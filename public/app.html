@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MY AI Agent — ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#04040a;--ink2:#0b0b14;--ink3:#11111e;--ink4:#181828;--ink5:#1e1e30;
+  --wire:rgba(255,255,255,.055);--wire2:rgba(255,255,255,.10);--wire3:rgba(255,255,255,.18);
+  --snow:#f0f0f8;--mist:#7272a0;--fog:#3a3a5a;
+  --volt:#c8ff57;--volt-dim:rgba(200,255,87,.1);--volt-glow:rgba(200,255,87,.28);
+  --cyan:#00e5cc;--rose:#ff4d6d;--rose-dim:rgba(255,77,109,.12);--amber:#ffb547;
+  --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;--mono:'DM Mono',monospace;
+  --sb:240px;
+}
+html,body{height:100%;font-family:var(--sans);background:var(--ink);color:var(--snow);-webkit-font-smoothing:antialiased;overflow:hidden;}
+button{font-family:var(--sans);cursor:pointer;border:none;transition:all .17s cubic-bezier(.4,0,.2,1);}
+input,textarea{font-family:var(--sans);}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--fog);border-radius:2px;}
+
+/* ══════════════════════════════════════
+   ROOT LAYOUT
+══════════════════════════════════════ */
+.layout{display:grid;grid-template-columns:var(--sb) 1fr;height:100vh;overflow:hidden;}
+
+/* ══════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════ */
+.sb{
+  background:var(--ink2);border-right:1px solid var(--wire);
+  display:flex;flex-direction:column;overflow:hidden;
+  position:relative;
+}
+/* volt line on right edge */
+.sb::after{
+  content:'';position:absolute;top:0;right:-1px;width:1px;height:100%;
+  background:linear-gradient(to bottom,transparent 0%,var(--volt-glow) 50%,transparent 100%);
+  opacity:.5;
+}
+
+/* brand */
+.sb-brand{
+  padding:18px 16px 14px;border-bottom:1px solid var(--wire);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sb-logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
+.logomark{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--volt);display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:17px;color:var(--ink);
+  box-shadow:0 0 14px var(--volt-glow);
+}
+.logotext{font-family:var(--display);font-size:15px;letter-spacing:.06em;}
+
+/* new agent button */
+.sb-new{
+  display:flex;align-items:center;gap:7px;
+  padding:9px 12px;border-radius:10px;
+  background:var(--volt-dim);border:1px solid rgba(200,255,87,.2);
+  color:var(--volt);font-size:12px;font-weight:700;
+  margin:12px;transition:all .2s;
+}
+.sb-new:hover{background:var(--volt);color:var(--ink);border-color:var(--volt);box-shadow:0 0 16px var(--volt-glow);}
+
+/* section label */
+.sb-lbl{
+  padding:10px 14px 5px;font-size:10px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--fog);
+}
+
+/* agent list */
+.ag-list{flex:1;overflow-y:auto;padding:0 6px 6px;}
+.ag-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:10px;cursor:pointer;margin-bottom:2px;border:1px solid transparent;
+  transition:all .14s;
+}
+.ag-item:hover{background:var(--ink3);}
+.ag-item.on{background:rgba(200,255,87,.07);border-color:rgba(200,255,87,.2);}
+.ag-icon{
+  width:34px;height:34px;border-radius:9px;background:var(--ink4);
+  border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.ag-item.on .ag-icon{border-color:rgba(200,255,87,.25);}
+.ag-meta{min-width:0;flex:1;}
+.ag-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ag-skill{font-size:10px;color:var(--fog);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.live-dot{width:5px;height:5px;border-radius:50%;background:#28c840;box-shadow:0 0 4px #28c840;flex-shrink:0;}
+
+/* bottom: balance + user */
+.sb-bot{padding:10px;border-top:1px solid var(--wire);display:flex;flex-direction:column;gap:8px;}
+
+.balance-card{
+  padding:12px;border-radius:10px;
+  background:var(--ink3);border:1px solid var(--wire);
+}
+.balance-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.balance-lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fog);}
+.balance-val{font-family:var(--mono);font-size:15px;font-weight:500;}
+.balance-val.pos{color:var(--volt);}
+.balance-val.neg{color:var(--rose);}
+.balance-val.warn{color:var(--amber);}
+.balance-sub{font-size:10px;color:var(--fog);}
+.charge-btn{
+  width:100%;padding:7px;border-radius:8px;font-size:12px;font-weight:700;
+  background:var(--volt);color:var(--ink);
+  box-shadow:0 0 10px var(--volt-glow);margin-top:8px;
+}
+.charge-btn:hover{box-shadow:0 0 18px var(--volt-glow);}
+
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:var(--ink3);}
+.user-av{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,var(--volt),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:var(--ink);flex-shrink:0;
+}
+.user-name{font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.logout-btn{background:none;color:var(--fog);font-size:11px;padding:0;}
+.logout-btn:hover{color:var(--rose);}
+
+/* ══════════════════════════════════════
+   MAIN AREA
+══════════════════════════════════════ */
+.main{display:flex;flex-direction:column;overflow:hidden;background:var(--ink);}
+
+/* Empty state */
+.empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;text-align:center;padding:2rem;
+}
+.empty-glyph{
+  width:80px;height:80px;border-radius:22px;
+  background:var(--ink2);border:1px solid var(--wire2);
+  display:flex;align-items:center;justify-content:center;font-size:36px;
+  box-shadow:0 0 40px rgba(200,255,87,.05);
+}
+.empty h2{font-family:var(--display);font-size:32px;letter-spacing:.02em;}
+.empty p{font-size:14px;color:var(--mist);line-height:1.7;max-width:280px;}
+.btn-volt{
+  padding:13px 30px;border-radius:12px;font-size:15px;font-weight:700;
+  background:var(--volt);color:var(--ink);
+  box-shadow:0 0 20px var(--volt-glow);
+}
+.btn-volt:hover{transform:translateY(-1px);box-shadow:0 0 32px var(--volt-glow);}
+
+/* Chat */
+.chat{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* topbar */
+.chat-top{
+  padding:14px 22px;border-bottom:1px solid var(--wire);
+  display:flex;align-items:center;gap:14px;flex-shrink:0;
+  background:rgba(4,4,10,.8);backdrop-filter:blur(16px);
+}
+.ct-icon{
+  width:40px;height:40px;border-radius:12px;background:var(--ink3);
+  border:1px solid var(--wire2);display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.ct-name{font-size:15px;font-weight:700;}
+.ct-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;}
+.pill{
+  padding:2px 9px;border-radius:18px;font-size:10px;font-weight:700;
+  background:var(--ink4);color:var(--mist);border:1px solid var(--wire);
+  letter-spacing:.02em;
+}
+.top-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.del-btn{
+  width:30px;height:30px;border-radius:8px;background:var(--ink3);
+  border:1px solid var(--wire);color:var(--fog);display:flex;align-items:center;justify-content:center;
+}
+.del-btn:hover{border-color:var(--rose);color:var(--rose);}
+
+/* messages */
+.msgs{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:18px;}
+
+.msg{display:flex;gap:10px;align-items:flex-end;animation:msgIn .2s ease;}
+.msg.u{flex-direction:row-reverse;}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;}}
+
+.mav{
+  width:30px;height:30px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+  background:var(--ink3);border:1px solid var(--wire);
+}
+.mav.ua{
+  background:linear-gradient(135deg,var(--volt),var(--cyan));
+  border:none;font-size:11px;font-weight:800;color:var(--ink);
+}
+
+.mbod{display:flex;flex-direction:column;gap:4px;max-width:72%;}
+.msg.u .mbod{align-items:flex-end;}
+
+.mbub{
+  padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.7;
+  background:var(--ink3);border:1px solid var(--wire2);
+  word-break:break-word;
+}
+.msg.u .mbub{
+  background:linear-gradient(135deg,rgba(200,255,87,.9),rgba(0,229,204,.7));
+  color:var(--ink);border:none;font-weight:500;
+  border-radius:18px 18px 5px 18px;
+  box-shadow:0 4px 16px rgba(200,255,87,.15);
+}
+.msg.a .mbub{border-radius:18px 18px 18px 5px;}
+
+.mtime{font-size:10px;color:var(--fog);padding:0 3px;}
+
+/* thinking */
+.tdots{display:flex;gap:4px;align-items:center;padding:4px 0;}
+.td{width:6px;height:6px;border-radius:50%;background:var(--fog);animation:tdot 1.4s ease infinite;}
+.td:nth-child(2){animation-delay:.18s;}.td:nth-child(3){animation-delay:.36s;}
+@keyframes tdot{0%,60%,100%{transform:scale(.8);opacity:.4;}30%{transform:scale(1.3);opacity:1;}}
+
+/* footer */
+.chat-foot{
+  padding:12px 22px 16px;border-top:1px solid var(--wire);flex-shrink:0;
+  background:rgba(4,4,10,.8);backdrop-filter:blur(16px);
+}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.chip{
+  padding:5px 12px;border-radius:16px;font-size:11px;font-weight:500;
+  background:var(--ink3);border:1px solid var(--wire2);color:var(--mist);
+}
+.chip:hover{border-color:rgba(200,255,87,.35);color:var(--volt);}
+
+.in-box{
+  display:flex;gap:9px;align-items:flex-end;
+  background:var(--ink3);border:1px solid var(--wire2);
+  border-radius:18px;padding:7px 7px 7px 18px;
+}
+.in-box:focus-within{border-color:rgba(200,255,87,.4);box-shadow:0 0 0 3px rgba(200,255,87,.07);}
+#ci{
+  flex:1;background:none;border:none;color:var(--snow);font-size:14px;
+  resize:none;max-height:120px;line-height:1.6;padding:6px 0;
+}
+.snd{
+  width:38px;height:38px;border-radius:12px;
+  background:var(--volt);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 0 12px var(--volt-glow);
+}
+.snd:hover{transform:scale(1.06);box-shadow:0 0 20px var(--volt-glow);}
+.snd:disabled{background:var(--ink4);box-shadow:none;color:var(--fog);}
+
+/* ══════════════════════════════════════
+   CREATE MODAL
+══════════════════════════════════════ */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);
+  display:none;align-items:center;justify-content:center;z-index:999;
+}
+.overlay.open{display:flex;}
+
+/* Create wizard */
+.wizard{
+  width:100%;max-width:540px;margin:0 20px;max-height:90vh;overflow-y:auto;
+  background:var(--ink2);border:1px solid var(--wire2);border-radius:24px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04),0 40px 80px rgba(0,0,0,.8);
+  animation:wizIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes wizIn{from{opacity:0;transform:scale(.94) translateY(12px);}}
+
+.wiz-top{
+  padding:20px 24px 16px;border-bottom:1px solid var(--wire);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.wiz-title{font-family:var(--display);font-size:24px;letter-spacing:.02em;}
+.wiz-close{
+  width:30px;height:30px;border-radius:8px;background:var(--ink3);
+  border:1px solid var(--wire);color:var(--mist);display:flex;align-items:center;justify-content:center;
+}
+.wiz-close:hover{color:var(--snow);}
+
+.wiz-progress{height:2px;background:var(--wire);position:relative;}
+.wiz-fill{height:100%;background:var(--volt);transition:width .4s cubic-bezier(.4,0,.2,1);}
+
+.wiz-body{padding:24px;}
+
+.step-h{font-size:20px;font-weight:700;margin-bottom:6px;}
+.step-s{font-size:13px;color:var(--mist);margin-bottom:20px;}
+
+/* avatar grid */
+.av-preview{
+  width:72px;height:72px;border-radius:20px;
+  background:var(--ink3);border:2px solid rgba(200,255,87,.3);
+  display:flex;align-items:center;justify-content:center;font-size:36px;
+  box-shadow:0 0 0 5px rgba(200,255,87,.06);margin-bottom:12px;
+}
+.av-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin-bottom:20px;}
+.av-cell{
+  aspect-ratio:1;border-radius:10px;background:var(--ink3);border:2px solid transparent;
+  font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .13s;
+}
+.av-cell:hover{background:var(--ink4);transform:scale(1.1);}
+.av-cell.sel{border-color:var(--volt);background:var(--volt-dim);}
+
+/* name input */
+.wiz-input{
+  width:100%;background:var(--ink3);border:1px solid var(--wire2);
+  border-radius:11px;color:var(--snow);font-size:15px;padding:12px 15px;
+}
+.wiz-input:focus{border-color:var(--volt);outline:none;box-shadow:0 0 0 3px var(--volt-dim);}
+::placeholder{color:var(--fog);}
+
+/* skill grid */
+.skill-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:20px;}
+.sk-card{
+  padding:13px;border-radius:12px;background:var(--ink3);
+  border:1px solid var(--wire2);cursor:pointer;text-align:left;transition:all .15s;
+}
+.sk-card:hover{border-color:var(--wire3);}
+.sk-card.sel{background:var(--volt-dim);border-color:rgba(200,255,87,.35);}
+.sk-ic{font-size:20px;margin-bottom:6px;}
+.sk-nm{font-size:12px;font-weight:700;}
+.sk-ds{font-size:10px;color:var(--fog);margin-top:2px;line-height:1.4;}
+
+.per-ta{
+  width:100%;min-height:80px;background:var(--ink3);border:1px solid var(--wire2);
+  border-radius:11px;color:var(--snow);font-size:13px;padding:12px 14px;
+  resize:vertical;line-height:1.6;
+}
+.per-ta:focus{border-color:var(--volt);outline:none;box-shadow:0 0 0 3px var(--volt-dim);}
+
+/* confirm hero */
+.conf-hero{
+  display:flex;align-items:center;gap:16px;padding:18px;
+  background:var(--ink3);border:1px solid var(--wire2);border-radius:16px;margin-bottom:16px;
+}
+.conf-ic{
+  width:60px;height:60px;border-radius:18px;background:var(--ink4);
+  border:1px solid rgba(200,255,87,.25);display:flex;align-items:center;justify-content:center;
+  font-size:30px;flex-shrink:0;
+}
+.conf-nm{font-size:19px;font-weight:700;}
+.conf-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.conf-per{
+  padding:12px 14px;background:var(--ink3);border:1px solid var(--wire);
+  border-left:2px solid var(--volt);border-radius:11px;
+  font-size:13px;color:var(--mist);line-height:1.6;margin-bottom:16px;
+}
+
+.wiz-fld{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.wiz-fld label{font-size:10px;font-weight:700;color:var(--mist);letter-spacing:.06em;text-transform:uppercase;}
+
+.btn-row{display:flex;gap:9px;}
+.btn-row .btn-volt{flex:1;border-radius:12px;padding:13px;}
+.btn-back{
+  padding:12px 20px;border-radius:12px;background:var(--ink3);
+  border:1px solid var(--wire2);color:var(--mist);font-size:14px;
+}
+.btn-back:hover{border-color:var(--wire3);color:var(--snow);}
+
+/* ══════════════════════════════════════
+   CHARGE MODAL
+══════════════════════════════════════ */
+.charge-modal{
+  width:100%;max-width:420px;margin:0 20px;
+  background:var(--ink2);border:1px solid var(--wire2);border-radius:22px;
+  padding:28px;box-shadow:0 40px 80px rgba(0,0,0,.8);
+  animation:wizIn .22s cubic-bezier(.34,1.56,.64,1);
+}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.modal-ti{font-family:var(--display);font-size:24px;letter-spacing:.02em;}
+.plan-g{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px;}
+.plan-c{
+  padding:14px 10px;border-radius:12px;border:1px solid var(--wire2);
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.plan-c:hover{border-color:var(--wire3);}
+.plan-c.sel{border-color:var(--volt);background:var(--volt-dim);}
+.pl-nm{font-size:12px;font-weight:700;margin-bottom:3px;}
+.pl-pr{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--volt);}
+.pl-ms{font-size:10px;color:var(--fog);margin-top:2px;}
+.stripe-note{text-align:center;margin-top:12px;font-size:11px;color:var(--fog);}
+
+/* toast */
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  padding:11px 18px;border-radius:12px;
+  background:var(--ink3);border:1px solid var(--wire2);color:var(--snow);
+  font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,.7);
+  transform:translateY(70px);opacity:0;transition:all .28s cubic-bezier(.34,1.56,.64,1);max-width:300px;
+}
+.toast.on{transform:translateY(0);opacity:1;}
+.tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.toast.ok .tdot{background:var(--volt);box-shadow:0 0 6px var(--volt);}
+.toast.ng .tdot{background:var(--rose);box-shadow:0 0 6px var(--rose);}
+
+/* loader */
+.loader{
+  position:fixed;inset:0;background:var(--ink);
+  display:flex;align-items:center;justify-content:center;z-index:8888;transition:opacity .3s;
+}
+.loader.gone{opacity:0;pointer-events:none;}
+.loader-ring{
+  width:36px;height:36px;border-radius:50%;
+  border:2px solid var(--wire2);border-top-color:var(--volt);
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+@media(max-width:700px){
+  :root{--sb:0px;}
+  .layout{grid-template-columns:1fr;}
+  .sb{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader"><div class="loader-ring"></div></div>
+
+<div class="layout">
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sb">
+    <div class="sb-brand">
+      <a class="sb-logo" href="lp.html">
+        <div class="logomark">M</div>
+        <span class="logotext">MY AI AGENT</span>
+      </a>
+    </div>
+    <button class="sb-new" onclick="openWizard()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      新しいエージェント
+    </button>
+    <div class="sb-lbl">チーム</div>
+    <div class="ag-list" id="agList"></div>
+    <div class="sb-bot">
+      <div class="balance-card">
+        <div class="balance-row">
+          <span class="balance-lbl">残高</span>
+          <span class="balance-val" id="balVal">¥0.00</span>
+        </div>
+        <div class="balance-sub" id="balSub">0メッセージ利用</div>
+        <button class="charge-btn" onclick="openCharge()">+ 残高チャージ</button>
+      </div>
+      <div class="sb-user">
+        <div class="user-av" id="userAv"></div>
+        <div class="user-name" id="userName"></div>
+        <button class="logout-btn" onclick="doLogout()">ログアウト</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────────────────────── -->
+  <main class="main">
+    <div class="empty" id="emptyWrap">
+      <div class="empty-glyph">🤖</div>
+      <h2>チームを作ろう</h2>
+      <p>専門スキルを持つAIエージェントを作って、仕事を任せましょう。</p>
+      <button class="btn-volt" onclick="openWizard()">最初のエージェントを作る →</button>
+    </div>
+    <div class="chat" id="chatWrap" style="display:none">
+      <div class="chat-top" id="chatTop"></div>
+      <div class="msgs" id="msgs"></div>
+      <div class="chat-foot">
+        <div class="chips" id="chips"></div>
+        <div class="in-box">
+          <textarea id="ci" placeholder="何をお願いしますか？（Shift+Enterで改行）" rows="1" oninput="exTA(this)" onkeydown="taKey(event)"></textarea>
+          <button class="snd" id="sndBtn" onclick="sendMsg()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l6 5-6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══ CREATE WIZARD OVERLAY ═══════════════════════════════ -->
+<div class="overlay" id="wizOverlay">
+  <div class="wizard">
+    <div class="wiz-top">
+      <div class="wiz-title" id="wizTitle">新しいエージェント</div>
+      <button class="wiz-close" onclick="closeWizard()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-progress"><div class="wiz-fill" id="wizFill" style="width:33%"></div></div>
+    <div class="wiz-body">
+
+      <!-- Step 1: Icon & Name -->
+      <div id="ws1">
+        <div class="step-h">アイコンと名前</div>
+        <div class="step-s">エージェントの見た目と名前を決めます</div>
+        <div class="av-preview" id="avPrev">🤖</div>
+        <div class="av-grid" id="avGrid"></div>
+        <div class="wiz-fld">
+          <label>エージェントの名前</label>
+          <input class="wiz-input" type="text" id="wName" placeholder="例：ライターの田中さん" maxlength="20">
+        </div>
+        <button class="btn-volt" style="width:100%;border-radius:12px;padding:13px;" onclick="wStep(2)">次へ →</button>
+      </div>
+
+      <!-- Step 2: Skills -->
+      <div id="ws2" style="display:none">
+        <div class="step-h">スキルを与える</div>
+        <div class="step-s">このエージェントの得意なこと（複数OK）</div>
+        <div class="skill-grid" id="skGrid"></div>
+        <div class="wiz-fld">
+          <label>性格・追加指示（任意）</label>
+          <textarea class="per-ta" id="wPer" placeholder="例：常に丁寧な敬語で話す。専門用語は使わずわかりやすく説明する。"></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(1)">← 戻る</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(3)">次へ →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Confirm -->
+      <div id="ws3" style="display:none">
+        <div class="step-h">確認して完成！</div>
+        <div class="step-s">このエージェントで作成します</div>
+        <div class="conf-hero" id="confHero"></div>
+        <div id="confPer"></div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(2)">← 戻る</button>
+          <button class="btn-volt" id="createBtn" style="border-radius:12px;padding:13px;" onclick="doCreate()">✨ 作成する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CHARGE OVERLAY ══════════════════════════════════════ -->
+<div class="overlay" id="chargeOverlay">
+  <div class="charge-modal">
+    <div class="modal-hd">
+      <div class="modal-ti">残高チャージ</div>
+      <button class="wiz-close" onclick="closeCharge()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="plan-g">
+      <div class="plan-c sel" id="c-500" onclick="selCharge(500,this)"><div class="pl-nm">ライト</div><div class="pl-pr">¥500</div><div class="pl-ms">約330回</div></div>
+      <div class="plan-c" id="c-1000" onclick="selCharge(1000,this)"><div class="pl-nm">スタンダード</div><div class="pl-pr">¥1,000</div><div class="pl-ms">約670回</div></div>
+      <div class="plan-c" id="c-3000" onclick="selCharge(3000,this)"><div class="pl-nm">ヘビー</div><div class="pl-pr">¥3,000</div><div class="pl-ms">約2,000回</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="font-size:13px;color:var(--mist);white-space:nowrap;">または:</span>
+      <input type="number" id="customAmt" min="100" max="100000" placeholder="金額を入力 (円)" class="wiz-input" style="flex:1;" oninput="selCharge(parseInt(this.value)||0,null)">
+      <span style="font-size:13px;color:var(--mist);">円</span>
+    </div>
+    <div class="wiz-fld"><label>カード番号</label><input type="text" class="wiz-input" placeholder="4242 4242 4242 4242" maxlength="19" oninput="fmtCard(this)"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px;">
+      <div class="wiz-fld"><label>有効期限</label><input type="text" class="wiz-input" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)"></div>
+      <div class="wiz-fld"><label>CVC</label><input type="text" class="wiz-input" placeholder="123" maxlength="3"></div>
+    </div>
+    <button class="btn-volt" id="chargeBtn" style="width:100%;border-radius:12px;padding:14px;font-size:15px;" onclick="doCharge()">チャージする</button>
+    <div class="stripe-note">🔒 Stripe による安全な決済（現在デモモード）</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
+
+<script>
+const API='';
+const AVATARS=['🤖','🦊','🐸','🐙','🦋','🐬','🦄','🐧','🦁','🐲','⭐','🌈','🦅','🐯','🦝','🐻','🧙','🤠','🥷','👾','🦸','🧚','🐼','🦜'];
+const SKILLS=[
+  {id:'writing',icon:'✍️',name:'ライティング',desc:'メール・記事・提案書'},
+  {id:'research',icon:'🔍',name:'リサーチ',desc:'情報収集・分析'},
+  {id:'coding',icon:'💻',name:'プログラミング',desc:'コード作成・デバッグ'},
+  {id:'marketing',icon:'📣',name:'マーケティング',desc:'戦略・コピー'},
+  {id:'planning',icon:'📋',name:'プランニング',desc:'企画・タスク整理'},
+  {id:'analysis',icon:'📊',name:'データ分析',desc:'数値解析・レポート'},
+  {id:'translate',icon:'🌏',name:'翻訳',desc:'日英・多言語'},
+  {id:'support',icon:'🤝',name:'カスタマー対応',desc:'問い合わせ・FAQ'},
+  {id:'idea',icon:'💡',name:'アイデア出し',desc:'ブレスト・発想'},
+  {id:'teaching',icon:'🎓',name:'教育・解説',desc:'わかりやすく説明'},
+];
+const CHIPS={
+  writing:['メールの下書き','キャッチコピー10個','ブログ記事を書いて'],
+  research:['競合分析して','トレンドを調べて'],
+  coding:['コードレビューして','バグを直して'],
+  marketing:['SNS投稿文を作って','戦略を提案して'],
+  planning:['タスクを整理して','スケジュールを作って'],
+  analysis:['データを分析して','レポートにまとめて'],
+  translate:['日本語に翻訳して','英語に翻訳して'],
+  support:['FAQを作って','返信メールを書いて'],
+  idea:['アイデアを10個出して','ブレストしよう'],
+  teaching:['簡単に説明して','具体例を挙げて'],
+};
+
+let token=null,me=null,agents=[],activeId=null;
+let NA={avatar:'🤖',name:'',skills:[],persona:''};
+let chargeAmt=500;
+
+/* ── Boot ──────────────────────────────────────────── */
+window.onload=async()=>{
+  buildAvGrid(); buildSkGrid();
+  // Handle Google OAuth redirect token in URL
+  const urlParams=new URLSearchParams(location.search);
+  const urlToken=urlParams.get('token');
+  if(urlToken){ localStorage.setItem('token',urlToken); history.replaceState(null,'','/app.html'); }
+
+  token=localStorage.getItem('token');
+  if(!token){ location.href='auth.html'; return; }
+  try{
+    const r=await api('GET','/api/me');
+    me=r.user;
+    const ra=await api('GET','/api/agents');
+    agents=ra.agents||[];
+    renderAll();
+    // Show email verify banner if not verified
+    if(!me.verified) showVerifyBanner();
+  }catch{
+    localStorage.removeItem('token');
+    location.href='auth.html';
+  }
+  document.getElementById('loader').classList.add('gone');
+};
+
+function showVerifyBanner(){
+  const banner=document.createElement('div');
+  banner.id='verify-banner';
+  banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:200;padding:10px 20px;background:#ffb547;color:#04040a;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;';
+  banner.innerHTML='📧 メールアドレスの確認が完了していません。 <button onclick="resendVerify()" style="background:rgba(0,0,0,.15);border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;">確認メールを再送</button> <button onclick="document.getElementById('verify-banner').remove()" style="background:none;border:none;cursor:pointer;font-size:16px;margin-left:8px;">×</button>';
+  document.body.prepend(banner);
+}
+
+async function resendVerify(){
+  try{ await api('POST','/api/auth/resend-verify'); showToast('確認メールを送信しました','ok'); }
+  catch(e){ showToast(e.message,'ng'); }
+}
+
+/* ── API ───────────────────────────────────────────── */
+async function api(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
+  if(body)opts.body=JSON.stringify(body);
+  const res=await fetch(API+path,opts);
+  const data=await res.json();
+  if(!res.ok)throw new Error(data.error||'エラーが発生しました');
+  return data;
+}
+
+/* ── Render ────────────────────────────────────────── */
+function renderAll(){
+  document.getElementById('userName').textContent=me.name;
+  document.getElementById('userAv').textContent=me.name.charAt(0).toUpperCase();
+  updateBalance();
+  renderAgList();
+  if(agents.length>0) openAgent(activeId&&agents.find(a=>a.id===activeId)?activeId:agents[0].id);
+  else{ document.getElementById('emptyWrap').style.display='flex'; document.getElementById('chatWrap').style.display='none'; }
+}
+
+function updateBalance(){
+  const b=me.balance_jpy||0;
+  const el=document.getElementById('balVal');
+  el.textContent=(b>=0?'¥':'−¥')+Math.abs(b).toFixed(2);
+  el.className='balance-val'+(b<0?' neg':b<200?' warn':' pos');
+  document.getElementById('balSub').textContent=`${me.usage_count||0}メッセージ利用`;
+}
+
+function renderAgList(){
+  document.getElementById('agList').innerHTML=agents.map(a=>`
+    <div class="ag-item${a.id===activeId?' on':''}" id="ai-${a.id}" onclick="openAgent('${a.id}')">
+      <div class="ag-icon">${a.avatar}</div>
+      <div class="ag-meta">
+        <div class="ag-name">${esc(a.name)}</div>
+        <div class="ag-skill">${a.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')}</div>
+      </div>
+      <div class="live-dot"></div>
+    </div>`).join('');
+}
+
+/* ── Open agent / chat ─────────────────────────────── */
+function openAgent(id){
+  const ag=agents.find(a=>a.id===id); if(!ag)return;
+  activeId=id;
+  document.getElementById('emptyWrap').style.display='none';
+  document.getElementById('chatWrap').style.display='flex';
+  document.querySelectorAll('.ag-item').forEach(el=>el.classList.remove('on'));
+  document.getElementById('ai-'+id)?.classList.add('on');
+
+  const sns=ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
+  document.getElementById('chatTop').innerHTML=`
+    <div class="ct-icon">${ag.avatar}</div>
+    <div>
+      <div class="ct-name">${esc(ag.name)}</div>
+      <div class="ct-pills">${sns.map(n=>`<span class="pill">${n}</span>`).join('')}</div>
+    </div>
+    <div class="top-actions">
+      <button class="del-btn" onclick="delAgent('${id}')">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M4.5 3.5V2h4v1.5M5 6v3.5M8 6v3.5M2.5 3.5l.6 7h7.8l.6-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>`;
+
+  const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);
+  document.getElementById('chips').innerHTML=ag.history?.length?'':allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('');
+  renderMsgs(ag);
+}
+
+function renderMsgs(ag){
+  const el=document.getElementById('msgs');
+  if(!ag.history||!ag.history.length){
+    el.innerHTML=bubble('a',ag.avatar,`はじめまして！${esc(ag.name)}です 👋<br>なんでも気軽に話しかけてください！`,now(),'');
+    return;
+  }
+  el.innerHTML=ag.history.map(m=>bubble(
+    m.role==='user'?'u':'a',
+    m.role==='user'?me.name.charAt(0):ag.avatar,
+    fmt(m.content),m.time||'',
+    '',
+  )).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+function bubble(type,av,content,time,cost){
+  const isU=type==='u';
+  return `<div class="msg ${isU?'u':'a'}">
+    <div class="mav${isU?' ua':''}">${av}</div>
+    <div class="mbod">
+      <div class="mbub">${content}</div>
+      <div style="display:flex;gap:6px;">
+        <div class="mtime">${time}</div>
+        </div>
+    </div>
+  </div>`;
+}
+
+function useChip(t){ document.getElementById('ci').value=t; document.getElementById('chips').innerHTML=''; sendMsg(); }
+
+/* ── Send ──────────────────────────────────────────── */
+async function sendMsg(){
+  const ci=document.getElementById('ci');
+  const text=ci.value.trim(); if(!text)return;
+  const ag=agents.find(a=>a.id===activeId); if(!ag)return;
+  if((me.balance_jpy||0)<-1500){ showToast('残高が不足しています','ng'); openCharge(); return; }
+  ci.value=''; exTA(ci);
+  document.getElementById('sndBtn').disabled=true;
+  document.getElementById('chips').innerHTML='';
+  if(!ag.history)ag.history=[];
+  ag.history.push({role:'user',content:text,time:now()});
+  renderMsgs(ag);
+  const msgs=document.getElementById('msgs');
+  const tEl=document.createElement('div');
+  tEl.className='msg a'; tEl.id='thinking';
+  tEl.innerHTML=`<div class="mav">${ag.avatar}</div><div class="mbod"><div class="mbub"><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div></div>`;
+  msgs.appendChild(tEl); msgs.scrollTop=msgs.scrollHeight;
+  try{
+    const r=await api('POST',`/api/chat/${activeId}`,{message:text});
+    ag.history.push({role:'assistant',content:r.reply,time:now()});
+    me.balance_jpy=r.balance_jpy;
+    me.usage_count=(me.usage_count||0)+1;
+    updateBalance();
+  }catch(e){
+    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
+    if(e.message.includes('クレジット')||e.message.includes('残高')){ openCharge(); }
+  }
+  document.getElementById('thinking')?.remove();
+  renderMsgs(ag);
+  document.getElementById('sndBtn').disabled=false;
+  ci.focus();
+}
+
+async function delAgent(id){
+  if(!confirm('このエージェントを削除しますか？'))return;
+  try{ await api('DELETE',`/api/agents/${id}`); }catch{}
+  agents=agents.filter(a=>a.id!==id); activeId=null;
+  renderAgList();
+  if(agents.length>0) openAgent(agents[0].id);
+  else{ document.getElementById('emptyWrap').style.display='flex'; document.getElementById('chatWrap').style.display='none'; }
+}
+
+/* ── Wizard ────────────────────────────────────────── */
+function openWizard(){
+  NA={avatar:'🤖',name:'',skills:[],persona:''};
+  document.getElementById('wName').value='';
+  document.getElementById('wPer').value='';
+  document.getElementById('avPrev').textContent='🤖';
+  document.querySelectorAll('.av-cell').forEach((b,i)=>b.classList.toggle('sel',i===0));
+  document.querySelectorAll('.sk-card').forEach(b=>b.classList.remove('sel'));
+  wStep(1);
+  document.getElementById('wizOverlay').classList.add('open');
+}
+function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
+
+function buildAvGrid(){
+  document.getElementById('avGrid').innerHTML=AVATARS.map((e,i)=>
+    `<button class="av-cell${i===0?' sel':''}" onclick="pickAv(this,'${e}')">${e}</button>`
+  ).join('');
+}
+function pickAv(btn,e){
+  document.querySelectorAll('.av-cell').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel'); NA.avatar=e;
+  document.getElementById('avPrev').textContent=e;
+}
+
+function buildSkGrid(){
+  document.getElementById('skGrid').innerHTML=SKILLS.map(s=>`
+    <button class="sk-card" onclick="togSk(this,'${s.id}')">
+      <div class="sk-ic">${s.icon}</div>
+      <div class="sk-nm">${s.name}</div>
+      <div class="sk-ds">${s.desc}</div>
+    </button>`).join('');
+}
+function togSk(btn,id){
+  btn.classList.toggle('sel');
+  const i=NA.skills.indexOf(id);
+  if(i>=0)NA.skills.splice(i,1); else NA.skills.push(id);
+}
+
+function wStep(n){
+  if(n===2){ NA.name=document.getElementById('wName').value.trim(); if(!NA.name){showToast('名前を入力してください','ng');return;} }
+  if(n===3){ if(!NA.skills.length){showToast('スキルを選んでください','ng');return;} NA.persona=document.getElementById('wPer').value.trim(); buildConf(); }
+  document.querySelectorAll('#wizOverlay [id^="ws"]').forEach(s=>s.style.display='none');
+  document.getElementById('ws'+n).style.display='block';
+  document.getElementById('wizFill').style.width=(n/3*100)+'%';
+  document.getElementById('wizTitle').textContent=['','アイコンと名前','スキル','確認'][n];
+}
+
+function buildConf(){
+  const sns=NA.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
+  document.getElementById('confHero').innerHTML=`
+    <div class="conf-ic">${NA.avatar}</div>
+    <div><div class="conf-nm">${esc(NA.name)}</div>
+    <div class="conf-pills">${sns.map(n=>`<span class="pill">${n}</span>`).join('')}</div></div>`;
+  document.getElementById('confPer').innerHTML=NA.persona?`<div class="conf-per">${esc(NA.persona)}</div>`:'';
+}
+
+async function doCreate(){
+  setBtnLoad('createBtn',true,'作成中...');
+  try{
+    const r=await api('POST','/api/agents',{avatar:NA.avatar,name:NA.name,skills:NA.skills,persona:NA.persona});
+    agents.push(r.agent); activeId=r.agent.id;
+    renderAgList();
+    closeWizard();
+    openAgent(r.agent.id);
+    showToast(`${NA.name}を作成しました！`,'ok');
+  }catch(e){ showToast(e.message,'ng'); }
+  setBtnLoad('createBtn',false,'✨ 作成する');
+}
+
+/* ── Charge ────────────────────────────────────────── */
+function openCharge(){ document.getElementById('chargeOverlay').classList.add('open'); }
+function closeCharge(){ document.getElementById('chargeOverlay').classList.remove('open'); }
+function selCharge(amt,btn){
+  chargeAmt=amt;
+  document.querySelectorAll('.plan-c').forEach(el=>el.classList.remove('sel'));
+  if(btn)btn.classList.add('sel');
+}
+async function doCharge(){
+  if(!chargeAmt||chargeAmt<100){ showToast('100円以上を入力してください','ng'); return; }
+  setBtnLoad('chargeBtn',true,'処理中...');
+  try{
+    const r=await api('POST','/api/billing/charge',{amount_jpy:chargeAmt});
+    if(r.demo){ me.balance_jpy=r.balance_jpy; me.usage_count=me.usage_count||0; updateBalance(); closeCharge(); showToast(`¥${chargeAmt}チャージしました！`,'ok'); }
+    else{ showToast('Stripe決済を完了してください','ok'); }
+  }catch(e){ showToast(e.message,'ng'); }
+  setBtnLoad('chargeBtn',false,'チャージする');
+}
+function fmtCard(el){let v=el.value.replace(/\D/g,'').slice(0,16);el.value=v.replace(/(.{4})/g,'$1 ').trim();}
+function fmtExp(el){let v=el.value.replace(/\D/g,'').slice(0,4);if(v.length>2)v=v.slice(0,2)+' / '+v.slice(2);el.value=v;}
+
+/* ── Logout ────────────────────────────────────────── */
+function doLogout(){
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  location.href='auth.html';
+}
+
+/* ── Utils ─────────────────────────────────────────── */
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
+function now(){return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});}
+function exTA(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function taKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+function setBtnLoad(id,on,txt){const b=document.getElementById(id);b.disabled=on;if(txt)b.textContent=txt;}
+let toastT;
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='toast '+type+' on';
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('on'),3200);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# 環境変数（絶対にコミットしない）
+.env
+.env.local
+.env.production
+
+# DB（本番はSupabaseを使うので不要）
+server/db.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title id="pageTitle">利用規約 — MY AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#04040a;--ink2:#0b0b14;--ink3:#11111e;
+  --wire:rgba(255,255,255,.06);--wire2:rgba(255,255,255,.11);
+  --snow:#f0f0f8;--mist:#7272a0;--fog:#3a3a5a;
+  --volt:#c8ff57;--volt-dim:rgba(200,255,87,.1);
+  --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;
+}
+html,body{min-height:100%;font-family:var(--sans);background:var(--ink);color:var(--snow);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.8;}
+a{color:var(--volt);text-decoration:none;}
+a:hover{text-decoration:underline;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:var(--fog);}
+
+nav{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 48px;background:rgba(4,4,10,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--wire);
+}
+.nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
+.logomark{width:30px;height:30px;border-radius:8px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:17px;color:var(--ink);}
+.logotext{font-family:var(--display);font-size:16px;letter-spacing:.05em;}
+.nav-back{padding:8px 18px;border-radius:9px;background:transparent;border:1px solid var(--wire2);color:var(--mist);font-size:13px;cursor:pointer;font-family:var(--sans);transition:all .18s;}
+.nav-back:hover{border-color:var(--wire2);color:var(--snow);}
+
+.tab-bar{
+  display:flex;gap:0;border-bottom:1px solid var(--wire);
+  background:var(--ink2);padding:0 48px;
+  position:sticky;top:57px;z-index:99;
+}
+.tab-btn{
+  padding:16px 24px;font-size:14px;font-weight:500;color:var(--mist);
+  border:none;background:none;cursor:pointer;font-family:var(--sans);
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .18s;
+}
+.tab-btn.active{color:var(--volt);border-bottom-color:var(--volt);}
+.tab-btn:hover:not(.active){color:var(--snow);}
+
+.page{display:none;max-width:780px;margin:0 auto;padding:56px 24px 80px;}
+.page.active{display:block;}
+
+.pg-kicker{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--volt);margin-bottom:12px;}
+.pg-title{font-family:var(--display);font-size:52px;letter-spacing:.02em;margin-bottom:8px;}
+.pg-date{font-size:13px;color:var(--fog);margin-bottom:48px;}
+
+h2{font-size:18px;font-weight:700;margin:40px 0 12px;padding-top:8px;border-top:1px solid var(--wire);}
+h2:first-of-type{margin-top:0;border-top:none;}
+p{color:var(--mist);margin-bottom:14px;}
+ul,ol{color:var(--mist);padding-left:24px;margin-bottom:14px;}
+ul li,ol li{margin-bottom:6px;}
+strong{color:var(--snow);font-weight:600;}
+.highlight{
+  padding:16px 20px;border-radius:12px;
+  background:var(--volt-dim);border:1px solid rgba(200,255,87,.2);
+  color:var(--snow);font-size:14px;margin:20px 0;line-height:1.7;
+}
+table{width:100%;border-collapse:collapse;margin:16px 0;}
+table th{background:var(--ink3);color:var(--snow);font-size:13px;padding:12px 16px;text-align:left;border:1px solid var(--wire2);}
+table td{color:var(--mist);font-size:14px;padding:12px 16px;border:1px solid var(--wire);vertical-align:top;}
+
+@media(max-width:600px){
+  nav,tab-bar{padding-left:20px;padding-right:20px;}
+  .tab-btn{padding:14px 14px;font-size:13px;}
+  .pg-title{font-size:38px;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="lp.html">
+    <div class="logomark">M</div>
+    <span class="logotext">MY AI AGENT</span>
+  </a>
+  <button class="nav-back" onclick="history.back()">← 戻る</button>
+</nav>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('terms')">利用規約</button>
+  <button class="tab-btn" onclick="showTab('privacy')">プライバシーポリシー</button>
+  <button class="tab-btn" onclick="showTab('commerce')">特定商取引法</button>
+</div>
+
+<!-- ══ TERMS ══════════════════════════════════════════════════ -->
+<div class="page active" id="tab-terms">
+  <div class="pg-kicker">TERMS OF SERVICE</div>
+  <h1 class="pg-title">利用規約</h1>
+  <div class="pg-date">最終更新日：2025年1月1日</div>
+
+  <div class="highlight">
+    本規約はMY AI Agent（以下「本サービス」）の利用条件を定めます。ご利用前に必ずお読みください。
+  </div>
+
+  <h2>第1条（適用）</h2>
+  <p>本規約は、本サービスの提供条件および運営者とユーザーの権利・義務関係を定めるものです。本サービスを利用することで、本規約に同意したものとみなします。</p>
+
+  <h2>第2条（定義）</h2>
+  <ul>
+    <li><strong>本サービス</strong>：MY AI Agentが提供するAIエージェントチャットサービス</li>
+    <li><strong>ユーザー</strong>：本サービスに登録し利用する個人または法人</li>
+    <li><strong>エージェント</strong>：ユーザーが作成するAIキャラクター</li>
+    <li><strong>残高</strong>：ユーザーがチャージしたサービス利用のための前払い金</li>
+  </ul>
+
+  <h2>第3条（アカウント登録）</h2>
+  <p>本サービスの利用にはアカウント登録が必要です。登録にあたり、以下の事項を遵守してください。</p>
+  <ul>
+    <li>正確かつ最新の情報を登録すること</li>
+    <li>1人につき1アカウントのみ登録すること</li>
+    <li>パスワードを第三者に開示しないこと</li>
+    <li>アカウントの不正利用を発見した場合は直ちに運営者に通知すること</li>
+  </ul>
+
+  <h2>第4条（料金・残高）</h2>
+  <p>本サービスは従量課金制（プリペイド方式）を採用しています。</p>
+  <ul>
+    <li>利用前に残高をチャージする必要があります</li>
+    <li>AIとのやり取りに応じてトークン数に基づき残高が消費されます</li>
+    <li>残高の有効期限は最終利用日から1年間とします</li>
+    <li>チャージ済みの残高は、法令に定める場合を除き返金できません</li>
+    <li>残高が不足した場合、サービスの一部機能が制限されます</li>
+  </ul>
+
+  <h2>第5条（禁止事項）</h2>
+  <p>ユーザーは以下の行為を行ってはなりません。</p>
+  <ul>
+    <li>法令または公序良俗に違反する行為</li>
+    <li>他のユーザーまたは第三者の権利を侵害する行為</li>
+    <li>本サービスの運営を妨害する行為</li>
+    <li>AIを利用して違法・有害なコンテンツを生成する行為</li>
+    <li>本サービスを通じて得た情報を無断で商業目的に利用する行為</li>
+    <li>アカウントを第三者に譲渡・貸与する行為</li>
+    <li>リバースエンジニアリング等による本サービスの解析行為</li>
+    <li>未成年者に有害なコンテンツを生成する行為</li>
+  </ul>
+
+  <h2>第6条（知的財産権）</h2>
+  <p>本サービスのシステム・デザイン等に関する知的財産権は運営者に帰属します。ユーザーが入力したテキストおよびAIが生成したコンテンツの権利については、Anthropic社の利用規約に準じます。</p>
+
+  <h2>第7条（サービスの変更・停止）</h2>
+  <p>運営者は以下の場合にサービスを変更・停止できるものとします。</p>
+  <ul>
+    <li>システムメンテナンスが必要な場合</li>
+    <li>天災・障害等でサービス提供が困難な場合</li>
+    <li>Anthropic社のAPI提供が停止・変更された場合</li>
+    <li>その他、運営上やむを得ない場合</li>
+  </ul>
+
+  <h2>第8条（免責事項）</h2>
+  <p>運営者は以下について責任を負いません。</p>
+  <ul>
+    <li>AIが生成したコンテンツの正確性・完全性</li>
+    <li>本サービスの利用により生じた損害</li>
+    <li>サービスの一時停止・廃止による損害</li>
+    <li>ユーザー間または第三者との間で生じたトラブル</li>
+  </ul>
+
+  <h2>第9条（規約の変更）</h2>
+  <p>運営者は必要に応じて本規約を変更することができます。重要な変更の場合は、サービス上での通知または登録メールアドレスへの連絡により告知します。変更後も本サービスを継続利用した場合、変更後の規約に同意したものとみなします。</p>
+
+  <h2>第10条（準拠法・管轄）</h2>
+  <p>本規約は日本法に準拠し、本サービスに関する紛争については東京地方裁判所を第一審の専属的合意管轄裁判所とします。</p>
+</div>
+
+<!-- ══ PRIVACY ═════════════════════════════════════════════════ -->
+<div class="page" id="tab-privacy">
+  <div class="pg-kicker">PRIVACY POLICY</div>
+  <h1 class="pg-title">プライバシーポリシー</h1>
+  <div class="pg-date">最終更新日：2025年1月1日</div>
+
+  <div class="highlight">
+    本ポリシーは、MY AI Agentがユーザーの個人情報をどのように収集・利用・管理するかを説明します。
+  </div>
+
+  <h2>1. 収集する情報</h2>
+  <p>本サービスでは以下の情報を収集します。</p>
+  <ul>
+    <li><strong>アカウント情報</strong>：氏名、メールアドレス、パスワード（ハッシュ化して保存）</li>
+    <li><strong>利用情報</strong>：チャット履歴、作成したエージェントの情報、利用日時</li>
+    <li><strong>決済情報</strong>：チャージ金額、決済履歴（カード情報はStripe社が管理し当社は保持しません）</li>
+    <li><strong>技術情報</strong>：IPアドレス、ブラウザ情報、アクセスログ</li>
+  </ul>
+
+  <h2>2. 情報の利用目的</h2>
+  <ul>
+    <li>サービスの提供・改善</li>
+    <li>アカウント認証・本人確認</li>
+    <li>課金・残高管理</li>
+    <li>カスタマーサポートの提供</li>
+    <li>不正利用の検知・防止</li>
+    <li>利用規約違反行為への対応</li>
+    <li>サービスに関するお知らせの送付</li>
+  </ul>
+
+  <h2>3. 第三者提供</h2>
+  <p>以下の場合を除き、収集した個人情報を第三者に提供しません。</p>
+  <ul>
+    <li>ユーザーの同意がある場合</li>
+    <li>法令に基づく開示要求がある場合</li>
+    <li>サービス提供に必要な委託先（Anthropic、Stripe、Supabase等）への提供</li>
+  </ul>
+
+  <h2>4. 委託先サービス</h2>
+  <table>
+    <tr><th>サービス</th><th>用途</th><th>プライバシーポリシー</th></tr>
+    <tr><td>Anthropic</td><td>AI応答生成</td><td><a href="https://www.anthropic.com/privacy" target="_blank">anthropic.com/privacy</a></td></tr>
+    <tr><td>Stripe</td><td>決済処理</td><td><a href="https://stripe.com/jp/privacy" target="_blank">stripe.com/jp/privacy</a></td></tr>
+    <tr><td>Supabase</td><td>データベース</td><td><a href="https://supabase.com/privacy" target="_blank">supabase.com/privacy</a></td></tr>
+    <tr><td>Railway</td><td>サーバーホスティング</td><td><a href="https://railway.app/legal/privacy" target="_blank">railway.app/legal/privacy</a></td></tr>
+  </table>
+
+  <h2>5. チャット内容の取り扱い</h2>
+  <p>ユーザーとAIエージェントのチャット内容は、会話履歴の表示のためにデータベースに保存されます。チャット内容はAnthropicのAPIを経由して処理されます。Anthropicの利用規約により、APIを通じて送信されたデータはAnthropicのモデル学習には使用されません。</p>
+
+  <h2>6. データの保管・削除</h2>
+  <ul>
+    <li>アカウント情報はアカウント削除まで保持します</li>
+    <li>チャット履歴はエージェントごとに最大200件保持します</li>
+    <li>課金・利用履歴は法定保存期間（7年）保持します</li>
+    <li>アカウント削除のご要望は <a href="mailto:support@myaiagent.jp">support@myaiagent.jp</a> までご連絡ください</li>
+  </ul>
+
+  <h2>7. セキュリティ</h2>
+  <p>個人情報の保護のために以下の措置を講じています。</p>
+  <ul>
+    <li>通信のSSL/TLS暗号化</li>
+    <li>パスワードのPBKDF2ハッシュ化（100,000回ストレッチ）</li>
+    <li>JWT認証によるセッション管理</li>
+    <li>APIキーのサーバーサイド管理（フロントエンドへの露出なし）</li>
+  </ul>
+
+  <h2>8. Cookie・トラッキング</h2>
+  <p>本サービスでは認証のためにlocalStorageを使用します。現時点では広告目的のCookieやトラッキングツールは使用していません。</p>
+
+  <h2>9. お問い合わせ</h2>
+  <p>個人情報の取り扱いに関するお問い合わせは以下までご連絡ください。</p>
+  <p><strong>メール：</strong><a href="mailto:support@myaiagent.jp">support@myaiagent.jp</a></p>
+</div>
+
+<!-- ══ COMMERCE ════════════════════════════════════════════════ -->
+<div class="page" id="tab-commerce">
+  <div class="pg-kicker">LEGAL DISCLOSURE</div>
+  <h1 class="pg-title">特定商取引法<br>に基づく表記</h1>
+  <div class="pg-date">最終更新日：2025年1月1日</div>
+
+  <div class="highlight">
+    特定商取引法第11条に基づき、以下の事項を表示します。
+  </div>
+
+  <table>
+    <tr>
+      <th style="width:180px;">項目</th>
+      <th>内容</th>
+    </tr>
+    <tr>
+      <td><strong>販売事業者名</strong></td>
+      <td>【事業者名をここに記載】</td>
+    </tr>
+    <tr>
+      <td><strong>代表者名</strong></td>
+      <td>【代表者名をここに記載】</td>
+    </tr>
+    <tr>
+      <td><strong>所在地</strong></td>
+      <td>【住所をここに記載】<br><small style="color:var(--fog);">※請求があった場合、遅滞なく開示します</small></td>
+    </tr>
+    <tr>
+      <td><strong>電話番号</strong></td>
+      <td>【電話番号をここに記載】<br><small style="color:var(--fog);">※請求があった場合、遅滞なく開示します</small></td>
+    </tr>
+    <tr>
+      <td><strong>メールアドレス</strong></td>
+      <td><a href="mailto:support@myaiagent.jp">support@myaiagent.jp</a></td>
+    </tr>
+    <tr>
+      <td><strong>サービス名</strong></td>
+      <td>MY AI Agent</td>
+    </tr>
+    <tr>
+      <td><strong>販売価格</strong></td>
+      <td>
+        プリペイド方式の従量課金<br>
+        ¥100〜（チャージ金額はユーザーが選択）<br>
+        <small style="color:var(--fog);">AIとの会話量に応じてトークン単位で消費されます</small>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>代金の支払方法</strong></td>
+      <td>クレジットカード（Visa / Mastercard / American Express / JCB）</td>
+    </tr>
+    <tr>
+      <td><strong>代金の支払時期</strong></td>
+      <td>チャージ時に即時決済</td>
+    </tr>
+    <tr>
+      <td><strong>サービス提供時期</strong></td>
+      <td>チャージ完了後、即時利用可能</td>
+    </tr>
+    <tr>
+      <td><strong>返品・返金</strong></td>
+      <td>
+        デジタルコンテンツの性質上、チャージ済み残高の返金は原則承っておりません。<br>
+        ただし、当社の責による重大な瑕疵が認められた場合はこの限りではありません。<br>
+        お問い合わせは <a href="mailto:support@myaiagent.jp">support@myaiagent.jp</a> まで。
+      </td>
+    </tr>
+    <tr>
+      <td><strong>残高の有効期限</strong></td>
+      <td>最終利用日から1年間</td>
+    </tr>
+    <tr>
+      <td><strong>動作環境</strong></td>
+      <td>
+        最新版のChrome / Safari / Firefox / Edge<br>
+        インターネット接続環境が必要です
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin-top:32px;font-size:13px;">※住所・電話番号は、消費者庁「特定商取引法ガイド」に基づき、請求があった場合に遅滞なく開示する形式としています。ご請求は <a href="mailto:support@myaiagent.jp">support@myaiagent.jp</a> まで。</p>
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  const titles = { terms:'利用規約', privacy:'プライバシーポリシー', commerce:'特定商取引法に基づく表記' };
+  document.getElementById('pageTitle').textContent = titles[name] + ' — MY AI Agent';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// URL hash support: legal.html#privacy
+window.onload = () => {
+  const hash = location.hash.replace('#','');
+  if (['terms','privacy','commerce'].includes(hash)) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      const names=['terms','privacy','commerce'];
+      b.classList.toggle('active', names[i]===hash);
+    });
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id==='tab-'+hash));
+  }
+};
+</script>
+</body>
+</html>

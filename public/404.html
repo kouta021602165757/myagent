@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>404 — MY AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--ink:#04040a;--volt:#c8ff57;--volt-glow:rgba(200,255,87,.3);--mist:#7272a0;--sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;}
+html,body{height:100%;background:var(--ink);color:#f0f0f8;font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;position:relative;overflow:hidden;}
+body::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:64px 64px;}
+body::after{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(200,255,87,.06) 0%,transparent 65%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.num{font-family:var(--display);font-size:clamp(120px,20vw,200px);line-height:1;letter-spacing:-.02em;background:linear-gradient(135deg,var(--volt),#00e5cc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;}
+.msg{font-size:22px;font-weight:700;margin:16px 0 10px;position:relative;z-index:1;}
+.sub{font-size:15px;color:var(--mist);margin-bottom:36px;position:relative;z-index:1;}
+.btn{padding:13px 32px;border-radius:12px;background:var(--volt);color:var(--ink);font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);box-shadow:0 0 20px var(--volt-glow);transition:all .2s;position:relative;z-index:1;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 32px var(--volt-glow);}
+</style>
+</head>
+<body>
+<div class="num">404</div>
+<div class="msg">ページが見つかりません</div>
+<p class="sub">お探しのページは移動または削除された可能性があります。</p>
+<button class="btn" onclick="location.href='lp.html'">トップページへ →</button>
+</body>
+</html>

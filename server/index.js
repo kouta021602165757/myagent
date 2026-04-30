@@ -78,12 +78,18 @@ function sbReq(method,table,qs='',body=null){
 const DB={
   async findBy(field,val){
     if(!USE_SUPA)return LDB.find(u=>u[field]===val)||null;
-    const r=await sbReq('GET','users',`?${field}=eq.${encodeURIComponent(val)}&limit=1`);
-    return r.d?.[0]||null;
+    const snakeField=toSnake({[field]:null});const sf=Object.keys(snakeField)[0];
+    const{data,error}=await supabase.from('users').select('*').eq(sf,val).limit(1);
+    if(error){console.error('Supabase findBy error:',error.message);return null;}
+    return data?.[0]?toCamel(data[0]):null;
   },
   async create(user){
     if(!USE_SUPA){LDB.add(user);return user;}
-    const r=await sbReq('POST','users','',user);return r.d?.[0]||user;
+    const snakeUser=toSnake(user);
+    const{data,error}=await supabase.from('users').insert(snakeUser).select();
+    if(error){console.error('Supabase create error:',error.message,error.details);}
+    else{console.log('Supabase create OK, id:',data?.[0]?.id);}
+    return data?.[0]?toCamel(data[0]):user;
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}

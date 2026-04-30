@@ -558,6 +558,7 @@ server.listen(PORT,'0.0.0.0',()=>{
   console.log(`\n🚀 MY AI Agent`);
   console.log(`   http://localhost:${PORT}`);
   console.log(`   Anthropic: ${ANTHROPIC?'✅':'❌ Missing ANTHROPIC_API_KEY'}`);
+  console.log(`   SUPA_KEY:  ${SUPA_KEY.substring(0,20)}`);
   console.log(`   DB:        ${USE_SUPA?'✅ Supabase':'⚠️  Local JSON'}`);
   console.log(`   Stripe:    ${STRIPE_SK?'✅':'⚠️  Demo mode'}`);
   console.log(`   Google:    ${GOOGLE_ID?'✅':'⚠️  Not configured'}`);

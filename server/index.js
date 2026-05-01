@@ -112,7 +112,7 @@ const DB={
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
-    await sbReq('PATCH','users',`?id=eq.${user.id}`,user);
+    await sbReq('PATCH','users',`?id=eq.${user.id}`,toSnake(user));
   },
 };
 

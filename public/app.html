@@ -399,11 +399,13 @@ input,textarea{font-family:var(--sans);}
 .loader{
   position:fixed;inset:0;background:var(--ink);
   display:flex;align-items:center;justify-content:center;z-index:8888;transition:opacity .3s;
+    animation:hideLoader 0s forwards 5s;
 }
+  @keyframes hideLoader{ to{opacity:0;pointer-events:none;} }
 .loader.gone{opacity:0;pointer-events:none;}
 .loader-ring{
   width:36px;height:36px;border-radius:50%;
-  border:2px solid var(--wire2);border-top-color:var(--volt);
+    rder:2px solid var(--wire2);border-top-color:var(--volt);
   animation:spin .7s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg);}}

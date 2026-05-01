@@ -1,12 +1,20 @@
 {
-  "name": "my-ai-agent",
-  "version": "1.0.0",
-  "description": "専属AIエージェントWebサービス",
-  "main": "server/index.js",
-  "engines": { "node": ">=18.0.0" },
-  "scripts": {
-    "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
-  },
-  "license": "MIT"
+    "name": "my-ai-agent",
+    "version": "1.0.0",
+    "description": "専属イライライラWebサービス",
+    "main": "server/index.js",
+    "engines": { "node": ">=18.0.0" },
+    "scripts": {
+          "start": "node server/index.js",
+          "dev": "node --watch server/index.js"
+    },
+    "dependencies": {
+          "@anthropic-ai/sdk": "^0.37.0",
+          "@supabase/supabase-js": "^2.49.4",
+          "bcryptjs": "^2.4.3",
+          "jsonwebtoken": "^9.0.2",
+          "nodemailer": "^6.9.16",
+          "stripe": "^17.7.0"
+    },
+    "license": "MIT"
 }

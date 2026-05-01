@@ -601,6 +601,8 @@ window.onload=async()=>{
   const urlParams=new URLSearchParams(location.search);
   const urlToken=urlParams.get('token');
   if(urlToken){ localStorage.setItem('token',urlToken); history.replaceState(null,'','/app.html'); }
+    // ローダーを即時非表示（念のため最初に実行）
+    setTimeout(()=>{ const l=document.getElementById('loader'); if(l) l.classList.add('gone'); }, 3000);
 
   token=localStorage.getItem('token');
   if(!token){ location.href='auth.html'; return; }

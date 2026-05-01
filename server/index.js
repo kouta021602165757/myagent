@@ -32,6 +32,8 @@ const USD_TO_JPY   = parseFloat(process.env.USD_TO_JPY||'150');
 
 // ── PRICING ───────────────────────────────────────────────────
 const PRICING={ user:{ input:4.5, output:22.5 } };
+const {createClient}=require('@supabase/supabase-js');
+const supabase=USE_SUPA?createClient(SUPA_URL,SUPA_KEY):null;
 function calcCost(inputTok,outputTok){
   const usd=(inputTok/1e6*PRICING.user.input)+(outputTok/1e6*PRICING.user.output);
   return{ usd, jpy:Math.ceil(usd*USD_TO_JPY*1000)/1000, inputTok, outputTok };

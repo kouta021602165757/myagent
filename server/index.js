@@ -67,10 +67,8 @@ function sbReq(method,table,qs='',body=null){
     const req=https.request({
       hostname:u.hostname,path:u.pathname+u.search,method,
       headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,
-        'Content-Type':'application/json','Prefer':'return=representation',
         ...(pay?{'Content-Length':Buffer.byteLength(pay)}:{})}
     },r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{try{res({s:r.statusCode,d:JSON.parse(d||'[]')});}catch{res({s:r.statusCode,d});}});});
-    const DB=
           
   });
 }

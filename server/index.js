@@ -70,7 +70,8 @@ function sbReq(method,table,qs='',body=null){
         'Content-Type':'application/json','Prefer':'return=representation',
         ...(pay?{'Content-Length':Buffer.byteLength(pay)}:{})}
     },r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{try{res({s:r.statusCode,d:JSON.parse(d||'[]')});}catch{res({s:r.statusCode,d});}});});
-    req.on('error',rej);if(pay)req.write(pay);req.end();
+    const DB=
+          
   });
 }
 

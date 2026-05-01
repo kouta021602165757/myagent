@@ -71,6 +71,27 @@ function sbReq(method,table,qs='',body=null){
         ...(pay?{'Content-Length':Buffer.byteLength(pay)}:{})}
     },r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{try{res({s:r.statusCode,d:JSON.parse(d||'[]')});}catch{res({s:r.statusCode,d});}});});
     req.on('error',rej);if(pay)req.write(pay);req.end();
+  // ── HELPERS ──────────────────────────────────────────────────
+  function toSnake(obj){
+          if(!obj||typeof obj!=='object')return obj;
+          const res={};
+          for(const[k,v]of Object.entries(obj)){
+                    const snake=k.replace(/([A-Z])/g,m=>'_'+m.toLowerCase());
+                    res[snake]=v;
+          }
+          return res;
+  }
+        function toCamel(obj){
+                if(!obj||typeof obj!=='object')return obj;
+                const res={};
+                for(const[k,v]of Object.entries(obj)){
+                          const camel=k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase());
+                          res[camel]=v;
+                }
+                return res;
+        }
+
+        
   });
 }
 

@@ -112,7 +112,8 @@ const DB={
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
-    await sbReq('PATCH','users',`?id=eq.${user.id}`,toSnake(user));
+        const{error:se}=await supabase.from('users').update(toSnake(user)).eq('id',user.id);
+            if(se)console.error('Supabase save error:',se.message);
   },
 };
 

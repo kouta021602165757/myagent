@@ -609,10 +609,10 @@ window.onload=async()=>{
     me=r.user;
     const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
-    renderAll();
     // Show email verify banner if not verified
     if(!me.verified) showVerifyBanner();
   }catch(e){ console.error('[init]',e&&e.message); }
+        try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
     document.getElementById('loader').classList.add('gone');
 };
 

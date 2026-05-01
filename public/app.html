@@ -612,11 +612,8 @@ window.onload=async()=>{
     renderAll();
     // Show email verify banner if not verified
     if(!me.verified) showVerifyBanner();
-  }catch{
-    localStorage.removeItem('token');
-    location.href='auth.html';
-  }
-  document.getElementById('loader').classList.add('gone');
+  }catch(e){ console.error('[init]',e&&e.message); }
+    document.getElementById('loader').classList.add('gone');
 };
 
 function showVerifyBanner(){

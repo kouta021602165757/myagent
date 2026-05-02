@@ -614,7 +614,7 @@ let chargeAmt=500;
       placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
   };
 /* ── Boot ──────────────────────────────────────────── */
-window.onload=async()=>{
+window.onload=async()=>{  const _applyI18n=()=>{[['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});const inp=document.getElementById('msgInput');if(inp)inp.placeholder=T.placeholder;document.documentElement.lang=isJa?'ja':'en';};  _applyI18n();  const _applyI18n=()=>{[['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});const inp=document.getElementById('msgInput');if(inp)inp.placeholder=T.placeholder;document.documentElement.lang=isJa?'ja':'en';};
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],

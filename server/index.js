@@ -593,3 +593,16 @@ server.listen(PORT,'0.0.0.0',()=>{
 server.on('error',err=>{console.error(err);process.exit(1);});
 process.on('SIGTERM',()=>server.close(()=>process.exit(0)));
 process.on('SIGINT', ()=>server.close(()=>process.exit(0)));
+
+
+// ── Keep-Alive: スリープ復帰後に自動稼働 ──────────────────────────────
+// Renderフリープランの非アクティブスリープを防ぐため14分ごとに自己ping
+const _SELF_URL = process.env.APP_URL || 'https://myaiagents.agency';
+setInterval(() => {
+  https.get(_SELF_URL + '/api/health', (res) => {
+    console.log('[keep-alive] ping ok:', res.statusCode);
+  }).on('error', (e) => {
+    console.warn('[keep-alive] ping failed:', e.message);
+  });
+}, 14 * 60 * 1000);
+console.log('[keep-alive] started ->', _SELF_URL);

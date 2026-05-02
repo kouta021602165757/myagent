@@ -614,42 +614,36 @@ let chargeAmt=500;
       placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
   };
 /* ── Boot ──────────────────────────────────────────── */
-window.onload=async()=>{  const _applyI18n=()=>{[['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});const inp=document.getElementById('msgInput');if(inp)inp.placeholder=T.placeholder;document.documentElement.lang=isJa?'ja':'en';};  _applyI18n();  const _applyI18n=()=>{[['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});const inp=document.getElementById('msgInput');if(inp)inp.placeholder=T.placeholder;document.documentElement.lang=isJa?'ja':'en';};
+window.onload=async()=>{
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],
      ['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],
      ['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]]
     .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
-    const inp=document.getElementById('msgInput');if(inp)inp.placeholder=T.placeholder;
+    const inp=document.getElementById('msgInput');
+    if(inp) inp.placeholder=T.placeholder;
     document.documentElement.lang=isJa?'ja':'en';
   };
   _applyI18n();
-
   buildAvGrid(); buildSkGrid();
-    // i18n適用
-    ['teamTitle','teamSub','teamBtn'].forEach(k=>{ const el=document.getElementById('i18n-'+k); if(el&&T[k]) el.textContent=T[k]; });
-    const chatInp=document.querySelector('.chat-input,#msgInput,textarea[placeholder]'); if(chatInp&&T.placeholder) chatInp.placeholder=T.placeholder;
-    document.documentElement.lang=isJa?'ja':'en';
   // Handle Google OAuth redirect token in URL
   const urlParams=new URLSearchParams(location.search);
   const urlToken=urlParams.get('token');
-  if(urlToken){ localStorage.setItem('token',urlToken); history.replaceState(null,'','/app.html'); }
-    // ローダーを即時非表示（念のため最初に実行）
-    setTimeout(()=>{ const l=document.getElementById('loader'); if(l) l.classList.add('gone'); }, 3000);
-
-  token=localStorage.getItem('token');
-  if(!token){ location.href='auth.html'; return; }
+  if(urlToken){ localStorage.setItem('token',urlToken); history.replaceState({},'',location.pathname); }
+  const tok=localStorage.getItem('token');
+  if(!tok){ location.href='auth.html'; return; }
   try{
-    const r=await api('GET','/api/me');
-    me=r.user;
-    const ra=await api('GET','/api/agents');
+    const me=await apiFetch('/api/me');
+    if(!me||me.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
+    user=me;
+    const ra=await apiFetch('/api/agents');
     agents=ra.agents||[];
     // Show email verify banner if not verified
     if(!me.verified) showVerifyBanner();
   }catch(e){ console.error('[init]',e&&e.message); }
-        try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
-    document.getElementById('loader').classList.add('gone');
+  try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
+  document.getElementById('loader').classList.add('gone');
 };
 
 function showVerifyBanner(){

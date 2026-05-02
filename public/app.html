@@ -432,9 +432,9 @@ input,textarea{font-family:var(--sans);}
     </div>
     <button class="sb-new" onclick="openWizard()">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      新しいエージェント
+      <span id="i18n-newAgent">新しいエージェント</span>
     </button>
-    <div class="sb-lbl">チーム</div>
+    <div class="sb-lbl" id="i18n-teamLabel">チーム</div>
     <div class="ag-list" id="agList"></div>
     <div class="sb-bot">
       <div class="balance-card">
@@ -457,9 +457,9 @@ input,textarea{font-family:var(--sans);}
   <main class="main">
     <div class="empty" id="emptyWrap">
       <div class="empty-glyph">🤖</div>
-      <h2>チームを作ろう</h2>
-      <p>専門スキルを持つAIエージェントを作って、仕事を任せましょう。</p>
-      <button class="btn-volt" onclick="openWizard()">最初のエージェントを作る →</button>
+      <h2 id="i18n-teamTitle">チームを作ろう</h2>
+      <p id="i18n-teamSub">専門スキルを持つAIエージェントを作って、仕事を任せましょう。</p>
+      <button class="btn-volt" id="i18n-teamBtn" onclick="openWizard()">最初のエージェントを作る →</button>
     </div>
     <div class="chat" id="chatWrap" style="display:none">
       <div class="chat-top" id="chatTop"></div>
@@ -467,7 +467,7 @@ input,textarea{font-family:var(--sans);}
       <div class="chat-foot">
         <div class="chips" id="chips"></div>
         <div class="in-box">
-          <textarea id="ci" placeholder="何をお願いしますか？（Shift+Enterで改行）" rows="1" oninput="exTA(this)" onkeydown="taKey(event)"></textarea>
+          <textarea id="msgInput" id="ci" placeholder="何をお願いしますか？（Shift+Enterで改行）" rows="1" oninput="exTA(this)" onkeydown="taKey(event)"></textarea>
           <button class="snd" id="sndBtn" onclick="sendMsg()">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l6 5-6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -615,6 +615,17 @@ let chargeAmt=500;
   };
 /* ── Boot ──────────────────────────────────────────── */
 window.onload=async()=>{
+  // i18n apply
+  const _applyI18n=()=>{
+    [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],
+     ['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],
+     ['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]]
+    .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
+    const inp=document.getElementById('msgInput');if(inp)inp.placeholder=T.placeholder;
+    document.documentElement.lang=isJa?'ja':'en';
+  };
+  _applyI18n();
+
   buildAvGrid(); buildSkGrid();
     // i18n適用
     ['teamTitle','teamSub','teamBtn'].forEach(k=>{ const el=document.getElementById('i18n-'+k); if(el&&T[k]) el.textContent=T[k]; });

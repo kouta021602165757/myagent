@@ -565,6 +565,7 @@ input,textarea{font-family:var(--sans);}
 <div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
 
 <script>
+console.log('SCRIPT_START_RUNNING');
 const API='';
 const AVATARS=['🤖','🦊','🐸','🐙','🦋','🐬','🦄','🐧','🦁','🐲','⭐','🌈','🦅','🐯','🦝','🐻','🧙','🤠','🥷','👾','🦸','🧚','🐼','🦜'];
 const SKILLS=[
@@ -615,6 +616,7 @@ let chargeAmt=500;
   };
 /* ── Boot ──────────────────────────────────────────── */
 window.onload=async()=>{
+console.log('ONLOAD_START');
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],

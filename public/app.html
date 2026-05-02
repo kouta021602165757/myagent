@@ -601,9 +601,25 @@ let token=null,me=null,agents=[],activeId=null;
 let NA={avatar:'🤖',name:'',skills:[],persona:''};
 let chargeAmt=500;
 
+  // ── i18n ───────────────────────────────────────────────
+  const isJa = !navigator.language || navigator.language.startsWith('ja');
+  const T = {
+      teamTitle:   isJa ? 'チームを作ろう'                              : 'Build Your Team',
+      teamSub:     isJa ? '専門スキルを持つAIエージェントを作って、仕事を任せましょう。' : 'Create AI agents with specialized skills.',
+      teamBtn:     isJa ? '最初のエージェントを作る →'                  : 'Create your first agent →',
+      newAgent:    isJa ? '+ 新しいエージェント'                         : '+ New Agent',
+      balance:     isJa ? '残高'                                        : 'Balance',
+      charge:      isJa ? '+ 残高チャージ'                              : '+ Add Credits',
+      logout:      isJa ? 'ログアウト'                                  : 'Logout',
+      placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
+  };
 /* ── Boot ──────────────────────────────────────────── */
 window.onload=async()=>{
   buildAvGrid(); buildSkGrid();
+    // i18n適用
+    ['teamTitle','teamSub','teamBtn'].forEach(k=>{ const el=document.getElementById('i18n-'+k); if(el&&T[k]) el.textContent=T[k]; });
+    const chatInp=document.querySelector('.chat-input,#msgInput,textarea[placeholder]'); if(chatInp&&T.placeholder) chatInp.placeholder=T.placeholder;
+    document.documentElement.lang=isJa?'ja':'en';
   // Handle Google OAuth redirect token in URL
   const urlParams=new URLSearchParams(location.search);
   const urlToken=urlParams.get('token');

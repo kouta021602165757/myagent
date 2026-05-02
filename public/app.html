@@ -565,7 +565,6 @@ input,textarea{font-family:var(--sans);}
 <div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
 
 <script>
-console.log('SCRIPT_START_RUNNING');
 const API='';
 const AVATARS=['🤖','🦊','🐸','🐙','🦋','🐬','🦄','🐧','🦁','🐲','⭐','🌈','🦅','🐯','🦝','🐻','🧙','🤠','🥷','👾','🦸','🧚','🐼','🦜'];
 const SKILLS=[
@@ -602,9 +601,9 @@ let token=null,me=null,agents=[],activeId=null;
 let NA={avatar:'🤖',name:'',skills:[],persona:''};
 let chargeAmt=500;
 
-  // ── i18n ───────────────────────────────────────────────
-  const isJa = !navigator.language || navigator.language.startsWith('ja');
-  const T = {
+// ── i18n ───────────────────────────────────────────────
+const isJa = !navigator.language || navigator.language.startsWith('ja');
+const T = {
       teamTitle:   isJa ? 'チームを作ろう'                              : 'Build Your Team',
       teamSub:     isJa ? '専門スキルを持つAIエージェントを作って、仕事を任せましょう。' : 'Create AI agents with specialized skills.',
       teamBtn:     isJa ? '最初のエージェントを作る →'                  : 'Create your first agent →',
@@ -613,10 +612,9 @@ let chargeAmt=500;
       charge:      isJa ? '+ 残高チャージ'                              : '+ Add Credits',
       logout:      isJa ? 'ログアウト'                                  : 'Logout',
       placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
-  };
+};
 /* ── Boot ──────────────────────────────────────────── */
 window.onload=async()=>{
-console.log('ONLOAD_START');
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],

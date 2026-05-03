@@ -47,7 +47,7 @@ var T = {
       placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
 };
 /* ── Boot ──────────────────────────────────────────── */
-window.onload=async()=>{
+document.addEventListener('DOMContentLoaded',async()=>{
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],
@@ -342,4 +342,4 @@ function showToast(msg,type='ok'){
   t.className='toast '+type+' on';
   clearTimeout(toastT);
   toastT=setTimeout(()=>t.classList.remove('on'),3200);
-}
+});

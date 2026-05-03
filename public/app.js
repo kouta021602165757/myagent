@@ -1,6 +1,6 @@
-const API='';
-const AVATARS=['🤖','🦊','🐸','🐙','🦋','🐬','🦄','🐧','🦁','🐲','⭐','🌈','🦅','🐯','🦝','🐻','🧙','🤠','🥷','👾','🦸','🧚','🐼','🦜'];
-const SKILLS=[
+var API='';
+var AVATARS=['🤖','🦊','🐸','🐙','🦋','🐬','🦄','🐧','🦁','🐲','⭐','🌈','🦅','🐯','🦝','🐻','🧙','🤠','🥷','👾','🦸','🧚','🐼','🦜'];
+var SKILLS=[
   {id:'writing',icon:'✍️',name:'ライティング',desc:'メール・記事・提案書'},
   {id:'research',icon:'🔍',name:'リサーチ',desc:'情報収集・分析'},
   {id:'coding',icon:'💻',name:'プログラミング',desc:'コード作成・デバッグ'},
@@ -17,7 +17,7 @@ const SKILLS=[
   {id:'designer',icon:'🎨',name:'デザイナー',desc:'UI/UX・ビジュアル'},
   {id:'sns',icon:'📱',name:'SNS担当',desc:'投稿作成・分析・集客'},
 ];
-const CHIPS={
+var CHIPS={
   writing:['メールの下書き','キャッチコピー10個','ブログ記事を書いて'],
   research:['競合分析して','トレンドを調べて'],
   coding:['コードレビューして','バグを直して'],
@@ -30,13 +30,13 @@ const CHIPS={
   teaching:['簡単に説明して','具体例を挙げて'],
 };
 
-let token=null,me=null,agents=[],activeId=null;
-let NA={avatar:'🤖',name:'',skills:[],persona:''};
-let chargeAmt=500;
+var token=null,me=null,agents=[],activeId=null;
+var NA={avatar:'🤖',name:'',skills:[],persona:''};
+var chargeAmt=500;
 
 // ── i18n ───────────────────────────────────────────────
-const isJa = !navigator.language || navigator.language.startsWith('ja');
-const T = {
+var isJa = !navigator.language || navigator.language.startsWith('ja');
+var T = {
       teamTitle:   isJa ? 'チームを作ろう'                              : 'Build Your Team',
       teamSub:     isJa ? '専門スキルを持つAIエージェントを作って、仕事を任せましょう。' : 'Create AI agents with specialized skills.',
       teamBtn:     isJa ? '最初のエージェントを作る →'                  : 'Create your first agent →',
@@ -335,7 +335,7 @@ function now(){return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minu
 function exTA(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 function taKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
 function setBtnLoad(id,on,txt){const b=document.getElementById(id);b.disabled=on;if(txt)b.textContent=txt;}
-let toastT;
+var toastT;
 function showToast(msg,type='ok'){
   const t=document.getElementById('toast');
   document.getElementById('toastMsg').textContent=msg;

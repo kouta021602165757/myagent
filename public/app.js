@@ -83,7 +83,7 @@ function showVerifyBanner(){
   const banner=document.createElement('div');
   banner.id='verify-banner';
   banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:200;padding:10px 20px;background:#ffb547;color:#04040a;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;';
-  banner.innerHTML='📧 メールアドレスの確認が完了していません。 <button onclick="resendVerify()" style="background:rgba(0,0,0,.15);border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;">確認メールを再送</button> <button onclick="document.getElementById('verify-banner').remove()" style="background:none;border:none;cursor:pointer;font-size:16px;margin-left:8px;">×</button>';
+  banner.innerHTML='📧 メールアドレスの確認が完了していません。 <button onclick="resendVerify()" style="background:rgba(0,0,0,.15);border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;">確認メールを再送</button> <button onclick="document.getElementById("verify-banner").remove()" style="background:none;border:none;cursor:pointer;font-size:16px;margin-left:8px;">×</button>';
   document.body.prepend(banner);
 }
 

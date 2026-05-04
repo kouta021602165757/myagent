@@ -756,42 +756,38 @@ body{color:#f0f0f8;}
   </div>
 </div>
 
-<!-- ── エージェント編集モーダル ── -->
-<div class="modal-overlay gone" id="editAgentModal">
-  <div class="wizard-modal" style="max-width:460px;padding:0;overflow:hidden;border-radius:20px;border:1px solid rgba(180,120,80,.2);box-shadow:0 20px 60px rgba(0,0,0,.15)">
-    <div class="wiz-top" style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(180,120,80,.12)">
-      <div class="wiz-title" style="font-size:16px;font-weight:700;color:var(--text)">エージェントを編集</div>
-      <button onclick="closeEditAgent()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">×</button>
+
+<!-- ── エージェント右パネル ── -->
+<div id="editPanel" style="position:fixed;top:0;right:-320px;bottom:0;width:300px;background:var(--cream);border-left:1px solid rgba(180,120,80,.2);box-shadow:-8px 0 24px rgba(0,0,0,.1);z-index:400;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(180,120,80,.12)">
+    <div style="font-size:15px;font-weight:700;color:var(--text)">エージェントを編集</div>
+    <button onclick="closeEditAgent()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:0">×</button>
+  </div>
+  <div style="padding:18px;display:flex;flex-direction:column;gap:14px;flex:1;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(251,146,60,.06);border-radius:12px;border:1px solid rgba(251,146,60,.12)">
+      <div id="editAgAvatar" style="font-size:28px"></div>
+      <div>
+        <div id="editAgName2" style="font-size:14px;font-weight:700;color:var(--text)"></div>
+        <div id="editAgSkills" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+      </div>
     </div>
-    <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
-      <!-- アバター表示 -->
-      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:rgba(251,146,60,.06);border-radius:14px;border:1px solid rgba(251,146,60,.12)">
-        <div id="editAgAvatar" style="font-size:32px"></div>
-        <div>
-          <div id="editAgName2" style="font-size:15px;font-weight:700;color:var(--text)"></div>
-          <div id="editAgSkills" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
-        </div>
-      </div>
-      <!-- 名前編集 -->
-      <div>
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:.04em">エージェント名</label>
-        <input id="editName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
-      </div>
-      <!-- 性格・追加指示 -->
-      <div>
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:.04em">性格・追加指示（任意）</label>
-        <textarea id="editPersona" placeholder="例：丁寧な口調で話してください。箇条書きで答えてください。" rows="4" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
-      </div>
-      <!-- ボタン -->
-      <div style="display:flex;gap:10px;margin-top:4px">
-        <button onclick="saveEditAgent()" style="flex:1;background:var(--peach);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
-      </div>
-      <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:14px">
-        <button onclick="deleteAgent()" style="width:100%;background:rgba(239,68,68,.08);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">🗑 このエージェントを削除</button>
-      </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">エージェント名</label>
+      <input id="editName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">性格・追加指示（任意）</label>
+      <textarea id="editPersona" placeholder="例：丁寧な口調で話してください。" rows="5" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
+    </div>
+    <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
+    <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px">
+      <button onclick="deleteAgent()" style="width:100%;background:rgba(239,68,68,.06);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">🗑 このエージェントを削除</button>
     </div>
   </div>
 </div>
+<!-- パネル背景オーバーレイ -->
+<div id="editPanelOverlay" onclick="closeEditAgent()" style="display:none;position:fixed;inset:0;background:rgba(45,26,14,.3);z-index:399;backdrop-filter:blur(2px)"></div>
+
 <div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
 
 <script>
@@ -1108,11 +1104,13 @@ function openEditAgent(id){
   document.getElementById('editAgSkills').textContent = ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ');
   document.getElementById('editName').value = ag.name;
   document.getElementById('editPersona').value = ag.persona || '';
-  document.getElementById('editAgentModal').classList.remove('gone');
+  document.getElementById('editPanel').style.right = '0';
+  document.getElementById('editPanelOverlay').style.display = 'block';
 }
 
 function closeEditAgent(){
-  document.getElementById('editAgentModal').classList.add('gone');
+  document.getElementById('editPanel').style.right = '-320px';
+  document.getElementById('editPanelOverlay').style.display = 'none';
 }
 
 async function saveEditAgent(){

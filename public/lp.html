@@ -470,6 +470,21 @@ footer h3, footer .footer-brand { color: #fff !important; }
 .marquee-wrap, .marquee-section { background: #2d1205 !important; }
 .marquee-item, .marquee-track * { color: #fff !important; }
 
+
+/* 追加修正 */
+.section-title { color: #1a0a00 !important; }
+.section-label { color: #fb923c !important; }
+.section-sub { color: #5c3a1e !important; }
+.pa-name { color: #2d1a0e !important; }
+.pa-role { color: #8c6a52 !important; }
+.pchat-bubble { color: #2d1a0e !important; background: #fff !important; border: 1px solid rgba(180,120,80,.12) !important; }
+.pchat-bubble .pchat-user { background: rgba(251,146,60,.12) !important; color: #2d1a0e !important; }
+#pricing .section-title, #pricing .section-label, #pricing .section-sub { color: #1a0a00 !important; }
+#pricing h3 { color: #1a0a00 !important; }
+#pricing p { color: #5c3a1e !important; }
+#pricing li { color: #5c3a1e !important; }
+.plan-cta-link { background: rgba(251,146,60,.1) !important; color: #fb923c !important; border: 1px solid rgba(251,146,60,.2) !important; }
+
 </style>
 </head>
 <body>
@@ -503,7 +518,7 @@ footer h3, footer .footer-brand { color: #fff !important; }
   </h1>
 
   <p class="hero-sub">
-    名前をつけて、スキルを与えて、<b>仕事を任せる。</b><br>
+    名前をつけて、スキルを与えて、<b style="color:#2d1a0e">仕事を任せる。</b><br>
     あなただけのAIエージェントチームを、今日から。
   </p>
 
@@ -526,7 +541,7 @@ footer h3, footer .footer-brand { color: #fff !important; }
           <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:0 4px 8px;">チーム</div>
           <div class="preview-agent active">
             <div class="pa-icon">✍️</div>
-            <div><div class="pa-name">ライター田中</div><div class="pa-role">ライティング</div></div>
+            <div><div class="pa-name" style="color:#2d1a0e">ライター田中</div><div class="pa-role" style="color:#8c6a52">ライティング</div></div>
             <div class="pa-dot"></div>
           </div>
           <div class="preview-agent">
@@ -557,7 +572,7 @@ footer h3, footer .footer-brand { color: #fff !important; }
               1. 「毎日が、変わりはじめる。」<br>
               2. 「カラダの声を、聞いてあげて。」<br>
               3. 「忙しいあなたに、静かな革命を。」<br>
-              <span style="color:var(--fog);">…他7案を作成中</span>
+              <span style="color:#9a6a4a;">…他7案を作成中</span>
             </div>
           </div>
           <div class="pchat-msg agent">
@@ -577,12 +592,7 @@ footer h3, footer .footer-brand { color: #fff !important; }
 </section>
 
 <!-- ── STATS ─────────────────────────────────────────────── -->
-<div class="stats">
-  <div class="stat reveal">
-  </div>
 
-
-</div>
 
 <!-- ── HOW IT WORKS ───────────────────────────────────────── -->
 <div id="how" class="section">
@@ -651,57 +661,57 @@ footer h3, footer .footer-brand { color: #fff !important; }
 <!-- ── FOOTER ─────────────────────────────────────────────── -->
 
 <!-- ── PRICING ─────────────────────────────────────────────── -->
-<section class="section" id="pricing" style="background:#07070f">
+<section class="section" id="pricing" style="background:#faf3eb">
   <p class="section-label reveal">PRICING</p>
   <h2 class="section-title reveal">シンプルな料金体系</h2>
   <p class="section-sub reveal">使った分だけ。月額固定なし。</p>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:900px;margin:48px auto 0">
     <!-- フリープラン -->
-    <div class="reveal" style="background:#faf3eb;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
-      <p style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">FREE</p>
-      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥0</h3>
-      <p style="color:var(--fog);font-size:14px;margin-bottom:24px">まず試してみる</p>
-      <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
+    <div class="reveal" style="background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:20px;padding:32px;text-align:center">
+      <p style="color:#f97316;font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">FREE</p>
+      <h3 style="font-size:36px;font-weight:900;color:#1a0a00;margin-bottom:4px">¥0</h3>
+      <p style="color:#6b4226;font-size:14px;margin-bottom:24px">まず試してみる</p>
+      <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:#6b4226;display:flex;flex-direction:column;gap:10px">
         <li>✅ 無料登録ですぐ使える</li>
         <li>✅ エージェント作成：3体まで</li>
         <li>✅ 15の専門スキルから選択</li>
         <li>⬜ メッセージ：残高チャージ必要</li>
       </ul>
-      <a href="/app.html" style="display:block;background:rgba(255,255,255,.08);color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">無料で始める →</a>
+      <a href="/app.html" style="display:block;background:rgba(255,255,255,.08);color:#1a0a00;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">無料で始める →</a>
     </div>
 
     <!-- スタンダード -->
-    <div class="reveal" style="background:linear-gradient(135deg,#0d1a00,#111);border:2px solid var(--volt);border-radius:20px;padding:32px;text-align:center;position:relative">
-      <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--volt);color:#fdf8f3;font-size:11px;font-weight:900;padding:4px 16px;border-radius:20px;letter-spacing:.08em">人気 🔥</div>
+    <div class="reveal" style="background:linear-gradient(135deg,#fff8f3,#fff);border:2px solid #fb923c;border-radius:20px;padding:32px;text-align:center;position:relative">
+      <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#fb923c;color:#1a0a00;font-size:11px;font-weight:900;padding:4px 16px;border-radius:20px;letter-spacing:.08em">人気 🔥</div>
       <p style="color:var(--volt);font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">STANDARD</p>
-      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥1,000</h3>
-      <p style="color:var(--fog);font-size:14px;margin-bottom:24px">約50〜100メッセージ分</p>
-      <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
+      <h3 style="font-size:36px;font-weight:900;color:#1a0a00;margin-bottom:4px">¥1,000</h3>
+      <p style="color:#6b4226;font-size:14px;margin-bottom:24px">約50〜100メッセージ分</p>
+      <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:#6b4226;display:flex;flex-direction:column;gap:10px">
         <li>✅ すぐ使えるチャージ式</li>
         <li>✅ エージェント無制限作成</li>
         <li>✅ 全15スキル利用可能</li>
         <li>✅ 残高の有効期限なし</li>
       </ul>
-      <a href="/app.html" style="display:block;background:var(--volt);color:#fdf8f3;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">チャージして使う →</a>
+      <a href="/app.html" style="display:block;background:#fb923c;color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">チャージして使う →</a>
     </div>
 
     <!-- ヘビーユーザー -->
-    <div class="reveal" style="background:#faf3eb;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
-      <p style="color:#c084fc;font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">POWER</p>
-      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥5,000</h3>
-      <p style="color:var(--fog);font-size:14px;margin-bottom:24px">約300〜500メッセージ分</p>
-      <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
+    <div class="reveal" style="background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:20px;padding:32px;text-align:center">
+      <p style="color:#a855f7;font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">POWER</p>
+      <h3 style="font-size:36px;font-weight:900;color:#1a0a00;margin-bottom:4px">¥5,000</h3>
+      <p style="color:#6b4226;font-size:14px;margin-bottom:24px">約300〜500メッセージ分</p>
+      <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:#6b4226;display:flex;flex-direction:column;gap:10px">
         <li>✅ まとめてお得なチャージ</li>
         <li>✅ エージェント無制限作成</li>
         <li>✅ 全15スキル利用可能</li>
         <li>✅ 残高の有効期限なし</li>
       </ul>
-      <a href="/app.html" style="display:block;background:rgba(192,132,252,.15);color:#c084fc;border:1px solid rgba(192,132,252,.3);text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">まとめてチャージ →</a>
+      <a href="/app.html" style="display:block;background:rgba(168,85,247,.1);color:#7c3aed;border:1px solid rgba(168,85,247,.3);text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">まとめてチャージ →</a>
     </div>
   </div>
 
-  <p class="reveal" style="text-align:center;color:var(--fog);font-size:13px;margin-top:32px">
+  <p class="reveal" style="text-align:center;color:#6b4226;font-size:13px;margin-top:32px">
     💳 Stripeによる安全な決済 &nbsp;|&nbsp; 🔒 SSL暗号化通信 &nbsp;|&nbsp; 📱 クレジットカード対応
   </p>
 </section>

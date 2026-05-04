@@ -485,6 +485,61 @@ footer h3, footer .footer-brand { color: #fff !important; }
 #pricing li { color: #5c3a1e !important; }
 .plan-cta-link { background: rgba(251,146,60,.1) !important; color: #fb923c !important; border: 1px solid rgba(251,146,60,.2) !important; }
 
+
+/* 追加修正2 */
+/* スキルセクション（暗い背景）のタイトルは白 */
+.skills-section .section-title,
+.skills-section .section-label,
+.skills-section .section-sub,
+section[style*="background:#2d1205"] .section-title,
+section[style*="background:#2d1205"] .section-label,
+section[style*="background:#2d1205"] .section-sub,
+section[style*="background:#3d1f0a"] .section-title { color: #fff !important; }
+
+/* CTAセクション（オレンジ背景）のテキストは白 */
+.cta-section .section-title,
+.cta-section span,
+.cta-section h2,
+.cta-section p,
+section[style*="background:linear-gradient(135deg, #fb923c"] * { color: #fff !important; }
+
+/* stepアイコンのボックス */
+.step-icon {
+  background: rgba(251,146,60,.12) !important;
+  border: 1px solid rgba(251,146,60,.2) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+  font-size: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* pchat-typing（ローディングドット）*/
+.pt-dot {
+  background: #b89880 !important;
+}
+.pchat-typing { background: transparent !important; }
+
+/* pa-name, pa-role（デモ内）全て暗い色に */
+.pa-name { color: #2d1a0e !important; font-weight: 600 !important; }
+.pa-role { color: #8c6a52 !important; font-size: 11px !important; }
+
+/* pchat-bubble（エージェント返答）*/
+.pchat-bubble {
+  background: #fff !important;
+  color: #2d1a0e !important;
+  border: 1px solid rgba(180,120,80,.15) !important;
+  border-radius: 12px !important;
+}
+
+/* pchat-msg user（ユーザー発言）*/
+.pchat-msg.user .pchat-bubble {
+  background: rgba(251,146,60,.12) !important;
+  color: #2d1a0e !important;
+  border: 1px solid rgba(251,146,60,.2) !important;
+}
+
 </style>
 </head>
 <body>
@@ -540,13 +595,13 @@ footer h3, footer .footer-brand { color: #fff !important; }
         <div class="preview-sidebar">
           <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:0 4px 8px;">チーム</div>
           <div class="preview-agent active">
-            <div class="pa-icon">✍️</div>
-            <div><div class="pa-name" style="color:#2d1a0e">ライター田中</div><div class="pa-role" style="color:#8c6a52">ライティング</div></div>
+            <div class="pa-icon">👑</div>
+            <div><div class="pa-name" style="color:#2d1a0e">CEOの田中</div><div class="pa-role" style="color:#8c6a52">経営戦略</div></div>
             <div class="pa-dot"></div>
           </div>
           <div class="preview-agent">
-            <div class="pa-icon">📊</div>
-            <div><div class="pa-name">分析の鈴木</div><div class="pa-role">データ分析</div></div>
+            <div class="pa-icon">⚙️</div>
+            <div><div class="pa-name">COOの鈴木</div><div class="pa-role">業務最適化</div></div>
             <div class="pa-dot"></div>
           </div>
           <div class="preview-agent">
@@ -555,8 +610,8 @@ footer h3, footer .footer-brand { color: #fff !important; }
             <div class="pa-dot"></div>
           </div>
           <div class="preview-agent">
-            <div class="pa-icon">📣</div>
-            <div><div class="pa-name">マーケの山田</div><div class="pa-role">マーケティング</div></div>
+            <div class="pa-icon">📱</div>
+            <div><div class="pa-name">SNS担当の山田</div><div class="pa-role">SNS・集客</div></div>
             <div class="pa-dot"></div>
           </div>
         </div>

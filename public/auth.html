@@ -190,26 +190,115 @@ input{font-family:var(--sans);}
   .right{padding:32px 20px;}
 }
 
-/* Auth ライトクリーム×ピーチテーマ */
-html,body{background:linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important;min-height:100vh;color:#2d1a0e !important;}
-.auth-wrap,.wrap,.container{background:transparent !important;}
-.auth-card,.card,.panel{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 8px 40px rgba(180,120,80,.12) !important;border-radius:20px !important;}
-.auth-logo,.logo{color:#2d1a0e !important;}
-h1,h2,h3,.title{color:#2d1a0e !important;}
-p,.sub,.desc{color:#6b4226 !important;}
-input,textarea{background:#faf3eb !important;border:1px solid rgba(180,120,80,.2) !important;color:#2d1a0e !important;border-radius:10px !important;}
-input::placeholder,textarea::placeholder{color:#b89880 !important;}
-input:focus,textarea:focus{border-color:#fb923c !important;outline:none !important;box-shadow:0 0 0 3px rgba(251,146,60,.15) !important;}
-label{color:#6b4226 !important;font-size:13px;}
-button[type="submit"],.btn-primary,.submit-btn{background:#fb923c !important;color:#fff !important;border-radius:12px !important;font-weight:700 !important;}
-button[type="submit"]:hover{background:#ea580c !important;}
-.tab-btn,.tab{color:#8c6a52 !important;border-bottom:2px solid transparent !important;}
-.tab-btn.active,.tab.active{color:#ea580c !important;border-bottom-color:#fb923c !important;}
-a{color:#ea580c !important;}
-.link{color:#ea580c !important;}
-.divider{border-color:rgba(180,120,80,.2) !important;}
-.google-btn{background:#fff !important;border:1px solid rgba(180,120,80,.2) !important;color:#2d1a0e !important;border-radius:12px !important;}
-.google-btn:hover{background:#faf3eb !important;}
+
+/* ============ Auth 全修正 ============ */
+html, body {
+  background: linear-gradient(160deg, #fdf8f3 0%, #fde8d8 100%) !important;
+  min-height: 100vh;
+  color: #2d1a0e !important;
+}
+
+/* カード */
+.auth-card, .card, .box, .panel, .form-wrap {
+  background: #fff !important;
+  border: 1px solid rgba(180,120,80,.18) !important;
+  box-shadow: 0 8px 40px rgba(180,100,40,.12) !important;
+  border-radius: 20px !important;
+}
+
+/* ロゴ・タイトル */
+.auth-logo, .logo, .brand {
+  color: #2d1a0e !important;
+}
+h1, h2, .title, .auth-title {
+  color: #1a0a00 !important;
+}
+p, .sub, .desc, .auth-sub {
+  color: #6b4226 !important;
+}
+
+/* タブ（ログイン/新規登録） */
+.tab-wrap, .tabs {
+  border-bottom: 1px solid rgba(180,120,80,.15) !important;
+}
+.tab-btn, .tab {
+  color: #9a6a4a !important;
+  background: none !important;
+  border-bottom: 2px solid transparent !important;
+  font-weight: 600 !important;
+}
+.tab-btn.active, .tab.active, .tab-btn[data-active] {
+  color: #ea580c !important;
+  border-bottom-color: #fb923c !important;
+}
+
+/* ラベル */
+label {
+  color: #6b4226 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+/* 入力欄 */
+input[type="text"], input[type="email"], input[type="password"] {
+  background: #faf3eb !important;
+  border: 1px solid rgba(180,120,80,.25) !important;
+  color: #1a0a00 !important;
+  border-radius: 10px !important;
+}
+input::placeholder {
+  color: #b89880 !important;
+}
+input:focus {
+  border-color: #fb923c !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(251,146,60,.15) !important;
+}
+
+/* 送信ボタン（「無料で始める」「ログイン」） - 白になっている問題を修正 */
+button[type="submit"],
+.btn-primary,
+.submit-btn,
+.auth-btn,
+.btn-submit {
+  background: #fb923c !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  padding: 14px !important;
+  width: 100% !important;
+  font-size: 15px !important;
+  cursor: pointer !important;
+}
+button[type="submit"]:hover {
+  background: #ea580c !important;
+}
+
+/* リンク */
+a { color: #ea580c !important; }
+.link, .auth-link { color: #ea580c !important; font-weight: 600 !important; }
+
+/* Googleログインボタン */
+.google-btn, .btn-google, .oauth-btn {
+  background: #fff !important;
+  border: 1px solid rgba(180,120,80,.2) !important;
+  color: #2d1a0e !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+}
+.google-btn:hover { background: #faf3eb !important; }
+
+/* 区切り線 */
+.divider, .or-divider { color: #b89880 !important; }
+.divider::before, .divider::after { border-color: rgba(180,120,80,.2) !important; }
+
+/* エラーメッセージ */
+.error, .error-msg { color: #ef4444 !important; }
+
+/* チェックボックス */
+input[type="checkbox"] { accent-color: #fb923c !important; }
+
 </style>
 </head>
 <body>

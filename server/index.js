@@ -66,12 +66,16 @@ function sbReq(method,table,qs='',body=null){
   return new Promise((res,rej)=>{
     const u=new url.URL(`${SUPA_URL}/rest/v1/${table}${qs}`);
     const pay=body?JSON.stringify(body):null;
+    const headers={'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,
+      'Content-Type':'application/json','Prefer':'return=representation',
+      ...(pay?{'Content-Length':Buffer.byteLength(pay)}:{})};
     const req=https.request({
-      hostname:u.hostname,path:u.pathname+u.search,method,
-      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,
-        ...(pay?{'Content-Length':Buffer.byteLength(pay)}:{})}
+      hostname:u.hostname,path:u.pathname+u.search,method,headers,timeout:8000
     },r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{try{res({s:r.statusCode,d:JSON.parse(d||'[]')});}catch{res({s:r.statusCode,d});}});});
-          
+    req.on('error',e=>{console.error('sbReq error:',e.message);rej(e);});
+    req.on('timeout',()=>{req.destroy();rej(new Error('Supabase timeout'));});
+    if(pay)req.write(pay);
+    req.end();
   });
 }
 

@@ -9,20 +9,20 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --ink:#04040a;
-  --ink2:#0b0b14;
-  --ink3:#11111e;
-  --ink4:#181828;
-  --wire:rgba(255,255,255,.06);
-  --wire2:rgba(255,255,255,.11);
-  --wire3:rgba(255,255,255,.2);
-  --snow:#f0f0f8;
-  --mist:#7272a0;
-  --fog:#3a3a5a;
-  --volt:#c8ff57;      /* lime accent */
-  --volt-dim:rgba(200,255,87,.12);
-  --volt-glow:rgba(200,255,87,.3);
-  --cyan:#00e5cc;
+  --ink:#fdf8f3;
+  --ink2:#faf3eb;
+  --ink3:#f5ebe0;
+  --ink4:#ede0d4;
+  --wire:rgba(180,120,80,.08);
+  --wire2:rgba(180,120,80,.15);
+  --wire3:rgba(180,120,80,.22);
+  --snow:#2d1a0e;
+  --mist:#8c6a52;
+  --fog:#b89880;
+  --volt:#fb923c;      /* lime accent */
+  --volt-dim:rgba(251,146,60,.12);
+  --volt-glow:rgba(251,146,60,.3);
+  --cyan:#f97316;
   --cyan-dim:rgba(0,229,204,.1);
   --rose:#ff4d6d;
   --sans:'Noto Sans JP',sans-serif;
@@ -93,14 +93,14 @@ nav{
 /* radial glow */
 .hero::after{
   content:'';position:absolute;width:800px;height:800px;border-radius:50%;
-  background:radial-gradient(circle,rgba(200,255,87,.06) 0%,transparent 65%);
+  background:radial-gradient(circle,rgba(251,146,60,.06) 0%,transparent 65%);
   top:50%;left:50%;transform:translate(-50%,-55%);pointer-events:none;
 }
 
 .hero-kicker{
   display:inline-flex;align-items:center;gap:8px;
   padding:6px 16px;border-radius:20px;margin-bottom:32px;
-  background:var(--volt-dim);border:1px solid rgba(200,255,87,.25);
+  background:var(--volt-dim);border:1px solid rgba(251,146,60,.25);
   font-size:12px;font-weight:700;color:var(--volt);letter-spacing:.08em;text-transform:uppercase;
   position:relative;z-index:1;
   animation:fadeDown .6s ease both;
@@ -169,7 +169,7 @@ nav{
 }
 .preview-shell{
   background:var(--ink2);border:1px solid var(--wire2);border-radius:20px;
-  overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 40px 80px rgba(0,0,0,.7);
+  overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 40px 80px rgba(45,26,14,.5);
 }
 .preview-bar{
   background:var(--ink3);border-bottom:1px solid var(--wire);
@@ -190,7 +190,7 @@ nav{
   display:flex;align-items:center;gap:10px;padding:10px;
   border-radius:10px;transition:background .15s;
 }
-.preview-agent.active{background:rgba(200,255,87,.08);border:1px solid rgba(200,255,87,.2);}
+.preview-agent.active{background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);}
 .preview-agent:not(.active){border:1px solid transparent;}
 .pa-icon{
   width:34px;height:34px;border-radius:9px;background:var(--ink4);
@@ -290,7 +290,7 @@ nav{
   transition:all .2s;cursor:default;
 }
 .skill-card:hover{
-  border-color:rgba(200,255,87,.3);
+  border-color:rgba(251,146,60,.3);
   background:var(--volt-dim);
   transform:translateY(-3px);
 }
@@ -310,7 +310,7 @@ nav{
 }
 .cta-section::before{
   content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(200,255,87,.05) 0%,transparent 70%);
+  background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(251,146,60,.05) 0%,transparent 70%);
 }
 .cta-title{
   font-family:var(--display);font-size:clamp(48px,8vw,100px);
@@ -361,6 +361,21 @@ footer a:hover{color:var(--mist);}
   .preview-sidebar{display:none;}
   footer{flex-direction:column;gap:12px;text-align:center;}
 }
+
+/* LP ライトクリーム×ピーチテーマ */
+html,body{background:#fdf8f3 !important;color:#2d1a0e !important;}
+nav,header,.nav{background:rgba(253,248,243,.95) !important;border-bottom:1px solid rgba(180,120,80,.12) !important;}
+.hero,.hero-section{background:linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important;}
+h1,h2,h3,.hero-title,.section-title{color:#2d1a0e !important;}
+p,.hero-sub,.section-sub,.plan-feat,.faq-a{color:#6b4226 !important;}
+.feature-card,.pricing-card,.faq-item,.card{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 4px 20px rgba(180,120,80,.06) !important;}
+.pricing-card.pop,.plan-popular{border-color:#fb923c !important;box-shadow:0 8px 32px rgba(251,146,60,.18) !important;}
+.badge,.tag,.label{background:rgba(251,146,60,.12) !important;color:#ea580c !important;}
+footer,.footer{background:#f5ebe0 !important;border-top:1px solid rgba(180,120,80,.15) !important;color:#6b4226 !important;}
+footer *,.footer *{color:#6b4226 !important;}
+a{color:#ea580c !important;}
+.btn,.cta-btn{background:#fb923c !important;color:#fff !important;}
+.btn-outline{background:transparent !important;border:1px solid #fb923c !important;color:#fb923c !important;}
 </style>
 </head>
 <body>
@@ -549,9 +564,9 @@ footer a:hover{color:var(--mist);}
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:900px;margin:48px auto 0">
     <!-- フリープラン -->
-    <div class="reveal" style="background:#0b0b14;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
+    <div class="reveal" style="background:#faf3eb;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
       <p style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">FREE</p>
-      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥0</h3>
+      <h3 style="font-size:36px;font-weight:900;color:#2d1a0e;margin-bottom:4px">¥0</h3>
       <p style="color:var(--fog);font-size:14px;margin-bottom:24px">まず試してみる</p>
       <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
         <li>✅ 無料登録ですぐ使える</li>
@@ -559,14 +574,14 @@ footer a:hover{color:var(--mist);}
         <li>✅ 15の専門スキルから選択</li>
         <li>⬜ メッセージ：残高チャージ必要</li>
       </ul>
-      <a href="/app.html" style="display:block;background:rgba(255,255,255,.08);color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">無料で始める →</a>
+      <a href="/app.html" style="display:block;background:rgba(255,255,255,.08);color:#2d1a0e;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">無料で始める →</a>
     </div>
 
     <!-- スタンダード -->
     <div class="reveal" style="background:linear-gradient(135deg,#0d1a00,#111);border:2px solid var(--volt);border-radius:20px;padding:32px;text-align:center;position:relative">
-      <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--volt);color:#04040a;font-size:11px;font-weight:900;padding:4px 16px;border-radius:20px;letter-spacing:.08em">人気 🔥</div>
+      <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--volt);color:#fdf8f3;font-size:11px;font-weight:900;padding:4px 16px;border-radius:20px;letter-spacing:.08em">人気 🔥</div>
       <p style="color:var(--volt);font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">STANDARD</p>
-      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥1,000</h3>
+      <h3 style="font-size:36px;font-weight:900;color:#2d1a0e;margin-bottom:4px">¥1,000</h3>
       <p style="color:var(--fog);font-size:14px;margin-bottom:24px">約50〜100メッセージ分</p>
       <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
         <li>✅ すぐ使えるチャージ式</li>
@@ -574,13 +589,13 @@ footer a:hover{color:var(--mist);}
         <li>✅ 全15スキル利用可能</li>
         <li>✅ 残高の有効期限なし</li>
       </ul>
-      <a href="/app.html" style="display:block;background:var(--volt);color:#04040a;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">チャージして使う →</a>
+      <a href="/app.html" style="display:block;background:var(--volt);color:#fdf8f3;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">チャージして使う →</a>
     </div>
 
     <!-- ヘビーユーザー -->
-    <div class="reveal" style="background:#0b0b14;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
+    <div class="reveal" style="background:#faf3eb;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
       <p style="color:#c084fc;font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">POWER</p>
-      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥5,000</h3>
+      <h3 style="font-size:36px;font-weight:900;color:#2d1a0e;margin-bottom:4px">¥5,000</h3>
       <p style="color:var(--fog);font-size:14px;margin-bottom:24px">約300〜500メッセージ分</p>
       <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
         <li>✅ まとめてお得なチャージ</li>

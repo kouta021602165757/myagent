@@ -307,6 +307,14 @@ function buildSystem(agent){
 async function handleAPI(req,res,pathname,method,ip){
   if(!rateLimit(ip,150,60000))return jres(res,429,{error:'リクエストが多すぎます。しばらく待ってから試してください。'});
 
+  
+  // ── DEBUG: check env ──
+  if(pathname==='/api/debug-env'&&method==='GET'){
+    return jres(res,200,{
+      anthropic_key_prefix: ANTHROPIC ? ANTHROPIC.substring(0,15) : 'EMPTY',
+      anthropic_key_len: ANTHROPIC ? ANTHROPIC.length : 0,
+    });
+  }
   // ── POST /api/auth/signup ──────────────────────────────────
   if(pathname==='/api/auth/signup'&&method==='POST'){
     const{name,email,password}=await readBody(req);

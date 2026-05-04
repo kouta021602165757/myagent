@@ -1348,5 +1348,60 @@ function showToast(msg,type='ok'){
 }
 
 </script>
+
+<script>
+(function(){
+  var lang = navigator.language || navigator.userLanguage || 'ja';
+  var isJa = lang.startsWith('ja');
+  var params = new URLSearchParams(location.search);
+  if(params.get('lang')==='en') isJa=false;
+  if(params.get('lang')==='ja') isJa=true;
+  if(isJa) return;
+  var map = {
+    'MY AI AGENT': 'MY AI AGENT',
+    'チーム': 'Team',
+    '+ 新しいエージェント': '+ New agent',
+    '残高': 'Balance',
+    '0メッセージ利用': '0 messages used',
+    '+ 残高チャージ': '+ Add credits',
+    'ログアウト': 'Log out',
+    'チームを作ろう': 'Build your team',
+    '専門スキルを持つAIエージェントを作って、': 'Create AI agents with specialized skills,',
+    '仕事を任せましょう。': 'and delegate your work.',
+    '最初のエージェントを作る →': 'Create your first agent →',
+    '何をお願いしますか？（Shift+Enterで改行）': 'What would you like help with? (Shift+Enter for newline)',
+    '新しいエージェント': 'New agent',
+    'アイコンを選ぶ': 'Choose an icon',
+    '名前をつける': 'Name your agent',
+    'スキルを選ぶ': 'Choose skills',
+    '完了': 'Done',
+    '次へ': 'Next',
+    '戻る': 'Back',
+    '作成する': 'Create',
+    '送信': 'Send',
+    '設定': 'Settings',
+    'プロフィール': 'Profile',
+    'セキュリティ': 'Security',
+    'お支払い': 'Billing',
+    '危険': 'Danger',
+    '表示名': 'Display name',
+    '保存する': 'Save',
+    '現在のパスワード': 'Current password',
+    '新しいパスワード': 'New password',
+    '新しいパスワード（確認）': 'Confirm new password',
+    'パスワードを変更': 'Change password',
+    '現在の残高': 'Current balance',
+    'チャージ金額を選択してください。': 'Select top-up amount.',
+    'アカウントを削除': 'Delete account',
+    'エージェントを編集': 'Edit agent',
+    'エージェント名': 'Agent name',
+    '性格・追加指示（任意）': 'Persona & instructions (optional)',
+    'このエージェントを削除': 'Delete this agent',
+  };
+  window._i18nMap = map;
+  window._isJa = false;
+})();
+</script>
+
 </body>
 </html>

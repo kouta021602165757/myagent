@@ -801,5 +801,100 @@ const io = new IntersectionObserver(entries=>{
 },{threshold:.12});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 </script>
+
+<script>
+(function(){
+  var lang = navigator.language || navigator.userLanguage || 'ja';
+  var isJa = lang.startsWith('ja');
+  var params = new URLSearchParams(location.search);
+  if(params.get('lang')==='en') isJa=false;
+  if(params.get('lang')==='ja') isJa=true;
+  if(isJa) return;
+
+  // 英語テキストマッピング
+  var map = {
+    // ナビ
+    '使い方': 'How it works',
+    'スキル': 'Skills',
+    '料金': 'Pricing',
+    '無料で始める': 'Get started free',
+    // ヒーロー
+    'YOUR OWN': 'YOUR OWN',
+    'AI TEAM': 'AI TEAM',
+    'STARTS HERE': 'STARTS HERE',
+    'AIチームを': 'AI Team',
+    '名前をつけて、スキルを与えて、': 'Name them, give them skills,',
+    '仕事を任せる。': 'and let them work.',
+    'あなただけのAIエージェントチームを、今日から。': 'Your own AI agent team, starting today.',
+    '無料で始める →': 'Get started free →',
+    '使い方を見る': 'See how it works',
+    'AI AGENTを部下のように使う': 'Use AI AGENT like your team',
+    // ステップ
+    '3ステップで': 'Get started',
+    'チームが動き出す': 'in 3 steps',
+    '複雑な設定は不要。今すぐ始められます。': 'No complex setup. Start right now.',
+    'アイコンと名前をつける': 'Name your agent',
+    'スキルを与える': 'Assign skills',
+    '仕事を任せる': 'Put them to work',
+    '24種類のアイコンから選んで、自分だけのエージェントに名前をつけましょう。愛着が生まれると仕事も捗ります。': 'Choose from 24 icons and give your agent a name. When you care about them, work flows better.',
+    'ライティング、プログラミング、データ分析など15種類のスキルを付与。複数選択OKで、万能型も専門家型も作れます。': 'Assign from 15 skills including writing, coding, and data analysis. Mix and match for generalists or specialists.',
+    'チャット形式で気軽に指示するだけ。複数のエージェントを切り替えながら、それぞれの専門領域で仕事を依頼できます。': 'Just chat naturally. Switch between agents and delegate tasks to each specialist.',
+    // スキル
+    '15の専門スキル': '15 Professional Skills',
+    // 料金
+    'PRICING': 'PRICING',
+    'シンプルな料金体系': 'Simple Pricing',
+    '使った分だけ。月額固定なし。': 'Pay as you go. No monthly fee.',
+    'FREE': 'FREE',
+    'まず試してみる': 'Try for free',
+    '無料登録ですぐ使える': 'Start instantly, no credit card',
+    'エージェント作成：3体まで': 'Create up to 3 agents',
+    '15の専門スキルから選択': 'Choose from 15 skills',
+    'メッセージ：残高チャージ必要': 'Messages require balance',
+    '無料で始める →': 'Get started free →',
+    'STANDARD': 'STANDARD',
+    '約50〜100メッセージ分': 'Approx. 50–100 messages',
+    'すぐ使えるチャージ式': 'Instant top-up, use right away',
+    'エージェント無制限作成': 'Unlimited agents',
+    '全15スキル利用可能': 'All 15 skills available',
+    '残高の有効期限なし': 'Balance never expires',
+    'チャージして使う →': 'Top up & use →',
+    'POWER': 'POWER',
+    '約300〜500メッセージ分': 'Approx. 300–500 messages',
+    'まとめてお得なチャージ': 'Best value bulk top-up',
+    'まとめてチャージ →': 'Bulk top-up →',
+    '人気 🔥': 'Popular 🔥',
+    'Stripeによる安全な決済': 'Secure payments by Stripe',
+    'SSL暗号化通信': 'SSL encrypted',
+    'クレジットカード対応': 'Credit cards accepted',
+    // CTA
+    '今日から': 'Start today',
+    '持とう': '',
+    // FAQ
+    'よくある質問': 'FAQ',
+    // フッター
+    '利用規約': 'Terms',
+    'プライバシーポリシー': 'Privacy',
+    'お問い合わせ': 'Contact',
+    '© 2025 MY AI AGENT': '© 2025 MY AI AGENT',
+  };
+
+  function walk(node) {
+    if(node.nodeType === 3) {
+      var t = node.textContent.trim();
+      if(map[t]) node.textContent = node.textContent.replace(t, map[t]);
+    } else if(node.nodeType === 1 && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
+      node.childNodes.forEach(walk);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    walk(document.body);
+    document.documentElement.lang = 'en';
+    document.title = 'MY AI AGENT — Build Your AI Team';
+  });
+})();
+</script>
+
 </body>
 </html>

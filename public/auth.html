@@ -591,5 +591,52 @@ async function doReset(token) {
   setBtnLoad('r-btn', false, 'パスワードを変更');
 }
 </script>
+
+<script>
+(function(){
+  var lang = navigator.language || navigator.userLanguage || 'ja';
+  var isJa = lang.startsWith('ja');
+  var params = new URLSearchParams(location.search);
+  if(params.get('lang')==='en') isJa=false;
+  if(params.get('lang')==='ja') isJa=true;
+  if(isJa) return;
+  var map = {
+    'ログイン': 'Log in',
+    '新規登録': 'Sign up',
+    'メールアドレス': 'Email',
+    'パスワード': 'Password',
+    'お名前': 'Name',
+    'パスワード（確認）': 'Confirm password',
+    'ログインする': 'Log in',
+    '無料で始める': 'Get started free',
+    'Googleでログイン': 'Continue with Google',
+    'パスワードを忘れた方': 'Forgot password?',
+    'アカウントをお持ちでない方': "Don't have an account?",
+    'すでにアカウントをお持ちの方': 'Already have an account?',
+    'MY AI Agentへようこそ': 'Welcome to MY AI AGENT',
+    'AIエージェントチームを作ろう': 'Build your AI agent team',
+  };
+  function walk(node) {
+    if(node.nodeType === 3) {
+      var t = node.textContent.trim();
+      if(map[t]) node.textContent = node.textContent.replace(t, map[t]);
+    } else if(node.nodeType === 1 && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
+      node.childNodes.forEach(walk);
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    walk(document.body);
+    document.documentElement.lang = 'en';
+    document.title = 'MY AI AGENT — Log in';
+    var ph = document.querySelector('#email');
+    if(ph) ph.placeholder = 'Email address';
+    var ph2 = document.querySelector('#password');
+    if(ph2) ph2.placeholder = 'Password';
+    var ph3 = document.querySelector('#name');
+    if(ph3) ph3.placeholder = 'Your name';
+  });
+})();
+</script>
+
 </body>
 </html>

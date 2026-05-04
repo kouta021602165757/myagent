@@ -15,19 +15,23 @@
   --ink4:#ede0d4;
   --wire:rgba(180,120,80,.08);
   --wire2:rgba(180,120,80,.15);
-  --wire3:rgba(180,120,80,.22);
-  --snow:#2d1a0e;
-  --mist:#8c6a52;
-  --fog:#b89880;
-  --volt:#fb923c;      /* lime accent */
+  --wire3:rgba(180,120,80,.25);
+  --snow:#fff;
+  --mist:rgba(255,255,255,.7);
+  --fog:rgba(255,255,255,.4);
+  --volt:#fb923c;
   --volt-dim:rgba(251,146,60,.12);
   --volt-glow:rgba(251,146,60,.3);
   --cyan:#f97316;
-  --cyan-dim:rgba(0,229,204,.1);
-  --rose:#ff4d6d;
+  --rose:#ef4444;
+  --rose-dim:rgba(239,68,68,.1);
+  --amber:#f59e0b;
   --sans:'Noto Sans JP',sans-serif;
   --display:'Bebas Neue',sans-serif;
   --mono:'DM Mono',monospace;
+  --text:#2d1a0e;
+  --text2:#6b4226;
+  --text3:#9a6a4a;
 }
 html{scroll-behavior:smooth;}
 body{background:var(--ink);color:var(--snow);font-family:var(--sans);font-size:16px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
@@ -363,10 +367,10 @@ footer a:hover{color:var(--mist);}
 }
 
 /* LP ライトクリーム×ピーチテーマ */
-html,body{background:#fdf8f3 !important;color:#2d1a0e !important;}
+html,body{margin:0;font-family:var(--sans);background:#fdf8f3;color:var(--text);-webkit-font-smoothing:antialiased;}
 nav,header,.nav{background:rgba(253,248,243,.95) !important;border-bottom:1px solid rgba(180,120,80,.12) !important;}
 .hero,.hero-section{background:linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important;}
-h1,h2,h3,.hero-title,.section-title{color:#2d1a0e !important;}
+h1,h2,h3,.hero-title,.section-title{color:#fff !important;}
 p,.hero-sub,.section-sub,.plan-feat,.faq-a{color:#6b4226 !important;}
 .feature-card,.pricing-card,.faq-item,.card{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 4px 20px rgba(180,120,80,.06) !important;}
 .pricing-card.pop,.plan-popular{border-color:#fb923c !important;box-shadow:0 8px 32px rgba(251,146,60,.18) !important;}
@@ -376,6 +380,78 @@ footer *,.footer *{color:#6b4226 !important;}
 a{color:#ea580c !important;}
 .btn,.cta-btn{background:#fb923c !important;color:#fff !important;}
 .btn-outline{background:transparent !important;border:1px solid #fb923c !important;color:#fb923c !important;}
+
+/* ライトテーマ上書き */
+nav{background:rgba(253,248,243,.95) !important;backdrop-filter:blur(12px);border-bottom:1px solid rgba(180,120,80,.12);}
+nav a,.nav-link{color:var(--text2) !important;}
+.nav-logo,.logo-text{color:var(--text) !important;}
+.nav-cta,.cta-primary{background:#fb923c !important;color:#fff !important;}
+
+/* ヒーローセクション */
+.hero{background:linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important;}
+.hero h1,.hero-title,.hero-eyebrow{color:var(--text) !important;}
+.hero p,.hero-sub{color:var(--text2) !important;}
+.hero .badge,.eyebrow{background:rgba(251,146,60,.12) !important;color:#ea580c !important;border:1px solid rgba(251,146,60,.2) !important;}
+
+/* ライトセクション（白/クリーム背景） */
+section{background:#fdf8f3;}
+section h2,section h3{color:var(--text) !important;}
+section p{color:var(--text2) !important;}
+
+/* 暗いセクション（スキル・スクロールバナーなど）→ 温かみのある茶色背景に */
+.skill-section,.skills-section,.dark-section,.marquee-section{background:#3d1f0a !important;}
+.skill-section *,.skills-section *,.dark-section *{color:#fff !important;}
+.skill-card,.sk-card-lp{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.12) !important;color:#fff !important;}
+
+/* ステップセクション */
+.steps-section,.how-section{background:#faf3eb !important;}
+.step-num{color:#fb923c !important;opacity:.3;}
+.step-title{color:var(--text) !important;}
+.step-desc{color:var(--text2) !important;}
+
+/* フィーチャーカード */
+.feature-card,.feat-card{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 4px 20px rgba(180,120,80,.08) !important;}
+.feature-card h3,.feat-title{color:var(--text) !important;}
+.feature-card p,.feat-desc{color:var(--text2) !important;}
+.feat-icon-wrap,.feature-icon{background:rgba(251,146,60,.1) !important;}
+
+/* 料金セクション */
+.pricing-section{background:#faf3eb !important;}
+.plan-card,.pricing-card{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 4px 16px rgba(180,120,80,.06) !important;}
+.plan-card.popular,.pricing-card.pop{border-color:#fb923c !important;box-shadow:0 8px 32px rgba(251,146,60,.18) !important;}
+.plan-name,.plan-price,.price-amount{color:var(--text) !important;}
+.plan-price span,.price-period{color:var(--text2) !important;}
+.plan-feature,.plan-feat{color:var(--text2) !important;}
+.plan-badge,.popular-badge{background:#fb923c !important;color:#fff !important;}
+.plan-cta-free,.btn-plan-free{background:transparent !important;border:1px solid #fb923c !important;color:#fb923c !important;}
+.plan-cta,.btn-plan{background:#fb923c !important;color:#fff !important;}
+
+/* FAQ */
+.faq-section{background:#fdf8f3 !important;}
+.faq-item{background:#fff !important;border:1px solid rgba(180,120,80,.12) !important;}
+.faq-q{color:var(--text) !important;}
+.faq-a{color:var(--text2) !important;}
+
+/* CTAセクション */
+.cta-section,.final-cta{background:linear-gradient(135deg,#fb923c,#f97316) !important;}
+.cta-section *,.final-cta *{color:#fff !important;}
+
+/* フッター */
+footer{background:#3d1f0a !important;color:rgba(255,255,255,.8) !important;}
+footer *{color:rgba(255,255,255,.8) !important;}
+footer a:hover{color:#fff !important;}
+
+/* ボタン全般 */
+.btn,.btn-primary,.cta-btn{background:#fb923c !important;color:#fff !important;}
+.btn:hover,.btn-primary:hover{background:#ea580c !important;}
+.btn-outline,.btn-secondary{background:transparent !important;border:2px solid #fb923c !important;color:#fb923c !important;}
+
+/* バッジ */
+.badge{background:rgba(251,146,60,.12) !important;color:#ea580c !important;}
+
+/* マーキー（スクロールテキスト） */
+.marquee-track,.marquee-item{color:#fff !important;}
+
 </style>
 </head>
 <body>
@@ -566,7 +642,7 @@ a{color:#ea580c !important;}
     <!-- フリープラン -->
     <div class="reveal" style="background:#faf3eb;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
       <p style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">FREE</p>
-      <h3 style="font-size:36px;font-weight:900;color:#2d1a0e;margin-bottom:4px">¥0</h3>
+      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥0</h3>
       <p style="color:var(--fog);font-size:14px;margin-bottom:24px">まず試してみる</p>
       <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
         <li>✅ 無料登録ですぐ使える</li>
@@ -574,14 +650,14 @@ a{color:#ea580c !important;}
         <li>✅ 15の専門スキルから選択</li>
         <li>⬜ メッセージ：残高チャージ必要</li>
       </ul>
-      <a href="/app.html" style="display:block;background:rgba(255,255,255,.08);color:#2d1a0e;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">無料で始める →</a>
+      <a href="/app.html" style="display:block;background:rgba(255,255,255,.08);color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;font-size:15px">無料で始める →</a>
     </div>
 
     <!-- スタンダード -->
     <div class="reveal" style="background:linear-gradient(135deg,#0d1a00,#111);border:2px solid var(--volt);border-radius:20px;padding:32px;text-align:center;position:relative">
       <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--volt);color:#fdf8f3;font-size:11px;font-weight:900;padding:4px 16px;border-radius:20px;letter-spacing:.08em">人気 🔥</div>
       <p style="color:var(--volt);font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">STANDARD</p>
-      <h3 style="font-size:36px;font-weight:900;color:#2d1a0e;margin-bottom:4px">¥1,000</h3>
+      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥1,000</h3>
       <p style="color:var(--fog);font-size:14px;margin-bottom:24px">約50〜100メッセージ分</p>
       <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
         <li>✅ すぐ使えるチャージ式</li>
@@ -595,7 +671,7 @@ a{color:#ea580c !important;}
     <!-- ヘビーユーザー -->
     <div class="reveal" style="background:#faf3eb;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;text-align:center">
       <p style="color:#c084fc;font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:12px">POWER</p>
-      <h3 style="font-size:36px;font-weight:900;color:#2d1a0e;margin-bottom:4px">¥5,000</h3>
+      <h3 style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">¥5,000</h3>
       <p style="color:var(--fog);font-size:14px;margin-bottom:24px">約300〜500メッセージ分</p>
       <ul style="text-align:left;list-style:none;padding:0;margin-bottom:32px;font-size:14px;color:var(--fog);display:flex;flex-direction:column;gap:10px">
         <li>✅ まとめてお得なチャージ</li>

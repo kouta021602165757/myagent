@@ -97,27 +97,27 @@ function toCamel(obj){
 const DB={
   async findBy(field,val){
     if(!USE_SUPA)return LDB.find(u=>u[field]===val)||null;
-    const snakeField=toSnake({[field]:null});const sf=Object.keys(snakeField)[0];
-    const{data,error}=await supabase.from('users').select('*').eq(sf,val).limit(1);
-    if(error){console.error('Supabase findBy error:',error.message);return null;}
-    return data?.[0]?toCamel(data[0]):null;
+    const sf=field.replace(/([A-Z])/g,m=>'_'+m.toLowerCase());
+    const r=await sbReq('GET','users','?select=*&'+sf+'=eq.'+encodeURIComponent(val)+'&limit=1');
+    if(!r.d||!r.d[0])return null;
+    return toCamel(r.d[0]);
   },
   async create(user){
     if(!USE_SUPA){LDB.add(user);return user;}
-    const snakeUser=toSnake(user);
-    const{data,error}=await supabase.from('users').insert(snakeUser).select();
-    if(error){console.error('Supabase create error:',error.message,error.details);}
-    else{console.log('Supabase create OK, id:',data?.[0]?.id);}
-    return data?.[0]?toCamel(data[0]):user;
+    const r=await sbReq('POST','users','',toSnake(user));
+    if(r.s>=400){console.error('Supabase create error:',r.d);return user;}
+    const arr=Array.isArray(r.d)?r.d:[r.d];
+    return arr[0]?toCamel(arr[0]):user;
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
-        const{error:se}=await supabase.from('users').update(toSnake(user)).eq('id',user.id);
-            if(se)console.error('Supabase save error:',se.message);
+    const r=await sbReq('PATCH','users','?id=eq.'+user.id,toSnake(user));
+    if(r.s>=400)console.error('Supabase save error:',r.d);
   },
-  remove(id){
-    if(!USE_SUPA){ LDB.data=LDB.data.filter(u=>u.id!==id); return Promise.resolve(true); }
-    return supabase.from('users').delete().eq('id',id).then(({error})=>!error);
+  async remove(id){
+    if(!USE_SUPA){LDB.data=(LDB.data||[]).filter(u=>u.id!==id);return true;}
+    const r=await sbReq('DELETE','users','?id=eq.'+id);
+    return r.s<300;
   },
 };
 

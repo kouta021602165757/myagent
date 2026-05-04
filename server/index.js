@@ -115,10 +115,9 @@ const DB={
         const{error:se}=await supabase.from('users').update(toSnake(user)).eq('id',user.id);
             if(se)console.error('Supabase save error:',se.message);
   }
-  async remove(id){
-    if(!USE_SUPA){ LDB.data=LDB.data.filter(u=>u.id!==id); return true; }
-    const{error}=await supabase.from('users').delete().eq('id',id);
-    return !error;
+  remove(id){
+    if(!USE_SUPA){ LDB.data=LDB.data.filter(u=>u.id!==id); return Promise.resolve(true); }
+    return supabase.from('users').delete().eq('id',id).then(({error})=>!error);
   },
 };
 

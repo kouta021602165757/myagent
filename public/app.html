@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MY AI Agent — ダッシュボード</title>
+<script src="https://js.stripe.com/v3/"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -972,11 +973,25 @@ async function doCharge(){
   setBtnLoad('chargeBtn',true,'処理中...');
   try{
     const r=await api('POST','/api/billing/charge',{amount_jpy:chargeAmt});
-    if(r.demo){ me.balance_jpy=r.balance_jpy; me.usage_count=me.usage_count||0; updateBalance(); closeCharge(); showToast(`¥${chargeAmt}チャージしました！`,'ok'); }
-    else{ showToast('Stripe決済を完了してください','ok'); }
-  }catch(e){ showToast(e.message,'ng'); }
+    if(r.demo){
+      me.balance_jpy=r.balance_jpy;
+      renderAll();
+      closeModal('chargeModal');
+      showToast('残高を追加しました（デモ）','ok');
+    } else if(r.clientSecret){
+      // Stripe本番決済
+      const pk = r.publishableKey || 'pk_live_51TTCtlKDii7rStRfdFJWRLB2Zfv9X7du1A64nhMIdXuMoh6KRBO5FNdV6gPbiAOLuwjpJch5F5XeQNYpBneBRqPL00OKvXJgTD';
+      const stripe = Stripe(pk);
+      const {error} = await stripe.confirmCardPayment(r.clientSecret, {
+        payment_method: { card: { token: 'tok_visa' } }
+      });
+      if(error){ showToast('決済エラー: '+error.message,'ng'); }
+      else { showToast('決済完了！残高に反映されます','ok'); closeModal('chargeModal'); }
+    }
+  }catch(e){ showToast(e.message||'エラーが発生しました','ng'); }
   setBtnLoad('chargeBtn',false,'チャージする');
 }
+
 function fmtCard(el){let v=el.value.replace(/\D/g,'').slice(0,16);el.value=v.replace(/(.{4})/g,'$1 ').trim();}
 function fmtExp(el){let v=el.value.replace(/\D/g,'').slice(0,4);if(v.length>2)v=v.slice(0,2)+' / '+v.slice(2);el.value=v;}
 

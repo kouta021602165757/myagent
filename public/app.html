@@ -444,6 +444,9 @@ input,textarea{font-family:var(--sans);}
   .msg{max-width:90%}
   .agent-header{padding:12px 16px}
 }
+
+.stab-btn{flex:1;padding:11px 4px;background:none;border:none;border-bottom:2px solid transparent;color:#7272a0;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
+.active-stab{color:#c8ff57!important;border-bottom-color:#c8ff57!important}
 </style>
 </head>
 <body>
@@ -477,7 +480,10 @@ input,textarea{font-family:var(--sans);}
       <div class="sb-user">
         <div class="user-av" id="userAv"></div>
         <div class="user-name" id="userName"></div>
-        <button class="logout-btn" onclick="doLogout()">ログアウト</button>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="logout-btn" onclick="openSettings()" title="設定" style="flex:0;padding:6px 10px;font-size:16px;background:rgba(255,255,255,.08);border-radius:8px;border:1px solid rgba(255,255,255,.1)">⚙️</button>
+          <button class="logout-btn" onclick="doLogout()" style="flex:1">ログアウト</button>
+        </div>
       </div>
     </div>
   </aside>
@@ -591,6 +597,63 @@ input,textarea{font-family:var(--sans);}
   </div>
 </div>
 
+
+<!-- ── SETTINGS MODAL ──────────────────────────────────── -->
+<div class="modal-overlay gone" id="settingsModal">
+  <div class="wizard-modal" style="max-width:520px;padding:0;overflow:hidden;border-radius:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <h2 style="font-size:17px;font-weight:700;color:#fff">設定</h2>
+      <button onclick="closeSettings()" style="background:none;border:none;color:#7272a0;font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.08)">
+      <button class="stab-btn active-stab" onclick="switchStab(this,'s-profile')">👤 プロフィール</button>
+      <button class="stab-btn" onclick="switchStab(this,'s-security')">🔒 セキュリティ</button>
+      <button class="stab-btn" onclick="switchStab(this,'s-billing')">💳 お支払い</button>
+      <button class="stab-btn" onclick="switchStab(this,'s-danger')" style="color:#ff4d6d">⚠️ 危険</button>
+    </div>
+    <div style="padding:24px;max-height:62vh;overflow-y:auto">
+      <div id="s-profile">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:rgba(255,255,255,.04);border-radius:14px">
+          <div id="sAv" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#c8ff57,#00e5cc);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#04040a;flex-shrink:0"></div>
+          <div><p id="sEmail" style="color:#fff;font-size:15px;font-weight:600"></p><p id="sJoined" style="color:#7272a0;font-size:12px;margin-top:3px"></p></div>
+        </div>
+        <label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px;letter-spacing:.06em">表示名</label>
+        <input id="sName" type="text" placeholder="名前を入力" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
+        <button onclick="saveProfile()" style="width:100%;background:#c8ff57;color:#04040a;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
+      </div>
+      <div id="s-security" style="display:none">
+        <p style="color:#7272a0;font-size:13px;margin-bottom:20px;line-height:1.6">パスワードを変更します。</p>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px">
+          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード</label><input id="sNewPw" type="password" placeholder="••••••••" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード（確認）</label><input id="sConfPw" type="password" placeholder="••••••••" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+        </div>
+        <button onclick="changePassword()" style="width:100%;background:#c8ff57;color:#04040a;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">パスワードを変更</button>
+      </div>
+      <div id="s-billing" style="display:none">
+        <div style="background:rgba(200,255,87,.07);border:1px solid rgba(200,255,87,.2);border-radius:14px;padding:18px;margin-bottom:20px">
+          <p style="color:#c8ff57;font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:6px">現在の残高</p>
+          <p id="sBal" style="color:#fff;font-size:30px;font-weight:900;margin-bottom:4px">¥0.00</p>
+          <p id="sUsage" style="color:#7272a0;font-size:12px"></p>
+        </div>
+        <p style="color:#7272a0;font-size:13px;margin-bottom:14px">チャージ金額を選択してください。</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <button onclick="quickCharge(500)" style="background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 8px;color:#fff;cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#c8ff57'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥500</b><small style="color:#7272a0;font-size:11px">約25回</small></button>
+          <button onclick="quickCharge(1000)" style="background:#0d0d1a;border:2px solid #c8ff57;border-radius:10px;padding:14px 8px;color:#fff;cursor:pointer;font-family:inherit;position:relative"><span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#c8ff57;color:#04040a;font-size:9px;font-weight:900;padding:2px 10px;border-radius:20px">🔥 人気</span><b style="display:block;font-size:17px">¥1,000</b><small style="color:#7272a0;font-size:11px">約50回</small></button>
+          <button onclick="quickCharge(5000)" style="background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 8px;color:#fff;cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#c8ff57'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥5,000</b><small style="color:#7272a0;font-size:11px">約250回</small></button>
+        </div>
+      </div>
+      <div id="s-danger" style="display:none">
+        <div style="background:rgba(255,77,109,.05);border:1px solid rgba(255,77,109,.2);border-radius:14px;padding:20px">
+          <h3 style="color:#ff4d6d;font-size:15px;font-weight:700;margin-bottom:8px">アカウントを削除</h3>
+          <p style="color:#7272a0;font-size:13px;margin-bottom:16px;line-height:1.6">全てのエージェント・会話・残高が永久に削除されます。この操作は取り消せません。</p>
+          <input id="sDelConfirm" type="text" placeholder='「削除する」と入力して確認' style="width:100%;background:#0d0d1a;border:1px solid rgba(255,77,109,.3);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box">
+          <button onclick="deleteAccount()" style="width:100%;background:#ff4d6d;color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">アカウントを完全削除する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
 
 <script>
@@ -932,6 +995,78 @@ function exTA(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeigh
 function taKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
 function setBtnLoad(id,on,txt){const b=document.getElementById(id);b.disabled=on;if(txt)b.textContent=txt;}
 var toastT;
+
+/* ── Settings ──────────────────────────────────────────── */
+function openSettings(){
+  const modal = document.getElementById('settingsModal');
+  modal.classList.remove('gone');
+  // プロフィール情報を入力
+  const av = document.getElementById('sAv');
+  const emailEl = document.getElementById('sEmail');
+  const joinedEl = document.getElementById('sJoined');
+  const nameEl = document.getElementById('sName');
+  const balEl = document.getElementById('sBal');
+  const usageEl = document.getElementById('sUsage');
+  if(me){
+    const initials = (me.name||me.email||'?').charAt(0).toUpperCase();
+    if(av) av.textContent = initials;
+    if(emailEl) emailEl.textContent = me.email||'';
+    if(joinedEl) joinedEl.textContent = 'メッセージ数: '+(me.usage_count||0)+'回';
+    if(nameEl) nameEl.value = me.name||'';
+    if(balEl) balEl.textContent = '¥'+(me.balance_jpy||0).toFixed(2);
+    if(usageEl) usageEl.textContent = (me.usage_count||0)+'回利用済み';
+  }
+}
+function closeSettings(){
+  document.getElementById('settingsModal').classList.add('gone');
+}
+function switchStab(btn, tabId){
+  document.querySelectorAll('.stab-btn').forEach(b=>{b.classList.remove('active-stab');b.style.color='';});
+  btn.classList.add('active-stab');
+  ['s-profile','s-security','s-billing','s-danger'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = id===tabId ? '' : 'none';
+  });
+}
+async function saveProfile(){
+  const name = document.getElementById('sName').value.trim();
+  if(!name){ showToast('名前を入力してください','err'); return; }
+  try{
+    const res = await apiFetch('/api/user/profile',{method:'PATCH',body:JSON.stringify({name})});
+    if(res.user){ me=res.user; document.getElementById('userName').textContent=me.name||me.email; }
+    showToast('プロフィールを保存しました','ok');
+  }catch(e){ showToast('保存に失敗しました','err'); }
+}
+async function changePassword(){
+  const cur = document.getElementById('sCurPw').value;
+  const np = document.getElementById('sNewPw').value;
+  const cp = document.getElementById('sConfPw').value;
+  if(!cur||!np){ showToast('全ての項目を入力してください','err'); return; }
+  if(np!==cp){ showToast('新しいパスワードが一致しません','err'); return; }
+  if(np.length<8){ showToast('パスワードは8文字以上にしてください','err'); return; }
+  try{
+    await apiFetch('/api/user/password',{method:'PATCH',body:JSON.stringify({current_password:cur,new_password:np})});
+    showToast('パスワードを変更しました','ok');
+    document.getElementById('sCurPw').value='';
+    document.getElementById('sNewPw').value='';
+    document.getElementById('sConfPw').value='';
+  }catch(e){ showToast(e.message||'変更に失敗しました','err'); }
+}
+async function deleteAccount(){
+  const confirm = document.getElementById('sDelConfirm').value;
+  if(confirm!=='削除する'){ showToast('「削除する」と入力してください','err'); return; }
+  try{
+    await apiFetch('/api/user/delete',{method:'DELETE'});
+    showToast('アカウントを削除しました','ok');
+    setTimeout(()=>{ localStorage.removeItem('token'); location.href='/'; },1500);
+  }catch(e){ showToast('削除に失敗しました','err'); }
+}
+function quickCharge(amount){
+  closeSettings();
+  document.getElementById('chargeAmt').value = amount;
+  document.getElementById('chargeModal').classList.remove('gone');
+}
+
 function showToast(msg,type='ok'){
   const t=document.getElementById('toast');
   document.getElementById('toastMsg').textContent=msg;

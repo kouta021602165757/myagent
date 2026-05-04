@@ -827,10 +827,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
   token=localStorage.getItem('token');
   if(!token){ location.href='auth.html'; return; }
   try{
-    const meData=await apiFetch('/api/me');
+    const meData=await api('GET','/api/me');
     if(!meData||meData.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
-    me=meData;
-    const ra=await apiFetch('/api/agents');
+    me=meData.user||meData;
+    const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
     // Show email verify banner if not verified
     if(!me.verified) showVerifyBanner();
@@ -1202,7 +1202,7 @@ async function saveProfile(){
   const name = document.getElementById('sName').value.trim();
   if(!name){ showToast('名前を入力してください','err'); return; }
   try{
-    const res = await apiFetch('/api/user/profile',{method:'PATCH',body:JSON.stringify({name})});
+    const res = await api('PATCH','/api/user/profile')});
     if(res.user){ me=res.user; document.getElementById('userName').textContent=me.name||me.email; }
     showToast('プロフィールを保存しました','ok');
   }catch(e){ showToast('保存に失敗しました','err'); }
@@ -1215,7 +1215,7 @@ async function changePassword(){
   if(np!==cp){ showToast('新しいパスワードが一致しません','err'); return; }
   if(np.length<8){ showToast('パスワードは8文字以上にしてください','err'); return; }
   try{
-    await apiFetch('/api/user/password',{method:'PATCH',body:JSON.stringify({current_password:cur,new_password:np})});
+    await api('PATCH','/api/user/password')});
     showToast('パスワードを変更しました','ok');
     document.getElementById('sCurPw').value='';
     document.getElementById('sNewPw').value='';
@@ -1226,7 +1226,7 @@ async function deleteAccount(){
   const confirm = document.getElementById('sDelConfirm').value;
   if(confirm!=='削除する'){ showToast('「削除する」と入力してください','err'); return; }
   try{
-    await apiFetch('/api/user/delete',{method:'DELETE'});
+    await api('DELETE','/api/user/delete');
     showToast('アカウントを削除しました','ok');
     setTimeout(()=>{ localStorage.removeItem('token'); location.href='/'; },1500);
   }catch(e){ showToast('削除に失敗しました','err'); }

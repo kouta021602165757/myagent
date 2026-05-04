@@ -550,10 +550,16 @@ body{color:#f0f0f8;}
   <!-- ── SIDEBAR ─────────────────────────────────────────── -->
   <aside class="sb">
     <div class="sb-brand">
-      <a class="sb-logo" href="lp.html">
-        <div class="logomark">M</div>
-        <span class="logotext">MY AI AGENT</span>
-      </a>
+      <a class="sb-logo" href="/" style="text-decoration:none;color:var(--text)">
+  <div style="display:flex;align-items:center;gap:7px">
+    <div style="display:flex;gap:2px;align-items:flex-end">
+      <div style="width:4px;height:18px;background:#fb923c;border-radius:2px;"></div>
+      <div style="width:4px;height:12px;background:#fb923c;border-radius:2px;opacity:.65;"></div>
+      <div style="width:4px;height:7px;background:#fb923c;border-radius:2px;opacity:.35;"></div>
+    </div>
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;">MY AI AGENT</span>
+  </div>
+</a>
     </div>
     <button class="sb-new" onclick="if(!token){showToast('ログインが必要です','ng');return;}openWizard()">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>

@@ -381,76 +381,94 @@ a{color:#ea580c !important;}
 .btn,.cta-btn{background:#fb923c !important;color:#fff !important;}
 .btn-outline{background:transparent !important;border:1px solid #fb923c !important;color:#fb923c !important;}
 
-/* ライトテーマ上書き */
-nav{background:rgba(253,248,243,.95) !important;backdrop-filter:blur(12px);border-bottom:1px solid rgba(180,120,80,.12);}
-nav a,.nav-link{color:var(--text2) !important;}
-.nav-logo,.logo-text{color:var(--text) !important;}
-.nav-cta,.cta-primary{background:#fb923c !important;color:#fff !important;}
 
-/* ヒーローセクション */
-.hero{background:linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important;}
-.hero h1,.hero-title,.hero-eyebrow{color:var(--text) !important;}
-.hero p,.hero-sub{color:var(--text2) !important;}
-.hero .badge,.eyebrow{background:rgba(251,146,60,.12) !important;color:#ea580c !important;border:1px solid rgba(251,146,60,.2) !important;}
+/* ============ LP 全修正 ============ */
 
-/* ライトセクション（白/クリーム背景） */
-section{background:#fdf8f3;}
-section h2,section h3{color:var(--text) !important;}
-section p{color:var(--text2) !important;}
+/* 1. ナビゲーション */
+nav { background: rgba(253,248,243,.97) !important; border-bottom: 1px solid rgba(180,120,80,.12) !important; }
+.nav-logo, .logo-text, .brand-name { color: #2d1a0e !important; }
+.nav-link { color: #6b4226 !important; }
+.nav-cta, .btn-nav { background: #fb923c !important; color: #fff !important; border-radius: 10px !important; }
 
-/* 暗いセクション（スキル・スクロールバナーなど）→ 温かみのある茶色背景に */
-.skill-section,.skills-section,.dark-section,.marquee-section{background:#3d1f0a !important;}
-.skill-section *,.skills-section *,.dark-section *{color:#fff !important;}
-.skill-card,.sk-card-lp{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.12) !important;color:#fff !important;}
+/* 2. ヒーロー - テキスト色を濃くする */
+.hero { background: linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important; }
+.hero-title, .hero h1 { color: #1a0a00 !important; }
+.hero-title .accent, .hero-title span { color: #fb923c !important; }
+.hero-sub, .hero p { color: #5c3a1e !important; }
+.eyebrow, .badge-pill { background: rgba(251,146,60,.15) !important; color: #c2410c !important; border: 1px solid rgba(251,146,60,.3) !important; }
 
-/* ステップセクション */
-.steps-section,.how-section{background:#faf3eb !important;}
-.step-num{color:#fb923c !important;opacity:.3;}
-.step-title{color:var(--text) !important;}
-.step-desc{color:var(--text2) !important;}
+/* 3. デモ画像（モックアップ）*/
+.mockup-wrap, .demo-wrap, .hero-visual { filter: drop-shadow(0 20px 60px rgba(180,100,40,.2)) !important; }
+.mockup, .app-demo { background: #fff !important; border: 1px solid rgba(180,120,80,.2) !important; border-radius: 16px !important; box-shadow: 0 12px 40px rgba(180,100,40,.15) !important; }
+.mockup-bar, .demo-bar { background: #f5ebe0 !important; }
+.mockup-dot { background: rgba(180,120,80,.3) !important; }
+/* モックアップ内のサイドバー */
+.demo-sidebar { background: #faf3eb !important; border-right: 1px solid rgba(180,120,80,.15) !important; }
+.demo-ag-name { color: #2d1a0e !important; }
+.demo-ag-skill { color: #8c6a52 !important; }
+.demo-chat { background: #fdf8f3 !important; }
+.demo-bubble-u { background: rgba(251,146,60,.15) !important; color: #2d1a0e !important; border: 1px solid rgba(251,146,60,.2) !important; }
+.demo-bubble-a { background: #fff !important; color: #2d1a0e !important; border: 1px solid rgba(180,120,80,.12) !important; }
 
-/* フィーチャーカード */
-.feature-card,.feat-card{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 4px 20px rgba(180,120,80,.08) !important;}
-.feature-card h3,.feat-title{color:var(--text) !important;}
-.feature-card p,.feat-desc{color:var(--text2) !important;}
-.feat-icon-wrap,.feature-icon{background:rgba(251,146,60,.1) !important;}
+/* 4. 「3ステップで〜」セクション */
+.steps-section, .how-section, section:has(.step-num) { background: #faf3eb !important; }
+.steps-section h2, .how-section h2, .step-title { color: #1a0a00 !important; }
+.steps-section p, .how-section p, .step-desc { color: #5c3a1e !important; }
+.step-num { color: #fb923c !important; font-weight: 900 !important; opacity: 0.25 !important; }
+.step-icon { background: rgba(251,146,60,.12) !important; }
 
-/* 料金セクション */
-.pricing-section{background:#faf3eb !important;}
-.plan-card,.pricing-card{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 4px 16px rgba(180,120,80,.06) !important;}
-.plan-card.popular,.pricing-card.pop{border-color:#fb923c !important;box-shadow:0 8px 32px rgba(251,146,60,.18) !important;}
-.plan-name,.plan-price,.price-amount{color:var(--text) !important;}
-.plan-price span,.price-period{color:var(--text2) !important;}
-.plan-feature,.plan-feat{color:var(--text2) !important;}
-.plan-badge,.popular-badge{background:#fb923c !important;color:#fff !important;}
-.plan-cta-free,.btn-plan-free{background:transparent !important;border:1px solid #fb923c !important;color:#fb923c !important;}
-.plan-cta,.btn-plan{background:#fb923c !important;color:#fff !important;}
+/* 5. スキルセクション（暗い背景）*/
+.skills-section, .skill-section { background: #2d1205 !important; }
+.skills-section *, .skill-section * { color: #fff !important; }
+.sk-card-lp, .skill-card { background: rgba(255,255,255,.08) !important; border: 1px solid rgba(255,255,255,.1) !important; }
 
-/* FAQ */
-.faq-section{background:#fdf8f3 !important;}
-.faq-item{background:#fff !important;border:1px solid rgba(180,120,80,.12) !important;}
-.faq-q{color:var(--text) !important;}
-.faq-a{color:var(--text2) !important;}
+/* 6. フィーチャーセクション */
+.features-section, .feature-section { background: #fdf8f3 !important; }
+.features-section h2, .feature-section h2 { color: #1a0a00 !important; }
+.features-section p, .feature-section p { color: #5c3a1e !important; }
+.feat-card, .feature-card { background: #fff !important; border: 1px solid rgba(180,120,80,.15) !important; box-shadow: 0 4px 20px rgba(180,100,40,.07) !important; }
+.feat-title, .feature-title { color: #1a0a00 !important; }
+.feat-desc, .feature-desc { color: #5c3a1e !important; }
+.feat-icon-wrap { background: rgba(251,146,60,.1) !important; }
 
-/* CTAセクション */
-.cta-section,.final-cta{background:linear-gradient(135deg,#fb923c,#f97316) !important;}
-.cta-section *,.final-cta *{color:#fff !important;}
+/* 7. 料金セクション - 黒を廃止してクリームに */
+.pricing-section { background: #faf3eb !important; }
+.pricing-section h2 { color: #1a0a00 !important; }
+.pricing-section > p { color: #5c3a1e !important; }
+.plan-card, .pricing-card { background: #fff !important; border: 1px solid rgba(180,120,80,.18) !important; box-shadow: 0 4px 16px rgba(180,100,40,.07) !important; border-radius: 20px !important; }
+.plan-card.popular, .pricing-card.pop, .plan-card.featured { border-color: #fb923c !important; box-shadow: 0 12px 40px rgba(251,146,60,.2) !important; }
+.plan-name { color: #1a0a00 !important; font-weight: 700 !important; }
+.plan-price, .price-amount { color: #1a0a00 !important; font-weight: 900 !important; }
+.plan-price span, .price-unit, .price-period { color: #6b4226 !important; }
+.plan-feat li, .plan-feature { color: #5c3a1e !important; }
+.plan-badge, .popular-badge { background: #fb923c !important; color: #fff !important; font-weight: 700 !important; }
+.plan-cta, .btn-plan { background: #fb923c !important; color: #fff !important; border: none !important; border-radius: 12px !important; font-weight: 700 !important; }
+.plan-cta-free, .btn-plan-free { background: transparent !important; border: 2px solid #fb923c !important; color: #fb923c !important; border-radius: 12px !important; font-weight: 700 !important; }
+.check-icon { color: #fb923c !important; }
 
-/* フッター */
-footer{background:#3d1f0a !important;color:rgba(255,255,255,.8) !important;}
-footer *{color:rgba(255,255,255,.8) !important;}
-footer a:hover{color:#fff !important;}
+/* 8. 「今日からAIチームを持とう」CTAセクション */
+.cta-section, .final-cta, .cta-band { background: linear-gradient(135deg, #fb923c 0%, #f97316 100%) !important; }
+.cta-section *, .final-cta *, .cta-band * { color: #fff !important; }
+.cta-section h2, .final-cta h2 { color: #fff !important; font-weight: 900 !important; }
+.cta-section p, .final-cta p { color: rgba(255,255,255,.9) !important; }
+.cta-section .btn, .final-cta .btn { background: #fff !important; color: #ea580c !important; font-weight: 700 !important; }
 
-/* ボタン全般 */
-.btn,.btn-primary,.cta-btn{background:#fb923c !important;color:#fff !important;}
-.btn:hover,.btn-primary:hover{background:#ea580c !important;}
-.btn-outline,.btn-secondary{background:transparent !important;border:2px solid #fb923c !important;color:#fb923c !important;}
+/* 9. FAQ */
+.faq-section { background: #fdf8f3 !important; }
+.faq-section h2 { color: #1a0a00 !important; }
+.faq-item { background: #fff !important; border: 1px solid rgba(180,120,80,.12) !important; border-radius: 14px !important; }
+.faq-q { color: #1a0a00 !important; font-weight: 600 !important; }
+.faq-a { color: #5c3a1e !important; }
 
-/* バッジ */
-.badge{background:rgba(251,146,60,.12) !important;color:#ea580c !important;}
+/* 10. フッター */
+footer { background: #1a0a00 !important; }
+footer * { color: rgba(255,255,255,.75) !important; }
+footer a:hover { color: #fb923c !important; }
+footer h3, footer .footer-brand { color: #fff !important; }
 
 /* マーキー（スクロールテキスト） */
-.marquee-track,.marquee-item{color:#fff !important;}
+.marquee-wrap, .marquee-section { background: #2d1205 !important; }
+.marquee-item, .marquee-track * { color: #fff !important; }
 
 </style>
 </head>

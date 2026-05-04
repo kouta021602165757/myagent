@@ -1204,7 +1204,7 @@ async function saveProfile(){
   const name = document.getElementById('sName').value.trim();
   if(!name){ showToast('名前を入力してください','err'); return; }
   try{
-    const res = await api('PATCH','/api/user/profile')});
+    const res = await api('PATCH','/api/user/profile',{name});
     if(res.user){ me=res.user; document.getElementById('userName').textContent=me.name||me.email; }
     showToast('プロフィールを保存しました','ok');
   }catch(e){ showToast('保存に失敗しました','err'); }
@@ -1217,7 +1217,7 @@ async function changePassword(){
   if(np!==cp){ showToast('新しいパスワードが一致しません','err'); return; }
   if(np.length<8){ showToast('パスワードは8文字以上にしてください','err'); return; }
   try{
-    await api('PATCH','/api/user/password')});
+    await api('PATCH','/api/user/password',{current_password:cur,new_password:np});
     showToast('パスワードを変更しました','ok');
     document.getElementById('sCurPw').value='';
     document.getElementById('sNewPw').value='';

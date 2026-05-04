@@ -1,5 +1,5 @@
 
-  async delete(id){
+  async remove(id) {
     if(!this.supa){ this.data=this.data.filter(u=>u.id!==id); return true; }
     const{error}=await this.supa.from('users').delete().eq('id',id);
     return !error;
@@ -516,7 +516,7 @@ async function handleAPI(req,res,pathname,method,ip){
   // ── DELETE /api/user/delete ──────────────────────────────────
   if(pathname==='/api/user/delete'&&method==='DELETE'){
     const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});
-    await DB.delete(user.id);
+    await DB.remove(user.id);
     return jres(res,200,{ok:true});
   }
 

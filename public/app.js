@@ -47,13 +47,13 @@ var T = {
       placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
 };
 /* ── Boot ──────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded',async()=>{
+(async()=>{
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],
      ['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],
      ['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]]
-    .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
+    .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;})();
     const inp=document.getElementById('msgInput');
     if(inp) inp.placeholder=T.placeholder;
     document.documentElement.lang=isJa?'ja':'en';
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   }catch(e){ console.error('[init]',e&&e.message); }
   try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
   document.getElementById('loader').classList.add('gone');
-});
+})();
 
 function showVerifyBanner(){
   const banner=document.createElement('div');

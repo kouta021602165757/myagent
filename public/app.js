@@ -342,4 +342,4 @@ function showToast(msg,type='ok'){
   t.className='toast '+type+' on';
   clearTimeout(toastT);
   toastT=setTimeout(()=>t.classList.remove('on'),3200);
-});
+}

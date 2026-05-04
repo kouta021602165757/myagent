@@ -464,11 +464,31 @@ async function handleAPI(req,res,pathname,method,ip){
   }
     const agent=(user.agents||[]).find(a=>a.id===cm[1]);
     if(!agent)return jres(res,404,{error:'エージェントが見つかりません'});
-    const{message}=await readBody(req);
-    if(!message?.trim())return jres(res,400,{error:'メッセージを入力してください'});
+    const body=await readBody(req);
+    const message=body.message||'';
+    const images=body.images||[];
+    if(!message?.trim()&&images.length===0)return jres(res,400,{error:'メッセージを入力してください'});
     if(message.length>4000)return jres(res,400,{error:'メッセージが長すぎます'});
     const hist=(agent.history||[]).slice(-20);
-    const msgs=[...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:message}];
+    // ユーザーメッセージのcontentを構築（画像対応）
+    let userContent;
+    if(images.length > 0){
+      userContent = [];
+      images.forEach(img => {
+        userContent.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.type || 'image/jpeg',
+            data: img.b64
+          }
+        });
+      });
+      if(message.trim()) userContent.push({type:'text',text:message});
+    } else {
+      userContent = message;
+    }
+    const msgs=[...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
     let reply,cost;
     try{
       const d=await callAI(msgs,buildSystem(agent));

@@ -1,3 +1,9 @@
+
+  async delete(id){
+    if(!this.supa){ this.data=this.data.filter(u=>u.id!==id); return true; }
+    const{error}=await this.supa.from('users').delete().eq('id',id);
+    return !error;
+  }
 'use strict';
 const http=require('http'),https=require('https'),fs=require('fs'),
       path=require('path'),crypto=require('crypto'),url=require('url');
@@ -484,6 +490,34 @@ async function handleAPI(req,res,pathname,method,ip){
     if(ai>=0)user.agents[ai]=agent;
     await DB.save(user);
     return jres(res,200,{reply,balance_jpy:user.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd}});
+  }
+
+  
+  // ── PATCH /api/user/profile ─────────────────────────────────
+  if(pathname==='/api/user/profile'&&method==='PATCH'){
+    const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});
+    const{name}=body;
+    if(name)user.name=name.trim().substring(0,50);
+    await DB.save(user);
+    return jres(res,200,{user:safe(user)});
+  }
+
+  // ── PATCH /api/user/password ─────────────────────────────────
+  if(pathname==='/api/user/password'&&method==='PATCH'){
+    const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});
+    const{current_password,new_password}=body;
+    if(!PW.verify(current_password,user.password))return jres(res,400,{error:'現在のパスワードが正しくありません'});
+    if(!new_password||new_password.length<8)return jres(res,400,{error:'パスワードは8文字以上にしてください'});
+    user.password=PW.hash(new_password);
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── DELETE /api/user/delete ──────────────────────────────────
+  if(pathname==='/api/user/delete'&&method==='DELETE'){
+    const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});
+    await DB.delete(user.id);
+    return jres(res,200,{ok:true});
   }
 
   // ── POST /api/billing/charge ───────────────────────────────

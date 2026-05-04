@@ -440,7 +440,20 @@ async function handleAPI(req,res,pathname,method,ip){
   const cm=pathname.match(/^\/api\/chat\/([^/]+)$/);
   if(cm&&method==='POST'){
     if(!ANTHROPIC)return jres(res,503,{error:'APIキーが設定されていません'});
-    if((user.balance_jpy||0)<-1500)return jres(res,402,{error:'残高が不足しています',upgrade:true});
+    // 無料枠: 最初の10メッセージは無料
+  var FREE_MSGS = 10;
+  var usageCount = user.usage_count || 0;
+  var balance = user.balance_jpy || 0;
+  if(usageCount >= FREE_MSGS && balance <= 0){
+    return jres(res,402,{
+      error:'残高が不足しています',
+      detail:'残高をチャージするか、プランをご確認ください',
+      free_used: usageCount,
+      free_limit: FREE_MSGS,
+      balance: balance,
+      upgrade:true
+    });
+  }
     const agent=(user.agents||[]).find(a=>a.id===cm[1]);
     if(!agent)return jres(res,404,{error:'エージェントが見つかりません'});
     const{message}=await readBody(req);
@@ -461,6 +474,7 @@ async function handleAPI(req,res,pathname,method,ip){
       {role:'assistant',content:reply,time:ts}];
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
     user.balance_jpy=Math.round(((user.balance_jpy||0)-cost.jpy)*1000)/1000;
+  user.usage_count=(user.usage_count||0)+1;
     user.usage_count=(user.usage_count||0)+1;
     user.billing_history=user.billing_history||[];
     user.billing_history.push({date:new Date().toISOString(),agentId:agent.id,agentName:agent.name,

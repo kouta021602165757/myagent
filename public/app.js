@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   }catch(e){ console.error('[init]',e&&e.message); }
   try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
   document.getElementById('loader').classList.add('gone');
-};
+});
 
 function showVerifyBanner(){
   const banner=document.createElement('div');

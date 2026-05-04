@@ -941,11 +941,7 @@ function openAgent(id){
       <div class="ct-name">${esc(ag.name)}</div>
       <div class="ct-pills">${sns.map(n=>`<span class="pill">${n}</span>`).join('')}</div>
     </div>
-    <div class="top-actions">
-      <button class="del-btn" onclick="delAgent('${id}')">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M4.5 3.5V2h4v1.5M5 6v3.5M8 6v3.5M2.5 3.5l.6 7h7.8l.6-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </div>  <button onclick="openEditAgent('${ag.id}')" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--peach-dark);cursor:pointer;padding:6px 12px;border-radius:10px;margin-left:auto;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:5px" title="編集・削除">⚙️ 編集</button>
+      <button onclick="openEditAgent('${ag.id}')" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--peach-dark);cursor:pointer;padding:6px 12px;border-radius:10px;margin-left:auto;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:5px" title="編集・削除">⚙️ 編集</button>
 `;
 
   const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);

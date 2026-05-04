@@ -593,7 +593,7 @@ function serveStatic(res,fp){
       });
     }else{
       const h={'Content-Type':mime,...SEC};
-      if(ext!=='.html')h['Cache-Control']='public,max-age=31536000';
+      if(ext==='.html'){h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';}else{h['Cache-Control']='public,max-age=31536000';}
       res.writeHead(200,h);res.end(data);
     }
   });

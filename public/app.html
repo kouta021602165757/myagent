@@ -415,6 +415,35 @@ input,textarea{font-family:var(--sans);}
   .layout{grid-template-columns:1fr;}
   .sb{display:none;}
 }
+
+/* ── Mobile ─────────────────────────────────────────── */
+@media(max-width:600px){
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .sidebar{
+    width:100%;height:auto;position:fixed;top:0;left:0;right:0;z-index:100;
+    flex-direction:row;padding:8px 12px;border-right:none;border-bottom:1px solid rgba(255,255,255,.08);
+    background:#04040a;
+  }
+  .logo-area{flex:1;margin-bottom:0}
+  .logo-area .logotext{display:none}
+  .sb-new{flex:1;max-width:160px;padding:8px 12px;font-size:13px}
+  .agent-list{display:none}
+  .balance-area{display:none}
+  .logout-btn{display:none}
+  .main-area{margin-top:56px;height:calc(100vh - 56px)}
+  .empty-wrap{padding:24px 16px}
+  .empty-wrap h2{font-size:24px}
+  .wizard-modal{padding:16px}
+  .wizard-panel{padding:20px 16px}
+  .av-grid{grid-template-columns:repeat(6,1fr);gap:8px}
+  .sk-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .sk-card{padding:10px 8px;font-size:12px}
+  .chat-input-wrap{padding:8px 12px}
+  #msgInput{font-size:14px}
+  .chat-messages{padding:12px}
+  .msg{max-width:90%}
+  .agent-header{padding:12px 16px}
+}
 </style>
 </head>
 <body>

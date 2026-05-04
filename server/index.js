@@ -626,6 +626,8 @@ const server=http.createServer(async(req,res)=>{
   serveStatic(res,fp);
 });
 
+process.on('uncaughtException',err=>{if(err.code==='ECONNRESET'||err.message==='socket hang up')return;console.error('Uncaught:',err.message);});
+process.on('unhandledRejection',err=>{console.error('Unhandled:',err?.message||err);});
 server.listen(PORT,'0.0.0.0',()=>{
   console.log(`\n🚀 MY AI Agent`);
   console.log(`   http://localhost:${PORT}`);
@@ -636,7 +638,7 @@ server.listen(PORT,'0.0.0.0',()=>{
   console.log(`   Google:    ${GOOGLE_ID?'✅':'⚠️  Not configured'}`);
   console.log(`   Email:     ${RESEND_KEY?'✅ Resend':'⚠️  Console only'}\n`);
 });
-server.on('error',err=>{console.error(err);process.exit(1);});
+server.on('error',err=>{if(err.code==='EADDRINUSE'){console.error('Port in use:',PORT);process.exit(1);}else{console.error('Server error:',err.message);}});
 process.on('SIGTERM',()=>server.close(()=>process.exit(0)));
 process.on('SIGINT', ()=>server.close(()=>process.exit(0)));
 

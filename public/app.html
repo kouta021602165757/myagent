@@ -735,12 +735,12 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const urlParams=new URLSearchParams(location.search);
   const urlToken=urlParams.get('token');
   if(urlToken){ localStorage.setItem('token',urlToken); history.replaceState({},'',location.pathname); }
-  const tok=localStorage.getItem('token');
-  if(!tok){ location.href='auth.html'; return; }
+  token=localStorage.getItem('token');
+  if(!token){ location.href='auth.html'; return; }
   try{
-    const me=await apiFetch('/api/me');
-    if(!me||me.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
-    user=me;
+    const meData=await apiFetch('/api/me');
+    if(!meData||meData.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
+    me=meData;
     const ra=await apiFetch('/api/agents');
     agents=ra.agents||[];
     // Show email verify banner if not verified

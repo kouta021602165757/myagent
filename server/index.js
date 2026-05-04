@@ -116,8 +116,8 @@ const DB={
             if(se)console.error('Supabase save error:',se.message);
   }
   async remove(id){
-    if(!this.supa){ this.data=this.data.filter(u=>u.id!==id); return true; }
-    const{error}=await this.supa.from('users').delete().eq('id',id);
+    if(!USE_SUPA){ LDB.data=LDB.data.filter(u=>u.id!==id); return true; }
+    const{error}=await supabase.from('users').delete().eq('id',id);
     return !error;
   },
 };

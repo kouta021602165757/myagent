@@ -445,6 +445,19 @@ async function handleAPI(req,res,pathname,method,ip){
     await DB.save(user);return jres(res,201,{agent});
   }
 
+
+  // ── PATCH /api/agents/:id ──────────────────────────────────
+  const pam=pathname.match(/^\/api\/agents\/([^/]+)$/);
+  if(pam&&method==='PATCH'){
+    const agId=pam[1];
+    const{name,persona}=await readBody(req);
+    const ag=(user.agents||[]).find(a=>a.id===agId);
+    if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
+    if(name)ag.name=name.trim();
+    if(persona!==undefined)ag.persona=persona;
+    await DB.save(user);
+    return jres(res,200,{agent:ag});
+  }
   // ── DELETE /api/agents/:id ─────────────────────────────────
   const dm=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(dm&&method==='DELETE'){

@@ -755,6 +755,43 @@ body{color:#f0f0f8;}
     </div>
   </div>
 </div>
+
+<!-- ── エージェント編集モーダル ── -->
+<div class="modal-overlay gone" id="editAgentModal">
+  <div class="wizard-modal" style="max-width:460px;padding:0;overflow:hidden;border-radius:20px;border:1px solid rgba(180,120,80,.2);box-shadow:0 20px 60px rgba(0,0,0,.15)">
+    <div class="wiz-top" style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(180,120,80,.12)">
+      <div class="wiz-title" style="font-size:16px;font-weight:700;color:var(--text)">エージェントを編集</div>
+      <button onclick="closeEditAgent()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+      <!-- アバター表示 -->
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:rgba(251,146,60,.06);border-radius:14px;border:1px solid rgba(251,146,60,.12)">
+        <div id="editAgAvatar" style="font-size:32px"></div>
+        <div>
+          <div id="editAgName2" style="font-size:15px;font-weight:700;color:var(--text)"></div>
+          <div id="editAgSkills" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
+        </div>
+      </div>
+      <!-- 名前編集 -->
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:.04em">エージェント名</label>
+        <input id="editName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <!-- 性格・追加指示 -->
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:.04em">性格・追加指示（任意）</label>
+        <textarea id="editPersona" placeholder="例：丁寧な口調で話してください。箇条書きで答えてください。" rows="4" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
+      </div>
+      <!-- ボタン -->
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button onclick="saveEditAgent()" style="flex:1;background:var(--peach);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
+      </div>
+      <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:14px">
+        <button onclick="deleteAgent()" style="width:100%;background:rgba(239,68,68,.08);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">🗑 このエージェントを削除</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
 
 <script>
@@ -912,7 +949,8 @@ function openAgent(id){
       <button class="del-btn" onclick="delAgent('${id}')">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M4.5 3.5V2h4v1.5M5 6v3.5M8 6v3.5M2.5 3.5l.6 7h7.8l.6-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-    </div>`;
+    </div>  <button onclick="openEditAgent('${ag.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:8px;border-radius:8px;margin-left:auto;font-size:18px;opacity:.7" title="編集・削除">⚙️</button>
+`;
 
   const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);
   document.getElementById('chips').innerHTML=ag.history?.length?'':allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('');
@@ -1060,6 +1098,66 @@ function openWizard(){
   document.getElementById('wizOverlay').classList.add('open');
 }
 function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
+
+function openEditAgent(id){
+  const ag = agents.find(a=>a.id===(id||activeId));
+  if(!ag) return;
+  window._editAgentId = ag.id;
+  document.getElementById('editAgAvatar').textContent = ag.avatar;
+  document.getElementById('editAgName2').textContent = ag.name;
+  document.getElementById('editAgSkills').textContent = ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ');
+  document.getElementById('editName').value = ag.name;
+  document.getElementById('editPersona').value = ag.persona || '';
+  document.getElementById('editAgentModal').classList.remove('gone');
+}
+
+function closeEditAgent(){
+  document.getElementById('editAgentModal').classList.add('gone');
+}
+
+async function saveEditAgent(){
+  const id = window._editAgentId;
+  const ag = agents.find(a=>a.id===id);
+  if(!ag) return;
+  const newName = document.getElementById('editName').value.trim();
+  const newPersona = document.getElementById('editPersona').value.trim();
+  if(!newName){ showToast('名前を入力してください','ng'); return; }
+  try{
+    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona});
+    ag.name = newName;
+    ag.persona = newPersona;
+    closeEditAgent();
+    renderAgList();
+    renderChatTop(ag);
+    showToast('保存しました','ok');
+  }catch(e){
+    showToast('保存に失敗しました','ng');
+  }
+}
+
+async function deleteAgent(){
+  const id = window._editAgentId;
+  const ag = agents.find(a=>a.id===id);
+  if(!ag) return;
+  if(!confirm(ag.name+'を削除しますか？会話履歴もすべて削除されます。')) return;
+  try{
+    await api('DELETE', '/api/agents/'+id);
+    agents = agents.filter(a=>a.id!==id);
+    closeEditAgent();
+    activeId = null;
+    if(agents.length > 0){
+      openAgent(agents[0].id);
+    } else {
+      document.getElementById('emptyWrap').style.display='flex';
+      document.getElementById('chatWrap').style.display='none';
+    }
+    renderAgList();
+    showToast('削除しました','ok');
+  }catch(e){
+    showToast('削除に失敗しました','ng');
+  }
+}
+
 
 function buildAvGrid(){
   document.getElementById('avGrid').innerHTML=AVATARS.map((e,i)=>

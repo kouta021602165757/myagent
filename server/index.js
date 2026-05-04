@@ -1,9 +1,3 @@
-
-  async remove(id) {
-    if(!this.supa){ this.data=this.data.filter(u=>u.id!==id); return true; }
-    const{error}=await this.supa.from('users').delete().eq('id',id);
-    return !error;
-  }
 'use strict';
 const http=require('http'),https=require('https'),fs=require('fs'),
       path=require('path'),crypto=require('crypto'),url=require('url');
@@ -120,6 +114,11 @@ const DB={
     if(!USE_SUPA){LDB.upd(user);return;}
         const{error:se}=await supabase.from('users').update(toSnake(user)).eq('id',user.id);
             if(se)console.error('Supabase save error:',se.message);
+  }
+  async remove(id){
+    if(!this.supa){ this.data=this.data.filter(u=>u.id!==id); return true; }
+    const{error}=await this.supa.from('users').delete().eq('id',id);
+    return !error;
   },
 };
 

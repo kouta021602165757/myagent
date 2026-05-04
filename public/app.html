@@ -10,15 +10,20 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --ink:#04040a;--ink2:#0b0b14;--ink3:#11111e;--ink4:#181828;--ink5:#1e1e30;
-  --wire:rgba(255,255,255,.055);--wire2:rgba(255,255,255,.10);--wire3:rgba(255,255,255,.18);
-  --snow:#f0f0f8;--mist:#7272a0;--fog:#3a3a5a;
-  --volt:#c8ff57;--volt-dim:rgba(200,255,87,.1);--volt-glow:rgba(200,255,87,.28);
-  --cyan:#00e5cc;--rose:#ff4d6d;--rose-dim:rgba(255,77,109,.12);--amber:#ffb547;
+  /* ライトクリーム×ピーチオレンジ */
+  --ink:#fdf8f3;--ink2:#faf3eb;--ink3:#f5ebe0;--ink4:#ede0d4;--ink5:#e3d5c8;
+  --wire:rgba(180,120,80,.08);--wire2:rgba(180,120,80,.15);--wire3:rgba(180,120,80,.25);
+  --snow:#2d1a0e;--mist:#8c6a52;--fog:#b89880;
+  --volt:#fb923c;--volt-dim:rgba(251,146,60,.12);--volt-glow:rgba(251,146,60,.3);
+  --cyan:#f97316;--rose:#ef4444;--rose-dim:rgba(239,68,68,.1);--amber:#f59e0b;
   --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;--mono:'DM Mono',monospace;
   --sb:240px;
+  /* 追加カラー */
+  --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#ea580c;
+  --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
+  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
 }
-html,body{height:100%;font-family:var(--sans);background:var(--ink);color:var(--snow);-webkit-font-smoothing:antialiased;overflow:hidden;}
+html,body{height:100%;font-family:var(--sans);background:var(--cream);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden;}
 button{font-family:var(--sans);cursor:pointer;border:none;transition:all .17s cubic-bezier(.4,0,.2,1);}
 input,textarea{font-family:var(--sans);}
 ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--fog);border-radius:2px;}
@@ -51,7 +56,7 @@ input,textarea{font-family:var(--sans);}
 .sb-logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
 .logomark{
   width:30px;height:30px;border-radius:8px;
-  background:var(--volt);display:flex;align-items:center;justify-content:center;
+  background:var(--peach);display:flex;align-items:center;justify-content:center;
   font-family:var(--display);font-size:17px;color:var(--ink);
   box-shadow:0 0 14px var(--volt-glow);
 }
@@ -61,11 +66,11 @@ input,textarea{font-family:var(--sans);}
 .sb-new{
   display:flex;align-items:center;gap:7px;
   padding:9px 12px;border-radius:10px;
-  background:var(--volt-dim);border:1px solid rgba(200,255,87,.2);
+  background:var(--volt-dim);border:1px solid rgba(251,146,60,.2);
   color:var(--volt);font-size:12px;font-weight:700;
   margin:12px;transition:all .2s;
 }
-.sb-new:hover{background:var(--volt);color:var(--ink);border-color:var(--volt);box-shadow:0 0 16px var(--volt-glow);}
+.sb-new:hover{background:var(--peach);color:var(--ink);border-color:var(--volt);box-shadow:0 0 16px var(--volt-glow);}
 
 /* section label */
 .sb-lbl{
@@ -81,7 +86,7 @@ input,textarea{font-family:var(--sans);}
   transition:all .14s;
 }
 .ag-item:hover{background:var(--ink3);}
-.ag-item.on{background:rgba(200,255,87,.07);border-color:rgba(200,255,87,.2);}
+.ag-item.on{background:rgba(251,146,60,.07);border-color:rgba(251,146,60,.2);}
 .ag-icon{
   width:34px;height:34px;border-radius:9px;background:var(--ink4);
   border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;
@@ -109,7 +114,7 @@ input,textarea{font-family:var(--sans);}
 .balance-sub{font-size:10px;color:var(--fog);}
 .charge-btn{
   width:100%;padding:7px;border-radius:8px;font-size:12px;font-weight:700;
-  background:var(--volt);color:var(--ink);
+  background:var(--peach);color:var(--ink);
   box-shadow:0 0 10px var(--volt-glow);margin-top:8px;
 }
 .charge-btn:hover{box-shadow:0 0 18px var(--volt-glow);}
@@ -145,7 +150,7 @@ input,textarea{font-family:var(--sans);}
 .empty p{font-size:14px;color:var(--mist);line-height:1.7;max-width:280px;}
 .btn-volt{
   padding:13px 30px;border-radius:12px;font-size:15px;font-weight:700;
-  background:var(--volt);color:var(--ink);
+  background:var(--peach);color:var(--ink);
   box-shadow:0 0 20px var(--volt-glow);
 }
 .btn-volt:hover{transform:translateY(-1px);box-shadow:0 0 32px var(--volt-glow);}
@@ -198,7 +203,7 @@ input,textarea{font-family:var(--sans);}
 .mbod{display:flex;flex-direction:column;gap:4px;max-width:72%;}
 .msg.u .mbod{align-items:flex-end;}
 
-.mbub{color:var(--snow);
+.mbub{color:var(--text);
   padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.7;
   background:var(--ink3);border:1px solid var(--wire2);
   word-break:break-word;
@@ -236,14 +241,14 @@ input,textarea{font-family:var(--sans);}
   background:var(--ink3);border:1px solid var(--wire2);
   border-radius:18px;padding:7px 7px 7px 18px;
 }
-.in-box:focus-within{border-color:rgba(200,255,87,.4);box-shadow:0 0 0 3px rgba(200,255,87,.07);}
+.in-box:focus-within{border-color:rgba(200,255,87,.4);box-shadow:0 0 0 3px rgba(251,146,60,.07);}
 #ci{
-  flex:1;background:none;border:none;color:var(--snow);font-size:14px;
+  flex:1;background:none;border:none;color:var(--text);font-size:14px;
   resize:none;max-height:120px;line-height:1.6;padding:6px 0;
 }
 .snd{
   width:38px;height:38px;border-radius:12px;
-  background:var(--volt);color:var(--ink);
+  background:var(--peach);color:var(--ink);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
   box-shadow:0 0 12px var(--volt-glow);
 }
@@ -254,7 +259,7 @@ input,textarea{font-family:var(--sans);}
    CREATE MODAL
 ══════════════════════════════════════ */
 .overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);
+  position:fixed;inset:0;background:rgba(251,146,60,.08);backdrop-filter:blur(12px);
   display:none;align-items:center;justify-content:center;z-index:999;
 }
 .overlay.open{display:flex;}
@@ -277,10 +282,10 @@ input,textarea{font-family:var(--sans);}
   width:30px;height:30px;border-radius:8px;background:var(--ink3);
   border:1px solid var(--wire);color:var(--mist);display:flex;align-items:center;justify-content:center;
 }
-.wiz-close:hover{color:var(--snow);}
+.wiz-close:hover{color:var(--text);}
 
 .wiz-progress{height:2px;background:var(--wire);position:relative;}
-.wiz-fill{height:100%;background:var(--volt);transition:width .4s cubic-bezier(.4,0,.2,1);}
+.wiz-fill{height:100%;background:var(--peach);transition:width .4s cubic-bezier(.4,0,.2,1);}
 
 .wiz-body{padding:24px;}
 
@@ -306,7 +311,7 @@ input,textarea{font-family:var(--sans);}
 /* name input */
 .wiz-input{
   width:100%;background:var(--ink3);border:1px solid var(--wire2);
-  border-radius:11px;color:var(--snow);font-size:15px;padding:12px 15px;
+  border-radius:11px;color:var(--text);font-size:15px;padding:12px 15px;
 }
 .wiz-input:focus{border-color:var(--volt);outline:none;box-shadow:0 0 0 3px var(--volt-dim);}
 ::placeholder{color:var(--fog);}
@@ -325,7 +330,7 @@ input,textarea{font-family:var(--sans);}
 
 .per-ta{
   width:100%;min-height:80px;background:var(--ink3);border:1px solid var(--wire2);
-  border-radius:11px;color:var(--snow);font-size:13px;padding:12px 14px;
+  border-radius:11px;color:var(--text);font-size:13px;padding:12px 14px;
   resize:vertical;line-height:1.6;
 }
 .per-ta:focus{border-color:var(--volt);outline:none;box-shadow:0 0 0 3px var(--volt-dim);}
@@ -357,7 +362,7 @@ input,textarea{font-family:var(--sans);}
   padding:12px 20px;border-radius:12px;background:var(--ink3);
   border:1px solid var(--wire2);color:var(--mist);font-size:14px;
 }
-.btn-back:hover{border-color:var(--wire3);color:var(--snow);}
+.btn-back:hover{border-color:var(--wire3);color:var(--text);}
 
 /* ══════════════════════════════════════
    CHARGE MODAL
@@ -386,14 +391,14 @@ input,textarea{font-family:var(--sans);}
 .toast{
   position:fixed;bottom:24px;right:24px;z-index:9999;
   padding:11px 18px;border-radius:12px;
-  background:var(--ink3);border:1px solid var(--wire2);color:var(--snow);
+  background:var(--ink3);border:1px solid var(--wire2);color:var(--text);
   font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;
   box-shadow:0 8px 32px rgba(0,0,0,.7);
   transform:translateY(70px);opacity:0;transition:all .28s cubic-bezier(.34,1.56,.64,1);max-width:300px;
 }
 .toast.on{transform:translateY(0);opacity:1;}
 .tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.toast.ok .tdot{background:var(--volt);box-shadow:0 0 6px var(--volt);}
+.toast.ok .tdot{background:var(--peach);box-shadow:0 0 6px var(--volt);}
 .toast.ng .tdot{background:var(--rose);box-shadow:0 0 6px var(--rose);}
 
 /* loader */
@@ -423,7 +428,7 @@ input,textarea{font-family:var(--sans);}
   .sidebar{
     width:100%;height:auto;position:fixed;top:0;left:0;right:0;z-index:100;
     flex-direction:row;padding:8px 12px;border-right:none;border-bottom:1px solid rgba(255,255,255,.08);
-    background:#04040a;
+    background:var(--cream);
   }
   .logo-area{flex:1;margin-bottom:0}
   .logo-area .logotext{display:none}
@@ -447,12 +452,12 @@ input,textarea{font-family:var(--sans);}
 }
 
 .stab-btn{flex:1;padding:11px 4px;background:none;border:none;border-bottom:2px solid transparent;color:#7272a0;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
-.active-stab{color:#c8ff57!important;border-bottom-color:#c8ff57!important}
+.active-stab{color:#fb923c!important;border-bottom-color:#fb923c!important}
 
 /* チャットメッセージの文字色 */
-.mbub{color:var(--snow)!important}
-.msg.u .mbub{background:var(--volt-dim);color:var(--snow)!important}
-.msg.a .mbub{background:rgba(255,255,255,.06);color:var(--snow)!important}
+.mbub{color:var(--text)!important}
+.msg.u .mbub{background:var(--volt-dim);color:var(--text)!important}
+.msg.a .mbub{background:rgba(255,255,255,.06);color:var(--text)!important}
 .mtime{color:var(--fog)!important}
 
 .mbub{color:#f0f0f8!important}
@@ -463,27 +468,73 @@ input,textarea{font-family:var(--sans);}
 
 /* デザイン改善 */
 body{color:#f0f0f8;}
-.sb{background:#07070d !important;}
+.sb{background:var(--cream) !important;}
 .ag-name{color:#f0f0f8 !important;font-weight:600;}
 .ag-skill{color:rgba(240,240,248,.5) !important;font-size:11px;}
 .balance-val{color:#f0f0f8 !important;font-weight:800;}
 .balance-lbl,.balance-sub{color:rgba(240,240,248,.5) !important;font-size:11px;}
 .user-name{color:#f0f0f8 !important;font-weight:600;}
-.chat-top{background:#07070d !important;border-bottom:1px solid rgba(255,255,255,.06) !important;}
+.chat-top{background:var(--cream) !important;border-bottom:1px solid rgba(255,255,255,.06) !important;}
 .ct-name{color:#f0f0f8 !important;font-size:16px;font-weight:700;}
-.msgs{background:#04040a !important;}
+.msgs{background:var(--cream) !important;}
 .mbub{color:#f0f0f8 !important;line-height:1.75;font-size:14px;}
-.msg.u .mbub{background:rgba(200,255,87,.1) !important;border:1px solid rgba(200,255,87,.2) !important;color:#f0f0f8 !important;}
-.msg.a .mbub{background:rgba(255,255,255,.05) !important;border:1px solid rgba(255,255,255,.08) !important;color:#f0f0f8 !important;}
+.msg.u .mbub{background:rgba(200,255,87,.1) !important;border:1px solid rgba(251,146,60,.2) !important;color:#f0f0f8 !important;}
+.msg.a .mbub{background:rgba(255,255,255,.05) !important;border:1px solid rgba(180,120,80,.15) !important;color:#f0f0f8 !important;}
 .mtime{color:rgba(240,240,248,.3) !important;font-size:11px;}
-.chat-foot{background:#07070d !important;border-top:1px solid rgba(255,255,255,.06) !important;}
+.chat-foot{background:var(--cream) !important;border-top:1px solid rgba(255,255,255,.06) !important;}
 #ci{color:#f0f0f8 !important;}
 #ci::placeholder{color:rgba(240,240,248,.3) !important;}
 .chip{color:rgba(240,240,248,.8) !important;border:1px solid rgba(255,255,255,.12) !important;}
 .stab-btn{color:rgba(240,240,248,.6) !important;border-bottom:2px solid transparent !important;}
-.active-stab{color:#c8ff57 !important;border-bottom-color:#c8ff57 !important;}
+.active-stab{color:#fb923c !important;border-bottom-color:#fb923c !important;}
 .logout-btn{color:rgba(240,240,248,.7) !important;}
 [style*="color:#7272a0"],[style*="color: #7272a0"]{color:rgba(240,240,248,.6) !important;}
+
+.modal-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(45,26,14,.4);backdrop-filter:blur(4px);align-items:center;justify-content:center;}.modal-overlay:not(.gone){display:flex;}
+
+/* ライトデザイン調整 */
+.sb{background:var(--cream2) !important;border-right:1px solid var(--wire2) !important;}
+.sb-logo,.sb-brand{color:var(--text) !important;}
+.sb-lbl{color:var(--text3) !important;font-size:11px !important;}
+.ag-name{color:var(--text) !important;font-weight:600;}
+.ag-skill{color:var(--text3) !important;font-size:11px;}
+.ag-item:hover{background:rgba(251,146,60,.08) !important;}
+.ag-item.active,.ag-item.sel{background:rgba(251,146,60,.12) !important;border-color:rgba(251,146,60,.3) !important;}
+.balance-card,.bal-box{background:var(--cream3) !important;border:1px solid var(--wire2) !important;}
+.balance-val{color:var(--text) !important;font-weight:800;}
+.balance-lbl,.balance-sub,.bal-label{color:var(--text3) !important;font-size:11px;}
+.user-name{color:var(--text) !important;font-weight:600;}
+.user-av{background:linear-gradient(135deg,#fb923c,#f97316) !important;color:#fff !important;}
+.chat-top{background:var(--cream2) !important;border-bottom:1px solid var(--wire2) !important;}
+.ct-name{color:var(--text) !important;font-size:16px;font-weight:700;}
+.pill{background:rgba(251,146,60,.12) !important;color:var(--peach-dark) !important;border:1px solid rgba(251,146,60,.25) !important;}
+.msgs{background:var(--cream) !important;}
+.mbub{color:var(--text) !important;line-height:1.75;font-size:14px;}
+.msg.u .mbub{background:rgba(251,146,60,.1) !important;border:1px solid rgba(251,146,60,.2) !important;color:var(--text) !important;}
+.msg.a .mbub{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;color:var(--text) !important;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.mtime{color:var(--text3) !important;font-size:11px;}
+.mav{background:rgba(251,146,60,.15) !important;border-radius:50% !important;}
+.chat-foot{background:var(--cream2) !important;border-top:1px solid var(--wire2) !important;}
+.in-box{background:#fff !important;border:1px solid rgba(180,120,80,.2) !important;border-radius:16px !important;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+#ci{color:var(--text) !important;}
+#ci::placeholder{color:var(--text3) !important;opacity:.6;}
+.snd{background:var(--peach) !important;color:#fff !important;}
+.chip{color:var(--text2) !important;background:rgba(251,146,60,.08) !important;border:1px solid rgba(251,146,60,.2) !important;border-radius:20px !important;}
+.chip:hover{background:rgba(251,146,60,.15) !important;}
+.sb-new{background:rgba(251,146,60,.1) !important;border:1px solid rgba(251,146,60,.25) !important;color:var(--peach-dark) !important;}
+.sb-new:hover{background:rgba(251,146,60,.18) !important;}
+.stab-btn{color:var(--text3) !important;border-bottom:2px solid transparent !important;background:none !important;}
+.stab-btn:hover{color:var(--text) !important;}
+.active-stab{color:var(--peach-dark) !important;border-bottom-color:var(--peach) !important;}
+.logout-btn{color:var(--text3) !important;background:rgba(180,120,80,.08) !important;border:1px solid rgba(180,120,80,.15) !important;}
+.empty{color:var(--text) !important;}
+.wizard-modal{background:var(--cream) !important;border:1px solid var(--wire2) !important;box-shadow:0 20px 60px rgba(0,0,0,.15) !important;}
+.wiz-top{background:var(--cream2) !important;border-bottom:1px solid var(--wire2) !important;}
+.wiz-title{color:var(--text) !important;}
+.btn-volt{background:var(--peach) !important;color:#fff !important;}
+.btn-volt:hover{background:var(--peach-dark) !important;}
+.plan-c{background:var(--cream2) !important;border:1px solid var(--wire2) !important;}
+.plan-g{background:rgba(251,146,60,.08) !important;border:1px solid rgba(251,146,60,.25) !important;}
 
 </style>
 </head>
@@ -519,7 +570,7 @@ body{color:#f0f0f8;}
         <div class="user-av" id="userAv"></div>
         <div class="user-name" id="userName"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
-          <button class="logout-btn" onclick="openSettings()" title="設定" style="flex:0;padding:6px 10px;font-size:16px;background:rgba(255,255,255,.08);border-radius:8px;border:1px solid rgba(255,255,255,.1)">⚙️</button>
+          <button class="logout-btn" onclick="openSettings()" title="設定" style="flex:0;padding:6px 10px;font-size:16px;background:rgba(255,255,255,.08);border-radius:8px;border:1px solid rgba(180,120,80,.2)">⚙️</button>
           <button class="logout-btn" onclick="doLogout()" style="flex:1">ログアウト</button>
         </div>
       </div>
@@ -640,7 +691,7 @@ body{color:#f0f0f8;}
 <div class="modal-overlay gone" id="settingsModal">
   <div class="wizard-modal" style="max-width:520px;padding:0;overflow:hidden;border-radius:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)">
-      <h2 style="font-size:17px;font-weight:700;color:#fff">設定</h2>
+      <h2 style="font-size:17px;font-weight:700;color:var(--text)">設定</h2>
       <button onclick="closeSettings()" style="background:none;border:none;color:#7272a0;font-size:22px;cursor:pointer;line-height:1">×</button>
     </div>
     <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.08)">
@@ -652,41 +703,41 @@ body{color:#f0f0f8;}
     <div style="padding:24px;max-height:62vh;overflow-y:auto">
       <div id="s-profile">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:rgba(255,255,255,.04);border-radius:14px">
-          <div id="sAv" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#c8ff57,#00e5cc);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#04040a;flex-shrink:0"></div>
-          <div><p id="sEmail" style="color:#fff;font-size:15px;font-weight:600"></p><p id="sJoined" style="color:#7272a0;font-size:12px;margin-top:3px"></p></div>
+          <div id="sAv" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#00e5cc);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0"></div>
+          <div><p id="sEmail" style="color:var(--text);font-size:15px;font-weight:600"></p><p id="sJoined" style="color:#7272a0;font-size:12px;margin-top:3px"></p></div>
         </div>
         <label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px;letter-spacing:.06em">表示名</label>
-        <input id="sName" type="text" placeholder="名前を入力" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
-        <button onclick="saveProfile()" style="width:100%;background:#c8ff57;color:#04040a;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
+        <input id="sName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
+        <button onclick="saveProfile()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
       </div>
       <div id="s-security" style="display:none">
         <p style="color:#7272a0;font-size:13px;margin-bottom:20px;line-height:1.6">パスワードを変更します。</p>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px">
-          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
-          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード</label><input id="sNewPw" type="password" placeholder="••••••••" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
-          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード（確認）</label><input id="sConfPw" type="password" placeholder="••••••••" style="width:100%;background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード</label><input id="sNewPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード（確認）</label><input id="sConfPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
         </div>
-        <button onclick="changePassword()" style="width:100%;background:#c8ff57;color:#04040a;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">パスワードを変更</button>
+        <button onclick="changePassword()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">パスワードを変更</button>
       </div>
       <div id="s-billing" style="display:none">
-        <div style="background:rgba(200,255,87,.07);border:1px solid rgba(200,255,87,.2);border-radius:14px;padding:18px;margin-bottom:20px">
-          <p style="color:#c8ff57;font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:6px">現在の残高</p>
-          <p id="sBal" style="color:#fff;font-size:30px;font-weight:900;margin-bottom:4px">¥0.00</p>
+        <div style="background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.2);border-radius:14px;padding:18px;margin-bottom:20px">
+          <p style="color:#fb923c;font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:6px">現在の残高</p>
+          <p id="sBal" style="color:var(--text);font-size:30px;font-weight:900;margin-bottom:4px">¥0.00</p>
           <p id="sUsage" style="color:#7272a0;font-size:12px"></p>
         </div>
         <p style="color:#7272a0;font-size:13px;margin-bottom:14px">チャージ金額を選択してください。</p>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          <button onclick="quickCharge(500)" style="background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 8px;color:#fff;cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#c8ff57'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥500</b><small style="color:#7272a0;font-size:11px">約25回</small></button>
-          <button onclick="quickCharge(1000)" style="background:#0d0d1a;border:2px solid #c8ff57;border-radius:10px;padding:14px 8px;color:#fff;cursor:pointer;font-family:inherit;position:relative"><span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#c8ff57;color:#04040a;font-size:9px;font-weight:900;padding:2px 10px;border-radius:20px">🔥 人気</span><b style="display:block;font-size:17px">¥1,000</b><small style="color:#7272a0;font-size:11px">約50回</small></button>
-          <button onclick="quickCharge(5000)" style="background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 8px;color:#fff;cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#c8ff57'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥5,000</b><small style="color:#7272a0;font-size:11px">約250回</small></button>
+          <button onclick="quickCharge(500)" style="background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:14px 8px;color:var(--text);cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥500</b><small style="color:#7272a0;font-size:11px">約25回</small></button>
+          <button onclick="quickCharge(1000)" style="background:var(--cream3);border:2px solid #fb923c;border-radius:10px;padding:14px 8px;color:var(--text);cursor:pointer;font-family:inherit;position:relative"><span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--peach);color:#fff;font-size:9px;font-weight:900;padding:2px 10px;border-radius:20px">🔥 人気</span><b style="display:block;font-size:17px">¥1,000</b><small style="color:#7272a0;font-size:11px">約50回</small></button>
+          <button onclick="quickCharge(5000)" style="background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:14px 8px;color:var(--text);cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥5,000</b><small style="color:#7272a0;font-size:11px">約250回</small></button>
         </div>
       </div>
       <div id="s-danger" style="display:none">
         <div style="background:rgba(255,77,109,.05);border:1px solid rgba(255,77,109,.2);border-radius:14px;padding:20px">
           <h3 style="color:#ff4d6d;font-size:15px;font-weight:700;margin-bottom:8px">アカウントを削除</h3>
           <p style="color:#7272a0;font-size:13px;margin-bottom:16px;line-height:1.6">全てのエージェント・会話・残高が永久に削除されます。この操作は取り消せません。</p>
-          <input id="sDelConfirm" type="text" placeholder='「削除する」と入力して確認' style="width:100%;background:#0d0d1a;border:1px solid rgba(255,77,109,.3);border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box">
-          <button onclick="deleteAccount()" style="width:100%;background:#ff4d6d;color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">アカウントを完全削除する</button>
+          <input id="sDelConfirm" type="text" placeholder='「削除する」と入力して確認' style="width:100%;background:var(--cream3);border:1px solid rgba(255,77,109,.3);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box">
+          <button onclick="deleteAccount()" style="width:100%;background:#ff4d6d;color:var(--text);border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">アカウントを完全削除する</button>
         </div>
       </div>
     </div>
@@ -779,7 +830,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
 function showVerifyBanner(){
   const banner=document.createElement('div');
   banner.id='verify-banner';
-  banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:200;padding:10px 20px;background:#ffb547;color:#04040a;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;';
+  banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:200;padding:10px 20px;background:#ffb547;color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;';
   banner.innerHTML=`📧 メールアドレスの確認が完了していません。 <button onclick="resendVerify()" style="background:rgba(0,0,0,.15);border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;">確認メールを再送</button> <button onclick="document.getElementById('verify-banner').remove()" style="background:none;border:none;cursor:pointer;font-size:16px;margin-left:8px;">×</button>`;
   document.body.prepend(banner);
 }

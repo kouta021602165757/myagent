@@ -231,7 +231,7 @@ async function sendResetEmail(user,token){
 async function callAI(messages,system){
   const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
     {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
-                         {model:'claude-haiku-4-5-20251001',max_tokens:1024,system,messages});
+                         {model:'claude-sonnet-4-6',max_tokens:1024,system,messages});
   if(r.s!==200)throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
   return r.d;
 }

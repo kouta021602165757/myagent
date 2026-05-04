@@ -704,7 +704,7 @@ body{color:#f0f0f8;}
   <div class="wizard-modal" style="max-width:520px;padding:0;overflow:hidden;border-radius:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)">
       <h2 style="font-size:17px;font-weight:700;color:var(--text)">設定</h2>
-      <button onclick="closeSettings()" style="background:none;border:none;color:#7272a0;font-size:22px;cursor:pointer;line-height:1">×</button>
+      <button onclick="closeSettings()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1">×</button>
     </div>
     <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.08)">
       <button class="stab-btn active-stab" onclick="switchStab(this,'s-profile')">👤 プロフィール</button>
@@ -712,22 +712,22 @@ body{color:#f0f0f8;}
       <button class="stab-btn" onclick="switchStab(this,'s-billing')">💳 お支払い</button>
       <button class="stab-btn" onclick="switchStab(this,'s-danger')" style="color:#ff4d6d">⚠️ 危険</button>
     </div>
-    <div style="padding:24px;max-height:62vh;overflow-y:auto">
+    <div style="padding:24px;height:420px;overflow-y:auto">
       <div id="s-profile">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:rgba(255,255,255,.04);border-radius:14px">
           <div id="sAv" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#00e5cc);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0"></div>
           <div><p id="sEmail" style="color:var(--text);font-size:15px;font-weight:600"></p><p id="sJoined" style="color:#7272a0;font-size:12px;margin-top:3px"></p></div>
         </div>
-        <label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px;letter-spacing:.06em">表示名</label>
+        <label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px;letter-spacing:.06em">表示名</label>
         <input id="sName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
         <button onclick="saveProfile()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
       </div>
       <div id="s-security" style="display:none">
         <p style="color:#7272a0;font-size:13px;margin-bottom:20px;line-height:1.6">パスワードを変更します。</p>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px">
-          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
-          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード</label><input id="sNewPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
-          <div><label style="display:block;font-size:12px;color:#7272a0;font-weight:700;margin-bottom:6px">新しいパスワード（確認）</label><input id="sConfPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px">新しいパスワード</label><input id="sNewPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
+          <div><label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px">新しいパスワード（確認）</label><input id="sConfPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
         </div>
         <button onclick="changePassword()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">パスワードを変更</button>
       </div>

@@ -21,6 +21,8 @@ const SUPA_URL     = process.env.SUPABASE_URL||'';
 const SUPA_KEY     = process.env.SUPABASE_SERVICE_KEY||'';
 const STRIPE_SK    = process.env.STRIPE_SECRET_KEY||'';
 const STRIPE_WH    = process.env.STRIPE_WEBHOOK_SECRET||'';
+const STRIPE_PRO_PRICE = process.env.STRIPE_PRO_PRICE_ID||'';
+const STRIPE_BIZ_PRICE = process.env.STRIPE_BIZ_PRICE_ID||'';
 const GOOGLE_ID    = process.env.GOOGLE_CLIENT_ID||'';
 const GOOGLE_SEC   = process.env.GOOGLE_CLIENT_SECRET||'';
 const RESEND_KEY   = process.env.RESEND_API_KEY||'';
@@ -266,6 +268,37 @@ async function googleUserInfo(accessToken){
 }
 
 // ── STRIPE ────────────────────────────────────────────────────
+
+async function stripeCreateCustomer(email, name){
+  const r=await httpsReq('POST','api.stripe.com','/v1/customers',
+    {'Authorization':'Basic '+Buffer.from(STRIPE_SK+':').toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
+    new URLSearchParams({email, name}).toString());
+  if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe customer error');
+  return r.d.id;
+}
+
+async function stripeCreateSubscription(customerId, priceId){
+  const r=await httpsReq('POST','api.stripe.com','/v1/subscriptions',
+    {'Authorization':'Basic '+Buffer.from(STRIPE_SK+':').toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
+    new URLSearchParams({
+      customer: customerId,
+      'items[0][price]': priceId,
+      'payment_behavior': 'default_incomplete',
+      'payment_settings[save_default_payment_method]': 'on_subscription',
+      'expand[0]': 'latest_invoice.payment_intent'
+    }).toString());
+  if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe subscription error');
+  return r.d;
+}
+
+async function stripeCancelSubscription(subscriptionId){
+  const r=await httpsReq('DELETE','api.stripe.com','/v1/subscriptions/'+subscriptionId,
+    {'Authorization':'Basic '+Buffer.from(STRIPE_SK+':').toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
+    '');
+  if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe cancel error');
+  return r.d;
+}
+
 async function stripeCreatePaymentIntent(amtJpy,userId,email){
   const r=await httpsReq('POST','api.stripe.com','/v1/payment_intents',
     {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`},
@@ -563,6 +596,63 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
+
+  // ── POST /api/billing/subscribe ────────────────────────────
+  if(pathname==='/api/billing/subscribe'&&method==='POST'){
+    const{plan}=await readBody(req);
+    if(!['pro','business'].includes(plan))return jres(res,400,{error:'Invalid plan'});
+    const priceId = plan==='pro' ? STRIPE_PRO_PRICE : STRIPE_BIZ_PRICE;
+    if(!priceId)return jres(res,503,{error:'Plan not configured'});
+    try{
+      // Stripe顧客を作成または取得
+      let customerId = user.stripe_customer_id;
+      if(!customerId){
+        customerId = await stripeCreateCustomer(user.email, user.name||user.email);
+        user.stripe_customer_id = customerId;
+      }
+      // サブスクリプション作成
+      const sub = await stripeCreateSubscription(customerId, priceId);
+      const clientSecret = sub.latest_invoice?.payment_intent?.client_secret;
+      user.plan = plan;
+      user.subscription_id = sub.id;
+      user.subscription_status = sub.status;
+      await DB.save(user);
+      return jres(res,200,{
+        subscription_id: sub.id,
+        client_secret: clientSecret,
+        status: sub.status,
+        plan
+      });
+    }catch(e){ return jres(res,500,{error:e.message}); }
+  }
+
+  // ── POST /api/billing/cancel ───────────────────────────────
+  if(pathname==='/api/billing/cancel'&&method==='POST'){
+    if(!user.subscription_id)return jres(res,400,{error:'No active subscription'});
+    try{
+      await stripeCancelSubscription(user.subscription_id);
+      user.plan = 'free';
+      user.subscription_id = null;
+      user.subscription_status = 'canceled';
+      await DB.save(user);
+      return jres(res,200,{message:'サブスクリプションをキャンセルしました'});
+    }catch(e){ return jres(res,500,{error:e.message}); }
+  }
+
+  // ── GET /api/billing/plans ─────────────────────────────────
+  if(pathname==='/api/billing/plans'&&method==='GET'){
+    return jres(res,200,{
+      plans:[
+        {id:'free',name:'Free',price_jpy:0,credits_jpy:0,description:'10メッセージ無料'},
+        {id:'pro',name:'Pro',price_jpy:1980,credits_jpy:3000,description:'毎月¥3,000分クレジット付き'},
+        {id:'business',name:'Business',price_jpy:4980,credits_jpy:9000,description:'毎月¥9,000分クレジット付き'},
+      ],
+      current_plan: user.plan||'free',
+      subscription_status: user.subscription_status||null,
+      balance_jpy: user.balance_jpy||0,
+    });
+  }
+
   // ── POST /api/billing/charge ───────────────────────────────
   if(pathname==='/api/billing/charge'&&method==='POST'){
     const{amount_jpy}=await readBody(req);
@@ -608,6 +698,38 @@ async function handleWebhook(req,res){
   try{
     const raw=await readRaw(req);
     const event=await verifyStripeWebhook(raw,sig);
+
+    // サブスクリプション更新（毎月クレジット付与）
+    if(event.type==='invoice.payment_succeeded'){
+      const invoice=event.data.object;
+      const customerId=invoice.customer;
+      const subId=invoice.subscription;
+      if(subId){
+        const u=await DB.findBy('stripe_customer_id',customerId);
+        if(u){
+          const plan=u.plan||'free';
+          const credits=plan==='pro'?3000:plan==='business'?9000:0;
+          if(credits>0){
+            u.balance_jpy=(u.balance_jpy||0)+credits;
+            u.subscription_status='active';
+            await DB.save(u);
+            console.log('Credits added:', credits, 'JPY to', u.email);
+          }
+        }
+      }
+    }
+    // サブスクリプションキャンセル
+    if(event.type==='customer.subscription.deleted'){
+      const sub=event.data.object;
+      const u=await DB.findBy('stripe_customer_id',sub.customer);
+      if(u){
+        u.plan='free';
+        u.subscription_id=null;
+        u.subscription_status='canceled';
+        await DB.save(u);
+      }
+    }
+
     if(event.type==='payment_intent.succeeded'){
       const pi=event.data.object;
       const userId=pi.metadata?.userId;

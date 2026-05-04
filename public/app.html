@@ -936,21 +936,23 @@ function renderMsgs(ag){
 
 function bubble(type,av,content,time,cost,images){
   const isU=type==='u';
-  const imgHtml = images && images.length > 0 ? images.map(img =>
-    `<img src="${img.url}" style="max-width:240px;max-height:200px;border-radius:10px;margin-bottom:6px;display:block;border:1px solid rgba(180,120,80,.15)">`
-  ).join('') : '';
-  return `<div class="msg ${isU?'u':'a'}">
-    <div class="mav${isU?' ua':''}">${av}</div>
-    <div class="mbod">
-      ${imgHtml ? '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+imgHtml+'</div>' : ''}
-      ${content ? '<div class="mbub">'+content+'</div>' : ''}
-      <div style="display:flex;gap:6px;">
-        <div class="mtime">${time}</div>
-      </div>
-    </div>
-  </div>`;
+  let imgHtml='';
+  if(images&&images.length>0){
+    imgHtml=images.map(function(img){
+      return '<img src="'+img.url+'" style="max-width:240px;max-height:200px;border-radius:10px;margin-bottom:6px;display:block;border:1px solid rgba(180,120,80,.15)">';
+    }).join('');
+  }
+  const cls='msg '+(isU?'u':'a');
+  const mavCls='mav'+(isU?' ua':'');
+  let html='<div class="'+cls+'">';
+  html+='<div class="'+mavCls+'">'+av+'</div>';
+  html+='<div class="mbod">';
+  if(imgHtml) html+='<div style="display:flex;flex-direction:column;align-items:'+(isU?'flex-end':'flex-start')+';gap:4px">'+imgHtml+'</div>';
+  if(content) html+='<div class="mbub">'+content+'</div>';
+  html+='<div style="display:flex;gap:6px;"><div class="mtime">'+time+'</div></div>';
+  html+='</div></div>';
+  return html;
 }
-
 function useChip(t){ document.getElementById('ci').value=t; document.getElementById('chips').innerHTML=''; sendMsg(); }
 
 /* ── Send ──────────────────────────────────────────── */

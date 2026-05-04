@@ -536,6 +536,10 @@ body{color:#f0f0f8;}
 .plan-c{background:var(--cream2) !important;border:1px solid var(--wire2) !important;}
 .plan-g{background:rgba(251,146,60,.08) !important;border:1px solid rgba(251,146,60,.25) !important;}
 
+
+#attachBtn:hover{opacity:1 !important;background:rgba(251,146,60,.1) !important;}
+#imgPreviewWrap{padding:8px 18px 0 !important;}
+.in-box{flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -590,8 +594,16 @@ body{color:#f0f0f8;}
       <div class="msgs" id="msgs"></div>
       <div class="chat-foot">
         <div class="chips" id="chips"></div>
+        <!-- 画像プレビューエリア -->
+        <div id="imgPreviewWrap" style="display:none;padding:8px 0 4px;display:flex;gap:8px;flex-wrap:wrap;"></div>
         <div class="in-box">
-          <textarea id="msgInput" id="ci" placeholder="何をお願いしますか？（Shift+Enterで改行）" rows="1" oninput="exTA(this)" onkeydown="taKey(event)"></textarea>
+          <!-- 隠しファイル入力 -->
+          <input type="file" id="imgInput" accept="image/*" multiple style="display:none" onchange="onImgSelect(event)">
+          <!-- 添付ボタン -->
+          <button id="attachBtn" onclick="document.getElementById('imgInput').click()" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;flex-shrink:0;opacity:.7;" title="画像を添付">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <textarea id="ci" placeholder="何をお願いしますか？（Shift+Enterで改行）" rows="1" oninput="exTA(this)" onkeydown="taKey(event)"></textarea>
           <button class="snd" id="sndBtn" onclick="sendMsg()">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l6 5-6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -917,20 +929,24 @@ function renderMsgs(ag){
     m.role==='user'?'u':'a',
     m.role==='user'?me.name.charAt(0):ag.avatar,
     fmt(m.content),m.time||'',
-    '',
+    '',m.images
   )).join('');
   el.scrollTop=el.scrollHeight;
 }
 
-function bubble(type,av,content,time,cost){
+function bubble(type,av,content,time,cost,images){
   const isU=type==='u';
+  const imgHtml = images && images.length > 0 ? images.map(img =>
+    `<img src="${img.url}" style="max-width:240px;max-height:200px;border-radius:10px;margin-bottom:6px;display:block;border:1px solid rgba(180,120,80,.15)">`
+  ).join('') : '';
   return `<div class="msg ${isU?'u':'a'}">
     <div class="mav${isU?' ua':''}">${av}</div>
     <div class="mbod">
-      <div class="mbub">${content}</div>
+      ${imgHtml ? '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+imgHtml+'</div>' : ''}
+      ${content ? '<div class="mbub">'+content+'</div>' : ''}
       <div style="display:flex;gap:6px;">
         <div class="mtime">${time}</div>
-        </div>
+      </div>
     </div>
   </div>`;
 }
@@ -938,24 +954,75 @@ function bubble(type,av,content,time,cost){
 function useChip(t){ document.getElementById('ci').value=t; document.getElementById('chips').innerHTML=''; sendMsg(); }
 
 /* ── Send ──────────────────────────────────────────── */
+// 選択中の画像リスト
+var _pendingImgs = [];
+
+// 画像選択ハンドラ
+function onImgSelect(e){
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    if(!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const b64 = ev.target.result.split(',')[1];
+      _pendingImgs.push({name:file.name, type:file.type, b64, url:ev.target.result});
+      renderImgPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+// 画像プレビュー描画
+function renderImgPreview(){
+  const wrap = document.getElementById('imgPreviewWrap');
+  if(!wrap) return;
+  if(_pendingImgs.length === 0){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML = _pendingImgs.map((img,i) => `
+    <div style="position:relative;display:inline-block">
+      <img src="${img.url}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid rgba(180,120,80,.2)">
+      <button onclick="_pendingImgs.splice(${i},1);renderImgPreview()" style="position:absolute;top:-6px;right:-6px;background:#ef4444;border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">×</button>
+    </div>
+  `).join('');
+}
+
 async function sendMsg(){
   const ci=document.getElementById('ci')||document.getElementById('msgInput');
-  const text=ci.value.trim(); if(!text)return;
+  const text=ci.value.trim();
+  const hasImg = _pendingImgs.length > 0;
+  if(!text && !hasImg) return;
   const ag=agents.find(a=>a.id===activeId); if(!ag)return;
   var _freeLeft=(me.usage_count||0)<10; if(!_freeLeft&&(me.balance_jpy||0)<=0){ showToast('残高が不足しています。チャージしてください','ng'); openCharge(); return; }
+  
+  // 送信する画像を取得してリセット
+  const imgs = [..._pendingImgs];
+  _pendingImgs = [];
+  renderImgPreview();
+  
   ci.value=''; exTA(ci);
   document.getElementById('sndBtn').disabled=true;
   document.getElementById('chips').innerHTML='';
   if(!ag.history)ag.history=[];
-  ag.history.push({role:'user',content:text,time:now()});
+  
+  // ユーザーメッセージ（画像プレビュー含む）
+  const userMsg = {role:'user', content:text, time:now()};
+  if(imgs.length > 0) userMsg.images = imgs.map(img => ({url:img.url, name:img.name}));
+  ag.history.push(userMsg);
   renderMsgs(ag);
+  
   const msgs=document.getElementById('msgs');
   const tEl=document.createElement('div');
   tEl.className='msg a'; tEl.id='thinking';
   tEl.innerHTML=`<div class="mav">${ag.avatar}</div><div class="mbod"><div class="mbub"><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div></div>`;
   msgs.appendChild(tEl); msgs.scrollTop=msgs.scrollHeight;
   try{
-    const r=await api('POST',`/api/chat/${activeId}`,{message:text});
+    // 画像データをAPIに送信
+    const payload = {message: text};
+    if(imgs.length > 0){
+      payload.images = imgs.map(img => ({type:img.type, b64:img.b64}));
+    }
+    const r=await api('POST',`/api/chat/${activeId}`,payload);
     ag.history.push({role:'assistant',content:r.reply,time:now()});
     me.balance_jpy=r.balance_jpy;
     me.usage_count=(me.usage_count||0)+1;

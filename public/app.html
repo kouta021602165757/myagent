@@ -1381,17 +1381,56 @@ function updateBillingUI(){
 async function subscribePlan(plan){
   var btn = document.getElementById(plan==='pro'?'proBtn':'bizBtn');
   var orig = btn ? btn.textContent : '';
-  if(btn){ btn.textContent='処理中...'; btn.disabled=true; }
+  if(btn){ btn.textContent='Processing...'; btn.disabled=true; }
   try{
     var r = await api('POST','/api/billing/subscribe',{plan});
     if(r.status==='active'||r.status==='trialing'){
-      me.plan=plan; updateBillingUI();
-      showToast(plan==='pro'?'Proプランに加入しました！':'Businessプランに加入しました！','ok');
-    } else if(r.client_secret){
-      showToast('カード情報を入力してください','ng');
+      me.plan=plan;
+      if(typeof updateBillingUI==='function') updateBillingUI();
+      if(typeof updatePlanBadge==='function') updatePlanBadge();
+      showToast(plan==='pro'?'Pro plan activated!':'Business plan activated!','ok');
+      if(btn){ btn.textContent='Active ✓'; btn.disabled=true; }
+      return;
+    }
+    // client_secretがある場合はStripe Elements でカード決済
+    if(r.client_secret){
+      // Stripe初期化
+      if(!_stripe){
+        var cr = await api('POST','/api/billing/charge',{amount_jpy:699});
+        if(cr.publishable_key && cr.publishable_key.startsWith('pk_')){
+          _stripe = Stripe(cr.publishable_key);
+        }
+      }
+      if(!_stripe){ showToast('Stripe initialization failed','ng'); return; }
+      // card-elementが未初期化の場合は初期化
+      if(!_cardElement){
+        var elements = _stripe.elements();
+        _cardElement = elements.create('card',{
+          style:{base:{fontSize:'15px',color:'#2d1a0e','::placeholder':{color:'#9a6a4a'}},invalid:{color:'#ef4444'}}
+        });
+        _cardElement.mount('#card-element');
+        _cardElement.on('change', function(e){
+          document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+        });
+        document.getElementById('card-element-wrap').style.display='block';
+      }
+      // カード確認
+      var result = await _stripe.confirmCardPayment(r.client_secret, {
+        payment_method: {card: _cardElement}
+      });
+      if(result.error){
+        showToast(result.error.message,'ng');
+        if(btn){ btn.textContent=orig; btn.disabled=false; }
+      } else {
+        me.plan=plan;
+        if(typeof updateBillingUI==='function') updateBillingUI();
+        if(typeof updatePlanBadge==='function') updatePlanBadge();
+        showToast(plan==='pro'?'Pro plan activated!':'Business plan activated!','ok');
+        if(btn){ btn.textContent='Active ✓'; btn.disabled=true; }
+      }
     }
   }catch(e){
-    showToast(e.message||'エラーが発生しました','ng');
+    showToast(e.message||'Error occurred','ng');
     if(btn){ btn.textContent=orig; btn.disabled=false; }
   }
 }

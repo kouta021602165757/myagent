@@ -20,6 +20,7 @@ const ANTHROPIC    = process.env.ANTHROPIC_API_KEY||'';
 const SUPA_URL     = process.env.SUPABASE_URL||'';
 const SUPA_KEY     = process.env.SUPABASE_SERVICE_KEY||'';
 const STRIPE_SK    = process.env.STRIPE_SECRET_KEY||'';
+const STRIPE_PK    = process.env.STRIPE_PUBLISHABLE_KEY||'';
 const STRIPE_WH    = process.env.STRIPE_WEBHOOK_SECRET||'';
 const STRIPE_PRO_PRICE = process.env.STRIPE_PRO_PRICE_ID||'';
 const STRIPE_BIZ_PRICE = process.env.STRIPE_BIZ_PRICE_ID||'';
@@ -672,7 +673,7 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     try{
       const pi=await stripeCreatePaymentIntent(amount_jpy,user.id,user.email);
-      return jres(res,200,{client_secret:pi.client_secret,publishable_key:process.env.STRIPE_PUBLISHABLE_KEY||''});
+      return jres(res,200,{client_secret:pi.client_secret,publishable_key:STRIPE_PK});
     }catch(e){return jres(res,500,{error:e.message});}
   }
 

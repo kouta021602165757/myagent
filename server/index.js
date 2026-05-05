@@ -31,6 +31,7 @@ const FROM_EMAIL   = process.env.FROM_EMAIL||'noreply@myaiagent.jp';
 const PUBLIC_DIR   = path.join(__dirname,'..','public');
 const USE_SUPA     = !!(SUPA_URL&&SUPA_KEY);
 const USD_TO_JPY   = parseFloat(process.env.USD_TO_JPY||'150');
+const CURRENCY = 'usd';
 
 // ── PRICING ───────────────────────────────────────────────────
 const PRICING={ user:{ input:4.5, output:22.5 } };
@@ -40,6 +41,8 @@ function calcCost(inputTok,outputTok){
   const usd=(inputTok/1e6*PRICING.user.input)+(outputTok/1e6*PRICING.user.output);
   return{ usd, jpy:Math.ceil(usd*USD_TO_JPY*1000)/1000, inputTok, outputTok };
 }
+// USD金額をセント（Stripe用）に変換
+function usdToCents(usd){ return Math.round(usd*100); }
 
 // ── RATE LIMITER ──────────────────────────────────────────────
 const RL=new Map();
@@ -300,6 +303,9 @@ async function stripeCancelSubscription(subscriptionId){
 }
 
 async function stripeCreatePaymentIntent(amtJpy,userId,email){
+  // amtJpyをUSDに変換してStripeに送る
+  const amtUsd = amtJpy / USD_TO_JPY;
+  const amtCents = usdToCents(amtUsd);
   const r=await httpsReq('POST','api.stripe.com','/v1/payment_intents',
     {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`},
     new URLSearchParams({amount:String(amtJpy),currency:'jpy',

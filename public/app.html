@@ -330,6 +330,28 @@ input,textarea{font-family:var(--sans);}
 .sk-nm{font-size:12px;font-weight:700;}
 .sk-ds{font-size:10px;color:var(--fog);margin-top:2px;line-height:1.4;}
 
+/* preset grid (wizard step 0) */
+.preset-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  max-height:380px;overflow-y:auto;margin-bottom:14px;padding-right:4px;
+}
+.preset-card{
+  display:flex;flex-direction:column;gap:8px;padding:12px;
+  border-radius:12px;cursor:pointer;text-align:left;
+  background:var(--ink3);border:1px solid var(--wire2);transition:all .14s;
+}
+.preset-card:hover{border-color:rgba(251,146,60,.4);background:var(--ink4);}
+.preset-card.sel{background:rgba(251,146,60,.12);border-color:var(--peach);box-shadow:0 0 0 2px rgba(251,146,60,.18);}
+.preset-hd{display:flex;align-items:center;gap:9px;}
+.preset-emo{font-size:24px;line-height:1;flex-shrink:0;}
+.preset-nm{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.preset-sks{display:flex;flex-wrap:wrap;gap:3px;}
+.preset-sks .preset-pill{
+  font-size:9px;padding:2px 7px;border-radius:999px;
+  background:rgba(251,146,60,.1);color:var(--peach-dark);border:1px solid rgba(251,146,60,.22);
+  font-weight:600;
+}
+
 .per-ta{
   width:100%;min-height:80px;background:var(--ink3);border:1px solid var(--wire2);
   border-radius:11px;color:var(--text);font-size:13px;padding:12px 14px;
@@ -446,6 +468,7 @@ input,textarea{font-family:var(--sans);}
   .av-grid{grid-template-columns:repeat(6,1fr);gap:8px}
   .sk-grid{grid-template-columns:repeat(2,1fr);gap:8px}
   .sk-card{padding:10px 8px;font-size:12px}
+  .preset-grid{grid-template-columns:1fr;max-height:320px;}
   .chat-input-wrap{padding:8px 12px}
   #msgInput{font-size:14px}
   .chat-messages{padding:12px}
@@ -641,8 +664,19 @@ body{color:#f0f0f8;}
     <div class="wiz-progress"><div class="wiz-fill" id="wizFill" style="width:33%"></div></div>
     <div class="wiz-body">
 
+      <!-- Step 0: Preset picker -->
+      <div id="ws0">
+        <div class="step-h">テンプレートから始める</div>
+        <div class="step-s">プリセットから選ぶか、ゼロから作ってください</div>
+        <div class="preset-grid" id="presetGrid"></div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-back" onclick="startFromScratch()">🛠️ ゼロから作る</button>
+          <button class="btn-volt" id="usePresetBtn" disabled style="border-radius:12px;padding:13px;opacity:.5;cursor:not-allowed" onclick="useSelectedPreset()">このテンプレートを使う →</button>
+        </div>
+      </div>
+
       <!-- Step 1: Icon & Name -->
-      <div id="ws1">
+      <div id="ws1" style="display:none">
         <div class="step-h">アイコンと名前</div>
         <div class="step-s">エージェントの見た目と名前を決めます</div>
         <div class="av-preview" id="avPrev">🤖</div>
@@ -856,6 +890,38 @@ var CHIPS={
   idea:['アイデアを10個出して','ブレストしよう'],
   teaching:['簡単に説明して','具体例を挙げて'],
 };
+var PRESETS=[
+  {avatar:'👑',name:'経営顧問たろう',skills:['ceo','planning','analysis'],persona:'戦略的視点で客観的に判断する。経営課題を構造化し、複数の選択肢と推奨案を提示する。'},
+  {avatar:'⚙️',name:'オペマネ博士',skills:['coo','planning','analysis'],persona:'業務効率最大化を信条とする。ボトルネックを特定し改善施策を具体的に提案する。'},
+  {avatar:'📋',name:'秘書まり',skills:['secretary','planning','support'],persona:'常に丁寧な敬語で対応。スケジュール管理・調整・メール下書きを正確かつ迅速に行う。'},
+  {avatar:'💰',name:'経理けいり',skills:['analysis','planning'],persona:'数字に強く正確。経費・売上の整理、簡易財務分析を得意とする。'},
+  {avatar:'🤝',name:'HR担当ななみ',skills:['support','planning','writing'],persona:'公平で思いやりがある。採用・評価・労務の相談に丁寧に対応する。'},
+  {avatar:'📱',name:'SNSプランナーいんす',skills:['sns','marketing','idea'],persona:'トレンドに敏感でZ世代の感覚を持つ。Instagram・X・TikTok向けの投稿を企画する。'},
+  {avatar:'✍️',name:'コピー職人ことば',skills:['writing','marketing','idea'],persona:'キャッチーで印象的なコピーを書く。短く、強く、覚えやすく。'},
+  {avatar:'🔍',name:'SEO博士',skills:['research','marketing','writing'],persona:'検索意図とキーワードからデータ駆動で記事構成を提案する。'},
+  {avatar:'📊',name:'グロース先生',skills:['marketing','analysis','idea'],persona:'仮説→実験→計測→学習のループ。指標と数値で判断する。'},
+  {avatar:'💼',name:'セールス高橋',skills:['marketing','support','writing'],persona:'顧客の課題を引き出し、共感と論理で説得する営業のプロ。'},
+  {avatar:'🎨',name:'UXデザイナーさくら',skills:['designer','idea'],persona:'ユーザー視点を最優先。シンプルで使いやすいUIを提案する。'},
+  {avatar:'✨',name:'ブランド戦略家',skills:['designer','marketing','idea'],persona:'ブランドの一貫性とトーン&マナーを設計する。'},
+  {avatar:'🎬',name:'動画ディレクター',skills:['idea','planning','sns'],persona:'ストーリーテリング重視で短尺動画の構成を企画する。'},
+  {avatar:'🎙️',name:'ナレーターたろう',skills:['writing','idea'],persona:'声に出して心地よいリズムと響く表現を追求する。'},
+  {avatar:'🖌️',name:'イラスト発想家',skills:['idea','designer'],persona:'ビジュアル発想が豊か。イラスト案・構図案を量産する。'},
+  {avatar:'💻',name:'フルスタック武',skills:['coding','planning'],persona:'技術的厳密性と実装可能性を両立。最新ベストプラクティスを使う。'},
+  {avatar:'🧐',name:'コードレビュアー',skills:['coding','teaching'],persona:'厳しいが優しい指摘。バグ・可読性・パフォーマンスを丁寧にレビューする。'},
+  {avatar:'🐛',name:'デバッグマスター',skills:['coding','analysis'],persona:'ロジカルで根気強くバグの原因を特定する。再現条件から仮説を立てる。'},
+  {avatar:'🤖',name:'AI研究員',skills:['coding','research','analysis'],persona:'最新の機械学習・LLM技術を探求しユースケースに応用する。'},
+  {avatar:'🛠️',name:'インフラ番長',skills:['coding','planning'],persona:'安定性・スケーラビリティ・コストを総合的に判断する。'},
+  {avatar:'🎓',name:'ライフコーチみずき',skills:['teaching','planning','support'],persona:'励ましながら目標達成までを伴走する。SMART原則を使う。'},
+  {avatar:'📚',name:'学習プランナー',skills:['teaching','planning'],persona:'段階的に楽しく学べるカリキュラムを設計する。'},
+  {avatar:'🏃',name:'ヘルスアドバイザー',skills:['research','teaching','support'],persona:'エビデンスに基づき食事・運動・睡眠のアドバイスをする。医療判断はしない。'},
+  {avatar:'🧘',name:'メンタルケアこころ',skills:['support','teaching'],persona:'共感的傾聴を重視。判断せず受け止める。専門医療は推奨する。'},
+  {avatar:'⏰',name:'時間管理マスター',skills:['planning','secretary'],persona:'タスクの優先度づけと時間ブロックでパフォーマンスを最大化する。'},
+  {avatar:'🌏',name:'翻訳家',skills:['translate','writing'],persona:'文脈とニュアンスに忠実に訳す。ビジネス文書も得意。'},
+  {avatar:'🦜',name:'リサーチャー',skills:['research','analysis','writing'],persona:'複数ソースから多角的にエビデンスを収集し整理する。'},
+  {avatar:'🎤',name:'プレゼンマスター',skills:['writing','idea','planning'],persona:'構造的で説得力のあるプレゼンを設計。スライド構成も提案する。'},
+  {avatar:'😇',name:'CSサポート天使',skills:['support','writing','planning'],persona:'顧客の感情に寄り添い、解決策を丁寧に案内する。'},
+  {avatar:'💡',name:'アイデアマシーン',skills:['idea','marketing','writing'],persona:'量と質を両立。10案、30案、100案の発想を素早く出す。'},
+];
 
 var token=null,me=null,agents=[],activeId=null;
 var NA={avatar:'🤖',name:'',skills:[],persona:''};
@@ -886,7 +952,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     document.documentElement.lang=isJa?'ja':'en';
   };
   _applyI18n();
-  buildAvGrid(); buildSkGrid();
+  buildAvGrid(); buildSkGrid(); buildPresetGrid();
   // Handle Google OAuth redirect token in URL
   const urlParams=new URLSearchParams(location.search);
   const urlToken=urlParams.get('token');
@@ -1123,13 +1189,63 @@ async function delAgent(id){
 /* ── Wizard ────────────────────────────────────────── */
 function openWizard(){
   NA={avatar:'🤖',name:'',skills:[],persona:''};
+  _selectedPresetIdx=-1;
   document.getElementById('wName').value='';
   document.getElementById('wPer').value='';
   document.getElementById('avPrev').textContent='🤖';
   document.querySelectorAll('.av-cell').forEach((b,i)=>b.classList.toggle('sel',i===0));
   document.querySelectorAll('.sk-card').forEach(b=>b.classList.remove('sel'));
-  wStep(1);
+  document.querySelectorAll('.preset-card').forEach(b=>b.classList.remove('sel'));
+  var useBtn=document.getElementById('usePresetBtn');
+  if(useBtn){ useBtn.disabled=true; useBtn.style.opacity='.5'; useBtn.style.cursor='not-allowed'; }
+  wStep(0);
   document.getElementById('wizOverlay').classList.add('open');
+}
+var _selectedPresetIdx=-1;
+function buildPresetGrid(){
+  var el=document.getElementById('presetGrid');
+  if(!el) return;
+  el.innerHTML=PRESETS.map(function(p,i){
+    var pills=p.skills.map(function(s){var sk=SKILLS.find(function(x){return x.id===s;});return '<span class="preset-pill">'+(sk?sk.name:s)+'</span>';}).join('');
+    return '<button type="button" class="preset-card" data-idx="'+i+'" onclick="pickPreset('+i+')">'
+      +'<div class="preset-hd"><div class="preset-emo">'+p.avatar+'</div><div class="preset-nm">'+esc(p.name)+'</div></div>'
+      +'<div class="preset-sks">'+pills+'</div>'
+      +'</button>';
+  }).join('');
+}
+function pickPreset(i){
+  _selectedPresetIdx=i;
+  document.querySelectorAll('.preset-card').forEach(function(b){b.classList.remove('sel');});
+  var sel=document.querySelector('.preset-card[data-idx="'+i+'"]');
+  if(sel) sel.classList.add('sel');
+  var btn=document.getElementById('usePresetBtn');
+  if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; }
+}
+function useSelectedPreset(){
+  if(_selectedPresetIdx<0) return;
+  var p=PRESETS[_selectedPresetIdx];
+  NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona};
+  // Sync form fields so step 1/2 reflect preset values if user goes back
+  document.getElementById('wName').value=p.name;
+  document.getElementById('wPer').value=p.persona;
+  document.getElementById('avPrev').textContent=p.avatar;
+  document.querySelectorAll('.av-cell').forEach(function(b,i){
+    b.classList.toggle('sel',AVATARS[i]===p.avatar);
+  });
+  document.querySelectorAll('.sk-card').forEach(function(b,i){
+    b.classList.toggle('sel',p.skills.indexOf(SKILLS[i].id)>=0);
+  });
+  buildConf();
+  wStep(3);
+}
+function startFromScratch(){
+  NA={avatar:'🤖',name:'',skills:[],persona:''};
+  document.getElementById('wName').value='';
+  document.getElementById('wPer').value='';
+  document.getElementById('avPrev').textContent='🤖';
+  document.querySelectorAll('.av-cell').forEach(function(b,i){b.classList.toggle('sel',i===0);});
+  document.querySelectorAll('.sk-card').forEach(function(b){b.classList.remove('sel');});
+  wStep(1);
 }
 function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
 
@@ -1225,8 +1341,8 @@ function wStep(n){
   if(n===3){ if(!NA.skills.length){showToast('スキルを選んでください','ng');return;} NA.persona=document.getElementById('wPer').value.trim(); buildConf(); }
   document.querySelectorAll('#wizOverlay [id^="ws"]').forEach(s=>s.style.display='none');
   document.getElementById('ws'+n).style.display='block';
-  document.getElementById('wizFill').style.width=(n/3*100)+'%';
-  document.getElementById('wizTitle').textContent=['','アイコンと名前','スキル','確認'][n];
+  document.getElementById('wizFill').style.width=(n===0?0:n/3*100)+'%';
+  document.getElementById('wizTitle').textContent=['テンプレート','アイコンと名前','スキル','確認'][n];
 }
 
 function buildConf(){

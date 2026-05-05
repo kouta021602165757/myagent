@@ -320,6 +320,11 @@ const SKILL_MAP={
   support:'カスタマー対応（問い合わせ対応・FAQ作成）',
   idea:'アイデア出し（ブレスト・クリエイティブ発想）',
   teaching:'教育・解説（わかりやすく丁寧に説明）',
+  ceo:'アシスタントCEO（経営戦略・意思決定）',
+  coo:'アシスタントCOO（業務最適化・オペレーション）',
+  secretary:'秘書（スケジュール・調整・連絡）',
+  designer:'デザイナー（UI/UX・ビジュアル）',
+  sns:'SNS担当（投稿作成・分析・集客）',
 };
 function buildSystem(agent){
   return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;

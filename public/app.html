@@ -81,24 +81,24 @@ input,textarea{font-family:var(--sans);}
 }
 
 /* agent list */
-.ag-list{flex:1;overflow-y:auto;padding:0 6px 6px;}
+.ag-list{flex:1;overflow-y:auto;padding:0 8px 8px;}
 .ag-item{
-  display:flex;align-items:center;gap:10px;padding:9px 10px;
-  border-radius:10px;cursor:pointer;margin-bottom:2px;border:1px solid transparent;
+  display:flex;align-items:center;gap:12px;padding:13px 12px;
+  border-radius:12px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;
   transition:all .14s;
 }
 .ag-item:hover{background:var(--ink3);}
 .ag-item.on{background:rgba(251,146,60,.07);border-color:rgba(251,146,60,.2);}
 .ag-icon{
-  width:34px;height:34px;border-radius:9px;background:var(--ink4);
+  width:44px;height:44px;border-radius:11px;background:var(--ink4);
   border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;
-  font-size:16px;flex-shrink:0;
+  font-size:22px;flex-shrink:0;
 }
 .ag-item.on .ag-icon{border-color:rgba(200,255,87,.25);}
 .ag-meta{min-width:0;flex:1;}
-.ag-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ag-skill{font-size:10px;color:var(--fog);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
-.live-dot{width:5px;height:5px;border-radius:50%;background:#28c840;box-shadow:0 0 4px #28c840;flex-shrink:0;}
+.ag-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;}
+.ag-skill{font-size:12px;color:var(--fog);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;line-height:1.2;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#28c840;box-shadow:0 0 5px #28c840;flex-shrink:0;}
 
 /* bottom: balance + user */
 .sb-bot{padding:10px;border-top:1px solid var(--wire);display:flex;flex-direction:column;gap:8px;}
@@ -472,7 +472,7 @@ input,textarea{font-family:var(--sans);}
 body{color:#f0f0f8;}
 .sb{background:var(--cream) !important;}
 .ag-name{color:#f0f0f8 !important;font-weight:600;}
-.ag-skill{color:rgba(240,240,248,.5) !important;font-size:11px;}
+.ag-skill{color:rgba(240,240,248,.5) !important;}
 .balance-val{color:#f0f0f8 !important;font-weight:800;}
 .balance-lbl,.balance-sub{color:rgba(240,240,248,.5) !important;font-size:11px;}
 .user-name{color:#f0f0f8 !important;font-weight:600;}
@@ -499,7 +499,7 @@ body{color:#f0f0f8;}
 .sb-logo,.sb-brand{color:var(--text) !important;}
 .sb-lbl{color:var(--text3) !important;font-size:11px !important;}
 .ag-name{color:var(--text) !important;font-weight:600;}
-.ag-skill{color:var(--text3) !important;font-size:11px;}
+.ag-skill{color:var(--text3) !important;}
 .ag-item:hover{background:rgba(251,146,60,.08) !important;}
 .ag-item.active,.ag-item.sel{background:rgba(251,146,60,.12) !important;border-color:rgba(251,146,60,.3) !important;}
 .balance-card,.bal-box{background:var(--cream3) !important;border:1px solid var(--wire2) !important;}
@@ -1319,6 +1319,8 @@ async function doCharge(){
       _chargeReady = false;
       window._pendingClientSecret = null;
       document.getElementById('card-element-wrap').style.display='none';
+      refreshMe();
+      setTimeout(refreshMe, 2500);
     }
   }catch(e){
     showToast(e.message||'エラーが発生しました','ng');
@@ -1378,6 +1380,17 @@ function updateBillingUI(){
   if(pb){ pb.textContent = me.plan==='pro'?'加入中 ✓':'加入する'; pb.disabled=me.plan==='pro'; pb.style.opacity=me.plan==='pro'?'.5':'1'; }
   if(bb){ bb.textContent = me.plan==='business'?'加入中 ✓':'加入する'; bb.disabled=me.plan==='business'; bb.style.opacity=me.plan==='business'?'.5':'1'; }
 }
+async function refreshMe(){
+  try{
+    var r = await api('GET','/api/me');
+    if(r&&r.user){
+      me = r.user;
+      if(typeof updateBillingUI==='function') updateBillingUI();
+      if(typeof updatePlanBadge==='function') updatePlanBadge();
+      if(typeof updateBalance==='function') updateBalance();
+    }
+  }catch(e){}
+}
 async function subscribePlan(plan){
   var btn = document.getElementById(plan==='pro'?'proBtn':'bizBtn');
   var orig = btn ? btn.textContent : '';
@@ -1390,6 +1403,8 @@ async function subscribePlan(plan){
       if(typeof updatePlanBadge==='function') updatePlanBadge();
       showToast(plan==='pro'?'Pro plan activated!':'Business plan activated!','ok');
       if(btn){ btn.textContent='Active ✓'; btn.disabled=true; }
+      refreshMe();
+      setTimeout(refreshMe, 2500);
       return;
     }
     // client_secretがある場合はStripe Elements でカード決済
@@ -1427,6 +1442,8 @@ async function subscribePlan(plan){
         if(typeof updatePlanBadge==='function') updatePlanBadge();
         showToast(plan==='pro'?'Pro plan activated!':'Business plan activated!','ok');
         if(btn){ btn.textContent='Active ✓'; btn.disabled=true; }
+        refreshMe();
+        setTimeout(refreshMe, 2500);
       }
     }
   }catch(e){

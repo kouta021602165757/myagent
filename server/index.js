@@ -629,20 +629,6 @@ async function handleAPI(req,res,pathname,method,ip){
     }catch(e){ return jres(res,500,{error:e.message}); }
   }
 
-  // ── GET /api/billing/plans ─────────────────────────────────
-  if(pathname==='/api/billing/plans'&&method==='GET'){
-    return jres(res,200,{
-      plans:[
-        {id:'free',name:'Free',price_jpy:0,credits_jpy:0,description:'10メッセージ無料'},
-        {id:'pro',name:'Pro',price_jpy:1980,credits_jpy:3000,description:'毎月¥3,000分クレジット付き'},
-        {id:'business',name:'Business',price_jpy:4980,credits_jpy:9000,description:'毎月¥9,000分クレジット付き'},
-      ],
-      current_plan: user.plan||'free',
-      subscription_status: user.subscription_status||null,
-      balance_jpy: user.balance_jpy||0,
-    });
-  }
-
   // ── POST /api/billing/charge ───────────────────────────────
   if(pathname==='/api/billing/charge'&&method==='POST'){
     // 注意: パラメータ名 amount_jpy は misnomer。実体は USDセント (例: 699 = $6.99)

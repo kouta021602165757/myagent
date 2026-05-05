@@ -740,18 +740,43 @@ body{color:#f0f0f8;}
         <button onclick="changePassword()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">パスワードを変更</button>
       </div>
       <div id="s-billing" style="display:none">
-        <div style="background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.2);border-radius:14px;padding:18px;margin-bottom:20px">
-          <p style="color:#fb923c;font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:6px">現在の残高</p>
-          <p id="sBal" style="color:var(--text);font-size:30px;font-weight:900;margin-bottom:4px">¥0.00</p>
-          <p id="sUsage" style="color:#7272a0;font-size:12px"></p>
-        </div>
-        <p style="color:#7272a0;font-size:13px;margin-bottom:14px">チャージ金額を選択してください。</p>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          <button onclick="quickCharge(500)" style="background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:14px 8px;color:var(--text);cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥500</b><small style="color:#7272a0;font-size:11px">約25回</small></button>
-          <button onclick="quickCharge(1000)" style="background:var(--cream3);border:2px solid #fb923c;border-radius:10px;padding:14px 8px;color:var(--text);cursor:pointer;font-family:inherit;position:relative"><span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--peach);color:#fff;font-size:9px;font-weight:900;padding:2px 10px;border-radius:20px">🔥 人気</span><b style="display:block;font-size:17px">¥1,000</b><small style="color:#7272a0;font-size:11px">約50回</small></button>
-          <button onclick="quickCharge(5000)" style="background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:14px 8px;color:var(--text);cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'"><b style="display:block;font-size:17px">¥5,000</b><small style="color:#7272a0;font-size:11px">約250回</small></button>
-        </div>
-      </div>
+  <div style="background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--peach-dark);letter-spacing:.08em;margin-bottom:2px">現在のプラン</div>
+      <div id="currentPlanName" style="font-size:15px;font-weight:700;color:var(--text)">Free</div>
+    </div>
+    <div style="text-align:right">
+      <div id="currentBalance" style="font-size:20px;font-weight:900;color:var(--peach)">¥0.00</div>
+      <div style="font-size:10px;color:var(--text3)">残高</div>
+    </div>
+  </div>
+  <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">月額プラン</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+    <div style="background:var(--cream);border:1px solid rgba(180,120,80,.2);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:10px;font-weight:700;color:var(--peach-dark);letter-spacing:.08em;margin-bottom:4px">PRO</div>
+      <div style="font-size:20px;font-weight:900;color:var(--text);line-height:1">¥1,980</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/月</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5">毎月¥3,000分<br>クレジット付き</div>
+      <button id="proBtn" onclick="subscribePlan('pro')" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">加入する</button>
+    </div>
+    <div style="background:var(--cream);border:2px solid var(--peach);border-radius:12px;padding:14px;text-align:center;position:relative">
+      <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--peach);color:#fff;font-size:9px;font-weight:900;padding:2px 10px;border-radius:20px;white-space:nowrap">人気</div>
+      <div style="font-size:10px;font-weight:700;color:var(--peach-dark);letter-spacing:.08em;margin-bottom:4px">BUSINESS</div>
+      <div style="font-size:20px;font-weight:900;color:var(--text);line-height:1">¥4,980</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/月</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5">毎月¥9,000分<br>クレジット付き</div>
+      <button id="bizBtn" onclick="subscribePlan('business')" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">加入する</button>
+    </div>
+  </div>
+  <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px">
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">追加チャージ（従量課金）</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+      <button onclick="quickCharge(500)" style="background:var(--cream2);border:1px solid rgba(180,120,80,.2);border-radius:8px;padding:10px 4px;color:var(--text);cursor:pointer;font-family:inherit;text-align:center"><b style="display:block;font-size:14px;font-weight:700">¥500</b><small style="color:var(--text3);font-size:10px">約25回</small></button>
+      <button onclick="quickCharge(1000)" style="background:var(--cream2);border:2px solid var(--peach);border-radius:8px;padding:10px 4px;color:var(--text);cursor:pointer;font-family:inherit;text-align:center;position:relative"><span style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--peach);color:#fff;font-size:8px;font-weight:900;padding:1px 8px;border-radius:20px;white-space:nowrap">おすすめ</span><b style="display:block;font-size:14px;font-weight:700">¥1,000</b><small style="color:var(--text3);font-size:10px">約50回</small></button>
+      <button onclick="quickCharge(5000)" style="background:var(--cream2);border:1px solid rgba(180,120,80,.2);border-radius:8px;padding:10px 4px;color:var(--text);cursor:pointer;font-family:inherit;text-align:center"><b style="display:block;font-size:14px;font-weight:700">¥5,000</b><small style="color:var(--text3);font-size:10px">約250回</small></button>
+    </div>
+  </div>
+</div>
       <div id="s-danger" style="display:none">
         <div style="background:rgba(255,77,109,.05);border:1px solid rgba(255,77,109,.2);border-radius:14px;padding:20px">
           <h3 style="color:#ff4d6d;font-size:15px;font-weight:700;margin-bottom:8px">アカウントを削除</h3>
@@ -1287,6 +1312,35 @@ function openSettings(){
     if(nameEl) nameEl.value = me.name||'';
     if(balEl) balEl.textContent = '¥'+(me.balance_jpy||0).toFixed(2);
     if(usageEl) usageEl.textContent = (me.usage_count||0)+'回利用済み';
+  }
+}
+
+function updateBillingUI(){
+  var pn = document.getElementById('currentPlanName');
+  var bl = document.getElementById('currentBalance');
+  var pb = document.getElementById('proBtn');
+  var bb = document.getElementById('bizBtn');
+  if(!me) return;
+  if(pn) pn.textContent = me.plan==='pro'?'Pro':me.plan==='business'?'Business':'Free';
+  if(bl) bl.textContent = '¥'+(me.balance_jpy||0).toFixed(2);
+  if(pb){ pb.textContent = me.plan==='pro'?'加入中 ✓':'加入する'; pb.disabled=me.plan==='pro'; pb.style.opacity=me.plan==='pro'?'.5':'1'; }
+  if(bb){ bb.textContent = me.plan==='business'?'加入中 ✓':'加入する'; bb.disabled=me.plan==='business'; bb.style.opacity=me.plan==='business'?'.5':'1'; }
+}
+async function subscribePlan(plan){
+  var btn = document.getElementById(plan==='pro'?'proBtn':'bizBtn');
+  var orig = btn ? btn.textContent : '';
+  if(btn){ btn.textContent='処理中...'; btn.disabled=true; }
+  try{
+    var r = await api('POST','/api/billing/subscribe',{plan});
+    if(r.status==='active'||r.status==='trialing'){
+      me.plan=plan; updateBillingUI();
+      showToast(plan==='pro'?'Proプランに加入しました！':'Businessプランに加入しました！','ok');
+    } else if(r.client_secret){
+      showToast('カード情報を入力してください','ng');
+    }
+  }catch(e){
+    showToast(e.message||'エラーが発生しました','ng');
+    if(btn){ btn.textContent=orig; btn.disabled=false; }
   }
 }
 function closeSettings(){

@@ -85,43 +85,25 @@ function sbReq(method,table,qs='',body=null){
   });
 }
 
-function toSnake(obj){
-        if(!obj||typeof obj!=='object')return obj;
-        const res={};
-        for(const[k,v]of Object.entries(obj)){
-                  const snake=k.replace(/([A-Z])/g,m=>'_'+m.toLowerCase());
-                  res[snake]=v;
-        }
-        return res;
-}
-function toCamel(obj){
-        if(!obj||typeof obj!=='object')return obj;
-        const res={};
-        for(const[k,v]of Object.entries(obj)){
-                  const camel=k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase());
-                  res[camel]=v;
-        }
-        return res;
-}
 // ── DB ABSTRACTION ────────────────────────────────────────────
+// 注意: コードと Supabase スキーマは共に snake_case を使用。case 変換は不要。
 const DB={
   async findBy(field,val){
     if(!USE_SUPA)return LDB.find(u=>u[field]===val)||null;
-    const sf=field.replace(/([A-Z])/g,m=>'_'+m.toLowerCase());
-    const r=await sbReq('GET','users','?select=*&'+sf+'=eq.'+encodeURIComponent(val)+'&limit=1');
+    const r=await sbReq('GET','users','?select=*&'+field+'=eq.'+encodeURIComponent(val)+'&limit=1');
     if(!r.d||!r.d[0])return null;
-    return toCamel(r.d[0]);
+    return r.d[0];
   },
   async create(user){
     if(!USE_SUPA){LDB.add(user);return user;}
-    const r=await sbReq('POST','users','',toSnake(user));
+    const r=await sbReq('POST','users','',user);
     if(r.s>=400){console.error('Supabase create error:',r.d);return user;}
     const arr=Array.isArray(r.d)?r.d:[r.d];
-    return arr[0]?toCamel(arr[0]):user;
+    return arr[0]||user;
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
-    const r=await sbReq('PATCH','users','?id=eq.'+user.id,toSnake(user));
+    const r=await sbReq('PATCH','users','?id=eq.'+user.id,user);
     if(r.s>=400)console.error('Supabase save error:',r.d);
   },
   async remove(id){
@@ -179,11 +161,11 @@ function readBody(req,max=2e6){
 function readRaw(req){return new Promise((resolve,reject)=>{const c=[];req.on('data',d=>c.push(d));req.on('end',()=>resolve(Buffer.concat(c)));req.on('error',reject);});}
 function getAuth(req){return JWT.verify((req.headers['authorization']||'').replace('Bearer ',''));}
 function getIP(req){return(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();}
-function safe(u){const{password:_,verifyToken:__,resetToken:___,resetExpiry:____,...s}=u;return s;}
+function safe(u){const{password:_,verify_token:__,reset_token:___,reset_expiry:____,...s}=u;return s;}
 function newUser(base){
   return{id:crypto.randomUUID(),plan:'free',balance_jpy:0,usage_count:0,
     agents:[],billing_history:[],stripe_customer_id:null,
-    verified:false,verifyToken:null,resetToken:null,resetExpiry:null,
+    verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
 }
 
@@ -210,7 +192,7 @@ async function sendEmail(to,subject,html){
 }
 
 async function sendVerifyEmail(user){
-  const link=`${APP_URL}/api/auth/verify?token=${user.verifyToken}`;
+  const link=`${APP_URL}/api/auth/verify?token=${user.verify_token}`;
   await sendEmail(user.email,'【MY AI Agent】メールアドレスの確認',
     `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
       <h2 style="color:#c8ff57;">メールアドレスの確認</h2>
@@ -303,16 +285,18 @@ async function stripeCancelSubscription(subscriptionId){
   return r.d;
 }
 
-async function stripeCreatePaymentIntent(amtJpy,userId,email){
-  // amtJpyをUSDに変換してStripeに送る
-  const amtUsd = amtJpy / USD_TO_JPY;
-  const amtCents = usdToCents(amtUsd);
+async function stripeCreatePaymentIntent(amtCentsUsd,userId,email){
+  // amtCentsUsd は USDセント (例: 699 = $6.99)。フロント側パラメータ名 amount_jpy は misnomer。
   const r=await httpsReq('POST','api.stripe.com','/v1/payment_intents',
     {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`},
-    new URLSearchParams({amount:String(amtJpy),currency:'jpy',
+    new URLSearchParams({
+      amount:String(amtCentsUsd),
+      currency:'usd',
       'automatic_payment_methods[enabled]':'true',
       receipt_email:email,
-      'metadata[userId]':userId,'metadata[amount_jpy]':String(amtJpy)}).toString());
+      'metadata[userId]':userId,
+      'metadata[amount_cents_usd]':String(amtCentsUsd)
+    }).toString());
   if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe error');
   return r.d;
 }
@@ -362,8 +346,8 @@ async function handleAPI(req,res,pathname,method,ip){
     if(password.length<8)return jres(res,400,{error:'パスワードは8文字以上にしてください'});
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return jres(res,400,{error:'メールアドレスの形式が正しくありません'});
     if(await DB.findBy('email',email.toLowerCase()))return jres(res,409,{error:'このメールアドレスはすでに登録されています'});
-    const verifyToken=crypto.randomBytes(32).toString('hex');
-    const user=newUser({name:name.trim(),email:email.toLowerCase(),password:PW.hash(password),verified:!RESEND_KEY,verifyToken});
+    const verify_token=crypto.randomBytes(32).toString('hex');
+    const user=newUser({name:name.trim(),email:email.toLowerCase(),password:PW.hash(password),verified:!RESEND_KEY,verify_token});
     await DB.create(user);
     if(RESEND_KEY)await sendVerifyEmail(user);
     const token=JWT.sign({userId:user.id,email:user.email});
@@ -401,10 +385,10 @@ async function handleAPI(req,res,pathname,method,ip){
       const gUser=await googleUserInfo(tokens.access_token);
       let user=await DB.findBy('email',gUser.email.toLowerCase());
       if(!user){
-        user=newUser({name:gUser.name||gUser.email,email:gUser.email.toLowerCase(),password:'',verified:true,googleId:gUser.id});
+        user=newUser({name:gUser.name||gUser.email,email:gUser.email.toLowerCase(),password:'',verified:true,google_id:gUser.id});
         await DB.create(user);
-      }else if(!user.googleId){
-        user.googleId=gUser.id;user.verified=true;await DB.save(user);
+      }else if(!user.google_id){
+        user.google_id=gUser.id;user.verified=true;await DB.save(user);
       }
       const token=JWT.sign({userId:user.id,email:user.email});
       res.writeHead(302,{Location:`/app.html?token=${token}`});res.end();
@@ -416,9 +400,9 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pathname==='/api/auth/verify'&&method==='GET'){
     const token=new url.URL(req.url,APP_URL).searchParams.get('token');
     if(!token){res.writeHead(302,{Location:'/auth.html?error=invalid_token'});res.end();return;}
-    const user=await DB.findBy('verifyToken',token);
+    const user=await DB.findBy('verify_token',token);
     if(!user){res.writeHead(302,{Location:'/auth.html?error=invalid_token'});res.end();return;}
-    user.verified=true;user.verifyToken=null;await DB.save(user);
+    user.verified=true;user.verify_token=null;await DB.save(user);
     res.writeHead(302,{Location:'/app.html?verified=1'});res.end();return;
   }
 
@@ -427,7 +411,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const claims=getAuth(req);if(!claims)return jres(res,401,{error:'認証が必要です'});
     const user=await DB.findBy('id',claims.userId);
     if(!user||user.verified)return jres(res,400,{error:'確認済みです'});
-    user.verifyToken=crypto.randomBytes(32).toString('hex');
+    user.verify_token=crypto.randomBytes(32).toString('hex');
     await DB.save(user);await sendVerifyEmail(user);
     return jres(res,200,{ok:true});
   }
@@ -438,11 +422,11 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!email)return jres(res,400,{error:'メールアドレスを入力してください'});
     const user=await DB.findBy('email',email.toLowerCase());
     // Always return 200 to prevent email enumeration
-    if(user&&!user.googleId){
-      user.resetToken=crypto.randomBytes(32).toString('hex');
-      user.resetExpiry=Date.now()+3600000; // 1 hour
+    if(user&&!user.google_id){
+      user.reset_token=crypto.randomBytes(32).toString('hex');
+      user.reset_expiry=Date.now()+3600000; // 1 hour
       await DB.save(user);
-      await sendResetEmail(user,user.resetToken);
+      await sendResetEmail(user,user.reset_token);
     }
     return jres(res,200,{ok:true,message:'登録済みのメールアドレスであればリセットリンクを送信しました'});
   }
@@ -452,10 +436,10 @@ async function handleAPI(req,res,pathname,method,ip){
     const{token,password}=await readBody(req);
     if(!token||!password)return jres(res,400,{error:'入力してください'});
     if(password.length<8)return jres(res,400,{error:'パスワードは8文字以上にしてください'});
-    const user=await DB.findBy('resetToken',token);
-    if(!user||!user.resetExpiry||Date.now()>user.resetExpiry)
+    const user=await DB.findBy('reset_token',token);
+    if(!user||!user.reset_expiry||Date.now()>user.reset_expiry)
       return jres(res,400,{error:'リセットリンクの有効期限が切れています。もう一度お試しください'});
-    user.password=PW.hash(password);user.resetToken=null;user.resetExpiry=null;
+    user.password=PW.hash(password);user.reset_token=null;user.reset_expiry=null;
     await DB.save(user);
     return jres(res,200,{ok:true,message:'パスワードを変更しました。ログインしてください'});
   }
@@ -563,7 +547,6 @@ async function handleAPI(req,res,pathname,method,ip){
       {role:'assistant',content:reply,time:ts}];
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
     user.balance_jpy=Math.round(((user.balance_jpy||0)-cost.jpy)*1000)/1000;
-  user.usage_count=(user.usage_count||0)+1;
     user.usage_count=(user.usage_count||0)+1;
     user.billing_history=user.billing_history||[];
     user.billing_history.push({date:new Date().toISOString(),agentId:agent.id,agentName:agent.name,
@@ -662,12 +645,14 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── POST /api/billing/charge ───────────────────────────────
   if(pathname==='/api/billing/charge'&&method==='POST'){
+    // 注意: パラメータ名 amount_jpy は misnomer。実体は USDセント (例: 699 = $6.99)
     const{amount_jpy}=await readBody(req);
-    if(!amount_jpy||amount_jpy<100)return jres(res,400,{error:'最低チャージ額は¥100です'});
-    if(amount_jpy>100000)return jres(res,400,{error:'1回の上限は¥100,000です'});
+    if(!amount_jpy||amount_jpy<100)return jres(res,400,{error:'最低チャージ額は$1.00です'});
+    if(amount_jpy>100000)return jres(res,400,{error:'1回の上限は$1,000です'});
     if(!STRIPE_SK){
-      // Demo mode
-      user.balance_jpy=(user.balance_jpy||0)+amount_jpy;
+      // Demo mode — USDセントを JPY 換算して残高に加算
+      const creditJpy=Math.round(amount_jpy/100*USD_TO_JPY*1000)/1000;
+      user.balance_jpy=Math.round(((user.balance_jpy||0)+creditJpy)*1000)/1000;
       await DB.save(user);
       return jres(res,200,{demo:true,balance_jpy:user.balance_jpy});
     }
@@ -740,10 +725,15 @@ async function handleWebhook(req,res){
     if(event.type==='payment_intent.succeeded'){
       const pi=event.data.object;
       const userId=pi.metadata?.userId;
-      const amtJpy=parseInt(pi.metadata?.amount_jpy||'0',10);
-      if(userId&&amtJpy>0){
+      const amtCentsUsd=parseInt(pi.metadata?.amount_cents_usd||'0',10);
+      if(userId&&amtCentsUsd>0){
         const user=await DB.findBy('id',userId);
-        if(user){user.balance_jpy=(user.balance_jpy||0)+amtJpy;await DB.save(user);}
+        if(user){
+          const creditJpy=Math.round(amtCentsUsd/100*USD_TO_JPY*1000)/1000;
+          user.balance_jpy=Math.round(((user.balance_jpy||0)+creditJpy)*1000)/1000;
+          await DB.save(user);
+          console.log('Credits added (PI):',creditJpy,'JPY to',user.email);
+        }
       }
     }
     return jres(res,200,{received:true});

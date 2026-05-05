@@ -713,13 +713,13 @@ body{color:#f0f0f8;}
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
       <span style="font-size:13px;color:var(--mist);white-space:nowrap;">または:</span>
-      <input type="number" id="customAmt" min="100" max="100000" placeholder="金額を入力 (円)" class="wiz-input" style="flex:1;" oninput="selCharge(parseInt(this.value)||0,null)">
+      <input type="number" id="customAmt" min="1" max="200" placeholder="Amount in USD (e.g. 10)" class="wiz-input" style="flex:1;" oninput="selCharge(Math.round((parseFloat(this.value)||0)*150),null);this.closest('.plan-c-wrap')?null:document.querySelectorAll('.plan-c').forEach(e=>e.classList.remove('sel'))">
       <span style="font-size:13px;color:var(--mist);">円</span>
     </div>
-    <div class="wiz-fld"><label>カード番号</label><input type="text" class="wiz-input" placeholder="4242 4242 4242 4242" maxlength="19" oninput="fmtCard(this)"></div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px;">
-      <div class="wiz-fld"><label>有効期限</label><input type="text" class="wiz-input" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)"></div>
-      <div class="wiz-fld"><label>CVC</label><input type="text" class="wiz-input" placeholder="123" maxlength="3"></div>
+      
+      
     </div>
     <!-- Stripe Elements カード入力 -->
     <div id="card-element-wrap" style="display:none;margin-bottom:12px">

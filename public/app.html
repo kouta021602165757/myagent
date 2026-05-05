@@ -721,6 +721,11 @@ body{color:#f0f0f8;}
       <div class="wiz-fld"><label>有効期限</label><input type="text" class="wiz-input" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)"></div>
       <div class="wiz-fld"><label>CVC</label><input type="text" class="wiz-input" placeholder="123" maxlength="3"></div>
     </div>
+    <!-- Stripe Elements カード入力 -->
+    <div id="card-element-wrap" style="display:none;margin-bottom:12px">
+      <div id="card-element" style="background:#fff;border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:14px;font-size:14px;"></div>
+      <div id="card-errors" style="color:#ef4444;font-size:12px;margin-top:6px;"></div>
+    </div>
     <button class="btn-volt" id="chargeBtn" style="width:100%;border-radius:12px;padding:14px;font-size:15px;" onclick="doCharge()">チャージする</button>
     <div class="stripe-note">🔒 Stripe による安全な決済（現在デモモード）</div>
   </div>
@@ -1267,28 +1272,71 @@ function selCharge(amt,btn){
   chargeAmt=amt;
   document.querySelectorAll('.plan-c').forEach(el=>el.classList.remove('sel'));
   if(btn)btn.classList.add('sel');
+  _chargeReady=false; _cardElement=null; window._pendingClientSecret=null;
+  document.getElementById('card-element-wrap').style.display='none';
+  initStripeElements();
 }
+// Stripe Elements インスタンス
+var _stripe = null;
+var _cardElement = null;
+var _chargeReady = false;
+
+// チャージモーダルを開くときにStripe Elementsを初期化
+async function initStripeElements(){
+  try{
+    const r = await api('POST','/api/billing/charge',{amount_jpy: chargeAmt||699});
+    if(!r.client_secret){ return; }
+    window._pendingClientSecret = r.client_secret;
+    if(!_stripe && r.publishable_key && r.publishable_key.startsWith('pk_')){
+      _stripe = Stripe(r.publishable_key);
+    }
+    if(!_stripe) return;
+    if(!_cardElement){
+      const elements = _stripe.elements();
+      _cardElement = elements.create('card',{
+        style:{
+          base:{fontSize:'15px',color:'#2d1a0e',fontFamily:'inherit','::placeholder':{color:'#9a6a4a'}},
+          invalid:{color:'#ef4444'}
+        }
+      });
+      _cardElement.mount('#card-element');
+      _cardElement.on('change', e => {
+        document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+      });
+    }
+    document.getElementById('card-element-wrap').style.display = 'block';
+    _chargeReady = true;
+  }catch(e){
+    console.log('Stripe init error:', e.message);
+  }
+}
+
 async function doCharge(){
-  if(!chargeAmt||chargeAmt<100){ showToast('100円以上を入力してください','ng'); return; }
+  if(!chargeAmt||chargeAmt<100){ showToast('金額を選択してください','ng'); return; }
+  if(!_chargeReady || !_stripe || !_cardElement){
+    showToast('カード情報を入力してください','ng');
+    return;
+  }
   setBtnLoad('chargeBtn',true,'処理中...');
   try{
-    const r=await api('POST','/api/billing/charge',{amount_jpy:chargeAmt});
-    if(r.demo){
-      me.balance_jpy=r.balance_jpy;
-      renderAll();
+    const {paymentIntent, error} = await _stripe.confirmCardPayment(
+      window._pendingClientSecret,
+      {payment_method: {card: _cardElement}}
+    );
+    if(error){
+      document.getElementById('card-errors').textContent = error.message;
+      showToast('決済エラー: '+error.message,'ng');
+    } else if(paymentIntent.status==='succeeded'){
+      showToast('決済完了！クレジットに反映されます','ok');
       closeModal('chargeModal');
-      showToast('残高を追加しました（デモ）','ok');
-    } else if(r.clientSecret){
-      // Stripe本番決済
-      const pk = r.publishableKey || 'pk_live_51TTCtlKDii7rStRfdFJWRLB2Zfv9X7du1A64nhMIdXuMoh6KRBO5FNdV6gPbiAOLuwjpJch5F5XeQNYpBneBRqPL00OKvXJgTD';
-      const stripe = Stripe(pk);
-      const {error} = await stripe.confirmCardPayment(r.clientSecret, {
-        payment_method: { card: { token: 'tok_visa' } }
-      });
-      if(error){ showToast('決済エラー: '+error.message,'ng'); }
-      else { showToast('決済完了！残高に反映されます','ok'); closeModal('chargeModal'); }
+      _cardElement = null;
+      _chargeReady = false;
+      window._pendingClientSecret = null;
+      document.getElementById('card-element-wrap').style.display='none';
     }
-  }catch(e){ showToast(e.message||'エラーが発生しました','ng'); }
+  }catch(e){
+    showToast(e.message||'エラーが発生しました','ng');
+  }
   setBtnLoad('chargeBtn',false,'チャージする');
 }
 

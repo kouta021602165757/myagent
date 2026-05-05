@@ -571,11 +571,11 @@ body{color:#f0f0f8;}
     <div class="ag-list" id="agList"></div>
     <div class="sb-bot">
       <div class="balance-card">
-        <div class="balance-row">
+        <div class="balance-row" style="display:none">
           <span class="balance-lbl">残高</span>
           <span class="balance-val" id="balVal">¥0.00</span>
         </div>
-        <div class="balance-sub" id="balSub">0メッセージ利用</div>
+        <div class="balance-sub" id="balSub" style="display:none">0メッセージ利用</div>
         <button class="charge-btn" onclick="openCharge()">+ 残高チャージ</button>
       </div>
       <div class="sb-user">
@@ -583,7 +583,7 @@ body{color:#f0f0f8;}
         <div class="user-name" id="userName"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <button class="logout-btn" onclick="openSettings()" title="設定" style="flex:0;padding:6px 10px;font-size:16px;background:rgba(255,255,255,.08);border-radius:8px;border:1px solid rgba(180,120,80,.2)">⚙️</button>
-          <button class="logout-btn" onclick="doLogout()" style="flex:1">ログアウト</button>
+          
         </div>
       </div>
     </div>
@@ -939,11 +939,10 @@ function renderAll(){
 }
 
 function updateBalance(){
-  const b=me.balance_jpy||0;
-  const el=document.getElementById('balVal');
-  el.textContent=(b>=0?'¥':'−¥')+Math.abs(b).toFixed(2);
-  el.className='balance-val'+(b<0?' neg':b<200?' warn':' pos');
-  document.getElementById('balSub').textContent=`${me.usage_count||0}メッセージ利用`;
+  const b = me ? (me.balance_jpy||0) : 0;
+  const usageEl = document.getElementById('usageCount');
+  if(usageEl) usageEl.textContent = (me?.usage_count||0) + '回利用済み';
+}メッセージ利用`;
 }
 
 function renderAgList(){

@@ -908,8 +908,12 @@ body{color:#f0f0f8;}
       <input id="editName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">性格・追加指示（任意）</label>
-      <textarea id="editPersona" placeholder="例：丁寧な口調で話してください。" rows="5" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">採用目的</label>
+      <input id="editPurpose" type="text" placeholder="例：アポ取り" maxlength="80" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">業務内容</label>
+      <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" rows="6" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
     </div>
     <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
     <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px">
@@ -1326,6 +1330,24 @@ function startFromScratch(){
 }
 function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
 
+function _parsePersona(persona){
+  // Parse "採用目的: ...\n業務内容: ..." back to {purpose, duties}.
+  // Legacy / preset personas (no prefix) land in duties so they remain editable.
+  var p={purpose:'',duties:''};
+  if(!persona) return p;
+  var m=persona.match(/^採用目的:\s*([\s\S]*?)\n業務内容:\s*([\s\S]*)$/);
+  if(m){ p.purpose=m[1].trim(); p.duties=m[2].trim(); }
+  else { p.duties=persona; }
+  return p;
+}
+function _composePersona(purpose,duties){
+  purpose=(purpose||'').trim(); duties=(duties||'').trim();
+  if(!purpose && !duties) return '';
+  if(!purpose) return duties;
+  if(!duties) return '採用目的: '+purpose;
+  return '採用目的: '+purpose+'\n業務内容: '+duties;
+}
+
 function openEditAgent(id){
   const ag = agents.find(a=>a.id===(id||activeId));
   if(!ag) return;
@@ -1334,7 +1356,9 @@ function openEditAgent(id){
   document.getElementById('editAgName2').textContent = ag.name;
   document.getElementById('editAgSkills').textContent = ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ');
   document.getElementById('editName').value = ag.name;
-  document.getElementById('editPersona').value = ag.persona || '';
+  var parsed=_parsePersona(ag.persona);
+  document.getElementById('editPurpose').value = parsed.purpose;
+  document.getElementById('editDuties').value = parsed.duties;
   document.getElementById('editPanel').style.right = '0';
   document.getElementById('editPanelOverlay').style.display = 'block';
 }
@@ -1349,7 +1373,9 @@ async function saveEditAgent(){
   const ag = agents.find(a=>a.id===id);
   if(!ag) return;
   const newName = document.getElementById('editName').value.trim();
-  const newPersona = document.getElementById('editPersona').value.trim();
+  const purpose = document.getElementById('editPurpose').value.trim();
+  const duties = document.getElementById('editDuties').value.trim();
+  const newPersona = _composePersona(purpose,duties);
   if(!newName){ showToast('名前を入力してください','ng'); return; }
   try{
     const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona});

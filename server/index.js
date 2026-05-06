@@ -592,6 +592,17 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
+  // ── POST /api/user/clear-chat-history ────────────────────────
+  // Clears `history` of all agents but preserves agents/balance/usage_count
+  if(pathname==='/api/user/clear-chat-history'&&method==='POST'){
+    user.agents=(user.agents||[]).map(function(a){
+      a.history=[];
+      return a;
+    });
+    await DB.save(user);
+    return jres(res,200,{ok:true,cleared:user.agents.length});
+  }
+
 
   // ── POST /api/billing/subscribe ────────────────────────────
   if(pathname==='/api/billing/subscribe'&&method==='POST'){

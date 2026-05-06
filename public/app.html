@@ -633,6 +633,210 @@ input,textarea{font-family:var(--sans);}
 .stab-btn{flex:1;padding:11px 4px;background:none;border:none;border-bottom:2px solid transparent;color:#7272a0;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
 .active-stab{color:#fb923c!important;border-bottom-color:#fb923c!important}
 
+/* ══════════════════════════════════════
+   SETTINGS MODAL (new layout)
+══════════════════════════════════════ */
+.settings-modal{
+  width:100%;max-width:840px;margin:0 16px;
+  background:var(--cream);border-radius:22px;overflow:hidden;color:var(--text);
+  box-shadow:0 24px 60px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.04);
+  max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  animation:wizIn .22s cubic-bezier(.34,1.56,.64,1);
+}
+.settings-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 22px;border-bottom:1px solid var(--wire2);background:var(--cream2);
+  flex-shrink:0;
+}
+.settings-ti{font-size:18px;font-weight:800;color:var(--text);letter-spacing:.01em;}
+.settings-x{
+  width:32px;height:32px;border-radius:9px;background:var(--cream3);border:1px solid var(--wire2);
+  color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.settings-x:hover{background:var(--cream4);color:var(--text);}
+.settings-layout{display:grid;grid-template-columns:220px 1fr;flex:1;min-height:0;overflow:hidden;}
+
+.settings-nav{
+  background:var(--cream2);border-right:1px solid var(--wire2);
+  padding:14px 10px;display:flex;flex-direction:column;gap:2px;
+  overflow-y:auto;
+}
+.snav-section{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:10px 12px 4px;}
+.snav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;
+  font-size:13px;color:var(--text2);font-weight:600;background:none;border:0;text-align:left;font-family:inherit;
+  transition:all .14s;width:100%;
+}
+.snav-item:hover{background:var(--cream3);color:var(--text);}
+.snav-item.active{background:rgba(251,146,60,.1);color:var(--peach-dark);font-weight:700;}
+.snav-item .snav-ic{font-size:14px;flex-shrink:0;width:18px;text-align:center;}
+.snav-item.danger{color:#dc2626;}
+.snav-item.danger:hover{background:rgba(220,38,38,.06);}
+.snav-badge{
+  margin-left:auto;font-size:10px;background:var(--green,#10b981);color:#fff;padding:1px 7px;border-radius:999px;font-weight:700;
+}
+
+.settings-content{padding:24px 28px;overflow-y:auto;color:var(--text);}
+.spane-h{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.spane-sub{font-size:13px;color:var(--text3);margin-bottom:22px;line-height:1.55;}
+.spane-section{margin-bottom:24px;}
+.spane-section:last-child{margin-bottom:0;}
+.spane-section-h{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--wire);}
+.spane-tip{font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.55;}
+
+/* form */
+.settings-content .fld{margin-bottom:14px;}
+.settings-content .fld label{display:block;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+.settings-content .fld input, .settings-content .fld textarea, .settings-content .fld select{
+  width:100%;background:var(--cream2);border:1px solid var(--wire2);border-radius:10px;
+  padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;
+  box-sizing:border-box;
+}
+.settings-content .fld input:focus, .settings-content .fld textarea:focus, .settings-content .fld select:focus{
+  border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.15);
+}
+.settings-content .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.settings-content .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.settings-content .btn-primary,
+.settings-content .btn-ghost,
+.settings-content .btn-danger{
+  padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:0;
+  transition:all .14s;
+}
+.settings-content .btn-primary{background:var(--peach);color:#fff;}
+.settings-content .btn-primary:hover{background:var(--peach-dark);}
+.settings-content .btn-ghost{background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);}
+.settings-content .btn-ghost:hover{background:var(--cream3);color:var(--text);}
+.settings-content .btn-ghost.danger{color:var(--rose);border-color:rgba(239,68,68,.25);}
+.settings-content .btn-ghost.danger:hover{background:rgba(239,68,68,.06);}
+.settings-content .btn-danger{background:rgba(239,68,68,.08);color:var(--rose);border:1px solid rgba(239,68,68,.25);}
+.settings-content .btn-danger:hover{background:rgba(239,68,68,.14);}
+.settings-content .btn-row{display:flex;gap:10px;margin-top:6px;}
+
+/* avatar block */
+.s-avatar-row{display:flex;align-items:center;gap:18px;padding:16px;background:var(--cream2);border:1px solid var(--wire2);border-radius:14px;margin-bottom:18px;}
+.s-av-lg{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-size:24px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.s-av-info{flex:1;min-width:0;}
+.s-av-info .s-av-nm{font-size:14px;font-weight:700;color:var(--text);}
+.s-av-info .s-av-since{font-size:11px;color:var(--text3);margin-top:3px;}
+
+/* toggles */
+.s-toggle{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--wire);}
+.s-toggle:last-child{border-bottom:0;}
+.s-toggle .lbl{flex:1;}
+.s-toggle .lbl .t{font-size:13.5px;font-weight:600;color:var(--text);}
+.s-toggle .lbl .d{font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5;}
+.s-sw{position:relative;width:42px;height:24px;background:var(--cream4);border-radius:24px;cursor:pointer;flex-shrink:0;transition:background .15s;border:0;padding:0;}
+.s-sw::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+.s-sw.on{background:var(--peach);}
+.s-sw.on::after{left:21px;}
+
+/* pills */
+.s-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;}
+.s-pill-ok{background:rgba(16,185,129,.1);color:var(--green,#10b981);border:1px solid rgba(16,185,129,.25);}
+.s-pill-info{background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.25);}
+.s-pill-soon{background:var(--cream3);color:var(--text3);border:1px solid var(--wire2);}
+
+/* connected accounts row */
+.s-conn-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px;margin-bottom:8px;}
+.s-conn-row:last-child{margin-bottom:0;}
+.s-conn-row.warn{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04);}
+.s-conn-row .ic{width:32px;height:32px;border-radius:9px;background:#fff;border:1px solid var(--wire2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.s-conn-row.warn .ic{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);}
+.s-conn-row .meta{flex:1;min-width:0;}
+.s-conn-row .meta .n{font-size:13px;font-weight:700;color:var(--text);}
+.s-conn-row .meta .s{font-size:11px;color:var(--text3);margin-top:1px;}
+
+/* sessions */
+.s-sess-box{border:1px solid var(--wire2);border-radius:11px;background:var(--cream2);}
+.s-sess{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--wire);font-size:13px;}
+.s-sess:last-child{border-bottom:0;}
+.s-sess .ic{font-size:18px;flex-shrink:0;}
+.s-sess .meta{flex:1;min-width:0;}
+.s-sess .dev{color:var(--text);font-weight:600;}
+.s-sess .loc{color:var(--text3);font-size:11px;margin-top:1px;}
+.s-now{font-size:10px;color:var(--green,#10b981);font-weight:700;margin-left:8px;}
+
+/* danger */
+.s-danger-box{background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.2);border-radius:14px;padding:18px;}
+.s-danger-box h4{color:var(--rose);font-size:14px;font-weight:800;margin-bottom:6px;}
+.s-danger-box p{font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.55;}
+
+/* creator card */
+.s-cs-card{background:linear-gradient(135deg,rgba(251,146,60,.08),rgba(251,146,60,.02));border:1px solid rgba(251,146,60,.25);border-radius:16px;padding:24px;}
+.s-cs-card h4{font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.s-cs-card p{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px;}
+.s-cs-card .s-cs-feats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.s-cs-card .s-cs-ft{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text2);}
+.s-cs-card .s-cs-ft::before{content:'⚡';flex-shrink:0;}
+
+/* theme picker */
+.s-theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.s-theme-c{background:var(--cream2);border:1px solid var(--wire2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;font-family:inherit;transition:all .14s;}
+.s-theme-c:hover{border-color:rgba(251,146,60,.4);}
+.s-theme-c.sel{border:2px solid var(--peach);background:rgba(251,146,60,.06);padding:13px;}
+.s-theme-prv{width:100%;height:60px;border-radius:8px;margin-bottom:10px;}
+.s-theme-nm{font-size:13px;font-weight:700;color:var(--text);}
+.s-theme-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* billing balance card (within new layout) */
+.s-bal-card{background:var(--cream3);border:1px solid var(--wire2);border-radius:12px;padding:14px;}
+.s-bal-card.s-bal-plan{background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.2);}
+.s-bal-lbl{font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+.s-bal-card.s-bal-plan #sb-plan{color:var(--peach-dark);}
+.s-bal-val{font-size:18px;color:var(--text);font-weight:800;}
+.s-bal-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.s-history-box{border:1px solid var(--wire2);border-radius:12px;background:var(--cream2);max-height:280px;overflow-y:auto;}
+
+/* account switch list */
+.s-acct-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.s-acct-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px;font-family:inherit;text-align:left;width:100%;cursor:pointer;transition:all .14s;}
+.s-acct-row:hover{background:var(--cream3);}
+.s-acct-row.current{background:rgba(251,146,60,.08);border:1.5px solid var(--peach);cursor:default;}
+.s-acct-row.current:hover{background:rgba(251,146,60,.08);}
+.s-acct-row .av{width:38px;height:38px;border-radius:11px;color:#fff;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.s-acct-row .meta{flex:1;min-width:0;}
+.s-acct-row .meta .nm{font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;}
+.s-acct-row .meta .em{font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.s-acct-row .arrow{font-size:12px;color:var(--peach-dark);font-weight:700;}
+.s-acct-row .x{background:none;border:0;color:var(--rose);font-size:14px;cursor:pointer;padding:4px 8px;border-radius:6px;flex-shrink:0;}
+.s-acct-row .x:hover{background:rgba(239,68,68,.08);}
+
+/* sidebar quick switcher popup */
+.user-popup{
+  position:absolute;left:-4px;bottom:calc(100% + 4px);width:280px;
+  background:var(--cream);border:1px solid var(--wire2);border-radius:14px;
+  box-shadow:0 12px 32px rgba(0,0,0,.18);padding:8px;z-index:50;
+  display:none;
+}
+.user-popup.open{display:block;}
+.user-popup-section{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.08em;padding:6px 10px;text-transform:uppercase;}
+.user-popup-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;border:0;background:transparent;font-family:inherit;width:100%;text-align:left;transition:background .14s;}
+.user-popup-row:hover{background:var(--cream2);}
+.user-popup-row.current{background:rgba(251,146,60,.1);cursor:default;}
+.user-popup-row.current:hover{background:rgba(251,146,60,.1);}
+.user-popup-row .av{width:32px;height:32px;border-radius:9px;color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.user-popup-row .meta{flex:1;min-width:0;}
+.user-popup-row .meta .nm{font-size:13px;font-weight:700;color:var(--text);}
+.user-popup-row .meta .em{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-popup-row .dot{color:var(--peach);font-size:13px;}
+.user-popup-divider{height:1px;background:var(--wire);margin:6px 8px;}
+.user-popup-row.action{font-size:13px;color:var(--text2);font-weight:600;padding:10px;}
+.user-popup-row.action.danger{color:var(--rose);}
+.user-popup-row.action.danger:hover{background:rgba(239,68,68,.06);}
+.user-popup-row .ic{font-size:15px;flex-shrink:0;width:20px;text-align:center;}
+
+/* responsive: collapse side nav on small screens */
+@media (max-width:720px){
+  .settings-layout{grid-template-columns:1fr;}
+  .settings-nav{flex-direction:row;border-right:0;border-bottom:1px solid var(--wire2);overflow-x:auto;flex-shrink:0;padding:8px;gap:4px;}
+  .snav-section{display:none;}
+  .snav-item{flex-shrink:0;width:auto;padding:8px 12px;font-size:12px;}
+  .snav-item span:not(.snav-ic):not(.snav-badge){display:none;}
+  .settings-content .row2,.settings-content .row3{grid-template-columns:1fr;}
+  .s-cs-card .s-cs-feats{grid-template-columns:1fr;}
+}
+
 /* チャットメッセージの文字色 */
 .mbub{color:var(--text)!important}
 .msg.u .mbub{background:var(--volt-dim);color:var(--text)!important}
@@ -765,17 +969,21 @@ body{color:#f0f0f8;}
         <div class="balance-sub" id="balSub" style="display:none">0 messages</div>
         <button class="charge-btn" onclick="openCharge()">+ Add Credits</button>
       </div>
-      <div class="sb-user">
+      <div class="sb-user" style="position:relative">
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-          <div class="user-av" id="userAv" style="width:30px;height:30px;flex-shrink:0"></div>
-          <div style="flex:1;min-width:0">
-            <div class="user-name" id="userName" style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-            <div id="userPlanBadge" style="font-size:10px;color:var(--text3);margin-top:1px">Free</div>
-          </div>
+          <button onclick="toggleUserPopup(event)" title="アカウント切替" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:4px;margin:-4px;background:transparent;border:0;cursor:pointer;font-family:inherit;text-align:left;border-radius:8px" onmouseover="this.style.background='rgba(251,146,60,.06)'" onmouseout="this.style.background='transparent'">
+            <div class="user-av" id="userAv" style="width:30px;height:30px;flex-shrink:0"></div>
+            <div style="flex:1;min-width:0">
+              <div class="user-name" id="userName" style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+              <div id="userPlanBadge" style="font-size:10px;color:var(--text3);margin-top:1px">Free</div>
+            </div>
+            <span style="font-size:9px;color:var(--text3);margin-left:2px">▾</span>
+          </button>
           <button onclick="openSettings()" title="設定" style="width:28px;height:28px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--text2)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
+        <div class="user-popup" id="userPopup" onclick="event.stopPropagation()"></div>
       </div>
     </div>
   </aside>
@@ -1022,71 +1230,322 @@ body{color:#f0f0f8;}
 </div>
 
 
-<!-- ── SETTINGS MODAL ──────────────────────────────────── -->
+<!-- ── SETTINGS MODAL (new layout: side-nav, 8 tabs) ─────── -->
 <div class="modal-overlay gone" id="settingsModal">
-  <div class="wizard-modal" style="max-width:520px;padding:0;overflow:hidden;border-radius:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)">
-      <h2 style="font-size:17px;font-weight:700;color:var(--text)">設定</h2>
-      <button onclick="closeSettings()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1">×</button>
+  <div class="settings-modal">
+    <div class="settings-hd">
+      <div class="settings-ti" data-i18n="sHd">設定</div>
+      <button class="settings-x" onclick="closeSettings()" aria-label="close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
     </div>
-    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.08)">
-      <button class="stab-btn active-stab" data-i18n="sTabProfile" onclick="switchStab(this,'s-profile')">👤 プロフィール</button>
-      <button class="stab-btn" data-i18n="sTabSecurity" onclick="switchStab(this,'s-security')">🔒 セキュリティ</button>
-      <button class="stab-btn" data-i18n="sTabBilling" onclick="switchStab(this,'s-billing')">💳 お支払い</button>
-      <button class="stab-btn" data-i18n="sTabDanger" onclick="switchStab(this,'s-danger')" style="color:#ff4d6d">⚠️ 危険</button>
-    </div>
-    <div style="padding:24px;height:490px;overflow-y:auto;box-sizing:border-box">
-      <div id="s-profile">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:rgba(255,255,255,.04);border-radius:14px">
-          <div id="sAv" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#00e5cc);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0"></div>
-          <div><p id="sEmail" style="color:var(--text);font-size:15px;font-weight:600"></p><p id="sJoined" style="color:#7272a0;font-size:12px;margin-top:3px"></p></div>
-        </div>
-        <label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px;letter-spacing:.06em">表示名</label>
-        <input id="sName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
-        <button onclick="saveProfile()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
-      </div>
-      <div id="s-security" style="display:none">
-        <p style="color:#7272a0;font-size:13px;margin-bottom:20px;line-height:1.6">パスワードを変更します。</p>
-        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px">
-          <div><label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
-          <div><label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px">新しいパスワード</label><input id="sNewPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
-          <div><label style="display:block;font-size:12px;color:var(--text2);font-weight:700;margin-bottom:6px">新しいパスワード（確認）</label><input id="sConfPw" type="password" placeholder="••••••••" style="width:100%;background:var(--cream3);border:1px solid rgba(180,120,80,.2);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"></div>
-        </div>
-        <button onclick="changePassword()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">パスワードを変更</button>
-      </div>
-      <div id="s-billing" style="display:none">
-        <!-- 上部: プラン + 残高 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-          <div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:12px;padding:14px">
-            <div data-i18n="sCurPlan" style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">現在のプラン</div>
-            <div id="sb-plan" style="font-size:18px;color:var(--peach-dark);font-weight:800">Free</div>
-            <div id="sb-plan-sub" style="font-size:11px;color:var(--text3);margin-top:3px">無料枠 10メッセージ</div>
+    <div class="settings-layout">
+      <!-- LEFT NAV -->
+      <aside class="settings-nav" id="settingsNav">
+        <div class="snav-section" data-i18n="sNavGrpAccount">アカウント</div>
+        <button class="snav-item active" data-tab="account" onclick="switchStab(this,'s-account')"><span class="snav-ic">👤</span><span data-i18n="sNavAccount">アカウント</span></button>
+        <button class="snav-item" data-tab="security" onclick="switchStab(this,'s-security')"><span class="snav-ic">🔒</span><span data-i18n="sNavSecurity">セキュリティ</span></button>
+        <button class="snav-item" data-tab="notif" onclick="switchStab(this,'s-notif')"><span class="snav-ic">🔔</span><span data-i18n="sNavNotif">通知</span></button>
+
+        <div class="snav-section" data-i18n="sNavGrpBilling">課金</div>
+        <button class="snav-item" data-tab="billing" onclick="switchStab(this,'s-billing')"><span class="snav-ic">💳</span><span data-i18n="sNavBilling">プラン・お支払い</span></button>
+
+        <div class="snav-section" data-i18n="sNavGrpEnv">環境</div>
+        <button class="snav-item" data-tab="prefs" onclick="switchStab(this,'s-prefs')"><span class="snav-ic">🎨</span><span data-i18n="sNavPrefs">環境設定</span></button>
+
+        <div class="snav-section" data-i18n="sNavGrpAdv">高度</div>
+        <button class="snav-item" data-tab="creator" onclick="switchStab(this,'s-creator')"><span class="snav-ic">🏪</span><span data-i18n="sNavCreator">クリエイター</span><span class="snav-badge" data-i18n="sBadgeNew">NEW</span></button>
+        <button class="snav-item" data-tab="data" onclick="switchStab(this,'s-data')"><span class="snav-ic">📦</span><span data-i18n="sNavData">データ</span></button>
+
+        <div class="snav-section" data-i18n="sNavGrpDanger">危険</div>
+        <button class="snav-item danger" data-tab="danger" onclick="switchStab(this,'s-danger')"><span class="snav-ic">⚠️</span><span data-i18n="sNavDanger">アカウント削除</span></button>
+      </aside>
+
+      <!-- RIGHT CONTENT -->
+      <main class="settings-content">
+
+        <!-- 👤 アカウント -->
+        <div id="s-account" class="snav-pane">
+          <h3 class="spane-h" data-i18n="sNavAccount">アカウント</h3>
+          <div class="spane-sub" data-i18n="sAccountSub">プロフィール情報とログイン中のアカウントを管理します。</div>
+
+          <div class="s-avatar-row">
+            <div class="s-av-lg" id="sAv"></div>
+            <div class="s-av-info">
+              <div class="s-av-nm" id="sEmail"></div>
+              <div class="s-av-since" id="sJoined"></div>
+            </div>
           </div>
-          <div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:12px;padding:14px">
-            <div data-i18n="sBalance" style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">残高</div>
-            <div id="sb-bal" style="font-size:18px;color:var(--text);font-weight:800">$0.00</div>
-            <div id="sb-msg" style="font-size:11px;color:var(--text3);margin-top:3px"></div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecBasic">基本情報</div>
+            <div class="row2">
+              <div class="fld"><label data-i18n="sFldName">表示名</label><input id="sName" type="text" placeholder="名前"></div>
+              <div class="fld"><label data-i18n="sFldRole">ロール / 職業</label>
+                <select id="sRole">
+                  <option value="">—</option>
+                  <option value="founder">Founder / 起業家</option>
+                  <option value="marketer">マーケター</option>
+                  <option value="engineer">エンジニア</option>
+                  <option value="designer">デザイナー</option>
+                  <option value="sales">セールス</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+            </div>
+            <div class="fld"><label data-i18n="sFldBio">自己紹介</label><textarea id="sBio" rows="3" placeholder=""></textarea></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecLocale">ローカリゼーション</div>
+            <div class="row2">
+              <div class="fld"><label data-i18n="sFldTz">タイムゾーン</label>
+                <select id="sTz">
+                  <option value="auto">自動 (端末設定)</option>
+                  <option value="Asia/Tokyo">(GMT+9) Asia/Tokyo</option>
+                  <option value="UTC">(GMT+0) UTC</option>
+                  <option value="America/New_York">(GMT-5) America/New_York</option>
+                  <option value="America/Los_Angeles">(GMT-8) America/Los_Angeles</option>
+                  <option value="Europe/London">(GMT+0) Europe/London</option>
+                </select>
+              </div>
+              <div class="fld"><label data-i18n="sFldLang">言語</label>
+                <select id="sLang">
+                  <option value="auto">自動検出</option>
+                  <option value="ja">日本語</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <div class="btn-row"><button class="btn-primary" onclick="saveProfile()" data-i18n="sBtnSave">変更を保存</button></div>
+
+          <section class="spane-section" style="border-top:1px solid var(--wire2);padding-top:24px;margin-top:30px">
+            <div class="spane-section-h" data-i18n="sSecAcctSwitch">アカウントの切替</div>
+            <div class="spane-tip" data-i18n="sAcctSwitchTip">複数のアカウントを保存して、ワンクリックで切替できます。</div>
+            <div id="sAccountList" class="s-acct-list"></div>
+            <div class="btn-row">
+              <button class="btn-ghost" style="flex:1" onclick="addAnotherAccount()" data-i18n="sBtnAddAccount">+ 別のアカウントを追加</button>
+              <button class="btn-ghost danger" onclick="logoutAllAccounts()" data-i18n="sBtnLogoutAll">すべてログアウト</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 🔒 セキュリティ -->
+        <div id="s-security" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavSecurity">セキュリティ</h3>
+          <div class="spane-sub" data-i18n="sSecuritySub">パスワード・連携アカウント・ログインセッションを管理します。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecPassword">パスワード</div>
+            <div class="fld"><label data-i18n="sFldCurPw">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••"></div>
+            <div class="row2">
+              <div class="fld"><label data-i18n="sFldNewPw">新しいパスワード</label><input id="sNewPw" type="password" placeholder="8文字以上"></div>
+              <div class="fld"><label data-i18n="sFldConfPw">確認</label><input id="sConfPw" type="password" placeholder="もう一度"></div>
+            </div>
+            <button class="btn-primary" onclick="changePassword()" data-i18n="sBtnChangePw">パスワードを変更</button>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSec2FA">二段階認証</div>
+            <div class="s-toggle">
+              <div class="lbl">
+                <div class="t" data-i18n="s2FATotpT">認証アプリ (TOTP)</div>
+                <div class="d" data-i18n="s2FATotpD">Google Authenticator / Authy などで追加コードを要求</div>
+              </div>
+              <span class="s-pill s-pill-soon" data-i18n="sBadgeSoon">近日対応</span>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecLinked">連携アカウント</div>
+            <div id="sLinkedAccts"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecSessions">アクティブセッション</div>
+            <div class="s-sess-box">
+              <div class="s-sess">
+                <div class="ic">💻</div>
+                <div class="meta">
+                  <div class="dev"><span data-i18n="sSessThis">このデバイス</span> <span class="s-now">● <span data-i18n="sSessCurrent">現在</span></span></div>
+                  <div class="loc" id="sSessUA"></div>
+                </div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px" data-i18n="sSessNote">他デバイスのセッション一覧は近日対応</div>
+          </section>
+        </div>
+
+        <!-- 🔔 通知 -->
+        <div id="s-notif" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavNotif">通知</h3>
+          <div class="spane-sub" data-i18n="sNotifSub">どんな通知をいつ受け取るかを管理します。設定はこのブラウザに保存されます。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sNotifEmail">メール通知</div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifBalT">残高アラート</div><div class="d" data-i18n="sNotifBalD">残高が $1.00 を下回ったらメール</div></div><div class="s-sw" data-pref="notif_balance"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifSubT">月額プラン更新通知</div><div class="d" data-i18n="sNotifSubD">サブスク更新の数日前に予告</div></div><div class="s-sw" data-pref="notif_renewal"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifRcptT">領収書（請求書）</div><div class="d" data-i18n="sNotifRcptD">決済完了時に PDF を自動送付</div></div><div class="s-sw" data-pref="notif_receipt"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifProdT">プロダクト更新</div><div class="d" data-i18n="sNotifProdD">新機能・新プリセット情報</div></div><div class="s-sw" data-pref="notif_product"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifWeekT">週次サマリー</div><div class="d" data-i18n="sNotifWeekD">エージェント別の利用統計を毎週月曜に</div></div><div class="s-sw" data-pref="notif_weekly"></div></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sNotifPush">ブラウザプッシュ</div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifPushT">プッシュ通知</div><div class="d" data-i18n="sNotifPushD">エージェント応答完了時などに通知</div></div><span class="s-pill s-pill-soon" data-i18n="sBadgeSoon">近日対応</span></div>
+          </section>
+
+          <div style="font-size:11px;color:var(--text3);margin-top:8px" data-i18n="sNotifDelivery">※ メール送信機能は順次有効化されます。設定だけ先に保存できます。</div>
+        </div>
+
+        <!-- 💳 プラン・お支払い -->
+        <div id="s-billing" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavBilling">プラン・お支払い</h3>
+          <div class="spane-sub" data-i18n="sBillingSub">プラン・残高・取引履歴を管理します。</div>
+
+          <section class="spane-section">
+            <div class="row2">
+              <div class="s-bal-card s-bal-plan">
+                <div class="s-bal-lbl" data-i18n="sCurPlan">現在のプラン</div>
+                <div id="sb-plan" class="s-bal-val">Free</div>
+                <div id="sb-plan-sub" class="s-bal-sub"></div>
+              </div>
+              <div class="s-bal-card">
+                <div class="s-bal-lbl" data-i18n="sBalance">残高</div>
+                <div id="sb-bal" class="s-bal-val">$0.00</div>
+                <div id="sb-msg" class="s-bal-sub"></div>
+              </div>
+            </div>
+          </section>
+
+          <div class="btn-row">
+            <button class="btn-primary" style="flex:1" onclick="closeSettings();openCharge()" data-i18n="sAddCredits">+ クレジット追加 / プラン変更</button>
+            <button id="sb-cancel-btn" class="btn-ghost" onclick="cancelSubscription()" data-i18n="sCancel" style="display:none">解約</button>
+          </div>
+
+          <section class="spane-section">
+            <div class="spane-section-h"><span data-i18n="sTxHistory">取引履歴</span> <span style="color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0" data-i18n="sLast30">（最新30件）</span></div>
+            <div id="sb-history" class="s-history-box"></div>
+          </section>
+        </div>
+
+        <!-- 🎨 環境設定 -->
+        <div id="s-prefs" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavPrefs">環境設定</h3>
+          <div class="spane-sub" data-i18n="sPrefsSub">見た目と挙動をカスタマイズします。設定はこのブラウザに保存されます。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sPrefsTheme">テーマ</div>
+            <div class="row3 s-theme-grid">
+              <button class="s-theme-c" data-theme="light" onclick="setTheme('light')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);border:1px solid var(--wire2)"></div>
+                <div class="s-theme-nm" data-i18n="sThemeLight">ライト</div>
+              </button>
+              <button class="s-theme-c" data-theme="dark" onclick="setTheme('dark')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#3a2a1c,#1a0a00)"></div>
+                <div class="s-theme-nm" data-i18n="sThemeDark">ダーク</div>
+                <div class="s-theme-sub" data-i18n="sBadgeSoon">近日対応</div>
+              </button>
+              <button class="s-theme-c" data-theme="auto" onclick="setTheme('auto')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3 50%,#1a0a00 50%)"></div>
+                <div class="s-theme-nm" data-i18n="sThemeAuto">自動</div>
+                <div class="s-theme-sub" data-i18n="sThemeAutoSub">OS設定に追従</div>
+              </button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sPrefsBehav">既定の動作</div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sBehavEnterT">Enter キーでメッセージ送信</div><div class="d" data-i18n="sBehavEnterD">OFF にすると改行のみ。送信は Cmd/Ctrl+Enter</div></div><div class="s-sw" data-pref="behav_enter_send"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sBehavLastT">起動時に最後のチャットを開く</div><div class="d" data-i18n="sBehavLastD">OFF にすると常に「チームを作ろう」画面で起動</div></div><div class="s-sw" data-pref="behav_open_last"></div></div>
+          </section>
+        </div>
+
+        <!-- 🏪 クリエイター -->
+        <div id="s-creator" class="snav-pane" style="display:none">
+          <h3 class="spane-h"><span data-i18n="sNavCreator">クリエイター</span> <span class="s-pill s-pill-info" data-i18n="sBadgeComing">Coming Soon</span></h3>
+          <div class="spane-sub" data-i18n="sCreatorSub">作ったエージェントをマーケットプレイスで販売できるようになります。</div>
+
+          <div class="s-cs-card">
+            <h4 data-i18n="sCreatorH">あなたのエージェントを世界へ販売 🚀</h4>
+            <p data-i18n="sCreatorBody">BtoB営業AI、コピーライターAI、リサーチャーAI ── あなたが作りこんだエージェントを公開して、世界中のユーザーに使ってもらいましょう。<b>従量課金の10%</b>がクリエイター報酬として還元されます。</p>
+            <div class="s-cs-feats">
+              <div class="s-cs-ft" data-i18n="sCreatorFt1">エージェントを公開してSNSで宣伝</div>
+              <div class="s-cs-ft" data-i18n="sCreatorFt2">使われた分だけ自動的に報酬発生</div>
+              <div class="s-cs-ft" data-i18n="sCreatorFt3">Stripe Connect で安全に出金</div>
+              <div class="s-cs-ft" data-i18n="sCreatorFt4">月次レポートで利用状況を可視化</div>
+            </div>
+            <button class="btn-primary" id="sCreatorPre" onclick="preregisterCreator()" data-i18n="sCreatorCta">事前登録（早期アクセス）</button>
           </div>
         </div>
 
-        <!-- アクション -->
-        <div style="display:flex;gap:8px;margin-bottom:18px">
-          <button data-i18n="sAddCredits" onclick="closeSettings();openCharge()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:10px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">+ クレジット追加 / プラン変更</button>
-          <button id="sb-cancel-btn" data-i18n="sCancel" onclick="cancelSubscription()" style="display:none;background:var(--cream2);border:1px solid var(--wire3);color:var(--text2);border-radius:10px;padding:11px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">解約</button>
+        <!-- 📦 データ -->
+        <div id="s-data" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavData">データ</h3>
+          <div class="spane-sub" data-i18n="sDataSub">データのエクスポート・インポート・削除を行います。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sDataExport">エクスポート</div>
+            <div class="s-conn-row">
+              <div class="ic">📄</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataExportAgentsT">エージェントと会話履歴</div>
+                <div class="s" data-i18n="sDataExportAgentsD">JSON 形式・全エージェント＋全チャット</div>
+              </div>
+              <button class="btn-ghost" onclick="exportData('agents')" data-i18n="sBtnDownload">ダウンロード</button>
+            </div>
+            <div class="s-conn-row">
+              <div class="ic">📊</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataExportTxT">取引履歴 (CSV)</div>
+                <div class="s" data-i18n="sDataExportTxD">確定申告などにご利用いただけます</div>
+              </div>
+              <button class="btn-ghost" onclick="exportData('history')" data-i18n="sBtnDownload">ダウンロード</button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sDataImport">インポート</div>
+            <div class="s-conn-row">
+              <div class="ic">📥</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataImportT">エージェントを読み込む</div>
+                <div class="s" data-i18n="sDataImportD">JSON ファイルから一括インポート</div>
+              </div>
+              <input type="file" id="sImportFile" accept=".json,application/json" style="display:none" onchange="importAgentsFile(this)">
+              <button class="btn-ghost" onclick="document.getElementById('sImportFile').click()" data-i18n="sBtnSelectFile">ファイル選択</button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sDataClear">クリア</div>
+            <div class="s-conn-row warn">
+              <div class="ic">🗑</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataClearT">全チャット履歴を削除</div>
+                <div class="s" data-i18n="sDataClearD">エージェント自体は残します。会話のみ消去（取り消し不可）</div>
+              </div>
+              <button class="btn-danger" onclick="clearAllChatHistory()" data-i18n="sBtnDelete">削除する</button>
+            </div>
+          </section>
         </div>
 
-        <!-- 取引履歴 -->
-        <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px"><span data-i18n="sTxHistory">取引履歴</span> <span data-i18n="sLast30" style="color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0">（最新30件）</span></div>
-        <div id="sb-history" style="border:1px solid var(--wire2);border-radius:12px;background:var(--cream2);max-height:280px;overflow-y:auto"></div>
-      </div>
-      <div id="s-danger" style="display:none">
-        <div style="background:rgba(255,77,109,.05);border:1px solid rgba(255,77,109,.2);border-radius:14px;padding:20px">
-          <h3 style="color:#ff4d6d;font-size:15px;font-weight:700;margin-bottom:8px">アカウントを削除</h3>
-          <p style="color:#7272a0;font-size:13px;margin-bottom:16px;line-height:1.6">全てのエージェント・会話・残高が永久に削除されます。この操作は取り消せません。</p>
-          <input id="sDelConfirm" type="text" placeholder='「削除する」と入力して確認' style="width:100%;background:var(--cream3);border:1px solid rgba(255,77,109,.3);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box">
-          <button onclick="deleteAccount()" style="width:100%;background:#ff4d6d;color:var(--text);border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">アカウントを完全削除する</button>
+        <!-- ⚠️ アカウント削除 -->
+        <div id="s-danger" class="snav-pane" style="display:none">
+          <h3 class="spane-h" style="color:var(--rose)" data-i18n="sNavDanger">アカウント削除</h3>
+          <div class="spane-sub" data-i18n="sDangerSub">この操作は取り消せません。慎重に行ってください。</div>
+
+          <div class="s-danger-box">
+            <h4 data-i18n="sDangerH">アカウントを完全削除</h4>
+            <p data-i18n="sDangerBody">全てのエージェント・会話・残高・サブスクリプションが永久に削除されます。サブスクは自動的に解約されます。</p>
+            <div class="fld"><label data-i18n="sDangerConfirmLbl">「削除する」と入力して確認</label><input id="sDelConfirm" type="text" placeholder="削除する"></div>
+            <button class="btn-danger" onclick="deleteAccount()" data-i18n="sDangerCta">アカウントを完全削除する</button>
+          </div>
         </div>
-      </div>
+
+      </main>
     </div>
   </div>
 </div>
@@ -1299,7 +1758,13 @@ var NA={avatar:'🤖',name:'',skills:[],persona:''};
 
 // ── i18n ───────────────────────────────────────────────
 var isJa = !navigator.language || navigator.language.startsWith('ja');
-// URL override (?lang=en|ja)
+// Saved preference (settings → 言語) wins over auto detection unless URL forces it
+try{
+  var _savedLang=localStorage.getItem('pref_lang');
+  if(_savedLang==='en') isJa=false;
+  else if(_savedLang==='ja') isJa=true;
+}catch(e){}
+// URL override (?lang=en|ja) is highest priority
 var _qsLang=(new URLSearchParams(location.search)).get('lang');
 if(_qsLang==='en') isJa=false; else if(_qsLang==='ja') isJa=true;
 
@@ -1407,6 +1872,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
     const meData=await api('GET','/api/me');
     if(!meData||meData.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
     me=meData.user||meData;
+    // Record this token in the multi-account list (so the switcher shows it)
+    try{ _recordCurrentAccount(); }catch(e){}
     const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
     // Show email verify banner if not verified
@@ -2126,25 +2593,57 @@ function setBtnLoad(id,on,txt){const b=document.getElementById(id);b.disabled=on
 var toastT;
 
 /* ── Settings ──────────────────────────────────────────── */
+/* ── Account preferences (client-side localStorage) ─────────────── */
+function _prefGet(key, fallback){ try{ var v=localStorage.getItem('pref_'+key); return v===null?fallback:v; }catch(e){ return fallback; } }
+function _prefSet(key, val){ try{ localStorage.setItem('pref_'+key, val); }catch(e){} }
+function _prefBool(key, def){ var v=_prefGet(key,null); return v===null?!!def:(v==='1'||v==='true'); }
+
+function _avatarColor(seed){
+  // Deterministic color from email/userId, picked to fit the cream palette
+  var palette=['linear-gradient(135deg,#fb923c,#ea580c)','linear-gradient(135deg,#10b981,#059669)','linear-gradient(135deg,#3b82f6,#2563eb)','linear-gradient(135deg,#8b5cf6,#7c3aed)','linear-gradient(135deg,#ec4899,#db2777)','linear-gradient(135deg,#f59e0b,#d97706)'];
+  var s=String(seed||''); var n=0; for(var i=0;i<s.length;i++) n=(n+s.charCodeAt(i))%palette.length;
+  return palette[n];
+}
+function _avatarLetter(name,email){ return ((name||email||'?').trim().charAt(0)||'?').toUpperCase(); }
+
 function openSettings(){
   const modal = document.getElementById('settingsModal');
   modal.classList.remove('gone');
-  // プロフィール情報を入力
-  const av = document.getElementById('sAv');
-  const emailEl = document.getElementById('sEmail');
-  const joinedEl = document.getElementById('sJoined');
-  const nameEl = document.getElementById('sName');
-  const balEl = document.getElementById('sBal');
-  const usageEl = document.getElementById('sUsage');
+  // Reset to first tab on each open
+  document.querySelectorAll('.snav-item').forEach(b=>b.classList.remove('active'));
+  var firstNav=document.querySelector('.snav-item[data-tab="account"]');
+  if(firstNav) firstNav.classList.add('active');
+  document.querySelectorAll('.snav-pane').forEach(p=>{p.style.display = p.id==='s-account' ? '' : 'none';});
+
   if(me){
-    const initials = (me.name||me.email||'?').charAt(0).toUpperCase();
-    if(av) av.textContent = initials;
+    const av = document.getElementById('sAv');
+    if(av){ av.textContent=_avatarLetter(me.name,me.email); av.style.background=_avatarColor(me.email||me.id); }
+    const emailEl = document.getElementById('sEmail');
     if(emailEl) emailEl.textContent = me.email||'';
-    if(joinedEl) joinedEl.textContent = _fmtT(T.sUsageFmt,{n:(me.usage_count||0)});
+    const joinedEl = document.getElementById('sJoined');
+    if(joinedEl){
+      var since='';
+      if(me.created_at){ try{ var d=new Date(me.created_at); since=d.toLocaleDateString(isJa?'ja-JP':'en-US',{year:'numeric',month:'long'}); }catch(e){} }
+      joinedEl.textContent = (since? (isJa?since+' よりメンバー':'Member since '+since)+' ・ ' : '') + 'ID: '+(me.id||'').slice(0,8)+'…';
+    }
+    const nameEl = document.getElementById('sName');
     if(nameEl) nameEl.value = me.name||'';
-    if(balEl) balEl.textContent = jpyAsUsd(me.balance_jpy);
-    if(usageEl) usageEl.textContent = _fmtT(T.sUsageFmt,{n:(me.usage_count||0)});
+    const bioEl = document.getElementById('sBio');
+    if(bioEl) bioEl.value = _prefGet('bio','');
+    const roleEl = document.getElementById('sRole');
+    if(roleEl) roleEl.value = _prefGet('role','');
+    const tzEl = document.getElementById('sTz');
+    if(tzEl) tzEl.value = _prefGet('tz','auto');
+    const langEl = document.getElementById('sLang');
+    if(langEl) langEl.value = _prefGet('lang','auto');
   }
+  // Render account list and notification toggles and theme/behavior
+  renderAccountList();
+  initNotifToggles();
+  initBehaviorToggles();
+  initThemePicker();
+  renderLinkedAccounts();
+  renderSessionInfo();
 }
 
 function updateBillingUI(){
@@ -2169,13 +2668,20 @@ function closeSettings(){
   document.getElementById('settingsModal').classList.add('gone');
 }
 function switchStab(btn, tabId){
-  document.querySelectorAll('.stab-btn').forEach(b=>{b.classList.remove('active-stab');b.style.color='';});
-  btn.classList.add('active-stab');
-  ['s-profile','s-security','s-billing','s-danger'].forEach(id=>{
-    const el = document.getElementById(id);
+  // Support both the new side-nav (.snav-item) and any leftover .stab-btn
+  document.querySelectorAll('.snav-item, .stab-btn').forEach(b=>{b.classList.remove('active');b.classList.remove('active-stab');});
+  if(btn) btn.classList.add('active');
+  var TAB_IDS=['s-account','s-security','s-notif','s-billing','s-prefs','s-creator','s-data','s-danger',
+               's-profile' /* legacy */];
+  TAB_IDS.forEach(function(id){
+    var el=document.getElementById(id);
     if(el) el.style.display = id===tabId ? '' : 'none';
   });
   if(tabId==='s-billing') loadBilling();
+  if(tabId==='s-account') renderAccountList();
+  if(tabId==='s-security') { renderLinkedAccounts(); renderSessionInfo(); }
+  if(tabId==='s-notif') initNotifToggles();
+  if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
 }
 
 async function loadBilling(){
@@ -2259,12 +2765,328 @@ async function cancelSubscription(){
 }
 async function saveProfile(){
   const name = document.getElementById('sName').value.trim();
-  if(!name){ showToast('名前を入力してください','err'); return; }
+  if(!name){ showToast(isJa?'名前を入力してください':'Please enter your name','err'); return; }
+  // Persist client-side prefs (bio/role/tz/lang) regardless of server outcome
+  var bio=document.getElementById('sBio'); if(bio) _prefSet('bio',bio.value.trim());
+  var role=document.getElementById('sRole'); if(role) _prefSet('role',role.value);
+  var tz=document.getElementById('sTz'); if(tz) _prefSet('tz',tz.value);
+  var langEl=document.getElementById('sLang');
+  if(langEl){
+    var newLang=langEl.value;
+    var oldLang=_prefGet('lang','auto');
+    _prefSet('lang',newLang);
+    if(newLang!==oldLang){
+      // Reload so the new language preference is picked up everywhere.
+      // Strip any ?lang= URL override so the saved pref wins on reload.
+      setTimeout(function(){
+        var url=location.pathname+location.search.replace(/[?&]lang=[^&]*/g,'').replace(/^&/,'?');
+        if(url===location.pathname+location.search){ location.reload(); } else { location.replace(url); }
+      }, 600);
+    }
+  }
   try{
     const res = await api('PATCH','/api/user/profile',{name});
-    if(res.user){ me=res.user; document.getElementById('userName').textContent=me.name||me.email; }
-    showToast('プロフィールを保存しました','ok');
-  }catch(e){ showToast('保存に失敗しました','err'); }
+    if(res.user){
+      me=res.user;
+      var nameEl=document.getElementById('userName'); if(nameEl) nameEl.textContent=me.name||me.email;
+      _recordCurrentAccount();
+    }
+    showToast(isJa?'プロフィールを保存しました':'Profile saved','ok');
+  }catch(e){ showToast(isJa?'保存に失敗しました':'Failed to save','err'); }
+}
+
+/* ── Multi-account management ─────────────────────────────────── */
+function _acctsList(){
+  try{ var v=localStorage.getItem('maa_accounts'); return v?JSON.parse(v):[]; }
+  catch(e){ return []; }
+}
+function _acctsSet(arr){ try{ localStorage.setItem('maa_accounts',JSON.stringify(arr||[])); }catch(e){} }
+function _recordCurrentAccount(){
+  if(!me||!token) return;
+  var list=_acctsList();
+  var idx=list.findIndex(function(a){return a.user_id===me.id;});
+  var entry={
+    user_id:me.id,
+    token:token,
+    email:me.email,
+    name:me.name||me.email,
+    plan:me.plan||'free',
+    last_used:Date.now()
+  };
+  if(idx>=0) list[idx]=entry; else list.push(entry);
+  _acctsSet(list);
+}
+function _activeAcctId(){ return me?me.id:null; }
+
+function renderAccountList(){
+  var el=document.getElementById('sAccountList');
+  if(!el) return;
+  var list=_acctsList();
+  // Make sure current account is in the list
+  if(me && token && !list.find(function(a){return a.user_id===me.id;})){
+    _recordCurrentAccount();
+    list=_acctsList();
+  }
+  if(!list.length){
+    el.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">'+(isJa?'保存されたアカウントはまだありません':'No saved accounts yet')+'</div>';
+    return;
+  }
+  var curId=_activeAcctId();
+  el.innerHTML=list.map(function(a){
+    var isCur = a.user_id===curId;
+    var letter = _avatarLetter(a.name,a.email);
+    var planLbl = a.plan==='pro'?'Pro':a.plan==='business'?'Business':'Free';
+    var actions = isCur
+      ? '<span class="s-pill s-pill-ok">'+(isJa?'現在のアカウント':'Current')+'</span>'
+      : '<span class="arrow">'+(isJa?'切り替え →':'Switch →')+'</span>'+
+        '<button class="x" onclick="event.stopPropagation();removeAccount(\''+a.user_id+'\')" title="'+(isJa?'リストから削除':'Remove from list')+'">×</button>';
+    return '<button type="button" class="s-acct-row'+(isCur?' current':'')+'" '+(isCur?'':'onclick="switchAccount(\''+a.user_id+'\')"')+'>'+
+      '<div class="av" style="background:'+_avatarColor(a.email||a.user_id)+'">'+letter+'</div>'+
+      '<div class="meta">'+
+        '<div class="nm">'+esc(a.name||a.email||'')+'</div>'+
+        '<div class="em">'+esc(a.email||'')+' ・ '+planLbl+(isJa?' プラン':' plan')+'</div>'+
+      '</div>'+
+      actions+
+    '</button>';
+  }).join('');
+}
+
+function switchAccount(userId){
+  var list=_acctsList();
+  var acct=list.find(function(a){return a.user_id===userId;});
+  if(!acct){ showToast(isJa?'アカウントが見つかりません':'Account not found','ng'); return; }
+  acct.last_used=Date.now();
+  _acctsSet(list);
+  localStorage.setItem('token',acct.token);
+  showToast((isJa?'切り替え中: ':'Switching to: ')+acct.name,'ok');
+  setTimeout(function(){ location.reload(); }, 300);
+}
+
+function removeAccount(userId){
+  var list=_acctsList();
+  var idx=list.findIndex(function(a){return a.user_id===userId;});
+  if(idx<0) return;
+  if(userId===_activeAcctId()){
+    showToast(isJa?'現在のアカウントは「ログアウト」で削除してください':'Use logout for the current account','ng');
+    return;
+  }
+  if(!confirm(isJa?'リストから削除しますか？\n（再度ログインすれば戻せます）':'Remove from list?\n(You can sign in again to restore)')) return;
+  list.splice(idx,1);
+  _acctsSet(list);
+  renderAccountList();
+}
+
+function addAnotherAccount(){
+  // Snapshot current account so we don't lose it after the auth flow
+  _recordCurrentAccount();
+  // Mark the upcoming auth as "additional account" — auth.html should preserve maa_accounts and just add the new token
+  try{ sessionStorage.setItem('maa_add_mode','1'); }catch(e){}
+  location.href='auth.html?mode=add';
+}
+
+function logoutAllAccounts(){
+  if(!confirm(isJa?'すべてのアカウントからログアウトしますか？':'Sign out of all accounts?')) return;
+  try{ localStorage.removeItem('maa_accounts'); }catch(e){}
+  try{ localStorage.removeItem('token'); }catch(e){}
+  try{ localStorage.removeItem('user'); }catch(e){}
+  location.href='auth.html';
+}
+
+/* ── Sidebar quick switcher popup ─────────────────────────────── */
+function toggleUserPopup(e){
+  if(e) e.stopPropagation();
+  var el=document.getElementById('userPopup');
+  if(!el) return;
+  if(el.classList.contains('open')){ el.classList.remove('open'); return; }
+  renderUserPopup();
+  el.classList.add('open');
+  // close on outside click
+  setTimeout(function(){
+    document.addEventListener('click', _userPopupClose, {once:true});
+  },10);
+}
+function _userPopupClose(){ var el=document.getElementById('userPopup'); if(el) el.classList.remove('open'); }
+function renderUserPopup(){
+  var el=document.getElementById('userPopup');
+  if(!el) return;
+  var list=_acctsList();
+  if(me && token && !list.find(function(a){return a.user_id===me.id;})){
+    _recordCurrentAccount();
+    list=_acctsList();
+  }
+  var curId=_activeAcctId();
+  var rows=list.map(function(a){
+    var isCur=a.user_id===curId;
+    var letter=_avatarLetter(a.name,a.email);
+    return '<button class="user-popup-row'+(isCur?' current':'')+'" '+(isCur?'':'onclick="switchAccount(\''+a.user_id+'\')"')+'>'+
+      '<div class="av" style="background:'+_avatarColor(a.email||a.user_id)+'">'+letter+'</div>'+
+      '<div class="meta"><div class="nm">'+esc(a.name||a.email||'')+'</div><div class="em">'+esc(a.email||'')+'</div></div>'+
+      (isCur?'<span class="dot">●</span>':'')+
+    '</button>';
+  }).join('');
+  el.innerHTML =
+    '<div class="user-popup-section">'+(isJa?'アカウント':'Accounts')+'</div>'+
+    rows+
+    '<div class="user-popup-divider"></div>'+
+    '<button class="user-popup-row action" onclick="addAnotherAccount()"><span class="ic">＋</span><span>'+(isJa?'別のアカウントを追加':'Add another account')+'</span></button>'+
+    '<button class="user-popup-row action danger" onclick="logoutCurrent()"><span class="ic">↪</span><span>'+(isJa?'ログアウト':'Sign out')+'</span></button>';
+}
+function logoutCurrent(){
+  if(!confirm(isJa?'現在のアカウントからログアウトしますか？':'Sign out of the current account?')) return;
+  var list=_acctsList();
+  var curId=_activeAcctId();
+  list=list.filter(function(a){return a.user_id!==curId;});
+  _acctsSet(list);
+  if(list.length){
+    var next=list[0];
+    localStorage.setItem('token',next.token);
+    location.reload();
+  } else {
+    try{ localStorage.removeItem('token'); }catch(e){}
+    location.href='auth.html';
+  }
+}
+
+/* ── Notifications / Behavior toggles (client-side prefs) ──────── */
+function initNotifToggles(){
+  // Defaults: balance/renewal/receipt ON, others OFF
+  var defs={notif_balance:1,notif_renewal:1,notif_receipt:1,notif_product:0,notif_weekly:0};
+  document.querySelectorAll('#s-notif .s-sw[data-pref]').forEach(function(sw){
+    var k=sw.getAttribute('data-pref');
+    if(_prefBool(k, defs[k]||0)) sw.classList.add('on'); else sw.classList.remove('on');
+    sw.onclick=function(){ sw.classList.toggle('on'); _prefSet(k, sw.classList.contains('on')?'1':'0'); };
+  });
+}
+function initBehaviorToggles(){
+  var defs={behav_enter_send:1,behav_open_last:1};
+  document.querySelectorAll('#s-prefs .s-sw[data-pref]').forEach(function(sw){
+    var k=sw.getAttribute('data-pref');
+    if(_prefBool(k, defs[k]||0)) sw.classList.add('on'); else sw.classList.remove('on');
+    sw.onclick=function(){ sw.classList.toggle('on'); _prefSet(k, sw.classList.contains('on')?'1':'0'); };
+  });
+}
+function initThemePicker(){
+  var current=_prefGet('theme','light');
+  document.querySelectorAll('.s-theme-c[data-theme]').forEach(function(c){
+    c.classList.toggle('sel', c.getAttribute('data-theme')===current);
+  });
+}
+function setTheme(name){
+  _prefSet('theme',name);
+  document.querySelectorAll('.s-theme-c[data-theme]').forEach(function(c){
+    c.classList.toggle('sel', c.getAttribute('data-theme')===name);
+  });
+  if(name==='light'){
+    document.documentElement.removeAttribute('data-theme');
+    showToast(isJa?'ライトテーマに切替':'Light theme','ok');
+  } else {
+    showToast(isJa?'近日対応予定です':'Coming soon','ng');
+    // revert pref to light for now
+    _prefSet('theme','light');
+    setTimeout(initThemePicker,300);
+  }
+}
+
+/* ── Linked accounts / sessions (security tab) ─────────────────── */
+function renderLinkedAccounts(){
+  var el=document.getElementById('sLinkedAccts');
+  if(!el) return;
+  var hasGoogle = !!(me && (me.google_id||me.googleId));
+  el.innerHTML =
+    '<div class="s-conn-row"><div class="ic">G</div><div class="meta"><div class="n">Google</div><div class="s">'+(hasGoogle?(isJa?'連携済み':'Connected'):(isJa?'未連携':'Not connected'))+'</div></div>'+
+      (hasGoogle?'<span class="s-pill s-pill-ok">'+(isJa?'✓ 連携済み':'✓ Linked')+'</span>':'<a class="btn-ghost" href="/api/auth/google" style="text-decoration:none;display:inline-block;">'+(isJa?'連携する':'Connect')+'</a>')+
+    '</div>'+
+    '<div class="s-conn-row"><div class="ic">📧</div><div class="meta"><div class="n">'+(isJa?'メールアドレス':'Email')+'</div><div class="s">'+esc((me&&me.email)||'')+'</div></div>'+
+      (me&&me.verified?'<span class="s-pill s-pill-ok">'+(isJa?'✓ 確認済み':'✓ Verified')+'</span>':'<span class="s-pill s-pill-soon">'+(isJa?'未確認':'Unverified')+'</span>')+
+    '</div>';
+}
+function renderSessionInfo(){
+  var el=document.getElementById('sSessUA');
+  if(el) el.textContent = (navigator.userAgent||'').slice(0,80);
+}
+
+/* ── Data tab: export / import / clear ────────────────────────── */
+function _downloadBlob(filename, content, mime){
+  var b=new Blob([content],{type:mime||'application/octet-stream'});
+  var url=URL.createObjectURL(b);
+  var a=document.createElement('a');
+  a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+function exportData(kind){
+  if(kind==='agents'){
+    var payload={
+      exported_at:new Date().toISOString(),
+      user:{id:me&&me.id, email:me&&me.email, name:me&&me.name, plan:me&&me.plan},
+      agents:agents||[]
+    };
+    _downloadBlob('myaiagent-export-'+Date.now()+'.json', JSON.stringify(payload,null,2), 'application/json');
+    showToast(isJa?'エクスポートしました':'Exported','ok');
+  } else if(kind==='history'){
+    api('GET','/api/usage').then(function(r){
+      var rows=[['date','type','agent','cost_usd','cost_jpy','credit_usd','plan']];
+      (r.recent_history||[]).forEach(function(it){
+        var t=it.type||'usage';
+        rows.push([
+          it.date||'',
+          t,
+          (it.agentName||'').replace(/,/g,' '),
+          it.cost_usd!==undefined?String(it.cost_usd):'',
+          it.cost_jpy!==undefined?String(it.cost_jpy):'',
+          it.amount_cents_usd?String(it.amount_cents_usd/100):'',
+          it.plan||''
+        ]);
+      });
+      var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+      _downloadBlob('myaiagent-history-'+Date.now()+'.csv', csv, 'text/csv;charset=utf-8');
+      showToast(isJa?'CSVをダウンロード':'CSV downloaded','ok');
+    }).catch(function(){ showToast(isJa?'取得に失敗':'Fetch failed','ng'); });
+  }
+}
+async function importAgentsFile(input){
+  var file=input.files&&input.files[0];
+  if(!file) return;
+  try{
+    var text=await file.text();
+    var data=JSON.parse(text);
+    var imported=Array.isArray(data)?data:(data.agents||[]);
+    if(!imported.length){ showToast(isJa?'インポート可能なエージェントがありません':'No agents to import','ng'); return; }
+    if(!confirm(_fmtT(isJa?'{n} 体のエージェントをインポートしますか？':'Import {n} agents?',{n:imported.length}))) return;
+    var ok=0, fail=0;
+    for(var i=0;i<imported.length;i++){
+      var a=imported[i];
+      try{
+        var r=await api('POST','/api/agents',{
+          avatar:a.avatar||'🤖', name:(a.name||'Agent').slice(0,40),
+          skills:Array.isArray(a.skills)?a.skills:['writing'],
+          persona:a.persona||''
+        });
+        agents.push(r.agent); ok++;
+      } catch(e){ fail++; }
+    }
+    renderAgList();
+    showToast(_fmtT(isJa?'{ok}体インポート（{fail}体失敗）':'Imported {ok} ({fail} failed)',{ok:ok,fail:fail}),'ok');
+  } catch(e){
+    showToast(isJa?'JSONの読み込みに失敗':'Failed to read JSON','ng');
+  }
+  input.value='';
+}
+async function clearAllChatHistory(){
+  if(!confirm(isJa?'全エージェントの会話履歴を削除しますか？\n（エージェント自体は残ります）':'Clear chat history of all agents?\n(Agents themselves stay)')) return;
+  try{
+    await api('POST','/api/user/clear-chat-history',{});
+    agents.forEach(function(a){ a.history=[]; });
+    if(activeId){ var ag=agents.find(function(a){return a.id===activeId;}); if(ag) renderMsgs(ag); }
+    showToast(isJa?'会話履歴を削除しました':'Chat history cleared','ok');
+  } catch(e){
+    showToast(isJa?'削除に失敗':'Failed to clear','ng');
+  }
+}
+function preregisterCreator(){
+  _prefSet('creator_preregistered','1');
+  var btn=document.getElementById('sCreatorPre');
+  if(btn){ btn.textContent=isJa?'✓ 事前登録済み':'✓ Pre-registered'; btn.disabled=true; btn.style.opacity='.6'; btn.style.cursor='default'; }
+  showToast(isJa?'リリース時にメールでお知らせします':'We will email you at release','ok');
 }
 async function changePassword(){
   const cur = document.getElementById('sCurPw').value;

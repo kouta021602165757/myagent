@@ -476,6 +476,18 @@ function googleLogin() {
   window.location.href = API + '/api/auth/google';
 }
 
+// Multi-account: append the just-authenticated user to maa_accounts
+function _maaAppend(token, user){
+  try{
+    var v=localStorage.getItem('maa_accounts');
+    var list=v?JSON.parse(v):[];
+    var idx=list.findIndex(function(a){return a.user_id===user.id;});
+    var entry={user_id:user.id,token:token,email:user.email,name:user.name||user.email,plan:user.plan||'free',last_used:Date.now()};
+    if(idx>=0) list[idx]=entry; else list.push(entry);
+    localStorage.setItem('maa_accounts',JSON.stringify(list));
+  }catch(e){}
+}
+
 // ── Login ─────────────────────────────────────────────────
 async function doLogin() {
   const email = val('l-email'), pass = val('l-pass');
@@ -486,6 +498,7 @@ async function doLogin() {
     const r = await post('/api/auth/login', { email, password: pass });
     localStorage.setItem('token', r.token);
     localStorage.setItem('user', JSON.stringify(r.user));
+    if(r.user) _maaAppend(r.token, r.user);
     window.location.href = 'app.html';
   } catch (e) {
     showErr('l-err', e.message);
@@ -505,6 +518,7 @@ async function doSignup() {
     const r = await post('/api/auth/signup', { name, email, password: pass });
     localStorage.setItem('token', r.token);
     localStorage.setItem('user', JSON.stringify(r.user));
+    if(r.user) _maaAppend(r.token, r.user);
     window.location.href = 'app.html';
   } catch (e) {
     showErr('s-err', e.message);
@@ -534,14 +548,23 @@ async function post(path, body) {
 
 // ── Auto-redirect if already logged in ────────────────────
 window.onload = () => {
-  // Auto-login if already have token
+  const p = new URLSearchParams(location.search);
+  // Add-account mode: user is logged in elsewhere and wants to attach a second account
+  const isAddMode = p.get('mode') === 'add';
+  // Auto-login if already have token (skip in add mode)
   const token = localStorage.getItem('token');
-  if (token) {
+  if (token && !isAddMode) {
     fetch(API + '/api/me', { headers: { Authorization: 'Bearer ' + token } })
       .then(r => r.ok ? window.location.href = 'app.html' : null)
       .catch(() => {});
   }
-  const p = new URLSearchParams(location.search);
+  if (isAddMode){
+    var b=document.createElement('div');
+    b.style.cssText='background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:#ea580c;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;margin-bottom:14px';
+    b.textContent='別のアカウントを追加 — ログインまたは新規登録してください';
+    var card=document.querySelector('.auth-card')||document.body;
+    card.insertBefore(b, card.firstChild);
+  }
   if (p.get('tab') === 'signup') switchTab('signup');
   if (p.get('reset')) showResetForm(p.get('reset'));
   if (p.get('error') === 'google_failed') showErr('l-err', 'Googleログインに失敗しました。もう一度お試しください。');

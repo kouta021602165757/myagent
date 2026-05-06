@@ -226,11 +226,57 @@ async function callAI(messages,system){
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
 async function callAIWithTools(messages,system,tools){
-  const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
-    {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
-                         {model:'claude-sonnet-4-6',max_tokens:4096,system,messages,tools});
-  if(r.s!==200)throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
-  return r.d;
+  // Up to 2 retries on 429 (rate limit) with exponential backoff
+  let attempt = 0;
+  while(true){
+    const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
+      {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+                           {model:'claude-sonnet-4-6',max_tokens:2048,system,messages,tools});
+    if(r.s===200) return r.d;
+    if(r.s===429 && attempt < 2){
+      const wait = (attempt===0 ? 8000 : 20000); // 8s, then 20s
+      console.warn(`[chat] Anthropic 429 rate-limited, retrying in ${wait}ms`);
+      await new Promise(res=>setTimeout(res, wait));
+      attempt++;
+      continue;
+    }
+    throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
+  }
+}
+
+/**
+ * Strip large data from older tool_result blocks to keep input tokens low.
+ * - Drops images from all tool_results except the latest user turn
+ * - Truncates text in older tool_result blocks
+ * Mutates the messages array.
+ */
+function _trimToolHistory(messages){
+  // Find the index of the LAST user turn that contains tool_result blocks
+  let latestToolUserIdx = -1;
+  for(let i=messages.length-1; i>=0; i--){
+    const m = messages[i];
+    if(m.role!=='user' || !Array.isArray(m.content)) continue;
+    if(m.content.some(b=>b.type==='tool_result')){ latestToolUserIdx = i; break; }
+  }
+  for(let i=0; i<messages.length; i++){
+    if(i===latestToolUserIdx) continue;
+    const m = messages[i];
+    if(m.role!=='user' || !Array.isArray(m.content)) continue;
+    m.content = m.content.map(b=>{
+      if(b.type!=='tool_result') return b;
+      // tool_result.content can be string or array of blocks
+      if(typeof b.content === 'string'){
+        return {...b, content: b.content.slice(0, 400)};
+      }
+      if(Array.isArray(b.content)){
+        const compact = b.content
+          .filter(x=>x.type!=='image')                  // drop old screenshots
+          .map(x=>x.type==='text' ? {...x, text: (x.text||'').slice(0,400)} : x);
+        return {...b, content: compact.length ? compact : '(omitted)'};
+      }
+      return b;
+    });
+  }
 }
 
 // ── BROWSER TOOLS (Google Chrome integration) ─────────────────
@@ -832,8 +878,11 @@ async function handleAPI(req,res,pathname,method,ip){
         let convMsgs = baseMsgs.slice();
         let resp;
         let iters = 0;
-        const MAX_ITERS = 8;
+        const MAX_ITERS = 5;
         while(true){
+          // Trim heavy data from older tool_result blocks before each call
+          // (keeps input tokens under the org rate limit)
+          _trimToolHistory(convMsgs);
           resp = await callAIWithTools(convMsgs, buildSystem(agent), BROWSER_TOOLS);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
@@ -876,6 +925,8 @@ async function handleAPI(req,res,pathname,method,ip){
           }catch(e2){
             return jres(res,502,{error:`AI応答エラー: ${e2.message}`});
           }
+        } else if(/rate limit|429|input tokens per minute/i.test(msg)){
+          return jres(res,429,{error:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。'});
         } else {
           return jres(res,502,{error:`AI応答エラー: ${msg}`});
         }

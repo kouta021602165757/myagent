@@ -498,6 +498,87 @@ function genShareId(){
   let s=''; for(let i=0;i<12;i++) s+=c[Math.floor(Math.random()*c.length)];
   return s.slice(0,4)+'-'+s.slice(4,8)+'-'+s.slice(8,12);
 }
+
+/* ── Marketplace helpers ───────────────────────────────────── */
+const MARKET_CATEGORIES = ['sales','marketing','research','writing','ops','other'];
+const MARKET_CAT_LABEL = {
+  sales:'セールス', marketing:'マーケティング', research:'リサーチ',
+  writing:'ライティング', ops:'業務効率化', other:'その他'
+};
+function genListingId(){
+  const c='abcdefghijklmnopqrstuvwxyz0123456789';
+  let s=''; for(let i=0;i<14;i++) s+=c[Math.floor(Math.random()*c.length)];
+  return 'ls_'+s.slice(0,5)+'-'+s.slice(5,10)+'-'+s.slice(10,14);
+}
+/** Build a public-safe listing object (joined with creator). */
+function publicListing(user, ag){
+  const m = ag.marketplace||{};
+  return {
+    listing_id: m.listing_id,
+    agent: {
+      avatar: ag.avatar||'🤖',
+      skills: ag.skills||[],
+      chrome_enabled: !!ag.chrome_enabled,
+    },
+    title: m.title || ag.name,
+    description: m.description || ag.persona || '',
+    category: m.category || 'other',
+    category_label: MARKET_CAT_LABEL[m.category||'other']||'その他',
+    demo_prompts: Array.isArray(m.demo_prompts) ? m.demo_prompts.slice(0,3) : [],
+    creator: {
+      handle: '@'+(user.email||'').split('@')[0],
+      name: user.name || '',
+    },
+    rating: m.rating_avg || 0,
+    rating_count: m.rating_count || 0,
+    uses: m.uses_count || 0,
+    badge: (m.uses_count||0) >= 100 ? 'hot' : (Date.now()-new Date(m.listed_at||0).getTime() < 14*86400000 ? 'new' : null),
+    listed_at: m.listed_at,
+  };
+}
+/** Scan all users and return live + public listings. */
+async function listAllPublicListings(){
+  const out = [];
+  const collect = (users) => {
+    for(const u of users||[]){
+      for(const ag of (u.agents||[])){
+        const m = ag.marketplace;
+        if(m && m.is_listed && m.status==='live' && (m.visibility||'public')==='public'){
+          out.push(publicListing(u, ag));
+        }
+      }
+    }
+  };
+  if(USE_SUPA){
+    const r = await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
+    if(Array.isArray(r.d)) collect(r.d);
+  } else {
+    collect(LDB.data||[]);
+  }
+  // Most recent first; 'hot' agents float up regardless
+  out.sort((a,b)=>{
+    if(a.badge==='hot' && b.badge!=='hot') return -1;
+    if(b.badge==='hot' && a.badge!=='hot') return 1;
+    return new Date(b.listed_at||0).getTime() - new Date(a.listed_at||0).getTime();
+  });
+  return out;
+}
+/** Find {user, agent} by listing_id (cross-user). */
+async function findAgentByListingId(listingId){
+  if(!listingId) return null;
+  const match = (users) => {
+    for(const u of users||[]){
+      const ag=(u.agents||[]).find(a=>a.marketplace && a.marketplace.listing_id===listingId);
+      if(ag) return {user:u, agent:ag};
+    }
+    return null;
+  };
+  if(USE_SUPA){
+    const r=await sbReq('GET','users','?select=*&limit=2000');
+    return Array.isArray(r.d) ? match(r.d) : null;
+  }
+  return match(LDB.data||[]);
+}
 async function findAgentByShareId(shareId){
   // Returns {user, agent} or null. Scans users (slow without index).
   if(!shareId) return null;
@@ -773,6 +854,113 @@ async function handleAPI(req,res,pathname,method,ip){
     else if(regenerate || !ag.share_id){ ag.share_id=genShareId(); }
     await DB.save(user);
     return jres(res,200,{share_id:ag.share_id||null});
+  }
+
+  // ══ MARKETPLACE ════════════════════════════════════════════
+  // ── GET /api/marketplace ───────────────────────────────────
+  // Public list (auth required so we can credit clones). Supports ?category= and ?q=.
+  if(pathname==='/api/marketplace' && method==='GET'){
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const cat = (qs.get('category')||'').trim();
+    const q = (qs.get('q')||'').trim().toLowerCase();
+    let listings = await listAllPublicListings();
+    if(cat && cat!=='all') listings = listings.filter(l=>l.category===cat);
+    if(q){
+      listings = listings.filter(l=>{
+        const hay = (l.title+' '+l.description+' '+l.category_label+' '+(l.creator.handle||'')).toLowerCase();
+        return hay.indexOf(q)>=0;
+      });
+    }
+    return jres(res,200,{listings, categories: MARKET_CATEGORIES.map(id=>({id, label:MARKET_CAT_LABEL[id]}))});
+  }
+
+  // ── GET /api/marketplace/listings/mine ─────────────────────
+  if(pathname==='/api/marketplace/listings/mine' && method==='GET'){
+    const mine = (user.agents||[]).filter(a=>a.marketplace).map(a=>({
+      agent_id: a.id,
+      agent_name: a.name,
+      agent_avatar: a.avatar,
+      ...a.marketplace,
+    }));
+    return jres(res,200,{listings: mine});
+  }
+
+  // ── POST /api/marketplace/listings ─────────────────────────
+  // body: {agent_id, title, description, category, demo_prompts[], visibility}
+  if(pathname==='/api/marketplace/listings' && method==='POST'){
+    const body = await readBody(req);
+    const ag = (user.agents||[]).find(a=>a.id===body.agent_id);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const title = (body.title||'').trim();
+    const description = (body.description||'').trim();
+    const category = MARKET_CATEGORIES.indexOf(body.category)>=0 ? body.category : 'other';
+    const visibility = body.visibility==='unlisted' ? 'unlisted' : 'public';
+    const demoPrompts = Array.isArray(body.demo_prompts)
+      ? body.demo_prompts.map(s=>String(s||'').trim()).filter(Boolean).slice(0,3) : [];
+    if(title.length<2 || title.length>60) return jres(res,400,{error:'タイトルは 2〜60 文字で入力してください'});
+    if(description.length<20 || description.length>500) return jres(res,400,{error:'説明は 20〜500 文字で入力してください'});
+
+    const existing = ag.marketplace || {};
+    ag.marketplace = {
+      is_listed: true,
+      listing_id: existing.listing_id || genListingId(),
+      title, description, category, demo_prompts: demoPrompts, visibility,
+      status: 'live',                      // auto-approve for MVP
+      listed_at: existing.listed_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      uses_count: existing.uses_count || 0,
+      rating_avg: existing.rating_avg || 0,
+      rating_count: existing.rating_count || 0,
+    };
+    await DB.save(user);
+    return jres(res,200,{listing: ag.marketplace, agent_id: ag.id});
+  }
+
+  // ── DELETE /api/marketplace/listings/:agent_id ─────────────
+  // Soft unpublish — keep stats so re-listing preserves them
+  const dlm = pathname.match(/^\/api\/marketplace\/listings\/([^/]+)$/);
+  if(dlm && method==='DELETE'){
+    const ag = (user.agents||[]).find(a=>a.id===dlm[1]);
+    if(!ag || !ag.marketplace) return jres(res,404,{error:'出店が見つかりません'});
+    ag.marketplace.is_listed = false;
+    ag.marketplace.status = 'paused';
+    ag.marketplace.updated_at = new Date().toISOString();
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── POST /api/marketplace/:listing_id/clone ────────────────
+  // Auth required. Clones a listed agent into the current user's account.
+  const mcm = pathname.match(/^\/api\/marketplace\/([a-z0-9_-]+)\/clone$/);
+  if(mcm && method==='POST'){
+    if((user.agents||[]).length>=20) return jres(res,400,{error:'エージェントは最大20個です'});
+    const found = await findAgentByListingId(mcm[1]);
+    if(!found || !found.agent.marketplace || !found.agent.marketplace.is_listed){
+      return jres(res,404,{error:'出店エージェントが見つかりません'});
+    }
+    if(found.user.id === user.id) return jres(res,400,{error:'自分の出店エージェントは複製できません'});
+    const src = found.agent;
+    const clone = {
+      id:'ag_'+crypto.randomUUID(),
+      avatar: src.avatar||'🤖',
+      name: src.marketplace.title || src.name || 'Agent',
+      skills: Array.isArray(src.skills) ? src.skills : ['writing'],
+      persona: src.persona || '',
+      chrome_enabled: !!src.chrome_enabled,
+      marketplace_origin: {
+        listing_id: src.marketplace.listing_id,
+        creator_user_id: found.user.id,
+        cloned_at: new Date().toISOString(),
+      },
+      history: [],
+      created_at: new Date().toISOString(),
+    };
+    user.agents = [...(user.agents||[]), clone];
+    // Bump uses on the listing
+    src.marketplace.uses_count = (src.marketplace.uses_count||0) + 1;
+    await DB.save(user);
+    await DB.save(found.user);
+    return jres(res,201,{agent: clone});
   }
 
   // ── POST /api/share/:share_id/clone ────────────────────────

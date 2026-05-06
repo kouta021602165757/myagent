@@ -1822,9 +1822,87 @@ body{color:#f0f0f8;}
         <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
       </div>
     </div>
+    <div id="editListingBox" style="padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--peach-dark);display:flex;align-items:center;gap:6px">🏪 マーケットに出店</div>
+          <div id="editListingDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">他のユーザーが利用するたびに利用料の 10% が収益になります</div>
+        </div>
+      </div>
+      <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
+    </div>
     <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
     <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px">
       <button onclick="deleteAgent()" style="width:100%;background:rgba(239,68,68,.06);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">🗑 このエージェントを削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LISTING FORM OVERLAY (#4 出店フォーム) ════════════════ -->
+<div class="overlay" id="listingOverlay">
+  <div class="wizard" style="max-width:640px">
+    <div class="wiz-top">
+      <div class="wiz-title" id="listingTitle">🏪 マーケットに出店する</div>
+      <button class="wiz-close" onclick="closeListingForm()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="max-height:75vh;overflow:auto">
+      <div id="listingAgentBar" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px;margin-bottom:18px">
+        <div id="listingAgentAv" style="width:40px;height:40px;border-radius:10px;background:var(--cream3);display:flex;align-items:center;justify-content:center;font-size:22px"></div>
+        <div style="flex:1;min-width:0">
+          <div id="listingAgentName" style="font-weight:800;font-size:14px;color:var(--text)"></div>
+          <div id="listingAgentSk" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+        </div>
+      </div>
+
+      <div class="step-h">公開情報を入力</div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">タイトル <span style="color:var(--rose)">*</span></label>
+        <input id="lsTitle" maxlength="60" placeholder="例: 営業フォローアップ Bot — 30秒で追客文面を作る" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">検索結果やカードに表示されます（最大 60 文字）</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">説明 <span style="color:var(--rose)">*</span></label>
+        <textarea id="lsDesc" maxlength="500" rows="4" placeholder="このエージェントが何ができるか・どんな時に便利か（20〜500 文字）" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box;resize:vertical;line-height:1.6"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">利用者が見る詳細文。長すぎず、価値が一目でわかるように。</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">カテゴリ <span style="color:var(--rose)">*</span></label>
+        <div id="lsCats" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">デモプロンプト（最大 3 つ・任意）</label>
+        <input id="lsDemo1" maxlength="120" placeholder="例: 商談した株式会社○○へ追加提案メールを書いて" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <input id="lsDemo2" maxlength="120" placeholder="例: 検討中の顧客への、軽めの追客メッセージ" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <input id="lsDemo3" maxlength="120" placeholder="例: 失注した相手への関係維持メッセージ" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">利用者がワンクリックで試せる例文。良いプロンプトを置くと使われやすくなります。</div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px">💰 収益還元: 利用料の 10%</div>
+        <div style="font-size:12px;color:#78350f;line-height:1.6">利用者が支払う AI 利用料の 10% が、自動的にあなたの利用可能残高に加算されます。価格は MY AI AGENT 側で固定です（クリエイター側で変更不可）。</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">公開設定</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="public" checked style="margin:0">🌐 マーケットに公開</label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="unlisted" style="margin:0">🔗 リンクを知ってる人だけ</label>
+        </div>
+      </div>
+
+      <div class="btn-row" style="justify-content:space-between;margin-top:24px;gap:10px">
+        <button id="lsUnpublishBtn" class="btn-back" style="display:none;color:var(--rose);border-color:rgba(239,68,68,.3)" onclick="unpublishListing()">出店を取り下げる</button>
+        <div style="display:flex;gap:10px;margin-left:auto">
+          <button class="btn-back" onclick="closeListingForm()">キャンセル</button>
+          <button class="btn-volt" id="lsSubmitBtn" onclick="submitListing()">出店する →</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2751,41 +2829,54 @@ function startFromScratch(){
 function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
 
 /* ── Marketplace ─────────────────────────────────────────────── */
-/* Sample listings for launch — will be replaced by real /api/marketplace once
-   the creator backend (#4–#7) ships. Reuses the PRESETS schema + adds creator,
-   rating, uses, category. */
-var MARKET_CATS = ['すべて','セールス','マーケティング','リサーチ','ライティング','業務効率化','その他'];
-var MARKET = [
-  {avatar:'📞',name:'営業フォローアップ Bot',skills:['sales'],persona:'商談後のフォローアップメールを自動生成。テキストを貼るだけで適切な追客文面を作ります。BtoB/BtoC 両対応、敬語の調整も自動。',category:'セールス',creator:'@takeuchi_kouta',rating:4.7,uses:284,badge:'hot'},
-  {avatar:'📱',name:'SNS 投稿ジェネレーター',skills:['sns','marketing'],persona:'商品名と訴求軸を入れるだけで Twitter / Instagram / TikTok 用の投稿を 3 パターン同時生成。',category:'マーケティング',creator:'@takeuchi_kouta',rating:4.5,uses:196,badge:'hot'},
-  {avatar:'🔍',name:'競合リサーチャー',skills:['research'],persona:'競合企業名を入れると Google Chrome 連携で公開情報を収集し、ポジショニングを比較レポート化します。',category:'リサーチ',creator:'@takeuchi_kouta',rating:0,uses:0,badge:'new',chrome_enabled:true},
-  {avatar:'✍️',name:'SEO ブログライター',skills:['writing','marketing'],persona:'キーワードと業界を伝えると、検索意図を分解して 2,000 字の SEO 記事を生成。見出し・メタディスクリプションも同梱。',category:'ライティング',creator:'@yamada_seo',rating:4.9,uses:1240,badge:'hot'},
-  {avatar:'📊',name:'KPI ダッシュボード解説',skills:['analyst','research'],persona:'スプレッドシート / GA4 のデータを貼ると、KPI の動きを経営会議向けにサマリー化。',category:'業務効率化',creator:'@data_pro',rating:4.6,uses:421},
-  {avatar:'🤝',name:'カスタマーサポート Tier1',skills:['support'],persona:'よくある問い合わせの一次回答を即座に返す。カスタマー怒り度を判定してエスカレーション要否も判断。',category:'業務効率化',creator:'@cs_master',rating:4.4,uses:312},
-  {avatar:'🎯',name:'リード獲得メール作成',skills:['sales','marketing'],persona:'業界・役職・企業規模を指定するだけでパーソナライズされたコールドメールを作成。',category:'セールス',creator:'@b2b_ninja',rating:4.3,uses:178},
-  {avatar:'📝',name:'議事録要約 Pro',skills:['secretary','writing'],persona:'長い議事録を「決定事項 / アクションアイテム / 議論ポイント」の3軸で構造化サマリー。',category:'業務効率化',creator:'@minute_master',rating:4.8,uses:892},
-  {avatar:'💼',name:'契約書チェッカー',skills:['legal','other'],persona:'契約書テキストを貼ると、リスク条項・要交渉点・抜け漏れをハイライト。法務チェック前の一次レビュー用。',category:'その他',creator:'@legal_ai',rating:4.7,uses:145},
-  {avatar:'🎨',name:'クリエイティブ・ブリーフ作成',skills:['designer','marketing'],persona:'商品 / ターゲット / 達成目標を聞き取りながら、デザイナーに渡せるブリーフを5分で作成。',category:'マーケティング',creator:'@design_brief',rating:4.5,uses:88,badge:'new'},
-  {avatar:'🔬',name:'論文サマライザー',skills:['research','writing'],persona:'arXiv / PubMed の URL を渡すと、Abstract → 主張 → 手法 → 結論 → 限界の5段で日本語サマリー。',category:'リサーチ',creator:'@phd_helper',rating:4.9,uses:567,chrome_enabled:true},
-  {avatar:'💬',name:'多言語ローカライザー',skills:['writing','translation','other'],persona:'日本語の販売文を、文化背景まで考慮して英語・中国語・韓国語に翻訳。直訳ではなく市場最適化。',category:'ライティング',creator:'@global_loc',rating:4.6,uses:234}
+/* Live data: fetched from /api/marketplace. Hardcoded labels mirror server's
+   MARKET_CAT_LABEL so search chips work pre-fetch. */
+var MARKET_CAT_DEFS = [
+  {id:'all',     label:'すべて'},
+  {id:'sales',   label:'セールス'},
+  {id:'marketing',label:'マーケティング'},
+  {id:'research',label:'リサーチ'},
+  {id:'writing', label:'ライティング'},
+  {id:'ops',     label:'業務効率化'},
+  {id:'other',   label:'その他'}
 ];
-var _marketCat='すべて', _marketPickedIdx=-1;
+var MARKET = [];                       // populated from API
+var _marketCat='all', _marketPickedListing=null, _marketLoading=false;
 
-function openMarketplace(){
-  _marketPickedIdx=-1; _marketCat='すべて';
+async function openMarketplace(){
+  _marketPickedListing=null; _marketCat='all';
   var s=document.getElementById('marketSearch'); if(s) s.value='';
   buildMarketCats();
-  renderMarket();
   var btn=document.getElementById('useMarketBtn');
   if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; }
   document.getElementById('marketOverlay').classList.add('open');
+  await loadMarket();
 }
 function closeMarket(){ document.getElementById('marketOverlay').classList.remove('open'); }
 
+async function loadMarket(){
+  var grid=document.getElementById('marketGrid');
+  var empty=document.getElementById('marketEmpty');
+  if(grid) grid.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--text3);font-size:13px;font-weight:600;grid-column:1/-1">読み込み中…</div>';
+  if(empty) empty.style.display='none';
+  _marketLoading=true;
+  try{
+    var r=await api('GET','/api/marketplace');
+    MARKET = r.listings||[];
+  }catch(e){
+    MARKET=[];
+    if(grid) grid.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--rose);font-size:13px;font-weight:600;grid-column:1/-1">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
+    _marketLoading=false;
+    return;
+  }
+  _marketLoading=false;
+  renderMarket();
+}
+
 function buildMarketCats(){
   var el=document.getElementById('marketCats'); if(!el) return;
-  el.innerHTML=MARKET_CATS.map(function(c){
-    return '<button type="button" class="market-cat'+(c===_marketCat?' on':'')+'" onclick="setMarketCat(\''+c+'\')">'+esc(c)+'</button>';
+  el.innerHTML=MARKET_CAT_DEFS.map(function(c){
+    return '<button type="button" class="market-cat'+(c.id===_marketCat?' on':'')+'" onclick="setMarketCat(\''+c.id+'\')">'+esc(c.label)+'</button>';
   }).join('');
 }
 function setMarketCat(c){
@@ -2794,58 +2885,156 @@ function setMarketCat(c){
   renderMarket();
 }
 function renderMarket(){
-  var el=document.getElementById('marketGrid'); if(!el) return;
+  var el=document.getElementById('marketGrid'); if(!el || _marketLoading) return;
   var q=(document.getElementById('marketSearch')?.value||'').toLowerCase().trim();
   var list=MARKET.filter(function(m){
-    if(_marketCat!=='すべて' && m.category!==_marketCat) return false;
+    if(_marketCat!=='all' && m.category!==_marketCat) return false;
     if(!q) return true;
-    return (m.name+' '+m.persona+' '+m.creator+' '+m.category).toLowerCase().indexOf(q)>=0;
+    return ((m.title||'')+' '+(m.description||'')+' '+(m.creator?.handle||'')+' '+(m.category_label||'')).toLowerCase().indexOf(q)>=0;
   });
   if(!list.length){
     el.innerHTML='';
-    document.getElementById('marketEmpty').style.display='block';
+    var empty=document.getElementById('marketEmpty');
+    if(empty){
+      empty.style.display='block';
+      empty.textContent = MARKET.length===0
+        ? 'まだ出店されたエージェントがありません。あなたが第1号になりませんか？'
+        : '該当するエージェントが見つかりません';
+    }
     return;
   }
   document.getElementById('marketEmpty').style.display='none';
   el.innerHTML=list.map(function(m){
-    var idx=MARKET.indexOf(m);
     var ribbon = m.badge==='hot' ? '<div class="market-ribbon">🔥 人気</div>'
                : m.badge==='new' ? '<div class="market-ribbon new">✨ 新着</div>' : '';
     var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
     var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
-    return '<button type="button" class="market-card'+(idx===_marketPickedIdx?' sel':'')+'" data-idx="'+idx+'" onclick="pickMarket('+idx+')">'
+    var picked = _marketPickedListing===m.listing_id ? ' sel' : '';
+    return '<button type="button" class="market-card'+picked+'" data-id="'+esc(m.listing_id)+'" onclick="pickMarket(\''+esc(m.listing_id)+'\')">'
       + ribbon
-      + '<div class="mc-head"><div class="mc-av">'+m.avatar+'</div>'
-      + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.name)+'</div><div class="mc-cat">'+esc(m.category)+'</div></div></div>'
-      + '<div class="mc-desc">'+esc(m.persona)+'</div>'
-      + '<div class="mc-creator">クリエイター: <b>'+esc(m.creator)+'</b></div>'
+      + '<div class="mc-head"><div class="mc-av">'+(m.agent?.avatar||'🤖')+'</div>'
+      + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
+      + '<div class="mc-desc">'+esc(m.description)+'</div>'
+      + '<div class="mc-creator">クリエイター: <b>'+esc(m.creator?.handle||'')+'</b></div>'
       + '<div class="mc-meta">'+stars+'<span>'+uses+'</span></div>'
       + '</button>';
   }).join('');
 }
-function pickMarket(i){
-  _marketPickedIdx=i;
-  document.querySelectorAll('.market-card').forEach(function(b){b.classList.remove('sel');});
-  var sel=document.querySelector('.market-card[data-idx="'+i+'"]');
-  if(sel) sel.classList.add('sel');
+function pickMarket(listingId){
+  _marketPickedListing=listingId;
+  document.querySelectorAll('.market-card').forEach(function(b){b.classList.toggle('sel', b.dataset.id===listingId);});
   var btn=document.getElementById('useMarketBtn');
   if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; }
 }
-function useSelectedMarket(){
-  if(_marketPickedIdx<0) return;
-  var m=MARKET[_marketPickedIdx];
-  closeMarket();
-  // Clone into wizard confirm step (same flow as preset) so user can review/customize
-  _wizardMode='preset';
-  NA={avatar:m.avatar,name:m.name,skills:m.skills.slice(),persona:m.persona,purpose:'',duties:'',chrome_enabled:!!m.chrome_enabled};
-  var wn=document.getElementById('wName'); if(wn) wn.value=m.name;
-  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent=m.avatar;
-  document.querySelectorAll('.av-cell').forEach(function(b,i){ b.classList.toggle('sel',AVATARS[i]===m.avatar); });
-  document.querySelectorAll('.sk-card').forEach(function(b,i){ b.classList.toggle('sel',m.skills.indexOf(SKILLS[i].id)>=0); });
-  if(typeof _renderChromeStatus==='function') _renderChromeStatus('wChromeSw','wChromeDesc',!!m.chrome_enabled);
-  buildConf();
-  wStep(6);
-  document.getElementById('wizOverlay').classList.add('open');
+async function useSelectedMarket(){
+  if(!_marketPickedListing) return;
+  var btn=document.getElementById('useMarketBtn');
+  if(btn){ btn.disabled=true; btn.textContent='追加中…'; }
+  try{
+    var r=await api('POST','/api/marketplace/'+_marketPickedListing+'/clone');
+    if(r.agent){
+      agents.push({...r.agent, history:[]});
+      activeId = r.agent.id;
+      closeMarket();
+      renderAgList();
+      openAgent(r.agent.id);
+      showToast(isJa?'チームに追加しました':'Added to team','ok');
+    }
+  }catch(e){
+    showToast(e.message||'追加に失敗しました','ng');
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='このエージェントを追加 →'; }
+  }
+}
+
+/* ── Listing Form (#4 出店フォーム) ─────────────────────────── */
+var _listingAgentId = null;
+function openListingForm(agentId){
+  var ag = agents.find(function(a){return a.id===agentId;});
+  if(!ag){ showToast('エージェントが見つかりません','ng'); return; }
+  _listingAgentId = agentId;
+  closeEditAgent();
+
+  document.getElementById('listingAgentAv').textContent = ag.avatar||'🤖';
+  document.getElementById('listingAgentName').textContent = ag.name||'';
+  var sknames = (ag.skills||[]).map(function(s){var sk=SKILLS.find(function(x){return x.id===s;});return sk?sk.name:s;}).join(' · ');
+  document.getElementById('listingAgentSk').textContent = sknames;
+
+  // Build category radio buttons
+  var catEl = document.getElementById('lsCats');
+  catEl.innerHTML = MARKET_CAT_DEFS.filter(function(c){return c.id!=='all';}).map(function(c){
+    return '<label class="market-cat" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0"><input type="radio" name="lsCat" value="'+c.id+'" style="margin:0">'+esc(c.label)+'</label>';
+  }).join('');
+
+  // Pre-fill if already listed
+  var m = ag.marketplace || {};
+  document.getElementById('lsTitle').value = m.title || ag.name || '';
+  document.getElementById('lsDesc').value = m.description || ag.persona || '';
+  var prefilledCat = m.category || 'other';
+  document.querySelectorAll('input[name="lsCat"]').forEach(function(r){
+    r.checked = r.value===prefilledCat;
+  });
+  document.getElementById('lsDemo1').value = (m.demo_prompts||[])[0] || '';
+  document.getElementById('lsDemo2').value = (m.demo_prompts||[])[1] || '';
+  document.getElementById('lsDemo3').value = (m.demo_prompts||[])[2] || '';
+  document.querySelectorAll('input[name="lsVis"]').forEach(function(r){
+    r.checked = r.value === (m.visibility||'public');
+  });
+
+  document.getElementById('listingTitle').textContent = m.is_listed ? '🏪 出店内容を編集' : '🏪 マーケットに出店する';
+  document.getElementById('lsSubmitBtn').textContent = m.is_listed ? '更新する' : '出店する →';
+  document.getElementById('lsUnpublishBtn').style.display = m.is_listed ? 'inline-flex' : 'none';
+
+  document.getElementById('listingOverlay').classList.add('open');
+}
+function closeListingForm(){
+  document.getElementById('listingOverlay').classList.remove('open');
+  _listingAgentId = null;
+}
+async function submitListing(){
+  if(!_listingAgentId) return;
+  var title = document.getElementById('lsTitle').value.trim();
+  var description = document.getElementById('lsDesc').value.trim();
+  var category = (document.querySelector('input[name="lsCat"]:checked')||{}).value || 'other';
+  var visibility = (document.querySelector('input[name="lsVis"]:checked')||{}).value || 'public';
+  var demo_prompts = [
+    document.getElementById('lsDemo1').value.trim(),
+    document.getElementById('lsDemo2').value.trim(),
+    document.getElementById('lsDemo3').value.trim(),
+  ].filter(Boolean);
+
+  if(title.length<2 || title.length>60){ showToast('タイトルは 2〜60 文字で入力してください','ng'); return; }
+  if(description.length<20 || description.length>500){ showToast('説明は 20〜500 文字で入力してください','ng'); return; }
+
+  var btn = document.getElementById('lsSubmitBtn');
+  btn.disabled = true; var origText = btn.textContent; btn.textContent = '保存中…';
+  try{
+    var r = await api('POST','/api/marketplace/listings',{
+      agent_id: _listingAgentId, title, description, category, demo_prompts, visibility
+    });
+    // Stash on local agent
+    var ag = agents.find(function(a){return a.id===_listingAgentId;});
+    if(ag) ag.marketplace = r.listing;
+    showToast(visibility==='public' ? 'マーケットに公開しました 🎉' : '出店を保存しました','ok');
+    closeListingForm();
+  }catch(e){
+    showToast(e.message||'保存に失敗しました','ng');
+  } finally {
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+async function unpublishListing(){
+  if(!_listingAgentId) return;
+  if(!confirm('この出店を取り下げますか？(統計は保持され、再出店時に復元されます)')) return;
+  try{
+    await api('DELETE','/api/marketplace/listings/'+_listingAgentId);
+    var ag = agents.find(function(a){return a.id===_listingAgentId;});
+    if(ag && ag.marketplace){ ag.marketplace.is_listed=false; ag.marketplace.status='paused'; }
+    showToast('出店を取り下げました','ok');
+    closeListingForm();
+  }catch(e){
+    showToast(e.message||'取り下げに失敗しました','ng');
+  }
 }
 
 function _parsePersona(persona){
@@ -2926,6 +3115,22 @@ function openEditAgent(id){
   document.getElementById('editPurpose').value = parsed.purpose;
   document.getElementById('editDuties').value = parsed.duties;
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('editChromeSw','editChromeDesc',!!ag.chrome_enabled);
+
+  // Reflect marketplace listing state
+  var m = ag.marketplace || {};
+  var lDesc = document.getElementById('editListingDesc');
+  var lBtn  = document.getElementById('editListingBtn');
+  if(m.is_listed){
+    lDesc.innerHTML = '<span style="color:#10b981;font-weight:700">✓ 出店中</span> — 利用 '+(m.uses_count||0)+' 回 / 累計収益 ¥'+Math.floor((m.uses_count||0)*0).toLocaleString();
+    lBtn.textContent = '出店内容を編集';
+  } else if(m.status==='paused'){
+    lDesc.innerHTML = '<span style="color:var(--text3);font-weight:700">⏸ 一時停止中</span> — 再公開できます';
+    lBtn.textContent = '再公開する';
+  } else {
+    lDesc.textContent = '他のユーザーが利用するたびに利用料の 10% が収益になります';
+    lBtn.textContent = '＋ 出店フォームを開く';
+  }
+
   document.getElementById('editPanel').style.right = '0';
   document.getElementById('editPanelOverlay').style.display = 'block';
 }

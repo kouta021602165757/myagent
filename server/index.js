@@ -325,6 +325,7 @@ const SKILL_MAP={
   secretary:'秘書（スケジュール・調整・連絡）',
   designer:'デザイナー（UI/UX・ビジュアル）',
   sns:'SNS担当（投稿作成・分析・集客）',
+  other:'その他（上記以外のカスタム業務）',
 };
 function buildSystem(agent){
   return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;

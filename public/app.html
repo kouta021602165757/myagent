@@ -309,9 +309,64 @@ input,textarea{font-family:var(--sans);}
 .ch-a b{color:var(--peach-dark);}
 
 /* ── Marketplace ────────────────────────────────────────────── */
-.market-bar{display:flex;gap:10px;margin:14px 0 10px;}
+.market-bar{display:flex;gap:10px;margin:14px 0 10px;align-items:center;}
 .market-search{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire3);border-radius:10px;padding:9px 14px;}
 .market-search input{border:none;outline:none;background:transparent;flex:1;font-size:13.5px;font-family:inherit;color:var(--text);}
+.market-sort{background:#fff;border:1px solid var(--wire3);border-radius:10px;padding:9px 14px;font-size:13px;font-family:inherit;color:var(--text);font-weight:700;cursor:pointer;outline:none;}
+.market-sort:focus{border-color:var(--peach);}
+
+/* Listing detail modal */
+.ld-hero{display:flex;align-items:center;gap:18px;padding:18px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.2);border-radius:14px;margin-bottom:18px;}
+.ld-av{width:72px;height:72px;border-radius:18px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:38px;flex-shrink:0;box-shadow:0 4px 12px rgba(180,80,40,.1);}
+.ld-info{flex:1;min-width:0;}
+.ld-cat{font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
+.ld-name{font-size:22px;font-weight:900;color:var(--text);line-height:1.2;margin-bottom:6px;}
+.ld-creator{font-size:12.5px;color:var(--text2);font-weight:600;}
+.ld-creator a{color:var(--peach-dark);text-decoration:none;font-weight:700;}
+.ld-creator a:hover{text-decoration:underline;}
+.ld-pri{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+.ld-rating{font-size:14px;font-weight:800;color:#f59e0b;}
+.ld-rating b{color:var(--text);}
+.ld-uses{font-size:11.5px;color:var(--text3);font-weight:600;}
+
+.ld-section{margin-bottom:18px;}
+.ld-section-h{font-size:11.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.ld-desc{font-size:13.5px;color:var(--text);line-height:1.7;white-space:pre-wrap;background:var(--cream);border:1px solid var(--wire2);border-radius:11px;padding:14px 16px;}
+.ld-pills{display:flex;flex-wrap:wrap;gap:6px;}
+.ld-pills .pl{background:var(--cream2);border:1px solid var(--wire2);padding:5px 11px;border-radius:8px;font-size:12px;font-weight:700;color:var(--text2);}
+.ld-pills .pl.chrome{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.25);color:#2563eb;}
+.ld-demos{display:flex;flex-direction:column;gap:6px;}
+.ld-demo{text-align:left;width:100%;padding:11px 14px;background:#fff;border:1px solid var(--wire2);border-radius:10px;font-size:13px;color:var(--text);font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1.5;}
+.ld-demo:hover{border-color:var(--peach);background:rgba(251,146,60,.04);}
+.ld-demo .ic{flex-shrink:0;color:var(--peach-dark);font-weight:800;}
+
+.ld-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--wire2);}
+.ld-actions .btn-clone{background:var(--peach);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;}
+.ld-actions .btn-clone:hover{background:var(--peach-dark);}
+.ld-actions .btn-clone:disabled{opacity:.5;cursor:not-allowed;}
+.ld-actions .btn-share{background:#fff;color:var(--text);border:1px solid var(--wire3);border-radius:10px;padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
+.ld-actions .btn-share:hover{background:var(--cream2);}
+.ld-actions .btn-report{background:transparent;color:var(--text3);border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-right:auto;padding:11px 8px;}
+.ld-actions .btn-report:hover{color:var(--rose);}
+
+/* Reviews */
+.ld-rv-form{padding:14px;background:var(--cream);border:1px solid var(--wire2);border-radius:11px;margin-bottom:12px;}
+.ld-rv-stars{display:flex;gap:4px;margin-bottom:10px;}
+.ld-rv-star{font-size:24px;color:#e2e8f0;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;line-height:1;transition:transform .1s;}
+.ld-rv-star:hover{transform:scale(1.15);}
+.ld-rv-star.on{color:#f59e0b;}
+.ld-rv-comment{width:100%;min-height:60px;padding:9px 12px;border:1px solid var(--wire3);border-radius:8px;background:#fff;font-size:13px;font-family:inherit;color:var(--text);resize:vertical;line-height:1.55;box-sizing:border-box;}
+.ld-rv-submit{margin-top:8px;background:var(--peach);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;}
+.ld-rv-submit:hover{background:var(--peach-dark);}
+.ld-rv-list{display:flex;flex-direction:column;gap:8px;}
+.ld-rv-row{padding:11px 14px;background:#fff;border:1px solid var(--wire2);border-radius:10px;}
+.ld-rv-head{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text3);font-weight:600;margin-bottom:5px;}
+.ld-rv-head .h{color:var(--peach-dark);font-weight:800;}
+.ld-rv-head .s{color:#f59e0b;font-weight:800;}
+.ld-rv-head .mine{margin-left:auto;font-size:10.5px;background:rgba(251,146,60,.12);color:var(--peach-dark);padding:1px 7px;border-radius:6px;font-weight:800;}
+.ld-rv-row .txt{font-size:13px;color:var(--text);line-height:1.65;white-space:pre-wrap;}
+.ld-rv-row .del{margin-top:6px;font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;}
+.ld-rv-row .del:hover{color:var(--rose);}
 .market-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
 .market-cat{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:#fff;border:1px solid var(--wire3);color:var(--text2);cursor:pointer;}
 .market-cat:hover{border-color:var(--peach);}
@@ -1412,8 +1467,13 @@ body{color:#f0f0f8;}
       <div class="market-bar">
         <div class="market-search">
           <span>🔍</span>
-          <input id="marketSearch" placeholder="エージェント・カテゴリで検索" oninput="renderMarket()">
+          <input id="marketSearch" placeholder="エージェント・カテゴリで検索" oninput="onMarketSearchInput()">
         </div>
+        <select id="marketSort" class="market-sort" onchange="setMarketSort(this.value)">
+          <option value="popular">🔥 人気順</option>
+          <option value="recent">✨ 新着順</option>
+          <option value="top_rated">⭐ 高評価順</option>
+        </select>
       </div>
       <div class="market-cats" id="marketCats"></div>
 
@@ -1422,8 +1482,22 @@ body{color:#f0f0f8;}
 
       <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
         <button class="btn-back" onclick="closeMarket()">閉じる</button>
-        <button class="btn-volt" id="useMarketBtn" disabled style="opacity:.5;cursor:not-allowed" onclick="useSelectedMarket()">このエージェントを追加 →</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LISTING DETAIL MODAL ═══════════════════════════════ -->
+<div class="overlay" id="listingDetailOverlay">
+  <div class="wizard" style="max-width:780px">
+    <div class="wiz-top">
+      <div class="wiz-title" id="ldTitle">エージェント詳細</div>
+      <button class="wiz-close" onclick="closeListingDetail()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="max-height:80vh;overflow:auto" id="ldBody">
+      <div class="creator-loading">読み込み中…</div>
     </div>
   </div>
 </div>
@@ -1999,7 +2073,7 @@ body{color:#f0f0f8;}
 
       <div class="form-row">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">タイトル <span style="color:var(--rose)">*</span></label>
-        <input id="lsTitle" maxlength="60" placeholder="例: 営業フォローアップ Bot — 30秒で追客文面を作る" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box">
+        <input id="lsTitle" maxlength="60" placeholder="例: 営業フォローアップ AI Agent — 30秒で追客文面を作る" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box">
         <div style="font-size:11px;color:var(--text3);margin-top:4px">検索結果やカードに表示されます（最大 60 文字）</div>
       </div>
 
@@ -3044,14 +3118,13 @@ var MARKET_CAT_DEFS = [
   {id:'other',   label:'その他'}
 ];
 var MARKET = [];                       // populated from API
-var _marketCat='all', _marketPickedListing=null, _marketLoading=false;
+var _marketCat='all', _marketSort='popular', _marketLoading=false, _marketSearchTimer=null;
 
 async function openMarketplace(){
-  _marketPickedListing=null; _marketCat='all';
+  _marketCat='all'; _marketSort='popular';
   var s=document.getElementById('marketSearch'); if(s) s.value='';
+  var sort=document.getElementById('marketSort'); if(sort) sort.value='popular';
   buildMarketCats();
-  var btn=document.getElementById('useMarketBtn');
-  if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; }
   document.getElementById('marketOverlay').classList.add('open');
   await loadMarket();
 }
@@ -3064,7 +3137,12 @@ async function loadMarket(){
   if(empty) empty.style.display='none';
   _marketLoading=true;
   try{
-    var r=await api('GET','/api/marketplace');
+    var qs=[];
+    if(_marketCat && _marketCat!=='all') qs.push('category='+encodeURIComponent(_marketCat));
+    var q=(document.getElementById('marketSearch')?.value||'').trim();
+    if(q) qs.push('q='+encodeURIComponent(q));
+    qs.push('sort='+encodeURIComponent(_marketSort));
+    var r=await api('GET','/api/marketplace?'+qs.join('&'));
     MARKET = r.listings||[];
   }catch(e){
     MARKET=[];
@@ -3085,37 +3163,38 @@ function buildMarketCats(){
 function setMarketCat(c){
   _marketCat=c;
   buildMarketCats();
-  renderMarket();
+  loadMarket();
 }
+function setMarketSort(s){
+  _marketSort=s;
+  loadMarket();
+}
+function onMarketSearchInput(){
+  // Debounce: refetch 300ms after the user stops typing
+  if(_marketSearchTimer) clearTimeout(_marketSearchTimer);
+  _marketSearchTimer = setTimeout(loadMarket, 300);
+}
+
 function renderMarket(){
   var el=document.getElementById('marketGrid'); if(!el || _marketLoading) return;
-  var q=(document.getElementById('marketSearch')?.value||'').toLowerCase().trim();
-  var list=MARKET.filter(function(m){
-    if(_marketCat!=='all' && m.category!==_marketCat) return false;
-    if(!q) return true;
-    return ((m.title||'')+' '+(m.description||'')+' '+(m.creator?.handle||'')+' '+(m.category_label||'')).toLowerCase().indexOf(q)>=0;
-  });
-  if(!list.length){
+  if(!MARKET.length){
     el.innerHTML='';
     var empty=document.getElementById('marketEmpty');
     if(empty){
       empty.style.display='block';
-      empty.textContent = MARKET.length===0
-        ? 'まだ出店されたエージェントがありません。あなたが第1号になりませんか？'
-        : '該当するエージェントが見つかりません';
+      empty.textContent = 'まだ出店されたエージェントがありません。あなたが第1号になりませんか？';
     }
     return;
   }
   document.getElementById('marketEmpty').style.display='none';
-  el.innerHTML=list.map(function(m){
+  el.innerHTML=MARKET.map(function(m){
     var ribbon = m.badge==='hot' ? '<div class="market-ribbon">🔥 人気</div>'
                : m.badge==='new' ? '<div class="market-ribbon new">✨ 新着</div>' : '';
     var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
     var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
-    var picked = _marketPickedListing===m.listing_id ? ' sel' : '';
     var creatorH = esc(m.creator?.handle||'');
     return '<div class="market-card-wrap" style="position:relative">'
-      + '<button type="button" class="market-card'+picked+'" data-id="'+esc(m.listing_id)+'" onclick="pickMarket(\''+esc(m.listing_id)+'\')">'
+      + '<button type="button" class="market-card" data-id="'+esc(m.listing_id)+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
       + ribbon
       + '<div class="mc-head"><div class="mc-av">'+(m.agent?.avatar||'🤖')+'</div>'
       + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
@@ -3127,31 +3206,172 @@ function renderMarket(){
       + '</div>';
   }).join('');
 }
-function pickMarket(listingId){
-  _marketPickedListing=listingId;
-  document.querySelectorAll('.market-card').forEach(function(b){b.classList.toggle('sel', b.dataset.id===listingId);});
-  var btn=document.getElementById('useMarketBtn');
-  if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; }
-}
-async function useSelectedMarket(){
-  if(!_marketPickedListing) return;
-  var btn=document.getElementById('useMarketBtn');
-  if(btn){ btn.disabled=true; btn.textContent='追加中…'; }
+
+/* ── Listing detail modal (drill-in) ────────────────────────── */
+var _detailListingId = null;
+var _detailRating = 0;
+
+async function openListingDetail(listingId){
+  _detailListingId = listingId;
+  document.getElementById('listingDetailOverlay').classList.add('open');
+  var body = document.getElementById('ldBody');
+  body.innerHTML = '<div class="creator-loading">読み込み中…</div>';
   try{
-    var r=await api('POST','/api/marketplace/'+_marketPickedListing+'/clone');
+    var d = await api('GET','/api/marketplace/'+listingId);
+    document.getElementById('ldTitle').textContent = d.title || 'エージェント詳細';
+    body.innerHTML = _renderListingDetail(d);
+    _detailRating = d.my_review ? d.my_review.rating : 0;
+    _renderRatingStars();
+  }catch(e){
+    body.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗: '+esc(e.message||'')+'</div>';
+  }
+}
+function closeListingDetail(){
+  document.getElementById('listingDetailOverlay').classList.remove('open');
+  _detailListingId = null; _detailRating = 0;
+}
+
+function _renderListingDetail(d){
+  var creatorH = esc(d.creator?.handle||'');
+  var stars = (d.rating||0) > 0
+    ? '★ <b>'+d.rating.toFixed(1)+'</b> <span style="color:var(--text3);font-weight:600">('+(d.rating_count||0)+')</span>'
+    : '<span style="color:var(--text3)">★ 未評価</span>';
+  var skillsHtml = (d.agent?.skills||[]).map(function(s){
+    var sk=SKILLS.find(function(x){return x.id===s;});
+    return '<span class="pl">'+(sk?(sk.icon+' '+sk.name):s)+'</span>';
+  }).join('');
+  if(d.agent?.chrome_enabled) skillsHtml += '<span class="pl chrome">🌐 Google Chrome 連携</span>';
+
+  var demosHtml = '';
+  if(d.demo_prompts && d.demo_prompts.length){
+    demosHtml = '<div class="ld-section"><div class="ld-section-h">デモプロンプト（クリックして clone 後すぐ試せる）</div><div class="ld-demos">'
+      + d.demo_prompts.map(function(p,i){
+          var safe = p.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+          return '<button class="ld-demo" onclick="cloneAndTry(\''+esc(d.listing_id)+'\','+i+')"><span class="ic">▸</span>'+esc(p)+'</button>';
+        }).join('')
+      + '</div></div>';
+  }
+
+  // Reviews section
+  var reviewFormHtml = '';
+  if(d.can_review){
+    reviewFormHtml = '<div class="ld-rv-form">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">'+(d.my_review ? 'あなたの評価を編集' : 'このエージェントを評価')+'</div>'
+      + '<div class="ld-rv-stars" id="ldRvStars">'
+        + [1,2,3,4,5].map(function(n){return '<button class="ld-rv-star" type="button" data-n="'+n+'" onclick="setDetailRating('+n+')">★</button>';}).join('')
+      + '</div>'
+      + '<textarea class="ld-rv-comment" id="ldRvComment" maxlength="1000" placeholder="どんな時に便利だったか・おすすめポイント（任意）">'+esc(d.my_review?.comment||'')+'</textarea>'
+      + '<button class="ld-rv-submit" onclick="submitDetailReview()">'+(d.my_review ? '評価を更新' : '評価を投稿')+'</button>'
+      + '</div>';
+  } else if(d.is_own){
+    reviewFormHtml = '<div style="padding:10px 14px;background:var(--cream2);border-radius:10px;font-size:12px;color:var(--text3);margin-bottom:12px">自分の出店には評価できません</div>';
+  }
+
+  var reviewsListHtml = (d.reviews && d.reviews.length)
+    ? '<div class="ld-rv-list">' + d.reviews.map(function(r){
+        var dt=new Date(r.date); var dStr=(dt.getMonth()+1)+'/'+dt.getDate();
+        return '<div class="ld-rv-row">'
+          + '<div class="ld-rv-head"><span class="h">'+esc(r.handle||'')+'</span><span class="s">'+'★'.repeat(r.rating)+'</span><span style="color:var(--text3)">'+dStr+(r.edited_at?' (編集済)':'')+'</span>'+(r.is_mine?'<span class="mine">あなた</span>':'')+'</div>'
+          + (r.comment ? '<div class="txt">'+esc(r.comment)+'</div>' : '')
+          + (r.is_mine ? '<button class="del" onclick="deleteDetailReview()">削除</button>' : '')
+          + '</div>';
+      }).join('') + '</div>'
+    : '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px;font-weight:600;background:var(--cream);border:1px dashed var(--wire2);border-radius:11px">まだ評価がありません</div>';
+
+  return ''
+    + '<div class="ld-hero">'
+      + '<div class="ld-av">'+(d.agent?.avatar||'🤖')+'</div>'
+      + '<div class="ld-info">'
+        + '<div class="ld-cat">'+esc(d.category_label||'')+'</div>'
+        + '<div class="ld-name">'+esc(d.title||'')+'</div>'
+        + '<div class="ld-creator">クリエイター: <a href="javascript:void(0)" onclick="closeListingDetail();openCreatorProfile(\''+creatorH+'\')">'+creatorH+'</a></div>'
+      + '</div>'
+      + '<div class="ld-pri">'
+        + '<div class="ld-rating">'+stars+'</div>'
+        + '<div class="ld-uses">利用 '+(d.uses||0).toLocaleString()+' 回</div>'
+      + '</div>'
+    + '</div>'
+    + '<div class="ld-section"><div class="ld-section-h">説明</div><div class="ld-desc">'+esc(d.description||'')+'</div></div>'
+    + (skillsHtml ? '<div class="ld-section"><div class="ld-section-h">スキル / 機能</div><div class="ld-pills">'+skillsHtml+'</div></div>' : '')
+    + demosHtml
+    + '<div class="ld-section">'
+      + '<div class="ld-section-h">評価とレビュー ('+(d.rating_count||0)+')</div>'
+      + reviewFormHtml
+      + reviewsListHtml
+    + '</div>'
+    + '<div class="ld-actions">'
+      + (!d.is_own ? '<button class="btn-report" onclick="openReportListing(\''+esc(d.listing_id)+'\',\''+esc(d.title||'').replace(/\\|\x27/g,"\\$&")+'\')">⚠ 通報する</button>' : '')
+      + (!d.is_own ? '<button class="btn-clone" onclick="cloneListingFromDetail()">＋ チームに追加</button>' : '<span style="margin-left:auto;color:var(--text3);font-size:12px;font-weight:600">これは自分の出店です</span>')
+    + '</div>';
+}
+
+function setDetailRating(n){
+  _detailRating = n;
+  _renderRatingStars();
+}
+function _renderRatingStars(){
+  var stars = document.querySelectorAll('#ldRvStars .ld-rv-star');
+  stars.forEach(function(s){
+    var n = parseInt(s.dataset.n,10);
+    s.classList.toggle('on', n<=_detailRating);
+  });
+}
+async function submitDetailReview(){
+  if(!_detailListingId) return;
+  if(!_detailRating){ showToast('星を選んでください','ng'); return; }
+  var comment = document.getElementById('ldRvComment').value.trim();
+  try{
+    await api('POST','/api/marketplace/'+_detailListingId+'/review',{rating:_detailRating, comment});
+    showToast('評価を投稿しました','ok');
+    openListingDetail(_detailListingId); // refresh
+  }catch(e){ showToast(e.message||'失敗','ng'); }
+}
+async function deleteDetailReview(){
+  if(!_detailListingId) return;
+  if(!confirm('この評価を削除しますか？')) return;
+  try{
+    await api('DELETE','/api/marketplace/'+_detailListingId+'/review');
+    showToast('評価を削除しました','ok');
+    openListingDetail(_detailListingId);
+  }catch(e){ showToast(e.message||'失敗','ng'); }
+}
+
+async function cloneListingFromDetail(){
+  if(!_detailListingId) return;
+  try{
+    var r=await api('POST','/api/marketplace/'+_detailListingId+'/clone');
     if(r.agent){
       agents.push({...r.agent, history:[]});
       activeId = r.agent.id;
+      closeListingDetail();
       closeMarket();
       renderAgList();
       openAgent(r.agent.id);
-      showToast(isJa?'チームに追加しました':'Added to team','ok');
+      showToast('チームに追加しました','ok');
     }
-  }catch(e){
-    showToast(e.message||'追加に失敗しました','ng');
-  } finally {
-    if(btn){ btn.disabled=false; btn.textContent='このエージェントを追加 →'; }
-  }
+  }catch(e){ showToast(e.message||'追加失敗','ng'); }
+}
+async function cloneAndTry(listingId, demoIdx){
+  // Clone the agent then prefill the chat input with the demo prompt
+  try{
+    var detail = await api('GET','/api/marketplace/'+listingId);
+    var prompt = (detail.demo_prompts||[])[demoIdx] || '';
+    var r=await api('POST','/api/marketplace/'+listingId+'/clone');
+    if(r.agent){
+      agents.push({...r.agent, history:[]});
+      activeId = r.agent.id;
+      closeListingDetail();
+      closeMarket();
+      renderAgList();
+      openAgent(r.agent.id);
+      // Prefill
+      setTimeout(function(){
+        var ci = document.getElementById('ci');
+        if(ci){ ci.value = prompt; ci.focus(); }
+      }, 100);
+      showToast('追加しました。送信ボタンで実行できます','ok');
+    }
+  }catch(e){ showToast(e.message||'追加失敗','ng'); }
 }
 
 /* ── Listing Form (#4 出店フォーム) ─────────────────────────── */

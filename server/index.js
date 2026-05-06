@@ -635,6 +635,19 @@ function publicListing(user, ag){
     listed_at: m.listed_at,
   };
 }
+
+/** Recompute rating_avg + rating_count from reviews[]. Mutates m. */
+function recomputeRatings(m){
+  const reviews = m.reviews||[];
+  if(!reviews.length){
+    m.rating_avg = 0;
+    m.rating_count = 0;
+    return;
+  }
+  const sum = reviews.reduce((s,r)=>s+(r.rating||0),0);
+  m.rating_count = reviews.length;
+  m.rating_avg = Math.round((sum/reviews.length)*10)/10;
+}
 /** Scan all users and return live + public listings. */
 async function listAllPublicListings(){
   const out = [];
@@ -963,11 +976,12 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ══ MARKETPLACE ════════════════════════════════════════════
   // ── GET /api/marketplace ───────────────────────────────────
-  // Public list (auth required so we can credit clones). Supports ?category= and ?q=.
+  // Public list. Supports ?category= ?q= ?sort= (popular|recent|top_rated)
   if(pathname==='/api/marketplace' && method==='GET'){
     const qs = new url.URL(req.url, APP_URL).searchParams;
     const cat = (qs.get('category')||'').trim();
     const q = (qs.get('q')||'').trim().toLowerCase();
+    const sort = (qs.get('sort')||'popular').trim();
     let listings = await listAllPublicListings();
     if(cat && cat!=='all') listings = listings.filter(l=>l.category===cat);
     if(q){
@@ -976,7 +990,98 @@ async function handleAPI(req,res,pathname,method,ip){
         return hay.indexOf(q)>=0;
       });
     }
-    return jres(res,200,{listings, categories: MARKET_CATEGORIES.map(id=>({id, label:MARKET_CAT_LABEL[id]}))});
+    // Sorting
+    if(sort==='recent'){
+      listings.sort((a,b)=>new Date(b.listed_at||0).getTime()-new Date(a.listed_at||0).getTime());
+    } else if(sort==='top_rated'){
+      // Bayesian-ish: rating × log(1+count) so well-reviewed beats single-5★
+      const score = l => (l.rating||0) * Math.log(1+(l.rating_count||0));
+      listings.sort((a,b)=>score(b)-score(a));
+    } else {
+      // popular = uses, with hot ribbon first (default)
+      listings.sort((a,b)=>{
+        if(a.badge==='hot' && b.badge!=='hot') return -1;
+        if(b.badge==='hot' && a.badge!=='hot') return 1;
+        return (b.uses||0)-(a.uses||0);
+      });
+    }
+    return jres(res,200,{listings, categories: MARKET_CATEGORIES.map(id=>({id, label:MARKET_CAT_LABEL[id]})), sort});
+  }
+
+  // ── GET /api/marketplace/:listing_id ───────────────────────
+  // Single listing detail (full description, demo prompts, reviews, my-review flag)
+  const dlmGet = pathname.match(/^\/api\/marketplace\/(ls_[a-z0-9_-]+)$/);
+  if(dlmGet && method==='GET'){
+    const found = await findAgentByListingId(dlmGet[1]);
+    if(!found) return jres(res,404,{error:'出店が見つかりません'});
+    if(!found.agent.marketplace.is_listed) return jres(res,404,{error:'この出店は公開されていません'});
+    const detail = publicListing(found.user, found.agent);
+    const reviews = (found.agent.marketplace.reviews||[]).slice().reverse(); // newest first
+    const myReview = reviews.find(r=>r.user_id===user.id) || null;
+    return jres(res,200,{
+      ...detail,
+      reviews: reviews.map(r=>({
+        handle: r.handle,
+        rating: r.rating,
+        comment: r.comment||'',
+        date: r.date,
+        edited_at: r.edited_at||null,
+        is_mine: r.user_id===user.id,
+      })),
+      my_review: myReview ? {rating: myReview.rating, comment: myReview.comment||''} : null,
+      can_review: found.user.id !== user.id,                 // can't review own listing
+      is_own: found.user.id === user.id,
+    });
+  }
+
+  // ── POST /api/marketplace/:listing_id/review ───────────────
+  // body: {rating: 1-5, comment?}
+  const rvm = pathname.match(/^\/api\/marketplace\/(ls_[a-z0-9_-]+)\/review$/);
+  if(rvm && method==='POST'){
+    const body = await readBody(req);
+    const rating = parseInt(body.rating, 10);
+    const comment = String(body.comment||'').trim().slice(0,1000);
+    if(!(rating>=1 && rating<=5)) return jres(res,400,{error:'評価は 1〜5 で入力してください'});
+    const found = await findAgentByListingId(rvm[1]);
+    if(!found) return jres(res,404,{error:'出店が見つかりません'});
+    if(found.user.id === user.id) return jres(res,400,{error:'自分の出店には評価できません'});
+    found.agent.marketplace.reviews = found.agent.marketplace.reviews || [];
+    const reviews = found.agent.marketplace.reviews;
+    const existingIdx = reviews.findIndex(r=>r.user_id===user.id);
+    const handle = '@'+(user.email||'').split('@')[0];
+    if(existingIdx>=0){
+      reviews[existingIdx] = {
+        ...reviews[existingIdx],
+        rating, comment,
+        edited_at: new Date().toISOString(),
+      };
+    } else {
+      reviews.push({
+        user_id: user.id,
+        handle,
+        rating, comment,
+        date: new Date().toISOString(),
+      });
+    }
+    recomputeRatings(found.agent.marketplace);
+    await DB.save(found.user);
+    return jres(res,200,{ok:true, rating: found.agent.marketplace.rating_avg, count: found.agent.marketplace.rating_count});
+  }
+
+  // ── DELETE /api/marketplace/:listing_id/review ─────────────
+  const drvm = pathname.match(/^\/api\/marketplace\/(ls_[a-z0-9_-]+)\/review$/);
+  if(drvm && method==='DELETE'){
+    const found = await findAgentByListingId(drvm[1]);
+    if(!found) return jres(res,404,{error:'出店が見つかりません'});
+    const reviews = found.agent.marketplace.reviews || [];
+    const before = reviews.length;
+    found.agent.marketplace.reviews = reviews.filter(r=>r.user_id!==user.id);
+    if(found.agent.marketplace.reviews.length === before){
+      return jres(res,404,{error:'削除する評価がありません'});
+    }
+    recomputeRatings(found.agent.marketplace);
+    await DB.save(found.user);
+    return jres(res,200,{ok:true, rating: found.agent.marketplace.rating_avg, count: found.agent.marketplace.rating_count});
   }
 
   // ── GET /api/marketplace/listings/mine ─────────────────────

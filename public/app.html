@@ -1123,7 +1123,7 @@ body{color:#f0f0f8;}
 
           <!-- Claude-style composer -->
           <div class="composer">
-            <input type="file" id="imgInput" accept="image/*" multiple style="display:none" onchange="onImgSelect(event)">
+            <input type="file" id="imgInput" accept="image/*,application/pdf" multiple style="display:none" onchange="onImgSelect(event)">
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <textarea id="ci" placeholder="何をお願いしますか？" rows="1" oninput="exTA(this)" onkeydown="taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()"></textarea>
             <div class="composer-tools">
@@ -2219,9 +2219,13 @@ function _renderMsg(role, ag, content, time, images, idx){
   const cls = 'm '+(isU?'u':'a');
   let imgHtml='';
   if(images && images.length){
-    imgHtml = images.map(function(img){
-      var url = img.url || (img.b64?'data:'+img.type+';base64,'+img.b64:'');
-      return '<div class="m-attach"><img class="thumb" src="'+url+'"><span>'+(img.name||(isJa?'画像':'image'))+'</span></div>';
+    imgHtml = images.map(function(att){
+      var isPdf = att.kind==='pdf' || att.type==='application/pdf';
+      if(isPdf){
+        return '<div class="m-attach"><div style="width:36px;height:36px;border-radius:6px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">PDF</div><span>'+(att.name||(isJa?'PDFファイル':'PDF'))+'</span></div>';
+      }
+      var url = att.url || (att.b64?'data:'+att.type+';base64,'+att.b64:'');
+      return '<div class="m-attach"><img class="thumb" src="'+url+'"><span>'+(att.name||(isJa?'画像':'image'))+'</span></div>';
     }).join('');
   }
   const body = content ? _md(content) : '';
@@ -2410,15 +2414,31 @@ function useChip(t){ document.getElementById('ci').value=t; sendMsg(); }
 // 選択中の画像リスト
 var _pendingImgs = [];
 
-// 画像選択ハンドラ
+// 添付ファイル選択ハンドラ（画像 + PDF対応）
 function onImgSelect(e){
   const files = Array.from(e.target.files);
   files.forEach(file => {
-    if(!file.type.startsWith('image/')) return;
+    var isImg = file.type.startsWith('image/');
+    var isPdf = file.type === 'application/pdf';
+    if(!isImg && !isPdf){
+      showToast(isJa?'画像と PDF のみ対応しています':'Only images and PDFs are supported','ng');
+      return;
+    }
+    // 32MB cap
+    if(file.size > 32*1024*1024){
+      showToast(isJa?'ファイルサイズが大きすぎます (32MB以下)':'File too large (max 32MB)','ng');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = ev => {
       const b64 = ev.target.result.split(',')[1];
-      _pendingImgs.push({name:file.name, type:file.type, b64, url:ev.target.result});
+      _pendingImgs.push({
+        name:file.name,
+        type:file.type,
+        b64,
+        url:ev.target.result,
+        kind: isPdf ? 'pdf' : 'image'
+      });
       renderImgPreview();
     };
     reader.readAsDataURL(file);
@@ -2426,16 +2446,23 @@ function onImgSelect(e){
   e.target.value = '';
 }
 
-// 画像プレビュー描画 (Claude-style attach chips)
+// 添付プレビュー描画 (画像 + PDF)
 function renderImgPreview(){
   const wrap = document.getElementById('imgPreviewWrap');
   if(!wrap) return;
   if(_pendingImgs.length === 0){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   wrap.style.display='flex';
-  wrap.innerHTML = _pendingImgs.map(function(img,i){
+  wrap.innerHTML = _pendingImgs.map(function(att,i){
+    var thumb;
+    if(att.kind==='pdf' || att.type==='application/pdf'){
+      // PDF icon (no thumbnail)
+      thumb = '<div style="width:28px;height:28px;border-radius:5px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0">PDF</div>';
+    } else {
+      thumb = '<img src="'+att.url+'">';
+    }
     return '<div class="att-chip">'+
-      '<img src="'+img.url+'">'+
-      '<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(img.name||'image')+'</span>'+
+      thumb+
+      '<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(att.name||'attachment')+'</span>'+
       '<button class="x" onclick="_pendingImgs.splice('+i+',1);renderImgPreview()" title="削除">×</button>'+
     '</div>';
   }).join('');
@@ -2458,12 +2485,12 @@ async function sendMsg(){
   document.getElementById('sndBtn').disabled=true;
   if(!ag.history)ag.history=[];
   
-  // ユーザーメッセージ（画像プレビュー含む）
+  // ユーザーメッセージ（添付プレビュー含む）
   const userMsg = {role:'user', content:text, time:now()};
-  if(imgs.length > 0) userMsg.images = imgs.map(img => ({url:img.url, name:img.name}));
+  if(imgs.length > 0) userMsg.images = imgs.map(att => ({url:att.url, name:att.name, type:att.type, kind:att.kind||(att.type==='application/pdf'?'pdf':'image')}));
   ag.history.push(userMsg);
   renderMsgs(ag);
-  
+
   // Append thinking indicator
   var inner=document.getElementById('msgsInner');
   const tEl=document.createElement('div');
@@ -2472,10 +2499,10 @@ async function sendMsg(){
   if(inner) inner.appendChild(tEl);
   _scrollMsgsToEnd();
   try{
-    // 画像データをAPIに送信
+    // 添付（画像 + PDF）をAPIに送信
     const payload = {message: text};
     if(imgs.length > 0){
-      payload.images = imgs.map(img => ({type:img.type, b64:img.b64}));
+      payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
     }
     const r=await api('POST',`/api/chat/${activeId}`,payload);
     ag.history.push({role:'assistant',content:r.reply,time:now()});

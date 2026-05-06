@@ -509,7 +509,18 @@ window.onload = () => {
   }
   if (p.get('tab') === 'signup') switchTab('signup');
   if (p.get('reset')) showResetForm(p.get('reset'));
-  if (p.get('error') === 'google_failed') showErr('l-err', 'Googleログインに失敗しました。もう一度お試しください。');
+  if (p.get('error') === 'google_failed') {
+    var reason = p.get('reason') || '';
+    var msg = 'Googleログインに失敗しました。';
+    if(reason==='not_configured') msg += 'サーバ設定が完了していません（管理者にお問い合わせください）。';
+    else if(reason==='access_denied') msg += '権限がキャンセルされました。';
+    else if(reason==='token_exchange_failed') msg += 'Googleからのトークン取得に失敗しました。';
+    else if(reason==='userinfo_failed') msg += 'Googleからのユーザー情報取得に失敗しました。';
+    else if(reason==='no_code') msg += '認可コードが取得できませんでした。';
+    else if(reason) msg += '（'+reason+'）もう一度お試しください。';
+    else msg += 'もう一度お試しください。';
+    showErr('l-err', msg);
+  }
   if (p.get('verified') === '1') showOk('l-err', '✅ メールアドレスを確認しました。ログインしてください。');
 };
 

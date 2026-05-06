@@ -415,8 +415,21 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pathname==='/api/auth/google/callback'&&method==='GET'){
     const qs=new url.URL(req.url,APP_URL).searchParams;
     const code=qs.get('code');
-    if(!code){res.writeHead(302,{Location:'/auth.html?error=google_failed'});res.end();return;}
+    const oauthErr=qs.get('error'); // Google may return ?error=access_denied etc.
+    if(oauthErr){
+      console.error('[Google OAuth] returned error:', oauthErr);
+      res.writeHead(302,{Location:'/auth.html?error=google_failed&reason='+encodeURIComponent(oauthErr)});
+      res.end();return;
+    }
+    if(!code){
+      console.error('[Google OAuth] no authorization code');
+      res.writeHead(302,{Location:'/auth.html?error=google_failed&reason=no_code'});
+      res.end();return;
+    }
     try{
+      if(!GOOGLE_ID || !GOOGLE_SEC){
+        throw new Error('not_configured: Google OAuth env vars missing on server');
+      }
       const tokens=await googleExchange(code);
       const gUser=await googleUserInfo(tokens.access_token);
       let user=await DB.findBy('email',gUser.email.toLowerCase());
@@ -428,7 +441,15 @@ async function handleAPI(req,res,pathname,method,ip){
       }
       const token=JWT.sign({userId:user.id,email:user.email});
       res.writeHead(302,{Location:`/app.html?token=${token}`});res.end();
-    }catch(e){res.writeHead(302,{Location:'/auth.html?error=google_failed'});res.end();}
+    }catch(e){
+      console.error('[Google OAuth] callback failed:', e.message);
+      var reason = (e.message||'').includes('not_configured') ? 'not_configured'
+        : (e.message||'').includes('exchange') ? 'token_exchange_failed'
+        : (e.message||'').includes('userinfo') ? 'userinfo_failed'
+        : 'unknown';
+      res.writeHead(302,{Location:'/auth.html?error=google_failed&reason='+reason});
+      res.end();
+    }
     return;
   }
 
@@ -622,19 +643,32 @@ async function handleAPI(req,res,pathname,method,ip){
     }
 
     const hist=(agent.history||[]).slice(-20);
-    // ユーザーメッセージのcontentを構築（画像対応）
+    // ユーザーメッセージのcontentを構築（画像 + PDF対応）
     let userContent;
     if(images.length > 0){
       userContent = [];
-      images.forEach(img => {
-        userContent.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: img.type || 'image/jpeg',
-            data: img.b64
-          }
-        });
+      images.forEach(att => {
+        var mt = att.type || 'image/jpeg';
+        if(mt === 'application/pdf'){
+          // Anthropic PDF document block (Claude 3.5 Sonnet+ supports this)
+          userContent.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: att.b64
+            }
+          });
+        } else if(mt.startsWith('image/')){
+          userContent.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mt,
+              data: att.b64
+            }
+          });
+        }
       });
       if(message.trim()) userContent.push({type:'text',text:message});
     } else {

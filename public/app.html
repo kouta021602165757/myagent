@@ -1487,6 +1487,37 @@ body{color:#f0f0f8;}
   </div>
 </div>
 
+<!-- ══ SHARE LISTING MODAL ════════════════════════════════ -->
+<div class="overlay" id="shareListingOverlay">
+  <div class="wizard" style="max-width:540px">
+    <div class="wiz-top">
+      <div class="wiz-title">🔗 SNS でシェア</div>
+      <button class="wiz-close" onclick="closeShareListing()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body">
+      <div class="step-s" id="shareTargetTitle"></div>
+      <div style="margin:14px 0 18px">
+        <div style="font-size:11px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">SNS プレビュー</div>
+        <div style="background:var(--cream);border:1px solid var(--wire2);border-radius:11px;padding:6px;overflow:hidden">
+          <img id="shareThumb" alt="" style="display:block;width:100%;border-radius:7px;background:#fff;aspect-ratio:1200/630;object-fit:cover">
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">公開 URL</div>
+        <div style="display:flex;gap:6px"><input id="shareUrl" readonly style="flex:1;padding:10px 13px;border:1px solid var(--wire3);border-radius:8px;background:#fff;font-size:12.5px;font-family:'SF Mono',Menlo,monospace;color:var(--text);"><button onclick="_copyShareUrl()" style="padding:10px 16px;background:var(--peach);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit">コピー</button></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px">
+        <a id="shareTw" target="_blank" rel="noopener" class="share-btn" style="flex:1;text-align:center;padding:11px;background:#0f1419;color:#fff;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none;min-width:120px">𝕏 で投稿</a>
+        <a id="shareLine" target="_blank" rel="noopener" class="share-btn" style="flex:1;text-align:center;padding:11px;background:#06c755;color:#fff;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none;min-width:120px">💬 LINE</a>
+        <a id="shareFb" target="_blank" rel="noopener" class="share-btn" style="flex:1;text-align:center;padding:11px;background:#1877f2;color:#fff;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none;min-width:120px">📘 Facebook</a>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:14px;line-height:1.6">URL を貼り付けるだけで自動的にこのサムネイル画像が表示されます。</div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ LISTING DETAIL MODAL ═══════════════════════════════ -->
 <div class="overlay" id="listingDetailOverlay">
   <div class="wizard" style="max-width:780px">
@@ -2475,6 +2506,15 @@ document.addEventListener('DOMContentLoaded',async()=>{
           if(btn) switchStab(btn,'s-creator');
         }, 200);
       }
+      // Deep-link: ?listing=ls_xxx — open the marketplace + detail modal
+      var lq = qs.get('listing');
+      if(lq){
+        history.replaceState({}, '', location.pathname);
+        setTimeout(function(){
+          openMarketplace();
+          setTimeout(function(){ openListingDetail(lq); }, 250);
+        }, 300);
+      }
     }catch(e){}
     const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
@@ -3301,7 +3341,8 @@ function _renderListingDetail(d){
     + '</div>'
     + '<div class="ld-actions">'
       + (!d.is_own ? '<button class="btn-report" onclick="openReportListing(\''+esc(d.listing_id)+'\',\''+esc(d.title||'').replace(/\\|\x27/g,"\\$&")+'\')">⚠ 通報する</button>' : '')
-      + (!d.is_own ? '<button class="btn-clone" onclick="cloneListingFromDetail()">＋ チームに追加</button>' : '<span style="margin-left:auto;color:var(--text3);font-size:12px;font-weight:600">これは自分の出店です</span>')
+      + '<button class="btn-share" onclick="openShareListing(\''+esc(d.listing_id)+'\',\''+esc(d.title||'').replace(/\\|\x27/g,"\\$&")+'\')">🔗 シェア</button>'
+      + (!d.is_own ? '<button class="btn-clone" onclick="cloneListingFromDetail()">＋ チームに追加</button>' : '<span style="color:var(--text3);font-size:12px;font-weight:600;align-self:center">これは自分の出店です</span>')
     + '</div>';
 }
 
@@ -3351,6 +3392,27 @@ async function cloneListingFromDetail(){
     }
   }catch(e){ showToast(e.message||'追加失敗','ng'); }
 }
+/* ── Share listing (SNS) ─────────────────────────────────── */
+function openShareListing(listingId, listingTitle){
+  var url = location.origin + '/l/' + listingId;
+  var ogUrl = location.origin + '/api/og/' + listingId + '.svg';
+  document.getElementById('shareTargetTitle').textContent = listingTitle || '';
+  document.getElementById('shareUrl').value = url;
+  document.getElementById('shareThumb').src = ogUrl;
+  var tweet = (listingTitle ? listingTitle + ' — ' : '') + 'MY AI AGENT で公開中のエージェント';
+  document.getElementById('shareTw').href   = 'https://twitter.com/intent/tweet?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(tweet);
+  document.getElementById('shareLine').href = 'https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(url);
+  document.getElementById('shareFb').href   = 'https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url);
+  document.getElementById('shareListingOverlay').classList.add('open');
+}
+function closeShareListing(){
+  document.getElementById('shareListingOverlay').classList.remove('open');
+}
+function _copyShareUrl(){
+  var url = document.getElementById('shareUrl').value;
+  navigator.clipboard.writeText(url).then(function(){ showToast('URLをコピーしました','ok'); });
+}
+
 async function cloneAndTry(listingId, demoIdx){
   // Clone the agent then prefill the chat input with the demo prompt
   try{

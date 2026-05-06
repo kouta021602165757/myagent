@@ -636,6 +636,236 @@ function publicListing(user, ag){
   };
 }
 
+/** Escape text for safe inclusion in SVG / HTML. */
+function _xmlEscape(s){
+  return String(s||'').replace(/[<>&'"]/g, c=>({
+    '<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'
+  }[c]));
+}
+/** Truncate to ~maxChars, appending ellipsis if cut. */
+function _trunc(s, n){ s=String(s||''); return s.length>n ? s.slice(0,n-1)+'…' : s; }
+/** Wrap text into N lines of ~chars each (returns array). Crude word-wrap (CJK splits). */
+function _wrapText(s, maxChars, maxLines){
+  s = String(s||''); const out=[]; let cur='';
+  for(const ch of s){
+    if((cur+ch).length > maxChars){
+      out.push(cur); cur=ch;
+      if(out.length >= maxLines-1){ out.push((cur+s.slice(out.join('').length+ch.length)).slice(0,maxChars-1)+'…'); return out; }
+    } else { cur += ch; }
+  }
+  if(cur) out.push(cur);
+  return out;
+}
+
+/** Render Pattern E thumbnail (1200×630) as SVG. */
+function renderListingOgSvg(d){
+  const av = d.agent?.avatar || '🤖';
+  const title = _trunc(d.title||'', 30);
+  const tagLines = _wrapText(d.description||'', 26, 2);
+  const cat = _xmlEscape(d.category_label||'');
+  const handle = _xmlEscape(d.creator?.handle||'');
+  const ratingNum = d.rating>0 ? d.rating.toFixed(1) : '—';
+  const usesNum = (d.uses||0) >= 1000 ? (d.uses/1000).toFixed(1)+'k' : String(d.uses||0);
+  const chrome = d.agent?.chrome_enabled;
+
+  // Sticker (white rounded square + emoji) at left center
+  // Info on right: tag pill + title + tagline + meta pills
+  // Decorative circles. Brand badge bottom-right.
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'Hiragino Sans','Noto Sans JP','Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="20%" r="100%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="60%" stop-color="#fed7aa"/>
+      <stop offset="130%" stop-color="#fb923c"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14"/>
+      <feOffset dx="0" dy="14"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.25"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- decorative circles -->
+  <circle cx="-40" cy="-40" r="220" fill="rgba(255,255,255,.32)"/>
+  <circle cx="1080" cy="500" r="160" fill="rgba(255,255,255,.34)"/>
+  <circle cx="900" cy="120" r="100" fill="rgba(234,88,12,.18)"/>
+  <circle cx="220" cy="500" r="60" fill="rgba(251,146,60,.42)"/>
+
+  <!-- sticker (white rounded square with emoji), tilted -8deg -->
+  <g transform="translate(170 315) rotate(-8)">
+    <rect x="-160" y="-160" width="320" height="320" rx="56" ry="56" fill="#fff" stroke="#fff" stroke-width="8" filter="url(#shadow)"/>
+    <text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="200">${_xmlEscape(av)}</text>
+  </g>
+
+  <!-- info column, right of sticker -->
+  <g transform="translate(420 130)">
+    <!-- category pill -->
+    <g>
+      <rect x="0" y="0" width="${Math.max(140, cat.length*22+34)}" height="38" rx="19" ry="19" fill="#ffffff"/>
+      <text x="${Math.max(70, (cat.length*22+34)/2)}" y="25" text-anchor="middle" fill="#ea580c" font-size="16" font-weight="800" letter-spacing="0.06em">${cat}</text>
+    </g>
+
+    <!-- title -->
+    <text x="0" y="120" fill="#1a0d05" font-size="62" font-weight="900" letter-spacing="-0.02em">${_xmlEscape(title)}</text>
+
+    <!-- tagline (up to 2 lines) -->
+    ${tagLines.map((l,i)=>`<text x="0" y="${190 + i*36}" fill="#6b4226" font-size="22" font-weight="500">${_xmlEscape(l)}</text>`).join('')}
+
+    <!-- meta pills -->
+    <g transform="translate(0 ${280 + Math.max(0,(tagLines.length-1)*36)})">
+      <g>
+        <rect x="0" y="0" width="120" height="38" rx="14" ry="14" fill="#ffffff"/>
+        <text x="60" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">⭐ ${ratingNum}</text>
+      </g>
+      <g transform="translate(132 0)">
+        <rect x="0" y="0" width="${48 + usesNum.length*12}" height="38" rx="14" ry="14" fill="#ffffff"/>
+        <text x="${(48 + usesNum.length*12)/2}" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">利用 ${usesNum} 回</text>
+      </g>
+      ${chrome?`<g transform="translate(${132 + (48+usesNum.length*12) + 12} 0)">
+        <rect x="0" y="0" width="200" height="38" rx="14" ry="14" fill="#ffffff"/>
+        <text x="100" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">🌐 Chrome 連携</text>
+      </g>`:''}
+    </g>
+
+    <!-- creator -->
+    <text x="0" y="${360 + Math.max(0,(tagLines.length-1)*36)}" fill="#6b4226" font-size="18" font-weight="700">by ${handle}</text>
+  </g>
+
+  <!-- brand badge bottom-right -->
+  <g transform="translate(1144 580)">
+    <rect x="-220" y="-22" width="220" height="44" rx="22" ry="22" fill="#fff"/>
+    <text x="-110" y="6" text-anchor="middle" fill="#ea580c" font-size="16" font-weight="900" letter-spacing="0.18em">🍑 MY AI AGENT</text>
+  </g>
+</svg>`;
+}
+
+/** Render the public listing landing HTML with OG meta SSR. */
+async function serveListingPage(res, listingId){
+  try{
+    const found = await findAgentByListingId(listingId);
+    if(!found || !found.agent.marketplace.is_listed){
+      res.writeHead(404,{'Content-Type':'text/html; charset=utf-8'});
+      return res.end('<h1>Listing not found</h1><a href="/">Home</a>');
+    }
+    const d = publicListing(found.user, found.agent);
+    const ogUrl = APP_URL + '/api/og/' + listingId + '.svg';
+    const pageUrl = APP_URL + '/l/' + listingId;
+    const titleH = _xmlEscape(d.title||'AI Agent');
+    const descH = _xmlEscape(_trunc(d.description||'', 160));
+    const catH = _xmlEscape(d.category_label||'');
+    const av = _xmlEscape(d.agent?.avatar||'🤖');
+    const skills = (d.agent?.skills||[]).join(' / ');
+    const handle = _xmlEscape(d.creator?.handle||'');
+    const ratingTxt = d.rating>0 ? `★ ${d.rating.toFixed(1)} (${d.rating_count})` : '★ 未評価';
+    const usesTxt = (d.uses||0).toLocaleString();
+
+    const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${titleH} — MY AI AGENT</title>
+<meta name="description" content="${descH}">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="${pageUrl}">
+<meta property="og:title" content="${titleH}">
+<meta property="og:description" content="${descH}">
+<meta property="og:image" content="${ogUrl}">
+<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="MY AI AGENT">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${titleH}">
+<meta name="twitter:description" content="${descH}">
+<meta name="twitter:image" content="${ogUrl}">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;background:#fdf8f3;color:#2d1a0e;min-height:100vh;}
+.wrap{max-width:780px;margin:0 auto;padding:32px 20px 80px;}
+.brand{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:#ea580c;letter-spacing:.04em;margin-bottom:24px;text-decoration:none;}
+.thumb{width:100%;aspect-ratio:1200/630;border-radius:18px;overflow:hidden;margin-bottom:28px;background:#fff;box-shadow:0 12px 32px rgba(180,120,80,.1);}
+.thumb img{width:100%;height:100%;display:block;object-fit:cover;}
+.head{display:flex;align-items:center;gap:18px;padding:20px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.2);border-radius:14px;margin-bottom:20px;}
+.head .av{width:80px;height:80px;border-radius:18px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;flex-shrink:0;box-shadow:0 4px 12px rgba(180,80,40,.1);}
+.head .info{flex:1;min-width:0;}
+.head .cat{font-size:12px;color:#ea580c;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
+.head .nm{font-size:24px;font-weight:900;color:#2d1a0e;line-height:1.2;margin-bottom:6px;}
+.head .by{font-size:13px;color:#6b4226;font-weight:600;}
+.meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
+.meta .pl{padding:7px 14px;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:10px;font-size:12.5px;font-weight:700;color:#6b4226;}
+.meta .pl b{color:#2d1a0e;font-weight:900;}
+.desc{padding:18px 22px;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:12px;font-size:14.5px;line-height:1.75;color:#2d1a0e;white-space:pre-wrap;margin-bottom:24px;}
+.demos{display:flex;flex-direction:column;gap:8px;margin-bottom:32px;}
+.demos h2{font-size:13px;color:#9a6a4a;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.demos .d{padding:13px 16px;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:10px;font-size:14px;line-height:1.55;color:#2d1a0e;}
+.cta-row{display:flex;gap:10px;flex-wrap:wrap;}
+.btn{padding:13px 22px;border-radius:11px;font-size:14.5px;font-weight:800;text-decoration:none;text-align:center;display:inline-flex;align-items:center;gap:8px;}
+.btn-pri{background:#fb923c;color:#fff;flex:1;justify-content:center;min-width:200px;}
+.btn-pri:hover{background:#ea580c;}
+.btn-sec{background:#fff;color:#2d1a0e;border:1px solid rgba(180,120,80,.25);}
+.btn-sec:hover{background:#faf3eb;}
+.share{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;}
+.share a{padding:9px 14px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;color:#6b4226;background:#fff;border:1px solid rgba(180,120,80,.2);display:inline-flex;align-items:center;gap:6px;}
+.share a:hover{background:#faf3eb;}
+.foot{margin-top:60px;text-align:center;font-size:12px;color:#9a6a4a;font-weight:600;}
+.foot a{color:#ea580c;text-decoration:none;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="brand">🍑 MY AI AGENT</a>
+  <div class="thumb"><img src="${ogUrl}" alt="${titleH}"></div>
+  <div class="head">
+    <div class="av">${av}</div>
+    <div class="info">
+      <div class="cat">${catH}</div>
+      <div class="nm">${titleH}</div>
+      <div class="by">クリエイター: <b>${handle}</b></div>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pl">⭐ <b>${ratingTxt}</b></span>
+    <span class="pl">利用 <b>${usesTxt}</b> 回</span>
+    ${skills?`<span class="pl">スキル: <b>${_xmlEscape(skills)}</b></span>`:''}
+    ${d.agent?.chrome_enabled?'<span class="pl">🌐 <b>Chrome 連携</b></span>':''}
+  </div>
+  <div class="desc">${_xmlEscape(d.description||'')}</div>
+  ${d.demo_prompts && d.demo_prompts.length ? `<div class="demos"><h2>デモプロンプト</h2>${d.demo_prompts.map(p=>`<div class="d">▸ ${_xmlEscape(p)}</div>`).join('')}</div>`:''}
+  <div class="cta-row">
+    <a class="btn btn-pri" href="/app.html?listing=${listingId}">＋ チームに追加して使う</a>
+    <a class="btn btn-sec" href="/">マーケットを見る</a>
+  </div>
+  <div class="share">
+    <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(d.title+' — MY AI AGENT')}" target="_blank" rel="noopener">🐦 X (Twitter)</a>
+    <a href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">💬 LINE</a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">📘 Facebook</a>
+    <a href="javascript:void(0)" onclick="navigator.clipboard.writeText(location.href);this.textContent='✓ コピー済';">🔗 URL コピー</a>
+  </div>
+  <div class="foot">
+    Powered by <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">サービスを知る</a>
+  </div>
+</div>
+</body>
+</html>`;
+    res.writeHead(200,{
+      'Content-Type':'text/html; charset=utf-8',
+      'Cache-Control':'public, max-age=120',
+    });
+    res.end(html);
+  }catch(e){
+    console.error('[serveListingPage]', e.message);
+    res.writeHead(500,{'Content-Type':'text/html; charset=utf-8'});
+    res.end('<h1>Server error</h1>');
+  }
+}
+
 /** Recompute rating_avg + rating_count from reviews[]. Mutates m. */
 function recomputeRatings(m){
   const reviews = m.reviews||[];
@@ -905,6 +1135,37 @@ async function handleAPI(req,res,pathname,method,ip){
       },
       owner:{ name: (found.user.name||(found.user.email||'').split('@')[0]||'ユーザー') }
     });
+  }
+
+  // ── GET /api/og/:listing_id.svg ────────────────────────────
+  // Public: Pattern E thumbnail for SNS / OG. Cacheable.
+  const ogm = pathname.match(/^\/api\/og\/(ls_[a-z0-9_-]+)\.svg$/);
+  if(ogm && method==='GET'){
+    const found = await findAgentByListingId(ogm[1]);
+    if(!found || !found.agent.marketplace.is_listed){
+      res.writeHead(404,{'Content-Type':'text/plain'});
+      return res.end('Listing not found');
+    }
+    const detail = publicListing(found.user, found.agent);
+    const svg = renderListingOgSvg(detail);
+    res.writeHead(200, {
+      'Content-Type':'image/svg+xml; charset=utf-8',
+      'Cache-Control':'public, max-age=300',                // 5min cache
+      'Access-Control-Allow-Origin':'*',
+    });
+    res.end(svg);
+    return;
+  }
+
+  // ── GET /api/listing/:listing_id (public) ──────────────────
+  // Used by /l/:id landing page. No auth required so SNS scrapers can hit it.
+  const plm = pathname.match(/^\/api\/listing\/(ls_[a-z0-9_-]+)$/);
+  if(plm && method==='GET'){
+    const found = await findAgentByListingId(plm[1]);
+    if(!found || !found.agent.marketplace.is_listed){
+      return jres(res,404,{error:'Listing not found'});
+    }
+    return jres(res,200, publicListing(found.user, found.agent));
   }
 
   // ── Auth required below ────────────────────────────────────
@@ -1930,6 +2191,12 @@ const server=http.createServer(async(req,res)=>{
   const aRoute=pathname.match(/^\/a\/([a-z0-9-]+)\/?$/);
   if(aRoute){
     return serveStatic(res, path.join(PUBLIC_DIR,'share.html'));
+  }
+
+  // /l/:listing_id → public marketplace listing landing (with OG meta SSR)
+  const lRoute=pathname.match(/^\/l\/(ls_[a-z0-9_-]+)\/?$/);
+  if(lRoute){
+    return serveListingPage(res, lRoute[1]);
   }
   // index.html → redirect to lp
   let fp=path.join(PUBLIC_DIR,pathname==='/'?'lp.html':pathname);

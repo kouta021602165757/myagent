@@ -1105,7 +1105,19 @@ body{color:#f0f0f8;}
           <label>業務内容</label>
           <textarea class="per-ta" id="wDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" style="min-height:120px"></textarea>
         </div>
-        <div class="btn-row">
+
+        <!-- Tools / Chrome integration -->
+        <div style="margin-top:6px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1">
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Chrome連携 <span style="font-size:10px;background:var(--cream3);color:var(--text3);padding:2px 8px;border-radius:999px;font-weight:700;border:1px solid var(--wire2)">Coming Soon</span></div>
+              <div style="font-size:12px;color:var(--text3);margin-top:3px;line-height:1.5">Webサイトの調査・フォーム入力・情報収集など、ブラウザ操作が必要な業務に対応します</div>
+            </div>
+            <button type="button" class="s-sw" id="wChromeSw" onclick="this.classList.toggle('on');NA.chrome_enabled=this.classList.contains('on')"></button>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top:14px">
           <button class="btn-back" onclick="wStep(4)">← 戻る</button>
           <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(6)">次へ →</button>
         </div>
@@ -1577,6 +1589,15 @@ body{color:#f0f0f8;}
       <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">業務内容</label>
       <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" rows="6" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
     </div>
+    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Chrome連携 <span style="font-size:10px;background:var(--cream3);color:var(--text3);padding:2px 7px;border-radius:999px;font-weight:700;border:1px solid var(--wire2)">Coming Soon</span></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;line-height:1.5">Webサイトの調査・情報収集が必要な業務に対応</div>
+        </div>
+        <button type="button" class="s-sw" id="editChromeSw" onclick="this.classList.toggle('on')"></button>
+      </div>
+    </div>
     <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
     <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px">
       <button onclick="deleteAgent()" style="width:100%;background:rgba(239,68,68,.06);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">🗑 このエージェントを削除</button>
@@ -1626,6 +1647,7 @@ var PRESETS=[
     avatar:'🤖',
     name:'自動インサイドエージェント',
     skills:['marketing','writing','research','analysis','planning'],
+    chrome_enabled:true,
     persona:`採用目的: アポ取りの自動化
 業務内容: 8つのスキルモジュール連携型エージェントとして、以下の順番でBtoBアポ取りを自動化する。
 
@@ -1940,6 +1962,7 @@ function renderAgList(){
         <div class="ag-name">${esc(a.name)}</div>
         <div class="ag-skill">${a.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')}</div>
       </div>
+      ${a.chrome_enabled?'<span title="Chrome連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="chrome">🌐</span>':''}
       <div class="live-dot"></div>
     </div>`).join('');
 }
@@ -1954,11 +1977,15 @@ function openAgent(id){
   document.getElementById('ai-'+id)?.classList.add('on');
 
   const sns=ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
+  var topPills = sns.map(n=>`<span class="pill">${n}</span>`).join('');
+  if(ag.chrome_enabled){
+    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="Chrome連携 ON">🌐 Chrome</span>';
+  }
   document.getElementById('chatTop').innerHTML=`
     <div class="ct-icon">${ag.avatar}</div>
     <div>
       <div class="ct-name">${esc(ag.name)}</div>
-      <div class="ct-pills">${sns.map(n=>`<span class="pill">${n}</span>`).join('')}</div>
+      <div class="ct-pills">${topPills}</div>
     </div>
       <button onclick="openEditAgent('${ag.id}')" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--peach-dark);cursor:pointer;padding:6px 12px;border-radius:10px;margin-left:auto;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:5px" title="編集・削除">⚙️ 編集</button>
 `;
@@ -2100,7 +2127,7 @@ async function delAgent(id){
 /* ── Wizard ────────────────────────────────────────── */
 var _wizardMode='new'; // 'new' | 'preset'
 function _resetWizardState(){
-  NA={avatar:'🤖',name:'',skills:[],persona:'',purpose:'',duties:''};
+  NA={avatar:'🤖',name:'',skills:[],persona:'',purpose:'',duties:'',chrome_enabled:false};
   _selectedPresetIdx=-1;
   ['wName','wPurpose','wDuties'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent='🤖';
@@ -2109,6 +2136,7 @@ function _resetWizardState(){
   document.querySelectorAll('.preset-card').forEach(function(b){b.classList.remove('sel');});
   var useBtn=document.getElementById('usePresetBtn');
   if(useBtn){ useBtn.disabled=true; useBtn.style.opacity='.5'; useBtn.style.cursor='not-allowed'; }
+  var sw=document.getElementById('wChromeSw'); if(sw) sw.classList.remove('on');
 }
 function openNewAgent(){
   _wizardMode='new';
@@ -2152,7 +2180,7 @@ function useSelectedPreset(){
   if(_selectedPresetIdx<0) return;
   var p=PRESETS[_selectedPresetIdx];
   _wizardMode='preset';
-  NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona,purpose:'',duties:''};
+  NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona,purpose:'',duties:'',chrome_enabled:!!p.chrome_enabled};
   // Sync form fields so back-navigation reflects preset values
   var wn=document.getElementById('wName'); if(wn) wn.value=p.name;
   var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent=p.avatar;
@@ -2162,6 +2190,7 @@ function useSelectedPreset(){
   document.querySelectorAll('.sk-card').forEach(function(b,i){
     b.classList.toggle('sel',p.skills.indexOf(SKILLS[i].id)>=0);
   });
+  var sw=document.getElementById('wChromeSw'); if(sw) sw.classList.toggle('on', !!p.chrome_enabled);
   buildConf();
   wStep(6);
 }
@@ -2201,6 +2230,8 @@ function openEditAgent(id){
   var parsed=_parsePersona(ag.persona);
   document.getElementById('editPurpose').value = parsed.purpose;
   document.getElementById('editDuties').value = parsed.duties;
+  var sw=document.getElementById('editChromeSw');
+  if(sw) sw.classList.toggle('on', !!ag.chrome_enabled);
   document.getElementById('editPanel').style.right = '0';
   document.getElementById('editPanelOverlay').style.display = 'block';
 }
@@ -2218,11 +2249,14 @@ async function saveEditAgent(){
   const purpose = document.getElementById('editPurpose').value.trim();
   const duties = document.getElementById('editDuties').value.trim();
   const newPersona = _composePersona(purpose,duties);
+  var sw=document.getElementById('editChromeSw');
+  var chromeEnabled = !!(sw && sw.classList.contains('on'));
   if(!newName){ showToast('名前を入力してください','ng'); return; }
   try{
-    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona});
+    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled});
     ag.name = newName;
     ag.persona = newPersona;
+    ag.chrome_enabled = chromeEnabled;
     closeEditAgent();
     renderAgList();
     renderChatTop(ag);
@@ -2312,10 +2346,12 @@ function wStep(n){
 
 function buildConf(){
   const sns=NA.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
+  var pills=sns.map(n=>`<span class="pill">${n}</span>`).join('');
+  if(NA.chrome_enabled) pills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)">🌐 Chrome連携</span>';
   document.getElementById('confHero').innerHTML=`
     <div class="conf-ic">${NA.avatar}</div>
     <div><div class="conf-nm">${esc(NA.name)}</div>
-    <div class="conf-pills">${sns.map(n=>`<span class="pill">${n}</span>`).join('')}</div></div>`;
+    <div class="conf-pills">${pills}</div></div>`;
   let perHtml='';
   if(_wizardMode==='new' && (NA.purpose||NA.duties)){
     perHtml='<div class="conf-per">'
@@ -2333,7 +2369,7 @@ function buildConf(){
 async function doCreate(){
   setBtnLoad('createBtn',true,'作成中...');
   try{
-    const r=await api('POST','/api/agents',{avatar:NA.avatar,name:NA.name,skills:NA.skills,persona:NA.persona});
+    const r=await api('POST','/api/agents',{avatar:NA.avatar,name:NA.name,skills:NA.skills,persona:NA.persona,chrome_enabled:!!NA.chrome_enabled});
     agents.push(r.agent); activeId=r.agent.id;
     renderAgList();
     closeWizard();

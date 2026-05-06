@@ -328,7 +328,10 @@ const SKILL_MAP={
   other:'その他（上記以外のカスタム業務）',
 };
 function buildSystem(agent){
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
+  const chromeNote = agent.chrome_enabled
+    ? `\nツール：ユーザーは Chrome 連携を有効化しています。Webサイト調査やフォーム入力など、ブラウザ操作が必要な作業の手順を具体的に示してください（実際のブラウザ操作は近日対応予定）。`
+    : '';
+  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -464,12 +467,13 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── POST /api/agents ───────────────────────────────────────
   if(pathname==='/api/agents'&&method==='POST'){
-    const{avatar,name,skills,persona}=await readBody(req);
+    const{avatar,name,skills,persona,chrome_enabled}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
     if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
     const agent={id:'ag_'+crypto.randomUUID(),avatar:avatar||'🤖',
       name:name.trim(),skills,persona:persona?.trim()||'',
+      chrome_enabled:!!chrome_enabled,
       history:[],created_at:new Date().toISOString()};
     user.agents=[...(user.agents||[]),agent];
     await DB.save(user);return jres(res,201,{agent});
@@ -480,11 +484,12 @@ async function handleAPI(req,res,pathname,method,ip){
   const pam=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(pam&&method==='PATCH'){
     const agId=pam[1];
-    const{name,persona}=await readBody(req);
+    const{name,persona,chrome_enabled}=await readBody(req);
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
     if(persona!==undefined)ag.persona=persona;
+    if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
     await DB.save(user);
     return jres(res,200,{agent:ag});
   }

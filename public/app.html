@@ -65,14 +65,23 @@ input,textarea{font-family:var(--sans);}
 .logotext{font-family:var(--display);font-size:15px;letter-spacing:.06em;}
 
 /* new agent button */
+.sb-new-row{display:flex;flex-direction:column;gap:6px;margin:12px;}
 .sb-new{
   display:flex;align-items:center;gap:7px;
   padding:9px 12px;border-radius:10px;
   background:var(--volt-dim);border:1px solid rgba(251,146,60,.2);
   color:var(--volt);font-size:12px;font-weight:700;
-  margin:12px;transition:all .2s;
+  transition:all .2s;
 }
 .sb-new:hover{background:var(--peach);color:var(--ink);border-color:var(--volt);box-shadow:0 0 16px var(--volt-glow);}
+.sb-new-tpl{background:transparent;color:var(--text2);border:1px solid var(--wire2);}
+.sb-new-tpl:hover{background:rgba(251,146,60,.08);color:var(--peach-dark);border-color:rgba(251,146,60,.3);box-shadow:none;}
+
+/* empty state action buttons */
+.empty-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.empty-actions .btn-volt{padding:13px 22px;border-radius:12px;font-size:14px;font-weight:700;}
+.empty-actions .btn-tpl{padding:13px 22px;border-radius:12px;font-size:14px;font-weight:700;background:var(--cream2);border:1px solid var(--wire2);color:var(--text2);}
+.empty-actions .btn-tpl:hover{background:var(--cream3);color:var(--text);border-color:rgba(251,146,60,.3);}
 
 /* section label */
 .sb-lbl{
@@ -599,10 +608,16 @@ body{color:#f0f0f8;}
   </div>
 </a>
     </div>
-    <button class="sb-new" onclick="if(!token){showToast('ログインが必要です','ng');return;}openWizard()">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span id="i18n-newAgent">新しいエージェント</span>
-    </button>
+    <div class="sb-new-row">
+      <button class="sb-new" onclick="if(!token){showToast('ログインが必要です','ng');return;}openNewAgent()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span id="i18n-newAgent">新規エージェント</span>
+      </button>
+      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openTemplate()">
+        <span style="font-size:13px">📋</span>
+        <span id="i18n-newTpl">テンプレートエージェント</span>
+      </button>
+    </div>
     <div class="sb-lbl" id="i18n-teamLabel">チーム</div>
     <div class="ag-list" id="agList"></div>
     <div class="sb-bot">
@@ -635,7 +650,10 @@ body{color:#f0f0f8;}
       <div class="empty-glyph">🤖</div>
       <h2 id="i18n-teamTitle">チームを作ろう</h2>
       <p id="i18n-teamSub">専門スキルを持つAIエージェントを作って、仕事を任せましょう。</p>
-      <button class="btn-volt" id="i18n-teamBtn" onclick="openWizard()">最初のエージェントを作る →</button>
+      <div class="empty-actions">
+        <button class="btn-volt" onclick="openNewAgent()">+ 新規エージェント</button>
+        <button class="btn-back btn-tpl" onclick="openTemplate()">📋 テンプレートエージェント</button>
+      </div>
     </div>
     <div class="chat" id="chatWrap" style="display:none">
       <div class="chat-top" id="chatTop"></div>
@@ -684,27 +702,25 @@ body{color:#f0f0f8;}
         </div>
       </div>
 
-      <!-- Step 1: Icon & Name -->
+      <!-- Step 1: Avatar -->
       <div id="ws1" style="display:none">
-        <div class="step-h">アイコンと名前</div>
-        <div class="step-s">エージェントの見た目と名前を決めます</div>
+        <div class="step-h">アイコンを選ぶ</div>
+        <div class="step-s">エージェントの見た目を決めます</div>
         <div class="av-preview" id="avPrev">🤖</div>
         <div class="av-grid" id="avGrid"></div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(0)">← 戻る</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(2)">次へ →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Name -->
+      <div id="ws2" style="display:none">
+        <div class="step-h">名前を決める</div>
+        <div class="step-s">このエージェントの名前を入力してください</div>
         <div class="wiz-fld">
           <label>エージェントの名前</label>
           <input class="wiz-input" type="text" id="wName" placeholder="例：ライターの田中さん" maxlength="20">
-        </div>
-        <button class="btn-volt" style="width:100%;border-radius:12px;padding:13px;" onclick="wStep(2)">次へ →</button>
-      </div>
-
-      <!-- Step 2: Skills -->
-      <div id="ws2" style="display:none">
-        <div class="step-h">スキルを与える</div>
-        <div class="step-s">このエージェントの得意なこと（複数OK）</div>
-        <div class="skill-grid" id="skGrid"></div>
-        <div class="wiz-fld">
-          <label>性格・追加指示（任意）</label>
-          <textarea class="per-ta" id="wPer" placeholder="例：常に丁寧な敬語で話す。専門用語は使わずわかりやすく説明する。"></textarea>
         </div>
         <div class="btn-row">
           <button class="btn-back" onclick="wStep(1)">← 戻る</button>
@@ -712,14 +728,53 @@ body{color:#f0f0f8;}
         </div>
       </div>
 
-      <!-- Step 3: Confirm -->
+      <!-- Step 3: Skills -->
       <div id="ws3" style="display:none">
+        <div class="step-h">スキルを与える</div>
+        <div class="step-s">このエージェントの得意なこと（複数OK）</div>
+        <div class="skill-grid" id="skGrid"></div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(2)">← 戻る</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(4)">次へ →</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Purpose -->
+      <div id="ws4" style="display:none">
+        <div class="step-h">採用目的</div>
+        <div class="step-s">このエージェントを何のために雇いますか？</div>
+        <div class="wiz-fld">
+          <label>採用目的</label>
+          <input class="wiz-input" type="text" id="wPurpose" placeholder="例：アポ取り、SNS投稿、コードレビュー" maxlength="80">
+        </div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(3)">← 戻る</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(5)">次へ →</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Duties -->
+      <div id="ws5" style="display:none">
+        <div class="step-h">業務内容</div>
+        <div class="step-s">具体的にどんな仕事を任せますか？日々の作業内容を入力してください</div>
+        <div class="wiz-fld">
+          <label>業務内容</label>
+          <textarea class="per-ta" id="wDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" style="min-height:120px"></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(4)">← 戻る</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(6)">次へ →</button>
+        </div>
+      </div>
+
+      <!-- Step 6: Confirm -->
+      <div id="ws6" style="display:none">
         <div class="step-h">確認して完成！</div>
         <div class="step-s">このエージェントで作成します</div>
         <div class="conf-hero" id="confHero"></div>
         <div id="confPer"></div>
         <div class="btn-row">
-          <button class="btn-back" onclick="wStep(2)">← 戻る</button>
+          <button class="btn-back" onclick="confirmBack()">← 戻る</button>
           <button class="btn-volt" id="createBtn" style="border-radius:12px;padding:13px;" onclick="doCreate()">✨ 作成する</button>
         </div>
       </div>
@@ -942,7 +997,8 @@ var T = {
       teamTitle:   isJa ? 'チームを作ろう'                              : 'Build Your Team',
       teamSub:     isJa ? '専門スキルを持つAIエージェントを作って、仕事を任せましょう。' : 'Create AI agents with specialized skills.',
       teamBtn:     isJa ? '最初のエージェントを作る →'                  : 'Create your first agent →',
-      newAgent:    isJa ? '+ 新しいエージェント'                         : '+ New Agent',
+      newAgent:    isJa ? '新規エージェント'                              : 'New agent',
+      newTpl:      isJa ? 'テンプレートエージェント'                       : 'Template agent',
       balance:     isJa ? '残高'                                        : 'Balance',
       charge:      isJa ? '+ 残高チャージ'                              : '+ Add Credits',
       logout:      isJa ? 'ログアウト'                                  : 'Logout',
@@ -953,7 +1009,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],
-     ['i18n-newAgent',T.newAgent],['i18n-teamLabel',T.teamLabel],
+     ['i18n-newAgent',T.newAgent],['i18n-newTpl',T.newTpl],['i18n-teamLabel',T.teamLabel],
      ['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]]
     .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
     const inp=document.getElementById('msgInput');
@@ -1196,19 +1252,35 @@ async function delAgent(id){
 }
 
 /* ── Wizard ────────────────────────────────────────── */
-function openWizard(){
-  NA={avatar:'🤖',name:'',skills:[],persona:''};
+var _wizardMode='new'; // 'new' | 'preset'
+function _resetWizardState(){
+  NA={avatar:'🤖',name:'',skills:[],persona:'',purpose:'',duties:''};
   _selectedPresetIdx=-1;
-  document.getElementById('wName').value='';
-  document.getElementById('wPer').value='';
-  document.getElementById('avPrev').textContent='🤖';
-  document.querySelectorAll('.av-cell').forEach((b,i)=>b.classList.toggle('sel',i===0));
-  document.querySelectorAll('.sk-card').forEach(b=>b.classList.remove('sel'));
-  document.querySelectorAll('.preset-card').forEach(b=>b.classList.remove('sel'));
+  ['wName','wPurpose','wDuties'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent='🤖';
+  document.querySelectorAll('.av-cell').forEach(function(b,i){b.classList.toggle('sel',i===0);});
+  document.querySelectorAll('.sk-card').forEach(function(b){b.classList.remove('sel');});
+  document.querySelectorAll('.preset-card').forEach(function(b){b.classList.remove('sel');});
   var useBtn=document.getElementById('usePresetBtn');
   if(useBtn){ useBtn.disabled=true; useBtn.style.opacity='.5'; useBtn.style.cursor='not-allowed'; }
+}
+function openNewAgent(){
+  _wizardMode='new';
+  _resetWizardState();
+  wStep(1);
+  document.getElementById('wizOverlay').classList.add('open');
+}
+function openTemplate(){
+  _wizardMode='preset';
+  _resetWizardState();
   wStep(0);
   document.getElementById('wizOverlay').classList.add('open');
+}
+// Backward-compat: any remaining caller of openWizard() lands on the template picker
+function openWizard(){ openTemplate(); }
+function confirmBack(){
+  if(_wizardMode==='preset') wStep(0);
+  else wStep(5);
 }
 var _selectedPresetIdx=-1;
 function buildPresetGrid(){
@@ -1233,11 +1305,11 @@ function pickPreset(i){
 function useSelectedPreset(){
   if(_selectedPresetIdx<0) return;
   var p=PRESETS[_selectedPresetIdx];
-  NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona};
-  // Sync form fields so step 1/2 reflect preset values if user goes back
-  document.getElementById('wName').value=p.name;
-  document.getElementById('wPer').value=p.persona;
-  document.getElementById('avPrev').textContent=p.avatar;
+  _wizardMode='preset';
+  NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona,purpose:'',duties:''};
+  // Sync form fields so back-navigation reflects preset values
+  var wn=document.getElementById('wName'); if(wn) wn.value=p.name;
+  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent=p.avatar;
   document.querySelectorAll('.av-cell').forEach(function(b,i){
     b.classList.toggle('sel',AVATARS[i]===p.avatar);
   });
@@ -1245,15 +1317,11 @@ function useSelectedPreset(){
     b.classList.toggle('sel',p.skills.indexOf(SKILLS[i].id)>=0);
   });
   buildConf();
-  wStep(3);
+  wStep(6);
 }
 function startFromScratch(){
-  NA={avatar:'🤖',name:'',skills:[],persona:''};
-  document.getElementById('wName').value='';
-  document.getElementById('wPer').value='';
-  document.getElementById('avPrev').textContent='🤖';
-  document.querySelectorAll('.av-cell').forEach(function(b,i){b.classList.toggle('sel',i===0);});
-  document.querySelectorAll('.sk-card').forEach(function(b){b.classList.remove('sel');});
+  _wizardMode='new';
+  _resetWizardState();
   wStep(1);
 }
 function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
@@ -1346,12 +1414,32 @@ function togSk(btn,id){
 }
 
 function wStep(n){
-  if(n===2){ NA.name=document.getElementById('wName').value.trim(); if(!NA.name){showToast('名前を入力してください','ng');return;} }
-  if(n===3){ if(!NA.skills.length){showToast('スキルを選んでください','ng');return;} NA.persona=document.getElementById('wPer').value.trim(); buildConf(); }
+  // Validate before entering step n (i.e. validate the previous step's data)
+  if(n===3){
+    NA.name=document.getElementById('wName').value.trim();
+    if(!NA.name){showToast('名前を入力してください','ng');return;}
+  }
+  if(n===4){
+    if(!NA.skills.length){showToast('スキルを選んでください','ng');return;}
+  }
+  if(n===5){
+    NA.purpose=document.getElementById('wPurpose').value.trim();
+    if(!NA.purpose){showToast('採用目的を入力してください','ng');return;}
+  }
+  if(n===6){
+    if(_wizardMode==='new'){
+      NA.duties=document.getElementById('wDuties').value.trim();
+      if(!NA.duties){showToast('業務内容を入力してください','ng');return;}
+      NA.persona='採用目的: '+(NA.purpose||'')+'\n業務内容: '+(NA.duties||'');
+    }
+    buildConf();
+  }
   document.querySelectorAll('#wizOverlay [id^="ws"]').forEach(s=>s.style.display='none');
   document.getElementById('ws'+n).style.display='block';
-  document.getElementById('wizFill').style.width=(n===0?0:n/3*100)+'%';
-  document.getElementById('wizTitle').textContent=['テンプレート','アイコンと名前','スキル','確認'][n];
+  // progress: 5 entry steps + confirm. ws0 is preset picker (no progress).
+  var pct = n===0 ? 0 : (n>=6 ? 100 : (n/5*100));
+  document.getElementById('wizFill').style.width=pct+'%';
+  document.getElementById('wizTitle').textContent=['テンプレート','アイコン','名前','スキル','採用目的','業務内容','確認'][n];
 }
 
 function buildConf(){
@@ -1360,7 +1448,18 @@ function buildConf(){
     <div class="conf-ic">${NA.avatar}</div>
     <div><div class="conf-nm">${esc(NA.name)}</div>
     <div class="conf-pills">${sns.map(n=>`<span class="pill">${n}</span>`).join('')}</div></div>`;
-  document.getElementById('confPer').innerHTML=NA.persona?`<div class="conf-per">${esc(NA.persona)}</div>`:'';
+  let perHtml='';
+  if(_wizardMode==='new' && (NA.purpose||NA.duties)){
+    perHtml='<div class="conf-per">'
+      +'<div style="font-weight:700;color:var(--peach-dark);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">採用目的</div>'
+      +esc(NA.purpose||'')
+      +'<div style="font-weight:700;color:var(--peach-dark);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin:12px 0 4px">業務内容</div>'
+      +esc(NA.duties||'').replace(/\n/g,'<br>')
+      +'</div>';
+  } else if(NA.persona){
+    perHtml='<div class="conf-per">'+esc(NA.persona).replace(/\n/g,'<br>')+'</div>';
+  }
+  document.getElementById('confPer').innerHTML=perHtml;
 }
 
 async function doCreate(){

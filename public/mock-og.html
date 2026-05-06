@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>OG サムネイル — モック</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-light:#fed7aa;
+  --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
+  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
+  --wire2:rgba(180,120,80,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#1a1a1a;color:#fff;font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;padding:32px;}
+h1{font-size:18px;font-weight:800;margin-bottom:6px;}
+.sub{color:#aaa;font-size:13px;margin-bottom:32px;}
+h2{font-size:14px;font-weight:700;color:#aaa;margin:32px 0 12px;letter-spacing:.05em;}
+.note{color:#888;font-size:12px;margin-top:8px;line-height:1.6;}
+.frame{display:inline-block;border:2px dashed #444;border-radius:6px;padding:6px;margin-bottom:10px;}
+.platform{display:flex;gap:12px;align-items:flex-start;margin-bottom:36px;}
+.platform-info{flex:1;font-size:12px;color:#888;line-height:1.6;background:#222;padding:12px 14px;border-radius:8px;border-left:3px solid var(--peach);}
+.platform-info b{color:#fff;}
+.scaler{width:600px;}              /* preview at 50% of native 1200x630 */
+.thumb{width:1200px;height:630px;transform:scale(.5);transform-origin:top left;}
+.size{font-size:11px;color:#666;margin-top:4px;font-feature-settings:'tnum';}
+
+/* ───────────────────── A: hero centered ───────────────────── */
+.t-a{
+  position:relative;background:linear-gradient(135deg,#fff7ed 0%,#fed7aa 50%,#fb923c 130%);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:80px;font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--text);
+  border-radius:0;overflow:hidden;
+}
+.t-a::after{content:'';position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.4),transparent 65%);right:-150px;top:-150px;}
+.t-a::before{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,.2),transparent 70%);left:-100px;bottom:-100px;}
+.t-a .av{font-size:160px;line-height:1;margin-bottom:30px;filter:drop-shadow(0 8px 20px rgba(180,80,40,.25));position:relative;z-index:1;}
+.t-a .nm{font-size:64px;font-weight:900;letter-spacing:-.02em;margin-bottom:14px;color:#1a0d05;text-align:center;position:relative;z-index:1;line-height:1.1;}
+.t-a .tg{font-size:26px;font-weight:600;color:var(--text2);text-align:center;line-height:1.5;max-width:900px;position:relative;z-index:1;}
+.t-a .br{position:absolute;bottom:36px;left:0;right:0;text-align:center;font-size:18px;font-weight:800;letter-spacing:.18em;color:var(--peach-dark);z-index:1;}
+.t-a .br span{font-weight:500;color:var(--text3);letter-spacing:.05em;}
+
+/* ─────────────────── B: split, info-rich ──────────────────── */
+.t-b{
+  display:grid;grid-template-columns:520px 1fr;background:#fff;color:var(--text);overflow:hidden;
+  font-family:'Hiragino Sans','Noto Sans JP',sans-serif;
+}
+.t-b .left{background:linear-gradient(135deg,var(--peach) 0%,var(--peach-dark) 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px;color:#fff;position:relative;}
+.t-b .left::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.1);top:-80px;left:-80px;}
+.t-b .left::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.08);bottom:-60px;right:-40px;}
+.t-b .av{font-size:200px;line-height:1;filter:drop-shadow(0 8px 20px rgba(0,0,0,.2));position:relative;z-index:1;margin-bottom:20px;}
+.t-b .creator{font-size:18px;font-weight:700;color:rgba(255,255,255,.85);position:relative;z-index:1;}
+.t-b .right{padding:60px 56px;display:flex;flex-direction:column;justify-content:space-between;}
+.t-b .cat{display:inline-block;font-size:14px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.12);padding:6px 14px;border-radius:20px;letter-spacing:.05em;margin-bottom:18px;width:fit-content;}
+.t-b .nm{font-size:54px;font-weight:900;letter-spacing:-.02em;margin-bottom:16px;color:#1a0d05;line-height:1.15;}
+.t-b .tg{font-size:21px;font-weight:500;color:var(--text2);line-height:1.55;margin-bottom:24px;}
+.t-b .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;}
+.t-b .pill{font-size:14px;font-weight:700;color:var(--text2);background:var(--cream2);border:1px solid var(--wire2);padding:6px 14px;border-radius:8px;}
+.t-b .stats{display:flex;gap:24px;font-size:14px;color:var(--text3);font-weight:600;border-top:1px solid var(--wire2);padding-top:18px;}
+.t-b .stats b{color:var(--text);font-size:18px;font-weight:800;}
+.t-b .br{position:absolute;bottom:24px;right:32px;font-size:14px;font-weight:800;letter-spacing:.15em;color:var(--peach-dark);}
+.t-b .br span{font-weight:500;color:var(--text3);}
+
+/* ─────────────────── C: chat preview frame ────────────────── */
+.t-c{
+  background:linear-gradient(180deg,#fff 0%,#fef3e7 100%);position:relative;
+  display:flex;align-items:center;padding:80px;
+  font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--text);overflow:hidden;
+}
+.t-c::after{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,.12),transparent 70%);right:-200px;top:-200px;}
+.t-c .left{flex-shrink:0;width:380px;}
+.t-c .av-card{width:200px;height:200px;border-radius:36px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;font-size:120px;box-shadow:0 16px 40px rgba(251,146,60,.35);}
+.t-c .nm{font-size:46px;font-weight:900;color:#1a0d05;margin:24px 0 8px;letter-spacing:-.02em;line-height:1.1;}
+.t-c .creator{font-size:18px;font-weight:600;color:var(--text3);}
+.t-c .right{flex:1;margin-left:60px;display:flex;flex-direction:column;gap:14px;position:relative;z-index:1;}
+.t-c .bub{padding:18px 24px;border-radius:18px;font-size:18px;line-height:1.5;max-width:600px;}
+.t-c .bub.u{background:rgba(251,146,60,.15);align-self:flex-end;border:1px solid rgba(251,146,60,.25);color:var(--text);}
+.t-c .bub.a{background:#fff;border:1px solid var(--wire2);color:var(--text);box-shadow:0 4px 16px rgba(180,120,80,.06);}
+.t-c .bub.a .av{font-size:18px;margin-right:8px;}
+.t-c .br{position:absolute;bottom:30px;left:80px;font-size:15px;font-weight:800;letter-spacing:.16em;color:var(--peach-dark);}
+.t-c .br span{font-weight:500;color:var(--text3);}
+.t-c .cta{position:absolute;bottom:30px;right:80px;font-size:15px;font-weight:800;color:#fff;background:var(--peach-dark);padding:10px 22px;border-radius:10px;letter-spacing:.05em;}
+
+/* ─────────────────── D: magazine cover ────────────────────── */
+.t-d{
+  background:#0d0d0f;color:#fff;position:relative;overflow:hidden;
+  padding:80px;display:flex;flex-direction:column;justify-content:space-between;
+  font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;
+}
+.t-d::after{content:'AGENT';position:absolute;font-size:560px;font-weight:900;color:rgba(251,146,60,.06);top:-180px;right:-60px;letter-spacing:-.04em;}
+.t-d .top{display:flex;align-items:center;gap:16px;position:relative;z-index:1;}
+.t-d .top .num{font-size:14px;color:var(--peach);letter-spacing:.3em;font-weight:800;}
+.t-d .top .num::before{content:'';display:inline-block;width:48px;height:2px;background:var(--peach);vertical-align:middle;margin-right:14px;}
+.t-d .top .br{margin-left:auto;font-size:14px;color:rgba(255,255,255,.55);font-weight:700;letter-spacing:.18em;}
+.t-d .body{position:relative;z-index:1;display:flex;align-items:flex-end;gap:40px;}
+.t-d .body .av{font-size:240px;line-height:1;flex-shrink:0;filter:drop-shadow(0 12px 28px rgba(251,146,60,.4));}
+.t-d .body .info{flex:1;}
+.t-d .body .cat{font-size:18px;color:var(--peach);font-weight:800;letter-spacing:.16em;margin-bottom:8px;text-transform:uppercase;}
+.t-d .body .nm{font-size:80px;font-weight:900;letter-spacing:-.03em;line-height:1.02;margin-bottom:18px;}
+.t-d .body .tg{font-size:22px;color:rgba(255,255,255,.7);line-height:1.5;max-width:780px;}
+.t-d .foot{display:flex;align-items:center;justify-content:space-between;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);position:relative;z-index:1;}
+.t-d .foot .creator{font-size:16px;color:rgba(255,255,255,.7);font-weight:600;}
+.t-d .foot .stat{display:flex;gap:28px;font-size:14px;color:rgba(255,255,255,.5);font-weight:700;}
+.t-d .foot .stat b{color:#fff;font-size:18px;}
+
+/* ─────────────────── E: sticker / playful ─────────────────── */
+.t-e{
+  background:radial-gradient(circle at 30% 20%, #ffedd5, #fed7aa 60%, #fb923c 130%);
+  position:relative;overflow:hidden;padding:60px;
+  font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--text);
+}
+.t-e .deco{position:absolute;border-radius:50%;}
+.t-e .d1{width:240px;height:240px;background:rgba(255,255,255,.25);top:-80px;left:-60px;}
+.t-e .d2{width:160px;height:160px;background:rgba(255,255,255,.3);bottom:60px;right:80px;}
+.t-e .d3{width:100px;height:100px;background:rgba(234,88,12,.2);top:100px;right:300px;}
+.t-e .d4{width:60px;height:60px;background:rgba(251,146,60,.4);bottom:140px;left:160px;}
+.t-e .sticker{position:absolute;top:50%;left:90px;transform:translateY(-50%) rotate(-8deg);width:280px;height:280px;background:#fff;border-radius:48px;box-shadow:0 20px 50px rgba(180,80,40,.25);display:flex;align-items:center;justify-content:center;font-size:170px;border:6px solid #fff;}
+.t-e .info{position:absolute;left:430px;top:50%;transform:translateY(-50%);max-width:680px;}
+.t-e .tag{display:inline-block;background:#fff;color:var(--peach-dark);padding:6px 16px;border-radius:24px;font-size:14px;font-weight:800;letter-spacing:.06em;margin-bottom:18px;box-shadow:0 4px 12px rgba(180,80,40,.15);}
+.t-e .nm{font-size:62px;font-weight:900;letter-spacing:-.02em;line-height:1.05;color:#1a0d05;margin-bottom:14px;}
+.t-e .tg{font-size:22px;color:var(--text2);line-height:1.55;font-weight:600;margin-bottom:22px;}
+.t-e .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;}
+.t-e .pill{background:#fff;color:var(--text2);padding:7px 14px;border-radius:14px;font-size:13px;font-weight:700;box-shadow:0 2px 6px rgba(180,80,40,.1);}
+.t-e .br{position:absolute;bottom:32px;right:48px;font-size:16px;font-weight:800;color:var(--peach-dark);letter-spacing:.18em;background:#fff;padding:8px 18px;border-radius:18px;box-shadow:0 4px 12px rgba(180,80,40,.15);}
+
+/* ─────────────────── F: review featured ───────────────────── */
+.t-f{
+  background:linear-gradient(135deg,#fef3e7,#fff);padding:70px;position:relative;overflow:hidden;
+  font-family:'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--text);
+  display:flex;flex-direction:column;gap:36px;
+}
+.t-f::after{content:'"';position:absolute;font-size:600px;color:rgba(251,146,60,.07);font-family:Georgia,serif;left:-20px;top:-180px;line-height:1;font-weight:900;}
+.t-f .head{display:flex;align-items:center;gap:24px;position:relative;z-index:1;}
+.t-f .head .av{width:120px;height:120px;border-radius:28px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;font-size:64px;box-shadow:0 10px 24px rgba(251,146,60,.3);}
+.t-f .head .info{flex:1;}
+.t-f .head .nm{font-size:42px;font-weight:900;color:#1a0d05;letter-spacing:-.02em;margin-bottom:6px;line-height:1.1;}
+.t-f .head .creator{font-size:16px;color:var(--text3);font-weight:600;}
+.t-f .stars{font-size:28px;color:#f59e0b;font-weight:800;display:flex;align-items:center;gap:6px;}
+.t-f .stars .num{color:var(--text);font-size:20px;font-weight:800;}
+.t-f .review{position:relative;z-index:1;background:#fff;border:1px solid var(--wire2);border-radius:18px;padding:32px 40px;box-shadow:0 8px 24px rgba(180,120,80,.06);}
+.t-f .review .text{font-size:24px;line-height:1.6;color:var(--text);font-weight:600;margin-bottom:18px;}
+.t-f .review .by{font-size:14px;color:var(--text3);font-weight:700;}
+.t-f .foot{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;margin-top:auto;}
+.t-f .foot .br{font-size:16px;font-weight:800;color:var(--peach-dark);letter-spacing:.18em;}
+.t-f .foot .br span{color:var(--text3);font-weight:500;letter-spacing:.05em;}
+.t-f .foot .stat{font-size:14px;color:var(--text3);font-weight:700;}
+.t-f .foot .stat b{color:var(--text);font-size:18px;font-weight:800;}
+
+/* ─────────────────── G: stat hero (big number) ────────────── */
+.t-g{
+  background:#fffbf5;color:var(--text);position:relative;overflow:hidden;
+  display:grid;grid-template-columns:1.05fr 1fr;
+  font-family:'Hiragino Sans','Noto Sans JP',sans-serif;
+}
+.t-g .left{padding:80px 50px 80px 80px;display:flex;flex-direction:column;justify-content:center;}
+.t-g .left .head{display:flex;align-items:center;gap:18px;margin-bottom:28px;}
+.t-g .left .head .av{width:88px;height:88px;border-radius:22px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;font-size:48px;flex-shrink:0;box-shadow:0 8px 20px rgba(251,146,60,.3);}
+.t-g .left .head .nm{font-size:34px;font-weight:900;color:#1a0d05;letter-spacing:-.02em;line-height:1.15;}
+.t-g .left .head .creator{font-size:14px;color:var(--text3);font-weight:600;margin-top:4px;}
+.t-g .left .tg{font-size:18px;color:var(--text2);line-height:1.6;font-weight:600;margin-bottom:24px;}
+.t-g .left .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:30px;}
+.t-g .left .pill{background:rgba(251,146,60,.1);color:var(--peach-dark);padding:5px 12px;border-radius:8px;font-size:12.5px;font-weight:800;}
+.t-g .left .br{font-size:13px;font-weight:800;color:var(--peach-dark);letter-spacing:.2em;}
+.t-g .right{background:linear-gradient(135deg,var(--peach) 0%,var(--peach-dark) 110%);color:#fff;padding:60px 70px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+.t-g .right::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.08);bottom:-100px;right:-100px;}
+.t-g .right .lbl{font-size:13px;font-weight:800;letter-spacing:.2em;color:rgba(255,255,255,.7);margin-bottom:12px;text-transform:uppercase;}
+.t-g .right .num{font-size:140px;font-weight:900;letter-spacing:-.05em;line-height:1;font-feature-settings:'tnum';position:relative;z-index:1;}
+.t-g .right .unit{font-size:36px;font-weight:700;margin-left:8px;color:rgba(255,255,255,.85);}
+.t-g .right .sub{font-size:16px;color:rgba(255,255,255,.85);margin-top:18px;line-height:1.6;font-weight:600;position:relative;z-index:1;}
+.t-g .right .stars{font-size:22px;color:#ffe082;margin-top:30px;font-weight:800;}
+
+/* ─────────────────── H: dark tech mode ────────────────────── */
+.t-h{
+  background:radial-gradient(ellipse at top right,#1f1f24 0%,#0a0a0e 60%);color:#fff;
+  position:relative;overflow:hidden;padding:80px;
+  font-family:'Hiragino Sans','Noto Sans JP','SF Mono',Menlo,monospace;
+}
+.t-h .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(251,146,60,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(251,146,60,.06) 1px,transparent 1px);background-size:48px 48px;}
+.t-h .glow{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,.25),transparent 70%);right:-160px;top:-160px;filter:blur(40px);}
+.t-h .top{position:relative;z-index:1;display:flex;align-items:center;gap:14px;font-size:13px;color:rgba(255,255,255,.6);font-weight:700;letter-spacing:.16em;margin-bottom:50px;}
+.t-h .top .dot{width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 12px #10b981;}
+.t-h .body{position:relative;z-index:1;display:flex;align-items:center;gap:40px;}
+.t-h .av-box{width:200px;height:200px;border-radius:24px;background:linear-gradient(135deg,rgba(251,146,60,.15),rgba(251,146,60,.05));border:1px solid rgba(251,146,60,.3);display:flex;align-items:center;justify-content:center;font-size:120px;flex-shrink:0;backdrop-filter:blur(8px);}
+.t-h .info{flex:1;}
+.t-h .info .ns{font-size:14px;color:var(--peach);font-weight:800;letter-spacing:.2em;margin-bottom:10px;text-transform:uppercase;}
+.t-h .info .nm{font-size:64px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin-bottom:18px;font-family:'Hiragino Sans','Noto Sans JP',sans-serif;}
+.t-h .info .tg{font-size:20px;color:rgba(255,255,255,.65);line-height:1.55;font-weight:500;font-family:'Hiragino Sans','Noto Sans JP',sans-serif;max-width:720px;}
+.t-h .foot{position:absolute;bottom:50px;left:80px;right:80px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:.1em;}
+.t-h .foot .br{color:var(--peach);letter-spacing:.2em;}
+.t-h .foot .meta{font-feature-settings:'tnum';}
+.t-h .foot .meta b{color:#fff;font-size:16px;}
+
+/* ─────────────────── I: gradient minimal (Vercel-ish) ─────── */
+.t-i{
+  background:#fff;color:#000;position:relative;overflow:hidden;padding:90px;
+  font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.t-i::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#fff 0%,#fff 50%,#fff7ed 75%,#fed7aa 100%);}
+.t-i .head{position:relative;z-index:1;display:flex;align-items:center;gap:16px;}
+.t-i .head .logo{font-size:24px;font-weight:900;letter-spacing:.08em;}
+.t-i .head .div{width:1px;height:24px;background:rgba(0,0,0,.15);}
+.t-i .head .creator{font-size:16px;color:#666;font-weight:700;}
+.t-i .body{position:relative;z-index:1;}
+.t-i .body .cat{font-size:14px;color:var(--peach-dark);font-weight:800;letter-spacing:.18em;margin-bottom:16px;text-transform:uppercase;}
+.t-i .body .row{display:flex;align-items:center;gap:24px;margin-bottom:24px;}
+.t-i .body .av{font-size:88px;line-height:1;flex-shrink:0;}
+.t-i .body .nm{font-size:78px;font-weight:900;letter-spacing:-.04em;line-height:1;}
+.t-i .body .tg{font-size:24px;color:#444;line-height:1.5;font-weight:500;max-width:920px;}
+.t-i .foot{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding-top:22px;border-top:1px solid rgba(0,0,0,.08);}
+.t-i .foot .l{display:flex;gap:24px;font-size:14px;color:#666;font-weight:700;}
+.t-i .foot .l b{color:#000;font-size:18px;font-weight:900;}
+.t-i .foot .cta{font-size:14px;font-weight:800;color:#fff;background:#000;padding:10px 20px;border-radius:10px;letter-spacing:.06em;}
+</style>
+</head>
+<body>
+
+<h1>🍑 MY AI AGENT — SNS シェアサムネイル モック</h1>
+<div class="sub">出店したエージェントを Twitter/X・Slack・LINE に貼ったとき表示される OG image。1200×630px（OG 標準）</div>
+
+<div class="platform">
+  <div class="platform-info">
+    <b>用途</b><br>
+    Twitter/X カード · Open Graph 画像 · LINE/Slack/Discord プレビュー · LP の埋め込み画像。<br>
+    ユーザーが <code>/listing/abc-123</code> をコピペして貼ると、自動でこの画像が表示される。
+  </div>
+</div>
+
+<!-- A -->
+<h2>A. ヒーロー型（シンプル・大きい絵文字）</h2>
+<div class="frame scaler"><div class="thumb t-a">
+  <div class="av">📞</div>
+  <div class="nm">営業フォローアップ AI Agent</div>
+  <div class="tg">商談後の追客メールを 30 秒で生成。<br>BtoB / BtoC 両対応・敬語自動調整</div>
+  <div class="br">🍑 MY AI AGENT <span>· @takeuchi_kouta</span></div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: 絵文字を大きく見せて目を引く。タイトル + キャッチで直球。情報少なめだが、瞬間の印象は最強。</div>
+
+<!-- B -->
+<h2>B. インフォリッチ型（カテゴリ + スキル + 統計）</h2>
+<div class="frame scaler"><div class="thumb t-b">
+  <div class="left">
+    <div class="av">📞</div>
+    <div class="creator">@takeuchi_kouta</div>
+  </div>
+  <div class="right">
+    <div>
+      <span class="cat">セールス</span>
+      <div class="nm">営業フォローアップ AI Agent</div>
+      <div class="tg">商談後のフォローアップメールを自動生成。CRM 連携不要、テキストを貼るだけで適切な追客文面を作ります。</div>
+      <div class="pills"><span class="pill">セールス</span><span class="pill">ライティング</span><span class="pill">🌐 Chrome 連携</span></div>
+    </div>
+    <div class="stats">
+      <span>★ <b>4.7</b></span>
+      <span>利用 <b>284</b> 回</span>
+      <span>クリエイター <b>@takeuchi_kouta</b></span>
+    </div>
+  </div>
+  <div class="br">🍑 MY AI AGENT</div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: 情報量が多く、スクロール途中でも目立つ。スキルピル + 評価 + 利用回数で社会的証明。Twitter で他のエージェントと並んだ時の差別化が強い。</div>
+
+<!-- C -->
+<h2>C. プレビュー型（実会話イメージ）</h2>
+<div class="frame scaler"><div class="thumb t-c">
+  <div class="left">
+    <div class="av-card">📞</div>
+    <div class="nm">営業フォローアップ AI Agent</div>
+    <div class="creator">by @takeuchi_kouta</div>
+  </div>
+  <div class="right">
+    <div class="bub u">先週商談した株式会社○○に追加提案メールを書いて</div>
+    <div class="bub a">承知しました。先方の検討状況に合わせて、強引にならない3パターンの追客メールを作成します...</div>
+    <div class="bub u">3 つ目を、もう少しカジュアルに</div>
+  </div>
+  <div class="br">🍑 MY AI AGENT</div>
+  <div class="cta">使ってみる →</div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: 実際にどう使えるかが一目で分かる。「使ってみる」CTA で行動を促す。会話例が良ければクリック率最大。ただしテキスト多めなので小サイズで読みづらいリスクあり。</div>
+
+<!-- D -->
+<h2>D. 雑誌カバー型（黒地 + 巨大タイポ）</h2>
+<div class="frame scaler"><div class="thumb t-d">
+  <div class="top">
+    <div class="num">No. 042 — MARKETPLACE FEATURE</div>
+    <div class="br">🍑 MY AI AGENT</div>
+  </div>
+  <div class="body">
+    <div class="av">📞</div>
+    <div class="info">
+      <div class="cat">SALES</div>
+      <div class="nm">営業フォローアップ AI Agent</div>
+      <div class="tg">商談後の追客メールを 30 秒で生成。CRM 不要。</div>
+    </div>
+  </div>
+  <div class="foot">
+    <div class="creator">by @takeuchi_kouta</div>
+    <div class="stat"><span>★ <b>4.7</b></span><span>USES <b>284</b></span></div>
+  </div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: 黒背景 + ピーチアクセントで Twitter フィードで埋もれない。雑誌風の番号 (No. 042) がブランド感。タイポを大胆に使うので「読み物」としての存在感が強い。Tech系メディアっぽい雰囲気。</div>
+
+<!-- E -->
+<h2>E. ステッカー型（ポップ・遊び心）</h2>
+<div class="frame scaler"><div class="thumb t-e">
+  <div class="deco d1"></div><div class="deco d2"></div><div class="deco d3"></div><div class="deco d4"></div>
+  <div class="sticker">📞</div>
+  <div class="info">
+    <div class="tag">セールス · プロフェッショナル</div>
+    <div class="nm">営業フォローアップ AI Agent</div>
+    <div class="tg">商談後の追客メールを 30 秒で生成<br>BtoB / BtoC 両対応・敬語自動調整</div>
+    <div class="pills"><span class="pill">⭐ 4.7</span><span class="pill">利用 284 回</span><span class="pill">🌐 Chrome 連携</span></div>
+  </div>
+  <div class="br">🍑 MY AI AGENT</div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: パステル + 円形装飾でカジュアル・親しみやすい。アバター emoji を「ステッカー風」に大きく配置。BtoC 寄り、Instagram 映え。一般消費者向けにエージェントを推すならこれ。</div>
+
+<!-- F -->
+<h2>F. レビュー前面型（社会的証明）</h2>
+<div class="frame scaler"><div class="thumb t-f">
+  <div class="head">
+    <div class="av">📞</div>
+    <div class="info">
+      <div class="nm">営業フォローアップ AI Agent</div>
+      <div class="creator">by @takeuchi_kouta</div>
+    </div>
+    <div class="stars">★★★★★ <span class="num">4.7 (52)</span></div>
+  </div>
+  <div class="review">
+    <div class="text">「商談後 30 分以内に追客メールが書けるようになった。<br>3 人の営業チームで月 60 時間の節約になってる」</div>
+    <div class="by">— SaaS 営業マネージャー · @kanade_b2b</div>
+  </div>
+  <div class="foot">
+    <div class="br">🍑 MY AI AGENT <span>· マーケットプレイス</span></div>
+    <div class="stat">利用 <b>284</b> 回</div>
+  </div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: 実ユーザーレビューを前面に置く。星 + 人数 + 具体エピソードで信頼性最強。BtoB 寄り、業務ツールっぽい正攻法。Twitter で「効果」を語りたい時はこれ。</div>
+
+<!-- G -->
+<h2>G. 数字ヒーロー型（インパクト数値）</h2>
+<div class="frame scaler"><div class="thumb t-g">
+  <div class="left">
+    <div class="head">
+      <div class="av">📞</div>
+      <div>
+        <div class="nm">営業フォローアップ AI Agent</div>
+        <div class="creator">by @takeuchi_kouta · セールス</div>
+      </div>
+    </div>
+    <div class="tg">商談後の追客メールを 30 秒で生成。<br>CRM 連携不要、テキストを貼るだけで適切な追客文面を作ります。</div>
+    <div class="pills"><span class="pill">SALES</span><span class="pill">WRITING</span><span class="pill">CHROME</span></div>
+    <div class="br">🍑 MY AI AGENT — マーケットプレイス</div>
+  </div>
+  <div class="right">
+    <div class="lbl">月間利用回数</div>
+    <div class="num">284<span class="unit">回</span></div>
+    <div class="sub">52 名のチームで使われている、<br>実績のあるエージェント</div>
+    <div class="stars">★★★★★ 4.7</div>
+  </div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: 右側の巨大数字でスクロール中の目を奪う。「284回」「52名」みたいな具体数値が信頼の鍵。Notion / Linear などモダン SaaS のキャンペーン素材っぽい。BtoB 強い。</div>
+
+<!-- H -->
+<h2>H. ダーク技術型（Tech / Dev 寄り）</h2>
+<div class="frame scaler"><div class="thumb t-h">
+  <div class="grid"></div>
+  <div class="glow"></div>
+  <div class="top">
+    <span class="dot"></span> AGENT.LIVE — ID: ls_a3f9-2bd1-c4e7
+    <span style="margin-left:auto;color:var(--peach)">v 1.2.0</span>
+  </div>
+  <div class="body">
+    <div class="av-box">📞</div>
+    <div class="info">
+      <div class="ns">[ SALES / B2B ]</div>
+      <div class="nm">営業フォローアップ AI Agent</div>
+      <div class="tg">Anthropic Claude × Playwright の組み合わせで、商談メモから最適な追客文面を生成。Chrome 連携で送信先 LinkedIn の公開情報も参照。</div>
+    </div>
+  </div>
+  <div class="foot">
+    <div class="br">🍑 MY AI AGENT</div>
+    <div class="meta">@takeuchi_kouta &nbsp;·&nbsp; <b>284</b> uses &nbsp;·&nbsp; <b>4.7</b>★ &nbsp;·&nbsp; 10% rev share</div>
+  </div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: グリッド背景 + 緑 LED + バージョン番号でハッカー / Dev ツール感。エンジニア界隈でシェアされやすい。Vercel / GitHub / Linear のリリース告知トーン。BtoD（開発者向け）に強い。</div>
+
+<!-- I -->
+<h2>I. グラデミニマル型（Vercel / Linear 系）</h2>
+<div class="frame scaler"><div class="thumb t-i">
+  <div class="head">
+    <div class="logo">🍑 MY AI AGENT</div>
+    <div class="div"></div>
+    <div class="creator">@takeuchi_kouta</div>
+  </div>
+  <div class="body">
+    <div class="cat">セールス · MARKETPLACE</div>
+    <div class="row">
+      <div class="av">📞</div>
+      <div class="nm">営業フォローアップ AI Agent</div>
+    </div>
+    <div class="tg">商談後の追客メールを 30 秒で生成。BtoB / BtoC 両対応、敬語の調整も自動で。</div>
+  </div>
+  <div class="foot">
+    <div class="l">
+      <span>★ <b>4.7</b></span>
+      <span>利用 <b>284</b></span>
+      <span>クリエイター <b>@takeuchi_kouta</b></span>
+    </div>
+    <div class="cta">使ってみる →</div>
+  </div>
+</div></div>
+<div class="size">1200 × 630px</div>
+<div class="note">特徴: 白基調 + 隅にだけグラデーション + 強い活字。モダン SaaS のド定番。Vercel / Linear / Stripe が好む様式。MY AI AGENT が「ちゃんとしたサービス」という雰囲気を出す。汎用性最強。</div>
+
+<h2 style="color:#fff;background:rgba(251,146,60,.2);padding:14px 18px;border-radius:8px;border-left:4px solid var(--peach);margin-top:48px">9 案 まとめ</h2>
+<div class="note" style="font-size:14px;color:#ccc;line-height:1.85">
+  <table style="border-collapse:collapse;width:100%;margin-top:8px">
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff;width:80px">A ヒーロー</td><td style="padding:8px 12px">シンプル・印象重視。LP 用 OG。万人向け、無難</td></tr>
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff">B インフォリッチ</td><td style="padding:8px 12px"><span style="color:var(--peach-light)">王道。情報量と社会的証明バランス◎</span></td></tr>
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff">C プレビュー</td><td style="padding:8px 12px">会話例で誘導。読みづらいリスク</td></tr>
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff">D 雑誌カバー</td><td style="padding:8px 12px">黒地 + 大胆タイポ。Tech メディア感</td></tr>
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff">E ステッカー</td><td style="padding:8px 12px">ポップで親しみ。BtoC / Instagram 向き</td></tr>
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff">F レビュー</td><td style="padding:8px 12px">社会的証明前面。BtoB 強い</td></tr>
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff">G 数字ヒーロー</td><td style="padding:8px 12px">巨大数値で目を奪う。実績アピール</td></tr>
+    <tr style="border-bottom:1px solid #333"><td style="padding:8px 4px;font-weight:800;color:#fff">H ダーク技術</td><td style="padding:8px 12px">Dev 系。エンジニア界隈でシェア向き</td></tr>
+    <tr><td style="padding:8px 4px;font-weight:800;color:#fff">I ミニマル</td><td style="padding:8px 12px"><span style="color:var(--peach-light)">Vercel/Linear 風。「ちゃんとしたサービス」感</span></td></tr>
+  </table>
+  <br>
+  <div style="background:rgba(255,255,255,.05);padding:14px 16px;border-radius:8px;margin-top:14px">
+    <b style="color:#fff">俺の推し:</b> 一番手は <b style="color:var(--peach-light)">B</b>（情報量と差別化）、次点 <b style="color:var(--peach-light)">I</b>（モダン SaaS 感）か <b style="color:var(--peach-light)">D</b>（インパクト重視）。<br>
+    迷うなら：<b>BtoB 強めなら F or G</b> / <b>BtoC や個人クリエイター なら A or E</b> / <b>Dev / SaaS 寄せなら H or I</b>。
+  </div>
+</div>
+
+</body>
+</html>

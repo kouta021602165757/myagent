@@ -657,8 +657,77 @@ function _wrapText(s, maxChars, maxLines){
   return out;
 }
 
-/** Render Pattern E thumbnail (1200×630) as SVG. */
-function renderListingOgSvg(d){
+// Lazy-load @resvg/resvg-js so the server still boots if the optional
+// native binding is missing on the host. Falls back to SVG-only mode.
+let _resvg = null, _resvgFailed = false;
+function _loadResvg(){
+  if(_resvg || _resvgFailed) return _resvg;
+  try{ _resvg = require('@resvg/resvg-js'); return _resvg; }
+  catch(e){ _resvgFailed = true; console.warn('[og] resvg unavailable:', e.message); return null; }
+}
+
+// Twemoji cache for emoji rendering (Linux servers usually lack color emoji fonts).
+// We fetch the Twemoji SVG once per emoji and embed it in the OG SVG.
+const _twemojiCache = new Map();
+const _TWEMOJI_VER = '15.1.0';
+function _emojiCodepoints(emoji){
+  const cps = [];
+  for(const ch of emoji){
+    const cp = ch.codePointAt(0);
+    // Skip variation selector U+FE0F (twemoji file names omit it)
+    if(cp !== 0xFE0F) cps.push(cp.toString(16));
+  }
+  return cps.join('-');
+}
+function _getTwemojiSvg(emoji){
+  if(_twemojiCache.has(emoji)) return Promise.resolve(_twemojiCache.get(emoji));
+  const codepoints = _emojiCodepoints(emoji);
+  if(!codepoints || codepoints.length < 2) return Promise.resolve(null);
+  const reqPath = '/gh/jdecked/twemoji@'+_TWEMOJI_VER+'/assets/svg/' + codepoints + '.svg';
+  return new Promise((resolve)=>{
+    const req = https.get({hostname:'cdn.jsdelivr.net', path:reqPath, headers:{'User-Agent':'myagent-og/1.0'}}, (r)=>{
+      if(r.statusCode !== 200){ _twemojiCache.set(emoji, null); resolve(null); return; }
+      let buf = '';
+      r.on('data', c=>buf+=c);
+      r.on('end', ()=>{
+        _twemojiCache.set(emoji, buf);
+        resolve(buf);
+      });
+    });
+    req.on('error', ()=>{ _twemojiCache.set(emoji, null); resolve(null); });
+    req.setTimeout(2500, ()=>{ try{req.destroy();}catch(e){} _twemojiCache.set(emoji, null); resolve(null); });
+  });
+}
+function _twemojiDataUri(svgString){
+  // Strip the XML declaration if present, then base64-encode for safe embedding
+  const cleaned = String(svgString||'').replace(/<\?xml[^?]*\?>/,'').trim();
+  return 'data:image/svg+xml;base64,' + Buffer.from(cleaned,'utf8').toString('base64');
+}
+
+/** Convert an SVG string to a PNG Buffer. Returns null if resvg is unavailable. */
+function svgToPng(svg, opts){
+  const r = _loadResvg();
+  if(!r) return null;
+  try{
+    const resvg = new r.Resvg(svg, {
+      fitTo: { mode: 'width', value: (opts && opts.width) || 1200 },
+      background: '#fdf8f3',
+      font: {
+        loadSystemFonts: true,
+        defaultFontFamily: 'Noto Sans CJK JP',
+        // Fonts on most Linux distros include CJK, but emoji needs Noto Color Emoji.
+        // If the host is missing it, emoji glyphs render as tofu — still acceptable.
+      },
+    });
+    return resvg.render().asPng();
+  }catch(e){
+    console.warn('[og] svg→png failed:', e.message);
+    return null;
+  }
+}
+
+/** Render Pattern E thumbnail (1200×630) as SVG. Pass `twemojiUri` (optional) to embed an emoji image. */
+function renderListingOgSvg(d, twemojiUri){
   const av = d.agent?.avatar || '🤖';
   const title = _trunc(d.title||'', 30);
   const tagLines = _wrapText(d.description||'', 26, 2);
@@ -698,7 +767,9 @@ function renderListingOgSvg(d){
   <!-- sticker (white rounded square with emoji), tilted -8deg -->
   <g transform="translate(170 315) rotate(-8)">
     <rect x="-160" y="-160" width="320" height="320" rx="56" ry="56" fill="#fff" stroke="#fff" stroke-width="8" filter="url(#shadow)"/>
-    <text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="200">${_xmlEscape(av)}</text>
+    ${twemojiUri
+      ? `<image x="-130" y="-130" width="260" height="260" href="${twemojiUri}" preserveAspectRatio="xMidYMid meet"/>`
+      : `<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="200">${_xmlEscape(av)}</text>`}
   </g>
 
   <!-- info column, right of sticker -->
@@ -752,7 +823,9 @@ async function serveListingPage(res, listingId){
       return res.end('<h1>Listing not found</h1><a href="/">Home</a>');
     }
     const d = publicListing(found.user, found.agent);
-    const ogUrl = APP_URL + '/api/og/' + listingId + '.svg';
+    // PNG for OG / Twitter (raster required). SVG variant available for inline preview.
+    const ogPngUrl = APP_URL + '/api/og/' + listingId + '.png';
+    const ogSvgUrl = APP_URL + '/api/og/' + listingId + '.svg';
     const pageUrl = APP_URL + '/l/' + listingId;
     const titleH = _xmlEscape(d.title||'AI Agent');
     const descH = _xmlEscape(_trunc(d.description||'', 160));
@@ -775,16 +848,18 @@ async function serveListingPage(res, listingId){
 <meta property="og:url" content="${pageUrl}">
 <meta property="og:title" content="${titleH}">
 <meta property="og:description" content="${descH}">
-<meta property="og:image" content="${ogUrl}">
-<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image" content="${ogPngUrl}">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${titleH}">
 <meta property="og:site_name" content="MY AI AGENT">
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${titleH}">
 <meta name="twitter:description" content="${descH}">
-<meta name="twitter:image" content="${ogUrl}">
+<meta name="twitter:image" content="${ogPngUrl}">
+<meta name="twitter:image:alt" content="${titleH}">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;background:#fdf8f3;color:#2d1a0e;min-height:100vh;}
@@ -821,7 +896,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
 <body>
 <div class="wrap">
   <a href="/" class="brand">🍑 MY AI AGENT</a>
-  <div class="thumb"><img src="${ogUrl}" alt="${titleH}"></div>
+  <div class="thumb"><img src="${ogSvgUrl}" alt="${titleH}"></div>
   <div class="head">
     <div class="av">${av}</div>
     <div class="info">
@@ -1138,7 +1213,7 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── GET /api/og/:listing_id.svg ────────────────────────────
-  // Public: Pattern E thumbnail for SNS / OG. Cacheable.
+  // Public: Pattern E thumbnail for SNS / OG (SVG variant). Cacheable.
   const ogm = pathname.match(/^\/api\/og\/(ls_[a-z0-9_-]+)\.svg$/);
   if(ogm && method==='GET'){
     const found = await findAgentByListingId(ogm[1]);
@@ -1147,13 +1222,48 @@ async function handleAPI(req,res,pathname,method,ip){
       return res.end('Listing not found');
     }
     const detail = publicListing(found.user, found.agent);
+    // Inline browsers/clients render emoji natively — skip Twemoji fetch for SVG variant
     const svg = renderListingOgSvg(detail);
     res.writeHead(200, {
       'Content-Type':'image/svg+xml; charset=utf-8',
-      'Cache-Control':'public, max-age=300',                // 5min cache
+      'Cache-Control':'public, max-age=300',
       'Access-Control-Allow-Origin':'*',
     });
     res.end(svg);
+    return;
+  }
+
+  // ── GET /api/og/:listing_id.png ────────────────────────────
+  // Public: PNG variant for Twitter / Facebook (raster-only platforms).
+  // Embeds Twemoji SVG so the avatar emoji renders even on Linux hosts
+  // that lack a color emoji font. Falls back to SVG redirect if resvg fails.
+  const ogmPng = pathname.match(/^\/api\/og\/(ls_[a-z0-9_-]+)\.png$/);
+  if(ogmPng && method==='GET'){
+    const found = await findAgentByListingId(ogmPng[1]);
+    if(!found || !found.agent.marketplace.is_listed){
+      res.writeHead(404,{'Content-Type':'text/plain'});
+      return res.end('Listing not found');
+    }
+    const detail = publicListing(found.user, found.agent);
+    let twemojiUri = null;
+    try{
+      const av = detail.agent?.avatar || '🤖';
+      const tw = await _getTwemojiSvg(av);
+      if(tw) twemojiUri = _twemojiDataUri(tw);
+    }catch(e){ /* ignore — fall back to text emoji */ }
+    const svg = renderListingOgSvg(detail, twemojiUri);
+    const png = svgToPng(svg);
+    if(!png){
+      res.writeHead(302, {Location:'/api/og/'+ogmPng[1]+'.svg'});
+      return res.end();
+    }
+    res.writeHead(200, {
+      'Content-Type':'image/png',
+      'Cache-Control':'public, max-age=86400',              // 24h — PNG generation is expensive
+      'Access-Control-Allow-Origin':'*',
+      'Content-Length': png.length,
+    });
+    res.end(png);
     return;
   }
 

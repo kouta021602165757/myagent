@@ -417,6 +417,140 @@ input,textarea{font-family:var(--sans);}
 }
 .modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .modal-ti{font-family:var(--display);font-size:24px;letter-spacing:.02em;}
+
+/* ══════════════════════════════════════
+   BILLING MODAL (new design)
+══════════════════════════════════════ */
+.charge-modal.bs-modal{
+  max-width:520px;padding:0;background:var(--cream);color:var(--text);
+  box-shadow:0 24px 60px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.04);
+  overflow:hidden;
+}
+.bs-hd{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:18px 22px;border-bottom:1px solid var(--wire2);background:var(--cream2);
+  margin:0;
+}
+.bs-ti{font-size:18px;font-weight:800;color:var(--text);letter-spacing:.01em;flex:1;text-align:center;}
+.bs-back{
+  display:flex;align-items:center;gap:6px;background:none;border:0;padding:6px 8px;
+  border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;
+}
+.bs-back:hover{background:var(--cream3);color:var(--text);}
+.bs-x{
+  width:32px;height:32px;border-radius:9px;background:var(--cream3);border:1px solid var(--wire2);
+  color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.bs-x:hover{background:var(--cream4);color:var(--text);}
+.bs-body{padding:22px;color:var(--text);}
+
+/* tabs */
+.bs-tabs{display:flex;gap:4px;background:var(--cream3);padding:4px;border-radius:12px;margin-bottom:20px;}
+.bs-tab{
+  flex:1;padding:11px 14px;border:0;background:transparent;border-radius:9px;
+  font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit;
+  transition:all .15s;
+}
+.bs-tab:hover{color:var(--text);}
+.bs-tab.active{background:var(--cream);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.06);}
+
+/* current plan / balance banner */
+.bs-curplan{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);
+  border-radius:11px;margin-bottom:18px;
+}
+.bs-curplan .bs-cur-lbl{font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.bs-curplan .bs-cur-val{font-size:15px;color:var(--peach-dark);font-weight:800;margin-top:2px;}
+.bs-curplan .bs-cur-badge{
+  font-size:11px;background:var(--cream);color:var(--text2);padding:4px 10px;border-radius:999px;
+  font-weight:700;border:1px solid var(--wire2);white-space:nowrap;
+}
+
+/* plan cards */
+.bs-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.bs-pc{
+  background:var(--cream);border:2px solid var(--wire2);border-radius:16px;padding:18px 16px 16px;
+  position:relative;cursor:pointer;transition:all .14s;text-align:left;font-family:inherit;
+}
+.bs-pc:hover{border-color:rgba(251,146,60,.4);transform:translateY(-1px);box-shadow:0 8px 20px rgba(251,146,60,.08);}
+.bs-pc.popular{border-color:var(--peach);}
+.bs-pc.popular::before{
+  content:'おすすめ';position:absolute;top:-10px;left:14px;
+  background:var(--peach);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;
+  border-radius:999px;letter-spacing:.04em;
+}
+.bs-pc.current{cursor:default;opacity:.7;}
+.bs-pc.current:hover{transform:none;box-shadow:none;}
+.bs-pc-nm{font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.bs-pc-pr{font-size:32px;font-weight:900;color:var(--text);line-height:1;letter-spacing:-.01em;}
+.bs-pc-pm{font-size:13px;color:var(--text3);margin:2px 0 14px;}
+.bs-pc-feat{list-style:none;padding:0;margin:0 0 14px;border-top:1px solid var(--wire);padding-top:12px;}
+.bs-pc-feat li{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);margin-bottom:7px;line-height:1.4;}
+.bs-pc-feat li::before{content:'✓';color:#10b981;font-weight:900;flex-shrink:0;}
+.bs-pc-pick{
+  display:block;width:100%;padding:11px;border:1px solid var(--wire3);background:var(--cream2);
+  color:var(--text);font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;font-family:inherit;
+  text-align:center;transition:all .14s;
+}
+.bs-pc:hover .bs-pc-pick{background:var(--cream3);}
+.bs-pc.popular .bs-pc-pick{background:var(--peach);color:#fff;border-color:var(--peach);}
+.bs-pc.popular:hover .bs-pc-pick{background:var(--peach-dark);border-color:var(--peach-dark);}
+.bs-pc.current .bs-pc-pick{background:var(--cream3);color:var(--text3);cursor:default;border-color:var(--wire2);}
+
+.bs-fineprint{font-size:11px;color:var(--text3);text-align:center;margin-top:10px;line-height:1.5;}
+
+/* PAYG cards */
+.bs-payg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.bs-payg-c{
+  border:2px solid var(--wire2);background:var(--cream);border-radius:13px;padding:14px 8px;
+  cursor:pointer;text-align:center;transition:all .14s;font-family:inherit;
+}
+.bs-payg-c:hover{border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.04);}
+.bs-payg-c.sel{border-color:var(--peach);background:rgba(251,146,60,.08);box-shadow:0 0 0 3px rgba(251,146,60,.15);}
+.bs-payg-nm{font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;}
+.bs-payg-pr{font-size:20px;color:var(--text);font-weight:800;}
+.bs-payg-c.sel .bs-payg-pr{color:var(--peach-dark);}
+.bs-payg-cr{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* checkout summary (Step 2) */
+.bs-summary{
+  background:linear-gradient(135deg,rgba(251,146,60,.08),rgba(251,146,60,.02));
+  border:1px solid rgba(251,146,60,.2);border-radius:14px;padding:18px;margin-bottom:18px;
+}
+.bs-summary .bs-sum-nm{font-size:11px;color:var(--peach-dark);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.bs-summary .bs-sum-pr{font-size:24px;font-weight:900;color:var(--text);line-height:1.1;}
+.bs-summary .bs-sum-pr small{font-size:13px;font-weight:600;color:var(--text2);margin-left:4px;}
+.bs-summary .bs-sum-feat{font-size:13px;color:var(--text2);margin-top:8px;line-height:1.55;}
+.bs-summary .bs-sum-feat b{font-weight:700;color:var(--peach-dark);}
+.bs-summary .bs-sum-ed{font-size:11px;color:var(--text3);margin-top:10px;}
+
+/* form labels and card box */
+.bs-fld-lbl{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px;}
+.bs-cardbox{
+  background:#fff;border:1.5px solid var(--wire2);border-radius:11px;padding:14px 16px;
+  margin-bottom:8px;
+}
+.bs-err{color:var(--rose);font-size:12px;min-height:16px;margin-bottom:8px;}
+
+/* primary CTA */
+.bs-go{
+  width:100%;background:var(--peach);color:#fff;border:0;border-radius:12px;
+  padding:15px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;
+  transition:all .14s;letter-spacing:.01em;
+}
+.bs-go:hover{background:var(--peach-dark);transform:translateY(-1px);box-shadow:0 8px 20px rgba(251,146,60,.3);}
+.bs-go:disabled{background:var(--cream4);color:var(--text3);cursor:not-allowed;transform:none;box-shadow:none;}
+
+.bs-trust{
+  font-size:11px;color:var(--text3);text-align:center;margin-top:10px;
+}
+
+@media (max-width:480px){
+  .bs-plans{grid-template-columns:1fr;}
+  .bs-payg-grid{grid-template-columns:1fr;}
+  .bs-pc-pr{font-size:28px;}
+}
 .plan-g{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px;}
 .plan-c{
   padding:14px 10px;border-radius:12px;border:1px solid var(--wire2);
@@ -784,61 +918,107 @@ body{color:#f0f0f8;}
 
 <!-- ══ CHARGE OVERLAY ══════════════════════════════════════ -->
 <div class="overlay" id="chargeOverlay">
-  <div class="charge-modal">
-    <div class="modal-hd">
-      <div class="modal-ti">Add Credits</div>
-      <button class="wiz-close" onclick="closeCharge()">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </button>
-    </div>
+  <div class="charge-modal bs-modal">
 
-    <!-- Monthly Plans -->
-    <div style="margin-bottom:18px">
-      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;letter-spacing:.04em">MONTHLY PLAN</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div style="background:var(--cream2);border:1px solid rgba(180,120,80,.2);border-radius:12px;padding:12px;text-align:center">
-          <div style="font-size:10px;font-weight:700;color:var(--peach-dark);letter-spacing:.08em;margin-bottom:3px">PRO</div>
-          <div style="font-size:18px;font-weight:900;color:var(--text);line-height:1">$12.99</div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/month</div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.4">$20 credits/mo</div>
-          <button id="proBtn" onclick="subscribePlan('pro')" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:8px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Subscribe</button>
+    <!-- ── Screen 1: プラン選択 ─────────────────────────── -->
+    <div id="bsScreen1">
+      <div class="bs-hd">
+        <div class="bs-ti">プランを選ぶ</div>
+        <button class="bs-x" onclick="closeCharge()" aria-label="閉じる">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="bs-body">
+        <div class="bs-tabs">
+          <button class="bs-tab active" data-tab="monthly" onclick="bsTab('monthly')">月額プラン</button>
+          <button class="bs-tab" data-tab="payg" onclick="bsTab('payg')">都度チャージ</button>
         </div>
-        <div style="background:var(--cream2);border:2px solid var(--peach);border-radius:12px;padding:12px;text-align:center;position:relative">
-          <div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--peach);color:#fff;font-size:9px;font-weight:900;padding:2px 8px;border-radius:20px;white-space:nowrap">Popular</div>
-          <div style="font-size:10px;font-weight:700;color:var(--peach-dark);letter-spacing:.08em;margin-bottom:3px">BUSINESS</div>
-          <div style="font-size:18px;font-weight:900;color:var(--text);line-height:1">$32.99</div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/month</div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.4">$60 credits/mo</div>
-          <button id="bizBtn" onclick="subscribePlan('business')" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:8px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Subscribe</button>
+
+        <!-- ── 月額タブ ── -->
+        <div id="bs-monthly" class="bs-tabc">
+          <div class="bs-curplan" id="bs-curplan"></div>
+
+          <div class="bs-plans">
+            <button type="button" class="bs-pc" data-plan="pro" onclick="bsPick('pro')">
+              <div class="bs-pc-nm">PRO</div>
+              <div class="bs-pc-pr">$12.99</div>
+              <div class="bs-pc-pm">/月（USD）</div>
+              <ul class="bs-pc-feat">
+                <li>$20 分のクレジット / 月</li>
+                <li>メッセージ無制限</li>
+                <li>全プリセット利用可</li>
+              </ul>
+              <span class="bs-pc-pick">このプランを選ぶ</span>
+            </button>
+
+            <button type="button" class="bs-pc popular" data-plan="business" onclick="bsPick('business')">
+              <div class="bs-pc-nm">BUSINESS</div>
+              <div class="bs-pc-pr">$32.99</div>
+              <div class="bs-pc-pm">/月（USD）</div>
+              <ul class="bs-pc-feat">
+                <li>$60 分のクレジット / 月</li>
+                <li>メッセージ無制限</li>
+                <li>全プリセット利用可</li>
+              </ul>
+              <span class="bs-pc-pick">このプランを選ぶ</span>
+            </button>
+          </div>
+          <div class="bs-fineprint">クレジットは月初にリセット ・ いつでもキャンセル可能</div>
+        </div>
+
+        <!-- ── 都度チャージタブ ── -->
+        <div id="bs-payg" class="bs-tabc" style="display:none">
+          <div class="bs-curplan" id="bs-curbal"></div>
+
+          <div class="bs-payg-grid">
+            <button type="button" class="bs-payg-c sel" data-cents="699" onclick="bsPickPayg(699)">
+              <div class="bs-payg-nm">STARTER</div>
+              <div class="bs-payg-pr">$6.99</div>
+              <div class="bs-payg-cr" id="bs-payg-cr-699">≈ ¥1,048分</div>
+            </button>
+            <button type="button" class="bs-payg-c" data-cents="1999" onclick="bsPickPayg(1999)">
+              <div class="bs-payg-nm">STANDARD</div>
+              <div class="bs-payg-pr">$19.99</div>
+              <div class="bs-payg-cr" id="bs-payg-cr-1999">≈ ¥2,998分</div>
+            </button>
+            <button type="button" class="bs-payg-c" data-cents="4999" onclick="bsPickPayg(4999)">
+              <div class="bs-payg-nm">PRO</div>
+              <div class="bs-payg-pr">$49.99</div>
+              <div class="bs-payg-cr" id="bs-payg-cr-4999">≈ ¥7,498分</div>
+            </button>
+          </div>
+
+          <div class="bs-fld-lbl">カード情報</div>
+          <div id="bs-payg-card" class="bs-cardbox"></div>
+          <div id="bs-payg-err" class="bs-err"></div>
+
+          <button class="bs-go" id="bsPaygGo" onclick="bsPaygSubmit()">$6.99 で購入</button>
+          <div class="bs-trust">🔒 Stripe による安全な決済 ・ 一度限りの請求</div>
         </div>
       </div>
     </div>
 
-    <!-- Pay-as-you-go -->
-    <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;letter-spacing:.04em">PAY AS YOU GO</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-        <div class="plan-c sel" id="c-699" onclick="selCharge(699,this)">
-          <div class="pl-nm">Starter</div>
-          <div class="pl-pr">$6.99</div>
-        </div>
-        <div class="plan-c" id="c-1999" onclick="selCharge(1999,this)">
-          <div class="pl-nm">Standard</div>
-          <div class="pl-pr">$19.99</div>
-        </div>
-        <div class="plan-c" id="c-4999" onclick="selCharge(4999,this)">
-          <div class="pl-nm">Pro</div>
-          <div class="pl-pr">$49.99</div>
-        </div>
+    <!-- ── Screen 2: 月額決済 ─────────────────────────── -->
+    <div id="bsScreen2" style="display:none">
+      <div class="bs-hd">
+        <button class="bs-back" onclick="bsBack()">← 戻る</button>
+        <div class="bs-ti">支払い情報</div>
+        <button class="bs-x" onclick="closeCharge()" aria-label="閉じる">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
       </div>
+      <div class="bs-body">
+        <div class="bs-summary" id="bs-summary"></div>
 
-      <!-- Stripe Elements カード入力 -->
-      <div id="card-element-wrap" style="margin-bottom:12px">
-        <div id="card-element" style="background:#fff;border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:14px;"></div>
-        <div id="card-errors" style="color:#ef4444;font-size:12px;margin-top:6px;"></div>
+        <div class="bs-fld-lbl">カード情報</div>
+        <div id="bs-monthly-card" class="bs-cardbox"></div>
+        <div id="bs-monthly-err" class="bs-err"></div>
+
+        <button class="bs-go" id="bsMonthlyGo" onclick="bsSubscribeSubmit()">開始</button>
+        <div class="bs-trust">🔒 Stripe による安全な決済</div>
       </div>
-      <button class="btn-volt" id="chargeBtn" style="width:100%;border-radius:12px;padding:14px;font-size:15px;" onclick="doCharge()">Add Credits</button>
     </div>
+
   </div>
 </div>
 
@@ -1092,7 +1272,7 @@ var PRESETS=[
 
 var token=null,me=null,agents=[],activeId=null;
 var NA={avatar:'🤖',name:'',skills:[],persona:''};
-var chargeAmt=500;
+// chargeAmt: legacy (new modal tracks _bsPaygCents instead)
 
 // ── i18n ───────────────────────────────────────────────
 var isJa = !navigator.language || navigator.language.startsWith('ja');
@@ -1600,82 +1780,224 @@ async function doCreate(){
   setBtnLoad('createBtn',false,'✨ 作成する');
 }
 
-/* ── Charge ────────────────────────────────────────── */
-function openCharge(){ document.getElementById('chargeOverlay').classList.add('open'); }
+/* ── Billing modal (new design) ────────────────────────
+   Two screens: Step 1 plan selection (monthly/payg tabs) → Step 2 monthly checkout.
+   PAYG checkout is inline within its tab.                                */
+var _bsStripe=null, _bsElements=null;
+var _bsMonthlyCard=null, _bsPaygCard=null;
+var _bsSelectedPlan=null;
+var _bsPaygCents=699;
+var _bsTabActive='monthly';
+
+function openCharge(){
+  _bsTabActive='monthly';
+  _bsSelectedPlan=null;
+  _bsPaygCents=699;
+  bsBack();
+  bsTab('monthly');
+  bsRenderCurplan();
+  bsHighlightPaygCard(699);
+  document.getElementById('chargeOverlay').classList.add('open');
+}
 function closeCharge(){ document.getElementById('chargeOverlay').classList.remove('open'); }
-function selCharge(amt,btn){
-  chargeAmt=amt;
-  document.querySelectorAll('.plan-c').forEach(el=>el.classList.remove('sel'));
-  if(btn)btn.classList.add('sel');
-  _chargeReady=false; _cardElement=null; window._pendingClientSecret=null;
-  document.getElementById('card-element-wrap').style.display='none';
-  initStripeElements();
-}
-// Stripe Elements インスタンス
-var _stripe = null;
-var _cardElement = null;
-var _chargeReady = false;
 
-// チャージモーダルを開くときにStripe Elementsを初期化
-async function initStripeElements(){
-  try{
-    const r = await api('POST','/api/billing/charge',{amount_jpy: chargeAmt||699});
-    if(!r.client_secret){ return; }
-    window._pendingClientSecret = r.client_secret;
-    if(!_stripe && r.publishable_key && r.publishable_key.startsWith('pk_')){
-      _stripe = Stripe(r.publishable_key);
-    }
-    if(!_stripe) return;
-    if(!_cardElement){
-      const elements = _stripe.elements();
-      _cardElement = elements.create('card',{
-        style:{
-          base:{fontSize:'15px',color:'#2d1a0e',fontFamily:'inherit','::placeholder':{color:'#9a6a4a'}},
-          invalid:{color:'#ef4444'}
-        }
-      });
-      _cardElement.mount('#card-element');
-      _cardElement.on('change', e => {
-        document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
-      });
-    }
-    document.getElementById('card-element-wrap').style.display = 'block';
-    _chargeReady = true;
-  }catch(e){
-    console.log('Stripe init error:', e.message);
-  }
+function bsTab(tab){
+  _bsTabActive=tab;
+  document.querySelectorAll('.bs-tab').forEach(function(t){
+    t.classList.toggle('active', t.getAttribute('data-tab')===tab);
+  });
+  document.getElementById('bs-monthly').style.display = tab==='monthly' ? '' : 'none';
+  document.getElementById('bs-payg').style.display = tab==='payg' ? '' : 'none';
+  if(tab==='payg'){ bsRenderCurBal(); bsInitPaygCard(); }
+  else { bsRenderCurplan(); }
 }
 
-async function doCharge(){
-  if(!chargeAmt||chargeAmt<100){ showToast('金額を選択してください','ng'); return; }
-  if(!_chargeReady || !_stripe || !_cardElement){
-    showToast('カード情報を入力してください','ng');
+function bsBack(){
+  document.getElementById('bsScreen1').style.display='';
+  document.getElementById('bsScreen2').style.display='none';
+}
+
+function bsPick(plan){
+  if(me && me.plan===plan){
+    showToast(plan==='pro'?'すでに Pro プランに加入中です':'すでに Business プランに加入中です','ng');
     return;
   }
-  setBtnLoad('chargeBtn',true,'処理中...');
+  _bsSelectedPlan=plan;
+  bsRenderSummary(plan);
+  document.getElementById('bsScreen1').style.display='none';
+  document.getElementById('bsScreen2').style.display='';
+  bsInitMonthlyCard();
+}
+
+function bsPickPayg(cents){
+  _bsPaygCents=cents;
+  bsHighlightPaygCard(cents);
+  var btn=document.getElementById('bsPaygGo');
+  if(btn) btn.textContent='$'+(cents/100).toFixed(2)+' で購入';
+}
+function bsHighlightPaygCard(cents){
+  document.querySelectorAll('.bs-payg-c').forEach(function(c){
+    c.classList.toggle('sel', parseInt(c.getAttribute('data-cents'),10)===cents);
+  });
+}
+
+function bsRenderCurplan(){
+  var el=document.getElementById('bs-curplan');
+  if(!el) return;
+  var plan=(me&&me.plan)||'free';
+  var planName = plan==='pro' ? 'Pro' : plan==='business' ? 'Business' : 'Free';
+  var badge = plan==='free'  ? '無料枠 10メッセージ' :
+              plan==='pro'   ? '毎月 $20 分のクレジット' :
+                               '毎月 $60 分のクレジット';
+  el.innerHTML =
+    '<div><div class="bs-cur-lbl">現在のプラン</div>'+
+    '<div class="bs-cur-val">'+planName+'</div></div>'+
+    '<div class="bs-cur-badge">'+badge+'</div>';
+  document.querySelectorAll('.bs-pc').forEach(function(c){
+    var p=c.getAttribute('data-plan');
+    var isCur=p===plan;
+    c.classList.toggle('current', isCur);
+    var pick=c.querySelector('.bs-pc-pick');
+    if(pick) pick.textContent = isCur ? '現在加入中' : 'このプランを選ぶ';
+  });
+}
+
+function bsRenderCurBal(){
+  var el=document.getElementById('bs-curbal');
+  if(!el) return;
+  var bal = me ? (me.balance_jpy||0) : 0;
+  el.innerHTML =
+    '<div><div class="bs-cur-lbl">現在の残高</div>'+
+    '<div class="bs-cur-val">¥'+Math.floor(bal).toLocaleString()+'</div></div>'+
+    '<div class="bs-cur-badge">¥1単位で利用可</div>';
+}
+
+function bsRenderSummary(plan){
+  var el=document.getElementById('bs-summary');
+  if(!el) return;
+  var price = plan==='pro' ? '$12.99' : '$32.99';
+  var credit = plan==='pro' ? '$20' : '$60';
+  el.innerHTML =
+    '<div class="bs-sum-nm">'+plan.toUpperCase()+' プラン</div>'+
+    '<div class="bs-sum-pr">'+price+'<small>/月</small></div>'+
+    '<div class="bs-sum-feat">毎月 <b>'+credit+'</b> 分のクレジットを付与</div>'+
+    '<div class="bs-sum-ed">いつでもキャンセル可能</div>';
+  var btn=document.getElementById('bsMonthlyGo');
+  if(btn) btn.textContent=price+' / 月で開始';
+}
+
+async function bsInitStripe(){
+  if(_bsStripe&&_bsElements) return true;
   try{
-    const {paymentIntent, error} = await _stripe.confirmCardPayment(
-      window._pendingClientSecret,
-      {payment_method: {card: _cardElement}}
-    );
-    if(error){
-      document.getElementById('card-errors').textContent = error.message;
-      showToast('決済エラー: '+error.message,'ng');
-    } else if(paymentIntent.status==='succeeded'){
-      showToast('決済完了！クレジットに反映されます','ok');
-      closeModal('chargeModal');
-      _cardElement = null;
-      _chargeReady = false;
-      window._pendingClientSecret = null;
-      document.getElementById('card-element-wrap').style.display='none';
-      refreshMe();
-      setTimeout(refreshMe, 2500);
+    var r=await api('POST','/api/billing/charge',{amount_jpy:699});
+    if(r&&r.publishable_key&&r.publishable_key.startsWith('pk_')){
+      _bsStripe=Stripe(r.publishable_key);
+      _bsElements=_bsStripe.elements();
+    }
+  }catch(e){ console.log('bsInitStripe error:',e&&e.message); }
+  return !!(_bsStripe&&_bsElements);
+}
+
+var _bsCardStyle={base:{fontSize:'15px',color:'#2d1a0e',fontFamily:'inherit','::placeholder':{color:'#9a6a4a'}},invalid:{color:'#ef4444'}};
+
+async function bsInitMonthlyCard(){
+  if(!(await bsInitStripe())){ showToast('決済システムの初期化に失敗しました','ng'); return; }
+  if(!_bsMonthlyCard){
+    _bsMonthlyCard=_bsElements.create('card',{style:_bsCardStyle});
+    _bsMonthlyCard.mount('#bs-monthly-card');
+    _bsMonthlyCard.on('change',function(e){
+      document.getElementById('bs-monthly-err').textContent=e.error?e.error.message:'';
+    });
+  }
+}
+async function bsInitPaygCard(){
+  if(!(await bsInitStripe())){ showToast('決済システムの初期化に失敗しました','ng'); return; }
+  if(!_bsPaygCard){
+    _bsPaygCard=_bsElements.create('card',{style:_bsCardStyle});
+    _bsPaygCard.mount('#bs-payg-card');
+    _bsPaygCard.on('change',function(e){
+      document.getElementById('bs-payg-err').textContent=e.error?e.error.message:'';
+    });
+  }
+}
+
+function bsAfterSubscribeSuccess(plan){
+  if(me) me.plan=plan;
+  showToast(plan==='pro'?'Pro plan activated!':'Business plan activated!','ok');
+  closeCharge();
+  if(typeof updateBillingUI==='function') updateBillingUI();
+  if(typeof updatePlanBadge==='function') updatePlanBadge();
+  if(typeof refreshMe==='function'){ refreshMe(); setTimeout(refreshMe,2500); }
+}
+
+async function bsSubscribeSubmit(){
+  var plan=_bsSelectedPlan;
+  if(!plan){ showToast('プランを選択してください','ng'); return; }
+  if(!(await bsInitStripe()) || !_bsMonthlyCard){
+    showToast('カード情報を入力してください','ng'); return;
+  }
+  var price = plan==='pro' ? '$12.99' : '$32.99';
+  var label = price+' / 月で開始';
+  setBtnLoad('bsMonthlyGo',true,'処理中...');
+  try{
+    var r=await api('POST','/api/billing/subscribe',{plan:plan});
+    if(r.status==='active'||r.status==='trialing'){
+      bsAfterSubscribeSuccess(plan); return;
+    }
+    if(r.client_secret){
+      var result=await _bsStripe.confirmCardPayment(r.client_secret,{
+        payment_method:{card:_bsMonthlyCard}
+      });
+      if(result.error){
+        document.getElementById('bs-monthly-err').textContent=result.error.message;
+        showToast(result.error.message,'ng');
+      } else {
+        bsAfterSubscribeSuccess(plan); return;
+      }
+    } else {
+      showToast('決済の初期化に失敗しました','ng');
     }
   }catch(e){
     showToast(e.message||'エラーが発生しました','ng');
   }
-  setBtnLoad('chargeBtn',false,'チャージする');
+  setBtnLoad('bsMonthlyGo',false,label);
 }
+
+async function bsPaygSubmit(){
+  var cents=_bsPaygCents;
+  if(!cents||cents<100){ showToast('金額を選択してください','ng'); return; }
+  if(!(await bsInitStripe()) || !_bsPaygCard){
+    showToast('カード情報を入力してください','ng'); return;
+  }
+  var label='$'+(cents/100).toFixed(2)+' で購入';
+  setBtnLoad('bsPaygGo',true,'処理中...');
+  try{
+    var r=await api('POST','/api/billing/charge',{amount_jpy:cents});
+    if(!r.client_secret){
+      showToast('決済の初期化に失敗しました','ng');
+      setBtnLoad('bsPaygGo',false,label); return;
+    }
+    var result=await _bsStripe.confirmCardPayment(r.client_secret,{
+      payment_method:{card:_bsPaygCard}
+    });
+    if(result.error){
+      document.getElementById('bs-payg-err').textContent=result.error.message;
+      showToast(result.error.message,'ng');
+    } else if(result.paymentIntent && result.paymentIntent.status==='succeeded'){
+      showToast('決済完了！クレジットに反映されます','ok');
+      closeCharge();
+      if(typeof refreshMe==='function'){ refreshMe(); setTimeout(refreshMe,2500); }
+      setBtnLoad('bsPaygGo',false,label); return;
+    }
+  }catch(e){
+    showToast(e.message||'エラーが発生しました','ng');
+  }
+  setBtnLoad('bsPaygGo',false,label);
+}
+
+// Backward-compat shims (no-op for legacy markup that was removed)
+function selCharge(){}
+function doCharge(){}
 
 function fmtCard(el){let v=el.value.replace(/\D/g,'').slice(0,16);el.value=v.replace(/(.{4})/g,'$1 ').trim();}
 function fmtExp(el){let v=el.value.replace(/\D/g,'').slice(0,4);if(v.length>2)v=v.slice(0,2)+' / '+v.slice(2);el.value=v;}
@@ -1719,15 +2041,9 @@ function openSettings(){
 }
 
 function updateBillingUI(){
-  var pn = document.getElementById('currentPlanName');
-  var bl = document.getElementById('currentBalance');
-  var pb = document.getElementById('proBtn');
-  var bb = document.getElementById('bizBtn');
-  if(!me) return;
-  if(pn) pn.textContent = me.plan==='pro'?'Pro':me.plan==='business'?'Business':'Free';
-  if(bl) bl.textContent = '¥'+(me.balance_jpy||0).toFixed(2);
-  if(pb){ pb.textContent = me.plan==='pro'?'加入中 ✓':'加入する'; pb.disabled=me.plan==='pro'; pb.style.opacity=me.plan==='pro'?'.5':'1'; }
-  if(bb){ bb.textContent = me.plan==='business'?'加入中 ✓':'加入する'; bb.disabled=me.plan==='business'; bb.style.opacity=me.plan==='business'?'.5':'1'; }
+  // Refresh the in-modal current-plan / current-balance banners if the modal is open
+  if(typeof bsRenderCurplan==='function') bsRenderCurplan();
+  if(typeof bsRenderCurBal==='function') bsRenderCurBal();
 }
 async function refreshMe(){
   try{
@@ -1740,66 +2056,8 @@ async function refreshMe(){
     }
   }catch(e){}
 }
-async function subscribePlan(plan){
-  var btn = document.getElementById(plan==='pro'?'proBtn':'bizBtn');
-  var orig = btn ? btn.textContent : '';
-  if(btn){ btn.textContent='Processing...'; btn.disabled=true; }
-  try{
-    var r = await api('POST','/api/billing/subscribe',{plan});
-    if(r.status==='active'||r.status==='trialing'){
-      me.plan=plan;
-      if(typeof updateBillingUI==='function') updateBillingUI();
-      if(typeof updatePlanBadge==='function') updatePlanBadge();
-      showToast(plan==='pro'?'Pro plan activated!':'Business plan activated!','ok');
-      if(btn){ btn.textContent='Active ✓'; btn.disabled=true; }
-      refreshMe();
-      setTimeout(refreshMe, 2500);
-      return;
-    }
-    // client_secretがある場合はStripe Elements でカード決済
-    if(r.client_secret){
-      // Stripe初期化
-      if(!_stripe){
-        var cr = await api('POST','/api/billing/charge',{amount_jpy:699});
-        if(cr.publishable_key && cr.publishable_key.startsWith('pk_')){
-          _stripe = Stripe(cr.publishable_key);
-        }
-      }
-      if(!_stripe){ showToast('Stripe initialization failed','ng'); return; }
-      // card-elementが未初期化の場合は初期化
-      if(!_cardElement){
-        var elements = _stripe.elements();
-        _cardElement = elements.create('card',{
-          style:{base:{fontSize:'15px',color:'#2d1a0e','::placeholder':{color:'#9a6a4a'}},invalid:{color:'#ef4444'}}
-        });
-        _cardElement.mount('#card-element');
-        _cardElement.on('change', function(e){
-          document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
-        });
-        document.getElementById('card-element-wrap').style.display='block';
-      }
-      // カード確認
-      var result = await _stripe.confirmCardPayment(r.client_secret, {
-        payment_method: {card: _cardElement}
-      });
-      if(result.error){
-        showToast(result.error.message,'ng');
-        if(btn){ btn.textContent=orig; btn.disabled=false; }
-      } else {
-        me.plan=plan;
-        if(typeof updateBillingUI==='function') updateBillingUI();
-        if(typeof updatePlanBadge==='function') updatePlanBadge();
-        showToast(plan==='pro'?'Pro plan activated!':'Business plan activated!','ok');
-        if(btn){ btn.textContent='Active ✓'; btn.disabled=true; }
-        refreshMe();
-        setTimeout(refreshMe, 2500);
-      }
-    }
-  }catch(e){
-    showToast(e.message||'Error occurred','ng');
-    if(btn){ btn.textContent=orig; btn.disabled=false; }
-  }
-}
+// Backward-compat: older callers can still invoke subscribePlan(plan); routes to new bsPick.
+function subscribePlan(plan){ if(typeof bsPick==='function') bsPick(plan); }
 function closeSettings(){
   document.getElementById('settingsModal').classList.add('gone');
 }
@@ -1845,9 +2103,11 @@ async function deleteAccount(){
   }catch(e){ showToast('削除に失敗しました','err'); }
 }
 function quickCharge(amount){
+  // Settings → Add Credits shortcut: open the new billing modal on PAYG tab w/ amount preset
   closeSettings();
-  document.getElementById('chargeAmt').value = amount;
-  document.getElementById('chargeModal').classList.remove('gone');
+  openCharge();
+  if(typeof bsTab==='function') bsTab('payg');
+  if(typeof bsPickPayg==='function') bsPickPayg(amount);
 }
 
 function showToast(msg,type='ok'){

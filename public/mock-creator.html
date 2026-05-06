@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MY AI AGENT — クリエイターマーケットプレイス（モック）</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#ea580c;
+  --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
+  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
+  --wire:rgba(180,120,80,.08);--wire2:rgba(180,120,80,.15);--wire3:rgba(180,120,80,.25);
+  --rose:#ef4444;--amber:#f59e0b;--lime:#65a30d;--cyan:#0891b2;--violet:#7c3aed;
+  --green:#10b981;--green-bg:rgba(16,185,129,.1);
+  --sans:'Hiragino Sans','Noto Sans JP','Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;font-family:var(--sans);background:var(--cream);color:var(--text);font-size:14px;line-height:1.6;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+a{color:inherit;text-decoration:none;}
+
+/* Layout */
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+.side{background:#fff;border-right:1px solid var(--wire2);padding:20px 12px;position:sticky;top:0;height:100vh;overflow:auto;}
+.side h1{font-size:14px;font-weight:900;color:var(--text);margin:0 0 4px;letter-spacing:.02em;}
+.side .sub{font-size:11px;color:var(--text3);margin-bottom:18px;font-weight:600;}
+.nav{display:flex;flex-direction:column;gap:2px;}
+.nav button{padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--text2);text-align:left;display:flex;align-items:center;gap:10px;transition:all .15s;}
+.nav button:hover{background:var(--cream2);}
+.nav button.on{background:rgba(251,146,60,.12);color:var(--peach-dark);font-weight:700;}
+.nav .ico{font-size:16px;width:20px;text-align:center;}
+.nav .badge{margin-left:auto;font-size:10px;background:var(--peach);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700;}
+
+.main{padding:32px 40px 80px;max-width:1100px;width:100%;}
+.screen{display:none;}
+.screen.on{display:block;animation:fadeIn .2s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+h2.title{font-size:24px;font-weight:900;margin:0 0 6px;color:var(--text);}
+.subtitle{font-size:13.5px;color:var(--text3);margin-bottom:28px;font-weight:600;}
+
+/* Cards */
+.card{background:#fff;border:1px solid var(--wire2);border-radius:16px;padding:22px;margin-bottom:18px;}
+.card h3{font-size:15px;font-weight:800;margin:0 0 14px;color:var(--text);display:flex;align-items:center;gap:8px;}
+.card h3 .h-ico{font-size:18px;}
+
+/* Hero (Screen 1) */
+.hero{background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 100%);border:1px solid rgba(251,146,60,.2);border-radius:20px;padding:32px 30px;margin-bottom:22px;position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;right:-30px;top:-30px;width:200px;height:200px;background:radial-gradient(circle,rgba(251,146,60,.15),transparent 70%);}
+.hero-eyebrow{font-size:12px;font-weight:800;color:var(--peach-dark);letter-spacing:.1em;margin-bottom:8px;}
+.hero h2{font-size:26px;font-weight:900;color:var(--text);margin:0 0 8px;}
+.hero p{font-size:14px;color:var(--text2);margin:0 0 18px;max-width:520px;line-height:1.7;}
+.hero .ctas{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-primary{background:var(--peach);color:#fff;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:800;display:inline-flex;align-items:center;gap:8px;transition:all .15s;}
+.btn-primary:hover{background:var(--peach-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(251,146,60,.3);}
+.btn-secondary{background:#fff;color:var(--text);padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;border:1px solid var(--wire3);}
+.btn-secondary:hover{background:var(--cream2);}
+.btn-ghost{background:transparent;color:var(--text3);font-size:13px;font-weight:700;padding:8px 12px;}
+.btn-ghost:hover{color:var(--text);}
+.btn-danger{background:#fff;color:var(--rose);border:1px solid var(--rose);padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;}
+.btn-danger:hover{background:var(--rose);color:#fff;}
+
+/* KPI cards */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
+.kpi{background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:18px 20px;}
+.kpi-lbl{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.kpi-val{font-size:26px;font-weight:900;color:var(--text);line-height:1.1;font-feature-settings:'tnum';}
+.kpi-val .yen{font-size:16px;font-weight:700;color:var(--text3);margin-right:2px;}
+.kpi-delta{font-size:11px;font-weight:700;margin-top:6px;display:inline-flex;align-items:center;gap:3px;}
+.kpi-delta.up{color:var(--green);}
+.kpi-delta.down{color:var(--rose);}
+.kpi-sub{font-size:11.5px;color:var(--text3);margin-top:4px;}
+
+/* Listings (Screen 3 / 6) */
+.listings{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.listing{background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;transition:all .15s;}
+.listing:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 6px 18px rgba(180,120,80,.08);}
+.listing-head{display:flex;align-items:center;gap:10px;}
+.listing-av{width:42px;height:42px;border-radius:11px;background:var(--cream3);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.listing-name{font-size:14.5px;font-weight:800;color:var(--text);margin:0;}
+.listing-cat{font-size:11px;color:var(--text3);font-weight:600;}
+.listing-desc{font-size:12.5px;color:var(--text2);line-height:1.55;height:34px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.listing-meta{display:flex;align-items:center;gap:14px;font-size:11.5px;color:var(--text3);font-weight:600;border-top:1px solid var(--wire);padding-top:10px;}
+.listing-meta b{color:var(--text);font-weight:800;}
+.listing-rev{font-size:13px;font-weight:800;color:var(--peach-dark);}
+.listing-foot{display:flex;gap:6px;}
+.listing-foot button{flex:1;padding:8px 10px;border-radius:8px;font-size:12px;font-weight:700;background:var(--cream2);color:var(--text2);}
+.listing-foot button:hover{background:var(--cream3);color:var(--text);}
+.status{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:8px;letter-spacing:.04em;}
+.status.live{background:var(--green-bg);color:var(--green);}
+.status.review{background:rgba(245,158,11,.12);color:var(--amber);}
+.status.paused{background:rgba(154,106,74,.12);color:var(--text3);}
+
+/* Form */
+.form-row{margin-bottom:16px;}
+.form-row label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:.02em;}
+.form-row .hint{font-size:11.5px;color:var(--text3);margin-top:4px;line-height:1.5;}
+.input,.textarea,.select{width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);transition:all .15s;}
+.input:focus,.textarea:focus,.select:focus{outline:none;border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.1);}
+.textarea{min-height:90px;resize:vertical;line-height:1.6;}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;}
+.tag-row label{display:flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--wire3);border-radius:999px;font-size:12px;cursor:pointer;background:#fff;color:var(--text2);font-weight:600;margin:0;}
+.tag-row label:has(input:checked){background:rgba(251,146,60,.12);border-color:var(--peach);color:var(--peach-dark);font-weight:700;}
+.tag-row input{display:none;}
+
+.fee-box{background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;border-radius:12px;padding:14px 18px;margin-bottom:18px;}
+.fee-box h4{font-size:13px;font-weight:800;color:#92400e;margin:0 0 6px;}
+.fee-box p{font-size:12.5px;color:#78350f;margin:0;line-height:1.6;}
+.fee-box .calc{margin-top:10px;background:rgba(255,255,255,.6);border-radius:8px;padding:10px 12px;font-size:12px;color:#78350f;font-weight:600;}
+.fee-box .calc b{color:#92400e;font-size:14px;}
+
+/* Earnings */
+.chart{height:180px;background:linear-gradient(180deg,rgba(251,146,60,.08),rgba(251,146,60,.01));border-radius:10px;position:relative;border:1px solid var(--wire2);overflow:hidden;}
+.chart svg{width:100%;height:100%;}
+.chart-grid line{stroke:var(--wire2);stroke-width:1;}
+.chart-line{fill:none;stroke:var(--peach);stroke-width:2.5;}
+.chart-area{fill:url(#g1);}
+.chart-dot{fill:var(--peach);}
+.chart-axis{font-size:9px;fill:var(--text3);}
+
+table{width:100%;border-collapse:collapse;font-size:13px;}
+table th{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:10px 12px;border-bottom:1px solid var(--wire2);background:var(--cream);}
+table td{padding:12px;border-bottom:1px solid var(--wire);color:var(--text);}
+table tr:last-child td{border-bottom:none;}
+table tr:hover td{background:var(--cream);}
+.tnum{font-feature-settings:'tnum';}
+.right{text-align:right;}
+
+/* Payout */
+.payout-card{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;border-radius:16px;padding:26px 28px;margin-bottom:22px;}
+.payout-card .lbl{font-size:11px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.6);text-transform:uppercase;}
+.payout-card .val{font-size:36px;font-weight:900;margin:8px 0;font-feature-settings:'tnum';}
+.payout-card .val .yen{font-size:18px;color:rgba(255,255,255,.5);}
+.payout-card .meta{font-size:12px;color:rgba(255,255,255,.55);}
+.payout-card .actions{margin-top:16px;display:flex;gap:10px;}
+.payout-card .actions button{padding:10px 20px;border-radius:10px;font-weight:700;}
+.btn-white{background:#fff;color:#0f172a;}
+.btn-white:hover{background:#f8fafc;}
+.btn-outline-white{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3);}
+.btn-outline-white:hover{background:rgba(255,255,255,.1);}
+
+.bank{display:flex;align-items:center;gap:14px;padding:14px;background:var(--cream);border-radius:12px;border:1px solid var(--wire2);margin-bottom:14px;}
+.bank-ico{width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--wire3);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.bank-name{font-weight:800;font-size:13.5px;}
+.bank-num{font-size:12px;color:var(--text3);font-feature-settings:'tnum';}
+.bank-action{margin-left:auto;font-size:12px;color:var(--peach-dark);font-weight:700;}
+
+/* Marketplace */
+.market-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px;}
+.search{flex:1;min-width:240px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire3);border-radius:10px;padding:9px 14px;}
+.search input{border:none;outline:none;background:transparent;flex:1;font-size:13.5px;font-family:inherit;color:var(--text);}
+.cats{display:flex;gap:6px;flex-wrap:wrap;}
+.cat{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:#fff;border:1px solid var(--wire3);color:var(--text2);}
+.cat.on{background:var(--peach);color:#fff;border-color:var(--peach);}
+
+.bigcard{position:relative;background:#fff;border:1px solid var(--wire2);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:all .15s;}
+.bigcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(180,120,80,.1);border-color:var(--peach-light);}
+.bigcard .ribbon{position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;color:#fff;background:var(--peach);padding:3px 9px;border-radius:6px;}
+.bigcard .stars{font-size:11.5px;color:var(--amber);font-weight:700;display:flex;align-items:center;gap:4px;}
+.bigcard .uses{font-size:11.5px;color:var(--text3);font-weight:600;}
+.bigcard .creator{font-size:11.5px;color:var(--text3);font-weight:600;display:flex;align-items:center;gap:6px;}
+.bigcard .creator b{color:var(--text2);font-weight:700;}
+.bigcard-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--wire);padding-top:10px;}
+.bigcard-price{font-size:11.5px;color:var(--text3);font-weight:600;}
+.bigcard-price b{color:var(--text);font-size:13px;font-weight:800;}
+.bigcard-cta{padding:7px 14px;background:var(--peach);color:#fff;border-radius:8px;font-size:12px;font-weight:800;}
+
+/* Modal preview area */
+.preview{background:var(--cream2);border:1px dashed var(--wire3);border-radius:14px;padding:16px;margin-top:18px;}
+.preview-lbl{font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+
+/* Responsive */
+@media(max-width:880px){
+  .shell{grid-template-columns:1fr;}
+  .side{position:static;height:auto;border-right:none;border-bottom:1px solid var(--wire2);}
+  .main{padding:24px 20px;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <h1>🍑 MY AI AGENT</h1>
+    <div class="sub">クリエイター モック</div>
+    <nav class="nav">
+      <button class="on" onclick="show('s1')"><span class="ico">🏪</span>クリエイター ホーム</button>
+      <button onclick="show('s2')"><span class="ico">📦</span>マイ出店<span class="badge">3</span></button>
+      <button onclick="show('s3')"><span class="ico">➕</span>新規出店</button>
+      <button onclick="show('s4')"><span class="ico">📊</span>収益ダッシュボード</button>
+      <button onclick="show('s5')"><span class="ico">💴</span>出金</button>
+      <button onclick="show('s6')"><span class="ico">🌐</span>マーケット（公開側）</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+
+    <!-- ─────────── Screen 1: Home ─────────── -->
+    <section class="screen on" id="s1">
+      <div class="hero">
+        <div class="hero-eyebrow">CREATOR PROGRAM</div>
+        <h2>あなたが育てた AI を、世界に売る</h2>
+        <p>作ったエージェントをマーケットに公開すると、他のユーザーが利用するたびに <b>利用料の 10%</b> があなたの収益になります。</p>
+        <div class="ctas">
+          <button class="btn-primary" onclick="show('s3')">+ 新規出店</button>
+          <button class="btn-secondary" onclick="show('s4')">📊 収益ダッシュボード</button>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-lbl">出店中</div><div class="kpi-val">3</div><div class="kpi-sub">+1 今月</div></div>
+        <div class="kpi"><div class="kpi-lbl">累計収益</div><div class="kpi-val"><span class="yen">¥</span>48,250</div><div class="kpi-delta up">▲ ¥12,400 今月</div></div>
+        <div class="kpi"><div class="kpi-lbl">利用可能残高</div><div class="kpi-val"><span class="yen">¥</span>23,800</div><div class="kpi-sub">出金可能</div></div>
+        <div class="kpi"><div class="kpi-lbl">アクティブ利用者</div><div class="kpi-val">128</div><div class="kpi-delta up">▲ 24 今月</div></div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">⚡</span>最近の動き</h3>
+        <table>
+          <thead><tr><th>日時</th><th>エージェント</th><th>利用者</th><th class="right">利用料</th><th class="right">あなたの収益</th></tr></thead>
+          <tbody>
+            <tr><td>5/6 14:32</td><td>営業フォローアップ Bot</td><td>tanaka@…</td><td class="right tnum">¥120</td><td class="right tnum"><b>¥12</b></td></tr>
+            <tr><td>5/6 12:18</td><td>SNS 投稿ジェネレーター</td><td>sato@…</td><td class="right tnum">¥85</td><td class="right tnum"><b>¥9</b></td></tr>
+            <tr><td>5/6 09:50</td><td>営業フォローアップ Bot</td><td>yamada@…</td><td class="right tnum">¥210</td><td class="right tnum"><b>¥21</b></td></tr>
+            <tr><td>5/5 22:11</td><td>競合リサーチャー</td><td>suzuki@…</td><td class="right tnum">¥340</td><td class="right tnum"><b>¥34</b></td></tr>
+            <tr><td>5/5 18:04</td><td>SNS 投稿ジェネレーター</td><td>okamoto@…</td><td class="right tnum">¥95</td><td class="right tnum"><b>¥10</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen 2: My listings ─────────── -->
+    <section class="screen" id="s2">
+      <h2 class="title">マイ出店</h2>
+      <div class="subtitle">出店中のエージェント一覧。一時停止・編集はカード右下から。</div>
+
+      <div class="listings">
+        <div class="listing">
+          <div class="listing-head">
+            <div class="listing-av">📞</div>
+            <div style="flex:1;min-width:0">
+              <h4 class="listing-name">営業フォローアップ Bot</h4>
+              <div class="listing-cat">セールス · プロフェッショナル</div>
+            </div>
+            <span class="status live">● 公開中</span>
+          </div>
+          <p class="listing-desc">商談後のフォローアップメールを自動生成。CRM 連携不要、テキストを貼るだけで適切な追客文面を作ります。</p>
+          <div class="listing-meta">
+            <div>★ <b>4.7</b> (52)</div>
+            <div>利用 <b>284</b></div>
+            <div class="listing-rev" style="margin-left:auto">¥21,400</div>
+          </div>
+          <div class="listing-foot">
+            <button>編集</button>
+            <button>一時停止</button>
+            <button>共有</button>
+          </div>
+        </div>
+
+        <div class="listing">
+          <div class="listing-head">
+            <div class="listing-av">📱</div>
+            <div style="flex:1;min-width:0">
+              <h4 class="listing-name">SNS 投稿ジェネレーター</h4>
+              <div class="listing-cat">マーケティング · 一般</div>
+            </div>
+            <span class="status live">● 公開中</span>
+          </div>
+          <p class="listing-desc">商品名と訴求軸を入れるだけで Twitter / Instagram / TikTok 用の投稿を 3 パターン同時生成。</p>
+          <div class="listing-meta">
+            <div>★ <b>4.5</b> (38)</div>
+            <div>利用 <b>196</b></div>
+            <div class="listing-rev" style="margin-left:auto">¥15,200</div>
+          </div>
+          <div class="listing-foot">
+            <button>編集</button>
+            <button>一時停止</button>
+            <button>共有</button>
+          </div>
+        </div>
+
+        <div class="listing">
+          <div class="listing-head">
+            <div class="listing-av">🔍</div>
+            <div style="flex:1;min-width:0">
+              <h4 class="listing-name">競合リサーチャー</h4>
+              <div class="listing-cat">リサーチ · プロフェッショナル</div>
+            </div>
+            <span class="status review">● 審査中</span>
+          </div>
+          <p class="listing-desc">競合企業名を入れると Google Chrome 連携で公開情報を収集し、ポジショニングを比較レポート化します。</p>
+          <div class="listing-meta">
+            <div>★ — </div>
+            <div>利用 <b>0</b></div>
+            <div class="listing-rev" style="margin-left:auto">— </div>
+          </div>
+          <div class="listing-foot">
+            <button>編集</button>
+            <button>取り下げ</button>
+            <button disabled style="opacity:.4">共有</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen 3: New listing ─────────── -->
+    <section class="screen" id="s3">
+      <h2 class="title">新規出店</h2>
+      <div class="subtitle">既に作ったエージェントから出店するものを選んで、公開情報を入力します。</div>
+
+      <div class="card">
+        <h3><span class="h-ico">①</span>エージェントを選ぶ</h3>
+        <div class="form-row">
+          <select class="select">
+            <option>営業フォローアップ Bot 📞</option>
+            <option>SNS 投稿ジェネレーター 📱</option>
+            <option>競合リサーチャー 🔍</option>
+            <option>ブログ記事ライター ✍️</option>
+          </select>
+          <div class="hint">あなたのアカウントで作成した、まだ出店していないエージェントから選択できます。</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">②</span>公開情報</h3>
+        <div class="form-row">
+          <label>タイトル <span style="color:var(--rose)">*</span></label>
+          <input class="input" value="営業フォローアップ Bot — 30秒で追客文面を作る">
+          <div class="hint">検索結果やカードに表示されます（最大 60 文字）</div>
+        </div>
+        <div class="form-row">
+          <label>説明 <span style="color:var(--rose)">*</span></label>
+          <textarea class="textarea">商談後のフォローアップメールを自動生成。CRM 連携不要、テキストを貼るだけで適切な追客文面を作ります。BtoB/BtoC 両対応、敬語の調整も自動。</textarea>
+          <div class="hint">利用者が「何ができるか・どんなときに便利か」を 100〜300 文字で。</div>
+        </div>
+        <div class="form-row">
+          <label>カテゴリ <span style="color:var(--rose)">*</span></label>
+          <div class="tag-row">
+            <label><input type="radio" name="cat" checked>セールス</label>
+            <label><input type="radio" name="cat">マーケティング</label>
+            <label><input type="radio" name="cat">リサーチ</label>
+            <label><input type="radio" name="cat">ライティング</label>
+            <label><input type="radio" name="cat">業務効率化</label>
+            <label><input type="radio" name="cat">その他</label>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>デモプロンプト（最大 3 つ）</label>
+          <input class="input" style="margin-bottom:6px" value="先週商談した株式会社○○に、丁寧な追加提案メールを書いて">
+          <input class="input" style="margin-bottom:6px" value="検討期間が長引いている顧客への、軽めの追客メッセージ">
+          <input class="input" value="失注した相手への、関係を残すクロージングメール">
+          <div class="hint">利用者がワンクリックで試せる例文。良いプロンプトを置くと使われやすくなります。</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">③</span>収益と価格</h3>
+        <div class="fee-box">
+          <h4>💰 収益還元: 利用料の 10%</h4>
+          <p>利用者が支払う AI 利用料（トークン消費量に応じた従量課金）の 10% が、自動的にあなたの利用可能残高に加算されます。価格は MY AI AGENT 側で固定です。</p>
+          <div class="calc">
+            想定: 1 ヶ月 100 人が平均 ¥200 ずつ使った場合<br>
+            <b>¥200 × 100 × 10% = ¥2,000 / 月</b> の収益
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">④</span>公開設定</h3>
+        <div class="tag-row" style="margin-bottom:14px">
+          <label><input type="radio" name="vis" checked>🌐 マーケットに公開</label>
+          <label><input type="radio" name="vis">🔗 リンクを知っている人だけ</label>
+        </div>
+        <div class="hint">マーケット公開は審査（最大 24 時間）後に表示されます。</div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px">
+        <button class="btn-ghost">下書き保存</button>
+        <button class="btn-secondary">プレビュー</button>
+        <button class="btn-primary">審査に出す →</button>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen 4: Earnings ─────────── -->
+    <section class="screen" id="s4">
+      <h2 class="title">収益ダッシュボード</h2>
+      <div class="subtitle">出店中のエージェントから得た収益の内訳。</div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-lbl">利用可能残高</div><div class="kpi-val"><span class="yen">¥</span>23,800</div><div class="kpi-sub">出金可能</div></div>
+        <div class="kpi"><div class="kpi-lbl">未確定収益</div><div class="kpi-val"><span class="yen">¥</span>3,420</div><div class="kpi-sub">7 日後に確定</div></div>
+        <div class="kpi"><div class="kpi-lbl">今月の収益</div><div class="kpi-val"><span class="yen">¥</span>12,400</div><div class="kpi-delta up">▲ 41% 前月比</div></div>
+        <div class="kpi"><div class="kpi-lbl">累計収益</div><div class="kpi-val"><span class="yen">¥</span>48,250</div><div class="kpi-sub">2025/12 開始</div></div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">📈</span>過去 30 日の収益推移</h3>
+        <div class="chart">
+          <svg viewBox="0 0 600 180" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fb923c" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g class="chart-grid">
+              <line x1="0" y1="40" x2="600" y2="40"/>
+              <line x1="0" y1="80" x2="600" y2="80"/>
+              <line x1="0" y1="120" x2="600" y2="120"/>
+            </g>
+            <path class="chart-area" d="M0,140 L20,135 40,128 60,130 80,118 100,122 120,112 140,108 160,115 180,98 200,105 220,92 240,95 260,88 280,82 300,78 320,85 340,72 360,68 380,75 400,62 420,58 440,65 460,52 480,55 500,42 520,48 540,38 560,32 580,28 600,22 L600,180 L0,180 Z"/>
+            <path class="chart-line" d="M0,140 L20,135 40,128 60,130 80,118 100,122 120,112 140,108 160,115 180,98 200,105 220,92 240,95 260,88 280,82 300,78 320,85 340,72 360,68 380,75 400,62 420,58 440,65 460,52 480,55 500,42 520,48 540,38 560,32 580,28 600,22"/>
+            <circle class="chart-dot" cx="600" cy="22" r="4"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">📦</span>エージェント別 (今月)</h3>
+        <table>
+          <thead><tr><th>エージェント</th><th class="right">利用回数</th><th class="right">利用者数</th><th class="right">総利用料</th><th class="right">あなたの収益</th></tr></thead>
+          <tbody>
+            <tr><td>📞 営業フォローアップ Bot</td><td class="right tnum">142</td><td class="right tnum">68</td><td class="right tnum">¥58,400</td><td class="right tnum"><b>¥5,840</b></td></tr>
+            <tr><td>📱 SNS 投稿ジェネレーター</td><td class="right tnum">98</td><td class="right tnum">52</td><td class="right tnum">¥38,200</td><td class="right tnum"><b>¥3,820</b></td></tr>
+            <tr><td>🔍 競合リサーチャー</td><td class="right tnum">31</td><td class="right tnum">14</td><td class="right tnum">¥27,400</td><td class="right tnum"><b>¥2,740</b></td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="border-top:2px solid var(--wire2);font-weight:800">
+              <td>合計</td><td class="right tnum">271</td><td class="right tnum">128</td><td class="right tnum">¥124,000</td><td class="right tnum" style="color:var(--peach-dark)">¥12,400</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen 5: Payout ─────────── -->
+    <section class="screen" id="s5">
+      <h2 class="title">出金</h2>
+      <div class="subtitle">利用可能残高を、登録した銀行口座へ出金します。</div>
+
+      <div class="payout-card">
+        <div class="lbl">利用可能残高</div>
+        <div class="val"><span class="yen">¥</span>23,800</div>
+        <div class="meta">最低出金額 ¥1,000 ／ 振込手数料 無料 ／ 月 1 回まで無料、以降 ¥250</div>
+        <div class="actions">
+          <button class="btn-white">¥23,800 全額を出金 →</button>
+          <button class="btn-outline-white">金額を指定</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">🏦</span>振込先口座</h3>
+        <div class="bank">
+          <div class="bank-ico">🏦</div>
+          <div>
+            <div class="bank-name">三井住友銀行 渋谷支店</div>
+            <div class="bank-num">普通 ・ ****1234 ・ タケウチ コウタ</div>
+          </div>
+          <button class="bank-action">変更</button>
+        </div>
+        <div class="hint" style="font-size:11.5px;color:var(--text3);margin-top:6px">
+          口座情報は Stripe Connect 経由で安全に保管されます（MY AI AGENT サーバには保存されません）。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="h-ico">📜</span>出金履歴</h3>
+        <table>
+          <thead><tr><th>日時</th><th>金額</th><th>振込先</th><th>状態</th></tr></thead>
+          <tbody>
+            <tr><td>2026-04-15</td><td class="tnum">¥18,500</td><td>三井住友銀行 ****1234</td><td><span class="status live">● 完了</span></td></tr>
+            <tr><td>2026-03-15</td><td class="tnum">¥12,300</td><td>三井住友銀行 ****1234</td><td><span class="status live">● 完了</span></td></tr>
+            <tr><td>2026-02-15</td><td class="tnum">¥6,800</td><td>三井住友銀行 ****1234</td><td><span class="status live">● 完了</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen 6: Marketplace (public) ─────────── -->
+    <section class="screen" id="s6">
+      <h2 class="title">マーケット — 公開側のイメージ</h2>
+      <div class="subtitle">出店したエージェントが、他のユーザーから見える画面。</div>
+
+      <div class="market-toolbar">
+        <div class="search">🔍 <input placeholder="エージェント・カテゴリ・クリエイターで検索"></div>
+      </div>
+      <div class="cats" style="margin-bottom:18px">
+        <button class="cat on">すべて</button>
+        <button class="cat">セールス</button>
+        <button class="cat">マーケティング</button>
+        <button class="cat">リサーチ</button>
+        <button class="cat">ライティング</button>
+        <button class="cat">業務効率化</button>
+        <button class="cat">その他</button>
+      </div>
+
+      <div class="listings">
+        <div class="bigcard">
+          <div class="ribbon">🔥 人気</div>
+          <div class="listing-head">
+            <div class="listing-av">📞</div>
+            <div style="flex:1;min-width:0">
+              <h4 class="listing-name">営業フォローアップ Bot</h4>
+              <div class="listing-cat">セールス</div>
+            </div>
+          </div>
+          <p class="listing-desc">商談後のフォローアップメールを自動生成。CRM 連携不要、テキストを貼るだけで適切な追客文面を作ります。</p>
+          <div class="creator">クリエイター: <b>@takeuchi_kouta</b></div>
+          <div class="listing-meta">
+            <div class="stars">★ <b>4.7</b></div>
+            <div class="uses">利用 284 回</div>
+          </div>
+          <div class="bigcard-foot">
+            <div class="bigcard-price">利用料 <b>従量課金</b></div>
+            <button class="bigcard-cta">使ってみる</button>
+          </div>
+        </div>
+
+        <div class="bigcard">
+          <div class="listing-head">
+            <div class="listing-av">📱</div>
+            <div style="flex:1;min-width:0">
+              <h4 class="listing-name">SNS 投稿ジェネレーター</h4>
+              <div class="listing-cat">マーケティング</div>
+            </div>
+          </div>
+          <p class="listing-desc">商品名と訴求軸を入れるだけで Twitter / Instagram / TikTok 用の投稿を 3 パターン同時生成。</p>
+          <div class="creator">クリエイター: <b>@takeuchi_kouta</b></div>
+          <div class="listing-meta">
+            <div class="stars">★ <b>4.5</b></div>
+            <div class="uses">利用 196 回</div>
+          </div>
+          <div class="bigcard-foot">
+            <div class="bigcard-price">利用料 <b>従量課金</b></div>
+            <button class="bigcard-cta">使ってみる</button>
+          </div>
+        </div>
+
+        <div class="bigcard">
+          <div class="listing-head">
+            <div class="listing-av">✍️</div>
+            <div style="flex:1;min-width:0">
+              <h4 class="listing-name">SEO ブログライター</h4>
+              <div class="listing-cat">ライティング</div>
+            </div>
+          </div>
+          <p class="listing-desc">キーワードと業界を伝えると、検索意図を分解して 2,000 字の SEO 記事を生成。見出し・メタディスクリプションも同梱。</p>
+          <div class="creator">クリエイター: <b>@yamada_seo</b></div>
+          <div class="listing-meta">
+            <div class="stars">★ <b>4.9</b></div>
+            <div class="uses">利用 1,240 回</div>
+          </div>
+          <div class="bigcard-foot">
+            <div class="bigcard-price">利用料 <b>従量課金</b></div>
+            <button class="bigcard-cta">使ってみる</button>
+          </div>
+        </div>
+
+        <div class="bigcard">
+          <div class="ribbon" style="background:#7c3aed">✨ 新着</div>
+          <div class="listing-head">
+            <div class="listing-av">🔍</div>
+            <div style="flex:1;min-width:0">
+              <h4 class="listing-name">競合リサーチャー</h4>
+              <div class="listing-cat">リサーチ</div>
+            </div>
+          </div>
+          <p class="listing-desc">競合企業名を入れると Google Chrome 連携で公開情報を収集し、ポジショニングを比較レポート化します。</p>
+          <div class="creator">クリエイター: <b>@takeuchi_kouta</b></div>
+          <div class="listing-meta">
+            <div class="stars">★ —</div>
+            <div class="uses">利用 0 回</div>
+          </div>
+          <div class="bigcard-foot">
+            <div class="bigcard-price">利用料 <b>従量課金</b></div>
+            <button class="bigcard-cta">使ってみる</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));
+  event.target.closest('button').classList.add('on');
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>

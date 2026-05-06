@@ -998,7 +998,12 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
     <a href="javascript:void(0)" onclick="navigator.clipboard.writeText(location.href);this.textContent='✓ コピー済';">🔗 URL コピー</a>
   </div>
   <div class="foot">
-    Powered by <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">サービスを知る</a>
+    Powered by <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">サービスを知る</a><br>
+    <span style="margin-top:8px;display:inline-block">
+      <a href="/terms.html">利用規約</a> ・
+      <a href="/privacy.html">プライバシー</a> ・
+      <a href="/legal.html">特商法表記</a>
+    </span>
   </div>
 </div>
 <script>
@@ -2306,18 +2311,17 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── PATCH /api/user/profile ─────────────────────────────────
   if(pathname==='/api/user/profile'&&method==='PATCH'){
-    const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});
-    const{name}=body;
-    if(name)user.name=name.trim().substring(0,50);
+    const body=await readBody(req);
+    if(body.name) user.name=String(body.name).trim().substring(0,50);
     await DB.save(user);
     return jres(res,200,{user:safe(user)});
   }
 
   // ── PATCH /api/user/password ─────────────────────────────────
   if(pathname==='/api/user/password'&&method==='PATCH'){
-    const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});
+    const body=await readBody(req);
     const{current_password,new_password}=body;
-    if(!PW.verify(current_password,user.password))return jres(res,400,{error:'現在のパスワードが正しくありません'});
+    if(!PW.check(current_password,user.password))return jres(res,400,{error:'現在のパスワードが正しくありません'});
     if(!new_password||new_password.length<8)return jres(res,400,{error:'パスワードは8文字以上にしてください'});
     user.password=PW.hash(new_password);
     await DB.save(user);
@@ -2326,7 +2330,6 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── DELETE /api/user/delete ──────────────────────────────────
   if(pathname==='/api/user/delete'&&method==='DELETE'){
-    const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});
     await DB.remove(user.id);
     return jres(res,200,{ok:true});
   }

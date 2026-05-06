@@ -5,1053 +5,779 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MY AI Agent — あなただけのAIチームを持とう</title>
+<title>MY AI AGENT — あなただけのAIチームを持とう</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+/* ════════════════════════════════════════════════════════
+   MY AI AGENT — Landing page (clean rebuild, no !important wars)
+═════════════════════════════════════════════════════════ */
 :root{
-  --ink:#fdf8f3;
-  --ink2:#faf3eb;
-  --ink3:#f5ebe0;
-  --ink4:#ede0d4;
-  --wire:rgba(180,120,80,.08);
-  --wire2:rgba(180,120,80,.15);
-  --wire3:rgba(180,120,80,.25);
-  --snow:#fff;
-  --mist:rgba(255,255,255,.7);
-  --fog:rgba(255,255,255,.4);
-  --volt:#fb923c;
-  --volt-dim:rgba(251,146,60,.12);
-  --volt-glow:rgba(251,146,60,.3);
-  --cyan:#f97316;
+  /* Brand */
+  --peach:#fb923c;
+  --peach-dark:#ea580c;
+  --peach-soft:rgba(251,146,60,.08);
+  --peach-light:#fde8d8;
+
+  /* Surfaces */
+  --bg:#fdf8f3;
+  --bg-warm:#faf3eb;
+  --bg-card:#ffffff;
+  --bg-deep:#1e1410;
+
+  /* Text */
+  --text:#1a0a00;
+  --text-muted:#5c3a1e;
+  --text-subtle:#9a6a4a;
+  --text-on-dark:#fff5e6;
+
+  /* Lines */
+  --line:rgba(180,120,80,.14);
+  --line-strong:rgba(180,120,80,.22);
+
+  /* Status */
+  --green:#10b981;
   --rose:#ef4444;
-  --rose-dim:rgba(239,68,68,.1);
-  --amber:#f59e0b;
-  --sans:'Noto Sans JP',sans-serif;
-  --display:'Bebas Neue',sans-serif;
-  --mono:'DM Mono',monospace;
-  --text:#2d1a0e;
-  --text2:#6b4226;
-  --text3:#9a6a4a;
+  --blue:#3b82f6;
+
+  /* Type */
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --display:'Bebas Neue','Hiragino Mincho ProN','Yu Mincho',serif;
+  --mono:'DM Mono','SF Mono',Menlo,monospace;
 }
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
-body{background:var(--ink);color:var(--snow);font-family:var(--sans);font-size:16px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
-
-/* ── Scrollbar ─ */
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-thumb{background:var(--fog);border-radius:2px;}
-
-/* ── Noise overlay ─ */
-body::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity:.022;
+body{
+  background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
 }
+img{max-width:100%;display:block;}
+a{color:inherit;text-decoration:none;}
+button{cursor:pointer;font-family:inherit;}
 
-/* ══════════════════════════════════════
-   NAV
-══════════════════════════════════════ */
+/* ════ NAV ════ */
 nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
+  position:sticky;top:0;z-index:50;
+  background:rgba(253,248,243,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   display:flex;align-items:center;justify-content:space-between;
-  padding:18px 48px;
-  background:rgba(4,4,10,.7);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--wire);
+  padding:14px 32px;border-bottom:1px solid var(--line);
 }
-.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
-.nav-logomark{
-  width:34px;height:34px;border-radius:9px;
-  background:var(--volt);display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-size:20px;color:var(--ink);letter-spacing:-1px;
-  box-shadow:0 0 20px var(--volt-glow);
-}
-.nav-logotext{font-family:var(--display);font-size:19px;letter-spacing:.05em;color:var(--snow);}
-.nav-links{display:flex;align-items:center;gap:32px;}
-.nav-links a{color:var(--mist);font-size:14px;text-decoration:none;transition:color .2s;}
-.nav-links a:hover{color:var(--snow);}
-.nav-cta{
-  padding:9px 22px;border-radius:9px;font-size:14px;font-weight:700;font-family:var(--sans);
-  background:var(--volt);color:var(--ink);cursor:pointer;border:none;
-  transition:all .2s;box-shadow:0 0 16px var(--volt-glow);
-}
-.nav-cta:hover{transform:translateY(-1px);box-shadow:0 0 28px var(--volt-glow);}
+.nav-logo{display:flex;align-items:center;gap:9px;}
+.nav-bars{display:flex;gap:3px;align-items:flex-end;}
+.nav-bars div{width:4px;background:var(--peach);border-radius:2px;}
+.nav-bars div:nth-child(1){height:20px;}
+.nav-bars div:nth-child(2){height:14px;opacity:.65;}
+.nav-bars div:nth-child(3){height:8px;opacity:.35;}
+.nav-name{font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--text);}
+.nav-links{display:flex;gap:24px;align-items:center;}
+.nav-links a{color:var(--text-muted);font-size:13px;font-weight:600;transition:color .15s;}
+.nav-links a:hover{color:var(--peach-dark);}
 
-/* ══════════════════════════════════════
-   HERO
-══════════════════════════════════════ */
+.nav-actions{display:flex;align-items:center;gap:8px;}
+.nav-login{
+  background:transparent;color:var(--text);border:1.5px solid var(--line-strong);
+  padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;transition:all .15s;
+}
+.nav-login:hover{border-color:var(--peach);color:var(--peach-dark);background:rgba(251,146,60,.04);}
+.nav-cta{
+  background:var(--peach);color:#fff;border:0;padding:9px 18px;border-radius:10px;
+  font-size:13px;font-weight:700;transition:all .15s;
+}
+.nav-cta:hover{background:var(--peach-dark);transform:translateY(-1px);}
+
+/* ════ Buttons (shared) ════ */
+.btn-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--peach);color:#fff;border:0;padding:14px 26px;border-radius:12px;
+  font-size:15px;font-weight:800;
+  box-shadow:0 6px 18px rgba(251,146,60,.22);
+  transition:all .18s;
+}
+.btn-primary:hover{background:var(--peach-dark);transform:translateY(-2px);box-shadow:0 10px 24px rgba(251,146,60,.32);}
+.btn-ghost{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:transparent;color:var(--text);border:1.5px solid var(--line-strong);
+  padding:14px 26px;border-radius:12px;font-size:15px;font-weight:700;
+  transition:all .18s;
+}
+.btn-ghost:hover{border-color:var(--peach);color:var(--peach-dark);}
+
+/* ════ Section frame ════ */
+.section{position:relative;padding:96px 24px;}
+.section-inner{max-width:1100px;margin:0 auto;}
+.section-head{text-align:center;max-width:680px;margin:0 auto 56px;}
+.kicker{
+  display:inline-block;font-size:11px;font-weight:800;color:var(--peach-dark);
+  letter-spacing:.18em;text-transform:uppercase;margin-bottom:14px;
+  padding:5px 12px;background:var(--peach-soft);border-radius:999px;
+}
+.h2{
+  font-family:var(--display);font-size:clamp(36px,5.4vw,56px);
+  font-weight:900;line-height:1.15;letter-spacing:.01em;color:var(--text);
+  margin-bottom:14px;
+}
+.lead{font-size:16px;color:var(--text-muted);line-height:1.75;}
+
+/* ════ Hero ════ */
 .hero{
-  min-height:100vh;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  padding:120px 24px 80px;text-align:center;
+  text-align:center;padding:90px 24px 80px;
+  background:radial-gradient(circle at 50% 0%, var(--peach-light) 0%, var(--bg) 60%);
   position:relative;overflow:hidden;
 }
-/* grid bg */
 .hero::before{
   content:'';position:absolute;inset:0;
-  background-image:
-    linear-gradient(var(--wire) 1px,transparent 1px),
-    linear-gradient(90deg,var(--wire) 1px,transparent 1px);
-  background-size:72px 72px;
-  mask-image:radial-gradient(ellipse 80% 70% at 50% 50%,black 40%,transparent 100%);
-}
-/* radial glow */
-.hero::after{
-  content:'';position:absolute;width:800px;height:800px;border-radius:50%;
-  background:radial-gradient(circle,rgba(251,146,60,.06) 0%,transparent 65%);
-  top:50%;left:50%;transform:translate(-50%,-55%);pointer-events:none;
-}
-
-.hero-kicker{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:6px 16px;border-radius:20px;margin-bottom:32px;
-  background:var(--volt-dim);border:1px solid rgba(251,146,60,.25);
-  font-size:12px;font-weight:700;color:var(--volt);letter-spacing:.08em;text-transform:uppercase;
-  position:relative;z-index:1;
-  animation:fadeDown .6s ease both;
-}
-.hero-kicker-dot{width:6px;height:6px;border-radius:50%;background:var(--volt);box-shadow:0 0 6px var(--volt);}
-
-.hero-title{
-  font-family:var(--display);font-size:clamp(64px,10vw,140px);
-  line-height:.9;letter-spacing:.01em;
-  position:relative;z-index:1;
-  animation:fadeDown .6s .1s ease both;
-}
-.hero-title .line1{display:block;color:var(--snow);}
-.hero-title .line2{
-  display:block;
-  -webkit-text-stroke:1px rgba(255,255,255,.25);
-  color:transparent;
-  background:linear-gradient(90deg,var(--volt),var(--cyan));
-  -webkit-background-clip:text;background-clip:text;
-  -webkit-text-fill-color:transparent;
-}
-.hero-title .line3{display:block;color:var(--snow);}
-
-.hero-sub{
-  max-width:560px;margin:28px auto 0;font-size:18px;font-weight:300;
-  color:var(--mist);line-height:1.7;
-  position:relative;z-index:1;
-  animation:fadeDown .6s .2s ease both;
-}
-.hero-sub b{color:var(--snow);font-weight:500;}
-
-.hero-actions{
-  display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
-  margin-top:44px;position:relative;z-index:1;
-  animation:fadeDown .6s .3s ease both;
-}
-.btn-volt{
-  padding:15px 36px;border-radius:12px;font-size:16px;font-weight:700;
-  background:var(--volt);color:var(--ink);border:none;cursor:pointer;
-  transition:all .2s;box-shadow:0 0 24px var(--volt-glow),0 4px 20px rgba(0,0,0,.4);
-  font-family:var(--sans);
-}
-.btn-volt:hover{transform:translateY(-2px);box-shadow:0 0 40px var(--volt-glow),0 8px 28px rgba(0,0,0,.5);}
-.btn-outline{
-  padding:14px 32px;border-radius:12px;font-size:16px;font-weight:500;
-  background:transparent;border:1px solid var(--wire2);color:var(--mist);cursor:pointer;
-  transition:all .2s;font-family:var(--sans);
-}
-.btn-outline:hover{border-color:var(--wire3);color:var(--snow);}
-
-/* hero scroll hint */
-.hero-scroll{
-  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  color:var(--fog);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
-  animation:fadeDown .6s .5s ease both;
-}
-.scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--fog),transparent);}
-
-/* ══════════════════════════════════════
-   AGENT PREVIEW (hero bottom)
-══════════════════════════════════════ */
-.hero-preview{
-  margin-top:64px;position:relative;z-index:1;width:100%;max-width:860px;
-  animation:fadeDown .7s .4s ease both;
-}
-.preview-shell{
-  background:var(--ink2);border:1px solid var(--wire2);border-radius:20px;
-  overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 40px 80px rgba(45,26,14,.5);
-}
-.preview-bar{
-  background:var(--ink3);border-bottom:1px solid var(--wire);
-  padding:12px 18px;display:flex;align-items:center;gap:8px;
-}
-.preview-dot{width:10px;height:10px;border-radius:50%;}
-.preview-dot.r{background:#ff5f5f;}.preview-dot.y{background:#febc2e;}.preview-dot.g{background:#28c840;}
-.preview-url{
-  flex:1;text-align:center;font-family:var(--mono);font-size:12px;color:var(--fog);
-  background:var(--ink4);border-radius:6px;padding:4px 12px;margin:0 12px;
-}
-.preview-body{display:grid;grid-template-columns:220px 1fr;min-height:320px;}
-.preview-sidebar{
-  background:var(--ink3);border-right:1px solid var(--wire);
-  padding:16px 12px;display:flex;flex-direction:column;gap:8px;
-}
-.preview-agent{
-  display:flex;align-items:center;gap:10px;padding:10px;
-  border-radius:10px;transition:background .15s;
-}
-.preview-agent.active{background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);}
-.preview-agent:not(.active){border:1px solid transparent;}
-.pa-icon{
-  width:34px;height:34px;border-radius:9px;background:var(--ink4);
-  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
-}
-.pa-name{font-size:12px;font-weight:600;color:var(--snow);}
-.pa-role{font-size:10px;color:var(--fog);}
-.pa-dot{width:5px;height:5px;border-radius:50%;background:#28c840;margin-left:auto;box-shadow:0 0 4px #28c840;}
-.preview-chat{padding:20px;display:flex;flex-direction:column;gap:14px;position:relative;}
-.pchat-msg{display:flex;gap:10px;align-items:flex-end;}
-.pchat-msg.user{flex-direction:row-reverse;}
-.pchat-av{width:28px;height:28px;border-radius:8px;background:var(--ink4);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
-.pchat-av.uav{background:var(--volt);font-size:11px;font-weight:800;color:var(--ink);}
-.pchat-bubble{
-  max-width:72%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;
-  background:var(--ink3);border:1px solid var(--wire);color:var(--snow);
-}
-.pchat-msg.user .pchat-bubble{
-  background:var(--volt);color:var(--ink);border:none;
-  border-radius:14px 14px 4px 14px;font-weight:500;
-}
-.pchat-msg.agent .pchat-bubble{border-radius:14px 14px 14px 4px;}
-.pchat-typing{display:flex;gap:4px;align-items:center;padding:12px 14px;}
-.pt-dot{width:6px;height:6px;border-radius:50%;background:var(--fog);animation:ptd 1.2s ease infinite;}
-.pt-dot:nth-child(2){animation-delay:.15s;}.pt-dot:nth-child(3){animation-delay:.3s;}
-@keyframes ptd{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-5px);opacity:1;}}
-.preview-cursor{
-  position:absolute;bottom:60px;right:30px;
-  background:var(--volt);color:var(--ink);font-size:11px;font-weight:700;
-  padding:5px 12px;border-radius:6px;white-space:nowrap;
-  box-shadow:0 0 12px var(--volt-glow);
-  animation:cursor-float 3s ease-in-out infinite;
-}
-.preview-cursor::before{
-  content:'';position:absolute;top:-5px;left:10px;
-  border:5px solid transparent;border-bottom-color:var(--volt);border-top:none;
-}
-@keyframes cursor-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
-
-/* ══════════════════════════════════════
-   STATS BAND
-══════════════════════════════════════ */
-.stats{
-  border-top:1px solid var(--wire);border-bottom:1px solid var(--wire);
-  padding:48px 24px;
-  display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
-  background:var(--wire);
-}
-.stat{background:var(--ink);padding:36px 24px;text-align:center;}
-.stat-num{
-  font-family:var(--display);font-size:64px;line-height:1;
-  background:linear-gradient(135deg,var(--volt),var(--cyan));
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-}
-.stat-label{font-size:14px;color:var(--mist);margin-top:8px;}
-
-/* ══════════════════════════════════════
-   HOW IT WORKS
-══════════════════════════════════════ */
-.section{padding:100px 24px;max-width:1100px;margin:0 auto;}
-.section-kicker{
-  font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--volt);margin-bottom:16px;
-}
-.section-title{
-  font-family:var(--display);font-size:clamp(40px,6vw,72px);line-height:1;
-  letter-spacing:.02em;margin-bottom:16px;
-}
-.section-sub{font-size:17px;color:var(--mist);max-width:520px;line-height:1.7;}
-
-.steps{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
-  margin-top:56px;background:var(--wire);border-radius:20px;overflow:hidden;
-}
-.step{background:var(--ink2);padding:36px 30px;position:relative;overflow:hidden;}
-.step::before{
-  content:attr(data-n);
-  position:absolute;top:-10px;right:20px;
-  font-family:var(--display);font-size:120px;color:var(--wire2);line-height:1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cdefs%3E%3Cpattern id='dots' x='0' y='0' width='20' height='20' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23fb923c' opacity='.12'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='url(%23dots)'/%3E%3C/svg%3E");
   pointer-events:none;
 }
-.step-icon{font-size:32px;margin-bottom:20px;}
-.step-title{font-size:17px;font-weight:700;margin-bottom:10px;}
-.step-desc{font-size:14px;color:var(--mist);line-height:1.7;}
+.hero-inner{position:relative;z-index:1;max-width:780px;margin:0 auto;}
+.hero-kicker{
+  display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;
+  color:var(--peach-dark);background:#fff;border:1px solid rgba(251,146,60,.25);
+  padding:7px 16px;border-radius:999px;margin-bottom:24px;letter-spacing:.04em;
+  box-shadow:0 4px 14px rgba(251,146,60,.08);
+}
+.hero-kicker-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.hero h1{
+  font-family:var(--display);font-size:clamp(56px,9vw,108px);
+  font-weight:900;line-height:.95;letter-spacing:.01em;margin-bottom:24px;
+  color:var(--text);
+}
+.hero h1 .accent{color:var(--peach);}
+.hero-sub{font-size:18px;color:var(--text-muted);max-width:580px;margin:0 auto 32px;line-height:1.75;}
+.hero-sub b{color:var(--text);font-weight:700;}
+.hero-cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.hero-trust{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:26px;}
+.hero-trust-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 18px;border-radius:999px;
+  background:#fff;border:1.5px solid rgba(251,146,60,.3);
+  font-size:14px;font-weight:700;color:var(--text);
+  box-shadow:0 6px 18px rgba(251,146,60,.12);
+  transition:all .2s;
+}
+.hero-trust-pill:hover{transform:translateY(-2px);border-color:var(--peach);box-shadow:0 10px 24px rgba(251,146,60,.18);}
+.hero-trust-pill .check{
+  width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;flex-shrink:0;
+  box-shadow:0 2px 6px rgba(251,146,60,.3);
+}
 
-/* ══════════════════════════════════════
-   SKILLS SHOWCASE
-══════════════════════════════════════ */
-.skills-section{padding:80px 24px;background:var(--ink2);border-top:1px solid var(--wire);border-bottom:1px solid var(--wire);}
-.skills-inner{max-width:1100px;margin:0 auto;}
-.skills-grid{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:48px;
+/* ════ Section: 3 STEPS ════ */
+.section-steps{background:var(--bg-warm);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.step-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:18px;padding:32px 26px;
+  position:relative;transition:all .25s;
 }
-.skill-card{
-  padding:22px 18px;border-radius:14px;
-  background:var(--ink3);border:1px solid var(--wire);
-  transition:all .2s;cursor:default;
+.step-card:hover{transform:translateY(-3px);box-shadow:0 14px 36px rgba(180,100,40,.08);border-color:rgba(251,146,60,.3);}
+.step-num{
+  position:absolute;top:20px;right:24px;
+  font-family:var(--display);font-size:42px;color:var(--bg-warm);
+  line-height:1;letter-spacing:.02em;
 }
-.skill-card:hover{
-  border-color:rgba(251,146,60,.3);
-  background:var(--volt-dim);
-  transform:translateY(-3px);
+.step-card:hover .step-num{color:rgba(251,146,60,.18);}
+.step-icon{
+  font-size:34px;margin-bottom:18px;width:60px;height:60px;
+  background:linear-gradient(135deg,var(--peach-soft),rgba(251,146,60,.04));
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
 }
-.skill-icon{font-size:28px;margin-bottom:12px;}
-.skill-name{font-size:13px;font-weight:700;margin-bottom:4px;}
-.skill-desc{font-size:11px;color:var(--fog);line-height:1.5;}
+.step-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:8px;}
+.step-desc{font-size:14px;color:var(--text-muted);line-height:1.75;}
 
-/* ══════════════════════════════════════
-   CREATE FLOW (new agent creation, 5 steps)
-══════════════════════════════════════ */
-.create-flow{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:14px;max-width:1100px;
-  margin:64px auto 0;
-}
+/* ════ Section: 5-STEP CREATE ════ */
+.section-create{background:var(--bg);}
+.create-flow{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
 .create-step{
-  background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:14px;padding:26px 18px 20px;
-  text-align:center;position:relative;transition:all .2s;
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:28px 18px 22px;text-align:center;position:relative;transition:all .25s;
 }
-.create-step:hover{border-color:rgba(251,146,60,.4);transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.06);}
-.create-step .cs-num{
-  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
-  width:34px;height:34px;border-radius:50%;background:#fb923c;color:#fff;
-  font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 10px rgba(251,146,60,.3);
+.create-step:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(180,100,40,.08);border-color:rgba(251,146,60,.3);}
+.create-step .num-badge{
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  width:30px;height:30px;border-radius:50%;background:var(--peach);color:#fff;
+  font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(251,146,60,.32);
 }
-.create-step .cs-ic{font-size:32px;margin:14px 0 10px;}
-.create-step .cs-nm{font-size:14px;font-weight:800;color:#1a0a00;margin-bottom:6px;}
-.create-step .cs-desc{font-size:11.5px;color:#6b4226;line-height:1.55;}
-@media(max-width:880px){.create-flow{grid-template-columns:repeat(2,1fr);}}
+.create-step .ic{font-size:32px;margin:14px 0 10px;}
+.create-step .nm{font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.create-step .desc{font-size:11.5px;color:var(--text-subtle);line-height:1.6;}
+.create-cta{text-align:center;margin-top:48px;}
 
-/* ══════════════════════════════════════
-   TEMPLATE SECTION
-══════════════════════════════════════ */
-.tmpl-row{display:grid;grid-template-columns:1fr 1fr;gap:36px;max-width:1100px;margin:48px auto 0;align-items:center;}
-@media(max-width:880px){.tmpl-row{grid-template-columns:1fr;}}
-.tmpl-text h3.tmpl-h{font-family:var(--display);font-size:36px;font-weight:900;color:#1a0a00;line-height:1.2;letter-spacing:.02em;margin-bottom:14px;}
-.tmpl-text p.tmpl-p{font-size:15px;color:#5c3a1e;line-height:1.75;margin-bottom:18px;}
-.tmpl-text p.tmpl-p b{color:#1a0a00;}
-.tmpl-text ul.tmpl-list{list-style:none;padding:0;margin-bottom:24px;}
-.tmpl-text ul.tmpl-list li{font-size:14px;color:#5c3a1e;margin:7px 0;display:flex;gap:8px;align-items:flex-start;}
-.tmpl-text ul.tmpl-list li::before{content:'✓';color:#10b981;font-weight:900;}
-
-.tmpl-card{background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:20px;padding:24px;box-shadow:0 12px 30px rgba(0,0,0,.06);}
-.tmpl-card-h{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
-.tmpl-card .tc-ic{width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
-.tmpl-card .tc-nm{font-size:17px;font-weight:800;color:#1a0a00;}
-.tmpl-card .tc-desc{font-size:12px;color:#9a6a4a;margin-top:3px;}
-.tc-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
-.tc-pill{background:rgba(251,146,60,.1);color:#ea580c;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid rgba(251,146,60,.2);}
-.tc-modules{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
-.tc-mod{background:#faf3eb;border:1px solid rgba(180,120,80,.18);border-radius:8px;padding:8px 4px;text-align:center;font-size:10px;color:#5c3a1e;font-weight:700;}
-.tc-mod-n{display:block;color:#fb923c;font-weight:900;font-size:12px;font-family:var(--display);}
-
-/* ══════════════════════════════════════
-   SHARE (Coming Soon)
-══════════════════════════════════════ */
-.coming-badge{
-  display:inline-block;background:#1e1410;color:#fff;padding:5px 16px;border-radius:999px;
-  font-size:11px;font-weight:800;letter-spacing:.08em;margin-bottom:16px;
+/* ════ Section: TEMPLATE ════ */
+.section-template{background:var(--bg-warm);border-top:1px solid var(--line);}
+.tmpl-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.tmpl-text h3{
+  font-family:var(--display);font-size:36px;font-weight:900;color:var(--text);
+  line-height:1.2;letter-spacing:.02em;margin-bottom:16px;
 }
-.share-row{display:grid;grid-template-columns:1fr 1fr;gap:36px;max-width:1000px;margin:48px auto 0;align-items:center;text-align:left;}
-@media(max-width:880px){.share-row{grid-template-columns:1fr;}}
-.share-text h3.share-h{font-family:var(--display);font-size:34px;font-weight:900;color:#1a0a00;letter-spacing:.02em;line-height:1.25;margin-bottom:14px;}
-.share-text p.share-p{font-size:15px;color:#5c3a1e;line-height:1.75;margin-bottom:18px;}
-.share-text p.share-p b{color:#1a0a00;}
-.share-text ul.share-list{list-style:none;padding:0;}
-.share-text ul.share-list li{font-size:14px;color:#5c3a1e;margin:7px 0;display:flex;gap:8px;align-items:flex-start;}
-.share-text ul.share-list li::before{content:'✓';color:#10b981;font-weight:900;}
+.tmpl-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:20px;}
+.tmpl-text p b{color:var(--text);}
+.tmpl-text ul{list-style:none;margin-bottom:24px;}
+.tmpl-text li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text-muted);margin:8px 0;}
+.tmpl-text li::before{
+  content:'';width:18px;height:18px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+
+.tmpl-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:20px;padding:26px;
+  box-shadow:0 14px 40px rgba(180,100,40,.08);position:relative;
+}
+.tmpl-card-head{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.tmpl-avatar{
+  width:64px;height:64px;border-radius:18px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;
+  flex-shrink:0;box-shadow:0 6px 18px rgba(251,146,60,.28);
+}
+.tmpl-card-name{font-size:17px;font-weight:800;color:var(--text);}
+.tmpl-card-desc{font-size:12px;color:var(--text-subtle);margin-top:3px;}
+.tmpl-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:18px;}
+.tmpl-pill{
+  background:var(--peach-soft);color:var(--peach-dark);
+  padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;
+  border:1px solid rgba(251,146,60,.2);letter-spacing:.02em;
+}
+.tmpl-modules{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.tmpl-mod{
+  background:var(--bg-warm);border:1px solid var(--line);border-radius:9px;
+  padding:9px 4px;text-align:center;font-size:10.5px;color:var(--text-muted);
+  font-weight:700;line-height:1.3;
+}
+.tmpl-mod-n{
+  display:block;color:var(--peach);font-weight:900;font-size:13px;
+  font-family:var(--display);margin-bottom:1px;
+}
+
+/* ════ Section: SHARE (Coming Soon) ════ */
+.section-share{background:var(--bg);position:relative;overflow:hidden;}
+.section-share::before{
+  content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;
+  background:radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
+  pointer-events:none;
+}
+.coming-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--text);color:var(--text-on-dark);
+  padding:6px 16px;border-radius:999px;
+  font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:18px;
+}
+.coming-pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--peach);}
+.share-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-top:56px;}
+.share-text h3{
+  font-family:var(--display);font-size:34px;font-weight:900;color:var(--text);
+  letter-spacing:.02em;line-height:1.25;margin-bottom:16px;
+}
+.share-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:20px;}
+.share-text p b{color:var(--text);}
+.share-text ul{list-style:none;}
+.share-text li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text-muted);margin:8px 0;}
+.share-text li::before{
+  content:'';width:18px;height:18px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
 
 .share-visual{
-  background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:18px;padding:24px;
-  box-shadow:0 12px 30px rgba(0,0,0,.06);position:relative;filter:saturate(.92);
+  background:var(--bg-card);border:1px solid var(--line);border-radius:20px;padding:24px;
+  box-shadow:0 14px 40px rgba(180,100,40,.08);position:relative;
 }
-.share-mock-url{font-family:var(--mono);font-size:13px;background:#faf3eb;border:1px solid rgba(180,120,80,.18);padding:10px 14px;border-radius:10px;margin-bottom:14px;color:#1a0a00;}
+.share-mock-url{
+  font-family:var(--mono);font-size:13px;color:var(--text);
+  background:var(--bg-warm);border:1px solid var(--line);padding:12px 16px;
+  border-radius:11px;margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.share-mock-url::before{content:'🔗';font-size:14px;}
 .share-flow{display:flex;flex-direction:column;gap:10px;}
-.share-flow-step{display:flex;align-items:center;gap:12px;font-size:13px;color:#5c3a1e;padding:10px 12px;background:#faf3eb;border-radius:10px;border:1px solid rgba(180,120,80,.18);}
-.share-flow-step .sfn{width:24px;height:24px;border-radius:50%;background:#fb923c;color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.share-overlay{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);
-  background:rgba(30,20,16,.92);color:#fff;padding:10px 22px;border-radius:10px;
-  font-size:14px;font-weight:800;letter-spacing:.08em;border:2px solid rgba(255,255,255,.2);
-  box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap;
+.share-flow-step{
+  display:flex;align-items:center;gap:14px;padding:12px 14px;
+  background:var(--bg-warm);border:1px solid var(--line);border-radius:11px;
+  font-size:13px;color:var(--text-muted);transition:all .18s;
+}
+.share-flow-step:hover{border-color:rgba(251,146,60,.3);}
+.share-flow-step .num{
+  width:26px;height:26px;border-radius:50%;background:var(--peach);color:#fff;
+  font-weight:800;font-size:12px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 
-.share-pre{margin:48px auto 0;max-width:520px;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:14px;padding:20px 24px;text-align:center;}
-.share-pre p{font-size:13px;color:#5c3a1e;margin-bottom:12px;}
+.share-stamp{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-6deg);
+  background:rgba(30,20,16,.94);color:#fff;
+  padding:10px 24px;border-radius:8px;
+  font-size:13px;font-weight:800;letter-spacing:.16em;
+  border:2px solid rgba(255,245,230,.25);
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+  white-space:nowrap;pointer-events:none;
+}
+
+.share-pre{
+  margin:48px auto 0;max-width:520px;
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:22px 26px;text-align:center;
+  box-shadow:0 6px 20px rgba(180,100,40,.05);
+}
+.share-pre p{font-size:13px;color:var(--text-muted);margin-bottom:12px;}
 .share-pre form{display:flex;gap:8px;}
-.share-pre input{flex:1;padding:11px 14px;border:1px solid rgba(180,120,80,.18);border-radius:10px;font-size:13.5px;font-family:inherit;background:#faf3eb;color:#1a0a00;}
-.share-pre button{background:#fb923c;color:#fff;border:0;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}
-.share-pre button:hover{background:#ea580c;}
+.share-pre input{
+  flex:1;padding:11px 14px;
+  background:var(--bg-warm);border:1px solid var(--line);border-radius:10px;
+  font-size:13.5px;font-family:inherit;color:var(--text);outline:none;
+  transition:border-color .18s;
+}
+.share-pre input:focus{border-color:var(--peach);}
+.share-pre button{
+  background:var(--peach);color:#fff;border:0;padding:11px 20px;border-radius:10px;
+  font-size:13px;font-weight:800;
+}
+.share-pre button:hover{background:var(--peach-dark);}
+.share-pre .ok{display:none;margin-top:8px;color:var(--green);font-size:12px;font-weight:700;}
 
-/* ══════════════════════════════════════
-   PRICING (new tabbed)
-══════════════════════════════════════ */
-.pricing-tabs{display:inline-flex;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:12px;padding:4px;margin:24px 0 0;}
-.pricing-tab{padding:9px 20px;border:0;background:transparent;font-size:13px;font-weight:700;color:#6b4226;border-radius:8px;cursor:pointer;font-family:inherit;}
-.pricing-tab.active{background:#fb923c;color:#fff;}
+/* ════ Section: PRICING ════ */
+.section-pricing{background:var(--bg-warm);border-top:1px solid var(--line);}
+.pricing-tabs{
+  display:inline-flex;background:var(--bg-card);border:1px solid var(--line);
+  border-radius:12px;padding:5px;margin-top:10px;
+  box-shadow:0 4px 14px rgba(180,100,40,.06);
+}
+.pricing-tab{
+  padding:9px 22px;border:0;background:transparent;font-size:13px;font-weight:700;
+  color:var(--text-muted);border-radius:8px;transition:all .18s;
+}
+.pricing-tab:hover{color:var(--text);}
+.pricing-tab.active{background:var(--peach);color:#fff;}
 
-.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;max-width:1100px;margin:48px auto 0;}
-.pricing-card{background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:20px;padding:30px 24px 26px;text-align:left;position:relative;display:flex;flex-direction:column;}
-.pricing-card.popular{border:2px solid #fb923c;}
-.pricing-card.popular::before{content:'おすすめ 🔥';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#fb923c;color:#fff;padding:3px 14px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;}
-.pricing-card .pn{font-size:11px;font-weight:800;color:#ea580c;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
-.pricing-card .pp{font-family:var(--display);font-size:42px;font-weight:900;color:#1a0a00;line-height:1;letter-spacing:.02em;}
-.pricing-card .pper{font-size:13px;color:#9a6a4a;margin:4px 0 6px;}
-.pricing-card .pcredit{font-size:13px;color:#ea580c;font-weight:700;margin-bottom:18px;}
-.pricing-card ul{list-style:none;flex:1;margin-bottom:18px;padding:0;border-top:1px solid rgba(180,120,80,.1);padding-top:14px;}
-.pricing-card li{font-size:13px;color:#5c3a1e;margin:8px 0;display:flex;gap:7px;align-items:flex-start;line-height:1.55;}
-.pricing-card li::before{content:'✓';color:#10b981;font-weight:900;flex-shrink:0;}
-.pricing-card .pcta{display:block;width:100%;padding:12px;background:#faf3eb;color:#1a0a00;border:1px solid rgba(180,120,80,.18);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;transition:all .15s;}
-.pricing-card .pcta:hover{background:#f5ebe0;border-color:rgba(251,146,60,.3);}
-.pricing-card.popular .pcta{background:#fb923c;color:#fff;border-color:#fb923c;}
-.pricing-card.popular .pcta:hover{background:#ea580c;border-color:#ea580c;}
+.pricing-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;
+  max-width:1100px;margin:48px auto 0;
+}
+.price-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+  padding:32px 26px 28px;display:flex;flex-direction:column;position:relative;
+  transition:all .25s;
+}
+.price-card:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(180,100,40,.1);}
+.price-card.popular{
+  border:2px solid var(--peach);
+  box-shadow:0 14px 40px rgba(251,146,60,.18);
+}
+.price-card.popular::before{
+  content:'おすすめ';
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  background:var(--peach);color:#fff;padding:4px 16px;border-radius:999px;
+  font-size:11px;font-weight:800;letter-spacing:.06em;
+  box-shadow:0 4px 14px rgba(251,146,60,.4);
+}
+.price-name{font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px;}
+.price-amount{
+  font-family:var(--display);font-size:48px;font-weight:900;color:var(--text);
+  line-height:1;letter-spacing:.02em;
+}
+.price-period{font-size:13px;color:var(--text-subtle);margin:6px 0 8px;}
+.price-credit{font-size:13.5px;color:var(--peach-dark);font-weight:700;margin-bottom:20px;}
+.price-feats{
+  list-style:none;flex:1;margin-bottom:22px;
+  border-top:1px solid var(--line);padding-top:16px;
+}
+.price-feats li{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:13px;color:var(--text-muted);margin:9px 0;line-height:1.6;
+}
+.price-feats li::before{
+  content:'';width:16px;height:16px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+.price-cta{
+  display:block;width:100%;padding:13px;border-radius:12px;
+  background:var(--bg-warm);color:var(--text);border:1px solid var(--line-strong);
+  font-size:13px;font-weight:700;text-align:center;
+  transition:all .18s;
+}
+.price-cta:hover{background:var(--bg-card);border-color:var(--peach);color:var(--peach-dark);}
+.price-card.popular .price-cta{background:var(--peach);color:#fff;border-color:var(--peach);}
+.price-card.popular .price-cta:hover{background:var(--peach-dark);border-color:var(--peach-dark);}
 
-/* ══════════════════════════════════════
-   CTA SECTION
-══════════════════════════════════════ */
-.cta-section{
+.pricing-trust{text-align:center;font-size:12px;color:var(--text-subtle);margin-top:32px;}
+.pricing-trust span{margin:0 8px;}
+
+/* ════ Section: CTA (final push) ════ */
+.section-cta{
   padding:100px 24px;text-align:center;
-  background:var(--ink);border-top:1px solid var(--wire);
-  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--text) 0%,#3a2a1c 100%);
+  color:var(--text-on-dark);position:relative;overflow:hidden;
 }
-.cta-section::before{
+.section-cta::before{
   content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(251,146,60,.05) 0%,transparent 70%);
+  background:radial-gradient(ellipse 70% 50% at 50% 50%,rgba(251,146,60,.12) 0%,transparent 60%);
 }
-.cta-title{
-  font-family:var(--display);font-size:clamp(48px,8vw,100px);
-  line-height:.95;letter-spacing:.02em;position:relative;z-index:1;
-  margin-bottom:24px;
+.section-cta-inner{position:relative;z-index:1;max-width:680px;margin:0 auto;}
+.section-cta h2{
+  font-family:var(--display);font-size:clamp(48px,8vw,88px);
+  font-weight:900;line-height:.98;letter-spacing:.02em;margin-bottom:18px;color:#fff;
 }
-.cta-title span{
-  background:linear-gradient(90deg,var(--volt),var(--cyan));
+.section-cta h2 .accent{
+  background:linear-gradient(90deg,var(--peach) 0%,#fdba74 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
-.cta-sub{font-size:17px;color:var(--mist);margin-bottom:40px;position:relative;z-index:1;}
+.section-cta p{font-size:16px;color:rgba(255,245,230,.7);margin-bottom:32px;}
+.section-cta .btn-primary{font-size:17px;padding:17px 38px;}
 
-/* ══════════════════════════════════════
-   FOOTER
-══════════════════════════════════════ */
-footer{
-  border-top:1px solid var(--wire);padding:32px 48px;
-  display:flex;align-items:center;justify-content:space-between;
-  font-size:13px;color:var(--fog);
-}
-footer a{color:var(--fog);text-decoration:none;}
-footer a:hover{color:var(--mist);}
+/* ════ Footer ════ */
+footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 24px;text-align:center;}
+.footer-brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;}
+.footer-brand .nav-name{color:var(--text);}
+.footer-links{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:14px;}
+.footer-links a{color:var(--text-muted);font-size:12.5px;font-weight:600;}
+.footer-links a:hover{color:var(--peach-dark);}
+.footer-copy{font-size:11.5px;color:var(--text-subtle);}
 
-/* ══════════════════════════════════════
-   ANIMATIONS
-══════════════════════════════════════ */
-@keyframes fadeDown{
-  from{opacity:0;transform:translateY(-16px);}
-  to{opacity:1;transform:translateY(0);}
-}
-
-/* Scroll reveal */
-.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
-.reveal.shown{opacity:1;transform:translateY(0);}
-
-/* ══════════════════════════════════════
-   RESPONSIVE
-══════════════════════════════════════ */
-@media(max-width:768px){
-  nav{padding:14px 20px;}
+/* ════ Responsive ════ */
+@media(max-width:880px){
+  .steps-grid{grid-template-columns:1fr;}
+  .create-flow{grid-template-columns:repeat(2,1fr);}
+  .tmpl-row,.share-row{grid-template-columns:1fr;}
   .nav-links{display:none;}
-  .hero-title{font-size:clamp(52px,14vw,90px);}
-  .stats{grid-template-columns:1fr;}
-  .steps{grid-template-columns:1fr;}
-  .skills-grid{grid-template-columns:repeat(2,1fr);}
-  .pricing-table{grid-template-columns:1fr;}
-  .preview-body{grid-template-columns:1fr;}
-  .preview-sidebar{display:none;}
-  footer{flex-direction:column;gap:12px;text-align:center;}
+}
+@media(max-width:520px){
+  .section{padding:72px 18px;}
+  .hero{padding:64px 18px 56px;}
+  .h2{font-size:30px;}
+  .pricing-grid{grid-template-columns:1fr;}
+  .nav-login{padding:7px 12px;font-size:12px;}
+  .nav-cta{padding:7px 14px;font-size:12px;}
 }
 
-/* LP ライトクリーム×ピーチテーマ */
-html,body{margin:0;font-family:var(--sans);background:#fdf8f3;color:var(--text);-webkit-font-smoothing:antialiased;}
-nav,header,.nav{background:rgba(253,248,243,.95) !important;border-bottom:1px solid rgba(180,120,80,.12) !important;}
-.hero,.hero-section{background:linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important;}
-h1,h2,h3,.hero-title,.section-title{color:#fff !important;}
-p,.hero-sub,.section-sub,.plan-feat,.faq-a{color:#6b4226 !important;}
-.feature-card,.pricing-card,.faq-item,.card{background:#fff !important;border:1px solid rgba(180,120,80,.15) !important;box-shadow:0 4px 20px rgba(180,120,80,.06) !important;}
-.pricing-card.pop,.plan-popular{border-color:#fb923c !important;box-shadow:0 8px 32px rgba(251,146,60,.18) !important;}
-.badge,.tag,.label{background:rgba(251,146,60,.12) !important;color:#ea580c !important;}
-footer,.footer{background:#f5ebe0 !important;border-top:1px solid rgba(180,120,80,.15) !important;color:#6b4226 !important;}
-footer *,.footer *{color:#6b4226 !important;}
-a{color:#ea580c !important;}
-.btn,.cta-btn{background:#fb923c !important;color:#fff !important;}
-.btn-outline{background:transparent !important;border:1px solid #fb923c !important;color:#fb923c !important;}
-
-
-/* ============ LP 全修正 ============ */
-
-/* 1. ナビゲーション */
-nav { background: rgba(253,248,243,.97) !important; border-bottom: 1px solid rgba(180,120,80,.12) !important; }
-.nav-logo, .logo-text, .brand-name { color: #2d1a0e !important; }
-.nav-link { color: #6b4226 !important; }
-.nav-cta, .btn-nav { background: #fb923c !important; color: #fff !important; border-radius: 10px !important; }
-
-/* 2. ヒーロー - テキスト色を濃くする */
-.hero { background: linear-gradient(160deg,#fdf8f3 0%,#fde8d8 100%) !important; }
-.hero-title, .hero h1 { color: #1a0a00 !important; }
-.hero-title .accent, .hero-title span { color: #fb923c !important; }
-.hero-sub, .hero p { color: #5c3a1e !important; }
-.eyebrow, .badge-pill { background: rgba(251,146,60,.15) !important; color: #c2410c !important; border: 1px solid rgba(251,146,60,.3) !important; }
-
-/* 3. デモ画像（モックアップ）*/
-.mockup-wrap, .demo-wrap, .hero-visual { filter: drop-shadow(0 20px 60px rgba(180,100,40,.2)) !important; }
-.mockup, .app-demo { background: #fff !important; border: 1px solid rgba(180,120,80,.2) !important; border-radius: 16px !important; box-shadow: 0 12px 40px rgba(180,100,40,.15) !important; }
-.mockup-bar, .demo-bar { background: #f5ebe0 !important; }
-.mockup-dot { background: rgba(180,120,80,.3) !important; }
-/* モックアップ内のサイドバー */
-.demo-sidebar { background: #faf3eb !important; border-right: 1px solid rgba(180,120,80,.15) !important; }
-.demo-ag-name { color: #2d1a0e !important; }
-.demo-ag-skill { color: #8c6a52 !important; }
-.demo-chat { background: #fdf8f3 !important; }
-.demo-bubble-u { background: rgba(251,146,60,.15) !important; color: #2d1a0e !important; border: 1px solid rgba(251,146,60,.2) !important; }
-.demo-bubble-a { background: #fff !important; color: #2d1a0e !important; border: 1px solid rgba(180,120,80,.12) !important; }
-
-/* 4. 「3ステップで〜」セクション */
-.steps-section, .how-section, section:has(.step-num) { background: #faf3eb !important; }
-.steps-section h2, .how-section h2, .step-title { color: #1a0a00 !important; }
-.steps-section p, .how-section p, .step-desc { color: #5c3a1e !important; }
-.step-num { color: #fb923c !important; font-weight: 900 !important; opacity: 0.25 !important; }
-.step-icon { background: rgba(251,146,60,.12) !important; }
-
-/* 5. スキルセクション（暗い背景）*/
-.skills-section, .skill-section { background: #2d1205 !important; }
-.skills-section *, .skill-section * { color: #fff !important; }
-.sk-card-lp, .skill-card { background: rgba(255,255,255,.08) !important; border: 1px solid rgba(255,255,255,.1) !important; }
-
-/* 6. フィーチャーセクション */
-.features-section, .feature-section { background: #fdf8f3 !important; }
-.features-section h2, .feature-section h2 { color: #1a0a00 !important; }
-.features-section p, .feature-section p { color: #5c3a1e !important; }
-.feat-card, .feature-card { background: #fff !important; border: 1px solid rgba(180,120,80,.15) !important; box-shadow: 0 4px 20px rgba(180,100,40,.07) !important; }
-.feat-title, .feature-title { color: #1a0a00 !important; }
-.feat-desc, .feature-desc { color: #5c3a1e !important; }
-.feat-icon-wrap { background: rgba(251,146,60,.1) !important; }
-
-/* 7. 料金セクション - 黒を廃止してクリームに */
-.pricing-section { background: #faf3eb !important; }
-.pricing-section h2 { color: #1a0a00 !important; }
-.pricing-section > p { color: #5c3a1e !important; }
-.plan-card, .pricing-card { background: #fff !important; border: 1px solid rgba(180,120,80,.18) !important; box-shadow: 0 4px 16px rgba(180,100,40,.07) !important; border-radius: 20px !important; }
-.plan-card.popular, .pricing-card.pop, .plan-card.featured { border-color: #fb923c !important; box-shadow: 0 12px 40px rgba(251,146,60,.2) !important; }
-.plan-name { color: #1a0a00 !important; font-weight: 700 !important; }
-.plan-price, .price-amount { color: #1a0a00 !important; font-weight: 900 !important; }
-.plan-price span, .price-unit, .price-period { color: #6b4226 !important; }
-.plan-feat li, .plan-feature { color: #5c3a1e !important; }
-.plan-badge, .popular-badge { background: #fb923c !important; color: #fff !important; font-weight: 700 !important; }
-.plan-cta, .btn-plan { background: #fb923c !important; color: #fff !important; border: none !important; border-radius: 12px !important; font-weight: 700 !important; }
-.plan-cta-free, .btn-plan-free { background: transparent !important; border: 2px solid #fb923c !important; color: #fb923c !important; border-radius: 12px !important; font-weight: 700 !important; }
-.check-icon { color: #fb923c !important; }
-
-/* 8. 「今日からAIチームを持とう」CTAセクション */
-.cta-section, .final-cta, .cta-band { background: linear-gradient(135deg, #fb923c 0%, #f97316 100%) !important; }
-.cta-section *, .final-cta *, .cta-band * { color: #fff !important; }
-.cta-section h2, .final-cta h2 { color: #fff !important; font-weight: 900 !important; }
-.cta-section p, .final-cta p { color: rgba(255,255,255,.9) !important; }
-.cta-section .btn, .final-cta .btn { background: #fff !important; color: #ea580c !important; font-weight: 700 !important; }
-
-/* 9. FAQ */
-.faq-section { background: #fdf8f3 !important; }
-.faq-section h2 { color: #1a0a00 !important; }
-.faq-item { background: #fff !important; border: 1px solid rgba(180,120,80,.12) !important; border-radius: 14px !important; }
-.faq-q { color: #1a0a00 !important; font-weight: 600 !important; }
-.faq-a { color: #5c3a1e !important; }
-
-/* 10. フッター */
-footer { background: #1a0a00 !important; }
-footer * { color: rgba(255,255,255,.75) !important; }
-footer a:hover { color: #fb923c !important; }
-footer h3, footer .footer-brand { color: #fff !important; }
-
-/* マーキー（スクロールテキスト） */
-.marquee-wrap, .marquee-section { background: #2d1205 !important; }
-.marquee-item, .marquee-track * { color: #fff !important; }
-
-
-/* 追加修正 */
-.section-title { color: #1a0a00 !important; }
-.section-label { color: #fb923c !important; }
-.section-sub { color: #5c3a1e !important; }
-.pa-name { color: #2d1a0e !important; }
-.pa-role { color: #8c6a52 !important; }
-.pchat-bubble { color: #2d1a0e !important; background: #fff !important; border: 1px solid rgba(180,120,80,.12) !important; }
-.pchat-bubble .pchat-user { background: rgba(251,146,60,.12) !important; color: #2d1a0e !important; }
-#pricing .section-title, #pricing .section-label, #pricing .section-sub { color: #1a0a00 !important; }
-#pricing h3 { color: #1a0a00 !important; }
-#pricing p { color: #5c3a1e !important; }
-#pricing li { color: #5c3a1e !important; }
-.plan-cta-link { background: rgba(251,146,60,.1) !important; color: #fb923c !important; border: 1px solid rgba(251,146,60,.2) !important; }
-
-
-/* 追加修正2 */
-/* スキルセクション（暗い背景）のタイトルは白 */
-.skills-section .section-title,
-.skills-section .section-label,
-.skills-section .section-sub,
-section[style*="background:#2d1205"] .section-title,
-section[style*="background:#2d1205"] .section-label,
-section[style*="background:#2d1205"] .section-sub,
-section[style*="background:#3d1f0a"] .section-title { color: #fff !important; }
-
-/* CTAセクション（オレンジ背景）のテキストは白 */
-.cta-section .section-title,
-.cta-section span,
-.cta-section h2,
-.cta-section p,
-section[style*="background:linear-gradient(135deg, #fb923c"] * { color: #fff !important; }
-
-/* stepアイコンのボックス */
-.step-icon {
-  background: rgba(251,146,60,.12) !important;
-  border: 1px solid rgba(251,146,60,.2) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
-  font-size: 28px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* pchat-typing（ローディングドット）*/
-.pt-dot {
-  background: #b89880 !important;
-}
-.pchat-typing { background: transparent !important; }
-
-/* pa-name, pa-role（デモ内）全て暗い色に */
-.pa-name { color: #2d1a0e !important; font-weight: 600 !important; }
-.pa-role { color: #8c6a52 !important; font-size: 11px !important; }
-
-/* pchat-bubble（エージェント返答）*/
-.pchat-bubble {
-  background: #fff !important;
-  color: #2d1a0e !important;
-  border: 1px solid rgba(180,120,80,.15) !important;
-  border-radius: 12px !important;
-}
-
-/* pchat-msg user（ユーザー発言）*/
-.pchat-msg.user .pchat-bubble {
-  background: rgba(251,146,60,.12) !important;
-  color: #2d1a0e !important;
-  border: 1px solid rgba(251,146,60,.2) !important;
-}
-
+/* ════ Reveal animation ════ */
+.reveal{opacity:0;transform:translateY(18px);transition:all .55s ease;}
+.reveal.shown{opacity:1;transform:none;}
 </style>
 </head>
 <body>
 
-<!-- ── NAV ───────────────────────────────────────────────── -->
+<!-- ════ NAV ════ -->
 <nav>
-  <a href="/" class="nav-logo" style="text-decoration:none;color:var(--text)"><div style="display:flex;align-items:center;gap:8px;">
-  <div style="display:flex;gap:3px;align-items:flex-end">
-    <div style="width:4px;height:20px;background:#fb923c;border-radius:2px;"></div>
-    <div style="width:4px;height:14px;background:#fb923c;border-radius:2px;opacity:.65;"></div>
-    <div style="width:4px;height:8px;background:#fb923c;border-radius:2px;opacity:.35;"></div>
-  </div>
-  <span style="font-size:15px;font-weight:700;letter-spacing:.06em;">MY AI AGENT</span>
-</div></a>
+  <a class="nav-logo" href="/">
+    <div class="nav-bars"><div></div><div></div><div></div></div>
+    <span class="nav-name">MY AI AGENT</span>
+  </a>
   <div class="nav-links">
     <a href="#how">使い方</a>
     <a href="#create">新規作成</a>
     <a href="#template">テンプレート</a>
     <a href="#pricing">料金</a>
   </div>
-  <button class="nav-cta" onclick="location.href='auth.html?tab=signup'">無料で始める</button>
+  <div class="nav-actions">
+    <button class="nav-login" id="navLogin" onclick="goLogin()">ログイン</button>
+    <button class="nav-cta" id="navCta" onclick="goSignup()">無料で始める</button>
+  </div>
 </nav>
 
-<!-- ── HERO ──────────────────────────────────────────────── -->
+<!-- ════ 1. HERO ════ -->
 <section class="hero">
-  <div class="hero-kicker">
-    <div class="hero-kicker-dot"></div>
-    AI Agentを部下のように使う
+  <div class="hero-inner">
+    <div class="hero-kicker">
+      <div class="hero-kicker-dot"></div>
+      AI Agent を部下のように使う
+    </div>
+    <h1>YOUR OWN<br><span class="accent">AI TEAM</span><br>STARTS HERE</h1>
+    <p class="hero-sub">
+      名前をつけて、スキルを与えて、<b>仕事を任せる。</b><br>
+      あなただけの AI エージェントチームを、今日から。
+    </p>
+    <div class="hero-cta-row">
+      <button class="btn-primary" onclick="goSignup()">無料で始める →</button>
+      <button class="btn-ghost" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">使い方を見る</button>
+    </div>
+    <div class="hero-trust">
+      <span class="hero-trust-pill"><span class="check">✓</span>30秒で登録</span>
+      <span class="hero-trust-pill"><span class="check">✓</span>Google Chrome 連携可</span>
+    </div>
   </div>
+</section>
 
-  <h1 class="hero-title">
-    <span class="line1">YOUR OWN</span>
-    <span class="line2">AI TEAM</span>
-    <span class="line3">STARTS HERE</span>
-  </h1>
-
-  <p class="hero-sub">
-    名前をつけて、スキルを与えて、<b style="color:#2d1a0e">仕事を任せる。</b><br>
-    あなただけのAIエージェントチームを、今日から。
-  </p>
-
-  <div class="hero-actions">
-    <button class="btn-volt" onclick="location.href='auth.html?tab=signup'">無料で始める →</button>
-    <button class="btn-outline" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">使い方を見る</button>
-  </div>
-
-  <!-- Browser mockup -->
-  <div class="hero-preview">
-    <div class="preview-shell">
-      <div class="preview-bar">
-        <div class="preview-dot r"></div>
-        <div class="preview-dot y"></div>
-        <div class="preview-dot g"></div>
-        <div class="preview-url">myaiagent.jp — ダッシュボード</div>
+<!-- ════ 2. 3 STEPS ════ -->
+<section class="section section-steps" id="how">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">HOW IT WORKS</span>
+      <h2 class="h2">3ステップで<br>チームが動き出す</h2>
+      <p class="lead">複雑な設定は不要。今すぐ始められます。</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <span class="step-num">01</span>
+        <div class="step-icon">🤖</div>
+        <h3 class="step-title">アイコンと名前をつける</h3>
+        <p class="step-desc">24種類のアイコンから選んで、自分だけのエージェントに名前をつけましょう。</p>
       </div>
-      <div class="preview-body">
-        <div class="preview-sidebar">
-          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:0 4px 8px;">チーム</div>
-          <div class="preview-agent active">
-            <div class="pa-icon">👑</div>
-            <div><div class="pa-name" style="color:#2d1a0e">CEOの田中</div><div class="pa-role" style="color:#8c6a52">経営戦略</div></div>
-            <div class="pa-dot"></div>
-          </div>
-          <div class="preview-agent">
-            <div class="pa-icon">⚙️</div>
-            <div><div class="pa-name">COOの鈴木</div><div class="pa-role">業務最適化</div></div>
-            <div class="pa-dot"></div>
-          </div>
-          <div class="preview-agent">
-            <div class="pa-icon">💻</div>
-            <div><div class="pa-name">エンジニア佐藤</div><div class="pa-role">プログラミング</div></div>
-            <div class="pa-dot"></div>
-          </div>
-          <div class="preview-agent">
-            <div class="pa-icon">📱</div>
-            <div><div class="pa-name">SNS担当の山田</div><div class="pa-role">SNS・集客</div></div>
-            <div class="pa-dot"></div>
+      <div class="step-card reveal">
+        <span class="step-num">02</span>
+        <div class="step-icon">⚡</div>
+        <h3 class="step-title">スキルを与える</h3>
+        <p class="step-desc">16種類のスキルを付与。複数選択OKで万能型も専門家型も作れます。</p>
+      </div>
+      <div class="step-card reveal">
+        <span class="step-num">03</span>
+        <div class="step-icon">💬</div>
+        <h3 class="step-title">仕事を任せる</h3>
+        <p class="step-desc">チャットで指示するだけ。Markdown 対応で構造化された返答が即受け取れます。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 3. 新規エージェントを作成 ════ -->
+<section class="section section-create" id="create">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">CREATE</span>
+      <h2 class="h2">新規エージェントを作成</h2>
+      <p class="lead">採用面談のように、5ステップでエージェントを作成。役割と業務を明確にすることで、AI の精度が大きく変わります。</p>
+    </div>
+
+    <div class="create-flow reveal">
+      <div class="create-step"><span class="num-badge">1</span><div class="ic">🎭</div><div class="nm">アイコン</div><div class="desc">24種類から選択<br>愛着が湧く見た目に</div></div>
+      <div class="create-step"><span class="num-badge">2</span><div class="ic">🏷️</div><div class="nm">名前</div><div class="desc">「営業の田中」など<br>呼びやすい名前を</div></div>
+      <div class="create-step"><span class="num-badge">3</span><div class="ic">⚡</div><div class="nm">スキル</div><div class="desc">16種類から複数選択<br>万能型も専門家型も</div></div>
+      <div class="create-step"><span class="num-badge">4</span><div class="ic">🎯</div><div class="nm">採用目的</div><div class="desc">「アポ取り」など<br>役割を明確に</div></div>
+      <div class="create-step"><span class="num-badge">5</span><div class="ic">📋</div><div class="nm">業務内容</div><div class="desc">日々の作業を具体的に<br>AI の動きが変わる</div></div>
+    </div>
+
+    <div class="create-cta reveal">
+      <button class="btn-primary" onclick="goSignup()">無料で作ってみる →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 4. テンプレートエージェント ════ -->
+<section class="section section-template" id="template">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">TEMPLATES</span>
+      <h2 class="h2">テンプレートエージェントも存在</h2>
+      <p class="lead">よくあるユースケースは、専門家が作りこんだエージェントを 1クリックでコピーして使えます。</p>
+    </div>
+
+    <div class="tmpl-row reveal">
+      <div class="tmpl-text">
+        <h3>業務に最適化された<br>専門エージェントを即時導入</h3>
+        <p>たとえば「アポ取り」を自動化したい場合、<b>自動インサイドエージェント</b>を選ぶだけ。8つのスキルモジュールが連携し、事業理解からメッセージ生成・改善ループまで一貫して対応します。</p>
+        <ul>
+          <li>ゼロから設定する必要なし</li>
+          <li>業界のベストプラクティスを内蔵</li>
+          <li>選んだ瞬間からチャットで使える</li>
+          <li>カスタマイズして自分仕様にも改造可能</li>
+        </ul>
+        <button class="btn-primary" onclick="goSignup()">テンプレートを見る →</button>
+      </div>
+
+      <div class="tmpl-card">
+        <div class="tmpl-card-head">
+          <div class="tmpl-avatar">🤖</div>
+          <div>
+            <div class="tmpl-card-name">自動インサイドエージェント</div>
+            <div class="tmpl-card-desc">アポ取りの自動化 ・ 8モジュール連携</div>
           </div>
         </div>
-        <div class="preview-chat">
-          <div class="pchat-msg user">
-            <div class="pchat-av uav">私</div>
-            <div class="pchat-bubble">新商品のLPキャッチコピーを10個考えて。ターゲットは30代女性で、健康食品です。</div>
-          </div>
-          <div class="pchat-msg agent">
-            <div class="pchat-av">✍️</div>
-            <div class="pchat-bubble">
-              承知しました！以下10案をご提案します：<br><br>
-              1. 「毎日が、変わりはじめる。」<br>
-              2. 「カラダの声を、聞いてあげて。」<br>
-              3. 「忙しいあなたに、静かな革命を。」<br>
-              <span style="color:#9a6a4a;">…他7案を作成中</span>
-            </div>
-          </div>
-          <div class="pchat-msg agent">
-            <div class="pchat-av">✍️</div>
-            <div class="pchat-bubble"><div class="pchat-typing"><div class="pt-dot"></div><div class="pt-dot"></div><div class="pt-dot"></div></div></div>
-          </div>
-
+        <div class="tmpl-pills">
+          <span class="tmpl-pill">マーケ</span>
+          <span class="tmpl-pill">ライティング</span>
+          <span class="tmpl-pill">リサーチ</span>
+          <span class="tmpl-pill">分析</span>
+          <span class="tmpl-pill">プランニング</span>
+        </div>
+        <div class="tmpl-modules">
+          <div class="tmpl-mod"><span class="tmpl-mod-n">①</span>事業理解</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">②</span>ペルソナ</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">③</span>抽出</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">④</span>精査</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑤</span>戦略</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑥</span>メッセージ</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑦</span>送信最適化</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑧</span>改善</div>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="hero-scroll">
-    <div class="scroll-line"></div>
-    SCROLL
-  </div>
 </section>
 
-<!-- ── STATS ─────────────────────────────────────────────── -->
-
-
-<!-- ── HOW IT WORKS ───────────────────────────────────────── -->
-<div id="how" class="section">
-  <div class="section-kicker reveal">HOW IT WORKS</div>
-  <h2 class="section-title reveal">3ステップで<br>チームが動き出す</h2>
-  <p class="section-sub reveal">複雑な設定は不要。今すぐ始められます。</p>
-
-  <div class="steps reveal">
-    <div class="step" data-n="1">
-      <div class="step-icon">🤖</div>
-      <div class="step-title">アイコンと名前をつける</div>
-      <div class="step-desc">24種類のアイコンから選んで、自分だけのエージェントに名前をつけましょう。</div>
-    </div>
-    <div class="step" data-n="2">
-      <div class="step-icon">⚡</div>
-      <div class="step-title">スキルを与える</div>
-      <div class="step-desc">16種類のスキルを付与。複数選択OKで万能型も専門家型も作れます。</div>
-    </div>
-    <div class="step" data-n="3">
-      <div class="step-icon">💬</div>
-      <div class="step-title">仕事を任せる</div>
-      <div class="step-desc">チャットで指示するだけ。Markdown 対応で構造化された返答が即受け取れます。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ── 新規エージェントを作成（5ステップ） ─────────────── -->
-<section class="section" id="create" style="background:#faf3eb">
-  <div class="section-kicker reveal" style="color:#fb923c">CREATE</div>
-  <h2 class="section-title reveal" style="color:#1a0a00">新規エージェントを作成</h2>
-  <p class="section-sub reveal" style="color:#5c3a1e;max-width:620px;">採用面談のように、5ステップでエージェントを作成。役割と業務を明確にすることで、AI の精度が大きく変わります。</p>
-
-  <div class="create-flow reveal">
-    <div class="create-step">
-      <span class="cs-num">1</span>
-      <div class="cs-ic">🎭</div>
-      <div class="cs-nm">アイコン</div>
-      <div class="cs-desc">24種類から選択。<br>愛着が湧く見た目に</div>
-    </div>
-    <div class="create-step">
-      <span class="cs-num">2</span>
-      <div class="cs-ic">🏷️</div>
-      <div class="cs-nm">名前</div>
-      <div class="cs-desc">「営業の田中」など、<br>呼びやすい名前を設定</div>
-    </div>
-    <div class="create-step">
-      <span class="cs-num">3</span>
-      <div class="cs-ic">⚡</div>
-      <div class="cs-nm">スキル</div>
-      <div class="cs-desc">16種類から複数選択。<br>万能型も専門家型も</div>
-    </div>
-    <div class="create-step">
-      <span class="cs-num">4</span>
-      <div class="cs-ic">🎯</div>
-      <div class="cs-nm">採用目的</div>
-      <div class="cs-desc">「アポ取り」など、<br>役割を明確に</div>
-    </div>
-    <div class="create-step">
-      <span class="cs-num">5</span>
-      <div class="cs-ic">📋</div>
-      <div class="cs-nm">業務内容</div>
-      <div class="cs-desc">日々の作業を具体的に。<br>AI の動きが変わる</div>
-    </div>
-  </div>
-
-  <div style="text-align:center;margin-top:48px">
-    <button class="btn-volt reveal" style="font-size:15px;padding:14px 28px" onclick="location.href='auth.html?tab=signup'">無料で作ってみる →</button>
-  </div>
-</section>
-
-<!-- ── テンプレートエージェントも存在 ─────────────────── -->
-<section class="section" id="template" style="background:#fdf8f3">
-  <div class="section-kicker reveal" style="color:#fb923c">TEMPLATES</div>
-  <h2 class="section-title reveal" style="color:#1a0a00">テンプレートエージェントも存在</h2>
-  <p class="section-sub reveal" style="color:#5c3a1e;max-width:620px;">よくあるユースケースは、専門家が作りこんだエージェントを 1クリックでコピーして使えます。</p>
-
-  <div class="tmpl-row reveal">
-    <div class="tmpl-text">
-      <h3 class="tmpl-h">業務に最適化された<br>専門エージェントを即時導入</h3>
-      <p class="tmpl-p">たとえば「アポ取り」を自動化したい場合、<b>自動インサイドエージェント</b>を選ぶだけ。8つのスキルモジュールが連携し、事業理解からメッセージ生成・改善ループまで一貫して対応します。</p>
-      <ul class="tmpl-list">
-        <li>ゼロから設定する必要なし</li>
-        <li>業界のベストプラクティスを内蔵</li>
-        <li>選んだ瞬間からチャットで使える</li>
-        <li>カスタマイズして自分仕様にも改造可能</li>
-      </ul>
-      <button class="btn-volt" style="font-size:14px;padding:13px 24px" onclick="location.href='auth.html?tab=signup'">テンプレートを見る →</button>
+<!-- ════ 5. 共有 (Coming Soon) ════ -->
+<section class="section section-share" id="share">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="coming-pill">COMING SOON</span>
+      <span class="kicker">SHARE</span>
+      <h2 class="h2">作ったエージェントを<br>世界に共有</h2>
+      <p class="lead">URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。</p>
     </div>
 
-    <div class="tmpl-card">
-      <div class="tmpl-card-h">
-        <div class="tc-ic">🤖</div>
-        <div>
-          <div class="tc-nm">自動インサイドエージェント</div>
-          <div class="tc-desc">アポ取りの自動化 — 8モジュール連携</div>
+    <div class="share-row reveal">
+      <div class="share-text">
+        <h3>共有URLでチームに展開</h3>
+        <p>各エージェントには専用の共有URLが発行されます。SNS や DM で送信するだけで、訪問者は<b>自分のアカウントに同じエージェントをコピー</b>して使い始められます。</p>
+        <ul>
+          <li>URL 1本でチームに展開（Slack・X・LINE・メール）</li>
+          <li>受信者は1クリックで自分のアカウントに保存</li>
+          <li>コピー後は完全独立 — 元の履歴は見えません</li>
+          <li>非公開・URL再生成も自由自在</li>
+        </ul>
+      </div>
+      <div class="share-visual">
+        <div class="share-mock-url">myaiagents.agency/a/k7f2-aGz9-pX3v</div>
+        <div class="share-flow">
+          <div class="share-flow-step"><div class="num">1</div>エージェントの 🔗 ボタンを押す</div>
+          <div class="share-flow-step"><div class="num">2</div>URL を SNS や DM でシェア</div>
+          <div class="share-flow-step"><div class="num">3</div>訪問者が「使う」をクリック → 完了</div>
         </div>
+        <div class="share-stamp">COMING SOON</div>
       </div>
-      <div class="tc-pills">
-        <span class="tc-pill">マーケ</span>
-        <span class="tc-pill">ライティング</span>
-        <span class="tc-pill">リサーチ</span>
-        <span class="tc-pill">分析</span>
-        <span class="tc-pill">プランニング</span>
-      </div>
-      <div class="tc-modules">
-        <div class="tc-mod"><span class="tc-mod-n">①</span>事業理解</div>
-        <div class="tc-mod"><span class="tc-mod-n">②</span>ペルソナ</div>
-        <div class="tc-mod"><span class="tc-mod-n">③</span>抽出</div>
-        <div class="tc-mod"><span class="tc-mod-n">④</span>精査</div>
-        <div class="tc-mod"><span class="tc-mod-n">⑤</span>戦略</div>
-        <div class="tc-mod"><span class="tc-mod-n">⑥</span>メッセージ</div>
-        <div class="tc-mod"><span class="tc-mod-n">⑦</span>送信最適化</div>
-        <div class="tc-mod"><span class="tc-mod-n">⑧</span>改善</div>
-      </div>
+    </div>
+
+    <div class="share-pre reveal">
+      <p>リリース時にメールでお知らせします</p>
+      <form id="sharePreForm">
+        <input type="email" id="sharePreEmail" placeholder="メールアドレス" required>
+        <button type="submit">お知らせ登録</button>
+      </form>
+      <div class="ok" id="sharePreOk">✓ 登録しました（リリース時にお知らせします）</div>
     </div>
   </div>
 </section>
 
-<!-- ── 作ったエージェントを世界に共有（Coming Soon） ────── -->
-<section class="section" id="share" style="background:#faf3eb">
-  <div style="text-align:center">
-    <span class="coming-badge reveal">🌍 COMING SOON</span>
-    <div class="section-kicker reveal" style="color:#fb923c">SHARE</div>
-    <h2 class="section-title reveal" style="color:#1a0a00">作ったエージェントを<br>世界に共有</h2>
-    <p class="section-sub reveal" style="color:#5c3a1e;max-width:620px;">URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。</p>
-  </div>
-
-  <div class="share-row reveal">
-    <div class="share-text">
-      <h3 class="share-h">共有URLでチームに展開</h3>
-      <p class="share-p">各エージェントには専用の共有URLが発行されます。SNS や DM で送信するだけで、訪問者は<b>自分のアカウントに同じエージェントをコピー</b>して使い始められます。</p>
-      <ul class="share-list">
-        <li>URL 1本でチームに展開（Slack・X・LINE・メール）</li>
-        <li>受信者は1クリックで自分のアカウントに保存</li>
-        <li>コピー後は完全独立 — 元の履歴は見えません</li>
-        <li>非公開・URL再生成も自由自在</li>
-      </ul>
-    </div>
-    <div class="share-visual">
-      <div class="share-mock-url">myaiagents.agency/a/k7f2-aGz9-pX3v</div>
-      <div class="share-flow">
-        <div class="share-flow-step"><span class="sfn">1</span>エージェントの 🔗 ボタンを押す</div>
-        <div class="share-flow-step"><span class="sfn">2</span>URL を SNS や DM でシェア</div>
-        <div class="share-flow-step"><span class="sfn">3</span>訪問者が「使う」をクリック → 自分のアカウントに追加完了</div>
+<!-- ════ 6. PRICING ════ -->
+<section class="section section-pricing" id="pricing">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">PRICING</span>
+      <h2 class="h2">料金プラン</h2>
+      <p class="lead">月額でじっくり、または使った分だけ — 自由に選べます。</p>
+      <div class="pricing-tabs">
+        <button class="pricing-tab active" data-tab="monthly">月額プラン</button>
+        <button class="pricing-tab" data-tab="payg">都度チャージ</button>
       </div>
-      <div class="share-overlay">COMING SOON</div>
     </div>
-  </div>
 
-  <div class="share-pre reveal">
-    <p>リリース時にメールでお知らせします</p>
-    <form id="sharePreForm">
-      <input type="email" id="sharePreEmail" placeholder="メールアドレス" required>
-      <button type="submit">お知らせ登録</button>
-    </form>
-    <div id="sharePreMsg" style="display:none;margin-top:8px;color:#10b981;font-size:12px;font-weight:700">✓ 登録しました（リリース時にお知らせします）</div>
+    <div class="pricing-grid" id="pricing-monthly">
+      <div class="price-card reveal">
+        <div class="price-name">FREE</div>
+        <div class="price-amount">$0</div>
+        <div class="price-period">無料登録</div>
+        <div class="price-credit">10メッセージ無料</div>
+        <ul class="price-feats">
+          <li>エージェント作成 3体</li>
+          <li>16スキルから選択</li>
+          <li>テンプレート利用可</li>
+          <li>Markdown 出力</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">無料で始める →</a>
+      </div>
+      <div class="price-card popular reveal">
+        <div class="price-name">PRO</div>
+        <div class="price-amount">$12.99</div>
+        <div class="price-period">/月（USD）</div>
+        <div class="price-credit">$20 分のクレジット / 月</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>共有URL機能（リリース時）</li>
+          <li>取引履歴 CSV エクスポート</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">PRO で始める →</a>
+      </div>
+      <div class="price-card reveal">
+        <div class="price-name">BUSINESS</div>
+        <div class="price-amount">$32.99</div>
+        <div class="price-period">/月（USD）</div>
+        <div class="price-credit">$60 分のクレジット / 月</div>
+        <ul class="price-feats">
+          <li>Pro の全機能</li>
+          <li>$60分の月次クレジット</li>
+          <li>クリエイター早期アクセス</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">BUSINESS で始める →</a>
+      </div>
+    </div>
+
+    <div class="pricing-grid" id="pricing-payg" style="display:none">
+      <div class="price-card">
+        <div class="price-name">STARTER</div>
+        <div class="price-amount">$6.99</div>
+        <div class="price-period">一回限り</div>
+        <div class="price-credit">$6.99 分のクレジット</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>残高は失効しない</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">STARTER をチャージ →</a>
+      </div>
+      <div class="price-card popular">
+        <div class="price-name">STANDARD</div>
+        <div class="price-amount">$19.99</div>
+        <div class="price-period">一回限り</div>
+        <div class="price-credit">$19.99 分のクレジット</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>残高は失効しない</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">STANDARD をチャージ →</a>
+      </div>
+      <div class="price-card">
+        <div class="price-name">PRO</div>
+        <div class="price-amount">$49.99</div>
+        <div class="price-period">一回限り</div>
+        <div class="price-credit">$49.99 分のクレジット</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>残高は失効しない</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">PRO をチャージ →</a>
+      </div>
+    </div>
+
+    <div class="pricing-trust reveal">
+      💳 Stripe による安全な決済<span>・</span>🔒 SSL暗号化通信<span>・</span>📱 クレジットカード対応
+    </div>
   </div>
 </section>
 
-<!-- ── PRICING（タブ切替） ─────────────────────────────── -->
-<section class="section" id="pricing" style="background:#fdf8f3">
-  <div style="text-align:center">
-    <p class="section-label reveal" style="color:#fb923c;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px">PRICING</p>
-    <h2 class="section-title reveal" style="color:#1a0a00">料金プラン</h2>
-    <p class="section-sub reveal" style="color:#5c3a1e;max-width:620px;">月額でじっくり、または使った分だけ — 自由に選べます。</p>
-    <div class="pricing-tabs reveal">
-      <button class="pricing-tab active" data-tab="monthly">月額プラン</button>
-      <button class="pricing-tab" data-tab="payg">都度チャージ</button>
-    </div>
+<!-- ════ FINAL CTA ════ -->
+<section class="section-cta">
+  <div class="section-cta-inner">
+    <h2 class="reveal">今日から<br><span class="accent">AI チームを</span><br>持とう</h2>
+    <p class="reveal">アカウント作成は30秒。クレジットカード不要。</p>
+    <button class="btn-primary reveal" onclick="goSignup()">無料でアカウント作成 →</button>
   </div>
-
-  <div class="pricing-grid" id="pricing-monthly">
-    <div class="pricing-card reveal">
-      <div class="pn">FREE</div>
-      <div class="pp">$0</div>
-      <div class="pper">無料登録</div>
-      <div class="pcredit">10メッセージ無料</div>
-      <ul>
-        <li>エージェント作成 3体</li>
-        <li>16スキルから選択</li>
-        <li>テンプレート利用可</li>
-        <li>Markdown 出力</li>
-      </ul>
-      <a href="/auth.html?tab=signup" class="pcta">無料で始める →</a>
-    </div>
-    <div class="pricing-card popular reveal">
-      <div class="pn">PRO</div>
-      <div class="pp">$12.99</div>
-      <div class="pper">/月（USD）</div>
-      <div class="pcredit">$20 分のクレジット / 月</div>
-      <ul>
-        <li>エージェント無制限作成</li>
-        <li>全16スキル利用可</li>
-        <li>共有URL機能（リリース時）</li>
-        <li>取引履歴 CSV エクスポート</li>
-      </ul>
-      <a href="/auth.html?tab=signup" class="pcta">PRO で始める →</a>
-    </div>
-    <div class="pricing-card reveal">
-      <div class="pn">BUSINESS</div>
-      <div class="pp">$32.99</div>
-      <div class="pper">/月（USD）</div>
-      <div class="pcredit">$60 分のクレジット / 月</div>
-      <ul>
-        <li>Pro の全機能</li>
-        <li>$60分の月次クレジット</li>
-        <li>クリエイター早期アクセス</li>
-      </ul>
-      <a href="/auth.html?tab=signup" class="pcta">BUSINESS で始める →</a>
-    </div>
-  </div>
-
-  <div class="pricing-grid" id="pricing-payg" style="display:none">
-    <div class="pricing-card">
-      <div class="pn">STARTER</div>
-      <div class="pp">$6.99</div>
-      <div class="pper">一回限り</div>
-      <div class="pcredit">$6.99 分のクレジット</div>
-      <ul>
-        <li>エージェント無制限作成</li>
-        <li>全16スキル利用可</li>
-        <li>残高は失効しない</li>
-      </ul>
-      <a href="/auth.html?tab=signup" class="pcta">STARTER をチャージ →</a>
-    </div>
-    <div class="pricing-card popular">
-      <div class="pn">STANDARD</div>
-      <div class="pp">$19.99</div>
-      <div class="pper">一回限り</div>
-      <div class="pcredit">$19.99 分のクレジット</div>
-      <ul>
-        <li>エージェント無制限作成</li>
-        <li>全16スキル利用可</li>
-        <li>残高は失効しない</li>
-      </ul>
-      <a href="/auth.html?tab=signup" class="pcta">STANDARD をチャージ →</a>
-    </div>
-    <div class="pricing-card">
-      <div class="pn">PRO</div>
-      <div class="pp">$49.99</div>
-      <div class="pper">一回限り</div>
-      <div class="pcredit">$49.99 分のクレジット</div>
-      <ul>
-        <li>エージェント無制限作成</li>
-        <li>全16スキル利用可</li>
-        <li>残高は失効しない</li>
-      </ul>
-      <a href="/auth.html?tab=signup" class="pcta">PRO をチャージ →</a>
-    </div>
-  </div>
-
-  <p class="reveal" style="text-align:center;color:#6b4226;font-size:13px;margin-top:32px">
-    💳 Stripeによる安全な決済 &nbsp;|&nbsp; 🔒 SSL暗号化通信 &nbsp;|&nbsp; 📱 クレジットカード対応
-  </p>
 </section>
 
-<!-- ── CTA（最後の押し） ───────────────────────────────── -->
-<section class="cta-section">
-  <h2 class="cta-title reveal">
-    今日から<br><span style="color:#ffffff !important">AIチームを</span><br>持とう
-  </h2>
-  <p class="cta-sub reveal">アカウント作成は30秒。クレジットカード不要。</p>
-  <button class="btn-volt reveal" style="font-size:18px;padding:18px 48px;" onclick="location.href='auth.html?tab=signup'">
-    無料でアカウント作成 →
-  </button>
-</section>
-
+<!-- ════ FOOTER ════ -->
 <footer>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <div style="display:flex;gap:3px;align-items:flex-end">
-      <div style="width:4px;height:20px;background:#fb923c;border-radius:2px;"></div>
-      <div style="width:4px;height:14px;background:#fb923c;border-radius:2px;opacity:.65;"></div>
-      <div style="width:4px;height:8px;background:#fb923c;border-radius:2px;opacity:.35;"></div>
-    </div>
-    <span style="font-size:15px;font-weight:700;letter-spacing:.06em;color:#fff;">MY AI AGENT</span>
+  <div class="footer-brand">
+    <div class="nav-bars"><div></div><div></div><div></div></div>
+    <span class="nav-name">MY AI AGENT</span>
   </div>
-  <div style="display:flex;gap:24px;">
+  <div class="footer-links">
     <a href="legal.html#terms">利用規約</a>
-    <a href="tokutei.html">特定商取引法に基づく表記</a>
-    <a href="legal.html#privacy">プライバシーポリシー</a>
-    <a href="mailto:support@myaiagent.jp">お問い合わせ</a>
+    <a href="tokutei.html">特商法表記</a>
+    <a href="legal.html#privacy">プライバシー</a>
+    <a href="mailto:support@myaiagents.agency">お問い合わせ</a>
   </div>
-  <div>© 2025 MY AI Agent</div>
+  <div class="footer-copy">© 2026 MY AI AGENT</div>
 </footer>
 
 <script>
-// Scroll reveal
-const io = new IntersectionObserver(entries=>{
-  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('shown'); io.unobserve(e.target); } });
-},{threshold:.12});
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-
-// Pricing tabs (monthly / payg)
+// pricing tab toggle
 document.querySelectorAll('.pricing-tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.pricing-tab').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -1060,7 +786,13 @@ document.querySelectorAll('.pricing-tab').forEach(t=>t.addEventListener('click',
   document.getElementById('pricing-payg').style.display = tab==='payg' ? '' : 'none';
 }));
 
-// Share pre-register form (placeholder — saves to localStorage for now)
+// reveal on scroll
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('shown'); io.unobserve(e.target); } });
+},{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+// share pre form (placeholder — saves to localStorage for now)
 var spForm = document.getElementById('sharePreForm');
 if(spForm){
   spForm.addEventListener('submit', function(e){
@@ -1073,12 +805,39 @@ if(spForm){
       localStorage.setItem('share_prereg', JSON.stringify(arr));
     }catch(e){}
     document.getElementById('sharePreEmail').value='';
-    var msg = document.getElementById('sharePreMsg');
-    if(msg) msg.style.display='block';
+    var ok = document.getElementById('sharePreOk');
+    if(ok) ok.style.display='block';
   });
 }
+
+// Auth-aware nav buttons
+function _isLoggedIn(){
+  try{ return !!localStorage.getItem('token'); }catch(e){ return false; }
+}
+function goLogin(){
+  if(_isLoggedIn()) location.href='/app.html';
+  else location.href='/auth.html';
+}
+function goSignup(){
+  if(_isLoggedIn()) location.href='/app.html';
+  else location.href='/auth.html?tab=signup';
+}
+function _navAuthState(){
+  if(!_isLoggedIn()) return;
+  // Logged in → swap login button to "アプリを開く →" + hide signup CTA in nav
+  var login = document.getElementById('navLogin');
+  var cta = document.getElementById('navCta');
+  if(login){
+    login.textContent = 'アプリを開く →';
+    login.classList.remove('nav-login');
+    login.classList.add('nav-cta');
+  }
+  if(cta) cta.style.display = 'none';
+}
+_navAuthState();
 </script>
 
+<!-- ════ i18n: auto-translate to English for non-Japanese browsers ════ -->
 <script>
 (function(){
   var lang = navigator.language || navigator.userLanguage || 'ja';
@@ -1088,26 +847,29 @@ if(spForm){
   if(params.get('lang')==='ja') isJa=true;
   if(isJa) return;
 
-  // 英語テキストマッピング
   var map = {
-    // ナビ
+    // nav
     '使い方': 'How it works',
     '新規作成': 'Create',
     'テンプレート': 'Templates',
     '料金': 'Pricing',
+    'ログイン': 'Sign in',
     '無料で始める': 'Get started free',
-    // ヒーロー
+    'アプリを開く →': 'Open app →',
+    // hero
+    'AI Agent を部下のように使う': 'Use AI Agent like your team',
     'YOUR OWN': 'YOUR OWN',
     'AI TEAM': 'AI TEAM',
     'STARTS HERE': 'STARTS HERE',
-    'AIチームを': 'AI Team',
     '名前をつけて、スキルを与えて、': 'Name them, give them skills,',
     '仕事を任せる。': 'and let them work.',
-    'あなただけのAIエージェントチームを、今日から。': 'Your own AI agent team, starting today.',
+    'あなただけの AI エージェントチームを、今日から。': 'Your own AI agent team, starting today.',
     '無料で始める →': 'Get started free →',
     '使い方を見る': 'See how it works',
-    'AI AGENTを部下のように使う': 'Use AI AGENT like your team',
+    '30秒で登録': '30-second signup',
+    'Google Chrome 連携可': 'Google Chrome ready',
     // 3 steps
+    'HOW IT WORKS': 'HOW IT WORKS',
     '3ステップで': 'Get started',
     'チームが動き出す': 'in 3 steps',
     '複雑な設定は不要。今すぐ始められます。': 'No complex setup. Start right now.',
@@ -1115,9 +877,9 @@ if(spForm){
     'スキルを与える': 'Assign skills',
     '仕事を任せる': 'Put them to work',
     '24種類のアイコンから選んで、自分だけのエージェントに名前をつけましょう。': 'Choose from 24 icons and give your agent a name.',
-    '16種類のスキルを付与。複数選択OKで万能型も専門家型も作れます。': 'Pick from 16 skills. Combine them for generalists or specialists.',
+    '16種類のスキルを付与。複数選択OKで万能型も専門家型も作れます。': 'Pick from 16 skills. Combine for generalists or specialists.',
     'チャットで指示するだけ。Markdown 対応で構造化された返答が即受け取れます。': 'Just chat. Get structured Markdown responses instantly.',
-    // 5-step create flow
+    // create flow
     'CREATE': 'CREATE',
     '新規エージェントを作成': 'Create a new agent',
     '採用面談のように、5ステップでエージェントを作成。役割と業務を明確にすることで、AI の精度が大きく変わります。': 'Like a hiring interview — define an agent in 5 steps. Clear roles dramatically improve AI accuracy.',
@@ -1126,32 +888,32 @@ if(spForm){
     'スキル': 'Skills',
     '採用目的': 'Purpose',
     '業務内容': 'Duties',
-    '24種類から選択。': 'Choose from 24 icons.',
+    '24種類から選択': 'Choose from 24',
     '愛着が湧く見た目に': 'A look you bond with',
-    '「営業の田中」など、': '"Sales Tanaka" etc.',
-    '呼びやすい名前を設定': 'Pick a name you can call',
-    '16種類から複数選択。': 'Pick from 16 skills.',
+    '「営業の田中」など': '"Sales Tanaka" etc.',
+    '呼びやすい名前を': 'A name you can call',
+    '16種類から複数選択': 'Pick from 16',
     '万能型も専門家型も': 'Generalist or specialist',
-    '「アポ取り」など、': '"Appointment setting" etc.',
+    '「アポ取り」など': '"Appointment setting" etc.',
     '役割を明確に': 'Make the role clear',
-    '日々の作業を具体的に。': 'Spell out daily tasks.',
+    '日々の作業を具体的に': 'Spell out daily tasks',
     'AI の動きが変わる': 'AI behavior changes',
     '無料で作ってみる →': 'Create for free →',
-    // テンプレート
+    // template
     'TEMPLATES': 'TEMPLATES',
     'テンプレートエージェントも存在': 'Templates are ready, too',
     'よくあるユースケースは、専門家が作りこんだエージェントを 1クリックでコピーして使えます。': 'Common use cases come pre-built. Clone a curated agent in one click.',
     '業務に最適化された': 'Drop-in specialists',
     '専門エージェントを即時導入': 'optimized for your work',
-    'たとえば「アポ取り」を自動化したい場合、': 'Want appointment-setting automation? Just pick',
-    '自動インサイドエージェント': 'Auto Inside-Sales Agent',
-    'を選ぶだけ。8つのスキルモジュールが連携し、事業理解からメッセージ生成・改善ループまで一貫して対応します。': '. 8 skill modules cooperate from business understanding all the way to message generation and the improvement loop.',
     'ゼロから設定する必要なし': 'No setup needed',
     '業界のベストプラクティスを内蔵': 'Built-in best practices',
     '選んだ瞬間からチャットで使える': 'Chat-ready from the moment you pick',
     'カスタマイズして自分仕様にも改造可能': 'Fully customizable to your needs',
     'テンプレートを見る →': 'Browse templates →',
-    'アポ取りの自動化 — 8モジュール連携': 'Appointment setting — 8 module pipeline',
+    'たとえば「アポ取り」を自動化したい場合、': 'Want appointment-setting automation? Just pick',
+    '自動インサイドエージェント': 'Auto Inside-Sales Agent',
+    'を選ぶだけ。8つのスキルモジュールが連携し、事業理解からメッセージ生成・改善ループまで一貫して対応します。': '. 8 skill modules cooperate from business understanding to message generation and the improvement loop.',
+    'アポ取りの自動化 ・ 8モジュール連携': 'Appointment setting · 8 modules',
     'マーケ': 'Marketing',
     'ライティング': 'Writing',
     'リサーチ': 'Research',
@@ -1166,7 +928,7 @@ if(spForm){
     '送信最適化': 'Send Opt',
     '改善': 'Improve',
     // share
-    '🌍 COMING SOON': '🌍 COMING SOON',
+    'COMING SOON': 'COMING SOON',
     'SHARE': 'SHARE',
     '作ったエージェントを': 'Share your agent',
     '世界に共有': 'with the world',
@@ -1180,8 +942,8 @@ if(spForm){
     'コピー後は完全独立 — 元の履歴は見えません': 'Independent after cloning — history stays private',
     '非公開・URL再生成も自由自在': 'Toggle private or regenerate URL anytime',
     'エージェントの 🔗 ボタンを押す': 'Hit 🔗 on the agent',
-    'URL を SNS や DM でシェア': 'Share the URL via SNS or DM',
-    '訪問者が「使う」をクリック → 自分のアカウントに追加完了': 'Visitor clicks "Use" → cloned to their account',
+    'URL を SNS や DM でシェア': 'Share the URL on SNS or DM',
+    '訪問者が「使う」をクリック → 完了': 'Visitor clicks "Use" → done',
     'リリース時にメールでお知らせします': 'We will email you at release',
     'メールアドレス': 'Email address',
     'お知らせ登録': 'Notify me',
@@ -1199,7 +961,6 @@ if(spForm){
     '16スキルから選択': 'Pick from 16 skills',
     'テンプレート利用可': 'Templates available',
     'Markdown 出力': 'Markdown output',
-    '無料で始める →': 'Get started free →',
     'PRO': 'PRO',
     '/月（USD）': '/mo (USD)',
     '$20 分のクレジット / 月': '$20 in credits / mo',
@@ -1224,22 +985,19 @@ if(spForm){
     'STARTER をチャージ →': 'Top up STARTER →',
     'STANDARD をチャージ →': 'Top up STANDARD →',
     'PRO をチャージ →': 'Top up PRO →',
-    '人気 🔥': 'Popular 🔥',
-    'おすすめ 🔥': 'Recommended 🔥',
-    'Stripeによる安全な決済': 'Secure payments by Stripe',
-    'SSL暗号化通信': 'SSL encrypted',
-    'クレジットカード対応': 'Credit cards accepted',
+    'おすすめ': 'Recommended',
     // CTA
     '今日から': 'Start today',
+    'AI チームを': 'Your AI Team',
     '持とう': '',
     'アカウント作成は30秒。クレジットカード不要。': 'Signup in 30 seconds. No credit card required.',
     '無料でアカウント作成 →': 'Create free account →',
-    // フッター
+    // footer
     '利用規約': 'Terms',
     '特商法表記': 'Legal (JP)',
-    'プライバシーポリシー': 'Privacy',
+    'プライバシー': 'Privacy',
     'お問い合わせ': 'Contact',
-    '© 2025 MY AI AGENT': '© 2025 MY AI AGENT',
+    '© 2026 MY AI AGENT': '© 2026 MY AI AGENT',
   };
 
   function walk(node) {
@@ -1258,6 +1016,5 @@ if(spForm){
   });
 })();
 </script>
-
 </body>
 </html>

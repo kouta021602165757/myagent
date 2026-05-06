@@ -1,0 +1,30 @@
+# Render Blueprint — forces Docker runtime so Chromium / Playwright work
+# out of the box. If the existing service was created in Node mode,
+# convert it via "Settings → Environment → Docker" or re-create from this
+# blueprint.
+services:
+  - type: web
+    name: my-ai-agent
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # The following are managed in the Render dashboard (do not commit values):
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false

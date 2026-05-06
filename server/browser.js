@@ -7,22 +7,73 @@
  * Playwright/Chromium failed to install on the host.
  */
 
+const { spawn } = require('child_process');
+
 let _playwright = null;
 let _browser = null;
 let _initFailed = false;
 let _initError = '';
+let _installPromise = null;
 
 function _loadPlaywright(){
-  if(_playwright || _initFailed) return _playwright;
+  if(_playwright) return _playwright;
   try{
     _playwright = require('playwright');
     return _playwright;
   }catch(e){
-    _initFailed = true;
     _initError = 'playwright_not_installed: '+e.message;
     console.error('[browser]', _initError);
     return null;
   }
+}
+
+/**
+ * Runtime install of Chromium binary. Used when postinstall failed silently
+ * (Render Node env is fragile). One-shot per process lifetime.
+ */
+function _ensureChromiumInstalled(){
+  if(_installPromise) return _installPromise;
+  _installPromise = new Promise((resolve)=>{
+    console.log('[browser] downloading Chromium at runtime…');
+    const child = spawn('npx', ['--yes', 'playwright', 'install', 'chromium'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: process.env,
+    });
+    let stderr = '';
+    child.stdout.on('data', d => process.stdout.write('[browser:install] '+d));
+    child.stderr.on('data', d => { stderr += d.toString(); process.stderr.write('[browser:install] '+d); });
+    const t = setTimeout(()=>{ try{ child.kill('SIGKILL'); }catch(e){} resolve({ok:false, reason:'install timeout'}); }, 240000);
+    child.on('error', (err)=>{ clearTimeout(t); resolve({ok:false, reason:err.message}); });
+    child.on('exit', (code)=>{
+      clearTimeout(t);
+      if(code===0){ console.log('[browser] Chromium install OK'); resolve({ok:true}); }
+      else resolve({ok:false, reason:`install exit ${code} ${stderr.slice(-400)}`});
+    });
+  });
+  return _installPromise;
+}
+
+function _isExecutableMissing(err){
+  const m = (err&&err.message)||'';
+  return /Executable doesn'?t exist|browserType\.launch|please install/i.test(m);
+}
+
+function _isOsDepMissing(err){
+  const m = (err&&err.message)||'';
+  return /libnss3|libnspr4|libatk|libcups|libxkbcommon|host system is missing dependencies/i.test(m);
+}
+
+async function _launch(pw){
+  return await pw.chromium.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-setuid-sandbox',
+      '--disable-gpu',
+      '--disable-blink-features=AutomationControlled',
+    ]
+  });
 }
 
 async function getBrowser(){
@@ -31,25 +82,38 @@ async function getBrowser(){
   const pw = _loadPlaywright();
   if(!pw) throw new Error(_initError||'playwright not installed');
   try{
-    _browser = await pw.chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-      ]
-    });
-    // If browser exits unexpectedly, allow re-init
-    _browser.on('disconnected', ()=>{ _browser = null; });
-    return _browser;
+    _browser = await _launch(pw);
   }catch(e){
-    _initFailed = true;
-    _initError = 'launch_failed: '+e.message;
-    console.error('[browser] launch failed:', e.message);
-    throw new Error(_initError);
+    if(_isExecutableMissing(e)){
+      console.warn('[browser] Chromium missing — attempting runtime install');
+      const r = await _ensureChromiumInstalled();
+      if(!r.ok){
+        _initFailed = true;
+        _initError = 'chromium_install_failed: '+r.reason;
+        console.error('[browser]', _initError);
+        throw new Error(_initError);
+      }
+      try{
+        _browser = await _launch(pw);
+      }catch(e2){
+        _initFailed = true;
+        _initError = _isOsDepMissing(e2)
+          ? 'os_deps_missing: Chromium が必要とする OS ライブラリがホストにありません。Render の Environment を Docker に切り替えてください。'
+          : 'launch_failed: '+e2.message;
+        console.error('[browser] post-install launch failed:', e2.message);
+        throw new Error(_initError);
+      }
+    } else {
+      _initFailed = true;
+      _initError = _isOsDepMissing(e)
+        ? 'os_deps_missing: Chromium が必要とする OS ライブラリがホストにありません。Render の Environment を Docker に切り替えてください。'
+        : 'launch_failed: '+e.message;
+      console.error('[browser] launch failed:', e.message);
+      throw new Error(_initError);
+    }
   }
+  _browser.on('disconnected', ()=>{ _browser = null; _initFailed = false; });
+  return _browser;
 }
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';

@@ -1125,7 +1125,7 @@ body{color:#f0f0f8;}
           <div class="composer">
             <input type="file" id="imgInput" accept="image/*" multiple style="display:none" onchange="onImgSelect(event)">
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
-            <textarea id="ci" placeholder="何をお願いしますか？" rows="1" oninput="exTA(this)" onkeydown="taKey(event)"></textarea>
+            <textarea id="ci" placeholder="何をお願いしますか？" rows="1" oninput="exTA(this)" onkeydown="taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()"></textarea>
             <div class="composer-tools">
               <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイル添付" id="attachBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -3072,10 +3072,18 @@ function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
 function now(){return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});}
 function exTA(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+// IME (input-method) composition tracking. The Enter that confirms IME
+// conversion can fire a stray keydown with isComposing=false on some browsers
+// (Safari, older Chrome), so we also track compositionstart/end and add a
+// short grace window after the IME closes.
+var _imeActive=false, _imeEndAt=0;
+function _imeStart(){ _imeActive=true; }
+function _imeEnd(){ _imeActive=false; _imeEndAt=Date.now(); }
 function taKey(e){
-  // Skip while IME composition is active (e.g. typing Japanese: Enter confirms
-  // the kana→kanji conversion, it shouldn't send the message).
-  if(e.isComposing || e.keyCode===229) return;
+  // Active IME — skip
+  if(e.isComposing || e.keyCode===229 || _imeActive) return;
+  // Just-confirmed IME — skip Enter for a short grace period
+  if((Date.now()-_imeEndAt) < 200) return;
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMsg(); }
 }
 // Global ⌘+K / Ctrl+K → start new chat

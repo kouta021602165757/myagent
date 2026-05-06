@@ -2107,9 +2107,7 @@ function openAgent(id){
   const sns=ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
   var topPills = sns.map(n=>`<span class="pill">${n}</span>`).join('');
   if(ag.chrome_enabled){
-    var chromeLbl = _isGoogleChrome() ? '🌐 Google Chrome' : '⚠ Google Chrome';
-    var chromeTitle = _isGoogleChrome() ? 'Google Chrome 連携 ON' : '連携 ON（このブラウザでは動作しません）';
-    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+chromeTitle+'">'+chromeLbl+'</span>';
+    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+(isJa?'Google Chrome 連携 ON':'Google Chrome integration ON')+'">🌐 Google Chrome</span>';
   }
   document.getElementById('chatTop').innerHTML=
     '<div class="ct-icon">'+ag.avatar+'</div>'+
@@ -2266,15 +2264,9 @@ function _updateChromeTool(ag){
     btn.style.display='none'; return;
   }
   btn.style.display='inline-flex';
-  if(_isGoogleChrome()){
-    btn.classList.remove('warn');
-    btn.classList.add('active');
-    btn.title=isJa?'Google Chrome 連携 ON':'Google Chrome integration ON';
-  } else {
-    btn.classList.remove('active');
-    btn.classList.add('warn');
-    btn.title=isJa?'連携 ON ですが、現在のブラウザでは動作しません':'Enabled, but won\'t run in current browser';
-  }
+  btn.classList.remove('warn');
+  btn.classList.add('active');
+  btn.title=isJa?'Google Chrome 連携 ON':'Google Chrome integration ON';
 }
 
 async function regenerateMsg(btn){
@@ -2639,41 +2631,22 @@ function _renderChromeStatus(swId, descId, enabled){
   var sw=document.getElementById(swId);
   var desc=document.getElementById(descId);
   if(!sw||!desc) return;
-  var supported=_isGoogleChrome();
   sw.classList.toggle('on', !!enabled);
-  if(!supported && enabled){
-    desc.innerHTML='<span style="color:#d97706;font-weight:700">⚠ '+
-      (isJa
-        ?'連携設定済み — 現在のブラウザ「'+_browserName()+'」では動作しません。Google Chrome から開いてください。'
-        :'Enabled, but won\'t run in '+_browserName()+'. Please open this site in Google Chrome.')+
-      '</span>';
-  } else if(!supported){
-    desc.innerHTML='<span style="color:var(--rose);font-weight:700">⚠ '+
-      (isJa
-        ?'Google Chrome のみ対応（現在: '+_browserName()+'）'
-        :'Google Chrome only (currently '+_browserName()+')')+
-      '</span>';
-  } else if(enabled){
+  if(enabled){
     desc.innerHTML='<span style="color:#10b981;font-weight:700">✓ '+
-      (isJa?'連携中':'Connected')+
+      (isJa?'連携 ON':'Connected')+
       '</span> — '+
-      (isJa?'Webサイトの調査・フォーム入力・情報収集に対応します':'Web research, form filling and info gathering enabled');
+      (isJa?'AI がサーバー上の Chrome を使って Web 検索・サイト閲覧・フォーム入力を実行します':'AI uses a server-side Chrome to browse, search, and fill forms');
   } else {
     desc.textContent = isJa
-      ? 'Webサイトの調査・フォーム入力・情報収集など、ブラウザ操作が必要な業務に対応します'
-      : 'Enable to allow web research, form filling, and info gathering';
+      ? 'AI に Web サイトの調査・フォーム入力・情報収集を任せられるようになります'
+      : 'Enable to let the AI browse the web, search, and fill forms';
   }
 }
 function toggleWizardChrome(){
   var sw=document.getElementById('wChromeSw');
   if(!sw) return;
   var willEnable=!sw.classList.contains('on');
-  if(willEnable && !_isGoogleChrome()){
-    showToast(isJa?'Google Chrome から開いてください':'Open in Google Chrome to enable','ng');
-    // re-render to refresh the warning text
-    _renderChromeStatus('wChromeSw','wChromeDesc',NA.chrome_enabled);
-    return;
-  }
   NA.chrome_enabled=willEnable;
   _renderChromeStatus('wChromeSw','wChromeDesc',willEnable);
 }
@@ -2681,11 +2654,6 @@ function toggleEditChrome(){
   var sw=document.getElementById('editChromeSw');
   if(!sw) return;
   var willEnable=!sw.classList.contains('on');
-  if(willEnable && !_isGoogleChrome()){
-    showToast(isJa?'Google Chrome から開いてください':'Open in Google Chrome to enable','ng');
-    _renderChromeStatus('editChromeSw','editChromeDesc',sw.classList.contains('on'));
-    return;
-  }
   _renderChromeStatus('editChromeSw','editChromeDesc',willEnable);
 }
 

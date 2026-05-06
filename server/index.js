@@ -170,9 +170,29 @@ function newUser(base){
     balance_jpy_available:0,       // 出金可能な確定収益
     revenue_history:[],            // {date, listing_id, agent_name, buyer_user_id, cost_jpy, share_jpy, status:'pending'|'confirmed', confirms_at}
     payout_history:[],             // {date, amount_jpy, method, status, stripe_payout_id}
+    // Marketplace UX
+    is_verified:false,             // 公式 / 検証済みクリエイターバッジ (admin manual)
+    favorites:[],                  // listing_ids the user favorited
     verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
 }
+
+/* ── Tag suggestions ────────────────────────────────────────── */
+const MARKET_TAGS = [
+  {id:'b2b',         label:'BtoB'},
+  {id:'b2c',         label:'BtoC'},
+  {id:'free',        label:'無料枠OK'},
+  {id:'sole',        label:'個人事業主向け'},
+  {id:'creator',     label:'クリエイター向け'},
+  {id:'student',     label:'学生向け'},
+  {id:'enterprise',  label:'法人向け'},
+  {id:'startup',     label:'スタートアップ向け'},
+  {id:'remote',      label:'リモートワーク'},
+  {id:'beginner',    label:'初心者向け'},
+  {id:'jp',          label:'日本市場特化'},
+  {id:'global',      label:'グローバル対応'},
+];
+const MARKET_TAG_LABEL = MARKET_TAGS.reduce((a,t)=>{a[t.id]=t.label;return a;},{});
 
 /* ── Creator revenue helpers (#5) ───────────────────────────── */
 const REVENUE_SHARE_RATE = 0.10;   // 10% to creator
@@ -612,6 +632,7 @@ function genListingId(){
 /** Build a public-safe listing object (joined with creator). */
 function publicListing(user, ag){
   const m = ag.marketplace||{};
+  const tags = Array.isArray(m.tags) ? m.tags.slice(0,5) : [];
   return {
     listing_id: m.listing_id,
     agent: {
@@ -623,10 +644,13 @@ function publicListing(user, ag){
     description: m.description || ag.persona || '',
     category: m.category || 'other',
     category_label: MARKET_CAT_LABEL[m.category||'other']||'その他',
+    tags,
+    tag_labels: tags.map(t=>MARKET_TAG_LABEL[t]||t),
     demo_prompts: Array.isArray(m.demo_prompts) ? m.demo_prompts.slice(0,3) : [],
     creator: {
       handle: '@'+(user.email||'').split('@')[0],
       name: user.name || '',
+      is_verified: !!user.is_verified,
     },
     rating: m.rating_avg || 0,
     rating_count: m.rating_count || 0,
@@ -803,7 +827,12 @@ function renderListingOgSvg(d, twemojiUri){
     </g>
 
     <!-- creator -->
-    <text x="0" y="${360 + Math.max(0,(tagLines.length-1)*36)}" fill="#6b4226" font-size="18" font-weight="700">by ${handle}</text>
+    <text x="0" y="${360 + Math.max(0,(tagLines.length-1)*36)}" fill="#6b4226" font-size="18" font-weight="700">by ${handle}${d.creator?.is_verified ? ' ' : ''}</text>
+    ${d.creator?.is_verified ? `
+    <g transform="translate(${65 + handle.length*11} ${344 + Math.max(0,(tagLines.length-1)*36)})">
+      <circle cx="0" cy="0" r="11" fill="#2563eb"/>
+      <path d="M-5,0 L-1,4 L5,-3" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>` : ''}
   </g>
 
   <!-- brand badge bottom-right -->
@@ -833,6 +862,9 @@ async function serveListingPage(res, listingId){
     const av = _xmlEscape(d.agent?.avatar||'🤖');
     const skills = (d.agent?.skills||[]).join(' / ');
     const handle = _xmlEscape(d.creator?.handle||'');
+    const verifiedBadge = d.creator?.is_verified
+      ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#2563eb;border-radius:50%;color:#fff;font-size:10px;font-weight:900;margin-left:4px;vertical-align:middle">✓</span>'
+      : '';
     const ratingTxt = d.rating>0 ? `★ ${d.rating.toFixed(1)} (${d.rating_count})` : '★ 未評価';
     const usesTxt = (d.uses||0).toLocaleString();
 
@@ -902,7 +934,7 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
     <div class="info">
       <div class="cat">${catH}</div>
       <div class="nm">${titleH}</div>
-      <div class="by">クリエイター: <b>${handle}</b></div>
+      <div class="by">クリエイター: <b>${handle}</b>${verifiedBadge}</div>
     </div>
   </div>
   <div class="meta">
@@ -1347,17 +1379,28 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ══ MARKETPLACE ════════════════════════════════════════════
   // ── GET /api/marketplace ───────────────────────────────────
-  // Public list. Supports ?category= ?q= ?sort= (popular|recent|top_rated)
+  // Public list. Supports ?category= ?q= ?sort= ?tags= ?favorites=1
   if(pathname==='/api/marketplace' && method==='GET'){
     const qs = new url.URL(req.url, APP_URL).searchParams;
     const cat = (qs.get('category')||'').trim();
     const q = (qs.get('q')||'').trim().toLowerCase();
     const sort = (qs.get('sort')||'popular').trim();
+    const tagsRaw = (qs.get('tags')||'').trim();
+    const tagFilter = tagsRaw ? tagsRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    const onlyFavs = qs.get('favorites')==='1';
     let listings = await listAllPublicListings();
     if(cat && cat!=='all') listings = listings.filter(l=>l.category===cat);
+    if(tagFilter.length){
+      // AND match: listing must contain all selected tags
+      listings = listings.filter(l=>tagFilter.every(t=>(l.tags||[]).indexOf(t)>=0));
+    }
+    if(onlyFavs){
+      const favs = new Set(user.favorites||[]);
+      listings = listings.filter(l=>favs.has(l.listing_id));
+    }
     if(q){
       listings = listings.filter(l=>{
-        const hay = (l.title+' '+l.description+' '+l.category_label+' '+(l.creator.handle||'')).toLowerCase();
+        const hay = (l.title+' '+l.description+' '+l.category_label+' '+(l.creator.handle||'')+' '+(l.tag_labels||[]).join(' ')).toLowerCase();
         return hay.indexOf(q)>=0;
       });
     }
@@ -1376,7 +1419,51 @@ async function handleAPI(req,res,pathname,method,ip){
         return (b.uses||0)-(a.uses||0);
       });
     }
-    return jres(res,200,{listings, categories: MARKET_CATEGORIES.map(id=>({id, label:MARKET_CAT_LABEL[id]})), sort});
+    return jres(res,200,{
+      listings,
+      categories: MARKET_CATEGORIES.map(id=>({id, label:MARKET_CAT_LABEL[id]})),
+      tags: MARKET_TAGS,
+      sort,
+      favorites: user.favorites||[],
+    });
+  }
+
+  // ── Favorites ───────────────────────────────────────────────
+  // GET /api/favorites — list my favorited listings (full detail)
+  if(pathname==='/api/favorites' && method==='GET'){
+    const favSet = new Set(user.favorites||[]);
+    const all = await listAllPublicListings();
+    const mine = all.filter(l=>favSet.has(l.listing_id));
+    return jres(res,200,{favorites: user.favorites||[], listings: mine});
+  }
+  // POST /api/favorites/:listing_id — add
+  const favAdd = pathname.match(/^\/api\/favorites\/(ls_[a-z0-9_-]+)$/);
+  if(favAdd && method==='POST'){
+    const id = favAdd[1];
+    user.favorites = user.favorites || [];
+    if(user.favorites.indexOf(id) < 0) user.favorites.push(id);
+    if(user.favorites.length > 200) user.favorites = user.favorites.slice(-200);
+    await DB.save(user);
+    return jres(res,200,{ok:true, favorites: user.favorites});
+  }
+  // DELETE /api/favorites/:listing_id — remove
+  if(favAdd && method==='DELETE'){
+    user.favorites = (user.favorites||[]).filter(x=>x!==favAdd[1]);
+    await DB.save(user);
+    return jres(res,200,{ok:true, favorites: user.favorites});
+  }
+
+  // ── POST /api/admin/users/:user_id/verify ──────────────────
+  // Admin: toggle is_verified flag on a creator
+  const vfm = pathname.match(/^\/api\/admin\/users\/([^/]+)\/verify$/);
+  if(vfm && method==='POST'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    const target = await DB.findBy('id', vfm[1]);
+    if(!target) return jres(res,404,{error:'ユーザーが見つかりません'});
+    const body = await readBody(req);
+    target.is_verified = body && typeof body.is_verified === 'boolean' ? body.is_verified : !target.is_verified;
+    await DB.save(target);
+    return jres(res,200,{ok:true, user_id: target.id, is_verified: target.is_verified});
   }
 
   // ── GET /api/marketplace/:listing_id ───────────────────────
@@ -1643,6 +1730,9 @@ async function handleAPI(req,res,pathname,method,ip){
     const visibility = body.visibility==='unlisted' ? 'unlisted' : 'public';
     const demoPrompts = Array.isArray(body.demo_prompts)
       ? body.demo_prompts.map(s=>String(s||'').trim()).filter(Boolean).slice(0,3) : [];
+    const tags = Array.isArray(body.tags)
+      ? body.tags.map(t=>String(t||'').trim().toLowerCase()).filter(t=>t && MARKET_TAG_LABEL[t]).slice(0,5)
+      : [];
     if(title.length<2 || title.length>60) return jres(res,400,{error:'タイトルは 2〜60 文字で入力してください'});
     if(description.length<20 || description.length>500) return jres(res,400,{error:'説明は 20〜500 文字で入力してください'});
 
@@ -1650,13 +1740,14 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.marketplace = {
       is_listed: true,
       listing_id: existing.listing_id || genListingId(),
-      title, description, category, demo_prompts: demoPrompts, visibility,
+      title, description, category, demo_prompts: demoPrompts, visibility, tags,
       status: 'live',                      // auto-approve for MVP
       listed_at: existing.listed_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
       uses_count: existing.uses_count || 0,
       rating_avg: existing.rating_avg || 0,
       rating_count: existing.rating_count || 0,
+      reviews: existing.reviews || [],
     };
     await DB.save(user);
     return jres(res,200,{listing: ag.marketplace, agent_id: ag.id});
@@ -1798,6 +1889,7 @@ async function handleAPI(req,res,pathname,method,ip){
         handle: '@'+(creator.email||'').split('@')[0],
         name: creator.name || '',
         joined: creator.created_at || null,
+        is_verified: !!creator.is_verified,
       },
       stats: { listings: listings.length, total_uses: totalUses },
       listings,

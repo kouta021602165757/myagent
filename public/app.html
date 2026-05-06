@@ -367,6 +367,9 @@ input,textarea{font-family:var(--sans);}
 .ld-rv-row .txt{font-size:13px;color:var(--text);line-height:1.65;white-space:pre-wrap;}
 .ld-rv-row .del{margin-top:6px;font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;}
 .ld-rv-row .del:hover{color:var(--rose);}
+.ld-fav{margin-top:4px;font-size:11.5px;font-weight:700;color:var(--rose);background:#fff;border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:inherit;}
+.ld-fav:hover{background:rgba(239,68,68,.06);}
+.ld-fav.on{background:rgba(239,68,68,.1);}
 .market-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
 .market-cat{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:#fff;border:1px solid var(--wire3);color:var(--text2);cursor:pointer;}
 .market-cat:hover{border-color:var(--peach);}
@@ -384,6 +387,12 @@ input,textarea{font-family:var(--sans);}
 .mc-desc{font-size:11.5px;color:var(--text2);line-height:1.5;height:33px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .mc-creator{font-size:10.5px;color:var(--text3);font-weight:600;}
 .mc-creator b{color:var(--text2);font-weight:700;}
+.mc-verified{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#2563eb;border-radius:50%;color:#fff;font-size:9px;font-weight:900;margin-left:3px;vertical-align:middle;}
+.mc-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:-2px;margin-bottom:2px;}
+.mc-tag{font-size:9.5px;font-weight:700;color:var(--text3);background:var(--cream2);border:1px solid var(--wire2);padding:2px 7px;border-radius:6px;letter-spacing:.02em;}
+.mc-fav{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.9);border:1px solid var(--wire2);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:var(--text3);z-index:2;font-family:inherit;transition:all .15s;}
+.mc-fav:hover{background:#fff;color:var(--rose);transform:scale(1.1);}
+.mc-fav.on{color:var(--rose);}
 .mc-meta{display:flex;align-items:center;gap:10px;font-size:10.5px;color:var(--text3);font-weight:600;border-top:1px solid var(--wire);padding-top:8px;margin-top:auto;}
 .mc-stars{color:#f59e0b;font-weight:800;}
 .mc-stars b{color:var(--text);}
@@ -1476,6 +1485,7 @@ body{color:#f0f0f8;}
         </select>
       </div>
       <div class="market-cats" id="marketCats"></div>
+      <div class="market-tags" id="marketTags" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
 
       <div class="market-grid" id="marketGrid"></div>
       <div id="marketEmpty" class="market-empty" style="display:none">該当するエージェントが見つかりません</div>
@@ -2120,6 +2130,12 @@ body{color:#f0f0f8;}
       </div>
 
       <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">タグ（最大 5 つ・任意）</label>
+        <div id="lsTags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">対象ユーザーが探しやすくなります。</div>
+      </div>
+
+      <div class="form-row">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">デモプロンプト（最大 3 つ・任意）</label>
         <input id="lsDemo1" maxlength="120" placeholder="例: 商談した株式会社○○へ追加提案メールを書いて" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
         <input id="lsDemo2" maxlength="120" placeholder="例: 検討中の顧客への、軽めの追客メッセージ" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
@@ -2484,6 +2500,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     const meData=await api('GET','/api/me');
     if(!meData||meData.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
     me=meData.user||meData;
+    if(!me.favorites) me.favorites = [];
     // Record this token in the multi-account list (so the switcher shows it)
     try{ _recordCurrentAccount(); }catch(e){}
     // Reveal admin moderation tab for staff accounts
@@ -3159,14 +3176,38 @@ var MARKET_CAT_DEFS = [
 ];
 var MARKET = [];                       // populated from API
 var _marketCat='all', _marketSort='popular', _marketLoading=false, _marketSearchTimer=null;
+var _marketTags=[], _marketOnlyFavs=false, _marketTagDefs=[];
 
 async function openMarketplace(){
-  _marketCat='all'; _marketSort='popular';
+  _marketCat='all'; _marketSort='popular'; _marketTags=[]; _marketOnlyFavs=false;
   var s=document.getElementById('marketSearch'); if(s) s.value='';
   var sort=document.getElementById('marketSort'); if(sort) sort.value='popular';
   buildMarketCats();
+  buildMarketTags();
   document.getElementById('marketOverlay').classList.add('open');
   await loadMarket();
+}
+
+function buildMarketTags(){
+  var el=document.getElementById('marketTags'); if(!el) return;
+  // Favorites toggle + tag chips
+  var favPart = '<button type="button" class="market-cat'+(_marketOnlyFavs?' on':'')+'" style="background:'+(_marketOnlyFavs?'var(--rose)':'#fff')+';color:'+(_marketOnlyFavs?'#fff':'var(--text2)')+';border-color:'+(_marketOnlyFavs?'var(--rose)':'var(--wire3)')+'" onclick="toggleMarketFavs()">❤ お気に入り</button>';
+  var tagPart = (_marketTagDefs||[]).map(function(t){
+    var on = _marketTags.indexOf(t.id)>=0;
+    return '<button type="button" class="market-cat'+(on?' on':'')+'" onclick="toggleMarketTag(\''+t.id+'\')">#'+esc(t.label)+'</button>';
+  }).join('');
+  el.innerHTML = favPart + tagPart;
+}
+function toggleMarketTag(t){
+  var i=_marketTags.indexOf(t);
+  if(i>=0) _marketTags.splice(i,1); else _marketTags.push(t);
+  buildMarketTags();
+  loadMarket();
+}
+function toggleMarketFavs(){
+  _marketOnlyFavs = !_marketOnlyFavs;
+  buildMarketTags();
+  loadMarket();
 }
 function closeMarket(){ document.getElementById('marketOverlay').classList.remove('open'); }
 
@@ -3182,8 +3223,15 @@ async function loadMarket(){
     var q=(document.getElementById('marketSearch')?.value||'').trim();
     if(q) qs.push('q='+encodeURIComponent(q));
     qs.push('sort='+encodeURIComponent(_marketSort));
+    if(_marketTags.length) qs.push('tags='+encodeURIComponent(_marketTags.join(',')));
+    if(_marketOnlyFavs) qs.push('favorites=1');
     var r=await api('GET','/api/marketplace?'+qs.join('&'));
     MARKET = r.listings||[];
+    if(r.tags && !_marketTagDefs.length){
+      _marketTagDefs = r.tags;
+      buildMarketTags();
+    }
+    if(r.favorites && me) me.favorites = r.favorites;
   }catch(e){
     MARKET=[];
     if(grid) grid.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--rose);font-size:13px;font-weight:600;grid-column:1/-1">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
@@ -3227,24 +3275,55 @@ function renderMarket(){
     return;
   }
   document.getElementById('marketEmpty').style.display='none';
+  var favs = new Set(me?.favorites||[]);
   el.innerHTML=MARKET.map(function(m){
     var ribbon = m.badge==='hot' ? '<div class="market-ribbon">🔥 人気</div>'
                : m.badge==='new' ? '<div class="market-ribbon new">✨ 新着</div>' : '';
     var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
     var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
     var creatorH = esc(m.creator?.handle||'');
+    var verifiedSpan = m.creator?.is_verified
+      ? '<span class="mc-verified" title="検証済みクリエイター">✓</span>'
+      : '';
+    var tagsHtml = (m.tag_labels||[]).slice(0,3).map(function(t){
+      return '<span class="mc-tag">'+esc(t)+'</span>';
+    }).join('');
+    var isFav = favs.has(m.listing_id);
     return '<div class="market-card-wrap" style="position:relative">'
       + '<button type="button" class="market-card" data-id="'+esc(m.listing_id)+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
       + ribbon
       + '<div class="mc-head"><div class="mc-av">'+(m.agent?.avatar||'🤖')+'</div>'
       + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
       + '<div class="mc-desc">'+esc(m.description)+'</div>'
-      + '<div class="mc-creator">クリエイター: <a href="javascript:void(0)" onclick="event.stopPropagation();openCreatorProfile(\''+creatorH+'\')" style="color:var(--peach-dark);text-decoration:none;font-weight:700">'+creatorH+'</a></div>'
+      + (tagsHtml ? '<div class="mc-tags">'+tagsHtml+'</div>' : '')
+      + '<div class="mc-creator">クリエイター: <a href="javascript:void(0)" onclick="event.stopPropagation();openCreatorProfile(\''+creatorH+'\')" style="color:var(--peach-dark);text-decoration:none;font-weight:700">'+creatorH+verifiedSpan+'</a></div>'
       + '<div class="mc-meta">'+stars+'<span>'+uses+'</span></div>'
       + '</button>'
+      + '<button class="mc-fav'+(isFav?' on':'')+'" title="お気に入り" onclick="toggleFavorite(\''+esc(m.listing_id)+'\',this)">'+(isFav?'❤':'♡')+'</button>'
       + '<button class="mc-report" title="この出店を通報" onclick="openReportListing(\''+esc(m.listing_id)+'\',\''+esc(m.title).replace(/\\|\x27/g,"\\$&")+'\')" style="position:absolute;top:8px;left:8px;background:rgba(255,255,255,.9);border:1px solid var(--wire2);width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--text3);z-index:2">⚠</button>'
       + '</div>';
   }).join('');
+}
+
+async function toggleFavorite(listingId, btn){
+  // event already stopped by inline; avoid card click
+  event.stopPropagation();
+  if(!me) return;
+  me.favorites = me.favorites || [];
+  var was = me.favorites.indexOf(listingId)>=0;
+  try{
+    if(was){
+      await api('DELETE','/api/favorites/'+listingId);
+      me.favorites = me.favorites.filter(x=>x!==listingId);
+      if(btn){ btn.classList.remove('on'); btn.textContent='♡'; }
+    } else {
+      await api('POST','/api/favorites/'+listingId);
+      me.favorites.push(listingId);
+      if(btn){ btn.classList.add('on'); btn.textContent='❤'; }
+    }
+  }catch(e){
+    showToast(e.message||'失敗','ng');
+  }
 }
 
 /* ── Listing detail modal (drill-in) ────────────────────────── */
@@ -3318,19 +3397,28 @@ function _renderListingDetail(d){
       }).join('') + '</div>'
     : '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px;font-weight:600;background:var(--cream);border:1px dashed var(--wire2);border-radius:11px">まだ評価がありません</div>';
 
+  var isFav = (me?.favorites||[]).indexOf(d.listing_id)>=0;
+  var verifiedSpan = d.creator?.is_verified
+    ? '<span class="mc-verified" title="検証済みクリエイター" style="width:16px;height:16px;font-size:10px">✓</span>'
+    : '';
+  var tagChipsHtml = (d.tag_labels||[]).map(function(t){
+    return '<span class="pl">'+esc(t)+'</span>';
+  }).join('');
   return ''
     + '<div class="ld-hero">'
       + '<div class="ld-av">'+(d.agent?.avatar||'🤖')+'</div>'
       + '<div class="ld-info">'
         + '<div class="ld-cat">'+esc(d.category_label||'')+'</div>'
         + '<div class="ld-name">'+esc(d.title||'')+'</div>'
-        + '<div class="ld-creator">クリエイター: <a href="javascript:void(0)" onclick="closeListingDetail();openCreatorProfile(\''+creatorH+'\')">'+creatorH+'</a></div>'
+        + '<div class="ld-creator">クリエイター: <a href="javascript:void(0)" onclick="closeListingDetail();openCreatorProfile(\''+creatorH+'\')">'+creatorH+verifiedSpan+'</a></div>'
       + '</div>'
       + '<div class="ld-pri">'
         + '<div class="ld-rating">'+stars+'</div>'
         + '<div class="ld-uses">利用 '+(d.uses||0).toLocaleString()+' 回</div>'
+        + '<button class="ld-fav'+(isFav?' on':'')+'" onclick="toggleFavorite(\''+esc(d.listing_id)+'\',this)">'+(isFav?'❤ お気に入り':'♡ お気に入り')+'</button>'
       + '</div>'
     + '</div>'
+    + (tagChipsHtml ? '<div class="ld-section"><div class="ld-section-h">タグ</div><div class="ld-pills">'+tagChipsHtml+'</div></div>' : '')
     + '<div class="ld-section"><div class="ld-section-h">説明</div><div class="ld-desc">'+esc(d.description||'')+'</div></div>'
     + (skillsHtml ? '<div class="ld-section"><div class="ld-section-h">スキル / 機能</div><div class="ld-pills">'+skillsHtml+'</div></div>' : '')
     + demosHtml
@@ -3455,6 +3543,15 @@ function openListingForm(agentId){
     return '<label class="market-cat" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0"><input type="radio" name="lsCat" value="'+c.id+'" style="margin:0">'+esc(c.label)+'</label>';
   }).join('');
 
+  // Build tag checkboxes (if defs not yet loaded, fetch them)
+  if(!_marketTagDefs.length){
+    api('GET','/api/marketplace?sort=popular').then(function(r){
+      if(r.tags){ _marketTagDefs = r.tags; _renderListingTagInputs(ag); }
+    }).catch(function(){});
+  } else {
+    _renderListingTagInputs(ag);
+  }
+
   // Pre-fill if already listed
   var m = ag.marketplace || {};
   document.getElementById('lsTitle').value = m.title || ag.name || '';
@@ -3476,6 +3573,15 @@ function openListingForm(agentId){
 
   document.getElementById('listingOverlay').classList.add('open');
 }
+function _renderListingTagInputs(ag){
+  var tagEl = document.getElementById('lsTags');
+  if(!tagEl || !_marketTagDefs.length) return;
+  var pre = (ag.marketplace && ag.marketplace.tags) || [];
+  tagEl.innerHTML = _marketTagDefs.map(function(t){
+    var checked = pre.indexOf(t.id)>=0 ? ' checked' : '';
+    return '<label class="market-cat" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0;font-size:12px"><input type="checkbox" name="lsTag" value="'+t.id+'"'+checked+' style="margin:0">'+esc(t.label)+'</label>';
+  }).join('');
+}
 function closeListingForm(){
   document.getElementById('listingOverlay').classList.remove('open');
   _listingAgentId = null;
@@ -3491,6 +3597,7 @@ async function submitListing(){
     document.getElementById('lsDemo2').value.trim(),
     document.getElementById('lsDemo3').value.trim(),
   ].filter(Boolean);
+  var tags = Array.from(document.querySelectorAll('input[name="lsTag"]:checked')).map(function(c){return c.value;}).slice(0,5);
 
   if(title.length<2 || title.length>60){ showToast('タイトルは 2〜60 文字で入力してください','ng'); return; }
   if(description.length<20 || description.length>500){ showToast('説明は 20〜500 文字で入力してください','ng'); return; }
@@ -3499,7 +3606,7 @@ async function submitListing(){
   btn.disabled = true; var origText = btn.textContent; btn.textContent = '保存中…';
   try{
     var r = await api('POST','/api/marketplace/listings',{
-      agent_id: _listingAgentId, title, description, category, demo_prompts, visibility
+      agent_id: _listingAgentId, title, description, category, demo_prompts, visibility, tags
     });
     // Stash on local agent
     var ag = agents.find(function(a){return a.id===_listingAgentId;});
@@ -4407,11 +4514,14 @@ async function openCreatorProfile(handle){
     var s = r.stats || {};
     var listings = r.listings || [];
     var joined = c.joined ? new Date(c.joined).toISOString().slice(0,10) : '';
+    var verifiedSpan = c.is_verified
+      ? '<span class="mc-verified" style="width:18px;height:18px;font-size:11px;margin-left:6px" title="検証済みクリエイター">✓</span>'
+      : '';
     body.innerHTML = ''
       + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.2);border-radius:14px;margin-bottom:18px">'
         + '<div style="width:54px;height:54px;border-radius:14px;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900">'+esc((c.handle||'@?').charAt(1).toUpperCase())+'</div>'
         + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:18px;font-weight:900;color:var(--text)">'+esc(c.handle||'')+'</div>'
+          + '<div style="font-size:18px;font-weight:900;color:var(--text);display:flex;align-items:center">'+esc(c.handle||'')+verifiedSpan+'</div>'
           + (c.name ? '<div style="font-size:12.5px;color:var(--text2);font-weight:600;margin-top:2px">'+esc(c.name)+'</div>' : '')
           + '<div style="font-size:11.5px;color:var(--text3);font-weight:600;margin-top:6px">出店 '+(s.listings||0)+' 件 ・ 累計利用 '+(s.total_uses||0).toLocaleString()+' 回'+(joined ? ' ・ '+joined+' から':'')+'</div>'
         + '</div>'

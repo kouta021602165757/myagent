@@ -242,6 +242,32 @@ input,textarea{font-family:var(--sans);}
 .m-name{font-weight:700;color:var(--text2);}
 .m-time{color:var(--text3);}
 
+/* ── Marketplace ────────────────────────────────────────────── */
+.market-bar{display:flex;gap:10px;margin:14px 0 10px;}
+.market-search{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire3);border-radius:10px;padding:9px 14px;}
+.market-search input{border:none;outline:none;background:transparent;flex:1;font-size:13.5px;font-family:inherit;color:var(--text);}
+.market-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.market-cat{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:#fff;border:1px solid var(--wire3);color:var(--text2);cursor:pointer;}
+.market-cat:hover{border-color:var(--peach);}
+.market-cat.on{background:var(--peach);color:#fff;border-color:var(--peach);}
+.market-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.market-card{position:relative;background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:all .15s;}
+.market-card:hover{border-color:var(--peach-light);transform:translateY(-2px);box-shadow:0 6px 18px rgba(180,120,80,.08);}
+.market-card.sel{border-color:var(--peach);background:rgba(251,146,60,.05);box-shadow:0 0 0 3px rgba(251,146,60,.15);}
+.market-ribbon{position:absolute;top:10px;right:10px;font-size:9.5px;font-weight:800;color:#fff;background:var(--peach);padding:2px 7px;border-radius:6px;letter-spacing:.04em;}
+.market-ribbon.new{background:#7c3aed;}
+.mc-head{display:flex;align-items:center;gap:10px;}
+.mc-av{width:40px;height:40px;border-radius:10px;background:var(--cream3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.mc-name{font-size:13.5px;font-weight:800;color:var(--text);margin:0;line-height:1.3;}
+.mc-cat{font-size:10.5px;color:var(--text3);font-weight:600;margin-top:1px;}
+.mc-desc{font-size:11.5px;color:var(--text2);line-height:1.5;height:33px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.mc-creator{font-size:10.5px;color:var(--text3);font-weight:600;}
+.mc-creator b{color:var(--text2);font-weight:700;}
+.mc-meta{display:flex;align-items:center;gap:10px;font-size:10.5px;color:var(--text3);font-weight:600;border-top:1px solid var(--wire);padding-top:8px;margin-top:auto;}
+.mc-stars{color:#f59e0b;font-weight:800;}
+.mc-stars b{color:var(--text);}
+.market-empty{padding:60px 20px;text-align:center;color:var(--text3);font-size:13px;font-weight:600;}
+
 /* ── Tool log (browser activity) ─────────────────────────────── */
 .tlog{max-width:680px;margin:6px 0 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;font-size:13px;}
 .tlog summary{list-style:none;cursor:pointer;padding:10px 14px;background:linear-gradient(135deg,#eff6ff,#f0f9ff);border-bottom:1px solid #e2e8f0;}
@@ -1097,6 +1123,10 @@ body{color:#f0f0f8;}
         <span style="font-size:13px">📋</span>
         <span id="i18n-newTpl">テンプレートエージェント</span>
       </button>
+      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openMarketplace()">
+        <span style="font-size:13px">🌐</span>
+        <span id="i18n-newMarket">マーケットプレイス</span>
+      </button>
     </div>
     <div class="sb-lbl" id="i18n-teamLabel">チーム</div>
     <div class="ag-list" id="agList"></div>
@@ -1137,6 +1167,7 @@ body{color:#f0f0f8;}
       <div class="empty-actions">
         <button class="btn-volt" onclick="openNewAgent()">+ 新規エージェント</button>
         <button class="btn-back btn-tpl" onclick="openTemplate()">📋 テンプレートエージェント</button>
+        <button class="btn-back btn-tpl" onclick="openMarketplace()">🌐 マーケットプレイス</button>
       </div>
     </div>
     <div class="chat" id="chatWrap" style="display:none">
@@ -1294,6 +1325,38 @@ body{color:#f0f0f8;}
           <button class="btn-back" onclick="confirmBack()">← 戻る</button>
           <button class="btn-volt" id="createBtn" style="border-radius:12px;padding:13px;" onclick="doCreate()">✨ 作成する</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MARKETPLACE OVERLAY ════════════════════════════════ -->
+<div class="overlay" id="marketOverlay">
+  <div class="wizard" style="max-width:900px">
+    <div class="wiz-top">
+      <div class="wiz-title">🌐 マーケットプレイス</div>
+      <button class="wiz-close" onclick="closeMarket()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="max-height:75vh;overflow:auto">
+      <div class="step-h" style="display:flex;align-items:center;gap:8px">出店中のエージェントから選ぶ</div>
+      <div class="step-s">他のクリエイターが出店した AI エージェントを、自分のチームに迎え入れることができます。<br>利用料の 10% は元のクリエイターに還元されます。</div>
+
+      <div class="market-bar">
+        <div class="market-search">
+          <span>🔍</span>
+          <input id="marketSearch" placeholder="エージェント・カテゴリで検索" oninput="renderMarket()">
+        </div>
+      </div>
+      <div class="market-cats" id="marketCats"></div>
+
+      <div class="market-grid" id="marketGrid"></div>
+      <div id="marketEmpty" class="market-empty" style="display:none">該当するエージェントが見つかりません</div>
+
+      <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+        <button class="btn-back" onclick="closeMarket()">閉じる</button>
+        <button class="btn-volt" id="useMarketBtn" disabled style="opacity:.5;cursor:not-allowed" onclick="useSelectedMarket()">このエージェントを追加 →</button>
       </div>
     </div>
   </div>
@@ -1968,6 +2031,7 @@ var T = {
       teamBtn:     isJa ? '最初のエージェントを作る →'                  : 'Create your first agent →',
       newAgent:    isJa ? '新規エージェント'                              : 'New agent',
       newTpl:      isJa ? 'テンプレートエージェント'                       : 'Template agent',
+      newMarket:   isJa ? 'マーケットプレイス'                              : 'Marketplace',
       balance:     isJa ? '残高'                                        : 'Balance',
       charge:      isJa ? '+ 残高チャージ'                              : '+ Add Credits',
       logout:      isJa ? 'ログアウト'                                  : 'Logout',
@@ -2031,7 +2095,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],
-     ['i18n-newAgent',T.newAgent],['i18n-newTpl',T.newTpl],['i18n-teamLabel',T.teamLabel],
+     ['i18n-newAgent',T.newAgent],['i18n-newTpl',T.newTpl],['i18n-newMarket',T.newMarket],['i18n-teamLabel',T.teamLabel],
      ['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]]
     .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
     // Apply data-i18n attributes anywhere on the page (billing modal, settings tabs, etc.)
@@ -2685,6 +2749,104 @@ function startFromScratch(){
   wStep(1);
 }
 function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
+
+/* ── Marketplace ─────────────────────────────────────────────── */
+/* Sample listings for launch — will be replaced by real /api/marketplace once
+   the creator backend (#4–#7) ships. Reuses the PRESETS schema + adds creator,
+   rating, uses, category. */
+var MARKET_CATS = ['すべて','セールス','マーケティング','リサーチ','ライティング','業務効率化','その他'];
+var MARKET = [
+  {avatar:'📞',name:'営業フォローアップ Bot',skills:['sales'],persona:'商談後のフォローアップメールを自動生成。テキストを貼るだけで適切な追客文面を作ります。BtoB/BtoC 両対応、敬語の調整も自動。',category:'セールス',creator:'@takeuchi_kouta',rating:4.7,uses:284,badge:'hot'},
+  {avatar:'📱',name:'SNS 投稿ジェネレーター',skills:['sns','marketing'],persona:'商品名と訴求軸を入れるだけで Twitter / Instagram / TikTok 用の投稿を 3 パターン同時生成。',category:'マーケティング',creator:'@takeuchi_kouta',rating:4.5,uses:196,badge:'hot'},
+  {avatar:'🔍',name:'競合リサーチャー',skills:['research'],persona:'競合企業名を入れると Google Chrome 連携で公開情報を収集し、ポジショニングを比較レポート化します。',category:'リサーチ',creator:'@takeuchi_kouta',rating:0,uses:0,badge:'new',chrome_enabled:true},
+  {avatar:'✍️',name:'SEO ブログライター',skills:['writing','marketing'],persona:'キーワードと業界を伝えると、検索意図を分解して 2,000 字の SEO 記事を生成。見出し・メタディスクリプションも同梱。',category:'ライティング',creator:'@yamada_seo',rating:4.9,uses:1240,badge:'hot'},
+  {avatar:'📊',name:'KPI ダッシュボード解説',skills:['analyst','research'],persona:'スプレッドシート / GA4 のデータを貼ると、KPI の動きを経営会議向けにサマリー化。',category:'業務効率化',creator:'@data_pro',rating:4.6,uses:421},
+  {avatar:'🤝',name:'カスタマーサポート Tier1',skills:['support'],persona:'よくある問い合わせの一次回答を即座に返す。カスタマー怒り度を判定してエスカレーション要否も判断。',category:'業務効率化',creator:'@cs_master',rating:4.4,uses:312},
+  {avatar:'🎯',name:'リード獲得メール作成',skills:['sales','marketing'],persona:'業界・役職・企業規模を指定するだけでパーソナライズされたコールドメールを作成。',category:'セールス',creator:'@b2b_ninja',rating:4.3,uses:178},
+  {avatar:'📝',name:'議事録要約 Pro',skills:['secretary','writing'],persona:'長い議事録を「決定事項 / アクションアイテム / 議論ポイント」の3軸で構造化サマリー。',category:'業務効率化',creator:'@minute_master',rating:4.8,uses:892},
+  {avatar:'💼',name:'契約書チェッカー',skills:['legal','other'],persona:'契約書テキストを貼ると、リスク条項・要交渉点・抜け漏れをハイライト。法務チェック前の一次レビュー用。',category:'その他',creator:'@legal_ai',rating:4.7,uses:145},
+  {avatar:'🎨',name:'クリエイティブ・ブリーフ作成',skills:['designer','marketing'],persona:'商品 / ターゲット / 達成目標を聞き取りながら、デザイナーに渡せるブリーフを5分で作成。',category:'マーケティング',creator:'@design_brief',rating:4.5,uses:88,badge:'new'},
+  {avatar:'🔬',name:'論文サマライザー',skills:['research','writing'],persona:'arXiv / PubMed の URL を渡すと、Abstract → 主張 → 手法 → 結論 → 限界の5段で日本語サマリー。',category:'リサーチ',creator:'@phd_helper',rating:4.9,uses:567,chrome_enabled:true},
+  {avatar:'💬',name:'多言語ローカライザー',skills:['writing','translation','other'],persona:'日本語の販売文を、文化背景まで考慮して英語・中国語・韓国語に翻訳。直訳ではなく市場最適化。',category:'ライティング',creator:'@global_loc',rating:4.6,uses:234}
+];
+var _marketCat='すべて', _marketPickedIdx=-1;
+
+function openMarketplace(){
+  _marketPickedIdx=-1; _marketCat='すべて';
+  var s=document.getElementById('marketSearch'); if(s) s.value='';
+  buildMarketCats();
+  renderMarket();
+  var btn=document.getElementById('useMarketBtn');
+  if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.style.cursor='not-allowed'; }
+  document.getElementById('marketOverlay').classList.add('open');
+}
+function closeMarket(){ document.getElementById('marketOverlay').classList.remove('open'); }
+
+function buildMarketCats(){
+  var el=document.getElementById('marketCats'); if(!el) return;
+  el.innerHTML=MARKET_CATS.map(function(c){
+    return '<button type="button" class="market-cat'+(c===_marketCat?' on':'')+'" onclick="setMarketCat(\''+c+'\')">'+esc(c)+'</button>';
+  }).join('');
+}
+function setMarketCat(c){
+  _marketCat=c;
+  buildMarketCats();
+  renderMarket();
+}
+function renderMarket(){
+  var el=document.getElementById('marketGrid'); if(!el) return;
+  var q=(document.getElementById('marketSearch')?.value||'').toLowerCase().trim();
+  var list=MARKET.filter(function(m){
+    if(_marketCat!=='すべて' && m.category!==_marketCat) return false;
+    if(!q) return true;
+    return (m.name+' '+m.persona+' '+m.creator+' '+m.category).toLowerCase().indexOf(q)>=0;
+  });
+  if(!list.length){
+    el.innerHTML='';
+    document.getElementById('marketEmpty').style.display='block';
+    return;
+  }
+  document.getElementById('marketEmpty').style.display='none';
+  el.innerHTML=list.map(function(m){
+    var idx=MARKET.indexOf(m);
+    var ribbon = m.badge==='hot' ? '<div class="market-ribbon">🔥 人気</div>'
+               : m.badge==='new' ? '<div class="market-ribbon new">✨ 新着</div>' : '';
+    var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
+    var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
+    return '<button type="button" class="market-card'+(idx===_marketPickedIdx?' sel':'')+'" data-idx="'+idx+'" onclick="pickMarket('+idx+')">'
+      + ribbon
+      + '<div class="mc-head"><div class="mc-av">'+m.avatar+'</div>'
+      + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.name)+'</div><div class="mc-cat">'+esc(m.category)+'</div></div></div>'
+      + '<div class="mc-desc">'+esc(m.persona)+'</div>'
+      + '<div class="mc-creator">クリエイター: <b>'+esc(m.creator)+'</b></div>'
+      + '<div class="mc-meta">'+stars+'<span>'+uses+'</span></div>'
+      + '</button>';
+  }).join('');
+}
+function pickMarket(i){
+  _marketPickedIdx=i;
+  document.querySelectorAll('.market-card').forEach(function(b){b.classList.remove('sel');});
+  var sel=document.querySelector('.market-card[data-idx="'+i+'"]');
+  if(sel) sel.classList.add('sel');
+  var btn=document.getElementById('useMarketBtn');
+  if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; }
+}
+function useSelectedMarket(){
+  if(_marketPickedIdx<0) return;
+  var m=MARKET[_marketPickedIdx];
+  closeMarket();
+  // Clone into wizard confirm step (same flow as preset) so user can review/customize
+  _wizardMode='preset';
+  NA={avatar:m.avatar,name:m.name,skills:m.skills.slice(),persona:m.persona,purpose:'',duties:'',chrome_enabled:!!m.chrome_enabled};
+  var wn=document.getElementById('wName'); if(wn) wn.value=m.name;
+  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent=m.avatar;
+  document.querySelectorAll('.av-cell').forEach(function(b,i){ b.classList.toggle('sel',AVATARS[i]===m.avatar); });
+  document.querySelectorAll('.sk-card').forEach(function(b,i){ b.classList.toggle('sel',m.skills.indexOf(SKILLS[i].id)>=0); });
+  if(typeof _renderChromeStatus==='function') _renderChromeStatus('wChromeSw','wChromeDesc',!!m.chrome_enabled);
+  buildConf();
+  wStep(6);
+  document.getElementById('wizOverlay').classList.add('open');
+}
 
 function _parsePersona(persona){
   // Parse "採用目的: ...\n業務内容: ..." back to {purpose, duties}.

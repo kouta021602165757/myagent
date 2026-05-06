@@ -226,17 +226,17 @@ async function callAI(messages,system){
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
 async function callAIWithTools(messages,system,tools){
-  // Up to 2 retries on 429 (rate limit) with exponential backoff
+  // Single retry on 429 with short backoff — Render edge times out around 60–100s
+  // so we can't afford long waits. Surface the rate limit to the user instead.
   let attempt = 0;
   while(true){
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
       {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
                            {model:'claude-sonnet-4-6',max_tokens:2048,system,messages,tools});
     if(r.s===200) return r.d;
-    if(r.s===429 && attempt < 2){
-      const wait = (attempt===0 ? 8000 : 20000); // 8s, then 20s
-      console.warn(`[chat] Anthropic 429 rate-limited, retrying in ${wait}ms`);
-      await new Promise(res=>setTimeout(res, wait));
+    if(r.s===429 && attempt < 1){
+      console.warn('[chat] Anthropic 429 rate-limited, retrying once in 5s');
+      await new Promise(res=>setTimeout(res, 5000));
       attempt++;
       continue;
     }
@@ -879,6 +879,8 @@ async function handleAPI(req,res,pathname,method,ip){
         let resp;
         let iters = 0;
         const MAX_ITERS = 5;
+        const startedAt = Date.now();
+        const BUDGET_MS = 50000; // Stay under Render edge timeout (~60–100s)
         while(true){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
@@ -891,6 +893,12 @@ async function handleAPI(req,res,pathname,method,ip){
           iters++;
           if(iters > MAX_ITERS){
             reply = '(ツール呼び出しの上限に達したため処理を中断しました)';
+            break;
+          }
+          if(Date.now() - startedAt > BUDGET_MS){
+            // Pull whatever text the AI produced this turn so user gets *something*
+            const partial = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+            reply = (partial ? partial + '\n\n' : '') + '(時間がかかりすぎたため、ここで処理を中断しました。もう一度お試しください)';
             break;
           }
 

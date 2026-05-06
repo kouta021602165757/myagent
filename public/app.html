@@ -2051,6 +2051,18 @@ async function api(method,path,body){
   const opts={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
   if(body)opts.body=JSON.stringify(body);
   const res=await fetch(API+path,opts);
+  const ct=(res.headers.get('content-type')||'').toLowerCase();
+  // Server may return an HTML error page (Render edge 502/504, gateway timeout, etc.)
+  if(!ct.includes('application/json')){
+    const text=await res.text().catch(()=>'');
+    if(res.status===502||res.status===503||res.status===504){
+      throw new Error(isJa?'サーバーが混雑または応答が遅すぎます。30秒待ってもう一度お試しください。':'Server busy or slow. Please retry in 30s.');
+    }
+    if(res.status===429){
+      throw new Error(isJa?'リクエストが多すぎます。少し待ってから再送信してください。':'Too many requests. Please wait and retry.');
+    }
+    throw new Error((isJa?'通信エラー（HTTP ':'Network error (HTTP ')+res.status+(isJa?'）':')')+(text?': '+text.slice(0,120):''));
+  }
   const data=await res.json();
   if(!res.ok)throw new Error(data.error||'エラーが発生しました');
   return data;

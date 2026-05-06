@@ -281,6 +281,17 @@ input,textarea{font-family:var(--sans);}
 .cea-table tr:hover td{background:var(--cream);}
 .cea-table b{color:var(--peach-dark);font-weight:800;}
 
+.payout-hero{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;border-radius:14px;padding:22px 24px;}
+.payout-hero .ph-lbl{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.55);text-transform:uppercase;}
+.payout-hero .ph-val{font-size:30px;font-weight:900;margin:8px 0;font-feature-settings:'tnum';}
+.payout-hero .ph-meta{font-size:11.5px;color:rgba(255,255,255,.55);}
+.payout-hero .ph-acts{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;}
+.payout-hero .ph-btn-w,.payout-hero .ph-btn-o{padding:9px 16px;border-radius:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;border:none;}
+.payout-hero .ph-btn-w{background:#fff;color:#0f172a;}
+.payout-hero .ph-btn-w:hover:not([disabled]){background:#f1f5f9;}
+.payout-hero .ph-btn-o{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3);}
+.payout-hero .ph-btn-o:hover{background:rgba(255,255,255,.1);}
+
 .cea-feed{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:6px;}
 .cea-feed-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:12px;}
 .cea-feed-row:hover{background:var(--cream);}
@@ -1805,6 +1816,13 @@ body{color:#f0f0f8;}
           </section>
 
           <section class="spane-section">
+            <div class="spane-section-h">💴 出金（Stripe Connect）</div>
+            <div id="creatorPayout" class="creator-list">
+              <div class="creator-loading">読み込み中…</div>
+            </div>
+          </section>
+
+          <section class="spane-section">
             <div class="spane-section-h">クリエイターサポート</div>
             <div class="creator-help">
               <div class="ch-item">
@@ -2368,6 +2386,22 @@ document.addEventListener('DOMContentLoaded',async()=>{
       var aSec=document.getElementById('snavAdminSec'); if(aSec) aSec.style.display='';
       var aBtn=document.getElementById('snavAdminBtn'); if(aBtn) aBtn.style.display='';
     }
+    // Handle Stripe Connect return redirect (?payout=onboarded|refresh)
+    try{
+      var qs = new URLSearchParams(location.search);
+      var pq = qs.get('payout');
+      if(pq){
+        history.replaceState({}, '', location.pathname);
+        if(pq==='onboarded') showToast('銀行口座の登録が完了しました','ok');
+        if(pq==='refresh')   showToast('銀行口座の登録を再開してください','ng');
+        // Auto-open creator tab so user sees the result
+        setTimeout(function(){
+          openSettings();
+          var btn = document.querySelector('.snav-item[data-tab="creator"]');
+          if(btn) switchStab(btn,'s-creator');
+        }, 200);
+      }
+    }catch(e){}
     const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
     // Show email verify banner if not verified
@@ -3810,7 +3844,7 @@ function switchStab(btn, tabId){
   if(tabId==='s-security') { renderLinkedAccounts(); renderSessionInfo(); }
   if(tabId==='s-notif') initNotifToggles();
   if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
-  if(tabId==='s-creator') loadCreatorDashboard();
+  if(tabId==='s-creator'){ loadCreatorDashboard(); loadPayoutSection(); }
   if(tabId==='s-admin') loadAdminReports();
 }
 
@@ -3959,6 +3993,80 @@ async function loadCreatorDashboard(){
   }catch(e){
     listEl.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
   }
+}
+
+/* ── Payout (Stripe Connect, #7) ────────────────────────────── */
+async function loadPayoutSection(){
+  var el = document.getElementById('creatorPayout');
+  if(!el) return;
+  el.innerHTML = '<div class="creator-loading">読み込み中…</div>';
+  try{
+    var s = await api('GET','/api/payout/status');
+    var min = s.min_jpy || 1000;
+    var available = s.balance_available || 0;
+    var canRequest = s.payouts_enabled && available >= min;
+
+    var head = '<div class="payout-hero">'
+      + '<div class="ph-lbl">利用可能残高</div>'
+      + '<div class="ph-val">¥'+Math.round(available).toLocaleString()+'</div>'
+      + '<div class="ph-meta">最低出金 ¥'+min.toLocaleString()+' ／ 月1回まで無料 ／ Stripe Connect 経由</div>';
+    if(canRequest){
+      head += '<div class="ph-acts"><button class="ph-btn-w" onclick="requestPayout()">¥'+Math.round(available).toLocaleString()+' を全額出金 →</button><button class="ph-btn-o" onclick="requestPayoutCustom()">金額を指定</button></div>';
+    } else if(!s.onboarded){
+      head += '<div class="ph-acts"><button class="ph-btn-w" onclick="onboardPayout()">＋ 銀行口座を登録</button></div>';
+    } else if(!s.payouts_enabled){
+      var due = (s.requirements?.currently_due||[]).slice(0,3).join(', ');
+      head += '<div class="ph-acts"><button class="ph-btn-w" onclick="onboardPayout()">確認情報を入力 →</button></div>'
+        + (due ? '<div style="font-size:11px;margin-top:8px;color:rgba(255,255,255,.65)">未提出: '+esc(due)+'</div>' : '');
+    } else {
+      head += '<div class="ph-acts"><button class="ph-btn-w" disabled style="opacity:.5;cursor:not-allowed">最低 ¥'+min.toLocaleString()+' から出金可能</button></div>';
+    }
+    head += '</div>';
+
+    var hist = s.history||[];
+    var histHtml = hist.length
+      ? '<div class="cea-table-wrap" style="margin-top:14px"><table class="cea-table"><thead><tr><th>日時</th><th class="r">金額</th><th>状態</th></tr></thead><tbody>'
+        + hist.map(function(p){
+            var dt = new Date(p.date);
+            var st = p.status==='paid' ? '<span class="cea-st ok">完了</span>'
+                    : p.status==='pending' ? '<span class="cea-st pending">処理中</span>'
+                    : '<span class="cea-st" style="background:rgba(239,68,68,.12);color:var(--rose)">失敗</span>';
+            return '<tr><td>'+dt.toISOString().slice(0,10)+'</td><td class="r">¥'+(p.amount_jpy||0).toLocaleString()+'</td><td>'+st+'</td></tr>';
+          }).join('')
+        + '</tbody></table></div>'
+      : '<div class="creator-empty" style="margin-top:14px">出金履歴はまだありません</div>';
+
+    el.innerHTML = head + histHtml;
+  }catch(e){
+    el.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗: '+esc(e.message||'')+'</div>';
+  }
+}
+async function onboardPayout(){
+  try{
+    var r = await api('POST','/api/payout/onboard');
+    if(r.url) window.location.href = r.url;
+  }catch(e){ showToast(e.message||'失敗','ng'); }
+}
+async function requestPayout(){
+  if(!confirm('利用可能残高の全額を出金しますか？')) return;
+  try{
+    var r = await api('POST','/api/payout/request');
+    showToast('出金処理を開始しました','ok');
+    loadPayoutSection();
+    loadCreatorDashboard();
+  }catch(e){ showToast(e.message||'出金失敗','ng'); }
+}
+async function requestPayoutCustom(){
+  var s = prompt('出金金額（円）');
+  if(s===null) return;
+  var amt = parseInt(s.replace(/[¥,\s]/g,''),10);
+  if(!amt || amt<=0){ showToast('金額が不正です','ng'); return; }
+  try{
+    await api('POST','/api/payout/request',{amount_jpy:amt});
+    showToast('出金処理を開始しました','ok');
+    loadPayoutSection();
+    loadCreatorDashboard();
+  }catch(e){ showToast(e.message||'出金失敗','ng'); }
 }
 
 /* ── Report listing ─────────────────────────────────────────── */

@@ -502,6 +502,52 @@ async function stripeCancelSubscription(subscriptionId){
   return r.d;
 }
 
+/* ── Stripe Connect (creator payouts, #7) ─────────────────── */
+const PAYOUT_MIN_JPY = 1000;
+async function stripeConnectCreateAccount(email){
+  const r=await httpsReq('POST','api.stripe.com','/v1/accounts',
+    {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`},
+    new URLSearchParams({
+      type:'express',
+      country:'JP',
+      email,
+      'capabilities[transfers][requested]':'true',
+    }).toString());
+  if(r.s>=400)throw new Error(r.d?.error?.message||'Stripe Connect account error');
+  return r.d;
+}
+async function stripeConnectOnboardingLink(accountId, returnUrl, refreshUrl){
+  const r=await httpsReq('POST','api.stripe.com','/v1/account_links',
+    {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`},
+    new URLSearchParams({
+      account: accountId,
+      refresh_url: refreshUrl,
+      return_url: returnUrl,
+      type: 'account_onboarding',
+    }).toString());
+  if(r.s>=400)throw new Error(r.d?.error?.message||'Stripe onboarding link error');
+  return r.d;
+}
+async function stripeConnectGetAccount(accountId){
+  const r=await httpsReq('GET','api.stripe.com','/v1/accounts/'+accountId,
+    {'Authorization':`Bearer ${STRIPE_SK}`}, null);
+  if(r.s>=400)throw new Error(r.d?.error?.message||'Stripe account fetch error');
+  return r.d;
+}
+async function stripeCreateTransfer(amountJpy, destAccountId, metadata){
+  const params = new URLSearchParams({
+    amount: String(Math.round(amountJpy)),
+    currency: 'jpy',
+    destination: destAccountId,
+  });
+  if(metadata) for(const k of Object.keys(metadata)) params.append('metadata['+k+']', String(metadata[k]));
+  const r=await httpsReq('POST','api.stripe.com','/v1/transfers',
+    {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`},
+    params.toString());
+  if(r.s>=400)throw new Error(r.d?.error?.message||'Stripe transfer error');
+  return r.d;
+}
+
 async function stripeCreatePaymentIntent(amtCentsUsd,userId,email){
   // amtCentsUsd は USDセント (例: 699 = $6.99)。フロント側パラメータ名 amount_jpy は misnomer。
   const r=await httpsReq('POST','api.stripe.com','/v1/payment_intents',
@@ -999,6 +1045,114 @@ async function handleAPI(req,res,pathname,method,ip){
       by_agent: Object.values(byAgent).sort((a,b)=>b.share_jpy-a.share_jpy),
       recent: rh.slice(-30).reverse(),
     });
+  }
+
+  // ── POST /api/payout/onboard ───────────────────────────────
+  // Create Stripe Connect Express account if missing, return onboarding URL
+  if(pathname==='/api/payout/onboard' && method==='POST'){
+    if(!STRIPE_SK) return jres(res,503,{error:'Stripe が設定されていません'});
+    try{
+      let acctId = user.stripe_connect_id;
+      if(!acctId){
+        const acct = await stripeConnectCreateAccount(user.email);
+        acctId = acct.id;
+        user.stripe_connect_id = acctId;
+        await DB.save(user);
+      }
+      const link = await stripeConnectOnboardingLink(
+        acctId,
+        APP_URL + '/app.html?payout=onboarded',
+        APP_URL + '/app.html?payout=refresh',
+      );
+      return jres(res,200,{url: link.url, account_id: acctId});
+    }catch(e){
+      return jres(res,500,{error:'Stripe Connect エラー: '+e.message});
+    }
+  }
+
+  // ── GET /api/payout/status ─────────────────────────────────
+  // Refresh Connect account state from Stripe; cache key flags on user
+  if(pathname==='/api/payout/status' && method==='GET'){
+    if(!user.stripe_connect_id){
+      return jres(res,200,{
+        onboarded: false,
+        payouts_enabled: false,
+        balance_available: _r3(user.balance_jpy_available||0),
+        balance_pending: _r3(user.balance_jpy_pending||0),
+        min_jpy: PAYOUT_MIN_JPY,
+        history: (user.payout_history||[]).slice(-30).reverse(),
+      });
+    }
+    try{
+      const acct = await stripeConnectGetAccount(user.stripe_connect_id);
+      const payoutsEnabled = !!acct.payouts_enabled;
+      user.stripe_connect_payouts_enabled = payoutsEnabled;
+      user.stripe_connect_charges_enabled = !!acct.charges_enabled;
+      user.stripe_connect_details_submitted = !!acct.details_submitted;
+      await DB.save(user);
+      return jres(res,200,{
+        onboarded: !!acct.details_submitted,
+        payouts_enabled: payoutsEnabled,
+        charges_enabled: !!acct.charges_enabled,
+        requirements: acct.requirements ? {
+          currently_due: acct.requirements.currently_due||[],
+          past_due: acct.requirements.past_due||[],
+        } : null,
+        balance_available: _r3(user.balance_jpy_available||0),
+        balance_pending: _r3(user.balance_jpy_pending||0),
+        min_jpy: PAYOUT_MIN_JPY,
+        history: (user.payout_history||[]).slice(-30).reverse(),
+      });
+    }catch(e){
+      return jres(res,500,{error:'Stripe ステータス取得失敗: '+e.message});
+    }
+  }
+
+  // ── POST /api/payout/request ───────────────────────────────
+  // body: {amount_jpy?: number}  default = full balance_available
+  if(pathname==='/api/payout/request' && method==='POST'){
+    if(!STRIPE_SK) return jres(res,503,{error:'Stripe が設定されていません'});
+    if(!user.stripe_connect_id) return jres(res,400,{error:'先に銀行口座を登録してください'});
+    if(!user.stripe_connect_payouts_enabled) return jres(res,400,{error:'銀行口座の確認が完了していません'});
+
+    const body = await readBody(req);
+    const available = _r3(user.balance_jpy_available||0);
+    let amount = Number(body.amount_jpy);
+    if(!amount || amount <= 0) amount = available;
+    amount = Math.floor(amount); // JPY is integer
+    if(amount < PAYOUT_MIN_JPY) return jres(res,400,{error:'最低出金額は ¥'+PAYOUT_MIN_JPY+' です'});
+    if(amount > available) return jres(res,400,{error:'残高不足: 利用可能 ¥'+available.toLocaleString()});
+
+    const entry = {
+      date: new Date().toISOString(),
+      amount_jpy: amount,
+      method: 'stripe_connect',
+      status: 'pending',
+      stripe_transfer_id: null,
+    };
+    try{
+      const tr = await stripeCreateTransfer(amount, user.stripe_connect_id, {
+        user_id: user.id,
+        purpose: 'creator_payout',
+      });
+      entry.stripe_transfer_id = tr.id;
+      entry.status = 'paid';
+      // Deduct from available balance
+      user.balance_jpy_available = _r3(available - amount);
+      user.payout_history = user.payout_history || [];
+      user.payout_history.push(entry);
+      if(user.payout_history.length>500) user.payout_history = user.payout_history.slice(-500);
+      await DB.save(user);
+      return jres(res,200,{ok:true, payout: entry, balance_available: user.balance_jpy_available});
+    }catch(e){
+      // Record failure for admin review; do NOT deduct balance
+      entry.status = 'failed';
+      entry.error = e.message;
+      user.payout_history = user.payout_history || [];
+      user.payout_history.push(entry);
+      await DB.save(user);
+      return jres(res,500,{error:'出金処理に失敗しました: '+e.message});
+    }
   }
 
   // ── POST /api/marketplace/listings ─────────────────────────

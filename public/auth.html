@@ -499,7 +499,8 @@ async function doLogin() {
     localStorage.setItem('token', r.token);
     localStorage.setItem('user', JSON.stringify(r.user));
     if(r.user) _maaAppend(r.token, r.user);
-    window.location.href = 'app.html';
+    var _next=(new URLSearchParams(location.search)).get('next');
+    window.location.href = (_next && /^\/[a-zA-Z0-9_\-/?=&]*$/.test(_next)) ? _next : 'app.html';
   } catch (e) {
     showErr('l-err', e.message);
   }
@@ -519,7 +520,8 @@ async function doSignup() {
     localStorage.setItem('token', r.token);
     localStorage.setItem('user', JSON.stringify(r.user));
     if(r.user) _maaAppend(r.token, r.user);
-    window.location.href = 'app.html';
+    var _next=(new URLSearchParams(location.search)).get('next');
+    window.location.href = (_next && /^\/[a-zA-Z0-9_\-/?=&]*$/.test(_next)) ? _next : 'app.html';
   } catch (e) {
     showErr('s-err', e.message);
   }

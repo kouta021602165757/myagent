@@ -327,6 +327,33 @@ const SKILL_MAP={
   sns:'SNS担当（投稿作成・分析・集客）',
   other:'その他（上記以外のカスタム業務）',
 };
+/* ── Share helpers ─────────────────────────────────────────── */
+function genShareId(){
+  // 12 chars from base36, hyphenated for readability
+  const c='abcdefghijklmnopqrstuvwxyz0123456789';
+  let s=''; for(let i=0;i<12;i++) s+=c[Math.floor(Math.random()*c.length)];
+  return s.slice(0,4)+'-'+s.slice(4,8)+'-'+s.slice(8,12);
+}
+async function findAgentByShareId(shareId){
+  // Returns {user, agent} or null. Scans users (slow without index).
+  if(!shareId) return null;
+  if(USE_SUPA){
+    // Supabase doesn't easily index nested jsonb fields without a separate column;
+    // scan up to N users (acceptable for current scale).
+    const r=await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
+    if(Array.isArray(r.d)){
+      for(const u of r.d){
+        const ag=(u.agents||[]).find(a=>a.share_id===shareId);
+        if(ag) return {user:u, agent:ag};
+      }
+    }
+  } else {
+    const u=LDB.find(u=>(u.agents||[]).some(a=>a.share_id===shareId));
+    if(u){ const ag=u.agents.find(a=>a.share_id===shareId); if(ag) return {user:u, agent:ag}; }
+  }
+  return null;
+}
+
 function buildSystem(agent){
   const chromeNote = agent.chrome_enabled
     ? `\nツール：このエージェントは Google Chrome 連携が有効です。Webサイトの調査・フォーム入力・情報収集など、ブラウザ操作が必要な作業の手順を具体的に示してください。ユーザーが Google Chrome 以外のブラウザを使っている場合は動作しない旨を案内してください。`
@@ -453,6 +480,25 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true,message:'パスワードを変更しました。ログインしてください'});
   }
 
+  // ── GET /api/share/:share_id (PUBLIC, no auth) ───────────────
+  // Returns minimal agent info so the share landing page can render
+  const psm=pathname.match(/^\/api\/share\/([a-z0-9-]+)$/);
+  if(psm&&method==='GET'){
+    const shareId=psm[1];
+    const found=await findAgentByShareId(shareId);
+    if(!found) return jres(res,404,{error:'共有エージェントが見つかりません'});
+    return jres(res,200,{
+      agent:{
+        avatar:found.agent.avatar,
+        name:found.agent.name,
+        skills:found.agent.skills||[],
+        persona:found.agent.persona||'',
+        chrome_enabled:!!found.agent.chrome_enabled
+      },
+      owner:{ name: (found.user.name||(found.user.email||'').split('@')[0]||'ユーザー') }
+    });
+  }
+
   // ── Auth required below ────────────────────────────────────
   const claims=getAuth(req);
   if(!claims)return jres(res,401,{error:'認証が必要です'});
@@ -500,6 +546,44 @@ async function handleAPI(req,res,pathname,method,ip){
     await DB.save(user);return jres(res,200,{ok:true});
   }
 
+  // ── POST /api/agents/:id/share ─────────────────────────────
+  // body: {enabled:true|false, regenerate?:true} — toggle/create/regenerate share URL
+  const sm=pathname.match(/^\/api\/agents\/([^/]+)\/share$/);
+  if(sm&&method==='POST'){
+    const agId=sm[1];
+    const ag=(user.agents||[]).find(a=>a.id===agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const{enabled,regenerate}=await readBody(req);
+    if(enabled===false){ ag.share_id=null; }
+    else if(regenerate || !ag.share_id){ ag.share_id=genShareId(); }
+    await DB.save(user);
+    return jres(res,200,{share_id:ag.share_id||null});
+  }
+
+  // ── POST /api/share/:share_id/clone ────────────────────────
+  // Auth required. Clones the shared agent into the current user's account.
+  const cmShare=pathname.match(/^\/api\/share\/([a-z0-9-]+)\/clone$/);
+  if(cmShare&&method==='POST'){
+    const shareId=cmShare[1];
+    if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
+    const found=await findAgentByShareId(shareId);
+    if(!found) return jres(res,404,{error:'共有エージェントが見つかりません'});
+    const src=found.agent;
+    const clone={
+      id:'ag_'+crypto.randomUUID(),
+      avatar:src.avatar||'🤖',
+      name:src.name||'Agent',
+      skills:Array.isArray(src.skills)?src.skills:['writing'],
+      persona:src.persona||'',
+      chrome_enabled:!!src.chrome_enabled,
+      history:[],
+      created_at:new Date().toISOString()
+    };
+    user.agents=[...(user.agents||[]),clone];
+    await DB.save(user);
+    return jres(res,201,{agent:clone});
+  }
+
   // ── POST /api/chat/:agentId ────────────────────────────────
   const cm=pathname.match(/^\/api\/chat\/([^/]+)$/);
   if(cm&&method==='POST'){
@@ -521,10 +605,22 @@ async function handleAPI(req,res,pathname,method,ip){
     const agent=(user.agents||[]).find(a=>a.id===cm[1]);
     if(!agent)return jres(res,404,{error:'エージェントが見つかりません'});
     const body=await readBody(req);
+    const regenerate=!!body.regenerate;
     const message=body.message||'';
     const images=body.images||[];
-    if(!message?.trim()&&images.length===0)return jres(res,400,{error:'メッセージを入力してください'});
+    if(!regenerate && !message?.trim() && images.length===0) return jres(res,400,{error:'メッセージを入力してください'});
     if(message.length>4000)return jres(res,400,{error:'メッセージが長すぎます'});
+
+    // Regenerate: drop trailing assistant from history; resend without adding a new user message
+    if(regenerate){
+      while(agent.history.length>0 && agent.history[agent.history.length-1].role==='assistant'){
+        agent.history.pop();
+      }
+      if(!agent.history.length || agent.history[agent.history.length-1].role!=='user'){
+        return jres(res,400,{error:'再生成できる返答がありません'});
+      }
+    }
+
     const hist=(agent.history||[]).slice(-20);
     // ユーザーメッセージのcontentを構築（画像対応）
     let userContent;
@@ -544,7 +640,10 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       userContent = message;
     }
-    const msgs=[...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
+    // For regenerate: history already ends with the user msg; skip adding a new one
+    const msgs = regenerate
+      ? hist.map(m=>({role:m.role,content:m.content}))
+      : [...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
     let reply,cost;
     try{
       const d=await callAI(msgs,buildSystem(agent));
@@ -553,9 +652,13 @@ async function handleAPI(req,res,pathname,method,ip){
       cost=calcCost(u.input_tokens||0,u.output_tokens||0);
     }catch(e){return jres(res,502,{error:`AI応答エラー: ${e.message}`});}
     const ts=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-    agent.history=[...(agent.history||[]),
-      {role:'user',content:message,time:ts},
-      {role:'assistant',content:reply,time:ts}];
+    if(regenerate){
+      agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts}];
+    } else {
+      agent.history=[...(agent.history||[]),
+        {role:'user',content:message,time:ts},
+        {role:'assistant',content:reply,time:ts}];
+    }
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
     user.balance_jpy=Math.round(((user.balance_jpy||0)-cost.jpy)*1000)/1000;
     user.usage_count=(user.usage_count||0)+1;
@@ -598,14 +701,17 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── POST /api/user/clear-chat-history ────────────────────────
-  // Clears `history` of all agents but preserves agents/balance/usage_count
+  // body: {agent_id?: string} — if set, clears only that agent's history;
+  // otherwise clears history of all agents. Agents/balance/usage_count preserved.
   if(pathname==='/api/user/clear-chat-history'&&method==='POST'){
+    const{agent_id}=await readBody(req);
+    let cleared=0;
     user.agents=(user.agents||[]).map(function(a){
-      a.history=[];
+      if(!agent_id || a.id===agent_id){ a.history=[]; cleared++; }
       return a;
     });
     await DB.save(user);
-    return jres(res,200,{ok:true,cleared:user.agents.length});
+    return jres(res,200,{ok:true,cleared});
   }
 
 
@@ -798,6 +904,11 @@ const server=http.createServer(async(req,res)=>{
     return;
   }
 
+  // /a/:share_id → public agent landing page
+  const aRoute=pathname.match(/^\/a\/([a-z0-9-]+)\/?$/);
+  if(aRoute){
+    return serveStatic(res, path.join(PUBLIC_DIR,'share.html'));
+  }
   // index.html → redirect to lp
   let fp=path.join(PUBLIC_DIR,pathname==='/'?'lp.html':pathname);
   if(!fp.startsWith(PUBLIC_DIR)){res.writeHead(403);return res.end();}

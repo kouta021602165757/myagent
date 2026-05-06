@@ -132,8 +132,15 @@ function newSession(){
       locale: 'ja-JP',
       timezoneId: 'Asia/Tokyo',
     });
+    // Block heavy resources (images/media/fonts/css) to cut page-load latency.
+    // We only need DOM text for the AI; visuals matter only when AI calls take_screenshot.
+    await context.route('**/*', (route)=>{
+      const t = route.request().resourceType();
+      if(t==='image' || t==='media' || t==='font' || t==='stylesheet') return route.abort();
+      return route.continue();
+    });
     page = await context.newPage();
-    page.setDefaultTimeout(20000);
+    page.setDefaultTimeout(12000);
     return page;
   }
 
@@ -142,12 +149,14 @@ function newSession(){
     try{ url = p.url(); }catch(e){}
     try{ title = await p.title(); }catch(e){}
     try{
-      // Limit to ~5KB to keep tokens sane
-      text = await p.evaluate(() => (document.body && document.body.innerText || '').slice(0, 5000));
+      // 2.5KB text cap — enough for AI context, much faster than 5KB
+      text = await p.evaluate(() => (document.body && document.body.innerText || '').slice(0, 2500));
     }catch(e){}
     if(includeScreenshot){
       try{
-        const buf = await p.screenshot({type:'jpeg', quality:55, fullPage:false});
+        // Re-enable images briefly via a fresh screenshot pass — but we keep them off
+        // by default for speed; AI must opt-in via take_screenshot.
+        const buf = await p.screenshot({type:'jpeg', quality:40, fullPage:false});
         screenshot = buf.toString('base64');
       }catch(e){}
     }
@@ -155,41 +164,39 @@ function newSession(){
   }
 
   return {
-    /** Open a URL and capture page text + screenshot. */
+    /** Open a URL and capture page text. (No auto-screenshot — call take_screenshot if visual needed.) */
     async browseUrl(url){
       if(!/^https?:\/\//i.test(url||'')) return {error:'URL は https:// または http:// で始めてください'};
       const p = await ensurePage();
       try{
-        await p.goto(url, {waitUntil:'domcontentloaded', timeout:25000});
-        // Allow a brief moment for SPA to render
-        await p.waitForTimeout(500);
+        await p.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
       }catch(e){
         return {error:'page_load_failed: '+e.message};
       }
-      return await _grabState(p, true);
+      return await _grabState(p, false);
     },
 
-    /** DuckDuckGo HTML search → top 10 results. */
+    /** DuckDuckGo HTML search → top 8 results. */
     async searchWeb(query){
       if(!query) return {error:'クエリが空です'};
       const p = await ensurePage();
       const url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query);
       try{
-        await p.goto(url, {waitUntil:'domcontentloaded', timeout:25000});
+        await p.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
       }catch(e){
         return {error:'search_failed: '+e.message};
       }
       const results = await p.evaluate(()=>{
         const items = [];
         document.querySelectorAll('.result__body, .web-result').forEach(el=>{
-          if(items.length >= 10) return;
+          if(items.length >= 8) return;
           const a = el.querySelector('.result__a, a.result__a');
           const snippet = el.querySelector('.result__snippet');
           if(a){
             items.push({
-              title: (a.textContent||'').trim().slice(0,200),
+              title: (a.textContent||'').trim().slice(0,160),
               url: a.href,
-              snippet: snippet ? (snippet.textContent||'').trim().slice(0,300) : ''
+              snippet: snippet ? (snippet.textContent||'').trim().slice(0,200) : ''
             });
           }
         });
@@ -201,19 +208,15 @@ function newSession(){
     /** Click an element by visible text (preferred) or CSS selector. */
     async clickElement(textOrSelector){
       const p = await ensurePage();
-      // Try visible text first
       try{
         const loc = p.getByText(textOrSelector, {exact:false}).first();
-        await loc.click({timeout:6000});
-        await p.waitForTimeout(500);
-        const state = await _grabState(p, true);
+        await loc.click({timeout:5000});
+        const state = await _grabState(p, false);
         return {ok:true, action:'click_by_text', target:textOrSelector, ...state};
       }catch(e1){
-        // Fall back to CSS selector
         try{
-          await p.click(textOrSelector, {timeout:6000});
-          await p.waitForTimeout(500);
-          const state = await _grabState(p, true);
+          await p.click(textOrSelector, {timeout:5000});
+          const state = await _grabState(p, false);
           return {ok:true, action:'click_by_selector', target:textOrSelector, ...state};
         }catch(e2){
           return {ok:false, error:'click_failed: '+e2.message};
@@ -244,8 +247,9 @@ function newSession(){
       try{
         if(selector) await p.press(selector, key, {timeout:5000});
         else await p.keyboard.press(key);
-        await p.waitForTimeout(500);
-        const state = await _grabState(p, true);
+        // Brief settle wait for navigation/rendering, but much shorter than before
+        try{ await p.waitForLoadState('domcontentloaded', {timeout:3000}); }catch(e){}
+        const state = await _grabState(p, false);
         return {ok:true, key, ...state};
       }catch(e){
         return {ok:false, error:'press_failed: '+e.message};

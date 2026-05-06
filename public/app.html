@@ -480,6 +480,7 @@ input,textarea{font-family:var(--sans);}
   background:var(--peach);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;
   border-radius:999px;letter-spacing:.04em;
 }
+[lang="en"] .bs-pc.popular::before{content:'Popular';}
 .bs-pc.current{cursor:default;opacity:.7;}
 .bs-pc.current:hover{transform:none;box-shadow:none;}
 .bs-pc-nm{font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
@@ -759,9 +760,9 @@ body{color:#f0f0f8;}
       <div class="balance-card">
         <div class="balance-row" style="display:none">
           <span class="balance-lbl">残高</span>
-          <span class="balance-val" id="balVal">¥0.00</span>
+          <span class="balance-val" id="balVal">$0.00</span>
         </div>
-        <div class="balance-sub" id="balSub" style="display:none">0メッセージ利用</div>
+        <div class="balance-sub" id="balSub" style="display:none">0 messages</div>
         <button class="charge-btn" onclick="openCharge()">+ Add Credits</button>
       </div>
       <div class="sb-user">
@@ -924,15 +925,15 @@ body{color:#f0f0f8;}
     <!-- ── Screen 1: プラン選択 ─────────────────────────── -->
     <div id="bsScreen1">
       <div class="bs-hd">
-        <div class="bs-ti">プランを選ぶ</div>
+        <div class="bs-ti" data-i18n="bsPickHd">プランを選ぶ</div>
         <button class="bs-x" onclick="closeCharge()" aria-label="閉じる">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
       </div>
       <div class="bs-body">
         <div class="bs-tabs">
-          <button class="bs-tab active" data-tab="monthly" onclick="bsTab('monthly')">月額プラン</button>
-          <button class="bs-tab" data-tab="payg" onclick="bsTab('payg')">都度チャージ</button>
+          <button class="bs-tab active" data-tab="monthly" data-i18n="bsMonthlyTab" onclick="bsTab('monthly')">月額プラン</button>
+          <button class="bs-tab" data-tab="payg" data-i18n="bsPaygTab" onclick="bsTab('payg')">都度チャージ</button>
         </div>
 
         <!-- ── 月額タブ ── -->
@@ -943,28 +944,28 @@ body{color:#f0f0f8;}
             <button type="button" class="bs-pc" data-plan="pro" onclick="bsPick('pro')">
               <div class="bs-pc-nm">PRO</div>
               <div class="bs-pc-pr">$12.99</div>
-              <div class="bs-pc-pm">/月（USD）</div>
+              <div class="bs-pc-pm" data-i18n="bsPerMonth">/月（USD）</div>
               <ul class="bs-pc-feat">
-                <li>$20 分のクレジット / 月</li>
-                <li>メッセージ無制限</li>
-                <li>全プリセット利用可</li>
+                <li data-i18n="bsFeatPro1">$20 分のクレジット / 月</li>
+                <li data-i18n="bsFeat2">メッセージ無制限</li>
+                <li data-i18n="bsFeat3">全プリセット利用可</li>
               </ul>
-              <span class="bs-pc-pick">このプランを選ぶ</span>
+              <span class="bs-pc-pick" data-i18n="bsPickPlan">このプランを選ぶ</span>
             </button>
 
             <button type="button" class="bs-pc popular" data-plan="business" onclick="bsPick('business')">
               <div class="bs-pc-nm">BUSINESS</div>
               <div class="bs-pc-pr">$32.99</div>
-              <div class="bs-pc-pm">/月（USD）</div>
+              <div class="bs-pc-pm" data-i18n="bsPerMonth">/月（USD）</div>
               <ul class="bs-pc-feat">
-                <li>$60 分のクレジット / 月</li>
-                <li>メッセージ無制限</li>
-                <li>全プリセット利用可</li>
+                <li data-i18n="bsFeatBiz1">$60 分のクレジット / 月</li>
+                <li data-i18n="bsFeat2">メッセージ無制限</li>
+                <li data-i18n="bsFeat3">全プリセット利用可</li>
               </ul>
-              <span class="bs-pc-pick">このプランを選ぶ</span>
+              <span class="bs-pc-pick" data-i18n="bsPickPlan">このプランを選ぶ</span>
             </button>
           </div>
-          <div class="bs-fineprint">クレジットは月初にリセット ・ いつでもキャンセル可能</div>
+          <div class="bs-fineprint" data-i18n="bsFinePrint">クレジットは月初にリセット ・ いつでもキャンセル可能</div>
         </div>
 
         <!-- ── 都度チャージタブ ── -->
@@ -975,26 +976,23 @@ body{color:#f0f0f8;}
             <button type="button" class="bs-payg-c sel" data-cents="699" onclick="bsPickPayg(699)">
               <div class="bs-payg-nm">STARTER</div>
               <div class="bs-payg-pr">$6.99</div>
-              <div class="bs-payg-cr" id="bs-payg-cr-699">≈ ¥1,048分</div>
             </button>
             <button type="button" class="bs-payg-c" data-cents="1999" onclick="bsPickPayg(1999)">
               <div class="bs-payg-nm">STANDARD</div>
               <div class="bs-payg-pr">$19.99</div>
-              <div class="bs-payg-cr" id="bs-payg-cr-1999">≈ ¥2,998分</div>
             </button>
             <button type="button" class="bs-payg-c" data-cents="4999" onclick="bsPickPayg(4999)">
               <div class="bs-payg-nm">PRO</div>
               <div class="bs-payg-pr">$49.99</div>
-              <div class="bs-payg-cr" id="bs-payg-cr-4999">≈ ¥7,498分</div>
             </button>
           </div>
 
-          <div class="bs-fld-lbl">カード情報</div>
+          <div class="bs-fld-lbl" data-i18n="bsCardLbl">カード情報</div>
           <div id="bs-payg-card" class="bs-cardbox"></div>
           <div id="bs-payg-err" class="bs-err"></div>
 
-          <button class="bs-go" id="bsPaygGo" onclick="bsPaygSubmit()">$6.99 で購入</button>
-          <div class="bs-trust">🔒 Stripe による安全な決済 ・ 一度限りの請求</div>
+          <button class="bs-go" id="bsPaygGo" onclick="bsPaygSubmit()">$6.99</button>
+          <div class="bs-trust" data-i18n="bsTrustOne">🔒 Stripe による安全な決済 ・ 一度限りの請求</div>
         </div>
       </div>
     </div>
@@ -1002,8 +1000,8 @@ body{color:#f0f0f8;}
     <!-- ── Screen 2: 月額決済 ─────────────────────────── -->
     <div id="bsScreen2" style="display:none">
       <div class="bs-hd">
-        <button class="bs-back" onclick="bsBack()">← 戻る</button>
-        <div class="bs-ti">支払い情報</div>
+        <button class="bs-back" onclick="bsBack()" data-i18n="bsBackTxt">← 戻る</button>
+        <div class="bs-ti" data-i18n="bsPayHd">支払い情報</div>
         <button class="bs-x" onclick="closeCharge()" aria-label="閉じる">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -1011,12 +1009,12 @@ body{color:#f0f0f8;}
       <div class="bs-body">
         <div class="bs-summary" id="bs-summary"></div>
 
-        <div class="bs-fld-lbl">カード情報</div>
+        <div class="bs-fld-lbl" data-i18n="bsCardLbl">カード情報</div>
         <div id="bs-monthly-card" class="bs-cardbox"></div>
         <div id="bs-monthly-err" class="bs-err"></div>
 
         <button class="bs-go" id="bsMonthlyGo" onclick="bsSubscribeSubmit()">開始</button>
-        <div class="bs-trust">🔒 Stripe による安全な決済</div>
+        <div class="bs-trust" data-i18n="bsTrustSub">🔒 Stripe による安全な決済</div>
       </div>
     </div>
 
@@ -1032,10 +1030,10 @@ body{color:#f0f0f8;}
       <button onclick="closeSettings()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1">×</button>
     </div>
     <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.08)">
-      <button class="stab-btn active-stab" onclick="switchStab(this,'s-profile')">👤 プロフィール</button>
-      <button class="stab-btn" onclick="switchStab(this,'s-security')">🔒 セキュリティ</button>
-      <button class="stab-btn" onclick="switchStab(this,'s-billing')">💳 お支払い</button>
-      <button class="stab-btn" onclick="switchStab(this,'s-danger')" style="color:#ff4d6d">⚠️ 危険</button>
+      <button class="stab-btn active-stab" data-i18n="sTabProfile" onclick="switchStab(this,'s-profile')">👤 プロフィール</button>
+      <button class="stab-btn" data-i18n="sTabSecurity" onclick="switchStab(this,'s-security')">🔒 セキュリティ</button>
+      <button class="stab-btn" data-i18n="sTabBilling" onclick="switchStab(this,'s-billing')">💳 お支払い</button>
+      <button class="stab-btn" data-i18n="sTabDanger" onclick="switchStab(this,'s-danger')" style="color:#ff4d6d">⚠️ 危険</button>
     </div>
     <div style="padding:24px;height:490px;overflow-y:auto;box-sizing:border-box">
       <div id="s-profile">
@@ -1060,25 +1058,25 @@ body{color:#f0f0f8;}
         <!-- 上部: プラン + 残高 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
           <div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:12px;padding:14px">
-            <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">現在のプラン</div>
+            <div data-i18n="sCurPlan" style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">現在のプラン</div>
             <div id="sb-plan" style="font-size:18px;color:var(--peach-dark);font-weight:800">Free</div>
             <div id="sb-plan-sub" style="font-size:11px;color:var(--text3);margin-top:3px">無料枠 10メッセージ</div>
           </div>
           <div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:12px;padding:14px">
-            <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">残高</div>
-            <div id="sb-bal" style="font-size:18px;color:var(--text);font-weight:800">¥0</div>
-            <div id="sb-msg" style="font-size:11px;color:var(--text3);margin-top:3px">累計 0 回利用</div>
+            <div data-i18n="sBalance" style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">残高</div>
+            <div id="sb-bal" style="font-size:18px;color:var(--text);font-weight:800">$0.00</div>
+            <div id="sb-msg" style="font-size:11px;color:var(--text3);margin-top:3px"></div>
           </div>
         </div>
 
         <!-- アクション -->
         <div style="display:flex;gap:8px;margin-bottom:18px">
-          <button onclick="closeSettings();openCharge()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:10px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">+ クレジット追加 / プラン変更</button>
-          <button id="sb-cancel-btn" onclick="cancelSubscription()" style="display:none;background:var(--cream2);border:1px solid var(--wire3);color:var(--text2);border-radius:10px;padding:11px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">解約</button>
+          <button data-i18n="sAddCredits" onclick="closeSettings();openCharge()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:10px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">+ クレジット追加 / プラン変更</button>
+          <button id="sb-cancel-btn" data-i18n="sCancel" onclick="cancelSubscription()" style="display:none;background:var(--cream2);border:1px solid var(--wire3);color:var(--text2);border-radius:10px;padding:11px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">解約</button>
         </div>
 
         <!-- 取引履歴 -->
-        <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">取引履歴 <span style="color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0">（最新30件）</span></div>
+        <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px"><span data-i18n="sTxHistory">取引履歴</span> <span data-i18n="sLast30" style="color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0">（最新30件）</span></div>
         <div id="sb-history" style="border:1px solid var(--wire2);border-radius:12px;background:var(--cream2);max-height:280px;overflow-y:auto"></div>
       </div>
       <div id="s-danger" style="display:none">
@@ -1301,6 +1299,21 @@ var NA={avatar:'🤖',name:'',skills:[],persona:''};
 
 // ── i18n ───────────────────────────────────────────────
 var isJa = !navigator.language || navigator.language.startsWith('ja');
+// URL override (?lang=en|ja)
+var _qsLang=(new URLSearchParams(location.search)).get('lang');
+if(_qsLang==='en') isJa=false; else if(_qsLang==='ja') isJa=true;
+
+// Money formatting — display is always USD (target: foreign users).
+// Internal balance is stored in JPY for backward compat; convert with this rate.
+var USD_TO_JPY = 150;
+function jpyToUsd(jpy){ return (Number(jpy)||0) / USD_TO_JPY; }
+function usdFmt(usd, decimals){
+  if(decimals===undefined) decimals = 2;
+  var n=Number(usd)||0;
+  return '$' + n.toFixed(decimals);
+}
+function jpyAsUsd(jpy, decimals){ return usdFmt(jpyToUsd(jpy), decimals); }
+
 var T = {
       teamTitle:   isJa ? 'チームを作ろう'                              : 'Build Your Team',
       teamSub:     isJa ? '専門スキルを持つAIエージェントを作って、仕事を任せましょう。' : 'Create AI agents with specialized skills.',
@@ -1311,7 +1324,60 @@ var T = {
       charge:      isJa ? '+ 残高チャージ'                              : '+ Add Credits',
       logout:      isJa ? 'ログアウト'                                  : 'Logout',
       placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
+      // Billing modal & settings
+      bsMonthlyTab:isJa ? '月額プラン'                                  : 'Monthly plan',
+      bsPaygTab:   isJa ? '都度チャージ'                                : 'Pay as you go',
+      bsCurPlan:   isJa ? '現在のプラン'                                : 'Current plan',
+      bsCurBal:    isJa ? '現在の残高'                                  : 'Current balance',
+      bsFreeNote:  isJa ? '無料枠 10メッセージ'                          : '10 free messages',
+      bsProNote:   isJa ? '毎月 $20 分のクレジット'                       : '$20 monthly credit',
+      bsBizNote:   isJa ? '毎月 $60 分のクレジット'                       : '$60 monthly credit',
+      bsAddNote:   isJa ? '$0.01 単位で利用可'                            : 'Use in $0.01 increments',
+      bsActive:    isJa ? '現在加入中'                                   : 'Currently active',
+      bsPickPlan:  isJa ? 'このプランを選ぶ'                             : 'Choose this plan',
+      bsStartFmt:  isJa ? '{p} / 月で開始'                              : 'Start at {p} / mo',
+      bsBuyFmt:    isJa ? '{p} で購入'                                  : 'Buy for {p}',
+      bsTrustSub:  isJa ? '🔒 Stripe による安全な決済'                    : '🔒 Secure checkout by Stripe',
+      bsTrustOne:  isJa ? '🔒 Stripe による安全な決済 ・ 一度限りの請求'    : '🔒 Secure checkout by Stripe · One-time charge',
+      bsFinePrint: isJa ? 'クレジットは月初にリセット ・ いつでもキャンセル可能' : 'Credits reset monthly · Cancel anytime',
+      bsBackTxt:   isJa ? '← 戻る'                                      : '← Back',
+      bsPickHd:    isJa ? 'プランを選ぶ'                                 : 'Choose a plan',
+      bsPayHd:     isJa ? '支払い情報'                                   : 'Payment information',
+      bsCardLbl:   isJa ? 'カード情報'                                   : 'Card information',
+      bsPerMonth:  isJa ? '/月（USD）'                                   : '/mo (USD)',
+      bsFeatPro1:  isJa ? '$20 分のクレジット / 月'                       : '$20 in monthly credits',
+      bsFeatBiz1:  isJa ? '$60 分のクレジット / 月'                       : '$60 in monthly credits',
+      bsFeat2:     isJa ? 'メッセージ無制限'                              : 'Unlimited messages',
+      bsFeat3:     isJa ? '全プリセット利用可'                            : 'All presets available',
+      // Settings
+      sBalance:    isJa ? '残高'                                        : 'Balance',
+      sCurPlan:    isJa ? '現在のプラン'                                 : 'Current plan',
+      sUsageFmt:   isJa ? '累計 {n} 回利用'                              : '{n} messages used',
+      sFreeBlurb:  isJa ? '無料枠 10メッセージ'                          : '10 free messages',
+      sProBlurb:   isJa ? '$12.99 / 月 ・ $20分のクレジット'              : '$12.99/mo · $20 credit',
+      sBizBlurb:   isJa ? '$32.99 / 月 ・ $60分のクレジット'              : '$32.99/mo · $60 credit',
+      sAddCredits: isJa ? '+ クレジット追加 / プラン変更'                  : '+ Add credits / Change plan',
+      sCancel:     isJa ? '解約'                                        : 'Cancel',
+      sCancelConf: isJa ? '現在のサブスクリプションを解約しますか？\n月末まではご利用いただけます。' : 'Cancel your subscription?\nYou will keep access until the end of the current period.',
+      sCancelDone: isJa ? '解約しました'                                : 'Subscription canceled',
+      sCancelFail: isJa ? '解約に失敗しました'                           : 'Cancellation failed',
+      sTxHistory:  isJa ? '取引履歴'                                    : 'Transaction history',
+      sLast30:     isJa ? '（最新30件）'                                : '(last 30)',
+      sNoTx:       isJa ? '取引履歴はまだありません'                      : 'No transactions yet',
+      sTxFetchFail:isJa ? '履歴を取得できませんでした'                    : 'Failed to load history',
+      sTxUsage:    isJa ? 'AI利用'                                      : 'AI usage',
+      sTxUsageWith:isJa ? 'AI利用 ({n})'                                : 'AI usage ({n})',
+      sTxTopup:    isJa ? 'クレジット追加'                              : 'Top-up',
+      sTxSub:      isJa ? '{p} 月額付与'                                 : '{p} monthly credit',
+      // settings tab labels
+      sTabProfile: isJa ? '👤 プロフィール'                              : '👤 Profile',
+      sTabSecurity:isJa ? '🔒 セキュリティ'                              : '🔒 Security',
+      sTabBilling: isJa ? '💳 お支払い'                                  : '💳 Billing',
+      sTabDanger:  isJa ? '⚠️ 危険'                                      : '⚠️ Danger',
 };
+function _fmtT(template, vars){
+  return String(template).replace(/\{(\w+)\}/g, function(_,k){ return vars[k]!==undefined ? vars[k] : ''; });
+}
 /* ── Boot ──────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded',async()=>{
   // i18n apply
@@ -1320,6 +1386,11 @@ document.addEventListener('DOMContentLoaded',async()=>{
      ['i18n-newAgent',T.newAgent],['i18n-newTpl',T.newTpl],['i18n-teamLabel',T.teamLabel],
      ['i18n-balance',T.balance],['i18n-charge',T.charge],['i18n-logout',T.logout]]
     .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
+    // Apply data-i18n attributes anywhere on the page (billing modal, settings tabs, etc.)
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var k=el.getAttribute('data-i18n');
+      if(T[k]!==undefined) el.textContent=T[k];
+    });
     const inp=document.getElementById('msgInput');
     if(inp) inp.placeholder=T.placeholder;
     document.documentElement.lang=isJa?'ja':'en';
@@ -1506,7 +1577,7 @@ async function sendMsg(){
   const hasImg = _pendingImgs.length > 0;
   if(!text && !hasImg) return;
   const ag=agents.find(a=>a.id===activeId); if(!ag)return;
-  var _freeLeft=(me.usage_count||0)<10; if(!_freeLeft&&(me.balance_jpy||0)<=0){ showToast('残高が不足しています。チャージしてください','ng'); openCharge(); return; }
+  var _freeLeft=(me.usage_count||0)<10; if(!_freeLeft&&(me.balance_jpy||0)<=0){ showToast(isJa?'残高が不足しています。チャージしてください':'Insufficient balance. Please add credits.','ng'); openCharge(); return; }
   
   // 送信する画像を取得してリセット
   const imgs = [..._pendingImgs];
@@ -1821,7 +1892,8 @@ function openCharge(){
   bsBack();
   bsTab('monthly');
   bsRenderCurplan();
-  bsHighlightPaygCard(699);
+  // Initialize PAYG button label too (also highlights default card)
+  bsPickPayg(699);
   document.getElementById('chargeOverlay').classList.add('open');
 }
 function closeCharge(){ document.getElementById('chargeOverlay').classList.remove('open'); }
@@ -1858,7 +1930,7 @@ function bsPickPayg(cents){
   _bsPaygCents=cents;
   bsHighlightPaygCard(cents);
   var btn=document.getElementById('bsPaygGo');
-  if(btn) btn.textContent='$'+(cents/100).toFixed(2)+' で購入';
+  if(btn) btn.textContent=_fmtT(T.bsBuyFmt,{p:'$'+(cents/100).toFixed(2)});
 }
 function bsHighlightPaygCard(cents){
   document.querySelectorAll('.bs-payg-c').forEach(function(c){
@@ -1871,11 +1943,11 @@ function bsRenderCurplan(){
   if(!el) return;
   var plan=(me&&me.plan)||'free';
   var planName = plan==='pro' ? 'Pro' : plan==='business' ? 'Business' : 'Free';
-  var badge = plan==='free'  ? '無料枠 10メッセージ' :
-              plan==='pro'   ? '毎月 $20 分のクレジット' :
-                               '毎月 $60 分のクレジット';
+  var badge = plan==='free'  ? T.bsFreeNote :
+              plan==='pro'   ? T.bsProNote :
+                               T.bsBizNote;
   el.innerHTML =
-    '<div><div class="bs-cur-lbl">現在のプラン</div>'+
+    '<div><div class="bs-cur-lbl">'+T.bsCurPlan+'</div>'+
     '<div class="bs-cur-val">'+planName+'</div></div>'+
     '<div class="bs-cur-badge">'+badge+'</div>';
   document.querySelectorAll('.bs-pc').forEach(function(c){
@@ -1883,7 +1955,7 @@ function bsRenderCurplan(){
     var isCur=p===plan;
     c.classList.toggle('current', isCur);
     var pick=c.querySelector('.bs-pc-pick');
-    if(pick) pick.textContent = isCur ? '現在加入中' : 'このプランを選ぶ';
+    if(pick) pick.textContent = isCur ? T.bsActive : T.bsPickPlan;
   });
 }
 
@@ -1892,9 +1964,9 @@ function bsRenderCurBal(){
   if(!el) return;
   var bal = me ? (me.balance_jpy||0) : 0;
   el.innerHTML =
-    '<div><div class="bs-cur-lbl">現在の残高</div>'+
-    '<div class="bs-cur-val">¥'+Math.floor(bal).toLocaleString()+'</div></div>'+
-    '<div class="bs-cur-badge">¥1単位で利用可</div>';
+    '<div><div class="bs-cur-lbl">'+T.bsCurBal+'</div>'+
+    '<div class="bs-cur-val">'+jpyAsUsd(bal)+'</div></div>'+
+    '<div class="bs-cur-badge">'+T.bsAddNote+'</div>';
 }
 
 function bsRenderSummary(plan){
@@ -1902,13 +1974,18 @@ function bsRenderSummary(plan){
   if(!el) return;
   var price = plan==='pro' ? '$12.99' : '$32.99';
   var credit = plan==='pro' ? '$20' : '$60';
+  var perMonth = isJa ? '/月' : '/mo';
+  var planLabel = plan.toUpperCase() + (isJa ? ' プラン' : ' plan');
+  var feat = isJa ? '毎月 <b>'+credit+'</b> 分のクレジットを付与'
+                  : 'Get <b>'+credit+'</b> in credits each month';
+  var ed   = isJa ? 'いつでもキャンセル可能' : 'Cancel anytime';
   el.innerHTML =
-    '<div class="bs-sum-nm">'+plan.toUpperCase()+' プラン</div>'+
-    '<div class="bs-sum-pr">'+price+'<small>/月</small></div>'+
-    '<div class="bs-sum-feat">毎月 <b>'+credit+'</b> 分のクレジットを付与</div>'+
-    '<div class="bs-sum-ed">いつでもキャンセル可能</div>';
+    '<div class="bs-sum-nm">'+planLabel+'</div>'+
+    '<div class="bs-sum-pr">'+price+'<small>'+perMonth+'</small></div>'+
+    '<div class="bs-sum-feat">'+feat+'</div>'+
+    '<div class="bs-sum-ed">'+ed+'</div>';
   var btn=document.getElementById('bsMonthlyGo');
-  if(btn) btn.textContent=price+' / 月で開始';
+  if(btn) btn.textContent=_fmtT(T.bsStartFmt,{p:price});
 }
 
 async function bsInitStripe(){
@@ -1967,8 +2044,8 @@ async function bsSubscribeSubmit(){
     showToast('カード情報を入力してください','ng'); return;
   }
   var price = plan==='pro' ? '$12.99' : '$32.99';
-  var label = price+' / 月で開始';
-  setBtnLoad('bsMonthlyGo',true,'処理中...');
+  var label = _fmtT(T.bsStartFmt,{p:price});
+  setBtnLoad('bsMonthlyGo',true,isJa?'処理中...':'Processing...');
   try{
     var r=await api('POST','/api/billing/subscribe',{plan:plan});
     if(r.status==='active'||r.status==='trialing'){
@@ -1999,8 +2076,8 @@ async function bsPaygSubmit(){
   if(!(await bsInitStripe()) || !_bsPaygCard){
     showToast('カード情報を入力してください','ng'); return;
   }
-  var label='$'+(cents/100).toFixed(2)+' で購入';
-  setBtnLoad('bsPaygGo',true,'処理中...');
+  var label=_fmtT(T.bsBuyFmt,{p:'$'+(cents/100).toFixed(2)});
+  setBtnLoad('bsPaygGo',true,isJa?'処理中...':'Processing...');
   try{
     var r=await api('POST','/api/billing/charge',{amount_jpy:cents});
     if(!r.client_secret){
@@ -2063,10 +2140,10 @@ function openSettings(){
     const initials = (me.name||me.email||'?').charAt(0).toUpperCase();
     if(av) av.textContent = initials;
     if(emailEl) emailEl.textContent = me.email||'';
-    if(joinedEl) joinedEl.textContent = 'メッセージ数: '+(me.usage_count||0)+'回';
+    if(joinedEl) joinedEl.textContent = _fmtT(T.sUsageFmt,{n:(me.usage_count||0)});
     if(nameEl) nameEl.value = me.name||'';
-    if(balEl) balEl.textContent = '¥'+(me.balance_jpy||0).toFixed(2);
-    if(usageEl) usageEl.textContent = (me.usage_count||0)+'回利用済み';
+    if(balEl) balEl.textContent = jpyAsUsd(me.balance_jpy);
+    if(usageEl) usageEl.textContent = _fmtT(T.sUsageFmt,{n:(me.usage_count||0)});
   }
 }
 
@@ -2107,7 +2184,7 @@ async function loadBilling(){
   var planEl=document.getElementById('sb-plan');
   var planSub=document.getElementById('sb-plan-sub');
   if(planEl) planEl.textContent = plan==='pro'?'Pro':plan==='business'?'Business':'Free';
-  if(planSub) planSub.textContent = plan==='free'?'無料枠 10メッセージ':plan==='pro'?'$12.99 / 月 ・ $20分のクレジット':'$32.99 / 月 ・ $60分のクレジット';
+  if(planSub) planSub.textContent = plan==='free'?T.sFreeBlurb:plan==='pro'?T.sProBlurb:T.sBizBlurb;
   var cancelBtn=document.getElementById('sb-cancel-btn');
   if(cancelBtn) cancelBtn.style.display = (plan==='pro'||plan==='business') ? '' : 'none';
 
@@ -2116,12 +2193,12 @@ async function loadBilling(){
     var r=await api('GET','/api/usage');
     var bal=r.balance_jpy||0;
     var msg=r.total_messages||0;
-    var bEl=document.getElementById('sb-bal'); if(bEl) bEl.textContent='¥'+Math.floor(bal).toLocaleString();
-    var mEl=document.getElementById('sb-msg'); if(mEl) mEl.textContent='累計 '+msg+' 回利用';
+    var bEl=document.getElementById('sb-bal'); if(bEl) bEl.textContent=jpyAsUsd(bal);
+    var mEl=document.getElementById('sb-msg'); if(mEl) mEl.textContent=_fmtT(T.sUsageFmt,{n:msg});
     renderBillingHistory(r.recent_history||[]);
   }catch(e){
     var hEl=document.getElementById('sb-history');
-    if(hEl) hEl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">履歴を取得できませんでした</div>';
+    if(hEl) hEl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">'+T.sTxFetchFail+'</div>';
   }
 }
 
@@ -2129,32 +2206,39 @@ function renderBillingHistory(items){
   var el=document.getElementById('sb-history');
   if(!el) return;
   if(!items||!items.length){
-    el.innerHTML='<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px">取引履歴はまだありません</div>';
+    el.innerHTML='<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px">'+T.sNoTx+'</div>';
     return;
   }
+  var loc = isJa ? 'ja-JP' : 'en-US';
   el.innerHTML = items.map(function(it){
     var date=new Date(it.date);
-    var dstr=isNaN(date.getTime())?'':date.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'})+' '+date.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    var dstr=isNaN(date.getTime())?'':date.toLocaleDateString(loc,{year:'numeric',month:'2-digit',day:'2-digit'})+' '+date.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
     var type=it.type||'usage';
     var label, amount, color, icon;
     if(type==='topup'){
-      icon='💳'; label='クレジット追加';
+      icon='💳'; label=T.sTxTopup;
       var cents=it.amount_cents_usd||0;
-      amount='+¥'+Math.floor(it.credit_jpy||0).toLocaleString()+' <span style="color:var(--text3);font-weight:500;font-size:11px">($'+(cents/100).toFixed(2)+')</span>';
+      amount='+'+usdFmt(cents/100);
       color='#10b981';
     } else if(type==='subscription'){
-      icon='⭐'; label=(it.plan==='pro'?'Pro':it.plan==='business'?'Business':'プラン')+' 月額付与';
-      amount='+¥'+Math.floor(it.credit_jpy||0).toLocaleString();
+      icon='⭐';
+      var planLbl=it.plan==='pro'?'Pro':it.plan==='business'?'Business':'Plan';
+      label=_fmtT(T.sTxSub,{p:planLbl});
+      amount='+'+usdFmt(jpyToUsd(it.credit_jpy));
       color='#10b981';
     } else {
-      icon='💬'; label=it.agentName?'AI利用 ('+esc(it.agentName)+')':'AI利用';
-      amount='-¥'+(it.cost_jpy||0).toFixed(2);
+      icon='💬';
+      var n=it.agentName||'';
+      label = n ? _fmtT(T.sTxUsageWith,{n:esc(n)}) : T.sTxUsage;
+      var costUsd = (it.cost_usd!==undefined) ? Number(it.cost_usd) : jpyToUsd(it.cost_jpy);
+      // Tiny chat costs need 4 decimals to be meaningful
+      amount='-'+usdFmt(costUsd, costUsd<0.01?4:4);
       color='var(--text2)';
     }
     return '<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--wire);font-size:13px">'+
       '<div style="font-size:18px;flex-shrink:0">'+icon+'</div>'+
       '<div style="flex:1;min-width:0">'+
-        '<div style="color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(label)+'</div>'+
+        '<div style="color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+label+'</div>'+
         '<div style="color:var(--text3);font-size:11px;margin-top:1px">'+dstr+'</div>'+
       '</div>'+
       '<div style="color:'+color+';font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+amount+'</div>'+
@@ -2163,14 +2247,14 @@ function renderBillingHistory(items){
 }
 
 async function cancelSubscription(){
-  if(!confirm('現在のサブスクリプションを解約しますか？\n月末まではご利用いただけます。')) return;
+  if(!confirm(T.sCancelConf)) return;
   try{
     await api('POST','/api/billing/cancel',{});
-    showToast('解約しました','ok');
+    showToast(T.sCancelDone,'ok');
     if(typeof refreshMe==='function'){ await refreshMe(); }
     loadBilling();
   }catch(e){
-    showToast(e.message||'解約に失敗しました','ng');
+    showToast(e.message||T.sCancelFail,'ng');
   }
 }
 async function saveProfile(){

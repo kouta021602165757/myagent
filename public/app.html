@@ -529,8 +529,9 @@ input,textarea{font-family:var(--sans);}
 .bs-fld-lbl{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px;}
 .bs-cardbox{
   background:#fff;border:1.5px solid var(--wire2);border-radius:11px;padding:14px 16px;
-  margin-bottom:8px;
+  margin-bottom:8px;min-height:48px;
 }
+.bs-cardbox:focus-within{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.15);}
 .bs-err{color:var(--rose);font-size:12px;min-height:16px;margin-bottom:8px;}
 
 /* primary CTA */
@@ -1055,7 +1056,31 @@ body{color:#f0f0f8;}
         </div>
         <button onclick="changePassword()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">パスワードを変更</button>
       </div>
-      <div id="s-billing" style="display:none"></div>
+      <div id="s-billing" style="display:none">
+        <!-- 上部: プラン + 残高 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:12px;padding:14px">
+            <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">現在のプラン</div>
+            <div id="sb-plan" style="font-size:18px;color:var(--peach-dark);font-weight:800">Free</div>
+            <div id="sb-plan-sub" style="font-size:11px;color:var(--text3);margin-top:3px">無料枠 10メッセージ</div>
+          </div>
+          <div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:12px;padding:14px">
+            <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">残高</div>
+            <div id="sb-bal" style="font-size:18px;color:var(--text);font-weight:800">¥0</div>
+            <div id="sb-msg" style="font-size:11px;color:var(--text3);margin-top:3px">累計 0 回利用</div>
+          </div>
+        </div>
+
+        <!-- アクション -->
+        <div style="display:flex;gap:8px;margin-bottom:18px">
+          <button onclick="closeSettings();openCharge()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:10px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">+ クレジット追加 / プラン変更</button>
+          <button id="sb-cancel-btn" onclick="cancelSubscription()" style="display:none;background:var(--cream2);border:1px solid var(--wire3);color:var(--text2);border-radius:10px;padding:11px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">解約</button>
+        </div>
+
+        <!-- 取引履歴 -->
+        <div style="font-size:11px;color:var(--text2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">取引履歴 <span style="color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0">（最新30件）</span></div>
+        <div id="sb-history" style="border:1px solid var(--wire2);border-radius:12px;background:var(--cream2);max-height:280px;overflow-y:auto"></div>
+      </div>
       <div id="s-danger" style="display:none">
         <div style="background:rgba(255,77,109,.05);border:1px solid rgba(255,77,109,.2);border-radius:14px;padding:20px">
           <h3 style="color:#ff4d6d;font-size:15px;font-weight:700;margin-bottom:8px">アカウントを削除</h3>
@@ -1900,11 +1925,16 @@ async function bsInitStripe(){
 
 var _bsCardStyle={base:{fontSize:'15px',color:'#2d1a0e',fontFamily:'inherit','::placeholder':{color:'#9a6a4a'}},invalid:{color:'#ef4444'}};
 
+function _bsMountCard(card, sel){
+  // Defer mount until after a layout pass — otherwise Stripe's iframe can
+  // be injected into a still-collapsing parent and end up unclickable.
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ card.mount(sel); }); });
+}
 async function bsInitMonthlyCard(){
   if(!(await bsInitStripe())){ showToast('決済システムの初期化に失敗しました','ng'); return; }
   if(!_bsMonthlyCard){
     _bsMonthlyCard=_bsElements.create('card',{style:_bsCardStyle});
-    _bsMonthlyCard.mount('#bs-monthly-card');
+    _bsMountCard(_bsMonthlyCard,'#bs-monthly-card');
     _bsMonthlyCard.on('change',function(e){
       document.getElementById('bs-monthly-err').textContent=e.error?e.error.message:'';
     });
@@ -1914,7 +1944,7 @@ async function bsInitPaygCard(){
   if(!(await bsInitStripe())){ showToast('決済システムの初期化に失敗しました','ng'); return; }
   if(!_bsPaygCard){
     _bsPaygCard=_bsElements.create('card',{style:_bsCardStyle});
-    _bsPaygCard.mount('#bs-payg-card');
+    _bsMountCard(_bsPaygCard,'#bs-payg-card');
     _bsPaygCard.on('change',function(e){
       document.getElementById('bs-payg-err').textContent=e.error?e.error.message:'';
     });
@@ -2068,6 +2098,80 @@ function switchStab(btn, tabId){
     const el = document.getElementById(id);
     if(el) el.style.display = id===tabId ? '' : 'none';
   });
+  if(tabId==='s-billing') loadBilling();
+}
+
+async function loadBilling(){
+  // populate header
+  var plan=(me&&me.plan)||'free';
+  var planEl=document.getElementById('sb-plan');
+  var planSub=document.getElementById('sb-plan-sub');
+  if(planEl) planEl.textContent = plan==='pro'?'Pro':plan==='business'?'Business':'Free';
+  if(planSub) planSub.textContent = plan==='free'?'無料枠 10メッセージ':plan==='pro'?'$12.99 / 月 ・ $20分のクレジット':'$32.99 / 月 ・ $60分のクレジット';
+  var cancelBtn=document.getElementById('sb-cancel-btn');
+  if(cancelBtn) cancelBtn.style.display = (plan==='pro'||plan==='business') ? '' : 'none';
+
+  // fetch usage details
+  try{
+    var r=await api('GET','/api/usage');
+    var bal=r.balance_jpy||0;
+    var msg=r.total_messages||0;
+    var bEl=document.getElementById('sb-bal'); if(bEl) bEl.textContent='¥'+Math.floor(bal).toLocaleString();
+    var mEl=document.getElementById('sb-msg'); if(mEl) mEl.textContent='累計 '+msg+' 回利用';
+    renderBillingHistory(r.recent_history||[]);
+  }catch(e){
+    var hEl=document.getElementById('sb-history');
+    if(hEl) hEl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">履歴を取得できませんでした</div>';
+  }
+}
+
+function renderBillingHistory(items){
+  var el=document.getElementById('sb-history');
+  if(!el) return;
+  if(!items||!items.length){
+    el.innerHTML='<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px">取引履歴はまだありません</div>';
+    return;
+  }
+  el.innerHTML = items.map(function(it){
+    var date=new Date(it.date);
+    var dstr=isNaN(date.getTime())?'':date.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'})+' '+date.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    var type=it.type||'usage';
+    var label, amount, color, icon;
+    if(type==='topup'){
+      icon='💳'; label='クレジット追加';
+      var cents=it.amount_cents_usd||0;
+      amount='+¥'+Math.floor(it.credit_jpy||0).toLocaleString()+' <span style="color:var(--text3);font-weight:500;font-size:11px">($'+(cents/100).toFixed(2)+')</span>';
+      color='#10b981';
+    } else if(type==='subscription'){
+      icon='⭐'; label=(it.plan==='pro'?'Pro':it.plan==='business'?'Business':'プラン')+' 月額付与';
+      amount='+¥'+Math.floor(it.credit_jpy||0).toLocaleString();
+      color='#10b981';
+    } else {
+      icon='💬'; label=it.agentName?'AI利用 ('+esc(it.agentName)+')':'AI利用';
+      amount='-¥'+(it.cost_jpy||0).toFixed(2);
+      color='var(--text2)';
+    }
+    return '<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--wire);font-size:13px">'+
+      '<div style="font-size:18px;flex-shrink:0">'+icon+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(label)+'</div>'+
+        '<div style="color:var(--text3);font-size:11px;margin-top:1px">'+dstr+'</div>'+
+      '</div>'+
+      '<div style="color:'+color+';font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+amount+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+async function cancelSubscription(){
+  if(!confirm('現在のサブスクリプションを解約しますか？\n月末まではご利用いただけます。')) return;
+  try{
+    await api('POST','/api/billing/cancel',{});
+    showToast('解約しました','ok');
+    if(typeof refreshMe==='function'){ await refreshMe(); }
+    loadBilling();
+  }catch(e){
+    showToast(e.message||'解約に失敗しました','ng');
+  }
 }
 async function saveProfile(){
   const name = document.getElementById('sName').value.trim();

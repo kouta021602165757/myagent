@@ -555,7 +555,7 @@ async function handleAPI(req,res,pathname,method,ip){
     user.balance_jpy=Math.round(((user.balance_jpy||0)-cost.jpy)*1000)/1000;
     user.usage_count=(user.usage_count||0)+1;
     user.billing_history=user.billing_history||[];
-    user.billing_history.push({date:new Date().toISOString(),agentId:agent.id,agentName:agent.name,
+    user.billing_history.push({date:new Date().toISOString(),type:'usage',agentId:agent.id,agentName:agent.name,
       input_tokens:cost.inputTok,output_tokens:cost.outputTok,cost_usd:cost.usd,cost_jpy:cost.jpy});
     if(user.billing_history.length>1000)user.billing_history=user.billing_history.slice(-1000);
     const ai=user.agents.findIndex(a=>a.id===agent.id);
@@ -696,6 +696,9 @@ async function handleWebhook(req,res){
           if(credits>0){
             u.balance_jpy=(u.balance_jpy||0)+credits;
             u.subscription_status='active';
+            u.billing_history=u.billing_history||[];
+            u.billing_history.push({date:new Date().toISOString(),type:'subscription',plan,credit_jpy:credits});
+            if(u.billing_history.length>1000)u.billing_history=u.billing_history.slice(-1000);
             await DB.save(u);
             console.log('Credits added:', credits, 'JPY to', u.email);
           }
@@ -723,6 +726,9 @@ async function handleWebhook(req,res){
         if(user){
           const creditJpy=Math.round(amtCentsUsd/100*USD_TO_JPY*1000)/1000;
           user.balance_jpy=Math.round(((user.balance_jpy||0)+creditJpy)*1000)/1000;
+          user.billing_history=user.billing_history||[];
+          user.billing_history.push({date:new Date().toISOString(),type:'topup',amount_cents_usd:amtCentsUsd,credit_jpy:creditJpy});
+          if(user.billing_history.length>1000)user.billing_history=user.billing_history.slice(-1000);
           await DB.save(user);
           console.log('Credits added (PI):',creditJpy,'JPY to',user.email);
         }

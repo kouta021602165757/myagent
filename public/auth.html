@@ -5,465 +5,361 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MY AI Agent — ログイン</title>
+<title>MY AI AGENT — ログイン / 新規登録</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --ink:#fdf8f3;--ink2:#faf3eb;--ink3:#f5ebe0;--ink4:#ede0d4;
-  --wire:rgba(180,120,80,.08);--wire2:rgba(180,120,80,.15);--wire3:rgba(180,120,80,.22);
-  --snow:#2d1a0e;--mist:#8c6a52;--fog:#b89880;
-  --volt:#fb923c;--volt-dim:rgba(251,146,60,.12);--volt-glow:rgba(251,146,60,.3);
-  --cyan:#f97316;--rose:#ff4d6d;--rose-dim:rgba(255,77,109,.12);
-  --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;--mono:'DM Mono',monospace;
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --peach-soft:rgba(251,146,60,.08); --peach-light:#fde8d8;
+  --bg:#fdf8f3; --bg-warm:#faf3eb; --bg-card:#fff;
+  --text:#1a0a00; --text-muted:#5c3a1e; --text-subtle:#9a6a4a;
+  --line:rgba(180,120,80,.14); --line-strong:rgba(180,120,80,.22);
+  --green:#10b981; --rose:#ef4444; --amber:#f59e0b;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',sans-serif;
+  --display:'Bebas Neue','Hiragino Mincho ProN',serif;
 }
-html,body{height:100%;font-family:var(--sans);background:var(--ink);color:var(--snow);-webkit-font-smoothing:antialiased;}
-*:focus{outline:none;}
-button{font-family:var(--sans);cursor:pointer;border:none;transition:all .18s cubic-bezier(.4,0,.2,1);}
-input{font-family:var(--sans);}
-::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:var(--fog);}
-
-/* ── Layout ── */
-.shell{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;}
-
-/* ── Left panel (decorative) ── */
-.left{
-  background:var(--ink2);border-right:1px solid var(--wire);
-  display:flex;flex-direction:column;justify-content:space-between;
-  padding:48px;position:relative;overflow:hidden;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  background:radial-gradient(circle at 50% 0%, var(--peach-light) 0%, var(--bg) 50%);
+  color:var(--text);font-family:var(--sans);min-height:100vh;
+  -webkit-font-smoothing:antialiased;line-height:1.65;
 }
-.left::before{
+button{cursor:pointer;font-family:inherit;}
+
+.shell{
+  position:relative;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 20px 48px;
+}
+.shell::before{
   content:'';position:absolute;inset:0;
-  background-image:linear-gradient(var(--wire) 1px,transparent 1px),
-                   linear-gradient(90deg,var(--wire) 1px,transparent 1px);
-  background-size:64px 64px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cdefs%3E%3Cpattern id='dots' x='0' y='0' width='20' height='20' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23fb923c' opacity='.12'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='url(%23dots)'/%3E%3C/svg%3E");
+  pointer-events:none;
 }
-.left::after{
-  content:'';position:absolute;width:600px;height:600px;border-radius:50%;
-  background:radial-gradient(circle,rgba(251,146,60,.07) 0%,transparent 65%);
-  bottom:-200px;left:-100px;
-}
-.left-brand{
-  display:flex;align-items:center;gap:10px;position:relative;z-index:1;
-  text-decoration:none;
-}
-.logomark{
-  width:38px;height:38px;border-radius:10px;
-  background:var(--volt);display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-size:22px;color:var(--ink);
-  box-shadow:0 0 20px var(--volt-glow);
-}
-.logotext{font-family:var(--display);font-size:20px;letter-spacing:.05em;}
 
-.left-quote{position:relative;z-index:1;}
-.lq-text{
-  font-family:var(--display);font-size:clamp(36px,4vw,60px);
-  line-height:1;letter-spacing:.02em;margin-bottom:20px;
+.brand{
+  display:flex;align-items:center;gap:9px;margin-bottom:24px;text-decoration:none;color:var(--text);
+  position:relative;z-index:1;
 }
-.lq-text span{
-  background:linear-gradient(90deg,var(--volt),var(--cyan));
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-}
-.lq-sub{font-size:15px;color:var(--mist);line-height:1.7;max-width:360px;}
+.brand-bars{display:flex;gap:3px;align-items:flex-end;}
+.brand-bars div{width:5px;background:var(--peach);border-radius:2px;}
+.brand-bars div:nth-child(1){height:24px;}
+.brand-bars div:nth-child(2){height:17px;opacity:.65;}
+.brand-bars div:nth-child(3){height:10px;opacity:.35;}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:.06em;}
 
-/* mini agent previews */
-.left-agents{
-  display:flex;flex-direction:column;gap:10px;position:relative;z-index:1;
+.add-banner{
+  width:100%;max-width:440px;
+  background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);
+  color:var(--peach-dark);padding:11px 14px;border-radius:10px;
+  font-size:13px;font-weight:600;text-align:center;margin-bottom:14px;
+  position:relative;z-index:1;
 }
-.la-item{
-  display:flex;align-items:center;gap:12px;
-  padding:12px 16px;border-radius:12px;
-  background:rgba(255,255,255,.03);border:1px solid var(--wire2);
-}
-.la-icon{
-  width:36px;height:36px;border-radius:10px;
-  background:var(--ink4);display:flex;align-items:center;justify-content:center;font-size:17px;
-}
-.la-name{font-size:13px;font-weight:600;}
-.la-role{font-size:11px;color:var(--fog);}
-.la-dot{width:6px;height:6px;border-radius:50%;background:#28c840;margin-left:auto;box-shadow:0 0 5px #28c840;}
 
-/* ── Right panel (form) ── */
-.right{
-  display:flex;align-items:center;justify-content:center;
-  padding:48px 24px;background:var(--ink);
+.card{
+  width:100%;max-width:440px;background:var(--bg-card);border-radius:20px;
+  padding:36px 32px 28px;border:1px solid var(--line);
+  box-shadow:0 24px 60px rgba(180,100,40,.1),0 0 0 1px rgba(255,255,255,.4) inset;
+  position:relative;z-index:1;
 }
-.form-shell{width:100%;max-width:420px;}
 
-/* tabs */
-.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--ink3);border:1px solid var(--wire);border-radius:14px;padding:4px;margin-bottom:36px;}
+.tabs{display:flex;background:var(--bg-warm);border-radius:11px;padding:4px;margin-bottom:24px;}
 .tab{
-  padding:11px;border-radius:10px;text-align:center;font-size:14px;font-weight:600;
-  color:var(--mist);transition:all .2s;
+  flex:1;padding:9px;border:0;background:transparent;
+  font-size:13px;font-weight:700;color:var(--text-muted);
+  border-radius:8px;transition:all .15s;
 }
-.tab.active{background:var(--ink2);color:var(--snow);box-shadow:0 0 0 1px var(--wire2);}
-.tab:hover:not(.active){color:var(--snow);}
+.tab.active{background:var(--bg-card);color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,.05);}
 
-/* form panels */
-.panel{display:none;}
-.panel.active{display:flex;flex-direction:column;gap:16px;}
+.title{
+  font-family:var(--display);font-size:30px;font-weight:900;color:var(--text);
+  margin-bottom:6px;letter-spacing:.02em;line-height:1.2;
+}
+.sub{font-size:13.5px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;}
 
-.form-title{font-family:var(--display);font-size:36px;letter-spacing:.02em;margin-bottom:4px;}
-.form-sub{font-size:13px;color:var(--mist);margin-bottom:8px;}
-
-/* Google btn */
+/* google */
 .btn-google{
-  width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
-  padding:13px 20px;border-radius:12px;
-  background:var(--ink2);border:1px solid var(--wire2);color:var(--snow);
-  font-size:15px;font-weight:600;
-  transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:13px;background:#fff;border:1.5px solid var(--line-strong);
+  border-radius:12px;font-size:14px;font-weight:700;color:var(--text);
+  transition:all .18s;box-shadow:0 2px 6px rgba(0,0,0,.04);
 }
-.btn-google:hover{border-color:var(--wire3);background:var(--ink3);}
-.google-icon{width:20px;height:20px;flex-shrink:0;}
-
-.divider-line{
-  display:flex;align-items:center;gap:12px;
-  color:var(--fog);font-size:12px;
+.btn-google:hover{border-color:var(--peach);background:rgba(251,146,60,.04);transform:translateY(-1px);box-shadow:0 6px 16px rgba(251,146,60,.15);}
+.btn-google .gicon{width:18px;height:18px;flex-shrink:0;}
+.btn-google .recommend{
+  font-size:9px;background:var(--green);color:#fff;padding:1px 7px;border-radius:999px;
+  font-weight:800;letter-spacing:.04em;margin-left:4px;
 }
-.divider-line::before,.divider-line::after{content:'';flex:1;height:1px;background:var(--wire);}
 
-/* fields */
-.field{display:flex;flex-direction:column;gap:7px;}
-.field label{font-size:11px;font-weight:700;color:var(--mist);letter-spacing:.06em;text-transform:uppercase;}
+.divider{
+  display:flex;align-items:center;gap:10px;margin:18px 0;
+  font-size:11px;color:var(--text-subtle);font-weight:600;
+}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line);}
+
+.field{margin-bottom:13px;}
+.label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.label{font-size:11.5px;font-weight:700;color:var(--text-muted);letter-spacing:.04em;}
+.label .req{color:var(--peach-dark);margin-left:4px;}
+.hint{font-size:10.5px;color:var(--text-subtle);font-weight:500;}
+.hint a{color:var(--peach-dark);text-decoration:underline;font-weight:700;}
+
 .input-wrap{position:relative;}
-.field input{
-  width:100%;background:var(--ink3);border:1px solid var(--wire2);
-  border-radius:12px;color:var(--snow);font-size:15px;padding:13px 16px;
-  transition:all .18s;
+.input{
+  width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;
+  background:#fff;color:var(--text);font-size:14px;font-family:inherit;
+  outline:none;transition:all .15s;
 }
-.field input:focus{border-color:var(--volt);box-shadow:0 0 0 3px var(--volt-dim);}
-::placeholder{color:var(--fog);}
+.input:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.15);}
+.input.ok{border-color:var(--green);}
+.input.err{border-color:var(--rose);}
+.input::placeholder{color:var(--text-subtle);}
 
-/* pw toggle */
+.input-icon{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-size:14px;font-weight:900;line-height:1;pointer-events:none;
+}
+.input-icon.ok{color:var(--green);}
+.input-icon.err{color:var(--rose);}
+
+.field-msg{font-size:11px;margin-top:4px;line-height:1.5;}
+.field-msg.ok{color:var(--green);}
+.field-msg.err{color:var(--rose);}
+
 .pw-toggle{
-  position:absolute;right:14px;top:50%;transform:translateY(-50%);
-  background:none;color:var(--fog);font-size:13px;padding:4px;
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  background:none;border:0;color:var(--text-subtle);
+  font-size:11px;font-weight:700;padding:5px 8px;border-radius:6px;font-family:inherit;
 }
-.pw-toggle:hover{color:var(--mist);}
+.pw-toggle:hover{background:var(--bg-warm);color:var(--text);}
 
-/* error */
+.pw-strength{display:flex;gap:3px;margin-top:6px;}
+.pw-bar{flex:1;height:3px;background:var(--line);border-radius:2px;transition:background .2s;}
+.pw-bar.s1{background:var(--rose);}
+.pw-bar.s2{background:var(--amber);}
+.pw-bar.s3{background:var(--green);}
+.pw-strength-label{font-size:10.5px;color:var(--text-subtle);font-weight:600;margin-top:4px;}
+.pw-strength-label.s1{color:var(--rose);}
+.pw-strength-label.s2{color:var(--amber);}
+.pw-strength-label.s3{color:var(--green);}
+
+.terms{
+  display:flex;align-items:flex-start;gap:9px;margin:14px 0 18px;
+  font-size:12px;color:var(--text-muted);line-height:1.6;cursor:pointer;
+}
+.terms input[type=checkbox]{
+  width:18px;height:18px;flex-shrink:0;margin-top:1px;
+  accent-color:var(--peach);cursor:pointer;
+}
+.terms a{color:var(--peach-dark);text-decoration:underline;font-weight:700;}
+
+.btn-submit{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:13px;background:var(--peach);color:#fff;border:0;
+  border-radius:12px;font-size:14.5px;font-weight:800;font-family:inherit;
+  transition:all .18s;
+  box-shadow:0 6px 18px rgba(251,146,60,.28);
+}
+.btn-submit:hover:not(:disabled){background:var(--peach-dark);transform:translateY(-1px);box-shadow:0 10px 24px rgba(251,146,60,.38);}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+
+.spinner{
+  display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg);}}
+
 .err-msg{
-  padding:10px 14px;border-radius:10px;font-size:13px;
-  background:var(--rose-dim);border:1px solid rgba(255,77,109,.25);color:var(--rose);
-  display:none;
+  display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);
+  color:var(--rose);padding:10px 13px;border-radius:9px;font-size:12.5px;
+  margin-bottom:12px;line-height:1.55;
 }
 .err-msg.show{display:block;}
+.err-msg.success{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.25);color:var(--green);}
 
-/* submit btn */
-.btn-submit{
-  width:100%;padding:14px;border-radius:12px;
-  background:var(--volt);color:var(--ink);font-size:16px;font-weight:700;
-  box-shadow:0 0 20px var(--volt-glow),0 4px 16px rgba(0,0,0,.4);
-  transition:all .2s;
+.form-foot{
+  margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--text-muted);text-align:center;
 }
-.btn-submit:hover{transform:translateY(-1px);box-shadow:0 0 32px var(--volt-glow),0 6px 24px rgba(0,0,0,.5);}
-.btn-submit:active{transform:translateY(0);}
-.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.form-foot a{color:var(--peach-dark);font-weight:700;cursor:pointer;}
+.form-foot a:hover{text-decoration:underline;}
 
-.form-note{font-size:12px;color:var(--fog);text-align:center;line-height:1.6;}
-.form-note a{color:var(--mist);text-decoration:none;}
-.form-note a:hover{color:var(--snow);}
-
-/* terms note */
-.terms-note{font-size:11px;color:var(--fog);line-height:1.6;text-align:center;}
-.terms-note a{color:var(--mist);text-decoration:underline;}
-
-/* demo hint */
-.demo-hint{
-  padding:10px 14px;border-radius:10px;font-size:12px;
-  background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.2);
-  color:var(--mist);text-align:center;
+.trust-row{
+  display:flex;justify-content:center;gap:10px;flex-wrap:wrap;
+  margin-top:24px;position:relative;z-index:1;
 }
-.demo-hint code{font-family:var(--mono);color:var(--volt);}
-
-/* loader spinner inline */
-.spinner{
-  display:inline-block;width:16px;height:16px;border-radius:50%;
-  border:2px solid rgba(0,0,0,.2);border-top-color:var(--ink);
-  animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px;
+.trust-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:999px;
+  background:rgba(255,255,255,.7);border:1px solid var(--line);
+  font-size:12px;font-weight:700;color:var(--text-muted);
+  backdrop-filter:blur(10px);
 }
-@keyframes spin{to{transform:rotate(360deg);}}
-
-@media(max-width:768px){
-  .shell{grid-template-columns:1fr;}
-  .left{display:none;}
-  .right{padding:32px 20px;}
+.trust-pill .check{
+  width:16px;height:16px;border-radius:50%;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:900;flex-shrink:0;
 }
 
+.panel{display:none;}
+.panel.active{display:block;}
 
-/* ============ Auth 全修正 ============ */
-html, body {
-  background: linear-gradient(160deg, #fdf8f3 0%, #fde8d8 100%) !important;
-  min-height: 100vh;
-  color: #2d1a0e !important;
+@media(max-width:520px){
+  .shell{padding:24px 16px 40px;}
+  .card{padding:28px 22px 22px;}
+  .title{font-size:26px;}
 }
-
-/* カード */
-.auth-card, .card, .box, .panel, .form-wrap {
-  background: #fff !important;
-  border: 1px solid rgba(180,120,80,.18) !important;
-  box-shadow: 0 8px 40px rgba(180,100,40,.12) !important;
-  border-radius: 20px !important;
-}
-
-/* ロゴ・タイトル */
-.auth-logo, .logo, .brand {
-  color: #2d1a0e !important;
-}
-h1, h2, .title, .auth-title {
-  color: #1a0a00 !important;
-}
-p, .sub, .desc, .auth-sub {
-  color: #6b4226 !important;
-}
-
-/* タブ（ログイン/新規登録） */
-.tab-wrap, .tabs {
-  border-bottom: 1px solid rgba(180,120,80,.15) !important;
-}
-.tab-btn, .tab {
-  color: #9a6a4a !important;
-  background: none !important;
-  border-bottom: 2px solid transparent !important;
-  font-weight: 600 !important;
-}
-.tab-btn.active, .tab.active, .tab-btn[data-active] {
-  color: #ea580c !important;
-  border-bottom-color: #fb923c !important;
-}
-
-/* ラベル */
-label {
-  color: #6b4226 !important;
-  font-weight: 600 !important;
-  font-size: 13px !important;
-}
-
-/* 入力欄 */
-input[type="text"], input[type="email"], input[type="password"] {
-  background: #faf3eb !important;
-  border: 1px solid rgba(180,120,80,.25) !important;
-  color: #1a0a00 !important;
-  border-radius: 10px !important;
-}
-input::placeholder {
-  color: #b89880 !important;
-}
-input:focus {
-  border-color: #fb923c !important;
-  outline: none !important;
-  box-shadow: 0 0 0 3px rgba(251,146,60,.15) !important;
-}
-
-/* 送信ボタン（「無料で始める」「ログイン」） - 白になっている問題を修正 */
-button[type="submit"],
-.btn-primary,
-.submit-btn,
-.auth-btn,
-.btn-submit {
-  background: #fb923c !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: 12px !important;
-  font-weight: 700 !important;
-  padding: 14px !important;
-  width: 100% !important;
-  font-size: 15px !important;
-  cursor: pointer !important;
-}
-button[type="submit"]:hover {
-  background: #ea580c !important;
-}
-
-/* リンク */
-a { color: #ea580c !important; }
-.link, .auth-link { color: #ea580c !important; font-weight: 600 !important; }
-
-/* Googleログインボタン */
-.google-btn, .btn-google, .oauth-btn {
-  background: #fff !important;
-  border: 1px solid rgba(180,120,80,.2) !important;
-  color: #2d1a0e !important;
-  border-radius: 12px !important;
-  font-weight: 600 !important;
-}
-.google-btn:hover { background: #faf3eb !important; }
-
-/* 区切り線 */
-.divider, .or-divider { color: #b89880 !important; }
-.divider::before, .divider::after { border-color: rgba(180,120,80,.2) !important; }
-
-/* エラーメッセージ */
-.error, .error-msg { color: #ef4444 !important; }
-
-/* チェックボックス */
-input[type="checkbox"] { accent-color: #fb923c !important; }
-
 </style>
 </head>
 <body>
+
 <div class="shell">
 
-  <!-- LEFT: Brand panel -->
-  <div class="left">
-    <a class="left-brand" href="lp.html">
-      <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px">
-  <div style="display:flex;gap:3px;align-items:flex-end">
-    <div style="width:5px;height:24px;background:#fb923c;border-radius:2px;"></div>
-    <div style="width:5px;height:16px;background:#fb923c;border-radius:2px;opacity:.65;"></div>
-    <div style="width:5px;height:9px;background:#fb923c;border-radius:2px;opacity:.35;"></div>
-  </div>
-  <span style="font-size:18px;font-weight:700;letter-spacing:.06em;color:var(--text)">MY AI AGENT</span>
-</div>
-    </a>
+  <a class="brand" href="lp.html">
+    <div class="brand-bars"><div></div><div></div><div></div></div>
+    <span class="brand-name">MY AI AGENT</span>
+  </a>
 
-    <div class="left-quote">
-      <div class="lq-text">あなただけの<br><span>AI部下</span>を<br>作ろう</div>
-      <p class="lq-sub">名前をつけて、スキルを与えて、仕事を任せる。専属のAIチームが今日から動き出します。</p>
-    </div>
-
-    <div class="left-agents">
-      <div class="la-item">
-        <div class="la-icon">✍️</div>
-        <div><div class="la-name">ライター田中</div><div class="la-role">ライティング・コピー</div></div>
-        <div class="la-dot"></div>
-      </div>
-      <div class="la-item">
-        <div class="la-icon">📊</div>
-        <div><div class="la-name">分析の鈴木</div><div class="la-role">データ分析・レポート</div></div>
-        <div class="la-dot"></div>
-      </div>
-      <div class="la-item">
-        <div class="la-icon">💻</div>
-        <div><div class="la-name">エンジニア佐藤</div><div class="la-role">コード・デバッグ</div></div>
-        <div class="la-dot"></div>
-      </div>
-    </div>
+  <div id="addBanner" class="add-banner" style="display:none">
+    別のアカウントを追加 — ログインまたは新規登録してください
   </div>
 
-  <!-- RIGHT: Auth form -->
-  <div class="right">
-    <div class="form-shell">
-      <!-- Tabs -->
-      <div class="tabs">
-        <button class="tab active" onclick="switchTab('login')">ログイン</button>
-        <button class="tab" onclick="switchTab('signup')">新規登録</button>
+  <div class="card" id="authCard">
+    <div class="tabs">
+      <button class="tab active" id="tabLogin" onclick="switchTab('login')">ログイン</button>
+      <button class="tab" id="tabSignup" onclick="switchTab('signup')">新規登録</button>
+    </div>
+
+    <!-- ─── LOGIN ─── -->
+    <div class="panel active" id="panel-login">
+      <div class="title">おかえりなさい</div>
+      <div class="sub">アカウントにログイン</div>
+
+      <button class="btn-google" onclick="googleLogin()">
+        <svg class="gicon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Googleでログイン
+      </button>
+
+      <div class="divider">またはメールアドレスで</div>
+
+      <div class="err-msg" id="l-err"></div>
+
+      <div class="field">
+        <div class="label-row"><span class="label">メールアドレス</span></div>
+        <input class="input" type="email" id="l-email" placeholder="you@example.com" autocomplete="email">
       </div>
-
-      <!-- ── LOGIN PANEL ── -->
-      <div class="panel active" id="panel-login">
-        <div>
-          <div class="form-title">おかえり</div>
-          <div class="form-sub">AIチームが待っています</div>
+      <div class="field">
+        <div class="label-row">
+          <span class="label">パスワード</span>
+          <span class="hint"><a onclick="showForgot()">忘れた</a></span>
         </div>
-
-        <!-- Google login -->
-        <button class="btn-google" onclick="googleLogin()">
-          <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          Googleでログイン
-        </button>
-
-        <div class="divider-line">メールアドレスでログイン</div>
-
-        <div class="field">
-          <label>メールアドレス</label>
-          <input type="email" id="l-email" placeholder="you@example.com" autocomplete="email">
-        </div>
-        <div class="field">
-          <label>パスワード</label>
-          <div class="input-wrap">
-            <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-            <button class="pw-toggle" onclick="togglePw('l-pass',this)" tabindex="-1">表示</button>
-          </div>
-        </div>
-
-        <div class="err-msg" id="l-err"></div>
-
-        <button class="btn-submit" id="l-btn" onclick="doLogin()">ログイン →</button>
-
-        <div class="demo-hint">
-          デモ: <code>test@test.com</code> / <code>password</code>
-        </div>
-
-        <div class="form-note">
-          <a href="#" onclick="showForgot()" style="color:var(--fog);">パスワードをお忘れの方</a>
-        </div>
-        <div class="form-note">
-          アカウントをお持ちでない方は <a href="#" onclick="switchTab('signup')">新規登録</a>
+        <div class="input-wrap">
+          <input class="input" type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+          <button type="button" class="pw-toggle" onclick="togglePw('l-pass',this)">表示</button>
         </div>
       </div>
 
-      <!-- ── SIGNUP PANEL ── -->
-      <div class="panel" id="panel-signup">
-        <div>
-          <div class="form-title">はじめよう</div>
-          <div class="form-sub">AIチームを今日から持てます</div>
+      <button class="btn-submit" id="l-btn" onclick="doLogin()">ログイン →</button>
+
+      <div class="form-foot">
+        アカウントをお持ちでない方は <a onclick="switchTab('signup')">新規登録</a>
+      </div>
+    </div>
+
+    <!-- ─── SIGNUP ─── -->
+    <div class="panel" id="panel-signup">
+      <div class="title">はじめよう</div>
+      <div class="sub">あなただけの AI チームを今日から</div>
+
+      <button class="btn-google" onclick="googleLogin()">
+        <svg class="gicon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Googleで登録
+        <span class="recommend">推奨</span>
+      </button>
+
+      <div class="divider">またはメールアドレスで</div>
+
+      <div class="err-msg" id="s-err"></div>
+
+      <div class="field">
+        <div class="label-row"><span class="label">お名前 <span class="req">*</span></span></div>
+        <div class="input-wrap">
+          <input class="input" type="text" id="s-name" placeholder="山田 太郎" autocomplete="name" maxlength="40">
+          <span class="input-icon" id="s-name-icon"></span>
         </div>
+        <div class="field-msg" id="s-name-msg"></div>
+      </div>
 
-        <!-- Google signup -->
-        <button class="btn-google" onclick="googleLogin()">
-          <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          Googleで登録（推奨）
-        </button>
-
-        <div class="divider-line">メールアドレスで登録</div>
-
-        <div class="field">
-          <label>お名前</label>
-          <input type="text" id="s-name" placeholder="山田 太郎" autocomplete="name">
+      <div class="field">
+        <div class="label-row"><span class="label">メールアドレス <span class="req">*</span></span></div>
+        <div class="input-wrap">
+          <input class="input" type="email" id="s-email" placeholder="you@example.com" autocomplete="email">
+          <span class="input-icon" id="s-email-icon"></span>
         </div>
-        <div class="field">
-          <label>メールアドレス</label>
-          <input type="email" id="s-email" placeholder="you@example.com" autocomplete="email">
-        </div>
-        <div class="field">
-          <label>パスワード</label>
-          <div class="input-wrap">
-            <input type="password" id="s-pass" placeholder="8文字以上" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
-            <button class="pw-toggle" onclick="togglePw('s-pass',this)" tabindex="-1">表示</button>
-          </div>
-        </div>
+        <div class="field-msg" id="s-email-msg"></div>
+      </div>
 
-        <div class="err-msg" id="s-err"></div>
-
-        <button class="btn-submit" id="s-btn" onclick="doSignup()">アカウント作成 →</button>
-
-        <div class="terms-note">
-          登録することで<a href="legal.html#terms">利用規約</a>および<a href="legal.html#privacy">プライバシーポリシー</a>に同意したことになります。
+      <div class="field">
+        <div class="label-row">
+          <span class="label">パスワード <span class="req">*</span></span>
+          <span class="hint">8文字以上</span>
         </div>
-
-        <div class="form-note">
-          すでにアカウントをお持ちの方は <a href="#" onclick="switchTab('login')">ログイン</a>
+        <div class="input-wrap">
+          <input class="input" type="password" id="s-pass" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
+          <button type="button" class="pw-toggle" onclick="togglePw('s-pass',this)">表示</button>
         </div>
+        <div class="pw-strength" id="s-pw-strength">
+          <div class="pw-bar"></div>
+          <div class="pw-bar"></div>
+          <div class="pw-bar"></div>
+        </div>
+        <div class="pw-strength-label" id="s-pw-label"></div>
+      </div>
+
+      <label class="terms">
+        <input type="checkbox" id="s-terms">
+        <span><a href="legal.html#terms" target="_blank">利用規約</a> および <a href="legal.html#privacy" target="_blank">プライバシーポリシー</a> に同意します</span>
+      </label>
+
+      <button class="btn-submit" id="s-btn" onclick="doSignup()" disabled>アカウント作成 →</button>
+
+      <div class="form-foot">
+        すでにアカウントをお持ちの方は <a onclick="switchTab('login')">ログイン</a>
       </div>
     </div>
   </div>
+
+  <div class="trust-row">
+    <span class="trust-pill"><span class="check">✓</span>30秒で登録</span>
+    <span class="trust-pill"><span class="check">✓</span>Google Chrome 連携可</span>
+  </div>
+
 </div>
 
 <script>
-const API = '';  // same origin
+const API = '';
 
-// ── Tab switch ────────────────────────────────────────────
+// ── Tab switch ──────────────────────────────────────────
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelector(`.tab:${tab === 'login' ? 'first-child' : 'last-child'}`).classList.add('active');
-  document.getElementById('panel-' + tab).classList.add('active');
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+  document.getElementById('panel-login').classList.toggle('active', tab==='login');
+  document.getElementById('panel-signup').classList.toggle('active', tab==='signup');
 }
 
-// ── PW toggle ─────────────────────────────────────────────
+// ── Password toggle ─────────────────────────────────────
 function togglePw(id, btn) {
   const input = document.getElementById(id);
   const shown = input.type === 'text';
@@ -471,12 +367,12 @@ function togglePw(id, btn) {
   btn.textContent = shown ? '表示' : '隠す';
 }
 
-// ── Google login (OAuth redirect) ─────────────────────────
+// ── Google OAuth ────────────────────────────────────────
 function googleLogin() {
   window.location.href = API + '/api/auth/google';
 }
 
-// Multi-account: append the just-authenticated user to maa_accounts
+// ── Multi-account append ────────────────────────────────
 function _maaAppend(token, user){
   try{
     var v=localStorage.getItem('maa_accounts');
@@ -488,7 +384,56 @@ function _maaAppend(token, user){
   }catch(e){}
 }
 
-// ── Login ─────────────────────────────────────────────────
+// ── Signup real-time validation ─────────────────────────
+function _vSignup(){
+  var name = document.getElementById('s-name').value.trim();
+  var email = document.getElementById('s-email').value.trim();
+  var pass = document.getElementById('s-pass').value;
+  var terms = document.getElementById('s-terms').checked;
+
+  // name
+  var nIcon = document.getElementById('s-name-icon');
+  var nMsg = document.getElementById('s-name-msg');
+  var nInp = document.getElementById('s-name');
+  if(name.length===0){ nIcon.textContent=''; nIcon.className='input-icon'; nMsg.textContent=''; nMsg.className='field-msg'; nInp.classList.remove('ok','err'); }
+  else if(name.length<2){ nIcon.textContent='✗'; nIcon.className='input-icon err'; nMsg.textContent='2文字以上で入力してください'; nMsg.className='field-msg err'; nInp.classList.add('err'); nInp.classList.remove('ok'); }
+  else { nIcon.textContent='✓'; nIcon.className='input-icon ok'; nMsg.textContent=''; nMsg.className='field-msg'; nInp.classList.add('ok'); nInp.classList.remove('err'); }
+
+  // email
+  var eIcon = document.getElementById('s-email-icon');
+  var eMsg = document.getElementById('s-email-msg');
+  var eInp = document.getElementById('s-email');
+  if(email.length===0){ eIcon.textContent=''; eIcon.className='input-icon'; eMsg.textContent=''; eMsg.className='field-msg'; eInp.classList.remove('ok','err'); }
+  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ eIcon.textContent='✗'; eIcon.className='input-icon err'; eMsg.textContent='有効なメールアドレスを入力してください'; eMsg.className='field-msg err'; eInp.classList.add('err'); eInp.classList.remove('ok'); }
+  else { eIcon.textContent='✓'; eIcon.className='input-icon ok'; eMsg.textContent=''; eMsg.className='field-msg'; eInp.classList.add('ok'); eInp.classList.remove('err'); }
+
+  // password strength
+  var bars = document.querySelectorAll('#s-pw-strength .pw-bar');
+  var label = document.getElementById('s-pw-label');
+  bars.forEach(b=>{b.className='pw-bar';});
+  label.className='pw-strength-label';
+  var strength = 0;
+  if(pass.length>=8) strength++;
+  if(pass.length>=12 || (pass.length>=8 && /\d/.test(pass) && /[a-z]/i.test(pass))) strength++;
+  if(pass.length>=12 && /\d/.test(pass) && /[a-zA-Z]/.test(pass) && /[^a-zA-Z0-9]/.test(pass)) strength++;
+  if(pass.length===0){ label.textContent=''; }
+  else if(strength<=1){ bars[0].classList.add('s1'); label.classList.add('s1'); label.textContent='弱い ・ 8文字以上にしてください'; }
+  else if(strength===2){ bars[0].classList.add('s2'); bars[1].classList.add('s2'); label.classList.add('s2'); label.textContent='普通 ・ 数字や記号を入れるとより安全'; }
+  else { bars[0].classList.add('s3'); bars[1].classList.add('s3'); bars[2].classList.add('s3'); label.classList.add('s3'); label.textContent='強い ✓'; }
+
+  // submit enable
+  var ok = name.length>=2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && pass.length>=8 && terms;
+  document.getElementById('s-btn').disabled = !ok;
+}
+['s-name','s-email','s-pass','s-terms'].forEach(id=>{
+  var el = document.getElementById(id);
+  if(el){
+    el.addEventListener('input', _vSignup);
+    el.addEventListener('change', _vSignup);
+  }
+});
+
+// ── Login ───────────────────────────────────────────────
 async function doLogin() {
   const email = val('l-email'), pass = val('l-pass');
   hideErr('l-err');
@@ -507,13 +452,17 @@ async function doLogin() {
   setLoading('l-btn', false, 'ログイン →');
 }
 
-// ── Signup ────────────────────────────────────────────────
+// ── Signup ──────────────────────────────────────────────
 async function doSignup() {
   const name = val('s-name'), email = val('s-email'), pass = val('s-pass');
+  const terms = document.getElementById('s-terms').checked;
   hideErr('s-err');
   if (!name) { showErr('s-err', 'お名前を入力してください'); return; }
+  if (name.length < 2) { showErr('s-err', 'お名前は2文字以上にしてください'); return; }
   if (!email) { showErr('s-err', 'メールアドレスを入力してください'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('s-err', '有効なメールアドレスを入力してください'); return; }
   if (pass.length < 8) { showErr('s-err', 'パスワードは8文字以上にしてください'); return; }
+  if (!terms) { showErr('s-err', '利用規約への同意が必要です'); return; }
   setLoading('s-btn', true, 'アカウント作成中...');
   try {
     const r = await post('/api/auth/signup', { name, email, password: pass });
@@ -528,9 +477,10 @@ async function doSignup() {
   setLoading('s-btn', false, 'アカウント作成 →');
 }
 
-// ── Helpers ───────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────
 function val(id) { return document.getElementById(id).value.trim(); }
-function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+function showErr(id, msg) { const el=document.getElementById(id); el.textContent=msg; el.classList.add('show'); el.classList.remove('success'); }
+function showOk(id, msg) { const el=document.getElementById(id); el.textContent=msg; el.classList.add('show','success'); }
 function hideErr(id) { document.getElementById(id).classList.remove('show'); }
 function setLoading(id, on, txt) {
   const b = document.getElementById(id);
@@ -538,22 +488,16 @@ function setLoading(id, on, txt) {
   b.innerHTML = on ? `<span class="spinner"></span>${txt}` : txt;
 }
 async function post(path, body) {
-  const res = await fetch(API + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const res = await fetch(API + path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'エラーが発生しました');
   return data;
 }
 
-// ── Auto-redirect if already logged in ────────────────────
+// ── Auto-redirect / URL params ──────────────────────────
 window.onload = () => {
   const p = new URLSearchParams(location.search);
-  // Add-account mode: user is logged in elsewhere and wants to attach a second account
   const isAddMode = p.get('mode') === 'add';
-  // Auto-login if already have token (skip in add mode)
   const token = localStorage.getItem('token');
   if (token && !isAddMode) {
     fetch(API + '/api/me', { headers: { Authorization: 'Bearer ' + token } })
@@ -561,62 +505,65 @@ window.onload = () => {
       .catch(() => {});
   }
   if (isAddMode){
-    var b=document.createElement('div');
-    b.style.cssText='background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:#ea580c;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;margin-bottom:14px';
-    b.textContent='別のアカウントを追加 — ログインまたは新規登録してください';
-    var card=document.querySelector('.auth-card')||document.body;
-    card.insertBefore(b, card.firstChild);
+    document.getElementById('addBanner').style.display='block';
   }
   if (p.get('tab') === 'signup') switchTab('signup');
   if (p.get('reset')) showResetForm(p.get('reset'));
   if (p.get('error') === 'google_failed') showErr('l-err', 'Googleログインに失敗しました。もう一度お試しください。');
-  if (p.get('verified') === '1') showErr('l-err', '✅ メールアドレスを確認しました。ログインしてください。');
+  if (p.get('verified') === '1') showOk('l-err', '✅ メールアドレスを確認しました。ログインしてください。');
 };
 
-// ── Password reset form ──────────────────────────────────────
+// ── Forgot / Reset password ─────────────────────────────
 function showForgot() {
   document.getElementById('panel-login').innerHTML = `
-    <div><div class="form-title">パスワードを忘れた</div><div class="form-sub">登録メールにリセットリンクを送ります</div></div>
-    <div class="fld"><label>メールアドレス</label><input type="email" id="f-email" placeholder="you@example.com"></div>
-    <div id="f-msg" class="err-msg" style="background:none;border:none;color:var(--volt);"></div>
-    <button class="btn btn-a" id="f-btn" onclick="doForgot()">リセットメールを送信</button>
-    <div class="form-note"><a href="#" onclick="switchTab('login')">← ログインに戻る</a></div>`;
+    <div class="title">パスワードを忘れた</div>
+    <div class="sub">登録メールアドレスにリセットリンクを送ります</div>
+    <div class="err-msg" id="f-msg"></div>
+    <div class="field">
+      <div class="label-row"><span class="label">メールアドレス</span></div>
+      <input class="input" type="email" id="f-email" placeholder="you@example.com">
+    </div>
+    <button class="btn-submit" id="f-btn" onclick="doForgot()">リセットメールを送信</button>
+    <div class="form-foot"><a onclick="location.reload()">← ログインに戻る</a></div>`;
 }
-
 async function doForgot() {
   const email = document.getElementById('f-email').value.trim();
   if (!email) return;
-  setBtnLoad('f-btn', true, '送信中...');
+  setLoading('f-btn', true, '送信中...');
   try {
     await post('/api/auth/forgot-password', { email });
-    document.getElementById('f-msg').textContent = '✅ 登録済みのメールアドレスであればリセットリンクを送信しました';
-    document.getElementById('f-msg').style.display = 'block';
-  } catch(e) { console.error(e); }
-  setBtnLoad('f-btn', false, 'リセットメールを送信');
+    showOk('f-msg', '✅ 登録済みのメールアドレスであればリセットリンクを送信しました');
+  } catch(e) { showErr('f-msg', e.message); }
+  setLoading('f-btn', false, 'リセットメールを送信');
 }
-
 function showResetForm(token) {
   document.getElementById('panel-login').innerHTML = `
-    <div><div class="form-title">新しいパスワード</div><div class="form-sub">新しいパスワードを設定してください</div></div>
-    <div class="fld"><label>新しいパスワード</label><input type="password" id="r-pass" placeholder="8文字以上" autocomplete="new-password"></div>
-    <div id="r-err" class="err-msg"></div>
-    <button class="btn btn-a" id="r-btn" onclick="doReset('${token}')">パスワードを変更</button>`;
+    <div class="title">新しいパスワード</div>
+    <div class="sub">新しいパスワードを設定してください</div>
+    <div class="err-msg" id="r-err"></div>
+    <div class="field">
+      <div class="label-row"><span class="label">新しいパスワード</span></div>
+      <div class="input-wrap">
+        <input class="input" type="password" id="r-pass" placeholder="8文字以上" autocomplete="new-password">
+        <button type="button" class="pw-toggle" onclick="togglePw('r-pass',this)">表示</button>
+      </div>
+    </div>
+    <button class="btn-submit" id="r-btn" onclick="doReset('${token}')">パスワードを変更</button>`;
 }
-
 async function doReset(token) {
   const pass = document.getElementById('r-pass').value;
   if (pass.length < 8) { showErr('r-err', '8文字以上にしてください'); return; }
-  setBtnLoad('r-btn', true, '変更中...');
+  setLoading('r-btn', true, '変更中...');
   try {
     await post('/api/auth/reset-password', { token, password: pass });
-    document.getElementById('r-err').style.color = 'var(--volt)';
-    showErr('r-err', '✅ パスワードを変更しました。ログインしてください');
-    setTimeout(() => { history.replaceState(null,'','/auth.html'); switchTab('login'); }, 2000);
+    showOk('r-err', '✅ パスワードを変更しました。ログインしてください');
+    setTimeout(() => { history.replaceState(null,'','/auth.html'); location.reload(); }, 2000);
   } catch(e) { showErr('r-err', e.message); }
-  setBtnLoad('r-btn', false, 'パスワードを変更');
+  setLoading('r-btn', false, 'パスワードを変更');
 }
 </script>
 
+<!-- ════ i18n: auto-translate to English for non-Japanese browsers ════ -->
 <script>
 (function(){
   var lang = navigator.language || navigator.userLanguage || 'ja';
@@ -625,22 +572,64 @@ async function doReset(token) {
   if(params.get('lang')==='en') isJa=false;
   if(params.get('lang')==='ja') isJa=true;
   if(isJa) return;
+
   var map = {
-    'ログイン': 'Log in',
+    'ログイン': 'Sign in',
     '新規登録': 'Sign up',
+    'おかえりなさい': 'Welcome back',
+    'アカウントにログイン': 'Sign in to your account',
+    'はじめよう': "Let's get started",
+    'あなただけの AI チームを今日から': 'Your own AI team starts today',
+    'Googleでログイン': 'Continue with Google',
+    'Googleで登録': 'Sign up with Google',
+    '推奨': 'Recommended',
+    'またはメールアドレスで': 'or with email',
     'メールアドレス': 'Email',
     'パスワード': 'Password',
-    'お名前': 'Name',
-    'パスワード（確認）': 'Confirm password',
-    'ログインする': 'Log in',
-    '無料で始める': 'Get started free',
-    'Googleでログイン': 'Continue with Google',
-    'パスワードを忘れた方': 'Forgot password?',
-    'アカウントをお持ちでない方': "Don't have an account?",
-    'すでにアカウントをお持ちの方': 'Already have an account?',
-    'MY AI Agentへようこそ': 'Welcome to MY AI AGENT',
-    'AIエージェントチームを作ろう': 'Build your AI agent team',
+    'お名前': 'Your name',
+    '8文字以上': 'At least 8 characters',
+    '忘れた': 'Forgot?',
+    '表示': 'Show',
+    '隠す': 'Hide',
+    '弱い ・ 8文字以上にしてください': 'Weak · Use at least 8 characters',
+    '普通 ・ 数字や記号を入れるとより安全': 'OK · Add numbers or symbols for safety',
+    '強い ✓': 'Strong ✓',
+    '利用規約': 'Terms',
+    'および': 'and',
+    'プライバシーポリシー': 'Privacy Policy',
+    'に同意します': '. I agree.',
+    'ログイン →': 'Sign in →',
+    'アカウント作成 →': 'Create account →',
+    'アカウントをお持ちでない方は': "Don't have an account?",
+    'すでにアカウントをお持ちの方は': 'Already have an account?',
+    '30秒で登録': '30-second signup',
+    'Google Chrome 連携可': 'Google Chrome ready',
+    '別のアカウントを追加 — ログインまたは新規登録してください': 'Add another account — sign in or sign up',
+    'パスワードを忘れた': 'Forgot password',
+    '登録メールアドレスにリセットリンクを送ります': 'We will email a reset link',
+    'リセットメールを送信': 'Send reset email',
+    '← ログインに戻る': '← Back to sign in',
+    '新しいパスワード': 'New password',
+    '新しいパスワードを設定してください': 'Set a new password',
+    'パスワードを変更': 'Change password',
+    'メールアドレスとパスワードを入力してください': 'Please enter email and password',
+    'お名前を入力してください': 'Please enter your name',
+    'お名前は2文字以上にしてください': 'Name must be at least 2 characters',
+    'メールアドレスを入力してください': 'Please enter your email',
+    '有効なメールアドレスを入力してください': 'Please enter a valid email',
+    'パスワードは8文字以上にしてください': 'Password must be at least 8 characters',
+    '利用規約への同意が必要です': 'You must agree to the Terms',
+    'ログイン中...': 'Signing in...',
+    'アカウント作成中...': 'Creating account...',
+    '送信中...': 'Sending...',
+    '変更中...': 'Changing...',
+    '2文字以上で入力してください': 'At least 2 characters',
+    'Googleログインに失敗しました。もう一度お試しください。': 'Google sign-in failed. Please try again.',
+    '✅ メールアドレスを確認しました。ログインしてください。': '✅ Email verified. Please sign in.',
+    '✅ 登録済みのメールアドレスであればリセットリンクを送信しました': '✅ If the email is registered, a reset link has been sent.',
+    '✅ パスワードを変更しました。ログインしてください': '✅ Password changed. Please sign in.',
   };
+
   function walk(node) {
     if(node.nodeType === 3) {
       var t = node.textContent.trim();
@@ -649,19 +638,22 @@ async function doReset(token) {
       node.childNodes.forEach(walk);
     }
   }
+
   document.addEventListener('DOMContentLoaded', function(){
     walk(document.body);
     document.documentElement.lang = 'en';
-    document.title = 'MY AI AGENT — Log in';
-    var ph = document.querySelector('#email');
-    if(ph) ph.placeholder = 'Email address';
-    var ph2 = document.querySelector('#password');
-    if(ph2) ph2.placeholder = 'Password';
-    var ph3 = document.querySelector('#name');
-    if(ph3) ph3.placeholder = 'Your name';
+    document.title = 'MY AI AGENT — Sign in / Sign up';
+    // Update placeholders too
+    var phMap = {
+      'you@example.com': 'you@example.com',
+      '••••••••': '••••••••',
+      '山田 太郎': 'Your name',
+    };
+    document.querySelectorAll('input[placeholder]').forEach(function(i){
+      if(phMap[i.placeholder]) i.placeholder = phMap[i.placeholder];
+    });
   });
 })();
 </script>
-
 </body>
 </html>

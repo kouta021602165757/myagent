@@ -3072,7 +3072,12 @@ function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
 function now(){return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});}
 function exTA(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
-function taKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+function taKey(e){
+  // Skip while IME composition is active (e.g. typing Japanese: Enter confirms
+  // the kana→kanji conversion, it shouldn't send the message).
+  if(e.isComposing || e.keyCode===229) return;
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMsg(); }
+}
 // Global ⌘+K / Ctrl+K → start new chat
 document.addEventListener('keydown', function(e){
   if((e.metaKey||e.ctrlKey) && (e.key==='k'||e.key==='K')){

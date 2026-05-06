@@ -923,6 +923,32 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
 .share a:hover{background:#faf3eb;}
 .foot{margin-top:60px;text-align:center;font-size:12px;color:#9a6a4a;font-weight:600;}
 .foot a{color:#ea580c;text-decoration:none;font-weight:700;}
+
+/* Try-before-signup chat widget */
+.try-card{background:linear-gradient(135deg,#fff,#fff7ed);border:1px solid rgba(251,146,60,.25);border-radius:16px;padding:18px 20px;margin-bottom:24px;}
+.try-head{margin-bottom:14px;}
+.try-title{font-size:15px;font-weight:900;color:#2d1a0e;}
+.try-sub{font-size:12px;color:#6b4226;font-weight:600;margin-top:3px;}
+.try-sub b{color:#ea580c;}
+.try-msgs{display:flex;flex-direction:column;gap:8px;min-height:60px;max-height:380px;overflow-y:auto;padding:4px 2px;}
+.try-msgs:empty::before{content:'まずは下から話しかけてみてください';color:#9a6a4a;font-size:12.5px;font-weight:600;font-style:italic;padding:18px 4px;display:block;text-align:center;}
+.try-bub{padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;max-width:88%;white-space:pre-wrap;word-break:break-word;}
+.try-bub.u{align-self:flex-end;background:rgba(251,146,60,.14);border:1px solid rgba(251,146,60,.25);color:#2d1a0e;}
+.try-bub.a{align-self:flex-start;background:#fff;border:1px solid rgba(180,120,80,.18);color:#2d1a0e;box-shadow:0 2px 6px rgba(180,120,80,.04);}
+.try-bub.thinking{color:#9a6a4a;font-style:italic;}
+.try-demos{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 6px;}
+.try-demo{padding:6px 10px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:8px;font-size:11.5px;color:#6b4226;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;line-height:1.4;}
+.try-demo:hover{background:#fef3e7;border-color:#fb923c;color:#2d1a0e;}
+.try-form{display:flex;gap:6px;margin-top:10px;}
+.try-form input{flex:1;padding:11px 14px;border:1px solid rgba(180,120,80,.25);border-radius:11px;background:#fff;font-size:13.5px;font-family:inherit;color:#2d1a0e;outline:none;}
+.try-form input:focus{border-color:#fb923c;}
+.try-form input:disabled{opacity:.6;}
+.try-form button{padding:0 18px;background:#fb923c;color:#fff;border:none;border-radius:11px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;}
+.try-form button:hover:not(:disabled){background:#ea580c;}
+.try-form button:disabled{opacity:.5;cursor:not-allowed;}
+.try-status{margin-top:8px;font-size:11px;color:#9a6a4a;font-weight:600;text-align:right;}
+.try-cta{margin-top:12px;padding:14px 16px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;border-radius:11px;text-align:center;display:block;text-decoration:none;font-weight:800;font-size:13px;}
+.try-cta:hover{filter:brightness(1.08);}
 </style>
 </head>
 <body>
@@ -944,9 +970,25 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
     ${d.agent?.chrome_enabled?'<span class="pl">🌐 <b>Chrome 連携</b></span>':''}
   </div>
   <div class="desc">${_xmlEscape(d.description||'')}</div>
+
+  <!-- ▼ TRY-BEFORE-SIGNUP CHAT WIDGET ▼ -->
+  <div class="try-card">
+    <div class="try-head">
+      <div class="try-title">🎯 試してみる</div>
+      <div class="try-sub">サインアップ前に <b>3 ターン</b> まで無料で会話できます</div>
+    </div>
+    <div class="try-msgs" id="tryMsgs"></div>
+    ${d.demo_prompts && d.demo_prompts.length ? `<div class="try-demos">${d.demo_prompts.map((p,i)=>`<button class="try-demo" onclick="useTryDemo(${i})" data-demo="${_xmlEscape(p).replace(/"/g,'&quot;')}">▸ ${_xmlEscape(p)}</button>`).join('')}</div>`:''}
+    <form class="try-form" onsubmit="sendTry(event)">
+      <input type="text" id="tryInput" placeholder="メッセージを入力…" autocomplete="off" maxlength="2000">
+      <button type="submit" id="tryBtn">送信</button>
+    </form>
+    <div class="try-status" id="tryStatus">残り 3 ターン</div>
+  </div>
+
   ${d.demo_prompts && d.demo_prompts.length ? `<div class="demos"><h2>デモプロンプト</h2>${d.demo_prompts.map(p=>`<div class="d">▸ ${_xmlEscape(p)}</div>`).join('')}</div>`:''}
   <div class="cta-row">
-    <a class="btn btn-pri" href="/app.html?listing=${listingId}">＋ チームに追加して使う</a>
+    <a class="btn btn-pri" href="/app.html?listing=${listingId}">＋ チームに追加して続ける</a>
     <a class="btn btn-sec" href="/">マーケットを見る</a>
   </div>
   <div class="share">
@@ -959,6 +1001,75 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
     Powered by <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">サービスを知る</a>
   </div>
 </div>
+<script>
+var LISTING_ID = ${JSON.stringify(listingId)};
+var TRY_MAX = 3;
+var tryMsgs = [];                                     // [{role,content}]
+var tryTurns = 0;
+function _esc(s){return String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+function _scrollMsgs(){var el=document.getElementById('tryMsgs');if(el)el.scrollTop=el.scrollHeight;}
+function _appendMsg(role, content, cls){
+  var el=document.getElementById('tryMsgs'); if(!el) return;
+  var d=document.createElement('div'); d.className='try-bub '+(role==='user'?'u':'a')+(cls?' '+cls:''); d.textContent=content;
+  el.appendChild(d); _scrollMsgs();
+}
+function _setStatus(){
+  var el=document.getElementById('tryStatus'); if(!el) return;
+  var remaining = TRY_MAX - tryTurns;
+  if(remaining > 0) el.textContent = '残り ' + remaining + ' ターン';
+  else el.innerHTML = '<a class="try-cta" href="/auth.html?next=/l/'+LISTING_ID+'">無料登録して続けて使う →</a>';
+}
+function useTryDemo(idx){
+  var btns = document.querySelectorAll('.try-demo');
+  if(btns[idx]){
+    var p = btns[idx].getAttribute('data-demo') || btns[idx].textContent.replace(/^▸\\s*/,'');
+    var inp=document.getElementById('tryInput');
+    if(inp){ inp.value = p; inp.focus(); }
+  }
+}
+async function sendTry(e){
+  e && e.preventDefault();
+  var inp=document.getElementById('tryInput');
+  var btn=document.getElementById('tryBtn');
+  if(!inp || !btn) return;
+  var text = (inp.value||'').trim();
+  if(!text) return;
+  if(tryTurns >= TRY_MAX){ _setStatus(); return; }
+  inp.value=''; inp.disabled=true; btn.disabled=true;
+  _appendMsg('user', text);
+  tryMsgs.push({role:'user', content:text});
+  // thinking indicator
+  var el=document.getElementById('tryMsgs');
+  var t=document.createElement('div'); t.className='try-bub a thinking'; t.textContent='考え中…'; el.appendChild(t); _scrollMsgs();
+  try{
+    var r = await fetch('/api/listing/'+LISTING_ID+'/preview', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({messages: tryMsgs.slice(0,-1), message: text}),
+    });
+    var ct = (r.headers.get('content-type')||'').toLowerCase();
+    if(!ct.includes('application/json')){ throw new Error('通信エラー'); }
+    var data = await r.json();
+    if(t && t.parentNode) t.parentNode.removeChild(t);
+    if(!r.ok){
+      _appendMsg('assistant', data.error||'エラー', 'thinking');
+      if(data.preview_exhausted){ tryTurns = TRY_MAX; _setStatus(); }
+      return;
+    }
+    _appendMsg('assistant', data.reply||'(no reply)');
+    tryMsgs.push({role:'assistant', content:data.reply||''});
+    tryTurns += 1;
+    _setStatus();
+  }catch(err){
+    if(t && t.parentNode) t.parentNode.removeChild(t);
+    _appendMsg('assistant', 'エラー: ' + err.message, 'thinking');
+  } finally {
+    inp.disabled=false; btn.disabled=false; inp.focus();
+    if(tryTurns >= TRY_MAX){ inp.disabled=true; btn.disabled=true; _setStatus(); }
+  }
+}
+_setStatus();
+</script>
 </body>
 </html>`;
     res.writeHead(200,{
@@ -1308,6 +1419,41 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res,404,{error:'Listing not found'});
     }
     return jres(res,200, publicListing(found.user, found.agent));
+  }
+
+  // ── POST /api/listing/:listing_id/preview (public) ─────────
+  // Anonymous chat preview — let visitors try the agent before signing up.
+  // body: {messages: [{role,content}], message: string}
+  // Rate limit: 3 messages per session (client-side + server enforced),
+  // and 10 per IP per hour (server enforced).
+  const prv = pathname.match(/^\/api\/listing\/(ls_[a-z0-9_-]+)\/preview$/);
+  if(prv && method==='POST'){
+    if(!ANTHROPIC) return jres(res,503,{error:'APIキーが設定されていません'});
+    if(!rateLimit('preview:'+ip, 10, 3600000)) return jres(res,429,{error:'プレビュー利用回数の上限です。少し待ってから試してください。'});
+    const found = await findAgentByListingId(prv[1]);
+    if(!found || !found.agent.marketplace.is_listed){
+      return jres(res,404,{error:'Listing not found'});
+    }
+    const body = await readBody(req);
+    const message = String(body.message||'').trim();
+    if(!message) return jres(res,400,{error:'メッセージを入力してください'});
+    if(message.length > 2000) return jres(res,400,{error:'長すぎます（2000文字まで）'});
+    // Cap conversation length to keep token cost bounded
+    const prior = Array.isArray(body.messages) ? body.messages.slice(-6) : [];
+    if(prior.length >= 6) return jres(res,403,{error:'このプレビューは 3 ターンまでです。続けるには無料登録してください。', preview_exhausted:true});
+    const msgs = [...prior, {role:'user', content:message}];
+    try{
+      const d = await callAI(msgs, buildSystem(found.agent));
+      const reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
+      const remaining = Math.max(0, 3 - Math.ceil((prior.length+1)/2));
+      return jres(res,200,{
+        reply,
+        remaining,                   // turns remaining for the visitor
+        preview_exhausted: remaining<=0,
+      });
+    }catch(e){
+      return jres(res,502,{error:'AI応答エラー: '+e.message});
+    }
   }
 
   // ── Auth required below ────────────────────────────────────

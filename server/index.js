@@ -1045,6 +1045,135 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
+  // ── POST /api/marketplace/:listing_id/report ───────────────
+  // body: {reason, detail?}
+  const rpm = pathname.match(/^\/api\/marketplace\/([a-z0-9_-]+)\/report$/);
+  if(rpm && method==='POST'){
+    const body = await readBody(req);
+    const reason = String(body.reason||'').slice(0,40);
+    const detail = String(body.detail||'').slice(0,500);
+    if(!reason) return jres(res,400,{error:'通報理由を選んでください'});
+    const found = await findAgentByListingId(rpm[1]);
+    if(!found) return jres(res,404,{error:'出店が見つかりません'});
+    if(found.user.id === user.id) return jres(res,400,{error:'自分の出店は通報できません'});
+    found.agent.marketplace.reports = found.agent.marketplace.reports || [];
+    // De-dup: one report per user per listing
+    if(found.agent.marketplace.reports.some(r=>r.reporter_user_id===user.id)){
+      return jres(res,200,{ok:true, deduped:true});
+    }
+    found.agent.marketplace.reports.push({
+      date: new Date().toISOString(),
+      reporter_user_id: user.id,
+      reason, detail,
+    });
+    // Auto-takedown threshold: 3 distinct reports
+    if(found.agent.marketplace.reports.length >= 3){
+      found.agent.marketplace.is_listed = false;
+      found.agent.marketplace.status = 'paused';
+      found.agent.marketplace.takedown_reason = 'auto: report threshold';
+    }
+    await DB.save(found.user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── GET /api/admin/reports ─────────────────────────────────
+  // Admins only — surfaces every listing with reports
+  if(pathname==='/api/admin/reports' && method==='GET'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    const all = [];
+    const collect = (users) => {
+      for(const u of users||[]){
+        for(const ag of (u.agents||[])){
+          const m = ag.marketplace;
+          if(m && m.reports && m.reports.length){
+            all.push({
+              listing_id: m.listing_id,
+              title: m.title,
+              creator_user_id: u.id,
+              creator_handle: '@'+(u.email||'').split('@')[0],
+              status: m.status,
+              is_listed: m.is_listed,
+              reports: m.reports,
+              report_count: m.reports.length,
+            });
+          }
+        }
+      }
+    };
+    if(USE_SUPA){
+      const r = await sbReq('GET','users','?select=*&limit=2000');
+      if(Array.isArray(r.d)) collect(r.d);
+    } else {
+      collect(LDB.data||[]);
+    }
+    all.sort((a,b)=>b.report_count - a.report_count);
+    return jres(res,200,{reports: all});
+  }
+
+  // ── POST /api/admin/listings/:listing_id/takedown ──────────
+  const tkm = pathname.match(/^\/api\/admin\/listings\/([a-z0-9_-]+)\/takedown$/);
+  if(tkm && method==='POST'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    const found = await findAgentByListingId(tkm[1]);
+    if(!found) return jres(res,404,{error:'出店が見つかりません'});
+    const body = await readBody(req);
+    found.agent.marketplace.is_listed = false;
+    found.agent.marketplace.status = 'paused';
+    found.agent.marketplace.takedown_reason = String(body.reason||'manual takedown').slice(0,200);
+    found.agent.marketplace.takedown_at = new Date().toISOString();
+    await DB.save(found.user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── POST /api/admin/listings/:listing_id/restore ───────────
+  const rsm = pathname.match(/^\/api\/admin\/listings\/([a-z0-9_-]+)\/restore$/);
+  if(rsm && method==='POST'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    const found = await findAgentByListingId(rsm[1]);
+    if(!found) return jres(res,404,{error:'出店が見つかりません'});
+    found.agent.marketplace.is_listed = true;
+    found.agent.marketplace.status = 'live';
+    found.agent.marketplace.takedown_reason = null;
+    found.agent.marketplace.reports = [];
+    await DB.save(found.user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── GET /api/creators/:handle ──────────────────────────────
+  // Public creator profile: handle → user, returns their listed agents
+  const chm = pathname.match(/^\/api\/creators\/(@?[a-z0-9_.-]+)$/i);
+  if(chm && method==='GET'){
+    const handleRaw = chm[1].replace(/^@/,'').toLowerCase();
+    const matchUser = (users) => {
+      for(const u of users||[]){
+        const handle = (u.email||'').split('@')[0].toLowerCase();
+        if(handle === handleRaw) return u;
+      }
+      return null;
+    };
+    let creator = null;
+    if(USE_SUPA){
+      const r = await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
+      if(Array.isArray(r.d)) creator = matchUser(r.d);
+    } else {
+      creator = matchUser(LDB.data||[]);
+    }
+    if(!creator) return jres(res,404,{error:'クリエイターが見つかりません'});
+    const listings = (creator.agents||[])
+      .filter(a => a.marketplace && a.marketplace.is_listed && a.marketplace.status==='live' && (a.marketplace.visibility||'public')==='public')
+      .map(a => publicListing(creator, a));
+    const totalUses = listings.reduce((s,l)=>s+(l.uses||0), 0);
+    return jres(res,200,{
+      creator: {
+        handle: '@'+(creator.email||'').split('@')[0],
+        name: creator.name || '',
+        joined: creator.created_at || null,
+      },
+      stats: { listings: listings.length, total_uses: totalUses },
+      listings,
+    });
+  }
+
   // ── POST /api/marketplace/:listing_id/clone ────────────────
   // Auth required. Clones a listed agent into the current user's account.
   const mcm = pathname.match(/^\/api\/marketplace\/([a-z0-9_-]+)\/clone$/);

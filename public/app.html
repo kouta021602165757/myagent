@@ -1548,6 +1548,9 @@ body{color:#f0f0f8;}
         <button class="snav-item" data-tab="creator" onclick="switchStab(this,'s-creator')"><span class="snav-ic">🏪</span><span data-i18n="sNavCreator">クリエイター</span><span class="snav-badge" data-i18n="sBadgeNew">NEW</span></button>
         <button class="snav-item" data-tab="data" onclick="switchStab(this,'s-data')"><span class="snav-ic">📦</span><span data-i18n="sNavData">データ</span></button>
 
+        <div class="snav-section" id="snavAdminSec" style="display:none">運営</div>
+        <button class="snav-item" id="snavAdminBtn" data-tab="admin" onclick="switchStab(this,'s-admin')" style="display:none"><span class="snav-ic">🛡</span><span>モデレーション</span></button>
+
         <div class="snav-section" data-i18n="sNavGrpDanger">危険</div>
         <button class="snav-item danger" data-tab="danger" onclick="switchStab(this,'s-danger')"><span class="snav-ic">⚠️</span><span data-i18n="sNavDanger">アカウント削除</span></button>
       </aside>
@@ -1820,6 +1823,21 @@ body{color:#f0f0f8;}
           </section>
         </div>
 
+        <!-- 🛡 モデレーション (admin only) -->
+        <div id="s-admin" class="snav-pane" style="display:none">
+          <h3 class="spane-h">🛡 モデレーション</h3>
+          <div class="spane-sub">通報された出店を確認し、削除/復元します。</div>
+          <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1">通報キュー</span>
+              <button class="btn-ghost" onclick="loadAdminReports()" style="font-size:11.5px;color:var(--text3);font-weight:700;padding:4px 10px;border-radius:6px;background:transparent;border:1px solid var(--wire2);cursor:pointer">↻ 更新</button>
+            </div>
+            <div id="adminReports" class="creator-list">
+              <div class="creator-loading">読み込み中…</div>
+            </div>
+          </section>
+        </div>
+
         <!-- 📦 データ -->
         <div id="s-data" class="snav-pane" style="display:none">
           <h3 class="spane-h" data-i18n="sNavData">データ</h3>
@@ -2011,6 +2029,49 @@ body{color:#f0f0f8;}
 </div>
 <!-- パネル背景オーバーレイ -->
 <div id="editPanelOverlay" onclick="closeEditAgent()" style="display:none;position:fixed;inset:0;background:rgba(45,26,14,.3);z-index:399;backdrop-filter:blur(2px)"></div>
+
+<!-- ══ REPORT LISTING MODAL ════════════════════════════════ -->
+<div class="overlay" id="reportOverlay">
+  <div class="wizard" style="max-width:480px">
+    <div class="wiz-top">
+      <div class="wiz-title">⚠ 出店を通報</div>
+      <button class="wiz-close" onclick="closeReportListing()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body">
+      <div class="step-s">通報対象: <b id="reportTarget"></b></div>
+      <div style="font-size:12px;color:var(--text3);margin:8px 0 14px;line-height:1.6">運営が確認します。3 件以上の通報が集まると自動的に非公開になります。</div>
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">理由 <span style="color:var(--rose)">*</span></label>
+        <div id="reportReasons" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">詳細（任意）</label>
+        <textarea id="reportDetail" rows="3" maxlength="500" placeholder="状況の詳細など" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;font-family:inherit;color:var(--text);box-sizing:border-box;resize:vertical;line-height:1.6"></textarea>
+      </div>
+      <div class="btn-row" style="justify-content:flex-end;gap:10px;margin-top:18px">
+        <button class="btn-back" onclick="closeReportListing()">キャンセル</button>
+        <button class="btn-volt" id="reportSubmitBtn" onclick="submitReportListing()">通報する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CREATOR PROFILE MODAL ══════════════════════════════ -->
+<div class="overlay" id="creatorProfileOverlay">
+  <div class="wizard" style="max-width:780px">
+    <div class="wiz-top">
+      <div class="wiz-title" id="cpTitle">クリエイター</div>
+      <button class="wiz-close" onclick="closeCreatorProfile()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="max-height:75vh;overflow:auto" id="cpBody">
+      <div class="creator-loading">読み込み中…</div>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
 
@@ -2302,6 +2363,11 @@ document.addEventListener('DOMContentLoaded',async()=>{
     me=meData.user||meData;
     // Record this token in the multi-account list (so the switcher shows it)
     try{ _recordCurrentAccount(); }catch(e){}
+    // Reveal admin moderation tab for staff accounts
+    if(me && me.is_admin){
+      var aSec=document.getElementById('snavAdminSec'); if(aSec) aSec.style.display='';
+      var aBtn=document.getElementById('snavAdminBtn'); if(aBtn) aBtn.style.display='';
+    }
     const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
     // Show email verify banner if not verified
@@ -3013,14 +3079,18 @@ function renderMarket(){
     var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
     var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
     var picked = _marketPickedListing===m.listing_id ? ' sel' : '';
-    return '<button type="button" class="market-card'+picked+'" data-id="'+esc(m.listing_id)+'" onclick="pickMarket(\''+esc(m.listing_id)+'\')">'
+    var creatorH = esc(m.creator?.handle||'');
+    return '<div class="market-card-wrap" style="position:relative">'
+      + '<button type="button" class="market-card'+picked+'" data-id="'+esc(m.listing_id)+'" onclick="pickMarket(\''+esc(m.listing_id)+'\')">'
       + ribbon
       + '<div class="mc-head"><div class="mc-av">'+(m.agent?.avatar||'🤖')+'</div>'
       + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
       + '<div class="mc-desc">'+esc(m.description)+'</div>'
-      + '<div class="mc-creator">クリエイター: <b>'+esc(m.creator?.handle||'')+'</b></div>'
+      + '<div class="mc-creator">クリエイター: <a href="javascript:void(0)" onclick="event.stopPropagation();openCreatorProfile(\''+creatorH+'\')" style="color:var(--peach-dark);text-decoration:none;font-weight:700">'+creatorH+'</a></div>'
       + '<div class="mc-meta">'+stars+'<span>'+uses+'</span></div>'
-      + '</button>';
+      + '</button>'
+      + '<button class="mc-report" title="この出店を通報" onclick="openReportListing(\''+esc(m.listing_id)+'\',\''+esc(m.title).replace(/\\|\x27/g,"\\$&")+'\')" style="position:absolute;top:8px;left:8px;background:rgba(255,255,255,.9);border:1px solid var(--wire2);width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--text3);z-index:2">⚠</button>'
+      + '</div>';
   }).join('');
 }
 function pickMarket(listingId){
@@ -3729,7 +3799,7 @@ function switchStab(btn, tabId){
   // Support both the new side-nav (.snav-item) and any leftover .stab-btn
   document.querySelectorAll('.snav-item, .stab-btn').forEach(b=>{b.classList.remove('active');b.classList.remove('active-stab');});
   if(btn) btn.classList.add('active');
-  var TAB_IDS=['s-account','s-security','s-notif','s-billing','s-prefs','s-creator','s-data','s-danger',
+  var TAB_IDS=['s-account','s-security','s-notif','s-billing','s-prefs','s-creator','s-data','s-admin','s-danger',
                's-profile' /* legacy */];
   TAB_IDS.forEach(function(id){
     var el=document.getElementById(id);
@@ -3741,6 +3811,60 @@ function switchStab(btn, tabId){
   if(tabId==='s-notif') initNotifToggles();
   if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
   if(tabId==='s-creator') loadCreatorDashboard();
+  if(tabId==='s-admin') loadAdminReports();
+}
+
+async function loadAdminReports(){
+  var el = document.getElementById('adminReports');
+  if(!el) return;
+  el.innerHTML = '<div class="creator-loading">読み込み中…</div>';
+  try{
+    var r = await api('GET','/api/admin/reports');
+    var reports = r.reports||[];
+    if(!reports.length){
+      el.innerHTML = '<div class="creator-empty">通報はありません 🎉</div>';
+      return;
+    }
+    el.innerHTML = reports.map(function(rep){
+      var reasonsHtml = rep.reports.map(function(rr){
+        var dt = new Date(rr.date);
+        return '<div style="font-size:11.5px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--wire)"><b>'+esc(rr.reason)+'</b> · '+ (dt.getMonth()+1)+'/'+dt.getDate() + (rr.detail ? ' — '+esc(rr.detail.slice(0,200)) : '') +'</div>';
+      }).join('');
+      var statusBadge = rep.is_listed ? '<span class="cl-st live">● 公開中</span>' : '<span class="cl-st paused">⏸ 停止中</span>';
+      return '<div class="cl-row" style="flex-direction:column;align-items:stretch;gap:10px">'
+        + '<div style="display:flex;align-items:center;gap:10px">'
+          + '<div style="flex:1;min-width:0"><div class="cl-name">'+esc(rep.title||'')+'</div>'
+          + '<div class="cl-sub"><span>クリエイター: '+esc(rep.creator_handle||'')+'</span>'+statusBadge+'<span style="color:var(--rose);font-weight:800">通報 '+rep.report_count+' 件</span></div></div>'
+        + '<div class="cl-actions">'
+          + (rep.is_listed
+              ? '<button class="pri" style="background:var(--rose);border-color:var(--rose)" onclick="adminTakedown(\''+esc(rep.listing_id)+'\')">取り下げ</button>'
+              : '<button class="pri" onclick="adminRestore(\''+esc(rep.listing_id)+'\')">復元</button>'
+            )
+        + '</div>'
+        + '</div>'
+        + '<div style="background:var(--cream);border-radius:8px;padding:8px 12px">'+reasonsHtml+'</div>'
+      + '</div>';
+    }).join('');
+  }catch(e){
+    el.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗: '+esc(e.message||'')+'</div>';
+  }
+}
+async function adminTakedown(listingId){
+  var reason = prompt('取り下げ理由（任意・運営記録用）');
+  if(reason===null) return;
+  try{
+    await api('POST','/api/admin/listings/'+listingId+'/takedown',{reason});
+    showToast('取り下げました','ok');
+    loadAdminReports();
+  }catch(e){ showToast(e.message||'失敗','ng'); }
+}
+async function adminRestore(listingId){
+  if(!confirm('この出店を復元（再公開）しますか？通報履歴はクリアされます')) return;
+  try{
+    await api('POST','/api/admin/listings/'+listingId+'/restore');
+    showToast('復元しました','ok');
+    loadAdminReports();
+  }catch(e){ showToast(e.message||'失敗','ng'); }
 }
 
 async function loadCreatorDashboard(){
@@ -3834,6 +3958,108 @@ async function loadCreatorDashboard(){
     }).join('');
   }catch(e){
     listEl.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
+  }
+}
+
+/* ── Report listing ─────────────────────────────────────────── */
+var REPORT_REASONS = [
+  {id:'spam',      label:'スパム / 自動投稿'},
+  {id:'misleading',label:'誤解を招く説明'},
+  {id:'ip',        label:'他者の知的財産・著作権侵害'},
+  {id:'illegal',   label:'違法 / 有害コンテンツ'},
+  {id:'unsafe',    label:'危険・差別的内容'},
+  {id:'duplicate', label:'重複出店'},
+  {id:'other',     label:'その他'},
+];
+var _reportTargetId = null;
+function openReportListing(listingId, listingTitle){
+  _reportTargetId = listingId;
+  document.getElementById('reportTarget').textContent = listingTitle || '';
+  var box = document.getElementById('reportReasons');
+  box.innerHTML = REPORT_REASONS.map(function(r){
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--wire3);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text);background:#fff"><input type="radio" name="reportReason" value="'+r.id+'" style="margin:0">'+esc(r.label)+'</label>';
+  }).join('');
+  document.getElementById('reportDetail').value = '';
+  document.getElementById('reportOverlay').classList.add('open');
+}
+function closeReportListing(){
+  document.getElementById('reportOverlay').classList.remove('open');
+  _reportTargetId = null;
+}
+async function submitReportListing(){
+  if(!_reportTargetId) return;
+  var reasonEl = document.querySelector('input[name="reportReason"]:checked');
+  if(!reasonEl){ showToast('理由を選んでください','ng'); return; }
+  var detail = document.getElementById('reportDetail').value.trim();
+  var btn = document.getElementById('reportSubmitBtn');
+  btn.disabled = true; btn.textContent = '送信中…';
+  try{
+    await api('POST','/api/marketplace/'+_reportTargetId+'/report',{ reason: reasonEl.value, detail });
+    showToast('通報を送信しました。ご協力ありがとうございます','ok');
+    closeReportListing();
+  }catch(e){
+    showToast(e.message||'通報に失敗しました','ng');
+  } finally {
+    btn.disabled = false; btn.textContent = '通報する';
+  }
+}
+
+/* ── Creator profile modal ──────────────────────────────────── */
+async function openCreatorProfile(handle){
+  if(!handle) return;
+  document.getElementById('cpTitle').textContent = handle;
+  var body = document.getElementById('cpBody');
+  body.innerHTML = '<div class="creator-loading">読み込み中…</div>';
+  document.getElementById('creatorProfileOverlay').classList.add('open');
+  try{
+    var r = await api('GET','/api/creators/'+encodeURIComponent(handle));
+    var c = r.creator || {};
+    var s = r.stats || {};
+    var listings = r.listings || [];
+    var joined = c.joined ? new Date(c.joined).toISOString().slice(0,10) : '';
+    body.innerHTML = ''
+      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.2);border-radius:14px;margin-bottom:18px">'
+        + '<div style="width:54px;height:54px;border-radius:14px;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900">'+esc((c.handle||'@?').charAt(1).toUpperCase())+'</div>'
+        + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:18px;font-weight:900;color:var(--text)">'+esc(c.handle||'')+'</div>'
+          + (c.name ? '<div style="font-size:12.5px;color:var(--text2);font-weight:600;margin-top:2px">'+esc(c.name)+'</div>' : '')
+          + '<div style="font-size:11.5px;color:var(--text3);font-weight:600;margin-top:6px">出店 '+(s.listings||0)+' 件 ・ 累計利用 '+(s.total_uses||0).toLocaleString()+' 回'+(joined ? ' ・ '+joined+' から':'')+'</div>'
+        + '</div>'
+      + '</div>';
+    if(!listings.length){
+      body.innerHTML += '<div class="creator-empty">このクリエイターはまだエージェントを公開していません</div>';
+      return;
+    }
+    body.innerHTML += '<div class="market-grid">' + listings.map(function(m){
+      var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
+      var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
+      return '<button class="market-card" onclick="cloneFromProfile(\''+esc(m.listing_id)+'\')">'
+        + '<div class="mc-head"><div class="mc-av">'+(m.agent?.avatar||'🤖')+'</div>'
+        + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
+        + '<div class="mc-desc">'+esc(m.description)+'</div>'
+        + '<div class="mc-meta">'+stars+'<span>'+uses+'</span></div>'
+        + '</button>';
+    }).join('') + '</div>';
+  }catch(e){
+    body.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
+  }
+}
+function closeCreatorProfile(){
+  document.getElementById('creatorProfileOverlay').classList.remove('open');
+}
+async function cloneFromProfile(listingId){
+  try{
+    var r = await api('POST','/api/marketplace/'+listingId+'/clone');
+    if(r.agent){
+      agents.push({...r.agent, history:[]});
+      activeId = r.agent.id;
+      closeCreatorProfile();
+      renderAgList();
+      openAgent(r.agent.id);
+      showToast('チームに追加しました','ok');
+    }
+  }catch(e){
+    showToast(e.message||'追加に失敗しました','ng');
   }
 }
 

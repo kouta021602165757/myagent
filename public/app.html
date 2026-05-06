@@ -242,6 +242,42 @@ input,textarea{font-family:var(--sans);}
 .m-name{font-weight:700;color:var(--text2);}
 .m-time{color:var(--text3);}
 
+/* ── Creator dashboard tab ──────────────────────────────────── */
+.creator-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px;}
+.ck{background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:13px 16px;}
+.ck-lbl{font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+.ck-val{font-size:21px;font-weight:900;color:var(--text);font-feature-settings:'tnum';line-height:1.1;}
+
+.creator-list{display:flex;flex-direction:column;gap:10px;}
+.creator-loading,.creator-empty{padding:30px 16px;text-align:center;color:var(--text3);font-size:13px;font-weight:600;background:var(--cream);border:1px dashed var(--wire2);border-radius:12px;}
+.creator-empty b{color:var(--peach-dark);}
+.cl-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--wire2);border-radius:12px;}
+.cl-av{width:38px;height:38px;border-radius:9px;background:var(--cream3);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.cl-meta{flex:1;min-width:0;}
+.cl-name{font-weight:800;font-size:13.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cl-sub{font-size:11.5px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cl-st{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:8px;letter-spacing:.04em;}
+.cl-st.live{background:rgba(16,185,129,.12);color:#10b981;}
+.cl-st.paused{background:rgba(154,106,74,.12);color:var(--text3);}
+.cl-st.review{background:rgba(245,158,11,.12);color:#f59e0b;}
+.cl-st.draft{background:rgba(108,117,125,.12);color:var(--text3);}
+.cl-actions{display:flex;gap:6px;}
+.cl-actions button{padding:7px 12px;border-radius:7px;font-size:11.5px;font-weight:700;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);cursor:pointer;font-family:inherit;}
+.cl-actions button:hover{background:var(--cream3);color:var(--text);}
+.cl-actions .pri{background:var(--peach);color:#fff;border-color:var(--peach);}
+.cl-actions .pri:hover{background:var(--peach-dark);border-color:var(--peach-dark);}
+
+.creator-flow{display:flex;flex-direction:column;gap:10px;}
+.cf-step{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--wire2);border-radius:11px;font-size:13px;color:var(--text);}
+.cf-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;}
+.cf-d{font-size:11.5px;color:var(--text3);font-weight:600;line-height:1.55;margin-top:3px;}
+
+.creator-help{display:flex;flex-direction:column;gap:8px;}
+.ch-item{padding:12px 14px;background:var(--cream);border:1px solid var(--wire2);border-radius:11px;}
+.ch-q{font-weight:800;font-size:12.5px;color:var(--text);margin-bottom:4px;}
+.ch-a{font-size:11.5px;color:var(--text2);line-height:1.65;}
+.ch-a b{color:var(--peach-dark);}
+
 /* ── Marketplace ────────────────────────────────────────────── */
 .market-bar{display:flex;gap:10px;margin:14px 0 10px;}
 .market-search{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire3);border-radius:10px;padding:9px 14px;}
@@ -1701,20 +1737,53 @@ body{color:#f0f0f8;}
 
         <!-- 🏪 クリエイター -->
         <div id="s-creator" class="snav-pane" style="display:none">
-          <h3 class="spane-h"><span data-i18n="sNavCreator">クリエイター</span> <span class="s-pill s-pill-info" data-i18n="sBadgeComing">Coming Soon</span></h3>
-          <div class="spane-sub" data-i18n="sCreatorSub">作ったエージェントをマーケットプレイスで販売できるようになります。</div>
+          <h3 class="spane-h">🏪 クリエイター</h3>
+          <div class="spane-sub">作ったエージェントを出店して、利用料の 10% を収益として受け取ります。</div>
 
-          <div class="s-cs-card">
-            <h4 data-i18n="sCreatorH">あなたのエージェントを世界へ販売 🚀</h4>
-            <p data-i18n="sCreatorBody">BtoB営業AI、コピーライターAI、リサーチャーAI ── あなたが作りこんだエージェントを公開して、世界中のユーザーに使ってもらいましょう。<b>従量課金の10%</b>がクリエイター報酬として還元されます。</p>
-            <div class="s-cs-feats">
-              <div class="s-cs-ft" data-i18n="sCreatorFt1">エージェントを公開してSNSで宣伝</div>
-              <div class="s-cs-ft" data-i18n="sCreatorFt2">使われた分だけ自動的に報酬発生</div>
-              <div class="s-cs-ft" data-i18n="sCreatorFt3">Stripe Connect で安全に出金</div>
-              <div class="s-cs-ft" data-i18n="sCreatorFt4">月次レポートで利用状況を可視化</div>
-            </div>
-            <button class="btn-primary" id="sCreatorPre" onclick="preregisterCreator()" data-i18n="sCreatorCta">事前登録（早期アクセス）</button>
+          <!-- KPIs -->
+          <div class="creator-kpis" id="creatorKpis">
+            <div class="ck"><div class="ck-lbl">出店中</div><div class="ck-val" id="ckListed">—</div></div>
+            <div class="ck"><div class="ck-lbl">累計利用回数</div><div class="ck-val" id="ckUses">—</div></div>
+            <div class="ck"><div class="ck-lbl">利用可能残高</div><div class="ck-val" id="ckBalance">—</div></div>
+            <div class="ck"><div class="ck-lbl">累計収益（推定）</div><div class="ck-val" id="ckEarnings">—</div></div>
           </div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1">マイ出店</span>
+              <button class="btn-ghost" onclick="loadCreatorDashboard()" style="font-size:11.5px;color:var(--text3);font-weight:700;padding:4px 10px;border-radius:6px;background:transparent;border:1px solid var(--wire2);cursor:pointer">↻ 更新</button>
+            </div>
+            <div id="creatorList" class="creator-list">
+              <div class="creator-loading">読み込み中…</div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">出店フロー</div>
+            <div class="creator-flow">
+              <div class="cf-step"><span class="cf-num">1</span><div><b>エージェントを編集</b><div class="cf-d">サイドバーで対象エージェントを開き、⚙ から編集パネルを表示</div></div></div>
+              <div class="cf-step"><span class="cf-num">2</span><div><b>「🏪 マーケットに出店」を開く</b><div class="cf-d">編集パネル内のオレンジ枠から出店フォームへ</div></div></div>
+              <div class="cf-step"><span class="cf-num">3</span><div><b>公開情報を入力 → 公開</b><div class="cf-d">タイトル・説明・カテゴリを入れて出店すると、即座にマーケットに掲載</div></div></div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">クリエイターサポート</div>
+            <div class="creator-help">
+              <div class="ch-item">
+                <div class="ch-q">💰 収益還元はいつ確定？</div>
+                <div class="ch-a">利用者が支払う AI 利用料の <b>10%</b> が、利用ごとに「未確定残高」に計上され、7 日後に「利用可能残高」に確定します。</div>
+              </div>
+              <div class="ch-item">
+                <div class="ch-q">💴 出金はいつできる？</div>
+                <div class="ch-a">利用可能残高が <b>¥1,000</b> に到達すると Stripe Connect 経由で出金可能になります（出金機能は近日リリース）。</div>
+              </div>
+              <div class="ch-item">
+                <div class="ch-q">📜 公開ガイドライン</div>
+                <div class="ch-a">他者の知的財産・個人情報を扱うエージェント、違法/有害コンテンツの生成に特化したエージェントは公開禁止。違反が見つかった場合は即座に取り下げられます。</div>
+              </div>
+            </div>
+          </section>
         </div>
 
         <!-- 📦 データ -->
@@ -3637,6 +3706,53 @@ function switchStab(btn, tabId){
   if(tabId==='s-security') { renderLinkedAccounts(); renderSessionInfo(); }
   if(tabId==='s-notif') initNotifToggles();
   if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
+  if(tabId==='s-creator') loadCreatorDashboard();
+}
+
+async function loadCreatorDashboard(){
+  var listEl = document.getElementById('creatorList');
+  if(listEl) listEl.innerHTML = '<div class="creator-loading">読み込み中…</div>';
+  // Reset KPIs
+  ['ckListed','ckUses','ckBalance','ckEarnings'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.textContent = '—';
+  });
+
+  try{
+    var r = await api('GET','/api/marketplace/listings/mine');
+    var listings = r.listings || [];
+    var listed = listings.filter(function(l){return l.is_listed;}).length;
+    var totalUses = listings.reduce(function(s,l){return s+(l.uses_count||0);},0);
+    // Estimated earnings: avg revenue ¥150 per use × 10% (placeholder until #5 real ledger)
+    var estEarnings = Math.round(totalUses * 15);
+
+    document.getElementById('ckListed').textContent = listed;
+    document.getElementById('ckUses').textContent = totalUses.toLocaleString();
+    document.getElementById('ckBalance').textContent = '¥0';
+    document.getElementById('ckEarnings').textContent = '¥' + estEarnings.toLocaleString();
+
+    if(!listings.length){
+      listEl.innerHTML = '<div class="creator-empty">まだ出店していません。<br>サイドバーでエージェントを開いて <b>⚙ 編集 → 🏪 マーケットに出店</b> から出店できます。</div>';
+      return;
+    }
+    listEl.innerHTML = listings.map(function(l){
+      var stCls = l.is_listed ? 'live' : (l.status==='paused' ? 'paused' : 'draft');
+      var stLbl = l.is_listed ? '● 公開中' : (l.status==='paused' ? '⏸ 停止中' : '— 未公開');
+      var visIc = l.visibility==='unlisted' ? '🔗' : '🌐';
+      return '<div class="cl-row">'
+        + '<div class="cl-av">'+(l.agent_avatar||'🤖')+'</div>'
+        + '<div class="cl-meta">'
+          + '<div class="cl-name">'+esc(l.title||l.agent_name||'')+'</div>'
+          + '<div class="cl-sub"><span class="cl-st '+stCls+'">'+stLbl+'</span><span>'+visIc+' '+(l.visibility==='unlisted'?'限定':'公開')+'</span><span>利用 '+(l.uses_count||0)+' 回</span></div>'
+        + '</div>'
+        + '<div class="cl-actions">'
+          + '<button onclick="openListingForm(\''+esc(l.agent_id)+'\')">編集</button>'
+          + (l.is_listed ? '<button class="pri" onclick="navigator.clipboard.writeText(location.origin+\'/?listing=\'+\''+esc(l.listing_id)+'\');showToast(\'出店リンクをコピーしました\',\'ok\')">共有</button>' : '<button class="pri" onclick="openListingForm(\''+esc(l.agent_id)+'\')">公開</button>')
+        + '</div>'
+      + '</div>';
+    }).join('');
+  }catch(e){
+    listEl.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
+  }
 }
 
 async function loadBilling(){

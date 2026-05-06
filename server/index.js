@@ -329,7 +329,7 @@ const SKILL_MAP={
 };
 function buildSystem(agent){
   const chromeNote = agent.chrome_enabled
-    ? `\nツール：ユーザーは Chrome 連携を有効化しています。Webサイト調査やフォーム入力など、ブラウザ操作が必要な作業の手順を具体的に示してください（実際のブラウザ操作は近日対応予定）。`
+    ? `\nツール：このエージェントは Google Chrome 連携が有効です。Webサイトの調査・フォーム入力・情報収集など、ブラウザ操作が必要な作業の手順を具体的に示してください。ユーザーが Google Chrome 以外のブラウザを使っている場合は動作しない旨を案内してください。`
     : '';
   return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }

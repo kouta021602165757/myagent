@@ -1106,14 +1106,14 @@ body{color:#f0f0f8;}
           <textarea class="per-ta" id="wDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" style="min-height:120px"></textarea>
         </div>
 
-        <!-- Tools / Chrome integration -->
+        <!-- Tools / Google Chrome integration -->
         <div style="margin-top:6px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
           <div style="display:flex;align-items:flex-start;gap:12px">
-            <div style="flex:1">
-              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Chrome連携 <span style="font-size:10px;background:var(--cream3);color:var(--text3);padding:2px 8px;border-radius:999px;font-weight:700;border:1px solid var(--wire2)">Coming Soon</span></div>
-              <div style="font-size:12px;color:var(--text3);margin-top:3px;line-height:1.5">Webサイトの調査・フォーム入力・情報収集など、ブラウザ操作が必要な業務に対応します</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Google Chrome 連携</div>
+              <div id="wChromeDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
             </div>
-            <button type="button" class="s-sw" id="wChromeSw" onclick="this.classList.toggle('on');NA.chrome_enabled=this.classList.contains('on')"></button>
+            <button type="button" class="s-sw" id="wChromeSw" onclick="toggleWizardChrome()"></button>
           </div>
         </div>
 
@@ -1591,11 +1591,11 @@ body{color:#f0f0f8;}
     </div>
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Chrome連携 <span style="font-size:10px;background:var(--cream3);color:var(--text3);padding:2px 7px;border-radius:999px;font-weight:700;border:1px solid var(--wire2)">Coming Soon</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;line-height:1.5">Webサイトの調査・情報収集が必要な業務に対応</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Google Chrome 連携</div>
+          <div id="editChromeDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
         </div>
-        <button type="button" class="s-sw" id="editChromeSw" onclick="this.classList.toggle('on')"></button>
+        <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
       </div>
     </div>
     <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
@@ -1962,7 +1962,7 @@ function renderAgList(){
         <div class="ag-name">${esc(a.name)}</div>
         <div class="ag-skill">${a.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')}</div>
       </div>
-      ${a.chrome_enabled?'<span title="Chrome連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="chrome">🌐</span>':''}
+      ${a.chrome_enabled?'<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>':''}
       <div class="live-dot"></div>
     </div>`).join('');
 }
@@ -1979,7 +1979,9 @@ function openAgent(id){
   const sns=ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
   var topPills = sns.map(n=>`<span class="pill">${n}</span>`).join('');
   if(ag.chrome_enabled){
-    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="Chrome連携 ON">🌐 Chrome</span>';
+    var chromeLbl = _isGoogleChrome() ? '🌐 Google Chrome' : '⚠ Google Chrome';
+    var chromeTitle = _isGoogleChrome() ? 'Google Chrome 連携 ON' : '連携 ON（このブラウザでは動作しません）';
+    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+chromeTitle+'">'+chromeLbl+'</span>';
   }
   document.getElementById('chatTop').innerHTML=`
     <div class="ct-icon">${ag.avatar}</div>
@@ -2136,7 +2138,7 @@ function _resetWizardState(){
   document.querySelectorAll('.preset-card').forEach(function(b){b.classList.remove('sel');});
   var useBtn=document.getElementById('usePresetBtn');
   if(useBtn){ useBtn.disabled=true; useBtn.style.opacity='.5'; useBtn.style.cursor='not-allowed'; }
-  var sw=document.getElementById('wChromeSw'); if(sw) sw.classList.remove('on');
+  if(typeof _renderChromeStatus==='function') _renderChromeStatus('wChromeSw','wChromeDesc',false);
 }
 function openNewAgent(){
   _wizardMode='new';
@@ -2190,7 +2192,7 @@ function useSelectedPreset(){
   document.querySelectorAll('.sk-card').forEach(function(b,i){
     b.classList.toggle('sel',p.skills.indexOf(SKILLS[i].id)>=0);
   });
-  var sw=document.getElementById('wChromeSw'); if(sw) sw.classList.toggle('on', !!p.chrome_enabled);
+  if(typeof _renderChromeStatus==='function') _renderChromeStatus('wChromeSw','wChromeDesc',!!p.chrome_enabled);
   buildConf();
   wStep(6);
 }
@@ -2211,6 +2213,78 @@ function _parsePersona(persona){
   else { p.duties=persona; }
   return p;
 }
+/* ── Google Chrome integration helpers ─────────────────────── */
+function _isGoogleChrome(){
+  var ua=navigator.userAgent||'';
+  // Exclude other Chromium-based browsers that masquerade as Chrome
+  if(/Edg\//.test(ua)||/OPR\//.test(ua)||/OPiOS\//.test(ua)) return false;
+  if(/Brave/.test(ua)) return false;
+  if(navigator.brave && navigator.brave.isBrave) return false;
+  return /Chrome\//.test(ua) && /Google Inc/.test(navigator.vendor||'');
+}
+function _browserName(){
+  var ua=navigator.userAgent||'';
+  if(/Edg\//.test(ua)) return 'Microsoft Edge';
+  if(/OPR\//.test(ua)) return 'Opera';
+  if(/Firefox\//.test(ua)) return 'Firefox';
+  if(/Safari\//.test(ua) && !/Chrome\//.test(ua)) return 'Safari';
+  if(/Chrome\//.test(ua)) return isJa?'Chromium 系ブラウザ':'a Chromium-based browser';
+  return isJa ? 'お使いのブラウザ' : 'your browser';
+}
+function _renderChromeStatus(swId, descId, enabled){
+  var sw=document.getElementById(swId);
+  var desc=document.getElementById(descId);
+  if(!sw||!desc) return;
+  var supported=_isGoogleChrome();
+  sw.classList.toggle('on', !!enabled);
+  if(!supported && enabled){
+    desc.innerHTML='<span style="color:#d97706;font-weight:700">⚠ '+
+      (isJa
+        ?'連携設定済み — 現在のブラウザ「'+_browserName()+'」では動作しません。Google Chrome から開いてください。'
+        :'Enabled, but won\'t run in '+_browserName()+'. Please open this site in Google Chrome.')+
+      '</span>';
+  } else if(!supported){
+    desc.innerHTML='<span style="color:var(--rose);font-weight:700">⚠ '+
+      (isJa
+        ?'Google Chrome のみ対応（現在: '+_browserName()+'）'
+        :'Google Chrome only (currently '+_browserName()+')')+
+      '</span>';
+  } else if(enabled){
+    desc.innerHTML='<span style="color:#10b981;font-weight:700">✓ '+
+      (isJa?'連携中':'Connected')+
+      '</span> — '+
+      (isJa?'Webサイトの調査・フォーム入力・情報収集に対応します':'Web research, form filling and info gathering enabled');
+  } else {
+    desc.textContent = isJa
+      ? 'Webサイトの調査・フォーム入力・情報収集など、ブラウザ操作が必要な業務に対応します'
+      : 'Enable to allow web research, form filling, and info gathering';
+  }
+}
+function toggleWizardChrome(){
+  var sw=document.getElementById('wChromeSw');
+  if(!sw) return;
+  var willEnable=!sw.classList.contains('on');
+  if(willEnable && !_isGoogleChrome()){
+    showToast(isJa?'Google Chrome から開いてください':'Open in Google Chrome to enable','ng');
+    // re-render to refresh the warning text
+    _renderChromeStatus('wChromeSw','wChromeDesc',NA.chrome_enabled);
+    return;
+  }
+  NA.chrome_enabled=willEnable;
+  _renderChromeStatus('wChromeSw','wChromeDesc',willEnable);
+}
+function toggleEditChrome(){
+  var sw=document.getElementById('editChromeSw');
+  if(!sw) return;
+  var willEnable=!sw.classList.contains('on');
+  if(willEnable && !_isGoogleChrome()){
+    showToast(isJa?'Google Chrome から開いてください':'Open in Google Chrome to enable','ng');
+    _renderChromeStatus('editChromeSw','editChromeDesc',sw.classList.contains('on'));
+    return;
+  }
+  _renderChromeStatus('editChromeSw','editChromeDesc',willEnable);
+}
+
 function _composePersona(purpose,duties){
   purpose=(purpose||'').trim(); duties=(duties||'').trim();
   if(!purpose && !duties) return '';
@@ -2230,8 +2304,7 @@ function openEditAgent(id){
   var parsed=_parsePersona(ag.persona);
   document.getElementById('editPurpose').value = parsed.purpose;
   document.getElementById('editDuties').value = parsed.duties;
-  var sw=document.getElementById('editChromeSw');
-  if(sw) sw.classList.toggle('on', !!ag.chrome_enabled);
+  if(typeof _renderChromeStatus==='function') _renderChromeStatus('editChromeSw','editChromeDesc',!!ag.chrome_enabled);
   document.getElementById('editPanel').style.right = '0';
   document.getElementById('editPanelOverlay').style.display = 'block';
 }
@@ -2347,7 +2420,7 @@ function wStep(n){
 function buildConf(){
   const sns=NA.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
   var pills=sns.map(n=>`<span class="pill">${n}</span>`).join('');
-  if(NA.chrome_enabled) pills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)">🌐 Chrome連携</span>';
+  if(NA.chrome_enabled) pills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)">🌐 Google Chrome 連携</span>';
   document.getElementById('confHero').innerHTML=`
     <div class="conf-ic">${NA.avatar}</div>
     <div><div class="conf-nm">${esc(NA.name)}</div>

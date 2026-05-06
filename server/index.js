@@ -165,8 +165,61 @@ function safe(u){const{password:_,verify_token:__,reset_token:___,reset_expiry:_
 function newUser(base){
   return{id:crypto.randomUUID(),plan:'free',balance_jpy:0,usage_count:0,
     agents:[],billing_history:[],stripe_customer_id:null,
+    // Creator revenue ledger (#5)
+    balance_jpy_pending:0,         // 7日経過前の未確定収益
+    balance_jpy_available:0,       // 出金可能な確定収益
+    revenue_history:[],            // {date, listing_id, agent_name, buyer_user_id, cost_jpy, share_jpy, status:'pending'|'confirmed', confirms_at}
+    payout_history:[],             // {date, amount_jpy, method, status, stripe_payout_id}
     verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
+}
+
+/* ── Creator revenue helpers (#5) ───────────────────────────── */
+const REVENUE_SHARE_RATE = 0.10;   // 10% to creator
+const PENDING_DAYS = 7;
+function _r3(n){ return Math.round(n*1000)/1000; }
+
+/** Move any confirmed pending revenue into available. Mutates user. */
+function reconcilePending(user){
+  if(!user || !Array.isArray(user.revenue_history)) return;
+  const now = Date.now();
+  let movedJpy = 0;
+  for(const r of user.revenue_history){
+    if(r.status==='pending' && r.confirms_at && new Date(r.confirms_at).getTime() <= now){
+      r.status = 'confirmed';
+      r.confirmed_at = new Date().toISOString();
+      movedJpy = _r3(movedJpy + (r.share_jpy||0));
+    }
+  }
+  if(movedJpy > 0){
+    user.balance_jpy_pending  = _r3((user.balance_jpy_pending||0)  - movedJpy);
+    user.balance_jpy_available= _r3((user.balance_jpy_available||0)+ movedJpy);
+    if(user.balance_jpy_pending < 0) user.balance_jpy_pending = 0;
+  }
+}
+
+/** Credit a creator for a buyer's chat. Saves the creator. */
+async function creditCreatorRevenue(creatorUserId, meta){
+  if(!creatorUserId || !meta || !(meta.cost_jpy>0)) return;
+  if(creatorUserId === meta.buyer_user_id) return; // shouldn't happen, defensive
+  const creator = await DB.findBy('id', creatorUserId);
+  if(!creator) return;
+  const share = _r3(meta.cost_jpy * REVENUE_SHARE_RATE);
+  if(share <= 0) return;
+  creator.balance_jpy_pending = _r3((creator.balance_jpy_pending||0) + share);
+  creator.revenue_history = creator.revenue_history || [];
+  creator.revenue_history.push({
+    date: new Date().toISOString(),
+    listing_id: meta.listing_id,
+    agent_name: meta.agent_name,
+    buyer_user_id: meta.buyer_user_id,
+    cost_jpy: meta.cost_jpy,
+    share_jpy: share,
+    status: 'pending',
+    confirms_at: new Date(Date.now() + PENDING_DAYS*86400000).toISOString(),
+  });
+  if(creator.revenue_history.length>2000) creator.revenue_history = creator.revenue_history.slice(-2000);
+  await DB.save(creator);
 }
 
 // ── HTTPS REQUEST ─────────────────────────────────────────────
@@ -800,6 +853,12 @@ async function handleAPI(req,res,pathname,method,ip){
   if(!claims)return jres(res,401,{error:'認証が必要です'});
   const user=await DB.findBy('id',claims.userId);
   if(!user)return jres(res,401,{error:'ユーザーが見つかりません'});
+  // Promote any pending creator revenue past the 7-day hold
+  if(user.revenue_history && user.revenue_history.length){
+    const before = user.balance_jpy_available || 0;
+    reconcilePending(user);
+    if((user.balance_jpy_available||0) !== before) await DB.save(user);
+  }
 
   // ── GET /api/me ────────────────────────────────────────────
   if(pathname==='/api/me'&&method==='GET')return jres(res,200,{user:safe(user)});
@@ -883,6 +942,63 @@ async function handleAPI(req,res,pathname,method,ip){
       ...a.marketplace,
     }));
     return jres(res,200,{listings: mine});
+  }
+
+  // ── GET /api/creator/earnings ──────────────────────────────
+  // Returns: pending / available / total / daily timeline / per-agent (this month) / recent feed
+  if(pathname==='/api/creator/earnings' && method==='GET'){
+    const rh = user.revenue_history || [];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Daily totals (last 30 days)
+    const daily = [];
+    for(let i=29; i>=0; i--){
+      const d = new Date(today.getTime() - i*86400000);
+      daily.push({
+        date: d.toISOString().slice(0,10),
+        share_jpy: 0,
+        uses: 0,
+      });
+    }
+    const dayIdx = {};
+    daily.forEach((d,i)=>{ dayIdx[d.date]=i; });
+
+    // Aggregations
+    const byAgent = {};                      // {agent_name: {share, uses}}
+    let total = 0, thisMonth = 0;
+
+    for(const r of rh){
+      const dt = new Date(r.date);
+      const key = dt.toISOString().slice(0,10);
+      total += r.share_jpy || 0;
+      if(dt >= monthStart) thisMonth += r.share_jpy || 0;
+      if(dayIdx[key] !== undefined){
+        daily[dayIdx[key]].share_jpy = _r3(daily[dayIdx[key]].share_jpy + (r.share_jpy||0));
+        daily[dayIdx[key]].uses += 1;
+      }
+      const an = r.agent_name || '(不明)';
+      if(!byAgent[an]) byAgent[an] = {agent_name:an, share_jpy:0, uses:0, this_month_jpy:0, this_month_uses:0};
+      byAgent[an].share_jpy = _r3(byAgent[an].share_jpy + (r.share_jpy||0));
+      byAgent[an].uses += 1;
+      if(dt >= monthStart){
+        byAgent[an].this_month_jpy = _r3(byAgent[an].this_month_jpy + (r.share_jpy||0));
+        byAgent[an].this_month_uses += 1;
+      }
+    }
+
+    return jres(res,200,{
+      balance_pending: _r3(user.balance_jpy_pending||0),
+      balance_available: _r3(user.balance_jpy_available||0),
+      total_earned: _r3(total),
+      this_month: _r3(thisMonth),
+      revenue_share_rate: REVENUE_SHARE_RATE,
+      pending_days: PENDING_DAYS,
+      daily,
+      by_agent: Object.values(byAgent).sort((a,b)=>b.share_jpy-a.share_jpy),
+      recent: rh.slice(-30).reverse(),
+    });
   }
 
   // ── POST /api/marketplace/listings ─────────────────────────
@@ -1178,6 +1294,15 @@ async function handleAPI(req,res,pathname,method,ip){
     const ai=user.agents.findIndex(a=>a.id===agent.id);
     if(ai>=0)user.agents[ai]=agent;
     await DB.save(user);
+    // Credit the marketplace creator (#5 revenue ledger) — fire-and-forget
+    if(agent.marketplace_origin && agent.marketplace_origin.creator_user_id && cost.jpy>0){
+      creditCreatorRevenue(agent.marketplace_origin.creator_user_id, {
+        listing_id: agent.marketplace_origin.listing_id,
+        agent_name: agent.name,
+        buyer_user_id: user.id,
+        cost_jpy: cost.jpy,
+      }).catch(e=>console.warn('[revenue] credit failed:', e.message));
+    }
     return jres(res,200,{reply,balance_jpy:user.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null});
   }
 

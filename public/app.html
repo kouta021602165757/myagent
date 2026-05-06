@@ -272,6 +272,25 @@ input,textarea{font-family:var(--sans);}
 .cf-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;}
 .cf-d{font-size:11.5px;color:var(--text3);font-weight:600;line-height:1.55;margin-top:3px;}
 
+.cea-table-wrap{background:#fff;border:1px solid var(--wire2);border-radius:11px;overflow:hidden;}
+.cea-table{width:100%;border-collapse:collapse;font-size:12.5px;font-feature-settings:'tnum';}
+.cea-table th{font-size:10.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:9px 12px;border-bottom:1px solid var(--wire2);background:var(--cream);}
+.cea-table th.r,.cea-table td.r{text-align:right;}
+.cea-table td{padding:10px 12px;border-bottom:1px solid var(--wire);color:var(--text);}
+.cea-table tr:last-child td{border-bottom:none;}
+.cea-table tr:hover td{background:var(--cream);}
+.cea-table b{color:var(--peach-dark);font-weight:800;}
+
+.cea-feed{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:6px;}
+.cea-feed-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:12px;}
+.cea-feed-row:hover{background:var(--cream);}
+.cea-when{color:var(--text3);font-weight:600;font-feature-settings:'tnum';width:60px;flex-shrink:0;}
+.cea-name{flex:1;min-width:0;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cea-share{color:var(--peach-dark);font-weight:800;font-feature-settings:'tnum';}
+.cea-st{font-size:10px;font-weight:800;padding:2px 7px;border-radius:7px;letter-spacing:.04em;}
+.cea-st.ok{background:rgba(16,185,129,.12);color:#10b981;}
+.cea-st.pending{background:rgba(245,158,11,.12);color:#f59e0b;}
+
 .creator-help{display:flex;flex-direction:column;gap:8px;}
 .ch-item{padding:12px 14px;background:var(--cream);border:1px solid var(--wire2);border-radius:11px;}
 .ch-q{font-weight:800;font-size:12.5px;color:var(--text);margin-bottom:4px;}
@@ -1744,9 +1763,24 @@ body{color:#f0f0f8;}
           <div class="creator-kpis" id="creatorKpis">
             <div class="ck"><div class="ck-lbl">出店中</div><div class="ck-val" id="ckListed">—</div></div>
             <div class="ck"><div class="ck-lbl">累計利用回数</div><div class="ck-val" id="ckUses">—</div></div>
-            <div class="ck"><div class="ck-lbl">利用可能残高</div><div class="ck-val" id="ckBalance">—</div></div>
-            <div class="ck"><div class="ck-lbl">累計収益（推定）</div><div class="ck-val" id="ckEarnings">—</div></div>
+            <div class="ck"><div class="ck-lbl">利用可能残高</div><div class="ck-val" id="ckBalance">—</div><div class="ck-sub" id="ckBalanceSub" style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:600"></div></div>
+            <div class="ck"><div class="ck-lbl">累計収益</div><div class="ck-val" id="ckEarnings">—</div></div>
           </div>
+
+          <section class="spane-section">
+            <div class="spane-section-h">過去30日の収益</div>
+            <div id="creatorChart"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">エージェント別（今月）</div>
+            <div id="creatorByAgent"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">最近の収益</div>
+            <div id="creatorRecent"></div>
+          </section>
 
           <section class="spane-section">
             <div class="spane-section-h" style="display:flex;align-items:center;gap:10px">
@@ -3712,24 +3746,72 @@ function switchStab(btn, tabId){
 async function loadCreatorDashboard(){
   var listEl = document.getElementById('creatorList');
   if(listEl) listEl.innerHTML = '<div class="creator-loading">読み込み中…</div>';
-  // Reset KPIs
   ['ckListed','ckUses','ckBalance','ckEarnings'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.textContent = '—';
   });
+  var chartEl = document.getElementById('creatorChart');
+  if(chartEl) chartEl.innerHTML = '';
+  var byAgEl = document.getElementById('creatorByAgent');
+  if(byAgEl) byAgEl.innerHTML = '';
+  var recentEl = document.getElementById('creatorRecent');
+  if(recentEl) recentEl.innerHTML = '';
 
   try{
-    var r = await api('GET','/api/marketplace/listings/mine');
-    var listings = r.listings || [];
+    // Fetch listings + earnings in parallel
+    var [listingsRes, earningsRes] = await Promise.all([
+      api('GET','/api/marketplace/listings/mine'),
+      api('GET','/api/creator/earnings'),
+    ]);
+    var listings = listingsRes.listings || [];
     var listed = listings.filter(function(l){return l.is_listed;}).length;
     var totalUses = listings.reduce(function(s,l){return s+(l.uses_count||0);},0);
-    // Estimated earnings: avg revenue ¥150 per use × 10% (placeholder until #5 real ledger)
-    var estEarnings = Math.round(totalUses * 15);
 
+    // KPIs
     document.getElementById('ckListed').textContent = listed;
     document.getElementById('ckUses').textContent = totalUses.toLocaleString();
-    document.getElementById('ckBalance').textContent = '¥0';
-    document.getElementById('ckEarnings').textContent = '¥' + estEarnings.toLocaleString();
+    document.getElementById('ckBalance').textContent = '¥' + (earningsRes.balance_available||0).toLocaleString();
+    document.getElementById('ckEarnings').textContent = '¥' + Math.round(earningsRes.total_earned||0).toLocaleString();
 
+    // Pending hint under balance
+    var pendingEl = document.getElementById('ckBalanceSub');
+    if(pendingEl){
+      var p = earningsRes.balance_pending||0;
+      pendingEl.textContent = p>0 ? '未確定: ¥' + Math.round(p).toLocaleString() + '（7日後確定）' : '';
+    }
+
+    // Chart (last 30 days)
+    if(chartEl) chartEl.innerHTML = _renderEarningsChart(earningsRes.daily||[]);
+
+    // Per-agent table (this month)
+    if(byAgEl){
+      var byAgent = (earningsRes.by_agent||[]).filter(function(a){return a.this_month_uses>0;});
+      if(byAgent.length){
+        byAgEl.innerHTML = '<div class="cea-table-wrap"><table class="cea-table"><thead><tr><th>エージェント</th><th class="r">今月利用</th><th class="r">今月収益</th><th class="r">累計</th></tr></thead><tbody>'
+          + byAgent.map(function(a){
+              return '<tr><td>'+esc(a.agent_name)+'</td><td class="r">'+a.this_month_uses+'</td><td class="r"><b>¥'+Math.round(a.this_month_jpy).toLocaleString()+'</b></td><td class="r">¥'+Math.round(a.share_jpy).toLocaleString()+'</td></tr>';
+            }).join('')
+          + '</tbody></table></div>';
+      } else {
+        byAgEl.innerHTML = '<div class="creator-empty">今月の収益データはまだありません</div>';
+      }
+    }
+
+    // Recent activity feed
+    if(recentEl){
+      var recent = (earningsRes.recent||[]).slice(0,10);
+      if(recent.length){
+        recentEl.innerHTML = '<div class="cea-feed">' + recent.map(function(r){
+          var dt = new Date(r.date);
+          var when = (dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+          var st = r.status==='confirmed' ? '<span class="cea-st ok">確定</span>' : '<span class="cea-st pending">未確定</span>';
+          return '<div class="cea-feed-row"><span class="cea-when">'+when+'</span><span class="cea-name">'+esc(r.agent_name||'')+'</span><span class="cea-share">+¥'+Math.round(r.share_jpy||0).toLocaleString()+'</span>'+st+'</div>';
+        }).join('') + '</div>';
+      } else {
+        recentEl.innerHTML = '<div class="creator-empty">まだ収益履歴はありません</div>';
+      }
+    }
+
+    // Listings
     if(!listings.length){
       listEl.innerHTML = '<div class="creator-empty">まだ出店していません。<br>サイドバーでエージェントを開いて <b>⚙ 編集 → 🏪 マーケットに出店</b> から出店できます。</div>';
       return;
@@ -3753,6 +3835,32 @@ async function loadCreatorDashboard(){
   }catch(e){
     listEl.innerHTML = '<div class="creator-loading" style="color:var(--rose)">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
   }
+}
+
+function _renderEarningsChart(daily){
+  if(!daily || !daily.length) return '<div class="creator-empty">データなし</div>';
+  var max = Math.max(1, ...daily.map(function(d){return d.share_jpy||0;}));
+  var w = 600, h = 140, pad = 4;
+  var step = (w - pad*2) / Math.max(1, daily.length-1);
+  var pts = daily.map(function(d,i){
+    var x = pad + i*step;
+    var y = h - pad - ((d.share_jpy||0)/max)*(h - pad*2);
+    return [x,y];
+  });
+  var line = pts.map(function(p,i){return (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ');
+  var area = line + ' L'+(w-pad)+','+(h-pad)+' L'+pad+','+(h-pad)+' Z';
+  var lastIdx = daily.length-1;
+  var lastDate = daily[lastIdx]?.date || '';
+  var firstDate = daily[0]?.date || '';
+  return '<div style="position:relative">'
+    + '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="width:100%;height:140px;display:block">'
+    + '<defs><linearGradient id="ceaG1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb923c" stop-opacity=".35"/><stop offset="100%" stop-color="#fb923c" stop-opacity="0"/></linearGradient></defs>'
+    + '<path d="'+area+'" fill="url(#ceaG1)"/>'
+    + '<path d="'+line+'" fill="none" stroke="#fb923c" stroke-width="2"/>'
+    + '<circle cx="'+pts[lastIdx][0].toFixed(1)+'" cy="'+pts[lastIdx][1].toFixed(1)+'" r="3.5" fill="#ea580c"/>'
+    + '</svg>'
+    + '<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);font-weight:600;margin-top:4px"><span>'+firstDate.slice(5)+'</span><span>過去30日 ・ 最大 ¥'+Math.round(max).toLocaleString()+'</span><span>'+lastDate.slice(5)+'</span></div>'
+  + '</div>';
 }
 
 async function loadBilling(){

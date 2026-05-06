@@ -543,7 +543,14 @@ function buildSystem(agent){
 - take_screenshot は視覚的な確認が必須な時だけ呼ぶ。テキストで判断できる場合は呼ばない
 - 必要な情報が揃ったら即座に最終回答に進む
 
-ツールを連鎖して問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
+【重要な制約】このブラウザは **ログインしていないクラウド上の Chromium** です。以下は不可能なので試さないでください:
+- Google アカウントへのログインが必要なページ（Gmail / Google カレンダー / Google ドライブ等）
+- Twitter/X、Facebook、LinkedIn 等のログイン必須ページ
+- ユーザーの個人アカウントが必要な操作
+
+ログイン必須ページに当たったら、ツール呼び出しを諦めて、ユーザーに「このページはログインが必要なので、現在の Chrome 連携では到達できません」と正直に伝え、代替案（公開情報を別ソースから取得 / ユーザーに直接実行を依頼 等）を提案してください。
+
+ツールを連鎖して公開情報の問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
     : '';
   return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
@@ -871,6 +878,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const useTools = !!agent.chrome_enabled;
     let totalIn=0, totalOut=0;
 
+    let toolLog = []; // visible browser-action log for the frontend
     if(useTools){
       let session = null;
       try{
@@ -880,7 +888,7 @@ async function handleAPI(req,res,pathname,method,ip){
         let iters = 0;
         const MAX_ITERS = 5;
         const startedAt = Date.now();
-        const BUDGET_MS = 50000; // Stay under Render edge timeout (~60–100s)
+        const BUDGET_MS = 60000; // Stay under Render edge timeout (~60–100s)
         while(true){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
@@ -905,12 +913,24 @@ async function handleAPI(req,res,pathname,method,ip){
           // Append the assistant's tool_use turn
           convMsgs.push({role:'assistant', content: resp.content});
 
-          // Run each tool_use block, collect tool_result blocks
+          // Run each tool_use block, collect tool_result blocks + log
           const toolResultBlocks = [];
           for(const block of (resp.content||[])){
             if(block.type !== 'tool_use') continue;
             const result = await executeBrowserTool(session, block.name, block.input||{});
             toolResultBlocks.push(buildToolResult(block.id, block.name, result));
+            toolLog.push({
+              name: block.name,
+              input: block.input||{},
+              ok: !(result&&result.error),
+              url: result&&result.url,
+              title: result&&result.title,
+              text: result&&result.text ? String(result.text).slice(0,400) : '',
+              results: result&&result.results, // for search_web
+              count: result&&result.count,
+              screenshot: result&&result.screenshot, // base64 jpeg, only present when AI called take_screenshot
+              error: result&&result.error,
+            });
           }
           convMsgs.push({role:'user', content: toolResultBlocks});
         }
@@ -970,10 +990,10 @@ async function handleAPI(req,res,pathname,method,ip){
     const ai=user.agents.findIndex(a=>a.id===agent.id);
     if(ai>=0)user.agents[ai]=agent;
     await DB.save(user);
-    return jres(res,200,{reply,balance_jpy:user.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd}});
+    return jres(res,200,{reply,balance_jpy:user.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null});
   }
 
-  
+
   // ── PATCH /api/user/profile ─────────────────────────────────
   if(pathname==='/api/user/profile'&&method==='PATCH'){
     const user=await auth(req);if(!user)return jres(res,401,{error:'Unauthorized'});

@@ -242,6 +242,39 @@ input,textarea{font-family:var(--sans);}
 .m-name{font-weight:700;color:var(--text2);}
 .m-time{color:var(--text3);}
 
+/* ── Tool log (browser activity) ─────────────────────────────── */
+.tlog{max-width:680px;margin:6px 0 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;font-size:13px;}
+.tlog summary{list-style:none;cursor:pointer;padding:10px 14px;background:linear-gradient(135deg,#eff6ff,#f0f9ff);border-bottom:1px solid #e2e8f0;}
+.tlog summary::-webkit-details-marker{display:none;}
+.tlog[open] summary{border-bottom:1px solid #e2e8f0;}
+.tlog-head{display:flex;align-items:center;gap:8px;font-weight:700;color:#1e3a8a;}
+.tlog-count{font-size:11px;color:#64748b;font-weight:600;background:#fff;padding:2px 8px;border-radius:10px;border:1px solid #e2e8f0;}
+.tlog-toggle{margin-left:auto;color:#64748b;transition:transform .15s;}
+.tlog[open] .tlog-toggle{transform:rotate(180deg);}
+.tlog-body{padding:6px 4px;}
+.tlog-step{padding:8px 12px;border-radius:8px;margin:2px 6px;}
+.tlog-step.ok{background:#fff;}
+.tlog-step.err{background:#fef2f2;}
+.tlog-row{display:flex;align-items:center;gap:8px;}
+.tlog-ic{font-size:14px;}
+.tlog-lbl{flex:1;min-width:0;color:#334155;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tlog-st{font-weight:900;font-size:13px;}
+.tlog-step.ok .tlog-st{color:#16a34a;}
+.tlog-step.err .tlog-st{color:#dc2626;}
+.tlog-page{margin-top:6px;padding:8px 10px;background:#f1f5f9;border-radius:6px;}
+.tlog-title{font-weight:700;color:#0f172a;font-size:12.5px;margin-bottom:2px;}
+.tlog-url{font-size:11px;color:#2563eb;text-decoration:none;word-break:break-all;}
+.tlog-url:hover{text-decoration:underline;}
+.tlog-text{margin-top:6px;padding:8px 10px;background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;color:#475569;line-height:1.55;max-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word;}
+.tlog-results{margin-top:6px;display:flex;flex-direction:column;gap:6px;}
+.tlog-result{padding:6px 10px;background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;}
+.tlog-result a{font-weight:700;color:#1d4ed8;font-size:12.5px;text-decoration:none;}
+.tlog-result a:hover{text-decoration:underline;}
+.tlog-snip{font-size:11.5px;color:#64748b;margin-top:2px;line-height:1.45;}
+.tlog-err{margin-top:6px;font-size:12px;color:#b91c1c;background:#fef2f2;padding:6px 10px;border-radius:6px;}
+.tlog-shot{margin-top:8px;display:block;max-width:100%;max-height:140px;border:1px solid #e2e8f0;border-radius:6px;cursor:zoom-in;transition:max-height .2s;}
+.tlog-shot.expanded{max-height:600px;cursor:zoom-out;}
+
 .m-body{
   max-width:680px;background:#fff;border:1px solid var(--wire2);border-radius:14px;
   padding:14px 18px;font-size:14.5px;line-height:1.75;color:var(--text);
@@ -2212,17 +2245,57 @@ function renderMsgs(ag){
   el.innerHTML='<div class="msgs-inner" id="msgsInner"></div>';
   const inner=document.getElementById('msgsInner');
   if(!ag.history||!ag.history.length){
-    inner.innerHTML=_renderMsg('assistant',ag,'はじめまして！'+esc(ag.name)+'です 👋\n\nなんでも気軽に話しかけてください！',now(),null,-1);
+    inner.innerHTML=_renderMsg('assistant',ag,'はじめまして！'+esc(ag.name)+'です 👋\n\nなんでも気軽に話しかけてください！',now(),null,-1,null);
     _scrollMsgsToEnd();
     return;
   }
   inner.innerHTML=ag.history.map(function(m,i){
-    return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i);
+    return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i,m.tool_log);
   }).join('');
   _scrollMsgsToEnd();
 }
 
-function _renderMsg(role, ag, content, time, images, idx){
+/* Compact action labels per tool name */
+var _TOOL_META = {
+  search_web:     { icon:'🔍', label: function(inp){ return (isJa?'検索: ':'Search: ')+(inp.query||''); } },
+  browse_url:     { icon:'🌐', label: function(inp){ return (isJa?'アクセス: ':'Open: ')+(inp.url||''); } },
+  click_element:  { icon:'👆', label: function(inp){ return (isJa?'クリック: ':'Click: ')+(inp.target||''); } },
+  type_text:      { icon:'⌨️', label: function(inp){ return (isJa?'入力: ':'Type: ')+(inp.selector||'')+' = '+(inp.text||''); } },
+  press_key:      { icon:'↩️', label: function(inp){ return (isJa?'キー押下: ':'Press: ')+(inp.key||''); } },
+  take_screenshot:{ icon:'📸', label: function(){ return isJa?'スクリーンショット撮影':'Took screenshot'; } },
+  read_page:      { icon:'📄', label: function(){ return isJa?'ページ再取得':'Re-read page'; } }
+};
+
+function _renderToolLog(log){
+  if(!log || !log.length) return '';
+  var head = '<div class="tlog-head">🌐 '+(isJa?'ブラウザ操作':'Browser activity')+' <span class="tlog-count">'+log.length+(isJa?' ステップ':' step'+(log.length>1?'s':''))+'</span> <span class="tlog-toggle">▾</span></div>';
+  var rows = log.map(function(step){
+    var meta = _TOOL_META[step.name] || {icon:'⚙️', label:function(){return step.name;}};
+    var label = meta.label(step.input||{});
+    var statusIcon = step.ok ? '✓' : '✗';
+    var statusClass = step.ok ? 'ok' : 'err';
+    var detail = '';
+    if(step.error){
+      detail = '<div class="tlog-err">'+esc(step.error)+'</div>';
+    } else if(step.name==='search_web' && step.results && step.results.length){
+      detail = '<div class="tlog-results">'+step.results.slice(0,5).map(function(r){
+        return '<div class="tlog-result"><a href="'+esc(r.url||'')+'" target="_blank" rel="noopener">'+esc(r.title||r.url||'')+'</a><div class="tlog-snip">'+esc((r.snippet||'').slice(0,140))+'</div></div>';
+      }).join('')+'</div>';
+    } else if(step.title || step.url){
+      detail = '<div class="tlog-page">'+(step.title?'<div class="tlog-title">'+esc(step.title)+'</div>':'')+(step.url?'<a class="tlog-url" href="'+esc(step.url)+'" target="_blank" rel="noopener">'+esc(step.url)+'</a>':'')+'</div>';
+    }
+    if(step.text){
+      detail += '<div class="tlog-text">'+esc(step.text.slice(0,300))+(step.text.length>=300?'…':'')+'</div>';
+    }
+    if(step.screenshot){
+      detail += '<img class="tlog-shot" src="data:image/jpeg;base64,'+step.screenshot+'" loading="lazy" onclick="this.classList.toggle(\'expanded\')">';
+    }
+    return '<div class="tlog-step '+statusClass+'"><div class="tlog-row"><span class="tlog-ic">'+meta.icon+'</span><span class="tlog-lbl">'+esc(label)+'</span><span class="tlog-st">'+statusIcon+'</span></div>'+detail+'</div>';
+  }).join('');
+  return '<details class="tlog" open><summary>'+head+'</summary><div class="tlog-body">'+rows+'</div></details>';
+}
+
+function _renderMsg(role, ag, content, time, images, idx, tool_log){
   const isU = role==='user';
   const av = isU ? (me?(me.name||me.email||'?').charAt(0).toUpperCase():'?') : (ag.avatar||'🤖');
   const name = isU ? (isJa?'あなた':'You') : (ag.name||'');
@@ -2239,6 +2312,7 @@ function _renderMsg(role, ag, content, time, images, idx){
     }).join('');
   }
   const body = content ? _md(content) : '';
+  const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
   let acts = '';
   if(idx>=0){
     if(isU){
@@ -2255,6 +2329,7 @@ function _renderMsg(role, ag, content, time, images, idx){
       '<span class="m-time">'+esc(time||'')+'</span>'+
     '</div>'+
     imgHtml+
+    tlogHtml+
     (body?'<div class="m-body">'+body+'</div>':'')+
     (acts?'<div class="m-acts">'+acts+'</div>':'')+
   '</div>';
@@ -2301,7 +2376,7 @@ async function regenerateMsg(btn){
   _scrollMsgsToEnd();
   try{
     var r=await api('POST','/api/chat/'+activeId,{regenerate:true});
-    ag.history.push({role:'assistant',content:r.reply,time:now()});
+    ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
     if(r.balance_jpy!==undefined) me.balance_jpy=r.balance_jpy;
   }catch(e){
     ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
@@ -2511,7 +2586,7 @@ async function sendMsg(){
       payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
     }
     const r=await api('POST',`/api/chat/${activeId}`,payload);
-    ag.history.push({role:'assistant',content:r.reply,time:now()});
+    ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
     me.balance_jpy=r.balance_jpy;
     me.usage_count=(me.usage_count||0)+1;
     updateBalance();

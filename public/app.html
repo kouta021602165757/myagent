@@ -2291,7 +2291,8 @@ async function regenerateMsg(btn){
   var inner=document.getElementById('msgsInner');
   var tEl=document.createElement('div');
   tEl.className='m a'; tEl.id='thinking';
-  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body"><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>';
+  var _thinkLabel = ag.chrome_enabled ? '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--peach-dark);font-weight:700">🌐 '+(isJa?'ブラウジング中':'Browsing')+'...</span><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>' : '<div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
+  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
   _scrollMsgsToEnd();
   try{
@@ -2495,7 +2496,8 @@ async function sendMsg(){
   var inner=document.getElementById('msgsInner');
   const tEl=document.createElement('div');
   tEl.className='m a'; tEl.id='thinking';
-  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body"><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>';
+  var _thinkLabel = ag.chrome_enabled ? '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--peach-dark);font-weight:700">🌐 '+(isJa?'ブラウジング中':'Browsing')+'...</span><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>' : '<div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
+  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
   _scrollMsgsToEnd();
   try{

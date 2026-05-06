@@ -224,6 +224,124 @@ async function callAI(messages,system){
   return r.d;
 }
 
+// Variant with tool definitions (for Google Chrome integration via Tool Use)
+async function callAIWithTools(messages,system,tools){
+  const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
+    {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+                         {model:'claude-sonnet-4-6',max_tokens:4096,system,messages,tools});
+  if(r.s!==200)throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
+  return r.d;
+}
+
+// ── BROWSER TOOLS (Google Chrome integration) ─────────────────
+const browser = require('./browser');
+const BROWSER_TOOLS = [
+  {
+    name:'browse_url',
+    description:'指定URLにアクセスしてページのタイトル・テキスト・スクリーンショットを取得します。https:// または http:// で始まるURLを渡してください。',
+    input_schema:{
+      type:'object',
+      properties:{ url:{type:'string',description:'https://〜 形式のURL'} },
+      required:['url']
+    }
+  },
+  {
+    name:'search_web',
+    description:'Web検索を実行して上位10件の結果（タイトル / URL / 抜粋）を取得します。情報を探すときに最初に呼びます。',
+    input_schema:{
+      type:'object',
+      properties:{ query:{type:'string',description:'検索クエリ'} },
+      required:['query']
+    }
+  },
+  {
+    name:'click_element',
+    description:'現在開いているページ内の要素をクリックします。表示テキストでもCSSセレクタでも指定可能。事前に browse_url か search_web でページを開いておく必要があります。',
+    input_schema:{
+      type:'object',
+      properties:{ target:{type:'string',description:'クリックする要素のテキスト or CSSセレクタ'} },
+      required:['target']
+    }
+  },
+  {
+    name:'type_text',
+    description:'現在のページの入力欄に文字列を入力します。事前にページを開いておく必要があります。',
+    input_schema:{
+      type:'object',
+      properties:{
+        selector:{type:'string',description:'入力欄のCSSセレクタ または placeholder テキスト'},
+        text:{type:'string',description:'入力する文字列'}
+      },
+      required:['selector','text']
+    }
+  },
+  {
+    name:'press_key',
+    description:'キーボード操作を実行（Enter / Tab / Escape など）。フォーム送信などに使います。',
+    input_schema:{
+      type:'object',
+      properties:{
+        key:{type:'string',description:'押すキー (例: Enter, Tab, Escape)'},
+        selector:{type:'string',description:'対象要素のCSSセレクタ（任意、未指定なら現在のフォーカス対象）'}
+      },
+      required:['key']
+    }
+  },
+  {
+    name:'take_screenshot',
+    description:'現在開いているページのスクリーンショットを取得します。',
+    input_schema:{ type:'object', properties:{} }
+  },
+  {
+    name:'read_page',
+    description:'現在開いているページの可視テキストを再取得します（再読込せずに最新の状態を確認）。',
+    input_schema:{ type:'object', properties:{} }
+  }
+];
+
+async function executeBrowserTool(session, name, input){
+  try{
+    if(name==='browse_url')      return await session.browseUrl(input.url);
+    if(name==='search_web')      return await session.searchWeb(input.query);
+    if(name==='click_element')   return await session.clickElement(input.target);
+    if(name==='type_text')       return await session.typeText(input.selector, input.text);
+    if(name==='press_key')       return await session.pressKey(input.key, input.selector);
+    if(name==='take_screenshot') return await session.takeScreenshot();
+    if(name==='read_page')       return await session.readPage();
+    return {error:'unknown_tool: '+name};
+  }catch(e){
+    return {error:'tool_failed: '+(e&&e.message||String(e))};
+  }
+}
+
+/** Build a tool_result block; if the tool returned a screenshot, attach it as an image. */
+function buildToolResult(toolUseId, name, result){
+  // Make a JSON-safe summary (drop big base64 from text portion)
+  const summary = {};
+  if(result && typeof result==='object'){
+    for(const k of Object.keys(result)){
+      if(k==='screenshot') continue;
+      summary[k] = result[k];
+    }
+  } else summary.value = result;
+
+  if(result && result.screenshot){
+    return {
+      type:'tool_result',
+      tool_use_id:toolUseId,
+      content:[
+        {type:'text', text:'[tool='+name+'] '+JSON.stringify(summary)},
+        {type:'image', source:{type:'base64', media_type:'image/jpeg', data:result.screenshot}}
+      ]
+    };
+  }
+  return {
+    type:'tool_result',
+    tool_use_id:toolUseId,
+    content: JSON.stringify(summary)
+  };
+}
+
 // ── GOOGLE OAUTH ──────────────────────────────────────────────
 function googleAuthURL(){
   const params=new URLSearchParams({
@@ -356,7 +474,25 @@ async function findAgentByShareId(shareId){
 
 function buildSystem(agent){
   const chromeNote = agent.chrome_enabled
-    ? `\nツール：このエージェントは Google Chrome 連携が有効です。Webサイトの調査・フォーム入力・情報収集など、ブラウザ操作が必要な作業の手順を具体的に示してください。ユーザーが Google Chrome 以外のブラウザを使っている場合は動作しない旨を案内してください。`
+    ? `
+
+【ツール: Google Chrome 連携】
+このエージェントは Google Chrome を直接操作できます。情報を Web から取得したり、サイトの操作が必要な依頼が来たら、自分で次のツールを呼び出してください（ユーザーに「URL を教えてください」と聞かずに自分で検索する）：
+- search_web(query): Web検索
+- browse_url(url): URLにアクセスしてページ内容を取得
+- click_element(target): ページ内の要素をクリック
+- type_text(selector, text): フォームに入力
+- press_key(key): Enter等のキー押下
+- take_screenshot(): 現在のページのスクショ
+- read_page(): 現在のページのテキストを再取得
+
+実行手順:
+1. 必要なら先に search_web で情報を探す
+2. browse_url で具体的なページを開く
+3. 必要に応じて click / type / press_key で操作
+4. 結果を要約してユーザーに伝える
+
+ツールを連鎖して問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
     : '';
   return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
@@ -675,16 +811,83 @@ async function handleAPI(req,res,pathname,method,ip){
       userContent = message;
     }
     // For regenerate: history already ends with the user msg; skip adding a new one
-    const msgs = regenerate
+    const baseMsgs = regenerate
       ? hist.map(m=>({role:m.role,content:m.content}))
       : [...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
     let reply,cost;
-    try{
-      const d=await callAI(msgs,buildSystem(agent));
-      reply=d.content?.find(b=>b.type==='text')?.text||'エラーが発生しました';
-      const u=d.usage||{};
-      cost=calcCost(u.input_tokens||0,u.output_tokens||0);
-    }catch(e){return jres(res,502,{error:`AI応答エラー: ${e.message}`});}
+
+    // Branch: Chrome 連携 ON のエージェントは Tool Use ループを通す
+    const useTools = !!agent.chrome_enabled;
+    let totalIn=0, totalOut=0;
+
+    if(useTools){
+      let session = null;
+      try{
+        session = browser.newSession();
+        let convMsgs = baseMsgs.slice();
+        let resp;
+        let iters = 0;
+        const MAX_ITERS = 8;
+        while(true){
+          resp = await callAIWithTools(convMsgs, buildSystem(agent), BROWSER_TOOLS);
+          totalIn  += (resp.usage?.input_tokens)||0;
+          totalOut += (resp.usage?.output_tokens)||0;
+
+          if(resp.stop_reason !== 'tool_use') break;
+          iters++;
+          if(iters > MAX_ITERS){
+            reply = '(ツール呼び出しの上限に達したため処理を中断しました)';
+            break;
+          }
+
+          // Append the assistant's tool_use turn
+          convMsgs.push({role:'assistant', content: resp.content});
+
+          // Run each tool_use block, collect tool_result blocks
+          const toolResultBlocks = [];
+          for(const block of (resp.content||[])){
+            if(block.type !== 'tool_use') continue;
+            const result = await executeBrowserTool(session, block.name, block.input||{});
+            toolResultBlocks.push(buildToolResult(block.id, block.name, result));
+          }
+          convMsgs.push({role:'user', content: toolResultBlocks});
+        }
+
+        // Final reply (text from last assistant turn)
+        if(!reply){
+          reply = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim()
+            || '応答を生成できませんでした';
+        }
+      }catch(e){
+        // Browser unavailable on this host — fall back to plain chat so user still gets an answer
+        const msg = (e&&e.message)||'';
+        if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
+          console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
+          try{
+            const d=await callAI(baseMsgs, buildSystem(agent));
+            reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
+            totalIn  = d.usage?.input_tokens || 0;
+            totalOut = d.usage?.output_tokens || 0;
+          }catch(e2){
+            return jres(res,502,{error:`AI応答エラー: ${e2.message}`});
+          }
+        } else {
+          return jres(res,502,{error:`AI応答エラー: ${msg}`});
+        }
+      } finally {
+        if(session){ try{ await session.close(); }catch(e){} }
+      }
+      cost = calcCost(totalIn, totalOut);
+    } else {
+      // Existing path — no tools
+      try{
+        const d = await callAI(baseMsgs, buildSystem(agent));
+        reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
+        const u = d.usage||{};
+        cost = calcCost(u.input_tokens||0, u.output_tokens||0);
+      }catch(e){return jres(res,502,{error:`AI応答エラー: ${e.message}`});}
+    }
+    const msgs = baseMsgs;
     const ts=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
     if(regenerate){
       agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts}];

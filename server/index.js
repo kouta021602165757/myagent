@@ -962,8 +962,24 @@ async function executeSheetsTool(user, name, input){
   }
 }
 
-async function executeBrowserTool(session, name, input){
+async function executeBrowserTool(session, name, input, ctx){
   try{
+    // Intercept Google Workspace URLs — they require login that the cloud Chromium
+    // doesn't have. Redirect AI to the Sheets API tools (or surface enable hint).
+    if(name==='browse_url' && /docs\.google\.com\/(spreadsheets|document|presentation)/.test(input.url||'')){
+      const sheetsConnected = !!(ctx && ctx.sheetsConnected);
+      const sheetsActive = !!(ctx && ctx.sheetsActive);
+      if(/spreadsheets/.test(input.url||'')){
+        if(sheetsActive){
+          return {error:'wrong_tool: Google スプレッドシートには browse_url を使わないでください。代わりに sheets_get_meta → sheets_read を URL から抽出した spreadsheet_id で呼んでください。'};
+        }
+        if(sheetsConnected){
+          return {error:'sheets_disabled_for_this_agent: ユーザーは Google スプレッドシートに接続済みですが、このエージェントの「📊 Google スプレッドシート連携」トグルが OFF のため API ツールが使えません。ユーザーに「エージェント編集 → 📊 トグルを ON にしてください」と案内してください。'};
+        }
+        return {error:'sheets_not_connected: Google スプレッドシートを編集するにはユーザー側で「+ Google アカウントと接続」が必要です。エージェント編集パネルから接続できます。'};
+      }
+      return {error:'google_workspace_login_required: Google ドキュメント・スライドはログインが必要なためブラウザでは扱えません。ユーザーに公開エクスポート (CSV/PDF) を依頼してください。'};
+    }
     if(name==='browse_url')      return await session.browseUrl(input.url);
     if(name==='search_web')      return await session.searchWeb(input.query);
     if(name==='click_element')   return await session.clickElement(input.target);
@@ -3396,7 +3412,7 @@ async function handleAPI(req,res,pathname,method,ip){
             if(sheetsToolNames.has(block.name)){
               result = await executeSheetsTool(user, block.name, block.input||{});
             } else if(session){
-              result = await executeBrowserTool(session, block.name, block.input||{});
+              result = await executeBrowserTool(session, block.name, block.input||{}, { sheetsConnected, sheetsActive });
             } else {
               result = {error:'tool_unavailable: '+block.name+' (Chrome 連携が無効です)'};
             }

@@ -1813,6 +1813,7 @@ body{color:#f0f0f8;}
 
         <div class="snav-section" id="snavAdminSec" style="display:none">運営</div>
         <button class="snav-item" id="snavAdminBtn" data-tab="admin" onclick="switchStab(this,'s-admin')" style="display:none"><span class="snav-ic">🛡</span><span>モデレーション</span></button>
+        <a class="snav-item" id="snavDashboardLink" href="/admin.html" target="_blank" style="display:none;text-decoration:none;color:inherit"><span class="snav-ic">📊</span><span>分析ダッシュボード</span><span class="snav-badge" style="background:rgba(99,102,241,.15);color:#3730a3">NEW</span></a>
 
         <div class="snav-section" data-i18n="sNavGrpDanger">危険</div>
         <button class="snav-item danger" data-tab="danger" onclick="switchStab(this,'s-danger')"><span class="snav-ic">⚠️</span><span data-i18n="sNavDanger">アカウント削除</span></button>
@@ -3762,6 +3763,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(me && me.is_admin){
       var aSec=document.getElementById('snavAdminSec'); if(aSec) aSec.style.display='';
       var aBtn=document.getElementById('snavAdminBtn'); if(aBtn) aBtn.style.display='';
+      var aDb =document.getElementById('snavDashboardLink'); if(aDb) aDb.style.display='';
     }
     // Handle Stripe Connect return redirect (?payout=onboarded|refresh)
     try{

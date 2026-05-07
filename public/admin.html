@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>管理ダッシュボード — MY AI Agent</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fde8d8;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+a{color:var(--peach-dark);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.shell{max-width:1280px;margin:0 auto;padding:32px 28px 80px;}
+
+.head{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  margin-bottom:24px;
+}
+.head .title{font-size:24px;font-weight:900;display:flex;align-items:center;gap:10px;}
+.head .title .badge{
+  background:rgba(99,102,241,.12);color:#3730a3;border:1px solid rgba(99,102,241,.25);
+  padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.04em;
+}
+.head .updated{font-size:11.5px;color:var(--text3);}
+.head a.back{font-size:12.5px;color:var(--text3);}
+.head .controls{display:flex;gap:8px;align-items:center;}
+.head .controls .btn{
+  background:#fff;border:1px solid var(--line);padding:7px 12px;border-radius:8px;
+  font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit;
+}
+.head .controls .btn:hover{border-color:var(--peach);color:var(--peach-dark);}
+
+/* Stat cards grid */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px;}
+.card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:12px;
+  padding:16px 18px;
+}
+.card .lbl{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.card .num{font-family:var(--mono);font-size:26px;font-weight:900;color:var(--text);line-height:1.1;}
+.card .num small{font-size:14px;color:var(--text3);font-weight:700;margin-left:3px;}
+.card .sub{font-size:11px;color:var(--text3);margin-top:5px;line-height:1.5;}
+.card .sub b{color:var(--text2);}
+.card .delta{font-size:11px;font-weight:700;display:inline-block;margin-top:4px;padding:1px 7px;border-radius:5px;}
+.card .delta.up{background:rgba(16,185,129,.12);color:#047857;}
+.card .delta.down{background:rgba(239,68,68,.12);color:var(--rose);}
+
+/* Section block */
+.section{margin-bottom:32px;}
+.section-h{font-size:16px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text);}
+.section-h .ic{font-size:18px;}
+.section-h .small{font-size:11.5px;color:var(--text3);font-weight:600;margin-left:auto;}
+
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:880px){.chart-grid{grid-template-columns:1fr;}}
+.chart-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+}
+.chart-card .ttl{font-size:13px;font-weight:800;margin-bottom:6px;}
+.chart-card .ttl small{font-weight:600;color:var(--text3);font-size:11px;margin-left:8px;}
+.chart-card svg{width:100%;height:140px;display:block;}
+
+/* Tables */
+.table-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:880px){.table-grid{grid-template-columns:1fr;}}
+table{
+  width:100%;border-collapse:collapse;font-size:12.5px;
+  background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--line);
+}
+table th{
+  background:var(--cream);font-size:11px;color:var(--text3);font-weight:800;
+  text-transform:uppercase;letter-spacing:.04em;padding:9px 12px;text-align:left;
+  border-bottom:1px solid var(--line);
+}
+table td{
+  padding:9px 12px;border-bottom:1px solid var(--line);color:var(--text);
+}
+table tr:last-child td{border-bottom:0;}
+table tr:hover td{background:rgba(251,146,60,.04);}
+.plan-pill{
+  display:inline-block;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700;letter-spacing:.04em;
+}
+.plan-pill.free{background:rgba(180,180,180,.18);color:var(--text3);}
+.plan-pill.pro{background:rgba(251,146,60,.15);color:var(--peach-dark);}
+.plan-pill.business{background:rgba(139,92,246,.15);color:#7c3aed;}
+.plan-pill.payg{background:rgba(59,130,246,.15);color:#2563eb;}
+.muted{color:var(--text3);font-size:11.5px;}
+.email{font-family:var(--mono);font-size:11.5px;color:var(--text2);}
+
+/* Loader */
+.loader{text-align:center;padding:60px 20px;color:var(--text3);font-size:13px;}
+.loader .spin{width:24px;height:24px;border:3px solid var(--line);border-top-color:var(--peach);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;margin-right:10px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.err{
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+  border-radius:12px;padding:16px 18px;color:var(--rose);font-size:13px;
+  margin-bottom:24px;
+}
+
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12px;color:var(--text3);}
+.foot a{color:var(--text3);}
+
+/* GA card */
+.ga-card{
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);border-radius:12px;
+  padding:18px 20px;display:flex;align-items:center;gap:14px;margin-bottom:24px;
+}
+.ga-card .ic{font-size:28px;}
+.ga-card .meta{flex:1;}
+.ga-card .ttl{font-size:13.5px;font-weight:800;color:var(--text);}
+.ga-card .desc{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.55;}
+.ga-card .lnk{
+  background:#fff;border:1px solid var(--peach);color:var(--peach-dark);
+  padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="head">
+  <div class="title">📊 管理ダッシュボード <span class="badge">ADMIN</span></div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="updated" id="updated">読み込み中...</div>
+    <a class="back" href="/app.html">← アプリに戻る</a>
+    <div class="controls">
+      <button class="btn" onclick="loadStats(true)">🔄 更新</button>
+    </div>
+  </div>
+</div>
+
+<div id="content">
+  <div class="loader"><span class="spin"></span>データ読み込み中...</div>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+
+<script>
+const API = '';
+
+function fmtNum(n){ return (n||0).toLocaleString('ja-JP'); }
+function fmtJpy(n){ return '¥' + fmtNum(Math.round(n||0)); }
+function fmtAgo(iso){
+  if(!iso) return '-';
+  const d = new Date(iso);
+  const sec = Math.floor((Date.now() - d.getTime())/1000);
+  if(sec < 60) return sec + '秒前';
+  if(sec < 3600) return Math.floor(sec/60) + '分前';
+  if(sec < 86400) return Math.floor(sec/3600) + '時間前';
+  if(sec < 86400*30) return Math.floor(sec/86400) + '日前';
+  return d.toLocaleDateString('ja-JP');
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Mini bar chart SVG
+function barChart(values, labelFn){
+  const max = Math.max(1, ...values);
+  const w = 300, h = 120, pad = 10;
+  const barW = (w - pad*2) / values.length;
+  let bars = '';
+  for(let i=0; i<values.length; i++){
+    const v = values[i];
+    const bh = Math.max(1, (v / max) * (h - pad*2));
+    const x = pad + i * barW;
+    const y = h - pad - bh;
+    const lbl = labelFn ? labelFn(i, v) : '';
+    bars += '<rect x="'+(x+1)+'" y="'+y+'" width="'+(barW-2)+'" height="'+bh+'" fill="#fb923c" opacity="0.85" rx="1.5"><title>'+esc(lbl)+'</title></rect>';
+  }
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' + bars + '</svg>';
+}
+
+async function loadStats(force){
+  const c = document.getElementById('content');
+  if(force) c.innerHTML = '<div class="loader"><span class="spin"></span>データ読み込み中...</div>';
+
+  const tok = localStorage.getItem('token');
+  if(!tok){
+    c.innerHTML = '<div class="err">⚠ ログインが必要です。<a href="/auth.html">ログイン</a> してから再アクセスしてください。</div>';
+    return;
+  }
+  try{
+    const res = await fetch(API + '/api/admin/stats', {
+      headers: { 'Authorization': 'Bearer ' + tok }
+    });
+    if(res.status === 403){
+      c.innerHTML = '<div class="err">⛔ 管理者権限がありません (is_admin=true が必要)。Supabase で<br><code>UPDATE users SET is_admin = true WHERE email = \'kota.takeuchi@protocol.ooo\';</code><br>を実行してから再ログインしてください。</div>';
+      return;
+    }
+    if(!res.ok){
+      const errBody = await res.text();
+      c.innerHTML = '<div class="err">エラー (HTTP ' + res.status + '): ' + esc(errBody.slice(0,200)) + '</div>';
+      return;
+    }
+    const d = await res.json();
+    document.getElementById('updated').textContent = '最終更新: ' + new Date(d.generated_at).toLocaleString('ja-JP');
+    render(d);
+  }catch(e){
+    c.innerHTML = '<div class="err">通信エラー: ' + esc(e.message) + '</div>';
+  }
+}
+
+function render(d){
+  const c = document.getElementById('content');
+  let html = '';
+
+  // ── GA card ──
+  html += renderGACard();
+
+  // ── Top stat cards ──
+  html += '<div class="cards">';
+  html += statCard('👥 ユーザー総数', fmtNum(d.users.total), '今日 +' + d.users.new_today + ' / 今週 +' + d.users.new_this_week);
+  html += statCard('💎 Pro / Business', d.users.by_plan.pro + ' / ' + d.users.by_plan.business, 'Free: ' + d.users.by_plan.free + ' · 認証済み: ' + d.users.verified);
+  html += statCard('💴 MRR (推定)', fmtJpy(d.revenue.mrr_estimate_jpy), '月額: 課金分のみ');
+  html += statCard('🛒 課金売上 累計', fmtJpy(d.revenue.topup_revenue_jpy + d.revenue.sub_revenue_jpy), 'チャージ: ' + fmtJpy(d.revenue.topup_revenue_jpy));
+  html += '</div>';
+
+  html += '<div class="cards">';
+  html += statCard('🤖 エージェント数', fmtNum(d.agents.total), '1人あたり平均: ' + d.agents.avg_per_user);
+  html += statCard('💬 メッセージ数', fmtNum(d.messages.total), '今日: ' + d.messages.today + ' / 今週: ' + d.messages.this_week);
+  html += statCard('🪙 トークン消費', fmtNum(d.tokens.input_total + d.tokens.output_total), 'in: ' + fmtNum(d.tokens.input_total) + ' / out: ' + fmtNum(d.tokens.output_total));
+  html += statCard('💸 API コスト累計', fmtJpy(d.revenue.total_cost_jpy), '今日: ' + fmtJpy(d.revenue.cost_today));
+  html += '</div>';
+
+  html += '<div class="cards">';
+  html += statCard('🏪 マーケット出店', fmtNum(d.marketplace.total_listings), '累計利用: ' + fmtNum(d.marketplace.total_uses));
+  html += statCard('🌐 Chrome 連携', fmtNum(d.agents.with_chrome), 'エージェントが ON');
+  html += statCard('📊 Sheets 連携', fmtNum(d.integrations.sheets_connected), 'OAuth 接続中');
+  html += statCard('🧩 拡張機能', fmtNum(d.integrations.extension_paired), 'オンライン: ' + d.integrations.extension_online);
+  html += '</div>';
+
+  // ── Charts ──
+  html += '<div class="section">';
+  html += '<div class="section-h"><span class="ic">📈</span>過去30日間の推移</div>';
+  html += '<div class="chart-grid">';
+  html += '<div class="chart-card"><div class="ttl">新規登録 <small>合計 ' + fmtNum(d.users.signups_by_day.reduce((a,b)=>a+b,0)) + '人</small></div>'
+       + barChart(d.users.signups_by_day, (i,v)=> (29-i) + '日前: ' + v + '人') + '</div>';
+  html += '<div class="chart-card"><div class="ttl">日別メッセージ数 <small>合計 ' + fmtNum(d.messages.by_day.reduce((a,b)=>a+b,0)) + '通</small></div>'
+       + barChart(d.messages.by_day, (i,v)=> (29-i) + '日前: ' + v + '通') + '</div>';
+  html += '<div class="chart-card"><div class="ttl">日別売上 <small>合計 ' + fmtJpy(d.revenue.revenue_by_day.reduce((a,b)=>a+b,0)) + '</small></div>'
+       + barChart(d.revenue.revenue_by_day, (i,v)=> (29-i) + '日前: ' + fmtJpy(v)) + '</div>';
+  html += '<div class="chart-card"><div class="ttl">プラン分布 <small>累計</small></div>'
+       + planChart(d.users.by_plan) + '</div>';
+  html += '</div></div>';
+
+  // ── Tables ──
+  html += '<div class="section">';
+  html += '<div class="section-h"><span class="ic">👥</span>ヘビーユーザー & 新規登録</div>';
+  html += '<div class="table-grid">';
+
+  // Top users
+  html += '<div><table>';
+  html += '<thead><tr><th>ユーザー</th><th>プラン</th><th style="text-align:right">使用回数</th><th style="text-align:right">コスト</th></tr></thead><tbody>';
+  for(const u of d.top_users){
+    html += '<tr>'
+      + '<td><b>' + esc(u.name||'-') + '</b><div class="email">' + esc(u.email||'') + '</div></td>'
+      + '<td><span class="plan-pill ' + esc(u.plan) + '">' + esc((u.plan||'').toUpperCase()) + '</span></td>'
+      + '<td style="text-align:right;font-family:monospace">' + fmtNum(u.messages) + '</td>'
+      + '<td style="text-align:right;font-family:monospace">' + fmtJpy(u.cost_jpy) + '</td>'
+      + '</tr>';
+  }
+  if(!d.top_users.length) html += '<tr><td colspan="4" class="muted" style="text-align:center;padding:18px">データなし</td></tr>';
+  html += '</tbody></table></div>';
+
+  // Recent signups
+  html += '<div><table>';
+  html += '<thead><tr><th>新規登録</th><th>プラン</th><th style="text-align:right">登録時刻</th></tr></thead><tbody>';
+  for(const u of d.recent_signups){
+    const tags = [];
+    if(u.google) tags.push('<span style="background:rgba(59,130,246,.12);color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:9.5px;margin-left:4px">G</span>');
+    if(u.verified) tags.push('<span style="color:#10b981;margin-left:3px">✓</span>');
+    html += '<tr>'
+      + '<td><b>' + esc(u.name||'-') + '</b>' + tags.join('') + '<div class="email">' + esc(u.email||'') + '</div></td>'
+      + '<td><span class="plan-pill ' + esc(u.plan) + '">' + esc((u.plan||'').toUpperCase()) + '</span></td>'
+      + '<td style="text-align:right" class="muted">' + fmtAgo(u.created_at) + '</td>'
+      + '</tr>';
+  }
+  if(!d.recent_signups.length) html += '<tr><td colspan="3" class="muted" style="text-align:center;padding:18px">データなし</td></tr>';
+  html += '</tbody></table></div>';
+  html += '</div></div>';
+
+  // Top listings
+  html += '<div class="section">';
+  html += '<div class="section-h"><span class="ic">🏪</span>人気マーケット出店</div>';
+  html += '<table><thead><tr><th>エージェント</th><th>クリエイター</th><th style="text-align:right">利用数</th><th style="text-align:right">評価</th><th style="text-align:right">公開日</th></tr></thead><tbody>';
+  for(const l of d.top_listings){
+    html += '<tr>'
+      + '<td><b>' + esc(l.avatar||'') + ' ' + esc(l.name||'-') + '</b></td>'
+      + '<td>' + esc(l.creator||'-') + '</td>'
+      + '<td style="text-align:right;font-family:monospace">' + fmtNum(l.uses_count) + '</td>'
+      + '<td style="text-align:right">' + (l.avg_rating ? '★ ' + l.avg_rating.toFixed(1) + ' (' + l.review_count + ')' : '<span class="muted">-</span>') + '</td>'
+      + '<td style="text-align:right" class="muted">' + fmtAgo(l.created_at) + '</td>'
+      + '</tr>';
+  }
+  if(!d.top_listings.length) html += '<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">出店なし</td></tr>';
+  html += '</tbody></table></div>';
+
+  c.innerHTML = html;
+}
+
+function statCard(label, value, sub){
+  return '<div class="card"><div class="lbl">' + label + '</div><div class="num">' + value + '</div><div class="sub">' + sub + '</div></div>';
+}
+
+function planChart(byPlan){
+  const total = (byPlan.free||0) + (byPlan.pro||0) + (byPlan.business||0) + (byPlan.payg||0);
+  if(!total) return '<div class="muted" style="padding:30px;text-align:center">データなし</div>';
+  const items = [
+    { name:'Free',     count:byPlan.free||0,     color:'#9a8d7d' },
+    { name:'Pro',      count:byPlan.pro||0,      color:'#fb923c' },
+    { name:'Business', count:byPlan.business||0, color:'#8b5cf6' },
+    { name:'PAYG',     count:byPlan.payg||0,     color:'#3b82f6' },
+  ];
+  let html = '<div style="padding:8px 0">';
+  for(const it of items){
+    const pct = (it.count / total) * 100;
+    html += '<div style="display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:8px">'
+      + '<div style="width:60px;font-weight:700">' + it.name + '</div>'
+      + '<div style="flex:1;height:18px;background:#f0e8d8;border-radius:5px;overflow:hidden">'
+      +   '<div style="height:100%;width:' + pct + '%;background:' + it.color + ';transition:width .4s"></div>'
+      + '</div>'
+      + '<div style="font-family:monospace;font-size:11.5px;color:#5c3a1e;width:64px;text-align:right">' + fmtNum(it.count) + ' (' + pct.toFixed(1) + '%)</div>'
+      + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderGACard(){
+  // Will be filled in if /api/config exposes GA tracking ID
+  return '<div class="ga-card">'
+    + '<div class="ic">📈</div>'
+    + '<div class="meta">'
+      + '<div class="ttl">Google Analytics</div>'
+      + '<div class="desc">詳細なユーザー行動・流入元・コンバージョンは Google Analytics ダッシュボードで確認できます。<br>計測タグはアプリ全ページに自動埋め込み済み (GA_MEASUREMENT_ID 環境変数で設定)。</div>'
+    + '</div>'
+    + '<a class="lnk" href="https://analytics.google.com/" target="_blank" rel="noopener">GA を開く →</a>'
+    + '</div>';
+}
+
+loadStats();
+// Auto-refresh every 60s while page is visible
+setInterval(()=>{
+  if(!document.hidden) loadStats(false);
+}, 60000);
+</script>
+
+</body>
+</html>

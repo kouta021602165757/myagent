@@ -28,6 +28,7 @@ const GOOGLE_ID    = process.env.GOOGLE_CLIENT_ID||'';
 const GOOGLE_SEC   = process.env.GOOGLE_CLIENT_SECRET||'';
 const RESEND_KEY   = process.env.RESEND_API_KEY||'';
 const BRAVE_KEY    = process.env.BRAVE_API_KEY||'';                  // optional, falls back to DDG
+const GA_ID        = process.env.GA_MEASUREMENT_ID||'';              // optional, e.g. G-XXXXXXXXXX
 const APP_URL      = process.env.APP_URL||`http://localhost:${PORT}`;
 const FROM_EMAIL   = process.env.FROM_EMAIL||'noreply@myaiagent.jp';
 const PUBLIC_DIR   = path.join(__dirname,'..','public');
@@ -63,6 +64,7 @@ const LDB=(()=>{
   const save=()=>fs.writeFileSync(DB_PATH,JSON.stringify(d,null,2));
   return{
     find:fn=>d.users.find(fn),
+    all:()=>d.users.slice(),
     add(u){d.users.push(u);save();},
     upd(u){const i=d.users.findIndex(x=>x.id===u.id);if(i>=0){d.users[i]=u;save();}},
   };
@@ -2359,6 +2361,7 @@ async function handleAPI(req,res,pathname,method,ip){
       stripe_pro_configured: !!STRIPE_PRO_PRICE,
       stripe_biz_configured: !!STRIPE_BIZ_PRICE,
       brave_search_enabled: !!BRAVE_KEY,
+      ga_measurement_id: GA_ID || null,                    // safe to expose (public tag)
     });
   }
 
@@ -2982,6 +2985,199 @@ async function handleAPI(req,res,pathname,method,ip){
     target.is_verified = body && typeof body.is_verified === 'boolean' ? body.is_verified : !target.is_verified;
     await DB.save(target);
     return jres(res,200,{ok:true, user_id: target.id, is_verified: target.is_verified});
+  }
+
+  // ── GET /api/admin/stats ───────────────────────────────────
+  // Returns aggregate metrics for the admin dashboard. Admin only.
+  if(pathname === '/api/admin/stats' && method === 'GET'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+
+    let allUsers = [];
+    if(USE_SUPA){
+      // Pull all users (could be paginated for large scale, but Supabase
+      // returns up to 1000 per request which is plenty for now)
+      const r = await sbReq('GET','users','?select=*&limit=10000');
+      allUsers = Array.isArray(r.d) ? r.d : [];
+    } else {
+      allUsers = LDB.all();
+    }
+
+    const now = Date.now();
+    const day = 24*60*60*1000;
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+
+    // ── User stats ─────────────────────────
+    const totalUsers = allUsers.length;
+    const verifiedUsers = allUsers.filter(u=>u.verified).length;
+    const adminCount = allUsers.filter(u=>u.is_admin).length;
+    const planCounts = { free:0, pro:0, business:0, payg:0 };
+    allUsers.forEach(u=>{ const p=u.plan||'free'; planCounts[p] = (planCounts[p]||0)+1; });
+
+    const newToday    = allUsers.filter(u=>u.created_at && new Date(u.created_at).getTime() >= todayStart.getTime()).length;
+    const newThisWeek = allUsers.filter(u=>u.created_at && now - new Date(u.created_at).getTime() <= 7*day).length;
+    const newThisMonth= allUsers.filter(u=>u.created_at && now - new Date(u.created_at).getTime() <= 30*day).length;
+
+    // Daily signup chart for last 30 days
+    const signupsByDay = new Array(30).fill(0);
+    allUsers.forEach(u=>{
+      if(!u.created_at) return;
+      const t = new Date(u.created_at).getTime();
+      const daysAgo = Math.floor((now - t) / day);
+      if(daysAgo >= 0 && daysAgo < 30) signupsByDay[29 - daysAgo]++;
+    });
+
+    // ── Agent stats ────────────────────────
+    const totalAgents = allUsers.reduce((s,u)=>s+(Array.isArray(u.agents)?u.agents.length:0), 0);
+    const usersWithAgents = allUsers.filter(u=>Array.isArray(u.agents) && u.agents.length>0).length;
+    const chromeAgents = allUsers.reduce((s,u)=>s+(u.agents||[]).filter(a=>a.chrome_enabled).length, 0);
+    const sheetsAgents = allUsers.reduce((s,u)=>s+(u.agents||[]).filter(a=>a.sheets_enabled).length, 0);
+    const extensionAgents = allUsers.reduce((s,u)=>s+(u.agents||[]).filter(a=>a.extension_enabled).length, 0);
+
+    // ── Marketplace ────────────────────────
+    let totalListings=0, totalListingUses=0;
+    allUsers.forEach(u=>{
+      (u.agents||[]).forEach(a=>{
+        if(a.marketplace && a.marketplace.is_listed){
+          totalListings++;
+          totalListingUses += (a.marketplace.uses_count||0);
+        }
+      });
+    });
+
+    // ── Revenue & usage from billing_history ──
+    let totalChatMessages=0, totalCostJpy=0, totalInputTokens=0, totalOutputTokens=0;
+    let chargeRevenueJpy=0, subRevenueJpy=0;
+    let messagesToday=0, messagesThisWeek=0, costToday=0, costThisWeek=0;
+    const messagesByDay = new Array(30).fill(0);
+    const revenueByDay  = new Array(30).fill(0);
+
+    allUsers.forEach(u=>{
+      (u.billing_history||[]).forEach(ev=>{
+        const t = ev.date ? new Date(ev.date).getTime() : 0;
+        const daysAgo = Math.floor((now - t) / day);
+        if(ev.type === 'usage'){
+          totalChatMessages++;
+          totalCostJpy += (ev.cost_jpy||0);
+          totalInputTokens += (ev.input_tokens||0);
+          totalOutputTokens += (ev.output_tokens||0);
+          if(t >= todayStart.getTime()) { messagesToday++; costToday += (ev.cost_jpy||0); }
+          if(now - t <= 7*day)          { messagesThisWeek++; costThisWeek += (ev.cost_jpy||0); }
+          if(daysAgo >= 0 && daysAgo < 30) messagesByDay[29 - daysAgo]++;
+        } else if(ev.type === 'charge' || ev.type === 'topup'){
+          chargeRevenueJpy += (ev.amount_jpy||0);
+          if(daysAgo >= 0 && daysAgo < 30) revenueByDay[29 - daysAgo] += (ev.amount_jpy||0);
+        } else if(ev.type === 'subscription' || ev.type === 'sub_payment'){
+          subRevenueJpy += (ev.amount_jpy||0);
+          if(daysAgo >= 0 && daysAgo < 30) revenueByDay[29 - daysAgo] += (ev.amount_jpy||0);
+        }
+      });
+    });
+
+    // MRR estimate: pro $12.99 + biz $32.99 in JPY (~150 yen rate)
+    const mrr = (planCounts.pro||0) * 1950 + (planCounts.business||0) * 4950;
+
+    // ── Top users / listings ────────────────
+    const topUsersByMessages = allUsers
+      .map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        plan: u.plan||'free',
+        messages: (u.billing_history||[]).filter(e=>e.type==='usage').length,
+        cost_jpy: (u.billing_history||[]).filter(e=>e.type==='usage').reduce((s,e)=>s+(e.cost_jpy||0),0),
+        agents: (u.agents||[]).length,
+        created_at: u.created_at,
+      }))
+      .sort((a,b)=>b.messages - a.messages)
+      .slice(0,10);
+
+    const recentSignups = allUsers
+      .filter(u=>u.created_at)
+      .sort((a,b)=> new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0,10)
+      .map(u=>({
+        id:u.id, name:u.name, email:u.email, plan:u.plan||'free',
+        verified:!!u.verified, google: !!u.google_id,
+        created_at:u.created_at, agents: (u.agents||[]).length,
+      }));
+
+    const topListings = [];
+    allUsers.forEach(u=>{
+      (u.agents||[]).forEach(a=>{
+        if(a.marketplace && a.marketplace.is_listed){
+          topListings.push({
+            listing_id: a.marketplace.listing_id,
+            name: a.name,
+            avatar: a.avatar,
+            creator: u.name,
+            uses_count: a.marketplace.uses_count||0,
+            avg_rating: a.marketplace.avg_rating||null,
+            review_count: (a.marketplace.reviews||[]).length,
+            created_at: a.marketplace.listed_at,
+          });
+        }
+      });
+    });
+    topListings.sort((a,b)=>b.uses_count - a.uses_count);
+
+    // ── Extension pairings ─────────────────
+    const extensionPaired = allUsers.filter(u=>u.extension_device_token).length;
+    const extensionConnected = Array.from(_extConnections.keys()).length;
+
+    // ── Sheets connections ─────────────────
+    const sheetsConnected = allUsers.filter(u=>u.google_oauth && u.google_oauth.refresh_token).length;
+
+    return jres(res,200,{
+      generated_at: new Date().toISOString(),
+      users: {
+        total: totalUsers,
+        verified: verifiedUsers,
+        admin: adminCount,
+        by_plan: planCounts,
+        new_today: newToday,
+        new_this_week: newThisWeek,
+        new_this_month: newThisMonth,
+        signups_by_day: signupsByDay,
+      },
+      agents: {
+        total: totalAgents,
+        avg_per_user: usersWithAgents ? +(totalAgents/usersWithAgents).toFixed(2) : 0,
+        with_chrome: chromeAgents,
+        with_sheets: sheetsAgents,
+        with_extension: extensionAgents,
+      },
+      marketplace: {
+        total_listings: totalListings,
+        total_uses: totalListingUses,
+      },
+      messages: {
+        total: totalChatMessages,
+        today: messagesToday,
+        this_week: messagesThisWeek,
+        by_day: messagesByDay,
+      },
+      tokens: {
+        input_total: totalInputTokens,
+        output_total: totalOutputTokens,
+      },
+      revenue: {
+        total_cost_jpy: Math.round(totalCostJpy),
+        cost_today: Math.round(costToday),
+        cost_this_week: Math.round(costThisWeek),
+        topup_revenue_jpy: Math.round(chargeRevenueJpy),
+        sub_revenue_jpy: Math.round(subRevenueJpy),
+        mrr_estimate_jpy: mrr,
+        revenue_by_day: revenueByDay.map(v=>Math.round(v)),
+      },
+      integrations: {
+        sheets_connected: sheetsConnected,
+        extension_paired: extensionPaired,
+        extension_online: extensionConnected,
+      },
+      top_users: topUsersByMessages,
+      recent_signups: recentSignups,
+      top_listings: topListings.slice(0,10),
+    });
   }
 
   // ── GET /api/marketplace/:listing_id ───────────────────────
@@ -4098,6 +4294,19 @@ const MIME={'.html':'text/html','.css':'text/css','.js':'application/javascript'
   '.json':'application/json','.png':'image/png','.ico':'image/x-icon',
   '.svg':'image/svg+xml','.woff2':'font/woff2','.webp':'image/webp'};
 
+// If a GA measurement ID is configured, inject the gtag.js snippet into the
+// <head> of every served HTML page. Idempotent — skips if already present.
+function _injectGA(html){
+  if(!GA_ID) return html;
+  const s = String(html);
+  if(s.includes('googletagmanager.com/gtag/js')) return s; // already present
+  const tag = '\n<!-- GA injected -->\n'
+    + '<script async src="https://www.googletagmanager.com/gtag/js?id=' + GA_ID + '"></script>\n'
+    + '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
+    + 'gtag("js",new Date());gtag("config","' + GA_ID + '",{anonymize_ip:true});</script>\n';
+  return s.replace(/<\/head>/i, tag + '</head>');
+}
+
 function serveStatic(res,fp){
   const ext=path.extname(fp),mime=MIME[ext]||'application/octet-stream';
   fs.readFile(fp,(err,data)=>{
@@ -4109,7 +4318,14 @@ function serveStatic(res,fp){
       });
     }else{
       const h={'Content-Type':mime,...SEC};
-      if(ext==='.html'){h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';}else{h['Cache-Control']='public,max-age=31536000';}
+      if(ext==='.html'){
+        h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';
+        // Inject GA snippet on the way out (only if GA_ID is set)
+        const body = GA_ID ? Buffer.from(_injectGA(data.toString('utf8')), 'utf8') : data;
+        res.writeHead(200,h);res.end(body);
+        return;
+      }
+      h['Cache-Control']='public,max-age=31536000';
       res.writeHead(200,h);res.end(data);
     }
   });

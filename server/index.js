@@ -104,8 +104,25 @@ const DB={
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
-    const r=await sbReq('PATCH','users','?id=eq.'+user.id,user);
-    if(r.s>=400)console.error('Supabase save error:',r.d);
+    // First attempt: full payload. If Supabase rejects (likely missing column),
+    // retry with a filtered payload of known-safe columns.
+    let r = await sbReq('PATCH','users','?id=eq.'+user.id,user);
+    if(r.s>=400){
+      console.warn('[DB.save] full PATCH rejected (HTTP '+r.s+'):', JSON.stringify(r.d).slice(0,200));
+      // Retry with only the legacy schema fields most likely to exist
+      const safe = {};
+      const SAFE_KEYS = ['name','email','password','plan','balance_jpy','usage_count',
+        'agents','billing_history','stripe_customer_id','subscription_id','subscription_status',
+        'verified','verify_token','reset_token','reset_expiry','google_id'];
+      for(const k of SAFE_KEYS){ if(user[k]!==undefined) safe[k]=user[k]; }
+      r = await sbReq('PATCH','users','?id=eq.'+user.id,safe);
+      if(r.s>=400){
+        console.error('[DB.save] safe PATCH also rejected:', JSON.stringify(r.d).slice(0,300));
+        const msg = (r.d && (r.d.message || r.d.hint)) || 'Supabase save failed (HTTP '+r.s+')';
+        throw new Error(msg);
+      }
+      console.warn('[DB.save] saved with reduced fields. Add the new columns via docs/SUPABASE_MIGRATION.sql');
+    }
   },
   async remove(id){
     if(!USE_SUPA){LDB.data=(LDB.data||[]).filter(u=>u.id!==id);return true;}

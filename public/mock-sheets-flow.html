@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ユーザー視点 — Google スプレッドシート連携の流れ</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fde8d8;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15); --wire:rgba(180,120,80,.2); --wire2:rgba(180,120,80,.18);
+  --green:#10b981; --green-light:#d1fae5; --rose:#ef4444; --blue:#3b82f6;
+  --google-green:#0f9d58;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+.shell{max-width:1100px;margin:0 auto;padding:48px 24px 80px;}
+
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-size:13px;color:var(--text3);font-weight:600;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+
+.h1{font-size:32px;font-weight:900;letter-spacing:.01em;margin-bottom:10px;line-height:1.25;}
+.sub{font-size:15px;color:var(--text2);margin-bottom:16px;}
+.sub b{color:var(--text);}
+.disclaimer{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(59,130,246,.08);color:#1d4ed8;border:1px solid rgba(59,130,246,.2);
+  padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:600;margin-bottom:48px;
+}
+
+/* ── Step layout ──────────────────────────────────────── */
+.flow{display:flex;flex-direction:column;gap:18px;}
+.step{display:grid;grid-template-columns:120px 1fr;gap:24px;align-items:flex-start;}
+@media(max-width:780px){
+  .step{grid-template-columns:1fr;gap:14px;}
+}
+.step-meta{padding-top:8px;}
+.step-num-big{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  color:var(--peach-dark);letter-spacing:.16em;display:block;margin-bottom:4px;
+}
+.step-title{font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px;line-height:1.3;}
+.step-note{font-size:12.5px;color:var(--text3);line-height:1.6;}
+.step-time{
+  display:inline-block;font-size:11px;font-weight:700;
+  background:var(--cream);color:var(--text3);padding:2px 8px;border-radius:6px;
+  margin-top:8px;border:1px solid var(--line);
+}
+
+.frame{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:0;overflow:hidden;
+  box-shadow:0 8px 30px rgba(180,100,40,.08);
+}
+.frame-bar{
+  background:linear-gradient(180deg,#f8f0e6,#f1e7d8);
+  padding:8px 14px;display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid var(--line);font-size:11px;color:var(--text3);font-weight:600;
+}
+.frame-dots{display:flex;gap:5px;}
+.frame-dots span{width:9px;height:9px;border-radius:50%;background:#cf9b73;opacity:.4;}
+.frame-dots span:nth-child(1){background:#ef4444;opacity:.65;}
+.frame-dots span:nth-child(2){background:#fbbf24;opacity:.65;}
+.frame-dots span:nth-child(3){background:#10b981;opacity:.65;}
+.frame-url{
+  flex:1;background:rgba(255,255,255,.7);border-radius:6px;
+  padding:3px 10px;font-family:var(--mono);font-size:11px;color:var(--text2);
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+.frame-body{padding:18px;}
+
+/* ── Reusable mini agent panel UI bits ───────────────── */
+.mock-edit{
+  background:var(--bg-card);border-radius:10px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.mock-row{
+  padding:12px 14px;background:var(--cream2);
+  border:1px solid var(--wire2);border-radius:11px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.mock-row.green-glow{
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+  border-color:rgba(16,185,129,.3);
+}
+.mock-row-text{flex:1;min-width:0;}
+.mock-row-label{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;}
+.mock-row-desc{font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5;}
+.mock-row-desc.ok{color:#0f9d58;font-weight:700;}
+.mock-row-meta{font-size:11px;color:var(--text3);margin-top:6px;}
+.mock-row-meta b{color:var(--text2);}
+
+.mini-btn{
+  background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;
+  padding:7px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;
+}
+.mini-btn:hover{background:#f0fdf4;}
+.mini-btn.peach{
+  background:var(--peach);color:#fff;border-color:var(--peach);
+}
+.mini-link{color:var(--text3);text-decoration:underline;font-size:11px;cursor:pointer;}
+.mini-link:hover{color:var(--peach-dark);}
+
+/* Toggle switch */
+.sw{
+  width:38px;height:22px;border-radius:999px;background:#d4c1aa;border:0;
+  position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;
+}
+.sw::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:18px;height:18px;border-radius:50%;background:#fff;
+  transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
+.sw.on{background:var(--peach);}
+.sw.on::after{left:18px;}
+.sw.green.on{background:var(--green);}
+
+/* Toast */
+.toast{
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;padding:10px 16px;border-radius:10px;
+  font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 8px 24px rgba(16,185,129,.32);
+}
+
+/* ── Google consent screen mock ──────────────────────── */
+.google-frame{
+  background:#fff;border:1px solid #dadce0;border-radius:8px;
+  padding:24px 28px;font-family:'Roboto','Noto Sans JP',sans-serif;
+}
+.g-logo{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:18px;}
+.g-logo .g{
+  width:24px;height:24px;border-radius:50%;
+  background:conic-gradient(from 0deg,#4285f4 0deg 90deg,#ea4335 90deg 180deg,#fbbc04 180deg 270deg,#34a853 270deg 360deg);
+  position:relative;
+}
+.g-logo .g::after{
+  content:'G';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:900;font-size:13px;font-family:Arial,sans-serif;
+}
+.g-title{font-size:21px;color:#202124;font-weight:400;text-align:center;margin-bottom:14px;}
+.g-account{
+  display:flex;align-items:center;gap:10px;
+  border:1px solid #dadce0;border-radius:24px;padding:6px 14px 6px 6px;
+  margin:0 auto 18px;width:fit-content;
+}
+.g-avatar{
+  width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(135deg,#4285f4,#1a73e8);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+}
+.g-email{font-size:13px;color:#202124;}
+.g-app{
+  font-size:14px;color:#202124;margin-bottom:14px;line-height:1.55;
+}
+.g-app b{font-weight:500;}
+.g-perm{
+  background:#f8f9fa;border-radius:8px;padding:14px;font-size:13px;color:#3c4043;
+  display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;
+}
+.g-perm-icon{
+  width:32px;height:32px;background:#e8f0fe;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+}
+.g-perm-text{line-height:1.5;}
+.g-perm-text b{font-weight:500;color:#202124;}
+.g-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+.g-btn{
+  padding:9px 22px;border-radius:4px;font-size:14px;font-weight:500;
+  border:0;cursor:pointer;font-family:inherit;
+}
+.g-btn.cancel{background:#fff;color:#1a73e8;border:1px solid transparent;}
+.g-btn.cancel:hover{background:#f6fafe;}
+.g-btn.allow{background:#1a73e8;color:#fff;}
+.g-btn.allow:hover{background:#1967d2;}
+
+/* ── Chat mock ────────────────────────────────────────── */
+.chat{
+  background:var(--bg-card);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;
+}
+.chat-msg{display:flex;gap:10px;align-items:flex-start;}
+.chat-msg.me{flex-direction:row-reverse;}
+.chat-av{
+  width:32px;height:32px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.chat-msg.me .chat-av{
+  background:linear-gradient(135deg,#3b82f6,#1d4ed8);font-size:13px;
+}
+.chat-bubble{
+  background:var(--cream);border:1px solid var(--line);
+  padding:10px 14px;border-radius:14px;font-size:13px;color:var(--text);max-width:75%;line-height:1.55;
+}
+.chat-msg.me .chat-bubble{background:#dbeafe;border-color:rgba(59,130,246,.2);color:#1e3a8a;}
+
+.tool-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#f0fdf4;color:#166534;border:1px solid rgba(22,163,74,.25);
+  padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;
+  font-family:var(--mono);margin:2px 4px 2px 0;
+}
+.tool-pill::before{content:'⚙';font-family:initial;font-size:11px;}
+.thinking{
+  display:inline-flex;gap:4px;padding:4px 10px;
+  background:#fff;border:1px solid var(--line);border-radius:999px;font-size:11px;color:var(--text3);
+}
+.thinking::before{content:'●';animation:pulse 1.5s infinite;color:var(--peach);}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+table.sheet{width:100%;border-collapse:collapse;font-size:11.5px;font-family:var(--mono);margin-top:8px;}
+table.sheet th,table.sheet td{
+  border:1px solid var(--line);padding:5px 8px;text-align:left;
+}
+table.sheet th{background:var(--cream);font-weight:700;color:var(--text2);font-size:10.5px;}
+
+/* Arrow connectors */
+.arrow{
+  text-align:center;color:var(--peach);font-size:24px;line-height:1;
+  margin:0 0 -4px 60px;
+}
+@media(max-width:780px){ .arrow{margin-left:0} }
+
+/* Footer */
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text3);text-align:center;}
+.foot a{color:var(--text3);}
+.summary-card{
+  margin-top:48px;padding:28px;border-radius:16px;
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);
+}
+.summary-card h2{font-size:19px;font-weight:800;margin-bottom:10px;color:var(--peach-dark);}
+.summary-card p{font-size:14px;color:var(--text2);margin-bottom:8px;}
+.summary-card ul{padding-left:20px;font-size:13.5px;color:var(--text2);}
+.summary-card li{margin:6px 0;}
+.summary-card b{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+  &nbsp;·&nbsp;
+  <a href="/setup-google-sheets.html">管理者向け初期セットアップ</a>
+</div>
+
+<h1 class="h1">📱 エンドユーザー視点<br>Google スプレッドシート連携の流れ</h1>
+<p class="sub">
+  あなたのサービスを使う人(=エンドユーザー)が、自分のシートを AI に読み書きさせるまでの<b>全画面</b>です。<br>
+  Cloud Console や Supabase は触りません。アプリ内で完結します。
+</p>
+<div class="disclaimer">
+  💡 これは<b style="margin:0 4px">静的モック</b>です。実際の UI と寸分違わぬ表示にする目的で作ってあります。
+</div>
+
+<div class="flow">
+
+<!-- ════ STEP 1 ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 01</span>
+    <div class="step-title">エージェント編集を開く</div>
+    <p class="step-note">既存のエージェントを編集モードに。新規作成ウィザードでも同じ画面が出ます。</p>
+    <span class="step-time">5秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html</div>
+    </div>
+    <div class="frame-body" style="padding:0;background:#f7ede0">
+      <div style="display:flex;height:280px">
+        <div style="width:200px;border-right:1px solid var(--line);background:#fdf8f3;padding:14px 12px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.05em;margin-bottom:8px">エージェント</div>
+          <div style="background:var(--peach-light);border:1px solid rgba(251,146,60,.3);border-radius:10px;padding:10px;display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px">📊</div>
+            <div style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--text)">営業データ管理君</div>
+            <div style="font-size:14px;color:var(--peach-dark)">⚙</div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);padding:8px 4px">＋ 新しく作成</div>
+        </div>
+        <div style="flex:1;padding:18px 16px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:14px;font-weight:800;color:var(--text)">⚙ エージェント編集</div>
+          <div class="mock-row" style="background:var(--cream);padding:10px 12px">
+            <div class="mock-row-text">
+              <div class="mock-row-label" style="font-size:12px">名前</div>
+              <div style="font-size:11.5px;color:var(--text);margin-top:2px">営業データ管理君</div>
+            </div>
+          </div>
+          <div class="mock-row">
+            <div class="mock-row-text">
+              <div class="mock-row-label" style="font-size:12px">🌐 Google Chrome 連携</div>
+              <div class="mock-row-desc">AI に Web 閲覧・検索を任せる</div>
+            </div>
+            <button class="sw"></button>
+          </div>
+          <div class="mock-row" style="border-color:rgba(251,146,60,.3);background:#fff7ed">
+            <div class="mock-row-text">
+              <div class="mock-row-label" style="font-size:12px">📊 Google スプレッドシート連携</div>
+              <div class="mock-row-desc">先に Google アカウントと接続してください</div>
+              <button class="mini-btn" style="margin-top:8px">＋ Google アカウントと接続</button>
+            </div>
+            <button class="sw"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 2 ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 02</span>
+    <div class="step-title">「+ Google アカウントと接続」をクリック</div>
+    <p class="step-note">押すと Google の同意画面に遷移します。アプリは「state パラメータ」にユーザー識別を仕込むので、戻ってきたら自動で紐付きます。</p>
+    <span class="step-time">2秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">accounts.google.com/o/oauth2/v2/auth?client_id=...&scope=spreadsheets</div>
+    </div>
+    <div class="frame-body" style="background:#f1f3f4;padding:32px">
+      <div class="google-frame" style="max-width:480px;margin:0 auto">
+        <div class="g-logo"><div class="g"></div></div>
+        <div class="g-title">MY AI AGENT へのログイン</div>
+        <div class="g-account">
+          <div class="g-avatar">K</div>
+          <div class="g-email">kota.takeuchi@protocol.ooo</div>
+        </div>
+        <div class="g-app">
+          <b>MY AI AGENT</b> が次の権限をリクエストしています:
+        </div>
+        <div class="g-perm">
+          <div class="g-perm-icon">📊</div>
+          <div class="g-perm-text">
+            <b>Google スプレッドシート</b>の表示・編集・作成・削除<br>
+            <span style="color:#5f6368;font-size:11.5px">(あなたが共有しているもののみ)</span>
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:#5f6368;line-height:1.55">
+          MY AI AGENT がこれらの権限を必要とする理由を確認してください。MY AI AGENT のプライバシーポリシーと利用規約を読むこともできます。
+        </div>
+        <div class="g-buttons">
+          <button class="g-btn cancel">キャンセル</button>
+          <button class="g-btn allow">許可</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 3 ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 03</span>
+    <div class="step-title">アプリに自動で戻ってくる</div>
+    <p class="step-note">Google が <code style="font-family:var(--mono);font-size:12px">/api/google/sheets/callback</code> にリダイレクト → サーバーが refresh token 保存 → アプリトップに戻ってトースト表示。</p>
+    <span class="step-time">1〜2秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html?google_sheets=connected</div>
+    </div>
+    <div class="frame-body" style="background:#f7ede0;padding:24px;display:flex;align-items:center;justify-content:center;min-height:140px;position:relative">
+      <div style="position:absolute;top:18px;right:20px">
+        <div class="toast">✓ Google スプレッドシート連携を有効にしました</div>
+      </div>
+      <div style="text-align:center;color:var(--text3);font-size:13px;margin-top:36px">
+        <div style="font-size:28px;margin-bottom:6px">📊✨</div>
+        サイドバーから先ほどのエージェントを再度開くと…
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 4 ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 04</span>
+    <div class="step-title">トグルを ON にして保存</div>
+    <p class="step-note">接続済みの状態。トグルを ON にすると、このエージェントだけが Sheets ツールを使えるようになります。他のエージェントには影響しません。</p>
+    <span class="step-time">3秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · 編集パネル</div>
+    </div>
+    <div class="frame-body" style="background:#f7ede0;padding:18px">
+      <div class="mock-row green-glow">
+        <div class="mock-row-text">
+          <div class="mock-row-label">📊 Google スプレッドシート連携</div>
+          <div class="mock-row-desc ok">✓ 有効 — AI がスプレッドシートを直接読み書きします</div>
+          <div class="mock-row-meta">接続中: <b>kota.takeuchi@protocol.ooo</b> · <span style="color:#ef4444;cursor:pointer;text-decoration:underline">切断</span></div>
+        </div>
+        <button class="sw green on"></button>
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end">
+        <button class="mini-btn peach" style="padding:10px 22px;font-size:13px">保存する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 5 ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 05</span>
+    <div class="step-title">チャットで指示するだけ</div>
+    <p class="step-note">「このスプレッドシートを読んで」と URL を渡せば、AI が <code style="font-family:var(--mono);font-size:12px">sheets_get_meta</code> → <code style="font-family:var(--mono);font-size:12px">sheets_read</code> を勝手に呼びます。書き込みも同様。</p>
+    <span class="step-time">10〜30秒/回</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · チャット</div>
+    </div>
+    <div class="frame-body" style="background:var(--cream);padding:16px">
+      <div class="chat">
+        <div class="chat-msg me">
+          <div class="chat-av">K</div>
+          <div class="chat-bubble">
+            このシートの A1:D20 を読んで、売上が高い順に並び替えてG列に集計を書き込んで<br>
+            <span style="font-family:var(--mono);font-size:11px;color:#1d4ed8;opacity:.7">https://docs.google.com/spreadsheets/d/1Wq8xv...nMpX/edit</span>
+          </div>
+        </div>
+        <div class="chat-msg">
+          <div class="chat-av">📊</div>
+          <div>
+            <div style="margin-bottom:6px"><span class="thinking">処理中</span></div>
+            <div style="margin-bottom:8px">
+              <span class="tool-pill">sheets_get_meta</span>
+              <span class="tool-pill">sheets_read</span>
+              <span class="tool-pill">sheets_write</span>
+            </div>
+            <div class="chat-bubble">
+              シートを読み込みました。20行のデータを売上降順で並び替え、G列に小計と合計を書き込みました。
+              <table class="sheet">
+                <thead><tr><th>会社名</th><th>売上</th><th>ステータス</th><th>担当</th></tr></thead>
+                <tbody>
+                  <tr><td>株式会社A</td><td>¥4,800,000</td><td>受注</td><td>佐藤</td></tr>
+                  <tr><td>B 商事</td><td>¥3,200,000</td><td>受注</td><td>田中</td></tr>
+                  <tr><td>C インダストリー</td><td>¥2,100,000</td><td>商談中</td><td>佐藤</td></tr>
+                  <tr><td colspan="4" style="text-align:center;color:var(--text3)">… 17行省略 …</td></tr>
+                </tbody>
+              </table>
+              <div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border-radius:8px;font-size:11.5px;color:#166534">
+                ✓ G21に合計 <b>¥18,640,000</b> を書き込みました
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ── Summary ─────────────────────────────────────────── -->
+<div class="summary-card">
+  <h2>📋 ユーザーが触る画面のまとめ</h2>
+  <p>上記5画面が、エンドユーザーが見る<b>全部</b>です。下記は<b>一切やりません</b>:</p>
+  <ul>
+    <li>❌ Supabase ダッシュボードを開く</li>
+    <li>❌ Google Cloud Console を開く</li>
+    <li>❌ SQL を実行</li>
+    <li>❌ 環境変数を設定</li>
+    <li>❌ API キーを発行</li>
+  </ul>
+  <p style="margin-top:14px">クリック数: <b>3回</b>(連携ボタン → 許可ボタン → トグル+保存)。所要時間: <b>30秒</b>程度。</p>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/setup-google-sheets.html">管理者セットアップ</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+</body>
+</html>

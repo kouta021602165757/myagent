@@ -104,25 +104,26 @@ const DB={
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
-    // First attempt: full payload. If Supabase rejects (likely missing column),
-    // retry with a filtered payload of known-safe columns.
-    let r = await sbReq('PATCH','users','?id=eq.'+user.id,user);
-    if(r.s>=400){
-      console.warn('[DB.save] full PATCH rejected (HTTP '+r.s+'):', JSON.stringify(r.d).slice(0,200));
-      // Retry with only the legacy schema fields most likely to exist
-      const safe = {};
-      const SAFE_KEYS = ['name','email','password','plan','balance_jpy','usage_count',
-        'agents','billing_history','stripe_customer_id','subscription_id','subscription_status',
-        'verified','verify_token','reset_token','reset_expiry','google_id'];
-      for(const k of SAFE_KEYS){ if(user[k]!==undefined) safe[k]=user[k]; }
-      r = await sbReq('PATCH','users','?id=eq.'+user.id,safe);
-      if(r.s>=400){
-        console.error('[DB.save] safe PATCH also rejected:', JSON.stringify(r.d).slice(0,300));
-        const msg = (r.d && (r.d.message || r.d.hint)) || 'Supabase save failed (HTTP '+r.s+')';
-        throw new Error(msg);
+    // PATCH the row. If PostgREST rejects with PGRST204 'Could not find the X
+    // column', auto-drop X and retry. Up to 12 retries to peel off any new
+    // columns the schema doesn't have yet.
+    const payload = {...user};
+    delete payload.id; // never update primary key
+    for(let attempt=0; attempt<12; attempt++){
+      const r = await sbReq('PATCH','users','?id=eq.'+user.id,payload);
+      if(r.s<400) return;
+      const msg = (r.d && (r.d.message || r.d.hint)) || '';
+      const m = msg.match(/Could not find the '([\w_]+)' column/);
+      if(m && payload[m[1]] !== undefined){
+        console.warn('[DB.save] dropping unknown column "'+m[1]+'" (run docs/SUPABASE_MIGRATION.sql to add it)');
+        delete payload[m[1]];
+        continue;
       }
-      console.warn('[DB.save] saved with reduced fields. Add the new columns via docs/SUPABASE_MIGRATION.sql');
+      // Some other error — give up
+      console.error('[DB.save] Supabase rejected (HTTP '+r.s+'):', JSON.stringify(r.d).slice(0,400));
+      throw new Error(msg || 'Supabase save failed (HTTP '+r.s+')');
     }
+    throw new Error('Supabase save failed after retries (too many missing columns?)');
   },
   async remove(id){
     if(!USE_SUPA){LDB.data=(LDB.data||[]).filter(u=>u.id!==id);return true;}

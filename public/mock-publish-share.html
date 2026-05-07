@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>出店完了モーダル + 強化版ランディング — モック</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#ea580c;
+  --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
+  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
+  --wire:rgba(180,120,80,.08);--wire2:rgba(180,120,80,.18);--wire3:rgba(180,120,80,.28);
+  --rose:#ef4444;--green:#10b981;--blue:#2563eb;
+  --sans:'Hiragino Sans','Noto Sans JP','Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#1a1a1a;color:#fff;font-family:var(--sans);padding:32px 20px 80px;}
+.wrap{max-width:1100px;margin:0 auto;}
+h1{font-size:18px;font-weight:800;margin-bottom:6px;}
+.sub{color:#aaa;font-size:13px;margin-bottom:30px;}
+h2{font-size:14px;color:#aaa;font-weight:700;margin:38px 0 12px;letter-spacing:.04em;}
+.note{color:#888;font-size:12px;margin-top:10px;line-height:1.7;background:#222;padding:12px 14px;border-radius:8px;border-left:3px solid var(--peach);}
+.section{background:var(--cream);padding:30px;border-radius:12px;border:2px dashed #444;}
+
+/* ─────────────── A. PUBLISH-SUCCESS MODAL ─────────────── */
+.modal-bg{
+  position:relative;background:rgba(0,0,0,.5);min-height:600px;display:flex;align-items:flex-start;justify-content:center;padding-top:50px;overflow:hidden;border-radius:8px;
+  background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Crect fill='%23fdf8f3' width='600' height='600'/%3E%3C/svg%3E");
+}
+.ps-modal{
+  width:540px;max-width:95%;background:#fff;border-radius:24px;overflow:hidden;
+  box-shadow:0 30px 60px rgba(0,0,0,.4);font-family:var(--sans);color:var(--text);
+  position:relative;
+}
+.ps-hero{
+  background:linear-gradient(135deg,#fff7ed 0%,#fed7aa 60%,#fb923c 130%);
+  padding:36px 30px 24px;text-align:center;position:relative;overflow:hidden;
+}
+.ps-hero::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.4);right:-100px;top:-100px;}
+.ps-hero::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(234,88,12,.1);left:-60px;bottom:-60px;}
+.ps-conf{
+  font-size:80px;line-height:1;animation:bounce 1s cubic-bezier(.36,.07,.19,.97) both;
+  position:relative;z-index:1;display:inline-block;margin-bottom:8px;
+}
+@keyframes bounce{0%{transform:scale(.3);opacity:0;}50%{transform:scale(1.2);opacity:1;}100%{transform:scale(1);opacity:1;}}
+.ps-h1{font-size:24px;font-weight:900;color:#1a0d05;letter-spacing:-.01em;position:relative;z-index:1;}
+.ps-h2{font-size:13.5px;color:#6b4226;font-weight:600;margin-top:8px;line-height:1.65;position:relative;z-index:1;max-width:400px;margin-left:auto;margin-right:auto;}
+.ps-h2 b{color:#ea580c;}
+
+.ps-body{padding:24px 26px 26px;}
+.ps-thumb-wrap{margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid var(--wire2);background:#f5ebe0;aspect-ratio:1200/630;display:flex;}
+.ps-thumb-wrap svg{width:100%;height:100%;}
+.ps-thumb-lbl{font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+
+.ps-url-row{display:flex;gap:6px;margin-bottom:18px;}
+.ps-url-input{flex:1;padding:11px 14px;border:1px solid var(--wire2);background:var(--cream2);border-radius:10px;font-size:12.5px;font-family:'SF Mono',Menlo,monospace;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ps-copy-btn{padding:11px 18px;background:var(--peach);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}
+.ps-copy-btn:hover{background:var(--peach-dark);}
+
+.ps-cta-h{font-size:11.5px;color:var(--text3);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;}
+.ps-sns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.ps-sns a{
+  padding:14px 10px;border-radius:12px;font-size:13px;font-weight:800;
+  text-align:center;text-decoration:none;color:#fff;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  transition:transform .15s,box-shadow .15s;
+}
+.ps-sns a:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.15);}
+.ps-sns .ic{font-size:22px;line-height:1;}
+.ps-sns .x{background:#0f1419;}
+.ps-sns .line{background:#06c755;}
+.ps-sns .fb{background:#1877f2;}
+
+.ps-tip{
+  background:linear-gradient(135deg,#fffbeb,#fef3c7);
+  border:1px solid #fbbf24;border-radius:11px;padding:13px 16px;margin-bottom:18px;
+  font-size:12.5px;color:#78350f;line-height:1.65;
+}
+.ps-tip b{color:#92400e;}
+
+.ps-tweet-preview{
+  background:var(--cream2);border:1px solid var(--wire2);border-radius:11px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.65;margin-bottom:18px;
+}
+.ps-tweet-preview .lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+.ps-tweet-preview p{font-size:13px;color:var(--text);}
+
+.ps-foot{display:flex;gap:8px;}
+.ps-skip{flex:1;padding:11px;background:transparent;border:1px solid var(--wire3);color:var(--text2);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
+.ps-skip:hover{background:var(--cream2);color:var(--text);}
+.ps-go{flex:1;padding:11px;background:var(--peach);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}
+.ps-go:hover{background:var(--peach-dark);}
+
+/* ─────────────── B. ENHANCED LANDING PAGE ─────────────── */
+.lp-page{background:#fdf8f3;color:var(--text);font-family:var(--sans);padding-bottom:80px;}
+.lp-nav{
+  display:flex;align-items:center;justify-content:space-between;padding:18px 24px;
+  background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--wire);
+  position:sticky;top:0;z-index:5;
+}
+.lp-brand{font-weight:900;color:var(--peach-dark);letter-spacing:.04em;font-size:14px;text-decoration:none;}
+.lp-nav-r{display:flex;gap:14px;align-items:center;font-size:12.5px;}
+.lp-nav-r a{color:var(--text3);text-decoration:none;font-weight:700;}
+.lp-nav-r a:hover{color:var(--text);}
+.lp-nav-r .lp-cta{background:var(--peach);color:#fff;padding:8px 16px;border-radius:9px;}
+.lp-nav-r .lp-cta:hover{background:var(--peach-dark);color:#fff;}
+
+.lp-hero{
+  background:radial-gradient(ellipse at top, #ffedd5 0%, #fed7aa 30%, transparent 70%),
+             linear-gradient(180deg,#fdf8f3 0%,#fff 100%);
+  padding:56px 24px 28px;text-align:center;position:relative;overflow:hidden;
+}
+.lp-hero::after{content:'';position:absolute;width:340px;height:340px;border-radius:50%;background:rgba(255,255,255,.4);right:-120px;top:60px;}
+.lp-hero::before{content:'';position:absolute;width:240px;height:240px;border-radius:50%;background:rgba(251,146,60,.18);left:-80px;bottom:-50px;}
+
+.lp-cat{
+  display:inline-block;font-size:11.5px;font-weight:800;color:var(--peach-dark);
+  background:rgba(251,146,60,.12);padding:5px 14px;border-radius:999px;letter-spacing:.06em;margin-bottom:18px;position:relative;z-index:1;
+}
+.lp-sticker{
+  width:130px;height:130px;border-radius:32px;background:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:80px;
+  box-shadow:0 14px 36px rgba(180,80,40,.2);transform:rotate(-6deg);
+  margin-bottom:24px;position:relative;z-index:1;
+}
+.lp-name{
+  font-size:42px;font-weight:900;color:#1a0d05;letter-spacing:-.02em;
+  line-height:1.1;margin-bottom:14px;position:relative;z-index:1;
+}
+.lp-tagline{
+  font-size:18px;color:var(--text2);font-weight:600;line-height:1.65;
+  max-width:580px;margin:0 auto 24px;position:relative;z-index:1;
+}
+.lp-creator-row{
+  display:inline-flex;align-items:center;gap:10px;font-size:13.5px;color:var(--text2);font-weight:600;
+  background:#fff;padding:7px 14px;border-radius:999px;border:1px solid var(--wire2);
+  position:relative;z-index:1;margin-bottom:8px;
+}
+.lp-creator-row b{color:var(--peach-dark);font-weight:800;}
+.lp-creator-row .verified{
+  display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  background:var(--blue);color:#fff;border-radius:50%;font-size:10px;font-weight:900;
+}
+
+.lp-trust-pills{display:flex;justify-content:center;gap:8px;margin:24px 0 30px;flex-wrap:wrap;position:relative;z-index:1;}
+.lp-trust-pills .pl{
+  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--text);
+  background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);padding:7px 14px;border-radius:999px;
+}
+.lp-trust-pills .pl .ck{color:var(--green);font-size:13px;}
+
+.lp-cta-primary{
+  display:inline-block;background:var(--peach);color:#fff;font-weight:900;font-size:18px;
+  padding:18px 42px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;text-decoration:none;
+  box-shadow:0 12px 28px rgba(251,146,60,.4);position:relative;z-index:1;
+  transition:all .15s;
+}
+.lp-cta-primary:hover{background:var(--peach-dark);transform:translateY(-2px);box-shadow:0 16px 36px rgba(234,88,12,.45);}
+
+.lp-stats{display:flex;justify-content:center;gap:40px;margin-top:22px;position:relative;z-index:1;}
+.lp-stats .st{text-align:center;}
+.lp-stats .st .v{font-size:24px;font-weight:900;color:#1a0d05;font-feature-settings:'tnum';}
+.lp-stats .st .v .star{color:#f59e0b;}
+.lp-stats .st .l{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px;}
+
+.lp-section{max-width:760px;margin:0 auto;padding:48px 24px;}
+.lp-section h2{font-size:24px;font-weight:900;color:#1a0d05;text-align:center;margin-bottom:24px;letter-spacing:-.01em;}
+.lp-desc-box{
+  background:#fff;border:1px solid var(--wire2);border-radius:18px;
+  padding:28px 32px;font-size:15px;line-height:1.85;color:var(--text);
+  box-shadow:0 4px 14px rgba(180,120,80,.04);
+  white-space:pre-wrap;
+}
+
+.lp-demos{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.lp-demo-card{
+  background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:18px 22px;
+  cursor:pointer;transition:all .15s;text-align:left;font-family:inherit;
+}
+.lp-demo-card:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 8px 20px rgba(180,120,80,.08);}
+.lp-demo-card .num{
+  display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+  background:var(--peach);color:#fff;border-radius:50%;font-size:12px;font-weight:900;margin-bottom:10px;
+}
+.lp-demo-card .txt{font-size:14px;color:var(--text);font-weight:600;line-height:1.55;}
+.lp-demo-card .arrow{margin-top:8px;font-size:12px;color:var(--peach-dark);font-weight:700;}
+
+.lp-try-banner{
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);
+  border-radius:18px;padding:28px 32px;display:flex;align-items:center;gap:20px;
+}
+.lp-try-banner .em{font-size:48px;line-height:1;flex-shrink:0;}
+.lp-try-banner .info{flex:1;min-width:0;}
+.lp-try-banner h3{font-size:18px;font-weight:900;color:#1a0d05;margin-bottom:5px;}
+.lp-try-banner p{font-size:13.5px;color:var(--text2);font-weight:600;line-height:1.65;margin-bottom:14px;}
+.lp-try-banner .row{display:flex;gap:8px;}
+.lp-try-banner input{flex:1;padding:12px 16px;border:1px solid rgba(180,120,80,.2);background:#fff;border-radius:11px;font-size:14px;font-family:inherit;color:var(--text);outline:none;}
+.lp-try-banner input:focus{border-color:var(--peach);}
+.lp-try-banner button{padding:0 22px;background:var(--peach);color:#fff;border:none;border-radius:11px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;}
+
+.lp-how{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.lp-how-step{
+  background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:22px 18px;text-align:center;
+}
+.lp-how-step .n{
+  width:38px;height:38px;border-radius:50%;background:var(--peach);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;
+  margin:0 auto 12px;
+}
+.lp-how-step h3{font-size:14px;font-weight:900;color:#1a0d05;margin-bottom:6px;}
+.lp-how-step p{font-size:12.5px;color:var(--text2);font-weight:600;line-height:1.6;}
+
+.lp-final-cta{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  border-radius:24px;padding:48px 32px;text-align:center;
+}
+.lp-final-cta h2{color:#fff;font-size:26px;}
+.lp-final-cta p{font-size:15px;color:rgba(255,255,255,.85);font-weight:600;margin:10px 0 22px;line-height:1.7;}
+.lp-final-btn{
+  background:#fff;color:var(--peach-dark);font-weight:900;font-size:17px;
+  padding:16px 40px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;
+}
+.lp-final-btn:hover{background:#fef3e7;}
+
+.lp-foot{padding:32px 24px;text-align:center;font-size:12px;color:var(--text3);font-weight:600;border-top:1px solid var(--wire);margin-top:40px;}
+.lp-foot a{color:var(--peach-dark);text-decoration:none;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🍑 出店モーダル + 強化版ランディングページ — モック</h1>
+<div class="sub">「出店した瞬間に SNS シェア促す UI」+「URL クリックされた人がワクワクする LP」をデザイン</div>
+
+<!-- ═══════════════ A. PUBLISH-SUCCESS MODAL ═══════════════ -->
+<h2>A. 出店完了 → SNS 告知モーダル（出店ボタン押下直後に表示）</h2>
+<div class="section">
+<div class="modal-bg">
+  <div class="ps-modal">
+    <div class="ps-hero">
+      <div class="ps-conf">🎉</div>
+      <div class="ps-h1">マーケットに公開しました！</div>
+      <div class="ps-h2">いまが <b>最初のユーザー獲得チャンス</b>。<br>SNS でシェアして、最初の利用者を呼び込もう</div>
+    </div>
+    <div class="ps-body">
+      <div class="ps-thumb-lbl">📸 SNS 投稿時の見え方プレビュー</div>
+      <div class="ps-thumb-wrap">
+        <!-- Pattern E thumbnail simulation -->
+        <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg2" cx="30%" cy="20%" r="100%">
+              <stop offset="0%" stop-color="#ffedd5"/>
+              <stop offset="60%" stop-color="#fed7aa"/>
+              <stop offset="130%" stop-color="#fb923c"/>
+            </radialGradient>
+          </defs>
+          <rect width="1200" height="630" fill="url(#bg2)"/>
+          <circle cx="-40" cy="-40" r="220" fill="rgba(255,255,255,.32)"/>
+          <circle cx="1080" cy="500" r="160" fill="rgba(255,255,255,.34)"/>
+          <circle cx="900" cy="120" r="100" fill="rgba(234,88,12,.18)"/>
+          <circle cx="220" cy="500" r="60" fill="rgba(251,146,60,.42)"/>
+          <g transform="translate(170 315) rotate(-8)">
+            <rect x="-160" y="-160" width="320" height="320" rx="56" fill="#fff"/>
+            <text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="200">📞</text>
+          </g>
+          <g transform="translate(420 130)">
+            <rect x="0" y="0" width="170" height="38" rx="19" fill="#fff"/>
+            <text x="85" y="25" text-anchor="middle" fill="#ea580c" font-size="16" font-weight="800">セールス</text>
+            <text x="0" y="120" fill="#1a0d05" font-size="56" font-weight="900">営業フォローアップ AI Agent</text>
+            <text x="0" y="180" fill="#6b4226" font-size="20" font-weight="500">商談後の追客メールを 30秒で生成</text>
+            <text x="0" y="210" fill="#6b4226" font-size="20" font-weight="500">CRM 連携不要・敬語自動調整</text>
+            <g transform="translate(0 250)">
+              <rect width="120" height="38" rx="14" fill="#fff"/><text x="60" y="25" text-anchor="middle" font-size="15" font-weight="800">⭐ 4.7</text>
+              <g transform="translate(132 0)"><rect width="130" height="38" rx="14" fill="#fff"/><text x="65" y="25" text-anchor="middle" font-size="15" font-weight="800">利用 284 回</text></g>
+            </g>
+            <text x="0" y="340" fill="#6b4226" font-size="18" font-weight="700">by @takeuchi_kouta</text>
+            <g transform="translate(195 322)">
+              <circle r="11" fill="#2563eb"/>
+              <path d="M-5,0 L-1,4 L5,-3" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            </g>
+          </g>
+          <g transform="translate(1144 580)">
+            <rect x="-220" y="-22" width="220" height="44" rx="22" fill="#fff"/>
+            <text x="-110" y="6" text-anchor="middle" fill="#ea580c" font-size="16" font-weight="900" letter-spacing="3">🍑 MY AI AGENT</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="ps-tweet-preview">
+        <div class="lbl">📝 自動生成された投稿文（編集可）</div>
+        <p>「営業フォローアップ AI Agent」を MY AI AGENT で公開しました 🎉<br>商談後の追客メールを 30秒で生成。CRM 不要、3ターン無料で試せます。<br>https://myaiagents.agency/l/ls_xxxx</p>
+      </div>
+
+      <div class="ps-cta-h">📤 SNS で告知する（クリックでシェア画面が開きます）</div>
+      <div class="ps-sns">
+        <a class="x" href="#"><div class="ic">𝕏</div>X (Twitter)</a>
+        <a class="line" href="#"><div class="ic">💬</div>LINE</a>
+        <a class="fb" href="#"><div class="ic">📘</div>Facebook</a>
+      </div>
+
+      <div class="ps-cta-h">🔗 公開 URL</div>
+      <div class="ps-url-row">
+        <div class="ps-url-input">https://myaiagents.agency/l/ls_a3f9-2bd1-c4e7</div>
+        <button class="ps-copy-btn">📋 コピー</button>
+      </div>
+
+      <div class="ps-tip">
+        💡 <b>シェアのコツ</b>: 投稿文に「3ターン無料で試せる」を入れると、未登録ユーザーもポチっと押しやすくなります。クリエイターハンドル <b>@takeuchi_kouta</b> もぜひ書いてください。
+      </div>
+
+      <div class="ps-foot">
+        <button class="ps-skip">あとでシェアする</button>
+        <button class="ps-go">クリエイターダッシュボードへ →</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="note">
+  <b>挙動:</b> 出店フォームで「出店する →」を押した直後に表示。SNS ボタンは twitter/intent/tweet のような事前入力済み URL を開く。<br>
+  <b>差別化ポイント:</b> 「最初のユーザー獲得チャンス」と煽ることで <b>そのまま閉じる確率を下げる</b>。プレビュー付きでサムネが本当に表示されることを安心させる。投稿文を自動生成して編集も可能。
+</div>
+
+<!-- ═══════════════ B. ENHANCED LANDING PAGE ═══════════════ -->
+<h2>B. 公開ランディングページ（誰かが /l/&lt;id&gt; を踏んだ時の見た目）</h2>
+<div class="section">
+<div class="lp-page">
+  <nav class="lp-nav">
+    <a href="/" class="lp-brand">🍑 MY AI AGENT</a>
+    <div class="lp-nav-r">
+      <a href="#">マーケット</a>
+      <a href="#">EN</a>
+      <a href="#" class="lp-cta">無料で始める</a>
+    </div>
+  </nav>
+
+  <div class="lp-hero">
+    <div class="lp-cat">セールス · MARKETPLACE</div>
+    <div class="lp-sticker">📞</div>
+    <div class="lp-name">営業フォローアップ AI Agent</div>
+    <div class="lp-tagline">商談後 30 秒で追客メールを生成。<br>CRM 連携不要、テキストを貼るだけで完成。</div>
+
+    <div class="lp-creator-row">
+      クリエイター: <b>@takeuchi_kouta</b><span class="verified">✓</span>
+    </div>
+
+    <div class="lp-trust-pills">
+      <span class="pl"><span class="ck">✓</span>3 ターン無料で試せる</span>
+      <span class="pl"><span class="ck">✓</span>登録不要</span>
+      <span class="pl"><span class="ck">✓</span>30 秒で結果</span>
+    </div>
+
+    <a class="lp-cta-primary" href="#try">🎯 今すぐ無料で試す →</a>
+
+    <div class="lp-stats">
+      <div class="st"><div class="v"><span class="star">★</span> 4.7</div><div class="l">52 件の評価</div></div>
+      <div class="st"><div class="v">284</div><div class="l">利用回数</div></div>
+      <div class="st"><div class="v">68</div><div class="l">アクティブ利用者</div></div>
+    </div>
+  </div>
+
+  <div class="lp-section">
+    <h2>このエージェントができること</h2>
+    <div class="lp-desc-box">商談後のフォローアップメールを自動生成します。CRM 連携不要、テキストを貼るだけで適切な追客文面を作成。
+
+BtoB / BtoC 両対応で、敬語の調整も自動。
+失注した相手への関係維持メッセージや、検討期間が長引く顧客への軽めの追客もこなせます。
+
+3 人の営業チームで月 60 時間の節約実績あり。</div>
+  </div>
+
+  <div class="lp-section">
+    <h2>こんな依頼が得意です（クリックで試せる）</h2>
+    <div class="lp-demos">
+      <button class="lp-demo-card">
+        <div class="num">1</div>
+        <div class="txt">先週商談した株式会社○○に、丁寧な追加提案メールを書いて</div>
+        <div class="arrow">▸ クリックで実行</div>
+      </button>
+      <button class="lp-demo-card">
+        <div class="num">2</div>
+        <div class="txt">検討期間が長引いている顧客への、軽めの追客メッセージ</div>
+        <div class="arrow">▸ クリックで実行</div>
+      </button>
+      <button class="lp-demo-card">
+        <div class="num">3</div>
+        <div class="txt">失注した相手への、関係を残すクロージングメール</div>
+        <div class="arrow">▸ クリックで実行</div>
+      </button>
+      <button class="lp-demo-card" style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:rgba(251,146,60,.25)">
+        <div class="num" style="background:var(--text2)">+</div>
+        <div class="txt">あなたの状況を直接書いて試す</div>
+        <div class="arrow">▸ 自由入力</div>
+      </button>
+    </div>
+  </div>
+
+  <div class="lp-section" id="try">
+    <div class="lp-try-banner">
+      <div class="em">🎯</div>
+      <div class="info">
+        <h3>まずは話しかけてみる</h3>
+        <p>サインアップ前に <b>3 ターン</b> まで無料で会話できます。リアルなレスポンスをその場で確認できます。</p>
+        <div class="row">
+          <input placeholder="例: 商談後の追客メールを書いて">
+          <button>送信</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lp-section">
+    <h2>使い方は 3 ステップ</h2>
+    <div class="lp-how">
+      <div class="lp-how-step">
+        <div class="n">1</div>
+        <h3>まず無料で試す</h3>
+        <p>登録不要で 3 ターン会話できます。期待した品質か確認</p>
+      </div>
+      <div class="lp-how-step">
+        <div class="n">2</div>
+        <h3>チームに追加</h3>
+        <p>30 秒で無料登録。あなたのアカウントにこのエージェントを追加</p>
+      </div>
+      <div class="lp-how-step">
+        <div class="n">3</div>
+        <h3>毎日使う</h3>
+        <p>10 メッセージまで無料。あとは利用量に応じた従量課金</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="lp-section">
+    <div class="lp-final-cta">
+      <h2>このエージェントを<br>あなたのチームに迎えませんか？</h2>
+      <p>登録は 30 秒。最初の 10 メッセージは無料です。</p>
+      <a href="#" class="lp-final-btn">＋ チームに追加して使い始める →</a>
+    </div>
+  </div>
+
+  <div class="lp-foot">
+    <a href="/">MY AI AGENT</a> · <a href="/terms.html">利用規約</a> · <a href="/privacy.html">プライバシー</a> · <a href="/legal.html">特商法表記</a><br>
+    <span style="margin-top:10px;display:inline-block">© 株式会社 PROTOCOL</span>
+  </div>
+</div>
+</div>
+
+<div class="note">
+  <b>従来との違い:</b><br>
+  ・ヒーローセクションを <b>「LP っぽい」</b> 構成に — Pattern E のステッカー絵文字 + 大きいタイトル + 信頼ピル + 巨大 CTA<br>
+  ・<b>★評価・利用回数・利用者数</b> を hero 直下に並べて社会的証明を上に押し出す<br>
+  ・<b>「こんな依頼が得意」</b>カード化（デモプロンプトを商品ベネフィットっぽく見せる）<br>
+  ・<b>3 ステップ説明</b>を追加（試す → 追加 → 使う）<br>
+  ・<b>最後にもう一度 CTA</b>（peach グラデブロック）で離脱前の再アピール<br>
+  <br>
+  <b>Twitter サムネ問題:</b><br>
+  Twitter が SVG OG image を表示しないため、<b>/api/og/&lt;id&gt;.png</b> を確実に返すよう既に修正済み（前回コミット 6bec0f4 で @resvg/resvg-js + Twemoji 埋め込み）。<br>
+  ただし最近の cross-user スキャン 500 エラーで PNG エンドポイントが落ちてた可能性あり → 直近の commit (180450d) で try/catch 追加済み。デプロイ後の検証必要。<br>
+  Twitter Card Validator (cards-dev.twitter.com/validator) で URL を投入すれば実際にサムネが出るか確認できる。
+</div>
+
+<h2 style="color:#fff;margin-top:48px">実装する？</h2>
+<div class="note" style="font-size:13px;line-height:1.85">
+  <b>A. 出店完了モーダル</b>: 出店フォームの submitListing 成功時に表示。既存の openShareListing モーダルを再利用 + 上部の hero/confetti 演出 + 投稿文プリセット追加。<b>~ 1コミット</b><br><br>
+  <b>B. 強化版ランディング</b>: 既存の serveListingPage を全面リライト。Hero / trust pills / 3-step / final CTA 追加。i18n は既存の T_JA/T_EN を拡張。<b>~ 1コミット</b><br><br>
+  <b>C. Twitter サムネ修正</b>: 既に PNG 出すコード入ってる。動作確認 + Cache 期限調整 + Twitter Card Validator で叩く。問題あれば修正。<b>~ 30分</b>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>他サイト対応例 — Slack / Gmail / LinkedIn / Notion</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6;
+  --slack-aubergine:#3f0e40; --slack-yellow:#ecb22e; --slack-green:#2eb67d;
+  --gmail-red:#ea4335; --linkedin-blue:#0a66c2;
+  --notion-black:#191919;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+.shell{max-width:1100px;margin:0 auto;padding:48px 24px 80px;}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-size:13px;color:var(--text3);font-weight:600;flex-wrap:wrap;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+
+.h1{font-size:32px;font-weight:900;margin-bottom:10px;line-height:1.25;}
+.sub{font-size:15px;color:var(--text2);margin-bottom:48px;line-height:1.7;}
+.sub b{color:var(--text);}
+
+.cases{display:grid;grid-template-columns:1fr;gap:36px;}
+
+.case{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 8px 28px rgba(180,100,40,.06);
+}
+.case-h{
+  display:flex;align-items:center;gap:14px;
+  padding:18px 22px;border-bottom:1px solid var(--line);
+}
+.case-h.slack{background:linear-gradient(135deg,#3f0e40,#5c1c5e);color:#fff;}
+.case-h.gmail{background:linear-gradient(135deg,#ea4335,#fbbc04);color:#fff;}
+.case-h.linkedin{background:linear-gradient(135deg,#0a66c2,#005580);color:#fff;}
+.case-h.notion{background:linear-gradient(135deg,#191919,#3a3a3a);color:#fff;}
+.case-h.salesforce{background:linear-gradient(135deg,#00a1e0,#005fb3);color:#fff;}
+.case-h .logo{width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;}
+.case-h .nm{font-size:17px;font-weight:800;}
+.case-h .desc{font-size:11.5px;opacity:.85;margin-top:2px;}
+
+.case-body{
+  display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:14px;padding:22px;background:var(--cream);
+}
+@media(max-width:880px){.case-body{grid-template-columns:1fr;}}
+
+.panel{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:13px;padding:14px;
+}
+.panel-h{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.panel-h .num{
+  width:18px;height:18px;border-radius:50%;background:var(--peach);color:#fff;
+  font-size:10px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;
+}
+
+/* Chat bubble */
+.chatm{display:flex;gap:9px;margin-bottom:8px;}
+.chatm-av{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700;}
+.chatm.me .chatm-av{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.chatm.ai .chatm-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));font-size:13px;}
+.chatm-bub{padding:9px 12px;border-radius:11px;font-size:12.5px;color:var(--text);line-height:1.55;}
+.chatm.me .chatm-bub{background:#dbeafe;border:1px solid rgba(59,130,246,.18);color:#1e3a8a;}
+.chatm.ai .chatm-bub{background:var(--cream);border:1px solid var(--line);}
+
+/* Approval card (mini) */
+.appro{
+  border:1.5px solid var(--peach);border-radius:12px;background:#fff;overflow:hidden;
+}
+.appro-h{
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);padding:10px 14px;
+  display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line);
+}
+.appro-h .ic{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.appro-h .nm{font-size:12.5px;font-weight:800;color:var(--text);}
+.appro-h .role{font-size:10.5px;color:var(--text3);}
+.appro-h .timer{margin-left:auto;font-size:10.5px;color:var(--peach-dark);font-weight:700;}
+.appro-body{padding:12px 14px;font-size:12.5px;color:var(--text);line-height:1.55;}
+.appro-body .what{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.appro-body .what em{color:var(--peach-dark);font-style:normal;background:rgba(251,146,60,.1);padding:1px 5px;border-radius:3px;}
+.appro-body .preview{
+  background:var(--cream);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.6;
+}
+.appro-body .meta{font-size:10.5px;color:var(--text3);margin-top:8px;}
+.appro-foot{display:grid;grid-template-columns:1fr 1.5fr;gap:6px;padding:10px 14px;background:var(--cream);}
+.appro-foot button{border:0;padding:8px;border-radius:8px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+.appro-foot .no{background:rgba(0,0,0,.05);color:var(--text2);}
+.appro-foot .yes{background:var(--green);color:#fff;}
+
+/* Result card */
+.result{
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+  border:1px solid rgba(16,185,129,.3);border-radius:11px;
+  padding:12px 14px;font-size:12.5px;color:#047857;line-height:1.55;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.result-emo{font-size:18px;line-height:1;flex-shrink:0;}
+.result b{color:#065f46;}
+.result a{color:#065f46;text-decoration:underline;font-weight:700;}
+
+/* Site-specific previews */
+
+/* ── Slack message ── */
+.slack-prev{display:flex;gap:9px;}
+.slack-prev .av{width:30px;height:30px;border-radius:6px;background:#5b1d5d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.slack-prev .meta{flex:1;}
+.slack-prev .name{font-size:12.5px;font-weight:800;color:#1d1c1d;}
+.slack-prev .time{font-size:10.5px;color:#616061;font-weight:500;}
+.slack-prev .text{font-size:12px;color:#1d1c1d;margin-top:2px;line-height:1.55;}
+.slack-prev .channel-tag{display:inline-flex;align-items:center;gap:3px;background:#f8f8f8;padding:1px 7px;border-radius:5px;font-size:10.5px;color:#616061;font-weight:700;margin-bottom:6px;}
+
+/* ── Gmail draft ── */
+.gmail-prev{font-family:Roboto,Arial,sans-serif;font-size:12.5px;}
+.gmail-prev .field{display:flex;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.08);font-size:12px;}
+.gmail-prev .k{width:50px;color:#5f6368;font-size:11px;}
+.gmail-prev .v{flex:1;color:#202124;}
+.gmail-prev .body{font-size:12px;color:#202124;line-height:1.7;padding:8px 0 0;white-space:pre-wrap;}
+
+/* ── LinkedIn DM ── */
+.li-prev{display:flex;gap:9px;}
+.li-prev .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0a66c2,#005580);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.li-prev .meta{flex:1;}
+.li-prev .name{font-size:12.5px;font-weight:800;color:#000;}
+.li-prev .title{font-size:10.5px;color:#666;line-height:1.4;margin-bottom:4px;}
+.li-prev .text{font-size:11.5px;color:#000;line-height:1.55;background:#f3f6f8;padding:8px 10px;border-radius:8px;}
+
+/* ── Notion block ── */
+.notion-prev{font-family:'Inter',sans-serif;}
+.notion-prev .page-title{font-size:14px;font-weight:700;color:#37352f;margin-bottom:6px;}
+.notion-prev .todo{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;color:#37352f;padding:3px 0;line-height:1.5;}
+.notion-prev .todo .cb{width:14px;height:14px;border:1.5px solid #b9b9b3;border-radius:3px;flex-shrink:0;margin-top:2px;}
+.notion-prev .todo.done .cb{background:#3a3a3a;border-color:#3a3a3a;color:#fff;text-align:center;font-size:9px;line-height:11px;}
+.notion-prev .todo .due{color:#9b9a97;font-size:10px;margin-left:4px;}
+
+/* ── Salesforce / CRM ── */
+.sf-prev{font-family:'Salesforce Sans','Inter',sans-serif;font-size:12px;}
+.sf-prev .field{display:flex;padding:4px 0;border-bottom:1px dashed rgba(0,0,0,.08);}
+.sf-prev .k{width:80px;color:#3e3e3c;font-size:10.5px;}
+.sf-prev .v{flex:1;color:#080707;font-weight:600;font-size:11.5px;}
+.sf-prev .v.new{color:#04844b;}
+.sf-prev .v.new::before{content:'+ ';color:#04844b;}
+
+.summary-card{
+  margin-top:48px;padding:28px;border-radius:16px;
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);
+}
+.summary-card h2{font-size:18px;font-weight:900;margin-bottom:10px;color:var(--peach-dark);}
+.summary-card p{font-size:13.5px;color:var(--text2);margin-bottom:6px;line-height:1.7;}
+.summary-card ul{padding-left:20px;font-size:13px;color:var(--text2);}
+.summary-card li{margin:5px 0;line-height:1.6;}
+.summary-card b{color:var(--text);}
+
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12.5px;color:var(--text3);}
+.foot a{color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-extension-flow.html">🌐 Phase 1 簡単版 (X 投稿)</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-localagent-flow.html">📋 技術者向け</a>
+</div>
+
+<h1 class="h1">🌐 他サイトでも同じ流れ</h1>
+<p class="sub">
+  ブラウザ拡張は <b>サイトを区別しません</b>。X で出来ることは Slack / Gmail / LinkedIn / Notion / Salesforce... 何でも同じ流れで出来ます。<br>
+  以下は <b>5 つの実例</b>。すべて <b>① 指示 → ② 内容確認 → ③ 結果報告</b> の 3 パネル構成。
+</p>
+
+<div class="cases">
+
+<!-- ════ CASE 1: SLACK ════ -->
+<div class="case">
+  <div class="case-h slack">
+    <div class="logo">#</div>
+    <div>
+      <div class="nm">Slack</div>
+      <div class="desc">チャンネル投稿・スレッド返信・DM 送信・既読チェック</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">#general に「今日 17時から定例ミーティングです、Zoom リンクは後ほど共有します」を投稿して</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>AI が確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">💼</div>
+          <div>
+            <div class="nm">業務サポート君</div>
+            <div class="role">が以下を実行します</div>
+          </div>
+          <div class="timer">残り 27秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">💬 <em>Slack</em> に投稿します</div>
+          <div class="preview">
+            <div class="slack-prev">
+              <div class="av">K</div>
+              <div class="meta">
+                <div class="channel-tag"># general · myaiagent ワークスペース</div>
+                <div><span class="name">Takeuchi Kouta</span> <span class="time">17:48</span></div>
+                <div class="text">今日 17時から定例ミーティングです、Zoom リンクは後ほど共有します</div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">📍 投稿先: <b>#general</b> (132 名) · 編集は5分以内可</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で投稿</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">✅</div>
+        <div>
+          <b>投稿しました</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">3名がスレッドで質問しています。</span><br>
+          <a href="#">📎 #general を開く</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 2: GMAIL ════ -->
+<div class="case">
+  <div class="case-h gmail">
+    <div class="logo">M</div>
+    <div>
+      <div class="nm">Gmail</div>
+      <div class="desc">メール送信・返信下書き・整理・要約</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">山田さんから来たメールに「了解です。来週水曜日 14時で対応可能です」って返信下書き作って</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>AI が確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">📧</div>
+          <div>
+            <div class="nm">業務サポート君</div>
+            <div class="role">が以下を実行します</div>
+          </div>
+          <div class="timer">残り 31秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">📝 <em>Gmail</em> に下書きを保存します<br><span style="font-size:11px;color:var(--text3);font-weight:500">(送信はしません — あなたが Gmail で確認後に手動送信)</span></div>
+          <div class="preview">
+            <div class="gmail-prev">
+              <div class="field"><div class="k">To</div><div class="v">山田 太郎 &lt;yamada@example.com&gt;</div></div>
+              <div class="field"><div class="k">件名</div><div class="v">Re: 来週の打ち合わせ日程について</div></div>
+              <div class="body">山田さま
+
+ご連絡ありがとうございます。
+了解です。来週水曜日 14時で対応可能です。
+
+何卒よろしくお願いいたします。
+
+竹内</div>
+            </div>
+          </div>
+          <div class="meta">📍 下書きとして保存 · 送信前に確認可</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">下書きを保存</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">📝</div>
+        <div>
+          <b>下書きを保存しました</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">確認して問題なければ Gmail で「送信」を押してください。</span><br>
+          <a href="#">📎 下書きを開く</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 3: LINKEDIN ════ -->
+<div class="case">
+  <div class="case-h linkedin">
+    <div class="logo">in</div>
+    <div>
+      <div class="nm">LinkedIn</div>
+      <div class="desc">投稿・営業 DM・コネクション申請・営業リスト抽出</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">SaaS 系 CTO の田中さんに、新サービスの紹介 DM を送って</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>AI が確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">🎯</div>
+          <div>
+            <div class="nm">営業サポート君</div>
+            <div class="role">が以下を実行します</div>
+          </div>
+          <div class="timer">残り 29秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">📤 <em>LinkedIn DM</em> を送信します</div>
+          <div class="preview">
+            <div class="li-prev">
+              <div class="av">田</div>
+              <div class="meta">
+                <div class="name">田中 健一さん</div>
+                <div class="title">CTO @ AcmeSaaS · 元エンジニア</div>
+                <div class="text">田中さん、突然失礼します。プロフィールを拝見し、CTO として組織のオペレーション最適化に注力されていることを知り、ご連絡しました。<br><br>弊社で開発中の MY AI Agent は、まさに〜（中略）〜<br><br>15 分ほどお時間いただけませんでしょうか。</div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">📍 送信先: <b>田中 健一</b> (1次接続) · 履歴に残ります</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で送信</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">📨</div>
+        <div>
+          <b>DM 送信完了</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">既読がついたら通知します。返信が来たら下書きも作ります。</span><br>
+          <a href="#">📎 メッセージを表示</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 4: NOTION ════ -->
+<div class="case">
+  <div class="case-h notion">
+    <div class="logo">N</div>
+    <div>
+      <div class="nm">Notion</div>
+      <div class="desc">議事録要約・ToDo抽出・ドキュメント整理・データベース更新</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">今日の定例ミーティングの議事録から、ToDo を抽出して「タスク」DBに追加して</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>AI が確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">📝</div>
+          <div>
+            <div class="nm">議事録まとめ君</div>
+            <div class="role">が以下を実行します</div>
+          </div>
+          <div class="timer">残り 34秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">📌 <em>Notion タスクDB</em> に <b>3件</b> 追加します</div>
+          <div class="preview">
+            <div class="notion-prev">
+              <div class="page-title">📋 タスク管理</div>
+              <div class="todo done"><div class="cb">✓</div>API ドキュメント整備 <span class="due">@竹内 · 5/14</span></div>
+              <div class="todo"><div class="cb"></div>新サービス LP の OG 画像を差し替える <span class="due">@竹内 · 5/10</span></div>
+              <div class="todo"><div class="cb"></div>来月のキャンペーン案を 3つ提示 <span class="due">@山田 · 5/15</span></div>
+              <div class="todo"><div class="cb"></div>Stripe Connect 審査の追加書類提出 <span class="due">@竹内 · 5/12</span></div>
+            </div>
+          </div>
+          <div class="meta">📍 追加先: <b>タスク管理 DB</b> · 既存タスクは変更しません</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">3件を追加</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">📌</div>
+        <div>
+          <b>3件のタスクを追加</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">担当者と期日も自動設定。期日3日前にリマインド予約しました。</span><br>
+          <a href="#">📎 タスク管理を開く</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 5: Salesforce / CRM ════ -->
+<div class="case">
+  <div class="case-h salesforce">
+    <div class="logo">SF</div>
+    <div>
+      <div class="nm">Salesforce / 社内 CRM</div>
+      <div class="desc">商談入力・顧客情報更新・パイプライン整理・レポート生成</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">今日の AcmeSaaS との商談、結果を入力しといて。受注確度70%、想定金額500万円、次回打合せ来週金曜</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>AI が確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">📊</div>
+          <div>
+            <div class="nm">営業データ管理君</div>
+            <div class="role">が以下を実行します</div>
+          </div>
+          <div class="timer">残り 32秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">💼 <em>Salesforce 商談</em> を更新します</div>
+          <div class="preview">
+            <div class="sf-prev">
+              <div class="field"><div class="k">商談名</div><div class="v">AcmeSaaS 様 - サブスク契約</div></div>
+              <div class="field"><div class="k">確度</div><div class="v new">70% (前回 50% から +20)</div></div>
+              <div class="field"><div class="k">想定金額</div><div class="v new">¥5,000,000</div></div>
+              <div class="field"><div class="k">フェーズ</div><div class="v new">提案・見積</div></div>
+              <div class="field"><div class="k">次回</div><div class="v new">2026-05-16 (金) 14:00</div></div>
+            </div>
+          </div>
+          <div class="meta">📍 更新先: <b>商談ID 0064x00000ABC</b> · 監査ログに記録</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で更新</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">💾</div>
+        <div>
+          <b>商談を更新しました</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">パイプライン合計 +200万円。Q2 目標達成見込みです。</span><br>
+          <a href="#">📎 商談ページを開く</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ── Summary ── -->
+<div class="summary-card">
+  <h2>🎯 すべてのサイトで共通するパターン</h2>
+  <p>サイトが違っても、ユーザー体験は<b>常に同じ 3 ステップ</b>:</p>
+  <ul>
+    <li>① <b>チャットで指示</b> — 普段の話し言葉で OK</li>
+    <li>② <b>AI が日本語で確認</b> — 「📤 〇〇 に投稿します」+ 内容プレビュー</li>
+    <li>③ <b>結果報告</b> — リンクと次のアクション提案つき</li>
+  </ul>
+  <p style="margin-top:14px"><b>新しいサイト対応もコード変更ほぼ不要</b>:</p>
+  <ul>
+    <li>AI が ext_read_page で <b>各サイトの構造を自動学習</b>。Salesforce のフィールド名、Notion の DB 構造、Gmail の宛先欄 — 全部 AI が画面を見て判断</li>
+    <li>サイトごとに専用ロジックを書く必要なし。ユーザーが「〇〇 を 〇〇 して」と言えば、AI がやり方を組み立てる</li>
+    <li>新サイト追加時の運用コスト = ほぼゼロ</li>
+  </ul>
+  <p style="margin-top:14px;padding:12px 14px;background:rgba(255,255,255,.6);border-radius:10px;font-size:13px">
+    💡 <b>ご注意</b>: 上記はモックです。実装上、サイトごとに UI 変更で動作不安定になる可能性は残ります (X / Slack 等のメジャーサイトは月1〜2 回くらいセレクタ確認が必要)。マイナーサイトは AI のページ構造解析に依存。
+  </p>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/mock-extension-flow.html">Phase 1 全体フロー</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+</body>
+</html>

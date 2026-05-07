@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>任意のサイトで動く — Uber / Amazon / 旅行サイト等</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --uber-black:#000;
+  --amazon-orange:#ff9900; --amazon-blue:#232f3e;
+  --rakuten-red:#bf0000;
+  --mercari-red:#ff0211;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+.shell{max-width:1100px;margin:0 auto;padding:48px 24px 80px;}
+
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-size:13px;color:var(--text3);font-weight:600;flex-wrap:wrap;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+
+.h1{font-size:36px;font-weight:900;letter-spacing:.01em;margin-bottom:10px;line-height:1.2;}
+.h1 .accent{
+  background:linear-gradient(90deg,var(--peach),var(--peach-dark));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{font-size:16px;color:var(--text2);margin-bottom:24px;line-height:1.7;}
+.sub b{color:var(--text);}
+
+/* ── Site logos grid ───────────────────────────────────── */
+.logos{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;
+  margin:32px 0 56px;
+}
+.logo-cell{
+  background:#fff;border:1px solid var(--line);border-radius:13px;
+  padding:18px 14px;text-align:center;
+  transition:all .18s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+}
+.logo-cell:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(180,100,40,.1);border-color:rgba(251,146,60,.3);}
+.logo-cell .ic{font-size:24px;line-height:1;}
+.logo-cell .nm{font-size:12px;font-weight:800;color:var(--text);}
+.logo-cell .cat{font-size:10px;color:var(--text3);}
+
+/* Section title */
+.section-title{font-size:24px;font-weight:900;margin:40px 0 18px;letter-spacing:.01em;}
+
+/* ── Approval rule visualization ──────────────────────── */
+.rule-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:780px){.rule-grid{grid-template-columns:1fr;}}
+.rule-col{
+  background:#fff;border-radius:14px;padding:20px 22px;
+  border:1px solid var(--line);
+}
+.rule-col.auto{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-color:rgba(16,185,129,.3);}
+.rule-col.appro{background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:rgba(251,146,60,.35);}
+.rule-h{font-size:15px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.rule-col.auto .rule-h{color:#047857;}
+.rule-col.appro .rule-h{color:var(--peach-dark);}
+.rule-h .badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:5px;letter-spacing:.04em;}
+.rule-col.auto .rule-h .badge{background:rgba(16,185,129,.15);color:#047857;}
+.rule-col.appro .rule-h .badge{background:rgba(251,146,60,.18);color:var(--peach-dark);}
+.rule-col ul{list-style:none;padding:0;}
+.rule-col li{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;color:var(--text);padding:5px 0;line-height:1.6;}
+.rule-col li::before{
+  content:'';width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:3px;
+  background-position:center;background-repeat:no-repeat;
+}
+.rule-col.auto li::before{
+  background-color:rgba(16,185,129,.15);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23047857' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.rule-col.appro li::before{
+  background-color:rgba(251,146,60,.18);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 2v5M6 9.5v.5' stroke='%23ea580c' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.rule-col li code{font-family:var(--mono);font-size:11.5px;color:var(--text);background:rgba(0,0,0,.04);padding:1px 5px;border-radius:3px;}
+.rule-col li b{font-weight:800;}
+
+/* ── Case (full mock) ─────────────────────────────────── */
+.case{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 8px 28px rgba(180,100,40,.06);
+  margin-bottom:28px;
+}
+.case-h{
+  display:flex;align-items:center;gap:14px;
+  padding:18px 22px;border-bottom:1px solid var(--line);
+}
+.case-h.uber{background:#000;color:#fff;}
+.case-h.amazon{background:linear-gradient(135deg,#232f3e,#37475a);color:#fff;}
+.case-h.rakuten{background:linear-gradient(135deg,#bf0000,#8b0000);color:#fff;}
+.case-h.mercari{background:linear-gradient(135deg,#ff0211,#cc0000);color:#fff;}
+.case-h.unknown{background:linear-gradient(135deg,#475569,#64748b);color:#fff;}
+.case-h .logo{
+  width:44px;height:44px;border-radius:11px;background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0;
+}
+.case-h.amazon .logo{background:var(--amazon-orange);color:#000;}
+.case-h.rakuten .logo{background:#fff;color:var(--rakuten-red);}
+.case-h.mercari .logo{background:#fff;color:var(--mercari-red);}
+.case-h.uber .logo{background:#fff;color:#000;}
+.case-h .nm{font-size:18px;font-weight:900;}
+.case-h .desc{font-size:11.5px;opacity:.85;margin-top:2px;}
+
+.case-body{
+  display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:14px;padding:22px;background:var(--cream);
+}
+@media(max-width:880px){.case-body{grid-template-columns:1fr;}}
+
+.panel{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:13px;padding:14px;
+}
+.panel-h{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.panel-h .num{
+  width:18px;height:18px;border-radius:50%;background:var(--peach);color:#fff;
+  font-size:10px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;
+}
+
+/* Chat */
+.chatm{display:flex;gap:9px;margin-bottom:8px;}
+.chatm-av{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700;}
+.chatm.me .chatm-av{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.chatm.ai .chatm-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));font-size:13px;}
+.chatm-bub{padding:9px 12px;border-radius:11px;font-size:12.5px;color:var(--text);line-height:1.55;}
+.chatm.me .chatm-bub{background:#dbeafe;border:1px solid rgba(59,130,246,.18);color:#1e3a8a;}
+.chatm.ai .chatm-bub{background:var(--cream);border:1px solid var(--line);}
+
+/* Approval card */
+.appro{
+  border:1.5px solid var(--peach);border-radius:12px;background:#fff;overflow:hidden;
+}
+.appro-h{
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);padding:10px 14px;
+  display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line);
+}
+.appro-h .ic{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.appro-h .nm{font-size:12.5px;font-weight:800;color:var(--text);}
+.appro-h .role{font-size:10.5px;color:var(--text3);}
+.appro-h .timer{margin-left:auto;font-size:10.5px;color:var(--peach-dark);font-weight:700;}
+.appro-body{padding:12px 14px;font-size:12.5px;color:var(--text);line-height:1.55;}
+.appro-body .what{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.appro-body .what em{color:var(--peach-dark);font-style:normal;background:rgba(251,146,60,.1);padding:1px 5px;border-radius:3px;}
+.appro-body .preview{
+  background:var(--cream);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.6;
+}
+.appro-body .meta{font-size:10.5px;color:var(--text3);margin-top:8px;}
+.appro-foot{display:grid;grid-template-columns:1fr 1.5fr;gap:6px;padding:10px 14px;background:var(--cream);}
+.appro-foot button{border:0;padding:8px;border-radius:8px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+.appro-foot .no{background:rgba(0,0,0,.05);color:var(--text2);}
+.appro-foot .yes{background:var(--green);color:#fff;}
+
+/* Result */
+.result{
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+  border:1px solid rgba(16,185,129,.3);border-radius:11px;
+  padding:12px 14px;font-size:12.5px;color:#047857;line-height:1.55;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.result-emo{font-size:18px;line-height:1;flex-shrink:0;}
+.result b{color:#065f46;}
+.result a{color:#065f46;text-decoration:underline;font-weight:700;}
+
+/* ── Site-specific previews ──────────────── */
+
+/* Uber */
+.uber-prev{font-family:'Inter',sans-serif;font-size:12.5px;color:#000;}
+.uber-prev .route{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e5e5e5;}
+.uber-prev .dot{width:10px;height:10px;border-radius:50%;background:#000;flex-shrink:0;}
+.uber-prev .dot.dest{background:transparent;border:2px solid #000;}
+.uber-prev .where{flex:1;font-size:12px;}
+.uber-prev .where b{font-weight:700;}
+.uber-prev .ride{display:flex;align-items:center;gap:10px;padding:8px 0;}
+.uber-prev .ride .ic{font-size:24px;line-height:1;}
+.uber-prev .ride .info{flex:1;}
+.uber-prev .ride .name{font-size:12.5px;font-weight:700;}
+.uber-prev .ride .meta{font-size:10.5px;color:#777;}
+.uber-prev .ride .price{font-size:13px;font-weight:800;}
+
+/* Amazon */
+.amzn-prev{font-family:'Amazon Ember','Helvetica Neue',Arial,sans-serif;font-size:12.5px;}
+.amzn-prev .item{display:flex;gap:10px;}
+.amzn-prev .img{width:48px;height:48px;border-radius:6px;background:#f0f2f3;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.amzn-prev .info{flex:1;}
+.amzn-prev .ttl{font-size:12px;color:#0066c0;font-weight:600;line-height:1.4;}
+.amzn-prev .pr{font-size:14px;color:#b12704;font-weight:700;margin-top:3px;}
+.amzn-prev .qty{font-size:11px;color:#555;margin-top:2px;}
+.amzn-prev .ship{font-size:11px;color:#067D62;margin-top:3px;}
+
+/* Rakuten travel */
+.rkt-prev{font-family:Helvetica,sans-serif;font-size:12.5px;}
+.rkt-prev .hotel{font-size:13px;font-weight:800;color:#bf0000;}
+.rkt-prev .meta{font-size:11.5px;color:#444;line-height:1.55;margin-top:3px;}
+.rkt-prev .meta b{color:#000;}
+.rkt-prev .total{display:flex;justify-content:space-between;padding-top:8px;margin-top:8px;border-top:1px dashed #ccc;font-size:13px;font-weight:800;}
+.rkt-prev .total .pr{color:#bf0000;font-size:15px;}
+
+/* Mercari */
+.mer-prev{font-family:Helvetica,sans-serif;font-size:12.5px;}
+.mer-prev .item{display:flex;gap:10px;}
+.mer-prev .img{width:54px;height:54px;border-radius:8px;background:linear-gradient(135deg,#e0e0e0,#bdbdbd);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;color:#666;}
+.mer-prev .info{flex:1;}
+.mer-prev .ttl{font-size:12.5px;font-weight:700;color:#000;line-height:1.4;}
+.mer-prev .desc{font-size:11px;color:#666;margin-top:3px;line-height:1.5;}
+.mer-prev .pr{font-size:15px;color:#000;font-weight:800;margin-top:4px;}
+
+/* Unknown site preview */
+.unknown-prev{font-family:Arial,sans-serif;font-size:12px;}
+.unknown-prev .url{font-family:var(--mono);font-size:11px;color:var(--text3);background:#f8f8f8;padding:5px 9px;border-radius:5px;margin-bottom:8px;}
+.unknown-prev .scan{font-size:11.5px;color:var(--text2);line-height:1.65;}
+.unknown-prev .scan b{color:var(--text);}
+
+/* Summary */
+.summary-card{
+  margin-top:48px;padding:32px;border-radius:18px;
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);
+}
+.summary-card h2{font-size:20px;font-weight:900;margin-bottom:12px;color:var(--peach-dark);}
+.summary-card p{font-size:14px;color:var(--text2);margin-bottom:8px;line-height:1.7;}
+.summary-card b{color:var(--text);}
+.summary-card .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px;}
+.summary-card .grid .stat{background:#fff;border-radius:11px;padding:14px;text-align:center;}
+.summary-card .grid .num{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--peach-dark);line-height:1;}
+.summary-card .grid .lbl{font-size:11px;color:var(--text3);margin-top:4px;font-weight:700;letter-spacing:.04em;}
+
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12.5px;color:var(--text3);}
+.foot a{color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-extension-flow.html">🌐 全体フロー</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-extension-sites.html">📋 業務SaaS例</a>
+</div>
+
+<h1 class="h1">🌍 <span class="accent">あらゆるサイト</span>で動きます</h1>
+<p class="sub">
+  Uber、Amazon、楽天トラベル、メルカリ、銀行、病院予約... <b>サイトを選ばない</b>のがブラウザ拡張の強み。<br>
+  事前登録もカテゴリ分けも不要。「〇〇 開いて」と言えば AI が動く。
+</p>
+
+<!-- ── Logo grid ── -->
+<div class="logos">
+  <div class="logo-cell"><div class="ic">🚗</div><div class="nm">Uber</div><div class="cat">移動</div></div>
+  <div class="logo-cell"><div class="ic">🛒</div><div class="nm">Amazon</div><div class="cat">通販</div></div>
+  <div class="logo-cell"><div class="ic">✈️</div><div class="nm">楽天トラベル</div><div class="cat">予約</div></div>
+  <div class="logo-cell"><div class="ic">🏷️</div><div class="nm">メルカリ</div><div class="cat">フリマ</div></div>
+  <div class="logo-cell"><div class="ic">🍕</div><div class="nm">UberEats</div><div class="cat">フード</div></div>
+  <div class="logo-cell"><div class="ic">🏥</div><div class="nm">病院予約</div><div class="cat">医療</div></div>
+  <div class="logo-cell"><div class="ic">🎫</div><div class="nm">Peatix</div><div class="cat">イベント</div></div>
+  <div class="logo-cell"><div class="ic">💳</div><div class="nm">クレカ会社</div><div class="cat">明細</div></div>
+  <div class="logo-cell"><div class="ic">🎓</div><div class="nm">Udemy</div><div class="cat">学習</div></div>
+  <div class="logo-cell"><div class="ic">📺</div><div class="nm">Netflix</div><div class="cat">動画</div></div>
+  <div class="logo-cell"><div class="ic">🏠</div><div class="nm">SUUMO</div><div class="cat">不動産</div></div>
+  <div class="logo-cell"><div class="ic">❓</div><div class="nm">それ以外</div><div class="cat">何でも</div></div>
+</div>
+
+<!-- ── Approval rule ── -->
+<h2 class="section-title">🔒 ユーザーが安心できるルール</h2>
+<p style="font-size:14px;color:var(--text2);margin-bottom:18px">サイトを区別する代わりに、<b>「操作の種類」で承認の要否を判定</b>します。<b>不可逆な行動の前だけ</b>確認モーダルが出る。</p>
+
+<div class="rule-grid">
+  <div class="rule-col auto">
+    <div class="rule-h">
+      <span>確認なしで実行</span>
+      <span class="badge">AUTO</span>
+    </div>
+    <ul>
+      <li><b>URL を開く</b> — タブ開くだけ、副作用なし</li>
+      <li><b>ページを読む</b> — 閲覧は無害</li>
+      <li><b>検索する</b> — 結果が出るだけ</li>
+      <li><b>フォームに入力</b> — まだ送信してない</li>
+      <li><b>「次へ」「カートに入れる」</b> — 中間ステップ</li>
+      <li><b>ページ間移動・スクロール</b></li>
+    </ul>
+  </div>
+  <div class="rule-col appro">
+    <div class="rule-h">
+      <span>必ず確認モーダル</span>
+      <span class="badge">APPROVAL</span>
+    </div>
+    <ul>
+      <li><b>投稿・送信</b> (X 投稿、Slack 送信、メール送信)</li>
+      <li><b>購入・決済</b> (Amazon 注文確定、クレカ決済)</li>
+      <li><b>予約・確定</b> (Uber 配車、ホテル予約、病院予約)</li>
+      <li><b>削除</b> (アカウント削除、データ削除)</li>
+      <li><b>認証情報の変更</b> (パスワード変更等)</li>
+      <li><b>金額が動く操作</b>すべて</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ── 4 cases ── -->
+<h2 class="section-title" style="margin-top:48px">💼 実際の動作例</h2>
+
+<!-- ════ CASE 1: Uber ════ -->
+<div class="case">
+  <div class="case-h uber">
+    <div class="logo">U</div>
+    <div>
+      <div class="nm">Uber</div>
+      <div class="desc">ライド予約・運賃確認</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">銀座から羽田空港まで Uber を呼んで</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.55">
+        💭 AI 内部処理 (ユーザーには見えない):<br>
+        Uber を開く → 出発地・目的地を入力 → 検索 → 候補一覧取得
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>予約前に確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">🚗</div>
+          <div>
+            <div class="nm">アシスタント</div>
+            <div class="role">が以下を予約します</div>
+          </div>
+          <div class="timer">残り 28秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">🚕 <em>Uber X</em> を予約します</div>
+          <div class="preview">
+            <div class="uber-prev">
+              <div class="route"><div class="dot"></div><div class="where"><b>銀座</b></div></div>
+              <div class="route" style="border:0"><div class="dot dest"></div><div class="where"><b>羽田空港</b> 第2ターミナル</div></div>
+              <div style="border-top:1px solid #e5e5e5;margin-top:4px"></div>
+              <div class="ride">
+                <div class="ic">🚗</div>
+                <div class="info">
+                  <div class="name">Uber X</div>
+                  <div class="meta">12分後到着 · 24分</div>
+                </div>
+                <div class="price">¥3,200</div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">📍 支払い: 登録済みカード末尾 ****4242 · キャンセルは5分以内無料</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で予約</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">🚕</div>
+        <div>
+          <b>配車完了</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">トヨタ プリウス (品川 500 ・ ○○-12) が 12分後に到着。Uber アプリで進捗確認できます。</span><br>
+          <a href="#">📎 Uber アプリで確認</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 2: Amazon ════ -->
+<div class="case">
+  <div class="case-h amazon">
+    <div class="logo">a</div>
+    <div>
+      <div class="nm">Amazon</div>
+      <div class="desc">通販・再注文・購入履歴検索</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">先週ポチった電池の追加注文 (同じやつ)</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.55">
+        💭 AI 内部処理:<br>
+        注文履歴ページを開く → 「電池」を検索 → 該当商品を「もう一度買う」 → カート確認
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>注文前に確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">🛒</div>
+          <div>
+            <div class="nm">アシスタント</div>
+            <div class="role">が以下を注文します</div>
+          </div>
+          <div class="timer">残り 31秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">📦 <em>Amazon</em> でワンクリック注文します</div>
+          <div class="preview">
+            <div class="amzn-prev">
+              <div class="item">
+                <div class="img">🔋</div>
+                <div class="info">
+                  <div class="ttl">パナソニック エボルタネオ 単4形 アルカリ乾電池 8本パック</div>
+                  <div class="pr">¥1,280</div>
+                  <div class="qty">数量: 1</div>
+                  <div class="ship">✓ 明日 (5/8) お届け予定 · Prime</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">📍 配送先: 自宅 (登録済) · 支払い: ****4242</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で注文</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">📦</div>
+        <div>
+          <b>注文完了</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">注文番号 250-1234567-1234567 · 明日 12-14 時にお届け予定</span><br>
+          <a href="#">📎 注文を表示</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 3: Rakuten Travel ════ -->
+<div class="case">
+  <div class="case-h rakuten">
+    <div class="logo">楽</div>
+    <div>
+      <div class="nm">楽天トラベル</div>
+      <div class="desc">ホテル予約・空室検索・ポイント確認</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">来週末 (5/16-17) 箱根で温泉宿 1泊2食付き、3万円以下で予約して</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.55">
+        💭 AI 内部処理:<br>
+        楽天トラベルを開く → 検索条件入力 (箱根, 5/16-17, 1泊2食, 〜3万円) →<br>
+        結果一覧から評価 4.5 以上で最安を選ぶ → プラン詳細を確認
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>予約前に確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">♨</div>
+          <div>
+            <div class="nm">アシスタント</div>
+            <div class="role">が以下を予約します</div>
+          </div>
+          <div class="timer">残り 45秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">🏨 <em>楽天トラベル</em> で予約します</div>
+          <div class="preview">
+            <div class="rkt-prev">
+              <div class="hotel">箱根湯本温泉 旅館 やまぐち</div>
+              <div class="meta">
+                ★★★★☆ 4.6 (327件) · <b>5/16(土) 〜 5/17(日) 1泊</b><br>
+                スタンダード和室 (8畳) · 2名様 · 1泊2食付<br>
+                チェックイン 15:00 / チェックアウト 10:00
+              </div>
+              <div class="total">
+                <div>合計 (税込)</div>
+                <div class="pr">¥27,800</div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">📍 支払い: 楽天カード末尾 ****1234 · 楽天 ポイント 278pt 獲得</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で予約</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">♨</div>
+        <div>
+          <b>予約完了</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">予約番号 R-20260516-A8B7C6 · 確認メールが届いています。前日 (5/15) にリマインドします。</span><br>
+          <a href="#">📎 予約詳細</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 4: Mercari (selling) ════ -->
+<div class="case">
+  <div class="case-h mercari">
+    <div class="logo">M</div>
+    <div>
+      <div class="nm">メルカリ</div>
+      <div class="desc">出品・購入・コメント返信</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">この iPhone 13 (128GB ブラック、傷少なめ)、相場で出品しといて</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.55">
+        💭 AI 内部処理:<br>
+        メルカリ で「iPhone 13 128GB ブラック」検索 → 売り切れた商品の平均価格を計算 →<br>
+        出品ページに移動 → 商品名・説明文・カテゴリ・コンディション・配送方法を入力
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>出品前に確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">🏷️</div>
+          <div>
+            <div class="nm">アシスタント</div>
+            <div class="role">が以下で出品します</div>
+          </div>
+          <div class="timer">残り 38秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">📤 <em>メルカリ</em> に出品します</div>
+          <div class="preview">
+            <div class="mer-prev">
+              <div class="item">
+                <div class="img">📱</div>
+                <div class="info">
+                  <div class="ttl">iPhone 13 128GB ミッドナイト (ブラック) SIMフリー</div>
+                  <div class="desc">バッテリー最大容量 89%。本体に細かい傷あり (使用感あり)。画面割れなし。付属品: 箱・ケーブル。動作確認済み。</div>
+                  <div class="pr">¥48,500 <span style="font-size:10.5px;color:#888;font-weight:500">(送料込・らくらくメルカリ便)</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">📍 直近30日の同等品平均は <b>¥51,200</b>。少し下げて売れやすくしてます</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で出品</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">🎉</div>
+        <div>
+          <b>出品完了</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">既に 12 人が「いいね」しました。コメントが来たら教えます。</span><br>
+          <a href="#">📎 出品を表示</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CASE 5: Unknown / arbitrary site ════ -->
+<div class="case">
+  <div class="case-h unknown">
+    <div class="logo">?</div>
+    <div>
+      <div class="nm">知らないサイト (例: 社内ツール、地方のレストラン予約)</div>
+      <div class="desc">事前学習なしのサイトでも、AI がページ構造を解析して動く</div>
+    </div>
+  </div>
+  <div class="case-body">
+    <div class="panel">
+      <div class="panel-h"><span class="num">1</span>あなたの指示</div>
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">このページで「来週土曜 19時 4名」で予約して<br><span style="font-family:monospace;font-size:11px;color:#1d4ed8;opacity:.7">https://kyoto-resto-xyz.example.com/reserve</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.55">
+        💭 AI 内部処理:<br>
+        URL を開く → ext_read_page() で <b>ページ構造を解析</b> →<br>
+        「日付ピッカー / 人数選択 / 名前 / 電話番号」フィールドを発見 → 入力 → 確認画面へ
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">2</span>予約前に確認</div>
+      <div class="appro">
+        <div class="appro-h">
+          <div class="ic">🍽</div>
+          <div>
+            <div class="nm">アシスタント</div>
+            <div class="role">が以下で予約します</div>
+          </div>
+          <div class="timer">残り 33秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">📅 <em>レストラン予約フォーム</em> を送信します</div>
+          <div class="preview">
+            <div class="unknown-prev">
+              <div class="url">🔗 kyoto-resto-xyz.example.com/reserve/confirm</div>
+              <div class="scan">
+                <b>京都 〇〇亭 ご予約内容</b><br>
+                日付: <b>2026年5月17日(土)</b><br>
+                時間: <b>19:00</b><br>
+                人数: <b>4名様</b><br>
+                お名前: <b>竹内 浩太</b> (登録情報から自動入力)<br>
+                電話番号: <b>090-XXXX-XXXX</b>
+              </div>
+            </div>
+          </div>
+          <div class="meta">📍 サイト構造を解析: 4 つの入力欄を発見・全て埋めました</div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で予約</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="num">3</span>結果</div>
+      <div class="result">
+        <div class="result-emo">📅</div>
+        <div>
+          <b>予約送信完了</b><br>
+          <span style="font-size:11.5px;color:var(--text2)">予約確認メールがお店から届くはずです。前日リマインド設定しました。</span><br>
+          <a href="#">📎 予約確認画面</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Summary ── -->
+<div class="summary-card">
+  <h2>🌍 つまり: 「サイト一覧」を作る必要がない</h2>
+  <p>事前に <b>「対応サイトリスト」を整備するモデル</b>(Zapier, IFTTT 等) ではなく、AI が <b>その場でページ構造を読んで判断する</b>モデル。</p>
+  <p style="margin-top:14px"><b>= 何も登録せず、すべてのサイトで動く</b>。あなたが「○○ で △△ して」と言えば、AI が:</p>
+  <ul style="padding-left:20px;margin-top:8px;font-size:13.5px;color:var(--text2)">
+    <li>① <code style="font-family:var(--mono);background:rgba(0,0,0,.04);padding:1px 5px;border-radius:3px">ext_open_url</code> でサイトを開く</li>
+    <li>② <code style="font-family:var(--mono);background:rgba(0,0,0,.04);padding:1px 5px;border-radius:3px">ext_read_page</code> で構造を理解 (どこが入力欄か、どのボタンが「予約」か)</li>
+    <li>③ <code style="font-family:var(--mono);background:rgba(0,0,0,.04);padding:1px 5px;border-radius:3px">ext_type</code> / <code style="font-family:var(--mono);background:rgba(0,0,0,.04);padding:1px 5px;border-radius:3px">ext_click</code> で操作</li>
+    <li>④ 不可逆操作の前にユーザー確認</li>
+  </ul>
+  <p style="margin-top:14px;padding:14px 16px;background:rgba(255,255,255,.7);border-radius:11px;font-size:13px;line-height:1.7">
+    💡 <b>Zapier との違い</b>: Zapier は事前に「Salesforce ↔ Slack」など特定の連携を登録して使う。我々は「ユーザーが自然言語で指示 → AI が画面を見て判断」なので、登録ゼロでどんなサイトでも動く。代わりに精度はサイトの構造による (一般的な HTML パターンならほぼ動く、特殊な独自 SPA だと AI が苦戦することもある)。
+  </p>
+
+  <div class="grid">
+    <div class="stat"><div class="num">∞</div><div class="lbl">対応サイト数</div></div>
+    <div class="stat"><div class="num">0</div><div class="lbl">事前登録</div></div>
+    <div class="stat"><div class="num">2</div><div class="lbl">必要な権限<br>(操作 + 確認)</div></div>
+    <div class="stat"><div class="num">1分</div><div class="lbl">初回セットアップ</div></div>
+  </div>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/mock-extension-flow.html">全体フロー</a> · <a href="/mock-extension-sites.html">業務SaaS例</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+</body>
+</html>

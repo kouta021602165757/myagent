@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local Agent デスクトップアプリ — UI モック (Tauri)</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fde8d8;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+.shell{max-width:1100px;margin:0 auto;padding:48px 24px 80px;}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-size:13px;color:var(--text3);font-weight:600;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+.h1{font-size:30px;font-weight:900;margin-bottom:10px;line-height:1.25;}
+.sub{font-size:15px;color:var(--text2);margin-bottom:32px;}
+.sub b{color:var(--text);}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;}
+@media(max-width:880px){.grid{grid-template-columns:1fr;}}
+
+.section-h{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;}
+
+/* ═════════ macOS menubar tray mockup ═════════ */
+.macos-bar{
+  background:linear-gradient(180deg,rgba(245,237,224,.92),rgba(232,222,206,.92));
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  height:28px;border-radius:9px 9px 0 0;
+  display:flex;align-items:center;padding:0 14px;gap:14px;font-size:12.5px;color:var(--text);
+  border:1px solid rgba(0,0,0,.05);
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+  position:relative;
+}
+.macos-bar .apple{font-size:14px;}
+.macos-bar .app-name{font-weight:700;font-size:13px;}
+.macos-bar .menu{color:var(--text2);}
+.macos-bar .right{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:12px;}
+.macos-bar .tray-icons{display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13px;}
+.macos-bar .tray-icons .ours{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(251,146,60,.18);padding:2px 7px;border-radius:5px;font-weight:700;
+  border:1px solid rgba(251,146,60,.35);color:var(--peach-dark);
+}
+.macos-bar .ours .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+.tray-menu{
+  background:rgba(255,255,255,.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(0,0,0,.08);border-radius:9px;
+  box-shadow:0 16px 50px rgba(0,0,0,.18);
+  padding:5px;width:280px;
+  position:absolute;top:calc(100% + 6px);right:80px;
+  font-size:13px;
+}
+.tray-menu .head{padding:10px 12px 8px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:5px;}
+.tray-menu .head .av{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.tray-menu .head .nm{font-weight:700;color:var(--text);font-size:13px;}
+.tray-menu .head .st{font-size:11px;color:var(--green);font-weight:600;display:flex;align-items:center;gap:4px;margin-top:2px;}
+.tray-menu .head .st .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.tray-menu .item{padding:7px 12px;display:flex;align-items:center;gap:10px;border-radius:5px;cursor:pointer;color:var(--text);}
+.tray-menu .item:hover{background:rgba(0,0,0,.04);}
+.tray-menu .item .ic{width:18px;text-align:center;color:var(--text2);}
+.tray-menu .item.kill{color:var(--rose);}
+.tray-menu .item.kill .ic{color:var(--rose);}
+.tray-menu .sep{height:1px;background:rgba(0,0,0,.06);margin:5px 8px;}
+.tray-menu .stat{padding:7px 12px;font-size:11px;color:var(--text3);}
+
+/* macOS desktop window */
+.macos-wnd{
+  background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:11px;
+  box-shadow:0 24px 60px rgba(0,0,0,.18);overflow:hidden;
+}
+.macos-wnd .titlebar{
+  background:linear-gradient(180deg,#f5ede0,#ebe1cf);
+  padding:10px 14px;display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid rgba(0,0,0,.06);
+}
+.macos-wnd .traffic{display:flex;gap:6px;}
+.macos-wnd .traffic span{width:11px;height:11px;border-radius:50%;}
+.macos-wnd .traffic span:nth-child(1){background:#ff5f56;}
+.macos-wnd .traffic span:nth-child(2){background:#ffbd2e;}
+.macos-wnd .traffic span:nth-child(3){background:#27c93f;}
+.macos-wnd .ttl{flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--text2);}
+.macos-wnd .body{padding:0;}
+
+.win-tabs{display:flex;border-bottom:1px solid var(--line);background:var(--cream);}
+.win-tab{padding:10px 16px;font-size:12px;font-weight:700;color:var(--text3);border-bottom:2px solid transparent;cursor:pointer;}
+.win-tab.active{color:var(--peach-dark);border-bottom-color:var(--peach);background:#fff;}
+
+.win-content{padding:18px;font-size:13px;color:var(--text);}
+.kv-row{display:flex;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
+.kv-row:last-child{border-bottom:0;}
+.kv-row .k{width:120px;color:var(--text3);font-weight:600;}
+.kv-row .v{flex:1;color:var(--text);font-family:var(--mono);font-size:11.5px;}
+.kv-row .v.normal{font-family:inherit;font-size:12.5px;}
+
+.bigbtn{
+  display:flex;align-items:center;gap:10px;width:100%;padding:13px 16px;
+  background:rgba(239,68,68,.08);color:var(--rose);
+  border:1.5px solid rgba(239,68,68,.3);border-radius:10px;
+  font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;
+  margin-top:14px;justify-content:center;
+}
+.bigbtn:hover{background:rgba(239,68,68,.14);}
+
+.note{padding:10px 12px;background:var(--cream2);border:1px solid var(--line);border-radius:9px;font-size:11.5px;color:var(--text2);line-height:1.6;margin-top:10px;}
+.note b{color:var(--text);}
+
+.legend{
+  margin-top:48px;padding:24px 28px;border-radius:14px;
+  background:linear-gradient(135deg,#ede9fe,#ddd6fe);
+  border:1px solid rgba(99,102,241,.25);
+}
+.legend h2{font-size:17px;font-weight:800;color:#3730a3;margin-bottom:8px;}
+.legend p{font-size:13.5px;color:var(--text2);margin-bottom:6px;line-height:1.7;}
+.legend ul{padding-left:20px;font-size:13px;color:var(--text2);}
+.legend li{margin:4px 0;line-height:1.6;}
+
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text3);text-align:center;}
+.foot a{color:var(--text3);}
+
+/* Activity log mini */
+.minilog{font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.7;}
+.minilog .t{color:var(--text3);}
+.minilog .ok{color:#0f9d58;font-weight:700;}
+.minilog .deny{color:var(--rose);font-weight:700;}
+.minilog .tag{background:var(--cream2);padding:1px 5px;border-radius:3px;color:var(--text);}
+
+/* approval card mini */
+.approval-card{
+  background:#fff;border:1.5px solid var(--peach);border-radius:11px;padding:14px;
+  box-shadow:0 8px 24px rgba(251,146,60,.18);
+}
+.approval-card .h{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;margin-bottom:8px;}
+.approval-card .h .ic{font-size:16px;}
+.approval-card .cmd{
+  background:#0f0a07;color:#86efac;font-family:var(--mono);font-size:11.5px;
+  padding:8px 11px;border-radius:6px;margin:8px 0;
+}
+.approval-card .row{font-size:11.5px;color:var(--text2);display:flex;gap:8px;padding:3px 0;}
+.approval-card .row .k{width:80px;color:var(--text3);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+.approval-card .btns{display:flex;gap:6px;margin-top:10px;}
+.approval-card .btn{flex:1;padding:7px;border-radius:7px;font-size:11.5px;font-weight:700;border:0;cursor:pointer;font-family:inherit;}
+.approval-card .btn.allow{background:var(--green);color:#fff;}
+.approval-card .btn.deny{background:rgba(239,68,68,.1);color:var(--rose);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-localagent-flow.html">🖥️ ユーザー視点フロー</a>
+</div>
+
+<h1 class="h1">🖥️ Local Agent デスクトップアプリ<br>UI モック (Tauri)</h1>
+<p class="sub">
+  ユーザーの PC 上で常駐する <b>MY AI Agent Desktop</b> アプリ自体の見た目。Tauri (Rust + WebView) で実装、~8MB のシングルバイナリ。<br>
+  メニューバー (タスクトレイ) 常駐 + 設定/アクティビティ表示用ウィンドウ + 承認通知。
+</p>
+
+<div class="grid">
+
+<!-- ═════ LEFT: macOS menubar tray mockup ═════ -->
+<div>
+  <div class="section-h">🎯 メニューバー (常駐)</div>
+
+  <!-- macOS menubar -->
+  <div style="background:linear-gradient(180deg,#a3b8c5,#7d96a8);padding:18px;border-radius:12px;position:relative">
+    <div class="macos-bar">
+      <span class="apple"></span>
+      <span class="app-name">Finder</span>
+      <span class="menu">ファイル</span>
+      <span class="menu">編集</span>
+      <span class="menu">表示</span>
+      <span class="menu">移動</span>
+      <span class="menu">ウインドウ</span>
+      <span class="menu">ヘルプ</span>
+      <div class="right">
+        <div class="tray-icons">
+          <span style="opacity:.55">🔋</span>
+          <span style="opacity:.55">📶</span>
+          <span style="opacity:.55">🔍</span>
+          <!-- our app's tray icon, expanded -->
+          <span class="ours">
+            <span class="dot"></span>
+            🤖 MY AI Agent
+          </span>
+          <span style="opacity:.6">17:48</span>
+        </div>
+      </div>
+    </div>
+    <!-- tray dropdown -->
+    <div class="tray-menu">
+      <div class="head">
+        <div class="av">🤖</div>
+        <div>
+          <div class="nm">MY AI Agent</div>
+          <div class="st"><span class="dot"></span>接続中 · kota.takeuchi@protocol.ooo</div>
+        </div>
+      </div>
+      <div class="item"><span class="ic">🔗</span>このデバイス: Takeuchi's MacBook Pro</div>
+      <div class="item"><span class="ic">📊</span>過去24時間: 12 操作 (11 ✓ / 1 拒否)</div>
+      <div class="sep"></div>
+      <div class="item"><span class="ic">⚙</span>設定とアクティビティを開く...</div>
+      <div class="item"><span class="ic">🌐</span>myaiagents.agency を開く</div>
+      <div class="sep"></div>
+      <div class="item kill"><span class="ic">⛔</span>実行中のタスクを停止</div>
+      <div class="item kill"><span class="ic">🔒</span>このデバイスを一時停止</div>
+      <div class="sep"></div>
+      <div class="stat">v0.1.0 · 接続: 2時間14分</div>
+      <div class="item" style="color:var(--text3);font-size:12px"><span class="ic">⏏</span>終了</div>
+    </div>
+  </div>
+  <div class="note">
+    💡 <b>常駐</b>: メニューバーに常時アイコン表示。緑ドット = 接続中。クリックで上記メニューが出る。「実行中のタスクを停止」が <b>1クリック緊急停止</b>。
+  </div>
+
+  <div class="section-h" style="margin-top:36px">🔔 承認通知 (画面右下に通知 + 設定ウィンドウにも)</div>
+  <div class="approval-card">
+    <div class="h">
+      <span class="ic">⚠</span>
+      <span>操作の承認 (29s)</span>
+      <span style="margin-left:auto;font-size:10.5px;color:var(--rose);font-family:var(--mono);font-weight:700">MEDIUM</span>
+    </div>
+    <div class="row"><div class="k">From</div><div>営業データ管理君</div></div>
+    <div class="row"><div class="k">Action</div><div>shell.exec</div></div>
+    <div class="cmd">$ npm test</div>
+    <div class="row"><div class="k">Cwd</div><div style="font-family:var(--mono);font-size:10.5px">/Users/takeuchi/projects/myagent</div></div>
+    <div class="btns">
+      <button class="btn deny">拒否</button>
+      <button class="btn allow">許可</button>
+    </div>
+  </div>
+  <div class="note">
+    🛎️ ブラウザでも承認モーダルが出るが、Local Agent 側でも <b>OS 通知 + ミニウィンドウ</b> で見える。両方どちらで承認しても OK。
+  </div>
+</div>
+
+<!-- ═════ RIGHT: dashboard window ═════ -->
+<div>
+  <div class="section-h">🪟 設定ウィンドウ</div>
+
+  <div class="macos-wnd">
+    <div class="titlebar">
+      <div class="traffic"><span></span><span></span><span></span></div>
+      <div class="ttl">MY AI Agent Desktop</div>
+      <div style="width:54px"></div>
+    </div>
+    <div class="body">
+      <div class="win-tabs">
+        <div class="win-tab active">概要</div>
+        <div class="win-tab">権限 (Capability)</div>
+        <div class="win-tab">アクティビティ</div>
+        <div class="win-tab">詳細設定</div>
+      </div>
+      <div class="win-content">
+        <div style="display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px">
+          <div style="width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px">🤖</div>
+          <div style="flex:1">
+            <div style="font-size:14.5px;font-weight:800">Takeuchi's MacBook Pro</div>
+            <div style="font-size:11.5px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:5px;margin-top:2px">
+              <span style="width:7px;height:7px;border-radius:50%;background:var(--green)"></span>
+              接続中 · 2時間14分
+            </div>
+          </div>
+        </div>
+
+        <div class="kv-row"><div class="k">Account</div><div class="v normal">kota.takeuchi@protocol.ooo</div></div>
+        <div class="kv-row"><div class="k">Device ID</div><div class="v">dev_01HX9F4JR8BPC9TKMQ3WX2YVZE</div></div>
+        <div class="kv-row"><div class="k">Server</div><div class="v normal">myaiagents.agency (TLS 1.3, ピン: ✓)</div></div>
+        <div class="kv-row"><div class="k">Agent Version</div><div class="v normal">v0.1.0 (最新)</div></div>
+        <div class="kv-row"><div class="k">Public Key</div><div class="v">ed25519: 0x4f7a...2d8e <a href="#" style="color:var(--peach-dark);font-size:11px;margin-left:6px;font-family:inherit">コピー</a></div></div>
+        <div class="kv-row"><div class="k">Private Key</div><div class="v normal" style="color:var(--text3)">macOS Keychain に格納 (アプリからも読み取り不可)</div></div>
+        <div class="kv-row"><div class="k">Sandbox</div><div class="v normal">App Sandbox 有効 / 第三者 Agent は隔離コンテナで実行</div></div>
+        <div class="kv-row"><div class="k">過去24時間</div><div class="v normal">12 操作 ・ 11 ✓ / 1 拒否</div></div>
+
+        <div style="margin-top:14px;padding:12px 14px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.25);border-radius:10px;font-size:12px;color:#047857;line-height:1.6">
+          ✓ <b>システムは正常に稼働しています</b>。WebSocket 接続: 安定・最終 heartbeat: 4秒前
+        </div>
+
+        <button class="bigbtn">⛔ このデバイスを今すぐ停止 (Kill Switch)</button>
+        <div class="note" style="margin-top:8px">
+          実行中のタスクをすべて SIGKILL し、新規操作の受付を停止します。アプリは常駐したまま。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-h" style="margin-top:36px">📋 アクティビティタブ (抜粋)</div>
+  <div class="macos-wnd">
+    <div class="titlebar">
+      <div class="traffic"><span></span><span></span><span></span></div>
+      <div class="ttl">MY AI Agent Desktop · アクティビティ</div>
+      <div style="width:54px"></div>
+    </div>
+    <div class="body" style="padding:14px 18px">
+      <div class="minilog">
+        <span class="t">17:48:21</span> · <span class="ok">✓</span> shell.exec <span class="tag">npm test</span> → success (12.4s, 42 tests passed)<br>
+        <span class="t">17:46:08</span> · <span class="ok">✓</span> approval.granted (npm test) by user<br>
+        <span class="t">17:31:55</span> · <span class="ok">✓</span> file.write <span class="tag">~/projects/myagent/README.md</span> (+1.2KB)<br>
+        <span class="t">17:14:02</span> · <span class="deny">✗</span> shell.exec <span class="tag" style="color:var(--rose)">rm -rf ~</span> → <b>denied</b> (cmd_deny matched)<br>
+        <span class="t">17:00:40</span> · <span class="ok">✓</span> device.paired (you)<br>
+      </div>
+      <div class="note" style="margin-top:10px">
+        🔒 全エントリは Merkle ハッシュチェーンで連結 · 90日ごとに公開ログに記録 · エクスポート可能 (CSV/JSON)
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ── Architecture diagram ─────────────────────────── -->
+<div class="legend" style="margin-top:48px">
+  <h2>🏗️ 配布と仕組み</h2>
+  <p><b>パッケージング</b>: Tauri 2.0 で macOS .app / Windows .msi / Linux .AppImage を CI でクロスビルド。</p>
+  <p><b>サイズ</b>: 単一バイナリ ~8MB (Electron の 1/15)。Rust ランタイム + システム WebView (macOS WebKit / Win WebView2)。</p>
+  <p><b>署名 + 公証</b>: Apple Developer ID で署名 + notarize (Mac), Microsoft EV Authenticode (Windows)。両方とも CI で自動。</p>
+  <p><b>自動更新</b>: 起動時に <code style="font-family:var(--mono);background:rgba(255,255,255,.5);padding:1px 5px;border-radius:3px;font-size:12px">myaiagents.agency/api/agent/update</code> をチェック → 新バージョンあれば差分配信 (Tauri Updater)。署名検証必須。</p>
+
+  <p style="margin-top:14px"><b>セキュリティ要件チェックリスト</b>:</p>
+  <ul>
+    <li>✅ TLS 1.3 必須 + Server SPKI ピンニング</li>
+    <li>✅ Ed25519 鍵ペアは macOS Keychain / Win Credential Manager / Linux libsecret に格納 (アプリ自身からも読めない)</li>
+    <li>✅ Capability ベース権限 (UI層・Server層・Agent層 の 3層強制)</li>
+    <li>✅ 60秒タイマー付き承認モーダル (クリックハイジャック耐性)</li>
+    <li>✅ ハッシュチェーン監査ログ (改竄不可)</li>
+    <li>✅ Outbound のみ接続 (NAT 越え不要 / firewall 設定不要)</li>
+    <li>✅ 緊急停止: メニュー1クリック + ブラウザから1クリック + 全デバイス一括停止</li>
+    <li>✅ サンドボックス: macOS App Sandbox + Linux bubblewrap + Windows AppContainer</li>
+    <li>✅ 第三者製 Agent (マーケットプレイス) は別プロファイルで完全隔離</li>
+  </ul>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/mock-localagent-flow.html">ユーザー視点フロー</a> · <a href="/mock-sheets-flow.html">📊 Sheets連携</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+</body>
+</html>

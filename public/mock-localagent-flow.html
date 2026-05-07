@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ユーザー視点 — コンピュータ連携 (Local Agent) の流れ</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fde8d8;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15); --wire:rgba(180,120,80,.2); --wire2:rgba(180,120,80,.18);
+  --green:#10b981; --green-light:#d1fae5; --rose:#ef4444; --blue:#3b82f6;
+  --indigo:#6366f1;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+.shell{max-width:1100px;margin:0 auto;padding:48px 24px 80px;}
+
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-size:13px;color:var(--text3);font-weight:600;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+
+.h1{font-size:32px;font-weight:900;letter-spacing:.01em;margin-bottom:10px;line-height:1.25;}
+.sub{font-size:15px;color:var(--text2);margin-bottom:16px;}
+.sub b{color:var(--text);}
+.disclaimer{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(99,102,241,.08);color:#3730a3;border:1px solid rgba(99,102,241,.2);
+  padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:600;margin-bottom:48px;
+}
+
+/* Step layout */
+.flow{display:flex;flex-direction:column;gap:18px;}
+.step{display:grid;grid-template-columns:140px 1fr;gap:24px;align-items:flex-start;}
+@media(max-width:780px){.step{grid-template-columns:1fr;gap:14px;}}
+.step-meta{padding-top:8px;}
+.step-num-big{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  color:var(--peach-dark);letter-spacing:.16em;display:block;margin-bottom:4px;
+}
+.step-title{font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px;line-height:1.3;}
+.step-note{font-size:12.5px;color:var(--text3);line-height:1.6;}
+.step-time{
+  display:inline-block;font-size:11px;font-weight:700;
+  background:var(--cream);color:var(--text3);padding:2px 8px;border-radius:6px;
+  margin-top:8px;border:1px solid var(--line);
+}
+
+.frame{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:0;overflow:hidden;
+  box-shadow:0 8px 30px rgba(180,100,40,.08);
+}
+.frame-bar{
+  background:linear-gradient(180deg,#f8f0e6,#f1e7d8);
+  padding:8px 14px;display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid var(--line);font-size:11px;color:var(--text3);font-weight:600;
+}
+.frame-dots{display:flex;gap:5px;}
+.frame-dots span{width:9px;height:9px;border-radius:50%;background:#cf9b73;opacity:.4;}
+.frame-dots span:nth-child(1){background:#ef4444;opacity:.65;}
+.frame-dots span:nth-child(2){background:#fbbf24;opacity:.65;}
+.frame-dots span:nth-child(3){background:#10b981;opacity:.65;}
+.frame-url{
+  flex:1;background:rgba(255,255,255,.7);border-radius:6px;
+  padding:3px 10px;font-family:var(--mono);font-size:11px;color:var(--text2);
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.frame-body{padding:18px;background:var(--cream);}
+.frame-body.dark{background:#1a1410;color:#fef0e0;}
+
+/* macOS desktop frame (for Local Agent screenshots) */
+.macos-frame{
+  background:linear-gradient(180deg,#ddd5c5,#cdc5b5);
+  padding:36px 18px 18px;border-radius:14px;position:relative;
+}
+.macos-frame::before{
+  content:'';position:absolute;top:11px;left:14px;display:flex;gap:6px;
+  width:46px;height:11px;
+  background:radial-gradient(circle 4px at 4px 5px,#ff5f56 4px,transparent 5px),
+             radial-gradient(circle 4px at 19px 5px,#ffbd2e 4px,transparent 5px),
+             radial-gradient(circle 4px at 34px 5px,#27c93f 4px,transparent 5px);
+}
+
+/* Arrow connectors */
+.arrow{text-align:center;color:var(--peach);font-size:24px;line-height:1;margin:0 0 -4px 70px;}
+@media(max-width:780px){.arrow{margin-left:0}}
+
+/* Reusable bits */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--peach);color:#fff;border:0;padding:9px 16px;border-radius:9px;
+  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:all .15s;text-decoration:none;
+}
+.btn.ghost{
+  background:#fff;color:var(--peach-dark);border:1.5px solid var(--peach);
+}
+.btn.green{background:var(--green);}
+.btn.danger{background:var(--rose);}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+
+.pin-input{
+  display:flex;gap:6px;justify-content:center;margin:14px 0;
+}
+.pin-cell{
+  width:36px;height:46px;border:2px solid var(--line);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:24px;font-weight:800;color:var(--text);
+  background:var(--bg-card);
+}
+.pin-cell.filled{border-color:var(--peach);background:var(--cream2);}
+.pin-cell.dash{border:0;width:6px;color:var(--text3);}
+
+.cap-row{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:var(--bg-card);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;
+}
+.cap-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.cap-text{flex:1;min-width:0;}
+.cap-name{font-size:13px;font-weight:800;color:var(--text);}
+.cap-desc{font-size:11.5px;color:var(--text3);margin-top:2px;line-height:1.5;}
+.cap-mode{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--cream2);color:var(--text2);
+  padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;
+  border:1px solid var(--line);font-family:var(--mono);
+}
+.cap-mode.danger{background:rgba(239,68,68,.08);color:var(--rose);border-color:rgba(239,68,68,.25);}
+.cap-mode.green{background:rgba(16,185,129,.1);color:#047857;border-color:rgba(16,185,129,.25);}
+.cap-mode.amber{background:rgba(251,146,60,.1);color:var(--peach-dark);border-color:rgba(251,146,60,.3);}
+
+.modal-mock{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:16px;
+  max-width:520px;margin:0 auto;
+  box-shadow:0 24px 50px rgba(0,0,0,.18);
+  overflow:hidden;
+}
+.modal-h{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+.modal-h .ic{width:32px;height:32px;border-radius:8px;background:rgba(99,102,241,.12);color:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:18px;}
+.modal-h .t{font-size:15px;font-weight:800;color:var(--text);}
+.modal-h .timer{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--rose);font-weight:700;}
+.modal-body{padding:18px 22px;font-size:13px;}
+.modal-body .row{display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);}
+.modal-body .row:last-child{border-bottom:0;}
+.modal-body .k{width:110px;color:var(--text3);font-size:12px;font-weight:600;flex-shrink:0;}
+.modal-body .v{flex:1;color:var(--text);font-size:12.5px;font-family:var(--mono);word-break:break-all;}
+.modal-foot{padding:14px 22px;background:var(--cream);border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;}
+
+.risk{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+.risk.med{background:rgba(251,146,60,.12);color:var(--peach-dark);border:1px solid rgba(251,146,60,.3);}
+.risk.high{background:rgba(239,68,68,.12);color:var(--rose);border:1px solid rgba(239,68,68,.3);}
+.risk.low{background:rgba(16,185,129,.12);color:#047857;border:1px solid rgba(16,185,129,.3);}
+
+.term{
+  background:#0f0a07;color:#e6d8c8;font-family:var(--mono);font-size:12px;
+  border-radius:10px;padding:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;
+}
+.term .prompt{color:#86efac;}
+.term .ok{color:#86efac;}
+.term .info{color:#93c5fd;}
+.term .warn{color:#fbbf24;}
+
+.device-row{
+  display:flex;align-items:center;gap:14px;padding:14px;
+  background:var(--bg-card);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;
+}
+.device-icon{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#dbeafe,#a5b4fc);color:#3730a3;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.device-meta{flex:1;min-width:0;}
+.device-name{font-size:13.5px;font-weight:800;color:var(--text);}
+.device-info{font-size:11.5px;color:var(--text3);margin-top:2px;}
+.device-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
+.device-status.online{background:rgba(16,185,129,.12);color:#047857;}
+.device-status.offline{background:rgba(180,180,180,.2);color:var(--text3);}
+
+.audit-row{
+  display:grid;grid-template-columns:80px 1fr 110px 70px;gap:12px;
+  padding:10px 14px;border-bottom:1px solid var(--line);align-items:center;
+  font-size:12.5px;
+}
+.audit-row.hd{background:var(--cream2);font-weight:800;color:var(--text2);font-size:11px;letter-spacing:.04em;text-transform:uppercase;}
+.audit-cmd{font-family:var(--mono);font-size:11.5px;color:var(--text);}
+.audit-time{font-family:var(--mono);font-size:11px;color:var(--text3);}
+.audit-result{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;display:inline-block;}
+.audit-result.ok{background:rgba(16,185,129,.12);color:#047857;}
+.audit-result.deny{background:rgba(239,68,68,.12);color:var(--rose);}
+
+.summary-card{
+  margin-top:48px;padding:28px;border-radius:16px;
+  background:linear-gradient(135deg,#ede9fe,#ddd6fe);
+  border:1px solid rgba(99,102,241,.3);
+}
+.summary-card h2{font-size:19px;font-weight:800;margin-bottom:10px;color:#3730a3;}
+.summary-card p{font-size:14px;color:var(--text2);margin-bottom:8px;}
+.summary-card ul{padding-left:20px;font-size:13.5px;color:var(--text2);}
+.summary-card li{margin:6px 0;}
+.summary-card b{color:var(--text);}
+
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text3);text-align:center;}
+.foot a{color:var(--text3);}
+
+.toast{
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;padding:10px 16px;border-radius:10px;
+  font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 8px 24px rgba(16,185,129,.32);
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-sheets-flow.html">📊 Sheets連携モック</a>
+</div>
+
+<h1 class="h1">🖥️ コンピュータ連携 (Local Agent)<br>エンドユーザー視点モック</h1>
+<p class="sub">
+  ユーザーが自分の Mac/Windows PC を MY AI Agent に紐付けて、AI に <b>シェル実行 / ファイル編集 / 画面操作</b> をさせるまでの全画面。<br>
+  ペアリング → 権限付与 → 実利用 → 監査までを 9 ステップで描画。
+</p>
+<div class="disclaimer">
+  💡 これは<b style="margin:0 4px">静的モック</b>です。仕様書 #11 (基盤)・#12 (Code 互換)・#13 (Computer Use 互換) の挙動を可視化しています。
+</div>
+
+<div class="flow">
+
+<!-- ════ STEP 01: Browser - start pairing ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 01</span>
+    <div class="step-title">アプリで「コンピュータと連携」を開始</div>
+    <p class="step-note">設定 → 「🖥️ デバイス」 タブ。「+ 新しいコンピュータを追加」をクリック。</p>
+    <span class="step-time">5秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · デバイス管理</div>
+    </div>
+    <div class="frame-body">
+      <div style="font-size:14px;font-weight:800;margin-bottom:14px">🖥️ 連携済みデバイス</div>
+      <div style="text-align:center;padding:32px 18px;background:var(--bg-card);border:1px dashed var(--line);border-radius:14px">
+        <div style="font-size:36px;margin-bottom:8px;opacity:.7">💻</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:14px">まだ連携されたコンピュータはありません</div>
+        <button class="btn">＋ 新しいコンピュータを追加</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 02: Browser - download Local Agent ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 02</span>
+    <div class="step-title">Local Agent をダウンロード</div>
+    <p class="step-note">OS 自動判別 (Mac/Win)。Code Signing 済みの公式ビルド。Tauri ベースで ~8MB。</p>
+    <span class="step-time">30秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · 新規デバイス追加</div>
+    </div>
+    <div class="frame-body">
+      <div class="modal-mock" style="max-width:560px">
+        <div class="modal-h">
+          <div class="ic">🖥️</div>
+          <div class="t">コンピュータを連携</div>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px">専用アプリ <b>MY AI Agent Desktop</b> をインストールします。</p>
+          <div style="background:var(--cream2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px">
+            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-bottom:8px">あなたの OS: macOS Sequoia (推定)</div>
+            <button class="btn" style="width:100%">⬇ macOS 用をダウンロード (8.2 MB)</button>
+            <div style="margin-top:8px;display:flex;gap:8px;font-size:11px">
+              <a href="#" style="color:var(--text3);text-decoration:underline">Windows 版 (.msi)</a>
+              <a href="#" style="color:var(--text3);text-decoration:underline">Linux 版 (.AppImage)</a>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--text3);line-height:1.6">
+            ✓ Apple notarized · Microsoft 署名済 · オープンソース<br>
+            ✓ あなたのPC上でのみ動作。コードもデータも MY AI Agent サーバーに送信されません<br>
+            ✓ アンインストールは Mac の「アプリケーション」フォルダから削除するだけ
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 03: Local Agent installs and shows pairing screen ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 03</span>
+    <div class="step-title">Local Agent を起動 → ペアリング待機</div>
+    <p class="step-note">.dmg 開く → Applications にドラッグ → 起動。アプリ初回起動時にペアリング画面が出る。</p>
+    <span class="step-time">15秒</span>
+  </div>
+  <div class="frame">
+    <div class="macos-frame">
+      <div style="background:#1a1410;border-radius:11px;padding:32px 28px;color:#fef0e0;text-align:center">
+        <div style="font-size:32px;margin-bottom:14px">🖥️</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:8px">MY AI Agent Desktop</div>
+        <div style="font-size:12.5px;color:#9a8a78;margin-bottom:24px">v0.1.0 · ようこそ! まず MY AI Agent と接続します</div>
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:18px 22px;margin-bottom:18px">
+          <div style="font-size:11.5px;color:#9a8a78;margin-bottom:10px">ブラウザで表示された 6桁のコードを入力</div>
+          <div class="pin-input" style="margin:8px 0">
+            <div class="pin-cell" style="background:#0f0a07;color:#fef0e0;border-color:#3a2e26"></div>
+            <div class="pin-cell" style="background:#0f0a07;color:#fef0e0;border-color:#3a2e26"></div>
+            <div class="pin-cell" style="background:#0f0a07;color:#fef0e0;border-color:#3a2e26"></div>
+            <div class="pin-cell dash" style="color:#9a8a78">-</div>
+            <div class="pin-cell" style="background:#0f0a07;color:#fef0e0;border-color:#3a2e26"></div>
+            <div class="pin-cell" style="background:#0f0a07;color:#fef0e0;border-color:#3a2e26"></div>
+            <div class="pin-cell" style="background:#0f0a07;color:#fef0e0;border-color:#3a2e26"></div>
+          </div>
+          <div style="font-size:11px;color:#9a8a78;margin-top:6px">ブラウザで <code style="background:#0f0a07;padding:2px 6px;border-radius:4px;color:#86efac">myaiagents.agency/app</code> を開いて確認</div>
+        </div>
+        <div style="font-size:11px;color:#9a8a78">🔒 鍵生成中... Ed25519 鍵ペアを OS Keychain に保存しています</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 04: Browser shows pairing code ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 04</span>
+    <div class="step-title">ブラウザに 6桁コードが表示される</div>
+    <p class="step-note">5分で失効。3回失敗でロック。コードは1度しか claim できない（Server 側で SETNX）。</p>
+    <span class="step-time">10秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · ペアリング</div>
+    </div>
+    <div class="frame-body">
+      <div class="modal-mock" style="max-width:520px">
+        <div class="modal-h">
+          <div class="ic">🔗</div>
+          <div class="t">ペアリングコード</div>
+        </div>
+        <div class="modal-body" style="text-align:center;padding:30px 22px">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Local Agent アプリに以下のコードを入力してください</p>
+          <div class="pin-input">
+            <div class="pin-cell filled">4</div>
+            <div class="pin-cell filled">8</div>
+            <div class="pin-cell filled">2</div>
+            <div class="pin-cell dash">-</div>
+            <div class="pin-cell filled">9</div>
+            <div class="pin-cell filled">1</div>
+            <div class="pin-cell filled">3</div>
+          </div>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:10px">残り <b style="color:var(--peach-dark);font-family:var(--mono)">04:32</b> で失効</div>
+          <div style="margin-top:18px;padding:12px 14px;background:var(--cream2);border:1px solid var(--line);border-radius:10px;font-size:11.5px;color:var(--text2);text-align:left;line-height:1.6">
+            💡 <b>ヒント</b>: アプリが見つからない場合は <a href="#" style="color:var(--peach-dark)">こちら</a> から再ダウンロードしてください。<br>
+            🔒 <b>セキュリティ</b>: このコードは他人に教えないでください。教えると相手のPCがあなたのアカウントに紐付きます。
+          </div>
+          <div style="margin-top:14px;color:var(--text3);font-size:12px">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--peach);animation:pulse 1.5s infinite"></span>
+            デバイスからの接続を待っています...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 05: Successful pairing ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 05</span>
+    <div class="step-title">ペアリング完了 → 権限を選択</div>
+    <p class="step-note">デバイス名と Capability (権限) を初期設定。あとで変更可。</p>
+    <span class="step-time">30秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · 権限設定</div>
+    </div>
+    <div class="frame-body" style="padding:22px">
+      <div style="position:relative">
+        <div style="position:absolute;top:-12px;right:0"><div class="toast">✓ 接続成功: Takeuchi's MacBook Pro</div></div>
+      </div>
+      <div style="font-size:14px;font-weight:800;margin:18px 0 10px">⚙ このデバイスに与える権限</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:16px">AI が実行できる操作を選びます。<b>あとから変更可</b>。チェックを外せば AI はそのカテゴリの操作を一切できません。</p>
+
+      <div class="cap-row">
+        <div class="cap-icon" style="background:rgba(99,102,241,.12);color:var(--indigo)">⚡</div>
+        <div class="cap-text">
+          <div class="cap-name">shell.exec — シェルコマンド実行</div>
+          <div class="cap-desc">git, npm, python 等を実行 (cwd 制限あり, 危険コマンドはブロック)</div>
+        </div>
+        <span class="cap-mode amber">毎回確認</span>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-icon" style="background:rgba(16,185,129,.12);color:#047857">📂</div>
+        <div class="cap-text">
+          <div class="cap-name">file.read / file.write — ファイル読み書き</div>
+          <div class="cap-desc">~/projects/** のみ許可。.ssh / .env はブロック</div>
+        </div>
+        <span class="cap-mode green">自動許可</span>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-icon" style="background:rgba(251,146,60,.12);color:var(--peach-dark)">🌐</div>
+        <div class="cap-text">
+          <div class="cap-name">network.fetch — ネットワーク</div>
+          <div class="cap-desc">github.com, npmjs.org, registry-1.docker.io のみ許可</div>
+        </div>
+        <span class="cap-mode amber">セッション中許可</span>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-icon" style="background:rgba(139,92,246,.12);color:#6d28d9">📸</div>
+        <div class="cap-text">
+          <div class="cap-name">screen.capture — 画面キャプチャ</div>
+          <div class="cap-desc">スクリーンショット取得 (Computer Use 用)</div>
+        </div>
+        <span class="cap-mode danger">無効</span>
+      </div>
+
+      <div class="cap-row">
+        <div class="cap-icon" style="background:rgba(239,68,68,.12);color:var(--rose)">🖱️</div>
+        <div class="cap-text">
+          <div class="cap-name">input.keyboard / input.mouse — 入力操作</div>
+          <div class="cap-desc">キーボード打鍵・マウス操作 (高リスク)</div>
+        </div>
+        <span class="cap-mode danger">無効</span>
+      </div>
+
+      <div class="btn-row" style="justify-content:flex-end;margin-top:18px">
+        <button class="btn ghost">後で設定</button>
+        <button class="btn">この権限で連携を完了</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 06: Chat with command + approval modal ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 06</span>
+    <div class="step-title">チャットで指示 → 承認モーダル</div>
+    <p class="step-note">ask_each モードの操作は実行前に必ずユーザー承認。60秒タイマー付き。リスク・実行内容・対象パスを完全表示。</p>
+    <span class="step-time">15秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · チャット (承認モーダル展開)</div>
+    </div>
+    <div class="frame-body" style="position:relative;min-height:380px;padding:18px">
+      <!-- chat behind -->
+      <div style="opacity:.4;pointer-events:none">
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+          <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">K</div>
+          <div style="background:#dbeafe;padding:8px 12px;border-radius:12px;font-size:12.5px">プロジェクトのテストを走らせて</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px">💻</div>
+          <div style="background:var(--cream2);padding:8px 12px;border-radius:12px;font-size:12.5px;color:var(--text3)">npm test を実行します...</div>
+        </div>
+      </div>
+      <!-- modal -->
+      <div style="position:absolute;inset:0;background:rgba(20,12,8,.55);display:flex;align-items:center;justify-content:center;padding:18px">
+        <div class="modal-mock" style="max-width:480px">
+          <div class="modal-h">
+            <div class="ic" style="background:rgba(251,146,60,.14);color:var(--peach-dark)">⚠</div>
+            <div class="t">操作の承認</div>
+            <div class="timer">残り 00:54</div>
+          </div>
+          <div class="modal-body">
+            <div style="display:flex;gap:6px;margin-bottom:14px">
+              <span class="risk med">⚠ MEDIUM RISK</span>
+              <span class="cap-mode" style="font-size:10.5px">shell.exec</span>
+            </div>
+            <div class="row"><div class="k">デバイス</div><div class="v" style="font-family:inherit;font-size:13px">Takeuchi's MacBook Pro</div></div>
+            <div class="row"><div class="k">コマンド</div><div class="v" style="background:#0f0a07;color:#86efac;padding:6px 10px;border-radius:6px">npm test</div></div>
+            <div class="row"><div class="k">作業ディレクトリ</div><div class="v">/Users/takeuchi/projects/myagent</div></div>
+            <div class="row"><div class="k">タイムアウト</div><div class="v" style="font-family:inherit;font-size:12px">300秒 (デフォルト)</div></div>
+            <div class="row"><div class="k">判定理由</div><div class="v" style="font-family:inherit;font-size:12px;color:var(--text2)">テスト実行は副作用が小さいが、設定により外部接続する可能性あり</div></div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn ghost" style="background:transparent;border:0;color:var(--text3)">拒否</button>
+            <button class="btn ghost" style="font-size:12px">このセッションは常に許可</button>
+            <button class="btn green">許可して実行</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 07: Live execution stream ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 07</span>
+    <div class="step-title">実行ログがリアルタイム表示</div>
+    <p class="step-note">stdout/stderr が WebSocket で stream.* イベントとしてブラウザに届く。10MB で切り詰め。</p>
+    <span class="step-time">10〜60秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · 実行中</div>
+    </div>
+    <div class="frame-body" style="padding:18px">
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+        <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px">💻</div>
+        <div style="flex:1">
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
+            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:rgba(15,157,88,.08);color:#0f9d58;border-radius:999px;font-size:11px;font-weight:600;font-family:var(--mono)">✓ shell exec</span>
+          </div>
+          <div class="term">
+<span class="prompt">$</span> npm test
+<span class="info">> myagent@1.0.0 test</span>
+<span class="info">> jest --coverage</span>
+
+PASS  src/auth.test.js
+PASS  src/billing.test.js
+PASS  src/sheets.test.js
+<span class="warn">PASS  src/chat.test.js  (slow)</span>
+
+Test Suites: <span class="ok">4 passed</span>, 4 total
+Tests:       <span class="ok">42 passed</span>, 42 total
+Coverage:    <span class="ok">87.3%</span>
+Time:        12.4 s
+<span class="prompt">$</span> <span style="display:inline-block;width:7px;height:14px;background:#86efac;animation:pulse 1s steps(2) infinite;vertical-align:text-bottom"></span>
+          </div>
+          <div style="margin-top:10px;padding:10px 12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;font-size:12.5px;color:#047857">
+            ✓ <b>テスト成功</b>: 42 個のテスト全て pass、カバレッジ 87.3%。<code style="background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">src/chat.test.js</code> が他より遅いので非同期テストの最適化候補です。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 08: Device list + kill switch ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 08</span>
+    <div class="step-title">デバイス管理 + 緊急停止 (Kill Switch)</div>
+    <p class="step-note">設定 → デバイス。複数 PC を登録可。「全デバイス即時停止」で実行中タスクを SIGKILL + 新規受付停止。</p>
+    <span class="step-time">いつでも</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · デバイス一覧</div>
+    </div>
+    <div class="frame-body" style="padding:22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:800">🖥️ 連携済みデバイス (2)</div>
+        <button class="btn danger" style="font-size:12px;padding:6px 12px">⛔ 全デバイス即時停止</button>
+      </div>
+
+      <div class="device-row">
+        <div class="device-icon">💻</div>
+        <div class="device-meta">
+          <div class="device-name">Takeuchi's MacBook Pro <span class="device-status online">● オンライン</span></div>
+          <div class="device-info">macOS 15.1 · Agent v0.1.0 · 最終接続: たった今 · IP: 153.158.xxx.xxx (Tokyo)</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost" style="font-size:11px;padding:5px 10px">権限</button>
+          <button class="btn ghost" style="font-size:11px;padding:5px 10px;color:var(--rose);border-color:var(--rose)">停止</button>
+        </div>
+      </div>
+
+      <div class="device-row">
+        <div class="device-icon" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8);color:#9f1239">🖥️</div>
+        <div class="device-meta">
+          <div class="device-name">Office Win11 PC <span class="device-status offline">○ オフライン</span></div>
+          <div class="device-info">Windows 11 Pro · Agent v0.1.0 · 最終接続: 3時間前</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost" style="font-size:11px;padding:5px 10px">権限</button>
+          <button class="btn ghost" style="font-size:11px;padding:5px 10px;color:var(--rose);border-color:var(--rose)">失効</button>
+        </div>
+      </div>
+
+      <button class="btn ghost" style="margin-top:10px;width:100%;justify-content:center">＋ 新しいデバイスを追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 09: Audit log ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 09</span>
+    <div class="step-title">監査ログ (アクティビティ)</div>
+    <p class="step-note">改竄不可: 各エントリは前エントリのハッシュを含むハッシュチェーン。90日ごとに Merkle ルートを公開ログに記録。</p>
+    <span class="step-time">確認用</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · アクティビティ</div>
+    </div>
+    <div class="frame-body" style="padding:22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:800">📋 アクティビティログ</div>
+        <div style="display:flex;gap:6px;font-size:11px">
+          <span style="padding:4px 10px;background:var(--peach);color:#fff;border-radius:6px;font-weight:700">直近30日</span>
+          <span style="padding:4px 10px;background:var(--cream2);color:var(--text3);border-radius:6px;border:1px solid var(--line)">過去全て</span>
+        </div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--line);border-radius:11px;overflow:hidden">
+        <div class="audit-row hd">
+          <div>時刻</div><div>操作</div><div>デバイス</div><div>結果</div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-time">17:48:21</div>
+          <div class="audit-cmd">shell.exec: <b style="color:var(--text)">npm test</b></div>
+          <div style="font-size:11.5px;color:var(--text2)">MacBook Pro</div>
+          <div><span class="audit-result ok">success</span></div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-time">17:46:08</div>
+          <div class="audit-cmd">approval.granted (npm test)</div>
+          <div style="font-size:11.5px;color:var(--text2)">MacBook Pro</div>
+          <div><span class="audit-result ok">approved</span></div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-time">17:31:55</div>
+          <div class="audit-cmd">file.write: <b style="color:var(--text)">~/projects/myagent/README.md</b></div>
+          <div style="font-size:11.5px;color:var(--text2)">MacBook Pro</div>
+          <div><span class="audit-result ok">success</span></div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-time">17:14:02</div>
+          <div class="audit-cmd">shell.exec: <code style="font-family:var(--mono);color:var(--rose)">rm -rf ~</code></div>
+          <div style="font-size:11.5px;color:var(--text2)">MacBook Pro</div>
+          <div><span class="audit-result deny">denied (cmd_deny)</span></div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-time">17:00:40</div>
+          <div class="audit-cmd">device.paired</div>
+          <div style="font-size:11.5px;color:var(--text2)">MacBook Pro</div>
+          <div><span class="audit-result ok">success</span></div>
+        </div>
+        <div class="audit-row" style="border-bottom:0">
+          <div class="audit-time">16:58:22</div>
+          <div class="audit-cmd">auth.login (Google OAuth)</div>
+          <div style="font-size:11.5px;color:var(--text2)">—</div>
+          <div><span class="audit-result ok">success</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;padding:10px 14px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;font-size:11.5px;color:var(--text2);line-height:1.6">
+        🔒 <b>改竄検証</b>: 全エントリは Merkle チェーンで前エントリと連結されています。<br>
+        最新ルートハッシュ: <code style="font-family:var(--mono);font-size:10.5px;color:var(--text)">3a7b4f...e91c2d</code> · <a href="#" style="color:var(--indigo)">公開ログで確認</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ── Summary ─────────────────────────────────────────── -->
+<div class="summary-card">
+  <h2>📋 ユーザーが触る画面のまとめ</h2>
+  <p>上記9画面が、エンドユーザーが見る<b>全部</b>です。下記は<b>一切やりません</b>:</p>
+  <ul>
+    <li>❌ ターミナルで設定ファイル編集</li>
+    <li>❌ コードビルド・コンパイル</li>
+    <li>❌ 環境変数の設定</li>
+    <li>❌ 鍵ペア生成 (Local Agent が自動で OS keychain に保存)</li>
+    <li>❌ ファイアウォール設定 (Local Agent は outbound 接続のみ)</li>
+  </ul>
+  <p style="margin-top:14px">所要時間: <b>初回 5分</b> (ダウンロード + ペアリング + 権限選択) · 以降は<b>常駐</b>。クリック数: <b>約 8 回</b>。</p>
+  <p style="margin-top:10px;padding:12px 14px;background:rgba(255,255,255,.6);border-radius:10px;font-size:13px;color:var(--text2)">
+    🔐 <b>セキュリティ</b>: Capability ベース権限 + 多層強制 + ハッシュチェーン監査ログ + 1クリック緊急停止。<br>
+    マーケットプレイスで他人作の Agent を入れても、独立サンドボックスで動くので自分のホームディレクトリには触れません。
+  </p>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/mock-sheets-flow.html">📊 Sheets連携モック</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+
+<style>
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+</style>
+</body>
+</html>

@@ -1461,7 +1461,7 @@ async function listAllPublicListings(){
   });
   return out;
 }
-/** Find {user, agent} by listing_id (cross-user). */
+/** Find {user, agent} by listing_id (cross-user). Uses JSONB containment. */
 async function findAgentByListingId(listingId){
   if(!listingId) return null;
   const match = (users) => {
@@ -1473,23 +1473,36 @@ async function findAgentByListingId(listingId){
   };
   try{
     if(USE_SUPA){
-      const r=await sbReq('GET','users','?select=*&limit=500');
-      return Array.isArray(r.d) ? match(r.d) : null;
+      // Targeted query: only the user whose agents array contains this listing_id
+      const filter = encodeURIComponent('[{"marketplace":{"listing_id":"'+listingId+'"}}]');
+      const r=await sbReq('GET','users','?select=*&agents=cs.'+filter+'&limit=1');
+      const hit = Array.isArray(r.d) ? match(r.d) : null;
+      if(hit) return hit;
+      // Fallback (broad scan) if containment isn't supported / didn't match
+      const r2=await sbReq('GET','users','?select=*&limit=2000');
+      return Array.isArray(r2.d) ? match(r2.d) : null;
     }
     return match(LDB.data||[]);
   }catch(e){ console.warn('[listing] lookup failed:', e.message); return null; }
 }
 async function findAgentByShareId(shareId){
-  // Returns {user, agent} or null. Scans users (slow without index).
+  // Returns {user, agent} or null. Uses JSONB containment to find the
+  // exact owner without scanning the whole users table.
   if(!shareId) return null;
   try{
     if(USE_SUPA){
-      // Supabase doesn't easily index nested jsonb fields without a separate column.
-      // Scan a limited window so we don't blow up on huge agent payloads (avatar
-      // images now embed as base64 data URIs, blowing up row size).
-      const r=await sbReq('GET','users','?select=id,name,email,agents&limit=500');
-      if(Array.isArray(r.d)){
-        for(const u of r.d){
+      // PostgREST JSONB containment: agents @> '[{"share_id":"..."}]'
+      const filter = encodeURIComponent('[{"share_id":"'+shareId+'"}]');
+      const r=await sbReq('GET','users','?select=*&agents=cs.'+filter+'&limit=1');
+      if(Array.isArray(r.d) && r.d.length){
+        const u = r.d[0];
+        const ag=(u.agents||[]).find(a=>a.share_id===shareId);
+        if(ag) return {user:u, agent:ag};
+      }
+      // Fallback to broad scan if containment is unsupported on this PostgREST version
+      const r2=await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
+      if(Array.isArray(r2.d)){
+        for(const u of r2.d){
           const ag=(u.agents||[]).find(a=>a.share_id===shareId);
           if(ag) return {user:u, agent:ag};
         }

@@ -3366,6 +3366,7 @@ async function handleAPI(req,res,pathname,method,ip){
     let toolLog = []; // visible browser-action log for the frontend
     // SSE setup (only if streaming was requested with tools enabled)
     let sse = null;
+    let sseKeepalive = null;
     if(wantStreamTools){
       res.writeHead(200, {
         'Content-Type':'text/event-stream; charset=utf-8',
@@ -3375,6 +3376,12 @@ async function handleAPI(req,res,pathname,method,ip){
         'Access-Control-Allow-Origin':APP_URL,
       });
       sse = (ev, data)=>{ try{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); }catch(e){} };
+      // Heartbeat every 15s — Playwright page loads or AI thinking can leave gaps
+      // long enough for some intermediate proxies (Render edge) to close idle connections.
+      // SSE comments (lines starting with `:`) are ignored by EventSource clients.
+      sseKeepalive = setInterval(()=>{ try{ res.write(': keepalive\n\n'); }catch(e){} }, 15000);
+      // Stop pinging when client disconnects.
+      req.on('close', ()=>{ if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; } });
     }
     if(useTools){
       let session = null;
@@ -3497,10 +3504,10 @@ async function handleAPI(req,res,pathname,method,ip){
             return jres(res,502,{error:`AI応答エラー: ${e2.message}`});
           }
         } else if(/rate limit|429|input tokens per minute/i.test(msg)){
-          if(sse){ sse('error', { message:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。' }); res.end(); return; }
+          if(sse){ sse('error', { message:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。' }); if(sseKeepalive){clearInterval(sseKeepalive);} res.end(); return; }
           return jres(res,429,{error:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。'});
         } else {
-          if(sse){ sse('error', { message:`AI応答エラー: ${msg}` }); res.end(); return; }
+          if(sse){ sse('error', { message:`AI応答エラー: ${msg}` }); if(sseKeepalive){clearInterval(sseKeepalive);} res.end(); return; }
           return jres(res,502,{error:`AI応答エラー: ${msg}`});
         }
       } finally {
@@ -3548,6 +3555,7 @@ async function handleAPI(req,res,pathname,method,ip){
       // Emit the (possibly already-streamed) reply once at the end so the client
       // can finalize the bubble. delta events were sent inside the loop.
       sse('done', { reply, balance_jpy: user.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog });
+      if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; }
       res.end();
       return;
     }

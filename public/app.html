@@ -1517,6 +1517,19 @@ body{color:#f0f0f8;}
           </div>
         </div>
 
+        <!-- Tools / Google Sheets integration -->
+        <div style="margin-top:8px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">📊 Google スプレッドシート連携</div>
+              <div id="wSheetsDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
+              <div id="wSheetsAccountRow" style="display:none;margin-top:8px;font-size:11.5px;color:var(--text3)">接続中: <b id="wSheetsEmail"></b></div>
+              <button type="button" id="wSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウントと接続</button>
+            </div>
+            <button type="button" class="s-sw" id="wSheetsSw" onclick="toggleWizardSheets()"></button>
+          </div>
+        </div>
+
         <div class="btn-row" style="margin-top:14px">
           <button class="btn-back" onclick="wStep(4)">← 戻る</button>
           <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(6)">次へ →</button>
@@ -2205,6 +2218,17 @@ body{color:#f0f0f8;}
           <div id="editChromeDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
         </div>
         <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
+      </div>
+    </div>
+    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">📊 Google スプレッドシート連携</div>
+          <div id="editSheetsDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
+          <div id="editSheetsAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editSheetsEmail"></b> · <a href="#" onclick="event.preventDefault();disconnectGoogleSheets()" style="color:#ef4444">切断</a></div>
+          <button type="button" id="editSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウントと接続</button>
+        </div>
+        <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
       </div>
     </div>
     <div id="editListingBox" style="padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:11px">
@@ -3750,6 +3774,23 @@ document.addEventListener('DOMContentLoaded',async()=>{
           setTimeout(function(){ openListingDetail(lq); }, 250);
         }, 300);
       }
+      // Google Sheets connection redirect
+      var gq = qs.get('google_sheets');
+      if(gq){
+        history.replaceState({}, '', location.pathname);
+        if(gq==='connected'){
+          showToast(isJa?'Google スプレッドシート連携を有効にしました':'Google Sheets connected','ok');
+          // /api/me already reflects connected state (set during the callback). Re-render
+          // any open edit/wizard panels so the toggle updates.
+          if(typeof _renderSheetsStatus==='function'){
+            _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn', false);
+            _renderSheetsStatus('wSheetsSw','wSheetsDesc','wSheetsAccountRow','wSheetsEmail','wSheetsConnectBtn', false);
+          }
+        } else {
+          var reason = qs.get('reason') || gq;
+          showToast((isJa?'Google 連携に失敗しました: ':'Google connection failed: ')+reason, 'ng');
+        }
+      }
     }catch(e){}
     const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
@@ -3830,7 +3871,7 @@ function renderAgList(){
         <div class="ag-name">${esc(a.name)}</div>
         <div class="ag-skill">${a.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')}</div>
       </div>
-      ${a.chrome_enabled?'<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>':''}
+      ${a.chrome_enabled?'<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>':''}${a.sheets_enabled?'<span title="Google スプレッドシート連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-sheets">📊</span>':''}
       <div class="live-dot"></div>
     </div>`).join('');
 }
@@ -4632,7 +4673,7 @@ async function delAgent(id){
 /* ── Wizard ────────────────────────────────────────── */
 var _wizardMode='new'; // 'new' | 'preset'
 function _resetWizardState(){
-  NA={avatar:'🤖',name:'',skills:[],persona:'',purpose:'',duties:'',chrome_enabled:false};
+  NA={avatar:'🤖',name:'',skills:[],persona:'',purpose:'',duties:'',chrome_enabled:false,sheets_enabled:false};
   _selectedPresetIdx=-1;
   ['wName','wPurpose','wDuties'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.innerHTML=_avHTML('🤖');
@@ -4642,6 +4683,7 @@ function _resetWizardState(){
   var useBtn=document.getElementById('usePresetBtn');
   if(useBtn){ useBtn.disabled=true; useBtn.style.opacity='.5'; useBtn.style.cursor='not-allowed'; }
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('wChromeSw','wChromeDesc',false);
+  if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('wSheetsSw','wSheetsDesc','wSheetsAccountRow','wSheetsEmail','wSheetsConnectBtn',false);
 }
 function openNewAgent(){
   _wizardMode='new';
@@ -4685,7 +4727,7 @@ function useSelectedPreset(){
   if(_selectedPresetIdx<0) return;
   var p=PRESETS[_selectedPresetIdx];
   _wizardMode='preset';
-  NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona,purpose:'',duties:'',chrome_enabled:!!p.chrome_enabled};
+  NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona,purpose:'',duties:'',chrome_enabled:!!p.chrome_enabled,sheets_enabled:false};
   // Sync form fields so back-navigation reflects preset values
   var wn=document.getElementById('wName'); if(wn) wn.value=p.name;
   var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.innerHTML=_avHTML(p.avatar);
@@ -4696,6 +4738,7 @@ function useSelectedPreset(){
     b.classList.toggle('sel',p.skills.indexOf(SKILLS[i].id)>=0);
   });
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('wChromeSw','wChromeDesc',!!p.chrome_enabled);
+  if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('wSheetsSw','wSheetsDesc','wSheetsAccountRow','wSheetsEmail','wSheetsConnectBtn',false);
   buildConf();
   wStep(6);
 }
@@ -5279,6 +5322,89 @@ function toggleEditChrome(){
   _renderChromeStatus('editChromeSw','editChromeDesc',willEnable);
 }
 
+/* ── Google Sheets integration helpers ────────────────────── */
+function _renderSheetsStatus(swId, descId, accountRowId, emailEl, btnId, agentEnabled){
+  var connected = !!(me && me.google_sheets_connected);
+  var sw=document.getElementById(swId);
+  var desc=document.getElementById(descId);
+  var accountRow=document.getElementById(accountRowId);
+  var emailNode=document.getElementById(emailEl);
+  var btn=document.getElementById(btnId);
+  if(!sw||!desc) return;
+  // Toggle reflects whether THIS agent uses Sheets, but it's only meaningful when connected.
+  sw.classList.toggle('on', !!agentEnabled && connected);
+  if(connected){
+    if(accountRow) accountRow.style.display='';
+    if(emailNode) emailNode.textContent = me.google_sheets_email || '';
+    if(btn) btn.style.display='none';
+    if(agentEnabled){
+      desc.innerHTML='<span style="color:#0f9d58;font-weight:700">✓ '+(isJa?'有効':'Active')+
+        '</span> — '+(isJa?'AI がスプレッドシートを直接読み書きします':'AI reads & writes your sheets directly');
+    }else{
+      desc.textContent = isJa
+        ? 'スイッチを ON にすると AI がスプレッドシートを読み書きできます'
+        : 'Turn on to let the AI read & write your sheets';
+    }
+  }else{
+    if(accountRow) accountRow.style.display='none';
+    if(btn) btn.style.display='';
+    sw.classList.remove('on');
+    desc.textContent = isJa
+      ? '先に Google アカウントと接続してください（ボタンを押すと Google の同意画面が開きます）'
+      : 'Connect a Google account first (button opens Google consent screen)';
+  }
+}
+async function connectGoogleSheets(){
+  try{
+    const r = await api('GET', '/api/google/sheets/auth-url');
+    if(r && r.url){
+      // Full-page redirect (popup is blocked on Safari iOS often). Google will
+      // bounce back to /api/google/sheets/callback → /app.html?google_sheets=connected.
+      location.href = r.url;
+    }
+  }catch(e){
+    showToast((e && e.message) || 'Google 接続URLの取得に失敗しました', 'ng');
+  }
+}
+async function disconnectGoogleSheets(){
+  if(!confirm(isJa?'Google スプレッドシート連携を切断します。本当によろしいですか？':'Disconnect Google Sheets?')) return;
+  try{
+    await api('POST', '/api/google/sheets/disconnect', {});
+    if(me){ me.google_sheets_connected=false; me.google_sheets_email=null; }
+    // Refresh both edit + wizard panels if open
+    var ag = agents.find(a=>a.id===window._editAgentId);
+    if(ag) ag.sheets_enabled=false;
+    _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn', false);
+    _renderSheetsStatus('wSheetsSw','wSheetsDesc','wSheetsAccountRow','wSheetsEmail','wSheetsConnectBtn', !!(NA && NA.sheets_enabled));
+    showToast('切断しました','ok');
+  }catch(e){
+    showToast((e && e.message) || '切断に失敗しました', 'ng');
+  }
+}
+function toggleWizardSheets(){
+  var connected = !!(me && me.google_sheets_connected);
+  if(!connected){
+    showToast(isJa?'先に Google アカウントと接続してください':'Connect a Google account first','ng');
+    return;
+  }
+  var sw=document.getElementById('wSheetsSw');
+  if(!sw) return;
+  var willEnable=!sw.classList.contains('on');
+  if(NA) NA.sheets_enabled=willEnable;
+  _renderSheetsStatus('wSheetsSw','wSheetsDesc','wSheetsAccountRow','wSheetsEmail','wSheetsConnectBtn', willEnable);
+}
+function toggleEditSheets(){
+  var connected = !!(me && me.google_sheets_connected);
+  if(!connected){
+    showToast(isJa?'先に Google アカウントと接続してください':'Connect a Google account first','ng');
+    return;
+  }
+  var sw=document.getElementById('editSheetsSw');
+  if(!sw) return;
+  var willEnable=!sw.classList.contains('on');
+  _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn', willEnable);
+}
+
 function _composePersona(purpose,duties){
   purpose=(purpose||'').trim(); duties=(duties||'').trim();
   if(!purpose && !duties) return '';
@@ -5300,6 +5426,7 @@ function openEditAgent(id){
   document.getElementById('editPurpose').value = parsed.purpose;
   document.getElementById('editDuties').value = parsed.duties;
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('editChromeSw','editChromeDesc',!!ag.chrome_enabled);
+  if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
 
   // Reflect marketplace listing state
   var m = ag.marketplace || {};
@@ -5335,12 +5462,15 @@ async function saveEditAgent(){
   const newPersona = _composePersona(purpose,duties);
   var sw=document.getElementById('editChromeSw');
   var chromeEnabled = !!(sw && sw.classList.contains('on'));
+  var swSheets=document.getElementById('editSheetsSw');
+  var sheetsEnabled = !!(swSheets && swSheets.classList.contains('on') && me && me.google_sheets_connected);
   if(!newName){ showToast('名前を入力してください','ng'); return; }
   try{
-    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled});
+    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled});
     ag.name = newName;
     ag.persona = newPersona;
     ag.chrome_enabled = chromeEnabled;
+    ag.sheets_enabled = sheetsEnabled;
     closeEditAgent();
     renderAgList();
     renderChatTop(ag);
@@ -5455,7 +5585,7 @@ function buildConf(){
 async function doCreate(){
   setBtnLoad('createBtn',true,'作成中...');
   try{
-    const r=await api('POST','/api/agents',{avatar:NA.avatar,name:NA.name,skills:NA.skills,persona:NA.persona,chrome_enabled:!!NA.chrome_enabled});
+    const r=await api('POST','/api/agents',{avatar:NA.avatar,name:NA.name,skills:NA.skills,persona:NA.persona,chrome_enabled:!!NA.chrome_enabled,sheets_enabled:!!NA.sheets_enabled});
     agents.push(r.agent); activeId=r.agent.id;
     renderAgList();
     closeWizard();

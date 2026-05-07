@@ -33,6 +33,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status text;
 -- ── Admin / モデレーション ──────────────────────────────────────
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin boolean DEFAULT false;
 
+-- ── Google Sheets API 連携トークン ─────────────────────────────
+-- 形式: { access_token, refresh_token, expires_at(unix ms), scope, email }
+-- 切断時は null に戻す。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_oauth jsonb;
+
 -- ── PostgREST のスキーマキャッシュをリロード ──────────────────────
 NOTIFY pgrst, 'reload schema';
 

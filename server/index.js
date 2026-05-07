@@ -188,7 +188,13 @@ function readBody(req,max=2e6){
 function readRaw(req){return new Promise((resolve,reject)=>{const c=[];req.on('data',d=>c.push(d));req.on('end',()=>resolve(Buffer.concat(c)));req.on('error',reject);});}
 function getAuth(req){return JWT.verify((req.headers['authorization']||'').replace('Bearer ',''));}
 function getIP(req){return(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();}
-function safe(u){const{password:_,verify_token:__,reset_token:___,reset_expiry:____,...s}=u;return s;}
+function safe(u){
+  const{password:_,verify_token:__,reset_token:___,reset_expiry:____,google_oauth:gOAuth,...s}=u;
+  // Expose only the *connection state* of Google Sheets — never the tokens themselves.
+  s.google_sheets_connected = !!(gOAuth && gOAuth.refresh_token);
+  s.google_sheets_email = (gOAuth && gOAuth.email) || null;
+  return s;
+}
 function newUser(base){
   return{id:crypto.randomUUID(),plan:'free',balance_jpy:0,usage_count:0,
     agents:[],billing_history:[],stripe_customer_id:null,
@@ -200,6 +206,9 @@ function newUser(base){
     // Marketplace UX
     is_verified:false,             // 公式 / 検証済みクリエイターバッジ (admin manual)
     favorites:[],                  // listing_ids the user favorited
+    // Google Sheets API tokens — null when not connected.
+    // {access_token, refresh_token, expires_at, scope, email}
+    google_oauth:null,
     verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
 }
@@ -648,6 +657,130 @@ const BROWSER_TOOLS = [
   }
 ];
 
+// ── Google Sheets API tools (require user.google_oauth set) ──
+const SHEETS_TOOLS = [
+  {
+    name:'sheets_read',
+    description:'指定した Google スプレッドシートからセル値を読みます。range は A1 形式 (例: "シート1!A1:C20")。Spreadsheet ID は URL の /d/ と /edit の間 (例: "1Wq8xv...nMpX...")。',
+    input_schema:{
+      type:'object',
+      properties:{
+        spreadsheet_id:{type:'string',description:'スプレッドシートID'},
+        range:{type:'string',description:'A1 形式 (例: "Sheet1!A1:Z100")'}
+      },
+      required:['spreadsheet_id','range']
+    }
+  },
+  {
+    name:'sheets_write',
+    description:'指定範囲にセル値を書き込みます (上書き)。values は2次元配列 (行x列)。range の左上セルを起点に書き込みます。',
+    input_schema:{
+      type:'object',
+      properties:{
+        spreadsheet_id:{type:'string',description:'スプレッドシートID'},
+        range:{type:'string',description:'書き込む範囲の左上セル (例: "Sheet1!A2")'},
+        values:{type:'array',description:'2次元配列 (行x列)。例: [["山田","営業","東京"],["佐藤","技術","大阪"]]'}
+      },
+      required:['spreadsheet_id','range','values']
+    }
+  },
+  {
+    name:'sheets_append',
+    description:'シートの最終行の下に新しい行を追記します。既存データを破壊しません。',
+    input_schema:{
+      type:'object',
+      properties:{
+        spreadsheet_id:{type:'string',description:'スプレッドシートID'},
+        range:{type:'string',description:'対象シート名 (例: "Sheet1!A:E")'},
+        values:{type:'array',description:'2次元配列 (追記する行)'}
+      },
+      required:['spreadsheet_id','range','values']
+    }
+  },
+  {
+    name:'sheets_clear',
+    description:'指定範囲のセル値をクリア (削除) します。',
+    input_schema:{
+      type:'object',
+      properties:{
+        spreadsheet_id:{type:'string',description:'スプレッドシートID'},
+        range:{type:'string',description:'クリアする範囲'}
+      },
+      required:['spreadsheet_id','range']
+    }
+  },
+  {
+    name:'sheets_get_meta',
+    description:'スプレッドシートのタイトルとシート名一覧を取得します。シート構成を確認したいときに最初に呼びます。',
+    input_schema:{
+      type:'object',
+      properties:{ spreadsheet_id:{type:'string'} },
+      required:['spreadsheet_id']
+    }
+  },
+];
+
+// Common Sheets API request — auto-refreshes token, returns parsed JSON or {error}.
+async function _sheetsApi(user, method, pathSuffix, body){
+  let token;
+  try{ token = await getValidGoogleAccessToken(user); }
+  catch(e){ return {error:'sheets_not_connected: '+(e.message||'')}; }
+  const headers={'Authorization':`Bearer ${token}`,'Content-Type':'application/json'};
+  const r = await httpsReq(method, 'sheets.googleapis.com', pathSuffix, headers, body||null, {timeout:25000});
+  if(r.s>=200 && r.s<300) return r.d;
+  const errMsg = (r.d && r.d.error && r.d.error.message) || (typeof r.d==='string'?r.d:JSON.stringify(r.d)).slice(0,200);
+  return {error:`sheets_api_${r.s}: ${errMsg}`};
+}
+
+async function executeSheetsTool(user, name, input){
+  try{
+    const id  = input.spreadsheet_id || '';
+    const rng = encodeURIComponent(input.range || '');
+    if(!id) return {error:'spreadsheet_id is required'};
+    if(name==='sheets_read'){
+      const d = await _sheetsApi(user, 'GET', `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}`);
+      if(d.error) return d;
+      return { range:d.range, values:d.values||[], rows:(d.values||[]).length };
+    }
+    if(name==='sheets_write'){
+      const d = await _sheetsApi(user, 'PUT',
+        `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}?valueInputOption=USER_ENTERED`,
+        {values: input.values || []});
+      if(d.error) return d;
+      return { updated_range:d.updatedRange, updated_rows:d.updatedRows, updated_cols:d.updatedColumns };
+    }
+    if(name==='sheets_append'){
+      const d = await _sheetsApi(user, 'POST',
+        `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+        {values: input.values || []});
+      if(d.error) return d;
+      return { updated_range: d.updates&&d.updates.updatedRange, appended_rows:(d.updates&&d.updates.updatedRows)||0 };
+    }
+    if(name==='sheets_clear'){
+      const d = await _sheetsApi(user, 'POST',
+        `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}:clear`, {});
+      if(d.error) return d;
+      return { cleared_range:d.clearedRange };
+    }
+    if(name==='sheets_get_meta'){
+      const d = await _sheetsApi(user, 'GET', `/v4/spreadsheets/${encodeURIComponent(id)}?fields=properties.title,sheets.properties(title,sheetId,gridProperties)`);
+      if(d.error) return d;
+      return {
+        title:(d.properties&&d.properties.title)||'',
+        sheets:(d.sheets||[]).map(s=>({
+          title:s.properties&&s.properties.title,
+          sheet_id:s.properties&&s.properties.sheetId,
+          rows:s.properties&&s.properties.gridProperties&&s.properties.gridProperties.rowCount,
+          cols:s.properties&&s.properties.gridProperties&&s.properties.gridProperties.columnCount,
+        })),
+      };
+    }
+    return {error:'unknown_sheets_tool: '+name};
+  }catch(e){
+    return {error:'sheets_failed: '+(e&&e.message||String(e))};
+  }
+}
+
 async function executeBrowserTool(session, name, input){
   try{
     if(name==='browse_url')      return await session.browseUrl(input.url);
@@ -718,6 +851,53 @@ async function googleUserInfo(accessToken){
     {'Authorization':`Bearer ${accessToken}`},null);
   if(r.s!==200)throw new Error('Google userinfo failed');
   return r.d;
+}
+
+// ── Google Sheets API connection (separate OAuth scope) ──────
+const SHEETS_SCOPE = 'openid email profile https://www.googleapis.com/auth/spreadsheets';
+function googleSheetsAuthURL(state){
+  const params=new URLSearchParams({
+    client_id:GOOGLE_ID,
+    redirect_uri:`${APP_URL}/api/google/sheets/callback`,
+    response_type:'code',
+    scope:SHEETS_SCOPE,
+    access_type:'offline',
+    prompt:'consent', // force re-consent so we always receive a refresh_token
+    state: state||'',
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+async function googleSheetsExchange(code){
+  const r=await httpsReq('POST','oauth2.googleapis.com','/token',
+    {'Content-Type':'application/x-www-form-urlencoded'},
+    new URLSearchParams({code,client_id:GOOGLE_ID,client_secret:GOOGLE_SEC,
+      redirect_uri:`${APP_URL}/api/google/sheets/callback`,grant_type:'authorization_code'}).toString());
+  if(r.s!==200)throw new Error('Sheets OAuth exchange failed: '+JSON.stringify(r.d).slice(0,200));
+  return r.d; // {access_token, refresh_token, expires_in, scope, ...}
+}
+async function googleRefreshAccessToken(refreshToken){
+  const r=await httpsReq('POST','oauth2.googleapis.com','/token',
+    {'Content-Type':'application/x-www-form-urlencoded'},
+    new URLSearchParams({refresh_token:refreshToken,client_id:GOOGLE_ID,client_secret:GOOGLE_SEC,
+      grant_type:'refresh_token'}).toString());
+  if(r.s!==200)throw new Error('Sheets token refresh failed: '+JSON.stringify(r.d).slice(0,200));
+  return r.d; // {access_token, expires_in, ...} (no new refresh_token)
+}
+// Returns a non-expired access_token, refreshing if needed. Mutates user.google_oauth + persists.
+async function getValidGoogleAccessToken(user){
+  const o=user.google_oauth;
+  if(!o||!o.refresh_token) throw new Error('Google Sheets not connected');
+  const now=Date.now();
+  const skew=60_000; // refresh 1 min before expiry
+  if(o.access_token && o.expires_at && o.expires_at - skew > now) return o.access_token;
+  const fresh=await googleRefreshAccessToken(o.refresh_token);
+  user.google_oauth={
+    ...o,
+    access_token:fresh.access_token,
+    expires_at:Date.now()+(fresh.expires_in||3600)*1000,
+  };
+  try{ await DB.save(user); }catch(e){ console.warn('[sheets] failed to persist refreshed token:', e.message); }
+  return user.google_oauth.access_token;
 }
 
 // ── STRIPE ────────────────────────────────────────────────────
@@ -1674,7 +1854,22 @@ async function findAgentByShareId(shareId){
   return null;
 }
 
-function buildSystem(agent){
+function buildSystem(agent, opts){
+  const sheetsActive = !!(opts && opts.sheetsActive);
+  const sheetsNote = sheetsActive
+    ? `
+
+【ツール: Google スプレッドシート連携】
+このエージェントはユーザー本人の Google アカウントに接続済みで、スプレッドシートを **直接読み書きできます**（API 経由、ブラウザ操作ではありません）。以下のツールを使ってください:
+- sheets_get_meta(spreadsheet_id): タイトル + シート名一覧（最初に呼んで構造把握）
+- sheets_read(spreadsheet_id, range): A1 形式でセル読み取り (例: "Sheet1!A1:D100")
+- sheets_write(spreadsheet_id, range, values): 範囲を上書き (values は2次元配列)
+- sheets_append(spreadsheet_id, range, values): 最終行の下に追記 (既存破壊なし)
+- sheets_clear(spreadsheet_id, range): セル値をクリア
+
+URL 例: https://docs.google.com/spreadsheets/d/【ここがID】/edit — /d/ と /edit の間が spreadsheet_id。
+書き込み前に必ず sheets_get_meta でシート名を確認してから、sheets_read で既存データを読み、必要があれば sheets_write/append してください。値は文字列・数値・数式 ("=SUM(A1:A10)" 等) に対応します。`
+    : '';
   const chromeNote = agent.chrome_enabled
     ? `
 
@@ -1709,7 +1904,7 @@ function buildSystem(agent){
 
 ツールを連鎖して公開情報の問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
     : '';
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
+  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${sheetsNote}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1816,6 +2011,49 @@ async function handleAPI(req,res,pathname,method,ip){
         : (e.message||'').includes('userinfo') ? 'userinfo_failed'
         : 'unknown';
       res.writeHead(302,{Location:'/auth.html?error=google_failed&reason='+reason});
+      res.end();
+    }
+    return;
+  }
+
+  // ── GET /api/google/sheets/callback ────────────────────────
+  // Google redirects here after user grants Sheets scope. The `state` query param
+  // carries the user's JWT (we put it there when we generated the auth URL) so we
+  // can identify which user is connecting.
+  if(pathname==='/api/google/sheets/callback' && method==='GET'){
+    const qs=new url.URL(req.url,APP_URL).searchParams;
+    const code=qs.get('code');
+    const state=qs.get('state'); // user's JWT
+    const oauthErr=qs.get('error');
+    if(oauthErr || !code || !state){
+      res.writeHead(302,{Location:'/app.html?google_sheets=error&reason='+encodeURIComponent(oauthErr||'no_code')});
+      res.end();return;
+    }
+    try{
+      if(!GOOGLE_ID || !GOOGLE_SEC) throw new Error('not_configured');
+      const claims=JWT.verify(state);
+      if(!claims) throw new Error('invalid_state');
+      const user=await DB.findBy('id',claims.userId);
+      if(!user) throw new Error('user_not_found');
+      const tokens=await googleSheetsExchange(code);
+      if(!tokens.refresh_token){
+        // Google only returns refresh_token on first consent. We sent prompt=consent so
+        // this should always be present, but if not we can't make API calls later.
+        throw new Error('no_refresh_token (revoke previous grant in Google account settings and retry)');
+      }
+      const gUser=await googleUserInfo(tokens.access_token);
+      user.google_oauth = {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_at: Date.now() + (tokens.expires_in||3600)*1000,
+        scope: tokens.scope || SHEETS_SCOPE,
+        email: (gUser && gUser.email) || '',
+      };
+      await DB.save(user);
+      res.writeHead(302,{Location:'/app.html?google_sheets=connected'});res.end();
+    }catch(e){
+      console.error('[Sheets OAuth] callback failed:', e.message);
+      res.writeHead(302,{Location:'/app.html?google_sheets=error&reason='+encodeURIComponent((e.message||'unknown').slice(0,80))});
       res.end();
     }
     return;
@@ -2044,7 +2282,7 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── POST /api/agents ───────────────────────────────────────
   if(pathname==='/api/agents'&&method==='POST'){
-    const{avatar,name,skills,persona,chrome_enabled}=await readBody(req);
+    const{avatar,name,skills,persona,chrome_enabled,sheets_enabled}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
     if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
@@ -2057,6 +2295,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const agent={id:'ag_'+crypto.randomUUID(),avatar:_av,
       name:name.trim(),skills,persona:persona?.trim()||'',
       chrome_enabled:!!chrome_enabled,
+      sheets_enabled:!!sheets_enabled,
       history:[],created_at:new Date().toISOString()};
     user.agents=[...(user.agents||[]),agent];
     await DB.save(user);return jres(res,201,{agent});
@@ -2067,12 +2306,13 @@ async function handleAPI(req,res,pathname,method,ip){
   const pam=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(pam&&method==='PATCH'){
     const agId=pam[1];
-    const{name,persona,chrome_enabled,avatar}=await readBody(req);
+    const{name,persona,chrome_enabled,sheets_enabled,avatar}=await readBody(req);
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
     if(persona!==undefined)ag.persona=persona;
     if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
+    if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(avatar!==undefined){
       // Accept either a single emoji/short string or a data:image/* base64 URI (≤500KB)
       const a = String(avatar||'').trim();
@@ -2117,6 +2357,38 @@ async function handleAPI(req,res,pathname,method,ip){
   if(dm&&method==='DELETE'){
     user.agents=(user.agents||[]).filter(a=>a.id!==dm[1]);
     await DB.save(user);return jres(res,200,{ok:true});
+  }
+
+  // ── GET /api/google/sheets/status ──────────────────────────
+  if(pathname==='/api/google/sheets/status' && method==='GET'){
+    const o=user.google_oauth;
+    return jres(res,200,{
+      connected: !!(o && o.refresh_token),
+      email: (o && o.email) || null,
+      scope: (o && o.scope) || null,
+    });
+  }
+
+  // ── GET /api/google/sheets/auth-url ────────────────────────
+  // Returns the Google OAuth URL to start the Sheets connection flow.
+  // Frontend redirects the user to it (or opens a popup).
+  if(pathname==='/api/google/sheets/auth-url' && method==='GET'){
+    if(!GOOGLE_ID || !GOOGLE_SEC) return jres(res,503,{error:'Google OAuth が未設定です'});
+    // Re-issue a short-lived JWT specifically for the OAuth state. This avoids passing
+    // the user's full long-lived token through Google's redirect URL, where it would
+    // appear in their browser history.
+    const stateToken = JWT.sign({userId:user.id,email:user.email});
+    return jres(res,200,{url: googleSheetsAuthURL(stateToken)});
+  }
+
+  // ── POST /api/google/sheets/disconnect ─────────────────────
+  if(pathname==='/api/google/sheets/disconnect' && method==='POST'){
+    user.google_oauth = null;
+    // Also flip off any agents currently flagged as sheets_enabled so the AI doesn't
+    // try to call sheets tools that will fail.
+    (user.agents||[]).forEach(a=>{ if(a.sheets_enabled) a.sheets_enabled=false; });
+    await DB.save(user);
+    return jres(res,200,{ok:true});
   }
 
   // ── POST /api/agents/:id/share ─────────────────────────────
@@ -2787,8 +3059,14 @@ async function handleAPI(req,res,pathname,method,ip){
       : [...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
     let reply,cost;
 
-    // Branch: Chrome 連携 ON のエージェントは Tool Use ループを通す
-    const useTools = !!agent.chrome_enabled;
+    // Branch: Chrome 連携 ON or Sheets 連携 ON のエージェントは Tool Use ループを通す
+    const sheetsConnected = !!(user.google_oauth && user.google_oauth.refresh_token);
+    const sheetsActive = !!agent.sheets_enabled && sheetsConnected;
+    const useTools = !!agent.chrome_enabled || sheetsActive;
+    const tools = [
+      ...(agent.chrome_enabled ? BROWSER_TOOLS : []),
+      ...(sheetsActive ? SHEETS_TOOLS : []),
+    ];
     const wantStream = body.stream === true && !useTools;
     let totalIn=0, totalOut=0;
 
@@ -2804,7 +3082,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(agent), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         });
@@ -2847,8 +3125,13 @@ async function handleAPI(req,res,pathname,method,ip){
     let toolLog = []; // visible browser-action log for the frontend
     if(useTools){
       let session = null;
+      const sheetsToolNames = new Set(SHEETS_TOOLS.map(t=>t.name));
       try{
-        session = browser.newSession();
+        // Lazy-create the browser session only when Chrome tools are actually wired in.
+        // Sheets-only agents don't need Playwright at all.
+        if(agent.chrome_enabled){
+          session = browser.newSession();
+        }
         let convMsgs = baseMsgs.slice();
         let resp;
         let iters = 0;
@@ -2859,7 +3142,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(agent), BROWSER_TOOLS);
+          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -2881,12 +3164,19 @@ async function handleAPI(req,res,pathname,method,ip){
           // Append the assistant's tool_use turn
           convMsgs.push({role:'assistant', content: resp.content});
 
-          // Run each tool_use block. MUST be serial — the session shares a single
-          // Playwright page, so parallel calls would race on navigation/state.
+          // Run each tool_use block. Browser ops must be serial (shared Playwright page);
+          // sheets ops are independent but for simplicity we keep the same loop.
           const toolResultBlocks = [];
           for(const block of (resp.content||[])){
             if(block.type !== 'tool_use') continue;
-            const result = await executeBrowserTool(session, block.name, block.input||{});
+            let result;
+            if(sheetsToolNames.has(block.name)){
+              result = await executeSheetsTool(user, block.name, block.input||{});
+            } else if(session){
+              result = await executeBrowserTool(session, block.name, block.input||{});
+            } else {
+              result = {error:'tool_unavailable: '+block.name+' (Chrome 連携が無効です)'};
+            }
             toolResultBlocks.push(buildToolResult(block.id, block.name, result));
             toolLog.push({
               name: block.name,
@@ -2915,7 +3205,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(agent));
+            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive}));
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -2934,7 +3224,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(agent));
+        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive}));
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

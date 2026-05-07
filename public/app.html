@@ -4560,37 +4560,51 @@ async function bsSubscribeSubmit(){
   var price = plan==='pro' ? '$12.99' : '$32.99';
   var label = _fmtT(T.bsStartFmt,{p:price});
   setBtnLoad('bsMonthlyGo',true,isJa?'処理中...':'Processing...');
+  var errEl = document.getElementById('bs-monthly-err');
+  if(errEl) errEl.textContent = '';
   try{
-    var r=await api('POST','/api/billing/subscribe',{plan:plan});
-    if(r.status==='active'||r.status==='trialing'){
+    // ── Step 1: SetupIntent でカードを保存 ──
+    var siRes = await api('POST','/api/billing/setup-intent',{});
+    if(!siRes || !siRes.client_secret){
+      throw new Error('SetupIntent の作成に失敗しました');
+    }
+    var setupResult = await _bsStripe.confirmCardSetup(siRes.client_secret,{
+      payment_method:{card:_bsMonthlyCard}
+    });
+    if(setupResult.error){
+      if(errEl) errEl.textContent = setupResult.error.message;
+      showToast(setupResult.error.message,'ng');
+      setBtnLoad('bsMonthlyGo',false,label); return;
+    }
+    var pmId = setupResult.setupIntent && setupResult.setupIntent.payment_method;
+    if(!pmId){ throw new Error('カード情報の保存に失敗しました'); }
+
+    // ── Step 2: PaymentMethod を紐付けて Subscription 作成 ──
+    var r = await api('POST','/api/billing/subscribe',{plan:plan, payment_method_id: pmId});
+    if(r.status==='active' || r.status==='trialing'){
       bsAfterSubscribeSuccess(plan); return;
     }
+    // 3DS / 追加認証が必要な場合
     if(r.client_secret){
-      var result=await _bsStripe.confirmCardPayment(r.client_secret,{
-        payment_method:{card:_bsMonthlyCard}
-      });
-      if(result.error){
-        document.getElementById('bs-monthly-err').textContent=result.error.message;
-        showToast(result.error.message,'ng');
+      var pay = await _bsStripe.confirmCardPayment(r.client_secret);
+      if(pay.error){
+        if(errEl) errEl.textContent = pay.error.message;
+        showToast(pay.error.message,'ng');
       } else {
         bsAfterSubscribeSuccess(plan); return;
       }
-    } else {
-      // Subscription created but no client_secret — surface what we got back
-      console.warn('subscribe response without client_secret:', r);
-      var msg = '決済の初期化に失敗しました';
-      var details = [];
-      if(r.status) details.push('sub:'+r.status);
-      if(r.invoice_status) details.push('inv:'+r.invoice_status);
-      if(r.pi_status) details.push('pi:'+r.pi_status);
-      if(r.latest_invoice_type) details.push('inv_type:'+r.latest_invoice_type);
-      if(details.length) msg += ' (' + details.join(', ') + ')';
-      showToast(msg,'ng');
-      var errEl = document.getElementById('bs-monthly-err');
+    } else if(r.status === 'incomplete'){
+      var msg = 'サブスクリプション作成に失敗しました (status: incomplete)';
       if(errEl) errEl.textContent = msg;
+      showToast(msg,'ng');
+    } else {
+      var msg2 = '不明な状態: ' + (r.status||'no status');
+      if(errEl) errEl.textContent = msg2;
+      showToast(msg2,'ng');
     }
   }catch(e){
     console.warn('[bsSubscribeSubmit]', e);
+    if(errEl) errEl.textContent = e.message||'エラー';
     showToast(e.message||'エラーが発生しました','ng');
   }
   setBtnLoad('bsMonthlyGo',false,label);

@@ -620,21 +620,37 @@ async function stripeCreateCustomer(email, name){
   return r.d.id;
 }
 
-async function stripeCreateSubscription(customerId, priceId){
+async function stripeCreateSubscription(customerId, priceId, paymentMethodId){
+  const params = {
+    customer: customerId,
+    'items[0][price]': priceId,
+    'payment_settings[payment_method_types][0]': 'card',
+    'expand[0]': 'latest_invoice.payment_intent',
+  };
+  if(paymentMethodId){
+    // SetupIntent 完了済の PaymentMethod を即座に紐付け、即課金させる
+    params.default_payment_method = paymentMethodId;
+  } else {
+    // フォールバック: 旧フロー (default_incomplete + first invoice の PI)
+    params.payment_behavior = 'default_incomplete';
+    params['payment_settings[save_default_payment_method]'] = 'on_subscription';
+  }
   const r=await httpsReq('POST','api.stripe.com','/v1/subscriptions',
+    {'Authorization':'Basic '+Buffer.from(STRIPE_SK+':').toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
+    new URLSearchParams(params).toString());
+  if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe subscription error');
+  return r.d;
+}
+
+async function stripeCreateSetupIntent(customerId){
+  const r=await httpsReq('POST','api.stripe.com','/v1/setup_intents',
     {'Authorization':'Basic '+Buffer.from(STRIPE_SK+':').toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
     new URLSearchParams({
       customer: customerId,
-      'items[0][price]': priceId,
-      'payment_behavior': 'default_incomplete',
-      // Explicit payment method type — newer Stripe accounts won't create a
-      // PaymentIntent on the first invoice without this.
-      'payment_settings[payment_method_types][0]': 'card',
-      'payment_settings[save_default_payment_method]': 'on_subscription',
-      'expand[0]': 'latest_invoice.payment_intent',
-      'expand[1]': 'pending_setup_intent',
+      'payment_method_types[0]': 'card',
+      usage: 'off_session',
     }).toString());
-  if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe subscription error');
+  if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe setup intent error');
   return r.d;
 }
 
@@ -2892,31 +2908,47 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
 
+  // ── POST /api/billing/setup-intent ────────────────────────
+  // Modern flow: collect card via SetupIntent, then attach PM to subscription.
+  // Replaces the older default_incomplete + latest_invoice.payment_intent flow.
+  if(pathname==='/api/billing/setup-intent'&&method==='POST'){
+    if(!STRIPE_SK) return jres(res,503,{error:'Stripe が設定されていません'});
+    try{
+      let customerId = user.stripe_customer_id;
+      if(!customerId){
+        customerId = await stripeCreateCustomer(user.email, user.name||user.email);
+        user.stripe_customer_id = customerId;
+        await DB.save(user);
+      }
+      const si = await stripeCreateSetupIntent(customerId);
+      return jres(res,200,{client_secret: si.client_secret});
+    }catch(e){
+      console.error('[billing/setup-intent]', e.message);
+      return jres(res,500,{error:'Stripe エラー: '+e.message});
+    }
+  }
+
   // ── POST /api/billing/subscribe ────────────────────────────
+  // body: {plan, payment_method_id?}  — if payment_method_id is provided
+  // (modern flow), creates a sub with default_payment_method (auto-charges).
+  // If omitted, falls back to default_incomplete (legacy).
   if(pathname==='/api/billing/subscribe'&&method==='POST'){
     if(!STRIPE_SK) return jres(res,503,{error:'Stripe が設定されていません（管理者にお問い合わせください）'});
-    const{plan}=await readBody(req);
+    const{plan, payment_method_id}=await readBody(req);
     if(!['pro','business'].includes(plan))return jres(res,400,{error:'プランが不正です'});
     const priceId = plan==='pro' ? STRIPE_PRO_PRICE : STRIPE_BIZ_PRICE;
     if(!priceId)return jres(res,503,{error:(plan==='pro'?'Pro':'Business')+' プランの価格 ID が設定されていません（STRIPE_'+(plan==='pro'?'PRO':'BIZ')+'_PRICE_ID）'});
     try{
-      // Stripe顧客を作成または取得
       let customerId = user.stripe_customer_id;
       if(!customerId){
         customerId = await stripeCreateCustomer(user.email, user.name||user.email);
         user.stripe_customer_id = customerId;
       }
-      // サブスクリプション作成
-      const sub = await stripeCreateSubscription(customerId, priceId);
+      const sub = await stripeCreateSubscription(customerId, priceId, payment_method_id);
       const clientSecret = sub.latest_invoice?.payment_intent?.client_secret;
       const piStatus = sub.latest_invoice?.payment_intent?.status;
       const liStatus = typeof sub.latest_invoice === 'string' ? '(unexpanded id)' : sub.latest_invoice?.status;
       console.log('[billing/subscribe] sub.status='+sub.status+' invoice.status='+liStatus+' pi.status='+piStatus+' has_client_secret='+!!clientSecret);
-      if(!clientSecret && sub.status !== 'active' && sub.status !== 'trialing'){
-        // Diagnostic: surface what Stripe actually gave back so the operator sees it
-        console.error('[billing/subscribe] missing client_secret. sub keys:', Object.keys(sub).join(','),
-          'latest_invoice keys:', sub.latest_invoice && typeof sub.latest_invoice === 'object' ? Object.keys(sub.latest_invoice).join(',') : 'STRING_ID');
-      }
       user.plan = plan;
       user.subscription_id = sub.id;
       user.subscription_status = sub.status;
@@ -2926,7 +2958,6 @@ async function handleAPI(req,res,pathname,method,ip){
         client_secret: clientSecret,
         status: sub.status,
         plan,
-        // Diagnostic fields (safe to expose for debugging)
         invoice_status: liStatus,
         pi_status: piStatus,
         latest_invoice_type: typeof sub.latest_invoice,

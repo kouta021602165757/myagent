@@ -368,10 +368,58 @@ function ddgSearch(query){
 }
 
 // ── ANTHROPIC ─────────────────────────────────────────────────
+
+/**
+ * Wrap a string `system` prompt as a content block array with cache_control:
+ * ephemeral. Anthropic caches the marked block for ~5 min — subsequent calls
+ * within that window read it from cache, cutting input tokens by ~90% on the
+ * cached portion and latency by ~70%. The persona is the same per agent so
+ * caching pays off after the first message.
+ */
+function _systemBlocks(system){
+  if(Array.isArray(system)) return system;
+  const text = String(system||'');
+  if(text.length < 200) return text; // not worth caching tiny prompts
+  return [{ type:'text', text, cache_control:{ type:'ephemeral' } }];
+}
+
+/**
+ * Trim history messages before sending to AI:
+ * - drop image / document blocks from all but the latest user turn (huge token saver)
+ * - cap any single text-string message at MAX_CHARS so a paste-bomb doesn't
+ *   inflate the next request
+ */
+const HIST_MAX_CHARS = 2000;
+function _trimHistory(messages){
+  return messages.map((m, i) => {
+    const isLast = i === messages.length - 1;
+    if(typeof m.content === 'string'){
+      const c = m.content.length > HIST_MAX_CHARS
+        ? m.content.slice(0, HIST_MAX_CHARS - 10) + '…[省略]'
+        : m.content;
+      return { role:m.role, content:c };
+    }
+    if(Array.isArray(m.content)){
+      const filtered = isLast
+        ? m.content
+        : m.content.filter(b => b.type !== 'image' && b.type !== 'document');
+      if(filtered.length === 0) return { role:m.role, content:'(画像/PDF省略)' };
+      const trimmed = filtered.map(b => {
+        if(b.type === 'text' && typeof b.text === 'string' && b.text.length > HIST_MAX_CHARS){
+          return { ...b, text: b.text.slice(0, HIST_MAX_CHARS - 10) + '…[省略]' };
+        }
+        return b;
+      });
+      return { role:m.role, content:trimmed };
+    }
+    return m;
+  });
+}
+
 async function callAI(messages,system){
   const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
     {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
-                         {model:'claude-sonnet-4-6',max_tokens:1024,system,messages});
+                         {model:'claude-sonnet-4-6',max_tokens:1024,system:_systemBlocks(system),messages:_trimHistory(messages)});
   if(r.s!==200)throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
   return r.d;
 }
@@ -385,7 +433,8 @@ function callAIStream(messages, system, onText){
     const body = JSON.stringify({
       model:'claude-sonnet-4-6',
       max_tokens:1024,
-      system, messages,
+      system: _systemBlocks(system),
+      messages: _trimHistory(messages),
       stream:true,
     });
     const req = https.request({
@@ -451,7 +500,7 @@ async function callAIWithTools(messages,system,tools){
   while(true){
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
       {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
-                           {model:'claude-sonnet-4-6',max_tokens:2048,system,messages,tools});
+                           {model:'claude-sonnet-4-6',max_tokens:2048,system:_systemBlocks(system),messages:_trimHistory(messages),tools});
     if(r.s===200) return r.d;
     if(r.s===429 && attempt < 1){
       console.warn('[chat] Anthropic 429 rate-limited, retrying once in 5s');
@@ -2664,7 +2713,7 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     }
 
-    const hist=(agent.history||[]).slice(-20);
+    const hist=(agent.history||[]).slice(-14);
     // ユーザーメッセージのcontentを構築（画像 + PDF対応）
     let userContent;
     if(images.length > 0){

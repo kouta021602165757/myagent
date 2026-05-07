@@ -1464,6 +1464,16 @@ async function handleAPI(req,res,pathname,method,ip){
     res.writeHead(302,{Location:googleAuthURL()});res.end();return;
   }
 
+  // ── GET /api/config (PUBLIC) ───────────────────────────────
+  // Lightweight feature-flag endpoint so the frontend knows what's enabled.
+  if(pathname==='/api/config' && method==='GET'){
+    return jres(res,200,{
+      google_login_enabled: !!(GOOGLE_ID && GOOGLE_SEC),
+      stripe_enabled: !!STRIPE_SK,
+      brave_search_enabled: !!BRAVE_KEY,
+    });
+  }
+
   // ── GET /api/auth/google/callback ─────────────────────────
   if(pathname==='/api/auth/google/callback'&&method==='GET'){
     const qs=new url.URL(req.url,APP_URL).searchParams;

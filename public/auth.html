@@ -372,6 +372,17 @@ function googleLogin() {
   window.location.href = API + '/api/auth/google';
 }
 
+// Feature-flag check: hide Google buttons if OAuth env not configured
+(function(){
+  fetch(API + '/api/config').then(r => r.ok ? r.json() : null).then(cfg => {
+    if(cfg && !cfg.google_login_enabled){
+      document.querySelectorAll('.btn-google').forEach(b => { b.style.display = 'none'; });
+      // Also hide the divider/separator if it exists right above the buttons
+      document.querySelectorAll('.divider, .or-divider').forEach(d => { d.style.display = 'none'; });
+    }
+  }).catch(()=>{});
+})();
+
 // ── Multi-account append ────────────────────────────────
 function _maaAppend(token, user){
   try{

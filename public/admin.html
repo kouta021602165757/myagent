@@ -309,7 +309,7 @@ function render(d){
   html += '</div>';
 
   html += '<div class="cards">';
-  html += statCard('🏪 マーケット出店', fmtNum(d.marketplace.total_listings), '累計利用: ' + fmtNum(d.marketplace.total_uses));
+  html += statCard('🏪 Agent Store 出店', fmtNum(d.marketplace.total_listings), '累計利用: ' + fmtNum(d.marketplace.total_uses));
   html += statCard('🌐 Chrome 連携', fmtNum(d.agents.with_chrome), 'エージェントが ON');
   html += statCard('📊 Sheets 連携', fmtNum(d.integrations.sheets_connected), 'OAuth 接続中');
   html += statCard('🧩 拡張機能', fmtNum(d.integrations.extension_paired), 'オンライン: ' + d.integrations.extension_online);
@@ -367,7 +367,7 @@ function render(d){
 
   // Top listings
   html += '<div class="section">';
-  html += '<div class="section-h"><span class="ic">🏪</span>人気マーケット出店</div>';
+  html += '<div class="section-h"><span class="ic">🏪</span>人気Agent Store 出店</div>';
   html += '<table><thead><tr><th>エージェント</th><th>クリエイター</th><th style="text-align:right">利用数</th><th style="text-align:right">評価</th><th style="text-align:right">公開日</th></tr></thead><tbody>';
   for(const l of d.top_listings){
     html += '<tr>'

@@ -7,387 +7,599 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <style>
 :root{
+  /* Refined color palette — premium feel */
   --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fde8d8;
-  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
-  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
-  --line:rgba(180,120,80,.15);
+  --peach-soft:#fff5eb;
+  --cream-50:#fdfaf6; --cream-100:#fbf4ec; --cream-200:#f6ead9;
+  --ink-900:#0c0703; --ink-800:#231507; --ink-700:#3a2310; --ink-500:#7a543a; --ink-400:#a78970; --ink-300:#c5ad95;
+  --line:rgba(35,21,7,.08); --line-strong:rgba(35,21,7,.14);
   --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
-  --ios-blue:#0a84ff; --ios-bg:#000;
-  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans',-apple-system,sans-serif;
-  --mono:'SF Mono',Menlo,monospace;
+  --shadow-sm:0 1px 2px rgba(35,21,7,.06);
+  --shadow-md:0 4px 14px rgba(35,21,7,.08), 0 1px 3px rgba(35,21,7,.04);
+  --shadow-lg:0 18px 40px rgba(35,21,7,.12), 0 4px 12px rgba(35,21,7,.06);
+  --shadow-xl:0 32px 70px rgba(35,21,7,.18), 0 8px 24px rgba(35,21,7,.08);
+  --sans:'SF Pro Display','Inter','Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans',-apple-system,sans-serif;
+  --display:'SF Pro Display','Inter','-apple-system',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',Menlo,monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 body{
-  background:linear-gradient(135deg,#1e1410 0%,#3a2a1c 100%);
-  color:#fff;font-family:var(--sans);font-size:15px;line-height:1.65;
-  -webkit-font-smoothing:antialiased;min-height:100vh;
+  background:#0a0604;
+  background-image:
+    radial-gradient(1200px 600px at 70% -10%, rgba(251,146,60,.18), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(251,146,60,.08), transparent 60%),
+    linear-gradient(180deg,#1a0f06 0%,#0a0604 100%);
+  background-attachment:fixed;
+  color:#fff;font-family:var(--sans);font-size:15px;line-height:1.65;min-height:100vh;
+  letter-spacing:-.011em;
 }
 a{color:var(--peach);text-decoration:none;}
-.shell{max-width:1280px;margin:0 auto;padding:48px 24px 80px;}
+.shell{max-width:1280px;margin:0 auto;padding:48px 24px 96px;}
 
-.brand{font-size:13px;color:rgba(255,255,255,.6);font-weight:600;margin-bottom:24px;}
-.brand a{color:rgba(255,255,255,.6);}
-.brand a:hover{color:var(--peach);text-decoration:underline;}
+.brand{font-size:13px;color:rgba(255,255,255,.55);font-weight:500;margin-bottom:24px;letter-spacing:-.005em;}
+.brand a{color:rgba(255,255,255,.55);}
+.brand a:hover{color:var(--peach);}
 
-.hero{margin-bottom:40px;}
-.h1{font-size:38px;font-weight:900;margin-bottom:10px;line-height:1.2;}
-.h1 .accent{color:var(--peach);}
-.sub{font-size:16px;color:rgba(255,255,255,.75);max-width:680px;line-height:1.7;}
-.sub b{color:#fff;}
-
-.tagrow{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0;}
-.tag{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:700;
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
-  color:rgba(255,255,255,.85);
+.hero{margin-bottom:44px;}
+.h1{
+  font-family:var(--display);
+  font-size:46px;font-weight:800;line-height:1.06;margin-bottom:12px;
+  letter-spacing:-.025em;
 }
-.tag.peach{background:rgba(251,146,60,.18);border-color:rgba(251,146,60,.4);color:var(--peach-light);}
+.h1 .accent{
+  background:linear-gradient(135deg,#fed7aa 0%,var(--peach) 50%,var(--peach-dark) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{font-size:16px;color:rgba(255,255,255,.7);max-width:680px;line-height:1.65;letter-spacing:-.005em;}
+.sub b{color:#fff;font-weight:600;}
+
+.tagrow{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0;}
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:600;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  color:rgba(255,255,255,.78);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.tag.peach{
+  background:linear-gradient(135deg,rgba(251,146,60,.16),rgba(251,146,60,.08));
+  border-color:rgba(251,146,60,.3);color:var(--peach-light);
+}
 
 /* Phone grid */
 .phones{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:36px 28px;
-  margin-top:48px;align-items:flex-start;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(296px,1fr));
+  gap:48px 32px;margin-top:56px;align-items:flex-start;
 }
 
-/* iPhone frame */
-.phone{
-  width:280px;margin:0 auto;
-}
-.phone-meta{margin-top:14px;text-align:center;}
+/* Phone wrapper */
+.phone{width:296px;margin:0 auto;}
+.phone-meta{margin-top:18px;text-align:center;}
 .phone-num{
-  display:inline-block;background:var(--peach);color:#000;
-  padding:2px 11px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.04em;
-  margin-bottom:6px;
+  display:inline-block;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  padding:3px 12px;border-radius:6px;font-size:10.5px;font-weight:700;
+  letter-spacing:.08em;margin-bottom:8px;font-family:var(--mono);
+  box-shadow:0 2px 8px rgba(251,146,60,.35);
 }
-.phone-ttl{font-size:14px;font-weight:800;color:#fff;margin-bottom:3px;}
-.phone-desc{font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.5;}
+.phone-ttl{font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:-.01em;}
+.phone-desc{font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.55;font-weight:400;}
 
+/* iPhone frame — premium, with light reflection */
 .iphone{
-  width:280px;height:608px;border-radius:38px;background:#000;padding:11px;
-  box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 0 2px #2a2018,inset 0 0 0 1px rgba(255,255,255,.08);
-  position:relative;
+  width:296px;height:640px;border-radius:46px;
+  background:linear-gradient(180deg,#1c130b 0%,#0c0703 100%);
+  padding:11px;position:relative;
+  box-shadow:
+    0 60px 90px rgba(0,0,0,.55),
+    0 30px 50px rgba(0,0,0,.35),
+    0 0 0 2px #2a1d10,
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 0 1px 0 rgba(255,255,255,.12);
 }
+/* Subtle glass glare on the bezel */
+.iphone::after{
+  content:'';position:absolute;inset:11px;border-radius:36px;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.08) 0%,transparent 30%,transparent 70%,rgba(255,255,255,.04) 100%);
+  z-index:6;
+}
+/* Dynamic Island */
 .iphone::before{
-  /* Dynamic Island */
   content:'';position:absolute;top:18px;left:50%;transform:translateX(-50%);
-  width:96px;height:24px;background:#000;border-radius:18px;z-index:10;
+  width:96px;height:26px;background:#000;border-radius:18px;z-index:11;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
 }
 .iphone-screen{
-  width:100%;height:100%;border-radius:28px;overflow:hidden;
-  background:var(--bg-card);position:relative;
+  width:100%;height:100%;border-radius:36px;overflow:hidden;
+  background:var(--cream-50);position:relative;
 }
 
 /* iOS status bar */
 .ios-status{
-  position:absolute;top:0;left:0;right:0;height:40px;
-  display:flex;align-items:flex-start;padding:14px 22px 0;
-  font-size:12.5px;font-weight:700;color:#000;z-index:5;
-  pointer-events:none;
+  position:absolute;top:0;left:0;right:0;height:46px;
+  display:flex;align-items:flex-start;padding:16px 24px 0;
+  font-size:14px;font-weight:600;color:var(--ink-900);z-index:5;
+  pointer-events:none;letter-spacing:-.01em;
+  font-feature-settings:'tnum';
 }
 .ios-status .time{flex:1;}
-.ios-status .right{display:flex;gap:5px;align-items:center;font-size:11.5px;}
+.ios-status .right{display:flex;gap:5px;align-items:center;font-size:13px;}
 .ios-status.dark{color:#fff;}
 
 /* Home indicator */
 .home-ind{
-  position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
-  width:124px;height:4px;background:#000;border-radius:2px;opacity:.4;
+  position:absolute;bottom:7px;left:50%;transform:translateX(-50%);
+  width:128px;height:4px;background:var(--ink-900);border-radius:2px;opacity:.45;z-index:9;
 }
-.home-ind.dark{background:#fff;opacity:.5;}
+.home-ind.dark{background:#fff;opacity:.55;}
 
 /* App content area */
 .app{
-  position:absolute;top:42px;bottom:18px;left:0;right:0;
+  position:absolute;top:46px;bottom:22px;left:0;right:0;
   display:flex;flex-direction:column;
 }
 
-/* App header */
+/* App header — refined with subtle blur */
 .app-head{
-  padding:8px 16px;background:#fff;border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:10px;flex-shrink:0;
+  padding:11px 18px;flex-shrink:0;
+  background:rgba(253,250,246,.85);
+  backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:.5px solid var(--line);
+  display:flex;align-items:center;gap:11px;z-index:2;
 }
-.app-head .ic{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;}
-.app-head .nm{flex:1;font-size:13.5px;font-weight:800;color:var(--text);}
-.app-head .st{font-size:9.5px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:3px;}
-.app-head .st .dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
-.app-head .menu{font-size:18px;color:var(--text3);padding:4px;cursor:pointer;}
-.app-head .icon-btn{font-size:17px;color:var(--text3);padding:4px;background:none;border:0;cursor:pointer;}
+.app-head .ic{
+  width:34px;height:34px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  box-shadow:0 4px 12px rgba(251,146,60,.32),inset 0 1px 0 rgba(255,255,255,.25);
+}
+.app-head .nm{flex:1;font-size:14.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;}
+.app-head .st{
+  font-size:10px;color:var(--green);font-weight:600;letter-spacing:.02em;
+  display:flex;align-items:center;gap:4px;margin-top:1px;
+}
+.app-head .st .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.18);}
+.app-head .icon-btn{
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(35,21,7,.04);
+  font-size:15px;color:var(--ink-700);border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-family:inherit;
+}
 
 /* Chat body */
 .app-body{
-  flex:1;overflow-y:auto;padding:14px 14px;background:var(--cream);
+  flex:1;overflow-y:auto;padding:18px 16px 14px;
+  background:linear-gradient(180deg,var(--cream-50) 0%,var(--cream-100) 100%);
 }
-.msg{display:flex;gap:8px;margin-bottom:10px;}
+.msg{display:flex;gap:9px;margin-bottom:14px;}
 .msg.me{flex-direction:row-reverse;}
 .msg-av{
-  width:24px;height:24px;border-radius:7px;flex-shrink:0;
+  width:28px;height:28px;border-radius:9px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  color:#fff;font-size:11px;font-weight:700;
+  color:#fff;font-size:12px;font-weight:700;
+  box-shadow:0 2px 6px rgba(35,21,7,.12);
 }
 .msg.me .msg-av{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
-.msg.ai .msg-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));font-size:12px;}
-.bubble{
-  max-width:78%;padding:8px 11px;border-radius:13px;
-  font-size:12px;color:var(--text);line-height:1.55;word-break:break-word;
+.msg.ai .msg-av{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));font-size:13px;
+  box-shadow:0 2px 8px rgba(251,146,60,.4);
 }
-.msg.me .bubble{background:#dbeafe;color:#1e3a8a;border:1px solid rgba(59,130,246,.18);}
-.msg.ai .bubble{background:#fff;border:1px solid var(--line);}
+.bubble{
+  max-width:80%;padding:10px 13px;border-radius:18px;
+  font-size:13.5px;color:var(--ink-900);line-height:1.5;letter-spacing:-.005em;
+  box-shadow:var(--shadow-sm);
+}
+.msg.me .bubble{
+  background:linear-gradient(135deg,#dbeafe,#c7dafe);color:#1e3a8a;
+  border:.5px solid rgba(59,130,246,.18);
+  border-bottom-right-radius:6px;
+}
+.msg.ai .bubble{
+  background:#fff;border:.5px solid var(--line);
+  border-bottom-left-radius:6px;
+}
 
+/* Generating pill — premium */
 .gen-pill{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:5px 11px;border-radius:999px;
-  background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);
-  font-size:11px;color:var(--peach-dark);font-weight:700;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 13px;border-radius:999px;
+  background:linear-gradient(135deg,rgba(251,146,60,.1),rgba(251,146,60,.18));
+  border:.5px solid rgba(251,146,60,.3);
+  font-size:11.5px;color:var(--peach-dark);font-weight:600;
+  box-shadow:0 2px 10px rgba(251,146,60,.18);
 }
 .gen-pill .dot{
   width:14px;height:14px;border-radius:50%;
-  background:radial-gradient(circle at 35% 35%,#fff,var(--peach) 60%,var(--peach-dark));
+  background:radial-gradient(circle at 30% 30%,#fff 0%,#fed7aa 30%,var(--peach) 60%,var(--peach-dark) 100%);
   animation:breathe 1.6s ease-in-out infinite;
+  box-shadow:0 0 0 0 rgba(251,146,60,.5);
 }
-@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes breathe{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(251,146,60,.5);}
+  50%{transform:scale(1.12);box-shadow:0 0 0 4px rgba(251,146,60,0);}
+}
 
 /* Composer */
 .app-comp{
-  padding:8px 12px 6px;background:#fff;border-top:1px solid var(--line);flex-shrink:0;
+  padding:10px 14px 8px;
+  background:rgba(255,255,255,.7);
+  backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--line);flex-shrink:0;
 }
 .comp-wrap{
-  display:flex;align-items:flex-end;gap:6px;
-  background:var(--cream);border:1px solid var(--line);border-radius:18px;
-  padding:7px 10px;
+  display:flex;align-items:flex-end;gap:7px;
+  background:#fff;border:.5px solid var(--line-strong);
+  border-radius:22px;padding:8px 10px;
+  box-shadow:var(--shadow-sm);
 }
 .comp-wrap input{
-  flex:1;background:transparent;border:0;outline:0;font-size:12.5px;color:var(--text);
-  font-family:inherit;line-height:1.5;
+  flex:1;background:transparent;border:0;outline:0;font-size:13.5px;color:var(--ink-900);
+  font-family:inherit;line-height:1.5;letter-spacing:-.005em;
 }
-.comp-wrap input::placeholder{color:var(--text3);}
+.comp-wrap input::placeholder{color:var(--ink-300);}
 .comp-btn{
-  width:28px;height:28px;border-radius:50%;border:0;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:13px;
-  flex-shrink:0;font-family:inherit;
+  width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  flex-shrink:0;font-family:inherit;transition:transform .15s;
 }
-.comp-btn.peach{background:var(--peach);color:#fff;}
-.comp-btn.attach{background:transparent;color:var(--text3);}
+.comp-btn:active{transform:scale(.94);}
+.comp-btn.peach{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  box-shadow:0 4px 12px rgba(251,146,60,.4);
+}
+.comp-btn.attach{background:transparent;color:var(--ink-300);}
 
-/* Bottom tab bar (iOS native pattern) */
+/* ── Bottom tab bar — frosted glass ── */
 .tab-bar{
-  display:flex;background:#fff;border-top:1px solid var(--line);
-  flex-shrink:0;padding:5px 0 0;
+  display:flex;flex-shrink:0;padding:7px 0 4px;
+  background:rgba(253,250,246,.85);
+  backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);
+  border-top:.5px solid var(--line);
 }
 .tab{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:5px 0 6px;text-decoration:none;cursor:pointer;
-  color:var(--text3);font-size:9px;font-weight:600;
+  padding:5px 0 7px;text-decoration:none;cursor:pointer;
+  color:var(--ink-300);font-size:9.5px;font-weight:600;letter-spacing:-.005em;
+  transition:color .15s;
 }
-.tab.active{color:var(--peach-dark);font-weight:800;}
-.tab .ic{font-size:18px;line-height:1;}
-.tab.active .ic{transform:scale(1.05);}
+.tab.active{color:var(--peach-dark);font-weight:700;}
+.tab .ic{font-size:19px;line-height:1;transition:transform .2s;}
+.tab.active .ic{transform:scale(1.08);}
 
-/* Login screen */
+/* ─────── Login screen — premium ─────── */
 .login-screen{
-  flex:1;background:linear-gradient(180deg,var(--bg) 0%,var(--cream2) 100%);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;
+  flex:1;
+  background:
+    radial-gradient(800px 400px at 50% 0%,rgba(251,146,60,.18),transparent 60%),
+    linear-gradient(180deg,var(--cream-50) 0%,var(--cream-100) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 28px;
+  position:relative;
 }
 .login-logo{
-  width:62px;height:62px;border-radius:18px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  width:72px;height:72px;border-radius:22px;
+  background:linear-gradient(135deg,var(--peach) 0%,var(--peach-dark) 100%);
   display:flex;align-items:center;justify-content:center;
-  margin-bottom:20px;color:#fff;font-size:30px;
-  box-shadow:0 14px 36px rgba(251,146,60,.35);
+  margin-bottom:24px;color:#fff;font-size:34px;
+  box-shadow:
+    0 18px 40px rgba(251,146,60,.4),
+    0 6px 14px rgba(251,146,60,.25),
+    inset 0 1px 0 rgba(255,255,255,.3);
 }
-.login-h{font-size:20px;font-weight:900;color:var(--text);margin-bottom:6px;text-align:center;}
-.login-s{font-size:11.5px;color:var(--text3);margin-bottom:24px;text-align:center;line-height:1.6;}
+.login-h{
+  font-family:var(--display);
+  font-size:24px;font-weight:800;color:var(--ink-900);margin-bottom:6px;
+  text-align:center;letter-spacing:-.022em;
+}
+.login-s{
+  font-size:13px;color:var(--ink-500);margin-bottom:28px;text-align:center;
+  line-height:1.55;font-weight:400;letter-spacing:-.005em;
+}
 .login-input{
-  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;
-  font-size:13px;font-family:inherit;outline:0;margin-bottom:9px;background:#fff;color:var(--text);
+  width:100%;padding:13px 14px;border:.5px solid var(--line-strong);border-radius:13px;
+  font-size:14px;font-family:inherit;outline:0;margin-bottom:9px;
+  background:#fff;color:var(--ink-900);letter-spacing:-.005em;
+  box-shadow:var(--shadow-sm);
+  transition:all .15s;
 }
+.login-input:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.15);}
 .login-btn{
-  width:100%;padding:12px;border-radius:10px;border:0;
-  font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;
-  margin-top:6px;
+  width:100%;padding:14px;border-radius:13px;border:0;
+  font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+  margin-top:8px;letter-spacing:-.005em;
 }
-.login-btn.peach{background:var(--peach);color:#fff;}
-.login-btn.google{background:#fff;color:var(--text);border:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;gap:9px;}
+.login-btn.peach{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  box-shadow:0 8px 20px rgba(251,146,60,.36),inset 0 1px 0 rgba(255,255,255,.25);
+}
+.login-btn.google{
+  background:#fff;color:var(--ink-900);border:.5px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  box-shadow:var(--shadow-sm);
+}
 .login-or{
-  display:flex;align-items:center;gap:8px;margin:14px 0;
-  font-size:10px;color:var(--text3);
+  display:flex;align-items:center;gap:10px;margin:18px 0;
+  font-size:11px;color:var(--ink-300);font-weight:500;
 }
 .login-or::before,.login-or::after{
-  content:'';flex:1;height:1px;background:var(--line);
+  content:'';flex:1;height:.5px;background:var(--line-strong);
 }
-.login-foot{
-  margin-top:24px;font-size:11px;color:var(--text3);text-align:center;
-}
+.login-foot{margin-top:28px;font-size:12px;color:var(--ink-500);text-align:center;}
+.login-foot a{color:var(--peach-dark);font-weight:700;}
 
-/* Side menu (slide-in) */
-.sidemenu{
-  position:absolute;inset:0;background:rgba(0,0,0,.5);
-  display:flex;
-}
+/* ─────── Side menu (slide-in) ─────── */
+.sidemenu{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;backdrop-filter:blur(2px);}
 .sidemenu .panel{
   width:78%;height:100%;background:#fff;display:flex;flex-direction:column;
-  animation:slideIn .25s ease;
+  animation:slideIn .25s cubic-bezier(.2,.9,.3,1);
+  box-shadow:0 0 60px rgba(0,0,0,.4);
 }
 @keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
 .sm-head{
-  padding:14px 16px;border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:10px;
+  padding:18px 18px 16px;border-bottom:.5px solid var(--line);
+  display:flex;align-items:center;gap:12px;
+  background:linear-gradient(180deg,var(--cream-50),#fff);
 }
-.sm-head .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
-.sm-head .nm{font-size:12.5px;font-weight:800;color:var(--text);}
-.sm-head .em{font-size:10px;color:var(--text3);font-family:var(--mono);}
+.sm-head .av{
+  width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;
+  box-shadow:0 4px 12px rgba(59,130,246,.32);
+}
+.sm-head .nm{font-size:14px;font-weight:700;color:var(--ink-900);letter-spacing:-.01em;}
+.sm-head .em{
+  font-size:10.5px;color:var(--peach-dark);font-weight:700;
+  letter-spacing:.04em;text-transform:uppercase;margin-top:2px;
+}
 
-.sm-section{padding:10px 16px 4px;font-size:9.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;}
+.sm-section{
+  padding:14px 18px 6px;font-size:10px;font-weight:700;color:var(--ink-300);
+  letter-spacing:.08em;text-transform:uppercase;
+}
 .sm-item{
-  display:flex;align-items:center;gap:10px;padding:9px 16px;color:var(--text);font-size:12px;
+  display:flex;align-items:center;gap:11px;padding:11px 18px;color:var(--ink-900);
+  font-size:13.5px;font-weight:500;letter-spacing:-.008em;
 }
-.sm-item.active{background:var(--peach-light);color:var(--peach-dark);font-weight:800;}
-.sm-item .ic{font-size:14px;width:18px;text-align:center;}
-.sm-item .badge{margin-left:auto;background:var(--peach);color:#fff;padding:1px 7px;border-radius:5px;font-size:9.5px;font-weight:800;}
-
-/* Voice fullscreen */
-.voice-screen{
-  flex:1;background:linear-gradient(180deg,#1e1410 0%,#3a2a1c 100%);
-  color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:32px 24px;position:relative;
+.sm-item.active{
+  background:linear-gradient(90deg,rgba(251,146,60,.08),transparent);
+  color:var(--peach-dark);font-weight:700;
+  border-left:3px solid var(--peach);padding-left:15px;
 }
-.voice-orb{
-  width:120px;height:120px;border-radius:50%;
-  background:radial-gradient(circle at 35% 35%,#fff 0%,#fed7aa 30%,var(--peach) 60%,var(--peach-dark) 90%);
-  box-shadow:0 0 60px rgba(251,146,60,.6),0 0 0 0 rgba(251,146,60,.5);
-  animation:voicePulse 2.2s ease-in-out infinite;
-  position:relative;
-}
-.voice-orb::after{
-  content:'';position:absolute;inset:-12px;border-radius:50%;
-  border:2px solid rgba(251,146,60,.3);
-  animation:voiceRing 2.2s ease-out infinite;
-}
-@keyframes voicePulse{
-  0%,100%{transform:scale(1);box-shadow:0 0 60px rgba(251,146,60,.6),0 0 0 0 rgba(251,146,60,.5);}
-  50%{transform:scale(1.06);box-shadow:0 0 90px rgba(251,146,60,.7),0 0 0 18px rgba(251,146,60,0);}
-}
-@keyframes voiceRing{
-  0%{transform:scale(1);opacity:.7;}
-  100%{transform:scale(1.5);opacity:0;}
-}
-.voice-text{
-  margin-top:30px;font-size:16px;font-weight:700;color:#fff;text-align:center;line-height:1.55;
-}
-.voice-status{
-  margin-top:12px;font-size:11px;color:rgba(255,255,255,.55);text-align:center;
-}
-.voice-cancel{
-  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
-  background:rgba(255,255,255,.12);color:#fff;border:0;
-  padding:10px 26px;border-radius:999px;font-size:12px;font-weight:700;
+.sm-item .ic{font-size:15px;width:20px;text-align:center;}
+.sm-item .badge{
+  margin-left:auto;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;padding:2px 8px;border-radius:6px;font-size:9.5px;font-weight:800;
 }
 
-/* Push notification */
-.notif{
-  position:absolute;top:50px;left:8px;right:8px;
-  background:rgba(255,255,255,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-radius:14px;padding:11px 13px;
-  box-shadow:0 8px 24px rgba(0,0,0,.18);
-  display:flex;gap:9px;font-family:-apple-system,sans-serif;color:#000;
+/* ─────── Notifications ─────── */
+.notif-card{
+  background:#fff;border:.5px solid var(--line);border-radius:16px;
+  padding:14px;margin-bottom:10px;display:flex;gap:11px;
+  box-shadow:var(--shadow-sm);
 }
-.notif .ic{
-  width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
-  color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;
+.notif-card.urgent{
+  border:.5px solid rgba(251,146,60,.4);
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  box-shadow:0 4px 14px rgba(251,146,60,.18);
 }
-.notif-meta{flex:1;}
-.notif-row{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#666;}
-.notif-row b{color:#000;font-weight:700;}
-.notif-row .when{margin-left:auto;font-size:10px;}
-.notif-ttl{font-size:12.5px;font-weight:700;color:#000;margin-top:2px;}
-.notif-body{font-size:11.5px;color:#333;line-height:1.4;margin-top:1px;}
+.notif-card .ic{
+  width:36px;height:36px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
+}
+.notif-card .ic.green{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.32);}
+.notif-card .ic.peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;box-shadow:0 4px 12px rgba(251,146,60,.32);}
+.notif-card .ic.blue{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;box-shadow:0 4px 12px rgba(59,130,246,.32);}
+.notif-card .ic.purple{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;box-shadow:0 4px 12px rgba(139,92,246,.32);}
+.notif-card .body{flex:1;}
+.notif-card .when{
+  font-size:10.5px;color:var(--ink-300);font-weight:600;letter-spacing:-.005em;
+}
+.notif-card .when.urgent{color:var(--peach-dark);font-weight:700;}
+.notif-card .ttl{font-size:13px;font-weight:700;color:var(--ink-900);margin-top:2px;letter-spacing:-.012em;}
+.notif-card .desc{font-size:12px;color:var(--ink-500);margin-top:3px;line-height:1.5;letter-spacing:-.005em;}
+.notif-actions{display:flex;gap:6px;margin-top:10px;}
+.notif-btn{flex:1;padding:7px;border-radius:9px;font-size:11px;font-weight:700;border:0;cursor:pointer;font-family:inherit;letter-spacing:-.005em;}
+.notif-btn.no{background:rgba(35,21,7,.06);color:var(--ink-700);}
+.notif-btn.yes{
+  flex:1.6;background:linear-gradient(135deg,#10b981,#059669);color:#fff;
+  box-shadow:0 4px 10px rgba(16,185,129,.32);
+}
 
-/* Lock screen background for notification mock */
+/* ─────── Lock screen for push notifications ─────── */
 .lockscreen{
   flex:1;
-  background:linear-gradient(180deg,rgba(60,40,25,.95) 0%,rgba(20,12,7,1) 100%),
-             radial-gradient(circle at 30% 20%,rgba(251,146,60,.3),transparent 60%);
-  background-size:cover;
+  background:
+    radial-gradient(circle at 30% 20%,rgba(251,146,60,.32),transparent 50%),
+    radial-gradient(circle at 80% 80%,rgba(99,102,241,.18),transparent 50%),
+    linear-gradient(180deg,#1a0f06 0%,#0a0604 100%);
   position:relative;color:#fff;
   display:flex;flex-direction:column;align-items:center;
+  padding:0 14px;
 }
-.lockscreen .time{
-  font-size:64px;font-weight:200;margin-top:60px;
+.lockscreen .clock{
+  font-family:-apple-system,sans-serif;font-size:74px;font-weight:200;
+  margin-top:64px;letter-spacing:-.04em;line-height:1;
+  text-shadow:0 2px 12px rgba(0,0,0,.3);
 }
 .lockscreen .date{
-  font-size:14px;color:rgba(255,255,255,.85);font-weight:500;margin-top:-6px;
+  font-size:15px;color:rgba(255,255,255,.85);font-weight:500;margin-top:2px;
+  letter-spacing:-.01em;
 }
 
-/* Settings */
-.settings-section{padding:8px 16px 4px;font-size:10px;color:var(--text3);font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+.notif-ios{
+  position:absolute;left:9px;right:9px;
+  background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(30px);-webkit-backdrop-filter:saturate(180%) blur(30px);
+  border-radius:14px;padding:11px 13px;
+  box-shadow:0 12px 32px rgba(0,0,0,.28);
+  display:flex;gap:10px;font-family:-apple-system,sans-serif;color:#000;
+  border:.5px solid rgba(255,255,255,.3);
+}
+.notif-ios .ic{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;
+  box-shadow:0 4px 10px rgba(0,0,0,.18);
+}
+.notif-ios .ic.peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.notif-ios .ic.green{background:linear-gradient(135deg,#10b981,#059669);}
+.notif-ios .ic.blue{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.notif-ios .meta{flex:1;}
+.notif-ios .row{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#666;}
+.notif-ios .row b{color:#000;font-weight:700;}
+.notif-ios .row .when{margin-left:auto;font-size:10px;}
+.notif-ios .ttl{font-size:13px;font-weight:600;color:#000;margin-top:2px;letter-spacing:-.01em;}
+.notif-ios .body{font-size:12px;color:#333;line-height:1.4;margin-top:1px;letter-spacing:-.005em;}
+
+/* ─────── Voice / generic full-screen variants ─────── */
+
+/* ─────── Settings ─────── */
+.settings-section{
+  padding:20px 18px 8px;font-size:10.5px;color:var(--ink-300);font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+}
 .settings-row{
-  padding:11px 16px;background:#fff;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);
-  font-size:12.5px;color:var(--text);
+  padding:12px 18px;background:#fff;display:flex;align-items:center;gap:12px;
+  border-bottom:.5px solid var(--line);
+  font-size:13.5px;color:var(--ink-900);letter-spacing:-.008em;
 }
-.settings-row .ic{font-size:15px;width:22px;}
-.settings-row .label{flex:1;}
-.settings-row .v{font-size:11.5px;color:var(--text3);}
-.settings-row .arrow{color:var(--text3);font-size:13px;}
+.settings-row .ic{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:rgba(251,146,60,.1);color:var(--peach-dark);
+  flex-shrink:0;
+}
+.settings-row .label{flex:1;font-weight:500;}
+.settings-row .v{font-size:12px;color:var(--ink-500);font-weight:500;}
+.settings-row .v.green{color:var(--green);font-weight:700;}
+.settings-row .v.peach{color:var(--peach-dark);font-weight:700;}
+.settings-row .arrow{color:var(--ink-300);font-size:14px;}
+
+/* iOS-style toggle */
 .toggle-sw{
-  width:38px;height:22px;border-radius:999px;background:#d4c1aa;position:relative;
+  width:42px;height:25px;border-radius:999px;background:#dadada;position:relative;
+  transition:background .2s;
 }
-.toggle-sw.on{background:var(--green);}
+.toggle-sw.on{background:var(--green);box-shadow:inset 0 0 0 2px rgba(16,185,129,.3);}
 .toggle-sw::after{
-  content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;
-  transition:left .18s;
+  content:'';position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:#fff;
+  transition:left .2s;
+  box-shadow:0 2px 4px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.04);
 }
-.toggle-sw.on::after{left:18px;}
+.toggle-sw.on::after{left:19px;}
 
-/* Marketplace */
+/* ─────── Agent Store cards ─────── */
 .market-card{
-  background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:8px;
+  background:#fff;border:.5px solid var(--line);border-radius:14px;
+  padding:13px;margin-bottom:9px;
+  box-shadow:var(--shadow-sm);
 }
-.market-card-h{display:flex;align-items:center;gap:9px;}
+.market-card-h{display:flex;align-items:center;gap:10px;}
 .market-card-av{
-  width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
-  color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;
+  width:42px;height:42px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:0 4px 12px rgba(251,146,60,.32),inset 0 1px 0 rgba(255,255,255,.25);
 }
-.market-card-nm{font-size:12.5px;font-weight:800;color:var(--text);}
-.market-card-by{font-size:10px;color:var(--text3);margin-top:1px;}
-.market-card-stars{font-size:10.5px;color:var(--peach-dark);font-weight:700;margin-top:6px;}
-.market-card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:8px;border-top:1px solid var(--line);}
-.market-card-pr{font-size:13px;font-weight:800;color:var(--text);}
-.market-card-buy{font-size:10px;color:var(--peach-dark);font-weight:700;}
+.market-card-meta{flex:1;}
+.market-card-nm{font-size:13.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;}
+.market-card-by{font-size:10.5px;color:var(--ink-500);margin-top:2px;}
+.market-card-stars{font-size:11px;color:var(--peach-dark);font-weight:700;margin-top:6px;letter-spacing:-.01em;}
+.market-card-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:8px;padding-top:9px;border-top:.5px solid var(--line);
+}
+.market-card-pr{
+  font-family:var(--display);font-size:16px;font-weight:800;color:var(--ink-900);
+  letter-spacing:-.022em;
+}
+.market-card-pr.free{color:var(--green);}
+.market-card-buy{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  padding:5px 11px;border-radius:8px;font-size:10.5px;font-weight:700;
+  box-shadow:0 3px 8px rgba(251,146,60,.32);
+}
+.market-tabs{
+  display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;
+}
+.market-tabs::-webkit-scrollbar{display:none;}
+.market-tab{
+  padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;flex-shrink:0;
+  background:#fff;color:var(--ink-500);border:.5px solid var(--line);
+  letter-spacing:-.005em;
+}
+.market-tab.active{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border:0;
+  box-shadow:0 3px 8px rgba(251,146,60,.32);
+}
 
-/* Agents list */
+/* ─────── Agent rows ─────── */
 .agent-row{
-  padding:11px 16px;background:#fff;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);
+  padding:13px 16px;background:#fff;display:flex;align-items:center;gap:12px;
+  border-bottom:.5px solid var(--line);
 }
 .agent-av{
-  width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
-  color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  width:40px;height:40px;border-radius:12px;
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
 }
+.agent-av.peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));box-shadow:0 4px 10px rgba(251,146,60,.3);}
+.agent-av.blue{background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 10px rgba(59,130,246,.3);}
+.agent-av.purple{background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 4px 10px rgba(139,92,246,.3);}
+.agent-av.green{background:linear-gradient(135deg,#10b981,#047857);box-shadow:0 4px 10px rgba(16,185,129,.3);}
+.agent-av.amber{background:linear-gradient(135deg,#fbbf24,#d97706);box-shadow:0 4px 10px rgba(217,119,6,.3);}
 .agent-meta{flex:1;}
-.agent-nm{font-size:12.5px;font-weight:800;color:var(--text);}
-.agent-last{font-size:10.5px;color:var(--text3);margin-top:1px;line-height:1.45;}
-.agent-flags{display:flex;gap:3px;}
+.agent-nm{font-size:14px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;}
+.agent-last{font-size:11px;color:var(--ink-500);margin-top:2px;line-height:1.4;letter-spacing:-.005em;}
+.agent-flags{display:flex;gap:4px;}
 .agent-flag{font-size:11px;}
 
-/* Section caption */
-.section-cap{font-size:18px;font-weight:900;color:#fff;margin:48px 0 14px;letter-spacing:.01em;}
-
-/* Summary */
-.summary{
-  margin-top:48px;padding:28px 32px;border-radius:18px;
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.1);
-  backdrop-filter:blur(20px);
+/* ─────── Section captions ─────── */
+.section-cap{
+  font-family:var(--display);font-size:22px;font-weight:700;color:#fff;
+  margin:60px 0 18px;letter-spacing:-.018em;
+  display:flex;align-items:center;gap:10px;
 }
-.summary h2{font-size:20px;font-weight:900;color:#fff;margin-bottom:14px;}
-.summary p{font-size:13.5px;color:rgba(255,255,255,.8);margin-bottom:8px;line-height:1.7;}
-.summary b{color:#fff;}
-.summary .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:18px;}
-.summary .stat{background:rgba(255,255,255,.06);border-radius:11px;padding:14px;text-align:center;}
-.summary .stat-num{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--peach);line-height:1;}
-.summary .stat-lbl{font-size:11px;color:rgba(255,255,255,.6);margin-top:5px;font-weight:600;}
+.section-cap .num{
+  font-size:11px;background:rgba(251,146,60,.18);color:var(--peach);
+  padding:3px 10px;border-radius:6px;font-weight:700;letter-spacing:.04em;
+  border:1px solid rgba(251,146,60,.3);font-family:var(--mono);
+}
 
-.foot{margin-top:60px;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);text-align:center;font-size:12px;color:rgba(255,255,255,.5);}
-.foot a{color:rgba(255,255,255,.5);}
+/* ─────── Summary card ─────── */
+.summary{
+  margin-top:64px;padding:36px 40px;border-radius:24px;
+  background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:var(--shadow-xl);
+}
+.summary h2{
+  font-family:var(--display);
+  font-size:24px;font-weight:800;color:#fff;margin-bottom:16px;letter-spacing:-.022em;
+}
+.summary p{font-size:14px;color:rgba(255,255,255,.78);margin-bottom:9px;line-height:1.65;letter-spacing:-.005em;}
+.summary b{color:#fff;font-weight:700;}
+.summary .stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:22px;
+}
+.summary .stat{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;padding:18px 14px;text-align:center;
+}
+.summary .stat-num{
+  font-family:var(--display);font-size:26px;font-weight:800;color:var(--peach);
+  line-height:1;letter-spacing:-.03em;
+}
+.summary .stat-lbl{
+  font-size:10.5px;color:rgba(255,255,255,.55);margin-top:7px;
+  font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+}
+
+.foot{
+  margin-top:60px;padding-top:24px;border-top:.5px solid rgba(255,255,255,.1);
+  text-align:center;font-size:12px;color:rgba(255,255,255,.45);letter-spacing:-.005em;
+}
+.foot a{color:rgba(255,255,255,.45);}
 </style>
 </head>
 <body>
@@ -399,10 +611,10 @@ a{color:var(--peach);text-decoration:none;}
 </div>
 
 <div class="hero">
-  <h1 class="h1">📱 MY AI Agent <span class="accent">モバイルアプリ</span><br>UI モック</h1>
+  <h1 class="h1">📱 MY AI Agent <span class="accent">Mobile</span></h1>
   <p class="sub">
-    Capacitor で iOS/Android 同時リリース予定。<b>2 週間で MVP</b>、6-8 週間で App Store / Google Play 公開を目標。<br>
-    通勤中・カフェ・打合せの隙間に AI に指示できる。完了したら push 通知。
+    Capacitor で iOS / Android 同時リリース。<b>2 週間で MVP</b>、<b>6-8 週間で公開</b>。<br>
+    通勤中・カフェ・打合せの隙間に AI に指示できる。完了したら push 通知で受け取り。
   </p>
   <div class="tagrow">
     <span class="tag peach">Capacitor</span>
@@ -414,15 +626,15 @@ a{color:var(--peach);text-decoration:none;}
   </div>
 </div>
 
-<!-- ═════ コア画面 ═════ -->
-<h2 class="section-cap">🎬 コア画面 (MVP)</h2>
+<!-- ════ コア画面 ════ -->
+<h2 class="section-cap"><span class="num">CORE</span>主要画面</h2>
 
 <div class="phones">
 
 <!-- ──── 1. ログイン ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="login-screen">
         <div class="login-logo">🤖</div>
@@ -433,18 +645,18 @@ a{color:var(--peach);text-decoration:none;}
         <button class="login-btn peach">ログイン</button>
         <div class="login-or">または</div>
         <button class="login-btn google">🔵 Google でログイン</button>
-        <div class="login-foot">アカウントがない？ <a href="#" style="color:var(--peach-dark);font-weight:700">新規登録</a></div>
+        <div class="login-foot">アカウントがない？ <a href="#">新規登録</a></div>
       </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 01</span><div class="phone-ttl">ログイン</div><div class="phone-desc">メールまたは Google OAuth。<br>JWT は Keychain に保存</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 01</span><div class="phone-ttl">ログイン</div><div class="phone-desc">メール / Google OAuth<br>JWT は Keychain 保存</div></div>
 </div>
 
 <!-- ──── 2. チャット (メイン) ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="app-head">
         <button class="icon-btn">☰</button>
@@ -477,22 +689,22 @@ a{color:var(--peach);text-decoration:none;}
       <div class="tab-bar">
         <a class="tab active"><div class="ic">💬</div><div>チャット</div></a>
         <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
-        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>Agent Store</div></a>
         <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 02</span><div class="phone-ttl">チャット (メイン)</div><div class="phone-desc">既存の app.html UI を<br>モバイル最適化 + 下部タブバー</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 02</span><div class="phone-ttl">チャット (メイン)</div><div class="phone-desc">フロステッドガラスのヘッダ<br>ボトムタブバー</div></div>
 </div>
 
-<!-- ──── 3. サイドメニュー (slide-in) ──── -->
+<!-- ──── 3. サイドメニュー ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="sidemenu">
-        <div class="panel" style="overflow:hidden">
+        <div class="panel">
           <div class="sm-head">
             <div class="av">武</div>
             <div>
@@ -509,7 +721,7 @@ a{color:var(--peach);text-decoration:none;}
 
             <div class="sm-section">メニュー</div>
             <div class="sm-item"><div class="ic">＋</div><div>新規エージェント作成</div></div>
-            <div class="sm-item"><div class="ic">🏪</div><div>マーケットプレイス</div></div>
+            <div class="sm-item"><div class="ic">🏪</div><div>Agent Store</div></div>
             <div class="sm-item"><div class="ic">⚙</div><div>設定</div></div>
             <div class="sm-item"><div class="ic">📋</div><div>アクティビティ</div></div>
           </div>
@@ -518,140 +730,141 @@ a{color:var(--peach);text-decoration:none;}
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 03</span><div class="phone-ttl">サイドメニュー</div><div class="phone-desc">左スワイプ or ☰ で表示<br>エージェント切替・メニュー</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 03</span><div class="phone-ttl">サイドメニュー</div><div class="phone-desc">左スワイプ or ☰<br>アクティブはオレンジバー</div></div>
 </div>
 
-<!-- ──── 4. 通知センター (アプリ内) ──── -->
+<!-- ──── 4. 通知センター ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="app-head">
         <button class="icon-btn" style="font-size:14px">←</button>
-        <div style="flex:1"><div class="nm" style="font-size:13px">通知</div></div>
+        <div style="flex:1"><div class="nm">通知</div></div>
         <button class="icon-btn">⋯</button>
       </div>
-      <div class="app-body" style="background:var(--cream2);padding:10px 12px">
-        <div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px">
-          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">✅</div>
-          <div style="flex:1">
-            <div style="font-size:11px;color:var(--text3);font-weight:600">5分前</div>
-            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">商談を更新しました</div>
-            <div style="font-size:11.5px;color:var(--text2);margin-top:2px;line-height:1.5">AcmeSaaS 様の商談を確度70%・¥5,000,000 で更新しました</div>
+      <div class="app-body" style="padding:14px 14px">
+        <div class="notif-card">
+          <div class="ic green">✅</div>
+          <div class="body">
+            <div class="when">5分前</div>
+            <div class="ttl">商談を更新しました</div>
+            <div class="desc">AcmeSaaS 様の商談を確度70%・¥5,000,000 で更新しました</div>
           </div>
         </div>
-        <div style="background:#fff;border:1px solid rgba(251,146,60,.4);border-radius:11px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px">
-          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">⚠</div>
-          <div style="flex:1">
-            <div style="font-size:11px;color:var(--peach-dark);font-weight:800">承認待ち · 25分</div>
-            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">X に投稿しますか?</div>
-            <div style="font-size:11px;color:var(--text2);margin-top:2px;line-height:1.5">「新サービス公開しました!ぜひ試してみてください 🎉」</div>
-            <div style="display:flex;gap:6px;margin-top:8px">
-              <button style="flex:1;background:rgba(0,0,0,.05);color:var(--text2);border:0;padding:6px;border-radius:7px;font-size:10.5px;font-weight:700">やめる</button>
-              <button style="flex:1.5;background:var(--green);color:#fff;border:0;padding:6px;border-radius:7px;font-size:10.5px;font-weight:700">許可して投稿</button>
+        <div class="notif-card urgent">
+          <div class="ic peach">⚠</div>
+          <div class="body">
+            <div class="when urgent">承認待ち · 25分</div>
+            <div class="ttl">X に投稿しますか?</div>
+            <div class="desc">「新サービス公開しました!ぜひ試してみてください 🎉」</div>
+            <div class="notif-actions">
+              <button class="notif-btn no">やめる</button>
+              <button class="notif-btn yes">許可して投稿</button>
             </div>
           </div>
         </div>
-        <div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px">
-          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">📨</div>
-          <div style="flex:1">
-            <div style="font-size:11px;color:var(--text3);font-weight:600">朝 8:30</div>
-            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">☀ 朝のサマリー</div>
-            <div style="font-size:11.5px;color:var(--text2);margin-top:2px;line-height:1.5">未読メール 8 通 (緊急 2)・今日の予定 3 件</div>
+        <div class="notif-card">
+          <div class="ic blue">📨</div>
+          <div class="body">
+            <div class="when">朝 8:30</div>
+            <div class="ttl">☀ 朝のサマリー</div>
+            <div class="desc">未読メール 8 通 (緊急 2)・今日の予定 3 件</div>
           </div>
         </div>
-        <div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;gap:10px">
-          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">📊</div>
-          <div style="flex:1">
-            <div style="font-size:11px;color:var(--text3);font-weight:600">昨日</div>
-            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">議事録から 5 タスク抽出</div>
-            <div style="font-size:11.5px;color:var(--text2);margin-top:2px;line-height:1.5">Notion の「タスク管理」DB に追加しました</div>
+        <div class="notif-card">
+          <div class="ic purple">📊</div>
+          <div class="body">
+            <div class="when">昨日</div>
+            <div class="ttl">議事録から 5 タスク抽出</div>
+            <div class="desc">Notion の「タスク管理」DB に追加しました</div>
           </div>
         </div>
       </div>
       <div class="tab-bar">
         <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
         <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
-        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>Agent Store</div></a>
         <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 04</span><div class="phone-ttl">通知センター</div><div class="phone-desc">アプリ内の通知一覧<br>承認依頼はその場で OK/拒否</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 04</span><div class="phone-ttl">通知センター</div><div class="phone-desc">承認依頼はその場で OK/拒否<br>緊急は橙のグロー</div></div>
 </div>
 
 </div>
 
-<!-- ═════ Phase 2 画面 ═════ -->
-<h2 class="section-cap">⚡ Phase 2 画面</h2>
+<!-- ════ Phase 2 画面 ════ -->
+<h2 class="section-cap"><span class="num">PHASE 2</span>ストア + 設定 + 通知</h2>
 
 <div class="phones">
 
 <!-- ──── 5. プッシュ通知 (ロック画面) ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status dark"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status dark"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="lockscreen">
-        <div class="time" style="font-family:-apple-system,sans-serif;">9:41</div>
+        <div class="clock">9:41</div>
         <div class="date">2026年5月15日 (金)</div>
 
-        <div class="notif" style="margin-top:36px">
-          <div class="ic">🤖</div>
-          <div class="notif-meta">
-            <div class="notif-row"><b>MY AI Agent</b><span class="when">今</span></div>
-            <div class="notif-ttl">✅ 商談を更新しました</div>
-            <div class="notif-body">AcmeSaaS 様の商談を確度70%・¥5,000,000 で更新</div>
+        <div class="notif-ios" style="top:40px">
+          <div class="ic peach">🤖</div>
+          <div class="meta">
+            <div class="row"><b>MY AI Agent</b><span class="when">今</span></div>
+            <div class="ttl">✅ 商談を更新しました</div>
+            <div class="body">AcmeSaaS 様の商談を確度70%・¥5,000,000 で更新</div>
           </div>
         </div>
 
-        <div class="notif" style="top:138px">
-          <div class="ic" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">⚠</div>
-          <div class="notif-meta">
-            <div class="notif-row"><b>MY AI Agent</b><span class="when">3分前</span></div>
-            <div class="notif-ttl">承認お願いします</div>
-            <div class="notif-body">X に「新サービス公開しました」を投稿しますか?</div>
+        <div class="notif-ios" style="top:138px">
+          <div class="ic peach">⚠</div>
+          <div class="meta">
+            <div class="row"><b>MY AI Agent</b><span class="when">3分前</span></div>
+            <div class="ttl">承認お願いします</div>
+            <div class="body">X に「新サービス公開しました」を投稿しますか?</div>
           </div>
         </div>
 
-        <div class="notif" style="top:226px">
-          <div class="ic" style="background:linear-gradient(135deg,#10b981,#059669)">📨</div>
-          <div class="notif-meta">
-            <div class="notif-row"><b>MY AI Agent</b><span class="when">朝 8:30</span></div>
-            <div class="notif-ttl">☀ 朝のサマリー</div>
-            <div class="notif-body">未読メール 8 通 (緊急 2)・今日の予定 3 件</div>
+        <div class="notif-ios" style="top:236px">
+          <div class="ic green">📨</div>
+          <div class="meta">
+            <div class="row"><b>MY AI Agent</b><span class="when">朝 8:30</span></div>
+            <div class="ttl">☀ 朝のサマリー</div>
+            <div class="body">未読メール 8 通 (緊急 2)・今日の予定 3 件</div>
           </div>
         </div>
       </div>
     </div>
     <div class="home-ind dark"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 05</span><div class="phone-ttl">プッシュ通知</div><div class="phone-desc">タスク完了 / 承認依頼 /<br>朝のサマリーが届く</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 05</span><div class="phone-ttl">プッシュ通知</div><div class="phone-desc">ロック画面に積層表示<br>iOS native ガラスタッチ</div></div>
 </div>
 
-<!-- ──── 6. マーケットプレイス ──── -->
+<!-- ──── 6. Agent Store ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="app-head">
         <button class="icon-btn">☰</button>
-        <div class="ic" style="background:rgba(251,146,60,.15);color:var(--peach-dark);font-size:14px">🏪</div>
-        <div style="flex:1"><div class="nm" style="font-size:13px">マーケットプレイス</div></div>
+        <div class="ic" style="background:linear-gradient(135deg,#fbbf24,var(--peach));font-size:15px">🏪</div>
+        <div style="flex:1"><div class="nm">Agent Store</div></div>
         <button class="icon-btn">🔍</button>
       </div>
-      <div class="app-body" style="background:var(--cream2)">
-        <div style="display:flex;gap:5px;margin-bottom:10px;font-size:10.5px">
-          <span style="background:var(--peach);color:#fff;padding:3px 9px;border-radius:5px;font-weight:700">人気順</span>
-          <span style="background:#fff;color:var(--text3);padding:3px 9px;border-radius:5px;border:1px solid var(--line)">新着</span>
-          <span style="background:#fff;color:var(--text3);padding:3px 9px;border-radius:5px;border:1px solid var(--line)">無料</span>
+      <div class="app-body" style="padding:14px 14px">
+        <div class="market-tabs">
+          <span class="market-tab active">人気順</span>
+          <span class="market-tab">新着</span>
+          <span class="market-tab">無料</span>
+          <span class="market-tab">SNS運用</span>
         </div>
 
         <div class="market-card">
           <div class="market-card-h">
             <div class="market-card-av">🐦</div>
-            <div style="flex:1">
+            <div class="market-card-meta">
               <div class="market-card-nm">X 自動運用エージェント</div>
               <div class="market-card-by">by @creator_a ✓</div>
               <div class="market-card-stars">★★★★★ 4.9 (132)</div>
@@ -659,14 +872,14 @@ a{color:var(--peach);text-decoration:none;}
           </div>
           <div class="market-card-foot">
             <div class="market-card-pr">¥1,980</div>
-            <div class="market-card-buy">使ってみる →</div>
+            <div class="market-card-buy">使ってみる</div>
           </div>
         </div>
 
         <div class="market-card">
           <div class="market-card-h">
-            <div class="market-card-av">✍️</div>
-            <div style="flex:1">
+            <div class="market-card-av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">✍️</div>
+            <div class="market-card-meta">
               <div class="market-card-nm">SEO ブログライター Pro</div>
               <div class="market-card-by">by @creator_b ✓</div>
               <div class="market-card-stars">★★★★☆ 4.6 (87)</div>
@@ -674,116 +887,116 @@ a{color:var(--peach);text-decoration:none;}
           </div>
           <div class="market-card-foot">
             <div class="market-card-pr">¥980</div>
-            <div class="market-card-buy">使ってみる →</div>
+            <div class="market-card-buy">使ってみる</div>
           </div>
         </div>
 
         <div class="market-card">
           <div class="market-card-h">
-            <div class="market-card-av">📝</div>
-            <div style="flex:1">
+            <div class="market-card-av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">📝</div>
+            <div class="market-card-meta">
               <div class="market-card-nm">議事録 → アクション抽出</div>
               <div class="market-card-by">by @creator_c</div>
               <div class="market-card-stars">★★★★★ 5.0 (41)</div>
             </div>
           </div>
           <div class="market-card-foot">
-            <div class="market-card-pr" style="color:var(--green)">無料</div>
-            <div class="market-card-buy">使ってみる →</div>
+            <div class="market-card-pr free">無料</div>
+            <div class="market-card-buy">使ってみる</div>
           </div>
         </div>
       </div>
       <div class="tab-bar">
         <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
         <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
-        <a class="tab active"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab active"><div class="ic">🏪</div><div>Agent Store</div></a>
         <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 06</span><div class="phone-ttl">マーケットプレイス</div><div class="phone-desc">スマホでも他のクリエイターの<br>エージェント購入可能</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 06</span><div class="phone-ttl">Agent Store</div><div class="phone-desc">スクロール可能なカテゴリ<br>シャドウ + グラデアバター</div></div>
 </div>
 
 <!-- ──── 7. 設定 ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="app-head">
         <button class="icon-btn" style="font-size:14px">←</button>
-        <div style="flex:1"><div class="nm" style="font-size:13px">設定</div></div>
+        <div style="flex:1"><div class="nm">設定</div></div>
       </div>
-      <div class="app-body" style="background:var(--cream2);padding:0">
+      <div class="app-body" style="background:linear-gradient(180deg,var(--cream-100),var(--cream-200));padding:0">
         <div class="settings-section">アカウント</div>
         <div class="settings-row"><div class="ic">👤</div><div class="label">プロフィール</div><div class="v">武内 洸太</div><span class="arrow">›</span></div>
-        <div class="settings-row"><div class="ic">💎</div><div class="label">プラン</div><div class="v" style="color:var(--peach-dark);font-weight:700">Business</div><span class="arrow">›</span></div>
-        <div class="settings-row"><div class="ic">💴</div><div class="label">残高 / 請求</div><div class="v">¥4,820</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic" style="background:rgba(139,92,246,.12);color:#7c3aed">💎</div><div class="label">プラン</div><div class="v peach">Business</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic" style="background:rgba(16,185,129,.12);color:var(--green)">💴</div><div class="label">残高 / 請求</div><div class="v">¥4,820</div><span class="arrow">›</span></div>
 
         <div class="settings-section">通知</div>
-        <div class="settings-row"><div class="ic">✅</div><div class="label">タスク完了通知</div><div class="toggle-sw on"></div></div>
+        <div class="settings-row"><div class="ic" style="background:rgba(16,185,129,.12);color:var(--green)">✅</div><div class="label">タスク完了通知</div><div class="toggle-sw on"></div></div>
         <div class="settings-row"><div class="ic">⚠</div><div class="label">承認依頼</div><div class="toggle-sw on"></div></div>
-        <div class="settings-row"><div class="ic">☀</div><div class="label">朝のサマリー</div><div class="toggle-sw on"></div></div>
+        <div class="settings-row"><div class="ic" style="background:rgba(251,191,36,.15);color:#d97706">☀</div><div class="label">朝のサマリー</div><div class="toggle-sw on"></div></div>
         <div class="settings-row"><div class="ic">📊</div><div class="label">残高アラート</div><div class="toggle-sw"></div></div>
 
         <div class="settings-section">統合</div>
-        <div class="settings-row"><div class="ic">📊</div><div class="label">Google スプレッドシート</div><div class="v" style="color:var(--green);font-weight:700">接続中</div><span class="arrow">›</span></div>
-        <div class="settings-row"><div class="ic">🌐</div><div class="label">ブラウザ拡張</div><div class="v">Mac で連携</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic" style="background:rgba(15,157,88,.12);color:#0f9d58">📊</div><div class="label">Google スプレッドシート</div><div class="v green">接続中</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic" style="background:rgba(99,102,241,.12);color:var(--indigo)">🌐</div><div class="label">ブラウザ拡張</div><div class="v">Mac で連携</div><span class="arrow">›</span></div>
 
         <div class="settings-section">その他</div>
         <div class="settings-row"><div class="ic">📋</div><div class="label">アクティビティ</div><span class="arrow">›</span></div>
         <div class="settings-row"><div class="ic">📜</div><div class="label">利用規約 / プライバシー</div><span class="arrow">›</span></div>
-        <div class="settings-row" style="color:var(--rose)"><div class="ic">↩</div><div class="label">ログアウト</div></div>
+        <div class="settings-row" style="color:var(--rose)"><div class="ic" style="background:rgba(239,68,68,.1);color:var(--rose)">↩</div><div class="label">ログアウト</div></div>
       </div>
       <div class="tab-bar">
         <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
         <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
-        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>Agent Store</div></a>
         <a class="tab active"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 07</span><div class="phone-ttl">設定</div><div class="phone-desc">プラン / 通知 ON-OFF /<br>連携状態</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 07</span><div class="phone-ttl">設定</div><div class="phone-desc">グラデアイコンでセクション差別化<br>iOS native トグル</div></div>
 </div>
 
-<!-- ──── 8. エージェント一覧 (代替ビュー) ──── -->
+<!-- ──── 8. エージェント一覧 ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
       <div class="app-head">
         <button class="icon-btn">☰</button>
-        <div style="flex:1"><div class="nm" style="font-size:13px">マイエージェント</div></div>
-        <button class="icon-btn" style="background:var(--peach);color:#fff;width:26px;height:26px;border-radius:50%;font-size:14px;font-weight:800">＋</button>
+        <div style="flex:1"><div class="nm">マイエージェント</div></div>
+        <button class="icon-btn" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-weight:800;font-size:16px;box-shadow:0 4px 10px rgba(251,146,60,.32)">＋</button>
       </div>
-      <div class="app-body" style="background:var(--cream2);padding:0">
+      <div class="app-body" style="background:linear-gradient(180deg,var(--cream-50),var(--cream-100));padding:0">
         <div class="agent-row">
-          <div class="agent-av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">📊</div>
+          <div class="agent-av blue">📊</div>
           <div class="agent-meta">
             <div class="agent-nm">営業データ管理君</div>
             <div class="agent-last">先ほど · 商談を更新しました</div>
           </div>
-          <div class="agent-flags"><span class="agent-flag" title="Sheets">📊</span><span class="agent-flag" title="拡張">🧩</span></div>
+          <div class="agent-flags"><span class="agent-flag">📊</span><span class="agent-flag">🧩</span></div>
         </div>
         <div class="agent-row">
-          <div class="agent-av">🐦</div>
+          <div class="agent-av peach">🐦</div>
           <div class="agent-meta">
             <div class="agent-nm">SNS 運用</div>
             <div class="agent-last">2時間前 · X に投稿: 18いいね</div>
           </div>
-          <div class="agent-flags"><span class="agent-flag" title="拡張">🧩</span></div>
+          <div class="agent-flags"><span class="agent-flag">🧩</span></div>
         </div>
         <div class="agent-row">
-          <div class="agent-av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">📝</div>
+          <div class="agent-av purple">📝</div>
           <div class="agent-meta">
             <div class="agent-nm">議事録まとめ君</div>
             <div class="agent-last">朝 9:30 · ToDo 3 件抽出</div>
           </div>
-          <div class="agent-flags"><span class="agent-flag" title="Sheets">📊</span></div>
+          <div class="agent-flags"><span class="agent-flag">📊</span></div>
         </div>
         <div class="agent-row">
-          <div class="agent-av" style="background:linear-gradient(135deg,#10b981,#047857)">🎯</div>
+          <div class="agent-av green">🎯</div>
           <div class="agent-meta">
             <div class="agent-nm">採用エージェント</div>
             <div class="agent-last">昨日 · 候補者 5 名スカウト送信</div>
@@ -791,7 +1004,7 @@ a{color:var(--peach);text-decoration:none;}
           <div class="agent-flags"></div>
         </div>
         <div class="agent-row">
-          <div class="agent-av" style="background:linear-gradient(135deg,#fbbf24,#d97706)">💰</div>
+          <div class="agent-av amber">💰</div>
           <div class="agent-meta">
             <div class="agent-nm">経営戦略アドバイザー</div>
             <div class="agent-last">3日前 · 月次レポート生成</div>
@@ -802,35 +1015,31 @@ a{color:var(--peach);text-decoration:none;}
       <div class="tab-bar">
         <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
         <a class="tab active"><div class="ic">🤖</div><div>エージェント</div></a>
-        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>Agent Store</div></a>
         <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 08</span><div class="phone-ttl">エージェント一覧</div><div class="phone-desc">最近のアクティビティ付き<br>連携アイコン (📊🌐🧩) も表示</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 08</span><div class="phone-ttl">エージェント一覧</div><div class="phone-desc">最近のアクティビティ + 連携状態<br>カラーで分類</div></div>
 </div>
 
 </div>
 
-<!-- ═════ Summary ═════ -->
+<!-- ════ Summary ════ -->
 <div class="summary">
   <h2>🎯 仕様まとめ</h2>
   <p><b>技術選定</b>: Capacitor (Ionic 系) で iOS / Android 同時開発。既存 Web 版 (app.html) を WebView でラップ + ネイティブ機能ブリッジ追加。</p>
-  <p><b>開発期間</b>: MVP <b>2 週間</b> (Week 1: ラップ + ネイティブブリッジ / Week 2: プッシュ通知 + 配布)。ストア審査含めて <b>6-8 週間</b>で公開。</p>
-  <p><b>必須実装</b>: ログイン / チャット / 音声入力 / カメラ / プッシュ通知 (どれか1つ以上ないと App Store 審査落ち)</p>
-  <p><b>非対応</b>: ブラウザ拡張 (モバイル Chrome 非対応) / マーケットプレイス出店フロー (PC 推奨、閲覧・購入は OK)</p>
+  <p><b>開発期間</b>: MVP <b>2 週間</b> / ストア審査含めて <b>6-8 週間</b>で公開。</p>
+  <p><b>必須実装</b>: ログイン / チャット / カメラ / プッシュ通知 / 下部タブバー (Apple のネイティブ機能要件クリア)</p>
+  <p><b>非対応</b>: ブラウザ拡張連携 (モバイル Chrome 非対応) / Agent Store 出店フロー (PC 推奨、閲覧・購入は OK)</p>
 
   <div class="stats">
     <div class="stat"><div class="stat-num">2週</div><div class="stat-lbl">MVP 開発</div></div>
     <div class="stat"><div class="stat-num">8</div><div class="stat-lbl">主要画面</div></div>
-    <div class="stat"><div class="stat-num">$124</div><div class="stat-lbl">初期費用<br>(Apple+Google)</div></div>
+    <div class="stat"><div class="stat-num">$124</div><div class="stat-lbl">初期費用</div></div>
     <div class="stat"><div class="stat-num">100%</div><div class="stat-lbl">既存 API 流用</div></div>
   </div>
-
-  <p style="margin-top:18px;padding:14px 16px;background:rgba(251,146,60,.1);border-radius:11px;font-size:13px">
-    💡 <b>次のステップ</b>: このモックで方向性 OK なら、Capacitor プロジェクトを <code style="font-family:var(--mono);background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px">/mobile</code> ディレクトリに作って、既存 app.html をラップ → TestFlight で動作確認、という流れになります。
-  </p>
 </div>
 
 <div class="foot">

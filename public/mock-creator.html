@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MY AI AGENT — クリエイターマーケットプレイス（モック）</title>
+<title>MY AI AGENT — クリエイターAgent Store（モック）</title>
 <style>
 :root{
   --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#ea580c;
@@ -144,7 +144,7 @@ table tr:hover td{background:var(--cream);}
 .bank-num{font-size:12px;color:var(--text3);font-feature-settings:'tnum';}
 .bank-action{margin-left:auto;font-size:12px;color:var(--peach-dark);font-weight:700;}
 
-/* Marketplace */
+/* Agent Store */
 .market-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px;}
 .search{flex:1;min-width:240px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire3);border-radius:10px;padding:9px 14px;}
 .search input{border:none;outline:none;background:transparent;flex:1;font-size:13.5px;font-family:inherit;color:var(--text);}
@@ -187,7 +187,7 @@ table tr:hover td{background:var(--cream);}
       <button onclick="show('s3')"><span class="ico">➕</span>新規出店</button>
       <button onclick="show('s4')"><span class="ico">📊</span>収益ダッシュボード</button>
       <button onclick="show('s5')"><span class="ico">💴</span>出金</button>
-      <button onclick="show('s6')"><span class="ico">🌐</span>マーケット（公開側）</button>
+      <button onclick="show('s6')"><span class="ico">🌐</span>Agent Store（公開側）</button>
     </nav>
   </aside>
 
@@ -198,7 +198,7 @@ table tr:hover td{background:var(--cream);}
       <div class="hero">
         <div class="hero-eyebrow">CREATOR PROGRAM</div>
         <h2>あなたが育てた AI を、世界に売る</h2>
-        <p>作ったエージェントをマーケットに公開すると、他のユーザーが利用するたびに <b>利用料の 10%</b> があなたの収益になります。</p>
+        <p>作ったエージェントをAgent Store に公開すると、他のユーザーが利用するたびに <b>利用料の 10%</b> があなたの収益になります。</p>
         <div class="ctas">
           <button class="btn-primary" onclick="show('s3')">+ 新規出店</button>
           <button class="btn-secondary" onclick="show('s4')">📊 収益ダッシュボード</button>
@@ -366,7 +366,7 @@ table tr:hover td{background:var(--cream);}
       <div class="card">
         <h3><span class="h-ico">④</span>公開設定</h3>
         <div class="tag-row" style="margin-bottom:14px">
-          <label><input type="radio" name="vis" checked>🌐 マーケットに公開</label>
+          <label><input type="radio" name="vis" checked>🌐 Agent Store に公開</label>
           <label><input type="radio" name="vis">🔗 リンクを知っている人だけ</label>
         </div>
         <div class="hint">マーケット公開は審査（最大 24 時間）後に表示されます。</div>
@@ -474,7 +474,7 @@ table tr:hover td{background:var(--cream);}
       </div>
     </section>
 
-    <!-- ─────────── Screen 6: Marketplace (public) ─────────── -->
+    <!-- ─────────── Screen 6: Agent Store (public) ─────────── -->
     <section class="screen" id="s6">
       <h2 class="title">マーケット — 公開側のイメージ</h2>
       <div class="subtitle">出店したエージェントが、他のユーザーから見える画面。</div>

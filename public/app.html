@@ -321,7 +321,7 @@ input,textarea{font-family:var(--sans);}
 .ch-a{font-size:11.5px;color:var(--text2);line-height:1.65;}
 .ch-a b{color:var(--peach-dark);}
 
-/* ── Marketplace ────────────────────────────────────────────── */
+/* ── Agent Store ────────────────────────────────────────────── */
 .market-bar{display:flex;gap:10px;margin:14px 0 10px;align-items:center;}
 .market-search{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire3);border-radius:10px;padding:9px 14px;}
 .market-search input{border:none;outline:none;background:transparent;flex:1;font-size:13.5px;font-family:inherit;color:var(--text);}
@@ -1362,9 +1362,9 @@ body{color:#f0f0f8;}
         <span style="font-size:13px">📋</span>
         <span id="i18n-newTpl">テンプレートエージェント</span>
       </button>
-      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openMarketplace()">
+      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openAgent Store()">
         <span style="font-size:13px">🌐</span>
-        <span id="i18n-newMarket">マーケットプレイス</span>
+        <span id="i18n-newMarket">Agent Store</span>
       </button>
     </div>
     <div class="sb-lbl" id="i18n-teamLabel">チーム</div>
@@ -1406,7 +1406,7 @@ body{color:#f0f0f8;}
       <div class="empty-actions">
         <button class="btn-volt" onclick="openNewAgent()">+ 新規エージェント</button>
         <button class="btn-back btn-tpl" onclick="openTemplate()">📋 テンプレートエージェント</button>
-        <button class="btn-back btn-tpl" onclick="openMarketplace()">🌐 マーケットプレイス</button>
+        <button class="btn-back btn-tpl" onclick="openAgent Store()">🌐 Agent Store</button>
       </div>
     </div>
     <div class="chat" id="chatWrap" style="display:none">
@@ -1592,11 +1592,11 @@ body{color:#f0f0f8;}
   </div>
 </div>
 
-<!-- ══ MARKETPLACE OVERLAY ════════════════════════════════ -->
+<!-- ══ AGENT STORE OVERLAY ════════════════════════════════ -->
 <div class="overlay" id="marketOverlay">
   <div class="wizard" style="max-width:900px">
     <div class="wiz-top">
-      <div class="wiz-title">🌐 マーケットプレイス</div>
+      <div class="wiz-title">🌐 Agent Store</div>
       <button class="wiz-close" onclick="closeMarket()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -1634,7 +1634,7 @@ body{color:#f0f0f8;}
   <div class="ps-modal">
     <div class="ps-hero">
       <div class="ps-conf">🎉</div>
-      <div class="ps-h1">マーケットに公開しました！</div>
+      <div class="ps-h1">Agent Store に公開しました！</div>
       <div class="ps-h2">いまが <b>最初のユーザー獲得チャンス</b>。<br>SNS でシェアして、最初の利用者を呼び込もう</div>
       <button class="ps-close" onclick="closePublishSuccess()" aria-label="close">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
@@ -2109,8 +2109,8 @@ body{color:#f0f0f8;}
             <div class="spane-section-h">出店フロー</div>
             <div class="creator-flow">
               <div class="cf-step"><span class="cf-num">1</span><div><b>エージェントを編集</b><div class="cf-d">サイドバーで対象エージェントを開き、⚙ から編集パネルを表示</div></div></div>
-              <div class="cf-step"><span class="cf-num">2</span><div><b>「🏪 マーケットに出店」を開く</b><div class="cf-d">編集パネル内のオレンジ枠から出店フォームへ</div></div></div>
-              <div class="cf-step"><span class="cf-num">3</span><div><b>公開情報を入力 → 公開</b><div class="cf-d">タイトル・説明・カテゴリを入れて出店すると、即座にマーケットに掲載</div></div></div>
+              <div class="cf-step"><span class="cf-num">2</span><div><b>「🏪 Agent Store に出店」を開く</b><div class="cf-d">編集パネル内のオレンジ枠から出店フォームへ</div></div></div>
+              <div class="cf-step"><span class="cf-num">3</span><div><b>公開情報を入力 → 公開</b><div class="cf-d">タイトル・説明・カテゴリを入れて出店すると、即座にAgent Store に掲載</div></div></div>
             </div>
           </section>
 
@@ -2288,7 +2288,7 @@ body{color:#f0f0f8;}
     <div id="editListingBox" style="padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--peach-dark);display:flex;align-items:center;gap:6px">🏪 マーケットに出店</div>
+          <div style="font-size:13px;font-weight:700;color:var(--peach-dark);display:flex;align-items:center;gap:6px">🏪 Agent Store に出店</div>
           <div id="editListingDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">他のユーザーが利用するたびに利用料の 10% が収益になります</div>
         </div>
       </div>
@@ -2305,7 +2305,7 @@ body{color:#f0f0f8;}
 <div class="overlay" id="listingOverlay">
   <div class="wizard" style="max-width:640px">
     <div class="wiz-top">
-      <div class="wiz-title" id="listingTitle">🏪 マーケットに出店する</div>
+      <div class="wiz-title" id="listingTitle">🏪 Agent Store に出店する</div>
       <button class="wiz-close" onclick="closeListingForm()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -2360,7 +2360,7 @@ body{color:#f0f0f8;}
       <div class="form-row">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">公開設定</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="public" checked style="margin:0">🌐 マーケットに公開</label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="public" checked style="margin:0">🌐 Agent Store に公開</label>
           <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="unlisted" style="margin:0">🔗 リンクを知ってる人だけ</label>
         </div>
       </div>
@@ -3695,7 +3695,7 @@ var T = {
       teamBtn:     isJa ? '最初のエージェントを作る →'                  : 'Create your first agent →',
       newAgent:    isJa ? '新規エージェント'                              : 'New agent',
       newTpl:      isJa ? 'テンプレートエージェント'                       : 'Template agent',
-      newMarket:   isJa ? 'マーケットプレイス'                              : 'Marketplace',
+      newMarket:   isJa ? 'Agent Store'                              : 'Agent Store',
       balance:     isJa ? '残高'                                        : 'Balance',
       charge:      isJa ? '+ 残高チャージ'                              : '+ Add Credits',
       logout:      isJa ? 'ログアウト'                                  : 'Logout',
@@ -3825,7 +3825,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
       if(lq){
         history.replaceState({}, '', location.pathname);
         setTimeout(function(){
-          openMarketplace();
+          openAgent Store();
           setTimeout(function(){ openListingDetail(lq); }, 250);
         }, 300);
       }
@@ -4916,7 +4916,7 @@ function startFromScratch(){
 }
 function closeWizard(){ document.getElementById('wizOverlay').classList.remove('open'); }
 
-/* ── Marketplace ─────────────────────────────────────────────── */
+/* ── Agent Store ─────────────────────────────────────────────── */
 /* Live data: fetched from /api/marketplace. Hardcoded labels mirror server's
    MARKET_CAT_LABEL so search chips work pre-fetch. */
 var MARKET_CAT_DEFS = [
@@ -4932,7 +4932,7 @@ var MARKET = [];                       // populated from API
 var _marketCat='all', _marketSort='popular', _marketLoading=false, _marketSearchTimer=null;
 var _marketTags=[], _marketOnlyFavs=false, _marketTagDefs=[];
 
-async function openMarketplace(){
+async function openAgent Store(){
   _marketCat='all'; _marketSort='popular'; _marketTags=[]; _marketOnlyFavs=false;
   var s=document.getElementById('marketSearch'); if(s) s.value='';
   var sort=document.getElementById('marketSort'); if(sort) sort.value='popular';
@@ -5360,7 +5360,7 @@ function openListingForm(agentId){
     r.checked = r.value === (m.visibility||'public');
   });
 
-  document.getElementById('listingTitle').textContent = m.is_listed ? '🏪 出店内容を編集' : '🏪 マーケットに出店する';
+  document.getElementById('listingTitle').textContent = m.is_listed ? '🏪 出店内容を編集' : '🏪 Agent Store に出店する';
   document.getElementById('lsSubmitBtn').textContent = m.is_listed ? '更新する' : '出店する →';
   document.getElementById('lsUnpublishBtn').style.display = m.is_listed ? 'inline-flex' : 'none';
 
@@ -6404,7 +6404,7 @@ async function loadCreatorDashboard(){
 
     // Listings
     if(!listings.length){
-      listEl.innerHTML = '<div class="creator-empty">まだ出店していません。<br>サイドバーでエージェントを開いて <b>⚙ 編集 → 🏪 マーケットに出店</b> から出店できます。</div>';
+      listEl.innerHTML = '<div class="creator-empty">まだ出店していません。<br>サイドバーでエージェントを開いて <b>⚙ 編集 → 🏪 Agent Store に出店</b> から出店できます。</div>';
       return;
     }
     listEl.innerHTML = listings.map(function(l){

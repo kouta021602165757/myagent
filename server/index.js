@@ -460,7 +460,7 @@ async function callAI(messages,system){
   const trimmedMsgs = _trimHistory(_capHistory(messages));
   const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
   const tryCall = async (sys) => httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-    {model:'claude-sonnet-4-6',max_tokens:1024,system:sys,messages:trimmedMsgs});
+    {model:'claude-sonnet-4-6',max_tokens:4096,system:sys,messages:trimmedMsgs});
   let r = await tryCall(_systemBlocks(system));
   // If Anthropic rejected cache_control formatting, retry with plain string system
   if(r.s===400 && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
@@ -479,7 +479,7 @@ function callAIStream(messages, system, onText){
   return new Promise((resolve, reject)=>{
     const body = JSON.stringify({
       model:'claude-sonnet-4-6',
-      max_tokens:1024,
+      max_tokens:4096,
       system: _systemBlocks(system),
       messages: _trimHistory(_capHistory(messages)),
       stream:true,
@@ -499,6 +499,7 @@ function callAIStream(messages, system, onText){
       let buf = '';
       let fullText = '';
       let inputTokens = 0, outputTokens = 0;
+      let stopReason = null;
       let errored = false;
       r.setEncoding('utf8');
       r.on('data', (chunk)=>{
@@ -520,8 +521,9 @@ function callAIStream(messages, system, onText){
               try{ onText(t); }catch(e){}
             } else if(obj.type === 'message_start' && obj.message && obj.message.usage){
               inputTokens = obj.message.usage.input_tokens || 0;
-            } else if(obj.type === 'message_delta' && obj.usage){
-              outputTokens = obj.usage.output_tokens || outputTokens;
+            } else if(obj.type === 'message_delta'){
+              if(obj.usage) outputTokens = obj.usage.output_tokens || outputTokens;
+              if(obj.delta && obj.delta.stop_reason) stopReason = obj.delta.stop_reason;
             } else if(obj.type === 'error'){
               errored = true;
               reject(new Error(obj.error?.message || 'Anthropic stream error'));
@@ -531,7 +533,17 @@ function callAIStream(messages, system, onText){
           }catch(e){ /* ignore parse errors on partial events */ }
         }
       });
-      r.on('end', ()=>{ if(!errored) resolve({text:fullText, inputTokens, outputTokens}); });
+      r.on('end', ()=>{
+        if(!errored){
+          // If max_tokens was reached mid-response, append a friendly note so
+          // the user knows the answer was cut off (and isn't a server bug).
+          let finalText = fullText;
+          if(stopReason === 'max_tokens'){
+            finalText += '\n\n…（出力上限に達したため途中までです。続きを生成するには「続けて」と送ってください）';
+          }
+          resolve({text: finalText, inputTokens, outputTokens, stopReason});
+        }
+      });
       r.on('error', (e)=>{ if(!errored) reject(e); });
     });
     req.on('error', reject);
@@ -551,7 +563,7 @@ async function callAIWithTools(messages,system,tools){
     const sys = useCache ? _systemBlocks(system) : String(system||'');
     const cachedTools = useCache ? _toolsWithCache(tools) : tools;
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-                           {model:'claude-haiku-4-5-20251001',max_tokens:2048,system:sys,messages:_trimHistory(messages),tools:cachedTools});
+                           {model:'claude-haiku-4-5-20251001',max_tokens:4096,system:sys,messages:_trimHistory(messages),tools:cachedTools});
     if(r.s===200) return r.d;
     if(r.s===400 && useCache && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
       console.warn('[chat] cache_control rejected, retrying without:', JSON.stringify(r.d).slice(0,200));

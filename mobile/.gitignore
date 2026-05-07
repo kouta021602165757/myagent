@@ -1,0 +1,16 @@
+# Capacitor generated platforms (per-developer; run `npx cap add ios` to recreate)
+ios/
+android/
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build artifacts
+.DS_Store
+*.log
+*.tmp
+
+# Capacitor build cache
+.capacitor/

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fafafa">
+<title>MY AI Agent</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fafafa; --ink-900:#09090b; --ink-500:#52525b; --ink-300:#a1a1aa;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  background:var(--bg);width:100%;height:100%;
+  font-family:-apple-system,'SF Pro Display','Inter','Noto Sans JP',sans-serif;
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;overscroll-behavior:none;
+}
+.splash{
+  width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:0 32px;background:var(--bg);
+  /* Safe area aware (iPhone notch / home indicator) */
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.logo{
+  width:84px;height:84px;border-radius:24px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  box-shadow:0 16px 40px rgba(251,146,60,.35),0 6px 14px rgba(251,146,60,.2),inset 0 1px 0 rgba(255,255,255,.28);
+  margin-bottom:24px;
+}
+.bar{width:9px;border-radius:4px;background:#fff;}
+.bar-1{height:46px;}
+.bar-2{height:36px;opacity:.65;}
+.bar-3{height:26px;opacity:.35;}
+.brand{
+  font-size:14px;font-weight:600;color:var(--ink-500);
+  letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;
+}
+.welcome{
+  font-size:24px;font-weight:700;color:var(--ink-900);
+  letter-spacing:-.024em;margin-bottom:36px;
+}
+.spinner{
+  width:24px;height:24px;border:2.5px solid var(--ink-300);
+  border-top-color:var(--peach);border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.error{
+  display:none;margin-top:20px;padding:14px 18px;border-radius:11px;
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  color:#dc2626;font-size:13px;text-align:center;line-height:1.55;
+  max-width:320px;
+}
+.error.visible{display:block;}
+.error a{color:#dc2626;font-weight:700;text-decoration:underline;}
+.retry{
+  margin-top:14px;background:var(--ink-900);color:#fff;border:0;
+  padding:11px 22px;border-radius:11px;font-size:13.5px;font-weight:600;
+  font-family:inherit;cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="splash" id="splash">
+  <div class="logo">
+    <div class="bar bar-1"></div>
+    <div class="bar bar-2"></div>
+    <div class="bar bar-3"></div>
+  </div>
+  <div class="brand">MY AI Agent</div>
+  <div class="welcome">Welcome back</div>
+  <div class="spinner" id="spinner"></div>
+  <div class="error" id="errorBox">
+    <div id="errorMsg">サーバーに接続できません。インターネット接続を確認してください。</div>
+    <button class="retry" onclick="bootstrap()">再試行</button>
+  </div>
+</div>
+
+<script>
+// ── Native bridge initialization ─────────────────────────────
+// Initialize Capacitor plugins on app launch, then navigate to the production
+// web app. The web app inherits this WebView context so window.Capacitor.*
+// remains available for bridge calls.
+
+const REMOTE_URL = 'https://myaiagents.agency/app.html';
+const HEALTH_URL = 'https://myaiagents.agency/api/health';
+const TIMEOUT_MS = 10000;
+
+async function setupNativePlugins() {
+  if (!window.Capacitor) return; // running in plain browser
+
+  try {
+    // Status bar style
+    if (window.Capacitor.Plugins.StatusBar) {
+      try {
+        await window.Capacitor.Plugins.StatusBar.setStyle({ style: 'LIGHT' });
+        await window.Capacitor.Plugins.StatusBar.setBackgroundColor({ color: '#fafafa' });
+      } catch (e) { console.warn('[native] StatusBar:', e); }
+    }
+
+    // Push notifications: request permission, get token, send to server
+    if (window.Capacitor.Plugins.PushNotifications) {
+      try {
+        const perm = await window.Capacitor.Plugins.PushNotifications.requestPermissions();
+        if (perm.receive === 'granted') {
+          await window.Capacitor.Plugins.PushNotifications.register();
+          window.Capacitor.Plugins.PushNotifications.addListener('registration', async (token) => {
+            console.log('[native] Push token:', token.value.slice(0, 20) + '...');
+            // Persist locally so web app can read & send to server
+            try {
+              if (window.Capacitor.Plugins.Preferences) {
+                await window.Capacitor.Plugins.Preferences.set({ key: 'native_push_token', value: token.value });
+                await window.Capacitor.Plugins.Preferences.set({ key: 'native_platform', value: window.Capacitor.getPlatform() });
+              }
+            } catch (e) {}
+          });
+          window.Capacitor.Plugins.PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+            console.log('[native] Push tapped:', notification);
+            // TODO: deep-link to relevant chat screen based on notification data
+          });
+        }
+      } catch (e) { console.warn('[native] PushNotifications:', e); }
+    }
+
+    // Keep alive on app resume
+    if (window.Capacitor.Plugins.App) {
+      window.Capacitor.Plugins.App.addListener('appStateChange', (state) => {
+        console.log('[native] App state:', state.isActive ? 'foreground' : 'background');
+      });
+    }
+  } catch (e) {
+    console.error('[native] setup failed:', e);
+  }
+}
+
+async function checkServerReachable() {
+  // Quick health check before navigating — avoids loading a broken page.
+  return new Promise((resolve) => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => { ctrl.abort(); resolve(false); }, TIMEOUT_MS);
+    fetch(HEALTH_URL, { signal: ctrl.signal })
+      .then(() => { clearTimeout(t); resolve(true); })
+      .catch(() => { clearTimeout(t); resolve(false); });
+  });
+}
+
+async function bootstrap() {
+  document.getElementById('errorBox').classList.remove('visible');
+  document.getElementById('spinner').style.display = '';
+
+  await setupNativePlugins();
+
+  const ok = await checkServerReachable();
+  if (!ok) {
+    document.getElementById('spinner').style.display = 'none';
+    document.getElementById('errorBox').classList.add('visible');
+    return;
+  }
+
+  // Smooth fade out then navigate
+  document.getElementById('splash').style.transition = 'opacity .3s ease';
+  document.getElementById('splash').style.opacity = '0';
+  setTimeout(() => {
+    window.location.href = REMOTE_URL;
+  }, 300);
+}
+
+// Wait for Capacitor to be available, then boot
+function waitForCapacitor() {
+  let attempts = 0;
+  const check = () => {
+    if (window.Capacitor || attempts > 20) {
+      bootstrap();
+    } else {
+      attempts++;
+      setTimeout(check, 50);
+    }
+  };
+  check();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', waitForCapacitor);
+} else {
+  waitForCapacitor();
+}
+</script>
+</body>
+</html>

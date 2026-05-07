@@ -1,0 +1,44 @@
+{
+  "appId": "ooo.protocol.myaiagent",
+  "appName": "MY AI Agent",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https",
+    "allowNavigation": [
+      "myaiagents.agency",
+      "*.myaiagents.agency",
+      "accounts.google.com",
+      "*.google.com",
+      "*.googleapis.com",
+      "checkout.stripe.com",
+      "js.stripe.com"
+    ]
+  },
+  "ios": {
+    "scheme": "MY AI Agent",
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false,
+    "captureInput": true
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#fafafa"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "light",
+      "resizeOnFullScreen": true
+    }
+  }
+}

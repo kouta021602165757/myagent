@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ブラウザ拡張プライバシーポリシー — MY AI Agent</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;
+  --bg:#fdf8f3;--text:#1a0a00;--text2:#5c3a1e;--text3:#9a6a4a;
+  --line:rgba(180,120,80,.16);
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans',-apple-system,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.85;-webkit-font-smoothing:antialiased;}
+a{color:var(--peach-dark);}
+.shell{max-width:780px;margin:0 auto;padding:48px 24px 80px;}
+.brand{font-size:13px;color:var(--text3);margin-bottom:24px;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+h1{font-size:30px;font-weight:900;margin-bottom:6px;line-height:1.25;}
+.upd{font-size:12.5px;color:var(--text3);margin-bottom:36px;}
+h2{font-size:18px;font-weight:800;margin:36px 0 12px;color:var(--text);border-left:4px solid var(--peach);padding-left:12px;}
+h3{font-size:15px;font-weight:800;margin:24px 0 8px;color:var(--text2);}
+p{margin-bottom:14px;color:var(--text2);}
+ul,ol{padding-left:24px;margin-bottom:14px;color:var(--text2);}
+li{margin:6px 0;}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;}
+th{background:#fff5ea;font-weight:700;color:var(--text);font-size:12.5px;}
+td{color:var(--text2);}
+code{font-family:'SF Mono',Menlo,monospace;background:#fff5ea;padding:1px 6px;border-radius:4px;font-size:13px;color:var(--text);}
+.note{background:#fff5ea;border:1px solid var(--line);border-radius:11px;padding:14px 16px;font-size:13.5px;color:var(--text2);margin:14px 0;line-height:1.75;}
+.note b{color:var(--text);}
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12px;color:var(--text3);}
+.foot a{color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a> ·
+  <a href="/privacy.html">本サービス全体のプライバシーポリシー</a>
+</div>
+
+<h1>MY AI Agent ブラウザ拡張<br>プライバシーポリシー</h1>
+<div class="upd">最終更新: 2026年5月7日 · 適用範囲: <code>MY AI Agent — Browser Connector</code> Chrome 拡張機能</div>
+
+<div class="note">
+  <b>サマリー (3 行)</b><br>
+  ① この拡張は<b>あなたが MY AI Agent アプリで指示した時のみ</b>動作します。<br>
+  ② <b>取得する情報は最小限</b>: ペアリング用のデバイストークンと、各操作時の対象URL・操作種別のみ。<br>
+  ③ <b>ページ内容は AI が処理する瞬間だけ取得</b>し、終わったら破棄します。常時監視や履歴取得は行いません。
+</div>
+
+<h2>1. 取得する情報</h2>
+
+<p>本拡張機能 (以下「本拡張」) は以下の情報のみを取得・処理します:</p>
+
+<table>
+  <tr><th>項目</th><th>取得タイミング</th><th>用途</th></tr>
+  <tr><td>デバイストークン (32 バイトのランダム値)</td><td>初回ペアリング時に1回</td><td>サーバーがあなたのアカウントを識別するため</td></tr>
+  <tr><td>現在開いているタブの URL・タイトル</td><td>AI ツール (<code>ext_read_page</code>) が呼ばれた瞬間のみ</td><td>AI に正しい操作を判断させるため</td></tr>
+  <tr><td>ページ内の表示テキスト (5,000 文字まで)</td><td>同上</td><td>同上</td></tr>
+  <tr><td>ページ内の操作可能要素 (ボタン・入力欄等の一覧)</td><td>同上</td><td>AI がクリック・入力対象を選定するため</td></tr>
+  <tr><td>スクリーンショット画像 (JPEG)</td><td>AI が <code>ext_screenshot</code> を明示的に呼んだ時のみ</td><td>AI が視覚的判断を必要とする時のみ</td></tr>
+  <tr><td>各操作の実行結果 (成功/失敗・所要時間等)</td><td>各操作実行時</td><td>あなたへの結果報告・監査ログ</td></tr>
+</table>
+
+<h2>2. 取得しない情報</h2>
+
+<p>本拡張は以下の情報を<b>取得しません</b>:</p>
+<ul>
+  <li>あなたが入力したパスワード・クレジットカード番号・個人識別情報</li>
+  <li>閲覧履歴 (AI が呼ばれていない時のページアクセス)</li>
+  <li>常時バックグラウンドでのページ監視</li>
+  <li>Cookie の中身 (ブラウザの認証 Cookie はあなたの Chrome に残ったまま、本拡張が直接読み取ることはありません)</li>
+  <li>ブックマーク・ダウンロード履歴・他の拡張機能の情報</li>
+</ul>
+
+<h2>3. 情報の保存場所</h2>
+
+<table>
+  <tr><th>情報</th><th>保存場所</th><th>保存期間</th></tr>
+  <tr><td>デバイストークン</td><td>あなたの Chrome の <code>chrome.storage.local</code> (ローカルのみ)</td><td>切断するまで</td></tr>
+  <tr><td>ページ操作の結果ログ</td><td>MY AI Agent サーバー (Render + Supabase, 日本国内リージョン)</td><td>90日間 (監査用)</td></tr>
+  <tr><td>ページ内容・スクリーンショット</td><td>サーバーで一時的に AI に渡した後即破棄</td><td>非保存</td></tr>
+</table>
+
+<h2>4. 第三者への提供</h2>
+
+<p>本拡張が取得した情報は以下のサービスにのみ送信され、それ以外への第三者提供はありません:</p>
+<ul>
+  <li><b>MY AI Agent サーバー</b> (myaiagents.agency) — 操作命令の中継と結果記録</li>
+  <li><b>Anthropic 社 (Claude API)</b> — AI が応答を生成するため、ページの一部内容が API リクエストに含まれます</li>
+</ul>
+<p>マーケティング目的での共有・販売は<b>一切行いません</b>。広告ネットワークへの提供もありません。</p>
+
+<h2>5. 暗号化と通信</h2>
+
+<ul>
+  <li>サーバーとの全通信は <b>HTTPS / TLS 1.3</b> で暗号化されます</li>
+  <li>デバイストークンは推測困難な 32 バイトのランダム値で、漏洩時はアプリ画面から即座に切断 (失効) 可能です</li>
+  <li>本拡張のソースコードは GitHub で公開されており、誰でも検証可能です</li>
+</ul>
+
+<h2>6. ユーザーの権利</h2>
+
+<ul>
+  <li><b>切断</b>: いつでも MY AI Agent アプリの「ブラウザ拡張連携」セクションから切断できます。トークンは即座に失効します。</li>
+  <li><b>アンインストール</b>: <code>chrome://extensions</code> から本拡張を削除できます。削除と同時にローカル保存のトークンも消去されます。</li>
+  <li><b>ログ閲覧</b>: アプリの「アクティビティ」タブで過去の全操作ログを閲覧できます。</li>
+  <li><b>削除請求</b>: 過去の操作ログ削除を希望される場合は <a href="mailto:kota.takeuchi@protocol.ooo">kota.takeuchi@protocol.ooo</a> までご連絡ください。30日以内に対応します。</li>
+</ul>
+
+<h2>7. 本拡張が必要とする権限の説明</h2>
+
+<table>
+  <tr><th>権限</th><th>必要な理由</th></tr>
+  <tr><td><code>tabs</code></td><td>AI からの「URL を開く」「タブ一覧を取得」コマンドの実行</td></tr>
+  <tr><td><code>storage</code></td><td>デバイストークンを <code>chrome.storage.local</code> に保存</td></tr>
+  <tr><td><code>scripting</code></td><td>各ページに DOM 操作スクリプト (content.js) を注入</td></tr>
+  <tr><td><code>activeTab</code></td><td>アクティブタブの内容取得・操作</td></tr>
+  <tr><td><code>notifications</code></td><td>承認が必要な操作の OS 通知 (将来機能)</td></tr>
+  <tr><td><code>host_permissions: &lt;all_urls&gt;</code></td><td>あらゆる Web サイト (X, Slack, Gmail, 自社 SaaS 等) で動作するため。<b>ページ内容を読むのは AI ツールが呼ばれた瞬間のみ</b></td></tr>
+</table>
+
+<h2>8. 第三者サービスとの関係</h2>
+
+<p>本拡張がアクセスする可能性のあるサイト (X, Slack, Gmail 等) は、<b>あなた自身がそれらのサービスにログインしている前提</b>で動作します。本拡張がそれらのサイトにあなたとして接続することは、各サービスの利用規約上の「自動化ツール」「ボット」とみなされる可能性があります。各サイトの利用規約を遵守してご利用ください。</p>
+
+<h2>9. ポリシーの変更</h2>
+
+<p>本ポリシーは予告なく変更される場合があります。重要な変更がある場合はアプリ内通知でお知らせします。</p>
+
+<h2>10. お問い合わせ</h2>
+
+<p>
+  運営: <b>株式会社 PROTOCOL</b><br>
+  メール: <a href="mailto:kota.takeuchi@protocol.ooo">kota.takeuchi@protocol.ooo</a><br>
+  Web: <a href="https://myaiagents.agency">https://myaiagents.agency</a>
+</p>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/privacy.html">本サービス全体のプライバシーポリシー</a> · <a href="/terms.html">利用規約</a>
+</div>
+
+</div>
+</body>
+</html>

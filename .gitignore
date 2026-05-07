@@ -21,3 +21,6 @@ npm-debug.log*
 # Logs
 *.log
 logs/
+
+# Build artifacts (Chrome Web Store ZIP)
+extension-v*.zip

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chrome Web Store 公開ガイド — MY AI Agent</title>
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15);
+  --green:#10b981; --rose:#ef4444; --indigo:#6366f1; --google-blue:#1a73e8;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+a{color:var(--peach-dark);}
+.shell{max-width:880px;margin:0 auto;padding:48px 24px 80px;}
+.brand{font-size:13px;color:var(--text3);font-weight:600;margin-bottom:24px;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+.h1{font-size:32px;font-weight:900;margin-bottom:10px;line-height:1.25;}
+.sub{font-size:15px;color:var(--text2);margin-bottom:32px;line-height:1.7;}
+.sub b{color:var(--text);}
+
+.callout{
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);border-radius:14px;
+  padding:18px 22px;margin-bottom:32px;font-size:13.5px;color:var(--text);
+}
+.callout b{color:var(--peach-dark);}
+
+.step{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:24px;margin-bottom:18px;position:relative;
+}
+.step-num{
+  position:absolute;top:-13px;left:20px;
+  background:var(--peach);color:#fff;padding:4px 14px;border-radius:999px;
+  font-size:12px;font-weight:800;letter-spacing:.04em;
+  box-shadow:0 4px 14px rgba(251,146,60,.32);
+}
+.step h2{font-size:18px;font-weight:800;margin:6px 0 12px;}
+.step p{font-size:13.5px;color:var(--text2);margin-bottom:12px;}
+.step ol,.step ul{padding-left:22px;font-size:13.5px;color:var(--text2);margin:8px 0 14px;}
+.step li{margin:6px 0;}
+.step b{color:var(--text);}
+.step code{font-family:var(--mono);font-size:12.5px;background:var(--cream2);padding:2px 7px;border-radius:5px;color:var(--text);}
+
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--google-blue);color:#fff;border:0;padding:11px 18px;border-radius:10px;
+  font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:all .15s;text-decoration:none;
+}
+.btn:hover{background:#1557b0;text-decoration:none;}
+.btn.peach{background:var(--peach);}
+.btn.peach:hover{background:var(--peach-dark);}
+.btn.ghost{background:#fff;color:var(--peach-dark);border:1.5px solid var(--peach);}
+.btn.ghost:hover{background:#fff7ed;}
+
+.code-block{
+  background:#0f0a07;color:#e6d8c8;font-family:var(--mono);font-size:12.5px;
+  padding:14px 18px;border-radius:10px;line-height:1.7;overflow-x:auto;
+  white-space:pre;
+}
+.code-block .cmt{color:#86efac;}
+
+.copy-row{
+  display:flex;gap:8px;align-items:stretch;
+  background:var(--cream2);border:1px solid var(--line);border-radius:10px;
+  overflow:hidden;margin:10px 0;
+}
+.copy-val{
+  flex:1;padding:11px 14px;font-family:var(--mono);font-size:12.5px;
+  color:var(--text);white-space:nowrap;overflow-x:auto;
+  background:transparent;border:0;outline:0;font-weight:500;
+}
+.copy-btn{
+  background:#fff;border:0;border-left:1px solid var(--line);
+  padding:0 16px;font-size:12px;font-weight:700;color:var(--peach-dark);
+  cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.copy-btn:hover{background:#fff7ed;}
+.copy-btn.copied{background:rgba(16,185,129,.12);color:var(--green);}
+
+.checklist{
+  background:var(--cream);border:1px solid var(--line);border-radius:11px;
+  padding:14px 18px;margin:14px 0;
+}
+.checklist .ch{display:flex;align-items:flex-start;gap:9px;padding:5px 0;font-size:13px;color:var(--text2);}
+.checklist .ch::before{
+  content:'';width:18px;height:18px;border-radius:4px;border:2px solid var(--line);background:#fff;flex-shrink:0;margin-top:2px;
+}
+.checklist .ch b{color:var(--text);}
+
+.timeline{position:relative;padding-left:32px;border-left:2px solid var(--line);margin:24px 0;}
+.timeline-item{position:relative;margin-bottom:24px;}
+.timeline-item::before{
+  content:'';position:absolute;left:-39px;top:4px;width:14px;height:14px;border-radius:50%;
+  background:var(--peach);border:3px solid #fff;
+}
+.timeline-time{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.04em;}
+.timeline-task{font-size:14px;font-weight:800;color:var(--text);margin-top:3px;}
+.timeline-desc{font-size:12.5px;color:var(--text3);margin-top:3px;line-height:1.6;}
+
+.tip{
+  background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);
+  border-radius:9px;padding:10px 14px;font-size:12.5px;color:var(--text2);line-height:1.6;
+  margin-top:10px;
+}
+.tip b{color:#3730a3;}
+
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12.5px;color:var(--text3);}
+.foot a{color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a> ·
+  <a href="/setup-extension.html">開発版インストール手順</a>
+</div>
+
+<h1 class="h1">🚀 Chrome Web Store 公開ガイド</h1>
+<p class="sub">
+  ブラウザ拡張を Chrome Web Store で公開する全手順。<b>Takeuchi さん専用</b> (アプリ管理者向け)。<br>
+  所要時間: <b>1時間 (申請まで)</b> + <b>1〜3営業日 (Google 審査)</b>。費用: <b>$5 (一回限り)</b>。
+</p>
+
+<div class="callout">
+  <b>📌 やる順番が大事</b><br>
+  ① 開発者登録 → ② ZIP 準備 → ③ スクショ準備 → ④ ストアフォーム入力 → ⑤ 提出 → ⑥ 公開後の app.html 更新<br>
+  各ステップに必要なもの・コピペ素材は全部このページにあります。
+</div>
+
+<!-- ── STEP 1: 開発者登録 ── -->
+<div class="step">
+  <span class="step-num">STEP 1</span>
+  <h2>Chrome Web Store 開発者登録 ($5)</h2>
+  <p>Google の Web Store 開発者として登録します (一回限り)。</p>
+  <a class="btn" href="https://chrome.google.com/webstore/devconsole" target="_blank" rel="noopener">
+    🚀 Developer Dashboard を開く
+  </a>
+  <ol>
+    <li>Google アカウントでログイン (Takeuchi さんの個人 or 会社 Gmail)</li>
+    <li>規約に同意</li>
+    <li><b>$5 の登録料金</b>支払い (クレカ)</li>
+    <li>登録完了 — Dashboard が見えるようになる</li>
+  </ol>
+  <div class="tip">
+    <b>💡 Tip</b>: 個人で出しても、会社 (PROTOCOL) で出してもOK。会社で出すなら Gmail Workspace アカウントから登録すると Publisher 名に「PROTOCOL Inc.」と表示できます。
+  </div>
+</div>
+
+<!-- ── STEP 2: ZIP 準備 ── -->
+<div class="step">
+  <span class="step-num">STEP 2</span>
+  <h2>拡張機能 ZIP を準備</h2>
+  <p>ターミナルで以下を実行:</p>
+  <div class="code-block"><span class="cmt"># プロジェクトルートで実行</span>
+cd ~/Desktop/myagent
+./extension/build-zip.sh</div>
+  <p>→ プロジェクトルートに <code>extension-v0.1.0.zip</code> が生成されます。</p>
+  <div class="tip">
+    <b>💡 すでに作成済み</b>: 私のほうで実行済みです。<code>~/Desktop/myagent/extension-v0.1.0.zip</code> にあります (12KB)。<br>
+    Finder で開いて場所を確認してください。
+  </div>
+</div>
+
+<!-- ── STEP 3: スクリーンショット ── -->
+<div class="step">
+  <span class="step-num">STEP 3</span>
+  <h2>スクリーンショット 5 枚を準備</h2>
+  <p>サイズ: <b>1280 × 800 ピクセル</b>。以下のページをブラウザで開いて、該当部分をキャプチャ:</p>
+  <ol>
+    <li><a href="/mock-extension-flow.html" target="_blank">mock-extension-flow.html</a> の STEP 02 (連携完了トースト)</li>
+    <li>同上 STEP 04 (X 投稿の承認モーダル)</li>
+    <li>同上 STEP 05 (進捗カード + 結果)</li>
+    <li><a href="/mock-extension-sites.html" target="_blank">mock-extension-sites.html</a> の Slack ケース</li>
+    <li><a href="/mock-extension-anysite.html" target="_blank">mock-extension-anysite.html</a> の Uber ケース</li>
+  </ol>
+  <div class="tip">
+    <b>💡 Mac でのキャプチャ</b>: <code>⌘+Shift+4</code> → 範囲選択 → デスクトップに保存。Retina ディスプレイなら 2倍で保存されるので、プレビュー.app で「ツール → サイズを調整」で 1280×800 に縮小してから提出。
+  </div>
+</div>
+
+<!-- ── STEP 4: ストアフォーム入力 ── -->
+<div class="step">
+  <span class="step-num">STEP 4</span>
+  <h2>ストア掲載情報を入力</h2>
+  <p>Developer Dashboard で「<b>新しい拡張機能を追加</b>」→ ZIP アップロード → 各フォームに以下をコピペ:</p>
+
+  <h3 style="font-size:14px;margin-top:18px;color:var(--text)">名前</h3>
+  <div class="copy-row">
+    <input class="copy-val" id="name1" value="MY AI Agent — ブラウザコネクター" readonly>
+    <button class="copy-btn" onclick="copyVal('name1',this)">コピー</button>
+  </div>
+
+  <h3 style="font-size:14px;margin-top:14px;color:var(--text)">概要 (132 文字以内)</h3>
+  <div class="copy-row">
+    <input class="copy-val" id="summary1" value="AI があなたの代わりに X、Slack、Gmail、Amazon、楽天など、ログイン済みサイトを操作。投稿・予約・購入も承認1つで完結。" readonly>
+    <button class="copy-btn" onclick="copyVal('summary1',this)">コピー</button>
+  </div>
+
+  <h3 style="font-size:14px;margin-top:14px;color:var(--text)">プライバシーポリシー URL</h3>
+  <div class="copy-row">
+    <input class="copy-val" id="privacy1" value="https://myaiagents.agency/privacy-extension.html" readonly>
+    <button class="copy-btn" onclick="copyVal('privacy1',this)">コピー</button>
+  </div>
+
+  <h3 style="font-size:14px;margin-top:14px;color:var(--text)">サポートメール</h3>
+  <div class="copy-row">
+    <input class="copy-val" id="support1" value="kota.takeuchi@protocol.ooo" readonly>
+    <button class="copy-btn" onclick="copyVal('support1',this)">コピー</button>
+  </div>
+
+  <h3 style="font-size:14px;margin-top:14px;color:var(--text)">公式サイト</h3>
+  <div class="copy-row">
+    <input class="copy-val" id="site1" value="https://myaiagents.agency" readonly>
+    <button class="copy-btn" onclick="copyVal('site1',this)">コピー</button>
+  </div>
+
+  <p style="margin-top:18px"><b>詳細説明・各権限の説明文</b>は長いので別ファイルにあります:</p>
+  <a class="btn ghost" href="https://github.com/kouta021602165757/myagent/blob/main/docs/CHROME_STORE_LISTING.md" target="_blank" rel="noopener">
+    📋 docs/CHROME_STORE_LISTING.md を開く →
+  </a>
+  <p style="margin-top:14px;font-size:12px;color:var(--text3)">
+    このファイルから:
+    <br>・「詳細説明 (Description)」 (日本語版・英語版)
+    <br>・「ホスト権限の説明」 6つ
+    <br>・「単一目的の説明」
+    <br>を順番にコピペしてください。
+  </p>
+</div>
+
+<!-- ── STEP 5: 提出 ── -->
+<div class="step">
+  <span class="step-num">STEP 5</span>
+  <h2>審査に提出</h2>
+  <p>Dashboard 右上の「<b>審査用に送信</b>」ボタンをクリック → 完了。</p>
+  <div class="checklist">
+    <div class="ch"><b>提出前チェック</b></div>
+    <div class="ch">名前 / 概要 / 詳細説明 すべて入力済み</div>
+    <div class="ch">プライバシーポリシー URL を入力済み (提出前にアクセス可能か確認)</div>
+    <div class="ch">スクリーンショット 5 枚アップロード済み</div>
+    <div class="ch">単一目的の説明を入力済み</div>
+    <div class="ch">各権限の必要性を入力済み</div>
+    <div class="ch">「公開」モードを選択 (テスト中ではなく)</div>
+  </div>
+  <div class="tip">
+    <b>⏱ 審査期間</b>: 通常 1〜3 営業日。Google から承認/却下のメールが届きます。<br>
+    <b>却下されたら</b>: メールに具体的な理由が書いてあります。だいたい「権限の説明不足」「プライバシーポリシー不備」のどちらか。<a href="https://github.com/kouta021602165757/myagent/blob/main/docs/CHROME_STORE_LISTING.md#トラブル時" target="_blank">トラブルシュート集</a>を参照して再提出してください。
+  </div>
+</div>
+
+<!-- ── STEP 6: 公開後の作業 ── -->
+<div class="step">
+  <span class="step-num">STEP 6</span>
+  <h2>公開後 - app.html に拡張機能 ID を埋め込む</h2>
+  <p>承認されたら、Web Store の URL に拡張機能 ID が含まれます:</p>
+  <div class="code-block">https://chrome.google.com/webstore/detail/<span style="color:#fbbf24">[拡張機能 ID]</span>?hl=ja</div>
+  <p>この <b>32 文字の小文字英字</b> をコピーして、以下のファイルに埋め込み:</p>
+  <ol>
+    <li>VS Code か Cursor で <code>~/Desktop/myagent/public/app.html</code> を開く</li>
+    <li><code>var EXT_ID = 'TBD';</code> を検索 (1箇所)</li>
+    <li><code>var EXT_ID = '<b style="color:var(--peach-dark)">あなたの拡張ID</b>';</code> に書き換え</li>
+    <li>保存 → ターミナルで:</li>
+  </ol>
+  <div class="code-block">cd ~/Desktop/myagent
+git add public/app.html
+git commit -m "feat(ext): set Chrome Web Store extension ID"
+git push</div>
+  <p>→ Render が自動デプロイ → これで全エンドユーザーがワンクリックで使えるようになります。</p>
+</div>
+
+<!-- ── 全体タイムライン ── -->
+<h2 style="font-size:22px;font-weight:900;margin:48px 0 14px">📅 全体スケジュール感</h2>
+<div class="timeline">
+  <div class="timeline-item">
+    <div class="timeline-time">DAY 1 — 1時間</div>
+    <div class="timeline-task">Takeuchi さん作業: STEP 1〜5</div>
+    <div class="timeline-desc">開発者登録 → ZIP 準備 → スクショ → フォーム入力 → 提出</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">DAY 1〜3</div>
+    <div class="timeline-task">Google 審査</div>
+    <div class="timeline-desc">手動チェック (権限・説明・スクショ・プライバシー)。1〜3営業日。</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">DAY 3〜4</div>
+    <div class="timeline-task">承認メール → STEP 6 を実行</div>
+    <div class="timeline-desc">EXT_ID を app.html に書き込んで push。5分の作業。</div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">DAY 4 〜</div>
+    <div class="timeline-task">エンドユーザーがワンクリックインストール可能に 🎉</div>
+    <div class="timeline-desc">Web Store の URL を共有すれば誰でも使える。</div>
+  </div>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/setup-extension.html">開発版インストール</a>
+</div>
+
+</div>
+
+<script>
+function copyVal(id, btn){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.select();
+  try{ navigator.clipboard.writeText(el.value); }
+  catch(e){ document.execCommand('copy'); }
+  var oldText = btn.textContent;
+  btn.textContent = '✓ コピー済み';
+  btn.classList.add('copied');
+  setTimeout(function(){ btn.textContent = oldText; btn.classList.remove('copied'); }, 1800);
+}
+</script>
+</body>
+</html>

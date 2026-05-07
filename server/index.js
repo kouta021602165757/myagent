@@ -1699,12 +1699,13 @@ function buildSystem(agent){
 - take_screenshot は視覚的な確認が必須な時だけ呼ぶ。テキストで判断できる場合は呼ばない
 - 必要な情報が揃ったら即座に最終回答に進む
 
-【重要な制約】このブラウザは **ログインしていないクラウド上の Chromium** です。以下は不可能なので試さないでください:
-- Google アカウントへのログインが必要なページ（Gmail / Google カレンダー / Google ドライブ等）
-- Twitter/X、Facebook、LinkedIn 等のログイン必須ページ
+【重要な制約】このブラウザは **ログインしていないクラウド上の Chromium** です。以下は **絶対に** 不可能なので、ツールを呼ばずに即座に諦めてください:
+- Google ドキュメント・スプレッドシート・スライド・ドライブの **編集**（共有リンクでも閲覧のみ。type_text や click_element でセルに値を入れようとしないでください）
+- Google アカウントへのログインが必要なページ（Gmail / Calendar / Drive 編集）
+- Twitter/X、Facebook、LinkedIn、GitHub 等のログイン必須ページ
 - ユーザーの個人アカウントが必要な操作
 
-ログイン必須ページに当たったら、ツール呼び出しを諦めて、ユーザーに「このページはログインが必要なので、現在の Chrome 連携では到達できません」と正直に伝え、代替案（公開情報を別ソースから取得 / ユーザーに直接実行を依頼 等）を提案してください。
+ページの中身に「ログイン」「Sign in」「サポートが終了」「browser unsupported」「アクセス権が必要」などが出たら **即座にツール呼び出しをやめて** 、ユーザーに「このページは編集にログインが必要で、サーバー上の Chrome ではできません。手元で開いて編集するか、公開 CSV など別形式があれば共有してください」と返してください。「以下の手順で入力します」のように作業を始めるふりをしてはいけません — それは時間と費用の無駄です。
 
 ツールを連鎖して公開情報の問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
     : '';
@@ -2853,7 +2854,7 @@ async function handleAPI(req,res,pathname,method,ip){
         let iters = 0;
         const MAX_ITERS = 5;
         const startedAt = Date.now();
-        const BUDGET_MS = 90000; // Render edge is ~100s, give us 10s margin
+        const BUDGET_MS = 95000; // Render edge is ~100s; 5s margin to flush response
         while(true){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
@@ -2869,9 +2870,11 @@ async function handleAPI(req,res,pathname,method,ip){
             break;
           }
           if(Date.now() - startedAt > BUDGET_MS){
-            // Pull whatever text the AI produced this turn so user gets *something*
+            // Render edge will close the request near 100s, so we must flush a response now.
+            // Salvage whatever text the AI produced this turn instead of throwing it away.
             const partial = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
-            reply = (partial ? partial + '\n\n' : '') + '(時間がかかりすぎたため、ここで処理を中断しました。もう一度お試しください)';
+            reply = (partial ? partial + '\n\n' : '')
+              + '（処理時間の上限（' + Math.round(BUDGET_MS/1000) + '秒）に達したのでここまでの結果をお伝えします。続けたい場合は「続けて」と送ってください）';
             break;
           }
 

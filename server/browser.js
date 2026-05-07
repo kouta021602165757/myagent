@@ -116,7 +116,9 @@ async function getBrowser(){
   return _browser;
 }
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// Match Playwright 1.59's bundled Chromium (~141). An old UA (Chrome 120) gets us
+// "your browser is unsupported" walls on Google Workspace pages.
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
 
 /** Per-chat-message session. Open one context, reuse the page across tool calls. */
 function newSession(){

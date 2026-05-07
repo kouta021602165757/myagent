@@ -554,6 +554,14 @@ input,textarea{font-family:var(--sans);}
 .chat-foot{
   padding:6px 22px 18px;background:var(--cream);
   flex-shrink:0;border-top:1px solid var(--wire);
+  position:relative;
+}
+.chat-foot.drop-active{ background:rgba(251,146,60,.08); }
+.chat-foot.drop-active::after{
+  content:"📎  ファイルをドロップして添付";
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(251,146,60,.92); color:#fff; font-weight:700; font-size:14px;
+  border:2px dashed #fff; border-radius:14px; pointer-events:none; z-index:10;
 }
 .chat-foot-inner{max-width:760px;margin:0 auto;}
 
@@ -1362,7 +1370,7 @@ body{color:#f0f0f8;}
         <span style="font-size:13px">📋</span>
         <span id="i18n-newTpl">テンプレートエージェント</span>
       </button>
-      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openAgent Store()">
+      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openAgentStore()">
         <span style="font-size:13px">🌐</span>
         <span id="i18n-newMarket">Agent Store</span>
       </button>
@@ -1406,7 +1414,7 @@ body{color:#f0f0f8;}
       <div class="empty-actions">
         <button class="btn-volt" onclick="openNewAgent()">+ 新規エージェント</button>
         <button class="btn-back btn-tpl" onclick="openTemplate()">📋 テンプレートエージェント</button>
-        <button class="btn-back btn-tpl" onclick="openAgent Store()">🌐 Agent Store</button>
+        <button class="btn-back btn-tpl" onclick="openAgentStore()">🌐 Agent Store</button>
       </div>
     </div>
     <div class="chat" id="chatWrap" style="display:none">
@@ -1426,12 +1434,15 @@ body{color:#f0f0f8;}
 
           <!-- Claude-style composer -->
           <div class="composer">
-            <input type="file" id="imgInput" accept="image/*,application/pdf" multiple style="display:none" onchange="onImgSelect(event)">
+            <input type="file" id="imgInput" accept="image/*,application/pdf,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
-            <textarea id="ci" placeholder="何をお願いしますか？" rows="1" oninput="exTA(this)" onkeydown="taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()"></textarea>
+            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this)" onkeydown="taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
             <div class="composer-tools">
-              <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="画像 / PDF を添付" id="attachBtn">
+              <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイルを添付 (画像/PDF/テキスト/コード)" id="attachBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <button class="tool-btn" id="urlBtn" onclick="openUrlAttach()" title="URL を読み込んで添付">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               </button>
               <button class="tool-btn" id="micBtn" onclick="toggleMic()" title="音声入力">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -3825,7 +3836,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
       if(lq){
         history.replaceState({}, '', location.pathname);
         setTimeout(function(){
-          openAgent Store();
+          openAgentStore();
           setTimeout(function(){ openListingDetail(lq); }, 250);
         }, 300);
       }
@@ -4186,10 +4197,19 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log){
     imgHtml = images.map(function(att){
       var isPdf = att.kind==='pdf' || att.type==='application/pdf';
       if(isPdf){
-        return '<div class="m-attach"><div style="width:36px;height:36px;border-radius:6px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">PDF</div><span>'+(att.name||(isJa?'PDFファイル':'PDF'))+'</span></div>';
+        return '<div class="m-attach"><div style="width:36px;height:36px;border-radius:6px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">PDF</div><span>'+esc(att.name||(isJa?'PDFファイル':'PDF'))+'</span></div>';
+      }
+      if(att.kind==='text'){
+        return '<div class="m-attach"><div style="width:36px;height:36px;border-radius:6px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">TXT</div><span>'+esc(att.name||(isJa?'テキストファイル':'text'))+'</span></div>';
+      }
+      if(att.kind==='url'){
+        var label = att.name || att.source || 'URL';
+        var href = att.source || '';
+        var inner = href ? '<a href="'+esc(href)+'" target="_blank" rel="noopener">'+esc(label)+'</a>' : esc(label);
+        return '<div class="m-attach"><div style="width:36px;height:36px;border-radius:6px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🔗</div><span>'+inner+'</span></div>';
       }
       var url = att.url || (att.b64?'data:'+att.type+';base64,'+att.b64:'');
-      return '<div class="m-attach"><img class="thumb" src="'+url+'"><span>'+(att.name||(isJa?'画像':'image'))+'</span></div>';
+      return '<div class="m-attach"><img class="thumb" src="'+url+'"><span>'+esc(att.name||(isJa?'画像':'image'))+'</span></div>';
     }).join('');
   }
   const body = content ? _md(content) : '';
@@ -4555,79 +4575,272 @@ function toggleMic(){
   catch(e){ showToast(isJa?'音声認識を開始できませんでした':'Could not start recognition','ng'); }
 }
 
+// Detect text-like files (by MIME or extension) so we can read as plain UTF-8
+// instead of base64 — prepended into the user message as <file> blocks.
+function _isTextLike(file){
+  var t = (file.type || '').toLowerCase();
+  if(t.startsWith('text/')) return true;
+  if(['application/json','application/xml','application/javascript','application/x-yaml','application/x-toml'].indexOf(t)>=0) return true;
+  var n = (file.name || '').toLowerCase();
+  return /\.(md|markdown|txt|log|csv|tsv|json|xml|yaml|yml|toml|ini|html?|css|m?js|cjs|tsx?|jsx?|py|rb|go|rs|java|kt|swift|php|c|cc|cpp|h|hpp|cs|sh|bash|zsh|sql|env|lock)$/.test(n)
+    || /(^|\/)dockerfile$/i.test(n) || /(^|\/)makefile$/i.test(n);
+}
+
 function onImgSelect(e){
   const files = Array.from(e.target.files);
-  files.forEach(file => {
-    var isImg = file.type.startsWith('image/');
-    var isPdf = file.type === 'application/pdf';
-    if(!isImg && !isPdf){
-      showToast(isJa?'画像と PDF のみ対応しています':'Only images and PDFs are supported','ng');
-      return;
-    }
-    // 32MB cap
-    if(file.size > 32*1024*1024){
-      showToast(isJa?'ファイルサイズが大きすぎます (32MB以下)':'File too large (max 32MB)','ng');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const b64 = ev.target.result.split(',')[1];
-      _pendingImgs.push({
-        name:file.name,
-        type:file.type,
-        b64,
-        url:ev.target.result,
-        kind: isPdf ? 'pdf' : 'image'
-      });
-      renderImgPreview();
-    };
-    reader.readAsDataURL(file);
-  });
+  _ingestFiles(files);
   e.target.value = '';
 }
 
-// 添付プレビュー描画 (画像 + PDF)
+function _ingestFiles(files){
+  files.forEach(file => {
+    var isImg = file.type.startsWith('image/');
+    var isPdf = file.type === 'application/pdf';
+    var isTxt = _isTextLike(file);
+    if(!isImg && !isPdf && !isTxt){
+      showToast((isJa?'未対応のファイル形式: ':'Unsupported file: ')+file.name,'ng');
+      return;
+    }
+    // Per-file caps: 32MB for binary, 1MB for text (read fully)
+    if((isImg||isPdf) && file.size > 32*1024*1024){
+      showToast(isJa?'ファイルサイズが大きすぎます (32MB以下)':'File too large (max 32MB)','ng');
+      return;
+    }
+    if(isTxt && file.size > 1*1024*1024){
+      showToast(isJa?'テキストファイルが大きすぎます (1MB以下)':'Text file too large (max 1MB)','ng');
+      return;
+    }
+    const reader = new FileReader();
+    if(isTxt){
+      reader.onload = ev => {
+        // Cap individual file text to 60KB so the prompt stays affordable
+        var text = String(ev.target.result || '');
+        var truncated = false;
+        if(text.length > 60000){ text = text.slice(0, 60000); truncated = true; }
+        _pendingImgs.push({
+          name: file.name,
+          type: file.type || 'text/plain',
+          kind: 'text',
+          text: text,
+          truncated: truncated,
+          size: file.size,
+        });
+        renderImgPreview();
+      };
+      reader.readAsText(file, 'utf-8');
+    } else {
+      reader.onload = ev => {
+        const b64 = ev.target.result.split(',')[1];
+        _pendingImgs.push({
+          name:file.name,
+          type:file.type,
+          b64,
+          url:ev.target.result,
+          kind: isPdf ? 'pdf' : 'image'
+        });
+        renderImgPreview();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+// Open a quick URL-attach prompt; fetches server-side and adds to attachments.
+async function openUrlAttach(){
+  var initial = '';
+  // If clipboard contains a URL, prefill it for convenience
+  try{
+    if(navigator.clipboard && navigator.clipboard.readText){
+      var clip = await navigator.clipboard.readText();
+      if(clip && /^https?:\/\//i.test(clip.trim())) initial = clip.trim();
+    }
+  }catch(e){}
+  var u = window.prompt(isJa ? '読み込む URL を入力 (https://...)' : 'URL to ingest (https://...)', initial);
+  if(!u) return;
+  u = u.trim();
+  if(!/^https?:\/\//i.test(u)){
+    showToast(isJa?'http(s) URL を入力してください':'http(s) URL required','ng');
+    return;
+  }
+  await _ingestUrl(u);
+}
+
+async function _ingestUrl(u){
+  // Show a placeholder chip while fetching
+  var placeholder = { name: u, source: u, kind: 'url-loading', text: '' };
+  _pendingImgs.push(placeholder);
+  renderImgPreview();
+  try{
+    const r = await api('POST','/api/fetch-url',{url:u});
+    var idx = _pendingImgs.indexOf(placeholder);
+    if(idx>=0) _pendingImgs.splice(idx,1);
+    if(!r || !r.text){
+      showToast(isJa?'内容を取得できませんでした':'Could not fetch','ng');
+      renderImgPreview();
+      return;
+    }
+    _pendingImgs.push({
+      name: r.title || u,
+      source: r.url || u,
+      kind: 'url',
+      text: r.text,
+      truncated: !!r.truncated,
+      size: r.text.length,
+    });
+    renderImgPreview();
+  }catch(e){
+    var idx2 = _pendingImgs.indexOf(placeholder);
+    if(idx2>=0) _pendingImgs.splice(idx2,1);
+    renderImgPreview();
+    showToast((isJa?'URL 取得失敗: ':'URL fetch failed: ')+(e.message||''),'ng');
+  }
+}
+
+// Wire drag & drop on the chat foot so users can drop files on the composer.
+function _initComposerDnD(){
+  var foot = document.querySelector('.chat-foot');
+  if(!foot || foot._dndBound) return;
+  foot._dndBound = true;
+  ['dragenter','dragover'].forEach(function(ev){
+    foot.addEventListener(ev, function(e){
+      if(e.dataTransfer && Array.from(e.dataTransfer.types||[]).indexOf('Files') >= 0){
+        e.preventDefault(); e.stopPropagation();
+        foot.classList.add('drop-active');
+      }
+    });
+  });
+  ['dragleave','dragend','drop'].forEach(function(ev){
+    foot.addEventListener(ev, function(e){
+      if(ev === 'drop'){
+        if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length){
+          e.preventDefault(); e.stopPropagation();
+          _ingestFiles(Array.from(e.dataTransfer.files));
+        }
+      }
+      foot.classList.remove('drop-active');
+    });
+  });
+}
+// Run init once DOM is ready (sendMsg uses .composer which is always present)
+if(document.readyState !== 'loading'){ try{ _initComposerDnD(); }catch(e){} }
+else{ document.addEventListener('DOMContentLoaded', function(){ try{ _initComposerDnD(); }catch(e){} }); }
+
+// When the user pastes into the composer, detect a bare URL and offer to ingest.
+function onComposerPaste(ev){
+  try{
+    var data = (ev.clipboardData || window.clipboardData);
+    if(!data) return;
+    var txt = data.getData && data.getData('text');
+    if(!txt) return;
+    txt = txt.trim();
+    // Only auto-suggest when the entire pasted content is a single URL
+    if(/^https?:\/\/\S+$/i.test(txt) && !/\s/.test(txt)){
+      // Defer so the paste lands in the textarea first; offer non-blocking ingest
+      setTimeout(function(){
+        if(confirm(isJa ? ('この URL を読み込んで添付しますか？\n' + txt) : ('Fetch this URL and attach?\n' + txt))){
+          // Remove the URL text from the textarea since we'll attach it
+          var ci = document.getElementById('ci');
+          if(ci && ci.value.trim() === txt){ ci.value = ''; exTA(ci); }
+          _ingestUrl(txt);
+        }
+      }, 50);
+    }
+  }catch(e){}
+}
+
+// 添付プレビュー描画 (画像 / PDF / テキスト / URL)
 function renderImgPreview(){
   const wrap = document.getElementById('imgPreviewWrap');
   if(!wrap) return;
   if(_pendingImgs.length === 0){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   wrap.style.display='flex';
   wrap.innerHTML = _pendingImgs.map(function(att,i){
-    var thumb;
+    var thumb, sub = '';
     if(att.kind==='pdf' || att.type==='application/pdf'){
-      // PDF icon (no thumbnail)
       thumb = '<div style="width:28px;height:28px;border-radius:5px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0">PDF</div>';
+    } else if(att.kind==='text'){
+      thumb = '<div style="width:28px;height:28px;border-radius:5px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0">TXT</div>';
+      if(att.size) sub = ' · '+_fmtBytes(att.size);
+    } else if(att.kind==='url'){
+      thumb = '<div style="width:28px;height:28px;border-radius:5px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">🔗</div>';
+      if(att.text && att.text.length) sub = ' · '+_fmtBytes(att.text.length);
+    } else if(att.kind==='url-loading'){
+      thumb = '<div style="width:28px;height:28px;border-radius:5px;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">⋯</div>';
+      sub = ' · '+(isJa?'読み込み中…':'fetching…');
     } else {
       thumb = '<img src="'+att.url+'">';
     }
+    var trunc = att.truncated ? ' · '+(isJa?'(冒頭のみ)':'(truncated)') : '';
     return '<div class="att-chip">'+
       thumb+
-      '<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(att.name||'attachment')+'</span>'+
+      '<span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(att.name||'attachment')+sub+trunc+'</span>'+
       '<button class="x" onclick="_pendingImgs.splice('+i+',1);renderImgPreview()" title="削除">×</button>'+
     '</div>';
   }).join('');
 }
 
+function _fmtBytes(n){
+  if(n < 1024) return n+'B';
+  if(n < 1024*1024) return Math.round(n/1024)+'KB';
+  return (n/(1024*1024)).toFixed(1)+'MB';
+}
+
+// Split _pendingImgs into the two arrays the chat API expects.
+function _attachmentPayload(){
+  const imgs = [], texts = [];
+  _pendingImgs.forEach(att => {
+    if(att.kind === 'url-loading') return; // skip in-flight URL fetches
+    if(att.kind === 'text' || att.kind === 'url'){
+      texts.push({
+        kind: att.kind,
+        name: att.name || (att.kind === 'url' ? 'page' : 'file'),
+        source: att.source || '',
+        text: att.text || '',
+      });
+    } else if(att.b64){
+      imgs.push({ type: att.type, b64: att.b64, name: att.name });
+    }
+  });
+  return { imgs, texts };
+}
+
 async function sendMsg(){
   const ci=document.getElementById('ci')||document.getElementById('msgInput');
   const text=ci.value.trim();
-  const hasImg = _pendingImgs.length > 0;
-  if(!text && !hasImg) return;
+  // Block if a URL is still loading
+  if(_pendingImgs.some(a => a.kind === 'url-loading')){
+    showToast(isJa?'URL の読み込み完了をお待ちください':'Wait for URL to finish loading','ng');
+    return;
+  }
+  const hasAtt = _pendingImgs.length > 0;
+  if(!text && !hasAtt) return;
   const ag=agents.find(a=>a.id===activeId); if(!ag)return;
   var _freeLeft=(me.usage_count||0)<10; if(!_freeLeft&&(me.balance_jpy||0)<=0){ showToast(isJa?'残高が不足しています。チャージしてください':'Insufficient balance. Please add credits.','ng'); openCharge(); return; }
-  
-  // 送信する画像を取得してリセット
-  const imgs = [..._pendingImgs];
+
+  // Snapshot attachments and reset the composer
+  const snap = _pendingImgs.slice();
+  const split = _attachmentPayload();
+  const imgs = split.imgs;        // image/pdf base64 entries (for /api/chat)
+  const texts = split.texts;      // text/url entries (for /api/chat)
   _pendingImgs = [];
   renderImgPreview();
-  
+
   ci.value=''; exTA(ci);
   document.getElementById('sndBtn').disabled=true;
   if(!ag.history)ag.history=[];
-  
+
   // ユーザーメッセージ（添付プレビュー含む）
   const userMsg = {role:'user', content:text, time:now()};
-  if(imgs.length > 0) userMsg.images = imgs.map(att => ({url:att.url, name:att.name, type:att.type, kind:att.kind||(att.type==='application/pdf'?'pdf':'image')}));
+  // For local rendering: unify image+pdf+text+url into one display array
+  if(snap.length > 0){
+    userMsg.images = snap.map(att => ({
+      url: att.url,
+      name: att.name,
+      type: att.type,
+      kind: att.kind || (att.type === 'application/pdf' ? 'pdf' : 'image'),
+      source: att.source || '',
+    }));
+  }
   ag.history.push(userMsg);
   renderMsgs(ag);
 
@@ -4660,13 +4873,12 @@ async function sendMsg(){
   const canStream = true;
   try{
     if(canStream){
-      await _sendMsgStream(ag, outboundText, imgs);
+      await _sendMsgStream(ag, outboundText, imgs, texts);
     } else {
       // 既存の一括取得パス
       const payload = {message: outboundText};
-      if(imgs.length > 0){
-        payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
-      }
+      if(imgs.length > 0) payload.images = imgs;
+      if(texts.length > 0) payload.texts = texts;
       const r=await api('POST',`/api/chat/${activeId}`,payload);
       ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
       me.balance_jpy=r.balance_jpy;
@@ -4688,11 +4900,10 @@ async function sendMsg(){
  * its content as text deltas arrive. Updates balance + final reply on 'done'.
  * Falls back to throwing on error so the caller's catch path runs.
  */
-async function _sendMsgStream(ag, text, imgs){
+async function _sendMsgStream(ag, text, imgs, texts){
   const payload = { message: text, stream: true };
-  if(imgs && imgs.length > 0){
-    payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
-  }
+  if(imgs && imgs.length > 0) payload.images = imgs;
+  if(texts && texts.length > 0) payload.texts = texts;
   const res = await fetch(API + '/api/chat/' + activeId, {
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
@@ -4932,7 +5143,7 @@ var MARKET = [];                       // populated from API
 var _marketCat='all', _marketSort='popular', _marketLoading=false, _marketSearchTimer=null;
 var _marketTags=[], _marketOnlyFavs=false, _marketTagDefs=[];
 
-async function openAgent Store(){
+async function openAgentStore(){
   _marketCat='all'; _marketSort='popular'; _marketTags=[]; _marketOnlyFavs=false;
   var s=document.getElementById('marketSearch'); if(s) s.value='';
   var sort=document.getElementById('marketSort'); if(sort) sort.value='popular';

@@ -307,6 +307,102 @@ function httpsReq(method,hostname,pathname,headers,body,opts){
   });
 }
 
+// ── URL fetch helper (for chat URL ingest) ───────────────────
+// Streams up to MAX_BYTES, follows up to 5 redirects, handles http+https,
+// rejects private/loopback hosts to avoid SSRF.
+function _isPrivateHost(host) {
+  const h = (host || '').toLowerCase();
+  if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '::1') return true;
+  // Private IP ranges
+  if (/^10\./.test(h)) return true;
+  if (/^192\.168\./.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+  if (/^169\.254\./.test(h)) return true; // link-local (cloud metadata)
+  if (/^fc[0-9a-f]{2}:/i.test(h) || /^fd[0-9a-f]{2}:/i.test(h)) return true; // ipv6 ULA
+  return false;
+}
+function fetchUrlText(targetUrl, opts = {}) {
+  const MAX_BYTES = opts.maxBytes || 2 * 1024 * 1024; // 2 MB hard cap
+  const TIMEOUT = opts.timeout || 12000;
+  const MAX_REDIRECTS = 5;
+
+  return new Promise((resolve, reject) => {
+    function step(currentUrl, redirectsLeft) {
+      let parsed;
+      try { parsed = new URL(currentUrl); } catch (e) { return reject(new Error('Invalid URL')); }
+      if (!/^https?:$/.test(parsed.protocol)) return reject(new Error('http(s) URLs only'));
+      if (_isPrivateHost(parsed.hostname)) return reject(new Error('Private/loopback hosts are not allowed'));
+
+      const lib = parsed.protocol === 'https:' ? https : http;
+      const req = lib.get({
+        hostname: parsed.hostname,
+        port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+        path: parsed.pathname + parsed.search,
+        timeout: TIMEOUT,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; MYAIAgentBot/1.0; +https://myaiagents.agency)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5',
+          'Accept-Language': 'ja,en;q=0.7',
+        },
+      }, r => {
+        // Redirect handling
+        if ([301, 302, 303, 307, 308].includes(r.statusCode) && r.headers.location) {
+          if (redirectsLeft <= 0) { r.destroy(); return reject(new Error('Too many redirects')); }
+          const next = new URL(r.headers.location, currentUrl).toString();
+          r.destroy();
+          return step(next, redirectsLeft - 1);
+        }
+        if (r.statusCode >= 400) { r.destroy(); return reject(new Error('HTTP ' + r.statusCode)); }
+
+        const ct = (r.headers['content-type'] || '').toLowerCase();
+        const buf = [];
+        let len = 0;
+        let aborted = false;
+        r.on('data', chunk => {
+          if (aborted) return;
+          len += chunk.length;
+          if (len > MAX_BYTES) { aborted = true; r.destroy(); return reject(new Error('Response too large (>2MB)')); }
+          buf.push(chunk);
+        });
+        r.on('end', () => {
+          if (aborted) return;
+          const raw = Buffer.concat(buf).toString('utf8');
+          // Title extraction
+          let title = '';
+          const tm = raw.match(/<title[^>]*>([^<]*)<\/title>/i);
+          if (tm) title = tm[1].replace(/\s+/g, ' ').trim();
+          // Strip HTML if html-ish; otherwise keep raw
+          let text = raw;
+          if (ct.includes('html') || /<\/?(html|body|div|p|h[1-6])\b/i.test(raw.slice(0, 4000))) {
+            text = raw
+              .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+              .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+              .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+              .replace(/<!--[\s\S]*?-->/g, ' ')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+              .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+              .replace(/[ \t]+/g, ' ')
+              .replace(/\n[ \t]+/g, '\n')
+              .replace(/\n{3,}/g, '\n\n')
+              .trim();
+          }
+          // Hard text cap (post-strip)
+          const MAX_TEXT = 60000;
+          let truncated = false;
+          if (text.length > MAX_TEXT) { text = text.slice(0, MAX_TEXT); truncated = true; }
+          resolve({ url: currentUrl, title, text, content_type: ct, truncated });
+        });
+        r.on('error', err => reject(err));
+      });
+      req.on('timeout', () => { try { req.destroy(new Error('Timeout')); } catch (e) {} reject(new Error('Request timeout')); });
+      req.on('error', err => reject(err));
+    }
+    step(targetUrl, MAX_REDIRECTS);
+  });
+}
+
 // ── EMAIL (Resend) ────────────────────────────────────────────
 async function sendEmail(to,subject,html){
   if(!RESEND_KEY){console.log(`[DEV EMAIL] To:${to}\nSubject:${subject}\n${html.replace(/<[^>]+>/g,'')}\n`);return;}
@@ -1674,7 +1770,7 @@ async function serveListingPage(res, listingId, lang){
   lang = (lang === 'en') ? 'en' : 'ja';
   const T_JA = {
     notFound:'Listing not found', langSwitch:'EN', langSwitchHref:'?lang=en', htmlLang:'ja',
-    navMarket:'マーケット', navSignup:'無料で始める',
+    navMarket:'Agent Store', navSignup:'無料で始める',
     trustPill1:'3 ターン無料で試せる', trustPill2:'登録不要', trustPill3:'30 秒で結果',
     ctaPriHero:'🎯 今すぐ無料で試す →',
     statRatingsLbl:'件の評価', statUsesLbl:'利用回数',
@@ -2953,6 +3049,22 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{devices: safe});
   }
 
+  // ── POST /api/fetch-url ────────────────────────────────────
+  // Body: { url: string }
+  // Fetches the URL server-side, strips HTML, returns extracted text so the
+  // user can attach it to a chat message. Auth required (rate-shaped by usage).
+  if(pathname==='/api/fetch-url' && method==='POST'){
+    const b = await readBody(req);
+    const target = (b && b.url || '').toString().trim();
+    if(!target) return jres(res, 400, { error: 'url is required' });
+    try {
+      const out = await fetchUrlText(target, { timeout: 12000, maxBytes: 2 * 1024 * 1024 });
+      return jres(res, 200, out);
+    } catch (e) {
+      return jres(res, 400, { error: 'fetch_failed', detail: (e && e.message) || String(e) });
+    }
+  }
+
   // ── POST /api/agents/:id/share ─────────────────────────────
   // body: {enabled:true|false, regenerate?:true} — toggle/create/regenerate share URL
   const sm=pathname.match(/^\/api\/agents\/([^/]+)\/share$/);
@@ -3792,7 +3904,19 @@ async function handleAPI(req,res,pathname,method,ip){
     const regenerate=!!body.regenerate;
     const message=body.message||'';
     const images=body.images||[];
-    if(!regenerate && !message?.trim() && images.length===0) return jres(res,400,{error:'メッセージを入力してください'});
+    // Text attachments: files (txt/md/csv/json/code) or fetched URLs.
+    // Each: { kind: 'text'|'url', name, source?, text }
+    const texts = Array.isArray(body.texts) ? body.texts.filter(t => t && typeof t.text === 'string') : [];
+    // Cap total text bytes to keep prompt cost in check
+    let _txtBytes = 0;
+    const TXT_CAP = 200 * 1024; // 200 KB combined
+    for (const t of texts) {
+      _txtBytes += Buffer.byteLength(t.text || '', 'utf8');
+      if (_txtBytes > TXT_CAP) {
+        return jres(res, 400, { error: '添付テキストの合計が大きすぎます (上限 200KB)' });
+      }
+    }
+    if(!regenerate && !message?.trim() && images.length===0 && texts.length===0) return jres(res,400,{error:'メッセージを入力してください'});
     if(message.length>4000)return jres(res,400,{error:'メッセージが長すぎます'});
 
     // Regenerate: drop trailing assistant from history; resend without adding a new user message
@@ -3806,10 +3930,22 @@ async function handleAPI(req,res,pathname,method,ip){
     }
 
     const hist=(agent.history||[]).slice(-14);
-    // ユーザーメッセージのcontentを構築（画像 + PDF対応）
+    // ユーザーメッセージのcontentを構築（画像 + PDF + テキスト/URL添付対応）
     let userContent;
-    if(images.length > 0){
+    if(images.length > 0 || texts.length > 0){
       userContent = [];
+      // 1) Text attachments first (files / fetched URLs) so the model has the
+      //    reference material when it reads the user's actual question.
+      texts.forEach(t => {
+        const kind = t.kind === 'url' ? 'url' : 'file';
+        const name = (t.name || (kind === 'url' ? 'page' : 'attachment')).toString().slice(0, 200);
+        const src  = (t.source || '').toString().slice(0, 500);
+        const wrapper = kind === 'url'
+          ? `<url src="${src}" title="${name.replace(/"/g, '&quot;')}">\n${t.text}\n</url>`
+          : `<file name="${name.replace(/"/g, '&quot;')}">\n${t.text}\n</file>`;
+        userContent.push({ type: 'text', text: wrapper });
+      });
+      // 2) Images / PDFs
       images.forEach(att => {
         var mt = att.type || 'image/jpeg';
         if(mt === 'application/pdf'){
@@ -3833,6 +3969,7 @@ async function handleAPI(req,res,pathname,method,ip){
           });
         }
       });
+      // 3) The user's actual question last
       if(message.trim()) userContent.push({type:'text',text:message});
     } else {
       userContent = message;

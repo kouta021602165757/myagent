@@ -90,7 +90,7 @@ MY AI Agent (https://myaiagents.agency) のスマホアプリ版。
 | C4 | チャット履歴 | 既存 |
 | C5 | 画像添付 (カメラ + ライブラリ) | Capacitor Camera Plugin |
 | C6 | 残高表示 / 課金 | Stripe Web リンク (App Store IAP は別途検討) |
-| C7 | **下部タブバー** (チャット / エージェント / マーケット / 設定) | iOS/Android 共通の native パターン |
+| C7 | **下部タブバー** (チャット / エージェント / Agent Store / 設定) | iOS/Android 共通の native パターン |
 
 ### 追加 (Phase 2)
 
@@ -145,7 +145,7 @@ MY AI Agent (https://myaiagents.agency) のスマホアプリ版。
 |---|---|---|
 | 💬 | チャット | アクティブなエージェントとの会話 |
 | 🤖 | エージェント | 自分のエージェント一覧 |
-| 🏪 | マーケット | 出店一覧 (購入も可) |
+| 🏪 | Agent Store | 出店一覧 (購入も可) |
 | ⚙ | 設定 | プロフィール / 課金 / 通知設定 |
 
 ### ナビゲーションパターン
@@ -221,7 +221,7 @@ POST /api/mobile/notification/send
 - タスク完了通知
 - 承認依頼
 - 残高アラート
-- マーケット通知
+- Agent Store 通知
 - お知らせ
 
 ---

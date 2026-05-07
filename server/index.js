@@ -740,6 +740,11 @@ async function _sheetsApi(user, method, pathSuffix, body){
   if(/Requested entity was not found|notFound/i.test(errMsg)){
     return {error:'sheets_not_found: 指定されたスプレッドシートが見つかりません。URL またはシート名・範囲を確認してください。'};
   }
+  // Range parse error usually means the AI guessed a sheet name (e.g. "Sheet1") that
+  // doesn't exist. Tell it to call sheets_get_meta first.
+  if(/Unable to parse range/i.test(errMsg)){
+    return {error:`sheets_bad_range: ${errMsg}. → 必ず先に sheets_get_meta を呼んで本物のシート名を取得し、"<シート名>!A1:Z100" 形式で再試行してください (シート名に日本語やスペースがある場合は 'シート名'!A1 のようにシングルクォートで囲む)。`};
+  }
   return {error:`sheets_api_${r.s}: ${errMsg}`};
 }
 
@@ -1873,18 +1878,27 @@ function buildSystem(agent, opts){
 【ツール: Google スプレッドシート連携 — 認証済み API 直結】
 このエージェントは **ユーザー本人の Google アカウントに接続されており、スプレッドシートを直接読み書きできます**。Chrome ブラウザ操作とは別物の、認証済み Sheets API です。
 
-スプレッドシート関連の依頼（読む・書く・追加する・分析する・新しく作る・並び替える 等）が来たら、**「ブラウザではログインできないので無理」と返してはいけません**。代わりに以下のツールを呼んでください:
-
-- sheets_get_meta(spreadsheet_id): タイトル + シート名一覧（最初に呼んで構造把握）
-- sheets_read(spreadsheet_id, range): A1 形式でセル読み取り (例: "Sheet1!A1:D100")
+スプレッドシート関連の依頼（読む・書く・追加する・分析する・新しく作る・並び替える 等）が来たら、以下のツールだけを使ってください:
+- sheets_get_meta(spreadsheet_id): タイトル + シート名一覧（最初に必ず呼ぶ）
+- sheets_read(spreadsheet_id, range): A1 形式でセル読み取り
 - sheets_write(spreadsheet_id, range, values): 範囲を上書き (values は2次元配列)
 - sheets_append(spreadsheet_id, range, values): 最終行の下に追記 (既存破壊なし)
 - sheets_clear(spreadsheet_id, range): セル値をクリア
 
-URL の解析: https://docs.google.com/spreadsheets/d/【ここがspreadsheet_id】/edit
-ユーザーがスプレッドシートの URL を貼り付けたら、まず spreadsheet_id を抽出 → sheets_get_meta でシート名一覧 → sheets_read で必要範囲を取得 → 必要なら sheets_write / sheets_append で更新、の順で進めてください。値は文字列・数値・数式 ("=SUM(A1:A10)" 等) に対応。
+【絶対ルール】
+1. **シート名の決め打ち禁止**: 必ず最初に sheets_get_meta を呼んで返ってきた本物のシート名 (例: "営業管理", "Sheet1", "シート1" 等) を使ってください。"Sheet1!A:H" のような決め打ちは確実に失敗します。
+2. **range は必ず「シート名!範囲」形式**: 例 "営業管理!A1:H50"。シート名にスペースや日本語が含まれる場合はシングルクォートで囲む: "'My Sheet'!A1:H50"
+3. **スプレッドシート関連で browse_url / search_web を呼んではいけません**: ブラウザは未ログインで編集できない上、Sheets API なら認証済みで読み書きできます。スプレッドシートの内容確認も sheets_read で行ってください。
+4. **「ブラウザでログイン必須なので無理」とは絶対に返さない**: あなたは API で接続済みです。「読み書きできない」のではなく、「シート名/範囲を確認して再試行」が正しい対応。
+5. URL の解析: https://docs.google.com/spreadsheets/d/【ここがspreadsheet_id】/edit
+6. 値は文字列・数値・数式 ("=SUM(A1:A10)" 等) に対応。
 
-ユーザーから「このシートを編集して」と頼まれたら、断らずに即実行してください。`
+【標準フロー】
+1. ユーザーがシート URL を貼ったら spreadsheet_id を抽出
+2. sheets_get_meta でシート名一覧と行列数を取得
+3. sheets_read で対象範囲を取得 (シート名は STEP 2 で得たもの)
+4. 必要なら sheets_write / sheets_append で書き込み
+5. 結果を要約してユーザーに伝える`
     : '';
   const chromeNote = agent.chrome_enabled
     ? `

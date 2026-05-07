@@ -627,8 +627,12 @@ async function stripeCreateSubscription(customerId, priceId){
       customer: customerId,
       'items[0][price]': priceId,
       'payment_behavior': 'default_incomplete',
+      // Explicit payment method type — newer Stripe accounts won't create a
+      // PaymentIntent on the first invoice without this.
+      'payment_settings[payment_method_types][0]': 'card',
       'payment_settings[save_default_payment_method]': 'on_subscription',
-      'expand[0]': 'latest_invoice.payment_intent'
+      'expand[0]': 'latest_invoice.payment_intent',
+      'expand[1]': 'pending_setup_intent',
     }).toString());
   if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe subscription error');
   return r.d;

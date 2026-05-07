@@ -4576,9 +4576,14 @@ async function bsSubscribeSubmit(){
         bsAfterSubscribeSuccess(plan); return;
       }
     } else {
-      showToast('決済の初期化に失敗しました','ng');
+      // Subscription created but no client_secret — surface what we got back
+      console.warn('subscribe response without client_secret:', r);
+      var msg = '決済の初期化に失敗しました';
+      if(r.status){ msg += ' (status: '+r.status+')'; }
+      showToast(msg,'ng');
     }
   }catch(e){
+    console.warn('[bsSubscribeSubmit]', e);
     showToast(e.message||'エラーが発生しました','ng');
   }
   setBtnLoad('bsMonthlyGo',false,label);
@@ -4595,7 +4600,8 @@ async function bsPaygSubmit(){
   try{
     var r=await api('POST','/api/billing/charge',{amount_jpy:cents});
     if(!r.client_secret){
-      showToast('決済の初期化に失敗しました','ng');
+      console.warn('charge response without client_secret:', r);
+      showToast(r.demo ? 'デモモードのため Stripe 決済はスキップされました' : '決済の初期化に失敗しました（Stripe 未設定の可能性）','ng');
       setBtnLoad('bsPaygGo',false,label); return;
     }
     var result=await _bsStripe.confirmCardPayment(r.client_secret,{

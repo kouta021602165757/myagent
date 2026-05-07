@@ -1323,12 +1323,14 @@ async function listAllPublicListings(){
       }
     }
   };
-  if(USE_SUPA){
-    const r = await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
-    if(Array.isArray(r.d)) collect(r.d);
-  } else {
-    collect(LDB.data||[]);
-  }
+  try{
+    if(USE_SUPA){
+      const r = await sbReq('GET','users','?select=*&limit=500');
+      if(Array.isArray(r.d)) collect(r.d);
+    } else {
+      collect(LDB.data||[]);
+    }
+  }catch(e){ console.warn('[market] list failed:', e.message); }
   // Most recent first; 'hot' agents float up regardless
   out.sort((a,b)=>{
     if(a.badge==='hot' && b.badge!=='hot') return -1;
@@ -1347,28 +1349,35 @@ async function findAgentByListingId(listingId){
     }
     return null;
   };
-  if(USE_SUPA){
-    const r=await sbReq('GET','users','?select=*&limit=2000');
-    return Array.isArray(r.d) ? match(r.d) : null;
-  }
-  return match(LDB.data||[]);
+  try{
+    if(USE_SUPA){
+      const r=await sbReq('GET','users','?select=*&limit=500');
+      return Array.isArray(r.d) ? match(r.d) : null;
+    }
+    return match(LDB.data||[]);
+  }catch(e){ console.warn('[listing] lookup failed:', e.message); return null; }
 }
 async function findAgentByShareId(shareId){
   // Returns {user, agent} or null. Scans users (slow without index).
   if(!shareId) return null;
-  if(USE_SUPA){
-    // Supabase doesn't easily index nested jsonb fields without a separate column;
-    // scan up to N users (acceptable for current scale).
-    const r=await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
-    if(Array.isArray(r.d)){
-      for(const u of r.d){
-        const ag=(u.agents||[]).find(a=>a.share_id===shareId);
-        if(ag) return {user:u, agent:ag};
+  try{
+    if(USE_SUPA){
+      // Supabase doesn't easily index nested jsonb fields without a separate column.
+      // Scan a limited window so we don't blow up on huge agent payloads (avatar
+      // images now embed as base64 data URIs, blowing up row size).
+      const r=await sbReq('GET','users','?select=id,name,email,agents&limit=500');
+      if(Array.isArray(r.d)){
+        for(const u of r.d){
+          const ag=(u.agents||[]).find(a=>a.share_id===shareId);
+          if(ag) return {user:u, agent:ag};
+        }
       }
+    } else {
+      const u=LDB.find(u=>(u.agents||[]).some(a=>a.share_id===shareId));
+      if(u){ const ag=u.agents.find(a=>a.share_id===shareId); if(ag) return {user:u, agent:ag}; }
     }
-  } else {
-    const u=LDB.find(u=>(u.agents||[]).some(a=>a.share_id===shareId));
-    if(u){ const ag=u.agents.find(a=>a.share_id===shareId); if(ag) return {user:u, agent:ag}; }
+  }catch(e){
+    console.warn('[share] lookup failed:', e.message);
   }
   return null;
 }
@@ -2324,12 +2333,14 @@ async function handleAPI(req,res,pathname,method,ip){
       return null;
     };
     let creator = null;
-    if(USE_SUPA){
-      const r = await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
-      if(Array.isArray(r.d)) creator = matchUser(r.d);
-    } else {
-      creator = matchUser(LDB.data||[]);
-    }
+    try{
+      if(USE_SUPA){
+        const r = await sbReq('GET','users','?select=*&limit=500');
+        if(Array.isArray(r.d)) creator = matchUser(r.d);
+      } else {
+        creator = matchUser(LDB.data||[]);
+      }
+    }catch(e){ console.warn('[creators] lookup failed:', e.message); }
     if(!creator) return jres(res,404,{error:'クリエイターが見つかりません'});
     const listings = (creator.agents||[])
       .filter(a => a.marketplace && a.marketplace.is_listed && a.marketplace.status==='live' && (a.marketplace.visibility||'public')==='public')

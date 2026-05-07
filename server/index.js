@@ -1007,36 +1007,64 @@ async function serveSitemapXml(res){
 async function serveListingPage(res, listingId, lang){
   lang = (lang === 'en') ? 'en' : 'ja';
   const T_JA = {
-    notFound:'Listing not found', creatorLbl:'クリエイター: ', skillsLbl:'スキル: ', chromeLbl:'Chrome 連携',
-    rateUnRated:'未評価', usesSuffix:'回', usesPrefix:'利用',
+    notFound:'Listing not found', langSwitch:'EN', langSwitchHref:'?lang=en', htmlLang:'ja',
+    navMarket:'マーケット', navSignup:'無料で始める',
+    trustPill1:'3 ターン無料で試せる', trustPill2:'登録不要', trustPill3:'30 秒で結果',
+    ctaPriHero:'🎯 今すぐ無料で試す →',
+    statRatingsLbl:'件の評価', statUsesLbl:'利用回数',
+    descSectionH:'このエージェントができること',
+    demosSectionH:'こんな依頼が得意です（クリックで試せる）',
+    demosArrow:'▸ クリックで実行', demosCustom:'あなたの状況を直接書いて試す', demosCustomArrow:'▸ 自由入力',
+    tryBannerH:'まずは話しかけてみる', tryBannerSub:'サインアップ前に <b>3 ターン</b> まで無料で会話できます。リアルなレスポンスをその場で確認できます。',
+    tryBannerPh:'例: 商談後の追客メールを書いて', tryBannerSend:'送信',
+    howSectionH:'使い方は 3 ステップ',
+    how1H:'まず無料で試す', how1P:'登録不要で 3 ターン会話できます。期待した品質か確認',
+    how2H:'チームに追加', how2P:'30 秒で無料登録。あなたのアカウントにこのエージェントを追加',
+    how3H:'毎日使う', how3P:'10 メッセージまで無料。あとは利用量に応じた従量課金',
+    finalH:'このエージェントを<br>あなたのチームに迎えませんか？',
+    finalSub:'登録は 30 秒。最初の 10 メッセージは無料です。',
+    finalBtn:'＋ チームに追加して使い始める →',
+    creatorLbl:'クリエイター: ', skillsLbl:'スキル: ', chromeLbl:'Chrome 連携',
+    rateUnRated:'未評価',
     tryTitle:'🎯 試してみる', trySub:'サインアップ前に <b>3 ターン</b> まで無料で会話できます',
     tryEmpty:'まずは下から話しかけてみてください', tryPlaceholder:'メッセージを入力…',
     trySend:'送信', tryRemainingPre:'残り ', tryRemainingPost:' ターン',
     trySignupCTA:'無料登録して続けて使う →', tryThinking:'考え中…', tryError:'エラー',
     tryNetErr:'通信エラー', tryDemoH:'デモプロンプト',
-    ctaPri:'＋ チームに追加して続ける', ctaSec:'マーケットを見る',
-    sShareTw:'🐦 X (Twitter)', sShareLine:'💬 LINE', sShareFb:'📘 Facebook',
     sShareCopy:'🔗 URL コピー', sShareDone:'✓ コピー済',
     footPowered:'Powered by', footAbout:'サービスを知る',
     footTerms:'利用規約', footPrivacy:'プライバシー', footLegal:'特商法表記',
-    langSwitch:'EN', langSwitchHref:'?lang=en', tweetSuffix:' — MY AI AGENT',
-    htmlLang:'ja',
+    tweetSuffix:' — MY AI AGENT',
   };
   const T_EN = {
-    notFound:'Listing not found', creatorLbl:'Creator: ', skillsLbl:'Skills: ', chromeLbl:'Chrome connected',
-    rateUnRated:'no ratings', usesSuffix:' uses', usesPrefix:'',
-    tryTitle:'🎯 Try it out', trySub:'Talk to this agent for <b>3 turns</b> free, no signup required',
+    notFound:'Listing not found', langSwitch:'日本語', langSwitchHref:'?lang=ja', htmlLang:'en',
+    navMarket:'Marketplace', navSignup:'Get started free',
+    trustPill1:'3 turns free', trustPill2:'No signup needed', trustPill3:'Results in seconds',
+    ctaPriHero:'🎯 Try it free now →',
+    statRatingsLbl:'ratings', statUsesLbl:'uses',
+    descSectionH:'What this agent can do',
+    demosSectionH:'Try one of these (click to run)',
+    demosArrow:'▸ Click to run', demosCustom:'Or type your own scenario', demosCustomArrow:'▸ Free input',
+    tryBannerH:'Talk to it first', tryBannerSub:'Talk for <b>3 turns</b> free before signup. See the real response right here.',
+    tryBannerPh:'e.g. Write a follow-up email after a sales meeting', tryBannerSend:'Send',
+    howSectionH:'How it works (3 steps)',
+    how1H:'Try it free', how1P:'No signup. 3 turns of conversation to check quality',
+    how2H:'Add to your team', how2P:'30-second free signup. Adds this agent to your account',
+    how3H:'Use daily', how3P:'First 10 messages free, then pay-as-you-go',
+    finalH:'Ready to add this agent<br>to your team?',
+    finalSub:'30-second signup. First 10 messages are free.',
+    finalBtn:'+ Add to my team and start →',
+    creatorLbl:'Creator: ', skillsLbl:'Skills: ', chromeLbl:'Chrome connected',
+    rateUnRated:'no ratings',
+    tryTitle:'🎯 Try it', trySub:'Talk to this agent for <b>3 turns</b> free, no signup required',
     tryEmpty:'Send a message to start chatting', tryPlaceholder:'Type a message…',
     trySend:'Send', tryRemainingPre:'', tryRemainingPost:' turns left',
     trySignupCTA:'Sign up free to continue →', tryThinking:'Thinking…', tryError:'Error',
     tryNetErr:'Network error', tryDemoH:'Demo prompts',
-    ctaPri:'+ Add to my team', ctaSec:'Browse marketplace',
-    sShareTw:'🐦 X (Twitter)', sShareLine:'💬 LINE', sShareFb:'📘 Facebook',
     sShareCopy:'🔗 Copy URL', sShareDone:'✓ Copied',
-    footPowered:'Powered by', footAbout:'About the service',
+    footPowered:'Powered by', footAbout:'About',
     footTerms:'Terms', footPrivacy:'Privacy', footLegal:'Commerce',
-    langSwitch:'日本語', langSwitchHref:'?lang=ja', tweetSuffix:' — MY AI AGENT',
-    htmlLang:'en',
+    tweetSuffix:' — MY AI AGENT',
   };
   const t = lang === 'en' ? T_EN : T_JA;
 
@@ -1091,121 +1119,213 @@ async function serveListingPage(res, listingId, lang){
 <meta name="twitter:image" content="${ogPngUrl}">
 <meta name="twitter:image:alt" content="${titleH}">
 <style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-light:#fed7aa;
+  --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
+  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
+  --wire:rgba(180,120,80,.08);--wire2:rgba(180,120,80,.18);
+  --green:#10b981;--blue:#2563eb;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;background:#fdf8f3;color:#2d1a0e;min-height:100vh;}
-.wrap{max-width:780px;margin:0 auto;padding:32px 20px 80px;}
-.brand{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:#ea580c;letter-spacing:.04em;margin-bottom:24px;text-decoration:none;}
-.thumb{width:100%;aspect-ratio:1200/630;border-radius:18px;overflow:hidden;margin-bottom:28px;background:#fff;box-shadow:0 12px 32px rgba(180,120,80,.1);}
-.thumb img{width:100%;height:100%;display:block;object-fit:cover;}
-.head{display:flex;align-items:center;gap:18px;padding:20px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.2);border-radius:14px;margin-bottom:20px;}
-.head .av{width:80px;height:80px;border-radius:18px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;flex-shrink:0;box-shadow:0 4px 12px rgba(180,80,40,.1);}
-.head .info{flex:1;min-width:0;}
-.head .cat{font-size:12px;color:#ea580c;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
-.head .nm{font-size:24px;font-weight:900;color:#2d1a0e;line-height:1.2;margin-bottom:6px;}
-.head .by{font-size:13px;color:#6b4226;font-weight:600;}
-.meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
-.meta .pl{padding:7px 14px;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:10px;font-size:12.5px;font-weight:700;color:#6b4226;}
-.meta .pl b{color:#2d1a0e;font-weight:900;}
-.desc{padding:18px 22px;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:12px;font-size:14.5px;line-height:1.75;color:#2d1a0e;white-space:pre-wrap;margin-bottom:24px;}
-.demos{display:flex;flex-direction:column;gap:8px;margin-bottom:32px;}
-.demos h2{font-size:13px;color:#9a6a4a;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
-.demos .d{padding:13px 16px;background:#fff;border:1px solid rgba(180,120,80,.18);border-radius:10px;font-size:14px;line-height:1.55;color:#2d1a0e;}
-.cta-row{display:flex;gap:10px;flex-wrap:wrap;}
-.btn{padding:13px 22px;border-radius:11px;font-size:14.5px;font-weight:800;text-decoration:none;text-align:center;display:inline-flex;align-items:center;gap:8px;}
-.btn-pri{background:#fb923c;color:#fff;flex:1;justify-content:center;min-width:200px;}
-.btn-pri:hover{background:#ea580c;}
-.btn-sec{background:#fff;color:#2d1a0e;border:1px solid rgba(180,120,80,.25);}
-.btn-sec:hover{background:#faf3eb;}
-.share{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;}
-.share a{padding:9px 14px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;color:#6b4226;background:#fff;border:1px solid rgba(180,120,80,.2);display:inline-flex;align-items:center;gap:6px;}
-.share a:hover{background:#faf3eb;}
-.foot{margin-top:60px;text-align:center;font-size:12px;color:#9a6a4a;font-weight:600;}
-.foot a{color:#ea580c;text-decoration:none;font-weight:700;}
+body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+a{color:inherit;}
 
-/* Try-before-signup chat widget */
-.try-card{background:linear-gradient(135deg,#fff,#fff7ed);border:1px solid rgba(251,146,60,.25);border-radius:16px;padding:18px 20px;margin-bottom:24px;}
-.try-head{margin-bottom:14px;}
-.try-title{font-size:15px;font-weight:900;color:#2d1a0e;}
-.try-sub{font-size:12px;color:#6b4226;font-weight:600;margin-top:3px;}
-.try-sub b{color:#ea580c;}
-.try-msgs{display:flex;flex-direction:column;gap:8px;min-height:60px;max-height:380px;overflow-y:auto;padding:4px 2px;}
-.try-msgs:empty::before{content:'${t.tryEmpty.replace(/'/g,"\\'")}';color:#9a6a4a;font-size:12.5px;font-weight:600;font-style:italic;padding:18px 4px;display:block;text-align:center;}
-.lang-switch{position:absolute;top:24px;right:20px;font-size:12px;color:#6b4226;background:#fff;padding:6px 12px;border:1px solid rgba(180,120,80,.2);border-radius:8px;font-weight:700;text-decoration:none;}
-.lang-switch:hover{background:#faf3eb;color:#2d1a0e;}
+.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--wire);position:sticky;top:0;z-index:5;}
+.lp-brand{font-weight:900;color:var(--peach-dark);letter-spacing:.04em;font-size:14px;text-decoration:none;}
+.lp-nav-r{display:flex;gap:14px;align-items:center;font-size:12.5px;}
+.lp-nav-r a{color:var(--text3);text-decoration:none;font-weight:700;}
+.lp-nav-r a:hover{color:var(--text);}
+.lp-nav-r .lp-cta{background:var(--peach);color:#fff;padding:8px 16px;border-radius:9px;}
+.lp-nav-r .lp-cta:hover{background:var(--peach-dark);color:#fff;}
+
+.lp-hero{background:radial-gradient(ellipse at top,#ffedd5 0%,#fed7aa 30%,transparent 70%),linear-gradient(180deg,#fdf8f3 0%,#fff 100%);padding:56px 22px 36px;text-align:center;position:relative;overflow:hidden;}
+.lp-hero::after{content:'';position:absolute;width:340px;height:340px;border-radius:50%;background:rgba(255,255,255,.4);right:-120px;top:60px;}
+.lp-hero::before{content:'';position:absolute;width:240px;height:240px;border-radius:50%;background:rgba(251,146,60,.18);left:-80px;bottom:-50px;}
+.lp-cat{display:inline-block;font-size:11.5px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.12);padding:5px 14px;border-radius:999px;letter-spacing:.06em;margin-bottom:18px;position:relative;z-index:1;}
+.lp-sticker{width:130px;height:130px;border-radius:32px;background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:80px;box-shadow:0 14px 36px rgba(180,80,40,.2);transform:rotate(-6deg);margin-bottom:24px;position:relative;z-index:1;overflow:hidden;}
+.lp-sticker img{width:100%;height:100%;object-fit:cover;}
+.lp-name{font-size:38px;font-weight:900;color:#1a0d05;letter-spacing:-.02em;line-height:1.1;margin-bottom:14px;position:relative;z-index:1;max-width:760px;margin-left:auto;margin-right:auto;}
+.lp-tagline{font-size:17px;color:var(--text2);font-weight:600;line-height:1.65;max-width:580px;margin:0 auto 24px;position:relative;z-index:1;white-space:pre-wrap;}
+.lp-creator-row{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);font-weight:600;background:#fff;padding:7px 14px;border-radius:999px;border:1px solid var(--wire2);position:relative;z-index:1;margin-bottom:8px;}
+.lp-creator-row b{color:var(--peach-dark);font-weight:800;}
+.lp-verified{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:var(--blue);color:#fff;border-radius:50%;font-size:10px;font-weight:900;}
+.lp-trust-pills{display:flex;justify-content:center;gap:8px;margin:24px 0 30px;flex-wrap:wrap;position:relative;z-index:1;}
+.lp-trust-pills .pl{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--text);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);padding:7px 14px;border-radius:999px;}
+.lp-trust-pills .pl .ck{color:var(--green);font-size:13px;}
+.lp-cta-primary{display:inline-block;background:var(--peach);color:#fff;font-weight:900;font-size:17px;padding:16px 38px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;text-decoration:none;box-shadow:0 12px 28px rgba(251,146,60,.4);position:relative;z-index:1;transition:all .15s;}
+.lp-cta-primary:hover{background:var(--peach-dark);transform:translateY(-2px);box-shadow:0 16px 36px rgba(234,88,12,.45);}
+.lp-stats{display:flex;justify-content:center;gap:36px;margin-top:24px;position:relative;z-index:1;flex-wrap:wrap;}
+.lp-stats .st{text-align:center;}
+.lp-stats .st .v{font-size:22px;font-weight:900;color:#1a0d05;font-feature-settings:'tnum';}
+.lp-stats .st .v .star{color:#f59e0b;}
+.lp-stats .st .l{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px;}
+
+.lp-section{max-width:760px;margin:0 auto;padding:40px 22px;}
+.lp-section h2{font-size:22px;font-weight:900;color:#1a0d05;text-align:center;margin-bottom:22px;letter-spacing:-.01em;}
+.lp-desc-box{background:#fff;border:1px solid var(--wire2);border-radius:18px;padding:24px 28px;font-size:14.5px;line-height:1.85;color:var(--text);box-shadow:0 4px 14px rgba(180,120,80,.04);white-space:pre-wrap;}
+
+.lp-demos{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:560px){.lp-demos{grid-template-columns:1fr;}}
+.lp-demo-card{background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:18px 22px;cursor:pointer;transition:all .15s;text-align:left;font-family:inherit;}
+.lp-demo-card:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 8px 20px rgba(180,120,80,.08);}
+.lp-demo-card .num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--peach);color:#fff;border-radius:50%;font-size:12px;font-weight:900;margin-bottom:10px;}
+.lp-demo-card .txt{font-size:14px;color:var(--text);font-weight:600;line-height:1.55;}
+.lp-demo-card .arrow{margin-top:8px;font-size:12px;color:var(--peach-dark);font-weight:700;}
+.lp-demo-card.custom{background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:rgba(251,146,60,.25);}
+.lp-demo-card.custom .num{background:var(--text2);}
+
+.lp-try-banner{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:18px;padding:24px 28px;}
+.lp-try-banner .head{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+.lp-try-banner .em{font-size:42px;line-height:1;flex-shrink:0;}
+.lp-try-banner h3{font-size:17px;font-weight:900;color:#1a0d05;margin-bottom:5px;}
+.lp-try-banner p{font-size:13px;color:var(--text2);font-weight:600;line-height:1.65;}
+.lp-try-banner p b{color:var(--peach-dark);}
+
+.try-msgs{display:flex;flex-direction:column;gap:8px;min-height:60px;max-height:340px;overflow-y:auto;padding:4px 2px;margin-bottom:8px;}
+.try-msgs:empty::before{content:'${t.tryEmpty.replace(/'/g,"\\'")}';color:var(--text3);font-size:12.5px;font-weight:600;font-style:italic;padding:14px 4px;display:block;text-align:center;}
 .try-bub{padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;max-width:88%;white-space:pre-wrap;word-break:break-word;}
-.try-bub.u{align-self:flex-end;background:rgba(251,146,60,.14);border:1px solid rgba(251,146,60,.25);color:#2d1a0e;}
-.try-bub.a{align-self:flex-start;background:#fff;border:1px solid rgba(180,120,80,.18);color:#2d1a0e;box-shadow:0 2px 6px rgba(180,120,80,.04);}
-.try-bub.thinking{color:#9a6a4a;font-style:italic;}
-.try-demos{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 6px;}
-.try-demo{padding:6px 10px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:8px;font-size:11.5px;color:#6b4226;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;line-height:1.4;}
-.try-demo:hover{background:#fef3e7;border-color:#fb923c;color:#2d1a0e;}
-.try-form{display:flex;gap:6px;margin-top:10px;}
-.try-form input{flex:1;padding:11px 14px;border:1px solid rgba(180,120,80,.25);border-radius:11px;background:#fff;font-size:13.5px;font-family:inherit;color:#2d1a0e;outline:none;}
-.try-form input:focus{border-color:#fb923c;}
+.try-bub.u{align-self:flex-end;background:rgba(251,146,60,.14);border:1px solid rgba(251,146,60,.25);color:var(--text);}
+.try-bub.a{align-self:flex-start;background:#fff;border:1px solid var(--wire2);color:var(--text);box-shadow:0 2px 6px rgba(180,120,80,.04);}
+.try-bub.thinking{color:var(--text3);font-style:italic;}
+.try-form{display:flex;gap:6px;margin-top:6px;}
+.try-form input{flex:1;padding:12px 16px;border:1px solid rgba(180,120,80,.2);border-radius:11px;background:#fff;font-size:14px;font-family:inherit;color:var(--text);outline:none;}
+.try-form input:focus{border-color:var(--peach);}
 .try-form input:disabled{opacity:.6;}
-.try-form button{padding:0 18px;background:#fb923c;color:#fff;border:none;border-radius:11px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;}
-.try-form button:hover:not(:disabled){background:#ea580c;}
+.try-form button{padding:0 22px;background:var(--peach);color:#fff;border:none;border-radius:11px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;}
+.try-form button:hover:not(:disabled){background:var(--peach-dark);}
 .try-form button:disabled{opacity:.5;cursor:not-allowed;}
-.try-status{margin-top:8px;font-size:11px;color:#9a6a4a;font-weight:600;text-align:right;}
-.try-cta{margin-top:12px;padding:14px 16px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;border-radius:11px;text-align:center;display:block;text-decoration:none;font-weight:800;font-size:13px;}
+.try-status{margin-top:8px;font-size:11px;color:var(--text3);font-weight:600;text-align:right;}
+.try-cta{margin-top:12px;padding:14px 16px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border-radius:11px;text-align:center;display:block;text-decoration:none;font-weight:800;font-size:13px;}
 .try-cta:hover{filter:brightness(1.08);}
+
+.lp-how{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:560px){.lp-how{grid-template-columns:1fr;}}
+.lp-how-step{background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:22px 18px;text-align:center;}
+.lp-how-step .n{width:38px;height:38px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;margin:0 auto 12px;}
+.lp-how-step h3{font-size:14px;font-weight:900;color:#1a0d05;margin-bottom:6px;}
+.lp-how-step p{font-size:12.5px;color:var(--text2);font-weight:600;line-height:1.6;}
+
+.lp-final-cta{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border-radius:24px;padding:44px 28px;text-align:center;}
+.lp-final-cta h2{color:#fff;font-size:24px;margin-bottom:0;}
+.lp-final-cta p{font-size:14.5px;color:rgba(255,255,255,.85);font-weight:600;margin:12px 0 22px;line-height:1.7;}
+.lp-final-btn{background:#fff;color:var(--peach-dark);font-weight:900;font-size:16px;padding:16px 38px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;}
+.lp-final-btn:hover{background:#fef3e7;}
+
+.lp-share{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px;}
+.lp-share a{padding:8px 14px;border-radius:10px;font-size:12.5px;font-weight:700;text-decoration:none;color:var(--text2);background:#fff;border:1px solid var(--wire2);display:inline-flex;align-items:center;gap:5px;}
+.lp-share a:hover{background:var(--cream2);}
+
+.lp-foot{padding:28px 22px;text-align:center;font-size:12px;color:var(--text3);font-weight:600;border-top:1px solid var(--wire);margin-top:30px;}
+.lp-foot a{color:var(--peach-dark);text-decoration:none;font-weight:700;}
+
+.lang-switch{position:absolute;top:14px;right:18px;font-size:12px;color:var(--text2);background:#fff;padding:6px 12px;border:1px solid var(--wire2);border-radius:8px;font-weight:700;text-decoration:none;z-index:2;}
+.lang-switch:hover{background:var(--cream2);color:var(--text);}
 </style>
 </head>
 <body>
-<div class="wrap" style="position:relative">
-  <a href="${t.langSwitchHref}" class="lang-switch">${t.langSwitch}</a>
-  <a href="/" class="brand">🍑 MY AI AGENT</a>
-  <div class="thumb"><img src="${ogSvgUrl}" alt="${titleH}"></div>
-  <div class="head">
-    <div class="av">${av}</div>
-    <div class="info">
-      <div class="cat">${catH}</div>
-      <div class="nm">${titleH}</div>
-      <div class="by">${t.creatorLbl}<b>${handle}</b>${verifiedBadge}</div>
-    </div>
+<nav class="lp-nav">
+  <a href="/" class="lp-brand">🍑 MY AI AGENT</a>
+  <div class="lp-nav-r">
+    <a href="/app.html">${t.navMarket}</a>
+    <a href="${t.langSwitchHref}">${t.langSwitch}</a>
+    <a href="/auth.html?next=/l/${listingId}" class="lp-cta">${t.navSignup}</a>
   </div>
-  <div class="meta">
-    <span class="pl">⭐ <b>${ratingTxt}</b></span>
-    <span class="pl">${t.usesPrefix}<b>${usesTxt}</b>${t.usesSuffix}</span>
-    ${skills?`<span class="pl">${t.skillsLbl}<b>${_xmlEscape(skills)}</b></span>`:''}
-    ${d.agent?.chrome_enabled?`<span class="pl">🌐 <b>${t.chromeLbl}</b></span>`:''}
-  </div>
-  <div class="desc">${_xmlEscape(d.description||'')}</div>
+</nav>
 
-  <!-- ▼ TRY-BEFORE-SIGNUP CHAT WIDGET ▼ -->
-  <div class="try-card">
-    <div class="try-head">
-      <div class="try-title">${t.tryTitle}</div>
-      <div class="try-sub">${t.trySub}</div>
+<div class="lp-hero">
+  <div class="lp-cat">${catH}</div>
+  <div class="lp-sticker">${av.startsWith('data:image/') ? `<img src="${av}" alt="">` : av}</div>
+  <div class="lp-name">${titleH}</div>
+  <div class="lp-tagline">${_xmlEscape(_trunc(d.description||'', 140))}</div>
+
+  <div class="lp-creator-row">
+    ${t.creatorLbl}<b>${handle}</b>${d.creator?.is_verified ? '<span class="lp-verified">✓</span>' : ''}
+  </div>
+
+  <div class="lp-trust-pills">
+    <span class="pl"><span class="ck">✓</span>${t.trustPill1}</span>
+    <span class="pl"><span class="ck">✓</span>${t.trustPill2}</span>
+    <span class="pl"><span class="ck">✓</span>${t.trustPill3}</span>
+  </div>
+
+  <a class="lp-cta-primary" href="#try">${t.ctaPriHero}</a>
+
+  <div class="lp-stats">
+    <div class="st"><div class="v"><span class="star">★</span> ${d.rating>0 ? d.rating.toFixed(1) : '—'}</div><div class="l">${d.rating_count||0} ${t.statRatingsLbl}</div></div>
+    <div class="st"><div class="v">${usesTxt}</div><div class="l">${t.statUsesLbl}</div></div>
+  </div>
+</div>
+
+<div class="lp-section">
+  <h2>${t.descSectionH}</h2>
+  <div class="lp-desc-box">${_xmlEscape(d.description||'')}</div>
+</div>
+
+${d.demo_prompts && d.demo_prompts.length ? `<div class="lp-section">
+  <h2>${t.demosSectionH}</h2>
+  <div class="lp-demos">
+    ${d.demo_prompts.map((p,i)=>`<button class="lp-demo-card" onclick="useTryDemo(${i});document.getElementById('tryInput').focus();">
+      <div class="num">${i+1}</div>
+      <div class="txt">${_xmlEscape(p)}</div>
+      <div class="arrow">${t.demosArrow}</div>
+    </button>`).join('')}
+    <button class="lp-demo-card custom" onclick="document.getElementById('tryInput').focus();">
+      <div class="num">+</div>
+      <div class="txt">${t.demosCustom}</div>
+      <div class="arrow">${t.demosCustomArrow}</div>
+    </button>
+  </div>
+</div>` : ''}
+
+<div class="lp-section" id="try">
+  <div class="lp-try-banner">
+    <div class="head">
+      <div class="em">🎯</div>
+      <div>
+        <h3>${t.tryBannerH}</h3>
+        <p>${t.tryBannerSub}</p>
+      </div>
     </div>
     <div class="try-msgs" id="tryMsgs"></div>
-    ${d.demo_prompts && d.demo_prompts.length ? `<div class="try-demos">${d.demo_prompts.map((p,i)=>`<button class="try-demo" onclick="useTryDemo(${i})" data-demo="${_xmlEscape(p).replace(/"/g,'&quot;')}">▸ ${_xmlEscape(p)}</button>`).join('')}</div>`:''}
+    ${d.demo_prompts && d.demo_prompts.length ? `<div style="display:none">${d.demo_prompts.map((p,i)=>`<button class="try-demo" data-demo="${_xmlEscape(p).replace(/"/g,'&quot;')}">${_xmlEscape(p)}</button>`).join('')}</div>` : ''}
     <form class="try-form" onsubmit="sendTry(event)">
-      <input type="text" id="tryInput" placeholder="${t.tryPlaceholder}" autocomplete="off" maxlength="2000">
-      <button type="submit" id="tryBtn">${t.trySend}</button>
+      <input type="text" id="tryInput" placeholder="${t.tryBannerPh}" autocomplete="off" maxlength="2000">
+      <button type="submit" id="tryBtn">${t.tryBannerSend}</button>
     </form>
     <div class="try-status" id="tryStatus">${t.tryRemainingPre}3${t.tryRemainingPost}</div>
   </div>
+</div>
 
-  ${d.demo_prompts && d.demo_prompts.length ? `<div class="demos"><h2>${t.tryDemoH}</h2>${d.demo_prompts.map(p=>`<div class="d">▸ ${_xmlEscape(p)}</div>`).join('')}</div>`:''}
-  <div class="cta-row">
-    <a class="btn btn-pri" href="/app.html?listing=${listingId}">${t.ctaPri}</a>
-    <a class="btn btn-sec" href="/">${t.ctaSec}</a>
+<div class="lp-section">
+  <h2>${t.howSectionH}</h2>
+  <div class="lp-how">
+    <div class="lp-how-step"><div class="n">1</div><h3>${t.how1H}</h3><p>${t.how1P}</p></div>
+    <div class="lp-how-step"><div class="n">2</div><h3>${t.how2H}</h3><p>${t.how2P}</p></div>
+    <div class="lp-how-step"><div class="n">3</div><h3>${t.how3H}</h3><p>${t.how3P}</p></div>
   </div>
-  <div class="share">
-    <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(d.title+t.tweetSuffix)}" target="_blank" rel="noopener">${t.sShareTw}</a>
-    <a href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">${t.sShareLine}</a>
-    <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">${t.sShareFb}</a>
+</div>
+
+<div class="lp-section">
+  <div class="lp-final-cta">
+    <h2>${t.finalH}</h2>
+    <p>${t.finalSub}</p>
+    <a href="/auth.html?next=/l/${listingId}" class="lp-final-btn">${t.finalBtn}</a>
+  </div>
+  <div class="lp-share">
+    <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(d.title+t.tweetSuffix)}" target="_blank" rel="noopener">𝕏 ${lang==='en'?'Share':'シェア'}</a>
+    <a href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">💬 LINE</a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">📘 Facebook</a>
     <a href="javascript:void(0)" onclick="navigator.clipboard.writeText(location.href);this.textContent='${t.sShareDone}';">${t.sShareCopy}</a>
   </div>
-  <div class="foot">
-    ${t.footPowered} <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">${t.footAbout}</a><br>
-    <span style="margin-top:8px;display:inline-block">
-      <a href="/terms.html">${t.footTerms}</a> ・
-      <a href="/privacy.html">${t.footPrivacy}</a> ・
-      <a href="/legal.html">${t.footLegal}</a>
-    </span>
-  </div>
+</div>
+
+<div class="lp-foot">
+  ${t.footPowered} <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">${t.footAbout}</a><br>
+  <span style="margin-top:10px;display:inline-block">
+    <a href="/terms.html">${t.footTerms}</a> ・
+    <a href="/privacy.html">${t.footPrivacy}</a> ・
+    <a href="/legal.html">${t.footLegal}</a>
+  </span>
 </div>
 <script>
 var LISTING_ID = ${JSON.stringify(listingId)};

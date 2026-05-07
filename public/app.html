@@ -562,6 +562,58 @@ input,textarea{font-family:var(--sans);}
 .tool-btn.recording{color:#fff;background:var(--rose);animation:micPulse 1.4s ease-in-out infinite;}
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5);}50%{box-shadow:0 0 0 6px rgba(239,68,68,0);}}
 @keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* ── Publish-success modal ─────────────────────────────────── */
+.ps-modal{
+  width:540px;max-width:95%;background:#fff;border-radius:24px;overflow:hidden;
+  box-shadow:0 30px 60px rgba(0,0,0,.4);color:var(--text);
+  position:relative;max-height:92vh;overflow-y:auto;
+}
+.ps-hero{
+  background:linear-gradient(135deg,#fff7ed 0%,#fed7aa 60%,#fb923c 130%);
+  padding:36px 30px 24px;text-align:center;position:relative;overflow:hidden;
+}
+.ps-hero::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.4);right:-100px;top:-100px;}
+.ps-hero::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(234,88,12,.1);left:-60px;bottom:-60px;}
+.ps-conf{font-size:80px;line-height:1;animation:psBounce 1s cubic-bezier(.36,.07,.19,.97) both;position:relative;z-index:1;display:inline-block;margin-bottom:8px;}
+@keyframes psBounce{0%{transform:scale(.3);opacity:0;}50%{transform:scale(1.2);opacity:1;}100%{transform:scale(1);opacity:1;}}
+.ps-h1{font-size:24px;font-weight:900;color:#1a0d05;letter-spacing:-.01em;position:relative;z-index:1;}
+.ps-h2{font-size:13.5px;color:#6b4226;font-weight:600;margin-top:8px;line-height:1.65;position:relative;z-index:1;max-width:400px;margin:8px auto 0;}
+.ps-h2 b{color:#ea580c;}
+.ps-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.6);border:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);z-index:2;}
+.ps-close:hover{background:#fff;color:var(--text);}
+
+.ps-body{padding:22px 26px 26px;}
+.ps-thumb-lbl{font-size:10.5px;color:var(--text3);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.ps-thumb-wrap{margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid var(--wire2);background:var(--cream3);aspect-ratio:1200/630;}
+.ps-thumb-wrap img{width:100%;height:100%;display:block;object-fit:cover;}
+
+.ps-tweet-preview{background:var(--cream2);border:1px solid var(--wire2);border-radius:11px;padding:11px 14px;margin-bottom:18px;}
+.ps-tweet-preview .lbl{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.ps-tweet-preview textarea{width:100%;border:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);resize:vertical;min-height:60px;line-height:1.65;outline:none;}
+
+.ps-cta-h{font-size:11.5px;color:var(--text3);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;margin-top:6px;}
+.ps-sns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.ps-sns a{padding:14px 8px;border-radius:12px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;color:#fff;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.ps-sns a:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.15);}
+.ps-sns .ic{font-size:22px;line-height:1;}
+.ps-sns .x{background:#0f1419;}
+.ps-sns .line{background:#06c755;}
+.ps-sns .fb{background:#1877f2;}
+
+.ps-url-row{display:flex;gap:6px;margin-bottom:18px;}
+.ps-url-input{flex:1;padding:11px 14px;border:1px solid var(--wire2);background:var(--cream2);border-radius:10px;font-size:12.5px;font-family:'SF Mono',Menlo,monospace;color:var(--text);outline:none;}
+.ps-copy-btn{padding:11px 18px;background:var(--peach);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}
+.ps-copy-btn:hover{background:var(--peach-dark);}
+
+.ps-tip{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fbbf24;border-radius:11px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:#78350f;line-height:1.65;}
+.ps-tip b{color:#92400e;}
+
+.ps-foot{display:flex;gap:8px;}
+.ps-skip{flex:1;padding:11px;background:transparent;border:1px solid var(--wire3);color:var(--text2);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
+.ps-skip:hover{background:var(--cream2);color:var(--text);}
+.ps-go{flex:1;padding:11px;background:var(--peach);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}
+.ps-go:hover{background:var(--peach-dark);}
 .tool-spacer{flex:1;}
 
 .send-btn{
@@ -1518,6 +1570,51 @@ body{color:#f0f0f8;}
 
       <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
         <button class="btn-back" onclick="closeMarket()">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PUBLISH SUCCESS MODAL ══════════════════════════════ -->
+<div class="overlay" id="publishSuccessOverlay">
+  <div class="ps-modal">
+    <div class="ps-hero">
+      <div class="ps-conf">🎉</div>
+      <div class="ps-h1">マーケットに公開しました！</div>
+      <div class="ps-h2">いまが <b>最初のユーザー獲得チャンス</b>。<br>SNS でシェアして、最初の利用者を呼び込もう</div>
+      <button class="ps-close" onclick="closePublishSuccess()" aria-label="close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="ps-body">
+      <div class="ps-thumb-lbl">📸 SNS 投稿時の見え方</div>
+      <div class="ps-thumb-wrap"><img id="psThumb" alt=""></div>
+
+      <div class="ps-tweet-preview">
+        <div class="lbl">📝 投稿文（コピー可・編集して使ってください）</div>
+        <textarea id="psTweetText" rows="3"></textarea>
+      </div>
+
+      <div class="ps-cta-h">📤 SNS で告知する</div>
+      <div class="ps-sns">
+        <a class="x" id="psSnsX" target="_blank" rel="noopener"><div class="ic">𝕏</div>X (Twitter)</a>
+        <a class="line" id="psSnsLine" target="_blank" rel="noopener"><div class="ic">💬</div>LINE</a>
+        <a class="fb" id="psSnsFb" target="_blank" rel="noopener"><div class="ic">📘</div>Facebook</a>
+      </div>
+
+      <div class="ps-cta-h">🔗 公開 URL</div>
+      <div class="ps-url-row">
+        <input class="ps-url-input" id="psUrlInput" readonly>
+        <button class="ps-copy-btn" onclick="psCopyUrl()">📋 コピー</button>
+      </div>
+
+      <div class="ps-tip">
+        💡 <b>シェアのコツ</b>: 「3ターン無料で試せる」を入れると、未登録ユーザーがクリックしやすくなります。クリエイターハンドルも書くとフォロワーが増えます。
+      </div>
+
+      <div class="ps-foot">
+        <button class="ps-skip" onclick="closePublishSuccess()">あとでシェアする</button>
+        <button class="ps-go" onclick="closePublishSuccess();openSettings();setTimeout(function(){var b=document.querySelector('.snav-item[data-tab=\'creator\']');if(b)switchStab(b,'s-creator');},100);">クリエイターダッシュボードへ →</button>
       </div>
     </div>
   </div>
@@ -3840,6 +3937,45 @@ async function cloneListingFromDetail(){
     }
   }catch(e){ showToast(e.message||'追加失敗','ng'); }
 }
+/* ── Publish-success modal ──────────────────────────────────── */
+function openPublishSuccess(listingId, agentName, agentDescription){
+  var url = location.origin + '/l/' + listingId;
+  var ogUrl = location.origin + '/api/og/' + listingId + '.svg';
+  var img = document.getElementById('psThumb');
+  if(img) img.src = ogUrl;
+  var input = document.getElementById('psUrlInput');
+  if(input) input.value = url;
+  // Pre-fill tweet text (editable)
+  var ta = document.getElementById('psTweetText');
+  if(ta){
+    var desc = (agentDescription||'').slice(0, 80);
+    ta.value = '「' + (agentName||'AI Agent') + '」を MY AI AGENT で公開しました 🎉\n'
+             + (desc ? desc + '\n' : '')
+             + '3 ターン無料で試せます。\n' + url;
+  }
+  // Build SNS share URLs
+  var tweetText = ta ? ta.value : url;
+  document.getElementById('psSnsX').href    = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweetText);
+  document.getElementById('psSnsLine').href = 'https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(tweetText);
+  document.getElementById('psSnsFb').href   = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+  // Refresh X/LINE links when user edits the tweet text
+  if(ta){
+    ta.oninput = function(){
+      var t = ta.value;
+      document.getElementById('psSnsX').href    = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(t);
+      document.getElementById('psSnsLine').href = 'https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(t);
+    };
+  }
+  document.getElementById('publishSuccessOverlay').classList.add('open');
+}
+function closePublishSuccess(){
+  document.getElementById('publishSuccessOverlay').classList.remove('open');
+}
+function psCopyUrl(){
+  var v = document.getElementById('psUrlInput').value;
+  if(navigator.clipboard) navigator.clipboard.writeText(v).then(function(){ showToast('URLをコピーしました','ok'); });
+}
+
 /* ── Share listing (SNS) ─────────────────────────────────── */
 function openShareListing(listingId, listingTitle){
   var url = location.origin + '/l/' + listingId;
@@ -3971,8 +4107,13 @@ async function submitListing(){
     // Stash on local agent
     var ag = agents.find(function(a){return a.id===_listingAgentId;});
     if(ag) ag.marketplace = r.listing;
-    showToast(visibility==='public' ? 'マーケットに公開しました 🎉' : '出店を保存しました','ok');
     closeListingForm();
+    // Publish-success modal: only for public listings (unlisted = quiet save)
+    if(visibility === 'public' && r.listing && r.listing.listing_id){
+      openPublishSuccess(r.listing.listing_id, title || (ag && ag.name), description);
+    } else {
+      showToast('出店を保存しました','ok');
+    }
   }catch(e){
     showToast(e.message||'保存に失敗しました','ng');
   } finally {

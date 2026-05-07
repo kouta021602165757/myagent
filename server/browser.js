@@ -132,15 +132,16 @@ function newSession(){
       locale: 'ja-JP',
       timezoneId: 'Asia/Tokyo',
     });
-    // Block heavy resources (images/media/fonts/css) to cut page-load latency.
-    // We only need DOM text for the AI; visuals matter only when AI calls take_screenshot.
+    // Block heavy resources to cut page-load latency. We only need DOM text for the AI.
+    // NOTE: stylesheets are NOT blocked — modern SPAs (Google Docs/Sheets, Notion, etc.)
+    // depend on CSS for layout/visibility, and blocking it makes their navigation hang.
     await context.route('**/*', (route)=>{
       const t = route.request().resourceType();
-      if(t==='image' || t==='media' || t==='font' || t==='stylesheet') return route.abort();
+      if(t==='image' || t==='media' || t==='font') return route.abort();
       return route.continue();
     });
     page = await context.newPage();
-    page.setDefaultTimeout(12000);
+    page.setDefaultTimeout(20000);
     return page;
   }
 
@@ -168,12 +169,26 @@ function newSession(){
     async browseUrl(url){
       if(!/^https?:\/\//i.test(url||'')) return {error:'URL は https:// または http:// で始めてください'};
       const p = await ensurePage();
+      let timedOut = false;
       try{
-        await p.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
+        // 'commit' returns as soon as navigation is committed — the heaviest SPAs
+        // (Google Docs/Sheets, Notion) never fire a stable domcontentloaded.
+        // We then give the JS up to 4 more seconds to populate body text.
+        await p.goto(url, {waitUntil:'commit', timeout:25000});
+        try{ await p.waitForLoadState('domcontentloaded', {timeout:4000}); }catch(e){}
       }catch(e){
-        return {error:'page_load_failed: '+e.message};
+        timedOut = true;
+        // Don't bail — if the page partially rendered, we can still grab text.
+        // Tell the AI it was a partial load so it can decide whether to retry.
+        const partial = await _grabState(p, false).catch(()=>({}));
+        if(partial.text && partial.text.length > 50){
+          return { ...partial, partial:true, warn:'page_load_timeout (' + (e.message||'').split('\n')[0] + ')' };
+        }
+        return {error:'page_load_failed: '+(e.message||'').split('\n')[0]};
       }
-      return await _grabState(p, false);
+      const state = await _grabState(p, false);
+      if(timedOut) state.partial = true;
+      return state;
     },
 
     /** DuckDuckGo HTML search → top 8 results. */
@@ -182,9 +197,9 @@ function newSession(){
       const p = await ensurePage();
       const url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query);
       try{
-        await p.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
+        await p.goto(url, {waitUntil:'domcontentloaded', timeout:20000});
       }catch(e){
-        return {error:'search_failed: '+e.message};
+        return {error:'search_failed: '+(e.message||'').split('\n')[0]};
       }
       const results = await p.evaluate(()=>{
         const items = [];

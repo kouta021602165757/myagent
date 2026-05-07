@@ -2632,6 +2632,19 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(!meData||meData.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
     me=meData.user||meData;
     if(!me.favorites) me.favorites = [];
+    // Recovery: if the user has a Stripe customer but plan says 'free',
+    // a previous subscription save likely failed. Re-sync from Stripe.
+    if(me && me.stripe_customer_id && (me.plan||'free')==='free'){
+      try{
+        var sync = await api('POST','/api/billing/sync');
+        if(sync && sync.plan && sync.plan !== 'free'){
+          me.plan = sync.plan;
+          me.subscription_id = sync.subscription_id;
+          me.subscription_status = sync.status;
+          console.log('[billing/sync] recovered plan:', sync.plan);
+        }
+      }catch(e){ console.warn('[billing/sync] failed:', e.message); }
+    }
     // Record this token in the multi-account list (so the switcher shows it)
     try{ _recordCurrentAccount(); }catch(e){}
     // Reveal admin moderation tab for staff accounts

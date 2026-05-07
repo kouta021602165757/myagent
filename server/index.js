@@ -680,6 +680,14 @@ async function stripeCreateSetupIntent(customerId){
   return r.d;
 }
 
+async function stripeListSubscriptions(customerId){
+  const r=await httpsReq('GET','api.stripe.com',
+    '/v1/subscriptions?customer='+encodeURIComponent(customerId)+'&status=all&limit=10',
+    {'Authorization':'Basic '+Buffer.from(STRIPE_SK+':').toString('base64')},null);
+  if(r.s>=400)throw new Error(r.d?.error?.message||'Stripe list_subscriptions error');
+  return r.d.data || [];
+}
+
 async function stripeCancelSubscription(subscriptionId){
   const r=await httpsReq('DELETE','api.stripe.com','/v1/subscriptions/'+subscriptionId,
     {'Authorization':'Basic '+Buffer.from(STRIPE_SK+':').toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
@@ -2991,6 +2999,40 @@ async function handleAPI(req,res,pathname,method,ip){
     }catch(e){
       console.error('[billing/subscribe]', e.message);
       return jres(res,500,{error:'Stripe エラー: '+e.message});
+    }
+  }
+
+  // ── POST /api/billing/sync ─────────────────────────────────
+  // Recovery: fetch the user's active Stripe subscription and sync DB.
+  // Used when DB save failed earlier but Stripe has the actual state.
+  if(pathname==='/api/billing/sync'&&method==='POST'){
+    if(!STRIPE_SK) return jres(res,503,{error:'Stripe が設定されていません'});
+    if(!user.stripe_customer_id) return jres(res,200,{plan:'free', synced:false, reason:'no stripe customer'});
+    try{
+      const subs = await stripeListSubscriptions(user.stripe_customer_id);
+      // Pick the latest active/trialing/past_due subscription
+      const live = subs.find(s => ['active','trialing','past_due','unpaid'].includes(s.status));
+      if(!live){
+        user.plan = 'free';
+        user.subscription_id = null;
+        user.subscription_status = 'canceled';
+        await DB.save(user);
+        return jres(res,200,{plan:'free', synced:true, reason:'no active subscription'});
+      }
+      // Map price_id back to plan
+      const priceId = live.items?.data?.[0]?.price?.id || '';
+      let plan = 'free';
+      if(priceId === STRIPE_PRO_PRICE) plan = 'pro';
+      else if(priceId === STRIPE_BIZ_PRICE) plan = 'business';
+      user.plan = plan;
+      user.subscription_id = live.id;
+      user.subscription_status = live.status;
+      await DB.save(user);
+      console.log('[billing/sync] user='+user.id+' plan='+plan+' sub='+live.id+' status='+live.status);
+      return jres(res,200,{plan, synced:true, subscription_id: live.id, status: live.status});
+    }catch(e){
+      console.error('[billing/sync]', e.message);
+      return jres(res,500,{error:'Stripe sync エラー: '+e.message});
     }
   }
 

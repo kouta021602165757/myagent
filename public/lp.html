@@ -2,6 +2,17 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<script>
+// Legacy redirect: /?listing=ls_xxx (old share format) → /l/ls_xxx (public listing page)
+(function(){
+  try{
+    var lid = new URLSearchParams(location.search).get('listing');
+    if(lid && /^ls_[a-z0-9_-]+$/.test(lid)){
+      location.replace('/l/' + lid);
+    }
+  }catch(e){}
+})();
+</script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -771,7 +782,7 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
     <a href="terms.html">利用規約</a>
     <a href="privacy.html">プライバシー</a>
     <a href="legal.html">特商法表記</a>
-    <a href="mailto:support@myaiagents.agency">お問い合わせ</a>
+    <a href="contact.html">お問い合わせ</a>
   </div>
   <div class="footer-copy">© 2026 MY AI AGENT</div>
 </footer>

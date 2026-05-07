@@ -963,13 +963,88 @@ function renderListingOgSvg(d, twemojiUri){
 </svg>`;
 }
 
+/** Render sitemap.xml: static pages + every live public listing. */
+async function serveSitemapXml(res){
+  const now = new Date().toISOString().slice(0,10);
+  const urls = [
+    {loc: APP_URL + '/',           changefreq:'weekly',  priority:'1.0', lastmod: now},
+    {loc: APP_URL + '/lp.html',    changefreq:'weekly',  priority:'1.0', lastmod: now},
+    {loc: APP_URL + '/auth.html',  changefreq:'monthly', priority:'0.5', lastmod: now},
+    {loc: APP_URL + '/terms.html', changefreq:'yearly',  priority:'0.3', lastmod: now},
+    {loc: APP_URL + '/privacy.html',changefreq:'yearly', priority:'0.3', lastmod: now},
+    {loc: APP_URL + '/legal.html', changefreq:'yearly',  priority:'0.3', lastmod: now},
+  ];
+  try{
+    const listings = await listAllPublicListings();
+    for(const l of listings){
+      urls.push({
+        loc: APP_URL + '/l/' + l.listing_id,
+        changefreq: 'weekly',
+        priority: '0.7',
+        lastmod: (l.listed_at || now).slice(0,10),
+      });
+    }
+  }catch(e){ console.warn('[sitemap] listings fetch failed:', e.message); }
+
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    urls.map(u => '  <url>\n' +
+      '    <loc>' + _xmlEscape(u.loc) + '</loc>\n' +
+      '    <lastmod>' + u.lastmod + '</lastmod>\n' +
+      '    <changefreq>' + u.changefreq + '</changefreq>\n' +
+      '    <priority>' + u.priority + '</priority>\n' +
+      '  </url>').join('\n') +
+    '\n</urlset>\n';
+
+  res.writeHead(200, {
+    'Content-Type':'application/xml; charset=utf-8',
+    'Cache-Control':'public, max-age=900',                // 15分キャッシュ
+  });
+  res.end(xml);
+}
+
 /** Render the public listing landing HTML with OG meta SSR. */
-async function serveListingPage(res, listingId){
+async function serveListingPage(res, listingId, lang){
+  lang = (lang === 'en') ? 'en' : 'ja';
+  const T_JA = {
+    notFound:'Listing not found', creatorLbl:'クリエイター: ', skillsLbl:'スキル: ', chromeLbl:'Chrome 連携',
+    rateUnRated:'未評価', usesSuffix:'回', usesPrefix:'利用',
+    tryTitle:'🎯 試してみる', trySub:'サインアップ前に <b>3 ターン</b> まで無料で会話できます',
+    tryEmpty:'まずは下から話しかけてみてください', tryPlaceholder:'メッセージを入力…',
+    trySend:'送信', tryRemainingPre:'残り ', tryRemainingPost:' ターン',
+    trySignupCTA:'無料登録して続けて使う →', tryThinking:'考え中…', tryError:'エラー',
+    tryNetErr:'通信エラー', tryDemoH:'デモプロンプト',
+    ctaPri:'＋ チームに追加して続ける', ctaSec:'マーケットを見る',
+    sShareTw:'🐦 X (Twitter)', sShareLine:'💬 LINE', sShareFb:'📘 Facebook',
+    sShareCopy:'🔗 URL コピー', sShareDone:'✓ コピー済',
+    footPowered:'Powered by', footAbout:'サービスを知る',
+    footTerms:'利用規約', footPrivacy:'プライバシー', footLegal:'特商法表記',
+    langSwitch:'EN', langSwitchHref:'?lang=en', tweetSuffix:' — MY AI AGENT',
+    htmlLang:'ja',
+  };
+  const T_EN = {
+    notFound:'Listing not found', creatorLbl:'Creator: ', skillsLbl:'Skills: ', chromeLbl:'Chrome connected',
+    rateUnRated:'no ratings', usesSuffix:' uses', usesPrefix:'',
+    tryTitle:'🎯 Try it out', trySub:'Talk to this agent for <b>3 turns</b> free, no signup required',
+    tryEmpty:'Send a message to start chatting', tryPlaceholder:'Type a message…',
+    trySend:'Send', tryRemainingPre:'', tryRemainingPost:' turns left',
+    trySignupCTA:'Sign up free to continue →', tryThinking:'Thinking…', tryError:'Error',
+    tryNetErr:'Network error', tryDemoH:'Demo prompts',
+    ctaPri:'+ Add to my team', ctaSec:'Browse marketplace',
+    sShareTw:'🐦 X (Twitter)', sShareLine:'💬 LINE', sShareFb:'📘 Facebook',
+    sShareCopy:'🔗 Copy URL', sShareDone:'✓ Copied',
+    footPowered:'Powered by', footAbout:'About the service',
+    footTerms:'Terms', footPrivacy:'Privacy', footLegal:'Commerce',
+    langSwitch:'日本語', langSwitchHref:'?lang=ja', tweetSuffix:' — MY AI AGENT',
+    htmlLang:'en',
+  };
+  const t = lang === 'en' ? T_EN : T_JA;
+
   try{
     const found = await findAgentByListingId(listingId);
     if(!found || !found.agent.marketplace.is_listed){
       res.writeHead(404,{'Content-Type':'text/html; charset=utf-8'});
-      return res.end('<h1>Listing not found</h1><a href="/">Home</a>');
+      return res.end('<h1>'+t.notFound+'</h1><a href="/">Home</a>');
     }
     const d = publicListing(found.user, found.agent);
     // PNG for OG / Twitter (raster required). SVG variant available for inline preview.
@@ -985,15 +1060,18 @@ async function serveListingPage(res, listingId){
     const verifiedBadge = d.creator?.is_verified
       ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#2563eb;border-radius:50%;color:#fff;font-size:10px;font-weight:900;margin-left:4px;vertical-align:middle">✓</span>'
       : '';
-    const ratingTxt = d.rating>0 ? `★ ${d.rating.toFixed(1)} (${d.rating_count})` : '★ 未評価';
+    const ratingTxt = d.rating>0 ? `★ ${d.rating.toFixed(1)} (${d.rating_count})` : ('★ '+t.rateUnRated);
     const usesTxt = (d.uses||0).toLocaleString();
 
     const html = `<!DOCTYPE html>
-<html lang="ja">
+<html lang="${t.htmlLang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${titleH} — MY AI AGENT</title>
+<link rel="alternate" hreflang="ja" href="${pageUrl}?lang=ja">
+<link rel="alternate" hreflang="en" href="${pageUrl}?lang=en">
+<link rel="alternate" hreflang="x-default" href="${pageUrl}">
 <meta name="description" content="${descH}">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -1051,7 +1129,9 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
 .try-sub{font-size:12px;color:#6b4226;font-weight:600;margin-top:3px;}
 .try-sub b{color:#ea580c;}
 .try-msgs{display:flex;flex-direction:column;gap:8px;min-height:60px;max-height:380px;overflow-y:auto;padding:4px 2px;}
-.try-msgs:empty::before{content:'まずは下から話しかけてみてください';color:#9a6a4a;font-size:12.5px;font-weight:600;font-style:italic;padding:18px 4px;display:block;text-align:center;}
+.try-msgs:empty::before{content:'${t.tryEmpty.replace(/'/g,"\\'")}';color:#9a6a4a;font-size:12.5px;font-weight:600;font-style:italic;padding:18px 4px;display:block;text-align:center;}
+.lang-switch{position:absolute;top:24px;right:20px;font-size:12px;color:#6b4226;background:#fff;padding:6px 12px;border:1px solid rgba(180,120,80,.2);border-radius:8px;font-weight:700;text-decoration:none;}
+.lang-switch:hover{background:#faf3eb;color:#2d1a0e;}
 .try-bub{padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;max-width:88%;white-space:pre-wrap;word-break:break-word;}
 .try-bub.u{align-self:flex-end;background:rgba(251,146,60,.14);border:1px solid rgba(251,146,60,.25);color:#2d1a0e;}
 .try-bub.a{align-self:flex-start;background:#fff;border:1px solid rgba(180,120,80,.18);color:#2d1a0e;box-shadow:0 2px 6px rgba(180,120,80,.04);}
@@ -1072,7 +1152,8 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" style="position:relative">
+  <a href="${t.langSwitchHref}" class="lang-switch">${t.langSwitch}</a>
   <a href="/" class="brand">🍑 MY AI AGENT</a>
   <div class="thumb"><img src="${ogSvgUrl}" alt="${titleH}"></div>
   <div class="head">
@@ -1080,54 +1161,62 @@ body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;back
     <div class="info">
       <div class="cat">${catH}</div>
       <div class="nm">${titleH}</div>
-      <div class="by">クリエイター: <b>${handle}</b>${verifiedBadge}</div>
+      <div class="by">${t.creatorLbl}<b>${handle}</b>${verifiedBadge}</div>
     </div>
   </div>
   <div class="meta">
     <span class="pl">⭐ <b>${ratingTxt}</b></span>
-    <span class="pl">利用 <b>${usesTxt}</b> 回</span>
-    ${skills?`<span class="pl">スキル: <b>${_xmlEscape(skills)}</b></span>`:''}
-    ${d.agent?.chrome_enabled?'<span class="pl">🌐 <b>Chrome 連携</b></span>':''}
+    <span class="pl">${t.usesPrefix}<b>${usesTxt}</b>${t.usesSuffix}</span>
+    ${skills?`<span class="pl">${t.skillsLbl}<b>${_xmlEscape(skills)}</b></span>`:''}
+    ${d.agent?.chrome_enabled?`<span class="pl">🌐 <b>${t.chromeLbl}</b></span>`:''}
   </div>
   <div class="desc">${_xmlEscape(d.description||'')}</div>
 
   <!-- ▼ TRY-BEFORE-SIGNUP CHAT WIDGET ▼ -->
   <div class="try-card">
     <div class="try-head">
-      <div class="try-title">🎯 試してみる</div>
-      <div class="try-sub">サインアップ前に <b>3 ターン</b> まで無料で会話できます</div>
+      <div class="try-title">${t.tryTitle}</div>
+      <div class="try-sub">${t.trySub}</div>
     </div>
     <div class="try-msgs" id="tryMsgs"></div>
     ${d.demo_prompts && d.demo_prompts.length ? `<div class="try-demos">${d.demo_prompts.map((p,i)=>`<button class="try-demo" onclick="useTryDemo(${i})" data-demo="${_xmlEscape(p).replace(/"/g,'&quot;')}">▸ ${_xmlEscape(p)}</button>`).join('')}</div>`:''}
     <form class="try-form" onsubmit="sendTry(event)">
-      <input type="text" id="tryInput" placeholder="メッセージを入力…" autocomplete="off" maxlength="2000">
-      <button type="submit" id="tryBtn">送信</button>
+      <input type="text" id="tryInput" placeholder="${t.tryPlaceholder}" autocomplete="off" maxlength="2000">
+      <button type="submit" id="tryBtn">${t.trySend}</button>
     </form>
-    <div class="try-status" id="tryStatus">残り 3 ターン</div>
+    <div class="try-status" id="tryStatus">${t.tryRemainingPre}3${t.tryRemainingPost}</div>
   </div>
 
-  ${d.demo_prompts && d.demo_prompts.length ? `<div class="demos"><h2>デモプロンプト</h2>${d.demo_prompts.map(p=>`<div class="d">▸ ${_xmlEscape(p)}</div>`).join('')}</div>`:''}
+  ${d.demo_prompts && d.demo_prompts.length ? `<div class="demos"><h2>${t.tryDemoH}</h2>${d.demo_prompts.map(p=>`<div class="d">▸ ${_xmlEscape(p)}</div>`).join('')}</div>`:''}
   <div class="cta-row">
-    <a class="btn btn-pri" href="/app.html?listing=${listingId}">＋ チームに追加して続ける</a>
-    <a class="btn btn-sec" href="/">マーケットを見る</a>
+    <a class="btn btn-pri" href="/app.html?listing=${listingId}">${t.ctaPri}</a>
+    <a class="btn btn-sec" href="/">${t.ctaSec}</a>
   </div>
   <div class="share">
-    <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(d.title+' — MY AI AGENT')}" target="_blank" rel="noopener">🐦 X (Twitter)</a>
-    <a href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">💬 LINE</a>
-    <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">📘 Facebook</a>
-    <a href="javascript:void(0)" onclick="navigator.clipboard.writeText(location.href);this.textContent='✓ コピー済';">🔗 URL コピー</a>
+    <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(d.title+t.tweetSuffix)}" target="_blank" rel="noopener">${t.sShareTw}</a>
+    <a href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">${t.sShareLine}</a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">${t.sShareFb}</a>
+    <a href="javascript:void(0)" onclick="navigator.clipboard.writeText(location.href);this.textContent='${t.sShareDone}';">${t.sShareCopy}</a>
   </div>
   <div class="foot">
-    Powered by <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">サービスを知る</a><br>
+    ${t.footPowered} <a href="/">MY AI AGENT</a> ・ <a href="/lp.html">${t.footAbout}</a><br>
     <span style="margin-top:8px;display:inline-block">
-      <a href="/terms.html">利用規約</a> ・
-      <a href="/privacy.html">プライバシー</a> ・
-      <a href="/legal.html">特商法表記</a>
+      <a href="/terms.html">${t.footTerms}</a> ・
+      <a href="/privacy.html">${t.footPrivacy}</a> ・
+      <a href="/legal.html">${t.footLegal}</a>
     </span>
   </div>
 </div>
 <script>
 var LISTING_ID = ${JSON.stringify(listingId)};
+var I18N = ${JSON.stringify({
+  remainPre: t.tryRemainingPre,
+  remainPost: t.tryRemainingPost,
+  signupCTA: t.trySignupCTA,
+  thinking: t.tryThinking,
+  error: t.tryError,
+  netErr: t.tryNetErr,
+})};
 var TRY_MAX = 3;
 var tryMsgs = [];                                     // [{role,content}]
 var tryTurns = 0;
@@ -1141,8 +1230,8 @@ function _appendMsg(role, content, cls){
 function _setStatus(){
   var el=document.getElementById('tryStatus'); if(!el) return;
   var remaining = TRY_MAX - tryTurns;
-  if(remaining > 0) el.textContent = '残り ' + remaining + ' ターン';
-  else el.innerHTML = '<a class="try-cta" href="/auth.html?next=/l/'+LISTING_ID+'">無料登録して続けて使う →</a>';
+  if(remaining > 0) el.textContent = I18N.remainPre + remaining + I18N.remainPost;
+  else el.innerHTML = '<a class="try-cta" href="/auth.html?next=/l/'+LISTING_ID+'">'+I18N.signupCTA+'</a>';
 }
 function useTryDemo(idx){
   var btns = document.querySelectorAll('.try-demo');
@@ -1165,7 +1254,7 @@ async function sendTry(e){
   tryMsgs.push({role:'user', content:text});
   // thinking indicator
   var el=document.getElementById('tryMsgs');
-  var t=document.createElement('div'); t.className='try-bub a thinking'; t.textContent='考え中…'; el.appendChild(t); _scrollMsgs();
+  var t=document.createElement('div'); t.className='try-bub a thinking'; t.textContent=I18N.thinking; el.appendChild(t); _scrollMsgs();
   try{
     var r = await fetch('/api/listing/'+LISTING_ID+'/preview', {
       method:'POST',
@@ -1173,11 +1262,11 @@ async function sendTry(e){
       body: JSON.stringify({messages: tryMsgs.slice(0,-1), message: text}),
     });
     var ct = (r.headers.get('content-type')||'').toLowerCase();
-    if(!ct.includes('application/json')){ throw new Error('通信エラー'); }
+    if(!ct.includes('application/json')){ throw new Error(I18N.netErr); }
     var data = await r.json();
     if(t && t.parentNode) t.parentNode.removeChild(t);
     if(!r.ok){
-      _appendMsg('assistant', data.error||'エラー', 'thinking');
+      _appendMsg('assistant', data.error||I18N.error, 'thinking');
       if(data.preview_exhausted){ tryTurns = TRY_MAX; _setStatus(); }
       return;
     }
@@ -1187,7 +1276,7 @@ async function sendTry(e){
     _setStatus();
   }catch(err){
     if(t && t.parentNode) t.parentNode.removeChild(t);
-    _appendMsg('assistant', 'エラー: ' + err.message, 'thinking');
+    _appendMsg('assistant', I18N.error + ': ' + err.message, 'thinking');
   } finally {
     inp.disabled=false; btn.disabled=false; inp.focus();
     if(tryTurns >= TRY_MAX){ inp.disabled=true; btn.disabled=true; _setStatus(); }
@@ -1581,6 +1670,41 @@ async function handleAPI(req,res,pathname,method,ip){
     }
   }
 
+  // ── POST /api/contact (PUBLIC — no auth) ───────────────────
+  // body: {name, email, subject, message}
+  if(pathname==='/api/contact' && method==='POST'){
+    if(!rateLimit('contact:'+ip, 5, 3600000)) return jres(res,429,{error:'送信回数の上限に達しました。しばらくしてから再度お試しください。'});
+    let cBody; try{ cBody = await readBody(req); }catch(e){ return jres(res,400,{error:'入力エラー'}); }
+    const cName = String(cBody.name||'').trim().slice(0,100);
+    const cEmail = String(cBody.email||'').trim().slice(0,200);
+    const cSubject = String(cBody.subject||'').trim().slice(0,200);
+    const cMessage = String(cBody.message||'').trim();
+    if(!cName || !cEmail || !cSubject || !cMessage){
+      return jres(res,400,{error:'すべての項目を入力してください'});
+    }
+    if(cMessage.length < 10) return jres(res,400,{error:'メッセージは 10 文字以上で入力してください'});
+    if(cMessage.length > 5000) return jres(res,400,{error:'メッセージは 5000 文字以下で入力してください'});
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cEmail)) return jres(res,400,{error:'メールアドレスの形式が不正です'});
+
+    const escH = (s)=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    const html = `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+      <h2 style="color:#ea580c">お問い合わせ受付</h2>
+      <p><b>名前:</b> ${escH(cName)}</p>
+      <p><b>メール:</b> ${escH(cEmail)}</p>
+      <p><b>件名:</b> ${escH(cSubject)}</p>
+      <hr style="border:0;border-top:1px solid #eee;margin:18px 0">
+      <pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.7">${escH(cMessage)}</pre>
+      <hr style="border:0;border-top:1px solid #eee;margin:18px 0">
+      <p style="color:#888;font-size:11px">IP: ${escH(ip||'-')}</p>
+    </div>`;
+    try{
+      await sendEmail('kota.takeuchi@protocol.ooo', '【MY AI AGENT】お問い合わせ: '+cSubject, html);
+    }catch(e){
+      console.error('[contact] send failed:', e.message);
+    }
+    return jres(res,200,{ok:true});
+  }
+
   // ── Auth required below ────────────────────────────────────
   const claims=getAuth(req);
   if(!claims)return jres(res,401,{error:'認証が必要です'});
@@ -1605,7 +1729,13 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
     if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
-    const agent={id:'ag_'+crypto.randomUUID(),avatar:avatar||'🤖',
+    let _av = String(avatar||'🤖').trim();
+    if(_av.startsWith('data:image/')){
+      if(_av.length > 500*1024) return jres(res,400,{error:'アバター画像は 500KB 以下にしてください'});
+    } else if(_av.length > 8){
+      _av = '🤖';
+    }
+    const agent={id:'ag_'+crypto.randomUUID(),avatar:_av,
       name:name.trim(),skills,persona:persona?.trim()||'',
       chrome_enabled:!!chrome_enabled,
       history:[],created_at:new Date().toISOString()};
@@ -1618,15 +1748,51 @@ async function handleAPI(req,res,pathname,method,ip){
   const pam=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(pam&&method==='PATCH'){
     const agId=pam[1];
-    const{name,persona,chrome_enabled}=await readBody(req);
+    const{name,persona,chrome_enabled,avatar}=await readBody(req);
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
     if(persona!==undefined)ag.persona=persona;
     if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
+    if(avatar!==undefined){
+      // Accept either a single emoji/short string or a data:image/* base64 URI (≤500KB)
+      const a = String(avatar||'').trim();
+      if(a.startsWith('data:image/')){
+        if(a.length > 500*1024) return jres(res,400,{error:'アバター画像は 500KB 以下にしてください'});
+        ag.avatar = a;
+      } else if(a.length <= 8){
+        ag.avatar = a || '🤖';
+      } else {
+        return jres(res,400,{error:'アバターの形式が不正です'});
+      }
+    }
     await DB.save(user);
     return jres(res,200,{agent:ag});
   }
+  // ── POST /api/agents/reorder ───────────────────────────────
+  // body: {order: [agentId, ...]}  — preserves only known IDs, appends any missing
+  if(pathname==='/api/agents/reorder' && method==='POST'){
+    const body = await readBody(req);
+    const ids = Array.isArray(body.order) ? body.order.filter(x=>typeof x==='string') : null;
+    if(!ids) return jres(res,400,{error:'order 配列が必要です'});
+    const cur = user.agents || [];
+    const byId = new Map(cur.map(a=>[a.id, a]));
+    const reordered = [];
+    const seen = new Set();
+    for(const id of ids){
+      if(seen.has(id)) continue;
+      const a = byId.get(id);
+      if(a){ reordered.push(a); seen.add(id); }
+    }
+    // Append any agents not in the order list (preserve original relative order)
+    for(const a of cur){
+      if(!seen.has(a.id)) reordered.push(a);
+    }
+    user.agents = reordered;
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
   // ── DELETE /api/agents/:id ─────────────────────────────────
   const dm=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(dm&&method==='DELETE'){
@@ -2738,7 +2904,28 @@ const server=http.createServer(async(req,res)=>{
   // /l/:listing_id → public marketplace listing landing (with OG meta SSR)
   const lRoute=pathname.match(/^\/l\/(ls_[a-z0-9_-]+)\/?$/);
   if(lRoute){
-    return serveListingPage(res, lRoute[1]);
+    // Detect language preference: ?lang=en wins, else Accept-Language
+    let lang = 'ja';
+    try{
+      const qs = new url.URL(req.url, APP_URL).searchParams;
+      const explicit = (qs.get('lang')||'').toLowerCase();
+      if(explicit === 'en' || explicit === 'ja'){ lang = explicit; }
+      else {
+        const al = (req.headers['accept-language']||'').toLowerCase();
+        if(al && !al.includes('ja') && al.includes('en')) lang = 'en';
+      }
+    }catch(e){}
+    return serveListingPage(res, lRoute[1], lang);
+  }
+
+  // /sitemap.xml → static + every live public listing (for SEO)
+  if(pathname === '/sitemap.xml'){
+    return serveSitemapXml(res);
+  }
+  // /robots.txt → allow crawlers, point to sitemap
+  if(pathname === '/robots.txt'){
+    res.writeHead(200, {'Content-Type':'text/plain; charset=utf-8','Cache-Control':'public, max-age=3600'});
+    return res.end('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app.html\nDisallow: /auth.html\nSitemap: ' + APP_URL + '/sitemap.xml\n');
   }
   // index.html → redirect to lp
   let fp=path.join(PUBLIC_DIR,pathname==='/'?'lp.html':pathname);

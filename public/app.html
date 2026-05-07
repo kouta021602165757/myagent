@@ -103,6 +103,15 @@ input,textarea{font-family:var(--sans);}
   border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;
   font-size:22px;flex-shrink:0;
 }
+.ag-handle{
+  width:14px;flex-shrink:0;color:var(--text3);font-size:14px;line-height:1;letter-spacing:-2px;
+  cursor:grab;opacity:0;transition:opacity .15s;user-select:none;
+}
+.ag-item:hover .ag-handle{opacity:.55;}
+.ag-item.dragging{opacity:.45;cursor:grabbing;}
+.ag-item.drop-target{box-shadow:inset 0 2px 0 var(--peach);}
+.ag-item[draggable="true"]{cursor:grab;}
+.ag-item[draggable="true"]:active{cursor:grabbing;}
 .ag-item.on .ag-icon{border-color:rgba(200,255,87,.25);}
 .ag-meta{min-width:0;flex:1;}
 .ag-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;}
@@ -677,8 +686,9 @@ input,textarea{font-family:var(--sans);}
 .conf-ic{
   width:64px;height:64px;border-radius:18px;background:var(--cream3);
   border:1px solid rgba(251,146,60,.3);display:flex;align-items:center;justify-content:center;
-  font-size:32px;flex-shrink:0;
+  font-size:32px;flex-shrink:0;overflow:hidden;
 }
+.ag-icon,.ct-icon,.m-av,.mc-av,.ld-av,.cl-av,.av-preview,.preset-emo,.listing-av-img,.head .av{overflow:hidden;}
 .conf-nm{font-size:20px;font-weight:700;color:var(--text);}
 .conf-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
 .conf-per{
@@ -1378,8 +1388,13 @@ body{color:#f0f0f8;}
       <!-- Step 1: Avatar -->
       <div id="ws1" style="display:none">
         <div class="step-h">アイコンを選ぶ</div>
-        <div class="step-s">エージェントの見た目を決めます</div>
+        <div class="step-s">絵文字から選ぶか、画像をアップロードします</div>
         <div class="av-preview" id="avPrev">🤖</div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px">
+          <input type="file" id="avFile" accept="image/*" style="display:none" onchange="onAvatarUpload(event,'wizard')">
+          <button class="btn-back" type="button" onclick="document.getElementById('avFile').click()" style="font-size:12.5px;padding:8px 14px">📸 画像をアップロード</button>
+          <button class="btn-back" type="button" onclick="resetAvatarToEmoji('wizard')" style="font-size:12.5px;padding:8px 14px">↻ 絵文字に戻す</button>
+        </div>
         <div class="av-grid" id="avGrid"></div>
         <div class="btn-row">
           <button class="btn-back" onclick="wStep(0)">← 戻る</button>
@@ -2062,11 +2077,13 @@ body{color:#f0f0f8;}
   </div>
   <div style="padding:18px;display:flex;flex-direction:column;gap:14px;flex:1;overflow-y:auto">
     <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(251,146,60,.06);border-radius:12px;border:1px solid rgba(251,146,60,.12)">
-      <div id="editAgAvatar" style="font-size:28px"></div>
-      <div>
+      <div id="editAgAvatar" style="font-size:28px;width:44px;height:44px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
         <div id="editAgName2" style="font-size:14px;font-weight:700;color:var(--text)"></div>
         <div id="editAgSkills" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
       </div>
+      <input type="file" id="avFileEdit" accept="image/*" style="display:none" onchange="onAvatarUpload(event,'edit')">
+      <button type="button" onclick="document.getElementById('avFileEdit').click()" title="アバター画像をアップロード" style="background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:7px 9px;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">📸</button>
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">エージェント名</label>
@@ -2618,8 +2635,9 @@ function updateBalance(){
 
 function renderAgList(){
   document.getElementById('agList').innerHTML=agents.map(a=>`
-    <div class="ag-item${a.id===activeId?' on':''}" id="ai-${a.id}" onclick="openAgent('${a.id}')">
-      <div class="ag-icon">${a.avatar}</div>
+    <div class="ag-item${a.id===activeId?' on':''}" id="ai-${a.id}" data-agid="${esc(a.id)}" draggable="true" onclick="openAgent('${a.id}')" ondragstart="agDragStart(event)" ondragover="agDragOver(event)" ondragleave="agDragLeave(event)" ondrop="agDrop(event)" ondragend="agDragEnd(event)">
+      <div class="ag-handle" title="ドラッグして並び替え" aria-hidden="true">⋮⋮</div>
+      <div class="ag-icon">${_avHTML(a.avatar)}</div>
       <div class="ag-meta">
         <div class="ag-name">${esc(a.name)}</div>
         <div class="ag-skill">${a.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')}</div>
@@ -2627,6 +2645,50 @@ function renderAgList(){
       ${a.chrome_enabled?'<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>':''}
       <div class="live-dot"></div>
     </div>`).join('');
+}
+
+/* ── Drag-and-drop reorder ─────────────────────────────────── */
+var _dragSrcId = null;
+function agDragStart(ev){
+  var el = ev.currentTarget;
+  _dragSrcId = el.dataset.agid;
+  el.classList.add('dragging');
+  try{ ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', _dragSrcId); }catch(e){}
+}
+function agDragOver(ev){
+  if(!_dragSrcId) return;
+  ev.preventDefault();
+  try{ ev.dataTransfer.dropEffect = 'move'; }catch(e){}
+  var el = ev.currentTarget;
+  if(el.dataset.agid !== _dragSrcId) el.classList.add('drop-target');
+}
+function agDragLeave(ev){
+  ev.currentTarget.classList.remove('drop-target');
+}
+async function agDrop(ev){
+  ev.preventDefault();
+  var dst = ev.currentTarget;
+  dst.classList.remove('drop-target');
+  if(!_dragSrcId) return;
+  var dstId = dst.dataset.agid;
+  if(!dstId || dstId === _dragSrcId) return;
+  // Reorder local agents[]
+  var srcIdx = agents.findIndex(function(a){return a.id === _dragSrcId;});
+  var dstIdx = agents.findIndex(function(a){return a.id === dstId;});
+  if(srcIdx < 0 || dstIdx < 0) return;
+  var moved = agents.splice(srcIdx, 1)[0];
+  agents.splice(dstIdx, 0, moved);
+  renderAgList();
+  // Persist server-side (best-effort)
+  try{ await api('POST','/api/agents/reorder', {order: agents.map(function(a){return a.id;})}); }
+  catch(err){ showToast(err.message||'並び替えの保存に失敗','ng'); }
+}
+function agDragEnd(ev){
+  document.querySelectorAll('.ag-item').forEach(function(el){
+    el.classList.remove('dragging');
+    el.classList.remove('drop-target');
+  });
+  _dragSrcId = null;
 }
 
 /* ── Open agent / chat ─────────────────────────────── */
@@ -2644,7 +2706,7 @@ function openAgent(id){
     topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+(isJa?'Google Chrome 連携 ON':'Google Chrome integration ON')+'">🌐 Google Chrome</span>';
   }
   document.getElementById('chatTop').innerHTML=
-    '<div class="ct-icon">'+ag.avatar+'</div>'+
+    '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
       '<div class="ct-name"><span class="live-status"></span>'+esc(ag.name)+'</div>'+
       '<div class="ct-pills">'+topPills+'</div>'+
@@ -2786,7 +2848,7 @@ function _renderToolLog(log){
 
 function _renderMsg(role, ag, content, time, images, idx, tool_log){
   const isU = role==='user';
-  const av = isU ? (me?(me.name||me.email||'?').charAt(0).toUpperCase():'?') : (ag.avatar||'🤖');
+  const av = isU ? esc((me?(me.name||me.email||'?').charAt(0).toUpperCase():'?')) : _avHTML(ag.avatar);
   const name = isU ? (isJa?'あなた':'You') : (ag.name||'');
   const cls = 'm '+(isU?'u':'a');
   let imgHtml='';
@@ -2860,7 +2922,7 @@ async function regenerateMsg(btn){
   var tEl=document.createElement('div');
   tEl.className='m a'; tEl.id='thinking';
   var _thinkLabel = ag.chrome_enabled ? '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--peach-dark);font-weight:700">🌐 '+(isJa?'ブラウジング中':'Browsing')+'...</span><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>' : '<div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
-  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
+  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+_avHTML(ag.avatar)+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
   _scrollMsgsToEnd();
   try{
@@ -2984,6 +3046,99 @@ function useChip(t){ document.getElementById('ci').value=t; sendMsg(); }
 var _pendingImgs = [];
 
 // 添付ファイル選択ハンドラ（画像 + PDF対応）
+/* ── Avatar upload (image) ──────────────────────────────────── */
+async function onAvatarUpload(e, mode){
+  var f = (e.target.files||[])[0];
+  if(!f) return;
+  if(!/^image\//.test(f.type)){ showToast(isJa?'画像を選んでください':'Pick an image','ng'); return; }
+  if(f.size > 5*1024*1024){ showToast(isJa?'5MB 以下にしてください':'Max 5MB','ng'); return; }
+  try{
+    var dataUri = await _resizeImageToDataURL(f, 256, 0.85);
+    if(mode === 'wizard'){
+      NA.avatar = dataUri;
+      var p = document.getElementById('avPrev'); if(p) p.innerHTML = _avHTML(dataUri);
+      // Deselect emoji cells
+      document.querySelectorAll('.av-cell').forEach(function(b){ b.classList.remove('sel'); });
+    } else if(mode === 'edit'){
+      var id = window._editAgentId;
+      if(!id){ showToast('エージェントが見つかりません','ng'); return; }
+      // Optimistic UI
+      var ag = agents.find(function(a){return a.id===id;});
+      if(ag) ag.avatar = dataUri;
+      var av = document.getElementById('editAgAvatar'); if(av) av.innerHTML = _avHTML(dataUri);
+      try{
+        await api('PATCH','/api/agents/'+id, {avatar:dataUri});
+        showToast(isJa?'アバターを更新しました':'Avatar updated','ok');
+        renderAgList();
+        if(activeId===id) openAgent(id);
+      }catch(err){
+        showToast(err.message||'更新失敗','ng');
+      }
+    }
+  }catch(err){ showToast(err.message||'失敗','ng'); }
+  e.target.value = '';
+}
+function resetAvatarToEmoji(mode){
+  if(mode === 'wizard'){
+    NA.avatar = '🤖';
+    var p = document.getElementById('avPrev'); if(p) p.innerHTML = _avHTML('🤖');
+    document.querySelectorAll('.av-cell').forEach(function(b,i){ b.classList.toggle('sel', AVATARS[i] === '🤖'); });
+  }
+}
+
+/* ── Avatar rendering helper ────────────────────────────────── */
+/* Returns HTML for an avatar value: data:image/* URI → <img>, else emoji text */
+function _avHTML(av){
+  av = String(av==null?'🤖':av);
+  if(av.startsWith('data:image/')){
+    return '<img src="'+av+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block">';
+  }
+  return esc(av);
+}
+
+/* Read a File as base64 data URI, with size cap. Resolves to data: URI string. */
+function _readFileAsDataURL(file, maxBytes){
+  return new Promise(function(resolve,reject){
+    if(maxBytes && file.size > maxBytes){
+      reject(new Error('ファイルが大きすぎます (最大 '+Math.round(maxBytes/1024)+'KB)'));
+      return;
+    }
+    var fr = new FileReader();
+    fr.onload = function(e){ resolve(e.target.result); };
+    fr.onerror = function(){ reject(new Error('読み込み失敗')); };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* Resize image to a square thumbnail (max NxN, JPEG). Resolves data: URI */
+function _resizeImageToDataURL(file, maxSize, quality){
+  maxSize = maxSize || 256;
+  quality = quality || 0.85;
+  return new Promise(function(resolve,reject){
+    var fr = new FileReader();
+    fr.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.width, h = img.height;
+        // Square crop center, then scale to maxSize
+        var side = Math.min(w, h);
+        var sx = (w - side) / 2, sy = (h - side) / 2;
+        var canvas = document.createElement('canvas');
+        canvas.width = canvas.height = maxSize;
+        var ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, maxSize, maxSize);
+        try{ resolve(canvas.toDataURL('image/jpeg', quality)); }
+        catch(err){ reject(err); }
+      };
+      img.onerror = function(){ reject(new Error('画像の読み込みに失敗')); };
+      img.src = e.target.result;
+    };
+    fr.onerror = function(){ reject(new Error('読み込み失敗')); };
+    fr.readAsDataURL(file);
+  });
+}
+
 /* ── Slash commands (/search etc.) ──────────────────────────── */
 async function _runSlashCommand(text){
   // /search <query> — Web 検索結果を context として prepend
@@ -3144,7 +3299,7 @@ async function sendMsg(){
   const tEl=document.createElement('div');
   tEl.className='m a'; tEl.id='thinking';
   var _thinkLabel = ag.chrome_enabled ? '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--peach-dark);font-weight:700">🌐 '+(isJa?'ブラウジング中':'Browsing')+'...</span><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>' : '<div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
-  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
+  tEl.innerHTML='<div class="m-meta"><div class="m-av">'+_avHTML(ag.avatar)+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
   _scrollMsgsToEnd();
   // /search slash-command: prepend Web search results as context
@@ -3292,7 +3447,7 @@ function _resetWizardState(){
   NA={avatar:'🤖',name:'',skills:[],persona:'',purpose:'',duties:'',chrome_enabled:false};
   _selectedPresetIdx=-1;
   ['wName','wPurpose','wDuties'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent='🤖';
+  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.innerHTML=_avHTML('🤖');
   document.querySelectorAll('.av-cell').forEach(function(b,i){b.classList.toggle('sel',i===0);});
   document.querySelectorAll('.sk-card').forEach(function(b){b.classList.remove('sel');});
   document.querySelectorAll('.preset-card').forEach(function(b){b.classList.remove('sel');});
@@ -3345,7 +3500,7 @@ function useSelectedPreset(){
   NA={avatar:p.avatar,name:p.name,skills:p.skills.slice(),persona:p.persona,purpose:'',duties:'',chrome_enabled:!!p.chrome_enabled};
   // Sync form fields so back-navigation reflects preset values
   var wn=document.getElementById('wName'); if(wn) wn.value=p.name;
-  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.textContent=p.avatar;
+  var avPrev=document.getElementById('avPrev'); if(avPrev) avPrev.innerHTML=_avHTML(p.avatar);
   document.querySelectorAll('.av-cell').forEach(function(b,i){
     b.classList.toggle('sel',AVATARS[i]===p.avatar);
   });
@@ -3493,7 +3648,7 @@ function renderMarket(){
     return '<div class="market-card-wrap" style="position:relative">'
       + '<button type="button" class="market-card" data-id="'+esc(m.listing_id)+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
       + ribbon
-      + '<div class="mc-head"><div class="mc-av">'+(m.agent?.avatar||'🤖')+'</div>'
+      + '<div class="mc-head"><div class="mc-av">'+_avHTML(m.agent?.avatar)+'</div>'
       + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
       + '<div class="mc-desc">'+esc(m.description)+'</div>'
       + (tagsHtml ? '<div class="mc-tags">'+tagsHtml+'</div>' : '')
@@ -3607,7 +3762,7 @@ function _renderListingDetail(d){
   }).join('');
   return ''
     + '<div class="ld-hero">'
-      + '<div class="ld-av">'+(d.agent?.avatar||'🤖')+'</div>'
+      + '<div class="ld-av">'+_avHTML(d.agent?.avatar)+'</div>'
       + '<div class="ld-info">'
         + '<div class="ld-cat">'+esc(d.category_label||'')+'</div>'
         + '<div class="ld-name">'+esc(d.title||'')+'</div>'
@@ -3733,7 +3888,7 @@ function openListingForm(agentId){
   _listingAgentId = agentId;
   closeEditAgent();
 
-  document.getElementById('listingAgentAv').textContent = ag.avatar||'🤖';
+  document.getElementById('listingAgentAv').innerHTML = _avHTML(ag.avatar);
   document.getElementById('listingAgentName').textContent = ag.name||'';
   var sknames = (ag.skills||[]).map(function(s){var sk=SKILLS.find(function(x){return x.id===s;});return sk?sk.name:s;}).join(' · ');
   document.getElementById('listingAgentSk').textContent = sknames;
@@ -3904,7 +4059,8 @@ function openEditAgent(id){
   const ag = agents.find(a=>a.id===(id||activeId));
   if(!ag) return;
   window._editAgentId = ag.id;
-  document.getElementById('editAgAvatar').textContent = ag.avatar;
+  var _eAv = document.getElementById('editAgAvatar');
+  if(_eAv){ _eAv.innerHTML = _avHTML(ag.avatar); }
   document.getElementById('editAgName2').textContent = ag.name;
   document.getElementById('editAgSkills').textContent = ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ');
   document.getElementById('editName').value = ag.name;
@@ -3994,7 +4150,7 @@ function buildAvGrid(){
 function pickAv(btn,e){
   document.querySelectorAll('.av-cell').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel'); NA.avatar=e;
-  document.getElementById('avPrev').textContent=e;
+  var p=document.getElementById('avPrev'); if(p) p.innerHTML=_avHTML(e);
 }
 
 function buildSkGrid(){
@@ -4045,7 +4201,7 @@ function buildConf(){
   var pills=sns.map(n=>`<span class="pill">${n}</span>`).join('');
   if(NA.chrome_enabled) pills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)">🌐 Google Chrome 連携</span>';
   document.getElementById('confHero').innerHTML=`
-    <div class="conf-ic">${NA.avatar}</div>
+    <div class="conf-ic">${_avHTML(NA.avatar)}</div>
     <div><div class="conf-nm">${esc(NA.name)}</div>
     <div class="conf-pills">${pills}</div></div>`;
   let perHtml='';
@@ -4569,14 +4725,14 @@ async function loadCreatorDashboard(){
       var stLbl = l.is_listed ? '● 公開中' : (l.status==='paused' ? '⏸ 停止中' : '— 未公開');
       var visIc = l.visibility==='unlisted' ? '🔗' : '🌐';
       return '<div class="cl-row">'
-        + '<div class="cl-av">'+(l.agent_avatar||'🤖')+'</div>'
+        + '<div class="cl-av">'+_avHTML(l.agent_avatar)+'</div>'
         + '<div class="cl-meta">'
           + '<div class="cl-name">'+esc(l.title||l.agent_name||'')+'</div>'
           + '<div class="cl-sub"><span class="cl-st '+stCls+'">'+stLbl+'</span><span>'+visIc+' '+(l.visibility==='unlisted'?'限定':'公開')+'</span><span>利用 '+(l.uses_count||0)+' 回</span></div>'
         + '</div>'
         + '<div class="cl-actions">'
           + '<button onclick="openListingForm(\''+esc(l.agent_id)+'\')">編集</button>'
-          + (l.is_listed ? '<button class="pri" onclick="navigator.clipboard.writeText(location.origin+\'/?listing=\'+\''+esc(l.listing_id)+'\');showToast(\'出店リンクをコピーしました\',\'ok\')">共有</button>' : '<button class="pri" onclick="openListingForm(\''+esc(l.agent_id)+'\')">公開</button>')
+          + (l.is_listed ? '<button class="pri" onclick="openShareListing(\''+esc(l.listing_id)+'\',\''+esc(l.title||l.agent_name||'').replace(/\\|\x27/g,"\\$&")+'\')">共有</button>' : '<button class="pri" onclick="openListingForm(\''+esc(l.agent_id)+'\')">公開</button>')
         + '</div>'
       + '</div>';
     }).join('');
@@ -4735,7 +4891,7 @@ async function openCreatorProfile(handle){
       var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
       var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
       return '<button class="market-card" onclick="cloneFromProfile(\''+esc(m.listing_id)+'\')">'
-        + '<div class="mc-head"><div class="mc-av">'+(m.agent?.avatar||'🤖')+'</div>'
+        + '<div class="mc-head"><div class="mc-av">'+_avHTML(m.agent?.avatar)+'</div>'
         + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
         + '<div class="mc-desc">'+esc(m.description)+'</div>'
         + '<div class="mc-meta">'+stars+'<span>'+uses+'</span></div>'

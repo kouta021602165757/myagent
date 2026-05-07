@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>お問い合わせ — MY AI AGENT</title>
+<meta name="description" content="MY AI AGENT へのお問い合わせフォーム。サポート・機能要望・出店相談など。">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--cream:#fdf8f3;--cream2:#faf3eb;
+  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;--wire:rgba(180,120,80,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;line-height:1.7;}
+.wrap{max-width:560px;margin:0 auto;padding:40px 22px 80px;}
+.brand{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--peach-dark);letter-spacing:.04em;margin-bottom:30px;text-decoration:none;}
+h1{font-size:28px;font-weight:900;margin-bottom:6px;letter-spacing:-.01em;}
+.lead{font-size:13px;color:var(--text3);font-weight:600;margin-bottom:30px;}
+.row{margin-bottom:18px;}
+label{display:block;font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px;letter-spacing:.02em;}
+label .req{color:#dc2626;font-weight:800;margin-left:3px;}
+input,textarea,select{
+  width:100%;padding:11px 14px;border:1px solid rgba(180,120,80,.25);border-radius:11px;
+  background:#fff;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;
+}
+input:focus,textarea:focus,select:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.1);}
+textarea{min-height:160px;line-height:1.7;resize:vertical;}
+.hint{font-size:11.5px;color:var(--text3);font-weight:600;margin-top:5px;}
+.btn{
+  display:block;width:100%;padding:14px;background:var(--peach);color:#fff;
+  border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;
+  font-family:inherit;transition:all .14s;margin-top:8px;
+}
+.btn:hover{background:var(--peach-dark);transform:translateY(-1px);box-shadow:0 8px 18px rgba(251,146,60,.3);}
+.btn:disabled{opacity:.6;cursor:wait;transform:none;box-shadow:none;}
+.success{
+  text-align:center;padding:40px 24px;background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.25);border-radius:16px;
+}
+.success .ic{font-size:48px;margin-bottom:12px;}
+.success h2{font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px;}
+.success p{font-size:13.5px;color:var(--text2);font-weight:600;}
+.err{
+  margin-bottom:14px;padding:11px 14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+  border-radius:10px;color:#dc2626;font-size:13px;font-weight:700;
+}
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--wire);font-size:12px;color:var(--text3);font-weight:600;text-align:center;}
+.foot a{color:var(--peach-dark);font-weight:700;text-decoration:none;}
+.alt-channels{margin-top:24px;padding:14px 18px;background:var(--cream2);border:1px solid var(--wire);border-radius:11px;}
+.alt-channels h3{font-size:12px;font-weight:800;color:var(--text2);margin-bottom:8px;letter-spacing:.04em;}
+.alt-channels p{font-size:12.5px;color:var(--text2);line-height:1.7;}
+.alt-channels a{color:var(--peach-dark);font-weight:700;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="brand">🍑 MY AI AGENT</a>
+  <h1>お問い合わせ</h1>
+  <div class="lead">サポート・機能要望・出店に関するご相談など、お気軽にどうぞ。<br>通常 3 営業日以内にメールでご返信いたします。</div>
+
+  <form id="contactForm" onsubmit="submitContact(event)">
+    <div id="errBox" class="err" style="display:none"></div>
+    <div class="row">
+      <label>お名前 <span class="req">*</span></label>
+      <input id="cName" type="text" maxlength="100" required>
+    </div>
+    <div class="row">
+      <label>メールアドレス <span class="req">*</span></label>
+      <input id="cEmail" type="email" maxlength="200" required>
+      <div class="hint">返信先として使用します</div>
+    </div>
+    <div class="row">
+      <label>件名 <span class="req">*</span></label>
+      <select id="cSubject" required>
+        <option value="">— 選択してください —</option>
+        <option>サポート（ログイン・課金・不具合）</option>
+        <option>機能要望</option>
+        <option>マーケットプレイス出店相談</option>
+        <option>パートナーシップ・取材</option>
+        <option>個人情報の開示・削除請求</option>
+        <option>その他</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>お問い合わせ内容 <span class="req">*</span></label>
+      <textarea id="cMessage" maxlength="5000" required placeholder="できるだけ具体的にご記入ください。バグの場合は、再現手順 / ブラウザ / OS をお知らせいただけると助かります。"></textarea>
+      <div class="hint" id="charCount">0 / 5000 文字</div>
+    </div>
+    <button class="btn" type="submit" id="submitBtn">送信する</button>
+  </form>
+
+  <div id="successBox" class="success" style="display:none">
+    <div class="ic">📩</div>
+    <h2>送信しました</h2>
+    <p>3 営業日以内にメールでご返信いたします。<br>しばらくお待ちください。</p>
+    <a href="/" style="display:inline-block;margin-top:20px;padding:10px 22px;background:var(--peach-dark);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px">← トップに戻る</a>
+  </div>
+
+  <div class="alt-channels">
+    <h3>📧 直接メールでも受け付けます</h3>
+    <p>急ぎの場合は <a href="mailto:kota.takeuchi@protocol.ooo">kota.takeuchi@protocol.ooo</a> へ直接ご連絡ください。</p>
+  </div>
+
+  <div class="foot">
+    <a href="/terms.html">利用規約</a> ・
+    <a href="/privacy.html">プライバシー</a> ・
+    <a href="/legal.html">特商法表記</a><br>
+    <span style="margin-top:10px;display:inline-block">© 株式会社 PROTOCOL — MY AI AGENT</span>
+  </div>
+</div>
+
+<script>
+var msgEl = document.getElementById('cMessage');
+var counter = document.getElementById('charCount');
+msgEl.addEventListener('input', function(){
+  counter.textContent = msgEl.value.length + ' / 5000 文字';
+});
+
+async function submitContact(e){
+  e.preventDefault();
+  var name = document.getElementById('cName').value.trim();
+  var email = document.getElementById('cEmail').value.trim();
+  var subject = document.getElementById('cSubject').value.trim();
+  var message = msgEl.value.trim();
+  var errBox = document.getElementById('errBox');
+  errBox.style.display = 'none';
+  if(!name || !email || !subject || !message){
+    errBox.textContent = 'すべての項目を入力してください';
+    errBox.style.display = 'block'; return;
+  }
+  if(message.length < 10){
+    errBox.textContent = 'メッセージは 10 文字以上で入力してください';
+    errBox.style.display = 'block'; return;
+  }
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '送信中…';
+  try{
+    var r = await fetch('/api/contact', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, email, subject, message}),
+    });
+    var data = await r.json();
+    if(!r.ok) throw new Error(data.error||'送信に失敗しました');
+    document.getElementById('contactForm').style.display = 'none';
+    document.querySelector('.alt-channels').style.display = 'none';
+    document.getElementById('successBox').style.display = 'block';
+    window.scrollTo(0,0);
+  }catch(err){
+    errBox.textContent = err.message || '送信に失敗しました。時間をおいて再度お試しください。';
+    errBox.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '送信する';
+  }
+}
+</script>
+</body>
+</html>

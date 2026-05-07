@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全体の流れ — インストールから日常利用まで</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+.shell{max-width:1100px;margin:0 auto;padding:48px 24px 80px;}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-size:13px;color:var(--text3);font-weight:600;flex-wrap:wrap;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+
+.h1{font-size:38px;font-weight:900;letter-spacing:.005em;margin-bottom:10px;line-height:1.15;}
+.h1 .accent{
+  background:linear-gradient(90deg,var(--peach),var(--peach-dark));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{font-size:16px;color:var(--text2);margin-bottom:14px;line-height:1.7;}
+.sub b{color:var(--text);}
+
+/* ═══ Timeline ═══ */
+.tl{display:flex;gap:8px;margin:36px 0 60px;flex-wrap:wrap;}
+.tl-pill{
+  display:flex;flex-direction:column;align-items:flex-start;
+  background:#fff;border:1px solid var(--line);border-radius:11px;
+  padding:10px 14px;flex:1;min-width:160px;
+}
+.tl-pill .when{font-family:var(--mono);font-size:10.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.04em;}
+.tl-pill .what{font-size:12.5px;font-weight:800;color:var(--text);margin-top:4px;}
+.tl-pill .desc{font-size:11px;color:var(--text3);margin-top:3px;line-height:1.5;}
+
+/* ═══ Phase block ═══ */
+.phase{margin:48px 0 60px;}
+.phase-h{
+  display:flex;align-items:center;gap:14px;margin-bottom:18px;
+}
+.phase-num{
+  width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;
+  box-shadow:0 6px 20px rgba(251,146,60,.32);
+}
+.phase-meta{flex:1;}
+.phase-ttl{font-size:22px;font-weight:900;color:var(--text);line-height:1.25;}
+.phase-sub{font-size:12.5px;color:var(--text3);margin-top:2px;font-weight:600;}
+.phase-tag{
+  background:var(--peach-light);color:var(--peach-dark);
+  padding:4px 12px;border-radius:7px;font-size:11px;font-weight:800;letter-spacing:.04em;
+}
+.peach-light{--peach-light:#fde8d8;}
+
+/* ═══ Scene (mini frame) ═══ */
+.scene{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  overflow:hidden;margin-bottom:14px;box-shadow:0 6px 20px rgba(180,100,40,.05);
+}
+.scene-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;background:linear-gradient(180deg,#f5ede0,#ebe1cf);
+  border-bottom:1px solid var(--line);font-size:11px;color:var(--text3);font-weight:700;
+}
+.scene-bar .time{font-family:var(--mono);background:#fff;color:var(--peach-dark);padding:2px 8px;border-radius:5px;}
+.scene-bar .title{flex:1;}
+.scene-body{padding:16px 18px;background:var(--cream);}
+
+/* Chrome Web Store install card */
+.cws-mini{
+  display:flex;align-items:center;gap:12px;background:#fff;border:2px solid var(--line);
+  border-radius:11px;padding:11px 14px;
+}
+.cws-mini .ic{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.cws-mini .meta{flex:1;}
+.cws-mini .nm{font-size:13px;font-weight:800;color:var(--text);}
+.cws-mini .desc{font-size:11px;color:var(--text3);margin-top:1px;}
+.cws-mini .star{font-size:10.5px;color:var(--peach-dark);font-weight:700;margin-top:2px;}
+.cws-mini .cta{background:var(--peach);color:#fff;padding:7px 14px;border-radius:7px;font-size:11.5px;font-weight:800;flex-shrink:0;}
+
+/* Toast */
+.toast{
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;padding:9px 14px;border-radius:10px;
+  font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;
+  box-shadow:0 6px 18px rgba(16,185,129,.3);
+}
+.toast.peach{background:linear-gradient(135deg,#fb923c,#ea580c);box-shadow:0 6px 18px rgba(251,146,60,.3);}
+
+/* Chat bubble */
+.chatm{display:flex;gap:9px;margin-bottom:8px;}
+.chatm-av{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700;}
+.chatm.me .chatm-av{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.chatm.ai .chatm-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));font-size:13px;}
+.chatm-bub{padding:9px 12px;border-radius:11px;font-size:12.5px;color:var(--text);line-height:1.55;max-width:85%;}
+.chatm.me .chatm-bub{background:#dbeafe;border:1px solid rgba(59,130,246,.18);color:#1e3a8a;}
+.chatm.ai .chatm-bub{background:#fff;border:1px solid var(--line);}
+
+/* Approval mini */
+.appro{
+  border:1.5px solid var(--peach);border-radius:11px;background:#fff;overflow:hidden;font-size:12px;
+}
+.appro-h{
+  padding:9px 12px;background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;
+}
+.appro-h .ic{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.appro-h .nm{font-size:11.5px;font-weight:800;color:var(--text);}
+.appro-h .timer{margin-left:auto;font-size:10.5px;color:var(--peach-dark);font-weight:700;}
+.appro-body{padding:9px 12px;}
+.appro-body .what{font-size:12px;font-weight:700;margin-bottom:5px;}
+.appro-body .what em{color:var(--peach-dark);font-style:normal;background:rgba(251,146,60,.1);padding:1px 5px;border-radius:3px;}
+.appro-body .preview{
+  background:var(--cream);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:11.5px;line-height:1.55;
+}
+.appro-foot{display:grid;grid-template-columns:1fr 1.5fr;gap:6px;padding:8px 12px;background:var(--cream);}
+.appro-foot button{border:0;padding:7px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;}
+.appro-foot .no{background:rgba(0,0,0,.05);color:var(--text2);}
+.appro-foot .yes{background:var(--green);color:#fff;}
+
+/* Result */
+.result{
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+  border:1px solid rgba(16,185,129,.3);border-radius:10px;
+  padding:9px 12px;font-size:12px;color:#047857;line-height:1.55;
+  display:flex;gap:8px;align-items:flex-start;
+}
+.result-emo{font-size:16px;line-height:1;flex-shrink:0;}
+.result b{color:#065f46;}
+
+/* Progress card */
+.progress-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+.prog-step{display:flex;align-items:flex-start;gap:9px;padding:5px 0;}
+.prog-icon{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:900;background:#e5e1d6;color:var(--text3);
+}
+.prog-step.done .prog-icon{background:var(--green);color:#fff;}
+.prog-step.active .prog-icon{background:var(--peach);color:#fff;animation:pulse 1.5s infinite;}
+.prog-step.pending .prog-icon{opacity:.4;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5)}50%{box-shadow:0 0 0 5px rgba(251,146,60,0)}}
+.prog-text{flex:1;font-size:11.5px;color:var(--text);font-weight:600;line-height:1.45;}
+.prog-step.done .prog-text{color:var(--text2);}
+.prog-step.pending .prog-text{color:var(--text3);font-weight:500;}
+
+/* Scene title at top of body */
+.scene-mini-h{font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.scene-mini-h .lbl{background:var(--peach);color:#fff;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:800;letter-spacing:.04em;}
+
+/* Tray icon mini */
+.tray-bar{
+  background:linear-gradient(180deg,rgba(245,237,224,.95),rgba(232,222,206,.95));
+  height:24px;display:flex;align-items:center;padding:0 14px;gap:14px;font-size:11px;color:var(--text);
+  border-radius:8px 8px 0 0;border:1px solid rgba(0,0,0,.05);position:relative;
+}
+.tray-bar .right{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--text2);}
+.tray-bar .ours{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(251,146,60,.18);padding:1px 6px;border-radius:4px;font-weight:700;
+  border:1px solid rgba(251,146,60,.35);color:var(--peach-dark);font-size:10.5px;
+}
+.tray-bar .ours .dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+
+/* Daily timeline */
+.dayline{
+  position:relative;padding-left:32px;border-left:2px dashed var(--peach);
+  margin:24px 0 32px;
+}
+.dayline::before{
+  content:'';position:absolute;left:-9px;top:0;width:16px;height:16px;border-radius:50%;
+  background:var(--peach);border:3px solid #fff;
+}
+.dayline-time{
+  font-family:var(--mono);font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.04em;
+  margin-bottom:4px;
+}
+.dayline-task{font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px;}
+
+.summary-card{
+  margin-top:48px;padding:32px;border-radius:18px;
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);
+}
+.summary-card h2{font-size:22px;font-weight:900;margin-bottom:14px;color:var(--peach-dark);}
+.summary-card p{font-size:14px;color:var(--text2);margin-bottom:8px;line-height:1.7;}
+.summary-card b{color:var(--text);}
+.summary-card .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:18px;}
+.summary-card .stat{background:#fff;border-radius:11px;padding:14px;text-align:center;}
+.summary-card .stat-num{font-family:var(--mono);font-size:24px;font-weight:900;color:var(--peach-dark);line-height:1;}
+.summary-card .stat-lbl{font-size:11px;color:var(--text3);margin-top:5px;font-weight:700;}
+
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12.5px;color:var(--text3);}
+.foot a{color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-extension-flow.html">🌐 簡単版フロー</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-extension-sites.html">📋 業務SaaS例</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-extension-anysite.html">🌍 任意サイト</a>
+</div>
+
+<h1 class="h1"><span class="accent">全体の流れ</span><br>インストールから日常利用まで</h1>
+<p class="sub">
+  <b>初日の朝、1分で導入。</b>その日の昼から AI が業務をやってくれる。<br>
+  1週間後にはあなたの定型作業の半分以上が「指示するだけ」になる。
+</p>
+
+<!-- ═══ Timeline pills ═══ -->
+<div class="tl">
+  <div class="tl-pill"><div class="when">PHASE 1</div><div class="what">セットアップ</div><div class="desc">1分・1回だけ</div></div>
+  <div class="tl-pill"><div class="when">PHASE 2</div><div class="what">初回利用</div><div class="desc">最初のチャット</div></div>
+  <div class="tl-pill"><div class="when">PHASE 3</div><div class="what">日常利用</div><div class="desc">複数サイトで自動化</div></div>
+  <div class="tl-pill"><div class="when">PHASE 4</div><div class="what">パワーユーザー</div><div class="desc">定期実行・連鎖</div></div>
+</div>
+
+<!-- ═══ PHASE 1: SETUP ═══ -->
+<div class="phase">
+  <div class="phase-h">
+    <div class="phase-num">1</div>
+    <div class="phase-meta">
+      <div class="phase-ttl">セットアップ — 1分で完了</div>
+      <div class="phase-sub">クリック2回。これ以降ずっと使える。</div>
+    </div>
+    <span class="phase-tag">⏱ 1 分</span>
+  </div>
+
+  <!-- Scene 1.1: Install -->
+  <div class="scene">
+    <div class="scene-bar">
+      <div class="time">00:00</div>
+      <div class="title">アプリ画面 → 「ブラウザ連携を有効にする」</div>
+    </div>
+    <div class="scene-body">
+      <div class="scene-mini-h"><span class="lbl">ACTION</span>「+ 追加」をクリック</div>
+      <div class="cws-mini">
+        <div class="ic">🤖</div>
+        <div class="meta">
+          <div class="nm">MY AI Agent — Browser Connector</div>
+          <div class="desc">ログイン済みサイトを AI が直接操作</div>
+          <div class="star">★★★★★ 4.9 · 2,481 ユーザー</div>
+        </div>
+        <div class="cta">＋ 追加</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scene 1.2: Auto-pair -->
+  <div class="scene">
+    <div class="scene-bar">
+      <div class="time">00:30</div>
+      <div class="title">Chrome に追加完了 → アプリに戻ってきた</div>
+    </div>
+    <div class="scene-body" style="position:relative;min-height:80px">
+      <div style="position:absolute;top:14px;right:18px"><div class="toast">✓ ブラウザと連携しました</div></div>
+      <div class="tray-bar" style="margin-top:30px">
+        <span style="font-weight:700;font-size:11px"></span>
+        <span style="color:var(--text2)">Finder</span>
+        <span style="color:var(--text2)">ファイル</span>
+        <span style="color:var(--text2)">編集</span>
+        <div class="right">
+          <span class="ours"><span class="dot"></span>🤖 接続中</span>
+          <span style="opacity:.55">17:48</span>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--text3);margin-top:8px;line-height:1.6">
+        💡 メニューバーの拡張アイコンが <b style="color:var(--green)">緑の点</b> になれば接続中。<b>これでセットアップ完了</b>。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 2: FIRST USE ═══ -->
+<div class="phase">
+  <div class="phase-h">
+    <div class="phase-num">2</div>
+    <div class="phase-meta">
+      <div class="phase-ttl">初回利用 — まず簡単なところから</div>
+      <div class="phase-sub">「X 投稿」で動作確認。承認モーダルで安心感を体験。</div>
+    </div>
+    <span class="phase-tag">⏱ 30 秒</span>
+  </div>
+
+  <div class="scene">
+    <div class="scene-bar">
+      <div class="time">11:30</div>
+      <div class="title">月曜の朝、新サービス公開のお知らせを X に投稿</div>
+    </div>
+    <div class="scene-body">
+      <div class="chatm me">
+        <div class="chatm-av">K</div>
+        <div class="chatm-bub">「新サービス公開しました!ぜひ試してみてください 🎉」って X に投稿して</div>
+      </div>
+      <div class="appro" style="margin:8px 0 8px 35px;max-width:420px">
+        <div class="appro-h">
+          <div class="ic">📢</div>
+          <div><div class="nm">アシスタント</div></div>
+          <div class="timer">残り 27秒</div>
+        </div>
+        <div class="appro-body">
+          <div class="what">📤 <em>X (Twitter)</em> に投稿します</div>
+          <div class="preview">
+            <b>@kotatake</b><br>
+            新サービス公開しました!ぜひ試してみてください 🎉
+          </div>
+        </div>
+        <div class="appro-foot">
+          <button class="no">やめる</button>
+          <button class="yes">この内容で投稿</button>
+        </div>
+      </div>
+      <div class="chatm ai">
+        <div class="chatm-av">📢</div>
+        <div style="flex:1;max-width:85%">
+          <div class="result">
+            <div class="result-emo">🎉</div>
+            <div><b>投稿完了。</b> 2分で 18 いいね・5 リポスト。エンゲージメント高めです!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 3: DAILY USE ═══ -->
+<div class="phase">
+  <div class="phase-h">
+    <div class="phase-num">3</div>
+    <div class="phase-meta">
+      <div class="phase-ttl">日常利用 — 1日の業務シミュレーション</div>
+      <div class="phase-sub">朝のメール対応 → 昼の Slack 報告 → 夕方の Uber → 夜の旅行予約まで全部 AI</div>
+    </div>
+    <span class="phase-tag">⏱ 1 日</span>
+  </div>
+
+  <!-- Morning -->
+  <div class="dayline">
+    <div class="dayline-time">🌅 09:00</div>
+    <div class="dayline-task">朝のメール対応</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:280px">
+        <div class="chatm me">
+          <div class="chatm-av">K</div>
+          <div class="chatm-bub">未読メール8件、緊急のだけ要約して</div>
+        </div>
+        <div class="chatm ai">
+          <div class="chatm-av">📧</div>
+          <div class="chatm-bub" style="font-size:11.5px;line-height:1.7">
+            <b>緊急 2件:</b><br>
+            ① 山田様 — 来週の打合せ日程の相談 (要返信)<br>
+            ② 経理部 — 5月の経費精算が今日締め切り<br>
+            ③〜⑧は社内通知・ニュースレターで急ぎなし。後回しでOK。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Late morning -->
+  <div class="dayline">
+    <div class="dayline-time">🌤 11:30</div>
+    <div class="dayline-task">日報をSlackに投稿</div>
+    <div class="chatm me">
+      <div class="chatm-av">K</div>
+      <div class="chatm-bub">今朝のメール処理 + 午前中のミーティング (Acme社) の内容を、Slack #日報 に投稿しといて</div>
+    </div>
+    <div class="appro" style="margin:8px 0 8px 35px;max-width:420px">
+      <div class="appro-h">
+        <div class="ic">💼</div><div><div class="nm">アシスタント</div></div><div class="timer">残り 38秒</div>
+      </div>
+      <div class="appro-body">
+        <div class="what">💬 <em>#日報</em> に投稿します</div>
+        <div class="preview" style="font-size:11px;line-height:1.6">
+          <b>5/7 (火) 午前の動き</b><br>
+          ・未読メール 8件処理 (緊急2件返信済)<br>
+          ・Acme社 MTG: SaaS 導入提案で受注見込 70%<br>
+          ・午後は提案書ブラッシュアップ
+        </div>
+      </div>
+      <div class="appro-foot"><button class="no">やめる</button><button class="yes">投稿</button></div>
+    </div>
+    <div class="result" style="margin-left:35px;max-width:300px"><div class="result-emo">✅</div><div><b>投稿完了</b> · チームから5👍</div></div>
+  </div>
+
+  <!-- Lunch / commute -->
+  <div class="dayline">
+    <div class="dayline-time">🚗 17:48</div>
+    <div class="dayline-task">退社時に Uber で帰宅</div>
+    <div class="chatm me">
+      <div class="chatm-av">K</div>
+      <div class="chatm-bub">家まで Uber 呼んで</div>
+    </div>
+    <div class="appro" style="margin:8px 0 8px 35px;max-width:420px">
+      <div class="appro-h">
+        <div class="ic">🚗</div><div><div class="nm">アシスタント</div></div><div class="timer">残り 28秒</div>
+      </div>
+      <div class="appro-body">
+        <div class="what">🚕 <em>Uber X</em> を予約します</div>
+        <div class="preview" style="font-size:11.5px">
+          📍 渋谷駅 → 自宅 (世田谷)<br>
+          🚗 Uber X · 8分後到着 · 約23分<br>
+          💴 ¥2,800
+        </div>
+      </div>
+      <div class="appro-foot"><button class="no">やめる</button><button class="yes">予約</button></div>
+    </div>
+    <div class="result" style="margin-left:35px;max-width:300px"><div class="result-emo">🚕</div><div><b>配車完了</b> · プリウス · 8分後到着</div></div>
+  </div>
+
+  <!-- Evening -->
+  <div class="dayline">
+    <div class="dayline-time">🌙 21:30</div>
+    <div class="dayline-task">来週末の旅行を予約</div>
+    <div class="chatm me">
+      <div class="chatm-av">K</div>
+      <div class="chatm-bub">来週末 (5/16-17) 箱根で温泉宿、3万円以下で予約しといて</div>
+    </div>
+    <div class="chatm ai">
+      <div class="chatm-av">♨</div>
+      <div style="flex:1;max-width:85%">
+        <div class="progress-card">
+          <div class="prog-step done"><div class="prog-icon">✓</div><div><div class="prog-text">楽天トラベルを開いて検索 (箱根 / 5/16-17)</div></div></div>
+          <div class="prog-step done"><div class="prog-icon">✓</div><div><div class="prog-text">評価 4.5+ で 3万円以下を抽出 (12 件)</div></div></div>
+          <div class="prog-step active"><div class="prog-icon">⋯</div><div><div class="prog-text">最安かつ最評価の宿を確認中...</div></div></div>
+        </div>
+        <div class="appro" style="margin-top:8px">
+          <div class="appro-h"><div class="ic">♨</div><div><div class="nm">アシスタント</div></div><div class="timer">残り 45秒</div></div>
+          <div class="appro-body">
+            <div class="what">🏨 <em>箱根湯本温泉 やまぐち</em> (¥27,800)</div>
+            <div class="preview" style="font-size:11.5px">
+              ★★★★☆ 4.6 · 1泊2食付 · 楽天ポイント 278pt
+            </div>
+          </div>
+          <div class="appro-foot"><button class="no">やめる</button><button class="yes">予約</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 4: POWER USER ═══ -->
+<div class="phase">
+  <div class="phase-h">
+    <div class="phase-num">4</div>
+    <div class="phase-meta">
+      <div class="phase-ttl">パワーユーザー — 定期実行 + 連鎖タスク</div>
+      <div class="phase-sub">「いつもの〇〇」を保存すると承認モーダルもスキップ。定期実行で完全自動化。</div>
+    </div>
+    <span class="phase-tag">⏱ 1〜2 週後</span>
+  </div>
+
+  <div class="scene">
+    <div class="scene-bar">
+      <div class="time">毎朝 8:00</div>
+      <div class="title">「いつものモーニング業務」を自動実行</div>
+    </div>
+    <div class="scene-body">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:280px">
+          <div class="scene-mini-h"><span class="lbl">SETUP</span>1回登録するだけ</div>
+          <div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;font-size:12px">
+            <div style="font-weight:800;font-size:13px;margin-bottom:8px">⚡ いつものモーニング</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--text2);line-height:1.5">
+              <div><b style="color:var(--peach-dark)">①</b> Gmail で未読メールを要約</div>
+              <div><b style="color:var(--peach-dark)">②</b> X / LinkedIn のトレンドを取得</div>
+              <div><b style="color:var(--peach-dark)">③</b> 今日の予定を Notion で整理</div>
+              <div><b style="color:var(--peach-dark)">④</b> Slack #自分用 に「朝サマリー」投稿</div>
+            </div>
+            <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:10.5px;color:var(--text3)">
+              ⏰ 毎朝 8:00 自動実行 · 承認スキップ (信頼済みタスク)
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:280px">
+          <div class="scene-mini-h"><span class="lbl">RESULT</span>毎朝の Slack 投稿</div>
+          <div style="background:#3f0e40;color:#fff;border-radius:11px;padding:12px 14px;font-size:11.5px;line-height:1.65">
+            <div style="font-size:11px;opacity:.7;margin-bottom:6px">#takeuchi-自分用 · 8:02</div>
+            <div style="font-weight:700;margin-bottom:5px">☀ 5/8 朝のサマリー</div>
+            <div style="opacity:.85">📧 緊急メール 2 件 · 山田様返信要</div>
+            <div style="opacity:.85">📈 X トレンド: 「AI Agent」「Tauri 2.0」</div>
+            <div style="opacity:.85">📅 今日の予定: 10時 提案書 / 14時 顧客MTG / 18時 飲み会</div>
+            <div style="opacity:.85">💡 提案: 顧客MTG 前の 13時に資料の最終確認を</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;padding:10px 12px;background:var(--cream);border:1px solid var(--line);border-radius:9px;font-size:11.5px;color:var(--text2);line-height:1.55">
+        💡 <b>連鎖タスク</b>: 例えば「毎週金曜 17時、1週間の業務サマリーを作って Notion に保存 + 上司にメール送信」など、複数サイトをまたぐワークフローも 1 タスクとして登録可能。
+      </div>
+    </div>
+  </div>
+
+  <div class="scene">
+    <div class="scene-bar">
+      <div class="time">いつでも</div>
+      <div class="title">アクティビティタブで全実行履歴を確認</div>
+    </div>
+    <div class="scene-body">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.8;background:#fff;border:1px solid var(--line);border-radius:9px;padding:12px 14px">
+        <div><span style="color:var(--text3)">5/7 17:48</span> · <span style="color:#0f9d58;font-weight:700">✓</span> Uber X 予約 (¥2,800) <span style="color:var(--text3)">@渋谷→世田谷</span></div>
+        <div><span style="color:var(--text3)">5/7 11:30</span> · <span style="color:#0f9d58;font-weight:700">✓</span> Slack #日報 投稿 (32 chars)</div>
+        <div><span style="color:var(--text3)">5/7 09:02</span> · <span style="color:#0f9d58;font-weight:700">✓</span> Gmail 8 通要約 (緊急 2)</div>
+        <div><span style="color:var(--text3)">5/7 08:00</span> · <span style="color:#0f9d58;font-weight:700">✓</span> いつものモーニング (4 ステップ)</div>
+        <div><span style="color:var(--text3)">5/6 22:14</span> · <span style="color:var(--rose);font-weight:700">✗</span> Amazon 注文 → ユーザーが「やめる」</div>
+        <div><span style="color:var(--text3)">5/6 14:21</span> · <span style="color:#0f9d58;font-weight:700">✓</span> X 投稿 (新サービス告知, 184 いいね)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Summary ═══ -->
+<div class="summary-card">
+  <h2>🎯 全体まとめ</h2>
+  <p>セットアップ <b>1分</b> · 初回利用 <b>30秒</b> · 1週間で日常業務に溶け込む。</p>
+  <p style="margin-top:10px">サイト分類なし、事前登録なし、ターミナル知識ゼロ。<b>「やってほしいこと」を話しかけるだけ</b>で AI がブラウザを動かす。</p>
+  <p style="margin-top:10px"><b>不可逆操作 (投稿・購入・予約・送信)</b> は必ず承認モーダル → 慣れたら「いつもの〇〇」で自動承認に格上げ可能。</p>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">1分</div><div class="stat-lbl">初回セットアップ</div></div>
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-lbl">対応サイト</div></div>
+    <div class="stat"><div class="stat-num">8</div><div class="stat-lbl">AI が使えるツール</div></div>
+    <div class="stat"><div class="stat-num">2</div><div class="stat-lbl">承認モード<br>(都度 / いつもの)</div></div>
+    <div class="stat"><div class="stat-num">100%</div><div class="stat-lbl">監査ログ</div></div>
+  </div>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/lp.html">ホーム</a><br>
+  関連モック: <a href="/mock-extension-flow.html">簡単版フロー</a> ·
+  <a href="/mock-extension-sites.html">業務SaaS例</a> ·
+  <a href="/mock-extension-anysite.html">任意サイト</a>
+</div>
+
+</div>
+</body>
+</html>

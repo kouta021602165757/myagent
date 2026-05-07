@@ -2993,14 +2993,27 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
 
     let allUsers = [];
-    if(USE_SUPA){
-      // Pull all users (could be paginated for large scale, but Supabase
-      // returns up to 1000 per request which is plenty for now)
-      const r = await sbReq('GET','users','?select=*&limit=10000');
-      allUsers = Array.isArray(r.d) ? r.d : [];
-    } else {
-      allUsers = LDB.all();
+    try{
+      if(USE_SUPA){
+        // Pull all users (could be paginated for large scale, but Supabase
+        // returns up to 1000 per request which is plenty for now)
+        const r = await sbReq('GET','users','?select=*&limit=10000');
+        if(r.s >= 400){
+          console.error('[admin/stats] Supabase fetch failed:', r.s, JSON.stringify(r.d).slice(0,200));
+          return jres(res, 502, { error: 'Supabase fetch failed: ' + r.s });
+        }
+        allUsers = Array.isArray(r.d) ? r.d : [];
+      } else {
+        allUsers = LDB.all();
+      }
+    }catch(e){
+      console.error('[admin/stats] fetch threw:', e.message);
+      return jres(res, 502, { error: 'fetch_failed: ' + e.message });
     }
+
+    // Wrap the whole aggregation in try/catch so one bad record doesn't
+    // crash the whole endpoint.
+    try{
 
     const now = Date.now();
     const day = 24*60*60*1000;
@@ -3178,6 +3191,10 @@ async function handleAPI(req,res,pathname,method,ip){
       recent_signups: recentSignups,
       top_listings: topListings.slice(0,10),
     });
+    }catch(e){
+      console.error('[admin/stats] aggregation threw:', e.message, e.stack);
+      return jres(res, 500, { error: 'aggregation_failed: ' + e.message });
+    }
   }
 
   // ── GET /api/marketplace/:listing_id ───────────────────────

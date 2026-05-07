@@ -188,26 +188,94 @@ function barChart(values, labelFn){
   return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' + bars + '</svg>';
 }
 
+function renderLogin(prefilledEmail){
+  const c = document.getElementById('content');
+  c.innerHTML = '<div style="max-width:420px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px 30px;box-shadow:0 12px 36px rgba(180,100,40,.08)">'
+    + '<h2 style="font-size:18px;font-weight:900;margin-bottom:6px;display:flex;align-items:center;gap:8px">🔐 管理者ログイン</h2>'
+    + '<p style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.65">分析ダッシュボードを開くには、is_admin 権限のあるアカウントでログインしてください。</p>'
+    + '<div id="loginErr" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:10px 13px;font-size:12.5px;color:var(--rose);margin-bottom:14px"></div>'
+    + '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin-bottom:5px">メールアドレス</label>'
+    + '<input id="loginEmail" type="email" autocomplete="email" value="' + esc(prefilledEmail||'') + '" style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key===\'Enter\')document.getElementById(\'loginPwd\').focus()">'
+    + '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin-bottom:5px">パスワード</label>'
+    + '<input id="loginPwd" type="password" autocomplete="current-password" style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit;outline:none;margin-bottom:18px" onkeydown="if(event.key===\'Enter\')doLogin()">'
+    + '<button onclick="doLogin()" style="width:100%;background:var(--peach);color:#fff;border:0;padding:12px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit">ログイン</button>'
+    + '<div style="margin-top:18px;display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">'
+    +   '<a href="/auth.html" style="color:var(--text3);text-decoration:underline">通常のログイン画面 →</a>'
+    +   '<a href="/app.html" style="color:var(--text3);text-decoration:underline">アプリに戻る</a>'
+    + '</div>'
+    + '</div>';
+  setTimeout(()=>{
+    const inp = document.getElementById(prefilledEmail ? 'loginPwd' : 'loginEmail');
+    if(inp) inp.focus();
+  }, 50);
+}
+
+async function doLogin(){
+  const email = (document.getElementById('loginEmail').value||'').trim();
+  const pwd = document.getElementById('loginPwd').value || '';
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+  if(!email || !pwd){
+    errEl.textContent = 'メールアドレスとパスワードを入力してください';
+    errEl.style.display = '';
+    return;
+  }
+  try{
+    const res = await fetch(API + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pwd }),
+    });
+    const data = await res.json();
+    if(!res.ok || !data.token){
+      errEl.textContent = data.error || 'ログインに失敗しました';
+      errEl.style.display = '';
+      return;
+    }
+    if(!data.user || !data.user.is_admin){
+      errEl.textContent = '⛔ このアカウントには管理者権限がありません (is_admin=false)';
+      errEl.style.display = '';
+      return;
+    }
+    localStorage.setItem('token', data.token);
+    loadStats(true);
+  }catch(e){
+    errEl.textContent = '通信エラー: ' + e.message;
+    errEl.style.display = '';
+  }
+}
+
 async function loadStats(force){
   const c = document.getElementById('content');
   if(force) c.innerHTML = '<div class="loader"><span class="spin"></span>データ読み込み中...</div>';
 
   const tok = localStorage.getItem('token');
   if(!tok){
-    c.innerHTML = '<div class="err">⚠ ログインが必要です。<a href="/auth.html">ログイン</a> してから再アクセスしてください。</div>';
+    renderLogin('');
     return;
   }
   try{
     const res = await fetch(API + '/api/admin/stats', {
       headers: { 'Authorization': 'Bearer ' + tok }
     });
+    if(res.status === 401){
+      // Token invalid/expired — clear and show login form
+      localStorage.removeItem('token');
+      renderLogin('');
+      return;
+    }
     if(res.status === 403){
-      c.innerHTML = '<div class="err">⛔ 管理者権限がありません (is_admin=true が必要)。Supabase で<br><code>UPDATE users SET is_admin = true WHERE email = \'kota.takeuchi@protocol.ooo\';</code><br>を実行してから再ログインしてください。</div>';
+      c.innerHTML = '<div class="err">⛔ このアカウントには管理者権限がありません (is_admin=true が必要)。<br>'
+        + '<button onclick="localStorage.removeItem(\'token\');loadStats(true)" style="margin-top:10px;background:#fff;border:1px solid var(--rose);color:var(--rose);padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">別アカウントでログイン</button></div>';
       return;
     }
     if(!res.ok){
-      const errBody = await res.text();
-      c.innerHTML = '<div class="err">エラー (HTTP ' + res.status + '): ' + esc(errBody.slice(0,200)) + '</div>';
+      let errMsg = 'HTTP ' + res.status;
+      try{ const j = await res.json(); errMsg += ': ' + (j.error || JSON.stringify(j)); }
+      catch(e){ const t = await res.text(); errMsg += ': ' + t.slice(0,200); }
+      c.innerHTML = '<div class="err">エラー (' + esc(errMsg) + ')<br>'
+        + '<small style="color:var(--text3);font-weight:500;margin-top:6px;display:block">Render の Logs タブで詳細を確認してください。</small>'
+        + '<button onclick="loadStats(true)" style="margin-top:10px;background:#fff;border:1px solid var(--line);color:var(--text2);padding:7px 14px;border-radius:7px;font-size:12px;cursor:pointer">🔄 再試行</button></div>';
       return;
     }
     const d = await res.json();

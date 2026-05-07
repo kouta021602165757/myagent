@@ -4588,8 +4588,9 @@ async function sendMsg(){
     // (keep the original /search command visible to the user for clarity)
   }
 
-  // Streaming path: non-Chrome agents only (Plan B tool-use can't stream cleanly)
-  const canStream = !ag.chrome_enabled;
+  // Streaming path: now supported for tools-enabled agents too (server emits
+  // delta / tool_call / tool_result events as the loop progresses).
+  const canStream = true;
   try{
     if(canStream){
       await _sendMsgStream(ag, outboundText, imgs);
@@ -4688,13 +4689,39 @@ async function _sendMsgStream(ag, text, imgs){
         // Throttle DOM updates to ~30fps
         const nowT = Date.now();
         if(nowT - lastRender > 32 && liveBody){
-          liveBody.innerHTML = _md(acc) + '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
+          liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
           lastRender = nowT;
           _scrollMsgsToEnd();
         }
+      } else if(evType === 'thinking'){
+        // Server about to call AI for an iteration. Show a subtle hint above the
+        // bubble so the user feels something is moving even before tools fire.
+        if(liveBody && !acc){
+          liveBody.innerHTML = '<span style="font-size:12px;color:var(--text3)">考え中...</span>';
+        }
+      } else if(evType === 'tool_call'){
+        // Tool requested by AI (about to execute). Track in tool_log + render.
+        ag.history[streamIdx].tool_log = ag.history[streamIdx].tool_log || [];
+        ag.history[streamIdx].tool_log.push({
+          name: obj.name, input: obj.input || {}, ok: null, _pending: true,
+        });
+        if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
+        _scrollMsgsToEnd();
+      } else if(evType === 'tool_result'){
+        // Tool finished — patch the latest pending entry with the same name.
+        const log = ag.history[streamIdx].tool_log || [];
+        for(let k=log.length-1; k>=0; k--){
+          if(log[k]._pending && log[k].name === obj.name){
+            log[k] = { ...obj, _pending: false };
+            break;
+          }
+        }
+        if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
+        _scrollMsgsToEnd();
       } else if(evType === 'done'){
         ag.history[streamIdx].content = obj.reply || acc;
         ag.history[streamIdx].streaming = false;
+        if(obj.tool_log && obj.tool_log.length){ ag.history[streamIdx].tool_log = obj.tool_log; }
         if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
         me.usage_count = (me.usage_count||0) + 1;
         updateBalance();
@@ -4707,6 +4734,31 @@ async function _sendMsgStream(ag, text, imgs){
     ag.history.pop();                    // drop the empty streaming bubble
     throw new Error(errorMsg);
   }
+}
+
+// Renders the streaming bubble: tool log (if any) + the markdown text + cursor.
+function _renderStreamingBody(text, toolLog){
+  let html = '';
+  if(toolLog && toolLog.length){
+    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">';
+    for(const t of toolLog){
+      const isPending = t._pending;
+      const ok = t.ok === true;
+      const failed = t.ok === false;
+      const color = isPending ? 'var(--text3)' : (failed ? '#ef4444' : '#0f9d58');
+      const bg = isPending ? 'rgba(120,90,60,.06)' : (failed ? 'rgba(239,68,68,.08)' : 'rgba(15,157,88,.08)');
+      const icon = isPending ? '⚙' : (failed ? '✗' : '✓');
+      const label = (t.name || '').replace(/_/g,' ');
+      html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:'+bg+';color:'+color+';border-radius:999px;font-size:11px;font-weight:600;font-family:SF Mono,monospace">'
+        + icon + ' ' + esc(label) + '</span>';
+    }
+    html += '</div>';
+  }
+  html += _md(text);
+  if(text){
+    html += '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
+  }
+  return html;
 }
 
 async function delAgent(id){

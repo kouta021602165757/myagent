@@ -3306,11 +3306,13 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(agent.chrome_enabled ? BROWSER_TOOLS : []),
       ...(sheetsActive ? SHEETS_TOOLS : []),
     ];
-    const wantStream = body.stream === true && !useTools;
+    const wantStream = body.stream === true; // streaming is now supported on the tools path too
+    const wantStreamPlain = wantStream && !useTools;
+    const wantStreamTools = wantStream && useTools;
     let totalIn=0, totalOut=0;
 
     // ── SSE streaming branch (no tools) ─────────────────────────
-    if(wantStream){
+    if(wantStreamPlain){
       res.writeHead(200, {
         'Content-Type':'text/event-stream; charset=utf-8',
         'Cache-Control':'no-cache, no-transform',
@@ -3362,6 +3364,18 @@ async function handleAPI(req,res,pathname,method,ip){
     }
 
     let toolLog = []; // visible browser-action log for the frontend
+    // SSE setup (only if streaming was requested with tools enabled)
+    let sse = null;
+    if(wantStreamTools){
+      res.writeHead(200, {
+        'Content-Type':'text/event-stream; charset=utf-8',
+        'Cache-Control':'no-cache, no-transform',
+        'Connection':'keep-alive',
+        'X-Accel-Buffering':'no',
+        'Access-Control-Allow-Origin':APP_URL,
+      });
+      sse = (ev, data)=>{ try{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); }catch(e){} };
+    }
     if(useTools){
       let session = null;
       const sheetsToolNames = new Set(SHEETS_TOOLS.map(t=>t.name));
@@ -3378,6 +3392,7 @@ async function handleAPI(req,res,pathname,method,ip){
         const startedAt = Date.now();
         const BUDGET_MS = 95000; // Render edge is ~100s; 5s margin to flush response
         while(true){
+          if(sse) sse('thinking', { iter: iters });
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
@@ -3403,11 +3418,19 @@ async function handleAPI(req,res,pathname,method,ip){
           // Append the assistant's tool_use turn
           convMsgs.push({role:'assistant', content: resp.content});
 
+          // Stream any text the AI emitted alongside its tool calls so the user sees
+          // its reasoning even before tools finish.
+          if(sse){
+            const reasonText = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+            if(reasonText) sse('delta', { text: reasonText + '\n\n' });
+          }
+
           // Run each tool_use block. Browser ops must be serial (shared Playwright page);
           // sheets ops are independent but for simplicity we keep the same loop.
           const toolResultBlocks = [];
           for(const block of (resp.content||[])){
             if(block.type !== 'tool_use') continue;
+            if(sse) sse('tool_call', { name: block.name, input: block.input||{} });
             let result;
             if(sheetsToolNames.has(block.name)){
               result = await executeSheetsTool(user, block.name, block.input||{});
@@ -3416,8 +3439,7 @@ async function handleAPI(req,res,pathname,method,ip){
             } else {
               result = {error:'tool_unavailable: '+block.name+' (Chrome 連携が無効です)'};
             }
-            toolResultBlocks.push(buildToolResult(block.id, block.name, result));
-            toolLog.push({
+            const logEntry = {
               name: block.name,
               input: block.input||{},
               ok: !(result&&result.error),
@@ -3428,7 +3450,10 @@ async function handleAPI(req,res,pathname,method,ip){
               count: result&&result.count,
               screenshot: result&&result.screenshot,
               error: result&&result.error,
-            });
+            };
+            toolResultBlocks.push(buildToolResult(block.id, block.name, result));
+            toolLog.push(logEntry);
+            if(sse) sse('tool_result', logEntry);
           }
           convMsgs.push({role:'user', content: toolResultBlocks});
         }
@@ -3452,8 +3477,10 @@ async function handleAPI(req,res,pathname,method,ip){
             return jres(res,502,{error:`AI応答エラー: ${e2.message}`});
           }
         } else if(/rate limit|429|input tokens per minute/i.test(msg)){
+          if(sse){ sse('error', { message:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。' }); res.end(); return; }
           return jres(res,429,{error:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。'});
         } else {
+          if(sse){ sse('error', { message:`AI応答エラー: ${msg}` }); res.end(); return; }
           return jres(res,502,{error:`AI応答エラー: ${msg}`});
         }
       } finally {
@@ -3496,6 +3523,13 @@ async function handleAPI(req,res,pathname,method,ip){
         buyer_user_id: user.id,
         cost_jpy: cost.jpy,
       }).catch(e=>console.warn('[revenue] credit failed:', e.message));
+    }
+    if(sse){
+      // Emit the (possibly already-streamed) reply once at the end so the client
+      // can finalize the bubble. delta events were sent inside the loop.
+      sse('done', { reply, balance_jpy: user.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog });
+      res.end();
+      return;
     }
     return jres(res,200,{reply,balance_jpy:user.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null});
   }

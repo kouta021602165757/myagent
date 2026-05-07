@@ -908,12 +908,14 @@ function renderListingOgSvg(d, twemojiUri){
   <circle cx="900" cy="120" r="100" fill="rgba(234,88,12,.18)"/>
   <circle cx="220" cy="500" r="60" fill="rgba(251,146,60,.42)"/>
 
-  <!-- sticker (white rounded square with emoji), tilted -8deg -->
+  <!-- sticker (white rounded square with emoji or uploaded image), tilted -8deg -->
   <g transform="translate(170 315) rotate(-8)">
     <rect x="-160" y="-160" width="320" height="320" rx="56" ry="56" fill="#fff" stroke="#fff" stroke-width="8" filter="url(#shadow)"/>
-    ${twemojiUri
-      ? `<image x="-130" y="-130" width="260" height="260" href="${twemojiUri}" preserveAspectRatio="xMidYMid meet"/>`
-      : `<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="200">${_xmlEscape(av)}</text>`}
+    ${av && av.startsWith('data:image/')
+      ? `<clipPath id="stickerClip"><rect x="-150" y="-150" width="300" height="300" rx="48" ry="48"/></clipPath><image x="-150" y="-150" width="300" height="300" href="${av}" preserveAspectRatio="xMidYMid slice" clip-path="url(#stickerClip)"/>`
+      : (twemojiUri
+        ? `<image x="-130" y="-130" width="260" height="260" href="${twemojiUri}" preserveAspectRatio="xMidYMid meet"/>`
+        : `<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="200">${_xmlEscape(av)}</text>`)}
   </g>
 
   <!-- info column, right of sticker -->

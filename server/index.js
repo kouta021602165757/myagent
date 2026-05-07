@@ -270,16 +270,19 @@ async function creditCreatorRevenue(creatorUserId, meta){
 }
 
 // ── HTTPS REQUEST ─────────────────────────────────────────────
-function httpsReq(method,hostname,pathname,headers,body){
+function httpsReq(method,hostname,pathname,headers,body,opts){
   return new Promise((resolve,reject)=>{
     const pay=body?(typeof body==='string'?body:JSON.stringify(body)):null;
     const h={...headers};
     if(pay)h['Content-Length']=Buffer.byteLength(pay);
-    const req=https.request({hostname,path:pathname,method,headers:h},r=>{
+    const timeoutMs = (opts && opts.timeout) || 50000; // 50s default — under Render's 100s edge cap
+    const req=https.request({hostname,path:pathname,method,headers:h,timeout:timeoutMs},r=>{
       let d='';r.on('data',c=>d+=c);
       r.on('end',()=>{try{resolve({s:r.statusCode,d:JSON.parse(d)});}catch{resolve({s:r.statusCode,d});}});
     });
-    req.on('error',reject);if(pay)req.write(pay);req.end();
+    req.on('error',reject);
+    req.on('timeout',()=>{ try{req.destroy(new Error('upstream timeout '+timeoutMs+'ms'));}catch(e){} reject(new Error('upstream timeout '+timeoutMs+'ms')); });
+    if(pay)req.write(pay);req.end();
   });
 }
 
@@ -417,9 +420,16 @@ function _trimHistory(messages){
 }
 
 async function callAI(messages,system){
-  const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
-    {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
-                         {model:'claude-sonnet-4-6',max_tokens:1024,system:_systemBlocks(system),messages:_trimHistory(messages)});
+  const trimmedMsgs = _trimHistory(messages);
+  const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
+  const tryCall = async (sys) => httpsReq('POST','api.anthropic.com','/v1/messages',headers,
+    {model:'claude-sonnet-4-6',max_tokens:1024,system:sys,messages:trimmedMsgs});
+  let r = await tryCall(_systemBlocks(system));
+  // If Anthropic rejected cache_control formatting, retry with plain string system
+  if(r.s===400 && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
+    console.warn('[callAI] retrying without cache_control:', JSON.stringify(r.d).slice(0,200));
+    r = await tryCall(String(system||''));
+  }
   if(r.s!==200)throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
   return r.d;
 }
@@ -445,6 +455,7 @@ function callAIStream(messages, system, onText){
         'Content-Type':'application/json',
         'x-api-key':ANTHROPIC,
         'anthropic-version':'2023-06-01',
+        'anthropic-beta':'prompt-caching-2024-07-31',
         'Content-Length':Buffer.byteLength(body),
       }
     }, (r)=>{
@@ -497,11 +508,18 @@ async function callAIWithTools(messages,system,tools){
   // Single retry on 429 with short backoff — Render edge times out around 60–100s
   // so we can't afford long waits. Surface the rate limit to the user instead.
   let attempt = 0;
+  let useCache = true;
+  const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
   while(true){
-    const r=await httpsReq('POST','api.anthropic.com','/v1/messages',
-      {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
-                           {model:'claude-sonnet-4-6',max_tokens:2048,system:_systemBlocks(system),messages:_trimHistory(messages),tools});
+    const sys = useCache ? _systemBlocks(system) : String(system||'');
+    const r=await httpsReq('POST','api.anthropic.com','/v1/messages',headers,
+                           {model:'claude-sonnet-4-6',max_tokens:2048,system:sys,messages:_trimHistory(messages),tools});
     if(r.s===200) return r.d;
+    if(r.s===400 && useCache && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
+      console.warn('[chat] cache_control rejected, retrying without:', JSON.stringify(r.d).slice(0,200));
+      useCache = false;
+      continue;
+    }
     if(r.s===429 && attempt < 1){
       console.warn('[chat] Anthropic 429 rate-limited, retrying once in 5s');
       await new Promise(res=>setTimeout(res, 5000));

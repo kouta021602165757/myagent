@@ -167,8 +167,21 @@ a{color:var(--peach);text-decoration:none;}
   flex-shrink:0;font-family:inherit;
 }
 .comp-btn.peach{background:var(--peach);color:#fff;}
-.comp-btn.mic{background:var(--bg-card);color:var(--peach-dark);border:1px solid var(--peach);}
 .comp-btn.attach{background:transparent;color:var(--text3);}
+
+/* Bottom tab bar (iOS native pattern) */
+.tab-bar{
+  display:flex;background:#fff;border-top:1px solid var(--line);
+  flex-shrink:0;padding:5px 0 0;
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:5px 0 6px;text-decoration:none;cursor:pointer;
+  color:var(--text3);font-size:9px;font-weight:600;
+}
+.tab.active{color:var(--peach-dark);font-weight:800;}
+.tab .ic{font-size:18px;line-height:1;}
+.tab.active .ic{transform:scale(1.05);}
 
 /* Login screen */
 .login-screen{
@@ -389,13 +402,13 @@ a{color:var(--peach);text-decoration:none;}
   <h1 class="h1">📱 MY AI Agent <span class="accent">モバイルアプリ</span><br>UI モック</h1>
   <p class="sub">
     Capacitor で iOS/Android 同時リリース予定。<b>2 週間で MVP</b>、6-8 週間で App Store / Google Play 公開を目標。<br>
-    通勤中・カフェ・打合せの隙間に音声で AI に指示できる。完了したら push 通知。
+    通勤中・カフェ・打合せの隙間に AI に指示できる。完了したら push 通知。
   </p>
   <div class="tagrow">
     <span class="tag peach">Capacitor</span>
     <span class="tag">iOS / Android</span>
     <span class="tag">既存 Web 流用</span>
-    <span class="tag">音声入力</span>
+    <span class="tag">下部タブバー</span>
     <span class="tag">プッシュ通知</span>
     <span class="tag">カメラ</span>
   </div>
@@ -458,14 +471,19 @@ a{color:var(--peach);text-decoration:none;}
         <div class="comp-wrap">
           <button class="comp-btn attach">📎</button>
           <input placeholder="何をお願いしますか？">
-          <button class="comp-btn mic">🎤</button>
           <button class="comp-btn peach">↑</button>
         </div>
+      </div>
+      <div class="tab-bar">
+        <a class="tab active"><div class="ic">💬</div><div>チャット</div></a>
+        <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 02</span><div class="phone-ttl">チャット (メイン)</div><div class="phone-desc">既存の app.html UI を<br>モバイル最適化</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 02</span><div class="phone-ttl">チャット (メイン)</div><div class="phone-desc">既存の app.html UI を<br>モバイル最適化 + 下部タブバー</div></div>
 </div>
 
 <!-- ──── 3. サイドメニュー (slide-in) ──── -->
@@ -503,21 +521,64 @@ a{color:var(--peach);text-decoration:none;}
   <div class="phone-meta"><span class="phone-num">SCREEN 03</span><div class="phone-ttl">サイドメニュー</div><div class="phone-desc">左スワイプ or ☰ で表示<br>エージェント切替・メニュー</div></div>
 </div>
 
-<!-- ──── 4. 音声入力 (フルスクリーン) ──── -->
+<!-- ──── 4. 通知センター (アプリ内) ──── -->
 <div class="phone">
   <div class="iphone"><div class="iphone-screen">
-    <div class="ios-status dark"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
     <div class="app">
-      <div class="voice-screen">
-        <div class="voice-orb"></div>
-        <div class="voice-text">「今日の予定を Slack の自分用チャンネルに投稿して」</div>
-        <div class="voice-status">🎙 聞き取り中…</div>
-        <button class="voice-cancel">キャンセル</button>
+      <div class="app-head">
+        <button class="icon-btn" style="font-size:14px">←</button>
+        <div style="flex:1"><div class="nm" style="font-size:13px">通知</div></div>
+        <button class="icon-btn">⋯</button>
+      </div>
+      <div class="app-body" style="background:var(--cream2);padding:10px 12px">
+        <div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px">
+          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">✅</div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text3);font-weight:600">5分前</div>
+            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">商談を更新しました</div>
+            <div style="font-size:11.5px;color:var(--text2);margin-top:2px;line-height:1.5">AcmeSaaS 様の商談を確度70%・¥5,000,000 で更新しました</div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(251,146,60,.4);border-radius:11px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px">
+          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">⚠</div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--peach-dark);font-weight:800">承認待ち · 25分</div>
+            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">X に投稿しますか?</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;line-height:1.5">「新サービス公開しました!ぜひ試してみてください 🎉」</div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <button style="flex:1;background:rgba(0,0,0,.05);color:var(--text2);border:0;padding:6px;border-radius:7px;font-size:10.5px;font-weight:700">やめる</button>
+              <button style="flex:1.5;background:var(--green);color:#fff;border:0;padding:6px;border-radius:7px;font-size:10.5px;font-weight:700">許可して投稿</button>
+            </div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px">
+          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">📨</div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text3);font-weight:600">朝 8:30</div>
+            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">☀ 朝のサマリー</div>
+            <div style="font-size:11.5px;color:var(--text2);margin-top:2px;line-height:1.5">未読メール 8 通 (緊急 2)・今日の予定 3 件</div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;gap:10px">
+          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">📊</div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text3);font-weight:600">昨日</div>
+            <div style="font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px">議事録から 5 タスク抽出</div>
+            <div style="font-size:11.5px;color:var(--text2);margin-top:2px;line-height:1.5">Notion の「タスク管理」DB に追加しました</div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
+        <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
-    <div class="home-ind dark"></div>
+    <div class="home-ind"></div>
   </div></div>
-  <div class="phone-meta"><span class="phone-num">SCREEN 04</span><div class="phone-ttl">音声入力モード</div><div class="phone-desc">フルスクリーンで脈動する球<br>話した内容がリアルタイム表示</div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 04</span><div class="phone-ttl">通知センター</div><div class="phone-desc">アプリ内の通知一覧<br>承認依頼はその場で OK/拒否</div></div>
 </div>
 
 </div>
@@ -632,6 +693,12 @@ a{color:var(--peach);text-decoration:none;}
           </div>
         </div>
       </div>
+      <div class="tab-bar">
+        <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
+        <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
+        <a class="tab active"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
+      </div>
     </div>
     <div class="home-ind"></div>
   </div></div>
@@ -667,6 +734,12 @@ a{color:var(--peach);text-decoration:none;}
         <div class="settings-row"><div class="ic">📋</div><div class="label">アクティビティ</div><span class="arrow">›</span></div>
         <div class="settings-row"><div class="ic">📜</div><div class="label">利用規約 / プライバシー</div><span class="arrow">›</span></div>
         <div class="settings-row" style="color:var(--rose)"><div class="ic">↩</div><div class="label">ログアウト</div></div>
+      </div>
+      <div class="tab-bar">
+        <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
+        <a class="tab"><div class="ic">🤖</div><div>エージェント</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab active"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>
@@ -725,6 +798,12 @@ a{color:var(--peach);text-decoration:none;}
           </div>
           <div class="agent-flags"></div>
         </div>
+      </div>
+      <div class="tab-bar">
+        <a class="tab"><div class="ic">💬</div><div>チャット</div></a>
+        <a class="tab active"><div class="ic">🤖</div><div>エージェント</div></a>
+        <a class="tab"><div class="ic">🏪</div><div>マーケット</div></a>
+        <a class="tab"><div class="ic">⚙</div><div>設定</div></a>
       </div>
     </div>
     <div class="home-ind"></div>

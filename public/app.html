@@ -5346,7 +5346,9 @@ async function saveEditAgent(){
     renderChatTop(ag);
     showToast('保存しました','ok');
   }catch(e){
-    showToast('保存に失敗しました','ng');
+    var msg = (e && e.message) ? e.message : '保存に失敗しました';
+    console.error('[saveEditAgent] failed:', e);
+    showToast(msg.slice(0, 200), 'ng');
   }
 }
 

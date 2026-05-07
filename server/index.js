@@ -792,6 +792,27 @@ async function _sheetsApi(user, method, pathSuffix, body){
   return {error:`sheets_api_${r.s}: ${errMsg}`};
 }
 
+// Sanitize the AI-supplied 2D values array before sending to Sheets API.
+// Anthropic sometimes emits objects ({type:'text',text:'...'}) or null cells inside arrays.
+// Returns null if the shape is invalid.
+function _cleanSheetValues(values){
+  if(!Array.isArray(values)) return null;
+  return values.map(row=>{
+    if(!Array.isArray(row)){
+      // Single-value rows: accept and wrap.
+      if(row==null || ['string','number','boolean'].includes(typeof row)) return [row==null?'':row];
+      return [String(row)];
+    }
+    return row.map(cell=>{
+      if(cell==null) return '';
+      if(typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean') return cell;
+      // Anthropic sometimes wraps strings in {type:'text',text:'...'} — flatten.
+      if(cell && typeof cell.text === 'string') return cell.text;
+      return JSON.stringify(cell);
+    });
+  });
+}
+
 // Convert "#RRGGBB" or "#rgb" hex to Google's float-RGB (0..1) color object.
 function _hexToRgbFloat(hex){
   const m = String(hex||'').trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
@@ -813,19 +834,35 @@ async function executeSheetsTool(user, name, input){
     if(name==='sheets_read'){
       const d = await _sheetsApi(user, 'GET', `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}`);
       if(d.error) return d;
-      return { range:d.range, values:d.values||[], rows:(d.values||[]).length };
+      // Cap response size to avoid blowing the AI's input window. 500 rows is plenty for
+      // analytical work; the AI can request additional ranges if needed.
+      const values = d.values || [];
+      const MAX_ROWS = 500;
+      const truncated = values.length > MAX_ROWS;
+      return {
+        range: d.range,
+        values: truncated ? values.slice(0, MAX_ROWS) : values,
+        rows: values.length,
+        ...(truncated ? { truncated:true, note:`先頭 ${MAX_ROWS} 行のみ返却。続きを読むには range を分割してください (例: "シート名!A501:Z1000")` } : {}),
+      };
     }
     if(name==='sheets_write'){
+      // valueInputOption=USER_ENTERED makes Google parse "=SUM(...)" as a formula and
+      // "1234" as a number. Pre-clean the values so AI's stray nulls/objects don't choke.
+      const cleanValues = _cleanSheetValues(input.values);
+      if(!cleanValues) return {error:'values must be a 2D array (rows × cols of strings/numbers/booleans/null)'};
       const d = await _sheetsApi(user, 'PUT',
         `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}?valueInputOption=USER_ENTERED`,
-        {values: input.values || []});
+        {values: cleanValues});
       if(d.error) return d;
       return { updated_range:d.updatedRange, updated_rows:d.updatedRows, updated_cols:d.updatedColumns };
     }
     if(name==='sheets_append'){
+      const cleanValues = _cleanSheetValues(input.values);
+      if(!cleanValues) return {error:'values must be a 2D array (rows × cols of strings/numbers/booleans/null)'};
       const d = await _sheetsApi(user, 'POST',
         `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-        {values: input.values || []});
+        {values: cleanValues});
       if(d.error) return d;
       return { updated_range: d.updates&&d.updates.updatedRange, appended_rows:(d.updates&&d.updates.updatedRows)||0 };
     }

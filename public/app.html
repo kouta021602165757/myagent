@@ -5486,7 +5486,8 @@ async function saveEditAgent(){
     ag.sheets_enabled = sheetsEnabled;
     closeEditAgent();
     renderAgList();
-    renderChatTop(ag);
+    // Re-open the active chat so name/avatar/icon changes show immediately
+    if(activeId === ag.id && typeof openAgent === 'function') openAgent(ag.id);
     showToast('保存しました','ok');
   }catch(e){
     var msg = (e && e.message) ? e.message : '保存に失敗しました';

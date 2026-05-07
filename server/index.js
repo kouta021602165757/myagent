@@ -2905,6 +2905,14 @@ async function handleAPI(req,res,pathname,method,ip){
       // サブスクリプション作成
       const sub = await stripeCreateSubscription(customerId, priceId);
       const clientSecret = sub.latest_invoice?.payment_intent?.client_secret;
+      const piStatus = sub.latest_invoice?.payment_intent?.status;
+      const liStatus = typeof sub.latest_invoice === 'string' ? '(unexpanded id)' : sub.latest_invoice?.status;
+      console.log('[billing/subscribe] sub.status='+sub.status+' invoice.status='+liStatus+' pi.status='+piStatus+' has_client_secret='+!!clientSecret);
+      if(!clientSecret && sub.status !== 'active' && sub.status !== 'trialing'){
+        // Diagnostic: surface what Stripe actually gave back so the operator sees it
+        console.error('[billing/subscribe] missing client_secret. sub keys:', Object.keys(sub).join(','),
+          'latest_invoice keys:', sub.latest_invoice && typeof sub.latest_invoice === 'object' ? Object.keys(sub.latest_invoice).join(',') : 'STRING_ID');
+      }
       user.plan = plan;
       user.subscription_id = sub.id;
       user.subscription_status = sub.status;
@@ -2913,7 +2921,11 @@ async function handleAPI(req,res,pathname,method,ip){
         subscription_id: sub.id,
         client_secret: clientSecret,
         status: sub.status,
-        plan
+        plan,
+        // Diagnostic fields (safe to expose for debugging)
+        invoice_status: liStatus,
+        pi_status: piStatus,
+        latest_invoice_type: typeof sub.latest_invoice,
       });
     }catch(e){
       console.error('[billing/subscribe]', e.message);

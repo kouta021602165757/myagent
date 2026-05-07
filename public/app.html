@@ -4579,8 +4579,15 @@ async function bsSubscribeSubmit(){
       // Subscription created but no client_secret — surface what we got back
       console.warn('subscribe response without client_secret:', r);
       var msg = '決済の初期化に失敗しました';
-      if(r.status){ msg += ' (status: '+r.status+')'; }
+      var details = [];
+      if(r.status) details.push('sub:'+r.status);
+      if(r.invoice_status) details.push('inv:'+r.invoice_status);
+      if(r.pi_status) details.push('pi:'+r.pi_status);
+      if(r.latest_invoice_type) details.push('inv_type:'+r.latest_invoice_type);
+      if(details.length) msg += ' (' + details.join(', ') + ')';
       showToast(msg,'ng');
+      var errEl = document.getElementById('bs-monthly-err');
+      if(errEl) errEl.textContent = msg;
     }
   }catch(e){
     console.warn('[bsSubscribeSubmit]', e);

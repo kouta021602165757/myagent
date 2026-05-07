@@ -104,26 +104,34 @@ const DB={
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
-    // PATCH the row. If PostgREST rejects with PGRST204 'Could not find the X
-    // column', auto-drop X and retry. Up to 12 retries to peel off any new
-    // columns the schema doesn't have yet.
     const payload = {...user};
     delete payload.id; // never update primary key
     for(let attempt=0; attempt<12; attempt++){
       const r = await sbReq('PATCH','users','?id=eq.'+user.id,payload);
-      if(r.s<400) return;
+      if(r.s<400){
+        // Verify the PATCH actually hit a row. With Prefer: return=representation,
+        // r.d should be an array of updated rows. Empty array == nothing matched.
+        if(Array.isArray(r.d) && r.d.length===0){
+          console.error('[DB.save] PATCH returned 0 rows for id='+user.id+' — RLS policy or wrong key? plan saved=NO');
+          throw new Error('Supabase: 0 rows updated (RLS policy blocking, or service key wrong)');
+        }
+        // Useful diagnostic: log when plan changed
+        if(payload.plan){
+          console.log('[DB.save] saved id='+user.id+' plan='+payload.plan+' rows='+(Array.isArray(r.d)?r.d.length:'?'));
+        }
+        return;
+      }
       const msg = (r.d && (r.d.message || r.d.hint)) || '';
       const m = msg.match(/Could not find the '([\w_]+)' column/);
       if(m && payload[m[1]] !== undefined){
-        console.warn('[DB.save] dropping unknown column "'+m[1]+'" (run docs/SUPABASE_MIGRATION.sql to add it)');
+        console.warn('[DB.save] dropping unknown column "'+m[1]+'"');
         delete payload[m[1]];
         continue;
       }
-      // Some other error — give up
       console.error('[DB.save] Supabase rejected (HTTP '+r.s+'):', JSON.stringify(r.d).slice(0,400));
       throw new Error(msg || 'Supabase save failed (HTTP '+r.s+')');
     }
-    throw new Error('Supabase save failed after retries (too many missing columns?)');
+    throw new Error('Supabase save failed after retries');
   },
   async remove(id){
     if(!USE_SUPA){LDB.data=(LDB.data||[]).filter(u=>u.id!==id);return true;}

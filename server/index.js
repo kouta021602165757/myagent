@@ -1456,7 +1456,11 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── GET /api/auth/google ───────────────────────────────────
   if(pathname==='/api/auth/google'&&method==='GET'){
-    if(!GOOGLE_ID)return jres(res,503,{error:'Googleログインは設定されていません'});
+    if(!GOOGLE_ID || !GOOGLE_SEC){
+      // Redirect back to auth page with a friendly error rather than raw JSON
+      res.writeHead(302,{Location:'/auth.html?error=google_failed&reason=not_configured'});
+      res.end(); return;
+    }
     res.writeHead(302,{Location:googleAuthURL()});res.end();return;
   }
 

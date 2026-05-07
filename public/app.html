@@ -546,6 +546,8 @@ input,textarea{font-family:var(--sans);}
 .tool-btn:hover{background:var(--cream2);color:var(--text);}
 .tool-btn.active{color:var(--peach-dark);background:rgba(251,146,60,.08);}
 .tool-btn.warn{color:#d97706;background:rgba(245,158,11,.08);}
+.tool-btn.recording{color:#fff;background:var(--rose);animation:micPulse 1.4s ease-in-out infinite;}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5);}50%{box-shadow:0 0 0 6px rgba(239,68,68,0);}}
 .tool-spacer{flex:1;}
 
 .send-btn{
@@ -1321,8 +1323,11 @@ body{color:#f0f0f8;}
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <textarea id="ci" placeholder="何をお願いしますか？" rows="1" oninput="exTA(this)" onkeydown="taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()"></textarea>
             <div class="composer-tools">
-              <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイル添付" id="attachBtn">
+              <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="画像 / PDF を添付" id="attachBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <button class="tool-btn" id="micBtn" onclick="toggleMic()" title="音声入力">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
               </button>
               <button class="tool-btn" id="chromeTool" title="" style="display:none">
                 <span style="font-size:14px">🌐</span><span style="font-size:12px;font-weight:700">Chrome</span>
@@ -2977,6 +2982,58 @@ function useChip(t){ document.getElementById('ci').value=t; sendMsg(); }
 var _pendingImgs = [];
 
 // 添付ファイル選択ハンドラ（画像 + PDF対応）
+/* ── Voice input (Web Speech API) ───────────────────────────── */
+var _recog = null, _recogActive = false;
+function _speechCtor(){
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+function toggleMic(){
+  var Ctor = _speechCtor();
+  if(!Ctor){
+    showToast(isJa?'このブラウザは音声入力に対応していません (Chrome/Edge/Safari 推奨)':'Voice input not supported in this browser','ng');
+    return;
+  }
+  if(_recogActive){
+    try{ _recog && _recog.stop(); }catch(e){}
+    return;
+  }
+  var btn = document.getElementById('micBtn');
+  var ci  = document.getElementById('ci');
+  if(!ci) return;
+  _recog = new Ctor();
+  _recog.lang = isJa ? 'ja-JP' : 'en-US';
+  _recog.interimResults = true;
+  _recog.continuous = false;
+  var baseText = ci.value.replace(/\s+$/,'');
+  if(baseText) baseText += ' ';
+  _recog.onresult = function(event){
+    var transcript = '';
+    for(var i = event.resultIndex; i < event.results.length; i++){
+      transcript += event.results[i][0].transcript;
+    }
+    ci.value = baseText + transcript;
+    if(typeof exTA === 'function') exTA(ci);
+  };
+  _recog.onerror = function(e){
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      showToast(isJa?'マイクの使用許可が必要です':'Microphone permission required','ng');
+    } else if(e.error !== 'aborted' && e.error !== 'no-speech'){
+      showToast((isJa?'音声認識エラー: ':'Recognition error: ')+e.error,'ng');
+    }
+  };
+  _recog.onstart = function(){
+    _recogActive = true;
+    if(btn){ btn.classList.add('recording'); btn.title = isJa?'録音中… クリックで停止':'Recording… click to stop'; }
+  };
+  _recog.onend = function(){
+    _recogActive = false;
+    if(btn){ btn.classList.remove('recording'); btn.title = isJa?'音声入力':'Voice input'; }
+    if(ci) ci.focus();
+  };
+  try{ _recog.start(); }
+  catch(e){ showToast(isJa?'音声認識を開始できませんでした':'Could not start recognition','ng'); }
+}
+
 function onImgSelect(e){
   const files = Array.from(e.target.files);
   files.forEach(file => {

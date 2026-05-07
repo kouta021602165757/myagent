@@ -718,6 +718,50 @@ const SHEETS_TOOLS = [
       required:['spreadsheet_id']
     }
   },
+  {
+    name:'sheets_create_spreadsheet',
+    description:'新しい Google スプレッドシートをユーザーのアカウントに作成します。タイトルを指定。返り値の url をユーザーに伝えると Google ドライブで開けます。',
+    input_schema:{
+      type:'object',
+      properties:{
+        title:{type:'string',description:'新規スプレッドシートのタイトル'},
+        sheet_titles:{type:'array',description:'(任意) 初期シート名の配列。例: ["顧客", "商品", "売上"]。省略時はシート1のみ'}
+      },
+      required:['title']
+    }
+  },
+  {
+    name:'sheets_add_sheet',
+    description:'既存スプレッドシートに新しいシート(タブ)を追加します。',
+    input_schema:{
+      type:'object',
+      properties:{
+        spreadsheet_id:{type:'string'},
+        sheet_title:{type:'string',description:'追加する新規シート名'}
+      },
+      required:['spreadsheet_id','sheet_title']
+    }
+  },
+  {
+    name:'sheets_format',
+    description:'指定範囲のセル書式を変更します (太字・背景色・テキスト色・フォントサイズ等)。複雑な編集は1回で済ませてください。',
+    input_schema:{
+      type:'object',
+      properties:{
+        spreadsheet_id:{type:'string'},
+        sheet_title:{type:'string',description:'対象シート名 (sheet_id ではなくシート名)'},
+        start_row:{type:'integer',description:'開始行 (1-indexed)'},
+        end_row:{type:'integer',description:'終了行 (1-indexed, inclusive)'},
+        start_col:{type:'integer',description:'開始列 (1-indexed, A=1)'},
+        end_col:{type:'integer',description:'終了列 (1-indexed, inclusive)'},
+        bold:{type:'boolean'},
+        background:{type:'string',description:'背景色 hex (例 "#FFEB3B" または "#fb923c")'},
+        text_color:{type:'string',description:'文字色 hex'},
+        font_size:{type:'integer',description:'フォントサイズ pt'},
+      },
+      required:['spreadsheet_id','sheet_title','start_row','end_row','start_col','end_col']
+    }
+  },
 ];
 
 // Common Sheets API request — auto-refreshes token, returns parsed JSON or {error}.
@@ -748,11 +792,24 @@ async function _sheetsApi(user, method, pathSuffix, body){
   return {error:`sheets_api_${r.s}: ${errMsg}`};
 }
 
+// Convert "#RRGGBB" or "#rgb" hex to Google's float-RGB (0..1) color object.
+function _hexToRgbFloat(hex){
+  const m = String(hex||'').trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if(!m) return null;
+  let h = m[1];
+  if(h.length===3) h = h.split('').map(c=>c+c).join('');
+  const r = parseInt(h.slice(0,2),16) / 255;
+  const g = parseInt(h.slice(2,4),16) / 255;
+  const b = parseInt(h.slice(4,6),16) / 255;
+  return { red:r, green:g, blue:b };
+}
+
 async function executeSheetsTool(user, name, input){
   try{
     const id  = input.spreadsheet_id || '';
     const rng = encodeURIComponent(input.range || '');
-    if(!id) return {error:'spreadsheet_id is required'};
+    // sheets_create_spreadsheet doesn't need spreadsheet_id; check inside that branch.
+    if(!id && name !== 'sheets_create_spreadsheet') return {error:'spreadsheet_id is required'};
     if(name==='sheets_read'){
       const d = await _sheetsApi(user, 'GET', `/v4/spreadsheets/${encodeURIComponent(id)}/values/${rng}`);
       if(d.error) return d;
@@ -790,6 +847,77 @@ async function executeSheetsTool(user, name, input){
           cols:s.properties&&s.properties.gridProperties&&s.properties.gridProperties.columnCount,
         })),
       };
+    }
+    if(name==='sheets_create_spreadsheet'){
+      // Note: spreadsheet_id NOT required for this op — override the early-return.
+      const title = (input.title||'').trim();
+      if(!title) return {error:'title is required'};
+      const sheetTitles = Array.isArray(input.sheet_titles) && input.sheet_titles.length
+        ? input.sheet_titles.filter(t=>typeof t==='string' && t.trim())
+        : null;
+      const body = {
+        properties: { title },
+        ...(sheetTitles ? { sheets: sheetTitles.map(t=>({ properties:{title:t} })) } : {}),
+      };
+      const d = await _sheetsApi(user, 'POST', '/v4/spreadsheets', body);
+      if(d.error) return d;
+      return {
+        spreadsheet_id: d.spreadsheetId,
+        url: d.spreadsheetUrl,
+        title: d.properties && d.properties.title,
+        sheets: (d.sheets||[]).map(s=>s.properties && s.properties.title),
+      };
+    }
+    if(name==='sheets_add_sheet'){
+      const t = (input.sheet_title||'').trim();
+      if(!t) return {error:'sheet_title is required'};
+      const d = await _sheetsApi(user, 'POST',
+        `/v4/spreadsheets/${encodeURIComponent(id)}:batchUpdate`,
+        { requests:[{ addSheet:{ properties:{ title:t } } }] });
+      if(d.error) return d;
+      const reply = (d.replies||[])[0];
+      const props = reply && reply.addSheet && reply.addSheet.properties;
+      return { added_sheet: props ? props.title : t, sheet_id: props ? props.sheetId : null };
+    }
+    if(name==='sheets_format'){
+      // Resolve sheet_title → sheetId via meta call (Google's batchUpdate needs the
+      // numeric sheet ID, but we accept human-readable title from the AI for clarity).
+      const sheetTitle = (input.sheet_title||'').trim();
+      if(!sheetTitle) return {error:'sheet_title is required'};
+      const meta = await _sheetsApi(user, 'GET', `/v4/spreadsheets/${encodeURIComponent(id)}?fields=sheets.properties(title,sheetId)`);
+      if(meta.error) return meta;
+      const sheet = (meta.sheets||[]).find(s=>s.properties && s.properties.title === sheetTitle);
+      if(!sheet) return {error:`sheet_not_found: "${sheetTitle}"。利用可能なシート: ${(meta.sheets||[]).map(s=>s.properties&&s.properties.title).filter(Boolean).join(', ')}`};
+      const sheetId = sheet.properties.sheetId;
+      // Build cellFormat from the optional inputs.
+      const cellFormat = {};
+      const fields = [];
+      if(typeof input.bold==='boolean'){ cellFormat.textFormat = {...(cellFormat.textFormat||{}), bold:input.bold}; fields.push('userEnteredFormat.textFormat.bold'); }
+      if(input.background){
+        const c = _hexToRgbFloat(input.background);
+        if(c){ cellFormat.backgroundColor = c; fields.push('userEnteredFormat.backgroundColor'); }
+      }
+      if(input.text_color){
+        const c = _hexToRgbFloat(input.text_color);
+        if(c){ cellFormat.textFormat = {...(cellFormat.textFormat||{}), foregroundColor:c}; fields.push('userEnteredFormat.textFormat.foregroundColor'); }
+      }
+      if(typeof input.font_size==='number'){ cellFormat.textFormat = {...(cellFormat.textFormat||{}), fontSize:input.font_size}; fields.push('userEnteredFormat.textFormat.fontSize'); }
+      if(fields.length===0) return {error:'少なくとも bold / background / text_color / font_size のいずれかを指定してください'};
+      const d = await _sheetsApi(user, 'POST',
+        `/v4/spreadsheets/${encodeURIComponent(id)}:batchUpdate`,
+        { requests:[{ repeatCell:{
+          range:{
+            sheetId,
+            startRowIndex: Math.max(0, (input.start_row|0) - 1),
+            endRowIndex: input.end_row|0,
+            startColumnIndex: Math.max(0, (input.start_col|0) - 1),
+            endColumnIndex: input.end_col|0,
+          },
+          cell:{ userEnteredFormat: cellFormat },
+          fields: fields.join(','),
+        } }] });
+      if(d.error) return d;
+      return { ok:true, formatted:{ sheet:sheetTitle, rows:`${input.start_row}-${input.end_row}`, cols:`${input.start_col}-${input.end_col}` } };
     }
     return {error:'unknown_sheets_tool: '+name};
   }catch(e){
@@ -1878,12 +2006,15 @@ function buildSystem(agent, opts){
 【ツール: Google スプレッドシート連携 — 認証済み API 直結】
 このエージェントは **ユーザー本人の Google アカウントに接続されており、スプレッドシートを直接読み書きできます**。Chrome ブラウザ操作とは別物の、認証済み Sheets API です。
 
-スプレッドシート関連の依頼（読む・書く・追加する・分析する・新しく作る・並び替える 等）が来たら、以下のツールだけを使ってください:
-- sheets_get_meta(spreadsheet_id): タイトル + シート名一覧（最初に必ず呼ぶ）
+スプレッドシート関連の依頼（読む・書く・追加する・分析する・新しく作る・並び替える・書式設定 等）が来たら、以下のツールだけを使ってください:
+- sheets_get_meta(spreadsheet_id): タイトル + シート名一覧（既存シート操作前に必ず呼ぶ）
 - sheets_read(spreadsheet_id, range): A1 形式でセル読み取り
 - sheets_write(spreadsheet_id, range, values): 範囲を上書き (values は2次元配列)
 - sheets_append(spreadsheet_id, range, values): 最終行の下に追記 (既存破壊なし)
 - sheets_clear(spreadsheet_id, range): セル値をクリア
+- sheets_create_spreadsheet(title, sheet_titles?): 新規スプレッドシートを作成 → URL を返す
+- sheets_add_sheet(spreadsheet_id, sheet_title): 既存シートに新しいタブを追加
+- sheets_format(spreadsheet_id, sheet_title, range, bold/background/text_color/font_size): セル書式設定
 
 【絶対ルール】
 1. **シート名の決め打ち禁止**: 必ず最初に sheets_get_meta を呼んで返ってきた本物のシート名 (例: "営業管理", "Sheet1", "シート1" 等) を使ってください。"Sheet1!A:H" のような決め打ちは確実に失敗します。

@@ -1961,6 +1961,28 @@ async function handleAPI(req,res,pathname,method,ip){
     res.writeHead(302,{Location:googleAuthURL()});res.end();return;
   }
 
+  // ── GET /api/setup/sheets-status (PUBLIC, dev-onboarding) ─
+  // Reports whether Google OAuth env vars are set and whether the google_oauth
+  // column exists in Supabase. Used by /setup-google-sheets.html.
+  if(pathname==='/api/setup/sheets-status' && method==='GET'){
+    let dbMigrated = false;
+    if(USE_SUPA){
+      try{
+        // PostgREST returns 400 with "column does not exist" if the column is missing.
+        const probe = await sbReq('GET','users','?select=google_oauth&limit=1');
+        // 200 (with data) OR 200 with empty array == column exists. 400 == missing.
+        dbMigrated = probe.s === 200;
+      }catch(e){ dbMigrated = false; }
+    } else {
+      dbMigrated = true; // local JSON DB always has the field
+    }
+    return jres(res,200,{
+      google_oauth: !!(GOOGLE_ID && GOOGLE_SEC),
+      db_migrated: dbMigrated,
+      database_url_set: !!(process.env.DATABASE_URL || process.env.SUPABASE_DB_URL),
+    });
+  }
+
   // ── GET /api/config (PUBLIC) ───────────────────────────────
   // Lightweight feature-flag endpoint so the frontend knows what's enabled.
   if(pathname==='/api/config' && method==='GET'){
@@ -3617,7 +3639,46 @@ const server=http.createServer(async(req,res)=>{
 
 process.on('uncaughtException',err=>{if(err.code==='ECONNRESET'||err.message==='socket hang up')return;console.error('Uncaught:',err.message);});
 process.on('unhandledRejection',err=>{console.error('Unhandled:',err?.message||err);});
-server.listen(PORT,'0.0.0.0',()=>{
+
+// ── Auto-migrate Supabase schema on boot ─────────────────────
+// Reads docs/SUPABASE_MIGRATION.sql and runs it via direct Postgres connection.
+// Idempotent (every ALTER uses IF NOT EXISTS) so it's safe to run on every deploy.
+// Requires DATABASE_URL env var (Supabase Project Settings → Database → Connection
+// pooling → Transaction mode connection string with the password filled in).
+async function autoMigrate(){
+  const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+  if(!dbUrl){
+    console.log('[migrate] skipped — DATABASE_URL not set (manual schema management)');
+    return;
+  }
+  let pg;
+  try{ pg = require('pg'); }
+  catch(e){ console.warn('[migrate] pg lib not installed — npm install failed?', e.message); return; }
+  const fs = require('fs');
+  const path = require('path');
+  const sqlPath = path.join(__dirname, '..', 'docs', 'SUPABASE_MIGRATION.sql');
+  let sql;
+  try{ sql = fs.readFileSync(sqlPath, 'utf8'); }
+  catch(e){ console.warn('[migrate] could not read', sqlPath, '—', e.message); return; }
+  const client = new pg.Client({
+    connectionString: dbUrl,
+    // Supabase requires SSL but doesn't always present a CA the system trusts.
+    ssl: { rejectUnauthorized: false },
+  });
+  try{
+    await client.connect();
+    // Run the entire script as a single multi-statement query. All statements use
+    // IF NOT EXISTS so re-running is a no-op.
+    await client.query(sql);
+    console.log('[migrate] ✅ schema applied (', sqlPath.split('/').slice(-2).join('/'), ')');
+  }catch(e){
+    console.error('[migrate] ❌ failed:', e.message);
+  }finally{
+    try{ await client.end(); }catch(e){}
+  }
+}
+
+server.listen(PORT,'0.0.0.0', async ()=>{
   console.log(`\n🚀 MY AI Agent`);
   console.log(`   http://localhost:${PORT}`);
   console.log(`   Anthropic: ${ANTHROPIC?'✅':'❌ Missing ANTHROPIC_API_KEY'}`);
@@ -3626,6 +3687,9 @@ server.listen(PORT,'0.0.0.0',()=>{
   console.log(`   Stripe:    ${STRIPE_SK?'✅':'⚠️  Demo mode'}`);
   console.log(`   Google:    ${GOOGLE_ID?'✅':'⚠️  Not configured'}`);
   console.log(`   Email:     ${RESEND_KEY?'✅ Resend':'⚠️  Console only'}\n`);
+  // Run schema migration AFTER server is listening so health checks pass even if
+  // migration is slow. Failures are logged but don't crash the server.
+  autoMigrate().catch(e=>console.error('[migrate] crashed:', e.message));
 });
 server.on('error',err=>{if(err.code==='EADDRINUSE'){console.error('Port in use:',PORT);process.exit(1);}else{console.error('Server error:',err.message);}});
 process.on('SIGTERM',()=>server.close(()=>process.exit(0)));

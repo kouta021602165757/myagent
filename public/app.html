@@ -1525,6 +1525,7 @@ body{color:#f0f0f8;}
               <div id="wSheetsDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
               <div id="wSheetsAccountRow" style="display:none;margin-top:8px;font-size:11.5px;color:var(--text3)">接続中: <b id="wSheetsEmail"></b></div>
               <button type="button" id="wSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウントと接続</button>
+              <div style="margin-top:6px;font-size:10.5px;color:var(--text3)"><a href="/setup-google-sheets.html" target="_blank" style="color:var(--text3);text-decoration:underline">🔧 接続できない場合のセットアップ手順</a></div>
             </div>
             <button type="button" class="s-sw" id="wSheetsSw" onclick="toggleWizardSheets()"></button>
           </div>
@@ -2227,6 +2228,7 @@ body{color:#f0f0f8;}
           <div id="editSheetsDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
           <div id="editSheetsAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editSheetsEmail"></b> · <a href="#" onclick="event.preventDefault();disconnectGoogleSheets()" style="color:#ef4444">切断</a></div>
           <button type="button" id="editSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウントと接続</button>
+          <div style="margin-top:6px;font-size:10.5px;color:var(--text3)"><a href="/setup-google-sheets.html" target="_blank" style="color:var(--text3);text-decoration:underline">🔧 接続できない場合のセットアップ手順</a></div>
         </div>
         <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
       </div>
@@ -3789,6 +3791,17 @@ document.addEventListener('DOMContentLoaded',async()=>{
         } else {
           var reason = qs.get('reason') || gq;
           showToast((isJa?'Google 連携に失敗しました: ':'Google connection failed: ')+reason, 'ng');
+          // The two errors that mean "developer hasn't finished Cloud Console setup".
+          // Auto-open the setup guide so they don't have to hunt for instructions.
+          if(/redirect_uri_mismatch|access_denied|invalid_scope|admin_policy_enforced/i.test(reason)){
+            setTimeout(function(){
+              if(confirm(isJa
+                ? 'Google Cloud Console の設定がまだ完了していない可能性があります。セットアップガイドを開きますか？'
+                : 'Google Cloud Console setup may be incomplete. Open setup guide?')){
+                window.open('/setup-google-sheets.html', '_blank');
+              }
+            }, 600);
+          }
         }
       }
     }catch(e){}

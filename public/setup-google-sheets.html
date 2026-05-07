@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Google スプレッドシート連携 — 初期セットアップ</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream2:#fff5ea;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15); --green:#10b981; --rose:#ef4444;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+a{color:var(--peach-dark);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+.shell{max-width:760px;margin:0 auto;padding:48px 24px 80px;}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:32px;font-size:13px;color:var(--text3);font-weight:600;}
+.brand a{color:var(--text3);}
+.brand a:hover{color:var(--peach-dark);}
+
+.h1{font-size:30px;font-weight:900;letter-spacing:.01em;margin-bottom:8px;line-height:1.25;}
+.sub{font-size:14.5px;color:var(--text2);margin-bottom:36px;line-height:1.7;}
+.callout{
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);border-radius:14px;
+  padding:18px 20px;margin-bottom:32px;font-size:13.5px;color:var(--text);
+}
+.callout b{color:var(--peach-dark);}
+
+.step{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:24px 24px 22px;margin-bottom:18px;position:relative;
+}
+.step-num{
+  position:absolute;top:-13px;left:20px;
+  background:var(--peach);color:#fff;padding:4px 14px;border-radius:999px;
+  font-size:12px;font-weight:800;letter-spacing:.04em;
+  box-shadow:0 4px 14px rgba(251,146,60,.32);
+}
+.step h2{font-size:18px;font-weight:800;margin:6px 0 10px;}
+.step p{font-size:13.5px;color:var(--text2);margin-bottom:12px;}
+.step ol,.step ul{padding-left:22px;font-size:13.5px;color:var(--text2);margin:8px 0 14px;}
+.step li{margin:5px 0;}
+.step b{color:var(--text);}
+
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--peach);color:#fff;border:0;padding:10px 18px;border-radius:10px;
+  font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:all .15s;text-decoration:none;
+}
+.btn:hover{background:var(--peach-dark);transform:translateY(-1px);text-decoration:none;}
+.btn.ghost{
+  background:#fff;color:var(--peach-dark);border:1.5px solid var(--peach);
+}
+.btn.ghost:hover{background:#fff7ed;}
+
+.copy-row{
+  display:flex;gap:8px;align-items:stretch;
+  background:var(--cream2);border:1px solid var(--line);border-radius:10px;
+  padding:0;overflow:hidden;margin:10px 0;
+}
+.copy-val{
+  flex:1;padding:11px 14px;font-family:var(--mono);font-size:12.5px;
+  color:var(--text);white-space:nowrap;overflow-x:auto;
+  background:transparent;border:0;outline:0;font-weight:500;letter-spacing:.01em;
+}
+.copy-btn{
+  background:#fff;border:0;border-left:1px solid var(--line);
+  padding:0 16px;font-size:12px;font-weight:700;color:var(--peach-dark);
+  cursor:pointer;font-family:inherit;transition:background .15s;
+  white-space:nowrap;
+}
+.copy-btn:hover{background:#fff7ed;}
+.copy-btn.copied{background:rgba(16,185,129,.12);color:var(--green);}
+
+.divider{height:1px;background:var(--line);margin:28px 0;}
+
+.check-section{
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+  border:1px solid rgba(16,185,129,.3);border-radius:14px;
+  padding:20px 22px;margin-top:24px;
+}
+.check-section h3{font-size:15px;font-weight:800;color:#047857;margin-bottom:8px;}
+.check-section p{font-size:13.5px;color:var(--text2);margin-bottom:12px;}
+
+.foot{margin-top:40px;text-align:center;font-size:12.5px;color:var(--text3);}
+.foot a{color:var(--text3);}
+
+.faq{margin-top:32px;}
+.faq summary{
+  cursor:pointer;font-weight:700;font-size:14px;color:var(--text);
+  padding:10px 0;border-bottom:1px solid var(--line);
+}
+.faq summary::marker{color:var(--peach);}
+.faq[open] summary{color:var(--peach-dark);}
+.faq p{font-size:13px;color:var(--text2);padding:12px 4px 16px;}
+
+.tag{
+  display:inline-block;background:rgba(59,130,246,.1);color:#1d4ed8;
+  padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;
+  margin-left:6px;letter-spacing:.04em;
+}
+.tag.green{background:rgba(16,185,129,.12);color:#047857;}
+.tag.amber{background:rgba(251,146,60,.12);color:var(--peach-dark);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+</div>
+
+<h1 class="h1">📊 Google スプレッドシート連携<br>初期セットアップ</h1>
+<p class="sub">
+  この画面は<b>アプリ管理者（あなた）が1回だけ</b>やる作業です。終わったらエンドユーザーは「Google アカウントと接続」ボタンを押すだけで連携できます。<br>
+  かかる時間: <b>5分</b>。順番に下のステップを進めてください。
+</p>
+
+<div class="callout">
+  <b>⚠️ なぜ手動なの?</b><br>
+  Google が OAuth クライアント設定の API 変更を許可していないため、Google Cloud Console を1回だけ開く必要があります。スコープと redirect URI を追加すれば、以後永久に再設定不要です。
+</div>
+
+<!-- ── Step 1: Add redirect URI ──────────────────────────── -->
+<div class="step">
+  <span class="step-num">STEP 1</span>
+  <h2>OAuth クライアントに redirect URI を追加</h2>
+  <p>Google Cloud Console の「OAuth クライアント」画面で、コールバック URL を追加します。</p>
+
+  <a class="btn" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">
+    🚀 Google Cloud Console を開く →
+  </a>
+
+  <ol>
+    <li>左メニューの<b>「認証情報」</b>(または上のボタンで直接)を開く</li>
+    <li>既存の <b>OAuth 2.0 クライアント ID</b> をクリック</li>
+    <li>「<b>承認済みのリダイレクト URI</b>」セクションの「+ URI を追加」をクリック</li>
+    <li>下の URL をそのままコピペ:</li>
+  </ol>
+
+  <div class="copy-row">
+    <input class="copy-val" id="redirUri" value="https://myaiagents.agency/api/google/sheets/callback" readonly>
+    <button class="copy-btn" onclick="copyVal('redirUri',this)">コピー</button>
+  </div>
+
+  <ol start="5">
+    <li>画面下の「<b>保存</b>」をクリック</li>
+  </ol>
+</div>
+
+<!-- ── Step 2: Add scope ─────────────────────────────────── -->
+<div class="step">
+  <span class="step-num">STEP 2</span>
+  <h2>OAuth 同意画面にスコープを追加</h2>
+  <p>「Google スプレッドシート読み書き」権限をユーザーに要求できるようにします。</p>
+
+  <a class="btn" href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener">
+    🚀 OAuth 同意画面を開く →
+  </a>
+
+  <ol>
+    <li>OAuth 同意画面 → 「<b>編集</b>」(または「アプリを編集」)</li>
+    <li>「<b>スコープ</b>」のステップまで進む(「次へ」「次へ」)</li>
+    <li>「<b>+ スコープを追加または削除</b>」をクリック</li>
+    <li>検索ボックスに以下を貼り付け:</li>
+  </ol>
+
+  <div class="copy-row">
+    <input class="copy-val" id="scope" value="https://www.googleapis.com/auth/spreadsheets" readonly>
+    <button class="copy-btn" onclick="copyVal('scope',this)">コピー</button>
+  </div>
+
+  <ol start="5">
+    <li>表示されるスコープ(Google Sheets API · 表示と管理) にチェック → 「<b>更新</b>」</li>
+    <li>「次へ」「次へ」で<b>保存</b></li>
+  </ol>
+
+  <p style="margin-top:14px;font-size:12.5px;color:var(--text3)">
+    <span class="tag amber">テストモード推奨</span>
+    アプリの公開ステータスが「<b>テスト中</b>」なら、テストユーザー一覧に自分の Gmail を追加してください(同じ画面の「テストユーザー」セクション)。「本番」モードに上げるとスプレッドシートスコープは Google の verification 申請が必要です。個人利用なら test mode のまま使えます。
+  </p>
+</div>
+
+<!-- ── Step 3: Test ──────────────────────────────────────── -->
+<div class="step">
+  <span class="step-num">STEP 3</span>
+  <h2>動作確認</h2>
+  <p>ここまで終わったら、アプリに戻って実際に接続してみてください。</p>
+
+  <ol>
+    <li>アプリ画面で任意のエージェントを開いて「⚙ 編集」</li>
+    <li>「📊 Google スプレッドシート連携」セクションの「<b>+ Google アカウントと接続</b>」をクリック</li>
+    <li>Google の同意画面で許可</li>
+    <li>アプリに戻ってトーストに「✓ 接続中」が出れば完了</li>
+    <li>「📊」スイッチを ON にして<b>保存</b></li>
+    <li>そのエージェントとチャットして「このスプレッドシート(URL)を読み込んで」と頼んでみる</li>
+  </ol>
+
+  <a class="btn ghost" href="/app.html">アプリに戻る →</a>
+</div>
+
+<!-- ── Setup status check ───────────────────────────────── -->
+<div class="check-section">
+  <h3>🔧 サーバー側の自動設定状況</h3>
+  <p id="autoCheckMsg" style="color:var(--text3)">読み込み中...</p>
+</div>
+
+<!-- ── FAQ ──────────────────────────────────────────────── -->
+<div class="faq" style="margin-top:40px">
+  <details class="faq">
+    <summary>Q. これってエンドユーザーにもやってもらうの?</summary>
+    <p>いいえ。STEP 1〜2 はアプリ管理者(あなた)が1回だけやる作業です。終わったらエンドユーザーは「Google アカウントと接続」ボタンを押すだけで、数秒で連携できます。</p>
+  </details>
+  <details class="faq">
+    <summary>Q. 「redirect_uri_mismatch」エラーが出る</summary>
+    <p>STEP 1 の URI が正しく登録されていません。コピーボタンで貼り直して再保存してください。よくある間違い: 末尾のスラッシュ、http と https の違い、サブドメイン違い(www. を付けるなど)。</p>
+  </details>
+  <details class="faq">
+    <summary>Q. 「アクセスがブロックされました」エラーが出る</summary>
+    <p>OAuth 同意画面が「テスト中」モードで、自分の Gmail がテストユーザーに登録されていません。STEP 2 の最後に書いたとおり、テストユーザー一覧に追加してください。</p>
+  </details>
+  <details class="faq">
+    <summary>Q. 後から連携を解除したい</summary>
+    <p>アプリのエージェント編集パネルから「切断」できます。Google 側でも一括で取り消せます: <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a></p>
+  </details>
+  <details class="faq">
+    <summary>Q. 「サーバー側の自動設定」って何?</summary>
+    <p>Supabase の DB スキーマを自動マイグレーションする機能です。<code>DATABASE_URL</code> 環境変数を Render に追加していれば、起動時に自動で <code>google_oauth</code> 列が作られます。未設定の場合は手動で SQL を実行してください(<a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a> → SQL Editor → docs/SUPABASE_MIGRATION.sql の中身を実行)。</p>
+  </details>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+
+<script>
+function copyVal(id, btn){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.select();
+  try{
+    navigator.clipboard.writeText(el.value);
+  }catch(e){
+    document.execCommand('copy');
+  }
+  var oldText = btn.textContent;
+  btn.textContent = '✓ コピー済み';
+  btn.classList.add('copied');
+  setTimeout(function(){ btn.textContent = oldText; btn.classList.remove('copied'); }, 1800);
+}
+
+// Show server-side auto-migration status
+(async function(){
+  var msg = document.getElementById('autoCheckMsg');
+  if(!msg) return;
+  try{
+    var r = await fetch('/api/setup/sheets-status');
+    var d = await r.json();
+    var parts = [];
+    parts.push(d.google_oauth ? '✅ <b>Google OAuth 環境変数</b>: 設定済み' : '❌ <b>Google OAuth 環境変数</b>: 未設定 (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)');
+    parts.push(d.db_migrated ? '✅ <b>Supabase スキーマ</b>: 移行済み (google_oauth 列あり)' : '⚠ <b>Supabase スキーマ</b>: 未移行 (DATABASE_URL を Render に追加すると自動移行されます)');
+    msg.innerHTML = parts.join('<br>');
+    msg.style.color = (d.google_oauth && d.db_migrated) ? 'var(--green)' : 'var(--text2)';
+  }catch(e){
+    msg.textContent = 'ステータス取得に失敗しました: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>

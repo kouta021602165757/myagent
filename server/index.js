@@ -3014,6 +3014,18 @@ async function handleAPI(req,res,pathname,method,ip){
     // Wrap the whole aggregation in try/catch so one bad record doesn't
     // crash the whole endpoint.
     try{
+    // Defensive: some legacy users may have agents/billing_history stored as
+    // objects (not arrays) or null. Normalize before aggregation so .filter /
+    // .reduce / .forEach won't throw.
+    const _arr = (v) => Array.isArray(v) ? v : [];
+    allUsers = allUsers.map(u => ({
+      ...u,
+      agents: _arr(u.agents),
+      billing_history: _arr(u.billing_history),
+      revenue_history: _arr(u.revenue_history),
+      payout_history: _arr(u.payout_history),
+      favorites: _arr(u.favorites),
+    }));
 
     const now = Date.now();
     const day = 24*60*60*1000;

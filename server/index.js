@@ -3388,6 +3388,7 @@ async function handleAPI(req,res,pathname,method,ip){
         let convMsgs = baseMsgs.slice();
         let resp;
         let iters = 0;
+        let streamedText = ''; // accumulator of everything emitted via SSE 'delta'
         const MAX_ITERS = 5;
         const startedAt = Date.now();
         const BUDGET_MS = 95000; // Render edge is ~100s; 5s margin to flush response
@@ -3419,10 +3420,14 @@ async function handleAPI(req,res,pathname,method,ip){
           convMsgs.push({role:'assistant', content: resp.content});
 
           // Stream any text the AI emitted alongside its tool calls so the user sees
-          // its reasoning even before tools finish.
+          // its reasoning even before tools finish. Track in streamedText so the final
+          // saved reply matches what the user actually saw on screen.
           if(sse){
             const reasonText = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
-            if(reasonText) sse('delta', { text: reasonText + '\n\n' });
+            if(reasonText){
+              streamedText += reasonText + '\n\n';
+              sse('delta', { text: reasonText + '\n\n' });
+            }
           }
 
           // Run each tool_use block. Browser ops must be serial (shared Playwright page);
@@ -3463,6 +3468,21 @@ async function handleAPI(req,res,pathname,method,ip){
           reply = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim()
             || '応答を生成できませんでした';
         }
+        // Stream the final reply text in chunks so the user sees it appear, since
+        // we use non-streaming Anthropic calls for the tool loop (true delta streams
+        // would require parsing input_json_delta deltas — left for a future revamp).
+        if(sse && reply){
+          const chunkSize = 20;
+          for(let i=0; i<reply.length; i+=chunkSize){
+            const chunk = reply.slice(i, i+chunkSize);
+            streamedText += chunk;
+            sse('delta', { text: chunk });
+            await new Promise(r=>setTimeout(r, 8));
+          }
+        }
+        // Save the full streamed transcript (intermediate reasoning + final answer)
+        // so the persisted history matches what the user saw on screen.
+        if(sse && streamedText.trim()) reply = streamedText.trim();
       }catch(e){
         // Browser unavailable on this host — fall back to plain chat so user still gets an answer
         const msg = (e&&e.message)||'';

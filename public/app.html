@@ -3809,6 +3809,14 @@ document.addEventListener('DOMContentLoaded',async()=>{
     agents=ra.agents||[];
     // Show email verify banner if not verified
     if(!me.verified) showVerifyBanner();
+    // Show one-time Sheets onboarding hint to users who have agents but haven't connected Sheets.
+    // Suppressed once dismissed (localStorage flag).
+    try{
+      var sheetsHintDismissed = localStorage.getItem('hint:sheets-v1')==='1';
+      if(!sheetsHintDismissed && !me.google_sheets_connected && (agents.length>0)){
+        showSheetsOnboardingBanner();
+      }
+    }catch(e){}
   }catch(e){ console.error('[init]',e&&e.message); }
   try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
   document.getElementById('loader').classList.add('gone');
@@ -3825,6 +3833,33 @@ function showVerifyBanner(){
 async function resendVerify(){
   try{ await api('POST','/api/auth/resend-verify'); showToast('確認メールを送信しました','ok'); }
   catch(e){ showToast(e.message,'ng'); }
+}
+
+function showSheetsOnboardingBanner(){
+  if(document.getElementById('sheets-onboarding-banner')) return;
+  var banner = document.createElement('div');
+  banner.id = 'sheets-onboarding-banner';
+  banner.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:180;max-width:340px;'
+    + 'background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.4);'
+    + 'border-radius:14px;padding:16px 18px 14px;box-shadow:0 12px 32px rgba(180,100,40,.18);'
+    + 'font-size:13px;color:var(--text);';
+  var dismissJS = "localStorage.setItem('hint:sheets-v1','1');document.getElementById('sheets-onboarding-banner').remove()";
+  banner.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:10px">'
+      + '<div style="font-size:22px;line-height:1">📊</div>'
+      + '<div style="flex:1;min-width:0">'
+        + '<div style="font-weight:800;color:var(--text);margin-bottom:4px">Google スプレッドシート連携</div>'
+        + '<div style="font-size:12px;color:var(--text2);line-height:1.6">'
+          + 'AI に自分のスプレッドシートを直接読み書きさせられます。エージェント編集 → 📊 から接続できます。'
+        + '</div>'
+        + '<div style="margin-top:10px;display:flex;gap:8px">'
+          + '<button onclick="' + dismissJS + ';openEditAgent(activeId)" style="background:var(--peach);color:#fff;border:0;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">設定する</button>'
+          + '<button onclick="' + dismissJS + '" style="background:transparent;color:var(--text3);border:0;padding:7px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">後で</button>'
+        + '</div>'
+      + '</div>'
+      + '<button onclick="' + dismissJS + '" aria-label="close" style="background:none;border:0;cursor:pointer;font-size:16px;color:var(--text3);padding:0 0 0 4px">×</button>'
+    + '</div>';
+  document.body.appendChild(banner);
 }
 
 /* ── API ───────────────────────────────────────────── */

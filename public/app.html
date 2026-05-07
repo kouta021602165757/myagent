@@ -2233,6 +2233,17 @@ body{color:#f0f0f8;}
         <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
       </div>
     </div>
+    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em">BETA</span></div>
+          <div id="editExtDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
+          <div id="editExtAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
+          <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:8px;background:#fff;color:#3730a3;border:1px solid #6366f1;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ ブラウザ拡張をペアリング</button>
+        </div>
+        <button type="button" class="s-sw" id="editExtSw" onclick="toggleEditExtension()"></button>
+      </div>
+    </div>
     <div id="editListingBox" style="padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3919,7 +3930,7 @@ function renderAgList(){
         <div class="ag-name">${esc(a.name)}</div>
         <div class="ag-skill">${a.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')}</div>
       </div>
-      ${a.chrome_enabled?'<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>':''}${a.sheets_enabled?'<span title="Google スプレッドシート連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-sheets">📊</span>':''}
+      ${a.chrome_enabled?'<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>':''}${a.sheets_enabled?'<span title="Google スプレッドシート連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-sheets">📊</span>':''}${a.extension_enabled?'<span title="ブラウザ拡張連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="browser-extension">🧩</span>':''}
       <div class="live-dot"></div>
     </div>`).join('');
 }
@@ -5505,6 +5516,116 @@ function toggleEditSheets(){
   _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn', willEnable);
 }
 
+/* ── Browser Extension integration helpers ────────────────── */
+// The extension ID — set after publishing to Chrome Web Store. For development
+// (load unpacked) we don't know the ID upfront, so we resolve via UA detection.
+var EXT_ID = 'TBD';  // will be set when published
+
+function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, agentEnabled){
+  var paired = !!(me && me.extension_paired);
+  var connected = !!(me && me.extension_connected);
+  var sw=document.getElementById(swId);
+  var desc=document.getElementById(descId);
+  var accountRow=document.getElementById(accountRowId);
+  var devNode=document.getElementById(deviceIdEl);
+  var btn=document.getElementById(btnId);
+  if(!sw||!desc) return;
+  sw.classList.toggle('on', !!agentEnabled && paired);
+  if(paired){
+    if(accountRow) accountRow.style.display='';
+    if(devNode) devNode.textContent = (me.extension_device_id||'') + (connected?' (オンライン)':' (オフライン)');
+    if(btn) btn.style.display='none';
+    if(agentEnabled){
+      desc.innerHTML = connected
+        ? '<span style="color:#3730a3;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
+        : '<span style="color:var(--peach-dark);font-weight:700">⚠ 有効だがオフライン</span> — Chrome を起動して拡張アイコンが表示されてるか確認';
+    }else{
+      desc.textContent = isJa
+        ? 'スイッチを ON にすると AI がこのブラウザを使ってサイト操作できます (X / Slack / Gmail など)'
+        : 'Turn on to let AI control this browser';
+    }
+  }else{
+    if(accountRow) accountRow.style.display='none';
+    if(btn) btn.style.display='';
+    sw.classList.remove('on');
+    desc.textContent = isJa
+      ? '先にブラウザ拡張をペアリングしてください'
+      : 'Pair the browser extension first';
+  }
+}
+
+async function connectExtension(){
+  // 1. Server issues a fresh device_token for this user.
+  let r;
+  try{
+    r = await api('POST','/api/extension/pair',{});
+  }catch(e){
+    showToast((e&&e.message)||'ペアリング初期化に失敗しました','ng');
+    return;
+  }
+  if(!r || !r.device_token){
+    showToast('サーバーが device_token を返しませんでした','ng');
+    return;
+  }
+  // 2. Push the token into the installed extension via externally_connectable.
+  // The extension responds with {ok:true} if accepted.
+  if(typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage){
+    showToast(isJa
+      ? '拡張機能がインストールされていません。先に Chrome に追加してください。'
+      : 'Extension not installed. Please add it to Chrome first.','ng');
+    // Open install instructions
+    setTimeout(function(){ window.open('/setup-extension.html','_blank'); }, 800);
+    return;
+  }
+  if(!EXT_ID || EXT_ID === 'TBD'){
+    showToast('開発版です。Chrome 拡張機能の ID を取得してから連携してください','ng');
+    return;
+  }
+  chrome.runtime.sendMessage(EXT_ID, {
+    type:'pair',
+    device_id: r.device_id,
+    device_token: r.device_token,
+  }, function(resp){
+    if(chrome.runtime.lastError || !resp || !resp.ok){
+      showToast('拡張機能との通信に失敗しました。Chrome を再起動して再試行してください','ng');
+      return;
+    }
+    // 3. Refresh /api/me to get updated paired/connected state.
+    setTimeout(async function(){
+      try{ const m = await api('GET','/api/me'); me = m.user||m; }catch(e){}
+      _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false);
+      showToast('ブラウザ拡張を連携しました','ok');
+    }, 500);
+  });
+}
+
+async function disconnectExtension(){
+  if(!confirm(isJa?'ブラウザ拡張連携を切断します。よろしいですか?':'Disconnect browser extension?')) return;
+  try{
+    await api('POST','/api/extension/unpair',{});
+    if(me){ me.extension_paired=false; me.extension_connected=false; me.extension_device_id=null; }
+    var ag = agents.find(a=>a.id===window._editAgentId);
+    if(ag) ag.extension_enabled=false;
+    _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false);
+    // Try to notify the extension too (best-effort).
+    try{ if(typeof chrome!=='undefined' && chrome.runtime && EXT_ID && EXT_ID!=='TBD'){ chrome.runtime.sendMessage(EXT_ID, {type:'unpair'}, function(){}); } }catch(e){}
+    showToast('切断しました','ok');
+  }catch(e){
+    showToast((e&&e.message)||'切断に失敗しました','ng');
+  }
+}
+
+function toggleEditExtension(){
+  if(!me || !me.extension_paired){
+    showToast(isJa?'先にブラウザ拡張をペアリングしてください':'Pair the extension first','ng');
+    return;
+  }
+  var sw=document.getElementById('editExtSw');
+  if(!sw) return;
+  var willEnable=!sw.classList.contains('on');
+  _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', willEnable);
+}
+
 function _composePersona(purpose,duties){
   purpose=(purpose||'').trim(); duties=(duties||'').trim();
   if(!purpose && !duties) return '';
@@ -5527,6 +5648,7 @@ function openEditAgent(id){
   document.getElementById('editDuties').value = parsed.duties;
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('editChromeSw','editChromeDesc',!!ag.chrome_enabled);
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
+  if(typeof _renderExtensionStatus==='function') _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn',!!ag.extension_enabled);
 
   // Reflect marketplace listing state
   var m = ag.marketplace || {};
@@ -5564,13 +5686,16 @@ async function saveEditAgent(){
   var chromeEnabled = !!(sw && sw.classList.contains('on'));
   var swSheets=document.getElementById('editSheetsSw');
   var sheetsEnabled = !!(swSheets && swSheets.classList.contains('on') && me && me.google_sheets_connected);
+  var swExt=document.getElementById('editExtSw');
+  var extensionEnabled = !!(swExt && swExt.classList.contains('on') && me && me.extension_paired);
   if(!newName){ showToast('名前を入力してください','ng'); return; }
   try{
-    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled});
+    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled});
     ag.name = newName;
     ag.persona = newPersona;
     ag.chrome_enabled = chromeEnabled;
     ag.sheets_enabled = sheetsEnabled;
+    ag.extension_enabled = extensionEnabled;
     closeEditAgent();
     renderAgList();
     // Re-open the active chat so name/avatar/icon changes show immediately

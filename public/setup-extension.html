@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ブラウザ拡張のインストール — MY AI Agent</title>
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream2:#fff5ea;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.14); --green:#10b981; --indigo:#6366f1;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+a{color:var(--peach-dark);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.shell{max-width:760px;margin:0 auto;padding:48px 24px 80px;}
+.brand{font-size:13px;color:var(--text3);font-weight:600;margin-bottom:32px;}
+.brand a{color:var(--text3);}
+.h1{font-size:28px;font-weight:900;margin-bottom:8px;line-height:1.3;}
+.sub{font-size:14.5px;color:var(--text2);margin-bottom:36px;}
+.callout{
+  background:linear-gradient(135deg,#ede9fe,#ddd6fe);
+  border:1px solid rgba(99,102,241,.3);border-radius:14px;
+  padding:18px 20px;margin-bottom:32px;font-size:13.5px;color:var(--text);
+}
+.callout b{color:#3730a3;}
+.step{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:24px 24px 22px;margin-bottom:18px;position:relative;
+}
+.step-num{
+  position:absolute;top:-13px;left:20px;
+  background:var(--indigo);color:#fff;padding:4px 14px;border-radius:999px;
+  font-size:12px;font-weight:800;letter-spacing:.04em;
+  box-shadow:0 4px 14px rgba(99,102,241,.32);
+}
+.step h2{font-size:18px;font-weight:800;margin:6px 0 10px;}
+.step p{font-size:13.5px;color:var(--text2);margin-bottom:12px;}
+.step ol,.step ul{padding-left:22px;font-size:13.5px;color:var(--text2);margin:8px 0 14px;}
+.step li{margin:5px 0;}
+.step b{color:var(--text);}
+.step code{font-family:var(--mono);font-size:12.5px;background:var(--cream2);padding:2px 6px;border-radius:4px;color:var(--text);}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--indigo);color:#fff;border:0;padding:10px 18px;border-radius:10px;
+  font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:all .15s;text-decoration:none;
+}
+.btn:hover{background:#4f46e5;text-decoration:none;}
+.btn.ghost{
+  background:#fff;color:var(--peach-dark);border:1.5px solid var(--peach);
+}
+.btn.ghost:hover{background:#fff7ed;}
+.faq{margin-top:36px;}
+.faq summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--text);padding:10px 0;border-bottom:1px solid var(--line);}
+.faq summary::marker{color:var(--indigo);}
+.faq[open] summary{color:#3730a3;}
+.faq p{font-size:13px;color:var(--text2);padding:12px 4px 16px;}
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12.5px;color:var(--text3);}
+.foot a{color:var(--text3);}
+.tag{display:inline-block;background:rgba(99,102,241,.1);color:#3730a3;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.04em;margin-left:6px;}
+.tag.amber{background:rgba(251,146,60,.12);color:var(--peach-dark);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+</div>
+
+<h1 class="h1">🌐 ブラウザ拡張をインストール</h1>
+<p class="sub">
+  MY AI Agent ブラウザ拡張をインストールすると、AI がこの Chrome を直接操作できるようになります。<br>
+  X 投稿、Slack 送信、Gmail 整理、社内 SaaS 自動化など <b>ログイン済みサイトの操作はすべて可能</b>。
+</p>
+
+<div class="callout">
+  <b>📌 開発中 (BETA)</b><br>
+  現在 Chrome Web Store 公開申請中です。それまでは <b>「デベロッパー モードで読み込み」</b> でインストールしてください。所要 1分。
+</div>
+
+<!-- ── Step 1 ── -->
+<div class="step">
+  <span class="step-num">STEP 1</span>
+  <h2>拡張機能ソースをダウンロード</h2>
+  <p>GitHub からソース一式 (ZIP) をダウンロードします。</p>
+  <a class="btn" href="https://github.com/kouta021602165757/myagent/archive/refs/heads/main.zip" target="_blank" rel="noopener">
+    ⬇ GitHub から ZIP をダウンロード
+  </a>
+  <p style="margin-top:14px;font-size:12.5px;color:var(--text3)">
+    解凍したフォルダの中の <code>extension/</code> ディレクトリが拡張機能本体です。
+  </p>
+</div>
+
+<!-- ── Step 2 ── -->
+<div class="step">
+  <span class="step-num">STEP 2</span>
+  <h2>Chrome に「読み込み済み」拡張として登録</h2>
+  <p>Chrome のアドレスバーに以下を貼って Enter:</p>
+  <pre style="background:var(--cream2);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:13px;color:var(--text);margin:10px 0">chrome://extensions</pre>
+  <ol>
+    <li>右上の <b>「デベロッパー モード」</b> トグルを ON</li>
+    <li>左上の <b>「パッケージ化されていない拡張機能を読み込む」</b> をクリック</li>
+    <li>STEP 1 で解凍した <code>extension/</code> フォルダを選択</li>
+    <li>拡張機能リストに「MY AI Agent — Browser Connector」が表示されたら成功</li>
+    <li>右上のパズルアイコン 🧩 →「MY AI Agent」のピン📌をクリック</li>
+  </ol>
+  <p style="margin-top:14px;font-size:12.5px;color:var(--text3)">
+    ピン留めしておくと、ステータスがアイコンの色 (灰色=未連携 / 緑=接続中) で常に見えます。
+  </p>
+</div>
+
+<!-- ── Step 3 ── -->
+<div class="step">
+  <span class="step-num">STEP 3</span>
+  <h2>拡張機能 ID をコピー</h2>
+  <p>chrome://extensions 画面で MY AI Agent 拡張の <b>「ID」</b> をコピーしてください (32 文字の小文字英字)。</p>
+  <p>そして MY AI Agent アプリの「設定 → 詳細設定」に貼り付け <span class="tag amber">開発版のみ</span>。<br>
+  → Chrome Web Store 公開後はこの手順は不要になります。</p>
+</div>
+
+<!-- ── Step 4 ── -->
+<div class="step">
+  <span class="step-num">STEP 4</span>
+  <h2>アプリ側でペアリング</h2>
+  <ol>
+    <li>MY AI Agent アプリで任意のエージェントを編集</li>
+    <li>「🌐 ブラウザ拡張連携」セクションの「<b>+ ブラウザ拡張をペアリング</b>」をクリック</li>
+    <li>拡張アイコン 🧩 が緑色に変われば接続成功</li>
+    <li>同セクションのトグルを ON にして<b>保存</b></li>
+  </ol>
+  <a class="btn ghost" href="/app.html">アプリに戻る →</a>
+</div>
+
+<!-- ── FAQ ── -->
+<div class="faq" style="margin-top:36px">
+  <details>
+    <summary>Q. Chrome Web Store で公開はいつ?</summary>
+    <p>申請中です。公開されればワンクリック (5秒) でインストール可能になり、上記 STEP 1〜3 が不要になります。それまでは開発者モードでお試しください。</p>
+  </details>
+  <details>
+    <summary>Q. 何ができるの?</summary>
+    <p>AI がこの Chrome を使って:
+      <ul style="margin-top:6px">
+        <li>X (Twitter): 投稿・DM・いいね・フォロー</li>
+        <li>Slack: メッセージ送信・スレッド整理</li>
+        <li>Gmail: メール送信・下書き作成・整理</li>
+        <li>LinkedIn: 投稿・営業メッセージ</li>
+        <li>Notion / Salesforce / HubSpot: ログイン済み SaaS 全般</li>
+        <li>社内ツール (独自Webアプリ): 既ログインなら何でも</li>
+      </ul>
+    </p>
+  </details>
+  <details>
+    <summary>Q. 安全?</summary>
+    <p>はい、設計上以下を守っています:
+      <ul style="margin-top:6px">
+        <li>サーバーから拡張への通信は SSE (TLS 1.3)</li>
+        <li>ペアリングトークンは 32 バイトのランダム値、ブラウザの localStorage 内</li>
+        <li>あなたのアカウントから発行されたトークンしか動作しない</li>
+        <li>切断は <code>chrome://extensions</code> から拡張削除 OR アプリで「切断」ボタン</li>
+        <li>ホスト権限は <code>&lt;all_urls&gt;</code> ですが、AI が指示したときだけ動作</li>
+      </ul>
+    </p>
+  </details>
+  <details>
+    <summary>Q. 不可逆操作 (送信・削除) が怖い</summary>
+    <p>承認モーダル (Phase 2) を順次実装中です。当面は AI に「投稿前は必ず確認」とプロンプト指示してありますが、最終的なボタンクリック前に必ず人間確認するワークフローを推奨します。</p>
+  </details>
+  <details>
+    <summary>Q. アンインストールは?</summary>
+    <p><code>chrome://extensions</code> で「MY AI Agent」を「削除」するだけです。サーバー側のトークンも自動失効します。</p>
+  </details>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -729,6 +729,17 @@ async function _sheetsApi(user, method, pathSuffix, body){
   const r = await httpsReq(method, 'sheets.googleapis.com', pathSuffix, headers, body||null, {timeout:25000});
   if(r.s>=200 && r.s<300) return r.d;
   const errMsg = (r.d && r.d.error && r.d.error.message) || (typeof r.d==='string'?r.d:JSON.stringify(r.d)).slice(0,200);
+  // Friendly translation for the most common setup error so the AI does not dump
+  // cryptic Google error URLs to end users.
+  if(/has not been used in project|disabled\.|consumer.*disabled/i.test(errMsg)){
+    return {error:'sheets_setup_pending: Google Sheets API がまだ有効化されていません。アプリ管理者の設定が完了するまでお待ちください (通常1〜2分で反映)。'};
+  }
+  if(/PERMISSION_DENIED|caller does not have permission/i.test(errMsg)){
+    return {error:'sheets_no_permission: このスプレッドシートへのアクセス権がありません。Google で共有設定を確認してください。'};
+  }
+  if(/Requested entity was not found|notFound/i.test(errMsg)){
+    return {error:'sheets_not_found: 指定されたスプレッドシートが見つかりません。URL またはシート名・範囲を確認してください。'};
+  }
   return {error:`sheets_api_${r.s}: ${errMsg}`};
 }
 

@@ -129,6 +129,24 @@ a:hover{text-decoration:underline;}
   Google が OAuth クライアント設定の API 変更を許可していないため、Google Cloud Console を1回だけ開く必要があります。スコープと redirect URI を追加すれば、以後永久に再設定不要です。
 </div>
 
+<!-- ── Step 0: Enable Sheets API ────────────────────────── -->
+<div class="step">
+  <span class="step-num">STEP 0</span>
+  <h2>Google Sheets API を有効化</h2>
+  <p>Google Cloud Project で Sheets API を ON にします。これをやらないと API 呼び出しで 403 エラーになります。<b>1回だけ</b>の作業です。</p>
+
+  <a class="btn" href="https://console.developers.google.com/apis/library/sheets.googleapis.com" target="_blank" rel="noopener">
+    🚀 Sheets API ライブラリを開く →
+  </a>
+
+  <ol>
+    <li>開いたページの右上で正しいプロジェクトが選ばれてるか確認 (OAuth クライアントを作ったプロジェクトと同じものを選ぶ)</li>
+    <li>青い <b>「有効にする」(ENABLE)</b> ボタンをクリック</li>
+    <li>ボタンが「管理」(MANAGE) に変わったら有効化完了</li>
+    <li>反映に <b>1〜2分</b> かかることがあります</li>
+  </ol>
+</div>
+
 <!-- ── Step 1: Add redirect URI ──────────────────────────── -->
 <div class="step">
   <span class="step-num">STEP 1</span>

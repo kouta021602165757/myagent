@@ -1343,6 +1343,7 @@ body{color:#f0f0f8;}
           <div class="foot-hint">
             <span><kbd>⏎</kbd> 送信</span>
             <span><kbd>Shift</kbd>+<kbd>⏎</kbd> 改行</span>
+            <span><kbd>/search</kbd> Web 検索</span>
             <span><kbd>⌘</kbd>+<kbd>K</kbd> 新規会話</span>
           </div>
         </div>
@@ -2983,6 +2984,33 @@ function useChip(t){ document.getElementById('ci').value=t; sendMsg(); }
 var _pendingImgs = [];
 
 // 添付ファイル選択ハンドラ（画像 + PDF対応）
+/* ── Slash commands (/search etc.) ──────────────────────────── */
+async function _runSlashCommand(text){
+  // /search <query> — Web 検索結果を context として prepend
+  var m = text.match(/^\/search\s+(.+)$/i) || text.match(/^\/s\s+(.+)$/i);
+  if(m){
+    var query = m[1].trim();
+    if(!query) return null;
+    showToast(isJa?'🔍 検索中…':'Searching…','ok');
+    try{
+      var r = await api('POST','/api/search',{query});
+      if(!r.results || !r.results.length){
+        return query + '\n\n（Web 検索結果は取得できませんでした）';
+      }
+      var ctx = '【Web 検索結果】「'+query+'」\n\n';
+      ctx += r.results.slice(0,6).map(function(x,i){
+        return (i+1)+'. '+x.title+'\n'+x.url+'\n'+(x.snippet||'');
+      }).join('\n\n');
+      ctx += '\n\n上記の検索結果を踏まえて、ユーザーの質問に答えてください。\n\nユーザーの質問: '+query;
+      return ctx;
+    }catch(e){
+      showToast((isJa?'検索失敗: ':'Search failed: ')+(e.message||''),'ng');
+      return null;
+    }
+  }
+  return null;
+}
+
 /* ── Voice input (Web Speech API) ───────────────────────────── */
 var _recog = null, _recogActive = false;
 function _speechCtor(){
@@ -3119,14 +3147,23 @@ async function sendMsg(){
   tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
   _scrollMsgsToEnd();
+  // /search slash-command: prepend Web search results as context
+  let outboundText = text;
+  const slashCtx = await _runSlashCommand(text);
+  if(slashCtx){
+    outboundText = slashCtx;
+    // Update the last user message in history to show what we actually sent
+    // (keep the original /search command visible to the user for clarity)
+  }
+
   // Streaming path: non-Chrome agents only (Plan B tool-use can't stream cleanly)
   const canStream = !ag.chrome_enabled;
   try{
     if(canStream){
-      await _sendMsgStream(ag, text, imgs);
+      await _sendMsgStream(ag, outboundText, imgs);
     } else {
       // 既存の一括取得パス
-      const payload = {message: text};
+      const payload = {message: outboundText};
       if(imgs.length > 0){
         payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
       }

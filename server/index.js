@@ -27,6 +27,7 @@ const STRIPE_BIZ_PRICE = process.env.STRIPE_BIZ_PRICE_ID||'';
 const GOOGLE_ID    = process.env.GOOGLE_CLIENT_ID||'';
 const GOOGLE_SEC   = process.env.GOOGLE_CLIENT_SECRET||'';
 const RESEND_KEY   = process.env.RESEND_API_KEY||'';
+const BRAVE_KEY    = process.env.BRAVE_API_KEY||'';                  // optional, falls back to DDG
 const APP_URL      = process.env.APP_URL||`http://localhost:${PORT}`;
 const FROM_EMAIL   = process.env.FROM_EMAIL||'noreply@myaiagent.jp';
 const PUBLIC_DIR   = path.join(__dirname,'..','public');
@@ -286,6 +287,58 @@ async function sendResetEmail(user,token){
       <a href="${link}" style="display:inline-block;margin:24px 0;padding:14px 32px;background:#c8ff57;color:#04040a;border-radius:10px;font-weight:700;text-decoration:none;">パスワードをリセット</a>
       <p style="color:#888;font-size:13px;">このリンクは1時間有効です。心当たりがない場合は無視してください。</p>
     </div>`);
+}
+
+// ── LIGHTWEIGHT WEB SEARCH ────────────────────────────────────
+// Used by /api/search slash-command. Brave first (high quality), DDG fallback.
+async function braveSearch(query){
+  if(!BRAVE_KEY) throw new Error('not_configured');
+  const r = await httpsReq('GET','api.search.brave.com',
+    '/res/v1/web/search?q='+encodeURIComponent(query)+'&count=8&country=JP&search_lang=jp',
+    {'X-Subscription-Token':BRAVE_KEY,'Accept':'application/json'},
+    null);
+  if(r.s>=400) throw new Error(r.d?.message||('brave_'+r.s));
+  return ((r.d&&r.d.web&&r.d.web.results)||[]).map(x=>({
+    title: (x.title||'').slice(0,200),
+    url: x.url||'',
+    snippet: (x.description||'').replace(/<[^>]+>/g,'').slice(0,300),
+  }));
+}
+function ddgSearch(query){
+  return new Promise((resolve)=>{
+    const path = '/html/?q='+encodeURIComponent(query);
+    const req = https.request({
+      hostname:'html.duckduckgo.com', path, method:'GET',
+      headers:{'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36','Accept':'text/html'},
+    }, (r)=>{
+      let buf=''; r.setEncoding('utf8');
+      r.on('data', c=>buf+=c);
+      r.on('end', ()=>{
+        const results = [];
+        const re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+        let m;
+        while((m = re.exec(buf)) && results.length < 8){
+          // DDG wraps the real URL in a redirect; extract uddg= param
+          let url = m[1];
+          try{
+            const u = new URL(url, 'https://duckduckgo.com');
+            const real = u.searchParams.get('uddg');
+            if(real) url = real;
+          }catch(e){}
+          results.push({
+            title: m[2].replace(/<[^>]+>/g,'').trim().slice(0,200),
+            url,
+            snippet: m[3].replace(/<[^>]+>/g,'').trim().slice(0,300),
+          });
+        }
+        resolve(results);
+      });
+      r.on('error', ()=>resolve([]));
+    });
+    req.on('error', ()=>resolve([]));
+    req.setTimeout(5000, ()=>{ try{req.destroy();}catch(e){} resolve([]); });
+    req.end();
+  });
 }
 
 // ── ANTHROPIC ─────────────────────────────────────────────────
@@ -2428,6 +2481,24 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{reply,balance_jpy:user.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null});
   }
 
+
+  // ── POST /api/search ───────────────────────────────────────
+  // Lightweight web search for non-Chrome agents (slash-command).
+  // body: {query: string} → {query, results, source}
+  if(pathname==='/api/search' && method==='POST'){
+    const body = await readBody(req);
+    const query = String(body.query||'').trim().slice(0,200);
+    if(!query) return jres(res,400,{error:'検索クエリを入力してください'});
+    if(!rateLimit('search:'+user.id, 30, 60000)) return jres(res,429,{error:'検索回数が多すぎます。少し待ってから試してください'});
+    let results = [];
+    let source = 'ddg';
+    if(BRAVE_KEY){
+      try{ results = await braveSearch(query); source = 'brave'; }
+      catch(e){ console.warn('[search] brave failed:', e.message); }
+    }
+    if(!results.length){ results = await ddgSearch(query); source = 'ddg'; }
+    return jres(res,200,{query, results, source});
+  }
 
   // ── PATCH /api/user/profile ─────────────────────────────────
   if(pathname==='/api/user/profile'&&method==='PATCH'){

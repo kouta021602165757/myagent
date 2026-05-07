@@ -291,6 +291,11 @@ function httpsReq(method,hostname,pathname,headers,body,opts){
     if(pay)h['Content-Length']=Buffer.byteLength(pay);
     const timeoutMs = (opts && opts.timeout) || 50000; // 50s default — under Render's 100s edge cap
     const req=https.request({hostname,path:pathname,method,headers:h,timeout:timeoutMs},r=>{
+      // CRITICAL: setEncoding('utf8') makes Node buffer incomplete multi-byte
+      // sequences across data chunks. Without it, "d += chunk" can split a
+      // 3-byte Japanese char like ド between two chunks, producing replacement
+      // characters in the output.
+      r.setEncoding('utf8');
       let d='';r.on('data',c=>d+=c);
       r.on('end',()=>{try{resolve({s:r.statusCode,d:JSON.parse(d)});}catch{resolve({s:r.statusCode,d});}});
     });
@@ -3729,10 +3734,13 @@ async function handleAPI(req,res,pathname,method,ip){
         // Stream the final reply text in chunks so the user sees it appear, since
         // we use non-streaming Anthropic calls for the tool loop (true delta streams
         // would require parsing input_json_delta deltas — left for a future revamp).
+        // Use Array.from() to iterate by code points (Unicode-aware), so emojis and
+        // surrogate-pair characters never get split across chunk boundaries.
         if(sse && reply){
-          const chunkSize = 20;
-          for(let i=0; i<reply.length; i+=chunkSize){
-            const chunk = reply.slice(i, i+chunkSize);
+          const chars = Array.from(reply);
+          const chunkSize = 25;
+          for(let i=0; i<chars.length; i+=chunkSize){
+            const chunk = chars.slice(i, i+chunkSize).join('');
             streamedText += chunk;
             sse('delta', { text: chunk });
             await new Promise(r=>setTimeout(r, 8));

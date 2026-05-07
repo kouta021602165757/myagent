@@ -386,6 +386,15 @@ function _systemBlocks(system){
   return [{ type:'text', text, cache_control:{ type:'ephemeral' } }];
 }
 
+// Mark the LAST tool with cache_control so Anthropic caches the full tool spec.
+// Tools are static across turns, so this saves a lot of input tokens per call.
+function _toolsWithCache(tools){
+  if(!Array.isArray(tools) || tools.length===0) return tools;
+  return tools.map((t,i)=> i === tools.length-1
+    ? { ...t, cache_control:{ type:'ephemeral' } }
+    : t);
+}
+
 /**
  * Trim history messages before sending to AI:
  * - drop image / document blocks from all but the latest user turn (huge token saver)
@@ -393,6 +402,13 @@ function _systemBlocks(system){
  *   inflate the next request
  */
 const HIST_MAX_CHARS = 2000;
+const HIST_MAX_MSGS  = 12; // cap turns sent to AI for plain chat — older context rarely matters
+// Cap history length. Only safe for plain-chat paths (no tool_use/result pairing risk).
+function _capHistory(messages){
+  return messages.length > HIST_MAX_MSGS
+    ? messages.slice(messages.length - HIST_MAX_MSGS)
+    : messages;
+}
 function _trimHistory(messages){
   return messages.map((m, i) => {
     const isLast = i === messages.length - 1;
@@ -420,7 +436,7 @@ function _trimHistory(messages){
 }
 
 async function callAI(messages,system){
-  const trimmedMsgs = _trimHistory(messages);
+  const trimmedMsgs = _trimHistory(_capHistory(messages));
   const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
   const tryCall = async (sys) => httpsReq('POST','api.anthropic.com','/v1/messages',headers,
     {model:'claude-sonnet-4-6',max_tokens:1024,system:sys,messages:trimmedMsgs});
@@ -444,7 +460,7 @@ function callAIStream(messages, system, onText){
       model:'claude-sonnet-4-6',
       max_tokens:1024,
       system: _systemBlocks(system),
-      messages: _trimHistory(messages),
+      messages: _trimHistory(_capHistory(messages)),
       stream:true,
     });
     const req = https.request({
@@ -512,8 +528,9 @@ async function callAIWithTools(messages,system,tools){
   const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
   while(true){
     const sys = useCache ? _systemBlocks(system) : String(system||'');
+    const cachedTools = useCache ? _toolsWithCache(tools) : tools;
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-                           {model:'claude-sonnet-4-6',max_tokens:2048,system:sys,messages:_trimHistory(messages),tools});
+                           {model:'claude-haiku-4-5-20251001',max_tokens:2048,system:sys,messages:_trimHistory(messages),tools:cachedTools});
     if(r.s===200) return r.d;
     if(r.s===400 && useCache && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
       console.warn('[chat] cache_control rejected, retrying without:', JSON.stringify(r.d).slice(0,200));
@@ -2836,7 +2853,7 @@ async function handleAPI(req,res,pathname,method,ip){
         let iters = 0;
         const MAX_ITERS = 5;
         const startedAt = Date.now();
-        const BUDGET_MS = 60000; // Stay under Render edge timeout (~60–100s)
+        const BUDGET_MS = 90000; // Render edge is ~100s, give us 10s margin
         while(true){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
@@ -2861,7 +2878,8 @@ async function handleAPI(req,res,pathname,method,ip){
           // Append the assistant's tool_use turn
           convMsgs.push({role:'assistant', content: resp.content});
 
-          // Run each tool_use block, collect tool_result blocks + log
+          // Run each tool_use block. MUST be serial — the session shares a single
+          // Playwright page, so parallel calls would race on navigation/state.
           const toolResultBlocks = [];
           for(const block of (resp.content||[])){
             if(block.type !== 'tool_use') continue;
@@ -2874,9 +2892,9 @@ async function handleAPI(req,res,pathname,method,ip){
               url: result&&result.url,
               title: result&&result.title,
               text: result&&result.text ? String(result.text).slice(0,400) : '',
-              results: result&&result.results, // for search_web
+              results: result&&result.results,
               count: result&&result.count,
-              screenshot: result&&result.screenshot, // base64 jpeg, only present when AI called take_screenshot
+              screenshot: result&&result.screenshot,
               error: result&&result.error,
             });
           }

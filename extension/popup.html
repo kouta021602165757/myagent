@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MY AI Agent</title>
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --bg:#fdf8f3; --card:#fff;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.18); --green:#10b981; --rose:#ef4444;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  width:300px;background:var(--bg);color:var(--text);
+  font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',-apple-system,system-ui,sans-serif;
+  font-size:13px;line-height:1.55;padding:16px 14px 14px;
+}
+.head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.head .av{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.head .nm{font-weight:800;font-size:14px;}
+.head .v{font-size:10.5px;color:var(--text3);font-weight:600;margin-top:1px;}
+
+.status{
+  background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:11px 13px;margin-bottom:10px;
+}
+.status .row{display:flex;align-items:center;gap:8px;font-size:12px;}
+.status .row + .row{margin-top:6px;color:var(--text2);}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot.green{background:var(--green);box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:pulse 1.8s infinite;}
+.dot.gray{background:#9a8d7d;}
+.dot.red{background:var(--rose);}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(16,185,129,.5);}
+  70%{box-shadow:0 0 0 8px rgba(16,185,129,0);}
+  100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}
+}
+.status .lbl{font-weight:700;color:var(--text);}
+
+.btn{
+  display:block;width:100%;padding:9px 12px;border-radius:8px;
+  font-size:12.5px;font-weight:700;border:0;cursor:pointer;
+  font-family:inherit;text-align:center;text-decoration:none;
+  transition:all .15s;
+}
+.btn.peach{background:var(--peach);color:#fff;}
+.btn.peach:hover{background:var(--peach-dark);}
+.btn.ghost{background:#fff;color:var(--text2);border:1px solid var(--line);}
+.btn.ghost:hover{background:var(--bg);}
+.btn.danger{background:rgba(239,68,68,.08);color:var(--rose);border:1px solid rgba(239,68,68,.25);}
+.btn.danger:hover{background:rgba(239,68,68,.15);}
+.btn + .btn{margin-top:6px;}
+
+.foot{
+  margin-top:12px;padding-top:10px;border-top:1px solid var(--line);
+  font-size:10.5px;color:var(--text3);text-align:center;
+}
+.foot a{color:var(--text3);}
+.tip{font-size:11px;color:var(--text3);line-height:1.6;background:rgba(251,146,60,.06);padding:8px 10px;border-radius:8px;margin-top:8px;}
+.tip b{color:var(--peach-dark);}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="av">🤖</div>
+  <div>
+    <div class="nm">MY AI Agent</div>
+    <div class="v">Browser Connector v0.1.0</div>
+  </div>
+</div>
+
+<div class="status" id="status">
+  <div class="row">
+    <span class="dot gray" id="statusDot"></span>
+    <span class="lbl" id="statusLabel">読み込み中...</span>
+  </div>
+  <div class="row" id="statusInfo" style="display:none">
+    <span style="font-size:11px;color:var(--text3)">デバイスID: <span id="deviceId" style="font-family:monospace"></span></span>
+  </div>
+</div>
+
+<div id="connectedActions" style="display:none">
+  <button class="btn ghost" id="openAppBtn">アプリを開く</button>
+  <button class="btn danger" id="unpairBtn">この拡張を切断</button>
+  <div class="tip">
+    💡 連携中。チャットで「X で〇〇を投稿して」と頼めば、このブラウザを使って自動操作します。
+  </div>
+</div>
+
+<div id="disconnectedActions" style="display:none">
+  <a class="btn peach" id="pairBtn" target="_blank">アプリで連携設定する →</a>
+  <div class="tip">
+    💡 まだ <b>MY AI Agent</b> と連携していません。アプリで「ブラウザ連携」を有効にすると、AI がこのブラウザを操作できるようになります。
+  </div>
+</div>
+
+<div class="foot">
+  <a href="https://myaiagents.agency/app.html" target="_blank">myaiagents.agency</a>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

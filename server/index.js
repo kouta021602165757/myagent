@@ -189,10 +189,15 @@ function readRaw(req){return new Promise((resolve,reject)=>{const c=[];req.on('d
 function getAuth(req){return JWT.verify((req.headers['authorization']||'').replace('Bearer ',''));}
 function getIP(req){return(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();}
 function safe(u){
-  const{password:_,verify_token:__,reset_token:___,reset_expiry:____,google_oauth:gOAuth,...s}=u;
-  // Expose only the *connection state* of Google Sheets — never the tokens themselves.
+  const{password:_,verify_token:__,reset_token:___,reset_expiry:____,
+        google_oauth:gOAuth,
+        extension_device_token:extTok,
+        ...s}=u;
+  // Expose only the *connection state* — never the secret tokens themselves.
   s.google_sheets_connected = !!(gOAuth && gOAuth.refresh_token);
   s.google_sheets_email = (gOAuth && gOAuth.email) || null;
+  s.extension_paired = !!extTok;
+  s.extension_connected = !!(extTok && _extConnections.has(extTok));
   return s;
 }
 function newUser(base){
@@ -656,6 +661,112 @@ const BROWSER_TOOLS = [
     input_schema:{ type:'object', properties:{} }
   }
 ];
+
+// ── Browser-extension live connection registry ───────────────
+// In-memory only (single-server deployment). Map from device_token → { res, ... }.
+// On multi-instance deploys, swap to Redis pub/sub.
+const _extConnections = new Map();    // token → { res, owner_id, heartbeat }
+const _extPending = new Map();        // command_id → { resolve, t0, timeout }
+
+// ── Browser Extension tools (require user has paired extension) ──
+const EXTENSION_TOOLS = [
+  {
+    name:'ext_open_url',
+    description:'ユーザーのブラウザで指定URLを新しいタブまたは現在のタブで開きます。ログイン済みのサイト (X / Slack / Gmail / 社内SaaS 等) をそのまま操作できます。',
+    input_schema:{
+      type:'object',
+      properties:{
+        url:{type:'string',description:'https://〜 形式のURL'},
+        in_active_tab:{type:'boolean',description:'true なら現在のアクティブタブで開く（デフォルトは新規タブ）'}
+      },
+      required:['url']
+    }
+  },
+  {
+    name:'ext_read_page',
+    description:'現在のアクティブタブの URL・タイトル・本文テキスト・操作可能な要素一覧を取得します。要素操作の前に必ず呼んでください。',
+    input_schema:{ type:'object', properties:{} }
+  },
+  {
+    name:'ext_click',
+    description:'現在のページ上の要素をクリックします。target は CSS セレクタ または 表示テキストの一部 (どちらでも自動判別)。',
+    input_schema:{
+      type:'object',
+      properties:{ target:{type:'string',description:'例: "投稿" または "[data-testid=tweetButton]"'} },
+      required:['target']
+    }
+  },
+  {
+    name:'ext_type',
+    description:'入力欄に文字列を入力します。selector は CSS or placeholder / aria-label。React/Vue のような SPA でも検出可能。',
+    input_schema:{
+      type:'object',
+      properties:{
+        selector:{type:'string',description:'例: "tweetTextarea" または "textarea[name=...]"'},
+        text:{type:'string',description:'入力する文字列'}
+      },
+      required:['selector','text']
+    }
+  },
+  {
+    name:'ext_press_key',
+    description:'キー押下 (Enter / Escape / Tab 等)。フォーム送信、検索、モーダル閉じるなどに使用。',
+    input_schema:{
+      type:'object',
+      properties:{
+        key:{type:'string',description:'例: Enter, Escape, Tab'},
+        selector:{type:'string',description:'(任意) 対象要素。未指定ならアクティブ要素'}
+      },
+      required:['key']
+    }
+  },
+  {
+    name:'ext_screenshot',
+    description:'現在表示されているタブのスクリーンショット (jpeg, base64) を取得します。視覚的な確認が必要なときだけ。',
+    input_schema:{ type:'object', properties:{} }
+  },
+  {
+    name:'ext_wait',
+    description:'指定ミリ秒だけ待機します。ページの非同期処理が落ち着くのを待つときに。最大 10000ms。',
+    input_schema:{
+      type:'object',
+      properties:{ ms:{type:'integer',description:'ミリ秒 (1〜10000)'} },
+      required:['ms']
+    }
+  },
+  {
+    name:'ext_list_tabs',
+    description:'現在開いている全タブの一覧を取得します。タブ切り替え前の確認用。',
+    input_schema:{ type:'object', properties:{} }
+  },
+];
+
+// Send a command to the user's connected extension. Returns the result (or {error}).
+async function executeExtensionTool(user, name, input){
+  const tok = user.extension_device_token;
+  if(!tok) return { error:'extension_not_paired: ユーザーがブラウザ拡張を連携していません。' };
+  const conn = _extConnections.get(tok);
+  if(!conn) return { error:'extension_offline: 拡張機能がオフラインです。Chrome を起動して拡張アイコンが緑になるのを待ってから再試行してください。' };
+
+  const command_id = 'cmd_' + crypto.randomBytes(8).toString('hex');
+  const realName = name.replace(/^ext_/, ''); // server-side names are ext_*, extension expects bare names
+  const cmd = { id: command_id, name: realName, input: input || {} };
+  return await new Promise((resolve)=>{
+    const timeoutMs = 30000;
+    const timeout = setTimeout(()=>{
+      _extPending.delete(command_id);
+      resolve({ error:'extension_timeout: ブラウザからの応答が30秒以内に返りませんでした。' });
+    }, timeoutMs);
+    _extPending.set(command_id, { resolve, t0:Date.now(), timeout });
+    try{
+      conn.res.write('event: cmd\ndata: ' + JSON.stringify(cmd) + '\n\n');
+    }catch(e){
+      clearTimeout(timeout);
+      _extPending.delete(command_id);
+      resolve({ error:'extension_send_failed: ' + (e.message||'unknown') });
+    }
+  });
+}
 
 // ── Google Sheets API tools (require user.google_oauth set) ──
 const SHEETS_TOOLS = [
@@ -2053,6 +2164,39 @@ async function findAgentByShareId(shareId){
 
 function buildSystem(agent, opts){
   const sheetsActive = !!(opts && opts.sheetsActive);
+  const extensionActive = !!(opts && opts.extensionActive);
+  const extensionNote = extensionActive
+    ? `
+
+【ツール: ブラウザ拡張連携 — ユーザーの実ブラウザ自動操作】
+ユーザーは MY AI Agent ブラウザ拡張をインストール済みで、あなたは **ユーザー本人のChrome** を直接操作できます。X / Slack / Gmail / LinkedIn / Notion / 社内SaaS など **ログイン済みのサイトはそのまま操作可能** です。
+
+利用可能なツール:
+- ext_open_url(url, in_active_tab?): タブを開く・遷移
+- ext_read_page(): 現在のページのテキスト + 操作可能要素一覧 (操作前に必ず呼ぶ)
+- ext_click(target): CSS セレクタ or 表示テキストで要素クリック
+- ext_type(selector, text): 入力欄に文字列を入力 (React/Vue 対応)
+- ext_press_key(key, selector?): Enter / Tab / Escape 等
+- ext_screenshot(): 現在表示中のタブのスクショ (確認用)
+- ext_wait(ms): 待機 (1〜10000ms)
+- ext_list_tabs(): 開いてるタブ一覧
+
+【絶対ルール】
+1. ページ操作前に必ず ext_read_page で **現在のページの構造を取得** してください。決め打ちセレクタは時々失敗します
+2. ext_type の selector は CSS よりも **placeholder や aria-label** での指定が長持ちします (例: "ツイートを投稿" "メッセージを入力")
+3. ext_click の target は **CSS or 表示テキスト**。表示テキストの方がメンテ不要で安全
+4. 投稿・送信・削除など **不可逆な操作の前は、ext_read_page で内容を確認** してからユーザーに「この内容で実行しますか?」と確認してください
+5. 失敗したら ext_screenshot で実際の画面を見て判断
+6. 1ステップずつ実行 → 結果確認 → 次のステップ。乱発しない
+
+【標準フロー (例: X 投稿)】
+1. ext_open_url("https://x.com/compose/post")
+2. ext_wait(1500) — ページ表示待ち
+3. ext_read_page() — 構造取得・ログイン状態確認
+4. ext_type(selector="ツイートを投稿", text="...")
+5. ext_click(target="投稿") もしくは ユーザー確認
+6. ext_screenshot() で結果確認 → ユーザーに報告`
+    : '';
   const sheetsNote = sheetsActive
     ? `
 
@@ -2121,7 +2265,7 @@ ${sheetsActive
 
 ツールを連鎖して公開情報の問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
     : '';
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${sheetsNote}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
+  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2501,6 +2645,59 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
+  // ── GET /api/extension/stream (token-only auth) ────────────
+  // Browser extension keeps an SSE connection here. Server pushes 'cmd' events
+  // when the AI wants the extension to do something.
+  if(pathname==='/api/extension/stream' && method==='GET'){
+    const qs=new url.URL(req.url,APP_URL).searchParams;
+    const tok = qs.get('token') || '';
+    if(!tok || tok.length < 16) return jres(res,400,{error:'token required'});
+    const owner = await DB.findBy('extension_device_token', tok);
+    if(!owner) return jres(res,401,{error:'invalid token'});
+    res.writeHead(200, {
+      'Content-Type':'text/event-stream; charset=utf-8',
+      'Cache-Control':'no-cache, no-transform',
+      'Connection':'keep-alive',
+      'X-Accel-Buffering':'no',
+      'Access-Control-Allow-Origin':'*',
+    });
+    res.write('event: ready\ndata: {"ok":true}\n\n');
+    // Replace any existing connection for this token (single-device assumption).
+    const old = _extConnections.get(tok);
+    if(old){ try{ old.res.end(); }catch(e){} }
+    const heartbeat = setInterval(()=>{ try{ res.write('event: ping\ndata: {}\n\n'); }catch(e){} }, 20000);
+    _extConnections.set(tok, { res, owner_id: owner.id, heartbeat });
+    // Touch last_seen
+    if(owner.extension_device_meta){
+      owner.extension_device_meta = { ...owner.extension_device_meta, last_seen: new Date().toISOString() };
+      try{ await DB.save(owner); }catch(e){}
+    }
+    req.on('close', ()=>{
+      clearInterval(heartbeat);
+      const cur = _extConnections.get(tok);
+      if(cur && cur.res === res){ _extConnections.delete(tok); }
+    });
+    return;
+  }
+
+  // ── POST /api/extension/result (token-only auth) ───────────
+  if(pathname==='/api/extension/result' && method==='POST'){
+    const auth = (req.headers['authorization']||'').replace(/^Bearer\s+/i,'');
+    if(!auth || auth.length < 16) return jres(res,401,{error:'token required'});
+    const owner = await DB.findBy('extension_device_token', auth);
+    if(!owner) return jres(res,401,{error:'invalid token'});
+    const body = await readBody(req);
+    const cid = body && body.command_id;
+    if(!cid) return jres(res,400,{error:'command_id required'});
+    const pending = _extPending.get(cid);
+    if(pending){
+      if(pending.timeout) clearTimeout(pending.timeout);
+      _extPending.delete(cid);
+      pending.resolve(body.result || { error:'empty_result' });
+    }
+    return jres(res,200,{ok:true});
+  }
+
   // ── Auth required below ────────────────────────────────────
   const claims=getAuth(req);
   if(!claims)return jres(res,401,{error:'認証が必要です'});
@@ -2521,7 +2718,7 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── POST /api/agents ───────────────────────────────────────
   if(pathname==='/api/agents'&&method==='POST'){
-    const{avatar,name,skills,persona,chrome_enabled,sheets_enabled}=await readBody(req);
+    const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
     if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
@@ -2535,6 +2732,7 @@ async function handleAPI(req,res,pathname,method,ip){
       name:name.trim(),skills,persona:persona?.trim()||'',
       chrome_enabled:!!chrome_enabled,
       sheets_enabled:!!sheets_enabled,
+      extension_enabled:!!extension_enabled,
       history:[],created_at:new Date().toISOString()};
     user.agents=[...(user.agents||[]),agent];
     await DB.save(user);return jres(res,201,{agent});
@@ -2545,13 +2743,14 @@ async function handleAPI(req,res,pathname,method,ip){
   const pam=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(pam&&method==='PATCH'){
     const agId=pam[1];
-    const{name,persona,chrome_enabled,sheets_enabled,avatar}=await readBody(req);
+    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar}=await readBody(req);
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
     if(persona!==undefined)ag.persona=persona;
     if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
+    if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
     if(avatar!==undefined){
       // Accept either a single emoji/short string or a data:image/* base64 URI (≤500KB)
       const a = String(avatar||'').trim();
@@ -2628,6 +2827,53 @@ async function handleAPI(req,res,pathname,method,ip){
     (user.agents||[]).forEach(a=>{ if(a.sheets_enabled) a.sheets_enabled=false; });
     await DB.save(user);
     return jres(res,200,{ok:true});
+  }
+
+  // ── POST /api/extension/pair ───────────────────────────────
+  // Generate a device token for the browser extension to use as bearer auth.
+  // Token is random 32 bytes hex; rotates on every pair.
+  // Stored as TOP-LEVEL columns so token lookup is fast (no JSONB scan).
+  if(pathname==='/api/extension/pair' && method==='POST'){
+    const device_id = 'dev_' + crypto.randomBytes(8).toString('hex');
+    const device_token = crypto.randomBytes(32).toString('hex');
+    user.extension_device_id = device_id;
+    user.extension_device_token = device_token;
+    user.extension_device_meta = {
+      created_at: new Date().toISOString(),
+      last_seen: null,
+      ua: req.headers['user-agent'] || '',
+    };
+    await DB.save(user);
+    return jres(res,200,{ device_id, device_token });
+  }
+
+  // ── POST /api/extension/unpair ─────────────────────────────
+  if(pathname==='/api/extension/unpair' && method==='POST'){
+    const t = user.extension_device_token;
+    if(t && _extConnections.has(t)){
+      try{ _extConnections.get(t).res.end(); }catch(e){}
+      _extConnections.delete(t);
+    }
+    user.extension_device_id = null;
+    user.extension_device_token = null;
+    user.extension_device_meta = null;
+    (user.agents||[]).forEach(a=>{ if(a.extension_enabled) a.extension_enabled=false; });
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── GET /api/extension/status ──────────────────────────────
+  if(pathname==='/api/extension/status' && method==='GET'){
+    const tok = user.extension_device_token;
+    const meta = user.extension_device_meta || {};
+    const connected = !!(tok && _extConnections.has(tok));
+    return jres(res,200,{
+      paired: !!tok,
+      connected,
+      device_id: user.extension_device_id || null,
+      last_seen: meta.last_seen || null,
+      ua: meta.ua || null,
+    });
   }
 
   // ── POST /api/agents/:id/share ─────────────────────────────
@@ -3298,13 +3544,16 @@ async function handleAPI(req,res,pathname,method,ip){
       : [...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
     let reply,cost;
 
-    // Branch: Chrome 連携 ON or Sheets 連携 ON のエージェントは Tool Use ループを通す
+    // Branch: Chrome 連携 ON or Sheets 連携 ON or Extension 連携 ON のエージェントは Tool Use ループを通す
     const sheetsConnected = !!(user.google_oauth && user.google_oauth.refresh_token);
     const sheetsActive = !!agent.sheets_enabled && sheetsConnected;
-    const useTools = !!agent.chrome_enabled || sheetsActive;
+    const extensionPaired = !!user.extension_device_token;
+    const extensionActive = !!agent.extension_enabled && extensionPaired;
+    const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive;
     const tools = [
       ...(agent.chrome_enabled ? BROWSER_TOOLS : []),
       ...(sheetsActive ? SHEETS_TOOLS : []),
+      ...(extensionActive ? EXTENSION_TOOLS : []),
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
@@ -3323,7 +3572,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         });
@@ -3404,7 +3653,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive}), tools);
+          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive, extensionActive}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -3446,6 +3695,8 @@ async function handleAPI(req,res,pathname,method,ip){
             let result;
             if(sheetsToolNames.has(block.name)){
               result = await executeSheetsTool(user, block.name, block.input||{});
+            } else if(block.name && block.name.startsWith('ext_')){
+              result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(session){
               result = await executeBrowserTool(session, block.name, block.input||{}, { sheetsConnected, sheetsActive });
             } else {
@@ -3496,7 +3747,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive}));
+            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive}));
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -3517,7 +3768,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive}));
+        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive}));
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

@@ -38,6 +38,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin boolean DEFAULT false;
 -- 切断時は null に戻す。
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_oauth jsonb;
 
+-- ── ブラウザ拡張連携 (Phase 1) ─────────────────────────────────
+-- token はトップレベル列で高速ルックアップ、メタは jsonb。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_device_id    text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_device_token text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_device_meta  jsonb;
+
 -- ── PostgREST のスキーマキャッシュをリロード ──────────────────────
 NOTIFY pgrst, 'reload schema';
 

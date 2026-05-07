@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📱 MY AI Agent モバイルアプリ — UI モック</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fde8d8;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --ios-blue:#0a84ff; --ios-bg:#000;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(135deg,#1e1410 0%,#3a2a1c 100%);
+  color:#fff;font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+a{color:var(--peach);text-decoration:none;}
+.shell{max-width:1280px;margin:0 auto;padding:48px 24px 80px;}
+
+.brand{font-size:13px;color:rgba(255,255,255,.6);font-weight:600;margin-bottom:24px;}
+.brand a{color:rgba(255,255,255,.6);}
+.brand a:hover{color:var(--peach);text-decoration:underline;}
+
+.hero{margin-bottom:40px;}
+.h1{font-size:38px;font-weight:900;margin-bottom:10px;line-height:1.2;}
+.h1 .accent{color:var(--peach);}
+.sub{font-size:16px;color:rgba(255,255,255,.75);max-width:680px;line-height:1.7;}
+.sub b{color:#fff;}
+
+.tagrow{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0;}
+.tag{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:700;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  color:rgba(255,255,255,.85);
+}
+.tag.peach{background:rgba(251,146,60,.18);border-color:rgba(251,146,60,.4);color:var(--peach-light);}
+
+/* Phone grid */
+.phones{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:36px 28px;
+  margin-top:48px;align-items:flex-start;
+}
+
+/* iPhone frame */
+.phone{
+  width:280px;margin:0 auto;
+}
+.phone-meta{margin-top:14px;text-align:center;}
+.phone-num{
+  display:inline-block;background:var(--peach);color:#000;
+  padding:2px 11px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.04em;
+  margin-bottom:6px;
+}
+.phone-ttl{font-size:14px;font-weight:800;color:#fff;margin-bottom:3px;}
+.phone-desc{font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.5;}
+
+.iphone{
+  width:280px;height:608px;border-radius:38px;background:#000;padding:11px;
+  box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 0 2px #2a2018,inset 0 0 0 1px rgba(255,255,255,.08);
+  position:relative;
+}
+.iphone::before{
+  /* Dynamic Island */
+  content:'';position:absolute;top:18px;left:50%;transform:translateX(-50%);
+  width:96px;height:24px;background:#000;border-radius:18px;z-index:10;
+}
+.iphone-screen{
+  width:100%;height:100%;border-radius:28px;overflow:hidden;
+  background:var(--bg-card);position:relative;
+}
+
+/* iOS status bar */
+.ios-status{
+  position:absolute;top:0;left:0;right:0;height:40px;
+  display:flex;align-items:flex-start;padding:14px 22px 0;
+  font-size:12.5px;font-weight:700;color:#000;z-index:5;
+  pointer-events:none;
+}
+.ios-status .time{flex:1;}
+.ios-status .right{display:flex;gap:5px;align-items:center;font-size:11.5px;}
+.ios-status.dark{color:#fff;}
+
+/* Home indicator */
+.home-ind{
+  position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  width:124px;height:4px;background:#000;border-radius:2px;opacity:.4;
+}
+.home-ind.dark{background:#fff;opacity:.5;}
+
+/* App content area */
+.app{
+  position:absolute;top:42px;bottom:18px;left:0;right:0;
+  display:flex;flex-direction:column;
+}
+
+/* App header */
+.app-head{
+  padding:8px 16px;background:#fff;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.app-head .ic{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.app-head .nm{flex:1;font-size:13.5px;font-weight:800;color:var(--text);}
+.app-head .st{font-size:9.5px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:3px;}
+.app-head .st .dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+.app-head .menu{font-size:18px;color:var(--text3);padding:4px;cursor:pointer;}
+.app-head .icon-btn{font-size:17px;color:var(--text3);padding:4px;background:none;border:0;cursor:pointer;}
+
+/* Chat body */
+.app-body{
+  flex:1;overflow-y:auto;padding:14px 14px;background:var(--cream);
+}
+.msg{display:flex;gap:8px;margin-bottom:10px;}
+.msg.me{flex-direction:row-reverse;}
+.msg-av{
+  width:24px;height:24px;border-radius:7px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:11px;font-weight:700;
+}
+.msg.me .msg-av{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.msg.ai .msg-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));font-size:12px;}
+.bubble{
+  max-width:78%;padding:8px 11px;border-radius:13px;
+  font-size:12px;color:var(--text);line-height:1.55;word-break:break-word;
+}
+.msg.me .bubble{background:#dbeafe;color:#1e3a8a;border:1px solid rgba(59,130,246,.18);}
+.msg.ai .bubble{background:#fff;border:1px solid var(--line);}
+
+.gen-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 11px;border-radius:999px;
+  background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);
+  font-size:11px;color:var(--peach-dark);font-weight:700;
+}
+.gen-pill .dot{
+  width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff,var(--peach) 60%,var(--peach-dark));
+  animation:breathe 1.6s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+/* Composer */
+.app-comp{
+  padding:8px 12px 6px;background:#fff;border-top:1px solid var(--line);flex-shrink:0;
+}
+.comp-wrap{
+  display:flex;align-items:flex-end;gap:6px;
+  background:var(--cream);border:1px solid var(--line);border-radius:18px;
+  padding:7px 10px;
+}
+.comp-wrap input{
+  flex:1;background:transparent;border:0;outline:0;font-size:12.5px;color:var(--text);
+  font-family:inherit;line-height:1.5;
+}
+.comp-wrap input::placeholder{color:var(--text3);}
+.comp-btn{
+  width:28px;height:28px;border-radius:50%;border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  flex-shrink:0;font-family:inherit;
+}
+.comp-btn.peach{background:var(--peach);color:#fff;}
+.comp-btn.mic{background:var(--bg-card);color:var(--peach-dark);border:1px solid var(--peach);}
+.comp-btn.attach{background:transparent;color:var(--text3);}
+
+/* Login screen */
+.login-screen{
+  flex:1;background:linear-gradient(180deg,var(--bg) 0%,var(--cream2) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;
+}
+.login-logo{
+  width:62px;height:62px;border-radius:18px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:20px;color:#fff;font-size:30px;
+  box-shadow:0 14px 36px rgba(251,146,60,.35);
+}
+.login-h{font-size:20px;font-weight:900;color:var(--text);margin-bottom:6px;text-align:center;}
+.login-s{font-size:11.5px;color:var(--text3);margin-bottom:24px;text-align:center;line-height:1.6;}
+.login-input{
+  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;
+  font-size:13px;font-family:inherit;outline:0;margin-bottom:9px;background:#fff;color:var(--text);
+}
+.login-btn{
+  width:100%;padding:12px;border-radius:10px;border:0;
+  font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;
+  margin-top:6px;
+}
+.login-btn.peach{background:var(--peach);color:#fff;}
+.login-btn.google{background:#fff;color:var(--text);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;gap:9px;}
+.login-or{
+  display:flex;align-items:center;gap:8px;margin:14px 0;
+  font-size:10px;color:var(--text3);
+}
+.login-or::before,.login-or::after{
+  content:'';flex:1;height:1px;background:var(--line);
+}
+.login-foot{
+  margin-top:24px;font-size:11px;color:var(--text3);text-align:center;
+}
+
+/* Side menu (slide-in) */
+.sidemenu{
+  position:absolute;inset:0;background:rgba(0,0,0,.5);
+  display:flex;
+}
+.sidemenu .panel{
+  width:78%;height:100%;background:#fff;display:flex;flex-direction:column;
+  animation:slideIn .25s ease;
+}
+@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.sm-head{
+  padding:14px 16px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:10px;
+}
+.sm-head .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.sm-head .nm{font-size:12.5px;font-weight:800;color:var(--text);}
+.sm-head .em{font-size:10px;color:var(--text3);font-family:var(--mono);}
+
+.sm-section{padding:10px 16px 4px;font-size:9.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;}
+.sm-item{
+  display:flex;align-items:center;gap:10px;padding:9px 16px;color:var(--text);font-size:12px;
+}
+.sm-item.active{background:var(--peach-light);color:var(--peach-dark);font-weight:800;}
+.sm-item .ic{font-size:14px;width:18px;text-align:center;}
+.sm-item .badge{margin-left:auto;background:var(--peach);color:#fff;padding:1px 7px;border-radius:5px;font-size:9.5px;font-weight:800;}
+
+/* Voice fullscreen */
+.voice-screen{
+  flex:1;background:linear-gradient(180deg,#1e1410 0%,#3a2a1c 100%);
+  color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;position:relative;
+}
+.voice-orb{
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff 0%,#fed7aa 30%,var(--peach) 60%,var(--peach-dark) 90%);
+  box-shadow:0 0 60px rgba(251,146,60,.6),0 0 0 0 rgba(251,146,60,.5);
+  animation:voicePulse 2.2s ease-in-out infinite;
+  position:relative;
+}
+.voice-orb::after{
+  content:'';position:absolute;inset:-12px;border-radius:50%;
+  border:2px solid rgba(251,146,60,.3);
+  animation:voiceRing 2.2s ease-out infinite;
+}
+@keyframes voicePulse{
+  0%,100%{transform:scale(1);box-shadow:0 0 60px rgba(251,146,60,.6),0 0 0 0 rgba(251,146,60,.5);}
+  50%{transform:scale(1.06);box-shadow:0 0 90px rgba(251,146,60,.7),0 0 0 18px rgba(251,146,60,0);}
+}
+@keyframes voiceRing{
+  0%{transform:scale(1);opacity:.7;}
+  100%{transform:scale(1.5);opacity:0;}
+}
+.voice-text{
+  margin-top:30px;font-size:16px;font-weight:700;color:#fff;text-align:center;line-height:1.55;
+}
+.voice-status{
+  margin-top:12px;font-size:11px;color:rgba(255,255,255,.55);text-align:center;
+}
+.voice-cancel{
+  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
+  background:rgba(255,255,255,.12);color:#fff;border:0;
+  padding:10px 26px;border-radius:999px;font-size:12px;font-weight:700;
+}
+
+/* Push notification */
+.notif{
+  position:absolute;top:50px;left:8px;right:8px;
+  background:rgba(255,255,255,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-radius:14px;padding:11px 13px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  display:flex;gap:9px;font-family:-apple-system,sans-serif;color:#000;
+}
+.notif .ic{
+  width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;
+}
+.notif-meta{flex:1;}
+.notif-row{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#666;}
+.notif-row b{color:#000;font-weight:700;}
+.notif-row .when{margin-left:auto;font-size:10px;}
+.notif-ttl{font-size:12.5px;font-weight:700;color:#000;margin-top:2px;}
+.notif-body{font-size:11.5px;color:#333;line-height:1.4;margin-top:1px;}
+
+/* Lock screen background for notification mock */
+.lockscreen{
+  flex:1;
+  background:linear-gradient(180deg,rgba(60,40,25,.95) 0%,rgba(20,12,7,1) 100%),
+             radial-gradient(circle at 30% 20%,rgba(251,146,60,.3),transparent 60%);
+  background-size:cover;
+  position:relative;color:#fff;
+  display:flex;flex-direction:column;align-items:center;
+}
+.lockscreen .time{
+  font-size:64px;font-weight:200;margin-top:60px;
+}
+.lockscreen .date{
+  font-size:14px;color:rgba(255,255,255,.85);font-weight:500;margin-top:-6px;
+}
+
+/* Settings */
+.settings-section{padding:8px 16px 4px;font-size:10px;color:var(--text3);font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+.settings-row{
+  padding:11px 16px;background:#fff;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);
+  font-size:12.5px;color:var(--text);
+}
+.settings-row .ic{font-size:15px;width:22px;}
+.settings-row .label{flex:1;}
+.settings-row .v{font-size:11.5px;color:var(--text3);}
+.settings-row .arrow{color:var(--text3);font-size:13px;}
+.toggle-sw{
+  width:38px;height:22px;border-radius:999px;background:#d4c1aa;position:relative;
+}
+.toggle-sw.on{background:var(--green);}
+.toggle-sw::after{
+  content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;
+  transition:left .18s;
+}
+.toggle-sw.on::after{left:18px;}
+
+/* Marketplace */
+.market-card{
+  background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:8px;
+}
+.market-card-h{display:flex;align-items:center;gap:9px;}
+.market-card-av{
+  width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.market-card-nm{font-size:12.5px;font-weight:800;color:var(--text);}
+.market-card-by{font-size:10px;color:var(--text3);margin-top:1px;}
+.market-card-stars{font-size:10.5px;color:var(--peach-dark);font-weight:700;margin-top:6px;}
+.market-card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:8px;border-top:1px solid var(--line);}
+.market-card-pr{font-size:13px;font-weight:800;color:var(--text);}
+.market-card-buy{font-size:10px;color:var(--peach-dark);font-weight:700;}
+
+/* Agents list */
+.agent-row{
+  padding:11px 16px;background:#fff;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);
+}
+.agent-av{
+  width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+}
+.agent-meta{flex:1;}
+.agent-nm{font-size:12.5px;font-weight:800;color:var(--text);}
+.agent-last{font-size:10.5px;color:var(--text3);margin-top:1px;line-height:1.45;}
+.agent-flags{display:flex;gap:3px;}
+.agent-flag{font-size:11px;}
+
+/* Section caption */
+.section-cap{font-size:18px;font-weight:900;color:#fff;margin:48px 0 14px;letter-spacing:.01em;}
+
+/* Summary */
+.summary{
+  margin-top:48px;padding:28px 32px;border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(20px);
+}
+.summary h2{font-size:20px;font-weight:900;color:#fff;margin-bottom:14px;}
+.summary p{font-size:13.5px;color:rgba(255,255,255,.8);margin-bottom:8px;line-height:1.7;}
+.summary b{color:#fff;}
+.summary .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:18px;}
+.summary .stat{background:rgba(255,255,255,.06);border-radius:11px;padding:14px;text-align:center;}
+.summary .stat-num{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--peach);line-height:1;}
+.summary .stat-lbl{font-size:11px;color:rgba(255,255,255,.6);margin-top:5px;font-weight:600;}
+
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);text-align:center;font-size:12px;color:rgba(255,255,255,.5);}
+.foot a{color:rgba(255,255,255,.5);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a> ·
+  <a href="/lp.html">ホーム</a>
+</div>
+
+<div class="hero">
+  <h1 class="h1">📱 MY AI Agent <span class="accent">モバイルアプリ</span><br>UI モック</h1>
+  <p class="sub">
+    Capacitor で iOS/Android 同時リリース予定。<b>2 週間で MVP</b>、6-8 週間で App Store / Google Play 公開を目標。<br>
+    通勤中・カフェ・打合せの隙間に音声で AI に指示できる。完了したら push 通知。
+  </p>
+  <div class="tagrow">
+    <span class="tag peach">Capacitor</span>
+    <span class="tag">iOS / Android</span>
+    <span class="tag">既存 Web 流用</span>
+    <span class="tag">音声入力</span>
+    <span class="tag">プッシュ通知</span>
+    <span class="tag">カメラ</span>
+  </div>
+</div>
+
+<!-- ═════ コア画面 ═════ -->
+<h2 class="section-cap">🎬 コア画面 (MVP)</h2>
+
+<div class="phones">
+
+<!-- ──── 1. ログイン ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="login-screen">
+        <div class="login-logo">🤖</div>
+        <div class="login-h">MY AI Agent</div>
+        <div class="login-s">あなただけの AI チームを<br>持ち歩こう</div>
+        <input class="login-input" type="email" placeholder="メールアドレス" value="kota@protocol.ooo">
+        <input class="login-input" type="password" placeholder="パスワード" value="••••••••">
+        <button class="login-btn peach">ログイン</button>
+        <div class="login-or">または</div>
+        <button class="login-btn google">🔵 Google でログイン</button>
+        <div class="login-foot">アカウントがない？ <a href="#" style="color:var(--peach-dark);font-weight:700">新規登録</a></div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 01</span><div class="phone-ttl">ログイン</div><div class="phone-desc">メールまたは Google OAuth。<br>JWT は Keychain に保存</div></div>
+</div>
+
+<!-- ──── 2. チャット (メイン) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="app-head">
+        <button class="icon-btn">☰</button>
+        <div class="ic">📊</div>
+        <div style="flex:1">
+          <div class="nm">営業データ管理君</div>
+          <div class="st"><span class="dot"></span>連携中</div>
+        </div>
+        <button class="icon-btn">🔔</button>
+      </div>
+      <div class="app-body">
+        <div class="msg me">
+          <div class="msg-av">K</div>
+          <div class="bubble">今日の AcmeSaaS 商談、確度70% 500万で更新しといて</div>
+        </div>
+        <div class="msg ai">
+          <div class="msg-av">📊</div>
+          <div style="flex:1">
+            <span class="gen-pill"><span class="dot"></span>Salesforce 操作中…</span>
+          </div>
+        </div>
+      </div>
+      <div class="app-comp">
+        <div class="comp-wrap">
+          <button class="comp-btn attach">📎</button>
+          <input placeholder="何をお願いしますか？">
+          <button class="comp-btn mic">🎤</button>
+          <button class="comp-btn peach">↑</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 02</span><div class="phone-ttl">チャット (メイン)</div><div class="phone-desc">既存の app.html UI を<br>モバイル最適化</div></div>
+</div>
+
+<!-- ──── 3. サイドメニュー (slide-in) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="sidemenu">
+        <div class="panel" style="overflow:hidden">
+          <div class="sm-head">
+            <div class="av">武</div>
+            <div>
+              <div class="nm">武内 洸太</div>
+              <div class="em">Business プラン</div>
+            </div>
+          </div>
+          <div style="overflow-y:auto;flex:1">
+            <div class="sm-section">エージェント</div>
+            <div class="sm-item active"><div class="ic">📊</div><div>営業データ管理君</div></div>
+            <div class="sm-item"><div class="ic">🐦</div><div>SNS 運用</div></div>
+            <div class="sm-item"><div class="ic">📝</div><div>議事録まとめ君</div><div class="badge">3</div></div>
+            <div class="sm-item"><div class="ic">🎯</div><div>採用エージェント</div></div>
+
+            <div class="sm-section">メニュー</div>
+            <div class="sm-item"><div class="ic">＋</div><div>新規エージェント作成</div></div>
+            <div class="sm-item"><div class="ic">🏪</div><div>マーケットプレイス</div></div>
+            <div class="sm-item"><div class="ic">⚙</div><div>設定</div></div>
+            <div class="sm-item"><div class="ic">📋</div><div>アクティビティ</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 03</span><div class="phone-ttl">サイドメニュー</div><div class="phone-desc">左スワイプ or ☰ で表示<br>エージェント切替・メニュー</div></div>
+</div>
+
+<!-- ──── 4. 音声入力 (フルスクリーン) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status dark"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="voice-screen">
+        <div class="voice-orb"></div>
+        <div class="voice-text">「今日の予定を Slack の自分用チャンネルに投稿して」</div>
+        <div class="voice-status">🎙 聞き取り中…</div>
+        <button class="voice-cancel">キャンセル</button>
+      </div>
+    </div>
+    <div class="home-ind dark"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 04</span><div class="phone-ttl">音声入力モード</div><div class="phone-desc">フルスクリーンで脈動する球<br>話した内容がリアルタイム表示</div></div>
+</div>
+
+</div>
+
+<!-- ═════ Phase 2 画面 ═════ -->
+<h2 class="section-cap">⚡ Phase 2 画面</h2>
+
+<div class="phones">
+
+<!-- ──── 5. プッシュ通知 (ロック画面) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status dark"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="lockscreen">
+        <div class="time" style="font-family:-apple-system,sans-serif;">9:41</div>
+        <div class="date">2026年5月15日 (金)</div>
+
+        <div class="notif" style="margin-top:36px">
+          <div class="ic">🤖</div>
+          <div class="notif-meta">
+            <div class="notif-row"><b>MY AI Agent</b><span class="when">今</span></div>
+            <div class="notif-ttl">✅ 商談を更新しました</div>
+            <div class="notif-body">AcmeSaaS 様の商談を確度70%・¥5,000,000 で更新</div>
+          </div>
+        </div>
+
+        <div class="notif" style="top:138px">
+          <div class="ic" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">⚠</div>
+          <div class="notif-meta">
+            <div class="notif-row"><b>MY AI Agent</b><span class="when">3分前</span></div>
+            <div class="notif-ttl">承認お願いします</div>
+            <div class="notif-body">X に「新サービス公開しました」を投稿しますか?</div>
+          </div>
+        </div>
+
+        <div class="notif" style="top:226px">
+          <div class="ic" style="background:linear-gradient(135deg,#10b981,#059669)">📨</div>
+          <div class="notif-meta">
+            <div class="notif-row"><b>MY AI Agent</b><span class="when">朝 8:30</span></div>
+            <div class="notif-ttl">☀ 朝のサマリー</div>
+            <div class="notif-body">未読メール 8 通 (緊急 2)・今日の予定 3 件</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind dark"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 05</span><div class="phone-ttl">プッシュ通知</div><div class="phone-desc">タスク完了 / 承認依頼 /<br>朝のサマリーが届く</div></div>
+</div>
+
+<!-- ──── 6. マーケットプレイス ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="app-head">
+        <button class="icon-btn">☰</button>
+        <div class="ic" style="background:rgba(251,146,60,.15);color:var(--peach-dark);font-size:14px">🏪</div>
+        <div style="flex:1"><div class="nm" style="font-size:13px">マーケットプレイス</div></div>
+        <button class="icon-btn">🔍</button>
+      </div>
+      <div class="app-body" style="background:var(--cream2)">
+        <div style="display:flex;gap:5px;margin-bottom:10px;font-size:10.5px">
+          <span style="background:var(--peach);color:#fff;padding:3px 9px;border-radius:5px;font-weight:700">人気順</span>
+          <span style="background:#fff;color:var(--text3);padding:3px 9px;border-radius:5px;border:1px solid var(--line)">新着</span>
+          <span style="background:#fff;color:var(--text3);padding:3px 9px;border-radius:5px;border:1px solid var(--line)">無料</span>
+        </div>
+
+        <div class="market-card">
+          <div class="market-card-h">
+            <div class="market-card-av">🐦</div>
+            <div style="flex:1">
+              <div class="market-card-nm">X 自動運用エージェント</div>
+              <div class="market-card-by">by @creator_a ✓</div>
+              <div class="market-card-stars">★★★★★ 4.9 (132)</div>
+            </div>
+          </div>
+          <div class="market-card-foot">
+            <div class="market-card-pr">¥1,980</div>
+            <div class="market-card-buy">使ってみる →</div>
+          </div>
+        </div>
+
+        <div class="market-card">
+          <div class="market-card-h">
+            <div class="market-card-av">✍️</div>
+            <div style="flex:1">
+              <div class="market-card-nm">SEO ブログライター Pro</div>
+              <div class="market-card-by">by @creator_b ✓</div>
+              <div class="market-card-stars">★★★★☆ 4.6 (87)</div>
+            </div>
+          </div>
+          <div class="market-card-foot">
+            <div class="market-card-pr">¥980</div>
+            <div class="market-card-buy">使ってみる →</div>
+          </div>
+        </div>
+
+        <div class="market-card">
+          <div class="market-card-h">
+            <div class="market-card-av">📝</div>
+            <div style="flex:1">
+              <div class="market-card-nm">議事録 → アクション抽出</div>
+              <div class="market-card-by">by @creator_c</div>
+              <div class="market-card-stars">★★★★★ 5.0 (41)</div>
+            </div>
+          </div>
+          <div class="market-card-foot">
+            <div class="market-card-pr" style="color:var(--green)">無料</div>
+            <div class="market-card-buy">使ってみる →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 06</span><div class="phone-ttl">マーケットプレイス</div><div class="phone-desc">スマホでも他のクリエイターの<br>エージェント購入可能</div></div>
+</div>
+
+<!-- ──── 7. 設定 ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="app-head">
+        <button class="icon-btn" style="font-size:14px">←</button>
+        <div style="flex:1"><div class="nm" style="font-size:13px">設定</div></div>
+      </div>
+      <div class="app-body" style="background:var(--cream2);padding:0">
+        <div class="settings-section">アカウント</div>
+        <div class="settings-row"><div class="ic">👤</div><div class="label">プロフィール</div><div class="v">武内 洸太</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic">💎</div><div class="label">プラン</div><div class="v" style="color:var(--peach-dark);font-weight:700">Business</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic">💴</div><div class="label">残高 / 請求</div><div class="v">¥4,820</div><span class="arrow">›</span></div>
+
+        <div class="settings-section">通知</div>
+        <div class="settings-row"><div class="ic">✅</div><div class="label">タスク完了通知</div><div class="toggle-sw on"></div></div>
+        <div class="settings-row"><div class="ic">⚠</div><div class="label">承認依頼</div><div class="toggle-sw on"></div></div>
+        <div class="settings-row"><div class="ic">☀</div><div class="label">朝のサマリー</div><div class="toggle-sw on"></div></div>
+        <div class="settings-row"><div class="ic">📊</div><div class="label">残高アラート</div><div class="toggle-sw"></div></div>
+
+        <div class="settings-section">統合</div>
+        <div class="settings-row"><div class="ic">📊</div><div class="label">Google スプレッドシート</div><div class="v" style="color:var(--green);font-weight:700">接続中</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic">🌐</div><div class="label">ブラウザ拡張</div><div class="v">Mac で連携</div><span class="arrow">›</span></div>
+
+        <div class="settings-section">その他</div>
+        <div class="settings-row"><div class="ic">📋</div><div class="label">アクティビティ</div><span class="arrow">›</span></div>
+        <div class="settings-row"><div class="ic">📜</div><div class="label">利用規約 / プライバシー</div><span class="arrow">›</span></div>
+        <div class="settings-row" style="color:var(--rose)"><div class="ic">↩</div><div class="label">ログアウト</div></div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 07</span><div class="phone-ttl">設定</div><div class="phone-desc">プラン / 通知 ON-OFF /<br>連携状態</div></div>
+</div>
+
+<!-- ──── 8. エージェント一覧 (代替ビュー) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>📶</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="app-head">
+        <button class="icon-btn">☰</button>
+        <div style="flex:1"><div class="nm" style="font-size:13px">マイエージェント</div></div>
+        <button class="icon-btn" style="background:var(--peach);color:#fff;width:26px;height:26px;border-radius:50%;font-size:14px;font-weight:800">＋</button>
+      </div>
+      <div class="app-body" style="background:var(--cream2);padding:0">
+        <div class="agent-row">
+          <div class="agent-av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">📊</div>
+          <div class="agent-meta">
+            <div class="agent-nm">営業データ管理君</div>
+            <div class="agent-last">先ほど · 商談を更新しました</div>
+          </div>
+          <div class="agent-flags"><span class="agent-flag" title="Sheets">📊</span><span class="agent-flag" title="拡張">🧩</span></div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-av">🐦</div>
+          <div class="agent-meta">
+            <div class="agent-nm">SNS 運用</div>
+            <div class="agent-last">2時間前 · X に投稿: 18いいね</div>
+          </div>
+          <div class="agent-flags"><span class="agent-flag" title="拡張">🧩</span></div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">📝</div>
+          <div class="agent-meta">
+            <div class="agent-nm">議事録まとめ君</div>
+            <div class="agent-last">朝 9:30 · ToDo 3 件抽出</div>
+          </div>
+          <div class="agent-flags"><span class="agent-flag" title="Sheets">📊</span></div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-av" style="background:linear-gradient(135deg,#10b981,#047857)">🎯</div>
+          <div class="agent-meta">
+            <div class="agent-nm">採用エージェント</div>
+            <div class="agent-last">昨日 · 候補者 5 名スカウト送信</div>
+          </div>
+          <div class="agent-flags"></div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-av" style="background:linear-gradient(135deg,#fbbf24,#d97706)">💰</div>
+          <div class="agent-meta">
+            <div class="agent-nm">経営戦略アドバイザー</div>
+            <div class="agent-last">3日前 · 月次レポート生成</div>
+          </div>
+          <div class="agent-flags"></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 08</span><div class="phone-ttl">エージェント一覧</div><div class="phone-desc">最近のアクティビティ付き<br>連携アイコン (📊🌐🧩) も表示</div></div>
+</div>
+
+</div>
+
+<!-- ═════ Summary ═════ -->
+<div class="summary">
+  <h2>🎯 仕様まとめ</h2>
+  <p><b>技術選定</b>: Capacitor (Ionic 系) で iOS / Android 同時開発。既存 Web 版 (app.html) を WebView でラップ + ネイティブ機能ブリッジ追加。</p>
+  <p><b>開発期間</b>: MVP <b>2 週間</b> (Week 1: ラップ + ネイティブブリッジ / Week 2: プッシュ通知 + 配布)。ストア審査含めて <b>6-8 週間</b>で公開。</p>
+  <p><b>必須実装</b>: ログイン / チャット / 音声入力 / カメラ / プッシュ通知 (どれか1つ以上ないと App Store 審査落ち)</p>
+  <p><b>非対応</b>: ブラウザ拡張 (モバイル Chrome 非対応) / マーケットプレイス出店フロー (PC 推奨、閲覧・購入は OK)</p>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">2週</div><div class="stat-lbl">MVP 開発</div></div>
+    <div class="stat"><div class="stat-num">8</div><div class="stat-lbl">主要画面</div></div>
+    <div class="stat"><div class="stat-num">$124</div><div class="stat-lbl">初期費用<br>(Apple+Google)</div></div>
+    <div class="stat"><div class="stat-num">100%</div><div class="stat-lbl">既存 API 流用</div></div>
+  </div>
+
+  <p style="margin-top:18px;padding:14px 16px;background:rgba(251,146,60,.1);border-radius:11px;font-size:13px">
+    💡 <b>次のステップ</b>: このモックで方向性 OK なら、Capacitor プロジェクトを <code style="font-family:var(--mono);background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px">/mobile</code> ディレクトリに作って、既存 app.html をラップ → TestFlight で動作確認、という流れになります。
+  </p>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/lp.html">ホーム</a> · 仕様書: <a href="https://github.com/kouta021602165757/myagent/blob/main/docs/MOBILE_APP_SPEC.md">MOBILE_APP_SPEC.md</a>
+</div>
+
+</div>
+</body>
+</html>

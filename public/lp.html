@@ -267,7 +267,26 @@ nav{
   font-family:var(--display);margin-bottom:1px;
 }
 
-/* ════ Section: SHARE (Coming Soon) ════ */
+/* ════ Template grid (other 9 templates) ════ */
+.tmpl-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+  margin-top:48px;
+}
+.tmpl-mini{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:18px 18px 16px;transition:all .22s;
+}
+.tmpl-mini:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(180,100,40,.08);border-color:rgba(251,146,60,.3);}
+.tmpl-mini-av{
+  width:42px;height:42px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;
+  margin-bottom:10px;box-shadow:0 4px 12px rgba(251,146,60,.24);
+}
+.tmpl-mini-nm{font-size:14px;font-weight:800;color:var(--text);margin-bottom:5px;line-height:1.35;}
+.tmpl-mini-dc{font-size:11.5px;color:var(--text-subtle);line-height:1.6;}
+
+/* ════ Section: SHARE ════ */
 .section-share{background:var(--bg);position:relative;overflow:hidden;}
 .section-share::before{
   content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;
@@ -281,6 +300,22 @@ nav{
   font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:18px;
 }
 .coming-pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--peach);}
+.live-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(16,185,129,.12);color:#047857;
+  padding:6px 16px;border-radius:999px;
+  font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:18px;
+  border:1px solid rgba(16,185,129,.25);
+}
+.live-pill::before{
+  content:'';width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:livePulse 1.8s infinite;
+}
+@keyframes livePulse{
+  0%{box-shadow:0 0 0 0 rgba(16,185,129,.5);}
+  70%{box-shadow:0 0 0 8px rgba(16,185,129,0);}
+  100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}
+}
 .share-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-top:56px;}
 .share-text h3{
   font-family:var(--display);font-size:34px;font-weight:900;color:var(--text);
@@ -351,6 +386,75 @@ nav{
 }
 .share-pre button:hover{background:var(--peach-dark);}
 .share-pre .ok{display:none;margin-top:8px;color:var(--green);font-size:12px;font-weight:700;}
+
+/* ════ Section: MARKETPLACE ════ */
+.section-market{background:var(--bg-warm);border-top:1px solid var(--line);position:relative;overflow:hidden;}
+.section-market::before{
+  content:'';position:absolute;bottom:-120px;left:-120px;width:380px;height:380px;
+  background:radial-gradient(circle, rgba(251,146,60,.07) 0%, transparent 70%);
+  pointer-events:none;
+}
+.market-row{display:grid;grid-template-columns:1fr 1.05fr;gap:48px;align-items:center;margin-top:56px;}
+.market-text h3{
+  font-family:var(--display);font-size:36px;font-weight:900;color:var(--text);
+  letter-spacing:.02em;line-height:1.2;margin-bottom:16px;
+}
+.market-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:20px;}
+.market-text p b{color:var(--text);}
+.market-text ul{list-style:none;margin-bottom:24px;}
+.market-text li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text-muted);margin:8px 0;}
+.market-text li b{color:var(--text);}
+.market-text li::before{
+  content:'';width:18px;height:18px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+
+.market-cards{display:flex;flex-direction:column;gap:14px;position:relative;}
+.market-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:16px;
+  padding:18px 20px;box-shadow:0 8px 24px rgba(180,100,40,.06);
+  position:relative;transition:all .22s;
+}
+.market-card:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(180,100,40,.12);border-color:rgba(251,146,60,.3);}
+.market-card-tag{
+  position:absolute;top:-9px;right:14px;
+  background:var(--peach);color:#fff;font-size:10px;font-weight:800;
+  padding:3px 11px;border-radius:999px;letter-spacing:.06em;
+  box-shadow:0 4px 10px rgba(251,146,60,.32);
+}
+.market-card-tag-free{background:var(--green);box-shadow:0 4px 10px rgba(16,185,129,.32);}
+.market-card-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.market-card-av{
+  width:46px;height:46px;border-radius:13px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;
+  flex-shrink:0;box-shadow:0 4px 12px rgba(251,146,60,.24);
+}
+.market-card-nm{font-size:14.5px;font-weight:800;color:var(--text);line-height:1.3;}
+.market-card-by{font-size:11.5px;color:var(--text-subtle);margin-top:2px;display:flex;align-items:center;gap:5px;}
+.market-verify{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;border-radius:50%;background:var(--blue);color:#fff;
+  font-size:9px;font-weight:900;
+}
+.market-card-stars{font-size:12.5px;color:var(--peach-dark);font-weight:700;margin-bottom:8px;}
+.market-card-stars span{color:var(--text-subtle);font-weight:600;margin-left:4px;}
+.market-card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;}
+.market-tag{
+  background:var(--peach-soft);color:var(--peach-dark);
+  padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;
+  border:1px solid rgba(251,146,60,.2);
+}
+.market-card-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-top:10px;border-top:1px solid var(--line);
+}
+.market-card-pr{font-family:var(--display);font-size:22px;font-weight:900;color:var(--text);letter-spacing:.02em;}
+.market-card-buy{
+  background:var(--peach);color:#fff;padding:7px 14px;border-radius:9px;
+  font-size:12px;font-weight:800;
+}
 
 /* ════ Section: PRICING ════ */
 .section-pricing{background:var(--bg-warm);border-top:1px solid var(--line);}
@@ -455,7 +559,8 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
 @media(max-width:880px){
   .steps-grid{grid-template-columns:1fr;}
   .create-flow{grid-template-columns:repeat(2,1fr);}
-  .tmpl-row,.share-row{grid-template-columns:1fr;}
+  .tmpl-row,.share-row,.market-row{grid-template-columns:1fr;}
+  .tmpl-grid{grid-template-columns:repeat(2,1fr);}
   .nav-links{display:none;}
 }
 @media(max-width:520px){
@@ -463,6 +568,7 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
   .hero{padding:64px 18px 56px;}
   .h2{font-size:30px;}
   .pricing-grid{grid-template-columns:1fr;}
+  .tmpl-grid{grid-template-columns:1fr;}
   .nav-login{padding:7px 12px;font-size:12px;}
   .nav-cta{padding:7px 14px;font-size:12px;}
 }
@@ -482,8 +588,8 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
   </a>
   <div class="nav-links">
     <a href="#how">使い方</a>
-    <a href="#create">新規作成</a>
     <a href="#template">テンプレート</a>
+    <a href="#marketplace">マーケット</a>
     <a href="#pricing">料金</a>
   </div>
   <div class="nav-actions">
@@ -574,17 +680,17 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
   <div class="section-inner">
     <div class="section-head reveal">
       <span class="kicker">TEMPLATES</span>
-      <h2 class="h2">テンプレートエージェントも存在</h2>
-      <p class="lead">よくあるユースケースは、専門家が作りこんだエージェントを 1クリックでコピーして使えます。</p>
+      <h2 class="h2">10種類の<br>テンプレートエージェント</h2>
+      <p class="lead">よくある業務は、専門家が作り込んだエージェントを 1クリックでコピー。採用目的・業務内容・8モジュールまで全部入りで、選んだ瞬間からチャットで使えます。</p>
     </div>
 
     <div class="tmpl-row reveal">
       <div class="tmpl-text">
         <h3>業務に最適化された<br>専門エージェントを即時導入</h3>
-        <p>たとえば「アポ取り」を自動化したい場合、<b>自動インサイドエージェント</b>を選ぶだけ。8つのスキルモジュールが連携し、事業理解からメッセージ生成・改善ループまで一貫して対応します。</p>
+        <p>看板テンプレートの <b>自動インサイドエージェント</b> は、事業理解からペルソナ抽出・メッセージ生成・改善ループまで 8 モジュールが連携。アポ取り業務をゼロからセットアップする必要がありません。</p>
         <ul>
-          <li>ゼロから設定する必要なし</li>
-          <li>業界のベストプラクティスを内蔵</li>
+          <li>10種類の専門エージェントを用意</li>
+          <li>採用目的・業務内容・スキルまで作り込み済み</li>
           <li>選んだ瞬間からチャットで使える</li>
           <li>カスタマイズして自分仕様にも改造可能</li>
         </ul>
@@ -618,48 +724,140 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
         </div>
       </div>
     </div>
+
+    <div class="tmpl-grid reveal">
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🐦</div><div class="tmpl-mini-nm">X (Twitter) 自動運用</div><div class="tmpl-mini-dc">コンセプト設計 → バズ分析 → 投稿生成 → エンゲージ運用</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">✍️</div><div class="tmpl-mini-nm">SEO ブログライター</div><div class="tmpl-mini-dc">KW分析 → SERP調査 → 構成 → 本文 → 内部リンク → リライト</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🎬</div><div class="tmpl-mini-nm">ショート動画台本ライター</div><div class="tmpl-mini-dc">トレンド分析 → フック設計 → 台本 → CTA → 改善</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🎯</div><div class="tmpl-mini-nm">採用エージェント</div><div class="tmpl-mini-dc">JD作成 → 候補者抽出 → スカウト文 → 面接設計 → 振り返り</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">📝</div><div class="tmpl-mini-nm">議事録 → アクション抽出</div><div class="tmpl-mini-dc">録音/メモを投げるだけで構造化議事録 + ToDo を出力</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🔍</div><div class="tmpl-mini-nm">競合分析エージェント</div><div class="tmpl-mini-dc">対象選定 → 機能比較 → 価格分析 → ポジショニング</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">💻</div><div class="tmpl-mini-nm">コードレビュー</div><div class="tmpl-mini-dc">差分読解 → バグ検出 → セキュリティ → 改善提案</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🤝</div><div class="tmpl-mini-nm">カスタマーサポート Tier1</div><div class="tmpl-mini-dc">問い合わせ分類 → 一次回答 → エスカレ判定 → ナレッジ蓄積</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">👑</div><div class="tmpl-mini-nm">経営戦略アドバイザー</div><div class="tmpl-mini-dc">市場分析 → 競合戦略 → 数値計画 → 意思決定支援</div></div>
+    </div>
   </div>
 </section>
 
-<!-- ════ 5. 共有 (Coming Soon) ════ -->
+<!-- ════ 5. 共有 (Live) ════ -->
 <section class="section section-share" id="share">
   <div class="section-inner">
     <div class="section-head reveal">
-      <span class="coming-pill">COMING SOON</span>
+      <span class="live-pill">LIVE</span>
       <span class="kicker">SHARE</span>
       <h2 class="h2">作ったエージェントを<br>世界に共有</h2>
-      <p class="lead">URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。</p>
+      <p class="lead">URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。SNS には専用サムネイルが自動生成されます。</p>
     </div>
 
     <div class="share-row reveal">
       <div class="share-text">
         <h3>共有URLでチームに展開</h3>
-        <p>各エージェントには専用の共有URLが発行されます。SNS や DM で送信するだけで、訪問者は<b>自分のアカウントに同じエージェントをコピー</b>して使い始められます。</p>
+        <p>各エージェントには専用の共有URLと SNS サムネイル（OGP画像）が自動生成されます。X や LINE で送るだけで、訪問者は<b>1クリックで自分のアカウントにコピー</b>して使い始められます。</p>
         <ul>
           <li>URL 1本でチームに展開（Slack・X・LINE・メール）</li>
+          <li>X / Facebook 用のステッカー型 OGP 画像を自動生成</li>
           <li>受信者は1クリックで自分のアカウントに保存</li>
           <li>コピー後は完全独立 — 元の履歴は見えません</li>
-          <li>非公開・URL再生成も自由自在</li>
+          <li>非公開・URL再生成・削除いつでも可能</li>
         </ul>
       </div>
       <div class="share-visual">
         <div class="share-mock-url">myaiagents.agency/a/k7f2-aGz9-pX3v</div>
         <div class="share-flow">
           <div class="share-flow-step"><div class="num">1</div>エージェントの 🔗 ボタンを押す</div>
-          <div class="share-flow-step"><div class="num">2</div>URL を SNS や DM でシェア</div>
+          <div class="share-flow-step"><div class="num">2</div>URL と OGP画像を SNS で共有</div>
           <div class="share-flow-step"><div class="num">3</div>訪問者が「使う」をクリック → 完了</div>
         </div>
-        <div class="share-stamp">COMING SOON</div>
       </div>
     </div>
+  </div>
+</section>
 
-    <div class="share-pre reveal">
-      <p>リリース時にメールでお知らせします</p>
-      <form id="sharePreForm">
-        <input type="email" id="sharePreEmail" placeholder="メールアドレス" required>
-        <button type="submit">お知らせ登録</button>
-      </form>
-      <div class="ok" id="sharePreOk">✓ 登録しました（リリース時にお知らせします）</div>
+<!-- ════ 5b. MARKETPLACE (Creator Program) ════ -->
+<section class="section section-market" id="marketplace">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="live-pill">LIVE</span>
+      <span class="kicker">MARKETPLACE</span>
+      <h2 class="h2">あなたのエージェントを<br>マーケットで販売</h2>
+      <p class="lead">作り込んだエージェントは、ワンクリックでマーケットに出店。レビュー・お気に入り・タグ検索つき。売上の <b>90%</b> はそのままクリエイターへ。</p>
+    </div>
+
+    <div class="market-row reveal">
+      <div class="market-text">
+        <h3>クリエイターとして<br>収益化できる</h3>
+        <p>「自分用」に作ったエージェントを<b>商品として販売</b>できます。価格はあなたが自由に設定。Stripe Connect 経由で銀行口座へ自動入金されます。</p>
+        <ul>
+          <li>1クリックで出店、価格は自分で設定</li>
+          <li>売上は <b>90% クリエイター / 10% プラットフォーム</b></li>
+          <li>Stripe Connect Express で銀行口座へ直接入金</li>
+          <li>レビュー・★評価・お気に入り・タグ検索</li>
+          <li>認証バッジ（実績ある出品者）取得可能</li>
+        </ul>
+        <button class="btn-primary" onclick="goSignup()">出店してみる →</button>
+      </div>
+
+      <div class="market-cards">
+        <div class="market-card">
+          <div class="market-card-tag">🏆 BESTSELLER</div>
+          <div class="market-card-head">
+            <div class="market-card-av">🐦</div>
+            <div>
+              <div class="market-card-nm">X 自動運用エージェント</div>
+              <div class="market-card-by">by @creator_a <span class="market-verify">✓</span></div>
+            </div>
+          </div>
+          <div class="market-card-stars">★★★★★ <span>4.9 (132)</span></div>
+          <div class="market-card-tags">
+            <span class="market-tag">SNS</span>
+            <span class="market-tag">マーケ</span>
+            <span class="market-tag">分析</span>
+          </div>
+          <div class="market-card-foot">
+            <span class="market-card-pr">¥1,980</span>
+            <span class="market-card-buy">使ってみる →</span>
+          </div>
+        </div>
+
+        <div class="market-card">
+          <div class="market-card-head">
+            <div class="market-card-av">✍️</div>
+            <div>
+              <div class="market-card-nm">SEO ブログライター Pro</div>
+              <div class="market-card-by">by @creator_b <span class="market-verify">✓</span></div>
+            </div>
+          </div>
+          <div class="market-card-stars">★★★★☆ <span>4.6 (87)</span></div>
+          <div class="market-card-tags">
+            <span class="market-tag">ライティング</span>
+            <span class="market-tag">SEO</span>
+          </div>
+          <div class="market-card-foot">
+            <span class="market-card-pr">¥980</span>
+            <span class="market-card-buy">使ってみる →</span>
+          </div>
+        </div>
+
+        <div class="market-card">
+          <div class="market-card-tag market-card-tag-free">🎁 無料</div>
+          <div class="market-card-head">
+            <div class="market-card-av">📝</div>
+            <div>
+              <div class="market-card-nm">議事録 → アクション抽出</div>
+              <div class="market-card-by">by @creator_c</div>
+            </div>
+          </div>
+          <div class="market-card-stars">★★★★★ <span>5.0 (41)</span></div>
+          <div class="market-card-tags">
+            <span class="market-tag">業務効率</span>
+            <span class="market-tag">議事録</span>
+          </div>
+          <div class="market-card-foot">
+            <span class="market-card-pr">無料</span>
+            <span class="market-card-buy">使ってみる →</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -699,7 +897,8 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
         <ul class="price-feats">
           <li>エージェント無制限作成</li>
           <li>全16スキル利用可</li>
-          <li>共有URL機能（リリース時）</li>
+          <li>共有URL + OGP画像自動生成</li>
+          <li>マーケット出店・購入</li>
           <li>取引履歴 CSV エクスポート</li>
         </ul>
         <a class="price-cta" href="/auth.html?tab=signup">PRO で始める →</a>
@@ -712,7 +911,9 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
         <ul class="price-feats">
           <li>Pro の全機能</li>
           <li>$60分の月次クレジット</li>
-          <li>クリエイター早期アクセス</li>
+          <li>マーケット出店・購入（売上 90% 還元）</li>
+          <li>Stripe Connect 出金対応</li>
+          <li>認証バッジ申請可</li>
         </ul>
         <a class="price-cta" href="/auth.html?tab=signup">BUSINESS で始める →</a>
       </div>
@@ -803,24 +1004,6 @@ const io = new IntersectionObserver(es=>{
 },{threshold:.15});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-// share pre form (placeholder — saves to localStorage for now)
-var spForm = document.getElementById('sharePreForm');
-if(spForm){
-  spForm.addEventListener('submit', function(e){
-    e.preventDefault();
-    var em = document.getElementById('sharePreEmail').value.trim();
-    if(!em) return;
-    try{
-      var arr = JSON.parse(localStorage.getItem('share_prereg')||'[]');
-      arr.push({email:em, at:Date.now()});
-      localStorage.setItem('share_prereg', JSON.stringify(arr));
-    }catch(e){}
-    document.getElementById('sharePreEmail').value='';
-    var ok = document.getElementById('sharePreOk');
-    if(ok) ok.style.display='block';
-  });
-}
-
 // Auth-aware nav buttons
 function _isLoggedIn(){
   try{ return !!localStorage.getItem('token'); }catch(e){ return false; }
@@ -861,8 +1044,8 @@ _navAuthState();
   var map = {
     // nav
     '使い方': 'How it works',
-    '新規作成': 'Create',
     'テンプレート': 'Templates',
+    'マーケット': 'Marketplace',
     '料金': 'Pricing',
     'ログイン': 'Sign in',
     '無料で始める': 'Get started free',
@@ -912,19 +1095,39 @@ _navAuthState();
     '無料で作ってみる →': 'Create for free →',
     // template
     'TEMPLATES': 'TEMPLATES',
-    'テンプレートエージェントも存在': 'Templates are ready, too',
-    'よくあるユースケースは、専門家が作りこんだエージェントを 1クリックでコピーして使えます。': 'Common use cases come pre-built. Clone a curated agent in one click.',
+    '10種類の': '10 prebuilt',
+    'テンプレートエージェント': 'template agents',
+    'よくある業務は、専門家が作り込んだエージェントを 1クリックでコピー。採用目的・業務内容・8モジュールまで全部入りで、選んだ瞬間からチャットで使えます。': 'Common workflows come pre-built. Clone a curated agent in one click — purpose, duties, and 8-module workflow are all included, ready to chat instantly.',
     '業務に最適化された': 'Drop-in specialists',
     '専門エージェントを即時導入': 'optimized for your work',
-    'ゼロから設定する必要なし': 'No setup needed',
-    '業界のベストプラクティスを内蔵': 'Built-in best practices',
+    '看板テンプレートの': 'Our flagship',
+    'は、事業理解からペルソナ抽出・メッセージ生成・改善ループまで 8 モジュールが連携。アポ取り業務をゼロからセットアップする必要がありません。': ' chains 8 modules — business understanding, persona extraction, message generation, and the improvement loop. No more setting up appointment workflows from scratch.',
+    '10種類の専門エージェントを用意': '10 specialist agents ready',
+    '採用目的・業務内容・スキルまで作り込み済み': 'Purpose, duties, and skills already crafted',
     '選んだ瞬間からチャットで使える': 'Chat-ready from the moment you pick',
     'カスタマイズして自分仕様にも改造可能': 'Fully customizable to your needs',
     'テンプレートを見る →': 'Browse templates →',
-    'たとえば「アポ取り」を自動化したい場合、': 'Want appointment-setting automation? Just pick',
     '自動インサイドエージェント': 'Auto Inside-Sales Agent',
-    'を選ぶだけ。8つのスキルモジュールが連携し、事業理解からメッセージ生成・改善ループまで一貫して対応します。': '. 8 skill modules cooperate from business understanding to message generation and the improvement loop.',
     'アポ取りの自動化 ・ 8モジュール連携': 'Appointment setting · 8 modules',
+    // 9 mini templates
+    'X (Twitter) 自動運用': 'X (Twitter) Auto Ops',
+    'コンセプト設計 → バズ分析 → 投稿生成 → エンゲージ運用': 'Concept → Viral analysis → Posts → Engagement',
+    'SEO ブログライター': 'SEO Blog Writer',
+    'KW分析 → SERP調査 → 構成 → 本文 → 内部リンク → リライト': 'KW → SERP → Outline → Body → Links → Rewrite',
+    'ショート動画台本ライター': 'Short Video Script Writer',
+    'トレンド分析 → フック設計 → 台本 → CTA → 改善': 'Trends → Hook → Script → CTA → Improve',
+    '採用エージェント': 'Recruiter Agent',
+    'JD作成 → 候補者抽出 → スカウト文 → 面接設計 → 振り返り': 'JD → Sourcing → Outreach → Interview → Retro',
+    '議事録 → アクション抽出': 'Minutes → Actions',
+    '録音/メモを投げるだけで構造化議事録 + ToDo を出力': 'Drop in audio/notes → structured minutes + todos',
+    '競合分析エージェント': 'Competitor Analysis',
+    '対象選定 → 機能比較 → 価格分析 → ポジショニング': 'Target → Features → Pricing → Positioning',
+    'コードレビュー': 'Code Reviewer',
+    '差分読解 → バグ検出 → セキュリティ → 改善提案': 'Diff → Bugs → Security → Suggestions',
+    'カスタマーサポート Tier1': 'Customer Support Tier1',
+    '問い合わせ分類 → 一次回答 → エスカレ判定 → ナレッジ蓄積': 'Triage → First reply → Escalate → Knowledge',
+    '経営戦略アドバイザー': 'Strategy Advisor',
+    '市場分析 → 競合戦略 → 数値計画 → 意思決定支援': 'Market → Strategy → Numbers → Decisions',
     'マーケ': 'Marketing',
     'ライティング': 'Writing',
     'リサーチ': 'Research',
@@ -938,27 +1141,52 @@ _navAuthState();
     'メッセージ': 'Message',
     '送信最適化': 'Send Opt',
     '改善': 'Improve',
-    // share
-    'COMING SOON': 'COMING SOON',
+    // share (live)
+    'LIVE': 'LIVE',
     'SHARE': 'SHARE',
     '作ったエージェントを': 'Share your agent',
     '世界に共有': 'with the world',
-    'URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。': 'One URL ships your agent to teammates, social, customers. Recipients clone it to their account in one click.',
+    'URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。SNS には専用サムネイルが自動生成されます。': 'One URL ships your agent to teammates, social, customers. Recipients clone it in one click — and SNS thumbnails are auto-generated.',
     '共有URLでチームに展開': 'Roll out via share URLs',
-    '各エージェントには専用の共有URLが発行されます。SNS や DM で送信するだけで、訪問者は': 'Every agent gets a dedicated share URL. Send it on SNS or DM and visitors',
-    '自分のアカウントに同じエージェントをコピー': 'clone the exact same agent to their account',
+    '各エージェントには専用の共有URLと SNS サムネイル（OGP画像）が自動生成されます。X や LINE で送るだけで、訪問者は': 'Every agent gets a dedicated share URL plus an auto-generated SNS thumbnail (OG image). Just send on X or LINE — visitors',
+    '1クリックで自分のアカウントにコピー': 'clone it to their account in one click',
     'して使い始められます。': '.',
     'URL 1本でチームに展開（Slack・X・LINE・メール）': 'Distribute via Slack / X / LINE / Email',
+    'X / Facebook 用のステッカー型 OGP 画像を自動生成': 'Auto-generated sticker-style OG image for X / Facebook',
     '受信者は1クリックで自分のアカウントに保存': 'Recipients save it in one click',
     'コピー後は完全独立 — 元の履歴は見えません': 'Independent after cloning — history stays private',
-    '非公開・URL再生成も自由自在': 'Toggle private or regenerate URL anytime',
+    '非公開・URL再生成・削除いつでも可能': 'Toggle private, regenerate URL, or delete anytime',
     'エージェントの 🔗 ボタンを押す': 'Hit 🔗 on the agent',
-    'URL を SNS や DM でシェア': 'Share the URL on SNS or DM',
+    'URL と OGP画像を SNS で共有': 'Share the URL + OG image on SNS',
     '訪問者が「使う」をクリック → 完了': 'Visitor clicks "Use" → done',
-    'リリース時にメールでお知らせします': 'We will email you at release',
-    'メールアドレス': 'Email address',
-    'お知らせ登録': 'Notify me',
-    '✓ 登録しました（リリース時にお知らせします）': '✓ Registered. We will notify you at release.',
+    // marketplace
+    'MARKETPLACE': 'MARKETPLACE',
+    'あなたのエージェントを': 'Sell your agents',
+    'マーケットで販売': 'on the marketplace',
+    '作り込んだエージェントは、ワンクリックでマーケットに出店。レビュー・お気に入り・タグ検索つき。売上の': 'Polished agents go live on the marketplace in one click — with reviews, favorites, tag search.',
+    'はそのままクリエイターへ。': 'goes straight to creators.',
+    'クリエイターとして': 'Earn as',
+    '収益化できる': 'a creator',
+    '「自分用」に作ったエージェントを': 'Turn agents you built',
+    '商品として販売': 'into products',
+    'できます。価格はあなたが自由に設定。Stripe Connect 経由で銀行口座へ自動入金されます。': '. Set your own price. Payouts land in your bank via Stripe Connect.',
+    '1クリックで出店、価格は自分で設定': 'List in one click, set your own price',
+    '売上は': 'Revenue split:',
+    '90% クリエイター / 10% プラットフォーム': '90% creator / 10% platform',
+    'Stripe Connect Express で銀行口座へ直接入金': 'Stripe Connect Express → direct bank payout',
+    'レビュー・★評価・お気に入り・タグ検索': 'Reviews, ratings, favorites, tag search',
+    '認証バッジ（実績ある出品者）取得可能': 'Verified badge available for proven sellers',
+    '出店してみる →': 'Start selling →',
+    '🏆 BESTSELLER': '🏆 BESTSELLER',
+    '🎁 無料': '🎁 FREE',
+    'X 自動運用エージェント': 'X Auto Ops Agent',
+    'SEO ブログライター Pro': 'SEO Blog Writer Pro',
+    '使ってみる →': 'Try it →',
+    '無料': 'Free',
+    'SNS': 'SNS',
+    'SEO': 'SEO',
+    '業務効率': 'Productivity',
+    '議事録': 'Minutes',
     // pricing
     'PRICING': 'PRICING',
     '料金プラン': 'Pricing',
@@ -977,14 +1205,17 @@ _navAuthState();
     '$20 分のクレジット / 月': '$20 in credits / mo',
     'エージェント無制限作成': 'Unlimited agents',
     '全16スキル利用可': 'All 16 skills',
-    '共有URL機能（リリース時）': 'Share URL (at release)',
+    '共有URL + OGP画像自動生成': 'Share URL + auto-generated OG image',
+    'マーケット出店・購入': 'Sell & buy on marketplace',
     '取引履歴 CSV エクスポート': 'CSV export of transactions',
     'PRO で始める →': 'Start with PRO →',
     'BUSINESS': 'BUSINESS',
     '$60 分のクレジット / 月': '$60 in credits / mo',
     'Pro の全機能': 'Everything in Pro',
     '$60分の月次クレジット': '$60 monthly credit',
-    'クリエイター早期アクセス': 'Creator early access',
+    'マーケット出店・購入（売上 90% 還元）': 'Marketplace sell/buy (keep 90%)',
+    'Stripe Connect 出金対応': 'Stripe Connect payouts',
+    '認証バッジ申請可': 'Apply for verified badge',
     'BUSINESS で始める →': 'Start with BUSINESS →',
     'STARTER': 'STARTER',
     'STANDARD': 'STANDARD',

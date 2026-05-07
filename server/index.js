@@ -1633,6 +1633,9 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{
       google_login_enabled: !!(GOOGLE_ID && GOOGLE_SEC),
       stripe_enabled: !!STRIPE_SK,
+      stripe_publishable_key: STRIPE_PK || null,           // safe to expose
+      stripe_pro_configured: !!STRIPE_PRO_PRICE,
+      stripe_biz_configured: !!STRIPE_BIZ_PRICE,
       brave_search_enabled: !!BRAVE_KEY,
     });
   }
@@ -2887,10 +2890,11 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── POST /api/billing/subscribe ────────────────────────────
   if(pathname==='/api/billing/subscribe'&&method==='POST'){
+    if(!STRIPE_SK) return jres(res,503,{error:'Stripe が設定されていません（管理者にお問い合わせください）'});
     const{plan}=await readBody(req);
-    if(!['pro','business'].includes(plan))return jres(res,400,{error:'Invalid plan'});
+    if(!['pro','business'].includes(plan))return jres(res,400,{error:'プランが不正です'});
     const priceId = plan==='pro' ? STRIPE_PRO_PRICE : STRIPE_BIZ_PRICE;
-    if(!priceId)return jres(res,503,{error:'Plan not configured'});
+    if(!priceId)return jres(res,503,{error:(plan==='pro'?'Pro':'Business')+' プランの価格 ID が設定されていません（STRIPE_'+(plan==='pro'?'PRO':'BIZ')+'_PRICE_ID）'});
     try{
       // Stripe顧客を作成または取得
       let customerId = user.stripe_customer_id;
@@ -2911,7 +2915,10 @@ async function handleAPI(req,res,pathname,method,ip){
         status: sub.status,
         plan
       });
-    }catch(e){ return jres(res,500,{error:e.message}); }
+    }catch(e){
+      console.error('[billing/subscribe]', e.message);
+      return jres(res,500,{error:'Stripe エラー: '+e.message});
+    }
   }
 
   // ── POST /api/billing/cancel ───────────────────────────────
@@ -2931,8 +2938,8 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pathname==='/api/billing/charge'&&method==='POST'){
     // 注意: パラメータ名 amount_jpy は misnomer。実体は USDセント (例: 699 = $6.99)
     const{amount_jpy}=await readBody(req);
-    if(!amount_jpy||amount_jpy<100)return jres(res,400,{error:'最低チャージ額は$1.00です'});
-    if(amount_jpy>100000)return jres(res,400,{error:'1回の上限は$1,000です'});
+    if(!amount_jpy||amount_jpy<100)return jres(res,400,{error:'最低チャージ額は $1.00 です'});
+    if(amount_jpy>100000)return jres(res,400,{error:'1回の上限は $1,000 です'});
     if(!STRIPE_SK){
       // Demo mode — USDセントを JPY 換算して残高に加算
       const creditJpy=Math.round(amount_jpy/100*USD_TO_JPY*1000)/1000;
@@ -2943,7 +2950,10 @@ async function handleAPI(req,res,pathname,method,ip){
     try{
       const pi=await stripeCreatePaymentIntent(amount_jpy,user.id,user.email);
       return jres(res,200,{client_secret:pi.client_secret,publishable_key:STRIPE_PK});
-    }catch(e){return jres(res,500,{error:e.message});}
+    }catch(e){
+      console.error('[billing/charge]', e.message);
+      return jres(res,500,{error:'Stripe エラー: '+e.message});
+    }
   }
 
   // ── GET /api/usage ─────────────────────────────────────────

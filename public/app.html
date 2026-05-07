@@ -4491,11 +4491,19 @@ function bsRenderSummary(plan){
 async function bsInitStripe(){
   if(_bsStripe&&_bsElements) return true;
   try{
-    var r=await api('POST','/api/billing/charge',{amount_jpy:699});
-    if(r&&r.publishable_key&&r.publishable_key.startsWith('pk_')){
-      _bsStripe=Stripe(r.publishable_key);
-      _bsElements=_bsStripe.elements();
+    // Get publishable key from public config endpoint (no auth, no side effects)
+    var cfg = await fetch(API+'/api/config').then(r=>r.json()).catch(()=>null);
+    var pk = cfg && cfg.stripe_publishable_key;
+    if(!pk || !pk.startsWith('pk_')){
+      console.warn('Stripe publishable key not configured');
+      return false;
     }
+    if(typeof Stripe !== 'function'){
+      console.warn('Stripe.js not loaded');
+      return false;
+    }
+    _bsStripe=Stripe(pk);
+    _bsElements=_bsStripe.elements();
   }catch(e){ console.log('bsInitStripe error:',e&&e.message); }
   return !!(_bsStripe&&_bsElements);
 }
@@ -4508,7 +4516,10 @@ function _bsMountCard(card, sel){
   requestAnimationFrame(function(){ requestAnimationFrame(function(){ card.mount(sel); }); });
 }
 async function bsInitMonthlyCard(){
-  if(!(await bsInitStripe())){ showToast('決済システムの初期化に失敗しました','ng'); return; }
+  if(!(await bsInitStripe())){
+    showToast(isJa?'決済システムが利用できません（Stripe 未設定）':'Payment unavailable (Stripe not configured)','ng');
+    return;
+  }
   if(!_bsMonthlyCard){
     _bsMonthlyCard=_bsElements.create('card',{style:_bsCardStyle});
     _bsMountCard(_bsMonthlyCard,'#bs-monthly-card');
@@ -4518,7 +4529,10 @@ async function bsInitMonthlyCard(){
   }
 }
 async function bsInitPaygCard(){
-  if(!(await bsInitStripe())){ showToast('決済システムの初期化に失敗しました','ng'); return; }
+  if(!(await bsInitStripe())){
+    showToast(isJa?'決済システムが利用できません（Stripe 未設定）':'Payment unavailable (Stripe not configured)','ng');
+    return;
+  }
   if(!_bsPaygCard){
     _bsPaygCard=_bsElements.create('card',{style:_bsCardStyle});
     _bsMountCard(_bsPaygCard,'#bs-payg-card');

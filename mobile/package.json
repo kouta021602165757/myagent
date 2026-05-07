@@ -12,7 +12,11 @@
     "run:android": "cap run android",
     "doctor": "cap doctor",
     "init:ios": "cap add ios && cap sync ios",
-    "init:android": "cap add android && cap sync android"
+    "init:android": "cap add android && cap sync android",
+    "icons": "node scripts/generate-icons.js",
+    "splash": "node scripts/generate-splash.js",
+    "screenshots": "SITE=https://myaiagents.agency node scripts/generate-screenshots.js",
+    "assets:build": "npm run icons && npm run splash && npx capacitor-assets generate"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",

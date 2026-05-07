@@ -2896,6 +2896,63 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  // ── POST /api/mobile/register-device ───────────────────────
+  // Body: { token: string, platform: 'ios'|'android', app_version?, locale? }
+  // Stores the FCM/APNs token under user.mobile_devices (array, dedup by token).
+  // Supports multi-device per user (phone + tablet).
+  if(pathname==='/api/mobile/register-device' && method==='POST'){
+    const b = await readBody(req);
+    const tok = (b && b.token || '').toString().trim();
+    const platform = (b && b.platform || '').toString().trim().toLowerCase();
+    if(!tok) return jres(res,400,{error:'token is required'});
+    if(platform !== 'ios' && platform !== 'android'){
+      return jres(res,400,{error:"platform must be 'ios' or 'android'"});
+    }
+    const list = Array.isArray(user.mobile_devices) ? user.mobile_devices.slice() : [];
+    // Dedup: drop any existing entry with the same token, then prepend fresh.
+    const filtered = list.filter(d => d && d.token !== tok);
+    filtered.unshift({
+      token: tok,
+      platform,
+      app_version: (b.app_version || '').toString().slice(0, 32) || null,
+      locale: (b.locale || '').toString().slice(0, 16) || null,
+      ua: (req.headers['user-agent'] || '').toString().slice(0, 256),
+      registered_at: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
+    });
+    // Cap at 10 devices per user
+    user.mobile_devices = filtered.slice(0, 10);
+    await DB.save(user);
+    return jres(res,200,{ok:true, device_count: user.mobile_devices.length});
+  }
+
+  // ── POST /api/mobile/unregister-device ─────────────────────
+  // Body: { token: string }
+  if(pathname==='/api/mobile/unregister-device' && method==='POST'){
+    const b = await readBody(req);
+    const tok = (b && b.token || '').toString().trim();
+    if(!tok) return jres(res,400,{error:'token is required'});
+    const list = Array.isArray(user.mobile_devices) ? user.mobile_devices : [];
+    user.mobile_devices = list.filter(d => d && d.token !== tok);
+    await DB.save(user);
+    return jres(res,200,{ok:true, device_count: user.mobile_devices.length});
+  }
+
+  // ── GET /api/mobile/devices ────────────────────────────────
+  // Lists currently registered devices (without exposing full tokens).
+  if(pathname==='/api/mobile/devices' && method==='GET'){
+    const list = Array.isArray(user.mobile_devices) ? user.mobile_devices : [];
+    const safe = list.map(d => ({
+      platform: d.platform,
+      app_version: d.app_version || null,
+      locale: d.locale || null,
+      registered_at: d.registered_at || null,
+      last_seen: d.last_seen || null,
+      token_preview: (d.token || '').slice(0, 12) + '...',
+    }));
+    return jres(res,200,{devices: safe});
+  }
+
   // ── POST /api/agents/:id/share ─────────────────────────────
   // body: {enabled:true|false, regenerate?:true} — toggle/create/regenerate share URL
   const sm=pathname.match(/^\/api\/agents\/([^/]+)\/share$/);

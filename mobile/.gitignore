@@ -1,6 +1,6 @@
 # Capacitor generated platforms (per-developer; run `npx cap add ios` to recreate)
-ios/
-android/
+/ios/
+/android/
 
 # Node
 node_modules/

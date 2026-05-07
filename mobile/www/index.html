@@ -113,13 +113,30 @@ async function setupNativePlugins() {
           await window.Capacitor.Plugins.PushNotifications.register();
           window.Capacitor.Plugins.PushNotifications.addListener('registration', async (token) => {
             console.log('[native] Push token:', token.value.slice(0, 20) + '...');
-            // Persist locally so web app can read & send to server
+            const platform = window.Capacitor.getPlatform();
+            // Persist locally so web app can read after navigation.
             try {
               if (window.Capacitor.Plugins.Preferences) {
                 await window.Capacitor.Plugins.Preferences.set({ key: 'native_push_token', value: token.value });
-                await window.Capacitor.Plugins.Preferences.set({ key: 'native_platform', value: window.Capacitor.getPlatform() });
+                await window.Capacitor.Plugins.Preferences.set({ key: 'native_platform', value: platform });
               }
             } catch (e) {}
+            // Also persist server-side if the user is already authenticated
+            // (cookie-bearing fetch). On first launch the user isn't signed in
+            // yet, so the web app re-attempts this from app.html after login.
+            try {
+              await fetch('https://myaiagents.agency/api/mobile/register-device', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  token: token.value,
+                  platform,
+                  app_version: '1.0.0',
+                  locale: navigator.language || 'ja',
+                }),
+              });
+            } catch (e) { console.warn('[native] register-device:', e); }
           });
           window.Capacitor.Plugins.PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
             console.log('[native] Push tapped:', notification);

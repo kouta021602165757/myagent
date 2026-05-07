@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ブラウザ拡張連携 — ビジネスマン向け簡単版モック</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fde8d8;
+  --bg:#fdf8f3; --bg-card:#ffffff; --cream:#fff5ea; --cream2:#fef6ec;
+  --text:#1a0a00; --text2:#5c3a1e; --text3:#9a6a4a;
+  --line:rgba(180,120,80,.15); --wire2:rgba(180,120,80,.18);
+  --green:#10b981; --green-light:#d1fae5; --rose:#ef4444; --blue:#3b82f6;
+  --indigo:#6366f1; --x-blue:#1d9bf0; --slack-purple:#4a154b;
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg,#fdf8f3 0%,#fef0e0 100%);
+  color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+.shell{max-width:980px;margin:0 auto;padding:48px 24px 80px;}
+
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-size:13px;color:var(--text3);font-weight:600;flex-wrap:wrap;}
+.brand a{color:var(--text3);text-decoration:none;}
+.brand a:hover{color:var(--peach-dark);}
+
+.h1{font-size:34px;font-weight:900;letter-spacing:.01em;margin-bottom:10px;line-height:1.2;}
+.h1 .accent{
+  background:linear-gradient(90deg,var(--peach),var(--peach-dark));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{font-size:15.5px;color:var(--text2);margin-bottom:14px;line-height:1.7;}
+.sub b{color:var(--text);}
+
+.tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:40px;}
+.tag{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;
+}
+.tag.simple{background:rgba(16,185,129,.1);color:#047857;border:1px solid rgba(16,185,129,.25);}
+.tag.fast{background:rgba(99,102,241,.1);color:#3730a3;border:1px solid rgba(99,102,241,.25);}
+.tag.safe{background:rgba(251,146,60,.12);color:var(--peach-dark);border:1px solid rgba(251,146,60,.3);}
+
+/* Step layout */
+.flow{display:flex;flex-direction:column;gap:20px;}
+.step{
+  display:grid;grid-template-columns:160px 1fr;gap:28px;align-items:flex-start;
+}
+@media(max-width:780px){.step{grid-template-columns:1fr;gap:14px;}}
+.step-meta{padding-top:8px;}
+.step-num-big{
+  display:inline-block;
+  font-family:var(--mono);font-size:11px;font-weight:800;
+  color:#fff;background:var(--peach);
+  padding:3px 12px;border-radius:5px;letter-spacing:.06em;margin-bottom:6px;
+}
+.step-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;line-height:1.3;}
+.step-note{font-size:12.5px;color:var(--text3);line-height:1.6;}
+.step-time{
+  display:inline-block;font-size:11px;font-weight:700;
+  background:var(--cream);color:var(--text3);padding:3px 10px;border-radius:6px;
+  margin-top:8px;border:1px solid var(--line);
+}
+
+.frame{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 12px 36px rgba(180,100,40,.08);
+}
+.frame-bar{
+  background:linear-gradient(180deg,#f8f0e6,#f1e7d8);
+  padding:9px 14px;display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text3);font-weight:600;
+}
+.frame-dots{display:flex;gap:5px;}
+.frame-dots span{width:9px;height:9px;border-radius:50%;background:#cf9b73;opacity:.4;}
+.frame-dots span:nth-child(1){background:#ef4444;opacity:.65;}
+.frame-dots span:nth-child(2){background:#fbbf24;opacity:.65;}
+.frame-dots span:nth-child(3){background:#10b981;opacity:.65;}
+.frame-url{
+  flex:1;background:rgba(255,255,255,.7);border-radius:6px;
+  padding:3px 10px;font-family:var(--mono);font-size:11px;color:var(--text2);
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.frame-body{padding:24px;background:var(--cream);}
+
+/* Arrow */
+.arrow{text-align:center;color:var(--peach);font-size:26px;line-height:1;margin:6px 0 -6px 80px;}
+@media(max-width:780px){.arrow{margin-left:0}}
+
+/* Reusable bits */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--peach);color:#fff;border:0;padding:11px 18px;border-radius:10px;
+  font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;
+  transition:all .15s;text-decoration:none;
+}
+.btn.ghost{background:#fff;color:var(--peach-dark);border:1.5px solid var(--peach);}
+.btn.green{background:var(--green);}
+.btn.huge{padding:14px 26px;font-size:15px;}
+.btn.x{background:#000;color:#fff;}
+
+/* Chrome Web Store install button */
+.cws-btn{
+  display:flex;align-items:center;gap:14px;
+  background:#fff;border:2px solid var(--line);border-radius:14px;
+  padding:14px 18px;width:100%;cursor:pointer;
+  transition:all .2s;
+}
+.cws-btn:hover{border-color:var(--peach);box-shadow:0 4px 16px rgba(251,146,60,.15);}
+.cws-icon{
+  width:46px;height:46px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+}
+.cws-meta{flex:1;text-align:left;}
+.cws-name{font-size:14px;font-weight:800;color:var(--text);}
+.cws-desc{font-size:12px;color:var(--text3);margin-top:2px;}
+.cws-stars{font-size:11px;color:var(--peach-dark);font-weight:700;margin-top:4px;}
+.cws-cta{
+  background:var(--peach);color:#fff;padding:9px 18px;border-radius:9px;
+  font-size:13px;font-weight:800;flex-shrink:0;
+}
+
+/* Use-case cards (the new "permissions" UX) */
+.usecase-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+.usecase{
+  display:flex;align-items:flex-start;gap:14px;padding:16px 18px;
+  background:#fff;border:2px solid var(--line);border-radius:13px;cursor:pointer;
+  transition:all .15s;
+}
+.usecase:hover{border-color:var(--peach);}
+.usecase.sel{border-color:var(--peach);background:linear-gradient(135deg,#fff7ed,#ffedd5);box-shadow:0 4px 14px rgba(251,146,60,.18);}
+.usecase-emo{font-size:28px;line-height:1;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--cream2);border-radius:11px;}
+.usecase.sel .usecase-emo{background:rgba(251,146,60,.18);}
+.usecase-meta{flex:1;min-width:0;}
+.usecase-title{font-size:14.5px;font-weight:800;color:var(--text);margin-bottom:3px;}
+.usecase-desc{font-size:12.5px;color:var(--text3);line-height:1.6;}
+.usecase-eg{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6;}
+.usecase-eg b{color:var(--peach-dark);font-weight:700;}
+.usecase-check{
+  width:24px;height:24px;border-radius:50%;border:2px solid var(--line);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:900;color:transparent;
+}
+.usecase.sel .usecase-check{background:var(--peach);border-color:var(--peach);color:#fff;}
+
+/* Toast */
+.toast{
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;padding:11px 18px;border-radius:11px;
+  font-size:13.5px;font-weight:700;display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 8px 28px rgba(16,185,129,.32);
+}
+
+/* ── Friendly approval modal (the new UX) ─────────── */
+.appro-modal{
+  background:#fff;border-radius:18px;
+  max-width:480px;margin:0 auto;
+  overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.18);
+}
+.appro-h{
+  padding:18px 24px;background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;
+}
+.appro-h .av{
+  width:42px;height:42px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.appro-h .nm{font-size:14px;font-weight:800;color:var(--text);}
+.appro-h .role{font-size:11.5px;color:var(--text3);margin-top:1px;}
+.appro-h .timer{
+  margin-left:auto;display:flex;align-items:center;gap:5px;
+  font-size:11px;color:var(--text3);
+}
+.appro-h .timer .ring{
+  width:18px;height:18px;border:2px solid var(--peach);border-radius:50%;
+  border-top-color:transparent;animation:spin 1.5s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.appro-body{padding:20px 24px;font-size:14px;color:var(--text);line-height:1.65;}
+.appro-body .what{font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:14px;}
+.appro-body .what em{color:var(--peach-dark);font-style:normal;background:rgba(251,146,60,.1);padding:1px 6px;border-radius:4px;}
+.appro-body .preview{
+  background:var(--cream);border:1px solid var(--line);border-radius:11px;
+  padding:14px 16px;font-size:13.5px;color:var(--text);line-height:1.65;margin-top:8px;
+}
+.appro-body .meta-line{
+  display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text3);margin-top:14px;
+}
+.appro-foot{
+  display:grid;grid-template-columns:1fr 1.5fr;gap:8px;
+  padding:14px 24px;background:var(--cream);
+}
+.appro-btn{
+  border:0;padding:13px;border-radius:11px;
+  font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer;
+}
+.appro-btn.no{background:rgba(0,0,0,.05);color:var(--text2);}
+.appro-btn.yes{background:var(--green);color:#fff;}
+.appro-btn.yes:hover{background:#059669;}
+.appro-tip{
+  padding:0 24px 14px;font-size:11px;color:var(--text3);text-align:center;
+}
+
+/* ── Live progress card ────────────────────────────── */
+.progress-card{
+  background:var(--bg-card);border-radius:14px;border:1px solid var(--line);
+  padding:18px 20px;
+}
+.prog-step{display:flex;align-items:flex-start;gap:12px;padding:10px 0;}
+.prog-icon{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;
+  background:#e5e1d6;color:var(--text3);
+  position:relative;
+}
+.prog-icon::after{
+  content:'';position:absolute;top:32px;left:50%;
+  width:2px;height:18px;background:var(--line);
+}
+.prog-step:last-child .prog-icon::after{display:none;}
+.prog-step.done .prog-icon{background:var(--green);color:#fff;}
+.prog-step.active .prog-icon{background:var(--peach);color:#fff;animation:pulse 1.5s infinite;}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5)}
+  50%{box-shadow:0 0 0 6px rgba(251,146,60,0)}
+}
+.prog-step.pending .prog-icon{opacity:.5;}
+.prog-text{flex:1;font-size:13px;color:var(--text);font-weight:600;line-height:1.5;}
+.prog-step.done .prog-text{color:var(--text2);}
+.prog-step.pending .prog-text{color:var(--text3);font-weight:500;}
+.prog-meta{font-size:11.5px;color:var(--text3);margin-top:2px;font-weight:500;}
+
+/* X-style preview tweet */
+.x-preview{
+  border:1px solid #cfd9de;border-radius:14px;padding:14px;background:#fff;
+  display:flex;gap:12px;
+}
+.x-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+.x-meta{flex:1;min-width:0;}
+.x-name{font-size:13.5px;font-weight:700;color:#0f1419;}
+.x-handle{font-size:13px;color:#536471;}
+.x-text{font-size:14.5px;color:#0f1419;line-height:1.5;margin-top:4px;}
+
+/* Result card */
+.result{
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+  border:1px solid rgba(16,185,129,.3);border-radius:14px;
+  padding:16px 20px;font-size:13.5px;color:#047857;line-height:1.65;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.result-emo{font-size:22px;line-height:1;flex-shrink:0;}
+.result b{color:#065f46;}
+.result a{color:#065f46;text-decoration:underline;font-weight:700;}
+
+/* Summary */
+.summary-card{
+  margin-top:48px;padding:32px;border-radius:18px;
+  background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.3);
+}
+.summary-card h2{font-size:20px;font-weight:900;margin-bottom:14px;color:var(--peach-dark);}
+.summary-card p{font-size:14px;color:var(--text2);margin-bottom:8px;}
+.summary-card .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px;}
+.summary-card .stat{
+  background:#fff;border-radius:12px;padding:16px;text-align:center;
+}
+.summary-card .stat-num{font-family:var(--mono);font-size:28px;font-weight:900;color:var(--peach-dark);line-height:1;}
+.summary-card .stat-lbl{font-size:11.5px;color:var(--text3);margin-top:6px;font-weight:700;letter-spacing:.04em;}
+
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:12.5px;color:var(--text3);}
+.foot a{color:var(--text3);}
+
+/* AI agent card */
+.agent-bar{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);border-radius:11px;
+  margin-bottom:14px;
+}
+.agent-bar .av{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.agent-bar .nm{font-size:13px;font-weight:800;color:var(--text);}
+.agent-bar .st{font-size:11px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:5px;margin-top:1px;}
+.agent-bar .st .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+/* Chat bubble */
+.chatm{display:flex;gap:10px;margin-bottom:10px;}
+.chatm.me{flex-direction:row-reverse;}
+.chatm-av{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;}
+.chatm.me .chatm-av{background:linear-gradient(135deg,#3b82f6,#1d4ed8);font-size:12px;font-weight:700;}
+.chatm.ai .chatm-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.chatm-bub{padding:10px 14px;border-radius:14px;font-size:13.5px;color:var(--text);max-width:80%;line-height:1.55;}
+.chatm.me .chatm-bub{background:#dbeafe;border:1px solid rgba(59,130,246,.2);color:#1e3a8a;}
+.chatm.ai .chatm-bub{background:#fff;border:1px solid var(--line);}
+
+/* Compare */
+.compare{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;
+}
+@media(max-width:780px){.compare{grid-template-columns:1fr;}}
+.compare-col{
+  background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;
+}
+.compare-col.bad{background:rgba(239,68,68,.04);border-color:rgba(239,68,68,.2);}
+.compare-col.good{background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.25);}
+.compare-h{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;}
+.compare-h.bad{color:var(--rose);}
+.compare-h.good{color:#047857;}
+.compare-col .item{font-size:12.5px;color:var(--text2);padding:5px 0;line-height:1.5;}
+.compare-col .item code{font-family:var(--mono);font-size:11.5px;background:rgba(0,0,0,.04);padding:1px 5px;border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<div class="brand">
+  <a href="/app.html">← アプリに戻る</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-localagent-flow.html">📋 旧モック (技術者向け)</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-localagent-app.html">🖥️ Local Agent UI</a>
+  &nbsp;·&nbsp;
+  <a href="/mock-sheets-flow.html">📊 Sheets連携</a>
+</div>
+
+<h1 class="h1">🌐 ブラウザ拡張連携<br><span class="accent">ビジネスマン向け簡単版</span></h1>
+<p class="sub">
+  「Capability」「Sandbox」「Daemon」 — そういう言葉、エンドユーザーには出しません。<br>
+  <b>5ステップ・所要1分・クリック8回で完了</b>。あとは AI が X / Slack / Gmail を勝手に動かしてくれる体験。
+</p>
+<div class="tagrow">
+  <span class="tag simple">✨ 技術用語ゼロ</span>
+  <span class="tag fast">⚡ 1分で完了</span>
+  <span class="tag safe">🔒 投稿前は必ず確認</span>
+</div>
+
+<div class="flow">
+
+<!-- ════ STEP 01: Chrome Web Store install ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 01</span>
+    <div class="step-title">拡張機能を追加</div>
+    <p class="step-note">アプリ内から Chrome Web Store のリンク。クリック2回でインストール。デベロッパーモード等の操作はゼロ。</p>
+    <span class="step-time">5秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · ブラウザ連携</div>
+    </div>
+    <div class="frame-body">
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">🌐 ブラウザ自動操作を有効にする</div>
+      <p style="font-size:12.5px;color:var(--text3);margin-bottom:18px;line-height:1.65">
+        Chrome に拡張機能を追加して、AI に X や Slack を任せられるようにします。
+      </p>
+      <button class="cws-btn">
+        <div class="cws-icon">🤖</div>
+        <div class="cws-meta">
+          <div class="cws-name">MY AI Agent — Browser Connector</div>
+          <div class="cws-desc">ログイン済みサイトを AI が直接操作</div>
+          <div class="cws-stars">★★★★★ 4.9 · 2,481 ユーザー</div>
+        </div>
+        <div class="cws-cta">＋ 追加</div>
+      </button>
+      <div style="margin-top:16px;padding:12px 14px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;font-size:11.5px;color:var(--text2);line-height:1.6">
+        💡 ボタンを押すと Chrome Web Store が開き、「<b>Chrome に追加</b>」の確認ダイアログが出ます。「拡張機能を追加」を押せばインストール完了。<b>所要 5秒</b>。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 02: Auto-pairing (no code) ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 02</span>
+    <div class="step-title">自動ペアリング</div>
+    <p class="step-note">Chrome Web Store からの戻りで、拡張が自動的にあなたのアカウントと紐付き。<b>6桁コード入力なし</b>、ボタンクリックだけ。</p>
+    <span class="step-time">3秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · 連携完了</div>
+    </div>
+    <div class="frame-body" style="position:relative;min-height:200px">
+      <div style="position:absolute;top:18px;right:20px;z-index:2"><div class="toast">✓ ブラウザと連携しました</div></div>
+      <div style="text-align:center;padding:46px 20px 20px;color:var(--text3);font-size:13.5px;line-height:1.7">
+        <div style="font-size:64px;margin-bottom:10px">🤝</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">この Chrome から AI が動かせるようになりました</div>
+        <div>右上のパズルアイコン 🧩 → MY AI Agent が <b style="color:var(--green)">緑の点</b> になっていれば接続中</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 03: Use-case based permissions ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 03</span>
+    <div class="step-title">「やりたいこと」を選ぶ</div>
+    <p class="step-note">5つの権限を全部聞かない。代わりに 3 つの<b>業務シナリオ</b>から1つ選ぶだけ。裏で適切な権限を自動設定。</p>
+    <span class="step-time">10秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · 用途を選択</div>
+    </div>
+    <div class="frame-body">
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">どんな業務に使いますか?</div>
+      <p style="font-size:12.5px;color:var(--text3);margin-bottom:18px">あとから変更できます。複数選択も OK。</p>
+
+      <div class="usecase-grid">
+        <div class="usecase sel">
+          <div class="usecase-emo">📢</div>
+          <div class="usecase-meta">
+            <div class="usecase-title">SNS 運用 (X / LinkedIn)</div>
+            <div class="usecase-desc">投稿・DM・リサーチ・トレンド分析を AI に任せる</div>
+            <div class="usecase-eg">例: <b>「今日の業界ニュースをまとめて X に投稿」「DM の返信下書き作って」</b></div>
+          </div>
+          <div class="usecase-check">✓</div>
+        </div>
+
+        <div class="usecase">
+          <div class="usecase-emo">💼</div>
+          <div class="usecase-meta">
+            <div class="usecase-title">業務ツール自動化 (Slack / CRM / Notion)</div>
+            <div class="usecase-desc">日報・報告・データ転記・整理を自動化</div>
+            <div class="usecase-eg">例: <b>「Slack に今日の日報を投稿」「Notion の議事録から ToDo 抽出」</b></div>
+          </div>
+          <div class="usecase-check">✓</div>
+        </div>
+
+        <div class="usecase">
+          <div class="usecase-emo">📧</div>
+          <div class="usecase-meta">
+            <div class="usecase-title">メール対応 (Gmail / Outlook)</div>
+            <div class="usecase-desc">下書き作成・返信・フォローアップ整理</div>
+            <div class="usecase-eg">例: <b>「未読 5 件のメールを要約」「先方への返信下書き作って」</b></div>
+          </div>
+          <div class="usecase-check">✓</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:18px;font-size:12px">
+        <a href="#" style="color:var(--text3);text-decoration:underline">⚙ 上級者向け: 個別の権限を設定</a>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end">
+        <button class="btn">この内容で完了 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 04: Chat instruction + plain-Japanese approval ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 04</span>
+    <div class="step-title">チャットで指示 → 日本語で確認</div>
+    <p class="step-note">承認モーダルは技術用語ゼロ。意図と結果プレビューを優しく表示。タイマーはくるくる回るリングで圧迫感を減らす。</p>
+    <span class="step-time">5秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · チャット</div>
+    </div>
+    <div class="frame-body" style="position:relative;min-height:540px;padding:20px">
+      <div class="agent-bar">
+        <div class="av">📢</div>
+        <div>
+          <div class="nm">SNS 担当くん</div>
+          <div class="st"><span class="dot"></span>ブラウザ連携 ON</div>
+        </div>
+      </div>
+      <!-- chat history below modal -->
+      <div style="opacity:.5">
+        <div class="chatm me">
+          <div class="chatm-av">K</div>
+          <div class="chatm-bub">「新サービス公開しました!ぜひ試してみてください 🎉」って X に投稿して</div>
+        </div>
+      </div>
+      <!-- modal centered -->
+      <div style="position:absolute;inset:0;background:rgba(20,12,8,.4);display:flex;align-items:center;justify-content:center;padding:18px">
+        <div class="appro-modal">
+          <div class="appro-h">
+            <div class="av">📢</div>
+            <div>
+              <div class="nm">SNS 担当くん</div>
+              <div class="role">が以下を実行しようとしています</div>
+            </div>
+            <div class="timer"><span class="ring"></span>残り 27秒</div>
+          </div>
+          <div class="appro-body">
+            <div class="what">📤 <em>X (Twitter)</em> に投稿します</div>
+            <div class="preview">
+              <div class="x-preview">
+                <div class="x-av">K</div>
+                <div class="x-meta">
+                  <div><span class="x-name">Takeuchi Kouta</span> <span class="x-handle">@kotatake</span></div>
+                  <div class="x-text">新サービス公開しました!ぜひ試してみてください 🎉</div>
+                </div>
+              </div>
+            </div>
+            <div class="meta-line">📍 投稿先: <b>@kotatake</b> · ⏱ 投稿後の取り消しは2分以内可能</div>
+          </div>
+          <div class="appro-foot">
+            <button class="appro-btn no">やめる</button>
+            <button class="appro-btn yes">この内容で投稿する</button>
+          </div>
+          <div class="appro-tip">💡 「いつもの SNS 運用」で承認すれば、次回から自動で投稿できます</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════ STEP 05: Live progress + result ════ -->
+<div class="step">
+  <div class="step-meta">
+    <span class="step-num-big">STEP 05</span>
+    <div class="step-title">ビジュアル進捗 → 完了報告</div>
+    <p class="step-note">ターミナルログは出さない。AI が今何をしてるか<b>絵で見せる</b>。完了したら結果のリンクをワンクリックで確認。</p>
+    <span class="step-time">8秒</span>
+  </div>
+  <div class="frame">
+    <div class="frame-bar">
+      <div class="frame-dots"><span></span><span></span><span></span></div>
+      <div class="frame-url">myaiagents.agency/app.html · 実行中</div>
+    </div>
+    <div class="frame-body" style="padding:20px">
+      <div class="agent-bar">
+        <div class="av">📢</div>
+        <div>
+          <div class="nm">SNS 担当くん</div>
+          <div class="st"><span class="dot"></span>作業中</div>
+        </div>
+      </div>
+
+      <div class="chatm ai">
+        <div class="chatm-av">📢</div>
+        <div style="flex:1;max-width:90%">
+          <div class="progress-card">
+            <div class="prog-step done">
+              <div class="prog-icon">✓</div>
+              <div>
+                <div class="prog-text">X (Twitter) を開きました</div>
+                <div class="prog-meta">x.com/compose/post</div>
+              </div>
+            </div>
+            <div class="prog-step done">
+              <div class="prog-icon">✓</div>
+              <div>
+                <div class="prog-text">投稿欄に文章を入力しました</div>
+                <div class="prog-meta">「新サービス公開しました!ぜひ試してみてください 🎉」</div>
+              </div>
+            </div>
+            <div class="prog-step active">
+              <div class="prog-icon">⋯</div>
+              <div>
+                <div class="prog-text">投稿ボタンを押しています...</div>
+                <div class="prog-meta">確認ダイアログを処理中</div>
+              </div>
+            </div>
+            <div class="prog-step pending">
+              <div class="prog-icon">3</div>
+              <div>
+                <div class="prog-text">投稿を確認</div>
+                <div class="prog-meta">URL を取得して報告</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="result" style="margin-top:14px">
+            <div class="result-emo">🎉</div>
+            <div>
+              <b>投稿完了しました!</b><br>
+              <span style="font-size:12.5px;color:var(--text2)">2,481 人のフォロワーに届きました。エンゲージメント分析を希望なら「分析して」と送ってください。</span><br>
+              <a href="#" style="font-size:12.5px;margin-top:6px;display:inline-block">📎 投稿を表示 →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ── Comparison: business-friendly vs technical ── -->
+<h2 style="font-size:22px;font-weight:900;margin:48px 0 14px;letter-spacing:.01em">🔄 旧モック (技術者向け) との比較</h2>
+<div class="compare">
+  <div class="compare-col bad">
+    <div class="compare-h bad">❌ 旧 (技術者向け)</div>
+    <div class="item">DL → Apps へドラッグ → 起動 → 6桁入力 → 認証</div>
+    <div class="item">「Capability」「Sandbox」「Audit log」</div>
+    <div class="item">approval modal: <code>shell.exec</code> / <code>cwd: /Users/...</code> / <code>MEDIUM RISK</code></div>
+    <div class="item">stdout 黒ターミナル画面</div>
+    <div class="item">5項目のトグルから選ぶ</div>
+    <div class="item">所要時間: <b>5分</b> / クリック数: <b>15+</b></div>
+  </div>
+  <div class="compare-col good">
+    <div class="compare-h good">✅ 新 (ビジネスマン向け)</div>
+    <div class="item">「+追加」をクリック1回 → 完了</div>
+    <div class="item">「ブラウザ連携」「業務に使う」「投稿前確認」</div>
+    <div class="item">approval modal: <b>「📤 X に投稿します」</b> + 投稿プレビュー</div>
+    <div class="item">AI のミニアバターが進捗カードで動く</div>
+    <div class="item">3つの業務シナリオから選ぶ</div>
+    <div class="item">所要時間: <b>1分</b> / クリック数: <b>8</b></div>
+  </div>
+</div>
+
+<!-- ── Summary ── -->
+<div class="summary-card">
+  <h2>📋 ビジネスマン向け UX の設計原則</h2>
+  <p>1. <b>技術用語ゼロ</b> — 「shell」「daemon」「capability」「audit log」を全部隠す</p>
+  <p>2. <b>意図ベース</b> — 何のコマンドか、ではなく「何が起きるか」を見せる</p>
+  <p>3. <b>業務シナリオベースの権限</b> — 抽象的なフラグでなく「営業」「日報」「メール」</p>
+  <p>4. <b>ビジュアル進捗</b> — ログでなく、AI のキャラが画面の中で動く</p>
+  <p>5. <b>不可逆操作の確認</b> — 投稿・送信・削除前は必ずプレビュー + 確認</p>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">8</div><div class="stat-lbl">クリック数<br>(初回)</div></div>
+    <div class="stat"><div class="stat-num">1分</div><div class="stat-lbl">所要時間<br>(初回)</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-lbl">技術用語<br>(画面上)</div></div>
+  </div>
+</div>
+
+<div class="foot">
+  © 2026 MY AI AGENT · <a href="/app.html">アプリ</a> · <a href="/setup-extension.html">インストールガイド (現状)</a> · <a href="/mock-localagent-flow.html">技術者向けモック</a> · <a href="/lp.html">ホーム</a>
+</div>
+
+</div>
+</body>
+</html>

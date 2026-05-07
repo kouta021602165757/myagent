@@ -848,19 +848,69 @@ function _twemojiDataUri(svgString){
   return 'data:image/svg+xml;base64,' + Buffer.from(cleaned,'utf8').toString('base64');
 }
 
+/* ── CJK font for OG PNG rendering ──────────────────────────── */
+// Render's default Linux image lacks CJK fonts, so Japanese text renders as
+// tofu boxes in PNG output. Fetch Noto Sans JP once at first PNG render and
+// cache to /tmp so resvg can use it. WOFF2 from jsdelivr (Fontsource), which
+// resvg supports natively.
+const _JP_FONT_PATH = '/tmp/myagent-noto-jp.woff2';
+const _JP_FONT_URL  = 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5/files/noto-sans-jp-japanese-400-normal.woff2';
+const _JP_LATIN_PATH = '/tmp/myagent-noto-latin.woff2';
+const _JP_LATIN_URL  = 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5/files/noto-sans-jp-latin-400-normal.woff2';
+let _jpFontReady = null; // promise once started
+
+function _downloadFont(url, destPath){
+  return new Promise((resolve)=>{
+    const file = fs.createWriteStream(destPath);
+    function fetchOne(u, depth){
+      if(depth > 4){ file.close(); fs.unlink(destPath, ()=>{}); resolve(false); return; }
+      https.get(u, (r)=>{
+        if((r.statusCode === 301 || r.statusCode === 302) && r.headers.location){
+          fetchOne(r.headers.location, depth+1);
+          return;
+        }
+        if(r.statusCode !== 200){
+          file.close(); fs.unlink(destPath, ()=>{}); resolve(false); return;
+        }
+        r.pipe(file);
+        file.on('finish', ()=>{ file.close(); resolve(true); });
+        file.on('error', ()=>{ resolve(false); });
+      }).on('error', ()=>{ file.close(); fs.unlink(destPath, ()=>{}); resolve(false); });
+    }
+    fetchOne(url, 0);
+  });
+}
+
+async function _ensureJpFonts(){
+  if(_jpFontReady) return _jpFontReady;
+  _jpFontReady = (async ()=>{
+    const out = [];
+    for(const [path, url] of [[_JP_FONT_PATH, _JP_FONT_URL], [_JP_LATIN_PATH, _JP_LATIN_URL]]){
+      try{
+        if(fs.existsSync(path) && fs.statSync(path).size > 50000){ out.push(path); continue; }
+        const ok = await _downloadFont(url, path);
+        if(ok) out.push(path);
+      }catch(e){ /* ignore */ }
+    }
+    return out;
+  })();
+  return _jpFontReady;
+}
+
 /** Convert an SVG string to a PNG Buffer. Returns null if resvg is unavailable. */
-function svgToPng(svg, opts){
+async function svgToPng(svg, opts){
   const r = _loadResvg();
   if(!r) return null;
+  let fontFiles = [];
+  try{ fontFiles = await _ensureJpFonts(); }catch(e){ /* font fetch best-effort */ }
   try{
     const resvg = new r.Resvg(svg, {
       fitTo: { mode: 'width', value: (opts && opts.width) || 1200 },
       background: '#fdf8f3',
       font: {
         loadSystemFonts: true,
-        defaultFontFamily: 'Noto Sans CJK JP',
-        // Fonts on most Linux distros include CJK, but emoji needs Noto Color Emoji.
-        // If the host is missing it, emoji glyphs render as tofu — still acceptable.
+        defaultFontFamily: 'Noto Sans JP',
+        fontFiles,
       },
     });
     return resvg.render().asPng();
@@ -1767,7 +1817,7 @@ async function handleAPI(req,res,pathname,method,ip){
       if(tw) twemojiUri = _twemojiDataUri(tw);
     }catch(e){ /* ignore — fall back to text emoji */ }
     const svg = renderListingOgSvg(detail, twemojiUri);
-    const png = svgToPng(svg);
+    const png = await svgToPng(svg);
     if(!png){
       res.writeHead(302, {Location:'/api/og/'+ogmPng[1]+'.svg'});
       return res.end();

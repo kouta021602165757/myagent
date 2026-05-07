@@ -548,6 +548,7 @@ input,textarea{font-family:var(--sans);}
 .tool-btn.warn{color:#d97706;background:rgba(245,158,11,.08);}
 .tool-btn.recording{color:#fff;background:var(--rose);animation:micPulse 1.4s ease-in-out infinite;}
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5);}50%{box-shadow:0 0 0 6px rgba(239,68,68,0);}}
+@keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
 .tool-spacer{flex:1;}
 
 .send-btn{
@@ -3118,17 +3119,23 @@ async function sendMsg(){
   tEl.innerHTML='<div class="m-meta"><div class="m-av">'+ag.avatar+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
   _scrollMsgsToEnd();
+  // Streaming path: non-Chrome agents only (Plan B tool-use can't stream cleanly)
+  const canStream = !ag.chrome_enabled;
   try{
-    // 添付（画像 + PDF）をAPIに送信
-    const payload = {message: text};
-    if(imgs.length > 0){
-      payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
+    if(canStream){
+      await _sendMsgStream(ag, text, imgs);
+    } else {
+      // 既存の一括取得パス
+      const payload = {message: text};
+      if(imgs.length > 0){
+        payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
+      }
+      const r=await api('POST',`/api/chat/${activeId}`,payload);
+      ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
+      me.balance_jpy=r.balance_jpy;
+      me.usage_count=(me.usage_count||0)+1;
+      updateBalance();
     }
-    const r=await api('POST',`/api/chat/${activeId}`,payload);
-    ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
-    me.balance_jpy=r.balance_jpy;
-    me.usage_count=(me.usage_count||0)+1;
-    updateBalance();
   }catch(e){
     ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
     if(e.message.includes('クレジット')||e.message.includes('残高')){ openCharge(); }
@@ -3137,6 +3144,100 @@ async function sendMsg(){
   renderMsgs(ag);
   document.getElementById('sndBtn').disabled=false;
   ci.focus();
+}
+
+/**
+ * SSE streaming chat. Pushes a placeholder assistant bubble, then patches
+ * its content as text deltas arrive. Updates balance + final reply on 'done'.
+ * Falls back to throwing on error so the caller's catch path runs.
+ */
+async function _sendMsgStream(ag, text, imgs){
+  const payload = { message: text, stream: true };
+  if(imgs && imgs.length > 0){
+    payload.images = imgs.map(att => ({type:att.type, b64:att.b64, name:att.name}));
+  }
+  const res = await fetch(API + '/api/chat/' + activeId, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify(payload),
+  });
+  const ct = (res.headers.get('content-type')||'').toLowerCase();
+  // If server didn't honor stream (shouldn't happen but just in case)
+  if(!ct.includes('text/event-stream')){
+    if(!res.ok){
+      let msg='通信エラー';
+      try{ const d=await res.json(); msg=d.error||msg; }catch(e){}
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    ag.history.push({role:'assistant',content:data.reply||'',time:now(),tool_log:data.tool_log||null});
+    if(data.balance_jpy!==undefined) me.balance_jpy=data.balance_jpy;
+    me.usage_count=(me.usage_count||0)+1;
+    updateBalance();
+    return;
+  }
+
+  // Remove thinking dots; push streaming placeholder bubble
+  var thinking=document.getElementById('thinking'); if(thinking) thinking.remove();
+  ag.history.push({role:'assistant', content:'', time:now(), streaming:true});
+  renderMsgs(ag);
+  const streamIdx = ag.history.length - 1;
+
+  // Find the live bubble body once for in-place updates
+  var inner = document.getElementById('msgsInner');
+  var bubbles = inner ? inner.querySelectorAll('.m.a') : [];
+  var liveEl = bubbles[bubbles.length - 1];
+  var liveBody = liveEl ? liveEl.querySelector('.m-body') : null;
+  if(liveBody){
+    // Replace any thinking dots with empty pending state
+    liveBody.innerHTML = '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom"></span>';
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let acc = '';
+  let lastRender = 0;
+  let errorMsg = null;
+
+  while(true){
+    const {value, done} = await reader.read();
+    if(done) break;
+    buf += decoder.decode(value, {stream:true});
+    let i;
+    while((i = buf.indexOf('\n\n')) >= 0){
+      const evt = buf.slice(0, i); buf = buf.slice(i+2);
+      let evType='message', dataStr='';
+      for(const line of evt.split('\n')){
+        if(line.startsWith('event:')) evType = line.slice(6).trim();
+        else if(line.startsWith('data:')) dataStr = line.slice(5).trim();
+      }
+      if(!dataStr) continue;
+      let obj=null; try{ obj=JSON.parse(dataStr); }catch(e){ continue; }
+      if(evType === 'delta'){
+        acc += obj.text || '';
+        // Throttle DOM updates to ~30fps
+        const nowT = Date.now();
+        if(nowT - lastRender > 32 && liveBody){
+          liveBody.innerHTML = _md(acc) + '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
+          lastRender = nowT;
+          _scrollMsgsToEnd();
+        }
+      } else if(evType === 'done'){
+        ag.history[streamIdx].content = obj.reply || acc;
+        ag.history[streamIdx].streaming = false;
+        if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
+        me.usage_count = (me.usage_count||0) + 1;
+        updateBalance();
+      } else if(evType === 'error'){
+        errorMsg = obj.message || 'エラー';
+      }
+    }
+  }
+  if(errorMsg){
+    ag.history.pop();                    // drop the empty streaming bubble
+    throw new Error(errorMsg);
+  }
 }
 
 async function delAgent(id){

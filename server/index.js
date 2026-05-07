@@ -297,6 +297,73 @@ async function callAI(messages,system){
   return r.d;
 }
 
+/**
+ * Streaming variant. Calls onText(chunk) for each text_delta.
+ * Resolves with {text, inputTokens, outputTokens}.
+ */
+function callAIStream(messages, system, onText){
+  return new Promise((resolve, reject)=>{
+    const body = JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:1024,
+      system, messages,
+      stream:true,
+    });
+    const req = https.request({
+      hostname:'api.anthropic.com',
+      path:'/v1/messages',
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':ANTHROPIC,
+        'anthropic-version':'2023-06-01',
+        'Content-Length':Buffer.byteLength(body),
+      }
+    }, (r)=>{
+      let buf = '';
+      let fullText = '';
+      let inputTokens = 0, outputTokens = 0;
+      let errored = false;
+      r.setEncoding('utf8');
+      r.on('data', (chunk)=>{
+        buf += chunk;
+        let i;
+        while((i = buf.indexOf('\n\n')) >= 0){
+          const event = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          let dataLine = '';
+          for(const line of event.split('\n')){
+            if(line.startsWith('data: ')) dataLine = line.slice(6);
+          }
+          if(!dataLine) continue;
+          try{
+            const obj = JSON.parse(dataLine);
+            if(obj.type === 'content_block_delta' && obj.delta && obj.delta.type === 'text_delta'){
+              const t = obj.delta.text || '';
+              fullText += t;
+              try{ onText(t); }catch(e){}
+            } else if(obj.type === 'message_start' && obj.message && obj.message.usage){
+              inputTokens = obj.message.usage.input_tokens || 0;
+            } else if(obj.type === 'message_delta' && obj.usage){
+              outputTokens = obj.usage.output_tokens || outputTokens;
+            } else if(obj.type === 'error'){
+              errored = true;
+              reject(new Error(obj.error?.message || 'Anthropic stream error'));
+              try{ r.destroy(); }catch(e){}
+              return;
+            }
+          }catch(e){ /* ignore parse errors on partial events */ }
+        }
+      });
+      r.on('end', ()=>{ if(!errored) resolve({text:fullText, inputTokens, outputTokens}); });
+      r.on('error', (e)=>{ if(!errored) reject(e); });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
 async function callAIWithTools(messages,system,tools){
   // Single retry on 429 with short backoff — Render edge times out around 60–100s
@@ -2182,7 +2249,60 @@ async function handleAPI(req,res,pathname,method,ip){
 
     // Branch: Chrome 連携 ON のエージェントは Tool Use ループを通す
     const useTools = !!agent.chrome_enabled;
+    const wantStream = body.stream === true && !useTools;
     let totalIn=0, totalOut=0;
+
+    // ── SSE streaming branch (no tools) ─────────────────────────
+    if(wantStream){
+      res.writeHead(200, {
+        'Content-Type':'text/event-stream; charset=utf-8',
+        'Cache-Control':'no-cache, no-transform',
+        'Connection':'keep-alive',
+        'X-Accel-Buffering':'no',
+        'Access-Control-Allow-Origin':APP_URL,
+      });
+      const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
+      let streamReply = '';
+      try{
+        const result = await callAIStream(baseMsgs, buildSystem(agent), (delta)=>{
+          streamReply += delta;
+          try{ sse('delta', {text: delta}); }catch(e){}
+        });
+        const cost = calcCost(result.inputTokens, result.outputTokens);
+        const reply = streamReply || result.text || 'エラー';
+        const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+        if(regenerate){
+          agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts}];
+        } else {
+          agent.history=[...(agent.history||[]),
+            {role:'user',content:message,time:ts},
+            {role:'assistant',content:reply,time:ts}];
+        }
+        if(agent.history.length>200) agent.history = agent.history.slice(-200);
+        user.balance_jpy = Math.round(((user.balance_jpy||0) - cost.jpy)*1000)/1000;
+        user.usage_count = (user.usage_count||0) + 1;
+        user.billing_history = user.billing_history || [];
+        user.billing_history.push({date:new Date().toISOString(),type:'usage',agentId:agent.id,agentName:agent.name,
+          input_tokens:cost.inputTok,output_tokens:cost.outputTok,cost_usd:cost.usd,cost_jpy:cost.jpy});
+        if(user.billing_history.length>1000) user.billing_history = user.billing_history.slice(-1000);
+        const ai = user.agents.findIndex(a=>a.id===agent.id);
+        if(ai>=0) user.agents[ai] = agent;
+        await DB.save(user);
+        if(agent.marketplace_origin && agent.marketplace_origin.creator_user_id && cost.jpy>0){
+          creditCreatorRevenue(agent.marketplace_origin.creator_user_id, {
+            listing_id: agent.marketplace_origin.listing_id,
+            agent_name: agent.name,
+            buyer_user_id: user.id,
+            cost_jpy: cost.jpy,
+          }).catch(e=>console.warn('[revenue] credit failed:', e.message));
+        }
+        sse('done', { reply, balance_jpy: user.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd } });
+      }catch(e){
+        try{ sse('error', { message: e.message }); }catch(_){}
+      }
+      res.end();
+      return;
+    }
 
     let toolLog = []; // visible browser-action log for the frontend
     if(useTools){

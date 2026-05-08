@@ -2625,7 +2625,22 @@ body{color:#f0f0f8;}
       <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
     </div>
     <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
-    <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px">
+
+    <!-- データ操作: エクスポート / ブックマーク -->
+    <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:14px;display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">データ</div>
+      <button type="button" onclick="exportChatForEditAgent('md')" style="width:100%;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:9px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">📥</span><span>Markdown でエクスポート</span>
+      </button>
+      <button type="button" onclick="exportChatForEditAgent('json')" style="width:100%;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:9px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">📦</span><span>JSON でエクスポート</span>
+      </button>
+      <button type="button" onclick="closeEditAgent();openBookmarks()" style="width:100%;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:9px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">★</span><span>ブックマーク一覧</span>
+      </button>
+    </div>
+
+    <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px;margin-top:6px">
       <button onclick="deleteAgent()" style="width:100%;background:rgba(239,68,68,.06);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">🗑 このエージェントを削除</button>
     </div>
   </div>
@@ -2737,11 +2752,8 @@ body{color:#f0f0f8;}
 </div>
 
 <!-- ══ CHAT-LEVEL OPTIONS MENU (⋯ button) ═══════════════════ -->
+<!-- Export / Bookmarks moved into the agent edit panel (above delete) -->
 <div id="chatMenu" class="chat-menu" style="display:none">
-  <button onclick="closeChatMenu();exportChat('md')">📥 Markdown でエクスポート</button>
-  <button onclick="closeChatMenu();exportChat('json')">📦 JSON でエクスポート</button>
-  <button onclick="closeChatMenu();openBookmarks()">★ ブックマーク一覧</button>
-  <div class="chat-menu-div"></div>
   <button id="chatMenuEditAg" onclick="closeChatMenu();const a=agents.find(x=>x.id===activeId);if(a&&!a._is_joined_group)openEditAgent(activeId);">⚙ エージェントを編集</button>
   <button id="chatMenuGrpSet" onclick="closeChatMenu();openGroupSettings(activeId)" style="display:none">⚙ グループ設定</button>
 </div>
@@ -6032,9 +6044,21 @@ async function _grpSettingsTransfer(){
 }
 
 // ── Chat export (MD / JSON download) ───────────────────────
+// Same as exportChat but reads from window._editAgentId — used by the
+// "Markdown / JSON でエクスポート" buttons inside the edit-agent panel.
+function exportChatForEditAgent(format){
+  const id = window._editAgentId;
+  if(!id) return;
+  const ag = agents.find(a => a.id === id);
+  if(!ag){ showToast('エージェントが見つかりません','ng'); return; }
+  _exportAgent(ag, format);
+}
 function exportChat(format){
   const ag = agents.find(a => a.id === activeId);
   if(!ag) return;
+  _exportAgent(ag, format);
+}
+function _exportAgent(ag, format){
   const fname = (ag.name||'chat').replace(/[^\w぀-ヿ一-鿿_-]/g,'_');
   if(format === 'json'){
     const blob = new Blob([JSON.stringify({

@@ -80,7 +80,16 @@ function sbReq(method,table,qs='',body=null){
       ...(pay?{'Content-Length':Buffer.byteLength(pay)}:{})};
     const req=https.request({
       hostname:u.hostname,path:u.pathname+u.search,method,headers,timeout:8000
-    },r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{try{res({s:r.statusCode,d:JSON.parse(d||'[]')});}catch{res({s:r.statusCode,d});}});});
+    },r=>{
+      // CRITICAL: setEncoding('utf8') so Node buffers incomplete multi-byte
+      // sequences across data chunks. Without it, "d += chunk" can split a
+      // 3-byte Japanese char between two chunks → 文字化け in agent names,
+      // chat history, etc. Same fix as httpsReq above.
+      r.setEncoding('utf8');
+      let d='';
+      r.on('data',c=>d+=c);
+      r.on('end',()=>{try{res({s:r.statusCode,d:JSON.parse(d||'[]')});}catch{res({s:r.statusCode,d});}});
+    });
     req.on('error',e=>{console.error('sbReq error:',e.message);rej(e);});
     req.on('timeout',()=>{req.destroy();rej(new Error('Supabase timeout'));});
     if(pay)req.write(pay);

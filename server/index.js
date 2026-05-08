@@ -222,11 +222,70 @@ function newUser(base){
     // Marketplace UX
     is_verified:false,             // 公式 / 検証済みクリエイターバッジ (admin manual)
     favorites:[],                  // listing_ids the user favorited
+    // Group memberships: groups this user joined that are owned by OTHERS.
+    // Format: [{host_id, agent_id, joined_at}]. The actual agent record lives in
+    // the host's agents[] (single source of truth, billing flows there).
+    group_memberships:[],
     // Google Sheets API tokens — null when not connected.
     // {access_token, refresh_token, expires_at, scope, email}
     google_oauth:null,
     verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
+}
+
+// ── GROUP HELPERS ─────────────────────────────────────────────
+// Generate a short shareable invite token (no '0/O/1/I' to avoid confusion).
+function genInviteToken(){
+  const A = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i=0;i<8;i++) s += A[Math.floor(Math.random()*A.length)];
+  return s;
+}
+
+// Returns a "public-safe" view of a member entry (no email, no tokens).
+function _safeMember(m){
+  if(!m) return null;
+  return {
+    user_id: m.user_id,
+    name: m.name || '',
+    avatar: m.avatar || '',
+    role: m.role || 'member',
+    joined_at: m.joined_at || null,
+    last_seen: m.last_seen || null,
+  };
+}
+
+// Resolve a token to {host, agent}. Scans Supabase via JSONB containment.
+// Returns null if not found or expired.
+async function findGroupByToken(token){
+  if(!token) return null;
+  if(USE_SUPA){
+    const filter = encodeURIComponent(JSON.stringify([{invite_token: token}]));
+    const r = await sbReq('GET','users','?select=*&agents=cs.'+filter+'&limit=1');
+    const host = r && r.d && r.d[0];
+    if(!host) return null;
+    const agent = (host.agents||[]).find(a => a.invite_token === token && a.is_group);
+    if(!agent) return null;
+    return { host, agent };
+  } else {
+    for(const u of LDB.all()){
+      const ag = (u.agents||[]).find(a => a.invite_token === token && a.is_group);
+      if(ag) return { host: u, agent: ag };
+    }
+    return null;
+  }
+}
+
+// Returns true if invite is currently valid (not expired, under capacity)
+function isInviteValid(agent){
+  if(!agent || !agent.invite_token) return false;
+  if(agent.invite_expires_at){
+    const exp = new Date(agent.invite_expires_at).getTime();
+    if(!isFinite(exp) || exp < Date.now()) return false;
+  }
+  const cap = agent.invite_max_members || 50;
+  if((agent.members||[]).length >= cap) return false;
+  return true;
 }
 
 /* ── Tag suggestions ────────────────────────────────────────── */
@@ -1774,6 +1833,176 @@ async function serveSitemapXml(res){
   res.end(xml);
 }
 
+/** Render the public group-invite landing HTML.
+ * Shows the invitee a preview before they join — works without login.
+ * Includes <meta og:*> for rich previews when the link is shared in LINE/Slack/Twitter.
+ */
+async function serveGroupInvitePage(res, token){
+  let found = null;
+  try { found = await findGroupByToken(token); } catch(e) { console.warn('[invite-landing]', e.message); }
+  const safeToken = String(token||'').replace(/[^a-zA-Z0-9]/g,'').slice(0,16);
+
+  if(!found){
+    const html404 = `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>招待が見つかりません — MY AI Agent</title>
+<style>body{font-family:-apple-system,'SF Pro Display','Inter','Noto Sans JP',sans-serif;background:#fafafa;color:#09090b;margin:0;padding:80px 24px;text-align:center}h1{font-size:24px;margin-bottom:12px}p{color:#52525b;font-size:15px}a{color:#ea580c;font-weight:700;text-decoration:none}</style></head><body><h1>招待が見つかりません</h1><p>リンクが期限切れか、間違っている可能性があります。<br><a href="${APP_URL}">MY AI Agent トップへ →</a></p></body></html>`;
+    res.writeHead(404,{'Content-Type':'text/html; charset=utf-8',...SEC});
+    return res.end(html404);
+  }
+
+  const ag = found.agent;
+  const host = found.host;
+  const valid = isInviteValid(ag);
+  const memberCount = (ag.members||[]).length;
+  const maxMembers = ag.invite_max_members || 50;
+  const hostName = host.name || (host.email||'').split('@')[0] || 'ホスト';
+  const groupName = ag.name || 'グループ';
+  const aiAvatar = (ag.avatar||'🤖');
+  const aiAvDisplay = aiAvatar.startsWith('data:image/') ? '🤖' : aiAvatar; // emoji-only in OG/title
+
+  const ogUrl = APP_URL + '/g/' + safeToken;
+  const ogTitle = `${groupName} に招待されました`;
+  const ogDesc  = `${hostName} さんから · AI + ${memberCount} 名 / 最大 ${maxMembers} 名 · あなたは無料で参加できます`;
+
+  // Inline HTML (split-payload OG image is overkill for invites; keep simple)
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escHtml(ogTitle)} — MY AI Agent</title>
+<meta name="description" content="${escHtml(ogDesc)}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${escHtml(ogTitle)}">
+<meta property="og:description" content="${escHtml(ogDesc)}">
+<meta property="og:url" content="${ogUrl}">
+<meta property="og:site_name" content="MY AI Agent">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${escHtml(ogTitle)}">
+<meta name="twitter:description" content="${escHtml(ogDesc)}">
+<style>
+:root{--peach:#fb923c;--peach-dark:#ea580c;--peach-light:#fed7aa;--peach-soft:#fff7ed;
+  --ink-900:#09090b;--ink-700:#27272a;--ink-500:#52525b;--ink-300:#a1a1aa;--ink-200:#d4d4d8;
+  --bg-50:#fafafa;--bg-100:#f4f4f5;--green:#10b981;--rose:#ef4444;
+  --line:rgba(9,9,11,.06);--line-strong:rgba(9,9,11,.1);
+  --sans:-apple-system,'SF Pro Display','Inter','Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg-50);color:var(--ink-900);font-family:var(--sans);font-size:15px;line-height:1.6;letter-spacing:-.005em;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:480px;margin:0 auto;padding:32px 20px;}
+.card{background:#fff;border-radius:18px;border:.5px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,.06),0 4px 10px rgba(0,0,0,.03);overflow:hidden;}
+.banner{height:120px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;color:#fff;}
+.stack{position:relative;width:120px;height:56px;}
+.stack > *{position:absolute;width:54px;height:54px;border-radius:14px;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18);}
+.stack .a1{left:0;top:0;background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.stack .a2{left:32px;top:0;background:linear-gradient(135deg,#10b981,#059669);}
+.stack .a3{left:64px;top:0;background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.body{padding:24px 22px 16px;text-align:center;}
+.from{font-size:12px;color:var(--ink-500);margin-bottom:8px;}
+.from b{color:var(--ink-900);font-weight:700;}
+.name{font-size:22px;font-weight:800;color:var(--ink-900);letter-spacing:-.02em;margin-bottom:6px;}
+.desc{font-size:13px;color:var(--ink-500);line-height:1.55;margin-bottom:18px;}
+.info{background:var(--bg-100);border-radius:11px;padding:14px;margin:0 22px 16px;}
+.info-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:.5px solid var(--line);}
+.info-row:last-child{border-bottom:0;}
+.info-row .k{color:var(--ink-500);}
+.info-row .v{color:var(--ink-900);font-weight:600;}
+.cost{margin:0 22px 14px;padding:11px 14px;background:var(--peach-soft);border:.5px solid rgba(251,146,60,.22);border-radius:11px;display:flex;align-items:flex-start;gap:9px;}
+.cost .em{font-size:16px;flex-shrink:0;}
+.cost .txt{font-size:12.5px;color:var(--peach-dark);line-height:1.5;}
+.cost .txt b{font-weight:700;}
+.cta{padding:0 22px 22px;display:flex;flex-direction:column;gap:8px;}
+.btn-pri{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border:0;border-radius:13px;padding:14px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:-.005em;box-shadow:0 8px 20px rgba(251,146,60,.32);}
+.btn-pri:disabled{background:var(--ink-200);color:#fff;box-shadow:none;cursor:not-allowed;}
+.btn-sec{background:transparent;color:var(--ink-700);border:.5px solid var(--line-strong);border-radius:13px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.expired{margin:0 22px 14px;padding:11px 14px;background:rgba(239,68,68,.08);border:.5px solid rgba(239,68,68,.2);border-radius:11px;color:#dc2626;font-size:12.5px;font-weight:600;text-align:center;}
+.brand{text-align:center;font-size:11px;color:var(--ink-500);margin-top:24px;}
+.brand a{color:var(--peach-dark);font-weight:700;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="banner">
+      <div class="stack">
+        <div class="a1">${escHtml((hostName.charAt(0)||'?').toUpperCase())}</div>
+        <div class="a2">+</div>
+        <div class="a3">${escHtml(aiAvDisplay)}</div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="from"><b>${escHtml(hostName)}</b> さんから招待</div>
+      <div class="name">${escHtml(groupName)}</div>
+      <div class="desc">AI + 仲間と一緒に話せる<br>グループ会話に参加できます</div>
+    </div>
+    <div class="info">
+      <div class="info-row"><span class="k">参加者</span><span class="v">${memberCount} / ${maxMembers} 名</span></div>
+      <div class="info-row"><span class="k">AI エージェント</span><span class="v">${escHtml(aiAvDisplay)} ${escHtml(groupName)}</span></div>
+      <div class="info-row"><span class="k">招待主</span><span class="v">${escHtml(hostName)}</span></div>
+    </div>
+    <div class="cost">
+      <span class="em">💰</span>
+      <div class="txt"><b>あなたは 0 円から参加可能</b><br>AI 利用料はホストが負担。チャットは無料で使えます。</div>
+    </div>
+    ${valid ? '' : '<div class="expired">⚠ この招待は期限切れまたは満員です。ホストに新しいリンクをもらってください。</div>'}
+    <div class="cta">
+      <button class="btn-pri" id="joinBtn" ${valid?'':'disabled'} onclick="joinGroup()">参加する</button>
+      <button class="btn-sec" onclick="location.href='${APP_URL}'">後で</button>
+    </div>
+  </div>
+  <div class="brand">Powered by <a href="${APP_URL}">MY AI Agent</a></div>
+</div>
+<script>
+const TOKEN = ${JSON.stringify(safeToken)};
+async function joinGroup(){
+  const btn = document.getElementById('joinBtn');
+  btn.disabled = true;
+  btn.textContent = '処理中…';
+  // If not logged in, store token and redirect to auth, then back here on success
+  const tk = localStorage.getItem('token');
+  if(!tk){
+    localStorage.setItem('pendingJoinToken', TOKEN);
+    location.href = '/auth.html?next=' + encodeURIComponent('/g/' + TOKEN);
+    return;
+  }
+  try {
+    const r = await fetch('/api/g/' + TOKEN + '/join', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + tk },
+    });
+    const d = await r.json();
+    if(d && d.ok){
+      // Land in the app, opening the joined agent
+      location.href = '/app.html?openAgent=' + encodeURIComponent(d.agent_id || '');
+      return;
+    }
+    btn.textContent = (d && d.error) || 'エラー';
+    setTimeout(()=>{ btn.disabled = false; btn.textContent = '参加する'; }, 2000);
+  } catch(e){
+    btn.textContent = 'ネットワークエラー';
+    setTimeout(()=>{ btn.disabled = false; btn.textContent = '参加する'; }, 2000);
+  }
+}
+// On page load: if user already authed and a pending token matches, auto-join
+(async () => {
+  const pending = localStorage.getItem('pendingJoinToken');
+  const tk = localStorage.getItem('token');
+  if(tk && pending === TOKEN){
+    localStorage.removeItem('pendingJoinToken');
+    joinGroup();
+  }
+})();
+</script>
+</body>
+</html>`;
+  res.writeHead(valid ? 200 : 410, {'Content-Type':'text/html; charset=utf-8',...SEC});
+  return res.end(html);
+}
+
+function escHtml(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 /** Render the public listing landing HTML with OG meta SSR. */
 async function serveListingPage(res, listingId, lang){
   lang = (lang === 'en') ? 'en' : 'ja';
@@ -2289,6 +2518,17 @@ async function findAgentByShareId(shareId){
 function buildSystem(agent, opts){
   const sheetsActive = !!(opts && opts.sheetsActive);
   const extensionActive = !!(opts && opts.extensionActive);
+  const isGroup = !!(opts && opts.isGroup);
+  const speakerName = (opts && opts.speakerName) || '';
+  const groupNote = isGroup ? `
+
+【グループ会話モード】
+これは複数人 + あなた (AI) が参加するグループチャットです。
+- 各ユーザーメッセージの先頭は「[名前] ...」の形式。誰の発言か必ず確認してください。
+- 直前の発言者: ${speakerName || '不明'}
+- メンションされた特定の人物 (例: マサルさん、佐藤さん) には名前で呼びかけて応答してください。
+- 一般的な会話 (@AI を含む発言) は、参加者全員に有益な内容を心がけてください。
+- 個人を特定するメンションがない場合は、最後の発言者に向けて答えてください。` : '';
   const extensionNote = extensionActive
     ? `
 
@@ -2389,7 +2629,7 @@ ${sheetsActive
 
 ツールを連鎖して公開情報の問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
     : '';
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
+  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}${groupNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2823,6 +3063,32 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
+  // ── PUBLIC: GET /api/g/:token (group preview before login) ─
+  // Anyone with the link can see the invite landing card.
+  const previewM = pathname.match(/^\/api\/g\/([a-zA-Z0-9]{4,16})$/);
+  if(previewM && method === 'GET'){
+    const found = await findGroupByToken(previewM[1]);
+    if(!found) return jres(res,404,{error:'招待が見つかりません'});
+    const valid = isInviteValid(found.agent);
+    return jres(res, valid ? 200 : 410, {
+      ok: valid,
+      group_name: found.agent.name,
+      group_avatar: found.agent.avatar,
+      ai_name: found.agent.name,           // alias — agent IS the AI
+      ai_avatar: found.agent.avatar,
+      member_count: (found.agent.members||[]).length,
+      max_members: found.agent.invite_max_members || 50,
+      expires_at: found.agent.invite_expires_at || null,
+      host_name: found.host.name || (found.host.email||'').split('@')[0] || 'ホスト',
+      members_preview: (found.agent.members||[]).slice(0, 6).map(m => ({
+        name: m.name, avatar: m.avatar, role: m.role,
+      })),
+      // Cost transparency for the invitee
+      free_for_invitees: true,
+      payer: 'host',
+    });
+  }
+
   // ── Auth required below ────────────────────────────────────
   const claims=getAuth(req);
   if(!claims)return jres(res,401,{error:'認証が必要です'});
@@ -3086,6 +3352,285 @@ async function handleAPI(req,res,pathname,method,ip){
     else if(regenerate || !ag.share_id){ ag.share_id=genShareId(); }
     await DB.save(user);
     return jres(res,200,{share_id:ag.share_id||null});
+  }
+
+  // ══ GROUPS ═════════════════════════════════════════════════
+  // Convert an existing solo agent into a group + create/regenerate invite token.
+  // body: { expires_in_days?: 7, max_members?: 50, require_approval?: false }
+  const grpInvM = pathname.match(/^\/api\/agents\/([^/]+)\/invite$/);
+  if(grpInvM && method==='POST'){
+    const agId = grpInvM[1];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const body = await readBody(req);
+    const days = Math.max(1, Math.min(90, parseInt(body.expires_in_days || 7, 10)));
+    const cap  = Math.max(2, Math.min(200, parseInt(body.max_members || 50, 10)));
+    const requireApproval = !!body.require_approval;
+
+    // Promote to a group. Idempotent — re-running just rotates the token.
+    ag.is_group = true;
+    ag.host_id = user.id;
+    if(!Array.isArray(ag.members) || ag.members.length === 0){
+      // Bootstrap with the host as the first member
+      ag.members = [{
+        user_id: user.id,
+        name: user.name || (user.email||'').split('@')[0] || 'ホスト',
+        avatar: '',
+        role: 'host',
+        joined_at: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+      }];
+    }
+    ag.invite_token = genInviteToken();
+    ag.invite_expires_at = new Date(Date.now() + days*24*60*60*1000).toISOString();
+    ag.invite_max_members = cap;
+    ag.invite_require_approval = requireApproval;
+
+    await DB.save(user);
+    return jres(res,200,{
+      invite_token: ag.invite_token,
+      invite_url: APP_URL + '/g/' + ag.invite_token,
+      invite_expires_at: ag.invite_expires_at,
+      invite_max_members: ag.invite_max_members,
+      members: ag.members.map(_safeMember),
+      is_group: true,
+    });
+  }
+
+  // Disable invite (token nulled — existing members stay).
+  if(grpInvM && method==='DELETE'){
+    const agId = grpInvM[1];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    if(ag.host_id && ag.host_id !== user.id){
+      return jres(res,403,{error:'ホストのみ操作できます'});
+    }
+    ag.invite_token = null;
+    ag.invite_expires_at = null;
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // GET members of a group (host or member can call)
+  const grpMemM = pathname.match(/^\/api\/agents\/([^/]+)\/members$/);
+  if(grpMemM && method==='GET'){
+    const agId = grpMemM[1];
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let host = user;
+    if(!ag){
+      // User might be a member of a group hosted by someone else — look it up
+      const m = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!m) return jres(res,404,{error:'エージェントが見つかりません'});
+      const hostUser = await DB.findBy('id', m.host_id);
+      if(!hostUser) return jres(res,404,{error:'ホストが見つかりません'});
+      host = hostUser;
+      ag = (hostUser.agents||[]).find(a => a.id === agId);
+      if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    }
+    return jres(res,200,{
+      agent_id: ag.id,
+      is_group: !!ag.is_group,
+      host_id: ag.host_id || host.id,
+      members: (ag.members||[]).map(_safeMember),
+      invite_token: (ag.host_id===user.id || host.id===user.id) ? (ag.invite_token||null) : null, // only host sees token
+      invite_expires_at: ag.invite_expires_at || null,
+      invite_max_members: ag.invite_max_members || 50,
+    });
+  }
+
+  // Host removes a member
+  const grpRmM = pathname.match(/^\/api\/agents\/([^/]+)\/members\/([^/]+)$/);
+  if(grpRmM && method==='DELETE'){
+    const agId = grpRmM[1], targetUid = grpRmM[2];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    if(ag.host_id !== user.id) return jres(res,403,{error:'ホストのみ操作できます'});
+    if(targetUid === user.id) return jres(res,400,{error:'ホストは退出ではなく所有権移譲を使ってください'});
+
+    const before = (ag.members||[]).length;
+    ag.members = (ag.members||[]).filter(m => m.user_id !== targetUid);
+    const removed = before - ag.members.length;
+    await DB.save(user);
+
+    // Also clear the invitee's group_memberships entry
+    if(removed > 0){
+      const target = await DB.findBy('id', targetUid);
+      if(target){
+        target.group_memberships = (target.group_memberships||[])
+          .filter(g => g.agent_id !== agId);
+        await DB.save(target);
+      }
+    }
+    return jres(res,200,{ok:true, removed});
+  }
+
+  // Self-leave (member or host who wants to abandon)
+  const grpLeaveM = pathname.match(/^\/api\/agents\/([^/]+)\/leave$/);
+  if(grpLeaveM && method==='POST'){
+    const agId = grpLeaveM[1];
+    // First check if user is the host (agent in their own list)
+    const ownAg = (user.agents||[]).find(a => a.id === agId);
+    if(ownAg && ownAg.is_group){
+      if((ownAg.members||[]).length > 1){
+        return jres(res,400,{error:'メンバーがいる間は退出できません。所有権を移譲するかメンバーを削除してください。'});
+      }
+      // Lone host leaving: just delete the agent
+      user.agents = (user.agents||[]).filter(a => a.id !== agId);
+      await DB.save(user);
+      return jres(res,200,{ok:true, deleted:true});
+    }
+    // Otherwise look at memberships
+    const m = (user.group_memberships||[]).find(g => g.agent_id === agId);
+    if(!m) return jres(res,404,{error:'参加していないグループです'});
+    user.group_memberships = (user.group_memberships||[]).filter(g => g.agent_id !== agId);
+    await DB.save(user);
+    // Drop from host's agent.members[]
+    const host = await DB.findBy('id', m.host_id);
+    if(host){
+      const hag = (host.agents||[]).find(a => a.id === agId);
+      if(hag){
+        hag.members = (hag.members||[]).filter(mm => mm.user_id !== user.id);
+        await DB.save(host);
+      }
+    }
+    return jres(res,200,{ok:true});
+  }
+
+  // Transfer ownership: only current host can call. body:{new_host_id}
+  const grpTrM = pathname.match(/^\/api\/agents\/([^/]+)\/transfer$/);
+  if(grpTrM && method==='POST'){
+    const agId = grpTrM[1];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    if(ag.host_id !== user.id) return jres(res,403,{error:'ホストのみ移譲できます'});
+    const body = await readBody(req);
+    const newId = (body.new_host_id||'').toString();
+    const target = (ag.members||[]).find(m => m.user_id === newId && m.user_id !== user.id);
+    if(!target) return jres(res,400,{error:'移譲先メンバーが見つかりません'});
+    const newHost = await DB.findBy('id', newId);
+    if(!newHost) return jres(res,404,{error:'ユーザーが見つかりません'});
+
+    // Move the entire agent record to the new host's agents[].
+    // Update ownership flags + adjust members[].role.
+    const moved = JSON.parse(JSON.stringify(ag));
+    moved.host_id = newHost.id;
+    moved.members = (moved.members||[]).map(m => ({...m,
+      role: m.user_id === newHost.id ? 'host' : (m.user_id === user.id ? 'member' : m.role)
+    }));
+    user.agents = (user.agents||[]).filter(a => a.id !== agId);
+    // Old host now becomes a regular member with a memberships entry
+    user.group_memberships = (user.group_memberships||[]);
+    if(!user.group_memberships.find(g => g.agent_id === agId)){
+      user.group_memberships.push({
+        host_id: newHost.id, agent_id: agId, joined_at: new Date().toISOString(),
+      });
+    }
+    await DB.save(user);
+
+    newHost.agents = [...(newHost.agents||[]), moved];
+    newHost.group_memberships = (newHost.group_memberships||[])
+      .filter(g => g.agent_id !== agId); // remove old membership entry
+    await DB.save(newHost);
+    return jres(res,200,{ok:true, new_host_id: newHost.id});
+  }
+
+  // ── GET /api/groups ────────────────────────────────────────
+  // List groups the user is a member of (both hosted and joined).
+  if(pathname === '/api/groups' && method === 'GET'){
+    const out = [];
+    // Hosted groups (agents with is_group=true in user.agents)
+    (user.agents||[]).forEach(ag => {
+      if(ag.is_group){
+        out.push({
+          id: ag.id,
+          name: ag.name,
+          avatar: ag.avatar,
+          host_id: ag.host_id,
+          is_host: true,
+          member_count: (ag.members||[]).length,
+          last_message: (ag.history||[]).slice(-1)[0]?.content || '',
+          last_at: (ag.history||[]).slice(-1)[0]?.time || ag.created_at,
+        });
+      }
+    });
+    // Joined groups (resolve from memberships)
+    for(const m of (user.group_memberships||[])){
+      const host = await DB.findBy('id', m.host_id);
+      if(!host) continue;
+      const ag = (host.agents||[]).find(a => a.id === m.agent_id);
+      if(!ag) continue;
+      out.push({
+        id: ag.id,
+        name: ag.name,
+        avatar: ag.avatar,
+        host_id: ag.host_id,
+        is_host: false,
+        member_count: (ag.members||[]).length,
+        last_message: (ag.history||[]).slice(-1)[0]?.content || '',
+        last_at: (ag.history||[]).slice(-1)[0]?.time || m.joined_at,
+      });
+    }
+    return jres(res,200,{groups: out});
+  }
+
+  // ── GET /api/g/:token (PUBLIC, no auth) ────────────────────
+  // Preview info for the invite landing page. Returns 410 if expired/full.
+  // NOTE: this branch is matched BEFORE auth middleware in the dispatcher
+  // (see early routing). Here we duplicate-handle it just in case auth
+  // already resolved — works either way since user may be null/undefined.
+
+  // ── POST /api/g/:token/join ───────────────────────────────
+  const joinM = pathname.match(/^\/api\/g\/([a-zA-Z0-9]{4,16})\/join$/);
+  if(joinM && method === 'POST'){
+    const token = joinM[1];
+    const found = await findGroupByToken(token);
+    if(!found) return jres(res,404,{error:'招待が見つかりません'});
+    if(!isInviteValid(found.agent)){
+      return jres(res,410,{error:'招待の期限切れまたは満員です'});
+    }
+    // Already a member? idempotent return.
+    if((found.agent.members||[]).find(m => m.user_id === user.id)){
+      return jres(res,200,{ok:true, already:true, agent_id: found.agent.id, host_id: found.host.id});
+    }
+    // Add to host's agent.members[]
+    found.agent.members = [...(found.agent.members||[]), {
+      user_id: user.id,
+      name: user.name || (user.email||'').split('@')[0] || 'メンバー',
+      avatar: '',
+      role: 'member',
+      joined_at: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
+    }];
+    // Append a system join message into history
+    found.agent.history = [...(found.agent.history||[]), {
+      role: 'system',
+      type: 'join',
+      user_id: user.id,
+      user_name: user.name || 'メンバー',
+      time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+      content: ((user.name||'メンバー') + ' さんが参加しました'),
+    }];
+    if(found.agent.history.length > 200) found.agent.history = found.agent.history.slice(-200);
+    await DB.save(found.host);
+
+    // Add membership entry on the joining user's record (unless they ARE the host)
+    if(found.host.id !== user.id){
+      user.group_memberships = user.group_memberships || [];
+      if(!user.group_memberships.find(g => g.agent_id === found.agent.id)){
+        user.group_memberships.push({
+          host_id: found.host.id,
+          agent_id: found.agent.id,
+          joined_at: new Date().toISOString(),
+        });
+      }
+      await DB.save(user);
+    }
+    return jres(res,200,{
+      ok:true,
+      agent_id: found.agent.id,
+      host_id: found.host.id,
+      group_name: found.agent.name,
+    });
   }
 
   // ══ MARKETPLACE ════════════════════════════════════════════
@@ -3893,22 +4438,42 @@ async function handleAPI(req,res,pathname,method,ip){
   const cm=pathname.match(/^\/api\/chat\/([^/]+)$/);
   if(cm&&method==='POST'){
     if(!ANTHROPIC)return jres(res,503,{error:'APIキーが設定されていません'});
-    // 無料枠: 最初の10メッセージは無料
-  var FREE_MSGS = 10;
-  var usageCount = user.usage_count || 0;
-  var balance = user.balance_jpy || 0;
-  if(usageCount >= FREE_MSGS && balance <= 0){
-    return jres(res,402,{
-      error:'残高が不足しています',
-      detail:'残高をチャージするか、プランをご確認ください',
-      free_used: usageCount,
-      free_limit: FREE_MSGS,
-      balance: balance,
-      upgrade:true
-    });
-  }
-    const agent=(user.agents||[]).find(a=>a.id===cm[1]);
-    if(!agent)return jres(res,404,{error:'エージェントが見つかりません'});
+    // ── Resolve agent: own first, then via group membership ──
+    let agent = (user.agents||[]).find(a=>a.id===cm[1]);
+    // payerUser = whose balance / quota gets charged. host of group, else self.
+    let payerUser = user;
+    let isGroupMember = false; // true when current user is a group invitee
+    if(!agent){
+      const mship = (user.group_memberships||[]).find(g => g.agent_id === cm[1]);
+      if(mship){
+        const hostUser = await DB.findBy('id', mship.host_id);
+        if(hostUser){
+          agent = (hostUser.agents||[]).find(a => a.id === cm[1]);
+          payerUser = hostUser;
+          isGroupMember = !!agent;
+        }
+      }
+    }
+    if(!agent) return jres(res,404,{error:'エージェントが見つかりません'});
+
+    const isGroup = !!agent.is_group;
+    // Free-tier / balance gate runs against the PAYER (host for groups)
+    var FREE_MSGS = 10;
+    var usageCount = payerUser.usage_count || 0;
+    var balance = payerUser.balance_jpy || 0;
+    if(usageCount >= FREE_MSGS && balance <= 0){
+      return jres(res,402,{
+        error: isGroupMember ? 'ホストの残高が不足しています' : '残高が不足しています',
+        detail: isGroupMember
+          ? 'ホストにチャージを依頼してください'
+          : '残高をチャージするか、プランをご確認ください',
+        free_used: usageCount,
+        free_limit: FREE_MSGS,
+        balance: balance,
+        upgrade: !isGroupMember,
+        host_low_balance: isGroupMember,
+      });
+    }
     const body=await readBody(req);
     const regenerate=!!body.regenerate;
     const message=body.message||'';
@@ -3936,6 +4501,28 @@ async function handleAPI(req,res,pathname,method,ip){
       if(!agent.history.length || agent.history[agent.history.length-1].role!=='user'){
         return jres(res,400,{error:'再生成できる返答がありません'});
       }
+    }
+
+    // Group chat: detect @AI mention; without it we just persist the human
+    // message and short-circuit (humans can talk freely without invoking AI).
+    const speakerName = user.name || (user.email||'').split('@')[0] || 'メンバー';
+    const speakerInitial = (speakerName || '?').charAt(0).toUpperCase();
+    const aiMentioned = /(^|[\s　])(?:@AI|＠AI|@ai|＠ai)\b/.test(message);
+    if(isGroup && !regenerate && !aiMentioned){
+      const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+      agent.history = [...(agent.history||[]), {
+        role: 'user',
+        content: message,
+        time: ts,
+        user_id: user.id,
+        user_name: speakerName,
+        user_avatar: speakerInitial,
+      }];
+      if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+      const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+      if(ai>=0) payerUser.agents[ai] = agent;
+      await DB.save(payerUser);
+      return jres(res,200,{ok:true, ai_replied:false, reply:'', balance_jpy: payerUser.balance_jpy});
     }
 
     const hist=(agent.history||[]).slice(-14);
@@ -3983,16 +4570,41 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       userContent = message;
     }
+    // For groups, prefix every user-history message with [name]: so the AI
+    // can attribute statements correctly.
+    const _histForAI = hist.map(m => {
+      if(m.role !== 'user') return {role: m.role, content: m.content};
+      if(!isGroup) return {role:'user', content: m.content};
+      const nm = m.user_name || 'メンバー';
+      return typeof m.content === 'string'
+        ? {role:'user', content: '[' + nm + '] ' + m.content}
+        : {role:'user', content: m.content};
+    });
+    // Wrap the *current* outgoing user message with the speaker name when in group
+    const _outboundUC = isGroup && typeof userContent === 'string'
+      ? '[' + speakerName + '] ' + userContent
+      : (isGroup && Array.isArray(userContent)
+          ? (() => {
+              const arr = userContent.slice();
+              const lastTextIdx = (() => { for(let i=arr.length-1;i>=0;i--){ if(arr[i].type==='text') return i; } return -1; })();
+              if(lastTextIdx >= 0){
+                arr[lastTextIdx] = {...arr[lastTextIdx], text: '[' + speakerName + '] ' + arr[lastTextIdx].text};
+              }
+              return arr;
+            })()
+          : userContent);
     // For regenerate: history already ends with the user msg; skip adding a new one
     const baseMsgs = regenerate
-      ? hist.map(m=>({role:m.role,content:m.content}))
-      : [...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
+      ? _histForAI
+      : [..._histForAI, {role:'user', content: _outboundUC}];
     let reply,cost;
 
     // Branch: Chrome 連携 ON or Sheets 連携 ON or Extension 連携 ON のエージェントは Tool Use ループを通す
-    const sheetsConnected = !!(user.google_oauth && user.google_oauth.refresh_token);
+    // Use the PAYER's connections (sheets/extension) since those tokens live
+    // on the host's user record for groups.
+    const sheetsConnected = !!(payerUser.google_oauth && payerUser.google_oauth.refresh_token);
     const sheetsActive = !!agent.sheets_enabled && sheetsConnected;
-    const extensionPaired = !!user.extension_device_token;
+    const extensionPaired = !!payerUser.extension_device_token;
     const extensionActive = !!agent.extension_enabled && extensionPaired;
     const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive;
     const tools = [
@@ -4017,39 +4629,43 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         });
         const cost = calcCost(result.inputTokens, result.outputTokens);
         const reply = streamReply || result.text || 'エラー';
         const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+        const _userMsgEntry = isGroup
+          ? {role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial}
+          : {role:'user',content:message,time:ts};
         if(regenerate){
-          agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts}];
+          agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
         } else {
           agent.history=[...(agent.history||[]),
-            {role:'user',content:message,time:ts},
-            {role:'assistant',content:reply,time:ts}];
+            _userMsgEntry,
+            {role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
         }
         if(agent.history.length>200) agent.history = agent.history.slice(-200);
-        user.balance_jpy = Math.round(((user.balance_jpy||0) - cost.jpy)*1000)/1000;
-        user.usage_count = (user.usage_count||0) + 1;
-        user.billing_history = user.billing_history || [];
-        user.billing_history.push({date:new Date().toISOString(),type:'usage',agentId:agent.id,agentName:agent.name,
-          input_tokens:cost.inputTok,output_tokens:cost.outputTok,cost_usd:cost.usd,cost_jpy:cost.jpy});
-        if(user.billing_history.length>1000) user.billing_history = user.billing_history.slice(-1000);
-        const ai = user.agents.findIndex(a=>a.id===agent.id);
-        if(ai>=0) user.agents[ai] = agent;
-        await DB.save(user);
+        payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
+        payerUser.usage_count = (payerUser.usage_count||0) + 1;
+        payerUser.billing_history = payerUser.billing_history || [];
+        payerUser.billing_history.push({date:new Date().toISOString(),type:'usage',agentId:agent.id,agentName:agent.name,
+          input_tokens:cost.inputTok,output_tokens:cost.outputTok,cost_usd:cost.usd,cost_jpy:cost.jpy,
+          ...(isGroupMember ? {via_member_user_id:user.id, via_member_name:speakerName} : {})});
+        if(payerUser.billing_history.length>1000) payerUser.billing_history = payerUser.billing_history.slice(-1000);
+        const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+        if(ai>=0) payerUser.agents[ai] = agent;
+        await DB.save(payerUser);
         if(agent.marketplace_origin && agent.marketplace_origin.creator_user_id && cost.jpy>0){
           creditCreatorRevenue(agent.marketplace_origin.creator_user_id, {
             listing_id: agent.marketplace_origin.listing_id,
             agent_name: agent.name,
-            buyer_user_id: user.id,
+            buyer_user_id: payerUser.id,
             cost_jpy: cost.jpy,
           }).catch(e=>console.warn('[revenue] credit failed:', e.message));
         }
-        sse('done', { reply, balance_jpy: user.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd } });
+        sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd } });
       }catch(e){
         try{ sse('error', { message: e.message }); }catch(_){}
       }
@@ -4098,7 +4714,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive, extensionActive}), tools);
+          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -4195,7 +4811,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive}));
+            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}));
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -4216,7 +4832,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive}));
+        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}));
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);
@@ -4224,41 +4840,45 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     const msgs = baseMsgs;
     const ts=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    const _userMsgEntry2 = isGroup
+      ? {role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial}
+      : {role:'user',content:message,time:ts};
     if(regenerate){
-      agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts}];
+      agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
     } else {
       agent.history=[...(agent.history||[]),
-        {role:'user',content:message,time:ts},
-        {role:'assistant',content:reply,time:ts}];
+        _userMsgEntry2,
+        {role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
     }
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
-    user.balance_jpy=Math.round(((user.balance_jpy||0)-cost.jpy)*1000)/1000;
-    user.usage_count=(user.usage_count||0)+1;
-    user.billing_history=user.billing_history||[];
-    user.billing_history.push({date:new Date().toISOString(),type:'usage',agentId:agent.id,agentName:agent.name,
-      input_tokens:cost.inputTok,output_tokens:cost.outputTok,cost_usd:cost.usd,cost_jpy:cost.jpy});
-    if(user.billing_history.length>1000)user.billing_history=user.billing_history.slice(-1000);
-    const ai=user.agents.findIndex(a=>a.id===agent.id);
-    if(ai>=0)user.agents[ai]=agent;
-    await DB.save(user);
+    payerUser.balance_jpy=Math.round(((payerUser.balance_jpy||0)-cost.jpy)*1000)/1000;
+    payerUser.usage_count=(payerUser.usage_count||0)+1;
+    payerUser.billing_history=payerUser.billing_history||[];
+    payerUser.billing_history.push({date:new Date().toISOString(),type:'usage',agentId:agent.id,agentName:agent.name,
+      input_tokens:cost.inputTok,output_tokens:cost.outputTok,cost_usd:cost.usd,cost_jpy:cost.jpy,
+      ...(isGroupMember ? {via_member_user_id:user.id, via_member_name:speakerName} : {})});
+    if(payerUser.billing_history.length>1000)payerUser.billing_history=payerUser.billing_history.slice(-1000);
+    const ai=(payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+    if(ai>=0)payerUser.agents[ai]=agent;
+    await DB.save(payerUser);
     // Credit the marketplace creator (#5 revenue ledger) — fire-and-forget
     if(agent.marketplace_origin && agent.marketplace_origin.creator_user_id && cost.jpy>0){
       creditCreatorRevenue(agent.marketplace_origin.creator_user_id, {
         listing_id: agent.marketplace_origin.listing_id,
         agent_name: agent.name,
-        buyer_user_id: user.id,
+        buyer_user_id: payerUser.id,
         cost_jpy: cost.jpy,
       }).catch(e=>console.warn('[revenue] credit failed:', e.message));
     }
     if(sse){
       // Emit the (possibly already-streamed) reply once at the end so the client
       // can finalize the bubble. delta events were sent inside the loop.
-      sse('done', { reply, balance_jpy: user.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog });
+      sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog });
       if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; }
       res.end();
       return;
     }
-    return jres(res,200,{reply,balance_jpy:user.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null});
+    return jres(res,200,{reply,balance_jpy:payerUser.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null});
   }
 
 
@@ -4601,6 +5221,12 @@ const server=http.createServer(async(req,res)=>{
   const aRoute=pathname.match(/^\/a\/([a-z0-9-]+)\/?$/);
   if(aRoute){
     return serveStatic(res, path.join(PUBLIC_DIR,'share.html'));
+  }
+
+  // /g/:token → public group invite landing (SSR with OG meta + redirect)
+  const gRoute = pathname.match(/^\/g\/([a-zA-Z0-9]{4,16})\/?$/);
+  if(gRoute){
+    return serveGroupInvitePage(res, gRoute[1]);
   }
 
   // /l/:listing_id → public marketplace listing landing (with OG meta SSR)

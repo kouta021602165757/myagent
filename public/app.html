@@ -4866,8 +4866,23 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   if(isU && isGroup && bodyMarkup){
     bodyMarkup = bodyMarkup.replace(/(@AI|＠AI|@ai|＠ai)\b/g, '<span class="mention ai">$1</span>');
   }
+  // Streaming placeholder: show the live "生成中…" indicator INSIDE the .m-body
+  // so the bubble has a visible body even before any text arrives. Without
+  // this, an empty assistant entry rendered as just header+actions and the
+  // _sendMsgStream patch path failed to find .m-body to write deltas into.
+  const isStreaming = !!(raw && raw.streaming);
+  if(!isU && isStreaming && !bodyMarkup){
+    bodyMarkup = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
+      + (isJa?'生成中…':'Generating…') + '</div></div>';
+  }
+  // While streaming, hide the action buttons (they only make sense once the
+  // message is finalized).
+  const actsToShow = isStreaming ? '' : acts;
+  // Always render .m-body for assistant rows (so streaming can patch into it
+  // even if content was empty when this row was rendered).
+  const renderBody = bodyMarkup || (!isU);
   const avStyle = userColor ? ' style="background:'+userColor+'"' : '';
-  return '<div class="'+cls+'" data-idx="'+idx+'">'+
+  return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'">'+
     '<div class="m-meta">'+
       '<div class="m-av'+(isU?' user':'')+'"'+avStyle+'>'+av+'</div>'+
       '<span class="m-name">'+esc(name)+'</span>'+
@@ -4875,8 +4890,8 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     '</div>'+
     imgHtml+
     tlogHtml+
-    (bodyMarkup?'<div class="m-body">'+bodyMarkup+'</div>':'')+
-    (acts?'<div class="m-acts">'+acts+'</div>':'')+
+    (renderBody?'<div class="m-body">'+(bodyMarkup||'')+'</div>':'')+
+    (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
   '</div>';
 }
 

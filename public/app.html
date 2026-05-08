@@ -2243,7 +2243,14 @@ body{color:#f0f0f8;}
                 </div>
               </div>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:6px" data-i18n="sSessNote">他デバイスのセッション一覧は近日対応</div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">最近のログイン</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:8px">
+              不審なログインがあれば <a href="#" onclick="event.preventDefault();const e=document.querySelector('.snav-item[data-tab=\'security\']');switchStab(e,'s-security');document.getElementById('sCurPw').focus()" style="color:var(--peach-dark);font-weight:700">パスワードを変更</a>してください。
+            </div>
+            <div id="sLoginLog" class="s-sess-box" style="font-size:12px;color:var(--text3)">読み込み中…</div>
           </section>
         </div>
 
@@ -8479,7 +8486,7 @@ function switchStab(btn, tabId){
   });
   if(tabId==='s-billing') loadBilling();
   if(tabId==='s-account') renderAccountList();
-  if(tabId==='s-security') { renderLinkedAccounts(); renderSessionInfo(); }
+  if(tabId==='s-security') { renderLinkedAccounts(); renderSessionInfo(); _loadLoginHistory(); }
   if(tabId==='s-notif') initNotifToggles();
   if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
   if(tabId==='s-creator'){ loadCreatorDashboard(); loadPayoutSection(); }
@@ -9168,6 +9175,46 @@ function _downloadBlob(filename, content, mime){
   a.href=url; a.download=filename; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 100);
 }
+// Login history loader (security tab)
+async function _loadLoginHistory(){
+  const box = document.getElementById('sLoginLog');
+  if(!box) return;
+  box.innerHTML = '<div style="padding:8px 0;color:var(--text3)">読み込み中…</div>';
+  try {
+    const r = await api('GET', '/api/me/login-history');
+    const events = (r && r.events) || [];
+    if(!events.length){
+      box.innerHTML = '<div style="padding:8px 0;color:var(--text3)">履歴がありません</div>';
+      return;
+    }
+    const kindLabel = {login:'メール/パスワード', signup:'新規登録', google:'Google'};
+    const ua2device = (ua) => {
+      ua = ua || '';
+      if(/iPhone|iPad/.test(ua)) return '📱 iOS';
+      if(/Android/.test(ua)) return '📱 Android';
+      if(/Macintosh|Mac OS X/.test(ua)) return '💻 Mac';
+      if(/Windows/.test(ua)) return '💻 Windows';
+      if(/Linux/.test(ua)) return '💻 Linux';
+      return '💻 その他';
+    };
+    box.innerHTML = events.map(e => {
+      const d = new Date(e.at);
+      const when = d.toLocaleString('ja-JP', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+      const dev = ua2device(e.ua);
+      const kind = kindLabel[e.kind] || e.kind || 'login';
+      return '<div class="s-sess">'
+        + '<div class="ic">'+esc(dev.split(' ')[0])+'</div>'
+        + '<div class="meta">'
+          + '<div class="dev">'+esc(when)+' · <span style="color:var(--text2);font-weight:600">'+esc(kind)+'</span></div>'
+          + '<div class="loc">'+esc(dev)+(e.ip?' · '+esc(e.ip):'')+'</div>'
+        + '</div>'
+      + '</div>';
+    }).join('');
+  } catch(e){
+    box.innerHTML = '<div style="padding:8px 0;color:var(--text3)">読み込み失敗</div>';
+  }
+}
+
 // Server-side full data export (GDPR-style)
 async function exportFullData(){
   try {

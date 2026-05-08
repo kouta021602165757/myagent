@@ -248,11 +248,28 @@ function newUser(base){
     referral_code:null,
     referred_by:null,
     referral_stats:{ count:0, last_at:null, total_credit_jpy:0 },
+    // Recent login events for security visibility (last 30)
+    // [{at, ip, ua, kind: 'login'|'signup'|'google'}]
+    login_history:[],
     // Google Sheets API tokens — null when not connected.
     // {access_token, refresh_token, expires_at, scope, email}
     google_oauth:null,
     verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
+}
+
+// ── LOGIN HISTORY ─────────────────────────────────────────────
+// Append a login event onto the user record for security visibility.
+function recordLogin(user, req, kind){
+  if(!user) return;
+  user.login_history = Array.isArray(user.login_history) ? user.login_history : [];
+  user.login_history.unshift({
+    at: new Date().toISOString(),
+    kind: kind || 'login',
+    ip: getIP(req) || null,
+    ua: ((req.headers['user-agent'] || '').toString()).slice(0, 200),
+  });
+  if(user.login_history.length > 30) user.login_history = user.login_history.slice(0, 30);
 }
 
 // ── REFERRAL HELPERS ──────────────────────────────────────────
@@ -2877,6 +2894,8 @@ async function handleAPI(req,res,pathname,method,ip){
     }
 
     if(RESEND_KEY)await sendVerifyEmail(user);
+    recordLogin(user, req, 'signup');
+    try{ await DB.save(user); }catch(e){}
     const token=JWT.sign({userId:user.id,email:user.email});
     return jres(res,201,{token,user:safe(user),needsVerify:!!RESEND_KEY});
   }
@@ -2893,6 +2912,8 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     const user=await DB.findBy('email',email.toLowerCase());
     if(!user||!PW.check(password,user.password))return jres(res,401,{error:'メールアドレスまたはパスワードが違います'});
+    recordLogin(user, req, 'login');
+    try{ await DB.save(user); }catch(e){}
     return jres(res,200,{token:JWT.sign({userId:user.id,email:user.email}),user:safe(user)});
   }
 
@@ -2968,8 +2989,10 @@ async function handleAPI(req,res,pathname,method,ip){
         user=newUser({name:gUser.name||gUser.email,email:gUser.email.toLowerCase(),password:'',verified:true,google_id:gUser.id});
         await DB.create(user);
       }else if(!user.google_id){
-        user.google_id=gUser.id;user.verified=true;await DB.save(user);
+        user.google_id=gUser.id;user.verified=true;
       }
+      recordLogin(user, req, 'google');
+      try{ await DB.save(user); }catch(e){}
       const token=JWT.sign({userId:user.id,email:user.email});
       res.writeHead(302,{Location:`/app.html?token=${token}`});res.end();
     }catch(e){
@@ -3964,6 +3987,11 @@ async function handleAPI(req,res,pathname,method,ip){
       new_balance_jpy: user.balance_jpy,
       host_balance_jpy: host.balance_jpy,
     });
+  }
+
+  // ── GET /api/me/login-history ──────────────────────────────
+  if(pathname === '/api/me/login-history' && method === 'GET'){
+    return jres(res,200,{ events: (user.login_history || []).slice(0, 30) });
   }
 
   // ── GET /api/me/referral ───────────────────────────────────

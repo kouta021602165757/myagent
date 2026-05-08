@@ -108,10 +108,29 @@ const DB={
   },
   async create(user){
     if(!USE_SUPA){LDB.add(user);return user;}
-    const r=await sbReq('POST','users','',user);
-    if(r.s>=400){console.error('Supabase create error:',r.d);return user;}
-    const arr=Array.isArray(r.d)?r.d:[r.d];
-    return arr[0]||user;
+    // Auto-retry: drop unknown columns (e.g., new fields added before migration)
+    // so signup never silently fails if a migration is pending. Same defensive
+    // pattern as DB.save.
+    const payload = {...user};
+    for(let attempt=0; attempt<12; attempt++){
+      const r = await sbReq('POST','users','',payload);
+      if(r.s < 400){
+        const arr = Array.isArray(r.d) ? r.d : [r.d];
+        return arr[0] || user;
+      }
+      const msg = (r.d && (r.d.message || r.d.hint)) || '';
+      const m = msg.match(/Could not find the '([\w_]+)' column/);
+      if(m && payload[m[1]] !== undefined){
+        console.warn('[DB.create] dropping unknown column "'+m[1]+'" — run docs/SUPABASE_MIGRATION.sql to add it');
+        delete payload[m[1]];
+        continue;
+      }
+      console.error('[DB.create] Supabase rejected (HTTP '+r.s+'):', JSON.stringify(r.d).slice(0,400));
+      // Don't return the in-memory user (that masked the bug). Throw so the
+      // signup endpoint surfaces a 500 instead of pretending success.
+      throw new Error('Supabase create failed: ' + (msg || 'HTTP '+r.s));
+    }
+    throw new Error('Supabase create failed after column-drop retries');
   },
   async save(user){
     if(!USE_SUPA){LDB.upd(user);return;}
@@ -1969,9 +1988,19 @@ async function joinGroup(){
       headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + tk },
     });
     const d = await r.json();
-    if(d && d.ok){
+    if(r.ok && d && d.ok){
       // Land in the app, opening the joined agent
       location.href = '/app.html?openAgent=' + encodeURIComponent(d.agent_id || '');
+      return;
+    }
+    // 401 with "ユーザーが見つかりません" → stale token from a failed signup.
+    // Clear local state and re-route through auth so they can register cleanly.
+    if(r.status === 401){
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.setItem('pendingJoinToken', TOKEN);
+      alert('ログイン情報が無効です。再度ログインまたは新規登録してください。');
+      location.href = '/auth.html?next=' + encodeURIComponent('/g/' + TOKEN);
       return;
     }
     btn.textContent = (d && d.error) || 'エラー';
@@ -2655,7 +2684,12 @@ async function handleAPI(req,res,pathname,method,ip){
     if(await DB.findBy('email',email.toLowerCase()))return jres(res,409,{error:'このメールアドレスはすでに登録されています'});
     const verify_token=crypto.randomBytes(32).toString('hex');
     const user=newUser({name:name.trim(),email:email.toLowerCase(),password:PW.hash(password),verified:!RESEND_KEY,verify_token});
-    await DB.create(user);
+    try {
+      await DB.create(user);
+    } catch(e) {
+      console.error('[signup] DB.create failed:', e.message);
+      return jres(res,500,{error:'アカウント作成に失敗しました。少し時間をおいて再試行してください。', detail: e.message});
+    }
     if(RESEND_KEY)await sendVerifyEmail(user);
     const token=JWT.sign({userId:user.id,email:user.email});
     return jres(res,201,{token,user:safe(user),needsVerify:!!RESEND_KEY});

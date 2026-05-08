@@ -44,6 +44,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_device_id    text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_device_token text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_device_meta  jsonb;
 
+-- ── モバイル端末登録 (Phase 2) ─────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_devices         jsonb DEFAULT '[]'::jsonb;
+
+-- ── グループチャット (Phase 3) ─────────────────────────────────
+-- 他人がホストするグループへの参加メンバーシップ。
+-- 各エントリ: {host_id, agent_id, joined_at}
+ALTER TABLE users ADD COLUMN IF NOT EXISTS group_memberships      jsonb DEFAULT '[]'::jsonb;
+
 -- ── PostgREST のスキーマキャッシュをリロード ──────────────────────
 NOTIFY pgrst, 'reload schema';
 

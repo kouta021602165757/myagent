@@ -1163,40 +1163,95 @@ input,textarea{font-family:var(--sans);}
 }
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* ── Mobile / Tablet (≤700px) — slide-in drawer for sidebar ── */
 @media(max-width:700px){
   :root{--sb:0px;}
   .layout{grid-template-columns:1fr;}
-  .sb{display:none;}
+  /* Sidebar becomes a slide-in drawer (closed by default) */
+  .sb{
+    position:fixed;top:0;left:0;bottom:0;
+    width:min(82vw, 320px);z-index:1100;
+    transform:translateX(-100%);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 0 0 0 rgba(0,0,0,0);
+  }
+  .sb.mobile-open{
+    transform:translateX(0);
+    box-shadow:8px 0 32px rgba(0,0,0,.18);
+  }
+  /* Backdrop appears when sidebar is open */
+  .sb-backdrop{
+    position:fixed;inset:0;background:rgba(9,9,11,.4);
+    z-index:1099;opacity:0;pointer-events:none;
+    transition:opacity .2s;
+  }
+  .sb-backdrop.show{opacity:1;pointer-events:auto;}
+  /* Hamburger inside chat header (hidden on desktop) */
+  .mobile-hamburger{
+    display:flex;align-items:center;justify-content:center;
+    width:34px;height:34px;border-radius:9px;
+    background:transparent;border:0;cursor:pointer;
+    color:var(--text);font-size:18px;font-family:inherit;flex-shrink:0;
+    margin-right:4px;
+  }
+  .mobile-hamburger:hover{background:rgba(9,9,11,.05);}
+  /* Show same hamburger on the empty (no-chat-open) screen */
+  .mobile-hamburger-empty{
+    position:fixed;top:14px;left:14px;z-index:50;
+    width:38px;height:38px;border-radius:10px;
+    background:#fff;border:.5px solid var(--wire2);
+    box-shadow:0 4px 10px rgba(9,9,11,.06);
+    color:var(--text);font-size:18px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-family:inherit;
+  }
+  /* Empty state: tighter spacing on mobile */
+  .empty{padding:24px 18px;}
+  .empty-glyph{font-size:48px;}
+  .empty h2{font-size:22px;}
+  .empty p{font-size:13.5px;}
+  .empty-actions{flex-direction:column;width:100%;max-width:280px;}
+  .empty-actions .btn-volt,
+  .empty-actions .btn-tpl{width:100%;padding:11px 18px;font-size:13.5px;}
+
+  /* Modals: full-width on mobile + comfortable padding */
+  .wizard{width:100%;max-width:calc(100vw - 16px);height:auto;max-height:calc(100vh - 24px);}
+  .wiz-body{padding:16px 18px;}
+  .wiz-top{padding:14px 18px 12px;}
+
+  /* Chat composer + msgs need more vertical room */
+  .chat-foot{padding:6px 14px 12px;}
+  .msgs-inner{padding:10px 4px;gap:10px;}
+  .ct-icon{width:36px;height:36px;border-radius:10px;font-size:17px;}
+  .ct-name{font-size:14px;}
+  .pill{font-size:9.5px;padding:1px 7px;}
+
+  /* Hide the old desktop-style action buttons that were duplicated below */
+  .sb-new-row{padding:10px 12px;}
 }
 
-/* ── Mobile ─────────────────────────────────────────── */
-@media(max-width:600px){
-  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  .sidebar{
-    width:100%;height:auto;position:fixed;top:0;left:0;right:0;z-index:100;
-    flex-direction:row;padding:8px 12px;border-right:none;border-bottom:1px solid rgba(255,255,255,.08);
-    background:var(--cream);
-  }
-  .logo-area{flex:1;margin-bottom:0}
-  .logo-area .logotext{display:none}
-  .sb-new{flex:1;max-width:160px;padding:8px 12px;font-size:13px}
-  .agent-list{display:none}
-  .balance-area{display:none}
-  .logout-btn{display:none}
-  .main-area{margin-top:56px;height:calc(100vh - 56px)}
-  .empty-wrap{padding:24px 16px}
-  .empty-wrap h2{font-size:24px}
-  .wizard-modal{padding:16px}
-  .wizard-panel{padding:20px 16px}
-  .av-grid{grid-template-columns:repeat(6,1fr);gap:8px}
+/* ── Tightening at ≤480px (small phones) ──────────────── */
+@media(max-width:480px){
+  .empty-glyph{font-size:42px;}
+  .empty h2{font-size:20px;}
+  .ct-act{width:32px;height:32px;font-size:13px;}
+  .av-grid{grid-template-columns:repeat(6,1fr);gap:6px}
   .sk-grid{grid-template-columns:repeat(2,1fr);gap:8px}
-  .sk-card{padding:10px 8px;font-size:12px}
-  .preset-grid{grid-template-columns:1fr;max-height:320px;}
-  .chat-input-wrap{padding:8px 12px}
-  #msgInput{font-size:14px}
-  .chat-messages{padding:12px}
-  .msg{max-width:90%}
-  .agent-header{padding:12px 16px}
+  .preset-grid{grid-template-columns:1fr;max-height:60vh;}
+  /* Group settings modal: ensure form rows stack cleanly */
+  .grpset-row{flex-direction:column;align-items:stretch;gap:6px;}
+  .grpset-lbl{width:auto;}
+  /* Invite modal: stack QR + content vertically (was a 2-column grid before) */
+  #grpInviteOverlay [style*="grid-template-columns:160px 1fr"]{
+    grid-template-columns:1fr !important;
+  }
+  /* Reactions: a touch smaller */
+  .reaction{padding:1px 7px 1px 5px;font-size:10.5px;}
+  .reaction .r-em{font-size:12px;}
+}
+
+/* On desktop (>700px) hide mobile-only chrome */
+@media(min-width:701px){
+  .mobile-hamburger,.mobile-hamburger-empty,.sb-backdrop{display:none !important;}
 }
 
 .stab-btn{flex:1;padding:11px 4px;background:none;border:none;border-bottom:2px solid transparent;color:#7272a0;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap}
@@ -1591,6 +1646,7 @@ body{color:#f0f0f8;}
 
   <!-- ── MAIN ───────────────────────────────────────────── -->
   <main class="main">
+    <button class="mobile-hamburger-empty" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>
     <div class="empty" id="emptyWrap">
       <div class="empty-glyph">🤖</div>
       <h2 id="i18n-teamTitle">チームを作ろう</h2>
@@ -1601,6 +1657,8 @@ body{color:#f0f0f8;}
         <button class="btn-back btn-tpl" onclick="openAgentStore()">🌐 Agent Store</button>
       </div>
     </div>
+    <!-- Mobile sidebar backdrop -->
+    <div class="sb-backdrop" id="sbBackdrop" onclick="_toggleMobileSidebar(false)"></div>
     <div class="chat" id="chatWrap" style="display:none">
       <div class="chat-top" id="chatTop"></div>
 
@@ -4475,6 +4533,42 @@ function updateBalance(){
 var _sbTab = 'talks';
 var _joinedGroups = [];
 
+// ── Mobile sidebar drawer ──────────────────────────────────
+// On ≤700px viewports, the sidebar is hidden by default and slides in when
+// the hamburger is tapped. Auto-closes on agent select / overlay click / Esc.
+function _toggleMobileSidebar(open){
+  const sb = document.querySelector('.sb');
+  const bd = document.getElementById('sbBackdrop');
+  if(!sb || !bd) return;
+  // If `open` is undefined → toggle. Else apply explicit state.
+  const wantOpen = (open === undefined) ? !sb.classList.contains('mobile-open') : !!open;
+  if(wantOpen){
+    sb.classList.add('mobile-open');
+    bd.classList.add('show');
+  } else {
+    sb.classList.remove('mobile-open');
+    bd.classList.remove('show');
+  }
+}
+// Close drawer when an agent item is clicked (mobile)
+document.addEventListener('click', (ev) => {
+  if(window.innerWidth > 700) return;
+  const item = ev.target.closest && ev.target.closest('.ag-item');
+  if(item){
+    setTimeout(() => _toggleMobileSidebar(false), 50);
+  }
+});
+// Esc closes mobile drawer
+document.addEventListener('keydown', (ev) => {
+  if(ev.key === 'Escape' && document.querySelector('.sb.mobile-open')){
+    _toggleMobileSidebar(false);
+  }
+});
+// On viewport resize past breakpoint, ensure drawer state is consistent
+window.addEventListener('resize', () => {
+  if(window.innerWidth > 700){ _toggleMobileSidebar(false); }
+});
+
 // ── Group chat live updates ────────────────────────────────────
 // Polls /api/agents/:id/members for the active group and patches in any new
 // history entries so other members see what's been said in near real time.
@@ -4918,6 +5012,7 @@ async function openAgent(id){
     }
   }
   document.getElementById('chatTop').innerHTML=
+    '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+
     '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
       '<div class="ct-name"><span class="live-status"></span>'+esc(ag.name)+'</div>'+

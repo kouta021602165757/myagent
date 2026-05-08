@@ -77,6 +77,90 @@ input,textarea{font-family:var(--sans);}
 .sb-new-tpl{background:transparent;color:var(--text2);border:1px solid var(--wire2);}
 .sb-new-tpl:hover{background:rgba(251,146,60,.08);color:var(--peach-dark);border-color:rgba(251,146,60,.3);box-shadow:none;}
 
+/* Plus dropdown menu (single ⊕ button replaces 3 separate buttons) */
+.sb-plus-menu{
+  position:absolute;top:42px;left:0;right:0;z-index:50;
+  background:#fff;border-radius:12px;
+  box-shadow:0 16px 36px rgba(9,9,11,.14),0 4px 10px rgba(9,9,11,.05);
+  border:.5px solid var(--wire2);padding:5px;
+}
+.sb-plus-menu::before{
+  content:'';position:absolute;top:-7px;left:50%;transform:translateX(-50%) rotate(45deg);
+  width:12px;height:12px;background:#fff;border-left:.5px solid var(--wire2);border-top:.5px solid var(--wire2);
+}
+.sb-pm-item{
+  display:flex;align-items:flex-start;gap:9px;padding:8px 10px;
+  border-radius:8px;cursor:pointer;border:0;background:transparent;
+  width:100%;font-family:inherit;text-align:left;
+  transition:background .12s;
+}
+.sb-pm-item:hover{background:rgba(9,9,11,.04);}
+.sb-pm-ic{
+  width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;
+  box-shadow:0 2px 4px rgba(9,9,11,.1);
+}
+.sb-pm-ic.peach{background:linear-gradient(135deg,#fb923c,#ea580c);}
+.sb-pm-ic.indigo{background:linear-gradient(135deg,#6366f1,#4338ca);}
+.sb-pm-ic.violet{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
+.sb-pm-ic.green{background:linear-gradient(135deg,#10b981,#047857);}
+.sb-pm-body{flex:1;min-width:0;}
+.sb-pm-h{font-size:12.5px;font-weight:700;color:var(--text);letter-spacing:-.005em;}
+.sb-pm-d{font-size:10.5px;color:var(--text3);margin-top:1px;line-height:1.45;}
+.sb-pm-div{height:.5px;background:var(--wire);margin:4px 6px;}
+
+/* Talks/Agents tab strip */
+.sb-tabs{
+  display:flex;gap:3px;margin:6px 12px 0;padding:3px;
+  background:rgba(9,9,11,.04);border-radius:9px;
+}
+.sb-tab{
+  flex:1;padding:6px 8px;border-radius:7px;border:0;cursor:pointer;
+  background:transparent;font-size:11.5px;font-weight:600;color:var(--text3);
+  font-family:inherit;letter-spacing:-.005em;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  transition:background .15s, color .15s;
+}
+.sb-tab:hover{color:var(--text2);}
+.sb-tab.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(9,9,11,.06);}
+/* When in Agents tab, show "create" trio at top of list */
+.ag-create-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;
+  padding:10px 12px 6px;
+}
+.ag-create{
+  background:#fff;border:.5px solid var(--wire2);border-radius:9px;
+  padding:8px 4px;cursor:pointer;text-align:center;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:transform .12s, border-color .12s;
+}
+.ag-create:hover{transform:translateY(-1px);border-color:var(--peach);}
+.ag-create .ic{width:26px;height:26px;border-radius:8px;color:#fff;font-size:12px;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(9,9,11,.1);}
+.ag-create .ic.peach{background:linear-gradient(135deg,#fb923c,#ea580c);}
+.ag-create .ic.indigo{background:linear-gradient(135deg,#6366f1,#4338ca);}
+.ag-create .ic.green{background:linear-gradient(135deg,#10b981,#047857);}
+.ag-create .lbl{font-size:9.5px;font-weight:700;color:var(--text);letter-spacing:-.005em;}
+
+/* Group avatar stack in sidebar items */
+.ag-stack{
+  position:relative;width:28px;height:24px;flex-shrink:0;
+}
+.ag-stack > *{
+  position:absolute;width:18px;height:18px;border-radius:5px;
+  border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:8px;font-weight:700;background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+}
+.ag-stack > *:nth-child(1){left:0;top:1px;z-index:3;}
+.ag-stack > *:nth-child(2){left:7px;top:1px;z-index:2;}
+.ag-stack > *:nth-child(3){left:14px;top:1px;z-index:1;background:linear-gradient(135deg,#fb923c,#ea580c);}
+.ag-pill{
+  display:inline-block;font-size:8.5px;font-weight:800;
+  padding:1px 5px;border-radius:4px;letter-spacing:.04em;
+  background:rgba(251,146,60,.14);color:var(--peach-dark);margin-left:5px;
+}
+.ag-pill.invitee{background:rgba(99,102,241,.14);color:#4f46e5;}
+
 /* empty state action buttons */
 .empty-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
 .empty-actions .btn-volt{padding:13px 22px;border-radius:12px;font-size:14px;font-weight:700;}
@@ -1361,21 +1445,49 @@ body{color:#f0f0f8;}
   </div>
 </a>
     </div>
-    <div class="sb-new-row">
-      <button class="sb-new" onclick="if(!token){showToast('ログインが必要です','ng');return;}openNewAgent()">
+    <div class="sb-new-row" style="position:relative">
+      <button class="sb-new" onclick="if(!token){showToast('ログインが必要です','ng');return;}toggleSbPlusMenu(event)" id="sbPlusBtn">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        <span id="i18n-newAgent">新規エージェント</span>
+        <span>新規</span>
+        <span style="margin-left:auto;font-size:10px;opacity:.7">▾</span>
       </button>
-      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openTemplate()">
-        <span style="font-size:13px">📋</span>
-        <span id="i18n-newTpl">テンプレートエージェント</span>
-      </button>
-      <button class="sb-new sb-new-tpl" onclick="if(!token){showToast('ログインが必要です','ng');return;}openAgentStore()">
-        <span style="font-size:13px">🌐</span>
-        <span id="i18n-newMarket">Agent Store</span>
-      </button>
+      <div class="sb-plus-menu" id="sbPlusMenu" style="display:none" onclick="event.stopPropagation()">
+        <button class="sb-pm-item" onclick="closeSbPlusMenu();openCreateGroup()">
+          <div class="sb-pm-ic peach">🤝</div>
+          <div class="sb-pm-body">
+            <div class="sb-pm-h">グループを作成</div>
+            <div class="sb-pm-d">仲間を招待して AI と一緒に話す</div>
+          </div>
+        </button>
+        <button class="sb-pm-item" onclick="closeSbPlusMenu();openNewAgent()">
+          <div class="sb-pm-ic indigo">💬</div>
+          <div class="sb-pm-body">
+            <div class="sb-pm-h">AI と DM を始める</div>
+            <div class="sb-pm-d">新しい AI を作って 1対1 で話す</div>
+          </div>
+        </button>
+        <div class="sb-pm-div"></div>
+        <button class="sb-pm-item" onclick="closeSbPlusMenu();openTemplate()">
+          <div class="sb-pm-ic violet">📋</div>
+          <div class="sb-pm-body">
+            <div class="sb-pm-h">テンプレートから作る</div>
+            <div class="sb-pm-d">プリセットを選んで素早く作成</div>
+          </div>
+        </button>
+        <button class="sb-pm-item" onclick="closeSbPlusMenu();openAgentStore()">
+          <div class="sb-pm-ic green">🏪</div>
+          <div class="sb-pm-body">
+            <div class="sb-pm-h">Agent Store で探す</div>
+            <div class="sb-pm-d">他のクリエイターの AI を試す</div>
+          </div>
+        </button>
+      </div>
     </div>
-    <div class="sb-lbl" id="i18n-teamLabel">チーム</div>
+    <div class="sb-tabs">
+      <button class="sb-tab active" data-tab="talks" onclick="setSbTab('talks')">💬 トーク</button>
+      <button class="sb-tab" data-tab="agents" onclick="setSbTab('agents')">🤖 Agents</button>
+    </div>
+    <div class="sb-lbl" id="i18n-teamLabel" style="display:none">チーム</div>
     <div class="ag-list" id="agList"></div>
     <div class="sb-bot">
       <div class="balance-card">
@@ -2416,6 +2528,122 @@ body{color:#f0f0f8;}
     </div>
   </div>
 </div>
+
+<!-- ══ GROUP MEMBER PANEL ════════════════════════════════════ -->
+<div class="overlay" id="grpMemberOverlay">
+  <div class="wizard" style="max-width:420px">
+    <div class="wiz-top">
+      <div class="wiz-title">👥 メンバー — <span id="grpMemberTitle"></span></div>
+      <button class="wiz-close" onclick="closeMemberPanel()"><svg width="12" height="12" viewbox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="wiz-body" style="padding:14px 20px 18px">
+      <div id="grpMemberList" style="display:flex;flex-direction:column;max-height:380px;overflow-y:auto;margin-bottom:14px"></div>
+      <div id="grpMemberFoot" style="display:flex;gap:8px"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+.mem-row{display:flex;align-items:center;gap:11px;padding:8px 4px;border-bottom:.5px solid var(--wire);}
+.mem-row:last-child{border-bottom:0;}
+.mem-av{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;box-shadow:0 2px 4px rgba(9,9,11,.1);}
+.mem-meta{flex:1;min-width:0;}
+.mem-name{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px;}
+.mem-sub{font-size:10.5px;color:var(--text3);margin-top:1px;}
+.mem-rm{background:rgba(239,68,68,.08);border:0;border-radius:50%;width:24px;height:24px;color:#dc2626;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:inherit;}
+.mem-rm:hover{background:rgba(239,68,68,.18);}
+
+.sys-row{display:flex;justify-content:center;margin:10px 0;}
+.sys-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;
+  background:rgba(99,102,241,.08);border:.5px solid rgba(99,102,241,.18);
+  font-size:11px;font-weight:600;color:#4338ca;letter-spacing:-.005em;
+}
+.mention.ai{
+  display:inline-flex;align-items:center;
+  background:rgba(251,146,60,.14);color:var(--peach-dark);
+  padding:0 5px;border-radius:4px;font-weight:700;
+}
+.m.u.other .m-av{box-shadow:0 2px 5px rgba(9,9,11,.12);}
+</style>
+
+<!-- ══ GROUP CREATE / INVITE MODALS ══════════════════════════ -->
+<div class="overlay" id="grpCreateOverlay">
+  <div class="wizard" style="max-width:480px">
+    <div class="wiz-top">
+      <div class="wiz-title">🤝 グループを作成</div>
+      <button class="wiz-close" onclick="closeCreateGroup()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="wiz-body" style="padding:18px 24px 24px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.55">
+        グループに常駐させる AI エージェントを選んでください。<br>
+        <span style="color:var(--text3);font-size:12px">→ 招待リンクが発行され、仲間を招待できます</span>
+      </div>
+      <div id="grpCreateList" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto"></div>
+      <div style="margin-top:14px;padding:11px 13px;background:rgba(99,102,241,.06);border:.5px solid rgba(99,102,241,.18);border-radius:9px;font-size:11.5px;color:#4338ca;line-height:1.5">
+        💡 まだ AI を持っていない場合は、先に <b>「AI と DM を始める」</b> でエージェントを作ってください
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="grpInviteOverlay">
+  <div class="wizard" style="max-width:520px">
+    <div class="wiz-top">
+      <div class="wiz-title">📨 メンバーを招待</div>
+      <button class="wiz-close" onclick="closeInviteModal()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="wiz-body" style="padding:18px 24px 24px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase;font-weight:700">グループ</div>
+      <div id="grpInviteName" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;letter-spacing:-.012em"></div>
+
+      <div style="display:grid;grid-template-columns:160px 1fr;gap:18px;align-items:start">
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:8px;text-align:center">
+          <img id="grpInviteQR" style="width:144px;height:144px;display:block;margin:0 auto" alt="QR">
+          <div style="font-size:9.5px;color:var(--text3);margin-top:6px;font-weight:600">QR で読み取り</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">招待リンク</div>
+          <div style="display:flex;align-items:center;gap:6px;background:rgba(9,9,11,.04);padding:8px 10px;border-radius:8px;margin-bottom:11px">
+            <span id="grpInviteUrl" style="flex:1;font-size:11.5px;font-family:'JetBrains Mono','SF Mono',monospace;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <button id="grpShareCopy" style="background:var(--ink);color:#fff;border:0;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em">コピー</button>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">他のチャネル</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:11px">
+            <button id="grpShareLine" class="btn-back" style="font-size:11px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">💬</span>LINE</button>
+            <button id="grpShareMail" class="btn-back" style="font-size:11px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">📧</span>メール</button>
+            <button id="grpShareSms" class="btn-back" style="font-size:11px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">📱</span>SMS</button>
+          </div>
+
+          <div style="background:rgba(251,146,60,.06);border:.5px solid rgba(251,146,60,.18);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--peach-dark);line-height:1.5;margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between"><span>有効期限</span><span id="grpInviteExp" style="font-weight:700"></span></div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px"><span>最大人数</span><span id="grpInviteMax" style="font-weight:700"></span></div>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.5">
+            💰 招待された人は <b style="color:var(--text)">無料</b> でこのグループを使えます<br>
+            AI 利用料はあなた (ホスト) の残高から消費
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.grp-pick{
+  display:flex;align-items:center;gap:11px;padding:9px 12px;
+  border-radius:9px;border:.5px solid var(--wire2);background:#fff;cursor:pointer;
+  font-family:inherit;text-align:left;width:100%;
+  transition:transform .12s, border-color .12s;
+}
+.grp-pick:hover{transform:translateY(-1px);border-color:var(--peach);background:rgba(251,146,60,.04);}
+.grp-pick-av{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff}
+.grp-pick-body{flex:1;min-width:0;}
+.grp-pick-nm{font-size:12.5px;font-weight:700;color:var(--text);}
+.grp-pick-d{font-size:10.5px;color:var(--text3);margin-top:1px;}
+</style>
 
 <!-- ══ CREATOR PROFILE MODAL ══════════════════════════════ -->
 <div class="overlay" id="creatorProfileOverlay">
@@ -3871,6 +4099,17 @@ document.addEventListener('DOMContentLoaded',async()=>{
     }catch(e){}
     const ra=await api('GET','/api/agents');
     agents=ra.agents||[];
+    // Fetch joined groups (where I'm an invitee, hosted by others)
+    try { await fetchJoinedGroups(); } catch(e){ console.warn('[groups] fetch failed:', e.message); }
+    // If URL has ?openAgent=ag_xxx (e.g., from invite redirect), focus that one
+    try {
+      var qsOpen = new URLSearchParams(location.search).get('openAgent');
+      if(qsOpen){
+        history.replaceState({}, '', location.pathname);
+        // Defer until after agent list renders
+        setTimeout(() => { try { openAgent(qsOpen); } catch(e){} }, 200);
+      }
+    } catch(e){}
     // Show email verify banner if not verified
     if(!me.verified) showVerifyBanner();
     // Show one-time Sheets onboarding hint to users who have agents but haven't connected Sheets.
@@ -3974,18 +4213,115 @@ function updateBalance(){
   if(usageEl) usageEl.textContent = (me?.usage_count||0) + '回利用済み';
 }
 
+// Sidebar state: which tab is active, and the joined-groups list (those owned
+// by other users where I'm a member). _joinedGroups is populated by fetchGroups().
+var _sbTab = 'talks';
+var _joinedGroups = [];
+
+function setSbTab(tab){
+  _sbTab = (tab === 'agents') ? 'agents' : 'talks';
+  document.querySelectorAll('.sb-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === _sbTab);
+  });
+  renderAgList();
+}
+
+function toggleSbPlusMenu(ev){
+  if(ev) ev.stopPropagation();
+  var menu = document.getElementById('sbPlusMenu');
+  if(!menu) return;
+  var open = menu.style.display !== 'none';
+  menu.style.display = open ? 'none' : 'block';
+  // Click-outside to close
+  if(!open){
+    setTimeout(() => {
+      document.addEventListener('click', closeSbPlusMenu, { once: true });
+    }, 0);
+  }
+}
+function closeSbPlusMenu(){
+  var menu = document.getElementById('sbPlusMenu');
+  if(menu) menu.style.display = 'none';
+}
+
+// Fetch groups the user joined (hosted by other users). The endpoint also
+// includes hosted groups but we already have those in `agents`. We dedupe by id.
+async function fetchJoinedGroups(){
+  try{
+    const r = await api('GET','/api/groups');
+    const all = (r && r.groups) || [];
+    _joinedGroups = all.filter(g => !g.is_host);
+  }catch(e){ _joinedGroups = []; }
+}
+
 function renderAgList(){
-  document.getElementById('agList').innerHTML=agents.map(a=>`
-    <div class="ag-item${a.id===activeId?' on':''}" id="ai-${a.id}" data-agid="${esc(a.id)}" draggable="true" onclick="openAgent('${a.id}')" ondragstart="agDragStart(event)" ondragover="agDragOver(event)" ondragleave="agDragLeave(event)" ondrop="agDrop(event)" ondragend="agDragEnd(event)">
-      <div class="ag-handle" title="ドラッグして並び替え" aria-hidden="true">⋮⋮</div>
-      <div class="ag-icon">${_avHTML(a.avatar)}</div>
-      <div class="ag-meta">
-        <div class="ag-name">${esc(a.name)}</div>
-        <div class="ag-skill">${a.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')}</div>
-      </div>
-      ${a.chrome_enabled?'<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>':''}${a.sheets_enabled?'<span title="Google スプレッドシート連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-sheets">📊</span>':''}${a.extension_enabled?'<span title="ブラウザ拡張連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="browser-extension">🧩</span>':''}
-      <div class="live-dot"></div>
-    </div>`).join('');
+  const owned = agents || [];
+  const isAgentsTab = (_sbTab === 'agents');
+  let html = '';
+
+  if(isAgentsTab){
+    // 「Agents」タブ: 作る (3 ボタン) + 自分の AI 一覧
+    html += '<div class="ag-create-row">'
+      + '<button class="ag-create" onclick="openNewAgent()" title="新規作成">'
+        + '<div class="ic peach">+</div><div class="lbl">新規</div></button>'
+      + '<button class="ag-create" onclick="openTemplate()" title="テンプレート">'
+        + '<div class="ic indigo">📋</div><div class="lbl">テンプレ</div></button>'
+      + '<button class="ag-create" onclick="openAgentStore()" title="Agent Store">'
+        + '<div class="ic green">🏪</div><div class="lbl">Store</div></button>'
+      + '</div>';
+    if(owned.length === 0){
+      html += '<div style="padding:20px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.55">まだエージェントがいません<br>「新規」ボタンで作成しましょう</div>';
+    } else {
+      html += owned.map(a => _renderAgItem(a, false)).join('');
+    }
+  } else {
+    // 「Talks」タブ: 自分のエージェント (DM/グループ) + 参加中のグループ
+    if(owned.length === 0 && _joinedGroups.length === 0){
+      html += '<div style="padding:32px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.55">'
+        + 'まだトークがありません<br>'
+        + '<button class="btn-volt" onclick="toggleSbPlusMenu(event)" style="margin-top:14px;font-size:11px;padding:7px 14px">＋ 新規 ▾</button></div>';
+    } else {
+      html += owned.map(a => _renderAgItem(a, false)).join('');
+      // Joined groups (where user is invitee) — render after own list
+      _joinedGroups.forEach(g => {
+        html += _renderAgItem(g, true);
+      });
+    }
+  }
+  document.getElementById('agList').innerHTML = html;
+}
+
+function _renderAgItem(a, isJoined){
+  const id = esc(a.id);
+  const onActive = (a.id === activeId) ? ' on' : '';
+  const isGroup = !!a.is_group;
+  const isHostedGroup = isGroup && !isJoined;
+  const stackHTML = isGroup
+    ? `<div class="ag-stack"><div>${esc((a.host_name||'?').charAt(0).toUpperCase())}</div><div>+</div><div>${(a.avatar||'🤖').toString().startsWith('data:image/')?'🤖':esc(String(a.avatar||'🤖'))}</div></div>`
+    : `<div class="ag-icon">${_avHTML(a.avatar)}</div>`;
+  const skills = (a.skills || []).map(s => SKILLS.find(x=>x.id===s)?.name||s).join(' · ');
+  const sublabel = isGroup
+    ? `${a.member_count || 0} 名 · ${isJoined ? '参加中' : 'ホスト'}`
+    : (skills || 'AI');
+  const tags =
+    (a.chrome_enabled ? '<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>' : '')
+    + (a.sheets_enabled ? '<span title="Google スプレッドシート連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-sheets">📊</span>' : '')
+    + (a.extension_enabled ? '<span title="ブラウザ拡張連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="browser-extension">🧩</span>' : '');
+  const grpTag = isJoined
+    ? '<span class="ag-pill invitee" title="参加中のグループ">GR</span>'
+    : (isHostedGroup ? '<span class="ag-pill" title="ホストしているグループ">GR</span>' : '');
+  // Joined groups don't support drag-reorder
+  const dragAttrs = isJoined ? '' : 'draggable="true" ondragstart="agDragStart(event)" ondragover="agDragOver(event)" ondragleave="agDragLeave(event)" ondrop="agDrop(event)" ondragend="agDragEnd(event)"';
+  return `<div class="ag-item${onActive}" id="ai-${id}" data-agid="${id}" ${dragAttrs} onclick="openAgent('${id}')">
+    ${isJoined ? '' : '<div class="ag-handle" title="ドラッグして並び替え" aria-hidden="true">⋮⋮</div>'}
+    ${stackHTML}
+    <div class="ag-meta">
+      <div class="ag-name">${esc(a.name)}${grpTag}</div>
+      <div class="ag-skill">${esc(sublabel)}</div>
+    </div>
+    ${tags}
+    <div class="live-dot"></div>
+  </div>`;
 }
 
 /* ── Drag-and-drop reorder ─────────────────────────────────── */
@@ -4033,18 +4369,65 @@ function agDragEnd(ev){
 }
 
 /* ── Open agent / chat ─────────────────────────────── */
-function openAgent(id){
-  const ag=agents.find(a=>a.id===id); if(!ag)return;
+async function openAgent(id){
+  let ag = agents.find(a=>a.id===id);
+  // If not in own list, look in joined groups (fetch full record from host)
+  let joined = null;
+  if(!ag){
+    joined = _joinedGroups.find(g => g.id === id);
+    if(!joined) return;
+    // Fetch full member list to populate the panel; the chat content itself
+    // (history) will be appended as messages flow.
+    try {
+      const m = await api('GET', '/api/agents/' + id + '/members');
+      ag = {
+        id: id,
+        name: joined.name,
+        avatar: joined.avatar,
+        skills: ['comms'],
+        is_group: true,
+        host_id: joined.host_id,
+        members: m.members || [],
+        history: [], // joined-group history loaded lazily
+        _is_joined_group: true,
+      };
+      // Cache it locally so subsequent lookups by id work
+      if(!agents.find(a => a.id === id)){
+        agents = agents.concat([ag]);
+      }
+    } catch(e){
+      showToast((isJa?'グループ読み込み失敗: ':'Group load failed: ')+e.message, 'ng');
+      return;
+    }
+  }
   activeId=id;
   document.getElementById('emptyWrap').style.display='none';
   document.getElementById('chatWrap').style.display='flex';
   document.querySelectorAll('.ag-item').forEach(el=>el.classList.remove('on'));
   document.getElementById('ai-'+id)?.classList.add('on');
 
-  const sns=ag.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
+  const isGroup = !!ag.is_group;
+  const memberCount = (ag.members||[]).length;
+  const sns=(ag.skills||[]).map(s=>SKILLS.find(x=>x.id===s)?.name||s);
   var topPills = sns.map(n=>`<span class="pill">${n}</span>`).join('');
   if(ag.chrome_enabled){
     topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+(isJa?'Google Chrome 連携 ON':'Google Chrome integration ON')+'">🌐 Google Chrome</span>';
+  }
+  if(isGroup){
+    topPills += '<span class="pill" style="background:rgba(99,102,241,.12);color:#4f46e5;border-color:rgba(99,102,241,.3)">🤝 グループ · '+memberCount+'名</span>';
+  }
+  // Action buttons differ for groups (host shows ＋招待, member shows メンバー)
+  const isHost = isGroup && ag.host_id === me?.id;
+  let actsHTML = '';
+  if(isGroup){
+    actsHTML += '<button class="ct-act primary" onclick="openInviteModal(\''+ag.id+'\')" title="メンバーを招待" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border-color:transparent">＋ 招待</button>';
+    actsHTML += '<button class="ct-act" onclick="openMemberPanel(\''+ag.id+'\')" title="メンバー">👥 '+memberCount+'</button>';
+  } else {
+    actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
+  }
+  actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
+  if(!ag._is_joined_group){
+    actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="'+(isJa?'編集':'Edit')+'">⚙</button>';
   }
   document.getElementById('chatTop').innerHTML=
     '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
@@ -4052,11 +4435,7 @@ function openAgent(id){
       '<div class="ct-name"><span class="live-status"></span>'+esc(ag.name)+'</div>'+
       '<div class="ct-pills">'+topPills+'</div>'+
     '</div>'+
-    '<div class="ct-actions">'+
-      '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>'+
-      '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>'+
-      '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="'+(isJa?'編集':'Edit')+'">⚙</button>'+
-    '</div>';
+    '<div class="ct-actions">'+ actsHTML +'</div>';
   // Hide share card whenever agent changes
   var sc=document.getElementById('shareCard'); if(sc) sc.style.display='none';
   // Reflect Chrome tool button state in composer
@@ -4142,7 +4521,11 @@ function renderMsgs(ag){
     return;
   }
   inner.innerHTML=ag.history.map(function(m,i){
-    return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i,m.tool_log);
+    // System messages (e.g., "X さんが参加しました") render as a centered pill
+    if(m.role === 'system'){
+      return '<div class="sys-row"><span class="sys-pill">✨ '+esc(m.content||'')+'</span></div>';
+    }
+    return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i,m.tool_log,m);
   }).join('');
   _scrollMsgsToEnd();
 }
@@ -4187,11 +4570,22 @@ function _renderToolLog(log){
   return '<details class="tlog" open><summary>'+head+'</summary><div class="tlog-body">'+rows+'</div></details>';
 }
 
-function _renderMsg(role, ag, content, time, images, idx, tool_log){
+function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const isU = role==='user';
-  const av = isU ? esc((me?(me.name||me.email||'?').charAt(0).toUpperCase():'?')) : _avHTML(ag.avatar);
-  const name = isU ? (isJa?'あなた':'You') : (ag.name||'');
-  const cls = 'm '+(isU?'u':'a');
+  const isGroup = !!(ag && ag.is_group);
+  // For group chats, show speaker's actual name (not just "あなた")
+  const speakerName = (raw && raw.user_name) ? raw.user_name : '';
+  const speakerInitial = (raw && raw.user_avatar) ? raw.user_avatar : null;
+  const isMyMsg = isU && (!raw || !raw.user_id || raw.user_id === me?.id);
+  const av = isU
+    ? (speakerInitial || esc((me?(me.name||me.email||'?').charAt(0).toUpperCase():'?')))
+    : _avHTML(ag.avatar);
+  const name = isU
+    ? (isGroup && speakerName ? speakerName : (isJa?'あなた':'You'))
+    : (ag.name||'');
+  // Color code by user_id so each speaker has a stable hue (deterministic)
+  const userColor = isU && raw && raw.user_id ? _userColor(raw.user_id) : null;
+  const cls = 'm '+(isU?(isMyMsg?'u':'u other'):'a');
   let imgHtml='';
   if(images && images.length){
     imgHtml = images.map(function(att){
@@ -4223,17 +4617,97 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log){
              '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>';
     }
   }
+  // In groups, highlight @AI / @name mentions in the body.
+  let bodyMarkup = body;
+  if(isU && isGroup && bodyMarkup){
+    bodyMarkup = bodyMarkup.replace(/(@AI|＠AI|@ai|＠ai)\b/g, '<span class="mention ai">$1</span>');
+  }
+  const avStyle = userColor ? ' style="background:'+userColor+'"' : '';
   return '<div class="'+cls+'" data-idx="'+idx+'">'+
     '<div class="m-meta">'+
-      '<div class="m-av'+(isU?' user':'')+'">'+av+'</div>'+
+      '<div class="m-av'+(isU?' user':'')+'"'+avStyle+'>'+av+'</div>'+
       '<span class="m-name">'+esc(name)+'</span>'+
       '<span class="m-time">'+esc(time||'')+'</span>'+
     '</div>'+
     imgHtml+
     tlogHtml+
-    (body?'<div class="m-body">'+body+'</div>':'')+
+    (bodyMarkup?'<div class="m-body">'+bodyMarkup+'</div>':'')+
     (acts?'<div class="m-acts">'+acts+'</div>':'')+
   '</div>';
+}
+
+// Deterministic color hue from user_id so each speaker always renders the
+// same avatar gradient. Returns a CSS gradient string.
+function _userColor(uid){
+  if(!uid) return null;
+  let h = 0;
+  for(let i=0;i<uid.length;i++) h = (h*31 + uid.charCodeAt(i)) | 0;
+  const hue = Math.abs(h) % 360;
+  return 'linear-gradient(135deg, hsl('+hue+',70%,55%), hsl('+(hue+30)%360+',70%,40%))';
+}
+
+// Member panel — slide-out drawer showing all members + invite/remove actions.
+async function openMemberPanel(agId){
+  const ag = agents.find(a => a.id === agId);
+  if(!ag) return;
+  let members = ag.members || [];
+  let token = ag.invite_token || null;
+  try {
+    const m = await api('GET', '/api/agents/' + agId + '/members');
+    members = m.members || [];
+    token = m.invite_token || null;
+    ag.members = members;
+  } catch(e){}
+  const isHost = ag.host_id === me?.id;
+  const overlay = document.getElementById('grpMemberOverlay');
+  if(!overlay) return;
+  document.getElementById('grpMemberTitle').textContent = ag.name;
+  const list = document.getElementById('grpMemberList');
+  list.innerHTML = members.map(m => {
+    const isMe = m.user_id === me?.id;
+    const initial = (m.name||'?').charAt(0).toUpperCase();
+    const color = _userColor(m.user_id);
+    const removeBtn = (isHost && !isMe)
+      ? '<button class="mem-rm" onclick="_removeMember(\''+esc(agId)+'\',\''+esc(m.user_id)+'\')" title="削除">×</button>'
+      : '';
+    return '<div class="mem-row">'
+      + '<div class="mem-av" style="background:'+color+'">'+esc(initial)+'</div>'
+      + '<div class="mem-meta"><div class="mem-name">'+esc(m.name||'')+(m.role==='host'?'<span class="ag-pill">ホスト</span>':'')+(isMe?'<span class="ag-pill invitee">あなた</span>':'')+'</div>'
+      + '<div class="mem-sub">'+(m.joined_at?new Date(m.joined_at).toLocaleDateString('ja-JP'):'')+(m.role==='host'?' に作成':' に参加')+'</div></div>'
+      + removeBtn + '</div>';
+  }).join('');
+  // Action footer differs for host vs member
+  document.getElementById('grpMemberFoot').innerHTML = isHost
+    ? '<button class="btn-volt" onclick="closeMemberPanel();openInviteModal(\''+esc(agId)+'\')" style="flex:1">＋ メンバーを招待</button>'
+    : '<button class="btn-back" onclick="_leaveGroup(\''+esc(agId)+'\')" style="flex:1;color:#dc2626;border-color:rgba(239,68,68,.3)">グループを退出</button>';
+  overlay.classList.add('open');
+}
+function closeMemberPanel(){
+  document.getElementById('grpMemberOverlay')?.classList.remove('open');
+}
+async function _removeMember(agId, uid){
+  if(!confirm(isJa?'このメンバーを削除しますか？':'Remove this member?')) return;
+  try {
+    await api('DELETE', '/api/agents/'+agId+'/members/'+uid);
+    showToast(isJa?'削除しました':'Removed', 'ok');
+    closeMemberPanel();
+    openMemberPanel(agId);
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+async function _leaveGroup(agId){
+  if(!confirm(isJa?'このグループを退出しますか？':'Leave this group?')) return;
+  try {
+    await api('POST', '/api/agents/'+agId+'/leave');
+    showToast(isJa?'退出しました':'Left group', 'ok');
+    closeMemberPanel();
+    // Refresh sidebar — drop from joined groups
+    _joinedGroups = _joinedGroups.filter(g => g.id !== agId);
+    agents = (agents||[]).filter(a => a.id !== agId);
+    activeId = null;
+    document.getElementById('chatWrap').style.display = 'none';
+    document.getElementById('emptyWrap').style.display = '';
+    renderAgList();
+  } catch(e){ showToast(e.message, 'ng'); }
 }
 
 function copyMsgText(btn){
@@ -5068,6 +5542,113 @@ function openNewAgent(){
   _resetWizardState();
   wStep(1);
   document.getElementById('wizOverlay').classList.add('open');
+}
+
+// ── GROUPS ──────────────────────────────────────────────────
+// Open a "create group" flow: pick an existing AI agent → promote it to a
+// group with an invite link. The user can then immediately share the link.
+async function openCreateGroup(){
+  if(!agents || agents.length === 0){
+    showToast(isJa ? '先に AI エージェントを 1 つ作成してください' : 'Create an AI agent first', 'ng');
+    setTimeout(() => openNewAgent(), 300);
+    return;
+  }
+  const overlay = document.getElementById('grpCreateOverlay');
+  if(overlay) overlay.classList.add('open');
+  const list = document.getElementById('grpCreateList');
+  if(!list) return;
+  list.innerHTML = agents.map(a => `
+    <button class="grp-pick" onclick="_pickGrpAgent('${esc(a.id)}')">
+      <div class="grp-pick-av">${_avHTML(a.avatar)}</div>
+      <div class="grp-pick-body">
+        <div class="grp-pick-nm">${esc(a.name)}${a.is_group?' <span class="ag-pill">GR</span>':''}</div>
+        <div class="grp-pick-d">${(a.skills||[]).map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')||'AI'}</div>
+      </div>
+      <span style="color:var(--text3);font-size:13px">›</span>
+    </button>`).join('');
+}
+function closeCreateGroup(){
+  document.getElementById('grpCreateOverlay')?.classList.remove('open');
+}
+async function _pickGrpAgent(agId){
+  closeCreateGroup();
+  try {
+    const r = await api('POST', '/api/agents/' + agId + '/invite', {
+      expires_in_days: 7,
+      max_members: 50,
+      require_approval: false,
+    });
+    // Mark the agent as group locally so sidebar reflects it
+    const ag = agents.find(a => a.id === agId);
+    if(ag){
+      ag.is_group = true;
+      ag.host_id = me.id;
+      ag.invite_token = r.invite_token;
+      ag.invite_expires_at = r.invite_expires_at;
+      ag.invite_max_members = r.invite_max_members;
+      ag.member_count = (r.members || []).length;
+      ag.members = r.members;
+    }
+    renderAgList();
+    openInviteModal(agId);
+  } catch(e) {
+    showToast((isJa ? 'グループ作成失敗: ' : 'Group create failed: ') + e.message, 'ng');
+  }
+}
+
+// Invite modal — show QR + link + share buttons
+async function openInviteModal(agId){
+  const ag = agents.find(a => a.id === agId);
+  if(!ag) return;
+  // Re-fetch members + token to ensure freshness
+  let token = ag.invite_token, expires = ag.invite_expires_at, maxMembers = ag.invite_max_members || 50;
+  try {
+    const m = await api('GET', '/api/agents/' + agId + '/members');
+    if(m && m.invite_token){ token = m.invite_token; expires = m.invite_expires_at; maxMembers = m.invite_max_members; }
+  } catch(e){}
+  if(!token){
+    // No invite yet — generate one
+    try {
+      const r = await api('POST', '/api/agents/' + agId + '/invite', {});
+      token = r.invite_token; expires = r.invite_expires_at; maxMembers = r.invite_max_members;
+      if(ag) { ag.invite_token = token; ag.is_group = true; ag.host_id = me.id; ag.member_count = (r.members||[]).length; }
+    } catch(e){
+      showToast((isJa ? '招待リンク生成失敗: ' : 'Invite create failed: ') + e.message, 'ng');
+      return;
+    }
+  }
+  const url = location.origin + '/g/' + token;
+  const expDate = expires ? new Date(expires) : null;
+  const expStr = expDate ? expDate.toLocaleDateString('ja-JP', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '無期限';
+  const overlay = document.getElementById('grpInviteOverlay');
+  if(!overlay) return;
+  document.getElementById('grpInviteUrl').textContent = url;
+  document.getElementById('grpInviteUrl').dataset.url = url;
+  document.getElementById('grpInviteExp').textContent = expStr;
+  document.getElementById('grpInviteMax').textContent = maxMembers + ' 人';
+  document.getElementById('grpInviteName').textContent = ag.name;
+  // Share buttons (open native share intents)
+  document.getElementById('grpShareLine').onclick = () => {
+    location.href = 'https://line.me/R/msg/text/?' + encodeURIComponent('「' + ag.name + '」グループに招待します\n' + url);
+  };
+  document.getElementById('grpShareMail').onclick = () => {
+    location.href = 'mailto:?subject=' + encodeURIComponent('「' + ag.name + '」グループへの招待') + '&body=' + encodeURIComponent('以下のリンクから参加してください:\n' + url);
+  };
+  document.getElementById('grpShareSms').onclick = () => {
+    location.href = 'sms:?body=' + encodeURIComponent('「' + ag.name + '」グループへの招待: ' + url);
+  };
+  document.getElementById('grpShareCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText(url); showToast(isJa?'リンクをコピーしました':'Copied', 'ok'); }
+    catch(e){ showToast('コピー失敗', 'ng'); }
+  };
+  // QR rendering: lightweight pattern using URL-encoded data
+  const qrEl = document.getElementById('grpInviteQR');
+  if(qrEl) qrEl.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url);
+
+  overlay.classList.add('open');
+}
+function closeInviteModal(){
+  document.getElementById('grpInviteOverlay')?.classList.remove('open');
 }
 function openTemplate(){
   _wizardMode='preset';

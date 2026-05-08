@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🗺 IA リデザイン — Talks / Agents の分離</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fed7aa; --peach-soft:#fff7ed;
+  --bg-50:#fafafa; --bg-100:#f4f4f5; --bg-200:#e4e4e7;
+  --ink-900:#09090b; --ink-800:#18181b; --ink-700:#27272a; --ink-600:#3f3f46;
+  --ink-500:#52525b; --ink-400:#71717a; --ink-300:#a1a1aa; --ink-200:#d4d4d8;
+  --line:rgba(9,9,11,.06); --line-strong:rgba(9,9,11,.1);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --pink:#ec4899; --teal:#14b8a6; --violet:#8b5cf6; --amber:#f59e0b;
+  --shadow-sm:0 1px 2px rgba(9,9,11,.04);
+  --shadow-md:0 2px 8px rgba(9,9,11,.06), 0 1px 2px rgba(9,9,11,.04);
+  --shadow-lg:0 12px 32px rgba(9,9,11,.08), 0 4px 8px rgba(9,9,11,.04);
+  --shadow-xl:0 28px 60px rgba(9,9,11,.14), 0 8px 16px rgba(9,9,11,.06);
+  --shadow-2xl:0 50px 100px rgba(0,0,0,.3), 0 25px 50px rgba(0,0,0,.2);
+  --sans:-apple-system,'SF Pro Display','Inter','Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+  --display:-apple-system,'SF Pro Display','Inter',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{
+  background:#09090b;
+  background-image:
+    radial-gradient(1400px 700px at 75% -10%, rgba(251,146,60,.13), transparent 60%),
+    radial-gradient(1100px 500px at 0% 110%, rgba(99,102,241,.08), transparent 60%),
+    linear-gradient(180deg,#0d0d10 0%,#09090b 100%);
+  background-attachment:fixed;
+  color:#fff;font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;
+  letter-spacing:-.011em;
+}
+a{color:var(--peach);text-decoration:none;}
+.shell{max-width:1480px;margin:0 auto;padding:48px 24px 96px;}
+
+.brand{font-size:12px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:28px;letter-spacing:-.003em;}
+.brand a{color:rgba(255,255,255,.45);}
+.brand a:hover{color:var(--peach);}
+
+.hero{margin-bottom:52px;}
+.h1{
+  font-family:var(--display);
+  font-size:46px;font-weight:700;line-height:1.05;margin-bottom:14px;letter-spacing:-.028em;
+}
+.h1 .accent{
+  background:linear-gradient(135deg,#fed7aa 0%,var(--peach) 50%,var(--peach-dark) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{font-size:15px;color:rgba(255,255,255,.62);max-width:720px;line-height:1.65;letter-spacing:-.005em;font-weight:400;}
+.sub b{color:#fff;font-weight:600;}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 0;}
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:500;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.7);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.tag.peach{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.2);color:var(--peach-light);}
+.tag.indigo{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);color:#a5b4fc;}
+
+.section-h{font-size:13px;color:rgba(255,255,255,.4);font-weight:600;margin:64px 0 14px;letter-spacing:.06em;text-transform:uppercase;}
+.section-h:first-of-type{margin-top:0;}
+
+/* macOS frame */
+.mac{
+  width:100%;max-width:1380px;margin:0 auto;
+  background:#fff;border-radius:14px;overflow:hidden;
+  box-shadow:var(--shadow-2xl), 0 0 0 1px rgba(255,255,255,.04);
+  position:relative;
+}
+.mac-bar{
+  height:38px;background:linear-gradient(180deg,#f4f4f5 0%,#e4e4e7 100%);
+  display:flex;align-items:center;padding:0 14px;gap:8px;
+  border-bottom:.5px solid rgba(0,0,0,.08);
+}
+.tl{display:flex;gap:8px;}
+.tl span{width:12px;height:12px;border-radius:50%;display:block;}
+.tl span:nth-child(1){background:#ff5f57;}
+.tl span:nth-child(2){background:#febc2e;}
+.tl span:nth-child(3){background:#28c840;}
+.mac-title{flex:1;text-align:center;font-size:12px;color:var(--ink-500);font-weight:600;}
+.mac-url{
+  background:rgba(0,0,0,.05);padding:3px 10px;border-radius:5px;
+  font-size:11px;color:var(--ink-600);font-family:var(--mono);
+  display:inline-flex;align-items:center;gap:4px;
+}
+.mac-url .lock{font-size:9px;color:var(--green);}
+
+/* PC layout */
+.app-pc{display:grid;grid-template-columns:280px 1fr;height:680px;background:#fff;}
+
+/* Sidebar shared */
+.sb{
+  background:linear-gradient(180deg,#fafafa 0%,#f4f4f5 100%);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;position:relative;
+}
+
+/* Top brand */
+.sb-brand{
+  padding:14px 16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--line);
+}
+.sb-logo{
+  width:30px;height:30px;border-radius:9px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  display:flex;align-items:center;justify-content:center;gap:1.5px;
+  box-shadow:0 4px 10px rgba(251,146,60,.32),inset 0 1px 0 rgba(255,255,255,.2);
+}
+.sb-bar{width:3px;border-radius:1.5px;background:#fff;}
+.sb-bar.b1{height:14px;}
+.sb-bar.b2{height:11px;opacity:.65;}
+.sb-bar.b3{height:8px;opacity:.35;}
+.sb-name{font-size:13px;font-weight:700;color:var(--ink-900);letter-spacing:-.018em;flex:1;}
+
+/* Big plus button */
+.sb-plus{
+  margin:14px 14px 6px;
+  padding:10px 14px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  border:0;cursor:pointer;font-size:13px;font-weight:700;letter-spacing:-.012em;
+  font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;
+  box-shadow:0 6px 14px rgba(251,146,60,.32),inset 0 1px 0 rgba(255,255,255,.18);
+  position:relative;
+}
+.sb-plus:hover{transform:translateY(-1px);}
+.sb-plus.active{background:var(--ink-900);}
+
+/* Tabs */
+.sb-tabs{
+  display:flex;gap:4px;padding:8px 14px 6px;border-bottom:1px solid var(--line);
+}
+.sb-tab{
+  flex:1;padding:8px 10px;border-radius:8px;border:0;cursor:pointer;
+  background:transparent;font-size:12px;font-weight:600;color:var(--ink-500);
+  font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;
+  letter-spacing:-.005em;
+  position:relative;
+}
+.sb-tab:hover{background:rgba(9,9,11,.04);color:var(--ink-800);}
+.sb-tab.active{background:#fff;color:var(--ink-900);box-shadow:var(--shadow-sm);}
+.sb-tab .badge{
+  background:var(--peach);color:#fff;font-size:9px;font-weight:800;
+  border-radius:9px;padding:1px 5px;min-width:14px;text-align:center;letter-spacing:0;
+}
+
+/* Search */
+.sb-search{
+  margin:8px 14px 0;padding:6px 10px;border-radius:8px;background:#fff;border:.5px solid var(--line-strong);
+  display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-400);box-shadow:var(--shadow-sm);
+}
+.sb-search kbd{
+  font-size:9.5px;background:var(--bg-100);border:.5px solid var(--line);
+  padding:1px 4px;border-radius:4px;color:var(--ink-500);font-family:var(--mono);
+  font-weight:600;margin-left:auto;
+}
+
+/* Section heads in list */
+.sb-h{
+  font-size:9.5px;color:var(--ink-400);font-weight:700;letter-spacing:.08em;
+  padding:14px 16px 6px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;
+}
+.sb-h .add{
+  background:transparent;border:0;color:var(--ink-400);cursor:pointer;font-size:14px;
+  width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+}
+.sb-h .add:hover{background:rgba(9,9,11,.06);color:var(--ink-700);}
+
+.sb-list{padding:0 8px;display:flex;flex-direction:column;gap:1px;}
+.sb-item{
+  display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;
+  cursor:pointer;border:0;background:transparent;width:100%;font-family:inherit;text-align:left;
+  position:relative;
+}
+.sb-item:hover{background:rgba(9,9,11,.04);}
+.sb-item.active{background:rgba(251,146,60,.12);}
+.sb-item.active .nm{color:var(--peach-dark);font-weight:700;}
+
+.sb-stack{
+  position:relative;width:34px;height:24px;flex-shrink:0;
+}
+.sb-stack > *{
+  position:absolute;width:22px;height:22px;border-radius:7px;
+  border:1.5px solid var(--bg-100);display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:9.5px;font-weight:700;
+}
+.sb-item.active .sb-stack > *{border-color:var(--peach-soft);}
+.sb-stack > *:nth-child(1){left:0;top:1px;z-index:3;}
+.sb-stack > *:nth-child(2){left:9px;top:1px;z-index:2;}
+.sb-stack > *:nth-child(3){left:0;top:1px;z-index:3;}
+.sb-single{
+  width:24px;height:24px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:11px;font-weight:700;
+}
+.sb-info{flex:1;min-width:0;}
+.sb-info .nm{font-size:12.5px;font-weight:600;color:var(--ink-900);letter-spacing:-.005em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-info .pv{font-size:10.5px;color:var(--ink-500);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.005em;}
+.sb-meta{font-size:9.5px;color:var(--ink-400);text-align:right;flex-shrink:0;}
+.sb-meta .badge{
+  display:inline-block;background:var(--peach);color:#fff;font-size:9px;font-weight:700;
+  border-radius:9px;padding:1px 6px;min-width:16px;text-align:center;margin-top:2px;
+}
+
+/* Bottom me */
+.sb-bottom{
+  margin-top:auto;padding:10px 14px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:9px;
+}
+.sb-me{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+}
+.sb-me-info{flex:1;min-width:0;}
+.sb-me-name{font-size:12px;font-weight:700;color:var(--ink-900);}
+.sb-me-status{font-size:10px;color:var(--green);display:flex;align-items:center;gap:3px;}
+.sb-me-status::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);}
+.sb-me-cog{
+  background:transparent;border:0;color:var(--ink-400);font-size:14px;cursor:pointer;
+  width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+}
+
+/* Plus dropdown menu */
+.plus-menu{
+  position:absolute;top:78px;left:14px;width:252px;
+  background:#fff;border-radius:13px;box-shadow:var(--shadow-xl);
+  border:.5px solid var(--line-strong);z-index:30;
+  padding:5px;
+}
+.plus-menu::before{
+  content:'';position:absolute;top:-7px;left:50%;transform:translateX(-50%) rotate(45deg);
+  width:12px;height:12px;background:#fff;border-left:.5px solid var(--line-strong);
+  border-top:.5px solid var(--line-strong);
+}
+.pm-item{
+  display:flex;align-items:flex-start;gap:11px;padding:10px 12px;
+  border-radius:9px;cursor:pointer;border:0;background:transparent;
+  width:100%;font-family:inherit;text-align:left;
+  transition:background .12s;
+}
+.pm-item:hover{background:var(--bg-100);}
+.pm-ic{
+  width:32px;height:32px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;
+  box-shadow:0 2px 5px rgba(9,9,11,.1);
+}
+.pm-ic.peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.pm-ic.indigo{background:linear-gradient(135deg,var(--indigo),#4338ca);}
+.pm-ic.violet{background:linear-gradient(135deg,var(--violet),#6d28d9);}
+.pm-ic.green{background:linear-gradient(135deg,var(--green),#047857);}
+.pm-body{flex:1;min-width:0;}
+.pm-h{font-size:12.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.005em;margin-bottom:1px;display:flex;align-items:center;gap:5px;}
+.pm-h .kbd{
+  font-size:9px;background:var(--bg-100);border:.5px solid var(--line);
+  padding:1px 4px;border-radius:3px;color:var(--ink-500);font-family:var(--mono);
+  font-weight:600;letter-spacing:0;
+}
+.pm-d{font-size:10.5px;color:var(--ink-500);line-height:1.45;}
+.pm-divider{height:.5px;background:var(--line);margin:5px 8px;}
+
+/* Right panel placeholder */
+.right-panel{
+  background:linear-gradient(180deg,#fff 0%,#fafafa 100%);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;color:var(--ink-400);text-align:center;padding:40px;
+}
+.right-empty-em{font-size:42px;margin-bottom:10px;opacity:.6;}
+.right-empty-h{font-size:15px;font-weight:700;color:var(--ink-700);margin-bottom:4px;letter-spacing:-.012em;}
+.right-empty-d{font-size:12.5px;color:var(--ink-500);max-width:380px;line-height:1.55;}
+
+/* Agents tab content */
+.agents-view{padding:0;display:flex;flex-direction:column;flex:1;}
+
+.create-row{padding:8px 8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.create-card{
+  background:#fff;border:.5px solid var(--line-strong);border-radius:9px;
+  padding:9px 6px;cursor:pointer;text-align:center;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:transform .12s, border-color .12s;
+}
+.create-card:hover{transform:translateY(-1px);border-color:var(--peach);}
+.create-card .ic{
+  width:30px;height:30px;border-radius:9px;color:#fff;font-size:13px;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(9,9,11,.1);
+}
+.create-card .ic.peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.create-card .ic.indigo{background:linear-gradient(135deg,var(--indigo),#4338ca);}
+.create-card .ic.green{background:linear-gradient(135deg,var(--green),#047857);}
+.create-card .lbl{font-size:10.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.005em;}
+
+/* Avatar palettes */
+.av-me{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.av-friend1{background:linear-gradient(135deg,#10b981,#059669);}
+.av-friend2{background:linear-gradient(135deg,#ec4899,#be185d);}
+.av-friend3{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
+.av-friend4{background:linear-gradient(135deg,#f59e0b,#b45309);}
+.av-friend5{background:linear-gradient(135deg,#14b8a6,#0d9488);}
+.av-ai{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.av-ai2{background:linear-gradient(135deg,#06b6d4,#0e7490);}
+.av-ai3{background:linear-gradient(135deg,var(--violet),#6d28d9);}
+.av-ai4{background:linear-gradient(135deg,var(--teal),#0d9488);}
+
+/* Right panel — show what user sees in main */
+.preview-h{
+  padding:14px 22px;border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.96);display:flex;align-items:center;gap:11px;
+}
+.preview-name{font-size:14px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;flex:1;}
+.preview-meta{font-size:11px;color:var(--ink-500);}
+.preview-body{
+  flex:1;padding:18px 22px;background:linear-gradient(180deg,#fff 0%,#fafafa 100%);
+  display:flex;flex-direction:column;gap:10px;color:var(--ink-700);font-size:12.5px;
+}
+.preview-msg{
+  background:#fff;border:.5px solid var(--line);border-radius:11px;padding:11px 14px;
+  max-width:75%;align-self:flex-start;font-size:12.5px;line-height:1.55;
+}
+
+/* MOBILE phone frame */
+.mobile-row{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(296px,1fr));
+  gap:48px 32px;margin-top:36px;align-items:flex-start;
+}
+.phone{width:296px;margin:0 auto;}
+.phone-meta{margin-top:20px;text-align:center;}
+.phone-num{
+  display:inline-block;background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);
+  padding:3px 10px;border-radius:5px;font-size:10px;font-weight:600;
+  letter-spacing:.1em;margin-bottom:10px;font-family:var(--mono);
+  border:1px solid rgba(255,255,255,.08);
+}
+.phone-ttl{font-size:13.5px;font-weight:600;color:#fff;margin-bottom:4px;letter-spacing:-.012em;}
+.phone-desc{font-size:11px;color:rgba(255,255,255,.45);line-height:1.55;font-weight:400;}
+
+.iphone{
+  width:296px;height:640px;border-radius:46px;
+  background:linear-gradient(180deg,#18181b 0%,#09090b 100%);
+  padding:11px;position:relative;
+  box-shadow:
+    0 50px 80px rgba(0,0,0,.5),
+    0 20px 40px rgba(0,0,0,.3),
+    0 0 0 1.5px #27272a,
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 1px 0 rgba(255,255,255,.1);
+}
+.iphone::after{
+  content:'';position:absolute;inset:11px;border-radius:36px;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.06) 0%,transparent 25%,transparent 75%,rgba(255,255,255,.03) 100%);
+  z-index:6;
+}
+.iphone::before{
+  content:'';position:absolute;top:18px;left:50%;transform:translateX(-50%);
+  width:96px;height:26px;background:#000;border-radius:18px;z-index:11;
+}
+.iphone-screen{width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--bg-50);position:relative;}
+.ios-status{
+  position:absolute;top:0;left:0;right:0;height:46px;
+  display:flex;align-items:flex-start;padding:16px 24px 0;
+  font-size:14px;font-weight:600;color:var(--ink-900);z-index:5;pointer-events:none;
+}
+.ios-status .time{flex:1;}
+.ios-status .right{display:flex;gap:5px;align-items:center;font-size:13px;}
+.home-ind{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:128px;height:4px;background:var(--ink-900);border-radius:2px;opacity:.45;z-index:9;}
+.app-mob{position:absolute;top:46px;bottom:22px;left:0;right:0;display:flex;flex-direction:column;background:var(--bg-50);}
+
+.mob-h{
+  padding:10px 16px 8px;border-bottom:.5px solid var(--line);background:rgba(250,250,250,.92);
+  backdrop-filter:saturate(180%) blur(20px);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.mob-title{font-size:18px;font-weight:800;color:var(--ink-900);letter-spacing:-.022em;}
+.mob-actions{display:flex;gap:6px;}
+.mob-act-btn{
+  width:30px;height:30px;border-radius:50%;background:transparent;color:var(--ink-700);
+  border:0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
+}
+.mob-act-btn.plus{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  font-size:16px;box-shadow:0 4px 10px rgba(251,146,60,.32);
+}
+
+.mob-search{margin:10px 14px 6px;padding:7px 11px;background:#fff;border:.5px solid var(--line-strong);
+  border-radius:9px;font-size:12px;color:var(--ink-400);display:flex;align-items:center;gap:6px;}
+
+.mob-h2{
+  font-size:9.5px;color:var(--ink-400);font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:14px 16px 6px;
+}
+.mob-body{flex:1;overflow-y:auto;}
+
+.mob-item{display:flex;align-items:center;gap:10px;padding:8px 14px;}
+.mob-item:hover{background:rgba(9,9,11,.03);}
+.mob-stack{position:relative;width:38px;height:28px;flex-shrink:0;}
+.mob-stack > *{
+  position:absolute;width:26px;height:26px;border-radius:8px;border:1.5px solid var(--bg-50);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:700;
+}
+.mob-stack > *:nth-child(1){left:0;top:1px;z-index:3;}
+.mob-stack > *:nth-child(2){left:10px;top:1px;z-index:2;}
+.mob-stack > *:nth-child(3){left:0;top:1px;z-index:3;}
+.mob-single{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;}
+.mob-info{flex:1;min-width:0;}
+.mob-info .nm{font-size:12.5px;font-weight:600;color:var(--ink-900);letter-spacing:-.005em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mob-info .pv{font-size:10.5px;color:var(--ink-500);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mob-time{font-size:9.5px;color:var(--ink-400);text-align:right;flex-shrink:0;}
+.mob-time .badge{
+  display:inline-block;background:var(--peach);color:#fff;font-size:9px;font-weight:700;
+  border-radius:9px;padding:1px 6px;min-width:16px;text-align:center;margin-top:2px;
+}
+
+/* Mobile bottom tab bar */
+.mob-tab{
+  flex-shrink:0;background:rgba(250,250,250,.92);
+  backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--line);
+  display:grid;grid-template-columns:1fr 1fr 1fr;padding:6px 0 4px;
+}
+.mob-tab-item{
+  display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px;
+  background:transparent;border:0;cursor:pointer;font-family:inherit;
+  color:var(--ink-400);font-size:9.5px;font-weight:600;letter-spacing:-.005em;
+  position:relative;
+}
+.mob-tab-item.active{color:var(--peach-dark);}
+.mob-tab-item .em{font-size:18px;line-height:1;margin-bottom:1px;}
+.mob-tab-item .badge{
+  position:absolute;top:0;right:25%;background:var(--rose);color:#fff;
+  font-size:8.5px;font-weight:800;padding:1px 5px;border-radius:9px;letter-spacing:0;
+}
+
+/* Mobile create cards (Agents tab) */
+.mob-create-row{
+  padding:8px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+}
+.mob-create{
+  background:#fff;border:.5px solid var(--line-strong);border-radius:11px;
+  padding:11px 6px;text-align:center;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.mob-create .ic{
+  width:34px;height:34px;border-radius:10px;color:#fff;font-size:14px;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(9,9,11,.1);
+}
+.mob-create .ic.peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.mob-create .ic.indigo{background:linear-gradient(135deg,var(--indigo),#4338ca);}
+.mob-create .ic.green{background:linear-gradient(135deg,var(--green),#047857);}
+.mob-create .lbl{font-size:10.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.005em;}
+
+/* Mobile bottom sheet (plus menu) */
+.mob-overlay{position:absolute;inset:46px 0 22px 0;background:rgba(9,9,11,.4);z-index:8;display:flex;align-items:flex-end;}
+.mob-sheet{
+  background:#fff;border-top-left-radius:18px;border-top-right-radius:18px;
+  width:100%;padding:8px 16px 18px;box-shadow:0 -10px 30px rgba(0,0,0,.18);
+}
+.mob-sheet-handle{width:38px;height:4px;background:var(--ink-200);border-radius:2px;margin:6px auto 14px;}
+.mob-sheet-h{font-size:13px;font-weight:700;color:var(--ink-900);margin-bottom:11px;letter-spacing:-.012em;}
+.mob-pm-item{
+  display:flex;align-items:center;gap:11px;padding:10px 6px;
+  border-radius:9px;cursor:pointer;border:0;background:transparent;width:100%;font-family:inherit;text-align:left;
+}
+.mob-pm-ic{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;
+  box-shadow:0 2px 5px rgba(9,9,11,.1);
+}
+.mob-pm-ic.peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.mob-pm-ic.indigo{background:linear-gradient(135deg,var(--indigo),#4338ca);}
+.mob-pm-ic.violet{background:linear-gradient(135deg,var(--violet),#6d28d9);}
+.mob-pm-ic.green{background:linear-gradient(135deg,var(--green),#047857);}
+.mob-pm-body{flex:1;min-width:0;}
+.mob-pm-h{font-size:13px;font-weight:700;color:var(--ink-900);letter-spacing:-.005em;}
+.mob-pm-d{font-size:10.5px;color:var(--ink-500);margin-top:1px;line-height:1.45;}
+
+/* IA diagram */
+.ia{
+  margin-top:64px;padding:36px 32px;border-radius:18px;
+  background:linear-gradient(135deg,rgba(251,146,60,.08),rgba(99,102,241,.05));border:1px solid rgba(255,255,255,.08);
+}
+.ia h2{font-size:24px;font-weight:700;margin-bottom:14px;letter-spacing:-.022em;}
+.ia .lead{font-size:14px;color:rgba(255,255,255,.65);max-width:720px;line-height:1.65;margin-bottom:28px;}
+
+.tree{
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:18px;
+}
+.tree .col{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+  border-radius:13px;padding:20px 22px;
+}
+.tree .col h3{font-size:15px;font-weight:700;margin-bottom:5px;letter-spacing:-.012em;display:flex;align-items:center;gap:7px;}
+.tree .col h3 .em{font-size:18px;}
+.tree .col p{font-size:11.5px;color:rgba(255,255,255,.55);margin-bottom:14px;line-height:1.55;}
+.tree-list{list-style:none;font-family:var(--mono);font-size:12px;line-height:1.85;color:rgba(255,255,255,.85);}
+.tree-list li{padding-left:14px;position:relative;}
+.tree-list li::before{content:'▸';position:absolute;left:0;color:var(--peach);}
+.tree-list .indent{padding-left:30px;}
+.tree-list .indent::before{content:'·';color:var(--ink-300);left:14px;}
+.tree-list .em{font-style:normal;}
+.tree-list .label{color:#a5b4fc;font-weight:600;}
+
+@media(max-width:1100px){
+  .app-pc{grid-template-columns:240px 1fr;}
+  .tree{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<div class="brand">
+  <a href="/">← MY AI Agent</a> ·
+  <a href="/mock-group-chat-pc.html">🖥 グループ PC 版</a> ·
+  <a href="/mock-group-chat.html">📱 モバイル版</a>
+</div>
+
+<div class="hero">
+  <div class="h1"><span class="accent">IA リデザイン</span> ／<br>Talks と Agents を分離する</div>
+  <p class="sub">
+    グループ機能を入れると、サイドバーは「<b>会話</b>」と「<b>エージェント管理</b>」の2つの責務を持つようになる。
+    これを <b>タブで切替</b> しつつ、<b>⊕ ボタンに新規アクションをまとめて</b> シンプルに保ちます。
+  </p>
+  <div class="tagrow">
+    <span class="tag peach">⊕ ボタン中央集約</span>
+    <span class="tag indigo">タブ切替 (Talks / Agents)</span>
+    <span class="tag">会話と作成を分離</span>
+    <span class="tag">⌘N でクイック作成</span>
+  </div>
+</div>
+
+<!-- ────────── PC: TALKS タブ (デフォルト) ────────── -->
+<div class="section-h">PC 版 SCREEN 01 — Talks タブ (デフォルト表示)</div>
+
+<div class="mac">
+  <div class="mac-bar">
+    <div class="tl"><span></span><span></span><span></span></div>
+    <div class="mac-title"><span class="mac-url"><span class="lock">🔒</span> myaiagents.agency/app</span></div>
+  </div>
+
+  <div class="app-pc">
+    <div class="sb">
+      <div class="sb-brand">
+        <div class="sb-logo">
+          <div class="sb-bar b1"></div>
+          <div class="sb-bar b2"></div>
+          <div class="sb-bar b3"></div>
+        </div>
+        <div class="sb-name">MY AI Agent</div>
+      </div>
+
+      <button class="sb-plus">＋ 新規</button>
+
+      <div class="sb-tabs">
+        <button class="sb-tab active">💬 トーク <span class="badge">3</span></button>
+        <button class="sb-tab">🤖 Agents</button>
+      </div>
+
+      <div class="sb-search">🔍 トーク検索 <kbd>⌘K</kbd></div>
+
+      <div class="sb-h">グループ <button class="add">＋</button></div>
+      <div class="sb-list">
+        <button class="sb-item active">
+          <div class="sb-stack">
+            <div class="av-me">K</div>
+            <div class="av-friend1">M</div>
+            <div class="av-ai">📊</div>
+          </div>
+          <div class="sb-info">
+            <div class="nm">プロジェクト Aurora</div>
+            <div class="pv">マサル: 台本ドラフト書く 👍</div>
+          </div>
+          <div class="sb-meta">9:40<div class="badge">2</div></div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-stack">
+            <div class="av-friend2">A</div>
+            <div class="av-friend3">N</div>
+            <div class="av-ai2">🎨</div>
+          </div>
+          <div class="sb-info">
+            <div class="nm">デザインレビュー</div>
+            <div class="pv">AI: 配色案を 3 つ提案しました</div>
+          </div>
+          <div class="sb-meta">昨日</div>
+        </button>
+      </div>
+
+      <div class="sb-h">DM (1対1) <button class="add">＋</button></div>
+      <div class="sb-list">
+        <button class="sb-item">
+          <div class="sb-single av-ai">📊</div>
+          <div class="sb-info">
+            <div class="nm">営業データ管理君</div>
+            <div class="pv">先週の進捗まとめました</div>
+          </div>
+          <div class="sb-meta">9:20</div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-single av-friend1">M</div>
+          <div class="sb-info">
+            <div class="nm">山田 マサル</div>
+            <div class="pv">承知しました</div>
+          </div>
+          <div class="sb-meta">昨日</div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-single av-ai2">🎨</div>
+          <div class="sb-info">
+            <div class="nm">デザイン補佐</div>
+            <div class="pv">フィードバックありがとう</div>
+          </div>
+          <div class="sb-meta">水</div>
+        </button>
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-me">K</div>
+        <div class="sb-me-info">
+          <div class="sb-me-name">竹内 こうた</div>
+          <div class="sb-me-status">オンライン</div>
+        </div>
+        <button class="sb-me-cog">⚙</button>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="right-empty-em">💬</div>
+      <div class="right-empty-h">トークを選択してください</div>
+      <div class="right-empty-d">
+        左のサイドバーから会話を選ぶか、上の <b>＋ 新規</b> ボタンから<br>
+        新しいグループ・DM・エージェントを作成できます
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ────────── PC: ⊕ メニュー展開時 ────────── -->
+<div class="section-h">PC 版 SCREEN 02 — ＋ ボタンを押したとき (4 つの新規アクション)</div>
+
+<div class="mac">
+  <div class="mac-bar">
+    <div class="tl"><span></span><span></span><span></span></div>
+    <div class="mac-title"><span class="mac-url"><span class="lock">🔒</span> myaiagents.agency/app</span></div>
+  </div>
+
+  <div class="app-pc">
+    <div class="sb">
+      <div class="sb-brand">
+        <div class="sb-logo">
+          <div class="sb-bar b1"></div>
+          <div class="sb-bar b2"></div>
+          <div class="sb-bar b3"></div>
+        </div>
+        <div class="sb-name">MY AI Agent</div>
+      </div>
+
+      <button class="sb-plus active">× 閉じる</button>
+
+      <!-- The dropdown menu -->
+      <div class="plus-menu">
+        <button class="pm-item">
+          <div class="pm-ic peach">🤝</div>
+          <div class="pm-body">
+            <div class="pm-h">グループを作成 <span class="kbd">⌘G</span></div>
+            <div class="pm-d">仲間を招待して AI と一緒に話す</div>
+          </div>
+        </button>
+        <button class="pm-item">
+          <div class="pm-ic indigo">💬</div>
+          <div class="pm-body">
+            <div class="pm-h">AI と DM を始める <span class="kbd">⌘D</span></div>
+            <div class="pm-d">既存の AI を選んで 1対1 で話す</div>
+          </div>
+        </button>
+        <div class="pm-divider"></div>
+        <button class="pm-item">
+          <div class="pm-ic violet">📋</div>
+          <div class="pm-body">
+            <div class="pm-h">テンプレートから作る <span class="kbd">⌘T</span></div>
+            <div class="pm-d">プリセットを選んで素早く AI を作成</div>
+          </div>
+        </button>
+        <button class="pm-item">
+          <div class="pm-ic green">🏪</div>
+          <div class="pm-body">
+            <div class="pm-h">Agent Store で探す</div>
+            <div class="pm-d">他のクリエイターが作った AI を試す</div>
+          </div>
+        </button>
+        <div class="pm-divider"></div>
+        <button class="pm-item">
+          <div class="pm-ic" style="background:var(--ink-100);color:var(--ink-700);box-shadow:none;border:.5px solid var(--line)">🛠</div>
+          <div class="pm-body">
+            <div class="pm-h">ゼロから AI を作る</div>
+            <div class="pm-d">空白から自分専用の AI を構築</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="sb-tabs" style="opacity:.4;pointer-events:none">
+        <button class="sb-tab active">💬 トーク</button>
+        <button class="sb-tab">🤖 Agents</button>
+      </div>
+
+      <div style="padding:14px;color:var(--ink-300);font-size:11px;text-align:center;flex:1">
+        メニューを開いている間は<br>サイドバーが非アクティブ
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-me">K</div>
+        <div class="sb-me-info">
+          <div class="sb-me-name">竹内 こうた</div>
+          <div class="sb-me-status">オンライン</div>
+        </div>
+        <button class="sb-me-cog">⚙</button>
+      </div>
+    </div>
+
+    <div class="right-panel" style="background:rgba(9,9,11,.4);">
+      <div style="color:rgba(255,255,255,.7);text-align:center">
+        <div class="right-empty-em" style="opacity:.8">⊕</div>
+        <div class="right-empty-h" style="color:#fff">何を始めますか？</div>
+        <div class="right-empty-d" style="color:rgba(255,255,255,.6)">
+          左のメニューから新しい<br>グループ・DM・エージェントを作成
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ────────── PC: AGENTS タブ ────────── -->
+<div class="section-h">PC 版 SCREEN 03 — Agents タブ (AI 管理ビュー)</div>
+
+<div class="mac">
+  <div class="mac-bar">
+    <div class="tl"><span></span><span></span><span></span></div>
+    <div class="mac-title"><span class="mac-url"><span class="lock">🔒</span> myaiagents.agency/app/agents</span></div>
+  </div>
+
+  <div class="app-pc">
+    <div class="sb">
+      <div class="sb-brand">
+        <div class="sb-logo">
+          <div class="sb-bar b1"></div>
+          <div class="sb-bar b2"></div>
+          <div class="sb-bar b3"></div>
+        </div>
+        <div class="sb-name">MY AI Agent</div>
+      </div>
+
+      <button class="sb-plus">＋ 新規</button>
+
+      <div class="sb-tabs">
+        <button class="sb-tab">💬 トーク</button>
+        <button class="sb-tab active">🤖 Agents</button>
+      </div>
+
+      <div class="sb-search">🔍 エージェント検索 <kbd>⌘K</kbd></div>
+
+      <div class="sb-h">マイ エージェント (4)</div>
+      <div class="sb-list">
+        <button class="sb-item active">
+          <div class="sb-single av-ai">📊</div>
+          <div class="sb-info">
+            <div class="nm">営業データ管理君</div>
+            <div class="pv">2 グループで利用中 · 公開</div>
+          </div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-single av-ai2">🎨</div>
+          <div class="sb-info">
+            <div class="nm">デザイン補佐</div>
+            <div class="pv">1 グループで利用中</div>
+          </div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-single av-ai3">📝</div>
+          <div class="sb-info">
+            <div class="nm">議事録さん</div>
+            <div class="pv">未使用</div>
+          </div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-single av-ai4">🔍</div>
+          <div class="sb-info">
+            <div class="nm">リサーチャー</div>
+            <div class="pv">DM で利用中</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="sb-h">作る</div>
+      <div class="create-row">
+        <button class="create-card">
+          <div class="ic peach">＋</div>
+          <div class="lbl">新規作成</div>
+        </button>
+        <button class="create-card">
+          <div class="ic indigo">📋</div>
+          <div class="lbl">テンプレート</div>
+        </button>
+        <button class="create-card">
+          <div class="ic green">🏪</div>
+          <div class="lbl">Store</div>
+        </button>
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-me">K</div>
+        <div class="sb-me-info">
+          <div class="sb-me-name">竹内 こうた</div>
+          <div class="sb-me-status">オンライン</div>
+        </div>
+        <button class="sb-me-cog">⚙</button>
+      </div>
+    </div>
+
+    <!-- Agent detail preview -->
+    <div style="display:flex;flex-direction:column;background:#fff">
+      <div class="preview-h">
+        <div style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));box-shadow:0 4px 10px rgba(251,146,60,.32)">📊</div>
+        <div style="flex:1">
+          <div class="preview-name">営業データ管理君</div>
+          <div class="preview-meta">公開 · 利用回数 142 · ★ 4.8 (12 件)</div>
+        </div>
+        <button class="sb-plus" style="margin:0;font-size:12px;padding:8px 14px;box-shadow:none">編集</button>
+      </div>
+      <div class="preview-body">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">プレビュー (DM)</div>
+        <div class="preview-msg">
+          こんにちは、営業データ管理君です 📊<br>
+          売上データの分析、競合調査、レポート作成などをお手伝いします。
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--ink-400);letter-spacing:.06em;text-transform:uppercase;margin-top:24px;margin-bottom:6px">利用統計</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="background:#fff;border:.5px solid var(--line);border-radius:9px;padding:10px 12px">
+            <div style="font-size:9.5px;color:var(--ink-400);font-weight:700;letter-spacing:.04em;text-transform:uppercase">DM</div>
+            <div style="font-size:18px;font-weight:800;color:var(--ink-900);margin-top:2px">42 件</div>
+          </div>
+          <div style="background:#fff;border:.5px solid var(--line);border-radius:9px;padding:10px 12px">
+            <div style="font-size:9.5px;color:var(--ink-400);font-weight:700;letter-spacing:.04em;text-transform:uppercase">グループ</div>
+            <div style="font-size:18px;font-weight:800;color:var(--ink-900);margin-top:2px">2</div>
+          </div>
+          <div style="background:#fff;border:.5px solid var(--line);border-radius:9px;padding:10px 12px">
+            <div style="font-size:9.5px;color:var(--ink-400);font-weight:700;letter-spacing:.04em;text-transform:uppercase">今月の収益</div>
+            <div style="font-size:18px;font-weight:800;color:var(--ink-900);margin-top:2px">¥1,240</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <button class="sb-plus" style="margin:0;font-size:11.5px;padding:8px 14px;box-shadow:none">💬 DM を開く</button>
+          <button class="sb-plus" style="margin:0;font-size:11.5px;padding:8px 14px;background:var(--ink-900);box-shadow:none">🤝 グループに追加</button>
+          <button class="sb-plus" style="margin:0;font-size:11.5px;padding:8px 14px;background:#fff;color:var(--ink-700);border:.5px solid var(--line-strong);box-shadow:none">📋 複製</button>
+          <button class="sb-plus" style="margin:0;font-size:11.5px;padding:8px 14px;background:#fff;color:var(--ink-700);border:.5px solid var(--line-strong);box-shadow:none">🏪 Agent Store で公開設定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════ MOBILE ════════════════ -->
+<div class="section-h">モバイル版 — 下部タブバーで切替</div>
+
+<div class="mobile-row">
+
+<!-- ──── Mobile: Talks tab ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app-mob">
+      <div class="mob-h">
+        <div class="mob-title">トーク</div>
+        <div class="mob-actions">
+          <button class="mob-act-btn">🔍</button>
+          <button class="mob-act-btn plus">＋</button>
+        </div>
+      </div>
+      <div class="mob-search">🔍 検索</div>
+
+      <div class="mob-body">
+        <div class="mob-h2">グループ</div>
+        <div class="mob-item">
+          <div class="mob-stack">
+            <div class="av-me">K</div>
+            <div class="av-friend1">M</div>
+            <div class="av-ai">📊</div>
+          </div>
+          <div class="mob-info">
+            <div class="nm">プロジェクト Aurora</div>
+            <div class="pv">マサル: 台本ドラフト書く 👍</div>
+          </div>
+          <div class="mob-time">9:40<div class="badge">2</div></div>
+        </div>
+        <div class="mob-item">
+          <div class="mob-stack">
+            <div class="av-friend2">A</div>
+            <div class="av-friend3">N</div>
+            <div class="av-ai2">🎨</div>
+          </div>
+          <div class="mob-info">
+            <div class="nm">デザインレビュー</div>
+            <div class="pv">AI: 配色案を 3 つ提案</div>
+          </div>
+          <div class="mob-time">昨日</div>
+        </div>
+
+        <div class="mob-h2">DM</div>
+        <div class="mob-item">
+          <div class="mob-single av-ai">📊</div>
+          <div class="mob-info">
+            <div class="nm">営業データ管理君</div>
+            <div class="pv">先週の進捗まとめました</div>
+          </div>
+          <div class="mob-time">9:20</div>
+        </div>
+        <div class="mob-item">
+          <div class="mob-single av-friend1">M</div>
+          <div class="mob-info">
+            <div class="nm">山田 マサル</div>
+            <div class="pv">承知しました</div>
+          </div>
+          <div class="mob-time">昨日</div>
+        </div>
+        <div class="mob-item">
+          <div class="mob-single av-ai2">🎨</div>
+          <div class="mob-info">
+            <div class="nm">デザイン補佐</div>
+            <div class="pv">フィードバックありがとう</div>
+          </div>
+          <div class="mob-time">水</div>
+        </div>
+      </div>
+
+      <div class="mob-tab">
+        <button class="mob-tab-item active">
+          <span class="em">💬</span>
+          <span>トーク</span>
+          <span class="badge">3</span>
+        </button>
+        <button class="mob-tab-item">
+          <span class="em">🤖</span>
+          <span>Agents</span>
+        </button>
+        <button class="mob-tab-item">
+          <span class="em">⚙</span>
+          <span>設定</span>
+        </button>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta">
+    <span class="phone-num">MOBILE 01</span>
+    <div class="phone-ttl">トーク タブ</div>
+    <div class="phone-desc">グループ + DM の一覧<br>＋ ボタンで新規作成</div>
+  </div>
+</div>
+
+<!-- ──── Mobile: ⊕ menu (bottom sheet) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app-mob">
+      <div class="mob-h">
+        <div class="mob-title">トーク</div>
+        <div class="mob-actions">
+          <button class="mob-act-btn">🔍</button>
+          <button class="mob-act-btn plus">×</button>
+        </div>
+      </div>
+
+      <div style="flex:1;background:var(--bg-50);position:relative">
+        <div class="mob-overlay" style="position:absolute;inset:0">
+          <div class="mob-sheet">
+            <div class="mob-sheet-handle"></div>
+            <div class="mob-sheet-h">何を始めますか？</div>
+
+            <button class="mob-pm-item">
+              <div class="mob-pm-ic peach">🤝</div>
+              <div class="mob-pm-body">
+                <div class="mob-pm-h">グループを作成</div>
+                <div class="mob-pm-d">仲間を招待して AI と一緒に話す</div>
+              </div>
+            </button>
+            <button class="mob-pm-item">
+              <div class="mob-pm-ic indigo">💬</div>
+              <div class="mob-pm-body">
+                <div class="mob-pm-h">AI と DM を始める</div>
+                <div class="mob-pm-d">既存の AI を選んで 1対1 で話す</div>
+              </div>
+            </button>
+            <button class="mob-pm-item">
+              <div class="mob-pm-ic violet">📋</div>
+              <div class="mob-pm-body">
+                <div class="mob-pm-h">テンプレートから作る</div>
+                <div class="mob-pm-d">プリセットを選んで素早く作成</div>
+              </div>
+            </button>
+            <button class="mob-pm-item">
+              <div class="mob-pm-ic green">🏪</div>
+              <div class="mob-pm-body">
+                <div class="mob-pm-h">Agent Store で探す</div>
+                <div class="mob-pm-d">他のクリエイターの AI を試す</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mob-tab" style="opacity:.4">
+        <button class="mob-tab-item active"><span class="em">💬</span><span>トーク</span></button>
+        <button class="mob-tab-item"><span class="em">🤖</span><span>Agents</span></button>
+        <button class="mob-tab-item"><span class="em">⚙</span><span>設定</span></button>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta">
+    <span class="phone-num">MOBILE 02</span>
+    <div class="phone-ttl">＋ ボタン → ボトムシート</div>
+    <div class="phone-desc">PC 版と同じ 4 アクション<br>iOS の慣れたパターン</div>
+  </div>
+</div>
+
+<!-- ──── Mobile: Agents tab ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app-mob">
+      <div class="mob-h">
+        <div class="mob-title">エージェント</div>
+        <div class="mob-actions">
+          <button class="mob-act-btn">🔍</button>
+          <button class="mob-act-btn plus">＋</button>
+        </div>
+      </div>
+
+      <div class="mob-body">
+        <div class="mob-h2">作る</div>
+        <div class="mob-create-row">
+          <button class="mob-create">
+            <div class="ic peach">＋</div>
+            <div class="lbl">新規</div>
+          </button>
+          <button class="mob-create">
+            <div class="ic indigo">📋</div>
+            <div class="lbl">テンプレ</div>
+          </button>
+          <button class="mob-create">
+            <div class="ic green">🏪</div>
+            <div class="lbl">Store</div>
+          </button>
+        </div>
+
+        <div class="mob-h2">マイ エージェント (4)</div>
+        <div class="mob-item">
+          <div class="mob-single av-ai">📊</div>
+          <div class="mob-info">
+            <div class="nm">営業データ管理君</div>
+            <div class="pv">2 グループ · DM 42 件 · ★4.8</div>
+          </div>
+          <div class="mob-time">›</div>
+        </div>
+        <div class="mob-item">
+          <div class="mob-single av-ai2">🎨</div>
+          <div class="mob-info">
+            <div class="nm">デザイン補佐</div>
+            <div class="pv">1 グループ · DM 18 件</div>
+          </div>
+          <div class="mob-time">›</div>
+        </div>
+        <div class="mob-item">
+          <div class="mob-single av-ai3">📝</div>
+          <div class="mob-info">
+            <div class="nm">議事録さん</div>
+            <div class="pv">未使用</div>
+          </div>
+          <div class="mob-time">›</div>
+        </div>
+        <div class="mob-item">
+          <div class="mob-single av-ai4">🔍</div>
+          <div class="mob-info">
+            <div class="nm">リサーチャー</div>
+            <div class="pv">DM 7 件</div>
+          </div>
+          <div class="mob-time">›</div>
+        </div>
+      </div>
+
+      <div class="mob-tab">
+        <button class="mob-tab-item">
+          <span class="em">💬</span>
+          <span>トーク</span>
+        </button>
+        <button class="mob-tab-item active">
+          <span class="em">🤖</span>
+          <span>Agents</span>
+        </button>
+        <button class="mob-tab-item">
+          <span class="em">⚙</span>
+          <span>設定</span>
+        </button>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta">
+    <span class="phone-num">MOBILE 03</span>
+    <div class="phone-ttl">Agents タブ</div>
+    <div class="phone-desc">作る (3 ボタン) + マイ AI<br>編集 / 公開設定はタップで詳細へ</div>
+  </div>
+</div>
+
+</div>
+
+
+<!-- ────────── IA tree comparison ────────── -->
+<div class="ia">
+  <h2>🗺 IA 比較 — 旧構造 vs 新構造</h2>
+  <p class="lead">
+    旧構造ではサイドバーが「エージェント = チャット」前提で 1 列に詰まっていた。
+    グループ機能で複数人参加が増えるので、「<b>会話</b>」と「<b>エージェント管理</b>」を分離。
+    新規アクションは <b>⊕ ボタン</b>に集約してノイズを消す。
+  </p>
+
+  <div class="tree">
+    <div class="col">
+      <h3><span class="em">📜</span>旧構造 (今のサイドバー)</h3>
+      <p>すべてが 1 列に並ぶ。トーク数が増えると新規ボタンがスクロール位置によって見えなくなる。</p>
+      <ul class="tree-list">
+        <li>[+ <span class="label">新規エージェント</span>]</li>
+        <li>[📋 <span class="label">テンプレート</span>]</li>
+        <li>[🏪 <span class="label">Agent Store</span>]</li>
+        <li>──────────</li>
+        <li>💬 営業データ管理君</li>
+        <li>💬 デザイン補佐</li>
+        <li>💬 議事録さん</li>
+        <li>💬 リサーチャー</li>
+        <li class="indent">…さらに増えるとボタンが埋もれる</li>
+      </ul>
+    </div>
+
+    <div class="col">
+      <h3><span class="em">✨</span>新構造 (タブ + ⊕)</h3>
+      <p>常時固定の <b>⊕ ボタン</b> から 4 種の新規アクション、タブで「会話/エージェント」を切替。Slack/Discord の慣れたパターン。</p>
+      <ul class="tree-list">
+        <li>[<span class="label">＋ 新規</span>] ← 常時固定</li>
+        <li class="indent">🤝 グループを作成</li>
+        <li class="indent">💬 AI と DM</li>
+        <li class="indent">📋 テンプレート</li>
+        <li class="indent">🏪 Agent Store</li>
+        <li class="indent">🛠 ゼロから作る</li>
+        <li>──────────</li>
+        <li>[💬 <span class="label">トーク</span>] [🤖 <span class="label">Agents</span>]</li>
+        <li class="indent">トーク = グループ + DM 一覧</li>
+        <li class="indent">Agents = AI 管理 + 作る 3 ボタン</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:14px">
+      <div style="font-size:18px;margin-bottom:6px">🎯</div>
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:5px;letter-spacing:-.012em">中央集約</h3>
+      <p style="font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.55;margin:0">
+        ⊕ ボタンが「すべての新規」のエントリポイント。覚えるのは 1 つだけ。
+      </p>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:14px">
+      <div style="font-size:18px;margin-bottom:6px">🪟</div>
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:5px;letter-spacing:-.012em">タブ分離</h3>
+      <p style="font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.55;margin:0">
+        日常使い (トーク) と管理 (Agents) の責務を分ける。
+      </p>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:14px">
+      <div style="font-size:18px;margin-bottom:6px">⌘</div>
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:5px;letter-spacing:-.012em">ショートカット</h3>
+      <p style="font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.55;margin:0">
+        <code style="font-family:var(--mono);background:rgba(255,255,255,.06);padding:0 4px;border-radius:3px;font-size:11px">⌘G</code> グループ /
+        <code style="font-family:var(--mono);background:rgba(255,255,255,.06);padding:0 4px;border-radius:3px;font-size:11px">⌘D</code> DM /
+        <code style="font-family:var(--mono);background:rgba(255,255,255,.06);padding:0 4px;border-radius:3px;font-size:11px">⌘T</code> テンプレ。
+      </p>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:14px">
+      <div style="font-size:18px;margin-bottom:6px">📱</div>
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:5px;letter-spacing:-.012em">モバイル整合</h3>
+      <p style="font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.55;margin:0">
+        モバイルは下部タブバーに同じ「💬 / 🤖 / ⚙」。一貫性◎。
+      </p>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>👥 Group AI Chat — UI モック</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fed7aa;
+  --peach-soft:#fff7ed;
+  --bg-50:#fafafa; --bg-100:#f4f4f5; --bg-200:#e4e4e7;
+  --ink-900:#09090b; --ink-800:#18181b; --ink-700:#27272a; --ink-600:#3f3f46;
+  --ink-500:#52525b; --ink-400:#71717a; --ink-300:#a1a1aa; --ink-200:#d4d4d8;
+  --line:rgba(9,9,11,.06); --line-strong:rgba(9,9,11,.1);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --pink:#ec4899; --teal:#14b8a6; --violet:#8b5cf6; --amber:#f59e0b;
+  --shadow-sm:0 1px 2px rgba(9,9,11,.04);
+  --shadow-md:0 2px 8px rgba(9,9,11,.06), 0 1px 2px rgba(9,9,11,.04);
+  --shadow-lg:0 12px 32px rgba(9,9,11,.08), 0 4px 8px rgba(9,9,11,.04);
+  --shadow-xl:0 28px 60px rgba(9,9,11,.14), 0 8px 16px rgba(9,9,11,.06);
+  --sans:-apple-system,'SF Pro Display','Inter','Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+  --display:-apple-system,'SF Pro Display','Inter',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{
+  background:#09090b;
+  background-image:
+    radial-gradient(1200px 600px at 70% -10%, rgba(251,146,60,.12), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(99,102,241,.08), transparent 60%),
+    linear-gradient(180deg,#0d0d10 0%,#09090b 100%);
+  background-attachment:fixed;
+  color:#fff;font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;
+  letter-spacing:-.011em;
+}
+a{color:var(--peach);text-decoration:none;}
+.shell{max-width:1280px;margin:0 auto;padding:48px 24px 96px;}
+
+.brand{font-size:12px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:28px;letter-spacing:-.003em;}
+.brand a{color:rgba(255,255,255,.45);}
+.brand a:hover{color:var(--peach);}
+
+.hero{margin-bottom:48px;}
+.h1{
+  font-family:var(--display);
+  font-size:42px;font-weight:700;line-height:1.05;margin-bottom:14px;letter-spacing:-.028em;
+}
+.h1 .accent{
+  background:linear-gradient(135deg,#fed7aa 0%,var(--peach) 50%,var(--peach-dark) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{font-size:14.5px;color:rgba(255,255,255,.6);max-width:660px;line-height:1.65;letter-spacing:-.005em;font-weight:400;}
+.sub b{color:#fff;font-weight:600;}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0;}
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:999px;font-size:11px;font-weight:500;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+  color:rgba(255,255,255,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.tag.peach{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.2);color:var(--peach-light);}
+.tag.indigo{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);color:#a5b4fc;}
+
+/* Phone grid */
+.phones{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(296px,1fr));
+  gap:48px 32px;margin-top:56px;align-items:flex-start;
+}
+.phone{width:296px;margin:0 auto;}
+.phone-meta{margin-top:20px;text-align:center;}
+.phone-num{
+  display:inline-block;background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);
+  padding:3px 10px;border-radius:5px;font-size:10px;font-weight:600;
+  letter-spacing:.1em;margin-bottom:10px;font-family:var(--mono);
+  border:1px solid rgba(255,255,255,.08);
+}
+.phone-ttl{font-size:13.5px;font-weight:600;color:#fff;margin-bottom:4px;letter-spacing:-.012em;}
+.phone-desc{font-size:11px;color:rgba(255,255,255,.45);line-height:1.55;font-weight:400;letter-spacing:-.005em;}
+
+/* iPhone frame */
+.iphone{
+  width:296px;height:640px;border-radius:46px;
+  background:linear-gradient(180deg,#18181b 0%,#09090b 100%);
+  padding:11px;position:relative;
+  box-shadow:
+    0 50px 80px rgba(0,0,0,.5),
+    0 20px 40px rgba(0,0,0,.3),
+    0 0 0 1.5px #27272a,
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 1px 0 rgba(255,255,255,.1);
+}
+.iphone::after{
+  content:'';position:absolute;inset:11px;border-radius:36px;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.06) 0%,transparent 25%,transparent 75%,rgba(255,255,255,.03) 100%);
+  z-index:6;
+}
+.iphone::before{
+  content:'';position:absolute;top:18px;left:50%;transform:translateX(-50%);
+  width:96px;height:26px;background:#000;border-radius:18px;z-index:11;
+}
+.iphone-screen{width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--bg-50);position:relative;}
+
+/* iOS status bar */
+.ios-status{
+  position:absolute;top:0;left:0;right:0;height:46px;
+  display:flex;align-items:flex-start;padding:16px 24px 0;
+  font-size:14px;font-weight:600;color:var(--ink-900);z-index:5;
+  pointer-events:none;letter-spacing:-.01em;font-feature-settings:'tnum';
+}
+.ios-status .time{flex:1;}
+.ios-status .right{display:flex;gap:5px;align-items:center;font-size:13px;}
+.ios-status.dark{color:#fff;}
+.home-ind{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:128px;height:4px;background:var(--ink-900);border-radius:2px;opacity:.45;z-index:9;}
+.home-ind.dark{background:#fff;opacity:.55;}
+
+.app{position:absolute;top:46px;bottom:22px;left:0;right:0;display:flex;flex-direction:column;}
+
+/* Group chat header — shows avatars stacked + group name */
+.gh{
+  padding:10px 14px;flex-shrink:0;
+  background:rgba(250,250,250,.85);
+  backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:.5px solid var(--line);
+  display:flex;align-items:center;gap:10px;z-index:2;
+}
+.gh .back{
+  width:24px;height:24px;border-radius:50%;background:transparent;color:var(--ink-700);
+  border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.gh-stack{
+  position:relative;width:42px;height:30px;flex-shrink:0;
+}
+.gh-stack > *{
+  position:absolute;width:24px;height:24px;border-radius:50%;
+  border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:#fff;
+}
+.gh-stack > *:nth-child(1){left:0;top:0;z-index:3;}
+.gh-stack > *:nth-child(2){left:8px;top:0;z-index:2;}
+.gh-stack > *:nth-child(3){left:16px;top:0;z-index:1;}
+.gh-info{flex:1;min-width:0;}
+.gh-name{font-size:12.5px;font-weight:600;color:var(--ink-900);letter-spacing:-.012em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gh-meta{font-size:9.5px;color:var(--ink-500);font-weight:500;letter-spacing:-.005em;}
+.gh-meta .ai-dot{display:inline-flex;align-items:center;gap:3px;color:var(--peach-dark);}
+.gh-meta .ai-dot::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--peach);}
+.gh-btn{
+  width:28px;height:28px;border-radius:50%;
+  background:transparent;font-size:13px;color:var(--ink-600);border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.gh-btn:hover{background:rgba(9,9,11,.04);}
+
+/* Avatar palettes */
+.av-me{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.av-friend1{background:linear-gradient(135deg,#10b981,#059669);}
+.av-friend2{background:linear-gradient(135deg,#ec4899,#be185d);}
+.av-friend3{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
+.av-friend4{background:linear-gradient(135deg,#f59e0b,#b45309);}
+.av-ai{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+
+/* Chat body */
+.app-body{flex:1;overflow-y:auto;padding:16px 14px 12px;background:var(--bg-50);}
+.day-sep{
+  text-align:center;margin:6px 0 14px;font-size:9.5px;font-weight:600;
+  color:var(--ink-400);letter-spacing:.04em;text-transform:uppercase;
+}
+.day-sep::before, .day-sep::after{
+  content:'';display:inline-block;width:38px;height:.5px;background:var(--line-strong);vertical-align:middle;margin:0 8px;
+}
+
+.msg{display:flex;gap:7px;margin-bottom:10px;align-items:flex-end;}
+.msg.me{flex-direction:row-reverse;}
+.msg-av{
+  width:22px;height:22px;border-radius:7px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:9.5px;font-weight:700;
+  box-shadow:0 2px 4px rgba(9,9,11,.12);
+}
+.msg.ai .msg-av{
+  border-radius:7px;font-size:11px;
+  box-shadow:0 2px 6px rgba(251,146,60,.3);
+}
+.msg-col{display:flex;flex-direction:column;max-width:78%;gap:2px;}
+.msg-name{
+  font-size:9.5px;color:var(--ink-500);font-weight:600;
+  padding:0 4px;letter-spacing:-.005em;
+}
+.msg.me .msg-name{text-align:right;}
+.bubble{
+  padding:7px 11px;border-radius:14px;
+  font-size:12px;color:var(--ink-900);line-height:1.5;letter-spacing:-.005em;
+  word-wrap:break-word;
+}
+.msg.me .bubble{background:var(--ink-900);color:#fff;border-bottom-right-radius:4px;}
+.msg.fr .bubble{background:#fff;border:.5px solid var(--line);border-bottom-left-radius:4px;}
+.msg.ai .bubble{
+  background:linear-gradient(135deg,rgba(251,146,60,.08),rgba(251,146,60,.04));
+  border:.5px solid rgba(251,146,60,.18);border-bottom-left-radius:4px;
+}
+.msg.ai .bubble b{color:var(--peach-dark);}
+.bubble .quote{
+  background:rgba(9,9,11,.04);border-left:2px solid var(--ink-300);
+  padding:5px 8px;margin-bottom:5px;border-radius:0 5px 5px 0;
+  font-size:10.5px;color:var(--ink-500);
+}
+.bubble.system{
+  background:transparent;border:0;padding:6px 12px;
+  font-size:10px;color:var(--ink-400);text-align:center;font-weight:500;
+  margin:0 auto;display:block;
+}
+.system-row{display:flex;justify-content:center;margin:8px 0;}
+.system-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:999px;
+  background:rgba(99,102,241,.08);border:.5px solid rgba(99,102,241,.18);
+  font-size:9.5px;font-weight:600;color:var(--indigo);letter-spacing:-.005em;
+}
+.time-stamp{font-size:9px;color:var(--ink-400);margin-top:1px;padding:0 4px;}
+.msg.me .time-stamp{text-align:right;}
+
+/* Composer */
+.app-comp{
+  padding:8px 12px 10px;flex-shrink:0;
+  background:rgba(250,250,250,.92);
+  backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--line);
+}
+.comp-wrap{
+  display:flex;align-items:center;gap:6px;
+  background:#fff;border:.5px solid var(--line-strong);
+  border-radius:18px;padding:4px 4px 4px 14px;box-shadow:var(--shadow-sm);
+}
+.comp-input{
+  flex:1;border:0;outline:0;background:transparent;
+  font-size:12px;color:var(--ink-900);font-family:inherit;padding:6px 0;
+}
+.comp-input::placeholder{color:var(--ink-400);}
+.comp-btn{
+  width:30px;height:30px;border-radius:50%;background:var(--ink-900);color:#fff;
+  border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;
+  font-family:inherit;
+}
+.comp-mini{
+  width:26px;height:26px;border-radius:50%;background:transparent;color:var(--ink-500);
+  border:0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
+}
+.comp-mini:hover{background:rgba(9,9,11,.05);}
+
+/* AI mention chip in composer (when @AI is typed) */
+.mention{
+  display:inline-flex;align-items:center;gap:3px;
+  background:rgba(251,146,60,.12);color:var(--peach-dark);
+  padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;
+}
+
+/* Members panel (slide-up sheet) */
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;
+  background:#fff;border-top-left-radius:18px;border-top-right-radius:18px;
+  box-shadow:0 -10px 30px rgba(0,0,0,.12);
+  z-index:8;display:flex;flex-direction:column;
+  max-height:90%;
+}
+.sheet-handle{
+  width:38px;height:4px;background:var(--ink-200);border-radius:2px;
+  margin:7px auto 4px;
+}
+.sheet-h{
+  padding:8px 16px 12px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:.5px solid var(--line);
+}
+.sheet-h .ttl{font-size:13.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;}
+.sheet-h .x{
+  background:rgba(9,9,11,.05);border:0;border-radius:50%;width:24px;height:24px;
+  font-size:13px;color:var(--ink-600);cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.member-list{padding:6px 0;flex:1;overflow-y:auto;}
+.mem{
+  display:flex;align-items:center;gap:10px;padding:8px 16px;
+  border-bottom:.5px solid var(--line);
+}
+.mem:last-child{border-bottom:0;}
+.mem-av{
+  width:32px;height:32px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;
+  box-shadow:0 2px 4px rgba(9,9,11,.1);
+}
+.mem-info{flex:1;min-width:0;}
+.mem-name{font-size:12px;font-weight:600;color:var(--ink-900);letter-spacing:-.005em;display:flex;align-items:center;gap:5px;}
+.mem-name .role{
+  font-size:8.5px;font-weight:700;background:var(--peach-soft);color:var(--peach-dark);
+  padding:1px 6px;border-radius:4px;letter-spacing:.02em;
+}
+.mem-name .ai-tag{
+  font-size:8.5px;font-weight:700;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  padding:1px 6px;border-radius:4px;letter-spacing:.02em;
+}
+.mem-meta{font-size:10px;color:var(--ink-500);}
+.mem-action{
+  background:transparent;border:0;color:var(--ink-400);font-size:14px;cursor:pointer;padding:4px;
+}
+
+.invite-cta{
+  margin:12px 16px;padding:11px 14px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  border:0;cursor:pointer;font-size:12.5px;font-weight:700;letter-spacing:-.012em;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  box-shadow:0 6px 16px rgba(251,146,60,.32);
+}
+
+/* Invite share */
+.share-card{
+  margin:14px 16px;padding:18px 16px;border-radius:14px;
+  background:#fff;border:.5px solid var(--line);text-align:center;
+  box-shadow:var(--shadow-md);
+}
+.qr{
+  width:130px;height:130px;margin:0 auto 12px;border-radius:9px;
+  background:
+    linear-gradient(45deg,#000 25%,transparent 25%,transparent 75%,#000 75%) 0 0/16px 16px,
+    linear-gradient(45deg,#000 25%,transparent 25%,transparent 75%,#000 75%) 8px 8px/16px 16px,
+    linear-gradient(45deg,#000 25%,transparent 25%,transparent 75%,#000 75%) 16px 0/16px 16px,
+    #fff;
+  position:relative;border:1.5px solid var(--ink-900);
+}
+.qr::before, .qr::after{
+  content:'';position:absolute;width:24px;height:24px;background:#fff;border:3px solid #000;
+}
+.qr::before{top:6px;left:6px;}
+.qr::after{top:6px;right:6px;}
+.share-title{font-size:13px;font-weight:700;color:var(--ink-900);margin-bottom:5px;}
+.share-sub{font-size:10.5px;color:var(--ink-500);margin-bottom:14px;}
+.share-link{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg-100);border-radius:9px;padding:7px 9px;font-size:10.5px;
+  color:var(--ink-700);font-family:var(--mono);overflow:hidden;
+}
+.share-link .url{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.copy-btn{
+  background:var(--ink-900);color:#fff;border:0;border-radius:6px;
+  padding:5px 9px;font-size:9.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  letter-spacing:.02em;
+}
+.share-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px;}
+.share-ico{
+  background:var(--bg-100);border:.5px solid var(--line);border-radius:9px;
+  padding:9px 4px;font-size:10px;color:var(--ink-700);font-weight:600;
+  display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;
+}
+.share-ico .em{font-size:18px;}
+
+/* Inbound invite card */
+.invite-screen{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px 20px;background:var(--bg-50);
+}
+.invite-card{
+  background:#fff;border:.5px solid var(--line);border-radius:16px;
+  padding:22px 18px;text-align:center;box-shadow:var(--shadow-lg);width:100%;
+}
+.invite-from{
+  display:flex;align-items:center;gap:8px;justify-content:center;
+  font-size:11px;color:var(--ink-500);margin-bottom:14px;
+}
+.invite-stack{position:relative;width:74px;height:48px;margin:0 auto 14px;}
+.invite-stack > *{
+  position:absolute;width:46px;height:46px;border-radius:14px;
+  border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:18px;font-weight:700;
+  box-shadow:0 4px 10px rgba(9,9,11,.15);
+}
+.invite-stack > *:nth-child(1){left:0;top:0;z-index:2;}
+.invite-stack > *:nth-child(2){left:28px;top:0;z-index:1;}
+.invite-title{font-size:15px;font-weight:700;color:var(--ink-900);margin-bottom:5px;letter-spacing:-.018em;}
+.invite-sub{font-size:11.5px;color:var(--ink-500);line-height:1.5;margin-bottom:16px;}
+.invite-sub b{color:var(--ink-900);font-weight:600;}
+.invite-info{
+  background:var(--bg-100);border-radius:9px;padding:9px 12px;margin-bottom:16px;
+  text-align:left;
+}
+.invite-info-row{display:flex;justify-content:space-between;font-size:10.5px;padding:3px 0;}
+.invite-info-row .k{color:var(--ink-500);}
+.invite-info-row .v{color:var(--ink-900);font-weight:600;}
+.invite-btns{display:flex;gap:6px;}
+.btn-pri{
+  flex:1;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  border:0;border-radius:10px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:inherit;letter-spacing:-.005em;
+  box-shadow:0 5px 14px rgba(251,146,60,.3);
+}
+.btn-sec{
+  flex:1;background:var(--bg-100);color:var(--ink-700);
+  border:.5px solid var(--line);border-radius:10px;padding:10px;font-size:12px;font-weight:600;
+  cursor:pointer;font-family:inherit;
+}
+
+/* Settings list */
+.set-section{padding:6px 0;}
+.set-row{
+  display:flex;align-items:center;gap:10px;padding:11px 16px;
+  border-bottom:.5px solid var(--line);background:#fff;
+}
+.set-row .em{font-size:15px;width:24px;text-align:center;}
+.set-row .lbl{flex:1;font-size:12px;color:var(--ink-900);font-weight:500;}
+.set-row .v{font-size:11px;color:var(--ink-400);}
+.set-row .chev{font-size:12px;color:var(--ink-300);}
+.set-row.danger .lbl{color:var(--rose);font-weight:600;}
+.set-h{
+  font-size:9.5px;font-weight:700;color:var(--ink-400);letter-spacing:.06em;
+  padding:14px 16px 6px;text-transform:uppercase;
+}
+.toggle{width:34px;height:20px;background:var(--green);border-radius:11px;position:relative;}
+.toggle::after{
+  content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;
+  top:2px;right:2px;box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.toggle.off{background:var(--ink-200);}
+.toggle.off::after{right:auto;left:2px;}
+
+/* Notification (lock screen) */
+.lock-bg{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);
+  background-image:
+    radial-gradient(900px 500px at 50% 30%,rgba(251,146,60,.15),transparent 50%),
+    linear-gradient(180deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);
+}
+.lock-time{
+  position:absolute;top:90px;left:0;right:0;text-align:center;
+  font-size:64px;font-weight:200;color:#fff;letter-spacing:-.04em;
+  font-feature-settings:'tnum';
+}
+.lock-date{
+  position:absolute;top:62px;left:0;right:0;text-align:center;
+  font-size:13px;color:rgba(255,255,255,.85);font-weight:500;letter-spacing:-.005em;
+}
+.notif{
+  position:absolute;left:14px;right:14px;top:200px;
+  background:rgba(255,255,255,.18);backdrop-filter:saturate(180%) blur(40px);
+  -webkit-backdrop-filter:saturate(180%) blur(40px);
+  border-radius:14px;padding:11px 12px;color:#fff;
+  border:.5px solid rgba(255,255,255,.18);
+  box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+.notif .head{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.notif .ic{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.notif .app{font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;flex:1;color:rgba(255,255,255,.85);}
+.notif .ts{font-size:10px;color:rgba(255,255,255,.6);}
+.notif .nt{font-size:13px;font-weight:700;letter-spacing:-.012em;margin-bottom:2px;}
+.notif .nb{font-size:11.5px;color:rgba(255,255,255,.85);line-height:1.45;}
+
+/* Section header (concept callout) */
+.callout{
+  margin-top:64px;padding:32px 28px;border-radius:18px;
+  background:linear-gradient(135deg,rgba(251,146,60,.08),rgba(99,102,241,.05));
+  border:1px solid rgba(255,255,255,.08);
+}
+.callout h2{font-size:22px;font-weight:700;margin-bottom:10px;letter-spacing:-.022em;}
+.callout p{font-size:13.5px;color:rgba(255,255,255,.65);max-width:640px;line-height:1.65;}
+.callout .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px;}
+.callout .feat{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  border-radius:11px;padding:14px;
+}
+.callout .feat .em{font-size:18px;margin-bottom:6px;}
+.callout .feat h3{font-size:13px;font-weight:700;margin-bottom:5px;letter-spacing:-.012em;}
+.callout .feat p{font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.55;margin:0;}
+
+/* Composer placeholder hint */
+.hint-row{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 12px 0;font-size:9.5px;color:var(--ink-400);
+}
+.hint-row .at{color:var(--peach-dark);font-weight:700;}
+
+/* Avatar emoji-able */
+.avtxt{font-size:11px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<div class="brand">
+  <a href="/">← MY AI Agent</a>
+</div>
+
+<div class="hero">
+  <div class="h1"><span class="accent">Group AI Chat</span> ／<br>知り合いを招待して、AI と一緒に話す</div>
+  <p class="sub">
+    LINE グループに <b>AI が常駐</b> してるイメージ。あなた + 仲間 + AI エージェントが同じ会話で並列に発言できる。
+    AI は誰の発言にも応答するし、メンションすれば特定のメンバーにフォーカスする。
+    招待は <b>URL / QR / メール / SMS</b> で送るだけ。
+  </p>
+  <div class="tagrow">
+    <span class="tag peach">📱 iOS / Android 両対応</span>
+    <span class="tag indigo">🔗 招待リンク</span>
+    <span class="tag">🤖 AI が常駐</span>
+    <span class="tag">@メンション対応</span>
+    <span class="tag">最大 50 人 / グループ</span>
+  </div>
+</div>
+
+<div class="phones">
+
+<!-- ──── 1. グループチャット (3人 + AI) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:41</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="gh">
+        <button class="back">‹</button>
+        <div class="gh-stack">
+          <div class="av-me"><span class="avtxt">K</span></div>
+          <div class="av-friend1"><span class="avtxt">M</span></div>
+          <div class="av-ai"><span class="avtxt">📊</span></div>
+        </div>
+        <div class="gh-info">
+          <div class="gh-name">プロジェクト Aurora</div>
+          <div class="gh-meta"><span class="ai-dot">AI 常駐</span> · 4 名</div>
+        </div>
+        <button class="gh-btn">📞</button>
+        <button class="gh-btn">⋮</button>
+      </div>
+
+      <div class="app-body">
+        <div class="day-sep">今日</div>
+
+        <!-- system: friend joined -->
+        <div class="system-row">
+          <span class="system-pill">✨ 山田 マサル さんが参加しました</span>
+        </div>
+
+        <!-- friend message -->
+        <div class="msg fr">
+          <div class="msg-av av-friend1">M</div>
+          <div class="msg-col">
+            <div class="msg-name">山田 マサル</div>
+            <div class="bubble">招待ありがとう！<br>来週の発表資料、進捗どんな感じ？</div>
+            <div class="time-stamp">9:38</div>
+          </div>
+        </div>
+
+        <!-- me message with @AI mention -->
+        <div class="msg me">
+          <div class="msg-av av-me">K</div>
+          <div class="msg-col">
+            <div class="bubble"><span class="mention">@AI</span> 先週の進捗まとめて、Mさんに教えて</div>
+            <div class="time-stamp">9:39</div>
+          </div>
+        </div>
+
+        <!-- AI response -->
+        <div class="msg ai">
+          <div class="msg-av av-ai">📊</div>
+          <div class="msg-col">
+            <div class="msg-name">AI · 営業データ管理君</div>
+            <div class="bubble">
+              <b>マサル さん向けまとめ:</b><br>
+              ✅ 競合分析シート完成 (50社)<br>
+              ✅ ヒアリング結果サマリ完了<br>
+              🟡 デモ資料 60% (図表残り)<br>
+              ⏳ 役員プレゼン台本 未着手<br>
+              <br>来週月曜まで残 5 営業日です。
+            </div>
+            <div class="time-stamp">9:39</div>
+          </div>
+        </div>
+
+        <!-- friend reply -->
+        <div class="msg fr">
+          <div class="msg-av av-friend1">M</div>
+          <div class="msg-col">
+            <div class="msg-name">山田 マサル</div>
+            <div class="bubble">なるほど。台本は俺がドラフト書く 👍</div>
+            <div class="time-stamp">9:40</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-comp">
+        <div class="hint-row"><span class="at">@AI</span> でメンション · 全員に見える</div>
+        <div class="comp-wrap">
+          <button class="comp-mini">+</button>
+          <input class="comp-input" placeholder="メッセージを入力">
+          <button class="comp-mini">😊</button>
+          <button class="comp-btn">↑</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 01</span><div class="phone-ttl">グループ会話 (3人 + AI)</div><div class="phone-desc">@AI でメンションで AI が反応<br>普通のメッセージは人だけが見える</div></div>
+</div>
+
+<!-- ──── 2. メンバー一覧 / 招待ボタン ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:42</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="gh">
+        <button class="back">‹</button>
+        <div class="gh-stack">
+          <div class="av-me"><span class="avtxt">K</span></div>
+          <div class="av-friend1"><span class="avtxt">M</span></div>
+          <div class="av-ai"><span class="avtxt">📊</span></div>
+        </div>
+        <div class="gh-info">
+          <div class="gh-name">プロジェクト Aurora</div>
+          <div class="gh-meta">メンバー</div>
+        </div>
+        <button class="gh-btn">⋮</button>
+      </div>
+
+      <div class="app-body" style="padding:0">
+        <button class="invite-cta">＋ メンバーを招待</button>
+
+        <div class="set-h">AI エージェント</div>
+        <div class="set-row">
+          <div class="mem-av av-ai" style="width:28px;height:28px;font-size:13px;border-radius:8px">📊</div>
+          <div style="flex:1">
+            <div class="mem-name">営業データ管理君 <span class="ai-tag">AI</span></div>
+            <div class="mem-meta">@AI で呼び出し可</div>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="set-h">参加者 3 名</div>
+        <div class="mem">
+          <div class="mem-av av-me">K</div>
+          <div class="mem-info">
+            <div class="mem-name">竹内 こうた <span class="role">作成者</span></div>
+            <div class="mem-meta">あなた · オンライン</div>
+          </div>
+        </div>
+        <div class="mem">
+          <div class="mem-av av-friend1">M</div>
+          <div class="mem-info">
+            <div class="mem-name">山田 マサル</div>
+            <div class="mem-meta">5 分前にアクティブ</div>
+          </div>
+          <button class="mem-action">⋮</button>
+        </div>
+        <div class="mem">
+          <div class="mem-av av-friend2">A</div>
+          <div class="mem-info">
+            <div class="mem-name">佐藤 あや</div>
+            <div class="mem-meta">招待済 · 未参加</div>
+          </div>
+          <button class="mem-action">⋮</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 02</span><div class="phone-ttl">メンバー一覧</div><div class="phone-desc">作成者 / 参加者 / 招待済を表示<br>右上の ⋮ から削除も可</div></div>
+</div>
+
+<!-- ──── 3. 招待 (シェアシート) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:43</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="gh">
+        <button class="back">‹</button>
+        <div class="gh-info">
+          <div class="gh-name">メンバーを招待</div>
+          <div class="gh-meta">プロジェクト Aurora</div>
+        </div>
+      </div>
+
+      <div class="app-body" style="padding:0">
+        <div class="share-card">
+          <div class="qr"></div>
+          <div class="share-title">QR コードを読み取り、または</div>
+          <div class="share-sub">下のリンクを送ってください</div>
+          <div class="share-link">
+            <span class="url">myaiagents.agency/g/aZ3kP9</span>
+            <button class="copy-btn">コピー</button>
+          </div>
+          <div class="share-row">
+            <button class="share-ico"><span class="em">💬</span>LINE</button>
+            <button class="share-ico"><span class="em">📧</span>メール</button>
+            <button class="share-ico"><span class="em">📱</span>SMS</button>
+            <button class="share-ico"><span class="em">⋯</span>その他</button>
+          </div>
+        </div>
+
+        <div class="set-h">招待リンクの設定</div>
+        <div class="set-row">
+          <div class="em">⏱</div>
+          <div class="lbl">有効期限</div>
+          <div class="v">7 日間 ›</div>
+        </div>
+        <div class="set-row">
+          <div class="em">👥</div>
+          <div class="lbl">最大人数</div>
+          <div class="v">50 人 ›</div>
+        </div>
+        <div class="set-row">
+          <div class="em">🔒</div>
+          <div class="lbl">参加に承認を必要にする</div>
+          <div class="toggle off"></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 03</span><div class="phone-ttl">招待を送る</div><div class="phone-desc">QR / リンク / LINE / メール / SMS<br>有効期限・最大人数・承認制を設定</div></div>
+</div>
+
+<!-- ──── 4. 招待を受け取った側 ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:45</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="gh">
+        <button class="back">‹</button>
+        <div class="gh-info">
+          <div class="gh-name">招待が届きました</div>
+          <div class="gh-meta">MY AI Agent</div>
+        </div>
+      </div>
+
+      <div class="invite-screen">
+        <div class="invite-card">
+          <div class="invite-stack">
+            <div class="av-me">K</div>
+            <div class="av-ai">📊</div>
+          </div>
+          <div class="invite-from">
+            <span><b style="color:var(--ink-900);font-weight:600">竹内 こうた</b> さんから</span>
+          </div>
+          <div class="invite-title">プロジェクト Aurora</div>
+          <div class="invite-sub">
+            営業データ管理君 (AI) と<br>
+            あなたを含む <b>4 名</b> のグループ会話に参加できます
+          </div>
+          <div class="invite-info">
+            <div class="invite-info-row"><span class="k">参加メンバー</span><span class="v">3 名 + AI 1 体</span></div>
+            <div class="invite-info-row"><span class="k">AI エージェント</span><span class="v">📊 営業データ管理君</span></div>
+            <div class="invite-info-row"><span class="k">作成日</span><span class="v">本日</span></div>
+          </div>
+          <div class="invite-btns">
+            <button class="btn-sec">後で</button>
+            <button class="btn-pri">参加する</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 04</span><div class="phone-ttl">招待を受け取った側</div><div class="phone-desc">URL/QR から開くとこの画面<br>未登録の人は登録 → 自動参加</div></div>
+</div>
+
+<!-- ──── 5. ロック画面通知 (誰かが参加した) ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="lock-bg"></div>
+    <div class="ios-status dark"><div class="time">9:46</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="lock-date">5月 8日 木曜日</div>
+    <div class="lock-time">9:46</div>
+
+    <div class="notif" style="top:200px">
+      <div class="head">
+        <div class="ic" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark))">A</div>
+        <div class="app">MY AI Agent</div>
+        <div class="ts">今</div>
+      </div>
+      <div class="nt">プロジェクト Aurora</div>
+      <div class="nb">山田 マサル さんが参加しました 🎉</div>
+    </div>
+
+    <div class="notif" style="top:288px">
+      <div class="head">
+        <div class="ic" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark))">A</div>
+        <div class="app">MY AI Agent</div>
+        <div class="ts">2分前</div>
+      </div>
+      <div class="nt">山田 マサル · プロジェクト Aurora</div>
+      <div class="nb">招待ありがとう！来週の発表資料、進捗ど…</div>
+    </div>
+
+    <div class="notif" style="top:376px">
+      <div class="head">
+        <div class="ic" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark))">A</div>
+        <div class="app">MY AI Agent</div>
+        <div class="ts">3分前</div>
+      </div>
+      <div class="nt">📊 営業データ管理君 · プロジェクト Aurora</div>
+      <div class="nb">先週の進捗をまとめました。確認お願いし…</div>
+    </div>
+
+    <div class="home-ind dark"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 05</span><div class="phone-ttl">ロック画面通知</div><div class="phone-desc">参加・新メッセージを Push<br>各メンバー個別に発言者名で表示</div></div>
+</div>
+
+<!-- ──── 6. グループ設定 ──── -->
+<div class="phone">
+  <div class="iphone"><div class="iphone-screen">
+    <div class="ios-status"><div class="time">9:48</div><div class="right"><span>⋅⋅⋅</span><span>📶</span><span>🔋</span></div></div>
+    <div class="app">
+      <div class="gh">
+        <button class="back">‹</button>
+        <div class="gh-info">
+          <div class="gh-name">グループ設定</div>
+          <div class="gh-meta">プロジェクト Aurora</div>
+        </div>
+      </div>
+
+      <div class="app-body" style="padding:0">
+        <div class="set-h">基本</div>
+        <div class="set-row">
+          <div class="em">📛</div>
+          <div class="lbl">グループ名</div>
+          <div class="v">プロジェクト Aurora ›</div>
+        </div>
+        <div class="set-row">
+          <div class="em">🤖</div>
+          <div class="lbl">AI エージェントを変更</div>
+          <div class="v">📊 営業データ管理君 ›</div>
+        </div>
+        <div class="set-row">
+          <div class="em">🖼</div>
+          <div class="lbl">グループ画像</div>
+          <div class="chev">›</div>
+        </div>
+
+        <div class="set-h">通知</div>
+        <div class="set-row">
+          <div class="em">🔔</div>
+          <div class="lbl">メッセージ通知</div>
+          <div class="toggle"></div>
+        </div>
+        <div class="set-row">
+          <div class="em">🔕</div>
+          <div class="lbl">メンションのみ通知</div>
+          <div class="toggle off"></div>
+        </div>
+
+        <div class="set-h">プライバシー</div>
+        <div class="set-row">
+          <div class="em">🔍</div>
+          <div class="lbl">AI が過去ログを参照する</div>
+          <div class="toggle"></div>
+        </div>
+        <div class="set-row">
+          <div class="em">📥</div>
+          <div class="lbl">招待を新規メンバーに許可</div>
+          <div class="toggle"></div>
+        </div>
+
+        <div class="set-h">操作</div>
+        <div class="set-row">
+          <div class="em">🚪</div>
+          <div class="lbl">グループを退出</div>
+          <div class="chev">›</div>
+        </div>
+        <div class="set-row danger">
+          <div class="em">🗑</div>
+          <div class="lbl">グループを削除</div>
+          <div class="chev">›</div>
+        </div>
+      </div>
+    </div>
+    <div class="home-ind"></div>
+  </div></div>
+  <div class="phone-meta"><span class="phone-num">SCREEN 06</span><div class="phone-ttl">グループ設定</div><div class="phone-desc">AI 変更 / 通知 / プライバシー<br>退出・削除は作成者だけ可</div></div>
+</div>
+
+</div><!-- /.phones -->
+
+<!-- ── Concept callout ── -->
+<div class="callout">
+  <h2>仕組み</h2>
+  <p>
+    既存の <code>agents</code> テーブルに <code>members[]</code> + <code>invite_token</code> を追加するだけで実装できます。
+    招待リンクを開くとトークンが検証され、ログイン済みの人は即参加、未登録の人は登録 → 自動参加。
+    AI はメッセージごとに発言者名を見て応答するので、「マサル さんに向けて」のような発言別の文脈も理解できます。
+  </p>
+  <div class="grid">
+    <div class="feat">
+      <div class="em">🔗</div>
+      <h3>招待トークン</h3>
+      <p>1グループ1リンク。有効期限 / 最大人数 / 承認制を設定可。リンクを知っている人なら誰でも参加 (LINE と同じモデル)。</p>
+    </div>
+    <div class="feat">
+      <div class="em">@</div>
+      <h3>@AI メンション</h3>
+      <p>普段は人同士の会話。<code>@AI</code> を含めた時だけ AI が応答。LINE 公式アカウントの「Bot」みたいな感覚で使える。</p>
+    </div>
+    <div class="feat">
+      <div class="em">🧠</div>
+      <h3>会話文脈</h3>
+      <p>AI は <code>{name: 'マサル', role: 'user', content: '...'}</code> 形式で誰の発言か理解。「マサルさんへ向けて」のような応答が可能。</p>
+    </div>
+    <div class="feat">
+      <div class="em">💰</div>
+      <h3>課金モデル</h3>
+      <p>AI 利用料はグループ作成者の残高から消費。参加者は無料で AI 機能を使える。プロプラン以上は他メンバー招待無制限。</p>
+    </div>
+    <div class="feat">
+      <div class="em">🔒</div>
+      <h3>プライバシー</h3>
+      <p>退出時に過去ログを残すか / 削除するかを選べる。ホストは Audit Log で誰がいつ参加したかを確認可能。</p>
+    </div>
+    <div class="feat">
+      <div class="em">📱</div>
+      <h3>クロスプラットフォーム</h3>
+      <p>iOS / Android / Web すべて同じ会話に参加可能。Push 通知で発言者名 + 内容を即時通知。</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.shell -->
+</body>
+</html>

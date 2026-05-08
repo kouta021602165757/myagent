@@ -4612,15 +4612,20 @@ async function handleAPI(req,res,pathname,method,ip){
       userContent = message;
     }
     // For groups, prefix every user-history message with [name]: so the AI
-    // can attribute statements correctly.
-    const _histForAI = hist.map(m => {
-      if(m.role !== 'user') return {role: m.role, content: m.content};
-      if(!isGroup) return {role:'user', content: m.content};
-      const nm = m.user_name || 'メンバー';
-      return typeof m.content === 'string'
-        ? {role:'user', content: '[' + nm + '] ' + m.content}
-        : {role:'user', content: m.content};
-    });
+    // can attribute statements correctly. CRITICAL: Anthropic Messages API
+    // only accepts 'user' and 'assistant' roles in messages[]; entries with
+    // role:'system' (our join/leave UI markers) MUST be stripped here, or the
+    // API returns "Unexpected role 'system'".
+    const _histForAI = hist
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
+      .map(m => {
+        if(m.role !== 'user') return {role: m.role, content: m.content};
+        if(!isGroup) return {role:'user', content: m.content};
+        const nm = m.user_name || 'メンバー';
+        return typeof m.content === 'string'
+          ? {role:'user', content: '[' + nm + '] ' + m.content}
+          : {role:'user', content: m.content};
+      });
     // Wrap the *current* outgoing user message with the speaker name when in group
     const _outboundUC = isGroup && typeof userContent === 'string'
       ? '[' + speakerName + '] ' + userContent

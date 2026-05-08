@@ -4284,6 +4284,73 @@ function updateBalance(){
 var _sbTab = 'talks';
 var _joinedGroups = [];
 
+// ── Group chat live updates ────────────────────────────────────
+// Polls /api/agents/:id/members for the active group and patches in any new
+// history entries so other members see what's been said in near real time.
+// Only runs while document is visible AND a group is open. Stops cleanly when
+// the user navigates away from the chat.
+var _groupPollTimer = null;
+var _groupPollAgentId = null;
+var _groupPollSig = ''; // signature of last seen history (length + last entry)
+
+function _historySignature(history){
+  if(!history || !history.length) return '0:';
+  const last = history[history.length-1];
+  return history.length + ':' + (last && (last.time || '') + '/' + (last.role || '') + '/' + (last.user_id || ''));
+}
+
+function _stopGroupPoll(){
+  if(_groupPollTimer){ clearInterval(_groupPollTimer); _groupPollTimer = null; }
+  _groupPollAgentId = null;
+  _groupPollSig = '';
+}
+
+function _startGroupPoll(agentId){
+  _stopGroupPoll();
+  _groupPollAgentId = agentId;
+  const ag = agents.find(a => a.id === agentId);
+  _groupPollSig = ag ? _historySignature(ag.history || []) : '';
+  // Only poll while tab is visible. Tab switch pauses polling automatically.
+  _groupPollTimer = setInterval(_groupPollTick, 4500);
+}
+
+// Set true while a local send is in flight so the poller doesn't clobber
+// the optimistic in-progress messages with stale server state.
+var _groupPollPaused = false;
+
+async function _groupPollTick(){
+  if(!_groupPollAgentId) return;
+  if(_groupPollPaused) return;
+  if(typeof document !== 'undefined' && document.hidden) return;
+  // Only poll if the chat is still active
+  if(activeId !== _groupPollAgentId){ _stopGroupPoll(); return; }
+  try {
+    const m = await api('GET', '/api/agents/' + _groupPollAgentId + '/members');
+    if(!m || !Array.isArray(m.history)) return;
+    const ag = agents.find(a => a.id === _groupPollAgentId);
+    if(!ag) return;
+    const localLen = (ag.history || []).length;
+    const serverLen = m.history.length;
+    const newSig = _historySignature(m.history);
+    // Only apply if server has at least as many entries as local (safeguard
+    // against transient races between optimistic local push and server save).
+    if(newSig === _groupPollSig && serverLen >= localLen) return;
+    if(serverLen < localLen) return; // local is ahead; will sync on next tick
+    _groupPollSig = newSig;
+    ag.history = m.history;
+    if(Array.isArray(m.members)) ag.members = m.members;
+    if(activeId === _groupPollAgentId){
+      renderMsgs(ag);
+    }
+  } catch(e){ /* swallow — transient errors are expected */ }
+}
+
+// Refresh once when tab regains visibility (covers users on phones who
+// foreground the app expecting a fresh state).
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && _groupPollAgentId){ _groupPollTick(); }
+});
+
 function setSbTab(tab){
   _sbTab = (tab === 'agents') ? 'agents' : 'talks';
   document.querySelectorAll('.sb-tab').forEach(b => {
@@ -4579,6 +4646,9 @@ async function openAgent(id){
   document.getElementById('chatWrap').style.display='flex';
   document.querySelectorAll('.ag-item').forEach(el=>el.classList.remove('on'));
   document.getElementById('ai-'+id)?.classList.add('on');
+
+  // Start/stop live polling: only groups need it (DMs are single-user).
+  if(ag.is_group){ _startGroupPoll(id); } else { _stopGroupPoll(); }
 
   const isGroup = !!ag.is_group;
   const memberCount = (ag.members||[]).length;
@@ -5462,6 +5532,9 @@ async function sendMsg(){
   }
   const hasAtt = _pendingImgs.length > 0;
   if(!text && !hasAtt) return;
+  // Pause group polling while we send so the optimistic local message + AI
+  // reply aren't transiently overwritten by a stale server snapshot.
+  _groupPollPaused = true;
   const ag=agents.find(a=>a.id===activeId); if(!ag)return;
   var _freeLeft=(me.usage_count||0)<10; if(!_freeLeft&&(me.balance_jpy||0)<=0){ showToast(isJa?'残高が不足しています。チャージしてください':'Insufficient balance. Please add credits.','ng'); openCharge(); return; }
 
@@ -5541,6 +5614,12 @@ async function sendMsg(){
   renderMsgs(ag);
   document.getElementById('sndBtn').disabled=false;
   ci.focus();
+  // Refresh group poll signature to match what we now have locally so the
+  // next tick doesn't immediately re-fetch and overwrite.
+  if(ag.is_group){
+    _groupPollSig = _historySignature(ag.history || []);
+  }
+  _groupPollPaused = false;
 }
 
 /**

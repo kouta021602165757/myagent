@@ -66,6 +66,13 @@ input,textarea{font-family:var(--sans);}
 
 /* new agent button */
 .sb-new-row{display:flex;flex-direction:column;gap:6px;margin:12px;}
+.sb-search-btn{
+  display:flex;align-items:center;gap:7px;width:calc(100% - 24px);margin:8px 12px 0;
+  padding:8px 11px;border-radius:8px;border:.5px solid var(--wire2);
+  background:#fff;cursor:pointer;font-family:inherit;font-size:11.5px;
+  transition:background .12s, border-color .12s;
+}
+.sb-search-btn:hover{background:var(--bg-100);border-color:var(--wire2);}
 .sb-new{
   display:flex;align-items:center;gap:7px;
   padding:9px 12px;border-radius:10px;
@@ -1572,6 +1579,11 @@ body{color:#f0f0f8;}
   </div>
 </a>
     </div>
+    <button class="sb-search-btn" onclick="openSearch()" title="検索 (⌘K)">
+      <span style="font-size:12px">🔍</span>
+      <span style="flex:1;text-align:left;color:var(--text3)">検索</span>
+      <kbd style="font-size:9px;background:rgba(9,9,11,.06);border:.5px solid var(--wire2);padding:1px 4px;border-radius:4px;color:var(--text3);font-family:'JetBrains Mono','SF Mono',monospace">⌘K</kbd>
+    </button>
     <div class="sb-new-row" style="position:relative">
       <button class="sb-new" onclick="if(!token){showToast('ログインが必要です','ng');return;}toggleSbPlusMenu(event)" id="sbPlusBtn">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -2658,6 +2670,98 @@ body{color:#f0f0f8;}
     </div>
   </div>
 </div>
+
+<!-- ══ CHAT-LEVEL OPTIONS MENU (⋯ button) ═══════════════════ -->
+<div id="chatMenu" class="chat-menu" style="display:none">
+  <button onclick="closeChatMenu();exportChat('md')">📥 Markdown でエクスポート</button>
+  <button onclick="closeChatMenu();exportChat('json')">📦 JSON でエクスポート</button>
+  <button onclick="closeChatMenu();openBookmarks()">★ ブックマーク一覧</button>
+  <div class="chat-menu-div"></div>
+  <button id="chatMenuEditAg" onclick="closeChatMenu();const a=agents.find(x=>x.id===activeId);if(a&&!a._is_joined_group)openEditAgent(activeId);">⚙ エージェントを編集</button>
+  <button id="chatMenuGrpSet" onclick="closeChatMenu();openGroupSettings(activeId)" style="display:none">⚙ グループ設定</button>
+</div>
+<style>
+.chat-menu{
+  position:fixed;z-index:1100;
+  background:#fff;border-radius:11px;border:.5px solid var(--wire2);
+  box-shadow:0 16px 36px rgba(9,9,11,.14),0 4px 10px rgba(9,9,11,.05);
+  padding:5px;min-width:220px;
+  animation:rpicker-in .14s ease-out;
+}
+.chat-menu button{
+  display:block;width:100%;text-align:left;padding:8px 12px;
+  border:0;background:transparent;cursor:pointer;font-family:inherit;
+  font-size:12.5px;color:var(--text);border-radius:7px;
+}
+.chat-menu button:hover{background:rgba(9,9,11,.04);}
+.chat-menu-div{height:.5px;background:var(--wire);margin:4px 6px;}
+.m-act.bm{font-size:13px !important;padding:0 6px !important;}
+.m-act.bm.bm-on{color:#f59e0b;}
+</style>
+
+<!-- ══ BOOKMARKS LIST OVERLAY ═══════════════════════════════ -->
+<div class="overlay" id="bookmarksOverlay" onclick="if(event.target===this)closeBookmarks()">
+  <div class="search-modal">
+    <div class="search-h">
+      <span style="font-size:14px">★</span>
+      <span style="flex:1;font-weight:700;color:var(--text);font-size:14px">ブックマーク</span>
+      <button onclick="closeBookmarks()" style="background:rgba(9,9,11,.05);border:0;border-radius:50%;width:24px;height:24px;cursor:pointer;color:var(--text2);font-size:13px">×</button>
+    </div>
+    <div class="search-results" id="bookmarksList"></div>
+  </div>
+</div>
+
+<!-- ══ GLOBAL SEARCH (⌘K) ════════════════════════════════════ -->
+<div class="overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+  <div class="search-modal">
+    <div class="search-h">
+      <span style="font-size:14px">🔍</span>
+      <input id="searchInput" type="text" placeholder="メッセージ・エージェント名で検索…" oninput="_runSearch(this.value)" onkeydown="_searchKey(event)">
+      <kbd>esc</kbd>
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-empty">⌘K でいつでも開ける · 全エージェントの履歴を横断検索</div>
+    </div>
+  </div>
+</div>
+<style>
+.search-modal{
+  width:600px;max-width:calc(100vw - 32px);max-height:70vh;
+  background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.18);
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:searchIn .18s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes searchIn{from{opacity:0;transform:translateY(-12px) scale(.96);}}
+.search-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:.5px solid var(--wire);}
+.search-h input{
+  flex:1;border:0;outline:0;font-size:14.5px;color:var(--text);font-family:inherit;
+  letter-spacing:-.005em;background:transparent;
+}
+.search-h input::placeholder{color:var(--text3);}
+.search-h kbd{
+  font-size:9.5px;background:var(--bg-100);border:.5px solid var(--wire2);
+  padding:2px 6px;border-radius:5px;color:var(--text3);font-family:'JetBrains Mono','SF Mono',monospace;
+}
+.search-results{flex:1;overflow-y:auto;padding:6px;}
+.search-empty{padding:32px 16px;text-align:center;font-size:12px;color:var(--text3);}
+.search-result{
+  display:block;padding:9px 12px;border-radius:8px;cursor:pointer;
+  border:0;background:transparent;width:100%;text-align:left;font-family:inherit;
+  margin-bottom:2px;
+}
+.search-result:hover, .search-result.sel{background:rgba(251,146,60,.08);}
+.search-result.sel{background:rgba(251,146,60,.14);}
+.search-result .sr-h{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3);margin-bottom:2px;}
+.search-result .sr-icon{
+  width:18px;height:18px;border-radius:5px;display:flex;align-items:center;
+  justify-content:center;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-size:11px;flex-shrink:0;
+}
+.search-result .sr-agent{font-weight:700;color:var(--text);}
+.search-result .sr-when{margin-left:auto;font-size:10px;}
+.search-result .sr-body{font-size:12.5px;color:var(--text);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.search-result .sr-body mark{background:rgba(251,146,60,.3);color:var(--peach-dark);font-weight:700;border-radius:2px;padding:0 1px;}
+</style>
 
 <!-- ══ GROUP SETTINGS MODAL ══════════════════════════════════ -->
 <div class="overlay" id="grpSetOverlay" onclick="if(event.target===this)closeGroupSettings()">
@@ -4533,6 +4637,238 @@ function updateBalance(){
 var _sbTab = 'talks';
 var _joinedGroups = [];
 
+// ── Chat options menu (⋯) ──────────────────────────────────
+function openChatMenu(ev){
+  if(ev) ev.stopPropagation();
+  const menu = document.getElementById('chatMenu');
+  if(!menu) return;
+  // Position below the trigger button
+  const r = ev.target.getBoundingClientRect();
+  menu.style.top = (r.bottom + 6) + 'px';
+  menu.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+  menu.style.left = 'auto';
+  menu.style.display = 'block';
+  // Show "edit agent" only for solo or hosted, group settings for groups
+  const ag = agents.find(a => a.id === activeId);
+  const editBtn = document.getElementById('chatMenuEditAg');
+  const grpBtn = document.getElementById('chatMenuGrpSet');
+  if(ag && ag.is_group){
+    if(editBtn) editBtn.style.display = 'none';
+    if(grpBtn) grpBtn.style.display = '';
+  } else {
+    if(editBtn) editBtn.style.display = (ag && !ag._is_joined_group) ? '' : 'none';
+    if(grpBtn) grpBtn.style.display = 'none';
+  }
+  setTimeout(() => {
+    document.addEventListener('click', closeChatMenu, { once: true });
+  }, 0);
+}
+function closeChatMenu(){
+  const menu = document.getElementById('chatMenu');
+  if(menu) menu.style.display = 'none';
+}
+
+// ── Voice input (Web Speech API) ───────────────────────────
+var _speechRecog = null;
+var _speechActive = false;
+function startVoiceInput(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    showToast(isJa?'お使いのブラウザは音声認識に対応していません':'Speech recognition not supported','ng');
+    return;
+  }
+  if(_speechActive){ stopVoiceInput(); return; }
+  _speechRecog = new SR();
+  _speechRecog.lang = isJa ? 'ja-JP' : 'en-US';
+  _speechRecog.continuous = false;
+  _speechRecog.interimResults = true;
+  const ci = document.getElementById('ci');
+  let baseVal = ci ? ci.value : '';
+  _speechRecog.onresult = (ev) => {
+    let interim = '', final = '';
+    for(let i = ev.resultIndex; i < ev.results.length; i++){
+      const t = ev.results[i][0].transcript;
+      if(ev.results[i].isFinal) final += t; else interim += t;
+    }
+    if(ci){
+      ci.value = (baseVal + (final || interim)).replace(/\s+$/,'');
+      try{ exTA(ci); }catch(e){}
+    }
+    if(final) baseVal += final;
+  };
+  _speechRecog.onstart = () => {
+    _speechActive = true;
+    document.getElementById('voiceBtn')?.classList.add('recording');
+  };
+  _speechRecog.onend = () => {
+    _speechActive = false;
+    document.getElementById('voiceBtn')?.classList.remove('recording');
+  };
+  _speechRecog.onerror = (e) => {
+    _speechActive = false;
+    document.getElementById('voiceBtn')?.classList.remove('recording');
+    if(e.error !== 'no-speech' && e.error !== 'aborted'){
+      showToast((isJa?'音声認識エラー: ':'Recognition error: ')+e.error,'ng');
+    }
+  };
+  try { _speechRecog.start(); }
+  catch(e){ showToast(isJa?'音声入力を開始できませんでした':'Could not start','ng'); }
+}
+function stopVoiceInput(){
+  if(_speechRecog){ try { _speechRecog.stop(); } catch(e){} }
+  _speechActive = false;
+}
+
+// ── Voice output (Web Speech Synthesis / TTS) ──────────────
+var _ttsCurrent = null;
+function speakMsg(btn){
+  const msg = btn.closest('.m');
+  if(!msg) return;
+  const body = msg.querySelector('.m-body');
+  if(!body) return;
+  const text = body.innerText.trim();
+  if(!text) return;
+  if(_ttsCurrent && _ttsCurrent.speaking){
+    window.speechSynthesis.cancel();
+    btn.textContent = '🔊';
+    return;
+  }
+  if(!('speechSynthesis' in window)){
+    showToast(isJa?'読み上げに対応していません':'TTS not supported','ng');
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(text.slice(0, 4000));
+  u.lang = isJa ? 'ja-JP' : 'en-US';
+  u.rate = 1.05;
+  u.onend = () => { btn.textContent = '🔊'; _ttsCurrent = null; };
+  u.onerror = () => { btn.textContent = '🔊'; _ttsCurrent = null; };
+  btn.textContent = '⏸';
+  _ttsCurrent = u;
+  window.speechSynthesis.speak(u);
+}
+
+// ── Global search (⌘K) ─────────────────────────────────────
+var _searchSel = 0;       // currently highlighted result index
+var _searchHits = [];     // last computed results
+
+function openSearch(){
+  document.getElementById('searchOverlay').classList.add('open');
+  setTimeout(() => {
+    const inp = document.getElementById('searchInput');
+    if(inp){ inp.value = ''; inp.focus(); }
+    _runSearch('');
+  }, 50);
+}
+function closeSearch(){
+  document.getElementById('searchOverlay').classList.remove('open');
+}
+
+function _runSearch(q){
+  q = (q||'').toLowerCase().trim();
+  const list = document.getElementById('searchResults');
+  if(!list) return;
+  if(!q){
+    list.innerHTML = '<div class="search-empty">⌘K でいつでも開ける · 全エージェントの履歴を横断検索</div>';
+    _searchHits = [];
+    return;
+  }
+  const hits = [];
+  // Search across all agents
+  (agents||[]).forEach(a => {
+    // Match in agent name itself (always include)
+    if((a.name||'').toLowerCase().includes(q)){
+      hits.push({type:'agent', agent: a, idx: -1, snippet: a.name});
+    }
+    // Match in history
+    (a.history||[]).forEach((m, i) => {
+      if(!m || !m.content) return;
+      const text = (typeof m.content === 'string')
+        ? m.content
+        : (Array.isArray(m.content)
+            ? (m.content.find(b => b.type==='text')?.text || '')
+            : '');
+      if(text.toLowerCase().includes(q)){
+        hits.push({type:'msg', agent: a, idx: i, snippet: text, role: m.role, time: m.time, user_name: m.user_name});
+      }
+    });
+  });
+  // Cap at 50 results
+  _searchHits = hits.slice(0, 50);
+  _searchSel = 0;
+  if(!_searchHits.length){
+    list.innerHTML = '<div class="search-empty">「'+esc(q)+'」に一致する結果はありません</div>';
+    return;
+  }
+  list.innerHTML = _searchHits.map((h, i) => {
+    const av = (h.agent.avatar||'🤖').toString();
+    const avHTML = av.startsWith('data:image/') ? '🤖' : av;
+    const roleLabel = h.type==='agent' ? '' :
+      (h.role==='user' ? (h.user_name||'あなた') : (h.agent.name||'AI'));
+    const when = h.type==='agent' ? '' : (h.time||'');
+    // Highlight match
+    const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')', 'gi');
+    let snip = h.snippet || '';
+    if(snip.length > 240) snip = snip.slice(0, 240) + '…';
+    snip = esc(snip).replace(re, '<mark>$1</mark>');
+    return '<button class="search-result'+(i===_searchSel?' sel':'')+'" data-idx="'+i+'" onclick="_pickSearch('+i+')">'
+      + '<div class="sr-h"><span class="sr-icon">'+esc(avHTML)+'</span>'
+        + '<span class="sr-agent">'+esc(h.agent.name)+'</span>'
+        + (roleLabel ? '<span> · '+esc(roleLabel)+'</span>' : '')
+        + '<span class="sr-when">'+esc(when)+'</span></div>'
+      + '<div class="sr-body">'+snip+'</div>'
+      + '</button>';
+  }).join('');
+}
+
+function _searchKey(ev){
+  if(ev.key === 'Escape'){ closeSearch(); return; }
+  if(ev.key === 'ArrowDown'){
+    ev.preventDefault();
+    _searchSel = Math.min(_searchHits.length-1, _searchSel+1);
+    _refreshSearchSel();
+  } else if(ev.key === 'ArrowUp'){
+    ev.preventDefault();
+    _searchSel = Math.max(0, _searchSel-1);
+    _refreshSearchSel();
+  } else if(ev.key === 'Enter' && _searchHits.length){
+    ev.preventDefault();
+    _pickSearch(_searchSel);
+  }
+}
+function _refreshSearchSel(){
+  document.querySelectorAll('.search-result').forEach((el, i) => {
+    el.classList.toggle('sel', i === _searchSel);
+    if(i === _searchSel) el.scrollIntoView({block:'nearest'});
+  });
+}
+function _pickSearch(i){
+  const h = _searchHits[i];
+  if(!h) return;
+  closeSearch();
+  openAgent(h.agent.id);
+  // Scroll to the matched message after agents render
+  if(h.type === 'msg' && h.idx >= 0){
+    setTimeout(() => {
+      const el = document.querySelector('.m[data-idx="'+h.idx+'"]');
+      if(el){
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        el.style.transition='background .8s';
+        const orig = el.style.background;
+        el.style.background = 'rgba(251,146,60,.18)';
+        setTimeout(() => { el.style.background = orig; }, 1200);
+      }
+    }, 300);
+  }
+}
+
+// Global ⌘K / Ctrl+K shortcut
+document.addEventListener('keydown', (ev) => {
+  if((ev.metaKey || ev.ctrlKey) && ev.key === 'k'){
+    ev.preventDefault();
+    openSearch();
+  }
+});
+
 // ── Mobile sidebar drawer ──────────────────────────────────
 // On ≤700px viewports, the sidebar is hidden by default and slides in when
 // the hamburger is tapped. Auto-closes on agent select / overlay click / Esc.
@@ -5003,13 +5339,11 @@ async function openAgent(id){
   if(isGroup){
     actsHTML += '<button class="ct-act wide invite" onclick="openInviteModal(\''+ag.id+'\')" title="メンバーを招待">＋ 招待</button>';
     actsHTML += '<button class="ct-act wide members" onclick="openMemberPanel(\''+ag.id+'\')" title="メンバー">👥 '+memberCount+'</button>';
-    actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="グループ設定">⚙</button>';
+    actsHTML += '<button class="ct-act" onclick="openChatMenu(event)" title="その他">⋯</button>';
   } else {
     actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
     actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
-    if(!ag._is_joined_group){
-      actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="'+(isJa?'編集':'Edit')+'">⚙</button>';
-    }
+    actsHTML += '<button class="ct-act" onclick="openChatMenu(event)" title="その他">⋯</button>';
   }
   document.getElementById('chatTop').innerHTML=
     '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+
@@ -5193,11 +5527,15 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
   let acts = '';
   if(idx>=0){
+    const isBookmarked = !!(raw && (raw.bookmarked || (Array.isArray(raw.bookmarked_by) && raw.bookmarked_by.includes(me?.id))));
+    const bmBtn = '<button class="m-act bm'+(isBookmarked?' bm-on':'')+'" onclick="toggleBookmark(this)" title="ブックマーク">'+(isBookmarked?'★':'☆')+'</button>';
     if(isU){
-      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>';
+      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+bmBtn;
     } else {
       acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+
-             '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>';
+             '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
+             '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊</button>'+
+             bmBtn;
     }
   }
   // In groups, highlight @AI / @name mentions in the body.
@@ -5627,6 +5965,118 @@ async function _grpSettingsTransfer(){
     if(activeId === agId) openAgent(agId);
   } catch(e){ showToast(e.message, 'ng'); }
 }
+
+// ── Chat export (MD / JSON download) ───────────────────────
+function exportChat(format){
+  const ag = agents.find(a => a.id === activeId);
+  if(!ag) return;
+  const fname = (ag.name||'chat').replace(/[^\w぀-ヿ一-鿿_-]/g,'_');
+  if(format === 'json'){
+    const blob = new Blob([JSON.stringify({
+      agent: { id:ag.id, name:ag.name, avatar:ag.avatar, persona:ag.persona, skills:ag.skills, is_group:!!ag.is_group },
+      members: ag.members || [],
+      history: ag.history || [],
+      exported_at: new Date().toISOString(),
+    }, null, 2)], {type:'application/json'});
+    _downloadBlob(blob, fname+'_'+_dateSlug()+'.json');
+  } else {
+    // Markdown
+    const lines = [];
+    lines.push('# ' + (ag.name||'AI Agent'));
+    if(ag.is_group) lines.push('_グループチャット · '+(ag.members||[]).length+' 名_');
+    if(ag.persona) lines.push('\n> '+ag.persona.replace(/\n/g,'\n> '));
+    lines.push('\n---\n');
+    (ag.history||[]).forEach(m => {
+      if(m.role === 'system'){
+        lines.push('_'+(m.content||'')+'_  ');
+        return;
+      }
+      const who = m.role === 'user'
+        ? (m.user_name || 'あなた')
+        : (ag.name || 'AI');
+      const time = m.time ? ' · ' + m.time : '';
+      const body = (typeof m.content === 'string')
+        ? m.content
+        : (Array.isArray(m.content)
+            ? (m.content.find(b => b.type==='text')?.text || '')
+            : '');
+      lines.push('### '+who+time);
+      lines.push(body+'\n');
+    });
+    const blob = new Blob([lines.join('\n')], {type:'text/markdown;charset=utf-8'});
+    _downloadBlob(blob, fname+'_'+_dateSlug()+'.md');
+  }
+  showToast(isJa?'エクスポートしました':'Exported','ok');
+}
+function _downloadBlob(blob, fname){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+}
+function _dateSlug(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// ── Bookmarks (star important AI replies) ────────────────────
+async function toggleBookmark(btn){
+  const msg = btn.closest('.m');
+  if(!msg) return;
+  const idx = parseInt(msg.dataset.idx, 10);
+  if(!Number.isInteger(idx) || !activeId) return;
+  const ag = agents.find(a => a.id === activeId);
+  if(!ag) return;
+  const m = (ag.history||[])[idx];
+  if(!m) return;
+  m.bookmarked = !m.bookmarked;
+  btn.textContent = m.bookmarked ? '★' : '☆';
+  btn.classList.toggle('bm-on', !!m.bookmarked);
+  // Persist via PATCH /api/agents/:id (just save the agent so history.bookmark is included)
+  try {
+    await api('POST', '/api/agents/'+activeId+'/bookmark', {idx, on: !!m.bookmarked});
+    showToast(m.bookmarked ? (isJa?'ブックマークしました':'Bookmarked') : (isJa?'外しました':'Unbookmarked'), 'ok');
+  } catch(e){
+    m.bookmarked = !m.bookmarked; // rollback
+    btn.textContent = m.bookmarked ? '★' : '☆';
+    btn.classList.toggle('bm-on', !!m.bookmarked);
+    showToast(e.message, 'ng');
+  }
+}
+function openBookmarks(){
+  // Gather all bookmarked messages across all agents
+  const items = [];
+  (agents||[]).forEach(a => {
+    (a.history||[]).forEach((m, i) => {
+      if(m && m.bookmarked){
+        items.push({agent: a, idx: i, msg: m});
+      }
+    });
+  });
+  const ov = document.getElementById('bookmarksOverlay');
+  const list = document.getElementById('bookmarksList');
+  if(!ov || !list) return;
+  if(!items.length){
+    list.innerHTML = '<div class="search-empty">★ をクリックしてブックマークを追加できます</div>';
+  } else {
+    list.innerHTML = items.map(it => {
+      const text = (typeof it.msg.content === 'string')
+        ? it.msg.content
+        : (Array.isArray(it.msg.content)
+            ? (it.msg.content.find(b => b.type==='text')?.text || '')
+            : '');
+      const av = (it.agent.avatar||'🤖').toString();
+      const avHTML = av.startsWith('data:image/') ? '🤖' : av;
+      return '<button class="search-result" onclick="closeBookmarks();_pickSearch(0);openAgent(\''+esc(it.agent.id)+'\');setTimeout(()=>{const e=document.querySelector(\\\'.m[data-idx=\\\\\"'+it.idx+'\\\\\"]\\\');if(e)e.scrollIntoView({block:\\\'center\\\'});},300)">'
+        + '<div class="sr-h"><span class="sr-icon">'+esc(avHTML)+'</span><span class="sr-agent">'+esc(it.agent.name)+'</span><span class="sr-when">'+esc(it.msg.time||'')+'</span></div>'
+        + '<div class="sr-body">'+esc(text.slice(0,200))+'</div></button>';
+    }).join('');
+  }
+  ov.classList.add('open');
+}
+function closeBookmarks(){ document.getElementById('bookmarksOverlay')?.classList.remove('open'); }
 
 function copyMsgText(btn){
   var msg=btn.closest('.m');

@@ -67,6 +67,7 @@ const LDB=(()=>{
     all:()=>d.users.slice(),
     add(u){d.users.push(u);save();},
     upd(u){const i=d.users.findIndex(x=>x.id===u.id);if(i>=0){d.users[i]=u;save();}},
+    del(id){const i=d.users.findIndex(x=>x.id===id);if(i>=0){d.users.splice(i,1);save();}},
   };
 })();
 
@@ -242,14 +243,40 @@ function newUser(base){
     is_verified:false,             // 公式 / 検証済みクリエイターバッジ (admin manual)
     favorites:[],                  // listing_ids the user favorited
     // Group memberships: groups this user joined that are owned by OTHERS.
-    // Format: [{host_id, agent_id, joined_at}]. The actual agent record lives in
-    // the host's agents[] (single source of truth, billing flows there).
     group_memberships:[],
+    // Referral: my own short code (lazy-generated) + who referred me + count
+    referral_code:null,
+    referred_by:null,
+    referral_stats:{ count:0, last_at:null, total_credit_jpy:0 },
     // Google Sheets API tokens — null when not connected.
     // {access_token, refresh_token, expires_at, scope, email}
     google_oauth:null,
     verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
+}
+
+// ── REFERRAL HELPERS ──────────────────────────────────────────
+// Generate a short (10-char base32) referral code. Cheap to type by hand.
+function genReferralCode(){
+  const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i=0;i<8;i++) s += A[Math.floor(Math.random()*A.length)];
+  return s;
+}
+async function ensureReferralCode(user){
+  if(user.referral_code && user.referral_code.length === 8) return user.referral_code;
+  user.referral_code = genReferralCode();
+  await DB.save(user).catch(()=>{});
+  return user.referral_code;
+}
+async function findUserByReferralCode(code){
+  if(!code || typeof code !== 'string' || code.length !== 8) return null;
+  if(USE_SUPA){
+    const r = await sbReq('GET','users','?select=*&referral_code=eq.'+encodeURIComponent(code)+'&limit=1');
+    return (r && r.d && r.d[0]) || null;
+  } else {
+    return LDB.find(u => u.referral_code === code) || null;
+  }
 }
 
 // ── GROUP HELPERS ─────────────────────────────────────────────
@@ -2796,19 +2823,59 @@ async function handleAPI(req,res,pathname,method,ip){
   }
   // ── POST /api/auth/signup ──────────────────────────────────
   if(pathname==='/api/auth/signup'&&method==='POST'){
-    const{name,email,password}=await readBody(req);
+    const body = await readBody(req);
+    const {name, email, password} = body;
+    const refCode = (body.ref || '').toString().trim().toUpperCase();
     if(!name?.trim()||!email?.trim()||!password)return jres(res,400,{error:'すべての項目を入力してください'});
     if(password.length<8)return jres(res,400,{error:'パスワードは8文字以上にしてください'});
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return jres(res,400,{error:'メールアドレスの形式が正しくありません'});
     if(await DB.findBy('email',email.toLowerCase()))return jres(res,409,{error:'このメールアドレスはすでに登録されています'});
     const verify_token=crypto.randomBytes(32).toString('hex');
     const user=newUser({name:name.trim(),email:email.toLowerCase(),password:PW.hash(password),verified:!RESEND_KEY,verify_token});
+
+    // Referral: bonus both sides
+    let referrer = null;
+    const REFERRAL_BONUS_JPY = 500;
+    if(refCode){
+      try {
+        referrer = await findUserByReferralCode(refCode);
+        if(referrer && referrer.id !== user.id){
+          user.referred_by = referrer.id;
+          user.balance_jpy = (user.balance_jpy||0) + REFERRAL_BONUS_JPY;
+        }
+      } catch(e){ console.warn('[signup] referral lookup failed:', e.message); }
+    }
+
     try {
       await DB.create(user);
     } catch(e) {
       console.error('[signup] DB.create failed:', e.message);
       return jres(res,500,{error:'アカウント作成に失敗しました。少し時間をおいて再試行してください。', detail: e.message});
     }
+
+    // Credit the referrer (after our user is committed)
+    if(referrer && user.referred_by){
+      try {
+        const fresh = await DB.findBy('id', referrer.id);
+        if(fresh){
+          fresh.balance_jpy = (fresh.balance_jpy||0) + REFERRAL_BONUS_JPY;
+          fresh.referral_stats = fresh.referral_stats || { count:0, last_at:null, total_credit_jpy:0 };
+          fresh.referral_stats.count = (fresh.referral_stats.count||0) + 1;
+          fresh.referral_stats.last_at = new Date().toISOString();
+          fresh.referral_stats.total_credit_jpy = (fresh.referral_stats.total_credit_jpy||0) + REFERRAL_BONUS_JPY;
+          fresh.billing_history = fresh.billing_history || [];
+          fresh.billing_history.push({
+            date:new Date().toISOString(),
+            type:'referral_bonus',
+            referred_user_id:user.id,
+            referred_name:user.name,
+            amount_jpy:REFERRAL_BONUS_JPY,
+          });
+          await DB.save(fresh);
+        }
+      } catch(e){ console.warn('[signup] referrer credit failed:', e.message); }
+    }
+
     if(RESEND_KEY)await sendVerifyEmail(user);
     const token=JWT.sign({userId:user.id,email:user.email});
     return jres(res,201,{token,user:safe(user),needsVerify:!!RESEND_KEY});
@@ -3897,6 +3964,116 @@ async function handleAPI(req,res,pathname,method,ip){
       new_balance_jpy: user.balance_jpy,
       host_balance_jpy: host.balance_jpy,
     });
+  }
+
+  // ── GET /api/me/referral ───────────────────────────────────
+  if(pathname === '/api/me/referral' && method === 'GET'){
+    const code = await ensureReferralCode(user);
+    return jres(res, 200, {
+      code,
+      url: APP_URL + '/auth.html?ref=' + code,
+      stats: user.referral_stats || { count:0, last_at:null, total_credit_jpy:0 },
+      bonus_jpy: 500,
+    });
+  }
+
+  // ── GET /api/me/data-export ────────────────────────────────
+  // Full JSON dump of the user's own data (GDPR-style).
+  if(pathname === '/api/me/data-export' && method === 'GET'){
+    const dump = {
+      exported_at: new Date().toISOString(),
+      user: {
+        id: user.id, name: user.name, email: user.email,
+        plan: user.plan, balance_jpy: user.balance_jpy, usage_count: user.usage_count,
+        verified: user.verified, created_at: user.created_at,
+        referral_code: user.referral_code, referred_by: user.referred_by,
+        referral_stats: user.referral_stats,
+      },
+      agents: user.agents || [],
+      group_memberships: user.group_memberships || [],
+      billing_history: user.billing_history || [],
+      revenue_history: user.revenue_history || [],
+      payout_history: user.payout_history || [],
+      favorites: user.favorites || [],
+      mobile_devices: (user.mobile_devices||[]).map(d => ({...d, token: (d.token||'').slice(0,12)+'…'})),
+    };
+    res.writeHead(200, {
+      'Content-Type':'application/json; charset=utf-8',
+      'Content-Disposition':'attachment; filename="myaiagent-data-'+user.id.slice(0,8)+'.json"',
+      ...SEC,
+    });
+    return res.end(JSON.stringify(dump, null, 2));
+  }
+
+  // ── DELETE /api/me ─────────────────────────────────────────
+  // Permanent account deletion. Removes the user record + cleans up
+  // group memberships in groups they joined. Hosted groups are deleted
+  // along with the user.
+  if(pathname === '/api/me' && method === 'DELETE'){
+    const body = await readBody(req).catch(()=>({}));
+    if(body && body.confirm !== 'DELETE'){
+      return jres(res,400,{error:'本当に削除する場合は body に {"confirm":"DELETE"} を含めてください'});
+    }
+    // Drop the user from all hosted-group member lists they're a member of.
+    for(const m of (user.group_memberships||[])){
+      try {
+        const host = await DB.findBy('id', m.host_id);
+        if(!host) continue;
+        const ag = (host.agents||[]).find(a => a.id === m.agent_id);
+        if(ag){
+          ag.members = (ag.members||[]).filter(x => x.user_id !== user.id);
+          await DB.save(host);
+        }
+      } catch(e){ console.warn('[delete] cleanup membership failed:', e.message); }
+    }
+    // Delete the user row itself
+    try {
+      if(USE_SUPA){
+        await sbReq('DELETE','users','?id=eq.'+encodeURIComponent(user.id));
+      } else {
+        LDB.del(user.id);
+      }
+    } catch(e){
+      console.error('[delete] user delete failed:', e.message);
+      return jres(res,500,{error:'削除に失敗しました', detail: e.message});
+    }
+    return jres(res, 200, { ok:true, deleted: true });
+  }
+
+  // ── POST /api/agents/:id/bookmark ──────────────────────────
+  // body: { idx: number, on: bool }  — flag a message as bookmarked
+  const bmM = pathname.match(/^\/api\/agents\/([^/]+)\/bookmark$/);
+  if(bmM && method === 'POST'){
+    const agId = bmM[1];
+    const body = await readBody(req) || {};
+    const idx = parseInt(body.idx, 10);
+    const on = !!body.on;
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let target = user;
+    if(!ag){
+      const ms = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!ms) return jres(res,404,{error:'エージェントが見つかりません'});
+      const host = await DB.findBy('id', ms.host_id);
+      if(!host) return jres(res,404,{error:'ホストが見つかりません'});
+      target = host;
+      ag = (host.agents||[]).find(a => a.id === agId);
+    }
+    if(!ag || !Array.isArray(ag.history) || idx < 0 || idx >= ag.history.length){
+      return jres(res,400,{error:'メッセージが見つかりません'});
+    }
+    // bookmarks are stored per-user (different members can bookmark differently)
+    const m = ag.history[idx];
+    m.bookmarked_by = Array.isArray(m.bookmarked_by) ? m.bookmarked_by : [];
+    if(on){
+      if(!m.bookmarked_by.includes(user.id)) m.bookmarked_by.push(user.id);
+    } else {
+      m.bookmarked_by = m.bookmarked_by.filter(id => id !== user.id);
+    }
+    // For solo agents (caller is owner), also keep the legacy `bookmarked` flag
+    if(target === user) m.bookmarked = on;
+    ag.history[idx] = m;
+    await DB.save(target);
+    return jres(res,200,{ok:true, bookmarked: on});
   }
 
   // ── POST /api/agents/:id/messages/:idx/react ───────────────

@@ -2595,6 +2595,119 @@ body{color:#f0f0f8;}
   </div>
 </div>
 
+<!-- ══ GROUP SETTINGS MODAL ══════════════════════════════════ -->
+<div class="overlay" id="grpSetOverlay">
+  <div class="wizard" style="max-width:480px">
+    <div class="wiz-top">
+      <div class="wiz-title">⚙ グループ設定</div>
+      <button class="wiz-close" onclick="closeGroupSettings()"><svg width="12" height="12" viewbox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <input type="hidden" id="grpSetActiveId">
+    <div class="wiz-body" style="padding:14px 22px 18px">
+
+      <!-- グループ名 (host only — disabled for members) -->
+      <div class="grpset-h">グループ情報</div>
+      <div class="grpset-row">
+        <label class="grpset-lbl">名前</label>
+        <div style="display:flex;gap:8px;flex:1">
+          <input id="grpSetName" type="text" class="grpset-input" placeholder="グループ名">
+          <button id="grpSetRenameBtn" class="grpset-btn primary" onclick="_grpSettingsRename()">保存</button>
+        </div>
+      </div>
+
+      <!-- 通知設定 (per-user) -->
+      <div class="grpset-h">通知</div>
+      <div class="grpset-radio-row" onclick="_grpSettingsNotifyPref('all')">
+        <input type="radio" name="grpset-notif" id="grpSetNotif_all" value="all">
+        <label for="grpSetNotif_all">
+          <div class="grpset-radio-h">🔔 すべての発言</div>
+          <div class="grpset-radio-d">グループ内の全てのメッセージで通知</div>
+        </label>
+      </div>
+      <div class="grpset-radio-row" onclick="_grpSettingsNotifyPref('mentions')">
+        <input type="radio" name="grpset-notif" id="grpSetNotif_mentions" value="mentions">
+        <label for="grpSetNotif_mentions">
+          <div class="grpset-radio-h">📣 メンションのみ</div>
+          <div class="grpset-radio-d">@あなた でメンションされた時のみ通知</div>
+        </label>
+      </div>
+      <div class="grpset-radio-row" onclick="_grpSettingsNotifyPref('mute')">
+        <input type="radio" name="grpset-notif" id="grpSetNotif_mute" value="mute">
+        <label for="grpSetNotif_mute">
+          <div class="grpset-radio-h">🔕 ミュート</div>
+          <div class="grpset-radio-d">通知しない (バッジは表示)</div>
+        </label>
+      </div>
+
+      <!-- 招待設定 (host only) -->
+      <div id="grpSetInviteSection" style="display:none">
+        <div class="grpset-h">招待設定</div>
+        <div class="grpset-radio-row" onclick="_grpSettingsToggleApproval(false)">
+          <input type="radio" name="grpset-approval" id="grpSetApproval_off" value="false">
+          <label for="grpSetApproval_off">
+            <div class="grpset-radio-h">🌐 リンクを知っていれば誰でも参加</div>
+            <div class="grpset-radio-d">URL/QR を持っている人は即時参加可能</div>
+          </label>
+        </div>
+        <div class="grpset-radio-row" onclick="_grpSettingsToggleApproval(true)">
+          <input type="radio" name="grpset-approval" id="grpSetApproval_on" value="true">
+          <label for="grpSetApproval_on">
+            <div class="grpset-radio-h">🔒 ホストの承認が必要</div>
+            <div class="grpset-radio-d">参加リクエストをあなたが承認すると参加できます</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 所有権移譲 (host only, hidden when alone) -->
+      <div id="grpSetTransferSection" style="display:none">
+        <div class="grpset-h">所有権の移譲</div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:8px">
+          移譲後は新しいホストの残高から AI 利用料が消費されるようになります
+        </div>
+        <div style="display:flex;gap:8px">
+          <select id="grpSetTransferTo" class="grpset-input" style="flex:1"></select>
+          <button class="grpset-btn primary" onclick="_grpSettingsTransfer()">移譲</button>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div style="margin-top:18px;padding-top:14px;border-top:.5px solid var(--wire)">
+        <button id="grpSetDangerBtn" class="grpset-btn danger" style="width:100%">グループを退出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.grpset-h{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;padding:10px 0 6px;}
+.grpset-row{display:flex;align-items:center;gap:10px;padding:8px 0;}
+.grpset-lbl{font-size:12px;color:var(--text2);font-weight:600;width:60px;flex-shrink:0;}
+.grpset-input{
+  flex:1;padding:8px 11px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;
+  color:var(--text);font-family:inherit;background:#fff;outline:0;
+}
+.grpset-input:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.15);}
+.grpset-input:disabled{background:var(--bg-100);color:var(--text3);cursor:not-allowed;}
+.grpset-btn{
+  padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:inherit;letter-spacing:-.005em;border:0;
+}
+.grpset-btn.primary{background:var(--ink);color:#fff;}
+.grpset-btn.primary:hover{background:#1a1a1a;}
+.grpset-btn.danger{background:rgba(239,68,68,.08);color:#dc2626;border:.5px solid rgba(239,68,68,.3);font-weight:700;padding:10px;}
+.grpset-btn.danger:hover{background:rgba(239,68,68,.16);}
+.grpset-radio-row{
+  display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-radius:9px;cursor:pointer;
+  border:.5px solid var(--wire);background:#fff;margin-bottom:4px;
+  transition:background .12s, border-color .12s;
+}
+.grpset-radio-row:hover{background:var(--bg-100);border-color:var(--wire2);}
+.grpset-radio-row input[type=radio]{accent-color:var(--peach);margin-top:2px;flex-shrink:0;}
+.grpset-radio-row label{flex:1;cursor:pointer;}
+.grpset-radio-h{font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.005em;}
+.grpset-radio-d{font-size:10.5px;color:var(--text3);margin-top:1px;line-height:1.45;}
+</style>
+
 <!-- ══ GROUP MEMBER PANEL ════════════════════════════════════ -->
 <div class="overlay" id="grpMemberOverlay">
   <div class="wizard" style="max-width:420px">
@@ -4334,22 +4447,50 @@ async function _groupPollTick(){
     const newSig = _historySignature(m.history);
     // Only apply if server has at least as many entries as local (safeguard
     // against transient races between optimistic local push and server save).
-    if(newSig === _groupPollSig && serverLen >= localLen) return;
+    if(newSig === _groupPollSig && serverLen >= localLen){
+      // Even with no chat changes, refresh sidebar unread badges for OTHER groups
+      // (a friend may have posted while user is in a different group). Light call.
+      _refreshSidebarUnread();
+      return;
+    }
     if(serverLen < localLen) return; // local is ahead; will sync on next tick
     _groupPollSig = newSig;
     ag.history = m.history;
     if(Array.isArray(m.members)) ag.members = m.members;
     if(activeId === _groupPollAgentId){
       renderMsgs(ag);
+      // Mark active chat as read since user is looking at it
+      api('POST', '/api/agents/' + _groupPollAgentId + '/read').catch(()=>{});
     }
   } catch(e){ /* swallow — transient errors are expected */ }
+}
+
+// Lightweight refresh of unread counts on the sidebar for non-active groups.
+// Called periodically and on visibilitychange.
+var _lastSidebarUnreadFetch = 0;
+async function _refreshSidebarUnread(){
+  const now = Date.now();
+  if(now - _lastSidebarUnreadFetch < 6000) return; // throttle
+  _lastSidebarUnreadFetch = now;
+  try { await fetchJoinedGroups(); renderAgList(); } catch(e){}
 }
 
 // Refresh once when tab regains visibility (covers users on phones who
 // foreground the app expecting a fresh state).
 document.addEventListener('visibilitychange', () => {
-  if(!document.hidden && _groupPollAgentId){ _groupPollTick(); }
+  if(!document.hidden){
+    if(_groupPollAgentId) _groupPollTick();
+    _refreshSidebarUnread();
+  }
 });
+
+// Sidebar unread refresh runs every 20s globally (so users on a DM still see
+// when a friend posted to a group). Cheap — single /api/groups call.
+setInterval(() => {
+  if(typeof document !== 'undefined' && document.hidden) return;
+  if(!token) return;
+  _refreshSidebarUnread();
+}, 20000);
 
 function setSbTab(tab){
   _sbTab = (tab === 'agents') ? 'agents' : 'talks';
@@ -4377,13 +4518,24 @@ function closeSbPlusMenu(){
   if(menu) menu.style.display = 'none';
 }
 
-// Fetch groups the user joined (hosted by other users). The endpoint also
-// includes hosted groups but we already have those in `agents`. We dedupe by id.
+// Fetch group metadata (hosted + joined). We use the response to populate
+// _joinedGroups AND to merge unread_count back into our local `agents` array
+// for hosted groups (since /api/me doesn't include unread).
 async function fetchJoinedGroups(){
   try{
     const r = await api('GET','/api/groups');
     const all = (r && r.groups) || [];
     _joinedGroups = all.filter(g => !g.is_host);
+    // Merge unread_count + last_message into hosted-group entries in `agents`
+    all.filter(g => g.is_host).forEach(g => {
+      const ag = (agents || []).find(a => a.id === g.id);
+      if(ag){
+        ag.unread_count = g.unread_count || 0;
+        if(g.last_message) ag.last_message = g.last_message;
+        if(g.last_at) ag.last_at = g.last_at;
+        if(typeof g.member_count === 'number') ag.member_count = g.member_count;
+      }
+    });
   }catch(e){ _joinedGroups = []; }
 }
 
@@ -4648,7 +4800,20 @@ async function openAgent(id){
   document.getElementById('ai-'+id)?.classList.add('on');
 
   // Start/stop live polling: only groups need it (DMs are single-user).
-  if(ag.is_group){ _startGroupPoll(id); } else { _stopGroupPoll(); }
+  if(ag.is_group){
+    _startGroupPoll(id);
+    // Mark as read on the server. Optimistically clear local unread badge.
+    ag.unread_count = 0;
+    // Update sidebar badge immediately (don't wait for next renderAgList)
+    try {
+      const itemEl = document.getElementById('ai-' + id);
+      const badgeEl = itemEl && itemEl.querySelector('.ag-unread');
+      if(badgeEl) badgeEl.remove();
+    } catch(e){}
+    api('POST', '/api/agents/' + id + '/read').catch(()=>{});
+  } else {
+    _stopGroupPoll();
+  }
 
   const isGroup = !!ag.is_group;
   const memberCount = (ag.members||[]).length;
@@ -4666,12 +4831,13 @@ async function openAgent(id){
   if(isGroup){
     actsHTML += '<button class="ct-act wide invite" onclick="openInviteModal(\''+ag.id+'\')" title="メンバーを招待">＋ 招待</button>';
     actsHTML += '<button class="ct-act wide members" onclick="openMemberPanel(\''+ag.id+'\')" title="メンバー">👥 '+memberCount+'</button>';
+    actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="グループ設定">⚙</button>';
   } else {
     actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
-  }
-  actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
-  if(!ag._is_joined_group){
-    actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="'+(isJa?'編集':'Edit')+'">⚙</button>';
+    actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
+    if(!ag._is_joined_group){
+      actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="'+(isJa?'編集':'Edit')+'">⚙</button>';
+    }
   }
   document.getElementById('chatTop').innerHTML=
     '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
@@ -4910,10 +5076,12 @@ async function openMemberPanel(agId){
   const ag = agents.find(a => a.id === agId);
   if(!ag) return;
   let members = ag.members || [];
+  let pendingRequests = [];
   let token = ag.invite_token || null;
   try {
     const m = await api('GET', '/api/agents/' + agId + '/members');
     members = m.members || [];
+    pendingRequests = Array.isArray(m.pending_requests) ? m.pending_requests : [];
     token = m.invite_token || null;
     ag.members = members;
   } catch(e){}
@@ -4922,7 +5090,27 @@ async function openMemberPanel(agId){
   if(!overlay) return;
   document.getElementById('grpMemberTitle').textContent = ag.name;
   const list = document.getElementById('grpMemberList');
-  list.innerHTML = members.map(m => {
+
+  // Pending requests block (host only)
+  let pendingHTML = '';
+  if(isHost && pendingRequests.length){
+    pendingHTML = '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(99,102,241,.06);border:.5px solid rgba(99,102,241,.18);border-radius:9px">'
+      + '<div style="font-size:10.5px;font-weight:700;color:#4338ca;margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase">参加リクエスト ('+pendingRequests.length+')</div>'
+      + pendingRequests.map(p => {
+          const initial = (p.name||'?').charAt(0).toUpperCase();
+          const color = _userColor(p.user_id);
+          return '<div class="mem-row" style="padding:6px 0;border:0">'
+            + '<div class="mem-av" style="background:'+color+';width:30px;height:30px">'+esc(initial)+'</div>'
+            + '<div class="mem-meta"><div class="mem-name" style="font-size:12px">'+esc(p.name||'')+'</div>'
+            + '<div class="mem-sub">'+new Date(p.requested_at||Date.now()).toLocaleString('ja-JP',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</div></div>'
+            + '<button class="grpset-btn primary" style="padding:5px 10px;font-size:10.5px" onclick="_approveJoin(\''+esc(agId)+'\',\''+esc(p.user_id)+'\')">承認</button>'
+            + '<button class="grpset-btn" style="padding:5px 10px;font-size:10.5px;background:rgba(9,9,11,.05);color:var(--text2);margin-left:4px" onclick="_denyJoin(\''+esc(agId)+'\',\''+esc(p.user_id)+'\')">却下</button>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  list.innerHTML = pendingHTML + members.map(m => {
     const isMe = m.user_id === me?.id;
     const initial = (m.name||'?').charAt(0).toUpperCase();
     const color = _userColor(m.user_id);
@@ -4940,6 +5128,24 @@ async function openMemberPanel(agId){
     ? '<button class="btn-volt" onclick="closeMemberPanel();openInviteModal(\''+esc(agId)+'\')" style="flex:1">＋ メンバーを招待</button>'
     : '<button class="btn-back" onclick="_leaveGroup(\''+esc(agId)+'\')" style="flex:1;color:#dc2626;border-color:rgba(239,68,68,.3)">グループを退出</button>';
   overlay.classList.add('open');
+}
+
+async function _approveJoin(agId, uid){
+  try {
+    await api('POST', '/api/agents/'+agId+'/approve', {user_id: uid});
+    showToast(isJa?'承認しました':'Approved','ok');
+    closeMemberPanel();
+    openMemberPanel(agId);
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+async function _denyJoin(agId, uid){
+  if(!confirm(isJa?'このリクエストを却下しますか？':'Deny this request?')) return;
+  try {
+    await api('POST', '/api/agents/'+agId+'/deny', {user_id: uid});
+    showToast(isJa?'却下しました':'Denied','ok');
+    closeMemberPanel();
+    openMemberPanel(agId);
+  } catch(e){ showToast(e.message, 'ng'); }
 }
 function closeMemberPanel(){
   document.getElementById('grpMemberOverlay')?.classList.remove('open');
@@ -4959,6 +5165,7 @@ async function _leaveGroup(agId){
     await api('POST', '/api/agents/'+agId+'/leave');
     showToast(isJa?'退出しました':'Left group', 'ok');
     closeMemberPanel();
+    closeGroupSettings();
     // Refresh sidebar — drop from joined groups
     _joinedGroups = _joinedGroups.filter(g => g.id !== agId);
     agents = (agents||[]).filter(a => a.id !== agId);
@@ -4966,6 +5173,143 @@ async function _leaveGroup(agId){
     document.getElementById('chatWrap').style.display = 'none';
     document.getElementById('emptyWrap').style.display = '';
     renderAgList();
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+
+// ── Group settings modal ──────────────────────────────────
+async function openGroupSettings(agId){
+  const ag = agents.find(a => a.id === agId);
+  if(!ag) return;
+  // Refresh members from server so the latest data shows
+  let members = ag.members || [];
+  try {
+    const m = await api('GET', '/api/agents/' + agId + '/members');
+    if(Array.isArray(m.members)) { members = m.members; ag.members = members; }
+    if(typeof m.name === 'string') ag.name = m.name;
+  } catch(e){}
+  const isHost = ag.host_id === me?.id;
+  const myMember = members.find(m => m.user_id === me?.id);
+  const myPref = (myMember && myMember.notify_pref) || 'all';
+
+  document.getElementById('grpSetName').value = ag.name || '';
+  document.getElementById('grpSetName').disabled = !isHost;
+  document.getElementById('grpSetRenameBtn').style.display = isHost ? '' : 'none';
+
+  // Notification radios
+  ['all','mentions','mute'].forEach(p => {
+    const r = document.getElementById('grpSetNotif_' + p);
+    if(r) r.checked = (p === myPref);
+  });
+
+  // Approval-required toggle (host only)
+  const inviteSec = document.getElementById('grpSetInviteSection');
+  if(isHost){
+    inviteSec.style.display = '';
+    let requireApproval = false;
+    try {
+      const m2 = await api('GET', '/api/agents/' + agId + '/members');
+      requireApproval = !!m2.invite_require_approval;
+    } catch(e){}
+    document.getElementById('grpSetApproval_off').checked = !requireApproval;
+    document.getElementById('grpSetApproval_on').checked = requireApproval;
+  } else {
+    inviteSec.style.display = 'none';
+  }
+
+  // Transfer ownership section: host only, only if there are other members
+  const transferSec = document.getElementById('grpSetTransferSection');
+  if(isHost && members.length > 1){
+    transferSec.style.display = '';
+    const sel = document.getElementById('grpSetTransferTo');
+    sel.innerHTML = '<option value="">移譲先を選択 …</option>'
+      + members.filter(m => m.user_id !== me?.id)
+        .map(m => '<option value="'+esc(m.user_id)+'">'+esc(m.name||'メンバー')+'</option>').join('');
+  } else {
+    transferSec.style.display = 'none';
+  }
+
+  // Footer button: 退出 (non-host) / 削除 (host alone) / hide (host with members)
+  const dangerBtn = document.getElementById('grpSetDangerBtn');
+  if(!isHost){
+    dangerBtn.style.display = '';
+    dangerBtn.textContent = isJa ? 'グループを退出' : 'Leave group';
+    dangerBtn.onclick = () => _leaveGroup(agId);
+  } else if(members.length === 1){
+    dangerBtn.style.display = '';
+    dangerBtn.textContent = isJa ? 'グループを削除' : 'Delete group';
+    dangerBtn.onclick = async () => {
+      if(!confirm(isJa?'このグループを削除しますか？復元できません。':'Delete this group? This cannot be undone.')) return;
+      try {
+        await api('DELETE', '/api/agents/'+agId);
+        showToast(isJa?'削除しました':'Deleted', 'ok');
+        agents = (agents||[]).filter(a => a.id !== agId);
+        activeId = null;
+        document.getElementById('chatWrap').style.display = 'none';
+        document.getElementById('emptyWrap').style.display = '';
+        renderAgList();
+        closeGroupSettings();
+      } catch(e){ showToast(e.message, 'ng'); }
+    };
+  } else {
+    // Host with members: must transfer first or remove members
+    dangerBtn.style.display = 'none';
+  }
+
+  document.getElementById('grpSetActiveId').value = agId;
+  document.getElementById('grpSetOverlay')?.classList.add('open');
+}
+function closeGroupSettings(){
+  document.getElementById('grpSetOverlay')?.classList.remove('open');
+}
+
+async function _grpSettingsRename(){
+  const agId = document.getElementById('grpSetActiveId').value;
+  const newName = (document.getElementById('grpSetName').value || '').trim();
+  if(!newName){ showToast('名前を入力してください', 'ng'); return; }
+  try {
+    await api('PATCH', '/api/agents/'+agId, {name: newName});
+    const ag = agents.find(a => a.id === agId);
+    if(ag) ag.name = newName;
+    showToast(isJa?'グループ名を変更しました':'Renamed', 'ok');
+    renderAgList();
+    if(activeId === agId) openAgent(agId); // refresh chat header
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+
+async function _grpSettingsNotifyPref(pref){
+  const agId = document.getElementById('grpSetActiveId').value;
+  try {
+    await api('POST', '/api/agents/'+agId+'/notify-pref', {pref});
+    const labels = {all:'すべての発言を通知', mentions:'メンションのみ通知', mute:'通知なし (ミュート)'};
+    showToast((labels[pref]||pref) + ' に変更', 'ok');
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+
+async function _grpSettingsToggleApproval(required){
+  const agId = document.getElementById('grpSetActiveId').value;
+  // Re-issue the invite token with the new flag (this rotates the token but
+  // that's fine — the host can re-share if needed).
+  try {
+    await api('POST', '/api/agents/'+agId+'/invite', {require_approval: !!required});
+    showToast(required ? (isJa?'承認制に変更しました':'Approval required') : (isJa?'リンクで誰でも参加可能に変更':'Open access'), 'ok');
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+
+async function _grpSettingsTransfer(){
+  const agId = document.getElementById('grpSetActiveId').value;
+  const newHostId = document.getElementById('grpSetTransferTo').value;
+  if(!newHostId){ showToast('移譲先を選択してください', 'ng'); return; }
+  if(!confirm(isJa?'本当に所有権を移譲しますか？AI 利用料は新しいホストの残高から消費されるようになります。':'Transfer ownership? AI cost will charge the new host going forward.')) return;
+  try {
+    await api('POST', '/api/agents/'+agId+'/transfer', {new_host_id: newHostId});
+    showToast(isJa?'所有権を移譲しました':'Ownership transferred', 'ok');
+    // Reload everything (this user is now a member, not a host)
+    closeGroupSettings();
+    const ra = await api('GET','/api/agents');
+    agents = ra.agents || [];
+    await fetchJoinedGroups();
+    renderAgList();
+    if(activeId === agId) openAgent(agId);
   } catch(e){ showToast(e.message, 'ng'); }
 }
 

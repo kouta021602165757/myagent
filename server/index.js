@@ -295,6 +295,25 @@ async function findGroupByToken(token){
   }
 }
 
+// Count history entries newer than the user's last_read_idx, excluding their
+// own messages and skipping system rows. Returns 0 if the user isn't a member.
+function _unreadCountForUser(agent, userId){
+  if(!agent || !Array.isArray(agent.history) || !Array.isArray(agent.members)) return 0;
+  const member = agent.members.find(m => m.user_id === userId);
+  const lastIdx = member && Number.isInteger(member.last_read_idx) ? member.last_read_idx : 0;
+  const tail = agent.history.slice(lastIdx);
+  let n = 0;
+  for(const m of tail){
+    if(!m) continue;
+    if(m.role === 'system') continue;
+    // Don't count the user's own messages as unread
+    if(m.role === 'user' && m.user_id === userId) continue;
+    n++;
+    if(n > 99) break; // capped — UI shows "99+"
+  }
+  return n;
+}
+
 // Returns true if invite is currently valid (not expired, under capacity)
 function isInviteValid(agent){
   if(!agent || !agent.invite_token) return false;
@@ -1988,8 +2007,19 @@ async function joinGroup(){
       headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + tk },
     });
     const d = await r.json();
+    // 202 pending — host requires approval. Show pending state.
+    if(r.status === 202 && d && d.pending){
+      btn.disabled = true;
+      btn.style.background = 'var(--ink-300)';
+      btn.style.boxShadow = 'none';
+      btn.textContent = '⏳ 承認待ち';
+      const sub = document.createElement('div');
+      sub.style.cssText = 'margin-top:10px;padding:11px 14px;background:rgba(99,102,241,.08);border:.5px solid rgba(99,102,241,.18);border-radius:11px;color:#4338ca;font-size:11.5px;text-align:center;line-height:1.55';
+      sub.innerHTML = 'ホスト (' + (d.group_name ? '<b>'+d.group_name.replace(/[<>]/g,'')+'</b>' : 'グループの作成者') + ') の承認待ちです。<br>承認されたら通知が届きます。';
+      btn.parentElement.appendChild(sub);
+      return;
+    }
     if(r.ok && d && d.ok){
-      // Land in the app, opening the joined agent
       location.href = '/app.html?openAgent=' + encodeURIComponent(d.agent_id || '');
       return;
     }
@@ -3461,22 +3491,80 @@ async function handleAPI(req,res,pathname,method,ip){
       ag = (hostUser.agents||[]).find(a => a.id === agId);
       if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
     }
+    const isCallerHost = (ag.host_id===user.id || host.id===user.id);
     return jres(res,200,{
       agent_id: ag.id,
       is_group: !!ag.is_group,
       host_id: ag.host_id || host.id,
       members: (ag.members||[]).map(_safeMember),
-      invite_token: (ag.host_id===user.id || host.id===user.id) ? (ag.invite_token||null) : null, // only host sees token
+      invite_token: isCallerHost ? (ag.invite_token||null) : null,
       invite_expires_at: ag.invite_expires_at || null,
       invite_max_members: ag.invite_max_members || 50,
+      invite_require_approval: !!ag.invite_require_approval,
+      // Pending join requests — host-only
+      pending_requests: isCallerHost ? (ag.pending_requests||[]) : [],
       // Full chat history (last 200 entries) so members see prior conversation.
-      // Strip server-only fields. The agent record otherwise stays on the host.
       name: ag.name,
       avatar: ag.avatar,
       skills: ag.skills || [],
       persona: ag.persona || '',
       history: (ag.history || []).slice(-200),
     });
+  }
+
+  // ── POST /api/agents/:id/approve | /deny ──────────────────
+  // body: { user_id }
+  const apM = pathname.match(/^\/api\/agents\/([^/]+)\/(approve|deny)$/);
+  if(apM && method === 'POST'){
+    const agId = apM[1];
+    const action = apM[2];
+    const body = await readBody(req);
+    const targetUid = (body && body.user_id || '').toString();
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    if(ag.host_id !== user.id) return jres(res,403,{error:'ホストのみ操作できます'});
+    const pending = (ag.pending_requests||[]).find(p => p.user_id === targetUid);
+    if(!pending) return jres(res,404,{error:'リクエストが見つかりません'});
+    ag.pending_requests = (ag.pending_requests||[]).filter(p => p.user_id !== targetUid);
+
+    if(action === 'approve'){
+      ag.members = [...(ag.members||[]), {
+        user_id: pending.user_id,
+        name: pending.name,
+        avatar: pending.avatar || '',
+        role: 'member',
+        joined_at: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+      }];
+      ag.history = [...(ag.history||[]), {
+        role: 'system',
+        type: 'join',
+        user_id: pending.user_id,
+        user_name: pending.name,
+        time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+        content: pending.name + ' さんが参加しました',
+      }];
+      if(ag.history.length > 200) ag.history = ag.history.slice(-200);
+      await DB.save(user);
+      // Add membership on the approved user's record
+      const approvedUser = await DB.findBy('id', pending.user_id);
+      if(approvedUser){
+        approvedUser.group_memberships = approvedUser.group_memberships || [];
+        if(!approvedUser.group_memberships.find(g => g.agent_id === ag.id)){
+          approvedUser.group_memberships.push({
+            host_id: user.id,
+            agent_id: ag.id,
+            joined_at: new Date().toISOString(),
+          });
+        }
+        await DB.save(approvedUser);
+      }
+      return jres(res,200,{ok:true, approved:true});
+    } else {
+      // deny — just drop from pending
+      await DB.save(user);
+      return jres(res,200,{ok:true, denied:true});
+    }
   }
 
   // Host removes a member
@@ -3577,9 +3665,9 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── GET /api/groups ────────────────────────────────────────
   // List groups the user is a member of (both hosted and joined).
+  // Includes per-user unread_count derived from agent.members[uid].last_read_idx.
   if(pathname === '/api/groups' && method === 'GET'){
     const out = [];
-    // Hosted groups (agents with is_group=true in user.agents)
     (user.agents||[]).forEach(ag => {
       if(ag.is_group){
         out.push({
@@ -3591,10 +3679,10 @@ async function handleAPI(req,res,pathname,method,ip){
           member_count: (ag.members||[]).length,
           last_message: (ag.history||[]).slice(-1)[0]?.content || '',
           last_at: (ag.history||[]).slice(-1)[0]?.time || ag.created_at,
+          unread_count: _unreadCountForUser(ag, user.id),
         });
       }
     });
-    // Joined groups (resolve from memberships)
     for(const m of (user.group_memberships||[])){
       const host = await DB.findBy('id', m.host_id);
       if(!host) continue;
@@ -3609,9 +3697,62 @@ async function handleAPI(req,res,pathname,method,ip){
         member_count: (ag.members||[]).length,
         last_message: (ag.history||[]).slice(-1)[0]?.content || '',
         last_at: (ag.history||[]).slice(-1)[0]?.time || m.joined_at,
+        unread_count: _unreadCountForUser(ag, user.id),
       });
     }
     return jres(res,200,{groups: out});
+  }
+
+  // ── POST /api/agents/:id/notify-pref ───────────────────────
+  // Per-user notification preference for a group.
+  // body: { pref: 'all' | 'mentions' | 'mute' }
+  const npM = pathname.match(/^\/api\/agents\/([^/]+)\/notify-pref$/);
+  if(npM && method === 'POST'){
+    const agId = npM[1];
+    const body = await readBody(req);
+    const pref = ['all','mentions','mute'].includes(body && body.pref) ? body.pref : 'all';
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let target = user;
+    if(!ag){
+      const m = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!m) return jres(res,404,{error:'エージェントが見つかりません'});
+      const host = await DB.findBy('id', m.host_id);
+      if(!host) return jres(res,404,{error:'ホストが見つかりません'});
+      target = host;
+      ag = (host.agents||[]).find(a => a.id === agId);
+      if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    }
+    ag.members = (ag.members || []).map(m =>
+      m.user_id === user.id ? {...m, notify_pref: pref} : m
+    );
+    await DB.save(target);
+    return jres(res,200,{ok:true, pref});
+  }
+
+  // ── POST /api/agents/:id/read ──────────────────────────────
+  // Mark the chat as read up to current history length for the calling user.
+  // Updates agent.members[uid].last_read_idx in the host's record.
+  const readM = pathname.match(/^\/api\/agents\/([^/]+)\/read$/);
+  if(readM && method === 'POST'){
+    const agId = readM[1];
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let target = user;
+    if(!ag){
+      const m = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!m) return jres(res,404,{error:'エージェントが見つかりません'});
+      const host = await DB.findBy('id', m.host_id);
+      if(!host) return jres(res,404,{error:'ホストが見つかりません'});
+      target = host;
+      ag = (host.agents||[]).find(a => a.id === agId);
+      if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    }
+    const len = (ag.history || []).length;
+    ag.members = (ag.members || []).map(m =>
+      m.user_id === user.id ? {...m, last_read_idx: len, last_seen: new Date().toISOString()} : m
+    );
+    // Persist target (host record for joined groups, self for owned)
+    await DB.save(target);
+    return jres(res,200,{ok:true, last_read_idx: len, unread_count: 0});
   }
 
   // ── GET /api/g/:token (PUBLIC, no auth) ────────────────────
@@ -3632,6 +3773,27 @@ async function handleAPI(req,res,pathname,method,ip){
     // Already a member? idempotent return.
     if((found.agent.members||[]).find(m => m.user_id === user.id)){
       return jres(res,200,{ok:true, already:true, agent_id: found.agent.id, host_id: found.host.id});
+    }
+    // Already requested? Return pending state.
+    if((found.agent.pending_requests||[]).find(p => p.user_id === user.id)){
+      return jres(res,202,{ok:true, pending:true, agent_id: found.agent.id, host_id: found.host.id});
+    }
+    // Approval required? Add to pending_requests, notify host (in-app via system msg).
+    if(found.agent.invite_require_approval){
+      found.agent.pending_requests = [...(found.agent.pending_requests||[]), {
+        user_id: user.id,
+        name: user.name || (user.email||'').split('@')[0] || 'メンバー',
+        avatar: '',
+        requested_at: new Date().toISOString(),
+      }];
+      await DB.save(found.host);
+      return jres(res,202,{
+        ok:true, pending:true,
+        agent_id: found.agent.id,
+        host_id: found.host.id,
+        group_name: found.agent.name,
+        message: 'ホストの承認待ちです',
+      });
     }
     // Add to host's agent.members[]
     found.agent.members = [...(found.agent.members||[]), {

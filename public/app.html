@@ -142,6 +142,58 @@ input,textarea{font-family:var(--sans);}
 .ag-create .ic.green{background:linear-gradient(135deg,#10b981,#047857);}
 .ag-create .lbl{font-size:9.5px;font-weight:700;color:var(--text);letter-spacing:-.005em;}
 
+/* Section headers in Talks list (グループ / DM) */
+.sb-section-h{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px 4px;font-size:11px;font-weight:700;
+  color:var(--text3);letter-spacing:.04em;
+}
+.sb-section-h:first-child{padding-top:6px;}
+.sb-section-add{
+  background:transparent;border:0;color:var(--text3);cursor:pointer;
+  width:20px;height:20px;border-radius:4px;font-size:14px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;font-family:inherit;
+}
+.sb-section-add:hover{background:rgba(9,9,11,.06);color:var(--text);}
+
+/* Talks-style chat list item: avatar + name+time + preview+badge */
+.ag-item-talk{
+  display:flex;align-items:center;gap:10px;padding:7px 12px;
+  border-radius:8px;cursor:pointer;margin:0 4px;
+  transition:background .12s;
+}
+.ag-item-talk:hover{background:rgba(9,9,11,.03);}
+.ag-item-talk.on{background:var(--peach-soft, rgba(251,146,60,.10));}
+.ag-item-talk.on .ag-name{color:var(--peach-dark);font-weight:700;}
+.ag-item-talk .ag-icon{
+  width:32px;height:32px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;
+  box-shadow:0 2px 5px rgba(9,9,11,.1);
+}
+.ag-item-talk .ag-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.ag-item-talk .ag-name-row{display:flex;align-items:baseline;gap:8px;}
+.ag-item-talk .ag-name{
+  flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--text);
+  letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.ag-item-talk .ag-time{
+  font-size:10px;color:var(--text3);font-weight:500;flex-shrink:0;
+  font-feature-settings:'tnum';
+}
+.ag-item-talk .ag-pv-row{display:flex;align-items:center;gap:8px;}
+.ag-item-talk .ag-pv{
+  flex:1;min-width:0;font-size:10.5px;color:var(--text3);
+  letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;
+}
+.ag-item-talk .ag-unread{
+  background:var(--peach);color:#fff;font-size:9px;font-weight:800;
+  border-radius:9px;padding:1px 6px;min-width:18px;height:18px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  letter-spacing:0;
+}
+.ag-item-talk.on .ag-unread{background:var(--peach-dark);}
+
 /* Group avatar stack in sidebar items */
 .ag-stack{
   position:relative;width:28px;height:24px;flex-shrink:0;
@@ -4260,7 +4312,7 @@ function renderAgList(){
   let html = '';
 
   if(isAgentsTab){
-    // 「Agents」タブ: 作る (3 ボタン) + 自分の AI 一覧
+    // 「Agents」タブ: 作る (3 ボタン) + 自分の AI 一覧 (DM 用)
     html += '<div class="ag-create-row">'
       + '<button class="ag-create" onclick="openNewAgent()" title="新規作成">'
         + '<div class="ic peach">+</div><div class="lbl">新規</div></button>'
@@ -4272,55 +4324,151 @@ function renderAgList(){
     if(owned.length === 0){
       html += '<div style="padding:20px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.55">まだエージェントがいません<br>「新規」ボタンで作成しましょう</div>';
     } else {
+      // Compact AI list (no section header — they're all AIs)
       html += owned.map(a => _renderAgItem(a, false)).join('');
     }
   } else {
-    // 「Talks」タブ: 自分のエージェント (DM/グループ) + 参加中のグループ
-    if(owned.length === 0 && _joinedGroups.length === 0){
+    // 「Talks」タブ: グループセクション + DM セクション
+    const hostedGroups = owned.filter(a => a.is_group);
+    const dmAgents    = owned.filter(a => !a.is_group);
+    const totalGroups = hostedGroups.length + _joinedGroups.length;
+
+    if(totalGroups === 0 && dmAgents.length === 0){
       html += '<div style="padding:32px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.55">'
         + 'まだトークがありません<br>'
         + '<button class="btn-volt" onclick="toggleSbPlusMenu(event)" style="margin-top:14px;font-size:11px;padding:7px 14px">＋ 新規 ▾</button></div>';
     } else {
-      html += owned.map(a => _renderAgItem(a, false)).join('');
-      // Joined groups (where user is invitee) — render after own list
-      _joinedGroups.forEach(g => {
-        html += _renderAgItem(g, true);
-      });
+      // Section: グループ
+      if(totalGroups > 0){
+        html += '<div class="sb-section-h"><span>グループ</span>'
+          + '<button class="sb-section-add" onclick="openCreateGroup()" title="グループを作成">+</button></div>';
+        // Hosted groups first, then joined groups; sort by last activity within each.
+        hostedGroups
+          .slice().sort(_sortByLastActivity)
+          .forEach(a => { html += _renderAgItem(a, false); });
+        _joinedGroups
+          .slice().sort(_sortByLastActivity)
+          .forEach(g => { html += _renderAgItem(g, true); });
+      }
+      // Section: DM (1対1)
+      if(dmAgents.length > 0){
+        html += '<div class="sb-section-h"><span>DM</span></div>';
+        dmAgents
+          .slice().sort(_sortByLastActivity)
+          .forEach(a => { html += _renderAgItem(a, false); });
+      }
     }
   }
   document.getElementById('agList').innerHTML = html;
+}
+
+// Sort by most-recent activity descending. Falls back to created_at.
+function _sortByLastActivity(a, b){
+  const at = _lastActivityMs(a);
+  const bt = _lastActivityMs(b);
+  return bt - at;
+}
+function _lastActivityMs(a){
+  // For agents, history.slice(-1)[0].time is "HH:MM" — fall back to created_at.
+  // For joined groups, server gives last_at which is an ISO string.
+  if(a.last_at){
+    const t = new Date(a.last_at).getTime();
+    if(isFinite(t)) return t;
+  }
+  if(a.created_at){
+    const t = new Date(a.created_at).getTime();
+    if(isFinite(t)) return t;
+  }
+  return 0;
+}
+
+// Format a timestamp like LINE's chat list: 9:40 / 昨日 / 月 / 5/3
+// Accepts either an ISO string, a Date, or a "HH:MM" literal (which we treat as today).
+function _formatChatTime(ts){
+  if(!ts) return '';
+  // Already an "HH:MM" / "H:MM" format from agent.history[-1].time → return verbatim
+  if(typeof ts === 'string' && /^\d{1,2}:\d{2}$/.test(ts.trim())) return ts.trim();
+  const d = new Date(ts);
+  if(!isFinite(d.getTime())) return '';
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if(sameDay){
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+  const oneDay = 24*60*60*1000;
+  const diff = now.getTime() - d.getTime();
+  if(diff < oneDay*2 && new Date(now.getTime()-oneDay).toDateString() === d.toDateString()){
+    return '昨日';
+  }
+  if(diff < oneDay*7){
+    const days = ['日','月','火','水','木','金','土'];
+    return days[d.getDay()];
+  }
+  return (d.getMonth()+1) + '/' + d.getDate();
+}
+
+// Pull a short preview string from an agent's last message.
+function _previewFromHistory(a){
+  // For joined groups, server provides last_message
+  if(typeof a.last_message === 'string' && a.last_message) return a.last_message.slice(0, 60);
+  const h = (a && a.history) || [];
+  // Find the last non-system entry
+  for(let i = h.length - 1; i >= 0; i--){
+    const m = h[i];
+    if(!m || m.role === 'system') continue;
+    let body = '';
+    if(typeof m.content === 'string') body = m.content;
+    else if(Array.isArray(m.content)){
+      const t = m.content.find(b => b && b.type === 'text');
+      body = (t && t.text) || '';
+    }
+    body = body.replace(/\s+/g, ' ').trim();
+    // Prefix with speaker name for group user messages
+    let prefix = '';
+    if(m.role === 'user'){
+      if(m.user_name && m.user_id !== me?.id) prefix = m.user_name + ': ';
+      else prefix = (isJa ? 'あなた: ' : 'You: ');
+    } else if(m.role === 'assistant'){
+      // No prefix needed (the agent name is the chat name)
+      prefix = '';
+    }
+    return (prefix + body).slice(0, 60);
+  }
+  return '';
 }
 
 function _renderAgItem(a, isJoined){
   const id = esc(a.id);
   const onActive = (a.id === activeId) ? ' on' : '';
   const isGroup = !!a.is_group;
-  const isHostedGroup = isGroup && !isJoined;
-  const stackHTML = isGroup
-    ? `<div class="ag-stack"><div>${esc((a.host_name||'?').charAt(0).toUpperCase())}</div><div>+</div><div>${(a.avatar||'🤖').toString().startsWith('data:image/')?'🤖':esc(String(a.avatar||'🤖'))}</div></div>`
-    : `<div class="ag-icon">${_avHTML(a.avatar)}</div>`;
-  const skills = (a.skills || []).map(s => SKILLS.find(x=>x.id===s)?.name||s).join(' · ');
-  const sublabel = isGroup
-    ? `${a.member_count || 0} 名 · ${isJoined ? '参加中' : 'ホスト'}`
-    : (skills || 'AI');
-  const tags =
-    (a.chrome_enabled ? '<span title="Google Chrome 連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-chrome">🌐</span>' : '')
-    + (a.sheets_enabled ? '<span title="Google スプレッドシート連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="google-sheets">📊</span>' : '')
-    + (a.extension_enabled ? '<span title="ブラウザ拡張連携 ON" style="font-size:11px;flex-shrink:0;opacity:.85" aria-label="browser-extension">🧩</span>' : '');
-  const grpTag = isJoined
-    ? '<span class="ag-pill invitee" title="参加中のグループ">GR</span>'
-    : (isHostedGroup ? '<span class="ag-pill" title="ホストしているグループ">GR</span>' : '');
+  // Single avatar (matches both groups and DMs in the new design)
+  const avatarHTML = `<div class="ag-icon">${_avHTML(a.avatar)}</div>`;
+  // Last message preview (LINE-style)
+  const preview = _previewFromHistory(a);
+  // Time string
+  const timeStr = _formatChatTime(a.last_at || (a.history && a.history.slice(-1)[0]?.time) || a.created_at);
+  // Unread badge: TODO — for now, derive from `unread_count` if server provides it,
+  // otherwise omit. Group joined records may include unread.
+  const unread = a.unread_count || 0;
+  const unreadBadge = unread > 0
+    ? `<div class="ag-unread">${unread > 99 ? '99+' : unread}</div>`
+    : '';
+
   // Joined groups don't support drag-reorder
   const dragAttrs = isJoined ? '' : 'draggable="true" ondragstart="agDragStart(event)" ondragover="agDragOver(event)" ondragleave="agDragLeave(event)" ondrop="agDrop(event)" ondragend="agDragEnd(event)"';
-  return `<div class="ag-item${onActive}" id="ai-${id}" data-agid="${id}" ${dragAttrs} onclick="openAgent('${id}')">
-    ${isJoined ? '' : '<div class="ag-handle" title="ドラッグして並び替え" aria-hidden="true">⋮⋮</div>'}
-    ${stackHTML}
+
+  return `<div class="ag-item ag-item-talk${onActive}" id="ai-${id}" data-agid="${id}" ${dragAttrs} onclick="openAgent('${id}')">
+    ${avatarHTML}
     <div class="ag-meta">
-      <div class="ag-name">${esc(a.name)}${grpTag}</div>
-      <div class="ag-skill">${esc(sublabel)}</div>
+      <div class="ag-name-row">
+        <div class="ag-name" title="${esc(a.name)}">${esc(a.name)}</div>
+        ${timeStr ? `<div class="ag-time">${esc(timeStr)}</div>` : ''}
+      </div>
+      <div class="ag-pv-row">
+        <div class="ag-pv" title="${esc(preview)}">${esc(preview || (isGroup ? (isJoined?'参加中':'ホスト') : ((a.skills||[]).map(s=>SKILLS.find(x=>x.id===s)?.name||s).join(' · ')||'AI')))}</div>
+        ${unreadBadge}
+      </div>
     </div>
-    ${tags}
-    <div class="live-dot"></div>
   </div>`;
 }
 

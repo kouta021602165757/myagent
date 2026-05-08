@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🖥 Group AI Chat — PC 版 UI モック</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-light:#fed7aa; --peach-soft:#fff7ed;
+  --bg-50:#fafafa; --bg-100:#f4f4f5; --bg-200:#e4e4e7;
+  --ink-900:#09090b; --ink-800:#18181b; --ink-700:#27272a; --ink-600:#3f3f46;
+  --ink-500:#52525b; --ink-400:#71717a; --ink-300:#a1a1aa; --ink-200:#d4d4d8;
+  --line:rgba(9,9,11,.06); --line-strong:rgba(9,9,11,.1);
+  --green:#10b981; --rose:#ef4444; --blue:#3b82f6; --indigo:#6366f1;
+  --pink:#ec4899; --teal:#14b8a6; --violet:#8b5cf6; --amber:#f59e0b;
+  --shadow-sm:0 1px 2px rgba(9,9,11,.04);
+  --shadow-md:0 2px 8px rgba(9,9,11,.06), 0 1px 2px rgba(9,9,11,.04);
+  --shadow-lg:0 12px 32px rgba(9,9,11,.08), 0 4px 8px rgba(9,9,11,.04);
+  --shadow-xl:0 28px 60px rgba(9,9,11,.14), 0 8px 16px rgba(9,9,11,.06);
+  --shadow-2xl:0 50px 100px rgba(0,0,0,.3), 0 25px 50px rgba(0,0,0,.2);
+  --sans:-apple-system,'SF Pro Display','Inter','Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+  --display:-apple-system,'SF Pro Display','Inter',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{
+  background:#09090b;
+  background-image:
+    radial-gradient(1400px 700px at 75% -10%, rgba(251,146,60,.13), transparent 60%),
+    radial-gradient(1100px 500px at 0% 110%, rgba(99,102,241,.08), transparent 60%),
+    linear-gradient(180deg,#0d0d10 0%,#09090b 100%);
+  background-attachment:fixed;
+  color:#fff;font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;
+  letter-spacing:-.011em;
+}
+a{color:var(--peach);text-decoration:none;}
+.shell{max-width:1480px;margin:0 auto;padding:48px 24px 96px;}
+
+.brand{font-size:12px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:28px;letter-spacing:-.003em;}
+.brand a{color:rgba(255,255,255,.45);}
+.brand a:hover{color:var(--peach);}
+
+.hero{margin-bottom:52px;}
+.h1{
+  font-family:var(--display);
+  font-size:46px;font-weight:700;line-height:1.05;margin-bottom:14px;letter-spacing:-.028em;
+}
+.h1 .accent{
+  background:linear-gradient(135deg,#fed7aa 0%,var(--peach) 50%,var(--peach-dark) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{font-size:15px;color:rgba(255,255,255,.62);max-width:720px;line-height:1.65;letter-spacing:-.005em;font-weight:400;}
+.sub b{color:#fff;font-weight:600;}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 0;}
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:500;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+  color:rgba(255,255,255,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.tag.peach{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.2);color:var(--peach-light);}
+.tag.indigo{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);color:#a5b4fc;}
+
+/* Section title */
+.section-h{font-size:13px;color:rgba(255,255,255,.4);font-weight:600;margin:64px 0 14px;letter-spacing:.06em;text-transform:uppercase;}
+.section-h:first-child{margin-top:0;}
+
+/* macOS window frame */
+.mac{
+  width:100%;max-width:1380px;margin:0 auto;
+  background:#fff;border-radius:14px;overflow:hidden;
+  box-shadow:var(--shadow-2xl), 0 0 0 1px rgba(255,255,255,.04);
+  position:relative;
+}
+.mac.dark{background:#0d0d10;}
+.mac-bar{
+  height:38px;background:linear-gradient(180deg,#f4f4f5 0%,#e4e4e7 100%);
+  display:flex;align-items:center;padding:0 14px;gap:8px;
+  border-bottom:.5px solid rgba(0,0,0,.08);
+}
+.mac.dark .mac-bar{background:linear-gradient(180deg,#27272a 0%,#18181b 100%);border-bottom-color:rgba(255,255,255,.06);}
+.tl{display:flex;gap:8px;}
+.tl span{width:12px;height:12px;border-radius:50%;display:block;}
+.tl span:nth-child(1){background:#ff5f57;}
+.tl span:nth-child(2){background:#febc2e;}
+.tl span:nth-child(3){background:#28c840;}
+.mac-title{
+  flex:1;text-align:center;font-size:12px;color:var(--ink-500);
+  font-weight:600;letter-spacing:-.005em;
+}
+.mac.dark .mac-title{color:rgba(255,255,255,.5);}
+.mac-url{
+  background:rgba(0,0,0,.05);padding:3px 10px;border-radius:5px;
+  font-size:11px;color:var(--ink-600);font-family:var(--mono);
+  display:inline-flex;align-items:center;gap:4px;
+}
+.mac.dark .mac-url{background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);}
+.mac-url .lock{font-size:9px;color:var(--green);}
+
+/* App body — 3 pane (sidebar / main / aside) */
+.app{display:grid;grid-template-columns:248px 1fr 280px;height:780px;background:#fff;}
+
+/* Sidebar */
+.sb{
+  background:linear-gradient(180deg,#fafafa 0%,#f4f4f5 100%);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+}
+.sb-top{
+  padding:14px 14px 10px;display:flex;align-items:center;gap:9px;
+  border-bottom:1px solid var(--line);
+}
+.sb-logo{
+  width:30px;height:30px;border-radius:9px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  display:flex;align-items:center;justify-content:center;gap:1.5px;
+  box-shadow:0 4px 10px rgba(251,146,60,.32),inset 0 1px 0 rgba(255,255,255,.2);
+}
+.sb-bar{width:3px;border-radius:1.5px;background:#fff;}
+.sb-bar.b1{height:14px;}
+.sb-bar.b2{height:11px;opacity:.65;}
+.sb-bar.b3{height:8px;opacity:.35;}
+.sb-name{font-size:13px;font-weight:700;color:var(--ink-900);letter-spacing:-.018em;flex:1;}
+.sb-search{
+  margin:10px 14px 0;padding:6px 10px;border-radius:8px;background:#fff;border:.5px solid var(--line-strong);
+  display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-400);box-shadow:var(--shadow-sm);
+}
+.sb-search .em{font-size:11px;}
+.sb-search kbd{
+  font-size:9.5px;background:var(--bg-100);border:.5px solid var(--line);
+  padding:1px 4px;border-radius:4px;color:var(--ink-500);font-family:var(--mono);
+  font-weight:600;margin-left:auto;
+}
+.sb-h{
+  font-size:9.5px;color:var(--ink-400);font-weight:700;letter-spacing:.08em;
+  padding:14px 14px 6px;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sb-h .add{
+  background:transparent;border:0;color:var(--ink-400);cursor:pointer;font-size:14px;
+  width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+}
+.sb-h .add:hover{background:rgba(9,9,11,.06);color:var(--ink-700);}
+.sb-list{padding:0 8px;display:flex;flex-direction:column;gap:1px;}
+.sb-item{
+  display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;
+  cursor:pointer;border:0;background:transparent;width:100%;font-family:inherit;text-align:left;
+  position:relative;
+}
+.sb-item:hover{background:rgba(9,9,11,.04);}
+.sb-item.active{background:rgba(251,146,60,.12);}
+.sb-item.active .nm{color:var(--peach-dark);font-weight:700;}
+.sb-stack{
+  position:relative;width:34px;height:24px;flex-shrink:0;
+}
+.sb-stack > *{
+  position:absolute;width:22px;height:22px;border-radius:7px;
+  border:1.5px solid var(--bg-100);display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:9.5px;font-weight:700;
+}
+.sb-item.active .sb-stack > *{border-color:var(--peach-soft);}
+.sb-stack > *:nth-child(1){left:0;top:1px;z-index:3;}
+.sb-stack > *:nth-child(2){left:9px;top:1px;z-index:2;}
+.sb-stack > *:nth-child(3){left:0;top:1px;z-index:3;}
+.sb-single{
+  width:24px;height:24px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:11px;font-weight:700;
+}
+.sb-info{flex:1;min-width:0;}
+.sb-info .nm{font-size:12.5px;font-weight:600;color:var(--ink-900);letter-spacing:-.005em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-info .pv{font-size:10.5px;color:var(--ink-500);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.005em;}
+.sb-meta{font-size:9.5px;color:var(--ink-400);text-align:right;flex-shrink:0;}
+.sb-meta .badge{
+  display:inline-block;background:var(--peach);color:#fff;font-size:9px;font-weight:700;
+  border-radius:9px;padding:1px 6px;min-width:16px;text-align:center;margin-top:2px;
+}
+.sb-bottom{
+  margin-top:auto;padding:10px 14px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:9px;
+}
+.sb-me{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+}
+.sb-me-info{flex:1;min-width:0;}
+.sb-me-name{font-size:12px;font-weight:700;color:var(--ink-900);}
+.sb-me-status{font-size:10px;color:var(--green);display:flex;align-items:center;gap:3px;}
+.sb-me-status::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);}
+.sb-me-cog{
+  background:transparent;border:0;color:var(--ink-400);font-size:14px;cursor:pointer;
+  width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+}
+.sb-me-cog:hover{background:rgba(9,9,11,.05);color:var(--ink-700);}
+
+/* Avatar palettes */
+.av-me{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.av-friend1{background:linear-gradient(135deg,#10b981,#059669);}
+.av-friend2{background:linear-gradient(135deg,#ec4899,#be185d);}
+.av-friend3{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
+.av-friend4{background:linear-gradient(135deg,#f59e0b,#b45309);}
+.av-friend5{background:linear-gradient(135deg,#14b8a6,#0d9488);}
+.av-ai{background:linear-gradient(135deg,var(--peach),var(--peach-dark));}
+.av-ai2{background:linear-gradient(135deg,#06b6d4,#0e7490);}
+
+/* Main pane (chat) */
+.main{display:flex;flex-direction:column;background:#fff;}
+.main-h{
+  padding:12px 22px;flex-shrink:0;
+  display:flex;align-items:center;gap:11px;
+  border-bottom:1px solid var(--line);background:rgba(255,255,255,.96);
+}
+.main-h-stack{position:relative;width:42px;height:30px;flex-shrink:0;}
+.main-h-stack > *{
+  position:absolute;width:28px;height:28px;border-radius:9px;
+  border:2px solid #fff;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:11px;font-weight:700;
+  box-shadow:0 2px 5px rgba(9,9,11,.12);
+}
+.main-h-stack > *:nth-child(1){left:0;top:0;z-index:3;}
+.main-h-stack > *:nth-child(2){left:10px;top:0;z-index:2;}
+.main-h-stack > *:nth-child(3){left:20px;top:0;z-index:1;}
+.main-h-info{flex:1;min-width:0;}
+.main-h-name{font-size:15px;font-weight:700;color:var(--ink-900);letter-spacing:-.018em;display:flex;align-items:center;gap:7px;}
+.main-h-pin{font-size:10px;color:var(--ink-400);}
+.main-h-meta{font-size:11px;color:var(--ink-500);font-weight:500;display:flex;align-items:center;gap:10px;}
+.main-h-meta .ai-active{
+  display:inline-flex;align-items:center;gap:4px;color:var(--peach-dark);font-weight:600;
+}
+.main-h-meta .ai-active::before{
+  content:'';width:6px;height:6px;border-radius:50%;background:var(--peach);
+  box-shadow:0 0 0 3px rgba(251,146,60,.18);
+  animation:breathe 2s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 3px rgba(251,146,60,.18);}50%{box-shadow:0 0 0 6px rgba(251,146,60,.08);}}
+.main-h-acts{display:flex;gap:4px;}
+.main-h-btn{
+  background:transparent;border:0;cursor:pointer;width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;color:var(--ink-600);font-size:14px;
+}
+.main-h-btn:hover{background:rgba(9,9,11,.04);color:var(--ink-900);}
+.main-h-btn.invite{
+  width:auto;padding:0 12px;font-size:12px;font-weight:700;color:#fff;gap:5px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  box-shadow:0 4px 12px rgba(251,146,60,.32);font-family:inherit;letter-spacing:-.005em;
+}
+.main-h-btn.invite:hover{transform:translateY(-1px);}
+
+.chat-body{flex:1;overflow-y:auto;padding:18px 22px 12px;background:linear-gradient(180deg,#fff 0%,#fafafa 100%);}
+.day-sep{
+  text-align:center;margin:6px 0 18px;font-size:10.5px;font-weight:600;
+  color:var(--ink-400);letter-spacing:.04em;text-transform:uppercase;
+  position:relative;
+}
+.day-sep::before, .day-sep::after{
+  content:'';position:absolute;top:50%;width:32%;height:.5px;background:var(--line-strong);
+}
+.day-sep::before{left:0;}.day-sep::after{right:0;}
+
+.system-row{display:flex;justify-content:center;margin:10px 0 14px;}
+.system-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:999px;
+  background:rgba(99,102,241,.08);border:.5px solid rgba(99,102,241,.18);
+  font-size:11px;font-weight:600;color:var(--indigo);letter-spacing:-.005em;
+}
+
+.msg{display:flex;gap:11px;margin-bottom:14px;}
+.msg-av{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:13px;font-weight:700;
+  box-shadow:0 3px 6px rgba(9,9,11,.1);
+}
+.msg.ai .msg-av{box-shadow:0 3px 8px rgba(251,146,60,.32);}
+.msg-col{flex:1;min-width:0;}
+.msg-head{display:flex;align-items:baseline;gap:7px;margin-bottom:3px;}
+.msg-name{font-size:13px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;}
+.msg-name.ai{color:var(--peach-dark);display:flex;align-items:center;gap:5px;}
+.msg-name.ai::after{
+  content:'AI';font-size:8.5px;font-weight:800;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;padding:1px 5px;border-radius:4px;letter-spacing:.04em;
+}
+.msg-time{font-size:10.5px;color:var(--ink-400);}
+.bubble{
+  font-size:13.5px;color:var(--ink-900);line-height:1.55;letter-spacing:-.005em;
+  word-wrap:break-word;
+}
+.bubble b{color:var(--peach-dark);font-weight:700;}
+.bubble .quote{
+  background:rgba(9,9,11,.04);border-left:3px solid var(--ink-300);
+  padding:7px 11px;margin:5px 0 6px;border-radius:0 6px 6px 0;
+  font-size:12.5px;color:var(--ink-600);
+}
+.bubble ul{padding-left:18px;margin:4px 0;}
+.bubble li{font-size:13px;line-height:1.5;}
+.bubble .checklist{display:flex;flex-direction:column;gap:4px;margin:6px 0;}
+.bubble .checklist .ck{
+  display:flex;align-items:center;gap:7px;padding:5px 10px;border-radius:7px;
+  background:#fff;border:.5px solid var(--line);font-size:12.5px;
+}
+.bubble .checklist .ck .em{font-size:13px;flex-shrink:0;}
+.bubble .checklist .ck.done{color:var(--ink-500);text-decoration:line-through;}
+.bubble .checklist .ck.todo{color:var(--ink-900);font-weight:600;}
+
+.mention{
+  display:inline-flex;align-items:center;
+  background:rgba(251,146,60,.14);color:var(--peach-dark);
+  padding:1px 8px;border-radius:5px;font-weight:700;font-size:13px;
+}
+
+/* Reactions */
+.reactions{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;}
+.reaction{
+  display:inline-flex;align-items:center;gap:3px;
+  background:#fff;border:.5px solid var(--line-strong);
+  padding:2px 8px;border-radius:999px;font-size:11px;cursor:pointer;
+  font-weight:600;color:var(--ink-700);
+}
+.reaction.mine{background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.3);color:var(--peach-dark);}
+.reaction:hover{transform:translateY(-1px);}
+
+/* Composer */
+.comp-area{padding:10px 22px 16px;background:#fff;border-top:1px solid var(--line);}
+.comp{
+  border:1px solid var(--line-strong);border-radius:13px;
+  padding:6px 6px 6px 14px;background:#fff;box-shadow:var(--shadow-sm);
+  display:flex;flex-direction:column;
+  transition:border-color .15s, box-shadow .15s;
+}
+.comp:focus-within{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.14),var(--shadow-sm);}
+.comp-input{
+  border:0;outline:0;background:transparent;font-size:13.5px;color:var(--ink-900);
+  font-family:inherit;padding:8px 0 4px;letter-spacing:-.005em;line-height:1.5;
+  resize:none;min-height:24px;
+}
+.comp-input::placeholder{color:var(--ink-400);}
+.comp-tools{
+  display:flex;align-items:center;gap:2px;
+}
+.comp-tool{
+  width:30px;height:30px;border-radius:7px;background:transparent;color:var(--ink-500);
+  border:0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
+}
+.comp-tool:hover{background:rgba(9,9,11,.05);color:var(--ink-800);}
+.comp-tool.ai{
+  width:auto;padding:0 9px;color:var(--peach-dark);font-size:11.5px;font-weight:700;
+  background:rgba(251,146,60,.1);gap:4px;font-family:inherit;letter-spacing:-.005em;
+}
+.comp-tool.ai:hover{background:rgba(251,146,60,.18);}
+.comp-spacer{flex:1;}
+.comp-send{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--ink-900);color:#fff;border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-family:inherit;
+}
+.comp-send:hover{background:var(--ink-800);}
+.comp-hint{
+  font-size:10.5px;color:var(--ink-400);margin-top:6px;display:flex;gap:11px;letter-spacing:-.005em;
+}
+.comp-hint kbd{
+  font-size:9.5px;background:var(--bg-100);border:.5px solid var(--line);
+  padding:1px 5px;border-radius:4px;color:var(--ink-600);font-family:var(--mono);font-weight:600;
+}
+
+/* Right aside (members) */
+.aside{
+  background:#fafafa;border-left:1px solid var(--line);
+  display:flex;flex-direction:column;
+}
+.aside-h{
+  padding:14px 18px 12px;border-bottom:1px solid var(--line);
+}
+.aside-h .ttl{font-size:13.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;margin-bottom:6px;}
+.aside-h .desc{font-size:11.5px;color:var(--ink-500);line-height:1.5;}
+.aside-cta{
+  margin:14px 14px 0;padding:10px 14px;border-radius:10px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  border:0;cursor:pointer;font-size:12.5px;font-weight:700;letter-spacing:-.012em;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  box-shadow:0 6px 14px rgba(251,146,60,.32);
+}
+.aside-h2{
+  font-size:9.5px;color:var(--ink-400);font-weight:700;letter-spacing:.08em;
+  padding:18px 18px 6px;text-transform:uppercase;
+}
+.aside-list{display:flex;flex-direction:column;}
+.aside-mem{
+  display:flex;align-items:center;gap:10px;padding:8px 18px;
+}
+.aside-mem:hover{background:rgba(9,9,11,.03);}
+.aside-mem-av{
+  width:30px;height:30px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:11.5px;font-weight:700;
+  position:relative;box-shadow:0 2px 5px rgba(9,9,11,.1);
+}
+.aside-mem-av .dot{
+  position:absolute;width:9px;height:9px;border-radius:50%;
+  border:2px solid #fafafa;bottom:-2px;right:-2px;
+}
+.aside-mem-av .dot.online{background:var(--green);}
+.aside-mem-av .dot.away{background:var(--amber);}
+.aside-mem-av .dot.off{background:var(--ink-300);}
+.aside-mem-info{flex:1;min-width:0;}
+.aside-mem-name{font-size:12px;font-weight:600;color:var(--ink-900);letter-spacing:-.005em;
+  display:flex;align-items:center;gap:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.aside-mem-name .role{
+  font-size:8.5px;font-weight:700;background:var(--peach-soft);color:var(--peach-dark);
+  padding:1px 5px;border-radius:4px;letter-spacing:.02em;
+}
+.aside-mem-name .ai-tag{
+  font-size:8.5px;font-weight:800;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  padding:1px 5px;border-radius:4px;letter-spacing:.04em;
+}
+.aside-mem-status{font-size:10px;color:var(--ink-500);font-weight:500;}
+
+.aside-bottom{margin-top:auto;padding:14px 18px;border-top:1px solid var(--line);}
+.aside-stat{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;font-size:11.5px;color:var(--ink-600);
+}
+.aside-stat .v{font-weight:700;color:var(--ink-900);}
+
+/* Modal: Invite share */
+.mac-overlay{
+  position:absolute;inset:38px 0 0 0;background:rgba(9,9,11,.55);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;z-index:5;
+}
+.modal{
+  background:#fff;border-radius:16px;width:540px;max-width:90%;
+  box-shadow:var(--shadow-xl);overflow:hidden;
+}
+.modal-h{padding:20px 24px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;}
+.modal-h h2{font-size:18px;font-weight:700;color:var(--ink-900);letter-spacing:-.018em;flex:1;}
+.modal-h .close{
+  background:rgba(9,9,11,.05);border:0;border-radius:50%;width:28px;height:28px;
+  cursor:pointer;font-size:14px;color:var(--ink-600);display:flex;align-items:center;justify-content:center;
+}
+.modal-body{padding:22px 24px 26px;display:grid;grid-template-columns:160px 1fr;gap:24px;}
+.qr{
+  width:160px;height:160px;border-radius:11px;border:1.5px solid var(--ink-900);
+  background:
+    linear-gradient(45deg,#000 25%,transparent 25%,transparent 75%,#000 75%) 0 0/22px 22px,
+    linear-gradient(45deg,#000 25%,transparent 25%,transparent 75%,#000 75%) 11px 11px/22px 22px,
+    #fff;
+  position:relative;
+}
+.qr::before, .qr::after, .qr-3{
+  content:'';position:absolute;width:30px;height:30px;background:#fff;border:4px solid #000;
+}
+.qr::before{top:8px;left:8px;}
+.qr::after{top:8px;right:8px;}
+.qr-3{bottom:8px;left:8px;display:block;}
+.modal-right{display:flex;flex-direction:column;}
+.modal-label{font-size:11px;font-weight:700;color:var(--ink-500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;}
+.modal-link{
+  display:flex;align-items:center;gap:6px;padding:9px 12px;
+  background:var(--bg-100);border-radius:9px;font-size:12.5px;color:var(--ink-700);
+  font-family:var(--mono);margin-bottom:14px;
+}
+.modal-link .url{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.modal-copy{
+  background:var(--ink-900);color:#fff;border:0;border-radius:6px;
+  padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em;
+}
+.share-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;}
+.share-btn{
+  background:var(--bg-100);border:1px solid var(--line);border-radius:9px;
+  padding:11px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;
+  font-size:10.5px;color:var(--ink-700);font-weight:600;font-family:inherit;
+}
+.share-btn .em{font-size:18px;}
+.share-btn:hover{background:#fff;border-color:var(--line-strong);}
+.modal-toggles{
+  background:var(--bg-50);border-radius:9px;padding:4px 12px;
+}
+.modal-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0;border-bottom:.5px solid var(--line);
+}
+.modal-toggle:last-child{border-bottom:0;}
+.modal-toggle .lbl{font-size:12px;color:var(--ink-700);}
+.modal-toggle .val{font-size:11.5px;color:var(--ink-900);font-weight:700;}
+.modal-toggle .toggle{
+  width:32px;height:18px;background:var(--green);border-radius:10px;position:relative;
+}
+.modal-toggle .toggle::after{
+  content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;
+  top:2px;right:2px;box-shadow:0 1px 2px rgba(0,0,0,.2);
+}
+.modal-toggle .toggle.off{background:var(--ink-200);}
+.modal-toggle .toggle.off::after{right:auto;left:2px;}
+
+/* Modal: New group */
+.steps{
+  display:flex;gap:6px;padding:0 24px 14px;
+}
+.step{
+  flex:1;height:3px;background:var(--ink-200);border-radius:2px;
+}
+.step.active{background:linear-gradient(90deg,var(--peach),var(--peach-dark));}
+.field-group{padding:0 24px 24px;}
+.field{margin-bottom:14px;}
+.field label{
+  font-size:11px;font-weight:700;color:var(--ink-500);
+  letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:5px;
+}
+.field input, .field textarea{
+  width:100%;padding:10px 14px;border:1px solid var(--line-strong);border-radius:9px;
+  font-size:13px;color:var(--ink-900);font-family:inherit;background:#fff;
+}
+.field input:focus, .field textarea:focus{
+  outline:0;border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.14);
+}
+.field textarea{resize:vertical;min-height:60px;}
+.ai-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;}
+.ai-card{
+  border:1.5px solid var(--line-strong);border-radius:11px;padding:11px 9px;
+  cursor:pointer;text-align:center;background:#fff;
+  transition:transform .12s, border-color .12s;
+}
+.ai-card:hover{border-color:var(--ink-300);transform:translateY(-1px);}
+.ai-card.sel{border-color:var(--peach);background:var(--peach-soft);}
+.ai-card .em{font-size:24px;display:block;margin-bottom:5px;}
+.ai-card .nm{font-size:11.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.005em;}
+.ai-card .desc{font-size:9.5px;color:var(--ink-500);margin-top:1px;line-height:1.4;}
+
+.modal-foot{
+  padding:14px 24px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg-50);
+}
+.modal-foot-info{font-size:11.5px;color:var(--ink-500);}
+.modal-foot-btns{display:flex;gap:8px;}
+.btn-ghost{
+  background:transparent;border:1px solid var(--line-strong);color:var(--ink-700);
+  border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.btn-ghost:hover{background:rgba(9,9,11,.04);}
+.btn-pri{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  border:0;border-radius:8px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;
+  font-family:inherit;letter-spacing:-.005em;
+  box-shadow:0 4px 12px rgba(251,146,60,.32);
+}
+
+/* Toast */
+.toast-area{
+  position:absolute;top:54px;right:18px;z-index:6;
+  display:flex;flex-direction:column;gap:8px;
+}
+.toast{
+  background:#fff;border-radius:11px;padding:11px 14px;
+  box-shadow:var(--shadow-lg);min-width:280px;max-width:340px;
+  display:flex;align-items:flex-start;gap:10px;
+  border:.5px solid var(--line);
+  animation:slidein .4s ease-out;
+}
+@keyframes slidein{from{transform:translateX(110%);}to{transform:translateX(0);}}
+.toast-ic{
+  width:30px;height:30px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;
+}
+.toast-body{flex:1;min-width:0;}
+.toast-title{font-size:12.5px;font-weight:700;color:var(--ink-900);letter-spacing:-.012em;}
+.toast-msg{font-size:11.5px;color:var(--ink-600);margin-top:2px;line-height:1.5;}
+.toast-x{
+  background:transparent;border:0;color:var(--ink-400);cursor:pointer;font-size:12px;
+  width:18px;height:18px;border-radius:4px;flex-shrink:0;
+}
+.toast-x:hover{background:rgba(9,9,11,.05);color:var(--ink-700);}
+
+/* Concept callout */
+.callout{
+  margin-top:64px;padding:32px 28px;border-radius:18px;
+  background:linear-gradient(135deg,rgba(251,146,60,.08),rgba(99,102,241,.05));
+  border:1px solid rgba(255,255,255,.08);
+}
+.callout h2{font-size:22px;font-weight:700;margin-bottom:10px;letter-spacing:-.022em;}
+.callout p{font-size:13.5px;color:rgba(255,255,255,.65);max-width:640px;line-height:1.65;}
+.callout .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px;}
+.callout .feat{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  border-radius:11px;padding:14px;
+}
+.callout .feat .em{font-size:18px;margin-bottom:6px;}
+.callout .feat h3{font-size:13px;font-weight:700;margin-bottom:5px;letter-spacing:-.012em;}
+.callout .feat p{font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.55;margin:0;}
+
+@media(max-width:1100px){
+  .app{grid-template-columns:240px 1fr;}
+  .aside{display:none;}
+  .modal-body{grid-template-columns:1fr;text-align:center;}
+  .qr{margin:0 auto;}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<div class="brand"><a href="/">← MY AI Agent</a> · <a href="/mock-group-chat.html">📱 モバイル版モック</a></div>
+
+<div class="hero">
+  <div class="h1"><span class="accent">Group AI Chat</span> ／<br>PC 版デザイン</div>
+  <p class="sub">
+    Slack / Discord / LINE Desktop に近い <b>3 ペイン構成</b>。
+    左サイドにグループ一覧、中央に会話、右にメンバー。
+    AI は常駐メンバーとして並列に発言し、<code>@AI</code> でいつでも呼び出せる。
+  </p>
+  <div class="tagrow">
+    <span class="tag peach">🖥 macOS / Windows / Web 共通</span>
+    <span class="tag indigo">3 ペイン UI</span>
+    <span class="tag">@メンション</span>
+    <span class="tag">⌘K 高速検索</span>
+    <span class="tag">リアクション</span>
+    <span class="tag">スレッド対応</span>
+  </div>
+</div>
+
+<!-- ────────── 1. Main app view ────────── -->
+<div class="section-h">SCREEN 01 — メインビュー (3 ペイン)</div>
+
+<div class="mac">
+  <div class="mac-bar">
+    <div class="tl"><span></span><span></span><span></span></div>
+    <div class="mac-title">
+      <span class="mac-url"><span class="lock">🔒</span> myaiagents.agency/groups/aurora</span>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- ── Sidebar ── -->
+    <div class="sb">
+      <div class="sb-top">
+        <div class="sb-logo">
+          <div class="sb-bar b1"></div>
+          <div class="sb-bar b2"></div>
+          <div class="sb-bar b3"></div>
+        </div>
+        <div class="sb-name">MY AI Agent</div>
+      </div>
+
+      <div class="sb-search">
+        <span class="em">🔍</span>
+        <span>検索</span>
+        <kbd>⌘K</kbd>
+      </div>
+
+      <div class="sb-h">グループ <button class="add">＋</button></div>
+      <div class="sb-list">
+        <button class="sb-item active">
+          <div class="sb-stack">
+            <div class="av-me">K</div>
+            <div class="av-friend1">M</div>
+            <div class="av-ai">📊</div>
+          </div>
+          <div class="sb-info">
+            <div class="nm">プロジェクト Aurora</div>
+            <div class="pv">マサル: 台本は俺がドラフト書く 👍</div>
+          </div>
+          <div class="sb-meta">9:40<div class="badge">2</div></div>
+        </button>
+
+        <button class="sb-item">
+          <div class="sb-stack">
+            <div class="av-friend2">A</div>
+            <div class="av-friend3">N</div>
+            <div class="av-ai2">🎨</div>
+          </div>
+          <div class="sb-info">
+            <div class="nm">デザインレビュー</div>
+            <div class="pv">AI: 配色案を 3 つ提案しました</div>
+          </div>
+          <div class="sb-meta">昨日</div>
+        </button>
+
+        <button class="sb-item">
+          <div class="sb-stack">
+            <div class="av-friend4">T</div>
+            <div class="av-friend5">S</div>
+            <div class="av-ai">📝</div>
+          </div>
+          <div class="sb-info">
+            <div class="nm">マーケ戦略 Q3</div>
+            <div class="pv">あなた: 来週水曜の MTG…</div>
+          </div>
+          <div class="sb-meta">月</div>
+        </button>
+      </div>
+
+      <div class="sb-h">DM</div>
+      <div class="sb-list">
+        <button class="sb-item">
+          <div class="sb-single av-ai">📊</div>
+          <div class="sb-info">
+            <div class="nm">営業データ管理君</div>
+            <div class="pv">先週の進捗まとめました</div>
+          </div>
+          <div class="sb-meta">9:20</div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-single av-friend1">M</div>
+          <div class="sb-info">
+            <div class="nm">山田 マサル</div>
+            <div class="pv">承知しました</div>
+          </div>
+          <div class="sb-meta">昨日</div>
+        </button>
+        <button class="sb-item">
+          <div class="sb-single av-ai2">🎨</div>
+          <div class="sb-info">
+            <div class="nm">デザイン補佐</div>
+            <div class="pv">フィードバックありがとう</div>
+          </div>
+          <div class="sb-meta">水</div>
+        </button>
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-me">K</div>
+        <div class="sb-me-info">
+          <div class="sb-me-name">竹内 こうた</div>
+          <div class="sb-me-status">オンライン</div>
+        </div>
+        <button class="sb-me-cog">⚙</button>
+      </div>
+    </div>
+
+    <!-- ── Main pane ── -->
+    <div class="main">
+      <div class="main-h">
+        <div class="main-h-stack">
+          <div class="av-me">K</div>
+          <div class="av-friend1">M</div>
+          <div class="av-ai">📊</div>
+        </div>
+        <div class="main-h-info">
+          <div class="main-h-name">プロジェクト Aurora <span class="main-h-pin">📌</span></div>
+          <div class="main-h-meta">
+            <span>4 名 · うち AI 1 体</span>
+            <span class="ai-active">営業データ管理君 待機中</span>
+          </div>
+        </div>
+        <div class="main-h-acts">
+          <button class="main-h-btn" title="検索">🔍</button>
+          <button class="main-h-btn" title="ピン留め">📌</button>
+          <button class="main-h-btn" title="ファイル">📎</button>
+          <button class="main-h-btn invite">＋ 招待</button>
+        </div>
+      </div>
+
+      <div class="chat-body">
+        <div class="day-sep">2026年 5月 8日 木曜日</div>
+
+        <div class="system-row">
+          <span class="system-pill">✨ 山田 マサル さんが参加しました</span>
+        </div>
+
+        <!-- friend message -->
+        <div class="msg">
+          <div class="msg-av av-friend1">M</div>
+          <div class="msg-col">
+            <div class="msg-head">
+              <span class="msg-name">山田 マサル</span>
+              <span class="msg-time">9:38</span>
+            </div>
+            <div class="bubble">
+              招待ありがとう！来週の発表資料、進捗どんな感じ？
+              競合分析シートだけでも先に共有してもらえると、こっちで見ておくよ。
+            </div>
+            <div class="reactions">
+              <span class="reaction">👍 1</span>
+              <span class="reaction">🙏 1</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- me message -->
+        <div class="msg">
+          <div class="msg-av av-me">K</div>
+          <div class="msg-col">
+            <div class="msg-head">
+              <span class="msg-name">竹内 こうた</span>
+              <span class="msg-time">9:39</span>
+            </div>
+            <div class="bubble">
+              <span class="mention">@AI</span> 先週の進捗まとめて、マサル さんに状況をシェアして
+            </div>
+          </div>
+        </div>
+
+        <!-- AI response -->
+        <div class="msg ai">
+          <div class="msg-av av-ai">📊</div>
+          <div class="msg-col">
+            <div class="msg-head">
+              <span class="msg-name ai">営業データ管理君</span>
+              <span class="msg-time">9:39</span>
+            </div>
+            <div class="bubble">
+              <b>マサル さん向け · 先週の進捗まとめ:</b>
+              <div class="checklist">
+                <div class="ck done"><span class="em">✅</span> 競合分析シート完成 (50社)</div>
+                <div class="ck done"><span class="em">✅</span> ヒアリング結果サマリ完了</div>
+                <div class="ck"><span class="em">🟡</span> デモ資料 60% (図表残り)</div>
+                <div class="ck todo"><span class="em">⏳</span> 役員プレゼン台本 未着手</div>
+              </div>
+              来週月曜の本番まで <b>残 5 営業日</b> です。台本ドラフトを誰かが書ければ間に合います。
+            </div>
+            <div class="reactions">
+              <span class="reaction mine">👀 2</span>
+              <span class="reaction">🔥 1</span>
+              <span class="reaction">＋</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- friend reply -->
+        <div class="msg">
+          <div class="msg-av av-friend1">M</div>
+          <div class="msg-col">
+            <div class="msg-head">
+              <span class="msg-name">山田 マサル</span>
+              <span class="msg-time">9:40</span>
+            </div>
+            <div class="bubble">なるほど。台本は俺がドラフト書く 👍 今日中に共有するわ</div>
+            <div class="reactions">
+              <span class="reaction mine">🙌 1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-area">
+        <div class="comp">
+          <textarea class="comp-input" rows="1" placeholder="メッセージを入力 …  @AI でメンション · @マサル で個人宛"></textarea>
+          <div class="comp-tools">
+            <button class="comp-tool" title="ファイル添付">📎</button>
+            <button class="comp-tool" title="絵文字">😊</button>
+            <button class="comp-tool" title="GIF">GIF</button>
+            <button class="comp-tool ai">@ AI</button>
+            <div class="comp-spacer"></div>
+            <button class="comp-tool" title="ボイスメッセージ">🎙</button>
+            <button class="comp-send">↑</button>
+          </div>
+        </div>
+        <div class="comp-hint">
+          <span><kbd>⏎</kbd> 送信</span>
+          <span><kbd>⇧</kbd>+<kbd>⏎</kbd> 改行</span>
+          <span><kbd>@</kbd> メンション</span>
+          <span><kbd>/</kbd> コマンド</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right aside ── -->
+    <div class="aside">
+      <div class="aside-h">
+        <div class="ttl">プロジェクト Aurora</div>
+        <div class="desc">5/12 (月) の役員向けプレゼンに向けた集中ワーキンググループ。</div>
+      </div>
+
+      <button class="aside-cta">＋ メンバーを招待</button>
+
+      <div class="aside-h2">AI エージェント</div>
+      <div class="aside-list">
+        <div class="aside-mem">
+          <div class="aside-mem-av av-ai" style="border-radius:9px;font-size:14px">📊
+            <div class="dot online"></div>
+          </div>
+          <div class="aside-mem-info">
+            <div class="aside-mem-name">営業データ管理君 <span class="ai-tag">AI</span></div>
+            <div class="aside-mem-status">@AI で呼び出し</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside-h2">参加者 3 名</div>
+      <div class="aside-list">
+        <div class="aside-mem">
+          <div class="aside-mem-av av-me">K
+            <div class="dot online"></div>
+          </div>
+          <div class="aside-mem-info">
+            <div class="aside-mem-name">竹内 こうた <span class="role">作成者</span></div>
+            <div class="aside-mem-status">あなた</div>
+          </div>
+        </div>
+        <div class="aside-mem">
+          <div class="aside-mem-av av-friend1">M
+            <div class="dot online"></div>
+          </div>
+          <div class="aside-mem-info">
+            <div class="aside-mem-name">山田 マサル</div>
+            <div class="aside-mem-status">オンライン</div>
+          </div>
+        </div>
+        <div class="aside-mem">
+          <div class="aside-mem-av av-friend2">A
+            <div class="dot away"></div>
+          </div>
+          <div class="aside-mem-info">
+            <div class="aside-mem-name">佐藤 あや</div>
+            <div class="aside-mem-status">招待済 · 未参加</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside-bottom">
+        <div class="aside-stat"><span>合計メッセージ</span><span class="v">237</span></div>
+        <div class="aside-stat"><span>AI 利用回数</span><span class="v">42</span></div>
+        <div class="aside-stat"><span>このグループの残高</span><span class="v">¥1,840</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ────────── 2. Invite modal ────────── -->
+<div class="section-h">SCREEN 02 — 招待モーダル (＋ 招待 ボタン押下時)</div>
+
+<div class="mac">
+  <div class="mac-bar">
+    <div class="tl"><span></span><span></span><span></span></div>
+    <div class="mac-title"><span class="mac-url"><span class="lock">🔒</span> myaiagents.agency/groups/aurora</span></div>
+  </div>
+  <div style="position:relative;">
+    <div class="app" style="filter:blur(3px) brightness(.95);pointer-events:none;height:560px">
+      <div class="sb"></div>
+      <div class="main"></div>
+      <div class="aside"></div>
+    </div>
+    <div class="mac-overlay" style="inset:0;">
+      <div class="modal">
+        <div class="modal-h">
+          <h2>メンバーを招待</h2>
+          <button class="close">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="qr"><div class="qr-3"></div></div>
+          <div class="modal-right">
+            <div class="modal-label">招待リンク</div>
+            <div class="modal-link">
+              <span class="url">https://myaiagents.agency/g/aZ3kP9</span>
+              <button class="modal-copy">コピー</button>
+            </div>
+
+            <div class="modal-label">他のチャネル経由で送る</div>
+            <div class="share-grid">
+              <button class="share-btn"><span class="em">💬</span>LINE</button>
+              <button class="share-btn"><span class="em">📧</span>メール</button>
+              <button class="share-btn"><span class="em">📱</span>SMS</button>
+              <button class="share-btn"><span class="em">🔗</span>その他</button>
+            </div>
+
+            <div class="modal-label">リンク設定</div>
+            <div class="modal-toggles">
+              <div class="modal-toggle">
+                <span class="lbl">⏱ 有効期限</span>
+                <span class="val">7 日間 ›</span>
+              </div>
+              <div class="modal-toggle">
+                <span class="lbl">👥 最大人数</span>
+                <span class="val">50 人 ›</span>
+              </div>
+              <div class="modal-toggle">
+                <span class="lbl">🔒 参加に承認を必要にする</span>
+                <span class="toggle off"></span>
+              </div>
+              <div class="modal-toggle">
+                <span class="lbl">🤖 AI を新規メンバーに見せる</span>
+                <span class="toggle"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <span class="modal-foot-info">リンクは新しい人が参加するたびに更新可能です</span>
+          <div class="modal-foot-btns">
+            <button class="btn-ghost">リンクを再生成</button>
+            <button class="btn-pri">完了</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ────────── 3. New group creation ────────── -->
+<div class="section-h">SCREEN 03 — 新規グループ作成 (3 ステップ)</div>
+
+<div class="mac">
+  <div class="mac-bar">
+    <div class="tl"><span></span><span></span><span></span></div>
+    <div class="mac-title"><span class="mac-url"><span class="lock">🔒</span> myaiagents.agency/groups/new</span></div>
+  </div>
+  <div style="position:relative;background:var(--bg-50);">
+    <div style="height:580px;display:flex;align-items:center;justify-content:center;padding:30px">
+      <div class="modal" style="width:620px;max-width:100%;">
+        <div class="modal-h" style="display:block;padding-bottom:12px">
+          <h2 style="margin-bottom:4px">新しいグループを作成</h2>
+          <div style="font-size:12px;color:var(--ink-500)">仲間と AI が同じ会話で並列に発言できるグループを作ります</div>
+        </div>
+
+        <div class="steps">
+          <div class="step active"></div>
+          <div class="step active"></div>
+          <div class="step"></div>
+        </div>
+
+        <div class="field-group">
+          <div class="field">
+            <label>グループ名</label>
+            <input type="text" value="プロジェクト Aurora" placeholder="例: プロジェクト Aurora">
+          </div>
+          <div class="field">
+            <label>説明 (任意)</label>
+            <textarea placeholder="このグループは何をする場？">5/12 (月) の役員向けプレゼンに向けた集中ワーキンググループ。</textarea>
+          </div>
+          <div class="field">
+            <label>常駐させる AI エージェント</label>
+            <div class="ai-picker">
+              <div class="ai-card sel">
+                <span class="em">📊</span>
+                <div class="nm">営業データ管理君</div>
+                <div class="desc">数値分析・レポート</div>
+              </div>
+              <div class="ai-card">
+                <span class="em">🎨</span>
+                <div class="nm">デザイン補佐</div>
+                <div class="desc">UI/UX フィードバック</div>
+              </div>
+              <div class="ai-card">
+                <span class="em">📝</span>
+                <div class="nm">議事録さん</div>
+                <div class="desc">会話を要約 / TODO 抽出</div>
+              </div>
+              <div class="ai-card">
+                <span class="em">🔍</span>
+                <div class="nm">リサーチャー</div>
+                <div class="desc">Web 検索 + 出典付き</div>
+              </div>
+              <div class="ai-card">
+                <span class="em">💼</span>
+                <div class="nm">マネージャー</div>
+                <div class="desc">タスク振り分け</div>
+              </div>
+              <div class="ai-card">
+                <span class="em">＋</span>
+                <div class="nm">自分の AI</div>
+                <div class="desc">既存の AI から選ぶ</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <span class="modal-foot-info">ステップ 2 / 3 — 招待リンクは次のステップで生成</span>
+          <div class="modal-foot-btns">
+            <button class="btn-ghost">戻る</button>
+            <button class="btn-pri">次へ →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ────────── 4. Toast notifications (someone joined) ────────── -->
+<div class="section-h">SCREEN 04 — トースト通知 (誰かが参加 / 新着メッセージ)</div>
+
+<div class="mac">
+  <div class="mac-bar">
+    <div class="tl"><span></span><span></span><span></span></div>
+    <div class="mac-title"><span class="mac-url"><span class="lock">🔒</span> myaiagents.agency/groups/aurora</span></div>
+  </div>
+  <div style="position:relative;height:430px;background:linear-gradient(135deg,#fafafa 0%,#f4f4f5 100%);">
+    <div style="position:absolute;inset:0;background:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj48cGF0aCBkPSJNNTkgMUgxdjU4aDU4eiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDAsMCwwLC4wMykiLz48L3N2Zz4=') repeat;opacity:.6;"></div>
+
+    <div class="toast-area">
+      <div class="toast">
+        <div class="toast-ic av-friend1">M</div>
+        <div class="toast-body">
+          <div class="toast-title">山田 マサル さんが参加しました 🎉</div>
+          <div class="toast-msg">プロジェクト Aurora に参加しました</div>
+        </div>
+        <button class="toast-x">×</button>
+      </div>
+
+      <div class="toast">
+        <div class="toast-ic av-friend1">M</div>
+        <div class="toast-body">
+          <div class="toast-title">山田 マサル · プロジェクト Aurora</div>
+          <div class="toast-msg">招待ありがとう！来週の発表資料、進捗どんな感じ？</div>
+        </div>
+        <button class="toast-x">×</button>
+      </div>
+
+      <div class="toast">
+        <div class="toast-ic av-ai">📊</div>
+        <div class="toast-body">
+          <div class="toast-title">📊 営業データ管理君 · プロジェクト Aurora</div>
+          <div class="toast-msg">マサル さん向け · 先週の進捗をまとめました。確認お願いします。</div>
+        </div>
+        <button class="toast-x">×</button>
+      </div>
+    </div>
+
+    <div style="position:absolute;left:38px;bottom:32px;color:var(--ink-500);font-size:12px;max-width:380px;line-height:1.55;">
+      <div style="font-size:13.5px;font-weight:700;color:var(--ink-900);margin-bottom:4px">右上から滑り込みで通知</div>
+      Slack / Discord と同じ感覚。発言者ごとに別カードで、クリックで該当メッセージへ即ジャンプ。<br>
+      OS 通知センターにも同時に流れる (macOS / Windows ネイティブ通知 API 経由)。
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Concept callout ── -->
+<div class="callout">
+  <h2>PC 版で重視した UX ポイント</h2>
+  <p>
+    モバイルが「片手・縦長・タップ中心」なら、PC は「両手・横長・キーボード中心」。
+    同じ機能でも導線とインタラクションを変えています。
+  </p>
+  <div class="grid">
+    <div class="feat">
+      <div class="em">⌨️</div>
+      <h3>ショートカット中心</h3>
+      <p><kbd style="font-family:var(--mono);background:rgba(255,255,255,.06);border:.5px solid rgba(255,255,255,.12);padding:0 4px;border-radius:3px;font-size:10px">⌘K</kbd> で全グループ検索 / <kbd style="font-family:var(--mono);background:rgba(255,255,255,.06);border:.5px solid rgba(255,255,255,.12);padding:0 4px;border-radius:3px;font-size:10px">⌘N</kbd> で新規 / <kbd style="font-family:var(--mono);background:rgba(255,255,255,.06);border:.5px solid rgba(255,255,255,.12);padding:0 4px;border-radius:3px;font-size:10px">⌘/</kbd> でコマンド。</p>
+    </div>
+    <div class="feat">
+      <div class="em">🪟</div>
+      <h3>3 ペイン構成</h3>
+      <p>左: グループ一覧 / 中央: 会話 / 右: メンバー。狭い画面では右ペインが折りたたまれる。</p>
+    </div>
+    <div class="feat">
+      <div class="em">🔔</div>
+      <h3>OS ネイティブ通知</h3>
+      <p>macOS Notification Center / Windows Action Center に直接配信。ブラウザ通知 API + Capacitor / Electron 連携。</p>
+    </div>
+    <div class="feat">
+      <div class="em">😀</div>
+      <h3>リアクション</h3>
+      <p>各発言に絵文字リアクション。AI 発言にも 👀 や 🔥 を付けられる。クリックで「誰がリアクションしたか」表示。</p>
+    </div>
+    <div class="feat">
+      <div class="em">🧵</div>
+      <h3>スレッド (将来拡張)</h3>
+      <p>長くなる議論は右にスレッドパネルが出てインライン化。AI に「このスレッドだけ要約して」も可能。</p>
+    </div>
+    <div class="feat">
+      <div class="em">📎</div>
+      <h3>D&D ファイル添付</h3>
+      <p>ウインドウのどこにドロップしてもアップロード。PDF / 画像 / コード / URL を AI が自動で読み込む (既存実装と統合)。</p>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

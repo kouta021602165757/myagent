@@ -2639,6 +2639,27 @@ body{color:#f0f0f8;}
         </label>
       </div>
 
+      <!-- 送金 (member only — not for host) -->
+      <div id="grpSetContributeSection" style="display:none">
+        <div class="grpset-h">💰 グループへ送金</div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:9px">
+          AI 利用料はホストが負担しています。残高をシェアすることもできます。
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px">
+          <button class="grpset-amount" data-amt="100" onclick="_grpSettingsPickAmount(100)">¥100</button>
+          <button class="grpset-amount" data-amt="500" onclick="_grpSettingsPickAmount(500)">¥500</button>
+          <button class="grpset-amount" data-amt="1000" onclick="_grpSettingsPickAmount(1000)">¥1,000</button>
+          <button class="grpset-amount" data-amt="3000" onclick="_grpSettingsPickAmount(3000)">¥3,000</button>
+          <button class="grpset-amount" data-amt="5000" onclick="_grpSettingsPickAmount(5000)">¥5,000</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:13px;color:var(--text2);font-weight:700">¥</span>
+          <input id="grpSetContribAmount" type="number" class="grpset-input" placeholder="100 〜 50,000" min="100" max="50000" style="flex:1">
+          <button class="grpset-btn primary" onclick="_grpSettingsContribute()">送金する</button>
+        </div>
+        <div id="grpSetContribInfo" style="margin-top:8px;font-size:10.5px;color:var(--text3);line-height:1.5"></div>
+      </div>
+
       <!-- 招待設定 (host only) -->
       <div id="grpSetInviteSection" style="display:none">
         <div class="grpset-h">招待設定</div>
@@ -2706,6 +2727,14 @@ body{color:#f0f0f8;}
 .grpset-radio-row label{flex:1;cursor:pointer;}
 .grpset-radio-h{font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.005em;}
 .grpset-radio-d{font-size:10.5px;color:var(--text3);margin-top:1px;line-height:1.45;}
+.grpset-amount{
+  background:#fff;border:.5px solid var(--wire2);color:var(--text);
+  border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:inherit;letter-spacing:-.005em;
+  transition:transform .12s, border-color .12s, background .12s;
+}
+.grpset-amount:hover{background:var(--peach-soft);border-color:var(--peach);transform:translateY(-1px);}
+.grpset-amount.selected{background:var(--peach);color:#fff;border-color:var(--peach);}
 </style>
 
 <!-- ══ GROUP MEMBER PANEL ════════════════════════════════════ -->
@@ -5216,6 +5245,18 @@ async function openGroupSettings(agId){
     inviteSec.style.display = 'none';
   }
 
+  // Send-money section (members only, hide for host)
+  const contribSec = document.getElementById('grpSetContributeSection');
+  if(!isHost){
+    contribSec.style.display = '';
+    document.getElementById('grpSetContribAmount').value = '';
+    document.querySelectorAll('.grpset-amount').forEach(b => b.classList.remove('selected'));
+    const info = document.getElementById('grpSetContribInfo');
+    if(info) info.textContent = (isJa?'あなたの残高: ':'Your balance: ') + '¥' + (Math.floor(me.balance_jpy||0)).toLocaleString();
+  } else {
+    contribSec.style.display = 'none';
+  }
+
   // Transfer ownership section: host only, only if there are other members
   const transferSec = document.getElementById('grpSetTransferSection');
   if(isHost && members.length > 1){
@@ -5282,6 +5323,39 @@ async function _grpSettingsNotifyPref(pref){
     await api('POST', '/api/agents/'+agId+'/notify-pref', {pref});
     const labels = {all:'すべての発言を通知', mentions:'メンションのみ通知', mute:'通知なし (ミュート)'};
     showToast((labels[pref]||pref) + ' に変更', 'ok');
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+
+function _grpSettingsPickAmount(amt){
+  document.querySelectorAll('.grpset-amount').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.amt, 10) === amt);
+  });
+  document.getElementById('grpSetContribAmount').value = amt;
+}
+
+async function _grpSettingsContribute(){
+  const agId = document.getElementById('grpSetActiveId').value;
+  const amount = parseInt(document.getElementById('grpSetContribAmount').value, 10);
+  if(!amount || amount < 100){
+    showToast(isJa?'最低 100 円から送金できます':'Min ¥100','ng');
+    return;
+  }
+  if((me.balance_jpy||0) < amount){
+    showToast(isJa?'残高が不足しています':'Insufficient balance','ng');
+    return;
+  }
+  if(!confirm(isJa
+    ? ('¥'+amount.toLocaleString()+' をグループに送金しますか？\nあなたの残高から差し引かれ、ホストの残高に加算されます。')
+    : ('Send ¥'+amount.toLocaleString()+' to the group? Deducted from your balance, added to host balance.')
+  )) return;
+  try {
+    const r = await api('POST', '/api/agents/'+agId+'/contribute', {amount_jpy: amount});
+    showToast(isJa?('¥'+amount.toLocaleString()+' を送金しました'):('Sent ¥'+amount.toLocaleString()), 'ok');
+    me.balance_jpy = r.new_balance_jpy;
+    updateBalance();
+    closeGroupSettings();
+    // Refresh active chat to pull in the system "送金しました" entry
+    if(activeId === agId) openAgent(agId);
   } catch(e){ showToast(e.message, 'ng'); }
 }
 

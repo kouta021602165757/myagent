@@ -3703,6 +3703,77 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{groups: out});
   }
 
+  // ── POST /api/agents/:id/contribute ────────────────────────
+  // LINE Pay-style split-pay: member sends money from their balance to the
+  // host's balance so AI usage in the group can continue.
+  // body: { amount_jpy: number }
+  const contribM = pathname.match(/^\/api\/agents\/([^/]+)\/contribute$/);
+  if(contribM && method === 'POST'){
+    const agId = contribM[1];
+    const body = await readBody(req);
+    const amount = Math.round(parseFloat(body && body.amount_jpy) || 0);
+    if(!amount || amount < 100) return jres(res,400,{error:'最低 100 円から送金できます'});
+    if(amount > 50000) return jres(res,400,{error:'1 回の上限は 50,000 円です'});
+
+    // Resolve agent + host
+    let agent = (user.agents||[]).find(a => a.id === agId);
+    let host = user;
+    if(!agent){
+      const ms = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!ms) return jres(res,404,{error:'エージェントが見つかりません'});
+      host = await DB.findBy('id', ms.host_id);
+      if(!host) return jres(res,404,{error:'ホストが見つかりません'});
+      agent = (host.agents||[]).find(a => a.id === agId);
+    }
+    if(!agent || !agent.is_group) return jres(res,400,{error:'グループ専用の機能です'});
+    if(host.id === user.id) return jres(res,400,{error:'自分のグループへは送金できません'});
+    if((user.balance_jpy||0) < amount) return jres(res,402,{error:'残高が不足しています'});
+
+    // Move balance
+    user.balance_jpy = Math.round(((user.balance_jpy||0) - amount)*1000)/1000;
+    host.balance_jpy = Math.round(((host.balance_jpy||0) + amount)*1000)/1000;
+
+    // Record on agent.contributions[]
+    agent.contributions = agent.contributions || [];
+    agent.contributions.push({
+      user_id: user.id,
+      name: user.name || (user.email||'').split('@')[0] || 'メンバー',
+      amount_jpy: amount,
+      at: new Date().toISOString(),
+    });
+    if(agent.contributions.length > 100) agent.contributions = agent.contributions.slice(-100);
+
+    // System message
+    agent.history = agent.history || [];
+    agent.history.push({
+      role: 'system',
+      type: 'contribute',
+      user_id: user.id,
+      user_name: user.name || 'メンバー',
+      time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+      content: ((user.name||'メンバー') + ' さんがグループに ¥' + amount.toLocaleString() + ' 送金しました'),
+    });
+    if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+
+    // Mirror in billing_history for both users so the receipts trail is clean
+    user.billing_history = user.billing_history || [];
+    user.billing_history.push({date:new Date().toISOString(),type:'contribute_out',agentId:agent.id,agentName:agent.name,host_user_id:host.id,amount_jpy:amount});
+    if(user.billing_history.length>1000) user.billing_history = user.billing_history.slice(-1000);
+    host.billing_history = host.billing_history || [];
+    host.billing_history.push({date:new Date().toISOString(),type:'contribute_in',agentId:agent.id,agentName:agent.name,from_user_id:user.id,from_user_name:user.name,amount_jpy:amount});
+    if(host.billing_history.length>1000) host.billing_history = host.billing_history.slice(-1000);
+
+    await DB.save(host);
+    await DB.save(user);
+
+    return jres(res,200,{
+      ok:true,
+      sent_jpy: amount,
+      new_balance_jpy: user.balance_jpy,
+      host_balance_jpy: host.balance_jpy,
+    });
+  }
+
   // ── POST /api/agents/:id/notify-pref ───────────────────────
   // Per-user notification preference for a group.
   // body: { pref: 'all' | 'mentions' | 'mute' }

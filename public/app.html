@@ -2428,6 +2428,14 @@ body{color:#f0f0f8;}
           <section class="spane-section">
             <div class="spane-section-h" data-i18n="sDataExport">エクスポート</div>
             <div class="s-conn-row">
+              <div class="ic">📦</div>
+              <div class="meta">
+                <div class="n">完全データエクスポート (GDPR)</div>
+                <div class="s">サーバーに保存された全データを JSON でダウンロード</div>
+              </div>
+              <button class="btn-ghost" onclick="exportFullData()">ダウンロード</button>
+            </div>
+            <div class="s-conn-row">
               <div class="ic">📄</div>
               <div class="meta">
                 <div class="n" data-i18n="sDataExportAgentsT">エージェントと会話履歴</div>
@@ -2442,6 +2450,28 @@ body{color:#f0f0f8;}
                 <div class="s" data-i18n="sDataExportTxD">確定申告などにご利用いただけます</div>
               </div>
               <button class="btn-ghost" onclick="exportData('history')" data-i18n="sBtnDownload">ダウンロード</button>
+            </div>
+          </section>
+
+          <!-- 紹介プログラム -->
+          <section class="spane-section">
+            <div class="spane-section-h">🎁 紹介プログラム</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
+              友達があなたの紹介リンクから登録すると、<b>あなたと友達それぞれに ¥500</b> 進呈されます。
+            </div>
+            <div class="s-conn-row" style="flex-direction:column;align-items:stretch;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="ic">🔗</div>
+                <div class="meta">
+                  <div class="n">あなたの紹介リンク</div>
+                  <div class="s" id="sRefStats">読み込み中…</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <input id="sRefUrl" readonly value="" style="flex:1;padding:8px 11px;border:.5px solid var(--wire2);border-radius:8px;font-size:11.5px;color:var(--text);font-family:'JetBrains Mono','SF Mono',monospace;background:var(--bg-100)">
+                <button class="btn-ghost" onclick="_copyRefUrl()">コピー</button>
+                <button class="btn-ghost" onclick="_shareRef()">共有</button>
+              </div>
             </div>
           </section>
 
@@ -8454,6 +8484,7 @@ function switchStab(btn, tabId){
   if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
   if(tabId==='s-creator'){ loadCreatorDashboard(); loadPayoutSection(); }
   if(tabId==='s-admin') loadAdminReports();
+  if(tabId==='s-data') _loadReferralCard();
 }
 
 async function loadAdminReports(){
@@ -9137,6 +9168,51 @@ function _downloadBlob(filename, content, mime){
   a.href=url; a.download=filename; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 100);
 }
+// Server-side full data export (GDPR-style)
+async function exportFullData(){
+  try {
+    const r = await fetch(API + '/api/me/data-export', {
+      headers: {'Authorization': 'Bearer ' + token},
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = u; a.download = 'myaiagent-data-' + _dateSlug() + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(u); }, 0);
+    showToast('ダウンロード完了','ok');
+  } catch(e){ showToast('エクスポート失敗: ' + e.message, 'ng'); }
+}
+
+// Referral helpers
+async function _loadReferralCard(){
+  const stat = document.getElementById('sRefStats');
+  const inp = document.getElementById('sRefUrl');
+  if(!stat || !inp) return;
+  try {
+    const r = await api('GET', '/api/me/referral');
+    inp.value = r.url || '';
+    const s = r.stats || {count:0, total_credit_jpy:0};
+    stat.innerHTML = '<b>' + (s.count||0) + ' 人</b> 招待済 · 累計獲得 <b>¥' + ((s.total_credit_jpy||0).toLocaleString()) + '</b>';
+  } catch(e){ stat.textContent = '読み込み失敗'; }
+}
+function _copyRefUrl(){
+  const inp = document.getElementById('sRefUrl');
+  if(!inp || !inp.value) return;
+  navigator.clipboard.writeText(inp.value).then(() => showToast('コピーしました','ok'));
+}
+function _shareRef(){
+  const url = document.getElementById('sRefUrl')?.value;
+  if(!url) return;
+  const text = '【MY AI Agent】このリンクから登録すると、あなたと私それぞれに ¥500 もらえます 🎁\n' + url;
+  if(navigator.share){
+    navigator.share({title: 'MY AI Agent 紹介', text, url}).catch(()=>{});
+  } else {
+    location.href = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
+  }
+}
+
 function exportData(kind){
   if(kind==='agents'){
     var payload={
@@ -9230,11 +9306,12 @@ async function changePassword(){
 async function deleteAccount(){
   const confirm = document.getElementById('sDelConfirm').value;
   if(confirm!=='削除する'){ showToast('「削除する」と入力してください','err'); return; }
+  if(!window.confirm('本当にアカウントを完全削除しますか？\n全てのエージェント・会話・残高が失われます。')) return;
   try{
-    await api('DELETE','/api/user/delete');
+    await api('DELETE','/api/me', { confirm: 'DELETE' });
     showToast('アカウントを削除しました','ok');
-    setTimeout(()=>{ localStorage.removeItem('token'); location.href='/'; },1500);
-  }catch(e){ showToast('削除に失敗しました','err'); }
+    setTimeout(()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); location.href='/'; },1500);
+  }catch(e){ showToast(e.message || '削除に失敗しました','ng'); }
 }
 function quickCharge(amount){
   // Settings → Add Credits shortcut: open the new billing modal on PAYG tab w/ amount preset

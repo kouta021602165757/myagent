@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🗂 モック一覧 — MY AI Agent</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-light:#fed7aa;--peach-soft:#fff7ed;
+  --bg-50:#fafafa;--bg-100:#f4f4f5;
+  --ink-900:#09090b;--ink-700:#27272a;--ink-500:#52525b;--ink-300:#a1a1aa;
+  --line:rgba(9,9,11,.06);--line-strong:rgba(9,9,11,.1);
+  --green:#10b981;--indigo:#6366f1;--violet:#8b5cf6;--rose:#ef4444;
+  --sans:-apple-system,'SF Pro Display','Inter','Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+  --display:-apple-system,'SF Pro Display','Inter',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;}
+body{
+  background:#09090b;
+  background-image:
+    radial-gradient(1200px 600px at 70% -10%, rgba(251,146,60,.12), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(99,102,241,.08), transparent 60%),
+    linear-gradient(180deg,#0d0d10 0%,#09090b 100%);
+  background-attachment:fixed;
+  color:#fff;font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;
+  letter-spacing:-.011em;
+}
+a{color:var(--peach);text-decoration:none;}
+.shell{max-width:1280px;margin:0 auto;padding:48px 24px 96px;}
+.brand{font-size:12px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:28px;}
+.brand a{color:rgba(255,255,255,.45);}
+.brand a:hover{color:var(--peach);}
+
+.hero{margin-bottom:40px;}
+.h1{font-family:var(--display);font-size:42px;font-weight:700;line-height:1.05;margin-bottom:14px;letter-spacing:-.028em;}
+.h1 .accent{background:linear-gradient(135deg,#fed7aa,var(--peach) 50%,var(--peach-dark));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.sub{font-size:14.5px;color:rgba(255,255,255,.6);max-width:680px;line-height:1.65;}
+.sub b{color:#fff;}
+
+.section{margin-top:36px;}
+.section-h{
+  font-size:13px;font-weight:700;color:rgba(255,255,255,.85);
+  margin-bottom:14px;letter-spacing:-.005em;display:flex;align-items:center;gap:10px;
+}
+.section-h .em{font-size:18px;}
+.section-h .meta{
+  font-size:10.5px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:.04em;
+  text-transform:uppercase;margin-left:6px;
+}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.card{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  border-radius:13px;padding:18px;display:flex;flex-direction:column;gap:8px;
+  transition:transform .15s, border-color .15s, background .15s;
+}
+.card:hover{transform:translateY(-2px);border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.04);}
+.card .row1{display:flex;align-items:center;gap:8px;}
+.card .em{font-size:18px;line-height:1;}
+.card .nm{font-size:14.5px;font-weight:700;color:#fff;letter-spacing:-.012em;flex:1;}
+.card .stat{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;flex-shrink:0;}
+.card .stat.live{background:rgba(16,185,129,.16);color:#6ee7b7;}
+.card .stat.legacy{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);}
+.card .stat.feature{background:rgba(99,102,241,.16);color:#a5b4fc;}
+.card .desc{font-size:12px;color:rgba(255,255,255,.55);line-height:1.55;letter-spacing:-.005em;}
+.card .url{font-size:10.5px;color:rgba(255,255,255,.35);font-family:var(--mono);word-break:break-all;}
+
+.note{
+  margin-top:48px;padding:16px 18px;border-radius:11px;
+  background:rgba(251,146,60,.06);border:.5px solid rgba(251,146,60,.18);
+  color:var(--peach-light);font-size:12px;line-height:1.65;
+}
+.note b{color:#fff;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="brand"><a href="/">← MY AI Agent</a></div>
+  <div class="hero">
+    <div class="h1">🗂 <span class="accent">モック一覧</span></div>
+    <p class="sub">
+      開発中・採用済みの全 UI モックを一覧化。各カードをクリックで実物にジャンプ。<br>
+      <b style="color:#fff">Live</b> = 実装に反映済 / <b style="color:#a5b4fc">Feature</b> = 機能設計用 / <b style="color:rgba(255,255,255,.5)">Legacy</b> = 過去案・非採用
+    </p>
+  </div>
+
+  <!-- ── Group chat (latest first) ── -->
+  <div class="section">
+    <div class="section-h"><span class="em">🤝</span>グループチャット<span class="meta">5 mocks · 2026-05</span></div>
+    <div class="grid">
+      <a class="card" href="/mock-post-login-mobile.html">
+        <div class="row1"><span class="em">📱</span><span class="nm">ログイン後 (モバイル)</span><span class="stat live">LIVE</span></div>
+        <div class="desc">実装と一致させた最新モバイル UI。Talks タブ + ⊕ メニュー + グループチャット。</div>
+        <div class="url">/mock-post-login-mobile.html</div>
+      </a>
+      <a class="card" href="/mock-ia-redesign.html">
+        <div class="row1"><span class="em">🗺</span><span class="nm">IA リデザイン</span><span class="stat live">LIVE</span></div>
+        <div class="desc">サイドバーを Talks/Agents タブ + ⊕ ボタンに分離した設計案。PC + モバイル両対応。</div>
+        <div class="url">/mock-ia-redesign.html</div>
+      </a>
+      <a class="card" href="/mock-group-chat-invite-flow.html">
+        <div class="row1"><span class="em">📨</span><span class="nm">招待された人の動線</span><span class="stat feature">FEATURE</span></div>
+        <div class="desc">LINE 招待 → ランディング → 登録 → ようこそ → 初回チャット → 課金詳細 (6 step) + 課金 FAQ</div>
+        <div class="url">/mock-group-chat-invite-flow.html</div>
+      </a>
+      <a class="card" href="/mock-group-chat-pc.html">
+        <div class="row1"><span class="em">🖥</span><span class="nm">PC 版 3 ペイン</span><span class="stat feature">FEATURE</span></div>
+        <div class="desc">Slack/Discord 風の 3 ペインレイアウト。サイドバー / 会話 / メンバー。</div>
+        <div class="url">/mock-group-chat-pc.html</div>
+      </a>
+      <a class="card" href="/mock-group-chat.html">
+        <div class="row1"><span class="em">👥</span><span class="nm">グループチャット 初版</span><span class="stat legacy">LEGACY</span></div>
+        <div class="desc">グループ機能の最初の探索モック。8 画面でモバイル UX 全体像を提示。</div>
+        <div class="url">/mock-group-chat.html</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Mobile app ── -->
+  <div class="section">
+    <div class="section-h"><span class="em">📱</span>モバイルアプリ<span class="meta">1 mock · 2026-04</span></div>
+    <div class="grid">
+      <a class="card" href="/mock-mobile-app.html">
+        <div class="row1"><span class="em">📱</span><span class="nm">モバイル UI 初版</span><span class="stat legacy">LEGACY</span></div>
+        <div class="desc">Capacitor アプリ初期 UI モック (8 画面)。下部タブバー、設定、ロック画面通知。</div>
+        <div class="url">/mock-mobile-app.html</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Browser extension ── -->
+  <div class="section">
+    <div class="section-h"><span class="em">🧩</span>ブラウザ拡張<span class="meta">4 mocks · 2026-03</span></div>
+    <div class="grid">
+      <a class="card" href="/mock-extension-flow.html">
+        <div class="row1"><span class="em">🔄</span><span class="nm">拡張連携フロー</span><span class="stat live">LIVE</span></div>
+        <div class="desc">ペアリング → AI 指示 → ブラウザ操作 → 結果報告のフル動線。Chrome Store 提出 SS の元。</div>
+        <div class="url">/mock-extension-flow.html</div>
+      </a>
+      <a class="card" href="/mock-extension-sites.html">
+        <div class="row1"><span class="em">💼</span><span class="nm">対応サイト例</span><span class="stat feature">FEATURE</span></div>
+        <div class="desc">Slack / Gmail / Notion などログイン済みサイトでの操作例。</div>
+        <div class="url">/mock-extension-sites.html</div>
+      </a>
+      <a class="card" href="/mock-extension-anysite.html">
+        <div class="row1"><span class="em">🌐</span><span class="nm">任意サイト操作</span><span class="stat feature">FEATURE</span></div>
+        <div class="desc">Uber / Airbnb など、ユーザー固有のサイトでも動くことを示す例。</div>
+        <div class="url">/mock-extension-anysite.html</div>
+      </a>
+      <a class="card" href="/mock-extension-journey.html">
+        <div class="row1"><span class="em">🗺</span><span class="nm">拡張インストール導線</span><span class="stat legacy">LEGACY</span></div>
+        <div class="desc">初期導入時のステップバイステップ・オンボーディング案。</div>
+        <div class="url">/mock-extension-journey.html</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Local agent (Plan A 案) ── -->
+  <div class="section">
+    <div class="section-h"><span class="em">💻</span>ローカル AI エージェント<span class="meta">2 mocks · 2026-02</span></div>
+    <div class="grid">
+      <a class="card" href="/mock-localagent-app.html">
+        <div class="row1"><span class="em">🖥</span><span class="nm">ローカルアプリ案</span><span class="stat legacy">LEGACY</span></div>
+        <div class="desc">Plan A: ローカルマシン上で動くデスクトップアプリ案。最終的に拡張機能ベース (Plan B) に移行。</div>
+        <div class="url">/mock-localagent-app.html</div>
+      </a>
+      <a class="card" href="/mock-localagent-flow.html">
+        <div class="row1"><span class="em">🔄</span><span class="nm">ローカル動線</span><span class="stat legacy">LEGACY</span></div>
+        <div class="desc">Plan A の操作フロー全体。アクセシビリティ API 経由のブラウザ操作。</div>
+        <div class="url">/mock-localagent-flow.html</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Marketplace / Creator ── -->
+  <div class="section">
+    <div class="section-h"><span class="em">🏪</span>Agent Store / クリエイター<span class="meta">3 mocks · 2026-01</span></div>
+    <div class="grid">
+      <a class="card" href="/mock-creator.html">
+        <div class="row1"><span class="em">🎨</span><span class="nm">クリエイター画面</span><span class="stat live">LIVE</span></div>
+        <div class="desc">エージェント出品・収益管理 UI。出品 → 審査 → 公開 → 売上ダッシュボード。</div>
+        <div class="url">/mock-creator.html</div>
+      </a>
+      <a class="card" href="/mock-publish-share.html">
+        <div class="row1"><span class="em">📤</span><span class="nm">出品・共有フロー</span><span class="stat feature">FEATURE</span></div>
+        <div class="desc">エージェントを Agent Store に公開する流れ + SNS シェアの導線。</div>
+        <div class="url">/mock-publish-share.html</div>
+      </a>
+      <a class="card" href="/mock-sheets-flow.html">
+        <div class="row1"><span class="em">📊</span><span class="nm">Sheets 連携フロー</span><span class="stat live">LIVE</span></div>
+        <div class="desc">Google スプレッドシート連携の OAuth + 操作例。</div>
+        <div class="url">/mock-sheets-flow.html</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── OG / Misc ── -->
+  <div class="section">
+    <div class="section-h"><span class="em">🔧</span>その他<span class="meta">1 mock</span></div>
+    <div class="grid">
+      <a class="card" href="/mock-og.html">
+        <div class="row1"><span class="em">🖼</span><span class="nm">OG 画像プレビュー</span><span class="stat feature">FEATURE</span></div>
+        <div class="desc">SNS シェア時の OG カード生成プレビュー。Twemoji + ブランドロゴ。</div>
+        <div class="url">/mock-og.html</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="note">
+    📌 <b>モック運用方針</b> — 新機能を実装する前にここに UI モックを置き、Takeuchi さんと UI を確定してから本実装に入る運用です。
+    実装に取り込まれたら <b>LIVE</b> ラベル、廃案になったら <b>LEGACY</b> として残します (削除はせず履歴として参照可能に)。
+  </div>
+</div>
+</body>
+</html>

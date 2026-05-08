@@ -509,6 +509,95 @@ function fetchUrlText(targetUrl, opts = {}) {
   });
 }
 
+// ── PUSH NOTIFICATIONS (FCM legacy + APNs proxied via FCM) ───
+// Send a notification to one device token. Gated behind FCM_SERVER_KEY:
+// when not configured (dev / before Firebase setup), logs and returns OK.
+// Production: set FCM_SERVER_KEY in Render env to the legacy server key
+// from Firebase Console → Project Settings → Cloud Messaging.
+async function sendPushFCM(token, payload){
+  if(!process.env.FCM_SERVER_KEY){
+    if(process.env.PUSH_DEBUG === '1'){
+      console.log('[push] would send:', JSON.stringify({token: (token||'').slice(0,16)+'…', payload}).slice(0, 300));
+    }
+    return { ok: false, reason: 'fcm_not_configured' };
+  }
+  try {
+    const body = {
+      to: token,
+      notification: {
+        title: payload.title || 'MY AI Agent',
+        body:  payload.body  || '',
+        sound: 'default',
+        badge: payload.badge || 1,
+      },
+      data: payload.data || {},
+      priority: 'high',
+    };
+    const r = await httpsReq('POST', 'fcm.googleapis.com', '/fcm/send', {
+      'Authorization': 'key=' + process.env.FCM_SERVER_KEY,
+      'Content-Type': 'application/json',
+    }, body);
+    return { ok: r.s < 400, status: r.s };
+  } catch(e){
+    console.warn('[push] FCM send failed:', e.message);
+    return { ok: false, error: e.message };
+  }
+}
+
+// Notify group members of a new message. Respects per-user notify_pref:
+//   'all'      → always send
+//   'mentions' → only when @AI / @name was used
+//   'mute'     → never send
+// Skips the sender's own devices. Fire-and-forget.
+async function notifyGroupMembers(host, agent, opts){
+  try {
+    if(!agent || !agent.is_group || !Array.isArray(agent.members)) return;
+    const senderUid   = opts.sender_user_id || '';
+    const senderName  = opts.sender_name || 'メンバー';
+    const messageText = (opts.text || '').toString().slice(0, 200);
+    const isAIReply   = !!opts.is_ai_reply;
+    const isMention   = !!opts.is_mention;
+
+    const targets = agent.members.filter(m => {
+      if(!m || !m.user_id) return false;
+      // Don't notify the sender (unless this is an AI reply — sender wants to know AI replied)
+      if(m.user_id === senderUid && !isAIReply) return false;
+      const pref = m.notify_pref || 'all';
+      if(pref === 'mute') return false;
+      if(pref === 'mentions' && !isMention && !isAIReply) return false;
+      return true;
+    });
+    if(!targets.length) return;
+
+    const title = agent.name || 'グループ';
+    const body  = isAIReply
+      ? (agent.name + ': ' + messageText)
+      : (senderName + ': ' + messageText);
+
+    for(const m of targets){
+      const member = await DB.findBy('id', m.user_id);
+      if(!member) continue;
+      const devices = Array.isArray(member.mobile_devices) ? member.mobile_devices : [];
+      if(!devices.length) continue;
+      const payload = {
+        title, body,
+        data: {
+          type: 'group_message',
+          agent_id: agent.id,
+          host_id: host.id,
+          sender_user_id: senderUid,
+          is_ai_reply: isAIReply ? '1' : '0',
+        },
+      };
+      for(const d of devices){
+        await sendPushFCM(d.token, payload).catch(()=>{});
+      }
+    }
+  } catch(e){
+    console.warn('[push] notifyGroupMembers error:', e.message);
+  }
+}
+
 // ── EMAIL (Resend) ────────────────────────────────────────────
 async function sendEmail(to,subject,html){
   if(!RESEND_KEY){console.log(`[DEV EMAIL] To:${to}\nSubject:${subject}\n${html.replace(/<[^>]+>/g,'')}\n`);return;}
@@ -3774,6 +3863,53 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  // ── POST /api/agents/:id/messages/:idx/react ───────────────
+  // body: { emoji: string, op: 'toggle'|'add'|'remove' (default toggle) }
+  // Each user has at most one of each emoji per message.
+  const reactM = pathname.match(/^\/api\/agents\/([^/]+)\/messages\/(\d+)\/react$/);
+  if(reactM && method === 'POST'){
+    const agId = reactM[1];
+    const idx = parseInt(reactM[2], 10);
+    const body = await readBody(req);
+    const emoji = ((body && body.emoji) || '').toString().slice(0, 16);
+    const op = ((body && body.op) || 'toggle').toString();
+    if(!emoji) return jres(res,400,{error:'emoji is required'});
+
+    // Resolve agent + host
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let target = user;
+    if(!ag){
+      const ms = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!ms) return jres(res,404,{error:'エージェントが見つかりません'});
+      const host = await DB.findBy('id', ms.host_id);
+      if(!host) return jres(res,404,{error:'ホストが見つかりません'});
+      target = host;
+      ag = (host.agents||[]).find(a => a.id === agId);
+    }
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    if(!Array.isArray(ag.history) || idx < 0 || idx >= ag.history.length){
+      return jres(res,400,{error:'メッセージが見つかりません'});
+    }
+
+    const msg = ag.history[idx];
+    msg.reactions = Array.isArray(msg.reactions) ? msg.reactions : [];
+    const existing = msg.reactions.find(r => r.user_id === user.id && r.emoji === emoji);
+
+    if(op === 'remove' || (op === 'toggle' && existing)){
+      msg.reactions = msg.reactions.filter(r => !(r.user_id === user.id && r.emoji === emoji));
+    } else if(!existing){
+      msg.reactions.push({
+        user_id: user.id,
+        name: user.name || (user.email||'').split('@')[0] || 'メンバー',
+        emoji,
+        at: new Date().toISOString(),
+      });
+    }
+    ag.history[idx] = msg;
+    await DB.save(target);
+    return jres(res,200,{ok:true, reactions: msg.reactions});
+  }
+
   // ── POST /api/agents/:id/notify-pref ───────────────────────
   // Per-user notification preference for a group.
   // body: { pref: 'all' | 'mentions' | 'mute' }
@@ -4796,6 +4932,14 @@ async function handleAPI(req,res,pathname,method,ip){
       const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
       if(ai>=0) payerUser.agents[ai] = agent;
       await DB.save(payerUser);
+      // Push notification: human-only message (no @AI), notify other members
+      notifyGroupMembers(payerUser, agent, {
+        sender_user_id: user.id,
+        sender_name: speakerName,
+        text: message,
+        is_ai_reply: false,
+        is_mention: false,
+      }).catch(()=>{});
       return jres(res,200,{ok:true, ai_replied:false, reply:'', balance_jpy: payerUser.balance_jpy});
     }
 
@@ -4943,6 +5087,16 @@ async function handleAPI(req,res,pathname,method,ip){
             buyer_user_id: payerUser.id,
             cost_jpy: cost.jpy,
           }).catch(e=>console.warn('[revenue] credit failed:', e.message));
+        }
+        // Push notification: AI replied in a group → notify all members
+        if(isGroup){
+          notifyGroupMembers(payerUser, agent, {
+            sender_user_id: user.id,
+            sender_name: speakerName,
+            text: reply,
+            is_ai_reply: true,
+            is_mention: aiMentioned,
+          }).catch(()=>{});
         }
         sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd } });
       }catch(e){
@@ -5148,6 +5302,16 @@ async function handleAPI(req,res,pathname,method,ip){
         buyer_user_id: payerUser.id,
         cost_jpy: cost.jpy,
       }).catch(e=>console.warn('[revenue] credit failed:', e.message));
+    }
+    // Push notification: AI replied in a group → notify all members
+    if(isGroup){
+      notifyGroupMembers(payerUser, agent, {
+        sender_user_id: user.id,
+        sender_name: speakerName,
+        text: reply,
+        is_ai_reply: true,
+        is_mention: aiMentioned,
+      }).catch(()=>{});
     }
     if(sse){
       // Emit the (possibly already-streamed) reply once at the end so the client

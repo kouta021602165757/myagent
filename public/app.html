@@ -2735,6 +2735,49 @@ body{color:#f0f0f8;}
 }
 .grpset-amount:hover{background:var(--peach-soft);border-color:var(--peach);transform:translateY(-1px);}
 .grpset-amount.selected{background:var(--peach);color:#fff;border-color:var(--peach);}
+
+/* Reactions */
+.m-reactions{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;padding:0 4px;}
+.m-reactions.empty{opacity:0;transition:opacity .15s;}
+.m:hover .m-reactions.empty{opacity:1;}
+.reaction{
+  display:inline-flex;align-items:center;gap:3px;
+  background:#fff;border:.5px solid var(--wire2);color:var(--text);
+  padding:2px 8px 2px 6px;border-radius:999px;font-size:11px;font-weight:600;
+  cursor:pointer;font-family:inherit;letter-spacing:-.005em;
+  transition:transform .12s, background .12s, border-color .12s;
+}
+.reaction:hover{transform:translateY(-1px);background:rgba(251,146,60,.06);border-color:rgba(251,146,60,.3);}
+.reaction.mine{background:rgba(251,146,60,.12);border-color:rgba(251,146,60,.3);color:var(--peach-dark);}
+.reaction.add{
+  padding:2px 8px;background:transparent;color:var(--text3);font-size:11px;font-weight:700;
+}
+.reaction.add:hover{background:rgba(9,9,11,.04);}
+.reaction .r-em{font-size:13px;line-height:1;}
+.reaction .r-n{font-size:10.5px;font-weight:700;}
+
+.reaction-picker{
+  position:absolute;z-index:200;
+  background:#fff;border:.5px solid var(--wire2);border-radius:11px;
+  padding:6px;display:flex;gap:3px;
+  box-shadow:0 10px 28px rgba(9,9,11,.12),0 3px 8px rgba(9,9,11,.05);
+  animation:rpicker-in .14s ease-out;
+}
+@keyframes rpicker-in{from{opacity:0;transform:translateY(4px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}
+.reaction-picker button{
+  width:30px;height:30px;border:0;background:transparent;cursor:pointer;
+  font-size:18px;border-radius:7px;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .12s, background .12s;
+}
+.reaction-picker button:hover{background:var(--bg-100);transform:scale(1.15);}
+
+/* Read receipt next to time stamp (LINE-style "既読 N") */
+.m-read{
+  font-size:9.5px;color:var(--peach-dark);font-weight:600;
+  padding:1px 6px;border-radius:9px;background:rgba(251,146,60,.08);
+  margin-left:4px;letter-spacing:-.005em;
+}
 </style>
 
 <!-- ══ GROUP MEMBER PANEL ════════════════════════════════════ -->
@@ -5077,17 +5120,112 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // even if content was empty when this row was rendered).
   const renderBody = bodyMarkup || (!isU);
   const avStyle = userColor ? ' style="background:'+userColor+'"' : '';
+  // Reactions row (groups only — solo agents don't have anyone else to react)
+  let reactionsHTML = '';
+  if(isGroup && raw && Array.isArray(raw.reactions) && raw.reactions.length){
+    const grouped = {};
+    raw.reactions.forEach(r => {
+      if(!r || !r.emoji) return;
+      grouped[r.emoji] = grouped[r.emoji] || {count:0, mine:false, names:[]};
+      grouped[r.emoji].count++;
+      grouped[r.emoji].names.push(r.name || '?');
+      if(r.user_id === me?.id) grouped[r.emoji].mine = true;
+    });
+    reactionsHTML = '<div class="m-reactions">'
+      + Object.entries(grouped).map(([emo, info]) =>
+          '<button class="reaction'+(info.mine?' mine':'')+'" data-idx="'+idx+'" data-emoji="'+esc(emo)+'" title="'+esc(info.names.join(', '))+'" onclick="_toggleReaction(this)">'
+            + '<span class="r-em">'+esc(emo)+'</span><span class="r-n">'+info.count+'</span>'
+          + '</button>'
+        ).join('')
+      + (idx>=0 ? '<button class="reaction add" data-idx="'+idx+'" onclick="_openReactionPicker(this, event)" title="リアクションを追加">＋</button>' : '')
+      + '</div>';
+  } else if(isGroup && !isStreaming && idx >= 0){
+    // Empty reactions — show "+" only on hover via CSS
+    reactionsHTML = '<div class="m-reactions empty">'
+      + '<button class="reaction add" data-idx="'+idx+'" onclick="_openReactionPicker(this, event)" title="リアクションを追加">＋</button>'
+      + '</div>';
+  }
+  // Read receipts: for my own group messages, count how many OTHER members
+  // have last_read_idx > this msg's idx.
+  let readReceipt = '';
+  if(isGroup && isU && raw && raw.user_id === me?.id && idx >= 0 && Array.isArray(ag.members)){
+    let readers = 0;
+    for(const mem of ag.members){
+      if(!mem || mem.user_id === me?.id) continue;
+      const li = Number.isInteger(mem.last_read_idx) ? mem.last_read_idx : 0;
+      if(li > idx) readers++;
+    }
+    if(readers > 0){
+      readReceipt = '<span class="m-read" title="このメッセージを既読のメンバー数">既読 '+readers+'</span>';
+    }
+  }
   return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'">'+
     '<div class="m-meta">'+
       '<div class="m-av'+(isU?' user':'')+'"'+avStyle+'>'+av+'</div>'+
       '<span class="m-name">'+esc(name)+'</span>'+
       '<span class="m-time">'+esc(time||'')+'</span>'+
+      readReceipt+
     '</div>'+
     imgHtml+
     tlogHtml+
     (renderBody?'<div class="m-body">'+(bodyMarkup||'')+'</div>':'')+
+    reactionsHTML+
     (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
   '</div>';
+}
+
+// Reaction picker — small popup with curated emoji set
+const _REACTION_EMOJIS = ['👍','❤️','😂','🎉','🔥','👀','🙏','🚀','💯','🤔'];
+
+function _openReactionPicker(btn, ev){
+  if(ev) ev.stopPropagation();
+  const idx = btn.dataset.idx;
+  // Remove any existing picker
+  document.querySelectorAll('.reaction-picker').forEach(el => el.remove());
+  const picker = document.createElement('div');
+  picker.className = 'reaction-picker';
+  picker.innerHTML = _REACTION_EMOJIS.map(e =>
+    '<button onclick="_pickReaction(\''+esc(idx)+'\',\''+esc(e)+'\',this)">'+esc(e)+'</button>'
+  ).join('');
+  document.body.appendChild(picker);
+  // Position near the clicked button
+  const r = btn.getBoundingClientRect();
+  const pw = 240; // picker approx width
+  const pl = Math.min(window.innerWidth - pw - 12, Math.max(12, r.left));
+  picker.style.left = pl + 'px';
+  picker.style.top  = (r.top - 50 + window.scrollY) + 'px';
+  // Click-outside to close
+  setTimeout(() => {
+    document.addEventListener('click', () => picker.remove(), { once: true });
+  }, 0);
+}
+
+async function _pickReaction(idx, emoji, btn){
+  if(btn) btn.closest('.reaction-picker')?.remove();
+  if(!activeId) return;
+  try {
+    const r = await api('POST', '/api/agents/' + activeId + '/messages/' + idx + '/react', {emoji, op:'toggle'});
+    // Patch local history entry and re-render
+    const ag = agents.find(a => a.id === activeId);
+    if(ag && Array.isArray(ag.history) && ag.history[idx]){
+      ag.history[idx].reactions = r.reactions || [];
+      renderMsgs(ag);
+    }
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+
+async function _toggleReaction(btn){
+  const idx = btn.dataset.idx;
+  const emoji = btn.dataset.emoji;
+  if(!activeId || !idx || !emoji) return;
+  try {
+    const r = await api('POST', '/api/agents/' + activeId + '/messages/' + idx + '/react', {emoji, op:'toggle'});
+    const ag = agents.find(a => a.id === activeId);
+    if(ag && Array.isArray(ag.history) && ag.history[idx]){
+      ag.history[idx].reactions = r.reactions || [];
+      renderMsgs(ag);
+    }
+  } catch(e){ showToast(e.message, 'ng'); }
 }
 
 // Deterministic color hue from user_id so each speaker always renders the

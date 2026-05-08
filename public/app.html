@@ -1459,13 +1459,41 @@ input,textarea{font-family:var(--sans);}
 
 /* responsive: collapse side nav on small screens */
 @media (max-width:720px){
-  .settings-layout{grid-template-columns:1fr;}
-  .settings-nav{flex-direction:row;border-right:0;border-bottom:1px solid var(--wire2);overflow-x:auto;flex-shrink:0;padding:8px;gap:4px;}
+  .settings-layout{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
+  .settings-nav{
+    flex-direction:row !important;align-items:center;
+    border-right:0;border-bottom:1px solid var(--wire2);
+    overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+    flex-shrink:0;flex-wrap:nowrap;
+    padding:8px 12px;gap:4px;height:auto;min-height:48px;max-height:54px;
+    scrollbar-width:none;
+  }
+  .settings-nav::-webkit-scrollbar{display:none;}
   .snav-section{display:none;}
-  .snav-item{flex-shrink:0;width:auto;padding:8px 12px;font-size:12px;}
-  .snav-item span:not(.snav-ic):not(.snav-badge){display:none;}
+  .snav-item{
+    flex-shrink:0;flex-grow:0;width:auto;height:auto;
+    padding:7px 11px;font-size:11.5px;gap:5px;
+    align-self:center;
+  }
+  .snav-item .snav-ic{font-size:14px;width:16px;}
+  /* Keep the text label on mobile (was previously hidden) — icon-only made
+     the bar look broken with floating emojis */
+  .snav-item span:not(.snav-ic):not(.snav-badge){
+    display:inline;font-size:11.5px;font-weight:600;letter-spacing:-.005em;white-space:nowrap;
+  }
+  .snav-badge{font-size:8px;padding:1px 5px;}
   .settings-content .row2,.settings-content .row3{grid-template-columns:1fr;}
   .s-cs-card .s-cs-feats{grid-template-columns:1fr;}
+
+  /* Composer hint row: only the bare essentials on mobile */
+  .foot-hint{font-size:10px;gap:8px;margin-top:5px;}
+  .foot-hint kbd{font-size:9px;padding:1px 4px;}
+}
+@media (max-width:480px){
+  /* Below 480 we drop the secondary hints — keep only 送信 */
+  .foot-hint span:not(:first-child){display:none;}
+  .snav-item{padding:6px 9px;font-size:11px;}
+  .snav-item span:not(.snav-ic):not(.snav-badge){font-size:11px;}
 }
 
 /* チャットメッセージの文字色 */

@@ -362,6 +362,12 @@ input,textarea{font-family:var(--sans);}
 .ct-act.wide.members{
   background:rgba(9,9,11,.04);color:var(--text);border-color:var(--wire2);
 }
+/* Narrow viewports: tighten padding + font so the action group fits */
+@media(max-width:520px){
+  .ct-act.wide{padding:0 9px;font-size:11.5px;gap:3px;}
+  .ct-actions{gap:4px;}
+  .chat-top{padding:10px 12px;gap:8px;}
+}
 
 /* share card */
 .share-card{
@@ -2596,7 +2602,7 @@ body{color:#f0f0f8;}
 </div>
 
 <!-- ══ GROUP SETTINGS MODAL ══════════════════════════════════ -->
-<div class="overlay" id="grpSetOverlay">
+<div class="overlay" id="grpSetOverlay" onclick="if(event.target===this)closeGroupSettings()">
   <div class="wizard" style="max-width:480px">
     <div class="wiz-top">
       <div class="wiz-title">⚙ グループ設定</div>
@@ -2757,7 +2763,7 @@ body{color:#f0f0f8;}
 .reaction .r-n{font-size:10.5px;font-weight:700;}
 
 .reaction-picker{
-  position:absolute;z-index:200;
+  position:fixed;z-index:1000;
   background:#fff;border:.5px solid var(--wire2);border-radius:11px;
   padding:6px;display:flex;gap:3px;
   box-shadow:0 10px 28px rgba(9,9,11,.12),0 3px 8px rgba(9,9,11,.05);
@@ -2781,7 +2787,7 @@ body{color:#f0f0f8;}
 </style>
 
 <!-- ══ GROUP MEMBER PANEL ════════════════════════════════════ -->
-<div class="overlay" id="grpMemberOverlay">
+<div class="overlay" id="grpMemberOverlay" onclick="if(event.target===this)closeMemberPanel()">
   <div class="wizard" style="max-width:420px">
     <div class="wiz-top">
       <div class="wiz-title">👥 メンバー — <span id="grpMemberTitle"></span></div>
@@ -2820,7 +2826,7 @@ body{color:#f0f0f8;}
 </style>
 
 <!-- ══ GROUP CREATE / INVITE MODALS ══════════════════════════ -->
-<div class="overlay" id="grpCreateOverlay">
+<div class="overlay" id="grpCreateOverlay" onclick="if(event.target===this)closeCreateGroup()">
   <div class="wizard" style="max-width:480px">
     <div class="wiz-top">
       <div class="wiz-title">🤝 グループを作成</div>
@@ -2839,7 +2845,7 @@ body{color:#f0f0f8;}
   </div>
 </div>
 
-<div class="overlay" id="grpInviteOverlay">
+<div class="overlay" id="grpInviteOverlay" onclick="if(event.target===this)closeInviteModal()">
   <div class="wizard" style="max-width:520px">
     <div class="wiz-top">
       <div class="wiz-title">📨 メンバーを招待</div>
@@ -5188,12 +5194,16 @@ function _openReactionPicker(btn, ev){
     '<button onclick="_pickReaction(\''+esc(idx)+'\',\''+esc(e)+'\',this)">'+esc(e)+'</button>'
   ).join('');
   document.body.appendChild(picker);
-  // Position near the clicked button
+  // Position via viewport coordinates (position:fixed). Pin above the button,
+  // clamp horizontally to the viewport.
   const r = btn.getBoundingClientRect();
   const pw = 240; // picker approx width
+  const ph = 42;  // picker approx height
   const pl = Math.min(window.innerWidth - pw - 12, Math.max(12, r.left));
+  let pt = r.top - ph - 6;
+  if(pt < 12) pt = r.bottom + 6; // not enough room above → place below
   picker.style.left = pl + 'px';
-  picker.style.top  = (r.top - 50 + window.scrollY) + 'px';
+  picker.style.top  = pt + 'px';
   // Click-outside to close
   setTimeout(() => {
     document.addEventListener('click', () => picker.remove(), { once: true });
@@ -5347,12 +5357,15 @@ async function _leaveGroup(agId){
 async function openGroupSettings(agId){
   const ag = agents.find(a => a.id === agId);
   if(!ag) return;
-  // Refresh members from server so the latest data shows
+  // Single round-trip: fetch members + invite settings together
   let members = ag.members || [];
+  let requireApproval = !!ag.invite_require_approval;
   try {
     const m = await api('GET', '/api/agents/' + agId + '/members');
     if(Array.isArray(m.members)) { members = m.members; ag.members = members; }
     if(typeof m.name === 'string') ag.name = m.name;
+    requireApproval = !!m.invite_require_approval;
+    ag.invite_require_approval = requireApproval;
   } catch(e){}
   const isHost = ag.host_id === me?.id;
   const myMember = members.find(m => m.user_id === me?.id);
@@ -5372,11 +5385,6 @@ async function openGroupSettings(agId){
   const inviteSec = document.getElementById('grpSetInviteSection');
   if(isHost){
     inviteSec.style.display = '';
-    let requireApproval = false;
-    try {
-      const m2 = await api('GET', '/api/agents/' + agId + '/members');
-      requireApproval = !!m2.invite_require_approval;
-    } catch(e){}
     document.getElementById('grpSetApproval_off').checked = !requireApproval;
     document.getElementById('grpSetApproval_on').checked = requireApproval;
   } else {
@@ -7775,7 +7783,13 @@ function doLogout(){
 }
 
 /* ── Utils ─────────────────────────────────────────── */
-function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(t){
+  // Escapes &, <, >, ", ' so the value is safe for both text content AND
+  // double/single-quoted HTML attributes (e.g. title="...", onclick="fn('...')")
+  return String(t==null?'':t)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function fmt(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
 function now(){return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});}
 function exTA(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}

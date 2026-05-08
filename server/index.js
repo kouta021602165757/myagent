@@ -3509,22 +3509,26 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ══ GROUPS ═════════════════════════════════════════════════
   // Convert an existing solo agent into a group + create/regenerate invite token.
-  // body: { expires_in_days?: 7, max_members?: 50, require_approval?: false }
+  // body: {
+  //   expires_in_days?: 7,
+  //   max_members?: 50,
+  //   require_approval?: bool,
+  //   regenerate?: bool   // set true to rotate the token explicitly
+  // }
+  // When invoked on an existing group, only fields that are actually present
+  // in the body are updated. Token is preserved unless regenerate=true OR
+  // the agent has no token yet.
   const grpInvM = pathname.match(/^\/api\/agents\/([^/]+)\/invite$/);
   if(grpInvM && method==='POST'){
     const agId = grpInvM[1];
     const ag = (user.agents||[]).find(a => a.id === agId);
     if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
-    const body = await readBody(req);
-    const days = Math.max(1, Math.min(90, parseInt(body.expires_in_days || 7, 10)));
-    const cap  = Math.max(2, Math.min(200, parseInt(body.max_members || 50, 10)));
-    const requireApproval = !!body.require_approval;
+    const body = await readBody(req) || {};
 
-    // Promote to a group. Idempotent — re-running just rotates the token.
+    // Promote to a group on first call.
     ag.is_group = true;
     ag.host_id = user.id;
     if(!Array.isArray(ag.members) || ag.members.length === 0){
-      // Bootstrap with the host as the first member
       ag.members = [{
         user_id: user.id,
         name: user.name || (user.email||'').split('@')[0] || 'ホスト',
@@ -3534,10 +3538,26 @@ async function handleAPI(req,res,pathname,method,ip){
         last_seen: new Date().toISOString(),
       }];
     }
-    ag.invite_token = genInviteToken();
-    ag.invite_expires_at = new Date(Date.now() + days*24*60*60*1000).toISOString();
-    ag.invite_max_members = cap;
-    ag.invite_require_approval = requireApproval;
+    // Only update settings that were actually sent (preserve existing for the rest)
+    if(body.expires_in_days !== undefined){
+      const days = Math.max(1, Math.min(90, parseInt(body.expires_in_days, 10) || 7));
+      ag.invite_expires_at = new Date(Date.now() + days*24*60*60*1000).toISOString();
+    } else if(!ag.invite_expires_at){
+      ag.invite_expires_at = new Date(Date.now() + 7*24*60*60*1000).toISOString();
+    }
+    if(body.max_members !== undefined){
+      ag.invite_max_members = Math.max(2, Math.min(200, parseInt(body.max_members, 10) || 50));
+    } else if(!ag.invite_max_members){
+      ag.invite_max_members = 50;
+    }
+    if(body.require_approval !== undefined){
+      ag.invite_require_approval = !!body.require_approval;
+    } // else preserve existing value (don't accidentally flip)
+
+    // Regenerate token only when explicitly asked OR when none exists yet.
+    if(!ag.invite_token || body.regenerate === true){
+      ag.invite_token = genInviteToken();
+    }
 
     await DB.save(user);
     return jres(res,200,{
@@ -3818,11 +3838,14 @@ async function handleAPI(req,res,pathname,method,ip){
     if(host.id === user.id) return jres(res,400,{error:'自分のグループへは送金できません'});
     if((user.balance_jpy||0) < amount) return jres(res,402,{error:'残高が不足しています'});
 
-    // Move balance
+    // Capture pre-state so we can roll back on partial failure.
+    const _oldUserBal = user.balance_jpy || 0;
+    const _oldHostBal = host.balance_jpy || 0;
+
+    // Mutate balances + side state in memory
     user.balance_jpy = Math.round(((user.balance_jpy||0) - amount)*1000)/1000;
     host.balance_jpy = Math.round(((host.balance_jpy||0) + amount)*1000)/1000;
 
-    // Record on agent.contributions[]
     agent.contributions = agent.contributions || [];
     agent.contributions.push({
       user_id: user.id,
@@ -3832,7 +3855,6 @@ async function handleAPI(req,res,pathname,method,ip){
     });
     if(agent.contributions.length > 100) agent.contributions = agent.contributions.slice(-100);
 
-    // System message
     agent.history = agent.history || [];
     agent.history.push({
       role: 'system',
@@ -3844,7 +3866,6 @@ async function handleAPI(req,res,pathname,method,ip){
     });
     if(agent.history.length > 200) agent.history = agent.history.slice(-200);
 
-    // Mirror in billing_history for both users so the receipts trail is clean
     user.billing_history = user.billing_history || [];
     user.billing_history.push({date:new Date().toISOString(),type:'contribute_out',agentId:agent.id,agentName:agent.name,host_user_id:host.id,amount_jpy:amount});
     if(user.billing_history.length>1000) user.billing_history = user.billing_history.slice(-1000);
@@ -3852,8 +3873,23 @@ async function handleAPI(req,res,pathname,method,ip){
     host.billing_history.push({date:new Date().toISOString(),type:'contribute_in',agentId:agent.id,agentName:agent.name,from_user_id:user.id,from_user_name:user.name,amount_jpy:amount});
     if(host.billing_history.length>1000) host.billing_history = host.billing_history.slice(-1000);
 
-    await DB.save(host);
-    await DB.save(user);
+    // Persist sender FIRST. If this fails, nothing has been moved.
+    try {
+      await DB.save(user);
+    } catch(e){
+      user.balance_jpy = _oldUserBal;
+      console.error('[contribute] sender save failed:', e.message);
+      return jres(res,500,{error:'送金に失敗しました', detail: e.message});
+    }
+    // Then credit host. On failure, attempt rollback of sender to keep ledgers consistent.
+    try {
+      await DB.save(host);
+    } catch(e){
+      console.error('[contribute] host save failed, rolling back sender:', e.message);
+      user.balance_jpy = _oldUserBal;
+      try { await DB.save(user); } catch(_){}
+      return jres(res,500,{error:'送金に失敗しました (ロールバック済)', detail: e.message});
+    }
 
     return jres(res,200,{
       ok:true,

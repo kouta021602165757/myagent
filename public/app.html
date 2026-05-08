@@ -4538,22 +4538,21 @@ async function openAgent(id){
   if(!ag){
     joined = _joinedGroups.find(g => g.id === id);
     if(!joined) return;
-    // Fetch full member list to populate the panel; the chat content itself
-    // (history) will be appended as messages flow.
     try {
       const m = await api('GET', '/api/agents/' + id + '/members');
       ag = {
         id: id,
-        name: joined.name,
-        avatar: joined.avatar,
-        skills: ['comms'],
+        name: m.name || joined.name,
+        avatar: m.avatar || joined.avatar,
+        skills: m.skills || ['comms'],
+        persona: m.persona || '',
         is_group: true,
-        host_id: joined.host_id,
+        host_id: m.host_id || joined.host_id,
         members: m.members || [],
-        history: [], // joined-group history loaded lazily
+        // Full prior history fetched from host so invitees see context
+        history: Array.isArray(m.history) ? m.history : [],
         _is_joined_group: true,
       };
-      // Cache it locally so subsequent lookups by id work
       if(!agents.find(a => a.id === id)){
         agents = agents.concat([ag]);
       }
@@ -4561,6 +4560,19 @@ async function openAgent(id){
       showToast((isJa?'グループ読み込み失敗: ':'Group load failed: ')+e.message, 'ng');
       return;
     }
+  } else if(ag.is_group && !ag._is_joined_group){
+    // For hosted groups, refresh history + members from server so we pick up
+    // any system messages added by joining users. Best-effort: fall back to
+    // the local copy on failure.
+    try {
+      const m = await api('GET', '/api/agents/' + id + '/members');
+      if(m){
+        if(Array.isArray(m.history) && m.history.length > 0){
+          ag.history = m.history;
+        }
+        if(Array.isArray(m.members)) ag.members = m.members;
+      }
+    } catch(e){ /* ignore — keep local */ }
   }
   activeId=id;
   document.getElementById('emptyWrap').style.display='none';

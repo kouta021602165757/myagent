@@ -3469,6 +3469,13 @@ async function handleAPI(req,res,pathname,method,ip){
       invite_token: (ag.host_id===user.id || host.id===user.id) ? (ag.invite_token||null) : null, // only host sees token
       invite_expires_at: ag.invite_expires_at || null,
       invite_max_members: ag.invite_max_members || 50,
+      // Full chat history (last 200 entries) so members see prior conversation.
+      // Strip server-only fields. The agent record otherwise stays on the host.
+      name: ag.name,
+      avatar: ag.avatar,
+      skills: ag.skills || [],
+      persona: ag.persona || '',
+      history: (ag.history || []).slice(-200),
     });
   }
 

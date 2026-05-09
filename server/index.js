@@ -4030,7 +4030,13 @@ async function handleAPI(req,res,pathname,method,ip){
     };
 
     user.agents = [...(user.agents||[]), ...cloned, group];
-    await DB.save(user);
+    try {
+      await DB.save(user);
+    } catch(e) {
+      console.error('[teams/activate] DB.save failed for user='+user.id+' tpl='+tpl.id+' err='+(e.message||e));
+      return jres(res, 500, { error: 'チームの保存に失敗しました: ' + (e.message || 'unknown') });
+    }
+    console.log('[teams/activate] user='+user.id+' tpl='+tpl.id+' cloned='+cloned.length+' group='+groupId);
 
     return jres(res, 201, {
       ok: true,

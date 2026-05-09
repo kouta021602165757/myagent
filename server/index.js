@@ -411,8 +411,10 @@ const MARKET_TAGS = [
 const MARKET_TAG_LABEL = MARKET_TAGS.reduce((a,t)=>{a[t.id]=t.label;return a;},{});
 
 /* ── Creator revenue helpers (#5) ───────────────────────────── */
-const REVENUE_SHARE_RATE = 0.10;   // 10% to creator
+const REVENUE_SHARE_RATE = 0.70;   // 70% to creator (chat usage share + upfront purchase)
 const PENDING_DAYS = 7;
+const MIN_PRICE_JPY = 100;         // ¥100 minimum for paid listings (Stripe min ¥50, leave buffer)
+const MAX_PRICE_JPY = 100000;      // ¥100,000 cap to prevent typos / abuse
 function _r3(n){ return Math.round(n*1000)/1000; }
 
 /** Move any confirmed pending revenue into available. Mutates user. */
@@ -1955,6 +1957,8 @@ function publicListing(user, ag){
     rating: m.rating_avg || 0,
     rating_count: m.rating_count || 0,
     uses: m.uses_count || 0,
+    purchases: m.purchases_count || 0,
+    price_jpy: Number.isFinite(m.price_jpy) ? m.price_jpy : 0,
     badge: (m.uses_count||0) >= 100 ? 'hot' : (Date.now()-new Date(m.listed_at||0).getTime() < 14*86400000 ? 'new' : null),
     listed_at: m.listed_at,
   };
@@ -2822,14 +2826,18 @@ function recomputeRatings(m){
   m.rating_count = reviews.length;
   m.rating_avg = Math.round((sum/reviews.length)*10)/10;
 }
-/** Scan all users and return live + public listings. */
+/** Scan all users and return live + public listings.
+ *  Skip listings missing price_jpy (legacy data created before pricing existed) —
+ *  creator must explicitly set a price (¥0 OK) to appear in the store.
+ */
 async function listAllPublicListings(){
   const out = [];
   const collect = (users) => {
     for(const u of users||[]){
       for(const ag of (u.agents||[])){
         const m = ag.marketplace;
-        if(m && m.is_listed && m.status==='live' && (m.visibility||'public')==='public'){
+        if(m && m.is_listed && m.status==='live' && (m.visibility||'public')==='public'
+           && Number.isFinite(m.price_jpy)){
           out.push(publicListing(u, ag));
         }
       }
@@ -5212,7 +5220,7 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── POST /api/marketplace/listings ─────────────────────────
-  // body: {agent_id, title, description, category, demo_prompts[], visibility}
+  // body: {agent_id, title, description, category, demo_prompts[], visibility, price_jpy}
   if(pathname==='/api/marketplace/listings' && method==='POST'){
     const body = await readBody(req);
     const ag = (user.agents||[]).find(a=>a.id===body.agent_id);
@@ -5229,15 +5237,27 @@ async function handleAPI(req,res,pathname,method,ip){
     if(title.length<2 || title.length>60) return jres(res,400,{error:'タイトルは 2〜60 文字で入力してください'});
     if(description.length<20 || description.length>500) return jres(res,400,{error:'説明は 20〜500 文字で入力してください'});
 
+    // Price validation: 0 = free, otherwise ¥100〜¥100,000
+    let priceJpy = Math.floor(Number(body.price_jpy));
+    if(!Number.isFinite(priceJpy) || priceJpy < 0) priceJpy = 0;
+    if(priceJpy > 0 && priceJpy < MIN_PRICE_JPY){
+      return jres(res,400,{error:`有料の場合、価格は ¥${MIN_PRICE_JPY} 以上に設定してください`});
+    }
+    if(priceJpy > MAX_PRICE_JPY){
+      return jres(res,400,{error:`価格の上限は ¥${MAX_PRICE_JPY.toLocaleString()} です`});
+    }
+
     const existing = ag.marketplace || {};
     ag.marketplace = {
       is_listed: true,
       listing_id: existing.listing_id || genListingId(),
       title, description, category, demo_prompts: demoPrompts, visibility, tags,
+      price_jpy: priceJpy,
       status: 'live',                      // auto-approve for MVP
       listed_at: existing.listed_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
       uses_count: existing.uses_count || 0,
+      purchases_count: existing.purchases_count || 0,
       rating_avg: existing.rating_avg || 0,
       rating_count: existing.rating_count || 0,
       reviews: existing.reviews || [],
@@ -5391,8 +5411,87 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  // ── POST /api/marketplace/:listing_id/purchase ─────────────
+  // Auth required. Charges buyer's wallet and credits creator (70/30 split).
+  // Idempotent — re-purchase is a no-op for paid listings (free is auto-purchased on clone).
+  const mpurm = pathname.match(/^\/api\/marketplace\/([a-z0-9_-]+)\/purchase$/);
+  if(mpurm && method==='POST'){
+    const found = await findAgentByListingId(mpurm[1]);
+    if(!found || !found.agent.marketplace || !found.agent.marketplace.is_listed){
+      return jres(res,404,{error:'出店エージェントが見つかりません'});
+    }
+    if(found.user.id === user.id) return jres(res,400,{error:'自分の出店は購入できません'});
+    const m = found.agent.marketplace;
+    const price = Number.isFinite(m.price_jpy) ? m.price_jpy : 0;
+    if(price <= 0) return jres(res,400,{error:'この出店は無料です。購入は不要です'});
+
+    // Idempotency: already purchased?
+    user.purchases = user.purchases || [];
+    if(user.purchases.some(p=>p.listing_id===m.listing_id)){
+      return jres(res,200,{ok:true, already_purchased:true});
+    }
+
+    // Wallet balance check (use available + recent topups, conservatively)
+    const balance = (user.balance_jpy||0);
+    if(balance < price){
+      return jres(res,402,{error:`残高不足です (必要: ¥${price.toLocaleString()} / 残高: ¥${Math.floor(balance).toLocaleString()})`, shortfall: price - balance});
+    }
+
+    // Atomic-ish: deduct buyer first, credit creator second. On creator-save failure, refund buyer.
+    user.balance_jpy = _r3(balance - price);
+    user.purchases.push({
+      date: new Date().toISOString(),
+      listing_id: m.listing_id,
+      agent_name: m.title || found.agent.name,
+      creator_user_id: found.user.id,
+      price_jpy: price,
+    });
+    user.billing_history = user.billing_history || [];
+    user.billing_history.push({
+      date: new Date().toISOString(),
+      type:'agent_purchase',
+      listing_id: m.listing_id,
+      agent_name: m.title || found.agent.name,
+      cost_jpy: price,
+    });
+    try{ await DB.save(user); }
+    catch(e){
+      // Restore in-memory state for the user; don't half-commit
+      user.balance_jpy = _r3(user.balance_jpy + price);
+      user.purchases = user.purchases.filter(p=>p.listing_id!==m.listing_id);
+      user.billing_history = user.billing_history.filter(b=>!(b.type==='agent_purchase' && b.listing_id===m.listing_id));
+      console.error('[purchase] buyer save failed:', e.message);
+      return jres(res,500,{error:'購入処理に失敗しました'});
+    }
+
+    // Credit creator (70%)
+    const share = _r3(price * REVENUE_SHARE_RATE);
+    found.user.balance_jpy_pending = _r3((found.user.balance_jpy_pending||0) + share);
+    found.user.revenue_history = found.user.revenue_history || [];
+    found.user.revenue_history.push({
+      date: new Date().toISOString(),
+      listing_id: m.listing_id,
+      agent_name: m.title || found.agent.name,
+      buyer_user_id: user.id,
+      type:'purchase',
+      cost_jpy: price,
+      share_jpy: share,
+      status:'pending',
+      confirms_at: new Date(Date.now() + PENDING_DAYS*86400000).toISOString(),
+    });
+    if(found.user.revenue_history.length>2000) found.user.revenue_history = found.user.revenue_history.slice(-2000);
+    m.purchases_count = (m.purchases_count||0) + 1;
+    try{ await DB.save(found.user); }
+    catch(e){
+      // Best-effort: log; buyer already paid. Will be reconciled manually if needed.
+      console.error('[purchase] creator credit save failed (buyer already charged):', e.message);
+    }
+    return jres(res,200,{ok:true, balance_jpy: user.balance_jpy, purchase: user.purchases[user.purchases.length-1]});
+  }
+
   // ── POST /api/marketplace/:listing_id/clone ────────────────
   // Auth required. Clones a listed agent into the current user's account.
+  // For paid listings, requires purchase first.
   const mcm = pathname.match(/^\/api\/marketplace\/([a-z0-9_-]+)\/clone$/);
   if(mcm && method==='POST'){
     if((user.agents||[]).length>=20) return jres(res,400,{error:'エージェントは最大20個です'});
@@ -5402,6 +5501,14 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     if(found.user.id === user.id) return jres(res,400,{error:'自分の出店エージェントは複製できません'});
     const src = found.agent;
+    const price = Number.isFinite(src.marketplace.price_jpy) ? src.marketplace.price_jpy : 0;
+    // Paid listings: must have purchased first
+    if(price > 0){
+      const purchased = (user.purchases||[]).some(p=>p.listing_id===src.marketplace.listing_id);
+      if(!purchased){
+        return jres(res,402,{error:'この出店は有料です。先に購入してください', price_jpy: price, listing_id: src.marketplace.listing_id});
+      }
+    }
     const clone = {
       id:'ag_'+crypto.randomUUID(),
       avatar: src.avatar||'🤖',

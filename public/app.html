@@ -693,6 +693,9 @@ input,textarea{font-family:var(--sans);}
 .mc-av{width:40px;height:40px;border-radius:10px;background:var(--cream3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .mc-name{font-size:13.5px;font-weight:800;color:var(--text);margin:0;line-height:1.3;}
 .mc-cat{font-size:10.5px;color:var(--text3);font-weight:600;margin-top:1px;}
+.mc-price{align-self:center;flex-shrink:0;font-size:13px;font-weight:900;color:var(--text);background:var(--cream2);border:1px solid var(--wire2);padding:5px 10px;border-radius:8px;letter-spacing:-.01em;font-feature-settings:"tnum";}
+.mc-price.free{color:var(--green);background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);font-size:11px;}
+.mc-price.purchased{color:#fff;background:var(--peach);border-color:var(--peach);font-size:11px;}
 .mc-desc{font-size:11.5px;color:var(--text2);line-height:1.5;height:33px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .mc-creator{font-size:10.5px;color:var(--text3);font-weight:600;}
 .mc-creator b{color:var(--text2);font-weight:700;}
@@ -2034,7 +2037,7 @@ body{color:#f0f0f8;}
     </div>
     <div class="wiz-body" style="max-height:75vh;overflow:auto">
       <div class="step-h" style="display:flex;align-items:center;gap:8px">出店中のエージェントから選ぶ</div>
-      <div class="step-s">他のクリエイターが出店した AI エージェントを、自分のチームに迎え入れることができます。<br>利用料の 10% は元のクリエイターに還元されます。</div>
+      <div class="step-s">他のクリエイターが出店した AI エージェントを、自分のチームに迎え入れることができます。<br>利用料の 70% は元のクリエイターに還元されます。</div>
 
       <div class="market-bar">
         <div class="market-search">
@@ -2529,7 +2532,7 @@ body{color:#f0f0f8;}
         <!-- 🏪 クリエイター -->
         <div id="s-creator" class="snav-pane" style="display:none">
           <h3 class="spane-h">🏪 クリエイター</h3>
-          <div class="spane-sub">作ったエージェントを出店して、利用料の 10% を収益として受け取ります。</div>
+          <div class="spane-sub">作ったエージェントを出店して、買い切り価格 + 利用料の 70% を収益として受け取ります。</div>
 
           <!-- KPIs -->
           <div class="creator-kpis" id="creatorKpis">
@@ -2585,7 +2588,7 @@ body{color:#f0f0f8;}
             <div class="creator-help">
               <div class="ch-item">
                 <div class="ch-q">💰 収益還元はいつ確定？</div>
-                <div class="ch-a">利用者が支払う AI 利用料の <b>10%</b> が、利用ごとに「未確定残高」に計上され、7 日後に「利用可能残高」に確定します。</div>
+                <div class="ch-a">利用者が支払う 買い切り価格と AI 利用料の <b>70%</b> が、利用ごとに「未確定残高」に計上され、7 日後に「利用可能残高」に確定します。</div>
               </div>
               <div class="ch-item">
                 <div class="ch-q">💴 出金はいつできる？</div>
@@ -2824,7 +2827,7 @@ body{color:#f0f0f8;}
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:var(--peach-dark);display:flex;align-items:center;gap:6px">🏪 Agent Store に出店</div>
-          <div id="editListingDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">他のユーザーが利用するたびに利用料の 10% が収益になります</div>
+          <div id="editListingDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">買い切り価格と利用料の 70% が収益になります</div>
         </div>
       </div>
       <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
@@ -2914,9 +2917,25 @@ body{color:#f0f0f8;}
         <div style="font-size:11px;color:var(--text3);margin-top:4px">利用者がワンクリックで試せる例文。良いプロンプトを置くと使われやすくなります。</div>
       </div>
 
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">販売価格 <span style="color:var(--rose)">*</span></label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="free" checked onchange="lsTogglePriceMode()" style="margin:0">🎁 無料</label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="paid" onchange="lsTogglePriceMode()" style="margin:0">💰 有料</label>
+        </div>
+        <div id="lsPriceWrap" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;font-weight:800;color:var(--text)">¥</span>
+            <input id="lsPrice" type="number" min="100" max="100000" step="100" placeholder="1980" style="width:140px;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:14px;font-family:inherit;color:var(--text);box-sizing:border-box">
+            <span style="font-size:12px;color:var(--text3)">¥100〜¥100,000</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px">購入時に買い手の残高から差し引かれます。</div>
+        </div>
+      </div>
+
       <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;border-radius:12px;padding:14px 18px;margin-bottom:18px">
-        <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px">💰 収益還元: 利用料の 10%</div>
-        <div style="font-size:12px;color:#78350f;line-height:1.6">利用者が支払う AI 利用料の 10% が、自動的にあなたの利用可能残高に加算されます。価格は MY AI AGENT 側で固定です（クリエイター側で変更不可）。</div>
+        <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px">💰 収益還元: 70%</div>
+        <div style="font-size:12px;color:#78350f;line-height:1.6">買い切り価格の <b>70%</b> + 利用料 (チャットコスト) の <b>70%</b> が、自動的にあなたの利用可能残高に加算されます (残り 30% がプラットフォーム手数料)。</div>
       </div>
 
       <div class="form-row">
@@ -7689,11 +7708,20 @@ function renderMarket(){
       return '<span class="mc-tag">'+esc(t)+'</span>';
     }).join('');
     var isFav = favs.has(m.listing_id);
+    var purchasedSet = new Set((me && me.purchases || []).map(function(p){return p.listing_id;}));
+    var priceJpy = Number.isFinite(m.price_jpy) ? m.price_jpy : 0;
+    var purchasedHere = purchasedSet.has(m.listing_id);
+    var priceBadge = priceJpy > 0
+      ? '<span class="mc-price">¥'+priceJpy.toLocaleString()+'</span>'
+      : '<span class="mc-price free">無料</span>';
+    if(purchasedHere) priceBadge = '<span class="mc-price purchased">✓ 購入済</span>';
     return '<div class="market-card-wrap" style="position:relative">'
       + '<button type="button" class="market-card" data-id="'+esc(m.listing_id)+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
       + ribbon
       + '<div class="mc-head"><div class="mc-av">'+_avHTML(m.agent?.avatar)+'</div>'
-      + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div></div>'
+      + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div>'
+      + priceBadge
+      + '</div>'
       + '<div class="mc-desc">'+esc(m.description)+'</div>'
       + (tagsHtml ? '<div class="mc-tags">'+tagsHtml+'</div>' : '')
       + '<div class="mc-creator">クリエイター: <a href="javascript:void(0)" onclick="event.stopPropagation();openCreatorProfile(\''+creatorH+'\')" style="color:var(--peach-dark);text-decoration:none;font-weight:700">'+creatorH+verifiedSpan+'</a></div>'
@@ -7804,6 +7832,13 @@ function _renderListingDetail(d){
   var tagChipsHtml = (d.tag_labels||[]).map(function(t){
     return '<span class="pl">'+esc(t)+'</span>';
   }).join('');
+  var priceJpy = Number.isFinite(d.price_jpy) ? d.price_jpy : 0;
+  var purchasedHere = (me && me.purchases || []).some(function(p){return p.listing_id===d.listing_id;});
+  var priceDisplay = priceJpy > 0
+    ? (purchasedHere
+        ? '<div style="font-size:13px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.1);border:1px solid var(--peach);padding:6px 12px;border-radius:8px;display:inline-block">✓ 購入済 (¥'+priceJpy.toLocaleString()+')</div>'
+        : '<div style="font-size:22px;font-weight:900;color:var(--text);font-feature-settings:\'tnum\';margin-bottom:2px">¥'+priceJpy.toLocaleString()+'</div><div style="font-size:10.5px;color:var(--text3);font-weight:600">買い切り</div>')
+    : '<div style="font-size:13px;font-weight:800;color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);padding:6px 12px;border-radius:8px;display:inline-block">🎁 無料</div>';
   return ''
     + '<div class="ld-hero">'
       + '<div class="ld-av">'+_avHTML(d.agent?.avatar)+'</div>'
@@ -7811,6 +7846,7 @@ function _renderListingDetail(d){
         + '<div class="ld-cat">'+esc(d.category_label||'')+'</div>'
         + '<div class="ld-name">'+esc(d.title||'')+'</div>'
         + '<div class="ld-creator">クリエイター: <a href="javascript:void(0)" onclick="closeListingDetail();openCreatorProfile(\''+creatorH+'\')">'+creatorH+verifiedSpan+'</a></div>'
+        + '<div style="margin-top:10px">'+priceDisplay+'</div>'
       + '</div>'
       + '<div class="ld-pri">'
         + '<div class="ld-rating">'+stars+'</div>'
@@ -7830,7 +7866,13 @@ function _renderListingDetail(d){
     + '<div class="ld-actions">'
       + (!d.is_own ? '<button class="btn-report" onclick="openReportListing(\''+esc(d.listing_id)+'\',\''+esc(d.title||'').replace(/\\|\x27/g,"\\$&")+'\')">⚠ 通報する</button>' : '')
       + '<button class="btn-share" onclick="openShareListing(\''+esc(d.listing_id)+'\',\''+esc(d.title||'').replace(/\\|\x27/g,"\\$&")+'\')">🔗 シェア</button>'
-      + (!d.is_own ? '<button class="btn-clone" onclick="cloneListingFromDetail()">＋ チームに追加</button>' : '<span style="color:var(--text3);font-size:12px;font-weight:600;align-self:center">これは自分の出店です</span>')
+      + (!d.is_own
+          ? '<button class="btn-clone" onclick="cloneListingFromDetail()">'
+            + (priceJpy > 0 && !purchasedHere
+                ? '🛍️ ¥'+priceJpy.toLocaleString()+' で購入してチームに追加'
+                : '＋ チームに追加')
+            + '</button>'
+          : '<span style="color:var(--text3);font-size:12px;font-weight:600;align-self:center">これは自分の出店です</span>')
     + '</div>';
 }
 
@@ -7867,6 +7909,12 @@ async function deleteDetailReview(){
 
 async function cloneListingFromDetail(){
   if(!_detailListingId) return;
+  // For paid listings not yet purchased, route through purchase confirm first
+  if(await _maybePurchaseFlow(_detailListingId)){
+    /* purchase succeeded → fall through to clone */
+  } else {
+    return; // user cancelled or insufficient balance
+  }
   try{
     var r=await api('POST','/api/marketplace/'+_detailListingId+'/clone');
     if(r.agent){
@@ -7879,6 +7927,76 @@ async function cloneListingFromDetail(){
       showToast('チームに追加しました','ok');
     }
   }catch(e){ showToast(e.message||'追加失敗','ng'); }
+}
+
+/* Purchase gating helper.
+ * Returns true if the listing is free/already-purchased OR purchase just succeeded.
+ * Returns false if user cancelled or purchase failed.
+ */
+async function _maybePurchaseFlow(listingId){
+  var detail = MARKET.find(function(m){return m.listing_id===listingId;});
+  // If detail not in cache, fetch it
+  if(!detail){
+    try{ detail = await api('GET','/api/marketplace/'+listingId); }
+    catch(e){ return true; /* let clone API decide */ }
+  }
+  var price = Number.isFinite(detail.price_jpy) ? detail.price_jpy : 0;
+  if(price <= 0) return true; // free
+  var purchased = (me && me.purchases || []).some(function(p){return p.listing_id===listingId;});
+  if(purchased) return true;
+  // Need purchase
+  return await _confirmPurchase(listingId, detail);
+}
+
+function _confirmPurchase(listingId, detail){
+  return new Promise(function(resolve){
+    var price = detail.price_jpy || 0;
+    var title = detail.title || 'エージェント';
+    var balance = (me && me.balance_jpy) || 0;
+    var enough = balance >= price;
+    var html = '<div style="padding:24px;text-align:center">'
+      + '<div style="font-size:32px;margin-bottom:8px">🛍️</div>'
+      + '<div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:18px">この有料エージェントを購入</div>'
+      + '<div style="background:var(--cream2);border:1px solid var(--wire2);border-radius:12px;padding:16px;margin-bottom:16px">'
+      + '<div style="font-size:13px;color:var(--text2);margin-bottom:6px">'+esc(title)+'</div>'
+      + '<div style="font-size:32px;font-weight:900;color:var(--text);font-feature-settings:\"tnum\"">¥'+price.toLocaleString()+'</div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7">残高: <b>¥'+Math.floor(balance).toLocaleString()+'</b><br>購入後の残高: <b>¥'+Math.floor(balance-price).toLocaleString()+'</b></div>'
+      + (enough ? '' : '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px;font-size:12px;color:var(--rose);font-weight:700;margin-bottom:14px">残高が不足しています。設定 → 残高 で追加してください。</div>')
+      + '<div style="display:flex;gap:8px">'
+      + '<button class="btn-back" id="purchCancelBtn" style="flex:1">キャンセル</button>'
+      + '<button class="btn-volt" id="purchOkBtn" style="flex:1"'+(enough?'':' disabled')+'>'+(enough?'¥'+price.toLocaleString()+' で購入':'残高不足')+'</button>'
+      + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text3);margin-top:12px;line-height:1.6">購入後はマイエージェントに追加され、いつでも利用可能になります。<br>払戻し不可。クリエイターに 70% が分配されます。</div>'
+      + '</div>';
+    // Reuse a simple ad-hoc overlay
+    var ov = document.createElement('div');
+    ov.className = 'overlay open';
+    ov.style.cssText = 'z-index:1000';
+    ov.innerHTML = '<div class="wizard" style="max-width:380px"><div class="wiz-body" style="padding:0">'+html+'</div></div>';
+    document.body.appendChild(ov);
+    var cleanup = function(ok){ document.body.removeChild(ov); resolve(!!ok); };
+    ov.querySelector('#purchCancelBtn').onclick = function(){ cleanup(false); };
+    var okBtn = ov.querySelector('#purchOkBtn');
+    if(okBtn){
+      okBtn.onclick = async function(){
+        okBtn.disabled = true; okBtn.textContent = '購入処理中…';
+        try{
+          var pr = await api('POST','/api/marketplace/'+listingId+'/purchase');
+          if(pr.ok){
+            // Update local state
+            me.purchases = me.purchases || [];
+            if(pr.purchase) me.purchases.push(pr.purchase);
+            if(typeof pr.balance_jpy === 'number') me.balance_jpy = pr.balance_jpy;
+            showToast('購入しました','ok');
+            cleanup(true);
+            return;
+          }
+        }catch(e){ showToast(e.message||'購入失敗','ng'); }
+        cleanup(false);
+      };
+    }
+  });
 }
 /* ── Publish-success modal ──────────────────────────────────── */
 function openPublishSuccess(listingId, agentName, agentDescription){
@@ -7945,6 +8063,8 @@ async function cloneAndTry(listingId, demoIdx){
   try{
     var detail = await api('GET','/api/marketplace/'+listingId);
     var prompt = (detail.demo_prompts||[])[demoIdx] || '';
+    // Purchase guard for paid listings
+    if(!await _maybePurchaseFlow(listingId)) return;
     var r=await api('POST','/api/marketplace/'+listingId+'/clone');
     if(r.agent){
       agents.push({...r.agent, history:[]});
@@ -8005,12 +8125,25 @@ function openListingForm(agentId){
   document.querySelectorAll('input[name="lsVis"]').forEach(function(r){
     r.checked = r.value === (m.visibility||'public');
   });
+  // Pre-fill price
+  var prefilledPrice = Number.isFinite(m.price_jpy) ? m.price_jpy : 0;
+  var priceMode = prefilledPrice > 0 ? 'paid' : 'free';
+  document.querySelectorAll('input[name="lsPriceMode"]').forEach(function(r){
+    r.checked = r.value === priceMode;
+  });
+  document.getElementById('lsPrice').value = prefilledPrice > 0 ? String(prefilledPrice) : '';
+  lsTogglePriceMode();
 
   document.getElementById('listingTitle').textContent = m.is_listed ? '🏪 出店内容を編集' : '🏪 Agent Store に出店する';
   document.getElementById('lsSubmitBtn').textContent = m.is_listed ? '更新する' : '出店する →';
   document.getElementById('lsUnpublishBtn').style.display = m.is_listed ? 'inline-flex' : 'none';
 
   document.getElementById('listingOverlay').classList.add('open');
+}
+function lsTogglePriceMode(){
+  var mode = (document.querySelector('input[name="lsPriceMode"]:checked')||{}).value || 'free';
+  var wrap = document.getElementById('lsPriceWrap');
+  if(wrap) wrap.style.display = mode === 'paid' ? '' : 'none';
 }
 function _renderListingTagInputs(ag){
   var tagEl = document.getElementById('lsTags');
@@ -8041,11 +8174,19 @@ async function submitListing(){
   if(title.length<2 || title.length>60){ showToast('タイトルは 2〜60 文字で入力してください','ng'); return; }
   if(description.length<20 || description.length>500){ showToast('説明は 20〜500 文字で入力してください','ng'); return; }
 
+  var priceMode = (document.querySelector('input[name="lsPriceMode"]:checked')||{}).value || 'free';
+  var price_jpy = 0;
+  if(priceMode === 'paid'){
+    price_jpy = parseInt(document.getElementById('lsPrice').value, 10);
+    if(!Number.isFinite(price_jpy) || price_jpy < 100){ showToast('有料の場合、価格は ¥100 以上で入力してください','ng'); return; }
+    if(price_jpy > 100000){ showToast('価格の上限は ¥100,000 です','ng'); return; }
+  }
+
   var btn = document.getElementById('lsSubmitBtn');
   btn.disabled = true; var origText = btn.textContent; btn.textContent = '保存中…';
   try{
     var r = await api('POST','/api/marketplace/listings',{
-      agent_id: _listingAgentId, title, description, category, demo_prompts, visibility, tags
+      agent_id: _listingAgentId, title, description, category, demo_prompts, visibility, tags, price_jpy
     });
     // Stash on local agent
     var ag = agents.find(function(a){return a.id===_listingAgentId;});
@@ -8375,7 +8516,7 @@ function openEditAgent(id){
     lDesc.innerHTML = '<span style="color:var(--text3);font-weight:700">⏸ 一時停止中</span> — 再公開できます';
     lBtn.textContent = '再公開する';
   } else {
-    lDesc.textContent = '他のユーザーが利用するたびに利用料の 10% が収益になります';
+    lDesc.textContent = '買い切り価格と利用料の 70% が収益になります';
     lBtn.textContent = '＋ 出店フォームを開く';
   }
 

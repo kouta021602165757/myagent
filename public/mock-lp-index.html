@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LP モック比較 — MY AI AGENT</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Hiragino Sans','Noto Sans JP',-apple-system,sans-serif;background:#fdf8f3;color:#1a0a00;padding:48px 24px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1100px;margin:0 auto;}
+h1{font-size:36px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;}
+.lead{font-size:15px;color:#5c3a1e;margin-bottom:32px;}
+.note{background:#fff7ee;border-left:4px solid #fb923c;padding:14px 18px;border-radius:0 12px 12px 0;font-size:14px;color:#5c3a1e;margin-bottom:40px;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.card{background:#fff;border:1px solid rgba(180,120,80,.16);border-radius:18px;padding:28px;transition:all .2s;display:flex;flex-direction:column;}
+.card:hover{transform:translateY(-4px);border-color:#fb923c;box-shadow:0 14px 40px rgba(251,146,60,.18);}
+.card-tag{display:inline-block;background:rgba(251,146,60,.10);color:#ea580c;padding:5px 11px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.06em;margin-bottom:14px;align-self:flex-start;text-transform:uppercase;}
+.card h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin-bottom:6px;}
+.card-sub{font-size:12px;color:#9a6a4a;font-weight:700;margin-bottom:14px;}
+.card-pic{aspect-ratio:16/10;border-radius:12px;background:linear-gradient(135deg,#fde8d8,#faf3eb);display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:14px;border:1px solid rgba(180,120,80,.10);}
+.card.dark .card-pic{background:linear-gradient(135deg,#1a1a26,#06060a);}
+.card p{font-size:13px;color:#5c3a1e;margin-bottom:14px;flex:1;}
+.feats{list-style:none;font-size:12px;color:#5c3a1e;margin-bottom:18px;}
+.feats li{padding:4px 0;display:flex;gap:6px;}
+.feats li::before{content:'✓';color:#fb923c;font-weight:900;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#fb923c;color:#fff;padding:12px 18px;border-radius:11px;font-size:13px;font-weight:800;text-decoration:none;transition:all .15s;}
+.btn:hover{background:#ea580c;transform:translateY(-1px);}
+.summary{margin-top:48px;background:#fff;border:1px solid rgba(180,120,80,.16);border-radius:18px;padding:28px;}
+.summary h3{font-size:18px;font-weight:900;margin-bottom:14px;}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.summary-col{padding:14px;background:#faf3eb;border-radius:12px;}
+.summary-col h4{font-size:13px;font-weight:800;margin-bottom:6px;color:#1a0a00;}
+.summary-col p{font-size:12px;color:#5c3a1e;}
+
+.compare{margin-top:32px;width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:14px;overflow:hidden;border:1px solid rgba(180,120,80,.16);}
+.compare th,.compare td{padding:12px 14px;text-align:left;border-bottom:1px solid rgba(180,120,80,.10);}
+.compare th{background:#faf3eb;font-weight:800;font-size:12px;}
+.compare td:first-child{font-weight:700;background:#fdfaf6;}
+.compare .y{color:#10b981;font-weight:900;}
+.compare .n{color:#9a6a4a;}
+
+@media (max-width:760px){
+  .grid,.summary-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📐 LP モック比較</h1>
+  <p class="lead">MY AI AGENT の最新 LP として、3 つの方向性でモックを作成しました。それぞれ訴求軸・デザイン・想定ユーザー層が違います。</p>
+
+  <div class="note">
+    <b>選び方の目安：</b>
+    どの軸を「フックとして一番強く打ち出すか」で選んでください。決まれば、それをベースにブラッシュアップして本番 LP に置き換えます。
+  </div>
+
+  <div class="grid">
+    <!-- MOCK A -->
+    <div class="card">
+      <span class="card-tag">MOCK A</span>
+      <div class="card-pic">👥</div>
+      <h2>グループチャット軸</h2>
+      <div class="card-sub">"AI と友達のグループ" を最大の差別化に</div>
+      <p>LINE 風招待 + AI コメント、つまり「日本初の AI 入りグループチャット」を Hero で打ち出す案。一般ユーザー向けにわかりやすい訴求。</p>
+      <ul class="feats">
+        <li>Hero でグループチャット UI を見せる</li>
+        <li>「割り勘」「議事録」など具体ユースケース</li>
+        <li>peach の暖色系テーマ維持</li>
+        <li>マス向け・SNS 拡散しやすい</li>
+      </ul>
+      <a href="/mock-lp-v1-group.html" class="btn">Mock A を見る →</a>
+    </div>
+
+    <!-- MOCK B -->
+    <div class="card">
+      <span class="card-tag">MOCK B</span>
+      <div class="card-pic">🎯</div>
+      <h2>プロ向け強化版</h2>
+      <div class="card-sub">既存 LP を進化、開発エージェント機能も追加訴求</div>
+      <p>既存 LP の peach 系統をベースに、新機能（Dev Agent、グループ、Agent Store、紹介プログラム）を追加。Testimonial・Stats も入れた本格構成。</p>
+      <ul class="feats">
+        <li>Hero で 2 つの AI プレビューを見せる split レイアウト</li>
+        <li>Dev Agent (β) を新機能としてフィーチャー</li>
+        <li>Testimonial / Stats / FAQ 完備</li>
+        <li>プロ・ビジネスユーザー狙い</li>
+      </ul>
+      <a href="/mock-lp-v2-pro.html" class="btn">Mock B を見る →</a>
+    </div>
+
+    <!-- MOCK C -->
+    <div class="card dark">
+      <span class="card-tag">MOCK C</span>
+      <div class="card-pic" style="color:#fb923c;">⚡</div>
+      <h2>モダンダーク軸</h2>
+      <div class="card-sub">AI スタートアップ風ダーク、開発者層を狙う</div>
+      <p>Anthropic / Vercel / OpenAI 風のダークテーマ。Bento Grid・コードプレビュー・FAQ・グラデーションテキストでテック感を演出。</p>
+      <ul class="feats">
+        <li>ダークテーマ + grid background</li>
+        <li>Bento Grid で機能を立体的に配置</li>
+        <li>Dev Agent をターミナル UI で訴求</li>
+        <li>開発者・スタートアップ・テック層狙い</li>
+      </ul>
+      <a href="/mock-lp-v3-dark.html" class="btn">Mock C を見る →</a>
+    </div>
+  </div>
+
+  <!-- 比較表 -->
+  <table class="compare">
+    <thead>
+      <tr>
+        <th>項目</th>
+        <th>Mock A — グループ軸</th>
+        <th>Mock B — プロ強化</th>
+        <th>Mock C — ダーク</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Hero 訴求</td><td>FRIENDS + AI = ALL IN</td><td>ONE TEAM. EVERY SKILL.</td><td>Build your own AI Team.</td></tr>
+      <tr><td>テーマ</td><td>peach 暖色 (既存延長)</td><td>peach 暖色 (既存延長)</td><td>ダーク + glow</td></tr>
+      <tr><td>主訴求</td><td>グループチャット</td><td>全機能 + Dev Agent</td><td>Dev Agent + 開発者向け</td></tr>
+      <tr><td>想定ユーザー</td><td>マス・友人グループ</td><td>ビジネス・プロ</td><td>開発者・テック層</td></tr>
+      <tr><td>Dev Agent (β) 訴求</td><td class="n">なし</td><td class="y">○ セクション独立</td><td class="y">◎ Hero + 専用セクション</td></tr>
+      <tr><td>Testimonial</td><td class="n">なし</td><td class="y">○ 3 件</td><td class="n">なし (FAQ で代替)</td></tr>
+      <tr><td>FAQ</td><td class="n">なし</td><td class="n">なし</td><td class="y">○ 5 問</td></tr>
+      <tr><td>4 プラットフォーム訴求</td><td class="y">○ Pills</td><td class="y">○ Hero + Pills</td><td class="y">○ Hero pills</td></tr>
+      <tr><td>Hero ビジュアル</td><td>グループチャット mockup</td><td>2 つの AI mockup (split)</td><td>テキストのみ + glow</td></tr>
+      <tr><td>セクション数</td><td>9</td><td>9</td><td>8</td></tr>
+    </tbody>
+  </table>
+
+  <!-- まとめ -->
+  <div class="summary">
+    <h3>💡 おすすめの進め方</h3>
+    <div class="summary-grid">
+      <div class="summary-col">
+        <h4>マス向け重視なら</h4>
+        <p><b>Mock A</b>。グループチャット機能は他にない強みなので、これを正面で打ち出すのは合理的。SNS でも拡散しやすい。</p>
+      </div>
+      <div class="summary-col">
+        <h4>収益性・客単価重視なら</h4>
+        <p><b>Mock B or C</b>。Pro プラン (¥1,980) を取りに行く戦略。プロ・ビジネスユーザーは ARPU が高い。</p>
+      </div>
+      <div class="summary-col">
+        <h4>ハイブリッドも可</h4>
+        <p>Mock A の Hero + Mock B の機能セクション + Mock C の Dev Agent UI、を組み合わせた最終版を作るのも OK。</p>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top:32px;font-size:13px;color:#9a6a4a;text-align:center;">
+    どの方向で進めるか決まったら教えてください。本番 LP (lp.html) を更新します。
+  </p>
+</div>
+</body>
+</html>

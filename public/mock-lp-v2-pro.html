@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOCK B — プロ向け強化版 | MY AI AGENT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.06);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;--bg-deep:#1a0a00;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;--text-on-dark:#fff5e6;
+  --wire:rgba(180,120,80,.16);--wire-strong:rgba(180,120,80,.26);
+  --green:#10b981;--blue:#3b82f6;--violet:#8b5cf6;--rose:#ef4444;
+  --sans:'Noto Sans JP',-apple-system,sans-serif;
+  --display:'Bebas Neue',serif;
+  --mono:'DM Mono','SF Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+a{color:inherit;text-decoration:none;}
+button{cursor:pointer;font-family:inherit;border:0;background:transparent;}
+
+.mock-banner{background:#1a0a00;color:#fff5e6;text-align:center;padding:8px 14px;font-size:11px;font-weight:700;letter-spacing:.1em;}
+.mock-banner b{color:var(--peach);}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(253,248,243,.88);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid var(--wire);}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;letter-spacing:.06em;}
+.nav-logo-mark{width:28px;height:28px;border-radius:8px;background:var(--peach);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;}
+.nav-links{display:flex;gap:24px;}
+.nav-links a{color:var(--text-muted);font-size:13px;font-weight:600;}
+.nav-links a:hover{color:var(--peach-dark);}
+.nav-cta{background:var(--peach);color:#fff;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:700;}
+
+/* HERO — split layout */
+.hero{position:relative;padding:80px 32px;background:var(--bg);overflow:hidden;}
+.hero-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.10);color:var(--green);padding:7px 14px;border-radius:99px;font-size:12px;font-weight:800;letter-spacing:.06em;margin-bottom:24px;}
+.hero-kicker-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:p 2s infinite;}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-family:var(--display);font-size:clamp(42px,6.5vw,84px);line-height:.95;letter-spacing:-.02em;font-weight:400;margin-bottom:14px;}
+.hero h1 .accent{color:var(--peach);}
+.hero h1 .ja{font-family:var(--sans);font-weight:900;font-size:.42em;letter-spacing:-.01em;display:block;margin-top:14px;color:var(--text);}
+.hero-sub{font-size:17px;color:var(--text-muted);max-width:520px;margin:24px 0 32px;line-height:1.85;}
+.hero-sub b{color:var(--text);font-weight:700;}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-primary{background:var(--peach);color:#fff;padding:15px 32px;border-radius:13px;font-size:15px;font-weight:800;box-shadow:0 6px 20px rgba(251,146,60,.32);transition:all .2s;}
+.btn-primary:hover{background:var(--peach-dark);transform:translateY(-2px);}
+.btn-ghost{background:transparent;color:var(--text);border:1.5px solid var(--wire-strong);padding:15px 28px;border-radius:13px;font-size:15px;font-weight:700;transition:all .2s;}
+.btn-ghost:hover{border-color:var(--peach);color:var(--peach-dark);}
+.hero-trust{display:flex;gap:16px;flex-wrap:wrap;margin-top:24px;font-size:12px;color:var(--text-subtle);font-weight:600;}
+.hero-trust span::before{content:'✓';color:var(--green);font-weight:900;margin-right:6px;}
+
+/* HERO right — App preview stack */
+.preview-stack{position:relative;height:560px;}
+.preview-card{position:absolute;background:#fff;border-radius:20px;box-shadow:0 30px 80px rgba(180,90,30,.20);border:1px solid var(--wire);overflow:hidden;}
+.pc-1{top:0;left:0;width:60%;height:380px;z-index:3;}
+.pc-2{top:140px;right:0;width:55%;height:380px;z-index:2;transform:rotate(2deg);}
+.pc-3{bottom:0;left:50%;transform:translateX(-50%) rotate(-1deg);width:75%;height:80px;z-index:4;}
+
+.pc-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--wire);background:#fdfaf6;}
+.pc-av{width:30px;height:30px;border-radius:9px;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;}
+.pc-av.b{background:var(--violet);}.pc-av.c{background:var(--green);}
+.pc-name{font-size:13px;font-weight:800;}
+.pc-meta{font-size:11px;color:var(--text-subtle);font-weight:600;}
+.pc-body{padding:14px;display:flex;flex-direction:column;gap:10px;}
+.pc-msg{padding:10px 13px;border-radius:14px;font-size:12.5px;line-height:1.55;max-width:88%;}
+.pc-msg.u{background:#faf3eb;align-self:flex-start;}
+.pc-msg.ai{background:linear-gradient(135deg,var(--peach),#fb7c20);color:#fff;align-self:flex-start;}
+.pc-msg.you{background:#1a0a00;color:#fff5e6;align-self:flex-end;}
+.pc-platform-bar{display:flex;align-items:center;justify-content:space-around;padding:18px 24px;background:#fff;}
+.pc-pi{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text-muted);}
+.pc-pi-ic{width:26px;height:26px;border-radius:8px;background:var(--peach-soft);display:flex;align-items:center;justify-content:center;font-size:14px;}
+
+/* SECTION */
+.section{position:relative;padding:96px 32px;}
+.section-warm{background:var(--bg-warm);border-top:1px solid var(--wire);border-bottom:1px solid var(--wire);}
+.section-deep{background:var(--bg-deep);color:var(--text-on-dark);}
+.section-deep .h2{color:var(--text-on-dark);}
+.section-deep .lead{color:rgba(255,245,230,.7);}
+.section-inner{max-width:1180px;margin:0 auto;}
+.section-head{text-align:center;max-width:720px;margin:0 auto 56px;}
+.kicker{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--peach-dark);margin-bottom:14px;text-transform:uppercase;}
+.section-deep .kicker{color:var(--peach);}
+.h2{font-family:var(--display);font-size:clamp(36px,5vw,58px);line-height:1.05;letter-spacing:-.01em;font-weight:400;margin-bottom:14px;}
+.h2-ja{font-family:var(--sans);font-weight:900;font-size:.55em;letter-spacing:-.01em;display:block;margin-top:8px;}
+.lead{font-size:16px;color:var(--text-muted);line-height:1.85;}
+
+/* TRUSTED BY (logo strip) */
+.logo-strip{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;padding:32px 0;border-top:1px solid var(--wire);border-bottom:1px solid var(--wire);background:#fff;}
+.logo-strip-text{font-size:11px;color:var(--text-subtle);font-weight:700;letter-spacing:.16em;}
+.logo-strip-item{font-size:18px;font-weight:900;color:var(--text-subtle);letter-spacing:-.02em;opacity:.5;}
+
+/* FEATURE GRID — large cards */
+.feat-master{display:grid;grid-template-columns:1.15fr .85fr;gap:32px;}
+.feat-master-l{display:grid;grid-template-rows:1fr 1fr;gap:24px;}
+.feat-card{background:#fff;border-radius:24px;border:1px solid var(--wire);padding:32px 28px;position:relative;overflow:hidden;transition:all .25s;display:flex;flex-direction:column;}
+.feat-card:hover{transform:translateY(-3px);box-shadow:0 20px 50px rgba(180,90,30,.14);}
+.feat-card.big{padding:36px 32px;}
+.feat-card-num{font-family:var(--display);font-size:80px;line-height:1;color:var(--peach);opacity:.16;position:absolute;top:18px;right:24px;font-weight:400;}
+.feat-card-tag{display:inline-flex;align-items:center;gap:6px;background:var(--peach-soft);color:var(--peach-dark);padding:5px 12px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.06em;margin-bottom:14px;align-self:flex-start;text-transform:uppercase;}
+.feat-card h3{font-size:22px;font-weight:900;letter-spacing:-.01em;margin-bottom:10px;line-height:1.2;}
+.feat-card.big h3{font-size:28px;}
+.feat-card p{font-size:14px;color:var(--text-muted);line-height:1.85;}
+.feat-card-mock{margin-top:auto;padding-top:20px;}
+.feat-card-pic{width:100%;aspect-ratio:16/9;border-radius:14px;background:linear-gradient(135deg,#fde8d8,#faf3eb);display:flex;align-items:center;justify-content:center;font-size:48px;}
+
+/* DEV AGENT — code preview */
+.dev-row{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center;}
+.dev-text h3{font-family:var(--display);font-size:48px;line-height:1.05;font-weight:400;margin-bottom:18px;}
+.dev-text h3 .ja{font-family:var(--sans);font-weight:900;font-size:.5em;display:block;margin-top:6px;}
+.dev-text p{font-size:15px;color:var(--text-muted);line-height:1.85;margin-bottom:16px;}
+.dev-text ul{list-style:none;}
+.dev-text li{font-size:14px;color:var(--text-muted);padding:8px 0;display:flex;align-items:flex-start;gap:10px;}
+.dev-text li::before{content:'→';color:var(--peach);font-weight:900;flex-shrink:0;}
+.dev-window{background:#1a0a00;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.3);}
+.dev-window-head{display:flex;align-items:center;gap:6px;padding:11px 14px;background:#0d0507;border-bottom:1px solid rgba(255,245,230,.08);}
+.dev-dot{width:11px;height:11px;border-radius:50%;}
+.dev-dot.r{background:#ff5f57;}.dev-dot.y{background:#febc2e;}.dev-dot.g{background:#28c840;}
+.dev-window-title{font-family:var(--mono);font-size:11px;color:rgba(255,245,230,.5);margin-left:8px;}
+.dev-window-body{padding:20px 22px;font-family:var(--mono);font-size:12.5px;line-height:1.75;color:rgba(255,245,230,.85);}
+.dev-window-body .c{color:#9a6a4a;}
+.dev-window-body .k{color:var(--violet);}
+.dev-window-body .s{color:var(--green);}
+.dev-window-body .v{color:var(--peach);}
+.dev-window-body .you{color:#67e8f9;}
+.dev-tool{background:rgba(251,146,60,.10);border-left:2px solid var(--peach);padding:8px 12px;margin:8px 0;border-radius:0 8px 8px 0;font-size:12px;}
+
+/* GROUP CHAT showcase */
+.group-row{display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;}
+
+/* MARKET stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center;}
+.stat{background:#fff;border-radius:18px;padding:28px 18px;border:1px solid var(--wire);}
+.stat-n{font-family:var(--display);font-size:48px;line-height:1;font-weight:400;color:var(--peach);}
+.stat-l{font-size:12px;font-weight:700;color:var(--text-muted);margin-top:6px;text-transform:uppercase;letter-spacing:.08em;}
+
+/* PRICING */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.price-card{background:#fff;border:1px solid var(--wire);border-radius:24px;padding:36px 28px;position:relative;}
+.price-card.pop{border:2px solid var(--peach);box-shadow:0 16px 40px rgba(251,146,60,.16);transform:scale(1.04);}
+.price-card.pop::before{content:'POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--peach);color:#fff;padding:5px 14px;border-radius:99px;font-size:10px;font-weight:900;letter-spacing:.12em;}
+.price-nm{font-size:13px;font-weight:800;letter-spacing:.06em;color:var(--text-subtle);margin-bottom:8px;text-transform:uppercase;}
+.price-amt{font-size:46px;font-weight:900;letter-spacing:-.02em;line-height:1;}
+.price-amt .y{font-size:18px;color:var(--text-muted);font-weight:700;}
+.price-cycle{font-size:12px;color:var(--text-subtle);margin:8px 0 18px;}
+.price-feat{list-style:none;padding:18px 0;border-top:1px solid var(--wire);}
+.price-feat li{font-size:13px;padding:7px 0;display:flex;gap:8px;color:var(--text-muted);}
+.price-feat li::before{content:'✓';color:var(--peach);font-weight:900;}
+.price-btn{display:block;width:100%;text-align:center;padding:13px;border-radius:12px;font-size:14px;font-weight:800;}
+.price-btn.fill{background:var(--peach);color:#fff;}
+.price-btn.fill:hover{background:var(--peach-dark);}
+.price-btn.out{border:1.5px solid var(--wire-strong);}
+
+/* TESTIMONIAL */
+.tst-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.tst{background:#fff;border:1px solid var(--wire);border-radius:18px;padding:24px;}
+.tst-stars{color:var(--peach);font-size:14px;margin-bottom:10px;}
+.tst-q{font-size:14px;line-height:1.85;color:var(--text);margin-bottom:14px;}
+.tst-who{display:flex;align-items:center;gap:10px;}
+.tst-who .av{width:36px;height:36px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;}
+.tst-who .nm{font-size:13px;font-weight:800;}
+.tst-who .role{font-size:11px;color:var(--text-subtle);}
+
+/* CTA */
+.cta-section{background:var(--bg-deep);color:var(--text-on-dark);text-align:center;padding:96px 24px;position:relative;overflow:hidden;}
+.cta-section::before{content:'';position:absolute;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,.18),transparent 70%);top:-300px;left:50%;transform:translateX(-50%);}
+.cta-section h2{position:relative;font-family:var(--display);font-size:clamp(40px,6vw,72px);font-weight:400;line-height:1;letter-spacing:-.02em;}
+.cta-section h2 .accent{color:var(--peach);}
+.cta-section p{position:relative;font-size:16px;color:rgba(255,245,230,.7);margin:24px auto 32px;max-width:520px;}
+
+footer{background:var(--bg-warm);padding:48px 24px;text-align:center;border-top:1px solid var(--wire);}
+.foot-links{display:flex;justify-content:center;gap:18px;font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:14px;flex-wrap:wrap;}
+.foot-c{font-size:11px;color:var(--text-subtle);}
+
+@media (max-width:900px){
+  .hero-grid,.dev-row,.group-row,.feat-master{grid-template-columns:1fr;}
+  .preview-stack{height:auto;}
+  .pc-1,.pc-2{position:relative;width:100%;height:auto;transform:none;margin-bottom:14px;}
+  .pc-3{display:none;}
+}
+@media (max-width:760px){
+  .nav-links{display:none;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .price-grid,.tst-grid{grid-template-columns:1fr;}
+  .section{padding:64px 18px;}
+}
+</style>
+</head>
+<body>
+<div class="mock-banner">📐 MOCK B — <b>プロ向け強化版</b> ・ 既存LPを進化させ、開発エージェント機能などプロ機能を中心に訴求</div>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">M</div>
+    <span>MY AI AGENT</span>
+  </a>
+  <div class="nav-links">
+    <a href="#feat">機能</a>
+    <a href="#dev">開発エージェント</a>
+    <a href="#group">グループ</a>
+    <a href="#store">Agent Store</a>
+    <a href="#price">料金</a>
+  </div>
+  <button class="nav-cta">無料で始める</button>
+</nav>
+
+<!-- HERO — split layout with preview stack -->
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="hero-kicker">
+        <div class="hero-kicker-dot"></div>
+        AI を「採用」する時代へ
+      </div>
+      <h1>
+        ONE TEAM.<br>
+        <span class="accent">EVERY</span><br>
+        SKILL.
+        <span class="ja">あなただけの AI チームを、今日から。</span>
+      </h1>
+      <p class="hero-sub">
+        グループチャット・コード生成・画像生成・議事録・Agent Store。<br>
+        <b>必要なスキルをぜんぶ揃えた</b> AI ワークスペースが、月 ¥1,980 から。
+      </p>
+      <div class="cta-row">
+        <button class="btn-primary">無料で始める →</button>
+        <button class="btn-ghost">▶ 30秒デモ</button>
+      </div>
+      <div class="hero-trust">
+        <span>30秒で登録</span>
+        <span>クレカ不要</span>
+        <span>日本語完全対応</span>
+        <span>iOS / Android / Chrome 拡張</span>
+      </div>
+    </div>
+    <div class="preview-stack">
+      <div class="preview-card pc-1">
+        <div class="pc-head">
+          <div class="pc-av">マ</div>
+          <div>
+            <div class="pc-name">マーケティング AI</div>
+            <div class="pc-meta">SEO + ライティング + 分析</div>
+          </div>
+        </div>
+        <div class="pc-body">
+          <div class="pc-msg you">12月の SEO 戦略立てて</div>
+          <div class="pc-msg ai">3軸で提案します：①ロングテール KW 強化（検索意図マッチ） ②既存記事の年末リライト ③AI 関連キーワードの先行抑え</div>
+          <div class="pc-msg ai">優先順位 + 工数見積も付けます？</div>
+        </div>
+      </div>
+      <div class="preview-card pc-2">
+        <div class="pc-head">
+          <div class="pc-av b">開</div>
+          <div>
+            <div class="pc-name">開発エージェント</div>
+            <div class="pc-meta">コード生成 + 実行</div>
+          </div>
+        </div>
+        <div class="pc-body">
+          <div class="pc-msg you">Stripe webhook の signature 検証コード書いて</div>
+          <div class="pc-msg ai">webhook.js を作成 → 署名検証 → テスト実行 → 通った ✓</div>
+        </div>
+      </div>
+      <div class="preview-card pc-3 pc-platform-bar">
+        <div class="pc-pi"><div class="pc-pi-ic">🌐</div>Web</div>
+        <div class="pc-pi"><div class="pc-pi-ic">📱</div>iOS</div>
+        <div class="pc-pi"><div class="pc-pi-ic">🤖</div>Android</div>
+        <div class="pc-pi"><div class="pc-pi-ic">🧩</div>Chrome</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUSTED BY -->
+<div class="logo-strip">
+  <span class="logo-strip-text">USED BY</span>
+  <span class="logo-strip-item">PROTOCOL</span>
+  <span class="logo-strip-item">スタートアップ</span>
+  <span class="logo-strip-item">個人事業主</span>
+  <span class="logo-strip-item">チーム</span>
+  <span class="logo-strip-item">クリエイター</span>
+</div>
+
+<!-- BIG FEATURE GRID -->
+<section class="section" id="feat">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">CORE FEATURES</span>
+      <h2 class="h2">仕事を任せられる<span class="h2-ja">機能の作り込み</span></h2>
+      <p class="lead">「ChatGPT で十分」と思ってる人ほど、試したら手放せなくなる細部の作り込み。</p>
+    </div>
+    <div class="feat-master">
+      <div class="feat-master-l">
+        <div class="feat-card">
+          <span class="feat-card-num">01</span>
+          <span class="feat-card-tag">CREATE</span>
+          <h3>5 ステップで採用面談</h3>
+          <p>アイコン → 名前 → スキル → 採用目的 → 業務内容。役割を明確にすると、AI の精度が劇的に変わります。</p>
+        </div>
+        <div class="feat-card">
+          <span class="feat-card-num">02</span>
+          <span class="feat-card-tag">TEMPLATES</span>
+          <h3>10 種類のテンプレ</h3>
+          <p>SEO ライター・X 自動運用・採用エージェント・議事録・コードレビュー・経営戦略 — 即戦力 1 クリックで導入。</p>
+        </div>
+      </div>
+      <div class="feat-card big" style="background:linear-gradient(135deg,#fff,#fdfaf6);">
+        <span class="feat-card-num" style="font-size:120px;">03</span>
+        <span class="feat-card-tag">SHARE</span>
+        <h3>作った AI を世界に共有</h3>
+        <p>専用 URL + OGP 画像が自動生成。SNS で送ると、訪問者は <b>1 クリックで自分のアカウントにコピー</b>。社内展開もインフルエンサー配布も思いのまま。</p>
+        <div class="feat-card-mock">
+          <div class="feat-card-pic">🔗</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEV AGENT (新機能) -->
+<section class="section section-deep" id="dev">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">NEW · DEV AGENT</span>
+      <h2 class="h2">指示すれば、コードが動く<span class="h2-ja">開発エージェント機能 (β)</span></h2>
+      <p class="lead">「ログイン画面作って」「Stripe webhook 書いて」「テスト実行して」 — チャットだけで実装まで完了。</p>
+    </div>
+    <div class="dev-row">
+      <div class="dev-text">
+        <h3>YOU TYPE.<br>AI BUILDS.<span class="ja">話しかけるだけで、実装まで</span></h3>
+        <p style="color:rgba(255,245,230,.7);">サンドボックス環境で AI がコードを書き・実行・テスト。<b style="color:var(--text-on-dark);">Cursor / Claude Code を内蔵</b>したような体験を、ブラウザだけで。</p>
+        <ul style="color:rgba(255,245,230,.7);">
+          <li>ファイル R/W・bash 実行・git 連携</li>
+          <li>差分プレビュー & 1 クリック適用</li>
+          <li>サンドボックスで安全に実行</li>
+          <li>Pro プランで 1 日 30 分まで利用可</li>
+          <li>Node・Python・Go など多言語対応</li>
+        </ul>
+      </div>
+      <div class="dev-window">
+        <div class="dev-window-head">
+          <div class="dev-dot r"></div><div class="dev-dot y"></div><div class="dev-dot g"></div>
+          <div class="dev-window-title">~/myproject — agent</div>
+        </div>
+        <div class="dev-window-body">
+          <div><span class="you">▸ you</span> Stripe webhook で signature 検証してテストまで</div>
+          <div class="dev-tool">📂 read_file: package.json ✓</div>
+          <div class="dev-tool">✏ write_file: webhook.js (47 lines)</div>
+          <div class="dev-tool">$ bash: npm test ✓ 4 passed</div>
+          <div><span class="c">// webhook.js</span></div>
+          <div><span class="k">const</span> sig = req.headers[<span class="s">'stripe-signature'</span>];</div>
+          <div><span class="k">const</span> evt = stripe.webhooks.<span class="v">constructEvent</span>(</div>
+          <div>&nbsp;&nbsp;body, sig, <span class="v">process</span>.env.STRIPE_WHSEC</div>
+          <div>);</div>
+          <div style="margin-top:10px;color:var(--peach);">✓ 実装完了 — テストも全パス</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GROUP CHAT -->
+<section class="section section-warm" id="group">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">GROUP CHAT</span>
+      <h2 class="h2">友達と AI が同じ部屋<span class="h2-ja">日本初のグループ × AI 体験</span></h2>
+    </div>
+    <div class="group-row">
+      <div>
+        <div class="feat-card" style="border:none;background:#fff;">
+          <span class="feat-card-tag">LIVE</span>
+          <h3>LINE 風招待 + AI コメント</h3>
+          <p style="margin-bottom:18px;">QR / リンクで招待 → 友達タップで即参加。グループ内で <b>@AI</b> を呼ぶと AI が答え、料金はホスト持ち。割り勘も「グループへ送金」で完結。</p>
+          <ul style="list-style:none;margin-top:8px;">
+            <li style="padding:6px 0;font-size:13px;color:var(--text-muted);"><b style="color:var(--peach-dark);">✓</b> @AI で誰でも AI を呼べる</li>
+            <li style="padding:6px 0;font-size:13px;color:var(--text-muted);"><b style="color:var(--peach-dark);">✓</b> 絵文字リアクション・ピン留め・ブックマーク</li>
+            <li style="padding:6px 0;font-size:13px;color:var(--text-muted);"><b style="color:var(--peach-dark);">✓</b> グループへ送金（割り勘）</li>
+            <li style="padding:6px 0;font-size:13px;color:var(--text-muted);"><b style="color:var(--peach-dark);">✓</b> 承認制グループ・ホスト譲渡</li>
+          </ul>
+        </div>
+      </div>
+      <div class="preview-card pc-1" style="position:relative;width:100%;height:auto;">
+        <div class="pc-head" style="background:#fdfaf6;">
+          <div class="pc-av">こ</div>
+          <div class="pc-av b" style="margin-left:-8px;border:2px solid #fff;">た</div>
+          <div class="pc-av c" style="margin-left:-8px;border:2px solid #fff;">🤖</div>
+          <div style="margin-left:8px;">
+            <div class="pc-name">忘年会の幹事</div>
+            <div class="pc-meta">3 メンバー ・ AI</div>
+          </div>
+        </div>
+        <div class="pc-body" style="background:#faf3eb;">
+          <div class="pc-msg u">渋谷で6人個室、予算5000円</div>
+          <div class="pc-msg you">@AI 探して</div>
+          <div class="pc-msg ai">3件見つけました。詳細をリンクで送ります</div>
+          <div class="pc-msg u">予約お願い！</div>
+          <div class="pc-msg you">割り勘いきます → 「グループへ送金」</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AGENT STORE — stats -->
+<section class="section" id="store">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">AGENT STORE</span>
+      <h2 class="h2">作った AI を販売<span class="h2-ja">クリエイターが収益化できる場所</span></h2>
+      <p class="lead">作り込んだエージェントを商品として出店。<b>売上の 90% がクリエイターへ。</b></p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-n">90<span style="font-size:24px;">%</span></div>
+        <div class="stat-l">クリエイター還元</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n">1<span style="font-size:24px;">click</span></div>
+        <div class="stat-l">出店フロー</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n">¥0<span style="font-size:24px;">〜</span></div>
+        <div class="stat-l">価格設定の自由</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n">⚡</div>
+        <div class="stat-l">Stripe 自動入金</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section section-warm">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">VOICES</span>
+      <h2 class="h2">使った人の声<span class="h2-ja">早期ユーザーから</span></h2>
+    </div>
+    <div class="tst-grid">
+      <div class="tst">
+        <div class="tst-stars">★★★★★</div>
+        <div class="tst-q">「議事録 AI を作って Slack 連携したら、毎週の打ち合わせメモ作成が完全自動化。週 5 時間削減できた」</div>
+        <div class="tst-who"><div class="av">M</div><div><div class="nm">M.K. さん</div><div class="role">SaaS スタートアップ COO</div></div></div>
+      </div>
+      <div class="tst">
+        <div class="tst-stars">★★★★★</div>
+        <div class="tst-q">「Agent Store で出した SEO ライターが、月 3 万円の売上に。副業として地味に効いてる」</div>
+        <div class="tst-who"><div class="av">T</div><div><div class="nm">T.S. さん</div><div class="role">フリーランスライター</div></div></div>
+      </div>
+      <div class="tst">
+        <div class="tst-stars">★★★★★</div>
+        <div class="tst-q">「友達グループに AI 入れたの、想像以上に楽しい。旅行プラン全部 AI が立てた」</div>
+        <div class="tst-who"><div class="av">A</div><div><div class="nm">A.N. さん</div><div class="role">大学生</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section" id="price">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">PRICING</span>
+      <h2 class="h2">シンプルで透明な料金<span class="h2-ja">無料から、使った分だけ</span></h2>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="price-nm">FREE</div>
+        <div class="price-amt"><span class="y">¥</span>0</div>
+        <div class="price-cycle">永久無料</div>
+        <ul class="price-feat">
+          <li>月 50 メッセージ</li>
+          <li>エージェント 3 個</li>
+          <li>グループ 1 個</li>
+          <li>Haiku モデル</li>
+        </ul>
+        <button class="price-btn out">無料で始める</button>
+      </div>
+      <div class="price-card pop">
+        <div class="price-nm">PRO</div>
+        <div class="price-amt"><span class="y">¥</span>1,980</div>
+        <div class="price-cycle">/ 月</div>
+        <ul class="price-feat">
+          <li>月 1,000 メッセージ</li>
+          <li>エージェント 無制限</li>
+          <li>グループ 無制限</li>
+          <li>Sonnet・Opus 利用可</li>
+          <li><b style="color:var(--peach-dark);">開発エージェント β 含む</b></li>
+          <li>Agent Store 出店可</li>
+          <li>画像生成 100 枚 / 月</li>
+        </ul>
+        <button class="price-btn fill">Pro を始める</button>
+      </div>
+      <div class="price-card">
+        <div class="price-nm">PAYG</div>
+        <div class="price-amt"><span class="y">¥</span>5+</div>
+        <div class="price-cycle">/ メッセージ</div>
+        <ul class="price-feat">
+          <li>使った分だけ課金</li>
+          <li>残高チャージ式</li>
+          <li>全機能利用可</li>
+          <li>大量利用に最適</li>
+        </ul>
+        <button class="price-btn out">残高をチャージ</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>YOUR <span class="accent">AI TEAM</span><br>STARTS HERE</h2>
+  <p>30 秒で登録。クレジットカード不要。<br>友達紹介で <b style="color:var(--peach);">¥500 ボーナス</b>つき。</p>
+  <button class="btn-primary" style="font-size:17px;padding:17px 38px;">無料で始める →</button>
+</section>
+
+<footer>
+  <div class="foot-links">
+    <a href="/terms.html">利用規約</a>
+    <a href="/privacy.html">プライバシー</a>
+    <a href="/legal.html">特定商取引法</a>
+    <a href="/contact.html">お問い合わせ</a>
+  </div>
+  <div class="foot-c">© 株式会社 PROTOCOL — MY AI AGENT</div>
+</footer>
+</body>
+</html>

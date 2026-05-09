@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOCK C — モダンダーク軸 | MY AI AGENT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06060a;--bg2:#0d0d14;--bg3:#13131d;--bg4:#1a1a26;--bg5:#222230;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.10);--b3:rgba(255,255,255,.18);
+  --t1:#eeeef5;--t2:#9898b0;--t3:#55556a;--t4:#6c63ff;
+  --peach:#fb923c;--peach-l:#fdba74;--peach-dim:rgba(251,146,60,.14);--peach-glow:rgba(251,146,60,.32);
+  --green:#22d3a0;--rose:#ff5f7e;--violet:#a78bfa;--cyan:#67e8f9;
+  --sans:'Geist','Inter',-apple-system,sans-serif;
+  --mono:'Geist Mono','SF Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+a{color:inherit;text-decoration:none;}
+button{cursor:pointer;font-family:inherit;border:0;background:transparent;}
+
+.mock-banner{background:var(--peach);color:#1a0a00;text-align:center;padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;}
+.mock-banner b{color:#1a0a00;}
+
+/* Background gradient mesh */
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 15% 20%,rgba(251,146,60,.10),transparent 40%),radial-gradient(circle at 85% 80%,rgba(167,139,250,.08),transparent 40%),radial-gradient(circle at 50% 50%,rgba(34,211,160,.04),transparent 50%);pointer-events:none;z-index:0;}
+body > *{position:relative;z-index:1;}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(6,6,10,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid var(--b1);}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;letter-spacing:-.01em;}
+.nav-logo-mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--peach),#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:900;box-shadow:0 4px 14px var(--peach-glow);}
+.nav-links{display:flex;gap:28px;}
+.nav-links a{color:var(--t2);font-size:13px;font-weight:500;transition:color .15s;}
+.nav-links a:hover{color:var(--t1);}
+.nav-cta{background:var(--peach);color:#1a0a00;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:700;transition:all .15s;}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px var(--peach-glow);}
+
+/* HERO — centered with ambient glow */
+.hero{position:relative;text-align:center;padding:128px 24px 96px;overflow:hidden;}
+.hero::before{content:'';position:absolute;width:1200px;height:1200px;border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,.10),transparent 60%);top:-600px;left:50%;transform:translateX(-50%);pointer-events:none;}
+.hero::after{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--b1) 1px,transparent 1px),linear-gradient(90deg,var(--b1) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse at center,black,transparent 60%);-webkit-mask-image:radial-gradient(ellipse at center,black,transparent 60%);opacity:.45;pointer-events:none;}
+.hero-inner{position:relative;z-index:1;max-width:920px;margin:0 auto;}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;background:rgba(251,146,60,.10);border:1px solid rgba(251,146,60,.24);color:var(--peach-l);padding:7px 16px;border-radius:99px;font-size:12px;font-weight:600;letter-spacing:.02em;margin-bottom:32px;}
+.hero-kicker-dot{width:6px;height:6px;border-radius:50%;background:var(--peach);box-shadow:0 0 12px var(--peach);animation:p 2s infinite;}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-size:clamp(48px,7.5vw,88px);line-height:1;letter-spacing:-.04em;font-weight:800;margin-bottom:24px;background:linear-gradient(180deg,#fff,#aaaabb);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero h1 .accent{background:linear-gradient(135deg,var(--peach),#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero-sub{font-size:18px;color:var(--t2);max-width:580px;margin:0 auto 36px;line-height:1.7;}
+.hero-sub b{color:var(--t1);font-weight:600;}
+.cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn-primary{background:linear-gradient(135deg,var(--peach),#f97316);color:#1a0a00;padding:14px 28px;border-radius:11px;font-size:14px;font-weight:700;box-shadow:0 8px 24px var(--peach-glow);transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px var(--peach-glow);}
+.btn-ghost{background:transparent;color:var(--t1);border:1px solid var(--b3);padding:14px 26px;border-radius:11px;font-size:14px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-ghost:hover{background:var(--b1);border-color:var(--b3);}
+
+.hero-trust{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-top:32px;font-size:12px;color:var(--t3);}
+.hero-trust span{display:inline-flex;align-items:center;gap:6px;}
+.hero-trust .check{color:var(--green);}
+
+/* PLATFORM PILLS HERO */
+.platform-bar{display:flex;justify-content:center;gap:8px;margin-top:48px;flex-wrap:wrap;}
+.plat-pill{display:inline-flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--b2);padding:8px 14px;border-radius:99px;font-size:12px;color:var(--t2);font-weight:500;transition:all .2s;}
+.plat-pill:hover{border-color:var(--peach);color:var(--t1);transform:translateY(-2px);}
+.plat-pill .ic{font-size:14px;}
+.plat-pill.live::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:p 2s infinite;}
+
+/* SECTION */
+.section{position:relative;padding:120px 32px;}
+.section-inner{max-width:1200px;margin:0 auto;}
+.section-head{text-align:center;max-width:680px;margin:0 auto 64px;}
+.kicker{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.18em;color:var(--peach);margin-bottom:18px;text-transform:uppercase;}
+.h2{font-size:clamp(36px,4.5vw,52px);line-height:1.1;letter-spacing:-.03em;font-weight:800;margin-bottom:18px;background:linear-gradient(180deg,#fff,#aaaabb);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.lead{font-size:16px;color:var(--t2);line-height:1.75;}
+
+/* BENTO GRID */
+.bento{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:auto auto;gap:16px;}
+.bento-card{background:var(--bg2);border:1px solid var(--b1);border-radius:18px;padding:32px;position:relative;overflow:hidden;transition:all .25s;display:flex;flex-direction:column;}
+.bento-card:hover{border-color:var(--b3);transform:translateY(-3px);}
+.bento-card::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,var(--peach-glow),transparent 70%);top:-150px;right:-150px;opacity:0;transition:opacity .25s;}
+.bento-card:hover::before{opacity:1;}
+.bento-card.feature{grid-column:span 2;background:linear-gradient(135deg,var(--bg2),var(--bg3));}
+.bento-card.feature.tall{grid-row:span 2;}
+.bento-tag{font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--peach-l);text-transform:uppercase;margin-bottom:14px;}
+.bento-card h3{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px;line-height:1.25;color:var(--t1);}
+.bento-card.feature h3{font-size:30px;}
+.bento-card p{font-size:14px;color:var(--t2);line-height:1.7;}
+.bento-ic{font-size:36px;margin-bottom:18px;}
+.bento-mock{margin-top:auto;padding-top:24px;}
+.bento-mock-window{background:var(--bg);border:1px solid var(--b1);border-radius:11px;padding:14px;font-family:var(--mono);font-size:11.5px;color:var(--t2);line-height:1.7;}
+.bento-mock-window .pl{color:var(--peach);}
+.bento-mock-window .vl{color:var(--green);}
+.bento-mock-window .ky{color:var(--violet);}
+
+/* DEV AGENT showcase */
+.dev-row{display:grid;grid-template-columns:.95fr 1.05fr;gap:48px;align-items:center;}
+.dev-text h3{font-size:42px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:20px;}
+.dev-text p{color:var(--t2);font-size:15px;line-height:1.85;margin-bottom:18px;}
+.dev-text ul{list-style:none;}
+.dev-text li{font-size:14px;color:var(--t2);padding:8px 0;display:flex;gap:10px;}
+.dev-text li::before{content:'→';color:var(--peach);}
+.dev-window{background:var(--bg2);border:1px solid var(--b2);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);}
+.dev-window-head{display:flex;align-items:center;gap:6px;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--b1);}
+.dev-dot{width:11px;height:11px;border-radius:50%;}
+.dev-dot.r{background:#ff5f57;}.dev-dot.y{background:#febc2e;}.dev-dot.g{background:#28c840;}
+.dev-window-title{font-family:var(--mono);font-size:11px;color:var(--t3);margin-left:8px;}
+.dev-window-body{padding:24px;font-family:var(--mono);font-size:12.5px;line-height:1.85;color:var(--t1);}
+.dev-tool{background:rgba(34,211,160,.08);border-left:2px solid var(--green);padding:8px 12px;margin:6px 0;border-radius:0 8px 8px 0;font-size:12px;color:var(--t2);}
+.dev-window-body .c{color:var(--t3);}
+.dev-window-body .k{color:var(--violet);}
+.dev-window-body .s{color:var(--green);}
+.dev-window-body .v{color:var(--peach);}
+.dev-window-body .you{color:var(--cyan);}
+
+/* NUMBERS BIG */
+.numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b1);border-radius:18px;border:1px solid var(--b1);overflow:hidden;}
+.num-cell{background:var(--bg2);padding:36px 28px;text-align:center;}
+.num-n{font-size:60px;font-weight:800;letter-spacing:-.04em;line-height:1;background:linear-gradient(135deg,var(--peach),#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.num-l{font-size:13px;color:var(--t2);margin-top:10px;font-weight:500;}
+
+/* PRICING */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.price-card{background:var(--bg2);border:1px solid var(--b1);border-radius:18px;padding:36px 28px;position:relative;transition:all .2s;}
+.price-card:hover{border-color:var(--b3);}
+.price-card.pop{border:1.5px solid var(--peach);background:linear-gradient(135deg,var(--bg2),rgba(251,146,60,.04));box-shadow:0 30px 60px rgba(251,146,60,.16);transform:scale(1.04);}
+.price-card.pop::before{content:'POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--peach);color:#1a0a00;padding:5px 14px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.12em;}
+.price-nm{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--peach-l);margin-bottom:8px;text-transform:uppercase;}
+.price-amt{font-size:48px;font-weight:800;letter-spacing:-.03em;line-height:1;}
+.price-amt .y{font-size:18px;color:var(--t2);}
+.price-cycle{font-size:12px;color:var(--t3);margin:8px 0 22px;}
+.price-feat{list-style:none;padding:18px 0;border-top:1px solid var(--b1);margin-bottom:18px;}
+.price-feat li{font-size:13px;padding:8px 0;display:flex;gap:8px;color:var(--t2);}
+.price-feat li::before{content:'✓';color:var(--peach);}
+.price-btn{display:block;width:100%;text-align:center;padding:13px;border-radius:11px;font-size:14px;font-weight:700;}
+.price-btn.fill{background:var(--peach);color:#1a0a00;}
+.price-btn.fill:hover{transform:translateY(-1px);box-shadow:0 8px 24px var(--peach-glow);}
+.price-btn.out{border:1px solid var(--b3);color:var(--t1);}
+.price-btn.out:hover{background:var(--b1);}
+
+/* FAQ */
+.faq{max-width:760px;margin:0 auto;}
+.faq-item{background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:22px 26px;margin-bottom:10px;}
+.faq-q{font-size:15px;font-weight:600;color:var(--t1);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.faq-q::after{content:'+';color:var(--peach);font-size:20px;}
+.faq-a{font-size:13.5px;color:var(--t2);line-height:1.85;}
+
+/* CTA FINAL */
+.cta-section{position:relative;padding:120px 32px;text-align:center;overflow:hidden;}
+.cta-section::before{content:'';position:absolute;width:1000px;height:1000px;border-radius:50%;background:radial-gradient(circle,var(--peach-glow),transparent 60%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.cta-section h2{position:relative;font-size:clamp(40px,6vw,72px);font-weight:800;letter-spacing:-.04em;line-height:1;background:linear-gradient(180deg,#fff,#888);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.cta-section h2 .accent{background:linear-gradient(135deg,var(--peach),#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.cta-section p{position:relative;font-size:16px;color:var(--t2);margin:24px auto 32px;max-width:520px;}
+
+footer{padding:48px 24px;text-align:center;border-top:1px solid var(--b1);background:var(--bg2);}
+.foot-links{display:flex;justify-content:center;gap:18px;font-size:12px;color:var(--t2);margin-bottom:14px;flex-wrap:wrap;}
+.foot-links a:hover{color:var(--peach-l);}
+.foot-c{font-size:11px;color:var(--t3);}
+
+@media (max-width:900px){
+  .bento{grid-template-columns:1fr;}
+  .bento-card.feature,.bento-card.feature.tall{grid-column:auto;grid-row:auto;}
+  .dev-row{grid-template-columns:1fr;}
+  .numbers{grid-template-columns:repeat(2,1fr);}
+  .nav-links{display:none;}
+}
+@media (max-width:640px){
+  .price-grid{grid-template-columns:1fr;}
+  .section{padding:80px 18px;}
+}
+</style>
+</head>
+<body>
+<div class="mock-banner">📐 MOCK C — <b>モダンダーク軸</b> ・ AI スタートアップ風ダークテーマで、開発者・プロユーザー層を狙う</div>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">M</div>
+    <span>MY AI AGENT</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">機能</a>
+    <a href="#dev">Dev Agent</a>
+    <a href="#group">Groups</a>
+    <a href="#price">料金</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <button class="nav-cta">無料で始める</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-kicker">
+      <div class="hero-kicker-dot"></div>
+      v3.0 — Dev Agent (β) 公開
+    </div>
+    <h1>
+      Build your own<br>
+      <span class="accent">AI Team</span>.
+    </h1>
+    <p class="hero-sub">
+      コードを書く AI、議事録を取る AI、グループに住む AI。<br>
+      <b>必要な専門家を、あなたが採用する</b>マルチエージェント・プラットフォーム。
+    </p>
+    <div class="cta-row">
+      <button class="btn-primary">無料で始める <span>→</span></button>
+      <button class="btn-ghost">▶ 30秒デモ</button>
+    </div>
+    <div class="hero-trust">
+      <span><span class="check">✓</span>30秒で登録</span>
+      <span><span class="check">✓</span>クレカ不要</span>
+      <span><span class="check">✓</span>紹介で ¥500</span>
+    </div>
+    <div class="platform-bar">
+      <div class="plat-pill live">🌐 Web</div>
+      <div class="plat-pill">📱 iOS (準備中)</div>
+      <div class="plat-pill">🤖 Android (準備中)</div>
+      <div class="plat-pill">🧩 Chrome 拡張 (審査中)</div>
+    </div>
+  </div>
+</section>
+
+<!-- BENTO GRID FEATURES -->
+<section class="section" id="features">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">CORE FEATURES</span>
+      <h2 class="h2">必要なものは、ぜんぶ揃ってる</h2>
+      <p class="lead">"ChatGPT で十分" と思ってる人ほど驚く、細部の作り込み。</p>
+    </div>
+    <div class="bento">
+      <div class="bento-card feature tall">
+        <span class="bento-tag">★ NEW</span>
+        <div class="bento-ic">⚡</div>
+        <h3>Dev Agent (β)<br>指示すれば、コードが動く</h3>
+        <p>サンドボックスで AI がファイル R/W、bash 実行、テスト、git push まで。Cursor / Claude Code を内蔵したような体験を、ブラウザだけで。</p>
+        <div class="bento-mock">
+          <div class="bento-mock-window">
+<span class="ky">$</span> <span class="pl">▸ Stripe webhook 書いて</span><br>
+<span class="vl">  ✓ webhook.js 作成</span><br>
+<span class="vl">  ✓ npm test passed (4)</span><br>
+<span class="vl">  ✓ git push origin main</span>
+          </div>
+        </div>
+      </div>
+      <div class="bento-card">
+        <span class="bento-tag">CREATE</span>
+        <div class="bento-ic">🎭</div>
+        <h3>5ステップで AI を採用</h3>
+        <p>アイコン・名前・スキル・採用目的・業務内容。役割を明確にすると AI の精度が劇的に変わる。</p>
+      </div>
+      <div class="bento-card">
+        <span class="bento-tag">TEMPLATES</span>
+        <div class="bento-ic">📚</div>
+        <h3>10種類のテンプレ</h3>
+        <p>SEO・X 自動運用・採用・議事録・コードレビュー・経営戦略 — 即戦力 1クリック。</p>
+      </div>
+      <div class="bento-card feature">
+        <span class="bento-tag">GROUPS</span>
+        <div class="bento-ic">👥</div>
+        <h3>友達 + AI のグループチャット</h3>
+        <p>LINE 風招待で友達を呼んで、グループ内で <b style="color:var(--t1);">@AI</b> を呼ぶと AI が答える。日本初のグループ × AI 体験。</p>
+      </div>
+      <div class="bento-card">
+        <span class="bento-tag">STORE</span>
+        <div class="bento-ic">🛍️</div>
+        <h3>Agent Store で販売</h3>
+        <p>作った AI を販売、売上の <b style="color:var(--peach);">90%</b> がクリエイターへ。Stripe 自動入金。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEV AGENT SHOWCASE -->
+<section class="section" id="dev">
+  <div class="section-inner">
+    <div class="dev-row">
+      <div>
+        <span class="kicker">★ NEW · DEV AGENT (β)</span>
+        <h3>You type.<br>AI builds.</h3>
+        <p>「ログイン画面作って」「Stripe webhook 書いて」「テスト実行して」 — チャットだけで、AI がサンドボックス内で実装・テスト・デプロイまで完了。</p>
+        <ul>
+          <li>ファイル R/W・bash 実行・git push</li>
+          <li>差分プレビュー & 1 クリック適用</li>
+          <li>サンドボックス環境で安全に実行</li>
+          <li>Node・Python・Go など多言語</li>
+          <li>Pro プランで 1 日 30 分</li>
+        </ul>
+      </div>
+      <div class="dev-window">
+        <div class="dev-window-head">
+          <div class="dev-dot r"></div><div class="dev-dot y"></div><div class="dev-dot g"></div>
+          <div class="dev-window-title">~/myproject — agent shell</div>
+        </div>
+        <div class="dev-window-body">
+          <div><span class="you">▸ you</span> Stripe webhook で signature 検証して、テストまで通して</div>
+          <div class="dev-tool">📂 read_file: package.json</div>
+          <div class="dev-tool">✏️ write_file: webhook.js (47 lines)</div>
+          <div class="dev-tool">$ npm test → ✓ 4 passed</div>
+          <div style="margin-top:14px;"><span class="c">// webhook.js</span></div>
+          <div><span class="k">const</span> sig = req.headers[<span class="s">'stripe-signature'</span>];</div>
+          <div><span class="k">const</span> evt = stripe.webhooks.<span class="v">constructEvent</span>(</div>
+          <div>&nbsp;&nbsp;body, sig, <span class="v">process</span>.env.STRIPE_WHSEC</div>
+          <div>);</div>
+          <div style="margin-top:12px;color:var(--green);">✓ 実装完了 — テストも全パス</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NUMBERS -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">BY THE NUMBERS</span>
+      <h2 class="h2">作り込みの数字</h2>
+    </div>
+    <div class="numbers">
+      <div class="num-cell"><div class="num-n">10</div><div class="num-l">テンプレートエージェント</div></div>
+      <div class="num-cell"><div class="num-n">16</div><div class="num-l">スキル種類</div></div>
+      <div class="num-cell"><div class="num-n">3</div><div class="num-l">AI モデル切替</div></div>
+      <div class="num-cell"><div class="num-n">90%</div><div class="num-l">クリエイター還元</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- GROUP CHAT -->
+<section class="section" id="group">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">GROUP CHAT</span>
+      <h2 class="h2">友達と AI が、同じ部屋に。</h2>
+      <p class="lead">日本では他にない体験。LINE 風招待で友達を呼んで、@AI で誰でも AI を呼べる。料金はホスト持ち。</p>
+    </div>
+    <div class="bento">
+      <div class="bento-card"><div class="bento-ic">🔗</div><h3>QR / リンク招待</h3><p>有効期限・人数制限・承認制も対応。</p></div>
+      <div class="bento-card"><div class="bento-ic">💸</div><h3>グループへ送金</h3><p>割り勘がアプリ内で完結。送金履歴も透明。</p></div>
+      <div class="bento-card"><div class="bento-ic">🎉</div><h3>絵文字リアクション</h3><p>ピン留め・ブックマーク・既読位置も。</p></div>
+      <div class="bento-card"><div class="bento-ic">🔔</div><h3>通知カスタマイズ</h3><p>メンション・全件・サイレント。</p></div>
+      <div class="bento-card"><div class="bento-ic">👑</div><h3>ホスト権限</h3><p>譲渡・削除・承認の柔軟な管理。</p></div>
+      <div class="bento-card"><div class="bento-ic">📊</div><h3>利用履歴</h3><p>誰がいつ AI を呼んだかをホストが確認可能。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section" id="price">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">PRICING</span>
+      <h2 class="h2">シンプルで、透明。</h2>
+      <p class="lead">無料からスタート。月額か、使った分だけ。</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="price-nm">FREE</div>
+        <div class="price-amt"><span class="y">¥</span>0</div>
+        <div class="price-cycle">永久無料</div>
+        <ul class="price-feat">
+          <li>月 50 メッセージ</li>
+          <li>エージェント 3 個</li>
+          <li>グループ 1 個</li>
+          <li>Haiku モデル</li>
+        </ul>
+        <button class="price-btn out">無料で始める</button>
+      </div>
+      <div class="price-card pop">
+        <div class="price-nm">PRO</div>
+        <div class="price-amt"><span class="y">¥</span>1,980</div>
+        <div class="price-cycle">/ 月</div>
+        <ul class="price-feat">
+          <li>月 1,000 メッセージ</li>
+          <li>エージェント 無制限</li>
+          <li>グループ 無制限</li>
+          <li>Sonnet・Opus 利用可</li>
+          <li><b style="color:var(--peach-l);">Dev Agent β 含む</b></li>
+          <li>Agent Store 出店可</li>
+          <li>画像生成 100 枚 / 月</li>
+        </ul>
+        <button class="price-btn fill">Pro を始める</button>
+      </div>
+      <div class="price-card">
+        <div class="price-nm">PAYG</div>
+        <div class="price-amt"><span class="y">¥</span>5+</div>
+        <div class="price-cycle">/ メッセージ</div>
+        <ul class="price-feat">
+          <li>使った分だけ課金</li>
+          <li>残高チャージ式</li>
+          <li>全機能利用可</li>
+          <li>大量利用に最適</li>
+        </ul>
+        <button class="price-btn out">残高をチャージ</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" id="faq">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="kicker">FAQ</span>
+      <h2 class="h2">よくある質問</h2>
+    </div>
+    <div class="faq">
+      <div class="faq-item"><div class="faq-q">ChatGPT との違いは？</div><div class="faq-a">「自分専用の AI を採用」できる点が最大の違いです。スキル・性格・業務内容を作り込んだ AI を保存して、必要な時に呼べます。さらにグループチャットや Agent Store などの SaaS 機能を内蔵。</div></div>
+      <div class="faq-item"><div class="faq-q">Dev Agent (β) はいつ使える？</div><div class="faq-a">2026 年 6 月公開予定。Pro プランで利用可能。サンドボックス環境で AI がコード生成・実行・テストまで実施します。</div></div>
+      <div class="faq-item"><div class="faq-q">無料プランはどこまで使える？</div><div class="faq-a">月 50 メッセージ・エージェント 3 個・グループ 1 個。クレジットカード登録不要。気に入ったら Pro / PAYG にアップグレードできます。</div></div>
+      <div class="faq-item"><div class="faq-q">商用利用 OK？</div><div class="faq-a">OK です。Agent Store で作った AI を販売することもできます (売上の 90% がクリエイターへ)。</div></div>
+      <div class="faq-item"><div class="faq-q">日本語以外も使える？</div><div class="faq-a">UI は日本語・英語・中国語の 3 言語に対応。チャット内容は AI モデルが対応するすべての言語で利用可能です。</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Build your own<br><span class="accent">AI Team</span>.</h2>
+  <p>30 秒で登録。クレジットカード不要。<br>友達紹介で <b style="color:var(--peach-l);">¥500 ボーナス</b>つき。</p>
+  <div class="cta-row" style="justify-content:center;">
+    <button class="btn-primary" style="font-size:15px;padding:16px 36px;">無料で始める <span>→</span></button>
+    <button class="btn-ghost">セールスに連絡</button>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-links">
+    <a href="/terms.html">利用規約</a>
+    <a href="/privacy.html">プライバシー</a>
+    <a href="/legal.html">特定商取引法</a>
+    <a href="/contact.html">お問い合わせ</a>
+  </div>
+  <div class="foot-c">© 株式会社 PROTOCOL — MY AI AGENT</div>
+</footer>
+</body>
+</html>

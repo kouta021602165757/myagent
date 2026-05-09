@@ -2059,8 +2059,27 @@ function genListingId(){
 function publicListing(user, ag){
   const m = ag.marketplace||{};
   const tags = Array.isArray(m.tags) ? m.tags.slice(0,5) : [];
+  // For team listings, surface a preview of the AI members so cards / detail
+  // pages can render "🎯 Team · 5 agents" instead of looking like a single AI.
+  let teamMembers = null;
+  if(ag.is_team && Array.isArray(ag.team_member_agent_ids) && ag.team_member_agent_ids.length){
+    const ownerAgents = user.agents || [];
+    teamMembers = ag.team_member_agent_ids
+      .map(id => ownerAgents.find(a => a.id === id))
+      .filter(Boolean)
+      .slice(0,8)
+      .map(a => ({
+        avatar: a.avatar || '🤖',
+        name: a.name || 'AI',
+        skills: Array.isArray(a.skills) ? a.skills.slice(0,3) : [],
+      }));
+  }
   return {
     listing_id: m.listing_id,
+    is_team: !!ag.is_team,
+    member_count: teamMembers ? teamMembers.length : 0,
+    team_members: teamMembers,
+    team_goal: ag.is_team ? (ag.team_goal||'') : undefined,
     agent: {
       avatar: ag.avatar||'🤖',
       skills: ag.skills||[],
@@ -6135,6 +6154,66 @@ async function handleAPI(req,res,pathname,method,ip){
         return jres(res,402,{error:'この出店は有料です。先に購入してください', price_jpy: price, listing_id: src.marketplace.listing_id});
       }
     }
+    const now = new Date().toISOString();
+    // Team listing: clone all member agents alongside the team group so the
+    // buyer gets a working multi-agent setup.
+    if(src.is_team && Array.isArray(src.team_member_agent_ids) && src.team_member_agent_ids.length){
+      const memberCount = src.team_member_agent_ids.length;
+      // Cap check: 1 group + N members
+      if((user.agents||[]).length + memberCount + 1 > 1000){
+        return jres(res,400,{error:`エージェントが上限 1000 を超えるためチームを複製できません (現在 ${(user.agents||[]).length} / 追加 ${memberCount+1})`});
+      }
+      const newGroupId = 'ag_'+crypto.randomUUID();
+      const sourceMembers = (found.user.agents||[]).filter(a => src.team_member_agent_ids.includes(a.id));
+      const clonedMembers = sourceMembers.map(orig => ({
+        id: 'ag_'+crypto.randomUUID(),
+        avatar: orig.avatar || '🤖',
+        name: orig.name,
+        skills: Array.isArray(orig.skills) ? orig.skills : ['writing'],
+        persona: orig.persona || '',
+        chrome_enabled: false,
+        sheets_enabled: false,
+        extension_enabled: false,
+        model: 'sonnet',
+        history: [],
+        created_at: now,
+        team_origin: { team_id: newGroupId, source_team_id: src.id, marketplace_origin: { listing_id: src.marketplace.listing_id, creator_user_id: found.user.id } },
+        marketplace_origin: { listing_id: src.marketplace.listing_id, creator_user_id: found.user.id, cloned_at: now },
+      }));
+      const groupClone = {
+        id: newGroupId,
+        avatar: src.avatar || '🎯',
+        name: src.marketplace.title || src.name || 'Team',
+        skills: ['planning'],
+        persona: '',
+        is_group: true,
+        is_team: true,
+        team_template_id: 'cloned',
+        team_goal: src.team_goal || '',
+        host_id: user.id,
+        members: [
+          { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
+        ],
+        team_member_agent_ids: clonedMembers.map(a => a.id),
+        ai_auto_respond: false,
+        created_at: now,
+        updated_at: now,
+        marketplace_origin: {
+          listing_id: src.marketplace.listing_id,
+          creator_user_id: found.user.id,
+          cloned_at: now,
+        },
+        history: [
+          { role:'system', content: `🎉 ${src.marketplace.title || src.name} を Store から複製しました。@${(clonedMembers[0]?.name||'AI').replace(/\s+/g,'')} のように特定エージェントを呼べます。`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+        ],
+      };
+      user.agents = [...(user.agents||[]), ...clonedMembers, groupClone];
+      src.marketplace.uses_count = (src.marketplace.uses_count||0) + 1;
+      await DB.save(user);
+      await DB.save(found.user);
+      return jres(res,201,{ agent: groupClone, team: true, member_count: clonedMembers.length });
+    }
+    // Single-agent listing — original behaviour
     const clone = {
       id:'ag_'+crypto.randomUUID(),
       avatar: src.avatar||'🤖',
@@ -6145,10 +6224,10 @@ async function handleAPI(req,res,pathname,method,ip){
       marketplace_origin: {
         listing_id: src.marketplace.listing_id,
         creator_user_id: found.user.id,
-        cloned_at: new Date().toISOString(),
+        cloned_at: now,
       },
       history: [],
-      created_at: new Date().toISOString(),
+      created_at: now,
     };
     user.agents = [...(user.agents||[]), clone];
     // Bump uses on the listing

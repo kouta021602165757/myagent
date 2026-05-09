@@ -2230,6 +2230,20 @@ body{color:#f0f0f8;}
         <button onclick="closeTeamEdit()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">キャンセル</button>
         <button id="teamEditSaveBtn" onclick="saveTeamEdit()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">💾 保存</button>
       </div>
+
+      <!-- Store listing CTA -->
+      <div style="margin-top:22px;padding-top:16px;border-top:1px dashed var(--wire2)">
+        <div style="display:flex;align-items:flex-start;gap:12px;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:12px;padding:14px 14px">
+          <div style="font-size:24px;line-height:1.2">🏪</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:900;color:var(--peach-dark);margin-bottom:3px">Agent Store に出店する</div>
+            <div id="teamStoreSubText" style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:9px">
+              このチームを丸ごとストアに出すと、他のユーザーが <b>1 クリックで自分のアカウントに複製</b> できます。買い切り価格の 70% + 利用料の 10% が収益になります。
+            </div>
+            <button id="teamListBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.5);color:var(--peach-dark);border-radius:9px;padding:8px 14px;font-size:11.5px;font-weight:800;cursor:pointer">＋ 出店フォームを開く</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -8703,6 +8717,26 @@ function openTeamEdit(teamId){
   document.getElementById('teamEditName').value  = team.name  || '';
   document.getElementById('teamEditGoal').value  = team.team_goal || '';
   document.getElementById('teamEditMsg').textContent = '';
+  // Reflect existing store listing state on the CTA
+  var listBtn = document.getElementById('teamListBtn');
+  var subTxt  = document.getElementById('teamStoreSubText');
+  var m = team.marketplace || {};
+  if(listBtn){
+    listBtn.onclick = function(){
+      closeTeamEdit();
+      openListingForm(team.id);
+    };
+    if(m.is_listed){
+      listBtn.textContent = '🏪 ' + L('出店内容を編集','Edit listing');
+      if(subTxt) subTxt.innerHTML = '<span style="color:#10b981;font-weight:800">✓ '+L('出店中','Live')+'</span> · '+(m.uses_count||0)+' '+L('回利用','uses')+(m.price_jpy>0?' · ¥'+m.price_jpy.toLocaleString():' · 無料');
+    } else if(m.status==='paused'){
+      listBtn.textContent = '🏪 ' + L('再公開する','Re-publish');
+      if(subTxt) subTxt.innerHTML = '<span style="color:var(--text3);font-weight:700">⏸ '+L('一時停止中','Paused')+'</span> — '+L('再公開できます','You can re-publish anytime.');
+    } else {
+      listBtn.textContent = '＋ ' + L('出店フォームを開く','Open listing form');
+      if(subTxt) subTxt.innerHTML = 'このチームを丸ごとストアに出すと、他のユーザーが <b>1 クリックで自分のアカウントに複製</b> できます。買い切り価格の 70% + 利用料の 10% が収益になります。';
+    }
+  }
   document.getElementById('teamEditOverlay').classList.add('open');
 }
 function closeTeamEdit(){
@@ -8990,11 +9024,14 @@ function renderMarket(){
       ? '<span class="mc-price">¥'+priceJpy.toLocaleString()+'</span>'
       : '<span class="mc-price free">無料</span>';
     if(purchasedHere) priceBadge = '<span class="mc-price purchased">✓ 購入済</span>';
+    var teamBadge = m.is_team
+      ? '<span style="display:inline-block;background:rgba(251,146,60,.14);color:var(--peach-dark);font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:99px;letter-spacing:.04em;margin-right:5px;vertical-align:middle">🎯 TEAM · '+(m.member_count||0)+'</span>'
+      : '';
     return '<div class="market-card-wrap" style="position:relative">'
       + '<button type="button" class="market-card" data-id="'+esc(m.listing_id)+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
       + ribbon
       + '<div class="mc-head"><div class="mc-av">'+_avHTML(m.agent?.avatar)+'</div>'
-      + '<div style="flex:1;min-width:0"><div class="mc-name">'+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div>'
+      + '<div style="flex:1;min-width:0"><div class="mc-name">'+teamBadge+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div>'
       + priceBadge
       + '</div>'
       + '<div class="mc-desc">'+esc(m.description)+'</div>'
@@ -9389,7 +9426,9 @@ function openListingForm(agentId){
   // Pre-fill if already listed
   var m = ag.marketplace || {};
   document.getElementById('lsTitle').value = m.title || ag.name || '';
-  document.getElementById('lsDesc').value = m.description || ag.persona || '';
+  // Teams have an empty persona — fall back to team_goal so creators
+  // don't have to retype the team description.
+  document.getElementById('lsDesc').value = m.description || ag.persona || ag.team_goal || '';
   var prefilledCat = m.category || 'other';
   document.querySelectorAll('input[name="lsCat"]').forEach(function(r){
     r.checked = r.value===prefilledCat;
@@ -10343,7 +10382,7 @@ function _mentionMembers(){
   // Returns [{key, name, label, isAI}] for the active group's members + AI.
   var ag = agents.find(function(a){return a.id===activeId;});
   if(!ag || !ag.is_group) return [];
-  var members = (ag.members || []).map(function(m){
+  var humans = (ag.members || []).map(function(m){
     var name = m.name || (m.email||'').split('@')[0] || 'member';
     return {
       key: name.replace(/\s+/g,''),     // mention token (no spaces)
@@ -10353,8 +10392,31 @@ function _mentionMembers(){
       isMe: m.user_id === me?.id,
     };
   });
-  // Always include @AI as the first option
-  return [{ key:'AI', name:'AI', email:'', isAI:true, isMe:false }].concat(members);
+  // Team groups: surface every cloned AI member so the user can pick one
+  // by name (e.g. @SocialManager). Falls back to @AI which routes via
+  // the team-default member picker on the server.
+  var teamAIs = [];
+  if(ag.is_team && Array.isArray(ag.team_member_agent_ids)){
+    teamAIs = ag.team_member_agent_ids
+      .map(function(id){ return (agents||[]).find(function(a){return a.id===id;}); })
+      .filter(Boolean)
+      .map(function(a){
+        var nm = a.name || 'AI';
+        return {
+          key: nm.replace(/\s+/g,''),
+          name: nm,
+          avatar: a.avatar || '🤖',
+          email: '',
+          isAI: true,
+          isTeamAI: true,
+          isMe: false,
+        };
+      });
+  }
+  // Always include @AI as the first option, then team AIs (if any), then humans
+  return [{ key:'AI', name:'AI', email:'', isAI:true, isMe:false }]
+    .concat(teamAIs)
+    .concat(humans);
 }
 
 function _mentionFindStart(text, cursor){
@@ -10381,14 +10443,22 @@ function _mentionRender(){
   var html = '<div class="mention-picker-head">'+L('メンバーをメンション','Mention someone')+'</div>';
   _mentionState.items.forEach(function(it, i){
     var initial = (it.name || '?').charAt(0).toUpperCase();
-    var av = it.isAI
-      ? '<div class="mr-av">🤖</div>'
-      : '<div class="mr-av" style="background:'+_userColor(it.email||it.name)+'">'+esc(initial)+'</div>';
+    var av;
+    if(it.isTeamAI){
+      av = '<div class="mr-av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa);font-size:14px">'+esc(it.avatar||'🤖')+'</div>';
+    } else if(it.isAI){
+      av = '<div class="mr-av">🤖</div>';
+    } else {
+      av = '<div class="mr-av" style="background:'+_userColor(it.email||it.name)+'">'+esc(initial)+'</div>';
+    }
+    var tag = it.isTeamAI
+      ? '<span class="mr-tag">'+L('チームの AI','Team AI')+'</span>'
+      : (it.isAI ? '<span class="mr-tag">'+L('AI を呼ぶ','Call the AI')+'</span>' : '');
     html += '<div class="mention-row '+(it.isAI?'is-ai ':'')+(i===_mentionState.sel?'sel':'')+'" '
          +  'data-idx="'+i+'" onmousedown="event.preventDefault();_mentionPick('+i+')">'
          +  av
          +  '<span class="mr-name">'+esc(it.name)+(it.isMe?' <span class="mr-tag">'+L('(あなた)','(you)')+'</span>':'')+'</span>'
-         +  (it.isAI ? '<span class="mr-tag">'+L('AI を呼ぶ','Call the AI')+'</span>' : '')
+         +  tag
          +  '</div>';
   });
   picker.innerHTML = html;

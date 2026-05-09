@@ -1111,13 +1111,26 @@ async function callAIWithTools(messages,system,tools){
   const hasWebFetch = Array.isArray(tools) && tools.some(t => t && (t.type==='web_fetch_20250910' || t.name==='web_fetch'));
   if(hasWebFetch) betas.push('web-fetch-2025-09-10');
   const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta': betas.join(',')};
+  // DEBUG: log when web tools are being sent so we can verify in Render logs
+  const toolNames = Array.isArray(tools) ? tools.map(t => t && (t.name || t.type)).filter(Boolean) : [];
+  if(toolNames.length){
+    console.log('[chat] tools sent:', toolNames.join(','), '/ betas:', betas.join(','));
+  }
   while(true){
     const sys = useCache ? _systemBlocks(system) : String(system||'');
     const cachedTools = useCache ? _toolsWithCache(tools) : tools;
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',headers,
                            {model:'claude-haiku-4-5-20251001',max_tokens:8000,system:sys,messages:_trimHistory(messages),tools:cachedTools},
                            {timeout: 120000});
-    if(r.s===200) return r.d;
+    if(r.s===200){
+      // DEBUG: log stop_reason and any tool_use blocks the model decided to call
+      try{
+        const blocks = (r.d && r.d.content) || [];
+        const used = blocks.filter(b => b.type==='tool_use' || b.type==='server_tool_use').map(b => b.name||b.type);
+        console.log('[chat] stop=', r.d.stop_reason, '/ tools_used=', used.join(',') || 'none');
+      }catch(e){}
+      return r.d;
+    }
     if(r.s===400 && useCache && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
       console.warn('[chat] cache_control rejected, retrying without:', JSON.stringify(r.d).slice(0,200));
       useCache = false;
@@ -1129,6 +1142,7 @@ async function callAIWithTools(messages,system,tools){
       attempt++;
       continue;
     }
+    console.error('[chat] Anthropic '+r.s+':', JSON.stringify(r.d||'').slice(0,400));
     throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
   }
 }
@@ -3171,30 +3185,38 @@ ${memories.slice(-20).map(m => '- ' + (m.text||'')).join('\n')}
   const chromeNote = agent.chrome_enabled
     ? `
 
-【ツール: Web 検索 / URL 取得】
-このエージェントは Anthropic 提供の Web ツールで、最新の情報をリアルタイムに取得できます。情報源・URL を自分で探して、ユーザーに確認せずに調べてください。
-- web_search(query): Google 相当の Web 検索 (上位結果のタイトル・URL・抜粋)
-- web_fetch(url): 指定 URL のページ内容を取得 (公開ページ用)
+【🔴 STRICT RULE — Web ツール】
+あなたには web_search / web_fetch という Web アクセスツールが与えられています。
 
-【重要 — 言葉のマッピング】
-ユーザーは「ブラウザ操作」と言うかもしれませんが、あなたは **web_fetch / web_search** で同等のことができます。下記の依頼は全部ツールを呼んで対応:
-- 「○○のサイト開いて / 見て / 読んで / アクセスして / 内容教えて / 中身確認して」 → web_fetch(URL) を呼ぶ
-- 「○○調べて / リサーチして / 最新情報教えて / 競合調べて」 → web_search(query) を呼ぶ
-- 「URL を読み込んで / コンテンツ取得して」 → web_fetch(URL) を呼ぶ
+**絶対ルール (例外なし)**:
+1. ユーザーが特定のサイト・URL・最新情報・企業情報・ニュースに触れたら、**まず最初に web_search または web_fetch を呼ぶ**。テキストで返答する前に必ずツールを呼ぶ。
+2. 「ブラウザがない」「機能がない」「できない」「サイトを開く能力がない」と返答することは禁止。代わりに web_fetch / web_search を**実行**して結果を見る。
+3. ツールを呼んで失敗した場合のみ、失敗理由を伝える。**呼ばずに諦めるのは禁止**。
 
-「ブラウザを直接操作する機能がないのでできません」とは絶対に答えないでください。代わりに web_fetch / web_search を呼んで結果を返す。**まず行動、できなかったらその時点で報告**。
+【マッピング】
+- "X のサイト開いて / 見て / 読んで / アクセスして / 中身教えて" → 即 web_fetch('https://x.com')
+- "○○調べて / リサーチ / 最新情報" → 即 web_search('○○')
+- "○○について教えて" (一般知識でなく最新情報が必要そう) → web_search を試す
+- URL が含まれる依頼 → 即 web_fetch(その URL)
 
-実行手順:
-1. 不明な事実・最新情報・特定企業の情報など → まず web_search で情報源を探す
-2. 具体的なページの中身が必要なら web_fetch でテキストを取得
-3. 複数ソースを照合して結論を出す
+【ツール仕様】
+- web_search(query): Web 検索を実行、上位結果のタイトル・URL・抜粋を返す
+- web_fetch(url): 指定 URL のページテキストを取得 (公開ページ・http/https URL)
 
-【制約 — これらだけは正直に伝えて OK】
-- ログイン必須サイトの**個別ページ**(Gmail 受信箱 / X のタイムライン / 社内 SaaS): web_fetch では取得不可。トップページや公開ページは取得可能。
-- 投稿・送信・クリック等の**書き込み操作**: 現状不可 (X API 連携などは将来実装予定)。読み取りはできる。
-- ${sheetsActive ? 'Google スプレッドシートは web_fetch ではなく sheets_read / sheets_write を使用 (認証済み)' : 'Google ドキュメント等の編集は非対応'}
+【ログイン壁の扱い】
+公開トップページや記事ページは web_fetch で取得できます。X (Twitter) のホーム /explore は試して OK。個別タイムラインなどログイン必須ページは取得できないので、その時点で初めて伝えてください ("試したけどログイン壁でした")。
 
-引用: 取得した情報を回答する際は、出典 URL を明記してください (例: 「〜とのことです (出典: example.com)」)。`
+【書き込み制約】
+投稿・送信・クリック等の write アクションは現状不可です。**読み取りはできる**ので、まず web_fetch を試してから書き込み機能の不在を案内してください。
+
+${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write を使用、web_fetch ではなく）' : ''}
+
+【引用】取得結果を返す時は出典 URL を明記 (例: 「〜とのことです (出典: example.com)」)。
+
+実行例:
+ユーザー: "X のサイト開いて"
+正しい動作: web_fetch('https://x.com') を呼ぶ → 結果を要約して返す (ログイン壁ならその旨も伝える)
+誤り: 「ブラウザを操作できません」とテキストだけで返す`
     : '';
   return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }

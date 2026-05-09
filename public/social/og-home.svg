@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="-apple-system, 'Helvetica Neue', 'Hiragino Sans', sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff7ee"/>
+      <stop offset="55%" stop-color="#fdf8f3"/>
+      <stop offset="100%" stop-color="#fde8d8"/>
+    </linearGradient>
+    <linearGradient id="peach" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="80%" cy="20%" r="50%">
+      <stop offset="0%" stop-color="rgba(251,146,60,0.32)"/>
+      <stop offset="100%" stop-color="rgba(251,146,60,0)"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="10%" cy="90%" r="55%">
+      <stop offset="0%" stop-color="rgba(167,139,250,0.20)"/>
+      <stop offset="100%" stop-color="rgba(167,139,250,0)"/>
+    </radialGradient>
+    <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#fb923c" fill-opacity="0.10"/>
+    </pattern>
+  </defs>
+
+  <!-- Base gradient + texture -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+  <rect width="1200" height="630" fill="url(#glow1)"/>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+
+  <!-- TOP-LEFT brand strip -->
+  <g transform="translate(70, 60)">
+    <rect x="0"  y="0"  width="22" height="100" rx="11" fill="url(#peach)"/>
+    <rect x="32" y="22" width="22" height="78"  rx="11" fill="url(#peach)" opacity="0.65"/>
+    <rect x="64" y="44" width="22" height="56"  rx="11" fill="url(#peach)" opacity="0.35"/>
+    <text x="108" y="68" font-size="26" font-weight="800" letter-spacing="3" fill="#1a0a00">MY AI AGENT</text>
+  </g>
+
+  <!-- HEADLINE — center -->
+  <g transform="translate(70, 220)">
+    <text x="0" y="0" font-family="'Bebas Neue', Impact, sans-serif" font-size="118" font-weight="900" letter-spacing="3" fill="#1a0a00">BUILD YOUR OWN</text>
+    <text x="0" y="118" font-family="'Bebas Neue', Impact, sans-serif" font-size="118" font-weight="900" letter-spacing="3" fill="url(#peach)">AI TEAM.</text>
+  </g>
+
+  <!-- Subheadline -->
+  <text x="70" y="475" font-size="24" font-weight="500" fill="#5c3a1e">Hire, customize, and ship AI agents in minutes — not weeks.</text>
+
+  <!-- Feature pills -->
+  <g transform="translate(70, 510)" font-size="14" font-weight="700">
+    <g transform="translate(0,0)">
+      <rect width="130" height="36" rx="18" fill="rgba(251,146,60,0.10)" stroke="rgba(251,146,60,0.32)"/>
+      <text x="65" y="23" text-anchor="middle" fill="#ea580c">10 templates</text>
+    </g>
+    <g transform="translate(140,0)">
+      <rect width="110" height="36" rx="18" fill="rgba(251,146,60,0.10)" stroke="rgba(251,146,60,0.32)"/>
+      <text x="55" y="23" text-anchor="middle" fill="#ea580c">16 skills</text>
+    </g>
+    <g transform="translate(258,0)">
+      <rect width="130" height="36" rx="18" fill="rgba(251,146,60,0.10)" stroke="rgba(251,146,60,0.32)"/>
+      <text x="65" y="23" text-anchor="middle" fill="#ea580c">Group chat</text>
+    </g>
+    <g transform="translate(396,0)">
+      <rect width="130" height="36" rx="18" fill="rgba(34,197,94,0.10)" stroke="rgba(34,197,94,0.32)"/>
+      <text x="65" y="23" text-anchor="middle" fill="#15803d">Agent Store</text>
+    </g>
+  </g>
+
+  <!-- RIGHT — Compact chat preview stack -->
+  <g transform="translate(770, 70)">
+    <!-- User bubble -->
+    <g transform="translate(40, 0)">
+      <rect width="350" height="56" rx="28" fill="#ffffff" stroke="rgba(180,120,80,0.16)"/>
+      <text x="26" y="36" font-size="17" fill="#1a0a00" font-weight="600">Build a sales agent for me</text>
+    </g>
+    <!-- AI bubble with reply -->
+    <g transform="translate(0, 80)">
+      <rect width="380" height="80" rx="28" fill="url(#peach)"/>
+      <text x="26" y="32" font-size="13" fill="rgba(255,255,255,0.88)" font-weight="800" letter-spacing="0.5">🤖 SALES AGENT</text>
+      <text x="26" y="58" font-size="17" fill="white" font-weight="600">Done. 5 follow-ups drafted ✓</text>
+    </g>
+    <!-- User bubble 2 -->
+    <g transform="translate(70, 184)">
+      <rect width="280" height="56" rx="28" fill="#ffffff" stroke="rgba(180,120,80,0.16)"/>
+      <text x="26" y="36" font-size="17" fill="#1a0a00" font-weight="600">Schedule the outreach</text>
+    </g>
+    <!-- AI bubble 2 -->
+    <g transform="translate(20, 264)">
+      <rect width="320" height="56" rx="28" fill="url(#peach)"/>
+      <text x="26" y="36" font-size="17" fill="white" font-weight="700">Sent ✓ — 12 prospects</text>
+    </g>
+    <!-- User bubble 3 -->
+    <g transform="translate(100, 344)">
+      <rect width="240" height="56" rx="28" fill="#ffffff" stroke="rgba(180,120,80,0.16)"/>
+      <text x="26" y="36" font-size="17" fill="#1a0a00" font-weight="600">Track replies</text>
+    </g>
+  </g>
+
+  <!-- BOTTOM-RIGHT URL pill -->
+  <g transform="translate(940, 555)">
+    <rect width="220" height="40" rx="20" fill="#1a0a00"/>
+    <text x="110" y="26" text-anchor="middle" font-size="15" fill="#fff5e6" font-weight="700">myaiagents.agency</text>
+  </g>
+</svg>

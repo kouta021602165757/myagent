@@ -1807,6 +1807,10 @@ body{color:#f0f0f8;}
   </div>
 </a>
     </div>
+    <button class="sb-search-btn" onclick="goHome()" title="Home" style="margin-bottom:6px">
+      <span style="font-size:12px">🏠</span>
+      <span style="flex:1;text-align:left;color:var(--text3)">Home</span>
+    </button>
     <button class="sb-search-btn" onclick="openSearch()" title="Search (⌘K)">
       <span style="font-size:12px">🔍</span>
       <span style="flex:1;text-align:left;color:var(--text3)" data-i18n="navSearch">検索</span>
@@ -5715,8 +5719,24 @@ function renderAll(){
   updateBalance();
   updatePlanBadge();
   renderAgList();
-  if(agents.length>0) openAgent(activeId&&agents.find(a=>a.id===activeId)?activeId:agents[0].id);
-  else{ document.getElementById('emptyWrap').style.display=''; document.getElementById('chatWrap').style.display='none'; }
+  // "Open last chat on startup" preference (default off → land on home dashboard).
+  const openLast = _prefBool('behav_open_last', false);
+  if(openLast && agents.length>0){
+    openAgent(activeId&&agents.find(a=>a.id===activeId)?activeId:agents[0].id);
+  } else {
+    goHome();
+  }
+}
+
+/** Show the home dashboard (close any active chat, render kinds row). */
+function goHome(){
+  activeId = null;
+  document.getElementById('emptyWrap').style.display='';
+  document.getElementById('chatWrap').style.display='none';
+  // Clear sidebar selection
+  try{ document.querySelectorAll('.ag-item').forEach(el=>el.classList.remove('on')); }catch(e){}
+  try{ renderHomeDashboard(); }catch(e){}
+  if(typeof _stopGroupPoll === 'function') _stopGroupPoll();
 }
 
 function updatePlanBadge(){

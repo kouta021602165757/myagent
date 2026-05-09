@@ -5416,11 +5416,13 @@ async function openAgent(id){
   if(isGroup){
     actsHTML += '<button class="ct-act wide invite" onclick="openInviteModal(\''+ag.id+'\')" title="メンバーを招待">＋ 招待</button>';
     actsHTML += '<button class="ct-act wide members" onclick="openMemberPanel(\''+ag.id+'\')" title="メンバー">👥 '+memberCount+'</button>';
-    actsHTML += '<button class="ct-act" onclick="openChatMenu(event)" title="その他">⋯</button>';
+    actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="グループ設定">⚙</button>';
   } else {
     actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
     actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
-    actsHTML += '<button class="ct-act" onclick="openChatMenu(event)" title="その他">⋯</button>';
+    if(!ag._is_joined_group){
+      actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
+    }
   }
   document.getElementById('chatTop').innerHTML=
     '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+

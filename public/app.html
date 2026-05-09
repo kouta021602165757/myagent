@@ -2807,6 +2807,18 @@ body{color:#f0f0f8;}
       </div>
       <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
     </div>
+
+    <!-- グループ作成 / 招待リンク管理 -->
+    <div id="editGroupBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(99,102,241,.05),rgba(99,102,241,.1));border:1px solid rgba(99,102,241,.22);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#4338ca;display:flex;align-items:center;gap:6px">🤝 グループを作成</div>
+          <div id="editGroupDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">仲間を招待して、このエージェントと一緒に話せるグループを作ります</div>
+        </div>
+      </div>
+      <button id="editGroupBtn" type="button" onclick="_promoteToGroupFromEdit()" style="margin-top:10px;width:100%;background:#fff;color:#4338ca;border:1px solid rgba(99,102,241,.4);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ グループを作成して招待</button>
+    </div>
+
     <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
 
     <!-- データ操作: エクスポート / ブックマーク -->
@@ -8301,6 +8313,17 @@ function openEditAgent(id){
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
   if(typeof _renderExtensionStatus==='function') _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn',!!ag.extension_enabled);
   _setEditModel(ag.model || 'sonnet');
+  // Group section: swap copy when already a group
+  const grpBtn = document.getElementById('editGroupBtn');
+  const grpDesc = document.getElementById('editGroupDesc');
+  if(ag.is_group){
+    const memCount = (ag.members||[]).length || ag.member_count || 1;
+    if(grpBtn) grpBtn.textContent = '🔗 招待リンクを管理';
+    if(grpDesc) grpDesc.textContent = 'すでにグループです (メンバー ' + memCount + ' 名)。招待リンク・メンバー管理はこちら。';
+  } else {
+    if(grpBtn) grpBtn.textContent = '＋ グループを作成して招待';
+    if(grpDesc) grpDesc.textContent = '仲間を招待して、このエージェントと一緒に話せるグループを作ります';
+  }
 
   // Reflect marketplace listing state
   var m = ag.marketplace || {};
@@ -8324,6 +8347,44 @@ function openEditAgent(id){
 function closeEditAgent(){
   document.getElementById('editPanel').style.right = '-320px';
   document.getElementById('editPanelOverlay').style.display = 'none';
+}
+
+// Promote the currently-edited agent to a group AND open the invite modal.
+// If it's already a group, just open the invite modal directly.
+async function _promoteToGroupFromEdit(){
+  const id = window._editAgentId;
+  if(!id) return;
+  const ag = agents.find(a => a.id === id);
+  if(!ag){ showToast('エージェントが見つかりません','ng'); return; }
+  // Already a group? Skip the promote step
+  if(ag.is_group){
+    closeEditAgent();
+    openInviteModal(id);
+    return;
+  }
+  // Confirm before promoting (it changes the agent semantics)
+  if(!confirm(isJa
+    ? ('「'+ag.name+'」をグループに昇格させますか？\n\nグループ化すると:\n・複数の人を招待できます\n・@AI でメンションされた時のみ AI が応答\n・AI 利用料はあなたの残高から消費されます\n\n後でいつでも元に戻せません (グループ削除は可能)。')
+    : ('Promote "'+ag.name+'" to a group?\nMultiple members can join. AI cost is charged to your balance.'))){
+    return;
+  }
+  try {
+    await api('POST', '/api/agents/' + id + '/invite', {
+      expires_in_days: 7,
+      max_members: 50,
+      require_approval: false,
+    });
+    // Update local agent state
+    ag.is_group = true;
+    ag.host_id = me.id;
+    ag.member_count = 1;
+    showToast(isJa?'グループ化しました':'Promoted to group','ok');
+    renderAgList();
+    closeEditAgent();
+    openInviteModal(id);
+  } catch(e){
+    showToast((isJa?'グループ化失敗: ':'Failed: ')+e.message, 'ng');
+  }
 }
 
 // Per-agent model picker (Haiku / Sonnet / Opus)

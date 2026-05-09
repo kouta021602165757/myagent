@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MY AI AGENT — ログイン / 新規登録</title>
+<title>MY AI AGENT — Sign in / Sign up</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -351,6 +351,18 @@ button{cursor:pointer;font-family:inherit;}
 <script>
 const API = '';
 
+// ── i18n helper (auth.html) ─────────────────────────────
+// English-default; flip to Japanese only for ja browsers (or ?lang=ja).
+var currentLang = 'en';
+(function _detectLang(){
+  var nav = (navigator.language || '').toLowerCase();
+  if(nav.startsWith('ja')) currentLang = 'ja';
+  try { var saved = localStorage.getItem('pref_lang'); if(['ja','en'].includes(saved)) currentLang = saved; } catch(e){}
+  var qs = (new URLSearchParams(location.search)).get('lang');
+  if(['ja','en'].includes(qs)) currentLang = qs;
+})();
+function L(ja, en){ return currentLang === 'ja' ? ja : (en || ja); }
+
 // ── Tab switch ──────────────────────────────────────────
 function switchTab(tab) {
   document.getElementById('tabLogin').classList.toggle('active', tab==='login');
@@ -364,7 +376,7 @@ function togglePw(id, btn) {
   const input = document.getElementById(id);
   const shown = input.type === 'text';
   input.type = shown ? 'password' : 'text';
-  btn.textContent = shown ? '表示' : '隠す';
+  btn.textContent = shown ? L('表示','Show') : L('隠す','Hide');
 }
 
 // ── Google OAuth ────────────────────────────────────────
@@ -407,7 +419,7 @@ function _vSignup(){
   var nMsg = document.getElementById('s-name-msg');
   var nInp = document.getElementById('s-name');
   if(name.length===0){ nIcon.textContent=''; nIcon.className='input-icon'; nMsg.textContent=''; nMsg.className='field-msg'; nInp.classList.remove('ok','err'); }
-  else if(name.length<2){ nIcon.textContent='✗'; nIcon.className='input-icon err'; nMsg.textContent='2文字以上で入力してください'; nMsg.className='field-msg err'; nInp.classList.add('err'); nInp.classList.remove('ok'); }
+  else if(name.length<2){ nIcon.textContent='✗'; nIcon.className='input-icon err'; nMsg.textContent=L('2文字以上で入力してください','At least 2 characters'); nMsg.className='field-msg err'; nInp.classList.add('err'); nInp.classList.remove('ok'); }
   else { nIcon.textContent='✓'; nIcon.className='input-icon ok'; nMsg.textContent=''; nMsg.className='field-msg'; nInp.classList.add('ok'); nInp.classList.remove('err'); }
 
   // email
@@ -415,7 +427,7 @@ function _vSignup(){
   var eMsg = document.getElementById('s-email-msg');
   var eInp = document.getElementById('s-email');
   if(email.length===0){ eIcon.textContent=''; eIcon.className='input-icon'; eMsg.textContent=''; eMsg.className='field-msg'; eInp.classList.remove('ok','err'); }
-  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ eIcon.textContent='✗'; eIcon.className='input-icon err'; eMsg.textContent='有効なメールアドレスを入力してください'; eMsg.className='field-msg err'; eInp.classList.add('err'); eInp.classList.remove('ok'); }
+  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ eIcon.textContent='✗'; eIcon.className='input-icon err'; eMsg.textContent=L('有効なメールアドレスを入力してください','Please enter a valid email'); eMsg.className='field-msg err'; eInp.classList.add('err'); eInp.classList.remove('ok'); }
   else { eIcon.textContent='✓'; eIcon.className='input-icon ok'; eMsg.textContent=''; eMsg.className='field-msg'; eInp.classList.add('ok'); eInp.classList.remove('err'); }
 
   // password strength
@@ -428,9 +440,9 @@ function _vSignup(){
   if(pass.length>=12 || (pass.length>=8 && /\d/.test(pass) && /[a-z]/i.test(pass))) strength++;
   if(pass.length>=12 && /\d/.test(pass) && /[a-zA-Z]/.test(pass) && /[^a-zA-Z0-9]/.test(pass)) strength++;
   if(pass.length===0){ label.textContent=''; }
-  else if(strength<=1){ bars[0].classList.add('s1'); label.classList.add('s1'); label.textContent='弱い ・ 8文字以上にしてください'; }
-  else if(strength===2){ bars[0].classList.add('s2'); bars[1].classList.add('s2'); label.classList.add('s2'); label.textContent='普通 ・ 数字や記号を入れるとより安全'; }
-  else { bars[0].classList.add('s3'); bars[1].classList.add('s3'); bars[2].classList.add('s3'); label.classList.add('s3'); label.textContent='強い ✓'; }
+  else if(strength<=1){ bars[0].classList.add('s1'); label.classList.add('s1'); label.textContent=L('弱い ・ 8文字以上にしてください','Weak · Use at least 8 characters'); }
+  else if(strength===2){ bars[0].classList.add('s2'); bars[1].classList.add('s2'); label.classList.add('s2'); label.textContent=L('普通 ・ 数字や記号を入れるとより安全','OK · Add numbers or symbols for safety'); }
+  else { bars[0].classList.add('s3'); bars[1].classList.add('s3'); bars[2].classList.add('s3'); label.classList.add('s3'); label.textContent=L('強い ✓','Strong ✓'); }
 
   // submit enable
   var ok = name.length>=2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && pass.length>=8 && terms;
@@ -448,8 +460,8 @@ function _vSignup(){
 async function doLogin() {
   const email = val('l-email'), pass = val('l-pass');
   hideErr('l-err');
-  if (!email || !pass) { showErr('l-err', 'メールアドレスとパスワードを入力してください'); return; }
-  setLoading('l-btn', true, 'ログイン中...');
+  if (!email || !pass) { showErr('l-err', L('メールアドレスとパスワードを入力してください','Please enter email and password')); return; }
+  setLoading('l-btn', true, L('ログイン中...','Signing in...'));
   try {
     const r = await post('/api/auth/login', { email, password: pass });
     localStorage.setItem('token', r.token);
@@ -460,7 +472,7 @@ async function doLogin() {
   } catch (e) {
     showErr('l-err', e.message);
   }
-  setLoading('l-btn', false, 'ログイン →');
+  setLoading('l-btn', false, L('ログイン →','Sign in →'));
 }
 
 // ── Signup ──────────────────────────────────────────────
@@ -468,13 +480,13 @@ async function doSignup() {
   const name = val('s-name'), email = val('s-email'), pass = val('s-pass');
   const terms = document.getElementById('s-terms').checked;
   hideErr('s-err');
-  if (!name) { showErr('s-err', 'お名前を入力してください'); return; }
-  if (name.length < 2) { showErr('s-err', 'お名前は2文字以上にしてください'); return; }
-  if (!email) { showErr('s-err', 'メールアドレスを入力してください'); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('s-err', '有効なメールアドレスを入力してください'); return; }
-  if (pass.length < 8) { showErr('s-err', 'パスワードは8文字以上にしてください'); return; }
-  if (!terms) { showErr('s-err', '利用規約への同意が必要です'); return; }
-  setLoading('s-btn', true, 'アカウント作成中...');
+  if (!name) { showErr('s-err', L('お名前を入力してください','Please enter your name')); return; }
+  if (name.length < 2) { showErr('s-err', L('お名前は2文字以上にしてください','Name must be at least 2 characters')); return; }
+  if (!email) { showErr('s-err', L('メールアドレスを入力してください','Please enter your email')); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('s-err', L('有効なメールアドレスを入力してください','Please enter a valid email')); return; }
+  if (pass.length < 8) { showErr('s-err', L('パスワードは8文字以上にしてください','Password must be at least 8 characters')); return; }
+  if (!terms) { showErr('s-err', L('利用規約への同意が必要です','You must agree to the Terms')); return; }
+  setLoading('s-btn', true, L('アカウント作成中...','Creating account...'));
   try {
     // Carry ?ref= referral code (from URL or localStorage stash) into the signup body
     var _qsRef = (new URLSearchParams(location.search)).get('ref') || '';
@@ -490,7 +502,7 @@ async function doSignup() {
   } catch (e) {
     showErr('s-err', e.message);
   }
-  setLoading('s-btn', false, 'アカウント作成 →');
+  setLoading('s-btn', false, L('アカウント作成 →','Create account →'));
 }
 
 // ── Helpers ─────────────────────────────────────────────
@@ -506,7 +518,7 @@ function setLoading(id, on, txt) {
 async function post(path, body) {
   const res = await fetch(API + path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'エラーが発生しました');
+  if (!res.ok) throw new Error(data.error || L('エラーが発生しました','An error occurred'));
   return data;
 }
 
@@ -523,7 +535,7 @@ window.onload = () => {
     if(p.get('tab') !== 'signin'){ setTimeout(() => { try{ switchTab('signup'); }catch(e){} }, 0); }
     var ref = document.createElement('div');
     ref.style.cssText = 'margin:14px auto 0;max-width:380px;padding:12px 16px;background:rgba(251,146,60,.08);border:.5px solid rgba(251,146,60,.25);border-radius:11px;color:var(--peach-dark);font-size:12.5px;text-align:center';
-    ref.innerHTML = '🎁 紹介リンクから登録 → <b>あなたに ¥500 進呈</b>';
+    ref.innerHTML = L('🎁 紹介リンクから登録 → <b>あなたに ¥500 進呈</b>','🎁 Sign up via referral link → <b>get $5 bonus</b>');
     var card = document.querySelector('.card') || document.body;
     card.insertBefore(ref, card.firstChild);
   }
@@ -539,78 +551,80 @@ window.onload = () => {
   if (p.get('reset')) showResetForm(p.get('reset'));
   if (p.get('error') === 'google_failed') {
     var reason = p.get('reason') || '';
-    var msg = 'Googleログインに失敗しました。';
-    if(reason==='not_configured') msg += 'サーバ設定が完了していません（管理者にお問い合わせください）。';
-    else if(reason==='access_denied') msg += '権限がキャンセルされました。';
-    else if(reason==='token_exchange_failed') msg += 'Googleからのトークン取得に失敗しました。';
-    else if(reason==='userinfo_failed') msg += 'Googleからのユーザー情報取得に失敗しました。';
-    else if(reason==='no_code') msg += '認可コードが取得できませんでした。';
-    else if(reason) msg += '（'+reason+'）もう一度お試しください。';
-    else msg += 'もう一度お試しください。';
+    var msg = L('Googleログインに失敗しました。','Google sign-in failed. ');
+    if(reason==='not_configured') msg += L('サーバ設定が完了していません（管理者にお問い合わせください）。','Server is not configured (please contact the administrator).');
+    else if(reason==='access_denied') msg += L('権限がキャンセルされました。','Permission was denied.');
+    else if(reason==='token_exchange_failed') msg += L('Googleからのトークン取得に失敗しました。','Failed to obtain a token from Google.');
+    else if(reason==='userinfo_failed') msg += L('Googleからのユーザー情報取得に失敗しました。','Failed to obtain user info from Google.');
+    else if(reason==='no_code') msg += L('認可コードが取得できませんでした。','No authorization code returned.');
+    else if(reason) msg += L('（'+reason+'）もう一度お試しください。',' ('+reason+') Please try again.');
+    else msg += L('もう一度お試しください。','Please try again.');
     showErr('l-err', msg);
   }
-  if (p.get('verified') === '1') showOk('l-err', '✅ メールアドレスを確認しました。ログインしてください。');
+  if (p.get('verified') === '1') showOk('l-err', L('✅ メールアドレスを確認しました。ログインしてください。','✅ Email verified. Please sign in.'));
 };
 
 // ── Forgot / Reset password ─────────────────────────────
 function showForgot() {
   document.getElementById('panel-login').innerHTML = `
-    <div class="title">パスワードを忘れた</div>
-    <div class="sub">登録メールアドレスにリセットリンクを送ります</div>
+    <div class="title">${L('パスワードを忘れた','Forgot password')}</div>
+    <div class="sub">${L('登録メールアドレスにリセットリンクを送ります','We will email a reset link')}</div>
     <div class="err-msg" id="f-msg"></div>
     <div class="field">
-      <div class="label-row"><span class="label">メールアドレス</span></div>
+      <div class="label-row"><span class="label">${L('メールアドレス','Email')}</span></div>
       <input class="input" type="email" id="f-email" placeholder="you@example.com">
     </div>
-    <button class="btn-submit" id="f-btn" onclick="doForgot()">リセットメールを送信</button>
-    <div class="form-foot"><a onclick="location.reload()">← ログインに戻る</a></div>`;
+    <button class="btn-submit" id="f-btn" onclick="doForgot()">${L('リセットメールを送信','Send reset email')}</button>
+    <div class="form-foot"><a onclick="location.reload()">${L('← ログインに戻る','← Back to sign in')}</a></div>`;
 }
 async function doForgot() {
   const email = document.getElementById('f-email').value.trim();
   if (!email) return;
-  setLoading('f-btn', true, '送信中...');
+  setLoading('f-btn', true, L('送信中...','Sending...'));
   try {
     await post('/api/auth/forgot-password', { email });
-    showOk('f-msg', '✅ 登録済みのメールアドレスであればリセットリンクを送信しました');
+    showOk('f-msg', L('✅ 登録済みのメールアドレスであればリセットリンクを送信しました','✅ If the email is registered, a reset link has been sent.'));
   } catch(e) { showErr('f-msg', e.message); }
-  setLoading('f-btn', false, 'リセットメールを送信');
+  setLoading('f-btn', false, L('リセットメールを送信','Send reset email'));
 }
 function showResetForm(token) {
   document.getElementById('panel-login').innerHTML = `
-    <div class="title">新しいパスワード</div>
-    <div class="sub">新しいパスワードを設定してください</div>
+    <div class="title">${L('新しいパスワード','New password')}</div>
+    <div class="sub">${L('新しいパスワードを設定してください','Set a new password')}</div>
     <div class="err-msg" id="r-err"></div>
     <div class="field">
-      <div class="label-row"><span class="label">新しいパスワード</span></div>
+      <div class="label-row"><span class="label">${L('新しいパスワード','New password')}</span></div>
       <div class="input-wrap">
-        <input class="input" type="password" id="r-pass" placeholder="8文字以上" autocomplete="new-password">
-        <button type="button" class="pw-toggle" onclick="togglePw('r-pass',this)">表示</button>
+        <input class="input" type="password" id="r-pass" placeholder="${L('8文字以上','At least 8 characters')}" autocomplete="new-password">
+        <button type="button" class="pw-toggle" onclick="togglePw('r-pass',this)">${L('表示','Show')}</button>
       </div>
     </div>
-    <button class="btn-submit" id="r-btn" onclick="doReset('${token}')">パスワードを変更</button>`;
+    <button class="btn-submit" id="r-btn" onclick="doReset('${token}')">${L('パスワードを変更','Change password')}</button>`;
 }
 async function doReset(token) {
   const pass = document.getElementById('r-pass').value;
-  if (pass.length < 8) { showErr('r-err', '8文字以上にしてください'); return; }
-  setLoading('r-btn', true, '変更中...');
+  if (pass.length < 8) { showErr('r-err', L('8文字以上にしてください','At least 8 characters')); return; }
+  setLoading('r-btn', true, L('変更中...','Changing...'));
   try {
     await post('/api/auth/reset-password', { token, password: pass });
-    showOk('r-err', '✅ パスワードを変更しました。ログインしてください');
+    showOk('r-err', L('✅ パスワードを変更しました。ログインしてください','✅ Password changed. Please sign in.'));
     setTimeout(() => { history.replaceState(null,'','/auth.html'); location.reload(); }, 2000);
   } catch(e) { showErr('r-err', e.message); }
-  setLoading('r-btn', false, 'パスワードを変更');
+  setLoading('r-btn', false, L('パスワードを変更','Change password'));
 }
 </script>
 
-<!-- ════ i18n: auto-translate to English for non-Japanese browsers ════ -->
+<!-- ════ i18n: keep JA hardcoded markup for ja browsers, auto-translate to EN for everyone else ════ -->
 <script>
 (function(){
-  var lang = navigator.language || navigator.userLanguage || 'ja';
-  var isJa = lang.startsWith('ja');
-  var params = new URLSearchParams(location.search);
-  if(params.get('lang')==='en') isJa=false;
-  if(params.get('lang')==='ja') isJa=true;
-  if(isJa) return;
+  // currentLang is set by the main <script> above (defaults to 'en', flips to 'ja' for ja browsers).
+  if(typeof currentLang === 'undefined') return;
+  if(currentLang === 'ja'){
+    // ja browser → markup is already Japanese, just sync the html lang attribute.
+    document.documentElement.lang = 'ja';
+    document.title = 'MY AI AGENT — ログイン / 新規登録';
+    return;
+  }
 
   var map = {
     'ログイン': 'Sign in',

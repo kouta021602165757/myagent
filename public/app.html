@@ -1749,7 +1749,7 @@ body{color:#f0f0f8;}
       <kbd style="font-size:9px;background:rgba(9,9,11,.06);border:.5px solid var(--wire2);padding:1px 4px;border-radius:4px;color:var(--text3);font-family:'JetBrains Mono','SF Mono',monospace">⌘K</kbd>
     </button>
     <div class="sb-new-row" style="position:relative">
-      <button class="sb-new" onclick="if(!token){showToast('ログインが必要です','ng');return;}toggleSbPlusMenu(event)" id="sbPlusBtn">
+      <button class="sb-new" onclick="if(!token){showToast(L('ログインが必要です','Sign in required'),'ng');return;}toggleSbPlusMenu(event)" id="sbPlusBtn">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <span>新規</span>
         <span style="margin-left:auto;font-size:10px;opacity:.7">▾</span>
@@ -3414,22 +3414,22 @@ body{color:#f0f0f8;}
 var API=location.origin;
 var AVATARS=['🤖','🦊','🐸','🐙','🦋','🐬','🦄','🐧','🦁','🐲','⭐','🌈','🦅','🐯','🦝','🐻','🧙','🤠','🥷','👾','👑','🧚','🐼','🦜'];
 var SKILLS=[
-  {id:'writing',icon:'✍️',name:'ライティング',desc:'メール・記事・提案書'},
-  {id:'research',icon:'🔍',name:'リサーチ',desc:'情報収集・分析'},
-  {id:'coding',icon:'💻',name:'プログラミング',desc:'コード作成・デバッグ'},
-  {id:'marketing',icon:'📣',name:'マーケティング',desc:'戦略・コピー'},
-  {id:'planning',icon:'📋',name:'プランニング',desc:'企画・タスク整理'},
-  {id:'analysis',icon:'📊',name:'データ分析',desc:'数値解析・レポート'},
-  {id:'translate',icon:'🌏',name:'翻訳',desc:'日英・多言語'},
-  {id:'support',icon:'🤝',name:'カスタマー対応',desc:'問い合わせ・FAQ'},
-  {id:'idea',icon:'💡',name:'アイデア出し',desc:'ブレスト・発想'},
-  {id:'teaching',icon:'🎓',name:'教育・解説',desc:'わかりやすく説明'},
-  {id:'ceo',icon:'👑',name:'アシスタントCEO',desc:'経営戦略・意思決定'},
-  {id:'coo',icon:'⚙️',name:'アシスタントCOO',desc:'業務最適化・オペレーション'},
-  {id:'secretary',icon:'📋',name:'秘書',desc:'スケジュール・調整・連絡'},
-  {id:'designer',icon:'🎨',name:'デザイナー',desc:'UI/UX・ビジュアル'},
-  {id:'sns',icon:'📱',name:'SNS担当',desc:'投稿作成・分析・集客'},
-  {id:'other',icon:'➕',name:'その他',desc:'上記以外のカスタム業務'},
+  {id:'writing',  icon:'✍️',name:L('ライティング','Writing'),       desc:L('メール・記事・提案書','Emails, articles, proposals')},
+  {id:'research', icon:'🔍',name:L('リサーチ','Research'),           desc:L('情報収集・分析','Gather and analyze info')},
+  {id:'coding',   icon:'💻',name:L('プログラミング','Programming'),  desc:L('コード作成・デバッグ','Write and debug code')},
+  {id:'marketing',icon:'📣',name:L('マーケティング','Marketing'),    desc:L('戦略・コピー','Strategy and copy')},
+  {id:'planning', icon:'📋',name:L('プランニング','Planning'),       desc:L('企画・タスク整理','Plans and task breakdown')},
+  {id:'analysis', icon:'📊',name:L('データ分析','Data analysis'),   desc:L('数値解析・レポート','Analytics and reports')},
+  {id:'translate',icon:'🌏',name:L('翻訳','Translation'),           desc:L('日英・多言語','JA/EN and multilingual')},
+  {id:'support',  icon:'🤝',name:L('カスタマー対応','Support'),      desc:L('問い合わせ・FAQ','Inquiries and FAQ')},
+  {id:'idea',     icon:'💡',name:L('アイデア出し','Ideation'),       desc:L('ブレスト・発想','Brainstorm and concept')},
+  {id:'teaching', icon:'🎓',name:L('教育・解説','Teaching'),         desc:L('わかりやすく説明','Explain clearly')},
+  {id:'ceo',      icon:'👑',name:L('アシスタントCEO','Assistant CEO'),desc:L('経営戦略・意思決定','Strategy and decisions')},
+  {id:'coo',      icon:'⚙️',name:L('アシスタントCOO','Assistant COO'),desc:L('業務最適化・オペレーション','Ops and process')},
+  {id:'secretary',icon:'📋',name:L('秘書','Secretary'),             desc:L('スケジュール・調整・連絡','Calendar, scheduling, comms')},
+  {id:'designer', icon:'🎨',name:L('デザイナー','Designer'),         desc:L('UI/UX・ビジュアル','UI/UX and visuals')},
+  {id:'sns',      icon:'📱',name:L('SNS担当','Social media'),       desc:L('投稿作成・分析・集客','Posts, analytics, growth')},
+  {id:'other',    icon:'➕',name:L('その他','Other'),               desc:L('上記以外のカスタム業務','Custom tasks beyond the above')},
 ];
 var CHIPS={
   writing:['メールの下書き','キャッチコピー10個','ブログ記事を書いて'],
@@ -4917,8 +4917,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
       var pq = qs.get('payout');
       if(pq){
         history.replaceState({}, '', location.pathname);
-        if(pq==='onboarded') showToast('銀行口座の登録が完了しました','ok');
-        if(pq==='refresh')   showToast('銀行口座の登録を再開してください','ng');
+        if(pq==='onboarded') showToast(L('銀行口座の登録が完了しました','Bank account registered'),'ok');
+        if(pq==='refresh')   showToast(L('銀行口座の登録を再開してください','Please resume bank account setup'),'ng');
         // Auto-open creator tab so user sees the result
         setTimeout(function(){
           openSettings();
@@ -5001,7 +5001,7 @@ function showVerifyBanner(){
 }
 
 async function resendVerify(){
-  try{ await api('POST','/api/auth/resend-verify'); showToast('確認メールを送信しました','ok'); }
+  try{ await api('POST','/api/auth/resend-verify'); showToast(L('確認メールを送信しました','Verification email sent'),'ok'); }
   catch(e){ showToast(e.message,'ng'); }
 }
 
@@ -6348,7 +6348,7 @@ function closeGroupSettings(){
 async function _grpSettingsRename(){
   const agId = document.getElementById('grpSetActiveId').value;
   const newName = (document.getElementById('grpSetName').value || '').trim();
-  if(!newName){ showToast('名前を入力してください', 'ng'); return; }
+  if(!newName){ showToast(L('名前を入力してください','Please enter a name'), 'ng'); return; }
   try {
     await api('PATCH', '/api/agents/'+agId, {name: newName});
     const ag = agents.find(a => a.id === agId);
@@ -6414,7 +6414,7 @@ async function _grpSettingsToggleApproval(required){
 async function _grpSettingsTransfer(){
   const agId = document.getElementById('grpSetActiveId').value;
   const newHostId = document.getElementById('grpSetTransferTo').value;
-  if(!newHostId){ showToast('移譲先を選択してください', 'ng'); return; }
+  if(!newHostId){ showToast(L('移譲先を選択してください','Please pick a transfer recipient'), 'ng'); return; }
   if(!confirm(isJa?'本当に所有権を移譲しますか？AI 利用料は新しいホストの残高から消費されるようになります。':'Transfer ownership? AI cost will charge the new host going forward.')) return;
   try {
     await api('POST', '/api/agents/'+agId+'/transfer', {new_host_id: newHostId});
@@ -6436,7 +6436,7 @@ function exportChatForEditAgent(format){
   const id = window._editAgentId;
   if(!id) return;
   const ag = agents.find(a => a.id === id);
-  if(!ag){ showToast('エージェントが見つかりません','ng'); return; }
+  if(!ag){ showToast(L('エージェントが見つかりません','Agent not found'),'ng'); return; }
   _exportAgent(ag, format);
 }
 function exportChat(format){
@@ -6792,7 +6792,7 @@ async function onAvatarUpload(e, mode){
       document.querySelectorAll('.av-cell').forEach(function(b){ b.classList.remove('sel'); });
     } else if(mode === 'edit'){
       var id = window._editAgentId;
-      if(!id){ showToast('エージェントが見つかりません','ng'); return; }
+      if(!id){ showToast(L('エージェントが見つかりません','Agent not found'),'ng'); return; }
       // Optimistic UI
       var ag = agents.find(function(a){return a.id===id;});
       if(ag) ag.avatar = dataUri;
@@ -7474,7 +7474,7 @@ function _renderStreamingBody(text, toolLog){
 }
 
 async function delAgent(id){
-  if(!confirm('このエージェントを削除しますか？'))return;
+  if(!confirm(L('このエージェントを削除しますか？','Delete this agent?')))return;
   try{ await api('DELETE',`/api/agents/${id}`); }catch{}
   agents=agents.filter(a=>a.id!==id); activeId=null;
   renderAgList();
@@ -7611,7 +7611,7 @@ async function openInviteModal(agId){
   };
   document.getElementById('grpShareCopy').onclick = async () => {
     try { await navigator.clipboard.writeText(url); showToast(isJa?'リンクをコピーしました':'Copied', 'ok'); }
-    catch(e){ showToast('コピー失敗', 'ng'); }
+    catch(e){ showToast(L('コピー失敗','Copy failed'), 'ng'); }
   };
   // QR rendering: lightweight pattern using URL-encoded data
   const qrEl = document.getElementById('grpInviteQR');
@@ -7988,20 +7988,20 @@ function _renderRatingStars(){
 }
 async function submitDetailReview(){
   if(!_detailListingId) return;
-  if(!_detailRating){ showToast('星を選んでください','ng'); return; }
+  if(!_detailRating){ showToast(L('星を選んでください','Please pick a star rating'),'ng'); return; }
   var comment = document.getElementById('ldRvComment').value.trim();
   try{
     await api('POST','/api/marketplace/'+_detailListingId+'/review',{rating:_detailRating, comment});
-    showToast('評価を投稿しました','ok');
+    showToast(L('評価を投稿しました','Review posted'),'ok');
     openListingDetail(_detailListingId); // refresh
   }catch(e){ showToast(e.message||'失敗','ng'); }
 }
 async function deleteDetailReview(){
   if(!_detailListingId) return;
-  if(!confirm('この評価を削除しますか？')) return;
+  if(!confirm(L('この評価を削除しますか？','Delete this review?'))) return;
   try{
     await api('DELETE','/api/marketplace/'+_detailListingId+'/review');
-    showToast('評価を削除しました','ok');
+    showToast(L('評価を削除しました','Review deleted'),'ok');
     openListingDetail(_detailListingId);
   }catch(e){ showToast(e.message||'失敗','ng'); }
 }
@@ -8023,7 +8023,7 @@ async function cloneListingFromDetail(){
       closeMarket();
       renderAgList();
       openAgent(r.agent.id);
-      showToast('チームに追加しました','ok');
+      showToast(L('チームに追加しました','Added to your team'),'ok');
     }
   }catch(e){ showToast(e.message||'追加失敗','ng'); }
 }
@@ -8087,7 +8087,7 @@ function _confirmPurchase(listingId, detail){
             me.purchases = me.purchases || [];
             if(pr.purchase) me.purchases.push(pr.purchase);
             if(typeof pr.balance_jpy === 'number') me.balance_jpy = pr.balance_jpy;
-            showToast('購入しました','ok');
+            showToast(L('購入しました','Purchased'),'ok');
             cleanup(true);
             return;
           }
@@ -8133,7 +8133,7 @@ function closePublishSuccess(){
 }
 function psCopyUrl(){
   var v = document.getElementById('psUrlInput').value;
-  if(navigator.clipboard) navigator.clipboard.writeText(v).then(function(){ showToast('URLをコピーしました','ok'); });
+  if(navigator.clipboard) navigator.clipboard.writeText(v).then(function(){ showToast(L('URLをコピーしました','URL copied'),'ok'); });
 }
 
 /* ── Share listing (SNS) ─────────────────────────────────── */
@@ -8154,7 +8154,7 @@ function closeShareListing(){
 }
 function _copyShareUrl(){
   var url = document.getElementById('shareUrl').value;
-  navigator.clipboard.writeText(url).then(function(){ showToast('URLをコピーしました','ok'); });
+  navigator.clipboard.writeText(url).then(function(){ showToast(L('URLをコピーしました','URL copied'),'ok'); });
 }
 
 async function cloneAndTry(listingId, demoIdx){
@@ -8177,7 +8177,7 @@ async function cloneAndTry(listingId, demoIdx){
         var ci = document.getElementById('ci');
         if(ci){ ci.value = prompt; ci.focus(); }
       }, 100);
-      showToast('追加しました。送信ボタンで実行できます','ok');
+      showToast(L('追加しました。送信ボタンで実行できます','Added. Hit Send to run it.'),'ok');
     }
   }catch(e){ showToast(e.message||'追加失敗','ng'); }
 }
@@ -8186,7 +8186,7 @@ async function cloneAndTry(listingId, demoIdx){
 var _listingAgentId = null;
 function openListingForm(agentId){
   var ag = agents.find(function(a){return a.id===agentId;});
-  if(!ag){ showToast('エージェントが見つかりません','ng'); return; }
+  if(!ag){ showToast(L('エージェントが見つかりません','Agent not found'),'ng'); return; }
   _listingAgentId = agentId;
   closeEditAgent();
 
@@ -8270,15 +8270,15 @@ async function submitListing(){
   ].filter(Boolean);
   var tags = Array.from(document.querySelectorAll('input[name="lsTag"]:checked')).map(function(c){return c.value;}).slice(0,5);
 
-  if(title.length<2 || title.length>60){ showToast('タイトルは 2〜60 文字で入力してください','ng'); return; }
-  if(description.length<20 || description.length>500){ showToast('説明は 20〜500 文字で入力してください','ng'); return; }
+  if(title.length<2 || title.length>60){ showToast(L('タイトルは 2〜60 文字で入力してください','Title must be 2–60 characters'),'ng'); return; }
+  if(description.length<20 || description.length>500){ showToast(L('説明は 20〜500 文字で入力してください','Description must be 20–500 characters'),'ng'); return; }
 
   var priceMode = (document.querySelector('input[name="lsPriceMode"]:checked')||{}).value || 'free';
   var price_jpy = 0;
   if(priceMode === 'paid'){
     price_jpy = parseInt(document.getElementById('lsPrice').value, 10);
-    if(!Number.isFinite(price_jpy) || price_jpy < 100){ showToast('有料の場合、価格は ¥100 以上で入力してください','ng'); return; }
-    if(price_jpy > 100000){ showToast('価格の上限は ¥100,000 です','ng'); return; }
+    if(!Number.isFinite(price_jpy) || price_jpy < 100){ showToast(L('有料の場合、価格は ¥100 以上で入力してください','For paid listings, price must be at least ¥100'),'ng'); return; }
+    if(price_jpy > 100000){ showToast(L('価格の上限は ¥100,000 です','Maximum price is ¥100,000'),'ng'); return; }
   }
 
   var btn = document.getElementById('lsSubmitBtn');
@@ -8295,7 +8295,7 @@ async function submitListing(){
     if(visibility === 'public' && r.listing && r.listing.listing_id){
       openPublishSuccess(r.listing.listing_id, title || (ag && ag.name), description);
     } else {
-      showToast('出店を保存しました','ok');
+      showToast(L('出店を保存しました','Listing saved'),'ok');
     }
   }catch(e){
     showToast(e.message||'保存に失敗しました','ng');
@@ -8305,12 +8305,12 @@ async function submitListing(){
 }
 async function unpublishListing(){
   if(!_listingAgentId) return;
-  if(!confirm('この出店を取り下げますか？(統計は保持され、再出店時に復元されます)')) return;
+  if(!confirm(L('この出店を取り下げますか？(統計は保持され、再出店時に復元されます)','Unpublish this listing? (Stats are kept and restored on re-publish.)'))) return;
   try{
     await api('DELETE','/api/marketplace/listings/'+_listingAgentId);
     var ag = agents.find(function(a){return a.id===_listingAgentId;});
     if(ag && ag.marketplace){ ag.marketplace.is_listed=false; ag.marketplace.status='paused'; }
-    showToast('出店を取り下げました','ok');
+    showToast(L('出店を取り下げました','Listing unpublished'),'ok');
     closeListingForm();
   }catch(e){
     showToast(e.message||'取り下げに失敗しました','ng');
@@ -8429,7 +8429,7 @@ async function disconnectGoogleSheets(){
     if(ag) ag.sheets_enabled=false;
     _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn', false);
     _renderSheetsStatus('wSheetsSw','wSheetsDesc','wSheetsAccountRow','wSheetsEmail','wSheetsConnectBtn', !!(NA && NA.sheets_enabled));
-    showToast('切断しました','ok');
+    showToast(L('切断しました','Disconnected'),'ok');
   }catch(e){
     showToast((e && e.message) || '切断に失敗しました', 'ng');
   }
@@ -8506,7 +8506,7 @@ async function connectExtension(){
     return;
   }
   if(!r || !r.device_token){
-    showToast('サーバーが device_token を返しませんでした','ng');
+    showToast(L('サーバーが device_token を返しませんでした','Server did not return a device_token'),'ng');
     return;
   }
   // 2. Push the token into the installed extension via externally_connectable.
@@ -8520,7 +8520,7 @@ async function connectExtension(){
     return;
   }
   if(!EXT_ID || EXT_ID === 'TBD'){
-    showToast('開発版です。Chrome 拡張機能の ID を取得してから連携してください','ng');
+    showToast(L('開発版です。Chrome 拡張機能の ID を取得してから連携してください','Dev build — get a Chrome extension ID before linking.'),'ng');
     return;
   }
   chrome.runtime.sendMessage(EXT_ID, {
@@ -8529,14 +8529,14 @@ async function connectExtension(){
     device_token: r.device_token,
   }, function(resp){
     if(chrome.runtime.lastError || !resp || !resp.ok){
-      showToast('拡張機能との通信に失敗しました。Chrome を再起動して再試行してください','ng');
+      showToast(L('拡張機能との通信に失敗しました。Chrome を再起動して再試行してください','Could not reach the extension. Restart Chrome and try again.'),'ng');
       return;
     }
     // 3. Refresh /api/me to get updated paired/connected state.
     setTimeout(async function(){
       try{ const m = await api('GET','/api/me'); me = m.user||m; }catch(e){}
       _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false);
-      showToast('ブラウザ拡張を連携しました','ok');
+      showToast(L('ブラウザ拡張を連携しました','Browser extension linked'),'ok');
     }, 500);
   });
 }
@@ -8551,7 +8551,7 @@ async function disconnectExtension(){
     _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false);
     // Try to notify the extension too (best-effort).
     try{ if(typeof chrome!=='undefined' && chrome.runtime && EXT_ID && EXT_ID!=='TBD'){ chrome.runtime.sendMessage(EXT_ID, {type:'unpair'}, function(){}); } }catch(e){}
-    showToast('切断しました','ok');
+    showToast(L('切断しました','Disconnected'),'ok');
   }catch(e){
     showToast((e&&e.message)||'切断に失敗しました','ng');
   }
@@ -8634,7 +8634,7 @@ async function _promoteToGroupFromEdit(){
   const id = window._editAgentId;
   if(!id) return;
   let ag = agents.find(a => a.id === id);
-  if(!ag){ showToast('エージェントが見つかりません','ng'); return; }
+  if(!ag){ showToast(L('エージェントが見つかりません','Agent not found'),'ng'); return; }
   // Already a group? Skip the promote step
   if(ag.is_group){
     closeEditAgent();
@@ -8719,7 +8719,7 @@ async function saveEditAgent(){
   var extensionEnabled = !!(swExt && swExt.classList.contains('on') && me && me.extension_paired);
   var modelSel = document.getElementById('editModel');
   var model = (modelSel && modelSel.value) || 'sonnet';
-  if(!newName){ showToast('名前を入力してください','ng'); return; }
+  if(!newName){ showToast(L('名前を入力してください','Please enter a name'),'ng'); return; }
   try{
     const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled, model});
     ag.name = newName;
@@ -8732,7 +8732,7 @@ async function saveEditAgent(){
     renderAgList();
     // Re-open the active chat so name/avatar/icon changes show immediately
     if(activeId === ag.id && typeof openAgent === 'function') openAgent(ag.id);
-    showToast('保存しました','ok');
+    showToast(L('保存しました','Saved'),'ok');
   }catch(e){
     var msg = (e && e.message) ? e.message : '保存に失敗しました';
     console.error('[saveEditAgent] failed:', e);
@@ -8757,9 +8757,9 @@ async function deleteAgent(){
       document.getElementById('chatWrap').style.display='none';
     }
     renderAgList();
-    showToast('削除しました','ok');
+    showToast(L('削除しました','Deleted'),'ok');
   }catch(e){
-    showToast('削除に失敗しました','ng');
+    showToast(L('削除に失敗しました','Delete failed'),'ng');
   }
 }
 
@@ -8793,19 +8793,19 @@ function wStep(n){
   // Validate before entering step n (i.e. validate the previous step's data)
   if(n===3){
     NA.name=document.getElementById('wName').value.trim();
-    if(!NA.name){showToast('名前を入力してください','ng');return;}
+    if(!NA.name){showToast(L('名前を入力してください','Please enter a name'),'ng');return;}
   }
   if(n===4){
-    if(!NA.skills.length){showToast('スキルを選んでください','ng');return;}
+    if(!NA.skills.length){showToast(L('スキルを選んでください','Please pick at least one skill'),'ng');return;}
   }
   if(n===5){
     NA.purpose=document.getElementById('wPurpose').value.trim();
-    if(!NA.purpose){showToast('採用目的を入力してください','ng');return;}
+    if(!NA.purpose){showToast(L('採用目的を入力してください','Please enter the agent\'s purpose'),'ng');return;}
   }
   if(n===6){
     if(_wizardMode==='new'){
       NA.duties=document.getElementById('wDuties').value.trim();
-      if(!NA.duties){showToast('業務内容を入力してください','ng');return;}
+      if(!NA.duties){showToast(L('業務内容を入力してください','Please describe the duties'),'ng');return;}
       NA.persona='採用目的: '+(NA.purpose||'')+'\n業務内容: '+(NA.duties||'');
     }
     buildConf();
@@ -9030,9 +9030,9 @@ function bsAfterSubscribeSuccess(plan){
 
 async function bsSubscribeSubmit(){
   var plan=_bsSelectedPlan;
-  if(!plan){ showToast('プランを選択してください','ng'); return; }
+  if(!plan){ showToast(L('プランを選択してください','Please select a plan'),'ng'); return; }
   if(!(await bsInitStripe()) || !_bsMonthlyCard){
-    showToast('カード情報を入力してください','ng'); return;
+    showToast(L('カード情報を入力してください','Please enter your card details'),'ng'); return;
   }
   var price = plan==='pro' ? '$12.99' : '$32.99';
   var label = _fmtT(T.bsStartFmt,{p:price});
@@ -9089,9 +9089,9 @@ async function bsSubscribeSubmit(){
 
 async function bsPaygSubmit(){
   var cents=_bsPaygCents;
-  if(!cents||cents<100){ showToast('金額を選択してください','ng'); return; }
+  if(!cents||cents<100){ showToast(L('金額を選択してください','Please pick an amount'),'ng'); return; }
   if(!(await bsInitStripe()) || !_bsPaygCard){
-    showToast('カード情報を入力してください','ng'); return;
+    showToast(L('カード情報を入力してください','Please enter your card details'),'ng'); return;
   }
   var label=_fmtT(T.bsBuyFmt,{p:'$'+(cents/100).toFixed(2)});
   setBtnLoad('bsPaygGo',true,isJa?'処理中...':'Processing...');
@@ -9109,7 +9109,7 @@ async function bsPaygSubmit(){
       document.getElementById('bs-payg-err').textContent=result.error.message;
       showToast(result.error.message,'ng');
     } else if(result.paymentIntent && result.paymentIntent.status==='succeeded'){
-      showToast('決済完了！クレジットに反映されます','ok');
+      showToast(L('決済完了！クレジットに反映されます','Payment complete! Credits will be applied.'),'ok');
       closeCharge();
       if(typeof refreshMe==='function'){ refreshMe(); setTimeout(refreshMe,2500); }
       setBtnLoad('bsPaygGo',false,label); return;
@@ -9304,15 +9304,15 @@ async function adminTakedown(listingId){
   if(reason===null) return;
   try{
     await api('POST','/api/admin/listings/'+listingId+'/takedown',{reason});
-    showToast('取り下げました','ok');
+    showToast(L('取り下げました','Unpublished'),'ok');
     loadAdminReports();
   }catch(e){ showToast(e.message||'失敗','ng'); }
 }
 async function adminRestore(listingId){
-  if(!confirm('この出店を復元（再公開）しますか？通報履歴はクリアされます')) return;
+  if(!confirm(L('この出店を復元（再公開）しますか？通報履歴はクリアされます','Restore (re-publish) this listing? Report history will be cleared.'))) return;
   try{
     await api('POST','/api/admin/listings/'+listingId+'/restore');
-    showToast('復元しました','ok');
+    showToast(L('復元しました','Restored'),'ok');
     loadAdminReports();
   }catch(e){ showToast(e.message||'失敗','ng'); }
 }
@@ -9464,10 +9464,10 @@ async function onboardPayout(){
   }catch(e){ showToast(e.message||'失敗','ng'); }
 }
 async function requestPayout(){
-  if(!confirm('利用可能残高の全額を出金しますか？')) return;
+  if(!confirm(L('利用可能残高の全額を出金しますか？','Withdraw the entire available balance?'))) return;
   try{
     var r = await api('POST','/api/payout/request');
-    showToast('出金処理を開始しました','ok');
+    showToast(L('出金処理を開始しました','Payout started'),'ok');
     loadPayoutSection();
     loadCreatorDashboard();
   }catch(e){ showToast(e.message||'出金失敗','ng'); }
@@ -9476,10 +9476,10 @@ async function requestPayoutCustom(){
   var s = prompt('出金金額（円）');
   if(s===null) return;
   var amt = parseInt(s.replace(/[¥,\s]/g,''),10);
-  if(!amt || amt<=0){ showToast('金額が不正です','ng'); return; }
+  if(!amt || amt<=0){ showToast(L('金額が不正です','Invalid amount'),'ng'); return; }
   try{
     await api('POST','/api/payout/request',{amount_jpy:amt});
-    showToast('出金処理を開始しました','ok');
+    showToast(L('出金処理を開始しました','Payout started'),'ok');
     loadPayoutSection();
     loadCreatorDashboard();
   }catch(e){ showToast(e.message||'出金失敗','ng'); }
@@ -9513,13 +9513,13 @@ function closeReportListing(){
 async function submitReportListing(){
   if(!_reportTargetId) return;
   var reasonEl = document.querySelector('input[name="reportReason"]:checked');
-  if(!reasonEl){ showToast('理由を選んでください','ng'); return; }
+  if(!reasonEl){ showToast(L('理由を選んでください','Please choose a reason'),'ng'); return; }
   var detail = document.getElementById('reportDetail').value.trim();
   var btn = document.getElementById('reportSubmitBtn');
   btn.disabled = true; btn.textContent = '送信中…';
   try{
     await api('POST','/api/marketplace/'+_reportTargetId+'/report',{ reason: reasonEl.value, detail });
-    showToast('通報を送信しました。ご協力ありがとうございます','ok');
+    showToast(L('通報を送信しました。ご協力ありがとうございます','Report submitted. Thanks for the heads-up.'),'ok');
     closeReportListing();
   }catch(e){
     showToast(e.message||'通報に失敗しました','ng');
@@ -9583,7 +9583,7 @@ async function cloneFromProfile(listingId){
       closeCreatorProfile();
       renderAgList();
       openAgent(r.agent.id);
-      showToast('チームに追加しました','ok');
+      showToast(L('チームに追加しました','Added to your team'),'ok');
     }
   }catch(e){
     showToast(e.message||'追加に失敗しました','ng');
@@ -10005,7 +10005,7 @@ async function _addMemory(){
   try {
     await api('POST','/api/me/memories',{text: inp.value.trim()});
     inp.value = '';
-    showToast('記憶しました 🧠','ok');
+    showToast(L('記憶しました 🧠','Saved to memory 🧠'),'ok');
     _loadMemories();
   } catch(e){ showToast(e.message,'ng'); }
 }
@@ -10038,11 +10038,11 @@ async function _loadReminders(){
 async function _addReminder(){
   const at = document.getElementById('remAt')?.value;
   const text = document.getElementById('remText')?.value.trim();
-  if(!at || !text){ showToast('日時とテキストを入力','ng'); return; }
+  if(!at || !text){ showToast(L('日時とテキストを入力','Enter date/time and text'),'ng'); return; }
   try {
     await api('POST','/api/me/reminders',{at: new Date(at).toISOString(), text});
     document.getElementById('remText').value = '';
-    showToast('リマインダーを設定','ok');
+    showToast(L('リマインダーを設定','Reminder set'),'ok');
     _loadReminders();
   } catch(e){ showToast(e.message,'ng'); }
 }
@@ -10106,8 +10106,8 @@ async function exportFullData(){
     a.href = u; a.download = 'myaiagent-data-' + _dateSlug() + '.json';
     document.body.appendChild(a); a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(u); }, 0);
-    showToast('ダウンロード完了','ok');
-  } catch(e){ showToast('エクスポート失敗: ' + e.message, 'ng'); }
+    showToast(L('ダウンロード完了','Download complete'),'ok');
+  } catch(e){ showToast(L('エクスポート失敗: ','Export failed: ') + e.message, 'ng'); }
 }
 
 // Referral helpers
@@ -10125,7 +10125,7 @@ async function _loadReferralCard(){
 function _copyRefUrl(){
   const inp = document.getElementById('sRefUrl');
   if(!inp || !inp.value) return;
-  navigator.clipboard.writeText(inp.value).then(() => showToast('コピーしました','ok'));
+  navigator.clipboard.writeText(inp.value).then(() => showToast(L('コピーしました','Copied'),'ok'));
 }
 function _shareRef(){
   const url = document.getElementById('sRefUrl')?.value;
@@ -10217,12 +10217,12 @@ async function changePassword(){
   const cur = document.getElementById('sCurPw').value;
   const np = document.getElementById('sNewPw').value;
   const cp = document.getElementById('sConfPw').value;
-  if(!cur||!np){ showToast('全ての項目を入力してください','err'); return; }
-  if(np!==cp){ showToast('新しいパスワードが一致しません','err'); return; }
-  if(np.length<8){ showToast('パスワードは8文字以上にしてください','err'); return; }
+  if(!cur||!np){ showToast(L('全ての項目を入力してください','Please fill in all fields'),'err'); return; }
+  if(np!==cp){ showToast(L('新しいパスワードが一致しません','New passwords do not match'),'err'); return; }
+  if(np.length<8){ showToast(L('パスワードは8文字以上にしてください','Password must be at least 8 characters'),'err'); return; }
   try{
     await api('PATCH','/api/user/password',{current_password:cur,new_password:np});
-    showToast('パスワードを変更しました','ok');
+    showToast(L('パスワードを変更しました','Password changed'),'ok');
     document.getElementById('sCurPw').value='';
     document.getElementById('sNewPw').value='';
     document.getElementById('sConfPw').value='';
@@ -10230,11 +10230,11 @@ async function changePassword(){
 }
 async function deleteAccount(){
   const confirm = document.getElementById('sDelConfirm').value;
-  if(confirm!=='削除する'){ showToast('「削除する」と入力してください','err'); return; }
+  if(confirm!=='削除する'){ showToast(L('「削除する」と入力してください','Type "DELETE" to confirm'),'err'); return; }
   if(!window.confirm('本当にアカウントを完全削除しますか？\n全てのエージェント・会話・残高が失われます。')) return;
   try{
     await api('DELETE','/api/me', { confirm: 'DELETE' });
-    showToast('アカウントを削除しました','ok');
+    showToast(L('アカウントを削除しました','Account deleted'),'ok');
     setTimeout(()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); location.href='/'; },1500);
   }catch(e){ showToast(e.message || '削除に失敗しました','ng'); }
 }

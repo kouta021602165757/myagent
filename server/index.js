@@ -3902,7 +3902,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled,model}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
-    if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
+    if((user.agents||[]).length>=1000)return jres(res,400,{error:'エージェントは最大1000個です'});
     let _av = String(avatar||'🤖').trim();
     if(_av.startsWith('data:image/')){
       if(_av.length > 500*1024) return jres(res,400,{error:'アバター画像は 500KB 以下にしてください'});
@@ -3978,12 +3978,13 @@ async function handleAPI(req,res,pathname,method,ip){
     // Cap total agents at 20 (existing limit). If the template would push
     // the user over, refuse early so we don't half-create.
     const owned = (user.agents||[]).length;
-    if(owned + tpl.agents.length > 20){
-      return jres(res,400,{error:`エージェントは最大 20 個までです (現在 ${owned} / 追加 ${tpl.agents.length})`});
+    if(owned + tpl.agents.length > 1000){
+      return jres(res,400,{error:`エージェントは最大 1000 個までです (現在 ${owned} / 追加 ${tpl.agents.length})`});
     }
 
     // Clone agents
     const now = new Date().toISOString();
+    const groupId = 'ag_'+crypto.randomUUID();
     const cloned = tpl.agents.map((a) => ({
       id: 'ag_'+crypto.randomUUID(),
       avatar: a.avatar || '🤖',
@@ -3996,12 +3997,13 @@ async function handleAPI(req,res,pathname,method,ip){
       model: 'sonnet',
       history: [],
       created_at: now,
-      team_origin: { template_id: tpl.id, template_name: tpl.name },
+      // team_origin marks an agent as belonging to a team — DM list filters
+      // these out so they only appear inside the team workspace.
+      team_origin: { team_id: groupId, template_id: tpl.id, template_name: tpl.name },
     }));
 
     // Create the group agent that hosts all of them. Reuse existing group
     // primitives so chat / mentions / settings just work.
-    const groupId = 'ag_'+crypto.randomUUID();
     const group = {
       id: groupId,
       avatar: tpl.cover_emoji || '🎯',
@@ -4045,6 +4047,70 @@ async function handleAPI(req,res,pathname,method,ip){
       cloned_agent_ids: cloned.map(a => a.id),
       cloned_count: cloned.length,
     });
+  }
+
+  // ── POST /api/teams/create ────────────────────────────────
+  // body: {name, cover_emoji, member_ids[]}
+  // Builds a team from the user's existing AI agents. The chosen agents
+  // are flagged team_origin so they no longer show in the DM list.
+  if(pathname==='/api/teams/create' && method==='POST'){
+    const body = await readBody(req);
+    const name = String(body.name||'').trim().slice(0,80);
+    const cover = String(body.cover_emoji||'🎯').trim().slice(0,8) || '🎯';
+    const ids = Array.isArray(body.member_ids) ? body.member_ids.filter(x=>typeof x==='string') : [];
+    if(!name) return jres(res,400,{error:'チーム名は必須です'});
+    if(!ids.length) return jres(res,400,{error:'メンバーを 1 体以上選択してください'});
+    const userAgents = user.agents || [];
+    // Only allow agents that the user owns and are not already groups/teams
+    // and not already members of another team.
+    const eligible = ids.filter(id => {
+      const a = userAgents.find(x => x.id===id);
+      return a && !a.is_group && !a.team_origin;
+    });
+    if(!eligible.length) return jres(res,400,{error:'有効な AI が選択されていません'});
+    if(userAgents.length >= 1000) return jres(res,400,{error:'エージェントは最大 1000 個までです'});
+
+    const now = new Date().toISOString();
+    const groupId = 'ag_'+crypto.randomUUID();
+    // Look up agent names so the welcome message can reference one
+    const firstName = (userAgents.find(a => a.id===eligible[0])||{}).name || 'AI';
+    const group = {
+      id: groupId,
+      avatar: cover,
+      name,
+      skills: ['planning'],
+      persona: '',
+      is_group: true,
+      is_team: true,
+      team_template_id: 'custom',
+      host_id: user.id,
+      members: [
+        { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
+      ],
+      team_member_agent_ids: eligible,
+      ai_auto_respond: false,
+      created_at: now,
+      updated_at: now,
+      history: [
+        { role:'system', content: `🎉 ${name} を作成しました。@${firstName.replace(/\s+/g,'')} のように特定エージェントを呼び出せます。`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+      ],
+    };
+
+    // Tag chosen agents so the DM list hides them
+    for(const a of userAgents){
+      if(eligible.includes(a.id)){
+        a.team_origin = { team_id: groupId, custom: true };
+      }
+    }
+    user.agents = [...userAgents, group];
+    try {
+      await DB.save(user);
+    } catch(e){
+      console.error('[teams/create] DB.save failed for user='+user.id+' err='+(e.message||e));
+      return jres(res,500,{error:'チームの保存に失敗しました: '+(e.message||'unknown')});
+    }
+    console.log('[teams/create] user='+user.id+' name='+name+' members='+eligible.length+' group='+groupId);
+    return jres(res,201,{ ok:true, group_id: groupId, member_count: eligible.length });
   }
 
   // ── POST /api/agents/reorder ───────────────────────────────
@@ -5927,7 +5993,7 @@ async function handleAPI(req,res,pathname,method,ip){
   // For paid listings, requires purchase first.
   const mcm = pathname.match(/^\/api\/marketplace\/([a-z0-9_-]+)\/clone$/);
   if(mcm && method==='POST'){
-    if((user.agents||[]).length>=20) return jres(res,400,{error:'エージェントは最大20個です'});
+    if((user.agents||[]).length>=1000) return jres(res,400,{error:'エージェントは最大1000個です'});
     const found = await findAgentByListingId(mcm[1]);
     if(!found || !found.agent.marketplace || !found.agent.marketplace.is_listed){
       return jres(res,404,{error:'出店エージェントが見つかりません'});
@@ -5970,7 +6036,7 @@ async function handleAPI(req,res,pathname,method,ip){
   const cmShare=pathname.match(/^\/api\/share\/([a-z0-9-]+)\/clone$/);
   if(cmShare&&method==='POST'){
     const shareId=cmShare[1];
-    if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
+    if((user.agents||[]).length>=1000)return jres(res,400,{error:'エージェントは最大1000個です'});
     const found=await findAgentByShareId(shareId);
     if(!found) return jres(res,404,{error:'共有エージェントが見つかりません'});
     const src=found.agent;

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] AI Agent Team 作成 — 新規 or テンプレート — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;
+  --type-team:#8b5cf6;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);} .banner a{color:var(--peach);text-decoration:underline;}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.brand{font-size:14px;font-weight:800;letter-spacing:.06em;color:var(--peach-dark);text-decoration:none;}
+
+.section-title{font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--peach-dark);text-transform:uppercase;margin-bottom:8px;}
+h1{font-size:32px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;line-height:1.15;}
+.lead{font-size:15px;color:var(--text-muted);margin-bottom:32px;}
+
+.flow-nav{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--wire);border-radius:14px;padding:10px 14px;margin-bottom:28px;font-size:11.5px;font-weight:700;color:var(--text-subtle);overflow-x:auto;}
+.fn-step{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:8px;flex-shrink:0;}
+.fn-step.done{color:var(--text);background:rgba(16,185,129,.08);}
+.fn-step.active{color:#fff;background:var(--peach);}
+.fn-step .num{width:18px;height:18px;border-radius:50%;background:var(--wire);color:var(--text-subtle);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;}
+.fn-step.done .num{background:var(--green);color:#fff;}
+.fn-step.active .num{background:#fff;color:var(--peach);}
+.fn-arrow{color:var(--wire);}
+
+/* Step screen frame */
+.step-screen{background:#fff;border:1px solid var(--wire);border-radius:18px;overflow:hidden;margin-bottom:24px;}
+.step-tag{background:linear-gradient(90deg,var(--peach),var(--peach-dark));color:#fff;padding:10px 22px;font-size:11.5px;font-weight:800;letter-spacing:.08em;display:flex;align-items:center;gap:10px;}
+.step-tag .num{background:rgba(255,255,255,.24);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;}
+.step-tag.violet{background:linear-gradient(90deg,var(--violet),#7c3aed);}
+.step-body{padding:32px;}
+
+/* === SCREEN 0: Choice screen === */
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.choice-card{background:var(--bg);border:2px solid var(--wire);border-radius:18px;padding:32px 28px;cursor:pointer;transition:all .2s;text-decoration:none;color:inherit;display:block;position:relative;}
+.choice-card:hover{transform:translateY(-3px);border-color:var(--peach);background:#fff;box-shadow:0 14px 40px rgba(251,146,60,.16);}
+.choice-card.feat{border-color:var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);}
+.choice-card.feat::before{content:'⭐ おすすめ';position:absolute;top:-12px;left:24px;background:var(--peach);color:#fff;font-size:10px;font-weight:900;letter-spacing:.06em;padding:4px 11px;border-radius:99px;box-shadow:0 4px 10px rgba(251,146,60,.32);}
+.choice-card .ic{font-size:48px;margin-bottom:14px;}
+.choice-card h3{font-size:20px;font-weight:900;margin-bottom:8px;letter-spacing:-.01em;}
+.choice-card p{font-size:13.5px;color:var(--text-muted);line-height:1.7;margin-bottom:18px;}
+.choice-card .feats{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--text);font-weight:700;margin-bottom:18px;}
+.choice-card .feats div{display:flex;align-items:flex-start;gap:6px;}
+.choice-card .feats div::before{content:'✓';color:var(--peach-dark);font-weight:900;flex-shrink:0;}
+.choice-card .arrow{font-size:13px;font-weight:800;color:var(--peach-dark);}
+
+/* === SCREEN 1: Template gallery === */
+.tmpl-filters{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.tmpl-fc{padding:7px 14px;border:1px solid var(--wire);background:#fff;border-radius:99px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;}
+.tmpl-fc.on{background:var(--peach);color:#fff;border-color:var(--peach);}
+.tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.tmpl-card{background:var(--bg);border:2px solid var(--wire);border-radius:14px;padding:18px;cursor:pointer;transition:all .14s;}
+.tmpl-card:hover{border-color:var(--peach);background:#fff;transform:translateY(-2px);}
+.tmpl-card.sel{border-color:var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);box-shadow:0 8px 24px rgba(251,146,60,.16);}
+.tmpl-card .cover{height:80px;border-radius:11px;margin-bottom:12px;display:flex;align-items:center;justify-content:center;font-size:36px;}
+.tmpl-card .cover.ec{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.tmpl-card .cover.cs{background:linear-gradient(135deg,#dbeafe,#93c5fd);}
+.tmpl-card .cover.sns{background:linear-gradient(135deg,#fce7f3,#f9a8d4);}
+.tmpl-card .cover.dev{background:linear-gradient(135deg,#dcfce7,#86efac);}
+.tmpl-card .cover.fin{background:linear-gradient(135deg,#fef3c7,#fcd34d);}
+.tmpl-card .cover.hr{background:linear-gradient(135deg,#ede9fe,#c4b5fd);}
+.tmpl-card .free-tag{display:inline-block;background:rgba(16,185,129,.16);color:var(--green);font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em;margin-bottom:6px;}
+.tmpl-card .paid-tag{display:inline-block;background:rgba(251,146,60,.12);color:var(--peach-dark);font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em;margin-bottom:6px;}
+.tmpl-card h4{font-size:14.5px;font-weight:900;margin-bottom:5px;letter-spacing:-.01em;}
+.tmpl-card p{font-size:11.5px;color:var(--text-muted);line-height:1.55;margin-bottom:10px;}
+.tmpl-card .meta{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--text-subtle);}
+.tmpl-card .meta .av{width:18px;height:18px;border-radius:5px;background:#fff;border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;font-size:10px;}
+.tmpl-card .price{margin-top:8px;padding-top:8px;border-top:1px solid var(--wire);display:flex;align-items:center;justify-content:space-between;}
+.tmpl-card .price-val{font-size:15px;font-weight:900;letter-spacing:-.01em;}
+.tmpl-card .price-val.free{color:var(--green);}
+
+/* === SCREEN 2: Template preview === */
+.preview-row{display:grid;grid-template-columns:1fr 360px;gap:32px;}
+.preview-cover{background:linear-gradient(135deg,#fff7ee,#fed7aa);height:200px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:80px;margin-bottom:18px;position:relative;overflow:hidden;}
+.preview-cover::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.4),transparent 60%);}
+.preview-info h3{font-size:24px;font-weight:900;letter-spacing:-.01em;margin-bottom:6px;}
+.preview-info .preview-tag{display:inline-block;background:rgba(16,185,129,.16);color:var(--green);font-size:10.5px;font-weight:900;padding:4px 11px;border-radius:99px;letter-spacing:.04em;margin-bottom:10px;}
+.preview-info .desc{font-size:14px;color:var(--text-muted);line-height:1.75;margin-bottom:18px;}
+.preview-info .stats{display:flex;align-items:center;gap:14px;font-size:12px;color:var(--text-subtle);font-weight:700;padding:10px 0;border-top:1px solid var(--wire);border-bottom:1px solid var(--wire);}
+.preview-info .stats b{color:var(--text);}
+
+.action-card{background:#fff;border:2px solid var(--peach);border-radius:14px;padding:20px;box-shadow:0 14px 40px rgba(251,146,60,.10);}
+.action-card .price{font-size:32px;font-weight:900;letter-spacing:-.02em;color:var(--green);margin-bottom:8px;}
+.action-card .meta{font-size:12px;color:var(--text-muted);margin-bottom:14px;}
+.action-card .activate{width:100%;background:var(--peach);color:#fff;padding:13px;border:0;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;box-shadow:0 6px 18px rgba(251,146,60,.32);}
+.action-card .customize{width:100%;background:#fff;color:var(--text);padding:12px;border:1px solid var(--wire);border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;}
+.action-card .perks{margin-top:14px;padding-top:14px;border-top:1px solid var(--wire);}
+.action-card .perk{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:var(--text-muted);margin-bottom:6px;}
+.action-card .perk::before{content:'✓';color:var(--green);font-weight:900;flex-shrink:0;}
+
+/* Members section in preview */
+.preview-members{margin-top:24px;}
+.preview-members h4{font-size:14px;font-weight:900;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.preview-members h4 .badge{font-size:11px;font-weight:800;background:var(--peach);color:#fff;padding:3px 10px;border-radius:99px;}
+.pm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.pm-row{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--wire);border-radius:10px;}
+.pm-row .av{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;}
+.pm-row .nm{font-size:12.5px;font-weight:800;}
+.pm-row .role{font-size:10.5px;color:var(--text-subtle);font-weight:700;}
+
+/* Workflow preview */
+.preview-workflow{margin-top:24px;}
+.preview-workflow h4{font-size:14px;font-weight:900;margin-bottom:12px;}
+.wf-flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:linear-gradient(135deg,#fff7ee,#fed7aa);border-radius:11px;padding:14px;}
+.wf-flow .step{background:#fff;padding:7px 12px;border-radius:99px;font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:6px;border:1px solid rgba(251,146,60,.32);}
+.wf-flow .step .num{width:18px;height:18px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;}
+.wf-flow .arrow{color:var(--peach-dark);font-weight:900;}
+
+/* === SCREEN 3: Customize === */
+.cust-row{display:grid;grid-template-columns:1fr 320px;gap:18px;margin-top:14px;}
+.cust-card{background:var(--bg);border:1.5px solid var(--wire);border-radius:12px;padding:14px;}
+.cust-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.cust-card-head .av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;}
+.cust-card-head .nm{font-size:13px;font-weight:900;flex:1;}
+.cust-card-head .toggle{font-size:10.5px;font-weight:800;color:var(--green);background:rgba(16,185,129,.12);padding:3px 9px;border-radius:99px;}
+.cust-card .field{margin-top:8px;}
+.cust-card .field label{display:block;font-size:10.5px;font-weight:800;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.cust-card .field input,.cust-card .field textarea{width:100%;padding:8px 11px;border:1px solid var(--wire);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;outline:0;}
+.cust-card .field textarea{min-height:50px;resize:vertical;line-height:1.55;}
+
+.cust-side{position:sticky;top:24px;height:fit-content;}
+.cust-side .summary{background:#fff;border:1px solid var(--wire);border-radius:12px;padding:14px;}
+.cust-side .summary h5{font-size:12.5px;font-weight:900;margin-bottom:10px;}
+.cust-side .summary .row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);font-weight:700;padding:5px 0;border-bottom:1px solid var(--wire);}
+.cust-side .summary .row:last-child{border-bottom:0;}
+.cust-side .summary .row b{color:var(--text);}
+.cust-side .activate{margin-top:14px;width:100%;background:var(--peach);color:#fff;padding:13px;border:0;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(251,146,60,.32);}
+
+/* === SCREEN 4: Done === */
+.success{display:flex;flex-direction:column;align-items:center;padding:32px 24px;text-align:center;}
+.success .check{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#10b981,#047857);color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;margin-bottom:18px;box-shadow:0 12px 32px rgba(16,185,129,.32);}
+.success h3{font-size:24px;font-weight:900;margin-bottom:8px;}
+.success p{font-size:14px;color:var(--text-muted);margin-bottom:18px;line-height:1.7;}
+.success .next{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:480px;}
+.success .nb{background:var(--bg);border:1px solid var(--wire);border-radius:12px;padding:16px;cursor:pointer;text-align:left;}
+.success .nb:hover{border-color:var(--peach);background:#fff;}
+.success .primary{margin-top:12px;width:100%;max-width:480px;background:var(--peach);color:#fff;padding:13px;border:0;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;}
+
+@media (max-width:900px){.choice-grid,.tmpl-grid,.preview-row,.cust-row{grid-template-columns:1fr;}.success .next{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK</b> ・ AI Agent Team 作成 → 新規 or テンプレート → アクティブ化 ・ <a href="/mock-team-index.html">他のモックを見る</a></div>
+
+<div class="wrap">
+  <div class="head">
+    <a href="/" class="brand">🍑 MY AI AGENT</a>
+  </div>
+
+  <div class="section-title">After clicking "AI Agent Team を作成"</div>
+  <h1>新規 or テンプレート → 起動まで</h1>
+  <p class="lead">クリック後の最初の選択 → テンプレート選択 → プレビュー → カスタマイズ → 起動 までを 1 ページで通しで確認できます。</p>
+
+  <div class="flow-nav">
+    <div class="fn-step done"><div class="num">0</div>Click "Team 作成"</div>
+    <div class="fn-arrow">›</div>
+    <div class="fn-step done"><div class="num">1</div>Choose path</div>
+    <div class="fn-arrow">›</div>
+    <div class="fn-step active"><div class="num">2</div>Pick template</div>
+    <div class="fn-arrow">›</div>
+    <div class="fn-step"><div class="num">3</div>Preview</div>
+    <div class="fn-arrow">›</div>
+    <div class="fn-step"><div class="num">4</div>Customize</div>
+    <div class="fn-arrow">›</div>
+    <div class="fn-step"><div class="num">5</div>Activate</div>
+  </div>
+
+  <!-- ════ STEP 1: Choice screen ════ -->
+  <div class="step-screen">
+    <div class="step-tag"><span class="num">1</span> どう作りますか?</div>
+    <div class="step-body">
+      <div class="choice-grid">
+        <a href="/mock-team-create-flow.html" class="choice-card feat">
+          <div class="ic">🆕</div>
+          <h3>新規で作る (AI 生成)</h3>
+          <p>「やりたいこと」を文章で書くと、AI が業務を分解し、必要なエージェント数を自動計算 → 全員生成して連携まで自動。</p>
+          <div class="feats">
+            <div>自分の業務に完全フィット</div>
+            <div>AI が必要なエージェント数を判断</div>
+            <div>5 分で完成 ・ 説明だけで OK</div>
+          </div>
+          <div class="arrow">→ AI 生成フローへ</div>
+        </a>
+        <a href="#step2" class="choice-card">
+          <div class="ic">📋</div>
+          <h3>テンプレートから選ぶ</h3>
+          <p>10+ 種類の業務テンプレ (EC / SNS / 開発 / 経営 etc.) から選んでカスタマイズ。素早く試したい時に最適。</p>
+          <div class="feats">
+            <div>10+ プリビルドのテンプレ</div>
+            <div>1 クリックで全員生成</div>
+            <div>後からカスタマイズ可能</div>
+          </div>
+          <div class="arrow">→ テンプレート一覧へ</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:32px;color:var(--peach);margin:18px 0 6px;">↓</div>
+  <div style="text-align:center;font-size:11px;color:var(--text-subtle);font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:24px;">「テンプレートから選ぶ」を選んだ場合</div>
+
+  <!-- ════ STEP 2: Template gallery ════ -->
+  <div class="step-screen" id="step2">
+    <div class="step-tag"><span class="num">2</span> テンプレート一覧</div>
+    <div class="step-body">
+      <div class="tmpl-filters">
+        <button class="tmpl-fc on">All</button>
+        <button class="tmpl-fc">🎁 Free</button>
+        <button class="tmpl-fc">🛍 E-commerce</button>
+        <button class="tmpl-fc">📱 SNS</button>
+        <button class="tmpl-fc">🤝 Customer Success</button>
+        <button class="tmpl-fc">💻 Engineering</button>
+        <button class="tmpl-fc">📊 Finance</button>
+        <button class="tmpl-fc">👥 HR</button>
+      </div>
+      <div class="tmpl-grid">
+        <div class="tmpl-card sel">
+          <div class="cover ec">🛍</div>
+          <span class="free-tag">🎁 FREE</span>
+          <h4>EC Launch Starter</h4>
+          <p>Source product → generate images → build Shopify → SNS → analyze</p>
+          <div class="meta">
+            <span class="av">🛍</span><span class="av">📸</span><span class="av">🌐</span><span class="av">📱</span><span class="av">📊</span>
+            <span>5 agents</span>
+          </div>
+          <div class="price">
+            <span style="font-size:10.5px;color:var(--text-subtle);font-weight:700;">★ 4.9 (132 used)</span>
+            <span class="price-val free">FREE</span>
+          </div>
+        </div>
+        <div class="tmpl-card">
+          <div class="cover sns">📱</div>
+          <span class="free-tag">🎁 FREE</span>
+          <h4>SNS Growth Starter</h4>
+          <p>Spot trends → write posts → schedule across X/IG/TikTok</p>
+          <div class="meta">
+            <span class="av">📈</span><span class="av">✍️</span><span class="av">📅</span>
+            <span>3 agents</span>
+          </div>
+          <div class="price">
+            <span style="font-size:10.5px;color:var(--text-subtle);font-weight:700;">★ 4.8 (89)</span>
+            <span class="price-val free">FREE</span>
+          </div>
+        </div>
+        <div class="tmpl-card">
+          <div class="cover cs">🤝</div>
+          <span class="paid-tag">💼 PAID</span>
+          <h4>Customer Success</h4>
+          <p>Onboard → tutorial → support → churn prevention</p>
+          <div class="meta">
+            <span class="av">🤝</span><span class="av">🎓</span><span class="av">💬</span><span class="av">🔁</span>
+            <span>4 agents</span>
+          </div>
+          <div class="price">
+            <span style="font-size:10.5px;color:var(--text-subtle);font-weight:700;">★ 4.6 (56)</span>
+            <span class="price-val">$49.80</span>
+          </div>
+        </div>
+        <div class="tmpl-card">
+          <div class="cover hr">👥</div>
+          <span class="paid-tag">💼 PAID</span>
+          <h4>Recruiting</h4>
+          <p>Write JD → source → AI screen → interview prep</p>
+          <div class="meta">
+            <span class="av">📋</span><span class="av">🔎</span><span class="av">🤖</span><span class="av">🎯</span>
+            <span>4 agents</span>
+          </div>
+          <div class="price">
+            <span style="font-size:10.5px;color:var(--text-subtle);font-weight:700;">★ 4.7 (34)</span>
+            <span class="price-val">$59.80</span>
+          </div>
+        </div>
+        <div class="tmpl-card">
+          <div class="cover dev">💻</div>
+          <span class="paid-tag">💼 PAID</span>
+          <h4>Dev Squad</h4>
+          <p>Code review → fix bugs → write tests → auto-deploy</p>
+          <div class="meta">
+            <span class="av">🔍</span><span class="av">🔧</span><span class="av">🧪</span><span class="av">🚀</span>
+            <span>4 agents</span>
+          </div>
+          <div class="price">
+            <span style="font-size:10.5px;color:var(--text-subtle);font-weight:700;">★ 5.0 (12)</span>
+            <span class="price-val">$39.80</span>
+          </div>
+        </div>
+        <div class="tmpl-card">
+          <div class="cover fin">📊</div>
+          <span class="paid-tag">💼 PAID</span>
+          <h4>Finance Squad</h4>
+          <p>Monthly close → variance → cash flow projection</p>
+          <div class="meta">
+            <span class="av">📈</span><span class="av">📊</span><span class="av">💼</span>
+            <span>3 agents</span>
+          </div>
+          <div class="price">
+            <span style="font-size:10.5px;color:var(--text-subtle);font-weight:700;">★ 4.5 (21)</span>
+            <span class="price-val">$29.80</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:32px;color:var(--peach);margin:18px 0 6px;">↓</div>
+  <div style="text-align:center;font-size:11px;color:var(--text-subtle);font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:24px;">"EC Launch Starter (Free)" を選択</div>
+
+  <!-- ════ STEP 3: Preview ════ -->
+  <div class="step-screen">
+    <div class="step-tag"><span class="num">3</span> プレビュー</div>
+    <div class="step-body">
+      <div class="preview-row">
+        <div>
+          <div class="preview-cover">🛍</div>
+          <div class="preview-info">
+            <span class="preview-tag">🎁 FREE TEMPLATE</span>
+            <h3>EC Launch Starter</h3>
+            <p class="desc">Spin up an entire e-commerce business with 5 AI agents that work together: research products, generate visuals, build the Shopify store, post on social, and watch sales — fully automated end-to-end.</p>
+            <div class="stats">
+              <span>★ <b>4.9</b> (132 reviews)</span>
+              <span>↗ <b>410</b> activations</span>
+              <span>By <b>@MY AI AGENT</b> ✓</span>
+            </div>
+          </div>
+
+          <div class="preview-members">
+            <h4>👥 Included agents <span class="badge">5</span></h4>
+            <div class="pm-grid">
+              <div class="pm-row">
+                <div class="av" style="background:linear-gradient(135deg,#fb923c,#ea580c)">🛍</div>
+                <div><div class="nm">Product Sourcer</div><div class="role">Step 1 ・ Research</div></div>
+              </div>
+              <div class="pm-row">
+                <div class="av" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">📸</div>
+                <div><div class="nm">Visual Designer</div><div class="role">Step 2 ・ Image gen</div></div>
+              </div>
+              <div class="pm-row">
+                <div class="av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🌐</div>
+                <div><div class="nm">Storefront Architect</div><div class="role">Step 3 ・ Shopify</div></div>
+              </div>
+              <div class="pm-row">
+                <div class="av" style="background:linear-gradient(135deg,#ec4899,#be185d)">📱</div>
+                <div><div class="nm">Social Manager</div><div class="role">Step 4 ・ X/IG/TikTok</div></div>
+              </div>
+              <div class="pm-row" style="grid-column:span 2;">
+                <div class="av" style="background:linear-gradient(135deg,#10b981,#047857)">📊</div>
+                <div><div class="nm">Revenue Analyst</div><div class="role">Step 5 ・ Stripe webhook (24/7)</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-workflow">
+            <h4>⚡ Workflow</h4>
+            <div class="wf-flow">
+              <div class="step"><span class="num">1</span>🛍 Source</div>
+              <span class="arrow">→</span>
+              <div class="step"><span class="num">2</span>📸 Image</div>
+              <span class="arrow">→</span>
+              <div class="step"><span class="num">3</span>🌐 Build</div>
+              <span class="arrow">→</span>
+              <div class="step"><span class="num">4</span>📱 Promote</div>
+              <span class="arrow">→</span>
+              <div class="step"><span class="num">5</span>📊 Watch</div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="action-card">
+          <div class="price">FREE</div>
+          <div class="meta">5 agents cloned to your account ・ No credit card</div>
+          <button class="activate">🚀 そのまま起動</button>
+          <button class="customize">⚙ 内容をカスタマイズ →</button>
+          <div class="perks">
+            <div class="perk">5 agents cloned to your team</div>
+            <div class="perk">Pre-configured workflow</div>
+            <div class="perk">Run instantly</div>
+            <div class="perk">Customizable after activation</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:32px;color:var(--peach);margin:18px 0 6px;">↓</div>
+  <div style="text-align:center;font-size:11px;color:var(--text-subtle);font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:24px;">「内容をカスタマイズ」を選んだ場合</div>
+
+  <!-- ════ STEP 4: Customize ════ -->
+  <div class="step-screen">
+    <div class="step-tag"><span class="num">4</span> 内容をカスタマイズ (任意)</div>
+    <div class="step-body">
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">各エージェントの名前・指示文・モデルを微調整できます。スキップしてそのまま起動も OK。</div>
+      <div class="cust-row">
+        <div>
+          <div class="cust-card" style="margin-bottom:10px;">
+            <div class="cust-card-head">
+              <div class="av" style="background:linear-gradient(135deg,#fb923c,#ea580c)">🛍</div>
+              <div class="nm">Product Sourcer</div>
+              <span class="toggle">● Active</span>
+            </div>
+            <div class="field">
+              <label>Name</label>
+              <input value="Product Sourcer">
+            </div>
+            <div class="field">
+              <label>Instructions</label>
+              <textarea>Search Alibaba, Google Trends, Reddit. Pick 3 products with margin > 50% and ↗ growth.</textarea>
+            </div>
+          </div>
+          <div class="cust-card" style="margin-bottom:10px;">
+            <div class="cust-card-head">
+              <div class="av" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">📸</div>
+              <div class="nm">Visual Designer</div>
+              <span class="toggle">● Active</span>
+            </div>
+            <div class="field">
+              <label>Style</label>
+              <input value="Cozy lifestyle, golden hour lighting, minimal background">
+            </div>
+          </div>
+          <div class="cust-card" style="margin-bottom:10px;opacity:.6;">
+            <div class="cust-card-head">
+              <div class="av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🌐</div>
+              <div class="nm">Storefront Architect</div>
+              <span class="toggle" style="color:var(--text-subtle);background:var(--bg-warm);">⚠ Shopify not connected</span>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px;">Connect your Shopify store in Settings → Integrations to activate this agent.</div>
+          </div>
+          <div style="text-align:center;font-size:12px;color:var(--text-subtle);font-weight:700;margin:14px 0 10px;">+ 2 more agents (Social Manager / Revenue Analyst)</div>
+        </div>
+
+        <aside class="cust-side">
+          <div class="summary">
+            <h5>📋 Summary</h5>
+            <div class="row"><span>Active agents</span><b>4 of 5</b></div>
+            <div class="row"><span>Workflow steps</span><b>5</b></div>
+            <div class="row"><span>Triggers</span><b>Manual + Stripe webhook</b></div>
+            <div class="row"><span>Estimated cost</span><b>$3〜$8/mo</b></div>
+            <div class="row"><span>Price</span><b style="color:var(--green);">FREE</b></div>
+          </div>
+          <button class="activate">🚀 起動する</button>
+          <div style="font-size:10.5px;color:var(--text-subtle);margin-top:10px;text-align:center;font-weight:700;line-height:1.5;">後からチームの設定 → メンバー編集で<br>いつでも調整できます</div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:32px;color:var(--peach);margin:18px 0 6px;">↓</div>
+  <div style="text-align:center;font-size:11px;color:var(--text-subtle);font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:24px;">「起動する」をクリック</div>
+
+  <!-- ════ STEP 5: Done ════ -->
+  <div class="step-screen">
+    <div class="step-tag violet"><span class="num">5</span> Activated</div>
+    <div class="step-body">
+      <div class="success">
+        <div class="check">✓</div>
+        <h3>EC Launch Starter is ready 🎉</h3>
+        <p>5 体のエージェントが生成され、ワークフローも構築済み。今すぐ起動 or 個別エージェントとチャット。</p>
+        <div class="next">
+          <div class="nb">
+            <div style="font-size:24px;margin-bottom:6px;">▶</div>
+            <div style="font-size:13px;font-weight:800;margin-bottom:3px;">Run the workflow</div>
+            <div style="font-size:11.5px;color:var(--text-muted);line-height:1.5;">5 ステップを自動実行 ・ 商品リサーチから集客投稿まで</div>
+          </div>
+          <div class="nb">
+            <div style="font-size:24px;margin-bottom:6px;">💬</div>
+            <div style="font-size:13px;font-weight:800;margin-bottom:3px;">Open Workspace</div>
+            <div style="font-size:11.5px;color:var(--text-muted);line-height:1.5;">@mention で個別エージェントに指示</div>
+          </div>
+        </div>
+        <button class="primary">▶ Run the workflow now</button>
+        <div style="font-size:11px;color:var(--text-subtle);font-weight:700;margin-top:10px;">サイドバーの 🎯 Teams にいつでも戻ってこれます</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

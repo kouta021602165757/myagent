@@ -74,14 +74,18 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);
 .subg{font-size:14px;color:var(--text-muted);margin-bottom:24px;}
 
 /* Quick start cards */
-.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;}
-.qc{background:#fff;border:1.5px solid var(--wire);border-radius:14px;padding:18px 16px;cursor:pointer;transition:all .18s;text-decoration:none;color:inherit;display:block;position:relative;}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px;}
+.qc{background:#fff;border:1.5px solid var(--wire);border-radius:16px;padding:22px 20px;cursor:pointer;transition:all .18s;text-decoration:none;color:inherit;display:block;position:relative;}
 .qc:hover{transform:translateY(-3px);border-color:var(--peach);box-shadow:0 10px 26px rgba(251,146,60,.12);}
 .qc.feat{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);}
 .qc.feat::before{content:'⚡ NEW';position:absolute;top:-9px;right:12px;background:var(--peach);color:#fff;font-size:9.5px;font-weight:900;letter-spacing:.06em;padding:3px 9px;border-radius:99px;}
-.qc .ic{font-size:30px;margin-bottom:10px;}
-.qc h3{font-size:13.5px;font-weight:900;margin-bottom:4px;}
-.qc p{font-size:11.5px;color:var(--text-muted);line-height:1.55;}
+.qc .ic{font-size:36px;margin-bottom:12px;}
+.qc h3{font-size:15px;font-weight:900;margin-bottom:6px;}
+.qc p{font-size:12.5px;color:var(--text-muted);line-height:1.55;margin-bottom:12px;}
+.qc .submenu{display:flex;gap:6px;font-size:11px;font-weight:700;}
+.qc .sub-pill{padding:4px 10px;background:var(--bg-warm);border:1px solid var(--wire);border-radius:99px;color:var(--text-muted);transition:all .14s;}
+.qc:hover .sub-pill{border-color:var(--peach);color:var(--peach-dark);}
+.qc .sub-pill.new{color:var(--peach-dark);background:var(--peach-soft);border-color:rgba(251,146,60,.32);font-weight:800;}
 
 /* Section: Three kinds */
 .kinds-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:24px;}
@@ -174,7 +178,6 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);
       <a class="sb-item"><div class="ic">📱</div><div class="nm">SNS Growth</div><span class="badge team">●</span></a>
 
       <div class="sb-cat">🏪 Discover</div>
-      <a class="sb-item"><div class="ic">📋</div><div class="nm">Templates</div></a>
       <a class="sb-item"><div class="ic">🛒</div><div class="nm">Agent Store</div></a>
     </nav>
 
@@ -200,22 +203,29 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);
       <a href="#" class="qc">
         <div class="ic">🤖</div>
         <h3>AI Agent を作成</h3>
-        <p>1 体ずつ ・ 自分の業務専属に</p>
+        <p>1 体ずつ ・ あなた専属の AI を組み立てる。</p>
+        <div class="submenu">
+          <span class="sub-pill new">🆕 新規</span>
+          <span class="sub-pill">📋 テンプレートから</span>
+        </div>
       </a>
-      <a href="/mock-team-create-flow.html" class="qc feat">
+      <a href="/mock-team-flow.html" class="qc feat">
         <div class="ic">🎯</div>
         <h3>AI Agent Team を作成</h3>
-        <p>やりたいことから AI が自動編成</p>
-      </a>
-      <a href="#" class="qc">
-        <div class="ic">📋</div>
-        <h3>テンプレート</h3>
-        <p>EC / SNS / 開発 ・ すぐ使える</p>
+        <p>やりたいことから AI が自動編成 ・ 業務丸ごと自動化。</p>
+        <div class="submenu">
+          <span class="sub-pill new">🆕 新規 (AI 生成)</span>
+          <span class="sub-pill">📋 テンプレートから</span>
+        </div>
       </a>
       <a href="/mock-team-store.html" class="qc">
         <div class="ic">🏪</div>
         <h3>Agent Store</h3>
-        <p>他クリエイターの Agent / Team</p>
+        <p>他クリエイターの Agent / Team を購入・無料 DL。</p>
+        <div class="submenu">
+          <span class="sub-pill">🤖 単体 Agent</span>
+          <span class="sub-pill">🎯 Team パック</span>
+        </div>
       </a>
     </div>
 

@@ -6068,7 +6068,11 @@ async function handleAPI(req,res,pathname,method,ip){
         let resp;
         let iters = 0;
         let streamedText = ''; // accumulator of everything emitted via SSE 'delta'
-        const MAX_ITERS = 5;
+        // Hard cap on tool-use iterations. Spreadsheet/browser tasks routinely
+        // chain 10-20 tool calls (read meta → read multiple ranges → analyze →
+        // write → format), so 5 was way too tight. The real ceiling is BUDGET_MS
+        // below — that's what stops runaway loops; this is a defense-in-depth limit.
+        const MAX_ITERS = 30;
         const startedAt = Date.now();
         const BUDGET_MS = 95000; // Render edge is ~100s; 5s margin to flush response
         while(true){

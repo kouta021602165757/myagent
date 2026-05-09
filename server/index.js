@@ -411,7 +411,9 @@ const MARKET_TAGS = [
 const MARKET_TAG_LABEL = MARKET_TAGS.reduce((a,t)=>{a[t.id]=t.label;return a;},{});
 
 /* ── Creator revenue helpers (#5) ───────────────────────────── */
-const REVENUE_SHARE_RATE = 0.70;   // 70% to creator (chat usage share + upfront purchase)
+const PURCHASE_SHARE_RATE = 0.70;  // 70% of upfront purchase price → creator
+const USAGE_SHARE_RATE    = 0.10;  // 10% of chat usage cost      → creator
+const REVENUE_SHARE_RATE  = USAGE_SHARE_RATE; // legacy alias for chat usage callsites
 const PENDING_DAYS = 7;
 const MIN_PRICE_JPY = 100;         // ¥100 minimum for paid listings (Stripe min ¥50, leave buffer)
 const MAX_PRICE_JPY = 100000;      // ¥100,000 cap to prevent typos / abuse
@@ -5103,7 +5105,8 @@ async function handleAPI(req,res,pathname,method,ip){
       balance_available: _r3(user.balance_jpy_available||0),
       total_earned: _r3(total),
       this_month: _r3(thisMonth),
-      revenue_share_rate: REVENUE_SHARE_RATE,
+      revenue_share_rate: USAGE_SHARE_RATE,
+      purchase_share_rate: PURCHASE_SHARE_RATE,
       pending_days: PENDING_DAYS,
       daily,
       by_agent: Object.values(byAgent).sort((a,b)=>b.share_jpy-a.share_jpy),
@@ -5464,8 +5467,8 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res,500,{error:'購入処理に失敗しました'});
     }
 
-    // Credit creator (70%)
-    const share = _r3(price * REVENUE_SHARE_RATE);
+    // Credit creator (70% of upfront purchase)
+    const share = _r3(price * PURCHASE_SHARE_RATE);
     found.user.balance_jpy_pending = _r3((found.user.balance_jpy_pending||0) + share);
     found.user.revenue_history = found.user.revenue_history || [];
     found.user.revenue_history.push({

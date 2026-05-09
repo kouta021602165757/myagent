@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Post-login Home — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;--rose:#ef4444;
+
+  /* Type colors — 3 types of conversations */
+  --type-dm:#fb923c;        /* DM = solo with AI */
+  --type-dm-bg:#fff7ee;
+  --type-group:#3b82f6;     /* Group = multi-human + AI */
+  --type-group-bg:#dbeafe;
+  --type-team:#8b5cf6;      /* Team = multi-AI */
+  --type-team-bg:#ede9fe;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.55;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;flex-shrink:0;}
+.banner b{color:var(--peach);} .banner a{color:var(--peach);text-decoration:underline;}
+
+/* === LAYOUT: Sidebar + Main === */
+.app{flex:1;display:flex;overflow:hidden;}
+
+/* Sidebar */
+.sb{width:240px;background:#fff;border-right:1px solid var(--wire);display:flex;flex-direction:column;flex-shrink:0;}
+.sb-top{padding:18px 16px 12px;border-bottom:1px solid var(--wire);}
+.sb-brand{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;color:var(--text);text-decoration:none;margin-bottom:14px;letter-spacing:.04em;}
+.sb-brand .bar{display:flex;gap:2px;align-items:flex-end;}
+.sb-brand .bar div{width:4px;background:var(--peach);border-radius:2px;}
+.sb-brand .bar div:nth-child(1){height:18px;}
+.sb-brand .bar div:nth-child(2){height:13px;opacity:.65;}
+.sb-brand .bar div:nth-child(3){height:8px;opacity:.35;}
+
+.sb-search{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:9px;font-size:12px;color:var(--text-subtle);font-weight:700;margin-bottom:12px;}
+.sb-search kbd{margin-left:auto;background:#fff;border:1px solid var(--wire);font-size:9.5px;padding:1px 5px;border-radius:4px;font-family:'SF Mono',monospace;}
+
+.sb-new{width:100%;background:var(--peach-soft);border:1px solid rgba(251,146,60,.32);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:8px;color:var(--peach-dark);font-size:13px;font-weight:800;cursor:pointer;}
+.sb-new:hover{background:var(--peach);color:#fff;}
+
+.sb-nav{flex:1;overflow-y:auto;padding:10px 8px;}
+.sb-cat{font-size:9.5px;font-weight:800;color:var(--text-subtle);letter-spacing:.1em;text-transform:uppercase;padding:8px 8px 4px;display:flex;align-items:center;justify-content:space-between;}
+.sb-cat .add{color:var(--peach-dark);cursor:pointer;font-size:14px;font-weight:900;}
+
+.sb-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--text);transition:background .12s;text-decoration:none;}
+.sb-item:hover{background:var(--bg-warm);}
+.sb-item.on{background:var(--peach-soft);color:var(--peach-dark);font-weight:800;}
+.sb-item .ic{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--bg-warm);}
+.sb-item .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;}
+.sb-item .badge{font-size:9.5px;font-weight:900;padding:2px 6px;border-radius:99px;color:#fff;}
+.sb-item .badge.dm{background:var(--type-dm);}
+.sb-item .badge.group{background:var(--type-group);}
+.sb-item .badge.team{background:var(--type-team);}
+.sb-item .badge.busy{background:var(--peach);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+.sb-bot{padding:12px 14px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:9px;font-size:12px;}
+.sb-bot .av{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;}
+.sb-bot .nm{flex:1;font-weight:700;}
+.sb-bot .gear{cursor:pointer;color:var(--text-subtle);}
+
+/* Main */
+.main{flex:1;overflow-y:auto;padding:32px 36px;}
+
+.greet{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.greet h1{font-size:28px;font-weight:900;letter-spacing:-.02em;}
+.greet .now{font-size:12px;color:var(--text-subtle);font-weight:700;}
+.subg{font-size:14px;color:var(--text-muted);margin-bottom:24px;}
+
+/* Quick start cards */
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;}
+.qc{background:#fff;border:1.5px solid var(--wire);border-radius:14px;padding:18px 16px;cursor:pointer;transition:all .18s;text-decoration:none;color:inherit;display:block;position:relative;}
+.qc:hover{transform:translateY(-3px);border-color:var(--peach);box-shadow:0 10px 26px rgba(251,146,60,.12);}
+.qc.feat{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);}
+.qc.feat::before{content:'⚡ NEW';position:absolute;top:-9px;right:12px;background:var(--peach);color:#fff;font-size:9.5px;font-weight:900;letter-spacing:.06em;padding:3px 9px;border-radius:99px;}
+.qc .ic{font-size:30px;margin-bottom:10px;}
+.qc h3{font-size:13.5px;font-weight:900;margin-bottom:4px;}
+.qc p{font-size:11.5px;color:var(--text-muted);line-height:1.55;}
+
+/* Section: Three kinds */
+.kinds-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:24px;}
+.kind{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:18px;display:flex;flex-direction:column;}
+.kind-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.kind-head .ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;}
+.kind.dm .kind-head .ic{background:var(--type-dm);}
+.kind.group .kind-head .ic{background:var(--type-group);}
+.kind.team .kind-head .ic{background:var(--type-team);}
+.kind-head h3{font-size:14px;font-weight:900;flex:1;}
+.kind-head .count{font-size:11px;font-weight:800;color:var(--text-subtle);background:var(--bg-warm);padding:3px 8px;border-radius:99px;}
+.kind-desc{font-size:11.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.55;}
+
+.kind-list{flex:1;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.k-row{display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--bg);border:1px solid var(--wire);border-radius:9px;cursor:pointer;transition:all .12s;}
+.k-row:hover{background:#fff;border-color:var(--peach);}
+.k-row .av{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.kind.dm .k-row .av{background:var(--type-dm-bg);}
+.kind.group .k-row .av{background:var(--type-group-bg);}
+.kind.team .k-row .av{background:var(--type-team-bg);}
+.k-row .body{flex:1;min-width:0;}
+.k-row .nm{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.k-row .meta{font-size:10.5px;color:var(--text-subtle);font-weight:700;display:flex;align-items:center;gap:5px;margin-top:1px;}
+.k-row .when{font-size:10px;color:var(--text-subtle);font-weight:700;flex-shrink:0;}
+.k-row .stat-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green);flex-shrink:0;}
+.k-row .stat-dot.busy{background:var(--peach);animation:pulse 1.5s infinite;}
+
+.kind .open-all{font-size:11.5px;font-weight:800;color:var(--peach-dark);background:transparent;border:0;padding:8px 0 0;text-align:left;cursor:pointer;}
+
+/* Recent activity */
+.activity{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:18px;margin-bottom:24px;}
+.activity h3{font-size:14px;font-weight:900;margin-bottom:12px;}
+.act-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--wire);}
+.act-row:last-child{border-bottom:0;}
+.act-row .icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;flex-shrink:0;}
+.act-row.dm .icon{background:var(--type-dm);}
+.act-row.group .icon{background:var(--type-group);}
+.act-row.team .icon{background:var(--type-team);}
+.act-row .body{flex:1;min-width:0;}
+.act-row .line1{font-size:12.5px;color:var(--text);line-height:1.55;}
+.act-row .line1 b{font-weight:800;}
+.act-row .line1 .pill{display:inline-block;font-size:9.5px;font-weight:800;padding:1px 7px;border-radius:99px;color:#fff;letter-spacing:.04em;margin-right:4px;}
+.act-row.dm .pill{background:var(--type-dm);}
+.act-row.group .pill{background:var(--type-group);}
+.act-row.team .pill{background:var(--type-team);}
+.act-row .when{font-size:10.5px;color:var(--text-subtle);font-weight:700;flex-shrink:0;}
+
+/* Legend */
+.legend{display:flex;gap:18px;margin-bottom:18px;font-size:11.5px;color:var(--text-muted);font-weight:700;flex-wrap:wrap;}
+.legend .l{display:flex;align-items:center;gap:6px;}
+.legend .dot{width:10px;height:10px;border-radius:50%;}
+.legend .dot.dm{background:var(--type-dm);}
+.legend .dot.group{background:var(--type-group);}
+.legend .dot.team{background:var(--type-team);}
+
+@media (max-width:1100px){.kinds-row{grid-template-columns:1fr;}.quick-grid{grid-template-columns:1fr 1fr;}}
+@media (max-width:760px){.sb{display:none;}.main{padding:20px;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK</b> ・ Post-login Home (Dashboard) ・ <a href="/mock-team-index.html">他のモックを見る</a></div>
+
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sb">
+    <div class="sb-top">
+      <a href="/" class="sb-brand">
+        <span class="bar"><div></div><div></div><div></div></span>
+        MY AI AGENT
+      </a>
+      <div class="sb-search">🔍 <span>Search…</span><kbd>⌘K</kbd></div>
+      <button class="sb-new">＋ New <span style="margin-left:auto;font-size:10px;opacity:.7">▾</span></button>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-cat">📊 Dashboard</div>
+      <a class="sb-item on"><div class="ic">🏠</div><div class="nm">Home</div></a>
+
+      <div class="sb-cat">🤖 AI Agents <span class="add">＋</span></div>
+      <a class="sb-item"><div class="ic">💼</div><div class="nm">Sales Agent</div><span class="badge dm">DM</span></a>
+      <a class="sb-item"><div class="ic">📝</div><div class="nm">SEO Writer</div><span class="badge dm">DM</span></a>
+      <a class="sb-item"><div class="ic">🐦</div><div class="nm">X Auto-Ops</div><span class="badge dm">DM</span></a>
+
+      <div class="sb-cat">👥 Groups <span class="add">＋</span></div>
+      <a class="sb-item"><div class="ic">🦊</div><div class="nm">小川-タスク</div><span class="badge group">3</span></a>
+      <a class="sb-item"><div class="ic">📋</div><div class="nm">資金調達資料</div><span class="badge group">2</span></a>
+
+      <div class="sb-cat">🎯 Teams <span class="add">＋</span></div>
+      <a class="sb-item"><div class="ic">🛍</div><div class="nm">EC Launch Team</div><span class="badge busy">⚙</span></a>
+      <a class="sb-item"><div class="ic">📱</div><div class="nm">SNS Growth</div><span class="badge team">●</span></a>
+
+      <div class="sb-cat">🏪 Discover</div>
+      <a class="sb-item"><div class="ic">📋</div><div class="nm">Templates</div></a>
+      <a class="sb-item"><div class="ic">🛒</div><div class="nm">Agent Store</div></a>
+    </nav>
+
+    <div class="sb-bot">
+      <div class="av">武</div>
+      <div class="nm">武内 洸太</div>
+      <span class="gear">⚙</span>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <div class="greet">
+      <div>
+        <h1>Welcome back, 武内 🍑</h1>
+        <div class="subg">3 つの世界 ・ 個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務丸ごと自動化</div>
+      </div>
+      <div class="now">Saturday, May 10 ・ 21:00</div>
+    </div>
+
+    <!-- Quick start -->
+    <div class="quick-grid">
+      <a href="#" class="qc">
+        <div class="ic">🤖</div>
+        <h3>AI Agent を作成</h3>
+        <p>1 体ずつ ・ 自分の業務専属に</p>
+      </a>
+      <a href="/mock-team-create-flow.html" class="qc feat">
+        <div class="ic">🎯</div>
+        <h3>AI Agent Team を作成</h3>
+        <p>やりたいことから AI が自動編成</p>
+      </a>
+      <a href="#" class="qc">
+        <div class="ic">📋</div>
+        <h3>テンプレート</h3>
+        <p>EC / SNS / 開発 ・ すぐ使える</p>
+      </a>
+      <a href="/mock-team-store.html" class="qc">
+        <div class="ic">🏪</div>
+        <h3>Agent Store</h3>
+        <p>他クリエイターの Agent / Team</p>
+      </a>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <span style="font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:10.5px;color:var(--text-subtle);">3 KINDS OF CONVERSATIONS</span>
+      <span class="l"><span class="dot dm"></span><b>DM</b> ・ あなた + AI 1 体</span>
+      <span class="l"><span class="dot group"></span><b>Group</b> ・ あなた + 友達 + AI</span>
+      <span class="l"><span class="dot team"></span><b>Team</b> ・ あなた + AI 複数体 (連携)</span>
+    </div>
+
+    <!-- 3 kinds row -->
+    <div class="kinds-row">
+      <!-- DM -->
+      <div class="kind dm">
+        <div class="kind-head">
+          <div class="ic">🤖</div>
+          <h3>AI Agents (DM)</h3>
+          <span class="count">3 active</span>
+        </div>
+        <p class="kind-desc">あなたと AI が **1 対 1** で話すモード。集中して 1 タスクを進めるのに最適。</p>
+        <div class="kind-list">
+          <div class="k-row">
+            <div class="av">💼</div>
+            <div class="body">
+              <div class="nm">Sales Agent</div>
+              <div class="meta"><span class="stat-dot"></span>Marketing ・ Writing ・ Research</div>
+            </div>
+            <div class="when">2m</div>
+          </div>
+          <div class="k-row">
+            <div class="av">📝</div>
+            <div class="body">
+              <div class="nm">SEO Writer</div>
+              <div class="meta"><span class="stat-dot"></span>SEO ・ Writing ・ Analytics</div>
+            </div>
+            <div class="when">1h</div>
+          </div>
+          <div class="k-row">
+            <div class="av">🐦</div>
+            <div class="body">
+              <div class="nm">X Auto-Ops</div>
+              <div class="meta"><span class="stat-dot"></span>SNS ・ Marketing</div>
+            </div>
+            <div class="when">3h</div>
+          </div>
+        </div>
+        <button class="open-all">＋ Create new agent →</button>
+      </div>
+
+      <!-- Group -->
+      <div class="kind group">
+        <div class="kind-head">
+          <div class="ic">👥</div>
+          <h3>Groups</h3>
+          <span class="count">2 active</span>
+        </div>
+        <p class="kind-desc">**人間 + AI** がいる LINE 風グループ。チーム作業や友達と一緒にプロジェクトを進める。</p>
+        <div class="kind-list">
+          <div class="k-row">
+            <div class="av">🦊</div>
+            <div class="body">
+              <div class="nm">小川-タスク</div>
+              <div class="meta"><span class="stat-dot busy"></span>武内 + 小川 + AI ・ 競合分析中</div>
+            </div>
+            <div class="when">5m</div>
+          </div>
+          <div class="k-row">
+            <div class="av">📋</div>
+            <div class="body">
+              <div class="nm">資金調達資料</div>
+              <div class="meta"><span class="stat-dot"></span>武内 + AI ・ pitch deck 作成</div>
+            </div>
+            <div class="when">9h</div>
+          </div>
+        </div>
+        <button class="open-all">＋ Create a group →</button>
+      </div>
+
+      <!-- Team -->
+      <div class="kind team">
+        <div class="kind-head">
+          <div class="ic">🎯</div>
+          <h3>Teams</h3>
+          <span class="count">2 active</span>
+        </div>
+        <p class="kind-desc">**AI が複数体連携** して業務を丸ごと自動化。EC 運営や SNS 集客を 1 クリックで回す。</p>
+        <div class="kind-list">
+          <div class="k-row">
+            <div class="av">🛍</div>
+            <div class="body">
+              <div class="nm">EC Launch Team</div>
+              <div class="meta"><span class="stat-dot busy"></span>5 agents ・ workflow running</div>
+            </div>
+            <div class="when">live</div>
+          </div>
+          <div class="k-row">
+            <div class="av">📱</div>
+            <div class="body">
+              <div class="nm">SNS Growth Starter</div>
+              <div class="meta"><span class="stat-dot"></span>3 agents ・ daily 9am</div>
+            </div>
+            <div class="when">9h</div>
+          </div>
+        </div>
+        <button class="open-all">＋ Build a new team →</button>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="activity">
+      <h3>⚡ Recent activity (mixed across all 3 kinds)</h3>
+      <div class="act-row team">
+        <div class="icon">🛍</div>
+        <div class="body">
+          <div class="line1"><span class="pill">TEAM</span> <b>EC Launch Team</b> ・ Visual Designer generated 5 product photos for "Pet calming bed" — ready for review</div>
+        </div>
+        <div class="when">2 min ago</div>
+      </div>
+      <div class="act-row group">
+        <div class="icon">🦊</div>
+        <div class="body">
+          <div class="line1"><span class="pill">GROUP</span> <b>小川-タスク</b> ・ 小川: 「@AI 競合 5 社分析して」 → AI replied with 5 competitors</div>
+        </div>
+        <div class="when">5 min ago</div>
+      </div>
+      <div class="act-row dm">
+        <div class="icon">💼</div>
+        <div class="body">
+          <div class="line1"><span class="pill">DM</span> <b>Sales Agent</b> ・ Drafted 5 follow-up emails for the prospect list you uploaded</div>
+        </div>
+        <div class="when">12 min ago</div>
+      </div>
+      <div class="act-row team">
+        <div class="icon">📱</div>
+        <div class="body">
+          <div class="line1"><span class="pill">TEAM</span> <b>SNS Growth Starter</b> ・ Daily workflow ran — 3 posts scheduled across X / IG / TikTok</div>
+        </div>
+        <div class="when">9 hours ago</div>
+      </div>
+      <div class="act-row dm">
+        <div class="icon">📝</div>
+        <div class="body">
+          <div class="line1"><span class="pill">DM</span> <b>SEO Writer</b> ・ Wrote a 1500-word blog post on "Pet calming techniques"</div>
+        </div>
+        <div class="when">1 day ago</div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

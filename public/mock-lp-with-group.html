@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<script>
+// Legacy redirect: /?listing=ls_xxx (old share format) → /l/ls_xxx (public listing page)
+(function(){
+  try{
+    var lid = new URLSearchParams(location.search).get('listing');
+    if(lid && /^ls_[a-z0-9_-]+$/.test(lid)){
+      location.replace('/l/' + lid);
+    }
+  }catch(e){}
+})();
+</script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] グループ機能追加版 — MY AI AGENT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════
+   MY AI AGENT — Landing page (clean rebuild, no !important wars)
+═════════════════════════════════════════════════════════ */
+:root{
+  /* Brand */
+  --peach:#fb923c;
+  --peach-dark:#ea580c;
+  --peach-soft:rgba(251,146,60,.08);
+  --peach-light:#fde8d8;
+
+  /* Surfaces */
+  --bg:#fdf8f3;
+  --bg-warm:#faf3eb;
+  --bg-card:#ffffff;
+  --bg-deep:#1e1410;
+
+  /* Text */
+  --text:#1a0a00;
+  --text-muted:#5c3a1e;
+  --text-subtle:#9a6a4a;
+  --text-on-dark:#fff5e6;
+
+  /* Lines */
+  --line:rgba(180,120,80,.14);
+  --line-strong:rgba(180,120,80,.22);
+
+  /* Status */
+  --green:#10b981;
+  --rose:#ef4444;
+  --blue:#3b82f6;
+
+  /* Type */
+  --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+  --display:'Bebas Neue','Hiragino Mincho ProN','Yu Mincho',serif;
+  --mono:'DM Mono','SF Mono',Menlo,monospace;
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block;}
+a{color:inherit;text-decoration:none;}
+button{cursor:pointer;font-family:inherit;}
+
+/* ════ NAV ════ */
+nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(253,248,243,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 32px;border-bottom:1px solid var(--line);
+}
+.nav-logo{display:flex;align-items:center;gap:9px;}
+.nav-bars{display:flex;gap:3px;align-items:flex-end;}
+.nav-bars div{width:4px;background:var(--peach);border-radius:2px;}
+.nav-bars div:nth-child(1){height:20px;}
+.nav-bars div:nth-child(2){height:14px;opacity:.65;}
+.nav-bars div:nth-child(3){height:8px;opacity:.35;}
+.nav-name{font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--text);}
+.nav-links{display:flex;gap:24px;align-items:center;}
+.nav-links a{color:var(--text-muted);font-size:13px;font-weight:600;transition:color .15s;}
+.nav-links a:hover{color:var(--peach-dark);}
+
+.nav-actions{display:flex;align-items:center;gap:8px;}
+.nav-login{
+  background:transparent;color:var(--text);border:1.5px solid var(--line-strong);
+  padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;transition:all .15s;
+}
+.nav-login:hover{border-color:var(--peach);color:var(--peach-dark);background:rgba(251,146,60,.04);}
+.nav-cta{
+  background:var(--peach);color:#fff;border:0;padding:9px 18px;border-radius:10px;
+  font-size:13px;font-weight:700;transition:all .15s;
+}
+.nav-cta:hover{background:var(--peach-dark);transform:translateY(-1px);}
+
+/* ════ Buttons (shared) ════ */
+.btn-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--peach);color:#fff;border:0;padding:14px 26px;border-radius:12px;
+  font-size:15px;font-weight:800;
+  box-shadow:0 6px 18px rgba(251,146,60,.22);
+  transition:all .18s;
+}
+.btn-primary:hover{background:var(--peach-dark);transform:translateY(-2px);box-shadow:0 10px 24px rgba(251,146,60,.32);}
+.btn-ghost{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:transparent;color:var(--text);border:1.5px solid var(--line-strong);
+  padding:14px 26px;border-radius:12px;font-size:15px;font-weight:700;
+  transition:all .18s;
+}
+.btn-ghost:hover{border-color:var(--peach);color:var(--peach-dark);}
+
+/* ════ Section frame ════ */
+.section{position:relative;padding:96px 24px;}
+.section-inner{max-width:1100px;margin:0 auto;}
+.section-head{text-align:center;max-width:680px;margin:0 auto 56px;}
+.kicker{
+  display:inline-block;font-size:11px;font-weight:800;color:var(--peach-dark);
+  letter-spacing:.18em;text-transform:uppercase;margin-bottom:14px;
+  padding:5px 12px;background:var(--peach-soft);border-radius:999px;
+}
+.h2{
+  font-family:var(--display);font-size:clamp(36px,5.4vw,56px);
+  font-weight:900;line-height:1.15;letter-spacing:.01em;color:var(--text);
+  margin-bottom:14px;
+}
+.lead{font-size:16px;color:var(--text-muted);line-height:1.75;}
+
+/* ════ Hero ════ */
+.hero{
+  text-align:center;padding:90px 24px 80px;
+  background:radial-gradient(circle at 50% 0%, var(--peach-light) 0%, var(--bg) 60%);
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cdefs%3E%3Cpattern id='dots' x='0' y='0' width='20' height='20' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23fb923c' opacity='.12'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='url(%23dots)'/%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.hero-inner{position:relative;z-index:1;max-width:780px;margin:0 auto;}
+.hero-kicker{
+  display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;
+  color:var(--peach-dark);background:#fff;border:1px solid rgba(251,146,60,.25);
+  padding:7px 16px;border-radius:999px;margin-bottom:24px;letter-spacing:.04em;
+  box-shadow:0 4px 14px rgba(251,146,60,.08);
+}
+.hero-kicker-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.hero h1{
+  font-family:var(--display);font-size:clamp(56px,9vw,108px);
+  font-weight:900;line-height:.95;letter-spacing:.01em;margin-bottom:24px;
+  color:var(--text);
+}
+.hero h1 .accent{color:var(--peach);}
+.hero-sub{font-size:18px;color:var(--text-muted);max-width:580px;margin:0 auto 32px;line-height:1.75;}
+.hero-sub b{color:var(--text);font-weight:700;}
+.hero-cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.hero-trust{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:26px;}
+.hero-trust-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 18px;border-radius:999px;
+  background:#fff;border:1.5px solid rgba(251,146,60,.3);
+  font-size:14px;font-weight:700;color:var(--text);
+  box-shadow:0 6px 18px rgba(251,146,60,.12);
+  transition:all .2s;
+}
+.hero-trust-pill:hover{transform:translateY(-2px);border-color:var(--peach);box-shadow:0 10px 24px rgba(251,146,60,.18);}
+.hero-trust-pill .check{
+  width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;flex-shrink:0;
+  box-shadow:0 2px 6px rgba(251,146,60,.3);
+}
+
+/* ════ Section: 3 STEPS ════ */
+.section-steps{background:var(--bg-warm);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.step-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:18px;padding:32px 26px;
+  position:relative;transition:all .25s;
+}
+.step-card:hover{transform:translateY(-3px);box-shadow:0 14px 36px rgba(180,100,40,.08);border-color:rgba(251,146,60,.3);}
+.step-num{
+  position:absolute;top:20px;right:24px;
+  font-family:var(--display);font-size:42px;color:var(--bg-warm);
+  line-height:1;letter-spacing:.02em;
+}
+.step-card:hover .step-num{color:rgba(251,146,60,.18);}
+.step-icon{
+  font-size:34px;margin-bottom:18px;width:60px;height:60px;
+  background:linear-gradient(135deg,var(--peach-soft),rgba(251,146,60,.04));
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+}
+.step-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:8px;}
+.step-desc{font-size:14px;color:var(--text-muted);line-height:1.75;}
+
+/* ════ Section: 5-STEP CREATE ════ */
+.section-create{background:var(--bg);}
+.create-flow{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+.create-step{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:28px 18px 22px;text-align:center;position:relative;transition:all .25s;
+}
+.create-step:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(180,100,40,.08);border-color:rgba(251,146,60,.3);}
+.create-step .num-badge{
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  width:30px;height:30px;border-radius:50%;background:var(--peach);color:#fff;
+  font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(251,146,60,.32);
+}
+.create-step .ic{font-size:32px;margin:14px 0 10px;}
+.create-step .nm{font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.create-step .desc{font-size:11.5px;color:var(--text-subtle);line-height:1.6;}
+.create-cta{text-align:center;margin-top:48px;}
+
+/* ════ Section: TEMPLATE ════ */
+.section-template{background:var(--bg-warm);border-top:1px solid var(--line);}
+.tmpl-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.tmpl-text h3{
+  font-family:var(--display);font-size:36px;font-weight:900;color:var(--text);
+  line-height:1.2;letter-spacing:.02em;margin-bottom:16px;
+}
+.tmpl-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:20px;}
+.tmpl-text p b{color:var(--text);}
+.tmpl-text ul{list-style:none;margin-bottom:24px;}
+.tmpl-text li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text-muted);margin:8px 0;}
+.tmpl-text li::before{
+  content:'';width:18px;height:18px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+
+.tmpl-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:20px;padding:26px;
+  box-shadow:0 14px 40px rgba(180,100,40,.08);position:relative;
+}
+.tmpl-card-head{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.tmpl-avatar{
+  width:64px;height:64px;border-radius:18px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;
+  flex-shrink:0;box-shadow:0 6px 18px rgba(251,146,60,.28);
+}
+.tmpl-card-name{font-size:17px;font-weight:800;color:var(--text);}
+.tmpl-card-desc{font-size:12px;color:var(--text-subtle);margin-top:3px;}
+.tmpl-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:18px;}
+.tmpl-pill{
+  background:var(--peach-soft);color:var(--peach-dark);
+  padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;
+  border:1px solid rgba(251,146,60,.2);letter-spacing:.02em;
+}
+.tmpl-modules{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.tmpl-mod{
+  background:var(--bg-warm);border:1px solid var(--line);border-radius:9px;
+  padding:9px 4px;text-align:center;font-size:10.5px;color:var(--text-muted);
+  font-weight:700;line-height:1.3;
+}
+.tmpl-mod-n{
+  display:block;color:var(--peach);font-weight:900;font-size:13px;
+  font-family:var(--display);margin-bottom:1px;
+}
+
+/* ════ Template grid (other 9 templates) ════ */
+.tmpl-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+  margin-top:48px;
+}
+.tmpl-mini{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:18px 18px 16px;transition:all .22s;
+}
+.tmpl-mini:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(180,100,40,.08);border-color:rgba(251,146,60,.3);}
+.tmpl-mini-av{
+  width:42px;height:42px;border-radius:11px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;
+  margin-bottom:10px;box-shadow:0 4px 12px rgba(251,146,60,.24);
+}
+.tmpl-mini-nm{font-size:14px;font-weight:800;color:var(--text);margin-bottom:5px;line-height:1.35;}
+.tmpl-mini-dc{font-size:11.5px;color:var(--text-subtle);line-height:1.6;}
+
+/* ════ Section: SHARE ════ */
+.section-share{background:var(--bg);position:relative;overflow:hidden;}
+.section-share::before{
+  content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;
+  background:radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
+  pointer-events:none;
+}
+.coming-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--text);color:var(--text-on-dark);
+  padding:6px 16px;border-radius:999px;
+  font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:18px;
+}
+.coming-pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--peach);}
+.live-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(16,185,129,.12);color:#047857;
+  padding:6px 16px;border-radius:999px;
+  font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:18px;
+  border:1px solid rgba(16,185,129,.25);
+}
+.live-pill::before{
+  content:'';width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 0 rgba(16,185,129,.5);animation:livePulse 1.8s infinite;
+}
+@keyframes livePulse{
+  0%{box-shadow:0 0 0 0 rgba(16,185,129,.5);}
+  70%{box-shadow:0 0 0 8px rgba(16,185,129,0);}
+  100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}
+}
+.share-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-top:56px;}
+.share-text h3{
+  font-family:var(--display);font-size:34px;font-weight:900;color:var(--text);
+  letter-spacing:.02em;line-height:1.25;margin-bottom:16px;
+}
+.share-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:20px;}
+.share-text p b{color:var(--text);}
+.share-text ul{list-style:none;}
+.share-text li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text-muted);margin:8px 0;}
+.share-text li::before{
+  content:'';width:18px;height:18px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+
+.share-visual{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:20px;padding:24px;
+  box-shadow:0 14px 40px rgba(180,100,40,.08);position:relative;
+}
+.share-mock-url{
+  font-family:var(--mono);font-size:13px;color:var(--text);
+  background:var(--bg-warm);border:1px solid var(--line);padding:12px 16px;
+  border-radius:11px;margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.share-mock-url::before{content:'🔗';font-size:14px;}
+.share-flow{display:flex;flex-direction:column;gap:10px;}
+.share-flow-step{
+  display:flex;align-items:center;gap:14px;padding:12px 14px;
+  background:var(--bg-warm);border:1px solid var(--line);border-radius:11px;
+  font-size:13px;color:var(--text-muted);transition:all .18s;
+}
+.share-flow-step:hover{border-color:rgba(251,146,60,.3);}
+.share-flow-step .num{
+  width:26px;height:26px;border-radius:50%;background:var(--peach);color:#fff;
+  font-weight:800;font-size:12px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+
+.share-stamp{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-6deg);
+  background:rgba(30,20,16,.94);color:#fff;
+  padding:10px 24px;border-radius:8px;
+  font-size:13px;font-weight:800;letter-spacing:.16em;
+  border:2px solid rgba(255,245,230,.25);
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+  white-space:nowrap;pointer-events:none;
+}
+
+.share-pre{
+  margin:48px auto 0;max-width:520px;
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:22px 26px;text-align:center;
+  box-shadow:0 6px 20px rgba(180,100,40,.05);
+}
+.share-pre p{font-size:13px;color:var(--text-muted);margin-bottom:12px;}
+.share-pre form{display:flex;gap:8px;}
+.share-pre input{
+  flex:1;padding:11px 14px;
+  background:var(--bg-warm);border:1px solid var(--line);border-radius:10px;
+  font-size:13.5px;font-family:inherit;color:var(--text);outline:none;
+  transition:border-color .18s;
+}
+.share-pre input:focus{border-color:var(--peach);}
+.share-pre button{
+  background:var(--peach);color:#fff;border:0;padding:11px 20px;border-radius:10px;
+  font-size:13px;font-weight:800;
+}
+.share-pre button:hover{background:var(--peach-dark);}
+.share-pre .ok{display:none;margin-top:8px;color:var(--green);font-size:12px;font-weight:700;}
+
+/* ════ Section: GROUP CHAT (NEW) ════ */
+.section-group{background:var(--bg-warm);border-top:1px solid var(--line);position:relative;overflow:hidden;}
+.section-group::before{
+  content:'';position:absolute;top:-100px;left:-100px;width:420px;height:420px;
+  background:radial-gradient(circle, rgba(16,185,129,.08) 0%, transparent 70%);
+  pointer-events:none;
+}
+.group-row{display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;margin-top:56px;}
+.group-text h3{
+  font-family:var(--display);font-size:34px;font-weight:900;color:var(--text);
+  letter-spacing:.02em;line-height:1.25;margin-bottom:16px;
+}
+.group-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:20px;}
+.group-text p b{color:var(--text);}
+.group-text ul{list-style:none;}
+.group-text li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text-muted);margin:8px 0;}
+.group-text li b{color:var(--text);}
+.group-text li::before{
+  content:'';width:18px;height:18px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+
+/* Group chat mockup (LINE風) */
+.group-mockup{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:22px;
+  box-shadow:0 14px 40px rgba(180,100,40,.10);overflow:hidden;
+  max-width:420px;margin:0 auto;
+}
+.gm-head{
+  display:flex;align-items:center;gap:12px;padding:14px 18px;
+  background:#fdfaf6;border-bottom:1px solid var(--line);
+}
+.gm-avs{display:flex;align-items:center;}
+.gm-av{
+  width:32px;height:32px;border-radius:50%;border:2px solid #fff;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;margin-left:-8px;flex-shrink:0;
+}
+.gm-av:first-child{margin-left:0;}
+.gm-av.b{background:linear-gradient(135deg,#a78bfa,#8b5cf6);}
+.gm-av.c{background:linear-gradient(135deg,#34d399,#10b981);}
+.gm-av.d{background:linear-gradient(135deg,#fbbf24,#f59e0b);}
+.gm-av.ai{background:linear-gradient(135deg,#1a0a00,#3a1a08);box-shadow:0 0 0 2px var(--peach);}
+.gm-meta-nm{font-size:14px;font-weight:800;color:var(--text);}
+.gm-meta-sub{font-size:11px;color:var(--text-subtle);font-weight:600;margin-top:2px;}
+.gm-body{
+  background:linear-gradient(180deg,#faf3eb,#fdf8f3);
+  padding:18px;display:flex;flex-direction:column;gap:10px;min-height:300px;
+}
+.gm-msg{max-width:80%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.55;}
+.gm-msg.u{background:#fff;border:1px solid var(--line);color:var(--text);align-self:flex-start;}
+.gm-msg.u .nm{font-size:10.5px;font-weight:800;color:var(--peach-dark);margin-bottom:3px;display:block;}
+.gm-msg.you{background:var(--green);color:#fff;align-self:flex-end;border-radius:14px 14px 4px 14px;}
+.gm-msg.ai{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;align-self:flex-start;
+  border-radius:14px 14px 14px 4px;
+}
+.gm-msg.ai .nm{font-size:10.5px;font-weight:800;color:rgba(255,255,255,.85);margin-bottom:3px;display:block;}
+.gm-input{
+  display:flex;align-items:center;gap:10px;padding:12px 16px;
+  background:#fff;border-top:1px solid var(--line);
+}
+.gm-input-box{
+  flex:1;background:var(--bg-warm);border:1px solid var(--line);
+  border-radius:99px;padding:8px 14px;font-size:12px;color:var(--text-subtle);
+}
+.gm-input-send{
+  background:var(--peach);color:#fff;border-radius:50%;width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;
+}
+
+/* Group sub-features (3 mini cards) */
+.group-features{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:48px;
+}
+.group-feat{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:14px;
+  padding:22px 20px;transition:all .22s;
+}
+.group-feat:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(180,100,40,.08);border-color:rgba(251,146,60,.3);}
+.group-feat-ic{font-size:28px;margin-bottom:10px;}
+.group-feat-nm{font-size:14.5px;font-weight:800;color:var(--text);margin-bottom:6px;line-height:1.35;}
+.group-feat-dc{font-size:12.5px;color:var(--text-subtle);line-height:1.7;}
+
+@media (max-width:760px){
+  .group-row{grid-template-columns:1fr;gap:32px;}
+  .group-features{grid-template-columns:1fr;}
+}
+
+/* ════ Section: AGENT STORE ════ */
+.section-market{background:var(--bg-warm);border-top:1px solid var(--line);position:relative;overflow:hidden;}
+.section-market::before{
+  content:'';position:absolute;bottom:-120px;left:-120px;width:380px;height:380px;
+  background:radial-gradient(circle, rgba(251,146,60,.07) 0%, transparent 70%);
+  pointer-events:none;
+}
+.market-row{display:grid;grid-template-columns:1fr 1.05fr;gap:48px;align-items:center;margin-top:56px;}
+.market-text h3{
+  font-family:var(--display);font-size:36px;font-weight:900;color:var(--text);
+  letter-spacing:.02em;line-height:1.2;margin-bottom:16px;
+}
+.market-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:20px;}
+.market-text p b{color:var(--text);}
+.market-text ul{list-style:none;margin-bottom:24px;}
+.market-text li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--text-muted);margin:8px 0;}
+.market-text li b{color:var(--text);}
+.market-text li::before{
+  content:'';width:18px;height:18px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+
+.market-cards{display:flex;flex-direction:column;gap:14px;position:relative;}
+.market-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:16px;
+  padding:18px 20px;box-shadow:0 8px 24px rgba(180,100,40,.06);
+  position:relative;transition:all .22s;
+}
+.market-card:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(180,100,40,.12);border-color:rgba(251,146,60,.3);}
+.market-card-tag{
+  position:absolute;top:-9px;right:14px;
+  background:var(--peach);color:#fff;font-size:10px;font-weight:800;
+  padding:3px 11px;border-radius:999px;letter-spacing:.06em;
+  box-shadow:0 4px 10px rgba(251,146,60,.32);
+}
+.market-card-tag-free{background:var(--green);box-shadow:0 4px 10px rgba(16,185,129,.32);}
+.market-card-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.market-card-av{
+  width:46px;height:46px;border-radius:13px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;
+  flex-shrink:0;box-shadow:0 4px 12px rgba(251,146,60,.24);
+}
+.market-card-nm{font-size:14.5px;font-weight:800;color:var(--text);line-height:1.3;}
+.market-card-by{font-size:11.5px;color:var(--text-subtle);margin-top:2px;display:flex;align-items:center;gap:5px;}
+.market-verify{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;border-radius:50%;background:var(--blue);color:#fff;
+  font-size:9px;font-weight:900;
+}
+.market-card-stars{font-size:12.5px;color:var(--peach-dark);font-weight:700;margin-bottom:8px;}
+.market-card-stars span{color:var(--text-subtle);font-weight:600;margin-left:4px;}
+.market-card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;}
+.market-tag{
+  background:var(--peach-soft);color:var(--peach-dark);
+  padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;
+  border:1px solid rgba(251,146,60,.2);
+}
+.market-card-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-top:10px;border-top:1px solid var(--line);
+}
+.market-card-pr{font-family:var(--display);font-size:22px;font-weight:900;color:var(--text);letter-spacing:.02em;}
+.market-card-buy{
+  background:var(--peach);color:#fff;padding:7px 14px;border-radius:9px;
+  font-size:12px;font-weight:800;
+}
+
+/* ════ Section: PRICING ════ */
+.section-pricing{background:var(--bg-warm);border-top:1px solid var(--line);}
+.pricing-tabs{
+  display:inline-flex;background:var(--bg-card);border:1px solid var(--line);
+  border-radius:12px;padding:5px;margin-top:10px;
+  box-shadow:0 4px 14px rgba(180,100,40,.06);
+}
+.pricing-tab{
+  padding:9px 22px;border:0;background:transparent;font-size:13px;font-weight:700;
+  color:var(--text-muted);border-radius:8px;transition:all .18s;
+}
+.pricing-tab:hover{color:var(--text);}
+.pricing-tab.active{background:var(--peach);color:#fff;}
+
+.pricing-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;
+  max-width:1100px;margin:48px auto 0;
+}
+.price-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+  padding:32px 26px 28px;display:flex;flex-direction:column;position:relative;
+  transition:all .25s;
+}
+.price-card:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(180,100,40,.1);}
+.price-card.popular{
+  border:2px solid var(--peach);
+  box-shadow:0 14px 40px rgba(251,146,60,.18);
+}
+.price-card.popular::before{
+  content:'おすすめ';
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  background:var(--peach);color:#fff;padding:4px 16px;border-radius:999px;
+  font-size:11px;font-weight:800;letter-spacing:.06em;
+  box-shadow:0 4px 14px rgba(251,146,60,.4);
+}
+.price-name{font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px;}
+.price-amount{
+  font-family:var(--display);font-size:48px;font-weight:900;color:var(--text);
+  line-height:1;letter-spacing:.02em;
+}
+.price-period{font-size:13px;color:var(--text-subtle);margin:6px 0 8px;}
+.price-credit{font-size:13.5px;color:var(--peach-dark);font-weight:700;margin-bottom:20px;}
+.price-feats{
+  list-style:none;flex:1;margin-bottom:22px;
+  border-top:1px solid var(--line);padding-top:16px;
+}
+.price-feats li{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:13px;color:var(--text-muted);margin:9px 0;line-height:1.6;
+}
+.price-feats li::before{
+  content:'';width:16px;height:16px;border-radius:50%;background:var(--peach-soft);flex-shrink:0;margin-top:3px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6L5 8.5L9.5 4' stroke='%23fb923c' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:center;background-repeat:no-repeat;
+}
+.price-cta{
+  display:block;width:100%;padding:13px;border-radius:12px;
+  background:var(--bg-warm);color:var(--text);border:1px solid var(--line-strong);
+  font-size:13px;font-weight:700;text-align:center;
+  transition:all .18s;
+}
+.price-cta:hover{background:var(--bg-card);border-color:var(--peach);color:var(--peach-dark);}
+.price-card.popular .price-cta{background:var(--peach);color:#fff;border-color:var(--peach);}
+.price-card.popular .price-cta:hover{background:var(--peach-dark);border-color:var(--peach-dark);}
+
+.pricing-trust{text-align:center;font-size:12px;color:var(--text-subtle);margin-top:32px;}
+.pricing-trust span{margin:0 8px;}
+
+/* ════ Section: CTA (final push) ════ */
+.section-cta{
+  padding:100px 24px;text-align:center;
+  background:linear-gradient(135deg,var(--text) 0%,#3a2a1c 100%);
+  color:var(--text-on-dark);position:relative;overflow:hidden;
+}
+.section-cta::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 50% at 50% 50%,rgba(251,146,60,.12) 0%,transparent 60%);
+}
+.section-cta-inner{position:relative;z-index:1;max-width:680px;margin:0 auto;}
+.section-cta h2{
+  font-family:var(--display);font-size:clamp(48px,8vw,88px);
+  font-weight:900;line-height:.98;letter-spacing:.02em;margin-bottom:18px;color:#fff;
+}
+.section-cta h2 .accent{
+  background:linear-gradient(90deg,var(--peach) 0%,#fdba74 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.section-cta p{font-size:16px;color:rgba(255,245,230,.7);margin-bottom:32px;}
+.section-cta .btn-primary{font-size:17px;padding:17px 38px;}
+
+/* ════ Footer ════ */
+footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 24px;text-align:center;}
+.footer-brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;}
+.footer-brand .nav-name{color:var(--text);}
+.footer-links{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:14px;}
+.footer-links a{color:var(--text-muted);font-size:12.5px;font-weight:600;}
+.footer-links a:hover{color:var(--peach-dark);}
+.footer-copy{font-size:11.5px;color:var(--text-subtle);}
+
+/* ════ Responsive ════ */
+@media(max-width:880px){
+  .steps-grid{grid-template-columns:1fr;}
+  .create-flow{grid-template-columns:repeat(2,1fr);}
+  .tmpl-row,.share-row,.market-row{grid-template-columns:1fr;}
+  .tmpl-grid{grid-template-columns:repeat(2,1fr);}
+  .nav-links{display:none;}
+}
+@media(max-width:520px){
+  .section{padding:72px 18px;}
+  .hero{padding:64px 18px 56px;}
+  .h2{font-size:30px;}
+  .pricing-grid{grid-template-columns:1fr;}
+  .tmpl-grid{grid-template-columns:1fr;}
+  .nav-login{padding:7px 12px;font-size:12px;}
+  .nav-cta{padding:7px 14px;font-size:12px;}
+}
+
+/* ════ Reveal animation ════ */
+.reveal{opacity:0;transform:translateY(18px);transition:all .55s ease;}
+.reveal.shown{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<!-- ════ NAV ════ -->
+<div style="background:#1a0a00;color:#fff5e6;text-align:center;padding:9px 14px;font-size:12px;font-weight:700;letter-spacing:.04em;">
+  📐 <b style="color:#fb923c;">MOCK</b> ・ 現行 LP に「<b style="color:#fb923c;">グループチャット</b>」セクションを追加した試作版
+  ・ <a href="/lp.html" style="color:#fb923c;text-decoration:underline;">現行 LP と比較</a>
+</div>
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-bars"><div></div><div></div><div></div></div>
+    <span class="nav-name">MY AI AGENT</span>
+  </a>
+  <div class="nav-links">
+    <a href="#how">使い方</a>
+    <a href="#template">テンプレート</a>
+    <a href="#group">グループ</a>
+    <a href="#marketplace">Agent Store</a>
+    <a href="#pricing">料金</a>
+  </div>
+  <div class="nav-actions">
+    <button class="nav-login" id="navLogin" onclick="goLogin()">ログイン</button>
+    <button class="nav-cta" id="navCta" onclick="goSignup()">無料で始める</button>
+  </div>
+</nav>
+
+<!-- ════ 1. HERO ════ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-kicker">
+      <div class="hero-kicker-dot"></div>
+      AI Agent を部下のように使う
+    </div>
+    <h1>YOUR OWN<br><span class="accent">AI TEAM</span><br>STARTS HERE</h1>
+    <p class="hero-sub">
+      名前をつけて、スキルを与えて、<b>仕事を任せる。</b><br>
+      あなただけの AI エージェントチームを、今日から。
+    </p>
+    <div class="hero-cta-row">
+      <button class="btn-primary" onclick="goSignup()">無料で始める →</button>
+      <button class="btn-ghost" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">使い方を見る</button>
+    </div>
+    <div class="hero-trust">
+      <span class="hero-trust-pill"><span class="check">✓</span>30秒で登録</span>
+      <span class="hero-trust-pill"><span class="check">✓</span>Google Chrome 連携可</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 2. 3 STEPS ════ -->
+<section class="section section-steps" id="how">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">HOW IT WORKS</span>
+      <h2 class="h2">3ステップで<br>チームが動き出す</h2>
+      <p class="lead">複雑な設定は不要。今すぐ始められます。</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <span class="step-num">01</span>
+        <div class="step-icon">🤖</div>
+        <h3 class="step-title">アイコンと名前をつける</h3>
+        <p class="step-desc">24種類のアイコンから選んで、自分だけのエージェントに名前をつけましょう。</p>
+      </div>
+      <div class="step-card reveal">
+        <span class="step-num">02</span>
+        <div class="step-icon">⚡</div>
+        <h3 class="step-title">スキルを与える</h3>
+        <p class="step-desc">16種類のスキルを付与。複数選択OKで万能型も専門家型も作れます。</p>
+      </div>
+      <div class="step-card reveal">
+        <span class="step-num">03</span>
+        <div class="step-icon">💬</div>
+        <h3 class="step-title">仕事を任せる</h3>
+        <p class="step-desc">チャットで指示するだけ。Markdown 対応で構造化された返答が即受け取れます。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 3. 新規エージェントを作成 ════ -->
+<section class="section section-create" id="create">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">CREATE</span>
+      <h2 class="h2">新規エージェントを作成</h2>
+      <p class="lead">採用面談のように、5ステップでエージェントを作成。役割と業務を明確にすることで、AI の精度が大きく変わります。</p>
+    </div>
+
+    <div class="create-flow reveal">
+      <div class="create-step"><span class="num-badge">1</span><div class="ic">🎭</div><div class="nm">アイコン</div><div class="desc">24種類から選択<br>愛着が湧く見た目に</div></div>
+      <div class="create-step"><span class="num-badge">2</span><div class="ic">🏷️</div><div class="nm">名前</div><div class="desc">「営業の田中」など<br>呼びやすい名前を</div></div>
+      <div class="create-step"><span class="num-badge">3</span><div class="ic">⚡</div><div class="nm">スキル</div><div class="desc">16種類から複数選択<br>万能型も専門家型も</div></div>
+      <div class="create-step"><span class="num-badge">4</span><div class="ic">🎯</div><div class="nm">採用目的</div><div class="desc">「アポ取り」など<br>役割を明確に</div></div>
+      <div class="create-step"><span class="num-badge">5</span><div class="ic">📋</div><div class="nm">業務内容</div><div class="desc">日々の作業を具体的に<br>AI の動きが変わる</div></div>
+    </div>
+
+    <div class="create-cta reveal">
+      <button class="btn-primary" onclick="goSignup()">無料で作ってみる →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 4. テンプレートエージェント ════ -->
+<section class="section section-template" id="template">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">TEMPLATES</span>
+      <h2 class="h2">10種類の<br>テンプレートエージェント</h2>
+      <p class="lead">よくある業務は、専門家が作り込んだエージェントを 1クリックでコピー。採用目的・業務内容・8モジュールまで全部入りで、選んだ瞬間からチャットで使えます。</p>
+    </div>
+
+    <div class="tmpl-row reveal">
+      <div class="tmpl-text">
+        <h3>業務に最適化された<br>専門エージェントを即時導入</h3>
+        <p>看板テンプレートの <b>自動インサイドエージェント</b> は、事業理解からペルソナ抽出・メッセージ生成・改善ループまで 8 モジュールが連携。アポ取り業務をゼロからセットアップする必要がありません。</p>
+        <ul>
+          <li>10種類の専門エージェントを用意</li>
+          <li>採用目的・業務内容・スキルまで作り込み済み</li>
+          <li>選んだ瞬間からチャットで使える</li>
+          <li>カスタマイズして自分仕様にも改造可能</li>
+        </ul>
+        <button class="btn-primary" onclick="goSignup()">テンプレートを見る →</button>
+      </div>
+
+      <div class="tmpl-card">
+        <div class="tmpl-card-head">
+          <div class="tmpl-avatar">🤖</div>
+          <div>
+            <div class="tmpl-card-name">自動インサイドエージェント</div>
+            <div class="tmpl-card-desc">アポ取りの自動化 ・ 8モジュール連携</div>
+          </div>
+        </div>
+        <div class="tmpl-pills">
+          <span class="tmpl-pill">マーケ</span>
+          <span class="tmpl-pill">ライティング</span>
+          <span class="tmpl-pill">リサーチ</span>
+          <span class="tmpl-pill">分析</span>
+          <span class="tmpl-pill">プランニング</span>
+        </div>
+        <div class="tmpl-modules">
+          <div class="tmpl-mod"><span class="tmpl-mod-n">①</span>事業理解</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">②</span>ペルソナ</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">③</span>抽出</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">④</span>精査</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑤</span>戦略</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑥</span>メッセージ</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑦</span>送信最適化</div>
+          <div class="tmpl-mod"><span class="tmpl-mod-n">⑧</span>改善</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tmpl-grid reveal">
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🐦</div><div class="tmpl-mini-nm">X (Twitter) 自動運用</div><div class="tmpl-mini-dc">コンセプト設計 → バズ分析 → 投稿生成 → エンゲージ運用</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">✍️</div><div class="tmpl-mini-nm">SEO ブログライター</div><div class="tmpl-mini-dc">KW分析 → SERP調査 → 構成 → 本文 → 内部リンク → リライト</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🎬</div><div class="tmpl-mini-nm">ショート動画台本ライター</div><div class="tmpl-mini-dc">トレンド分析 → フック設計 → 台本 → CTA → 改善</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🎯</div><div class="tmpl-mini-nm">採用エージェント</div><div class="tmpl-mini-dc">JD作成 → 候補者抽出 → スカウト文 → 面接設計 → 振り返り</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">📝</div><div class="tmpl-mini-nm">議事録 → アクション抽出</div><div class="tmpl-mini-dc">録音/メモを投げるだけで構造化議事録 + ToDo を出力</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🔍</div><div class="tmpl-mini-nm">競合分析エージェント</div><div class="tmpl-mini-dc">対象選定 → 機能比較 → 価格分析 → ポジショニング</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">💻</div><div class="tmpl-mini-nm">コードレビュー</div><div class="tmpl-mini-dc">差分読解 → バグ検出 → セキュリティ → 改善提案</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">🤝</div><div class="tmpl-mini-nm">カスタマーサポート Tier1</div><div class="tmpl-mini-dc">問い合わせ分類 → 一次回答 → エスカレ判定 → ナレッジ蓄積</div></div>
+      <div class="tmpl-mini"><div class="tmpl-mini-av">👑</div><div class="tmpl-mini-nm">経営戦略アドバイザー</div><div class="tmpl-mini-dc">市場分析 → 競合戦略 → 数値計画 → 意思決定支援</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 5. 共有 (Live) ════ -->
+<section class="section section-share" id="share">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="live-pill">LIVE</span>
+      <span class="kicker">SHARE</span>
+      <h2 class="h2">作ったエージェントを<br>世界に共有</h2>
+      <p class="lead">URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。SNS には専用サムネイルが自動生成されます。</p>
+    </div>
+
+    <div class="share-row reveal">
+      <div class="share-text">
+        <h3>共有URLでチームに展開</h3>
+        <p>各エージェントには専用の共有URLと SNS サムネイル（OGP画像）が自動生成されます。X や LINE で送るだけで、訪問者は<b>1クリックで自分のアカウントにコピー</b>して使い始められます。</p>
+        <ul>
+          <li>URL 1本でチームに展開（Slack・X・LINE・メール）</li>
+          <li>X / Facebook 用のステッカー型 OGP 画像を自動生成</li>
+          <li>受信者は1クリックで自分のアカウントに保存</li>
+          <li>コピー後は完全独立 — 元の履歴は見えません</li>
+          <li>非公開・URL再生成・削除いつでも可能</li>
+        </ul>
+      </div>
+      <div class="share-visual">
+        <div class="share-mock-url">myaiagents.agency/a/k7f2-aGz9-pX3v</div>
+        <div class="share-flow">
+          <div class="share-flow-step"><div class="num">1</div>エージェントの 🔗 ボタンを押す</div>
+          <div class="share-flow-step"><div class="num">2</div>URL と OGP画像を SNS で共有</div>
+          <div class="share-flow-step"><div class="num">3</div>訪問者が「使う」をクリック → 完了</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 5a. GROUP CHAT (NEW · Live) ════ -->
+<section class="section section-group" id="group">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="live-pill">LIVE</span>
+      <span class="kicker">GROUP CHAT</span>
+      <h2 class="h2">友達と AI が、<br>同じグループに集合</h2>
+      <p class="lead">LINE 風の招待リンクで友達を呼んで、グループ内で <b>@AI</b> を呼ぶと AI が答える。割り勘・議事録・旅行プランも、AI と一緒に。</p>
+    </div>
+
+    <div class="group-row reveal">
+      <div class="group-text">
+        <h3>みんなのグループに、<br>AI を 1 人入れる感覚。</h3>
+        <p>あなたが作った AI エージェントを、友達やチームのグループチャットに招待できます。<b>@AI</b> でメンションすると、グループの会話を理解した上で AI が答えてくれます。</p>
+        <ul>
+          <li><b>QR / リンク 1 本</b>で招待 (有効期限・人数制限つき)</li>
+          <li><b>@AI</b> で誰でも AI を呼べる (料金はホスト持ち)</li>
+          <li>絵文字リアクション・ピン留め・ブックマーク</li>
+          <li><b>「グループへ送金」</b>で割り勘もアプリ内で完結</li>
+          <li>承認制・ホスト譲渡・退出メンバーの履歴管理</li>
+          <li>未読バッジ・通知カスタマイズ・既読位置同期</li>
+        </ul>
+        <button class="btn-primary" onclick="goSignup()">グループを作って始める →</button>
+      </div>
+
+      <div>
+        <div class="group-mockup">
+          <div class="gm-head">
+            <div class="gm-avs">
+              <div class="gm-av">こ</div>
+              <div class="gm-av b">た</div>
+              <div class="gm-av c">ま</div>
+              <div class="gm-av ai">🤖</div>
+            </div>
+            <div>
+              <div class="gm-meta-nm">忘年会の幹事 + AI</div>
+              <div class="gm-meta-sub">4 メンバー ・ オンライン</div>
+            </div>
+          </div>
+          <div class="gm-body">
+            <div class="gm-msg u"><span class="nm">たかし</span>渋谷で12月20日空いてる？</div>
+            <div class="gm-msg you">空いてるよ！</div>
+            <div class="gm-msg u"><span class="nm">まなみ</span>@AI 渋谷で6人個室、予算5000円で居酒屋探して</div>
+            <div class="gm-msg ai"><span class="nm">🤖 グルメ AI</span>3件見つけました。①個室居酒屋 鳥心 ②博多もつ鍋 山笠 ③酒場ふみ — 詳細リンク送ります</div>
+            <div class="gm-msg you">②でお願い！予約してくれる？</div>
+            <div class="gm-msg ai"><span class="nm">🤖 グルメ AI</span>予約完了 ✓ 確認メール届きました</div>
+          </div>
+          <div class="gm-input">
+            <div class="gm-input-box">メッセージを入力 ・ @AI で AI を呼ぶ</div>
+            <div class="gm-input-send">↑</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 sub-features -->
+    <div class="group-features reveal">
+      <div class="group-feat">
+        <div class="group-feat-ic">🔗</div>
+        <div class="group-feat-nm">QR / リンク招待</div>
+        <div class="group-feat-dc">LINE のように招待リンクを送るだけ。有効期限・人数制限・承認制も設定可能。</div>
+      </div>
+      <div class="group-feat">
+        <div class="group-feat-ic">💸</div>
+        <div class="group-feat-nm">グループへ送金</div>
+        <div class="group-feat-dc">飲み会の割り勘や、AI 利用料の負担分担をアプリ内で。送金履歴も透明に管理。</div>
+      </div>
+      <div class="group-feat">
+        <div class="group-feat-ic">🤖</div>
+        <div class="group-feat-nm">@AI でいつでも呼べる</div>
+        <div class="group-feat-dc">議事録 AI、旅行プラン AI、コードレビュー AI — グループ用途に合わせて呼び分け。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 5b. AGENT STORE (Creator Program) ════ -->
+<section class="section section-market" id="marketplace">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="live-pill">LIVE</span>
+      <span class="kicker">AGENT STORE</span>
+      <h2 class="h2">あなたのエージェントを<br>Agent Store で販売</h2>
+      <p class="lead">作り込んだエージェントは、ワンクリックでAgent Store に出店。レビュー・お気に入り・タグ検索つき。売上の <b>90%</b> はそのままクリエイターへ。</p>
+    </div>
+
+    <div class="market-row reveal">
+      <div class="market-text">
+        <h3>クリエイターとして<br>収益化できる</h3>
+        <p>「自分用」に作ったエージェントを<b>商品として販売</b>できます。価格はあなたが自由に設定。Stripe Connect 経由で銀行口座へ自動入金されます。</p>
+        <ul>
+          <li>1クリックで出店、価格は自分で設定</li>
+          <li>売上は <b>90% クリエイター / 10% プラットフォーム</b></li>
+          <li>Stripe Connect Express で銀行口座へ直接入金</li>
+          <li>レビュー・★評価・お気に入り・タグ検索</li>
+          <li>認証バッジ（実績ある出品者）取得可能</li>
+        </ul>
+        <button class="btn-primary" onclick="goSignup()">出店してみる →</button>
+      </div>
+
+      <div class="market-cards">
+        <div class="market-card">
+          <div class="market-card-tag">🏆 BESTSELLER</div>
+          <div class="market-card-head">
+            <div class="market-card-av">🐦</div>
+            <div>
+              <div class="market-card-nm">X 自動運用エージェント</div>
+              <div class="market-card-by">by @creator_a <span class="market-verify">✓</span></div>
+            </div>
+          </div>
+          <div class="market-card-stars">★★★★★ <span>4.9 (132)</span></div>
+          <div class="market-card-tags">
+            <span class="market-tag">SNS</span>
+            <span class="market-tag">マーケ</span>
+            <span class="market-tag">分析</span>
+          </div>
+          <div class="market-card-foot">
+            <span class="market-card-pr">¥1,980</span>
+            <span class="market-card-buy">使ってみる →</span>
+          </div>
+        </div>
+
+        <div class="market-card">
+          <div class="market-card-head">
+            <div class="market-card-av">✍️</div>
+            <div>
+              <div class="market-card-nm">SEO ブログライター Pro</div>
+              <div class="market-card-by">by @creator_b <span class="market-verify">✓</span></div>
+            </div>
+          </div>
+          <div class="market-card-stars">★★★★☆ <span>4.6 (87)</span></div>
+          <div class="market-card-tags">
+            <span class="market-tag">ライティング</span>
+            <span class="market-tag">SEO</span>
+          </div>
+          <div class="market-card-foot">
+            <span class="market-card-pr">¥980</span>
+            <span class="market-card-buy">使ってみる →</span>
+          </div>
+        </div>
+
+        <div class="market-card">
+          <div class="market-card-tag market-card-tag-free">🎁 無料</div>
+          <div class="market-card-head">
+            <div class="market-card-av">📝</div>
+            <div>
+              <div class="market-card-nm">議事録 → アクション抽出</div>
+              <div class="market-card-by">by @creator_c</div>
+            </div>
+          </div>
+          <div class="market-card-stars">★★★★★ <span>5.0 (41)</span></div>
+          <div class="market-card-tags">
+            <span class="market-tag">業務効率</span>
+            <span class="market-tag">議事録</span>
+          </div>
+          <div class="market-card-foot">
+            <span class="market-card-pr">無料</span>
+            <span class="market-card-buy">使ってみる →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 6. PRICING ════ -->
+<section class="section section-pricing" id="pricing">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="kicker">PRICING</span>
+      <h2 class="h2">料金プラン</h2>
+      <p class="lead">月額でじっくり、または使った分だけ — 自由に選べます。</p>
+      <div class="pricing-tabs">
+        <button class="pricing-tab active" data-tab="monthly">月額プラン</button>
+        <button class="pricing-tab" data-tab="payg">都度チャージ</button>
+      </div>
+    </div>
+
+    <div class="pricing-grid" id="pricing-monthly">
+      <div class="price-card reveal">
+        <div class="price-name">FREE</div>
+        <div class="price-amount">$0</div>
+        <div class="price-period">無料登録</div>
+        <div class="price-credit">10メッセージ無料</div>
+        <ul class="price-feats">
+          <li>エージェント作成 3体</li>
+          <li>16スキルから選択</li>
+          <li>テンプレート利用可</li>
+          <li>Markdown 出力</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">無料で始める →</a>
+      </div>
+      <div class="price-card popular reveal">
+        <div class="price-name">PRO</div>
+        <div class="price-amount">$12.99</div>
+        <div class="price-period">/月（USD）</div>
+        <div class="price-credit">$20 分のクレジット / 月</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>共有URL + OGP画像自動生成</li>
+          <li>Agent Store 出店・購入</li>
+          <li>取引履歴 CSV エクスポート</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">PRO で始める →</a>
+      </div>
+      <div class="price-card reveal">
+        <div class="price-name">BUSINESS</div>
+        <div class="price-amount">$32.99</div>
+        <div class="price-period">/月（USD）</div>
+        <div class="price-credit">$60 分のクレジット / 月</div>
+        <ul class="price-feats">
+          <li>Pro の全機能</li>
+          <li>$60分の月次クレジット</li>
+          <li>Agent Store 出店・購入（売上 90% 還元）</li>
+          <li>Stripe Connect 出金対応</li>
+          <li>認証バッジ申請可</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">BUSINESS で始める →</a>
+      </div>
+    </div>
+
+    <div class="pricing-grid" id="pricing-payg" style="display:none">
+      <div class="price-card">
+        <div class="price-name">STARTER</div>
+        <div class="price-amount">$6.99</div>
+        <div class="price-period">一回限り</div>
+        <div class="price-credit">$6.99 分のクレジット</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>残高は失効しない</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">STARTER をチャージ →</a>
+      </div>
+      <div class="price-card popular">
+        <div class="price-name">STANDARD</div>
+        <div class="price-amount">$19.99</div>
+        <div class="price-period">一回限り</div>
+        <div class="price-credit">$19.99 分のクレジット</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>残高は失効しない</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">STANDARD をチャージ →</a>
+      </div>
+      <div class="price-card">
+        <div class="price-name">PRO</div>
+        <div class="price-amount">$49.99</div>
+        <div class="price-period">一回限り</div>
+        <div class="price-credit">$49.99 分のクレジット</div>
+        <ul class="price-feats">
+          <li>エージェント無制限作成</li>
+          <li>全16スキル利用可</li>
+          <li>残高は失効しない</li>
+        </ul>
+        <a class="price-cta" href="/auth.html?tab=signup">PRO をチャージ →</a>
+      </div>
+    </div>
+
+    <div class="pricing-trust reveal">
+      💳 Stripe による安全な決済<span>・</span>🔒 SSL暗号化通信<span>・</span>📱 クレジットカード対応
+    </div>
+  </div>
+</section>
+
+<!-- ════ FINAL CTA ════ -->
+<section class="section-cta">
+  <div class="section-cta-inner">
+    <h2 class="reveal">今日から<br><span class="accent">AI チームを</span><br>持とう</h2>
+    <p class="reveal">アカウント作成は30秒。クレジットカード不要。</p>
+    <button class="btn-primary reveal" onclick="goSignup()">無料でアカウント作成 →</button>
+  </div>
+</section>
+
+<!-- ════ FOOTER ════ -->
+<footer>
+  <div class="footer-brand">
+    <div class="nav-bars"><div></div><div></div><div></div></div>
+    <span class="nav-name">MY AI AGENT</span>
+  </div>
+  <div class="footer-links">
+    <a href="terms.html">利用規約</a>
+    <a href="privacy.html">プライバシー</a>
+    <a href="legal.html">特商法表記</a>
+    <a href="contact.html">お問い合わせ</a>
+  </div>
+  <div class="footer-copy">© 2026 MY AI AGENT</div>
+</footer>
+
+<script>
+// pricing tab toggle
+document.querySelectorAll('.pricing-tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.pricing-tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  var tab = t.dataset.tab;
+  document.getElementById('pricing-monthly').style.display = tab==='monthly' ? '' : 'none';
+  document.getElementById('pricing-payg').style.display = tab==='payg' ? '' : 'none';
+}));
+
+// reveal on scroll
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('shown'); io.unobserve(e.target); } });
+},{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+// Auth-aware nav buttons
+function _isLoggedIn(){
+  try{ return !!localStorage.getItem('token'); }catch(e){ return false; }
+}
+function goLogin(){
+  if(_isLoggedIn()) location.href='/app.html';
+  else location.href='/auth.html';
+}
+function goSignup(){
+  if(_isLoggedIn()) location.href='/app.html';
+  else location.href='/auth.html?tab=signup';
+}
+function _navAuthState(){
+  if(!_isLoggedIn()) return;
+  // Logged in → swap login button to "アプリを開く →" + hide signup CTA in nav
+  var login = document.getElementById('navLogin');
+  var cta = document.getElementById('navCta');
+  if(login){
+    login.textContent = 'アプリを開く →';
+    login.classList.remove('nav-login');
+    login.classList.add('nav-cta');
+  }
+  if(cta) cta.style.display = 'none';
+}
+_navAuthState();
+</script>
+
+<!-- ════ i18n: auto-translate to English for non-Japanese browsers ════ -->
+<script>
+(function(){
+  var lang = navigator.language || navigator.userLanguage || 'ja';
+  var isJa = lang.startsWith('ja');
+  var params = new URLSearchParams(location.search);
+  if(params.get('lang')==='en') isJa=false;
+  if(params.get('lang')==='ja') isJa=true;
+  if(isJa) return;
+
+  var map = {
+    // nav
+    '使い方': 'How it works',
+    'テンプレート': 'Templates',
+    'Agent Store': 'Agent Store',
+    '料金': 'Pricing',
+    'ログイン': 'Sign in',
+    '無料で始める': 'Get started free',
+    'アプリを開く →': 'Open app →',
+    // hero
+    'AI Agent を部下のように使う': 'Use AI Agent like your team',
+    'YOUR OWN': 'YOUR OWN',
+    'AI TEAM': 'AI TEAM',
+    'STARTS HERE': 'STARTS HERE',
+    '名前をつけて、スキルを与えて、': 'Name them, give them skills,',
+    '仕事を任せる。': 'and let them work.',
+    'あなただけの AI エージェントチームを、今日から。': 'Your own AI agent team, starting today.',
+    '無料で始める →': 'Get started free →',
+    '使い方を見る': 'See how it works',
+    '30秒で登録': '30-second signup',
+    'Google Chrome 連携可': 'Google Chrome ready',
+    // 3 steps
+    'HOW IT WORKS': 'HOW IT WORKS',
+    '3ステップで': 'Get started',
+    'チームが動き出す': 'in 3 steps',
+    '複雑な設定は不要。今すぐ始められます。': 'No complex setup. Start right now.',
+    'アイコンと名前をつける': 'Name your agent',
+    'スキルを与える': 'Assign skills',
+    '仕事を任せる': 'Put them to work',
+    '24種類のアイコンから選んで、自分だけのエージェントに名前をつけましょう。': 'Choose from 24 icons and give your agent a name.',
+    '16種類のスキルを付与。複数選択OKで万能型も専門家型も作れます。': 'Pick from 16 skills. Combine for generalists or specialists.',
+    'チャットで指示するだけ。Markdown 対応で構造化された返答が即受け取れます。': 'Just chat. Get structured Markdown responses instantly.',
+    // create flow
+    'CREATE': 'CREATE',
+    '新規エージェントを作成': 'Create a new agent',
+    '採用面談のように、5ステップでエージェントを作成。役割と業務を明確にすることで、AI の精度が大きく変わります。': 'Like a hiring interview — define an agent in 5 steps. Clear roles dramatically improve AI accuracy.',
+    'アイコン': 'Icon',
+    '名前': 'Name',
+    'スキル': 'Skills',
+    '採用目的': 'Purpose',
+    '業務内容': 'Duties',
+    '24種類から選択': 'Choose from 24',
+    '愛着が湧く見た目に': 'A look you bond with',
+    '「営業の田中」など': '"Sales Tanaka" etc.',
+    '呼びやすい名前を': 'A name you can call',
+    '16種類から複数選択': 'Pick from 16',
+    '万能型も専門家型も': 'Generalist or specialist',
+    '「アポ取り」など': '"Appointment setting" etc.',
+    '役割を明確に': 'Make the role clear',
+    '日々の作業を具体的に': 'Spell out daily tasks',
+    'AI の動きが変わる': 'AI behavior changes',
+    '無料で作ってみる →': 'Create for free →',
+    // template
+    'TEMPLATES': 'TEMPLATES',
+    '10種類の': '10 prebuilt',
+    'テンプレートエージェント': 'template agents',
+    'よくある業務は、専門家が作り込んだエージェントを 1クリックでコピー。採用目的・業務内容・8モジュールまで全部入りで、選んだ瞬間からチャットで使えます。': 'Common workflows come pre-built. Clone a curated agent in one click — purpose, duties, and 8-module workflow are all included, ready to chat instantly.',
+    '業務に最適化された': 'Drop-in specialists',
+    '専門エージェントを即時導入': 'optimized for your work',
+    '看板テンプレートの': 'Our flagship',
+    'は、事業理解からペルソナ抽出・メッセージ生成・改善ループまで 8 モジュールが連携。アポ取り業務をゼロからセットアップする必要がありません。': ' chains 8 modules — business understanding, persona extraction, message generation, and the improvement loop. No more setting up appointment workflows from scratch.',
+    '10種類の専門エージェントを用意': '10 specialist agents ready',
+    '採用目的・業務内容・スキルまで作り込み済み': 'Purpose, duties, and skills already crafted',
+    '選んだ瞬間からチャットで使える': 'Chat-ready from the moment you pick',
+    'カスタマイズして自分仕様にも改造可能': 'Fully customizable to your needs',
+    'テンプレートを見る →': 'Browse templates →',
+    '自動インサイドエージェント': 'Auto Inside-Sales Agent',
+    'アポ取りの自動化 ・ 8モジュール連携': 'Appointment setting · 8 modules',
+    // 9 mini templates
+    'X (Twitter) 自動運用': 'X (Twitter) Auto Ops',
+    'コンセプト設計 → バズ分析 → 投稿生成 → エンゲージ運用': 'Concept → Viral analysis → Posts → Engagement',
+    'SEO ブログライター': 'SEO Blog Writer',
+    'KW分析 → SERP調査 → 構成 → 本文 → 内部リンク → リライト': 'KW → SERP → Outline → Body → Links → Rewrite',
+    'ショート動画台本ライター': 'Short Video Script Writer',
+    'トレンド分析 → フック設計 → 台本 → CTA → 改善': 'Trends → Hook → Script → CTA → Improve',
+    '採用エージェント': 'Recruiter Agent',
+    'JD作成 → 候補者抽出 → スカウト文 → 面接設計 → 振り返り': 'JD → Sourcing → Outreach → Interview → Retro',
+    '議事録 → アクション抽出': 'Minutes → Actions',
+    '録音/メモを投げるだけで構造化議事録 + ToDo を出力': 'Drop in audio/notes → structured minutes + todos',
+    '競合分析エージェント': 'Competitor Analysis',
+    '対象選定 → 機能比較 → 価格分析 → ポジショニング': 'Target → Features → Pricing → Positioning',
+    'コードレビュー': 'Code Reviewer',
+    '差分読解 → バグ検出 → セキュリティ → 改善提案': 'Diff → Bugs → Security → Suggestions',
+    'カスタマーサポート Tier1': 'Customer Support Tier1',
+    '問い合わせ分類 → 一次回答 → エスカレ判定 → ナレッジ蓄積': 'Triage → First reply → Escalate → Knowledge',
+    '経営戦略アドバイザー': 'Strategy Advisor',
+    '市場分析 → 競合戦略 → 数値計画 → 意思決定支援': 'Market → Strategy → Numbers → Decisions',
+    'マーケ': 'Marketing',
+    'ライティング': 'Writing',
+    'リサーチ': 'Research',
+    '分析': 'Analysis',
+    'プランニング': 'Planning',
+    '事業理解': 'Business',
+    'ペルソナ': 'Persona',
+    '抽出': 'Extract',
+    '精査': 'Vet',
+    '戦略': 'Strategy',
+    'メッセージ': 'Message',
+    '送信最適化': 'Send Opt',
+    '改善': 'Improve',
+    // share (live)
+    'LIVE': 'LIVE',
+    'SHARE': 'SHARE',
+    '作ったエージェントを': 'Share your agent',
+    '世界に共有': 'with the world',
+    'URL 1本でチーム・SNS・お客様に配布。受け取った人は1クリックで自分のアカウントにコピーして使えます。SNS には専用サムネイルが自動生成されます。': 'One URL ships your agent to teammates, social, customers. Recipients clone it in one click — and SNS thumbnails are auto-generated.',
+    '共有URLでチームに展開': 'Roll out via share URLs',
+    '各エージェントには専用の共有URLと SNS サムネイル（OGP画像）が自動生成されます。X や LINE で送るだけで、訪問者は': 'Every agent gets a dedicated share URL plus an auto-generated SNS thumbnail (OG image). Just send on X or LINE — visitors',
+    '1クリックで自分のアカウントにコピー': 'clone it to their account in one click',
+    'して使い始められます。': '.',
+    'URL 1本でチームに展開（Slack・X・LINE・メール）': 'Distribute via Slack / X / LINE / Email',
+    'X / Facebook 用のステッカー型 OGP 画像を自動生成': 'Auto-generated sticker-style OG image for X / Facebook',
+    '受信者は1クリックで自分のアカウントに保存': 'Recipients save it in one click',
+    'コピー後は完全独立 — 元の履歴は見えません': 'Independent after cloning — history stays private',
+    '非公開・URL再生成・削除いつでも可能': 'Toggle private, regenerate URL, or delete anytime',
+    'エージェントの 🔗 ボタンを押す': 'Hit 🔗 on the agent',
+    'URL と OGP画像を SNS で共有': 'Share the URL + OG image on SNS',
+    '訪問者が「使う」をクリック → 完了': 'Visitor clicks "Use" → done',
+    // marketplace
+    'AGENT STORE': 'AGENT STORE',
+    'あなたのエージェントを': 'Sell your agents',
+    'Agent Store で販売': 'on the marketplace',
+    '作り込んだエージェントは、ワンクリックでAgent Store に出店。レビュー・お気に入り・タグ検索つき。売上の': 'Polished agents go live on the marketplace in one click — with reviews, favorites, tag search.',
+    'はそのままクリエイターへ。': 'goes straight to creators.',
+    'クリエイターとして': 'Earn as',
+    '収益化できる': 'a creator',
+    '「自分用」に作ったエージェントを': 'Turn agents you built',
+    '商品として販売': 'into products',
+    'できます。価格はあなたが自由に設定。Stripe Connect 経由で銀行口座へ自動入金されます。': '. Set your own price. Payouts land in your bank via Stripe Connect.',
+    '1クリックで出店、価格は自分で設定': 'List in one click, set your own price',
+    '売上は': 'Revenue split:',
+    '90% クリエイター / 10% プラットフォーム': '90% creator / 10% platform',
+    'Stripe Connect Express で銀行口座へ直接入金': 'Stripe Connect Express → direct bank payout',
+    'レビュー・★評価・お気に入り・タグ検索': 'Reviews, ratings, favorites, tag search',
+    '認証バッジ（実績ある出品者）取得可能': 'Verified badge available for proven sellers',
+    '出店してみる →': 'Start selling →',
+    '🏆 BESTSELLER': '🏆 BESTSELLER',
+    '🎁 無料': '🎁 FREE',
+    'X 自動運用エージェント': 'X Auto Ops Agent',
+    'SEO ブログライター Pro': 'SEO Blog Writer Pro',
+    '使ってみる →': 'Try it →',
+    '無料': 'Free',
+    'SNS': 'SNS',
+    'SEO': 'SEO',
+    '業務効率': 'Productivity',
+    '議事録': 'Minutes',
+    // pricing
+    'PRICING': 'PRICING',
+    '料金プラン': 'Pricing',
+    '月額でじっくり、または使った分だけ — 自由に選べます。': 'Monthly or pay-as-you-go — your choice.',
+    '月額プラン': 'Monthly',
+    '都度チャージ': 'Pay as you go',
+    'FREE': 'FREE',
+    '無料登録': 'Free signup',
+    '10メッセージ無料': '10 free messages',
+    'エージェント作成 3体': 'Up to 3 agents',
+    '16スキルから選択': 'Pick from 16 skills',
+    'テンプレート利用可': 'Templates available',
+    'Markdown 出力': 'Markdown output',
+    'PRO': 'PRO',
+    '/月（USD）': '/mo (USD)',
+    '$20 分のクレジット / 月': '$20 in credits / mo',
+    'エージェント無制限作成': 'Unlimited agents',
+    '全16スキル利用可': 'All 16 skills',
+    '共有URL + OGP画像自動生成': 'Share URL + auto-generated OG image',
+    'Agent Store 出店・購入': 'Sell & buy on marketplace',
+    '取引履歴 CSV エクスポート': 'CSV export of transactions',
+    'PRO で始める →': 'Start with PRO →',
+    'BUSINESS': 'BUSINESS',
+    '$60 分のクレジット / 月': '$60 in credits / mo',
+    'Pro の全機能': 'Everything in Pro',
+    '$60分の月次クレジット': '$60 monthly credit',
+    'Agent Store 出店・購入（売上 90% 還元）': 'Agent Store sell/buy (keep 90%)',
+    'Stripe Connect 出金対応': 'Stripe Connect payouts',
+    '認証バッジ申請可': 'Apply for verified badge',
+    'BUSINESS で始める →': 'Start with BUSINESS →',
+    'STARTER': 'STARTER',
+    'STANDARD': 'STANDARD',
+    '一回限り': 'One-time',
+    '$6.99 分のクレジット': '$6.99 in credits',
+    '$19.99 分のクレジット': '$19.99 in credits',
+    '$49.99 分のクレジット': '$49.99 in credits',
+    '残高は失効しない': 'Balance never expires',
+    'STARTER をチャージ →': 'Top up STARTER →',
+    'STANDARD をチャージ →': 'Top up STANDARD →',
+    'PRO をチャージ →': 'Top up PRO →',
+    'おすすめ': 'Recommended',
+    // CTA
+    '今日から': 'Start today',
+    'AI チームを': 'Your AI Team',
+    '持とう': '',
+    'アカウント作成は30秒。クレジットカード不要。': 'Signup in 30 seconds. No credit card required.',
+    '無料でアカウント作成 →': 'Create free account →',
+    // footer
+    '利用規約': 'Terms',
+    '特商法表記': 'Legal (JP)',
+    'プライバシー': 'Privacy',
+    'お問い合わせ': 'Contact',
+    '© 2026 MY AI AGENT': '© 2026 MY AI AGENT',
+  };
+
+  function walk(node) {
+    if(node.nodeType === 3) {
+      var t = node.textContent.trim();
+      if(map[t]) node.textContent = node.textContent.replace(t, map[t]);
+    } else if(node.nodeType === 1 && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
+      node.childNodes.forEach(walk);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    walk(document.body);
+    document.documentElement.lang = 'en';
+    document.title = 'MY AI AGENT — Build Your AI Team';
+  });
+})();
+</script>
+</body>
+</html>

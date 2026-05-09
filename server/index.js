@@ -3189,34 +3189,6 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
-  // ── DEBUG: list a few share_ids to verify lookup works ──
-  if(pathname==='/api/debug-shares'&&method==='GET'){
-    try{
-      let users = [];
-      if(USE_SUPA){
-        const r = await sbReq('GET','users','?select=id,email,agents&limit=200');
-        users = Array.isArray(r.d) ? r.d : [];
-      } else {
-        users = LDB.data || [];
-      }
-      const out = [];
-      for(const u of users){
-        for(const ag of (u.agents||[])){
-          if(ag.share_id){
-            out.push({
-              share_id: ag.share_id,
-              agent_name: ag.name,
-              user_email: (u.email||'').split('@')[0]+'@…',
-              has_persona: !!(ag.persona && ag.persona.length),
-            });
-          }
-        }
-      }
-      return jres(res,200,{count:out.length, samples:out.slice(0,20)});
-    }catch(e){
-      return jres(res,500,{error:'debug failed', detail:e.message});
-    }
-  }
   // ── POST /api/auth/signup ──────────────────────────────────
   if(pathname==='/api/auth/signup'&&method==='POST'){
     const body = await readBody(req);

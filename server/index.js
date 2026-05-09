@@ -2477,14 +2477,22 @@ async function serveAgentSharePage(res, shareId){
       ? _trunc(ag.persona || 'A custom AI agent on MY AI AGENT.', 160)
       : 'Build your own AI agent team. 10 templates, group chat, Agent Store. Free to start.');
     const pageUrl = APP_URL + '/a/' + shareId;
-    // Static brand image. Dynamic per-agent OG (/api/og/a/:share_id.png) exists
-    // but Twitter / mobile clients seem to silently fail on it (timeout?
-    // rendering quirk?), so we point og:image at a known-good static PNG.
-    // Static content goes through Render's CDN edge → Twitter fetches fast and
-    // succeeds. Per-agent customization can be reintroduced once the dynamic
-    // path is verified end-to-end.
-    const ogPng  = APP_URL + '/social/og-agent-sample.png';
-    const ogSvg  = APP_URL + '/social/og-agent-sample.svg';
+    // Per-agent dynamic OG. The endpoint renders a 1200x630 card with the
+    // agent's name, description, avatar, and creator handle.
+    // Cache-bust key: derived from agent.updated_at so SNS unfurls refresh
+    // when the creator edits the agent (otherwise Twitter / FB cache the
+    // first fetch result indefinitely).
+    let cacheKey = '';
+    if(hasAgent){
+      const stamp = String(ag.updated_at || ag.created_at || '') + (ag.name||'') + (ag.persona||'');
+      cacheKey = '?v=' + crypto.createHash('sha1').update(stamp).digest('hex').slice(0,8);
+    }
+    const ogPng  = hasAgent
+      ? APP_URL + '/api/og/a/' + shareId + '.png' + cacheKey
+      : APP_URL + '/social/og-agent-sample.png';
+    const ogSvg  = hasAgent
+      ? APP_URL + '/api/og/a/' + shareId + '.svg' + cacheKey
+      : APP_URL + '/social/og-agent-sample.svg';
 
     const ogBlock = `<title>${titleH} — MY AI AGENT</title>
 <meta name="description" content="${descH}">
@@ -3801,6 +3809,8 @@ async function handleAPI(req,res,pathname,method,ip){
         return jres(res,400,{error:'アバターの形式が不正です'});
       }
     }
+    // Bump updated_at so OG image cache busts and SNS unfurls re-fetch.
+    ag.updated_at = new Date().toISOString();
     await DB.save(user);
     return jres(res,200,{agent:ag});
   }

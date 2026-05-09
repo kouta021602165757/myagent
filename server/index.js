@@ -2042,7 +2042,14 @@ let _jpFontPaths = null;
 function _resolveJpFonts(){
   if(_jpFontPaths) return _jpFontPaths;
   const out = [];
-  // Try the npm-installed @fontsource files first
+  // Prefer the bundled TTF — it's a full Noto Sans JP variable font that
+  // resvg unambiguously matches by family name. The @fontsource woff2 fallback
+  // had spotty glyph coverage on Render Linux (boxes / 豆腐 in CJK output).
+  const bundled = path.join(__dirname, '..', 'assets', 'fonts', 'NotoSansJP-VF.ttf');
+  if(fs.existsSync(bundled) && fs.statSync(bundled).size > 100000){
+    out.push(bundled);
+  }
+  // Also try the npm-installed @fontsource files (latin range covers ASCII text).
   for(const slug of ['japanese-400-normal','latin-400-normal']){
     try{
       const p = require.resolve('@fontsource/noto-sans-jp/files/noto-sans-jp-'+slug+'.woff2');

@@ -1984,7 +1984,7 @@ body{color:#f0f0f8;}
         <div style="margin-top:6px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
           <div style="display:flex;align-items:flex-start;gap:12px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Google Chrome 連携</div>
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Web 検索 / URL 取得</div>
               <div id="wChromeDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
             </div>
             <button type="button" class="s-sw" id="wChromeSw" onclick="toggleWizardChrome()"></button>
@@ -2789,7 +2789,7 @@ body{color:#f0f0f8;}
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Google Chrome 連携</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Web 検索 / URL 取得</div>
           <div id="editChromeDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
         </div>
         <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
@@ -5848,7 +5848,7 @@ async function openAgent(id){
   const sns=(ag.skills||[]).map(s=>SKILLS.find(x=>x.id===s)?.name||s);
   var topPills = sns.map(n=>`<span class="pill">${n}</span>`).join('');
   if(ag.chrome_enabled){
-    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+(isJa?'Google Chrome 連携 ON':'Google Chrome integration ON')+'">🌐 Google Chrome</span>';
+    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+(isJa?'Web 検索 / URL 取得 有効':'Web search / fetch enabled')+'">🌐 Web</span>';
   }
   if(isGroup){
     topPills += '<span class="pill" style="background:rgba(99,102,241,.12);color:#4f46e5;border-color:rgba(99,102,241,.3)">🤝 グループ · '+memberCount+'名</span>';
@@ -8009,7 +8009,7 @@ function _renderListingDetail(d){
     var sk=SKILLS.find(function(x){return x.id===s;});
     return '<span class="pl">'+(sk?(sk.icon+' '+sk.name):s)+'</span>';
   }).join('');
-  if(d.agent?.chrome_enabled) skillsHtml += '<span class="pl chrome">🌐 Google Chrome 連携</span>';
+  if(d.agent?.chrome_enabled) skillsHtml += '<span class="pl chrome">🌐 Web 検索 / URL 取得</span>';
 
   var demosHtml = '';
   if(d.demo_prompts && d.demo_prompts.length){
@@ -8475,13 +8475,13 @@ function _renderChromeStatus(swId, descId, enabled){
   sw.classList.toggle('on', !!enabled);
   if(enabled){
     desc.innerHTML='<span style="color:#10b981;font-weight:700">✓ '+
-      (isJa?'連携 ON':'Connected')+
+      (isJa?'有効':'Enabled')+
       '</span> — '+
-      (isJa?'AI がサーバー上の Chrome を使って Web 検索・サイト閲覧・フォーム入力を実行します':'AI uses a server-side Chrome to browse, search, and fill forms');
+      (isJa?'AI がリアルタイム Web 検索 + URL 取得で最新情報を調べます (出典付きで回答)':'AI uses live web search + URL fetch to ground answers in current sources');
   } else {
     desc.textContent = isJa
-      ? 'AI に Web サイトの調査・フォーム入力・情報収集を任せられるようになります'
-      : 'Enable to let the AI browse the web, search, and fill forms';
+      ? '最新ニュース・統計・企業情報など Web 上の情報を AI が自分で調べる (Anthropic Web Search)'
+      : 'Let the AI search the live web (Anthropic-hosted, no install needed)';
   }
 }
 function toggleWizardChrome(){
@@ -8944,7 +8944,7 @@ function wStep(n){
 function buildConf(){
   const sns=NA.skills.map(s=>SKILLS.find(x=>x.id===s)?.name||s);
   var pills=sns.map(n=>`<span class="pill">${n}</span>`).join('');
-  if(NA.chrome_enabled) pills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)">🌐 Google Chrome 連携</span>';
+  if(NA.chrome_enabled) pills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)">🌐 Web 検索 / URL 取得</span>';
   document.getElementById('confHero').innerHTML=`
     <div class="conf-ic">${_avHTML(NA.avatar)}</div>
     <div><div class="conf-nm">${esc(NA.name)}</div>

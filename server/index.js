@@ -1154,7 +1154,22 @@ function _trimToolHistory(messages){
   }
 }
 
-// ── BROWSER TOOLS (Google Chrome integration) ─────────────────
+// ── WEB TOOLS (Anthropic-hosted, server-side) ─────────────────
+// These are processed by Anthropic's API itself — no Playwright/Chromium
+// required, no Render egress hop. They satisfy "browse this URL" /
+// "search the web for X" cleanly even on free-tier hosts.
+//
+// Including them in the `tools` array on a Messages API request
+// auto-enables web search + URL fetch. We don't need to handle a
+// tool_use round-trip — Anthropic returns the final text directly.
+const WEB_TOOLS = [
+  { type: 'web_search_20250305', name: 'web_search', max_uses: 5 },
+  { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 5 },
+];
+
+// ── BROWSER TOOLS (Google Chrome integration, paid/Docker only) ──
+// Kept for hosts where Chromium fits in RAM (≥1.5GB). Not used on
+// Render free tier — agents toggle to WEB_TOOLS instead. See callsite.
 const browser = require('./browser');
 const BROWSER_TOOLS = [
   {
@@ -3137,39 +3152,21 @@ ${memories.slice(-20).map(m => '- ' + (m.text||'')).join('\n')}
   const chromeNote = agent.chrome_enabled
     ? `
 
-【ツール: Google Chrome 連携】
-このエージェントは Google Chrome を直接操作できます。情報を Web から取得したり、サイトの操作が必要な依頼が来たら、自分で次のツールを呼び出してください（ユーザーに「URL を教えてください」と聞かずに自分で検索する）：
-- search_web(query): Web検索
-- browse_url(url): URLにアクセスしてページ内容を取得
-- click_element(target): ページ内の要素をクリック
-- type_text(selector, text): フォームに入力
-- press_key(key): Enter等のキー押下
-- take_screenshot(): 現在のページのスクショ（重いので本当に視覚情報が必要な時だけ）
-- read_page(): 現在のページのテキストを再取得
+【ツール: Web 検索 / URL 取得】
+このエージェントは Anthropic 提供の Web ツールで、最新の情報をリアルタイムに取得できます。情報源・URL を自分で探して、ユーザーに確認せずに調べてください。
+- web_search(query): Google 相当の Web 検索 (上位結果のタイトル・URL・抜粋)
+- web_fetch(url): 指定 URL のページ内容を取得 (公開ページ用)
 
 実行手順:
-1. 必要なら先に search_web で情報を探す
-2. browse_url で具体的なページを開く（テキストはこの時点で返るのでスクショ不要）
-3. 必要に応じて click / type / press_key で操作
-4. 結果を要約してユーザーに伝える
+1. 不明な事実・最新情報・特定企業の情報など → まず web_search で情報源を探す
+2. 具体的なページの中身が必要なら web_fetch でテキストを取得
+3. 複数ソースを照合して結論を出す
 
-レイテンシ削減のコツ:
-- ツール呼び出しは最小限に。同じ情報を何度も取り直さない
-- take_screenshot は視覚的な確認が必須な時だけ呼ぶ。テキストで判断できる場合は呼ばない
-- 必要な情報が揃ったら即座に最終回答に進む
+【制約】
+- ログイン必須サイト (Gmail / 社内 SaaS / 個人アカウント等) は web_fetch では取得できません — ユーザーに依頼してください
+- ${sheetsActive ? 'Google スプレッドシートは web_fetch ではなく sheets_read / sheets_write を使用 (認証済み)' : 'Google ドキュメント等の編集はブラウザ自動操作機能では非対応 (拡張連携が必要)'}
 
-【重要な制約】このブラウザは **ログインしていないクラウド上の Chromium** です。以下は browse_url / click_element / type_text 等の**ブラウザツールでは** 不可能なので、これらのツールでは試さないでください:
-- Google アカウントへのログインが必要なページ（Gmail / Calendar / Drive 編集）
-- Twitter/X、Facebook、LinkedIn、GitHub 等のログイン必須ページ
-- ユーザーの個人アカウントが必要な操作
-
-${sheetsActive
-  ? '※ ただし **Google スプレッドシートの読み書きは別途 sheets_read / sheets_write 等の API ツールで対応可能** です。スプレッドシート関連の依頼が来たら、ブラウザツールではなく Sheets API ツールを優先してください。'
-  : '※ Google ドキュメント・スプレッドシート・スライド・ドライブの **編集** もブラウザでは不可能です（共有リンクでも閲覧のみ）。'}
-
-ブラウザでログイン壁ページの中身に「ログイン」「Sign in」「サポートが終了」「browser unsupported」「アクセス権が必要」などが出たら **即座にツール呼び出しをやめて** ユーザーに正直に伝えてください。「以下の手順で入力します」のように作業を始めるふりをしてはいけません。
-
-ツールを連鎖して公開情報の問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
+引用: 取得した情報を回答する際は、出典 URL を明記してください (例: 「〜とのことです (出典: example.com)」)。`
     : '';
   return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
@@ -5960,7 +5957,9 @@ async function handleAPI(req,res,pathname,method,ip){
     const extensionActive = !!agent.extension_enabled && extensionPaired;
     const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive;
     const tools = [
-      ...(agent.chrome_enabled ? BROWSER_TOOLS : []),
+      // chrome_enabled now means "give the agent web access" — fulfilled
+      // by Anthropic-hosted web_search / web_fetch (works on Render free).
+      ...(agent.chrome_enabled ? WEB_TOOLS : []),
       ...(sheetsActive ? SHEETS_TOOLS : []),
       ...(extensionActive ? EXTENSION_TOOLS : []),
     ];

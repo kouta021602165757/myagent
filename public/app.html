@@ -435,25 +435,60 @@ input,textarea{font-family:var(--sans);}
 ══════════════════════════════════════ */
 .main{display:flex;flex-direction:column;overflow:hidden;background:var(--ink);}
 
-/* Empty state */
+/* Empty state — full dashboard view */
 .empty{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:20px;text-align:center;padding:2rem;
+  flex:1;overflow-y:auto;padding:32px 36px 60px;background:var(--cream);color:var(--text);
 }
-.empty-glyph{
-  width:80px;height:80px;border-radius:22px;
-  background:var(--ink2);border:1px solid var(--wire2);
-  display:flex;align-items:center;justify-content:center;font-size:36px;
-  box-shadow:0 0 40px rgba(200,255,87,.05);
-}
-.empty h2{font-family:var(--display);font-size:32px;letter-spacing:.02em;}
-.empty p{font-size:14px;color:var(--mist);line-height:1.7;max-width:280px;}
-.btn-volt{
-  padding:13px 30px;border-radius:12px;font-size:15px;font-weight:700;
-  background:var(--peach);color:var(--ink);
-  box-shadow:0 0 20px var(--volt-glow);
-}
-.btn-volt:hover{transform:translateY(-1px);box-shadow:0 0 32px var(--volt-glow);}
+.empty-greet{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px;}
+.empty-greet h2{font-family:var(--sans);font-size:26px;font-weight:900;letter-spacing:-.02em;color:var(--text);}
+.empty-greet .now{font-size:12px;color:var(--text3);font-weight:700;}
+.empty-sub{font-size:14px;color:var(--text2);margin-bottom:24px;line-height:1.6;}
+.empty p{font-size:14px;line-height:1.7;}
+
+.empty-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:30px;}
+.qc{background:#fff;border:1.5px solid var(--wire2);border-radius:16px;padding:22px 20px;cursor:pointer;transition:all .18s;text-align:left;font-family:inherit;color:var(--text);position:relative;}
+.qc:hover{transform:translateY(-3px);border-color:var(--peach);box-shadow:0 10px 26px rgba(251,146,60,.12);}
+.qc.feat{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);}
+.qc.feat::before{content:'⚡ NEW';position:absolute;top:-9px;right:12px;background:var(--peach);color:#fff;font-size:9.5px;font-weight:900;letter-spacing:.06em;padding:3px 9px;border-radius:99px;}
+.qc-ic{font-size:36px;margin-bottom:12px;}
+.qc h3{font-size:15px;font-weight:900;margin-bottom:6px;color:var(--text);}
+.qc-desc{font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:12px;}
+.qc-sub{display:flex;gap:6px;font-size:11px;font-weight:700;}
+.qc-pill{padding:4px 10px;background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;color:var(--text2);transition:all .14s;}
+.qc:hover .qc-pill{border-color:var(--peach);color:var(--peach-dark);}
+.qc-pill.new{color:var(--peach-dark);background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.32);font-weight:800;}
+
+.legend{display:flex;gap:14px;margin-bottom:16px;font-size:11.5px;color:var(--text2);font-weight:700;flex-wrap:wrap;align-items:center;}
+.legend .lbl{font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:10.5px;color:var(--text3);}
+.legend .l{display:flex;align-items:center;gap:5px;}
+.legend .dot{width:10px;height:10px;border-radius:50%;}
+.legend .dot.dm{background:#fb923c;}
+.legend .dot.group{background:#3b82f6;}
+.legend .dot.team{background:#8b5cf6;}
+
+.kinds-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+.kind{background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:18px;display:flex;flex-direction:column;}
+.kind-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.kind-head .ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;}
+.kind.dm .kind-head .ic{background:#fb923c;}
+.kind.group .kind-head .ic{background:#3b82f6;}
+.kind.team .kind-head .ic{background:#8b5cf6;}
+.kind-head h3{font-size:14px;font-weight:900;flex:1;color:var(--text);}
+.kind-head .count{font-size:11px;font-weight:800;color:var(--text3);background:var(--cream2);padding:3px 8px;border-radius:99px;}
+.kind-desc{font-size:11.5px;color:var(--text2);margin-bottom:14px;line-height:1.55;}
+.kind-list{flex:1;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;min-height:24px;}
+.k-row{display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--cream);border:1px solid var(--wire2);border-radius:9px;cursor:pointer;transition:all .12s;}
+.k-row:hover{background:#fff;border-color:var(--peach);}
+.k-row .av{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--cream2);}
+.k-row .body{flex:1;min-width:0;}
+.k-row .nm{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.k-row .meta{font-size:10.5px;color:var(--text3);font-weight:700;display:flex;align-items:center;gap:5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.k-row .when{font-size:10px;color:var(--text3);font-weight:700;flex-shrink:0;}
+.kind-empty{font-size:11.5px;color:var(--text3);padding:18px 10px;text-align:center;font-style:italic;}
+.kind-cta{font-size:11.5px;font-weight:800;color:var(--peach-dark);background:transparent;border:0;padding:8px 0 0;text-align:left;cursor:pointer;font-family:inherit;}
+
+@media (max-width:1100px){.empty-quick,.kinds-row{grid-template-columns:1fr;}}
+@media (max-width:760px){.empty{padding:18px;}}
 
 /* Chat */
 .chat{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--cream);color:var(--text);}
@@ -1853,13 +1888,83 @@ body{color:#f0f0f8;}
   <main class="main">
     <button class="mobile-hamburger-empty" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>
     <div class="empty" id="emptyWrap">
-      <div class="empty-glyph">🤖</div>
-      <h2 id="i18n-teamTitle">チームを作ろう</h2>
-      <p id="i18n-teamSub">専門スキルを持つAIエージェントを作って、仕事を任せましょう。</p>
-      <div class="empty-actions">
-        <button class="btn-volt" onclick="openNewAgent()">+ 新規エージェント</button>
-        <button class="btn-back btn-tpl" onclick="openTemplate()">📋 テンプレートエージェント</button>
-        <button class="btn-back btn-tpl" onclick="openAgentStore()">🌐 Agent Store</button>
+      <div class="empty-greet">
+        <h2 id="homeGreeting">Welcome 🍑</h2>
+        <div class="now" id="homeNow"></div>
+      </div>
+      <div class="empty-sub">3 つの世界 ・ 個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務丸ごと自動化</div>
+
+      <!-- Quick start: 3 cards -->
+      <div class="empty-quick">
+        <button class="qc" onclick="openNewAgent()">
+          <div class="qc-ic">🤖</div>
+          <h3>AI Agent を作成</h3>
+          <div class="qc-desc">1 体ずつ ・ あなた専属の AI を組み立てる。</div>
+          <div class="qc-sub">
+            <span class="qc-pill new">🆕 新規</span>
+            <span class="qc-pill" onclick="event.stopPropagation();openTemplate()">📋 テンプレートから</span>
+          </div>
+        </button>
+        <button class="qc feat" onclick="openTeamGallery()">
+          <div class="qc-ic">🎯</div>
+          <h3>AI Agent Team を作成</h3>
+          <div class="qc-desc">複数 AI が連携 ・ 業務丸ごと自動化。</div>
+          <div class="qc-sub">
+            <span class="qc-pill">🆕 新規 (近日)</span>
+            <span class="qc-pill new">📋 テンプレートから</span>
+          </div>
+        </button>
+        <button class="qc" onclick="openAgentStore()">
+          <div class="qc-ic">🏪</div>
+          <h3>Agent Store</h3>
+          <div class="qc-desc">他クリエイターの Agent / Team を購入・無料 DL。</div>
+          <div class="qc-sub">
+            <span class="qc-pill">🤖 単体 Agent</span>
+            <span class="qc-pill">🎯 Team パック</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <span class="lbl">3 KINDS OF CONVERSATIONS</span>
+        <span class="l"><span class="dot dm"></span><b>DM</b> ・ あなた + AI 1 体</span>
+        <span class="l"><span class="dot group"></span><b>Group</b> ・ あなた + 友達 + AI</span>
+        <span class="l"><span class="dot team"></span><b>Team</b> ・ あなた + AI 複数体</span>
+      </div>
+
+      <!-- 3 kinds -->
+      <div class="kinds-row">
+        <div class="kind dm">
+          <div class="kind-head">
+            <div class="ic">🤖</div>
+            <h3>AI Agents (DM)</h3>
+            <span class="count" id="homeDmCount">—</span>
+          </div>
+          <div class="kind-desc">あなたと AI が <b>1 対 1</b>。集中して 1 タスクを進めるのに最適。</div>
+          <div class="kind-list" id="homeDmList"></div>
+          <button class="kind-cta" onclick="openNewAgent()">＋ Create new agent →</button>
+        </div>
+        <div class="kind group">
+          <div class="kind-head">
+            <div class="ic">👥</div>
+            <h3>Groups</h3>
+            <span class="count" id="homeGroupCount">—</span>
+          </div>
+          <div class="kind-desc"><b>人間 + AI</b> がいる LINE 風グループ。チーム作業や友達と一緒に。</div>
+          <div class="kind-list" id="homeGroupList"></div>
+          <button class="kind-cta" onclick="openCreateGroup()">＋ Create a group →</button>
+        </div>
+        <div class="kind team">
+          <div class="kind-head">
+            <div class="ic">🎯</div>
+            <h3>Teams</h3>
+            <span class="count" id="homeTeamCount">—</span>
+          </div>
+          <div class="kind-desc"><b>AI が複数体連携</b>して業務を丸ごと自動化。</div>
+          <div class="kind-list" id="homeTeamList"></div>
+          <button class="kind-cta" onclick="openTeamGallery()">＋ Build a new team →</button>
+        </div>
       </div>
     </div>
     <!-- Mobile sidebar backdrop -->
@@ -5611,7 +5716,7 @@ function renderAll(){
   updatePlanBadge();
   renderAgList();
   if(agents.length>0) openAgent(activeId&&agents.find(a=>a.id===activeId)?activeId:agents[0].id);
-  else{ document.getElementById('emptyWrap').style.display='flex'; document.getElementById('chatWrap').style.display='none'; }
+  else{ document.getElementById('emptyWrap').style.display=''; document.getElementById('chatWrap').style.display='none'; }
 }
 
 function updatePlanBadge(){
@@ -6048,7 +6153,58 @@ async function fetchJoinedGroups(){
   }catch(e){ _joinedGroups = []; }
 }
 
+/* Home dashboard: 3-kind overview shown on the empty state. Re-renders
+ * whenever the agent list changes, so the user sees a live picture of
+ * what's going on. */
+function renderHomeDashboard(){
+  var greet = document.getElementById('homeGreeting');
+  var nowEl = document.getElementById('homeNow');
+  if(!greet) return; // empty state not in DOM
+  var nameStr = (me && (me.name || (me.email||'').split('@')[0])) || 'there';
+  greet.textContent = 'Welcome back, ' + nameStr + ' 🍑';
+  if(nowEl){
+    var d = new Date();
+    var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var pad = function(n){return n<10?'0'+n:''+n;};
+    nowEl.textContent = days[d.getDay()] + ', ' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  var owned = agents || [];
+  var teams  = owned.filter(function(a){ return a.is_group && a.is_team; });
+  var groups = owned.filter(function(a){ return a.is_group && !a.is_team; }).concat(_joinedGroups || []);
+  var dms    = owned.filter(function(a){ return !a.is_group; });
+
+  function fmtItem(a, badgeColor){
+    var nm = esc(a.name || 'Untitled');
+    var skills = (a.skills || []).map(function(s){var sk=SKILLS.find(function(x){return x.id===s;});return sk?sk.name:s;}).slice(0,3).join(' · ');
+    var meta = a.is_team
+      ? (Array.isArray(a.team_member_agent_ids) ? a.team_member_agent_ids.length+' agents' : 'team')
+      : (a.is_group ? ((a.members||[]).length + ' members') : (skills || ''));
+    var when = a.history && a.history.length ? '' : '';
+    return '<div class="k-row" onclick="openAgent(\''+a.id+'\')">'
+      + '<div class="av">'+_avHTML(a.avatar)+'</div>'
+      + '<div class="body"><div class="nm">'+nm+'</div><div class="meta">'+esc(meta)+'</div></div>'
+      + '</div>';
+  }
+
+  function fillList(elId, countId, items, emptyMsg){
+    var listEl = document.getElementById(elId);
+    var countEl = document.getElementById(countId);
+    if(countEl) countEl.textContent = items.length + ' active';
+    if(!listEl) return;
+    if(items.length === 0){
+      listEl.innerHTML = '<div class="kind-empty">'+emptyMsg+'</div>';
+    } else {
+      listEl.innerHTML = items.slice(0,4).map(fmtItem).join('');
+    }
+  }
+  fillList('homeDmList','homeDmCount', dms, 'まだ AI がいません');
+  fillList('homeGroupList','homeGroupCount', groups, 'まだグループがありません');
+  fillList('homeTeamList','homeTeamCount', teams, 'まだチームがありません');
+}
+
 function renderAgList(){
+  // Keep the home dashboard in sync with the agent list.
+  try { renderHomeDashboard(); } catch(e){}
   const owned = agents || [];
   const isAgentsTab = (_sbTab === 'agents');
   let html = '';
@@ -8097,7 +8253,7 @@ async function delAgent(id){
   agents=agents.filter(a=>a.id!==id); activeId=null;
   renderAgList();
   if(agents.length>0) openAgent(agents[0].id);
-  else{ document.getElementById('emptyWrap').style.display='flex'; document.getElementById('chatWrap').style.display='none'; }
+  else{ document.getElementById('emptyWrap').style.display=''; document.getElementById('chatWrap').style.display='none'; }
 }
 
 /* ── Wizard ────────────────────────────────────────── */
@@ -9449,7 +9605,7 @@ async function deleteAgent(){
     if(agents.length > 0){
       openAgent(agents[0].id);
     } else {
-      document.getElementById('emptyWrap').style.display='flex';
+      document.getElementById('emptyWrap').style.display='';
       document.getElementById('chatWrap').style.display='none';
     }
     renderAgList();

@@ -875,71 +875,38 @@ footer{background:var(--bg-warm);border-top:1px solid var(--line);padding:36px 2
     <div class="section-head reveal">
       <span class="live-pill">LIVE</span>
       <span class="kicker">GROUP CHAT</span>
-      <h2 class="h2">友達と AI が、<br>同じグループに集合</h2>
-      <p class="lead">LINE 風の招待リンクで友達を呼んで、グループ内で <b>@AI</b> を呼ぶと AI が答える。割り勘・議事録・旅行プランも、AI と一緒に。</p>
+      <h2 class="h2">友達と AI が、<br>同じグループに。</h2>
+      <p class="lead">招待リンクで友達を呼んで、<b>@AI</b> でいつでも呼べる。<br>料金はホスト持ち。</p>
     </div>
 
     <div class="group-row reveal">
       <div class="group-text">
-        <h3>みんなのグループに、<br>AI を 1 人入れる感覚。</h3>
-        <p>あなたが作った AI エージェントを、友達やチームのグループチャットに招待できます。<b>@AI</b> でメンションすると、グループの会話を理解した上で AI が答えてくれます。</p>
         <ul>
-          <li><b>QR / リンク 1 本</b>で招待 (有効期限・人数制限つき)</li>
-          <li><b>@AI</b> で誰でも AI を呼べる (料金はホスト持ち)</li>
-          <li>絵文字リアクション・ピン留め・ブックマーク</li>
-          <li><b>「グループへ送金」</b>で割り勘もアプリ内で完結</li>
-          <li>承認制・ホスト譲渡・退出メンバーの履歴管理</li>
-          <li>未読バッジ・通知カスタマイズ・既読位置同期</li>
+          <li><b>QR / リンク</b>で友達を招待</li>
+          <li><b>@AI</b> で誰でも AI を呼べる</li>
+          <li><b>「グループへ送金」</b>で割り勘も完結</li>
         </ul>
-        <button class="btn-primary" onclick="goSignup()">グループを作って始める →</button>
+        <button class="btn-primary" onclick="goSignup()">グループを作る →</button>
       </div>
 
-      <div>
-        <div class="group-mockup">
-          <div class="gm-head">
-            <div class="gm-avs">
-              <div class="gm-av">こ</div>
-              <div class="gm-av b">た</div>
-              <div class="gm-av c">ま</div>
-              <div class="gm-av ai">🤖</div>
-            </div>
-            <div>
-              <div class="gm-meta-nm">忘年会の幹事 + AI</div>
-              <div class="gm-meta-sub">4 メンバー ・ オンライン</div>
-            </div>
+      <div class="group-mockup">
+        <div class="gm-head">
+          <div class="gm-avs">
+            <div class="gm-av">こ</div>
+            <div class="gm-av b">た</div>
+            <div class="gm-av ai">🤖</div>
           </div>
-          <div class="gm-body">
-            <div class="gm-msg u"><span class="nm">たかし</span>渋谷で12月20日空いてる？</div>
-            <div class="gm-msg you">空いてるよ！</div>
-            <div class="gm-msg u"><span class="nm">まなみ</span>@AI 渋谷で6人個室、予算5000円で居酒屋探して</div>
-            <div class="gm-msg ai"><span class="nm">🤖 グルメ AI</span>3件見つけました。①個室居酒屋 鳥心 ②博多もつ鍋 山笠 ③酒場ふみ — 詳細リンク送ります</div>
-            <div class="gm-msg you">②でお願い！予約してくれる？</div>
-            <div class="gm-msg ai"><span class="nm">🤖 グルメ AI</span>予約完了 ✓ 確認メール届きました</div>
-          </div>
-          <div class="gm-input">
-            <div class="gm-input-box">メッセージを入力 ・ @AI で AI を呼ぶ</div>
-            <div class="gm-input-send">↑</div>
+          <div>
+            <div class="gm-meta-nm">忘年会の幹事 + AI</div>
+            <div class="gm-meta-sub">3 メンバー</div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 3 sub-features -->
-    <div class="group-features reveal">
-      <div class="group-feat">
-        <div class="group-feat-ic">🔗</div>
-        <div class="group-feat-nm">QR / リンク招待</div>
-        <div class="group-feat-dc">LINE のように招待リンクを送るだけ。有効期限・人数制限・承認制も設定可能。</div>
-      </div>
-      <div class="group-feat">
-        <div class="group-feat-ic">💸</div>
-        <div class="group-feat-nm">グループへ送金</div>
-        <div class="group-feat-dc">飲み会の割り勘や、AI 利用料の負担分担をアプリ内で。送金履歴も透明に管理。</div>
-      </div>
-      <div class="group-feat">
-        <div class="group-feat-ic">🤖</div>
-        <div class="group-feat-nm">@AI でいつでも呼べる</div>
-        <div class="group-feat-dc">議事録 AI、旅行プラン AI、コードレビュー AI — グループ用途に合わせて呼び分け。</div>
+        <div class="gm-body">
+          <div class="gm-msg u"><span class="nm">まなみ</span>@AI 渋谷で6人個室、予算5000円</div>
+          <div class="gm-msg ai"><span class="nm">🤖 グルメ AI</span>3件見つけました。①鳥心 ②もつ鍋山笠 ③酒場ふみ</div>
+          <div class="gm-msg you">②で予約お願い！</div>
+          <div class="gm-msg ai"><span class="nm">🤖 グルメ AI</span>予約完了 ✓</div>
+        </div>
       </div>
     </div>
   </div>

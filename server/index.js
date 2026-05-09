@@ -2108,7 +2108,7 @@ function renderListingOgSvg(d, twemojiUri){
   const tagLines = _wrapText(d.description||'', 26, 2);
   const cat = _xmlEscape(d.category_label||'');
   const handle = _xmlEscape(d.creator?.handle||'');
-  const ratingNum = d.rating>0 ? d.rating.toFixed(1) : '—';
+  const ratingNum = d.rating>0 ? d.rating.toFixed(1) : '';
   const usesNum = (d.uses||0) >= 1000 ? (d.uses/1000).toFixed(1)+'k' : String(d.uses||0);
   const chrome = d.agent?.chrome_enabled;
 
@@ -2165,17 +2165,19 @@ function renderListingOgSvg(d, twemojiUri){
 
     <!-- meta pills -->
     <g transform="translate(0 ${280 + Math.max(0,(tagLines.length-1)*36)})">
-      <g>
+      ${ratingNum ? `<g>
         <rect x="0" y="0" width="120" height="38" rx="14" ry="14" fill="#ffffff"/>
-        <text x="60" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">⭐ ${ratingNum}</text>
-      </g>
-      <g transform="translate(132 0)">
+        <!-- Star drawn as SVG path (no emoji/font dependency) -->
+        <path d="M16 9 L18.4 14 L23.6 14.6 L19.6 18 L20.6 23.4 L16 20.6 L11.4 23.4 L12.4 18 L8.4 14.6 L13.6 14 Z" fill="#fbbf24" stroke="#d97706" stroke-width="0.5"/>
+        <text x="68" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">${ratingNum}</text>
+      </g>` : ''}
+      <g transform="translate(${ratingNum ? 132 : 0} 0)">
         <rect x="0" y="0" width="${48 + usesNum.length*12}" height="38" rx="14" ry="14" fill="#ffffff"/>
-        <text x="${(48 + usesNum.length*12)/2}" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">利用 ${usesNum} 回</text>
+        <text x="${(48 + usesNum.length*12)/2}" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">${_xmlEscape((d.htmlLang === 'en' || (typeof d.lang === 'string' && d.lang === 'en')) ? `${usesNum} uses` : `利用 ${usesNum} 回`)}</text>
       </g>
-      ${chrome?`<g transform="translate(${132 + (48+usesNum.length*12) + 12} 0)">
-        <rect x="0" y="0" width="200" height="38" rx="14" ry="14" fill="#ffffff"/>
-        <text x="100" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">🌐 Chrome 連携</text>
+      ${chrome?`<g transform="translate(${(ratingNum ? 132 : 0) + (48+usesNum.length*12) + 12} 0)">
+        <rect x="0" y="0" width="180" height="38" rx="14" ry="14" fill="#ffffff"/>
+        <text x="90" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">Chrome 連携</text>
       </g>`:''}
     </g>
 
@@ -2475,12 +2477,14 @@ async function serveAgentSharePage(res, shareId){
       ? _trunc(ag.persona || 'A custom AI agent on MY AI AGENT.', 160)
       : 'Build your own AI agent team. 10 templates, group chat, Agent Store. Free to start.');
     const pageUrl = APP_URL + '/a/' + shareId;
-    const ogPng  = hasAgent
-      ? APP_URL + '/api/og/a/' + shareId + '.png'
-      : APP_URL + '/social/twitter-header.png';
-    const ogSvg  = hasAgent
-      ? APP_URL + '/api/og/a/' + shareId + '.svg'
-      : APP_URL + '/social/twitter-header.svg';
+    // Static brand image. Dynamic per-agent OG (/api/og/a/:share_id.png) exists
+    // but Twitter / mobile clients seem to silently fail on it (timeout?
+    // rendering quirk?), so we point og:image at a known-good static PNG.
+    // Static content goes through Render's CDN edge → Twitter fetches fast and
+    // succeeds. Per-agent customization can be reintroduced once the dynamic
+    // path is verified end-to-end.
+    const ogPng  = APP_URL + '/social/og-agent-sample.png';
+    const ogSvg  = APP_URL + '/social/og-agent-sample.svg';
 
     const ogBlock = `<title>${titleH} — MY AI AGENT</title>
 <meta name="description" content="${descH}">

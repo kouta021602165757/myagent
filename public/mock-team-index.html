@@ -41,37 +41,73 @@ h1{font-size:38px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;}
 
   <a href="/docs/AGENT_TEAM_SPEC.md" class="spec-link">📄 仕様書を読む (AGENT_TEAM_SPEC.md)</a>
 
+  <h2 style="font-size:18px;font-weight:900;margin-bottom:14px;">📦 v1 mocks (基本フロー)</h2>
   <div class="grid">
     <a href="/mock-team-store.html" class="card">
       <span class="card-tag">MOCK 1</span>
       <div class="card-pic s1">🛒</div>
       <h2>Team Marketplace</h2>
-      <div class="card-sub">Browse view ・ チーム一覧</div>
-      <p>カテゴリでフィルタ ・ 5〜6 種類のテンプレチーム ・ 構成エージェントのミニアバター ・ 価格 ・ レビュー</p>
+      <div class="card-sub">Browse view ・ Free + Premium 2 段構成</div>
+      <p>🎁 FREE 行を最上段に配置 ・ Premium 行で買い切りチームを並べる ・ カテゴリフィルタ + Free 専用フィルタ</p>
     </a>
 
     <a href="/mock-team-detail.html" class="card">
       <span class="card-tag">MOCK 2</span>
       <div class="card-pic s2">📋</div>
       <h2>Team Detail</h2>
-      <div class="card-sub">Detail page ・ 個別チーム情報</div>
-      <p>チーム説明 ・ 全メンバー紹介 ・ ワークフロー図解 ・ デモ会話 ・ 購入カード (バンドル割引表示)</p>
+      <div class="card-sub">Detail page</div>
+      <p>チーム説明 ・ 全メンバー紹介 ・ ワークフロー図解 ・ デモ会話 ・ 購入カード (バンドル割引)</p>
     </a>
 
     <a href="/mock-team-workspace.html" class="card">
       <span class="card-tag">MOCK 3</span>
       <div class="card-pic s3">⚙</div>
       <h2>Team Workspace</h2>
-      <div class="card-sub">Active workspace ・ チーム稼働中の画面</div>
-      <p>左: メンバー一覧 + ワークフロー進行 ・ 中央: マルチカラーチャット (役割別) ・ 右: 実行タイムライン</p>
+      <div class="card-sub">Active workspace</div>
+      <p>左: メンバー + ワークフロー進行 ・ 中央: マルチカラーチャット ・ 右: 実行タイムライン</p>
     </a>
 
     <a href="/mock-team-builder.html" class="card">
       <span class="card-tag">MOCK 4</span>
       <div class="card-pic s4">🏗</div>
-      <h2>Team Builder</h2>
-      <div class="card-sub">Create + publish ・ チーム作成画面</div>
-      <p>5 セクション (基本 / メンバー / ワークフロー / トリガー / 価格) ・ ドラッグで並び替え ・ Marketplace プレビュー</p>
+      <h2>Team Builder (overview)</h2>
+      <div class="card-sub">Create + publish ・ シングルページ版</div>
+      <p>5 セクション (基本 / メンバー / ワークフロー / トリガー / 価格) ・ ドラッグ並び替え ・ Marketplace プレビュー</p>
+    </a>
+  </div>
+
+  <h2 style="font-size:18px;font-weight:900;margin:32px 0 14px;">🆕 v2 detailed mocks (細かい体験)</h2>
+  <div class="grid">
+    <a href="/mock-team-onboarding.html" class="card">
+      <span class="card-tag">MOCK A · NEW</span>
+      <div class="card-pic" style="background:linear-gradient(135deg,#dcfce7,#86efac);">🎁</div>
+      <h2>Free Onboarding</h2>
+      <div class="card-sub">First-time user ・ 4 ステップ</div>
+      <p>サインアップ直後に **無料 Team を 1 つ進呈** ・ Welcome → Pick (3 free) → Activating (clone) → Ready (Run/Chat) ・ ハマる入り口設計</p>
+    </a>
+
+    <a href="/mock-team-editor.html" class="card">
+      <span class="card-tag">MOCK B · NEW</span>
+      <div class="card-pic" style="background:linear-gradient(135deg,#ede9fe,#c4b5fd);">🎨</div>
+      <h2>Visual Workflow Editor</h2>
+      <div class="card-sub">Drag-drop node editor</div>
+      <p>左: パレット (Trigger/Agents/Logic/Actions) ・ 中央: グリッド canvas + ノード + 矢印エッジ ・ 右: 選択ノードのインスペクタ (input/tools/output/settings)</p>
+    </a>
+
+    <a href="/mock-team-wizard.html" class="card">
+      <span class="card-tag">MOCK C · NEW</span>
+      <div class="card-pic" style="background:linear-gradient(135deg,#fef3c7,#fcd34d);">🪄</div>
+      <h2>Builder Wizard (5-step)</h2>
+      <div class="card-sub">Detailed creation flow</div>
+      <p>Step1: 開始方法 (Template / Blank / AI / Import) ・ Step2: テンプレ選択 ・ Step3: メンバー編集 ・ Step4: テスト実行 ・ Step5: 公開 (Free / Paid / Private)</p>
+    </a>
+
+    <a href="/mock-team-dashboard.html" class="card">
+      <span class="card-tag">MOCK D · NEW</span>
+      <div class="card-pic" style="background:linear-gradient(135deg,#dbeafe,#93c5fd);">📊</div>
+      <h2>My Teams Dashboard</h2>
+      <div class="card-sub">Operations view</div>
+      <p>4 つの KPI (Active/Runs/Cost/Time saved) ・ チームカード (稼働中バッジ) ・ 実行履歴テーブル ・ 出店した場合のクリエイター収益チャート</p>
     </a>
   </div>
 

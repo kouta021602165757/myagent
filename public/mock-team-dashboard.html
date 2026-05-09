@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] My Teams Dashboard — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;--rose:#ef4444;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);} .banner a{color:var(--peach);text-decoration:underline;}
+
+.wrap{max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.brand{font-size:14px;font-weight:800;letter-spacing:.06em;color:var(--peach-dark);text-decoration:none;}
+
+.section-title{font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--peach-dark);text-transform:uppercase;margin-bottom:8px;}
+h1{font-size:32px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;}
+.lead{font-size:14px;color:var(--text-muted);margin-bottom:32px;}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--wire);border-radius:12px;padding:5px;width:fit-content;margin-bottom:24px;}
+.tab{padding:9px 18px;border:0;background:transparent;font-size:13px;font-weight:700;color:var(--text-muted);border-radius:8px;cursor:pointer;}
+.tab.active{background:var(--peach);color:#fff;}
+
+/* Top KPI row (creator stats) */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px;}
+.kpi{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:18px;}
+.kpi .lbl{font-size:11px;font-weight:800;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+.kpi .val{font-size:28px;font-weight:900;letter-spacing:-.02em;font-feature-settings:"tnum";}
+.kpi .delta{font-size:11.5px;font-weight:800;margin-top:4px;}
+.kpi .delta.up{color:var(--green);}
+.kpi .delta.flat{color:var(--text-subtle);}
+
+/* My teams grid */
+.my-teams{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:32px;}
+.team-card{background:#fff;border:1px solid var(--wire);border-radius:16px;overflow:hidden;}
+.team-card .hd{display:flex;align-items:center;gap:14px;padding:18px;border-bottom:1px solid var(--wire);}
+.team-card .ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.team-card .ic.ec{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.team-card .ic.sns{background:linear-gradient(135deg,#fce7f3,#f9a8d4);}
+.team-card .ic.dev{background:linear-gradient(135deg,#dcfce7,#86efac);}
+.team-card .ic.cs{background:linear-gradient(135deg,#dbeafe,#93c5fd);}
+.team-card .nm{font-size:15px;font-weight:900;}
+.team-card .meta{font-size:11px;color:var(--text-subtle);font-weight:700;}
+.team-card .status{margin-left:auto;font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:99px;letter-spacing:.04em;}
+.team-card .status.live{background:rgba(16,185,129,.12);color:var(--green);}
+.team-card .status.busy{background:rgba(251,146,60,.12);color:var(--peach-dark);}
+.team-card .status.idle{background:var(--bg-warm);color:var(--text-subtle);}
+
+.team-card .body{padding:14px 18px;}
+.team-card .members-row{display:flex;align-items:center;gap:6px;margin-bottom:14px;}
+.team-card .mb{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg-warm);border:1px solid var(--wire);position:relative;}
+.team-card .mb.busy::after{content:'';position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--peach);box-shadow:0 0 0 2px #fff;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+.team-card .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;font-size:11.5px;}
+.team-card .st{padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--wire);}
+.team-card .st .lbl{font-size:9.5px;font-weight:800;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;}
+.team-card .st .v{font-size:14px;font-weight:900;letter-spacing:-.01em;}
+
+.team-card .actions{display:flex;gap:6px;padding-top:12px;border-top:1px solid var(--wire);}
+.team-card .ab{flex:1;padding:8px;border:1px solid var(--wire);background:#fff;border-radius:9px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text);}
+.team-card .ab.run{background:var(--peach);color:#fff;border:0;font-weight:800;}
+.team-card .ab.run:hover{background:var(--peach-dark);}
+
+/* Run history */
+.section{background:#fff;border:1px solid var(--wire);border-radius:18px;padding:24px;margin-bottom:24px;}
+.section h2{font-size:18px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section h2 .more{margin-left:auto;font-size:12px;color:var(--text-subtle);font-weight:700;text-decoration:underline;cursor:pointer;}
+
+.run-table{width:100%;border-collapse:collapse;}
+.run-table th,.run-table td{padding:10px 12px;text-align:left;font-size:12.5px;border-bottom:1px solid var(--wire);}
+.run-table th{background:var(--bg-warm);font-weight:800;color:var(--text-subtle);letter-spacing:.04em;font-size:10.5px;text-transform:uppercase;}
+.run-table td{color:var(--text-muted);}
+.run-table .team{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--text);}
+.run-table .team .av{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;background:var(--bg-warm);}
+.run-table .st-pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;}
+.run-table .st-pill.ok{background:rgba(16,185,129,.12);color:var(--green);}
+.run-table .st-pill.run{background:rgba(251,146,60,.12);color:var(--peach-dark);}
+.run-table .st-pill.fail{background:rgba(239,68,68,.12);color:var(--rose);}
+
+/* Revenue chart placeholder */
+.chart{height:140px;background:linear-gradient(180deg,rgba(251,146,60,.06),transparent);border-radius:11px;padding:14px;position:relative;border:1px solid var(--wire);}
+.chart svg{width:100%;height:100%;}
+
+@media (max-width:900px){.kpis{grid-template-columns:1fr 1fr;}.my-teams{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK D</b> ・ My Teams Dashboard ・ <a href="/mock-team-index.html">他のモックを見る</a></div>
+
+<div class="wrap">
+  <div class="head">
+    <a href="/" class="brand">🍑 MY AI AGENT</a>
+  </div>
+
+  <div class="section-title">My Teams</div>
+  <h1>あなたのチーム ・ ダッシュボード</h1>
+  <p class="lead">所有チームの稼働状況、実行履歴、収益 (作者として出店した場合) を一画面でモニタ。</p>
+
+  <div class="tabs">
+    <button class="tab active">📦 Owned (3)</button>
+    <button class="tab">🏪 Published (1)</button>
+    <button class="tab">📊 Analytics</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="lbl">Active Teams</div>
+      <div class="val">3</div>
+      <div class="delta flat">2 owned ・ 1 free</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Runs (this week)</div>
+      <div class="val">42</div>
+      <div class="delta up">↑ 18% vs last week</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Total cost (this mo.)</div>
+      <div class="val">$8.40</div>
+      <div class="delta flat">$0.20/run avg</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Time saved (est.)</div>
+      <div class="val">22h</div>
+      <div class="delta up">↑ vs solo work</div>
+    </div>
+  </div>
+
+  <!-- My teams cards -->
+  <h2 style="font-size:18px;font-weight:900;margin-bottom:14px;">📦 Active Teams</h2>
+  <div class="my-teams">
+    <div class="team-card">
+      <div class="hd">
+        <div class="ic ec">🛍</div>
+        <div>
+          <div class="nm">EC Launch Team</div>
+          <div class="meta">5 agents ・ Purchased 3 days ago ・ $98</div>
+        </div>
+        <span class="status busy">⚙ RUNNING</span>
+      </div>
+      <div class="body">
+        <div class="members-row">
+          <div class="mb">🛍</div>
+          <div class="mb busy">📸</div>
+          <div class="mb">🌐</div>
+          <div class="mb">📱</div>
+          <div class="mb">📊</div>
+        </div>
+        <div class="stats-row">
+          <div class="st"><div class="lbl">Runs</div><div class="v">12</div></div>
+          <div class="st"><div class="lbl">Last run</div><div class="v">2m ago</div></div>
+          <div class="st"><div class="lbl">Cost (mo)</div><div class="v">$3.20</div></div>
+        </div>
+        <div class="actions">
+          <button class="ab">Open workspace</button>
+          <button class="ab">⚙ Settings</button>
+          <button class="ab run">▶ Run now</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-card">
+      <div class="hd">
+        <div class="ic sns">📱</div>
+        <div>
+          <div class="nm">SNS Growth Starter</div>
+          <div class="meta">3 agents ・ Free team ・ Activated 7 days ago</div>
+        </div>
+        <span class="status live">● LIVE</span>
+      </div>
+      <div class="body">
+        <div class="members-row">
+          <div class="mb">📈</div>
+          <div class="mb">✍️</div>
+          <div class="mb">📅</div>
+        </div>
+        <div class="stats-row">
+          <div class="st"><div class="lbl">Runs</div><div class="v">28</div></div>
+          <div class="st"><div class="lbl">Last run</div><div class="v">9h ago</div></div>
+          <div class="st"><div class="lbl">Cost (mo)</div><div class="v">$4.80</div></div>
+        </div>
+        <div class="actions">
+          <button class="ab">Open workspace</button>
+          <button class="ab">⚙ Settings</button>
+          <button class="ab run">▶ Run now</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-card">
+      <div class="hd">
+        <div class="ic dev">💻</div>
+        <div>
+          <div class="nm">Dev Squad</div>
+          <div class="meta">4 agents ・ Purchased 2 weeks ago ・ $39.80</div>
+        </div>
+        <span class="status idle">⏸ IDLE</span>
+      </div>
+      <div class="body">
+        <div class="members-row">
+          <div class="mb">🔍</div>
+          <div class="mb">🔧</div>
+          <div class="mb">🧪</div>
+          <div class="mb">🚀</div>
+        </div>
+        <div class="stats-row">
+          <div class="st"><div class="lbl">Runs</div><div class="v">2</div></div>
+          <div class="st"><div class="lbl">Last run</div><div class="v">5d ago</div></div>
+          <div class="st"><div class="lbl">Cost (mo)</div><div class="v">$0.40</div></div>
+        </div>
+        <div class="actions">
+          <button class="ab">Open workspace</button>
+          <button class="ab">⚙ Settings</button>
+          <button class="ab run">▶ Run now</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-card" style="border-style:dashed;background:var(--bg-warm);cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:240px;">
+      <div style="text-align:center;color:var(--text-muted);">
+        <div style="font-size:36px;margin-bottom:8px;">＋</div>
+        <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Add another team</div>
+        <div style="font-size:11.5px;">Browse Marketplace or build your own</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent runs -->
+  <div class="section">
+    <h2>⏱ Recent runs <span class="more">View all →</span></h2>
+    <table class="run-table">
+      <thead><tr><th>Team</th><th>Trigger</th><th>Started</th><th>Duration</th><th>Cost</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="team"><span class="av">🛍</span>EC Launch Team</span></td>
+          <td>Manual ・ "Find pet product"</td>
+          <td>2 minutes ago</td>
+          <td>—</td>
+          <td>—</td>
+          <td><span class="st-pill run">⚙ Running</span></td>
+        </tr>
+        <tr>
+          <td><span class="team"><span class="av">📱</span>SNS Growth Starter</span></td>
+          <td>Schedule ・ Daily 9am</td>
+          <td>9 hours ago</td>
+          <td>2m 14s</td>
+          <td>$0.18</td>
+          <td><span class="st-pill ok">✓ Done</span></td>
+        </tr>
+        <tr>
+          <td><span class="team"><span class="av">🛍</span>EC Launch Team</span></td>
+          <td>Webhook ・ Stripe checkout.completed</td>
+          <td>14 hours ago</td>
+          <td>32s</td>
+          <td>$0.04</td>
+          <td><span class="st-pill ok">✓ Done</span></td>
+        </tr>
+        <tr>
+          <td><span class="team"><span class="av">📱</span>SNS Growth Starter</span></td>
+          <td>Schedule ・ Daily 9am</td>
+          <td>1 day ago</td>
+          <td>1m 58s</td>
+          <td>$0.16</td>
+          <td><span class="st-pill ok">✓ Done</span></td>
+        </tr>
+        <tr>
+          <td><span class="team"><span class="av">💻</span>Dev Squad</span></td>
+          <td>Manual ・ "Review PR #42"</td>
+          <td>5 days ago</td>
+          <td>4m 02s</td>
+          <td>$0.22</td>
+          <td><span class="st-pill fail">⚠ Partial fail</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Creator revenue (if user has published anything) -->
+  <div class="section">
+    <h2>💰 Creator revenue (you published 1 team) <span class="more">Settings →</span></h2>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:24px;margin-bottom:14px;">
+      <div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr;margin-bottom:0;">
+          <div class="kpi">
+            <div class="lbl">Total revenue</div>
+            <div class="val" style="font-size:24px;">$483</div>
+            <div class="delta up">↑ $98 this week</div>
+          </div>
+          <div class="kpi">
+            <div class="lbl">Sold copies</div>
+            <div class="val" style="font-size:24px;">7</div>
+            <div class="delta up">↑ 1 this week</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart">
+        <svg viewBox="0 0 800 100" preserveAspectRatio="none">
+          <path d="M 0 90 L 100 80 L 200 70 L 300 60 L 400 50 L 500 35 L 600 30 L 700 25 L 800 15"
+                stroke="#fb923c" stroke-width="3" fill="none" stroke-linejoin="round"/>
+          <path d="M 0 90 L 100 80 L 200 70 L 300 60 L 400 50 L 500 35 L 600 30 L 700 25 L 800 15 L 800 100 L 0 100 Z"
+                fill="rgba(251,146,60,0.16)"/>
+          <text x="0" y="95" font-family="-apple-system" font-size="9" fill="#9a6a4a">8 weeks ago</text>
+          <text x="780" y="95" font-family="-apple-system" font-size="9" fill="#9a6a4a" text-anchor="end">today</text>
+        </svg>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-subtle);font-weight:700;">Pending balance: $68.60 ・ Available: $414.40 ・ <a href="#" style="color:var(--peach-dark);text-decoration:underline;">Withdraw via Stripe Connect →</a></div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Workflow Editor — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;--rose:#ef4444;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;flex-shrink:0;}
+.banner b{color:var(--peach);} .banner a{color:var(--peach);text-decoration:underline;}
+
+/* Top bar */
+.topbar{background:#fff;border-bottom:1px solid var(--wire);padding:12px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.topbar .brand{font-size:13px;font-weight:800;letter-spacing:.06em;color:var(--peach-dark);text-decoration:none;}
+.topbar .name-input{flex:1;max-width:340px;font-size:14px;font-weight:800;background:transparent;border:0;border-bottom:1px solid transparent;padding:6px 4px;outline:0;}
+.topbar .name-input:hover, .topbar .name-input:focus{border-bottom-color:var(--peach);}
+.topbar .badge{background:rgba(16,185,129,.12);color:var(--green);font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:99px;}
+.topbar .actions{display:flex;gap:8px;margin-left:auto;}
+.topbar .btn{padding:8px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;border:1px solid var(--wire);background:#fff;color:var(--text);}
+.topbar .btn:hover{border-color:var(--peach);}
+.topbar .btn-primary{background:var(--peach);color:#fff;border:0;box-shadow:0 4px 12px rgba(251,146,60,.32);}
+.topbar .btn-primary:hover{background:var(--peach-dark);}
+
+/* Main: 3-column */
+.main{flex:1;display:flex;overflow:hidden;}
+
+/* Left palette */
+.palette{width:240px;background:#fff;border-right:1px solid var(--wire);padding:18px;overflow-y:auto;flex-shrink:0;}
+.palette h3{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:10px;}
+.search{position:relative;margin-bottom:14px;}
+.search input{width:100%;padding:8px 12px 8px 30px;border:1px solid var(--wire);border-radius:9px;font-size:12px;background:var(--bg);outline:0;}
+.search input:focus{border-color:var(--peach);background:#fff;}
+.search::before{content:'🔍';position:absolute;left:9px;top:7px;font-size:11px;}
+.palette-section{margin-bottom:18px;}
+.palette-section .ph{font-size:10px;font-weight:800;color:var(--text-subtle);letter-spacing:.08em;margin-bottom:6px;}
+.palette-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:grab;border:1px solid transparent;font-size:12.5px;font-weight:700;color:var(--text);transition:all .14s;}
+.palette-item:hover{background:var(--bg-warm);border-color:var(--wire);}
+.palette-item .ic{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;flex-shrink:0;}
+.palette-item.trig .ic{background:linear-gradient(135deg,#22d3ee,#0891b2);}
+.palette-item.agent .ic{background:linear-gradient(135deg,#fb923c,#ea580c);}
+.palette-item.cond .ic{background:linear-gradient(135deg,#a78bfa,#7c3aed);}
+.palette-item.action .ic{background:linear-gradient(135deg,#10b981,#047857);}
+
+/* Center canvas */
+.canvas{flex:1;background:#fdf8f3;background-image:radial-gradient(circle, rgba(180,120,80,0.16) 1px, transparent 1px);background-size:24px 24px;position:relative;overflow:auto;padding:40px;}
+
+.node{position:absolute;background:#fff;border:2px solid var(--wire);border-radius:14px;width:240px;box-shadow:0 4px 12px rgba(0,0,0,.06);transition:all .14s;}
+.node:hover{box-shadow:0 8px 24px rgba(0,0,0,.10);}
+.node.sel{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.16),0 8px 24px rgba(251,146,60,.16);}
+.node-head{padding:10px 12px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:8px;}
+.node-head .ic{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0;}
+.node-head .nm{font-size:12.5px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.node-head .step{font-size:10px;font-weight:800;color:var(--text-subtle);background:var(--bg-warm);padding:2px 7px;border-radius:99px;}
+.node-body{padding:10px 12px;font-size:11px;color:var(--text-muted);line-height:1.6;}
+.node.trig{border-color:#22d3ee;}
+.node.trig .ic{background:linear-gradient(135deg,#22d3ee,#0891b2);}
+.node.cond{border-color:#a78bfa;}
+.node.cond .ic{background:linear-gradient(135deg,#a78bfa,#7c3aed);}
+.node.action{border-color:#10b981;}
+.node.action .ic{background:linear-gradient(135deg,#10b981,#047857);}
+.node.agent .ic{background:linear-gradient(135deg,#fb923c,#ea580c);}
+
+.node-port{position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--peach);}
+.node-port.top{top:-7px;left:50%;transform:translateX(-50%);}
+.node-port.bot{bottom:-7px;left:50%;transform:translateX(-50%);}
+.node-port.left{top:50%;left:-7px;transform:translateY(-50%);}
+.node-port.right{top:50%;right:-7px;transform:translateY(-50%);}
+
+/* Edges via SVG overlay */
+.edges{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+
+/* Right inspector */
+.inspector{width:300px;background:#fff;border-left:1px solid var(--wire);padding:18px;overflow-y:auto;flex-shrink:0;}
+.insp-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--wire);}
+.insp-head .ic{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.insp-head h3{font-size:14px;font-weight:900;}
+.insp-head .sub{font-size:10.5px;color:var(--text-subtle);font-weight:700;}
+.insp-section{margin-bottom:18px;}
+.insp-section h4{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:8px;}
+.field{margin-bottom:10px;}
+.field label{display:block;font-size:11.5px;font-weight:700;color:var(--text-muted);margin-bottom:4px;}
+.field input,.field textarea,.field select{width:100%;padding:7px 10px;border:1px solid var(--wire);border-radius:8px;font-size:12px;font-family:inherit;background:var(--bg);outline:0;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--peach);background:#fff;}
+.field textarea{min-height:60px;resize:vertical;}
+.var-pill{display:inline-block;background:rgba(167,139,250,.12);color:#7c3aed;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px;font-family:'SF Mono',monospace;border:1px solid rgba(167,139,250,.32);}
+
+.toolbar-bottom{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--wire);border-radius:12px;padding:6px;display:flex;gap:4px;box-shadow:0 6px 20px rgba(0,0,0,.10);}
+.tb-btn{padding:7px 12px;border:0;background:transparent;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--text);}
+.tb-btn:hover{background:var(--bg-warm);}
+.tb-btn.run{background:var(--peach);color:#fff;font-weight:800;padding:7px 16px;}
+.tb-btn.run:hover{background:var(--peach-dark);}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK B</b> ・ Visual Workflow Editor (drag-drop) ・ <a href="/mock-team-index.html">他のモックを見る</a></div>
+
+<div class="topbar">
+  <a href="/" class="brand">🍑 MY AI AGENT</a>
+  <input class="name-input" value="EC Launch Team — Workflow">
+  <span class="badge">● Auto-saved</span>
+  <div class="actions">
+    <button class="btn">↩ Undo</button>
+    <button class="btn">▷ Test run</button>
+    <button class="btn btn-primary">Save & Publish →</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- LEFT: Palette -->
+  <aside class="palette">
+    <div class="search"><input type="text" placeholder="Search blocks..."></div>
+
+    <div class="palette-section">
+      <div class="ph">Triggers</div>
+      <div class="palette-item trig"><div class="ic">▶</div>Manual run</div>
+      <div class="palette-item trig"><div class="ic">⏰</div>Schedule (cron)</div>
+      <div class="palette-item trig"><div class="ic">🔔</div>Webhook</div>
+      <div class="palette-item trig"><div class="ic">📧</div>New email</div>
+      <div class="palette-item trig"><div class="ic">💬</div>X mention</div>
+    </div>
+
+    <div class="palette-section">
+      <div class="ph">Your agents</div>
+      <div class="palette-item agent"><div class="ic">🛍</div>Product Sourcer</div>
+      <div class="palette-item agent"><div class="ic">📸</div>Visual Designer</div>
+      <div class="palette-item agent"><div class="ic">🌐</div>Storefront Architect</div>
+      <div class="palette-item agent"><div class="ic">📱</div>Social Media Manager</div>
+      <div class="palette-item agent"><div class="ic">📊</div>Revenue Analyst</div>
+    </div>
+
+    <div class="palette-section">
+      <div class="ph">Logic</div>
+      <div class="palette-item cond"><div class="ic">?</div>Condition (if/else)</div>
+      <div class="palette-item cond"><div class="ic">⇉</div>Parallel branch</div>
+      <div class="palette-item cond"><div class="ic">⏱</div>Wait / Delay</div>
+      <div class="palette-item cond"><div class="ic">🔁</div>Loop</div>
+    </div>
+
+    <div class="palette-section">
+      <div class="ph">Actions</div>
+      <div class="palette-item action"><div class="ic">📨</div>Send email</div>
+      <div class="palette-item action"><div class="ic">📱</div>Post to X</div>
+      <div class="palette-item action"><div class="ic">🛒</div>Shopify create product</div>
+      <div class="palette-item action"><div class="ic">💬</div>Slack message</div>
+      <div class="palette-item action"><div class="ic">📊</div>Update sheet</div>
+    </div>
+  </aside>
+
+  <!-- CENTER: Canvas with nodes + edges -->
+  <div class="canvas" id="canvas" style="position:relative;">
+    <!-- SVG edges layer -->
+    <svg class="edges" width="100%" height="100%" style="position:absolute;top:0;left:0;">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#fb923c"/>
+        </marker>
+      </defs>
+      <!-- Trigger → Sourcer -->
+      <path d="M 280 170 C 280 220, 280 230, 280 280" stroke="#fb923c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <!-- Sourcer → Designer -->
+      <path d="M 280 410 C 280 450, 280 460, 280 510" stroke="#fb923c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <!-- Designer → Architect -->
+      <path d="M 280 640 C 280 660, 600 660, 600 230 L 600 280" stroke="#fb923c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <!-- Architect → Parallel split (SNS + Analyst) -->
+      <path d="M 600 410 C 600 450, 600 460, 600 510" stroke="#fb923c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <!-- Parallel → SNS Manager -->
+      <path d="M 600 640 C 600 670, 920 670, 920 230 L 920 280" stroke="#fb923c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <!-- Parallel → Analyst -->
+      <path d="M 600 640 C 600 680, 920 680, 920 510" stroke="#fb923c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    </svg>
+
+    <!-- Trigger node -->
+    <div class="node trig" style="top:60px;left:160px;">
+      <div class="node-head"><div class="ic">▶</div><div class="nm">Manual trigger</div><span class="step">START</span></div>
+      <div class="node-body">User clicks "Run team" button</div>
+      <div class="node-port bot"></div>
+    </div>
+
+    <!-- Sourcer -->
+    <div class="node agent sel" style="top:280px;left:160px;">
+      <div class="node-head"><div class="ic">🛍</div><div class="nm">Product Sourcer</div><span class="step">1</span></div>
+      <div class="node-body">Find a product with margin > <span class="var-pill">{{user.margin}}</span></div>
+      <div class="node-port top"></div>
+      <div class="node-port bot"></div>
+    </div>
+
+    <!-- Designer -->
+    <div class="node agent" style="top:510px;left:160px;">
+      <div class="node-head"><div class="ic">📸</div><div class="nm">Visual Designer</div><span class="step">2</span></div>
+      <div class="node-body">Create product photos for <span class="var-pill">{{step1.product}}</span></div>
+      <div class="node-port top"></div>
+      <div class="node-port bot"></div>
+    </div>
+
+    <!-- Architect -->
+    <div class="node agent" style="top:280px;left:480px;">
+      <div class="node-head"><div class="ic">🌐</div><div class="nm">Storefront Architect</div><span class="step">3</span></div>
+      <div class="node-body">Build Shopify with <span class="var-pill">{{step1.product}}</span> + <span class="var-pill">{{step2.images}}</span></div>
+      <div class="node-port top"></div>
+      <div class="node-port bot"></div>
+    </div>
+
+    <!-- Parallel split -->
+    <div class="node cond" style="top:510px;left:480px;">
+      <div class="node-head"><div class="ic">⇉</div><div class="nm">Parallel branch</div><span class="step">4</span></div>
+      <div class="node-body">Run SNS Manager + Revenue Analyst in parallel</div>
+      <div class="node-port top"></div>
+      <div class="node-port bot"></div>
+    </div>
+
+    <!-- SNS Manager -->
+    <div class="node agent" style="top:280px;left:800px;">
+      <div class="node-head"><div class="ic">📱</div><div class="nm">Social Media Manager</div><span class="step">5a</span></div>
+      <div class="node-body">Promote <span class="var-pill">{{step3.url}}</span> on X / IG / TikTok</div>
+      <div class="node-port top"></div>
+    </div>
+
+    <!-- Analyst -->
+    <div class="node agent" style="top:510px;left:800px;">
+      <div class="node-head"><div class="ic">📊</div><div class="nm">Revenue Analyst</div><span class="step">5b</span></div>
+      <div class="node-body">Watch Stripe webhook ・ Notify on each sale ・ Daily summary 9pm</div>
+      <div class="node-port top"></div>
+    </div>
+
+    <!-- Bottom toolbar -->
+    <div class="toolbar-bottom">
+      <button class="tb-btn">⊕ Add node</button>
+      <button class="tb-btn">↔ Auto-layout</button>
+      <button class="tb-btn">🔍 Zoom in</button>
+      <button class="tb-btn">⊖ Zoom out</button>
+      <button class="tb-btn run">▷ Test run</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Inspector for selected node -->
+  <aside class="inspector">
+    <div class="insp-head">
+      <div class="ic">🛍</div>
+      <div>
+        <h3>Product Sourcer</h3>
+        <div class="sub">Step 1 ・ Agent</div>
+      </div>
+    </div>
+
+    <div class="insp-section">
+      <h4>Inputs</h4>
+      <div class="field">
+        <label>User instruction template</label>
+        <textarea>Find a trending product with margin > {{user.margin}} and at least {{user.searches}} monthly searches. Return top 3 with reasoning.</textarea>
+      </div>
+      <div class="field">
+        <label>Variables you can use</label>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          <span class="var-pill">{{user.margin}}</span>
+          <span class="var-pill">{{user.searches}}</span>
+          <span class="var-pill">{{user.category}}</span>
+          <span class="var-pill">{{trigger.timestamp}}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="insp-section">
+      <h4>Tools</h4>
+      <div class="field">
+        <label>Enabled for this step</label>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <span style="font-size:11px;background:var(--peach-soft);color:var(--peach-dark);padding:4px 9px;border-radius:99px;font-weight:700;border:1px solid var(--wire);">🌐 Web search</span>
+          <span style="font-size:11px;background:var(--peach-soft);color:var(--peach-dark);padding:4px 9px;border-radius:99px;font-weight:700;border:1px solid var(--wire);">🔗 Web fetch</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="insp-section">
+      <h4>Output</h4>
+      <div style="font-size:11px;color:var(--text-muted);font-family:'SF Mono',monospace;background:var(--bg);border:1px solid var(--wire);border-radius:8px;padding:9px;line-height:1.65;">
+        <span class="var-pill">step1.product</span><br>
+        <span class="var-pill">step1.candidates</span><br>
+        <span class="var-pill">step1.reasoning</span>
+      </div>
+    </div>
+
+    <div class="insp-section">
+      <h4>Settings</h4>
+      <div class="field">
+        <label>Model</label>
+        <select>
+          <option>Sonnet 4.6 (default)</option>
+          <option>Haiku 4.5 (faster, cheaper)</option>
+          <option>Opus 4.7 (best quality)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Timeout</label>
+        <input type="text" value="60s">
+      </div>
+      <div class="field">
+        <label>On failure</label>
+        <select>
+          <option>Stop workflow</option>
+          <option>Skip this step</option>
+          <option>Retry once</option>
+          <option>Notify user, then stop</option>
+        </select>
+      </div>
+    </div>
+  </aside>
+</div>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Free Team Onboarding — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);} .banner a{color:var(--peach);text-decoration:underline;}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.brand{font-size:14px;font-weight:800;letter-spacing:.06em;color:var(--peach-dark);text-decoration:none;}
+.section-title{font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--peach-dark);text-transform:uppercase;margin-bottom:8px;}
+h1{font-size:32px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;line-height:1.15;}
+.lead{font-size:15px;color:var(--text-muted);margin-bottom:32px;}
+
+/* Step row */
+.steps-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:48px;}
+.step-card{background:#fff;border:1.5px solid var(--wire);border-radius:14px;padding:16px;position:relative;}
+.step-card.done{border-color:var(--green);background:linear-gradient(135deg,#fff,#dcfce7);}
+.step-card.active{border-color:var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);box-shadow:0 8px 24px rgba(251,146,60,.16);}
+.step-num{position:absolute;top:-12px;left:14px;width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;}
+.step-card.active .step-num{background:var(--peach);}
+.step-card.done .step-num{background:var(--green);}
+.step-card h3{font-size:13px;font-weight:800;margin-bottom:4px;}
+.step-card p{font-size:11.5px;color:var(--text-muted);line-height:1.55;}
+
+/* Screens */
+.screens{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-bottom:48px;}
+.screen{background:#fff;border:1px solid var(--wire);border-radius:18px;overflow:hidden;}
+.screen-head{background:var(--bg-warm);padding:10px 16px;border-bottom:1px solid var(--wire);font-size:11px;font-weight:800;color:var(--text-subtle);letter-spacing:.06em;display:flex;align-items:center;gap:10px;}
+.screen-head .dots{display:flex;gap:5px;}
+.screen-head .dot{width:10px;height:10px;border-radius:50%;background:var(--wire);}
+.screen-head .dot.r{background:#ff5f57;}.screen-head .dot.y{background:#febc2e;}.screen-head .dot.g{background:#28c840;}
+.screen-body{padding:24px;min-height:340px;}
+
+/* Screen 1: Welcome */
+.welcome{text-align:center;padding:24px 0;}
+.welcome .gift{font-size:64px;margin-bottom:14px;}
+.welcome h2{font-size:24px;font-weight:900;margin-bottom:8px;letter-spacing:-.02em;}
+.welcome p{font-size:13.5px;color:var(--text-muted);margin-bottom:18px;line-height:1.7;}
+.welcome .pills{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
+.welcome .pill{background:rgba(251,146,60,.10);color:var(--peach-dark);font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px;border:1px solid rgba(251,146,60,.32);}
+.welcome .cta{background:var(--peach);color:#fff;padding:13px 30px;border-radius:11px;font-size:14px;font-weight:800;border:0;cursor:pointer;box-shadow:0 6px 20px rgba(251,146,60,.32);}
+
+/* Screen 2: Pick template */
+.pick-list{display:flex;flex-direction:column;gap:10px;}
+.pick-card{background:var(--bg);border:1.5px solid var(--wire);border-radius:12px;padding:14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .14s;}
+.pick-card:hover{border-color:var(--peach);background:#fff;}
+.pick-card.sel{border-color:var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);box-shadow:0 4px 12px rgba(251,146,60,.16);}
+.pick-card.sel::after{content:'✓';color:var(--peach-dark);font-weight:900;font-size:18px;margin-left:auto;}
+.pick-card .ic{width:48px;height:48px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.pick-card .body{flex:1;min-width:0;}
+.pick-card .nm{font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+.pick-card .free-tag{background:rgba(16,185,129,.16);color:#047857;font-size:9px;font-weight:900;padding:2px 7px;border-radius:99px;letter-spacing:.04em;}
+.pick-card .desc{font-size:11.5px;color:var(--text-muted);line-height:1.55;}
+.pick-card .meta{font-size:10.5px;color:var(--text-subtle);font-weight:700;margin-top:3px;display:flex;align-items:center;gap:6px;}
+.pick-card .meta .av-mini{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--bg-warm);}
+
+/* Screen 3: Activating */
+.activate{padding:18px 0;}
+.activate-head{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+.activate-head .ic{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:28px;}
+.activate-head h3{font-size:17px;font-weight:900;}
+.activate-head .sub{font-size:11.5px;color:var(--text-subtle);font-weight:700;}
+.cloning{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+.clone-row{display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:700;}
+.clone-row .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;}
+.clone-row .nm{flex:1;color:var(--text);}
+.clone-row .st{font-size:10.5px;font-weight:800;letter-spacing:.04em;}
+.clone-row.done .st{color:var(--green);}
+.clone-row.active .st{color:var(--peach-dark);}
+.clone-row.queued .st{color:var(--text-subtle);}
+.clone-row .spinner{width:14px;height:14px;border:2px solid var(--peach-soft);border-top-color:var(--peach);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.progress{height:6px;background:var(--bg-warm);border-radius:3px;overflow:hidden;margin-top:14px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--peach),var(--peach-dark));width:60%;border-radius:3px;}
+
+/* Screen 4: Ready */
+.ready{padding:18px 0;text-align:center;}
+.ready .check{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#047857);color:#fff;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 18px;box-shadow:0 8px 24px rgba(16,185,129,.32);}
+.ready h2{font-size:22px;font-weight:900;margin-bottom:8px;}
+.ready p{font-size:13.5px;color:var(--text-muted);margin-bottom:20px;line-height:1.7;}
+.next-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.next-card{background:var(--bg);border:1px solid var(--wire);border-radius:11px;padding:12px;text-align:left;cursor:pointer;transition:all .14s;}
+.next-card:hover{border-color:var(--peach);background:#fff;}
+.next-card .ic{font-size:20px;margin-bottom:6px;}
+.next-card .nm{font-size:12.5px;font-weight:800;margin-bottom:3px;}
+.next-card .desc{font-size:11px;color:var(--text-muted);line-height:1.5;}
+.ready .primary{width:100%;background:var(--peach);color:#fff;padding:13px;border:0;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;}
+
+/* Banner section */
+.free-pitch{background:linear-gradient(135deg,#dcfce7,#86efac);border:1px solid rgba(16,185,129,.32);border-radius:18px;padding:32px;margin-bottom:48px;}
+.free-pitch h2{font-size:22px;font-weight:900;margin-bottom:8px;color:#047857;}
+.free-pitch p{font-size:14px;color:#065f46;line-height:1.7;}
+.free-pitch .row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px;}
+.free-pitch .item{background:rgba(255,255,255,.7);border:1px solid rgba(16,185,129,.32);border-radius:12px;padding:14px;}
+.free-pitch .item h3{font-size:13px;font-weight:900;color:#065f46;margin-bottom:5px;}
+.free-pitch .item p{font-size:12px;color:#065f46;}
+
+@media (max-width:900px){.steps-row{grid-template-columns:1fr 1fr;}.screens{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK A</b> ・ Free Team Onboarding ・ <a href="/mock-team-index.html">他のモックを見る</a></div>
+
+<div class="wrap">
+  <div class="head">
+    <a href="/" class="brand">🍑 MY AI AGENT</a>
+  </div>
+
+  <div class="section-title">First-time user experience</div>
+  <h1>Free Team を最初に渡す</h1>
+  <p class="lead">サインアップ直後、いきなり「無料 Team」を提供して、即体験 → ハマる → 有料 Team / 自作へ。</p>
+
+  <!-- 4-step indicator -->
+  <div class="steps-row">
+    <div class="step-card done"><span class="step-num">1</span><h3>Welcome</h3><p>無料 Team を提案 ・ 30 秒で完了</p></div>
+    <div class="step-card done"><span class="step-num">2</span><h3>Pick a team</h3><p>3 種類から選ぶ (全部無料)</p></div>
+    <div class="step-card active"><span class="step-num">3</span><h3>Activating</h3><p>5 体クローン中</p></div>
+    <div class="step-card"><span class="step-num">4</span><h3>Ready</h3><p>使い始め or もっと探す</p></div>
+  </div>
+
+  <!-- 4 screens (2x2 grid) -->
+  <div class="screens">
+    <!-- Screen 1: Welcome -->
+    <div class="screen">
+      <div class="screen-head"><div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>Step 1 ・ Welcome</div>
+      <div class="screen-body">
+        <div class="welcome">
+          <div class="gift">🎁</div>
+          <h2>1 つの無料 Team を<br>あなたに進呈します</h2>
+          <p>業務丸ごとを動かす AI チームのテンプレを<br><b>3 種類から 1 つ選んで</b>無料で受け取れます。</p>
+          <div class="pills">
+            <span class="pill">5 agents cloned</span>
+            <span class="pill">Workflow ready</span>
+            <span class="pill">No credit card</span>
+          </div>
+          <button class="cta">Choose my free team →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 2: Pick a free team -->
+    <div class="screen">
+      <div class="screen-head"><div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>Step 2 ・ Choose</div>
+      <div class="screen-body">
+        <div style="font-size:13px;font-weight:800;margin-bottom:14px;">どのチームを受け取りますか？</div>
+        <div class="pick-list">
+          <div class="pick-card sel">
+            <div class="ic" style="background:linear-gradient(135deg,#fff7ee,#fed7aa)">📱</div>
+            <div class="body">
+              <div class="nm">SNS Growth Starter <span class="free-tag">FREE</span></div>
+              <div class="desc">Trend spotter + content writer + scheduler. Post daily on X/IG.</div>
+              <div class="meta">
+                <span class="av-mini">📈</span><span class="av-mini">✍️</span><span class="av-mini">📅</span>
+                <span>3 agents</span>
+              </div>
+            </div>
+          </div>
+          <div class="pick-card">
+            <div class="ic" style="background:linear-gradient(135deg,#dbeafe,#93c5fd)">💼</div>
+            <div class="body">
+              <div class="nm">Solo Founder Toolkit <span class="free-tag">FREE</span></div>
+              <div class="desc">Email writer + meeting note-taker + task tracker. Daily essentials.</div>
+              <div class="meta">
+                <span class="av-mini">📧</span><span class="av-mini">📝</span><span class="av-mini">✅</span>
+                <span>3 agents</span>
+              </div>
+            </div>
+          </div>
+          <div class="pick-card">
+            <div class="ic" style="background:linear-gradient(135deg,#dcfce7,#86efac)">🎓</div>
+            <div class="body">
+              <div class="nm">Personal Tutor Squad <span class="free-tag">FREE</span></div>
+              <div class="desc">Researcher + explainer + quiz maker. For learning anything new.</div>
+              <div class="meta">
+                <span class="av-mini">🔍</span><span class="av-mini">🎓</span><span class="av-mini">🧠</span>
+                <span>3 agents</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="cta" style="margin-top:18px;width:100%">Activate this team →</button>
+      </div>
+    </div>
+
+    <!-- Screen 3: Activating -->
+    <div class="screen">
+      <div class="screen-head"><div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>Step 3 ・ Activating</div>
+      <div class="screen-body">
+        <div class="activate">
+          <div class="activate-head">
+            <div class="ic">📱</div>
+            <div>
+              <h3>SNS Growth Starter</h3>
+              <div class="sub">Cloning 3 agents to your account…</div>
+            </div>
+          </div>
+          <div class="cloning">
+            <div class="clone-row done">
+              <div class="ic" style="background:linear-gradient(135deg,#fb923c,#ea580c)">📈</div>
+              <div class="nm">Trend Spotter</div>
+              <div class="st">✓ Cloned</div>
+            </div>
+            <div class="clone-row active">
+              <div class="ic" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">✍️</div>
+              <div class="nm">Content Writer</div>
+              <span class="spinner"></span><div class="st">Cloning…</div>
+            </div>
+            <div class="clone-row queued">
+              <div class="ic" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">📅</div>
+              <div class="nm">Scheduler</div>
+              <div class="st">Queued</div>
+            </div>
+          </div>
+          <div class="progress"><div class="progress-fill"></div></div>
+          <div style="font-size:11.5px;color:var(--text-subtle);font-weight:700;margin-top:10px;text-align:center;">2 of 3 ・ ETA 3 seconds</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 4: Ready -->
+    <div class="screen">
+      <div class="screen-head"><div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>Step 4 ・ Ready</div>
+      <div class="screen-body">
+        <div class="ready">
+          <div class="check">✓</div>
+          <h2>Your team is ready 🎉</h2>
+          <p>3 agents cloned to your account. Try them out or let the workflow run.</p>
+          <div class="next-actions">
+            <div class="next-card">
+              <div class="ic">▶</div>
+              <div class="nm">Run the workflow</div>
+              <div class="desc">Auto-post a trending tweet today</div>
+            </div>
+            <div class="next-card">
+              <div class="ic">💬</div>
+              <div class="nm">Chat with agents</div>
+              <div class="desc">Open Team Workspace</div>
+            </div>
+          </div>
+          <button class="primary">▶ Run the workflow now</button>
+          <div style="font-size:11px;color:var(--text-subtle);margin-top:12px;">More teams to discover? <a href="/mock-team-store.html" style="color:var(--peach-dark);font-weight:700;text-decoration:underline">Browse Marketplace →</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free pitch -->
+  <div class="free-pitch">
+    <h2>💡 なぜ Free Team から?</h2>
+    <p>「無料で 1 体ずつ作る」より「無料で 1 チーム丸ごと体験」のほうが圧倒的にハマる。チームで連携して動く感覚を 30 秒で体験できれば、Team の価値が腹に落ちて、有料 Team や自作にもスムーズに進める。</p>
+    <div class="row">
+      <div class="item">
+        <h3>📈 Activation 率 +3x</h3>
+        <p>単体エージェントだと "何に使うか" が抽象的。Team は "何を達成するか" が即座にわかる。</p>
+      </div>
+      <div class="item">
+        <h3>💰 Conversion 改善</h3>
+        <p>Free Team を使い切ったユーザーは、有料 Team の購入率が 4-5 倍 (業界比較から推定)。</p>
+      </div>
+      <div class="item">
+        <h3>🎁 招待・拡散</h3>
+        <p>「無料で AI チームもらえるよ」は単体エージェントより SNS で拡散されやすい。</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

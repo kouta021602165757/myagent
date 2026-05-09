@@ -1743,51 +1743,51 @@ body{color:#f0f0f8;}
   </div>
 </a>
     </div>
-    <button class="sb-search-btn" onclick="openSearch()" title="検索 (⌘K)">
+    <button class="sb-search-btn" onclick="openSearch()" title="Search (⌘K)">
       <span style="font-size:12px">🔍</span>
-      <span style="flex:1;text-align:left;color:var(--text3)">検索</span>
+      <span style="flex:1;text-align:left;color:var(--text3)" data-i18n="navSearch">検索</span>
       <kbd style="font-size:9px;background:rgba(9,9,11,.06);border:.5px solid var(--wire2);padding:1px 4px;border-radius:4px;color:var(--text3);font-family:'JetBrains Mono','SF Mono',monospace">⌘K</kbd>
     </button>
     <div class="sb-new-row" style="position:relative">
       <button class="sb-new" onclick="if(!token){showToast(L('ログインが必要です','Sign in required'),'ng');return;}toggleSbPlusMenu(event)" id="sbPlusBtn">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        <span>新規</span>
+        <span data-i18n="navNew">新規</span>
         <span style="margin-left:auto;font-size:10px;opacity:.7">▾</span>
       </button>
       <div class="sb-plus-menu" id="sbPlusMenu" style="display:none" onclick="event.stopPropagation()">
         <button class="sb-pm-item" onclick="closeSbPlusMenu();openCreateGroup()">
           <div class="sb-pm-ic peach">🤝</div>
           <div class="sb-pm-body">
-            <div class="sb-pm-h">グループを作成</div>
-            <div class="sb-pm-d">仲間を招待して AI と一緒に話す</div>
+            <div class="sb-pm-h" data-i18n="sbCreateGroup">グループを作成</div>
+            <div class="sb-pm-d" data-i18n="sbCreateGroupD">仲間を招待して AI と一緒に話す</div>
           </div>
         </button>
         <button class="sb-pm-item" onclick="closeSbPlusMenu();openNewAgent()">
           <div class="sb-pm-ic indigo">💬</div>
           <div class="sb-pm-body">
-            <div class="sb-pm-h">AI と DM を始める</div>
-            <div class="sb-pm-d">新しい AI を作って 1対1 で話す</div>
+            <div class="sb-pm-h" data-i18n="sbStartDm">AI と DM を始める</div>
+            <div class="sb-pm-d" data-i18n="sbStartDmD">新しい AI を作って 1対1 で話す</div>
           </div>
         </button>
         <div class="sb-pm-div"></div>
         <button class="sb-pm-item" onclick="closeSbPlusMenu();openTemplate()">
           <div class="sb-pm-ic violet">📋</div>
           <div class="sb-pm-body">
-            <div class="sb-pm-h">テンプレートから作る</div>
-            <div class="sb-pm-d">プリセットを選んで素早く作成</div>
+            <div class="sb-pm-h" data-i18n="sbFromTemplate">テンプレートから作る</div>
+            <div class="sb-pm-d" data-i18n="sbFromTemplateD">プリセットを選んで素早く作成</div>
           </div>
         </button>
         <button class="sb-pm-item" onclick="closeSbPlusMenu();openAgentStore()">
           <div class="sb-pm-ic green">🏪</div>
           <div class="sb-pm-body">
-            <div class="sb-pm-h">Agent Store で探す</div>
-            <div class="sb-pm-d">他のクリエイターの AI を試す</div>
+            <div class="sb-pm-h" data-i18n="sbBrowseStore">Agent Store で探す</div>
+            <div class="sb-pm-d" data-i18n="sbBrowseStoreD">他のクリエイターの AI を試す</div>
           </div>
         </button>
       </div>
     </div>
     <div class="sb-tabs">
-      <button class="sb-tab active" data-tab="talks" onclick="setSbTab('talks')">💬 トーク</button>
+      <button class="sb-tab active" data-tab="talks" onclick="setSbTab('talks')">💬 <span data-i18n="navTalks">トーク</span></button>
       <button class="sb-tab" data-tab="agents" onclick="setSbTab('agents')">🤖 Agents</button>
     </div>
     <div class="sb-lbl" id="i18n-teamLabel" style="display:none">チーム</div>
@@ -1879,12 +1879,12 @@ body{color:#f0f0f8;}
           </div>
 
           <div class="foot-hint">
-            <span><kbd>⏎</kbd> 送信</span>
-            <span><kbd>Shift</kbd>+<kbd>⏎</kbd> 改行</span>
-            <span><kbd>/search</kbd> Web 検索</span>
-            <span><kbd>/image</kbd> 画像生成</span>
-            <span><kbd>/remember</kbd> 記憶</span>
-            <span><kbd>⌘</kbd>+<kbd>K</kbd> 新規会話</span>
+            <span><kbd>⏎</kbd> <span data-i18n="hintSend">送信</span></span>
+            <span><kbd>Shift</kbd>+<kbd>⏎</kbd> <span data-i18n="hintNewline">改行</span></span>
+            <span><kbd>/search</kbd> <span data-i18n="hintWebSearch">Web 検索</span></span>
+            <span><kbd>/image</kbd> <span data-i18n="hintImageGen">画像生成</span></span>
+            <span><kbd>/remember</kbd> <span data-i18n="hintMemory">記憶</span></span>
+            <span><kbd>⌘</kbd>+<kbd>K</kbd> <span data-i18n="hintNewChat">新規会話</span></span>
           </div>
         </div>
       </div>
@@ -4856,6 +4856,27 @@ var T = {
       sDangerConfirmLbl:    L('「削除する」と入力して確認','Type "DELETE" to confirm','输入“删除”以确认'),
       sDangerCta:           L('アカウントを完全削除する','Permanently delete account','永久删除账户'),
       sLangNote:            L('表示言語を切り替えます。変更後ページが再読み込みされます。','Choose your language. The page will reload to apply.'),
+
+      // Sidebar
+      navSearch:            L('検索','Search'),
+      navNew:               L('新規','New'),
+      navTalks:             L('トーク','Talks'),
+      sbCreateGroup:        L('グループを作成','Create a group'),
+      sbCreateGroupD:       L('仲間を招待して AI と一緒に話す','Invite friends and chat with AI together'),
+      sbStartDm:            L('AI と DM を始める','Start a DM with AI'),
+      sbStartDmD:           L('新しい AI を作って 1対1 で話す','Build a new AI and chat 1-on-1'),
+      sbFromTemplate:       L('テンプレートから作る','Start from template'),
+      sbFromTemplateD:      L('プリセットを選んで素早く作成','Pick a preset and ship in seconds'),
+      sbBrowseStore:        L('Agent Store で探す','Browse Agent Store'),
+      sbBrowseStoreD:       L('他のクリエイターの AI を試す','Try AIs from other creators'),
+
+      // Composer footer hints
+      hintSend:             L('送信','Send'),
+      hintNewline:          L('改行','Newline'),
+      hintWebSearch:        L('Web 検索','Web search'),
+      hintImageGen:         L('画像生成','Image gen'),
+      hintMemory:           L('記憶','Memory'),
+      hintNewChat:          L('新規会話','New chat'),
 };
 function _fmtT(template, vars){
   return String(template).replace(/\{(\w+)\}/g, function(_,k){ return vars[k]!==undefined ? vars[k] : ''; });
@@ -5069,8 +5090,12 @@ function updatePlanBadge(){
   const badge = document.getElementById('userPlanBadge');
   if(!badge||!me) return;
   const plan = me.plan||'free';
-  const labels = {free:'Free プラン', pro:'Pro プラン', business:'Business プラン'};
-  badge.textContent = labels[plan]||'Free プラン';
+  const labels = {
+    free:     L('Free プラン','Free plan'),
+    pro:      L('Pro プラン','Pro plan'),
+    business: L('Business プラン','Business plan'),
+  };
+  badge.textContent = labels[plan] || labels.free;
   badge.style.color = plan==='pro'?'#ea580c':plan==='business'?'#9333ea':'var(--text3)';
 }
 
@@ -5524,13 +5549,13 @@ function renderAgList(){
 
     if(totalGroups === 0 && dmAgents.length === 0){
       html += '<div style="padding:32px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.55">'
-        + 'まだトークがありません<br>'
-        + '<button class="btn-volt" onclick="toggleSbPlusMenu(event)" style="margin-top:14px;font-size:11px;padding:7px 14px">＋ 新規 ▾</button></div>';
+        + L('まだトークがありません','No conversations yet') + '<br>'
+        + '<button class="btn-volt" onclick="toggleSbPlusMenu(event)" style="margin-top:14px;font-size:11px;padding:7px 14px">＋ ' + L('新規','New') + ' ▾</button></div>';
     } else {
-      // Section: グループ
+      // Section: Groups
       if(totalGroups > 0){
-        html += '<div class="sb-section-h"><span>グループ</span>'
-          + '<button class="sb-section-add" onclick="openCreateGroup()" title="グループを作成">+</button></div>';
+        html += '<div class="sb-section-h"><span>' + L('グループ','Groups') + '</span>'
+          + '<button class="sb-section-add" onclick="openCreateGroup()" title="' + L('グループを作成','Create a group') + '">+</button></div>';
         // Hosted groups first, then joined groups; sort by last activity within each.
         hostedGroups
           .slice().sort(_sortByLastActivity)
@@ -5539,7 +5564,7 @@ function renderAgList(){
           .slice().sort(_sortByLastActivity)
           .forEach(g => { html += _renderAgItem(g, true); });
       }
-      // Section: DM (1対1)
+      // Section: DMs
       if(dmAgents.length > 0){
         html += '<div class="sb-section-h"><span>DM</span></div>';
         dmAgents

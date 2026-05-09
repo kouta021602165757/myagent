@@ -2498,6 +2498,28 @@ body{color:#f0f0f8;}
           </section>
 
           <section class="spane-section">
+            <div class="spane-section-h">🌐 言語 / Language / 语言</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">表示言語を切り替えます。変更後ページが再読み込みされます。</div>
+            <div class="row3 s-theme-grid" id="langPicker">
+              <button class="s-theme-c" data-lang="ja" onclick="setLang('ja')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#fff,#fff 49%,#bc002d 50%,#bc002d 51%,#fff 51%);border:1px solid var(--wire2);display:flex;align-items:center;justify-content:center;font-size:22px">🇯🇵</div>
+                <div class="s-theme-nm">日本語</div>
+                <div class="s-theme-sub">Japanese</div>
+              </button>
+              <button class="s-theme-c" data-lang="en" onclick="setLang('en')">
+                <div class="s-theme-prv" style="background:linear-gradient(180deg,#012169 0%,#012169 33%,#fff 33%,#fff 66%,#c8102e 66%);display:flex;align-items:center;justify-content:center;font-size:22px">🇺🇸</div>
+                <div class="s-theme-nm">English</div>
+                <div class="s-theme-sub">英語</div>
+              </button>
+              <button class="s-theme-c" data-lang="zh" onclick="setLang('zh')">
+                <div class="s-theme-prv" style="background:#de2910;display:flex;align-items:center;justify-content:center;font-size:22px">🇨🇳</div>
+                <div class="s-theme-nm">简体中文</div>
+                <div class="s-theme-sub">Chinese</div>
+              </button>
+            </div>
+          </section>
+
+          <section class="spane-section">
             <div class="spane-section-h" data-i18n="sPrefsBehav">既定の動作</div>
             <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sBehavEnterT">Enter キーでメッセージ送信</div><div class="d" data-i18n="sBehavEnterD">OFF にすると改行のみ。送信は Cmd/Ctrl+Enter</div></div><div class="s-sw" data-pref="behav_enter_send"></div></div>
             <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sBehavLastT">起動時に最後のチャットを開く</div><div class="d" data-i18n="sBehavLastD">OFF にすると常に「チームを作ろう」画面で起動</div></div><div class="s-sw" data-pref="behav_open_last"></div></div>
@@ -4656,16 +4678,16 @@ function usdFmt(usd, decimals){
 function jpyAsUsd(jpy, decimals){ return usdFmt(jpyToUsd(jpy), decimals); }
 
 var T = {
-      teamTitle:   isJa ? 'チームを作ろう'                              : 'Build Your Team',
-      teamSub:     isJa ? '専門スキルを持つAIエージェントを作って、仕事を任せましょう。' : 'Create AI agents with specialized skills.',
-      teamBtn:     isJa ? '最初のエージェントを作る →'                  : 'Create your first agent →',
-      newAgent:    isJa ? '新規エージェント'                              : 'New agent',
-      newTpl:      isJa ? 'テンプレートエージェント'                       : 'Template agent',
-      newMarket:   isJa ? 'Agent Store'                              : 'Agent Store',
-      balance:     isJa ? '残高'                                        : 'Balance',
-      charge:      isJa ? '+ 残高チャージ'                              : '+ Add Credits',
-      logout:      isJa ? 'ログアウト'                                  : 'Logout',
-      placeholder: isJa ? '何をお願いしますか？（Shift+Enter で改行）'  : 'What can I help you with? (Shift+Enter for newline)',
+      teamTitle:   L('チームを作ろう', 'Build Your Team', '组建团队'),
+      teamSub:     L('専門スキルを持つAIエージェントを作って、仕事を任せましょう。', 'Create AI agents with specialized skills.', '创建拥有专业技能的 AI 智能体'),
+      teamBtn:     L('最初のエージェントを作る →', 'Create your first agent →', '创建第一个智能体 →'),
+      newAgent:    L('新規エージェント', 'New agent', '新建智能体'),
+      newTpl:      L('テンプレートエージェント', 'Template agent', '模板智能体'),
+      newMarket:   'Agent Store',
+      balance:     L('残高', 'Balance', '余额'),
+      charge:      L('+ 残高チャージ', '+ Add Credits', '+ 充值'),
+      logout:      L('ログアウト', 'Logout', '登出'),
+      placeholder: L('何をお願いしますか？（Shift+Enter で改行）', 'What can I help you with? (Shift+Enter for newline)', '需要什么帮助？（Shift+Enter 换行）'),
       // Billing modal & settings
       bsMonthlyTab:isJa ? '月額プラン'                                  : 'Monthly plan',
       bsPaygTab:   isJa ? '都度チャージ'                                : 'Pay as you go',
@@ -4735,7 +4757,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     });
     const inp=document.getElementById('msgInput');
     if(inp) inp.placeholder=T.placeholder;
-    document.documentElement.lang=isJa?'ja':'en';
+    document.documentElement.lang = (typeof currentLang==='string') ? currentLang : (isJa?'ja':'en');
   };
   _applyI18n();
   buildAvGrid(); buildSkGrid(); buildPresetGrid();
@@ -8996,7 +9018,7 @@ function switchStab(btn, tabId){
   if(tabId==='s-account') renderAccountList();
   if(tabId==='s-security') { renderLinkedAccounts(); renderSessionInfo(); _loadLoginHistory(); }
   if(tabId==='s-notif') initNotifToggles();
-  if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
+  if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); initLangPicker(); }
   if(tabId==='s-creator'){ loadCreatorDashboard(); loadPayoutSection(); }
   if(tabId==='s-admin') loadAdminReports();
   if(tabId==='s-data'){ _loadReferralCard(); _loadMemories(); _loadReminders(); }
@@ -9641,6 +9663,23 @@ function initThemePicker(){
     c.classList.toggle('sel', c.getAttribute('data-theme')===current);
   });
 }
+// ── Language picker ───────────────────────────────────────
+function setLang(name){
+  if(!['ja','en','zh'].includes(name)) name = 'ja';
+  try { localStorage.setItem('pref_lang', name); } catch(e){}
+  // Most strings are baked into HTML/JS at load. Easiest correct UX: reload.
+  // The detector at top of <script> reads pref_lang first.
+  const labels = {ja:'日本語', en:'English', zh:'简体中文'};
+  showToast('Language: ' + labels[name] + ' — reloading…', 'ok');
+  setTimeout(() => location.reload(), 600);
+}
+function initLangPicker(){
+  const cur = (typeof currentLang === 'string') ? currentLang : 'ja';
+  document.querySelectorAll('#langPicker [data-lang]').forEach(b => {
+    b.classList.toggle('sel', b.dataset.lang === cur);
+  });
+}
+
 function setTheme(name){
   _prefSet('theme',name);
   document.querySelectorAll('.s-theme-c[data-theme]').forEach(function(c){

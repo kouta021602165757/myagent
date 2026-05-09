@@ -2401,6 +2401,98 @@ function escHtml(s){
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+/** Build a publicListing-shaped object from an agent share, so we can reuse
+ *  renderListingOgSvg without forking the renderer. */
+function _agentAsListing(user, ag){
+  const handle = '@' + ((user.email||'').split('@')[0] || 'creator');
+  return {
+    listing_id: ag.share_id || '',
+    agent: {
+      avatar: ag.avatar || '🤖',
+      skills: ag.skills || [],
+      chrome_enabled: !!ag.chrome_enabled,
+    },
+    title: ag.name || 'AI Agent',
+    description: ag.persona || '',
+    category: 'agent',
+    category_label: 'AI Agent',
+    tags: [],
+    tag_labels: [],
+    demo_prompts: [],
+    creator: {
+      handle,
+      name: user.name || '',
+      is_verified: !!user.is_verified,
+    },
+    rating: 0,
+    rating_count: 0,
+    uses: 0,
+    purchases: 0,
+    price_jpy: 0,
+    badge: null,
+    listed_at: ag.created_at || null,
+  };
+}
+
+/** Render the public agent share landing HTML with OG meta SSR.
+ *  Loads the static share.html and injects OG/Twitter Card tags before </head>
+ *  so SNS unfurls show a proper preview. */
+async function serveAgentSharePage(res, shareId){
+  try{
+    const found = await findAgentByShareId(shareId);
+    if(!found || !found.agent || !found.agent.share_id){
+      // Fall through to static share.html (it shows its own "not found" UI)
+      return serveStatic(res, path.join(PUBLIC_DIR, 'share.html'));
+    }
+    const ag = found.agent;
+    const u  = found.user;
+    const titleH = escHtml(ag.name || 'AI Agent');
+    const descH  = escHtml(_trunc(ag.persona || 'A custom AI agent on MY AI AGENT.', 160));
+    const pageUrl = APP_URL + '/a/' + shareId;
+    const ogPng  = APP_URL + '/api/og/a/' + shareId + '.png';
+    const ogSvg  = APP_URL + '/api/og/a/' + shareId + '.svg';
+
+    const ogBlock = `<title>${titleH} — MY AI AGENT</title>
+<meta name="description" content="${descH}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${pageUrl}">
+<meta property="og:title" content="${titleH}">
+<meta property="og:description" content="${descH}">
+<meta property="og:image" content="${ogPng}">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${titleH}">
+<meta property="og:site_name" content="MY AI AGENT">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${titleH}">
+<meta name="twitter:description" content="${descH}">
+<meta name="twitter:image" content="${ogPng}">
+<meta name="twitter:image:alt" content="${titleH}">
+<link rel="alternate" type="image/svg+xml" href="${ogSvg}">`;
+
+    fs.readFile(path.join(PUBLIC_DIR, 'share.html'), 'utf8', (err, raw) => {
+      if(err){
+        res.writeHead(500, {'Content-Type':'text/plain'});
+        return res.end('share template missing');
+      }
+      // Strip the existing <title> and inject the OG block right before </head>.
+      let html = raw.replace(/<title>[\s\S]*?<\/title>/i, '');
+      html = html.replace(/<\/head>/i, ogBlock + '\n</head>');
+      const headers = {
+        'Content-Type':'text/html; charset=utf-8',
+        'Cache-Control':'public, max-age=300',
+        ...SEC,
+      };
+      res.writeHead(200, headers);
+      res.end(html);
+    });
+  }catch(e){
+    console.warn('[shareSSR] failed:', e.message);
+    return serveStatic(res, path.join(PUBLIC_DIR, 'share.html'));
+  }
+}
+
 /** Render the public listing landing HTML with OG meta SSR. */
 async function serveListingPage(res, listingId, lang){
   lang = (lang === 'en') ? 'en' : 'ja';
@@ -3331,6 +3423,58 @@ async function handleAPI(req,res,pathname,method,ip){
       },
       owner:{ name: (found.user.name||(found.user.email||'').split('@')[0]||'ユーザー') }
     });
+  }
+
+  // ── GET /api/og/a/:share_id.svg ────────────────────────────
+  // Public: SNS unfurl image for agent share pages (/a/:share_id).
+  const ogShareSvg = pathname.match(/^\/api\/og\/a\/([a-z0-9-]+)\.svg$/);
+  if(ogShareSvg && method==='GET'){
+    const found = await findAgentByShareId(ogShareSvg[1]);
+    if(!found || !found.agent || !found.agent.share_id){
+      res.writeHead(404,{'Content-Type':'text/plain'});
+      return res.end('Share not found');
+    }
+    const detail = _agentAsListing(found.user, found.agent);
+    const svg = renderListingOgSvg(detail);
+    res.writeHead(200, {
+      'Content-Type':'image/svg+xml; charset=utf-8',
+      'Cache-Control':'public, max-age=300',
+      'Access-Control-Allow-Origin':'*',
+    });
+    res.end(svg);
+    return;
+  }
+
+  // ── GET /api/og/a/:share_id.png ────────────────────────────
+  // Public: PNG variant for Twitter / Facebook (raster-only platforms).
+  const ogSharePng = pathname.match(/^\/api\/og\/a\/([a-z0-9-]+)\.png$/);
+  if(ogSharePng && method==='GET'){
+    const found = await findAgentByShareId(ogSharePng[1]);
+    if(!found || !found.agent || !found.agent.share_id){
+      res.writeHead(404,{'Content-Type':'text/plain'});
+      return res.end('Share not found');
+    }
+    const detail = _agentAsListing(found.user, found.agent);
+    let twemojiUri = null;
+    try{
+      const av = detail.agent?.avatar || '🤖';
+      const tw = await _getTwemojiSvg(av);
+      if(tw) twemojiUri = _twemojiDataUri(tw);
+    }catch(e){ /* fall back to text emoji */ }
+    const svg = renderListingOgSvg(detail, twemojiUri);
+    const png = svgToPng(svg);
+    if(!png){
+      res.writeHead(302, {Location:'/api/og/a/'+ogSharePng[1]+'.svg'});
+      return res.end();
+    }
+    res.writeHead(200, {
+      'Content-Type':'image/png',
+      'Cache-Control':'public, max-age=86400',
+      'Access-Control-Allow-Origin':'*',
+      'Content-Length': png.length,
+    });
+    res.end(png);
+    return;
   }
 
   // ── GET /api/og/:listing_id.svg ────────────────────────────
@@ -6398,10 +6542,10 @@ const server=http.createServer(async(req,res)=>{
     return;
   }
 
-  // /a/:share_id → public agent landing page
+  // /a/:share_id → public agent landing page (with OG/Twitter card SSR)
   const aRoute=pathname.match(/^\/a\/([a-z0-9-]+)\/?$/);
   if(aRoute){
-    return serveStatic(res, path.join(PUBLIC_DIR,'share.html'));
+    return serveAgentSharePage(res, aRoute[1]);
   }
 
   // /g/:token → public group invite landing (SSR with OG meta + redirect)

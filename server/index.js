@@ -978,12 +978,23 @@ function _resolveModel(alias){
     default:      return 'claude-sonnet-4-6';
   }
 }
+// Output-token budget per model. Long replies (slide wireframes, code,
+// document drafts) need >4K — Sonnet/Opus can go much higher.
+function _maxTokensFor(alias){
+  switch((alias||'').toLowerCase()){
+    case 'haiku': return 8000;
+    case 'opus':  return 32000;
+    case 'sonnet':
+    default:      return 16000;
+  }
+}
 
 async function callAI(messages,system,modelAlias){
   const trimmedMsgs = _trimHistory(_capHistory(messages));
   const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
   const tryCall = async (sys) => httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-    {model:_resolveModel(modelAlias),max_tokens:4096,system:sys,messages:trimmedMsgs});
+    {model:_resolveModel(modelAlias),max_tokens:_maxTokensFor(modelAlias),system:sys,messages:trimmedMsgs},
+    {timeout: 180000});
   let r = await tryCall(_systemBlocks(system));
   // If Anthropic rejected cache_control formatting, retry with plain string system
   if(r.s===400 && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
@@ -1002,7 +1013,7 @@ function callAIStream(messages, system, onText, modelAlias){
   return new Promise((resolve, reject)=>{
     const body = JSON.stringify({
       model:_resolveModel(modelAlias),
-      max_tokens:4096,
+      max_tokens:_maxTokensFor(modelAlias),
       system: _systemBlocks(system),
       messages: _trimHistory(_capHistory(messages)),
       stream:true,
@@ -1086,7 +1097,8 @@ async function callAIWithTools(messages,system,tools){
     const sys = useCache ? _systemBlocks(system) : String(system||'');
     const cachedTools = useCache ? _toolsWithCache(tools) : tools;
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-                           {model:'claude-haiku-4-5-20251001',max_tokens:4096,system:sys,messages:_trimHistory(messages),tools:cachedTools});
+                           {model:'claude-haiku-4-5-20251001',max_tokens:8000,system:sys,messages:_trimHistory(messages),tools:cachedTools},
+                           {timeout: 120000});
     if(r.s===200) return r.d;
     if(r.s===400 && useCache && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
       console.warn('[chat] cache_control rejected, retrying without:', JSON.stringify(r.d).slice(0,200));

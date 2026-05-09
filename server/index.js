@@ -490,9 +490,16 @@ function fetchUrlText(targetUrl, opts = {}) {
         path: parsed.pathname + parsed.search,
         timeout: TIMEOUT,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; MYAIAgentBot/1.0; +https://myaiagents.agency)',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5',
-          'Accept-Language': 'ja,en;q=0.7',
+          // Real Chrome UA — many sites (TikTok, Instagram, X, Cloudflare-protected)
+          // serve placeholder / blocked pages to anything self-identifying as a bot.
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'identity', // no gzip — keeps parsing simple
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Upgrade-Insecure-Requests': '1',
         },
       }, r => {
         // Redirect handling
@@ -519,8 +526,75 @@ function fetchUrlText(targetUrl, opts = {}) {
           const raw = Buffer.concat(buf).toString('utf8');
           // Title extraction
           let title = '';
-          const tm = raw.match(/<title[^>]*>([^<]*)<\/title>/i);
+          const tm = raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
           if (tm) title = tm[1].replace(/\s+/g, ' ').trim();
+
+          // Open Graph / Twitter Card meta — works for SPAs (TikTok, Instagram,
+          // X, YouTube, etc.) that render body content via JS but expose preview
+          // metadata in <head>.
+          const meta = (prop) => {
+            const re = new RegExp('<meta[^>]+(?:property|name)=["\']' + prop + '["\'][^>]+content=["\']([^"\']+)["\']','i');
+            const m = raw.match(re);
+            if (m) return m[1].trim();
+            const re2 = new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']' + prop + '["\']','i');
+            const m2 = raw.match(re2);
+            return m2 ? m2[1].trim() : '';
+          };
+          const og = {
+            title: meta('og:title') || meta('twitter:title'),
+            description: meta('og:description') || meta('twitter:description') || meta('description'),
+            site_name: meta('og:site_name'),
+            image: meta('og:image') || meta('twitter:image'),
+            type: meta('og:type'),
+            url: meta('og:url') || currentUrl,
+          };
+          if (og.title && og.title.length > title.length) title = og.title;
+
+          // SPA structured data: JSON-LD + Next.js / TikTok / etc. embedded JSON
+          let structured = '';
+          // 1) JSON-LD blocks
+          const jsonLds = raw.match(/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+          for (const block of jsonLds.slice(0, 4)) {
+            const m = block.match(/>([\s\S]*?)<\/script>/);
+            if (m) {
+              try {
+                const data = JSON.parse(m[1].trim());
+                structured += '\n[JSON-LD] ' + JSON.stringify(data).slice(0, 4000);
+              } catch (e) {/* skip */}
+            }
+          }
+          // 2) TikTok-specific universal data
+          const tk = raw.match(/<script[^>]+id=["\']__UNIVERSAL_DATA_FOR_REHYDRATION__["\'][^>]*>([\s\S]*?)<\/script>/i);
+          if (tk) {
+            try {
+              const data = JSON.parse(tk[1]);
+              const ds = (data && data.__DEFAULT_SCOPE__) || {};
+              const userDetail = ds['webapp.user-detail'];
+              if (userDetail && userDetail.userInfo) {
+                const ui = userDetail.userInfo;
+                structured += '\n[TikTok UserInfo] ' + JSON.stringify({
+                  user: ui.user,
+                  stats: ui.stats,
+                  shareMeta: ui.shareMeta,
+                }).slice(0, 4000);
+              }
+              const videoList = ds['webapp.video-detail'] || ds['webapp.user-post'];
+              if (videoList) {
+                structured += '\n[TikTok Posts] ' + JSON.stringify(videoList).slice(0, 4000);
+              }
+            } catch (e) { /* skip */ }
+          }
+          // 3) Next.js __NEXT_DATA__
+          const nx = raw.match(/<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>([\s\S]*?)<\/script>/i);
+          if (nx && !structured.includes('[Next.js]')) {
+            try {
+              const data = JSON.parse(nx[1]);
+              const props = (data && data.props) || {};
+              const slim = JSON.stringify(props.pageProps || props).slice(0, 4000);
+              if (slim) structured += '\n[Next.js] ' + slim;
+            } catch (e) {/* skip */}
+          }
+
           // Strip HTML if html-ish; otherwise keep raw
           let text = raw;
           if (ct.includes('html') || /<\/?(html|body|div|p|h[1-6])\b/i.test(raw.slice(0, 4000))) {
@@ -538,11 +612,33 @@ function fetchUrlText(targetUrl, opts = {}) {
               .replace(/\n{3,}/g, '\n\n')
               .trim();
           }
+
+          // Build a header preamble that highlights OG meta + structured data
+          // before the (often sparse for SPAs) body text. The AI sees this
+          // structured info first.
+          const preamble = [];
+          if (og.site_name) preamble.push('Site: ' + og.site_name);
+          if (og.type) preamble.push('Type: ' + og.type);
+          if (og.title) preamble.push('Title: ' + og.title);
+          if (og.description) preamble.push('Description: ' + og.description);
+          if (og.image) preamble.push('Image: ' + og.image);
+          const header = preamble.length ? preamble.join('\n') + '\n\n' : '';
+          const structuredBlock = structured ? '--- Structured Data ---' + structured + '\n\n' : '';
+          const bodyBlock = text ? '--- Page Body ---\n' + text : '';
+          let finalText = (header + structuredBlock + bodyBlock).trim() || text || raw.slice(0, 2000);
+
           // Hard text cap (post-strip)
           const MAX_TEXT = 60000;
           let truncated = false;
-          if (text.length > MAX_TEXT) { text = text.slice(0, MAX_TEXT); truncated = true; }
-          resolve({ url: currentUrl, title, text, content_type: ct, truncated });
+          if (finalText.length > MAX_TEXT) { finalText = finalText.slice(0, MAX_TEXT); truncated = true; }
+          resolve({
+            url: currentUrl,
+            title: title || og.title || '',
+            text: finalText,
+            content_type: ct,
+            truncated,
+            og,
+          });
         });
         r.on('error', err => reject(err));
       });

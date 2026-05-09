@@ -208,12 +208,35 @@ function jres(res,status,data){
   res.writeHead(status,{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body),'Access-Control-Allow-Origin':APP_URL,...SEC});
   res.end(body);
 }
-function readBody(req,max=2e6){
+// Max body size: 50 MB. PDF / image attachments are sent base64 (~1.37x
+// inflation) so a 32 MB PDF (Anthropic's per-request cap) fits comfortably
+// here with headroom for JSON wrapping. Frontend caps individual attachments
+// at 32 MB so this is the right ceiling.
+function readBody(req,max=50*1024*1024){
   return new Promise((resolve,reject)=>{
-    let b='',sz=0;
-    req.on('data',c=>{sz+=c.length;if(sz>max)reject(new Error('Too large'));b+=c;});
-    req.on('end',()=>{try{resolve(JSON.parse(b||'{}'));}catch{resolve({});}});
-    req.on('error',reject);
+    let b='',sz=0,settled=false;
+    req.on('data',c=>{
+      if(settled) return;
+      sz+=c.length;
+      if(sz>max){
+        settled=true;
+        try{ req.destroy(); }catch(e){}
+        const err = new Error('Body too large');
+        err.statusCode = 413;
+        reject(err);
+        return;
+      }
+      b+=c;
+    });
+    req.on('end',()=>{
+      if(settled) return;
+      settled=true;
+      try{ resolve(JSON.parse(b||'{}')); }catch{ resolve({}); }
+    });
+    req.on('error',(e)=>{
+      if(settled) return;
+      settled=true; reject(e);
+    });
   });
 }
 function readRaw(req){return new Promise((resolve,reject)=>{const c=[];req.on('data',d=>c.push(d));req.on('end',()=>resolve(Buffer.concat(c)));req.on('error',reject);});}
@@ -6236,7 +6259,20 @@ const server=http.createServer(async(req,res)=>{
 
   if(pathname.startsWith('/api/')){
     try{await handleAPI(req,res,pathname,method,ip);}
-    catch(e){console.error('[API]',e.message);jres(res,500,{error:'Internal server error'});}
+    catch(e){
+      console.error('[API]',e.message,e.stack ? e.stack.split('\n').slice(0,3).join(' | ') : '');
+      // Surface specific known errors with a friendlier status + message
+      if(e && e.statusCode === 413){
+        return jres(res,413,{error:'ファイルが大きすぎます (上限 32MB)'});
+      }
+      if(e && /too large|payload|body/i.test(e.message||'')){
+        return jres(res,413,{error:'リクエストが大きすぎます'});
+      }
+      if(e && /timeout/i.test(e.message||'')){
+        return jres(res,504,{error:'タイムアウトしました。少し時間をおいて再試行してください'});
+      }
+      jres(res,500,{error:'Internal server error', detail: (e && e.message ? e.message.slice(0,200) : '')});
+    }
     return;
   }
 

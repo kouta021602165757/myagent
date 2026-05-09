@@ -6065,7 +6065,32 @@ async function handleAPI(req,res,pathname,method,ip){
     const speakerInitial = (speakerName || '?').charAt(0).toUpperCase();
     const aiMentioned = /(^|[\s　])(?:@AI|＠AI|@ai|＠ai)\b/.test(message);
     let aiShouldRespond = aiMentioned;
-    if(isGroup && !aiMentioned){
+    // Team chat: route @MemberName mentions to that specific cloned agent's
+    // persona. Without this, team groups fall back to the group's empty
+    // persona and lose all the curated instructions.
+    let teamMemberAgent = null;
+    if(agent.is_team && Array.isArray(agent.team_member_agent_ids) && agent.team_member_agent_ids.length){
+      // Try to match @<word> against any team member's name (case-insensitive,
+      // ignoring whitespace in the name).
+      const mtchs = message.match(/(?:^|[\s　])@(\S+)/g) || [];
+      for(const m of mtchs){
+        const token = m.replace(/^[\s　]*@/,'').toLowerCase().replace(/[^a-z0-9ぁ-んァ-ヶー一-龠]+/g,'');
+        if(!token || token === 'ai') continue;
+        const candidate = (payerUser.agents||[]).find(a =>
+          agent.team_member_agent_ids.includes(a.id) &&
+          a.name && a.name.toLowerCase().replace(/\s+/g,'').startsWith(token)
+        );
+        if(candidate){ teamMemberAgent = candidate; break; }
+      }
+      // No specific @member, no @AI either → still respond using the first
+      // member as the team coordinator (so the team feels alive even with
+      // bare messages).
+      if(!teamMemberAgent && !aiMentioned){
+        teamMemberAgent = (payerUser.agents||[]).find(a => a.id === agent.team_member_agent_ids[0]) || null;
+      }
+      if(teamMemberAgent) aiShouldRespond = true;
+    }
+    if(isGroup && !aiMentioned && !teamMemberAgent){
       const memberCount = Array.isArray(agent.members) ? agent.members.length : 1;
       if(typeof agent.ai_auto_respond === 'boolean'){
         aiShouldRespond = agent.ai_auto_respond;
@@ -6209,7 +6234,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         }, agent.model);
@@ -6308,7 +6333,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), tools);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -6405,7 +6430,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -6426,7 +6451,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

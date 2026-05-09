@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
@@ -2501,23 +2501,18 @@ body{color:#f0f0f8;}
           </section>
 
           <section class="spane-section">
-            <div class="spane-section-h">🌐 言語 / Language / 语言</div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">表示言語を切り替えます。変更後ページが再読み込みされます。</div>
-            <div class="row3 s-theme-grid" id="langPicker">
+            <div class="spane-section-h">🌐 Language / 言語</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px" data-i18n="sLangNote">Choose your language. The page will reload to apply.</div>
+            <div class="row2 s-theme-grid" id="langPicker">
+              <button class="s-theme-c" data-lang="en" onclick="setLang('en')">
+                <div class="s-theme-prv" style="background:linear-gradient(180deg,#012169 0%,#012169 33%,#fff 33%,#fff 66%,#c8102e 66%);display:flex;align-items:center;justify-content:center;font-size:22px">🇺🇸</div>
+                <div class="s-theme-nm">English</div>
+                <div class="s-theme-sub">Default</div>
+              </button>
               <button class="s-theme-c" data-lang="ja" onclick="setLang('ja')">
                 <div class="s-theme-prv" style="background:linear-gradient(135deg,#fff,#fff 49%,#bc002d 50%,#bc002d 51%,#fff 51%);border:1px solid var(--wire2);display:flex;align-items:center;justify-content:center;font-size:22px">🇯🇵</div>
                 <div class="s-theme-nm">日本語</div>
                 <div class="s-theme-sub">Japanese</div>
-              </button>
-              <button class="s-theme-c" data-lang="en" onclick="setLang('en')">
-                <div class="s-theme-prv" style="background:linear-gradient(180deg,#012169 0%,#012169 33%,#fff 33%,#fff 66%,#c8102e 66%);display:flex;align-items:center;justify-content:center;font-size:22px">🇺🇸</div>
-                <div class="s-theme-nm">English</div>
-                <div class="s-theme-sub">英語</div>
-              </button>
-              <button class="s-theme-c" data-lang="zh" onclick="setLang('zh')">
-                <div class="s-theme-prv" style="background:#de2910;display:flex;align-items:center;justify-content:center;font-size:22px">🇨🇳</div>
-                <div class="s-theme-nm">简体中文</div>
-                <div class="s-theme-sub">Chinese</div>
               </button>
             </div>
           </section>
@@ -4659,30 +4654,27 @@ var NA={avatar:'🤖',name:'',skills:[],persona:''};
 // chargeAmt: legacy (new modal tracks _bsPaygCents instead)
 
 // ── i18n ───────────────────────────────────────────────
-// Lang detection: 'ja' | 'en' | 'zh' (zh = Simplified Chinese)
-// Backwards compat: `isJa` remains as a boolean (true when lang === 'ja') so
-// the existing ~200 isJa ternaries don't need rewriting. Extensive zh/en
-// translations are rolled out incrementally via the T table below.
-var currentLang = 'ja';
+// Default: English (US-targeted product). Japanese browsers auto-switch to ja.
+// Backwards compat: `isJa` remains as a boolean (true when lang === 'ja').
+// The third (zh) argument to L() is accepted but ignored — kept so existing
+// callsites don't need to be rewritten.
+var currentLang = 'en';
 (function _detectLang(){
   var nav = (navigator.language || '').toLowerCase();
-  if(nav.startsWith('zh')) currentLang = 'zh';
-  else if(nav.startsWith('en')) currentLang = 'en';
+  if(nav.startsWith('ja')) currentLang = 'ja';
   try{
     var saved = localStorage.getItem('pref_lang');
-    if(['ja','en','zh'].includes(saved)) currentLang = saved;
+    if(['ja','en'].includes(saved)) currentLang = saved;
   }catch(e){}
   var qs = (new URLSearchParams(location.search)).get('lang');
-  if(['ja','en','zh'].includes(qs)) currentLang = qs;
+  if(['ja','en'].includes(qs)) currentLang = qs;
 })();
 var isJa = currentLang === 'ja';
-var isZh = currentLang === 'zh';
 var isEn = currentLang === 'en';
-// Helper: pick a string by language with ja fallback
+// Helper: pick a string by language with en fallback. zh arg accepted but ignored.
 function L(ja, en, zh){
-  if(currentLang === 'zh') return zh || en || ja;
-  if(currentLang === 'en') return en || ja;
-  return ja;
+  if(currentLang === 'ja') return ja;
+  return en || ja;
 }
 
 // Money formatting — display is always USD (target: foreign users).
@@ -4863,6 +4855,7 @@ var T = {
       sDangerBody:          L('全てのエージェント・会話・残高・サブスクリプションが永久に削除されます。サブスクは自動的に解約されます。','All agents, conversations, balance, and subscriptions will be permanently deleted. Subscriptions will be canceled automatically.','所有智能体、对话、余额和订阅将被永久删除。订阅将自动取消。'),
       sDangerConfirmLbl:    L('「削除する」と入力して確認','Type "DELETE" to confirm','输入“删除”以确认'),
       sDangerCta:           L('アカウントを完全削除する','Permanently delete account','永久删除账户'),
+      sLangNote:            L('表示言語を切り替えます。変更後ページが再読み込みされます。','Choose your language. The page will reload to apply.'),
 };
 function _fmtT(template, vars){
   return String(template).replace(/\{(\w+)\}/g, function(_,k){ return vars[k]!==undefined ? vars[k] : ''; });
@@ -9912,11 +9905,11 @@ function initThemePicker(){
 }
 // ── Language picker ───────────────────────────────────────
 function setLang(name){
-  if(!['ja','en','zh'].includes(name)) name = 'ja';
+  if(!['ja','en'].includes(name)) name = 'en';
   try { localStorage.setItem('pref_lang', name); } catch(e){}
   // Most strings are baked into HTML/JS at load. Easiest correct UX: reload.
   // The detector at top of <script> reads pref_lang first.
-  const labels = {ja:'日本語', en:'English', zh:'简体中文'};
+  const labels = {ja:'日本語', en:'English'};
   showToast('Language: ' + labels[name] + ' — reloading…', 'ok');
   setTimeout(() => location.reload(), 600);
 }

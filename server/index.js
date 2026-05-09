@@ -2440,17 +2440,21 @@ function _agentAsListing(user, ag){
 async function serveAgentSharePage(res, shareId){
   try{
     const found = await findAgentByShareId(shareId);
-    if(!found || !found.agent || !found.agent.share_id){
-      // Fall through to static share.html (it shows its own "not found" UI)
-      return serveStatic(res, path.join(PUBLIC_DIR, 'share.html'));
-    }
-    const ag = found.agent;
-    const u  = found.user;
-    const titleH = escHtml(ag.name || 'AI Agent');
-    const descH  = escHtml(_trunc(ag.persona || 'A custom AI agent on MY AI AGENT.', 160));
+    // Always inject *some* OG block — even on lookup miss we show brand card
+    // so SNS unfurls don't show a bare URL.
+    const hasAgent = !!(found && found.agent && found.agent.share_id);
+    const ag = hasAgent ? found.agent : null;
+    const titleH = escHtml(hasAgent ? (ag.name || 'AI Agent') : 'MY AI AGENT — Build your own AI Team');
+    const descH  = escHtml(hasAgent
+      ? _trunc(ag.persona || 'A custom AI agent on MY AI AGENT.', 160)
+      : 'Build your own AI agent team. 10 templates, group chat, Agent Store. Free to start.');
     const pageUrl = APP_URL + '/a/' + shareId;
-    const ogPng  = APP_URL + '/api/og/a/' + shareId + '.png';
-    const ogSvg  = APP_URL + '/api/og/a/' + shareId + '.svg';
+    const ogPng  = hasAgent
+      ? APP_URL + '/api/og/a/' + shareId + '.png'
+      : APP_URL + '/social/twitter-header.png';
+    const ogSvg  = hasAgent
+      ? APP_URL + '/api/og/a/' + shareId + '.svg'
+      : APP_URL + '/social/twitter-header.svg';
 
     const ogBlock = `<title>${titleH} — MY AI AGENT</title>
 <meta name="description" content="${descH}">

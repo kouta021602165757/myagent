@@ -4049,6 +4049,130 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  // ── POST /api/teams/generate ─────────────────────────────
+  // body: {goal: string}
+  // Calls Claude to design 3-6 agents that match the user's goal, then
+  // creates them and a containing team. Returns the new group_id.
+  if(pathname==='/api/teams/generate' && method==='POST'){
+    const body = await readBody(req);
+    const goal = String(body.goal||'').trim().slice(0, 1200);
+    if(goal.length < 6) return jres(res,400,{error:'目的をもう少し詳しく書いてください'});
+    if(!ANTHROPIC) return jres(res,500,{error:'AI が設定されていません'});
+    if((user.agents||[]).length >= 994) return jres(res,400,{error:'エージェントは最大 1000 個までです'});
+
+    // Valid skill IDs (mirrors public/app.html SKILLS list).
+    const VALID_SKILLS = ['writing','research','coding','marketing','planning','analysis','translate','support','idea','teaching','ceo','coo','secretary','designer','sns','other'];
+
+    const sys = 'You are a senior product strategist who designs small AI-agent teams. '
+      + 'Given a user goal (in Japanese or English), output a JSON object describing a focused team of 3-6 agents that, working together, can accomplish the goal. '
+      + 'Output ONLY valid JSON — no prose, no code fences. Schema: '
+      + '{"team_name":"<short name, 2-6 words, JA preferred>", "cover_emoji":"<single emoji>", "description":"<one-sentence summary of what the team does, JA>", '
+      + '"agents":[{"avatar":"<single emoji>","name":"<short role name, 2-4 words>","skills":["<from the allowed set>"...],"persona":"採用目的: <why we hired this agent, JA>\\n業務内容: <what they do day-to-day, JA, concrete>"}]}. '
+      + 'Allowed skill IDs only: ' + VALID_SKILLS.join(', ') + '. '
+      + 'Each agent: 1-3 skills max. Personas should be specific to the goal (mention concrete tools/steps where relevant). '
+      + 'No duplicate roles. Pick agents that hand off naturally to each other.';
+    const userMsg = `目的:\n${goal}\n\nこの目的に最適なチームを JSON で設計してください。`;
+    let aiData;
+    try {
+      aiData = await callAI([{role:'user', content: userMsg}], sys, 'sonnet');
+    } catch(e){
+      console.error('[teams/generate] Anthropic failed:', e.message);
+      return jres(res,500,{error:'AI 設計に失敗しました: ' + (e.message||'unknown')});
+    }
+    // Extract first text block
+    let raw = '';
+    if(Array.isArray(aiData?.content)){
+      for(const blk of aiData.content){ if(blk.type==='text' && blk.text){ raw += blk.text; } }
+    }
+    raw = raw.trim();
+    // Strip code fences if model added them
+    raw = raw.replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    let spec;
+    try { spec = JSON.parse(raw); }
+    catch(e){
+      console.error('[teams/generate] JSON parse failed. Raw:', raw.slice(0,400));
+      return jres(res,500,{error:'AI 応答を解析できませんでした。もう一度試してください。'});
+    }
+    const teamName = String(spec.team_name||'New Team').slice(0,80);
+    const coverEmoji = String(spec.cover_emoji||'🎯').slice(0,8) || '🎯';
+    const proposed = Array.isArray(spec.agents) ? spec.agents : [];
+    const filteredAgents = proposed
+      .filter(a => a && typeof a.name==='string' && a.name.trim())
+      .slice(0,6)
+      .map(a => {
+        const skills = (Array.isArray(a.skills) ? a.skills : [])
+          .filter(s => typeof s==='string' && VALID_SKILLS.includes(s.toLowerCase()))
+          .map(s => s.toLowerCase());
+        return {
+          avatar: String(a.avatar||'🤖').slice(0,8) || '🤖',
+          name: String(a.name).trim().slice(0,40),
+          skills: skills.length ? skills.slice(0,3) : ['planning'],
+          persona: String(a.persona||'').slice(0, 1200),
+        };
+      });
+    if(filteredAgents.length < 2){
+      return jres(res,500,{error:'チーム構成が不十分でした。もう一度試してください。'});
+    }
+    if((user.agents||[]).length + filteredAgents.length + 1 > 1000){
+      return jres(res,400,{error:'エージェントが上限 (1000) を超えるためチームを作成できません'});
+    }
+
+    // Persist: clone agents tagged with team_origin, then create the team group.
+    const now = new Date().toISOString();
+    const groupId = 'ag_'+crypto.randomUUID();
+    const cloned = filteredAgents.map(a => ({
+      id: 'ag_'+crypto.randomUUID(),
+      avatar: a.avatar,
+      name: a.name,
+      skills: a.skills,
+      persona: a.persona,
+      chrome_enabled: false,
+      sheets_enabled: false,
+      extension_enabled: false,
+      model: 'sonnet',
+      history: [],
+      created_at: now,
+      team_origin: { team_id: groupId, generated: true, goal: goal.slice(0,400) },
+    }));
+    const firstName = (cloned[0]?.name||'AI').replace(/\s+/g,'');
+    const group = {
+      id: groupId,
+      avatar: coverEmoji,
+      name: teamName,
+      skills: ['planning'],
+      persona: '',
+      is_group: true,
+      is_team: true,
+      team_template_id: 'generated',
+      team_goal: goal.slice(0,400),
+      host_id: user.id,
+      members: [
+        { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
+      ],
+      team_member_agent_ids: cloned.map(a => a.id),
+      ai_auto_respond: false,
+      created_at: now,
+      updated_at: now,
+      history: [
+        { role:'system', content: `🎉 ${teamName} を AI が設計しました。@${firstName} のように特定エージェントを呼べます。\n目的: ${goal.slice(0,200)}`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+      ],
+    };
+    user.agents = [...(user.agents||[]), ...cloned, group];
+    try { await DB.save(user); }
+    catch(e){
+      console.error('[teams/generate] DB.save failed for user='+user.id+' err='+(e.message||e));
+      return jres(res,500,{error:'チームの保存に失敗しました: '+(e.message||'unknown')});
+    }
+    console.log('[teams/generate] user='+user.id+' goal="'+goal.slice(0,80)+'" agents='+cloned.length+' group='+groupId);
+    return jres(res,201,{
+      ok: true,
+      group_id: groupId,
+      member_count: cloned.length,
+      team_name: teamName,
+      cover_emoji: coverEmoji,
+    });
+  }
+
   // ── POST /api/teams/create ────────────────────────────────
   // body: {name, cover_emoji, member_ids[]}
   // Builds a team from the user's existing AI agents. The chosen agents

@@ -2054,6 +2054,25 @@ function _resolveJpFonts(){
 }
 
 /** Convert an SVG string to a PNG Buffer. Returns null if resvg is unavailable. */
+/** Last-resort fallback for /api/og endpoints when svgToPng fails.
+ *  Streams the static brand sample PNG so SNS unfurl always shows something. */
+function _serveStaticOgFallback(res){
+  const p = path.join(PUBLIC_DIR, 'social', 'og-agent-sample.png');
+  fs.readFile(p, (err, data) => {
+    if(err){
+      res.writeHead(404, {'Content-Type':'text/plain'});
+      return res.end('og fallback missing');
+    }
+    res.writeHead(200, {
+      'Content-Type':'image/png',
+      'Cache-Control':'public, max-age=3600',
+      'Access-Control-Allow-Origin':'*',
+      'Content-Length': data.length,
+    });
+    res.end(data);
+  });
+}
+
 function svgToPng(svg, opts){
   const r = _loadResvg();
   if(!r) return null;
@@ -3468,8 +3487,10 @@ async function handleAPI(req,res,pathname,method,ip){
     const svg = renderListingOgSvg(detail, twemojiUri);
     const png = svgToPng(svg);
     if(!png){
-      res.writeHead(302, {Location:'/api/og/a/'+ogSharePng[1]+'.svg'});
-      return res.end();
+      // resvg unavailable on this host (Render Node-only build can't link
+      // the native binary). Twitter / Facebook only accept raster, so
+      // serve the static brand sample PNG instead of redirecting to SVG.
+      return _serveStaticOgFallback(res);
     }
     res.writeHead(200, {
       'Content-Type':'image/png',
@@ -3523,8 +3544,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const svg = renderListingOgSvg(detail, twemojiUri);
     const png = svgToPng(svg);
     if(!png){
-      res.writeHead(302, {Location:'/api/og/'+ogmPng[1]+'.svg'});
-      return res.end();
+      return _serveStaticOgFallback(res);
     }
     res.writeHead(200, {
       'Content-Type':'image/png',

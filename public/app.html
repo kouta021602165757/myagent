@@ -4914,6 +4914,187 @@ var T = {
 function _fmtT(template, vars){
   return String(template).replace(/\{(\w+)\}/g, function(_,k){ return vars[k]!==undefined ? vars[k] : ''; });
 }
+/* ── Runtime DOM translator (catches everything not yet wrapped with L()) ── */
+// Comprehensive JA→EN dictionary for common UI strings. Entries are looked
+// up by trimmed, exact textContent. Anything not in the dict stays in JA
+// (so partial coverage degrades gracefully).
+var _JA2EN = {
+  // Headers / sections
+  '残高': 'Balance', '残高:': 'Balance:', 'プラン': 'Plan', 'プラン:': 'Plan:',
+  'アカウント': 'Account', 'プロフィール': 'Profile', '設定': 'Settings',
+  'チーム': 'Team', 'チームを作ろう': 'Build your team',
+  '新規': 'New', '新規エージェント': 'New agent', '新規作成': 'Create new',
+  '新規エージェントを作成': 'Create a new agent', '新規会話': 'New chat',
+  '新規グループ': 'New group', 'グループ': 'Groups', 'グループを作成': 'Create a group',
+  'メンバー': 'Members', 'メンバーを招待': 'Invite members', '招待': 'Invite',
+  'ホスト': 'Host', '招待リンク': 'Invite link', 'メンバー一覧': 'Member list',
+  'チームを作ろう': 'Build your team',
+  '専門スキルを持つAIエージェントを作って、仕事を任せましょう。': 'Create AI agents with specialized skills.',
+  '最初のエージェントを作る →': 'Create your first agent →',
+  'まだトークがありません': 'No conversations yet',
+  'まだエージェントがいません': 'No agents yet',
+  'トーク': 'Talks',
+  // Common buttons / actions
+  '保存': 'Save', '保存する': 'Save', '変更を保存': 'Save changes',
+  'キャンセル': 'Cancel', 'キャンセルする': 'Cancel',
+  '削除': 'Delete', '削除する': 'Delete', '取消': 'Undo',
+  '送信': 'Send', '送信する': 'Send', '送信中...': 'Sending...', '生成中…': 'Generating…',
+  '閉じる': 'Close', '戻る': 'Back', '次へ': 'Next', '完了': 'Done',
+  'コピー': 'Copy', 'コピーしました': 'Copied', 'コピー失敗': 'Copy failed',
+  '共有': 'Share', '編集': 'Edit', '更新': 'Update', '更新する': 'Update',
+  '出店': 'List', '出店する →': 'List on store →', '出店内容を編集': 'Edit listing',
+  '出店を取り下げる': 'Unpublish listing', '取り下げ': 'Unpublish',
+  '再公開する': 'Republish', '却下': 'Decline', '承認': 'Approve', '復元': 'Restore',
+  '通報': 'Report', '⚠ 通報する': '⚠ Report',
+  'ログイン': 'Sign in', 'ログイン →': 'Sign in →', 'ログアウト': 'Sign out',
+  '使う': 'Use', '使ってみる': 'Try', '使ってみる →': 'Try →',
+  'お気に入り': 'Favorites', 'チームに追加': 'Add to team',
+  '＋ チームに追加': '+ Add to team',
+  '＋ 招待': '+ Invite', '＋ 新規': '+ New',
+  // Agent / chat
+  'エージェント': 'Agent', 'エージェントを編集': 'Edit agent',
+  'AI を編集': 'Edit AI', 'AI と DM を始める': 'Start a DM with AI',
+  'スキル': 'Skills', 'スキル:': 'Skills:',
+  'アバター': 'Avatar', '名前': 'Name', '採用目的': 'Purpose',
+  '業務内容': 'Duties', '性格・指示': 'Personality',
+  'モデル': 'Model', '高速 (Haiku)': 'Fast (Haiku)', 'バランス (Sonnet)': 'Balanced (Sonnet)',
+  '最高品質 (Opus)': 'Best (Opus)',
+  'メッセージ': 'Messages', 'メッセージを入力…': 'Type a message…',
+  'チャット': 'Chat', 'チャット履歴': 'Chat history', '履歴': 'History',
+  '会話を消去': 'Clear conversation', '全チャット履歴を削除': 'Delete all chat history',
+  // Sidebar
+  '検索': 'Search', '検索する': 'Search', 'クイック:': 'Quick:',
+  '出店中': 'Listed', '出店中のエージェントから選ぶ': 'Pick a listed agent',
+  // Marketplace
+  'マーケットプレイス': 'Marketplace', 'カテゴリ': 'Category', 'タグ': 'Tags',
+  'すべて': 'All', '新着': 'New', '人気': 'Popular', '無料': 'Free',
+  'クリエイター': 'Creator', '出店者': 'Seller', '購入': 'Purchase',
+  '購入する': 'Buy now', '購入しました': 'Purchased', '購入済': 'Purchased',
+  '購入する →': 'Buy now →', 'タイトル': 'Title', '説明': 'Description',
+  'デモプロンプト': 'Demo prompts',
+  '販売価格': 'Price', '買い切り': 'One-time', '価格': 'Price',
+  '評価とレビュー': 'Reviews', '評価を投稿': 'Post review',
+  '評価を更新': 'Update review', 'このエージェントを評価': 'Rate this agent',
+  'あなたの評価を編集': 'Edit your review', '星を選んでください': 'Pick a star rating',
+  // Billing
+  '料金プラン': 'Pricing', '都度チャージ': 'Pay as you go', '月額プラン': 'Monthly plan',
+  '残高チャージ': 'Add credits', '+ 残高チャージ': '+ Add credits',
+  '+ クレジット追加 / プラン変更': '+ Add credits / Change plan',
+  '無料登録': 'Free signup', '現在のプラン': 'Current plan',
+  '現在加入中': 'Currently active', 'このプランを選ぶ': 'Choose this plan',
+  '取引履歴': 'Transactions', '出金': 'Withdraw', '今月の収益': 'This month',
+  '累計収益': 'Total revenue', '残高 (利用可能)': 'Available balance',
+  '残高 (未確定)': 'Pending balance',
+  // Settings panes
+  'セキュリティ': 'Security', 'パスワード': 'Password',
+  '現在のパスワード': 'Current password', '新しいパスワード': 'New password',
+  'パスワードを変更': 'Change password', '通知': 'Notifications',
+  '環境設定': 'Preferences', 'テーマ': 'Theme', 'ライト': 'Light',
+  'ダーク': 'Dark', '自動': 'Auto', '言語': 'Language',
+  'データ': 'Data', 'エクスポート': 'Export', 'インポート': 'Import',
+  'ダウンロード': 'Download', 'ダウンロード完了': 'Download complete',
+  'ファイル選択': 'Choose file', 'クリア': 'Clear',
+  '危険': 'Danger', '危険ゾーン': 'Danger zone',
+  'アカウント削除': 'Delete account', 'アカウントを完全削除する': 'Permanently delete account',
+  // Toasts (most common)
+  '保存しました': 'Saved', '削除しました': 'Deleted', '復元しました': 'Restored',
+  '取り下げました': 'Unpublished', '出店を保存しました': 'Listing saved',
+  '出店を取り下げました': 'Listing unpublished',
+  'エージェントが見つかりません': 'Agent not found',
+  '名前を入力してください': 'Please enter a name',
+  '採用目的を入力してください': 'Please enter the purpose',
+  '業務内容を入力してください': 'Please describe the duties',
+  'スキルを選んでください': 'Please pick a skill',
+  '全ての項目を入力してください': 'Please fill in all fields',
+  'ログインが必要です': 'Sign in required',
+  'チームに追加しました': 'Added to your team',
+  'リマインダーを設定': 'Reminder set',
+  '記憶しました 🧠': 'Saved to memory 🧠',
+  // Group chat
+  'グループ設定': 'Group settings', 'グループ名': 'Group name',
+  'グループへ送金': 'Send to group',
+  'グループを退出': 'Leave group',
+  'グループを削除': 'Delete group',
+  'すべての発言': 'All messages', 'メンションのみ': 'Mentions only',
+  'ミュート': 'Muted',
+  '所有権の移譲': 'Transfer ownership', '移譲': 'Transfer',
+  '招待設定': 'Invite settings',
+  'ホストの承認が必要': 'Host approval required',
+  'リンクを知っていれば誰でも参加': 'Anyone with link can join',
+  'AI の応答': 'AI replies', '毎回応答': 'Always reply', '@AI のみ': '@AI only',
+  // Misc common
+  '読み込み中…': 'Loading…', '読み込み失敗': 'Load failed',
+  'まだ評価がありません': 'No reviews yet',
+  'データなし': 'No data',
+  'はい': 'Yes', 'いいえ': 'No', 'OK': 'OK', '確認': 'Confirm',
+};
+
+/* Apply translations to all text nodes in the given root. Idempotent. */
+function _walkAndTranslate(root){
+  if(!root) return;
+  var stack = [root];
+  while(stack.length){
+    var node = stack.pop();
+    if(node.nodeType === 3){
+      var t = node.nodeValue;
+      var trimmed = t.trim();
+      if(trimmed && /[ぁ-んァ-ヶー一-龠]/.test(trimmed) && _JA2EN[trimmed]){
+        node.nodeValue = t.replace(trimmed, _JA2EN[trimmed]);
+      }
+    } else if(node.nodeType === 1 && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE' && node.tagName !== 'TEXTAREA'){
+      // Translate placeholder attribute as well
+      if(node.hasAttribute && node.hasAttribute('placeholder')){
+        var p = node.getAttribute('placeholder').trim();
+        if(_JA2EN[p]) node.setAttribute('placeholder', _JA2EN[p]);
+      }
+      if(node.hasAttribute && node.hasAttribute('title')){
+        var ti = node.getAttribute('title').trim();
+        if(_JA2EN[ti]) node.setAttribute('title', _JA2EN[ti]);
+      }
+      for(var i=0;i<node.childNodes.length;i++) stack.push(node.childNodes[i]);
+    }
+  }
+}
+
+/* Initial pass + observe future mutations */
+function _enableRuntimeTranslator(){
+  _walkAndTranslate(document.body);
+  if(window.MutationObserver){
+    var mo = new MutationObserver(function(muts){
+      for(var i=0;i<muts.length;i++){
+        var m = muts[i];
+        if(m.type === 'childList'){
+          for(var j=0;j<m.addedNodes.length;j++) _walkAndTranslate(m.addedNodes[j]);
+        } else if(m.type === 'characterData'){
+          _walkAndTranslate(m.target);
+        }
+      }
+    });
+    mo.observe(document.body, {childList:true, subtree:true, characterData:true});
+  }
+  // Wrap showToast / confirm / alert to translate first arg
+  var origToast = window.showToast;
+  if(typeof origToast === 'function'){
+    window.showToast = function(msg, kind){
+      var trimmed = String(msg||'').trim();
+      if(_JA2EN[trimmed]) msg = _JA2EN[trimmed];
+      return origToast.call(this, msg, kind);
+    };
+  }
+  var origConfirm = window.confirm;
+  window.confirm = function(msg){
+    var trimmed = String(msg||'').trim();
+    if(_JA2EN[trimmed]) msg = _JA2EN[trimmed];
+    return origConfirm.call(window, msg);
+  };
+  var origAlert = window.alert;
+  window.alert = function(msg){
+    var trimmed = String(msg||'').trim();
+    if(_JA2EN[trimmed]) msg = _JA2EN[trimmed];
+    return origAlert.call(window, msg);
+  };
+}
+
 /* ── Boot ──────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded',async()=>{
   // i18n apply
@@ -4932,6 +5113,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
     document.documentElement.lang = (typeof currentLang==='string') ? currentLang : (isJa?'ja':'en');
   };
   _applyI18n();
+  // For non-JA users, run the runtime translator over everything that wasn't
+  // explicitly wrapped with L(...) yet. Keeps JA browsers untouched.
+  if(currentLang !== 'ja') _enableRuntimeTranslator();
   buildAvGrid(); buildSkGrid(); buildPresetGrid();
   // Handle Google OAuth redirect token in URL
   const urlParams=new URLSearchParams(location.search);

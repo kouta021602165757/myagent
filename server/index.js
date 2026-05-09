@@ -2205,8 +2205,8 @@ function renderListingOgSvg(d, twemojiUri){
         <text x="${(48 + usesNum.length*12)/2}" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">${_xmlEscape((d.htmlLang === 'en' || (typeof d.lang === 'string' && d.lang === 'en')) ? `${usesNum} uses` : `利用 ${usesNum} 回`)}</text>
       </g>
       ${chrome?`<g transform="translate(${(ratingNum ? 132 : 0) + (48+usesNum.length*12) + 12} 0)">
-        <rect x="0" y="0" width="180" height="38" rx="14" ry="14" fill="#ffffff"/>
-        <text x="90" y="25" text-anchor="middle" fill="#1a0d05" font-size="15" font-weight="800">Chrome 連携</text>
+        <rect x="0" y="0" width="140" height="38" rx="14" ry="14" fill="#ffffff"/>
+        <text x="70" y="25" text-anchor="middle" fill="#1a0d05" font-size="14" font-weight="800">Web access</text>
       </g>`:''}
     </g>
 
@@ -2219,10 +2219,15 @@ function renderListingOgSvg(d, twemojiUri){
     </g>` : ''}
   </g>
 
-  <!-- brand badge bottom-right -->
+  <!-- brand badge bottom-right (3-bar logo + wordmark, no emoji to avoid tofu) -->
   <g transform="translate(1144 580)">
     <rect x="-220" y="-22" width="220" height="44" rx="22" ry="22" fill="#fff"/>
-    <text x="-110" y="6" text-anchor="middle" fill="#ea580c" font-size="16" font-weight="900" letter-spacing="0.18em">🍑 MY AI AGENT</text>
+    <g transform="translate(-200 -10)">
+      <rect x="0"  y="0"  width="6" height="20" rx="3" fill="#ea580c"/>
+      <rect x="9"  y="4"  width="6" height="16" rx="3" fill="#ea580c" opacity="0.65"/>
+      <rect x="18" y="8"  width="6" height="12" rx="3" fill="#ea580c" opacity="0.35"/>
+    </g>
+    <text x="-95" y="6" text-anchor="middle" fill="#ea580c" font-size="15" font-weight="900" letter-spacing="0.18em">MY AI AGENT</text>
   </g>
 </svg>`;
 }

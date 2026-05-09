@@ -1784,33 +1784,33 @@ body{color:#f0f0f8;}
         <span style="margin-left:auto;font-size:10px;opacity:.7">▾</span>
       </button>
       <div class="sb-plus-menu" id="sbPlusMenu" style="display:none" onclick="event.stopPropagation()">
-        <button class="sb-pm-item" onclick="closeSbPlusMenu();openCreateGroup()">
-          <div class="sb-pm-ic peach">🤝</div>
+        <button class="sb-pm-item" onclick="closeSbPlusMenu();openNewAgent()">
+          <div class="sb-pm-ic indigo">🤖</div>
           <div class="sb-pm-body">
-            <div class="sb-pm-h" data-i18n="sbCreateGroup">グループを作成</div>
-            <div class="sb-pm-d" data-i18n="sbCreateGroupD">仲間を招待して AI と一緒に話す</div>
+            <div class="sb-pm-h">AI Agent を作成</div>
+            <div class="sb-pm-d">1 体ずつ ・ 新規 or テンプレート</div>
           </div>
         </button>
-        <button class="sb-pm-item" onclick="closeSbPlusMenu();openNewAgent()">
-          <div class="sb-pm-ic indigo">💬</div>
+        <button class="sb-pm-item" onclick="closeSbPlusMenu();openTeamGallery()">
+          <div class="sb-pm-ic peach">🎯</div>
           <div class="sb-pm-body">
-            <div class="sb-pm-h" data-i18n="sbStartDm">AI と DM を始める</div>
-            <div class="sb-pm-d" data-i18n="sbStartDmD">新しい AI を作って 1対1 で話す</div>
+            <div class="sb-pm-h">AI Agent Team を作成</div>
+            <div class="sb-pm-d">複数 AI の連携 ・ 業務丸ごと自動化</div>
+          </div>
+        </button>
+        <button class="sb-pm-item" onclick="closeSbPlusMenu();openCreateGroup()">
+          <div class="sb-pm-ic violet">👥</div>
+          <div class="sb-pm-body">
+            <div class="sb-pm-h">グループを作成</div>
+            <div class="sb-pm-d">友達を招待して AI と一緒に話す</div>
           </div>
         </button>
         <div class="sb-pm-div"></div>
-        <button class="sb-pm-item" onclick="closeSbPlusMenu();openTemplate()">
-          <div class="sb-pm-ic violet">📋</div>
-          <div class="sb-pm-body">
-            <div class="sb-pm-h" data-i18n="sbFromTemplate">テンプレートから作る</div>
-            <div class="sb-pm-d" data-i18n="sbFromTemplateD">プリセットを選んで素早く作成</div>
-          </div>
-        </button>
         <button class="sb-pm-item" onclick="closeSbPlusMenu();openAgentStore()">
           <div class="sb-pm-ic green">🏪</div>
           <div class="sb-pm-body">
-            <div class="sb-pm-h" data-i18n="sbBrowseStore">Agent Store で探す</div>
-            <div class="sb-pm-d" data-i18n="sbBrowseStoreD">他のクリエイターの AI を試す</div>
+            <div class="sb-pm-h">Agent Store で探す</div>
+            <div class="sb-pm-d">他のクリエイターの Agent / Team</div>
           </div>
         </button>
       </div>
@@ -2053,6 +2053,39 @@ body{color:#f0f0f8;}
           <button class="btn-volt" id="createBtn" style="border-radius:12px;padding:13px;" onclick="doCreate()">✨ 作成する</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TEAM GALLERY OVERLAY ════════════════════════════════ -->
+<div class="overlay" id="teamGalleryOverlay">
+  <div class="wizard" style="max-width:920px">
+    <div class="wiz-top">
+      <div class="wiz-title">🎯 AI Agent Team を作成</div>
+      <button class="wiz-close" onclick="closeTeamGallery()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.7">
+        テンプレートから選んで <b>1 クリックで起動</b>。複数の AI が連携してあなたの業務を自動化します。新規 (AI 自動生成) は近日対応。
+      </div>
+      <div id="teamGalleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TEAM ACTIVATION PROGRESS OVERLAY ═══════════════════════ -->
+<div class="overlay" id="teamActivateOverlay">
+  <div class="wizard" style="max-width:420px">
+    <div class="wiz-body" style="padding:36px 32px;text-align:center">
+      <div id="teamActIcon" style="font-size:64px;margin-bottom:14px">🎯</div>
+      <div id="teamActTitle" style="font-size:18px;font-weight:900;margin-bottom:6px">起動中…</div>
+      <div id="teamActSub" style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6">エージェントをクローン中</div>
+      <div style="height:6px;background:var(--cream2);border-radius:3px;overflow:hidden;margin-bottom:14px">
+        <div id="teamActBar" style="height:100%;width:30%;background:linear-gradient(90deg,var(--peach),var(--peach-dark));border-radius:3px;transition:width .4s"></div>
+      </div>
+      <div id="teamActStatus" style="font-size:11.5px;color:var(--text3);font-weight:700"></div>
     </div>
   </div>
 </div>
@@ -8215,6 +8248,84 @@ function openTemplate(){
 }
 // Backward-compat: any remaining caller of openWizard() lands on the template picker
 function openWizard(){ openTemplate(); }
+
+/* ── Team gallery + activation (Phase 1 MVP) ─────────────────── */
+async function openTeamGallery(){
+  if(!token){ showToast(L('ログインが必要です','Sign in required'),'ng'); return; }
+  document.getElementById('teamGalleryOverlay').classList.add('open');
+  var grid = document.getElementById('teamGalleryGrid');
+  grid.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:14px 0">'+L('読み込み中…','Loading…')+'</div>';
+  try {
+    var r = await api('GET','/api/teams/templates');
+    var items = (r && r.templates) || [];
+    if(!items.length){ grid.innerHTML = '<div style="color:var(--text3)">'+L('テンプレートがありません','No templates available')+'</div>'; return; }
+    grid.innerHTML = items.map(function(t){
+      var priceTag = (t.price_jpy>0)
+        ? '<span style="display:inline-block;background:rgba(251,146,60,.12);color:var(--peach-dark);font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em">💼 PAID ¥'+t.price_jpy.toLocaleString()+'</span>'
+        : '<span style="display:inline-block;background:rgba(16,185,129,.16);color:#047857;font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em">🎁 FREE</span>';
+      var avHtml = (t.agents_preview||[]).slice(0,5).map(function(a){
+        return '<div style="width:24px;height:24px;border-radius:6px;background:var(--cream2);border:1px solid var(--wire2);display:inline-flex;align-items:center;justify-content:center;font-size:13px;margin-right:-2px">'+esc(a.avatar||'🤖')+'</div>';
+      }).join('');
+      var btn = (t.price_jpy>0)
+        ? '<button disabled style="width:100%;background:var(--cream2);color:var(--text3);padding:10px;border:1px solid var(--wire2);border-radius:9px;font-size:12.5px;font-weight:800;cursor:not-allowed">Marketplace 経由で購入</button>'
+        : '<button onclick="event.stopPropagation();activateTeam(\''+esc(t.id)+'\',\''+esc(t.name)+'\',\''+esc(t.cover_emoji)+'\')" style="width:100%;background:var(--peach);color:#fff;padding:10px;border:0;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">▶ 起動 (無料)</button>';
+      return ''
+        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .14s" onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'\';this.style.transform=\'\'">'
+        + '<div style="height:64px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:30px">'+esc(t.cover_emoji||'🎯')+'</div>'
+        + '<div>'+priceTag+'</div>'
+        + '<div style="font-size:14px;font-weight:900;letter-spacing:-.005em">'+esc(t.name)+'</div>'
+        + '<div style="font-size:11.5px;color:var(--text2);line-height:1.55;flex:1">'+esc(t.description||'')+'</div>'
+        + '<div style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text3);font-weight:700">'+avHtml+'<span style="margin-left:6px">'+(t.agent_count||0)+' agents</span></div>'
+        + btn
+        + '</div>';
+    }).join('');
+  } catch(e){
+    grid.innerHTML = '<div style="color:var(--rose)">'+esc(e.message||'Load failed')+'</div>';
+  }
+}
+function closeTeamGallery(){
+  document.getElementById('teamGalleryOverlay').classList.remove('open');
+}
+
+async function activateTeam(templateId, templateName, coverEmoji){
+  // Show progress overlay
+  document.getElementById('teamGalleryOverlay').classList.remove('open');
+  var ov = document.getElementById('teamActivateOverlay');
+  ov.classList.add('open');
+  document.getElementById('teamActIcon').textContent = coverEmoji || '🎯';
+  document.getElementById('teamActTitle').textContent = templateName + L(' を起動中…',' is activating…');
+  document.getElementById('teamActSub').textContent = L('エージェントをクローンしています','Cloning agents…');
+  document.getElementById('teamActBar').style.width = '30%';
+  document.getElementById('teamActStatus').textContent = '';
+  try {
+    var r = await api('POST','/api/teams/activate', { template_id: templateId });
+    document.getElementById('teamActBar').style.width = '100%';
+    document.getElementById('teamActSub').textContent = L('完了!','Done!');
+    document.getElementById('teamActStatus').textContent = L((r.cloned_count||0) + ' agents created · opening workspace…','Opening workspace…');
+    // Refresh local agent state and open the new group
+    try {
+      var meRes = await api('GET','/api/me');
+      if(meRes && meRes.user){
+        me = meRes.user;
+        if(Array.isArray(me.agents)) agents = me.agents;
+      }
+    } catch(e){}
+    setTimeout(function(){
+      document.getElementById('teamActivateOverlay').classList.remove('open');
+      if(r.group_id){
+        renderAgList();
+        openAgent(r.group_id);
+      }
+    }, 900);
+  } catch(e){
+    document.getElementById('teamActSub').textContent = L('起動失敗','Activation failed');
+    document.getElementById('teamActStatus').textContent = e.message || '';
+    document.getElementById('teamActBar').style.background = 'var(--rose)';
+    setTimeout(function(){
+      document.getElementById('teamActivateOverlay').classList.remove('open');
+    }, 2400);
+  }
+}
 function confirmBack(){
   if(_wizardMode==='preset') wStep(0);
   else wStep(5);

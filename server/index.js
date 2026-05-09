@@ -1965,6 +1965,85 @@ function genShareId(){
   return s.slice(0,4)+'-'+s.slice(4,8)+'-'+s.slice(8,12);
 }
 
+/* ── Team templates (Phase 1 MVP) ─────────────────────────── */
+// Each template, when activated, clones N agents into the user's account
+// and creates a single group containing all of them. Workflow execution
+// is Phase 2 — for now, the user @-mentions individual agents.
+const TEAM_TEMPLATES = [
+  {
+    id: 'tpl-ec-launch',
+    name: 'EC Launch Starter',
+    cover_emoji: '🛍',
+    category: 'ecommerce',
+    price_jpy: 0,             // free
+    description: 'Source products → generate visuals → build store → post on social → analyze sales. Run an entire e-commerce business with 5 AI agents.',
+    agents: [
+      { avatar:'🛍', name:'Product Sourcer',  skills:['research','analysis'],     persona:'採用目的: 利益率 > 50% かつ需要が伸びている商品を Web 検索 + トレンド分析で特定する\n業務内容: Alibaba / Google Trends / Reddit を調査し、上位 3 候補を margin・demand・差別化で評価して提案する。' },
+      { avatar:'📸', name:'Visual Designer',  skills:['idea','marketing'],        persona:'採用目的: ブランド一貫性のある商品ライフスタイル写真を生成する\n業務内容: ユーザーが選んだ商品に対して 5 パターンの画像を生成 (golden hour / minimal / cozy etc.) し、各シーンの意図を添える。' },
+      { avatar:'🌐', name:'Storefront Architect', skills:['coding','planning'],   persona:'採用目的: Shopify Storefront の構築をワンステップで完了させる\n業務内容: 商品ページ作成、Stripe 決済設定、配送ゾーン設定、SEO 最適化、ローンチ前チェックリスト。' },
+      { avatar:'📱', name:'Social Manager',    skills:['marketing','sns','writing'],persona:'採用目的: 新店舗のローンチを X / IG / TikTok で同時配信し、最適時刻でエンゲージを取る\n業務内容: ハッシュタグ最適化、投稿テキスト生成、ベストタイム計算、画像との整合性確認。' },
+      { avatar:'📊', name:'Revenue Analyst',   skills:['analysis','planning'],     persona:'採用目的: 売上をモニタしながら改善提案を返す常駐エージェント\n業務内容: Stripe webhook で受注検知、日次サマリー、商品別分析、改善アクションの提示。' },
+    ],
+  },
+  {
+    id: 'tpl-sns-growth',
+    name: 'SNS Growth Starter',
+    cover_emoji: '📱',
+    category: 'sns',
+    price_jpy: 0,
+    description: 'Spot trends → write engaging posts → schedule across X / Instagram / TikTok at peak engagement times.',
+    agents: [
+      { avatar:'📈', name:'Trend Spotter',  skills:['research','sns'],      persona:'採用目的: X / TikTok の急上昇トピックを毎日 5 つ抽出する\n業務内容: トレンド検索 → 関連性スコア付け → 投稿候補テーマ提案。' },
+      { avatar:'✍️', name:'Content Writer', skills:['writing','marketing'],  persona:'採用目的: バズる投稿テキストを書く\n業務内容: トレンドに沿ったフック → 本文 → CTA の 3 段構成、絵文字・改行最適化。' },
+      { avatar:'📅', name:'Scheduler',      skills:['planning','sns'],       persona:'採用目的: 各 SNS の最適時刻に投稿を予約する\n業務内容: ベストタイムテーブルに基づき 1 日複数回の予約配信、結果を翌日に学習。' },
+    ],
+  },
+  {
+    id: 'tpl-solo-founder',
+    name: 'Solo Founder Toolkit',
+    cover_emoji: '💼',
+    category: 'productivity',
+    price_jpy: 0,
+    description: 'Email writer + meeting note-taker + task tracker. Daily essentials for indie hackers and solo founders.',
+    agents: [
+      { avatar:'📧', name:'Email Drafter',   skills:['writing','support'],    persona:'採用目的: 30秒で目的に合った返信メールを書く\n業務内容: 受信メールに対する返信案を 3 トーン (formal / friendly / direct) で提示。' },
+      { avatar:'📝', name:'Note Taker',      skills:['writing','analysis'],   persona:'採用目的: 議事録・メモを構造化された ToDo に変換する\n業務内容: 録音/メモ → 議事録 → アクションアイテム → 期限付き ToDo を出力。' },
+      { avatar:'✅', name:'Task Tracker',     skills:['planning','support'],   persona:'採用目的: 散らかったタスクを優先順位付きの今日のリストにする\n業務内容: 締切 + インパクト + 工数で並べ替え、上位 5 件をピックアップ。' },
+    ],
+  },
+  {
+    id: 'tpl-tutor-squad',
+    name: 'Personal Tutor Squad',
+    cover_emoji: '🎓',
+    category: 'education',
+    price_jpy: 0,
+    description: 'Researcher + explainer + quiz maker. Learn anything new — coding, finance, language — with a 3-agent crew.',
+    agents: [
+      { avatar:'🔍', name:'Researcher',      skills:['research'],             persona:'採用目的: 学習トピックの最新で正確な情報源を 3 つ集める\n業務内容: Web 検索 + 学術ソース確認、要約と出典を返す。' },
+      { avatar:'🎓', name:'Explainer',        skills:['teaching','writing'],   persona:'採用目的: 中学生でも理解できる例え話で説明する\n業務内容: コアコンセプト → 日常の例え → 図解の言語化、長さは 200-400 字。' },
+      { avatar:'🧠', name:'Quiz Maker',       skills:['teaching','analysis'],  persona:'採用目的: 学んだ内容の定着を確認する 5 問クイズを作る\n業務内容: 4 択 3 + 記述 2、解説付き、間違えやすいポイントを優先。' },
+    ],
+  },
+  {
+    id: 'tpl-dev-squad',
+    name: 'Dev Squad',
+    cover_emoji: '💻',
+    category: 'engineering',
+    price_jpy: 3980,   // paid
+    description: 'Code reviewer + bug fixer + test writer + deploy helper. Boost code quality without the team meetings.',
+    agents: [
+      { avatar:'🔍', name:'Code Reviewer',  skills:['coding','analysis'],    persona:'採用目的: PR の差分をレビューし、バグ・セキュリティ・可読性を指摘する\n業務内容: diff 受領 → 行単位コメント → 修正提案 → 重要度ラベル付与。' },
+      { avatar:'🔧', name:'Bug Fixer',       skills:['coding'],               persona:'採用目的: スタックトレース or バグ報告から修正コードを書く\n業務内容: 再現 → 原因特定 → 最小修正パッチ → リグレッション防止のテスト案。' },
+      { avatar:'🧪', name:'Test Writer',     skills:['coding','analysis'],    persona:'採用目的: 関数・コンポーネントに対するテストを過不足なく書く\n業務内容: ユニット → 結合 → e2e の優先順位、エッジケースの列挙、CI で動くテスト。' },
+      { avatar:'🚀', name:'Deploy Helper',   skills:['coding','planning'],    persona:'採用目的: デプロイ手順を間違えないようサポートする\n業務内容: 事前チェックリスト → ロールアウト計画 → ロールバック手順 → スモークテスト。' },
+    ],
+  },
+];
+
+function _findTeamTemplate(id){
+  return TEAM_TEMPLATES.find(t => t.id === id) || null;
+}
+
 /* ── Marketplace helpers ───────────────────────────────────── */
 const MARKET_CATEGORIES = ['sales','marketing','research','writing','ops','other'];
 const MARKET_CAT_LABEL = {
@@ -3783,6 +3862,23 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  // ── GET /api/teams/templates (public) ─────────────────────
+  // Returns the catalog of team templates. Anyone can browse before signup.
+  if(pathname==='/api/teams/templates' && method==='GET'){
+    return jres(res, 200, {
+      templates: TEAM_TEMPLATES.map(t => ({
+        id: t.id,
+        name: t.name,
+        cover_emoji: t.cover_emoji,
+        category: t.category,
+        price_jpy: t.price_jpy,
+        description: t.description,
+        agent_count: t.agents.length,
+        agents_preview: t.agents.map(a => ({ avatar: a.avatar, name: a.name, skills: a.skills })),
+      })),
+    });
+  }
+
   // ── Auth required below ────────────────────────────────────
   const claims=getAuth(req);
   if(!claims)return jres(res,401,{error:'認証が必要です'});
@@ -3862,6 +3958,89 @@ async function handleAPI(req,res,pathname,method,ip){
     await DB.save(user);
     return jres(res,200,{agent:ag});
   }
+
+  // ── POST /api/teams/activate ──────────────────────────────
+  // body: {template_id}  — clones every member of the template into the
+  // user's account, then creates a single group containing all of them.
+  // The user can @-mention members in chat. Phase 2 will add workflow
+  // execution; for now this is a curated multi-agent group.
+  if(pathname==='/api/teams/activate' && method==='POST'){
+    const body = await readBody(req);
+    const tpl = _findTeamTemplate(String(body.template_id||''));
+    if(!tpl) return jres(res,404,{error:'テンプレートが見つかりません'});
+
+    // Free templates only on Phase 1. Paid teams will require purchase
+    // through the marketplace (price_jpy > 0 → reject for now with hint).
+    if(tpl.price_jpy > 0){
+      return jres(res,402,{error:'有料テンプレートは Marketplace から購入してください', price_jpy: tpl.price_jpy});
+    }
+
+    // Cap total agents at 20 (existing limit). If the template would push
+    // the user over, refuse early so we don't half-create.
+    const owned = (user.agents||[]).length;
+    if(owned + tpl.agents.length > 20){
+      return jres(res,400,{error:`エージェントは最大 20 個までです (現在 ${owned} / 追加 ${tpl.agents.length})`});
+    }
+
+    // Clone agents
+    const now = new Date().toISOString();
+    const cloned = tpl.agents.map((a) => ({
+      id: 'ag_'+crypto.randomUUID(),
+      avatar: a.avatar || '🤖',
+      name: a.name,
+      skills: Array.isArray(a.skills) ? a.skills : ['writing'],
+      persona: a.persona || '',
+      chrome_enabled: false,
+      sheets_enabled: false,
+      extension_enabled: false,
+      model: 'sonnet',
+      history: [],
+      created_at: now,
+      team_origin: { template_id: tpl.id, template_name: tpl.name },
+    }));
+
+    // Create the group agent that hosts all of them. Reuse existing group
+    // primitives so chat / mentions / settings just work.
+    const groupId = 'ag_'+crypto.randomUUID();
+    const group = {
+      id: groupId,
+      avatar: tpl.cover_emoji || '🎯',
+      name: tpl.name,
+      skills: ['planning'],
+      persona: '',
+      is_group: true,
+      is_team: true,                       // distinguishes Team groups from human groups
+      team_template_id: tpl.id,
+      host_id: user.id,
+      members: [
+        // Host is always member (humans + AIs share the members array; the
+        // existing chat handler picks AIs by their agent records). For
+        // simplicity, keep humans only in this list and reference cloned
+        // agents via team_member_agent_ids.
+        { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
+      ],
+      team_member_agent_ids: cloned.map(a => a.id),
+      ai_auto_respond: false,              // require @mention so the user picks which agent to invoke
+      created_at: now,
+      updated_at: now,
+      history: [
+        // Welcome system message
+        { role:'system', content: `🎉 ${tpl.name} が起動しました。@${cloned[0].name.replace(/\s+/g,'')} のように特定エージェントを呼び出せます。`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+      ],
+    };
+
+    user.agents = [...(user.agents||[]), ...cloned, group];
+    await DB.save(user);
+
+    return jres(res, 201, {
+      ok: true,
+      template_id: tpl.id,
+      group_id: groupId,
+      cloned_agent_ids: cloned.map(a => a.id),
+      cloned_count: cloned.length,
+    });
+  }
+
   // ── POST /api/agents/reorder ───────────────────────────────
   // body: {order: [agentId, ...]}  — preserves only known IDs, appends any missing
   if(pathname==='/api/agents/reorder' && method==='POST'){

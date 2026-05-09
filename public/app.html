@@ -879,6 +879,35 @@ input,textarea{font-family:var(--sans);}
 }
 .composer:focus-within{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.16),0 1px 3px rgba(0,0,0,.04);}
 
+/* Slack-style @mention picker */
+.mention-picker{
+  position:absolute;bottom:calc(100% + 6px);left:14px;right:14px;
+  max-width:340px;max-height:240px;overflow-y:auto;
+  background:#fff;border:1px solid var(--wire2);border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.06);
+  z-index:1000;padding:6px;
+}
+html[data-theme="dark"] .mention-picker{background:#1c1c22;border-color:rgba(255,255,255,.10);box-shadow:0 10px 30px rgba(0,0,0,.4);}
+.mention-picker-head{
+  font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.06em;
+  text-transform:uppercase;padding:6px 10px 4px;
+}
+.mention-row{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;
+  transition:background .1s;
+}
+.mention-row:hover, .mention-row.sel{background:rgba(251,146,60,0.10);}
+html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row.sel{background:rgba(251,146,60,0.18);}
+.mention-row .mr-av{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:#fff;
+}
+.mention-row.is-ai .mr-av{background:linear-gradient(135deg,#1a0a00,#3a1a08);box-shadow:0 0 0 2px var(--peach);}
+.mention-row .mr-name{font-size:13.5px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mention-row .mr-tag{font-size:10.5px;color:var(--text3);font-weight:600;}
+.mention-row.is-ai .mr-name{color:var(--peach-dark);}
+
 .composer-attach-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .composer-attach-strip .att-chip{
   display:flex;align-items:center;gap:7px;padding:5px 10px;background:var(--cream2);
@@ -1854,10 +1883,12 @@ body{color:#f0f0f8;}
           <div class="chips" id="chips"></div>
 
           <!-- Claude-style composer -->
-          <div class="composer">
+          <div class="composer" style="position:relative">
             <input type="file" id="imgInput" accept="image/*,application/pdf,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
-            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this)" onkeydown="taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
+            <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
+            <div id="mentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>
+            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this);_mentionOnInput(this)" onkeydown="_mentionOnKeydown(event) || taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
             <div class="composer-tools">
               <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイルを添付 (画像/PDF/テキスト/コード)" id="attachBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -9712,6 +9743,125 @@ function taKey(e){
   // Just-confirmed IME — skip Enter for a short grace period
   if((Date.now()-_imeEndAt) < 200) return;
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMsg(); }
+}
+
+/* ── @mention picker (Slack-style) ─────────────────────────── */
+var _mentionState = { open:false, start:-1, query:'', items:[], sel:0 };
+
+function _mentionMembers(){
+  // Returns [{key, name, label, isAI}] for the active group's members + AI.
+  var ag = agents.find(function(a){return a.id===activeId;});
+  if(!ag || !ag.is_group) return [];
+  var members = (ag.members || []).map(function(m){
+    var name = m.name || (m.email||'').split('@')[0] || 'member';
+    return {
+      key: name.replace(/\s+/g,''),     // mention token (no spaces)
+      name: name,
+      email: m.email || '',
+      isAI: false,
+      isMe: m.user_id === me?.id,
+    };
+  });
+  // Always include @AI as the first option
+  return [{ key:'AI', name:'AI', email:'', isAI:true, isMe:false }].concat(members);
+}
+
+function _mentionFindStart(text, cursor){
+  // Walks back from cursor to find the start of the current @mention.
+  // Returns -1 if no active @mention.
+  for(var i=cursor-1; i>=0; i--){
+    var c = text[i];
+    if(c==='@'){
+      // Check the char before @ — must be start-of-input or whitespace
+      if(i===0 || /\s/.test(text[i-1])) return i;
+      return -1;
+    }
+    if(/\s/.test(c)) return -1;
+  }
+  return -1;
+}
+
+function _mentionRender(){
+  var picker = document.getElementById('mentionPicker');
+  if(!picker) return;
+  if(!_mentionState.open || _mentionState.items.length === 0){
+    picker.style.display='none'; picker.innerHTML=''; _mentionState.open=false; return;
+  }
+  var html = '<div class="mention-picker-head">'+L('メンバーをメンション','Mention someone')+'</div>';
+  _mentionState.items.forEach(function(it, i){
+    var initial = (it.name || '?').charAt(0).toUpperCase();
+    var av = it.isAI
+      ? '<div class="mr-av">🤖</div>'
+      : '<div class="mr-av" style="background:'+_userColor(it.email||it.name)+'">'+esc(initial)+'</div>';
+    html += '<div class="mention-row '+(it.isAI?'is-ai ':'')+(i===_mentionState.sel?'sel':'')+'" '
+         +  'data-idx="'+i+'" onmousedown="event.preventDefault();_mentionPick('+i+')">'
+         +  av
+         +  '<span class="mr-name">'+esc(it.name)+(it.isMe?' <span class="mr-tag">'+L('(あなた)','(you)')+'</span>':'')+'</span>'
+         +  (it.isAI ? '<span class="mr-tag">'+L('AI を呼ぶ','Call the AI')+'</span>' : '')
+         +  '</div>';
+  });
+  picker.innerHTML = html;
+  picker.style.display='';
+}
+
+function _mentionOnInput(ta){
+  var cursor = ta.selectionStart;
+  var text = ta.value;
+  var start = _mentionFindStart(text, cursor);
+  if(start === -1){ _mentionState.open=false; _mentionRender(); return; }
+  var query = text.slice(start+1, cursor).toLowerCase();
+  var members = _mentionMembers();
+  var items = members.filter(function(m){
+    if(!query) return true;
+    return m.key.toLowerCase().indexOf(query) === 0 || m.name.toLowerCase().indexOf(query) !== -1;
+  }).slice(0, 8);
+  _mentionState.open = items.length > 0;
+  _mentionState.start = start;
+  _mentionState.query = query;
+  _mentionState.items = items;
+  if(_mentionState.sel >= items.length) _mentionState.sel = 0;
+  _mentionRender();
+}
+
+function _mentionOnKeydown(e){
+  if(!_mentionState.open) return false;
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    _mentionState.sel = (_mentionState.sel + 1) % _mentionState.items.length;
+    _mentionRender(); return true;
+  }
+  if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    _mentionState.sel = (_mentionState.sel - 1 + _mentionState.items.length) % _mentionState.items.length;
+    _mentionRender(); return true;
+  }
+  if(e.key === 'Enter' || e.key === 'Tab'){
+    e.preventDefault();
+    _mentionPick(_mentionState.sel);
+    return true;
+  }
+  if(e.key === 'Escape'){
+    _mentionState.open = false; _mentionRender(); return true;
+  }
+  return false;
+}
+
+function _mentionPick(idx){
+  var ta = document.getElementById('ci');
+  if(!ta || !_mentionState.items[idx]) return;
+  var it = _mentionState.items[idx];
+  var start = _mentionState.start;
+  var cursor = ta.selectionStart;
+  var before = ta.value.slice(0, start);
+  var after = ta.value.slice(cursor);
+  var insert = '@' + it.key + ' ';
+  ta.value = before + insert + after;
+  var newPos = (before + insert).length;
+  ta.setSelectionRange(newPos, newPos);
+  _mentionState.open = false;
+  _mentionRender();
+  ta.focus();
+  exTA(ta);
 }
 // Global ⌘+K / Ctrl+K → start new chat
 document.addEventListener('keydown', function(e){

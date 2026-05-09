@@ -3157,6 +3157,39 @@ body{color:#f0f0f8;}
         <div id="grpSetContribInfo" style="margin-top:8px;font-size:10.5px;color:var(--text3);line-height:1.5"></div>
       </div>
 
+      <!-- AI 応答設定 (host only) -->
+      <div id="grpSetAiSection" style="display:none">
+        <div class="grpset-h">AI の応答</div>
+        <div class="grpset-radio-row" onclick="_grpSettingsAiRespond('auto')">
+          <input type="radio" name="grpset-airespond" id="grpSetAi_auto" value="auto">
+          <label for="grpSetAi_auto">
+            <div class="grpset-radio-h">🤖 自動 (推奨)</div>
+            <div class="grpset-radio-d">小グループ (3人以下) は毎回応答 ・ 大グループは @AI のみ</div>
+          </label>
+        </div>
+        <div class="grpset-radio-row" onclick="_grpSettingsAiRespond('always')">
+          <input type="radio" name="grpset-airespond" id="grpSetAi_always" value="always">
+          <label for="grpSetAi_always">
+            <div class="grpset-radio-h">💬 毎回応答</div>
+            <div class="grpset-radio-d">人数に関係なく、すべての発言に AI が応答</div>
+          </label>
+        </div>
+        <div class="grpset-radio-row" onclick="_grpSettingsAiRespond('mention')">
+          <input type="radio" name="grpset-airespond" id="grpSetAi_mention" value="mention">
+          <label for="grpSetAi_mention">
+            <div class="grpset-radio-h">🏷 @AI のみ</div>
+            <div class="grpset-radio-d">@AI と呼ばれた時だけ応答 (コスト節約)</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- エージェント編集 (host only) -->
+      <div id="grpSetEditAgentSection" style="display:none">
+        <div class="grpset-h">AI エージェント</div>
+        <button class="grpset-btn primary" style="width:100%" onclick="_grpSettingsEditAgent()">🤖 エージェントを編集 (名前・スキル・性格)</button>
+        <div style="font-size:10.5px;color:var(--text3);margin-top:6px;line-height:1.55">アイコン・スキル・採用目的・業務内容を編集できます。</div>
+      </div>
+
       <!-- 招待設定 (host only) -->
       <div id="grpSetInviteSection" style="display:none">
         <div class="grpset-h">招待設定</div>
@@ -5824,9 +5857,12 @@ async function openAgent(id){
   const isHost = isGroup && ag.host_id === me?.id;
   let actsHTML = '';
   if(isGroup){
-    actsHTML += '<button class="ct-act wide invite" onclick="openInviteModal(\''+ag.id+'\')" title="メンバーを招待">＋ 招待</button>';
-    actsHTML += '<button class="ct-act wide members" onclick="openMemberPanel(\''+ag.id+'\')" title="メンバー">👥 '+memberCount+'</button>';
-    actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="グループ設定">⚙</button>';
+    actsHTML += '<button class="ct-act wide invite" onclick="openInviteModal(\''+ag.id+'\')" title="'+L('メンバーを招待','Invite members')+'">＋ '+L('招待','Invite')+'</button>';
+    actsHTML += '<button class="ct-act wide members" onclick="openMemberPanel(\''+ag.id+'\')" title="'+L('メンバー','Members')+'">👥 '+memberCount+'</button>';
+    if(isHost){
+      actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="'+L('AI を編集','Edit AI')+'">🤖</button>';
+    }
+    actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="'+L('グループ設定','Group settings')+'">⚙</button>';
   } else {
     actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
     actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
@@ -6316,6 +6352,26 @@ async function openGroupSettings(agId){
     inviteSec.style.display = 'none';
   }
 
+  // AI auto-respond mode + Edit-agent button (host only)
+  const aiSec = document.getElementById('grpSetAiSection');
+  const editAgentSec = document.getElementById('grpSetEditAgentSection');
+  if(isHost){
+    aiSec.style.display = '';
+    editAgentSec.style.display = '';
+    var mode = (typeof ag.ai_auto_respond === 'boolean')
+      ? (ag.ai_auto_respond ? 'always' : 'mention')
+      : 'auto';
+    var r1 = document.getElementById('grpSetAi_auto');
+    var r2 = document.getElementById('grpSetAi_always');
+    var r3 = document.getElementById('grpSetAi_mention');
+    if(r1) r1.checked = (mode === 'auto');
+    if(r2) r2.checked = (mode === 'always');
+    if(r3) r3.checked = (mode === 'mention');
+  } else {
+    aiSec.style.display = 'none';
+    editAgentSec.style.display = 'none';
+  }
+
   // Send-money section (members only, hide for host)
   const contribSec = document.getElementById('grpSetContributeSection');
   if(!isHost){
@@ -6400,6 +6456,31 @@ async function _grpSettingsNotifyPref(pref){
     const labels = {all:'すべての発言を通知', mentions:'メンションのみ通知', mute:'通知なし (ミュート)'};
     showToast((labels[pref]||pref) + ' に変更', 'ok');
   } catch(e){ showToast(e.message, 'ng'); }
+}
+
+async function _grpSettingsAiRespond(mode){
+  const agId = document.getElementById('grpSetActiveId').value;
+  // mode: 'auto' (size heuristic) | 'always' | 'mention'
+  var payload;
+  if(mode === 'auto')        payload = { ai_auto_respond: null };
+  else if(mode === 'always') payload = { ai_auto_respond: true };
+  else                       payload = { ai_auto_respond: false };
+  try {
+    await api('PATCH', '/api/agents/'+agId, payload);
+    const ag = agents.find(a => a.id === agId);
+    if(ag){
+      if(mode === 'auto') delete ag.ai_auto_respond;
+      else ag.ai_auto_respond = (mode === 'always');
+    }
+    const labels = {auto: L('自動','Auto'), always: L('毎回応答','Always'), mention: L('@AI のみ','@AI only')};
+    showToast(L('AI 応答モード: ','AI response mode: ') + (labels[mode]||mode), 'ok');
+  } catch(e){ showToast(e.message, 'ng'); }
+}
+
+function _grpSettingsEditAgent(){
+  const agId = document.getElementById('grpSetActiveId').value;
+  closeGroupSettings();
+  openEditAgent(agId);
 }
 
 function _grpSettingsPickAmount(amt){

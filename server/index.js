@@ -3742,7 +3742,8 @@ async function handleAPI(req,res,pathname,method,ip){
   const pam=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(pam&&method==='PATCH'){
     const agId=pam[1];
-    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar,model}=await readBody(req);
+    const body=await readBody(req);
+    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar,model,skills,ai_auto_respond}=body;
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
@@ -3751,6 +3752,12 @@ async function handleAPI(req,res,pathname,method,ip){
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
     if(model!==undefined && ['haiku','sonnet','opus'].includes(model)) ag.model=model;
+    if(Array.isArray(skills)) ag.skills = skills.filter(s => typeof s === 'string').slice(0, 16);
+    if(ai_auto_respond !== undefined){
+      // Group-only setting; treat null as "unset" (use size heuristic).
+      if(ai_auto_respond === null) delete ag.ai_auto_respond;
+      else ag.ai_auto_respond = !!ai_auto_respond;
+    }
     if(avatar!==undefined){
       // Accept either a single emoji/short string or a data:image/* base64 URI (≤500KB)
       const a = String(avatar||'').trim();
@@ -4093,6 +4100,7 @@ async function handleAPI(req,res,pathname,method,ip){
       avatar: ag.avatar,
       skills: ag.skills || [],
       persona: ag.persona || '',
+      ai_auto_respond: ag.ai_auto_respond,  // undefined → use size heuristic
       history: (ag.history || []).slice(-200),
     });
   }
@@ -5776,12 +5784,28 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     }
 
-    // Group chat: detect @AI mention; without it we just persist the human
-    // message and short-circuit (humans can talk freely without invoking AI).
+    // Group chat AI invocation policy:
+    //   - Small groups (≤3 humans incl. host): AI responds to every message
+    //     by default — feels like a DM-with-friend.
+    //   - Larger groups (4+ humans): require explicit @AI mention so the
+    //     AI doesn't spam discussion threads.
+    //   - Per-group setting `ai_auto_respond` (host-controlled) overrides:
+    //       true  = always respond
+    //       false = require @AI
+    //       undefined = use the size heuristic above
     const speakerName = user.name || (user.email||'').split('@')[0] || 'メンバー';
     const speakerInitial = (speakerName || '?').charAt(0).toUpperCase();
     const aiMentioned = /(^|[\s　])(?:@AI|＠AI|@ai|＠ai)\b/.test(message);
-    if(isGroup && !regenerate && !aiMentioned){
+    let aiShouldRespond = aiMentioned;
+    if(isGroup && !aiMentioned){
+      const memberCount = Array.isArray(agent.members) ? agent.members.length : 1;
+      if(typeof agent.ai_auto_respond === 'boolean'){
+        aiShouldRespond = agent.ai_auto_respond;
+      } else {
+        aiShouldRespond = memberCount <= 3;
+      }
+    }
+    if(isGroup && !regenerate && !aiShouldRespond){
       const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
       agent.history = [...(agent.history||[]), {
         role: 'user',

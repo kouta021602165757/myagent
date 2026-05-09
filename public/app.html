@@ -24,7 +24,44 @@
   --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#ea580c;
   --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
   --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
+  --bg-50:#fafafa;--bg-100:#f4f4f5;--bg-200:#e4e4e7;
+  --line:rgba(9,9,11,.06);--line-strong:rgba(9,9,11,.1);
 }
+/* ── Dark theme ──────────────────────────────────────────── */
+html[data-theme="dark"]{
+  --ink:#0d0d10;--ink2:#141418;--ink3:#1c1c22;--ink4:#26262d;--ink5:#33333c;
+  --wire:rgba(255,255,255,.06);--wire2:rgba(255,255,255,.12);--wire3:rgba(255,255,255,.2);
+  --snow:#f5f5f7;--mist:#a8a8b3;--fog:#5d5d68;
+  --volt:#fb923c;--volt-dim:rgba(251,146,60,.18);--volt-glow:rgba(251,146,60,.4);
+  --cyan:#fb923c;--rose:#ef4444;--rose-dim:rgba(239,68,68,.15);--amber:#fbbf24;
+  --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#fdba74;
+  --cream:#0d0d10;--cream2:#141418;--cream3:#1c1c22;
+  --text:#f5f5f7;--text2:#c8c8d0;--text3:#82828c;
+  --bg-50:#141418;--bg-100:#1c1c22;--bg-200:#26262d;
+  --line:rgba(255,255,255,.08);--line-strong:rgba(255,255,255,.16);
+  color-scheme:dark;
+}
+/* Dark theme — fix specific high-contrast white backgrounds */
+html[data-theme="dark"] .ag-item-talk .ag-icon{box-shadow:0 2px 5px rgba(0,0,0,.3);}
+html[data-theme="dark"] .reaction{background:#1c1c22;color:#c8c8d0;}
+html[data-theme="dark"] .reaction.mine{background:rgba(251,146,60,.18);color:#fed7aa;}
+html[data-theme="dark"] .grpset-input,
+html[data-theme="dark"] input[type=text],
+html[data-theme="dark"] input[type=email],
+html[data-theme="dark"] input[type=password],
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select{background:#1c1c22;color:#f5f5f7;border-color:rgba(255,255,255,.12);}
+html[data-theme="dark"] .ag-create,
+html[data-theme="dark"] .grp-pick,
+html[data-theme="dark"] .chat-menu,
+html[data-theme="dark"] .reaction-picker,
+html[data-theme="dark"] .sb-plus-menu,
+html[data-theme="dark"] .search-modal,
+html[data-theme="dark"] .modal-link,
+html[data-theme="dark"] .pm-item:hover,
+html[data-theme="dark"] .sb-pm-item:hover{background:#1c1c22;}
+html[data-theme="dark"] .ct-icon{box-shadow:0 2px 8px rgba(251,146,60,.4);}
+html[data-theme="dark"] body{background:var(--cream);}
 html,body{height:100%;font-family:var(--sans);background:var(--cream);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden;}
 button{font-family:var(--sans);cursor:pointer;border:none;transition:all .17s cubic-bezier(.4,0,.2,1);}
 input,textarea{font-family:var(--sans);}
@@ -1702,6 +1739,9 @@ body{color:#f0f0f8;}
     <div class="chat" id="chatWrap" style="display:none">
       <div class="chat-top" id="chatTop"></div>
 
+      <!-- Pinned messages banner (just below chat header) -->
+      <div id="pinnedWrap" class="pinned-wrap" style="display:none"></div>
+
       <!-- Share URL panel (shown when 🔗 clicked) -->
       <div id="shareCard" class="share-card" style="display:none"></div>
 
@@ -1743,6 +1783,8 @@ body{color:#f0f0f8;}
             <span><kbd>⏎</kbd> 送信</span>
             <span><kbd>Shift</kbd>+<kbd>⏎</kbd> 改行</span>
             <span><kbd>/search</kbd> Web 検索</span>
+            <span><kbd>/image</kbd> 画像生成</span>
+            <span><kbd>/remember</kbd> 記憶</span>
             <span><kbd>⌘</kbd>+<kbd>K</kbd> 新規会話</span>
           </div>
         </div>
@@ -2348,9 +2390,8 @@ body{color:#f0f0f8;}
                 <div class="s-theme-nm" data-i18n="sThemeLight">ライト</div>
               </button>
               <button class="s-theme-c" data-theme="dark" onclick="setTheme('dark')">
-                <div class="s-theme-prv" style="background:linear-gradient(135deg,#3a2a1c,#1a0a00)"></div>
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#1c1c22,#0d0d10);border:1px solid rgba(255,255,255,.1)"></div>
                 <div class="s-theme-nm" data-i18n="sThemeDark">ダーク</div>
-                <div class="s-theme-sub" data-i18n="sBadgeSoon">近日対応</div>
               </button>
               <button class="s-theme-c" data-theme="auto" onclick="setTheme('auto')">
                 <div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3 50%,#1a0a00 50%)"></div>
@@ -2488,6 +2529,34 @@ body{color:#f0f0f8;}
             </div>
           </section>
 
+          <!-- AI 長期記憶 -->
+          <section class="spane-section">
+            <div class="spane-section-h">🧠 AI 長期記憶</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">
+              全エージェントが共通で参照する記憶。あなたの好み・役職・プロジェクト情報などを書いておくと、AI が文脈に応じて活用します。
+              チャット中に <code style="font-family:'JetBrains Mono','SF Mono',monospace;background:var(--bg-100);padding:0 4px;border-radius:3px;font-size:11px">/remember &lt;内容&gt;</code> でも追加可能。
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <input id="memInput" placeholder="例: 私は株式会社 PROTOCOL の代表で、AI スタートアップを運営してます" style="flex:1;padding:9px 12px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;color:var(--text);font-family:inherit;background:#fff" maxlength="500">
+              <button class="btn-volt" onclick="_addMemory()" style="padding:0 18px;font-size:12px">追加</button>
+            </div>
+            <div id="memList" style="display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto"></div>
+          </section>
+
+          <!-- リマインダー -->
+          <section class="spane-section">
+            <div class="spane-section-h">⏰ スケジュール送信 / リマインダー</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">
+              指定した日時に AI から通知が届きます。例: "明日 9 時に、商談準備の確認" など。
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;margin-bottom:8px">
+              <input id="remAt" type="datetime-local" style="padding:9px 12px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;color:var(--text);font-family:inherit;background:#fff">
+              <input id="remText" placeholder="リマインダー内容" style="padding:9px 12px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;color:var(--text);font-family:inherit;background:#fff" maxlength="200">
+              <button class="btn-volt" onclick="_addReminder()" style="padding:0 18px;font-size:12px">追加</button>
+            </div>
+            <div id="remList" style="display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto"></div>
+          </section>
+
           <!-- 紹介プログラム -->
           <section class="spane-section">
             <div class="spane-section-h">🎁 紹介プログラム</div>
@@ -2582,6 +2651,24 @@ body{color:#f0f0f8;}
     <div>
       <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">業務内容</label>
       <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" rows="6" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">🤖 使用する AI モデル</label>
+      <div id="editModelGroup" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <button type="button" data-model="haiku" onclick="_setEditModel('haiku')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">⚡ Haiku</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">高速・安価</div>
+        </button>
+        <button type="button" data-model="sonnet" onclick="_setEditModel('sonnet')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">🎯 Sonnet</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">標準・推奨</div>
+        </button>
+        <button type="button" data-model="opus" onclick="_setEditModel('opus')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">🧠 Opus</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">最高性能・高価</div>
+        </button>
+      </div>
+      <input type="hidden" id="editModel" value="sonnet">
     </div>
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
@@ -2774,6 +2861,27 @@ body{color:#f0f0f8;}
 .chat-menu-div{height:.5px;background:var(--wire);margin:4px 6px;}
 .m-act.bm{font-size:13px !important;padding:0 6px !important;}
 .m-act.bm.bm-on{color:#f59e0b;}
+.m-act.pin{font-size:13px !important;padding:0 6px !important;}
+.m-act.pin.pin-on{color:var(--peach-dark);}
+
+/* Pinned messages banner — shown below chat header */
+.pinned-wrap{
+  background:linear-gradient(180deg,rgba(251,146,60,.06),rgba(251,146,60,.02));
+  border-bottom:.5px solid rgba(251,146,60,.18);padding:6px 14px;display:flex;flex-direction:column;gap:3px;
+}
+.pinned-item{
+  display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:7px;
+  border:0;background:rgba(255,255,255,.7);cursor:pointer;width:100%;text-align:left;font-family:inherit;
+  font-size:11.5px;color:var(--text);
+  transition:background .12s;
+}
+.pinned-item:hover{background:#fff;}
+.pinned-item .pin-ic{font-size:11px;flex-shrink:0;}
+.pinned-item .pin-who{font-weight:700;color:var(--peach-dark);flex-shrink:0;}
+.pinned-item .pin-txt{
+  flex:1;min-width:0;color:var(--text2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 </style>
 
 <!-- ══ BOOKMARKS LIST OVERLAY ═══════════════════════════════ -->
@@ -4402,16 +4510,31 @@ var NA={avatar:'🤖',name:'',skills:[],persona:''};
 // chargeAmt: legacy (new modal tracks _bsPaygCents instead)
 
 // ── i18n ───────────────────────────────────────────────
-var isJa = !navigator.language || navigator.language.startsWith('ja');
-// Saved preference (settings → 言語) wins over auto detection unless URL forces it
-try{
-  var _savedLang=localStorage.getItem('pref_lang');
-  if(_savedLang==='en') isJa=false;
-  else if(_savedLang==='ja') isJa=true;
-}catch(e){}
-// URL override (?lang=en|ja) is highest priority
-var _qsLang=(new URLSearchParams(location.search)).get('lang');
-if(_qsLang==='en') isJa=false; else if(_qsLang==='ja') isJa=true;
+// Lang detection: 'ja' | 'en' | 'zh' (zh = Simplified Chinese)
+// Backwards compat: `isJa` remains as a boolean (true when lang === 'ja') so
+// the existing ~200 isJa ternaries don't need rewriting. Extensive zh/en
+// translations are rolled out incrementally via the T table below.
+var currentLang = 'ja';
+(function _detectLang(){
+  var nav = (navigator.language || '').toLowerCase();
+  if(nav.startsWith('zh')) currentLang = 'zh';
+  else if(nav.startsWith('en')) currentLang = 'en';
+  try{
+    var saved = localStorage.getItem('pref_lang');
+    if(['ja','en','zh'].includes(saved)) currentLang = saved;
+  }catch(e){}
+  var qs = (new URLSearchParams(location.search)).get('lang');
+  if(['ja','en','zh'].includes(qs)) currentLang = qs;
+})();
+var isJa = currentLang === 'ja';
+var isZh = currentLang === 'zh';
+var isEn = currentLang === 'en';
+// Helper: pick a string by language with ja fallback
+function L(ja, en, zh){
+  if(currentLang === 'zh') return zh || en || ja;
+  if(currentLang === 'en') return en || ja;
+  return ja;
+}
 
 // Money formatting — display is always USD (target: foreign users).
 // Internal balance is stored in JPY for backward compat; convert with this rate.
@@ -5523,6 +5646,7 @@ function renderMsgs(ag){
     }
     return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i,m.tool_log,m);
   }).join('');
+  try { _renderPinnedBanner(ag); } catch(e){}
   _scrollMsgsToEnd();
 }
 
@@ -5607,14 +5731,16 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   let acts = '';
   if(idx>=0){
     const isBookmarked = !!(raw && (raw.bookmarked || (Array.isArray(raw.bookmarked_by) && raw.bookmarked_by.includes(me?.id))));
+    const isPinned = !!(raw && raw.pinned);
     const bmBtn = '<button class="m-act bm'+(isBookmarked?' bm-on':'')+'" onclick="toggleBookmark(this)" title="ブックマーク">'+(isBookmarked?'★':'☆')+'</button>';
+    const pinBtn = '<button class="m-act pin'+(isPinned?' pin-on':'')+'" onclick="togglePin(this)" title="ピン留め">'+(isPinned?'📌':'📍')+'</button>';
     if(isU){
-      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+bmBtn;
+      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+bmBtn+pinBtn;
     } else {
       acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+
              '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
              '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊</button>'+
-             bmBtn;
+             bmBtn+pinBtn;
     }
   }
   // In groups, highlight @AI / @name mentions in the body.
@@ -6117,6 +6243,63 @@ function _dateSlug(){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+// ── Pin messages (host/member can mark important messages) ───
+async function togglePin(btn){
+  const msg = btn.closest('.m');
+  if(!msg || !activeId) return;
+  const idx = parseInt(msg.dataset.idx, 10);
+  if(!Number.isInteger(idx)) return;
+  const ag = agents.find(a => a.id === activeId);
+  if(!ag) return;
+  const m = (ag.history||[])[idx];
+  if(!m) return;
+  m.pinned = !m.pinned;
+  btn.textContent = m.pinned ? '📌' : '📍';
+  btn.classList.toggle('pin-on', !!m.pinned);
+  ag.pinned_idxs = Array.isArray(ag.pinned_idxs) ? ag.pinned_idxs : [];
+  if(m.pinned){ if(!ag.pinned_idxs.includes(idx)) ag.pinned_idxs.push(idx); }
+  else ag.pinned_idxs = ag.pinned_idxs.filter(i => i !== idx);
+  try {
+    await api('POST', '/api/agents/'+activeId+'/pin', {idx, on: !!m.pinned});
+    showToast(m.pinned ? 'ピン留めしました' : 'ピン留めを解除', 'ok');
+    _renderPinnedBanner(ag);
+  } catch(e){
+    m.pinned = !m.pinned;
+    btn.textContent = m.pinned ? '📌' : '📍';
+    btn.classList.toggle('pin-on', !!m.pinned);
+    showToast(e.message, 'ng');
+  }
+}
+function _renderPinnedBanner(ag){
+  const wrap = document.getElementById('pinnedWrap');
+  if(!wrap) return;
+  const idxs = (ag.history||[])
+    .map((m,i) => m && m.pinned ? i : -1)
+    .filter(i => i >= 0);
+  if(!idxs.length){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  wrap.innerHTML = idxs.slice(-3).map(i => {
+    const m = ag.history[i];
+    const text = (typeof m.content === 'string') ? m.content : '';
+    const truncated = text.length > 80 ? text.slice(0, 80) + '…' : text;
+    const who = m.role === 'user' ? (m.user_name || 'あなた') : (ag.name || 'AI');
+    return '<button class="pinned-item" data-idx="'+i+'" onclick="_jumpToMsg('+i+')">'
+      + '<span class="pin-ic">📌</span>'
+      + '<span class="pin-who">'+esc(who)+'</span>'
+      + '<span class="pin-txt">'+esc(truncated)+'</span></button>';
+  }).join('');
+}
+function _jumpToMsg(idx){
+  const el = document.querySelector('.m[data-idx="'+idx+'"]');
+  if(el){
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.style.transition='background .8s';
+    const orig = el.style.background;
+    el.style.background = 'rgba(251,146,60,.18)';
+    setTimeout(() => { el.style.background = orig; }, 1200);
+  }
+}
+
 // ── Bookmarks (star important AI replies) ────────────────────
 async function toggleBookmark(btn){
   const msg = btn.closest('.m');
@@ -6436,6 +6619,57 @@ function _resizeImageToDataURL(file, maxSize, quality){
 
 /* ── Slash commands (/search etc.) ──────────────────────────── */
 async function _runSlashCommand(text){
+  // /image <prompt> — generate an image via Replicate, attach the URL to the chat
+  var imM = text.match(/^\/(?:image|img|imagine)\s+(.+)$/i);
+  if(imM){
+    var prompt = imM[1].trim();
+    if(!prompt) return null;
+    showToast(isJa?'🎨 画像を生成中…':'Generating image…','ok');
+    try{
+      var r = await api('POST','/api/generate/image',{prompt});
+      if(r && r.urls && r.urls[0]){
+        // Push the AI's "image generated" message into local history immediately
+        var ag = agents.find(a => a.id === activeId);
+        if(ag){
+          ag.history = ag.history || [];
+          var imgUrl = r.urls[0];
+          ag.history.push({
+            role: 'assistant',
+            content: '🎨 画像を生成しました\n\n![生成画像]('+imgUrl+')\n\n*Prompt: '+prompt+'*',
+            time: now(),
+            generated_image_url: imgUrl,
+          });
+          renderMsgs(ag);
+        }
+        if(typeof me !== 'undefined' && r.cost_jpy){
+          me.balance_jpy = (me.balance_jpy||0) - r.cost_jpy;
+          updateBalance && updateBalance();
+        }
+        showToast(isJa?'生成完了':'Done','ok');
+        // Return null to skip sending to AI (image is the response itself)
+        return null;
+      }
+    }catch(e){
+      var msg = e.message||'';
+      if(msg.includes('not_configured') || msg.includes('準備中')){
+        showToast(isJa?'画像生成は管理者の API キー設定後に利用可':'Image generation pending API key','ng');
+      } else {
+        showToast((isJa?'画像生成失敗: ':'Image gen failed: ')+msg,'ng');
+      }
+      return null;
+    }
+    return null;
+  }
+  // /remember <text> — save to long-term memory
+  var rmM = text.match(/^\/(?:remember|memo)\s+(.+)$/i);
+  if(rmM){
+    var memText = rmM[1].trim();
+    try {
+      await api('POST','/api/me/memories',{text: memText});
+      showToast(isJa?'記憶しました 🧠':'Remembered','ok');
+    } catch(e){ showToast(e.message,'ng'); }
+    return null;
+  }
   // /search <query> — Web 検索結果を context として prepend
   var m = text.match(/^\/search\s+(.+)$/i) || text.match(/^\/s\s+(.+)$/i);
   if(m){
@@ -7970,6 +8204,7 @@ function openEditAgent(id){
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('editChromeSw','editChromeDesc',!!ag.chrome_enabled);
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
   if(typeof _renderExtensionStatus==='function') _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn',!!ag.extension_enabled);
+  _setEditModel(ag.model || 'sonnet');
 
   // Reflect marketplace listing state
   var m = ag.marketplace || {};
@@ -7995,6 +8230,18 @@ function closeEditAgent(){
   document.getElementById('editPanelOverlay').style.display = 'none';
 }
 
+// Per-agent model picker (Haiku / Sonnet / Opus)
+function _setEditModel(name){
+  if(!['haiku','sonnet','opus'].includes(name)) name = 'sonnet';
+  const inp = document.getElementById('editModel');
+  if(inp) inp.value = name;
+  document.querySelectorAll('#editModelGroup .model-pick').forEach(b => {
+    const sel = b.dataset.model === name;
+    b.style.borderColor = sel ? 'var(--peach)' : 'var(--wire2)';
+    b.style.background = sel ? 'rgba(251,146,60,.08)' : '#fff';
+  });
+}
+
 async function saveEditAgent(){
   const id = window._editAgentId;
   const ag = agents.find(a=>a.id===id);
@@ -8009,14 +8256,17 @@ async function saveEditAgent(){
   var sheetsEnabled = !!(swSheets && swSheets.classList.contains('on') && me && me.google_sheets_connected);
   var swExt=document.getElementById('editExtSw');
   var extensionEnabled = !!(swExt && swExt.classList.contains('on') && me && me.extension_paired);
+  var modelSel = document.getElementById('editModel');
+  var model = (modelSel && modelSel.value) || 'sonnet';
   if(!newName){ showToast('名前を入力してください','ng'); return; }
   try{
-    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled});
+    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled, model});
     ag.name = newName;
     ag.persona = newPersona;
     ag.chrome_enabled = chromeEnabled;
     ag.sheets_enabled = sheetsEnabled;
     ag.extension_enabled = extensionEnabled;
+    ag.model = model;
     closeEditAgent();
     renderAgList();
     // Re-open the active chat so name/avatar/icon changes show immediately
@@ -8550,7 +8800,7 @@ function switchStab(btn, tabId){
   if(tabId==='s-prefs') { initThemePicker(); initBehaviorToggles(); }
   if(tabId==='s-creator'){ loadCreatorDashboard(); loadPayoutSection(); }
   if(tabId==='s-admin') loadAdminReports();
-  if(tabId==='s-data') _loadReferralCard();
+  if(tabId==='s-data'){ _loadReferralCard(); _loadMemories(); _loadReminders(); }
 }
 
 async function loadAdminReports(){
@@ -9197,16 +9447,37 @@ function setTheme(name){
   document.querySelectorAll('.s-theme-c[data-theme]').forEach(function(c){
     c.classList.toggle('sel', c.getAttribute('data-theme')===name);
   });
-  if(name==='light'){
-    document.documentElement.removeAttribute('data-theme');
-    showToast(isJa?'ライトテーマに切替':'Light theme','ok');
+  _applyTheme(name);
+  showToast(isJa?(name==='light'?'ライト':name==='dark'?'ダーク':'OS 連動')+'テーマに切替':'Theme: '+name,'ok');
+}
+function _applyTheme(name){
+  const html = document.documentElement;
+  let actual = name;
+  if(name === 'auto'){
+    actual = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  if(actual === 'dark'){
+    html.setAttribute('data-theme','dark');
   } else {
-    showToast(isJa?'近日対応予定です':'Coming soon','ng');
-    // revert pref to light for now
-    _prefSet('theme','light');
-    setTimeout(initThemePicker,300);
+    html.removeAttribute('data-theme');
   }
 }
+// Apply on initial load + watch system preference for 'auto' mode
+(function _initThemeOnLoad(){
+  try {
+    const saved = (typeof localStorage !== 'undefined' && localStorage.getItem('pref:theme')) || 'light';
+    _applyTheme(saved);
+    if(window.matchMedia){
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => {
+        const cur = (typeof localStorage !== 'undefined' && localStorage.getItem('pref:theme')) || 'light';
+        if(cur === 'auto') _applyTheme('auto');
+      };
+      if(mq.addEventListener) mq.addEventListener('change', handler);
+      else if(mq.addListener) mq.addListener(handler);
+    }
+  } catch(e){}
+})();
 
 /* ── Linked accounts / sessions (security tab) ─────────────────── */
 function renderLinkedAccounts(){
@@ -9234,6 +9505,76 @@ function _downloadBlob(filename, content, mime){
   a.href=url; a.download=filename; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 100);
 }
+// Memories (long-term AI memory) management
+async function _loadMemories(){
+  const list = document.getElementById('memList');
+  if(!list) return;
+  try {
+    const r = await api('GET', '/api/me/memories');
+    const ms = r.memories || [];
+    if(!ms.length){ list.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:8px 0">まだ記憶はありません</div>'; return; }
+    list.innerHTML = ms.map((m, i) => '<div class="mem-card" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--bg-50,#fafafa);border:.5px solid var(--wire2);border-radius:9px">'
+      + '<span style="font-size:13px;line-height:1.55;color:var(--text);flex:1">'+esc(m.text)+'</span>'
+      + '<button onclick="_delMemory('+i+')" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px;font-family:inherit" title="削除">×</button>'
+      + '</div>').join('');
+  } catch(e){
+    list.innerHTML = '<div style="font-size:11.5px;color:var(--text3)">読み込み失敗</div>';
+  }
+}
+async function _addMemory(){
+  const inp = document.getElementById('memInput');
+  if(!inp || !inp.value.trim()) return;
+  try {
+    await api('POST','/api/me/memories',{text: inp.value.trim()});
+    inp.value = '';
+    showToast('記憶しました 🧠','ok');
+    _loadMemories();
+  } catch(e){ showToast(e.message,'ng'); }
+}
+async function _delMemory(idx){
+  try {
+    await api('DELETE','/api/me/memories/'+idx);
+    _loadMemories();
+  } catch(e){ showToast(e.message,'ng'); }
+}
+
+// Reminders
+async function _loadReminders(){
+  const list = document.getElementById('remList');
+  if(!list) return;
+  try {
+    const r = await api('GET','/api/me/reminders');
+    const rs = r.reminders || [];
+    if(!rs.length){ list.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:8px 0">まだリマインダーはありません</div>'; return; }
+    list.innerHTML = rs.map(rm => {
+      const d = new Date(rm.at);
+      const when = d.toLocaleString('ja-JP',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      return '<div class="mem-card" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-50,#fafafa);border:.5px solid var(--wire2);border-radius:9px">'
+        + '<span style="font-size:11.5px;font-weight:700;color:var(--peach-dark);font-family:\'JetBrains Mono\',\'SF Mono\',monospace">'+esc(when)+'</span>'
+        + '<span style="flex:1;font-size:12.5px;color:var(--text);line-height:1.5">'+esc(rm.text)+'</span>'
+        + '<button onclick="_delReminder(\''+esc(rm.id)+'\')" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px;font-family:inherit" title="削除">×</button>'
+        + '</div>';
+    }).join('');
+  } catch(e){ list.innerHTML = '<div style="font-size:11.5px;color:var(--text3)">読み込み失敗</div>'; }
+}
+async function _addReminder(){
+  const at = document.getElementById('remAt')?.value;
+  const text = document.getElementById('remText')?.value.trim();
+  if(!at || !text){ showToast('日時とテキストを入力','ng'); return; }
+  try {
+    await api('POST','/api/me/reminders',{at: new Date(at).toISOString(), text});
+    document.getElementById('remText').value = '';
+    showToast('リマインダーを設定','ok');
+    _loadReminders();
+  } catch(e){ showToast(e.message,'ng'); }
+}
+async function _delReminder(id){
+  try {
+    await api('DELETE','/api/me/reminders/'+id);
+    _loadReminders();
+  } catch(e){ showToast(e.message,'ng'); }
+}
+
 // Login history loader (security tab)
 async function _loadLoginHistory(){
   const box = document.getElementById('sLoginLog');
@@ -9488,6 +9829,66 @@ function showToast(msg,type='ok'){
   };
   window._i18nMap = map;
   window._isJa = false;
+})();
+</script>
+
+<!-- ══ COOKIE CONSENT BANNER (EU/UK) ═══════════════════════════ -->
+<div id="cookieBanner" style="display:none;position:fixed;left:14px;right:14px;bottom:14px;z-index:1500;max-width:520px;margin:0 auto;background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.18);font-family:inherit">
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <div style="font-size:22px;line-height:1">🍪</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">クッキーの利用について</div>
+      <div style="font-size:11.5px;color:var(--text2);line-height:1.55">
+        サービス改善・利用状況の分析・ログイン状態維持のため Cookie とローカルストレージを使用します。詳細は <a href="/privacy.html" target="_blank" style="color:var(--peach-dark);font-weight:700">プライバシーポリシー</a> をご覧ください。
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="_cookieDecide('all')" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">すべて許可</button>
+        <button onclick="_cookieDecide('essential')" style="background:transparent;color:var(--text2);border:.5px solid var(--wire2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">必須のみ</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function _initCookieBanner(){
+  try {
+    if(localStorage.getItem('cookie:consent')) return;
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('cookieBanner');
+      if(el) el.style.display = 'block';
+    });
+  } catch(e){}
+})();
+function _cookieDecide(level){
+  try {
+    localStorage.setItem('cookie:consent', level); // 'all' | 'essential'
+    localStorage.setItem('cookie:consent_at', new Date().toISOString());
+  } catch(e){}
+  const el = document.getElementById('cookieBanner');
+  if(el) el.style.display = 'none';
+  // If essential-only, disable analytics tracking
+  if(level === 'essential' && window.gtag){
+    try { window['ga-disable-' + (window._GA_ID||'G-XXX')] = true; } catch(e){}
+  }
+}
+</script>
+
+<!-- ══ Sentry (env-gated) ════════════════════════════════════ -->
+<script>
+(function _initSentry(){
+  // Sentry DSN is injected server-side via meta tag when SENTRY_DSN env is set.
+  const dsnMeta = document.querySelector('meta[name="sentry-dsn"]');
+  const dsn = dsnMeta ? dsnMeta.content : '';
+  if(!dsn || !/^https?:\/\//.test(dsn)) return;
+  const s = document.createElement('script');
+  s.src = 'https://browser.sentry-cdn.com/7.119.0/bundle.min.js';
+  s.crossOrigin = 'anonymous';
+  s.onload = function(){
+    if(window.Sentry) {
+      try { window.Sentry.init({dsn, tracesSampleRate: 0.1}); }
+      catch(e){ console.warn('[Sentry] init failed:', e.message); }
+    }
+  };
+  document.head.appendChild(s);
 })();
 </script>
 

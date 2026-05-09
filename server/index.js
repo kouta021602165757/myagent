@@ -553,6 +553,61 @@ function fetchUrlText(targetUrl, opts = {}) {
   });
 }
 
+// ── IMAGE GENERATION (Replicate proxy, env-gated) ─────────────
+// Gated behind REPLICATE_API_TOKEN (https://replicate.com/account/api-tokens).
+// When unset, returns a placeholder + clear "not configured" error to UI.
+async function generateImage(prompt, opts){
+  if(!process.env.REPLICATE_API_TOKEN){
+    throw new Error('not_configured: REPLICATE_API_TOKEN not set');
+  }
+  // Default to a fast SDXL Lightning model. Override via env if needed.
+  const modelVersion = process.env.REPLICATE_MODEL_VERSION
+    || '727e49a643e999d602a896c774a0658ffefea21465756a6ce24b7ea4165eba6a'; // SDXL
+  const r = await httpsReq('POST', 'api.replicate.com', '/v1/predictions',
+    {'Authorization':'Token '+process.env.REPLICATE_API_TOKEN, 'Content-Type':'application/json'},
+    {version: modelVersion, input: {prompt: String(prompt||'').slice(0, 500), num_outputs: 1, ...(opts||{})}});
+  if(r.s >= 400) throw new Error('Replicate ' + r.s + ': ' + JSON.stringify(r.d).slice(0,200));
+  // Poll for completion (Replicate is async)
+  const id = r.d && r.d.id;
+  if(!id) throw new Error('No prediction id returned');
+  for(let i=0;i<60;i++){ // up to 60 seconds
+    await new Promise(rs => setTimeout(rs, 1000));
+    const p = await httpsReq('GET', 'api.replicate.com', '/v1/predictions/' + id,
+      {'Authorization':'Token '+process.env.REPLICATE_API_TOKEN}, null);
+    if(p.s >= 400) throw new Error('Replicate poll ' + p.s);
+    const status = p.d && p.d.status;
+    if(status === 'succeeded'){
+      const urls = (p.d.output || []).filter(u => typeof u === 'string');
+      return { urls, model: modelVersion };
+    }
+    if(status === 'failed' || status === 'canceled'){
+      throw new Error('Generation failed: ' + (p.d.error || status));
+    }
+  }
+  throw new Error('Generation timed out');
+}
+
+// ── VIDEO GENERATION stub (would use Sora/Runway when available) ──
+async function generateVideo(prompt){
+  // TODO: integrate when Sora API GA / Runway API key is set
+  if(!process.env.RUNWAY_API_TOKEN){
+    throw new Error('not_configured: Video generation requires RUNWAY_API_TOKEN');
+  }
+  throw new Error('Video generation provider not yet wired up');
+}
+
+// ── DOCUMENT GENERATION stub (Word/PDF/Slides via libraries) ─────
+// TODO: needs `docx` and/or `pdf-lib` deps. For now returns a clear stub.
+async function generateDocument(format, title, content){
+  throw new Error('not_configured: Document generation pending (docx/pdf-lib install)');
+}
+
+// ── CALENDAR INTEGRATION stub (Google Calendar) ──────────────────
+// TODO: requires Google OAuth scope `https://www.googleapis.com/auth/calendar.events`
+async function createCalendarEvent(user, eventInput){
+  throw new Error('not_configured: Google Calendar scope not yet provisioned');
+}
+
 // ── PUSH NOTIFICATIONS (FCM legacy + APNs proxied via FCM) ───
 // Send a notification to one device token. Gated behind FCM_SERVER_KEY:
 // when not configured (dev / before Firebase setup), logs and returns OK.
@@ -791,11 +846,25 @@ function _trimHistory(messages){
   });
 }
 
-async function callAI(messages,system){
+// Resolve a per-agent model alias ('haiku'|'sonnet'|'opus') to an actual
+// Anthropic model id. Defaults to sonnet.
+function _resolveModel(alias){
+  switch((alias||'').toLowerCase()){
+    case 'haiku': return 'claude-haiku-4-5-20251001';
+    case 'opus':  return 'claude-opus-4-7';
+    case 'sonnet':
+    case '':
+    case null:
+    case undefined:
+    default:      return 'claude-sonnet-4-6';
+  }
+}
+
+async function callAI(messages,system,modelAlias){
   const trimmedMsgs = _trimHistory(_capHistory(messages));
   const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
   const tryCall = async (sys) => httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-    {model:'claude-sonnet-4-6',max_tokens:4096,system:sys,messages:trimmedMsgs});
+    {model:_resolveModel(modelAlias),max_tokens:4096,system:sys,messages:trimmedMsgs});
   let r = await tryCall(_systemBlocks(system));
   // If Anthropic rejected cache_control formatting, retry with plain string system
   if(r.s===400 && /cache_control|content block/i.test(JSON.stringify(r.d||''))){
@@ -810,10 +879,10 @@ async function callAI(messages,system){
  * Streaming variant. Calls onText(chunk) for each text_delta.
  * Resolves with {text, inputTokens, outputTokens}.
  */
-function callAIStream(messages, system, onText){
+function callAIStream(messages, system, onText, modelAlias){
   return new Promise((resolve, reject)=>{
     const body = JSON.stringify({
-      model:'claude-sonnet-4-6',
+      model:_resolveModel(modelAlias),
       max_tokens:4096,
       system: _systemBlocks(system),
       messages: _trimHistory(_capHistory(messages)),
@@ -2712,6 +2781,12 @@ function buildSystem(agent, opts){
   const extensionActive = !!(opts && opts.extensionActive);
   const isGroup = !!(opts && opts.isGroup);
   const speakerName = (opts && opts.speakerName) || '';
+  const memories = (opts && Array.isArray(opts.memories)) ? opts.memories : [];
+  const memoriesNote = memories.length ? `
+
+【ユーザーが覚えておいてほしいこと (long-term memories)】
+${memories.slice(-20).map(m => '- ' + (m.text||'')).join('\n')}
+これらの情報を踏まえて、ユーザーの状況・好みに合わせた応答をしてください。` : '';
   const groupNote = isGroup ? `
 
 【グループ会話モード】
@@ -2821,7 +2896,7 @@ ${sheetsActive
 
 ツールを連鎖して公開情報の問題を解決してください。情報が足りないと感じたら諦めず、追加でツールを呼び出して調べてください。`
     : '';
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}${groupNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
+  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3352,7 +3427,7 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── POST /api/agents ───────────────────────────────────────
   if(pathname==='/api/agents'&&method==='POST'){
-    const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled}=await readBody(req);
+    const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled,model}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
     if((user.agents||[]).length>=20)return jres(res,400,{error:'エージェントは最大20個です'});
@@ -3367,6 +3442,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled:!!chrome_enabled,
       sheets_enabled:!!sheets_enabled,
       extension_enabled:!!extension_enabled,
+      model: ['haiku','sonnet','opus'].includes(model) ? model : 'sonnet',
       history:[],created_at:new Date().toISOString()};
     user.agents=[...(user.agents||[]),agent];
     await DB.save(user);return jres(res,201,{agent});
@@ -3377,7 +3453,7 @@ async function handleAPI(req,res,pathname,method,ip){
   const pam=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(pam&&method==='PATCH'){
     const agId=pam[1];
-    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar}=await readBody(req);
+    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar,model}=await readBody(req);
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
@@ -3385,6 +3461,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
+    if(model!==undefined && ['haiku','sonnet','opus'].includes(model)) ag.model=model;
     if(avatar!==undefined){
       // Accept either a single emoji/short string or a data:image/* base64 URI (≤500KB)
       const a = String(avatar||'').trim();
@@ -4088,6 +4165,45 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { ok:true, deleted: true });
   }
 
+  // ── POST /api/agents/:id/pin ───────────────────────────────
+  // body: { idx: number, on: bool } — pin/unpin a message in chat
+  // Different from bookmark: pinned messages are surfaced at top of chat
+  // for ALL members; bookmarks are per-user.
+  const pinM = pathname.match(/^\/api\/agents\/([^/]+)\/pin$/);
+  if(pinM && method === 'POST'){
+    const agId = pinM[1];
+    const body = await readBody(req) || {};
+    const idx = parseInt(body.idx, 10);
+    const on = !!body.on;
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let target = user;
+    if(!ag){
+      const ms = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!ms) return jres(res,404,{error:'エージェントが見つかりません'});
+      const host = await DB.findBy('id', ms.host_id);
+      if(!host) return jres(res,404,{error:'ホストが見つかりません'});
+      target = host;
+      ag = (host.agents||[]).find(a => a.id === agId);
+    }
+    if(!ag || !Array.isArray(ag.history) || idx < 0 || idx >= ag.history.length){
+      return jres(res,400,{error:'メッセージが見つかりません'});
+    }
+    // Group: only host or member can pin (already auth'd as member). Solo: only owner.
+    // Cap to 5 pins so UI doesn't overflow
+    ag.pinned_idxs = Array.isArray(ag.pinned_idxs) ? ag.pinned_idxs : [];
+    if(on){
+      if(!ag.pinned_idxs.includes(idx)) ag.pinned_idxs.push(idx);
+      if(ag.pinned_idxs.length > 5){
+        ag.pinned_idxs = ag.pinned_idxs.slice(-5);
+      }
+    } else {
+      ag.pinned_idxs = ag.pinned_idxs.filter(i => i !== idx);
+    }
+    ag.history[idx].pinned = on;
+    await DB.save(target);
+    return jres(res,200,{ok:true, pinned: on, pinned_idxs: ag.pinned_idxs});
+  }
+
   // ── POST /api/agents/:id/bookmark ──────────────────────────
   // body: { idx: number, on: bool }  — flag a message as bookmarked
   const bmM = pathname.match(/^\/api\/agents\/([^/]+)\/bookmark$/);
@@ -4169,6 +4285,103 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.history[idx] = msg;
     await DB.save(target);
     return jres(res,200,{ok:true, reactions: msg.reactions});
+  }
+
+  // ── POST /api/generate/image ───────────────────────────────
+  // body: { prompt: string, agent_id?: string }
+  // Generates an image via Replicate (env-gated). On success, returns
+  // image URL(s) AND optionally pushes a system message into the agent's
+  // history so the conversation reflects the generation.
+  if(pathname === '/api/generate/image' && method === 'POST'){
+    const body = await readBody(req) || {};
+    const prompt = (body.prompt || '').toString().trim();
+    if(!prompt) return jres(res,400,{error:'prompt is required'});
+    if(prompt.length > 500) return jres(res,400,{error:'prompt が長すぎます (500文字以内)'});
+    // Free-tier check: count this as 1 message
+    if((user.usage_count||0) >= 10 && (user.balance_jpy||0) <= 0){
+      return jres(res,402,{error:'残高が不足しています'});
+    }
+    try {
+      const out = await generateImage(prompt);
+      // Cost: ~$0.0035 per SDXL image ≈ ¥0.5; round up to ¥3 for buffer
+      const cost = 3;
+      user.balance_jpy = Math.round(((user.balance_jpy||0) - cost)*1000)/1000;
+      user.usage_count = (user.usage_count||0) + 1;
+      user.billing_history = user.billing_history || [];
+      user.billing_history.push({date:new Date().toISOString(),type:'image_gen',prompt:prompt.slice(0,80),cost_jpy:cost});
+      if(user.billing_history.length > 1000) user.billing_history = user.billing_history.slice(-1000);
+      await DB.save(user);
+      return jres(res,200,{ok:true, urls: out.urls, prompt, cost_jpy: cost});
+    } catch(e){
+      const msg = e.message || 'image generation failed';
+      const isConfig = msg.includes('not_configured');
+      return jres(res, isConfig ? 503 : 500, {
+        error: isConfig ? '画像生成は現在準備中です (REPLICATE_API_TOKEN 未設定)' : msg,
+        code: isConfig ? 'image_gen_not_configured' : 'image_gen_failed',
+      });
+    }
+  }
+
+  // ── POST /api/me/memories ──────────────────────────────────
+  // Long-term memory: facts the user wants the AI to remember across
+  // chats (preferences, name, role, project context).
+  // GET — list. POST — add. DELETE /api/me/memories/:idx — remove.
+  if(pathname === '/api/me/memories' && method === 'GET'){
+    return jres(res, 200, { memories: user.memories || [] });
+  }
+  if(pathname === '/api/me/memories' && method === 'POST'){
+    const body = await readBody(req) || {};
+    const text = (body.text || '').toString().trim().slice(0, 500);
+    if(!text) return jres(res,400,{error:'text is required'});
+    user.memories = Array.isArray(user.memories) ? user.memories : [];
+    user.memories.push({
+      text,
+      tag: (body.tag || '').toString().slice(0, 32),
+      added_at: new Date().toISOString(),
+    });
+    if(user.memories.length > 50) user.memories = user.memories.slice(-50);
+    await DB.save(user);
+    return jres(res,200,{ok:true, memories: user.memories});
+  }
+  const memDelM = pathname.match(/^\/api\/me\/memories\/(\d+)$/);
+  if(memDelM && method === 'DELETE'){
+    const idx = parseInt(memDelM[1], 10);
+    if(!Array.isArray(user.memories) || idx < 0 || idx >= user.memories.length){
+      return jres(res,404,{error:'memory not found'});
+    }
+    user.memories.splice(idx, 1);
+    await DB.save(user);
+    return jres(res,200,{ok:true, memories: user.memories});
+  }
+
+  // ── Scheduled reminders (lightweight: stored on user, fired by cron) ─
+  // POST: {at, text, agent_id?}  GET: list  DELETE/:id: remove
+  if(pathname === '/api/me/reminders' && method === 'GET'){
+    return jres(res,200,{reminders: user.reminders || []});
+  }
+  if(pathname === '/api/me/reminders' && method === 'POST'){
+    const body = await readBody(req) || {};
+    const at = (body.at || '').toString();
+    const text = (body.text || '').toString().trim().slice(0, 200);
+    const agent_id = (body.agent_id || '').toString();
+    if(!at || !text) return jres(res,400,{error:'at + text required'});
+    const t = new Date(at).getTime();
+    if(!isFinite(t) || t <= Date.now()) return jres(res,400,{error:'at must be a future ISO timestamp'});
+    user.reminders = Array.isArray(user.reminders) ? user.reminders : [];
+    user.reminders.push({
+      id: 'rem_' + crypto.randomBytes(4).toString('hex'),
+      at, text, agent_id,
+      created_at: new Date().toISOString(),
+    });
+    await DB.save(user);
+    return jres(res,200,{ok:true, reminders: user.reminders});
+  }
+  const remDelM = pathname.match(/^\/api\/me\/reminders\/(rem_[a-f0-9]{8})$/);
+  if(remDelM && method === 'DELETE'){
+    const id = remDelM[1];
+    user.reminders = (user.reminders||[]).filter(r => r.id !== id);
+    await DB.save(user);
+    return jres(res,200,{ok:true, reminders: user.reminders});
   }
 
   // ── POST /api/agents/:id/notify-pref ───────────────────────
@@ -5313,10 +5526,10 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
-        });
+        }, agent.model);
         const cost = calcCost(result.inputTokens, result.outputTokens);
         const reply = streamReply || result.text || 'エラー';
         const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
@@ -5408,7 +5621,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}), tools);
+          resp = await callAIWithTools(convMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -5505,7 +5718,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}));
+            const d=await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -5526,7 +5739,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName}));
+        const d = await callAI(baseMsgs, buildSystem(agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);
@@ -5865,13 +6078,22 @@ const MIME={'.html':'text/html','.css':'text/css','.js':'application/javascript'
 // If a GA measurement ID is configured, inject the gtag.js snippet into the
 // <head> of every served HTML page. Idempotent — skips if already present.
 function _injectGA(html){
-  if(!GA_ID) return html;
-  const s = String(html);
+  let s = String(html);
+  // Sentry DSN as a meta tag — picked up by frontend's _initSentry.
+  // Gated on SENTRY_DSN env so dev/no-op stays clean.
+  const sentryDsn = (process.env.SENTRY_DSN || '').trim();
+  if(sentryDsn && !s.includes('name="sentry-dsn"')){
+    s = s.replace(/<\/head>/i, '<meta name="sentry-dsn" content="' + sentryDsn.replace(/"/g,'&quot;') + '"></head>');
+  }
+  if(!GA_ID) return s;
   if(s.includes('googletagmanager.com/gtag/js')) return s; // already present
   const tag = '\n<!-- GA injected -->\n'
     + '<script async src="https://www.googletagmanager.com/gtag/js?id=' + GA_ID + '"></script>\n'
-    + '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
-    + 'gtag("js",new Date());gtag("config","' + GA_ID + '",{anonymize_ip:true});</script>\n';
+    + '<script>window._GA_ID="' + GA_ID + '";window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
+    + 'gtag("js",new Date());'
+    + '/* Respect cookie consent: only enable analytics on "all" */'
+    + 'try{var _cc=localStorage.getItem("cookie:consent");if(_cc==="essential"){window["ga-disable-' + GA_ID + '"]=true;}}catch(e){}'
+    + 'gtag("config","' + GA_ID + '",{anonymize_ip:true});</script>\n';
   return s.replace(/<\/head>/i, tag + '</head>');
 }
 
@@ -5888,8 +6110,9 @@ function serveStatic(res,fp){
       const h={'Content-Type':mime,...SEC};
       if(ext==='.html'){
         h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';
-        // Inject GA snippet on the way out (only if GA_ID is set)
-        const body = GA_ID ? Buffer.from(_injectGA(data.toString('utf8')), 'utf8') : data;
+        // Inject GA / Sentry tags via _injectGA (no-op when neither env is set)
+        const needInject = GA_ID || (process.env.SENTRY_DSN || '').trim();
+        const body = needInject ? Buffer.from(_injectGA(data.toString('utf8')), 'utf8') : data;
         res.writeHead(200,h);res.end(body);
         return;
       }

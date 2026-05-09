@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Team Builder — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);}
+.banner a{color:var(--peach);text-decoration:underline;}
+
+.wrap{max-width:1100px;margin:0 auto;padding:32px 24px 80px;}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.brand{font-size:14px;font-weight:800;letter-spacing:.06em;color:var(--peach-dark);text-decoration:none;}
+.back{font-size:12px;color:var(--text-muted);font-weight:700;text-decoration:none;}
+
+h1{font-size:32px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;}
+.sub{font-size:14px;color:var(--text-muted);margin-bottom:32px;}
+
+.grid{display:grid;grid-template-columns:1fr 320px;gap:24px;}
+
+.left section{background:#fff;border:1px solid var(--wire);border-radius:16px;padding:24px;margin-bottom:18px;}
+.sh{font-size:13px;font-weight:900;letter-spacing:-.01em;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.sh .num{width:22px;height:22px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;}
+
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;}
+.field input,.field textarea,.field select{
+  width:100%;padding:10px 13px;border:1px solid var(--wire);border-radius:10px;
+  font-size:13.5px;font-family:inherit;color:var(--text);background:var(--bg);outline:0;
+}
+.field input:focus,.field textarea:focus{border-color:var(--peach);background:#fff;box-shadow:0 0 0 3px rgba(251,146,60,.12);}
+.field textarea{min-height:80px;resize:vertical;line-height:1.6;}
+.field .hint{font-size:11px;color:var(--text-subtle);margin-top:5px;}
+
+/* Members section */
+.members{display:flex;flex-direction:column;gap:10px;}
+.mrow{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border:1px solid var(--wire);border-radius:12px;cursor:grab;transition:all .14s;}
+.mrow:hover{border-color:var(--peach);background:#fff;}
+.mrow .drag{color:var(--text-subtle);font-size:18px;cursor:grab;}
+.mrow .order{width:24px;height:24px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;}
+.mrow .av{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;}
+.mrow .body{flex:1;min-width:0;}
+.mrow .nm{font-size:13px;font-weight:800;}
+.mrow .role{font-size:11px;color:var(--text-subtle);font-weight:700;}
+.mrow .act{display:flex;gap:6px;}
+.mrow .ic-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--wire);background:#fff;color:var(--text-muted);font-size:13px;cursor:pointer;}
+.mrow .ic-btn:hover{border-color:var(--peach);color:var(--peach);}
+
+.add-row{padding:14px;background:var(--bg-warm);border:2px dashed var(--wire);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;}
+.add-row:hover{border-color:var(--peach);color:var(--peach-dark);background:var(--peach-soft);}
+
+/* Workflow flow */
+.wf-row{display:flex;align-items:flex-start;gap:14px;padding:14px;background:var(--bg);border:1px solid var(--wire);border-radius:12px;margin-bottom:8px;}
+.wf-row .num{width:30px;height:30px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;}
+.wf-row .body{flex:1;}
+.wf-row .who{font-size:11.5px;font-weight:800;color:var(--peach-dark);margin-bottom:4px;}
+.wf-row .body code{display:block;font-family:'SF Mono',monospace;font-size:11px;background:#fff;padding:8px 10px;border-radius:7px;border:1px solid var(--wire);color:var(--text);}
+.wf-arrow{margin-left:14px;color:var(--peach);font-size:16px;line-height:1;height:14px;font-weight:900;}
+
+/* Trigger */
+.trig-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.trig-card{padding:14px;background:#fff;border:1.5px solid var(--wire);border-radius:11px;cursor:pointer;transition:all .14s;}
+.trig-card:hover,.trig-card.on{border-color:var(--peach);background:var(--peach-soft);}
+.trig-card .tnm{font-size:13px;font-weight:800;margin-bottom:3px;}
+.trig-card .td{font-size:11.5px;color:var(--text-muted);line-height:1.5;}
+
+/* Right side: preview / publish */
+.preview{position:sticky;top:24px;height:fit-content;}
+.preview-card{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:18px;margin-bottom:14px;}
+.preview-card .ph{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:10px;}
+.preview-card .pcover{height:80px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:12px;}
+.preview-card h3{font-size:15px;font-weight:900;margin-bottom:4px;}
+.preview-card .pdesc{font-size:12px;color:var(--text-muted);line-height:1.55;margin-bottom:12px;}
+.preview-card .ppills{display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+.preview-card .ppill{width:26px;height:26px;border-radius:6px;background:var(--bg-warm);border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;font-size:14px;}
+.preview-card .price{font-size:24px;font-weight:900;letter-spacing:-.01em;}
+
+.publish-btn{width:100%;background:var(--peach);color:#fff;padding:13px;border:0;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px;box-shadow:0 6px 18px rgba(251,146,60,.32);}
+.publish-btn:hover{background:var(--peach-dark);}
+.draft-btn{width:100%;background:#fff;color:var(--text);padding:12px;border:1px solid var(--wire);border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;}
+
+@media (max-width:900px){.grid{grid-template-columns:1fr;}.preview{position:static;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK 4/4</b> ・ Team Builder ・ <a href="/mock-team-index.html">他のモックを見る</a></div>
+
+<div class="wrap">
+  <div class="head">
+    <a href="/" class="brand">🍑 MY AI AGENT</a>
+    <a href="/mock-team-store.html" class="back">← Back to Teams</a>
+  </div>
+
+  <h1>Build your team</h1>
+  <p class="sub">Combine multiple agents into a sequence, define roles, and ship the team to the marketplace. Earn 70% of every sale.</p>
+
+  <div class="grid">
+    <div class="left">
+      <!-- Section 1: Basics -->
+      <section>
+        <div class="sh"><span class="num">1</span> Team basics</div>
+        <div class="field">
+          <label>Team name *</label>
+          <input type="text" value="EC Launch Team" placeholder="e.g. SaaS Customer Success Squad">
+        </div>
+        <div class="field">
+          <label>Description *</label>
+          <textarea>Spin up an entire Shopify store, generate product images, post to socials, and analyze sales — all on autopilot.</textarea>
+          <div class="hint">Shown to users browsing the marketplace. Be specific about outcomes (max 500 chars).</div>
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select>
+            <option>🛍 E-commerce</option>
+            <option>📱 SNS Growth</option>
+            <option>🤝 Customer Success</option>
+            <option>💻 Engineering</option>
+            <option>📊 Finance</option>
+            <option>👥 HR / Recruiting</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Section 2: Members -->
+      <section>
+        <div class="sh"><span class="num">2</span> Members (drag to reorder)</div>
+        <div class="members">
+          <div class="mrow">
+            <span class="drag">⋮⋮</span>
+            <div class="order">1</div>
+            <div class="av" style="background:linear-gradient(135deg,#fb923c,#ea580c)">🛍</div>
+            <div class="body">
+              <div class="nm">Product Sourcer</div>
+              <div class="role">Research · Web search · Analysis</div>
+            </div>
+            <div class="act">
+              <button class="ic-btn">⚙</button>
+              <button class="ic-btn">×</button>
+            </div>
+          </div>
+          <div class="mrow">
+            <span class="drag">⋮⋮</span>
+            <div class="order">2</div>
+            <div class="av" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">📸</div>
+            <div class="body">
+              <div class="nm">Visual Designer</div>
+              <div class="role">Image gen · Brand</div>
+            </div>
+            <div class="act">
+              <button class="ic-btn">⚙</button>
+              <button class="ic-btn">×</button>
+            </div>
+          </div>
+          <div class="mrow">
+            <span class="drag">⋮⋮</span>
+            <div class="order">3</div>
+            <div class="av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🌐</div>
+            <div class="body">
+              <div class="nm">Storefront Architect</div>
+              <div class="role">Shopify API · Stripe</div>
+            </div>
+            <div class="act">
+              <button class="ic-btn">⚙</button>
+              <button class="ic-btn">×</button>
+            </div>
+          </div>
+          <div class="mrow">
+            <span class="drag">⋮⋮</span>
+            <div class="order">4</div>
+            <div class="av" style="background:linear-gradient(135deg,#ec4899,#be185d)">📱</div>
+            <div class="body">
+              <div class="nm">Social Media Manager</div>
+              <div class="role">X API · Marketing</div>
+            </div>
+            <div class="act">
+              <button class="ic-btn">⚙</button>
+              <button class="ic-btn">×</button>
+            </div>
+          </div>
+          <div class="mrow">
+            <span class="drag">⋮⋮</span>
+            <div class="order">5</div>
+            <div class="av" style="background:linear-gradient(135deg,#10b981,#047857)">📊</div>
+            <div class="body">
+              <div class="nm">Revenue Analyst</div>
+              <div class="role">Analytics · Stripe webhook</div>
+            </div>
+            <div class="act">
+              <button class="ic-btn">⚙</button>
+              <button class="ic-btn">×</button>
+            </div>
+          </div>
+          <div class="add-row">＋ Add agent (pick from your library or create new)</div>
+        </div>
+      </section>
+
+      <!-- Section 3: Workflow -->
+      <section>
+        <div class="sh"><span class="num">3</span> Workflow (sequential by default)</div>
+        <div class="wf-row">
+          <div class="num">1</div>
+          <div class="body">
+            <div class="who">🛍 Product Sourcer</div>
+            <code>input: {user_query}</code>
+          </div>
+        </div>
+        <div class="wf-arrow">↓</div>
+        <div class="wf-row">
+          <div class="num">2</div>
+          <div class="body">
+            <div class="who">📸 Visual Designer</div>
+            <code>input: "Generate product photos for {sourcer.selected_product}"</code>
+          </div>
+        </div>
+        <div class="wf-arrow">↓</div>
+        <div class="wf-row">
+          <div class="num">3</div>
+          <div class="body">
+            <div class="who">🌐 Storefront Architect</div>
+            <code>input: "Create Shopify store with {sourcer.product} + {designer.images}"</code>
+          </div>
+        </div>
+        <div class="wf-arrow">↓</div>
+        <div class="wf-row">
+          <div class="num">4</div>
+          <div class="body">
+            <div class="who">📱 Social Media Manager (parallel)</div>
+            <code>input: "Promote {architect.store_url} on X, IG, TikTok"</code>
+          </div>
+        </div>
+        <div class="wf-arrow">↓</div>
+        <div class="wf-row">
+          <div class="num">5</div>
+          <div class="body">
+            <div class="who">📊 Revenue Analyst (always-on)</div>
+            <code>trigger: stripe_webhook(checkout.session.completed)</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Triggers -->
+      <section>
+        <div class="sh"><span class="num">4</span> Trigger</div>
+        <div class="trig-options">
+          <div class="trig-card on">
+            <div class="tnm">▶ Manual</div>
+            <div class="td">User clicks "Run team" to start the workflow.</div>
+          </div>
+          <div class="trig-card">
+            <div class="tnm">⏰ Schedule</div>
+            <div class="td">Run on a cron, e.g. daily at 9am.</div>
+          </div>
+          <div class="trig-card">
+            <div class="tnm">🔔 Webhook</div>
+            <div class="td">Triggered by external events (Stripe, Shopify, X mentions).</div>
+          </div>
+          <div class="trig-card">
+            <div class="tnm">🔁 Chained</div>
+            <div class="td">Trigger when another team finishes.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Pricing -->
+      <section>
+        <div class="sh"><span class="num">5</span> Pricing</div>
+        <div class="field">
+          <label>Bundle price (one-time)</label>
+          <input type="text" value="$98">
+          <div class="hint">Buyers get all 5 agents cloned + the workflow ・ You earn 70% ($68.60 per sale)</div>
+        </div>
+        <div style="background:var(--peach-soft);border:1px solid var(--peach);border-radius:11px;padding:14px;font-size:12.5px;color:#92400e;line-height:1.7;">
+          💰 If sold individually, these 5 agents would total <b>$190</b>. Bundle gives buyers a 48% discount → higher conversion.
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: Preview + Publish -->
+    <aside class="preview">
+      <div class="preview-card">
+        <div class="ph">Marketplace preview</div>
+        <div class="pcover">🛍</div>
+        <h3>EC Launch Team</h3>
+        <div class="pdesc">Spin up an entire Shopify store, generate product images, post to socials, and analyze sales — all on autopilot.</div>
+        <div class="ppills">
+          <div class="ppill">🛍</div><div class="ppill">📸</div><div class="ppill">🌐</div><div class="ppill">📱</div><div class="ppill">📊</div>
+          <span style="font-size:10.5px;color:var(--text-subtle);font-weight:700;margin-left:4px;">5 agents</span>
+        </div>
+        <div class="price">$98<span style="font-size:12px;color:var(--text-subtle);font-weight:700;">/team</span></div>
+      </div>
+
+      <button class="publish-btn">🚀 Publish to marketplace</button>
+      <button class="draft-btn">Save as draft</button>
+
+      <div style="margin-top:18px;padding:14px;background:var(--bg-warm);border-radius:11px;border:1px dashed var(--wire);font-size:11px;color:var(--text-muted);line-height:1.6;">
+        💡 <b>Tip</b>: Bundles convert ~3× better than single agents. Keep team size 3-5 for best clarity.
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

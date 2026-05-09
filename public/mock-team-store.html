@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Team Marketplace — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
+.brand{font-size:14px;font-weight:800;letter-spacing:.06em;color:var(--peach-dark);text-decoration:none;}
+.tabs{display:flex;background:#fff;border:1px solid var(--wire);border-radius:12px;padding:5px;}
+.tab{padding:9px 22px;border:0;background:transparent;font-size:13px;font-weight:700;color:var(--text-muted);border-radius:8px;cursor:pointer;transition:all .14s;}
+.tab.active{background:var(--peach);color:#fff;}
+
+.hero{margin-bottom:32px;}
+.hero h1{font-size:36px;font-weight:900;letter-spacing:-.02em;margin-bottom:10px;}
+.hero h1 .accent{background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero .lead{font-size:15px;color:var(--text-muted);max-width:680px;}
+
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px;}
+.fchip{padding:7px 14px;border:1px solid var(--wire);background:#fff;border-radius:99px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all .14s;}
+.fchip.on{background:var(--peach);color:#fff;border-color:var(--peach);}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+
+.tcard{background:#fff;border:1px solid var(--wire);border-radius:18px;padding:24px;position:relative;transition:all .2s;cursor:pointer;}
+.tcard:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(180,90,30,.14);border-color:var(--peach);}
+
+.tcard-cover{height:100px;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;overflow:hidden;}
+.tcard-cover.ec{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.tcard-cover.cs{background:linear-gradient(135deg,#dbeafe,#93c5fd);}
+.tcard-cover.sns{background:linear-gradient(135deg,#fce7f3,#f9a8d4);}
+.tcard-cover.dev{background:linear-gradient(135deg,#dcfce7,#86efac);}
+.tcard-cover.fin{background:linear-gradient(135deg,#fef3c7,#fcd34d);}
+.tcard-cover.hr{background:linear-gradient(135deg,#ede9fe,#c4b5fd);}
+
+.tcard-tag{position:absolute;top:14px;right:14px;background:var(--peach);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:99px;letter-spacing:.06em;box-shadow:0 4px 10px rgba(251,146,60,.32);}
+
+.tcard h3{font-size:17px;font-weight:900;margin-bottom:6px;line-height:1.3;}
+.tcard .desc{font-size:12.5px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+.tcard .members{display:flex;align-items:center;gap:6px;margin-bottom:14px;}
+.tcard .member{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--bg-warm);border:1px solid var(--wire);}
+.tcard .member-count{font-size:11px;color:var(--text-subtle);font-weight:700;margin-left:4px;}
+
+.tcard .stats{display:flex;align-items:center;gap:14px;font-size:11.5px;color:var(--text-subtle);font-weight:700;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--wire);}
+.tcard .stats .stars{color:var(--peach-dark);}
+
+.tcard .foot{display:flex;align-items:center;justify-content:space-between;}
+.tcard .price{font-size:24px;font-weight:900;letter-spacing:-.01em;color:var(--text);font-feature-settings:"tnum";}
+.tcard .price .small{font-size:13px;color:var(--text-subtle);font-weight:700;}
+.tcard .buy{background:var(--peach);color:#fff;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:800;border:0;cursor:pointer;}
+.tcard .buy:hover{background:var(--peach-dark);}
+
+.tcard.featured{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);}
+.tcard.featured .tcard-tag{background:linear-gradient(135deg,#fbbf24,#f59e0b);}
+
+@media (max-width:900px){.grid{grid-template-columns:1fr 1fr;}}
+@media (max-width:600px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK 1/4</b> ・ Agent Team Marketplace 一覧 ・ <a href="/mock-team-index.html" style="color:var(--peach);text-decoration:underline">他のモックを見る</a></div>
+
+<div class="wrap">
+  <div class="head">
+    <a href="/" class="brand">🍑 MY AI AGENT</a>
+    <div class="tabs">
+      <button class="tab" onclick="location.href='/app.html'">🤖 Single Agents</button>
+      <button class="tab active">🎯 Teams</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h1>Build a business with an <span class="accent">AI Team</span>.</h1>
+    <p class="lead">Stop juggling single agents. Buy a pre-built team that runs an entire workflow — from product research to fulfillment, on autopilot.</p>
+  </div>
+
+  <div class="filters">
+    <button class="fchip on">All</button>
+    <button class="fchip">🛍 E-commerce</button>
+    <button class="fchip">📱 SNS Growth</button>
+    <button class="fchip">🤝 Customer Success</button>
+    <button class="fchip">💻 Engineering</button>
+    <button class="fchip">📊 Finance</button>
+    <button class="fchip">👥 HR / Recruiting</button>
+  </div>
+
+  <div class="grid">
+    <!-- 1. EC Launch Team (Featured) -->
+    <div class="tcard featured" onclick="location.href='/mock-team-detail.html'">
+      <div class="tcard-tag">🏆 BESTSELLER</div>
+      <div class="tcard-cover ec">🛍</div>
+      <h3>E-commerce Launch Team</h3>
+      <div class="desc">Spin up an entire Shopify store, generate product images, post to socials, and analyze sales — all on autopilot.</div>
+      <div class="members">
+        <div class="member">🛍</div><div class="member">📸</div><div class="member">🌐</div><div class="member">📱</div><div class="member">📊</div>
+        <span class="member-count">5 agents</span>
+      </div>
+      <div class="stats">
+        <span class="stars">★★★★★ 4.9</span>
+        <span>(132 reviews)</span>
+        <span>↗ 410 purchases</span>
+      </div>
+      <div class="foot">
+        <div class="price">$98<span class="small">/team</span></div>
+        <button class="buy">Buy team →</button>
+      </div>
+    </div>
+
+    <!-- 2. SNS Growth Team -->
+    <div class="tcard">
+      <div class="tcard-tag">⚡ TRENDING</div>
+      <div class="tcard-cover sns">📱</div>
+      <h3>SNS Growth Team</h3>
+      <div class="desc">Spot trending topics, write engaging posts, and schedule them at peak times across X, Instagram, and TikTok.</div>
+      <div class="members">
+        <div class="member">📈</div><div class="member">✍️</div><div class="member">📅</div>
+        <span class="member-count">3 agents</span>
+      </div>
+      <div class="stats">
+        <span class="stars">★★★★★ 4.8</span>
+        <span>(89 reviews)</span>
+        <span>↗ 240 purchases</span>
+      </div>
+      <div class="foot">
+        <div class="price">$19.80<span class="small">/team</span></div>
+        <button class="buy">Buy team →</button>
+      </div>
+    </div>
+
+    <!-- 3. SaaS Customer Success -->
+    <div class="tcard">
+      <div class="tcard-cover cs">🤝</div>
+      <h3>Customer Success Team</h3>
+      <div class="desc">Onboard new users, generate tutorials, handle Tier-1 support, and prevent churn with predictive outreach.</div>
+      <div class="members">
+        <div class="member">🤝</div><div class="member">🎓</div><div class="member">💬</div><div class="member">🔁</div>
+        <span class="member-count">4 agents</span>
+      </div>
+      <div class="stats">
+        <span class="stars">★★★★☆ 4.6</span>
+        <span>(56 reviews)</span>
+        <span>↗ 130 purchases</span>
+      </div>
+      <div class="foot">
+        <div class="price">$49.80<span class="small">/team</span></div>
+        <button class="buy">Buy team →</button>
+      </div>
+    </div>
+
+    <!-- 4. Recruiting Team -->
+    <div class="tcard">
+      <div class="tcard-cover hr">👥</div>
+      <h3>Recruiting Team</h3>
+      <div class="desc">Write JDs, source candidates, screen with AI interviews, and run final-round prep — end-to-end hiring on autopilot.</div>
+      <div class="members">
+        <div class="member">📋</div><div class="member">🔎</div><div class="member">🤖</div><div class="member">🎯</div>
+        <span class="member-count">4 agents</span>
+      </div>
+      <div class="stats">
+        <span class="stars">★★★★★ 4.7</span>
+        <span>(34 reviews)</span>
+        <span>↗ 78 purchases</span>
+      </div>
+      <div class="foot">
+        <div class="price">$59.80<span class="small">/team</span></div>
+        <button class="buy">Buy team →</button>
+      </div>
+    </div>
+
+    <!-- 5. Dev Team -->
+    <div class="tcard">
+      <div class="tcard-tag">🆕 NEW</div>
+      <div class="tcard-cover dev">💻</div>
+      <h3>Dev Squad</h3>
+      <div class="desc">Code reviewer + bug fixer + test writer + deploy bot. Pair with your IDE for instant code-quality boost.</div>
+      <div class="members">
+        <div class="member">🔍</div><div class="member">🔧</div><div class="member">🧪</div><div class="member">🚀</div>
+        <span class="member-count">4 agents</span>
+      </div>
+      <div class="stats">
+        <span class="stars">★★★★★ 5.0</span>
+        <span>(12 reviews)</span>
+        <span>↗ 28 purchases</span>
+      </div>
+      <div class="foot">
+        <div class="price">$39.80<span class="small">/team</span></div>
+        <button class="buy">Buy team →</button>
+      </div>
+    </div>
+
+    <!-- 6. Finance Team -->
+    <div class="tcard">
+      <div class="tcard-cover fin">📊</div>
+      <h3>Finance Team</h3>
+      <div class="desc">Monthly close + variance analysis + cash flow projection + investor updates. Replace 3 hours of analyst work.</div>
+      <div class="members">
+        <div class="member">📈</div><div class="member">📊</div><div class="member">💼</div>
+        <span class="member-count">3 agents</span>
+      </div>
+      <div class="stats">
+        <span class="stars">★★★★☆ 4.5</span>
+        <span>(21 reviews)</span>
+        <span>↗ 47 purchases</span>
+      </div>
+      <div class="foot">
+        <div class="price">$29.80<span class="small">/team</span></div>
+        <button class="buy">Buy team →</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

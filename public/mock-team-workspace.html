@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Team Workspace — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;--bg-deep:#1a0a00;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;--rose:#ef4444;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;flex-shrink:0;}
+.banner b{color:var(--peach);}
+.banner a{color:var(--peach);text-decoration:underline;}
+
+.main{flex:1;display:flex;overflow:hidden;}
+
+/* Sidebar (members + workflow) */
+.sidebar{width:300px;background:#fff;border-right:1px solid var(--wire);padding:18px;overflow-y:auto;flex-shrink:0;}
+.sb-head{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--wire);}
+.sb-cover{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:24px;}
+.sb-head h2{font-size:15px;font-weight:900;margin-bottom:2px;}
+.sb-head .sub{font-size:11px;color:var(--text-subtle);font-weight:700;}
+
+.sb-section{margin-bottom:20px;}
+.sb-section .sh{font-size:10px;font-weight:800;color:var(--text-subtle);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.sb-section .sh .add{color:var(--peach-dark);cursor:pointer;font-size:11px;}
+
+.member{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer;transition:background .12s;}
+.member:hover{background:var(--bg-warm);}
+.member .av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.member .nm{font-size:12.5px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.member .st{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green);}
+.member.busy .st{background:var(--peach);box-shadow:0 0 4px var(--peach);}
+.member.busy::after{content:'⚙ working';font-size:9px;color:var(--peach-dark);font-weight:800;letter-spacing:.04em;}
+
+.run-btn{width:100%;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;padding:14px;border:0;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:14px;box-shadow:0 6px 18px rgba(251,146,60,.32);}
+.run-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(251,146,60,.42);}
+
+.wf-step{font-size:11.5px;color:var(--text-muted);padding:7px 10px;border-left:2px solid var(--wire);margin-bottom:6px;font-weight:700;}
+.wf-step.done{border-color:var(--green);color:var(--text-subtle);}
+.wf-step.done::before{content:'✓ ';color:var(--green);font-weight:900;}
+.wf-step.active{border-color:var(--peach);background:var(--peach-soft);color:var(--peach-dark);}
+.wf-step.active::before{content:'▸ ';font-weight:900;}
+
+/* Main chat */
+.chat{flex:1;display:flex;flex-direction:column;}
+.chat-head{padding:14px 24px;border-bottom:1px solid var(--wire);background:#fff;display:flex;align-items:center;gap:14px;}
+.chat-head .icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.chat-head h1{font-size:16px;font-weight:900;flex:1;}
+.chat-head .pill{font-size:11px;font-weight:800;color:var(--green);background:rgba(16,185,129,.12);padding:4px 10px;border-radius:99px;}
+.chat-head .pill.busy{color:var(--peach-dark);background:rgba(251,146,60,.12);}
+
+.chat-body{flex:1;overflow-y:auto;padding:24px;background:var(--bg);}
+.msg{display:flex;gap:12px;margin-bottom:18px;max-width:760px;}
+.msg.you{justify-content:flex-end;}
+.msg .av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:#fff;font-weight:800;}
+.msg .bubble{padding:11px 14px;border-radius:14px;max-width:560px;font-size:14px;line-height:1.65;}
+.msg .who{font-size:10.5px;font-weight:800;letter-spacing:.04em;margin-bottom:3px;text-transform:uppercase;}
+
+.msg.you .bubble{background:var(--bg-card);border:1px solid var(--wire);}
+.msg.you .av{background:linear-gradient(135deg,#fb923c,#ea580c);}
+
+.msg.curator .av{background:linear-gradient(135deg,#fb923c,#ea580c);}
+.msg.curator .bubble{background:linear-gradient(135deg,#fff7ee,#fed7aa);border:1px solid rgba(251,146,60,.32);color:#1a0a00;}
+.msg.curator .who{color:var(--peach-dark);}
+
+.msg.image .av{background:linear-gradient(135deg,#a78bfa,#7c3aed);}
+.msg.image .bubble{background:linear-gradient(135deg,#ede9fe,#c4b5fd);border:1px solid rgba(139,92,246,.32);color:#1a0a00;}
+.msg.image .who{color:#7c3aed;}
+
+.msg.site .av{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.msg.site .bubble{background:linear-gradient(135deg,#dbeafe,#93c5fd);border:1px solid rgba(59,130,246,.32);color:#1a0a00;}
+.msg.site .who{color:#1d4ed8;}
+
+.msg.sns .av{background:linear-gradient(135deg,#ec4899,#be185d);}
+.msg.sns .bubble{background:linear-gradient(135deg,#fce7f3,#f9a8d4);border:1px solid rgba(236,72,153,.32);color:#1a0a00;}
+.msg.sns .who{color:#be185d;}
+
+.msg.analyst .av{background:linear-gradient(135deg,#10b981,#047857);}
+.msg.analyst .bubble{background:linear-gradient(135deg,#dcfce7,#86efac);border:1px solid rgba(16,185,129,.32);color:#1a0a00;}
+.msg.analyst .who{color:#047857;}
+
+.thinking{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-subtle);font-weight:700;font-style:italic;padding:8px 12px;}
+.thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--peach);animation:pulse 1.2s ease-in-out infinite;}
+.thinking .dot:nth-child(2){animation-delay:.2s;}
+.thinking .dot:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+.composer{padding:18px 24px;border-top:1px solid var(--wire);background:#fff;}
+.composer .input-row{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--wire);border-radius:14px;padding:10px 14px;transition:border-color .14s;}
+.composer .input-row:focus-within{border-color:var(--peach);}
+.composer input{flex:1;border:0;outline:0;font-size:14px;font-family:inherit;background:transparent;}
+.composer .send{background:var(--peach);color:#fff;border:0;width:36px;height:36px;border-radius:10px;font-size:14px;cursor:pointer;}
+
+/* Agent panel (right) */
+.right{width:320px;background:#fff;border-left:1px solid var(--wire);padding:18px;overflow-y:auto;flex-shrink:0;}
+.rh{font-size:13px;font-weight:900;margin-bottom:14px;}
+.timeline{font-size:12px;}
+.tl-item{display:flex;gap:10px;padding-bottom:14px;position:relative;}
+.tl-item::before{content:'';position:absolute;left:11px;top:24px;bottom:-8px;width:2px;background:var(--wire);}
+.tl-item:last-child::before{display:none;}
+.tl-dot{width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--peach);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;z-index:1;}
+.tl-item.done .tl-dot{background:var(--green);border-color:var(--green);color:#fff;}
+.tl-item.active .tl-dot{background:var(--peach);border-color:var(--peach);color:#fff;animation:pulse2 1.5s infinite;}
+@keyframes pulse2{0%{box-shadow:0 0 0 0 rgba(251,146,60,.4)}70%{box-shadow:0 0 0 8px rgba(251,146,60,0)}100%{box-shadow:0 0 0 0 rgba(251,146,60,0)}}
+.tl-body{flex:1;}
+.tl-when{font-size:10.5px;color:var(--text-subtle);font-weight:700;margin-bottom:2px;}
+.tl-title{font-size:13px;font-weight:800;margin-bottom:3px;}
+.tl-detail{font-size:11.5px;color:var(--text-muted);line-height:1.55;}
+
+@media (max-width:1100px){.right{display:none;}}
+@media (max-width:800px){.sidebar{display:none;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK 3/4</b> ・ Team Workspace ・ <a href="/mock-team-index.html">他のモックを見る</a></div>
+
+<div class="main">
+  <!-- LEFT SIDEBAR: Members + Workflow -->
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-cover">🛍</div>
+      <div>
+        <h2>EC Launch Team</h2>
+        <div class="sub">5 agents ・ Running</div>
+      </div>
+    </div>
+
+    <button class="run-btn">▶ Run team workflow</button>
+
+    <div class="sb-section">
+      <div class="sh">Members</div>
+      <div class="member"><div class="av" style="background:linear-gradient(135deg,#fb923c,#ea580c)">🛍</div><div class="nm">Product Sourcer</div><div class="st"></div></div>
+      <div class="member busy"><div class="av" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">📸</div><div class="nm">Visual Designer</div><div class="st"></div></div>
+      <div class="member"><div class="av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🌐</div><div class="nm">Storefront Architect</div><div class="st"></div></div>
+      <div class="member"><div class="av" style="background:linear-gradient(135deg,#ec4899,#be185d)">📱</div><div class="nm">Social Media Manager</div><div class="st"></div></div>
+      <div class="member"><div class="av" style="background:linear-gradient(135deg,#10b981,#047857)">📊</div><div class="nm">Revenue Analyst</div><div class="st"></div></div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sh">Current workflow</div>
+      <div class="wf-step done">Step 1 ・ Sourcing — done</div>
+      <div class="wf-step active">Step 2 ・ Image generation</div>
+      <div class="wf-step">Step 3 ・ Storefront build</div>
+      <div class="wf-step">Step 4 ・ SNS posting</div>
+      <div class="wf-step">Step 5 ・ Sales monitoring (24/7)</div>
+    </div>
+  </aside>
+
+  <!-- CENTER: Chat -->
+  <main class="chat">
+    <div class="chat-head">
+      <div class="icon">🛍</div>
+      <h1>EC Launch Team — Workspace</h1>
+      <span class="pill busy">⚙ Workflow running</span>
+    </div>
+
+    <div class="chat-body">
+      <div class="msg you">
+        <div class="bubble">Find me a trending product to sell with margin > 50%, then build the store and start posting.</div>
+        <div class="av">武</div>
+      </div>
+
+      <div class="msg curator">
+        <div class="av">🛍</div>
+        <div class="bubble">
+          <div class="who">Product Sourcer</div>
+          🔍 Searched 3 sources (Alibaba, Google Trends, Reddit). Top 3 candidates:
+          <ol style="margin:8px 0 4px 22px;font-size:13px;">
+            <li>🐶 <b>Pet calming bed</b> — 62% margin, 8.5k searches/mo, ↗ 23% MoM</li>
+            <li>💆 LED skincare mask — 58% margin, 12k searches/mo</li>
+            <li>💊 Smart pillbox — 54%, 4.5k searches/mo</li>
+          </ol>
+          Going with #1 (highest margin × growth combo). Handing off to Visual Designer ↓
+        </div>
+      </div>
+
+      <div class="msg image">
+        <div class="av">📸</div>
+        <div class="bubble">
+          <div class="who">Visual Designer</div>
+          ⚙ Generating product photos (Replicate, Flux 1.1 Pro)... <br>
+          <div class="thinking" style="margin-top:8px"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Rendering 5 lifestyle shots</div>
+        </div>
+      </div>
+
+      <div class="msg site" style="opacity:.4">
+        <div class="av">🌐</div>
+        <div class="bubble">
+          <div class="who">Storefront Architect</div>
+          <em>Waiting for images...</em>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="input-row">
+        <input type="text" placeholder="@ to mention an agent  ・  type to chat with the team">
+        <button class="send">→</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT: Activity timeline -->
+  <aside class="right">
+    <div class="rh">⚡ Activity timeline</div>
+    <div class="timeline">
+      <div class="tl-item done">
+        <div class="tl-dot">✓</div>
+        <div class="tl-body">
+          <div class="tl-when">14:23 · 30s ago</div>
+          <div class="tl-title">Triggered by user</div>
+          <div class="tl-detail">"Find me a trending product..."</div>
+        </div>
+      </div>
+      <div class="tl-item done">
+        <div class="tl-dot">✓</div>
+        <div class="tl-body">
+          <div class="tl-when">14:23 · 28s ago</div>
+          <div class="tl-title">🛍 Product Sourcer ran</div>
+          <div class="tl-detail">3 web_search calls + 2 web_fetch. Returned 3 candidates in 12s.</div>
+        </div>
+      </div>
+      <div class="tl-item active">
+        <div class="tl-dot">2</div>
+        <div class="tl-body">
+          <div class="tl-when">14:23 · running</div>
+          <div class="tl-title">📸 Visual Designer working</div>
+          <div class="tl-detail">5 image gens (~$0.12 each). ETA 40s.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">3</div>
+        <div class="tl-body">
+          <div class="tl-when">queued</div>
+          <div class="tl-title">🌐 Storefront Architect</div>
+          <div class="tl-detail">Will create Shopify store with selected product + chosen image.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">4</div>
+        <div class="tl-body">
+          <div class="tl-when">queued</div>
+          <div class="tl-title">📱 Social Media Manager</div>
+          <div class="tl-detail">Drafts X / IG / TikTok posts after store URL ready.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">5</div>
+        <div class="tl-body">
+          <div class="tl-when">always-on</div>
+          <div class="tl-title">📊 Revenue Analyst</div>
+          <div class="tl-detail">Subscribes to Stripe webhook. Will notify on every order + daily summary at 9pm.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding:14px;background:var(--bg-warm);border:1px dashed var(--wire);border-radius:12px;font-size:11.5px;color:var(--text-muted);line-height:1.6;">
+      💡 <b>Tip</b>: Use <code style="background:#fff;padding:1px 5px;border-radius:4px;font-size:10.5px">@</code> to direct-message a specific agent. Or hit ▶ Run team to launch the full sequence again.
+    </div>
+  </aside>
+</div>
+</body>
+</html>

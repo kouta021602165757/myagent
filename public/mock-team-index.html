@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Team Marketplace — Mock Index</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:#fdf8f3;color:#1a0a00;line-height:1.7;padding:48px 24px;}
+.wrap{max-width:1100px;margin:0 auto;}
+h1{font-size:38px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;}
+.lead{font-size:16px;color:#5c3a1e;margin-bottom:32px;max-width:680px;}
+.spec-link{display:inline-flex;align-items:center;gap:8px;background:#1a0a00;color:#fff5e6;padding:10px 18px;border-radius:11px;font-size:13px;font-weight:800;text-decoration:none;margin-bottom:32px;}
+.spec-link:hover{background:#3a1a08;}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:48px;}
+.card{background:#fff;border:1px solid rgba(180,120,80,.16);border-radius:18px;padding:24px;transition:all .2s;text-decoration:none;color:inherit;display:block;}
+.card:hover{transform:translateY(-3px);border-color:#fb923c;box-shadow:0 14px 40px rgba(251,146,60,.16);}
+.card-tag{display:inline-block;background:rgba(251,146,60,.10);color:#ea580c;padding:4px 11px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.06em;margin-bottom:12px;}
+.card-pic{aspect-ratio:16/9;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:54px;margin-bottom:14px;border:1px solid rgba(180,120,80,.10);}
+.card-pic.s1{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.card-pic.s2{background:linear-gradient(135deg,#dbeafe,#93c5fd);}
+.card-pic.s3{background:linear-gradient(135deg,#fce7f3,#f9a8d4);}
+.card-pic.s4{background:linear-gradient(135deg,#dcfce7,#86efac);}
+.card h2{font-size:20px;font-weight:900;margin-bottom:6px;}
+.card-sub{font-size:12px;color:#9a6a4a;font-weight:700;margin-bottom:12px;}
+.card p{font-size:13.5px;color:#5c3a1e;}
+.spec-section{background:#fff;border:1px solid rgba(180,120,80,.16);border-radius:18px;padding:32px;margin-bottom:24px;}
+.spec-section h2{font-size:22px;font-weight:900;margin-bottom:14px;}
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;}
+.phase{padding:18px;background:#faf3eb;border-radius:12px;border:1px solid rgba(180,120,80,.16);}
+.phase-num{display:inline-block;width:28px;height:28px;border-radius:50%;background:#fb923c;color:#fff;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.phase h3{font-size:14px;font-weight:900;margin-bottom:6px;}
+.phase p{font-size:12px;color:#5c3a1e;line-height:1.65;}
+@media (max-width:760px){.grid{grid-template-columns:1fr;}.phases{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎯 Agent Team Marketplace</h1>
+  <p class="lead">業務丸ごとを動かす AI チームを販売・運用する仕組み。仕様書 + 4 つのデザインモックで全体像を可視化しました。</p>
+
+  <a href="/docs/AGENT_TEAM_SPEC.md" class="spec-link">📄 仕様書を読む (AGENT_TEAM_SPEC.md)</a>
+
+  <div class="grid">
+    <a href="/mock-team-store.html" class="card">
+      <span class="card-tag">MOCK 1</span>
+      <div class="card-pic s1">🛒</div>
+      <h2>Team Marketplace</h2>
+      <div class="card-sub">Browse view ・ チーム一覧</div>
+      <p>カテゴリでフィルタ ・ 5〜6 種類のテンプレチーム ・ 構成エージェントのミニアバター ・ 価格 ・ レビュー</p>
+    </a>
+
+    <a href="/mock-team-detail.html" class="card">
+      <span class="card-tag">MOCK 2</span>
+      <div class="card-pic s2">📋</div>
+      <h2>Team Detail</h2>
+      <div class="card-sub">Detail page ・ 個別チーム情報</div>
+      <p>チーム説明 ・ 全メンバー紹介 ・ ワークフロー図解 ・ デモ会話 ・ 購入カード (バンドル割引表示)</p>
+    </a>
+
+    <a href="/mock-team-workspace.html" class="card">
+      <span class="card-tag">MOCK 3</span>
+      <div class="card-pic s3">⚙</div>
+      <h2>Team Workspace</h2>
+      <div class="card-sub">Active workspace ・ チーム稼働中の画面</div>
+      <p>左: メンバー一覧 + ワークフロー進行 ・ 中央: マルチカラーチャット (役割別) ・ 右: 実行タイムライン</p>
+    </a>
+
+    <a href="/mock-team-builder.html" class="card">
+      <span class="card-tag">MOCK 4</span>
+      <div class="card-pic s4">🏗</div>
+      <h2>Team Builder</h2>
+      <div class="card-sub">Create + publish ・ チーム作成画面</div>
+      <p>5 セクション (基本 / メンバー / ワークフロー / トリガー / 価格) ・ ドラッグで並び替え ・ Marketplace プレビュー</p>
+    </a>
+  </div>
+
+  <div class="spec-section">
+    <h2>🚀 実装ロードマップ</h2>
+    <div class="phases">
+      <div class="phase">
+        <span class="phase-num">1</span>
+        <h3>Multi-Agent Pack 販売</h3>
+        <p>5 体パックを 1 クリック購入 ・ 全部クローンしてユーザーアカウントへ ・ 既存グループチャット流用</p>
+      </div>
+      <div class="phase">
+        <span class="phase-num">2</span>
+        <h3>Workflow 自動実行</h3>
+        <p>YAML 定義 ・ Sequential / Parallel / Conditional ・ 各エージェント間で output → input 連鎖</p>
+      </div>
+      <div class="phase">
+        <span class="phase-num">3</span>
+        <h3>Autonomous (外部連携)</h3>
+        <p>Cron / Webhook / Event トリガー ・ Shopify / X API / Stripe webhook ・ 24/7 稼働</p>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#5c3a1e;line-height:1.7;">
+      <b>MVP まで 17 営業日 (約 1 ヶ月)</b>。Phase 1 だけで ARPU が 5〜10 倍化する可能性 (単体 ¥1,980 → チーム ¥9,800〜)。
+    </p>
+  </div>
+
+  <div class="spec-section">
+    <h2>💡 北極星のユースケース</h2>
+    <p style="margin-bottom:14px;font-size:14px;color:#5c3a1e;">
+      <b>EC ローンチ自動化チーム ¥9,800</b>
+    </p>
+    <ol style="margin-left:20px;font-size:14px;color:#5c3a1e;line-height:1.85;">
+      <li>🛍 Product Curator が仕入候補を Web 検索で選定</li>
+      <li>📸 Image Generator が AI で商品画像生成 (Replicate)</li>
+      <li>🌐 Site Builder が Shopify Storefront API で店舗構築</li>
+      <li>📱 SNS Promoter が X / IG に投稿</li>
+      <li>📊 Sales Analyst が Stripe Webhook で売上を分析</li>
+    </ol>
+    <p style="margin-top:14px;font-size:13px;color:#9a6a4a;">
+      ユーザーは「Run team」を 1 回押すだけで、上の 5 ステップが自動で連鎖実行されます。
+    </p>
+  </div>
+
+  <p style="text-align:center;color:#9a6a4a;font-size:13px;margin-top:32px;">
+    どこから着手するか決まったら教えてください。Phase 1 (パック販売) なら 1〜2 週間で実装できます。
+  </p>
+</div>
+</body>
+</html>

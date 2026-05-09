@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Team Detail — MY AI AGENT</title>
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --wire:rgba(180,120,80,.16);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);}
+.wrap{max-width:1100px;margin:0 auto;padding:32px 24px 80px;}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
+.brand{font-size:14px;font-weight:800;letter-spacing:.06em;color:var(--peach-dark);text-decoration:none;}
+.back{font-size:12px;color:var(--text-muted);font-weight:700;text-decoration:none;}
+
+.hero{display:grid;grid-template-columns:1fr 380px;gap:36px;margin-bottom:48px;}
+.hero-cover{height:280px;border-radius:18px;background:linear-gradient(135deg,#fff7ee,#fed7aa,#fb923c);display:flex;align-items:center;justify-content:center;font-size:96px;position:relative;overflow:hidden;}
+.hero-cover::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.4),transparent 60%);}
+
+.hero-info h1{font-size:38px;font-weight:900;letter-spacing:-.02em;margin-bottom:10px;line-height:1.1;}
+.hero-info .tag{display:inline-block;background:var(--peach-soft);color:var(--peach-dark);padding:4px 11px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.06em;margin-bottom:12px;}
+.hero-info .desc{font-size:15px;color:var(--text-muted);line-height:1.75;margin-bottom:18px;}
+.hero-info .stats{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--text-muted);font-weight:700;margin-bottom:18px;padding:10px 0;border-top:1px solid var(--wire);border-bottom:1px solid var(--wire);}
+.hero-info .stats .stars{color:var(--peach-dark);}
+.hero-info .creator{font-size:13px;color:var(--text-subtle);font-weight:700;}
+.hero-info .creator b{color:var(--text);}
+
+.buy-card{background:#fff;border:1px solid var(--wire);border-radius:18px;padding:24px;box-shadow:0 14px 40px rgba(180,90,30,.10);position:sticky;top:24px;height:fit-content;}
+.buy-card .price{font-size:42px;font-weight:900;letter-spacing:-.02em;color:var(--text);font-feature-settings:"tnum";line-height:1;margin-bottom:4px;}
+.buy-card .price .small{font-size:14px;color:var(--text-subtle);font-weight:700;}
+.buy-card .compare{font-size:12px;color:var(--text-subtle);text-decoration:line-through;margin-bottom:12px;}
+.buy-card .save{display:inline-block;background:rgba(16,185,129,.12);color:var(--green);font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;margin-bottom:14px;}
+.buy-card .buy{width:100%;background:var(--peach);color:#fff;padding:14px;border-radius:11px;font-size:15px;font-weight:800;border:0;cursor:pointer;margin-bottom:8px;}
+.buy-card .buy:hover{background:var(--peach-dark);}
+.buy-card .alt{width:100%;background:#fff;color:var(--text);padding:13px;border-radius:11px;font-size:13px;font-weight:700;border:1px solid var(--wire);cursor:pointer;}
+.buy-card .perks{margin-top:18px;padding-top:14px;border-top:1px solid var(--wire);}
+.buy-card .perk{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text-muted);margin-bottom:8px;}
+.buy-card .perk::before{content:'✓';color:var(--green);font-weight:900;flex-shrink:0;}
+
+.section{margin-bottom:48px;}
+.section h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin-bottom:18px;}
+
+.members-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+.mcard{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:18px;display:flex;gap:14px;}
+.mcard .av{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
+.mcard .body{flex:1;min-width:0;}
+.mcard h3{font-size:15px;font-weight:800;margin-bottom:4px;}
+.mcard .role{font-size:11px;color:var(--peach-dark);font-weight:800;letter-spacing:.04em;margin-bottom:6px;text-transform:uppercase;}
+.mcard p{font-size:12.5px;color:var(--text-muted);line-height:1.6;margin-bottom:8px;}
+.mcard .skills{display:flex;flex-wrap:wrap;gap:5px;}
+.mcard .skill{background:var(--bg-warm);color:var(--text-muted);font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:99px;border:1px solid var(--wire);}
+
+.flow{background:#fff;border:1px solid var(--wire);border-radius:18px;padding:28px;}
+.flow-step{display:flex;gap:16px;margin-bottom:14px;}
+.flow-step .num{width:32px;height:32px;border-radius:50%;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0;box-shadow:0 4px 10px rgba(251,146,60,.32);}
+.flow-step .body{flex:1;padding-top:5px;}
+.flow-step h4{font-size:14px;font-weight:800;margin-bottom:4px;}
+.flow-step h4 .tag{display:inline-block;background:var(--peach-soft);color:var(--peach-dark);font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;margin-left:8px;}
+.flow-step p{font-size:12.5px;color:var(--text-muted);}
+.flow-arrow{margin-left:14px;color:var(--peach);font-size:20px;line-height:1;height:14px;}
+
+@media (max-width:900px){.hero{grid-template-columns:1fr;}.members-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK 2/4</b> ・ Team Detail Page ・ <a href="/mock-team-index.html" style="color:var(--peach);text-decoration:underline">他のモックを見る</a></div>
+
+<div class="wrap">
+  <div class="head">
+    <a href="/" class="brand">🍑 MY AI AGENT</a>
+    <a href="/mock-team-store.html" class="back">← Back to Teams</a>
+  </div>
+
+  <div class="hero">
+    <div>
+      <div class="hero-cover">🛍</div>
+    </div>
+    <div class="hero-info">
+      <span class="tag">🏆 BESTSELLER</span>
+      <h1>E-commerce Launch Team</h1>
+      <div class="desc">Spin up an entire Shopify store, generate product images, post to socials, and analyze sales — all on autopilot. Replace 30+ hours of solo grind with a 5-agent squad that runs end-to-end.</div>
+      <div class="stats">
+        <span class="stars">★★★★★ 4.9 (132 reviews)</span>
+        <span>↗ 410 purchases</span>
+        <span>🟢 LIVE</span>
+      </div>
+      <div class="creator">Created by <b>@kota.takeuchi</b> ✓ Verified</div>
+    </div>
+
+    <!-- This col is the buy card, but we put it inline for layout -->
+  </div>
+
+  <div style="position:relative">
+    <div class="buy-card" style="position:absolute;top:-460px;right:0;width:340px;">
+      <div class="price">$98<span class="small">/team</span></div>
+      <div class="compare">$190 individually</div>
+      <div class="save">↓ Save $92 (48% off)</div>
+      <button class="buy">🛍 Buy team →</button>
+      <button class="alt">▷ Try demo (3 turns free)</button>
+      <div class="perks">
+        <div class="perk">5 agents cloned to your account</div>
+        <div class="perk">Pre-configured workflow ready to run</div>
+        <div class="perk">Lifetime access (no recurring fee)</div>
+        <div class="perk">Customizable after purchase</div>
+        <div class="perk">90-day creator support</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>👥 Members (5 agents)</h2>
+    <div class="members-grid">
+      <div class="mcard">
+        <div class="av">🛍</div>
+        <div class="body">
+          <div class="role">Step 1 · Product Curator</div>
+          <h3>Product Sourcer</h3>
+          <p>Searches alibaba, AliExpress, and trend reports to recommend 10 hot products with margin estimates.</p>
+          <div class="skills"><span class="skill">Research</span><span class="skill">Web search</span><span class="skill">Analysis</span></div>
+        </div>
+      </div>
+      <div class="mcard">
+        <div class="av" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">📸</div>
+        <div class="body">
+          <div class="role">Step 2 · Image Generator</div>
+          <h3>Visual Designer</h3>
+          <p>Creates lifestyle product photos using Replicate. Generates 5 variations per product with brand-consistent styling.</p>
+          <div class="skills"><span class="skill">Image gen</span><span class="skill">Brand</span></div>
+        </div>
+      </div>
+      <div class="mcard">
+        <div class="av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🌐</div>
+        <div class="body">
+          <div class="role">Step 3 · Site Builder</div>
+          <h3>Storefront Architect</h3>
+          <p>Spins up a Shopify store via API. Imports products, sets up payments, configures shipping zones.</p>
+          <div class="skills"><span class="skill">Shopify</span><span class="skill">Stripe</span></div>
+        </div>
+      </div>
+      <div class="mcard">
+        <div class="av" style="background:linear-gradient(135deg,#ec4899,#be185d)">📱</div>
+        <div class="body">
+          <div class="role">Step 4 · SNS Promoter</div>
+          <h3>Social Media Manager</h3>
+          <p>Posts to X, Instagram, TikTok with optimized hashtags and trending audio. Schedules at peak engagement times.</p>
+          <div class="skills"><span class="skill">X API</span><span class="skill">Marketing</span></div>
+        </div>
+      </div>
+      <div class="mcard">
+        <div class="av" style="background:linear-gradient(135deg,#10b981,#047857)">📊</div>
+        <div class="body">
+          <div class="role">Step 5 · Sales Analyst</div>
+          <h3>Revenue Analyst</h3>
+          <p>Monitors Stripe webhooks, generates daily/weekly revenue reports, and recommends optimizations.</p>
+          <div class="skills"><span class="skill">Analytics</span><span class="skill">Stripe webhooks</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>⚡ How it works</h2>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="num">1</div>
+        <div class="body">
+          <h4>You ask "Find a hot product to sell" <span class="tag">Manual trigger</span></h4>
+          <p><b>Product Sourcer</b> researches via web_search → returns top 10 candidates with profit margin & demand score.</p>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="num">2</div>
+        <div class="body">
+          <h4>You pick one → <b>Visual Designer</b> auto-runs <span class="tag">Sequential</span></h4>
+          <p>Generates 5 product photos using Replicate. You select your favorite.</p>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="num">3</div>
+        <div class="body">
+          <h4><b>Storefront Architect</b> builds your Shopify <span class="tag">Sequential</span></h4>
+          <p>Connects via OAuth → creates product page → sets pricing → enables Stripe checkout. Live URL returned.</p>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="num">4</div>
+        <div class="body">
+          <h4><b>Social Media Manager</b> posts about it <span class="tag">Parallel</span></h4>
+          <p>Drafts X / Instagram / TikTok posts → schedules them across the day.</p>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="num">5</div>
+        <div class="body">
+          <h4><b>Revenue Analyst</b> watches sales 24/7 <span class="tag">Webhook trigger</span></h4>
+          <p>When a Stripe webhook fires (purchase) → notifies you in chat → daily summary at 9pm.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>💬 Demo conversation</h2>
+    <div style="background:#fff;border:1px solid var(--wire);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:10px;">
+      <div style="background:var(--bg-warm);padding:10px 14px;border-radius:14px;align-self:flex-end;font-size:13px;">Find me a trending product to sell. Margin > 50%.</div>
+      <div style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;padding:12px 14px;border-radius:14px;align-self:flex-start;max-width:70%;font-size:13px;">
+        <div style="font-size:10.5px;font-weight:800;opacity:.85;margin-bottom:4px;">🛍 PRODUCT SOURCER</div>
+        Found 3 contenders: <br>1. Pet calming bed (margin 62%, 8.5k searches/mo) <br>2. LED skincare mask (58%, 12k) <br>3. Smart pillbox (54%, 4.5k). <br>Pick one to launch?
+      </div>
+      <div style="background:var(--bg-warm);padding:10px 14px;border-radius:14px;align-self:flex-end;font-size:13px;">#1, the pet bed.</div>
+      <div style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 14px;border-radius:14px;align-self:flex-start;max-width:70%;font-size:13px;">
+        <div style="font-size:10.5px;font-weight:800;opacity:.85;margin-bottom:4px;">📸 VISUAL DESIGNER</div>
+        Generated 5 lifestyle shots (cozy living room, golden hour). View → <span style="text-decoration:underline">imgur.com/abc</span>
+      </div>
+      <div style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;padding:12px 14px;border-radius:14px;align-self:flex-start;max-width:70%;font-size:13px;">
+        <div style="font-size:10.5px;font-weight:800;opacity:.85;margin-bottom:4px;">🌐 STOREFRONT ARCHITECT</div>
+        Store is live! → <span style="text-decoration:underline">cozypets.myshopify.com</span> ・ Stripe connected ・ Free shipping &gt; $50.
+      </div>
+      <div style="background:linear-gradient(135deg,#10b981,#047857);color:#fff;padding:12px 14px;border-radius:14px;align-self:flex-start;max-width:70%;font-size:13px;">
+        <div style="font-size:10.5px;font-weight:800;opacity:.85;margin-bottom:4px;">📊 REVENUE ANALYST</div>
+        🎉 First sale! $39.99 from @sarahj. I'll watch and notify you on each one + send a daily digest at 9pm.
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

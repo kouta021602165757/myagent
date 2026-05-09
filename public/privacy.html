@@ -30,8 +30,19 @@ table th{background:var(--cream2);font-weight:800;}
 </style>
 </head>
 <body>
+<script>
+(function(){
+  try{
+    var qs = new URLSearchParams(location.search);
+    if(qs.get('lang') === 'ja') return;
+    var nav = (navigator.language || '').toLowerCase();
+    if(!nav.startsWith('ja')) location.replace('/privacy-en.html');
+  }catch(e){}
+})();
+</script>
 <div class="wrap">
   <a href="/" class="brand">🍑 MY AI AGENT</a>
+  <a href="/privacy-en.html" style="display:inline-block;font-size:12px;color:var(--text3);margin-left:14px;text-decoration:underline">English</a>
   <h1>プライバシーポリシー</h1>
   <div class="lead">株式会社 PROTOCOL（以下「当社」）は、MY AI AGENT（以下「本サービス」）におけるユーザーの個人情報の取扱いについて、以下のとおりプライバシーポリシーを定めます。</div>
   <div class="last-updated">最終更新: 2026-05-07</div>

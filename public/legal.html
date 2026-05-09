@@ -29,8 +29,22 @@ table ul{margin:8px 0 0 18px;}
 </style>
 </head>
 <body>
+<script>
+// Auto-redirect to EN version for non-Japanese browsers (unless ?lang=ja).
+(function(){
+  try{
+    var qs = new URLSearchParams(location.search);
+    if(qs.get('lang') === 'ja') return;
+    var nav = (navigator.language || '').toLowerCase();
+    if(!nav.startsWith('ja') && qs.get('lang') !== 'ja'){
+      location.replace('/legal-en.html');
+    }
+  }catch(e){}
+})();
+</script>
 <div class="wrap">
   <a href="/" class="brand">🍑 MY AI AGENT</a>
+  <a href="/legal-en.html" style="display:inline-block;font-size:12px;color:var(--text3);margin-left:14px;text-decoration:underline">English</a>
   <h1>特定商取引法に基づく表記</h1>
   <div class="lead">特定商取引に関する法律 第11条（通信販売についての広告）に基づき、以下のとおり表記いたします。</div>
   <div class="last-updated">最終更新: 2026-05-07</div>

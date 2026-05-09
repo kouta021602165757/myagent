@@ -53,8 +53,19 @@ textarea{min-height:160px;line-height:1.7;resize:vertical;}
 </style>
 </head>
 <body>
+<script>
+(function(){
+  try{
+    var qs = new URLSearchParams(location.search);
+    if(qs.get('lang') === 'ja') return;
+    var nav = (navigator.language || '').toLowerCase();
+    if(!nav.startsWith('ja')) location.replace('/contact-en.html');
+  }catch(e){}
+})();
+</script>
 <div class="wrap">
   <a href="/" class="brand">🍑 MY AI AGENT</a>
+  <a href="/contact-en.html" style="display:inline-block;font-size:12px;color:var(--text3);margin-left:14px;text-decoration:underline">English</a>
   <h1>お問い合わせ</h1>
   <div class="lead">サポート・機能要望・出店に関するご相談など、お気軽にどうぞ。<br>通常 3 営業日以内にメールでご返信いたします。</div>
 

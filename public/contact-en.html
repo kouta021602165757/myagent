@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contact — MY AI AGENT</title>
+<meta name="description" content="Contact MY AI AGENT.">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--cream:#fdf8f3;--cream2:#faf3eb;
+  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;--wire:rgba(180,120,80,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;line-height:1.7;}
+.wrap{max-width:640px;margin:0 auto;padding:40px 22px 80px;}
+.brand{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--peach-dark);letter-spacing:.04em;margin-bottom:30px;text-decoration:none;}
+.lang-switch{display:inline-block;font-size:12px;color:var(--text3);margin-left:14px;text-decoration:underline;}
+h1{font-size:30px;font-weight:900;margin-bottom:6px;letter-spacing:-.01em;}
+.lead{font-size:14px;color:var(--text3);font-weight:600;margin-bottom:34px;line-height:1.7;}
+form{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:24px;}
+.row{margin-bottom:18px;}
+label{display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.req{color:#dc2626;font-weight:800;}
+input,select,textarea{
+  width:100%;padding:11px 14px;border:1px solid var(--wire);border-radius:10px;
+  font-size:14px;font-family:inherit;color:var(--text);background:var(--cream);outline:none;
+  transition:border-color .18s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--peach);background:#fff;box-shadow:0 0 0 3px rgba(251,146,60,.15);}
+textarea{min-height:140px;resize:vertical;line-height:1.6;}
+.hint{font-size:11.5px;color:var(--text3);margin-top:5px;}
+.btn{
+  width:100%;padding:13px;background:var(--peach-dark);color:#fff;border:0;border-radius:11px;
+  font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.04em;
+  box-shadow:0 4px 12px rgba(251,146,60,.25);transition:all .18s;
+}
+.btn:hover:not(:disabled){background:#c2410c;transform:translateY(-1px);}
+.btn:disabled{opacity:.6;cursor:wait;transform:none;box-shadow:none;}
+.success{
+  text-align:center;padding:40px 24px;background:linear-gradient(135deg,#fff7ed,#ffedd5);
+  border:1px solid rgba(251,146,60,.25);border-radius:16px;
+}
+.success .ic{font-size:48px;margin-bottom:12px;}
+.success h2{font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px;}
+.success p{font-size:13.5px;color:var(--text2);font-weight:600;}
+.err{
+  margin-bottom:14px;padding:11px 14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+  border-radius:10px;color:#dc2626;font-size:13px;font-weight:700;
+}
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--wire);font-size:12px;color:var(--text3);font-weight:600;text-align:center;}
+.foot a{color:var(--peach-dark);font-weight:700;text-decoration:none;}
+.alt-channels{margin-top:24px;padding:14px 18px;background:var(--cream2);border:1px solid var(--wire);border-radius:11px;}
+.alt-channels h3{font-size:12px;font-weight:800;color:var(--text2);margin-bottom:8px;letter-spacing:.04em;}
+.alt-channels p{font-size:12.5px;color:var(--text2);line-height:1.7;}
+.alt-channels a{color:var(--peach-dark);font-weight:700;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="brand">🍑 MY AI AGENT</a>
+  <a href="/contact.html" class="lang-switch">日本語</a>
+  <h1>Contact</h1>
+  <div class="lead">For support, feature requests, or listing inquiries, feel free to reach out.<br>We typically reply by email within 3 business days.</div>
+
+  <form id="contactForm" onsubmit="submitContact(event)">
+    <div id="errBox" class="err" style="display:none"></div>
+    <div class="row">
+      <label>Name <span class="req">*</span></label>
+      <input id="cName" type="text" maxlength="100" required>
+    </div>
+    <div class="row">
+      <label>Email <span class="req">*</span></label>
+      <input id="cEmail" type="email" maxlength="200" required>
+      <div class="hint">Used for our reply.</div>
+    </div>
+    <div class="row">
+      <label>Subject <span class="req">*</span></label>
+      <select id="cSubject" required>
+        <option value="">— Select —</option>
+        <option>Support (sign-in, billing, bugs)</option>
+        <option>Feature request</option>
+        <option>Agent Store listing inquiry</option>
+        <option>Partnership / press</option>
+        <option>Personal data disclosure / deletion request</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Message <span class="req">*</span></label>
+      <textarea id="cMessage" maxlength="5000" required placeholder="Please be as specific as possible. For bug reports, include reproduction steps, browser, and OS."></textarea>
+      <div class="hint" id="charCount">0 / 5000 characters</div>
+    </div>
+    <button class="btn" type="submit" id="submitBtn">Send</button>
+  </form>
+
+  <div id="successBox" class="success" style="display:none">
+    <div class="ic">📩</div>
+    <h2>Sent</h2>
+    <p>We will reply by email within 3 business days.<br>Please wait a moment.</p>
+    <a href="/" style="display:inline-block;margin-top:20px;padding:10px 22px;background:var(--peach-dark);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px">← Back to home</a>
+  </div>
+
+  <div class="alt-channels">
+    <h3>📧 Email us directly</h3>
+    <p>For urgent matters, please email <a href="mailto:kota.takeuchi@protocol.ooo">kota.takeuchi@protocol.ooo</a> directly.</p>
+  </div>
+
+  <div class="foot">
+    <a href="/terms-en.html">Terms</a> ・
+    <a href="/privacy-en.html">Privacy</a> ・
+    <a href="/legal-en.html">Commercial Transactions Notation</a><br>
+    <span style="margin-top:10px;display:inline-block">© PROTOCOL Inc. — MY AI AGENT</span>
+  </div>
+</div>
+
+<script>
+var msgEl = document.getElementById('cMessage');
+var counter = document.getElementById('charCount');
+msgEl.addEventListener('input', function(){
+  counter.textContent = msgEl.value.length + ' / 5000 characters';
+});
+
+async function submitContact(e){
+  e.preventDefault();
+  var name = document.getElementById('cName').value.trim();
+  var email = document.getElementById('cEmail').value.trim();
+  var subject = document.getElementById('cSubject').value.trim();
+  var message = msgEl.value.trim();
+  var errBox = document.getElementById('errBox');
+  errBox.style.display = 'none';
+  if(!name || !email || !subject || !message){
+    errBox.textContent = 'Please fill in all fields.';
+    errBox.style.display = '';
+    return;
+  }
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    var r = await fetch('/api/contact', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, email, subject, message, lang:'en'})
+    });
+    if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error || 'Network error');
+    document.getElementById('contactForm').style.display = 'none';
+    document.getElementById('successBox').style.display = '';
+  } catch(err){
+    errBox.textContent = (err && err.message) || 'Failed to send.';
+    errBox.style.display = '';
+    btn.disabled = false; btn.textContent = 'Send';
+  }
+}
+</script>
+</body>
+</html>

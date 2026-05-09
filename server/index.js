@@ -3926,11 +3926,14 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pam&&method==='PATCH'){
     const agId=pam[1];
     const body=await readBody(req);
-    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar,model,skills,ai_auto_respond}=body;
+    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar,model,skills,ai_auto_respond,team_goal}=body;
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
     if(persona!==undefined)ag.persona=persona;
+    if(team_goal!==undefined && ag.is_team){
+      ag.team_goal = String(team_goal||'').trim().slice(0, 1200);
+    }
     if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;

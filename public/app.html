@@ -2204,6 +2204,36 @@ body{color:#f0f0f8;}
   </div>
 </div>
 
+<!-- ══ TEAM EDIT OVERLAY ═══════════════════════════════════ -->
+<div class="overlay" id="teamEditOverlay">
+  <div class="wizard" style="max-width:620px">
+    <div class="wiz-top">
+      <div class="wiz-title">✏️ チームを編集</div>
+      <button class="wiz-close" onclick="closeTeamEdit()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
+      <div style="display:grid;grid-template-columns:90px 1fr;gap:10px;margin-bottom:16px;align-items:start">
+        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px">アイコン</label>
+        <input id="teamEditEmoji" type="text" maxlength="3" style="width:64px;height:42px;text-align:center;font-size:22px;border:1px solid var(--wire2);border-radius:9px;background:#fff;font-family:inherit">
+        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px">チーム名</label>
+        <input id="teamEditName" type="text" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--wire2);border-radius:9px;background:#fff;font-size:13px;font-family:inherit">
+      </div>
+      <div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px;letter-spacing:.04em">どんな業務を自動化したいですか？</div>
+      <div style="font-size:10.5px;color:var(--text3);margin-bottom:8px;line-height:1.6">
+        この目的はチームのコンテキストとして各エージェントに渡されます。後から方向性が変わったら自由に書き換えてください。
+      </div>
+      <textarea id="teamEditGoal" rows="5" placeholder="例: ECサイトを作って販売したい (Shopify + 商品ソーシング + SNS集客 + 売上分析)" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13px;line-height:1.7;font-family:inherit;resize:vertical;min-height:110px"></textarea>
+      <div id="teamEditMsg" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="closeTeamEdit()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">キャンセル</button>
+        <button id="teamEditSaveBtn" onclick="saveTeamEdit()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">💾 保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ TEAM MEMBERS PANEL ═════════════════════════════════ -->
 <div class="overlay" id="teamMembersOverlay">
   <div class="wizard" style="max-width:760px">
@@ -2214,8 +2244,15 @@ body{color:#f0f0f8;}
       </button>
     </div>
     <div class="wiz-body" style="padding:18px 22px 22px;max-height:78vh;overflow-y:auto">
-      <div id="teamMembersIntro" style="font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:14px">
+      <div id="teamMembersIntro" style="font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:10px">
         このチームに所属している AI エージェントです。<b>@名前</b> で個別に呼び出せます。各エージェントの ✏️ から、性格・スキル・モデルを編集できます。
+      </div>
+      <div id="teamMembersGoalRow" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:11px;padding:11px 13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">チームの目的</div>
+          <div id="teamMembersGoalText" style="font-size:12.5px;color:var(--text);line-height:1.65;white-space:pre-wrap"></div>
+        </div>
+        <button id="teamMembersGoalEditBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.32);color:var(--peach-dark);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0">✏️ 編集</button>
       </div>
       <div id="teamMembersList" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
@@ -6574,6 +6611,9 @@ async function openAgent(id){
   if(isGroup){
     if(isTeam){
       actsHTML += '<button class="ct-act wide members" onclick="openTeamMembersPanel(\''+ag.id+'\')" title="'+L('チームのメンバー','Team members')+'">🎯 '+teamCount+' AI</button>';
+      if(isHost){
+        actsHTML += '<button class="ct-act" onclick="openTeamEdit(\''+ag.id+'\')" title="'+L('チームを編集 (目的・名前)','Edit team (goal · name)')+'">✏️</button>';
+      }
     } else {
       actsHTML += '<button class="ct-act wide invite" onclick="openInviteModal(\''+ag.id+'\')" title="'+L('メンバーを招待','Invite members')+'">＋ '+L('招待','Invite')+'</button>';
       actsHTML += '<button class="ct-act wide members" onclick="openMemberPanel(\''+ag.id+'\')" title="'+L('メンバー','Members')+'">👥 '+memberCount+'</button>';
@@ -8652,6 +8692,57 @@ async function activateTeam(templateId, templateName, coverEmoji){
     showToast(L('チームの起動に失敗しました: ','Team activation failed: ') + (e.message||''),'ng');
   }
 }
+/* ── Team edit (name, emoji, goal) ─────────────────────────── */
+var _editingTeamId = null;
+function openTeamEdit(teamId){
+  var team = (agents||[]).find(function(a){return a.id===teamId;});
+  if(!team || !team.is_team){ showToast(L('チームが見つかりません','Team not found'),'ng'); return; }
+  if(team.host_id !== me?.id){ showToast(L('ホストのみ編集できます','Only the host can edit'),'ng'); return; }
+  _editingTeamId = teamId;
+  document.getElementById('teamEditEmoji').value = team.avatar || '🎯';
+  document.getElementById('teamEditName').value  = team.name  || '';
+  document.getElementById('teamEditGoal').value  = team.team_goal || '';
+  document.getElementById('teamEditMsg').textContent = '';
+  document.getElementById('teamEditOverlay').classList.add('open');
+}
+function closeTeamEdit(){
+  document.getElementById('teamEditOverlay')?.classList.remove('open');
+  _editingTeamId = null;
+}
+async function saveTeamEdit(){
+  if(!_editingTeamId){ closeTeamEdit(); return; }
+  var team = (agents||[]).find(function(a){return a.id===_editingTeamId;});
+  if(!team){ closeTeamEdit(); return; }
+  var name  = (document.getElementById('teamEditName').value||'').trim();
+  var emoji = (document.getElementById('teamEditEmoji').value||'🎯').trim() || '🎯';
+  var goal  = (document.getElementById('teamEditGoal').value||'').trim();
+  var msgEl = document.getElementById('teamEditMsg');
+  if(!name){ msgEl.textContent = L('チーム名を入力してください','Enter a team name'); return; }
+  var btn = document.getElementById('teamEditSaveBtn');
+  btn.disabled = true; btn.style.opacity='.7'; btn.textContent = L('保存中…','Saving…');
+  try {
+    var r = await api('PATCH','/api/agents/'+team.id, { name: name, avatar: emoji, team_goal: goal });
+    // Update local copy so the chat header / list reflect the change immediately
+    if(r && r.agent){
+      Object.assign(team, r.agent);
+    } else {
+      team.name = name; team.avatar = emoji; team.team_goal = goal;
+    }
+    showToast(L('保存しました','Saved'),'ok');
+    closeTeamEdit();
+    renderAgList();
+    if(activeId === team.id){
+      // Re-render chat header and home dashboard so name/emoji refresh
+      try { openAgent(team.id); } catch(e){}
+    }
+  } catch(e){
+    msgEl.textContent = (e.message || L('保存に失敗しました','Save failed'));
+    showToast((e.message||L('保存に失敗しました','Save failed')),'ng');
+  } finally {
+    btn.disabled = false; btn.style.opacity='1'; btn.textContent = '💾 ' + L('保存','Save');
+  }
+}
+
 /* ── Team members panel (list + edit AI agents in a Team) ─── */
 function openTeamMembersPanel(teamId){
   var team = (agents||[]).find(function(a){return a.id===teamId;});
@@ -8660,6 +8751,26 @@ function openTeamMembersPanel(teamId){
   if(!ov) return;
   var titleEl = document.getElementById('teamMembersTitle');
   if(titleEl) titleEl.textContent = '🎯 ' + (team.name||L('チーム','Team')) + ' · ' + L('AI メンバー','AI members');
+  // Goal row (only when set + only host can edit)
+  var goalRow = document.getElementById('teamMembersGoalRow');
+  var goalText= document.getElementById('teamMembersGoalText');
+  var goalBtn = document.getElementById('teamMembersGoalEditBtn');
+  var isTeamHost = team.host_id === me?.id;
+  if(goalRow){
+    if(team.team_goal && team.team_goal.trim()){
+      goalRow.style.display = 'flex';
+      if(goalText) goalText.textContent = team.team_goal;
+    } else if(isTeamHost){
+      goalRow.style.display = 'flex';
+      if(goalText) goalText.innerHTML = '<span style="color:var(--text3);font-style:italic">'+L('まだ目的が設定されていません。「✏️ 編集」から追加できます。','No goal yet — click "✏️ Edit" to add one.')+'</span>';
+    } else {
+      goalRow.style.display = 'none';
+    }
+    if(goalBtn){
+      goalBtn.style.display = isTeamHost ? '' : 'none';
+      goalBtn.onclick = function(){ closeTeamMembersPanel(); openTeamEdit(team.id); };
+    }
+  }
   var list = document.getElementById('teamMembersList');
   var ids = Array.isArray(team.team_member_agent_ids) ? team.team_member_agent_ids : [];
   var members = ids.map(function(id){return (agents||[]).find(function(a){return a.id===id;});}).filter(Boolean);

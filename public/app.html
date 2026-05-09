@@ -5927,17 +5927,25 @@ async function openGroupSettings(agId){
     transferSec.style.display = 'none';
   }
 
-  // Footer button: 退出 (non-host) / 削除 (host alone) / hide (host with members)
+  // Footer button: 退出 (member) / 削除 (host — always available, stronger warning when members exist)
   const dangerBtn = document.getElementById('grpSetDangerBtn');
   if(!isHost){
     dangerBtn.style.display = '';
     dangerBtn.textContent = isJa ? 'グループを退出' : 'Leave group';
     dangerBtn.onclick = () => _leaveGroup(agId);
-  } else if(members.length === 1){
+  } else {
     dangerBtn.style.display = '';
-    dangerBtn.textContent = isJa ? 'グループを削除' : 'Delete group';
+    const otherCount = Math.max(0, members.length - 1);
+    dangerBtn.textContent = isJa
+      ? (otherCount > 0 ? 'グループを削除 ('+otherCount+'名のメンバー)' : 'グループを削除')
+      : 'Delete group' + (otherCount > 0 ? ' ('+otherCount+' members)' : '');
     dangerBtn.onclick = async () => {
-      if(!confirm(isJa?'このグループを削除しますか？復元できません。':'Delete this group? This cannot be undone.')) return;
+      const warn = otherCount > 0
+        ? (isJa
+            ? ('このグループには他に '+otherCount+' 名のメンバーがいます。\n\n削除すると:\n・全員のチャット履歴が消えます\n・メンバーはトーク一覧から消えます\n・復元できません\n\n本当に削除しますか？')
+            : ('This group has '+otherCount+' other members. Delete?\nAll history is permanently lost. This cannot be undone.'))
+        : (isJa ? 'このグループを削除しますか？復元できません。' : 'Delete this group? Cannot be undone.');
+      if(!confirm(warn)) return;
       try {
         await api('DELETE', '/api/agents/'+agId);
         showToast(isJa?'削除しました':'Deleted', 'ok');
@@ -5949,9 +5957,6 @@ async function openGroupSettings(agId){
         closeGroupSettings();
       } catch(e){ showToast(e.message, 'ng'); }
     };
-  } else {
-    // Host with members: must transfer first or remove members
-    dangerBtn.style.display = 'none';
   }
 
   document.getElementById('grpSetActiveId').value = agId;

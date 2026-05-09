@@ -3427,8 +3427,28 @@ async function handleAPI(req,res,pathname,method,ip){
   // ── DELETE /api/agents/:id ─────────────────────────────────
   const dm=pathname.match(/^\/api\/agents\/([^/]+)$/);
   if(dm&&method==='DELETE'){
-    user.agents=(user.agents||[]).filter(a=>a.id!==dm[1]);
-    await DB.save(user);return jres(res,200,{ok:true});
+    const agId = dm[1];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    // If this is a group, clean up each non-host member's group_memberships
+    // so it disappears from their sidebar.
+    if(ag.is_group && Array.isArray(ag.members)){
+      const others = ag.members.filter(m => m.user_id !== user.id);
+      for(const m of others){
+        try {
+          const member = await DB.findBy('id', m.user_id);
+          if(!member) continue;
+          member.group_memberships = (member.group_memberships||[])
+            .filter(g => g.agent_id !== agId);
+          await DB.save(member);
+        } catch(e){
+          console.warn('[delete-group] cleanup membership failed for', m.user_id, e.message);
+        }
+      }
+    }
+    user.agents = (user.agents||[]).filter(a => a.id !== agId);
+    await DB.save(user);
+    return jres(res,200,{ok:true});
   }
 
   // ── GET /api/google/sheets/status ──────────────────────────

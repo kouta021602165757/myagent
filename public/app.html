@@ -5418,11 +5418,16 @@ function _sortByLastActivity(a, b){
   return bt - at;
 }
 function _lastActivityMs(a){
-  // For agents, history.slice(-1)[0].time is "HH:MM" — fall back to created_at.
-  // For joined groups, server gives last_at which is an ISO string.
+  // Try last_at (ISO string preferred), then fall back to history's last entry,
+  // then created_at. "HH:MM" strings (legacy) parse to NaN — we treat that as
+  // a "recent today" signal so groups don't sink to the bottom of the list.
   if(a.last_at){
     const t = new Date(a.last_at).getTime();
     if(isFinite(t)) return t;
+    // legacy HH:MM-only — treat as today (so it stays near top)
+    if(typeof a.last_at === 'string' && /^\d{1,2}:\d{2}$/.test(a.last_at.trim())){
+      return Date.now();
+    }
   }
   if(a.created_at){
     const t = new Date(a.created_at).getTime();
@@ -7393,17 +7398,29 @@ async function _pickGrpAgent(agId){
       max_members: 50,
       require_approval: false,
     });
-    // Mark the agent as group locally so sidebar reflects it
     const ag = agents.find(a => a.id === agId);
     if(ag){
       ag.is_group = true;
       ag.host_id = me.id;
       ag.invite_token = r.invite_token;
+      ag.invite_url = r.invite_url;
       ag.invite_expires_at = r.invite_expires_at;
       ag.invite_max_members = r.invite_max_members;
-      ag.member_count = (r.members || []).length;
-      ag.members = r.members;
+      ag.members = Array.isArray(r.members) ? r.members : [];
+      ag.member_count = ag.members.length || 1;
     }
+    // Defensive: refresh agents from server so all server-known fields land
+    try {
+      const fresh = await api('GET', '/api/agents');
+      if(fresh && Array.isArray(fresh.agents)){
+        const map = new Map(agents.map(a => [a.id, a]));
+        fresh.agents.forEach(serverAg => {
+          const local = map.get(serverAg.id);
+          if(local) Object.assign(local, serverAg);
+          else agents.push(serverAg);
+        });
+      }
+    } catch(e){}
     renderAgList();
     openInviteModal(agId);
   } catch(e) {
@@ -8354,7 +8371,7 @@ function closeEditAgent(){
 async function _promoteToGroupFromEdit(){
   const id = window._editAgentId;
   if(!id) return;
-  const ag = agents.find(a => a.id === id);
+  let ag = agents.find(a => a.id === id);
   if(!ag){ showToast('エージェントが見つかりません','ng'); return; }
   // Already a group? Skip the promote step
   if(ag.is_group){
@@ -8362,25 +8379,50 @@ async function _promoteToGroupFromEdit(){
     openInviteModal(id);
     return;
   }
-  // Confirm before promoting (it changes the agent semantics)
   if(!confirm(isJa
     ? ('「'+ag.name+'」をグループに昇格させますか？\n\nグループ化すると:\n・複数の人を招待できます\n・@AI でメンションされた時のみ AI が応答\n・AI 利用料はあなたの残高から消費されます\n\n後でいつでも元に戻せません (グループ削除は可能)。')
     : ('Promote "'+ag.name+'" to a group?\nMultiple members can join. AI cost is charged to your balance.'))){
     return;
   }
   try {
-    await api('POST', '/api/agents/' + id + '/invite', {
+    const r = await api('POST', '/api/agents/' + id + '/invite', {
       expires_in_days: 7,
       max_members: 50,
       require_approval: false,
     });
-    // Update local agent state
+    // Capture FULL response into local agent so subsequent code (sidebar
+    // render, openInviteModal) sees a complete state
     ag.is_group = true;
     ag.host_id = me.id;
-    ag.member_count = 1;
+    ag.invite_token = r.invite_token;
+    ag.invite_url = r.invite_url;
+    ag.invite_expires_at = r.invite_expires_at;
+    ag.invite_max_members = r.invite_max_members;
+    ag.members = Array.isArray(r.members) ? r.members : [];
+    ag.member_count = ag.members.length || 1;
+
+    // Defensive: re-pull authoritative state from server so any field we
+    // forgot to update locally (e.g. invite_require_approval) is correct
+    try {
+      const fresh = await api('GET', '/api/agents');
+      if(fresh && Array.isArray(fresh.agents)){
+        // Merge: keep local objects but replace by id
+        const map = new Map(agents.map(a => [a.id, a]));
+        fresh.agents.forEach(serverAg => {
+          const local = map.get(serverAg.id);
+          if(local){
+            // Preserve any local-only fields, override server-known fields
+            Object.assign(local, serverAg);
+          } else {
+            agents.push(serverAg);
+          }
+        });
+      }
+    } catch(e){ console.warn('[promote] re-fetch failed:', e.message); }
+
     showToast(isJa?'グループ化しました':'Promoted to group','ok');
-    renderAgList();
     closeEditAgent();
+    renderAgList();
     openInviteModal(id);
   } catch(e){
     showToast((isJa?'グループ化失敗: ':'Failed: ')+e.message, 'ng');

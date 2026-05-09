@@ -1056,12 +1056,10 @@ _navAuthState();
 <!-- ════ i18n: auto-translate to English for non-Japanese browsers ════ -->
 <script>
 (function(){
-  var lang = navigator.language || navigator.userLanguage || 'ja';
-  var isJa = lang.startsWith('ja');
+  // US-targeted product → English is the default.
+  // Stay in Japanese only when the URL explicitly opts in with ?lang=ja.
   var params = new URLSearchParams(location.search);
-  if(params.get('lang')==='en') isJa=false;
-  if(params.get('lang')==='ja') isJa=true;
-  if(isJa) return;
+  if(params.get('lang')==='ja') return;
 
   var map = {
     // nav

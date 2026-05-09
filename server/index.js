@@ -924,7 +924,15 @@ function _systemBlocks(system){
 // Tools are static across turns, so this saves a lot of input tokens per call.
 function _toolsWithCache(tools){
   if(!Array.isArray(tools) || tools.length===0) return tools;
-  return tools.map((t,i)=> i === tools.length-1
+  // cache_control on server-managed tools (web_search, web_fetch, etc.) may
+  // be rejected. Find the last *user-defined* tool (one with input_schema)
+  // and attach cache_control there.
+  let lastUserToolIdx = -1;
+  for(let i=tools.length-1; i>=0; i--){
+    if(tools[i] && tools[i].input_schema){ lastUserToolIdx = i; break; }
+  }
+  if(lastUserToolIdx === -1) return tools;
+  return tools.map((t,i)=> i === lastUserToolIdx
     ? { ...t, cache_control:{ type:'ephemeral' } }
     : t);
 }
@@ -1096,7 +1104,13 @@ async function callAIWithTools(messages,system,tools){
   // so we can't afford long waits. Surface the rate limit to the user instead.
   let attempt = 0;
   let useCache = true;
-  const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
+  // Build the anthropic-beta header. web_fetch (server tool) needs an opt-in
+  // beta flag — without it, the request fails silently and the agent ends up
+  // saying "I can't fetch URLs". Add the flag when any web tool is in `tools`.
+  const betas = ['prompt-caching-2024-07-31'];
+  const hasWebFetch = Array.isArray(tools) && tools.some(t => t && (t.type==='web_fetch_20250910' || t.name==='web_fetch'));
+  if(hasWebFetch) betas.push('web-fetch-2025-09-10');
+  const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta': betas.join(',')};
   while(true){
     const sys = useCache ? _systemBlocks(system) : String(system||'');
     const cachedTools = useCache ? _toolsWithCache(tools) : tools;

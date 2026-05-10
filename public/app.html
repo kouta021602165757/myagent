@@ -1870,45 +1870,45 @@ body{color:#f0f0f8;}
         <h2 id="homeGreeting">Welcome 🍑</h2>
         <div class="now" id="homeNow"></div>
       </div>
-      <div class="empty-sub">3 つの世界 ・ 個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務丸ごと自動化</div>
+      <div class="empty-sub" data-i18n="homeSub">3 つの世界 ・ 個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務丸ごと自動化</div>
 
       <!-- Quick start: 3 cards -->
       <div class="empty-quick">
         <button class="qc" onclick="openNewAgent()">
           <div class="qc-ic">🤖</div>
-          <h3>AI Agent を作成</h3>
-          <div class="qc-desc">1 体ずつ ・ あなた専属の AI を組み立てる。</div>
+          <h3 data-i18n="homeQcAgentH">AI Agent を作成</h3>
+          <div class="qc-desc" data-i18n="homeQcAgentD">1 体ずつ ・ あなた専属の AI を組み立てる。</div>
           <div class="qc-sub">
-            <span class="qc-pill new">🆕 新規</span>
-            <span class="qc-pill" onclick="event.stopPropagation();openTemplate()">📋 テンプレートから</span>
+            <span class="qc-pill new" data-i18n="homeQcAgentP1">🆕 新規</span>
+            <span class="qc-pill" onclick="event.stopPropagation();openTemplate()" data-i18n="homeQcAgentP2">📋 テンプレートから</span>
           </div>
         </button>
         <button class="qc feat" onclick="openTeamGallery()">
           <div class="qc-ic">🎯</div>
-          <h3>AI Agent Team を作成</h3>
-          <div class="qc-desc">複数 AI が連携 ・ 業務丸ごと自動化。</div>
+          <h3 data-i18n="homeQcTeamH">AI Agent Team を作成</h3>
+          <div class="qc-desc" data-i18n="homeQcTeamD">複数 AI が連携 ・ 業務丸ごと自動化。</div>
           <div class="qc-sub">
-            <span class="qc-pill">🆕 新規 (近日)</span>
-            <span class="qc-pill new">📋 テンプレートから</span>
+            <span class="qc-pill" data-i18n="homeQcTeamP1">🆕 新規</span>
+            <span class="qc-pill new" data-i18n="homeQcTeamP2">📋 テンプレートから</span>
           </div>
         </button>
         <button class="qc" onclick="openAgentStore()">
           <div class="qc-ic">🏪</div>
-          <h3>Agent Store</h3>
-          <div class="qc-desc">他クリエイターの Agent / Team を購入・無料 DL。</div>
+          <h3 data-i18n="homeQcStoreH">Agent Store</h3>
+          <div class="qc-desc" data-i18n="homeQcStoreD">他クリエイターの Agent / Team を購入・無料 DL。</div>
           <div class="qc-sub">
-            <span class="qc-pill">🤖 単体 Agent</span>
-            <span class="qc-pill">🎯 Team パック</span>
+            <span class="qc-pill" data-i18n="homeQcStoreP1">🤖 単体 Agent</span>
+            <span class="qc-pill" data-i18n="homeQcStoreP2">🎯 Team パック</span>
           </div>
         </button>
       </div>
 
       <!-- Legend -->
       <div class="legend">
-        <span class="lbl">3 KINDS OF CONVERSATIONS</span>
-        <span class="l"><span class="dot dm"></span><b>DM</b> ・ あなた + AI 1 体</span>
-        <span class="l"><span class="dot group"></span><b>Group</b> ・ あなた + 友達 + AI</span>
-        <span class="l"><span class="dot team"></span><b>Team</b> ・ あなた + AI 複数体</span>
+        <span class="lbl" data-i18n="homeLegendLbl">3 KINDS OF CONVERSATIONS</span>
+        <span class="l"><span class="dot dm"></span><span data-i18n="homeLegendDm"><b>DM</b> ・ あなた + AI 1 体</span></span>
+        <span class="l"><span class="dot group"></span><span data-i18n="homeLegendGr"><b>Group</b> ・ あなた + 友達 + AI</span></span>
+        <span class="l"><span class="dot team"></span><span data-i18n="homeLegendTm"><b>Team</b> ・ あなた + AI 複数体</span></span>
       </div>
 
       <!-- 3 kinds -->
@@ -1919,9 +1919,9 @@ body{color:#f0f0f8;}
             <h3>AI Agents (DM)</h3>
             <span class="count" id="homeDmCount">—</span>
           </div>
-          <div class="kind-desc">あなたと AI が <b>1 対 1</b>。集中して 1 タスクを進めるのに最適。</div>
+          <div class="kind-desc" data-i18n="homeKindDmD">あなたと AI が <b>1 対 1</b>。集中して 1 タスクを進めるのに最適。</div>
           <div class="kind-list" id="homeDmList"></div>
-          <button class="kind-cta" onclick="openNewAgent()">＋ Create new agent →</button>
+          <button class="kind-cta" onclick="openNewAgent()" data-i18n="homeKindDmCta">＋ Create new agent →</button>
         </div>
         <div class="kind group">
           <div class="kind-head">
@@ -1929,9 +1929,9 @@ body{color:#f0f0f8;}
             <h3>Groups</h3>
             <span class="count" id="homeGroupCount">—</span>
           </div>
-          <div class="kind-desc"><b>人間 + AI</b> がいる LINE 風グループ。チーム作業や友達と一緒に。</div>
+          <div class="kind-desc" data-i18n="homeKindGrD"><b>人間 + AI</b> がいる LINE 風グループ。チーム作業や友達と一緒に。</div>
           <div class="kind-list" id="homeGroupList"></div>
-          <button class="kind-cta" onclick="openCreateGroup()">＋ Create a group →</button>
+          <button class="kind-cta" onclick="openCreateGroup()" data-i18n="homeKindGrCta">＋ Create a group →</button>
         </div>
         <div class="kind team">
           <div class="kind-head">
@@ -1939,9 +1939,9 @@ body{color:#f0f0f8;}
             <h3>Teams</h3>
             <span class="count" id="homeTeamCount">—</span>
           </div>
-          <div class="kind-desc"><b>AI が複数体連携</b>して業務を丸ごと自動化。</div>
+          <div class="kind-desc" data-i18n="homeKindTmD"><b>AI が複数体連携</b>して業務を丸ごと自動化。</div>
           <div class="kind-list" id="homeTeamList"></div>
-          <button class="kind-cta" onclick="openTeamGallery()">＋ Build a new team →</button>
+          <button class="kind-cta" onclick="openTeamGallery()" data-i18n="homeKindTmCta">＋ Build a new team →</button>
         </div>
       </div>
     </div>
@@ -5191,6 +5191,32 @@ var T = {
       hintMemory:           L('記憶','Memory'),
       hintNewChat:          L('新規会話','New chat'),
 
+      // Home dashboard (post-login empty state)
+      homeSub:              L('3 つの世界 ・ 個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務丸ごと自動化',
+                              '3 worlds — chat 1:1 with an AI, mix friends + AI in a group, or let a multi-AI team automate the whole job.'),
+      homeQcAgentH:         L('AI Agent を作成','Create an AI Agent'),
+      homeQcAgentD:         L('1 体ずつ ・ あなた専属の AI を組み立てる。','One at a time · Build your own dedicated AI.'),
+      homeQcAgentP1:        L('🆕 新規','🆕 From scratch'),
+      homeQcAgentP2:        L('📋 テンプレートから','📋 From templates'),
+      homeQcTeamH:          L('AI Agent Team を作成','Create an AI Agent Team'),
+      homeQcTeamD:          L('複数 AI が連携 ・ 業務丸ごと自動化。','Multiple AIs in concert · Automate the whole job.'),
+      homeQcTeamP1:         L('🆕 新規','🆕 From scratch'),
+      homeQcTeamP2:         L('📋 テンプレートから','📋 From templates'),
+      homeQcStoreH:         L('Agent Store','Agent Store'),
+      homeQcStoreD:         L('他クリエイターの Agent / Team を購入・無料 DL。','Buy or free-download Agents and Teams from other creators.'),
+      homeQcStoreP1:        L('🤖 単体 Agent','🤖 Solo Agent'),
+      homeQcStoreP2:        L('🎯 Team パック','🎯 Team pack'),
+      homeLegendLbl:        L('3 KINDS OF CONVERSATIONS','3 KINDS OF CONVERSATIONS'),
+      homeLegendDm:         L('<b>DM</b> ・ あなた + AI 1 体','<b>DM</b> · You + 1 AI'),
+      homeLegendGr:         L('<b>Group</b> ・ あなた + 友達 + AI','<b>Group</b> · You + friends + AI'),
+      homeLegendTm:         L('<b>Team</b> ・ あなた + AI 複数体','<b>Team</b> · You + multiple AIs'),
+      homeKindDmD:          L('あなたと AI が <b>1 対 1</b>。集中して 1 タスクを進めるのに最適。','Just you and one AI, <b>1:1</b>. Best when you want to focus on a single task.'),
+      homeKindDmCta:        L('＋ Create new agent →','+ Create new agent →'),
+      homeKindGrD:          L('<b>人間 + AI</b> がいる LINE 風グループ。チーム作業や友達と一緒に。','<b>Humans + AI</b> in a chat-app-style group. Great for teamwork or friends.'),
+      homeKindGrCta:        L('＋ Create a group →','+ Create a group →'),
+      homeKindTmD:          L('<b>AI が複数体連携</b>して業務を丸ごと自動化。','<b>Multiple AIs in concert</b> — automate the whole job.'),
+      homeKindTmCta:        L('＋ Build a new team →','+ Build a new team →'),
+
       // Agent create overlay (2-tab New / Template chooser)
       cancel:               L('キャンセル','Cancel'),
       agentModeNew:         L('新規作成','From scratch'),
@@ -5720,7 +5746,12 @@ document.addEventListener('DOMContentLoaded',async()=>{
     // Apply data-i18n attributes anywhere on the page (billing modal, settings tabs, etc.)
     document.querySelectorAll('[data-i18n]').forEach(function(el){
       var k=el.getAttribute('data-i18n');
-      if(T[k]!==undefined) el.textContent=T[k];
+      if(T[k]===undefined) return;
+      // If the value contains HTML tags (e.g. <b> in legend lines), use
+      // innerHTML so the markup renders. Plain strings still go through
+      // textContent for safety.
+      if(/[<&]/.test(T[k])) el.innerHTML = T[k];
+      else el.textContent = T[k];
     });
     const inp=document.getElementById('msgInput');
     if(inp) inp.placeholder=T.placeholder;

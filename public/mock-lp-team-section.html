@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] LP — AI Agent Team Section</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);--peach-light:#fde8d8;
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;--bg-deep:#1e1410;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --line:rgba(180,120,80,.14);--line-strong:rgba(180,120,80,.22);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;--pink:#ec4899;
+  --sans:'Noto Sans JP',-apple-system,sans-serif;
+  --display:'Bebas Neue','Hiragino Mincho ProN',serif;
+  --mono:'DM Mono','SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.7;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);}
+
+/* Reuse the LP visual language */
+.section{padding:120px 24px;position:relative;overflow:hidden;}
+.section-inner{max-width:1200px;margin:0 auto;}
+.section-head{text-align:center;margin-bottom:64px;}
+.kicker{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.18em;color:var(--peach-dark);background:var(--peach-soft);padding:5px 12px;border-radius:99px;margin-bottom:14px;text-transform:uppercase;}
+.live-pill{display:inline-block;background:#dc2626;color:#fff;font-size:10px;font-weight:900;letter-spacing:.08em;padding:3px 10px;border-radius:99px;margin-right:8px;text-transform:uppercase;animation:livePulse 2.4s infinite;vertical-align:middle;}
+@keyframes livePulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5);}50%{box-shadow:0 0 0 8px rgba(220,38,38,0);}}
+.h2{font-family:var(--display);font-size:clamp(36px,5.5vw,64px);font-weight:400;line-height:1.05;letter-spacing:-.01em;margin-bottom:16px;color:var(--text);}
+.lead{font-size:17px;color:var(--text-muted);max-width:680px;margin:0 auto;line-height:1.75;}
+
+/* ── TEAM SECTION (the new one) ── */
+.section-team{
+  background:linear-gradient(180deg,var(--bg-warm) 0%,#fff8ef 50%,var(--bg-warm) 100%);
+  position:relative;
+}
+.section-team::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 20% 30%,rgba(251,146,60,.10),transparent 50%),
+    radial-gradient(circle at 80% 70%,rgba(139,92,246,.08),transparent 50%);
+  pointer-events:none;
+}
+.section-team .section-inner{position:relative;}
+
+.team-hero{
+  display:grid;grid-template-columns:1fr 1.05fr;gap:60px;align-items:center;margin-bottom:72px;
+}
+.team-hero-text h3{
+  font-family:var(--display);font-weight:400;font-size:48px;line-height:1.05;letter-spacing:-.01em;margin-bottom:20px;
+}
+.team-hero-text h3 .accent{color:var(--peach-dark);position:relative;display:inline-block;}
+.team-hero-text h3 .accent::after{
+  content:'';position:absolute;left:0;right:0;bottom:-2px;height:9px;background:rgba(251,146,60,.32);z-index:-1;
+}
+.team-hero-text p{font-size:16px;color:var(--text-muted);line-height:1.85;margin-bottom:18px;}
+.team-hero-text p b{color:var(--text);}
+.team-hero-text ul{list-style:none;padding:0;margin:0 0 24px;}
+.team-hero-text ul li{
+  position:relative;padding-left:28px;margin-bottom:10px;font-size:14.5px;color:var(--text-muted);line-height:1.7;
+}
+.team-hero-text ul li::before{
+  content:'';position:absolute;left:0;top:6px;width:18px;height:18px;
+  border-radius:50%;background:var(--peach);
+  background-image:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  box-shadow:0 2px 6px rgba(251,146,60,.32);
+}
+.team-hero-text ul li::after{
+  content:'✓';position:absolute;left:4px;top:5px;color:#fff;font-weight:900;font-size:11px;
+}
+.btn-primary-team{
+  display:inline-flex;align-items:center;gap:8px;background:var(--peach);color:#fff;
+  font-size:15px;font-weight:800;padding:14px 28px;border-radius:11px;border:0;cursor:pointer;
+  font-family:inherit;box-shadow:0 8px 24px rgba(251,146,60,.32);transition:all .15s;
+}
+.btn-primary-team:hover{background:var(--peach-dark);transform:translateY(-2px);box-shadow:0 12px 32px rgba(251,146,60,.42);}
+
+/* ── Team visual on the right ── */
+.team-visual{
+  position:relative;background:#fff;border:1px solid var(--line-strong);
+  border-radius:24px;padding:28px;box-shadow:0 24px 64px rgba(180,90,30,.12);
+}
+.team-visual-head{
+  display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px dashed var(--line);
+  margin-bottom:18px;
+}
+.team-visual-head .tv-emo{
+  width:42px;height:42px;border-radius:11px;
+  background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.team-visual-head .tv-name{flex:1;}
+.team-visual-head .tv-name .h{font-size:14.5px;font-weight:900;letter-spacing:-.005em;}
+.team-visual-head .tv-name .s{font-size:11px;color:var(--text-subtle);font-weight:700;}
+.team-visual-head .tv-badge{
+  background:rgba(251,146,60,.14);color:var(--peach-dark);font-size:9.5px;font-weight:900;
+  padding:3px 9px;border-radius:99px;letter-spacing:.05em;
+}
+
+.tv-members{display:flex;flex-direction:column;gap:8px;}
+.tv-mem{
+  display:flex;align-items:center;gap:11px;padding:9px 12px;background:var(--bg-warm);
+  border:1px solid var(--line);border-radius:10px;font-size:12.5px;font-weight:700;
+}
+.tv-mem .av{
+  width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;
+}
+.tv-mem .av.a1{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.tv-mem .av.a2{background:linear-gradient(135deg,#ede9fe,#a78bfa);}
+.tv-mem .av.a3{background:linear-gradient(135deg,#dbeafe,#3b82f6);}
+.tv-mem .av.a4{background:linear-gradient(135deg,#fce7f3,#ec4899);}
+.tv-mem .av.a5{background:linear-gradient(135deg,#d1fae5,#10b981);}
+.tv-mem .nm{flex:1;color:var(--text);}
+.tv-mem .tag{
+  font-size:9.5px;font-weight:900;color:var(--peach-dark);background:rgba(251,146,60,.10);
+  padding:2px 8px;border-radius:99px;letter-spacing:.04em;
+}
+.tv-flow{
+  margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px dashed var(--peach);
+  border-radius:10px;font-size:11.5px;color:var(--peach-dark);font-weight:700;line-height:1.65;text-align:center;
+}
+.tv-flow .arrow{margin:0 5px;color:var(--peach);font-weight:900;}
+
+/* ── 3 capability cards ── */
+.team-feats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.team-feat{
+  background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px 24px;
+  position:relative;transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.team-feat:hover{transform:translateY(-3px);border-color:rgba(251,146,60,.32);box-shadow:0 10px 28px rgba(180,90,30,.10);}
+.team-feat .ic{font-size:34px;line-height:1;margin-bottom:14px;}
+.team-feat h4{font-family:var(--display);font-weight:400;font-size:24px;letter-spacing:-.01em;margin-bottom:8px;line-height:1.15;}
+.team-feat p{font-size:13.5px;color:var(--text-muted);line-height:1.75;}
+.team-feat .ribbon{
+  position:absolute;top:14px;right:14px;
+  font-size:9.5px;font-weight:900;letter-spacing:.06em;
+  background:rgba(251,146,60,.14);color:var(--peach-dark);
+  padding:3px 9px;border-radius:99px;
+}
+
+/* ── Templates row ── */
+.team-templates{margin-top:64px;}
+.team-templates-h{text-align:center;margin-bottom:24px;}
+.team-templates-h .lbl{
+  font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--text-subtle);text-transform:uppercase;
+}
+.team-templates-h h4{font-family:var(--display);font-size:28px;font-weight:400;letter-spacing:-.005em;margin-top:6px;}
+.team-tmpl-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;
+}
+.team-tmpl{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 16px 16px;
+  display:flex;flex-direction:column;gap:8px;transition:all .15s;cursor:pointer;
+}
+.team-tmpl:hover{border-color:var(--peach);transform:translateY(-2px);}
+.team-tmpl .cover{
+  height:54px;border-radius:9px;
+  background:linear-gradient(135deg,#fff7ee,#fed7aa);
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+}
+.team-tmpl .price{
+  display:inline-block;background:rgba(16,185,129,.16);color:#047857;
+  font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em;
+  align-self:flex-start;
+}
+.team-tmpl .nm{font-size:13px;font-weight:900;letter-spacing:-.005em;line-height:1.3;}
+.team-tmpl .ds{font-size:11px;color:var(--text-subtle);line-height:1.55;flex:1;}
+.team-tmpl .av-row{display:flex;align-items:center;gap:0;}
+.team-tmpl .av-row .av{
+  width:22px;height:22px;border-radius:6px;background:var(--bg-warm);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-size:12px;margin-right:-3px;
+}
+.team-tmpl .av-row .ct{margin-left:8px;font-size:10.5px;color:var(--text-subtle);font-weight:700;}
+
+@media (max-width:900px){
+  .team-hero{grid-template-columns:1fr;gap:36px;}
+  .team-feats{grid-template-columns:1fr;}
+  .section{padding:80px 20px;}
+}
+</style>
+</head>
+<body>
+
+<div class="banner">📐 <b>MOCK</b> ・ LP に追加する「AI Agent Team」セクション ・ 既存セクション (Templates ↔ Share) の間に挿入する想定</div>
+
+<!-- ════ NEW: AI AGENT TEAM SECTION ════ -->
+<section class="section section-team" id="team">
+  <div class="section-inner">
+
+    <div class="section-head">
+      <span class="live-pill">NEW</span>
+      <span class="kicker">AI Agent Team</span>
+      <h2 class="h2">1体じゃない。<br>チームで動かせ。</h2>
+      <p class="lead">
+        AI が自分で <b>必要な役割を分析・設計</b>し、3〜10 体のエージェントを 1 つのチームに編成。<br>
+        @メンションで切り替えながら、業務を丸ごと自動化します。
+      </p>
+    </div>
+
+    <!-- HERO row: text + visual mockup -->
+    <div class="team-hero">
+      <div class="team-hero-text">
+        <h3>「<span class="accent">EC を作って販売したい</span>」<br>と書くだけで、5体の AI が編成される。</h3>
+        <p>
+          目的を入力 → AI が役割を分解 → <b>商品ソーシャ・デザイナー・サイト構築・SNS 運用・売上分析</b>の 5 人組チームが起動。
+          初日からチャットで指示できます。
+        </p>
+        <ul>
+          <li>AI が <b>3〜10 体</b>のエージェントを自動設計 (15-30 秒)</li>
+          <li>あとから <b>メンバー追加・編集・削除</b>もチャットから可</li>
+          <li>@SocialManager のように <b>個別に呼び出して</b>ピンポイント依頼</li>
+          <li>編成したチームは <b>URL 共有 / Agent Store で販売</b>もできる</li>
+        </ul>
+        <button class="btn-primary-team" onclick="alert('プロト: サインアップフローを開く')">
+          無料でチームを作る →
+        </button>
+      </div>
+
+      <!-- right: visual chat-like preview -->
+      <div class="team-visual">
+        <div class="team-visual-head">
+          <div class="tv-emo">🛍</div>
+          <div class="tv-name">
+            <div class="h">EC Launch チーム</div>
+            <div class="s">AI が設計 ・ 5 人体制 ・ 起動済み</div>
+          </div>
+          <span class="tv-badge">🎯 TEAM</span>
+        </div>
+        <div class="tv-members">
+          <div class="tv-mem"><div class="av a1">🛍</div><div class="nm">Product Sourcer</div><span class="tag">@product</span></div>
+          <div class="tv-mem"><div class="av a2">📸</div><div class="nm">Visual Designer</div><span class="tag">@design</span></div>
+          <div class="tv-mem"><div class="av a3">🌐</div><div class="nm">Storefront Architect</div><span class="tag">@store</span></div>
+          <div class="tv-mem"><div class="av a4">📱</div><div class="nm">Social Manager</div><span class="tag">@social</span></div>
+          <div class="tv-mem"><div class="av a5">📊</div><div class="nm">Revenue Analyst</div><span class="tag">@rev</span></div>
+        </div>
+        <div class="tv-flow">
+          @product がトレンド分析<span class="arrow">→</span>@design が画像生成<span class="arrow">→</span>@store が出店
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 feature cards -->
+    <div class="team-feats">
+      <div class="team-feat">
+        <span class="ribbon">AUTO</span>
+        <div class="ic">✨</div>
+        <h4>AI が設計する</h4>
+        <p>「ECサイトを作って販売したい」とだけ書けば、AI が必要な業務を分解して、最適な 3〜10 体のエージェントを生成。役割・スキル・ペルソナまで全部入りで起動します。</p>
+      </div>
+      <div class="team-feat">
+        <span class="ribbon">@MENTION</span>
+        <div class="ic">🎯</div>
+        <h4>個別に呼び出す</h4>
+        <p>チャットで <code style="background:var(--peach-soft);padding:2px 6px;border-radius:5px;font-family:var(--mono);font-size:12px">@SocialManager</code> のように指定すると、その AI の視点で返答。複数の専門家を一つのチャットで使い分けられます。</p>
+      </div>
+      <div class="team-feat">
+        <span class="ribbon">SHARE & SELL</span>
+        <div class="ic">🛍</div>
+        <h4>共有する・売る</h4>
+        <p>編成した Team は URL 1 本で SNS 共有 (X 用 OG 画像も自動生成)。Agent Store に出店すれば、買い切り価格 70% + 利用料 10% が収益として還元されます。</p>
+      </div>
+    </div>
+
+    <!-- Templates row -->
+    <div class="team-templates">
+      <div class="team-templates-h">
+        <span class="lbl">Ready-Made Templates</span>
+        <h4>すぐ使えるチームテンプレ ・ 5 種類</h4>
+      </div>
+      <div class="team-tmpl-grid">
+        <div class="team-tmpl">
+          <div class="cover">🛍</div>
+          <span class="price">FREE</span>
+          <div class="nm">EC Launch Starter</div>
+          <div class="ds">商品ソーシャ → 画像生成 → サイト構築 → SNS 集客 → 売上分析。EC を丸ごと自動化。</div>
+          <div class="av-row">
+            <div class="av">🛍</div><div class="av">📸</div><div class="av">🌐</div><div class="av">📱</div><div class="av">📊</div>
+            <span class="ct">5 agents</span>
+          </div>
+        </div>
+        <div class="team-tmpl">
+          <div class="cover">📱</div>
+          <span class="price">FREE</span>
+          <div class="nm">SNS Growth Starter</div>
+          <div class="ds">トレンド分析 → 投稿執筆 → 最適時刻で予約配信。X / IG / TikTok を同時運用。</div>
+          <div class="av-row">
+            <div class="av">📈</div><div class="av">✍️</div><div class="av">📅</div>
+            <span class="ct">3 agents</span>
+          </div>
+        </div>
+        <div class="team-tmpl">
+          <div class="cover">💼</div>
+          <span class="price">FREE</span>
+          <div class="nm">Solo Founder Toolkit</div>
+          <div class="ds">メール返信 + 議事録 + タスク管理。1 人会社の日常業務を全部こなす 3 人組。</div>
+          <div class="av-row">
+            <div class="av">📧</div><div class="av">📝</div><div class="av">✅</div>
+            <span class="ct">3 agents</span>
+          </div>
+        </div>
+        <div class="team-tmpl">
+          <div class="cover">🎓</div>
+          <span class="price">FREE</span>
+          <div class="nm">Personal Tutor Squad</div>
+          <div class="ds">調査 + 解説 + 小テスト作成。何かを学ぶときに必要な 3 役を一気に揃える。</div>
+          <div class="av-row">
+            <div class="av">🔍</div><div class="av">🎓</div><div class="av">🧠</div>
+            <span class="ct">3 agents</span>
+          </div>
+        </div>
+        <div class="team-tmpl">
+          <div class="cover" style="background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff;">💻</div>
+          <span class="price" style="background:rgba(251,146,60,.16);color:var(--peach-dark)">$26</span>
+          <div class="nm">Dev Squad</div>
+          <div class="ds">レビュー + バグ修正 + テスト書き + デプロイ補助。コード品質をチームで底上げ。</div>
+          <div class="av-row">
+            <div class="av">🔍</div><div class="av">🔧</div><div class="av">🧪</div><div class="av">🚀</div>
+            <span class="ct">4 agents</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Note panel -->
+<div style="max-width:900px;margin:0 auto;padding:32px 24px 80px;font-size:13px;color:var(--text-subtle);line-height:1.85">
+  <div style="background:#fff;border:1px solid var(--line);border-radius:13px;padding:20px 22px">
+    <div style="font-weight:900;font-size:13px;color:var(--text);margin-bottom:8px">📐 設計メモ</div>
+    <ul style="padding-left:20px;line-height:2">
+      <li>このセクションは LP の <b>Templates (#4) と Share (#5) の間</b>に挿入する想定</li>
+      <li>左カラムにストーリー (目的 → AI 設計 → 起動)、右カラムに実画面プレビューを並べる構成</li>
+      <li>3 feat カードでチームの 3 つの強み (AUTO / @MENTION / SHARE & SELL) を強調</li>
+      <li>下段の Templates 行で「すぐ使える具体例」を提示 (Hero に EC が出ているので、SNS / 1 人会社 / 学習 / Dev の 4 つで広がりを見せる)</li>
+      <li>背景は radial gradient で peach 系統と紫を混ぜて、既存セクションから視覚的に差別化</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

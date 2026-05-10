@@ -733,6 +733,209 @@ input,textarea{font-family:var(--sans);}
 .market-cat{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:#fff;border:1px solid var(--wire3);color:var(--text2);cursor:pointer;}
 .market-cat:hover{border-color:var(--peach);}
 .market-cat.on{background:var(--peach);color:#fff;border-color:var(--peach);}
+
+/* ── Agent Store v2 (modern marketplace) ─────────────────── */
+.wizard.storev2{padding:0;background:var(--bg);width:1200px;display:flex;flex-direction:column;}
+.storev2-top{
+  position:sticky;top:0;z-index:5;background:rgba(253,248,243,.96);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--wire2);padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.storev2-title{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.005em;font-size:14px;color:var(--text);}
+.storev2-brand-mark{
+  width:28px;height:28px;border-radius:7px;background:var(--peach);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:18px;
+}
+.storev2-h{font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:22px;font-weight:400;letter-spacing:.01em;}
+.storev2-search{
+  flex:1;min-width:220px;background:#fff;border:1px solid var(--wire2);border-radius:10px;
+  padding:9px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2);transition:border-color .14s,box-shadow .14s;
+}
+.storev2-search:hover{border-color:var(--peach);box-shadow:0 0 0 4px rgba(251,146,60,.10);}
+.storev2-search input{flex:1;border:0;background:transparent;font-family:inherit;font-size:13px;color:var(--text);outline:none;}
+.storev2-search input::placeholder{color:var(--text3);}
+.storev2-search kbd{margin-left:auto;font-family:'DM Mono','SF Mono',Menlo,monospace;font-size:10px;color:var(--text3);background:rgba(9,9,11,.06);border:1px solid var(--wire2);padding:2px 6px;border-radius:5px;}
+.storev2-actions{display:flex;gap:8px;}
+.storev2-btn{font-family:inherit;font-size:13px;font-weight:700;padding:8px 14px;border-radius:9px;cursor:pointer;border:0;}
+.storev2-btn.ghost{background:transparent;color:var(--text);border:1px solid var(--wire2);}
+.storev2-btn.ghost:hover{background:#fff;border-color:var(--peach);}
+.storev2-btn.primary{background:var(--peach);color:#fff;box-shadow:0 4px 12px rgba(251,146,60,.32);}
+.storev2-btn.primary:hover{background:var(--peach-dark);}
+
+.storev2-filters{
+  background:#fff;border-bottom:1px solid var(--wire2);padding:11px 22px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.storev2-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.storev2-pill-divider{width:1px;height:18px;background:var(--wire2);margin:0 4px;}
+.storev2-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.storev2-pill{
+  font-family:inherit;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;
+  background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);cursor:pointer;
+  transition:all .14s;display:inline-flex;align-items:center;gap:5px;
+}
+.storev2-pill:hover{border-color:var(--peach);color:var(--peach-dark);}
+.storev2-pill.on{background:var(--text);color:#fff5e6;border-color:var(--text);}
+.storev2-pill .ct{font-family:'DM Mono','SF Mono',Menlo,monospace;font-size:10px;opacity:.7;font-weight:600;}
+.storev2-pill.fav.on{background:var(--rose);border-color:var(--rose);}
+.storev2-sort{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);font-weight:600;}
+.storev2-sort select{font-family:inherit;font-size:12.5px;font-weight:700;padding:6px 10px;border-radius:8px;background:#fff;border:1px solid var(--wire2);color:var(--text);cursor:pointer;}
+
+.storev2-body{padding:32px 22px 36px;overflow-y:auto;flex:1;min-height:0;}
+.storev2-section{margin-bottom:48px;}
+.storev2-section:last-child{margin-bottom:0;}
+.storev2-empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:13px;font-weight:600;}
+
+.storev2-section-h{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.storev2-section-h h2{font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-weight:400;font-size:30px;letter-spacing:-.005em;line-height:1.05;}
+.storev2-section-h h2 .muted{color:var(--text3);font-size:16px;letter-spacing:.04em;font-weight:400;}
+.storev2-section-h .more{font-size:12.5px;font-weight:700;color:var(--peach-dark);text-decoration:none;cursor:pointer;background:transparent;border:0;font-family:inherit;}
+
+/* Hero featured */
+.storev2-hero{
+  background:linear-gradient(135deg,#fff7ee 0%,#fed7aa 50%,#fb923c 100%);
+  border-radius:22px;padding:32px;display:grid;grid-template-columns:240px 1fr;gap:32px;align-items:center;
+  position:relative;overflow:hidden;cursor:pointer;
+  box-shadow:0 16px 48px rgba(180,90,30,.16);
+}
+.storev2-hero::before{content:'';position:absolute;top:-80px;right:-80px;width:400px;height:400px;border-radius:50%;background:rgba(255,255,255,.32);filter:blur(60px);}
+.storev2-hero::after{content:'';position:absolute;bottom:-100px;left:-60px;width:260px;height:260px;border-radius:50%;background:rgba(234,88,12,.18);filter:blur(70px);}
+.storev2-hero-cover{position:relative;z-index:2;}
+.storev2-hero-cover .badge{display:inline-flex;align-items:center;gap:6px;background:#1a0a00;color:#fff5e6;font-size:10.5px;font-weight:900;letter-spacing:.10em;padding:5px 11px;border-radius:99px;text-transform:uppercase;margin-bottom:14px;}
+.storev2-hero-cover .badge .gold{color:#f59e0b;}
+.storev2-hero-cover .em-card{
+  width:200px;height:200px;border-radius:28px;background:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:108px;
+  box-shadow:0 20px 48px rgba(0,0,0,.18);transform:rotate(-6deg);margin-left:8px;
+}
+.storev2-hero-info{position:relative;z-index:2;}
+.storev2-hero-pills{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.storev2-hero-pill{background:rgba(26,10,0,.85);color:#fff5e6;font-size:10px;font-weight:900;letter-spacing:.05em;padding:4px 11px;border-radius:99px;}
+.storev2-hero-pill.team{background:#fff;color:var(--peach-dark);}
+.storev2-hero-info h3{font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:48px;font-weight:400;line-height:1;letter-spacing:-.005em;margin-bottom:12px;color:#1a0a00;}
+.storev2-hero-info .desc{font-size:14.5px;color:#3d1f0a;line-height:1.65;margin-bottom:18px;max-width:560px;}
+.storev2-hero-stats{display:flex;align-items:center;gap:12px;font-size:12px;color:#3d1f0a;font-weight:700;margin-bottom:18px;flex-wrap:wrap;}
+.storev2-hero-cta-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.storev2-hero-cta-row .storev2-btn.primary{background:#1a0a00;color:#fff5e6;padding:11px 22px;font-size:13.5px;box-shadow:0 8px 22px rgba(26,10,0,.28);}
+.storev2-hero-cta-row .storev2-btn.primary:hover{background:#3d1f0a;}
+.storev2-hero-cta-row .price{font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:30px;font-weight:400;color:#1a0a00;line-height:1;}
+.storev2-hero-cta-row .price.free{color:#047857;}
+.storev2-hero-cta-row .price .small{font-size:12px;color:#5c3a1e;font-weight:700;font-family:inherit;}
+.storev2-hero-members{position:absolute;right:32px;bottom:32px;display:flex;align-items:center;z-index:3;}
+.storev2-hero-members .av{width:36px;height:36px;border-radius:9px;background:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;margin-left:-10px;box-shadow:0 4px 10px rgba(0,0,0,.15);}
+.storev2-hero-members .av:first-child{margin-left:0;}
+.storev2-hero-members .ct{margin-left:12px;background:#1a0a00;color:#fff5e6;font-size:11px;font-weight:900;padding:4px 10px;border-radius:99px;letter-spacing:.04em;}
+
+/* Cards */
+.storev2-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.storev2-card{
+  background:#fff;border:1px solid var(--wire2);border-radius:15px;overflow:hidden;
+  transition:transform .15s,border-color .15s,box-shadow .15s;cursor:pointer;position:relative;
+  font-family:inherit;text-align:left;color:var(--text);padding:0;border-style:solid;
+  display:flex;flex-direction:column;
+}
+.storev2-card:hover{transform:translateY(-3px);border-color:var(--peach);box-shadow:0 14px 32px rgba(180,90,30,.10);}
+.storev2-card .cv{
+  height:108px;background:linear-gradient(135deg,#fff7ee,#fed7aa);
+  display:flex;align-items:center;justify-content:center;font-size:46px;position:relative;flex-shrink:0;
+}
+.storev2-card.team .cv{background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff;}
+.storev2-card.team .cv::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(251,146,60,.32),transparent 60%);}
+.storev2-card .ribbon{position:absolute;top:9px;left:9px;background:rgba(26,10,0,.82);color:#fff5e6;font-size:9px;font-weight:900;letter-spacing:.05em;padding:3px 8px;border-radius:99px;backdrop-filter:blur(4px);}
+.storev2-card .ribbon.hot{background:linear-gradient(90deg,#dc2626,#f59e0b);color:#fff;}
+.storev2-card .ribbon.new{background:#10b981;color:#fff;}
+.storev2-card .ribbon.rank{background:#1a0a00;color:#f59e0b;font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:14px;letter-spacing:0;padding:1px 9px;font-weight:400;}
+.storev2-card .fav{position:absolute;top:9px;right:9px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.86);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text3);border:0;cursor:pointer;backdrop-filter:blur(4px);}
+.storev2-card .fav.on{color:var(--rose);}
+.storev2-card .body{padding:14px;display:flex;flex-direction:column;flex:1;}
+.storev2-card .badges{display:flex;gap:5px;margin-bottom:7px;flex-wrap:wrap;}
+.storev2-card .badges .b{font-size:9px;font-weight:900;letter-spacing:.04em;padding:2px 7px;border-radius:99px;background:rgba(251,146,60,.14);color:var(--peach-dark);}
+.storev2-card .badges .b.team{background:#1a0a00;color:#fff5e6;}
+.storev2-card .badges .b.solo{background:rgba(59,130,246,.14);color:#1d4ed8;}
+.storev2-card .nm{font-size:13.5px;font-weight:900;letter-spacing:-.005em;line-height:1.25;margin-bottom:5px;}
+.storev2-card .ds{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;}
+.storev2-card .skills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px;}
+.storev2-card .skill{background:var(--cream2);color:var(--text2);font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:99px;border:1px solid var(--wire2);}
+.storev2-card .meta{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--wire2);font-size:10.5px;color:var(--text3);font-weight:700;gap:6px;flex-wrap:wrap;}
+.storev2-card .meta .stats{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.storev2-card .meta .star{color:#f59e0b;}
+.storev2-card .meta .price{font-family:'DM Mono','SF Mono',Menlo,monospace;font-size:11.5px;font-weight:900;color:var(--peach-dark);}
+.storev2-card .meta .price.free{color:#10b981;}
+.storev2-card .meta .price.purchased{color:#10b981;}
+
+/* Horizontal scroll */
+.storev2-h-scroll{display:flex;gap:12px;overflow-x:auto;padding:4px 4px 14px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+.storev2-h-scroll::-webkit-scrollbar{height:6px;}
+.storev2-h-scroll::-webkit-scrollbar-thumb{background:rgba(180,120,80,.18);border-radius:3px;}
+.storev2-h-scroll .storev2-card{flex:0 0 264px;scroll-snap-align:start;}
+
+/* Category tiles */
+.storev2-cat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
+.storev2-cat{
+  position:relative;background:#fff;border:1px solid var(--wire2);border-radius:13px;padding:18px 12px;
+  text-align:center;cursor:pointer;transition:all .14s;text-decoration:none;color:var(--text);overflow:hidden;font-family:inherit;
+}
+.storev2-cat::before{content:'';position:absolute;inset:0;opacity:.06;transition:opacity .14s;}
+.storev2-cat:hover{transform:translateY(-2px);border-color:var(--peach);box-shadow:0 8px 20px rgba(180,90,30,.10);}
+.storev2-cat:hover::before{opacity:.12;}
+.storev2-cat.c1::before{background:linear-gradient(135deg,#fb923c,#ec4899);}
+.storev2-cat.c2::before{background:linear-gradient(135deg,#3b82f6,#8b5cf6);}
+.storev2-cat.c3::before{background:linear-gradient(135deg,#10b981,#3b82f6);}
+.storev2-cat.c4::before{background:linear-gradient(135deg,#ec4899,#f59e0b);}
+.storev2-cat.c5::before{background:linear-gradient(135deg,#8b5cf6,#3b82f6);}
+.storev2-cat.c6::before{background:linear-gradient(135deg,#f59e0b,#fb923c);}
+.storev2-cat .em{font-size:32px;line-height:1;margin-bottom:6px;position:relative;z-index:1;}
+.storev2-cat .nm{font-size:12.5px;font-weight:900;letter-spacing:-.005em;margin-bottom:2px;position:relative;z-index:1;}
+.storev2-cat .ct{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;font-family:'DM Mono','SF Mono',Menlo,monospace;position:relative;z-index:1;}
+
+/* Top creators */
+.storev2-creators{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
+.storev2-creator{
+  background:#fff;border:1px solid var(--wire2);border-radius:13px;padding:16px 10px;text-align:center;
+  cursor:pointer;transition:all .14s;text-decoration:none;color:var(--text);font-family:inherit;
+}
+.storev2-creator:hover{transform:translateY(-2px);border-color:var(--peach);}
+.storev2-creator .av{
+  width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#ea580c);
+  display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;
+  margin:0 auto 8px;box-shadow:0 4px 12px rgba(251,146,60,.32);
+}
+.storev2-creator .nm{font-size:11.5px;font-weight:900;letter-spacing:-.005em;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:3px;}
+.storev2-creator .verified{display:inline-flex;width:11px;height:11px;border-radius:50%;background:#2563eb;color:#fff;align-items:center;justify-content:center;font-size:7px;font-weight:900;}
+.storev2-creator .meta{font-size:10px;color:var(--text3);font-weight:700;font-family:'DM Mono','SF Mono',Menlo,monospace;}
+
+/* Become a creator CTA */
+.storev2-cta{
+  background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff5e6;border-radius:22px;padding:36px;
+  display:grid;grid-template-columns:1.3fr 1fr;gap:36px;align-items:center;position:relative;overflow:hidden;
+}
+.storev2-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 30%,rgba(251,146,60,.32),transparent 60%);pointer-events:none;}
+.storev2-cta-text{position:relative;z-index:2;}
+.storev2-cta-text .kicker{display:inline-block;font-family:'DM Mono','SF Mono',Menlo,monospace;font-size:10px;font-weight:600;letter-spacing:.18em;color:var(--peach);background:rgba(251,146,60,.14);padding:5px 11px;border-radius:99px;margin-bottom:12px;text-transform:uppercase;}
+.storev2-cta-text h3{font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:42px;font-weight:400;line-height:1.05;letter-spacing:-.005em;margin-bottom:14px;color:#fff5e6;}
+.storev2-cta-text h3 .accent{color:var(--peach);}
+.storev2-cta-text p{font-size:13.5px;color:rgba(255,245,230,.78);line-height:1.7;margin-bottom:18px;}
+.storev2-cta-text .storev2-btn{padding:11px 22px;background:var(--peach);color:#0c0a09;font-size:13.5px;}
+.storev2-cta-text .storev2-btn:hover{background:#fff5e6;}
+.storev2-cta-stats{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.storev2-cta-stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:14px;}
+.storev2-cta-stat .num{font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:34px;color:var(--peach);line-height:1;letter-spacing:-.005em;margin-bottom:3px;}
+.storev2-cta-stat .lbl{font-size:10px;color:rgba(255,245,230,.72);font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+
+@media (max-width:980px){
+  .storev2-hero{grid-template-columns:1fr;}
+  .storev2-hero-cover .em-card{width:140px;height:140px;font-size:72px;margin-left:0;}
+  .storev2-hero-info h3{font-size:36px;}
+  .storev2-grid{grid-template-columns:repeat(2,1fr);}
+  .storev2-cat-grid{grid-template-columns:repeat(3,1fr);}
+  .storev2-creators{grid-template-columns:repeat(3,1fr);}
+  .storev2-cta{grid-template-columns:1fr;padding:28px;}
+  .storev2-cta-text h3{font-size:32px;}
+}
+@media (max-width:640px){
+  .storev2-grid{grid-template-columns:1fr;}
+  .storev2-cat-grid{grid-template-columns:repeat(2,1fr);}
+  .storev2-creators{grid-template-columns:repeat(2,1fr);}
+}
 .market-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
 .market-card{position:relative;background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:all .15s;}
 .market-card:hover{border-color:var(--peach-light);transform:translateY(-2px);box-shadow:0 6px 18px rgba(180,120,80,.08);}
@@ -2342,37 +2545,47 @@ body{color:#f0f0f8;}
 
 <!-- ══ AGENT STORE OVERLAY ════════════════════════════════ -->
 <div class="overlay" id="marketOverlay">
-  <div class="wizard" style="max-width:900px">
-    <div class="wiz-top">
-      <div class="wiz-title">🌐 Agent Store</div>
-      <button class="wiz-close" onclick="closeMarket()">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
+  <div class="wizard storev2" style="max-width:1200px;height:auto;max-height:calc(100vh - 32px)">
+    <!-- Sticky top bar: brand · title · search · CTAs -->
+    <div class="storev2-top">
+      <div class="storev2-title">
+        <span class="storev2-brand-mark">M</span>
+        <span class="storev2-h"><span data-storev2="storeTitle">Agent Store</span></span>
+      </div>
+      <div class="storev2-search">
+        <span style="font-size:14px">🔍</span>
+        <input id="marketSearch" placeholder="Search agents, teams, creators…" oninput="onMarketSearchInput()">
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="storev2-actions">
+        <button class="storev2-btn ghost" onclick="closeMarket()" title="Close" data-storev2="storeClose">Close</button>
+      </div>
     </div>
-    <div class="wiz-body" style="max-height:75vh;overflow:auto">
-      <div class="step-h" style="display:flex;align-items:center;gap:8px">出店中のエージェントから選ぶ</div>
-      <div class="step-s">他のクリエイターが出店した AI エージェントを、自分のチームに迎え入れることができます。<br>買い切り価格の 70% + 利用料の 10% が元のクリエイターに還元されます。</div>
-
-      <div class="market-bar">
-        <div class="market-search">
-          <span>🔍</span>
-          <input id="marketSearch" placeholder="エージェント・カテゴリで検索" oninput="onMarketSearchInput()">
-        </div>
-        <select id="marketSort" class="market-sort" onchange="setMarketSort(this.value)">
-          <option value="popular">🔥 人気順</option>
-          <option value="recent">✨ 新着順</option>
-          <option value="top_rated">⭐ 高評価順</option>
+    <!-- Filter pills + sort -->
+    <div class="storev2-filters">
+      <div class="storev2-pills" id="marketCats"></div>
+      <div class="storev2-pill-divider"></div>
+      <div class="storev2-tags" id="marketTags"></div>
+      <div class="storev2-sort">
+        <span data-storev2="sortBy">Sort by</span>
+        <select id="marketSort" onchange="setMarketSort(this.value)">
+          <option value="popular">🔥 Trending</option>
+          <option value="recent">✨ Newest</option>
+          <option value="top_rated">⭐ Top rated</option>
         </select>
       </div>
-      <div class="market-cats" id="marketCats"></div>
-      <div class="market-tags" id="marketTags" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
-
-      <div class="market-grid" id="marketGrid"></div>
-      <div id="marketEmpty" class="market-empty" style="display:none">該当するエージェントが見つかりません</div>
-
-      <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
-        <button class="btn-back" onclick="closeMarket()">閉じる</button>
-      </div>
+    </div>
+    <!-- Body sections -->
+    <div class="storev2-body">
+      <div id="storev2Hero" class="storev2-section"></div>
+      <div id="storev2Picks" class="storev2-section"></div>
+      <div id="storev2Trending" class="storev2-section"></div>
+      <div id="storev2Cats" class="storev2-section"></div>
+      <div id="storev2Creators" class="storev2-section"></div>
+      <div id="storev2CTA" class="storev2-section"></div>
+      <!-- Empty / loading states -->
+      <div id="marketGrid" style="display:none"></div>
+      <div id="marketEmpty" class="storev2-empty" style="display:none">No matching agents — try a different search.</div>
     </div>
   </div>
 </div>
@@ -9386,11 +9599,11 @@ async function openAgentStore(){
 
 function buildMarketTags(){
   var el=document.getElementById('marketTags'); if(!el) return;
-  // Favorites toggle + tag chips
-  var favPart = '<button type="button" class="market-cat'+(_marketOnlyFavs?' on':'')+'" style="background:'+(_marketOnlyFavs?'var(--rose)':'#fff')+';color:'+(_marketOnlyFavs?'#fff':'var(--text2)')+';border-color:'+(_marketOnlyFavs?'var(--rose)':'var(--wire3)')+'" onclick="toggleMarketFavs()">❤ お気に入り</button>';
+  // Favorites toggle + tag chips (storev2 styled)
+  var favPart = '<button type="button" class="storev2-pill fav'+(_marketOnlyFavs?' on':'')+'" onclick="toggleMarketFavs()">❤ '+L('お気に入り','Favorites')+'</button>';
   var tagPart = (_marketTagDefs||[]).map(function(t){
     var on = _marketTags.indexOf(t.id)>=0;
-    return '<button type="button" class="market-cat'+(on?' on':'')+'" onclick="toggleMarketTag(\''+t.id+'\')">#'+esc(t.label)+'</button>';
+    return '<button type="button" class="storev2-pill'+(on?' on':'')+'" onclick="toggleMarketTag(\''+t.id+'\')">#'+esc(t.label)+'</button>';
   }).join('');
   el.innerHTML = favPart + tagPart;
 }
@@ -9408,9 +9621,20 @@ function toggleMarketFavs(){
 function closeMarket(){ document.getElementById('marketOverlay').classList.remove('open'); }
 
 async function loadMarket(){
-  var grid=document.getElementById('marketGrid');
+  var heroEl = document.getElementById('storev2Hero');
+  var picksEl = document.getElementById('storev2Picks');
+  var trendEl = document.getElementById('storev2Trending');
+  var catsEl  = document.getElementById('storev2Cats');
+  var creatorsEl = document.getElementById('storev2Creators');
+  var ctaEl   = document.getElementById('storev2CTA');
   var empty=document.getElementById('marketEmpty');
-  if(grid) grid.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--text3);font-size:13px;font-weight:600;grid-column:1/-1">読み込み中…</div>';
+  // Loading state — show a single spinner row in picks
+  if(heroEl) heroEl.innerHTML = '';
+  if(picksEl) picksEl.innerHTML = '<div style="padding:48px 20px;text-align:center;color:var(--text3);font-size:13px;font-weight:600">'+L('読み込み中…','Loading…')+'</div>';
+  if(trendEl) trendEl.innerHTML = '';
+  if(catsEl) catsEl.innerHTML = '';
+  if(creatorsEl) creatorsEl.innerHTML = '';
+  if(ctaEl) ctaEl.innerHTML = '';
   if(empty) empty.style.display='none';
   _marketLoading=true;
   try{
@@ -9430,7 +9654,7 @@ async function loadMarket(){
     if(r.favorites && me) me.favorites = r.favorites;
   }catch(e){
     MARKET=[];
-    if(grid) grid.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--rose);font-size:13px;font-weight:600;grid-column:1/-1">読み込みに失敗しました: '+esc(e.message||'')+'</div>';
+    if(picksEl) picksEl.innerHTML='<div style="padding:48px 20px;text-align:center;color:var(--rose);font-size:13px;font-weight:600">'+L('読み込みに失敗しました: ','Failed to load: ')+esc(e.message||'')+'</div>';
     _marketLoading=false;
     return;
   }
@@ -9438,11 +9662,37 @@ async function loadMarket(){
   renderMarket();
 }
 
+// English labels for category pills (and the visual category tiles).
+// MARKET_CAT_DEFS still drives server filtering; this map is for display.
+var _MARKET_CAT_LABEL_EN = {
+  all:'All', sales:'Sales', marketing:'Marketing', research:'Research',
+  writing:'Writing', ops:'Productivity', other:'Other',
+};
 function buildMarketCats(){
   var el=document.getElementById('marketCats'); if(!el) return;
-  el.innerHTML=MARKET_CAT_DEFS.map(function(c){
-    return '<button type="button" class="market-cat'+(c.id===_marketCat?' on':'')+'" onclick="setMarketCat(\''+c.id+'\')">'+esc(c.label)+'</button>';
+  // Type filters first (All / Teams / Solo / Free), then category chips.
+  // Type filter is client-side; the server doesn't have a type query yet so
+  // we just store the active type in _marketType and filter MARKET in JS.
+  var typePills = [
+    {k:'all',  label:L('すべて','All')},
+    {k:'team', label:'🎯 ' + L('チーム','Teams')},
+    {k:'solo', label:'🤖 ' + L('単体','Solo')},
+    {k:'free', label:'🎁 ' + L('無料','Free')},
+  ].map(function(t){
+    var on = (_marketType||'all') === t.k;
+    return '<button type="button" class="storev2-pill'+(on?' on':'')+'" onclick="setMarketType(\''+t.k+'\')">'+t.label+'</button>';
   }).join('');
+  var catPills = MARKET_CAT_DEFS.map(function(c){
+    var label = currentLang==='en' ? (_MARKET_CAT_LABEL_EN[c.id] || c.label) : c.label;
+    return '<button type="button" class="storev2-pill'+(c.id===_marketCat?' on':'')+'" onclick="setMarketCat(\''+c.id+'\')">'+esc(label)+'</button>';
+  }).join('');
+  el.innerHTML = typePills + '<span class="storev2-pill-divider"></span>' + catPills;
+}
+var _marketType = 'all';
+function setMarketType(t){
+  _marketType = (['all','team','solo','free'].indexOf(t)>=0) ? t : 'all';
+  buildMarketCats();
+  renderMarket(); // type filter is client-side; no need to refetch
 }
 function setMarketCat(c){
   _marketCat=c;
@@ -9459,58 +9709,264 @@ function onMarketSearchInput(){
   _marketSearchTimer = setTimeout(loadMarket, 300);
 }
 
+// ── Render a single store v2 card (used by picks + trending) ──
+function _storev2RenderCard(m, opts){
+  opts = opts || {};
+  var favs = new Set(me?.favorites||[]);
+  var purchased = new Set((me && me.purchases || []).map(function(p){return p.listing_id;}));
+  var isFav = favs.has(m.listing_id);
+  var purchasedHere = purchased.has(m.listing_id);
+  var priceJpy = Number.isFinite(m.price_jpy) ? m.price_jpy : 0;
+  var priceCls = priceJpy > 0 ? '' : ' free';
+  var priceTxt = purchasedHere ? '✓ '+L('購入済','Owned')
+               : priceJpy > 0 ? jpyAsUsd(priceJpy)
+               : L('無料','FREE');
+  var typeBadge = m.is_team
+    ? '<span class="b team">🎯 TEAM · '+(m.member_count||0)+'</span>'
+    : '<span class="b solo">🤖 SOLO</span>';
+  var ribbon = '';
+  if(opts.rank){
+    ribbon = '<span class="ribbon rank">#'+opts.rank+'</span>';
+  } else if(m.badge==='hot'){
+    ribbon = '<span class="ribbon hot">🔥 HOT</span>';
+  } else if(m.badge==='new'){
+    ribbon = '<span class="ribbon new">🆕 NEW</span>';
+  }
+  var stars = m.rating>0 ? '<span class="star">★ '+m.rating.toFixed(1)+'</span>' : '<span style="color:var(--text3)">★ —</span>';
+  var skills = (m.agent?.skills||[]).slice(0,3).map(function(s){
+    var sk=SKILLS.find(function(x){return x.id===s;});
+    return '<span class="skill">'+esc(sk?sk.name:s)+'</span>';
+  }).join('');
+  var av = m.agent?.avatar || '🤖';
+  // Coverage gradient by category for solo agents to match the mock
+  var coverStyle = '';
+  if(!m.is_team){
+    var cat = m.category || 'other';
+    var grads = {
+      sales:    'linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff',
+      marketing:'linear-gradient(135deg,#fce7f3,#ec4899);color:#fff',
+      research: 'linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff',
+      writing:  'linear-gradient(135deg,#fff7ee,#fed7aa)',
+      ops:      'linear-gradient(135deg,#d1fae5,#10b981);color:#fff',
+      other:    'linear-gradient(135deg,#fff7ee,#fed7aa)',
+    };
+    coverStyle = ' style="background:'+(grads[cat]||grads.other)+'"';
+  }
+  return ''
+    + '<button type="button" class="storev2-card'+(m.is_team?' team':'')+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
+    +   '<div class="cv"'+coverStyle+'>'
+    +     ribbon
+    +     '<button class="fav'+(isFav?' on':'')+'" title="'+L('お気に入り','Favorite')+'" onclick="event.stopPropagation();toggleFavorite(\''+esc(m.listing_id)+'\',this)">'+(isFav?'❤':'♡')+'</button>'
+    +     esc(av)
+    +   '</div>'
+    +   '<div class="body">'
+    +     '<div class="badges">'+typeBadge+'</div>'
+    +     '<div class="nm">'+esc(m.title||'')+'</div>'
+    +     '<div class="ds">'+esc(m.description||'')+'</div>'
+    +     (skills ? '<div class="skills">'+skills+'</div>' : '')
+    +     '<div class="meta">'
+    +       '<span class="stats">'+stars+(m.rating_count?' <span style="color:var(--text3)">('+m.rating_count+')</span>':'')+'</span>'
+    +       '<span class="price'+priceCls+(purchasedHere?' purchased':'')+'">'+priceTxt+'</span>'
+    +     '</div>'
+    +   '</div>'
+    + '</button>';
+}
+
+// ── Visible market: applies the client-side type filter ──
+function _storev2VisibleMarket(){
+  var t = _marketType || 'all';
+  if(t === 'all') return MARKET.slice();
+  if(t === 'team') return MARKET.filter(function(m){return m.is_team;});
+  if(t === 'solo') return MARKET.filter(function(m){return !m.is_team;});
+  if(t === 'free') return MARKET.filter(function(m){return !(m.price_jpy > 0);});
+  return MARKET.slice();
+}
+
 function renderMarket(){
-  var el=document.getElementById('marketGrid'); if(!el || _marketLoading) return;
-  if(!MARKET.length){
-    el.innerHTML='';
-    var empty=document.getElementById('marketEmpty');
+  if(_marketLoading) return;
+  var picksEl = document.getElementById('storev2Picks');
+  if(!picksEl) return;
+  var heroEl = document.getElementById('storev2Hero');
+  var trendEl = document.getElementById('storev2Trending');
+  var catsEl  = document.getElementById('storev2Cats');
+  var creatorsEl = document.getElementById('storev2Creators');
+  var ctaEl   = document.getElementById('storev2CTA');
+  var empty=document.getElementById('marketEmpty');
+  var visible = _storev2VisibleMarket();
+
+  if(!visible.length){
+    [heroEl,picksEl,trendEl,catsEl,creatorsEl,ctaEl].forEach(function(e){if(e)e.innerHTML='';});
     if(empty){
       empty.style.display='block';
-      empty.textContent = 'まだ出店されたエージェントがありません。あなたが第1号になりませんか？';
+      empty.textContent = MARKET.length === 0
+        ? L('まだ出店されたエージェントがありません。あなたが第1号になりませんか？','No listings yet — be the first to list yours.')
+        : L('該当するエージェントが見つかりません','No matching agents — try a different search.');
     }
     return;
   }
-  document.getElementById('marketEmpty').style.display='none';
-  var favs = new Set(me?.favorites||[]);
-  el.innerHTML=MARKET.map(function(m){
-    var ribbon = m.badge==='hot' ? '<div class="market-ribbon">🔥 人気</div>'
-               : m.badge==='new' ? '<div class="market-ribbon new">✨ 新着</div>' : '';
-    var stars = m.rating>0 ? '<span class="mc-stars">★ <b>'+m.rating.toFixed(1)+'</b></span>' : '<span style="color:var(--text3)">★ —</span>';
-    var uses = m.uses>0 ? '利用 '+(m.uses>=1000?(m.uses/1000).toFixed(1)+'k':m.uses)+' 回' : '新着';
-    var creatorH = esc(m.creator?.handle||'');
-    var verifiedSpan = m.creator?.is_verified
-      ? '<span class="mc-verified" title="検証済みクリエイター">✓</span>'
-      : '';
-    var tagsHtml = (m.tag_labels||[]).slice(0,3).map(function(t){
-      return '<span class="mc-tag">'+esc(t)+'</span>';
-    }).join('');
-    var isFav = favs.has(m.listing_id);
-    var purchasedSet = new Set((me && me.purchases || []).map(function(p){return p.listing_id;}));
-    var priceJpy = Number.isFinite(m.price_jpy) ? m.price_jpy : 0;
-    var purchasedHere = purchasedSet.has(m.listing_id);
-    var priceBadge = priceJpy > 0
-      ? '<span class="mc-price">¥'+priceJpy.toLocaleString()+'</span>'
-      : '<span class="mc-price free">無料</span>';
-    if(purchasedHere) priceBadge = '<span class="mc-price purchased">✓ 購入済</span>';
-    var teamBadge = m.is_team
-      ? '<span style="display:inline-block;background:rgba(251,146,60,.14);color:var(--peach-dark);font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:99px;letter-spacing:.04em;margin-right:5px;vertical-align:middle">🎯 TEAM · '+(m.member_count||0)+'</span>'
-      : '';
-    return '<div class="market-card-wrap" style="position:relative">'
-      + '<button type="button" class="market-card" data-id="'+esc(m.listing_id)+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
-      + ribbon
-      + '<div class="mc-head"><div class="mc-av">'+_avHTML(m.agent?.avatar)+'</div>'
-      + '<div style="flex:1;min-width:0"><div class="mc-name">'+teamBadge+esc(m.title)+'</div><div class="mc-cat">'+esc(m.category_label||'')+'</div></div>'
-      + priceBadge
-      + '</div>'
-      + '<div class="mc-desc">'+esc(m.description)+'</div>'
-      + (tagsHtml ? '<div class="mc-tags">'+tagsHtml+'</div>' : '')
-      + '<div class="mc-creator">クリエイター: <a href="javascript:void(0)" onclick="event.stopPropagation();openCreatorProfile(\''+creatorH+'\')" style="color:var(--peach-dark);text-decoration:none;font-weight:700">'+creatorH+verifiedSpan+'</a></div>'
-      + '<div class="mc-meta">'+stars+'<span>'+uses+'</span></div>'
-      + '</button>'
-      + '<button class="mc-fav'+(isFav?' on':'')+'" title="お気に入り" onclick="toggleFavorite(\''+esc(m.listing_id)+'\',this)">'+(isFav?'❤':'♡')+'</button>'
-      + '<button class="mc-report" title="この出店を通報" onclick="openReportListing(\''+esc(m.listing_id)+'\',\''+esc(m.title).replace(/\\|\x27/g,"\\$&")+'\')" style="position:absolute;top:8px;left:8px;background:rgba(255,255,255,.9);border:1px solid var(--wire2);width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--text3);z-index:2">⚠</button>'
+  if(empty) empty.style.display='none';
+
+  // Hero featured: top item by uses (already roughly sorted by `popular`)
+  var hero = visible[0];
+  if(hero && heroEl){
+    var heroPriceJpy = Number.isFinite(hero.price_jpy) ? hero.price_jpy : 0;
+    var heroPrice = heroPriceJpy>0 ? jpyAsUsd(heroPriceJpy) : L('無料','FREE');
+    var heroPriceCls = heroPriceJpy>0 ? '' : ' free';
+    var heroPills = '<span class="storev2-hero-pill team">'+(hero.is_team
+      ? '🎯 TEAM · '+(hero.member_count||0)+' AI'
+      : '🤖 SOLO AGENT')+'</span>';
+    if((hero.uses||0)>=100) heroPills += '<span class="storev2-hero-pill">🏆 '+L('ベストセラー','Bestseller')+'</span>';
+    if((hero.uses||0)>0)    heroPills += '<span class="storev2-hero-pill">'+(hero.uses||0)+' '+L('利用','pulls')+'</span>';
+    var heroStars = hero.rating>0 ? '★★★★★ '+hero.rating.toFixed(1)+' <span style="opacity:.7">('+hero.rating_count+')</span>' : '★ '+L('未評価','no ratings');
+    var heroCreator = esc(hero.creator?.handle||'');
+    var heroVerified = hero.creator?.is_verified ? '<span style="display:inline-flex;width:13px;height:13px;border-radius:50%;background:#2563eb;color:#fff;align-items:center;justify-content:center;font-size:8px;font-weight:900;margin-left:3px;vertical-align:middle">✓</span>' : '';
+    var heroMembersHtml = '';
+    if(hero.is_team && Array.isArray(hero.team_members) && hero.team_members.length){
+      var avs = hero.team_members.slice(0,5).map(function(mm){return '<div class="av">'+esc(mm.avatar||'🤖')+'</div>';}).join('');
+      heroMembersHtml = '<div class="storev2-hero-members">'+avs+'<span class="ct">'+(hero.member_count||hero.team_members.length)+' AGENTS</span></div>';
+    }
+    heroEl.innerHTML = ''
+      + '<div class="storev2-hero" onclick="openListingDetail(\''+esc(hero.listing_id)+'\')">'
+      +   '<div class="storev2-hero-cover">'
+      +     '<span class="badge">⭐<span class="gold">EDITORS\' PICK</span> · '+L('今週','This week')+'</span>'
+      +     '<div class="em-card">'+esc(hero.agent?.avatar||hero.is_team?'🎯':'🤖')+'</div>'
+      +   '</div>'
+      +   '<div class="storev2-hero-info">'
+      +     '<div class="storev2-hero-pills">'+heroPills+'</div>'
+      +     '<h3>'+esc(hero.title||'').toUpperCase()+'</h3>'
+      +     '<div class="desc">'+esc(hero.description||'')+'</div>'
+      +     '<div class="storev2-hero-stats">'
+      +       '<span>'+heroStars+'</span>'
+      +       '<span>·</span>'
+      +       '<span>by <b>'+heroCreator+'</b>'+heroVerified+'</span>'
+      +     '</div>'
+      +     '<div class="storev2-hero-cta-row">'
+      +       '<button type="button" class="storev2-btn primary" onclick="event.stopPropagation();openListingDetail(\''+esc(hero.listing_id)+'\')">'+L('入手する','Get this')+' →</button>'
+      +       '<span class="price'+heroPriceCls+'">'+heroPrice+(heroPriceJpy>0?'<span class="small">/'+(hero.is_team?L('チーム','team'):L('エージェント','agent'))+'</span>':'')+'</span>'
+      +     '</div>'
+      +   '</div>'
+      +   heroMembersHtml
       + '</div>';
-  }).join('');
+  }
+
+  // Top picks: next 6 items after the hero
+  var picks = visible.slice(1, 7);
+  picksEl.innerHTML = ''
+    + '<div class="storev2-section-h"><h2>'+L('トップピック','Top picks')+' <span class="muted">'+L('今月','this month')+'</span></h2><a href="#" class="more" onclick="event.preventDefault();_storev2ShowAll()">'+L('すべて','See all')+' '+visible.length+' →</a></div>'
+    + '<div class="storev2-grid">' + picks.map(function(m){return _storev2RenderCard(m);}).join('') + '</div>';
+
+  // Trending: top 6 by uses (or hot badge)
+  if(trendEl){
+    var trending = visible.slice().sort(function(a,b){
+      // hot first, then by uses desc
+      var aH = a.badge==='hot' ? 1 : 0, bH = b.badge==='hot' ? 1 : 0;
+      if(aH !== bH) return bH - aH;
+      return (b.uses||0) - (a.uses||0);
+    }).slice(0, 8);
+    if(trending.length >= 4){
+      trendEl.innerHTML = ''
+        + '<div class="storev2-section-h"><h2>'+L('トレンド','Trending')+' <span class="muted">'+L('今週','this week')+'</span></h2></div>'
+        + '<div class="storev2-h-scroll">' + trending.map(function(m, i){return _storev2RenderCard(m, {rank: i+1});}).join('') + '</div>';
+    } else {
+      trendEl.innerHTML = '';
+    }
+  }
+
+  // Categories: visual tile grid with counts derived from MARKET
+  if(catsEl){
+    var counts = {};
+    MARKET.forEach(function(m){ var c = m.category || 'other'; counts[c] = (counts[c]||0) + 1; });
+    var tiles = [
+      {id:'marketing', cls:'c1', em:'📈', en:'Marketing',    ja:'マーケティング'},
+      {id:'sales',     cls:'c2', em:'💼', en:'Sales',        ja:'セールス'},
+      {id:'research',  cls:'c3', em:'🔍', en:'Research',     ja:'リサーチ'},
+      {id:'writing',   cls:'c4', em:'✍️', en:'Writing',      ja:'ライティング'},
+      {id:'ops',       cls:'c5', em:'⚙️', en:'Productivity', ja:'業務効率化'},
+      {id:'other',     cls:'c6', em:'✨', en:'Other',        ja:'その他'},
+    ];
+    catsEl.innerHTML = ''
+      + '<div class="storev2-section-h"><h2>'+L('カテゴリ別','Browse by')+' <span class="muted">'+L('カテゴリ','category')+'</span></h2></div>'
+      + '<div class="storev2-cat-grid">'
+      + tiles.map(function(t){
+          var label = currentLang==='en' ? t.en : t.ja;
+          return '<button type="button" class="storev2-cat '+t.cls+'" onclick="setMarketCat(\''+t.id+'\')">'
+            + '<div class="em">'+t.em+'</div>'
+            + '<div class="nm">'+label+'</div>'
+            + '<div class="ct">'+(counts[t.id]||0)+'</div>'
+            + '</button>';
+        }).join('')
+      + '</div>';
+  }
+
+  // Top creators: aggregate from MARKET, top 6 by listing count
+  if(creatorsEl){
+    var byCreator = {};
+    MARKET.forEach(function(m){
+      var h = m.creator?.handle; if(!h) return;
+      if(!byCreator[h]) byCreator[h] = { handle:h, count:0, verified:!!m.creator?.is_verified, name: m.creator?.name||h };
+      byCreator[h].count++;
+      if(m.creator?.is_verified) byCreator[h].verified = true;
+    });
+    var creators = Object.values(byCreator).sort(function(a,b){return b.count - a.count;}).slice(0, 6);
+    if(creators.length){
+      var palette = ['#fb923c→#ea580c','#3b82f6→#1d4ed8','#ec4899→#be185d','#10b981→#047857','#8b5cf6→#6d28d9','#f59e0b→#d97706'];
+      creatorsEl.innerHTML = ''
+        + '<div class="storev2-section-h"><h2>'+L('トップクリエイター','Top creators')+'</h2></div>'
+        + '<div class="storev2-creators">'
+        + creators.map(function(c, i){
+            var initial = (c.name||c.handle||'?').replace('@','').charAt(0).toUpperCase();
+            var pg = palette[i % palette.length].split('→');
+            return '<button type="button" class="storev2-creator" onclick="openCreatorProfile(\''+esc(c.handle)+'\')">'
+              + '<div class="av" style="background:linear-gradient(135deg,'+pg[0]+','+pg[1]+')">'+esc(initial)+'</div>'
+              + '<div class="nm">'+esc(c.handle)+(c.verified?' <span class="verified">✓</span>':'')+'</div>'
+              + '<div class="meta">'+c.count+' '+L('出店','listings')+'</div>'
+              + '</button>';
+          }).join('')
+        + '</div>';
+    } else {
+      creatorsEl.innerHTML = '';
+    }
+  }
+
+  // Become a creator CTA
+  if(ctaEl){
+    var totalListings = MARKET.length;
+    var teamPacks = MARKET.filter(function(m){return m.is_team;}).length;
+    ctaEl.innerHTML = ''
+      + '<div class="storev2-cta">'
+      +   '<div class="storev2-cta-text">'
+      +     '<span class="kicker">'+L('寝てる間に稼ぐ','Earn while you sleep')+'</span>'
+      +     '<h3>'+L('作ったの、いいやつ？','Built something ')+'<span class="accent">'+L('?','good?')+'</span><br>'+L('ストアに並べよう。','List it on the Store.')+'</h3>'
+      +     '<p>'+L('自分用に作った AI を商品にできる。','Turn the AI you built for yourself into a product.')
+      +     ' <b>'+L('買い切り価格の最大 80% + 利用料 10% が収益。','Up to 80% creator share + 10% usage royalties.')+'</b>'
+      +     ' '+L('Stripe Connect で銀行口座へ自動入金。','Stripe Connect deposits revenue directly to your bank.')+'</p>'
+      +     '<button type="button" class="storev2-btn" onclick="_storev2OpenCreator()">'+L('クリエイターになる','Become a creator')+' →</button>'
+      +   '</div>'
+      +   '<div class="storev2-cta-stats">'
+      +     '<div class="storev2-cta-stat"><div class="num">'+totalListings+'</div><div class="lbl">'+L('公開中の出店','Live listings')+'</div></div>'
+      +     '<div class="storev2-cta-stat"><div class="num">'+teamPacks+'</div><div class="lbl">'+L('チームパック','Team packs')+'</div></div>'
+      +     '<div class="storev2-cta-stat"><div class="num">80<span style="font-size:18px;color:rgba(255,245,230,.72)">%</span></div><div class="lbl">'+L('クリエイター取り分','Creator share')+'</div></div>'
+      +     '<div class="storev2-cta-stat"><div class="num">7<span style="font-size:18px;color:rgba(255,245,230,.72)">d</span></div><div class="lbl">'+L('初回出金まで','To 1st payout')+'</div></div>'
+      +   '</div>'
+      + '</div>';
+  }
+}
+
+function _storev2ShowAll(){
+  // Reset filters back to "All" and scroll to picks so the user sees everything
+  _marketType = 'all';
+  _marketCat = 'all';
+  buildMarketCats();
+  renderMarket();
+  document.getElementById('storev2Picks')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function _storev2OpenCreator(){
+  closeMarket();
+  try { openSettings(); } catch(e){}
+  setTimeout(function(){
+    var b = document.querySelector('.snav-item[data-tab="creator"]');
+    if(b) b.click();
+  }, 140);
 }
 
 async function toggleFavorite(listingId, btn){

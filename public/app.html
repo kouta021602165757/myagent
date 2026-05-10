@@ -3570,7 +3570,7 @@ body{color:#f0f0f8;}
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em">BETA</span></div>
           <div id="editExtDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
-          <div id="editExtAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
+          <div id="editExtAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" id="editExtReconnect" onclick="event.preventDefault();reconnectExtension()" style="display:none;color:#3730a3;font-weight:700">🔄 再接続</a><span id="editExtReconnectSep" style="display:none"> · </span><a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
           <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:8px;background:#fff;color:#3730a3;border:1px solid #6366f1;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ ブラウザ拡張をペアリング</button>
         </div>
         <button type="button" class="s-sw" id="editExtSw" onclick="toggleEditExtension()"></button>
@@ -11251,6 +11251,12 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
     if(accountRow) accountRow.style.display='';
     if(devNode) devNode.textContent = connected?(isJa?'オンライン':'Online'):(isJa?'オフライン':'Offline');
     if(btn) btn.style.display='none';
+    // Reveal a "再接続" link only when paired-but-offline so the user has a
+    // non-destructive way out (today the only action shown was "切断").
+    var rc = document.getElementById('editExtReconnect');
+    var rcSep = document.getElementById('editExtReconnectSep');
+    if(rc)    rc.style.display    = connected ? 'none' : '';
+    if(rcSep) rcSep.style.display = connected ? 'none' : '';
     if(agentEnabled){
       desc.innerHTML = connected
         ? (isJa
@@ -11307,6 +11313,30 @@ async function connectExtension(){
     return;
   }
   await _extPairOnce(true);
+}
+
+// Manual recovery from the "paired but offline" state. Same flow as connect:
+// probes the extension, re-pairs if reachable (the SSE link comes back with
+// the new token), or sends the user to the Chrome Web Store if not.
+async function reconnectExtension(){
+  var installed = await _extProbe();
+  if(!installed){
+    showToast(isJa
+      ? 'Chrome 拡張機能に届きませんでした。Chrome を起動して拡張アイコンが表示されているか確認してください。'
+      : 'Could not reach the extension. Make sure Chrome is running and the extension icon is visible.','ng');
+    // Best-effort: also kick off the install poller so it picks up automatically
+    // if the user re-enables the extension within ~2 minutes.
+    _extWaitForInstall();
+    return;
+  }
+  var ok = await _extPairOnce(false);
+  if(ok){
+    showToast(isJa?'再接続しました':'Reconnected','ok');
+  }else{
+    showToast(isJa
+      ? '再接続できませんでした。Chrome を再起動して試してください。'
+      : 'Reconnect failed. Try restarting Chrome.','ng');
+  }
 }
 
 // Mint a token + push it into the extension. Silent: no toasts unless `verbose`.

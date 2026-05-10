@@ -2207,7 +2207,7 @@ body{color:#f0f0f8;}
           <button id="newTeamSubmit" onclick="submitGenerateTeam()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:12px;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">✨ AI にチームを設計してもらう</button>
         </div>
         <div style="font-size:10.5px;color:var(--text3);margin-top:10px;line-height:1.6">
-          ※ 設計は約 15-30 秒。目的に応じて 3-6 体のエージェントが自動生成され、すぐ起動します。
+          ※ 設計は約 15-30 秒。目的に応じて 4-10 体のエージェントが自動生成され、すぐ起動します。
         </div>
       </div>
 
@@ -2302,6 +2302,34 @@ body{color:#f0f0f8;}
         <button id="teamMembersGoalEditBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.32);color:var(--peach-dark);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0">✏️ 編集</button>
       </div>
       <div id="teamMembersList" style="display:flex;flex-direction:column;gap:10px"></div>
+
+      <!-- Add member affordance (host only) -->
+      <div id="teamMembersAddRow" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+        <button id="teamMembersAddBtn" type="button" onclick="openAddTeamMember()" style="width:100%;background:#fff;border:2px dashed rgba(251,146,60,.42);color:var(--peach-dark);border-radius:11px;padding:14px;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:-.005em;transition:all .14s">＋ メンバーを追加 <span id="teamMembersCapHint" style="font-weight:600;color:var(--text-subtle);font-size:11px;margin-left:6px">(0/10)</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD-TEAM-MEMBER OVERLAY ════════════════════════════ -->
+<div class="overlay" id="addTeamMemberOverlay">
+  <div class="wizard" style="max-width:560px">
+    <div class="wiz-top">
+      <div class="wiz-title">＋ メンバーを追加</div>
+      <button class="wiz-close" onclick="closeAddTeamMember()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px">
+        どんなメンバーを追加しますか？ 役割や担当業務を書くと、AI が <b>名前 ・ アイコン ・ スキル ・ 性格</b> を組み立てます。
+      </div>
+      <textarea id="addMemDesc" rows="4" placeholder="例: SEO 担当のライター / 競合分析が得意なリサーチャー / コードレビューしてくれるエンジニア" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical;min-height:96px"></textarea>
+      <div id="addMemErr" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="closeAddTeamMember()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">キャンセル</button>
+        <button id="addMemSubmitBtn" onclick="submitAddTeamMember()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">✨ AI に作ってもらう</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5607,8 +5635,8 @@ var _JA2EN = {
   '🤝 CS 自動化': '🤝 Automate support',
   '🎬 YouTube': '🎬 YouTube',
   '✨ AI にチームを設計してもらう': '✨ Let AI design your team',
-  '※ 設計は約 15-30 秒。目的に応じて 3-6 体のエージェントが自動生成され、すぐ起動します。':
-    'Takes ~15–30s. 3–6 agents are generated for your goal and the team launches right after.',
+  '※ 設計は約 15-30 秒。目的に応じて 4-10 体のエージェントが自動生成され、すぐ起動します。':
+    'Takes ~15–30s. 4–10 agents are generated for your goal and the team launches right after.',
   'AI がチームを設計中…': 'AI is designing your team…',
   '目的を分析しています': 'Analyzing your goal…',
   '必要な役割を洗い出しています': 'Mapping out roles…',
@@ -8314,6 +8342,60 @@ async function sendMsg(){
   }
   const hasAtt = _pendingImgs.length > 0;
   if(!text && !hasAtt) return;
+
+  // Slash-command hook (only intercepts when in a Team chat AND user is host)
+  // Examples:
+  //   /add a researcher who watches competitor pricing
+  //   /メンバー追加 SEOライター
+  //   add member: SEO writer who watches competitors
+  if(text){
+    var _agSlash = agents.find(function(a){return a.id===activeId;});
+    if(_agSlash && _agSlash.is_team && _agSlash.host_id === me?.id){
+      var _addMatch = text.match(/^\s*(?:\/add(?:[\-_]?member)?|\/(?:メンバー|member)(?:[\-_]?追加)?|add\s+(?:a\s+)?(?:new\s+)?member\s*[:：]?|メンバー\s*追加\s*[:：]?)\s*(.*)$/i);
+      if(_addMatch){
+        var _addDesc = (_addMatch[1]||'').trim();
+        ci.value = '';
+        exTA(ci);
+        if(!_addDesc){
+          showToast(L('追加するメンバーの説明を一緒に書いてください (例: "/add SEO担当のライター")','Add a description after the command (e.g. "/add SEO writer")'),'ng');
+          openAddTeamMember(_agSlash.id);
+          return;
+        }
+        // Inline confirmation in chat: add to history + call API
+        var ts = now();
+        _agSlash.history = _agSlash.history || [];
+        _agSlash.history.push({role:'user', content:text, time:ts});
+        _agSlash.history.push({role:'system', content:'⏳ AI が新しいメンバーを設計中…', time:ts});
+        renderMsgs(_agSlash);
+        try {
+          var r = await api('POST','/api/teams/'+_agSlash.id+'/add-member', { description: _addDesc });
+          if(r && r.agent){
+            try {
+              var meRes = await api('GET','/api/me');
+              if(meRes && meRes.user){ me = meRes.user; if(Array.isArray(me.agents)) agents = me.agents; }
+            } catch(e){}
+            // Replace the "designing..." line with the success line
+            var teamLatest = (agents||[]).find(function(a){return a.id===_agSlash.id;}) || _agSlash;
+            // The server already pushed a system message; trust the refreshed history.
+            renderAgList();
+            try { openAgent(teamLatest.id); } catch(e){}
+            showToast(L((r.agent.name||'New member')+' をチームに追加しました', (r.agent.name||'New member')+' joined the team'),'ok');
+          }
+        } catch(e){
+          if(e && e.upgrade_required){ _showUpgradeToast(e); }
+          else { showToast((e && e.message) || L('追加に失敗しました','Failed to add member'),'ng'); }
+          // Repaint to remove the "designing..." line
+          var t2 = (agents||[]).find(function(a){return a.id===_agSlash.id;}) || _agSlash;
+          if(t2.history && t2.history.length){
+            t2.history = t2.history.filter(function(h){ return !(h.role==='system' && h.content && h.content.indexOf('AI が新しいメンバーを設計中')>=0); });
+          }
+          renderMsgs(t2);
+        }
+        document.getElementById('sndBtn').disabled=false;
+        return;
+      }
+    }
+  }
   // Pause group polling while we send so the optimistic local message + AI
   // reply aren't transiently overwritten by a stale server snapshot.
   _groupPollPaused = true;
@@ -9013,6 +9095,23 @@ function openTeamMembersPanel(teamId){
       goalBtn.onclick = function(){ closeTeamMembersPanel(); openTeamEdit(team.id); };
     }
   }
+  // "+ Add member" row (host only, hide when team is at the 10-member cap)
+  var addRow = document.getElementById('teamMembersAddRow');
+  var addBtn = document.getElementById('teamMembersAddBtn');
+  var addCap = document.getElementById('teamMembersCapHint');
+  var memCount = (team.team_member_agent_ids||[]).length;
+  var TEAM_MAX = 10;
+  if(addRow){
+    addRow.style.display = isTeamHost ? '' : 'none';
+    if(addCap) addCap.textContent = '('+memCount+'/'+TEAM_MAX+')';
+    if(addBtn){
+      var atCap = memCount >= TEAM_MAX;
+      addBtn.disabled = atCap;
+      addBtn.style.opacity = atCap ? '.55' : '1';
+      addBtn.style.cursor  = atCap ? 'not-allowed' : 'pointer';
+      addBtn.onclick = atCap ? null : function(){ openAddTeamMember(team.id); };
+    }
+  }
   var list = document.getElementById('teamMembersList');
   var ids = Array.isArray(team.team_member_agent_ids) ? team.team_member_agent_ids : [];
   var members = ids.map(function(id){return (agents||[]).find(function(a){return a.id===id;});}).filter(Boolean);
@@ -9046,6 +9145,68 @@ function openTeamMembersPanel(teamId){
 }
 function closeTeamMembersPanel(){
   document.getElementById('teamMembersOverlay')?.classList.remove('open');
+}
+
+/* ── Add a member to an existing team ─────────────────────── */
+var _addingMemberTeamId = null;
+function openAddTeamMember(teamId){
+  var id = teamId || _editingTeamId || activeId;
+  var team = (agents||[]).find(function(a){return a.id===id;});
+  if(!team || !team.is_team){ showToast(L('チームが見つかりません','Team not found'),'ng'); return; }
+  if(team.host_id !== me?.id){ showToast(L('ホストのみメンバーを追加できます','Only the host can add members'),'ng'); return; }
+  _addingMemberTeamId = team.id;
+  document.getElementById('addMemDesc').value = '';
+  document.getElementById('addMemErr').textContent = '';
+  // Hide other overlays so this one stacks cleanly
+  document.getElementById('teamMembersOverlay')?.classList.remove('open');
+  document.getElementById('addTeamMemberOverlay').classList.add('open');
+  setTimeout(function(){ document.getElementById('addMemDesc')?.focus(); }, 80);
+}
+function closeAddTeamMember(){
+  document.getElementById('addTeamMemberOverlay')?.classList.remove('open');
+  _addingMemberTeamId = null;
+}
+
+async function submitAddTeamMember(){
+  if(!_addingMemberTeamId){ closeAddTeamMember(); return; }
+  if(!token){ showToast(L('ログインが必要です','Sign in required'),'ng'); return; }
+  var desc = (document.getElementById('addMemDesc').value||'').trim();
+  var errEl = document.getElementById('addMemErr');
+  if(desc.length < 4){
+    errEl.textContent = L('もう少し詳しく書いてください (4 文字以上)','Please describe the member in a bit more detail');
+    return;
+  }
+  var btn = document.getElementById('addMemSubmitBtn');
+  btn.disabled = true; btn.style.opacity='.7'; btn.textContent = L('生成中…','Generating…');
+  try {
+    var r = await api('POST','/api/teams/'+_addingMemberTeamId+'/add-member', { description: desc });
+    if(r && r.agent){
+      // Refresh local agents from /api/me so team's team_member_agent_ids reflects the new id
+      try {
+        var meRes = await api('GET','/api/me');
+        if(meRes && meRes.user){
+          me = meRes.user;
+          if(Array.isArray(me.agents)) agents = me.agents;
+        }
+      } catch(e){ console.warn('[team] /api/me refresh failed', e); }
+      var teamId = _addingMemberTeamId;
+      closeAddTeamMember();
+      showToast(L((r.agent.name||'New member')+' をチームに追加しました', (r.agent.name||'New member')+' joined the team'),'ok');
+      renderAgList();
+      // Re-open the team members panel so the new member is visible
+      try { openTeamMembersPanel(teamId); } catch(e){}
+      // If chat is open on this team, refresh history
+      if(activeId === teamId){ try { openAgent(teamId); } catch(e){} }
+    } else {
+      errEl.textContent = L('追加に失敗しました','Failed to add member');
+    }
+  } catch(e){
+    console.error('[team/add-member] failed', e);
+    if(e && e.upgrade_required){ closeAddTeamMember(); _showUpgradeToast(e); }
+    else { errEl.textContent = e.message || L('追加に失敗しました','Failed to add member'); }
+  } finally {
+    btn.disabled = false; btn.style.opacity='1'; btn.textContent = '✨ ' + L('AI に作ってもらう','Let AI generate');
+  }
 }
 
 function confirmBack(){

@@ -4156,7 +4156,8 @@ async function handleAPI(req,res,pathname,method,ip){
     const VALID_SKILLS = ['writing','research','coding','marketing','planning','analysis','translate','support','idea','teaching','ceo','coo','secretary','designer','sns','other'];
 
     const sys = 'You are a senior product strategist who designs small AI-agent teams. '
-      + 'Given a user goal (in Japanese or English), output a JSON object describing a focused team of 3-6 agents that, working together, can accomplish the goal. '
+      + 'Given a user goal (in Japanese or English), output a JSON object describing a focused team of 4-10 agents that, working together, can accomplish the goal. '
+      + 'Pick the smallest team that genuinely covers the goal — pad to ~6 for broad goals, scale up to 10 only for end-to-end ones. '
       + 'Output ONLY valid JSON — no prose, no code fences. Schema: '
       + '{"team_name":"<short name, 2-6 words, JA preferred>", "cover_emoji":"<single emoji>", "description":"<one-sentence summary of what the team does, JA>", '
       + '"agents":[{"avatar":"<single emoji>","name":"<short role name, 2-4 words>","skills":["<from the allowed set>"...],"persona":"採用目的: <why we hired this agent, JA>\\n業務内容: <what they do day-to-day, JA, concrete>"}]}. '
@@ -4190,7 +4191,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const proposed = Array.isArray(spec.agents) ? spec.agents : [];
     const filteredAgents = proposed
       .filter(a => a && typeof a.name==='string' && a.name.trim())
-      .slice(0,6)
+      .slice(0, 10)
       .map(a => {
         const skills = (Array.isArray(a.skills) ? a.skills : [])
           .filter(s => typeof s==='string' && VALID_SKILLS.includes(s.toLowerCase()))
@@ -4329,6 +4330,127 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     console.log('[teams/create] user='+user.id+' name='+name+' members='+eligible.length+' group='+groupId);
     return jres(res,201,{ ok:true, group_id: groupId, member_count: eligible.length });
+  }
+
+  // ── POST /api/teams/:id/add-member ────────────────────────
+  // body: {description: string, name?: string, avatar?: string, skills?: string[]}
+  // If only `description` is provided, AI generates a single agent that fits.
+  // If `name`/`skills` are provided, uses those directly (skips AI).
+  // Returns the new agent. Caps team at 10 members.
+  const tamMatch = pathname.match(/^\/api\/teams\/([^/]+)\/add-member$/);
+  if(tamMatch && method==='POST'){
+    const teamId = tamMatch[1];
+    const team = (user.agents||[]).find(a => a.id===teamId);
+    if(!team || !team.is_team) return jres(res,404,{error:'チームが見つかりません'});
+    if(team.host_id !== user.id) return jres(res,403,{error:'ホストのみメンバーを追加できます'});
+    const TEAM_MAX = 10;
+    const currentCount = (team.team_member_agent_ids||[]).length;
+    if(currentCount >= TEAM_MAX){
+      return jres(res,400,{error:`チームのメンバーは最大 ${TEAM_MAX} 体までです (現在 ${currentCount} 体)`});
+    }
+    if((user.agents||[]).length >= 1000) return jres(res,400,{error:'エージェントは最大1000個です'});
+
+    const body = await readBody(req);
+    const description = String(body.description||'').trim().slice(0, 800);
+
+    const VALID_SKILLS = ['writing','research','coding','marketing','planning','analysis','translate','support','idea','teaching','ceo','coo','secretary','designer','sns','other'];
+
+    let memberSpec = null;
+    // Path 1: caller already provided concrete fields → use as-is
+    if(body.name && typeof body.name==='string' && body.name.trim()){
+      memberSpec = {
+        avatar: String(body.avatar||'🤖').slice(0,8) || '🤖',
+        name:   String(body.name).trim().slice(0,40),
+        skills: (Array.isArray(body.skills) ? body.skills : ['planning'])
+                  .filter(s => typeof s==='string' && VALID_SKILLS.includes(s.toLowerCase()))
+                  .map(s => s.toLowerCase()).slice(0,3),
+        persona: String(body.persona||description||'').trim().slice(0, 1200),
+      };
+      if(!memberSpec.skills.length) memberSpec.skills = ['planning'];
+    }
+    // Path 2: only description → ask Claude to design ONE agent that fits
+    else {
+      if(description.length < 4) return jres(res,400,{error:'追加するメンバーの説明をもう少し詳しく書いてください'});
+      if(!ANTHROPIC) return jres(res,500,{error:'AI が設定されていません'});
+
+      const existingNames = ((team.team_member_agent_ids||[])
+        .map(id => (user.agents||[]).find(a => a.id===id))
+        .filter(Boolean)
+        .map(a => a.name)).join(', ');
+      const teamGoal = team.team_goal || '';
+      const teamName = team.name || '';
+
+      const sys = 'You are a senior product strategist who designs single AI agents. '
+        + 'Given an existing AI Agent Team and a description of a NEW member to add, output a JSON object describing exactly one agent that complements the team. '
+        + 'Output ONLY valid JSON — no prose, no code fences. Schema: '
+        + '{"avatar":"<single emoji>","name":"<short role name, 2-4 words, JA preferred>","skills":["<from the allowed set>"...],"persona":"採用目的: <why we hired this agent, JA>\\n業務内容: <what they do day-to-day, JA, concrete>"}. '
+        + 'Allowed skill IDs only: ' + VALID_SKILLS.join(', ') + '. '
+        + 'Pick 1-3 skills max. The new agent must not duplicate an existing role. '
+        + 'Persona should be specific and actionable.';
+      const userMsg =
+        `Team name: ${teamName}\n`
+        + (teamGoal ? `Team goal: ${teamGoal}\n` : '')
+        + `Existing members: ${existingNames || '(none)'}\n`
+        + `\nNew member request:\n${description}\n\nDesign exactly one agent in JSON.`;
+      let aiData;
+      try { aiData = await callAI([{role:'user', content: userMsg}], sys, 'sonnet'); }
+      catch(e){
+        console.error('[teams/add-member] Anthropic failed:', e.message);
+        return jres(res,500,{error:'AI 生成に失敗しました: ' + (e.message||'unknown')});
+      }
+      let raw = '';
+      if(Array.isArray(aiData?.content)){
+        for(const blk of aiData.content){ if(blk.type==='text' && blk.text){ raw += blk.text; } }
+      }
+      raw = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+      try { memberSpec = JSON.parse(raw); }
+      catch(e){
+        console.error('[teams/add-member] JSON parse failed. Raw:', raw.slice(0,400));
+        return jres(res,500,{error:'AI 応答を解析できませんでした。もう一度試してください。'});
+      }
+      const filteredSkills = (Array.isArray(memberSpec.skills) ? memberSpec.skills : [])
+        .filter(s => typeof s==='string' && VALID_SKILLS.includes(s.toLowerCase()))
+        .map(s => s.toLowerCase()).slice(0,3);
+      memberSpec = {
+        avatar: String(memberSpec.avatar||'🤖').slice(0,8) || '🤖',
+        name:   String(memberSpec.name||'New Member').trim().slice(0,40),
+        skills: filteredSkills.length ? filteredSkills : ['planning'],
+        persona: String(memberSpec.persona||'').slice(0, 1200),
+      };
+    }
+
+    const now = new Date().toISOString();
+    const newAgent = {
+      id: 'ag_'+crypto.randomUUID(),
+      avatar: memberSpec.avatar,
+      name: memberSpec.name,
+      skills: memberSpec.skills,
+      persona: memberSpec.persona,
+      chrome_enabled: false,
+      sheets_enabled: false,
+      extension_enabled: false,
+      model: 'sonnet',
+      history: [],
+      created_at: now,
+      team_origin: { team_id: teamId, added_after: true },
+    };
+    user.agents = [...(user.agents||[]), newAgent];
+    team.team_member_agent_ids = [...(team.team_member_agent_ids||[]), newAgent.id];
+    team.updated_at = now;
+    // Drop a system message into the team history so other tabs see the addition
+    team.history = Array.isArray(team.history) ? team.history : [];
+    team.history.push({
+      role: 'system',
+      content: `🆕 ${newAgent.name} がチームに加わりました。@${newAgent.name.replace(/\s+/g,'')} で呼び出せます。`,
+      time: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}),
+    });
+    try { await DB.save(user); }
+    catch(e){
+      console.error('[teams/add-member] DB.save failed', e.message);
+      return jres(res,500,{error:'保存に失敗しました: '+(e.message||'unknown')});
+    }
+    console.log('[teams/add-member] team='+teamId+' agent='+newAgent.id+' name="'+newAgent.name+'"');
+    return jres(res,201,{ ok:true, agent: newAgent, member_count: team.team_member_agent_ids.length });
   }
 
   // ── POST /api/agents/reorder ───────────────────────────────

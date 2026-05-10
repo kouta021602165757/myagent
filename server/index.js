@@ -6714,16 +6714,23 @@ async function handleAPI(req,res,pathname,method,ip){
         team_origin: { team_id: newGroupId, source_team_id: src.id, marketplace_origin: { listing_id: src.marketplace.listing_id, creator_user_id: found.user.id } },
         marketplace_origin: { listing_id: src.marketplace.listing_id, creator_user_id: found.user.id, cloned_at: now },
       }));
+      // Lang for the welcome system message: prefer the source team's stored
+      // lang; fall back to the seller's lang; finally to English.
+      const cloneLang = (src.lang === 'ja' || src.lang === 'en') ? src.lang
+                      : (found.user.lang === 'ja' ? 'ja' : 'en');
+      const firstMemTag = (clonedMembers[0]?.name||'AI').replace(/\s+/g,'');
+      const cloneName = src.marketplace.title || src.name || 'Team';
       const groupClone = {
         id: newGroupId,
         avatar: src.avatar || '🎯',
-        name: src.marketplace.title || src.name || 'Team',
+        name: cloneName,
         skills: ['planning'],
         persona: '',
         is_group: true,
         is_team: true,
         team_template_id: 'cloned',
         team_goal: src.team_goal || '',
+        lang: cloneLang,
         host_id: user.id,
         members: [
           { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
@@ -6738,7 +6745,12 @@ async function handleAPI(req,res,pathname,method,ip){
           cloned_at: now,
         },
         history: [
-          { role:'system', content: `🎉 ${src.marketplace.title || src.name} を Store から複製しました。@${(clonedMembers[0]?.name||'AI').replace(/\s+/g,'')} のように特定エージェントを呼べます。`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+          { role:'system',
+            content: cloneLang === 'ja'
+              ? `🎉 ${cloneName} を Store から複製しました。@${firstMemTag} のように特定エージェントを呼べます。`
+              : `🎉 Cloned ${cloneName} from the Store. Call a specific agent with @${firstMemTag}.`,
+            time: new Date().toLocaleTimeString(cloneLang==='ja'?'ja-JP':'en-US',{hour:'2-digit',minute:'2-digit'}),
+          },
         ],
       };
       user.agents = [...(user.agents||[]), ...clonedMembers, groupClone];
@@ -7797,16 +7809,13 @@ const server=http.createServer(async(req,res)=>{
   // /l/:listing_id → public marketplace listing landing (with OG meta SSR)
   const lRoute=pathname.match(/^\/l\/(ls_[a-z0-9_-]+)\/?$/);
   if(lRoute){
-    // Detect language preference: ?lang=en wins, else Accept-Language
-    let lang = 'ja';
+    // English-default. Only flip to JA when ?lang=ja is explicit. The rest of
+    // the product (LP, app, share page) is EN-default; matching that here.
+    let lang = 'en';
     try{
       const qs = new url.URL(req.url, APP_URL).searchParams;
       const explicit = (qs.get('lang')||'').toLowerCase();
-      if(explicit === 'en' || explicit === 'ja'){ lang = explicit; }
-      else {
-        const al = (req.headers['accept-language']||'').toLowerCase();
-        if(al && !al.includes('ja') && al.includes('en')) lang = 'en';
-      }
+      if(explicit === 'en' || explicit === 'ja') lang = explicit;
     }catch(e){}
     return serveListingPage(res, lRoute[1], lang);
   }

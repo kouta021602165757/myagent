@@ -11576,10 +11576,55 @@ async function _extAutoPair(){
     if(!me) return;
     var installed = await _extProbe();
     if(!installed) return;
-    if(me.extension_paired && me.extension_connected) return;
-    await _extPairOnce(false);
+    if(!(me.extension_paired && me.extension_connected)){
+      await _extPairOnce(false);
+    }
+    // Once paired, keep the extension's MV3 service worker alive for as long
+    // as this tab is open. See _extStartKeepAlive for why.
+    _extStartKeepAlive();
   }catch(e){}
 }
+
+// ── MV3 service-worker keep-alive (web → extension) ─────────────────
+// Chrome MV3 service workers idle out after ~30s, dropping the SSE stream
+// even when the user is actively using the app. Without this loop, every
+// ext_* tool call has a coin-flip chance of "extension offline" because the
+// SW happened to die between messages.
+//
+// We can't fix this in the published v0.1.0 extension (that needs a Web
+// Store re-publish with chrome.alarms), but the *web app* can send a
+// chrome.runtime ping every 25s — each ping resets the SW idle clock. So
+// as long as the user has any tab of myaiagents.agency open, the extension
+// stays alive and SSE stays connected.
+var _extKeepAliveTimer = null;
+var _EXT_KEEPALIVE_MS = 25000; // safely under MV3's 30s idle cap
+
+function _extStartKeepAlive(){
+  if(_extKeepAliveTimer) return;
+  if(!_isExtCapable()) return;
+  _extKeepAliveTimer = setInterval(function(){
+    if(document.hidden) return;
+    if(!me || !me.extension_paired) return;
+    // A single chrome.runtime.sendMessage is enough to keep the SW alive.
+    _extProbe().catch(function(){});
+  }, _EXT_KEEPALIVE_MS);
+}
+
+function _extStopKeepAlive(){
+  if(_extKeepAliveTimer){ clearInterval(_extKeepAliveTimer); _extKeepAliveTimer = null; }
+}
+
+// When the tab returns from being hidden, the SW may have died during the
+// idle window. Probe immediately so the next ext_* tool call doesn't hit a
+// stale connection.
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden) return;
+  if(!me || !me.extension_paired) return;
+  if(!_isExtCapable()) return;
+  // Fire-and-forget — _extProbe wakes the SW; if SSE was dropped, the
+  // server will reconnect via the extension's own EventSource retry.
+  _extProbe().catch(function(){});
+});
 
 async function disconnectExtension(){
   if(!confirm(isJa?'ブラウザ拡張連携を切断します。よろしいですか?':'Disconnect browser extension?')) return;

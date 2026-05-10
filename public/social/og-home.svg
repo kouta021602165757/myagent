@@ -1,33 +1,89 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="-apple-system, 'Helvetica Neue', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"
+     font-family="'Inter','Helvetica Neue','Hiragino Sans','Noto Sans JP',Arial,sans-serif">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fff7ee"/>
-      <stop offset="100%" stop-color="#fed7aa"/>
-    </linearGradient>
-    <linearGradient id="peach" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fb923c"/>
-      <stop offset="100%" stop-color="#ea580c"/>
-    </linearGradient>
+    <radialGradient id="rPeach" cx="20%" cy="30%" r="55%">
+      <stop offset="0%" stop-color="#fb923c" stop-opacity="0.40"/>
+      <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rViolet" cx="90%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <circle cx="1080" cy="120" r="180" fill="rgba(251,146,60,0.12)"/>
-  <circle cx="120" cy="540" r="220" fill="rgba(167,139,250,0.10)"/>
-  <circle cx="1130" cy="490" r="80" fill="rgba(234,88,12,0.18)"/>
-  <circle cx="180" cy="100" r="40" fill="rgba(251,146,60,0.20)"/>
-  <g transform="translate(60, 60)">
-    <rect x="0"  y="0"  width="22" height="68" rx="11" fill="url(#peach)"/>
-    <rect x="32" y="14" width="22" height="54"  rx="11" fill="url(#peach)" opacity="0.65"/>
-    <rect x="64" y="28" width="22" height="40"  rx="11" fill="url(#peach)" opacity="0.35"/>
-    <text x="106" y="50" font-size="24" font-weight="800" letter-spacing="3" fill="#1a0a00">MY AI AGENT</text>
+
+  <!-- Dark base + radial highlights -->
+  <rect width="1200" height="630" fill="#0c0a09"/>
+  <rect width="1200" height="630" fill="url(#rPeach)"/>
+  <rect width="1200" height="630" fill="url(#rViolet)"/>
+
+  <!-- Header: brand + ⚡ 30 SECONDS pill -->
+  <g transform="translate(54 38)">
+    <rect x="0" y="0" width="44" height="44" rx="9" ry="9" fill="#fb923c"/>
+    <text x="22" y="32" text-anchor="middle" fill="#0c0a09" font-size="26" font-weight="900" letter-spacing="-0.02em">M</text>
+    <text x="56" y="30" fill="#ffffff" font-size="22" font-weight="900" letter-spacing="0.04em">MY AI AGENT</text>
   </g>
-  <text x="600" y="270" text-anchor="middle" font-family="'Bebas Neue', Impact, sans-serif" font-size="148" font-weight="900" letter-spacing="2" fill="#1a0a00">BUILD YOUR OWN</text>
-  <text x="600" y="410" text-anchor="middle" font-family="'Bebas Neue', Impact, sans-serif" font-size="148" font-weight="900" letter-spacing="2" fill="url(#peach)">AI TEAM.</text>
-  <text x="600" y="478" text-anchor="middle" font-size="20" font-weight="500" fill="#5c3a1e">Hire, customize, and ship AI agents in minutes — not weeks.</text>
-  <g transform="translate(600, 525)" font-size="14" font-weight="700">
-    <g transform="translate(-235, 0)"><rect width="150" height="42" rx="21" fill="white" stroke="rgba(251,146,60,0.32)"/><text x="75" y="27" text-anchor="middle" fill="#ea580c">Create AI Agent</text></g>
-    <g transform="translate(-75, 0)"><rect width="150" height="42" rx="21" fill="white" stroke="rgba(251,146,60,0.32)"/><text x="75" y="27" text-anchor="middle" fill="#ea580c">AI Agent Group</text></g>
-    <g transform="translate(85, 0)"><rect width="150" height="42" rx="21" fill="white" stroke="rgba(34,197,94,0.32)"/><text x="75" y="27" text-anchor="middle" fill="#15803d">Agent Store</text></g>
+  <g transform="translate(948 46)">
+    <rect x="0" y="0" width="198" height="34" rx="17" ry="17" fill="#10b981"/>
+    <text x="99" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" letter-spacing="0.08em">⚡ 30 SECONDS</text>
   </g>
-  <text x="600" y="600" text-anchor="middle" font-family="'Helvetica Neue', monospace" font-size="14" font-weight="700" fill="#9a6a4a" letter-spacing="2">MYAIAGENTS.AGENCY</text>
+
+  <!-- Headline: "TYPE A GOAL." white + "BUILD A TEAM." peach -->
+  <g transform="translate(54 200)">
+    <text x="0" y="0" fill="#ffffff" font-size="92" font-weight="900" letter-spacing="-0.025em">TYPE A GOAL.</text>
+    <text x="0" y="92" fill="#fb923c" font-size="92" font-weight="900" letter-spacing="-0.025em">BUILD A TEAM.</text>
+  </g>
+
+  <!-- Input mockup box -->
+  <g transform="translate(54 380)">
+    <rect x="0" y="0" width="780" height="68" rx="14" ry="14"
+          fill="rgba(255,255,255,0.06)" stroke="#fb923c" stroke-width="1.5"/>
+    <!-- Sparkle -->
+    <g transform="translate(36 34)"><image x="-12" y="-12" width="24" height="24" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PHBhdGggZmlsbD0iI0ZGQUMzMyIgZD0iTTM0LjM0NyAxNi44OTNsLTguODk5LTMuMjk0LTMuMzIzLTEwLjg5MWMtLjEyOC0uNDItLjUxNy0uNzA4LS45NTYtLjcwOC0uNDM5IDAtLjgyOC4yODgtLjk1Ni43MDhsLTMuMzIyIDEwLjg5MS04LjkgMy4yOTRjLS4zOTMuMTQ2LS42NTMuNTE5LS42NTMuOTM4IDAgLjQxOC4yNi43OTMuNjUzLjkzOGw4Ljg5NSAzLjI5MyAzLjMyNCAxMS4yMjNjLjEyNi40MjQuNTE2LjcxNS45NTkuNzE1LjQ0MiAwIC44MzMtLjI5MS45NTktLjcxNmwzLjMyNC0xMS4yMjMgOC44OTYtMy4yOTNjLjM5MS0uMTQ0LjY1Mi0uNTE4LjY1Mi0uOTM3IDAtLjQxOC0uMjYxLS43OTItLjY1My0uOTM4eiIvPjxwYXRoIGZpbGw9IiNGRkNDNEQiIGQ9Ik0xNC4zNDcgMjcuODk0bC0yLjMxNC0uODU2LS45LTMuM2MtLjExOC0uNDM2LS41MTMtLjczOC0uOTY0LS43MzgtLjQ1MSAwLS44NDYuMzAyLS45NjUuNzM3bC0uOSAzLjMtMi4zMTMuODU2Yy0uMzkzLjE0NS0uNjUzLjUyLS42NTMuOTM4IDAgLjQxOC4yNi43OTMuNjUzLjkzOGwyLjMwMS44NTMuOTA3IDMuNjIyYy4xMTIuNDQ0LjUxMS43NTYuOTcuNzU2LjQ1OSAwIC44NTgtLjMxMi45Ny0uNzU3bC45MDctMy42MjIgMi4zMDEtLjg1M2MuMzkzLS4xNDQuNjUzLS41MTkuNjUzLS45MzcgMC0uNDE4LS4yNi0uNzkzLS42NTMtLjkzN3pNMTAuMDA5IDYuMjMxbC0yLjM2NC0uODc1LS44NzYtMi4zNjVjLS4xNDUtLjM5My0uNTE5LS42NTMtLjkzOC0uNjUzLS40MTggMC0uNzkyLjI2LS45MzguNjUzbC0uODc1IDIuMzY1LTIuMzY1Ljg3NWMtLjM5My4xNDYtLjY1My41Mi0uNjUzLjkzOCAwIC40MTguMjYuNzkzLjY1My45MzhsMi4zNjUuODc1Ljg3NSAyLjM2NWMuMTQ2LjM5My41Mi42NTMuOTM4LjY1My40MTggMCAuNzkyLS4yNi45MzgtLjY1M2wuODc1LTIuMzY1IDIuMzY1LS44NzVjLjM5My0uMTQ2LjY1My0uNTIuNjUzLS45MzggMC0uNDE4LS4yNi0uNzkyLS42NTMtLjkzOHoiLz48L3N2Zz4=" preserveAspectRatio="xMidYMid meet"/></g>
+    <!-- Input text -->
+    <text x="68" y="42" fill="#ffffff" font-size="18" font-weight="700">"Build &amp; sell on Shopify with margin &gt; 50%"</text>
+    <!-- GENERATE button -->
+    <g transform="translate(650 14)">
+      <rect x="0" y="0" width="116" height="40" rx="20" ry="20" fill="#fb923c"/>
+      <text x="58" y="27" text-anchor="middle" fill="#0c0a09" font-size="13" font-weight="900" letter-spacing="0.06em">GENERATE</text>
+    </g>
+  </g>
+
+  <!-- Tilted arrow -->
+  <g transform="translate(880 410) rotate(8)">
+    <text x="0" y="0" fill="#fb923c" font-size="56" font-weight="900">→</text>
+  </g>
+
+  <!-- 5 member avatars (right-bottom) -->
+  
+    <g transform="translate(720 500)">
+      <rect x="0" y="0" width="56" height="56" rx="14" ry="14" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+      <image x="7.84" y="7.84" width="40.32" height="40.32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PHBhdGggZmlsbD0iI0Y0OTAwQyIgZD0iTTExIDBDNi41ODIgMCAzIDMuNTgyIDMgOHY4aDJWOGMwLTMuMzEzIDIuNjg3LTYgNi02IDMuMzE0IDAgNiAyLjY4NyA2IDZ2OGgyVjhjMC00LjQxOC0zLjU4Mi04LTgtOHoiLz48cGF0aCBmaWxsPSIjREQyRTQ0IiBkPSJNMSA4bDIgMiAyLTIgMiAyIDItMiAyIDIgMi0yIDIgMiAyLTIgMiAyIDItMnYyM0gxeiIvPjxwYXRoIGZpbGw9IiNGRkNDNEQiIGQ9Ik0yNSA1Yy00LjQxOCAwLTggMy41ODItOCA4djhoMnYtOGMwLTMuMzE0IDIuNjg4LTYgNi02IDMuMzE1IDAgNiAyLjY4NiA2IDZ2OGgydi04YzAtNC40MTgtMy41ODItOC04LTh6Ii8+PHBhdGggZmlsbD0iIzc0NEVBQSIgZD0iTTE1IDEzbDIgMiAyLTIgMiAyIDItMiAyIDIgMi0yIDIgMiAyLTIgMiAyIDItMnYyM0gxNXoiLz48L3N2Zz4=" preserveAspectRatio="xMidYMid meet"/>
+    </g>
+    <g transform="translate(766 500)">
+      <rect x="0" y="0" width="56" height="56" rx="14" ry="14" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+      <image x="7.84" y="7.84" width="40.32" height="40.32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PHBhdGggZmlsbD0iIzMxMzczRCIgZD0iTTAgMTBzMC00IDQtNGgyOHM0IDAgNCA0djE4czAgNC00IDRINHMtNCAwLTQtNFYxMHoiLz48Y2lyY2xlIGZpbGw9IiNDQ0Q2REQiIGN4PSIyMSIgY3k9IjE5IiByPSIxMCIvPjxjaXJjbGUgZmlsbD0iIzMxMzczRCIgY3g9IjIxIiBjeT0iMTkiIHI9IjgiLz48Y2lyY2xlIGZpbGw9IiMzQjg4QzMiIGN4PSIyMSIgY3k9IjE5IiByPSI1Ii8+PGNpcmNsZSBmaWxsPSIjRkZGIiBjeD0iMzIuNSIgY3k9IjkuNSIgcj0iMS41Ii8+PHBhdGggZmlsbD0iI0ZGQUMzMyIgZD0iTTE2IDlsMy02LTYgMi00LTUtMiA1LTYtMSA0IDYtNSA0aDZsLTIgNiA2LTMgNiA1LTEtOCA2LTF6Ii8+PHBhdGggZmlsbD0iI0ZGRiIgZD0iTTEwIDE0bC0zIDIgMS0zLTMtMSAzLTItMy0zaDRsMS0zIDIgMyAzLTEtMiAzIDMgMy0zIDEgMSA0eiIvPjwvc3ZnPg==" preserveAspectRatio="xMidYMid meet"/>
+    </g>
+    <g transform="translate(812 500)">
+      <rect x="0" y="0" width="56" height="56" rx="14" ry="14" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+      <image x="7.84" y="7.84" width="40.32" height="40.32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PHBhdGggZmlsbD0iIzNCODhDMyIgZD0iTTE4IDBDOC4wNTkgMCAwIDguMDU5IDAgMThzOC4wNTkgMTggMTggMTggMTgtOC4wNTkgMTgtMThTMjcuOTQxIDAgMTggMHpNMi4wNSAxOWgzLjk4M2MuMDkyIDIuNTA2LjUyMiA0Ljg3MSAxLjIyOSA3SDQuMTU4Yy0xLjIwNy0yLjA4My0xLjk1LTQuNDU5LTIuMTA4LTd6TTE5IDhWMi4wODFjMi43NDcuNDM2IDUuMTYyIDIuNjU1IDYuNzk5IDUuOTE5SDE5em03LjY1MSAyYy43NTQgMi4wODMgMS4yMTkgNC40NiAxLjMxNyA3SDE5di03aDcuNjUxek0xNyAyLjA4MVY4aC02Ljc5OUMxMS44MzcgNC43MzYgMTQuMjUzIDIuNTE3IDE3IDIuMDgxek0xNyAxMHY3SDguMDMyYy4wOTgtMi41NC41NjMtNC45MTcgMS4zMTctN0gxN3pNNi4wMzQgMTdIMi4wNWMuMTU4LTIuNTQuOTAxLTQuOTE3IDIuMTA3LTdoMy4xMDRjLS43MDUgMi4xMjktMS4xMzUgNC40OTUtMS4yMjcgN3ptMS45OTggMkgxN3Y3SDkuMzQ5Yy0uNzU0LTIuMDgzLTEuMjE5LTQuNDU5LTEuMzE3LTd6TTE3IDI4djUuOTE5Yy0yLjc0Ny0uNDM3LTUuMTYzLTIuNjU1LTYuNzk5LTUuOTE5SDE3em0yIDUuOTE5VjI4aDYuOGMtMS42MzcgMy4yNjQtNC4wNTMgNS40ODItNi44IDUuOTE5ek0xOSAyNnYtN2g4Ljk2OWMtLjA5OSAyLjU0MS0uNTYzIDQuOTE3LTEuMzE3IDdIMTl6bTEwLjk2Ny03aDMuOTgyYy0uMTU3IDIuNTQxLS45IDQuOTE3LTIuMTA3IDdoLTMuMTA0Yy43MDYtMi4xMjkgMS4xMzYtNC40OTQgMS4yMjktN3ptMC0yYy0uMDkzLTIuNTA1LS41MjMtNC44NzEtMS4yMjktN2gzLjEwNGMxLjIwNyAyLjA4MyAxLjk1IDQuNDYgMi4xMDcgN2gtMy45ODJ6bS41MTItOWgtMi41MDNjLS43MTctMS42MDQtMS42MDYtMy4wMTUtMi42MTktNC4xOTlDMjcuMzQ2IDQuODMzIDI5LjA4OSA2LjI2NyAzMC40NzkgOHpNMTAuNjQzIDMuODAxQzkuNjI5IDQuOTg1IDguNzQgNi4zOTYgOC4wMjMgOEg1LjUyMWMxLjM5LTEuNzMzIDMuMTMzLTMuMTY2IDUuMTIyLTQuMTk5ek01LjUyMSAyOGgyLjUwM2MuNzE2IDEuNjA0IDEuNjA1IDMuMDE1IDIuNjE5IDQuMTk4QzguNjU0IDMxLjE2NiA2LjkxMSAyOS43MzMgNS41MjEgMjh6bTE5LjgzNiA0LjE5OGMxLjAxNC0xLjE4NCAxLjkwMi0yLjU5NCAyLjYxOS00LjE5OGgyLjUwM2MtMS4zOSAxLjczMy0zLjEzMyAzLjE2Ni01LjEyMiA0LjE5OHoiLz48L3N2Zz4=" preserveAspectRatio="xMidYMid meet"/>
+    </g>
+    <g transform="translate(858 500)">
+      <rect x="0" y="0" width="56" height="56" rx="14" ry="14" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+      <image x="7.84" y="7.84" width="40.32" height="40.32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PHBhdGggZmlsbD0iIzMxMzczRCIgZD0iTTExIDM2cy00IDAtNC00VjRzMC00IDQtNGgxNHM0IDAgNCA0djI4czAgNC00IDRIMTF6Ii8+PHBhdGggZmlsbD0iIzU1QUNFRSIgZD0iTTkgNWgxOHYyNkg5eiIvPjwvc3ZnPg==" preserveAspectRatio="xMidYMid meet"/>
+    </g>
+    <g transform="translate(904 500)">
+      <rect x="0" y="0" width="56" height="56" rx="14" ry="14" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+      <image x="7.84" y="7.84" width="40.32" height="40.32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PHBhdGggZmlsbD0iI0NDRDZERCIgZD0iTTMxIDJINUMzLjM0MyAyIDIgMy4zNDMgMiA1djI2YzAgMS42NTcgMS4zNDMgMyAzIDNoMjZjMS42NTcgMCAzLTEuMzQzIDMtM1Y1YzAtMS42NTctMS4zNDMtMy0zLTN6Ii8+PHBhdGggZmlsbD0iI0UxRThFRCIgZD0iTTMxIDFINUMyLjc5MSAxIDEgMi43OTEgMSA1djI2YzAgMi4yMDkgMS43OTEgNCA0IDRoMjZjMi4yMDkgMCA0LTEuNzkxIDQtNFY1YzAtMi4yMDktMS43OTEtNC00LTR6bTAgMmMxLjEwMyAwIDIgLjg5NyAyIDJ2NGgtNlYzaDR6bS00IDE2aDZ2NmgtNnYtNnptMC0ydi02aDZ2NmgtNnpNMjUgM3Y2aC02VjNoNnptLTYgOGg2djZoLTZ2LTZ6bTAgOGg2djZoLTZ2LTZ6TTE3IDN2NmgtNlYzaDZ6bS02IDhoNnY2aC02di02em0wIDhoNnY2aC02di02ek0zIDVjMC0xLjEwMy44OTctMiAyLTJoNHY2SDNWNXptMCA2aDZ2Nkgzdi02em0wIDhoNnY2SDN2LTZ6bTIgMTRjLTEuMTAzIDAtMi0uODk3LTItMnYtNGg2djZINXptNiAwdi02aDZ2NmgtNnptOCAwdi02aDZ2NmgtNnptMTIgMGgtNHYtNmg2djRjMCAxLjEwMy0uODk3IDItMiAyeiIvPjxwYXRoIGZpbGw9IiM1QzkxM0IiIGQ9Ik0xMyAzM0g3VjE2YzAtMS4xMDQuODk2LTIgMi0yaDJjMS4xMDQgMCAyIC44OTYgMiAydjE3eiIvPjxwYXRoIGZpbGw9IiMzQjk0RDkiIGQ9Ik0yOSAzM2gtNlY5YzAtMS4xMDQuODk2LTIgMi0yaDJjMS4xMDQgMCAyIC44OTYgMiAydjI0eiIvPjxwYXRoIGZpbGw9IiNERDJFNDQiIGQ9Ik0yMSAzM2gtNlYyM2MwLTEuMTA0Ljg5Ni0yIDItMmgyYzEuMTA0IDAgMiAuODk2IDIgMnYxMHoiLz48L3N2Zz4=" preserveAspectRatio="xMidYMid meet"/>
+    </g>
+
+  <!-- READY pill (right of avatars) -->
+  <g transform="translate(974 512)">
+    <rect x="0" y="0" width="156" height="32" rx="16" ry="16" fill="#fb923c"/>
+    <text x="78" y="22" text-anchor="middle" fill="#0c0a09" font-size="13" font-weight="900" letter-spacing="0.06em">5 AI · READY</text>
+  </g>
+
+  <!-- URL bottom-left -->
+  <text x="54" y="588" fill="rgba(255,245,230,0.6)" font-size="14" font-weight="500"
+        font-family="'DM Mono','SF Mono',Menlo,monospace">myaiagents.agency</text>
 </svg>

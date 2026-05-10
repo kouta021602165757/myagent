@@ -11237,6 +11237,17 @@ function toggleEditSheets(){
 var EXT_ID = 'dfpkogebkejpggilgcfgnipemdjpkoil';
 var EXT_STORE_URL = 'https://chromewebstore.google.com/detail/' + EXT_ID;
 
+// Devices that physically cannot run a Chrome extension (mobile Chrome doesn't
+// support extensions; non-Chrome desktop browsers don't either). On those we
+// hide the "再接続" button instead of letting the user tap something that
+// can never succeed, and show a clearer "open on desktop Chrome" hint.
+function _isExtCapable(){
+  var ua = navigator.userAgent || '';
+  if(/(Mobile|Android|iPhone|iPad|iPod)/i.test(ua)) return false;
+  // chrome.runtime is only present on desktop Chrome / Edge / Brave (Chromium).
+  return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.sendMessage;
+}
+
 function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, agentEnabled){
   var paired = !!(me && me.extension_paired);
   var connected = !!(me && me.extension_connected);
@@ -11251,20 +11262,35 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
     if(accountRow) accountRow.style.display='';
     if(devNode) devNode.textContent = connected?(isJa?'オンライン':'Online'):(isJa?'オフライン':'Offline');
     if(btn) btn.style.display='none';
-    // Reveal a "再接続" link only when paired-but-offline so the user has a
-    // non-destructive way out (today the only action shown was "切断").
+    // 再接続 link: only useful on devices that can actually reach a Chrome
+    // extension. On mobile / non-Chrome the link is hidden so the user isn't
+    // teased with a button that always fails — instead the offline message
+    // points them to desktop Chrome, and a background poll picks up the
+    // moment the extension comes back online (no manual action required).
     var rc = document.getElementById('editExtReconnect');
     var rcSep = document.getElementById('editExtReconnectSep');
-    if(rc)    rc.style.display    = connected ? 'none' : '';
-    if(rcSep) rcSep.style.display = connected ? 'none' : '';
+    var showRc = !connected && _isExtCapable();
+    if(rc)    rc.style.display    = showRc ? '' : 'none';
+    if(rcSep) rcSep.style.display = showRc ? '' : 'none';
+    // Kick off (or stop) the silent auto-recovery loop based on current state.
+    if(connected){ _extStopBackgroundReconnect(); }
+    else         { _extStartBackgroundReconnect(); }
     if(agentEnabled){
-      desc.innerHTML = connected
-        ? (isJa
-            ? '<span style="color:#3730a3;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
-            : '<span style="color:#3730a3;font-weight:700">✓ Active · Online</span> — AI can drive this browser')
-        : (isJa
-            ? '<span style="color:var(--peach-dark);font-weight:700">⚠ 有効だがオフライン</span> — Chrome を起動して拡張アイコンが表示されてるか確認'
-            : '<span style="color:var(--peach-dark);font-weight:700">⚠ Active but offline</span> — Open Chrome and check the extension icon');
+      if(connected){
+        desc.innerHTML = isJa
+          ? '<span style="color:#3730a3;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
+          : '<span style="color:#3730a3;font-weight:700">✓ Active · Online</span> — AI can drive this browser';
+      } else if(_isExtCapable()){
+        desc.innerHTML = isJa
+          ? '<span style="color:var(--peach-dark);font-weight:700">⚠ オフライン</span> — Chrome の起動を待っています。再接続できたら自動で復旧します。'
+          : '<span style="color:var(--peach-dark);font-weight:700">⚠ Offline</span> — Waiting for Chrome. We\'ll reconnect automatically.';
+      } else {
+        // Mobile / non-Chrome: extension can't run here. Make that explicit
+        // and reassure them it'll auto-recover when they hit the desktop.
+        desc.innerHTML = isJa
+          ? '<span style="color:var(--peach-dark);font-weight:700">⚠ オフライン</span> — 拡張機能はデスクトップ Chrome 専用です。PC で開けば自動再接続。'
+          : '<span style="color:var(--peach-dark);font-weight:700">⚠ Offline</span> — The extension only runs in desktop Chrome. We\'ll reconnect when you open the app on your PC.';
+      }
     }else{
       desc.textContent = isJa
         ? 'スイッチを ON にすると AI がこのブラウザを使ってサイト操作できます (X / Slack / Gmail など)'
@@ -11314,6 +11340,68 @@ async function connectExtension(){
   }
   await _extPairOnce(true);
 }
+
+// ── Silent auto-recovery for paired-but-offline ──
+// While the agent-edit modal is open and the extension is paired but the
+// server hasn't seen its SSE stream lately, this loop quietly polls so the UI
+// updates the moment the extension comes back online — without the user
+// having to click "再接続". Two paths converge here:
+//   1. desktop Chrome path — chrome.runtime probe + silent re-pair (fast)
+//   2. server-side path    — refresh /api/me to pick up the extension's own
+//                            autonomous SSE reconnect (works even on mobile)
+var _extReconnectTimer = null;
+var _extReconnectStartedAt = 0;
+var _EXT_RECONNECT_INTERVAL_MS = 6000;
+var _EXT_RECONNECT_MAX_MS      = 5 * 60 * 1000; // give up after 5 min idle
+
+function _extStopBackgroundReconnect(){
+  if(_extReconnectTimer){ clearInterval(_extReconnectTimer); _extReconnectTimer = null; }
+}
+
+function _extStartBackgroundReconnect(){
+  if(_extReconnectTimer) return; // already running
+  _extReconnectStartedAt = Date.now();
+  _extReconnectTimer = setInterval(async function(){
+    // Stop after 5 min so we don't poll forever in a forgotten tab.
+    if(Date.now() - _extReconnectStartedAt > _EXT_RECONNECT_MAX_MS){
+      _extStopBackgroundReconnect(); return;
+    }
+    if(document.hidden) return;
+    if(!me || !me.extension_paired){ _extStopBackgroundReconnect(); return; }
+
+    // Path 1: if we're on desktop Chrome and the extension is reachable, mint
+    // a fresh token and push it down. Silent — no toast on success.
+    if(_isExtCapable()){
+      try{
+        var installed = await _extProbe();
+        if(installed){ await _extPairOnce(false); }
+      }catch(e){}
+    }
+
+    // Path 2: refresh /api/me. If the extension reconnected its SSE on its
+    // own (Chrome restart, profile switch, mobile→desktop), this is what
+    // flips the UI without any user action.
+    try{
+      var m = await api('GET','/api/me');
+      var prev = !!(me && me.extension_connected);
+      me = m.user || m;
+      if(me.extension_connected && !prev){
+        _extStopBackgroundReconnect();
+        try{ _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false); }catch(e){}
+        showToast(isJa?'✓ 拡張機能に自動再接続しました':'✓ Extension reconnected automatically','ok');
+      }
+    }catch(e){}
+  }, _EXT_RECONNECT_INTERVAL_MS);
+}
+
+// When the user comes back to this tab (from Chrome restart, etc.) re-probe
+// immediately instead of waiting up to 6s for the next polling tick.
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden && _extReconnectTimer){
+    // Reset the start clock so the 5-min idle cap resets on user return.
+    _extReconnectStartedAt = Date.now();
+  }
+});
 
 // Manual recovery from the "paired but offline" state. Same flow as connect:
 // probes the extension, re-pairs if reachable (the SSE link comes back with

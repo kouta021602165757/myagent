@@ -2018,14 +2018,47 @@ body{color:#f0f0f8;}
     <div class="wiz-progress"><div class="wiz-fill" id="wizFill" style="width:33%"></div></div>
     <div class="wiz-body">
 
-      <!-- Step 0: Preset picker -->
+      <!-- Step 0: Mode chooser (🆕 New / 📋 Template) -->
       <div id="ws0">
-        <div class="step-h">テンプレートから始める</div>
-        <div class="step-s">プリセットから選ぶか、ゼロから作ってください</div>
-        <div class="preset-grid" id="presetGrid"></div>
-        <div class="btn-row">
-          <button class="btn-back" onclick="startFromScratch()">🛠️ ゼロから作る</button>
-          <button class="btn-volt" id="usePresetBtn" disabled style="opacity:.5;cursor:not-allowed" onclick="useSelectedPreset()">このテンプレートを使う →</button>
+        <div id="agentModeTabs" style="display:flex;gap:6px;background:var(--cream2);padding:4px;border-radius:11px;margin-bottom:18px">
+          <button id="agentModeTabNew" type="button" onclick="setAgentMode('new')" style="flex:1;background:#fff;color:var(--text);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)">🆕 <span data-i18n="agentModeNew">新規作成</span></button>
+          <button id="agentModeTabTpl" type="button" onclick="setAgentMode('tpl')" style="flex:1;background:transparent;color:var(--text2);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">📋 <span data-i18n="agentModeTpl">テンプレートから</span></button>
+        </div>
+
+        <!-- 🆕 新規作成 -->
+        <div id="agentModeNew">
+          <div class="step-h" data-i18n="agentNewH">ゼロから作る</div>
+          <div class="step-s" data-i18n="agentNewS">アイコン・名前・スキル・性格を 1 つずつ自分で決めて、専属の AI を組み立てます。</div>
+          <div style="background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:13px;padding:18px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+              <div style="font-size:42px;line-height:1">🤖</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14px;font-weight:900;color:var(--peach-dark);letter-spacing:-.005em;margin-bottom:3px" data-i18n="agentNewCardH">あなた専属の AI を 1 体作る</div>
+                <div style="font-size:11.5px;color:var(--text2);line-height:1.65" data-i18n="agentNewCardD">5 ステップ (約 1 分) で完成 ・ いつでも編集可能 ・ DM タブから呼び出せます。</div>
+              </div>
+            </div>
+            <ul style="font-size:11.5px;color:var(--text2);line-height:1.85;margin:0;padding-left:22px">
+              <li data-i18n="agentNewLi1">アイコン (絵文字 or 画像アップロード) を選ぶ</li>
+              <li data-i18n="agentNewLi2">名前と「採用目的・業務内容」を書く (= persona)</li>
+              <li data-i18n="agentNewLi3">スキルを最大 3 つ選ぶ</li>
+              <li data-i18n="agentNewLi4">🌐 Web 検索 / Google Sheets 連携などの能力を有効化 (任意)</li>
+            </ul>
+          </div>
+          <div class="btn-row">
+            <button class="btn-back" type="button" onclick="closeWizard()" data-i18n="cancel">キャンセル</button>
+            <button class="btn-volt" type="button" onclick="startFromScratch()" style="border-radius:12px;padding:13px;font-weight:900" data-i18n="agentNewStart">▶ 作り始める</button>
+          </div>
+        </div>
+
+        <!-- 📋 テンプレート -->
+        <div id="agentModeTpl" style="display:none">
+          <div class="step-h" data-i18n="agentTplH">テンプレートから始める</div>
+          <div class="step-s" data-i18n="agentTplS">用途別のプリセットを選ぶと、性格とスキルを自動で設定。後から自由に編集できます。</div>
+          <div class="preset-grid" id="presetGrid"></div>
+          <div class="btn-row">
+            <button class="btn-back" type="button" onclick="closeWizard()" data-i18n="cancel">キャンセル</button>
+            <button class="btn-volt" id="usePresetBtn" disabled style="opacity:.5;cursor:not-allowed" onclick="useSelectedPreset()" data-i18n="agentTplUse">このテンプレートを使う →</button>
+          </div>
         </div>
       </div>
 
@@ -5157,6 +5190,23 @@ var T = {
       hintImageGen:         L('画像生成','Image gen'),
       hintMemory:           L('記憶','Memory'),
       hintNewChat:          L('新規会話','New chat'),
+
+      // Agent create overlay (2-tab New / Template chooser)
+      cancel:               L('キャンセル','Cancel'),
+      agentModeNew:         L('新規作成','From scratch'),
+      agentModeTpl:         L('テンプレートから','From templates'),
+      agentNewH:            L('ゼロから作る','Build from scratch'),
+      agentNewS:            L('アイコン・名前・スキル・性格を 1 つずつ自分で決めて、専属の AI を組み立てます。','Pick the icon, name, skills, and persona yourself and assemble your own AI.'),
+      agentNewCardH:        L('あなた専属の AI を 1 体作る','Build one dedicated AI'),
+      agentNewCardD:        L('5 ステップ (約 1 分) で完成 ・ いつでも編集可能 ・ DM タブから呼び出せます。','5 steps (~1 min) · Edit anytime · Reach it from the DM tab.'),
+      agentNewLi1:          L('アイコン (絵文字 or 画像アップロード) を選ぶ','Pick an icon (emoji or upload an image)'),
+      agentNewLi2:          L('名前と「採用目的・業務内容」を書く (= persona)','Write its name and the "purpose · duties" (= persona)'),
+      agentNewLi3:          L('スキルを最大 3 つ選ぶ','Choose up to 3 skills'),
+      agentNewLi4:          L('🌐 Web 検索 / Google Sheets 連携などの能力を有効化 (任意)','Optionally enable web search / Google Sheets / Chrome integrations'),
+      agentNewStart:        L('▶ 作り始める','▶ Start building'),
+      agentTplH:            L('テンプレートから始める','Start from a template'),
+      agentTplS:            L('用途別のプリセットを選ぶと、性格とスキルを自動で設定。後から自由に編集できます。','Pick a use-case preset; persona and skills are auto-filled and stay editable.'),
+      agentTplUse:          L('このテンプレートを使う →','Use this template →'),
 };
 function _fmtT(template, vars){
   return String(template).replace(/\{(\w+)\}/g, function(_,k){ return vars[k]!==undefined ? vars[k] : ''; });
@@ -5521,6 +5571,76 @@ var _JA2EN = {
 
   // Time labels
   'たった今': 'just now', '分前': ' min ago', '時間前': ' h ago', '日前': ' d ago',
+
+  // ── Agent Team — generation flow ──
+  'どんな業務を自動化したいですか？': 'What would you like to automate?',
+  '目的を書くと AI が必要なエージェントを設計してチームにします。': 'Describe the goal — AI will design the agents you need and bundle them into a team.',
+  '🛍 EC を作る': '🛍 Build an e-commerce site',
+  '📱 SNS 集客': '📱 Grow on social',
+  '💻 SaaS を作る': '💻 Ship a SaaS MVP',
+  '🤝 CS 自動化': '🤝 Automate support',
+  '🎬 YouTube': '🎬 YouTube',
+  '✨ AI にチームを設計してもらう': '✨ Let AI design your team',
+  '※ 設計は約 15-30 秒。目的に応じて 3-6 体のエージェントが自動生成され、すぐ起動します。':
+    'Takes ~15–30s. 3–6 agents are generated for your goal and the team launches right after.',
+  'AI がチームを設計中…': 'AI is designing your team…',
+  '目的を分析しています': 'Analyzing your goal…',
+  '必要な役割を洗い出しています': 'Mapping out roles…',
+  '各エージェントの性格を設計中': 'Designing personas…',
+  'スキルを割り当てています': 'Assigning skills…',
+  'もう少しで完成…': 'Almost done…',
+
+  // ── Agent Team — edit overlay ──
+  '✏️ チームを編集': '✏️ Edit team',
+  'チームを編集': 'Edit team',
+  'アイコン': 'Icon',
+  'チーム名': 'Team name',
+  '💾 保存': '💾 Save',
+  '保存中…': 'Saving…',
+  'この目的はチームのコンテキストとして各エージェントに渡されます。後から方向性が変わったら自由に書き換えてください。':
+    'This goal is shared with every team agent as context. Rewrite it any time the direction shifts.',
+  'チームの目的': 'Team goal',
+  'まだ目的が設定されていません。「✏️ 編集」から追加できます。':
+    'No goal set yet — click "✏️ Edit" to add one.',
+
+  // ── Agent Team — members panel ──
+  'このチームに所属している AI エージェントです。': 'These are the AI agents in this team.',
+  '🎯 Team members': '🎯 Team members',
+  'AI メンバー': 'AI members',
+  'チームのメンバー': 'Team members',
+
+  // ── Agent Team — store listing ──
+  'Agent Store に出店する': 'List on Agent Store',
+  'このチームを丸ごとストアに出すと、他のユーザーが': 'List the whole team on the Store so other users can',
+  '1 クリックで自分のアカウントに複製': 'clone it into their account in one click',
+  'できます。買い切り価格の 70% + 利用料の 10% が収益になります。':
+    '. You earn 70% of the one-time price plus 10% of usage revenue.',
+  '＋ 出店フォームを開く': '+ Open listing form',
+  '出店内容を編集': 'Edit listing',
+  '再公開する': 'Re-publish',
+  '出店中': 'Live',
+  '回利用': 'uses',
+
+  // ── Agent create chooser ──
+  '新規作成': 'From scratch',
+  'テンプレートから': 'From templates',
+  'ゼロから作る': 'Build from scratch',
+  'あなた専属の AI を 1 体作る': 'Build one dedicated AI',
+  'このテンプレートを使う →': 'Use this template →',
+  '▶ 作り始める': '▶ Start building',
+  'キャンセル': 'Cancel',
+  'テンプレートから始める': 'Start from a template',
+
+  // ── Sidebar IA ──
+  '🎯 Agent Team': '🎯 Agent Team',
+  '🎯 Agent Teams': '🎯 Agent Teams',
+  '👥 グループ': '👥 Groups',
+  '🤖 DM': '🤖 DM',
+  'Agent Team を作成': 'Create Agent Team',
+  'グループを作成': 'Create a group',
+  'AI を作成': 'Create AI',
+  'まだトークがありません': 'No conversations yet',
+  '＋ ホームから作成': '+ Create from home',
 };
 
 /* Apply translations to all text nodes in the given root. Idempotent. */
@@ -8393,10 +8513,28 @@ function _resetWizardState(){
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('wChromeSw','wChromeDesc',false);
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('wSheetsSw','wSheetsDesc','wSheetsAccountRow','wSheetsEmail','wSheetsConnectBtn',false);
 }
+function setAgentMode(mode){
+  var tabNew = document.getElementById('agentModeTabNew');
+  var tabTpl = document.getElementById('agentModeTabTpl');
+  var paneNew= document.getElementById('agentModeNew');
+  var paneTpl= document.getElementById('agentModeTpl');
+  if(!tabNew||!tabTpl||!paneNew||!paneTpl) return;
+  if(mode==='tpl'){
+    tabTpl.style.background='#fff'; tabTpl.style.color='var(--text)'; tabTpl.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';
+    tabNew.style.background='transparent'; tabNew.style.color='var(--text2)'; tabNew.style.boxShadow='none';
+    paneTpl.style.display=''; paneNew.style.display='none';
+  } else {
+    tabNew.style.background='#fff'; tabNew.style.color='var(--text)'; tabNew.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';
+    tabTpl.style.background='transparent'; tabTpl.style.color='var(--text2)'; tabTpl.style.boxShadow='none';
+    paneNew.style.display=''; paneTpl.style.display='none';
+  }
+}
+
 function openNewAgent(){
   _wizardMode='new';
   _resetWizardState();
-  wStep(1);
+  wStep(0);
+  setAgentMode('new');
   document.getElementById('wizOverlay').classList.add('open');
 }
 
@@ -8522,6 +8660,7 @@ function openTemplate(){
   _wizardMode='preset';
   _resetWizardState();
   wStep(0);
+  setAgentMode('tpl');
   document.getElementById('wizOverlay').classList.add('open');
 }
 // Backward-compat: any remaining caller of openWizard() lands on the template picker

@@ -6772,14 +6772,76 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── POST /api/share/:share_id/clone ────────────────────────
-  // Auth required. Clones the shared agent into the current user's account.
+  // Auth required. Clones the shared agent (or team) into the current user's
+  // account. For teams, every member is also cloned and re-linked, otherwise
+  // the cloned team would have member ids pointing back to the source user.
   const cmShare=pathname.match(/^\/api\/share\/([a-z0-9-]+)\/clone$/);
   if(cmShare&&method==='POST'){
     const shareId=cmShare[1];
     if((user.agents||[]).length>=1000)return jres(res,400,{error:'エージェントは最大1000個です'});
     const found=await findAgentByShareId(shareId);
     if(!found) return jres(res,404,{error:'共有エージェントが見つかりません'});
+    if(found.user.id === user.id) return jres(res,400,{error:'自分のエージェントは複製できません'});
     const src=found.agent;
+    const now = new Date().toISOString();
+
+    // ── Team share clone ──
+    if(src.is_team && Array.isArray(src.team_member_agent_ids) && src.team_member_agent_ids.length){
+      const memberCount = src.team_member_agent_ids.length;
+      if((user.agents||[]).length + memberCount + 1 > 1000){
+        return jres(res,400,{error:`エージェントが上限 1000 を超えるためチームを複製できません (現在 ${(user.agents||[]).length} / 追加 ${memberCount+1})`});
+      }
+      const newGroupId = 'ag_'+crypto.randomUUID();
+      const sourceMembers = (found.user.agents||[]).filter(a => src.team_member_agent_ids.includes(a.id));
+      const clonedMembers = sourceMembers.map(orig => ({
+        id: 'ag_'+crypto.randomUUID(),
+        avatar: orig.avatar || '🤖',
+        name: orig.name,
+        skills: Array.isArray(orig.skills) ? orig.skills : ['writing'],
+        persona: orig.persona || '',
+        chrome_enabled: false,
+        sheets_enabled: false,
+        extension_enabled: false,
+        model: 'sonnet',
+        history: [],
+        created_at: now,
+        team_origin: { team_id: newGroupId, source_team_id: src.id, source_share_id: src.share_id || null },
+      }));
+      const groupClone = {
+        id: newGroupId,
+        avatar: src.avatar || '🎯',
+        name: src.name || 'Team',
+        skills: ['planning'],
+        persona: '',
+        is_group: true,
+        is_team: true,
+        team_template_id: 'shared',
+        team_goal: src.team_goal || '',
+        lang: src.lang || 'en',
+        host_id: user.id,
+        members: [
+          { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
+        ],
+        team_member_agent_ids: clonedMembers.map(a => a.id),
+        ai_auto_respond: false,
+        created_at: now,
+        updated_at: now,
+        history: [
+          { role:'system',
+            content: (src.lang === 'ja')
+              ? `🎉 ${src.name} を共有 URL から複製しました。@${(clonedMembers[0]?.name||'AI').replace(/\s+/g,'')} のように特定エージェントを呼べます。`
+              : `🎉 Cloned ${src.name} from a shared URL. Call a specific agent with @${(clonedMembers[0]?.name||'AI').replace(/\s+/g,'')}.`,
+            time: new Date().toLocaleTimeString((src.lang==='ja')?'ja-JP':'en-US',{hour:'2-digit',minute:'2-digit'}),
+          },
+        ],
+      };
+      user.agents = [...(user.agents||[]), ...clonedMembers, groupClone];
+      await DB.save(user);
+      console.log('[share/clone] team='+src.id+' source_user='+found.user.id+' new_team='+newGroupId+' members='+clonedMembers.length);
+      return jres(res, 201, { agent: groupClone, team: true, member_count: clonedMembers.length });
+    }
+
+    // ── Solo agent clone ──
     const clone={
       id:'ag_'+crypto.randomUUID(),
       avatar:src.avatar||'🤖',
@@ -6787,11 +6849,14 @@ async function handleAPI(req,res,pathname,method,ip){
       skills:Array.isArray(src.skills)?src.skills:['writing'],
       persona:src.persona||'',
       chrome_enabled:!!src.chrome_enabled,
+      model: src.model || 'sonnet',
       history:[],
-      created_at:new Date().toISOString()
+      created_at: now,
+      share_origin: { share_id: src.share_id || null, source_user_id: found.user.id },
     };
     user.agents=[...(user.agents||[]),clone];
     await DB.save(user);
+    console.log('[share/clone] solo='+src.id+' source_user='+found.user.id+' new='+clone.id);
     return jres(res,201,{agent:clone});
   }
 

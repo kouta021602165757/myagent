@@ -103,14 +103,18 @@ const API = location.origin;
 const shareId = (location.pathname.match(/^\/a\/([a-z0-9-]+)\/?$/)||[])[1];
 
 // ── i18n ──
+// English-default: only switches to JA when explicit ?lang=ja or saved
+// preference. Browser language is intentionally NOT used so US/global
+// visitors landing on a JA-locale device still see English.
 function _detectLang(){
   try{
     var qs = new URLSearchParams(location.search).get('lang');
-    if(qs === 'ja' || qs === 'en') return qs;
+    if(qs === 'ja' || qs === 'en'){
+      try{ localStorage.setItem('lang', qs); }catch(e){}
+      return qs;
+    }
     var saved = localStorage.getItem('lang');
     if(saved === 'ja' || saved === 'en') return saved;
-    var nav = (navigator.language||'').toLowerCase();
-    if(nav.startsWith('ja')) return 'ja';
   }catch(e){}
   return 'en';
 }

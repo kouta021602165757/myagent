@@ -286,17 +286,249 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
     <div class="notes"><b>狙い:</b> 右側で <b>実チャット</b>を見せる。"AI を 1 つの会話で使い分ける" という Team の核機能 (@mention 切替) が一目でわかる。"これ何のサービス？" の説明コストが激減する案。ただし文字密度高めなので Twitter の縮小表示で読みづらいリスクあり。</div>
   </div>
 
-  <!-- ───────── PICK ───────── -->
+  <!-- ═══════════════ Creation-focused patterns (F-I) ═══════════════ -->
+  <div style="margin:80px 0 32px;padding:18px 22px;background:#fff7ee;border:1px solid rgba(251,146,60,.32);border-radius:13px;">
+    <div style="font-family:var(--display);font-size:30px;color:var(--peach-dark);letter-spacing:-.005em;margin-bottom:6px;">CREATION-focused (F〜I)</div>
+    <div style="font-size:13.5px;color:var(--text-muted);line-height:1.7;">
+      ここから下は「<b>AI Agent / Agent Team を <i>作れる</i></b>」訴求を強めた案。<br>
+      A〜E (上) は「使える / 雇える」目線、F〜I (下) は「作れる / ビルド」目線。
+    </div>
+  </div>
+
+  <!-- Style for creation patterns -->
+  <style>
+  .F{background:#fdf8f3;}
+  .F .hdr{position:absolute;top:36px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .F .mark{width:38px;height:38px;border-radius:8px;background:#1a0a00;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:var(--peach);}
+  .F .name{font-family:var(--display);font-size:24px;color:#1a0a00;}
+  .F .body{position:absolute;top:140px;left:54px;right:54px;}
+  .F .h1{font-family:var(--display);font-weight:400;font-size:84px;line-height:.95;letter-spacing:-.02em;color:#1a0a00;margin-bottom:8px;}
+  .F .h1 .accent{color:var(--peach-dark);}
+  .F .sub{font-size:18px;color:var(--text-muted);font-weight:600;margin-bottom:30px;}
+  .F .input-mock{
+    background:#fff;border:2px solid var(--peach);border-radius:14px;padding:14px 18px;
+    font-size:18px;color:#1a0a00;font-weight:700;display:flex;align-items:center;gap:10px;max-width:780px;
+    box-shadow:0 8px 22px rgba(251,146,60,.18);
+    transform:rotate(-1deg);
+  }
+  .F .input-mock .ic{font-size:22px;}
+  .F .input-mock .typing{flex:1;color:var(--text-muted);font-weight:600;}
+  .F .input-mock .typing b{color:#1a0a00;font-weight:800;}
+  .F .input-mock .cta{background:var(--peach);color:#fff;font-size:13px;font-weight:800;padding:7px 16px;border-radius:99px;letter-spacing:.04em;}
+  .F .arrow{position:absolute;left:430px;bottom:160px;font-size:48px;color:var(--peach);font-weight:900;line-height:1;transform:rotate(8deg);}
+  .F .agents{position:absolute;bottom:60px;right:54px;display:flex;align-items:center;gap:0;}
+  .F .agents .av{width:62px;height:62px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;background:#fff;border:3px solid #fff;box-shadow:0 8px 18px rgba(0,0,0,.14);margin-left:-12px;}
+  .F .agents .av:first-child{margin-left:0;}
+  .F .agents .ct{margin-left:14px;background:#1a0a00;color:#fff;font-size:13px;font-weight:900;padding:6px 13px;border-radius:99px;letter-spacing:.05em;}
+  .F .url{position:absolute;bottom:36px;left:54px;font-family:var(--mono);font-size:13px;color:var(--text-subtle);font-weight:600;}
+
+  .G{background:linear-gradient(135deg,#1a0a00 0%,#3a1f10 100%);color:#fff;overflow:hidden;}
+  .G::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(251,146,60,.30),transparent 55%),radial-gradient(circle at 80% 90%,rgba(16,185,129,.16),transparent 60%);}
+  .G .hdr{position:absolute;top:38px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .G .mark{width:44px;height:44px;border-radius:9px;background:var(--peach);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;color:#0c0a09;}
+  .G .name{font-family:var(--display);font-size:26px;color:#fff;letter-spacing:.02em;}
+  .G .badge{position:absolute;top:48px;right:54px;background:#10b981;color:#fff;font-size:13px;font-weight:900;letter-spacing:.08em;padding:7px 14px;border-radius:99px;z-index:3;}
+  .G .body{position:absolute;top:130px;left:54px;right:54px;z-index:2;}
+  .G .h1{font-family:var(--display);font-weight:400;font-size:108px;line-height:.92;letter-spacing:-.02em;color:#fff;}
+  .G .h1 .l1{display:block;}
+  .G .h1 .l2{display:block;color:var(--peach);}
+  .G .sub{font-size:20px;color:rgba(255,245,230,.78);line-height:1.55;margin-top:22px;font-weight:500;max-width:780px;}
+  .G .stats{position:absolute;bottom:56px;left:54px;display:flex;gap:12px;z-index:2;}
+  .G .stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:11px;padding:10px 16px;}
+  .G .stat .num{font-family:var(--display);font-size:30px;color:var(--peach);line-height:1;}
+  .G .stat .lbl{font-size:11px;color:rgba(255,245,230,.7);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:3px;}
+  .G .url{position:absolute;bottom:62px;right:54px;font-family:var(--mono);font-size:14px;color:rgba(255,245,230,.72);font-weight:500;z-index:2;}
+
+  .H{background:#fdf8f3;}
+  .H .hdr{position:absolute;top:36px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .H .mark{width:38px;height:38px;border-radius:8px;background:#1a0a00;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:var(--peach);}
+  .H .name{font-family:var(--display);font-size:24px;color:#1a0a00;}
+  .H .badge{position:absolute;top:46px;right:54px;background:rgba(26,10,0,.85);color:#fff5e6;font-size:12px;font-weight:900;letter-spacing:.08em;padding:6px 13px;border-radius:99px;z-index:3;}
+  .H .h1{position:absolute;top:120px;left:54px;right:54px;font-family:var(--display);font-weight:400;font-size:64px;line-height:1;letter-spacing:-.018em;color:#1a0a00;text-align:center;}
+  .H .h1 .accent{color:var(--peach-dark);}
+  .H .duo{position:absolute;top:230px;left:54px;right:54px;display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .H .card{
+    background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    box-shadow:0 14px 32px rgba(180,90,30,.12);
+  }
+  .H .card.team{background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff;border-color:transparent;}
+  .H .card .lbl{font-size:11px;font-weight:900;letter-spacing:.10em;text-transform:uppercase;color:var(--peach-dark);}
+  .H .card.team .lbl{color:var(--peach);}
+  .H .card .em-area{display:flex;align-items:center;gap:8px;}
+  .H .card .em-area .em{width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:32px;}
+  .H .card.team .em-area .em{background:linear-gradient(135deg,#fff7ee,#fb923c);}
+  .H .card.team .em-area .mini{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid rgba(0,0,0,.20);}
+  .H .card .nm{font-size:24px;font-weight:900;letter-spacing:-.005em;text-align:center;line-height:1.15;}
+  .H .card .desc{font-size:13px;color:var(--text-muted);text-align:center;line-height:1.55;}
+  .H .card.team .desc{color:rgba(255,245,230,.72);}
+  .H .card .cta{background:var(--peach);color:#fff;font-size:13px;font-weight:900;padding:8px 20px;border-radius:99px;letter-spacing:.04em;}
+  .H .card.team .cta{background:var(--peach);color:#0c0a09;}
+  .H .url{position:absolute;bottom:32px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:13px;color:var(--text-subtle);font-weight:600;}
+
+  .I{background:linear-gradient(180deg,#fff7ee 0%,#fdf8f3 100%);}
+  .I .hdr{position:absolute;top:38px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .I .mark{width:44px;height:44px;border-radius:9px;background:var(--peach);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;color:#fff;}
+  .I .name{font-family:var(--display);font-size:26px;color:#1a0a00;letter-spacing:.02em;}
+  .I .badge{position:absolute;top:48px;right:54px;background:#1a0a00;color:#fff5e6;font-size:13px;font-weight:900;letter-spacing:.08em;padding:7px 14px;border-radius:99px;z-index:3;}
+  .I .h1{position:absolute;top:130px;left:54px;right:54px;font-family:var(--display);font-weight:400;font-size:78px;line-height:.96;letter-spacing:-.018em;color:#1a0a00;text-align:center;}
+  .I .h1 .accent{color:var(--peach-dark);}
+  .I .h1 .small{font-family:var(--sans);font-size:36px;font-weight:900;letter-spacing:-.005em;display:block;margin-top:10px;color:var(--text-muted);}
+  .I .stages{position:absolute;top:330px;left:54px;right:54px;display:flex;align-items:center;gap:14px;justify-content:center;}
+  .I .stage{
+    background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 22px;
+    display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:240px;text-align:center;
+    box-shadow:0 6px 18px rgba(180,90,30,.08);
+  }
+  .I .stage.glow{border-color:var(--peach);box-shadow:0 14px 36px rgba(251,146,60,.30);transform:translateY(-4px);}
+  .I .stage .em{font-size:36px;line-height:1;}
+  .I .stage .nm{font-size:14px;font-weight:900;letter-spacing:-.005em;}
+  .I .stage .desc{font-size:11.5px;color:var(--text-subtle);font-weight:600;}
+  .I .stage-arrow{font-size:24px;color:var(--peach);font-weight:900;}
+  .I .url{position:absolute;bottom:44px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:14px;color:var(--text-subtle);font-weight:700;}
+  </style>
+
+  <!-- ───────── F: Type → Build ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">F</span><span class="ttl">Type → Build</span><span class="sub">入力欄 → 矢印 → 5 体 ・ 即作れる感を視覚化</span></div>
+    <div class="shell">
+      <div class="og F">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="body">
+          <div class="h1">TYPE A GOAL.<br><span class="accent">BUILD A TEAM.</span></div>
+          <div class="sub">AI designs 4-10 agents for any workflow in 30 seconds.</div>
+          <div class="input-mock">
+            <span class="ic">✨</span>
+            <span class="typing"><b>"Build &amp; sell on Shopify with margin &gt; 50%"</b></span>
+            <span class="cta">GENERATE</span>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="agents">
+          <div class="av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa)">🛍</div>
+          <div class="av" style="background:linear-gradient(135deg,#fce7f3,#ec4899);color:#fff">📸</div>
+          <div class="av" style="background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff">🌐</div>
+          <div class="av" style="background:linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff">📱</div>
+          <div class="av" style="background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff">📊</div>
+          <span class="ct">5 AI · READY</span>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> "目的を書く → 即チームができる" を 1 枚で実演。入力欄 → 矢印 → 5 体の avatar、という視線誘導で **作れること** を最大限にアピール。"これ何のサービス？" に対して「目的を書くと AI チームを <b>作ってくれる</b>」が瞬時に伝わる。</div>
+  </div>
+
+  <!-- ───────── G: Build & Sell · Creator narrative ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">G</span><span class="ttl">Build &amp; Sell · Creator angle</span><span class="sub">作って ・ 並べて ・ 稼ぐ ・ クリエイター向け</span></div>
+    <div class="shell">
+      <div class="og G">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="badge">💰 80% TO CREATORS</div>
+        <div class="body">
+          <div class="h1"><span class="l1">BUILD AI.</span><span class="l2">SELL AI.</span></div>
+          <div class="sub">Hire it for yourself. List it on the Store. Earn while you sleep.</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="num">100+</div><div class="lbl">Live listings</div></div>
+          <div class="stat"><div class="num">80%</div><div class="lbl">Creator share</div></div>
+          <div class="stat"><div class="num">+10%</div><div class="lbl">Usage royalty</div></div>
+          <div class="stat"><div class="num">7d</div><div class="lbl">To 1st payout</div></div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> 「作る + 売る」のセットで <b>クリエイター・インディーハッカー層に直接訴求</b>。"BUILD AI / SELL AI" の二段ネオン的な見出しで Twitter フィードでも目立つ。stat tile で revenue 仕組みを一瞬で説明。Product Hunt や Indie Hackers 系コミュニティで強い。</div>
+  </div>
+
+  <!-- ───────── H: Solo OR Team duo ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">H</span><span class="ttl">Solo OR Team · 二択カード</span><span class="sub">2 つの "作れる" を並列で見せる</span></div>
+    <div class="shell">
+      <div class="og H">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="badge">🎨 BUILD WHAT YOU NEED</div>
+        <div class="h1">Build a <span class="accent">solo AI</span><br>or a whole <span class="accent">team.</span></div>
+        <div class="duo">
+          <div class="card">
+            <div class="lbl">🤖 SOLO AGENT</div>
+            <div class="em-area">
+              <div class="em">🤖</div>
+            </div>
+            <div class="nm">5 steps.<br>1 minute.</div>
+            <div class="desc">Pick avatar, name, skills, persona — done.</div>
+            <div class="cta">+ CREATE AGENT</div>
+          </div>
+          <div class="card team">
+            <div class="lbl">🎯 AGENT TEAM</div>
+            <div class="em-area">
+              <div class="em">🛍</div>
+              <div class="mini">📸</div>
+              <div class="mini">🌐</div>
+              <div class="mini">📱</div>
+            </div>
+            <div class="nm">Type a goal.<br>30 seconds.</div>
+            <div class="desc">AI designs 4-10 agents for the workflow.</div>
+            <div class="cta">+ GENERATE TEAM</div>
+          </div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> "Solo or Team" の 2 択を並列に見せ、ユーザに <b>選ばせる</b>構造。Solo (5 ステップ・1 分) と Team (目的書く・30 秒) の対比で、何が出来るかが直感的に伝わる。"作れる" 前提が強くなる ・ 説明的だが情報密度の割に整理されてて読みやすい。</div>
+  </div>
+
+  <!-- ───────── I: From idea to team in 30s ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">I</span><span class="ttl">From idea to AI team in 30s</span><span class="sub">3 段ステージ ・ プロセス感</span></div>
+    <div class="shell">
+      <div class="og I">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="badge">⚡ 30 SECONDS</div>
+        <div class="h1">From <span class="accent">idea</span><br>to <span class="accent">AI team</span> in 30s.<span class="small">No setup. No prompt engineering. Just a goal.</span></div>
+        <div class="stages">
+          <div class="stage">
+            <div class="em">💭</div>
+            <div class="nm">1 · Idea</div>
+            <div class="desc">"Run my Shopify"</div>
+          </div>
+          <div class="stage-arrow">→</div>
+          <div class="stage glow">
+            <div class="em">✨</div>
+            <div class="nm">2 · AI builds</div>
+            <div class="desc">Designs 5 agents</div>
+          </div>
+          <div class="stage-arrow">→</div>
+          <div class="stage">
+            <div class="em">🎯</div>
+            <div class="nm">3 · Team ready</div>
+            <div class="desc">Chat & ship</div>
+          </div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> "アイデア → AI が作る → チーム稼働" の <b>3 ステージプロセス</b>を視覚化。"作れる" 自体を時系列で見せるので "簡単に出来る" が一瞬で伝わる。Onboarding ページやチュートリアル教材っぽい雰囲気。Notion / Linear のヘルプドキュメント表紙的フォーマット。</div>
+  </div>
+
+  <!-- ═══════════════ Pick (updated for 9 patterns) ═══════════════ -->
   <div style="margin-top:60px;background:#fff;border:2px solid var(--peach);border-radius:16px;padding:22px 24px;">
-    <div style="font-weight:900;font-size:16px;margin-bottom:10px;">🎨 どれにしますか？</div>
+    <div style="font-weight:900;font-size:16px;margin-bottom:10px;">🎨 9 案からどれにしますか？</div>
     <div style="font-size:13.5px;color:var(--text-muted);line-height:1.85;">
-      <b>A (Big Type · Peach)</b>: 現 OG と統一感 ・ 安定 ・ 無難 → <b>新 LP との整合性重視</b><br>
-      <b>B (Dark Story)</b>: SaaS Twitter 受けが最も良い ・ stat tiles で説明力高い → <b>Pro / Power user 狙い</b><br>
-      <b>C (Product Mockup)</b>: ストアの存在を明示 ・ "何売ってるか" が瞬時にわかる → <b>マーケットプレイス訴求重視</b><br>
-      <b>D (Massive Type)</b>: スクロールストップ力最強 ・ クリック率高そう → <b>バイラル狙い</b><br>
-      <b>E (Chat Demo)</b>: 機能の凄さが一目でわかる → <b>説明コスト激減</b> (ただし密度高め)<br>
+      <b style="color:var(--text);">— 使う/雇う訴求 (A〜E) —</b><br>
+      <b>A</b> Big Type · Peach: 現 OG リブランド (無難)<br>
+      <b>B</b> Dark Story: SaaS 受け最強 ・ stat tiles<br>
+      <b>C</b> Product Mockup: 商品っぽさ最強<br>
+      <b>D</b> Massive Type: スクロール停止力 MAX<br>
+      <b>E</b> Chat Demo: @mention 機能を実演<br>
       <br>
-      <span style="color:var(--text);font-weight:700">推し: B or D。混合 (A の peach + B の stat tiles 等) もアリ。</span>
+      <b style="color:var(--text);">— 作る/ビルド訴求 (F〜I) —</b><br>
+      <b>F</b> Type → Build: 入力 → 5 体 ・ 即作れる感<br>
+      <b>G</b> Build &amp; Sell: クリエイター訴求 ・ 80% creator share<br>
+      <b>H</b> Solo OR Team: 二択カード ・ 何が作れるかを並列<br>
+      <b>I</b> From idea to team in 30s: 3 段プロセス感<br>
+      <br>
+      <span style="color:var(--text);font-weight:700">推し: F (即作れる感が直球で強い) or H (Solo / Team 両方を 1 枚で訴求)。混合可。</span>
     </div>
   </div>
 </div>

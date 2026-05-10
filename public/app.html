@@ -6833,6 +6833,7 @@ async function openAgent(id){
     if(isTeam){
       actsHTML += '<button class="ct-act wide members" onclick="openTeamMembersPanel(\''+ag.id+'\')" title="'+L('チームのメンバー','Team members')+'">🎯 '+teamCount+' AI</button>';
       if(isHost){
+        actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+L('共有 URL ・ SNS で広報','Share URL · post on social')+'">🔗</button>';
         actsHTML += '<button class="ct-act" onclick="openTeamEdit(\''+ag.id+'\')" title="'+L('チームを編集 (目的・名前)','Edit team (goal · name)')+'">✏️</button>';
       }
     } else {

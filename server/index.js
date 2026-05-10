@@ -2395,6 +2395,129 @@ function renderListingOgSvg(d, twemojiUri){
 </svg>`;
 }
 
+/** Render the dark "Member Grid" Team OG (Variant B from the approved mock).
+ *  Inputs:
+ *    team       — the team agent record (name, avatar, team_goal)
+ *    members    — array of {avatar, name} cloned-agent records (max 6 displayed)
+ *    avatarMap  — optional Map<emoji, twemojiDataUri> for member avatars
+ */
+function renderTeamOgSvg(team, members, avatarMap){
+  members = Array.isArray(members) ? members.slice(0, 6) : [];
+  const teamName = _trunc(team.name || 'Agent Team', 24);
+  const goal = team.team_goal || team.persona || '';
+  const goalLines = _wrapText(goal, 30, 2);
+  const cover = team.avatar || '🎯';
+  const memberCount = (Array.isArray(team.team_member_agent_ids) ? team.team_member_agent_ids.length : members.length) || 0;
+  const teamEmojiUri = (avatarMap && avatarMap.get(cover)) || null;
+  // Member palette — index-based gradients matching the mock
+  const memberGrads = ['#fff7ee→#fb923c','#ede9fe→#8b5cf6','#dbeafe→#3b82f6','#fce7f3→#ec4899','#d1fae5→#10b981','#fef3c7→#f59e0b'];
+
+  // Right-side grid: 2 cols × 3 rows. Each card 270×60 with 14px gap.
+  const grid = members.map((m, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = 660 + col * 284;
+    const y = 150 + row * 74;
+    const [g1, g2] = memberGrads[i % memberGrads.length].split('→');
+    const av = m.avatar || '🤖';
+    const nm = _trunc(m.name || 'AI', 14);
+    const role = `Step ${i+1}`;
+    const memUri = avatarMap && avatarMap.get(av);
+    const avInner = av.startsWith('data:image/')
+      ? `<clipPath id="memClip${i}"><rect x="-19" y="-19" width="38" height="38" rx="9" ry="9"/></clipPath><image x="-19" y="-19" width="38" height="38" href="${av}" preserveAspectRatio="xMidYMid slice" clip-path="url(#memClip${i})"/>`
+      : (memUri
+        ? `<image x="-16" y="-16" width="32" height="32" href="${memUri}" preserveAspectRatio="xMidYMid meet"/>`
+        : `<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="22">${_xmlEscape(av)}</text>`);
+    return `
+    <g transform="translate(${x} ${y})">
+      <rect x="0" y="0" width="270" height="60" rx="13" ry="13" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+      <defs><linearGradient id="memG${i}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${g1}"/><stop offset="100%" stop-color="${g2}"/></linearGradient></defs>
+      <rect x="11" y="11" width="38" height="38" rx="9" ry="9" fill="url(#memG${i})"/>
+      <g transform="translate(30 30)">${avInner}</g>
+      <text x="60" y="28" fill="#ffffff" font-size="15" font-weight="800">${_xmlEscape(nm)}</text>
+      <text x="60" y="46" fill="rgba(255,245,230,0.6)" font-size="10" font-weight="600" letter-spacing="0.06em" text-transform="uppercase">${_xmlEscape(role)}</text>
+    </g>`;
+  }).join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'Hiragino Sans','Noto Sans JP','Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <radialGradient id="bgPeach" cx="20%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#fb923c" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bgViolet" cx="90%" cy="110%" r="70%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Dark base -->
+  <rect width="1200" height="630" fill="#0c0a09"/>
+  <rect width="1200" height="630" fill="url(#bgPeach)"/>
+  <rect width="1200" height="630" fill="url(#bgViolet)"/>
+
+  <!-- Header -->
+  <g transform="translate(48 32)">
+    <!-- M square -->
+    <rect x="0" y="0" width="44" height="44" rx="9" ry="9" fill="#fb923c"/>
+    <text x="22" y="32" text-anchor="middle" fill="#0c0a09" font-size="24" font-weight="900" letter-spacing="-0.02em">M</text>
+    <!-- wordmark -->
+    <text x="56" y="30" fill="#ffffff" font-size="22" font-weight="900" letter-spacing="0.04em">MY AI AGENT</text>
+    <!-- TEAM pill at right -->
+    <g transform="translate(${1200 - 48 - 200} 0)">
+      <rect x="0" y="0" width="200" height="34" rx="17" ry="17" fill="#fb923c"/>
+      <text x="100" y="23" text-anchor="middle" fill="#0c0a09" font-size="13" font-weight="900" letter-spacing="0.08em">🎯 AGENT TEAM</text>
+    </g>
+  </g>
+
+  <!-- LEFT side: cover pill + headline + desc + meta -->
+  <g transform="translate(48 130)">
+    <!-- cover pill -->
+    <g>
+      <rect x="0" y="0" width="${Math.min(540, 70 + teamName.length*22)}" height="54" rx="27" ry="27" fill="rgba(251,146,60,0.18)" stroke="rgba(251,146,60,0.32)" stroke-width="1"/>
+      <circle cx="27" cy="27" r="17" fill="#ffffff"/>
+      <g transform="translate(27 27)">
+        ${cover.startsWith('data:image/')
+          ? `<clipPath id="coverClip"><circle cx="0" cy="0" r="15"/></clipPath><image x="-15" y="-15" width="30" height="30" href="${cover}" preserveAspectRatio="xMidYMid slice" clip-path="url(#coverClip)"/>`
+          : (teamEmojiUri
+            ? `<image x="-13" y="-13" width="26" height="26" href="${teamEmojiUri}" preserveAspectRatio="xMidYMid meet"/>`
+            : `<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="20">${_xmlEscape(cover)}</text>`)}
+      </g>
+      <text x="56" y="34" fill="#fb923c" font-size="15" font-weight="800" letter-spacing="0.04em">${_xmlEscape(teamName)}</text>
+    </g>
+
+    <!-- big headline = goal line 1 (or fallback) -->
+    <text x="0" y="120" fill="#ffffff" font-size="56" font-weight="900" letter-spacing="-0.02em">${_xmlEscape(goalLines[0] || `${memberCount} 体の AI が`)}</text>
+    <text x="0" y="180" fill="#ffffff" font-size="56" font-weight="900" letter-spacing="-0.02em">${_xmlEscape(goalLines[1] || '業務を回す。')}</text>
+
+    <!-- desc / handoff line -->
+    <text x="0" y="240" fill="rgba(255,245,230,0.78)" font-size="20" font-weight="500">1 クリックでクローン → 自分のアカウントで起動。</text>
+
+    <!-- meta pills -->
+    <g transform="translate(0 290)">
+      <rect x="0" y="0" width="${64 + String(memberCount).length*12}" height="32" rx="16" ry="16" fill="rgba(251,146,60,0.10)" stroke="rgba(251,146,60,0.28)" stroke-width="1"/>
+      <text x="${(64 + String(memberCount).length*12)/2}" y="22" text-anchor="middle" fill="#fb923c" font-size="13" font-weight="800" letter-spacing="0.04em">🤖 ${memberCount} AGENTS</text>
+      <g transform="translate(${64 + String(memberCount).length*12 + 10} 0)">
+        <rect x="0" y="0" width="76" height="32" rx="16" ry="16" fill="rgba(251,146,60,0.10)" stroke="rgba(251,146,60,0.28)" stroke-width="1"/>
+        <text x="38" y="22" text-anchor="middle" fill="#fb923c" font-size="13" font-weight="800" letter-spacing="0.04em">💼 FREE</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- RIGHT side: 6-member grid -->
+  ${grid}
+
+  <!-- Footer: URL on left, CTA on right -->
+  <g transform="translate(48 568)">
+    <text x="0" y="22" fill="rgba(255,245,230,0.72)" font-size="14" font-weight="500" font-family="'DM Mono','SF Mono',Menlo,monospace">myaiagents.agency/a/${_xmlEscape(team.share_id||'')}</text>
+  </g>
+  <g transform="translate(${1200 - 48 - 220} 564)">
+    <rect x="0" y="0" width="220" height="44" rx="9" ry="9" fill="#fb923c"/>
+    <text x="110" y="28" text-anchor="middle" fill="#0c0a09" font-size="14" font-weight="900" letter-spacing="0.04em">▶ 1-CLICK CLONE</text>
+  </g>
+</svg>`;
+}
+
 /** Render sitemap.xml: static pages + every live public listing. */
 async function serveSitemapXml(res){
   const now = new Date().toISOString().slice(0,10);
@@ -2669,10 +2792,17 @@ async function serveAgentSharePage(res, shareId){
     // so SNS unfurls don't show a bare URL.
     const hasAgent = !!(found && found.agent && found.agent.share_id);
     const ag = hasAgent ? found.agent : null;
-    const titleH = escHtml(hasAgent ? (ag.name || 'AI Agent') : 'MY AI AGENT — Build your own AI Team');
-    const descH  = escHtml(hasAgent
-      ? _trunc(ag.persona || 'A custom AI agent on MY AI AGENT.', 160)
-      : 'Build your own AI agent team. 10 templates, group chat, Agent Store. Free to start.');
+    const isTeam = hasAgent && !!ag.is_team;
+    const memCount = isTeam ? (Array.isArray(ag.team_member_agent_ids) ? ag.team_member_agent_ids.length : 0) : 0;
+    const titleH = escHtml(hasAgent
+      ? (isTeam ? `🎯 ${ag.name || 'Agent Team'} · ${memCount} AI agents` : (ag.name || 'AI Agent'))
+      : 'MY AI AGENT — Build your own AI Team');
+    // Teams have empty persona — fall back to team_goal so the unfurl still
+    // tells the visitor what the team does.
+    const descSrc = isTeam ? (ag.team_goal || ag.persona || 'A multi-agent AI team on MY AI AGENT.')
+                  : hasAgent ? (ag.persona || 'A custom AI agent on MY AI AGENT.')
+                  : 'Build your own AI agent team. 10 templates, group chat, Agent Store. Free to start.';
+    const descH  = escHtml(_trunc(descSrc, 160));
     const pageUrl = APP_URL + '/a/' + shareId;
     // Per-agent dynamic OG. The endpoint renders a 1200x630 card with the
     // agent's name, description, avatar, and creator handle.
@@ -3666,6 +3796,8 @@ async function handleAPI(req,res,pathname,method,ip){
 
   // ── GET /api/og/a/:share_id.svg ────────────────────────────
   // Public: SNS unfurl image for agent share pages (/a/:share_id).
+  // Teams (is_team:true) render the dark "Member Grid" variant; solo agents
+  // render the existing peach-gradient listing card.
   const ogShareSvg = pathname.match(/^\/api\/og\/a\/([a-z0-9-]+)\.svg$/);
   if(ogShareSvg && method==='GET'){
     const found = await findAgentByShareId(ogShareSvg[1]);
@@ -3673,8 +3805,14 @@ async function handleAPI(req,res,pathname,method,ip){
       res.writeHead(404,{'Content-Type':'text/plain'});
       return res.end('Share not found');
     }
-    const detail = _agentAsListing(found.user, found.agent);
-    const svg = renderListingOgSvg(detail);
+    let svg;
+    if(found.agent.is_team){
+      const memberAgents = (found.user.agents||[]).filter(a => (found.agent.team_member_agent_ids||[]).includes(a.id)).slice(0, 6);
+      svg = renderTeamOgSvg(found.agent, memberAgents);
+    } else {
+      const detail = _agentAsListing(found.user, found.agent);
+      svg = renderListingOgSvg(detail);
+    }
     res.writeHead(200, {
       'Content-Type':'image/svg+xml; charset=utf-8',
       'Cache-Control':'public, max-age=300',
@@ -3693,14 +3831,31 @@ async function handleAPI(req,res,pathname,method,ip){
       res.writeHead(404,{'Content-Type':'text/plain'});
       return res.end('Share not found');
     }
-    const detail = _agentAsListing(found.user, found.agent);
-    let twemojiUri = null;
-    try{
-      const av = detail.agent?.avatar || '🤖';
-      const tw = await _getTwemojiSvg(av);
-      if(tw) twemojiUri = _twemojiDataUri(tw);
-    }catch(e){ /* fall back to text emoji */ }
-    const svg = renderListingOgSvg(detail, twemojiUri);
+    let svg;
+    if(found.agent.is_team){
+      const memberAgents = (found.user.agents||[]).filter(a => (found.agent.team_member_agent_ids||[]).includes(a.id)).slice(0, 6);
+      // Build a Map of every emoji we need (cover + each member) → twemoji data URI.
+      // resvg can render those as <image>, even on hosts without color emoji fonts.
+      const avatarMap = new Map();
+      const emojis = [found.agent.avatar || '🎯', ...memberAgents.map(m => m.avatar || '🤖')];
+      for(const em of emojis){
+        if(!em || em.startsWith('data:image/') || avatarMap.has(em)) continue;
+        try {
+          const tw = await _getTwemojiSvg(em);
+          if(tw) avatarMap.set(em, _twemojiDataUri(tw));
+        } catch(e){ /* skip — fall back to text emoji */ }
+      }
+      svg = renderTeamOgSvg(found.agent, memberAgents, avatarMap);
+    } else {
+      const detail = _agentAsListing(found.user, found.agent);
+      let twemojiUri = null;
+      try{
+        const av = detail.agent?.avatar || '🤖';
+        const tw = await _getTwemojiSvg(av);
+        if(tw) twemojiUri = _twemojiDataUri(tw);
+      }catch(e){ /* fall back to text emoji */ }
+      svg = renderListingOgSvg(detail, twemojiUri);
+    }
     const png = svgToPng(svg);
     if(!png){
       // resvg unavailable on this host (Render Node-only build can't link

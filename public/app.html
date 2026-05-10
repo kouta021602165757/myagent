@@ -936,6 +936,230 @@ input,textarea{font-family:var(--sans);}
   .storev2-cat-grid{grid-template-columns:repeat(2,1fr);}
   .storev2-creators{grid-template-columns:repeat(2,1fr);}
 }
+
+/* ── Agent Store v3 — App Store-style ──────────────────────── */
+.wizard.storev3{background:#fff;}
+.storev3-top{
+  position:sticky;top:0;z-index:5;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);
+  border-bottom:.5px solid rgba(0,0,0,.08);padding:14px 22px;display:flex;align-items:center;gap:14px;
+}
+.storev3-brand{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.storev3-brand-mark{
+  width:30px;height:30px;border-radius:7px;background:#1a0a00;color:var(--peach);
+  display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue','Hiragino Mincho ProN',serif;font-size:18px;
+}
+.storev3-brand-name{font-size:18px;font-weight:800;letter-spacing:-.01em;color:#1a0a00;}
+.storev3-search{
+  flex:1;background:rgba(0,0,0,.04);border:0;border-radius:10px;
+  padding:9px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text3);
+  transition:background .14s,box-shadow .14s;
+}
+.storev3-search:focus-within{background:#fff;box-shadow:0 0 0 2px var(--peach);}
+.storev3-search input{flex:1;border:0;background:transparent;font-family:inherit;font-size:13.5px;color:var(--text);outline:none;}
+.storev3-search input::placeholder{color:rgba(60,60,67,.6);}
+.storev3-search kbd{font-family:'DM Mono','SF Mono',Menlo,monospace;font-size:10px;color:rgba(60,60,67,.6);background:rgba(0,0,0,.04);padding:2px 6px;border-radius:5px;}
+.storev3-close{
+  width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.06);border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;color:rgba(60,60,67,.7);flex-shrink:0;
+}
+.storev3-close:hover{background:rgba(0,0,0,.10);color:var(--text);}
+
+.storev3-tabs{
+  display:flex;gap:0;padding:0 14px;background:#fff;border-bottom:.5px solid rgba(0,0,0,.08);
+  position:sticky;top:58px;z-index:4;
+}
+.storev3-tab{
+  font-family:inherit;font-size:14px;font-weight:600;padding:14px 18px;
+  background:transparent;border:0;color:rgba(60,60,67,.7);cursor:pointer;position:relative;letter-spacing:-.005em;
+}
+.storev3-tab:hover{color:var(--text);}
+.storev3-tab.active{color:#1a0a00;font-weight:700;}
+.storev3-tab.active::after{
+  content:'';position:absolute;left:14px;right:14px;bottom:-1px;height:2px;background:var(--peach);border-radius:1px;
+}
+
+.storev3-body{padding:24px 22px 36px;overflow-y:auto;flex:1;min-height:0;background:#fff;}
+.storev3-body::-webkit-scrollbar{width:8px;}
+.storev3-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:4px;}
+.storev3-empty{padding:80px 20px;text-align:center;color:var(--text3);font-size:14px;font-weight:600;}
+
+/* Section header (App Store style) */
+.storev3-sh{display:flex;align-items:flex-end;justify-content:space-between;margin:36px 0 14px;}
+.storev3-sh:first-child{margin-top:6px;}
+.storev3-sh .ttl{font-size:24px;font-weight:800;letter-spacing:-.015em;color:#1a0a00;}
+.storev3-sh .ttl .kicker{display:block;font-size:11px;font-weight:700;color:var(--peach-dark);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;}
+.storev3-sh .more{font-size:14px;font-weight:600;color:var(--peach-dark);text-decoration:none;background:transparent;border:0;cursor:pointer;font-family:inherit;}
+.storev3-sh .more:hover{color:var(--peach);}
+
+/* HERO STORY card (full-width, gradient bg, App Store "Today" feel) */
+.storev3-story{
+  position:relative;border-radius:18px;overflow:hidden;cursor:pointer;
+  min-height:380px;display:flex;align-items:flex-end;
+  background:linear-gradient(135deg,#1a0a00 0%,#3a1f10 50%,#ea580c 100%);color:#fff5e6;
+  padding:28px 28px 26px;margin-bottom:36px;
+  transition:transform .15s, box-shadow .15s;
+  box-shadow:0 12px 40px rgba(0,0,0,.20);
+}
+.storev3-story::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(251,146,60,.42),transparent 60%);pointer-events:none;}
+.storev3-story:hover{transform:translateY(-2px);box-shadow:0 16px 48px rgba(0,0,0,.28);}
+.storev3-story .em{
+  position:absolute;top:36px;right:36px;width:160px;height:160px;border-radius:34px;
+  background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:88px;
+  box-shadow:0 16px 40px rgba(0,0,0,.18);transform:rotate(-6deg);
+}
+.storev3-story .info{position:relative;z-index:2;max-width:62%;}
+.storev3-story .kicker{display:inline-block;background:rgba(255,255,255,.16);color:#fff5e6;font-size:11px;font-weight:800;letter-spacing:.10em;padding:5px 12px;border-radius:99px;margin-bottom:14px;text-transform:uppercase;backdrop-filter:blur(6px);}
+.storev3-story h2{font-size:42px;font-weight:900;line-height:1.05;letter-spacing:-.02em;margin-bottom:10px;color:#fff;}
+.storev3-story .subtitle{font-size:15px;color:rgba(255,245,230,.78);line-height:1.6;margin-bottom:18px;max-width:520px;}
+.storev3-story .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.storev3-story .pill{background:rgba(255,255,255,.14);color:#fff5e6;font-size:11px;font-weight:800;letter-spacing:.04em;padding:4px 11px;border-radius:99px;backdrop-filter:blur(4px);}
+.storev3-story .price{font-size:22px;font-weight:800;color:#fff;}
+.storev3-story .get{
+  background:rgba(255,255,255,.96);color:#1a0a00;border:0;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:800;padding:8px 22px;border-radius:99px;
+  letter-spacing:-.005em;
+}
+.storev3-story .get:hover{background:#fff;}
+
+/* Featured pair (2-up smaller story cards) */
+.storev3-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px;}
+.storev3-pair-card{
+  position:relative;border-radius:16px;overflow:hidden;cursor:pointer;padding:20px;
+  background:#fff;border:.5px solid rgba(0,0,0,.06);
+  display:flex;flex-direction:column;justify-content:flex-end;min-height:200px;
+  transition:transform .15s, box-shadow .15s;
+}
+.storev3-pair-card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.10);}
+.storev3-pair-card.dark{background:linear-gradient(135deg,#0c0a09 0%,#1a0a00 100%);color:#fff5e6;border-color:transparent;}
+.storev3-pair-card.peach{background:linear-gradient(135deg,#fff7ee 0%,#fed7aa 100%);color:#1a0a00;border-color:transparent;}
+.storev3-pair-card .em{position:absolute;top:18px;right:18px;font-size:48px;line-height:1;}
+.storev3-pair-card .kicker{font-size:10.5px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;margin-bottom:6px;color:rgba(0,0,0,.50);}
+.storev3-pair-card.dark .kicker{color:rgba(255,245,230,.65);}
+.storev3-pair-card.peach .kicker{color:var(--peach-dark);}
+.storev3-pair-card h3{font-size:22px;font-weight:800;line-height:1.15;letter-spacing:-.015em;margin-bottom:5px;}
+.storev3-pair-card .sub{font-size:13px;line-height:1.55;color:rgba(0,0,0,.62);margin-bottom:0;}
+.storev3-pair-card.dark .sub{color:rgba(255,245,230,.72);}
+
+/* TOP CHARTS — numbered list (the App Store signature) */
+.storev3-charts{
+  background:#fff;border-radius:14px;border:.5px solid rgba(0,0,0,.08);overflow:hidden;
+}
+.storev3-row{
+  display:grid;grid-template-columns:34px 60px 1fr auto;gap:14px;align-items:center;
+  padding:13px 18px;cursor:pointer;border-top:.5px solid rgba(0,0,0,.05);
+  transition:background .12s;
+}
+.storev3-row:first-child{border-top:0;}
+.storev3-row:hover{background:rgba(0,0,0,.025);}
+.storev3-row .rank{font-family:'DM Mono','SF Mono',Menlo,monospace;font-size:14px;font-weight:600;color:rgba(60,60,67,.6);letter-spacing:-.005em;text-align:center;}
+.storev3-row .icon{
+  width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:32px;
+  background:linear-gradient(135deg,#fff7ee,#fed7aa);box-shadow:0 1px 0 rgba(0,0,0,.04);
+}
+.storev3-row.team .icon{background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff;}
+.storev3-row .icon[data-cat=marketing]{background:linear-gradient(135deg,#fce7f3,#ec4899);color:#fff;}
+.storev3-row .icon[data-cat=research]{background:linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff;}
+.storev3-row .icon[data-cat=writing]{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.storev3-row .icon[data-cat=ops]{background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff;}
+.storev3-row .icon[data-cat=sales]{background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff;}
+.storev3-row .meta{min-width:0;display:flex;flex-direction:column;gap:2px;}
+.storev3-row .nm{font-size:14.5px;font-weight:700;color:#1a0a00;letter-spacing:-.005em;line-height:1.2;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
+.storev3-row .sub{font-size:12.5px;color:rgba(60,60,67,.62);line-height:1.35;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
+.storev3-row .sub .badge{display:inline-block;background:rgba(251,146,60,.14);color:var(--peach-dark);font-size:9.5px;font-weight:800;padding:1px 7px;border-radius:99px;letter-spacing:.04em;margin-right:5px;vertical-align:middle;}
+.storev3-row .get{
+  background:rgba(0,122,255,0);color:var(--peach-dark);
+  border:1.5px solid var(--peach);border-radius:99px;font-family:inherit;font-size:13px;font-weight:800;
+  padding:5px 18px;cursor:pointer;letter-spacing:-.005em;flex-shrink:0;
+}
+.storev3-row .get:hover{background:var(--peach);color:#fff;}
+.storev3-row .get.free{color:#10b981;border-color:#10b981;}
+.storev3-row .get.free:hover{background:#10b981;color:#fff;}
+.storev3-row .get.owned{color:rgba(60,60,67,.5);border-color:rgba(0,0,0,.12);}
+
+/* Editor's choice — horizontal scroll big tiles */
+.storev3-hscroll{display:flex;gap:14px;overflow-x:auto;padding:4px 4px 14px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+.storev3-hscroll::-webkit-scrollbar{height:6px;}
+.storev3-hscroll::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:3px;}
+.storev3-tile{
+  flex:0 0 270px;scroll-snap-align:start;border-radius:14px;overflow:hidden;cursor:pointer;
+  background:#fff;border:.5px solid rgba(0,0,0,.06);transition:transform .15s, box-shadow .15s;
+}
+.storev3-tile:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.08);}
+.storev3-tile .cv{height:140px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:54px;position:relative;}
+.storev3-tile.team .cv{background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff;}
+.storev3-tile .cv .ribbon{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.95);color:var(--peach-dark);font-size:9.5px;font-weight:900;letter-spacing:.05em;padding:3px 9px;border-radius:99px;}
+.storev3-tile.team .cv .ribbon{background:rgba(0,0,0,.42);color:#fff;backdrop-filter:blur(6px);}
+.storev3-tile .body{padding:14px;}
+.storev3-tile .nm{font-size:14px;font-weight:700;letter-spacing:-.005em;line-height:1.25;margin-bottom:4px;color:#1a0a00;}
+.storev3-tile .sub{font-size:12px;color:rgba(60,60,67,.6);line-height:1.45;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.storev3-tile .row{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:rgba(60,60,67,.6);font-weight:700;}
+.storev3-tile .row .star{color:#f59e0b;}
+.storev3-tile .row .price{font-family:'DM Mono','SF Mono',Menlo,monospace;font-size:12px;font-weight:900;color:var(--peach-dark);}
+.storev3-tile .row .price.free{color:#10b981;}
+
+/* Categories — clean App Store-style flat tiles */
+.storev3-cats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:rgba(0,0,0,.06);border-radius:14px;overflow:hidden;border:.5px solid rgba(0,0,0,.06);}
+.storev3-cat{
+  background:#fff;padding:18px 20px;cursor:pointer;border:0;font-family:inherit;text-align:left;
+  display:flex;align-items:center;gap:14px;transition:background .12s;
+}
+.storev3-cat:hover{background:rgba(0,0,0,.025);}
+.storev3-cat .em{
+  width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+}
+.storev3-cat.c1 .em{background:linear-gradient(135deg,#fce7f3,#ec4899);}
+.storev3-cat.c2 .em{background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff;}
+.storev3-cat.c3 .em{background:linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff;}
+.storev3-cat.c4 .em{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.storev3-cat.c5 .em{background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff;}
+.storev3-cat.c6 .em{background:linear-gradient(135deg,#fef3c7,#f59e0b);color:#fff;}
+.storev3-cat .meta{flex:1;}
+.storev3-cat .nm{font-size:15px;font-weight:700;letter-spacing:-.005em;color:#1a0a00;line-height:1.2;}
+.storev3-cat .ct{font-size:12px;color:rgba(60,60,67,.6);font-weight:600;margin-top:2px;}
+.storev3-cat .arrow{color:rgba(60,60,67,.4);font-size:14px;}
+
+/* Apps / Teams full list view (when tabs other than Today) */
+.storev3-list{
+  background:#fff;border-radius:14px;border:.5px solid rgba(0,0,0,.08);overflow:hidden;
+}
+.storev3-list .storev3-row{grid-template-columns:60px 1fr auto;}
+.storev3-list .storev3-row .rank{display:none;}
+
+/* Become a creator footer card */
+.storev3-creator-cta{
+  background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff5e6;
+  border-radius:16px;padding:28px;margin-top:36px;
+  display:grid;grid-template-columns:1.4fr 1fr;gap:28px;align-items:center;position:relative;overflow:hidden;
+}
+.storev3-creator-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 30%,rgba(251,146,60,.32),transparent 60%);pointer-events:none;}
+.storev3-creator-cta .text{position:relative;z-index:2;}
+.storev3-creator-cta h3{font-size:26px;font-weight:800;letter-spacing:-.015em;margin-bottom:10px;color:#fff;}
+.storev3-creator-cta h3 .accent{color:var(--peach);}
+.storev3-creator-cta p{font-size:13.5px;color:rgba(255,245,230,.78);line-height:1.65;margin-bottom:14px;}
+.storev3-creator-cta button{background:var(--peach);color:#0c0a09;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:800;padding:9px 22px;border-radius:99px;}
+.storev3-creator-cta .stats{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.storev3-creator-cta .stat{background:rgba(255,255,255,.06);border:.5px solid rgba(255,255,255,.10);border-radius:11px;padding:13px;}
+.storev3-creator-cta .stat .num{font-size:26px;font-weight:800;color:var(--peach);line-height:1;letter-spacing:-.005em;margin-bottom:3px;}
+.storev3-creator-cta .stat .lbl{font-size:10px;color:rgba(255,245,230,.7);font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+
+@media (max-width:820px){
+  .storev3-pair{grid-template-columns:1fr;}
+  .storev3-story{min-height:340px;}
+  .storev3-story .em{width:120px;height:120px;font-size:64px;top:24px;right:24px;border-radius:24px;}
+  .storev3-story h2{font-size:32px;}
+  .storev3-cats{grid-template-columns:1fr;}
+  .storev3-creator-cta{grid-template-columns:1fr;}
+}
+@media (max-width:520px){
+  .storev3-row{grid-template-columns:24px 50px 1fr auto;gap:10px;padding:11px 14px;}
+  .storev3-row .icon{width:50px;height:50px;font-size:26px;border-radius:12px;}
+  .storev3-row .nm{font-size:13.5px;}
+  .storev3-row .sub{font-size:11.5px;}
+  .storev3-row .get{padding:5px 14px;font-size:12px;}
+  .storev3-tile{flex:0 0 220px;}
+  .storev3-tabs{padding:0 10px;overflow-x:auto;}
+  .storev3-tab{padding:14px 14px;font-size:13px;}
+}
 .market-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
 .market-card{position:relative;background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:all .15s;}
 .market-card:hover{border-color:var(--peach-light);transform:translateY(-2px);box-shadow:0 6px 18px rgba(180,120,80,.08);}
@@ -2545,47 +2769,42 @@ body{color:#f0f0f8;}
 
 <!-- ══ AGENT STORE OVERLAY ════════════════════════════════ -->
 <div class="overlay" id="marketOverlay">
-  <div class="wizard storev2" style="max-width:1200px;height:auto;max-height:calc(100vh - 32px)">
-    <!-- Sticky top bar: brand · title · search · CTAs -->
-    <div class="storev2-top">
-      <div class="storev2-title">
-        <span class="storev2-brand-mark">M</span>
-        <span class="storev2-h"><span data-storev2="storeTitle">Agent Store</span></span>
+  <div class="wizard storev2 storev3" style="max-width:1180px;height:auto;max-height:calc(100vh - 32px)">
+    <!-- App Store-style top bar: brand + close on right; tabs sit below -->
+    <div class="storev3-top">
+      <div class="storev3-brand">
+        <span class="storev3-brand-mark">M</span>
+        <span class="storev3-brand-name">Agent Store</span>
       </div>
-      <div class="storev2-search">
-        <span style="font-size:14px">🔍</span>
+      <div class="storev3-search">
+        <span style="font-size:13px">🔍</span>
         <input id="marketSearch" placeholder="Search agents, teams, creators…" oninput="onMarketSearchInput()">
         <kbd>⌘K</kbd>
       </div>
-      <div class="storev2-actions">
-        <button class="storev2-btn ghost" onclick="closeMarket()" title="Close" data-storev2="storeClose">Close</button>
-      </div>
+      <button class="storev3-close" onclick="closeMarket()" title="Close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
     </div>
-    <!-- Filter pills + sort -->
-    <div class="storev2-filters">
-      <div class="storev2-pills" id="marketCats"></div>
-      <div class="storev2-pill-divider"></div>
-      <div class="storev2-tags" id="marketTags"></div>
-      <div class="storev2-sort">
-        <span data-storev2="sortBy">Sort by</span>
-        <select id="marketSort" onchange="setMarketSort(this.value)">
-          <option value="popular">🔥 Trending</option>
-          <option value="recent">✨ Newest</option>
-          <option value="top_rated">⭐ Top rated</option>
-        </select>
-      </div>
+    <!-- Tab nav (Today / Apps / Teams / Categories) -->
+    <div class="storev3-tabs" id="storev3Tabs">
+      <button class="storev3-tab active" data-tab="today"  onclick="setStoreTab('today')">Today</button>
+      <button class="storev3-tab"        data-tab="apps"   onclick="setStoreTab('apps')">Apps</button>
+      <button class="storev3-tab"        data-tab="teams"  onclick="setStoreTab('teams')">Teams</button>
+      <button class="storev3-tab"        data-tab="cats"   onclick="setStoreTab('cats')">Categories</button>
     </div>
-    <!-- Body sections -->
-    <div class="storev2-body">
-      <div id="storev2Hero" class="storev2-section"></div>
-      <div id="storev2Picks" class="storev2-section"></div>
-      <div id="storev2Trending" class="storev2-section"></div>
-      <div id="storev2Cats" class="storev2-section"></div>
-      <div id="storev2Creators" class="storev2-section"></div>
-      <div id="storev2CTA" class="storev2-section"></div>
-      <!-- Empty / loading states -->
-      <div id="marketGrid" style="display:none"></div>
-      <div id="marketEmpty" class="storev2-empty" style="display:none">No matching agents — try a different search.</div>
+    <!-- Body — sections render based on active tab -->
+    <div class="storev3-body" id="storev3Body">
+      <div id="storev3Today"></div>
+      <div id="storev3Apps"  style="display:none"></div>
+      <div id="storev3Teams" style="display:none"></div>
+      <div id="storev3Cats"  style="display:none"></div>
+      <div id="marketEmpty" class="storev3-empty" style="display:none">No matching agents — try a different search.</div>
+      <!-- legacy / unused but referenced by code -->
+      <div id="marketCats" style="display:none"></div>
+      <div id="marketTags" style="display:none"></div>
+      <select id="marketSort" style="display:none" onchange="setMarketSort(this.value)">
+        <option value="popular">popular</option><option value="recent">recent</option><option value="top_rated">top_rated</option>
+      </select>
     </div>
   </div>
 </div>
@@ -9683,8 +9902,8 @@ async function openAgentStore(){
   _marketCat='all'; _marketSort='popular'; _marketTags=[]; _marketOnlyFavs=false;
   var s=document.getElementById('marketSearch'); if(s) s.value='';
   var sort=document.getElementById('marketSort'); if(sort) sort.value='popular';
-  buildMarketCats();
-  buildMarketTags();
+  // Default to the App Store-style "Today" tab on every open
+  if(typeof setStoreTab === 'function') setStoreTab('today');
   document.getElementById('marketOverlay').classList.add('open');
   await loadMarket();
 }
@@ -9874,7 +10093,267 @@ function _storev2VisibleMarket(){
   return MARKET.slice();
 }
 
+// ── Storev3 (App Store-style) ──
+var _storev3Tab = 'today'; // today | apps | teams | cats
+
+function setStoreTab(tab){
+  if(['today','apps','teams','cats'].indexOf(tab) < 0) tab = 'today';
+  _storev3Tab = tab;
+  document.querySelectorAll('.storev3-tab').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  ['storev3Today','storev3Apps','storev3Teams','storev3Cats'].forEach(function(id){
+    var key = id.replace('storev3','').toLowerCase();
+    var el = document.getElementById(id);
+    if(el) el.style.display = (key === tab) ? '' : 'none';
+  });
+  // Body scroll back to top whenever a tab switches
+  var body = document.getElementById('storev3Body');
+  if(body) body.scrollTop = 0;
+}
+
+// Render a single Top-Charts row (numbered list, App Store classic)
+function _storev3RenderRow(m, rank){
+  var purchased = new Set((me && me.purchases || []).map(function(p){return p.listing_id;}));
+  var purchasedHere = purchased.has(m.listing_id);
+  var priceJpy = Number.isFinite(m.price_jpy) ? m.price_jpy : 0;
+  var priceText, priceCls;
+  if(purchasedHere){ priceText = '✓ ' + L('購入済','OWNED'); priceCls = 'owned'; }
+  else if(priceJpy > 0){ priceText = jpyAsUsd(priceJpy); priceCls = ''; }
+  else { priceText = L('無料','FREE'); priceCls = 'free'; }
+  var av = m.agent?.avatar || (m.is_team ? '🎯' : '🤖');
+  var sub = m.is_team
+    ? '<span class="badge">🎯 TEAM · '+(m.member_count||0)+'</span>' + esc(m.category_label||'Team')
+    : esc((m.category_label||'AI') + ' · ' + (m.creator?.handle||''));
+  return ''
+    + '<div class="storev3-row'+(m.is_team?' team':'')+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
+    + (rank ? '<div class="rank">'+rank+'</div>' : '')
+    +   '<div class="icon" data-cat="'+esc(m.category||'other')+'">'+esc(av)+'</div>'
+    +   '<div class="meta"><div class="nm">'+esc(m.title||'')+'</div><div class="sub">'+sub+'</div></div>'
+    +   '<button type="button" class="get '+priceCls+'" onclick="event.stopPropagation();openListingDetail(\''+esc(m.listing_id)+'\')">'+priceText+'</button>'
+    + '</div>';
+}
+
+// Render a single horizontal-scroll tile (used in Today's "Top picks")
+function _storev3RenderTile(m){
+  var priceJpy = Number.isFinite(m.price_jpy) ? m.price_jpy : 0;
+  var priceText, priceCls = '';
+  if(priceJpy > 0){ priceText = jpyAsUsd(priceJpy); }
+  else { priceText = L('無料','FREE'); priceCls = 'free'; }
+  var ribbon = m.badge==='hot' ? '<span class="ribbon">🔥 HOT</span>'
+             : m.badge==='new' ? '<span class="ribbon">🆕 NEW</span>' : '';
+  var av = m.agent?.avatar || (m.is_team ? '🎯' : '🤖');
+  var stars = m.rating>0 ? '<span class="star">★</span> '+m.rating.toFixed(1) : '';
+  return ''
+    + '<button type="button" class="storev3-tile'+(m.is_team?' team':'')+'" onclick="openListingDetail(\''+esc(m.listing_id)+'\')">'
+    +   '<div class="cv">'+ribbon+esc(av)+'</div>'
+    +   '<div class="body">'
+    +     '<div class="nm">'+esc(m.title||'')+'</div>'
+    +     '<div class="sub">'+esc(m.description||'')+'</div>'
+    +     '<div class="row"><span>'+stars+'</span><span class="price '+priceCls+'">'+priceText+'</span></div>'
+    +   '</div>'
+    + '</button>';
+}
+
 function renderMarket(){
+  if(_marketLoading) return;
+  var todayEl = document.getElementById('storev3Today');
+  if(!todayEl) return;
+  var appsEl   = document.getElementById('storev3Apps');
+  var teamsEl  = document.getElementById('storev3Teams');
+  var catsEl   = document.getElementById('storev3Cats');
+  var empty    = document.getElementById('marketEmpty');
+
+  // Reflect the current top-search box (q) on top of MARKET
+  var visible = MARKET.slice();
+  // (Search/category are server-side; visible is already filtered.)
+
+  if(!visible.length){
+    [todayEl,appsEl,teamsEl,catsEl].forEach(function(e){if(e)e.innerHTML='';});
+    if(empty){
+      empty.style.display='block';
+      empty.textContent = MARKET.length === 0
+        ? L('まだ出店されたエージェントがありません。あなたが第1号になりませんか？','No listings yet — be the first to list yours.')
+        : L('該当するエージェントが見つかりません','No matching agents — try a different search.');
+    }
+    return;
+  }
+  if(empty) empty.style.display='none';
+
+  var soloAll = visible.filter(function(m){return !m.is_team;});
+  var teamsAll = visible.filter(function(m){return m.is_team;});
+
+  // ─── TODAY (default) — hero story + 2-up pair + Top Charts list + categories preview + creator CTA ───
+  if(todayEl){
+    var hero = visible[0];
+    var pair = [visible[1], visible[2]].filter(Boolean);
+    // Sort top charts by uses, mix of solo + team, take top 10
+    var charts = visible.slice().sort(function(a,b){return (b.uses||0)-(a.uses||0);}).slice(0,10);
+    // Editor's choice = mix of teams + new badges
+    var editor = visible.filter(function(m){return m.is_team || m.badge==='new';}).slice(0,8);
+    if(editor.length < 4) editor = visible.slice(0,8);
+
+    // hero
+    var heroHtml = '';
+    if(hero){
+      var heroPriceJpy = Number.isFinite(hero.price_jpy) ? hero.price_jpy : 0;
+      var heroPriceText = heroPriceJpy>0 ? jpyAsUsd(heroPriceJpy) : L('無料','FREE');
+      var heroPills = '<span class="pill">'+(hero.is_team
+        ? '🎯 TEAM · '+(hero.member_count||0)+' AI'
+        : '🤖 SOLO AGENT')+'</span>';
+      if((hero.uses||0)>=100) heroPills += '<span class="pill">🏆 '+L('ベストセラー','Bestseller')+'</span>';
+      heroHtml = ''
+        + '<div class="storev3-story" onclick="openListingDetail(\''+esc(hero.listing_id)+'\')">'
+        +   '<div class="em">'+esc(hero.agent?.avatar||(hero.is_team?'🎯':'🤖'))+'</div>'
+        +   '<div class="info">'
+        +     '<span class="kicker">⭐ EDITOR\'S PICK · '+L('今週','This week')+'</span>'
+        +     '<h2>'+esc(hero.title||'')+'</h2>'
+        +     '<div class="subtitle">'+esc(hero.description||'')+'</div>'
+        +     '<div class="row">'
+        +       heroPills
+        +       '<span class="price">'+heroPriceText+'</span>'
+        +       '<button type="button" class="get" onclick="event.stopPropagation();openListingDetail(\''+esc(hero.listing_id)+'\')">'+L('入手する','GET')+'</button>'
+        +     '</div>'
+        +   '</div>'
+        + '</div>';
+    }
+
+    // 2-up pair (Most popular + Just added) — only when we have 3+ items
+    var pairHtml = '';
+    if(pair.length >= 2){
+      var p1 = pair[0], p2 = pair[1];
+      pairHtml = ''
+        + '<div class="storev3-pair">'
+        +   '<div class="storev3-pair-card dark" onclick="openListingDetail(\''+esc(p1.listing_id)+'\')">'
+        +     '<span class="em">'+esc(p1.agent?.avatar||'🤖')+'</span>'
+        +     '<div class="kicker">'+L('注目','Most popular')+'</div>'
+        +     '<h3>'+esc(p1.title||'')+'</h3>'
+        +     '<div class="sub">'+esc(_trunc(p1.description||'', 80))+'</div>'
+        +   '</div>'
+        +   '<div class="storev3-pair-card peach" onclick="openListingDetail(\''+esc(p2.listing_id)+'\')">'
+        +     '<span class="em">'+esc(p2.agent?.avatar||'🤖')+'</span>'
+        +     '<div class="kicker">'+L('新着','Just added')+'</div>'
+        +     '<h3>'+esc(p2.title||'')+'</h3>'
+        +     '<div class="sub">'+esc(_trunc(p2.description||'', 80))+'</div>'
+        +   '</div>'
+        + '</div>';
+    }
+
+    // Top charts list
+    var chartsHtml = ''
+      + '<div class="storev3-sh"><div class="ttl"><span class="kicker">'+L('トップチャート','Top Charts')+'</span>'+L('今 No.1','What\'s hot now')+'</div><button class="more" onclick="setStoreTab(\'apps\')">'+L('すべて','See All')+' →</button></div>'
+      + '<div class="storev3-charts">' + charts.map(function(m,i){return _storev3RenderRow(m, i+1);}).join('') + '</div>';
+
+    // Editor's choice horizontal scroll
+    var editorHtml = '';
+    if(editor.length){
+      editorHtml = ''
+        + '<div class="storev3-sh"><div class="ttl"><span class="kicker">'+L('編集部のおすすめ','Editor\'s Choice')+'</span>'+L('プロが選ぶ','Hand-picked')+'</div></div>'
+        + '<div class="storev3-hscroll">' + editor.map(_storev3RenderTile).join('') + '</div>';
+    }
+
+    // Categories preview (4 tiles)
+    var counts = {};
+    MARKET.forEach(function(m){ var c = m.category || 'other'; counts[c] = (counts[c]||0) + 1; });
+    var catTiles = [
+      {id:'marketing', cls:'c1', em:'📈', en:'Marketing',    ja:'マーケティング'},
+      {id:'sales',     cls:'c2', em:'💼', en:'Sales',        ja:'セールス'},
+      {id:'research',  cls:'c3', em:'🔍', en:'Research',     ja:'リサーチ'},
+      {id:'writing',   cls:'c4', em:'✍️', en:'Writing',      ja:'ライティング'},
+      {id:'ops',       cls:'c5', em:'⚙️', en:'Productivity', ja:'業務効率化'},
+      {id:'other',     cls:'c6', em:'✨', en:'Other',        ja:'その他'},
+    ];
+    var catsHtml = ''
+      + '<div class="storev3-sh"><div class="ttl">'+L('カテゴリで探す','Browse by Category')+'</div><button class="more" onclick="setStoreTab(\'cats\')">'+L('すべて','See All')+' →</button></div>'
+      + '<div class="storev3-cats">'
+      + catTiles.map(function(t){
+          var label = currentLang==='en' ? t.en : t.ja;
+          return '<button type="button" class="storev3-cat '+t.cls+'" onclick="setMarketCat(\''+t.id+'\');setStoreTab(\'apps\')">'
+            + '<div class="em">'+t.em+'</div>'
+            + '<div class="meta"><div class="nm">'+label+'</div><div class="ct">'+(counts[t.id]||0)+' '+L('件','listings')+'</div></div>'
+            + '<div class="arrow">›</div>'
+            + '</button>';
+        }).join('')
+      + '</div>';
+
+    // Become a creator
+    var totalListings = MARKET.length;
+    var teamPacks = teamsAll.length;
+    var creatorHtml = ''
+      + '<div class="storev3-creator-cta">'
+      +   '<div class="text">'
+      +     '<h3>'+L('作ったら、ストアへ。','Built something? ')+'<span class="accent">'+L('','List it.')+'</span></h3>'
+      +     '<p>'+L('自分用に作った AI を商品にできる。買い切りの最大 80% + 利用料 10% が収益。Stripe Connect で銀行口座へ自動入金。',
+                     'Turn the AI you built for yourself into a product. Up to 80% creator share + 10% usage royalties — paid out via Stripe Connect.')+'</p>'
+      +     '<button type="button" onclick="_storev2OpenCreator()">'+L('クリエイターになる','Become a creator')+' →</button>'
+      +   '</div>'
+      +   '<div class="stats">'
+      +     '<div class="stat"><div class="num">'+totalListings+'</div><div class="lbl">'+L('公開中','Live')+'</div></div>'
+      +     '<div class="stat"><div class="num">'+teamPacks+'</div><div class="lbl">'+L('Team','Teams')+'</div></div>'
+      +     '<div class="stat"><div class="num">80%</div><div class="lbl">'+L('クリエイター取り分','Creator share')+'</div></div>'
+      +     '<div class="stat"><div class="num">7d</div><div class="lbl">'+L('初回出金','To 1st payout')+'</div></div>'
+      +   '</div>'
+      + '</div>';
+
+    todayEl.innerHTML = heroHtml + pairHtml + chartsHtml + editorHtml + catsHtml + creatorHtml;
+  }
+
+  // ─── APPS tab — full list of solo agents ───
+  if(appsEl){
+    if(!soloAll.length){
+      appsEl.innerHTML = '<div class="storev3-empty">'+L('単体エージェントはまだありません','No solo agents yet')+'</div>';
+    } else {
+      appsEl.innerHTML = ''
+        + '<div class="storev3-sh"><div class="ttl">'+L('AI Agents','AI Agents')+' <span style="font-weight:600;color:rgba(60,60,67,.55);font-size:15px;letter-spacing:0">'+soloAll.length+'</span></div></div>'
+        + '<div class="storev3-list">' + soloAll.map(function(m,i){return _storev3RenderRow(m, i+1);}).join('') + '</div>';
+    }
+  }
+
+  // ─── TEAMS tab — full list of teams ───
+  if(teamsEl){
+    if(!teamsAll.length){
+      teamsEl.innerHTML = '<div class="storev3-empty">'+L('チームはまだありません','No teams yet')+'</div>';
+    } else {
+      teamsEl.innerHTML = ''
+        + '<div class="storev3-sh"><div class="ttl">🎯 '+L('Agent Teams','Agent Teams')+' <span style="font-weight:600;color:rgba(60,60,67,.55);font-size:15px;letter-spacing:0">'+teamsAll.length+'</span></div></div>'
+        + '<div class="storev3-list">' + teamsAll.map(function(m,i){return _storev3RenderRow(m, i+1);}).join('') + '</div>';
+    }
+  }
+
+  // ─── CATEGORIES tab — full grid + per-category counts ───
+  if(catsEl){
+    var counts2 = {};
+    MARKET.forEach(function(m){ var c = m.category || 'other'; counts2[c] = (counts2[c]||0) + 1; });
+    var tilesAll = [
+      {id:'marketing', cls:'c1', em:'📈', en:'Marketing',    ja:'マーケティング'},
+      {id:'sales',     cls:'c2', em:'💼', en:'Sales',        ja:'セールス'},
+      {id:'research',  cls:'c3', em:'🔍', en:'Research',     ja:'リサーチ'},
+      {id:'writing',   cls:'c4', em:'✍️', en:'Writing',      ja:'ライティング'},
+      {id:'ops',       cls:'c5', em:'⚙️', en:'Productivity', ja:'業務効率化'},
+      {id:'other',     cls:'c6', em:'✨', en:'Other',        ja:'その他'},
+    ];
+    catsEl.innerHTML = ''
+      + '<div class="storev3-sh"><div class="ttl">'+L('カテゴリで探す','Browse by Category')+'</div></div>'
+      + '<div class="storev3-cats">'
+      + tilesAll.map(function(t){
+          var label = currentLang==='en' ? t.en : t.ja;
+          return '<button type="button" class="storev3-cat '+t.cls+'" onclick="setMarketCat(\''+t.id+'\');setStoreTab(\'apps\')">'
+            + '<div class="em">'+t.em+'</div>'
+            + '<div class="meta"><div class="nm">'+label+'</div><div class="ct">'+(counts2[t.id]||0)+' '+L('件','listings')+'</div></div>'
+            + '<div class="arrow">›</div>'
+            + '</button>';
+        }).join('')
+      + '</div>';
+  }
+
+  return; // skip the legacy storev2 path
+}
+
+// Helper: shorter trunc for storev3 cards (used above)
+function _trunc(s, n){ s = String(s||''); return s.length > n ? s.slice(0, n-1) + '…' : s; }
+
+// ── LEGACY storev2 render (no longer called, kept for safety) ──
+function _renderMarket_legacy_v2(){
   if(_marketLoading) return;
   var picksEl = document.getElementById('storev2Picks');
   if(!picksEl) return;

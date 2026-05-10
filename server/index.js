@@ -2191,6 +2191,72 @@ function _loadResvg(){
 // Twemoji cache for emoji rendering (Linux servers usually lack color emoji fonts).
 // We fetch the Twemoji SVG once per emoji and embed it in the OG SVG.
 const _twemojiCache = new Map();
+
+// ── OG PNG render cache (in-memory) ──
+// resvg + Twemoji takes ~3s per render. Without a cache, every Twitter / FB
+// scraper retry pays that cost — and Twitter's image fetch budget is short
+// enough that a slow first response often gets cached as a failure ("generic
+// document" placeholder). Caching the rendered Buffer keyed by share_id /
+// listing_id + mtime makes every subsequent scrape ~10ms instead of 3s.
+const _OG_PNG_CACHE = new Map();          // key → {buf, mtime, cachedAt}
+const _OG_PNG_CACHE_MAX = 300;            // LRU bound
+const _OG_PNG_CACHE_TTL_MS = 7*24*60*60*1000; // 7 days
+function _ogPngCacheGet(key, sourceMtime){
+  const e = _OG_PNG_CACHE.get(key);
+  if(!e) return null;
+  if(Date.now() - e.cachedAt > _OG_PNG_CACHE_TTL_MS){ _OG_PNG_CACHE.delete(key); return null; }
+  // If the agent was edited after we cached the PNG, treat the cache as stale.
+  if(sourceMtime && e.mtime && e.mtime < sourceMtime){ _OG_PNG_CACHE.delete(key); return null; }
+  // Touch (re-insert to mark as MRU)
+  _OG_PNG_CACHE.delete(key); _OG_PNG_CACHE.set(key, e);
+  return e.buf;
+}
+function _ogPngCacheSet(key, buf, sourceMtime){
+  if(!buf) return;
+  if(_OG_PNG_CACHE.size >= _OG_PNG_CACHE_MAX){
+    const firstKey = _OG_PNG_CACHE.keys().next().value;
+    if(firstKey) _OG_PNG_CACHE.delete(firstKey);
+  }
+  _OG_PNG_CACHE.set(key, { buf, mtime: sourceMtime||0, cachedAt: Date.now() });
+}
+
+// Pre-render the OG PNG for a freshly-created share_id. Called fire-and-forget
+// from the share endpoint so the response stays fast. The next Twitter scrape
+// finds a warm cache and gets the image in ~10ms.
+async function _prerenderShareOG(owner, ag){
+  if(!ag || !ag.share_id) return;
+  try {
+    let svg;
+    if(ag.is_team){
+      const memberAgents = (owner.agents||[]).filter(a => (ag.team_member_agent_ids||[]).includes(a.id)).slice(0, 6);
+      const avatarMap = new Map();
+      const emojis = [ag.avatar || '🎯', ...memberAgents.map(m => m.avatar || '🤖')];
+      for(const em of emojis){
+        if(!em || em.startsWith('data:image/') || avatarMap.has(em)) continue;
+        try {
+          const tw = await _getTwemojiSvg(em);
+          if(tw) avatarMap.set(em, _twemojiDataUri(tw));
+        } catch(e){}
+      }
+      svg = renderTeamOgSvg(ag, memberAgents, avatarMap);
+    } else {
+      const detail = _agentAsListing(owner, ag);
+      let twemojiUri = null;
+      try {
+        const tw = await _getTwemojiSvg(detail.agent?.avatar || '🤖');
+        if(tw) twemojiUri = _twemojiDataUri(tw);
+      } catch(e){}
+      svg = renderListingOgSvg(detail, twemojiUri);
+    }
+    const png = svgToPng(svg);
+    if(!png) return;
+    const sourceMtime = new Date(ag.updated_at || ag.created_at || 0).getTime();
+    _ogPngCacheSet('a:'+ag.share_id, png, sourceMtime);
+    console.log('[og/prerender] cached '+ag.share_id+' ('+png.length+' bytes)');
+  } catch(e){
+    console.warn('[og/prerender] failed:', e.message);
+  }
+}
 const _TWEMOJI_VER = '15.1.0';
 function _emojiCodepoints(emoji){
   const cps = [];
@@ -3895,16 +3961,29 @@ async function handleAPI(req,res,pathname,method,ip){
   // Public: PNG variant for Twitter / Facebook (raster-only platforms).
   const ogSharePng = pathname.match(/^\/api\/og\/a\/([a-z0-9-]+)\.png$/);
   if(ogSharePng && method==='GET'){
-    const found = await findAgentByShareId(ogSharePng[1]);
+    const shareId = ogSharePng[1];
+    const found = await findAgentByShareId(shareId);
     if(!found || !found.agent || !found.agent.share_id){
       res.writeHead(404,{'Content-Type':'text/plain'});
       return res.end('Share not found');
     }
+    // Cache lookup — keyed by share_id, invalidated when agent.updated_at advances.
+    const sourceMtime = new Date(found.agent.updated_at || found.agent.created_at || 0).getTime();
+    const cacheKey = 'a:' + shareId;
+    const cached = _ogPngCacheGet(cacheKey, sourceMtime);
+    if(cached){
+      res.writeHead(200, {
+        'Content-Type':'image/png',
+        'Cache-Control':'public, max-age=604800',
+        'Access-Control-Allow-Origin':'*',
+        'Content-Length': cached.length,
+        'X-Og-Cache':'hit',
+      });
+      return res.end(cached);
+    }
     let svg;
     if(found.agent.is_team){
       const memberAgents = (found.user.agents||[]).filter(a => (found.agent.team_member_agent_ids||[]).includes(a.id)).slice(0, 6);
-      // Build a Map of every emoji we need (cover + each member) → twemoji data URI.
-      // resvg can render those as <image>, even on hosts without color emoji fonts.
       const avatarMap = new Map();
       const emojis = [found.agent.avatar || '🎯', ...memberAgents.map(m => m.avatar || '🤖')];
       for(const em of emojis){
@@ -3912,7 +3991,7 @@ async function handleAPI(req,res,pathname,method,ip){
         try {
           const tw = await _getTwemojiSvg(em);
           if(tw) avatarMap.set(em, _twemojiDataUri(tw));
-        } catch(e){ /* skip — fall back to text emoji */ }
+        } catch(e){ /* skip */ }
       }
       svg = renderTeamOgSvg(found.agent, memberAgents, avatarMap);
     } else {
@@ -3922,21 +4001,18 @@ async function handleAPI(req,res,pathname,method,ip){
         const av = detail.agent?.avatar || '🤖';
         const tw = await _getTwemojiSvg(av);
         if(tw) twemojiUri = _twemojiDataUri(tw);
-      }catch(e){ /* fall back to text emoji */ }
+      }catch(e){ /* fall back */ }
       svg = renderListingOgSvg(detail, twemojiUri);
     }
     const png = svgToPng(svg);
-    if(!png){
-      // resvg unavailable on this host (Render Node-only build can't link
-      // the native binary). Twitter / Facebook only accept raster, so
-      // serve the static brand sample PNG instead of redirecting to SVG.
-      return _serveStaticOgFallback(res);
-    }
+    if(!png) return _serveStaticOgFallback(res);
+    _ogPngCacheSet(cacheKey, png, sourceMtime);
     res.writeHead(200, {
       'Content-Type':'image/png',
-      'Cache-Control':'public, max-age=86400',
+      'Cache-Control':'public, max-age=604800',     // 7 days at the edge
       'Access-Control-Allow-Origin':'*',
       'Content-Length': png.length,
+      'X-Og-Cache':'miss',
     });
     res.end(png);
     return;
@@ -3969,10 +4045,24 @@ async function handleAPI(req,res,pathname,method,ip){
   // that lack a color emoji font. Falls back to SVG redirect if resvg fails.
   const ogmPng = pathname.match(/^\/api\/og\/(ls_[a-z0-9_-]+)\.png$/);
   if(ogmPng && method==='GET'){
-    const found = await findAgentByListingId(ogmPng[1]);
+    const listingId = ogmPng[1];
+    const found = await findAgentByListingId(listingId);
     if(!found || !found.agent.marketplace.is_listed){
       res.writeHead(404,{'Content-Type':'text/plain'});
       return res.end('Listing not found');
+    }
+    const sourceMtime = new Date(found.agent.marketplace.updated_at || found.agent.updated_at || 0).getTime();
+    const cacheKey = 'l:' + listingId;
+    const cached = _ogPngCacheGet(cacheKey, sourceMtime);
+    if(cached){
+      res.writeHead(200, {
+        'Content-Type':'image/png',
+        'Cache-Control':'public, max-age=604800',
+        'Access-Control-Allow-Origin':'*',
+        'Content-Length': cached.length,
+        'X-Og-Cache':'hit',
+      });
+      return res.end(cached);
     }
     const detail = publicListing(found.user, found.agent);
     let twemojiUri = null;
@@ -3980,15 +4070,17 @@ async function handleAPI(req,res,pathname,method,ip){
       const av = detail.agent?.avatar || '🤖';
       const tw = await _getTwemojiSvg(av);
       if(tw) twemojiUri = _twemojiDataUri(tw);
-    }catch(e){ /* ignore — fall back to text emoji */ }
+    }catch(e){ /* ignore */ }
     const svg = renderListingOgSvg(detail, twemojiUri);
     const png = svgToPng(svg);
     if(!png){
       return _serveStaticOgFallback(res);
     }
+    _ogPngCacheSet(cacheKey, png, sourceMtime);
     res.writeHead(200, {
       'Content-Type':'image/png',
-      'Cache-Control':'public, max-age=86400',              // 24h — PNG generation is expensive
+      'Cache-Control':'public, max-age=604800',             // 7 days
+      'X-Og-Cache':'miss',
       'Access-Control-Allow-Origin':'*',
       'Content-Length': png.length,
     });
@@ -5004,9 +5096,17 @@ async function handleAPI(req,res,pathname,method,ip){
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
     const{enabled,regenerate}=await readBody(req);
+    const wasShareId = ag.share_id;
     if(enabled===false){ ag.share_id=null; }
     else if(regenerate || !ag.share_id){ ag.share_id=genShareId(); }
     await DB.save(user);
+    // Pre-render the OG PNG so the first Twitter / FB scrape hits a warm
+    // cache (~10ms) instead of doing a 3-second resvg render that often
+    // exceeds Twitter's image-fetch budget. Fire-and-forget — failures
+    // just leave the cache empty and the next request renders normally.
+    if(ag.share_id && ag.share_id !== wasShareId){
+      _prerenderShareOG(user, ag).catch(e => console.warn('[og/prerender] '+e.message));
+    }
     return jres(res,200,{share_id:ag.share_id||null});
   }
 

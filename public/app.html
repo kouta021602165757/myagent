@@ -5018,8 +5018,8 @@ var T = {
       bsCurPlan:   isJa ? '現在のプラン'                                : 'Current plan',
       bsCurBal:    isJa ? '現在の残高'                                  : 'Current balance',
       bsFreeNote:  isJa ? '無料枠 10メッセージ'                          : '10 free messages',
-      bsProNote:   isJa ? '毎月 $20 分のクレジット'                       : '$20 monthly credit',
-      bsBizNote:   isJa ? '毎月 $60 分のクレジット'                       : '$60 monthly credit',
+      bsProNote:   isJa ? '毎月 $15 分のクレジット'                       : '$15 monthly credit',
+      bsBizNote:   isJa ? '毎月 $45 分のクレジット'                       : '$45 monthly credit',
       bsAddNote:   isJa ? '$0.01 単位で利用可'                            : 'Use in $0.01 increments',
       bsActive:    isJa ? '現在加入中'                                   : 'Currently active',
       bsPickPlan:  isJa ? 'このプランを選ぶ'                             : 'Choose this plan',
@@ -5033,8 +5033,8 @@ var T = {
       bsPayHd:     isJa ? '支払い情報'                                   : 'Payment information',
       bsCardLbl:   isJa ? 'カード情報'                                   : 'Card information',
       bsPerMonth:  isJa ? '/月（USD）'                                   : '/mo (USD)',
-      bsFeatPro1:  isJa ? '$20 分のクレジット / 月'                       : '$20 in monthly credits',
-      bsFeatBiz1:  isJa ? '$60 分のクレジット / 月'                       : '$60 in monthly credits',
+      bsFeatPro1:  isJa ? '$15 分のクレジット / 月'                       : '$15 in monthly credits',
+      bsFeatBiz1:  isJa ? '$45 分のクレジット / 月'                       : '$45 in monthly credits',
       bsFeat2:     isJa ? 'メッセージ無制限'                              : 'Unlimited messages',
       bsFeat3:     isJa ? '全プリセット利用可'                            : 'All presets available',
       // Settings
@@ -5042,8 +5042,8 @@ var T = {
       sCurPlan:    isJa ? '現在のプラン'                                 : 'Current plan',
       sUsageFmt:   isJa ? '累計 {n} 回利用'                              : '{n} messages used',
       sFreeBlurb:  isJa ? '無料枠 10メッセージ'                          : '10 free messages',
-      sProBlurb:   isJa ? '$12.99 / 月 ・ $20分のクレジット'              : '$12.99/mo · $20 credit',
-      sBizBlurb:   isJa ? '$32.99 / 月 ・ $60分のクレジット'              : '$32.99/mo · $60 credit',
+      sProBlurb:   isJa ? '$12.99 / 月 ・ $15分のクレジット'              : '$12.99/mo · $15 credit',
+      sBizBlurb:   isJa ? '$32.99 / 月 ・ $45分のクレジット'              : '$32.99/mo · $45 credit',
       sAddCredits: isJa ? '+ クレジット追加 / プラン変更'                  : '+ Add credits / Change plan',
       sCancel:     isJa ? '解約'                                        : 'Cancel',
       sCancelConf: isJa ? '現在のサブスクリプションを解約しますか？\n月末まではご利用いただけます。' : 'Cancel your subscription?\nYou will keep access until the end of the current period.',
@@ -5902,8 +5902,36 @@ async function api(method,path,body){
     throw new Error((isJa?'通信エラー（HTTP ':'Network error (HTTP ')+res.status+(isJa?'）':')')+(text?': '+text.slice(0,120):''));
   }
   const data=await res.json();
-  if(!res.ok)throw new Error(data.error||'エラーが発生しました');
+  if(!res.ok){
+    var err = new Error(data.error||'エラーが発生しました');
+    // Carry plan-gate hints through to callers (Team / Agents creators show
+    // an Upgrade CTA when these fields are present).
+    if(data.upgrade_required) err.upgrade_required = data.upgrade_required;
+    if(data.reason) err.reason = data.reason;
+    throw err;
+  }
   return data;
+}
+
+/**
+ * Show a sticky "upgrade" prompt when the backend signals plan_gate.
+ * Falls back to a normal toast for non-gated errors.
+ */
+function _showUpgradeToast(err){
+  if(!err) return;
+  var target = err.upgrade_required;
+  if(!target){ showToast(err.message || 'エラー','ng'); return; }
+  var planLabel = target === 'pro' ? 'Pro' : 'Business';
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1a0a00;color:#fff;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;z-index:99999;box-shadow:0 14px 40px rgba(0,0,0,.32);max-width:520px;font-family:inherit;font-size:13px';
+  t.innerHTML = '<div style="font-size:22px;flex-shrink:0">🔒</div>'
+    + '<div style="flex:1;min-width:0;line-height:1.55">'+esc(err.message||'')+'</div>'
+    + '<button id="_upgToastBtn" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">'+planLabel+' へ →</button>';
+  document.body.appendChild(t);
+  var btn = t.querySelector('#_upgToastBtn');
+  var dismiss = function(){ if(t.parentNode) t.parentNode.removeChild(t); };
+  btn.onclick = function(){ dismiss(); try{ openBillingModal(target); }catch(e){ try{ openCharge(); }catch(_){ } } };
+  setTimeout(dismiss, 9000);
 }
 
 /* ── Render ────────────────────────────────────────── */
@@ -8752,6 +8780,11 @@ async function submitGenerateTeam(){
   } catch(e){
     clearInterval(anim);
     console.error('[team] generate failed', e);
+    if(e && e.upgrade_required){
+      document.getElementById('teamActivateOverlay').classList.remove('open');
+      _showUpgradeToast(e);
+      return;
+    }
     subEl.textContent = L('生成失敗','Generation failed');
     document.getElementById('teamActStatus').innerHTML =
       '<div style="color:var(--rose);font-weight:700;margin-bottom:10px;font-size:11.5px">' + esc(e.message || L('不明なエラー','Unknown error')) + '</div>'
@@ -8837,6 +8870,11 @@ async function activateTeam(templateId, templateName, coverEmoji){
     }, 900);
   } catch(e){
     console.error('[team] activate failed', e);
+    if(e && e.upgrade_required){
+      document.getElementById('teamActivateOverlay').classList.remove('open');
+      _showUpgradeToast(e);
+      return;
+    }
     document.getElementById('teamActSub').textContent = L('起動失敗','Activation failed');
     document.getElementById('teamActStatus').innerHTML =
       '<div style="color:var(--rose);font-weight:700;margin-bottom:10px;font-size:11.5px">' + esc(e.message || L('不明なエラー','Unknown error')) + '</div>'
@@ -10203,7 +10241,10 @@ async function doCreate(){
     closeWizard();
     openAgent(r.agent.id);
     showToast(`${NA.name}を作成しました！`,'ok');
-  }catch(e){ showToast(e.message,'ng'); }
+  }catch(e){
+    if(e && e.upgrade_required){ closeWizard(); _showUpgradeToast(e); }
+    else { showToast(e.message,'ng'); }
+  }
   setBtnLoad('createBtn',false,'✨ 作成する');
 }
 

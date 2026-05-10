@@ -252,6 +252,9 @@ function safe(u){
   s.google_sheets_email = (gOAuth && gOAuth.email) || null;
   s.extension_paired = !!extTok;
   s.extension_connected = !!(extTok && _extConnections.has(extTok));
+  // Plan v2 surface (frontend uses this to render correct credit amount and
+  // gate Team / agent-cap UIs without doing date math itself).
+  s.plan_v2_grandfathered = _isGrandfathered(u);
   return s;
 }
 function newUser(base){
@@ -2042,6 +2045,54 @@ const TEAM_TEMPLATES = [
 
 function _findTeamTemplate(id){
   return TEAM_TEMPLATES.find(t => t.id === id) || null;
+}
+
+/**
+ * Plan v2 launched 2026-05-10. Users who registered before this date are
+ * grandfathered: they keep old credit ($20 / $60) and old caps (no per-tier
+ * agent / team limits). New signups follow the v2 rules.
+ */
+const PLAN_V2_LAUNCH_AT = '2026-05-10T00:00:00Z';
+function _isGrandfathered(user){
+  if(user.plan_v2_grandfathered === true) return true;
+  if(user.plan_v2_grandfathered === false) return false;
+  // Lazy migration: derive from created_at the first time we see this user.
+  const t = user.created_at ? new Date(user.created_at).getTime() : NaN;
+  if(!isFinite(t)) return false; // unknown → treat as new
+  return t < new Date(PLAN_V2_LAUNCH_AT).getTime();
+}
+
+/**
+ * Plan-based gate for any /api/teams/* mutation.
+ * Returns null when allowed, or a JSON body { error, upgrade_required } to send.
+ *
+ * Free   : no Teams at all (upgrade to pro).
+ * Pro    : at most 1 active Team — block creating a 2nd.
+ * Biz    : unlimited.
+ * Grandfathered users keep the pre-migration "anyone can build any number of
+ * teams" behaviour so we don't pull a feature out from under them.
+ */
+function _planTeamGate(user){
+  if(_isGrandfathered(user)) return null;
+  const plan = user.plan || 'free';
+  if(plan === 'free'){
+    return {
+      error: 'Agent Team は Pro プラン以上で利用できます。',
+      upgrade_required: 'pro',
+      reason: 'team_requires_pro',
+    };
+  }
+  if(plan === 'pro'){
+    const activeTeams = (user.agents||[]).filter(a => a.is_team && a.is_group).length;
+    if(activeTeams >= 1){
+      return {
+        error: 'Pro プランで持てる Agent Team は 1 つまでです。複数 Team を運用するには Business にアップグレードしてください。',
+        upgrade_required: 'business',
+        reason: 'team_cap_reached',
+      };
+    }
+  }
+  return null;
 }
 
 /* ── Marketplace helpers ───────────────────────────────────── */
@@ -3921,6 +3972,20 @@ async function handleAPI(req,res,pathname,method,ip){
     const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled,model}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
+    // Per-plan agent caps. Grandfathered users keep the legacy 1000-cap.
+    const _gf = _isGrandfathered(user);
+    const _planCap = _gf ? 1000
+                   : user.plan==='free' ? 3
+                   : user.plan==='pro'  ? 20
+                   : 1000;
+    const _ownedCount = (user.agents||[]).filter(a => !a.is_group).length;
+    if(_ownedCount >= _planCap){
+      const upgrade = user.plan==='free' ? 'Pro にアップグレード' : 'Business にアップグレード';
+      return jres(res,402,{
+        error: `Agents は最大 ${_planCap} 体までです (現在のプラン: ${user.plan||'free'})。${upgrade} すると上限が増えます。`,
+        upgrade_required: user.plan==='free' ? 'pro' : 'business',
+      });
+    }
     if((user.agents||[]).length>=1000)return jres(res,400,{error:'エージェントは最大1000個です'});
     let _av = String(avatar||'🤖').trim();
     if(_av.startsWith('data:image/')){
@@ -3987,6 +4052,9 @@ async function handleAPI(req,res,pathname,method,ip){
   // The user can @-mention members in chat. Phase 2 will add workflow
   // execution; for now this is a curated multi-agent group.
   if(pathname==='/api/teams/activate' && method==='POST'){
+    // Plan gate
+    const _gate = _planTeamGate(user);
+    if(_gate) return jres(res, 402, _gate);
     const body = await readBody(req);
     const tpl = _findTeamTemplate(String(body.template_id||''));
     if(!tpl) return jres(res,404,{error:'テンプレートが見つかりません'});
@@ -4076,6 +4144,8 @@ async function handleAPI(req,res,pathname,method,ip){
   // Calls Claude to design 3-6 agents that match the user's goal, then
   // creates them and a containing team. Returns the new group_id.
   if(pathname==='/api/teams/generate' && method==='POST'){
+    const _gate = _planTeamGate(user);
+    if(_gate) return jres(res, 402, _gate);
     const body = await readBody(req);
     const goal = String(body.goal||'').trim().slice(0, 1200);
     if(goal.length < 6) return jres(res,400,{error:'目的をもう少し詳しく書いてください'});
@@ -4200,6 +4270,8 @@ async function handleAPI(req,res,pathname,method,ip){
   // Builds a team from the user's existing AI agents. The chosen agents
   // are flagged team_origin so they no longer show in the DM list.
   if(pathname==='/api/teams/create' && method==='POST'){
+    const _gate = _planTeamGate(user);
+    if(_gate) return jres(res, 402, _gate);
     const body = await readBody(req);
     const name = String(body.name||'').trim().slice(0,80);
     const cover = String(body.cover_emoji||'🎯').trim().slice(0,8) || '🎯';
@@ -6283,6 +6355,18 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     if(!agent) return jres(res,404,{error:'エージェントが見つかりません'});
 
+    // Plan-based model gating (charged-side payer drives this).
+    // Free → Haiku only; Pro → no Opus; Biz → all. Grandfathered users keep
+    // whatever the agent's saved model says (they don't get nudged down).
+    if(!_isGrandfathered(payerUser)){
+      const _plan = payerUser.plan || 'free';
+      if(_plan === 'free' && agent.model !== 'haiku'){
+        agent = { ...agent, model: 'haiku' };
+      } else if(_plan === 'pro' && agent.model === 'opus'){
+        agent = { ...agent, model: 'sonnet' };
+      }
+    }
+
     const isGroup = !!agent.is_group;
     // Free-tier / balance gate runs against the PAYER (host for groups)
     var FREE_MSGS = 10;
@@ -6891,6 +6975,10 @@ async function handleAPI(req,res,pathname,method,ip){
       user.plan = plan;
       user.subscription_id = sub.id;
       user.subscription_status = sub.status;
+      // New tier (post-2026-05-10): credits are $15 / $45 instead of $20 / $60.
+      // Existing pre-migration subscribers keep their original credit (we treat
+      // any user without plan_v2 set as grandfathered).
+      user.plan_v2 = true;
       await DB.save(user);
       return jres(res,200,{
         subscription_id: sub.id,
@@ -7014,7 +7102,12 @@ async function handleWebhook(req,res){
         const u=await DB.findBy('stripe_customer_id',customerId);
         if(u){
           const plan=u.plan||'free';
-          const credits=plan==='pro'?3000:plan==='business'?9000:0;
+          // Grandfathered (pre-migration registrants) keep $20 / $60.
+          // Everyone else gets new $15 / $45 amounts.
+          const _gf = _isGrandfathered(u);
+          const credits = plan==='pro'   ? (_gf ? 3000 : 2250)
+                        : plan==='business' ? (_gf ? 9000 : 6750)
+                        : 0;
           if(credits>0){
             u.balance_jpy=(u.balance_jpy||0)+credits;
             u.subscription_status='active';

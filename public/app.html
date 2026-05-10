@@ -11435,16 +11435,27 @@ document.addEventListener('visibilitychange', function(){
 });
 
 // Manual recovery from the "paired but offline" state. Same flow as connect:
-// probes the extension, re-pairs if reachable (the SSE link comes back with
-// the new token), or sends the user to the Chrome Web Store if not.
+// probes the extension, re-pairs if reachable, or — if the extension can't
+// be reached — sends the user straight to the Chrome Web Store (rather than
+// just telling them to "check the Chrome icon" with no actionable URL). Once
+// they re-add it, the background install poller silently re-pairs.
 async function reconnectExtension(){
   var installed = await _extProbe();
   if(!installed){
-    showToast(isJa
-      ? 'Chrome 拡張機能に届きませんでした。Chrome を起動して拡張アイコンが表示されているか確認してください。'
-      : 'Could not reach the extension. Make sure Chrome is running and the extension icon is visible.','ng');
-    // Best-effort: also kick off the install poller so it picks up automatically
-    // if the user re-enables the extension within ~2 minutes.
+    // Open the Web Store in a new tab so the user has a one-click path to fix
+    // it. Most browsers allow this because reconnectExtension() is called from
+    // a user-initiated click handler.
+    var win = window.open(EXT_STORE_URL, '_blank');
+    if(win){
+      showToast(isJa
+        ? 'Chrome Web Store を開きました。拡張機能を追加すると自動で再接続されます。'
+        : 'Opened the Chrome Web Store. Re-add the extension and we\'ll reconnect automatically.','ok');
+    } else {
+      // Popup blocked — surface the URL as plain text so the user can copy it.
+      showToast(isJa
+        ? 'こちらから再追加してください: ' + EXT_STORE_URL
+        : 'Re-add from here: ' + EXT_STORE_URL, 'ng');
+    }
     _extWaitForInstall();
     return;
   }

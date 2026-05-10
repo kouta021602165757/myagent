@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] Agent Store — MY AI AGENT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);--peach-light:#fde8d8;
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;--cream2:#f5ead9;
+  --bg-deep:#1e1410;--bg-dark:#0c0a09;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;--text-on-dark:#fff5e6;
+  --line:rgba(180,120,80,.14);--line-strong:rgba(180,120,80,.22);
+  --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;--pink:#ec4899;--rose:#ef4444;--gold:#f59e0b;
+  --sans:'Inter',-apple-system,sans-serif;
+  --display:'Bebas Neue',serif;
+  --mono:'DM Mono','SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.65;-webkit-font-smoothing:antialiased;}
+
+/* Mock banner */
+.banner-mock{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:600;letter-spacing:.05em;text-align:center;}
+.banner-mock b{color:var(--peach);}
+
+/* ── TOP BAR ── */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(253,248,243,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:14px 24px;}
+.topbar-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:20px;}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.005em;text-decoration:none;color:var(--text);font-size:14px;}
+.brand-mark{width:28px;height:28px;border-radius:7px;background:var(--peach);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-size:18px;}
+.brand-divider{width:1px;height:18px;background:var(--line-strong);}
+.section-title-top{font-family:var(--display);font-size:22px;font-weight:400;letter-spacing:.01em;color:var(--text);}
+
+.search{flex:1;max-width:520px;background:#fff;border:1px solid var(--line-strong);border-radius:11px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-muted);transition:border-color .14s,box-shadow .14s;cursor:text;}
+.search:hover{border-color:var(--peach);box-shadow:0 0 0 4px rgba(251,146,60,.10);}
+.search input{flex:1;border:0;background:transparent;font-family:inherit;font-size:13px;color:var(--text);outline:none;}
+.search input::placeholder{color:var(--text-subtle);}
+.search kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-subtle);background:rgba(9,9,11,.06);border:1px solid var(--line);padding:2px 6px;border-radius:5px;}
+
+.topbar-actions{display:flex;gap:8px;}
+.btn{font-family:inherit;font-size:13px;font-weight:700;padding:9px 16px;border-radius:9px;cursor:pointer;border:0;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .14s;}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line-strong);}
+.btn-ghost:hover{background:#fff;border-color:var(--peach);}
+.btn-primary{background:var(--peach);color:#fff;box-shadow:0 4px 12px rgba(251,146,60,.32);}
+.btn-primary:hover{background:var(--peach-dark);transform:translateY(-1px);}
+
+/* ── FILTER BAR ── */
+.filter-bar{background:#fff;border-bottom:1px solid var(--line);padding:12px 24px;}
+.filter-bar-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.filter-pill{font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:99px;background:var(--bg);color:var(--text-muted);border:1px solid var(--line);cursor:pointer;transition:all .14s;font-family:inherit;display:inline-flex;align-items:center;gap:6px;}
+.filter-pill:hover{border-color:var(--peach);color:var(--peach-dark);}
+.filter-pill.active{background:var(--text);color:#fff5e6;border-color:var(--text);}
+.filter-pill .count{font-family:var(--mono);font-size:10.5px;opacity:.7;font-weight:600;}
+.filter-bar-divider{width:1px;height:20px;background:var(--line);margin:0 4px;}
+.filter-bar-sort{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-subtle);font-weight:600;}
+.filter-bar-sort select{font-family:inherit;font-size:12.5px;font-weight:700;padding:7px 12px 7px 11px;border-radius:8px;background:#fff;border:1px solid var(--line-strong);color:var(--text);cursor:pointer;}
+
+/* ── PAGE LAYOUT ── */
+.page{max-width:1280px;margin:0 auto;padding:48px 24px 80px;}
+.section-h{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+.section-h h2{font-family:var(--display);font-weight:400;font-size:36px;letter-spacing:-.005em;line-height:1.05;}
+.section-h h2 .muted{color:var(--text-subtle);font-size:18px;letter-spacing:.04em;font-weight:400;}
+.section-h .more{font-size:13px;font-weight:700;color:var(--peach-dark);text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+.section-h .more:hover{color:var(--peach);}
+.section{margin-bottom:72px;}
+
+/* ── HERO: EDITORS' PICK ── */
+.hero{
+  background:linear-gradient(135deg,#fff7ee 0%,#fed7aa 50%,#fb923c 100%);
+  border-radius:24px;padding:36px;display:grid;grid-template-columns:1fr 1.4fr;gap:36px;align-items:center;
+  position:relative;overflow:hidden;
+  box-shadow:0 24px 64px rgba(180,90,30,.16);
+}
+.hero::before{content:'';position:absolute;top:-80px;right:-80px;width:400px;height:400px;border-radius:50%;background:rgba(255,255,255,.32);filter:blur(60px);}
+.hero::after{content:'';position:absolute;bottom:-100px;left:-60px;width:260px;height:260px;border-radius:50%;background:rgba(234,88,12,.18);filter:blur(70px);}
+.hero-cover{position:relative;z-index:2;}
+.hero-cover .badge{display:inline-flex;align-items:center;gap:6px;background:#1a0a00;color:#fff5e6;font-size:11px;font-weight:900;letter-spacing:.10em;padding:5px 12px;border-radius:99px;text-transform:uppercase;margin-bottom:14px;}
+.hero-cover .badge .gold{color:var(--gold);}
+.hero-cover .em-card{
+  width:240px;height:240px;border-radius:32px;background:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:128px;
+  box-shadow:0 24px 56px rgba(0,0,0,.18);transform:rotate(-6deg);margin-left:18px;
+}
+.hero-info{position:relative;z-index:2;}
+.hero-info .pill-row{display:flex;gap:6px;margin-bottom:14px;}
+.hero-info .pill{background:rgba(26,10,0,.85);color:#fff5e6;font-size:10.5px;font-weight:900;letter-spacing:.06em;padding:4px 11px;border-radius:99px;}
+.hero-info .pill.team{background:#fff;color:var(--peach-dark);}
+.hero-info h3{font-family:var(--display);font-size:64px;font-weight:400;line-height:1;letter-spacing:-.01em;margin-bottom:14px;color:#1a0a00;}
+.hero-info .desc{font-size:16px;color:#3d1f0a;line-height:1.65;margin-bottom:22px;max-width:540px;}
+.hero-info .desc b{color:#1a0a00;}
+.hero-stats{display:flex;align-items:center;gap:18px;font-size:13px;color:#3d1f0a;font-weight:700;margin-bottom:22px;flex-wrap:wrap;}
+.hero-stats .star{color:#1a0a00;}
+.hero-stats .by b{color:#1a0a00;}
+.hero-stats .verified{display:inline-flex;width:14px;height:14px;border-radius:50%;background:#2563eb;color:#fff;align-items:center;justify-content:center;font-size:9px;font-weight:900;margin-left:3px;vertical-align:middle;}
+.hero-cta-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.hero-cta-row .btn{padding:13px 26px;font-size:14px;}
+.hero-cta-row .btn-primary{background:#1a0a00;color:#fff5e6;box-shadow:0 8px 22px rgba(26,10,0,.28);}
+.hero-cta-row .btn-primary:hover{background:#3d1f0a;}
+.hero-cta-row .price{font-family:var(--display);font-size:34px;font-weight:400;letter-spacing:-.005em;color:#1a0a00;line-height:1;}
+.hero-cta-row .price .small{font-size:13px;color:#5c3a1e;font-weight:700;font-family:var(--sans);}
+.hero-cta-row .compare{font-size:12px;color:#5c3a1e;font-weight:600;text-decoration:line-through;}
+.hero-cta-row .save{background:rgba(16,185,129,.22);color:#047857;font-size:11px;font-weight:900;padding:3px 10px;border-radius:99px;letter-spacing:.04em;}
+
+.hero-members{position:absolute;right:36px;bottom:36px;display:flex;align-items:center;gap:0;z-index:3;}
+.hero-members .av{width:44px;height:44px;border-radius:11px;background:#fff;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:22px;margin-left:-12px;box-shadow:0 4px 10px rgba(0,0,0,.15);}
+.hero-members .av:first-child{margin-left:0;}
+.hero-members .ct{margin-left:14px;background:#1a0a00;color:#fff5e6;font-size:12px;font-weight:900;padding:5px 11px;border-radius:99px;letter-spacing:.04em;}
+
+/* ── CARD GRID ── */
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.card{
+  background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  transition:transform .15s,border-color .15s,box-shadow .15s;
+  cursor:pointer;position:relative;
+}
+.card:hover{transform:translateY(-4px);border-color:var(--peach);box-shadow:0 18px 40px rgba(180,90,30,.12);}
+.card .cover{
+  height:120px;background:linear-gradient(135deg,#fff7ee,#fed7aa);
+  display:flex;align-items:center;justify-content:center;font-size:54px;position:relative;
+}
+.card.team .cover{background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff;}
+.card.team .cover::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(251,146,60,.32),transparent 60%);}
+.card .cover .ribbon{position:absolute;top:10px;left:10px;background:rgba(26,10,0,.82);color:#fff5e6;font-size:9.5px;font-weight:900;letter-spacing:.06em;padding:3px 9px;border-radius:99px;backdrop-filter:blur(4px);}
+.card .cover .ribbon.hot{background:linear-gradient(90deg,#dc2626,#f59e0b);color:#fff;}
+.card .cover .ribbon.new{background:#10b981;color:#fff;}
+.card .cover .fav{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.86);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-subtle);border:0;cursor:pointer;backdrop-filter:blur(4px);}
+.card .cover .fav.on{color:var(--rose);}
+.card .body{padding:16px;}
+.card .badges{display:flex;gap:5px;margin-bottom:8px;}
+.card .badges .b{font-size:9.5px;font-weight:900;letter-spacing:.04em;padding:2px 8px;border-radius:99px;background:rgba(251,146,60,.14);color:var(--peach-dark);}
+.card .badges .b.team{background:#1a0a00;color:#fff5e6;}
+.card .badges .b.solo{background:rgba(59,130,246,.14);color:#1d4ed8;}
+.card .nm{font-size:14.5px;font-weight:900;letter-spacing:-.005em;line-height:1.25;margin-bottom:5px;color:var(--text);}
+.card .ds{font-size:11.5px;color:var(--text-muted);line-height:1.55;height:36px;overflow:hidden;margin-bottom:10px;}
+.card .skills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;min-height:21px;}
+.card .skill{background:var(--bg-warm);color:var(--text-muted);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--line);}
+.card .meta{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--text-subtle);font-weight:700;}
+.card .meta .stats{display:flex;align-items:center;gap:10px;}
+.card .meta .star{color:var(--gold);}
+.card .meta .price{font-family:var(--mono);font-size:12px;font-weight:900;color:var(--peach-dark);}
+.card .meta .price.free{color:var(--green);}
+.card .meta .price.purchased{color:var(--green);}
+.card .creator-row{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-subtle);font-weight:600;margin-top:8px;}
+.card .creator-row .av{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:11px;}
+.card .creator-row .verified{display:inline-flex;width:11px;height:11px;border-radius:50%;background:#2563eb;color:#fff;align-items:center;justify-content:center;font-size:7px;font-weight:900;}
+
+/* ── HORIZONTAL SCROLL ── */
+.h-scroll{display:flex;gap:14px;overflow-x:auto;padding:4px 4px 18px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+.h-scroll::-webkit-scrollbar{height:6px;}
+.h-scroll::-webkit-scrollbar-thumb{background:rgba(180,120,80,.18);border-radius:3px;}
+.h-scroll .card{flex:0 0 280px;scroll-snap-align:start;}
+
+/* ── CATEGORY TILES ── */
+.cat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
+.cat-tile{
+  position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 16px;
+  text-align:center;cursor:pointer;transition:all .14s;text-decoration:none;color:var(--text);overflow:hidden;
+}
+.cat-tile::before{content:'';position:absolute;inset:0;opacity:.06;transition:opacity .14s;}
+.cat-tile:hover{transform:translateY(-3px);border-color:var(--peach);box-shadow:0 10px 24px rgba(180,90,30,.10);}
+.cat-tile:hover::before{opacity:.12;}
+.cat-tile.c1::before{background:linear-gradient(135deg,#fb923c,#ec4899);}
+.cat-tile.c2::before{background:linear-gradient(135deg,#3b82f6,#8b5cf6);}
+.cat-tile.c3::before{background:linear-gradient(135deg,#10b981,#3b82f6);}
+.cat-tile.c4::before{background:linear-gradient(135deg,#ec4899,#f59e0b);}
+.cat-tile.c5::before{background:linear-gradient(135deg,#8b5cf6,#3b82f6);}
+.cat-tile.c6::before{background:linear-gradient(135deg,#f59e0b,#fb923c);}
+.cat-tile .em{font-size:36px;line-height:1;margin-bottom:8px;position:relative;z-index:1;}
+.cat-tile .nm{font-size:13px;font-weight:900;letter-spacing:-.005em;margin-bottom:3px;position:relative;z-index:1;}
+.cat-tile .ct{font-size:10.5px;color:var(--text-subtle);font-weight:700;letter-spacing:.04em;font-family:var(--mono);position:relative;z-index:1;}
+
+/* ── CREATOR ROW ── */
+.creators{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
+.creator{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 12px;text-align:center;
+  cursor:pointer;transition:all .14s;text-decoration:none;color:var(--text);
+}
+.creator:hover{transform:translateY(-2px);border-color:var(--peach);}
+.creator .av{
+  width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#ea580c);
+  display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;
+  margin:0 auto 10px;box-shadow:0 6px 16px rgba(251,146,60,.32);
+}
+.creator .nm{font-size:12.5px;font-weight:900;letter-spacing:-.005em;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:4px;}
+.creator .verified{display:inline-flex;width:13px;height:13px;border-radius:50%;background:#2563eb;color:#fff;align-items:center;justify-content:center;font-size:8px;font-weight:900;}
+.creator .meta{font-size:10.5px;color:var(--text-subtle);font-weight:700;font-family:var(--mono);}
+
+/* ── BECOME A CREATOR CTA ── */
+.creator-cta{
+  background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff5e6;border-radius:24px;padding:48px;
+  display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center;position:relative;overflow:hidden;
+}
+.creator-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 30%,rgba(251,146,60,.32),transparent 60%);pointer-events:none;}
+.creator-cta-text{position:relative;z-index:2;}
+.creator-cta-text .kicker{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.18em;color:var(--peach);background:rgba(251,146,60,.14);padding:5px 12px;border-radius:99px;margin-bottom:14px;text-transform:uppercase;}
+.creator-cta-text h3{font-family:var(--display);font-size:54px;font-weight:400;line-height:1.05;letter-spacing:-.005em;margin-bottom:16px;}
+.creator-cta-text h3 .accent{color:var(--peach);}
+.creator-cta-text p{font-size:15px;color:rgba(255,245,230,.78);line-height:1.7;margin-bottom:22px;}
+.creator-cta-text .btn{padding:13px 26px;background:var(--peach);color:#0c0a09;font-size:14px;}
+.creator-cta-text .btn:hover{background:#fff5e6;}
+.creator-cta-stats{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.creator-stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:18px;}
+.creator-stat .num{font-family:var(--display);font-size:42px;color:var(--peach);line-height:1;letter-spacing:-.005em;margin-bottom:4px;}
+.creator-stat .lbl{font-size:11px;color:rgba(255,245,230,.72);font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.creator-stat .num .small{font-size:18px;color:rgba(255,245,230,.72);}
+
+/* ── DETAIL ── footer note ── */
+.note{margin-top:60px;padding:18px 22px;background:#fff;border:1px solid var(--line);border-radius:13px;font-size:13px;color:var(--text-muted);line-height:1.85;text-align:center;}
+.note b{color:var(--text);}
+
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr;}
+  .hero-cover .em-card{width:160px;height:160px;font-size:80px;margin-left:0;}
+  .hero-info h3{font-size:44px;}
+  .cards-grid{grid-template-columns:repeat(2,1fr);}
+  .cat-grid{grid-template-columns:repeat(3,1fr);}
+  .creators{grid-template-columns:repeat(3,1fr);}
+  .creator-cta{grid-template-columns:1fr;padding:32px;}
+  .creator-cta-text h3{font-size:38px;}
+}
+@media (max-width:640px){
+  .cards-grid{grid-template-columns:1fr;}
+  .cat-grid{grid-template-columns:repeat(2,1fr);}
+  .creators{grid-template-columns:repeat(2,1fr);}
+  .topbar-inner{flex-wrap:wrap;}
+  .search{order:3;flex-basis:100%;}
+}
+</style>
+</head>
+<body>
+
+<div class="banner-mock">📐 <b>MOCK</b> · Agent Store redesign · English-default · for review before replacing /app.html marketOverlay + creating a /store public page</div>
+
+<!-- ─────────── TOP BAR ─────────── -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <a href="#" class="brand"><div class="brand-mark">M</div>MY AI AGENT</a>
+    <div class="brand-divider"></div>
+    <div class="section-title-top">Agent Store</div>
+    <div class="search">
+      <span style="font-size:14px">🔍</span>
+      <input type="text" placeholder="Search agents, teams, creators…">
+      <kbd>⌘K</kbd>
+    </div>
+    <div class="topbar-actions">
+      <a href="#" class="btn btn-ghost">My library</a>
+      <a href="#" class="btn btn-primary">+ List yours</a>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── FILTER BAR ─────────── -->
+<div class="filter-bar">
+  <div class="filter-bar-inner">
+    <button class="filter-pill active">All <span class="count">438</span></button>
+    <button class="filter-pill">🎯 Teams <span class="count">62</span></button>
+    <button class="filter-pill">🤖 Solo <span class="count">376</span></button>
+    <button class="filter-pill">💼 Free <span class="count">184</span></button>
+    <div class="filter-bar-divider"></div>
+    <button class="filter-pill">📈 Marketing</button>
+    <button class="filter-pill">💻 Engineering</button>
+    <button class="filter-pill">🛍 E-commerce</button>
+    <button class="filter-pill">✍️ Writing</button>
+    <button class="filter-pill">🎨 Creative</button>
+    <button class="filter-pill">📊 Analytics</button>
+    <div class="filter-bar-sort">
+      <span>Sort by</span>
+      <select>
+        <option>🔥 Trending</option>
+        <option>✨ Newest</option>
+        <option>⭐ Top rated</option>
+        <option>$ Price low → high</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ─────────── HERO: EDITORS' PICK ─────────── -->
+  <div class="section">
+    <div class="hero">
+      <div class="hero-cover">
+        <span class="badge">⭐<span class="gold">EDITORS' PICK</span> · This week</span>
+        <div class="em-card">🛍</div>
+      </div>
+      <div class="hero-info">
+        <div class="pill-row">
+          <span class="pill team">🎯 TEAM · 5 AI agents</span>
+          <span class="pill">🏆 Bestseller</span>
+          <span class="pill">410 purchases</span>
+        </div>
+        <h3>EC LAUNCH<br>STARTER TEAM</h3>
+        <div class="desc">
+          Source winning products → render lifestyle photos → spin up Shopify → post on social → analyze sales.
+          <b>Run an entire e-commerce business with 5 hand-tuned AI agents.</b>
+        </div>
+        <div class="hero-stats">
+          <span class="star">★★★★★ 4.9 <span style="opacity:.7">(132)</span></span>
+          <span>·</span>
+          <span class="by">by <b>@kota.takeuchi</b><span class="verified">✓</span></span>
+          <span>·</span>
+          <span>🟢 LIVE</span>
+        </div>
+        <div class="hero-cta-row">
+          <a href="#" class="btn btn-primary">Get this team →</a>
+          <span class="price">$98<span class="small">/team</span></span>
+          <span class="compare">$190</span>
+          <span class="save">Save 48%</span>
+        </div>
+      </div>
+      <div class="hero-members">
+        <div class="av">🛍</div>
+        <div class="av">📸</div>
+        <div class="av">🌐</div>
+        <div class="av">📱</div>
+        <div class="av">📊</div>
+        <span class="ct">5 AGENTS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── TOP PICKS ─────────── -->
+  <div class="section">
+    <div class="section-h">
+      <h2>Top picks <span class="muted">this month</span></h2>
+      <a href="#" class="more">See all 438 →</a>
+    </div>
+    <div class="cards-grid">
+
+      <a href="#" class="card team">
+        <div class="cover">
+          <span class="ribbon hot">🔥 HOT</span>
+          <button class="fav on">❤</button>
+          💻
+        </div>
+        <div class="body">
+          <div class="badges"><span class="b team">🎯 TEAM · 4</span></div>
+          <div class="nm">Dev Squad</div>
+          <div class="ds">Code reviewer + bug fixer + test writer + deploy helper. Boost code quality without team meetings.</div>
+          <div class="skills"><span class="skill">Coding</span><span class="skill">Analysis</span><span class="skill">Planning</span></div>
+          <div class="creator-row">
+            <div class="av">K</div><span>by @kota</span><span class="verified">✓</span>
+            <span style="margin-left:auto;font-family:var(--mono)">2.4k pulls</span>
+          </div>
+          <div class="meta">
+            <span class="stats"><span class="star">★ 4.9</span> · <span>54 reviews</span></span>
+            <span class="price">$26</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="card">
+        <div class="cover" style="background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff">
+          <span class="ribbon">★ EDITORS' PICK</span>
+          <button class="fav">♡</button>
+          ✍️
+        </div>
+        <div class="body">
+          <div class="badges"><span class="b solo">🤖 SOLO</span></div>
+          <div class="nm">SEO Blog Writer Pro</div>
+          <div class="ds">Keyword research → SERP analysis → outline → 1,500-word draft with internal links → rewrite pass.</div>
+          <div class="skills"><span class="skill">Writing</span><span class="skill">Research</span><span class="skill">SEO</span></div>
+          <div class="creator-row">
+            <div class="av">S</div><span>by @sara.w</span><span class="verified">✓</span>
+            <span style="margin-left:auto;font-family:var(--mono)">1.8k pulls</span>
+          </div>
+          <div class="meta">
+            <span class="stats"><span class="star">★ 4.8</span> · <span>87 reviews</span></span>
+            <span class="price">$24</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="card">
+        <div class="cover" style="background:linear-gradient(135deg,#fce7f3,#ec4899);color:#fff">
+          <span class="ribbon new">🆕 NEW</span>
+          <button class="fav">♡</button>
+          🎬
+        </div>
+        <div class="body">
+          <div class="badges"><span class="b solo">🤖 SOLO</span></div>
+          <div class="nm">TikTok Scripter</div>
+          <div class="ds">Trend mining + hook design + script + CTA. Built for short-form virality, fed by current trends.</div>
+          <div class="skills"><span class="skill">Writing</span><span class="skill">Marketing</span><span class="skill">SNS</span></div>
+          <div class="creator-row">
+            <div class="av">T</div><span>by @tomo</span>
+            <span style="margin-left:auto;font-family:var(--mono)">312 pulls</span>
+          </div>
+          <div class="meta">
+            <span class="stats"><span class="star">★ 4.7</span> · <span>96 reviews</span></span>
+            <span class="price">$19</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="card team">
+        <div class="cover">
+          <button class="fav">♡</button>
+          📱
+        </div>
+        <div class="body">
+          <div class="badges"><span class="b team">🎯 TEAM · 3</span></div>
+          <div class="nm">SNS Growth Starter</div>
+          <div class="ds">Spot trends → write engaging posts → schedule across X / Instagram / TikTok at peak times.</div>
+          <div class="skills"><span class="skill">Marketing</span><span class="skill">SNS</span><span class="skill">Planning</span></div>
+          <div class="creator-row">
+            <div class="av">M</div><span>by @mira</span><span class="verified">✓</span>
+            <span style="margin-left:auto;font-family:var(--mono)">5.1k pulls</span>
+          </div>
+          <div class="meta">
+            <span class="stats"><span class="star">★ 4.8</span> · <span>41 reviews</span></span>
+            <span class="price free">FREE</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="card">
+        <div class="cover" style="background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff">
+          <button class="fav">♡</button>
+          🤝
+        </div>
+        <div class="body">
+          <div class="badges"><span class="b solo">🤖 SOLO</span></div>
+          <div class="nm">CS Tier 1 Bot</div>
+          <div class="ds">Triage → first response → escalation routing → knowledge base build-up. Plug into your inbox.</div>
+          <div class="skills"><span class="skill">Support</span><span class="skill">Writing</span></div>
+          <div class="creator-row">
+            <div class="av">D</div><span>by @david</span>
+            <span style="margin-left:auto;font-family:var(--mono)">8.9k pulls</span>
+          </div>
+          <div class="meta">
+            <span class="stats"><span class="star">★ 4.7</span> · <span>213 reviews</span></span>
+            <span class="price free">FREE</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="card">
+        <div class="cover" style="background:linear-gradient(135deg,#fff7ee,#fed7aa);">
+          <span class="ribbon hot">🔥 HOT</span>
+          <button class="fav">♡</button>
+          🐦
+        </div>
+        <div class="body">
+          <div class="badges"><span class="b solo">🤖 SOLO</span></div>
+          <div class="nm">X (Twitter) Auto-Run</div>
+          <div class="ds">Concept design → bazz analysis → post generation → engagement ops. Set it once, runs every day.</div>
+          <div class="skills"><span class="skill">Marketing</span><span class="skill">SNS</span><span class="skill">Writing</span></div>
+          <div class="creator-row">
+            <div class="av">N</div><span>by @nao</span><span class="verified">✓</span>
+            <span style="margin-left:auto;font-family:var(--mono)">3.2k pulls</span>
+          </div>
+          <div class="meta">
+            <span class="stats"><span class="star">★ 4.8</span> · <span>68 reviews</span></span>
+            <span class="price">$15</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ─────────── TRENDING (horizontal scroll) ─────────── -->
+  <div class="section">
+    <div class="section-h">
+      <h2>Trending <span class="muted">this week</span></h2>
+      <a href="#" class="more">All trending →</a>
+    </div>
+    <div class="h-scroll">
+      <a href="#" class="card team"><div class="cover"><span class="ribbon hot">#1</span>🛍</div><div class="body"><div class="badges"><span class="b team">🎯 TEAM · 5</span></div><div class="nm">EC Launch Team</div><div class="ds">Source → render → ship → post → analyze. Run an EC business with 5 agents.</div><div class="meta"><span class="stats"><span class="star">★ 4.9</span></span><span class="price">$98</span></div></div></a>
+      <a href="#" class="card"><div class="cover" style="background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff"><span class="ribbon hot">#2</span>✍️</div><div class="body"><div class="badges"><span class="b solo">🤖 SOLO</span></div><div class="nm">SEO Blog Writer</div><div class="ds">Keyword research → SERP → outline → draft → rewrite.</div><div class="meta"><span class="stats"><span class="star">★ 4.8</span></span><span class="price">$24</span></div></div></a>
+      <a href="#" class="card"><div class="cover" style="background:linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff"><span class="ribbon hot">#3</span>🎓</div><div class="body"><div class="badges"><span class="b team">🎯 TEAM · 3</span></div><div class="nm">Tutor Squad</div><div class="ds">Researcher + explainer + quiz maker. Learn anything new.</div><div class="meta"><span class="stats"><span class="star">★ 4.9</span></span><span class="price free">FREE</span></div></div></a>
+      <a href="#" class="card"><div class="cover" style="background:linear-gradient(135deg,#fce7f3,#ec4899);color:#fff"><span class="ribbon hot">#4</span>🎬</div><div class="body"><div class="badges"><span class="b solo">🤖 SOLO</span></div><div class="nm">TikTok Scripter</div><div class="ds">Trend mining + hook design + script + CTA.</div><div class="meta"><span class="stats"><span class="star">★ 4.7</span></span><span class="price">$19</span></div></div></a>
+      <a href="#" class="card team"><div class="cover"><span class="ribbon hot">#5</span>💻</div><div class="body"><div class="badges"><span class="b team">🎯 TEAM · 4</span></div><div class="nm">Dev Squad</div><div class="ds">Reviewer + bug fixer + test writer + deploy helper.</div><div class="meta"><span class="stats"><span class="star">★ 4.9</span></span><span class="price">$26</span></div></div></a>
+      <a href="#" class="card"><div class="cover" style="background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff"><span class="ribbon hot">#6</span>🤝</div><div class="body"><div class="badges"><span class="b solo">🤖 SOLO</span></div><div class="nm">CS Tier 1 Bot</div><div class="ds">Triage → response → escalation → KB.</div><div class="meta"><span class="stats"><span class="star">★ 4.7</span></span><span class="price free">FREE</span></div></div></a>
+    </div>
+  </div>
+
+  <!-- ─────────── BROWSE BY CATEGORY ─────────── -->
+  <div class="section">
+    <div class="section-h">
+      <h2>Browse by <span class="muted">category</span></h2>
+    </div>
+    <div class="cat-grid">
+      <a href="#" class="cat-tile c1"><div class="em">📈</div><div class="nm">Marketing</div><div class="ct">82</div></a>
+      <a href="#" class="cat-tile c2"><div class="em">💻</div><div class="nm">Engineering</div><div class="ct">64</div></a>
+      <a href="#" class="cat-tile c3"><div class="em">🛍</div><div class="nm">E-commerce</div><div class="ct">28</div></a>
+      <a href="#" class="cat-tile c4"><div class="em">✍️</div><div class="nm">Writing</div><div class="ct">71</div></a>
+      <a href="#" class="cat-tile c5"><div class="em">📊</div><div class="nm">Analytics</div><div class="ct">36</div></a>
+      <a href="#" class="cat-tile c6"><div class="em">🎓</div><div class="nm">Education</div><div class="ct">22</div></a>
+    </div>
+  </div>
+
+  <!-- ─────────── TOP CREATORS ─────────── -->
+  <div class="section">
+    <div class="section-h">
+      <h2>Top <span class="muted">creators</span></h2>
+      <a href="#" class="more">All creators →</a>
+    </div>
+    <div class="creators">
+      <a href="#" class="creator">
+        <div class="av" style="background:linear-gradient(135deg,#fb923c,#ea580c)">K</div>
+        <div class="nm">@kota.takeuchi <span class="verified">✓</span></div>
+        <div class="meta">14 listings</div>
+      </a>
+      <a href="#" class="creator">
+        <div class="av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">S</div>
+        <div class="nm">@sara.w <span class="verified">✓</span></div>
+        <div class="meta">9 listings</div>
+      </a>
+      <a href="#" class="creator">
+        <div class="av" style="background:linear-gradient(135deg,#ec4899,#be185d)">M</div>
+        <div class="nm">@mira <span class="verified">✓</span></div>
+        <div class="meta">7 listings</div>
+      </a>
+      <a href="#" class="creator">
+        <div class="av" style="background:linear-gradient(135deg,#10b981,#047857)">D</div>
+        <div class="nm">@david</div>
+        <div class="meta">12 listings</div>
+      </a>
+      <a href="#" class="creator">
+        <div class="av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">T</div>
+        <div class="nm">@tomo</div>
+        <div class="meta">5 listings</div>
+      </a>
+      <a href="#" class="creator">
+        <div class="av" style="background:linear-gradient(135deg,#f59e0b,#d97706)">N</div>
+        <div class="nm">@nao <span class="verified">✓</span></div>
+        <div class="meta">8 listings</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ─────────── BECOME A CREATOR ─────────── -->
+  <div class="section">
+    <div class="creator-cta">
+      <div class="creator-cta-text">
+        <span class="kicker">Earn while you sleep</span>
+        <h3>Built something <span class="accent">good?</span><br>List it on the Store.</h3>
+        <p>Turn the AI you built for yourself into a product. <b>Up to 80% creator share + 10% usage royalties.</b> Stripe Connect deposits revenue directly to your bank.</p>
+        <a href="#" class="btn">Become a creator →</a>
+      </div>
+      <div class="creator-cta-stats">
+        <div class="creator-stat"><div class="num">438</div><div class="lbl">Live listings</div></div>
+        <div class="creator-stat"><div class="num">62</div><div class="lbl">Team packs</div></div>
+        <div class="creator-stat"><div class="num">$<span class="small">/mo</span><br>2.4k</div><div class="lbl">Top creator earned</div></div>
+        <div class="creator-stat"><div class="num">7d</div><div class="lbl">To 1st payout</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── DESIGN NOTES ─────────── -->
+  <div class="note">
+    <div style="font-family:var(--display);font-size:22px;color:var(--text);margin-bottom:6px">📐 What's new vs the current store</div>
+    <ul style="text-align:left;max-width:920px;margin:8px auto 0;padding-left:22px;line-height:2">
+      <li><b>Hero featured</b> with EDITORS' PICK badge, large rotated emoji card, member avatars, big save% pill — replaces the plain category bar</li>
+      <li><b>Card cover blocks</b> get distinct gradients per agent type (peach for solo, dark for Team, color-coded by role) instead of monochrome rows</li>
+      <li><b>Trending row</b> with #1-#6 ribbons and horizontal scroll gives the sense of velocity</li>
+      <li><b>Browse by category</b> visual tiles + count pills — discoverable without typing</li>
+      <li><b>Top creators</b> grid with verified ✓ badges (creator profile pages already exist)</li>
+      <li><b>"Become a creator"</b> dark CTA with live stats — drives the supply side</li>
+      <li><b>Filter pills</b> instead of dropdowns for primary axes (Teams / Solo / Free / category) — single click filtering</li>
+      <li>Fully <b>English by default</b>, ⌘K hotkey for search, mobile breakpoints baked in</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

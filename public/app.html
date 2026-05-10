@@ -3556,7 +3556,7 @@ body{color:#f0f0f8;}
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">📊 Google スプレッドシート連携</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">📊 Google スプレッドシート連携 <span id="editSheetsConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>接続中</span></div>
           <div id="editSheetsDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
           <div id="editSheetsAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editSheetsEmail"></b> · <a href="#" onclick="event.preventDefault();disconnectGoogleSheets()" style="color:#ef4444">切断</a></div>
           <button type="button" id="editSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウントと接続</button>
@@ -3568,7 +3568,7 @@ body{color:#f0f0f8;}
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em">BETA</span></div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em">BETA</span> <span id="editExtConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>接続中</span></div>
           <div id="editExtDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
           <div id="editExtAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" id="editExtReconnect" onclick="event.preventDefault();reconnectExtension()" style="display:none;color:#3730a3;font-weight:700">🔄 再接続</a><span id="editExtReconnectSep" style="display:none"> · </span><a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
           <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:8px;background:#fff;color:#3730a3;border:1px solid #6366f1;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ ブラウザ拡張をペアリング</button>
@@ -11161,6 +11161,9 @@ function _renderSheetsStatus(swId, descId, accountRowId, emailEl, btnId, agentEn
   if(!sw||!desc) return;
   // Toggle reflects whether THIS agent uses Sheets, but it's only meaningful when connected.
   sw.classList.toggle('on', !!agentEnabled && connected);
+  // Inline "接続中" pill in the title row — visible only on the agent-edit modal.
+  var sheetsBadge = document.getElementById('editSheetsConnBadge');
+  if(sheetsBadge) sheetsBadge.style.display = connected ? 'inline-flex' : 'none';
   if(connected){
     if(accountRow) accountRow.style.display='';
     if(emailNode) emailNode.textContent = me.google_sheets_email || '';
@@ -11258,6 +11261,9 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
   var btn=document.getElementById(btnId);
   if(!sw||!desc) return;
   sw.classList.toggle('on', !!agentEnabled && paired);
+  // Inline "接続中" pill — only when actively online (paired+connected).
+  var extBadge = document.getElementById('editExtConnBadge');
+  if(extBadge) extBadge.style.display = (paired && connected) ? 'inline-flex' : 'none';
   if(paired){
     if(accountRow) accountRow.style.display='';
     if(devNode) devNode.textContent = connected?(isJa?'オンライン':'Online'):(isJa?'オフライン':'Offline');

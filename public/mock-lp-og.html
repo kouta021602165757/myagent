@@ -511,6 +511,212 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
     <div class="notes"><b>狙い:</b> "アイデア → AI が作る → チーム稼働" の <b>3 ステージプロセス</b>を視覚化。"作れる" 自体を時系列で見せるので "簡単に出来る" が一瞬で伝わる。Onboarding ページやチュートリアル教材っぽい雰囲気。Notion / Linear のヘルプドキュメント表紙的フォーマット。</div>
   </div>
 
+  <!-- ═══════════════ F variations (F2-F5) ═══════════════ -->
+  <div style="margin:80px 0 32px;padding:18px 22px;background:#fff7ee;border:1px solid rgba(251,146,60,.32);border-radius:13px;">
+    <div style="font-family:var(--display);font-size:30px;color:var(--peach-dark);letter-spacing:-.005em;margin-bottom:6px;">F variations (F2 〜 F5)</div>
+    <div style="font-size:13.5px;color:var(--text-muted);line-height:1.7;">
+      F (Type → Build) のコンセプトを保ちつつ、<b>レイアウト / 配色 / 強調点</b>を変えた 4 案。
+      "目的を書く → AI がチームを作る" の文法はそのまま、視線誘導と空気感だけ変えてます。
+    </div>
+  </div>
+
+  <style>
+  /* F2: Dark premium — Type → Build on black */
+  .F2{background:#0c0a09;color:#fff;overflow:hidden;}
+  .F2::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,rgba(251,146,60,.40),transparent 55%),radial-gradient(circle at 90% 90%,rgba(139,92,246,.18),transparent 60%);}
+  .F2 .hdr{position:absolute;top:38px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .F2 .mark{width:44px;height:44px;border-radius:9px;background:var(--peach);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;color:#0c0a09;}
+  .F2 .name{font-family:var(--display);font-size:26px;color:#fff;letter-spacing:.02em;}
+  .F2 .badge{position:absolute;top:48px;right:54px;background:#10b981;color:#fff;font-size:13px;font-weight:900;letter-spacing:.08em;padding:7px 14px;border-radius:99px;z-index:3;}
+  .F2 .body{position:absolute;top:140px;left:54px;right:54px;z-index:2;}
+  .F2 .h1{font-family:var(--display);font-weight:400;font-size:88px;line-height:.95;letter-spacing:-.02em;color:#fff;margin-bottom:32px;}
+  .F2 .h1 .accent{color:var(--peach);}
+  .F2 .input-mock{background:rgba(255,255,255,.06);border:1.5px solid var(--peach);border-radius:14px;padding:16px 20px;font-size:18px;color:#fff;font-weight:600;display:flex;align-items:center;gap:12px;max-width:760px;backdrop-filter:blur(10px);}
+  .F2 .input-mock .ic{font-size:24px;color:var(--peach);}
+  .F2 .input-mock .typing{flex:1;color:rgba(255,245,230,.85);font-weight:500;}
+  .F2 .input-mock .typing b{color:#fff;font-weight:800;}
+  .F2 .input-mock .cta{background:var(--peach);color:#0c0a09;font-size:13px;font-weight:900;padding:7px 16px;border-radius:99px;letter-spacing:.06em;}
+  .F2 .arrow{position:absolute;left:430px;bottom:160px;font-size:48px;color:var(--peach);font-weight:900;line-height:1;transform:rotate(8deg);z-index:2;}
+  .F2 .agents{position:absolute;bottom:62px;right:54px;display:flex;align-items:center;gap:0;z-index:2;}
+  .F2 .agents .av{width:62px;height:62px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.10);box-shadow:0 8px 18px rgba(0,0,0,.32);margin-left:-12px;}
+  .F2 .agents .av:first-child{margin-left:0;}
+  .F2 .agents .ct{margin-left:14px;background:var(--peach);color:#0c0a09;font-size:13px;font-weight:900;padding:6px 13px;border-radius:99px;letter-spacing:.05em;}
+  .F2 .url{position:absolute;bottom:36px;left:54px;font-family:var(--mono);font-size:13px;color:rgba(255,245,230,.6);font-weight:600;z-index:2;}
+
+  /* F3: Vertical Stacked — Centered top-down */
+  .F3{background:linear-gradient(180deg,#fff7ee 0%,#fdf8f3 100%);}
+  .F3 .hdr{position:absolute;top:36px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .F3 .mark{width:38px;height:38px;border-radius:8px;background:var(--peach);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:#fff;}
+  .F3 .name{font-family:var(--display);font-size:24px;color:#1a0a00;letter-spacing:.02em;}
+  .F3 .badge{position:absolute;top:46px;right:54px;background:rgba(26,10,0,.85);color:#fff5e6;font-size:12px;font-weight:900;letter-spacing:.08em;padding:6px 13px;border-radius:99px;z-index:3;}
+  .F3 .h1{position:absolute;top:120px;left:54px;right:54px;font-family:var(--display);font-weight:400;font-size:66px;line-height:.96;letter-spacing:-.018em;color:#1a0a00;text-align:center;}
+  .F3 .h1 .accent{color:var(--peach-dark);}
+  .F3 .stack{position:absolute;top:230px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:18px;}
+  .F3 .input{background:#fff;border:2px solid var(--peach);border-radius:14px;padding:14px 18px;font-size:17px;color:#1a0a00;font-weight:700;display:flex;align-items:center;gap:10px;width:660px;box-shadow:0 8px 22px rgba(251,146,60,.18);}
+  .F3 .input .ic{font-size:22px;}
+  .F3 .input .text{flex:1;color:var(--text-muted);font-weight:600;}
+  .F3 .input .text b{color:#1a0a00;font-weight:800;}
+  .F3 .input .cta{background:var(--peach);color:#fff;font-size:12.5px;font-weight:900;padding:7px 14px;border-radius:99px;letter-spacing:.04em;}
+  .F3 .arrow-down{font-size:34px;color:var(--peach);font-weight:900;line-height:1;}
+  .F3 .agents-row{display:flex;align-items:center;gap:0;}
+  .F3 .agents-row .av{width:64px;height:64px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;background:#fff;border:3px solid #fff;box-shadow:0 10px 22px rgba(0,0,0,.16);margin-left:-10px;}
+  .F3 .agents-row .av:first-child{margin-left:0;}
+  .F3 .agents-row .ct{margin-left:18px;background:#1a0a00;color:#fff;font-size:13px;font-weight:900;padding:7px 14px;border-radius:99px;letter-spacing:.05em;}
+  .F3 .url{position:absolute;bottom:32px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:13px;color:var(--text-subtle);font-weight:600;}
+
+  /* F4: Result Cards — show what was built */
+  .F4{background:#fdf8f3;}
+  .F4 .hdr{position:absolute;top:38px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .F4 .mark{width:38px;height:38px;border-radius:8px;background:#1a0a00;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:var(--peach);}
+  .F4 .name{font-family:var(--display);font-size:24px;color:#1a0a00;letter-spacing:.02em;}
+  .F4 .input-tag{position:absolute;top:38px;right:54px;background:#fff;border:1.5px solid var(--peach);border-radius:99px;padding:7px 16px;font-size:13.5px;font-weight:600;color:#1a0a00;z-index:3;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(251,146,60,.16);}
+  .F4 .input-tag .ic{color:var(--peach);font-weight:900;}
+  .F4 .input-tag b{font-weight:800;}
+  .F4 .h1{position:absolute;top:115px;left:54px;right:54px;font-family:var(--display);font-weight:400;font-size:74px;line-height:.95;letter-spacing:-.02em;color:#1a0a00;text-align:center;margin-bottom:0;}
+  .F4 .h1 .accent{color:var(--peach-dark);}
+  .F4 .h1 .small{font-family:var(--sans);font-size:17px;font-weight:700;letter-spacing:0;color:var(--text-muted);display:block;margin-top:10px;}
+  .F4 .cards{position:absolute;top:300px;left:54px;right:54px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+  .F4 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center;box-shadow:0 8px 18px rgba(180,90,30,.10);}
+  .F4 .card .em{width:48px;height:48px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 9px;}
+  .F4 .card.c2 .em{background:linear-gradient(135deg,#fce7f3,#ec4899);color:#fff;}
+  .F4 .card.c3 .em{background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff;}
+  .F4 .card.c4 .em{background:linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff;}
+  .F4 .card.c5 .em{background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff;}
+  .F4 .card .step{font-size:9px;font-weight:900;color:var(--peach-dark);letter-spacing:.10em;text-transform:uppercase;margin-bottom:3px;}
+  .F4 .card .nm{font-size:13px;font-weight:900;color:#1a0a00;line-height:1.2;}
+  .F4 .url{position:absolute;bottom:34px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:13px;color:var(--text-subtle);font-weight:600;}
+
+  /* F5: Conversational Chat Style */
+  .F5{background:linear-gradient(135deg,#fff7ee 0%,#fed7aa 100%);}
+  .F5 .hdr{position:absolute;top:38px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+  .F5 .mark{width:38px;height:38px;border-radius:8px;background:#1a0a00;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:var(--peach);}
+  .F5 .name{font-family:var(--display);font-size:24px;color:#1a0a00;letter-spacing:.02em;}
+  .F5 .badge{position:absolute;top:48px;right:54px;background:#1a0a00;color:#fff5e6;font-size:13px;font-weight:900;letter-spacing:.08em;padding:7px 14px;border-radius:99px;z-index:3;}
+  .F5 .h1{position:absolute;top:108px;left:54px;font-family:var(--display);font-weight:400;font-size:60px;line-height:.95;letter-spacing:-.018em;color:#1a0a00;}
+  .F5 .h1 .accent{color:var(--peach-dark);}
+  .F5 .chat{position:absolute;top:235px;left:54px;right:54px;display:flex;flex-direction:column;gap:12px;}
+  .F5 .bub{padding:14px 18px;border-radius:18px;font-size:15.5px;line-height:1.55;font-weight:600;max-width:80%;box-shadow:0 8px 18px rgba(0,0,0,.10);}
+  .F5 .bub.you{align-self:flex-end;background:#1a0a00;color:#fff;}
+  .F5 .bub.ai{align-self:flex-start;background:#fff;color:#1a0a00;border:1px solid var(--line);max-width:88%;}
+  .F5 .bub.ai .who{font-size:10.5px;font-weight:900;color:var(--peach-dark);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .F5 .bub.ai .who::before{content:'✨';}
+  .F5 .bub.ai .row{display:flex;align-items:center;gap:7px;margin-top:10px;}
+  .F5 .bub.ai .row .av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;}
+  .F5 .bub.ai .row .av.a1{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+  .F5 .bub.ai .row .av.a2{background:linear-gradient(135deg,#fce7f3,#ec4899);color:#fff;}
+  .F5 .bub.ai .row .av.a3{background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff;}
+  .F5 .bub.ai .row .av.a4{background:linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff;}
+  .F5 .bub.ai .row .av.a5{background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff;}
+  .F5 .bub.ai .row .ct{margin-left:auto;font-size:11px;font-weight:800;color:var(--text-subtle);font-family:var(--mono);}
+  .F5 .url{position:absolute;bottom:38px;left:54px;font-family:var(--mono);font-size:13px;color:#1a0a00;font-weight:700;}
+  </style>
+
+  <!-- ───────── F2: Dark Premium ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">F2</span><span class="ttl">Type → Build · Dark Premium</span><span class="sub">F の dark / premium 版 ・ peach 強調</span></div>
+    <div class="shell">
+      <div class="og F2">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="badge">⚡ 30 SECONDS</div>
+        <div class="body">
+          <div class="h1">TYPE A GOAL.<br><span class="accent">BUILD A TEAM.</span></div>
+          <div class="input-mock">
+            <span class="ic">✨</span>
+            <span class="typing"><b>"Build &amp; sell on Shopify with margin &gt; 50%"</b></span>
+            <span class="cta">GENERATE</span>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="agents">
+          <div class="av">🛍</div><div class="av">📸</div><div class="av">🌐</div><div class="av">📱</div><div class="av">📊</div>
+          <span class="ct">5 AI · READY</span>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> F のレイアウトをダークに。peach + violet の radial で premium SaaS 感を出しつつ、Linear/Cursor 系のテクノロジー文脈に寄せる。Twitter のダークテーマで貼られたとき特に映える。</div>
+  </div>
+
+  <!-- ───────── F3: Vertical Stack ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">F3</span><span class="ttl">Type → Build · Vertical Stack</span><span class="sub">中央 top-down ・ 入力 ↓ 5 体の流れを縦軸で</span></div>
+    <div class="shell">
+      <div class="og F3">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="badge">⚡ 30 SECONDS</div>
+        <div class="h1">Type a goal. <span class="accent">Get a team.</span></div>
+        <div class="stack">
+          <div class="input">
+            <span class="ic">✨</span>
+            <span class="text"><b>"Build &amp; sell on Shopify with margin &gt; 50%"</b></span>
+            <span class="cta">GENERATE</span>
+          </div>
+          <div class="arrow-down">↓</div>
+          <div class="agents-row">
+            <div class="av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa)">🛍</div>
+            <div class="av" style="background:linear-gradient(135deg,#fce7f3,#ec4899);color:#fff">📸</div>
+            <div class="av" style="background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff">🌐</div>
+            <div class="av" style="background:linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff">📱</div>
+            <div class="av" style="background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff">📊</div>
+            <span class="ct">5 AI · READY</span>
+          </div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> F の "横→" を "縦↓" に変えた構成。視線が中央で上下に流れるのでバランス安定。モバイルで縮小表示されたときも入力 → ↓ → 5体が読み取れる。サムネ縮小耐性が高い案。</div>
+  </div>
+
+  <!-- ───────── F4: Result Cards ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">F4</span><span class="ttl">Type → Build · Result Cards</span><span class="sub">5 体の役割名を全部見せる ・ "何が出来るか" 全展開</span></div>
+    <div class="shell">
+      <div class="og F4">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="input-tag"><span class="ic">✨</span><b>"Build &amp; sell on Shopify"</b></div>
+        <div class="h1">Your <span class="accent">AI team</span>, in 30s.<span class="small">↓ AI generated 5 specialists for you</span></div>
+        <div class="cards">
+          <div class="card c1"><div class="em">🛍</div><div class="step">Step 1</div><div class="nm">Product<br>Sourcer</div></div>
+          <div class="card c2"><div class="em">📸</div><div class="step">Step 2</div><div class="nm">Visual<br>Designer</div></div>
+          <div class="card c3"><div class="em">🌐</div><div class="step">Step 3</div><div class="nm">Storefront<br>Architect</div></div>
+          <div class="card c4"><div class="em">📱</div><div class="step">Step 4</div><div class="nm">Social<br>Manager</div></div>
+          <div class="card c5"><div class="em">📊</div><div class="step">Step 5</div><div class="nm">Revenue<br>Analyst</div></div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> F の核 "5 体作れる" を <b>役割名つきで全展開</b>。"Product Sourcer / Visual Designer / Storefront Architect / Social Manager / Revenue Analyst" を見せて、説明コストゼロで <b>どんな業務がチーム化できるか</b>が伝わる。情報量多め、scroll-stop 力強い。</div>
+  </div>
+
+  <!-- ───────── F5: Conversational ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">F5</span><span class="ttl">Type → Build · Conversational</span><span class="sub">実チャットの会話そのもの ・ 会話 UI 見せる</span></div>
+    <div class="shell">
+      <div class="og F5">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="badge">🎯 AGENT TEAM</div>
+        <div class="h1">Type a goal.<br><span class="accent">Meet your team.</span></div>
+        <div class="chat">
+          <div class="bub you">Build &amp; sell on Shopify. Margin &gt; 50%.</div>
+          <div class="bub ai">
+            <div class="who">AI assembled your team</div>
+            Generated 5 specialists for the workflow:
+            <div class="row">
+              <div class="av a1">🛍</div>
+              <div class="av a2">📸</div>
+              <div class="av a3">🌐</div>
+              <div class="av a4">📱</div>
+              <div class="av a5">📊</div>
+              <div class="ct">READY ・ 30s</div>
+            </div>
+          </div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> F の核を <b>実際のチャット UI</b> で見せる。"プロダクト触ってる感" が一番強い案。"これ書くと AI が生成して返してくれる" を 1 ターンの実会話で再現。クリックする前から **使ってる気分**にさせる。</div>
+  </div>
+
   <!-- ═══════════════ Pick (updated for 9 patterns) ═══════════════ -->
   <div style="margin-top:60px;background:#fff;border:2px solid var(--peach);border-radius:16px;padding:22px 24px;">
     <div style="font-weight:900;font-size:16px;margin-bottom:10px;">🎨 9 案からどれにしますか？</div>
@@ -523,12 +729,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
       <b>E</b> Chat Demo: @mention 機能を実演<br>
       <br>
       <b style="color:var(--text);">— 作る/ビルド訴求 (F〜I) —</b><br>
-      <b>F</b> Type → Build: 入力 → 5 体 ・ 即作れる感<br>
+      <b>F</b> Type → Build: 入力 → 5 体 ・ 即作れる感 (peach base)<br>
       <b>G</b> Build &amp; Sell: クリエイター訴求 ・ 80% creator share<br>
       <b>H</b> Solo OR Team: 二択カード ・ 何が作れるかを並列<br>
       <b>I</b> From idea to team in 30s: 3 段プロセス感<br>
       <br>
-      <span style="color:var(--text);font-weight:700">推し: F (即作れる感が直球で強い) or H (Solo / Team 両方を 1 枚で訴求)。混合可。</span>
+      <b style="color:var(--text);">— F の変奏 (F2〜F5) — 同コンセプトで配色/レイアウト違い —</b><br>
+      <b>F2</b> Type → Build · Dark Premium: F のダーク版、Linear/Cursor 系 SaaS 文脈<br>
+      <b>F3</b> Vertical Stack: 縦軸に並べた中央構成、サムネ縮小耐性高い<br>
+      <b>F4</b> Result Cards: 5 体の役割名 (Product Sourcer 等) を全展開、説明力 MAX<br>
+      <b>F5</b> Conversational: 実チャット UI 風、プロダクト触ってる感が一番強い<br>
+      <br>
+      <span style="color:var(--text);font-weight:700">推し: F4 (役割名で説明力高い) or F2 (premium 感で SaaS 受け良) or F (シンプル＆balanced)</span>
     </div>
   </div>
 </div>

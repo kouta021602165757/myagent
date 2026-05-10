@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[MOCK] LP OG Thumbnail — 5 patterns</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --peach:#fb923c;--peach-dark:#ea580c;
+  --bg:#fdf8f3;--bg-warm:#faf3eb;
+  --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;
+  --line:rgba(180,120,80,.16);
+  --sans:'Inter',-apple-system,sans-serif;
+  --display:'Bebas Neue',serif;
+  --mono:'DM Mono','SF Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.65;}
+.banner{background:#1a0a00;color:#fff5e6;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.banner b{color:var(--peach);}
+.wrap{max-width:1320px;margin:0 auto;padding:36px 24px 80px;}
+.head h1{font-size:30px;font-weight:900;letter-spacing:-.015em;margin-bottom:8px;}
+.head p{font-size:14px;color:var(--text-muted);margin-bottom:34px;line-height:1.75;max-width:860px;}
+
+.variant{margin:0 0 80px;}
+.vh{display:flex;align-items:baseline;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+.vh .num{font-family:var(--display);font-size:44px;line-height:1;color:var(--peach-dark);}
+.vh .ttl{font-size:20px;font-weight:900;letter-spacing:-.005em;}
+.vh .sub{font-size:12px;color:var(--text-subtle);font-weight:700;font-family:var(--mono);}
+
+.shell{background:repeating-linear-gradient(45deg,rgba(180,120,80,.05) 0 6px,transparent 6px 12px);padding:20px;border-radius:18px;border:1px solid var(--line);display:flex;justify-content:center;}
+
+/* 1200 × 630 base, scaled for preview */
+.og{width:1200px;height:630px;background:#fff;border-radius:8px;overflow:hidden;position:relative;font-family:var(--sans);transform:scale(.78);transform-origin:top left;margin-bottom:-138px;box-shadow:0 24px 56px rgba(0,0,0,.16);}
+
+.notes{margin-top:30px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 22px;font-size:13px;color:var(--text-muted);line-height:1.85;}
+.notes b{color:var(--text);}
+.notes ul{padding-left:22px;margin-top:6px;}
+.notes li{margin:4px 0;}
+
+/* ───────── A: Big Type · Peach Gradient (current style refresh) ───────── */
+.A{background:linear-gradient(135deg,#fff7ee 0%,#fed7aa 50%,#fb923c 100%);}
+.A .hdr{position:absolute;top:38px;left:54px;right:54px;display:flex;align-items:center;justify-content:space-between;}
+.A .brand{display:flex;align-items:center;gap:10px;}
+.A .mark{width:44px;height:44px;border-radius:9px;background:#1a0a00;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;color:var(--peach);}
+.A .name{font-family:var(--display);font-size:26px;color:#1a0a00;letter-spacing:.02em;}
+.A .pill-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;font-weight:600;color:#1a0a00;}
+.A .live-dot{width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 0 4px rgba(16,185,129,.22);}
+.A .body{position:absolute;top:130px;left:54px;right:54px;}
+.A .h1{font-family:var(--display);font-weight:400;font-size:104px;line-height:.96;letter-spacing:-.02em;color:#1a0a00;margin-bottom:6px;}
+.A .h1 .accent{color:var(--peach-dark);position:relative;}
+.A .h1 .accent::after{content:'';position:absolute;left:-3%;right:-3%;bottom:6%;height:18%;background:rgba(255,255,255,.55);z-index:-1;}
+.A .sub{font-size:24px;color:#3d1f0a;font-weight:700;line-height:1.5;max-width:780px;margin-top:24px;}
+.A .members{position:absolute;bottom:60px;left:54px;display:flex;align-items:center;gap:0;}
+.A .mem{width:54px;height:54px;border-radius:13px;background:#fff;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin-left:-12px;box-shadow:0 6px 14px rgba(0,0,0,.18);}
+.A .mem:first-child{margin-left:0;}
+.A .ct{margin-left:14px;background:rgba(26,10,0,.85);color:#fff5e6;font-size:13px;font-weight:900;padding:6px 13px;border-radius:99px;letter-spacing:.05em;}
+.A .url{position:absolute;bottom:60px;right:54px;font-family:var(--mono);font-size:14px;color:#1a0a00;font-weight:600;}
+
+/* ───────── B: Dark Story · Premium SaaS feel ───────── */
+.B{background:#0c0a09;color:#fff;overflow:hidden;}
+.B::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 25% 35%,rgba(251,146,60,.40),transparent 55%),radial-gradient(circle at 90% 100%,rgba(139,92,246,.18),transparent 65%);}
+.B .hdr{position:absolute;top:38px;left:54px;right:54px;display:flex;justify-content:space-between;align-items:center;z-index:2;}
+.B .brand{display:flex;align-items:center;gap:10px;}
+.B .mark{width:44px;height:44px;border-radius:9px;background:var(--peach);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;color:#0c0a09;}
+.B .name{font-family:var(--display);font-size:26px;color:#fff;letter-spacing:.02em;}
+.B .badge{background:var(--peach);color:#0c0a09;font-size:13px;font-weight:900;letter-spacing:.08em;padding:7px 14px;border-radius:99px;}
+.B .body{position:absolute;top:140px;left:54px;right:54px;z-index:2;}
+.B .kicker{display:inline-block;background:rgba(251,146,60,.18);border:1px solid rgba(251,146,60,.32);color:var(--peach);font-size:14px;font-weight:800;letter-spacing:.06em;padding:6px 14px;border-radius:99px;margin-bottom:24px;}
+.B .h1{font-size:84px;font-weight:900;line-height:1.02;letter-spacing:-.025em;color:#fff;margin-bottom:18px;}
+.B .h1 .accent{color:var(--peach);}
+.B .sub{font-size:22px;color:rgba(255,245,230,.78);line-height:1.55;max-width:780px;font-weight:500;}
+.B .meta-row{position:absolute;bottom:54px;left:54px;right:54px;display:flex;align-items:center;justify-content:space-between;z-index:2;}
+.B .stats{display:flex;gap:14px;}
+.B .stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);padding:9px 14px;border-radius:11px;}
+.B .stat .num{font-family:var(--display);font-size:24px;color:var(--peach);line-height:1;}
+.B .stat .lbl{font-size:11px;color:rgba(255,245,230,.7);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:4px;}
+.B .url{font-family:var(--mono);font-size:14px;color:rgba(255,245,230,.72);font-weight:500;}
+
+/* ───────── C: Product Mockup · Dashboard preview ───────── */
+.C{background:#fdf8f3;}
+.C .hdr{position:absolute;top:36px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+.C .mark{width:38px;height:38px;border-radius:8px;background:var(--peach);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:#fff;}
+.C .name{font-family:var(--display);font-size:24px;color:#1a0a00;letter-spacing:.02em;}
+.C .left{position:absolute;top:130px;left:54px;width:520px;z-index:2;}
+.C .h1{font-family:var(--display);font-weight:400;font-size:80px;line-height:.97;letter-spacing:-.02em;color:#1a0a00;margin-bottom:18px;}
+.C .h1 .accent{color:var(--peach-dark);}
+.C .sub{font-size:18px;color:var(--text-muted);font-weight:600;line-height:1.55;margin-bottom:22px;}
+.C .pills{display:flex;gap:8px;flex-wrap:wrap;}
+.C .pill{background:#1a0a00;color:#fff5e6;font-size:12px;font-weight:800;padding:7px 14px;border-radius:99px;letter-spacing:.04em;}
+.C .pill.alt{background:#fff;color:#1a0a00;border:1px solid var(--line);}
+.C .right{position:absolute;top:80px;right:54px;width:540px;z-index:1;}
+.C .preview{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px rgba(180,90,30,.18);overflow:hidden;transform:rotate(-2deg) translateY(0);}
+.C .pv-bar{padding:10px 14px;background:var(--bg-warm);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;}
+.C .pv-bar .dot{width:10px;height:10px;border-radius:50%;}
+.C .pv-bar .r{background:#ff5f57;}.C .pv-bar .y{background:#febc2e;}.C .pv-bar .g{background:#28c840;}
+.C .pv-bar .url{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-subtle);}
+.C .pv-rows{padding:14px;display:flex;flex-direction:column;gap:8px;}
+.C .pv-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-warm);border-radius:9px;}
+.C .pv-row .av{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:18px;}
+.C .pv-row .t{flex:1;font-size:12.5px;font-weight:700;color:#1a0a00;}
+.C .pv-row .gt{background:transparent;color:var(--peach-dark);border:1px solid var(--peach);font-size:10.5px;font-weight:800;padding:4px 12px;border-radius:99px;}
+.C .url{position:absolute;bottom:36px;left:54px;font-family:var(--mono);font-size:13px;color:var(--text-subtle);}
+
+/* ───────── D: Massive Type · Editorial / minimal ───────── */
+.D{background:#fdf8f3;}
+.D .hdr{position:absolute;top:48px;left:54px;display:flex;align-items:center;gap:10px;}
+.D .mark{width:38px;height:38px;border-radius:8px;background:#1a0a00;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:var(--peach);}
+.D .name{font-family:var(--display);font-size:24px;color:#1a0a00;letter-spacing:.02em;}
+.D .body{position:absolute;top:160px;left:54px;right:54px;}
+.D .h1{font-family:var(--display);font-weight:400;font-size:158px;line-height:.88;letter-spacing:-.025em;color:#1a0a00;}
+.D .h1 .l1{display:block;}
+.D .h1 .l2{display:block;color:var(--peach-dark);}
+.D .h1 .l3{display:block;}
+.D .meta{position:absolute;bottom:60px;left:54px;right:54px;display:flex;align-items:center;justify-content:space-between;}
+.D .sub{font-size:21px;color:var(--text-muted);font-weight:600;letter-spacing:-.005em;}
+.D .url{font-family:var(--mono);font-size:14px;color:var(--text-subtle);font-weight:600;}
+
+/* ───────── E: Chat Demo · "show the magic" ───────── */
+.E{background:linear-gradient(180deg,#fff7ee 0%,#fdf8f3 70%);}
+.E .hdr{position:absolute;top:38px;left:54px;display:flex;align-items:center;gap:10px;z-index:3;}
+.E .mark{width:38px;height:38px;border-radius:8px;background:var(--peach);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:22px;color:#fff;}
+.E .name{font-family:var(--display);font-size:24px;color:#1a0a00;}
+.E .left{position:absolute;top:130px;left:54px;width:520px;z-index:2;}
+.E .h1{font-family:var(--display);font-weight:400;font-size:74px;line-height:.96;letter-spacing:-.018em;color:#1a0a00;margin-bottom:14px;}
+.E .h1 .accent{color:var(--peach-dark);}
+.E .sub{font-size:18px;color:var(--text-muted);font-weight:600;line-height:1.55;}
+.E .right{position:absolute;top:90px;right:54px;width:520px;z-index:2;display:flex;flex-direction:column;gap:11px;}
+.E .bub{padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.55;font-weight:600;max-width:85%;box-shadow:0 6px 16px rgba(0,0,0,.06);}
+.E .bub.you{align-self:flex-end;background:#1a0a00;color:#fff;}
+.E .bub.you b{color:var(--peach);font-family:var(--mono);font-weight:700;}
+.E .bub.ai{align-self:flex-start;background:#fff;color:#1a0a00;border:1px solid var(--line);}
+.E .bub.ai .who{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
+.E .bub.ai.a1 .who{color:var(--peach-dark);}
+.E .bub.ai.a2 .who{color:#1d4ed8;}
+.E .bub.ai .who .av{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.E .bub.ai.a1 .who .av{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.E .bub.ai.a2 .who .av{background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff;}
+.E .url{position:absolute;bottom:48px;left:54px;font-family:var(--mono);font-size:13px;color:var(--text-subtle);font-weight:600;}
+.E .badge{position:absolute;bottom:50px;right:54px;background:#1a0a00;color:#fff5e6;font-size:13px;font-weight:900;letter-spacing:.06em;padding:7px 14px;border-radius:99px;}
+
+</style>
+</head>
+<body>
+<div class="banner">📐 <b>MOCK</b> · LP OG thumbnail · 5 patterns @ 1200×630 · 78% scaled</div>
+
+<div class="wrap">
+  <div class="head">
+    <h1>LP サムネイル — 5 案</h1>
+    <p>
+      Twitter / FB / LINE で <code style="background:#fff;padding:2px 6px;border-radius:5px">myaiagents.agency</code> をシェアしたとき表示される画像です。
+      現在使用中の <a href="/social/og-home.png" target="_blank" style="color:var(--peach-dark);font-weight:700">og-home.png</a> は古い言い回し ("AI Agent Group" 等)。
+      新 LP のリブランドに合わせた 5 パターンを下に並べました。
+    </p>
+  </div>
+
+  <!-- ───────── A ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">A</span><span class="ttl">Big Type · Peach Gradient</span><span class="sub">既存 OG をリブランド ・ Team avatar 付き</span></div>
+    <div class="shell">
+      <div class="og A">
+        <div class="hdr">
+          <div class="brand"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+          <div class="pill-row"><span class="live-dot"></span>100+ AGENTS · LIVE</div>
+        </div>
+        <div class="body">
+          <div class="h1">YOUR OWN<br><span class="accent">AI TEAM</span><br>STARTS HERE.</div>
+          <div class="sub">AI designs your team. You ship 10× faster. Free to start, no card needed.</div>
+        </div>
+        <div class="members">
+          <div class="mem">🛍</div><div class="mem">📸</div><div class="mem">🌐</div><div class="mem">📱</div><div class="mem">📊</div>
+          <span class="ct">A 5-AI TEAM</span>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> 既存 OG の peach トーンと統一感を保ちつつ、現 LP の hero "YOUR OWN AI TEAM STARTS HERE" にコピーを揃える。下段のメンバーアバターで Team 機能をビジュアル訴求。Twitter で縮小表示されてもタイトルがしっかり読める。</div>
+  </div>
+
+  <!-- ───────── B ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">B</span><span class="ttl">Dark Story · Premium SaaS</span><span class="sub">dark theme + stat tiles ・ Linear / Vercel 系</span></div>
+    <div class="shell">
+      <div class="og B">
+        <div class="hdr">
+          <div class="brand"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+          <div class="badge">🎯 AGENT TEAM</div>
+        </div>
+        <div class="body">
+          <div class="kicker">⚡ Built for solo founders</div>
+          <div class="h1">Hire your<br><span class="accent">AI team.</span></div>
+          <div class="sub">Type a goal — AI designs 4-10 agents and your team launches in 30 seconds.</div>
+        </div>
+        <div class="meta-row">
+          <div class="stats">
+            <div class="stat"><div class="num">100+</div><div class="lbl">Curated agents</div></div>
+            <div class="stat"><div class="num">30s</div><div class="lbl">To first team</div></div>
+            <div class="stat"><div class="num">$0</div><div class="lbl">To start</div></div>
+          </div>
+          <div class="url">myaiagents.agency</div>
+        </div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> ダーク + peach の高級 SaaS 感 (Linear / Vercel / Cursor 系)。stat tile 3 つで "100+ agents · 30s · Free" を一瞬で伝える。Y Combinator や Product Hunt のフロー読者に刺さりやすい。</div>
+  </div>
+
+  <!-- ───────── C ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">C</span><span class="ttl">Product Mockup · Dashboard Preview</span><span class="sub">実画面のミニチュア ・ 商品らしさ最重視</span></div>
+    <div class="shell">
+      <div class="og C">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="left">
+          <div class="h1">Your AI<br><span class="accent">team,</span><br>at work.</div>
+          <div class="sub">Solo agents. Multi-agent teams. All in one chat.</div>
+          <div class="pills"><span class="pill">🤖 Solo</span><span class="pill">🎯 Team</span><span class="pill alt">🏪 Store</span></div>
+        </div>
+        <div class="right">
+          <div class="preview">
+            <div class="pv-bar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <span class="url">myaiagents.agency</span>
+            </div>
+            <div class="pv-rows">
+              <div class="pv-row"><div class="av">🛍</div><div class="t">EC Launch Team · 5 AI</div><div class="gt">$98</div></div>
+              <div class="pv-row"><div class="av" style="background:linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff">✍️</div><div class="t">SEO Blog Writer Pro</div><div class="gt">$24</div></div>
+              <div class="pv-row"><div class="av" style="background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff">💻</div><div class="t">Dev Squad · 4 AI</div><div class="gt">$26</div></div>
+              <div class="pv-row"><div class="av" style="background:linear-gradient(135deg,#d1fae5,#10b981);color:#fff">🤝</div><div class="t">CS Tier 1 Bot</div><div class="gt">FREE</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> 右側に <b>実商品の Store 画面</b>を出して "なに売ってる/買えるサービスか" を一瞬で伝える。"AI を使うだけじゃなく **マーケットプレイス**もある" を見せる差別化案。ECサイト系 SaaS の OG (Stripe, Shopify) に近い文法。</div>
+  </div>
+
+  <!-- ───────── D ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">D</span><span class="ttl">Massive Type · Editorial</span><span class="sub">超大文字 ・ 装飾なし ・ ミニマル</span></div>
+    <div class="shell">
+      <div class="og D">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="body">
+          <div class="h1">
+            <span class="l1">STOP ASKING</span>
+            <span class="l2">AI THINGS.</span>
+            <span class="l3">HIRE A TEAM.</span>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="sub">100+ curated AI agents · Free to start</div>
+          <div class="url">MYAIAGENTS.AGENCY</div>
+        </div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> Bebas Neue で超大文字、装飾ゼロ、文字だけで戦う。新 LP の最終 CTA "Stop asking AI to do things. Hire a team." をそのまま OG に。Twitter のタイムラインでスクロールを止めさせる用。エンジニア / スタートアップ系のフィードに強い。</div>
+  </div>
+
+  <!-- ───────── E ───────── -->
+  <div class="variant">
+    <div class="vh"><span class="num">E</span><span class="ttl">Chat Demo · Show the magic</span><span class="sub">@mention で複数 AI を呼び出す核機能を実演</span></div>
+    <div class="shell">
+      <div class="og E">
+        <div class="hdr"><div class="mark">M</div><div class="name">MY AI AGENT</div></div>
+        <div class="left">
+          <div class="h1">One chat.<br><span class="accent">Five</span><br>specialists.</div>
+          <div class="sub">@mention any AI in your team. Run a workflow in one chat.</div>
+        </div>
+        <div class="right">
+          <div class="bub you">Find a hot product. <b>@design</b> render shots. <b>@store</b> ship it.</div>
+          <div class="bub ai a1">
+            <div class="who"><span class="av">🛍</span>Product Sourcer</div>
+            Top pick: pet calming bed (62% margin, 8.5k searches/mo).
+          </div>
+          <div class="bub ai a2">
+            <div class="who"><span class="av">🌐</span>Storefront Architect</div>
+            Live → cozypets.myshopify.com · Stripe ready.
+          </div>
+        </div>
+        <div class="url">myaiagents.agency</div>
+        <div class="badge">🎯 AGENT TEAM</div>
+      </div>
+    </div>
+    <div class="notes"><b>狙い:</b> 右側で <b>実チャット</b>を見せる。"AI を 1 つの会話で使い分ける" という Team の核機能 (@mention 切替) が一目でわかる。"これ何のサービス？" の説明コストが激減する案。ただし文字密度高めなので Twitter の縮小表示で読みづらいリスクあり。</div>
+  </div>
+
+  <!-- ───────── PICK ───────── -->
+  <div style="margin-top:60px;background:#fff;border:2px solid var(--peach);border-radius:16px;padding:22px 24px;">
+    <div style="font-weight:900;font-size:16px;margin-bottom:10px;">🎨 どれにしますか？</div>
+    <div style="font-size:13.5px;color:var(--text-muted);line-height:1.85;">
+      <b>A (Big Type · Peach)</b>: 現 OG と統一感 ・ 安定 ・ 無難 → <b>新 LP との整合性重視</b><br>
+      <b>B (Dark Story)</b>: SaaS Twitter 受けが最も良い ・ stat tiles で説明力高い → <b>Pro / Power user 狙い</b><br>
+      <b>C (Product Mockup)</b>: ストアの存在を明示 ・ "何売ってるか" が瞬時にわかる → <b>マーケットプレイス訴求重視</b><br>
+      <b>D (Massive Type)</b>: スクロールストップ力最強 ・ クリック率高そう → <b>バイラル狙い</b><br>
+      <b>E (Chat Demo)</b>: 機能の凄さが一目でわかる → <b>説明コスト激減</b> (ただし密度高め)<br>
+      <br>
+      <span style="color:var(--text);font-weight:700">推し: B or D。混合 (A の peach + B の stat tiles 等) もアリ。</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

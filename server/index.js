@@ -2408,6 +2408,14 @@ function renderTeamOgSvg(team, members, avatarMap){
   const goalLines = _wrapText(goal, 30, 2);
   const cover = team.avatar || '🎯';
   const memberCount = (Array.isArray(team.team_member_agent_ids) ? team.team_member_agent_ids.length : members.length) || 0;
+  // Lang-aware copy. Prefer the team's stored lang; fall back to detecting
+  // CJK characters in the team name / goal so legacy teams without `lang` set
+  // still render correctly.
+  const isJa = team.lang === 'ja' || (team.lang !== 'en' && /[ぁ-んァ-ヶー一-龠]/.test((team.name||'') + ' ' + (goal||'')));
+  const tHeadlineFallback1 = isJa ? `${memberCount} 体の AI が`           : `${memberCount} AI agents`;
+  const tHeadlineFallback2 = isJa ? '業務を回す。'                         : 'run the workflow.';
+  const tHandoff           = isJa ? '1 クリックでクローン → 自分のアカウントで起動。'
+                                  : '1-click clone → spins up in your own account.';
   const teamEmojiUri = (avatarMap && avatarMap.get(cover)) || null;
   // Member palette — index-based gradients matching the mock
   const memberGrads = ['#fff7ee→#fb923c','#ede9fe→#8b5cf6','#dbeafe→#3b82f6','#fce7f3→#ec4899','#d1fae5→#10b981','#fef3c7→#f59e0b'];
@@ -2487,11 +2495,11 @@ function renderTeamOgSvg(team, members, avatarMap){
     </g>
 
     <!-- big headline = goal line 1 (or fallback) -->
-    <text x="0" y="120" fill="#ffffff" font-size="56" font-weight="900" letter-spacing="-0.02em">${_xmlEscape(goalLines[0] || `${memberCount} 体の AI が`)}</text>
-    <text x="0" y="180" fill="#ffffff" font-size="56" font-weight="900" letter-spacing="-0.02em">${_xmlEscape(goalLines[1] || '業務を回す。')}</text>
+    <text x="0" y="120" fill="#ffffff" font-size="56" font-weight="900" letter-spacing="-0.02em">${_xmlEscape(goalLines[0] || tHeadlineFallback1)}</text>
+    <text x="0" y="180" fill="#ffffff" font-size="56" font-weight="900" letter-spacing="-0.02em">${_xmlEscape(goalLines[1] || tHeadlineFallback2)}</text>
 
     <!-- desc / handoff line -->
-    <text x="0" y="240" fill="rgba(255,245,230,0.78)" font-size="20" font-weight="500">1 クリックでクローン → 自分のアカウントで起動。</text>
+    <text x="0" y="240" fill="rgba(255,245,230,0.78)" font-size="20" font-weight="500">${_xmlEscape(tHandoff)}</text>
 
     <!-- meta pills -->
     <g transform="translate(0 290)">
@@ -2794,14 +2802,31 @@ async function serveAgentSharePage(res, shareId){
     const ag = hasAgent ? found.agent : null;
     const isTeam = hasAgent && !!ag.is_team;
     const memCount = isTeam ? (Array.isArray(ag.team_member_agent_ids) ? ag.team_member_agent_ids.length : 0) : 0;
+    // Lang for OG title/description: stored team.lang wins; otherwise detect
+    // from CJK chars in the agent's text. English is the default product
+    // language so unknown / mixed cases lean EN.
+    const ogIsJa = isTeam
+      ? (ag.lang === 'ja' || (ag.lang !== 'en' && /[ぁ-んァ-ヶー一-龠]/.test((ag.name||'') + ' ' + (ag.team_goal||''))))
+      : (hasAgent && /[ぁ-んァ-ヶー一-龠]/.test((ag.name||'') + ' ' + (ag.persona||'')));
     const titleH = escHtml(hasAgent
-      ? (isTeam ? `🎯 ${ag.name || 'Agent Team'} · ${memCount} AI agents` : (ag.name || 'AI Agent'))
+      ? (isTeam
+          ? (ogIsJa
+              ? `🎯 ${ag.name || 'Agent Team'} · AI ${memCount} 体のチーム`
+              : `🎯 ${ag.name || 'Agent Team'} · ${memCount} AI agents`)
+          : (ag.name || 'AI Agent'))
       : 'MY AI AGENT — Build your own AI Team');
     // Teams have empty persona — fall back to team_goal so the unfurl still
     // tells the visitor what the team does.
-    const descSrc = isTeam ? (ag.team_goal || ag.persona || 'A multi-agent AI team on MY AI AGENT.')
-                  : hasAgent ? (ag.persona || 'A custom AI agent on MY AI AGENT.')
-                  : 'Build your own AI agent team. 10 templates, group chat, Agent Store. Free to start.';
+    const fallbackTeamDesc = ogIsJa
+      ? 'MY AI AGENT で動くマルチエージェント AI チーム。'
+      : 'A multi-agent AI team on MY AI AGENT.';
+    const fallbackAgentDesc = ogIsJa
+      ? 'MY AI AGENT で作られたカスタム AI エージェント。'
+      : 'A custom AI agent on MY AI AGENT.';
+    const fallbackBrandDesc = 'Build your own AI agent team. Templates, group chat, Agent Store. Free to start.';
+    const descSrc = isTeam ? (ag.team_goal || ag.persona || fallbackTeamDesc)
+                  : hasAgent ? (ag.persona || fallbackAgentDesc)
+                  : fallbackBrandDesc;
     const descH  = escHtml(_trunc(descSrc, 160));
     const pageUrl = APP_URL + '/a/' + shareId;
     // Per-agent dynamic OG. The endpoint renders a 1200x630 card with the
@@ -3801,20 +3826,39 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── GET /api/share/:share_id (PUBLIC, no auth) ───────────────
-  // Returns minimal agent info so the share landing page can render
+  // Returns minimal agent info so the share landing page can render.
+  // Includes team-only fields when agent.is_team so the page can show
+  // member previews and the team goal.
   const psm=pathname.match(/^\/api\/share\/([a-z0-9-]+)$/);
   if(psm&&method==='GET'){
     const shareId=psm[1];
     const found=await findAgentByShareId(shareId);
     if(!found) return jres(res,404,{error:'共有エージェントが見つかりません'});
+    const ag = found.agent;
+    let memberPreview = null;
+    if(ag.is_team && Array.isArray(ag.team_member_agent_ids) && ag.team_member_agent_ids.length){
+      memberPreview = ag.team_member_agent_ids
+        .map(id => (found.user.agents||[]).find(a => a.id === id))
+        .filter(Boolean)
+        .slice(0, 8)
+        .map(a => ({
+          avatar: a.avatar || '🤖',
+          name: a.name || 'AI',
+          skills: Array.isArray(a.skills) ? a.skills.slice(0,3) : [],
+        }));
+    }
     return jres(res,200,{
       agent:{
-        avatar:found.agent.avatar,
-        name:found.agent.name,
-        skills:found.agent.skills||[],
-        persona:found.agent.persona||'',
-        chrome_enabled:!!found.agent.chrome_enabled
+        avatar: ag.avatar,
+        name: ag.name,
+        skills: ag.skills||[],
+        persona: ag.persona||'',
+        chrome_enabled: !!ag.chrome_enabled,
+        is_team: !!ag.is_team,
+        team_goal: ag.is_team ? (ag.team_goal||'') : undefined,
+        member_count: memberPreview ? memberPreview.length : undefined,
       },
+      members: memberPreview,
       owner:{ name: (found.user.name||(found.user.email||'').split('@')[0]||'ユーザー') }
     });
   }
@@ -4236,6 +4280,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const _gate = _planTeamGate(user);
     if(_gate) return jres(res, 402, _gate);
     const body = await readBody(req);
+    const lang = (body.lang === 'ja') ? 'ja' : 'en';
     const tpl = _findTeamTemplate(String(body.template_id||''));
     if(!tpl) return jres(res,404,{error:'テンプレートが見つかりません'});
 
@@ -4283,6 +4328,7 @@ async function handleAPI(req,res,pathname,method,ip){
       is_group: true,
       is_team: true,                       // distinguishes Team groups from human groups
       team_template_id: tpl.id,
+      lang: lang,
       host_id: user.id,
       members: [
         // Host is always member (humans + AIs share the members array; the
@@ -4297,7 +4343,10 @@ async function handleAPI(req,res,pathname,method,ip){
       updated_at: now,
       history: [
         // Welcome system message
-        { role:'system', content: `🎉 ${tpl.name} が起動しました。@${cloned[0].name.replace(/\s+/g,'')} のように特定エージェントを呼び出せます。`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+        { role:'system', content: lang === 'ja'
+          ? `🎉 ${tpl.name} が起動しました。@${cloned[0].name.replace(/\s+/g,'')} のように特定エージェントを呼び出せます。`
+          : `🎉 ${tpl.name} is up and running. Call a specific agent with @${cloned[0].name.replace(/\s+/g,'')}.`,
+          time: new Date().toLocaleTimeString(lang==='ja'?'ja-JP':'en-US', {hour:'2-digit',minute:'2-digit'}) },
       ],
     };
 
@@ -4328,23 +4377,35 @@ async function handleAPI(req,res,pathname,method,ip){
     if(_gate) return jres(res, 402, _gate);
     const body = await readBody(req);
     const goal = String(body.goal||'').trim().slice(0, 1200);
-    if(goal.length < 6) return jres(res,400,{error:'目的をもう少し詳しく書いてください'});
-    if(!ANTHROPIC) return jres(res,500,{error:'AI が設定されていません'});
-    if((user.agents||[]).length >= 994) return jres(res,400,{error:'エージェントは最大 1000 個までです'});
+    const lang = (body.lang === 'ja') ? 'ja' : 'en';   // EN by default — flipped from before
+    if(goal.length < 6) return jres(res,400,{error: lang==='ja' ? '目的をもう少し詳しく書いてください' : 'Please describe your goal in a bit more detail'});
+    if(!ANTHROPIC) return jres(res,500,{error: lang==='ja' ? 'AI が設定されていません' : 'AI is not configured'});
+    if((user.agents||[]).length >= 994) return jres(res,400,{error: lang==='ja' ? 'エージェントは最大 1000 個までです' : 'Up to 1000 agents'});
 
     // Valid skill IDs (mirrors public/app.html SKILLS list).
     const VALID_SKILLS = ['writing','research','coding','marketing','planning','analysis','translate','support','idea','teaching','ceo','coo','secretary','designer','sns','other'];
 
+    // Output language is driven by the user's app preference (?lang / saved
+    // setting), not by the goal language. Without this, English-default users
+    // were getting Japanese personas because the prompt hard-coded JA.
+    const personaLang = lang === 'ja' ? 'in Japanese' : 'in English';
+    const titleHint   = lang === 'ja' ? 'short name, 2-6 words, JA preferred' : 'short name, 2-6 words, in English';
+    const personaSchema = lang === 'ja'
+      ? '"persona":"採用目的: <why we hired this agent, JA>\\n業務内容: <what they do day-to-day, JA, concrete>"'
+      : '"persona":"Hired for: <why we hired this agent>\\nDay-to-day: <what they do day-to-day, concrete>"';
     const sys = 'You are a senior product strategist who designs small AI-agent teams. '
-      + 'Given a user goal (in Japanese or English), output a JSON object describing a focused team of 4-10 agents that, working together, can accomplish the goal. '
+      + 'Given a user goal, output a JSON object describing a focused team of 4-10 agents that, working together, can accomplish the goal. '
       + 'Pick the smallest team that genuinely covers the goal — pad to ~6 for broad goals, scale up to 10 only for end-to-end ones. '
       + 'Output ONLY valid JSON — no prose, no code fences. Schema: '
-      + '{"team_name":"<short name, 2-6 words, JA preferred>", "cover_emoji":"<single emoji>", "description":"<one-sentence summary of what the team does, JA>", '
-      + '"agents":[{"avatar":"<single emoji>","name":"<short role name, 2-4 words>","skills":["<from the allowed set>"...],"persona":"採用目的: <why we hired this agent, JA>\\n業務内容: <what they do day-to-day, JA, concrete>"}]}. '
+      + '{"team_name":"<' + titleHint + '>", "cover_emoji":"<single emoji>", "description":"<one-sentence summary, ' + personaLang + '>", '
+      + '"agents":[{"avatar":"<single emoji>","name":"<short role name, 2-4 words, ' + personaLang + '>","skills":["<from the allowed set>"...],' + personaSchema + '}]}. '
       + 'Allowed skill IDs only: ' + VALID_SKILLS.join(', ') + '. '
-      + 'Each agent: 1-3 skills max. Personas should be specific to the goal (mention concrete tools/steps where relevant). '
+      + 'Each agent: 1-3 skills max. ALL human-readable text (team_name, name, persona, description) MUST be ' + personaLang + '. '
+      + 'Personas should be specific to the goal (mention concrete tools/steps where relevant). '
       + 'No duplicate roles. Pick agents that hand off naturally to each other.';
-    const userMsg = `目的:\n${goal}\n\nこの目的に最適なチームを JSON で設計してください。`;
+    const userMsg = lang === 'ja'
+      ? `目的:\n${goal}\n\nこの目的に最適なチームを JSON で設計してください。`
+      : `Goal:\n${goal}\n\nDesign the best team for this goal as JSON.`;
     let aiData;
     try {
       aiData = await callAI([{role:'user', content: userMsg}], sys, 'sonnet');
@@ -4418,6 +4479,7 @@ async function handleAPI(req,res,pathname,method,ip){
       is_team: true,
       team_template_id: 'generated',
       team_goal: goal.slice(0,400),
+      lang: lang,
       host_id: user.id,
       members: [
         { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
@@ -4427,7 +4489,10 @@ async function handleAPI(req,res,pathname,method,ip){
       created_at: now,
       updated_at: now,
       history: [
-        { role:'system', content: `🎉 ${teamName} を AI が設計しました。@${firstName} のように特定エージェントを呼べます。\n目的: ${goal.slice(0,200)}`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+        { role:'system', content: lang === 'ja'
+          ? `🎉 ${teamName} を AI が設計しました。@${firstName} のように特定エージェントを呼べます。\n目的: ${goal.slice(0,200)}`
+          : `🎉 AI assembled ${teamName} for you. Call a specific agent with @${firstName}.\nGoal: ${goal.slice(0,200)}`,
+          time: new Date().toLocaleTimeString(lang==='ja'?'ja-JP':'en-US', {hour:'2-digit',minute:'2-digit'}) },
       ],
     };
     user.agents = [...(user.agents||[]), ...cloned, group];
@@ -4454,6 +4519,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const _gate = _planTeamGate(user);
     if(_gate) return jres(res, 402, _gate);
     const body = await readBody(req);
+    const lang = (body.lang === 'ja') ? 'ja' : 'en';
     const name = String(body.name||'').trim().slice(0,80);
     const cover = String(body.cover_emoji||'🎯').trim().slice(0,8) || '🎯';
     const ids = Array.isArray(body.member_ids) ? body.member_ids.filter(x=>typeof x==='string') : [];
@@ -4482,6 +4548,7 @@ async function handleAPI(req,res,pathname,method,ip){
       is_group: true,
       is_team: true,
       team_template_id: 'custom',
+      lang: lang,
       host_id: user.id,
       members: [
         { user_id: user.id, name: user.name||'You', email: user.email||'', joined_at: now, role: 'host', notify_pref: 'all' },
@@ -4491,7 +4558,10 @@ async function handleAPI(req,res,pathname,method,ip){
       created_at: now,
       updated_at: now,
       history: [
-        { role:'system', content: `🎉 ${name} を作成しました。@${firstName.replace(/\s+/g,'')} のように特定エージェントを呼び出せます。`, time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) },
+        { role:'system', content: lang === 'ja'
+          ? `🎉 ${name} を作成しました。@${firstName.replace(/\s+/g,'')} のように特定エージェントを呼び出せます。`
+          : `🎉 ${name} is ready. Call a specific agent with @${firstName.replace(/\s+/g,'')}.`,
+          time: new Date().toLocaleTimeString(lang==='ja'?'ja-JP':'en-US', {hour:'2-digit',minute:'2-digit'}) },
       ],
     };
 
@@ -4531,6 +4601,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if((user.agents||[]).length >= 1000) return jres(res,400,{error:'エージェントは最大1000個です'});
 
     const body = await readBody(req);
+    const lang = (body.lang === 'ja') ? 'ja' : 'en';
     const description = String(body.description||'').trim().slice(0, 800);
 
     const VALID_SKILLS = ['writing','research','coding','marketing','planning','analysis','translate','support','idea','teaching','ceo','coo','secretary','designer','sns','other'];
@@ -4550,8 +4621,8 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     // Path 2: only description → ask Claude to design ONE agent that fits
     else {
-      if(description.length < 4) return jres(res,400,{error:'追加するメンバーの説明をもう少し詳しく書いてください'});
-      if(!ANTHROPIC) return jres(res,500,{error:'AI が設定されていません'});
+      if(description.length < 4) return jres(res,400,{error: lang==='ja' ? '追加するメンバーの説明をもう少し詳しく書いてください' : 'Please describe the new member in a bit more detail'});
+      if(!ANTHROPIC) return jres(res,500,{error: lang==='ja' ? 'AI が設定されていません' : 'AI is not configured'});
 
       const existingNames = ((team.team_member_agent_ids||[])
         .map(id => (user.agents||[]).find(a => a.id===id))
@@ -4559,12 +4630,17 @@ async function handleAPI(req,res,pathname,method,ip){
         .map(a => a.name)).join(', ');
       const teamGoal = team.team_goal || '';
       const teamName = team.name || '';
+      const personaLang = lang === 'ja' ? 'in Japanese' : 'in English';
+      const personaSchema = lang === 'ja'
+        ? '"persona":"採用目的: <why we hired this agent, JA>\\n業務内容: <what they do day-to-day, JA, concrete>"'
+        : '"persona":"Hired for: <why we hired this agent>\\nDay-to-day: <what they do day-to-day, concrete>"';
 
       const sys = 'You are a senior product strategist who designs single AI agents. '
         + 'Given an existing AI Agent Team and a description of a NEW member to add, output a JSON object describing exactly one agent that complements the team. '
         + 'Output ONLY valid JSON — no prose, no code fences. Schema: '
-        + '{"avatar":"<single emoji>","name":"<short role name, 2-4 words, JA preferred>","skills":["<from the allowed set>"...],"persona":"採用目的: <why we hired this agent, JA>\\n業務内容: <what they do day-to-day, JA, concrete>"}. '
+        + '{"avatar":"<single emoji>","name":"<short role name, 2-4 words, ' + personaLang + '>","skills":["<from the allowed set>"...],' + personaSchema + '}. '
         + 'Allowed skill IDs only: ' + VALID_SKILLS.join(', ') + '. '
+        + 'ALL human-readable text MUST be ' + personaLang + '. '
         + 'Pick 1-3 skills max. The new agent must not duplicate an existing role. '
         + 'Persona should be specific and actionable.';
       const userMsg =
@@ -4621,7 +4697,9 @@ async function handleAPI(req,res,pathname,method,ip){
     team.history = Array.isArray(team.history) ? team.history : [];
     team.history.push({
       role: 'system',
-      content: `🆕 ${newAgent.name} がチームに加わりました。@${newAgent.name.replace(/\s+/g,'')} で呼び出せます。`,
+      content: lang === 'ja'
+        ? `🆕 ${newAgent.name} がチームに加わりました。@${newAgent.name.replace(/\s+/g,'')} で呼び出せます。`
+        : `🆕 ${newAgent.name} joined the team. Call them with @${newAgent.name.replace(/\s+/g,'')}.`,
       time: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}),
     });
     try { await DB.save(user); }

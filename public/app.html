@@ -8388,7 +8388,7 @@ async function sendMsg(){
         _agSlash.history.push({role:'system', content:'⏳ AI が新しいメンバーを設計中…', time:ts});
         renderMsgs(_agSlash);
         try {
-          var r = await api('POST','/api/teams/'+_agSlash.id+'/add-member', { description: _addDesc });
+          var r = await api('POST','/api/teams/'+_agSlash.id+'/add-member', { description: _addDesc, lang: currentLang });
           if(r && r.agent){
             try {
               var meRes = await api('GET','/api/me');
@@ -8888,7 +8888,7 @@ async function submitGenerateTeam(){
   }, 900);
 
   try {
-    var r = await api('POST','/api/teams/generate', { goal: goal });
+    var r = await api('POST','/api/teams/generate', { goal: goal, lang: currentLang });
     clearInterval(anim);
     barEl.style.width = '100%';
     document.getElementById('teamActIcon').textContent = r.cover_emoji || '🎯';
@@ -8980,7 +8980,7 @@ async function activateTeam(templateId, templateName, coverEmoji){
   document.getElementById('teamActBar').style.background = 'linear-gradient(90deg,var(--peach),var(--peach-dark))';
   document.getElementById('teamActStatus').textContent = '';
   try {
-    var r = await api('POST','/api/teams/activate', { template_id: templateId });
+    var r = await api('POST','/api/teams/activate', { template_id: templateId, lang: currentLang });
     document.getElementById('teamActBar').style.width = '100%';
     document.getElementById('teamActSub').textContent = L('完了!','Done!');
     document.getElementById('teamActStatus').textContent = L((r.cloned_count||0) + ' agents created · opening workspace…','Opening workspace…');
@@ -9278,7 +9278,7 @@ async function submitAddTeamMember(){
   var btn = document.getElementById('addMemSubmitBtn');
   btn.disabled = true; btn.style.opacity='.7'; btn.textContent = L('生成中…','Generating…');
   try {
-    var r = await api('POST','/api/teams/'+_addingMemberTeamId+'/add-member', { description: desc });
+    var r = await api('POST','/api/teams/'+_addingMemberTeamId+'/add-member', { description: desc, lang: currentLang });
     if(r && r.agent){
       // Refresh local agents from /api/me so team's team_member_agent_ids reflects the new id
       try {

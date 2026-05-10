@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>MY AI AGENT — 共有エージェント</title>
+<title>MY AI AGENT — Shared agent</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{
@@ -11,24 +11,25 @@
   --peach:#fb923c; --peach-dark:#ea580c;
   --text:#2d1a0e; --text2:#6b4226; --text3:#9a6a4a;
   --green:#10b981; --rose:#ef4444; --blue:#3b82f6;
-  --sans:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',sans-serif;
+  --sans:'Inter','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{font-family:var(--sans);background:var(--cream);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
 
-.page{
-  min-height:100vh;display:flex;flex-direction:column;align-items:center;
-  padding:24px 20px 60px;
-}
+.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 20px 60px;}
 
-.brand{display:flex;align-items:center;gap:8px;margin-bottom:32px;text-decoration:none;color:var(--text);}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;text-decoration:none;color:var(--text);}
 .brand .bars{display:flex;gap:3px;align-items:flex-end;}
 .brand .bar{width:4px;background:#fb923c;border-radius:2px;}
 .brand .bar1{height:18px;}.brand .bar2{height:12px;opacity:.65;}.brand .bar3{height:7px;opacity:.35;}
 .brand-name{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--text);}
 
+.lang-toggle{margin-bottom:20px;font-size:11px;color:var(--text3);}
+.lang-toggle a{color:var(--peach-dark);text-decoration:none;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid var(--wire2);background:#fff;}
+.lang-toggle a:hover{background:var(--cream3);}
+
 .card{
-  width:100%;max-width:520px;background:#fff;border:1px solid var(--wire2);border-radius:20px;
+  width:100%;max-width:560px;background:#fff;border:1px solid var(--wire2);border-radius:20px;
   padding:32px 28px 28px;box-shadow:0 12px 30px rgba(0,0,0,.08);text-align:center;
 }
 
@@ -44,11 +45,9 @@ html,body{font-family:var(--sans);background:var(--cream);color:var(--text);min-
 .name{font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;}
 .owner{font-size:12px;color:var(--text3);margin-bottom:18px;}
 .pills{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin-bottom:20px;}
-.pill{
-  font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;
-  background:var(--cream3);color:var(--text2);border:1px solid var(--wire2);letter-spacing:.02em;
-}
+.pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--cream3);color:var(--text2);border:1px solid var(--wire2);letter-spacing:.02em;}
 .pill.chrome{background:rgba(59,130,246,.1);color:var(--blue);border-color:rgba(59,130,246,.25);}
+.pill.team{background:rgba(251,146,60,.14);color:var(--peach-dark);border-color:rgba(251,146,60,.32);font-weight:900;letter-spacing:.05em;}
 .persona{
   text-align:left;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px;
   padding:14px 16px;font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px;
@@ -56,29 +55,27 @@ html,body{font-family:var(--sans);background:var(--cream);color:var(--text);min-
 }
 .persona b{color:var(--peach-dark);font-weight:700;}
 
-.cta{
-  display:block;width:100%;padding:14px;background:var(--peach);color:#fff;border:0;
-  border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;
-  transition:all .14s;margin-bottom:10px;
-}
+/* Team member preview */
+.members{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;text-align:left;}
+.mem{background:var(--cream2);border:1px solid var(--wire2);border-radius:11px;padding:11px 12px;display:flex;align-items:center;gap:10px;}
+.mem .em{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.mem .nm{font-size:12.5px;font-weight:800;letter-spacing:-.005em;color:var(--text);}
+.mem .rl{font-size:9.5px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+
+.cta{display:block;width:100%;padding:14px;background:var(--peach);color:#fff;border:0;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .14s;margin-bottom:10px;}
 .cta:hover{background:var(--peach-dark);transform:translateY(-1px);box-shadow:0 8px 18px rgba(251,146,60,.3);}
 .cta:disabled{opacity:.6;cursor:wait;transform:none;}
-
 .cta-sub{font-size:11.5px;color:var(--text3);line-height:1.6;}
 .cta-sub a{color:var(--peach-dark);text-decoration:underline;}
 
-.err{
-  text-align:center;color:var(--rose);font-size:14px;
-  background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);
-  padding:14px;border-radius:12px;
-}
+.err{text-align:center;color:var(--rose);font-size:14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);padding:14px;border-radius:12px;}
 
 .loader{display:flex;justify-content:center;gap:6px;padding:30px;}
 .loader span{width:8px;height:8px;border-radius:50%;background:var(--peach);animation:bounce 1.2s ease infinite;}
 .loader span:nth-child(2){animation-delay:.15s;}.loader span:nth-child(3){animation-delay:.3s;}
 @keyframes bounce{0%,100%{transform:scale(.6);opacity:.4;}50%{transform:scale(1.1);opacity:1;}}
 
-.tag-line{margin-top:24px;font-size:11px;color:var(--text3);text-align:center;line-height:1.7;}
+.tag-line{margin-top:24px;font-size:11px;color:var(--text3);text-align:center;line-height:1.7;max-width:560px;}
 </style>
 </head>
 <body>
@@ -92,74 +89,159 @@ html,body{font-family:var(--sans);background:var(--cream);color:var(--text);min-
     <div class="brand-name">MY AI AGENT</div>
   </a>
 
+  <div class="lang-toggle" id="langToggle"></div>
+
   <div class="card" id="card">
     <div class="loader"><span></span><span></span><span></span></div>
   </div>
 
-  <div class="tag-line">
-    🌍 SNS でシェアされた AI エージェントを試して、自分のアカウントに保存できます。<br>
-    Built on <a href="/" style="color:var(--peach-dark);text-decoration:underline">MY AI AGENT</a> · クリエイターは従量課金の10%を報酬として受け取れます（リリース後）
-  </div>
+  <div class="tag-line" id="tagLine"></div>
 </div>
 
 <script>
 const API = location.origin;
-
-// Extract share_id from /a/{share_id}
 const shareId = (location.pathname.match(/^\/a\/([a-z0-9-]+)\/?$/)||[])[1];
 
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-const SKILL_LABELS = {
-  writing:'ライティング', research:'リサーチ', coding:'プログラミング',
-  marketing:'マーケティング', planning:'プランニング', analysis:'データ分析',
-  translate:'翻訳', support:'カスタマー対応', idea:'アイデア出し', teaching:'教育・解説',
-  ceo:'アシスタントCEO', coo:'アシスタントCOO', secretary:'秘書',
-  designer:'デザイナー', sns:'SNS担当', other:'その他'
+// ── i18n ──
+function _detectLang(){
+  try{
+    var qs = new URLSearchParams(location.search).get('lang');
+    if(qs === 'ja' || qs === 'en') return qs;
+    var saved = localStorage.getItem('lang');
+    if(saved === 'ja' || saved === 'en') return saved;
+    var nav = (navigator.language||'').toLowerCase();
+    if(nav.startsWith('ja')) return 'ja';
+  }catch(e){}
+  return 'en';
+}
+const LANG = _detectLang();
+const T = LANG === 'ja' ? {
+  htmlLang:'ja', langOther:'EN', langOtherHref:'?lang=en',
+  agentBanner:'🔗 共有された AI エージェント',
+  teamBanner:'🎯 共有された AI Agent Team',
+  membersH:'チームのメンバー',
+  invalidUrl:'URL の形式が正しくありません',
+  notFound:'共有エージェントが見つかりません',
+  ownerLbl:'作成者: ',
+  unknownUser:'ユーザー',
+  ctaAgent:'このエージェントを使う →',
+  ctaTeam:'このチームを 1 クリックで複製 →',
+  ctaSub:'クリックすると、このエージェントを <b>あなたのアカウント</b> にコピーします。<br>未ログインの場合は、サインアップ後に自動でコピーされます。',
+  ctaSubTeam:'クリックすると、このチームをあなたのアカウントに <b>1 クリックで丸ごと複製</b> します。<br>未ログインの場合は、サインアップ後に自動でコピーされます。',
+  processing:'処理中…',
+  cloned:'✓ 追加しました — 開いています…',
+  cloneFail:'追加に失敗しました',
+  bottomLine:'🌍 SNS でシェアされた AI エージェント / チームを試して、自分のアカウントに保存できます。',
+  bottomBuilt:'Built on',
+  bottomShareNote:'クリエイターは従量課金の 10% を報酬として受け取れます',
+  fetchFail:'取得に失敗しました',
+  webPill:'🌐 Web access',
+  hiredFor:'採用目的:', duties:'業務内容:',
+  skills:{writing:'ライティング',research:'リサーチ',coding:'プログラミング',marketing:'マーケティング',planning:'プランニング',analysis:'データ分析',translate:'翻訳',support:'カスタマー対応',idea:'アイデア出し',teaching:'教育・解説',ceo:'アシスタントCEO',coo:'アシスタントCOO',secretary:'秘書',designer:'デザイナー',sns:'SNS担当',other:'その他'},
+  goalH:'チームの目的',
+} : {
+  htmlLang:'en', langOther:'日本語', langOtherHref:'?lang=ja',
+  agentBanner:'🔗 Shared AI Agent',
+  teamBanner:'🎯 Shared AI Agent Team',
+  membersH:'Team members',
+  invalidUrl:'Malformed share URL',
+  notFound:'Share not found',
+  ownerLbl:'Creator: ',
+  unknownUser:'a creator',
+  ctaAgent:'Use this agent →',
+  ctaTeam:'Clone this whole team →',
+  ctaSub:'Click to copy this agent into <b>your account</b>.<br>If you\'re not signed in, sign up first and the agent will be added automatically.',
+  ctaSubTeam:'Click to <b>clone the whole team</b> (every member) into your account.<br>If you\'re not signed in, sign up first and the team will be added automatically.',
+  processing:'Processing…',
+  cloned:'✓ Added — opening…',
+  cloneFail:'Failed to add',
+  bottomLine:'🌍 Try AI agents and teams shared on social, save them to your own account.',
+  bottomBuilt:'Built on',
+  bottomShareNote:'Creators earn 10% of usage revenue',
+  fetchFail:'Fetch failed',
+  webPill:'🌐 Web access',
+  hiredFor:'Hired for:', duties:'Day-to-day:',
+  skills:{writing:'Writing',research:'Research',coding:'Programming',marketing:'Marketing',planning:'Planning',analysis:'Analysis',translate:'Translation',support:'Support',idea:'Ideation',teaching:'Teaching',ceo:'Assistant CEO',coo:'Assistant COO',secretary:'Secretary',designer:'Designer',sns:'Social media',other:'Other'},
+  goalH:'Team goal',
 };
+document.documentElement.lang = T.htmlLang;
+document.title = T.htmlLang === 'ja' ? 'MY AI AGENT — 共有エージェント' : 'MY AI AGENT — Shared agent';
+document.getElementById('langToggle').innerHTML = '<a href="' + T.langOtherHref + '">' + T.langOther + '</a>';
+document.getElementById('tagLine').innerHTML = T.bottomLine + '<br>' + T.bottomBuilt + ' <a href="/" style="color:var(--peach-dark);text-decoration:underline">MY AI AGENT</a> · ' + T.bottomShareNote;
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 async function main(){
   const card = document.getElementById('card');
   if(!shareId){
-    card.innerHTML = '<div class="err">URL の形式が正しくありません</div>';
+    card.innerHTML = '<div class="err">' + T.invalidUrl + '</div>';
     return;
   }
   let data;
   try{
     const res = await fetch(API+'/api/share/'+shareId);
     data = await res.json();
-    if(!res.ok) throw new Error(data.error||'取得に失敗しました');
+    if(!res.ok) throw new Error(data.error||T.fetchFail);
   }catch(e){
-    card.innerHTML = '<div class="err">'+esc(e.message||'共有エージェントが見つかりません')+'</div>';
+    card.innerHTML = '<div class="err">'+esc(e.message||T.notFound)+'</div>';
     return;
   }
 
-  const ag = data.agent;
-  const owner = data.owner;
-  const skillsHtml = (ag.skills||[]).map(s=>'<span class="pill">'+esc(SKILL_LABELS[s]||s)+'</span>').join('')
-    + (ag.chrome_enabled?'<span class="pill chrome">🌐 Google Chrome</span>':'');
-  const personaHtml = ag.persona
-    ? '<div class="persona">'+esc(ag.persona).replace(/\n/g,'<br>').replace(/採用目的:/g,'<b>採用目的:</b>').replace(/業務内容:/g,'<b>業務内容:</b>')+'</div>'
+  const ag = data.agent || {};
+  const owner = data.owner || {};
+  const isTeam = !!ag.is_team;
+  const members = Array.isArray(data.members) ? data.members : [];
+
+  const skillsHtml = (ag.skills||[]).map(s=>'<span class="pill">'+esc(T.skills[s]||s)+'</span>').join('')
+    + (ag.chrome_enabled?'<span class="pill chrome">'+T.webPill+'</span>':'')
+    + (isTeam ? '<span class="pill team">🎯 '+(members.length||ag.member_count||0)+' AI</span>' : '');
+
+  // Persona display — replace 採用目的: / 業務内容: with localized labels
+  let personaText = ag.persona || '';
+  if(isTeam && !personaText && ag.team_goal) personaText = ag.team_goal;
+  const personaHtml = personaText
+    ? '<div class="persona">'
+        + esc(personaText).replace(/\n/g,'<br>')
+            .replace(/採用目的:/g,'<b>'+T.hiredFor+'</b>')
+            .replace(/業務内容:/g,'<b>'+T.duties+'</b>')
+      + '</div>'
     : '';
 
+  const membersHtml = (isTeam && members.length) ? (
+    '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;text-align:left">'+T.membersH+'</div>'
+    + '<div class="members">'
+    + members.slice(0,8).map(function(m, i){
+        return '<div class="mem"><div class="em">'+esc(m.avatar||'🤖')+'</div><div><div class="nm">'+esc(m.name||'AI')+'</div><div class="rl">Step '+(i+1)+'</div></div></div>';
+      }).join('')
+    + '</div>'
+  ) : '';
+
+  const goalHtml = (isTeam && ag.team_goal) ? (
+    '<div class="persona" style="background:linear-gradient(135deg,#fff7ee,#ffe8d4);border-color:rgba(251,146,60,.32)">'
+    + '<b>'+T.goalH+':</b><br>'+esc(ag.team_goal).replace(/\n/g,'<br>')
+    + '</div>'
+  ) : '';
+
   card.innerHTML =
-    '<div class="banner">🔗 共有された AI エージェント</div>'+
+    '<div class="banner">'+(isTeam ? T.teamBanner : T.agentBanner)+'</div>'+
     '<div class="av">'+esc(ag.avatar||'🤖')+'</div>'+
     '<div class="name">'+esc(ag.name||'')+'</div>'+
-    '<div class="owner">作成者: '+esc(owner.name||'ユーザー')+'</div>'+
+    '<div class="owner">'+T.ownerLbl+esc(owner.name||T.unknownUser)+'</div>'+
     '<div class="pills">'+skillsHtml+'</div>'+
-    personaHtml+
-    '<button class="cta" id="useBtn" onclick="useAgent()">このエージェントを使う →</button>'+
-    '<div class="cta-sub">クリックすると、このエージェントを <b>あなたのアカウント</b> にコピーします。<br>未ログインの場合は、簡単サインアップ後に自動でコピーされます。</div>';
+    membersHtml +
+    goalHtml +
+    (isTeam ? '' : personaHtml) +
+    '<button class="cta" id="useBtn" onclick="useAgent()">'+(isTeam ? T.ctaTeam : T.ctaAgent)+'</button>'+
+    '<div class="cta-sub">'+(isTeam ? T.ctaSubTeam : T.ctaSub)+'</div>';
 }
 
 async function useAgent(){
   const btn = document.getElementById('useBtn');
+  const isTeam = btn.textContent.indexOf(T.ctaTeam.slice(0,4)) >= 0;
   btn.disabled = true;
-  btn.textContent = '処理中…';
+  btn.textContent = T.processing;
   const token = localStorage.getItem('token');
   if(!token){
-    // Save destination so we can resume after auth
     sessionStorage.setItem('post_auth_share', shareId);
     location.href = '/auth.html?next=/a/'+shareId;
     return;
@@ -171,13 +253,13 @@ async function useAgent(){
       body:'{}'
     });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error||'追加に失敗しました');
-    btn.textContent = '✓ 追加しました — 開いています...';
+    if(!res.ok) throw new Error(data.error||T.cloneFail);
+    btn.textContent = T.cloned;
     setTimeout(()=>{ location.href = '/app.html'; }, 600);
   }catch(e){
     btn.disabled = false;
-    btn.textContent = 'このエージェントを使う →';
-    alert(e.message||'追加に失敗しました');
+    btn.textContent = isTeam ? T.ctaTeam : T.ctaAgent;
+    alert(e.message||T.cloneFail);
   }
 }
 

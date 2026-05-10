@@ -2598,6 +2598,7 @@ async function serveSitemapXml(res){
   const urls = [
     {loc: APP_URL + '/',           changefreq:'weekly',  priority:'1.0', lastmod: now},
     {loc: APP_URL + '/lp.html',    changefreq:'weekly',  priority:'1.0', lastmod: now},
+    {loc: APP_URL + '/store',      changefreq:'daily',   priority:'0.9', lastmod: now},
     {loc: APP_URL + '/auth.html',  changefreq:'monthly', priority:'0.5', lastmod: now},
     {loc: APP_URL + '/terms.html', changefreq:'yearly',  priority:'0.3', lastmod: now},
     {loc: APP_URL + '/privacy.html',changefreq:'yearly', priority:'0.3', lastmod: now},
@@ -3022,7 +3023,14 @@ async function serveListingPage(res, listingId, lang){
     const found = await findAgentByListingId(listingId);
     if(!found || !found.agent.marketplace.is_listed){
       res.writeHead(404,{'Content-Type':'text/html; charset=utf-8'});
-      return res.end('<h1>'+t.notFound+'</h1><a href="/">Home</a>');
+      const isEn = lang === 'en';
+      const ttl = isEn ? 'Listing not found' : '出店が見つかりません';
+      const hint = isEn
+        ? 'This listing may have been unpublished or the link is incorrect.'
+        : 'この出店は取り下げられたか、URL が間違っている可能性があります。';
+      const back = isEn ? '← Browse all agents' : '← Agent Store を見る';
+      const home = isEn ? 'Go home' : 'ホームへ';
+      return res.end(`<!doctype html><html lang="${isEn?'en':'ja'}"><head><meta charset="utf-8"><title>${ttl} — MY AI AGENT</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:'Inter','Hiragino Sans',sans-serif;background:#fdf8f3;color:#1a0a00;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;}.box{max-width:480px;background:#fff;border:1px solid rgba(180,120,80,.16);border-radius:18px;padding:36px 32px;text-align:center;box-shadow:0 14px 40px rgba(180,90,30,.10);}.em{font-size:64px;margin-bottom:14px;line-height:1;}h1{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:0 0 8px;}p{font-size:13.5px;color:#5c3a1e;line-height:1.7;margin:0 0 22px;}a{display:inline-block;background:#fb923c;color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:11px 22px;border-radius:10px;margin:0 4px;box-shadow:0 6px 14px rgba(251,146,60,.28);}a.alt{background:#fff;color:#5c3a1e;border:1px solid rgba(180,120,80,.22);box-shadow:none;}a:hover{background:#ea580c;}a.alt:hover{background:#faf3eb;}</style></head><body><div class="box"><div class="em">🔍</div><h1>${ttl}</h1><p>${hint}</p><a href="/">${back}</a><a href="/" class="alt">${home}</a></div></body></html>`);
     }
     const d = publicListing(found.user, found.agent);
     // PNG for OG / Twitter (raster required). SVG variant available for inline preview.
@@ -4262,6 +4270,58 @@ async function handleAPI(req,res,pathname,method,ip){
         agent_count: t.agents.length,
         agents_preview: t.agents.map(a => ({ avatar: a.avatar, name: a.name, skills: a.skills })),
       })),
+    });
+  }
+
+  // ── GET /api/marketplace (PUBLIC, no auth) ─────────────────
+  // Same shape as the authed /api/marketplace below, just without
+  // user-specific data (favorites). Lets anonymous visitors of /store
+  // browse listings + drives sign-up via "Get / Clone" CTAs.
+  if(pathname==='/api/marketplace' && method==='GET'){
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const cat = (qs.get('category')||'').trim();
+    const q = (qs.get('q')||'').trim().toLowerCase();
+    const sort = (qs.get('sort')||'popular').trim();
+    const tagsRaw = (qs.get('tags')||'').trim();
+    const tagFilter = tagsRaw ? tagsRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    let listings = await listAllPublicListings();
+    if(cat && cat!=='all') listings = listings.filter(l=>l.category===cat);
+    if(tagFilter.length){
+      listings = listings.filter(l=>tagFilter.every(t=>(l.tags||[]).indexOf(t)>=0));
+    }
+    if(q){
+      listings = listings.filter(l=>{
+        const hay = (l.title+' '+l.description+' '+l.category_label+' '+(l.creator.handle||'')+' '+(l.tag_labels||[]).join(' ')).toLowerCase();
+        return hay.indexOf(q)>=0;
+      });
+    }
+    if(sort==='recent'){
+      listings.sort((a,b)=>new Date(b.listed_at||0).getTime()-new Date(a.listed_at||0).getTime());
+    } else if(sort==='top_rated'){
+      const score = l => (l.rating||0) * Math.log(1+(l.rating_count||0));
+      listings.sort((a,b)=>score(b)-score(a));
+    } else {
+      listings.sort((a,b)=>{
+        if(a.badge==='hot' && b.badge!=='hot') return -1;
+        if(b.badge==='hot' && a.badge!=='hot') return 1;
+        return (b.uses||0)-(a.uses||0);
+      });
+    }
+    // Try to attach favorites if a token IS present (idempotent for logged-out)
+    let favorites = [];
+    try {
+      const claims = getAuth(req);
+      if(claims){
+        const u = await DB.findBy('id', claims.userId);
+        if(u && Array.isArray(u.favorites)) favorites = u.favorites;
+      }
+    } catch(e){}
+    return jres(res,200,{
+      listings,
+      categories: MARKET_CATEGORIES.map(id=>({id, label:MARKET_CAT_LABEL[id]})),
+      tags: MARKET_TAGS,
+      sort,
+      favorites,
     });
   }
 
@@ -7930,7 +7990,11 @@ const server=http.createServer(async(req,res)=>{
     return res.end('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app.html\nDisallow: /auth.html\nSitemap: ' + APP_URL + '/sitemap.xml\n');
   }
   // index.html → redirect to lp
-  let fp=path.join(PUBLIC_DIR,pathname==='/'?'lp.html':pathname);
+  // /store (no extension) → serve store.html (public Agent Store browse page)
+  let resolved = pathname;
+  if(resolved === '/') resolved = 'lp.html';
+  else if(resolved === '/store' || resolved === '/store/') resolved = 'store.html';
+  let fp=path.join(PUBLIC_DIR, resolved);
   if(!fp.startsWith(PUBLIC_DIR)){res.writeHead(403);return res.end();}
   serveStatic(res,fp);
 });

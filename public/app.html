@@ -11458,7 +11458,8 @@ async function deleteAgent(){
   const id = window._editAgentId;
   const ag = agents.find(a=>a.id===id);
   if(!ag) return;
-  if(!confirm(ag.name+'を削除しますか？会話履歴もすべて削除されます。')) return;
+  if(!confirm(L('"'+ag.name+'" を削除しますか？\n\n会話履歴もすべて削除されます。',
+                'Delete "'+ag.name+'"?\n\nAll chat history will also be deleted.'))) return;
   try{
     await api('DELETE', '/api/agents/'+id);
     agents = agents.filter(a=>a.id!==id);
@@ -13096,14 +13097,21 @@ async function changePassword(){
   }catch(e){ showToast(e.message||'変更に失敗しました','err'); }
 }
 async function deleteAccount(){
-  const confirm = document.getElementById('sDelConfirm').value;
-  if(confirm!=='削除する'){ showToast(L('「削除する」と入力してください','Type "DELETE" to confirm'),'err'); return; }
-  if(!window.confirm('本当にアカウントを完全削除しますか？\n全てのエージェント・会話・残高が失われます。')) return;
+  const typed = (document.getElementById('sDelConfirm').value || '').trim();
+  // Accept either the JA phrase or "DELETE" so EN users have a sensible confirm
+  if(typed !== '削除する' && typed.toUpperCase() !== 'DELETE'){
+    showToast(L('「削除する」または「DELETE」と入力してください','Type "DELETE" to confirm'),'err');
+    return;
+  }
+  if(!window.confirm(L(
+    '本当にアカウントを完全削除しますか？\n\n全てのエージェント・会話・残高が失われます。\nこの操作は取り消せません。',
+    'Permanently delete your account?\n\nAll agents, chats, and balance will be lost.\nThis cannot be undone.'
+  ))) return;
   try{
     await api('DELETE','/api/me', { confirm: 'DELETE' });
     showToast(L('アカウントを削除しました','Account deleted'),'ok');
     setTimeout(()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); location.href='/'; },1500);
-  }catch(e){ showToast(e.message || '削除に失敗しました','ng'); }
+  }catch(e){ showToast(e.message || L('削除に失敗しました','Delete failed'),'ng'); }
 }
 function quickCharge(amount){
   // Settings → Add Credits shortcut: open the new billing modal on PAYG tab w/ amount preset

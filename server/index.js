@@ -4,6 +4,10 @@ const http=require('http'),https=require('https'),fs=require('fs'),
 
 // ── ENV ───────────────────────────────────────────────────────
 function loadEnv(){
+  // Tests opt out of .env loading so they can run against an isolated local DB
+  // even when the developer's machine has production credentials in .env.
+  // Without this guard, `npm test` would write to production Supabase.
+  if(process.env.SKIP_DOTENV) return;
   const p=path.join(__dirname,'..', '.env');
   if(!fs.existsSync(p))return;
   fs.readFileSync(p,'utf8').split('\n').forEach(line=>{
@@ -57,7 +61,7 @@ function rateLimit(ip,max=100,win=60000){
 setInterval(()=>{const now=Date.now();for(const[k,v]of RL)if(now>v.reset+60000)RL.delete(k);},120000);
 
 // ── LOCAL DB ──────────────────────────────────────────────────
-const DB_PATH=path.join(__dirname,'db.json');
+const DB_PATH=process.env.LDB_PATH||path.join(__dirname,'db.json');
 const LDB=(()=>{
   let d={users:[]};
   if(fs.existsSync(DB_PATH)){try{d=JSON.parse(fs.readFileSync(DB_PATH,'utf8'));}catch{}}
@@ -1349,8 +1353,20 @@ const EXTENSION_TOOLS = [
 async function executeExtensionTool(user, name, input){
   const tok = user.extension_device_token;
   if(!tok) return { error:'extension_not_paired: ユーザーがブラウザ拡張を連携していません。' };
-  const conn = _extConnections.get(tok);
-  if(!conn) return { error:'extension_offline: 拡張機能がオフラインです。Chrome を起動して拡張アイコンが緑になるのを待ってから再試行してください。' };
+
+  // Chrome MV3 service workers idle out after ~30s, dropping the SSE stream
+  // even though the user just saw "Online" in the UI. Wait briefly so the
+  // extension's auto-reconnect (or the next chrome.runtime.sendMessage from
+  // the web app) has a chance to re-establish the link before we hard-fail.
+  let conn = _extConnections.get(tok);
+  if(!conn){
+    for(let i=0; i<5; i++){
+      await new Promise(r=>setTimeout(r, 1000));
+      conn = _extConnections.get(tok);
+      if(conn) break;
+    }
+  }
+  if(!conn) return { error:'extension_offline: 拡張機能との接続が切れています (Chrome が拡張機能をスリープさせた可能性)。Chrome 拡張アイコンをクリックすると復活します。それでも直らない場合は Chrome を再起動してください。' };
 
   const command_id = 'cmd_' + crypto.randomBytes(8).toString('hex');
   const realName = name.replace(/^ext_/, ''); // server-side names are ext_*, extension expects bare names
@@ -3642,9 +3658,15 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 // API ROUTER
 // ══════════════════════════════════════════════════════════════
 async function handleAPI(req,res,pathname,method,ip){
+  // ── GET /api/health (PUBLIC, unrate-limited) ───────────────
+  // Used by keep-alive ping and uptime monitors. Must come before rateLimit.
+  if(pathname==='/api/health'&&method==='GET'){
+    return jres(res,200,{ok:true,ts:Date.now()});
+  }
+
   if(!rateLimit(ip,150,60000))return jres(res,429,{error:'リクエストが多すぎます。しばらく待ってから試してください。'});
 
-  
+
   // ── DEBUG: check env ──
   if(pathname==='/api/debug-env'&&method==='GET'){
     return jres(res,200,{
@@ -8115,37 +8137,43 @@ async function seedMarketplace(){
   }
 }
 
-server.listen(PORT,'0.0.0.0', async ()=>{
-  console.log(`\n🚀 MY AI Agent`);
-  console.log(`   http://localhost:${PORT}`);
-  console.log(`   Anthropic: ${ANTHROPIC?'✅':'❌ Missing ANTHROPIC_API_KEY'}`);
-  console.log(`   SUPA_KEY:  ${SUPA_KEY.substring(0,20)}`);
-  console.log(`   DB:        ${USE_SUPA?'✅ Supabase':'⚠️  Local JSON'}`);
-  console.log(`   Stripe:    ${STRIPE_SK?'✅':'⚠️  Demo mode'}`);
-  console.log(`   Google:    ${GOOGLE_ID?'✅':'⚠️  Not configured'}`);
-  console.log(`   Email:     ${RESEND_KEY?'✅ Resend':'⚠️  Console only'}\n`);
-  // Run schema migration AFTER server is listening so health checks pass even if
-  // migration is slow. Failures are logged but don't crash the server.
-  autoMigrate()
-    .catch(e=>console.error('[migrate] crashed:', e.message))
-    .finally(()=>{
-      // Seed runs after migration so the schema is in place. Idempotent.
-      seedMarketplace().catch(e=>console.error('[seed] crashed:', e.message));
-    });
-});
-server.on('error',err=>{if(err.code==='EADDRINUSE'){console.error('Port in use:',PORT);process.exit(1);}else{console.error('Server error:',err.message);}});
-process.on('SIGTERM',()=>server.close(()=>process.exit(0)));
-process.on('SIGINT', ()=>server.close(()=>process.exit(0)));
-
-
-// ── Keep-Alive: スリープ復帰後に自動稼働 ──────────────────────────────
-// Renderフリープランの非アクティブスリープを防ぐため14分ごとに自己ping
-const _SELF_URL = process.env.APP_URL || 'https://myaiagents.agency';
-setInterval(() => {
-  https.get(_SELF_URL + '/api/health', (res) => {
-    console.log('[keep-alive] ping ok:', res.statusCode);
-  }).on('error', (e) => {
-    console.warn('[keep-alive] ping failed:', e.message);
+// Boot side-effects (listen, migrate, keep-alive ping) run only when this file
+// is executed directly. When required from a test, the test harness owns the
+// listen lifecycle so suites can bind to an ephemeral port and tear down cleanly.
+if(require.main === module){
+  server.listen(PORT,'0.0.0.0', async ()=>{
+    console.log(`\n🚀 MY AI Agent`);
+    console.log(`   http://localhost:${PORT}`);
+    console.log(`   Anthropic: ${ANTHROPIC?'✅':'❌ Missing ANTHROPIC_API_KEY'}`);
+    console.log(`   SUPA_KEY:  ${SUPA_KEY.substring(0,20)}`);
+    console.log(`   DB:        ${USE_SUPA?'✅ Supabase':'⚠️  Local JSON'}`);
+    console.log(`   Stripe:    ${STRIPE_SK?'✅':'⚠️  Demo mode'}`);
+    console.log(`   Google:    ${GOOGLE_ID?'✅':'⚠️  Not configured'}`);
+    console.log(`   Email:     ${RESEND_KEY?'✅ Resend':'⚠️  Console only'}\n`);
+    // Run schema migration AFTER server is listening so health checks pass even if
+    // migration is slow. Failures are logged but don't crash the server.
+    autoMigrate()
+      .catch(e=>console.error('[migrate] crashed:', e.message))
+      .finally(()=>{
+        // Seed runs after migration so the schema is in place. Idempotent.
+        seedMarketplace().catch(e=>console.error('[seed] crashed:', e.message));
+      });
   });
-}, 14 * 60 * 1000);
-console.log('[keep-alive] started ->', _SELF_URL);
+  server.on('error',err=>{if(err.code==='EADDRINUSE'){console.error('Port in use:',PORT);process.exit(1);}else{console.error('Server error:',err.message);}});
+  process.on('SIGTERM',()=>server.close(()=>process.exit(0)));
+  process.on('SIGINT', ()=>server.close(()=>process.exit(0)));
+
+  // ── Keep-Alive: スリープ復帰後に自動稼働 ──────────────────────────────
+  // Renderフリープランの非アクティブスリープを防ぐため14分ごとに自己ping
+  const _SELF_URL = process.env.APP_URL || 'https://myaiagents.agency';
+  setInterval(() => {
+    https.get(_SELF_URL + '/api/health', (res) => {
+      console.log('[keep-alive] ping ok:', res.statusCode);
+    }).on('error', (e) => {
+      console.warn('[keep-alive] ping failed:', e.message);
+    });
+  }, 14 * 60 * 1000);
+  console.log('[keep-alive] started ->', _SELF_URL);
+}
+
+module.exports = server;

@@ -270,9 +270,38 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
   return false;
 });
 
+// ── Keep-alive (defeats MV3 service worker idle timeout) ──────
+// Chrome MV3 service workers are killed after ~30s idle, which drops the SSE
+// stream and surfaces as "extension is offline" in the user-facing app even
+// though everything is technically still installed and paired. A registered
+// chrome.alarms listener wakes the SW well within the idle window, and we
+// take that wake event to ensure SSE is reconnected.
+const KEEPALIVE_NAME = 'mya-keepalive';
+function _scheduleKeepalive() {
+  try {
+    chrome.alarms.create(KEEPALIVE_NAME, { periodInMinutes: 0.4 }); // ~24s
+  } catch (e) { /* alarms permission missing in older installs */ }
+}
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== KEEPALIVE_NAME) return;
+  // Only reconnect if we have a token (i.e. user actually paired) AND we
+  // don't currently have an open EventSource. This is a no-op the rest of
+  // the time — just enough activity to keep the SW alive.
+  try {
+    const { device_token } = await getToken();
+    if (!device_token) return;
+    if (!_es || _es.readyState !== 1) {
+      connectSSE();
+    }
+  } catch (e) { /* ignore */ }
+});
+
 // ── Lifecycle ─────────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
   setBadge('idle');
+  _scheduleKeepalive();
+  // Reconnect SSE if a token already exists from a previous install/version.
+  getToken().then(({ device_token }) => { if (device_token) connectSSE(); });
   // Open onboarding tab on first install.
   chrome.storage.local.get(['onboarded'], (r) => {
     if (!r.onboarded) {
@@ -281,6 +310,17 @@ chrome.runtime.onInstalled.addListener(() => {
     }
   });
 });
+
+// Fired on browser startup — re-arm the alarm and reconnect SSE if paired.
+chrome.runtime.onStartup.addListener(() => {
+  _scheduleKeepalive();
+  getToken().then(({ device_token }) => { if (device_token) connectSSE(); });
+});
+
+// Best-effort: also re-arm whenever the SW wakes (some wake events don't fire
+// onStartup but do execute top-level code). Idempotent — chrome.alarms.create
+// with the same name updates the existing alarm.
+_scheduleKeepalive();
 
 chrome.runtime.onStartup.addListener(() => {
   connectSSE();

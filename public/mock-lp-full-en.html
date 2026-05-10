@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>[MOCK] MY AI AGENT — Full LP redesign (EN, Plan v2, with Team)</title>
+<title>[MOCK v2] MY AI AGENT — Full LP redesign (EN, Plan v2, real-product imagery)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --peach:#fb923c;--peach-dark:#ea580c;--peach-soft:rgba(251,146,60,.08);--peach-light:#fde8d8;
-  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;--bg-deep:#1e1410;--bg-dark:#0c0a09;
+  --bg:#fdf8f3;--bg-warm:#faf3eb;--bg-card:#fff;--cream2:#f5ead9;
+  --bg-deep:#1e1410;--bg-dark:#0c0a09;
   --text:#1a0a00;--text-muted:#5c3a1e;--text-subtle:#9a6a4a;--text-on-dark:#fff5e6;
   --line:rgba(180,120,80,.14);--line-strong:rgba(180,120,80,.22);
   --green:#10b981;--violet:#8b5cf6;--blue:#3b82f6;--pink:#ec4899;--rose:#ef4444;
@@ -25,16 +26,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
 .section-anchor{padding:6px 0;font-family:var(--mono);font-size:10px;color:var(--text-subtle);text-align:center;letter-spacing:.18em;text-transform:uppercase;background:#fff;border-bottom:1px dashed var(--line);}
 
 /* ── NAV ── */
-.nav{
-  position:sticky;top:0;z-index:30;background:rgba(253,248,243,.92);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);padding:14px 24px;
-}
+.nav{position:sticky;top:0;z-index:30;background:rgba(253,248,243,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:14px 24px;}
 .nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:32px;}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.005em;text-decoration:none;color:var(--text);}
-.brand-mark{
-  width:30px;height:30px;border-radius:7px;background:var(--peach);
-  display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-size:18px;
-}
+.brand-mark{width:30px;height:30px;border-radius:7px;background:var(--peach);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-size:18px;}
 .nav-links{display:flex;gap:24px;font-size:13px;font-weight:500;}
 .nav-links a{color:var(--text-muted);text-decoration:none;}
 .nav-links a:hover{color:var(--peach-dark);}
@@ -47,37 +42,27 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
 
 /* ── BASE SECTION ── */
 .section{padding:120px 24px;position:relative;overflow:hidden;}
-.section-inner{max-width:1200px;margin:0 auto;}
-.section-head{text-align:center;margin-bottom:64px;}
+.section-inner{max-width:1280px;margin:0 auto;}
+.section-head{text-align:center;margin-bottom:56px;}
 .kicker{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.18em;color:var(--peach-dark);background:var(--peach-soft);padding:5px 12px;border-radius:99px;margin-bottom:14px;text-transform:uppercase;}
 .live-pill{display:inline-block;background:#dc2626;color:#fff;font-size:10px;font-weight:900;letter-spacing:.08em;padding:3px 10px;border-radius:99px;margin-right:8px;text-transform:uppercase;}
 .h2{font-family:var(--display);font-weight:400;font-size:clamp(40px,6vw,72px);line-height:1.02;letter-spacing:-.01em;margin-bottom:18px;color:var(--text);}
 .lead{font-size:17px;color:var(--text-muted);max-width:680px;margin:0 auto;line-height:1.75;}
 
-/* ── HERO ── */
+/* ─────────────────── HERO ─────────────────── */
 .hero{
-  padding:96px 24px 110px;
+  padding:80px 24px 36px;
   background:
     radial-gradient(circle at 15% 0%,rgba(251,146,60,.18),transparent 50%),
     radial-gradient(circle at 85% 100%,rgba(139,92,246,.10),transparent 60%),
     var(--bg);
   text-align:center;
 }
-.hero-kicker{
-  display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--peach);
-  border-radius:99px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--peach-dark);
-  letter-spacing:.04em;margin-bottom:24px;
-}
-.hero-kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--peach);box-shadow:0 0 0 4px rgba(251,146,60,.18);animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.32);}50%{box-shadow:0 0 0 6px rgba(251,146,60,0);}}
-.hero h1{
-  font-family:var(--display);font-weight:400;font-size:clamp(56px,9vw,124px);line-height:.96;
-  letter-spacing:-.02em;margin-bottom:22px;
-}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--peach);border-radius:99px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--peach-dark);letter-spacing:.04em;margin-bottom:24px;}
+.hero-kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--peach);box-shadow:0 0 0 4px rgba(251,146,60,.18);}
+.hero h1{font-family:var(--display);font-weight:400;font-size:clamp(56px,9vw,124px);line-height:.96;letter-spacing:-.02em;margin-bottom:22px;}
 .hero h1 .accent{color:var(--peach-dark);position:relative;display:inline-block;}
-.hero h1 .accent::after{
-  content:'';position:absolute;left:-2%;right:-2%;bottom:6%;height:18%;background:rgba(251,146,60,.28);z-index:-1;
-}
+.hero h1 .accent::after{content:'';position:absolute;left:-2%;right:-2%;bottom:6%;height:18%;background:rgba(251,146,60,.28);z-index:-1;}
 .hero-sub{font-size:19px;color:var(--text-muted);max-width:680px;margin:0 auto 32px;line-height:1.7;}
 .hero-sub b{color:var(--text);}
 .hero-cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center;}
@@ -85,117 +70,201 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
 .hero-cta .btn-primary{box-shadow:0 10px 28px rgba(251,146,60,.36);}
 .hero-trust{display:flex;justify-content:center;gap:24px;margin-top:30px;flex-wrap:wrap;font-size:13px;color:var(--text-subtle);font-weight:600;}
 .hero-trust .check{color:var(--green);font-weight:900;margin-right:5px;}
-.hero-stack{
-  margin-top:64px;max-width:880px;margin-left:auto;margin-right:auto;
-  background:#fff;border:1px solid var(--line-strong);border-radius:18px;
-  padding:8px;box-shadow:0 32px 64px rgba(180,90,30,.10);
-  display:flex;gap:8px;
-}
-.hero-stack .pane{flex:1;background:var(--bg-warm);border-radius:12px;padding:16px;text-align:left;font-size:11.5px;color:var(--text-muted);font-family:var(--mono);}
-.hero-stack .pane .label{font-size:9.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
-.hero-stack .pane .demo{color:var(--text);font-weight:600;line-height:1.6;}
 
-/* ── SECTION: HOW IT WORKS (3 steps) ── */
+/* ── PRODUCT SHOWCASE: real home-dashboard mock under hero ── */
+.product-frame{
+  max-width:1240px;margin:48px auto 0;
+  background:#fff;border:1px solid var(--line-strong);border-radius:18px;padding:0;
+  box-shadow:0 40px 80px -20px rgba(180,90,30,.18), 0 0 0 8px rgba(255,255,255,.6);
+  overflow:hidden;
+}
+.product-bar{
+  display:flex;align-items:center;gap:8px;padding:11px 16px;background:var(--bg-warm);border-bottom:1px solid var(--line);
+}
+.product-bar .dot{width:11px;height:11px;border-radius:50%;}
+.product-bar .dot.r{background:#ff5f57;}
+.product-bar .dot.y{background:#febc2e;}
+.product-bar .dot.g{background:#28c840;}
+.product-bar .url{flex:1;text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--text-subtle);}
+.product-bar .url::before{content:'🔒  ';color:var(--green);}
+
+/* APP WINDOW = sidebar + main */
+.app-shell{display:grid;grid-template-columns:280px 1fr;background:var(--bg);min-height:520px;}
+
+/* ── Sidebar (matches public/app.html) ── */
+.sb{background:var(--bg-warm);border-right:1px solid var(--line);padding:14px 0;}
+.sb-brand{display:flex;align-items:center;gap:8px;padding:0 16px 14px;border-bottom:1px solid var(--line);}
+.sb-brand .mk{width:24px;height:24px;border-radius:6px;background:var(--peach);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-size:14px;}
+.sb-brand .nm{font-size:11px;font-weight:800;letter-spacing:.06em;}
+.sb-home{display:flex;align-items:center;gap:9px;width:calc(100% - 24px);margin:10px 12px 4px;padding:11px 14px;border-radius:11px;border:1px solid rgba(251,146,60,.32);background:linear-gradient(135deg,#fff7ee,#ffe8d4);color:var(--peach-dark);font-size:13px;font-weight:800;box-shadow:0 2px 6px rgba(251,146,60,.12);}
+.sb-home .ic{font-size:16px;}
+.sb-home .lbl{flex:1;text-align:left;}
+.sb-home .arrow{font-size:13px;font-weight:900;opacity:.55;}
+.sb-search{display:flex;align-items:center;gap:7px;width:calc(100% - 24px);margin:8px 12px 0;padding:8px 11px;border-radius:8px;border:.5px solid var(--line-strong);background:#fff;font-size:11.5px;color:var(--text-subtle);}
+.sb-search kbd{margin-left:auto;font-size:9px;background:rgba(9,9,11,.06);border:.5px solid var(--line);padding:1px 4px;border-radius:4px;color:var(--text-subtle);font-family:var(--mono);}
+
+.sb-section-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px;font-size:10.5px;font-weight:800;color:var(--text-subtle);letter-spacing:.04em;text-transform:uppercase;}
+.sb-section-h .add{width:18px;height:18px;border-radius:5px;background:var(--peach-soft);color:var(--peach-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;cursor:pointer;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:12.5px;cursor:pointer;color:var(--text-muted);}
+.sb-item:hover{background:rgba(251,146,60,.06);}
+.sb-item.on{background:rgba(251,146,60,.10);color:var(--peach-dark);font-weight:700;}
+.sb-item .av{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sb-item .av.v{background:linear-gradient(135deg,#ede9fe,#a78bfa);}
+.sb-item .av.b{background:linear-gradient(135deg,#dbeafe,#3b82f6);}
+.sb-item .av.g{background:linear-gradient(135deg,#d1fae5,#10b981);}
+.sb-item .av.h{background:#1a0a00;color:#fff;}
+.sb-item .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.sb-item .ti{font-size:10px;color:var(--text-subtle);font-weight:600;}
+
+/* ── Main (home dashboard) ── */
+.mn{padding:36px 36px 28px;overflow:hidden;}
+.greet{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;}
+.greet h2{font-size:24px;font-weight:900;letter-spacing:-.01em;}
+.greet .now{font-size:11px;color:var(--text-subtle);font-weight:700;}
+.greet-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.7;}
+.qc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;}
+.qc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;text-align:left;transition:all .15s;}
+.qc:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 8px 18px rgba(180,90,30,.08);}
+.qc.feat{background:linear-gradient(135deg,#fff7ee,#ffe8d4);border-color:rgba(251,146,60,.32);}
+.qc .qc-ic{font-size:24px;line-height:1;margin-bottom:8px;}
+.qc h3{font-size:13.5px;font-weight:900;letter-spacing:-.005em;margin-bottom:4px;}
+.qc .qc-d{font-size:10.5px;color:var(--text-muted);line-height:1.55;margin-bottom:8px;}
+.qc .qc-s{display:flex;gap:5px;flex-wrap:wrap;}
+.qc-pill{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--bg-warm);color:var(--text-subtle);border:1px solid var(--line);}
+.qc-pill.new{background:rgba(251,146,60,.14);color:var(--peach-dark);border:0;}
+
+.legend{display:flex;align-items:center;gap:16px;font-size:10.5px;color:var(--text-subtle);font-weight:700;margin-bottom:14px;flex-wrap:wrap;letter-spacing:.04em;}
+.legend .lbl{font-family:var(--mono);text-transform:uppercase;}
+.legend .l{display:flex;align-items:center;gap:5px;}
+.legend .dot{width:7px;height:7px;border-radius:50%;}
+.legend .dot.dm{background:var(--peach);}
+.legend .dot.gr{background:#a78bfa;}
+.legend .dot.tm{background:#3b82f6;}
+
+.kinds-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.kind{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;}
+.kind.hl{border-color:rgba(59,130,246,.32);background:linear-gradient(180deg,#fff,#f0f8ff);}
+.kind-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.kind-h .ic{font-size:18px;}
+.kind-h h3{font-size:12.5px;font-weight:900;letter-spacing:-.005em;flex:1;}
+.kind-h .ct{font-size:9.5px;color:var(--text-subtle);font-weight:700;}
+.kind-d{font-size:10.5px;color:var(--text-muted);line-height:1.55;margin-bottom:10px;}
+.kind-list{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
+.k-row{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-warm);border-radius:7px;font-size:10.5px;font-weight:700;}
+.k-row .av{width:18px;height:18px;border-radius:4px;background:var(--peach-soft);display:flex;align-items:center;justify-content:center;font-size:11px;}
+.k-row .nm{flex:1;}
+
+/* ─────────────────── HOW IT WORKS ─────────────────── */
 .section-steps{background:#fff;}
 .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
-.step-card{background:var(--bg-warm);border:1px solid var(--line);border-radius:18px;padding:32px 28px;position:relative;transition:transform .2s;}
+.step-card{background:var(--bg-warm);border:1px solid var(--line);border-radius:18px;padding:28px;position:relative;transition:transform .2s;}
 .step-card:hover{transform:translateY(-3px);}
 .step-num{font-family:var(--display);font-size:64px;color:rgba(251,146,60,.20);position:absolute;top:-8px;right:18px;line-height:1;}
-.step-icon{font-size:36px;margin-bottom:14px;}
+.step-icon{font-size:36px;margin-bottom:12px;}
 .step-title{font-size:20px;font-weight:800;margin-bottom:8px;letter-spacing:-.005em;}
-.step-desc{font-size:14px;color:var(--text-muted);line-height:1.7;}
+.step-desc{font-size:13.5px;color:var(--text-muted);line-height:1.7;margin-bottom:14px;}
+.step-mock{
+  background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px;
+  font-family:var(--mono);font-size:10.5px;color:var(--text);line-height:1.7;
+}
+.step-mock .you{color:var(--text);}
+.step-mock .ai{color:var(--peach-dark);font-weight:700;}
+.step-mock .typing{display:inline-block;background:var(--peach-soft);color:var(--peach-dark);padding:1px 6px;border-radius:5px;}
 
-/* ── SECTION: SINGLE AGENT ── */
-.section-create{background:var(--bg-warm);}
-.create-flow{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:32px;
-}
-.create-step{
-  background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 14px;text-align:center;
-  position:relative;transition:transform .15s;
-}
-.create-step:hover{transform:translateY(-2px);border-color:var(--peach);}
-.num-badge{
-  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
-  width:24px;height:24px;border-radius:50%;background:var(--peach);color:#fff;
-  font-weight:900;font-size:11px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);
-}
-.create-step .ic{font-size:28px;margin:8px 0 6px;}
-.create-step .nm{font-size:13px;font-weight:800;margin-bottom:4px;}
-.create-step .desc{font-size:10.5px;color:var(--text-subtle);line-height:1.55;}
-.create-cta{text-align:center;margin-top:36px;}
+/* ─────────────────── BUILD AGENTS — real wizard mock ─────────────────── */
+.section-build{background:var(--bg-warm);}
+.build-row{display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;}
+.build-text h3{font-family:var(--display);font-size:48px;font-weight:400;line-height:1.1;letter-spacing:-.01em;margin-bottom:18px;}
+.build-text h3 .accent{color:var(--peach-dark);}
+.build-text p{font-size:15px;color:var(--text-muted);line-height:1.85;margin-bottom:14px;}
+.build-text p b{color:var(--text);}
+.build-text ul{list-style:none;padding:0;margin-bottom:24px;}
+.build-text li{position:relative;padding-left:26px;margin:8px 0;font-size:14px;color:var(--text-muted);}
+.build-text li::before{content:'✓';position:absolute;left:0;color:var(--peach-dark);font-weight:900;}
 
-/* ── SECTION: TEMPLATES ── */
-.section-template{background:#fff;}
-.tmpl-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-bottom:48px;}
-.tmpl-text h3{font-family:var(--display);font-size:42px;font-weight:400;line-height:1.1;letter-spacing:-.005em;margin-bottom:16px;}
-.tmpl-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:14px;}
-.tmpl-text ul{list-style:none;padding:0;margin-bottom:20px;}
-.tmpl-text li{position:relative;padding-left:24px;margin:6px 0;font-size:14px;color:var(--text-muted);}
-.tmpl-text li::before{content:'✓';position:absolute;left:0;color:var(--peach);font-weight:900;}
-.tmpl-card{background:var(--bg-warm);border:1px solid var(--line);border-radius:16px;padding:22px;}
-.tmpl-card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
-.tmpl-avatar{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:24px;}
-.tmpl-card-name{font-size:15px;font-weight:800;letter-spacing:-.005em;}
-.tmpl-card-desc{font-size:12px;color:var(--text-subtle);}
-.tmpl-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
-.tmpl-pill{background:#fff;border:1px solid var(--line);font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;color:var(--text-muted);}
-.tmpl-modules{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
-.tmpl-mod{background:#fff;border:1px solid var(--line);font-size:10.5px;font-weight:600;padding:6px 8px;border-radius:7px;color:var(--text-muted);}
-.tmpl-mod-n{color:var(--peach);font-weight:900;margin-right:3px;}
+/* Wizard preview = matches actual app's wizard step UI */
+.wiz-mock{background:#fff;border:1px solid var(--line-strong);border-radius:16px;overflow:hidden;box-shadow:0 24px 50px rgba(180,90,30,.10);}
+.wiz-mock-top{background:var(--bg-warm);padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+.wiz-mock-top .t{font-size:13px;font-weight:900;letter-spacing:-.005em;}
+.wiz-mock-top .x{margin-left:auto;width:24px;height:24px;border-radius:6px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-subtle);}
+.wiz-mock-bar{height:3px;background:var(--bg);}
+.wiz-mock-bar-f{height:100%;width:60%;background:linear-gradient(90deg,var(--peach),var(--peach-dark));}
+.wiz-mock-tabs{display:flex;gap:6px;padding:14px 18px 0;}
+.wiz-mock-tab{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:800;text-align:center;color:var(--text-subtle);background:var(--bg-warm);}
+.wiz-mock-tab.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid var(--line);}
+.wiz-mock-body{padding:18px;}
+.wiz-mock-step-h{font-size:14px;font-weight:900;margin-bottom:5px;}
+.wiz-mock-step-s{font-size:11.5px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;}
+.wiz-mock-card{background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.32);border-radius:11px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.wiz-mock-card .em{font-size:30px;}
+.wiz-mock-card .meta .h{font-size:13px;font-weight:900;color:var(--peach-dark);margin-bottom:2px;}
+.wiz-mock-card .meta .d{font-size:10.5px;color:var(--text-muted);line-height:1.55;}
+.wiz-mock-list{font-size:11.5px;color:var(--text-muted);line-height:1.85;padding-left:18px;}
+.wiz-mock-cta{margin-top:14px;display:flex;gap:8px;}
+.wiz-mock-cta .b{flex:1;padding:10px;background:var(--peach);color:#fff;border-radius:8px;font-size:12px;font-weight:900;text-align:center;box-shadow:0 4px 12px rgba(251,146,60,.32);}
+.wiz-mock-cta .b.alt{flex:0 0 auto;background:var(--bg-warm);color:var(--text-muted);border:1px solid var(--line);box-shadow:none;padding:10px 18px;}
 
-.tmpl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
-.tmpl-mini{background:var(--bg-warm);border:1px solid var(--line);border-radius:12px;padding:18px 16px;}
-.tmpl-mini-av{font-size:24px;margin-bottom:6px;}
-.tmpl-mini-nm{font-size:13px;font-weight:800;margin-bottom:4px;letter-spacing:-.005em;}
-.tmpl-mini-dc{font-size:11px;color:var(--text-subtle);line-height:1.6;}
-
-/* ── SECTION: AI AGENT TEAM (NEW) ── */
-.section-team{
-  background:linear-gradient(180deg,var(--bg-warm) 0%,#fff8ef 50%,var(--bg-warm) 100%);
-  position:relative;
-}
-.section-team::before{
-  content:'';position:absolute;inset:0;
-  background:
-    radial-gradient(circle at 20% 30%,rgba(251,146,60,.10),transparent 50%),
-    radial-gradient(circle at 80% 70%,rgba(139,92,246,.08),transparent 50%);
-  pointer-events:none;
-}
+/* ─────────────────── BUILD TEAMS — real Team chat mock ─────────────────── */
+.section-team{background:linear-gradient(180deg,#fff 0%,#fff7ee 50%,#fff 100%);position:relative;}
+.section-team::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 30%,rgba(139,92,246,.10),transparent 50%);pointer-events:none;}
 .section-team .section-inner{position:relative;}
 
-.team-hero{display:grid;grid-template-columns:1fr 1.05fr;gap:60px;align-items:center;margin-bottom:72px;}
-.team-hero-text h3{font-family:var(--display);font-weight:400;font-size:48px;line-height:1.05;letter-spacing:-.01em;margin-bottom:20px;}
-.team-hero-text h3 .accent{color:var(--peach-dark);position:relative;display:inline-block;}
-.team-hero-text h3 .accent::after{content:'';position:absolute;left:0;right:0;bottom:-2px;height:9px;background:rgba(251,146,60,.32);z-index:-1;}
-.team-hero-text p{font-size:16px;color:var(--text-muted);line-height:1.85;margin-bottom:18px;}
-.team-hero-text p b{color:var(--text);}
-.team-hero-text ul{list-style:none;padding:0;margin:0 0 24px;}
-.team-hero-text ul li{position:relative;padding-left:28px;margin-bottom:10px;font-size:14.5px;color:var(--text-muted);line-height:1.7;}
-.team-hero-text ul li::before{content:'';position:absolute;left:0;top:6px;width:18px;height:18px;border-radius:50%;background-image:linear-gradient(135deg,var(--peach),var(--peach-dark));box-shadow:0 2px 6px rgba(251,146,60,.32);}
-.team-hero-text ul li::after{content:'✓';position:absolute;left:4px;top:5px;color:#fff;font-weight:900;font-size:11px;}
+.team-hero{display:grid;grid-template-columns:1fr 1.2fr;gap:48px;align-items:center;margin-bottom:64px;}
+.team-hero h3{font-family:var(--display);font-size:48px;font-weight:400;line-height:1.05;letter-spacing:-.01em;margin-bottom:18px;}
+.team-hero h3 .accent{color:var(--peach-dark);position:relative;display:inline-block;}
+.team-hero h3 .accent::after{content:'';position:absolute;left:0;right:0;bottom:-2px;height:9px;background:rgba(251,146,60,.32);z-index:-1;}
+.team-hero p{font-size:16px;color:var(--text-muted);line-height:1.85;margin-bottom:18px;}
+.team-hero p b{color:var(--text);}
+.team-hero ul{list-style:none;padding:0;margin:0 0 24px;}
+.team-hero ul li{position:relative;padding-left:28px;margin-bottom:10px;font-size:14.5px;color:var(--text-muted);line-height:1.7;}
+.team-hero ul li::before{content:'';position:absolute;left:0;top:6px;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--peach),var(--peach-dark));box-shadow:0 2px 6px rgba(251,146,60,.32);}
+.team-hero ul li::after{content:'✓';position:absolute;left:4px;top:5px;color:#fff;font-weight:900;font-size:11px;}
 
-/* Team visual (right side) */
-.team-visual{position:relative;background:#fff;border:1px solid var(--line-strong);border-radius:24px;padding:28px;box-shadow:0 24px 64px rgba(180,90,30,.12);}
-.team-visual-head{display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px dashed var(--line);margin-bottom:18px;}
-.team-visual-head .tv-emo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:22px;}
-.team-visual-head .tv-name .h{font-size:14.5px;font-weight:900;letter-spacing:-.005em;}
-.team-visual-head .tv-name .s{font-size:11px;color:var(--text-subtle);font-weight:700;}
-.team-visual-head .tv-badge{margin-left:auto;background:rgba(251,146,60,.14);color:var(--peach-dark);font-size:9.5px;font-weight:900;padding:3px 9px;border-radius:99px;letter-spacing:.05em;}
-.tv-members{display:flex;flex-direction:column;gap:8px;}
-.tv-mem{display:flex;align-items:center;gap:11px;padding:9px 12px;background:var(--bg-warm);border:1px solid var(--line);border-radius:10px;font-size:12.5px;font-weight:700;}
-.tv-mem .av{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-.tv-mem .av.a1{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
-.tv-mem .av.a2{background:linear-gradient(135deg,#ede9fe,#a78bfa);}
-.tv-mem .av.a3{background:linear-gradient(135deg,#dbeafe,#3b82f6);}
-.tv-mem .av.a4{background:linear-gradient(135deg,#fce7f3,#ec4899);}
-.tv-mem .av.a5{background:linear-gradient(135deg,#d1fae5,#10b981);}
-.tv-mem .nm{flex:1;color:var(--text);}
-.tv-mem .tag{font-size:9.5px;font-weight:900;color:var(--peach-dark);background:rgba(251,146,60,.10);padding:2px 8px;border-radius:99px;letter-spacing:.04em;}
-.tv-flow{margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px dashed var(--peach);border-radius:10px;font-size:11.5px;color:var(--peach-dark);font-weight:700;line-height:1.65;text-align:center;}
-.tv-flow .arrow{margin:0 5px;color:var(--peach);font-weight:900;}
+/* Real Team CHAT mock */
+.chat-mock{
+  background:#fff;border:1px solid var(--line-strong);border-radius:18px;overflow:hidden;
+  box-shadow:0 40px 80px -20px rgba(180,90,30,.18);
+}
+.chat-mock-top{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--bg-warm);border-bottom:1px solid var(--line);}
+.chat-mock-top .em{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.chat-mock-top .t .h{font-size:13.5px;font-weight:900;letter-spacing:-.005em;}
+.chat-mock-top .t .s{font-size:10.5px;color:var(--text-subtle);font-weight:700;}
+.chat-mock-top .pill{margin-left:auto;font-size:9.5px;font-weight:900;background:rgba(251,146,60,.14);color:var(--peach-dark);padding:3px 9px;border-radius:99px;}
+.chat-mock-acts{display:flex;gap:6px;}
+.chat-mock-acts .a{width:28px;height:28px;border-radius:7px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;}
+.chat-mock-body{padding:18px;display:flex;flex-direction:column;gap:10px;background:var(--bg);min-height:340px;}
+.bub{padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;max-width:78%;}
+.bub.you{align-self:flex-end;background:#1a0a00;color:#fff;}
+.bub.you b{color:var(--peach);font-family:var(--mono);}
+.bub.ai{align-self:flex-start;background:#fff;border:1px solid var(--line);}
+.bub.ai .who{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.bub.ai .who .av{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.bub.ai.a1 .who .av{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.bub.ai.a1 .who{color:var(--peach-dark);}
+.bub.ai.a2 .who .av{background:linear-gradient(135deg,#dbeafe,#3b82f6);}
+.bub.ai.a2 .who{color:#1d4ed8;}
+.bub.ai.a3 .who .av{background:linear-gradient(135deg,#fce7f3,#ec4899);}
+.bub.ai.a3 .who{color:#be185d;}
+/* mention picker overlay */
+.mention-pop{
+  position:relative;align-self:flex-end;background:#fff;border:1px solid var(--line-strong);
+  border-radius:11px;padding:8px;width:240px;box-shadow:0 12px 28px rgba(0,0,0,.12);
+  font-size:11.5px;
+}
+.mention-pop .h{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-subtle);font-weight:800;padding:4px 8px 6px;}
+.mention-pop .r{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;}
+.mention-pop .r.s{background:rgba(251,146,60,.10);}
+.mention-pop .r .av{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.mention-pop .r .av.c1{background:linear-gradient(135deg,#fff7ee,#fed7aa);}
+.mention-pop .r .av.c2{background:linear-gradient(135deg,#dbeafe,#3b82f6);}
+.mention-pop .r .av.c3{background:linear-gradient(135deg,#fce7f3,#ec4899);}
+.mention-pop .r .nm{flex:1;font-weight:700;}
+.mention-pop .r .tg{font-size:9px;color:var(--text-subtle);font-weight:700;}
+.chat-mock-input{padding:12px 18px;border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:8px;}
+.chat-mock-input input{flex:1;border:1px solid var(--line);background:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;color:var(--text);font-family:inherit;}
+.chat-mock-input .send{width:36px;height:36px;border-radius:9px;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;}
 
-.team-feats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.team-feats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px;}
 .team-feat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px 24px;position:relative;transition:transform .2s,border-color .2s,box-shadow .2s;}
 .team-feat:hover{transform:translateY(-3px);border-color:rgba(251,146,60,.32);box-shadow:0 10px 28px rgba(180,90,30,.10);}
 .team-feat .ic{font-size:34px;line-height:1;margin-bottom:14px;}
@@ -203,52 +272,49 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
 .team-feat p{font-size:13.5px;color:var(--text-muted);line-height:1.75;}
 .team-feat .ribbon{position:absolute;top:14px;right:14px;font-size:9.5px;font-weight:900;letter-spacing:.06em;background:rgba(251,146,60,.14);color:var(--peach-dark);padding:3px 9px;border-radius:99px;}
 
-.team-templates{margin-top:64px;}
-.team-templates-h{text-align:center;margin-bottom:24px;}
-.team-templates-h .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--text-subtle);text-transform:uppercase;}
-.team-templates-h h4{font-family:var(--display);font-size:28px;font-weight:400;letter-spacing:-.005em;margin-top:6px;}
-.team-tmpl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
-.team-tmpl{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 16px 16px;display:flex;flex-direction:column;gap:8px;transition:all .15s;}
-.team-tmpl:hover{border-color:var(--peach);transform:translateY(-2px);}
-.team-tmpl .cover{height:54px;border-radius:9px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:26px;}
-.team-tmpl .price{display:inline-block;background:rgba(16,185,129,.16);color:#047857;font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em;align-self:flex-start;}
-.team-tmpl .nm{font-size:13px;font-weight:900;letter-spacing:-.005em;line-height:1.3;}
-.team-tmpl .ds{font-size:11px;color:var(--text-subtle);line-height:1.55;flex:1;}
-.team-tmpl .av-row{display:flex;align-items:center;gap:0;}
-.team-tmpl .av-row .av{width:22px;height:22px;border-radius:6px;background:var(--bg-warm);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;margin-right:-3px;}
-.team-tmpl .av-row .ct{margin-left:8px;font-size:10.5px;color:var(--text-subtle);font-weight:700;}
+/* Generation flow visual */
+.gen-flow{
+  background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px;
+  display:grid;grid-template-columns:1fr 36px 1.4fr;gap:18px;align-items:center;margin-top:24px;
+}
+.gen-flow .input-side{}
+.gen-flow .arrow{font-size:32px;color:var(--peach);text-align:center;font-weight:900;}
+.gen-flow .input-h{font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text-subtle);font-weight:700;margin-bottom:6px;}
+.gen-flow .input-box{background:var(--bg-warm);border:1px solid var(--line);border-radius:11px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--mono);min-height:64px;line-height:1.65;}
+.gen-flow .out-side{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.gen-flow .out-card{background:var(--bg-warm);border:1px solid var(--line);border-radius:10px;padding:10px 8px;text-align:center;}
+.gen-flow .out-card .em{font-size:24px;margin-bottom:4px;}
+.gen-flow .out-card .nm{font-size:10px;font-weight:800;color:var(--text);line-height:1.3;}
+.gen-flow .out-card .rl{font-size:8.5px;color:var(--text-subtle);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
 
-/* ── SHARE ── */
-.section-share{background:#fff;}
-.share-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
-.share-text h3{font-family:var(--display);font-size:42px;font-weight:400;line-height:1.1;margin-bottom:16px;}
-.share-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:14px;}
-.share-text ul{list-style:none;padding:0;}
-.share-text li{position:relative;padding-left:26px;margin:8px 0;font-size:14px;color:var(--text-muted);}
-.share-text li::before{content:'→';position:absolute;left:0;color:var(--peach-dark);font-weight:900;}
-.share-mock-url{font-family:var(--mono);font-size:14px;background:var(--bg-warm);border:1px solid var(--line);padding:12px 16px;border-radius:10px;text-align:center;margin-bottom:16px;color:var(--text-muted);}
-.share-flow{display:flex;flex-direction:column;gap:10px;}
-.share-flow-step{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg-warm);border:1px solid var(--line);border-radius:12px;font-size:13.5px;color:var(--text-muted);}
-.share-flow-step .num{width:28px;height:28px;border-radius:50%;background:var(--peach);color:#fff;font-weight:900;font-family:var(--mono);font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+/* ─────────────────── STORE — real grid mock ─────────────────── */
+.section-store{background:var(--bg-warm);}
+.store-row{display:grid;grid-template-columns:1fr 1.2fr;gap:48px;align-items:center;}
+.store-text h3{font-family:var(--display);font-size:48px;font-weight:400;line-height:1.1;letter-spacing:-.01em;margin-bottom:18px;}
+.store-text p{font-size:15px;color:var(--text-muted);line-height:1.85;margin-bottom:14px;}
+.store-text ul{list-style:none;padding:0;margin-bottom:24px;}
+.store-text li{position:relative;padding-left:26px;margin:8px 0;font-size:14px;color:var(--text-muted);}
+.store-text li::before{content:'$';position:absolute;left:0;color:var(--green);font-weight:900;}
 
-/* ── MARKETPLACE ── */
-.section-market{background:var(--bg-warm);}
-.market-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
-.market-text h3{font-family:var(--display);font-size:42px;font-weight:400;line-height:1.1;margin-bottom:16px;}
-.market-text p{font-size:15px;color:var(--text-muted);line-height:1.8;margin-bottom:14px;}
-.market-text ul{list-style:none;padding:0;margin-bottom:20px;}
-.market-text li{position:relative;padding-left:26px;margin:8px 0;font-size:14px;color:var(--text-muted);}
-.market-text li::before{content:'$';position:absolute;left:0;color:var(--green);font-weight:900;}
-.market-cards{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:12px;}
-.market-card{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg-warm);border:1px solid var(--line);border-radius:12px;}
-.market-card-av{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:22px;}
-.market-card-mid{flex:1;}
-.market-card-nm{font-size:13.5px;font-weight:800;letter-spacing:-.005em;}
-.market-card-meta{font-size:11px;color:var(--text-subtle);font-weight:600;}
-.market-card-price{font-size:13px;font-weight:900;color:var(--peach-dark);font-family:var(--mono);}
-.market-card-price.free{color:var(--green);}
+.store-mock{background:#fff;border:1px solid var(--line-strong);border-radius:18px;overflow:hidden;box-shadow:0 32px 64px rgba(180,90,30,.12);}
+.store-mock-top{padding:14px 18px;background:var(--bg-warm);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;}
+.store-mock-top .h{font-size:13.5px;font-weight:900;}
+.store-mock-top .search{flex:1;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:11.5px;color:var(--text-subtle);font-family:var(--mono);}
+.store-mock-tabs{display:flex;gap:5px;padding:10px 18px;border-bottom:1px solid var(--line);}
+.store-mock-tab{padding:5px 11px;border-radius:99px;font-size:10.5px;font-weight:700;background:var(--bg);color:var(--text-muted);}
+.store-mock-tab.active{background:var(--peach);color:#fff;}
+.store-mock-grid{padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:11px;}
+.store-card{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px;}
+.store-card .top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.store-card .top .av{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:18px;}
+.store-card .top .t{font-size:11.5px;font-weight:900;letter-spacing:-.005em;}
+.store-card .top .t .badge{display:inline-block;background:rgba(251,146,60,.14);color:var(--peach-dark);font-size:8.5px;font-weight:900;padding:1px 5px;border-radius:99px;letter-spacing:.04em;margin-right:4px;}
+.store-card .desc{font-size:10.5px;color:var(--text-muted);line-height:1.55;margin-bottom:8px;}
+.store-card .meta{display:flex;align-items:center;justify-content:space-between;font-size:9.5px;color:var(--text-subtle);font-weight:700;}
+.store-card .price{font-family:var(--mono);font-size:11px;font-weight:900;color:var(--peach-dark);}
+.store-card .price.free{color:var(--green);}
 
-/* ── PRICING (Plan v2) ── */
+/* ─────────────────── PRICING ─────────────────── */
 .section-pricing{background:#fff;border-top:1px solid var(--line);}
 .pricing-tabs{display:inline-flex;gap:4px;background:var(--bg-warm);border-radius:11px;padding:4px;margin-top:14px;border:1px solid var(--line);}
 .pricing-tab{font-family:inherit;font-size:13px;font-weight:700;padding:9px 18px;border-radius:8px;border:0;cursor:pointer;color:var(--text-muted);background:transparent;}
@@ -256,52 +322,28 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:
 .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px;}
 .price-card{background:#fff;border:1px solid var(--line-strong);border-radius:18px;padding:32px 28px;position:relative;display:flex;flex-direction:column;}
 .price-card.popular{border:2px solid var(--peach);box-shadow:0 24px 64px rgba(251,146,60,.18);transform:scale(1.03);}
-.price-card.popular::before{
-  content:'★ MOST POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);
-  background:var(--peach);color:#fff;font-size:10.5px;font-weight:900;
-  padding:5px 14px;border-radius:99px;letter-spacing:.08em;
-}
+.price-card.popular::before{content:'★ MOST POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--peach);color:#fff;font-size:10.5px;font-weight:900;padding:5px 14px;border-radius:99px;letter-spacing:.08em;}
 .price-name{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--peach-dark);text-transform:uppercase;margin-bottom:14px;}
 .price-amount{font-family:var(--display);font-size:64px;font-weight:400;line-height:1;color:var(--text);margin-bottom:6px;}
 .price-period{font-size:13px;color:var(--text-subtle);font-weight:600;margin-bottom:18px;}
-.price-credit{
-  display:inline-block;background:var(--peach-soft);color:var(--peach-dark);
-  font-size:12.5px;font-weight:900;padding:6px 14px;border-radius:99px;margin-bottom:24px;letter-spacing:.04em;
-}
+.price-credit{display:inline-block;background:var(--peach-soft);color:var(--peach-dark);font-size:12.5px;font-weight:900;padding:6px 14px;border-radius:99px;margin-bottom:24px;letter-spacing:.04em;}
 .price-credit.gone{background:#fff;border:1px dashed var(--line-strong);color:var(--text-subtle);}
 .price-feats{list-style:none;padding:0;margin-bottom:28px;flex:1;}
-.price-feats li{
-  position:relative;padding:10px 0 10px 32px;font-size:13.5px;color:var(--text-muted);line-height:1.6;
-  border-bottom:1px solid var(--line);
-}
+.price-feats li{position:relative;padding:10px 0 10px 32px;font-size:13.5px;color:var(--text-muted);line-height:1.6;border-bottom:1px solid var(--line);}
 .price-feats li:last-child{border-bottom:0;}
-.price-feats li::before{
-  content:'✓';position:absolute;left:6px;top:10px;width:20px;height:20px;border-radius:50%;
-  background:rgba(16,185,129,.16);color:#047857;font-weight:900;font-size:11px;
-  display:flex;align-items:center;justify-content:center;
-}
+.price-feats li::before{content:'✓';position:absolute;left:6px;top:10px;width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,.16);color:#047857;font-weight:900;font-size:11px;display:flex;align-items:center;justify-content:center;}
 .price-feats li.no::before{content:'×';background:rgba(180,120,80,.10);color:var(--text-subtle);}
 .price-feats li b{color:var(--text);font-weight:800;}
-.price-feats li .diff{
-  display:inline-block;background:rgba(251,146,60,.14);color:var(--peach-dark);
-  font-size:10.5px;font-weight:900;padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.04em;
-}
-.price-cta{
-  font-family:inherit;display:block;text-align:center;padding:14px;border-radius:11px;
-  font-size:14px;font-weight:800;text-decoration:none;
-  background:#fff;border:1px solid var(--peach);color:var(--peach-dark);transition:all .15s;
-}
+.price-feats li .diff{display:inline-block;background:rgba(251,146,60,.14);color:var(--peach-dark);font-size:10.5px;font-weight:900;padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.04em;}
+.price-cta{font-family:inherit;display:block;text-align:center;padding:14px;border-radius:11px;font-size:14px;font-weight:800;text-decoration:none;background:#fff;border:1px solid var(--peach);color:var(--peach-dark);transition:all .15s;}
 .price-card.popular .price-cta{background:var(--peach);color:#fff;border-color:var(--peach);box-shadow:0 8px 22px rgba(251,146,60,.32);}
 .price-cta:hover{background:var(--peach-dark);color:#fff;border-color:var(--peach-dark);}
 .pricing-trust{text-align:center;font-size:12px;color:var(--text-subtle);margin-top:32px;}
 .pricing-trust span{margin:0 8px;}
-.pricing-compare{
-  margin-top:48px;background:var(--bg-warm);border:1px solid var(--line);border-radius:14px;padding:18px 22px;text-align:center;
-  font-size:12.5px;color:var(--text-muted);line-height:1.85;
-}
+.pricing-compare{margin-top:48px;background:var(--bg-warm);border:1px solid var(--line);border-radius:14px;padding:18px 22px;text-align:center;font-size:12.5px;color:var(--text-muted);line-height:1.85;}
 .pricing-compare b{color:var(--text);}
 
-/* ── BIG CTA ── */
+/* ─────────────────── BIG CTA ─────────────────── */
 .section-cta{background:var(--bg-deep);color:var(--text-on-dark);text-align:center;padding:96px 24px;position:relative;overflow:hidden;}
 .section-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(251,146,60,.18),transparent 70%);}
 .section-cta .inner{position:relative;max-width:800px;margin:0 auto;}
@@ -321,18 +363,22 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
 
 @media (max-width:980px){
   .nav-links{display:none;}
-  .steps-grid,.create-flow,.team-feats,.pricing-grid{grid-template-columns:1fr;}
-  .team-hero,.tmpl-row,.share-row,.market-row{grid-template-columns:1fr;gap:36px;}
+  .steps-grid,.team-feats,.pricing-grid{grid-template-columns:1fr;}
+  .build-row,.team-hero,.store-row{grid-template-columns:1fr;gap:36px;}
   .price-card.popular{transform:none;}
   .section{padding:80px 20px;}
-  .hero{padding:64px 20px 80px;}
-  .hero-stack{flex-direction:column;}
+  .hero{padding:56px 20px 24px;}
+  .app-shell{grid-template-columns:1fr;}
+  .sb{display:none;}
+  .gen-flow{grid-template-columns:1fr;}
+  .gen-flow .arrow{transform:rotate(90deg);}
+  .qc-row,.kinds-row,.store-mock-grid{grid-template-columns:1fr;}
 }
 </style>
 </head>
 <body>
 
-<div class="banner-mock">📐 <b>MOCK</b> ・ Full LP redesign in English ・ with new AI Agent Team section + Plan v2 pricing ・ replaces /lp.html</div>
+<div class="banner-mock">📐 <b>MOCK v2</b> ・ Templates / Share 削除 ・ Hero に実ホーム画面 ・ Real-product imagery throughout</div>
 
 <!-- ─────────── NAV ─────────── -->
 <nav class="nav">
@@ -342,8 +388,7 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
       <a href="#how">How it works</a>
       <a href="#agent">Agents</a>
       <a href="#team">Teams</a>
-      <a href="#share">Share</a>
-      <a href="#market">Store</a>
+      <a href="#store">Store</a>
       <a href="#pricing">Pricing</a>
     </div>
     <div class="nav-cta">
@@ -353,7 +398,7 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
   </div>
 </nav>
 
-<div class="section-anchor">§ 1 — HERO</div>
+<div class="section-anchor">§ 1 — HERO + REAL HOME DASHBOARD</div>
 <!-- ─────────── 1. HERO ─────────── -->
 <section class="hero">
   <div class="hero-kicker"><span class="dot"></span>NEW · AI generates your team</div>
@@ -371,18 +416,97 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
     <span><span class="check">✓</span>10 free messages</span>
     <span><span class="check">✓</span>No credit card</span>
   </div>
-  <div class="hero-stack">
-    <div class="pane">
-      <div class="label">🤖 Solo Agent</div>
-      <div class="demo">"Draft 5 marketing emails for our Series A launch."</div>
+
+  <!-- REAL HOME DASHBOARD MOCKUP -->
+  <div class="product-frame">
+    <div class="product-bar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <div class="url">myaiagents.agency  ·  Home</div>
     </div>
-    <div class="pane">
-      <div class="label">🎯 Agent Team</div>
-      <div class="demo">"I want to build and sell on Shopify."<br>→ AI spawns 5 agents and starts.</div>
-    </div>
-    <div class="pane">
-      <div class="label">🏪 Agent Store</div>
-      <div class="demo">"Buy a verified team. 1-click clone."</div>
+    <div class="app-shell">
+      <!-- Sidebar -->
+      <aside class="sb">
+        <div class="sb-brand"><div class="mk">M</div><span class="nm">MY AI AGENT</span></div>
+        <button class="sb-home"><span class="ic">🏠</span><span class="lbl">Home</span><span class="arrow">→</span></button>
+        <div class="sb-search">🔍 <span style="flex:1">Search</span><kbd>⌘K</kbd></div>
+
+        <div class="sb-section-h"><span>🎯 Agent Teams</span><span class="add">+</span></div>
+        <div class="sb-item on"><div class="av">🛍</div><div class="nm">EC Launch</div><div class="ti">15:50</div></div>
+        <div class="sb-item"><div class="av v">📱</div><div class="nm">SNS Growth</div><div class="ti">12:14</div></div>
+
+        <div class="sb-section-h"><span>👥 Groups</span><span class="add">+</span></div>
+        <div class="sb-item"><div class="av v">🦄</div><div class="nm">Founders Lounge</div><div class="ti">9:02</div></div>
+
+        <div class="sb-section-h"><span>🤖 DM</span><span class="add">+</span></div>
+        <div class="sb-item"><div class="av b">✍️</div><div class="nm">SEO Writer</div><div class="ti">Mon</div></div>
+        <div class="sb-item"><div class="av g">🎓</div><div class="nm">Tutor</div><div class="ti">Sun</div></div>
+        <div class="sb-item"><div class="av h">🤖</div><div class="nm">Sales Tanaka</div><div class="ti">Sat</div></div>
+      </aside>
+
+      <!-- Main = home dashboard -->
+      <main class="mn">
+        <div class="greet">
+          <h2>Welcome back, Kota 🍑</h2>
+          <span class="now">Sat, May 10 · 16:38</span>
+        </div>
+        <div class="greet-sub">3 worlds — chat 1:1 with an AI · mix friends + AI in a group · let a multi-AI team automate the whole job.</div>
+
+        <!-- 3 Quick cards -->
+        <div class="qc-row">
+          <button class="qc">
+            <div class="qc-ic">🤖</div>
+            <h3>Create AI Agent</h3>
+            <div class="qc-d">One at a time · Build your own dedicated AI.</div>
+            <div class="qc-s"><span class="qc-pill new">🆕 New</span><span class="qc-pill">📋 Templates</span></div>
+          </button>
+          <button class="qc feat">
+            <div class="qc-ic">🎯</div>
+            <h3>Create Agent Team</h3>
+            <div class="qc-d">Multiple AIs in concert · Automate the whole job.</div>
+            <div class="qc-s"><span class="qc-pill new">🆕 New</span><span class="qc-pill">📋 Templates</span></div>
+          </button>
+          <button class="qc">
+            <div class="qc-ic">🏪</div>
+            <h3>Agent Store</h3>
+            <div class="qc-d">Buy or free-download Agents and Teams from creators.</div>
+            <div class="qc-s"><span class="qc-pill">🤖 Agent</span><span class="qc-pill">🎯 Team</span></div>
+          </button>
+        </div>
+
+        <div class="legend">
+          <span class="lbl">3 KINDS OF CONVERSATIONS</span>
+          <span class="l"><span class="dot dm"></span><b>DM</b> · You + 1 AI</span>
+          <span class="l"><span class="dot gr"></span><b>Group</b> · You + friends + AI</span>
+          <span class="l"><span class="dot tm"></span><b>Team</b> · You + multiple AIs</span>
+        </div>
+
+        <div class="kinds-row">
+          <div class="kind">
+            <div class="kind-h"><span class="ic">🤖</span><h3>AI Agents (DM)</h3><span class="ct">3 active</span></div>
+            <div class="kind-d">Just you and one AI, 1:1.</div>
+            <div class="kind-list">
+              <div class="k-row"><div class="av">✍️</div><div class="nm">SEO Writer</div></div>
+              <div class="k-row"><div class="av">🎓</div><div class="nm">Tutor</div></div>
+              <div class="k-row"><div class="av">🤖</div><div class="nm">Sales Tanaka</div></div>
+            </div>
+          </div>
+          <div class="kind">
+            <div class="kind-h"><span class="ic">👥</span><h3>Groups</h3><span class="ct">1 active</span></div>
+            <div class="kind-d">Humans + AI in a chat group.</div>
+            <div class="kind-list">
+              <div class="k-row"><div class="av">🦄</div><div class="nm">Founders Lounge</div></div>
+            </div>
+          </div>
+          <div class="kind hl">
+            <div class="kind-h"><span class="ic">🎯</span><h3>Teams</h3><span class="ct">2 active</span></div>
+            <div class="kind-d">Multiple AIs in concert.</div>
+            <div class="kind-list">
+              <div class="k-row"><div class="av">🛍</div><div class="nm">EC Launch · 5 agents</div></div>
+              <div class="k-row"><div class="av">📱</div><div class="nm">SNS Growth · 3 agents</div></div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   </div>
 </section>
@@ -394,117 +518,84 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
     <div class="section-head">
       <span class="kicker">HOW IT WORKS</span>
       <h2 class="h2">Up and running<br>in 3 steps.</h2>
-      <p class="lead">No setup. No prompt engineering boot camp. Sign up and start delegating.</p>
+      <p class="lead">Three minutes from sign-up to your first AI doing real work.</p>
     </div>
     <div class="steps-grid">
       <div class="step-card">
         <span class="step-num">01</span>
-        <div class="step-icon">🤖</div>
-        <h3 class="step-title">Pick or generate</h3>
-        <p class="step-desc">Pick from 10 built-in templates, or describe your goal and let AI design the right agents for the job.</p>
+        <div class="step-icon">📝</div>
+        <h3 class="step-title">Tell it your goal</h3>
+        <p class="step-desc">Describe in plain English what you want done. Build a single AI for one task, or let AI design a whole team.</p>
+        <div class="step-mock"><span class="you">› build &amp; sell on Shopify</span></div>
       </div>
       <div class="step-card">
         <span class="step-num">02</span>
         <div class="step-icon">⚡</div>
-        <h3 class="step-title">Customize the role</h3>
-        <p class="step-desc">Name, persona, skills, models, and integrations (web search, Sheets, Chrome) — everything stays editable.</p>
+        <h3 class="step-title">AI assembles the right roles</h3>
+        <p class="step-desc">Within 30s you get an editable agent (or team of agents) with avatars, names, personas, skills, and integrations.</p>
+        <div class="step-mock"><span class="ai">✨ Generated 5 agents:</span><br>🛍 Product Sourcer<br>📸 Visual Designer<br>🌐 Storefront Architect<br>📱 Social Manager<br>📊 Revenue Analyst</div>
       </div>
       <div class="step-card">
         <span class="step-num">03</span>
         <div class="step-icon">💬</div>
-        <h3 class="step-title">Delegate the work</h3>
-        <p class="step-desc">Chat in plain English. @mention specific team members. Share, sell, or fork what you build.</p>
+        <h3 class="step-title">Delegate &amp; iterate</h3>
+        <p class="step-desc">Chat normally. <span class="typing">@SocialManager</span> to call one specifically. Add or edit members anytime — even from chat.</p>
+        <div class="step-mock"><span class="you">› @social: write 3 launch posts</span><br><span class="ai">📱 Social Manager: Here are 3 hooks...</span></div>
       </div>
     </div>
   </div>
 </section>
 
-<div class="section-anchor">§ 3 — SOLO AGENT</div>
-<!-- ─────────── 3. SOLO AGENT ─────────── -->
-<section class="section section-create" id="agent">
+<div class="section-anchor">§ 3 — BUILD AGENTS</div>
+<!-- ─────────── 3. BUILD AGENTS ─────────── -->
+<section class="section section-build" id="agent">
   <div class="section-inner">
-    <div class="section-head">
-      <span class="kicker">SOLO AGENT</span>
-      <h2 class="h2">Build a single AI<br>like you're hiring.</h2>
-      <p class="lead">5 short steps. Treat the AI like a new hire — define the role and the day-to-day, and the answers get sharper.</p>
-    </div>
-    <div class="create-flow">
-      <div class="create-step"><span class="num-badge">1</span><div class="ic">🎭</div><div class="nm">Avatar</div><div class="desc">24 emoji or upload<br>your own image</div></div>
-      <div class="create-step"><span class="num-badge">2</span><div class="ic">🏷️</div><div class="nm">Name</div><div class="desc">"Sales Tanaka"<br>or whatever sticks</div></div>
-      <div class="create-step"><span class="num-badge">3</span><div class="ic">⚡</div><div class="nm">Skills</div><div class="desc">Pick 1-3 from<br>16 specialties</div></div>
-      <div class="create-step"><span class="num-badge">4</span><div class="ic">🎯</div><div class="nm">Purpose</div><div class="desc">Why hire it?<br>One sentence.</div></div>
-      <div class="create-step"><span class="num-badge">5</span><div class="ic">📋</div><div class="nm">Duties</div><div class="desc">What it does<br>day to day.</div></div>
-    </div>
-    <div class="create-cta">
-      <a class="btn btn-primary" href="/auth.html?tab=signup">Build your first agent — free →</a>
-    </div>
-  </div>
-</section>
-
-<div class="section-anchor">§ 4 — TEMPLATES</div>
-<!-- ─────────── 4. TEMPLATES ─────────── -->
-<section class="section section-template" id="templates">
-  <div class="section-inner">
-    <div class="section-head">
-      <span class="kicker">TEMPLATES</span>
-      <h2 class="h2">10 ready-made<br>agent templates.</h2>
-      <p class="lead">Common roles, pre-built — purpose, duties, skills, and 8 working modules wired in. Pick, click, ship.</p>
-    </div>
-    <div class="tmpl-row">
-      <div class="tmpl-text">
-        <h3>Specialist agents,<br>fully configured.</h3>
-        <p>The flagship template, <b>Auto Inside Sales</b>, ships with 8 connected modules — from business comprehension to message generation and continuous improvement loops.</p>
+    <div class="build-row">
+      <div class="build-text">
+        <span class="kicker">SOLO AGENT</span>
+        <h3>Build a <span class="accent">single AI</span><br>like you're hiring.</h3>
+        <p>Pick from <b>10 ready-made templates</b> or start from scratch. Either way, you tune the persona — purpose, duties, skills, model — and it all stays editable.</p>
         <ul>
-          <li>10 specialist templates ready to go</li>
-          <li>Purpose, duties, and skills pre-filled</li>
-          <li>Usable from the moment you pick one</li>
-          <li>Customizable to your needs anytime</li>
+          <li>5 short steps · ~1 minute to first chat</li>
+          <li>16 specialty skills + 24 emoji avatars (or upload your own)</li>
+          <li>Integrations: 🌐 web search, 📊 Sheets, 🔗 Chrome</li>
+          <li>Switch between Haiku / Sonnet / Opus per agent</li>
         </ul>
-        <a class="btn btn-primary" href="/auth.html?tab=signup">Browse templates →</a>
+        <a class="btn btn-primary" href="/auth.html?tab=signup">Build your first agent — free →</a>
       </div>
-      <div class="tmpl-card">
-        <div class="tmpl-card-head">
-          <div class="tmpl-avatar">🤖</div>
-          <div>
-            <div class="tmpl-card-name">Auto Inside Sales</div>
-            <div class="tmpl-card-desc">Outbound on autopilot · 8 modules</div>
+      <!-- WIZARD MOCK -->
+      <div class="wiz-mock">
+        <div class="wiz-mock-top"><div class="t">🤖 Create AI Agent</div><div class="x">×</div></div>
+        <div class="wiz-mock-bar"><div class="wiz-mock-bar-f"></div></div>
+        <div class="wiz-mock-tabs">
+          <div class="wiz-mock-tab active">🆕 From scratch</div>
+          <div class="wiz-mock-tab">📋 From templates</div>
+        </div>
+        <div class="wiz-mock-body">
+          <div class="wiz-mock-step-h">Build from scratch</div>
+          <div class="wiz-mock-step-s">Pick the icon, name, skills, and persona yourself and assemble your own AI.</div>
+          <div class="wiz-mock-card">
+            <div class="em">🤖</div>
+            <div class="meta"><div class="h">Build one dedicated AI</div><div class="d">5 steps (~1 min) · Edit anytime · Reach it from the DM tab.</div></div>
+          </div>
+          <ul class="wiz-mock-list">
+            <li>Pick an icon (emoji or upload an image)</li>
+            <li>Write its name and the "purpose · duties"</li>
+            <li>Choose up to 3 skills</li>
+            <li>Optionally enable web search / Sheets / Chrome</li>
+          </ul>
+          <div class="wiz-mock-cta">
+            <div class="b alt">Cancel</div>
+            <div class="b">▶ Start building</div>
           </div>
         </div>
-        <div class="tmpl-pills">
-          <span class="tmpl-pill">Marketing</span>
-          <span class="tmpl-pill">Writing</span>
-          <span class="tmpl-pill">Research</span>
-          <span class="tmpl-pill">Analysis</span>
-          <span class="tmpl-pill">Planning</span>
-        </div>
-        <div class="tmpl-modules">
-          <div class="tmpl-mod"><span class="tmpl-mod-n">①</span>Business</div>
-          <div class="tmpl-mod"><span class="tmpl-mod-n">②</span>Persona</div>
-          <div class="tmpl-mod"><span class="tmpl-mod-n">③</span>Source</div>
-          <div class="tmpl-mod"><span class="tmpl-mod-n">④</span>Filter</div>
-          <div class="tmpl-mod"><span class="tmpl-mod-n">⑤</span>Strategy</div>
-          <div class="tmpl-mod"><span class="tmpl-mod-n">⑥</span>Message</div>
-          <div class="tmpl-mod"><span class="tmpl-mod-n">⑦</span>Send</div>
-          <div class="tmpl-mod"><span class="tmpl-mod-n">⑧</span>Improve</div>
-        </div>
       </div>
-    </div>
-    <div class="tmpl-grid">
-      <div class="tmpl-mini"><div class="tmpl-mini-av">🐦</div><div class="tmpl-mini-nm">X (Twitter) Auto-Run</div><div class="tmpl-mini-dc">Concept → trend mining → post generation → engagement ops</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">✍️</div><div class="tmpl-mini-nm">SEO Blog Writer</div><div class="tmpl-mini-dc">Keywords → SERP → outline → draft → links → rewrite</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">🎬</div><div class="tmpl-mini-nm">Short-form Scriptwriter</div><div class="tmpl-mini-dc">Trends → hooks → script → CTA → iterate</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">🎯</div><div class="tmpl-mini-nm">Recruiter Agent</div><div class="tmpl-mini-dc">JD → sourcing → outreach → interviews → debrief</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">📝</div><div class="tmpl-mini-nm">Notes → Action Items</div><div class="tmpl-mini-dc">Drop a recording or notes; get structured notes and todos</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">🔍</div><div class="tmpl-mini-nm">Competitor Analyst</div><div class="tmpl-mini-dc">Target → features → pricing → positioning</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">💻</div><div class="tmpl-mini-nm">Code Reviewer</div><div class="tmpl-mini-dc">Diff → bugs → security → suggestions</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">🤝</div><div class="tmpl-mini-nm">CS Tier 1</div><div class="tmpl-mini-dc">Triage → first response → escalate → knowledge base</div></div>
-      <div class="tmpl-mini"><div class="tmpl-mini-av">👑</div><div class="tmpl-mini-nm">Strategy Advisor</div><div class="tmpl-mini-dc">Market → competition → numbers → decisions</div></div>
     </div>
   </div>
 </section>
 
-<div class="section-anchor">§ 5 — AI AGENT TEAM (NEW)</div>
-<!-- ─────────── 5. AI AGENT TEAM (NEW) ─────────── -->
+<div class="section-anchor">§ 4 — BUILD TEAMS</div>
+<!-- ─────────── 4. BUILD TEAMS ─────────── -->
 <section class="section section-team" id="team">
   <div class="section-inner">
 
@@ -513,44 +604,80 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
       <span class="kicker">AI Agent Team</span>
       <h2 class="h2">Don't just hire one.<br>Spin up a whole team.</h2>
       <p class="lead">
-        AI analyzes your goal, breaks it into roles, and assembles a <b>3–10 agent team</b> in 30 seconds.
-        Switch between members with @mentions. Run an entire workflow in one chat.
+        AI analyzes your goal, breaks it into roles, and assembles a 3–10 agent team in 30 seconds.
+        Switch members with @mentions — run an entire workflow in one chat.
       </p>
     </div>
 
-    <div class="team-hero">
-      <div class="team-hero-text">
-        <h3>Type "<span class="accent">build & sell on Shopify</span>"<br>and 5 AI agents show up for work.</h3>
-        <p>
-          Describe a goal → AI splits it into roles → a <b>Product Sourcer · Visual Designer · Storefront Architect · Social Manager · Revenue Analyst</b> team starts on day one.
-          Every agent stays editable, addable, removable.
-        </p>
-        <ul>
-          <li>AI auto-designs <b>3–10 specialist agents</b> in 15-30s</li>
-          <li>Add, edit, or remove members anytime — even from chat</li>
-          <li>@mention <code style="background:var(--peach-soft);color:var(--peach-dark);font-family:var(--mono);font-size:12.5px;padding:2px 6px;border-radius:5px">@SocialManager</code> to call one specifically</li>
-          <li>Share the team via URL or list it on Agent Store</li>
-        </ul>
-        <a class="btn btn-primary" href="/auth.html?tab=signup">Build your AI team — free →</a>
+    <!-- Generation flow visual -->
+    <div class="gen-flow">
+      <div class="input-side">
+        <div class="input-h">You type</div>
+        <div class="input-box">› build &amp; sell on Shopify with margins &gt; 50%, post on social, watch sales</div>
       </div>
-      <div class="team-visual">
-        <div class="team-visual-head">
-          <div class="tv-emo">🛍</div>
-          <div class="tv-name">
+      <div class="arrow">→</div>
+      <div class="out-side">
+        <div class="out-card"><div class="em">🛍</div><div class="nm">Product Sourcer</div><div class="rl">Step 1</div></div>
+        <div class="out-card"><div class="em">📸</div><div class="nm">Visual Designer</div><div class="rl">Step 2</div></div>
+        <div class="out-card"><div class="em">🌐</div><div class="nm">Storefront</div><div class="rl">Step 3</div></div>
+        <div class="out-card"><div class="em">📱</div><div class="nm">Social Mgr</div><div class="rl">Step 4</div></div>
+        <div class="out-card"><div class="em">📊</div><div class="nm">Revenue Analyst</div><div class="rl">Step 5</div></div>
+      </div>
+    </div>
+
+    <div style="height:64px"></div>
+
+    <!-- Team chat in action -->
+    <div class="team-hero">
+      <div>
+        <h3>One chat,<br><span class="accent">five specialists.</span></h3>
+        <p>Once the team's running, you talk to it like a single chat — but with a twist: <b>type @SocialManager</b> and the reply switches to that member's persona, model, and integrations. The conversation keeps a single timeline.</p>
+        <ul>
+          <li>@mention any member to call them specifically</li>
+          <li>Default reply uses team handoff (no @ needed)</li>
+          <li>Edit / add / remove members anytime — from the chat</li>
+          <li>Each member can have its own model (e.g. Opus for code review)</li>
+        </ul>
+        <a class="btn btn-primary" href="/auth.html?tab=signup">Try a free starter team →</a>
+      </div>
+      <!-- REAL TEAM CHAT MOCKUP -->
+      <div class="chat-mock">
+        <div class="chat-mock-top">
+          <div class="em">🛍</div>
+          <div class="t">
             <div class="h">EC Launch Team</div>
-            <div class="s">AI-designed · 5 members · running</div>
+            <div class="s">5 AI members · running</div>
           </div>
-          <span class="tv-badge">🎯 TEAM</span>
+          <span class="pill">🎯 TEAM</span>
+          <div class="chat-mock-acts" style="margin-left:8px"><div class="a">🎯</div><div class="a">✏️</div><div class="a">⚙</div></div>
         </div>
-        <div class="tv-members">
-          <div class="tv-mem"><div class="av a1">🛍</div><div class="nm">Product Sourcer</div><span class="tag">@product</span></div>
-          <div class="tv-mem"><div class="av a2">📸</div><div class="nm">Visual Designer</div><span class="tag">@design</span></div>
-          <div class="tv-mem"><div class="av a3">🌐</div><div class="nm">Storefront Architect</div><span class="tag">@store</span></div>
-          <div class="tv-mem"><div class="av a4">📱</div><div class="nm">Social Manager</div><span class="tag">@social</span></div>
-          <div class="tv-mem"><div class="av a5">📊</div><div class="nm">Revenue Analyst</div><span class="tag">@rev</span></div>
+        <div class="chat-mock-body">
+          <div class="bub you">Find me a hot product to source. Margin &gt; 50%.</div>
+          <div class="bub ai a1">
+            <div class="who"><div class="av">🛍</div>Product Sourcer</div>
+            Top 3 contenders: <b>Pet calming bed</b> (margin 62%, 8.5k searches/mo), LED skincare mask (58%, 12k), smart pillbox (54%, 4.5k). Pick one to launch?
+          </div>
+          <div class="bub you">#1, the pet bed. <b>@design</b> render lifestyle shots</div>
+          <div class="bub ai a3">
+            <div class="who"><div class="av">📸</div>Visual Designer</div>
+            On it. Generated 5 cozy living-room scenes at golden hour. <span style="text-decoration:underline;color:var(--peach-dark)">imgur.com/abc</span>
+          </div>
+          <div class="bub you"><b>@store</b> ship it to Shopify</div>
+          <div class="bub ai a2">
+            <div class="who"><div class="av">🌐</div>Storefront Architect</div>
+            Live → <span style="text-decoration:underline;color:var(--peach-dark)">cozypets.myshopify.com</span> · Stripe connected · free ship $50+
+          </div>
+          <!-- mention picker -->
+          <div class="mention-pop">
+            <div class="h">Mention someone</div>
+            <div class="r s"><div class="av c1">🛍</div><div class="nm">Product Sourcer</div><span class="tg">Team AI</span></div>
+            <div class="r"><div class="av c2">🌐</div><div class="nm">Storefront Architect</div><span class="tg">Team AI</span></div>
+            <div class="r"><div class="av c3">📱</div><div class="nm">Social Manager</div><span class="tg">Team AI</span></div>
+          </div>
         </div>
-        <div class="tv-flow">
-          @product spots a trend<span class="arrow">→</span>@design renders shots<span class="arrow">→</span>@store goes live
+        <div class="chat-mock-input">
+          <input value="@product" readonly>
+          <div class="send">↑</div>
         </div>
       </div>
     </div>
@@ -566,133 +693,95 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
         <span class="ribbon">@MENTION</span>
         <div class="ic">🎯</div>
         <h4>Pick a specialist.</h4>
-        <p>Type <code style="background:var(--peach-soft);color:var(--peach-dark);font-family:var(--mono);font-size:12.5px;padding:2px 6px;border-radius:5px">@SocialManager</code> and the reply switches to that member's persona, model, and skills. One chat, many minds.</p>
+        <p>Type <code style="background:var(--peach-soft);color:var(--peach-dark);font-family:var(--mono);font-size:12.5px;padding:2px 6px;border-radius:5px">@SocialManager</code> and the reply switches to that member's persona and model. One chat, many minds.</p>
       </div>
       <div class="team-feat">
-        <span class="ribbon">SHARE & SELL</span>
+        <span class="ribbon">SHARE &amp; SELL</span>
         <div class="ic">🛍</div>
         <h4>Share or sell it.</h4>
         <p>Drop a URL on X / LINE — receivers clone the whole team in one click. List on Agent Store and earn 80% one-time + 10% usage on every clone.</p>
       </div>
     </div>
-
-    <div class="team-templates">
-      <div class="team-templates-h">
-        <span class="lbl">Ready-Made Team Templates</span>
-        <h4>5 starter teams · 1-click launch</h4>
-      </div>
-      <div class="team-tmpl-grid">
-        <div class="team-tmpl">
-          <div class="cover">🛍</div><span class="price">FREE</span>
-          <div class="nm">EC Launch Starter</div>
-          <div class="ds">Source → render → build store → post on social → analyze sales. Run an entire e-commerce business with 5 agents.</div>
-          <div class="av-row"><div class="av">🛍</div><div class="av">📸</div><div class="av">🌐</div><div class="av">📱</div><div class="av">📊</div><span class="ct">5 agents</span></div>
-        </div>
-        <div class="team-tmpl">
-          <div class="cover">📱</div><span class="price">FREE</span>
-          <div class="nm">SNS Growth Starter</div>
-          <div class="ds">Spot trends → write engaging posts → schedule across X / IG / TikTok at peak times.</div>
-          <div class="av-row"><div class="av">📈</div><div class="av">✍️</div><div class="av">📅</div><span class="ct">3 agents</span></div>
-        </div>
-        <div class="team-tmpl">
-          <div class="cover">💼</div><span class="price">FREE</span>
-          <div class="nm">Solo Founder Toolkit</div>
-          <div class="ds">Email writer + meeting note-taker + task tracker. Daily essentials for solo founders.</div>
-          <div class="av-row"><div class="av">📧</div><div class="av">📝</div><div class="av">✅</div><span class="ct">3 agents</span></div>
-        </div>
-        <div class="team-tmpl">
-          <div class="cover">🎓</div><span class="price">FREE</span>
-          <div class="nm">Personal Tutor Squad</div>
-          <div class="ds">Researcher + explainer + quiz maker. Learn anything new — code, finance, language.</div>
-          <div class="av-row"><div class="av">🔍</div><div class="av">🎓</div><div class="av">🧠</div><span class="ct">3 agents</span></div>
-        </div>
-        <div class="team-tmpl">
-          <div class="cover" style="background:linear-gradient(135deg,#1a0a00,#3a1f10);color:#fff;">💻</div>
-          <span class="price" style="background:rgba(251,146,60,.16);color:var(--peach-dark)">$26</span>
-          <div class="nm">Dev Squad</div>
-          <div class="ds">Code reviewer + bug fixer + test writer + deploy helper. Boost code quality without team meetings.</div>
-          <div class="av-row"><div class="av">🔍</div><div class="av">🔧</div><div class="av">🧪</div><div class="av">🚀</div><span class="ct">4 agents</span></div>
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 
-<div class="section-anchor">§ 6 — SHARE</div>
-<!-- ─────────── 6. SHARE ─────────── -->
-<section class="section section-share" id="share">
+<div class="section-anchor">§ 5 — STORE</div>
+<!-- ─────────── 5. STORE ─────────── -->
+<section class="section section-store" id="store">
   <div class="section-inner">
-    <div class="section-head">
-      <span class="live-pill">LIVE</span>
-      <span class="kicker">SHARE</span>
-      <h2 class="h2">One link.<br>Worldwide reach.</h2>
-      <p class="lead">Every agent and team gets a unique URL plus an auto-generated SNS thumbnail. Recipients clone in one click into their own account.</p>
-    </div>
-    <div class="share-row">
-      <div class="share-text">
-        <h3>Distribute<br>via a single URL.</h3>
-        <p>Each agent and each team has its own share URL plus an auto-generated OG image — paste it on X or LINE and visitors can <b>1-click clone</b> into their own account.</p>
+    <div class="store-row">
+      <div class="store-text">
+        <span class="kicker">AGENT STORE</span>
+        <span class="live-pill" style="margin-left:6px">LIVE</span>
+        <h3>Sell what you build.<br>Get paid in your sleep.</h3>
+        <p>Turn the AI you built for yourself into a <b>product</b>. Set your own price. Stripe Connect deposits the revenue directly to your bank.</p>
         <ul>
-          <li>One URL for any channel — Slack, X, LINE, email</li>
-          <li>Auto-generated OG image, sized for X / Facebook</li>
-          <li>1-click clone into the recipient's account</li>
-          <li>Cloned copies are independent (no chat-history leak)</li>
-          <li>Unlist, regenerate, or delete the URL anytime</li>
-        </ul>
-      </div>
-      <div>
-        <div class="share-mock-url">myaiagents.agency/t/k7f2-aGz9-pX3v</div>
-        <div class="share-flow">
-          <div class="share-flow-step"><div class="num">1</div>Click the 🔗 button on your agent or team</div>
-          <div class="share-flow-step"><div class="num">2</div>Share URL + thumbnail to social</div>
-          <div class="share-flow-step"><div class="num">3</div>Visitor hits "Use this" → done</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="section-anchor">§ 7 — AGENT STORE</div>
-<!-- ─────────── 7. STORE ─────────── -->
-<section class="section section-market" id="market">
-  <div class="section-inner">
-    <div class="section-head">
-      <span class="live-pill">LIVE</span>
-      <span class="kicker">AGENT STORE</span>
-      <h2 class="h2">Sell what you build.</h2>
-      <p class="lead">List a polished agent or team on the Agent Store. <b>Creators keep 70-80%</b> of the one-time price plus 10% of usage. Stripe Connect handles payouts.</p>
-    </div>
-    <div class="market-row">
-      <div class="market-text">
-        <h3>Become a creator.<br>Get paid.</h3>
-        <p>Turn the AI you built for yourself into a <b>product</b>. Set your own price. Stripe Connect deposits revenue directly to your bank.</p>
-        <ul>
-          <li>One-click listing, you set the price</li>
+          <li>One-click listing — agent or whole team</li>
           <li>Up to <b>80%</b> creator share + 10% usage royalties</li>
           <li>Stripe Connect Express for direct deposits</li>
-          <li>Reviews, ratings, favorites, tag search built-in</li>
-          <li>Optional verified-creator badge for top sellers</li>
+          <li>Reviews, ratings, favorites, tag search</li>
+          <li>Optional verified-creator badge</li>
         </ul>
         <a class="btn btn-primary" href="/auth.html?tab=signup">Become a creator →</a>
       </div>
-      <div class="market-cards">
-        <div class="market-card"><div class="market-card-av">🛍</div><div class="market-card-mid"><div class="market-card-nm">EC Launch Team</div><div class="market-card-meta">🎯 Team · 5 agents · ★ 4.9 (132)</div></div><div class="market-card-price">$98</div></div>
-        <div class="market-card"><div class="market-card-av">✍️</div><div class="market-card-mid"><div class="market-card-nm">SEO Blog Writer Pro</div><div class="market-card-meta">🤖 Solo Agent · ★ 4.8 (87)</div></div><div class="market-card-price">$24</div></div>
-        <div class="market-card"><div class="market-card-av">💻</div><div class="market-card-mid"><div class="market-card-nm">Dev Squad</div><div class="market-card-meta">🎯 Team · 4 agents · ★ 4.9 (54)</div></div><div class="market-card-price">$26</div></div>
-        <div class="market-card"><div class="market-card-av">🤝</div><div class="market-card-mid"><div class="market-card-nm">CS Tier 1 Bot</div><div class="market-card-meta">🤖 Solo Agent · ★ 4.7 (213)</div></div><div class="market-card-price free">FREE</div></div>
+      <!-- REAL STORE MOCK -->
+      <div class="store-mock">
+        <div class="store-mock-top">
+          <div class="h">🏪 Agent Store</div>
+          <div class="search">🔍  Search agents & teams</div>
+        </div>
+        <div class="store-mock-tabs">
+          <div class="store-mock-tab active">All</div>
+          <div class="store-mock-tab">Solo</div>
+          <div class="store-mock-tab">Team</div>
+          <div class="store-mock-tab">Free</div>
+          <div class="store-mock-tab">Top rated</div>
+        </div>
+        <div class="store-mock-grid">
+          <div class="store-card">
+            <div class="top"><div class="av">🛍</div><div class="t"><span class="badge">🎯 TEAM · 5</span><br>EC Launch Team</div></div>
+            <div class="desc">Source · render · build · post · analyze. Run an entire e-commerce business with 5 agents.</div>
+            <div class="meta"><span>★ 4.9 (132)</span><span class="price">$98</span></div>
+          </div>
+          <div class="store-card">
+            <div class="top"><div class="av" style="background:linear-gradient(135deg,#dbeafe,#3b82f6)">✍️</div><div class="t">SEO Blog Writer</div></div>
+            <div class="desc">Keyword → SERP → outline → draft → links → rewrite. Pro-grade writing.</div>
+            <div class="meta"><span>★ 4.8 (87)</span><span class="price">$24</span></div>
+          </div>
+          <div class="store-card">
+            <div class="top"><div class="av" style="background:#1a0a00;color:#fff">💻</div><div class="t"><span class="badge">🎯 TEAM · 4</span><br>Dev Squad</div></div>
+            <div class="desc">Reviewer + bug fixer + test writer + deploy helper.</div>
+            <div class="meta"><span>★ 4.9 (54)</span><span class="price">$26</span></div>
+          </div>
+          <div class="store-card">
+            <div class="top"><div class="av" style="background:linear-gradient(135deg,#fce7f3,#ec4899)">🎬</div><div class="t">TikTok Scripter</div></div>
+            <div class="desc">Trend mining + hook design + script + CTA + iterate.</div>
+            <div class="meta"><span>★ 4.7 (96)</span><span class="price">$19</span></div>
+          </div>
+          <div class="store-card">
+            <div class="top"><div class="av" style="background:linear-gradient(135deg,#d1fae5,#10b981)">🤝</div><div class="t">CS Tier 1 Bot</div></div>
+            <div class="desc">Triage → first response → escalation → KB.</div>
+            <div class="meta"><span>★ 4.7 (213)</span><span class="price free">FREE</span></div>
+          </div>
+          <div class="store-card">
+            <div class="top"><div class="av" style="background:linear-gradient(135deg,#ede9fe,#a78bfa)">📱</div><div class="t"><span class="badge">🎯 TEAM · 3</span><br>SNS Growth</div></div>
+            <div class="desc">Trend → write → schedule across X / IG / TikTok.</div>
+            <div class="meta"><span>★ 4.8 (41)</span><span class="price free">FREE</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<div class="section-anchor">§ 8 — PRICING (Plan v2)</div>
-<!-- ─────────── 8. PRICING ─────────── -->
+<div class="section-anchor">§ 6 — PRICING (Plan v2)</div>
+<!-- ─────────── 6. PRICING ─────────── -->
 <section class="section section-pricing" id="pricing">
   <div class="section-inner">
     <div class="section-head">
       <span class="kicker">PRICING</span>
       <h2 class="h2">Start free.<br>Scale when ready.</h2>
-      <p class="lead">No price tricks. Bigger plans unlock more agents, more teams, and stronger models — pick what fits.</p>
+      <p class="lead">No tricks. Bigger plans unlock more agents, more teams, and stronger models.</p>
       <div class="pricing-tabs">
         <button class="pricing-tab active">Monthly</button>
         <button class="pricing-tab">Pay as you go</button>
@@ -700,7 +789,6 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
     </div>
 
     <div class="pricing-grid">
-      <!-- FREE -->
       <div class="price-card">
         <div class="price-name">FREE</div>
         <div class="price-amount">$0</div>
@@ -709,7 +797,7 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
         <ul class="price-feats">
           <li><b>3</b> AI agents (DM)</li>
           <li>16 skills · all templates</li>
-          <li>Web search & file upload</li>
+          <li>Web search &amp; file upload</li>
           <li>Haiku model</li>
           <li class="no">Agent Team (need Pro)</li>
           <li class="no">Agent Store listing</li>
@@ -717,7 +805,6 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
         </ul>
         <a class="price-cta" href="/auth.html?tab=signup">Start free →</a>
       </div>
-      <!-- PRO -->
       <div class="price-card popular">
         <div class="price-name">PRO</div>
         <div class="price-amount">$12.99</div>
@@ -734,7 +821,6 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
         </ul>
         <a class="price-cta" href="/auth.html?tab=signup">Go Pro →</a>
       </div>
-      <!-- BUSINESS -->
       <div class="price-card">
         <div class="price-name">BUSINESS</div>
         <div class="price-amount">$32.99</div>
@@ -759,13 +845,13 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
 
     <div class="pricing-compare">
       <b>Existing user before 2026-05-10?</b> You're grandfathered — your $20 / $60 monthly credit and unlimited caps stay.<br>
-      Pricing changed only for new sign-ups. <a href="#" style="color:var(--peach-dark);font-weight:700">See migration FAQ →</a>
+      Pricing changed only for new sign-ups.
     </div>
   </div>
 </section>
 
-<div class="section-anchor">§ 9 — BIG CTA</div>
-<!-- ─────────── 9. BIG CTA ─────────── -->
+<div class="section-anchor">§ 7 — BIG CTA</div>
+<!-- ─────────── 7. BIG CTA ─────────── -->
 <section class="section-cta">
   <div class="inner">
     <h2>Stop asking AI<br>to do things.<br><span class="accent">Hire a team.</span></h2>
@@ -785,40 +871,6 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
   </div>
   <div class="footer-copy">© 2026 MY AI AGENT</div>
 </footer>
-
-<!-- ─────────── DESIGN NOTES ─────────── -->
-<div style="background:#fff;border-top:6px solid var(--peach);padding:48px 24px 80px;">
-  <div style="max-width:900px;margin:0 auto;">
-    <div style="font-family:var(--mono);font-size:11px;color:var(--text-subtle);letter-spacing:.18em;margin-bottom:8px;">📐 DESIGN NOTES</div>
-    <h2 style="font-family:var(--display);font-size:32px;letter-spacing:-.005em;margin-bottom:16px;font-weight:400;">What changed vs the current LP</h2>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;font-size:13.5px;line-height:1.85;color:var(--text-muted);">
-      <div>
-        <h4 style="color:var(--text);font-weight:800;margin-bottom:8px;">🌍 Language</h4>
-        Fully English. Existing JA copy archived (a JA toggle can come back later via /lp.html?lang=ja if needed).
-      </div>
-      <div>
-        <h4 style="color:var(--text);font-weight:800;margin-bottom:8px;">🎯 New section</h4>
-        AI Agent Team becomes a hero feature with its own anchor (#team) and 3 capability cards.
-      </div>
-      <div>
-        <h4 style="color:var(--text);font-weight:800;margin-bottom:8px;">💰 Pricing v2</h4>
-        Free / Pro $12.99 / Biz $32.99 — but credits redrawn at $15 / $45 with feature gates clearly listed.
-      </div>
-      <div>
-        <h4 style="color:var(--text);font-weight:800;margin-bottom:8px;">📜 Grandfather note</h4>
-        Bottom of pricing has a callout for pre-2026-05-10 users explaining their plan stays unchanged.
-      </div>
-      <div>
-        <h4 style="color:var(--text);font-weight:800;margin-bottom:8px;">🔥 Hero rewrite</h4>
-        New copy "YOUR OWN AI TEAM STARTS HERE" leads with team-positioning, not solo-agent.
-      </div>
-      <div>
-        <h4 style="color:var(--text);font-weight:800;margin-bottom:8px;">🎨 Typography</h4>
-        Inter (was Noto Sans JP) + Bebas Neue display. Cleaner, more SaaS-native for English.
-      </div>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>

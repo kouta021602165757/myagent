@@ -11280,16 +11280,23 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
         desc.innerHTML = isJa
           ? '<span style="color:#3730a3;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
           : '<span style="color:#3730a3;font-weight:700">✓ Active · Online</span> — AI can drive this browser';
-      } else if(_isExtCapable()){
-        desc.innerHTML = isJa
-          ? '<span style="color:var(--peach-dark);font-weight:700">⚠ オフライン</span> — Chrome の起動を待っています。再接続できたら自動で復旧します。'
-          : '<span style="color:var(--peach-dark);font-weight:700">⚠ Offline</span> — Waiting for Chrome. We\'ll reconnect automatically.';
-      } else {
+      } else if(!_isExtCapable()){
         // Mobile / non-Chrome: extension can't run here. Make that explicit
         // and reassure them it'll auto-recover when they hit the desktop.
         desc.innerHTML = isJa
           ? '<span style="color:var(--peach-dark);font-weight:700">⚠ オフライン</span> — 拡張機能はデスクトップ Chrome 専用です。PC で開けば自動再接続。'
           : '<span style="color:var(--peach-dark);font-weight:700">⚠ Offline</span> — The extension only runs in desktop Chrome. We\'ll reconnect when you open the app on your PC.';
+      } else if(_extProbeFailStreak >= _EXT_FAIL_STREAK_FLIP){
+        // Desktop Chrome but the extension hasn't responded after ~24s of
+        // polling. Almost certainly uninstalled or disabled — give the user a
+        // direct path to fix it instead of "waiting…" forever.
+        desc.innerHTML = isJa
+          ? '<span style="color:var(--peach-dark);font-weight:700">⚠ 拡張機能が見つかりません</span> — アンインストール / 無効化されている可能性があります。<a href="' + EXT_STORE_URL + '" target="_blank" style="color:#3730a3;font-weight:700;text-decoration:underline">Chrome に再追加</a>'
+          : '<span style="color:var(--peach-dark);font-weight:700">⚠ Extension not found</span> — It may have been uninstalled or disabled. <a href="' + EXT_STORE_URL + '" target="_blank" style="color:#3730a3;font-weight:700;text-decoration:underline">Add to Chrome again</a>';
+      } else {
+        desc.innerHTML = isJa
+          ? '<span style="color:var(--peach-dark);font-weight:700">⚠ オフライン</span> — Chrome の起動を待っています。再接続できたら自動で復旧します。'
+          : '<span style="color:var(--peach-dark);font-weight:700">⚠ Offline</span> — Waiting for Chrome. We\'ll reconnect automatically.';
       }
     }else{
       desc.textContent = isJa
@@ -11310,13 +11317,17 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
 }
 
 // Probe whether the extension is installed (responds to pings via externally_connectable).
+// Timeout is 3s, not 800ms — Chrome MV3 service workers can take 1-3s to wake
+// from cold sleep, and a too-eager timeout was the most common false negative
+// behind "paired but stuck offline" (the SW would respond ~1-2s later, but
+// we'd already given up).
 function _extProbe(){
   return new Promise(function(resolve){
     if(typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage){
       return resolve(false);
     }
     var done=false;
-    var t=setTimeout(function(){ if(!done){ done=true; resolve(false); } }, 800);
+    var t=setTimeout(function(){ if(!done){ done=true; resolve(false); } }, 3000);
     try{
       chrome.runtime.sendMessage(EXT_ID, {type:'status'}, function(resp){
         if(done) return; done=true; clearTimeout(t);
@@ -11351,47 +11362,67 @@ async function connectExtension(){
 //                            autonomous SSE reconnect (works even on mobile)
 var _extReconnectTimer = null;
 var _extReconnectStartedAt = 0;
+var _extProbeFailStreak = 0;        // consecutive probe-fail count
 var _EXT_RECONNECT_INTERVAL_MS = 6000;
 var _EXT_RECONNECT_MAX_MS      = 5 * 60 * 1000; // give up after 5 min idle
+var _EXT_FAIL_STREAK_FLIP      = 4;             // ≈ 24s of failures → flip message
 
 function _extStopBackgroundReconnect(){
   if(_extReconnectTimer){ clearInterval(_extReconnectTimer); _extReconnectTimer = null; }
 }
 
+async function _extReconnectTick(){
+  if(Date.now() - _extReconnectStartedAt > _EXT_RECONNECT_MAX_MS){
+    _extStopBackgroundReconnect(); return;
+  }
+  if(document.hidden) return;
+  if(!me || !me.extension_paired){ _extStopBackgroundReconnect(); return; }
+
+  // Path 1: desktop Chrome with extension reachable → wake SW + silent re-pair.
+  // Path 2: regardless of platform, refresh /api/me to pick up the extension's
+  // own autonomous SSE reconnect (works on mobile too).
+  var capable = _isExtCapable();
+  if(capable){
+    try{
+      var installed = await _extProbe();
+      if(installed){
+        _extProbeFailStreak = 0;
+        await _extPairOnce(false);
+      } else {
+        _extProbeFailStreak++;
+        // After ~24s of "extension flagged paired in DB but never responding",
+        // assume it was uninstalled / disabled and flip the UI to a clearer
+        // "reinstall" guidance so the user isn't left staring at "waiting…"
+        // forever. Re-render picks up the new copy via _extProbeFailStreak.
+        if(_extProbeFailStreak === _EXT_FAIL_STREAK_FLIP){
+          try{ _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false); }catch(e){}
+        }
+      }
+    }catch(e){ _extProbeFailStreak++; }
+  }
+
+  try{
+    var m = await api('GET','/api/me');
+    var prev = !!(me && me.extension_connected);
+    me = m.user || m;
+    if(me.extension_connected && !prev){
+      _extStopBackgroundReconnect();
+      _extProbeFailStreak = 0;
+      try{ _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false); }catch(e){}
+      showToast(isJa?'✓ 拡張機能に自動再接続しました':'✓ Extension reconnected automatically','ok');
+    }
+  }catch(e){}
+}
+
 function _extStartBackgroundReconnect(){
   if(_extReconnectTimer) return; // already running
   _extReconnectStartedAt = Date.now();
-  _extReconnectTimer = setInterval(async function(){
-    // Stop after 5 min so we don't poll forever in a forgotten tab.
-    if(Date.now() - _extReconnectStartedAt > _EXT_RECONNECT_MAX_MS){
-      _extStopBackgroundReconnect(); return;
-    }
-    if(document.hidden) return;
-    if(!me || !me.extension_paired){ _extStopBackgroundReconnect(); return; }
-
-    // Path 1: if we're on desktop Chrome and the extension is reachable, mint
-    // a fresh token and push it down. Silent — no toast on success.
-    if(_isExtCapable()){
-      try{
-        var installed = await _extProbe();
-        if(installed){ await _extPairOnce(false); }
-      }catch(e){}
-    }
-
-    // Path 2: refresh /api/me. If the extension reconnected its SSE on its
-    // own (Chrome restart, profile switch, mobile→desktop), this is what
-    // flips the UI without any user action.
-    try{
-      var m = await api('GET','/api/me');
-      var prev = !!(me && me.extension_connected);
-      me = m.user || m;
-      if(me.extension_connected && !prev){
-        _extStopBackgroundReconnect();
-        try{ _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false); }catch(e){}
-        showToast(isJa?'✓ 拡張機能に自動再接続しました':'✓ Extension reconnected automatically','ok');
-      }
-    }catch(e){}
-  }, _EXT_RECONNECT_INTERVAL_MS);
+  _extProbeFailStreak = 0;
+  // Fire one tick immediately so we don't make the user wait 6s for the first
+  // attempt — most often this single call already wakes a sleeping SW and
+  // recovers the connection.
+  _extReconnectTick();
+  _extReconnectTimer = setInterval(_extReconnectTick, _EXT_RECONNECT_INTERVAL_MS);
 }
 
 // When the user comes back to this tab (from Chrome restart, etc.) re-probe

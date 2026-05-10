@@ -3120,6 +3120,21 @@ a{color:inherit;}
   <div class="lp-desc-box">${_xmlEscape(d.description||'')}</div>
 </div>
 
+${d.is_team && Array.isArray(d.team_members) && d.team_members.length ? `<div class="lp-section">
+  <h2>${lang==='en'?'Team members':'チームのメンバー'} <span style="font-size:14px;color:#9a6a4a;font-weight:600;letter-spacing:0">· ${d.member_count||d.team_members.length} ${lang==='en'?'agents':'体'}</span></h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:12px">
+    ${d.team_members.map((m, i) => `<div style="background:#fff;border:1px solid rgba(180,120,80,.16);border-radius:13px;padding:14px;display:flex;align-items:flex-start;gap:11px">
+      <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${_xmlEscape(m.avatar||'🤖')}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:800;color:#ea580c;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px">Step ${i+1}</div>
+        <div style="font-size:13.5px;font-weight:800;letter-spacing:-.005em;margin-bottom:5px">${_xmlEscape(m.name||'AI')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${(m.skills||[]).slice(0,3).map(s => `<span style="background:#faf3eb;color:#5c3a1e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;border:.5px solid rgba(180,120,80,.18)">${_xmlEscape(s)}</span>`).join('')}</div>
+      </div>
+    </div>`).join('')}
+  </div>
+  ${d.team_goal ? `<div style="margin-top:14px;padding:13px 16px;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:11px;font-size:13.5px;color:#5c3a1e;line-height:1.7"><b style="color:#ea580c">${lang==='en'?'Team goal':'チームの目的'}:</b> ${_xmlEscape(d.team_goal)}</div>` : ''}
+</div>` : ''}
+
 ${d.demo_prompts && d.demo_prompts.length ? `<div class="lp-section">
   <h2>${t.demosSectionH}</h2>
   <div class="lp-demos">
@@ -3384,6 +3399,16 @@ function buildSystem(agent, opts){
   const isGroup = !!(opts && opts.isGroup);
   const speakerName = (opts && opts.speakerName) || '';
   const memories = (opts && Array.isArray(opts.memories)) ? opts.memories : [];
+  // Team context — injected into a team member's prompt so they know they're
+  // part of a larger team working toward a shared goal.
+  const teamName = (opts && opts.teamName) || '';
+  const teamGoal = (opts && opts.teamGoal) || '';
+  const teamMembers = (opts && Array.isArray(opts.teamMembers)) ? opts.teamMembers : [];
+  const teamNote = (teamName || teamGoal) ? `
+
+【あなたが所属するチーム】
+- チーム名: ${teamName || '(無題)'}
+${teamGoal ? `- チームの目的: ${teamGoal}\n` : ''}${teamMembers.length ? `- 他のメンバー: ${teamMembers.map(m => '@'+(m.name||'').replace(/\s+/g,'')+'('+(m.name||'')+')').join(' / ')}\n` : ''}この目的を踏まえてあなたの専門性で貢献し、必要なら他メンバーへの引き継ぎ案 (例: 「次は @SocialManager に投稿文の生成を依頼しましょう」) を 1 行添えてください。` : '';
   const memoriesNote = memories.length ? `
 
 【ユーザーが覚えておいてほしいこと (long-term memories)】
@@ -3497,7 +3522,7 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 正しい動作: web_fetch('https://x.com') を呼ぶ → 結果を要約して返す (ログイン壁ならその旨も伝える)
 誤り: 「ブラウザを操作できません」とテキストだけで返す`
     : '';
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
+  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4606,6 +4631,88 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     console.log('[teams/add-member] team='+teamId+' agent='+newAgent.id+' name="'+newAgent.name+'"');
     return jres(res,201,{ ok:true, agent: newAgent, member_count: team.team_member_agent_ids.length });
+  }
+
+  // ── DELETE /api/teams/:teamId/members/:agentId ─────────────
+  // Remove an agent from a team. Query ?delete=1 also deletes the agent;
+  // otherwise the agent stays in user.agents and resurfaces in the DM list
+  // (team_origin cleared).
+  const trmMatch = pathname.match(/^\/api\/teams\/([^/]+)\/members\/([^/]+)$/);
+  if(trmMatch && method==='DELETE'){
+    const teamId = trmMatch[1];
+    const memId  = trmMatch[2];
+    const team = (user.agents||[]).find(a => a.id===teamId);
+    if(!team || !team.is_team) return jres(res,404,{error:'チームが見つかりません'});
+    if(team.host_id !== user.id) return jres(res,403,{error:'ホストのみメンバーを外せます'});
+    const ids = Array.isArray(team.team_member_agent_ids) ? team.team_member_agent_ids : [];
+    if(!ids.includes(memId)) return jres(res,404,{error:'そのメンバーはこのチームに属していません'});
+    if(ids.length <= 1) return jres(res,400,{error:'チームには最低 1 体のメンバーが必要です'});
+
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const alsoDelete = qs.get('delete') === '1';
+    const member = (user.agents||[]).find(a => a.id===memId);
+    const memberName = (member && member.name) || 'メンバー';
+
+    team.team_member_agent_ids = ids.filter(x => x !== memId);
+    team.updated_at = new Date().toISOString();
+    team.history = Array.isArray(team.history) ? team.history : [];
+    team.history.push({
+      role: 'system',
+      content: alsoDelete
+        ? `🗑 ${memberName} をチームから外し、削除しました。`
+        : `👋 ${memberName} がチームから外れました (DM に戻しました)。`,
+      time: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}),
+    });
+    if(alsoDelete){
+      user.agents = (user.agents||[]).filter(a => a.id !== memId);
+    } else if(member){
+      // Drop team_origin so the agent reappears in the DM tab
+      delete member.team_origin;
+      member.updated_at = new Date().toISOString();
+    }
+    try { await DB.save(user); }
+    catch(e){
+      console.error('[teams/remove-member] DB.save failed', e.message);
+      return jres(res,500,{error:'保存に失敗しました: '+(e.message||'unknown')});
+    }
+    console.log('[teams/remove-member] team='+teamId+' agent='+memId+' delete='+alsoDelete);
+    return jres(res,200,{ ok:true, member_count: team.team_member_agent_ids.length, deleted: alsoDelete });
+  }
+
+  // ── DELETE /api/teams/:teamId ──────────────────────────────
+  // Delete a whole team. Query ?keep_members=1 keeps the cloned agents
+  // (clears team_origin so they appear in DM); otherwise deletes them too.
+  const tdmMatch = pathname.match(/^\/api\/teams\/([^/]+)$/);
+  if(tdmMatch && method==='DELETE'){
+    const teamId = tdmMatch[1];
+    const team = (user.agents||[]).find(a => a.id===teamId);
+    if(!team || !team.is_team) return jres(res,404,{error:'チームが見つかりません'});
+    if(team.host_id !== user.id) return jres(res,403,{error:'ホストのみチームを削除できます'});
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const keepMembers = qs.get('keep_members') === '1';
+    const memberIds = Array.isArray(team.team_member_agent_ids) ? team.team_member_agent_ids : [];
+    if(keepMembers){
+      // Restore each member to the DM list
+      for(const a of (user.agents||[])){
+        if(memberIds.includes(a.id) && a.team_origin && a.team_origin.team_id === teamId){
+          delete a.team_origin;
+          a.updated_at = new Date().toISOString();
+        }
+      }
+      user.agents = (user.agents||[]).filter(a => a.id !== teamId);
+    } else {
+      // Delete the team and every member that was tagged as part of it
+      user.agents = (user.agents||[]).filter(a =>
+        a.id !== teamId && !(memberIds.includes(a.id) && a.team_origin && a.team_origin.team_id === teamId)
+      );
+    }
+    try { await DB.save(user); }
+    catch(e){
+      console.error('[teams/delete] DB.save failed', e.message);
+      return jres(res,500,{error:'削除に失敗しました: '+(e.message||'unknown')});
+    }
+    console.log('[teams/delete] team='+teamId+' keep_members='+keepMembers+' member_count='+memberIds.length);
+    return jres(res,200,{ ok:true, kept_members: keepMembers ? memberIds.length : 0 });
   }
 
   // ── POST /api/agents/reorder ───────────────────────────────
@@ -6729,6 +6836,21 @@ async function handleAPI(req,res,pathname,method,ip){
       }
       if(teamMemberAgent) aiShouldRespond = true;
     }
+    // Team context for buildSystem — pass team name + goal + sibling members
+    // so the AI knows what team it belongs to and what handoffs to suggest.
+    let _teamCtx = null;
+    if(agent.is_team){
+      const memberAgents = (Array.isArray(agent.team_member_agent_ids) ? agent.team_member_agent_ids : [])
+        .map(id => (payerUser.agents||[]).find(a => a.id===id))
+        .filter(Boolean);
+      _teamCtx = {
+        teamName: agent.name || '',
+        teamGoal: agent.team_goal || '',
+        teamMembers: memberAgents
+          .filter(m => !teamMemberAgent || m.id !== teamMemberAgent.id)
+          .map(m => ({ name: m.name||'AI' })),
+      };
+    }
     if(isGroup && !aiMentioned && !teamMemberAgent){
       const memberCount = Array.isArray(agent.members) ? agent.members.length : 1;
       if(typeof agent.ai_auto_respond === 'boolean'){
@@ -6873,7 +6995,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         }, agent.model);
@@ -6972,7 +7094,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), tools);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -7069,7 +7191,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), agent.model);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -7090,7 +7212,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories)}), agent.model);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), agent.model);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

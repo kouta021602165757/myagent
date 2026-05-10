@@ -2277,6 +2277,12 @@ body{color:#f0f0f8;}
           </div>
         </div>
       </div>
+
+      <!-- Danger zone -->
+      <div style="margin-top:18px;padding:12px 14px;border:1px dashed rgba(239,68,68,.35);border-radius:11px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:11px;color:var(--text2);font-weight:700;flex:1">⚠️ チームを削除すると、メンバー AI を DM に戻すか一緒に削除するか選べます。</div>
+        <button id="teamDeleteBtn" type="button" style="background:#fff;border:1px solid rgba(239,68,68,.5);color:#dc2626;border-radius:8px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0">🗑 チームを削除</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5625,6 +5631,19 @@ var _JA2EN = {
 
   // Time labels
   'たった今': 'just now', '分前': ' min ago', '時間前': ' h ago', '日前': ' d ago',
+
+  // ── Team add/remove member + delete flows ──
+  '＋ メンバーを追加': '+ Add member',
+  '✨ AI に作ってもらう': '✨ Let AI generate',
+  '生成中…': 'Generating…',
+  'チームから外す': 'Remove from team',
+  '🗑 チームを削除': '🗑 Delete team',
+  '⚠️ チームを削除すると、メンバー AI を DM に戻すか一緒に削除するか選べます。':
+    '⚠️ Deleting the team lets you choose whether to keep members in DM or delete them too.',
+  'どんなメンバーを追加しますか？ 役割や担当業務を書くと、AI が 名前 ・ アイコン ・ スキル ・ 性格 を組み立てます。':
+    'What kind of member do you want to add? Describe the role and tasks; AI will assemble name · icon · skills · persona for you.',
+  '例: SEO 担当のライター / 競合分析が得意なリサーチャー / コードレビューしてくれるエンジニア':
+    'e.g. SEO writer / competitive analyst / code reviewer',
 
   // ── Agent Team — generation flow ──
   'どんな業務を自動化したいですか？': 'What would you like to automate?',
@@ -9028,6 +9047,11 @@ function openTeamEdit(teamId){
       if(subTxt) subTxt.innerHTML = 'このチームを丸ごとストアに出すと、他のユーザーが <b>1 クリックで自分のアカウントに複製</b> できます。買い切り価格の 70% + 利用料の 10% が収益になります。';
     }
   }
+  // Wire the delete button to deleteTeam()
+  var delBtn = document.getElementById('teamDeleteBtn');
+  if(delBtn){
+    delBtn.onclick = function(){ closeTeamEdit(); deleteTeam(team.id); };
+  }
   document.getElementById('teamEditOverlay').classList.add('open');
 }
 function closeTeamEdit(){
@@ -9125,11 +9149,16 @@ function openTeamMembersPanel(teamId){
       var personaPreview = (m.persona||'').slice(0,140);
       if((m.persona||'').length>140) personaPreview += '…';
       var modelLabel = ({haiku:'Haiku',sonnet:'Sonnet',opus:'Opus'}[m.model||'sonnet']) || 'Sonnet';
+      // Remove button only for hosts AND when team has > 1 member (server enforces this too)
+      var canRemove = isTeamHost && members.length > 1;
+      var rmBtn = canRemove
+        ? '<button onclick="removeTeamMember(\''+esc(team.id)+'\',\''+esc(m.id)+'\',\''+esc((m.name||'').replace(/\\|\x27/g,"\\$&"))+'\')" title="'+L('チームから外す','Remove from team')+'" style="background:#fff;color:var(--rose);border:1px solid var(--wire2);border-radius:9px;padding:8px 10px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0">🗑</button>'
+        : '';
       return ''
         + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:13px;padding:14px 14px 12px;display:flex;gap:12px;align-items:flex-start">'
         +   '<div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+_avHTML(m.avatar||'🤖')+'</div>'
         +   '<div style="flex:1;min-width:0">'
-        +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">'
+        +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap">'
         +       '<div style="font-size:14px;font-weight:900;letter-spacing:-.005em">'+esc(m.name||'')+'</div>'
         +       '<span style="font-size:9.5px;font-weight:800;background:rgba(251,146,60,.12);color:var(--peach-dark);padding:1px 7px;border-radius:99px;letter-spacing:.04em">@'+esc((m.name||'').replace(/\s+/g,''))+'</span>'
         +       '<span style="font-size:9.5px;font-weight:700;color:var(--text3)">·</span>'
@@ -9138,7 +9167,10 @@ function openTeamMembersPanel(teamId){
         +     (personaPreview ? '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:6px;white-space:pre-wrap">'+esc(personaPreview)+'</div>' : '')
         +     '<div>'+skillsTxt+'</div>'
         +   '</div>'
-        +   '<button onclick="closeTeamMembersPanel();openEditAgent(\''+esc(m.id)+'\')" title="'+L('編集','Edit')+'" style="background:var(--peach);color:#fff;border:0;border-radius:9px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0;box-shadow:0 3px 9px rgba(251,146,60,.25)">✏️ '+L('編集','Edit')+'</button>'
+        +   '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">'
+        +     '<button onclick="closeTeamMembersPanel();openEditAgent(\''+esc(m.id)+'\')" title="'+L('編集','Edit')+'" style="background:var(--peach);color:#fff;border:0;border-radius:9px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 9px rgba(251,146,60,.25)">✏️ '+L('編集','Edit')+'</button>'
+        +     rmBtn
+        +   '</div>'
         + '</div>';
     }).join('');
   }
@@ -9146,6 +9178,72 @@ function openTeamMembersPanel(teamId){
 }
 function closeTeamMembersPanel(){
   document.getElementById('teamMembersOverlay')?.classList.remove('open');
+}
+
+/* ── Remove a member from a team (host only) ───────────────── */
+async function removeTeamMember(teamId, memberId, memberName){
+  if(!token){ showToast(L('ログインが必要です','Sign in required'),'ng'); return; }
+  // Two-step confirm: (1) Remove only or (2) Remove + delete
+  var msg = (memberName ? '"'+memberName+'" ' : '') + L(
+    'をチームから外しますか？\n\n[OK] = チームから外す (DM タブに戻ります)\n[キャンセル] = やめる',
+    ' will be removed from the team?\n\n[OK] = remove only (the agent stays in your DM list)\n[Cancel] = keep'
+  );
+  if(!confirm(msg)) return;
+  // Optional second prompt to fully delete the agent
+  var alsoDelete = confirm(L(
+    'エージェントも完全に削除しますか？\n\n[OK] = 削除 (履歴含めすべて消えます)\n[キャンセル] = DM に戻すだけ',
+    'Also delete the agent permanently?\n\n[OK] = delete (history is lost)\n[Cancel] = keep it as a DM'
+  ));
+  try {
+    var qs = alsoDelete ? '?delete=1' : '';
+    await api('DELETE','/api/teams/'+teamId+'/members/'+memberId+qs);
+    // Refresh local agents from /api/me
+    try {
+      var meRes = await api('GET','/api/me');
+      if(meRes && meRes.user){ me = meRes.user; if(Array.isArray(me.agents)) agents = me.agents; }
+    } catch(e){}
+    showToast(L((memberName||'メンバー')+' をチームから外しました', (memberName||'Member')+' removed'),'ok');
+    renderAgList();
+    try { openTeamMembersPanel(teamId); } catch(e){}
+    if(activeId === teamId){ try { openAgent(teamId); } catch(e){} }
+  } catch(e){
+    showToast((e && e.message) || L('外せませんでした','Failed to remove'),'ng');
+  }
+}
+
+/* ── Delete the whole team (host only) ─────────────────────── */
+async function deleteTeam(teamId){
+  if(!token){ showToast(L('ログインが必要です','Sign in required'),'ng'); return; }
+  var team = (agents||[]).find(function(a){return a.id===teamId;});
+  if(!team || !team.is_team){ showToast(L('チームが見つかりません','Team not found'),'ng'); return; }
+  if(team.host_id !== me?.id){ showToast(L('ホストのみ削除できます','Only the host can delete'),'ng'); return; }
+  var memCount = (team.team_member_agent_ids||[]).length;
+  var msg = '"'+(team.name||'Team')+'" '+L(
+    'を削除します。\n\n[OK] = メンバーは DM タブに戻す + チームだけ削除\n[キャンセル] = やめる',
+    ' will be deleted.\n\n[OK] = restore members to DM + delete the team only\n[Cancel] = keep'
+  ) + (memCount ? '\n('+memCount+L(' 体のメンバー'+'を保存)',' members will be kept)') : '');
+  if(!confirm(msg)) return;
+  // Second confirm: also delete every member?
+  var alsoDeleteMembers = confirm(L(
+    'メンバー AI もすべて削除しますか？\n\n[OK] = チームと全メンバーを削除\n[キャンセル] = メンバーは DM に戻す (推奨)',
+    'Also delete every member AI?\n\n[OK] = delete the team AND all members\n[Cancel] = keep members in your DM list (recommended)'
+  ));
+  try {
+    var qs = alsoDeleteMembers ? '' : '?keep_members=1';
+    await api('DELETE','/api/teams/'+teamId+qs);
+    try {
+      var meRes = await api('GET','/api/me');
+      if(meRes && meRes.user){ me = meRes.user; if(Array.isArray(me.agents)) agents = me.agents; }
+    } catch(e){}
+    showToast(L('チームを削除しました','Team deleted'),'ok');
+    activeId = null;
+    document.getElementById('chatWrap').style.display='none';
+    document.getElementById('emptyWrap').style.display='';
+    renderAgList();
+    try { goHome(); } catch(e){}
+  } catch(e){
+    showToast((e && e.message) || L('削除に失敗しました','Failed to delete'),'ng');
+  }
 }
 
 /* ── Add a member to an existing team ─────────────────────── */

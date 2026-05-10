@@ -11390,12 +11390,26 @@ async function _extReconnectTick(){
         await _extPairOnce(false);
       } else {
         _extProbeFailStreak++;
-        // After ~24s of "extension flagged paired in DB but never responding",
-        // assume it was uninstalled / disabled and flip the UI to a clearer
-        // "reinstall" guidance so the user isn't left staring at "waiting…"
-        // forever. Re-render picks up the new copy via _extProbeFailStreak.
+        // After ~24s of "extension flagged paired in DB but never responding"
+        // we're confident it's uninstalled / disabled. Auto-unpair on the
+        // server so the UI flips to a clean "Add to Chrome" state with a
+        // single, obvious CTA — no manual reconnect / disconnect dance, and
+        // open the Web Store directly so the user has the URL in hand.
         if(_extProbeFailStreak === _EXT_FAIL_STREAK_FLIP){
+          _extStopBackgroundReconnect();
+          try{
+            await api('POST','/api/extension/unpair',{});
+            if(me){ me.extension_paired=false; me.extension_connected=false; me.extension_device_id=null; }
+          }catch(e){ /* swallow — we still want to update the UI */ }
           try{ _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false); }catch(e){}
+          var win = window.open(EXT_STORE_URL, '_blank');
+          showToast(isJa
+            ? (win ? '拡張機能が見つからないので接続を解除しました。Web Store から再追加してください。'
+                  : '拡張機能が見つかりません。再追加してください: ' + EXT_STORE_URL)
+            : (win ? 'Extension not found — disconnected. Re-add from the Web Store.'
+                  : 'Extension not found. Re-add: ' + EXT_STORE_URL),
+            win ? 'ok' : 'ng');
+          return;
         }
       }
     }catch(e){ _extProbeFailStreak++; }

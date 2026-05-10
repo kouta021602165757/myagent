@@ -2392,13 +2392,25 @@ body{color:#f0f0f8;}
         <div class="chat-foot-inner">
           <div class="chips" id="chips"></div>
 
+          <!-- Inline hint when user types about posting/sending and the active
+               agent doesn't have Browser Extension paired/enabled. -->
+          <div id="extHintBanner" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.32);border-radius:11px;padding:10px 13px;margin-bottom:8px;display:none;align-items:center;gap:10px;font-size:12.5px;color:var(--text-muted)">
+            <span style="font-size:18px;flex-shrink:0">💡</span>
+            <div style="flex:1;min-width:0;line-height:1.5">
+              <b style="color:var(--peach-dark)" id="extHintTitle">Posting needs Browser Extension</b><br>
+              <span id="extHintBody">Enable it to let this AI post to X / Slack / Gmail with your logged-in browser.</span>
+            </div>
+            <button type="button" id="extHintBtn" onclick="_extHintAction()" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">Enable →</button>
+            <button type="button" onclick="document.getElementById('extHintBanner').style.display='none'" style="background:transparent;border:0;color:var(--text-subtle);font-size:18px;cursor:pointer;line-height:1;padding:0 4px" aria-label="Dismiss">×</button>
+          </div>
+
           <!-- Claude-style composer -->
           <div class="composer" style="position:relative">
             <input type="file" id="imgInput" accept="image/*,application/pdf,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
             <div id="mentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>
-            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this);_mentionOnInput(this)" onkeydown="_mentionOnKeydown(event) || taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
+            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this);_mentionOnInput(this);_extHintCheck(this.value)" onkeydown="_mentionOnKeydown(event) || taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
             <div class="composer-tools">
               <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイルを添付 (画像/PDF/テキスト/コード)" id="attachBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -8268,6 +8280,52 @@ function _updateChromeTool(ag){
   btn.classList.remove('warn');
   btn.classList.add('active');
   btn.title=isJa?'Google Chrome 連携 ON':'Google Chrome integration ON';
+}
+
+/* ── Extension hint banner — shown above composer when the user types a
+ * "post / send / tweet" intent and the active agent doesn't have Browser
+ * Extension paired AND enabled. The agent's reply will explain too, but
+ * surfacing it inline lets the user fix it before sending. ───────── */
+var _EXT_INTENT_RE = /(?:^|[\s　])(?:x\s*(?:に|で)?\s*(?:投稿|ポスト|ツイ(?:ート)?|つぶや)|tweet|post(?:\s+to|\s+on)?\s+(?:x|twitter|tweet)|twitterに?投稿|スラック?で?(?:送|投稿)|slack(?:\s+に|\s+で)?\s*(?:送|post|message)|gmailで?(?:送|返信|メール)|emailで?(?:送|返信)|拡張機能|browser\s+extension)/i;
+function _extHintCheck(text){
+  var bn = document.getElementById('extHintBanner');
+  if(!bn) return;
+  if(!text || text.length < 3){ bn.style.display='none'; return; }
+  var ag = (agents||[]).find(function(a){return a.id===activeId;});
+  if(!ag){ bn.style.display='none'; return; }
+  // Already paired AND enabled on this agent → no hint
+  if(me && me.extension_paired && ag.extension_enabled){ bn.style.display='none'; return; }
+  // Only show when intent looks like posting/sending
+  if(!_EXT_INTENT_RE.test(text)){ bn.style.display='none'; return; }
+  // Choose state: not paired vs paired-but-not-enabled
+  var t = document.getElementById('extHintTitle');
+  var b = document.getElementById('extHintBody');
+  var btn = document.getElementById('extHintBtn');
+  if(!me || !me.extension_paired){
+    t.textContent = L('投稿には拡張機能のペアリングが必要', 'Posting needs Browser Extension');
+    b.textContent = L('X / Slack / Gmail にログイン済みのブラウザを操作するため、拡張機能をペアリングしてください。',
+                       'Pair the Browser Extension to let this AI post / send via your logged-in browser (X, Slack, Gmail, …).');
+    btn.textContent = L('ペアリング →','Pair →');
+  } else {
+    t.textContent = L('このエージェントで拡張機能が OFF', 'Extension is OFF for this agent');
+    b.textContent = L('このエージェントの編集画面で「🌐 ブラウザ拡張連携」を ON にしてください。',
+                       'Edit this agent and turn ON "🌐 Browser Extension".');
+    btn.textContent = L('編集 →','Edit →');
+  }
+  bn.style.display = 'flex';
+}
+function _extHintAction(){
+  var bn = document.getElementById('extHintBanner');
+  if(bn) bn.style.display = 'none';
+  if(!me || !me.extension_paired){
+    // Open extension setup page
+    window.open('/setup-extension.html','_blank');
+    return;
+  }
+  // Paired but not enabled on this agent → open agent edit
+  if(activeId){
+    try { openEditAgent(activeId); } catch(e){}
+  }
 }
 
 async function regenerateMsg(btn){

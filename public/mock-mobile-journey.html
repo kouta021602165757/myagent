@@ -1,0 +1,1375 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MY AI AGENT — Mobile Preview (LP → Post-login)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --peach:#fb923c; --peach-dark:#ea580c;
+    --peach-soft:rgba(251,146,60,.08); --peach-light:#fde8d8;
+    --bg:#fdf8f3; --bg-warm:#faf3eb; --bg-card:#fff; --cream2:#f5ead9;
+    --text:#1a0a00; --text-muted:#5c3a1e; --text-subtle:#9a6a4a;
+    --line:rgba(180,120,80,.14); --line-strong:rgba(180,120,80,.22);
+    --violet:#8b5cf6; --green:#10b981; --blue:#3b82f6; --pink:#ec4899; --rose:#ef4444;
+
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Helvetica Neue','Hiragino Sans','Noto Sans JP',sans-serif;
+    --display:'Bebas Neue',serif;
+    --mono:'DM Mono','SF Mono',Menlo,monospace;
+
+    --frame:#0a0a0c; --frame-edge:#1c1d22;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; min-height: 100%;
+    font-family: var(--sans);
+    color: var(--text);
+    background:
+      radial-gradient(1200px 700px at 10% -10%, rgba(251,146,60,.18) 0%, transparent 55%),
+      radial-gradient(1000px 600px at 110% 110%, rgba(139,92,246,.10) 0%, transparent 60%),
+      var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  .stage { padding: 56px 20px 80px; }
+  .stage > header {
+    text-align: center;
+    margin: 0 auto 36px;
+    max-width: 760px;
+  }
+  .stage > header .eyebrow {
+    display: inline-block; font-family: var(--mono);
+    font-size: 11px; letter-spacing: .18em; color: var(--peach-dark);
+    background: var(--peach-soft); padding: 5px 12px; border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .stage > header h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 6vw, 56px); line-height: 1; letter-spacing: -.01em;
+    margin: 12px 0 8px;
+  }
+  .stage > header p {
+    margin: 0; color: var(--text-muted); font-size: 14px;
+  }
+  .row {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 36px 28px;
+  }
+  .col { display: flex; flex-direction: column; align-items: center; }
+  .caption {
+    margin-top: 16px; text-align: center;
+    color: var(--text-muted);
+    font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+    max-width: 320px;
+  }
+  .caption b { color: var(--text); font-weight: 700; }
+  .caption .step {
+    display: inline-block;
+    background: var(--peach); color: #fff;
+    width: 22px; height: 22px; border-radius: 50%;
+    font-family: var(--sans); font-weight: 800;
+    line-height: 22px; margin-right: 6px;
+    box-shadow: 0 4px 10px rgba(251,146,60,.4);
+  }
+
+  /* ---------- Phone frame ---------- */
+  .phone {
+    --w: 320px;
+    --h: 680px;
+    width: var(--w);
+    height: var(--h);
+    background: var(--frame);
+    border-radius: 48px;
+    padding: 11px;
+    position: relative;
+    box-shadow:
+      0 0 0 2px var(--frame-edge) inset,
+      0 30px 60px rgba(60,30,10,.18),
+      0 8px 24px rgba(60,30,10,.10);
+  }
+  .phone::before, .phone::after {
+    content: ""; position: absolute; background: #2a2c33; border-radius: 2px;
+  }
+  .phone::before { left: -2px; top: 100px; width: 3px; height: 26px; }
+  .phone::after  { right: -2px; top: 138px; width: 3px; height: 50px; }
+
+  .screen {
+    position: relative;
+    width: 100%; height: 100%;
+    border-radius: 38px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .island {
+    position: absolute; top: 9px; left: 50%;
+    transform: translateX(-50%);
+    width: 100px; height: 28px; background: #000; border-radius: 18px; z-index: 6;
+  }
+  .home {
+    position: absolute; left: 50%; bottom: 7px;
+    transform: translateX(-50%);
+    width: 120px; height: 4px; border-radius: 3px;
+    background: rgba(0,0,0,.35); z-index: 7;
+  }
+
+  /* iOS status bar (variants) */
+  .status {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 46px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px;
+    font-size: 13px; font-weight: 600;
+    z-index: 5; pointer-events: none;
+  }
+  .status .right { display: flex; gap: 6px; align-items: center; }
+  .bars { display: inline-flex; gap: 2px; align-items: end; height: 9px; }
+  .bars i { width: 3px; border-radius: 1px; }
+  .bars i:nth-child(1){ height: 3px; }
+  .bars i:nth-child(2){ height: 5px; }
+  .bars i:nth-child(3){ height: 7px; }
+  .bars i:nth-child(4){ height: 9px; }
+  .battery {
+    width: 22px; height: 10px; border-radius: 3px;
+    position: relative; padding: 1px;
+  }
+  .battery::after {
+    content: ""; position: absolute; right: -3px; top: 3px;
+    width: 2px; height: 4px; border-radius: 1px;
+  }
+  .battery span { display: block; width: 80%; height: 100%; border-radius: 1px; }
+
+  /* status — dark text on cream */
+  .status.dark, .status.dark .bars i,
+  .status.dark .battery, .status.dark .battery::after, .status.dark .battery span { color: var(--text); }
+  .status.dark .bars i { background: var(--text); }
+  .status.dark .battery { border: 1.2px solid var(--text); }
+  .status.dark .battery::after { background: var(--text); }
+  .status.dark .battery span { background: var(--text); }
+  .status.dark { color: var(--text); }
+
+  /* ============================================================
+     PHONE 1 — LP (mobile Safari, full sections)
+     ============================================================ */
+  .chrome {
+    position: absolute; top: 46px; left: 0; right: 0;
+    background: rgba(253,248,243,.94);
+    backdrop-filter: saturate(160%) blur(12px);
+    -webkit-backdrop-filter: saturate(160%) blur(12px);
+    border-bottom: 1px solid var(--line-strong);
+    padding: 7px 11px 9px;
+    z-index: 4;
+  }
+  .urlbar {
+    height: 34px; border-radius: 11px;
+    background: #fff; border: 1px solid var(--line);
+    display: flex; align-items: center; gap: 7px;
+    padding: 0 11px;
+    color: var(--text); font-size: 12px;
+  }
+  .urlbar svg { color: var(--text-subtle); }
+  .urlbar .host { color: var(--text); font-weight: 600; }
+  .urlbar .path { color: var(--text-subtle); }
+  .urlbar .reload { margin-left: auto; }
+  .loading {
+    position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; overflow: hidden;
+  }
+  .loading::before {
+    content: ""; position: absolute; left: 0; top: 0; height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--peach), var(--peach-dark));
+    animation: load 2.6s ease-in-out infinite;
+  }
+  @keyframes load {
+    0% { width: 0%; opacity: 1; }
+    60%{ width: 92%; opacity: 1; }
+    80%{ width: 100%; opacity: 1; }
+    100%{ width: 100%; opacity: 0; }
+  }
+
+  .page-lp {
+    position: absolute; inset: 0;
+    padding-top: 92px;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(251,146,60,.15), transparent 45%),
+      radial-gradient(circle at 100% 90%, rgba(139,92,246,.08), transparent 55%),
+      var(--bg);
+    overflow: hidden;
+  }
+  .scroll {
+    height: 100%; overflow-y: auto;
+    scrollbar-width: none;
+    animation: fadein .55s ease .15s both;
+  }
+  .scroll::-webkit-scrollbar { display: none; }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .lp-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(253,248,243,.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13px; }
+  .brand-mark {
+    width: 24px; height: 24px; border-radius: 6px; background: var(--peach);
+    display: grid; place-items: center; color: #fff;
+    font-family: var(--display); font-size: 15px;
+    box-shadow: 0 4px 10px rgba(251,146,60,.32);
+  }
+  .menu {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: #fff; border: 1px solid var(--line-strong);
+    display: grid; place-items: center;
+  }
+  .menu i {
+    width: 13px; height: 1.5px; background: var(--text-muted); display: block;
+    box-shadow: 0 5px 0 var(--text-muted), 0 -5px 0 var(--text-muted);
+  }
+
+  /* LP — Hero */
+  .hero { padding: 22px 16px 16px; text-align: center; }
+  .hero-kicker {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: #fff; border: 1px solid var(--peach);
+    border-radius: 999px; padding: 5px 11px;
+    font-size: 10.5px; font-weight: 700; color: var(--peach-dark);
+    letter-spacing: .04em; margin-bottom: 14px;
+  }
+  .hero-kicker .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--peach);
+    box-shadow: 0 0 0 4px rgba(251,146,60,.18);
+  }
+  .hero h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: 50px; line-height: .96; letter-spacing: -.02em;
+    margin: 0 0 14px; color: var(--text);
+  }
+  .hero h1 .accent { color: var(--peach-dark); position: relative; display: inline-block; }
+  .hero h1 .accent::after {
+    content: ''; position: absolute; left: -2%; right: -2%; bottom: 6%; height: 18%;
+    background: rgba(251,146,60,.28); z-index: -1;
+  }
+  .hero-sub {
+    font-size: 13px; line-height: 1.6;
+    color: var(--text-muted); margin: 0 0 16px; padding: 0 4px;
+  }
+  .hero-sub b { color: var(--text); }
+  .cta { display: flex; flex-direction: column; gap: 8px; padding: 0 4px; }
+  .btn {
+    height: 44px; border-radius: 11px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13.5px;
+    border: 0; text-decoration: none; cursor: pointer; font-family: inherit;
+  }
+  .btn-primary { background: var(--peach); color: #fff; box-shadow: 0 8px 18px rgba(251,146,60,.34); }
+  .btn-ghost { background: #fff; color: var(--text); border: 1px solid var(--line-strong); }
+  .trust {
+    margin-top: 12px;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px;
+    font-size: 10.5px; color: var(--text-subtle);
+  }
+  .trust .check { color: var(--green); font-weight: 800; margin-right: 4px; }
+
+  /* LP — Section common */
+  .sec { padding: 32px 16px; position: relative; }
+  .sec.alt { background: var(--bg-warm); }
+  .sec-head { text-align: center; margin-bottom: 18px; }
+  .kicker {
+    display: inline-block; font-family: var(--mono);
+    font-size: 10px; letter-spacing: .14em; color: var(--peach-dark);
+    background: var(--peach-soft); padding: 4px 10px; border-radius: 999px;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .live-pill {
+    display: inline-block; background: #dc2626; color: #fff;
+    font-size: 9px; font-weight: 900; letter-spacing: .08em;
+    padding: 3px 8px; border-radius: 999px; margin-right: 6px;
+    text-transform: uppercase;
+  }
+  .h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: 36px; line-height: 1.02; letter-spacing: -.01em;
+    margin: 0 0 8px;
+  }
+  .lead { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; margin: 0; }
+
+  /* LP — How */
+  .step-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px;
+    margin-bottom: 10px; position: relative;
+  }
+  .step-num {
+    font-family: var(--display); font-size: 26px; color: var(--peach);
+    line-height: 1;
+  }
+  .step-title { font-size: 14px; font-weight: 800; margin: 6px 0 4px; }
+  .step-desc { font-size: 11.5px; color: var(--text-muted); line-height: 1.55; margin: 0 0 8px; }
+  .step-mock {
+    font-family: var(--mono); font-size: 10.5px;
+    background: var(--cream2); border: 1px dashed var(--line-strong);
+    border-radius: 8px; padding: 8px 10px; line-height: 1.6;
+  }
+  .step-mock .you { color: var(--text); font-weight: 600; }
+  .step-mock .ai { color: var(--peach-dark); font-weight: 600; }
+
+  /* LP — Build solo */
+  .build h3 {
+    font-family: var(--display); font-weight: 400;
+    font-size: 32px; line-height: 1.05; margin: 0 0 8px;
+  }
+  .build h3 .accent { color: var(--peach-dark); }
+  .build .desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; margin: 0 0 10px; }
+  .build ul { margin: 0 0 14px; padding: 0; list-style: none; }
+  .build li {
+    font-size: 12px; color: var(--text-muted); padding: 4px 0 4px 20px;
+    position: relative; line-height: 1.5;
+  }
+  .build li::before {
+    content: '✓'; position: absolute; left: 0; top: 4px;
+    color: var(--green); font-weight: 800;
+  }
+  .wiz-mock {
+    background: #fff; border: 1px solid var(--line-strong);
+    border-radius: 14px; overflow: hidden; margin-top: 10px;
+  }
+  .wiz-mock-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: var(--bg-warm);
+    border-bottom: 1px solid var(--line);
+    font-weight: 700; font-size: 12px;
+  }
+  .wiz-mock-top .x { color: var(--text-subtle); }
+  .wiz-mock-bar { height: 3px; background: var(--cream2); }
+  .wiz-mock-bar > i { display: block; width: 30%; height: 100%; background: var(--peach); }
+  .wiz-mock-tabs { display: flex; gap: 6px; padding: 8px 10px 0; }
+  .wiz-mock-tab {
+    flex: 1; text-align: center; padding: 6px 4px; border-radius: 8px 8px 0 0;
+    font-size: 10.5px; font-weight: 600; color: var(--text-subtle);
+    background: var(--bg-warm); border: 1px solid var(--line);
+    border-bottom: 0;
+  }
+  .wiz-mock-tab.active { color: var(--peach-dark); background: #fff; }
+  .wiz-mock-body { padding: 10px 12px 12px; }
+  .wiz-mock-step-h { font-weight: 800; font-size: 12.5px; margin-bottom: 4px; }
+  .wiz-mock-step-s { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px; }
+  .wiz-mock-card {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--peach-soft); border: 1px solid rgba(251,146,60,.25);
+    border-radius: 10px; padding: 8px 10px; margin-bottom: 8px;
+  }
+  .wiz-mock-card .em { font-size: 22px; }
+  .wiz-mock-card .h { font-size: 12px; font-weight: 700; }
+  .wiz-mock-card .d { font-size: 10.5px; color: var(--text-muted); }
+  .wiz-mock-list { margin: 0 0 8px; padding: 0; list-style: none; }
+  .wiz-mock-list li { font-size: 11px; color: var(--text-muted); padding: 3px 0 3px 16px; position: relative; }
+  .wiz-mock-list li::before { content: '·'; position: absolute; left: 4px; top: 0; font-weight: 800; color: var(--peach); }
+  .wiz-mock-cta { display: flex; gap: 6px; }
+  .wiz-mock-cta .b {
+    flex: 1; height: 32px; border-radius: 8px;
+    background: var(--peach); color: #fff;
+    display: grid; place-items: center; font-size: 11.5px; font-weight: 700;
+  }
+  .wiz-mock-cta .b.alt { background: #fff; color: var(--text); border: 1px solid var(--line-strong); }
+
+  /* LP — Build teams */
+  .gen-flow {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px; margin-top: 10px;
+  }
+  .gen-flow .input-h { font-size: 10px; color: var(--text-subtle); font-family: var(--mono); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
+  .gen-flow .input-box {
+    background: var(--cream2); border: 1px dashed var(--line-strong);
+    border-radius: 8px; padding: 8px 10px;
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.55;
+  }
+  .gen-arrow { text-align: center; margin: 6px 0; color: var(--peach-dark); font-weight: 800; }
+  .out-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .out-card {
+    background: var(--peach-soft); border: 1px solid rgba(251,146,60,.25);
+    border-radius: 10px; padding: 8px; text-align: center;
+  }
+  .out-card .em { font-size: 18px; }
+  .out-card .nm { font-size: 11px; font-weight: 700; }
+  .out-card .rl { font-size: 9.5px; color: var(--text-subtle); font-family: var(--mono); }
+
+  .chat-mock {
+    background: #fff; border: 1px solid var(--line-strong);
+    border-radius: 14px; overflow: hidden; margin-top: 14px;
+  }
+  .chat-mock-top {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px; border-bottom: 1px solid var(--line);
+    background: var(--bg-warm);
+  }
+  .chat-mock-top .em { font-size: 18px; }
+  .chat-mock-top .h { font-size: 12px; font-weight: 800; line-height: 1; }
+  .chat-mock-top .s { font-size: 10px; color: var(--text-subtle); margin-top: 2px; }
+  .chat-mock-top .pill {
+    margin-left: auto;
+    font-size: 9px; font-weight: 800; color: var(--peach-dark);
+    background: var(--peach-soft); padding: 3px 6px; border-radius: 5px;
+  }
+  .chat-mock-body { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .bub {
+    max-width: 86%; padding: 7px 10px;
+    border-radius: 12px; font-size: 11.5px; line-height: 1.5;
+  }
+  .bub.you { align-self: flex-end; background: var(--peach); color: #fff; border-bottom-right-radius: 4px; }
+  .bub.ai { align-self: flex-start; background: var(--bg-warm); color: var(--text); border-bottom-left-radius: 4px; border: 1px solid var(--line); }
+  .bub.ai .who {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 800; color: var(--peach-dark);
+    margin-bottom: 4px;
+  }
+  .bub.ai .who .av {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--peach); color: #fff;
+    display: grid; place-items: center; font-size: 10px;
+  }
+  .chat-mock-input {
+    display: flex; gap: 6px; align-items: center;
+    padding: 8px 10px; border-top: 1px solid var(--line);
+  }
+  .chat-mock-input input {
+    flex: 1; height: 30px; border-radius: 8px;
+    border: 1px solid var(--line-strong);
+    padding: 0 10px; font-size: 11.5px; font-family: var(--mono);
+    background: #fff; color: var(--text);
+    outline: none;
+  }
+  .chat-mock-input .send {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--peach); color: #fff;
+    display: grid; place-items: center; font-weight: 800;
+  }
+
+  /* LP — Store */
+  .store-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-top: 12px;
+  }
+  .store-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px;
+  }
+  .store-card .top { display: flex; gap: 8px; align-items: flex-start; }
+  .store-card .av {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--peach-soft); color: var(--peach-dark);
+    display: grid; place-items: center; font-size: 14px; flex: 0 0 28px;
+  }
+  .store-card .badge {
+    display: inline-block;
+    font-size: 8.5px; font-weight: 800; color: var(--peach-dark);
+    background: var(--peach-soft); padding: 1px 5px; border-radius: 4px;
+    margin-bottom: 2px;
+  }
+  .store-card .t { font-size: 11px; font-weight: 800; line-height: 1.2; }
+  .store-card .desc { font-size: 10px; color: var(--text-subtle); line-height: 1.5; margin: 6px 0 6px; }
+  .store-card .meta {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 10px; color: var(--text-muted);
+  }
+  .store-card .price { color: var(--peach-dark); font-weight: 800; }
+  .store-card .price.free { color: var(--green); }
+
+  /* LP — Pricing */
+  .price-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px;
+    margin-bottom: 10px; position: relative;
+  }
+  .price-card.popular {
+    border-color: var(--peach);
+    box-shadow: 0 10px 24px rgba(251,146,60,.18);
+  }
+  .price-card.popular::before {
+    content: 'POPULAR';
+    position: absolute; top: -10px; right: 12px;
+    background: var(--peach); color: #fff;
+    font-size: 9px; font-weight: 900; letter-spacing: .12em;
+    padding: 3px 8px; border-radius: 999px;
+  }
+  .price-name { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--text-subtle); }
+  .price-amount { font-family: var(--display); font-size: 32px; line-height: 1; color: var(--text); margin-top: 2px; }
+  .price-period { font-size: 10.5px; color: var(--text-subtle); margin-bottom: 6px; }
+  .price-credit {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    color: var(--green); background: rgba(16,185,129,.08);
+    padding: 3px 8px; border-radius: 999px; margin-bottom: 8px;
+  }
+  .price-credit.gone { color: var(--text-subtle); background: var(--cream2); }
+  .price-feats { list-style: none; padding: 0; margin: 0 0 10px; }
+  .price-feats li { font-size: 11px; color: var(--text-muted); padding: 3px 0 3px 16px; position: relative; }
+  .price-feats li::before { content: '✓'; position: absolute; left: 0; top: 3px; color: var(--green); font-weight: 800; }
+  .price-feats li.no { color: var(--text-subtle); opacity: .55; }
+  .price-feats li.no::before { content: '×'; color: var(--text-subtle); }
+  .price-cta {
+    display: block; text-align: center;
+    background: var(--peach); color: #fff;
+    height: 36px; line-height: 36px; border-radius: 9px;
+    font-size: 12px; font-weight: 800; text-decoration: none;
+  }
+
+  /* LP — Big CTA */
+  .big-cta {
+    background: linear-gradient(160deg, #1a0a00 0%, #2a1408 100%);
+    color: #fff;
+    padding: 36px 18px; text-align: center;
+  }
+  .big-cta h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: 38px; line-height: 1; margin: 0 0 10px;
+    color: #fff;
+  }
+  .big-cta h2 .accent {
+    color: var(--peach);
+  }
+  .big-cta p { font-size: 12.5px; color: rgba(255,255,255,.7); margin: 0 0 14px; }
+  .big-cta .btn-primary {
+    display: inline-flex; padding: 0 22px;
+    box-shadow: 0 12px 28px rgba(251,146,60,.42);
+  }
+
+  /* LP — Footer */
+  .lp-footer {
+    padding: 22px 16px 80px;
+    text-align: center;
+    background: #1a0a00; color: rgba(255,255,255,.55);
+  }
+  .lp-footer .b { font-weight: 800; color: #fff; margin-bottom: 8px; }
+  .lp-footer .lk { display: flex; justify-content: center; gap: 14px; font-size: 11px; margin-bottom: 8px; }
+  .lp-footer .lk a { color: rgba(255,255,255,.65); text-decoration: none; }
+  .lp-footer .cp { font-size: 10px; color: rgba(255,255,255,.4); font-family: var(--mono); }
+
+  /* ============================================================
+     PHONE 2 — POST-LOGIN HOME
+     ============================================================ */
+  .app {
+    position: absolute; top: 46px; bottom: 22px; left: 0; right: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+  }
+  .app-h {
+    padding: 10px 14px 8px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(253,248,243,.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .app-h .brand-mark { width: 26px; height: 26px; border-radius: 7px; font-size: 16px; }
+  .app-h .ttl { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+  .app-h .acts { margin-left: auto; display: flex; gap: 6px; }
+  .app-h .ic-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #fff; border: 1px solid var(--line-strong);
+    display: grid; place-items: center; color: var(--text-muted);
+    font-size: 14px;
+  }
+  .app-h .ic-btn.plus {
+    background: var(--peach); color: #fff; border-color: transparent;
+    box-shadow: 0 4px 10px rgba(251,146,60,.32);
+    font-size: 16px; font-weight: 700;
+  }
+  .app-h .me {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--peach), var(--peach-dark));
+    color: #fff; font-weight: 800;
+    display: grid; place-items: center; font-size: 12px;
+    box-shadow: 0 4px 10px rgba(251,146,60,.32);
+  }
+
+  .app-body { flex: 1; overflow-y: auto; scrollbar-width: none; }
+  .app-body::-webkit-scrollbar { display: none; }
+
+  .greet {
+    padding: 16px 14px 6px;
+  }
+  .greet h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+  .greet .now { font-size: 10px; color: var(--text-subtle); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+  .greet .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+
+  .qc-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    padding: 12px 14px;
+  }
+  .qc {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 6px; text-align: center;
+    box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  }
+  .qc .ic { font-size: 20px; }
+  .qc .lbl { font-size: 10px; font-weight: 800; color: var(--text); margin-top: 4px; }
+  .qc .sub { font-size: 9px; color: var(--text-subtle); margin-top: 1px; }
+
+  .sec-h {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px 6px;
+  }
+  .sec-h .t { font-size: 11px; font-weight: 800; letter-spacing: .12em; color: var(--text-subtle); text-transform: uppercase; }
+  .sec-h .add {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--peach-soft); color: var(--peach-dark);
+    display: grid; place-items: center; font-size: 13px; font-weight: 800;
+  }
+
+  .row-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px;
+  }
+  .row-item:active { background: rgba(251,146,60,.06); }
+  .row-item.on { background: rgba(251,146,60,.06); }
+  .row-item .av {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: grid; place-items: center; font-size: 16px;
+    background: var(--peach-soft); color: var(--peach-dark);
+    flex-shrink: 0;
+  }
+  .row-item .av.v { background: rgba(139,92,246,.12); color: var(--violet); }
+  .row-item .av.b { background: rgba(59,130,246,.12); color: var(--blue); }
+  .row-item .av.g { background: rgba(16,185,129,.12); color: var(--green); }
+  .row-item .av.p { background: rgba(236,72,153,.12); color: var(--pink); }
+  .row-item .info { flex: 1; min-width: 0; }
+  .row-item .nm {
+    font-size: 13px; font-weight: 700; line-height: 1.2;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .row-item .nm .pill {
+    font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
+    color: var(--peach-dark); background: var(--peach-soft);
+    letter-spacing: .04em;
+  }
+  .row-item .pv {
+    font-size: 11px; color: var(--text-subtle); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .row-item .meta {
+    text-align: right; flex-shrink: 0;
+  }
+  .row-item .ti { font-size: 10px; color: var(--text-subtle); font-family: var(--mono); }
+  .row-item .badge {
+    display: inline-block; min-width: 18px; height: 18px;
+    background: var(--peach); color: #fff;
+    border-radius: 9px; padding: 0 5px;
+    font-size: 10px; font-weight: 800; line-height: 18px;
+    margin-top: 4px;
+  }
+
+  .tb {
+    display: flex; border-top: 1px solid var(--line);
+    background: rgba(253,248,243,.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .tb-item {
+    flex: 1; padding: 8px 0 6px;
+    text-align: center; font-size: 9.5px; font-weight: 700;
+    color: var(--text-subtle); background: transparent; border: 0;
+    font-family: inherit;
+  }
+  .tb-item .em { display: block; font-size: 18px; line-height: 1; margin-bottom: 2px; }
+  .tb-item.active { color: var(--peach-dark); }
+  .tb-item.active .em {
+    filter: drop-shadow(0 0 0 var(--peach-dark));
+  }
+
+  /* ============================================================
+     PHONE 3 — TEAM CHAT
+     ============================================================ */
+  .chat-h {
+    padding: 8px 12px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(253,248,243,.94);
+  }
+  .chat-h .back {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: var(--text-muted); font-size: 18px; font-weight: 700;
+  }
+  .chat-h .avatar {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--peach-soft); color: var(--peach-dark);
+    display: grid; place-items: center; font-size: 16px;
+    flex-shrink: 0;
+  }
+  .chat-h .info { flex: 1; min-width: 0; line-height: 1.15; }
+  .chat-h .info .h { font-size: 13px; font-weight: 800; }
+  .chat-h .info .s { font-size: 10px; color: var(--text-subtle); margin-top: 2px; }
+  .chat-h .info .s .live {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); margin-right: 4px;
+    box-shadow: 0 0 0 3px rgba(16,185,129,.18);
+  }
+  .chat-h .menu-dot {
+    color: var(--text-muted); font-size: 16px; padding: 0 4px;
+  }
+
+  .chat-body {
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: none;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(251,146,60,.10), transparent 40%),
+      var(--bg);
+  }
+  .chat-body::-webkit-scrollbar { display: none; }
+
+  .b-day {
+    align-self: center;
+    font-size: 9.5px; color: var(--text-subtle);
+    background: rgba(255,255,255,.7);
+    padding: 3px 9px; border-radius: 999px;
+    font-family: var(--mono); letter-spacing: .08em;
+    border: 1px solid var(--line);
+  }
+  .b-bub {
+    max-width: 86%; padding: 8px 11px;
+    border-radius: 14px; font-size: 12px; line-height: 1.5;
+  }
+  .b-bub.you {
+    align-self: flex-end;
+    background: var(--peach); color: #fff;
+    border-bottom-right-radius: 5px;
+  }
+  .b-bub.ai {
+    align-self: flex-start;
+    background: #fff; color: var(--text);
+    border: 1px solid var(--line);
+    border-bottom-left-radius: 5px;
+  }
+  .b-bub.ai .who {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; font-weight: 800; color: var(--peach-dark);
+    margin-bottom: 4px;
+  }
+  .b-bub.ai .who .av {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--peach); color: #fff;
+    display: grid; place-items: center; font-size: 10px;
+  }
+  .b-bub.ai.alt-v .who { color: var(--violet); }
+  .b-bub.ai.alt-v .who .av { background: var(--violet); }
+  .b-bub.ai.alt-b .who { color: var(--blue); }
+  .b-bub.ai.alt-b .who .av { background: var(--blue); }
+  .b-bub a { color: var(--peach-dark); text-decoration: underline; }
+
+  .typing {
+    align-self: flex-start;
+    display: inline-flex; gap: 3px;
+    padding: 8px 12px; background: #fff;
+    border: 1px solid var(--line); border-radius: 14px;
+    border-bottom-left-radius: 5px;
+  }
+  .typing i {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--text-subtle);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink {
+    0%, 60%, 100% { opacity: .3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-2px); }
+  }
+
+  .mention-pop {
+    align-self: flex-start;
+    background: #fff; border: 1px solid var(--line-strong);
+    border-radius: 12px; padding: 6px 8px;
+    box-shadow: 0 8px 20px rgba(60,30,10,.10);
+    width: 92%;
+  }
+  .mention-pop .h {
+    font-size: 9.5px; color: var(--text-subtle); font-family: var(--mono);
+    letter-spacing: .12em; padding: 4px 6px;
+  }
+  .mention-pop .r {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 6px; border-radius: 8px;
+    font-size: 11px;
+  }
+  .mention-pop .r.s { background: var(--peach-soft); color: var(--peach-dark); font-weight: 700; }
+  .mention-pop .r .av {
+    width: 22px; height: 22px; border-radius: 7px;
+    background: var(--peach); color: #fff;
+    display: grid; place-items: center; font-size: 11px;
+  }
+  .mention-pop .r .nm { flex: 1; font-weight: 600; color: var(--text); }
+  .mention-pop .r.s .nm { color: var(--peach-dark); }
+  .mention-pop .r .tg { font-size: 8.5px; color: var(--text-subtle); }
+
+  .input-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--line);
+    background: rgba(253,248,243,.96);
+  }
+  .input-bar .plus {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--peach-soft); color: var(--peach-dark);
+    display: grid; place-items: center; font-weight: 800;
+  }
+  .input-bar input {
+    flex: 1; height: 32px; border-radius: 16px;
+    border: 1px solid var(--line-strong);
+    padding: 0 12px; font-size: 12px; font-family: var(--mono);
+    background: #fff; color: var(--text);
+    outline: none;
+  }
+  .input-bar .send {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--peach); color: #fff;
+    display: grid; place-items: center; font-weight: 800;
+    box-shadow: 0 4px 10px rgba(251,146,60,.32);
+  }
+
+  @media (max-width: 720px) {
+    .row { gap: 28px 16px; }
+    .phone { --w: 300px; --h: 640px; }
+  }
+</style>
+</head>
+<body>
+  <main class="stage">
+
+    <header>
+      <span class="eyebrow">Mobile preview · MY AI AGENT</span>
+      <h1>Open. Sign up. Hire a team.</h1>
+      <p>LP の続き、ログイン後のホーム、Agent Team チャットまで — スマホで開いた瞬間からの体験を 3 端末で。</p>
+    </header>
+
+    <div class="row">
+
+      <!-- ============= PHONE 1 — LP ============= -->
+      <div class="col">
+        <div class="phone" role="img" aria-label="MY AI AGENT のランディングページをスマホで開いた状態">
+          <div class="screen">
+            <div class="island"></div>
+
+            <div class="status dark">
+              <div class="time">9:41</div>
+              <div class="right">
+                <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span style="font-size:10.5px;">5G</span>
+                <span class="battery"><span></span></span>
+              </div>
+            </div>
+
+            <!-- Browser chrome -->
+            <div class="chrome">
+              <div class="urlbar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="11" width="14" height="9" rx="2"/>
+                  <path d="M8 11V8a4 4 0 1 1 8 0v3"/>
+                </svg>
+                <span class="host">myaiagents.agency</span><span class="path">/</span>
+                <svg class="reload" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15A9 9 0 1 1 18 6.36"/>
+                </svg>
+              </div>
+              <div class="loading"></div>
+            </div>
+
+            <div class="page-lp">
+              <div class="scroll">
+
+                <!-- Inner nav -->
+                <nav class="lp-nav">
+                  <div class="brand">
+                    <span class="brand-mark">M</span>
+                    <span>MY AI AGENT</span>
+                  </div>
+                  <div class="menu" aria-label="menu"><i></i></div>
+                </nav>
+
+                <!-- 1. Hero -->
+                <section class="hero">
+                  <span class="hero-kicker"><span class="dot"></span>NEW · AI generates your team</span>
+                  <h1>YOUR OWN<br><span class="accent">AI TEAM</span><br>STARTS HERE.</h1>
+                  <p class="hero-sub">
+                    Hire one AI as a teammate, or let AI <b>design a whole 3-10 agent team</b>
+                    from a single goal.
+                  </p>
+                  <div class="cta">
+                    <a class="btn btn-primary" href="#">Start free — no card →</a>
+                    <a class="btn btn-ghost" href="#">See how it works</a>
+                  </div>
+                  <div class="trust">
+                    <span><span class="check">✓</span>30-second sign-up</span>
+                    <span><span class="check">✓</span>10 free messages</span>
+                    <span><span class="check">✓</span>No card</span>
+                  </div>
+                </section>
+
+                <!-- 2. How it works -->
+                <section class="sec alt">
+                  <div class="sec-head">
+                    <span class="kicker">HOW IT WORKS</span>
+                    <h2 class="h2">Up and running<br>in 3 steps.</h2>
+                    <p class="lead">3 minutes from sign-up to your first AI doing real work.</p>
+                  </div>
+
+                  <div class="step-card">
+                    <span class="step-num">01</span>
+                    <div class="step-title">📝 Tell it your goal</div>
+                    <p class="step-desc">Describe in plain English what you want done.</p>
+                    <div class="step-mock"><span class="you">› build &amp; sell on Shopify</span></div>
+                  </div>
+                  <div class="step-card">
+                    <span class="step-num">02</span>
+                    <div class="step-title">⚡ AI assembles roles</div>
+                    <p class="step-desc">In 30s — editable agents with avatars, names, skills.</p>
+                    <div class="step-mock">
+                      <span class="ai">✨ Generated 5 agents:</span><br>
+                      🛍 Product Sourcer<br>
+                      📸 Visual Designer<br>
+                      🌐 Storefront Architect<br>
+                      📱 Social Manager<br>
+                      📊 Revenue Analyst
+                    </div>
+                  </div>
+                  <div class="step-card">
+                    <span class="step-num">03</span>
+                    <div class="step-title">💬 Delegate &amp; iterate</div>
+                    <p class="step-desc">Chat normally. <code style="background:var(--peach-soft);color:var(--peach-dark);font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px">@SocialManager</code> to pick one.</p>
+                    <div class="step-mock">
+                      <span class="you">› @social: write 3 launch posts</span><br>
+                      <span class="ai">📱 Here are 3 hooks…</span>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 3. Build solo -->
+                <section class="sec build">
+                  <span class="kicker">SOLO AGENT</span>
+                  <h3>Build a <span class="accent">single AI</span><br>like you're hiring.</h3>
+                  <p class="desc">10 ready-made templates or start from scratch — tune the persona, skills, model, and keep it editable.</p>
+                  <ul>
+                    <li>5 short steps · ~1 min to first chat</li>
+                    <li>16 skills + 24 emoji avatars</li>
+                    <li>Web search · Sheets · Chrome</li>
+                    <li>Haiku / Sonnet / Opus per agent</li>
+                  </ul>
+                  <div class="wiz-mock">
+                    <div class="wiz-mock-top"><div>🤖 Create AI Agent</div><div class="x">×</div></div>
+                    <div class="wiz-mock-bar"><i></i></div>
+                    <div class="wiz-mock-tabs">
+                      <div class="wiz-mock-tab active">🆕 From scratch</div>
+                      <div class="wiz-mock-tab">📋 Templates</div>
+                    </div>
+                    <div class="wiz-mock-body">
+                      <div class="wiz-mock-step-h">Build from scratch</div>
+                      <div class="wiz-mock-step-s">Pick the icon, name, skills, and persona yourself.</div>
+                      <div class="wiz-mock-card">
+                        <div class="em">🤖</div>
+                        <div>
+                          <div class="h">Build one dedicated AI</div>
+                          <div class="d">5 steps · Edit anytime · Reach from DM tab.</div>
+                        </div>
+                      </div>
+                      <ul class="wiz-mock-list">
+                        <li>Pick an icon (emoji or upload)</li>
+                        <li>Name + purpose &amp; duties</li>
+                        <li>Up to 3 skills</li>
+                        <li>Web / Sheets / Chrome (optional)</li>
+                      </ul>
+                      <div class="wiz-mock-cta">
+                        <div class="b alt">Cancel</div>
+                        <div class="b">▶ Start building</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 4. Build teams -->
+                <section class="sec alt">
+                  <div class="sec-head">
+                    <span class="live-pill">NEW</span>
+                    <span class="kicker">AI Agent Team</span>
+                    <h2 class="h2">Don't just hire one.<br>Spin up a team.</h2>
+                    <p class="lead">AI breaks the goal into roles and assembles a 3-10 agent team in 30 seconds.</p>
+                  </div>
+
+                  <div class="gen-flow">
+                    <div class="input-h">› YOU TYPE</div>
+                    <div class="input-box">build &amp; sell on Shopify with margins &gt; 50%, post on social, watch sales</div>
+                    <div class="gen-arrow">↓ AI generates ↓</div>
+                    <div class="out-grid">
+                      <div class="out-card"><div class="em">🛍</div><div class="nm">Product Sourcer</div><div class="rl">Step 1</div></div>
+                      <div class="out-card"><div class="em">📸</div><div class="nm">Visual Designer</div><div class="rl">Step 2</div></div>
+                      <div class="out-card"><div class="em">🌐</div><div class="nm">Storefront</div><div class="rl">Step 3</div></div>
+                      <div class="out-card"><div class="em">📱</div><div class="nm">Social Mgr</div><div class="rl">Step 4</div></div>
+                    </div>
+                  </div>
+
+                  <div class="chat-mock">
+                    <div class="chat-mock-top">
+                      <div class="em">🛍</div>
+                      <div>
+                        <div class="h">EC Launch Team</div>
+                        <div class="s">5 AI members · running</div>
+                      </div>
+                      <div class="pill">🎯 TEAM</div>
+                    </div>
+                    <div class="chat-mock-body">
+                      <div class="bub you">Find me a hot product. Margin &gt; 50%.</div>
+                      <div class="bub ai">
+                        <div class="who"><div class="av">🛍</div>Product Sourcer</div>
+                        Top 3: <b>Pet calming bed</b> (62%), LED skincare mask (58%), smart pillbox (54%).
+                      </div>
+                      <div class="bub you">#1 — pet bed. <b>@design</b> render shots</div>
+                      <div class="bub ai">
+                        <div class="who"><div class="av" style="background:var(--violet)">📸</div>Visual Designer</div>
+                        Done — 5 cozy living-room scenes at golden hour.
+                      </div>
+                    </div>
+                    <div class="chat-mock-input">
+                      <input value="@store ship it to Shopify" readonly>
+                      <div class="send">↑</div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 5. Store -->
+                <section class="sec">
+                  <div class="sec-head">
+                    <span class="live-pill">LIVE</span>
+                    <span class="kicker">AGENT STORE</span>
+                    <h2 class="h2">Sell what<br>you build.</h2>
+                    <p class="lead">Up to 80% creator share + 10% usage royalties. Direct deposits via Stripe Connect.</p>
+                  </div>
+                  <div class="store-grid">
+                    <div class="store-card">
+                      <div class="top"><div class="av">🛍</div><div><span class="badge">🎯 TEAM · 5</span><div class="t">EC Launch Team</div></div></div>
+                      <div class="desc">Source · render · build · post · analyze.</div>
+                      <div class="meta"><span>★ 4.9 (132)</span><span class="price">$98</span></div>
+                    </div>
+                    <div class="store-card">
+                      <div class="top"><div class="av" style="background:rgba(59,130,246,.12);color:var(--blue)">✍️</div><div class="t">SEO Blog Writer</div></div>
+                      <div class="desc">Keyword → outline → draft → links.</div>
+                      <div class="meta"><span>★ 4.8 (87)</span><span class="price">$24</span></div>
+                    </div>
+                    <div class="store-card">
+                      <div class="top"><div class="av" style="background:#1a0a00;color:#fff">💻</div><div><span class="badge">🎯 TEAM · 4</span><div class="t">Dev Squad</div></div></div>
+                      <div class="desc">Reviewer + bug fixer + test + deploy.</div>
+                      <div class="meta"><span>★ 4.9 (54)</span><span class="price">$26</span></div>
+                    </div>
+                    <div class="store-card">
+                      <div class="top"><div class="av" style="background:rgba(236,72,153,.12);color:var(--pink)">🎬</div><div class="t">TikTok Scripter</div></div>
+                      <div class="desc">Trend → hook → script → CTA.</div>
+                      <div class="meta"><span>★ 4.7 (96)</span><span class="price">$19</span></div>
+                    </div>
+                    <div class="store-card">
+                      <div class="top"><div class="av" style="background:rgba(16,185,129,.12);color:var(--green)">🤝</div><div class="t">CS Tier 1 Bot</div></div>
+                      <div class="desc">Triage → first response → escalate.</div>
+                      <div class="meta"><span>★ 4.7 (213)</span><span class="price free">FREE</span></div>
+                    </div>
+                    <div class="store-card">
+                      <div class="top"><div class="av v" style="background:rgba(139,92,246,.12);color:var(--violet)">📱</div><div><span class="badge">🎯 TEAM · 3</span><div class="t">SNS Growth</div></div></div>
+                      <div class="desc">Trend → write → schedule X / IG.</div>
+                      <div class="meta"><span>★ 4.8 (41)</span><span class="price free">FREE</span></div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 6. Pricing -->
+                <section class="sec alt">
+                  <div class="sec-head">
+                    <span class="kicker">PRICING</span>
+                    <h2 class="h2">Start free.<br>Scale when ready.</h2>
+                    <p class="lead">Bigger plans unlock more agents, more teams, stronger models.</p>
+                  </div>
+
+                  <div class="price-card">
+                    <div class="price-name">FREE</div>
+                    <div class="price-amount">$0</div>
+                    <div class="price-period">forever · no card</div>
+                    <div class="price-credit gone">10 free messages</div>
+                    <ul class="price-feats">
+                      <li><b>3</b> AI agents (DM)</li>
+                      <li>16 skills · all templates</li>
+                      <li>Haiku model</li>
+                      <li class="no">Agent Team</li>
+                      <li class="no">Sonnet / Opus</li>
+                    </ul>
+                    <a class="price-cta" href="#">Start free →</a>
+                  </div>
+
+                  <div class="price-card popular">
+                    <div class="price-name">PRO</div>
+                    <div class="price-amount">$12.99</div>
+                    <div class="price-period">per month</div>
+                    <div class="price-credit">$15 monthly credit</div>
+                    <ul class="price-feats">
+                      <li><b>20</b> AI agents</li>
+                      <li><b>1</b> active Agent Team</li>
+                      <li>AI auto-team generation</li>
+                      <li>@mention any team member</li>
+                      <li>Sonnet · web · Sheets</li>
+                      <li>List Solo on Store · 70/10 split</li>
+                    </ul>
+                    <a class="price-cta" href="#">Go Pro →</a>
+                  </div>
+
+                  <div class="price-card">
+                    <div class="price-name">BUSINESS</div>
+                    <div class="price-amount">$32.99</div>
+                    <div class="price-period">per month</div>
+                    <div class="price-credit">$45 monthly credit</div>
+                    <ul class="price-feats">
+                      <li><b>1000</b> AI agents</li>
+                      <li><b>Unlimited</b> Agent Teams</li>
+                      <li><b>List Teams</b> on Store</li>
+                      <li>80/10 creator split</li>
+                      <li>Sonnet + Opus + priority queue</li>
+                    </ul>
+                    <a class="price-cta" href="#">Go Business →</a>
+                  </div>
+                </section>
+
+                <!-- 7. Big CTA -->
+                <section class="big-cta">
+                  <h2>Stop asking AI<br>to do things.<br><span class="accent">Hire a team.</span></h2>
+                  <p>30s sign-up. 30s for AI to assemble your first team.</p>
+                  <a class="btn btn-primary" href="#">Sign up free →</a>
+                </section>
+
+                <!-- Footer -->
+                <footer class="lp-footer">
+                  <div class="b">🍑 MY AI AGENT</div>
+                  <div class="lk">
+                    <a href="#">Terms</a>
+                    <a href="#">Privacy</a>
+                    <a href="#">Legal</a>
+                    <a href="#">Contact</a>
+                  </div>
+                  <div class="cp">© 2026 MY AI AGENT</div>
+                </footer>
+
+              </div>
+            </div>
+
+            <div class="home"></div>
+          </div>
+        </div>
+        <p class="caption"><span class="step">1</span><b>LP</b> — myaiagents.agency をスマホで開いた状態（端末内をスクロールで全 7 セクション）</p>
+      </div>
+
+      <!-- ============= PHONE 2 — POST-LOGIN HOME ============= -->
+      <div class="col">
+        <div class="phone" role="img" aria-label="ログイン直後のホーム画面">
+          <div class="screen">
+            <div class="island"></div>
+
+            <div class="status dark">
+              <div class="time">9:41</div>
+              <div class="right">
+                <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span style="font-size:10.5px;">5G</span>
+                <span class="battery"><span></span></span>
+              </div>
+            </div>
+
+            <div class="app">
+              <!-- App header -->
+              <div class="app-h">
+                <span class="brand-mark">M</span>
+                <span class="ttl">Home</span>
+                <div class="acts">
+                  <button class="ic-btn" aria-label="search">🔍</button>
+                  <button class="ic-btn plus" aria-label="new">＋</button>
+                  <span class="me" aria-label="me">K</span>
+                </div>
+              </div>
+
+              <div class="app-body">
+                <div class="greet">
+                  <h2>Welcome back, Kota 🍑</h2>
+                  <div class="now">SAT, MAY 10 · 16:38</div>
+                  <p class="sub">3 worlds — chat 1:1 with an AI · mix friends + AI in a group · let a multi-AI team run the whole job.</p>
+                </div>
+
+                <!-- Quick cards -->
+                <div class="qc-row">
+                  <div class="qc"><div class="ic">🤖</div><div class="lbl">Hire AI</div><div class="sub">DM</div></div>
+                  <div class="qc"><div class="ic">🎯</div><div class="lbl">Build Team</div><div class="sub">3-10 AI</div></div>
+                  <div class="qc"><div class="ic">👥</div><div class="lbl">Group</div><div class="sub">+ friends</div></div>
+                </div>
+
+                <!-- Agent Teams -->
+                <div class="sec-h">
+                  <span class="t">🎯 Agent Teams</span>
+                  <span class="add">+</span>
+                </div>
+                <div class="row-item on">
+                  <div class="av">🛍</div>
+                  <div class="info">
+                    <div class="nm">EC Launch <span class="pill">RUNNING</span></div>
+                    <div class="pv">📸 Visual Designer: 5 lifestyle shots ready</div>
+                  </div>
+                  <div class="meta"><div class="ti">15:50</div><span class="badge">3</span></div>
+                </div>
+                <div class="row-item">
+                  <div class="av v">📱</div>
+                  <div class="info">
+                    <div class="nm">SNS Growth</div>
+                    <div class="pv">Drafted 12 posts for X / IG / TikTok</div>
+                  </div>
+                  <div class="meta"><div class="ti">12:14</div></div>
+                </div>
+
+                <!-- Groups -->
+                <div class="sec-h">
+                  <span class="t">👥 Groups</span>
+                  <span class="add">+</span>
+                </div>
+                <div class="row-item">
+                  <div class="av p">🦄</div>
+                  <div class="info">
+                    <div class="nm">Founders Lounge</div>
+                    <div class="pv">マサル: Looks great — ship it 👍</div>
+                  </div>
+                  <div class="meta"><div class="ti">9:02</div></div>
+                </div>
+
+                <!-- DM -->
+                <div class="sec-h">
+                  <span class="t">🤖 DM (1:1)</span>
+                  <span class="add">+</span>
+                </div>
+                <div class="row-item">
+                  <div class="av b">✍️</div>
+                  <div class="info">
+                    <div class="nm">SEO Writer</div>
+                    <div class="pv">Outline ready — want a draft next?</div>
+                  </div>
+                  <div class="meta"><div class="ti">Mon</div></div>
+                </div>
+                <div class="row-item">
+                  <div class="av g">🎓</div>
+                  <div class="info">
+                    <div class="nm">Tutor</div>
+                    <div class="pv">Today: Big-O cheatsheet</div>
+                  </div>
+                  <div class="meta"><div class="ti">Sun</div></div>
+                </div>
+                <div class="row-item">
+                  <div class="av">🤖</div>
+                  <div class="info">
+                    <div class="nm">Sales Tanaka</div>
+                    <div class="pv">Drafted 3 cold-mail variants</div>
+                  </div>
+                  <div class="meta"><div class="ti">Sat</div></div>
+                </div>
+                <div style="height:14px"></div>
+              </div>
+
+              <!-- Bottom tab bar -->
+              <nav class="tb">
+                <button class="tb-item active"><span class="em">💬</span>Talks</button>
+                <button class="tb-item"><span class="em">🎯</span>Teams</button>
+                <button class="tb-item"><span class="em">🏪</span>Store</button>
+                <button class="tb-item"><span class="em">👤</span>Me</button>
+              </nav>
+            </div>
+
+            <div class="home"></div>
+          </div>
+        </div>
+        <p class="caption"><span class="step">2</span><b>Post-login Home</b> — Welcome back · 3 worlds · Agent Teams / Groups / DM</p>
+      </div>
+
+      <!-- ============= PHONE 3 — TEAM CHAT ============= -->
+      <div class="col">
+        <div class="phone" role="img" aria-label="EC Launch Team の進行中チャット">
+          <div class="screen">
+            <div class="island"></div>
+
+            <div class="status dark">
+              <div class="time">9:41</div>
+              <div class="right">
+                <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span style="font-size:10.5px;">5G</span>
+                <span class="battery"><span></span></span>
+              </div>
+            </div>
+
+            <div class="app">
+              <div class="chat-h">
+                <div class="back">‹</div>
+                <div class="avatar">🛍</div>
+                <div class="info">
+                  <div class="h">EC Launch Team</div>
+                  <div class="s"><span class="live"></span>5 AI members · running</div>
+                </div>
+                <div class="menu-dot">⋯</div>
+              </div>
+
+              <div class="chat-body">
+                <div class="b-day">TODAY · 16:38</div>
+
+                <div class="b-bub you">Find me a hot product to source. Margin &gt; 50%.</div>
+
+                <div class="b-bub ai">
+                  <div class="who"><div class="av">🛍</div>Product Sourcer</div>
+                  Top 3 contenders:
+                  <b>Pet calming bed</b> (62% margin · 8.5k searches/mo),
+                  LED skincare mask (58% · 12k),
+                  smart pillbox (54% · 4.5k). Pick one to launch?
+                </div>
+
+                <div class="b-bub you">#1, the pet bed. <b>@design</b> render lifestyle shots</div>
+
+                <div class="b-bub ai alt-v">
+                  <div class="who"><div class="av">📸</div>Visual Designer</div>
+                  On it. Generated 5 cozy living-room scenes at golden hour.
+                  <a href="#">imgur.com/abc</a>
+                </div>
+
+                <div class="b-bub you"><b>@store</b> ship it to Shopify</div>
+
+                <div class="b-bub ai alt-b">
+                  <div class="who"><div class="av">🌐</div>Storefront Architect</div>
+                  Live → <a href="#">cozypets.myshopify.com</a><br>
+                  Stripe connected · free ship $50+
+                </div>
+
+                <!-- mention picker -->
+                <div class="mention-pop">
+                  <div class="h">MENTION SOMEONE</div>
+                  <div class="r s"><div class="av">📱</div><div class="nm">Social Manager</div><span class="tg">Team AI</span></div>
+                  <div class="r"><div class="av" style="background:var(--violet)">📊</div><div class="nm">Revenue Analyst</div><span class="tg">Team AI</span></div>
+                  <div class="r"><div class="av" style="background:var(--blue)">🌐</div><div class="nm">Storefront Architect</div><span class="tg">Team AI</span></div>
+                </div>
+
+                <div class="typing"><i></i><i></i><i></i></div>
+              </div>
+
+              <div class="input-bar">
+                <div class="plus">+</div>
+                <input value="@social write 3 launch posts" readonly>
+                <div class="send">↑</div>
+              </div>
+            </div>
+
+            <div class="home"></div>
+          </div>
+        </div>
+        <p class="caption"><span class="step">3</span><b>Agent Team Chat</b> — @mention で各メンバーを切替 · 5 AI が 1 つのタイムラインで動く</p>
+      </div>
+
+    </div>
+  </main>
+</body>
+</html>

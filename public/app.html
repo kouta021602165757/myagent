@@ -11378,7 +11378,7 @@ async function disconnectExtension(){
 
 function toggleEditExtension(){
   if(!me || !me.extension_paired){
-    showToast(isJa?'先にブラウザ拡張をペアリングしてください':'Pair the extension first','ng');
+    connectExtension();
     return;
   }
   var sw=document.getElementById('editExtSw');

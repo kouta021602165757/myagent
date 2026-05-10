@@ -2213,7 +2213,7 @@ body{color:#f0f0f8;}
 <div class="overlay" id="wizOverlay">
   <div class="wizard">
     <div class="wiz-top">
-      <div class="wiz-title" id="wizTitle">新しいエージェント</div>
+      <div class="wiz-title" id="wizTitle" data-i18n="wizTitle">New agent</div>
       <button class="wiz-close" onclick="closeWizard()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -2267,74 +2267,74 @@ body{color:#f0f0f8;}
 
       <!-- Step 1: Avatar -->
       <div id="ws1" style="display:none">
-        <div class="step-h">アイコンを選ぶ</div>
-        <div class="step-s">絵文字から選ぶか、画像をアップロードします</div>
+        <div class="step-h" data-i18n="ws1H">Pick an icon</div>
+        <div class="step-s" data-i18n="ws1S">Choose an emoji or upload an image</div>
         <div class="av-preview" id="avPrev">🤖</div>
         <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px">
           <input type="file" id="avFile" accept="image/*" style="display:none" onchange="onAvatarUpload(event,'wizard')">
-          <button class="btn-back" type="button" onclick="document.getElementById('avFile').click()" style="font-size:12.5px;padding:8px 14px">📸 画像をアップロード</button>
-          <button class="btn-back" type="button" onclick="resetAvatarToEmoji('wizard')" style="font-size:12.5px;padding:8px 14px">↻ 絵文字に戻す</button>
+          <button class="btn-back" type="button" onclick="document.getElementById('avFile').click()" style="font-size:12.5px;padding:8px 14px" data-i18n="ws1Upload">📸 Upload image</button>
+          <button class="btn-back" type="button" onclick="resetAvatarToEmoji('wizard')" style="font-size:12.5px;padding:8px 14px" data-i18n="ws1Reset">↻ Back to emoji</button>
         </div>
         <div class="av-grid" id="avGrid"></div>
         <div class="btn-row">
-          <button class="btn-back" onclick="wStep(0)">← 戻る</button>
-          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(2)">次へ →</button>
+          <button class="btn-back" onclick="wStep(0)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(2)" data-i18n="wsNext">Next →</button>
         </div>
       </div>
 
       <!-- Step 2: Name -->
       <div id="ws2" style="display:none">
-        <div class="step-h">名前を決める</div>
-        <div class="step-s">このエージェントの名前を入力してください</div>
+        <div class="step-h" data-i18n="ws2H">Pick a name</div>
+        <div class="step-s" data-i18n="ws2S">Give this agent a name</div>
         <div class="wiz-fld">
-          <label>エージェントの名前</label>
-          <input class="wiz-input" type="text" id="wName" placeholder="例：ライターの田中さん" maxlength="20">
+          <label data-i18n="ws2Lbl">Agent name</label>
+          <input class="wiz-input" type="text" id="wName" placeholder="e.g. Tanaka the Writer" maxlength="20">
         </div>
         <div class="btn-row">
-          <button class="btn-back" onclick="wStep(1)">← 戻る</button>
-          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(3)">次へ →</button>
+          <button class="btn-back" onclick="wStep(1)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(3)" data-i18n="wsNext">Next →</button>
         </div>
       </div>
 
       <!-- Step 3: Skills -->
       <div id="ws3" style="display:none">
-        <div class="step-h">スキルを与える</div>
-        <div class="step-s">このエージェントの得意なこと（複数OK）</div>
+        <div class="step-h" data-i18n="ws3H">Assign skills</div>
+        <div class="step-s" data-i18n="ws3S">What this agent is good at (multiple OK)</div>
         <div class="skill-grid" id="skGrid"></div>
         <div class="btn-row">
-          <button class="btn-back" onclick="wStep(2)">← 戻る</button>
-          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(4)">次へ →</button>
+          <button class="btn-back" onclick="wStep(2)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(4)" data-i18n="wsNext">Next →</button>
         </div>
       </div>
 
       <!-- Step 4: Purpose -->
       <div id="ws4" style="display:none">
-        <div class="step-h">採用目的</div>
-        <div class="step-s">このエージェントを何のために雇いますか？</div>
+        <div class="step-h" data-i18n="ws4H">Hired for</div>
+        <div class="step-s" data-i18n="ws4S">What is this agent hired to do?</div>
         <div class="wiz-fld">
-          <label>採用目的</label>
-          <input class="wiz-input" type="text" id="wPurpose" placeholder="例：アポ取り、SNS投稿、コードレビュー" maxlength="80">
+          <label data-i18n="ws4Lbl">Purpose</label>
+          <input class="wiz-input" type="text" id="wPurpose" placeholder="e.g. outbound prospecting, social posts, code review" maxlength="80">
         </div>
         <div class="btn-row">
-          <button class="btn-back" onclick="wStep(3)">← 戻る</button>
-          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(5)">次へ →</button>
+          <button class="btn-back" onclick="wStep(3)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(5)" data-i18n="wsNext">Next →</button>
         </div>
       </div>
 
       <!-- Step 5: Duties -->
       <div id="ws5" style="display:none">
-        <div class="step-h">業務内容</div>
-        <div class="step-s">具体的にどんな仕事を任せますか？日々の作業内容を入力してください</div>
+        <div class="step-h" data-i18n="ws5H">Day-to-day duties</div>
+        <div class="step-s" data-i18n="ws5S">Concretely, what work will this agent handle every day?</div>
         <div class="wiz-fld">
-          <label>業務内容</label>
-          <textarea class="per-ta" id="wDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" style="min-height:120px"></textarea>
+          <label data-i18n="ws5Lbl">Duties</label>
+          <textarea class="per-ta" id="wDuties" placeholder="e.g. write outbound emails to a prospect list, summarize replies, schedule meetings" style="min-height:120px"></textarea>
         </div>
 
         <!-- Tools / Google Chrome integration -->
         <div style="margin-top:6px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
           <div style="display:flex;align-items:flex-start;gap:12px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Web 検索 / URL 取得</div>
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px" data-i18n="ws5WebTool">🌐 Web search / URL fetch</div>
               <div id="wChromeDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
             </div>
             <button type="button" class="s-sw" id="wChromeSw" onclick="toggleWizardChrome()"></button>
@@ -2345,31 +2345,31 @@ body{color:#f0f0f8;}
         <div style="margin-top:8px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
           <div style="display:flex;align-items:flex-start;gap:12px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">📊 Google スプレッドシート連携</div>
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px" data-i18n="ws5SheetsTool">📊 Google Sheets integration</div>
               <div id="wSheetsDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
-              <div id="wSheetsAccountRow" style="display:none;margin-top:8px;font-size:11.5px;color:var(--text3)">接続中: <b id="wSheetsEmail"></b></div>
-              <button type="button" id="wSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウントと接続</button>
-              <div style="margin-top:6px;font-size:10.5px;color:var(--text3)"><a href="/setup-google-sheets.html" target="_blank" style="color:var(--text3);text-decoration:underline">🔧 接続できない場合のセットアップ手順</a></div>
+              <div id="wSheetsAccountRow" style="display:none;margin-top:8px;font-size:11.5px;color:var(--text3)"><span data-i18n="ws5SheetsConn">Connected as:</span> <b id="wSheetsEmail"></b></div>
+              <button type="button" id="wSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="ws5SheetsConnect">+ Connect Google account</button>
+              <div style="margin-top:6px;font-size:10.5px;color:var(--text3)"><a href="/setup-google-sheets.html" target="_blank" style="color:var(--text3);text-decoration:underline" data-i18n="ws5SheetsHelp">🔧 Setup guide if you can't connect</a></div>
             </div>
             <button type="button" class="s-sw" id="wSheetsSw" onclick="toggleWizardSheets()"></button>
           </div>
         </div>
 
         <div class="btn-row" style="margin-top:14px">
-          <button class="btn-back" onclick="wStep(4)">← 戻る</button>
-          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(6)">次へ →</button>
+          <button class="btn-back" onclick="wStep(4)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(6)" data-i18n="wsNext">Next →</button>
         </div>
       </div>
 
       <!-- Step 6: Confirm -->
       <div id="ws6" style="display:none">
-        <div class="step-h">確認して完成！</div>
-        <div class="step-s">このエージェントで作成します</div>
+        <div class="step-h" data-i18n="ws6H">Review and finish!</div>
+        <div class="step-s" data-i18n="ws6S">Create this agent</div>
         <div class="conf-hero" id="confHero"></div>
         <div id="confPer"></div>
         <div class="btn-row">
-          <button class="btn-back" onclick="confirmBack()">← 戻る</button>
-          <button class="btn-volt" id="createBtn" style="border-radius:12px;padding:13px;" onclick="doCreate()">✨ 作成する</button>
+          <button class="btn-back" onclick="confirmBack()" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" id="createBtn" style="border-radius:12px;padding:13px;" onclick="doCreate()" data-i18n="wsCreate">✨ Create</button>
         </div>
       </div>
     </div>
@@ -2380,44 +2380,44 @@ body{color:#f0f0f8;}
 <div class="overlay" id="teamGalleryOverlay">
   <div class="wizard" style="max-width:920px">
     <div class="wiz-top">
-      <div class="wiz-title">🎯 AI Agent Team を作成</div>
+      <div class="wiz-title" data-i18n="teamGalleryTitle">🎯 Create AI Agent Team</div>
       <button class="wiz-close" onclick="closeTeamGallery()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
-      <!-- Mode tabs: 新規 / テンプレート -->
+      <!-- Mode tabs: New / Template -->
       <div id="teamModeTabs" style="display:flex;gap:6px;background:var(--cream2);padding:4px;border-radius:11px;margin-bottom:16px">
-        <button id="teamModeTabNew" type="button" onclick="setTeamMode('new')" style="flex:1;background:#fff;color:var(--text);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)">🆕 新規作成</button>
-        <button id="teamModeTabTpl" type="button" onclick="setTeamMode('tpl')" style="flex:1;background:transparent;color:var(--text2);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">📋 テンプレートから</button>
+        <button id="teamModeTabNew" type="button" onclick="setTeamMode('new')" style="flex:1;background:#fff;color:var(--text);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)" data-i18n="teamGalleryTabNew">🆕 From scratch</button>
+        <button id="teamModeTabTpl" type="button" onclick="setTeamMode('tpl')" style="flex:1;background:transparent;color:var(--text2);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer" data-i18n="teamGalleryTabTpl">📋 From templates</button>
       </div>
 
       <!-- Mode: NEW (goal → AI generates team) -->
       <div id="teamModeNew">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7">
-          <b>どんな業務を自動化したいですか？</b> 目的を書くと AI が必要なエージェントを設計してチームにします。
+        <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7" data-i18n="teamGalleryIntro">
+          <b>What would you like to automate?</b> Describe the goal — AI will design the agents you need and bundle them into a team.
         </div>
-        <textarea id="newTeamGoal" rows="4" placeholder="例: ECサイトを作って販売したい / Twitter で月3万フォロワーを目指したい / カスタマーサポートを24時間自動化したい / SaaS の MVP を作って公開したい" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical;min-height:96px"></textarea>
+        <textarea id="newTeamGoal" rows="4" placeholder="e.g. Build & sell on Shopify / Grow my X (Twitter) to 30k followers / Automate customer support 24/7 / Ship a SaaS MVP" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical;min-height:96px"></textarea>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
-          <button type="button" class="goal-chip" onclick="_setGoalText('ECサイトを作って販売したい (Shopify + 商品ソーシング + SNS集客 + 売上分析)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">🛍 EC を作る</button>
-          <button type="button" class="goal-chip" onclick="_setGoalText('Twitter で月3万フォロワーを目指したい (トレンド分析 + 投稿執筆 + 予約配信)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">📱 SNS 集客</button>
-          <button type="button" class="goal-chip" onclick="_setGoalText('SaaS の MVP を作って公開したい (要件定義 + 実装 + テスト + デプロイ)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">💻 SaaS を作る</button>
-          <button type="button" class="goal-chip" onclick="_setGoalText('カスタマーサポートを24時間自動化したい (FAQ + 返信ドラフト + エスカレーション判定)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">🤝 CS 自動化</button>
-          <button type="button" class="goal-chip" onclick="_setGoalText('YouTube チャンネルを成長させたい (企画 + 台本 + サムネ案 + 分析)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">🎬 YouTube</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Build &amp; sell on Shopify (product sourcing + visuals + storefront + social + revenue analysis)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipEC">🛍 Build an e-commerce site</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Grow my X (Twitter) to 30k followers (trend mining + post writing + scheduled publishing)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipSNS">📱 Grow on social</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Ship a SaaS MVP and publish (requirements + implementation + tests + deploy)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipSaaS">💻 Ship a SaaS MVP</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Automate customer support 24/7 (FAQ + reply drafts + escalation routing)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipCS">🤝 Automate support</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Grow a YouTube channel (concepts + scripts + thumbnail ideas + analytics)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipYT">🎬 YouTube</button>
         </div>
         <div style="display:flex;gap:8px;margin-top:18px">
-          <button onclick="closeTeamGallery()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">キャンセル</button>
-          <button id="newTeamSubmit" onclick="submitGenerateTeam()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:12px;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">✨ AI にチームを設計してもらう</button>
+          <button onclick="closeTeamGallery()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
+          <button id="newTeamSubmit" onclick="submitGenerateTeam()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:12px;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)" data-i18n="teamGallerySubmit">✨ Let AI design your team</button>
         </div>
-        <div style="font-size:10.5px;color:var(--text3);margin-top:10px;line-height:1.6">
-          ※ 設計は約 15-30 秒。目的に応じて 4-10 体のエージェントが自動生成され、すぐ起動します。
+        <div style="font-size:10.5px;color:var(--text3);margin-top:10px;line-height:1.6" data-i18n="teamGalleryFootnote">
+          Takes ~15–30s. 4–10 agents are generated for your goal and the team launches right after.
         </div>
       </div>
 
       <!-- Mode: TPL (templates) -->
       <div id="teamModeTpl" style="display:none">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.7">
-          テンプレートから選んで <b>1 クリックで起動</b>。複数の AI が連携してあなたの業務を自動化します。
+        <div style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.7" data-i18n="teamGalleryTplIntro">
+          Pick a template and <b>launch in one click</b>. Multiple AI agents work together to automate the job.
         </div>
         <div id="teamGalleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
       </div>
@@ -2430,8 +2430,8 @@ body{color:#f0f0f8;}
   <div class="wizard" style="max-width:420px">
     <div class="wiz-body" style="padding:36px 32px;text-align:center">
       <div id="teamActIcon" style="font-size:64px;margin-bottom:14px">🎯</div>
-      <div id="teamActTitle" style="font-size:18px;font-weight:900;margin-bottom:6px">起動中…</div>
-      <div id="teamActSub" style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6">エージェントをクローン中</div>
+      <div id="teamActTitle" style="font-size:18px;font-weight:900;margin-bottom:6px" data-i18n="teamActTitle">Activating…</div>
+      <div id="teamActSub" style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6" data-i18n="teamActSub">Cloning agents…</div>
       <div style="height:6px;background:var(--cream2);border-radius:3px;overflow:hidden;margin-bottom:14px">
         <div id="teamActBar" style="height:100%;width:30%;background:linear-gradient(90deg,var(--peach),var(--peach-dark));border-radius:3px;transition:width .4s"></div>
       </div>
@@ -2444,27 +2444,27 @@ body{color:#f0f0f8;}
 <div class="overlay" id="teamEditOverlay">
   <div class="wizard" style="max-width:620px">
     <div class="wiz-top">
-      <div class="wiz-title">✏️ チームを編集</div>
+      <div class="wiz-title" data-i18n="teamEditTitle">✏️ Edit team</div>
       <button class="wiz-close" onclick="closeTeamEdit()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
       <div style="display:grid;grid-template-columns:90px 1fr;gap:10px;margin-bottom:16px;align-items:start">
-        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px">アイコン</label>
+        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px" data-i18n="teamEditIconLbl">Icon</label>
         <input id="teamEditEmoji" type="text" maxlength="3" style="width:64px;height:42px;text-align:center;font-size:22px;border:1px solid var(--wire2);border-radius:9px;background:#fff;font-family:inherit">
-        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px">チーム名</label>
+        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px" data-i18n="teamEditNameLbl">Team name</label>
         <input id="teamEditName" type="text" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--wire2);border-radius:9px;background:#fff;font-size:13px;font-family:inherit">
       </div>
-      <div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px;letter-spacing:.04em">どんな業務を自動化したいですか？</div>
-      <div style="font-size:10.5px;color:var(--text3);margin-bottom:8px;line-height:1.6">
-        この目的はチームのコンテキストとして各エージェントに渡されます。後から方向性が変わったら自由に書き換えてください。
+      <div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px;letter-spacing:.04em" data-i18n="teamEditGoalLbl">What would you like to automate?</div>
+      <div style="font-size:10.5px;color:var(--text3);margin-bottom:8px;line-height:1.6" data-i18n="teamEditGoalSub">
+        This goal is passed to every team agent as context. Rewrite it any time the direction shifts.
       </div>
-      <textarea id="teamEditGoal" rows="5" placeholder="例: ECサイトを作って販売したい (Shopify + 商品ソーシング + SNS集客 + 売上分析)" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13px;line-height:1.7;font-family:inherit;resize:vertical;min-height:110px"></textarea>
+      <textarea id="teamEditGoal" rows="5" placeholder="e.g. Build & sell on Shopify (sourcing + visuals + storefront + social + analytics)" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13px;line-height:1.7;font-family:inherit;resize:vertical;min-height:110px"></textarea>
       <div id="teamEditMsg" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button onclick="closeTeamEdit()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">キャンセル</button>
-        <button id="teamEditSaveBtn" onclick="saveTeamEdit()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">💾 保存</button>
+        <button onclick="closeTeamEdit()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
+        <button id="teamEditSaveBtn" onclick="saveTeamEdit()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)" data-i18n="teamEditSave">💾 Save</button>
       </div>
 
       <!-- Store listing CTA -->
@@ -2472,19 +2472,19 @@ body{color:#f0f0f8;}
         <div style="display:flex;align-items:flex-start;gap:12px;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:12px;padding:14px 14px">
           <div style="font-size:24px;line-height:1.2">🏪</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:900;color:var(--peach-dark);margin-bottom:3px">Agent Store に出店する</div>
+            <div style="font-size:13px;font-weight:900;color:var(--peach-dark);margin-bottom:3px" data-i18n="teamStoreH">List on Agent Store</div>
             <div id="teamStoreSubText" style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:9px">
-              このチームを丸ごとストアに出すと、他のユーザーが <b>1 クリックで自分のアカウントに複製</b> できます。買い切り価格の 70% + 利用料の 10% が収益になります。
+              List the whole team on the Store so others can <b>clone it into their account in one click</b>. You earn 70% of the one-time price + 10% of usage.
             </div>
-            <button id="teamListBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.5);color:var(--peach-dark);border-radius:9px;padding:8px 14px;font-size:11.5px;font-weight:800;cursor:pointer">＋ 出店フォームを開く</button>
+            <button id="teamListBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.5);color:var(--peach-dark);border-radius:9px;padding:8px 14px;font-size:11.5px;font-weight:800;cursor:pointer">+ Open listing form</button>
           </div>
         </div>
       </div>
 
       <!-- Danger zone -->
       <div style="margin-top:18px;padding:12px 14px;border:1px dashed rgba(239,68,68,.35);border-radius:11px;display:flex;align-items:center;gap:10px">
-        <div style="font-size:11px;color:var(--text2);font-weight:700;flex:1">⚠️ チームを削除すると、メンバー AI を DM に戻すか一緒に削除するか選べます。</div>
-        <button id="teamDeleteBtn" type="button" style="background:#fff;border:1px solid rgba(239,68,68,.5);color:#dc2626;border-radius:8px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0">🗑 チームを削除</button>
+        <div style="font-size:11px;color:var(--text2);font-weight:700;flex:1" data-i18n="teamDangerNote">⚠️ Deleting the team lets you choose whether to keep its members in DM or delete them too.</div>
+        <button id="teamDeleteBtn" type="button" style="background:#fff;border:1px solid rgba(239,68,68,.5);color:#dc2626;border-radius:8px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0" data-i18n="teamDeleteBtn">🗑 Delete team</button>
       </div>
     </div>
   </div>
@@ -2500,21 +2500,21 @@ body{color:#f0f0f8;}
       </button>
     </div>
     <div class="wiz-body" style="padding:18px 22px 22px;max-height:78vh;overflow-y:auto">
-      <div id="teamMembersIntro" style="font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:10px">
-        このチームに所属している AI エージェントです。<b>@名前</b> で個別に呼び出せます。各エージェントの ✏️ から、性格・スキル・モデルを編集できます。
+      <div id="teamMembersIntro" style="font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:10px" data-i18n="teamMembersIntro">
+        These are the AI agents in this team. Mention any of them with <b>@name</b>. Click ✏️ on a row to edit persona, skills, or model.
       </div>
       <div id="teamMembersGoalRow" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:11px;padding:11px 13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:10.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">チームの目的</div>
+          <div style="font-size:10.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px" data-i18n="teamMembersGoalH">Team goal</div>
           <div id="teamMembersGoalText" style="font-size:12.5px;color:var(--text);line-height:1.65;white-space:pre-wrap"></div>
         </div>
-        <button id="teamMembersGoalEditBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.32);color:var(--peach-dark);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0">✏️ 編集</button>
+        <button id="teamMembersGoalEditBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.32);color:var(--peach-dark);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0" data-i18n="teamMembersGoalEdit">✏️ Edit</button>
       </div>
       <div id="teamMembersList" style="display:flex;flex-direction:column;gap:10px"></div>
 
       <!-- Add member affordance (host only) -->
       <div id="teamMembersAddRow" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
-        <button id="teamMembersAddBtn" type="button" onclick="openAddTeamMember()" style="width:100%;background:#fff;border:2px dashed rgba(251,146,60,.42);color:var(--peach-dark);border-radius:11px;padding:14px;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:-.005em;transition:all .14s">＋ メンバーを追加 <span id="teamMembersCapHint" style="font-weight:600;color:var(--text-subtle);font-size:11px;margin-left:6px">(0/10)</span></button>
+        <button id="teamMembersAddBtn" type="button" onclick="openAddTeamMember()" style="width:100%;background:#fff;border:2px dashed rgba(251,146,60,.42);color:var(--peach-dark);border-radius:11px;padding:14px;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:-.005em;transition:all .14s"><span data-i18n="teamMembersAddBtn">+ Add member</span> <span id="teamMembersCapHint" style="font-weight:600;color:var(--text-subtle);font-size:11px;margin-left:6px">(0/10)</span></button>
       </div>
     </div>
   </div>
@@ -2524,20 +2524,20 @@ body{color:#f0f0f8;}
 <div class="overlay" id="addTeamMemberOverlay">
   <div class="wizard" style="max-width:560px">
     <div class="wiz-top">
-      <div class="wiz-title">＋ メンバーを追加</div>
+      <div class="wiz-title" data-i18n="addMemTitle">+ Add member</div>
       <button class="wiz-close" onclick="closeAddTeamMember()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
-      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px">
-        どんなメンバーを追加しますか？ 役割や担当業務を書くと、AI が <b>名前 ・ アイコン ・ スキル ・ 性格</b> を組み立てます。
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px" data-i18n="addMemIntro">
+        What kind of member do you want to add? Describe the role and tasks, and AI will assemble <b>name · icon · skills · persona</b>.
       </div>
-      <textarea id="addMemDesc" rows="4" placeholder="例: SEO 担当のライター / 競合分析が得意なリサーチャー / コードレビューしてくれるエンジニア" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical;min-height:96px"></textarea>
+      <textarea id="addMemDesc" rows="4" placeholder="e.g. SEO writer / competitive analyst / engineer who reviews code" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical;min-height:96px"></textarea>
       <div id="addMemErr" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button onclick="closeAddTeamMember()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">キャンセル</button>
-        <button id="addMemSubmitBtn" onclick="submitAddTeamMember()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">✨ AI に作ってもらう</button>
+        <button onclick="closeAddTeamMember()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
+        <button id="addMemSubmitBtn" onclick="submitAddTeamMember()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)" data-i18n="addMemSubmit">✨ Let AI generate</button>
       </div>
     </div>
   </div>
@@ -2670,7 +2670,7 @@ body{color:#f0f0f8;}
 <div class="overlay" id="listingDetailOverlay">
   <div class="wizard" style="max-width:780px">
     <div class="wiz-top">
-      <div class="wiz-title" id="ldTitle">エージェント詳細</div>
+      <div class="wiz-title" id="ldTitle" data-i18n="ldTitle">Agent details</div>
       <button class="wiz-close" onclick="closeListingDetail()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -3392,7 +3392,7 @@ body{color:#f0f0f8;}
 <div class="overlay" id="listingOverlay">
   <div class="wizard" style="max-width:640px">
     <div class="wiz-top">
-      <div class="wiz-title" id="listingTitle">🏪 Agent Store に出店する</div>
+      <div class="wiz-title" id="listingTitle" data-i18n="listingTitleNew">🏪 List on Agent Store</div>
       <button class="wiz-close" onclick="closeListingForm()">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -3406,73 +3406,73 @@ body{color:#f0f0f8;}
         </div>
       </div>
 
-      <div class="step-h">公開情報を入力</div>
+      <div class="step-h" data-i18n="listingFormH">Listing details</div>
 
       <div class="form-row">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">タイトル <span style="color:var(--rose)">*</span></label>
-        <input id="lsTitle" maxlength="60" placeholder="例: 営業フォローアップ AI Agent — 30秒で追客文面を作る" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box">
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">検索結果やカードに表示されます（最大 60 文字）</div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingTitleLbl">Title</span> <span style="color:var(--rose)">*</span></label>
+        <input id="lsTitle" maxlength="60" placeholder="e.g. Sales Follow-up AI — drafts replies in 30 seconds" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingTitleHint">Shown on cards and search results (max 60 characters).</div>
       </div>
 
       <div class="form-row">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">説明 <span style="color:var(--rose)">*</span></label>
-        <textarea id="lsDesc" maxlength="500" rows="4" placeholder="このエージェントが何ができるか・どんな時に便利か（20〜500 文字）" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box;resize:vertical;line-height:1.6"></textarea>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">利用者が見る詳細文。長すぎず、価値が一目でわかるように。</div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingDescLbl">Description</span> <span style="color:var(--rose)">*</span></label>
+        <textarea id="lsDesc" maxlength="500" rows="4" placeholder="What this agent does and when it's useful (20–500 characters)" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box;resize:vertical;line-height:1.6"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingDescHint">The detail blurb users see. Keep it short — make the value obvious.</div>
       </div>
 
       <div class="form-row">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">カテゴリ <span style="color:var(--rose)">*</span></label>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingCatLbl">Category</span> <span style="color:var(--rose)">*</span></label>
         <div id="lsCats" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
 
       <div class="form-row">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">タグ（最大 5 つ・任意）</label>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="listingTagsLbl">Tags (up to 5, optional)</label>
         <div id="lsTags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">対象ユーザーが探しやすくなります。</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingTagsHint">Help the right users find your agent.</div>
       </div>
 
       <div class="form-row">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">デモプロンプト（最大 3 つ・任意）</label>
-        <input id="lsDemo1" maxlength="120" placeholder="例: 商談した株式会社○○へ追加提案メールを書いて" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
-        <input id="lsDemo2" maxlength="120" placeholder="例: 検討中の顧客への、軽めの追客メッセージ" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
-        <input id="lsDemo3" maxlength="120" placeholder="例: 失注した相手への関係維持メッセージ" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;box-sizing:border-box;font-family:inherit;color:var(--text)">
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">利用者がワンクリックで試せる例文。良いプロンプトを置くと使われやすくなります。</div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="listingDemosLbl">Demo prompts (up to 3, optional)</label>
+        <input id="lsDemo1" maxlength="120" placeholder="e.g. Write a follow-up email to Acme Inc. after our meeting" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <input id="lsDemo2" maxlength="120" placeholder="e.g. Soft re-engagement message to a stalled prospect" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <input id="lsDemo3" maxlength="120" placeholder="e.g. Stay-in-touch note to a lost deal" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingDemosHint">One-click examples users can run. Good demos = more clones.</div>
       </div>
 
       <div class="form-row">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">販売価格 <span style="color:var(--rose)">*</span></label>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingPriceLbl">Price</span> <span style="color:var(--rose)">*</span></label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="free" checked onchange="lsTogglePriceMode()" style="margin:0">🎁 無料</label>
-          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="paid" onchange="lsTogglePriceMode()" style="margin:0">💰 有料</label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="free" checked onchange="lsTogglePriceMode()" style="margin:0"><span data-i18n="listingPriceFree">🎁 Free</span></label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="paid" onchange="lsTogglePriceMode()" style="margin:0"><span data-i18n="listingPricePaid">💰 Paid</span></label>
         </div>
         <div id="lsPriceWrap" style="display:none">
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:14px;font-weight:800;color:var(--text)">¥</span>
             <input id="lsPrice" type="number" min="100" max="100000" step="100" placeholder="1980" style="width:140px;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:14px;font-family:inherit;color:var(--text);box-sizing:border-box">
-            <span style="font-size:12px;color:var(--text3)">¥100〜¥100,000</span>
+            <span style="font-size:12px;color:var(--text3)">¥100–¥100,000</span>
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:6px">購入時に買い手の残高から差し引かれます。</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px" data-i18n="listingPriceHint">Charged from the buyer's balance at purchase time.</div>
         </div>
       </div>
 
       <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;border-radius:12px;padding:14px 18px;margin-bottom:18px">
-        <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px">💰 収益還元</div>
-        <div style="font-size:12px;color:#78350f;line-height:1.6">買い切り価格の <b>70%</b> + 利用料 (チャットコスト) の <b>10%</b> が、自動的にあなたの利用可能残高に加算されます。</div>
+        <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px" data-i18n="listingRevH">💰 Revenue share</div>
+        <div style="font-size:12px;color:#78350f;line-height:1.6" data-i18n="listingRevD"><b>70%</b> of the one-time price + <b>10%</b> of usage (chat cost) is automatically credited to your available balance.</div>
       </div>
 
       <div class="form-row">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">公開設定</label>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="listingVisLbl">Visibility</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="public" checked style="margin:0">🌐 Agent Store に公開</label>
-          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="unlisted" style="margin:0">🔗 リンクを知ってる人だけ</label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="public" checked style="margin:0"><span data-i18n="listingVisPublic">🌐 Public on Agent Store</span></label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="unlisted" style="margin:0"><span data-i18n="listingVisUnlisted">🔗 Unlisted (link only)</span></label>
         </div>
       </div>
 
       <div class="btn-row" style="justify-content:space-between;margin-top:24px;gap:10px">
-        <button id="lsUnpublishBtn" class="btn-back" style="display:none;color:var(--rose);border-color:rgba(239,68,68,.3)" onclick="unpublishListing()">出店を取り下げる</button>
+        <button id="lsUnpublishBtn" class="btn-back" style="display:none;color:var(--rose);border-color:rgba(239,68,68,.3)" onclick="unpublishListing()" data-i18n="listingUnpublish">Unpublish listing</button>
         <div style="display:flex;gap:10px;margin-left:auto">
-          <button class="btn-back" onclick="closeListingForm()">キャンセル</button>
-          <button class="btn-volt" id="lsSubmitBtn" onclick="submitListing()">出店する →</button>
+          <button class="btn-back" onclick="closeListingForm()" data-i18n="cancel">Cancel</button>
+          <button class="btn-volt" id="lsSubmitBtn" onclick="submitListing()" data-i18n="listingSubmit">Publish →</button>
         </div>
       </div>
     </div>
@@ -5463,6 +5463,98 @@ var T = {
       homeKindGrCta:        L('＋ Create a group →','+ Create a group →'),
       homeKindTmD:          L('<b>AI が複数体連携</b>して業務を丸ごと自動化。','<b>Multiple AIs in concert</b> — automate the whole job.'),
       homeKindTmCta:        L('＋ Build a new team →','+ Build a new team →'),
+
+      // ── Team gallery / activate / edit / members / add-member ──
+      teamGalleryTitle:     L('🎯 AI Agent Team を作成','🎯 Create AI Agent Team'),
+      teamGalleryTabNew:    L('🆕 新規作成','🆕 From scratch'),
+      teamGalleryTabTpl:    L('📋 テンプレートから','📋 From templates'),
+      teamGalleryIntro:     L('<b>どんな業務を自動化したいですか？</b> 目的を書くと AI が必要なエージェントを設計してチームにします。',
+                              '<b>What would you like to automate?</b> Describe the goal — AI will design the agents you need and bundle them into a team.'),
+      teamGalleryChipEC:    L('🛍 EC を作る','🛍 Build an e-commerce site'),
+      teamGalleryChipSNS:   L('📱 SNS 集客','📱 Grow on social'),
+      teamGalleryChipSaaS:  L('💻 SaaS を作る','💻 Ship a SaaS MVP'),
+      teamGalleryChipCS:    L('🤝 CS 自動化','🤝 Automate support'),
+      teamGalleryChipYT:    L('🎬 YouTube','🎬 YouTube'),
+      teamGallerySubmit:    L('✨ AI にチームを設計してもらう','✨ Let AI design your team'),
+      teamGalleryFootnote:  L('※ 設計は約 15-30 秒。目的に応じて 4-10 体のエージェントが自動生成され、すぐ起動します。',
+                              'Takes ~15–30s. 4–10 agents are generated for your goal and the team launches right after.'),
+      teamGalleryTplIntro:  L('テンプレートから選んで <b>1 クリックで起動</b>。複数の AI が連携してあなたの業務を自動化します。',
+                              'Pick a template and <b>launch in one click</b>. Multiple AI agents work together to automate the job.'),
+      teamActTitle:         L('起動中…','Activating…'),
+      teamActSub:           L('エージェントをクローン中','Cloning agents…'),
+      teamEditTitle:        L('✏️ チームを編集','✏️ Edit team'),
+      teamEditIconLbl:      L('アイコン','Icon'),
+      teamEditNameLbl:      L('チーム名','Team name'),
+      teamEditGoalLbl:      L('どんな業務を自動化したいですか？','What would you like to automate?'),
+      teamEditGoalSub:      L('この目的はチームのコンテキストとして各エージェントに渡されます。後から方向性が変わったら自由に書き換えてください。',
+                              'This goal is passed to every team agent as context. Rewrite it any time the direction shifts.'),
+      teamEditSave:         L('💾 保存','💾 Save'),
+      teamStoreH:           L('Agent Store に出店する','List on Agent Store'),
+      teamDangerNote:       L('⚠️ チームを削除すると、メンバー AI を DM に戻すか一緒に削除するか選べます。',
+                              '⚠️ Deleting the team lets you choose whether to keep its members in DM or delete them too.'),
+      teamDeleteBtn:        L('🗑 チームを削除','🗑 Delete team'),
+      teamMembersIntro:     L('このチームに所属している AI エージェントです。<b>@名前</b> で個別に呼び出せます。各エージェントの ✏️ から、性格・スキル・モデルを編集できます。',
+                              'These are the AI agents in this team. Mention any of them with <b>@name</b>. Click ✏️ on a row to edit persona, skills, or model.'),
+      teamMembersGoalH:     L('チームの目的','Team goal'),
+      teamMembersGoalEdit:  L('✏️ 編集','✏️ Edit'),
+      teamMembersAddBtn:    L('＋ メンバーを追加','+ Add member'),
+      addMemTitle:          L('＋ メンバーを追加','+ Add member'),
+      addMemIntro:          L('どんなメンバーを追加しますか？ 役割や担当業務を書くと、AI が <b>名前 ・ アイコン ・ スキル ・ 性格</b> を組み立てます。',
+                              'What kind of member do you want to add? Describe the role and tasks, and AI will assemble <b>name · icon · skills · persona</b>.'),
+      addMemSubmit:         L('✨ AI に作ってもらう','✨ Let AI generate'),
+
+      // ── Agent details / listing form ──
+      ldTitle:              L('エージェント詳細','Agent details'),
+      listingTitleNew:      L('🏪 Agent Store に出店する','🏪 List on Agent Store'),
+      listingFormH:         L('公開情報を入力','Listing details'),
+      listingTitleLbl:      L('タイトル','Title'),
+      listingTitleHint:     L('検索結果やカードに表示されます（最大 60 文字）','Shown on cards and search results (max 60 characters).'),
+      listingDescLbl:       L('説明','Description'),
+      listingDescHint:      L('利用者が見る詳細文。長すぎず、価値が一目でわかるように。',"The detail blurb users see. Keep it short — make the value obvious."),
+      listingCatLbl:        L('カテゴリ','Category'),
+      listingTagsLbl:       L('タグ（最大 5 つ・任意）','Tags (up to 5, optional)'),
+      listingTagsHint:      L('対象ユーザーが探しやすくなります。','Help the right users find your agent.'),
+      listingDemosLbl:      L('デモプロンプト（最大 3 つ・任意）','Demo prompts (up to 3, optional)'),
+      listingDemosHint:     L('利用者がワンクリックで試せる例文。良いプロンプトを置くと使われやすくなります。','One-click examples users can run. Good demos = more clones.'),
+      listingPriceLbl:      L('販売価格','Price'),
+      listingPriceFree:     L('🎁 無料','🎁 Free'),
+      listingPricePaid:     L('💰 有料','💰 Paid'),
+      listingPriceHint:     L('購入時に買い手の残高から差し引かれます。','Charged from the buyer\'s balance at purchase time.'),
+      listingRevH:          L('💰 収益還元','💰 Revenue share'),
+      listingRevD:          L('買い切り価格の <b>70%</b> + 利用料 (チャットコスト) の <b>10%</b> が、自動的にあなたの利用可能残高に加算されます。','<b>70%</b> of the one-time price + <b>10%</b> of usage (chat cost) is automatically credited to your available balance.'),
+      listingVisLbl:        L('公開設定','Visibility'),
+      listingVisPublic:     L('🌐 Agent Store に公開','🌐 Public on Agent Store'),
+      listingVisUnlisted:   L('🔗 リンクを知ってる人だけ','🔗 Unlisted (link only)'),
+      listingUnpublish:     L('出店を取り下げる','Unpublish listing'),
+      listingSubmit:        L('出店する →','Publish →'),
+
+      // ── Create wizard (single agent) ──
+      wizTitle:             L('新しいエージェント','New agent'),
+      wsBack:               L('← 戻る','← Back'),
+      wsNext:               L('次へ →','Next →'),
+      wsCreate:             L('✨ 作成する','✨ Create'),
+      ws1H:                 L('アイコンを選ぶ','Pick an icon'),
+      ws1S:                 L('絵文字から選ぶか、画像をアップロードします','Choose an emoji or upload an image'),
+      ws1Upload:            L('📸 画像をアップロード','📸 Upload image'),
+      ws1Reset:             L('↻ 絵文字に戻す','↻ Back to emoji'),
+      ws2H:                 L('名前を決める','Pick a name'),
+      ws2S:                 L('このエージェントの名前を入力してください','Give this agent a name'),
+      ws2Lbl:               L('エージェントの名前','Agent name'),
+      ws3H:                 L('スキルを与える','Assign skills'),
+      ws3S:                 L('このエージェントの得意なこと（複数OK）','What this agent is good at (multiple OK)'),
+      ws4H:                 L('採用目的','Hired for'),
+      ws4S:                 L('このエージェントを何のために雇いますか？','What is this agent hired to do?'),
+      ws4Lbl:               L('採用目的','Purpose'),
+      ws5H:                 L('業務内容','Day-to-day duties'),
+      ws5S:                 L('具体的にどんな仕事を任せますか？日々の作業内容を入力してください','Concretely, what work will this agent handle every day?'),
+      ws5Lbl:               L('業務内容','Duties'),
+      ws5WebTool:           L('🌐 Web 検索 / URL 取得','🌐 Web search / URL fetch'),
+      ws5SheetsTool:        L('📊 Google スプレッドシート連携','📊 Google Sheets integration'),
+      ws5SheetsConn:        L('接続中:','Connected as:'),
+      ws5SheetsConnect:     L('＋ Google アカウントと接続','+ Connect Google account'),
+      ws5SheetsHelp:        L('🔧 接続できない場合のセットアップ手順','🔧 Setup guide if you can\'t connect'),
+      ws6H:                 L('確認して完成！','Review and finish!'),
+      ws6S:                 L('このエージェントで作成します','Create this agent'),
 
       // Agent create overlay (2-tab New / Template chooser)
       cancel:               L('キャンセル','Cancel'),
@@ -10372,8 +10464,12 @@ function openListingForm(agentId){
   document.getElementById('lsPrice').value = prefilledPrice > 0 ? String(prefilledPrice) : '';
   lsTogglePriceMode();
 
-  document.getElementById('listingTitle').textContent = m.is_listed ? '🏪 出店内容を編集' : '🏪 Agent Store に出店する';
-  document.getElementById('lsSubmitBtn').textContent = m.is_listed ? '更新する' : '出店する →';
+  document.getElementById('listingTitle').textContent = m.is_listed
+    ? L('🏪 出店内容を編集','🏪 Edit listing')
+    : L('🏪 Agent Store に出店する','🏪 List on Agent Store');
+  document.getElementById('lsSubmitBtn').textContent = m.is_listed
+    ? L('更新する','Update')
+    : L('出店する →','Publish →');
   document.getElementById('lsUnpublishBtn').style.display = m.is_listed ? 'inline-flex' : 'none';
 
   document.getElementById('listingOverlay').classList.add('open');

@@ -6371,6 +6371,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
     }
     // Record this token in the multi-account list (so the switcher shows it)
     try{ _recordCurrentAccount(); }catch(e){}
+    // If the Chrome extension is installed but not yet paired (or paired-but-offline),
+    // silently pair in the background so the user never has to click anything.
+    try{ if(typeof _extAutoPair==='function') _extAutoPair(); }catch(e){}
     // Reveal admin moderation tab for staff accounts
     if(me && me.is_admin){
       var aSec=document.getElementById('snavAdminSec'); if(aSec) aSec.style.display='';
@@ -11231,9 +11234,8 @@ function toggleEditSheets(){
 }
 
 /* ── Browser Extension integration helpers ────────────────── */
-// The extension ID — set after publishing to Chrome Web Store. For development
-// (load unpacked) we don't know the ID upfront, so we resolve via UA detection.
-var EXT_ID = 'TBD';  // will be set when published
+var EXT_ID = 'dfpkogebkejpggilgcfgnipemdjpkoil';
+var EXT_STORE_URL = 'https://chromewebstore.google.com/detail/' + EXT_ID;
 
 function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, agentEnabled){
   var paired = !!(me && me.extension_paired);
@@ -11247,12 +11249,16 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
   sw.classList.toggle('on', !!agentEnabled && paired);
   if(paired){
     if(accountRow) accountRow.style.display='';
-    if(devNode) devNode.textContent = (me.extension_device_id||'') + (connected?' (オンライン)':' (オフライン)');
+    if(devNode) devNode.textContent = connected?(isJa?'オンライン':'Online'):(isJa?'オフライン':'Offline');
     if(btn) btn.style.display='none';
     if(agentEnabled){
       desc.innerHTML = connected
-        ? '<span style="color:#3730a3;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
-        : '<span style="color:var(--peach-dark);font-weight:700">⚠ 有効だがオフライン</span> — Chrome を起動して拡張アイコンが表示されてるか確認';
+        ? (isJa
+            ? '<span style="color:#3730a3;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
+            : '<span style="color:#3730a3;font-weight:700">✓ Active · Online</span> — AI can drive this browser')
+        : (isJa
+            ? '<span style="color:var(--peach-dark);font-weight:700">⚠ 有効だがオフライン</span> — Chrome を起動して拡張アイコンが表示されてるか確認'
+            : '<span style="color:var(--peach-dark);font-weight:700">⚠ Active but offline</span> — Open Chrome and check the extension icon');
     }else{
       desc.textContent = isJa
         ? 'スイッチを ON にすると AI がこのブラウザを使ってサイト操作できます (X / Slack / Gmail など)'
@@ -11260,57 +11266,98 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
     }
   }else{
     if(accountRow) accountRow.style.display='none';
-    if(btn) btn.style.display='';
+    if(btn){
+      btn.style.display='';
+      btn.textContent = isJa?'Chrome に追加':'Add to Chrome';
+    }
     sw.classList.remove('on');
     desc.textContent = isJa
-      ? '先にブラウザ拡張をペアリングしてください'
-      : 'Pair the browser extension first';
+      ? 'Chrome 拡張をインストールすると、AI がブラウザを操作できるようになります'
+      : 'Install the Chrome extension to let AI drive your browser';
   }
 }
 
-async function connectExtension(){
-  // 1. Server issues a fresh device_token for this user.
-  let r;
-  try{
-    r = await api('POST','/api/extension/pair',{});
-  }catch(e){
-    showToast((e&&e.message)||'ペアリング初期化に失敗しました','ng');
-    return;
-  }
-  if(!r || !r.device_token){
-    showToast(L('サーバーが device_token を返しませんでした','Server did not return a device_token'),'ng');
-    return;
-  }
-  // 2. Push the token into the installed extension via externally_connectable.
-  // The extension responds with {ok:true} if accepted.
-  if(typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage){
-    showToast(isJa
-      ? '拡張機能がインストールされていません。先に Chrome に追加してください。'
-      : 'Extension not installed. Please add it to Chrome first.','ng');
-    // Open install instructions
-    setTimeout(function(){ window.open('/setup-extension.html','_blank'); }, 800);
-    return;
-  }
-  if(!EXT_ID || EXT_ID === 'TBD'){
-    showToast(L('開発版です。Chrome 拡張機能の ID を取得してから連携してください','Dev build — get a Chrome extension ID before linking.'),'ng');
-    return;
-  }
-  chrome.runtime.sendMessage(EXT_ID, {
-    type:'pair',
-    device_id: r.device_id,
-    device_token: r.device_token,
-  }, function(resp){
-    if(chrome.runtime.lastError || !resp || !resp.ok){
-      showToast(L('拡張機能との通信に失敗しました。Chrome を再起動して再試行してください','Could not reach the extension. Restart Chrome and try again.'),'ng');
-      return;
+// Probe whether the extension is installed (responds to pings via externally_connectable).
+function _extProbe(){
+  return new Promise(function(resolve){
+    if(typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage){
+      return resolve(false);
     }
-    // 3. Refresh /api/me to get updated paired/connected state.
-    setTimeout(async function(){
-      try{ const m = await api('GET','/api/me'); me = m.user||m; }catch(e){}
-      _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false);
-      showToast(L('ブラウザ拡張を連携しました','Browser extension linked'),'ok');
-    }, 500);
+    var done=false;
+    var t=setTimeout(function(){ if(!done){ done=true; resolve(false); } }, 800);
+    try{
+      chrome.runtime.sendMessage(EXT_ID, {type:'status'}, function(resp){
+        if(done) return; done=true; clearTimeout(t);
+        if(chrome.runtime.lastError) return resolve(false);
+        resolve(!!resp);
+      });
+    }catch(e){ if(!done){ done=true; clearTimeout(t); resolve(false); } }
   });
+}
+
+async function connectExtension(){
+  // If extension isn't installed, send the user straight to the Chrome Web Store.
+  var installed = await _extProbe();
+  if(!installed){
+    window.open(EXT_STORE_URL, '_blank');
+    showToast(isJa
+      ? 'Chrome に追加した後、このタブに戻ってください。自動で接続されます。'
+      : 'After adding to Chrome, return to this tab — we\'ll connect automatically.','ok');
+    _extWaitForInstall();
+    return;
+  }
+  await _extPairOnce(true);
+}
+
+// Mint a token + push it into the extension. Silent: no toasts unless `verbose`.
+async function _extPairOnce(verbose){
+  let r;
+  try{ r = await api('POST','/api/extension/pair',{}); }
+  catch(e){ if(verbose) showToast((e&&e.message)||'ペアリング初期化に失敗しました','ng'); return false; }
+  if(!r || !r.device_token){ if(verbose) showToast(L('サーバーが device_token を返しませんでした','Server did not return a device_token'),'ng'); return false; }
+  return await new Promise(function(resolve){
+    try{
+      chrome.runtime.sendMessage(EXT_ID, {
+        type:'pair', device_id:r.device_id, device_token:r.device_token,
+      }, async function(resp){
+        if(chrome.runtime.lastError || !resp || !resp.ok){
+          if(verbose) showToast(L('拡張機能との通信に失敗しました。Chrome を再起動して再試行してください','Could not reach the extension. Restart Chrome and try again.'),'ng');
+          return resolve(false);
+        }
+        try{ const m = await api('GET','/api/me'); me = m.user||m; }catch(e){}
+        try{ _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false); }catch(e){}
+        if(verbose) showToast(L('ブラウザ拡張を連携しました','Browser extension linked'),'ok');
+        resolve(true);
+      });
+    }catch(e){ resolve(false); }
+  });
+}
+
+// Poll for the extension after the user clicks "Add to Chrome" and switches tabs.
+function _extWaitForInstall(){
+  var tries=0;
+  var iv=setInterval(async function(){
+    tries++;
+    if(tries>60){ clearInterval(iv); return; } // ~2 min
+    if(document.hidden) return;
+    var ok = await _extProbe();
+    if(ok){
+      clearInterval(iv);
+      await _extPairOnce(true);
+    }
+  }, 2000);
+}
+
+// On app load: if user is logged in and extension is reachable but not yet paired
+// (or paired-but-offline), do it silently in the background.
+async function _extAutoPair(){
+  try{
+    if(!me) return;
+    var installed = await _extProbe();
+    if(!installed) return;
+    if(me.extension_paired && me.extension_connected) return;
+    await _extPairOnce(false);
+  }catch(e){}
 }
 
 async function disconnectExtension(){

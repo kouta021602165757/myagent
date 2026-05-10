@@ -7802,6 +7802,67 @@ async function autoMigrate(){
   }
 }
 
+// ── Marketplace seed: 50 curated agents + 50 curated teams ──
+// Owned by a single 'system' user so they appear publicly in the Store.
+// Idempotent: only adds listings whose deterministic ls_seed_<slug> isn't
+// already saved. Safe to run on every boot.
+async function seedMarketplace(){
+  let seed;
+  try { seed = require('./seed_marketplace'); }
+  catch(e){ console.warn('[seed] seed module not loaded:', e.message); return; }
+  const SYS_ID = 'sys_marketplace_seed';
+  const SYS_EMAIL = 'curated@myaiagents.agency';
+  let sysUser = await DB.findBy('id', SYS_ID).catch(()=>null);
+  if(!sysUser){
+    sysUser = newUser({
+      name: 'MY AI AGENT',
+      email: SYS_EMAIL,
+      password: PW.hash('seed-' + crypto.randomBytes(16).toString('hex')),
+      verified: true,
+    });
+    sysUser.id = SYS_ID;          // pin the id so we can find it again
+    sysUser.is_verified = true;   // verified-creator badge on cards
+    sysUser.plan = 'business';    // host plan should never block listings
+    sysUser.plan_v2_grandfathered = true;
+    try {
+      await DB.create(sysUser);
+      console.log('[seed] created system curator user');
+    } catch(e){
+      console.error('[seed] failed to create system user:', e.message);
+      return;
+    }
+  }
+  // Existing listings (by listing_id) so we don't re-add
+  const existingIds = new Set(
+    (sysUser.agents||[])
+      .map(a => a && a.marketplace && a.marketplace.listing_id)
+      .filter(Boolean)
+  );
+  const toAdd = [];
+  for(const spec of seed.SEED_AGENTS){
+    const lid = 'ls_seed_' + spec.slug;
+    if(existingIds.has(lid)) continue;
+    toAdd.push(seed.buildSeedAgent(spec));
+  }
+  for(const spec of seed.SEED_TEAMS){
+    const lid = 'ls_seed_' + spec.slug;
+    if(existingIds.has(lid)) continue;
+    const built = seed.buildSeedTeam(spec);
+    toAdd.push(...built.members, built.group);
+  }
+  if(!toAdd.length){
+    console.log('[seed] marketplace seeds already present (' + existingIds.size + ' listings)');
+    return;
+  }
+  sysUser.agents = [...(sysUser.agents||[]), ...toAdd];
+  try {
+    await DB.save(sysUser);
+    console.log('[seed] added ' + toAdd.length + ' records to the system curator (now ' + (sysUser.agents||[]).length + ' total)');
+  } catch(e){
+    console.error('[seed] DB.save failed:', e.message);
+  }
+}
+
 server.listen(PORT,'0.0.0.0', async ()=>{
   console.log(`\n🚀 MY AI Agent`);
   console.log(`   http://localhost:${PORT}`);
@@ -7813,7 +7874,12 @@ server.listen(PORT,'0.0.0.0', async ()=>{
   console.log(`   Email:     ${RESEND_KEY?'✅ Resend':'⚠️  Console only'}\n`);
   // Run schema migration AFTER server is listening so health checks pass even if
   // migration is slow. Failures are logged but don't crash the server.
-  autoMigrate().catch(e=>console.error('[migrate] crashed:', e.message));
+  autoMigrate()
+    .catch(e=>console.error('[migrate] crashed:', e.message))
+    .finally(()=>{
+      // Seed runs after migration so the schema is in place. Idempotent.
+      seedMarketplace().catch(e=>console.error('[seed] crashed:', e.message));
+    });
 });
 server.on('error',err=>{if(err.code==='EADDRINUSE'){console.error('Port in use:',PORT);process.exit(1);}else{console.error('Server error:',err.message);}});
 process.on('SIGTERM',()=>server.close(()=>process.exit(0)));

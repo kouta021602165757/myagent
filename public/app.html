@@ -11547,6 +11547,10 @@ async function _extPairOnce(verbose){
         }
         try{ const m = await api('GET','/api/me'); me = m.user||m; }catch(e){}
         try{ _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false); }catch(e){}
+        // Pairing succeeded — start the SW keep-alive ping if it isn't
+        // already running. Covers mid-session pairs (Add to Chrome flow,
+        // background reconnect) that bypass _extAutoPair.
+        try{ _extStartKeepAlive(); }catch(e){}
         if(verbose) showToast(L('ブラウザ拡張を連携しました','Browser extension linked'),'ok');
         resolve(true);
       });
@@ -11587,42 +11591,49 @@ async function _extAutoPair(){
 
 // ── MV3 service-worker keep-alive (web → extension) ─────────────────
 // Chrome MV3 service workers idle out after ~30s, dropping the SSE stream
-// even when the user is actively using the app. Without this loop, every
-// ext_* tool call has a coin-flip chance of "extension offline" because the
-// SW happened to die between messages.
+// even when the user is actively using the app. The proper fix lives in
+// the extension itself (chrome.alarms keep-alive in v0.2.0), but until
+// that's published the *web app* keeps the SW alive by pinging every 20s.
+// As long as any tab of myaiagents.agency is open and the user is paired,
+// the SSE never gets a chance to time out.
 //
-// We can't fix this in the published v0.1.0 extension (that needs a Web
-// Store re-publish with chrome.alarms), but the *web app* can send a
-// chrome.runtime ping every 25s — each ping resets the SW idle clock. So
-// as long as the user has any tab of myaiagents.agency open, the extension
-// stays alive and SSE stays connected.
+// We use a chained setTimeout (not setInterval) so a missed tick — e.g.
+// a slow probe round-trip on a flaky network — doesn't permanently drift
+// the schedule. We *don't* skip on document.hidden: when the user has
+// the AI doing tool work in a background tab, we need the SW alive even
+// if they're not looking at it. Browsers throttle setTimeout to ~1Hz on
+// hidden tabs, but that still fires our 20s tick fast enough.
 var _extKeepAliveTimer = null;
-var _EXT_KEEPALIVE_MS = 25000; // safely under MV3's 30s idle cap
+var _EXT_KEEPALIVE_MS = 20000; // safely under MV3's 30s idle cap, with margin
+
+function _extKeepAliveTick(){
+  if(!me || !me.extension_paired){ _extStopKeepAlive(); return; }
+  if(!_isExtCapable())             { _extStopKeepAlive(); return; }
+  // Fire-and-forget — a single chrome.runtime.sendMessage resets the SW
+  // idle clock. We don't care about the response.
+  _extProbe().catch(function(){});
+  _extKeepAliveTimer = setTimeout(_extKeepAliveTick, _EXT_KEEPALIVE_MS);
+}
 
 function _extStartKeepAlive(){
-  if(_extKeepAliveTimer) return;
+  if(_extKeepAliveTimer) return; // already running
   if(!_isExtCapable()) return;
-  _extKeepAliveTimer = setInterval(function(){
-    if(document.hidden) return;
-    if(!me || !me.extension_paired) return;
-    // A single chrome.runtime.sendMessage is enough to keep the SW alive.
-    _extProbe().catch(function(){});
-  }, _EXT_KEEPALIVE_MS);
+  if(!me || !me.extension_paired) return;
+  // Probe once immediately so the SW is alive *now*, then schedule.
+  _extProbe().catch(function(){});
+  _extKeepAliveTimer = setTimeout(_extKeepAliveTick, _EXT_KEEPALIVE_MS);
 }
 
 function _extStopKeepAlive(){
-  if(_extKeepAliveTimer){ clearInterval(_extKeepAliveTimer); _extKeepAliveTimer = null; }
+  if(_extKeepAliveTimer){ clearTimeout(_extKeepAliveTimer); _extKeepAliveTimer = null; }
 }
 
-// When the tab returns from being hidden, the SW may have died during the
-// idle window. Probe immediately so the next ext_* tool call doesn't hit a
-// stale connection.
+// When the tab returns from being hidden longer than the SW idle cap, the
+// SW likely died — probe immediately to wake it before any ext_* tool call.
 document.addEventListener('visibilitychange', function(){
   if(document.hidden) return;
   if(!me || !me.extension_paired) return;
   if(!_isExtCapable()) return;
-  // Fire-and-forget — _extProbe wakes the SW; if SSE was dropped, the
-  // server will reconnect via the extension's own EventSource retry.
   _extProbe().catch(function(){});
 });
 
@@ -11634,6 +11645,8 @@ async function disconnectExtension(){
     var ag = agents.find(a=>a.id===window._editAgentId);
     if(ag) ag.extension_enabled=false;
     _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', false);
+    // No longer paired — stop the SW keep-alive ping.
+    try{ _extStopKeepAlive(); }catch(e){}
     // Try to notify the extension too (best-effort).
     try{ if(typeof chrome!=='undefined' && chrome.runtime && EXT_ID && EXT_ID!=='TBD'){ chrome.runtime.sendMessage(EXT_ID, {type:'unpair'}, function(){}); } }catch(e){}
     showToast(L('切断しました','Disconnected'),'ok');

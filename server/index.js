@@ -2478,31 +2478,82 @@ async function executeEmailTool(user, agent, input){
 // Claude.ai-style "Artifacts" — the AI writes a complete self-contained
 // HTML doc, we drop it in /generated/ and hand back a URL. The chat
 // renders .html URLs as a sandboxed iframe with a control bar.
-async function executeArtifactTool(input){
+async function executeArtifactTool(input, ownerUser){
   const title = _safeName(input && input.title, 'artifact');
   const html  = String(input && input.html || '');
   const desc  = String(input && input.description || '').slice(0, 240);
   if(html.length < 50)     return { error: 'html too short' };
   if(html.length > 500000) return { error: 'html too long (max 500KB)' };
-  // Defense in depth — drop any <script> that fetches from the same origin
-  // (the artifact is served from myaiagents.agency, but iframe sandbox
-  // already cuts off same-origin access). The iframe sandbox attribute on
-  // the client side is the real guardrail.
   const id = crypto.randomBytes(5).toString('hex');
   const filename = 'artifact-' + title + '-' + id + '.html';
   const outPath = path.join(GENERATED_DIR, filename);
+  // Write to ephemeral disk (fast path for this container's lifetime).
+  let sizeKb = Math.round(Buffer.byteLength(html, 'utf8') / 1024);
   try {
     fs.writeFileSync(outPath, html, 'utf8');
+    sizeKb = Math.round(fs.statSync(outPath).size / 1024);
   } catch(e){
-    return { error: 'write_failed: ' + (e.message || 'unknown') };
+    console.warn('[artifact] disk write failed:', e.message);
+    // Continue — DB persistence below is the source of truth on free-tier hosting.
+  }
+  // Persist to DB so the URL survives container restarts (Render free-tier
+  // wipes /generated/ on every deploy). serveStatic falls back to this on miss.
+  if(ownerUser){
+    try {
+      ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
+      ownerUser.artifacts.push({
+        id, filename, title, description: desc,
+        html,
+        created_at: new Date().toISOString(),
+        size: Buffer.byteLength(html, 'utf8'),
+      });
+      // Cap at 100 most-recent artifacts per user to keep JSONB row small.
+      if(ownerUser.artifacts.length > 100){
+        ownerUser.artifacts.splice(0, ownerUser.artifacts.length - 100);
+      }
+      await DB.save(ownerUser);
+    } catch(e){
+      console.warn('[artifact] DB persist failed:', e.message);
+      // Don't fail the tool call — disk copy might still work for this session.
+    }
   }
   const url = '/generated/' + filename;
   return {
     url, title, description: desc,
-    size_kb: Math.round(fs.statSync(outPath).size / 1024),
+    size_kb: sizeKb,
     markdown: '![' + title + '](' + url + ')',
-    instructions: '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットが .html を sandbox iframe として再生し、ユーザーは「全画面で開く」ボタンで新タブ表示できます。',
+    instructions: '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットは URL を「新タブで開く ↗」リンクカードとしてレンダリングします。',
   };
+}
+
+// Lookup an artifact by filename across all users (for the static-route
+// fallback when the on-disk copy was wiped by a container restart).
+async function findArtifactByFilename(filename){
+  if(!filename) return null;
+  try {
+    if(USE_SUPA){
+      const filter = encodeURIComponent('[{"filename":"'+filename+'"}]');
+      const r = await sbReq('GET','users','?select=*&artifacts=cs.'+filter+'&limit=1');
+      if(Array.isArray(r.d) && r.d.length){
+        const a = (r.d[0].artifacts||[]).find(x => x.filename===filename);
+        if(a) return a;
+      }
+      // Broad scan fallback.
+      const r2 = await sbReq('GET','users','?select=artifacts&limit=2000');
+      if(Array.isArray(r2.d)){
+        for(const u of r2.d){
+          const a = (u.artifacts||[]).find(x => x.filename===filename);
+          if(a) return a;
+        }
+      }
+    } else {
+      for(const u of LDB.all()){
+        const a = (u.artifacts||[]).find(x => x.filename===filename);
+        if(a) return a;
+      }
+    }
+  } catch(e){ console.warn('[artifact] lookup failed:', e.message); }
+  return null;
 }
 
 // ── 6) generate_qr — qrcode npm, fully local ─────────────────
@@ -10533,7 +10584,7 @@ async function handleAPI(req,res,pathname,method,ip){
             } else if(block.name === 'generate_qr'){
               result = await executeQrTool(block.input||{});
             } else if(block.name === 'create_artifact'){
-              result = await executeArtifactTool(block.input||{});
+              result = await executeArtifactTool(block.input||{}, payerUser);
             } else if(block.name === 'notify_slack'){
               result = await executeNotifyTool('slack', payerUser, block.input||{});
             } else if(block.name === 'notify_discord'){
@@ -11006,6 +11057,27 @@ function serveStatic(res,fp){
     : SEC;
   fs.readFile(fp,(err,data)=>{
     if(err){
+      // Ephemeral-disk fallback: if a /generated/<file>.html got wiped by a
+      // container restart, try to recover the HTML from the DB record. This
+      // makes artifact URLs durable across Render redeploys.
+      if(isGenerated && ext==='.html'){
+        const filename = path.basename(fp);
+        findArtifactByFilename(filename).then(a => {
+          if(!a || !a.html){
+            res.writeHead(404, {'Content-Type':'text/plain'});
+            return res.end('artifact expired or not found');
+          }
+          // Best-effort: write the recovered HTML back to disk so subsequent
+          // requests are served from the fast path.
+          try { fs.writeFileSync(fp, a.html, 'utf8'); } catch(e){}
+          const h={'Content-Type':'text/html; charset=utf-8',...headerSEC,
+                   'Cache-Control':'no-cache, no-store, must-revalidate'};
+          res.writeHead(200,h); res.end(a.html);
+        }).catch(()=>{
+          res.writeHead(404,{'Content-Type':'text/plain'}); res.end('Not found');
+        });
+        return;
+      }
       fs.readFile(path.join(PUBLIC_DIR,'404.html'),(e2,d2)=>{
         if(e2){res.writeHead(404);res.end('Not found');}
         else{res.writeHead(404,{'Content-Type':'text/html',...SEC});res.end(d2);}
@@ -11014,9 +11086,6 @@ function serveStatic(res,fp){
       const h={'Content-Type':mime,...headerSEC};
       if(ext==='.html'){
         h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';
-        // Inject GA / Sentry tags via _injectGA (no-op when neither env is set).
-        // Skip injection for /generated/ artifacts so user-authored HTML stays
-        // pristine.
         const needInject = !isGenerated && (GA_ID || (process.env.SENTRY_DSN || '').trim());
         const body = needInject ? Buffer.from(_injectGA(data.toString('utf8')), 'utf8') : data;
         res.writeHead(200,h);res.end(body);

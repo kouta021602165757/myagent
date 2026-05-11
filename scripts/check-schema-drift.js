@@ -65,6 +65,8 @@ const EXPECTED = [
   'google_oauth', 'outgoing_webhooks',
   'extension_device_id', 'extension_device_token', 'extension_device_meta',
   'mobile_devices', 'group_memberships',
+  // generated content
+  'artifacts',
 ];
 
 async function probeColumn(col) {

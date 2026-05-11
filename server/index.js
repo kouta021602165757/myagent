@@ -1332,7 +1332,7 @@ const IMAGE_TOOLS = [
 const VIDEO_TOOLS = [
   {
     name:'generate_video',
-    description:'HTML/CSS アニメーションから動画 (mp4) を生成します。SNS マーケティング動画 / ロゴアニメ / 解説動画 / タイポグラフィ / 数値カウントダウン等に最適。実写は不可。input.html は完全な単一 HTML 文書で、CSS @keyframes と animation-delay で時間軸を作ること。返ってきた URL は最終応答で markdown 画像構文 ![説明](URL) として埋め込む — チャットが mp4 を <video> として再生します。MY AI Agent ブランド: ピーチ #fb923c, ダーク #0a0a0c, クリーム #fdf8f3, Bebas Neue 見出し。',
+    description:'HTML/CSS アニメーションから動画 (mp4) を生成。SNS マーケティング動画 / ロゴアニメ / 解説動画 / タイポグラフィ / 数値カウントダウン等に最適。実写は不可。input.html は完全な単一 HTML 文書で、CSS @keyframes と animation-delay で時間軸を作ること。任意でナレーション (narration) を指定すると TTS で音声が合成されて mp4 にミックスされます。返ってきた URL は最終応答で markdown 画像構文 ![説明](URL) として埋め込む — チャットが mp4 を <video> として再生します。MY AI Agent ブランド: ピーチ #fb923c, ダーク #0a0a0c, クリーム #fdf8f3, Bebas Neue 見出し。',
     input_schema:{
       type:'object',
       properties:{
@@ -1340,6 +1340,8 @@ const VIDEO_TOOLS = [
         duration_seconds:{type:'integer',description:'録画する秒数 (5-30)'},
         aspect:{type:'string',enum:['landscape','portrait'],description:'landscape = 1280×720 (X / YouTube horizontal), portrait = 1080×1920 (TikTok / Reels / Shorts)'},
         html:{type:'string',description:'完全な HTML 文書 (<!doctype html>...). 動画は最初の duration_seconds 秒間を録画。Google Fonts は <link> で読み込み可。'},
+        narration:{type:'string',description:'(任意) 音声で読み上げるナレーション。英語推奨 (TTS 品質が一番高い)。1-300 文字。短すぎる/長すぎると不自然になるので動画長 (秒) × ~14 文字を目安に。'},
+        voice:{type:'string',enum:['alloy','echo','fable','onyx','nova','shimmer'],description:'TTS の声 (OpenAI 互換)。alloy=中性, nova=明るい, echo=温かい, fable=ストーリーテラー, onyx=深い男声, shimmer=明るい女声'},
       },
       required:['title','duration_seconds','aspect','html'],
     },
@@ -1378,13 +1380,60 @@ setInterval(() => {
   } catch(e){}
 }, 60 * 60 * 1000);
 
-async function _recordHtmlToMp4(html, outPath, durationSec, aspect){
+// ── TTS via Pollinations (OpenAI-audio compat, no key, free) ──
+// Pollinations exposes OpenAI's TTS through their text endpoint. We hit
+// GET text.pollinations.ai/<prompt>?model=openai-audio&voice=<v> and the
+// response body is an mp3 byte stream.
+async function _generateNarrationMp3(text, voice, outPath){
+  const clean = String(text || '').slice(0, 800);
+  if(!clean) throw new Error('empty narration');
+  const safeVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice) ? voice : 'alloy';
+  const url = 'https://text.pollinations.ai/' + encodeURIComponent(clean)
+            + '?model=openai-audio&voice=' + safeVoice;
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = https.request({
+      hostname: u.hostname, path: u.pathname + u.search, method: 'GET',
+      timeout: 45000,
+      headers: { 'Accept': 'audio/mpeg' },
+    }, (res) => {
+      if(res.statusCode !== 200){
+        return reject(new Error('TTS HTTP ' + res.statusCode));
+      }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        if(buf.length < 1000) return reject(new Error('TTS response too small (' + buf.length + ' bytes)'));
+        fs.writeFileSync(outPath, buf);
+        resolve();
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('TTS timeout')); });
+    req.end();
+  });
+}
+
+async function _recordHtmlToMp4(html, outPath, durationSec, aspect, narration, voice){
   const { chromium, ffmpegPath } = _loadVideoDeps();
   const tmpDir = path.dirname(outPath);
   fs.mkdirSync(tmpDir, { recursive: true });
   const tmpHtml = path.join(tmpDir, '.tmp-' + crypto.randomBytes(6).toString('hex') + '.html');
   fs.writeFileSync(tmpHtml, html);
   const size = aspect === 'portrait' ? { width:1080, height:1920 } : { width:1280, height:720 };
+
+  // Kick off TTS in parallel with the video recording so end-to-end latency
+  // is max(record, tts) instead of record + tts.
+  let ttsPath = null;
+  let ttsPromise = null;
+  if(narration && narration.trim()){
+    ttsPath = path.join(tmpDir, '.narr-' + crypto.randomBytes(6).toString('hex') + '.mp3');
+    ttsPromise = _generateNarrationMp3(narration, voice, ttsPath).catch(e => {
+      console.warn('[generate_video] TTS failed, falling back to silent:', e.message);
+      ttsPath = null;
+    });
+  }
 
   let webmPath = null;
   const browser = await chromium.launch();
@@ -1404,24 +1453,44 @@ async function _recordHtmlToMp4(html, outPath, durationSec, aspect){
   }
   // Locate the freshest webm produced by Playwright
   const candidates = fs.readdirSync(tmpDir)
-    .filter(f => f.endsWith('.webm') && !f.startsWith('.tmp-'))
+    .filter(f => f.endsWith('.webm') && !f.startsWith('.tmp-') && !f.startsWith('.narr-'))
     .map(f => ({ f, t: fs.statSync(path.join(tmpDir, f)).mtimeMs }))
     .sort((a,b) => b.t - a.t);
   if(!candidates.length) throw new Error('Playwright produced no webm');
   webmPath = path.join(tmpDir, candidates[0].f);
-  // Transcode to mp4
+
+  // Wait for TTS to finish (started before recording)
+  if(ttsPromise) await ttsPromise;
+
+  // Transcode to mp4, optionally muxing in the TTS track. If the audio is
+  // shorter than the video, ffmpeg pads with silence (apad). If it's longer,
+  // we let it ride to the video end (-shortest implicitly, since we pin the
+  // duration to the video stream length via -map).
+  const useAudio = ttsPath && fs.existsSync(ttsPath);
+  const args = ['-y', '-i', webmPath];
+  if(useAudio) args.push('-i', ttsPath);
+  args.push(
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart', '-preset', 'fast', '-crf', '24',
+  );
+  if(useAudio){
+    args.push(
+      '-c:a', 'aac', '-b:a', '128k',
+      '-af', 'apad',          // pad short narration with silence
+      '-shortest',            // cut audio at video end if longer
+      '-map', '0:v:0', '-map', '1:a:0',
+    );
+  }
+  args.push(outPath);
+
   await new Promise((resolve, reject) => {
-    const proc = require('child_process').spawn(ffmpegPath, [
-      '-y', '-i', webmPath,
-      '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart', '-preset', 'fast', '-crf', '24',
-      outPath,
-    ]);
+    const proc = require('child_process').spawn(ffmpegPath, args);
     proc.stderr.on('data', () => {}); // discard
     proc.on('close', (code) => code === 0 ? resolve() : reject(new Error('ffmpeg exit ' + code)));
     proc.on('error', reject);
   });
   try { fs.unlinkSync(webmPath); } catch(e){}
+  if(ttsPath){ try { fs.unlinkSync(ttsPath); } catch(e){} }
 }
 
 async function executeVideoTool(name, input){
@@ -1433,12 +1502,14 @@ async function executeVideoTool(name, input){
   const html = String(input.html || '');
   if(html.length < 100)  return { error: 'html too short (need a complete HTML document)' };
   if(html.length > 80000) return { error: 'html too long (max 80KB)' };
+  const narration = String(input.narration || '').trim().slice(0, 800);
+  const voice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(input.voice) ? input.voice : 'alloy';
 
   const id = crypto.randomBytes(5).toString('hex');
   const filename = safeTitle + '-' + id + '.mp4';
   const outPath = path.join(GENERATED_DIR, filename);
   try {
-    await _recordHtmlToMp4(html, outPath, duration, aspect);
+    await _recordHtmlToMp4(html, outPath, duration, aspect, narration, voice);
   } catch(e){
     return { error: 'render_failed: ' + (e.message || 'unknown') };
   }
@@ -1449,6 +1520,8 @@ async function executeVideoTool(name, input){
     duration_seconds: duration,
     aspect,
     size_kb: sizeKb,
+    has_audio: !!narration,
+    voice: narration ? voice : null,
     markdown: '![' + safeTitle + '](' + url + ')',
     instructions: '次の最終応答で必ず上記 markdown 構文を本文に含めてください。チャットが mp4 を <video> として自動的にインライン再生します。',
   };

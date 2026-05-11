@@ -62,8 +62,50 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS outgoing_webhooks      jsonb DEFAULT 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS handle                 text;
 CREATE UNIQUE INDEX IF NOT EXISTS users_handle_unique             ON users (handle) WHERE handle IS NOT NULL;
 
+-- ── Founder 100 機構 (席番 1-100 を先着で割り当て) ───────────────
+-- code は server/index.js のサインアップ処理で is_founder / founder_seat_no /
+-- founder_granted_at / business_trial_until を書く。schema 未追加だと
+-- DB.create の auto-drop で silently 失われ、UI バッジが常に外れる。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founder            boolean DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS founder_seat_no       integer;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS founder_granted_at    text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS business_trial_until  text;
+
+-- ── 紹介プログラム ────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code         text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by           text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_stats        jsonb DEFAULT '{"count":0,"last_at":null,"total_credit_jpy":0}'::jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS users_referral_code_unique     ON users (referral_code) WHERE referral_code IS NOT NULL;
+
+-- ── ログイン履歴 / プロフィール拡張 / 長期メモリ / pin / リアクション ──
+ALTER TABLE users ADD COLUMN IF NOT EXISTS login_history         jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role                  text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS memories              jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_pinned           jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reactions             jsonb DEFAULT '[]'::jsonb;
+
 -- ── PostgREST のスキーマキャッシュをリロード ──────────────────────
 NOTIFY pgrst, 'reload schema';
+
+-- ──────────────────────────────────────────────────────────────────
+-- (OPTIONAL) 既存ユーザーを retroactively Founder 100 に登録するバックフィル
+-- ──────────────────────────────────────────────────────────────────
+-- Founder 100 機構を後付けした関係で、既存のサインアップ済みユーザーには
+-- バッジが付かない (列が無かったため auto-drop されてた)。ビジネス判断で
+-- 「最初の N 人を Founder 扱いにする」ならコメントを外して 1 度だけ実行。
+--
+-- WITH first_100 AS (
+--   SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC) AS seat
+--   FROM users
+--   WHERE password IS NOT NULL                      -- ボット seed user を除外
+--   ORDER BY created_at ASC LIMIT 100
+-- )
+-- UPDATE users SET
+--   is_founder = true,
+--   founder_seat_no = f.seat,
+--   founder_granted_at = users.created_at,
+--   business_trial_until = (users.created_at::timestamptz + interval '30 days')::text
+-- FROM first_100 f WHERE users.id = f.id;
 
 -- 確認: 全カラムが揃っているか
 -- SELECT column_name, data_type, column_default

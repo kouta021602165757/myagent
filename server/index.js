@@ -1260,7 +1260,7 @@ function callAIStream(messages, system, onText, modelAlias){
 }
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
-async function callAIWithTools(messages,system,tools){
+async function callAIWithTools(messages,system,tools,toolChoice){
   // Single retry on 429 with short backoff — Render edge times out around 60–100s
   // so we can't afford long waits. Surface the rate limit to the user instead.
   let attempt = 0;
@@ -1280,8 +1280,10 @@ async function callAIWithTools(messages,system,tools){
   while(true){
     const sys = useCache ? _systemBlocks(system) : String(system||'');
     const cachedTools = useCache ? _toolsWithCache(tools) : tools;
+    const reqBody = {model:'claude-haiku-4-5-20251001',max_tokens:8000,system:sys,messages:_trimHistory(messages),tools:cachedTools};
+    if(toolChoice){ reqBody.tool_choice = toolChoice; }
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-                           {model:'claude-haiku-4-5-20251001',max_tokens:8000,system:sys,messages:_trimHistory(messages),tools:cachedTools},
+                           reqBody,
                            {timeout: 120000});
     if(r.s===200){
       // DEBUG: log stop_reason and any tool_use blocks the model decided to call
@@ -10580,6 +10582,57 @@ async function handleAPI(req,res,pathname,method,ip){
     if(useTools){
       let session = null;
       const sheetsToolNames = new Set(SHEETS_TOOLS.map(t=>t.name));
+      // ── Intent-routed forced tool_choice ─────────────────────
+      // When the user's message is unambiguously "build/make/send X", we
+      // force the model to call the matching tool on the FIRST iteration.
+      // This breaks out of the "作ります! → 完成したら送ります!" stall loop
+      // where prompt instructions alone weren't sufficient. After iteration 1
+      // (where the tool fires), we drop tool_choice so the model can chat /
+      // call more tools as needed.
+      const _firstToolChoice = (() => {
+        const m = (message||'').toLowerCase();
+        const isMakeIntent = /(作って|作成|作る|作ります|出して|出す|用意|生成|描いて|デザイン|完成|見せて|送って|送信|投稿|make|create|build|generate|send|show me|draw|design)/i.test(message||'');
+        if(!isMakeIntent) return null;
+        // Route by the type of deliverable mentioned
+        if(/(画像|イラスト|アイコン|ロゴ|illustration|icon|logo|picture|image)/i.test(message)) {
+          return { type:'tool', name:'generate_image' };
+        }
+        if(/(動画|プロモ.*ビデオ|プロモ.*動画|movie|video.*clip)/i.test(message) && !/エージェント|agent.*promo/i.test(message)) {
+          return { type:'tool', name:'generate_video' };
+        }
+        if(/(音声|ボイス|読み上げ|tts|audio|voice|speech)/i.test(message)) {
+          return { type:'tool', name:'generate_audio' };
+        }
+        if(/(pdf|請求書|提案書|レポート|invoice|report.*pdf)/i.test(m)) {
+          return { type:'tool', name:'generate_pdf' };
+        }
+        if(/(グラフ|chart|棒グラフ|折れ線|円グラフ|barchart|piechart)/i.test(message)) {
+          return { type:'tool', name:'generate_chart' };
+        }
+        if(/(qrコード|qr code|qr)/i.test(m)) {
+          return { type:'tool', name:'generate_qr' };
+        }
+        if(/(メール.*送|email|send.*mail)/i.test(message)) {
+          return { type:'tool', name:'send_email' };
+        }
+        if(/(slack.*(投稿|送|post)|post.*slack|slack.*に)/i.test(m)) {
+          return { type:'tool', name:'notify_slack' };
+        }
+        if(/(discord.*(投稿|送|post)|post.*discord)/i.test(m)) {
+          return { type:'tool', name:'notify_discord' };
+        }
+        if(/(予定|スケジュール.*登録|カレンダー.*登録|meeting|appointment|calendar.*event)/i.test(message)) {
+          return { type:'tool', name:'create_calendar_event' };
+        }
+        // Default for unspecified build requests = create_artifact (LP / mock /
+        // dashboard / page / app / calculator / UI etc.)
+        if(/(サイト|lp|モック|ダッシュ|ダッシュボード|ページ|アプリ|計算機|ui|画面|webサイト|landing|landing.*page|mockup|dashboard|page|app|calculator)/i.test(m)) {
+          return { type:'tool', name:'create_artifact' };
+        }
+        // Generic "build me something" with no clear noun: still force tool
+        // selection so the model can't stall, but let it choose which tool.
+        return { type:'any' };
+      })();
       try{
         // Lazy-create the browser session only when Chrome tools are actually wired in.
         // Sheets-only agents don't need Playwright at all.
@@ -10602,7 +10655,12 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), tools);
+          // Only force a tool on the FIRST iteration; subsequent iterations
+          // are the model reacting to tool_result blocks and need to be free
+          // to chat / call more tools / stop.
+          const _tc = (iters === 0 && !effectiveRegen) ? _firstToolChoice : null;
+          if(_tc){ console.log('[chat] tool_choice forced:', JSON.stringify(_tc)); }
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), tools, _tc);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 

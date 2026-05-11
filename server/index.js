@@ -8833,10 +8833,24 @@ const server=http.createServer(async(req,res)=>{
   if(pathname === '/sitemap.xml'){
     return serveSitemapXml(res);
   }
-  // /robots.txt → allow crawlers, point to sitemap
+  // /robots.txt → allow crawlers + explicit allow for social-card bots
   if(pathname === '/robots.txt'){
     res.writeHead(200, {'Content-Type':'text/plain; charset=utf-8','Cache-Control':'public, max-age=3600'});
-    return res.end('User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app.html\nDisallow: /auth.html\nSitemap: ' + APP_URL + '/sitemap.xml\n');
+    return res.end(
+      // Social link-preview crawlers need full access to anything users share
+      // (auth.html with ?ref= referrals, share.html, strategy-1000.html etc.).
+      // They respect robots.txt, so put them first with explicit Allow rules.
+      'User-agent: Twitterbot\nAllow: /\nDisallow: /api/\n\n' +
+      'User-agent: facebookexternalhit\nAllow: /\nDisallow: /api/\n\n' +
+      'User-agent: LinkedInBot\nAllow: /\nDisallow: /api/\n\n' +
+      'User-agent: Slackbot-LinkExpanding\nAllow: /\nDisallow: /api/\n\n' +
+      'User-agent: Slackbot\nAllow: /\nDisallow: /api/\n\n' +
+      'User-agent: Discordbot\nAllow: /\nDisallow: /api/\n\n' +
+      // Default crawlers: keep the /app.html restriction (it's a SPA shell
+      // with no SEO value) but allow /auth.html (signup landing has OG now).
+      'User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app.html\n\n' +
+      'Sitemap: ' + APP_URL + '/sitemap.xml\n'
+    );
   }
   // index.html → redirect to lp
   // /store (no extension) → serve store.html (public Agent Store browse page)

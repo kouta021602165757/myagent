@@ -5145,6 +5145,76 @@ async function handleAPI(req,res,pathname,method,ip){
   // ── GET /api/agents ────────────────────────────────────────
   if(pathname==='/api/agents'&&method==='GET')return jres(res,200,{agents:user.agents||[]});
 
+  // ── POST /api/onboarding/quickstart ────────────────────────
+  // First-run onboarding: Claude designs a single solo agent that matches
+  // the user's goal, we create it, return the new agent. Works for every
+  // plan (no team-gen gate). Caps the user at one quickstart agent so
+  // repeated calls don't spam the sidebar.
+  if(pathname==='/api/onboarding/quickstart' && method==='POST'){
+    const body = await readBody(req);
+    const goal = String(body.goal || '').trim().slice(0, 800);
+    const lang = (body.lang === 'ja') ? 'ja' : 'en';
+    if(goal.length < 6) return jres(res,400,{error: lang==='ja' ? '目的をもう少し詳しく書いてください' : 'Please describe your goal in a bit more detail'});
+    if(!ANTHROPIC)        return jres(res,500,{error: 'AI is not configured'});
+    if((user.agents||[]).filter(a => !a.is_group).length >= 1000) return jres(res,400,{error:'agents at cap'});
+
+    const VALID_SKILLS = ['writing','research','coding','marketing','planning','analysis','translate','support','idea','teaching','ceo','coo','secretary','designer','sns','other'];
+
+    const sys = lang === 'ja'
+      ? 'あなたは AI エージェント設計の専門家。ユーザーの 1 文目標から、それを実行する最適な solo AI エージェントを 1 体設計する。出力は厳密な JSON のみ、説明文や ``` も無し。'
+      : 'You design AI agents. Given a one-sentence goal, design ONE solo AI agent that will execute that goal best. Output strict JSON only — no commentary, no code fences.';
+
+    const schemaHint = '{"name":"<role name in target language, 12 chars max>","avatar":"<single emoji>","skills":[<1-3 of: '+VALID_SKILLS.join(',')+'>],"persona":"<1-2 sentence first-person persona describing scope and tone>"}';
+
+    let designed = null;
+    try {
+      const r = await callAI(
+        [{role:'user', content: 'Goal: ' + goal + '\n\nReturn JSON matching: ' + schemaHint}],
+        sys,
+        'haiku',
+      );
+      const raw = (r.content || []).map(b => b.text || '').join('').trim()
+        .replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'');
+      designed = JSON.parse(raw);
+    } catch(e){
+      return jres(res,502,{error:'AI design failed: ' + (e.message || 'unknown')});
+    }
+    if(!designed || !designed.name) return jres(res,502,{error:'AI returned no design'});
+
+    const skills = (Array.isArray(designed.skills) ? designed.skills : ['support'])
+      .filter(s => VALID_SKILLS.includes(s)).slice(0,3);
+    if(!skills.length) skills.push('support');
+
+    const agent = {
+      id: 'ag_' + crypto.randomUUID(),
+      avatar: String(designed.avatar || '🤖').slice(0, 6),
+      name: String(designed.name).trim().slice(0, 40),
+      skills,
+      persona: String(designed.persona || '').slice(0, 1200),
+      chrome_enabled: false,
+      sheets_enabled: false,
+      extension_enabled: false,
+      model: 'sonnet',
+      history: [],
+      created_at: new Date().toISOString(),
+      via_onboarding: true,
+    };
+    user.agents = [...(user.agents||[]), agent];
+    user.onboarded_v1 = true;
+    user.onboarded_at = new Date().toISOString();
+    await DB.save(user);
+    return jres(res,201,{ agent, goal });
+  }
+
+  // ── POST /api/onboarding/dismiss ───────────────────────────
+  // User skipped the wizard. Just flips the flag so we don't show it again.
+  if(pathname==='/api/onboarding/dismiss' && method==='POST'){
+    user.onboarded_v1 = true;
+    user.onboarded_at = new Date().toISOString();
+    try { await DB.save(user); } catch(e){}
+    return jres(res,200,{ok:true});
+  }
+
   // ── POST /api/agents ───────────────────────────────────────
   if(pathname==='/api/agents'&&method==='POST'){
     const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled,model}=await readBody(req);

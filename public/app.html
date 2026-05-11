@@ -2297,6 +2297,105 @@ body{color:#f0f0f8;}
 
 <div class="loader" id="loader"><div class="loader-ring"></div></div>
 
+<!-- ── First-run onboarding wizard (3 steps) ────────────────── -->
+<style>
+  #onbOverlay{
+    position:fixed;inset:0;z-index:9998;display:none;
+    background:rgba(10,10,12,.72);backdrop-filter:blur(6px);
+    align-items:center;justify-content:center;padding:24px;
+  }
+  #onbOverlay.on{display:flex;}
+  .onb-card{
+    width:min(560px,100%);background:#fff;border-radius:20px;overflow:hidden;
+    box-shadow:0 36px 80px rgba(0,0,0,.4);
+    font-family:-apple-system,'Hiragino Sans',sans-serif;color:#1a0a00;
+    animation:onbIn .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes onbIn{from{opacity:0;transform:scale(.94) translateY(14px);}to{opacity:1;transform:none;}}
+  .onb-hd{
+    background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;
+    padding:24px 28px;
+  }
+  .onb-step{
+    font-family:'DM Mono','SF Mono',monospace;font-size:11px;
+    letter-spacing:.14em;opacity:.85;text-transform:uppercase;
+  }
+  .onb-title{
+    font-family:'Bebas Neue',serif;font-weight:400;
+    font-size:38px;line-height:1.04;letter-spacing:-.01em;margin-top:4px;
+  }
+  .onb-body{padding:24px 28px 18px;}
+  .onb-prompt{
+    font-size:14px;color:#5c3a1e;line-height:1.65;margin:0 0 14px;
+  }
+  .onb-input{
+    width:100%;min-height:90px;resize:vertical;
+    padding:14px 16px;border:2px solid rgba(180,120,80,.22);
+    border-radius:12px;font-family:inherit;font-size:15px;line-height:1.5;
+    background:#fdf8f3;color:#1a0a00;outline:none;
+    transition:border .15s;
+  }
+  .onb-input:focus{border-color:#fb923c;}
+  .onb-chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 16px;}
+  .onb-chip{
+    font-size:12px;color:#5c3a1e;background:#faf3eb;
+    border:1px solid rgba(180,120,80,.22);
+    padding:6px 11px;border-radius:99px;cursor:pointer;font-family:inherit;
+  }
+  .onb-chip:hover{background:#fff7ed;border-color:#fb923c;color:#ea580c;}
+  .onb-cta{
+    width:100%;height:48px;background:#fb923c;color:#fff;border:0;
+    border-radius:12px;font-family:inherit;font-weight:700;font-size:15px;
+    cursor:pointer;letter-spacing:.005em;
+    box-shadow:0 10px 22px rgba(251,146,60,.32);
+    transition:background .14s,transform .12s;
+  }
+  .onb-cta:hover{background:#ea580c;}
+  .onb-cta:disabled{background:#cbd5e1;color:#94a3b8;cursor:not-allowed;box-shadow:none;}
+  .onb-skip{
+    background:transparent;border:0;color:#9a6a4a;font-family:inherit;
+    font-size:12px;cursor:pointer;margin-top:14px;width:100%;text-align:center;
+    text-decoration:underline;
+  }
+  .onb-skip:hover{color:#5c3a1e;}
+  .onb-loading{text-align:center;padding:30px 0 22px;}
+  .onb-loading .ring{
+    width:64px;height:64px;border-radius:50%;
+    border:5px solid rgba(251,146,60,.18);border-top-color:#fb923c;
+    margin:0 auto 18px;animation:onbSpin 1s linear infinite;
+  }
+  @keyframes onbSpin{to{transform:rotate(360deg);}}
+  .onb-loading .lbl{
+    font-family:'Bebas Neue',serif;font-size:22px;color:#1a0a00;letter-spacing:.005em;
+  }
+  .onb-loading .sub{font-size:12px;color:#9a6a4a;margin-top:6px;font-family:'DM Mono',monospace;}
+  .onb-agent{
+    background:linear-gradient(135deg,#fff7ed,#fed7aa);
+    border:2px solid #fb923c;border-radius:18px;padding:22px;text-align:center;
+    margin:8px 0 22px;
+  }
+  .onb-agent .em{font-size:64px;line-height:1;margin-bottom:10px;}
+  .onb-agent .nm{font-family:'Bebas Neue',serif;font-size:30px;color:#1a0a00;line-height:1;}
+  .onb-agent .pe{font-size:13px;color:#5c3a1e;margin-top:10px;line-height:1.55;text-align:left;}
+  .onb-agent .sk{
+    display:flex;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap;
+  }
+  .onb-agent .sk span{
+    font-size:10px;background:rgba(255,255,255,.6);color:#ea580c;
+    padding:3px 9px;border-radius:99px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  }
+  .onb-err{
+    background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);
+    color:#b91c1c;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;
+  }
+</style>
+
+<div id="onbOverlay" role="dialog" aria-modal="true">
+  <div class="onb-card" id="onbCard">
+    <!-- content injected by JS based on step -->
+  </div>
+</div>
+
 <div class="layout">
   <!-- ── SIDEBAR ─────────────────────────────────────────── -->
   <aside class="sb">
@@ -6522,7 +6621,139 @@ document.addEventListener('DOMContentLoaded',async()=>{
   }catch(e){ console.error('[init]',e&&e.message); }
   try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
   document.getElementById('loader').classList.add('gone');
+  // First-run wizard: only when the user has zero agents AND hasn't completed
+  // onboarding yet. Skips on subsequent visits.
+  try {
+    if(me && !me.onboarded_v1 && (!me.agents || me.agents.length === 0)){
+      _showOnboarding();
+    }
+  } catch(e){ console.warn('[onboarding]', e.message); }
 });
+
+// ── First-run onboarding wizard logic ───────────────────────
+function _showOnboarding(){
+  _renderOnboardingStep(1, {});
+  document.getElementById('onbOverlay').classList.add('on');
+}
+function _closeOnboarding(){
+  document.getElementById('onbOverlay').classList.remove('on');
+}
+function _renderOnboardingStep(step, state){
+  const card = document.getElementById('onbCard');
+  if(!card) return;
+  if(step === 1){
+    card.innerHTML = `
+      <div class="onb-hd">
+        <div class="onb-step">Step 1 / 3 — Welcome</div>
+        <div class="onb-title">${isJa ? 'AI に何をやってもらいたい?' : 'What do you want AI to do for you?'}</div>
+      </div>
+      <div class="onb-body">
+        <p class="onb-prompt">${isJa ? '1 文で OK。「AI が設計した専用エージェント」が 30 秒で立ち上がります。' : 'One sentence is enough. AI will design a custom agent for you in ~30 seconds.'}</p>
+        <textarea id="onbGoal" class="onb-input" placeholder="${isJa ? '例: Instagram のアカウントを運営する / Shopify で商品を売る / 顧客サポートのメールを返す' : 'e.g. Run my Instagram / Sell products on Shopify / Reply to customer support emails'}"></textarea>
+        <div class="onb-chips" id="onbChips"></div>
+        <button class="onb-cta" id="onbGo" disabled>${isJa ? '▶ エージェントを設計する' : '▶ Design my agent'}</button>
+        <button class="onb-skip" onclick="_skipOnboarding()">${isJa ? '今はスキップ' : 'Skip for now'}</button>
+      </div>
+    `;
+    const examples = isJa
+      ? ['Instagram を運営','Shopify で販売','顧客サポート','SEO 記事を書く','データを集計']
+      : ['Run my Instagram','Sell on Shopify','Customer support','Write SEO articles','Crunch data'];
+    const chipsEl = document.getElementById('onbChips');
+    chipsEl.innerHTML = examples.map(e => `<button type="button" class="onb-chip" data-ex="${esc(e)}">${esc(e)}</button>`).join('');
+    chipsEl.querySelectorAll('.onb-chip').forEach(c => c.onclick = () => {
+      document.getElementById('onbGoal').value = c.dataset.ex;
+      document.getElementById('onbGoal').dispatchEvent(new Event('input'));
+    });
+    const ta = document.getElementById('onbGoal');
+    const btn = document.getElementById('onbGo');
+    ta.oninput = () => { btn.disabled = ta.value.trim().length < 6; };
+    btn.onclick = () => {
+      const goal = ta.value.trim();
+      if(goal.length < 6) return;
+      _renderOnboardingStep(2, { goal });
+      _runOnboardingGen(goal);
+    };
+    setTimeout(() => ta.focus(), 80);
+  } else if(step === 2){
+    card.innerHTML = `
+      <div class="onb-hd">
+        <div class="onb-step">Step 2 / 3 — ${isJa ? '設計中' : 'Designing'}</div>
+        <div class="onb-title">${isJa ? 'AI があなたのエージェントを設計しています…' : 'AI is designing your agent…'}</div>
+      </div>
+      <div class="onb-body">
+        <div class="onb-loading">
+          <div class="ring"></div>
+          <div class="lbl">${isJa ? '〜 30 秒' : '~ 30 seconds'}</div>
+          <div class="sub">${isJa ? '目標を分析 → 役割と persona を生成 → 完成' : 'Analyzing goal → generating role + persona → done'}</div>
+        </div>
+      </div>
+    `;
+  } else if(step === 3){
+    const a = state.agent || {};
+    const skills = (a.skills || []).map(s => `<span>${esc(s)}</span>`).join('');
+    card.innerHTML = `
+      <div class="onb-hd">
+        <div class="onb-step">Step 3 / 3 — ${isJa ? '完成!' : 'Done!'}</div>
+        <div class="onb-title">${isJa ? 'あなたの最初の AI:' : 'Meet your first AI:'}</div>
+      </div>
+      <div class="onb-body">
+        <div class="onb-agent">
+          <div class="em">${esc(a.avatar || '🤖')}</div>
+          <div class="nm">${esc(a.name || 'AI Agent')}</div>
+          <div class="sk">${skills}</div>
+          <div class="pe">${esc(a.persona || '').slice(0,240)}</div>
+        </div>
+        <button class="onb-cta" id="onbStartChat">${isJa ? '💬 最初のメッセージを送る →' : '💬 Send your first message →'}</button>
+      </div>
+    `;
+    document.getElementById('onbStartChat').onclick = () => {
+      _closeOnboarding();
+      try {
+        if(a && a.id){
+          openAgent(a.id);
+          setTimeout(() => {
+            const inp = document.getElementById('ci') || document.getElementById('msgInput');
+            if(inp){
+              inp.placeholder = isJa
+                ? '例: 「' + (state.goal || '上記の目標') + '」について最初の一歩を提案して'
+                : 'Try: "Suggest first steps for: ' + (state.goal || 'this goal') + '"';
+              inp.focus();
+            }
+          }, 200);
+        }
+      } catch(e){ console.warn(e); }
+    };
+  } else if(step === 'error'){
+    card.innerHTML = `
+      <div class="onb-hd"><div class="onb-step">Error</div><div class="onb-title">${isJa ? 'うまく行きませんでした' : 'Something went wrong'}</div></div>
+      <div class="onb-body">
+        <div class="onb-err">${esc(state.error || 'unknown')}</div>
+        <button class="onb-cta" onclick="_renderOnboardingStep(1, {})">${isJa ? '← もう一度' : '← Try again'}</button>
+        <button class="onb-skip" onclick="_skipOnboarding()">${isJa ? '今はスキップ' : 'Skip for now'}</button>
+      </div>
+    `;
+  }
+}
+async function _runOnboardingGen(goal){
+  try {
+    const r = await api('POST', '/api/onboarding/quickstart', { goal, lang: isJa ? 'ja' : 'en' });
+    if(!r || !r.agent) throw new Error('no agent returned');
+    // Update local state so the new agent shows in the sidebar.
+    if(!Array.isArray(me.agents)) me.agents = [];
+    me.agents.push(r.agent);
+    if(Array.isArray(agents)) agents.push(r.agent);
+    me.onboarded_v1 = true;
+    try { renderAgList(); } catch(e){}
+    _renderOnboardingStep(3, { agent: r.agent, goal });
+  } catch(e){
+    _renderOnboardingStep('error', { error: e.message || 'unknown' });
+  }
+}
+async function _skipOnboarding(){
+  try { await api('POST', '/api/onboarding/dismiss', {}); } catch(e){}
+  if(me) me.onboarded_v1 = true;
+  _closeOnboarding();
+}
 
 function showVerifyBanner(){
   const banner=document.createElement('div');

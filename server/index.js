@@ -10994,19 +10994,30 @@ function _injectGA(html){
 
 function serveStatic(res,fp){
   const ext=path.extname(fp),mime=MIME[ext]||'application/octet-stream';
+  // Files under /generated/ are user-rendered artifacts (mockup LP / videos
+  // etc) that the chat embeds via <iframe>. Default SEC has X-Frame-Options:
+  // DENY which makes "myaiagents.agency で接続が拒否されました" appear in
+  // the iframe. Allow same-origin framing for these paths only.
+  const isGenerated = fp.startsWith(GENERATED_DIR);
+  const headerSEC = isGenerated
+    ? { 'X-Content-Type-Options': SEC['X-Content-Type-Options'],
+        'X-Frame-Options': 'SAMEORIGIN',
+        'Referrer-Policy': SEC['Referrer-Policy'] }
+    : SEC;
   fs.readFile(fp,(err,data)=>{
     if(err){
-      // Try 404 page
       fs.readFile(path.join(PUBLIC_DIR,'404.html'),(e2,d2)=>{
         if(e2){res.writeHead(404);res.end('Not found');}
         else{res.writeHead(404,{'Content-Type':'text/html',...SEC});res.end(d2);}
       });
     }else{
-      const h={'Content-Type':mime,...SEC};
+      const h={'Content-Type':mime,...headerSEC};
       if(ext==='.html'){
         h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';
-        // Inject GA / Sentry tags via _injectGA (no-op when neither env is set)
-        const needInject = GA_ID || (process.env.SENTRY_DSN || '').trim();
+        // Inject GA / Sentry tags via _injectGA (no-op when neither env is set).
+        // Skip injection for /generated/ artifacts so user-authored HTML stays
+        // pristine.
+        const needInject = !isGenerated && (GA_ID || (process.env.SENTRY_DSN || '').trim());
         const body = needInject ? Buffer.from(_injectGA(data.toString('utf8')), 'utf8') : data;
         res.writeHead(200,h);res.end(body);
         return;

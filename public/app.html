@@ -1461,6 +1461,28 @@ input,textarea{font-family:var(--sans);}
   50%{background-position:100% 50%;}
 }
 
+/* Tool-progress pills (used inside _renderStreamingBody) */
+.tool-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;
+  letter-spacing:.01em;line-height:1;font-family:inherit;
+  border:1px solid transparent;transition:background .2s,color .2s;
+}
+.tool-pill.run{
+  background:linear-gradient(90deg,rgba(251,146,60,.08),rgba(251,146,60,.16),rgba(251,146,60,.08));
+  background-size:200% 100%;
+  animation:genShimmer 1.8s ease-in-out infinite;
+  color:var(--peach-dark);border-color:rgba(251,146,60,.32);
+}
+.tool-pill.run .tool-pill-spin{
+  display:inline-block;width:11px;height:11px;border-radius:50%;
+  border:2px solid rgba(251,146,60,.25);border-top-color:var(--peach);
+  animation:spin .8s linear infinite;
+  vertical-align:-1px;
+}
+.tool-pill.ok{background:rgba(15,157,88,.08);color:#0f9d58;border-color:rgba(15,157,88,.24);}
+.tool-pill.err{background:rgba(239,68,68,.08);color:#ef4444;border-color:rgba(239,68,68,.24);}
+
 /* scroll-to-bottom FAB */
 .fab-scroll{
   position:absolute;right:24px;bottom:14px;width:38px;height:38px;border-radius:50%;
@@ -10193,7 +10215,10 @@ async function _sendMsgStream(ag, text, imgs, texts){
         // Server about to call AI for an iteration. Show a subtle hint above the
         // bubble so the user feels something is moving even before tools fire.
         if(liveBody && !acc){
-          liveBody.innerHTML = '<span style="font-size:12px;color:var(--text3)">考え中...</span>';
+          // Use the brand gen-indicator (pulsing logo + shimmering text) so
+          // the user has obvious motion the instant a request starts.
+          liveBody.innerHTML = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
+            + (isJa?'考えています…':'Thinking…') + '</div></div>';
         }
       } else if(evType === 'tool_call'){
         // Tool requested by AI (about to execute). Track in tool_log + render.
@@ -10248,26 +10273,108 @@ async function _sendMsgStream(ag, text, imgs, texts){
 }
 
 // Renders the streaming bubble: tool log (if any) + the markdown text + cursor.
+function _friendlyToolLabel(name){
+  // Map raw tool name → human-friendly Japanese / English label with emoji.
+  // Falls back to a cleaned-up version of the name when no entry matches.
+  var L = isJa ? {
+    create_artifact:'🎨 デザインを生成中…',
+    generate_image:'🖼 画像を生成中…',
+    generate_video:'🎬 動画をレンダリング中… (30-60 秒かかります)',
+    generate_audio:'🎙 音声を合成中…',
+    generate_pdf:'📄 PDF を組版中…',
+    generate_chart:'📊 グラフを描画中…',
+    generate_diagram:'🔀 図を生成中…',
+    generate_qr:'🔲 QR コードを生成中…',
+    generate_agent_promo_video:'🎬 プロモ動画を作成中… (10-20 秒)',
+    send_email:'✉️ メール送信中…',
+    notify_slack:'📣 Slack に投稿中…',
+    notify_discord:'💬 Discord に投稿中…',
+    create_calendar_event:'📅 カレンダーに登録中…',
+    sheets_read:'📊 スプレッドシートを読み込み中…',
+    sheets_write:'📊 スプレッドシートに書き込み中…',
+    sheets_append:'📊 スプレッドシートに追記中…',
+    sheets_clear:'📊 スプレッドシートをクリア中…',
+    sheets_get_meta:'📊 スプレッドシート情報を取得中…',
+    sheets_create_spreadsheet:'📊 新しいスプレッドシートを作成中…',
+    sheets_add_sheet:'📊 シートを追加中…',
+    sheets_format:'📊 スプレッドシートを書式設定中…',
+    web_search:'🔍 Web を検索中…',
+    web_fetch:'🌐 ページを取得中…',
+    web_screenshot:'📸 スクリーンショットを撮影中…',
+    web_read_markdown:'📖 ページを読み込み中…',
+    web_extract:'🔎 ページから情報抽出中…',
+  } : {
+    create_artifact:'🎨 Designing…',
+    generate_image:'🖼 Generating image…',
+    generate_video:'🎬 Rendering video… (30-60s)',
+    generate_audio:'🎙 Synthesizing audio…',
+    generate_pdf:'📄 Typesetting PDF…',
+    generate_chart:'📊 Drawing chart…',
+    generate_diagram:'🔀 Generating diagram…',
+    generate_qr:'🔲 Generating QR code…',
+    generate_agent_promo_video:'🎬 Recording promo video… (10-20s)',
+    send_email:'✉️ Sending email…',
+    notify_slack:'📣 Posting to Slack…',
+    notify_discord:'💬 Posting to Discord…',
+    create_calendar_event:'📅 Creating calendar event…',
+    sheets_read:'📊 Reading spreadsheet…',
+    sheets_write:'📊 Writing to spreadsheet…',
+    sheets_append:'📊 Appending to spreadsheet…',
+    sheets_clear:'📊 Clearing spreadsheet…',
+    sheets_get_meta:'📊 Fetching sheet metadata…',
+    sheets_create_spreadsheet:'📊 Creating new spreadsheet…',
+    sheets_add_sheet:'📊 Adding sheet…',
+    sheets_format:'📊 Formatting spreadsheet…',
+    web_search:'🔍 Searching the web…',
+    web_fetch:'🌐 Fetching page…',
+    web_screenshot:'📸 Taking screenshot…',
+    web_read_markdown:'📖 Reading page…',
+    web_extract:'🔎 Extracting from page…',
+  };
+  if(L[name]) return L[name];
+  // ext_* are browser-extension actions — generic label
+  if(name && name.indexOf('ext_')===0){
+    return isJa ? '🌐 ブラウザを操作中…' : '🌐 Operating browser…';
+  }
+  return (isJa?'⚙ ツール実行中: ':'⚙ Running: ')+String(name||'').replace(/_/g,' ');
+}
+
+function _toolDoneLabel(name){
+  // Past-tense / completed label (shown once the tool finishes successfully).
+  var lbl = _friendlyToolLabel(name)
+    .replace(/中…/g,'')             // strip 〜中… progressive
+    .replace(/…$/,'')
+    .replace(/ \(.*\)$/,'')          // strip "(30-60s)" etc
+    .replace(/ing…?$/i,'ed')         // "Generating…" → "Generated"
+    .replace(/ting$/i,'ted');
+  return lbl;
+}
+
 function _renderStreamingBody(text, toolLog){
   let html = '';
   if(toolLog && toolLog.length){
-    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
     for(const t of toolLog){
       const isPending = t._pending;
-      const ok = t.ok === true;
       const failed = t.ok === false;
-      const color = isPending ? 'var(--text3)' : (failed ? '#ef4444' : '#0f9d58');
-      const bg = isPending ? 'rgba(120,90,60,.06)' : (failed ? 'rgba(239,68,68,.08)' : 'rgba(15,157,88,.08)');
-      const icon = isPending ? '⚙' : (failed ? '✗' : '✓');
-      const label = (t.name || '').replace(/_/g,' ');
-      html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:'+bg+';color:'+color+';border-radius:999px;font-size:11px;font-weight:600;font-family:SF Mono,monospace">'
-        + icon + ' ' + esc(label) + '</span>';
+      const cls = isPending ? 'tool-pill run' : (failed ? 'tool-pill err' : 'tool-pill ok');
+      const label = isPending
+        ? _friendlyToolLabel(t.name)
+        : (failed ? '✗ '+(_toolDoneLabel(t.name)) : '✓ '+(_toolDoneLabel(t.name)));
+      const icon = isPending ? '<span class="tool-pill-spin"></span>' : '';
+      html += '<span class="'+cls+'">'+icon+esc(label)+'</span>';
     }
     html += '</div>';
   }
-  html += _md(text);
+  // While there are no tools fired yet and no text yet, show the brand
+  // "thinking" pill so the user has visible motion immediately.
   if(text){
+    html += _md(text);
     html += '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
+  } else if(!toolLog || !toolLog.length){
+    html += '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
+         + (isJa?'考えています…':'Thinking…')
+         + '</div></div>';
   }
   return html;
 }

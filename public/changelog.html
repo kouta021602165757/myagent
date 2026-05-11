@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Changelog — MY AI AGENT</title>
+<meta name="description" content="What's new on MY AI AGENT: Automations, Knowledge Base, Schedules, Webhooks, Calendar, Slack/Discord, and more.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://myaiagents.agency/changelog">
+<meta property="og:title" content="Changelog — MY AI AGENT">
+<meta property="og:description" content="What's new on MY AI AGENT — Automations, Knowledge Base, Schedules, Webhooks, Calendar, Slack/Discord, and more.">
+<meta property="og:image" content="https://myaiagents.agency/social/og-agent-sample.png">
+<meta property="og:site_name" content="MY AI AGENT">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Changelog — MY AI AGENT">
+<meta name="twitter:description" content="What's new on MY AI AGENT — Automations, Knowledge Base, Schedules, Webhooks, Calendar, Slack/Discord, and more.">
+<meta name="twitter:image" content="https://myaiagents.agency/social/og-agent-sample.png">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#faf7f2;color:#1c1c1f;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Hiragino Sans',sans-serif;line-height:1.6;}
+  a{color:#ea580c;text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  .nav{position:sticky;top:0;background:rgba(250,247,242,.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(180,120,80,.12);padding:14px 22px;z-index:5;}
+  .nav-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:16px;}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:900;color:#1c1c1f;}
+  .brand .mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#fb923c,#ea580c);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;}
+  .nav-cta{margin-left:auto;background:#1c1c1f;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;}
+  .nav-cta:hover{text-decoration:none;background:#3d1a0a;}
+  .wrap{max-width:760px;margin:0 auto;padding:50px 22px 80px;}
+  h1{font-size:36px;font-weight:900;letter-spacing:-.02em;margin:0 0 8px;}
+  .lead{color:#52525b;font-size:15px;margin:0 0 36px;}
+  .release{position:relative;padding-left:24px;margin-bottom:50px;border-left:2px solid rgba(251,146,60,.32);}
+  .release::before{content:'';position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:#fb923c;box-shadow:0 0 0 4px #faf7f2;}
+  .rel-date{font-size:12px;font-weight:800;color:#ea580c;letter-spacing:.06em;text-transform:uppercase;}
+  .rel-title{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:6px 0 16px;}
+  .feature{background:#fff;border:1px solid rgba(180,120,80,.14);border-radius:14px;padding:18px 20px;margin-bottom:14px;}
+  .f-title{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15.5px;margin-bottom:6px;}
+  .f-title .ic{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .f-body{color:#52525b;font-size:13.5px;line-height:1.65;}
+  .f-body code{background:#fdf1e3;color:#9a3412;padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:ui-monospace,'SF Mono',Menlo,monospace;}
+  .pill{display:inline-block;background:rgba(251,146,60,.12);color:#ea580c;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:.04em;margin-right:5px;vertical-align:1px;}
+  .pill.new{background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;}
+  .pill.fix{background:rgba(22,163,74,.12);color:#15803d;}
+  .pill.viral{background:rgba(168,85,247,.12);color:#7c3aed;}
+  .group-h{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#52525b;margin:24px 0 10px;}
+  .cta{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.3);border-radius:16px;padding:24px;margin-top:40px;text-align:center;}
+  .cta h3{margin:0 0 8px;font-size:18px;font-weight:800;}
+  .cta p{margin:0 0 16px;color:#52525b;font-size:13.5px;}
+  .cta a{background:#1c1c1f;color:#fff;padding:10px 18px;border-radius:8px;font-weight:700;display:inline-block;}
+  .cta a:hover{text-decoration:none;background:#3d1a0a;}
+  @media (max-width:560px){
+    .wrap{padding:32px 14px 60px;}
+    h1{font-size:28px;}
+    .release{padding-left:18px;}
+    .feature{padding:14px 16px;}
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="brand"><div class="mark">M</div><span>MY AI AGENT</span></a>
+    <a href="/app.html" class="nav-cta">Open app →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <h1>Changelog</h1>
+  <p class="lead">What's new on MY AI AGENT — every release builds you a more capable AI team.</p>
+
+  <!-- ───────────────── 2026-05-11 ───────────────── -->
+  <div class="release">
+    <div class="rel-date">May 11, 2026</div>
+    <h2 class="rel-title">The Automations release</h2>
+
+    <div class="group-h">⚡ 1-click Automations</div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🌅</span>Templates gallery <span class="pill new">New</span></div>
+      <div class="f-body">6 pre-built automations on the home dashboard — <b>Daily Slack Briefing</b>, <b>Meeting Notes → Action Items</b>, <b>Weekly Newsletter Draft</b>, <b>Sales Lead Researcher</b>, <b>Customer Support Triage</b>, <b>Morning Reflection Coach</b>. Each installs an agent + schedule + integration hints in one click.</div>
+    </div>
+
+    <div class="group-h">📚 Knowledge & retrieval</div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">📚</span>Per-agent Knowledge Base <span class="pill new">New</span></div>
+      <div class="f-body">Drop <b>PDF / DOCX / TXT / CSV / Markdown</b> into any agent. We chunk + index the text and the agent retrieves the most relevant passages on every question. 50 docs · 5 MB total per agent. Japanese-aware tokenizer (CJK bigrams).</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">📎</span>File analysis in chat <span class="pill new">New</span></div>
+      <div class="f-body">Drag a <code>.docx</code> or <code>.pdf</code> into the composer and the AI gets the text. CSV files get a row/column preview header. PDF goes straight to Anthropic's vision tool when used in chat.</div>
+    </div>
+
+    <div class="group-h">⏰ Schedule & triggers</div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">⏰</span>Scheduled execution <span class="pill new">New</span></div>
+      <div class="f-body">Run any agent on a <b>daily</b> or <b>hourly</b> cadence. Result lands in chat or your inbox. Per-agent timezone offset, ▶ <b>Run Now</b> to smoke-test before going live.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🔌</span>Webhook entry point <span class="pill new">New</span></div>
+      <div class="f-body">Every agent gets a <code>POST /w/&lt;token&gt;</code> URL. Hook it up to Zapier, GitHub Actions, Stripe, anything — the AI replies as JSON. <b>Daily cost cap</b> (default ¥1,000) protects you if a token leaks.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">📥</span>Inbound email <span class="pill new">New</span></div>
+      <div class="f-body">Configure a forwarder (Mailgun / SendGrid / Resend Inbound) to <code>POST /api/inbound/email</code> and your agent answers emails in its own voice. Replies go back to the sender automatically.</div>
+    </div>
+
+    <div class="group-h">🔗 Integrations</div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">📣</span>Slack & Discord notify <span class="pill new">New</span></div>
+      <div class="f-body">Save an Incoming Webhook URL once in <i>Settings → Integrations</i>. Then say <i>"send the sales report to Slack"</i> — your agent calls <code>notify_slack</code> automatically.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">📅</span>Google Calendar <span class="pill new">New</span></div>
+      <div class="f-body">Your agent can now create calendar events with attendees, location, agenda. Already connected Sheets? Reconnect once to grant calendar scope.</div>
+    </div>
+
+    <div class="group-h">💬 Chat experience</div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">∑</span>LaTeX math rendering <span class="pill new">New</span></div>
+      <div class="f-body">Math expressions like <code>$x^2 + y^2 = z^2$</code> or display blocks render beautifully via KaTeX.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🐍</span>Python code interpreter <span class="pill new">New</span></div>
+      <div class="f-body">Click <b>▶ Run</b> on any Python code block — Pyodide runs it in your browser. Numpy, pandas, plotting, all work. No server roundtrip.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🔗</span>Public chat sharing <span class="pill viral">Viral</span></div>
+      <div class="f-body">Share any conversation at <code>/c/&lt;id&gt;</code> — read-only, with OG card unfurls on X / Slack / LinkedIn. Expiry options (1d / 7d / 30d / never) + view counter.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">✏️</span>Edit & regenerate <span class="pill new">New</span></div>
+      <div class="f-body">Reword any past user message; we truncate the trailing history and let the AI take a fresh swing.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">✓✓</span>Read receipts <span class="pill new">New</span></div>
+      <div class="f-body">Group chats now show WhatsApp-style ✓ (delivered) / ✓✓ (read by N) next to your messages.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">💡</span>Follow-up suggestions <span class="pill new">New</span></div>
+      <div class="f-body">After every reply, 3 clickable chips appear with likely next questions — generated by Haiku for speed.</div>
+    </div>
+
+    <div class="group-h">🚀 Creators & growth</div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">★</span>Founder 100 badge <span class="pill viral">Viral</span></div>
+      <div class="f-body">First 100 creators get a permanent <b>★ Founder #N</b> badge on profile pages + 1 month BUSINESS free. Existing top 8 signups have been retroactively granted — check Settings → Account.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">@</span>Public creator profiles <span class="pill new">New</span></div>
+      <div class="f-body">Claim your <code>@handle</code> in Settings → your profile lives at <code>/u/&lt;handle&gt;</code> with all your listed agents. OG card on social shares.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🔥</span>Trending — Today / Week / Month <span class="pill new">New</span></div>
+      <div class="f-body">The store now has a Trending tab with a time-window selector. <code>/trending</code> shortcut.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🎬</span>Self-promo video tool <span class="pill viral">Viral</span></div>
+      <div class="f-body">Ask any agent <i>"make a promo video about you"</i> — produces a 9-second vertical MP4 with TTS narration for TikTok / Reels / Shorts.</div>
+    </div>
+
+    <div class="group-h">🛡 Hardening</div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🔐</span>Webhook daily cost cap <span class="pill fix">Fix</span></div>
+      <div class="f-body">Per-owner 24h JPY cap on <code>/w/:token</code> calls (default ¥1,000, override via <code>agent.webhook_daily_cap_jpy</code>). Leaked tokens can't drain your balance overnight.</div>
+    </div>
+
+    <div class="feature">
+      <div class="f-title"><span class="ic">🩹</span>Schema drift check <span class="pill fix">Fix</span></div>
+      <div class="f-body">12 columns silently missing on Supabase have been added + a CI check (<code>npm run check:schema</code>) prevents this regression. Existing user records (including Founder seat numbers) recovered.</div>
+    </div>
+
+  </div>
+
+  <div class="cta">
+    <h3>Build your own AI team</h3>
+    <p>Free to start. Founder 100 still has seats remaining.</p>
+    <a href="/auth.html?tab=signup&next=/app.html">Sign up free →</a>
+  </div>
+</div>
+
+</body>
+</html>

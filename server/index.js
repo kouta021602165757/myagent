@@ -2622,7 +2622,7 @@ async function executeExtensionTool(user, name, input){
 const SHEETS_TOOLS = [
   {
     name:'create_calendar_event',
-    description:'Google カレンダーに予定を作成します。スケジューリング・会議調整・期限の登録などに使う。タイムゾーン込みの ISO 8601 (例: 2026-05-15T09:00:00+09:00) で start/end を指定。attendees を渡すと招待メールも送られる。事前に Google を連携している必要がある。',
+    description:'Google カレンダーに予定を作成します。スケジューリング・会議調整・期限の登録などに使う。タイムゾーン込みの ISO 8601 (例: 2026-05-15T09:00:00+09:00) で start/end を指定。attendees を渡すと招待メールも送られる。事前に Google を連携している必要がある。\n\n【既存ユーザーの注意】Sheets を以前から連携しているアカウントは Calendar 権限が不足している可能性あり。"insufficient_scope" エラーが返ったら、ユーザーに「設定 → Sheets を切断 → 再接続してください (Calendar 権限が追加されます)」と案内すること。',
     input_schema:{
       type:'object',
       properties:{
@@ -3916,6 +3916,7 @@ async function serveSitemapXml(res){
     {loc: APP_URL + '/',           changefreq:'weekly',  priority:'1.0', lastmod: now},
     {loc: APP_URL + '/lp.html',    changefreq:'weekly',  priority:'1.0', lastmod: now},
     {loc: APP_URL + '/store',      changefreq:'daily',   priority:'0.9', lastmod: now},
+    {loc: APP_URL + '/changelog',  changefreq:'weekly',  priority:'0.7', lastmod: now},
     {loc: APP_URL + '/auth.html',  changefreq:'monthly', priority:'0.5', lastmod: now},
     {loc: APP_URL + '/terms.html', changefreq:'yearly',  priority:'0.3', lastmod: now},
     {loc: APP_URL + '/privacy.html',changefreq:'yearly', priority:'0.3', lastmod: now},
@@ -5309,14 +5310,22 @@ async function _runOneSchedule(user, agent, sched){
     if(agent.history.length > 200) agent.history = agent.history.slice(-200);
     user.balance_jpy = Math.round(((user.balance_jpy||0) - cost.jpy) * 1000) / 1000;
     if(sched.deliver === 'email' && user.email){
+      // Match recipient language: if their email contains a Japanese name or
+      // their user.name has CJK characters, send in Japanese. Otherwise English.
+      const isJa = /[ぁ-んァ-ヶー一-龠]/.test((user.name||'') + (user.email||''));
+      const subj = isJa
+        ? `🤖 ${sched.label || agent.name || 'AI'} — 定期実行レポート`
+        : `🤖 ${sched.label || agent.name || 'AI'} — scheduled report`;
+      const tagline   = isJa ? '定期タスクからの自動実行' : 'Triggered by your scheduled task';
+      const promptLbl = isJa ? 'プロンプト:'           : 'Prompt:';
+      const noLabel   = isJa ? '(ラベルなし)'           : '(no label)';
       try {
         await sendEmail(
-          user.email,
-          '🤖 ' + (sched.label || agent.name || 'AI') + ' — scheduled report',
+          user.email, subj,
           '<div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px">'+
           '<h2 style="margin:0 0 8px">'+_xmlEscape(agent.name||'AI')+'</h2>'+
-          '<div style="color:#52525b;font-size:13px;margin-bottom:14px">Triggered by your scheduled task: <i>'+_xmlEscape(sched.label||'(no label)')+'</i></div>'+
-          '<div style="font-size:11px;color:#a1a1aa;margin-bottom:6px"><b>Prompt:</b> '+_xmlEscape(sched.prompt||'')+'</div>'+
+          '<div style="color:#52525b;font-size:13px;margin-bottom:14px">'+tagline+': <i>'+_xmlEscape(sched.label||noLabel)+'</i></div>'+
+          '<div style="font-size:11px;color:#a1a1aa;margin-bottom:6px"><b>'+promptLbl+'</b> '+_xmlEscape(sched.prompt||'')+'</div>'+
           '<div style="background:#fff7ed;border:1px solid #f5e1cd;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:14px;line-height:1.55">'+_xmlEscape(reply)+'</div>'+
           '<div style="margin-top:18px;text-align:center;color:#a1a1aa;font-size:11px">— MY AI AGENT</div>'+
           '</div>'
@@ -8833,6 +8842,116 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true, user_id: target.id, is_verified: target.is_verified});
   }
 
+  // ── POST /api/admin/notify-founders ────────────────────────
+  // One-shot mailer for the 100 Founder users. Idempotent: each user gets
+  // `founder_email_sent` set on success so re-runs only target new entries.
+  // Admin only. Body: { dry_run?: bool, force?: bool, only_seat?: number }.
+  if(pathname === '/api/admin/notify-founders' && method === 'POST'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    const body = (await readBody(req)) || {};
+    const dryRun = !!body.dry_run;
+    const force = !!body.force;
+    const onlySeat = (typeof body.only_seat === 'number') ? body.only_seat : null;
+    let allUsers = [];
+    try {
+      if(USE_SUPA){
+        const r = await sbReq('GET','users','?select=*&is_founder=eq.true&order=founder_seat_no.asc&limit=200');
+        allUsers = Array.isArray(r.d) ? r.d : [];
+      } else {
+        allUsers = LDB.all().filter(u => u.is_founder).sort((a,b)=>(a.founder_seat_no||0)-(b.founder_seat_no||0));
+      }
+    } catch(e){ return jres(res,502,{error:'fetch_failed: '+e.message}); }
+    const targets = allUsers.filter(u => {
+      if(!u.email) return false;
+      if(onlySeat !== null && u.founder_seat_no !== onlySeat) return false;
+      if(!force && u.founder_email_sent) return false;
+      return true;
+    });
+    if(dryRun){
+      return jres(res,200,{
+        dry_run: true,
+        would_send: targets.length,
+        targets: targets.map(t => ({ seat: t.founder_seat_no, email: t.email, already_sent: !!t.founder_email_sent })),
+      });
+    }
+    const results = [];
+    for(const t of targets){
+      const seat = t.founder_seat_no || '?';
+      const trial = (t.business_trial_until||'').slice(0,10);
+      const handle = t.handle || '';
+      const profileUrl = handle ? (APP_URL + '/u/' + handle) : (APP_URL + '/app.html');
+      const isJa = /[ぁ-んァ-ヶー一-龠]/.test((t.name||'') + (t.email||''));
+      const subj = isJa
+        ? `🎉 あなたは Founder #${seat} に認定されました — MY AI AGENT`
+        : `🎉 You're Founder #${seat} on MY AI AGENT`;
+      const tweetText = encodeURIComponent(
+        `I'm Founder #${seat} on @myaiagents 🎉\n\nBuild, run, and share your own AI team — first 100 creators get permanent badge + 1 month BUSINESS free.\n\n${profileUrl}`
+      );
+      const html = isJa ? `
+<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#faf7f2;color:#1c1c1f;line-height:1.7">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="display:inline-block;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;padding:10px 26px;border-radius:999px;font-weight:900;font-size:18px;box-shadow:0 8px 20px rgba(234,88,12,.32)">★ Founder #${seat}</div>
+  </div>
+  <h1 style="font-size:22px;margin:0 0 16px;letter-spacing:-.01em">MY AI AGENT 最初の 100 人として正式に認定されました</h1>
+  <p style="font-size:14px;color:#52525b;margin:0 0 14px">${_xmlEscape(t.name||'')} 様、</p>
+  <p style="font-size:14px;color:#52525b;margin:0 0 14px">最初期にご登録いただいた感謝として、あなたは Founder 100 の <b>席 #${seat}</b> を獲得しました。これは退会しない限り永久バッジとして公開プロフィールに表示されます。</p>
+  <div style="background:#fff;border:1px solid #f5e1cd;border-radius:12px;padding:18px;margin:18px 0">
+    <div style="font-weight:800;font-size:14.5px;margin-bottom:10px">特典</div>
+    <ul style="margin:0;padding-left:18px;color:#52525b;font-size:13.5px">
+      <li>★ Founder #${seat} バッジを公開プロフィール (/u/handle) に永久表示</li>
+      <li>BUSINESS プラン 1 ヶ月無料 (期限: ${_xmlEscape(trial)})</li>
+      <li>新機能の優先案内</li>
+    </ul>
+  </div>
+  <p style="font-size:14px;color:#52525b;margin:0 0 14px"><b>次のステップ:</b></p>
+  <ol style="font-size:14px;color:#52525b;margin:0 0 18px;padding-left:18px">
+    <li style="margin-bottom:6px">アプリで <a href="${APP_URL}/app.html" style="color:#ea580c">設定 → アカウント</a> を開き、<b>公開ハンドル (/u/...)</b> を 30 秒で登録</li>
+    <li style="margin-bottom:6px">Founder バッジを SNS でシェアして仲間に教える (ボタン下記)</li>
+    <li>新しく追加された <a href="${APP_URL}/changelog" style="color:#ea580c">Automations / KB / Schedule / Webhook</a> を試す</li>
+  </ol>
+  <div style="text-align:center;margin:24px 0">
+    <a href="https://twitter.com/intent/tweet?text=${tweetText}" style="display:inline-block;background:#000;color:#fff;padding:13px 22px;border-radius:10px;font-weight:800;text-decoration:none;font-size:14px">𝕏 Founder #${seat} を X でシェア</a>
+  </div>
+  <p style="font-size:11.5px;color:#a1a1aa;margin-top:24px;text-align:center">— MY AI AGENT chief steward</p>
+</div>` : `
+<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#faf7f2;color:#1c1c1f;line-height:1.7">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="display:inline-block;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;padding:10px 26px;border-radius:999px;font-weight:900;font-size:18px;box-shadow:0 8px 20px rgba(234,88,12,.32)">★ Founder #${seat}</div>
+  </div>
+  <h1 style="font-size:22px;margin:0 0 16px;letter-spacing:-.01em">You're officially one of the first 100 creators on MY AI AGENT</h1>
+  <p style="font-size:14px;color:#52525b;margin:0 0 14px">Hi ${_xmlEscape(t.name||'')},</p>
+  <p style="font-size:14px;color:#52525b;margin:0 0 14px">As thanks for being here from the start, we've granted you <b>Founder seat #${seat}</b>. The badge sits permanently on your profile.</p>
+  <div style="background:#fff;border:1px solid #f5e1cd;border-radius:12px;padding:18px;margin:18px 0">
+    <div style="font-weight:800;font-size:14.5px;margin-bottom:10px">What you get</div>
+    <ul style="margin:0;padding-left:18px;color:#52525b;font-size:13.5px">
+      <li>★ Founder #${seat} badge on your public profile (/u/handle), forever</li>
+      <li>1 month of BUSINESS plan free (until ${_xmlEscape(trial)})</li>
+      <li>Early access to new features</li>
+    </ul>
+  </div>
+  <p style="font-size:14px;color:#52525b;margin:0 0 14px"><b>Next steps:</b></p>
+  <ol style="font-size:14px;color:#52525b;margin:0 0 18px;padding-left:18px">
+    <li style="margin-bottom:6px">Open <a href="${APP_URL}/app.html" style="color:#ea580c">Settings → Account</a> and claim your <b>@handle</b> (takes 30 seconds)</li>
+    <li style="margin-bottom:6px">Tweet your badge — let your network know (button below)</li>
+    <li>Try the new <a href="${APP_URL}/changelog" style="color:#ea580c">Automations / Knowledge Base / Schedule / Webhook</a> features</li>
+  </ol>
+  <div style="text-align:center;margin:24px 0">
+    <a href="https://twitter.com/intent/tweet?text=${tweetText}" style="display:inline-block;background:#000;color:#fff;padding:13px 22px;border-radius:10px;font-weight:800;text-decoration:none;font-size:14px">𝕏 Share Founder #${seat} on X</a>
+  </div>
+  <p style="font-size:11.5px;color:#a1a1aa;margin-top:24px;text-align:center">— MY AI AGENT chief steward</p>
+</div>`;
+      try {
+        await sendEmail(t.email, subj, html);
+        t.founder_email_sent = new Date().toISOString();
+        try { await DB.save(t); } catch(e){ console.warn('[notify-founders] save', t.email, e.message); }
+        results.push({ seat, email: t.email, ok: true });
+      } catch(e){
+        results.push({ seat, email: t.email, ok: false, error: e.message });
+      }
+    }
+    return jres(res,200,{ sent: results.filter(r=>r.ok).length, failed: results.filter(r=>!r.ok).length, results });
+  }
+
   // ── GET /api/admin/stats ───────────────────────────────────
   // Returns aggregate metrics for the admin dashboard. Admin only.
   if(pathname === '/api/admin/stats' && method === 'GET'){
@@ -11018,6 +11137,7 @@ const server=http.createServer(async(req,res)=>{
   let resolved = pathname;
   if(resolved === '/') resolved = 'lp.html';
   else if(resolved === '/store' || resolved === '/store/') resolved = 'store.html';
+  else if(resolved === '/changelog' || resolved === '/changelog/') resolved = 'changelog.html';
   let fp=path.join(PUBLIC_DIR, resolved);
   if(!fp.startsWith(PUBLIC_DIR)){res.writeHead(403);return res.end();}
   serveStatic(res,fp);

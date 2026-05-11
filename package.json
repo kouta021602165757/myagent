@@ -10,6 +10,7 @@
         "start": "node server/index.js",
         "dev": "node --watch server/index.js",
         "test": "node --test 'tests/**/*.test.js'",
+        "check:schema": "node scripts/check-schema-drift.js",
         "postinstall": "playwright install chromium || echo 'playwright install failed - browsing tools will be disabled'"
     },
     "dependencies": {
@@ -21,6 +22,7 @@
         "ffmpeg-static": "^5.3.0",
         "jsonwebtoken": "^9.0.2",
         "mammoth": "^1.8.0",
+        "pdf-parse": "^1.1.1",
         "nodemailer": "^6.9.16",
         "pg": "^8.13.1",
         "playwright": "^1.49.0",

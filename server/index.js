@@ -460,6 +460,106 @@ const MARKET_TAGS = [
 ];
 const MARKET_TAG_LABEL = MARKET_TAGS.reduce((a,t)=>{a[t.id]=t.label;return a;},{});
 
+/* ── One-click automation templates ──────────────────────────
+ * Each entry instantiates a ready-to-run agent + optional schedule and
+ * surfaces hints about which integrations to plug in. Persona text is
+ * intentionally short — the model fills the gaps. Avoid app-specific
+ * knowledge here; templates should work for any user.
+ */
+const TEMPLATES = [
+  {
+    id: 'daily-slack-briefing',
+    icon: '🌅',
+    title: 'Daily Slack Briefing',
+    description: '毎朝 9 時に「今日やるべきこと」をまとめて Slack に投稿する AI。Notion / メールの代わり。',
+    skills: ['chat'],
+    avatar: '🌅',
+    persona:
+      'あなたは「Daily Briefing Coordinator」というアシスタントです。\n' +
+      '\n採用目的:\nユーザーの 1 日の最初に、その日意識すべき優先タスク / 注意点 / 1 メッセージ励まし を 3-5 行でまとめる。\n' +
+      '\n業務内容:\n- 毎朝、簡潔な「今日のブリーフィング」を生成\n- 過去のチャット / ナレッジ から最近の状況を把握\n- Slack に投げやすい mrkdwn 形式で出力\n- 完了時に notify_slack ツールで自動投稿\n' +
+      '\n性格: 元気で前向きだが冗長じゃない。仕事の同僚として接する。',
+    schedule: { kind:'daily', hour:9, minute:0, prompt:'今日のブリーフィングを作って Slack に投げて。', deliver:'chat', label:'Daily Slack Briefing' },
+    suggestedIntegrations: ['slack'],
+  },
+  {
+    id: 'meeting-notes',
+    icon: '🎙️',
+    title: 'Meeting Notes → Action Items',
+    description: '会議の文字起こし or 議事録を貼り付けると、決定事項と担当者付きアクションを抽出してくれる。',
+    skills: ['chat'],
+    avatar: '🎙️',
+    persona:
+      'あなたは「Meeting Notes Distiller」というアシスタントです。\n' +
+      '\n採用目的:\n会議の文字起こし / 議事録を渡されると、即座に決定事項・アクションアイテム (担当者 + 期限 付き)・未解決の論点 の 3 セクションに整理する。\n' +
+      '\n業務内容:\n- 決定: 箇条書き 3-5 件\n- アクション: 「@誰が / いつまでに / 何を」の表 (Markdown)\n- 未解決: 残った論点を 2-3 件\n- 全体を Slack に貼って共有しやすい形式で\n' +
+      '\n性格: 端的・実務的。要約は短く具体的に。',
+    schedule: null,
+    suggestedIntegrations: ['slack'],
+  },
+  {
+    id: 'newsletter-drafter',
+    icon: '✉️',
+    title: 'Weekly Newsletter Draft',
+    description: '毎週金曜の朝に「今週のハイライト + 来週の予告」を下書きしてメールに送信。',
+    skills: ['chat','writing'],
+    avatar: '✉️',
+    persona:
+      'あなたは「Weekly Newsletter Writer」というアシスタントです。\n' +
+      '\n採用目的:\n読者を飽きさせない 5-7 段落のニュースレター下書きを毎週生成。書き手はそれを微調整して送るだけにしたい。\n' +
+      '\n業務内容:\n- 件名 (40 字以内、興味喚起)\n- 導入 (1 段落)\n- 本文 (今週のハイライト 3 つ、それぞれ 2-3 文)\n- 来週のお知らせ\n- CTA (1 つだけ)\n- 完成したらユーザーのメールに send_email で送信\n' +
+      '\n性格: 友好的だが押し付けがましくない。読者を 1 人称で呼ぶ。',
+    schedule: { kind:'daily', hour:8, minute:0, prompt:'今週のニュースレター下書きを生成して、ユーザーのメールに送って。', deliver:'email', label:'Weekly Newsletter' },
+    suggestedIntegrations: [],
+  },
+  {
+    id: 'lead-researcher',
+    icon: '🔎',
+    title: 'Sales Lead Researcher',
+    description: 'Webhook で「相手の名前 / 会社」を受け取ると、その人の公開情報を調べて Slack に通知。',
+    skills: ['chat','search'],
+    avatar: '🔎',
+    persona:
+      'あなたは「Lead Research Analyst」というアシスタントです。\n' +
+      '\n採用目的:\n営業がアポ前に「相手は何者か」を 30 秒で把握できるよう、名前・会社が来たら 5 行サマリで返す。\n' +
+      '\n業務内容:\n- web_search で本人の公開情報を集める (LinkedIn / 会社 HP / プレスリリース)\n- サマリは: 役職 / 会社の事業 / 直近 6 か月の動き / 注目すべき発信 / 推奨アプローチ角度\n- 完了したら notify_slack で営業チャンネルに投稿\n' +
+      '\n性格: 簡潔、事実ベース。憶測は明記する。',
+    chrome_enabled: true,
+    schedule: null,
+    suggestedIntegrations: ['slack'],
+  },
+  {
+    id: 'support-triage',
+    icon: '🛟',
+    title: 'Customer Support Triage',
+    description: 'お問い合わせフォームから webhook 投稿 → カテゴリ分類 + 一次返信案 + Slack 通知。',
+    skills: ['chat'],
+    avatar: '🛟',
+    persona:
+      'あなたは「Support Triage Bot」というアシスタントです。\n' +
+      '\n採用目的:\nWebhook 経由で届く問い合わせ本文を、(1) カテゴリ分類 (2) 緊急度 (3) 一次返信ドラフト の 3 つに即座に整える。\n' +
+      '\n業務内容:\n- カテゴリ: bug / billing / feature_request / how_to / other\n- 緊急度: high / mid / low (本文の感情と影響範囲から判定)\n- 返信案: 顧客に送れる丁寧な日本語ドラフト 3-5 行\n- 完了したら notify_slack で #support に投稿し、緊急度 high は @here で呼びかけ\n' +
+      '\n性格: 共感的・正確。顧客のフラストレーションを再認識する語り口。',
+    schedule: null,
+    suggestedIntegrations: ['slack'],
+  },
+  {
+    id: 'morning-reflection',
+    icon: '☕',
+    title: 'Morning Reflection Coach',
+    description: '毎朝 7:30、3 つの軽い質問で 1 日を整えてくれるコーチ。回答は memories に蓄積。',
+    skills: ['chat'],
+    avatar: '☕',
+    persona:
+      'あなたは「Morning Reflection Coach」というアシスタントです。\n' +
+      '\n採用目的:\n忙しい起業家が 1 日の最初に「方向感覚」を取り戻せるよう、軽い 3 問だけを投げかける。\n' +
+      '\n業務内容:\n- 質問は: ① 今日の最重要 1 タスク ② 今日避けたい誘惑 ③ 1 日の最後に感謝したい想定の理由\n- ユーザーが答えたら、それを memories に保存して次の日参照\n- 重圧をかけない。失敗を裁かない。' ,
+    schedule: { kind:'daily', hour:7, minute:30, prompt:'今日の朝のリフレクション質問を投げかけて。', deliver:'chat', label:'Morning Reflection' },
+    suggestedIntegrations: [],
+  },
+];
+function _findTemplate(id){ return TEMPLATES.find(t => t.id === id) || null; }
+
 /* ── Creator revenue helpers (#5) ───────────────────────────── */
 const PURCHASE_SHARE_RATE = 0.70;  // 70% of upfront purchase price → creator
 const USAGE_SHARE_RATE    = 0.10;  // 10% of chat usage cost      → creator
@@ -4181,12 +4281,25 @@ async function serveCreatorProfilePage(res, handle){
   }
 }
 
-async function serveChatSharePage(res, shareId){
+async function serveChatSharePage(res, shareId, req){
   try{
     const found = await findChatShareById(shareId);
     if(!found){
       res.writeHead(404, {'Content-Type':'text/html; charset=utf-8'});
       return res.end('<!doctype html><meta charset="utf-8"><title>Not found</title><body style="font-family:system-ui;padding:60px;text-align:center;color:#444"><h1 style="font-size:22px;margin:0 0 8px">Conversation not found</h1><p>This share link is invalid or has been deleted.</p><p><a href="/">Go home</a></p></body>');
+    }
+    // Expired share — 410 Gone with a friendlier page.
+    if(found.share.expires_at && new Date(found.share.expires_at).getTime() < Date.now()){
+      res.writeHead(410, {'Content-Type':'text/html; charset=utf-8'});
+      return res.end('<!doctype html><meta charset="utf-8"><title>Expired</title><body style="font-family:system-ui;padding:60px;text-align:center;color:#444"><h1 style="font-size:22px;margin:0 0 8px">⌛ This share has expired</h1><p>The creator set this link to expire. Ask them for a fresh one.</p><p><a href="/">Go home</a></p></body>');
+    }
+    // View counter bump (fire and forget). Skip when bots are unfurling links —
+    // Twitterbot / facebookexternalhit / Slackbot / LinkedInBot keep counts honest.
+    const ua = (req && req.headers && req.headers['user-agent']) || '';
+    const isBot = /bot|crawler|spider|preview|unfurl/i.test(ua);
+    if(!isBot){
+      found.share.view_count = (found.share.view_count||0) + 1;
+      DB.save(found.user).catch(e => console.warn('[chat-share SSR view bump]', e.message));
     }
     const ag = found.agent || {};
     const sh = found.share || {};
@@ -4271,7 +4384,7 @@ async function serveChatSharePage(res, shareId){
     <div class="av">${agAvatar}</div>
     <div>
       <div class="h-name">${agName}</div>
-      <div class="h-meta">by ${owner.handle ? `<a href="/u/${escHtml(owner.handle)}" style="color:inherit;font-weight:700">@${escHtml(owner.handle)}</a>` : ownerName}${owner.is_founder ? ' <span style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:999px;letter-spacing:.02em;vertical-align:1px">★ Founder</span>' : ''} · ${msgCount} message${msgCount===1?'':'s'}</div>
+      <div class="h-meta">by ${owner.handle ? `<a href="/u/${escHtml(owner.handle)}" style="color:inherit;font-weight:700">@${escHtml(owner.handle)}</a>` : ownerName}${owner.is_founder ? ' <span style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:999px;letter-spacing:.02em;vertical-align:1px">★ Founder</span>' : ''} · ${msgCount} message${msgCount===1?'':'s'}${sh.view_count ? ' · 👁 '+sh.view_count+' view'+(sh.view_count===1?'':'s') : ''}</div>
     </div>
     <span class="badge">SHARED</span>
   </div>
@@ -5849,18 +5962,32 @@ async function handleAPI(req,res,pathname,method,ip){
       time: m.time || '',
       user_name: m.user_name || undefined,
       user_avatar: m.user_avatar || undefined,
-      tool_log: Array.isArray(m.tool_log) ? m.tool_log.map(t => ({
-        name: t.name, ok: t.ok, error: t.error,
-        title: t.title, url: t.url,
-        // drop screenshot bytes — too heavy + may include sensitive info
-      })) : undefined,
+      tool_log: Array.isArray(m.tool_log) ? m.tool_log.map(t => {
+        // Public-facing snapshot — only expose URLs from external sites
+        // (search results, fetched pages). Hide `/generated/*` URLs (could
+        // leak private user-rendered artifacts) and any other relative path.
+        const url = (typeof t.url === 'string' && /^https?:\/\//.test(t.url)) ? t.url : undefined;
+        return {
+          name: t.name, ok: t.ok, error: t.error,
+          title: t.title, url,
+          // drop screenshot bytes — too heavy + may include sensitive info
+        };
+      }) : undefined,
     }));
+    // Optional expiry: body.expires_in_days = 1 / 7 / 30 / 0 (never). Default 0.
+    let expiresAt = null;
+    if(typeof body.expires_in_days === 'number' && body.expires_in_days > 0){
+      const days = Math.max(1, Math.min(365, Math.floor(body.expires_in_days)));
+      expiresAt = new Date(Date.now() + days*24*60*60*1000).toISOString();
+    }
     const sh = {
       id: genChatShareId(),
       title: String(body.title||'').slice(0,120) || ((snap[0]&&snap[0].content)?String(snap[0].content).slice(0,60):'Conversation'),
       messages: snap,
       created_at: new Date().toISOString(),
+      expires_at: expiresAt,
       msg_count: snap.length,
+      view_count: 0,
     };
     ag.chat_shares = Array.isArray(ag.chat_shares) ? ag.chat_shares : [];
     ag.chat_shares.push(sh);
@@ -5875,9 +6002,22 @@ async function handleAPI(req,res,pathname,method,ip){
   if(csm && method==='GET'){
     const found = await findChatShareById(csm[1]);
     if(!found) return jres(res,404,{error:'共有が見つかりません'});
+    // Expiry check — return 410 Gone for expired shares (distinct from 404).
+    if(found.share.expires_at && new Date(found.share.expires_at).getTime() < Date.now()){
+      return jres(res,410,{error:'expired', detail:'This share link has expired.'});
+    }
+    // View counter — fire-and-forget save so a slow disk doesn't block reads.
+    // Skip when viewer === owner (don't inflate stats from creator previews).
+    const viewerAuth = getAuth(req);
+    if(!viewerAuth || viewerAuth.userId !== found.user.id){
+      found.share.view_count = (found.share.view_count||0) + 1;
+      DB.save(found.user).catch(e => console.warn('[chat-share view bump] save failed:', e.message));
+    }
     return jres(res,200,{
       title: found.share.title,
       created_at: found.share.created_at,
+      expires_at: found.share.expires_at || null,
+      view_count: found.share.view_count || 0,
       msg_count: found.share.msg_count || (found.share.messages||[]).length,
       agent: {
         name: found.agent.name || 'AI',
@@ -5886,9 +6026,26 @@ async function handleAPI(req,res,pathname,method,ip){
       owner: {
         name: (found.user.name || (found.user.email||'').split('@')[0] || 'User'),
         handle: found.user.handle || null,
+        is_founder: !!found.user.is_founder,
+        founder_seat_no: found.user.is_founder ? (found.user.founder_seat_no || null) : null,
       },
       messages: found.share.messages || [],
     });
+  }
+
+  // ── GET /api/templates — public, list one-click automation templates ──
+  if(pathname === '/api/templates' && method === 'GET'){
+    return jres(res, 200, { templates: TEMPLATES.map(t => ({
+      id: t.id, icon: t.icon, title: t.title, description: t.description,
+      avatar: t.avatar, skills: t.skills,
+      has_schedule: !!t.schedule,
+      schedule_summary: t.schedule ? (
+        t.schedule.kind === 'daily'
+          ? `Daily ${String(t.schedule.hour).padStart(2,'0')}:${String(t.schedule.minute).padStart(2,'0')}`
+          : `Hourly :${String(t.schedule.minute||0).padStart(2,'0')}`
+      ) : null,
+      suggested_integrations: t.suggestedIntegrations || [],
+    })) });
   }
 
   // ── GET /api/u/:handle — public creator profile JSON ─────────
@@ -6365,6 +6522,9 @@ async function handleAPI(req,res,pathname,method,ip){
     const cat = (qs.get('category')||'').trim();
     const q = (qs.get('q')||'').trim().toLowerCase();
     const sort = (qs.get('sort')||'popular').trim();
+    // Trending window: day / week / month / all. day/week/month filters by
+    // listed_at then ranks by raw uses. 'all' uses exp-decay scorer.
+    const windowParam = (qs.get('window')||'all').trim();
     const tagsRaw = (qs.get('tags')||'').trim();
     const tagFilter = tagsRaw ? tagsRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
     let listings = await listAllPublicListings();
@@ -6384,16 +6544,24 @@ async function handleAPI(req,res,pathname,method,ip){
       const score = l => (l.rating||0) * Math.log(1+(l.rating_count||0));
       listings.sort((a,b)=>score(b)-score(a));
     } else if(sort==='trending'){
-      // Recency-weighted popularity. Half-life ~14 days, so a hot 3-day-old
-      // listing can outrank a steady 6-month-old one.
       const now = Date.now();
-      const score = l => {
-        const ageMs = now - new Date(l.listed_at||0).getTime();
-        const ageDays = Math.max(0, ageMs / 86400000);
-        const decay = Math.exp(-ageDays / 14);
-        return (l.uses||0) * (0.4 + 0.6*decay) + (l.rating_count||0) * 2 * decay;
-      };
-      listings.sort((a,b)=>score(b)-score(a));
+      const windowDays = windowParam==='day' ? 1
+                       : windowParam==='week' ? 7
+                       : windowParam==='month' ? 30
+                       : 0;
+      if(windowDays > 0){
+        const cutoff = now - windowDays*86400000;
+        listings = listings.filter(l => new Date(l.listed_at||0).getTime() >= cutoff);
+        listings.sort((a,b) => (b.uses||0) - (a.uses||0));
+      } else {
+        // 'all' — exp decay half-life ~14 days.
+        const score = l => {
+          const ageDays = Math.max(0, (now - new Date(l.listed_at||0).getTime()) / 86400000);
+          const decay = Math.exp(-ageDays / 14);
+          return (l.uses||0) * (0.4 + 0.6*decay) + (l.rating_count||0) * 2 * decay;
+        };
+        listings.sort((a,b)=>score(b)-score(a));
+      }
     } else {
       listings.sort((a,b)=>{
         if(a.badge==='hot' && b.badge!=='hot') return -1;
@@ -6517,6 +6685,67 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── POST /api/agents ───────────────────────────────────────
+  // ── POST /api/templates/:id/install — 1-click apply ──────────
+  // Creates a new agent from the template, optionally seeds its first
+  // schedule, and returns suggested integration setup links.
+  const tmplInstall = pathname.match(/^\/api\/templates\/([a-z0-9-]+)\/install$/);
+  if(tmplInstall && method==='POST'){
+    const t = _findTemplate(tmplInstall[1]);
+    if(!t) return jres(res,404,{error:'テンプレートが見つかりません'});
+    const _gf = _isGrandfathered(user);
+    const _planCap = _gf ? 1000 : user.plan==='free' ? 3 : user.plan==='pro' ? 20 : 1000;
+    const _owned = (user.agents||[]).filter(a => !a.is_group).length;
+    if(_owned >= _planCap){
+      return jres(res,402,{error:`Agents は最大 ${_planCap} 体まで。アップグレードしてください。`, upgrade_required: user.plan==='free' ? 'pro' : 'business'});
+    }
+    const agent = {
+      id: 'ag_'+crypto.randomUUID(),
+      avatar: t.avatar || '🤖',
+      name: t.title,
+      skills: t.skills || ['chat'],
+      persona: t.persona || '',
+      chrome_enabled: !!t.chrome_enabled,
+      sheets_enabled: false,
+      extension_enabled: false,
+      model: 'sonnet',
+      history: [],
+      created_at: new Date().toISOString(),
+      from_template: t.id,
+    };
+    if(t.schedule){
+      const sched = {
+        id: genScheduleId(),
+        prompt: t.schedule.prompt,
+        kind: t.schedule.kind,
+        hour: t.schedule.hour ?? 9,
+        minute: t.schedule.minute ?? 0,
+        tz_offset_min: 540,  // JST default; user can edit in UI
+        deliver: t.schedule.deliver || 'chat',
+        enabled: true,
+        label: t.schedule.label || t.title,
+        created_at: new Date().toISOString(),
+        last_run: null,
+        next_run: null,
+      };
+      sched.next_run = _scheduleNextRun(sched);
+      agent.schedules = [sched];
+    }
+    user.agents = [...(user.agents||[]), agent];
+    await DB.save(user);
+    // Hint about integrations the user should set up.
+    const wAlreadySet = user.outgoing_webhooks || {};
+    const integrationHints = (t.suggestedIntegrations||[]).map(kind => ({
+      kind,
+      configured: !!wAlreadySet[kind],
+      setup_url: '/app.html#/settings/integrations',
+    }));
+    return jres(res,201,{
+      agent: { id:agent.id, name:agent.name, avatar:agent.avatar, skills:agent.skills, from_template:t.id },
+      schedule: agent.schedules ? agent.schedules[0] : null,
+      integration_hints: integrationHints,
+    });
+  }
+
   if(pathname==='/api/agents'&&method==='POST'){
     const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled,model}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
@@ -7333,6 +7562,39 @@ async function handleAPI(req,res,pathname,method,ip){
     }
   }
 
+  // ── POST /api/parse/pdf ────────────────────────────────────
+  // Body: { b64: string, name?: string }
+  // Extract plain text from a PDF for use in KB / chat context. Anthropic
+  // already accepts PDFs as documents in chat — this is for the KB pipeline
+  // (which needs text to chunk + retrieve).
+  if(pathname==='/api/parse/pdf' && method==='POST'){
+    const auth=getAuth(req); if(!auth) return jres(res,401,{error:'認証が必要です'});
+    const body = (await readBody(req)) || {};
+    const b64=(body.b64||'').toString();
+    if(!b64) return jres(res,400,{error:'b64 が必要です'});
+    let buf;
+    try { buf = Buffer.from(b64, 'base64'); }
+    catch { return jres(res,400,{error:'base64 デコードに失敗'}); }
+    if(buf.length > 20*1024*1024) return jres(res,413,{error:'ファイルが大きすぎます (上限 20MB)'});
+    let pdfParse;
+    try { pdfParse = require('pdf-parse'); }
+    catch(e){ return jres(res,500,{error:'pdf-parse 未インストール — npm install を実行してください'}); }
+    try {
+      const result = await pdfParse(buf, { max: 100 });  // cap at 100 pages
+      let text = (result && result.text || '').trim();
+      let truncated = false;
+      if(text.length > 200000){ text = text.slice(0,200000); truncated = true; }
+      return jres(res,200,{
+        text, truncated,
+        name: body.name||'document.pdf',
+        length: text.length,
+        pages: (result && result.numpages) || 0,
+      });
+    } catch(e){
+      return jres(res,400,{ error:'PDF 解析に失敗', detail: (e&&e.message||'').slice(0,200) });
+    }
+  }
+
   // ── POST /api/fetch-url ────────────────────────────────────
   // Body: { url: string }
   // Fetches the URL server-side, strips HTML, returns extracted text so the
@@ -7468,6 +7730,34 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.schedules.splice(i,1);
     await DB.save(user);
     return jres(res,200,{ok:true});
+  }
+
+  // ── POST /api/agents/:id/schedules/:sid/run  (Run Now) ──────
+  // Fires the schedule immediately as a smoke test. Does NOT reschedule the
+  // next_run timestamp — the regular tick still owns that.
+  const schRun = pathname.match(/^\/api\/agents\/([^/]+)\/schedules\/([a-z0-9_]+)\/run$/);
+  if(schRun && method==='POST'){
+    const ag=(user.agents||[]).find(a=>a.id===schRun[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const s=(ag.schedules||[]).find(x=>x.id===schRun[2]);
+    if(!s) return jres(res,404,{error:'スケジュールが見つかりません'});
+    if((user.balance_jpy||0) <= 0){
+      return jres(res,402,{error:'残高がありません。チャージしてください。'});
+    }
+    const beforeNext = s.next_run;
+    await _runOneSchedule(user, ag, s);
+    // Preserve the original next_run — Run Now is for testing, not rescheduling.
+    s.next_run = beforeNext;
+    s.last_manual_run = new Date().toISOString();
+    await DB.save(user);
+    // Return last assistant entry that we just appended
+    const last = (ag.history||[]).slice(-1)[0];
+    return jres(res,200,{
+      ok:true,
+      reply: last && last.role==='assistant' ? last.content : '',
+      error: s.last_error || null,
+      next_run: s.next_run,
+    });
   }
 
   // ── Outgoing Slack / Discord webhook URLs ──────────────────
@@ -8443,6 +8733,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const cat = (qs.get('category')||'').trim();
     const q = (qs.get('q')||'').trim().toLowerCase();
     const sort = (qs.get('sort')||'popular').trim();
+    const windowParam = (qs.get('window')||'all').trim();
     const tagsRaw = (qs.get('tags')||'').trim();
     const tagFilter = tagsRaw ? tagsRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
     const onlyFavs = qs.get('favorites')==='1';
@@ -8471,12 +8762,22 @@ async function handleAPI(req,res,pathname,method,ip){
       listings.sort((a,b)=>score(b)-score(a));
     } else if(sort==='trending'){
       const now = Date.now();
-      const score = l => {
-        const ageDays = Math.max(0, (now - new Date(l.listed_at||0).getTime()) / 86400000);
-        const decay = Math.exp(-ageDays / 14);
-        return (l.uses||0) * (0.4 + 0.6*decay) + (l.rating_count||0) * 2 * decay;
-      };
-      listings.sort((a,b)=>score(b)-score(a));
+      const windowDays = windowParam==='day' ? 1
+                       : windowParam==='week' ? 7
+                       : windowParam==='month' ? 30
+                       : 0;
+      if(windowDays > 0){
+        const cutoff = now - windowDays*86400000;
+        listings = listings.filter(l => new Date(l.listed_at||0).getTime() >= cutoff);
+        listings.sort((a,b) => (b.uses||0) - (a.uses||0));
+      } else {
+        const score = l => {
+          const ageDays = Math.max(0, (now - new Date(l.listed_at||0).getTime()) / 86400000);
+          const decay = Math.exp(-ageDays / 14);
+          return (l.uses||0) * (0.4 + 0.6*decay) + (l.rating_count||0) * 2 * decay;
+        };
+        listings.sort((a,b)=>score(b)-score(a));
+      }
     } else {
       // popular = uses, with hot ribbon first (default)
       listings.sort((a,b)=>{
@@ -10562,7 +10863,7 @@ const server=http.createServer(async(req,res)=>{
   // /c/:share_id → public read-only conversation snapshot
   const cRoute=pathname.match(/^\/c\/(c_[A-Za-z0-9_-]+)\/?$/);
   if(cRoute){
-    return serveChatSharePage(res, cRoute[1]);
+    return serveChatSharePage(res, cRoute[1], req);
   }
 
   // /u/:handle → public creator profile (SSR with OG card)
@@ -10609,6 +10910,25 @@ const server=http.createServer(async(req,res)=>{
         else message = JSON.stringify(payload, null, 2);
         if(!message || !message.trim()) return jres(res, 400, { error: 'message body required' });
         if(message.length > 8000) message = message.slice(0, 8000);
+        // Per-owner daily spend cap — bounds the blast radius of a leaked
+        // webhook URL. Sliding 24h window of JPY billed via webhook-origin
+        // entries in billing_history. Default ¥1,000/day; agent-level override
+        // honored via agent.webhook_daily_cap_jpy.
+        const cap = (typeof agent.webhook_daily_cap_jpy === 'number' && agent.webhook_daily_cap_jpy > 0)
+          ? agent.webhook_daily_cap_jpy : 1000;
+        const since = Date.now() - 24*60*60*1000;
+        const spentToday = (owner.billing_history||[]).reduce((sum,e)=>{
+          if(!e || e.type !== 'usage' || e.via !== 'webhook') return sum;
+          if(new Date(e.date||0).getTime() < since) return sum;
+          return sum + (e.cost_jpy||0);
+        }, 0);
+        if(spentToday >= cap){
+          return jres(res, 402, {
+            error: 'webhook_daily_cap_reached',
+            cap_jpy: cap, spent_jpy: Math.round(spentToday*100)/100,
+            detail: 'This webhook has hit its 24h spend cap. Raise agent.webhook_daily_cap_jpy or wait for the rolling window to clear.',
+          });
+        }
         if((owner.balance_jpy||0) <= 0){
           return jres(res, 402, { error: 'owner balance is zero — please top up' });
         }
@@ -10630,6 +10950,15 @@ const server=http.createServer(async(req,res)=>{
         ];
         if(agent.history.length > 200) agent.history = agent.history.slice(-200);
         owner.balance_jpy = Math.round(((owner.balance_jpy||0) - cost.jpy)*1000)/1000;
+        // Record billing with via:'webhook' so the daily-cap counter above can
+        // see it on the next request.
+        owner.billing_history = owner.billing_history || [];
+        owner.billing_history.push({
+          date: new Date().toISOString(), type: 'usage', via: 'webhook',
+          agentId: agent.id, agentName: agent.name,
+          cost_jpy: cost.jpy,
+        });
+        if(owner.billing_history.length > 1000) owner.billing_history = owner.billing_history.slice(-1000);
         try { await DB.save(owner); } catch(e){ console.warn('[webhook] save failed:', e.message); }
         return jres(res, 200, { reply, agent: { name: agent.name, avatar: agent.avatar }, cost_jpy: cost.jpy });
       } catch(e){

@@ -154,6 +154,9 @@ body{font-family:var(--sans);background:#fff;color:var(--text);line-height:1.55;
   <button class="tab"        data-tab="free"  onclick="setTab('free')">🎁 Free</button>
 </div>
 
+<!-- Trending window picker — only rendered when ?sort=trending. -->
+<div id="windowPicker" style="display:none;justify-content:center;gap:6px;flex-wrap:wrap;padding:0 22px 8px"></div>
+
 <div class="page" id="page">
   <div class="empty" id="loading">Loading…</div>
 </div>
@@ -265,14 +268,43 @@ function render(){
   page.innerHTML = html;
 }
 
+function renderWindowPicker(currentWindow){
+  // Only show when sort=trending. Lets visitors slice trending by 1d / 7d / 30d / all.
+  const wrap = document.getElementById('windowPicker');
+  if(!wrap) return;
+  const opts = [
+    {k:'day',   label:'Today'},
+    {k:'week',  label:'This week'},
+    {k:'month', label:'This month'},
+    {k:'all',   label:'All time'},
+  ];
+  wrap.innerHTML = opts.map(o =>
+    '<button data-w="'+o.k+'" onclick="reloadWithWindow(\''+o.k+'\')" style="background:'+
+      (currentWindow===o.k?'var(--peach)':'#fff')+';color:'+(currentWindow===o.k?'#fff':'var(--text2)')+
+      ';border:1px solid '+(currentWindow===o.k?'var(--peach)':'var(--wire2,#e5e7eb)')+
+      ';border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">'+o.label+'</button>'
+  ).join('');
+  wrap.style.display = 'flex';
+}
+function reloadWithWindow(w){
+  const p = new URLSearchParams(location.search);
+  p.set('sort','trending');
+  p.set('window',w);
+  location.search = p.toString();
+}
+
 async function load(){
   try{
     // Honor ?sort=trending|recent|top_rated|popular from the URL so /trending
     // can route here and stay deep-linkable.
     const params = new URLSearchParams(location.search);
     const sort = ['popular','recent','top_rated','trending'].includes(params.get('sort')) ? params.get('sort') : 'popular';
+    const window_ = ['day','week','month','all'].includes(params.get('window')) ? params.get('window') : 'all';
     document.title = (sort==='trending' ? '🔥 Trending — ' : '') + document.title;
-    const r = await fetch(API + '/api/marketplace?sort='+sort);
+    const q = new URLSearchParams({ sort });
+    if(sort==='trending' && window_!=='all') q.set('window', window_);
+    if(sort==='trending') renderWindowPicker(window_);
+    const r = await fetch(API + '/api/marketplace?'+q.toString());
     if(!r.ok) throw new Error('Failed to load');
     const data = await r.json();
     LISTINGS = data.listings || [];

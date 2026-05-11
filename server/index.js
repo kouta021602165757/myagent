@@ -8922,8 +8922,10 @@ const server=http.createServer(async(req,res)=>{
     return serveAgentSharePage(res, aRoute[1]);
   }
 
-  // /g/:token → public group invite landing (SSR with OG meta + redirect)
-  const gRoute = pathname.match(/^\/g\/([a-zA-Z0-9]{4,16})\/?$/);
+  // /g/:token and /i/:token → public group invite landing
+  // (SSR with OG meta + redirect). /i/ is the friendlier alias the
+  // marketing strategy refers to; both render the same page.
+  const gRoute = pathname.match(/^\/(?:g|i)\/([a-zA-Z0-9]{4,16})\/?$/);
   if(gRoute){
     return serveGroupInvitePage(res, gRoute[1]);
   }

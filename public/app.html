@@ -6599,13 +6599,25 @@ document.addEventListener('DOMContentLoaded',async()=>{
     agents=ra.agents||[];
     // Fetch joined groups (where I'm an invitee, hosted by others)
     try { await fetchJoinedGroups(); } catch(e){ console.warn('[groups] fetch failed:', e.message); }
-    // If URL has ?openAgent=ag_xxx (e.g., from invite redirect), focus that one
+    // If URL has ?openAgent=ag_xxx (e.g., from invite redirect), focus that one.
+    // ?joined=1 means the user just completed an invite → toast a welcome.
     try {
-      var qsOpen = new URLSearchParams(location.search).get('openAgent');
+      var qs0 = new URLSearchParams(location.search);
+      var qsOpen = qs0.get('openAgent');
+      var qsJoined = qs0.get('joined') === '1';
       if(qsOpen){
         history.replaceState({}, '', location.pathname);
         // Defer until after agent list renders
-        setTimeout(() => { try { openAgent(qsOpen); } catch(e){} }, 200);
+        setTimeout(() => {
+          try { openAgent(qsOpen); } catch(e){}
+          if(qsJoined){
+            try {
+              showToast(isJa
+                ? '✨ グループに参加しました! 早速メッセージを送ってみましょう。'
+                : '✨ You joined the group! Send a message to say hi.', 'ok');
+            } catch(e){}
+          }
+        }, 200);
       }
     } catch(e){}
     // Show email verify banner if not verified

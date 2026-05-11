@@ -528,6 +528,31 @@ async function doLogin() {
     localStorage.setItem('token', r.token);
     localStorage.setItem('user', JSON.stringify(r.user));
     if(r.user) _maaAppend(r.token, r.user);
+
+    // Auto-join: same path as signup. If the user clicked an invite link,
+    // bounced through auth to log in, finish the join silently and land
+    // them in the chat.
+    var _pendJoinL = '';
+    try { _pendJoinL = localStorage.getItem('pendingJoinToken') || ''; } catch(e){}
+    if(_pendJoinL && /^[a-zA-Z0-9]{4,16}$/.test(_pendJoinL)){
+      try {
+        var _jr = await fetch('/api/g/' + _pendJoinL + '/join', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + r.token },
+        });
+        var _jd = null; try { _jd = await _jr.json(); } catch(e){}
+        try { localStorage.removeItem('pendingJoinToken'); } catch(e){}
+        if(_jr.ok && _jd && _jd.ok && _jd.agent_id){
+          window.location.href = '/app.html?openAgent=' + encodeURIComponent(_jd.agent_id) + '&joined=1';
+          return;
+        }
+        if(_jr.status === 202 && _jd && _jd.pending){
+          window.location.href = '/g/' + _pendJoinL + '?status=pending';
+          return;
+        }
+      } catch(e){}
+    }
+
     var _next=(new URLSearchParams(location.search)).get('next');
     window.location.href = (_next && /^\/[a-zA-Z0-9_\-/?=&]*$/.test(_next)) ? _next : 'app.html';
   } catch (e) {
@@ -564,6 +589,33 @@ async function doSignup() {
     localStorage.setItem('user', JSON.stringify(r.user));
     localStorage.removeItem('pendingRef');
     if(r.user) _maaAppend(r.token, r.user);
+
+    // Auto-join: if the user arrived via /g/:token or /i/:token, the invite
+    // landing stashed the token. Join the group server-side now so they
+    // land directly inside the chat instead of bouncing back to click
+    // "参加する" again. Silent best-effort — failures fall through to
+    // normal redirect.
+    var _pendJoin = '';
+    try { _pendJoin = localStorage.getItem('pendingJoinToken') || ''; } catch(e){}
+    if(_pendJoin && /^[a-zA-Z0-9]{4,16}$/.test(_pendJoin)){
+      try {
+        var _jr = await fetch('/api/g/' + _pendJoin + '/join', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + r.token },
+        });
+        var _jd = null; try { _jd = await _jr.json(); } catch(e){}
+        try { localStorage.removeItem('pendingJoinToken'); } catch(e){}
+        if(_jr.ok && _jd && _jd.ok && _jd.agent_id){
+          window.location.href = '/app.html?openAgent=' + encodeURIComponent(_jd.agent_id) + '&joined=1';
+          return;
+        }
+        if(_jr.status === 202 && _jd && _jd.pending){
+          window.location.href = '/g/' + _pendJoin + '?status=pending';
+          return;
+        }
+      } catch(e){ /* fall through to normal redirect */ }
+    }
+
     // Founder 100: pop the celebration modal before redirecting, so the
     // user shares the moment (and gets a Tweet button to do it).
     if(r.user && r.user.is_founder){

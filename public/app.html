@@ -13825,7 +13825,7 @@ function switchStab(btn, tabId){
   // Support both the new side-nav (.snav-item) and any leftover .stab-btn
   document.querySelectorAll('.snav-item, .stab-btn').forEach(b=>{b.classList.remove('active');b.classList.remove('active-stab');});
   if(btn) btn.classList.add('active');
-  var TAB_IDS=['s-account','s-security','s-notif','s-billing','s-prefs','s-creator','s-data','s-admin','s-danger',
+  var TAB_IDS=['s-account','s-security','s-notif','s-billing','s-prefs','s-creator','s-integrations','s-data','s-admin','s-danger',
                's-profile' /* legacy */];
   TAB_IDS.forEach(function(id){
     var el=document.getElementById(id);

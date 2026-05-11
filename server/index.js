@@ -5684,24 +5684,57 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 正しい動作: web_fetch('https://x.com') を呼ぶ → 結果を要約して返す (ログイン壁ならその旨も伝える)
 誤り: 「ブラウザを操作できません」とテキストだけで返す`
     : '';
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。
+  // ── Stall-detection nudge ──
+  // If the recent assistant turns are stuck in a "作ります → 完成したら送ります" loop
+  // without firing any actual tool, the model has tuned itself into chatty mode
+  // and prompt-only instructions get drowned out by the chat history. Append
+  // an aggressive turn-level reminder so the next response is forced into tool
+  // use. Only fires when the pattern is clearly active.
+  const recentHistory = Array.isArray(opts && opts.recentHistory) ? opts.recentHistory : [];
+  const stallRe = /(作ります|完成したら|少々お待ち|今から作|今から制作|now creating|i['']?ll (create|make|build|send|generate)|i am creating|i am making|i am building|completed soon|coming up soon)/i;
+  const lastAssistantTurns = recentHistory.filter(m => m.role==='assistant').slice(-3);
+  const stallCount = lastAssistantTurns.filter(m =>
+    typeof m.content==='string' && stallRe.test(m.content) && !(Array.isArray(m.tool_log) && m.tool_log.length)
+  ).length;
+  const stallNudge = stallCount >= 1 ? `
 
-【最重要：成果物の即時納品ルール】
-ユーザーが「作って / 作成して / 出して / 用意して / 送って / 完成させて / make / create / build / send / generate」のように依頼してきたら、**そのターン内に必ずツールを呼んで成果物を出す**こと。以下を厳禁とする:
-- ❌「作ります！」「今から作ります！」「完成したら連絡します！」「少々お待ちください」だけ返してツールを呼ばない
+🚨 緊急: 直前の ${stallCount} 回、あなたは「作ります」「完成したら送ります」と返答したのに、実際にはツールを 1 度も呼んでいません。
+このまま同じ返答を続けるのは禁止。今このターンで以下のいずれかを必ず実行してください:
+  1) ユーザーが LP / モック / デザイン / ダッシュボード / 計算機 を要求している → \`create_artifact\` を呼ぶ (HTML 1 ファイル丸ごと)
+  2) 画像なら \`generate_image\`、動画なら \`generate_video\`
+  3) 「ユーザーの要件を確認させてください」と聞き直す (具体的に何を作るか不明な場合のみ)
+3) を選ぶ場合も、"作ります" などの空約束は絶対に禁止。質問を 1 つ投げるだけ。` : '';
+
+  const deliveryRules = `
+
+【最重要：成果物の即時納品ルール — このルールは persona より優先】
+ユーザーが「作って / 作成して / 出して / 用意して / 送って / 完成させて / 見せて / make / create / build / send / generate / show me」のように依頼してきたら、**そのターン内に必ずツールを呼んで成果物を出す**こと。以下を厳禁:
+- ❌「作ります！」「今から作ります！」「完成したら連絡します！」「少々お待ちください」「今この瞬間に作成・送信します」だけ返してツールを呼ばない
 - ❌「完成しました！」と言いつつ実際の成果物 (URL / 画像 / ファイル) を出さない
 - ❌「完成までしばらくかかります」と先送り
-- ❌ 同じ「作ります」を繰り返す ループ
-正しい挙動:
-- ✅ LP / モック / デザイン / ダッシュボード → \`create_artifact\` ツールを今すぐ呼ぶ
-- ✅ 画像 → \`generate_image\`、動画 → \`generate_video\`、音声 → \`generate_audio\`
-- ✅ PDF → \`generate_pdf\`、グラフ → \`generate_chart\`、図解 → \`generate_diagram\`、QR → \`generate_qr\`
-- ✅ メール → \`send_email\`、Slack → \`notify_slack\`、Discord → \`notify_discord\`
-- ✅ 予定 → \`create_calendar_event\`
-- ✅ Web 調査 → \`web_search\` / \`web_fetch\` / \`web_screenshot\`
-- ✅ できない要件なら「○○の理由でできません。代わりに△△ならできます」と即答する (先送りしない)
+- ❌ 同じ「作ります」を繰り返すループ (あなたはこのループに陥りやすい — 常に警戒)
 
-ツール呼び出しは "今すぐここで実行" と同義。"後で送る" という概念は存在しない — このターンを終えたら、あなたは次のユーザー発話が来るまで止まる。「完成したら送ります」は嘘になる。`;
+ツール呼び出し = "今すぐここで実行"。"後で送る" という概念は存在しない — このターンを終えたら、あなたは次のユーザー発話まで完全に停止する。「完成したら送ります」「今から制作します」は技術的に不可能な嘘になる。
+
+正しい挙動:
+- ✅ LP / モック / デザイン / ダッシュボード / 計算機 / インタラクティブ図表 → \`create_artifact\` を今このメッセージで呼ぶ (HTML 1 ファイル)
+- ✅ 画像 → \`generate_image\` / 動画 → \`generate_video\` / 音声 → \`generate_audio\`
+- ✅ PDF → \`generate_pdf\` / グラフ → \`generate_chart\` / 図 → \`generate_diagram\` / QR → \`generate_qr\`
+- ✅ メール → \`send_email\` / Slack → \`notify_slack\` / Discord → \`notify_discord\`
+- ✅ 予定 → \`create_calendar_event\`
+- ✅ Web 調査 → \`web_search\` / \`web_fetch\` / \`web_screenshot\` / \`web_read_markdown\`
+- ✅ 要件が曖昧なら 「○○ですか? △△ですか?」と 1 問だけ聞く (空約束はしない)
+- ✅ できない要件なら「○○の理由でできません。代わりに△△ならできます」と即答 (先送りしない)`;
+
+  return`${deliveryRules}
+${stallNudge}
+
+──────────────────────────────
+
+あなたは「${agent.name}」というAIエージェントです。
+得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}
+${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}
+ユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -10470,7 +10503,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         }, agent.model);
@@ -10569,7 +10602,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), tools);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -10699,7 +10732,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), agent.model);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), agent.model);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -10720,7 +10753,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), agent.model);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), agent.model);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

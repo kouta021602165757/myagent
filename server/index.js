@@ -11128,12 +11128,18 @@ function serveStatic(res,fp){
 const server=http.createServer(async(req,res)=>{
   const parsed=url.parse(req.url);
   const pathname=parsed.pathname;
-  const method=req.method.toUpperCase();
+  // Treat HEAD as GET — routes below match on method==='GET' explicitly, so
+  // without this rewrite HEAD requests fall through to the auth gate and 401.
+  // That breaks SNS unfurl scrapers (FB, LinkedIn, Slack) which often HEAD
+  // a URL to validate before GET-ing. Node's http module auto-strips the
+  // body on HEAD responses, so handlers can stay GET-shaped.
+  const rawMethod = req.method.toUpperCase();
+  const method = rawMethod === 'HEAD' ? 'GET' : rawMethod;
   const ip=getIP(req);
 
   if(method==='OPTIONS'){
     res.writeHead(204,{'Access-Control-Allow-Origin':APP_URL,
-      'Access-Control-Allow-Methods':'GET,POST,DELETE,OPTIONS',
+      'Access-Control-Allow-Methods':'GET,HEAD,POST,DELETE,OPTIONS',
       'Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Max-Age':'86400'});
     return res.end();
   }

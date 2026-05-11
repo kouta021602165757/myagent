@@ -1300,6 +1300,55 @@ input,textarea{font-family:var(--sans);}
   .m-artifact-frame{height:560px;}
 }
 
+/* Link-card variant — used by chat for .html artifacts (iframe replaced). */
+.m-artifact-card{
+  display:flex;align-items:center;gap:12px;
+  max-width:560px;width:100%;margin:12px 0;
+  padding:14px 16px;
+  background:#fff;border:1px solid var(--wire2);border-radius:12px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 20px rgba(0,0,0,.05);
+  text-decoration:none;color:inherit;font-family:inherit;
+  transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+  position:relative;
+}
+.m-artifact-card:hover{
+  transform:translateY(-1px);
+  border-color:rgba(251,146,60,.4);
+  box-shadow:0 2px 6px rgba(251,146,60,.10), 0 14px 28px rgba(251,146,60,.10);
+}
+.m-artifact-card-ic{
+  width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,#fff3e6,#ffe5cc);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.m-artifact-card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.m-artifact-card-ti{
+  font-weight:800;font-size:14px;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.m-artifact-card-url{
+  font-family:'SF Mono','Menlo',monospace;font-size:11.5px;color:var(--text3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.m-artifact-card-copy{
+  background:transparent;border:1px solid var(--wire2);border-radius:7px;
+  width:30px;height:30px;cursor:pointer;font-size:13px;line-height:1;color:var(--text2);
+  flex-shrink:0;font-family:inherit;
+}
+.m-artifact-card-copy:hover{background:var(--cream3);color:var(--text);}
+.m-artifact-card-cta{
+  display:none;
+}
+@media (min-width:560px){
+  .m-artifact-card-cta{
+    display:inline-flex;align-items:center;
+    background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;
+    padding:7px 12px;border-radius:8px;font-weight:700;font-size:12px;
+    letter-spacing:.02em;white-space:nowrap;flex-shrink:0;
+    box-shadow:0 4px 10px rgba(234,88,12,.22);
+  }
+}
+
 .m-body{
   max-width:680px;background:#fff;border:1px solid var(--wire2);border-radius:14px;
   padding:14px 18px;font-size:14.5px;line-height:1.75;color:var(--text);
@@ -8053,20 +8102,23 @@ function _md(src){
   // Audio — same shape but mp3/wav/ogg → <audio>.
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.(?:mp3|wav|ogg|m4a))\)/g,
     '<audio class="m-genaudio" src="$2" controls preload="metadata"></audio>');
-  // Artifacts — .html URLs in image markdown syntax render as a sandboxed
-  // iframe + control bar (open in new tab / copy URL / refresh).
+  // Artifacts — .html URLs in image markdown syntax render as a prominent
+  // link card (full URL + "新タブで開く" CTA). Previously we used iframes
+  // here but Render's X-Frame headers + sandboxing made some artifacts blank
+  // for users; the link card is simpler, always works, and lets the rendered
+  // page use the full viewport for design impact.
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
     const safeAlt = String(alt||'').replace(/"/g,'&quot;').slice(0,80);
     const safeSrc = String(src||'').replace(/"/g,'&quot;');
-    return '<div class="m-artifact"><div class="m-artifact-hd">'
-      + '<span class="m-artifact-ti">📄 '+safeAlt+'</span>'
-      + '<div class="m-artifact-acts">'
-      + '<button class="m-artifact-btn" onclick="this.parentElement.parentElement.nextElementSibling.contentWindow.location.reload()" title="再読込">🔄</button>'
-      + '<button class="m-artifact-btn" onclick="navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(()=>{this.textContent=\'✓\';setTimeout(()=>this.textContent=\'📋\',1200)})" title="URL コピー">📋</button>'
-      + '<a class="m-artifact-btn" href="'+safeSrc+'" target="_blank" rel="noopener" title="新タブで開く">↗</a>'
-      + '</div></div>'
-      + '<iframe class="m-artifact-frame" src="'+safeSrc+'" sandbox="allow-scripts allow-forms allow-popups allow-modals" loading="lazy" referrerpolicy="no-referrer"></iframe>'
-      + '</div>';
+    return '<a class="m-artifact-card" href="'+safeSrc+'" target="_blank" rel="noopener">'
+      + '<div class="m-artifact-card-ic">📄</div>'
+      + '<div class="m-artifact-card-body">'
+      +   '<div class="m-artifact-card-ti">'+safeAlt+'</div>'
+      +   '<div class="m-artifact-card-url">'+safeSrc+'</div>'
+      + '</div>'
+      + '<button class="m-artifact-card-copy" onclick="event.preventDefault();event.stopPropagation();navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(()=>{this.textContent=\'✓\';setTimeout(()=>this.textContent=\'📋\',1200)})" title="URL コピー">📋</button>'
+      + '<span class="m-artifact-card-cta">新タブで開く ↗</span>'
+      + '</a>';
   });
   // Images — MUST come before links so the leading '!' is consumed cleanly.
   // Renders the AI-generated image inline. Lazy-loaded to avoid blocking

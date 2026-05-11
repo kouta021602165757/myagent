@@ -3827,6 +3827,7 @@ body{color:#f0f0f8;}
       </div>
       <input type="hidden" id="editModel" value="sonnet">
     </div>
+    <!-- 1. Web 検索 / URL 取得 -->
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3836,6 +3837,21 @@ body{color:#f0f0f8;}
         <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
       </div>
     </div>
+
+    <!-- 2. ブラウザ拡張連携 -->
+    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em">BETA</span> <span id="editExtConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>接続中</span></div>
+          <div id="editExtDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
+          <div id="editExtAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" id="editExtReconnect" onclick="event.preventDefault();reconnectExtension()" style="display:none;color:#3730a3;font-weight:700">🔄 再接続</a><span id="editExtReconnectSep" style="display:none"> · </span><a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
+          <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:8px;background:#fff;color:#3730a3;border:1px solid #6366f1;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ ブラウザ拡張をペアリング</button>
+        </div>
+        <button type="button" class="s-sw" id="editExtSw" onclick="toggleEditExtension()"></button>
+      </div>
+    </div>
+
+    <!-- 3. Google スプレッドシート連携 -->
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3848,28 +3864,8 @@ body{color:#f0f0f8;}
         <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
       </div>
     </div>
-    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em">BETA</span> <span id="editExtConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>接続中</span></div>
-          <div id="editExtDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
-          <div id="editExtAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" id="editExtReconnect" onclick="event.preventDefault();reconnectExtension()" style="display:none;color:#3730a3;font-weight:700">🔄 再接続</a><span id="editExtReconnectSep" style="display:none"> · </span><a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
-          <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:8px;background:#fff;color:#3730a3;border:1px solid #6366f1;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ ブラウザ拡張をペアリング</button>
-        </div>
-        <button type="button" class="s-sw" id="editExtSw" onclick="toggleEditExtension()"></button>
-      </div>
-    </div>
-    <div id="editListingBox" style="padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--peach-dark);display:flex;align-items:center;gap:6px">🏪 Agent Store に出店</div>
-          <div id="editListingDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">買い切り価格の 70% + 利用料の 10% が収益になります</div>
-        </div>
-      </div>
-      <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
-    </div>
 
-    <!-- Knowledge base (RAG) -->
+    <!-- 4. ナレッジベース (RAG) -->
     <div id="editKbBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(16,185,129,.1));border:1px solid rgba(16,185,129,.22);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3882,7 +3878,7 @@ body{color:#f0f0f8;}
       <button type="button" onclick="document.getElementById('editKbInput').click()" style="margin-top:10px;width:100%;background:#fff;color:#047857;border:1px solid #10b981;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ ドキュメントを追加</button>
     </div>
 
-    <!-- Webhook -->
+    <!-- 5. Webhook -->
     <div id="editWhBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(14,165,233,.05),rgba(14,165,233,.1));border:1px solid rgba(14,165,233,.25);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3897,7 +3893,7 @@ body{color:#f0f0f8;}
       </div>
     </div>
 
-    <!-- Scheduled execution -->
+    <!-- 6. スケジュール実行 -->
     <div id="editSchedBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,.05),rgba(245,158,11,.1));border:1px solid rgba(245,158,11,.25);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3909,7 +3905,7 @@ body{color:#f0f0f8;}
       <button type="button" onclick="_schedOpenForm()" style="margin-top:10px;width:100%;background:#fff;color:#b45309;border:1px solid #f59e0b;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 新しいスケジュール</button>
     </div>
 
-    <!-- グループ作成 / 招待リンク管理 -->
+    <!-- 7. グループを作成 -->
     <div id="editGroupBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(99,102,241,.05),rgba(99,102,241,.1));border:1px solid rgba(99,102,241,.22);border-radius:11px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3920,6 +3916,18 @@ body{color:#f0f0f8;}
       <button id="editGroupBtn" type="button" onclick="_promoteToGroupFromEdit()" style="margin-top:10px;width:100%;background:#fff;color:#4338ca;border:1px solid rgba(99,102,241,.4);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ グループを作成して招待</button>
     </div>
 
+    <!-- 8. Agent Store に出店 -->
+    <div id="editListingBox" style="padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--peach-dark);display:flex;align-items:center;gap:6px">🏪 Agent Store に出店</div>
+          <div id="editListingDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">買い切り価格の 70% + 利用料の 10% が収益になります</div>
+        </div>
+      </div>
+      <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
+    </div>
+
+    <!-- 9. 保存 -->
     <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
 
     <!-- データ操作: エクスポート / ブックマーク -->
@@ -12658,7 +12666,7 @@ async function disconnectExtension(){
   }
 }
 
-function toggleEditExtension(){
+async function toggleEditExtension(){
   if(!me || !me.extension_paired){
     connectExtension();
     return;
@@ -12666,7 +12674,25 @@ function toggleEditExtension(){
   var sw=document.getElementById('editExtSw');
   if(!sw) return;
   var willEnable=!sw.classList.contains('on');
+  // Flip the UI immediately so the user sees the toggle move.
   _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', willEnable);
+  // Auto-save: PATCH only this one field, no panel close. Roll back the UI
+  // if the server rejects.
+  var id = window._editAgentId;
+  var ag = agents.find(a => a.id === id);
+  if(!id || !ag){ return; }
+  try {
+    await api('PATCH', '/api/agents/'+id, { extension_enabled: willEnable });
+    ag.extension_enabled = willEnable;
+    showToast(willEnable
+      ? (isJa ? 'ブラウザ拡張連携を有効化しました' : 'Extension enabled')
+      : (isJa ? 'ブラウザ拡張連携を無効化しました' : 'Extension disabled'),
+      'ok');
+  } catch(e) {
+    // Roll back the switch on failure so it matches server state.
+    _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn', !willEnable);
+    showToast((isJa?'保存に失敗: ':'Save failed: ')+(e.message||''), 'ng');
+  }
 }
 
 function _composePersona(purpose,duties){

@@ -1445,13 +1445,43 @@ let _playwrightChromium = null;
 let _ffmpegStaticPath   = null;
 function _loadVideoDeps(){
   if(!_playwrightChromium){
-    try { _playwrightChromium = require('playwright').chromium; } catch(e){ throw new Error('playwright not installed'); }
+    try { _playwrightChromium = require('playwright').chromium; }
+    catch(e){ throw new Error('playwright module not installed: ' + e.message); }
+    // Probe the actual Chromium binary too — postinstall `playwright install chromium`
+    // can silently fail on free-tier hosts (network/disk) and we'd otherwise blow up
+    // inside .launch() with a much less clear error.
+    try {
+      const exec = _playwrightChromium.executablePath();
+      if(!fs.existsSync(exec)){
+        throw new Error('Chromium binary missing at ' + exec + ' — run: npx playwright install chromium');
+      }
+    } catch(e){ throw new Error('Chromium check failed: ' + e.message); }
   }
   if(!_ffmpegStaticPath){
-    try { _ffmpegStaticPath = require('ffmpeg-static'); } catch(e){ throw new Error('ffmpeg-static not installed — run: npm install --no-save ffmpeg-static'); }
+    try { _ffmpegStaticPath = require('ffmpeg-static'); }
+    catch(e){ throw new Error('ffmpeg-static module not installed: ' + e.message); }
+    if(!fs.existsSync(_ffmpegStaticPath)){
+      throw new Error('ffmpeg binary missing at ' + _ffmpegStaticPath);
+    }
   }
   return { chromium: _playwrightChromium, ffmpegPath: _ffmpegStaticPath };
 }
+
+// Low-memory Chromium args — Render's free tier is ~512MB, which is right at
+// the edge for Chromium + Node. These flags shave ~80-150MB off peak usage.
+const _CHROMIUM_LAUNCH_ARGS = [
+  '--no-sandbox',
+  '--disable-dev-shm-usage',           // critical on small /dev/shm hosts
+  '--disable-gpu',
+  '--disable-software-rasterizer',
+  '--disable-extensions',
+  '--disable-background-networking',
+  '--disable-default-apps',
+  '--disable-sync',
+  '--no-first-run',
+  '--no-zygote',
+  '--mute-audio',
+];
 
 const GENERATED_DIR = path.join(PUBLIC_DIR, 'generated');
 try { fs.mkdirSync(GENERATED_DIR, { recursive: true }); } catch(e){}
@@ -1528,7 +1558,7 @@ async function _recordHtmlToMp4(html, outPath, durationSec, aspect, narration, v
   }
 
   let webmPath = null;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
   try {
     const context = await browser.newContext({ viewport: size, recordVideo: { dir: tmpDir, size } });
     const page = await context.newPage();
@@ -1603,6 +1633,8 @@ async function executeVideoTool(name, input){
   try {
     await _recordHtmlToMp4(html, outPath, duration, aspect, narration, voice);
   } catch(e){
+    console.error('[generate_video] failed:', e.message);
+    if(e.stack) console.error(e.stack.split('\n').slice(0,4).join(' | '));
     return { error: 'render_failed: ' + (e.message || 'unknown') };
   }
   const sizeKb = Math.round(fs.statSync(outPath).size / 1024);
@@ -1710,6 +1742,7 @@ async function executePdfTool(input){
     await page.pdf({ path: outPath, format, landscape, printBackground: true,
                      margin:{ top:'18mm', bottom:'18mm', left:'16mm', right:'16mm' } });
   } catch(e){
+    console.error('[generate_pdf] failed:', e.message);
     return { error: 'pdf_render_failed: ' + (e.message || 'unknown') };
   } finally {
     if(browser) await browser.close();
@@ -1760,6 +1793,7 @@ async function executeChartTool(input){
     await page.waitForTimeout(500); // let Chart.js render
     await page.screenshot({ path: outPath, type:'png', omitBackground:false });
   } catch(e){
+    console.error('[generate_chart] failed:', e.message);
     return { error: 'chart_render_failed: ' + (e.message || 'unknown') };
   } finally {
     if(browser) await browser.close();
@@ -4264,6 +4298,63 @@ async function handleAPI(req,res,pathname,method,ip){
   // Used by keep-alive ping and uptime monitors. Must come before rateLimit.
   if(pathname==='/api/health'&&method==='GET'){
     return jres(res,200,{ok:true,ts:Date.now()});
+  }
+
+  // ── GET /api/admin/media-status (admin diagnostic) ─────────
+  // Reports whether each piece of the media-generation pipeline can boot.
+  // The chat says "ビデオ生成がエラーになりました" without telling you why;
+  // hit this endpoint to see the actual root cause (binary missing,
+  // disk perms, etc.) without combing through Render logs.
+  if(pathname==='/api/admin/media-status'&&method==='GET'){
+    const u = getAuth(req);
+    let isAdmin = false;
+    if(u){
+      const me = await DB.findBy('id', u.userId);
+      isAdmin = !!(me && me.is_admin);
+    }
+    if(!isAdmin) return jres(res,403,{error:'admin required'});
+    const status = {
+      playwright_module: 'unknown',
+      chromium_binary:   'unknown',
+      ffmpeg_module:     'unknown',
+      ffmpeg_binary:     'unknown',
+      qrcode_module:     'unknown',
+      generated_dir:     'unknown',
+      render_test:       'not_run',
+    };
+    try {
+      const { chromium } = require('playwright');
+      status.playwright_module = 'ok';
+      try {
+        const exec = chromium.executablePath();
+        status.chromium_binary = fs.existsSync(exec) ? ('ok: ' + exec) : ('MISSING: ' + exec);
+      } catch(e){ status.chromium_binary = 'check failed: ' + e.message; }
+    } catch(e){ status.playwright_module = 'missing: ' + e.message; }
+    try {
+      const ffmpegPath = require('ffmpeg-static');
+      status.ffmpeg_module = 'ok';
+      status.ffmpeg_binary = (ffmpegPath && fs.existsSync(ffmpegPath)) ? ('ok: ' + ffmpegPath) : ('MISSING: ' + ffmpegPath);
+    } catch(e){ status.ffmpeg_module = 'missing: ' + e.message; }
+    try { require('qrcode'); status.qrcode_module = 'ok'; }
+    catch(e){ status.qrcode_module = 'missing: ' + e.message; }
+    try {
+      const st = fs.statSync(GENERATED_DIR);
+      status.generated_dir = st.isDirectory() ? ('ok: ' + GENERATED_DIR) : 'not a directory';
+    } catch(e){ status.generated_dir = 'missing: ' + e.message; }
+    // Optional: actually try a 1-second Chromium launch + close so we can detect
+    // launch-time errors (sandbox missing, OOM, libs missing on host).
+    if(req.url.includes('test=1')){
+      try {
+        const { chromium } = require('playwright');
+        const browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
+        const ctx = await browser.newContext();
+        await ctx.newPage();
+        await ctx.close();
+        await browser.close();
+        status.render_test = 'ok';
+      } catch(e){ status.render_test = 'launch_failed: ' + e.message; }
+    }
+    return jres(res,200,status);
   }
 
   // ── GET /api/founder/status (PUBLIC) ───────────────────────

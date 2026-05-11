@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MY AI Agent — 30s demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* 30-second deterministic demo. Each "scene" lives in its own absolutely
+     positioned layer and animates opacity / transform on a fixed schedule.
+     Total runtime: 30s. */
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body {
+    width:1280px; height:720px; overflow:hidden;
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#0a0a0c;
+    color:#fff;
+    -webkit-font-smoothing:antialiased;
+  }
+  .stage {
+    position:relative; width:100%; height:100%;
+  }
+  .scene {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0;
+    animation-fill-mode:forwards;
+    animation-timing-function:cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── SCENE 1: 0-3.5s — hook text ─────────────────────────────── */
+  .scene-1 { background:#0a0a0c; }
+  .scene-1 { animation:s1-show 3.5s; }
+  @keyframes s1-show {
+    0%   { opacity:0; }
+    8%   { opacity:1; }
+    85%  { opacity:1; }
+    100% { opacity:0; }
+  }
+  .hook-stack {
+    text-align:center;
+    font-family:'Bebas Neue',serif;
+    font-size:110px;
+    line-height:1;
+    letter-spacing:-.02em;
+    color:#fff;
+  }
+  .hook-line {
+    opacity:0;
+    transform:translateY(20px);
+    animation-fill-mode:forwards;
+    animation-timing-function:cubic-bezier(.4,0,.2,1);
+  }
+  .hook-line.l1 { animation:line-in .5s .2s forwards; }
+  .hook-line.l2 { animation:line-in .5s 1.0s forwards; color:#9a6a4a; }
+  .hook-line.l3 { animation:line-in .5s 1.8s forwards; color:#fb923c; }
+  @keyframes line-in {
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── SCENE 2: 3.5-8s — type the goal ─────────────────────────── */
+  .scene-2 { background:#fdf8f3; color:#1a0a00; animation:s2-show 4.5s 3.5s forwards; }
+  @keyframes s2-show {
+    0%   { opacity:0; }
+    8%   { opacity:1; }
+    88%  { opacity:1; }
+    100% { opacity:0; }
+  }
+  .prompt-wrap {
+    width:780px; text-align:center;
+  }
+  .prompt-label {
+    font-family:'DM Mono',monospace;
+    font-size:13px;
+    color:#9a6a4a;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    margin-bottom:18px;
+    opacity:0;
+    animation:fade-in .4s 3.7s forwards;
+  }
+  .prompt-box {
+    background:#fff;
+    border:1.5px solid rgba(180,120,80,.22);
+    border-radius:16px;
+    padding:26px 30px;
+    box-shadow:0 18px 40px rgba(60,30,10,.08);
+    font-size:24px;
+    line-height:1.45;
+    color:#1a0a00;
+    text-align:left;
+    min-height:120px;
+    opacity:0;
+    animation:fade-in .4s 3.9s forwards;
+  }
+  .prompt-typed {
+    display:inline-block;
+    overflow:hidden;
+    white-space:nowrap;
+    border-right:2px solid #fb923c;
+    width:0;
+    animation:typing 3.4s 4.1s steps(70,end) forwards, caret 0.7s infinite step-end;
+  }
+  @keyframes typing { to { width:100%; } }
+  @keyframes caret { 50% { border-color:transparent; } }
+  @keyframes fade-in { to { opacity:1; } }
+
+  .generate-btn {
+    margin-top:24px;
+    display:inline-block;
+    background:#fb923c;
+    color:#fff;
+    font-weight:800;
+    font-size:18px;
+    padding:14px 32px;
+    border-radius:12px;
+    box-shadow:0 10px 22px rgba(251,146,60,.36);
+    opacity:0;
+    animation:btn-in .4s 7.4s forwards, btn-pulse .8s 7.4s 1 forwards;
+  }
+  @keyframes btn-in { to { opacity:1; } }
+  @keyframes btn-pulse {
+    0%, 100% { transform:scale(1); }
+    50% { transform:scale(1.06); }
+  }
+
+  /* ── SCENE 3: 8-18s — 5 agents materialise ───────────────────── */
+  .scene-3 {
+    background:
+      radial-gradient(800px 500px at 50% 0%, rgba(251,146,60,.15) 0%, transparent 60%),
+      #fdf8f3;
+    color:#1a0a00;
+    flex-direction:column;
+    animation:s3-show 10s 8s forwards;
+  }
+  @keyframes s3-show {
+    0%   { opacity:0; }
+    5%   { opacity:1; }
+    93%  { opacity:1; }
+    100% { opacity:0; }
+  }
+  .s3-title {
+    font-family:'Bebas Neue',serif;
+    font-size:64px;
+    letter-spacing:-.01em;
+    line-height:1;
+    color:#1a0a00;
+    margin-bottom:14px;
+  }
+  .s3-title .accent { color:#ea580c; }
+  .s3-sub {
+    font-family:'DM Mono',monospace;
+    font-size:14px;
+    letter-spacing:.12em;
+    color:#9a6a4a;
+    text-transform:uppercase;
+    margin-bottom:34px;
+  }
+  .agent-grid {
+    display:flex; gap:14px;
+  }
+  .agent {
+    width:170px;
+    background:#fff;
+    border:1.5px solid rgba(251,146,60,.22);
+    border-radius:18px;
+    padding:22px 14px;
+    text-align:center;
+    box-shadow:0 14px 32px rgba(60,30,10,.10);
+    opacity:0;
+    transform:translateY(40px) scale(.92);
+    animation-fill-mode:forwards;
+    animation-timing-function:cubic-bezier(.34,1.56,.64,1);
+    animation-duration:.55s;
+  }
+  .agent .em { font-size:46px; line-height:1; margin-bottom:10px; }
+  .agent .nm { font-size:13.5px; font-weight:800; color:#1a0a00; line-height:1.25; }
+  .agent .rl {
+    font-family:'DM Mono',monospace;
+    font-size:10.5px;
+    color:#9a6a4a;
+    margin-top:6px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+  }
+  .agent.a1 { animation-name:agent-in; animation-delay:9s; }
+  .agent.a2 { animation-name:agent-in; animation-delay:10s; }
+  .agent.a3 { animation-name:agent-in; animation-delay:11s; }
+  .agent.a4 { animation-name:agent-in; animation-delay:12s; }
+  .agent.a5 { animation-name:agent-in; animation-delay:13s; }
+  @keyframes agent-in {
+    to { opacity:1; transform:translateY(0) scale(1); }
+  }
+  .agent.a1 .em { color:#fb923c; }
+  .agent.a2 .em { color:#8b5cf6; }
+  .agent.a3 .em { color:#3b82f6; }
+  .agent.a4 .em { color:#ec4899; }
+  .agent.a5 .em { color:#10b981; }
+
+  .timer {
+    position:absolute; bottom:64px; left:50%; transform:translateX(-50%);
+    font-family:'Bebas Neue',serif;
+    font-size:42px;
+    color:#ea580c;
+    letter-spacing:-.01em;
+    line-height:1;
+    opacity:0;
+    animation:fade-in .4s 14.5s forwards;
+  }
+  .timer-label {
+    display:block;
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    color:#9a6a4a;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    margin-top:6px;
+  }
+
+  /* ── SCENE 4: 18-25s — @mention switches the responder ───────── */
+  .scene-4 {
+    background:#fdf8f3;
+    color:#1a0a00;
+    flex-direction:column;
+    padding:60px;
+    animation:s4-show 7s 18s forwards;
+  }
+  @keyframes s4-show {
+    0%   { opacity:0; }
+    7%   { opacity:1; }
+    93%  { opacity:1; }
+    100% { opacity:0; }
+  }
+  .s4-title {
+    font-family:'Bebas Neue',serif;
+    font-size:48px;
+    letter-spacing:-.01em;
+    margin-bottom:24px;
+    align-self:center;
+  }
+  .s4-title .accent { color:#ea580c; }
+  .chat {
+    width:780px;
+    background:#fff;
+    border:1.5px solid rgba(180,120,80,.22);
+    border-radius:18px;
+    padding:22px 24px;
+    box-shadow:0 18px 40px rgba(60,30,10,.08);
+    display:flex; flex-direction:column; gap:14px;
+    align-self:center;
+  }
+  .bub {
+    max-width:88%;
+    padding:13px 18px;
+    border-radius:18px;
+    font-size:18px;
+    line-height:1.45;
+    opacity:0;
+    transform:translateY(8px);
+    animation-fill-mode:forwards;
+    animation-timing-function:cubic-bezier(.4,0,.2,1);
+    animation-duration:.4s;
+  }
+  .bub.you {
+    align-self:flex-end;
+    background:#fb923c; color:#fff;
+    border-bottom-right-radius:6px;
+  }
+  .bub.ai {
+    align-self:flex-start;
+    background:#faf3eb; color:#1a0a00;
+    border:1px solid rgba(180,120,80,.14);
+    border-bottom-left-radius:6px;
+  }
+  .bub.ai .who {
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:800; color:#ec4899;
+    margin-bottom:6px;
+  }
+  .bub.ai .who .av {
+    width:24px; height:24px; border-radius:50%;
+    background:#ec4899; color:#fff;
+    display:grid; place-items:center; font-size:14px;
+  }
+  .b1 { animation-name:bub-in; animation-delay:19s; }
+  .b2 { animation-name:bub-in; animation-delay:21s; }
+  .b3 { animation-name:bub-in; animation-delay:23s; }
+  @keyframes bub-in {
+    to { opacity:1; transform:translateY(0); }
+  }
+  .b1 strong { background:rgba(255,255,255,.22); padding:1px 6px; border-radius:5px; }
+
+  /* ── SCENE 5: 25-30s — pricing + founder offer ──────────────── */
+  .scene-5 {
+    background:linear-gradient(135deg, #1a0a00 0%, #2a1408 100%);
+    color:#fff;
+    flex-direction:column;
+    padding:50px;
+    animation:s5-show 5s 25s forwards;
+  }
+  @keyframes s5-show {
+    0%   { opacity:0; }
+    10%  { opacity:1; }
+    100% { opacity:1; }
+  }
+  .s5-banner {
+    font-family:'DM Mono',monospace;
+    font-size:13px;
+    letter-spacing:.16em;
+    color:#fb923c;
+    text-transform:uppercase;
+    margin-bottom:18px;
+    text-align:center;
+    opacity:0; animation:fade-in .4s 25.4s forwards;
+  }
+  .s5-banner b { color:#fff; font-weight:700; }
+  .s5-title {
+    font-family:'Bebas Neue',serif;
+    font-size:84px;
+    letter-spacing:-.01em;
+    line-height:.95;
+    text-align:center;
+    margin-bottom:32px;
+    opacity:0; animation:fade-in .5s 25.8s forwards;
+  }
+  .s5-title .accent { color:#fb923c; }
+  .price-row {
+    display:flex; gap:18px; justify-content:center;
+    margin-bottom:28px;
+  }
+  .price {
+    width:230px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    padding:22px 18px;
+    text-align:center;
+    opacity:0;
+    transform:translateY(20px);
+    animation-fill-mode:forwards;
+    animation-timing-function:cubic-bezier(.4,0,.2,1);
+    animation-duration:.45s;
+  }
+  .price .lbl {
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    letter-spacing:.16em;
+    color:rgba(255,255,255,.55);
+    text-transform:uppercase;
+  }
+  .price .amt {
+    font-family:'Bebas Neue',serif;
+    font-size:48px;
+    color:#fff;
+    line-height:1;
+    margin-top:6px;
+  }
+  .price .sub {
+    font-size:11px;
+    color:rgba(255,255,255,.55);
+    margin-top:6px;
+  }
+  .price.featured {
+    background:rgba(251,146,60,.14);
+    border-color:#fb923c;
+  }
+  .price.featured .amt { color:#fb923c; }
+  .p1 { animation-name:price-in; animation-delay:26.4s; }
+  .p2 { animation-name:price-in; animation-delay:26.7s; }
+  .p3 { animation-name:price-in; animation-delay:27.0s; }
+  @keyframes price-in {
+    to { opacity:1; transform:translateY(0); }
+  }
+  .url-line {
+    text-align:center;
+    font-family:'Bebas Neue',serif;
+    font-size:34px;
+    letter-spacing:.04em;
+    color:#fb923c;
+    opacity:0;
+    animation:fade-in .5s 28.5s forwards;
+  }
+  .url-line::before {
+    content:'→  ';
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ── SCENE 1 ── -->
+  <div class="scene scene-1">
+    <div class="hook-stack">
+      <div class="hook-line l1">AI AGENTS?</div>
+      <div class="hook-line l2">YOU DON'T NEED ONE.</div>
+      <div class="hook-line l3">YOU NEED A TEAM.</div>
+    </div>
+  </div>
+
+  <!-- ── SCENE 2 ── -->
+  <div class="scene scene-2">
+    <div class="prompt-wrap">
+      <div class="prompt-label">► TYPE ONE GOAL</div>
+      <div class="prompt-box"><span class="prompt-typed">Build &amp; sell on Shopify with 50%+ margins, post on social</span></div>
+      <div class="generate-btn">Generate team →</div>
+    </div>
+  </div>
+
+  <!-- ── SCENE 3 ── -->
+  <div class="scene scene-3">
+    <div class="s3-title">5 specialists, <span class="accent">one chat.</span></div>
+    <div class="s3-sub">Personas · models · tools, all generated</div>
+    <div class="agent-grid">
+      <div class="agent a1"><div class="em">🛍</div><div class="nm">Product Sourcer</div><div class="rl">Sonnet</div></div>
+      <div class="agent a2"><div class="em">📸</div><div class="nm">Visual Designer</div><div class="rl">Sonnet</div></div>
+      <div class="agent a3"><div class="em">🌐</div><div class="nm">Storefront Architect</div><div class="rl">Opus</div></div>
+      <div class="agent a4"><div class="em">📱</div><div class="nm">Social Manager</div><div class="rl">Haiku</div></div>
+      <div class="agent a5"><div class="em">📊</div><div class="nm">Revenue Analyst</div><div class="rl">Sonnet</div></div>
+    </div>
+    <div class="timer">30 SECONDS<span class="timer-label">From goal to team</span></div>
+  </div>
+
+  <!-- ── SCENE 4 ── -->
+  <div class="scene scene-4">
+    <div class="s4-title">Talk like Slack. <span class="accent">@mention to switch.</span></div>
+    <div class="chat">
+      <div class="bub you b1"><strong>@social</strong> write 3 launch posts for tomorrow</div>
+      <div class="bub ai b2">
+        <div class="who"><div class="av">📱</div>Social Manager</div>
+        Switching to Social Manager · Haiku · web search ON
+      </div>
+      <div class="bub ai b3">
+        <div class="who"><div class="av">📱</div>Social Manager</div>
+        Done — 3 hooks tested against your audience. Want me to schedule them across X / IG / TikTok?
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCENE 5 ── -->
+  <div class="scene scene-5">
+    <div class="s5-banner">★ <b>FIRST 100 FOUNDERS</b> · 2× CREDIT FOREVER · 0% STORE FEES ★</div>
+    <div class="s5-title">Hire a team.<br><span class="accent">Free to start.</span></div>
+    <div class="price-row">
+      <div class="price p1">
+        <div class="lbl">FREE</div>
+        <div class="amt">$0</div>
+        <div class="sub">3 agents · 10 messages · no card</div>
+      </div>
+      <div class="price featured p2">
+        <div class="lbl">PRO</div>
+        <div class="amt">$12.99</div>
+        <div class="sub">20 agents · full team generation</div>
+      </div>
+      <div class="price p3">
+        <div class="lbl">BUSINESS</div>
+        <div class="amt">$32.99</div>
+        <div class="sub">unlimited teams · Opus access</div>
+      </div>
+    </div>
+    <div class="url-line">myaiagents.agency</div>
+  </div>
+
+</div>
+</body>
+</html>

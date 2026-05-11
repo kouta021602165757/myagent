@@ -23,6 +23,7 @@
   /* 追加カラー */
   --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#ea580c;
   --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
+  --card:#ffffff;
   --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
   --bg-50:#fafafa;--bg-100:#f4f4f5;--bg-200:#e4e4e7;
   --line:rgba(9,9,11,.06);--line-strong:rgba(9,9,11,.1);
@@ -36,6 +37,7 @@ html[data-theme="dark"]{
   --cyan:#fb923c;--rose:#ef4444;--rose-dim:rgba(239,68,68,.15);--amber:#fbbf24;
   --peach:#fb923c;--peach-light:#fed7aa;--peach-dark:#fdba74;
   --cream:#0d0d10;--cream2:#141418;--cream3:#1c1c22;
+  --card:#1c1c22;
   --text:#f5f5f7;--text2:#c8c8d0;--text3:#82828c;
   --bg-50:#141418;--bg-100:#1c1c22;--bg-200:#26262d;
   --line:rgba(255,255,255,.08);--line-strong:rgba(255,255,255,.16);
@@ -9031,7 +9033,7 @@ function editMsgStart(btn){
   bodyEl.dataset.origHtml = bodyEl.innerHTML;
   var current = msg.content || '';
   bodyEl.innerHTML =
-    '<textarea class="m-edit-ta" rows="3" style="width:100%;min-height:64px;max-height:240px;padding:9px 11px;border:1px solid var(--peach);border-radius:10px;font-family:inherit;font-size:14.5px;line-height:1.5;background:var(--card);color:var(--text);resize:vertical">'+esc(current)+'</textarea>'+
+    '<textarea class="m-edit-ta" rows="3" style="width:100%;min-height:64px;max-height:240px;padding:9px 11px;border:1px solid var(--peach);border-radius:10px;font-family:inherit;font-size:14.5px;line-height:1.5;background:var(--card,#fff);color:var(--text);resize:vertical">'+esc(current)+'</textarea>'+
     '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">'+
       '<button class="m-act" onclick="editMsgCancel(this)" style="background:none">'+(isJa?'キャンセル':'Cancel')+'</button>'+
       '<button class="m-act primary" onclick="editMsgSave(this)" style="background:var(--peach);color:#fff;border:0">'+(isJa?'保存して再送信':'Save & resend')+'</button>'+
@@ -9232,9 +9234,12 @@ async function openChatShareModal(){
   var defaultTitle = (firstUser && firstUser.content || ag.name || 'Conversation').toString().replace(/\s+/g,' ').slice(0,90);
   var ov=document.createElement('div');
   ov.id='chatShareOv';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;padding:14px;';
+  // flex-start + overflow-y so a long modal scrolls instead of clipping its
+  // own header when the content is taller than the viewport (mobile, soft
+  // keyboard open, narrow heights, etc).
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:9000;padding:5vh 14px 14px;overflow-y:auto;';
   ov.innerHTML=
-    '<div style="background:var(--card);border-radius:14px;max-width:480px;width:100%;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
+    '<div style="background:var(--card,#fff);border-radius:14px;max-width:480px;width:100%;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
         '<div style="font-weight:800;font-size:16px">💬 '+(isJa?'この会話を共有':'Share this conversation')+'</div>'+
         '<button onclick="closeChatShareModal()" style="background:none;border:0;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">×</button>'+
@@ -10396,7 +10401,7 @@ async function openAutomationsGallery(){
   ov.id='autoGalOv';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:9000;padding:24px;overflow-y:auto';
   ov.innerHTML=
-    '<div style="background:var(--card);border-radius:16px;max-width:780px;width:100%;padding:24px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
+    '<div style="background:var(--card,#fff);border-radius:16px;max-width:780px;width:100%;padding:24px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-weight:900;font-size:20px;letter-spacing:-.01em">⚡ '+(isJa?'1-click Automations':'1-click Automations')+'</div><button onclick="document.getElementById(\'autoGalOv\').remove()" style="background:none;border:0;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">×</button></div>'+
       '<div style="font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:18px">'+(isJa?'よく使われる自動化を、AI + スケジュール + 連携 までセットで一気に立ち上げます。':'Pre-built automations — agent + schedule + integration hints in one click.')+'</div>'+
       '<div id="autoGalList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"><div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:30px 0">'+(isJa?'読み込み中…':'Loading…')+'</div></div>'+
@@ -12940,11 +12945,11 @@ function _schedOpenForm(){
   if(document.getElementById('schedOv')) return;
   var ov=document.createElement('div');
   ov.id='schedOv';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;padding:14px;';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:9000;padding:5vh 14px 14px;overflow-y:auto;';
   var hours=''; for(var h=0;h<24;h++){ hours+='<option value="'+h+'">'+String(h).padStart(2,'0')+'</option>'; }
   var mins=''; for(var m=0;m<60;m+=5){ mins+='<option value="'+m+'">'+String(m).padStart(2,'0')+'</option>'; }
   ov.innerHTML=
-    '<div style="background:var(--card);border-radius:14px;max-width:460px;width:100%;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
+    '<div style="background:var(--card,#fff);border-radius:14px;max-width:460px;width:100%;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-weight:800;font-size:16px">⏰ '+(isJa?'スケジュールを追加':'Add schedule')+'</div><button onclick="document.getElementById(\'schedOv\').remove()" style="background:none;border:0;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">×</button></div>'+
       '<label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'ラベル':'Label')+'</label>'+
       '<input id="schLabel" maxlength="80" placeholder="'+(isJa?'例: 朝のニュース要約':'e.g. Morning news digest')+'" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;margin-bottom:12px;font-family:inherit">'+

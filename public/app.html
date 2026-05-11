@@ -7920,6 +7920,9 @@ function agDragEnd(ev){
 
 /* ── Open agent / chat ─────────────────────────────── */
 async function openAgent(id){
+  // Flag for renderMsgs — snap to bottom on the first render after switching
+  // chats. Cleared once that render runs.
+  window._chatJustOpened = true;
   let ag = agents.find(a=>a.id===id);
   // If not in own list, look in joined groups (fetch full record from host)
   let joined = null;
@@ -8242,24 +8245,45 @@ async function runPyCode(ev, btn){
 }
 
 /* ── Message rendering ──────────────────────────────── */
-function renderMsgs(ag){
+function renderMsgs(ag, forceScrollBottom){
   const el=document.getElementById('msgs');
+  if(!el) return;
+  // Preserve scroll behavior across re-render:
+  //   - If user is at/near the bottom → snap to new bottom after render
+  //   - If user scrolled up to read past messages → keep their scroll position
+  //   - Initial chat open (window._chatJustOpened) → always to bottom
+  //   - forceScrollBottom=true (user-initiated regenerate / edit / send) → always to bottom
+  const wasNearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 160;
+  const prevScrollFromBottom = el.scrollHeight - el.scrollTop;
+  const justOpened = !!window._chatJustOpened;
+  const force = !!forceScrollBottom;
   el.innerHTML='<div class="msgs-inner" id="msgsInner"></div>';
   const inner=document.getElementById('msgsInner');
   if(!ag.history||!ag.history.length){
     inner.innerHTML=_renderMsg('assistant',ag,'はじめまして！'+esc(ag.name)+'です 👋\n\nなんでも気軽に話しかけてください！',now(),null,-1,null);
-    _scrollMsgsToEnd();
+    el.scrollTop = el.scrollHeight;
+    window._chatJustOpened = false;
+    _updateScrollFAB();
     return;
   }
   inner.innerHTML=ag.history.map(function(m,i){
-    // System messages (e.g., "X さんが参加しました") render as a centered pill
     if(m.role === 'system'){
       return '<div class="sys-row"><span class="sys-pill">✨ '+esc(m.content||'')+'</span></div>';
     }
     return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i,m.tool_log,m);
   }).join('');
   try { _renderPinnedBanner(ag); } catch(e){}
-  _scrollMsgsToEnd();
+  // Sticky-bottom: stick if user was near bottom, this is a fresh open,
+  // or the caller explicitly forced scroll (user-initiated action).
+  if(force || justOpened || wasNearBottom){
+    el.scrollTop = el.scrollHeight;
+    window._chatJustOpened = false;
+  } else {
+    // Restore "distance from bottom" so the user's reading position survives
+    // (e.g., a group-poll re-render while they're scrolled up).
+    el.scrollTop = el.scrollHeight - prevScrollFromBottom;
+  }
+  _updateScrollFAB();
 }
 
 /* Compact action labels per tool name */
@@ -9135,7 +9159,7 @@ async function editMsgSave(btn){
   // Optimistic local update: truncate history past idx, replace content, drop assistant after.
   ag.history = ag.history.slice(0, idx+1);
   ag.history[idx] = { ...ag.history[idx], content: newText, edited: true, edited_at: new Date().toISOString() };
-  renderMsgs(ag);
+  renderMsgs(ag, true);  // user-initiated → force scroll
   // Append thinking indicator (mirror regenerateMsg).
   var inner=document.getElementById('msgsInner');
   if(inner){
@@ -9144,7 +9168,7 @@ async function editMsgSave(btn){
     var _genLabel = ag.chrome_enabled ? (isJa?'ブラウジング中…':'Browsing…') : (isJa?'考えています…':'Thinking…');
     tEl.innerHTML='<div class="m-meta"><div class="m-av">'+_avHTML(ag.avatar)+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body"><div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'+_genLabel+'</div></div></div>';
     inner.appendChild(tEl);
-    _scrollMsgsToEnd();
+    _scrollMsgsToEnd(true);
   }
   try{
     var r=await api('POST','/api/chat/'+activeId,{ edit_index: idx, message: newText });
@@ -9154,7 +9178,7 @@ async function editMsgSave(btn){
     ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
   }
   var t=document.getElementById('thinking'); if(t) t.remove();
-  renderMsgs(ag);
+  renderMsgs(ag);  // sticky-bottom — if user scrolled up reading reply mid-stream, respect that
 }
 
 async function regenerateMsg(btn){
@@ -9166,7 +9190,7 @@ async function regenerateMsg(btn){
   }
   // Optimistically remove last assistant from UI
   ag.history.pop();
-  renderMsgs(ag);
+  renderMsgs(ag, true);  // user-initiated → force scroll
   // Append thinking indicator
   var inner=document.getElementById('msgsInner');
   var tEl=document.createElement('div');
@@ -9181,7 +9205,7 @@ async function regenerateMsg(btn){
     + '</div>';
   tEl.innerHTML='<div class="m-meta"><div class="m-av">'+_avHTML(ag.avatar)+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
-  _scrollMsgsToEnd();
+  _scrollMsgsToEnd(true);
   try{
     var r=await api('POST','/api/chat/'+activeId,{regenerate:true});
     ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
@@ -9193,12 +9217,25 @@ async function regenerateMsg(btn){
   renderMsgs(ag);
 }
 
-function _scrollMsgsToEnd(){
+// "Sticky bottom" — auto-scroll while user is at/near the bottom, but DON'T
+// rip them down if they've scrolled up to read past messages mid-stream.
+// Pass force=true to override (user-initiated actions like sending a message,
+// regenerating, clicking the scroll-to-bottom FAB).
+function _isNearBottom(threshold){
   var el=document.getElementById('msgs');
-  if(el) el.scrollTop=el.scrollHeight;
+  if(!el) return true;
+  var t = typeof threshold === 'number' ? threshold : 120;
+  return (el.scrollHeight - el.scrollTop - el.clientHeight) < t;
+}
+function _scrollMsgsToEnd(force){
+  var el=document.getElementById('msgs');
+  if(!el){ return; }
+  if(force || _isNearBottom(160)){
+    el.scrollTop = el.scrollHeight;
+  }
   _updateScrollFAB();
 }
-function scrollMsgsToBottom(){ _scrollMsgsToEnd(); }
+function scrollMsgsToBottom(){ _scrollMsgsToEnd(true); }   // FAB always forces
 function _updateScrollFAB(){
   var el=document.getElementById('msgs');
   var fab=document.getElementById('fabScroll');
@@ -9215,7 +9252,7 @@ async function newChat(){
     await api('POST','/api/user/clear-chat-history',{agent_id:activeId});
     var ag=agents.find(function(a){return a.id===activeId;});
     if(ag) ag.history=[];
-    renderMsgs(ag);
+    renderMsgs(ag, true);  // user-initiated reset
     showToast(isJa?'新しい会話を始めました':'New chat started','ok');
   }catch(e){ showToast(isJa?'クリアに失敗':'Failed to clear','ng'); }
 }
@@ -10028,7 +10065,7 @@ async function sendMsg(){
     }));
   }
   ag.history.push(userMsg);
-  renderMsgs(ag);
+  renderMsgs(ag, true);   // user just sent → snap to bottom
 
   // Append thinking indicator
   var inner=document.getElementById('msgsInner');
@@ -10044,7 +10081,7 @@ async function sendMsg(){
     + '</div>';
   tEl.innerHTML='<div class="m-meta"><div class="m-av">'+_avHTML(ag.avatar)+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body">'+_thinkLabel+'</div>';
   if(inner) inner.appendChild(tEl);
-  _scrollMsgsToEnd();
+  _scrollMsgsToEnd(true);
   // /search slash-command: prepend Web search results as context
   let outboundText = text;
   const slashCtx = await _runSlashCommand(text);

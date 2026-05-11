@@ -1674,13 +1674,92 @@ const MEDIA_UTIL_TOOLS = [
   },
   {
     name:'create_artifact',
-    description:'完全な HTML/CSS/JS で構成された 1 ページのモックサイト / ランディングページ / デモ / 計算機 / インタラクティブな図表などを生成し、チャット内で iframe としてインライン表示します。Claude.ai の Artifacts と同じ感覚。CDN 経由なら Tailwind / Alpine.js / htmx / Chart.js / Bebas Neue 等が使用可。React/Vue のビルドが必要な物は不可。html フィールドに <!doctype html> から </html> まで完全な文書を渡してください。',
+    description:`完全な HTML/CSS/JS で構成された 1 ページのモックサイト / ランディングページ / デモ / 計算機 / ダッシュボード / インタラクティブな図表などを生成し、チャット内で iframe としてインライン表示する。Claude.ai の Artifacts と同じ感覚。
+
+【最重要：デザイン品質を最大化すること】
+ユーザーは "見せたら相手が感動する" レベルを期待している。default Tailwind を貼っただけの「それっぽい」ページではダメ。Linear / Stripe / Vercel / Apple / Anthropic / Notion / Figma の LP に並べても遜色ない仕上がりを目指すこと。
+
+▼ 必ず守る design rules (この通り作れば 9 割クオリティが出る):
+
+1. **タイポグラフィを最初に決める**
+   - 見出しは display フォント。Google Fonts から: Inter / DM Serif Display / Space Grotesk / Geist / Bricolage Grotesque / Instrument Serif / Playfair Display のどれか。本文は Inter or DM Sans。
+   - 見出しは font-weight: 800-900, letter-spacing: -0.02em ~ -0.04em, line-height: 0.95-1.05。
+   - h1 は 56-96px (clamp で responsive), h2 40-64px, 本文 16-18px / line-height 1.6-1.7。
+   - 等幅は SF Mono / JetBrains Mono / Geist Mono。
+
+2. **カラーシステムを 3 色以内で決める**
+   - メインの 1 色 (#fb923c など) + ニュートラル系 2-3 階調 + アクセント 1 色だけ。
+   - default Tailwind の bg-blue-500 みたいな出来合いの色は使うな。HSL で微調整した独自色 or 既製ブランド (Linear: #5e6ad2, Vercel: #000/#fafafa, Notion: #2e2e2e + #ff7849) を引用。
+   - 大胆な背景: 黒地 (#0a0a0a) / オフホワイト (#fafaf7) / 1 色の薄いグラデーション。グレー一色のミニマルは「無印良品」レベルでないと逆に貧相に見える。
+
+3. **余白 (whitespace) を恐れない**
+   - セクション間 padding: 96-160px vertical。
+   - hero の上下 padding はビューポートの 12-18%。
+   - 要素間は 24/32/48/64px をシステマティックに使う。
+   - 「詰まってる」と感じたらだいたい余白不足。
+
+4. **視覚階層を明確に**
+   - 最重要メッセージは画面に 1 つだけ。それ以外は意図的に小さく/薄く。
+   - キャッチコピーは 1 行で完結する強い言葉。説明は副次的なサイズで。
+
+5. **質感ディテール**
+   - Box shadow は subtle。\`0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.08)\` のような multi-layer shadow。
+   - Border は \`1px solid rgba(0,0,0,.06)\` レベルの薄さ。
+   - Border-radius は 8 / 12 / 16 / 24 のどれかに統一 (混ぜない)。
+   - Hover transition は 150-220ms cubic-bezier(0.4, 0, 0.2, 1)。
+
+6. **画像 / イラスト**
+   - placeholder は \`https://picsum.photos/seed/<word>/800/600\` か \`https://api.dicebear.com/7.x/...\` を使う。Lorem ipsum 画像で穴を埋めない。
+   - 図は素の SVG を inline で描く (アイコン: \`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\`)。Font Awesome 等は最終手段。
+   - Lucide icons (\`https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/<name>.svg\`) が一番きれい。
+
+7. **動き / インタラクティブ**
+   - hero に subtle な animation (fade-in-up 600ms ease-out)。
+   - hover で要素は 1-3px translate + shadow 強化。
+   - 計算機 / ダッシュボードなら値が変わる時に number-tween アニメ (Alpine x-transition でも CSS でも)。
+
+8. **モバイル対応**
+   - レイアウトは max-width: 1200px + 中央寄せ。
+   - clamp() で font-size を流動的に。
+   - メディアクエリは 1 つで十分 (\`@media (max-width: 720px)\`)。
+
+9. **使える CDN (build なしで動く OK な物)**
+   - Tailwind: \`<script src="https://cdn.tailwindcss.com"></script>\` (config を <script> で渡せる)
+   - Alpine.js: \`<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>\`
+   - htmx: \`https://unpkg.com/htmx.org@1.9\`
+   - Chart.js: \`https://cdn.jsdelivr.net/npm/chart.js\`
+   - Three.js: \`https://cdn.jsdelivr.net/npm/three@0.160/build/three.min.js\`
+   - GSAP: \`https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js\`
+   - Google Fonts (link rel=stylesheet で読み込み)
+   - Lucide icons (上記)
+   React/Vue のビルドが必要な物は不可。
+
+10. **やってはいけない**
+    - default Tailwind の \`text-gray-600 bg-gray-100\` 一色貼り
+    - すべての見出しを font-bold text-2xl のような中途半端なサイズで揃える
+    - emoji を装飾にむやみに使う (1 ページに 1-2 個まで)
+    - 大量のコピーを段落で並べる (情報密度より読みやすさ)
+    - 真四角の枠線 box-shadow 強めのコンビ ("Bootstrap 2014" になる)
+    - placeholder 画像のリンク先が画像でない (404 になる)
+
+▼ 出力前の self-check:
+- 見出しのフォントは display フォントになっているか?
+- カラーパレットは 3 色 (+ニュートラル) 以内か?
+- セクション間に十分な余白 (80px+) があるか?
+- ファーストビュー 1 つだけ強い見出しか?
+- shadow / border は subtle で複層か?
+
+▼ 引数:
+- title: ファイル名 + 表示タイトル (a-z0-9-, 1-40 文字)
+- html: 完全な単一 HTML 文書 (<!doctype html>...). 自己完結 — JS / CSS は CDN のみ参照可。
+- description: (任意) 何を作ったか 1-2 行の説明`,
     input_schema:{
       type:'object',
       properties:{
         title:{type:'string',description:'ファイル名 + 表示タイトル (a-z0-9-, 1-40 文字)'},
-        html:{type:'string',description:'完全な単一 HTML 文書 (<!doctype html>...). 自己完結であること — 外部 JS は CDN のみ参照可。'},
+        html:{type:'string',description:'完全な単一 HTML 文書 (<!doctype html>...)。デザイン品質は上記 10 ルールに厳密に従うこと — default Tailwind 貼り付けレベルではダメ。'},
         description:{type:'string',description:'(任意) 何を作ったか 1-2 行の説明'},
+        style_ref:{type:'string',description:'(任意) 目指す美意識のリファレンス。例: "linear", "stripe", "apple", "vercel", "notion", "figma", "editorial-magazine", "brutalist", "soft-pastel". 1 つ選ぶと出力が安定する。'},
       },
       required:['title','html'],
     },

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_base.css">
+<style>
+  .h1 { font-size:84px; }
+  .h1 .small { font-size:.55em; letter-spacing:.04em; color:rgba(255,255,255,.5); display:block; margin-top:6px; font-weight:400; }
+  .chat-frame {
+    position:absolute; right:56px; top:104px; bottom:96px;
+    width:580px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:20px;
+    padding:22px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .chat-head {
+    display:flex; align-items:center; gap:11px;
+    padding-bottom:14px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    margin-bottom:6px;
+  }
+  .chat-head .av {
+    width:36px; height:36px; border-radius:10px;
+    background:linear-gradient(135deg,#fb923c,#ea580c);
+    display:grid; place-items:center; font-size:18px;
+  }
+  .chat-head .ti {
+    flex:1;
+    font-size:14px; font-weight:800; color:#fff;
+  }
+  .chat-head .ti .s {
+    display:block; font-weight:400; font-size:11px;
+    color:rgba(255,255,255,.5); margin-top:3px;
+    font-family:'DM Mono',monospace; letter-spacing:.08em;
+  }
+  .chat-head .ti .s::before {
+    content:''; display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:#10b981; box-shadow:0 0 8px #10b981;
+    margin-right:6px; vertical-align:1px;
+  }
+  .bub {
+    max-width:90%; padding:11px 16px; border-radius:16px;
+    font-size:14px; line-height:1.45;
+  }
+  .bub.you {
+    align-self:flex-end;
+    background:#fb923c; color:#fff;
+    border-bottom-right-radius:6px;
+  }
+  .bub.you b {
+    background:rgba(255,255,255,.22); padding:1px 6px; border-radius:5px;
+  }
+  .bub.ai {
+    align-self:flex-start;
+    background:rgba(255,255,255,.06);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.10);
+    border-bottom-left-radius:6px;
+  }
+  .bub.ai .who {
+    display:flex; align-items:center; gap:8px;
+    font-size:11.5px; font-weight:800; margin-bottom:6px;
+    color:#f9a8d4;
+  }
+  .bub.ai .who .av {
+    width:22px; height:22px; border-radius:50%;
+    background:#ec4899; display:grid; place-items:center; font-size:12px;
+  }
+  .bub.ai .who .meta {
+    font-family:'DM Mono',monospace; font-weight:400;
+    font-size:10px; letter-spacing:.08em;
+    color:rgba(255,255,255,.4);
+    margin-left:4px;
+  }
+  .mention-pop {
+    position:absolute; left:22px; bottom:86px; width:280px;
+    background:#18181b; border:1px solid rgba(255,255,255,.12);
+    border-radius:12px;
+    box-shadow:0 24px 60px rgba(0,0,0,.5);
+    padding:6px;
+    z-index:5;
+  }
+  .mention-pop .h {
+    font-family:'DM Mono',monospace; font-size:9.5px;
+    color:rgba(255,255,255,.4); letter-spacing:.16em;
+    padding:6px 8px;
+  }
+  .mention-pop .r {
+    display:flex; align-items:center; gap:8px;
+    padding:6px 8px; border-radius:8px;
+    font-size:12px;
+  }
+  .mention-pop .r.s { background:rgba(251,146,60,.16); }
+  .mention-pop .r .av {
+    width:22px; height:22px; border-radius:7px;
+    color:#fff;
+    display:grid; place-items:center; font-size:11px;
+  }
+  .mention-pop .r .nm { flex:1; font-weight:600; color:#fff; }
+  .mention-pop .r.s .nm { color:#fb923c; }
+  .mention-pop .r .tg { font-family:'DM Mono',monospace; font-size:9px; color:rgba(255,255,255,.45); }
+  .input-bar {
+    margin-top:auto;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:12px;
+    padding:9px 12px;
+    display:flex; gap:8px; align-items:center;
+    font-family:'DM Mono',monospace; font-size:12.5px;
+    color:rgba(255,255,255,.7);
+  }
+  .input-bar .ic {
+    width:24px; height:24px; border-radius:50%;
+    background:rgba(251,146,60,.16); color:#fb923c;
+    display:grid; place-items:center; font-weight:800;
+  }
+  .input-bar .caret { color:#fb923c; }
+  .send {
+    margin-left:auto;
+    width:26px; height:26px; border-radius:50%;
+    background:#fb923c; color:#fff;
+    display:grid; place-items:center; font-weight:800;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark">M</span>
+      <span class="brand-name">MY AI AGENT</span>
+    </div>
+    <span class="pill">SLACK-LIKE · ONE CHAT</span>
+  </div>
+  <h1 class="h1"><span class="accent">@MENTION</span><br>SWITCHES THE<br>RESPONDER.<span class="small">Persona · model · tools change with them.</span></h1>
+
+  <div class="chat-frame">
+    <div class="chat-head">
+      <div class="av">🛍</div>
+      <div class="ti">EC Launch Team<span class="s">5 AI members · running</span></div>
+    </div>
+    <div class="bub you"><b>@social</b> write 3 launch posts for tomorrow</div>
+    <div class="bub ai">
+      <div class="who"><div class="av">📱</div>Social Manager<span class="meta">Haiku · web ON</span></div>
+      Switching responder. Tone for your audience: founder-voice, no emoji spam. Here are 3 hooks tested against last month's best performers…
+    </div>
+    <div class="bub you"><b>@analyst</b> what was last month's best?</div>
+
+    <div class="mention-pop">
+      <div class="h">MENTION SOMEONE</div>
+      <div class="r"><div class="av" style="background:#fb923c">🛍</div><div class="nm">Product Sourcer</div><span class="tg">Sonnet</span></div>
+      <div class="r s"><div class="av" style="background:#10b981">📊</div><div class="nm">Revenue Analyst</div><span class="tg">Sonnet · Sheets</span></div>
+      <div class="r"><div class="av" style="background:#8b5cf6">📸</div><div class="nm">Visual Designer</div><span class="tg">Sonnet</span></div>
+    </div>
+
+    <div class="input-bar">
+      <div class="ic">+</div>
+      <span>@analyst<span class="caret">|</span></span>
+      <div class="send">↑</div>
+    </div>
+  </div>
+
+  <div class="url">myaiagents.agency</div>
+</div>
+</body>
+</html>

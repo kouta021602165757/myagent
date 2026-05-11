@@ -1,0 +1,75 @@
+/* Shared style language for all ProductHunt gallery images.
+   Mirror of the first image (TYPE A GOAL. BUILD A TEAM.) so the
+   set looks like a single carousel, not 5 random screens.
+   Each gallery HTML file inlines this rather than @imports it
+   so headless rendering works from file:// without any fetch. */
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:1280px; height:720px; overflow:hidden;
+  font-family:'Inter',-apple-system,sans-serif;
+  background:#0a0a0c;
+  color:#fff;
+  -webkit-font-smoothing:antialiased;
+}
+.stage {
+  position:relative; width:100%; height:100%;
+  background:
+    radial-gradient(900px 500px at 12% 8%, rgba(251,146,60,.10) 0%, transparent 55%),
+    radial-gradient(700px 400px at 88% 92%, rgba(45,212,191,.06) 0%, transparent 55%),
+    #0a0a0c;
+  padding:42px 56px;
+}
+
+/* Top bar — brand mark + 30 SECONDS pill */
+.topbar {
+  display:flex; align-items:center; justify-content:space-between;
+}
+.brand { display:flex; align-items:center; gap:11px; }
+.brand-mark {
+  width:36px; height:36px; border-radius:9px;
+  background:#fb923c;
+  display:grid; place-items:center;
+  color:#fff; font-family:'Bebas Neue',serif; font-size:22px;
+  box-shadow:0 6px 16px rgba(251,146,60,.36);
+}
+.brand-name {
+  font-weight:800; font-size:15px; letter-spacing:.04em;
+  color:#fff;
+}
+.pill {
+  display:inline-flex; align-items:center; gap:7px;
+  background:rgba(45,212,191,.16);
+  color:#5eead4;
+  font-family:'DM Mono',monospace;
+  font-size:11.5px; font-weight:600;
+  letter-spacing:.18em;
+  padding:7px 14px; border-radius:99px;
+  border:1px solid rgba(45,212,191,.32);
+  text-transform:uppercase;
+}
+.pill::before { content:'▸'; color:#2dd4bf; }
+
+/* Big headline */
+.h1 {
+  font-family:'Bebas Neue',serif; font-weight:400;
+  font-size:96px; line-height:.95; letter-spacing:-.01em;
+  margin-top:48px;
+}
+.h1 .accent { color:#fb923c; }
+.h1 .row2 { display:block; }
+
+/* Subline / lead */
+.lead {
+  margin-top:18px;
+  color:rgba(255,255,255,.62);
+  font-size:18px; line-height:1.55; max-width:760px;
+}
+.lead b { color:#fff; font-weight:600; }
+
+/* Footer URL */
+.url {
+  position:absolute; bottom:32px; left:56px;
+  font-family:'DM Mono',monospace; font-size:13px;
+  color:rgba(255,255,255,.45); letter-spacing:.06em;
+}

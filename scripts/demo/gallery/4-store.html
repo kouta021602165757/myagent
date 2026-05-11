@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_base.css">
+<style>
+  .h1 { font-size:84px; }
+  .lead { max-width:520px; }
+
+  .store-grid {
+    position:absolute; right:56px; top:104px; bottom:96px;
+    width:600px;
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+  }
+  .card {
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:18px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .card .top {
+    display:flex; gap:11px; align-items:flex-start;
+  }
+  .card .av {
+    width:42px; height:42px; border-radius:10px;
+    display:grid; place-items:center; font-size:20px;
+    flex-shrink:0;
+  }
+  .card .t-stack {
+    flex:1; min-width:0;
+  }
+  .card .badge {
+    display:inline-block; font-size:9.5px; font-weight:800;
+    background:rgba(251,146,60,.16); color:#fb923c;
+    padding:2px 7px; border-radius:5px;
+    letter-spacing:.06em; text-transform:uppercase;
+    margin-bottom:4px;
+  }
+  .card .nm { font-size:14px; font-weight:800; color:#fff; line-height:1.25; }
+  .card .desc {
+    font-size:11.5px; color:rgba(255,255,255,.55);
+    line-height:1.55;
+  }
+  .card .meta {
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:11.5px; color:rgba(255,255,255,.55);
+    padding-top:8px;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+  .card .price { color:#fb923c; font-weight:800; }
+  .card .price.free { color:#10b981; }
+  .card.c1 .av { background:rgba(251,146,60,.22); color:#fdba74; }
+  .card.c2 .av { background:rgba(59,130,246,.22); color:#93c5fd; }
+  .card.c3 .av { background:rgba(255,255,255,.10); color:#fff; }
+  .card.c4 .av { background:rgba(139,92,246,.22); color:#c4b5fd; }
+  .split-line {
+    margin-top:24px;
+    font-family:'DM Mono',monospace; font-size:13px;
+    color:rgba(255,255,255,.5); letter-spacing:.06em;
+  }
+  .split-line .num {
+    color:#fb923c; font-weight:800; font-size:36px;
+    font-family:'Bebas Neue',serif; letter-spacing:0;
+    line-height:1; vertical-align:-4px;
+    margin-right:4px;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark">M</span>
+      <span class="brand-name">MY AI AGENT</span>
+    </div>
+    <span class="pill">AGENT STORE · LIVE</span>
+  </div>
+  <h1 class="h1">SELL TEAMS.<br><span class="accent">KEEP 80%.</span></h1>
+  <p class="lead">List the AI team you built for yourself on the <b>Agent Store</b>. Stripe Connect deposits the revenue straight to your bank.</p>
+  <div class="split-line"><span class="num">80%</span>creator share · 10% usage royalty · pay-out via Stripe</div>
+
+  <div class="store-grid">
+    <div class="card c1">
+      <div class="top">
+        <div class="av">🛍</div>
+        <div class="t-stack">
+          <span class="badge">🎯 TEAM · 5</span>
+          <div class="nm">EC Launch Team</div>
+        </div>
+      </div>
+      <div class="desc">Source · render · build · post · analyze. Run a Shopify business with 5 AI specialists.</div>
+      <div class="meta"><span>★ 4.9 (132)</span><span class="price">$98</span></div>
+    </div>
+    <div class="card c2">
+      <div class="top">
+        <div class="av">✍️</div>
+        <div class="t-stack">
+          <div class="nm">SEO Blog Writer</div>
+        </div>
+      </div>
+      <div class="desc">Keyword → SERP → outline → draft → links → rewrite. Pro-grade writing.</div>
+      <div class="meta"><span>★ 4.8 (87)</span><span class="price">$24</span></div>
+    </div>
+    <div class="card c3">
+      <div class="top">
+        <div class="av">💻</div>
+        <div class="t-stack">
+          <span class="badge">🎯 TEAM · 4</span>
+          <div class="nm">Dev Squad</div>
+        </div>
+      </div>
+      <div class="desc">Reviewer + bug fixer + test writer + deploy helper.</div>
+      <div class="meta"><span>★ 4.9 (54)</span><span class="price">$26</span></div>
+    </div>
+    <div class="card c4">
+      <div class="top">
+        <div class="av">📱</div>
+        <div class="t-stack">
+          <span class="badge">🎯 TEAM · 3</span>
+          <div class="nm">SNS Growth</div>
+        </div>
+      </div>
+      <div class="desc">Trend → write → schedule across X / IG / TikTok.</div>
+      <div class="meta"><span>★ 4.8 (41)</span><span class="price free">FREE</span></div>
+    </div>
+  </div>
+
+  <div class="url">myaiagents.agency</div>
+</div>
+</body>
+</html>

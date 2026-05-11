@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_base.css">
+<style>
+  .agents {
+    position:absolute; left:56px; bottom:96px; right:56px;
+    display:grid; grid-template-columns:repeat(5,1fr); gap:18px;
+  }
+  .agent {
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:18px;
+    padding:22px 18px;
+    position:relative;
+  }
+  .agent .em {
+    font-size:42px; line-height:1; margin-bottom:14px;
+  }
+  .agent .nm {
+    font-size:15px; font-weight:800; color:#fff; line-height:1.25;
+    margin-bottom:8px;
+  }
+  .agent .rl {
+    font-family:'DM Mono',monospace;
+    font-size:11px; letter-spacing:.12em;
+    color:rgba(255,255,255,.45);
+    text-transform:uppercase;
+  }
+  .agent .badge {
+    position:absolute; top:14px; right:14px;
+    font-family:'DM Mono',monospace;
+    font-size:9.5px; letter-spacing:.1em;
+    background:rgba(251,146,60,.16);
+    color:#fb923c;
+    padding:3px 7px; border-radius:6px;
+  }
+  .agent.a1 { background:linear-gradient(180deg,rgba(251,146,60,.10),rgba(251,146,60,.02)); border-color:rgba(251,146,60,.32); }
+  .agent.a2 { background:linear-gradient(180deg,rgba(139,92,246,.10),rgba(139,92,246,.02)); border-color:rgba(139,92,246,.32); }
+  .agent.a3 { background:linear-gradient(180deg,rgba(59,130,246,.10),rgba(59,130,246,.02)); border-color:rgba(59,130,246,.32); }
+  .agent.a4 { background:linear-gradient(180deg,rgba(236,72,153,.10),rgba(236,72,153,.02)); border-color:rgba(236,72,153,.32); }
+  .agent.a5 { background:linear-gradient(180deg,rgba(16,185,129,.10),rgba(16,185,129,.02)); border-color:rgba(16,185,129,.32); }
+  .agent.a1 .badge { background:rgba(251,146,60,.16); color:#fdba74; }
+  .agent.a2 .badge { background:rgba(139,92,246,.16); color:#c4b5fd; }
+  .agent.a3 .badge { background:rgba(59,130,246,.16); color:#93c5fd; }
+  .agent.a4 .badge { background:rgba(236,72,153,.16); color:#f9a8d4; }
+  .agent.a5 .badge { background:rgba(16,185,129,.16); color:#6ee7b7; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark">M</span>
+      <span class="brand-name">MY AI AGENT</span>
+    </div>
+    <span class="pill">TEAM READY · 30 SECONDS</span>
+  </div>
+  <h1 class="h1">FIVE SPECIALISTS.<br><span class="accent">ONE CHAT.</span></h1>
+  <p class="lead">Each member has its own <b>persona</b>, <b>model</b>, and <b>tools</b> — generated automatically from your one-sentence goal.</p>
+  <div class="agents">
+    <div class="agent a1"><div class="em">🛍</div><div class="nm">Product Sourcer</div><div class="rl">Sonnet</div><div class="badge">STEP 1</div></div>
+    <div class="agent a2"><div class="em">📸</div><div class="nm">Visual Designer</div><div class="rl">Sonnet · web</div><div class="badge">STEP 2</div></div>
+    <div class="agent a3"><div class="em">🌐</div><div class="nm">Storefront Architect</div><div class="rl">Opus · Chrome</div><div class="badge">STEP 3</div></div>
+    <div class="agent a4"><div class="em">📱</div><div class="nm">Social Manager</div><div class="rl">Haiku</div><div class="badge">STEP 4</div></div>
+    <div class="agent a5"><div class="em">📊</div><div class="nm">Revenue Analyst</div><div class="rl">Sonnet · Sheets</div><div class="badge">STEP 5</div></div>
+  </div>
+  <div class="url">myaiagents.agency</div>
+</div>
+</body>
+</html>

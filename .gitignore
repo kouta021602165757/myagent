@@ -31,3 +31,6 @@ screenshots/
 # Generated demo videos (regenerate via `node scripts/demo/record.js`)
 assets/demo.webm
 assets/demo.mp4
+
+# Generated gallery PNGs (regenerate via `node scripts/demo/screenshot-gallery.js`)
+assets/gallery/*.png

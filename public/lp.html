@@ -482,32 +482,57 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
 </head>
 <body>
 
-<!-- ─────────── Founder 100 sticky banner ─────────── -->
-<a href="/auth.html?tab=signup" id="founderBanner" style="
-  display:none;
-  position:sticky; top:0; z-index:40;
-  background:linear-gradient(135deg,#fb923c,#ea580c);
-  color:#fff; text-decoration:none;
-  padding:11px 24px;
-  font-family:var(--sans);
-  font-size:13.5px; font-weight:700; letter-spacing:.005em;
-  text-align:center;
-  border-bottom:1px solid rgba(0,0,0,.12);
-  box-shadow:0 6px 18px rgba(251,146,60,.32);
-">
-  <span style="font-size:11px;letter-spacing:.18em;font-weight:900;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:99px;margin-right:10px;">★ FOUNDER 100</span>
+<!-- ─────────── Founder 100 banner (full-width strip above the nav) ─────────── -->
+<a href="/auth.html?tab=signup" id="founderBanner" class="founder-banner">
+  <span class="founder-pill">★ FOUNDER 100</span>
   <span id="founderBannerText">Loading…</span>
-  <span style="margin-left:12px;font-weight:800;text-decoration:underline;">Claim →</span>
+  <span class="founder-cta">Claim →</span>
 </a>
 <style>
+  /* Hidden by default — JS reveals after /api/founder/status responds */
+  .founder-banner {
+    display:none;
+    width:100%;
+    box-sizing:border-box;
+    background:linear-gradient(135deg,#fb923c,#ea580c);
+    color:#fff !important; text-decoration:none;
+    padding:11px 24px;
+    font-family:var(--sans);
+    font-size:13.5px; font-weight:700; letter-spacing:.005em;
+    text-align:center;
+    border-bottom:1px solid rgba(0,0,0,.12);
+    box-shadow:0 6px 18px rgba(251,146,60,.32);
+    line-height:1.4;
+  }
+  .founder-banner.show { display:block; }
+  .founder-pill {
+    display:inline-block;
+    font-size:11px; letter-spacing:.16em; font-weight:900;
+    background:rgba(255,255,255,.18);
+    padding:2px 8px; border-radius:99px;
+    margin-right:10px;
+    vertical-align:1px;
+  }
+  .founder-cta {
+    margin-left:12px; font-weight:800;
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
   @keyframes founderPulse {
     0%, 100% { box-shadow:0 6px 18px rgba(251,146,60,.32); }
     50%      { box-shadow:0 6px 24px rgba(251,146,60,.62); }
   }
-  #founderBanner.pulse { animation:founderPulse 1.4s ease-in-out infinite; }
-  #founderBanner.sold-out {
+  .founder-banner.pulse { animation:founderPulse 1.4s ease-in-out infinite; }
+  .founder-banner.sold-out {
     background:linear-gradient(135deg,#1a0a00,#2a1408);
     cursor:default;
+    pointer-events:none;
+  }
+  /* Narrow phones: stack the inner text so the strip stays readable */
+  @media (max-width:560px){
+    .founder-banner { font-size:12.5px; padding:9px 14px; }
+    .founder-pill   { font-size:10px; margin-right:7px; padding:2px 6px; }
+    .founder-cta    { margin-left:8px; }
   }
 </style>
 <script>
@@ -525,7 +550,7 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
   async function poll(){
     try {
       var r = await fetch('/api/founder/status').then(r => r.json());
-      banner.style.display = '';
+      banner.classList.add('show');
       text.textContent = fmt(r.remaining, r.total);
       banner.classList.toggle('pulse', r.remaining > 0 && r.remaining <= 30);
       banner.classList.toggle('sold-out', r.sold_out);

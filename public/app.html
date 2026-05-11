@@ -1260,6 +1260,10 @@ input,textarea{font-family:var(--sans);}
 .tlog-err{margin-top:6px;font-size:12px;color:#b91c1c;background:#fef2f2;padding:6px 10px;border-radius:6px;}
 .tlog-shot{margin-top:8px;display:block;max-width:100%;max-height:140px;border:1px solid #e2e8f0;border-radius:6px;cursor:zoom-in;transition:max-height .2s;}
 .tlog-shot.expanded{max-height:600px;cursor:zoom-out;}
+/* AI-generated images embedded in chat bubbles via markdown ![](url). */
+.m-genimg{display:block;max-width:480px;max-height:480px;width:auto;height:auto;border-radius:12px;border:1px solid var(--wire2);margin:10px 0;cursor:zoom-in;transition:transform .18s,max-width .2s,max-height .2s;background:var(--cream);box-shadow:0 4px 12px rgba(0,0,0,.06);}
+.m-genimg:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.10);}
+.m-genimg.expanded{max-width:min(95vw,900px);max-height:80vh;cursor:zoom-out;}
 
 .m-body{
   max-width:680px;background:#fff;border:1px solid var(--wire2);border-radius:14px;
@@ -7501,6 +7505,11 @@ function _md(src){
   // Bold then italic (order matters)
   html=html.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
   html=html.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
+  // Images — MUST come before links so the leading '!' is consumed cleanly.
+  // Renders the AI-generated image inline. Lazy-loaded to avoid blocking
+  // long chats; click-to-expand on tap.
+  html=html.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
+    '<img class="m-genimg" src="$2" alt="$1" loading="lazy" onclick="this.classList.toggle(\'expanded\')" referrerpolicy="no-referrer">');
   // Links
   html=html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   // Blockquotes

@@ -1304,6 +1304,51 @@ const BROWSER_TOOLS = [
   }
 ];
 
+// ── Image generation tool (Pollinations.ai, free, no key) ────
+// Anthropic doesn't generate images. We bolt on Pollinations (Flux Schnell)
+// because: free, no auth, single-GET API, ~5-15s latency. The AI calls
+// generate_image, gets a URL back, then embeds it via markdown
+// ![alt](url) in its final reply — which the chat renderer turns into <img>.
+const IMAGE_TOOLS = [
+  {
+    name:'generate_image',
+    description:'画像を生成して返します。プロンプトは英語の方が品質が高いです。ロゴ、図解、イラスト、サムネイル、モックアップなどに使用。返ってきた URL を後続の最終応答で必ず markdown 画像構文 ![短い説明](URL) として埋め込んでください — そうするとユーザーには画像が直接表示されます。生成は 5-15 秒。',
+    input_schema:{
+      type:'object',
+      properties:{
+        prompt:{type:'string',description:'画像の詳細な英語説明。スタイル・構図・雰囲気も含める。例: "minimalist isometric illustration of a smartphone with 5 AI avatars floating above it, peach gradient background"'},
+        width:{type:'integer',description:'生成幅 (256-1536, 既定 1024)'},
+        height:{type:'integer',description:'生成高さ (256-1536, 既定 1024)'},
+      },
+      required:['prompt'],
+    },
+  },
+];
+
+async function executeImageTool(name, input){
+  if(name !== 'generate_image') return { error: 'unknown_image_tool: ' + name };
+  const prompt = String(input && input.prompt || '').trim();
+  if(!prompt) return { error: 'prompt required' };
+  if(prompt.length > 800) return { error: 'prompt too long (max 800 chars)' };
+  const width  = Math.max(256, Math.min(1536, parseInt(input.width)  || 1024));
+  const height = Math.max(256, Math.min(1536, parseInt(input.height) || 1024));
+  // Pollinations.ai serves a synthesized image on GET. The chat renderer
+  // hydrates it from this URL — we just return the URL.
+  const seed = Math.floor(Math.random() * 999999999);
+  const url = 'https://image.pollinations.ai/prompt/'
+    + encodeURIComponent(prompt)
+    + '?width=' + width
+    + '&height=' + height
+    + '&model=flux&nologo=true&safe=true&seed=' + seed;
+  return {
+    url,
+    prompt,
+    width, height,
+    markdown: '![' + prompt.replace(/[\[\]()]/g,'').slice(0,120) + '](' + url + ')',
+    instructions: '次の最終応答で必ず上記 markdown を本文に含めてください。そうするとユーザーには画像が直接表示されます。',
+  };
+}
+
 // ── Browser-extension live connection registry ───────────────
 // In-memory only (single-server deployment). Map from device_token → { res, ... }.
 // On multi-instance deploys, swap to Redis pub/sub.
@@ -7450,13 +7495,17 @@ async function handleAPI(req,res,pathname,method,ip){
     const sheetsActive = !!agent.sheets_enabled && sheetsConnected;
     const extensionPaired = !!payerUser.extension_device_token;
     const extensionActive = !!agent.extension_enabled && extensionPaired;
-    const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive;
+    // Image generation is always available — Pollinations.ai is free for us,
+    // so every agent can produce visuals on demand.
+    const imageGenActive = true;
+    const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive || imageGenActive;
     const tools = [
       // chrome_enabled now means "give the agent web access" — fulfilled
       // by Anthropic-hosted web_search / web_fetch (works on Render free).
       ...(agent.chrome_enabled ? WEB_TOOLS : []),
       ...(sheetsActive ? SHEETS_TOOLS : []),
       ...(extensionActive ? EXTENSION_TOOLS : []),
+      ...(imageGenActive ? IMAGE_TOOLS : []),
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
@@ -7616,6 +7665,8 @@ async function handleAPI(req,res,pathname,method,ip){
             let result;
             if(sheetsToolNames.has(block.name)){
               result = await executeSheetsTool(user, block.name, block.input||{});
+            } else if(block.name === 'generate_image'){
+              result = await executeImageTool(block.name, block.input||{});
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(session){

@@ -1527,6 +1527,18 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
 }
 .send-btn:hover{background:var(--peach-dark);}
 .send-btn:disabled{background:var(--cream4);color:var(--text3);cursor:not-allowed;}
+/* While the assistant is streaming, the send button reuses its slot as a
+   Claude.ai-style stop button. Dark slate + subtle ring pulse so the user
+   notices it's now an interactive "stop" affordance, not a passive spinner. */
+.send-btn.streaming{
+  background:#1a0a00;
+  animation:sndBtnPulse 1.4s ease-in-out infinite;
+}
+.send-btn.streaming:hover{background:#3a1e10;}
+@keyframes sndBtnPulse{
+  0%, 100% { box-shadow:0 0 0 0 rgba(251,146,60,0); }
+  50%      { box-shadow:0 0 0 4px rgba(251,146,60,.35); }
+}
 
 .foot-hint{
   font-size:11px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:14px;
@@ -9175,6 +9187,33 @@ async function sendMsg(){
   _groupPollPaused = false;
 }
 
+// ── Chat-stream stop button (Claude.ai-style) ───────────────────
+// Module-level controller so the send button (now reused as a stop
+// button while streaming) can abort the in-flight fetch.
+var _chatStreamCtrl = null;
+
+function _setChatStreaming(on){
+  const btn = document.getElementById('sndBtn');
+  if(!btn) return;
+  if(on){
+    btn.classList.add('streaming');
+    btn.title = '生成を停止 (Stop)';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.6"/></svg>';
+    btn.onclick = stopChatStream;
+  } else {
+    btn.classList.remove('streaming');
+    btn.title = '送信';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>';
+    btn.onclick = sendMsg;
+  }
+}
+
+function stopChatStream(){
+  if(_chatStreamCtrl){
+    try { _chatStreamCtrl.abort(); } catch(e){}
+  }
+}
+
 /**
  * SSE streaming chat. Pushes a placeholder assistant bubble, then patches
  * its content as text deltas arrive. Updates balance + final reply on 'done'.
@@ -9184,11 +9223,24 @@ async function _sendMsgStream(ag, text, imgs, texts){
   const payload = { message: text, stream: true };
   if(imgs && imgs.length > 0) payload.images = imgs;
   if(texts && texts.length > 0) payload.texts = texts;
-  const res = await fetch(API + '/api/chat/' + activeId, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-    body: JSON.stringify(payload),
-  });
+  // Per-call AbortController so the user can hit ⏹ to stop mid-stream.
+  const ctrl = new AbortController();
+  _chatStreamCtrl = ctrl;
+  _setChatStreaming(true);
+  let _aborted = false;
+  let res;
+  try {
+    res = await fetch(API + '/api/chat/' + activeId, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+  } catch(e){
+    _chatStreamCtrl = null; _setChatStreaming(false);
+    if(e && e.name === 'AbortError') return; // user stopped before headers
+    throw e;
+  }
   const ct = (res.headers.get('content-type')||'').toLowerCase();
   // If server didn't honor stream (shouldn't happen but just in case)
   if(!ct.includes('text/event-stream')){
@@ -9228,8 +9280,13 @@ async function _sendMsgStream(ag, text, imgs, texts){
   let lastRender = 0;
   let errorMsg = null;
 
-  while(true){
-    const {value, done} = await reader.read();
+  try { while(true){
+    let value, done;
+    try { ({value, done} = await reader.read()); }
+    catch(e){
+      if(e && e.name === 'AbortError'){ _aborted = true; break; }
+      throw e;
+    }
     if(done) break;
     buf += decoder.decode(value, {stream:true});
     let i;
@@ -9287,6 +9344,21 @@ async function _sendMsgStream(ag, text, imgs, texts){
         errorMsg = obj.message || 'エラー';
       }
     }
+  } } finally {
+    _chatStreamCtrl = null;
+    _setChatStreaming(false);
+  }
+  if(_aborted){
+    // User pressed ⏹. Preserve whatever text we already streamed and tag the
+    // bubble as stopped so it's obvious in history.
+    const last = ag.history[ag.history.length - 1];
+    if(last && last.streaming){
+      const partial = (acc || '').trim();
+      last.content  = partial ? partial + '\n\n_(停止しました)_' : '_(停止しました)_';
+      last.streaming = false;
+      renderMsgs(ag);
+    }
+    return; // not an error
   }
   if(errorMsg){
     ag.history.pop();                    // drop the empty streaming bubble

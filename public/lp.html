@@ -12,6 +12,24 @@
     }
   }catch(e){}
 })();
+// Marketing attribution: stash ?utm_campaign= so it survives the click from LP
+// to /auth.html. Format expected: YYYY-MM-DD-NN. 24h expiry to avoid stale tags.
+(function(){
+  try{
+    var camp = new URLSearchParams(location.search).get('utm_campaign');
+    if(camp && /^\d{4}-\d{2}-\d{2}-\d{2}$/.test(camp)){
+      localStorage.setItem('pendingUtmCampaign', camp);
+      localStorage.setItem('pendingUtmCampaignAt', String(Date.now()));
+    } else {
+      // Expire after 24h
+      var stamped = parseInt(localStorage.getItem('pendingUtmCampaignAt')||'0',10);
+      if(stamped && (Date.now() - stamped) > 86400000){
+        localStorage.removeItem('pendingUtmCampaign');
+        localStorage.removeItem('pendingUtmCampaignAt');
+      }
+    }
+  }catch(e){}
+})();
 </script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <meta name="viewport" content="width=device-width,initial-scale=1">

@@ -492,7 +492,13 @@ async function doSignup() {
     var _qsRef = (new URLSearchParams(location.search)).get('ref') || '';
     var ref = _qsRef || localStorage.getItem('pendingRef') || '';
     if(ref) ref = ref.toString().toUpperCase().slice(0,8);
-    const r = await post('/api/auth/signup', { name, email, password: pass, ...(ref ? {ref} : {}) });
+    // Carry ?utm_campaign= from the landing URL (or stashed) for marketing attribution
+    var _qsUtm = (new URLSearchParams(location.search)).get('utm_campaign') || '';
+    var utm_campaign = _qsUtm || localStorage.getItem('pendingUtmCampaign') || '';
+    const r = await post('/api/auth/signup', { name, email, password: pass,
+      ...(ref ? {ref} : {}),
+      ...(utm_campaign && /^\d{4}-\d{2}-\d{2}-\d{2}$/.test(utm_campaign) ? {utm_campaign} : {})
+    });
     localStorage.setItem('token', r.token);
     localStorage.setItem('user', JSON.stringify(r.user));
     localStorage.removeItem('pendingRef');

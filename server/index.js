@@ -1,6 +1,7 @@
 'use strict';
 const http=require('http'),https=require('https'),fs=require('fs'),
       path=require('path'),crypto=require('crypto'),url=require('url');
+const marketing = require('./marketing');
 
 // ── ENV ───────────────────────────────────────────────────────
 function loadEnv(){
@@ -172,6 +173,18 @@ const DB={
     if(!USE_SUPA){LDB.data=(LDB.data||[]).filter(u=>u.id!==id);return true;}
     const r=await sbReq('DELETE','users','?id=eq.'+id);
     return r.s<300;
+  },
+  // For marketing daily-report aggregation: pull users created in a UTC window.
+  async findAllCreatedBetween(startIso, endIso){
+    if(!USE_SUPA){
+      return LDB.all().filter(u => u.created_at >= startIso && u.created_at < endIso);
+    }
+    const qs = '?select=id,email,marketing_attribution,created_at'
+      + '&created_at=gte.' + encodeURIComponent(startIso)
+      + '&created_at=lt.'  + encodeURIComponent(endIso)
+      + '&limit=10000';
+    const r = await sbReq('GET','users',qs);
+    return Array.isArray(r.d) ? r.d : [];
   },
 };
 
@@ -3700,6 +3713,12 @@ async function handleAPI(req,res,pathname,method,ip){
       } catch(e){ console.warn('[signup] referral lookup failed:', e.message); }
     }
 
+    // ── Marketing attribution: stamp the X-utm campaign that brought them in
+    try {
+      const camp = marketing.attributionFromSignupReq(req, body);
+      if(camp) user.marketing_attribution = camp;
+    } catch(e){ /* noop — attribution is best-effort */ }
+
     try {
       await DB.create(user);
     } catch(e) {
@@ -6685,6 +6704,39 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
+  // ── Marketing autopilot (admin only) ───────────────────────
+  // GET /api/admin/marketing/today → today's queue + metrics
+  if(pathname==='/api/admin/marketing/today' && method==='GET'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    const queue   = marketing.getTodayQueue();
+    const metrics = await marketing.getTodayMetrics({ DB, USE_SUPA, LDB });
+    return jres(res,200,{ queue, metrics });
+  }
+  // POST /api/admin/marketing/generate → force-regen today's queue
+  if(pathname==='/api/admin/marketing/generate' && method==='POST'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    try {
+      const q = await marketing.generateDailyPosts({ callAI });
+      marketing.setTodayQueue(q);
+      return jres(res,200,{ ok:true, queue:q });
+    } catch(e){
+      return jres(res,500,{ error: e.message });
+    }
+  }
+  // POST /api/admin/marketing/report → force-send the daily report now
+  if(pathname==='/api/admin/marketing/report' && method==='POST'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    try {
+      const r = await marketing.sendDailyReport({
+        to: user.email, callAI, DB, USE_SUPA, LDB, sendEmail,
+        yesterdayTotal: 0,
+      });
+      return jres(res,200,{ ok:true, ...r });
+    } catch(e){
+      return jres(res,500,{ error: e.message });
+    }
+  }
+
   // ── GET /api/admin/reports ─────────────────────────────────
   // Admins only — surfaces every listing with reports
   if(pathname==='/api/admin/reports' && method==='GET'){
@@ -8174,6 +8226,18 @@ if(require.main === module){
     });
   }, 14 * 60 * 1000);
   console.log('[keep-alive] started ->', _SELF_URL);
+
+  // ── Marketing autopilot: 07:00 JST content gen + 23:00 JST daily report
+  // Disabled by default — set MKT_AUTOPILOT=1 + MKT_ADMIN_EMAIL to enable.
+  if(process.env.MKT_AUTOPILOT === '1' && process.env.MKT_ADMIN_EMAIL){
+    marketing.startScheduler({
+      callAI, DB, USE_SUPA, LDB, sendEmail,
+      adminEmail: process.env.MKT_ADMIN_EMAIL,
+    });
+    console.log('[marketing] autopilot started — report → ' + process.env.MKT_ADMIN_EMAIL);
+  } else {
+    console.log('[marketing] autopilot OFF (set MKT_AUTOPILOT=1 + MKT_ADMIN_EMAIL to enable)');
+  }
 }
 
 module.exports = server;

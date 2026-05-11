@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📊 Marketing Autopilot — MY AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --peach:#fb923c; --peach-dark:#ea580c;
+    --bg:#fdf8f3; --bg-warm:#faf3eb; --cream2:#f5ead9;
+    --text:#1a0a00; --text-muted:#5c3a1e; --text-subtle:#9a6a4a;
+    --line:rgba(180,120,80,.14); --line-strong:rgba(180,120,80,.22);
+    --green:#10b981; --violet:#8b5cf6; --blue:#3b82f6;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100vh; padding:32px 20px 80px;
+    font-family:'Inter',-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;
+    background:
+      radial-gradient(1000px 600px at 10% -10%, rgba(251,146,60,.10) 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+  }
+  .wrap { max-width:880px; margin:0 auto; }
+  h1 {
+    font-family:'Bebas Neue',serif; font-weight:400;
+    font-size:44px; line-height:1; letter-spacing:-.01em; margin:0 0 6px;
+  }
+  .sub {
+    color:var(--text-muted); font-size:13px; margin:0 0 24px;
+    font-family:'DM Mono',monospace; letter-spacing:.06em;
+  }
+  .err {
+    background:rgba(220,38,38,.08); border:1px solid rgba(220,38,38,.22);
+    border-radius:10px; padding:14px 16px; color:#b91c1c; margin-bottom:18px; font-size:13px;
+  }
+
+  /* metrics */
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:32px; }
+  .stat {
+    background:#fff; border:1px solid var(--line-strong); border-radius:14px;
+    padding:18px 16px;
+  }
+  .stat .k { font-size:10.5px; font-weight:800; color:var(--text-subtle); text-transform:uppercase; letter-spacing:.1em; }
+  .stat .v { font-family:'Bebas Neue',serif; font-size:42px; color:var(--peach-dark); line-height:1; margin:6px 0 2px; }
+  .stat .t { font-size:11px; color:var(--text-subtle); font-family:'DM Mono',monospace; }
+  @media (max-width:560px) { .grid { grid-template-columns:1fr; } }
+
+  /* actions */
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+  .btn {
+    height:38px; padding:0 16px; border-radius:9px; border:0;
+    font-family:inherit; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .btn-primary { background:var(--peach); color:#fff; box-shadow:0 6px 14px rgba(251,146,60,.28); }
+  .btn-primary:hover { background:var(--peach-dark); }
+  .btn-ghost { background:#fff; color:var(--text); border:1px solid var(--line-strong); }
+  .btn-ghost:hover { background:var(--bg-warm); }
+  .btn[disabled] { opacity:.5; cursor:not-allowed; }
+
+  /* posts */
+  .post {
+    background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:16px; margin-bottom:10px;
+  }
+  .post-head {
+    display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;
+  }
+  .cat {
+    font-size:10px; font-weight:800; color:var(--peach-dark);
+    background:rgba(251,146,60,.10); padding:3px 9px; border-radius:99px;
+    letter-spacing:.08em; text-transform:uppercase;
+  }
+  .lang {
+    font-size:10px; font-weight:700; color:var(--text-subtle);
+    background:var(--cream2); padding:3px 9px; border-radius:99px;
+  }
+  .post-id {
+    font-family:'DM Mono',monospace; font-size:10.5px; color:var(--text-subtle);
+    margin-left:auto;
+  }
+  .post-text {
+    font-size:14px; line-height:1.55; margin:0 0 10px;
+    white-space:pre-wrap; color:var(--text);
+  }
+  .post-cta {
+    font-family:'DM Mono',monospace; font-size:10.5px; color:var(--violet);
+    margin-bottom:10px; word-break:break-all;
+  }
+  .post-img {
+    font-size:11px; color:var(--text-subtle); margin-bottom:10px;
+    background:var(--bg-warm); padding:8px 11px; border-radius:8px;
+    border:1px dashed var(--line-strong);
+  }
+  .post-img b { color:var(--text-muted); }
+  .post-acts { display:flex; gap:8px; flex-wrap:wrap; }
+  .post-acts .btn { height:32px; padding:0 12px; font-size:12px; }
+  .post-acts .copied { background:var(--green); color:#fff; }
+
+  /* category breakdown */
+  .cats {
+    background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:16px; margin-bottom:24px;
+  }
+  .cats h3 { font-size:13px; margin:0 0 12px; }
+  .cats pre {
+    font-family:'DM Mono',monospace; font-size:12px;
+    background:var(--cream2); padding:11px; border-radius:8px;
+    border:1px solid var(--line); margin:0; overflow:auto;
+  }
+
+  .loading { color:var(--text-subtle); font-size:13px; text-align:center; padding:40px 20px; }
+  .empty { color:var(--text-subtle); font-size:13px; text-align:center; padding:30px 20px;
+    background:var(--bg-warm); border:1px dashed var(--line-strong); border-radius:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MARKETING AUTOPILOT</h1>
+  <p class="sub">Daily X posts · UTM attribution · 23:00 JST email report</p>
+
+  <div id="err" class="err" style="display:none"></div>
+
+  <div class="grid">
+    <div class="stat">
+      <div class="k">Today's signups</div>
+      <div class="v" id="stat-total">—</div>
+      <div class="t" id="stat-total-sub">loading…</div>
+    </div>
+    <div class="stat">
+      <div class="k">Via X attribution</div>
+      <div class="v" id="stat-x">—</div>
+      <div class="t" id="stat-x-sub">UTM = utm_source=x</div>
+    </div>
+    <div class="stat">
+      <div class="k">Posts in queue</div>
+      <div class="v" id="stat-queue">—</div>
+      <div class="t" id="stat-queue-sub">generated at 07:00 JST</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btnGen">▶ 今日の投稿を再生成</button>
+    <button class="btn btn-ghost" id="btnReport">📧 今すぐレポートを送信</button>
+    <button class="btn btn-ghost" id="btnRefresh">↻ 再読込</button>
+  </div>
+
+  <div class="cats" id="cats" style="display:none">
+    <h3>📊 カテゴリ別 attribution (今日)</h3>
+    <pre id="catsBody"></pre>
+  </div>
+
+  <h3 style="margin:24px 0 12px;font-size:15px;">📝 今日のキュー</h3>
+  <div id="posts"><div class="loading">読み込み中…</div></div>
+</div>
+
+<script>
+const token = localStorage.getItem('token') || '';
+if(!token){
+  document.getElementById('err').style.display='';
+  document.getElementById('err').textContent='ログインしてください: /auth.html';
+}
+
+function api(method, path, body){
+  return fetch(path, {
+    method, headers: {
+      'Content-Type':'application/json',
+      'Authorization': token ? ('Bearer ' + token) : '',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(async r => {
+    const text = await r.text();
+    const data = text ? JSON.parse(text) : null;
+    if(!r.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
+    return data;
+  });
+}
+
+function renderQueue(q){
+  const el = document.getElementById('posts');
+  if(!q || !q.posts || q.posts.length===0){
+    el.innerHTML = '<div class="empty">まだ今日のキューがありません。「▶ 今日の投稿を再生成」を押すと Claude が生成します。</div>';
+    return;
+  }
+  el.innerHTML = q.posts.map(p => `
+    <div class="post">
+      <div class="post-head">
+        <span class="cat">${p.category}</span>
+        <span class="lang">${p.lang === 'ja' ? '🇯🇵 JA' : '🇺🇸 EN'}</span>
+        <span class="post-id">${p.id}</span>
+      </div>
+      <p class="post-text">${(p.text || '').replace(/</g,'&lt;')}</p>
+      <div class="post-cta">${p.cta_url}</div>
+      ${p.image_prompt ? `<div class="post-img"><b>画像 prompt:</b> ${p.image_prompt.replace(/</g,'&lt;')}</div>` : ''}
+      <div class="post-acts">
+        <button class="btn btn-primary" onclick="copyText(this, ${JSON.stringify((p.text||'') + '\\n\\n' + p.cta_url).replace(/'/g,'&#39;')})">📋 本文+URL をコピー</button>
+        <a class="btn btn-ghost" target="_blank" href="https://x.com/intent/tweet?text=${encodeURIComponent((p.text||'') + '\n\n' + p.cta_url)}">𝕏 投稿ウィンドウを開く</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyText(btn, text){
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.classList.add('copied');
+    btn.textContent = '✓ コピー済';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1500);
+  });
+}
+window.copyText = copyText;
+
+function renderMetrics(m){
+  if(!m){
+    document.getElementById('stat-total').textContent = '—';
+    return;
+  }
+  document.getElementById('stat-total').textContent = m.all || 0;
+  document.getElementById('stat-total-sub').textContent = m.date || '';
+  const direct = (m.byCampaign && m.byCampaign['(direct)']) || 0;
+  document.getElementById('stat-x').textContent = (m.all || 0) - direct;
+  // Categories breakdown panel
+  const cats = m.byCategory || {};
+  if(Object.keys(cats).length){
+    document.getElementById('cats').style.display = '';
+    document.getElementById('catsBody').textContent =
+      Object.entries(cats).map(([k,v]) => `  ${(k+'                    ').slice(0,20)} ${v}`).join('\n');
+  }
+}
+
+async function load(){
+  try {
+    const r = await api('GET', '/api/admin/marketing/today');
+    renderMetrics(r.metrics);
+    document.getElementById('stat-queue').textContent = (r.queue && r.queue.posts.length) || 0;
+    document.getElementById('stat-queue-sub').textContent =
+      r.queue ? ('生成 ' + new Date(r.queue.generatedAt).toLocaleString('ja-JP')) : '未生成';
+    renderQueue(r.queue);
+  } catch(e){
+    document.getElementById('err').style.display = '';
+    document.getElementById('err').textContent = e.message;
+  }
+}
+
+document.getElementById('btnGen').onclick = async () => {
+  const btn = document.getElementById('btnGen');
+  btn.disabled = true; btn.textContent = '生成中… (10-30 秒)';
+  try {
+    const r = await api('POST', '/api/admin/marketing/generate');
+    renderQueue(r.queue);
+    document.getElementById('stat-queue').textContent = r.queue.posts.length;
+  } catch(e){
+    document.getElementById('err').style.display = '';
+    document.getElementById('err').textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '▶ 今日の投稿を再生成';
+  }
+};
+
+document.getElementById('btnReport').onclick = async () => {
+  const btn = document.getElementById('btnReport');
+  btn.disabled = true; btn.textContent = '送信中…';
+  try {
+    const r = await api('POST', '/api/admin/marketing/report');
+    btn.textContent = '✓ 送信しました (' + r.signups + ' signups)';
+    setTimeout(() => { btn.textContent = '📧 今すぐレポートを送信'; btn.disabled = false; }, 2000);
+  } catch(e){
+    document.getElementById('err').style.display = '';
+    document.getElementById('err').textContent = e.message;
+    btn.disabled = false; btn.textContent = '📧 今すぐレポートを送信';
+  }
+};
+
+document.getElementById('btnRefresh').onclick = load;
+
+if(token) load();
+</script>
+</body>
+</html>

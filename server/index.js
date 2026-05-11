@@ -8120,6 +8120,21 @@ async function handleAPI(req,res,pathname,method,ip){
     const mediaUtilActive = true;
     const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive
                    || imageGenActive || videoGenActive || mediaUtilActive;
+    // send_email auto-routes to the user's own address, but the AI doesn't
+    // know what that address IS — so it sometimes asks the user for one
+    // or refuses with "no recipient". Inject the email into the tool's
+    // description per-request so the AI knows there's nothing to ask.
+    const _mediaTools = MEDIA_UTIL_TOOLS.map(t => {
+      if(t.name !== 'send_email') return t;
+      const ownerEmail = (payerUser && payerUser.email) || (user && user.email) || '';
+      if(!ownerEmail) return t; // fallback: leave generic
+      return {
+        ...t,
+        description: 'メールを ' + ownerEmail + ' (この AI を呼んだユーザー本人のメールアドレス) に送信します。'
+          + '宛先は ' + ownerEmail + ' に固定されているので「メールアドレスを教えて」と聞く必要はありません。'
+          + '要約・レポート・リマインダー・調査結果の自分宛通知に使ってください。他人への送信は不可。',
+      };
+    });
     const tools = [
       // chrome_enabled now means "give the agent web access" — fulfilled
       // by Anthropic-hosted web_search / web_fetch (works on Render free).
@@ -8128,7 +8143,7 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(extensionActive ? EXTENSION_TOOLS : []),
       ...(imageGenActive ? IMAGE_TOOLS : []),
       ...(videoGenActive ? VIDEO_TOOLS : []),
-      ...(mediaUtilActive ? MEDIA_UTIL_TOOLS : []),
+      ...(mediaUtilActive ? _mediaTools : []),
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;

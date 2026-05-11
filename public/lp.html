@@ -883,49 +883,64 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
   </div>
 </section>
 
-<!-- ─────────── 4.5 AUTOMATIONS (new) ─────────── -->
-<section class="section section-autom" id="autom" style="background:linear-gradient(180deg,#fff7ed 0%,#faf7f2 100%)">
+<!-- ─────────── 4.5 AUTOMATIONS ─────────── -->
+<section class="section section-autom" id="autom">
   <div class="section-inner">
     <div class="section-head">
-      <span class="kicker">AUTOMATIONS · NEW</span>
-      <h2 class="h2">Not just a chatbot.<br>A team that <em style="font-style:normal;background:linear-gradient(135deg,#fb923c,#ea580c);-webkit-background-clip:text;-webkit-text-fill-color:transparent">runs by itself</em>.</h2>
-      <p class="lead">Schedule it, hook a webhook, drop a PDF in its knowledge base. Your AI works while you sleep — and posts the result to Slack.</p>
+      <span class="live-pill">NEW</span>
+      <span class="kicker">Automations</span>
+      <h2 class="h2">Not just a chatbot.<br>A team that <em>runs by itself</em>.</h2>
+      <p class="lead">
+        Schedule it, hook a webhook, drop a PDF in its knowledge base.
+        Your AI works while you sleep — and posts the result to Slack.
+      </p>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;max-width:1080px;margin:36px auto 0;padding:0 22px">
-      <div style="background:#fff;border:1px solid rgba(180,120,80,.14);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(180,90,30,.06)">
-        <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px">⏰</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Scheduled execution</div>
-        <div style="font-size:13.5px;color:#52525b;line-height:1.65">Daily 9 AM brief in Slack. Weekly newsletter draft to your inbox. Hourly KPI digest. Set a cadence — your AI hits it.</div>
+
+    <div class="team-feats">
+      <div class="team-feat">
+        <span class="ribbon">SCHEDULE</span>
+        <div class="ic">⏰</div>
+        <h4>Daily / hourly cadence.</h4>
+        <p>Daily 9 AM brief in Slack. Weekly newsletter draft to your inbox. Hourly KPI digest. Set a cadence — your AI hits it.</p>
       </div>
-      <div style="background:#fff;border:1px solid rgba(180,120,80,.14);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(180,90,30,.06)">
-        <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px">🔌</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Webhook entry</div>
-        <div style="font-size:13.5px;color:#52525b;line-height:1.65">Every agent has its own POST URL. Trigger it from Zapier, GitHub, your CRM. The AI replies as JSON. Daily cost cap built in.</div>
+      <div class="team-feat">
+        <span class="ribbon">WEBHOOK</span>
+        <div class="ic">🔌</div>
+        <h4>Trigger from anywhere.</h4>
+        <p>Every agent gets a <code style="background:var(--peach-soft);color:var(--peach-dark);font-family:var(--mono);font-size:12.5px;padding:2px 6px;border-radius:5px">POST /w/&lt;token&gt;</code> URL. Hook it to Zapier, GitHub, your CRM. Daily cost cap built in.</p>
       </div>
-      <div style="background:#fff;border:1px solid rgba(180,120,80,.14);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(180,90,30,.06)">
-        <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px">📚</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Knowledge Base</div>
-        <div style="font-size:13.5px;color:#52525b;line-height:1.65">Drop in PDFs, DOCX, CSV, Markdown — your agent retrieves what's relevant on every question. Japanese-aware retrieval.</div>
-      </div>
-      <div style="background:#fff;border:1px solid rgba(180,120,80,.14);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(180,90,30,.06)">
-        <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px">📣</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Slack · Discord · Calendar</div>
-        <div style="font-size:13.5px;color:#52525b;line-height:1.65">Drop a webhook URL once. Then say <i>"send the sales report to Slack"</i> — your AI picks the right tool. Google Calendar event creation too.</div>
-      </div>
-      <div style="background:#fff;border:1px solid rgba(180,120,80,.14);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(180,90,30,.06)">
-        <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px">📥</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Email reception</div>
-        <div style="font-size:13.5px;color:#52525b;line-height:1.65">Forward inbound mail to your agent. It answers in its own voice and ships the reply back to the sender automatically.</div>
-      </div>
-      <div style="background:#fff;border:1px solid rgba(180,120,80,.14);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(180,90,30,.06)">
-        <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px">🐍</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Python · LaTeX · Artifacts</div>
-        <div style="font-size:13.5px;color:#52525b;line-height:1.65">▶ Run Python on any code block (Pyodide). $x^2+y^2=z^2$ renders. Build an interactive HTML mockup in chat with one prompt.</div>
+      <div class="team-feat">
+        <span class="ribbon">RAG</span>
+        <div class="ic">📚</div>
+        <h4>Knows your docs.</h4>
+        <p>Drop in PDFs, DOCX, CSV, Markdown — the agent retrieves what's relevant on every question. Japanese-aware retrieval.</p>
       </div>
     </div>
-    <div style="text-align:center;margin-top:38px">
-      <a href="/auth.html?tab=signup&next=/app.html" class="cta-primary" style="background:#1c1c1f;color:#fff;padding:14px 26px;border-radius:10px;font-weight:800;text-decoration:none;display:inline-block">⚡ Try 1-click Automations — free →</a>
-      <div style="margin-top:10px"><a href="/changelog" style="color:#ea580c;font-size:12.5px;font-weight:700;text-decoration:none">See full changelog →</a></div>
+
+    <div class="team-feats">
+      <div class="team-feat">
+        <span class="ribbon">SLACK · DISCORD</span>
+        <div class="ic">📣</div>
+        <h4>Talks to your tools.</h4>
+        <p>Save an Incoming Webhook URL once. Then say <i>"send the sales report to Slack"</i> — your AI picks the right tool. Google Calendar event creation too.</p>
+      </div>
+      <div class="team-feat">
+        <span class="ribbon">INBOUND MAIL</span>
+        <div class="ic">📥</div>
+        <h4>Answers emails for you.</h4>
+        <p>Forward inbound mail to your agent. It replies in its own voice and sends the response back to the original sender automatically.</p>
+      </div>
+      <div class="team-feat">
+        <span class="ribbon">CODE · MATH</span>
+        <div class="ic">🐍</div>
+        <h4>Runs Python in chat.</h4>
+        <p>▶ Run on any Python block via Pyodide. <code style="background:var(--peach-soft);color:var(--peach-dark);font-family:var(--mono);font-size:12.5px;padding:2px 6px;border-radius:5px">$x^2+y^2=z^2$</code> renders. Build interactive HTML mockups with one prompt.</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:24px">
+      <a href="/auth.html?tab=signup&amp;next=/app.html" class="btn btn-primary">⚡ Try 1-click Automations — free →</a>
+      <div style="margin-top:14px"><a href="/changelog" style="color:var(--peach-dark);font-size:13px;font-weight:700;text-decoration:none">See full changelog →</a></div>
     </div>
   </div>
 </section>

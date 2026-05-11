@@ -36,5 +36,8 @@ assets/demo-vertical.mp4
 assets/founder100-vertical.webm
 assets/founder100-vertical.mp4
 
+# AI-generated chat videos (auto-cleaned after 24h server-side)
+public/generated/
+
 # Generated gallery PNGs (regenerate via `node scripts/demo/screenshot-gallery.js`)
 assets/gallery/*.png

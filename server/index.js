@@ -1325,6 +1325,135 @@ const IMAGE_TOOLS = [
   },
 ];
 
+// ── Video generation tool (Playwright + ffmpeg, zero external API) ──
+// AI authors a self-contained HTML/CSS animation; we render it in headless
+// Chromium for the requested duration, transcode webm → mp4, and hand back
+// a /generated/*.mp4 URL the chat embeds inline via <video>.
+const VIDEO_TOOLS = [
+  {
+    name:'generate_video',
+    description:'HTML/CSS アニメーションから動画 (mp4) を生成します。SNS マーケティング動画 / ロゴアニメ / 解説動画 / タイポグラフィ / 数値カウントダウン等に最適。実写は不可。input.html は完全な単一 HTML 文書で、CSS @keyframes と animation-delay で時間軸を作ること。返ってきた URL は最終応答で markdown 画像構文 ![説明](URL) として埋め込む — チャットが mp4 を <video> として再生します。MY AI Agent ブランド: ピーチ #fb923c, ダーク #0a0a0c, クリーム #fdf8f3, Bebas Neue 見出し。',
+    input_schema:{
+      type:'object',
+      properties:{
+        title:{type:'string',description:'動画の短いタイトル (ファイル名に使う, a-z0-9 のみ)'},
+        duration_seconds:{type:'integer',description:'録画する秒数 (5-30)'},
+        aspect:{type:'string',enum:['landscape','portrait'],description:'landscape = 1280×720 (X / YouTube horizontal), portrait = 1080×1920 (TikTok / Reels / Shorts)'},
+        html:{type:'string',description:'完全な HTML 文書 (<!doctype html>...). 動画は最初の duration_seconds 秒間を録画。Google Fonts は <link> で読み込み可。'},
+      },
+      required:['title','duration_seconds','aspect','html'],
+    },
+  },
+];
+
+// Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
+let _playwrightChromium = null;
+let _ffmpegStaticPath   = null;
+function _loadVideoDeps(){
+  if(!_playwrightChromium){
+    try { _playwrightChromium = require('playwright').chromium; } catch(e){ throw new Error('playwright not installed'); }
+  }
+  if(!_ffmpegStaticPath){
+    try { _ffmpegStaticPath = require('ffmpeg-static'); } catch(e){ throw new Error('ffmpeg-static not installed — run: npm install --no-save ffmpeg-static'); }
+  }
+  return { chromium: _playwrightChromium, ffmpegPath: _ffmpegStaticPath };
+}
+
+const GENERATED_DIR = path.join(PUBLIC_DIR, 'generated');
+try { fs.mkdirSync(GENERATED_DIR, { recursive: true }); } catch(e){}
+
+// Sweep videos older than 24h every hour to keep the public/ disk bounded.
+setInterval(() => {
+  try {
+    const now = Date.now();
+    const ttl = 24 * 3600 * 1000;
+    for(const f of fs.readdirSync(GENERATED_DIR)){
+      if(!/\.(mp4|webm)$/.test(f)) continue;
+      const p = path.join(GENERATED_DIR, f);
+      try {
+        const st = fs.statSync(p);
+        if((now - st.mtimeMs) > ttl) fs.unlinkSync(p);
+      } catch(e){}
+    }
+  } catch(e){}
+}, 60 * 60 * 1000);
+
+async function _recordHtmlToMp4(html, outPath, durationSec, aspect){
+  const { chromium, ffmpegPath } = _loadVideoDeps();
+  const tmpDir = path.dirname(outPath);
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const tmpHtml = path.join(tmpDir, '.tmp-' + crypto.randomBytes(6).toString('hex') + '.html');
+  fs.writeFileSync(tmpHtml, html);
+  const size = aspect === 'portrait' ? { width:1080, height:1920 } : { width:1280, height:720 };
+
+  let webmPath = null;
+  const browser = await chromium.launch();
+  try {
+    const context = await browser.newContext({ viewport: size, recordVideo: { dir: tmpDir, size } });
+    const page = await context.newPage();
+    await page.goto('file://' + tmpHtml);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(durationSec * 1000);
+    await context.close();
+  } finally {
+    await browser.close();
+    try { fs.unlinkSync(tmpHtml); } catch(e){}
+  }
+  // Locate the freshest webm produced by Playwright
+  const candidates = fs.readdirSync(tmpDir)
+    .filter(f => f.endsWith('.webm') && !f.startsWith('.tmp-'))
+    .map(f => ({ f, t: fs.statSync(path.join(tmpDir, f)).mtimeMs }))
+    .sort((a,b) => b.t - a.t);
+  if(!candidates.length) throw new Error('Playwright produced no webm');
+  webmPath = path.join(tmpDir, candidates[0].f);
+  // Transcode to mp4
+  await new Promise((resolve, reject) => {
+    const proc = require('child_process').spawn(ffmpegPath, [
+      '-y', '-i', webmPath,
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart', '-preset', 'fast', '-crf', '24',
+      outPath,
+    ]);
+    proc.stderr.on('data', () => {}); // discard
+    proc.on('close', (code) => code === 0 ? resolve() : reject(new Error('ffmpeg exit ' + code)));
+    proc.on('error', reject);
+  });
+  try { fs.unlinkSync(webmPath); } catch(e){}
+}
+
+async function executeVideoTool(name, input){
+  if(name !== 'generate_video') return { error: 'unknown_video_tool: ' + name };
+  const safeTitle = String(input && input.title || 'video')
+    .toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'video';
+  const duration = Math.max(5, Math.min(30, parseInt(input.duration_seconds) || 10));
+  const aspect = input.aspect === 'portrait' ? 'portrait' : 'landscape';
+  const html = String(input.html || '');
+  if(html.length < 100)  return { error: 'html too short (need a complete HTML document)' };
+  if(html.length > 80000) return { error: 'html too long (max 80KB)' };
+
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = safeTitle + '-' + id + '.mp4';
+  const outPath = path.join(GENERATED_DIR, filename);
+  try {
+    await _recordHtmlToMp4(html, outPath, duration, aspect);
+  } catch(e){
+    return { error: 'render_failed: ' + (e.message || 'unknown') };
+  }
+  const sizeKb = Math.round(fs.statSync(outPath).size / 1024);
+  const url = '/generated/' + filename;
+  return {
+    url,
+    duration_seconds: duration,
+    aspect,
+    size_kb: sizeKb,
+    markdown: '![' + safeTitle + '](' + url + ')',
+    instructions: '次の最終応答で必ず上記 markdown 構文を本文に含めてください。チャットが mp4 を <video> として自動的にインライン再生します。',
+  };
+}
+
 async function executeImageTool(name, input){
   if(name !== 'generate_image') return { error: 'unknown_image_tool: ' + name };
   const prompt = String(input && input.prompt || '').trim();
@@ -7495,10 +7624,11 @@ async function handleAPI(req,res,pathname,method,ip){
     const sheetsActive = !!agent.sheets_enabled && sheetsConnected;
     const extensionPaired = !!payerUser.extension_device_token;
     const extensionActive = !!agent.extension_enabled && extensionPaired;
-    // Image generation is always available — Pollinations.ai is free for us,
+    // Image + video generation are always available — no external API cost,
     // so every agent can produce visuals on demand.
     const imageGenActive = true;
-    const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive || imageGenActive;
+    const videoGenActive = true;
+    const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive || imageGenActive || videoGenActive;
     const tools = [
       // chrome_enabled now means "give the agent web access" — fulfilled
       // by Anthropic-hosted web_search / web_fetch (works on Render free).
@@ -7506,6 +7636,7 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(sheetsActive ? SHEETS_TOOLS : []),
       ...(extensionActive ? EXTENSION_TOOLS : []),
       ...(imageGenActive ? IMAGE_TOOLS : []),
+      ...(videoGenActive ? VIDEO_TOOLS : []),
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
@@ -7667,6 +7798,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeSheetsTool(user, block.name, block.input||{});
             } else if(block.name === 'generate_image'){
               result = await executeImageTool(block.name, block.input||{});
+            } else if(block.name === 'generate_video'){
+              result = await executeVideoTool(block.name, block.input||{});
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(session){

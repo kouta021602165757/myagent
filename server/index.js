@@ -35,7 +35,12 @@ const RESEND_KEY   = process.env.RESEND_API_KEY||'';
 const BRAVE_KEY    = process.env.BRAVE_API_KEY||'';                  // optional, falls back to DDG
 const GA_ID        = process.env.GA_MEASUREMENT_ID||'';              // optional, e.g. G-XXXXXXXXXX
 const APP_URL      = process.env.APP_URL||`http://localhost:${PORT}`;
-const FROM_EMAIL   = process.env.FROM_EMAIL||'noreply@myaiagent.jp';
+// One unified sender for everything MY AI Agent emails (verification,
+// password reset, daily reports, send_email tool). All AI agents share
+// this address — the agent's own name goes into the human-readable
+// "From" display so recipients see e.g. "Sales Tanaka via MY AI Agent
+// <noreply@myaiagents.agency>".
+const FROM_EMAIL   = process.env.FROM_EMAIL||'noreply@myaiagents.agency';
 const PUBLIC_DIR   = path.join(__dirname,'..','public');
 const USE_SUPA     = !!(SUPA_URL&&SUPA_KEY);
 const USD_TO_JPY   = parseFloat(process.env.USD_TO_JPY||'150');
@@ -866,11 +871,22 @@ async function notifyGroupMembers(host, agent, opts){
 }
 
 // ── EMAIL (Resend) ────────────────────────────────────────────
-async function sendEmail(to,subject,html){
+// fromName: optional human-friendly display name. Defaults to "MY AI Agent"
+// for system mails (verify, reset, daily report). The send_email tool passes
+// the agent's name so the recipient sees who actually composed the message.
+// Strip control + quote chars from the display name — RFC 5322 doesn't like
+// them in an unquoted addr-spec.
+function _safeFromName(name){
+  return String(name || 'MY AI Agent')
+    .replace(/["<>\\\r\n\t]+/g, '')
+    .trim().slice(0, 60) || 'MY AI Agent';
+}
+async function sendEmail(to,subject,html,opts){
   if(!RESEND_KEY){console.log(`[DEV EMAIL] To:${to}\nSubject:${subject}\n${html.replace(/<[^>]+>/g,'')}\n`);return;}
+  const displayName = _safeFromName(opts && opts.fromName);
   await httpsReq('POST','api.resend.com','/emails',
     {'Content-Type':'application/json','Authorization':`Bearer ${RESEND_KEY}`},
-    {from:`MY AI Agent <${FROM_EMAIL}>`,to,subject,html});
+    {from:`${displayName} <${FROM_EMAIL}>`,to,subject,html});
 }
 
 async function sendVerifyEmail(user){
@@ -1858,25 +1874,33 @@ async function executeDiagramTool(input){
 }
 
 // ── 5) send_email — Resend, restricted to user's own address ─
-async function executeEmailTool(user, input){
+async function executeEmailTool(user, agent, input){
   if(!user || !user.email) return { error: 'no user email on file' };
   const subject = String(input && input.subject || '').slice(0, 100).trim();
   const htmlBody = String(input && input.html_body || '');
   if(!subject)  return { error: 'subject required' };
   if(htmlBody.length < 10)    return { error: 'html_body too short' };
   if(htmlBody.length > 200000) return { error: 'html_body too long (max 200KB)' };
+  // Display name: "Sales Tanaka via MY AI Agent" so the recipient instantly
+  // sees which agent composed it. All agents still send from the same
+  // unified sender address (FROM_EMAIL = noreply@myaiagents.agency).
+  const fromName = (agent && agent.name)
+    ? (agent.name + ' via MY AI Agent')
+    : 'MY AI Agent';
   // Restricted: only to the user's own address. Prevents the agent from
   // spraying mails on the user's behalf without explicit consent.
   try {
-    await sendEmail(user.email, subject, htmlBody);
+    await sendEmail(user.email, subject, htmlBody, { fromName });
   } catch(e){
     return { error: 'email_send_failed: ' + (e.message || 'unknown') };
   }
   return {
     ok: true,
     sent_to: user.email,
+    sent_from: FROM_EMAIL,
+    from_display: fromName,
     subject,
-    instructions: '送信完了。次の応答で 「✉️ メールを ' + user.email + ' に送信しました」 と報告してください。',
+    instructions: '送信完了。次の応答で 「✉️ メールを ' + user.email + ' に送信しました (差出人: ' + fromName + ')」 と報告してください。',
   };
 }
 
@@ -8316,7 +8340,7 @@ async function handleAPI(req,res,pathname,method,ip){
             } else if(block.name === 'generate_diagram'){
               result = await executeDiagramTool(block.input||{});
             } else if(block.name === 'send_email'){
-              result = await executeEmailTool(user, block.input||{});
+              result = await executeEmailTool(user, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'generate_qr'){
               result = await executeQrTool(block.input||{});
             } else if(block.name && block.name.startsWith('ext_')){

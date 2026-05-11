@@ -217,5 +217,56 @@ Combine the autopilot (8 EN posts/day already drafting) + PH + HN + IH milestone
 
 ---
 
+## 📣 Shoutouts (3 products that helped build MY AI Agent)
+
+PH shows shoutouts as **founder reviews** on the recipient product's page,
+linked back to your launch. Pick tools you actually use — reviewers can
+spot fake endorsements. All copy is English (target overseas audience).
+
+### Recommended top 3 ✅
+
+**1. Claude (Anthropic)** — *the model behind every agent*
+```
+Powers every agent that MY AI Agent generates. Sonnet's role-reasoning is what makes our 30-second team assembly actually work — we tell it "design a 5-role Shopify team", and it returns coherent personas, models, and tool sets in one shot. Switched from another provider mid-build because Claude follows persona / system prompts more reliably across long sessions.
+```
+~440 chars. Replace "another provider" with the specific one if you want.
+
+**2. Supabase** — *the entire data layer*
+```
+The whole backend of MY AI Agent. Postgres + auth + Row-Level Security + storage in one — and the free tier carried us through six months of pre-revenue dev. Setting up multi-tenant RLS for a SaaS took ~10 minutes versus the weekend I'd planned. Auto-managed migrations + the Studio UI saved us from ever writing a DB admin tool.
+```
+~395 chars.
+
+**3. Claude Code** — *AI pair-programmer for the whole codebase*
+```
+Wrote a meaningful chunk of MY AI Agent shoulder-to-shoulder with me. The 1M context window means it actually holds the whole repo in head — refactors that span 8 files happen in one go, not 8. Every commit on this project has a Co-Authored-By Claude line and it's not for show. Closest thing to having a senior engineer on call 24/7.
+```
+~395 chars.
+
+### Alternates (use if you'd rather diversify away from Anthropic)
+
+**4. Stripe** — *Agent Store payouts*
+```
+Powers the Agent Store creator pay-outs in MY AI Agent. Stripe Connect Express took ~2 days end-to-end to wire up — and the dashboard auto-handles 1099 / tax forms so we don't have to. Subscription billing for our Pro / Business tiers runs on the same account. Boring infrastructure in the best possible way.
+```
+~340 chars.
+
+**5. Render** — *hosting + auto-deploy*
+```
+Hosts every part of MY AI Agent: the Node server, the SSE stream for our Chrome extension, and the cron'd marketing autopilot. Docker mode + auto-deploy from GitHub means I push code, and ~90 seconds later it's live in production. We've never had to think about a Linux box, and that's worth the whole price.
+```
+~340 chars.
+
+### How to enter on PH
+
+1. Click **Add shoutout** on the Shoutouts step
+2. Search the product (typing 4-5 chars usually finds it)
+3. Paste the review text above
+4. Repeat for the next two
+
+If a product isn't on PH (rare for these 5 — all listed), skip it.
+
+---
+
 **Direct URL** for the launch once it's live (PH gives this format):
 `https://www.producthunt.com/posts/my-ai-agent`

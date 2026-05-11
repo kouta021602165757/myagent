@@ -123,6 +123,16 @@ async function handleCommand(cmd) {
       case 'list_tabs':        return await listTabs();
       case 'switch_tab':       return await switchTab(cmd.input);
       case 'close_tab':        return await closeTab(cmd.input);
+      // ── v0.3.0 additions: SPA-friendly primitives + page understanding ──
+      case 'scroll':           return await runOnActiveTab('scroll', cmd.input);
+      case 'wait_for':         return await runOnActiveTab('wait_for', cmd.input);
+      case 'hover':            return await runOnActiveTab('hover', cmd.input);
+      case 'fill_form':        return await runOnActiveTab('fill_form', cmd.input);
+      case 'extract':          return await runOnActiveTab('extract', cmd.input);
+      case 'read_markdown':    return await runOnActiveTab('read_markdown', cmd.input);
+      case 'page_outline':     return await runOnActiveTab('page_outline', cmd.input);
+      case 'eval':             return await runOnActiveTab('eval', cmd.input);
+      case 'upload_file':      return await runOnActiveTab('upload_file', cmd.input);
       default:
         return { error: 'unknown_command: ' + cmd.name };
     }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MY AI Agent — Browser Connector",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MY AI Agent からブラウザを操作できるようにする公式拡張機能。X / Slack / Gmail などのログイン済みサイトを自動操作します。",
   "permissions": [
     "tabs",

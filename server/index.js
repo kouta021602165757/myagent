@@ -1321,7 +1321,121 @@ const BROWSER_TOOLS = [
     name:'read_page',
     description:'現在開いているページの可視テキストを再取得します（再読込せずに最新の状態を確認）。',
     input_schema:{ type:'object', properties:{} }
-  }
+  },
+  // ── v0.3.0: SPA-friendly primitives + structured page understanding ──
+  // These map 1:1 to the extension's content.js handlers added in v0.3.0.
+  // For users still on v0.1/v0.2 of the extension the server will return
+  // unknown_command — they can re-install to pick up the new tools.
+  {
+    name:'ext_scroll',
+    description:'ページをスクロールします。下にコンテンツが追加読込されるサイト (X / LinkedIn / Notion 等) で必須。selector を指定するとその要素まで scroll。',
+    input_schema:{
+      type:'object',
+      properties:{
+        direction:{type:'string',enum:['up','down','left','right'],description:'スクロール方向 (既定: down)'},
+        amount:{type:'integer',description:'スクロール量 (px, 既定 600)'},
+        selector:{type:'string',description:'特定要素まで scroll したい場合の CSS セレクタ or 表示テキスト'},
+      },
+    },
+  },
+  {
+    name:'ext_wait_for',
+    description:'指定した要素 / テキストが表示されるまで待ちます (最大 timeout_ms 秒)。動的に出現するボタンや読込完了の確認に使う — ext_wait の "とりあえず 2 秒待つ" より確実。',
+    input_schema:{
+      type:'object',
+      properties:{
+        selector:{type:'string',description:'CSS セレクタ (推奨)'},
+        text:{type:'string',description:'or 表示されるはずのテキスト'},
+        timeout_ms:{type:'integer',description:'最大待機ミリ秒 (既定 5000, max 20000)'},
+      },
+    },
+  },
+  {
+    name:'ext_hover',
+    description:'要素にマウスホバーします。ホバーで開くドロップダウンメニュー (Gmail / Notion / SaaS 系) でクリック前に必要なケース。',
+    input_schema:{
+      type:'object',
+      properties:{ target:{type:'string',description:'CSS セレクタ or 表示テキスト'} },
+      required:['target'],
+    },
+  },
+  {
+    name:'ext_fill_form',
+    description:'複数のフォーム入力を 1 コールで一括入力します。サインアップ / 連絡先 / 設定など複数欄あるフォーム向け。selector に CSS or placeholder/aria-label 部分一致が使える。',
+    input_schema:{
+      type:'object',
+      properties:{
+        fields:{
+          type:'array',
+          description:'入力フィールド配列',
+          items:{
+            type:'object',
+            properties:{
+              selector:{type:'string',description:'CSS セレクタ or placeholder/aria-label'},
+              value:{type:'string',description:'入力する値'},
+            },
+            required:['selector','value'],
+          },
+        },
+      },
+      required:['fields'],
+    },
+  },
+  {
+    name:'ext_extract',
+    description:'CSS セレクタを使って現在のページから構造化データを抽出します。商品一覧 / レビュー / テーブル等を再パースせず取得。items に複数の「名前と selector」を指定すると、それぞれの全マッチをまとめて返す。',
+    input_schema:{
+      type:'object',
+      properties:{
+        items:{
+          type:'array',
+          description:'抽出ターゲット',
+          items:{
+            type:'object',
+            properties:{
+              name:{type:'string',description:'結果の key 名 (例: "titles")'},
+              selector:{type:'string',description:'CSS セレクタ (例: ".product-card .name")'},
+              attribute:{type:'string',description:'(任意) attribute 名 (例: "href") — 指定しなければ innerText'},
+            },
+            required:['name','selector'],
+          },
+        },
+      },
+      required:['items'],
+    },
+  },
+  {
+    name:'ext_read_markdown',
+    description:'現在のページを Markdown 形式で読み取ります (見出し・リスト・リンク・コード ブロックを保持)。長文記事・ドキュメント・ブログを正確に把握する時。最大 12,000 文字。',
+    input_schema:{ type:'object', properties:{} },
+  },
+  {
+    name:'ext_page_outline',
+    description:'ページの構造的アウトラインを取得 (見出し / フォーム / ボタン / リンク のリスト)。「次に何をすべきか」の判断に最適 — 全文を読む前に 1 コール推奨。',
+    input_schema:{ type:'object', properties:{} },
+  },
+  {
+    name:'ext_eval',
+    description:'ページ上で任意の JavaScript を実行します (async OK)。複雑な抽出や DOM 操作で他のツールが届かない時の最終手段。code は 5000 文字以下、結果は安全 JSON 化されて返ります。',
+    input_schema:{
+      type:'object',
+      properties:{ code:{type:'string',description:'実行する JS (async OK, 最後の return 値が結果)'} },
+      required:['code'],
+    },
+  },
+  {
+    name:'ext_upload_file',
+    description:'AI が生成したファイル (generate_image / generate_pdf 等の URL) を <input type="file"> にアップロード。data_url か /generated/ パスを指定。',
+    input_schema:{
+      type:'object',
+      properties:{
+        selector:{type:'string',description:'<input type="file"> の CSS セレクタ'},
+        data_url:{type:'string',description:'data:image/png;base64,... 形式 (or /generated/ パスの場合はサーバが data URL に変換)'},
+        filename:{type:'string',description:'ファイル名'},
+      },
+      required:['selector','data_url'],
+    },
+  },
 ];
 
 // ── Image generation tool (Pollinations.ai, free, no key) ────
@@ -1680,6 +1794,174 @@ function _encodeForMd(s){
     .replace(/\(/g, '%28').replace(/\)/g, '%29')
     .replace(/\!/g, '%21').replace(/\*/g, '%2A')
     .replace(/'/g,  '%27');
+}
+
+// ── Server-side public-web tools (no extension required) ────────────
+// These let the agent operate on PUBLIC sites without needing the Chrome
+// extension or even being on desktop. Anything that needs login still
+// goes through ext_* (the user's authenticated browser). Anything public
+// (news, docs, leaderboards, marketing pages) can be done server-side.
+const WEB_NATIVE_TOOLS = [
+  {
+    name:'web_screenshot',
+    description:'公開 URL のスクリーンショットを撮ります (拡張機能・ログイン不要)。AI が「このページを見たい」時の最速手段。',
+    input_schema:{
+      type:'object',
+      properties:{
+        url:{type:'string',description:'https://〜 形式の公開 URL'},
+        full_page:{type:'boolean',description:'true で全画面 / false で viewport のみ (既定 false)'},
+        viewport:{type:'string',enum:['desktop','mobile'],description:'desktop=1280×800, mobile=390×844'},
+      },
+      required:['url'],
+    },
+  },
+  {
+    name:'web_read_markdown',
+    description:'公開 URL のページを Markdown 化して読みます (拡張機能・ログイン不要)。ニュース記事・ドキュメント・ブログ・GitHub README 等を高品質で取得。',
+    input_schema:{
+      type:'object',
+      properties:{ url:{type:'string',description:'公開 URL'} },
+      required:['url'],
+    },
+  },
+  {
+    name:'web_extract',
+    description:'公開 URL から CSS セレクタで構造化データを抽出 (拡張機能・ログイン不要)。商品一覧 / リーダーボード / 検索結果のスクレイピングに。',
+    input_schema:{
+      type:'object',
+      properties:{
+        url:{type:'string',description:'公開 URL'},
+        items:{
+          type:'array',
+          description:'抽出対象。例: [{name:"titles", selector:".post h2"}, {name:"urls", selector:".post a", attribute:"href"}]',
+          items:{
+            type:'object',
+            properties:{
+              name:{type:'string'},
+              selector:{type:'string'},
+              attribute:{type:'string'},
+            },
+            required:['name','selector'],
+          },
+        },
+      },
+      required:['url','items'],
+    },
+  },
+];
+
+async function _runWebTask(url, action){
+  const { chromium } = _loadVideoDeps();
+  if(!/^https?:\/\//i.test(url)) throw new Error('url must be http(s)');
+  const browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
+  try {
+    const ctx = await browser.newContext({
+      viewport: action.viewport === 'mobile' ? { width:390, height:844 } : { width:1280, height:800 },
+      userAgent: action.viewport === 'mobile'
+        ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'
+        : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+    });
+    const page = await ctx.newPage();
+    await page.goto(url, { waitUntil:'networkidle', timeout: 25000 });
+    return await action.run(page);
+  } finally {
+    await browser.close();
+  }
+}
+
+async function executeWebScreenshotTool(input){
+  const url = String(input.url||'').trim();
+  if(!url) return { error: 'url required' };
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = 'webshot-' + id + '.png';
+  const outPath = path.join(GENERATED_DIR, filename);
+  try {
+    await _runWebTask(url, {
+      viewport: input.viewport,
+      run: async (page) => {
+        await page.screenshot({ path: outPath, fullPage: !!input.full_page, type:'png' });
+      },
+    });
+  } catch(e){
+    console.error('[web_screenshot] failed:', e.message);
+    return { error: 'screenshot_failed: ' + e.message };
+  }
+  return {
+    url: '/generated/' + filename,
+    source_url: url,
+    size_kb: Math.round(fs.statSync(outPath).size / 1024),
+    markdown: '![web screenshot](/generated/' + filename + ')',
+  };
+}
+
+async function executeWebReadMdTool(input){
+  const url = String(input.url||'').trim();
+  if(!url) return { error: 'url required' };
+  try {
+    const result = await _runWebTask(url, {
+      run: async (page) => {
+        await page.waitForTimeout(300);
+        // Server-side DOM walk that mirrors the content.js getMarkdown logic.
+        return await page.evaluate(() => {
+          const root = document.querySelector('main, article, [role="main"]') || document.body;
+          const out = [];
+          function walk(node) {
+            if (!node) return;
+            if (node.nodeType === Node.TEXT_NODE) { const t = node.textContent.replace(/\s+/g,' '); if(t.trim()) out.push(t); return; }
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            const tag = node.tagName.toLowerCase();
+            if (['script','style','noscript','svg','iframe','nav','footer'].includes(tag)) return;
+            if (/^h[1-6]$/.test(tag)) { out.push('\n\n'+'#'.repeat(+tag.slice(1))+' '+(node.innerText||'').trim()+'\n'); return; }
+            if (tag === 'p')  { out.push('\n\n'); for(const c of node.childNodes) walk(c); return; }
+            if (tag === 'br') { out.push('\n'); return; }
+            if (tag === 'li') { out.push('\n- '); for(const c of node.childNodes) walk(c); return; }
+            if (tag === 'pre'){ out.push('\n\n```\n'+(node.innerText||'')+'\n```\n'); return; }
+            if (tag === 'code'){ out.push('`'+(node.innerText||'')+'`'); return; }
+            if (tag === 'a' && node.href) { const txt = (node.innerText||'').trim(); if(txt){ out.push('['+txt+']('+node.href+')'); return; } }
+            if (tag === 'strong' || tag === 'b') { out.push('**'); for(const c of node.childNodes) walk(c); out.push('**'); return; }
+            for (const c of node.childNodes) walk(c);
+          }
+          walk(root);
+          return { title: document.title, markdown: out.join('').replace(/\n{3,}/g,'\n\n').trim().slice(0, 12000) };
+        });
+      },
+    });
+    return { source_url: url, ...result };
+  } catch(e){
+    console.error('[web_read_markdown] failed:', e.message);
+    return { error: 'read_failed: ' + e.message };
+  }
+}
+
+async function executeWebExtractTool(input){
+  const url = String(input.url||'').trim();
+  const items = Array.isArray(input.items) ? input.items : [];
+  if(!url) return { error: 'url required' };
+  if(!items.length) return { error: 'items[] required' };
+  try {
+    const data = await _runWebTask(url, {
+      run: async (page) => {
+        await page.waitForTimeout(300);
+        return await page.evaluate((items) => {
+          const out = {};
+          for (const it of items) {
+            try {
+              const nodes = document.querySelectorAll(it.selector);
+              out[it.name || it.selector] = Array.from(nodes).slice(0, 200).map(n => {
+                if (it.attribute) return n.getAttribute(it.attribute) || '';
+                return (n.innerText || n.textContent || '').trim().slice(0, 500);
+              });
+            } catch (e) { out[it.name || it.selector] = { error: 'bad_selector: ' + e.message }; }
+          }
+          return out;
+        }, items);
+      },
+    });
+    return { source_url: url, data };
+  } catch(e){
+    console.error('[web_extract] failed:', e.message);
+    return { error: 'extract_failed: ' + e.message };
+  }
 }
 
 async function executeImageTool(name, input){
@@ -8207,13 +8489,16 @@ async function handleAPI(req,res,pathname,method,ip){
     const sheetsActive = !!agent.sheets_enabled && sheetsConnected;
     const extensionPaired = !!payerUser.extension_device_token;
     const extensionActive = !!agent.extension_enabled && extensionPaired;
-    // Image / video / media-utility tools are always available — they have
-    // zero variable cost (local rendering + free public APIs).
+    // Image / video / media-utility / web-native tools are always available
+    // — they have zero variable cost (local rendering + free public APIs +
+    // local Playwright for public pages).
     const imageGenActive = true;
     const videoGenActive = true;
     const mediaUtilActive = true;
+    const webNativeActive = true;   // server-side Playwright for public sites
     const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive
-                   || imageGenActive || videoGenActive || mediaUtilActive;
+                   || imageGenActive || videoGenActive || mediaUtilActive
+                   || webNativeActive;
     // send_email auto-routes to the user's own address, but the AI doesn't
     // know what that address IS — so it sometimes asks the user for one
     // or refuses with "no recipient". Inject the email into the tool's
@@ -8238,6 +8523,7 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(imageGenActive ? IMAGE_TOOLS : []),
       ...(videoGenActive ? VIDEO_TOOLS : []),
       ...(mediaUtilActive ? _mediaTools : []),
+      ...(webNativeActive ? WEB_NATIVE_TOOLS : []),
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
@@ -8413,6 +8699,12 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeEmailTool(user, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'generate_qr'){
               result = await executeQrTool(block.input||{});
+            } else if(block.name === 'web_screenshot'){
+              result = await executeWebScreenshotTool(block.input||{});
+            } else if(block.name === 'web_read_markdown'){
+              result = await executeWebReadMdTool(block.input||{});
+            } else if(block.name === 'web_extract'){
+              result = await executeWebExtractTool(block.input||{});
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(session){

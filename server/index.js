@@ -1572,6 +1572,19 @@ const MEDIA_UTIL_TOOLS = [
       required:['text'],
     },
   },
+  {
+    name:'create_artifact',
+    description:'完全な HTML/CSS/JS で構成された 1 ページのモックサイト / ランディングページ / デモ / 計算機 / インタラクティブな図表などを生成し、チャット内で iframe としてインライン表示します。Claude.ai の Artifacts と同じ感覚。CDN 経由なら Tailwind / Alpine.js / htmx / Chart.js / Bebas Neue 等が使用可。React/Vue のビルドが必要な物は不可。html フィールドに <!doctype html> から </html> まで完全な文書を渡してください。',
+    input_schema:{
+      type:'object',
+      properties:{
+        title:{type:'string',description:'ファイル名 + 表示タイトル (a-z0-9-, 1-40 文字)'},
+        html:{type:'string',description:'完全な単一 HTML 文書 (<!doctype html>...). 自己完結であること — 外部 JS は CDN のみ参照可。'},
+        description:{type:'string',description:'(任意) 何を作ったか 1-2 行の説明'},
+      },
+      required:['title','html'],
+    },
+  },
 ];
 
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
@@ -2183,6 +2196,37 @@ async function executeEmailTool(user, agent, input){
     from_display: fromName,
     subject,
     instructions: '送信完了。次の応答で 「✉️ メールを ' + user.email + ' に送信しました (差出人: ' + fromName + ')」 と報告してください。',
+  };
+}
+
+// ── 7) create_artifact — save AI-authored HTML as a live page ────
+// Claude.ai-style "Artifacts" — the AI writes a complete self-contained
+// HTML doc, we drop it in /generated/ and hand back a URL. The chat
+// renders .html URLs as a sandboxed iframe with a control bar.
+async function executeArtifactTool(input){
+  const title = _safeName(input && input.title, 'artifact');
+  const html  = String(input && input.html || '');
+  const desc  = String(input && input.description || '').slice(0, 240);
+  if(html.length < 50)     return { error: 'html too short' };
+  if(html.length > 500000) return { error: 'html too long (max 500KB)' };
+  // Defense in depth — drop any <script> that fetches from the same origin
+  // (the artifact is served from myaiagents.agency, but iframe sandbox
+  // already cuts off same-origin access). The iframe sandbox attribute on
+  // the client side is the real guardrail.
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = 'artifact-' + title + '-' + id + '.html';
+  const outPath = path.join(GENERATED_DIR, filename);
+  try {
+    fs.writeFileSync(outPath, html, 'utf8');
+  } catch(e){
+    return { error: 'write_failed: ' + (e.message || 'unknown') };
+  }
+  const url = '/generated/' + filename;
+  return {
+    url, title, description: desc,
+    size_kb: Math.round(fs.statSync(outPath).size / 1024),
+    markdown: '![' + title + '](' + url + ')',
+    instructions: '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットが .html を sandbox iframe として再生し、ユーザーは「全画面で開く」ボタンで新タブ表示できます。',
   };
 }
 
@@ -8699,6 +8743,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeEmailTool(user, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'generate_qr'){
               result = await executeQrTool(block.input||{});
+            } else if(block.name === 'create_artifact'){
+              result = await executeArtifactTool(block.input||{});
             } else if(block.name === 'web_screenshot'){
               result = await executeWebScreenshotTool(block.input||{});
             } else if(block.name === 'web_read_markdown'){

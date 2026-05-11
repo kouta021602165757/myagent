@@ -1270,6 +1270,30 @@ input,textarea{font-family:var(--sans);}
 /* AI-generated audio (mp3/wav/ogg) — slim player aligned with chat width. */
 .m-genaudio{display:block;width:100%;max-width:480px;margin:10px 0;border-radius:99px;outline:none;}
 .m-genaudio:focus{outline:2px solid var(--peach);}
+/* AI-generated artifact (live HTML page) — Claude.ai-style inline preview. */
+.m-artifact{
+  display:block;max-width:720px;width:100%;margin:12px 0;
+  background:#fff;border:1px solid var(--wire2);border-radius:12px;overflow:hidden;
+  box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+.m-artifact-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,#1a0a00,#2a1408);color:#fdf8f3;
+  padding:8px 12px;font-size:12px;font-weight:600;
+}
+.m-artifact-ti{font-family:'SF Mono',Menlo,monospace;letter-spacing:.02em;}
+.m-artifact-acts{display:flex;gap:4px;}
+.m-artifact-btn{
+  background:rgba(255,255,255,.08);color:#fdf8f3;border:0;
+  width:26px;height:26px;border-radius:6px;
+  display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:13px;text-decoration:none;font-family:inherit;
+  transition:background .14s;
+}
+.m-artifact-btn:hover{background:rgba(251,146,60,.32);}
+.m-artifact-frame{
+  display:block;width:100%;height:500px;border:0;background:#fff;
+}
 
 .m-body{
   max-width:680px;background:#fff;border:1px solid var(--wire2);border-radius:14px;
@@ -7794,6 +7818,21 @@ function _md(src){
   // Audio — same shape but mp3/wav/ogg → <audio>.
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.(?:mp3|wav|ogg|m4a))\)/g,
     '<audio class="m-genaudio" src="$2" controls preload="metadata"></audio>');
+  // Artifacts — .html URLs in image markdown syntax render as a sandboxed
+  // iframe + control bar (open in new tab / copy URL / refresh).
+  html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
+    const safeAlt = String(alt||'').replace(/"/g,'&quot;').slice(0,80);
+    const safeSrc = String(src||'').replace(/"/g,'&quot;');
+    return '<div class="m-artifact"><div class="m-artifact-hd">'
+      + '<span class="m-artifact-ti">📄 '+safeAlt+'</span>'
+      + '<div class="m-artifact-acts">'
+      + '<button class="m-artifact-btn" onclick="this.parentElement.parentElement.nextElementSibling.contentWindow.location.reload()" title="再読込">🔄</button>'
+      + '<button class="m-artifact-btn" onclick="navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(()=>{this.textContent=\'✓\';setTimeout(()=>this.textContent=\'📋\',1200)})" title="URL コピー">📋</button>'
+      + '<a class="m-artifact-btn" href="'+safeSrc+'" target="_blank" rel="noopener" title="新タブで開く">↗</a>'
+      + '</div></div>'
+      + '<iframe class="m-artifact-frame" src="'+safeSrc+'" sandbox="allow-scripts allow-forms allow-popups allow-modals" loading="lazy" referrerpolicy="no-referrer"></iframe>'
+      + '</div>';
+  });
   // Images — MUST come before links so the leading '!' is consumed cleanly.
   // Renders the AI-generated image inline. Lazy-loaded to avoid blocking
   // long chats; click-to-expand on tap.

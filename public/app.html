@@ -6955,6 +6955,14 @@ function _startGroupPoll(agentId){
 // the optimistic in-progress messages with stale server state.
 var _groupPollPaused = false;
 
+// Signature of members' last_read_idx — used to detect "someone read my
+// messages" without needing the chat history itself to change.
+function _readSignature(members){
+  if(!Array.isArray(members)) return '';
+  return members.map(m => (m && m.user_id ? m.user_id + ':' + (Number.isInteger(m.last_read_idx) ? m.last_read_idx : 0) : '')).join('|');
+}
+var _groupPollReadSig = '';
+
 async function _groupPollTick(){
   if(!_groupPollAgentId) return;
   if(_groupPollPaused) return;
@@ -6969,16 +6977,28 @@ async function _groupPollTick(){
     const localLen = (ag.history || []).length;
     const serverLen = m.history.length;
     const newSig = _historySignature(m.history);
-    // Only apply if server has at least as many entries as local (safeguard
-    // against transient races between optimistic local push and server save).
-    if(newSig === _groupPollSig && serverLen >= localLen){
-      // Even with no chat changes, refresh sidebar unread badges for OTHER groups
-      // (a friend may have posted while user is in a different group). Light call.
+    const newReadSig = _readSignature(m.members);
+    const historyChanged = newSig !== _groupPollSig;
+    const readsChanged = newReadSig !== _groupPollReadSig;
+    // If only the read pointers moved (someone read my message — no new
+    // history), update members + re-render so 既読 counts can update.
+    if(!historyChanged && readsChanged && Array.isArray(m.members)){
+      _groupPollReadSig = newReadSig;
+      ag.members = m.members;
+      if(activeId === _groupPollAgentId) renderMsgs(ag);
+      _refreshSidebarUnread();
+      return;
+    }
+    if(!historyChanged && serverLen >= localLen){
+      // No chat changes AND no read-pointer changes — just refresh sidebar
+      // badges for OTHER groups (a friend may have posted in a different
+      // group while user is here). Light call.
       _refreshSidebarUnread();
       return;
     }
     if(serverLen < localLen) return; // local is ahead; will sync on next tick
     _groupPollSig = newSig;
+    _groupPollReadSig = newReadSig;
     ag.history = m.history;
     if(Array.isArray(m.members)) ag.members = m.members;
     if(activeId === _groupPollAgentId){

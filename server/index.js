@@ -379,6 +379,10 @@ function _safeMember(m){
     role: m.role || 'member',
     joined_at: m.joined_at || null,
     last_seen: m.last_seen || null,
+    // Read-receipt pointer: which message index this member has read up to.
+    // Required for the "既読 N" indicator next to a user's sent message to
+    // update when other members open the chat. Not PII — it's just a number.
+    last_read_idx: Number.isInteger(m.last_read_idx) ? m.last_read_idx : 0,
   };
 }
 

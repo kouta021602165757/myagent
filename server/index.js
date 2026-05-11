@@ -1348,6 +1348,98 @@ const VIDEO_TOOLS = [
   },
 ];
 
+// ── Tier-1 media + utility tools (all zero-cost) ──────────────
+//
+// generate_audio   — TTS standalone mp3 (Pollinations openai-audio)
+// generate_pdf     — Playwright page.pdf() from arbitrary HTML
+// generate_chart   — Chart.js + Playwright headless screenshot
+// generate_diagram — Mermaid via kroki.io public service
+// send_email       — Resend, restricted to the user's own email
+// generate_qr      — qrcode npm package, local
+const MEDIA_UTIL_TOOLS = [
+  {
+    name:'generate_audio',
+    description:'TTS で音声 (mp3) を単体生成。ポッドキャストクリップ、ボイスメモ、SNS 音声投稿、留守電など。英語推奨。',
+    input_schema:{
+      type:'object',
+      properties:{
+        text:{type:'string',description:'読み上げる本文 (1-800 文字, 英語推奨)'},
+        voice:{type:'string',enum:['alloy','echo','fable','onyx','nova','shimmer'],description:'voice。alloy=neutral, nova=energetic, echo=warm, fable=storyteller, onyx=deep, shimmer=bright'},
+        title:{type:'string',description:'ファイル名用の短いタイトル (a-z0-9)'},
+      },
+      required:['text'],
+    },
+  },
+  {
+    name:'generate_pdf',
+    description:'HTML から PDF を生成。請求書、提案書、レポート、ホワイトペーパー、契約書ドラフトなどに最適。完全な HTML 文書を渡すこと。@page CSS で印刷余白も指定可。',
+    input_schema:{
+      type:'object',
+      properties:{
+        html:{type:'string',description:'完全な HTML 文書 (<!doctype html>...). A4 印刷向けに余白を考慮。'},
+        title:{type:'string',description:'ファイル名 (a-z0-9)'},
+        format:{type:'string',enum:['A4','Letter','Legal','Tabloid'],description:'用紙サイズ (既定 A4)'},
+        landscape:{type:'boolean',description:'横向きにする場合は true'},
+      },
+      required:['html','title'],
+    },
+  },
+  {
+    name:'generate_chart',
+    description:'グラフ画像 (PNG) を生成。売上推移・KPI ダッシュボード・カテゴリ分布・比較表など、数字を視覚化したい時に使う。Chart.js を裏で使うので、データは Chart.js v4 の dataset 形式で渡す。',
+    input_schema:{
+      type:'object',
+      properties:{
+        type:{type:'string',enum:['bar','line','pie','doughnut','radar','polarArea'],description:'チャート種別'},
+        title:{type:'string',description:'チャートのタイトル'},
+        labels:{type:'array',items:{type:'string'},description:'X 軸ラベル (例: ["Mon","Tue","Wed"])'},
+        datasets:{type:'array',description:'Chart.js datasets 配列。例: [{label:"Signups", data:[12,19,30], backgroundColor:"#fb923c"}]',items:{type:'object'}},
+        width:{type:'integer',description:'幅 px (default 800, max 1600)'},
+        height:{type:'integer',description:'高さ px (default 500, max 1200)'},
+      },
+      required:['type','labels','datasets'],
+    },
+  },
+  {
+    name:'generate_diagram',
+    description:'Mermaid 記法から図 (フローチャート/シーケンス図/ER 図/ガント/組織図など) の PNG 画像を生成。技術仕様・ワークフロー・組織設計の可視化に。',
+    input_schema:{
+      type:'object',
+      properties:{
+        mermaid:{type:'string',description:'Mermaid ソースコード (例: "graph LR\\nA-->B\\nB-->C")'},
+        title:{type:'string',description:'ファイル名 (a-z0-9)'},
+      },
+      required:['mermaid'],
+    },
+  },
+  {
+    name:'send_email',
+    description:'ユーザー自身のメールアドレスにメールを送信します。要約・レポート・リマインダー・調査結果の自分宛通知などに使う。安全のため、宛先は **ユーザー本人のみ** で他人には送れません。',
+    input_schema:{
+      type:'object',
+      properties:{
+        subject:{type:'string',description:'件名 (1-100 文字)'},
+        html_body:{type:'string',description:'HTML 本文。inline style 推奨 (メールクライアントは外部 CSS 非対応が多い)。'},
+        text_body:{type:'string',description:'(任意) プレーンテキスト fallback'},
+      },
+      required:['subject','html_body'],
+    },
+  },
+  {
+    name:'generate_qr',
+    description:'QR コード画像を生成。招待 URL・決済リンク・イベント参加・名刺などに使う。テキストは URL でも任意の文字列でも可。',
+    input_schema:{
+      type:'object',
+      properties:{
+        text:{type:'string',description:'QR にエンコードする内容 (URL または任意文字列, 最大 1000 文字)'},
+        size:{type:'integer',description:'解像度 px (default 400, max 1024)'},
+        title:{type:'string',description:'ファイル名 (a-z0-9)'},
+      },
+      required:['text'],
+    },
+  },
+];
+
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
 let _playwrightChromium = null;
 let _ffmpegStaticPath   = null;
@@ -1527,6 +1619,17 @@ async function executeVideoTool(name, input){
   };
 }
 
+// encodeURIComponent leaves ( ) ! * ' ~ unencoded because RFC 3986 lists them
+// as "sub-delims" — fine for transport, but they break the markdown image
+// regex ![](...) which stops at the first ')'. Force-encode them so URLs
+// embedded in chat render correctly.
+function _encodeForMd(s){
+  return encodeURIComponent(s)
+    .replace(/\(/g, '%28').replace(/\)/g, '%29')
+    .replace(/\!/g, '%21').replace(/\*/g, '%2A')
+    .replace(/'/g,  '%27');
+}
+
 async function executeImageTool(name, input){
   if(name !== 'generate_image') return { error: 'unknown_image_tool: ' + name };
   const prompt = String(input && input.prompt || '').trim();
@@ -1538,16 +1641,234 @@ async function executeImageTool(name, input){
   // hydrates it from this URL — we just return the URL.
   const seed = Math.floor(Math.random() * 999999999);
   const url = 'https://image.pollinations.ai/prompt/'
-    + encodeURIComponent(prompt)
+    + _encodeForMd(prompt)
     + '?width=' + width
     + '&height=' + height
     + '&model=flux&nologo=true&safe=true&seed=' + seed;
+  // Strip parens/brackets from the alt text too so neither side of the
+  // markdown ![](...) syntax can be ambiguous to the renderer.
+  const altSafe = prompt.replace(/[\[\]()]/g, '').slice(0,120);
   return {
     url,
     prompt,
     width, height,
-    markdown: '![' + prompt.replace(/[\[\]()]/g,'').slice(0,120) + '](' + url + ')',
+    markdown: '![' + altSafe + '](' + url + ')',
     instructions: '次の最終応答で必ず上記 markdown を本文に含めてください。そうするとユーザーには画像が直接表示されます。',
+  };
+}
+
+// ── helpers shared by media utility tools ────────────────────
+function _safeName(s, fallback){
+  const x = String(s || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  return x || fallback || 'file';
+}
+
+// ── 1) generate_audio — standalone TTS mp3 ───────────────────
+async function executeAudioTool(input){
+  const text  = String(input && input.text || '').trim();
+  const voice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(input.voice) ? input.voice : 'alloy';
+  if(!text) return { error: 'text required' };
+  if(text.length > 800) return { error: 'text too long (max 800 chars)' };
+  const title = _safeName(input.title, 'audio');
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = title + '-' + id + '.mp3';
+  const outPath = path.join(GENERATED_DIR, filename);
+  try {
+    await _generateNarrationMp3(text, voice, outPath);
+  } catch(e){
+    return { error: 'tts_failed: ' + (e.message || 'unknown') };
+  }
+  const url = '/generated/' + filename;
+  return {
+    url, voice,
+    size_kb: Math.round(fs.statSync(outPath).size / 1024),
+    markdown: '![' + title + '](' + url + ')',
+    instructions: '最終応答で上記 markdown 構文を本文に含めてください。チャットが mp3 を <audio> として再生します。',
+  };
+}
+
+// ── 2) generate_pdf — HTML → PDF via Playwright ──────────────
+async function executePdfTool(input){
+  const html = String(input && input.html || '');
+  if(html.length < 50)    return { error: 'html too short' };
+  if(html.length > 200000) return { error: 'html too long (max 200KB)' };
+  const title = _safeName(input.title, 'document');
+  const format = ['A4','Letter','Legal','Tabloid'].includes(input.format) ? input.format : 'A4';
+  const landscape = !!input.landscape;
+  const { chromium } = _loadVideoDeps();
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = title + '-' + id + '.pdf';
+  const outPath = path.join(GENERATED_DIR, filename);
+  const tmpHtml = path.join(GENERATED_DIR, '.tmp-pdf-' + id + '.html');
+  fs.writeFileSync(tmpHtml, html);
+  let browser;
+  try {
+    browser = await chromium.launch();
+    const page = await browser.newPage();
+    await page.goto('file://' + tmpHtml, { waitUntil:'networkidle' });
+    await page.waitForTimeout(400);
+    await page.pdf({ path: outPath, format, landscape, printBackground: true,
+                     margin:{ top:'18mm', bottom:'18mm', left:'16mm', right:'16mm' } });
+  } catch(e){
+    return { error: 'pdf_render_failed: ' + (e.message || 'unknown') };
+  } finally {
+    if(browser) await browser.close();
+    try { fs.unlinkSync(tmpHtml); } catch(e){}
+  }
+  const url = '/generated/' + filename;
+  return {
+    url, format, landscape,
+    size_kb: Math.round(fs.statSync(outPath).size / 1024),
+    markdown: '[📄 ' + title + ' (PDF)](' + url + ')',
+    instructions: '最終応答で上記 markdown リンクを本文に含めてください。クリックで PDF が開きます。',
+  };
+}
+
+// ── 3) generate_chart — Chart.js → PNG via Playwright ────────
+async function executeChartTool(input){
+  const type = ['bar','line','pie','doughnut','radar','polarArea'].includes(input.type) ? input.type : 'bar';
+  const labels = Array.isArray(input.labels) ? input.labels.slice(0,50) : [];
+  const datasets = Array.isArray(input.datasets) ? input.datasets.slice(0,8) : [];
+  if(!labels.length || !datasets.length) return { error: 'labels and datasets required' };
+  const title = _safeName(input.title, 'chart');
+  const width  = Math.max(320, Math.min(1600, parseInt(input.width)  || 800));
+  const height = Math.max(240, Math.min(1200, parseInt(input.height) || 500));
+
+  const config = { type, data: { labels, datasets },
+    options: { responsive:false, animation:false, plugins:{ title:{ display:!!input.title, text:String(input.title||''), font:{ size:18 } } } } };
+
+  const html = '<!doctype html><html><head><meta charset="utf-8">'
+    + '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>'
+    + '<style>body{margin:0;background:#fff;font-family:-apple-system,sans-serif;}'
+    + '#wrap{width:' + width + 'px;height:' + height + 'px;padding:18px;box-sizing:border-box;}</style></head>'
+    + '<body><div id="wrap"><canvas id="c" width="' + (width-36) + '" height="' + (height-36) + '"></canvas></div>'
+    + '<script>const cfg = ' + JSON.stringify(config) + ';'
+    + 'new Chart(document.getElementById("c"), cfg);</script></body></html>';
+
+  const { chromium } = _loadVideoDeps();
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = title + '-' + id + '.png';
+  const outPath = path.join(GENERATED_DIR, filename);
+  const tmpHtml = path.join(GENERATED_DIR, '.tmp-chart-' + id + '.html');
+  fs.writeFileSync(tmpHtml, html);
+  let browser;
+  try {
+    browser = await chromium.launch();
+    const context = await browser.newContext({ viewport:{ width, height }, deviceScaleFactor:2 });
+    const page = await context.newPage();
+    await page.goto('file://' + tmpHtml, { waitUntil:'networkidle' });
+    await page.waitForTimeout(500); // let Chart.js render
+    await page.screenshot({ path: outPath, type:'png', omitBackground:false });
+  } catch(e){
+    return { error: 'chart_render_failed: ' + (e.message || 'unknown') };
+  } finally {
+    if(browser) await browser.close();
+    try { fs.unlinkSync(tmpHtml); } catch(e){}
+  }
+  const url = '/generated/' + filename;
+  return {
+    url, type, width, height,
+    markdown: '![' + title + '](' + url + ')',
+    instructions: '最終応答で上記 markdown 画像構文を本文に含めてください。',
+  };
+}
+
+// ── 4) generate_diagram — Mermaid via kroki.io (free public) ─
+async function executeDiagramTool(input){
+  const src = String(input && input.mermaid || '').trim();
+  if(!src) return { error: 'mermaid source required' };
+  if(src.length > 20000) return { error: 'mermaid too long (max 20KB)' };
+  const title = _safeName(input.title, 'diagram');
+
+  // kroki accepts POST body. We always go to PNG so the result drops cleanly
+  // into the existing markdown image renderer.
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = title + '-' + id + '.png';
+  const outPath = path.join(GENERATED_DIR, filename);
+  try {
+    await new Promise((resolve, reject) => {
+      const body = Buffer.from(src, 'utf8');
+      const req = https.request({
+        hostname:'kroki.io', path:'/mermaid/png', method:'POST',
+        timeout: 25000,
+        headers:{ 'Content-Type':'text/plain', 'Content-Length':body.length, 'Accept':'image/png' },
+      }, (res) => {
+        if(res.statusCode !== 200) return reject(new Error('Kroki HTTP ' + res.statusCode));
+        const chunks = [];
+        res.on('data', c => chunks.push(c));
+        res.on('end', () => {
+          const buf = Buffer.concat(chunks);
+          if(buf.length < 200) return reject(new Error('kroki returned empty PNG'));
+          fs.writeFileSync(outPath, buf);
+          resolve();
+        });
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('kroki timeout')); });
+      req.write(body); req.end();
+    });
+  } catch(e){
+    return { error: 'diagram_render_failed: ' + (e.message || 'unknown') };
+  }
+  const url = '/generated/' + filename;
+  return {
+    url,
+    size_kb: Math.round(fs.statSync(outPath).size / 1024),
+    markdown: '![' + title + '](' + url + ')',
+    instructions: '最終応答で上記 markdown 画像構文を本文に含めてください。',
+  };
+}
+
+// ── 5) send_email — Resend, restricted to user's own address ─
+async function executeEmailTool(user, input){
+  if(!user || !user.email) return { error: 'no user email on file' };
+  const subject = String(input && input.subject || '').slice(0, 100).trim();
+  const htmlBody = String(input && input.html_body || '');
+  if(!subject)  return { error: 'subject required' };
+  if(htmlBody.length < 10)    return { error: 'html_body too short' };
+  if(htmlBody.length > 200000) return { error: 'html_body too long (max 200KB)' };
+  // Restricted: only to the user's own address. Prevents the agent from
+  // spraying mails on the user's behalf without explicit consent.
+  try {
+    await sendEmail(user.email, subject, htmlBody);
+  } catch(e){
+    return { error: 'email_send_failed: ' + (e.message || 'unknown') };
+  }
+  return {
+    ok: true,
+    sent_to: user.email,
+    subject,
+    instructions: '送信完了。次の応答で 「✉️ メールを ' + user.email + ' に送信しました」 と報告してください。',
+  };
+}
+
+// ── 6) generate_qr — qrcode npm, fully local ─────────────────
+async function executeQrTool(input){
+  const text = String(input && input.text || '').trim();
+  if(!text) return { error: 'text required' };
+  if(text.length > 1000) return { error: 'text too long (max 1000 chars)' };
+  const size = Math.max(128, Math.min(1024, parseInt(input.size) || 400));
+  const title = _safeName(input.title, 'qr');
+  let QRCode;
+  try { QRCode = require('qrcode'); }
+  catch(e){ return { error: 'qrcode package missing — run: npm install qrcode' }; }
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = title + '-' + id + '.png';
+  const outPath = path.join(GENERATED_DIR, filename);
+  try {
+    await QRCode.toFile(outPath, text, {
+      width: size, margin: 2,
+      color: { dark:'#1a0a00', light:'#ffffff' }, // MY AI Agent brand
+      errorCorrectionLevel: 'M',
+    });
+  } catch(e){
+    return { error: 'qr_failed: ' + (e.message || 'unknown') };
+  }
+  const url = '/generated/' + filename;
+  return {
+    url, size, text_preview: text.slice(0, 80),
+    markdown: '![' + title + '](' + url + ')',
+    instructions: '最終応答で上記 markdown 画像構文を本文に含めてください。',
   };
 }
 
@@ -7697,11 +8018,13 @@ async function handleAPI(req,res,pathname,method,ip){
     const sheetsActive = !!agent.sheets_enabled && sheetsConnected;
     const extensionPaired = !!payerUser.extension_device_token;
     const extensionActive = !!agent.extension_enabled && extensionPaired;
-    // Image + video generation are always available — no external API cost,
-    // so every agent can produce visuals on demand.
+    // Image / video / media-utility tools are always available — they have
+    // zero variable cost (local rendering + free public APIs).
     const imageGenActive = true;
     const videoGenActive = true;
-    const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive || imageGenActive || videoGenActive;
+    const mediaUtilActive = true;
+    const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive
+                   || imageGenActive || videoGenActive || mediaUtilActive;
     const tools = [
       // chrome_enabled now means "give the agent web access" — fulfilled
       // by Anthropic-hosted web_search / web_fetch (works on Render free).
@@ -7710,6 +8033,7 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(extensionActive ? EXTENSION_TOOLS : []),
       ...(imageGenActive ? IMAGE_TOOLS : []),
       ...(videoGenActive ? VIDEO_TOOLS : []),
+      ...(mediaUtilActive ? MEDIA_UTIL_TOOLS : []),
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
@@ -7873,6 +8197,18 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeImageTool(block.name, block.input||{});
             } else if(block.name === 'generate_video'){
               result = await executeVideoTool(block.name, block.input||{});
+            } else if(block.name === 'generate_audio'){
+              result = await executeAudioTool(block.input||{});
+            } else if(block.name === 'generate_pdf'){
+              result = await executePdfTool(block.input||{});
+            } else if(block.name === 'generate_chart'){
+              result = await executeChartTool(block.input||{});
+            } else if(block.name === 'generate_diagram'){
+              result = await executeDiagramTool(block.input||{});
+            } else if(block.name === 'send_email'){
+              result = await executeEmailTool(user, block.input||{});
+            } else if(block.name === 'generate_qr'){
+              result = await executeQrTool(block.input||{});
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(session){

@@ -23,6 +23,7 @@
         "nodemailer": "^6.9.16",
         "pg": "^8.13.1",
         "playwright": "^1.49.0",
+        "qrcode": "^1.5.4",
         "stripe": "^17.7.0"
     },
     "license": "MIT"

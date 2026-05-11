@@ -3810,7 +3810,14 @@ function svgToPng(svg, opts){
 function renderListingOgSvg(d, twemojiUri){
   const av = d.agent?.avatar || '🤖';
   const title = _trunc(d.title||'', 30);
-  const tagLines = _wrapText(d.description||'', 26, 2);
+  // Filter AI system prompts out of the OG description — they read like
+  // "You are operating as a fully autonomous..." which is internal copy.
+  const rawDesc = (d.description||'').trim();
+  const looksLikeSystemPrompt = /^(you are|you operate|you act|act as|operate as|あなたは|あなたが|お前は)/i.test(rawDesc.slice(0,40));
+  const cleanDesc = looksLikeSystemPrompt
+    ? ((d.agent?.skills||[]).slice(0,3).join(' · ') || 'AI agent on MY AI AGENT')
+    : rawDesc;
+  const tagLines = _wrapText(cleanDesc, 26, 2);
   const cat = _xmlEscape(d.category_label||'');
   const handle = _xmlEscape(d.creator?.handle||'');
   const ratingNum = d.rating>0 ? d.rating.toFixed(1) : '';
@@ -3917,14 +3924,23 @@ function renderListingOgSvg(d, twemojiUri){
 function renderTeamOgSvg(team, members, avatarMap){
   members = Array.isArray(members) ? members.slice(0, 6) : [];
   const teamName = _trunc(team.name || 'Agent Team', 24);
-  const goal = team.team_goal || team.persona || '';
+  // Pull the headline source. If team_goal isn't set, persona can be used —
+  // BUT only when it reads like user-facing copy. AI system prompts ("You are
+  // operating as...", "あなたは XX として動作します") must NOT leak into the
+  // OG headline.
+  const rawGoal = (team.team_goal || '').trim();
+  const rawPersona = (team.persona || '').trim();
+  const looksLikeSystemPrompt = (s) => !s || /^(you are|you operate|you act|act as|operate as|あなたは|あなたが|お前は)/i.test(s.trim().slice(0,40));
+  const goal = !looksLikeSystemPrompt(rawGoal)
+    ? rawGoal
+    : (!looksLikeSystemPrompt(rawPersona) ? rawPersona : '');
   const goalLines = _wrapText(goal, 30, 2);
   const cover = team.avatar || '🎯';
   const memberCount = (Array.isArray(team.team_member_agent_ids) ? team.team_member_agent_ids.length : members.length) || 0;
   // Lang-aware copy. Prefer the team's stored lang; fall back to detecting
   // CJK characters in the team name / goal so legacy teams without `lang` set
   // still render correctly.
-  const isJa = team.lang === 'ja' || (team.lang !== 'en' && /[ぁ-んァ-ヶー一-龠]/.test((team.name||'') + ' ' + (goal||'')));
+  const isJa = team.lang === 'ja' || (team.lang !== 'en' && /[ぁ-んァ-ヶー一-龠]/.test((team.name||'') + ' ' + (rawGoal||rawPersona||'')));
   const tHeadlineFallback1 = isJa ? `${memberCount} 体の AI が`           : `${memberCount} AI agents`;
   const tHeadlineFallback2 = isJa ? '業務を回す。'                         : 'run the workflow.';
   const tHandoff           = isJa ? '1 クリックでクローン → 自分のアカウントで起動。'
@@ -4613,9 +4629,20 @@ async function serveAgentSharePage(res, shareId){
       ? 'MY AI AGENT で作られたカスタム AI エージェント。'
       : 'A custom AI agent on MY AI AGENT.';
     const fallbackBrandDesc = 'Build your own AI agent team. Templates, group chat, Agent Store. Free to start.';
-    const descSrc = isTeam ? (ag.team_goal || ag.persona || fallbackTeamDesc)
-                  : hasAgent ? (ag.persona || fallbackAgentDesc)
-                  : fallbackBrandDesc;
+    // Filter AI system prompts out of og:description — they're internal copy.
+    const _isSysPrompt = (s) => !!s && /^(you are|you operate|you act|act as|operate as|あなたは|あなたが|お前は)/i.test(String(s).trim().slice(0,40));
+    const _pickDesc = (...candidates) => {
+      for(const c of candidates){
+        const t = (c||'').trim();
+        if(t && !_isSysPrompt(t)) return t;
+      }
+      return '';
+    };
+    const descSrc = isTeam
+      ? (_pickDesc(ag.team_goal, ag.persona) || fallbackTeamDesc)
+      : hasAgent
+      ? (_pickDesc(ag.persona) || fallbackAgentDesc)
+      : fallbackBrandDesc;
     const descH  = escHtml(_trunc(descSrc, 160));
     const pageUrl = APP_URL + '/a/' + shareId;
     // Per-agent dynamic OG. The endpoint renders a 1200x630 card with the

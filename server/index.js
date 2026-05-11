@@ -10583,55 +10583,41 @@ async function handleAPI(req,res,pathname,method,ip){
       let session = null;
       const sheetsToolNames = new Set(SHEETS_TOOLS.map(t=>t.name));
       // ── Intent-routed forced tool_choice ─────────────────────
-      // When the user's message is unambiguously "build/make/send X", we
-      // force the model to call the matching tool on the FIRST iteration.
-      // This breaks out of the "作ります! → 完成したら送ります!" stall loop
-      // where prompt instructions alone weren't sufficient. After iteration 1
-      // (where the tool fires), we drop tool_choice so the model can chat /
-      // call more tools as needed.
+      // When the user UNAMBIGUOUSLY asks for a specific deliverable, force
+      // the matching tool on the FIRST iteration. Past iterations of this
+      // logic over-fired on "完成させた？" / followups → forced a random tool
+      // and the API errored. Now we require BOTH (a) a clear build verb
+      // AND (b) a specific deliverable noun in the SAME message. Pure
+      // questions ("完成した？") and bare verbs ("作って" with no noun) fall
+      // back to the system prompt rules, which are also strengthened.
       const _firstToolChoice = (() => {
-        const m = (message||'').toLowerCase();
-        const isMakeIntent = /(作って|作成|作る|作ります|出して|出す|用意|生成|描いて|デザイン|完成|見せて|送って|送信|投稿|make|create|build|generate|send|show me|draw|design)/i.test(message||'');
-        if(!isMakeIntent) return null;
-        // Route by the type of deliverable mentioned
-        if(/(画像|イラスト|アイコン|ロゴ|illustration|icon|logo|picture|image)/i.test(message)) {
-          return { type:'tool', name:'generate_image' };
-        }
-        if(/(動画|プロモ.*ビデオ|プロモ.*動画|movie|video.*clip)/i.test(message) && !/エージェント|agent.*promo/i.test(message)) {
-          return { type:'tool', name:'generate_video' };
-        }
-        if(/(音声|ボイス|読み上げ|tts|audio|voice|speech)/i.test(message)) {
-          return { type:'tool', name:'generate_audio' };
-        }
-        if(/(pdf|請求書|提案書|レポート|invoice|report.*pdf)/i.test(m)) {
-          return { type:'tool', name:'generate_pdf' };
-        }
-        if(/(グラフ|chart|棒グラフ|折れ線|円グラフ|barchart|piechart)/i.test(message)) {
-          return { type:'tool', name:'generate_chart' };
-        }
-        if(/(qrコード|qr code|qr)/i.test(m)) {
-          return { type:'tool', name:'generate_qr' };
-        }
-        if(/(メール.*送|email|send.*mail)/i.test(message)) {
-          return { type:'tool', name:'send_email' };
-        }
-        if(/(slack.*(投稿|送|post)|post.*slack|slack.*に)/i.test(m)) {
-          return { type:'tool', name:'notify_slack' };
-        }
-        if(/(discord.*(投稿|送|post)|post.*discord)/i.test(m)) {
-          return { type:'tool', name:'notify_discord' };
-        }
-        if(/(予定|スケジュール.*登録|カレンダー.*登録|meeting|appointment|calendar.*event)/i.test(message)) {
-          return { type:'tool', name:'create_calendar_event' };
-        }
-        // Default for unspecified build requests = create_artifact (LP / mock /
-        // dashboard / page / app / calculator / UI etc.)
-        if(/(サイト|lp|モック|ダッシュ|ダッシュボード|ページ|アプリ|計算機|ui|画面|webサイト|landing|landing.*page|mockup|dashboard|page|app|calculator)/i.test(m)) {
+        const raw = (message||'').trim();
+        const m = raw.toLowerCase();
+        // Skip pure questions / followups — no forcing.
+        const isQuestion = /[?？]\s*$|です(か|の|ね)[?？]?\s*$|した[?？]\s*$|ますか[?？]?\s*$|でしょうか[?？]?\s*$|did you|are you|どこ|なに|何|いつ|なぜ|どう|how|why|when|where|what/i.test(raw);
+        if(isQuestion) return null;
+        // Require a clear "make/build/send/show" verb.
+        const hasBuildVerb = /(作って|作成して|作りたい|出して|用意して|生成して|描いて|デザインして|送って|送信して|投稿して|見せて|表示して|make|create|build|generate|send (?:me|this|it)?|show me|draw|design)/i.test(raw);
+        if(!hasBuildVerb) return null;
+        // Route ONLY when a specific deliverable noun is present.
+        if(/(画像|イラスト|アイコン|ロゴ|illustration|icon|logo|picture|image)/i.test(raw)) return { type:'tool', name:'generate_image' };
+        if(/(動画|movie|video)/i.test(raw) && !/エージェント|agent.*promo|プロモ/i.test(raw)) return { type:'tool', name:'generate_video' };
+        if(/(音声|ボイス|読み上げ|tts|audio|voice|speech)/i.test(raw)) return { type:'tool', name:'generate_audio' };
+        if(/(pdf|請求書|提案書|invoice)/i.test(m)) return { type:'tool', name:'generate_pdf' };
+        if(/(グラフ|chart|棒グラフ|折れ線|円グラフ|barchart|piechart)/i.test(raw)) return { type:'tool', name:'generate_chart' };
+        if(/(qrコード|qr code|qr)/i.test(m)) return { type:'tool', name:'generate_qr' };
+        if(/(メール.*(送|送信)|send.*mail|email.*me|email.*to)/i.test(raw)) return { type:'tool', name:'send_email' };
+        if(/(slack.*(投稿|送|post)|post.*slack|slack.*に)/i.test(m)) return { type:'tool', name:'notify_slack' };
+        if(/(discord.*(投稿|送|post)|post.*discord)/i.test(m)) return { type:'tool', name:'notify_discord' };
+        if(/(予定.*登録|スケジュール.*登録|カレンダー.*登録|meeting|appointment|calendar.*event)/i.test(raw)) return { type:'tool', name:'create_calendar_event' };
+        // create_artifact: LP / mockup / dashboard / page / app etc.
+        if(/(サイト|lp|モック|ダッシュ|ダッシュボード|ページ|アプリ|計算機|ui|画面|webサイト|ホームページ|landing|mockup|dashboard|page|app|calculator|prototype|landing.*page)/i.test(m)) {
           return { type:'tool', name:'create_artifact' };
         }
-        // Generic "build me something" with no clear noun: still force tool
-        // selection so the model can't stall, but let it choose which tool.
-        return { type:'any' };
+        // No specific noun → DON'T force. The system prompt's stall-nudge
+        // handles "作って" with vague target by making the model ask one
+        // clarifying question or pick the best fit on its own.
+        return null;
       })();
       try{
         // Lazy-create the browser session only when Chrome tools are actually wired in.

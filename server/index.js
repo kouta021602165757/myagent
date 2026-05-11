@@ -6736,6 +6736,19 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res,500,{ error: e.message });
     }
   }
+  // POST /api/admin/marketing/send-strategy → email the comprehensive 7-day
+  // strategy doc (public/strategy-1000.html) to the requesting admin's address
+  if(pathname==='/api/admin/marketing/send-strategy' && method==='POST'){
+    if(!user.is_admin) return jres(res,403,{error:'管理者権限が必要です'});
+    try {
+      const strategyPath = path.join(PUBLIC_DIR, 'strategy-1000.html');
+      const strategyHtml = fs.readFileSync(strategyPath, 'utf8');
+      await sendEmail(user.email, '🚀 7日間で 1,000 ユーザー獲得戦略 — MY AI Agent', strategyHtml);
+      return jres(res,200,{ok:true, to: user.email});
+    } catch(e){
+      return jres(res,500,{error: e.message});
+    }
+  }
 
   // ── GET /api/admin/reports ─────────────────────────────────
   // Admins only — surfaces every listing with reports

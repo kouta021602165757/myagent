@@ -144,6 +144,7 @@
   <div class="actions">
     <button class="btn btn-primary" id="btnGen">▶ 今日の投稿を再生成</button>
     <button class="btn btn-ghost" id="btnReport">📧 今すぐレポートを送信</button>
+    <button class="btn btn-ghost" id="btnStrategy">📨 7日戦略書をメール送信</button>
     <button class="btn btn-ghost" id="btnRefresh">↻ 再読込</button>
   </div>
 
@@ -270,6 +271,20 @@ document.getElementById('btnReport').onclick = async () => {
     document.getElementById('err').style.display = '';
     document.getElementById('err').textContent = e.message;
     btn.disabled = false; btn.textContent = '📧 今すぐレポートを送信';
+  }
+};
+
+document.getElementById('btnStrategy').onclick = async () => {
+  const btn = document.getElementById('btnStrategy');
+  btn.disabled = true; btn.textContent = '送信中…';
+  try {
+    const r = await api('POST', '/api/admin/marketing/send-strategy');
+    btn.textContent = '✓ 送信完了 → ' + r.to;
+    setTimeout(() => { btn.textContent = '📨 7日戦略書をメール送信'; btn.disabled = false; }, 3000);
+  } catch(e){
+    document.getElementById('err').style.display = '';
+    document.getElementById('err').textContent = e.message;
+    btn.disabled = false; btn.textContent = '📨 7日戦略書をメール送信';
   }
 };
 

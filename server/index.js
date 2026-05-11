@@ -1585,6 +1585,42 @@ const MEDIA_UTIL_TOOLS = [
       required:['title','html'],
     },
   },
+  {
+    name:'generate_agent_promo_video',
+    description:'今チャットしている AI エージェント自身の縦長 (9:16) 9 秒プロモ動画を生成します。ユーザーが SNS でこの AI をシェアしたい時に呼ぶ。引数は不要 — agent.name / persona / skills / avatar を自動で使う。TikTok / Reels / YouTube Shorts 向け。',
+    input_schema:{
+      type:'object',
+      properties:{
+        // No required inputs — the agent template uses the active agent's
+        // own metadata. Accept an optional `tagline` override for spice.
+        tagline:{type:'string',description:'(任意) ペルソナの代わりに使う 1-2 行のキャッチコピー'},
+      },
+    },
+  },
+  {
+    name:'notify_slack',
+    description:'ユーザーが設定済みの Slack Incoming Webhook へメッセージを投稿します。リマインダー・売上アラート・新規ユーザー通知・スケジュールの結果など、Slack で受け取りたい内容に使う。事前に Settings で Slack Webhook URL を保存している必要があります。',
+    input_schema:{
+      type:'object',
+      properties:{
+        text:{type:'string',description:'Slack に投稿する本文 (1-3500 文字, Slack mrkdwn 可)'},
+        username:{type:'string',description:'(任意) 投稿者名の上書き'},
+      },
+      required:['text'],
+    },
+  },
+  {
+    name:'notify_discord',
+    description:'ユーザーが設定済みの Discord Webhook へメッセージを投稿します。事前に Settings で Discord Webhook URL を保存している必要があります。',
+    input_schema:{
+      type:'object',
+      properties:{
+        text:{type:'string',description:'Discord に投稿する本文 (1-1900 文字, Discord markdown 可)'},
+        username:{type:'string',description:'(任意) 投稿者名の上書き'},
+      },
+      required:['text'],
+    },
+  },
 ];
 
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
@@ -1760,6 +1796,66 @@ async function _recordHtmlToMp4(html, outPath, durationSec, aspect, narration, v
   });
   try { fs.unlinkSync(webmPath); } catch(e){}
   if(ttsPath){ try { fs.unlinkSync(ttsPath); } catch(e){} }
+}
+
+async function executeAgentPromoVideo(agent){
+  if(!agent) return { error: 'no_agent_context' };
+  const name = String(agent.name || 'AI').slice(0, 40);
+  const avatar = String(agent.avatar || '🤖').slice(0, 6);
+  const persona = String(agent.persona || '').slice(0, 140) || 'Your personal AI on MY AI AGENT.';
+  const skills = (Array.isArray(agent.skills) ? agent.skills : []).slice(0,4);
+  const safeTitle = name.toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,30) || 'agent';
+  const skillsHtml = skills.length
+    ? skills.map(s => `<span class="sk">${_xmlEscape(s)}</span>`).join('')
+    : '<span class="sk">Talk to me</span>';
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Promo</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;}
+  html,body{width:100%;height:100%;background:#1a0a00;color:#fff8f0;overflow:hidden;}
+  .stage{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;background:linear-gradient(180deg,#1a0a00,#3d1a0a 60%,#1a0a00);position:relative;}
+  .stage::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(251,146,60,.22),transparent 50%),radial-gradient(circle at 70% 80%,rgba(234,88,12,.18),transparent 60%);}
+  .av{width:200px;height:200px;border-radius:48px;background:linear-gradient(135deg,#fb923c,#ea580c);display:flex;align-items:center;justify-content:center;font-size:104px;font-weight:800;box-shadow:0 30px 90px rgba(251,146,60,.45);position:relative;z-index:1;animation:av-in 1.5s cubic-bezier(.18,.89,.32,1.28) both;}
+  @keyframes av-in{0%{transform:scale(.5) rotate(-12deg);opacity:0}80%{transform:scale(1.05) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+  .nm{font-size:64px;font-weight:900;margin:32px 0 14px;letter-spacing:-.03em;text-align:center;position:relative;z-index:1;animation:slide-up 1.2s .35s cubic-bezier(.16,.84,.44,1) both;}
+  .pe{font-size:24px;color:#ffd7b0;line-height:1.4;max-width:680px;text-align:center;font-weight:600;position:relative;z-index:1;animation:slide-up 1.2s .55s cubic-bezier(.16,.84,.44,1) both;}
+  .skills{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:24px;position:relative;z-index:1;animation:slide-up 1.2s .8s cubic-bezier(.16,.84,.44,1) both;}
+  .sk{background:rgba(251,146,60,.15);border:2px solid rgba(251,146,60,.4);color:#fb923c;padding:10px 18px;border-radius:999px;font-weight:800;font-size:16px;letter-spacing:.02em;}
+  .badge{position:absolute;top:50px;left:0;right:0;text-align:center;font-size:14px;color:#ea580c;font-weight:900;letter-spacing:.4em;animation:fade-in 1s 1.2s both;}
+  .ctab{position:absolute;bottom:60px;left:0;right:0;text-align:center;font-size:18px;color:rgba(255,248,240,.7);animation:slide-up 1.2s 1.5s cubic-bezier(.16,.84,.44,1) both;}
+  .ctab b{color:#fb923c;font-weight:900;}
+  @keyframes slide-up{0%{transform:translateY(40px);opacity:0}100%{transform:translateY(0);opacity:1}}
+  @keyframes fade-in{0%{opacity:0}100%{opacity:1}}
+</style>
+</head><body>
+<div class="stage">
+  <div class="badge">MY AI AGENT</div>
+  <div class="av">${avatar}</div>
+  <div class="nm">${_xmlEscape(name)}</div>
+  <div class="pe">${_xmlEscape(persona)}</div>
+  <div class="skills">${skillsHtml}</div>
+  <div class="ctab">Try <b>${_xmlEscape(name)}</b> for free → myaiagents.agency</div>
+</div>
+</body></html>`;
+  const id = crypto.randomBytes(5).toString('hex');
+  const filename = 'promo-' + safeTitle + '-' + id + '.mp4';
+  const outPath = path.join(GENERATED_DIR, filename);
+  const narration = `Meet ${name}. ${persona.slice(0,100)}. Available now on MY AI AGENT.`;
+  try {
+    await _recordHtmlToMp4(html, outPath, 9, 'portrait', narration, 'nova');
+  } catch(e){
+    console.error('[promo_video] failed:', e.message);
+    return { error: 'render_failed: ' + (e.message||'unknown') };
+  }
+  const sizeKb = Math.round(fs.statSync(outPath).size / 1024);
+  const url = '/generated/' + filename;
+  return {
+    url,
+    aspect: 'portrait',
+    duration_seconds: 9,
+    size_kb: sizeKb,
+    markdown: '![' + safeTitle + '-promo](' + url + ')',
+    instructions: '生成した縦長プロモ動画。最終応答に上記 markdown を含めてユーザーが SNS に投稿しやすいよう促してください (例: 「TikTok / Reels / YouTube Shorts にどうぞ」)。',
+  };
 }
 
 async function executeVideoTool(name, input){
@@ -2260,6 +2356,50 @@ async function executeQrTool(input){
   };
 }
 
+// ── Slack / Discord notify (via user-supplied incoming webhooks) ──
+async function executeNotifyTool(kind, user, input){
+  const text = String(input && input.text || '').trim();
+  if(!text) return { error: 'text required' };
+  const url = (user && user.outgoing_webhooks && user.outgoing_webhooks[kind]) || '';
+  if(!url){
+    return { error: kind + '_not_configured', detail: 'Settings → Integrations で ' + kind + ' webhook URL を保存してください。' };
+  }
+  // Sanity-check the URL shape so we don't proxy arbitrary requests.
+  const allowedHost = (kind === 'slack') ? /^https:\/\/hooks\.slack\.com\// : /^https:\/\/(?:discord(?:app)?\.com)\/api\/webhooks\//;
+  if(!allowedHost.test(url)){
+    return { error: 'invalid_webhook_url', detail: kind + ' webhook URL の形式が想定外です。' };
+  }
+  const maxLen = kind === 'slack' ? 3500 : 1900;
+  const body = kind === 'slack'
+    ? JSON.stringify({ text: text.slice(0, maxLen), username: input.username || undefined })
+    : JSON.stringify({ content: text.slice(0, maxLen), username: input.username || undefined });
+  return new Promise((resolve) => {
+    try {
+      const u = new URL(url);
+      const opts = {
+        method: 'POST',
+        hostname: u.hostname,
+        path: u.pathname + (u.search || ''),
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      };
+      const r = https.request(opts, (rs) => {
+        let chunks = '';
+        rs.on('data', d => { if(chunks.length < 1000) chunks += d.toString(); });
+        rs.on('end', () => {
+          if(rs.statusCode && rs.statusCode < 300){
+            resolve({ ok:true, status: rs.statusCode, kind, length: text.length });
+          } else {
+            resolve({ error: kind+'_http_'+rs.statusCode, detail: chunks.slice(0, 200) });
+          }
+        });
+      });
+      r.on('error', e => resolve({ error: 'request_failed', detail: e.message }));
+      r.setTimeout(8000, () => { r.destroy(new Error('timeout')); });
+      r.write(body); r.end();
+    } catch(e){ resolve({ error: 'request_failed', detail: e.message }); }
+  });
+}
+
 // ── Browser-extension live connection registry ───────────────
 // In-memory only (single-server deployment). Map from device_token → { res, ... }.
 // On multi-instance deploys, swap to Redis pub/sub.
@@ -2380,6 +2520,23 @@ async function executeExtensionTool(user, name, input){
 
 // ── Google Sheets API tools (require user.google_oauth set) ──
 const SHEETS_TOOLS = [
+  {
+    name:'create_calendar_event',
+    description:'Google カレンダーに予定を作成します。スケジューリング・会議調整・期限の登録などに使う。タイムゾーン込みの ISO 8601 (例: 2026-05-15T09:00:00+09:00) で start/end を指定。attendees を渡すと招待メールも送られる。事前に Google を連携している必要がある。',
+    input_schema:{
+      type:'object',
+      properties:{
+        summary:{type:'string',description:'予定タイトル (例: "ABC 社との打ち合わせ")'},
+        start:{type:'string',description:'開始時刻 ISO 8601 (例: 2026-05-15T09:00:00+09:00)'},
+        end:{type:'string',description:'終了時刻 ISO 8601 (例: 2026-05-15T10:00:00+09:00)'},
+        description:{type:'string',description:'(任意) 詳細 / アジェンダ。改行可。'},
+        location:{type:'string',description:'(任意) 場所 (会議室名 / Zoom URL / 住所)'},
+        attendees:{type:'array',items:{type:'string'},description:'(任意) 参加者のメールアドレス配列'},
+        calendar_id:{type:'string',description:"(任意) 対象カレンダー ID (省略時 'primary')"},
+      },
+      required:['summary','start','end'],
+    },
+  },
   {
     name:'sheets_read',
     description:'指定した Google スプレッドシートからセル値を読みます。range は A1 形式 (例: "シート1!A1:C20")。Spreadsheet ID は URL の /d/ と /edit の間 (例: "1Wq8xv...nMpX...")。',
@@ -2546,8 +2703,58 @@ function _hexToRgbFloat(hex){
   return { red:r, green:g, blue:b };
 }
 
+async function executeCalendarTool(user, input){
+  try {
+    if(!user.google_oauth || !user.google_oauth.refresh_token){
+      return { error: 'google_not_connected', detail: '設定 → Integrations → Google を再連携してください。' };
+    }
+    const access = await getValidGoogleAccessToken(user);
+    const calId = encodeURIComponent(input.calendar_id || 'primary');
+    const body = {
+      summary: String(input.summary||'').slice(0,200),
+      description: input.description ? String(input.description).slice(0,4000) : undefined,
+      location: input.location ? String(input.location).slice(0,200) : undefined,
+      start: { dateTime: String(input.start||'') },
+      end:   { dateTime: String(input.end||'')   },
+      attendees: Array.isArray(input.attendees)
+        ? input.attendees.slice(0,30).map(e => ({ email: String(e||'').slice(0,100) })).filter(a => /@/.test(a.email))
+        : undefined,
+    };
+    if(!body.summary || !body.start.dateTime || !body.end.dateTime){
+      return { error: 'missing_required_fields', detail: 'summary, start, end は必須' };
+    }
+    const sendUpdates = (body.attendees && body.attendees.length) ? '?sendUpdates=all' : '';
+    const r = await httpsReq(
+      'POST', 'www.googleapis.com',
+      `/calendar/v3/calendars/${calId}/events${sendUpdates}`,
+      { 'Content-Type':'application/json', 'Authorization':'Bearer '+access },
+      body
+    );
+    if(r.s===403 && /insufficient/i.test(JSON.stringify(r.d||''))){
+      return { error:'insufficient_scope', detail:'Google を再連携してカレンダー権限を付与してください。' };
+    }
+    if(r.s>=400) return { error:'calendar_'+r.s, detail: JSON.stringify(r.d).slice(0,300) };
+    return {
+      ok: true,
+      event_id: r.d.id,
+      html_link: r.d.htmlLink,
+      summary: r.d.summary,
+      start: r.d.start && r.d.start.dateTime,
+      end:   r.d.end   && r.d.end.dateTime,
+      attendees: (r.d.attendees||[]).map(a => a.email),
+    };
+  } catch(e){
+    return { error: 'calendar_failed', detail: (e && e.message || '').slice(0,200) };
+  }
+}
+
 async function executeSheetsTool(user, name, input){
   try{
+    // create_calendar_event is bundled into SHEETS_TOOLS so it ships with the
+    // same Google connection; dispatch it before the spreadsheet_id check.
+    if(name === 'create_calendar_event'){
+      return await executeCalendarTool(user, input);
+    }
     const id  = input.spreadsheet_id || '';
     const rng = encodeURIComponent(input.range || '');
     // sheets_create_spreadsheet doesn't need spreadsheet_id; check inside that branch.
@@ -2772,7 +2979,11 @@ async function googleUserInfo(accessToken){
 }
 
 // ── Google Sheets API connection (separate OAuth scope) ──────
-const SHEETS_SCOPE = 'openid email profile https://www.googleapis.com/auth/spreadsheets';
+// Single Google OAuth flow now covers Sheets *and* Calendar — adding the
+// calendar.events scope here means new connections automatically gain calendar
+// access. Existing users who paired before this change will see the calendar
+// tools return "insufficient_scope" and need to reconnect once.
+const SHEETS_SCOPE = 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events';
 function googleSheetsAuthURL(state){
   const params=new URLSearchParams({
     client_id:GOOGLE_ID,
@@ -3866,6 +4077,267 @@ function _agentAsListing(user, ag){
 /** Render the public agent share landing HTML with OG meta SSR.
  *  Loads the static share.html and injects OG/Twitter Card tags before </head>
  *  so SNS unfurls show a proper preview. */
+async function serveCreatorProfilePage(res, handle){
+  try {
+    let owner = null;
+    if(USE_SUPA){
+      const r = await sbReq('GET','users','?select=*&handle=eq.'+encodeURIComponent(handle)+'&limit=1');
+      owner = (r.d && r.d[0]) || null;
+    } else {
+      owner = LDB.find(u => (u.handle||'').toLowerCase() === handle) || null;
+    }
+    if(!owner){
+      res.writeHead(404, {'Content-Type':'text/html; charset=utf-8'});
+      return res.end('<!doctype html><meta charset="utf-8"><title>Not found</title><body style="font-family:system-ui;padding:60px;text-align:center;color:#444"><h1 style="font-size:22px;margin:0 0 8px">@'+escHtml(handle)+' not found</h1><p>This creator handle doesn\'t exist (yet).</p><p><a href="/">Go home</a></p></body>');
+    }
+    const listings = (owner.agents||[]).filter(a => a.marketplace && a.marketplace.is_listed).slice(0, 24);
+    const name = escHtml(owner.name || ('@'+handle));
+    const titleH = escHtml(name + ' — AI agents on MY AI AGENT');
+    const descRaw = `${listings.length} AI agent${listings.length===1?'':'s'} by @${handle} on MY AI AGENT.`;
+    const descH = escHtml(descRaw);
+    const pageUrl = APP_URL + '/u/' + handle;
+    const cardsHtml = listings.map(a => {
+      const target = a.marketplace && a.marketplace.listing_id ? ('/l/' + a.marketplace.listing_id) : (a.share_id ? ('/a/' + a.share_id) : '#');
+      const skills = (a.skills||[]).slice(0,3).map(s => '<span class="sk">'+escHtml(s)+'</span>').join('');
+      return `<a class="card" href="${target}">
+        <div class="card-av">${escHtml(a.avatar||'🤖')}</div>
+        <div class="card-nm">${escHtml(a.name||'AI')}</div>
+        <div class="card-pe">${escHtml((a.persona||'').slice(0,90))}</div>
+        <div class="card-sk">${skills}</div>
+      </a>`;
+    }).join('') || `<div style="grid-column:1/-1;text-align:center;color:#a1a1aa;padding:40px 16px;font-size:13px">No listed agents yet.</div>`;
+    const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${titleH}</title>
+<meta name="description" content="${descH}">
+<meta property="og:type" content="profile">
+<meta property="og:url" content="${pageUrl}">
+<meta property="og:title" content="${titleH}">
+<meta property="og:description" content="${descH}">
+<meta property="og:image" content="${APP_URL}/social/og-agent-sample.png">
+<meta property="og:site_name" content="MY AI AGENT">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${titleH}">
+<meta name="twitter:description" content="${descH}">
+<meta name="twitter:image" content="${APP_URL}/social/og-agent-sample.png">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#faf7f2;color:#1c1c1f;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Hiragino Sans',sans-serif;}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 22px 80px;}
+  .hd{display:flex;align-items:center;gap:18px;margin-bottom:30px;}
+  .hd .av{width:84px;height:84px;border-radius:20px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#7c2d12;flex-shrink:0;}
+  .hd h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em;}
+  .hd .handle{color:#52525b;font-size:14px;font-weight:700;}
+  .hd .stat{color:#a1a1aa;font-size:12.5px;margin-top:6px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .card{display:flex;flex-direction:column;gap:8px;padding:18px;background:#fff;border:1px solid #eee;border-radius:14px;text-decoration:none;color:inherit;transition:transform .12s ease;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.06);}
+  .card-av{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;}
+  .card-nm{font-weight:800;font-size:14.5px;}
+  .card-pe{color:#52525b;font-size:12.5px;line-height:1.55;min-height:36px;}
+  .card-sk{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px;}
+  .sk{background:#fdf1e3;color:#9a3412;font-size:11px;font-weight:700;padding:3px 7px;border-radius:6px;}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .b{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;letter-spacing:.02em;}
+  .b.founder{background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;box-shadow:0 4px 12px rgba(234,88,12,.32);}
+  .b.founder::before{content:'★';font-size:13px;line-height:1;}
+  .b.verified{background:rgba(22,163,74,.12);color:#15803d;border:1px solid rgba(22,163,74,.3);}
+  .ftr{margin-top:50px;text-align:center;color:#a1a1aa;font-size:12px;}
+  .ftr a{color:#ea580c;text-decoration:none;}
+  @media (max-width:560px){
+    .wrap{padding:24px 14px 60px;}
+    .hd{flex-direction:column;align-items:flex-start;gap:14px;}
+    .hd .av{width:64px;height:64px;font-size:28px;}
+    .hd h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div class="av">${escHtml((owner.name||handle).charAt(0).toUpperCase())}</div>
+    <div>
+      <h1>${escHtml(owner.name||('@'+handle))}</h1>
+      <div class="handle">@${escHtml(handle)}${owner.is_verified ? ' <span style="color:#16a34a">✓</span>' : ''}</div>
+      <div class="badges">
+        ${owner.is_founder ? `<span class="b founder" title="One of the first 100 creators on MY AI AGENT">Founder${owner.founder_seat_no?` #${owner.founder_seat_no}`:''}</span>` : ''}
+        ${owner.is_verified ? '<span class="b verified">✓ Verified</span>' : ''}
+      </div>
+      <div class="stat" style="margin-top:6px">${listings.length} agent${listings.length===1?'':'s'} on the Agent Store</div>
+    </div>
+  </div>
+  <div class="grid">${cardsHtml}</div>
+  <div class="ftr">Discover more on <a href="/">MY AI AGENT</a></div>
+</div>
+</body></html>`;
+    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=180', ...SEC});
+    res.end(html);
+  } catch(e){
+    console.warn('[profile] failed:', e.message);
+    res.writeHead(500,{'Content-Type':'text/plain'}); res.end('Server error');
+  }
+}
+
+async function serveChatSharePage(res, shareId){
+  try{
+    const found = await findChatShareById(shareId);
+    if(!found){
+      res.writeHead(404, {'Content-Type':'text/html; charset=utf-8'});
+      return res.end('<!doctype html><meta charset="utf-8"><title>Not found</title><body style="font-family:system-ui;padding:60px;text-align:center;color:#444"><h1 style="font-size:22px;margin:0 0 8px">Conversation not found</h1><p>This share link is invalid or has been deleted.</p><p><a href="/">Go home</a></p></body>');
+    }
+    const ag = found.agent || {};
+    const sh = found.share || {};
+    const owner = found.user || {};
+    const ownerName = escHtml(owner.name || (owner.email||'').split('@')[0] || 'User');
+    const agName = escHtml(ag.name || 'AI');
+    const agAvatar = escHtml(ag.avatar || '🤖');
+    const titleRaw = sh.title || (agName + ' — chat');
+    const titleH = escHtml(_trunc(titleRaw, 90));
+    const msgCount = (sh.messages||[]).length;
+    const descRaw = ((sh.messages||[]).slice(-1)[0]?.content || '').toString().replace(/\s+/g,' ').slice(0,160) || `A ${msgCount}-message conversation with ${ag.name||'AI'} on MY AI AGENT.`;
+    const descH = escHtml(_trunc(descRaw, 160));
+    const pageUrl = APP_URL + '/c/' + shareId;
+    // Inline the conversation as JSON inside a <script type="application/json"> so
+    // we don't need a second round trip. Escape </script> defensively.
+    const json = JSON.stringify({
+      title: sh.title,
+      created_at: sh.created_at,
+      agent: { name: ag.name||'AI', avatar: ag.avatar||'🤖' },
+      owner: { name: owner.name || (owner.email||'').split('@')[0] || 'User' },
+      messages: sh.messages || [],
+    }).replace(/<\/script/gi,'<\\/script');
+
+    const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${titleH} — MY AI AGENT</title>
+<meta name="description" content="${descH}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="${pageUrl}">
+<meta property="og:title" content="${titleH}">
+<meta property="og:description" content="${descH}">
+<meta property="og:image" content="${APP_URL}/social/og-agent-sample.png">
+<meta property="og:site_name" content="MY AI AGENT">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${titleH}">
+<meta name="twitter:description" content="${descH}">
+<meta name="twitter:image" content="${APP_URL}/social/og-agent-sample.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<style>
+  :root{--bg:#faf7f2;--card:#fff;--ink:#1c1c1f;--ink2:#52525b;--ink3:#a1a1aa;--peach:#fb923c;--peach-d:#ea580c;--ring:rgba(251,146,60,.25);--ai-bg:#fff7ed;--u-bg:#1c1c1f;--u-ink:#fff8f0;}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Hiragino Sans',sans-serif;line-height:1.55;}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 18px 96px;}
+  .hd{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border:1px solid #eee;border-radius:14px;margin-bottom:14px;}
+  .av{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+  .h-name{font-weight:800;font-size:15px;}
+  .h-meta{font-size:12px;color:var(--ink3);margin-top:1px;}
+  .badge{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--peach-d);background:rgba(251,146,60,.12);border:1px solid var(--ring);padding:4px 8px;border-radius:999px;margin-left:auto;}
+  h1.t{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:6px 4px 14px;}
+  .m{display:flex;gap:10px;margin:10px 0;align-items:flex-start;}
+  .m.u{flex-direction:row-reverse;}
+  .m .ic{width:30px;height:30px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:#e4e4e7;color:#27272a;}
+  .m.a .ic{background:linear-gradient(135deg,#fff3e6,#ffe5cc);}
+  .m .b{max-width:78%;border-radius:14px;padding:10px 14px;font-size:14.5px;}
+  .m.a .b{background:var(--ai-bg);border:1px solid #f5e1cd;border-top-left-radius:4px;}
+  .m.u .b{background:var(--u-bg);color:var(--u-ink);border-top-right-radius:4px;}
+  .m .b pre{background:#0d0d10;color:#fafafa;padding:10px 12px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.45;margin:6px 0;}
+  .m.a .b code:not(pre code){background:#fde4cb;color:#7c2d12;padding:1px 5px;border-radius:4px;font-size:12.5px;}
+  .m.u .b code:not(pre code){background:rgba(255,255,255,.12);color:#fff8f0;padding:1px 5px;border-radius:4px;font-size:12.5px;}
+  .m .b img{max-width:100%;border-radius:8px;margin:4px 0;}
+  .m .b a{color:inherit;text-decoration:underline;text-underline-offset:2px;}
+  .m .b .katex{font-size:1em;}
+  .sysrow{text-align:center;color:var(--ink3);font-size:11px;margin:10px 0;}
+  .cta{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(250,247,242,0) 0%,#faf7f2 32%);padding:30px 16px 18px;text-align:center;pointer-events:none;}
+  .cta .inner{display:inline-flex;align-items:center;gap:10px;background:#1c1c1f;color:#fff;padding:11px 18px 11px 14px;border-radius:999px;font-weight:700;font-size:14px;box-shadow:0 14px 32px rgba(0,0,0,.18);pointer-events:auto;text-decoration:none;}
+  .cta .inner b{color:var(--peach);font-weight:800;}
+  .ftr{text-align:center;color:var(--ink3);font-size:11px;margin-top:18px;}
+  @media (max-width:560px){
+    .wrap{padding:14px 12px 96px;}
+    .m .b{max-width:84%;font-size:14px;padding:9px 12px;}
+    h1.t{font-size:19px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div class="av">${agAvatar}</div>
+    <div>
+      <div class="h-name">${agName}</div>
+      <div class="h-meta">by ${owner.handle ? `<a href="/u/${escHtml(owner.handle)}" style="color:inherit;font-weight:700">@${escHtml(owner.handle)}</a>` : ownerName}${owner.is_founder ? ' <span style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:999px;letter-spacing:.02em;vertical-align:1px">★ Founder</span>' : ''} · ${msgCount} message${msgCount===1?'':'s'}</div>
+    </div>
+    <span class="badge">SHARED</span>
+  </div>
+  <h1 class="t">${titleH}</h1>
+  <div id="msgs"><div class="sysrow">Loading…</div></div>
+  <div class="ftr">Shared from <a href="/" style="color:inherit">MY AI AGENT</a> · read-only snapshot</div>
+</div>
+<a class="cta" href="/auth.html?ref=chatshare"><span class="inner">▶ Continue chatting on <b>MY AI AGENT</b></span></a>
+<script type="application/json" id="data">${json}</script>
+<script>
+(function(){
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  function md(src){
+    if(!src) return '';
+    var codeBlocks=[];
+    src=String(src).replace(/\`\`\`(\\w*)\\n?([\\s\\S]*?)\`\`\`/g, function(_,l,c){ var i=codeBlocks.length; codeBlocks.push(c.replace(/\\n+$/,'')); return '\\u0001CB'+i+'\\u0001'; });
+    var math=[];
+    function pm(t,d){ var i=math.length; math.push({tex:t,display:!!d}); return '\\u0002MX'+i+'\\u0002'; }
+    src=src.replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, function(_,t){ return pm(t,true); });
+    src=src.replace(/\\\\\\[([\\s\\S]+?)\\\\\\]/g, function(_,t){ return pm(t,true); });
+    src=src.replace(/\\\\\\(([\\s\\S]+?)\\\\\\)/g, function(_,t){ return pm(t,false); });
+    src=src.replace(/(^|[^$\\\\\\w])\\$([^\\s$][^$\\n]*?[^\\s$])\\$(?=$|[^$\\w])/g, function(m,pre,t){ if(/^\\s*\\d+(\\.\\d+)?\\s*$/.test(t)) return m; return pre+pm(t,false); });
+    var html=esc(src);
+    html=html.replace(/\\u0001CB(\\d+)\\u0001/g, function(_,i){ return '<pre><code>'+esc(codeBlocks[+i])+'</code></pre>'; });
+    html=html.replace(/\\u0002MX(\\d+)\\u0002/g, function(_,i){ var b=math[+i]; if(window.katex){ try{ return window.katex.renderToString(b.tex,{displayMode:b.display,throwOnError:false,output:'html'}); }catch(e){} } return '<code>'+esc(b.tex)+'</code>'; });
+    html=html.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>');
+    html=html.replace(/\`([^\`\\n]+)\`/g,'<code>$1</code>');
+    html=html.replace(/\\*\\*([^*\\n]+)\\*\\*/g,'<strong>$1</strong>').replace(/\\*([^*\\n]+)\\*/g,'<em>$1</em>');
+    html=html.replace(/!\\[([^\\]]*)\\]\\((https?:\\/\\/[^)]+)\\)/g,'<img src="$2" alt="$1" loading="lazy">');
+    html=html.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+    html=html.replace(/\\n/g,'<br>');
+    return html;
+  }
+  var data; try{ data=JSON.parse(document.getElementById('data').textContent); }catch(e){ data={messages:[]}; }
+  var av = data.agent && data.agent.avatar || '🤖';
+  var owner = data.owner && data.owner.name || 'User';
+  var el = document.getElementById('msgs');
+  if(!data.messages.length){ el.innerHTML='<div class="sysrow">(empty)</div>'; return; }
+  el.innerHTML = data.messages.map(function(m){
+    if(m.role==='system') return '<div class="sysrow">'+esc(m.content||'')+'</div>';
+    var isU = m.role==='user';
+    var ic = isU ? (m.user_avatar || (owner.charAt(0)||'?').toUpperCase()) : av;
+    return '<div class="m '+(isU?'u':'a')+'"><div class="ic">'+esc(ic)+'</div><div class="b">'+md(m.content||'')+'</div></div>';
+  }).join('');
+  // Run KaTeX once the deferred script loads.
+  if(window.katex){ /* already inlined */ }
+  else window.addEventListener('load', function(){ /* re-render with katex */
+    el.innerHTML = data.messages.map(function(m){
+      if(m.role==='system') return '<div class="sysrow">'+esc(m.content||'')+'</div>';
+      var isU = m.role==='user';
+      var ic = isU ? (m.user_avatar || (owner.charAt(0)||'?').toUpperCase()) : av;
+      return '<div class="m '+(isU?'u':'a')+'"><div class="ic">'+esc(ic)+'</div><div class="b">'+md(m.content||'')+'</div></div>';
+    }).join('');
+  });
+})();
+</script>
+</body></html>`;
+    res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=120', ...SEC});
+    res.end(html);
+  }catch(e){
+    console.warn('[chatShareSSR] failed:', e.message);
+    res.writeHead(500, {'Content-Type':'text/plain'});
+    res.end('Server error');
+  }
+}
+
 async function serveAgentSharePage(res, shareId){
   try{
     const found = await findAgentByShareId(shareId);
@@ -4498,12 +4970,304 @@ async function findAgentByShareId(shareId){
   return null;
 }
 
+// ── Chat share (public read-only conversation links) ─────────
+// A "chat share" is a frozen snapshot of an agent's chat history at the
+// moment the user clicked Share. Lives inside `agent.chat_shares` so it
+// rides along with the existing JSONB-stored agents array — no schema
+// migration needed.
+function genChatShareId(){
+  // 128-bit URL-safe token. The URL is the only auth gate, so entropy matters.
+  return 'c_' + crypto.randomBytes(16).toString('base64url');
+}
+async function findChatShareById(shareId){
+  if(!shareId) return null;
+  try{
+    if(USE_SUPA){
+      const filter = encodeURIComponent('[{"chat_shares":[{"id":"'+shareId+'"}]}]');
+      const r = await sbReq('GET','users','?select=*&agents=cs.'+filter+'&limit=1');
+      if(Array.isArray(r.d) && r.d.length){
+        for(const ag of (r.d[0].agents||[])){
+          const sh = (ag.chat_shares||[]).find(s => s.id===shareId);
+          if(sh) return {user:r.d[0], agent:ag, share:sh};
+        }
+      }
+      // Fallback broad scan (containment may not match nested arrays on older PostgREST).
+      const r2 = await sbReq('GET','users','?select=id,name,email,agents&limit=2000');
+      if(Array.isArray(r2.d)){
+        for(const u of r2.d){
+          for(const ag of (u.agents||[])){
+            const sh = (ag.chat_shares||[]).find(s => s.id===shareId);
+            if(sh) return {user:u, agent:ag, share:sh};
+          }
+        }
+      }
+    } else {
+      for(const u of LDB.all()){
+        for(const ag of (u.agents||[])){
+          const sh = (ag.chat_shares||[]).find(s => s.id===shareId);
+          if(sh) return {user:u, agent:ag, share:sh};
+        }
+      }
+    }
+  }catch(e){ console.warn('[chat-share] lookup failed:', e.message); }
+  return null;
+}
+
+// ── Knowledge base (RAG, lexical) ──────────────────────────────
+// Per-agent `agent.knowledge = [{id, name, text, chunks:[string,...], created_at}]`.
+// Free, zero-dep retrieval: split each doc into ~1500-char chunks (with overlap),
+// score by tokenized term overlap with the query, return the top-K.
+const _KB_CHUNK_SIZE = 1500;
+const _KB_CHUNK_OVERLAP = 200;
+const _KB_STOPWORDS = new Set('the a an of and or but to in on at for with by as is are was were be been being it this that these those i you he she we they me my your our their have has had do does did will would can could should may might must not no な は が の を に も と で て だ で す ま し か です である これ それ あれ どれ こと もの'.split(/\s+/));
+function _kbTokenize(s){
+  s = String(s||'').toLowerCase();
+  // Word-token pass: works for English / European text.
+  const wordTokens = s.replace(/[^\p{L}\p{N}_-]+/gu, ' ').split(/\s+/)
+    .filter(t => t.length >= 2 && !_KB_STOPWORDS.has(t));
+  // CJK bigram pass: Japanese / Chinese / Korean have no spaces, so the
+  // word-token pass collapses whole sentences into one giant token. Emit
+  // overlapping 2-character bigrams from runs of CJK so retrieval finds
+  // sub-string matches ("ナレッジ" in a query matches "ナレッジベース" in the doc).
+  const tokens = [...wordTokens];
+  const cjkRuns = s.match(/[぀-ヿ㐀-鿿가-힯＀-￯]+/g) || [];
+  for(const run of cjkRuns){
+    for(let i=0; i<run.length-1; i++){
+      tokens.push(run.slice(i, i+2));
+    }
+  }
+  return tokens;
+}
+function _kbChunkText(text){
+  text = String(text||'').replace(/\r\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  if(!text) return [];
+  const chunks=[];
+  let i=0;
+  while(i < text.length){
+    let end = Math.min(i + _KB_CHUNK_SIZE, text.length);
+    // Prefer ending on a paragraph or sentence boundary — search BACKWARDS
+    // from the desired end so we find the *last* boundary inside the slice
+    // (a previous version used String.search() which returns the FIRST
+    // match — chunks then never honored a boundary at all).
+    if(end < text.length){
+      const slice = text.slice(i, end);
+      const lastPara = slice.lastIndexOf('\n\n');
+      const lastSent = Math.max(
+        slice.lastIndexOf('. '),
+        slice.lastIndexOf('。'),
+        slice.lastIndexOf('! '),
+        slice.lastIndexOf('? '),
+        slice.lastIndexOf('！'),
+        slice.lastIndexOf('？'),
+      );
+      const minBoundary = _KB_CHUNK_SIZE * 0.5;
+      const boundary = lastPara > minBoundary ? lastPara + 2
+                     : lastSent > minBoundary ? lastSent + 1
+                     : -1;
+      if(boundary > 0) end = i + boundary;
+    }
+    const c = text.slice(i, end).trim();
+    // Keep every non-trivial chunk — silently dropping short tails loses
+    // important short paragraphs (FAQ answers, headings).
+    if(c.length > 0) chunks.push(c);
+    if(end >= text.length) break;
+    i = Math.max(end - _KB_CHUNK_OVERLAP, end - _KB_CHUNK_SIZE + 1);
+  }
+  return chunks;
+}
+function _kbScoreChunk(qTokens, chunkText){
+  const cTokens = _kbTokenize(chunkText);
+  if(!cTokens.length) return 0;
+  const cSet = new Set(cTokens);
+  let hits = 0;
+  for(const t of qTokens){ if(cSet.has(t)) hits++; }
+  // Normalize by chunk length so very long chunks don't always win.
+  return hits / Math.sqrt(cTokens.length);
+}
+function _retrieveKbChunks(agent, query, k=3){
+  if(!agent || !Array.isArray(agent.knowledge) || !agent.knowledge.length) return [];
+  const qTokens = _kbTokenize(query);
+  if(!qTokens.length) return [];
+  const scored = [];
+  for(const doc of agent.knowledge){
+    const chunks = Array.isArray(doc.chunks) && doc.chunks.length ? doc.chunks : (doc.text ? _kbChunkText(doc.text) : []);
+    for(let i=0;i<chunks.length;i++){
+      const s = _kbScoreChunk(qTokens, chunks[i]);
+      if(s > 0) scored.push({ score:s, doc_name:doc.name, text:chunks[i] });
+    }
+  }
+  scored.sort((a,b) => b.score - a.score);
+  return scored.slice(0, k);
+}
+function genKbDocId(){ return 'kb_'+Math.random().toString(36).slice(2,9); }
+
+// ── Scheduled agent runs ────────────────────────────────────
+// Per-agent `agent.schedules = [{id, prompt, kind, hour, minute, tz_offset_min,
+// deliver, enabled, label, last_run, next_run}]`. A 60s tick walks every user
+// and fires any schedule whose next_run is in the past.
+function genScheduleId(){ return 'sch_'+Math.random().toString(36).slice(2,9); }
+function genWebhookToken(){
+  // 36-char URL-safe token. Long enough to resist guessing without a DB.
+  return 'wh_' + crypto.randomBytes(24).toString('base64url');
+}
+async function findAgentByWebhookToken(tok){
+  if(!tok) return null;
+  try{
+    if(USE_SUPA){
+      const filter = encodeURIComponent('[{"webhook_token":"'+tok+'"}]');
+      const r = await sbReq('GET','users','?select=*&agents=cs.'+filter+'&limit=1');
+      if(Array.isArray(r.d) && r.d.length){
+        const u=r.d[0];
+        const ag=(u.agents||[]).find(a => a.webhook_token===tok);
+        if(ag) return { user:u, agent:ag };
+      }
+      const r2 = await sbReq('GET','users','?select=id,email,name,agents,balance_jpy,plan,memories&limit=2000');
+      if(Array.isArray(r2.d)){
+        for(const u of r2.d){
+          const ag=(u.agents||[]).find(a => a.webhook_token===tok);
+          if(ag) return { user:u, agent:ag };
+        }
+      }
+    } else {
+      const u = LDB.find(u => (u.agents||[]).some(a => a.webhook_token===tok));
+      if(u){ const ag=u.agents.find(a => a.webhook_token===tok); if(ag) return { user:u, agent:ag }; }
+    }
+  }catch(e){ console.warn('[webhook] lookup failed:', e.message); }
+  return null;
+}
+function _scheduleNextRun(s, fromMs){
+  // All math in UTC. tz_offset_min is the user's UTC offset (e.g. +540 for JST).
+  // The user wants "9am in their local time" so we compute that as
+  // (UTC_hour - tz_offset/60) modulo 24.
+  const now = fromMs ? new Date(fromMs) : new Date();
+  const tz = Number(s.tz_offset_min || 0);
+  if(s.kind === 'hourly'){
+    // Fire every hour at the configured minute.
+    const next = new Date(now);
+    next.setUTCSeconds(0,0);
+    const minute = Math.max(0, Math.min(59, Number(s.minute||0)));
+    next.setUTCMinutes(minute);
+    if(next.getTime() <= now.getTime()){
+      next.setTime(next.getTime() + 60*60*1000);
+    }
+    return next.toISOString();
+  }
+  if(s.kind === 'daily'){
+    // Target HH:MM in the user's local timezone — that's
+    // (HH - tz/60) mod 24 in UTC, with day rollover.
+    const hourLocal = Math.max(0, Math.min(23, Number(s.hour||9)));
+    const minuteLocal = Math.max(0, Math.min(59, Number(s.minute||0)));
+    // Compute today's target (UTC). Convert "local HH:MM" → UTC.
+    const utc = new Date(Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
+      hourLocal, minuteLocal, 0, 0
+    ));
+    utc.setTime(utc.getTime() - tz * 60 * 1000);
+    if(utc.getTime() <= now.getTime()){
+      utc.setTime(utc.getTime() + 24*60*60*1000);
+    }
+    return utc.toISOString();
+  }
+  // Default: 1 hour from now.
+  return new Date(now.getTime() + 60*60*1000).toISOString();
+}
+async function _runOneSchedule(user, agent, sched){
+  // Execute the schedule's prompt as if the user sent it. No tools (keeps the
+  // scheduled run fast & cheap). Reply is appended to agent.history and, if
+  // deliver='email', emailed to the user.
+  try {
+    const sys = buildSystem(agent, {
+      memories: (user.memories || []),
+      kbHits: _retrieveKbChunks(agent, sched.prompt || '', 3),
+    });
+    const msgs = [...(agent.history||[]), { role:'user', content: String(sched.prompt||'') }];
+    const r = await callAI(msgs, sys, agent.model);
+    const reply = (r && r.content && r.content[0] && r.content[0].text) || '';
+    const cost = (r && r.usage)
+      ? calcCost(r.usage.input_tokens||0, r.usage.output_tokens||0)
+      : { jpy:0, usd:0, inputTok:0, outputTok:0 };
+    // Neutral HH:MM (24h) — no locale tied. Renderer treats this as display-only.
+    const ts = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',hour12:false});
+    agent.history = [
+      ...(agent.history||[]),
+      { role:'user', content: sched.prompt, time: ts, scheduled:true, schedule_id:sched.id },
+      { role:'assistant', content: reply, time: ts, cost_jpy: cost.jpy, scheduled:true },
+    ];
+    if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+    user.balance_jpy = Math.round(((user.balance_jpy||0) - cost.jpy) * 1000) / 1000;
+    if(sched.deliver === 'email' && user.email){
+      try {
+        await sendEmail(
+          user.email,
+          '🤖 ' + (sched.label || agent.name || 'AI') + ' — scheduled report',
+          '<div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px">'+
+          '<h2 style="margin:0 0 8px">'+_xmlEscape(agent.name||'AI')+'</h2>'+
+          '<div style="color:#52525b;font-size:13px;margin-bottom:14px">Triggered by your scheduled task: <i>'+_xmlEscape(sched.label||'(no label)')+'</i></div>'+
+          '<div style="font-size:11px;color:#a1a1aa;margin-bottom:6px"><b>Prompt:</b> '+_xmlEscape(sched.prompt||'')+'</div>'+
+          '<div style="background:#fff7ed;border:1px solid #f5e1cd;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:14px;line-height:1.55">'+_xmlEscape(reply)+'</div>'+
+          '<div style="margin-top:18px;text-align:center;color:#a1a1aa;font-size:11px">— MY AI AGENT</div>'+
+          '</div>'
+        );
+      } catch(e){ console.warn('[schedule] email failed:', e.message); }
+    }
+    sched.last_run = new Date().toISOString();
+    sched.next_run = _scheduleNextRun(sched);
+    sched.last_error = null;
+  } catch(e){
+    sched.last_error = (e && e.message || String(e)).slice(0, 200);
+    console.warn('[schedule] run failed:', sched.id, sched.last_error);
+    // Push next_run forward 1h so we don't spin on persistent failures.
+    sched.next_run = new Date(Date.now() + 60*60*1000).toISOString();
+  }
+}
+let _scheduleTimer = null;
+function _startAgentScheduler(){
+  if(_scheduleTimer) return;
+  _scheduleTimer = setInterval(async () => {
+    try {
+      const users = USE_SUPA
+        ? (await sbReq('GET','users','?select=id,email,name,memories,agents,balance_jpy,plan&limit=2000')).d || []
+        : LDB.all();
+      const nowMs = Date.now();
+      for(const u of users){
+        let changed = false;
+        for(const ag of (u.agents||[])){
+          for(const s of (ag.schedules||[])){
+            if(!s.enabled) continue;
+            if(!s.next_run){ s.next_run = _scheduleNextRun(s); changed = true; continue; }
+            if(new Date(s.next_run).getTime() > nowMs) continue;
+            await _runOneSchedule(u, ag, s);
+            changed = true;
+          }
+        }
+        if(changed){
+          try { await DB.save(u); }
+          catch(e){ console.warn('[schedule] save failed:', e.message); }
+        }
+      }
+    } catch(e){
+      console.warn('[schedule] tick failed:', e.message);
+    }
+  }, 60 * 1000);
+  console.log('[schedule] agent scheduler started (60s tick)');
+}
+
 function buildSystem(agent, opts){
   const sheetsActive = !!(opts && opts.sheetsActive);
   const extensionActive = !!(opts && opts.extensionActive);
   const isGroup = !!(opts && opts.isGroup);
   const speakerName = (opts && opts.speakerName) || '';
   const memories = (opts && Array.isArray(opts.memories)) ? opts.memories : [];
+  // Knowledge-base retrieval hits, already pre-selected by `_retrieveKbChunks`.
+  // Each hit: { doc_name, text }. Injected before the persona so the AI treats
+  // them as authoritative context.
+  const kbHits = (opts && Array.isArray(opts.kbHits)) ? opts.kbHits : [];
+  const kbNote = kbHits.length ? `
+
+【参考資料 (ナレッジベース) — ユーザーが事前にこの AI へ登録した文書からの抜粋】
+${kbHits.map((h,i) => `[${i+1}] ${h.doc_name || 'doc'}\n${(h.text||'').slice(0, 1800)}`).join('\n\n---\n\n')}
+
+これらは ユーザーが信頼できる情報源 として登録した内容です。回答する際はこの資料の内容を優先して使い、引用元 (例: 「[1] 〜より」) を明記してください。資料に書かれていないことは、その旨を正直に伝えてください。` : '';
   // Team context — injected into a team member's prompt so they know they're
   // part of a larger team working toward a shared goal.
   const teamName = (opts && opts.teamName) || '';
@@ -4641,7 +5405,7 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 正しい動作: web_fetch('https://x.com') を呼ぶ → 結果を要約して返す (ログイン壁ならその旨も伝える)
 誤り: 「ブラウザを操作できません」とテキストだけで返す`
     : '';
-  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
+  return`あなたは「${agent.name}」というAIエージェントです。\n得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}\n${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}\nユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -5052,8 +5816,208 @@ async function handleAPI(req,res,pathname,method,ip){
         member_count: memberPreview ? memberPreview.length : undefined,
       },
       members: memberPreview,
-      owner:{ name: (found.user.name||(found.user.email||'').split('@')[0]||'ユーザー') }
+      owner:{
+        name: (found.user.name||(found.user.email||'').split('@')[0]||'ユーザー'),
+        handle: found.user.handle || null,
+        is_founder: !!found.user.is_founder,
+        founder_seat_no: found.user.is_founder ? (found.user.founder_seat_no || null) : null,
+      }
     });
+  }
+
+  // ── POST /api/chat/share — create a public, read-only conversation link ─
+  // Body: { agent_id, title?, last_n? }. Snapshots the current chat history
+  // (up to last 200 messages) and returns { share_id, url }.
+  if(pathname==='/api/chat/share' && method==='POST'){
+    const auth=getAuth(req); if(!auth) return jres(res,401,{error:'認証が必要です'});
+    const user=await DB.findBy('id',auth.userId); if(!user) return jres(res,401,{error:'認証が必要です'});
+    const body = (await readBody(req)) || {};
+    const ag=(user.agents||[]).find(a=>a.id===body.agent_id);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    // In group chats, the snapshot includes every member's messages — only
+    // the host should be able to publish that. Solo agents = owner only too.
+    if(ag.is_group && ag.host_id && ag.host_id !== user.id){
+      return jres(res,403,{error:'グループの会話を共有できるのはホストのみです'});
+    }
+    const hist = Array.isArray(ag.history) ? ag.history : [];
+    if(!hist.length) return jres(res,400,{error:'共有できる会話がまだありません'});
+    const lastN = Math.max(1, Math.min(200, parseInt(body.last_n,10) || 100));
+    // Strip server-only fields. Keep role/content/time/user_name/user_avatar/tool_log.
+    const snap = hist.slice(-lastN).map(m => ({
+      role: m.role,
+      content: m.content || '',
+      time: m.time || '',
+      user_name: m.user_name || undefined,
+      user_avatar: m.user_avatar || undefined,
+      tool_log: Array.isArray(m.tool_log) ? m.tool_log.map(t => ({
+        name: t.name, ok: t.ok, error: t.error,
+        title: t.title, url: t.url,
+        // drop screenshot bytes — too heavy + may include sensitive info
+      })) : undefined,
+    }));
+    const sh = {
+      id: genChatShareId(),
+      title: String(body.title||'').slice(0,120) || ((snap[0]&&snap[0].content)?String(snap[0].content).slice(0,60):'Conversation'),
+      messages: snap,
+      created_at: new Date().toISOString(),
+      msg_count: snap.length,
+    };
+    ag.chat_shares = Array.isArray(ag.chat_shares) ? ag.chat_shares : [];
+    ag.chat_shares.push(sh);
+    // Cap to 20 shares per agent — drop oldest first.
+    if(ag.chat_shares.length > 20) ag.chat_shares.splice(0, ag.chat_shares.length - 20);
+    await DB.save(user);
+    return jres(res,200,{share_id:sh.id, url:APP_URL+'/c/'+sh.id, title:sh.title});
+  }
+
+  // ── GET /api/chat/share/:id — public, no auth ─────────────────
+  const csm = pathname.match(/^\/api\/chat\/share\/(c_[A-Za-z0-9_-]+)$/);
+  if(csm && method==='GET'){
+    const found = await findChatShareById(csm[1]);
+    if(!found) return jres(res,404,{error:'共有が見つかりません'});
+    return jres(res,200,{
+      title: found.share.title,
+      created_at: found.share.created_at,
+      msg_count: found.share.msg_count || (found.share.messages||[]).length,
+      agent: {
+        name: found.agent.name || 'AI',
+        avatar: found.agent.avatar || '🤖',
+      },
+      owner: {
+        name: (found.user.name || (found.user.email||'').split('@')[0] || 'User'),
+        handle: found.user.handle || null,
+      },
+      messages: found.share.messages || [],
+    });
+  }
+
+  // ── GET /api/u/:handle — public creator profile JSON ─────────
+  const uApi = pathname.match(/^\/api\/u\/([a-z0-9_]{3,30})$/);
+  if(uApi && method === 'GET'){
+    const h = uApi[1];
+    let owner = null;
+    try {
+      if(USE_SUPA){
+        const r = await sbReq('GET','users','?select=*&handle=eq.'+encodeURIComponent(h)+'&limit=1');
+        owner = (r.d && r.d[0]) || null;
+      } else {
+        owner = LDB.find(u => (u.handle||'').toLowerCase() === h) || null;
+      }
+    } catch(e){}
+    if(!owner) return jres(res,404,{error:'profile not found'});
+    const listings = (owner.agents||[]).filter(a => a.marketplace && a.marketplace.is_listed).map(a => ({
+      id: a.id,
+      listing_id: (a.marketplace && a.marketplace.listing_id) || '',
+      share_id: a.share_id || null,
+      avatar: a.avatar,
+      name: a.name,
+      persona: (a.persona||'').slice(0,160),
+      skills: a.skills || [],
+      uses_count: (a.marketplace && a.marketplace.uses_count) || 0,
+      price_jpy: (a.marketplace && a.marketplace.price_jpy) || 0,
+    }));
+    return jres(res,200,{
+      handle: owner.handle,
+      name: owner.name || '',
+      role: owner.role || '',
+      is_verified: !!owner.is_verified,
+      is_founder: !!owner.is_founder,
+      founder_seat_no: owner.is_founder ? (owner.founder_seat_no || null) : null,
+      joined_at: owner.created_at || null,
+      listings,
+      listing_count: listings.length,
+    });
+  }
+
+  // ── POST /api/inbound/email — inbound email forwarder ──────
+  // We don't run IMAP ourselves (free-tier hosting can't keep an IMAP socket
+  // open). Instead, the user wires up a forwarder (Mailgun Inbound Parse,
+  // SendGrid Inbound, Resend Inbound — any provider) to POST the email here
+  // as JSON.
+  //
+  // Body: { token, to, from, subject, body }
+  //   token   = INBOUND_EMAIL_TOKEN (shared secret, env var)
+  //   to      = anything that contains a webhook token like `wh_abc...`.
+  //             A handy alias format is `agent+wh_abc123@inbound.example.com`
+  //             — providers preserve the `+`-suffix when forwarding.
+  if(pathname === '/api/inbound/email' && method === 'POST'){
+    if(!process.env.INBOUND_EMAIL_TOKEN){
+      return jres(res, 503, { error: 'inbound_email_disabled', detail: 'INBOUND_EMAIL_TOKEN env var not set' });
+    }
+    const body = (await readBody(req)) || {};
+    if(body.token !== process.env.INBOUND_EMAIL_TOKEN){
+      return jres(res, 401, { error: 'invalid token' });
+    }
+    // Do NOT lowercase — webhook tokens are base64url (case-sensitive). Email
+    // local-parts are technically case-sensitive too; forwarders preserve case.
+    const toField = String(body.to || '');
+    const tokMatch = toField.match(/wh_[A-Za-z0-9_-]{16,}/);
+    if(!tokMatch){
+      return jres(res, 400, { error: 'no webhook token in `to` field', hint:'format the alias like agent+wh_<token>@inbound.example.com' });
+    }
+    try {
+      const found = await findAgentByWebhookToken(tokMatch[0]);
+      if(!found) return jres(res, 404, { error: 'agent not found for that token' });
+      const { user: owner, agent } = found;
+      const from = String(body.from || '').slice(0,200);
+      const subject = String(body.subject || '').slice(0,200);
+      const emailBody = String(body.body || '').slice(0, 12000);
+      const message = `[Inbound email]\nFrom: ${from}\nSubject: ${subject}\n\n${emailBody}`;
+      if((owner.balance_jpy||0) <= 0){
+        return jres(res, 402, { error: 'owner balance is zero' });
+      }
+      const sys = buildSystem(agent, {
+        memories: (owner.memories || []),
+        kbHits: _retrieveKbChunks(agent, subject + ' ' + emailBody, 3),
+      });
+      const msgs = [...(agent.history||[]).slice(-20), { role:'user', content: message }];
+      const r = await callAI(msgs, sys, agent.model);
+      const reply = (r && r.content && r.content[0] && r.content[0].text) || '';
+      const cost = (r && r.usage)
+        ? calcCost(r.usage.input_tokens||0, r.usage.output_tokens||0)
+        : { jpy:0, usd:0 };
+      const ts = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',hour12:false});
+      agent.history = [
+        ...(agent.history||[]),
+        { role:'user', content: message, time: ts, via:'inbound_email', from: from, subject: subject },
+        { role:'assistant', content: reply, time: ts, cost_jpy: cost.jpy, via:'inbound_email' },
+      ];
+      if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+      owner.balance_jpy = Math.round(((owner.balance_jpy||0) - cost.jpy)*1000)/1000;
+      try { await DB.save(owner); } catch(e){ console.warn('[inbound] save failed:', e.message); }
+      let email_back = false;
+      if(from && /@/.test(from) && body.reply_email !== false){
+        try {
+          await sendEmail(from, 'Re: ' + (subject || agent.name || 'AI reply'),
+            '<div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px">'+
+            '<div style="background:#fff7ed;border:1px solid #f5e1cd;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:14px;line-height:1.55">'+_xmlEscape(reply)+'</div>'+
+            '<div style="margin-top:18px;text-align:center;color:#a1a1aa;font-size:11px">— '+_xmlEscape(agent.name||'AI')+' via MY AI AGENT</div>'+
+            '</div>',
+            { fromName: agent.name || 'AI' }
+          );
+          email_back = true;
+        } catch(e){ console.warn('[inbound] reply email failed:', e.message); }
+      }
+      return jres(res, 200, { ok: true, reply, email_back, agent: { name: agent.name } });
+    } catch(e){
+      console.error('[inbound] error:', e.message);
+      return jres(res, 500, { error: 'internal', detail: (e&&e.message||'').slice(0,200) });
+    }
+  }
+
+  // ── DELETE /api/chat/share/:id — auth required, owner only ────
+  const csmd = pathname.match(/^\/api\/chat\/share\/(c_[A-Za-z0-9_-]+)$/);
+  if(csmd && method==='DELETE'){
+    const auth=getAuth(req); if(!auth) return jres(res,401,{error:'認証が必要です'});
+    const user=await DB.findBy('id',auth.userId); if(!user) return jres(res,401,{error:'認証が必要です'});
+    let removed=false;
+    for(const ag of (user.agents||[])){
+      const i=(ag.chat_shares||[]).findIndex(s => s.id===csmd[1]);
+      if(i>=0){ ag.chat_shares.splice(i,1); removed=true; break; }
+    }
+    if(!removed) return jres(res,404,{error:'共有が見つかりません'});
+    await DB.save(user);
+    return jres(res,200,{ok:true});
   }
 
   // ── GET /api/og/a/:share_id.svg ────────────────────────────
@@ -5418,6 +6382,17 @@ async function handleAPI(req,res,pathname,method,ip){
       listings.sort((a,b)=>new Date(b.listed_at||0).getTime()-new Date(a.listed_at||0).getTime());
     } else if(sort==='top_rated'){
       const score = l => (l.rating||0) * Math.log(1+(l.rating_count||0));
+      listings.sort((a,b)=>score(b)-score(a));
+    } else if(sort==='trending'){
+      // Recency-weighted popularity. Half-life ~14 days, so a hot 3-day-old
+      // listing can outrank a steady 6-month-old one.
+      const now = Date.now();
+      const score = l => {
+        const ageMs = now - new Date(l.listed_at||0).getTime();
+        const ageDays = Math.max(0, ageMs / 86400000);
+        const decay = Math.exp(-ageDays / 14);
+        return (l.uses||0) * (0.4 + 0.6*decay) + (l.rating_count||0) * 2 * decay;
+      };
       listings.sort((a,b)=>score(b)-score(a));
     } else {
       listings.sort((a,b)=>{
@@ -6330,6 +7305,34 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{devices: safe});
   }
 
+  // ── POST /api/parse/docx ───────────────────────────────────
+  // Body: { b64: string, name?: string }
+  // Extracts plain text from a .docx file so the AI can read it. Uses
+  // `mammoth` (lazy-required so a fresh deploy without `npm install` still
+  // boots — we just return a friendly error instead of crashing).
+  if(pathname==='/api/parse/docx' && method==='POST'){
+    const auth=getAuth(req); if(!auth) return jres(res,401,{error:'認証が必要です'});
+    const body = (await readBody(req)) || {};
+    const b64=(body.b64||'').toString();
+    if(!b64) return jres(res,400,{error:'b64 が必要です'});
+    let buf;
+    try { buf = Buffer.from(b64, 'base64'); }
+    catch { return jres(res,400,{error:'base64 デコードに失敗'}); }
+    if(buf.length > 20*1024*1024) return jres(res,413,{error:'ファイルが大きすぎます (上限 20MB)'});
+    let mammoth;
+    try { mammoth = require('mammoth'); }
+    catch(e){ return jres(res,500,{error:'mammoth 未インストール — npm install を実行してください'}); }
+    try {
+      const result = await mammoth.extractRawText({ buffer: buf });
+      let text = (result && result.value || '').trim();
+      let truncated = false;
+      if(text.length > 80000){ text = text.slice(0,80000); truncated = true; }
+      return jres(res,200,{ text, truncated, name: body.name||'document.docx', length: text.length });
+    } catch(e){
+      return jres(res,400,{ error:'DOCX 解析に失敗', detail: (e&&e.message||'').slice(0,200) });
+    }
+  }
+
   // ── POST /api/fetch-url ────────────────────────────────────
   // Body: { url: string }
   // Fetches the URL server-side, strips HTML, returns extracted text so the
@@ -6344,6 +7347,185 @@ async function handleAPI(req,res,pathname,method,ip){
     } catch (e) {
       return jres(res, 400, { error: 'fetch_failed', detail: (e && e.message) || String(e) });
     }
+  }
+
+  // ── Knowledge base ─────────────────────────────────────────
+  // Per-agent KB: text-only documents (the client extracts text from PDF/DOCX/etc
+  // before sending). Stored on the agent so it rides along in the JSONB column.
+  //
+  //   GET    /api/agents/:id/knowledge          → list (no chunk bodies)
+  //   POST   /api/agents/:id/knowledge          → add { name, text }
+  //   DELETE /api/agents/:id/knowledge/:docId   → remove
+  const kbList = pathname.match(/^\/api\/agents\/([^/]+)\/knowledge$/);
+  if(kbList && method==='GET'){
+    const ag=(user.agents||[]).find(a=>a.id===kbList[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const docs = (ag.knowledge||[]).map(d => ({
+      id:d.id, name:d.name, length:(d.text||'').length, chunks:(d.chunks||[]).length, created_at:d.created_at,
+    }));
+    return jres(res,200,{ docs, total: docs.length });
+  }
+  if(kbList && method==='POST'){
+    const ag=(user.agents||[]).find(a=>a.id===kbList[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const body = (await readBody(req)) || {};
+    const text = String(body.text||'').trim();
+    if(!text) return jres(res,400,{error:'text が空です'});
+    if(text.length > 500*1024) return jres(res,413,{error:'1 ドキュメント 500KB まで'});
+    ag.knowledge = Array.isArray(ag.knowledge) ? ag.knowledge : [];
+    if(ag.knowledge.length >= 50) return jres(res,400,{error:'ナレッジは 50 ドキュメントまでです'});
+    // Total KB cap to keep retrieval fast and JSONB small.
+    const totalBytes = ag.knowledge.reduce((n,d)=>n+(d.text||'').length,0) + text.length;
+    if(totalBytes > 5*1024*1024) return jres(res,413,{error:'ナレッジ合計 5MB を超えました'});
+    const chunks = _kbChunkText(text);
+    const doc = {
+      id: genKbDocId(),
+      name: String(body.name||'document').slice(0,120),
+      text,
+      chunks,
+      created_at: new Date().toISOString(),
+    };
+    ag.knowledge.push(doc);
+    await DB.save(user);
+    return jres(res,200,{ id:doc.id, name:doc.name, chunks:chunks.length, length:text.length });
+  }
+  const kbDel = pathname.match(/^\/api\/agents\/([^/]+)\/knowledge\/([a-z0-9_]+)$/);
+  if(kbDel && method==='DELETE'){
+    const ag=(user.agents||[]).find(a=>a.id===kbDel[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const i=(ag.knowledge||[]).findIndex(d=>d.id===kbDel[2]);
+    if(i<0) return jres(res,404,{error:'ドキュメントが見つかりません'});
+    ag.knowledge.splice(i,1);
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── Scheduled runs ─────────────────────────────────────────
+  //   GET    /api/agents/:id/schedules                    → list
+  //   POST   /api/agents/:id/schedules                    → create
+  //   PUT    /api/agents/:id/schedules/:sid               → update (toggle/edit)
+  //   DELETE /api/agents/:id/schedules/:sid               → remove
+  const schList = pathname.match(/^\/api\/agents\/([^/]+)\/schedules$/);
+  if(schList && method==='GET'){
+    const ag=(user.agents||[]).find(a=>a.id===schList[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    return jres(res,200,{ schedules: ag.schedules || [] });
+  }
+  if(schList && method==='POST'){
+    const ag=(user.agents||[]).find(a=>a.id===schList[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const body = (await readBody(req)) || {};
+    const prompt = String(body.prompt||'').trim();
+    if(!prompt) return jres(res,400,{error:'prompt が空です'});
+    if(prompt.length > 1000) return jres(res,400,{error:'prompt は 1000 文字まで'});
+    const kind = (body.kind === 'hourly') ? 'hourly' : 'daily';
+    const sched = {
+      id: genScheduleId(),
+      prompt,
+      kind,
+      hour: Math.max(0, Math.min(23, Number(body.hour||9))),
+      minute: Math.max(0, Math.min(59, Number(body.minute||0))),
+      // Clamp to ±14h so out-of-range values can't corrupt the next_run math.
+      tz_offset_min: Math.max(-840, Math.min(840, Number(body.tz_offset_min) || 0)),
+      deliver: body.deliver === 'email' ? 'email' : 'chat',
+      enabled: body.enabled === false ? false : true,
+      label: String(body.label||'').slice(0,80),
+      created_at: new Date().toISOString(),
+      last_run: null,
+      next_run: null,
+    };
+    sched.next_run = _scheduleNextRun(sched);
+    ag.schedules = Array.isArray(ag.schedules) ? ag.schedules : [];
+    if(ag.schedules.length >= 20) return jres(res,400,{error:'スケジュールは 20 件までです'});
+    ag.schedules.push(sched);
+    await DB.save(user);
+    return jres(res,200,{ schedule: sched });
+  }
+  const schOne = pathname.match(/^\/api\/agents\/([^/]+)\/schedules\/([a-z0-9_]+)$/);
+  if(schOne && method==='PUT'){
+    const ag=(user.agents||[]).find(a=>a.id===schOne[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const s=(ag.schedules||[]).find(x=>x.id===schOne[2]);
+    if(!s) return jres(res,404,{error:'スケジュールが見つかりません'});
+    const body = (await readBody(req)) || {};
+    if(typeof body.enabled === 'boolean') s.enabled = body.enabled;
+    if(typeof body.prompt === 'string' && body.prompt.trim()){ s.prompt = body.prompt.trim().slice(0,1000); }
+    if(body.kind === 'daily' || body.kind === 'hourly') s.kind = body.kind;
+    if(typeof body.hour === 'number') s.hour = Math.max(0, Math.min(23, body.hour));
+    if(typeof body.minute === 'number') s.minute = Math.max(0, Math.min(59, body.minute));
+    if(typeof body.tz_offset_min === 'number') s.tz_offset_min = Math.max(-840, Math.min(840, body.tz_offset_min));
+    if(body.deliver === 'email' || body.deliver === 'chat') s.deliver = body.deliver;
+    if(typeof body.label === 'string') s.label = body.label.slice(0,80);
+    s.next_run = _scheduleNextRun(s);
+    await DB.save(user);
+    return jres(res,200,{ schedule: s });
+  }
+  if(schOne && method==='DELETE'){
+    const ag=(user.agents||[]).find(a=>a.id===schOne[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const i=(ag.schedules||[]).findIndex(x=>x.id===schOne[2]);
+    if(i<0) return jres(res,404,{error:'スケジュールが見つかりません'});
+    ag.schedules.splice(i,1);
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── Outgoing Slack / Discord webhook URLs ──────────────────
+  //   GET  /api/integrations              → current URLs (masked)
+  //   POST /api/integrations              → save { slack, discord } (either field optional)
+  if(pathname==='/api/integrations' && method==='GET'){
+    const w = user.outgoing_webhooks || {};
+    const mask = u => u ? (u.replace(/^(https?:\/\/[^/]+\/).+(.{4})$/, '$1…$2')) : '';
+    return jres(res,200,{
+      slack:   { configured: !!w.slack,   preview: mask(w.slack) },
+      discord: { configured: !!w.discord, preview: mask(w.discord) },
+    });
+  }
+  if(pathname==='/api/integrations' && method==='POST'){
+    const body = (await readBody(req)) || {};
+    user.outgoing_webhooks = user.outgoing_webhooks || {};
+    if(body.slack !== undefined){
+      const v = String(body.slack||'').trim();
+      if(v && !/^https:\/\/hooks\.slack\.com\//.test(v)) return jres(res,400,{error:'Slack Webhook URL は https://hooks.slack.com/... の形式である必要があります'});
+      if(v) user.outgoing_webhooks.slack = v; else delete user.outgoing_webhooks.slack;
+    }
+    if(body.discord !== undefined){
+      const v = String(body.discord||'').trim();
+      if(v && !/^https:\/\/(?:discord(?:app)?\.com)\/api\/webhooks\//.test(v)) return jres(res,400,{error:'Discord Webhook URL は https://discord.com/api/webhooks/... の形式である必要があります'});
+      if(v) user.outgoing_webhooks.discord = v; else delete user.outgoing_webhooks.discord;
+    }
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── Webhook entry point ────────────────────────────────────
+  //   GET  /api/agents/:id/webhook                  → current status
+  //   POST /api/agents/:id/webhook { enabled, regenerate? } → create/rotate/disable
+  const whMan = pathname.match(/^\/api\/agents\/([^/]+)\/webhook$/);
+  if(whMan && method==='GET'){
+    const ag=(user.agents||[]).find(a=>a.id===whMan[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    return jres(res,200,{
+      enabled: !!ag.webhook_token,
+      token: ag.webhook_token || null,
+      url: ag.webhook_token ? (APP_URL + '/w/' + ag.webhook_token) : null,
+    });
+  }
+  if(whMan && method==='POST'){
+    const ag=(user.agents||[]).find(a=>a.id===whMan[1]);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const body = (await readBody(req)) || {};
+    if(body.enabled === false){
+      ag.webhook_token = null;
+    } else if(body.regenerate || !ag.webhook_token){
+      ag.webhook_token = genWebhookToken();
+    }
+    await DB.save(user);
+    return jres(res,200,{
+      enabled: !!ag.webhook_token,
+      token: ag.webhook_token || null,
+      url: ag.webhook_token ? (APP_URL + '/w/' + ag.webhook_token) : null,
+    });
   }
 
   // ── POST /api/agents/:id/share ─────────────────────────────
@@ -6997,6 +8179,67 @@ async function handleAPI(req,res,pathname,method,ip){
     }
   }
 
+  // ── POST /api/chat/:agent_id/suggest ───────────────────────
+  // After an assistant reply lands, the UI fires this to get 3 short
+  // follow-up prompts. Cheap (haiku, ~60 input / 30 output tokens).
+  const sugm = pathname.match(/^\/api\/chat\/([^/]+)\/suggest$/);
+  if(sugm && method === 'POST'){
+    const ag = (user.agents||[]).find(a => a.id===sugm[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const hist = (ag.history||[]).slice(-4);
+    const lastAssistant = [...hist].reverse().find(m => m.role==='assistant');
+    if(!lastAssistant || !lastAssistant.content){
+      return jres(res,200,{ suggestions: [] });
+    }
+    try {
+      const sys = 'You produce short follow-up question suggestions for a chat UI. Given the assistant\'s most recent reply, write exactly 3 follow-up questions or requests the user might tap next. Constraints:\n- Each is one short sentence, ≤ 50 characters.\n- Use the same language as the assistant\'s reply (Japanese if Japanese, English if English).\n- No numbering, no quotes. Output ONLY the 3 lines separated by newlines.';
+      const lastUser = [...hist].reverse().find(m => m.role==='user');
+      const lines = [];
+      if(lastUser && lastUser.content) lines.push('USER: ' + String(lastUser.content).slice(0,400));
+      lines.push('ASSISTANT: ' + String(lastAssistant.content).slice(0,1200));
+      const msgs = [{ role:'user', content: lines.join('\n\n') }];
+      const r = await callAI(msgs, sys, 'haiku');
+      const text = (r && r.content && r.content[0] && r.content[0].text) || '';
+      const suggestions = text.split(/\r?\n/).map(s => s.replace(/^[\-\d\.\)\s•]+/, '').trim()).filter(Boolean).slice(0,3);
+      return jres(res,200,{ suggestions });
+    } catch(e){
+      return jres(res,200,{ suggestions: [], error: (e&&e.message||'').slice(0,120) });
+    }
+  }
+
+  // ── PUT /api/me/handle ─────────────────────────────────────
+  // Sets or updates the user's public handle (used on /u/:handle).
+  // 3-30 chars, [a-z0-9_]. Must be unique.
+  if(pathname === '/api/me/handle' && method === 'PUT'){
+    const body = (await readBody(req)) || {};
+    const raw = String(body.handle||'').trim().toLowerCase();
+    if(!/^[a-z0-9_]{3,30}$/.test(raw)){
+      return jres(res,400,{error:'ハンドルは 3-30 文字の半角英数字/アンダースコアのみです'});
+    }
+    // Reserved names so users don't squat on routes.
+    const reserved = new Set(['admin','api','app','auth','dashboard','help','home','login','signup','support','staff','team','user','users','www','agent','agents','store','marketplace']);
+    if(reserved.has(raw)) return jres(res,400,{error:'予約済みのハンドルです'});
+    // Already mine? No-op.
+    if((user.handle||'').toLowerCase() === raw){
+      return jres(res,200,{ handle: raw });
+    }
+    // Uniqueness check.
+    try {
+      if(USE_SUPA){
+        const r = await sbReq('GET','users','?select=id,handle&handle=eq.'+encodeURIComponent(raw)+'&limit=1');
+        if(Array.isArray(r.d) && r.d.length && r.d[0].id !== user.id){
+          return jres(res,409,{error:'そのハンドルはすでに使われています'});
+        }
+      } else {
+        const other = LDB.find(u => (u.handle||'').toLowerCase() === raw && u.id !== user.id);
+        if(other) return jres(res,409,{error:'そのハンドルはすでに使われています'});
+      }
+    } catch(e){}
+    user.handle = raw;
+    await DB.save(user);
+    return jres(res,200,{ handle: raw });
+  }
+
   // ── POST /api/me/memories ──────────────────────────────────
   // Long-term memory: facts the user wants the AI to remember across
   // chats (preferences, name, role, project context).
@@ -7225,6 +8468,14 @@ async function handleAPI(req,res,pathname,method,ip){
     } else if(sort==='top_rated'){
       // Bayesian-ish: rating × log(1+count) so well-reviewed beats single-5★
       const score = l => (l.rating||0) * Math.log(1+(l.rating_count||0));
+      listings.sort((a,b)=>score(b)-score(a));
+    } else if(sort==='trending'){
+      const now = Date.now();
+      const score = l => {
+        const ageDays = Math.max(0, (now - new Date(l.listed_at||0).getTime()) / 86400000);
+        const decay = Math.exp(-ageDays / 14);
+        return (l.uses||0) * (0.4 + 0.6*decay) + (l.rating_count||0) * 2 * decay;
+      };
       listings.sort((a,b)=>score(b)-score(a));
     } else {
       // popular = uses, with hot ribbon first (default)
@@ -8351,6 +9602,38 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!regenerate && !message?.trim() && images.length===0 && texts.length===0) return jres(res,400,{error:'メッセージを入力してください'});
     if(message.length>4000)return jres(res,400,{error:'メッセージが長すぎます'});
 
+    // Edit: replace a past user message and resend.
+    //   edit_index: 0-based index of the user message to overwrite.
+    //   message:    the new text. Required (and not blank).
+    //
+    // Validated FIRST (before the regenerate pop) so an edit_index+regenerate
+    // combo doesn't mutate history before being rejected.
+    const editIndex = (typeof body.edit_index === 'number' && body.edit_index >= 0)
+      ? Math.floor(body.edit_index) : -1;
+    if(editIndex >= 0){
+      if(regenerate){
+        return jres(res,400,{error:'edit_index と regenerate は同時に指定できません'});
+      }
+      if(!message || !message.trim()){
+        return jres(res,400,{error:'編集後のメッセージを入力してください'});
+      }
+      if(!agent.history || editIndex >= agent.history.length){
+        return jres(res,400,{error:'編集対象のメッセージが見つかりません'});
+      }
+      const target = agent.history[editIndex];
+      if(!target || target.role !== 'user'){
+        return jres(res,400,{error:'編集できるのは自分のメッセージのみです'});
+      }
+      if(isGroup && target.user_id && target.user_id !== user.id){
+        return jres(res,403,{error:'他のメンバーのメッセージは編集できません'});
+      }
+      target.content = message;
+      target.edited = true;
+      target.edited_at = new Date().toISOString();
+      agent.history = agent.history.slice(0, editIndex + 1);
+      body.__forceRegenerate = true;
+    }
+
     // Regenerate: drop trailing assistant from history; resend without adding a new user message
     if(regenerate){
       while(agent.history.length>0 && agent.history[agent.history.length-1].role==='assistant'){
@@ -8360,6 +9643,7 @@ async function handleAPI(req,res,pathname,method,ip){
         return jres(res,400,{error:'再生成できる返答がありません'});
       }
     }
+    const effectiveRegen = regenerate || !!body.__forceRegenerate;
 
     // Group chat AI invocation policy:
     //   - Small groups (≤3 humans incl. host): AI responds to every message
@@ -8399,6 +9683,11 @@ async function handleAPI(req,res,pathname,method,ip){
       }
       if(teamMemberAgent) aiShouldRespond = true;
     }
+    // Knowledge-base retrieval — runs against the responding agent's KB.
+    // Empty/missing KB returns []; injected into every buildSystem call below.
+    const _kbAgent = teamMemberAgent || agent;
+    const _kbHits = _retrieveKbChunks(_kbAgent, message || '', 3);
+
     // Team context for buildSystem — pass team name + goal + sibling members
     // so the AI knows what team it belongs to and what handoffs to suggest.
     let _teamCtx = null;
@@ -8422,7 +9711,7 @@ async function handleAPI(req,res,pathname,method,ip){
         aiShouldRespond = memberCount <= 3;
       }
     }
-    if(isGroup && !regenerate && !aiShouldRespond){
+    if(isGroup && !effectiveRegen && !aiShouldRespond){
       const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
       agent.history = [...(agent.history||[]), {
         role: 'user',
@@ -8520,8 +9809,9 @@ async function handleAPI(req,res,pathname,method,ip){
               return arr;
             })()
           : userContent);
-    // For regenerate: history already ends with the user msg; skip adding a new one
-    const baseMsgs = regenerate
+    // For regenerate / edit: history already ends with the (possibly edited) user
+    // msg; skip adding a new one.
+    const baseMsgs = effectiveRegen
       ? _histForAI
       : [..._histForAI, {role:'user', content: _outboundUC}];
     let reply,cost;
@@ -8586,7 +9876,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         }, agent.model);
@@ -8596,7 +9886,7 @@ async function handleAPI(req,res,pathname,method,ip){
         const _userMsgEntry = isGroup
           ? {role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial}
           : {role:'user',content:message,time:ts};
-        if(regenerate){
+        if(effectiveRegen){
           agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
         } else {
           agent.history=[...(agent.history||[]),
@@ -8685,7 +9975,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
           _trimToolHistory(convMsgs);
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), tools);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), tools);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -8745,6 +10035,15 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeQrTool(block.input||{});
             } else if(block.name === 'create_artifact'){
               result = await executeArtifactTool(block.input||{});
+            } else if(block.name === 'notify_slack'){
+              result = await executeNotifyTool('slack', payerUser, block.input||{});
+            } else if(block.name === 'notify_discord'){
+              result = await executeNotifyTool('discord', payerUser, block.input||{});
+            } else if(block.name === 'generate_agent_promo_video'){
+              const promoAgent = (block.input && block.input.tagline)
+                ? { ...(teamMemberAgent || agent), persona: String(block.input.tagline).slice(0,140) }
+                : (teamMemberAgent || agent);
+              result = await executeAgentPromoVideo(promoAgent);
             } else if(block.name === 'web_screenshot'){
               result = await executeWebScreenshotTool(block.input||{});
             } else if(block.name === 'web_read_markdown'){
@@ -8806,7 +10105,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), agent.model);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), agent.model);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -8827,7 +10126,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), ...(_teamCtx||{})}), agent.model);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, ...(_teamCtx||{})}), agent.model);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);
@@ -8838,7 +10137,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const _userMsgEntry2 = isGroup
       ? {role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial}
       : {role:'user',content:message,time:ts};
-    if(regenerate){
+    if(effectiveRegen){
       agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
     } else {
       agent.history=[...(agent.history||[]),
@@ -9260,6 +10559,86 @@ const server=http.createServer(async(req,res)=>{
     return serveAgentSharePage(res, aRoute[1]);
   }
 
+  // /c/:share_id → public read-only conversation snapshot
+  const cRoute=pathname.match(/^\/c\/(c_[A-Za-z0-9_-]+)\/?$/);
+  if(cRoute){
+    return serveChatSharePage(res, cRoute[1]);
+  }
+
+  // /u/:handle → public creator profile (SSR with OG card)
+  const uRoute = pathname.match(/^\/u\/([a-z0-9_]{3,30})\/?$/);
+  if(uRoute){
+    return serveCreatorProfilePage(res, uRoute[1]);
+  }
+
+  // /trending → public agent store filtered to the trending sort.
+  // Reuses store.html so we don't ship a second SPA shell; the store JS reads
+  // `?sort=trending` off the URL and applies the filter.
+  if(pathname === '/trending' || pathname === '/trending/'){
+    res.writeHead(302, { Location: '/store?sort=trending' }); return res.end();
+  }
+
+  // /w/:token → public webhook entry point. POST a JSON body to trigger the
+  // agent owner's agent. GET returns a docs stub so a curious visitor sees
+  // something useful instead of 404. Token is the auth.
+  const wRoute = pathname.match(/^\/w\/(wh_[A-Za-z0-9_-]+)\/?$/);
+  if(wRoute){
+    if(method === 'GET'){
+      res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+      return res.end('<!doctype html><meta charset="utf-8"><title>MY AI AGENT — webhook</title><body style="font-family:ui-monospace,monospace;background:#0f1216;color:#e5e7eb;padding:32px;max-width:720px;margin:0 auto"><h1 style="font-size:18px;color:#fdba74">MY AI AGENT · webhook endpoint</h1><p>This is a private webhook entry for an AI agent.</p><pre style="background:#1a1f26;padding:14px;border-radius:8px;font-size:12.5px;overflow-x:auto">POST '+APP_URL+'/w/&lt;TOKEN&gt;\nContent-Type: application/json\n\n{ "message": "Hello agent" }</pre><p style="color:#9ca3af">The agent runs and returns its reply as JSON. No auth header needed — the URL token is the secret.</p></body>');
+    }
+    if(method !== 'POST'){
+      res.writeHead(405,{'Allow':'GET, POST'}); return res.end();
+    }
+    // Per-token RL — leaked token = wallet drain risk. 60 hits/min is plenty
+    // for a sensible automation; serious abuse trips this and the owner sees
+    // a 429 in their integration logs instead of getting billed for it.
+    if(!rateLimit('wh:'+wRoute[1], 60, 60000)){
+      return jres(res, 429, { error: 'rate_limit', detail: 'too many requests on this webhook (60/min)' });
+    }
+    return (async () => {
+      try {
+        const found = await findAgentByWebhookToken(wRoute[1]);
+        if(!found) return jres(res, 404, { error: 'webhook not found' });
+        const { user: owner, agent } = found;
+        const payload = (await readBody(req)) || {};
+        // Accept either {message:"..."} or any object (stringify it).
+        let message;
+        if(typeof payload.message === 'string') message = payload.message;
+        else if(typeof payload === 'string') message = payload;
+        else message = JSON.stringify(payload, null, 2);
+        if(!message || !message.trim()) return jres(res, 400, { error: 'message body required' });
+        if(message.length > 8000) message = message.slice(0, 8000);
+        if((owner.balance_jpy||0) <= 0){
+          return jres(res, 402, { error: 'owner balance is zero — please top up' });
+        }
+        const sys = buildSystem(agent, {
+          memories: (owner.memories || []),
+          kbHits: _retrieveKbChunks(agent, message, 3),
+        });
+        const msgs = [...(agent.history||[]).slice(-30), { role:'user', content: message }];
+        const r = await callAI(msgs, sys, agent.model);
+        const reply = (r && r.content && r.content[0] && r.content[0].text) || '';
+        const cost = (r && r.usage)
+          ? calcCost(r.usage.input_tokens||0, r.usage.output_tokens||0)
+          : { jpy:0, usd:0 };
+        const ts = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',hour12:false});
+        agent.history = [
+          ...(agent.history||[]),
+          { role:'user', content: message, time: ts, via:'webhook' },
+          { role:'assistant', content: reply, time: ts, cost_jpy: cost.jpy, via:'webhook' },
+        ];
+        if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+        owner.balance_jpy = Math.round(((owner.balance_jpy||0) - cost.jpy)*1000)/1000;
+        try { await DB.save(owner); } catch(e){ console.warn('[webhook] save failed:', e.message); }
+        return jres(res, 200, { reply, agent: { name: agent.name, avatar: agent.avatar }, cost_jpy: cost.jpy });
+      } catch(e){
+        console.error('[webhook] error:', e.message);
+        return jres(res, 500, { error: 'internal error', detail: (e&&e.message||'').slice(0,200) });
+      }
+    })();
+  }
+
   // /g/:token and /i/:token → public group invite landing
   // (SSR with OG meta + redirect). /i/ is the friendlier alias the
   // marketing strategy refers to; both render the same page.
@@ -9465,6 +10844,12 @@ if(require.main === module){
     console.log('[marketing] autopilot started — report → ' + process.env.MKT_ADMIN_EMAIL);
   } else {
     console.log('[marketing] autopilot OFF (set MKT_AUTOPILOT=1 + MKT_ADMIN_EMAIL to enable)');
+  }
+
+  // ── Per-agent schedule runner: 60s tick that fires due schedules.
+  // Disabled in tests (LDB_PATH set => test mode).
+  if(!process.env.LDB_PATH){
+    _startAgentScheduler();
   }
 }
 

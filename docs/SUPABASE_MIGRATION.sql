@@ -52,6 +52,16 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_devices         jsonb DEFAULT 
 -- 各エントリ: {host_id, agent_id, joined_at}
 ALTER TABLE users ADD COLUMN IF NOT EXISTS group_memberships      jsonb DEFAULT '[]'::jsonb;
 
+-- ── 外向き Webhook (Slack / Discord 通知連携) ────────────────────
+-- 形式: { slack: 'https://hooks.slack.com/...', discord: 'https://discord.com/api/webhooks/...' }
+-- AI が notify_slack / notify_discord ツールを使う時に参照する。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS outgoing_webhooks      jsonb DEFAULT '{}'::jsonb;
+
+-- ── 公開クリエイターハンドル (/u/:handle) ────────────────────────
+-- 3-30 文字の a-z0-9_, グローバルにユニーク。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS handle                 text;
+CREATE UNIQUE INDEX IF NOT EXISTS users_handle_unique             ON users (handle) WHERE handle IS NOT NULL;
+
 -- ── PostgREST のスキーマキャッシュをリロード ──────────────────────
 NOTIFY pgrst, 'reload schema';
 

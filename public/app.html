@@ -1322,6 +1322,21 @@ input,textarea{font-family:var(--sans);}
   padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;
 }
 .m-body pre .cb-copy:hover{background:rgba(255,255,255,.2);}
+.m-body pre .cb-run{
+  position:absolute;top:8px;right:62px;font-size:10px;font-weight:700;
+  background:rgba(74,222,128,.18);color:#86efac;border:1px solid rgba(74,222,128,.35);
+  padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;
+}
+.m-body pre .cb-run:hover{background:rgba(74,222,128,.3);color:#bbf7d0;}
+.m-body pre .cb-run:disabled{opacity:.6;cursor:wait;}
+.cb-out{
+  margin:6px 0 12px;background:#0c1014;color:#cbd5e1;border:1px solid rgba(74,222,128,.25);
+  border-radius:8px;padding:10px 12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;
+  font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-x:auto;
+}
+.cb-out .cb-out-h{display:flex;align-items:center;gap:6px;font-size:10px;color:#86efac;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;}
+.cb-out.err{border-color:rgba(248,113,113,.35);color:#fecaca;}
+.cb-out.err .cb-out-h{color:#fca5a5;}
 .m-body blockquote{margin:8px 0;padding:6px 14px;border-left:3px solid var(--peach);background:rgba(251,146,60,.04);color:var(--text2);}
 .m-body a{color:var(--peach-dark);text-decoration:underline;}
 .m-body img{max-width:100%;border-radius:10px;margin:6px 0;}
@@ -2315,7 +2330,13 @@ body{color:#f0f0f8;}
 #attachBtn:hover{opacity:1 !important;background:rgba(251,146,60,.1) !important;}
 #imgPreviewWrap{padding:8px 18px 0 !important;}
 .in-box{flex-wrap:wrap;}
+
+/* KaTeX-rendered math should inherit the chat text color */
+.m .katex { font-size: 1.02em; }
+.m .katex-display { margin: .55em 0; overflow-x: auto; overflow-y: hidden; }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -2461,7 +2482,10 @@ body{color:#f0f0f8;}
           <button onclick="toggleUserPopup(event)" title="アカウント切替" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:4px;margin:-4px;background:transparent;border:0;cursor:pointer;font-family:inherit;text-align:left;border-radius:8px" onmouseover="this.style.background='rgba(251,146,60,.06)'" onmouseout="this.style.background='transparent'">
             <div class="user-av" id="userAv" style="width:30px;height:30px;flex-shrink:0"></div>
             <div style="flex:1;min-width:0">
-              <div class="user-name" id="userName" style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+              <div style="display:flex;align-items:center;gap:5px;min-width:0">
+                <span class="user-name" id="userName" style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0"></span>
+                <span id="userFounderBadge" style="display:none;flex-shrink:0;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;letter-spacing:.02em;line-height:1;box-shadow:0 2px 5px rgba(234,88,12,.32)" title=""></span>
+              </div>
               <div id="userPlanBadge" style="font-size:10px;color:var(--text3);margin-top:1px">Free</div>
             </div>
             <span style="font-size:9px;color:var(--text3);margin-left:2px">▾</span>
@@ -2592,7 +2616,7 @@ body{color:#f0f0f8;}
 
           <!-- Claude-style composer -->
           <div class="composer" style="position:relative">
-            <input type="file" id="imgInput" accept="image/*,application/pdf,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
+            <input type="file" id="imgInput" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
             <div id="mentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>
@@ -3227,6 +3251,7 @@ body{color:#f0f0f8;}
 
         <div class="snav-section" data-i18n="sNavGrpAdv">高度</div>
         <button class="snav-item" data-tab="creator" onclick="switchStab(this,'s-creator')"><span class="snav-ic">🏪</span><span data-i18n="sNavCreator">クリエイター</span><span class="snav-badge" data-i18n="sBadgeNew">NEW</span></button>
+        <button class="snav-item" data-tab="integrations" onclick="switchStab(this,'s-integrations');_loadIntegrations()"><span class="snav-ic">🔌</span><span>Integrations</span></button>
         <button class="snav-item" data-tab="data" onclick="switchStab(this,'s-data')"><span class="snav-ic">📦</span><span data-i18n="sNavData">データ</span></button>
 
         <div class="snav-section" id="snavAdminSec" style="display:none">運営</div>
@@ -3276,6 +3301,15 @@ body{color:#f0f0f8;}
               </div>
             </div>
             <div class="fld"><label data-i18n="sFldBio">自己紹介</label><textarea id="sBio" rows="3" placeholder=""></textarea></div>
+            <div class="fld">
+              <label>公開ハンドル (Public handle)</label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span style="font-size:13px;color:var(--text3);font-weight:700">/u/</span>
+                <input id="sHandle" type="text" maxlength="30" placeholder="username" pattern="[a-z0-9_]{3,30}" style="flex:1">
+                <button onclick="_saveHandle()" class="btn-primary" style="padding:8px 14px">保存</button>
+              </div>
+              <div id="sHandleStatus" style="font-size:11.5px;color:var(--text3);margin-top:4px"></div>
+            </div>
           </section>
 
           <section class="spane-section">
@@ -3556,6 +3590,46 @@ body{color:#f0f0f8;}
           </section>
         </div>
 
+        <!-- 🔌 Integrations -->
+        <div id="s-integrations" class="snav-pane" style="display:none">
+          <h3 class="spane-h">Integrations</h3>
+          <div class="spane-sub"><span data-i18n>Slack や Discord に通知を送るための連携設定です。</span></div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px"><span style="background:#4a154b;color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">Slack</span> <span data-i18n>Incoming Webhook</span></div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+              <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener" style="color:var(--peach-dark)" data-i18n>Slack で Incoming Webhook を作成</a> <span data-i18n>して URL を貼り付け。</span>
+            </div>
+            <div id="intSlackStatus" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px">
+              <input id="intSlackUrl" type="url" placeholder="https://hooks.slack.com/services/..." style="flex:1;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace">
+              <button onclick="_saveIntegration('slack')" class="btn-primary" style="padding:9px 14px"><span data-i18n>保存</span></button>
+              <button onclick="_clearIntegration('slack')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;font-family:inherit"><span data-i18n>削除</span></button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px"><span style="background:#5865f2;color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">Discord</span> Webhook</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+              <span data-i18n>チャンネル設定 → Integrations → Webhooks → New Webhook → URL をコピー。</span>
+            </div>
+            <div id="intDiscordStatus" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px">
+              <input id="intDiscordUrl" type="url" placeholder="https://discord.com/api/webhooks/..." style="flex:1;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace">
+              <button onclick="_saveIntegration('discord')" class="btn-primary" style="padding:9px 14px"><span data-i18n>保存</span></button>
+              <button onclick="_clearIntegration('discord')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;font-family:inherit"><span data-i18n>削除</span></button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h"><span data-i18n>使い方</span></div>
+            <div style="font-size:12.5px;color:var(--text2);line-height:1.7">
+              <span data-i18n>AI に「Slack に売上レポートを送って」と指示すると、自動で notify_slack ツールを呼びます。</span><br>
+              <span data-i18n>スケジュール実行 + Slack 通知 を組み合わせて、毎朝 9 時に分析結果を投げる、といったオートメーションも可能です。</span>
+            </div>
+          </section>
+        </div>
+
         <!-- 📦 データ -->
         <div id="s-data" class="snav-pane" style="display:none">
           <h3 class="spane-h" data-i18n="sNavData">データ</h3>
@@ -3770,6 +3844,46 @@ body{color:#f0f0f8;}
         </div>
       </div>
       <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
+    </div>
+
+    <!-- Knowledge base (RAG) -->
+    <div id="editKbBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(16,185,129,.1));border:1px solid rgba(16,185,129,.22);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#047857;display:flex;align-items:center;gap:6px">📚 ナレッジベース</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">PDF・DOCX・テキストを登録すると、関連する質問でこのAIが自動で参照します。</div>
+        </div>
+      </div>
+      <div id="editKbList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto"></div>
+      <input type="file" id="editKbInput" accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.xml,.yaml,.yml,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv" multiple style="display:none" onchange="onKbFileSelect(event)">
+      <button type="button" onclick="document.getElementById('editKbInput').click()" style="margin-top:10px;width:100%;background:#fff;color:#047857;border:1px solid #10b981;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ ドキュメントを追加</button>
+    </div>
+
+    <!-- Webhook -->
+    <div id="editWhBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(14,165,233,.05),rgba(14,165,233,.1));border:1px solid rgba(14,165,233,.25);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#0369a1;display:flex;align-items:center;gap:6px">🔌 Webhook</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">外部サービスから POST すると、AI が応答を JSON で返します。Zapier・GitHub・Slack などから呼び出せます。</div>
+        </div>
+      </div>
+      <div id="editWhStatus" style="margin-top:10px"></div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button id="editWhToggle" type="button" onclick="_whToggle()" style="flex:1;background:#fff;color:#0369a1;border:1px solid #0ea5e9;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">Webhook を有効化</button>
+        <button id="editWhRotate" type="button" onclick="_whRotate()" style="display:none;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:8px;padding:9px 12px;font-size:11.5px;cursor:pointer;font-family:inherit">URL 再生成</button>
+      </div>
+    </div>
+
+    <!-- Scheduled execution -->
+    <div id="editSchedBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,.05),rgba(245,158,11,.1));border:1px solid rgba(245,158,11,.25);border-radius:11px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#b45309;display:flex;align-items:center;gap:6px">⏰ スケジュール実行</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">毎日 / 毎時 のタイミングで自動的に AI を走らせ、結果をチャットまたはメールで受け取れます。</div>
+        </div>
+      </div>
+      <div id="editSchedList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto"></div>
+      <button type="button" onclick="_schedOpenForm()" style="margin-top:10px;width:100%;background:#fff;color:#b45309;border:1px solid #f59e0b;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 新しいスケジュール</button>
     </div>
 
     <!-- グループ作成 / 招待リンク管理 -->
@@ -4246,11 +4360,20 @@ body{color:#f0f0f8;}
 }
 .reaction-picker button:hover{background:var(--bg-100);transform:scale(1.15);}
 
-/* Read receipt next to time stamp (LINE-style "既読 N") */
+/* Read receipt — WhatsApp/LINE-style check icons next to time stamp.
+   .m-read.delivered = ✓ (one tick, gray) = sent but nobody read it yet.
+   .m-read.read      = ✓✓ (two ticks, peach) = at least one other member read. */
 .m-read{
-  font-size:9.5px;color:var(--peach-dark);font-weight:600;
-  padding:1px 6px;border-radius:9px;background:rgba(251,146,60,.08);
-  margin-left:4px;letter-spacing:-.005em;
+  display:inline-flex;align-items:center;gap:2px;
+  font-size:11px;font-weight:700;margin-left:5px;
+  letter-spacing:-.04em;line-height:1;
+}
+.m-read.delivered{color:var(--text3);}
+.m-read.read{color:var(--peach-dark);}
+.m-read .m-read-n{
+  font-size:9.5px;font-weight:700;margin-left:1px;
+  padding:1px 5px;border-radius:8px;
+  background:rgba(251,146,60,.12);color:var(--peach-dark);
 }
 </style>
 
@@ -6436,6 +6559,38 @@ var _JA2EN = {
   'AI を作成': 'Create AI',
   'まだトークがありません': 'No conversations yet',
   '＋ ホームから作成': '+ Create from home',
+
+  // ── New: Knowledge base / Schedules / Webhook / Integrations ──
+  '📚 ナレッジベース': '📚 Knowledge base',
+  'PDF・DOCX・テキストを登録すると、関連する質問でこのAIが自動で参照します。': 'Add PDF/DOCX/text — this AI will look them up on relevant questions.',
+  '＋ ドキュメントを追加': '+ Add document',
+  'まだドキュメントがありません': 'No documents yet',
+  '⏰ スケジュール実行': '⏰ Scheduled runs',
+  '毎日 / 毎時 のタイミングで自動的に AI を走らせ、結果をチャットまたはメールで受け取れます。': 'Run this AI on a daily/hourly schedule and deliver the result to chat or email.',
+  '＋ 新しいスケジュール': '+ New schedule',
+  'まだスケジュールがありません': 'No schedules yet',
+  '🔌 Webhook': '🔌 Webhook',
+  '外部サービスから POST すると、AI が応答を JSON で返します。Zapier・GitHub・Slack などから呼び出せます。': 'Anything that POSTs here will trigger the AI and get a JSON reply — Zapier, GitHub, Slack, etc.',
+  'Webhook を有効化': 'Enable webhook',
+  'Webhook を無効化': 'Disable webhook',
+  'URL 再生成': 'Regenerate URL',
+  'まだ有効化されていません': 'Not enabled yet',
+  '公開ハンドル (Public handle)': 'Public handle',
+  '3-30 文字の a-z, 0-9, _ のみ。公開プロフィールページを使うために設定。': '3-30 chars of a-z, 0-9, _ only. Required for your public profile page.',
+
+  // ── Integrations pane ──
+  'Slack や Discord に通知を送るための連携設定です。': 'Outbound notifications to Slack or Discord.',
+  'Incoming Webhook': 'Incoming Webhook',
+  'Slack で Incoming Webhook を作成': 'Create a Slack Incoming Webhook',
+  'して URL を貼り付け。': '— then paste the URL here.',
+  'チャンネル設定 → Integrations → Webhooks → New Webhook → URL をコピー。': 'Channel settings → Integrations → Webhooks → New Webhook → copy the URL.',
+  '使い方': 'How to use',
+  '保存': 'Save',
+  '削除': 'Delete',
+  '未設定': 'Not configured',
+  '設定済み': 'Configured',
+  'AI に「Slack に売上レポートを送って」と指示すると、自動で notify_slack ツールを呼びます。': 'Ask the AI "send a sales report to Slack" — it calls notify_slack automatically.',
+  'スケジュール実行 + Slack 通知 を組み合わせて、毎朝 9 時に分析結果を投げる、といったオートメーションも可能です。': 'Combined with Scheduled runs, you can have analysis delivered to Slack every morning at 9 AM.',
 };
 
 /* Apply translations to all text nodes in the given root. Idempotent. */
@@ -6885,6 +7040,19 @@ function _showUpgradeToast(err){
 function renderAll(){
   document.getElementById('userName').textContent=me.name;
   document.getElementById('userAv').textContent=me.name.charAt(0).toUpperCase();
+  // Founder 100 badge in sidebar — shows "★ #42" with peach gradient.
+  var fb = document.getElementById('userFounderBadge');
+  if(fb){
+    if(me.is_founder){
+      fb.style.display = 'inline-flex';
+      fb.textContent = '★' + (me.founder_seat_no ? ' #'+me.founder_seat_no : '');
+      fb.title = isJa
+        ? 'Founder 100 メンバー' + (me.founder_seat_no ? ' (席 #'+me.founder_seat_no+')' : '')
+        : 'Founder 100 member' + (me.founder_seat_no ? ' (seat #'+me.founder_seat_no+')' : '');
+    } else {
+      fb.style.display = 'none';
+    }
+  }
   updateBalance();
   updatePlanBadge();
   renderAgList();
@@ -7754,6 +7922,7 @@ async function openAgent(id){
     actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="'+L('グループ設定','Group settings')+'">⚙</button>';
   } else {
     actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
+    actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
     actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
     if(!ag._is_joined_group){
       actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
@@ -7792,13 +7961,45 @@ function _md(src){
     codeBlocks.push({lang:lang||'',code:code.replace(/\n+$/,'')});
     return ' CB'+idx+' ';
   });
+  // Extract LaTeX math blocks BEFORE escaping so $..$ / $$..$$ survive.
+  // Placeholder uses NUL bytes so it can't collide with user text (same trick
+  // as the code-block placeholder above).
+  var mathBlocks=[];
+  function _pushMath(tex, display){
+    var mi=mathBlocks.length;
+    mathBlocks.push({tex:tex, display:!!display});
+    return '  MX'+mi+'  ';
+  }
+  src=src.replace(/\$\$([\s\S]+?)\$\$/g, function(_,t){ return _pushMath(t, true); });
+  src=src.replace(/\\\[([\s\S]+?)\\\]/g,  function(_,t){ return _pushMath(t, true); });
+  src=src.replace(/\\\(([\s\S]+?)\\\)/g,  function(_,t){ return _pushMath(t, false); });
+  // Conservative inline $..$ — avoid eating "$5" / "$1 and $2" style prices.
+  src=src.replace(/(^|[^$\\\w])\$([^\s$][^$\n]*?[^\s$])\$(?=$|[^$\w])/g,
+    function(m, pre, t){
+      if(/^\s*\d+(\.\d+)?\s*$/.test(t)) return m;
+      return pre + _pushMath(t, false);
+    });
   // Escape HTML
   var html=esc(src);
+  // Restore math blocks — render with KaTeX if loaded, else show source.
+  html=html.replace(/  MX(\d+)  /g, function(_,i){
+    var b=mathBlocks[+i];
+    if(window.katex && typeof window.katex.renderToString==='function'){
+      try { return window.katex.renderToString(b.tex, { displayMode:b.display, throwOnError:false, output:'html' }); }
+      catch(e){}
+    }
+    return '<code class="math-fallback">'+esc(b.tex)+'</code>';
+  });
   // Restore code blocks (escape the code inside)
   html=html.replace(/ CB(\d+) /g,function(_,i){
     var b=codeBlocks[+i];
     var enc=encodeURIComponent(b.code);
-    return '<pre><button class="cb-copy" data-code="'+enc+'" onclick="copyCodeBlock(event,this)">📋 Copy</button><code>'+esc(b.code)+'</code></pre>';
+    var langAttr = b.lang ? ' data-lang="'+esc(b.lang)+'"' : '';
+    var isPy = /^(py|python)$/i.test(b.lang||'');
+    var runBtn = isPy
+      ? '<button class="cb-run" data-code="'+enc+'" onclick="runPyCode(event,this)" title="Run with Pyodide (in-browser Python)">▶ Run</button>'
+      : '';
+    return '<pre'+langAttr+'>'+runBtn+'<button class="cb-copy" data-code="'+enc+'" onclick="copyCodeBlock(event,this)">📋 Copy</button><code>'+esc(b.code)+'</code></pre>';
   });
   // Headings
   html=html.replace(/^#### (.+)$/gm,'<h4>$1</h4>');
@@ -7867,6 +8068,69 @@ function copyCodeBlock(ev,btn){
   var orig=btn.innerHTML;
   btn.innerHTML='✓ Copied';
   setTimeout(function(){ btn.innerHTML=orig; },1400);
+}
+
+/* ── In-browser Python (Pyodide) ───────────────────────
+ * Loads a single ~12MB Pyodide WASM bundle on first run, then caches it.
+ * Runs each code block in a fresh global namespace so prior cells don't leak.
+ * stdout / stderr are captured and shown beneath the <pre> block. */
+var _pyodideLoading = null;
+async function _loadPyodide(){
+  if(window.pyodide) return window.pyodide;
+  if(_pyodideLoading) return _pyodideLoading;
+  _pyodideLoading = (async function(){
+    if(!window.loadPyodide){
+      await new Promise(function(resolve, reject){
+        var s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+        s.onload=resolve; s.onerror=reject;
+        document.head.appendChild(s);
+      });
+    }
+    window.pyodide = await window.loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' });
+    return window.pyodide;
+  })();
+  return _pyodideLoading;
+}
+
+async function runPyCode(ev, btn){
+  ev && ev.stopPropagation();
+  var pre = btn.closest('pre'); if(!pre) return;
+  var code = decodeURIComponent(btn.getAttribute('data-code')||'');
+  if(!code.trim()) return;
+  // Re-use or create an output box right after the <pre>.
+  var out = pre.nextElementSibling;
+  if(!out || !out.classList || !out.classList.contains('cb-out')){
+    out = document.createElement('div');
+    out.className = 'cb-out';
+    pre.parentNode.insertBefore(out, pre.nextSibling);
+  }
+  out.classList.remove('err');
+  out.innerHTML = '<div class="cb-out-h">▶ Python · loading…</div>';
+  btn.disabled = true; var origLabel = btn.innerHTML; btn.innerHTML = '⋯';
+  try {
+    var py = await _loadPyodide();
+    out.innerHTML = '<div class="cb-out-h">▶ Python · running…</div>';
+    var captured = [];
+    py.setStdout({ batched: function(s){ captured.push(s); } });
+    py.setStderr({ batched: function(s){ captured.push(s); } });
+    var result;
+    try {
+      result = await py.runPythonAsync(code, { globals: py.toPy({}) });
+    } catch(e){
+      out.classList.add('err');
+      out.innerHTML = '<div class="cb-out-h">▶ Python · error</div>' + esc(captured.join('\n')+(captured.length?'\n':'')+(e && e.message || String(e)));
+      return;
+    }
+    var stdout = captured.join('\n');
+    var repr = (result === undefined || result === null) ? '' : String(result);
+    out.innerHTML = '<div class="cb-out-h">▶ Python · ok</div>' + esc(stdout + (stdout && repr ? '\n' : '') + repr);
+  } catch(e){
+    out.classList.add('err');
+    out.innerHTML = '<div class="cb-out-h">▶ Python · failed to load</div>' + esc((e&&e.message)||String(e));
+  } finally {
+    btn.disabled = false; btn.innerHTML = origLabel;
+  }
 }
 
 /* ── Message rendering ──────────────────────────────── */
@@ -7975,7 +8239,9 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const bmBtn = '<button class="m-act bm'+(isBookmarked?' bm-on':'')+'" onclick="toggleBookmark(this)" title="ブックマーク">'+(isBookmarked?'★':'☆')+'</button>';
     const pinBtn = '<button class="m-act pin'+(isPinned?' pin-on':'')+'" onclick="togglePin(this)" title="ピン留め">'+(isPinned?'📌':'📍')+'</button>';
     if(isU){
-      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+bmBtn+pinBtn;
+      // Only show edit on your own user messages (not other group members').
+      var editBtn = isMyMsg ? '<button class="m-act" onclick="editMsgStart(this)" title="'+(isJa?'編集して再生成':'Edit & resend')+'">✏️ '+(isJa?'編集':'Edit')+'</button>' : '';
+      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+editBtn+bmBtn+pinBtn;
     } else {
       acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+
              '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
@@ -8031,16 +8297,27 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   }
   // Read receipts: for my own group messages, count how many OTHER members
   // have last_read_idx > this msg's idx.
+  //   0 readers  → ✓     (delivered, nobody else has read)
+  //   1+ readers → ✓✓ N  (read by N other members)
   let readReceipt = '';
   if(isGroup && isU && raw && raw.user_id === me?.id && idx >= 0 && Array.isArray(ag.members)){
-    let readers = 0;
+    let readers = 0, otherMembers = 0;
     for(const mem of ag.members){
       if(!mem || mem.user_id === me?.id) continue;
+      otherMembers++;
       const li = Number.isInteger(mem.last_read_idx) ? mem.last_read_idx : 0;
       if(li > idx) readers++;
     }
-    if(readers > 0){
-      readReceipt = '<span class="m-read" title="このメッセージを既読のメンバー数">既読 '+readers+'</span>';
+    if(otherMembers > 0){
+      const tipDel = isJa ? '送信済み (まだ未読)' : 'Delivered (unread)';
+      const tipRead = isJa ? readers + ' 人が既読' : 'Read by ' + readers;
+      // Two-member chats (host + 1) → no count, just ticks.
+      const countBadge = otherMembers > 1 && readers > 0 ? '<span class="m-read-n">'+readers+'</span>' : '';
+      if(readers > 0){
+        readReceipt = '<span class="m-read read" title="'+tipRead+'" aria-label="'+tipRead+'">✓✓'+countBadge+'</span>';
+      } else {
+        readReceipt = '<span class="m-read delivered" title="'+tipDel+'" aria-label="'+tipDel+'">✓</span>';
+      }
     }
   }
   return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'">'+
@@ -8709,6 +8986,69 @@ function _extHintAction(){
   }
 }
 
+/* ── Edit + regenerate user message ──────────────────── */
+function editMsgStart(btn){
+  var row=btn.closest('.m'); if(!row) return;
+  var idx=parseInt(row.dataset.idx||'-1',10); if(idx<0) return;
+  var ag=agents.find(function(a){return a.id===activeId;}); if(!ag) return;
+  var msg=ag.history[idx]; if(!msg || msg.role!=='user') return;
+  // Find the body element to swap into edit mode.
+  var bodyEl=row.querySelector('.m-body'); if(!bodyEl) return;
+  if(row.classList.contains('editing')) return;
+  row.classList.add('editing');
+  // Save original HTML so cancel restores cleanly.
+  bodyEl.dataset.origHtml = bodyEl.innerHTML;
+  var current = msg.content || '';
+  bodyEl.innerHTML =
+    '<textarea class="m-edit-ta" rows="3" style="width:100%;min-height:64px;max-height:240px;padding:9px 11px;border:1px solid var(--peach);border-radius:10px;font-family:inherit;font-size:14.5px;line-height:1.5;background:var(--card);color:var(--text);resize:vertical">'+esc(current)+'</textarea>'+
+    '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">'+
+      '<button class="m-act" onclick="editMsgCancel(this)" style="background:none">'+(isJa?'キャンセル':'Cancel')+'</button>'+
+      '<button class="m-act primary" onclick="editMsgSave(this)" style="background:var(--peach);color:#fff;border:0">'+(isJa?'保存して再送信':'Save & resend')+'</button>'+
+    '</div>';
+  var ta=bodyEl.querySelector('textarea'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+function editMsgCancel(btn){
+  var row=btn.closest('.m'); if(!row) return;
+  var bodyEl=row.querySelector('.m-body'); if(!bodyEl) return;
+  if(bodyEl.dataset.origHtml !== undefined){
+    bodyEl.innerHTML = bodyEl.dataset.origHtml;
+    delete bodyEl.dataset.origHtml;
+  }
+  row.classList.remove('editing');
+}
+async function editMsgSave(btn){
+  var row=btn.closest('.m'); if(!row) return;
+  var idx=parseInt(row.dataset.idx||'-1',10); if(idx<0) return;
+  var ag=agents.find(function(a){return a.id===activeId;}); if(!ag) return;
+  var ta=row.querySelector('textarea.m-edit-ta'); if(!ta) return;
+  var newText=(ta.value||'').trim();
+  if(!newText){ showToast(isJa?'空のメッセージにはできません':'Cannot be empty','ng'); return; }
+  btn.disabled=true; btn.textContent=isJa?'送信中…':'Sending…';
+  // Optimistic local update: truncate history past idx, replace content, drop assistant after.
+  ag.history = ag.history.slice(0, idx+1);
+  ag.history[idx] = { ...ag.history[idx], content: newText, edited: true, edited_at: new Date().toISOString() };
+  renderMsgs(ag);
+  // Append thinking indicator (mirror regenerateMsg).
+  var inner=document.getElementById('msgsInner');
+  if(inner){
+    var tEl=document.createElement('div');
+    tEl.className='m a'; tEl.id='thinking';
+    var _genLabel = ag.chrome_enabled ? (isJa?'ブラウジング中…':'Browsing…') : (isJa?'考えています…':'Thinking…');
+    tEl.innerHTML='<div class="m-meta"><div class="m-av">'+_avHTML(ag.avatar)+'</div><span class="m-name">'+esc(ag.name)+'</span></div><div class="m-body"><div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'+_genLabel+'</div></div></div>';
+    inner.appendChild(tEl);
+    _scrollMsgsToEnd();
+  }
+  try{
+    var r=await api('POST','/api/chat/'+activeId,{ edit_index: idx, message: newText });
+    ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
+    if(r.balance_jpy!==undefined) me.balance_jpy=r.balance_jpy;
+  }catch(e){
+    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
+  }
+  var t=document.getElementById('thinking'); if(t) t.remove();
+  renderMsgs(ag);
+}
+
 async function regenerateMsg(btn){
   if(!activeId) return;
   var ag=agents.find(function(a){return a.id===activeId;}); if(!ag) return;
@@ -8848,6 +9188,74 @@ async function toggleSharePublic(enabled){
     }
   }catch(e){ showToast(isJa?'失敗しました':'Failed','ng'); }
 }
+
+/* ── Share *conversation* (read-only public snapshot at /c/:id) ───── */
+async function openChatShareModal(){
+  if(!activeId) return;
+  var ag=agents.find(function(a){return a.id===activeId;}); if(!ag) return;
+  if(!ag.history || !ag.history.length){
+    showToast(isJa?'共有できる会話がまだありません':'No conversation to share yet','ng'); return;
+  }
+  // Pre-fill the title from the first user message (truncated).
+  var firstUser = (ag.history||[]).find(function(m){return m.role==='user';});
+  var defaultTitle = (firstUser && firstUser.content || ag.name || 'Conversation').toString().replace(/\s+/g,' ').slice(0,90);
+  var ov=document.createElement('div');
+  ov.id='chatShareOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;padding:14px;';
+  ov.innerHTML=
+    '<div style="background:var(--card);border-radius:14px;max-width:480px;width:100%;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
+        '<div style="font-weight:800;font-size:16px">💬 '+(isJa?'この会話を共有':'Share this conversation')+'</div>'+
+        '<button onclick="closeChatShareModal()" style="background:none;border:0;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">×</button>'+
+      '</div>'+
+      '<div style="font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:12px">'+(isJa?'今までのやり取りをスナップショットとして公開リンクにします。閲覧専用で、後から編集できません。':'Creates a read-only public snapshot of this conversation. Viewers cannot edit or reply.')+'</div>'+
+      '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'タイトル':'Title')+'</label>'+
+      '<input id="csTitleIn" maxlength="120" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;margin-bottom:14px;font-family:inherit" value="'+esc(defaultTitle)+'">'+
+      '<div id="csResult" style="display:none;margin-bottom:14px">'+
+        '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'公開リンク':'Public link')+'</label>'+
+        '<div style="display:flex;gap:6px"><input id="csUrlIn" readonly style="flex:1;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:12.5px;font-family:inherit"><button onclick="copyChatShareUrl()" style="padding:9px 12px;background:var(--peach);color:#fff;border:0;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
+        '<div id="csTweet" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>'+
+      '</div>'+
+      '<button id="csCreate" onclick="createChatShare()" style="width:100%;padding:11px;background:var(--text);color:#fff;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'公開リンクを作成':'Create public link')+'</button>'+
+    '</div>';
+  ov.addEventListener('click', function(e){ if(e.target===ov) closeChatShareModal(); });
+  document.body.appendChild(ov);
+}
+function closeChatShareModal(){
+  var ov=document.getElementById('chatShareOv'); if(ov) ov.remove();
+}
+async function createChatShare(){
+  var titleIn=document.getElementById('csTitleIn');
+  var btn=document.getElementById('csCreate');
+  if(!titleIn||!btn) return;
+  btn.disabled=true; btn.textContent=isJa?'作成中…':'Creating…';
+  try{
+    var r=await api('POST','/api/chat/share',{ agent_id: activeId, title: titleIn.value||'' });
+    var url=r.url;
+    var box=document.getElementById('csResult');
+    var urlIn=document.getElementById('csUrlIn');
+    if(urlIn) urlIn.value=url;
+    if(box){
+      box.style.display='block';
+      var enc=encodeURIComponent(url);
+      var tweetText=encodeURIComponent((isJa?'Claude をベースに作った MY AI Agent との会話、共有しました 👇':'Sharing a conversation with my AI agent on MY AI AGENT 👇'));
+      document.getElementById('csTweet').innerHTML=
+        '<a target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text='+tweetText+'&url='+enc+'" style="background:#000;color:#fff;padding:7px 11px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none">𝕏 '+(isJa?'X でツイート':'Tweet')+'</a>'+
+        '<a href="mailto:?subject='+tweetText+'&body='+enc+'" style="background:#f4f4f5;color:#27272a;padding:7px 11px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none">✉️ '+(isJa?'メール':'Email')+'</a>';
+    }
+    btn.style.display='none';
+    showToast(isJa?'公開リンクを作成しました':'Public link created','ok');
+  }catch(e){
+    btn.disabled=false; btn.textContent=isJa?'公開リンクを作成':'Create public link';
+    showToast((e&&e.message)||(isJa?'作成に失敗':'Failed'),'ng');
+  }
+}
+function copyChatShareUrl(){
+  var inp=document.getElementById('csUrlIn'); if(!inp) return;
+  if(navigator.clipboard) navigator.clipboard.writeText(inp.value);
+  else { inp.select(); document.execCommand('copy'); }
+  showToast(isJa?'URLをコピーしました':'URL copied','ok');
+}
 function useChip(t){
   // In group chats, the AI only responds when the message includes @AI.
   // Quick chips are explicitly meant to invoke the agent, so auto-prepend.
@@ -8856,6 +9264,35 @@ function useChip(t){
     t = '@AI ' + t;
   }
   document.getElementById('ci').value=t; sendMsg();
+}
+
+/* ── Follow-up chip suggestions (Claude.ai-style) ───── */
+async function _fetchFollowupSuggestions(ag){
+  if(!ag || !ag.id) return;
+  // Clear any previous chip row so we don't stack.
+  var prev = document.getElementById('followup-chips');
+  if(prev) prev.remove();
+  try {
+    var r = await api('POST','/api/chat/'+ag.id+'/suggest',{});
+    var s = (r && r.suggestions) || [];
+    if(!s.length) return;
+    if(activeId !== ag.id) return; // user switched agents while we were waiting
+    var inner = document.getElementById('msgsInner'); if(!inner) return;
+    var row = document.createElement('div');
+    row.id = 'followup-chips';
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 4px;max-width:780px;margin:0 auto;';
+    row.innerHTML = s.map(function(text){
+      var t = String(text||'').slice(0,90);
+      return '<button onclick="useFollowupChip(this)" data-text="'+esc(t).replace(/"/g,'&quot;')+'" style="background:#fff;border:1px solid var(--wire2);border-radius:18px;padding:7px 13px;font-size:12.5px;color:var(--text2);cursor:pointer;font-family:inherit;line-height:1.3;transition:all .12s ease" onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--text2)\';this.style.borderColor=\'var(--wire2)\'">'+esc(t)+'</button>';
+    }).join('');
+    inner.appendChild(row);
+    _scrollMsgsToEnd();
+  } catch(e){ /* silent — chips are non-critical */ }
+}
+function useFollowupChip(btn){
+  var t = btn.getAttribute('data-text') || '';
+  var prev = document.getElementById('followup-chips'); if(prev) prev.remove();
+  useChip(t);
 }
 
 /* ── Send ──────────────────────────────────────────── */
@@ -9103,11 +9540,67 @@ function onImgSelect(e){
   e.target.value = '';
 }
 
+function _isDocx(file){
+  var n=(file.name||'').toLowerCase();
+  return file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/.test(n);
+}
+
+function _csvSummary(text, name){
+  // Quick rows × cols preview prepended so the AI sees structure right away.
+  var lines = text.split(/\r?\n/).filter(function(l){return l.length>0;});
+  if(!lines.length) return text;
+  // Naive split on comma — fine for previews. The full file is still in `text`.
+  var firstCols = (lines[0].match(/,/g)||[]).length + 1;
+  var head = lines.slice(0, 10).join('\n');
+  var note = '[CSV preview — '+lines.length+' row'+(lines.length===1?'':'s')+', '+firstCols+' column'+(firstCols===1?'':'s')+']';
+  return note + '\n\n' + head + (lines.length>10 ? '\n…\n(full file below)\n\n' + text : '');
+}
+
+async function _ingestDocx(file){
+  // Read as base64, hand off to server for mammoth-based text extraction.
+  var placeholder = { name: file.name, kind: 'text-loading', text: '' };
+  _pendingImgs.push(placeholder);
+  renderImgPreview();
+  try {
+    var b64 = await new Promise(function(resolve, reject){
+      var r = new FileReader();
+      r.onload = function(ev){ resolve(String(ev.target.result||'').split(',')[1] || ''); };
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    var r = await api('POST','/api/parse/docx',{ b64: b64, name: file.name });
+    var idx = _pendingImgs.indexOf(placeholder);
+    if(idx>=0) _pendingImgs.splice(idx,1);
+    if(!r || !r.text){
+      showToast(isJa?'DOCX を解析できませんでした':'Could not parse DOCX','ng');
+      renderImgPreview(); return;
+    }
+    _pendingImgs.push({
+      name: file.name,
+      type: 'text/plain',
+      kind: 'text',
+      text: r.text,
+      truncated: !!r.truncated,
+      size: file.size,
+      source_kind: 'docx',
+    });
+  } catch(e){
+    var i = _pendingImgs.indexOf(placeholder); if(i>=0) _pendingImgs.splice(i,1);
+    showToast((isJa?'DOCX 解析エラー: ':'DOCX parse error: ')+(e.message||''),'ng');
+  }
+  renderImgPreview();
+}
+
 function _ingestFiles(files){
   files.forEach(file => {
     var isImg = file.type.startsWith('image/');
     var isPdf = file.type === 'application/pdf';
-    var isTxt = _isTextLike(file);
+    var isDocx = _isDocx(file);
+    var isTxt = !isDocx && _isTextLike(file);
+    if(isDocx){
+      if(file.size > 20*1024*1024){ showToast(isJa?'DOCX が大きすぎます (20MB)':'DOCX too large (20MB)','ng'); return; }
+      return _ingestDocx(file);
+    }
     if(!isImg && !isPdf && !isTxt){
       showToast((isJa?'未対応のファイル形式: ':'Unsupported file: ')+file.name,'ng');
       return;
@@ -9128,6 +9621,10 @@ function _ingestFiles(files){
         var text = String(ev.target.result || '');
         var truncated = false;
         if(text.length > 60000){ text = text.slice(0, 60000); truncated = true; }
+        // For CSV/TSV, prepend a quick rows × columns summary so the AI
+        // immediately knows the shape of the data.
+        var isCsv = /\.(csv|tsv)$/i.test(file.name);
+        if(isCsv){ text = _csvSummary(text, file.name); }
         _pendingImgs.push({
           name: file.name,
           type: file.type || 'text/plain',
@@ -9135,6 +9632,7 @@ function _ingestFiles(files){
           text: text,
           truncated: truncated,
           size: file.size,
+          source_kind: isCsv ? 'csv' : 'text',
         });
         renderImgPreview();
       };
@@ -9275,9 +9773,9 @@ function renderImgPreview(){
     } else if(att.kind==='url'){
       thumb = '<div style="width:28px;height:28px;border-radius:5px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">🔗</div>';
       if(att.text && att.text.length) sub = ' · '+_fmtBytes(att.text.length);
-    } else if(att.kind==='url-loading'){
+    } else if(att.kind==='url-loading' || att.kind==='text-loading'){
       thumb = '<div style="width:28px;height:28px;border-radius:5px;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">⋯</div>';
-      sub = ' · '+(isJa?'読み込み中…':'fetching…');
+      sub = ' · '+(att.kind==='text-loading' ? (isJa?'解析中…':'parsing…') : (isJa?'読み込み中…':'fetching…'));
     } else {
       thumb = '<img src="'+att.url+'">';
     }
@@ -9300,7 +9798,7 @@ function _fmtBytes(n){
 function _attachmentPayload(){
   const imgs = [], texts = [];
   _pendingImgs.forEach(att => {
-    if(att.kind === 'url-loading') return; // skip in-flight URL fetches
+    if(att.kind === 'url-loading' || att.kind === 'text-loading') return; // skip in-flight fetches/parses
     if(att.kind === 'text' || att.kind === 'url'){
       texts.push({
         kind: att.kind,
@@ -9466,6 +9964,9 @@ async function sendMsg(){
   if(ag.is_group){
     _groupPollSig = _historySignature(ag.history || []);
   }
+  // Fire-and-forget follow-up suggestion chips for solo chats. Skipped for
+  // groups (signal-to-noise too low + cost adds up across speakers).
+  if(!ag.is_group){ _fetchFollowupSuggestions(ag); }
   _groupPollPaused = false;
 }
 
@@ -12116,6 +12617,273 @@ function openEditAgent(id){
 
   document.getElementById('editPanel').style.right = '0';
   document.getElementById('editPanelOverlay').style.display = 'block';
+  // Refresh KB + schedule + webhook lists whenever the panel opens.
+  try { _kbLoadList(); } catch(e){}
+  try { _schedLoadList(); } catch(e){}
+  try { _whLoad(); } catch(e){}
+}
+
+async function _kbLoadList(){
+  var id = window._editAgentId; if(!id) return;
+  var listEl = document.getElementById('editKbList'); if(!listEl) return;
+  try {
+    var r = await api('GET','/api/agents/'+id+'/knowledge');
+    var docs = (r && r.docs) || [];
+    if(!docs.length){
+      listEl.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:4px 0">'+(isJa?'まだドキュメントがありません':'No documents yet')+'</div>';
+      return;
+    }
+    listEl.innerHTML = docs.map(function(d){
+      var kb = Math.max(1, Math.round(d.length/1024));
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:#fff;border:1px solid rgba(16,185,129,.18);border-radius:8px">'+
+        '<div style="width:24px;height:24px;border-radius:5px;background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">DOC</div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(d.name||'doc')+'</div>'+
+        '<div style="font-size:10.5px;color:var(--text3)">'+kb+'KB · '+(d.chunks||0)+(isJa?' チャンク':' chunks')+'</div></div>'+
+        '<button onclick="_kbDelete(\''+esc(d.id)+'\')" style="background:none;border:0;color:var(--text3);cursor:pointer;font-size:14px" title="'+(isJa?'削除':'Delete')+'">✕</button>'+
+      '</div>';
+    }).join('');
+  } catch(e){
+    listEl.innerHTML = '<div style="font-size:11.5px;color:#dc2626;padding:4px 0">'+(isJa?'読み込めません':'Failed to load')+'</div>';
+  }
+}
+async function _kbDelete(docId){
+  var id = window._editAgentId; if(!id || !docId) return;
+  if(!confirm(isJa?'このドキュメントを削除しますか？':'Delete this document?')) return;
+  try { await api('DELETE','/api/agents/'+id+'/knowledge/'+docId); _kbLoadList(); }
+  catch(e){ showToast((isJa?'削除に失敗: ':'Delete failed: ')+(e.message||''), 'ng'); }
+}
+function onKbFileSelect(ev){
+  var files = Array.from(ev.target.files||[]);
+  ev.target.value='';
+  files.forEach(_kbUploadDoc);
+}
+/* ── Public handle ──────────────────────────────────── */
+async function _saveHandle(){
+  var inp = document.getElementById('sHandle'); if(!inp) return;
+  var v = (inp.value||'').trim().toLowerCase();
+  if(!/^[a-z0-9_]{3,30}$/.test(v)){
+    showToast(isJa?'3-30 文字の a-z, 0-9, _ のみ':'3-30 chars [a-z0-9_]','ng'); return;
+  }
+  try {
+    var r = await api('PUT','/api/me/handle',{ handle: v });
+    if(me) me.handle = r.handle;
+    var st = document.getElementById('sHandleStatus');
+    if(st) st.innerHTML = '<span style="color:#16a34a">✓ Public URL: <a href="/u/'+esc(r.handle)+'" target="_blank" style="color:#16a34a;font-weight:700">'+location.origin+'/u/'+esc(r.handle)+'</a></span>';
+    showToast(isJa?'ハンドルを保存しました':'Handle saved','ok');
+  } catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+
+/* ── Integrations (Slack / Discord) ─────────────────── */
+async function _loadIntegrations(){
+  try {
+    var r = await api('GET','/api/integrations');
+    var sStatus = document.getElementById('intSlackStatus');
+    var dStatus = document.getElementById('intDiscordStatus');
+    if(sStatus) sStatus.innerHTML = r.slack.configured
+      ? '<span style="color:#16a34a;font-weight:700">✓ '+esc(r.slack.preview||'設定済み')+'</span>'
+      : '<span style="color:var(--text3)">未設定</span>';
+    if(dStatus) dStatus.innerHTML = r.discord.configured
+      ? '<span style="color:#16a34a;font-weight:700">✓ '+esc(r.discord.preview||'設定済み')+'</span>'
+      : '<span style="color:var(--text3)">未設定</span>';
+  } catch(e){}
+}
+async function _saveIntegration(kind){
+  var inp = document.getElementById(kind==='slack'?'intSlackUrl':'intDiscordUrl'); if(!inp) return;
+  var url = (inp.value||'').trim();
+  if(!url){ showToast(isJa?'URL を入力してください':'URL required','ng'); return; }
+  var body = {}; body[kind] = url;
+  try { await api('POST','/api/integrations', body); inp.value=''; _loadIntegrations(); showToast(isJa?'保存しました':'Saved','ok'); }
+  catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+async function _clearIntegration(kind){
+  if(!confirm(isJa?'この連携を削除しますか？':'Remove this integration?')) return;
+  var body = {}; body[kind] = '';
+  try { await api('POST','/api/integrations', body); _loadIntegrations(); showToast(isJa?'削除しました':'Removed','ok'); }
+  catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+
+/* ── Webhook ────────────────────────────────────────── */
+async function _whLoad(){
+  var id = window._editAgentId; if(!id) return;
+  var statusEl = document.getElementById('editWhStatus');
+  var btn = document.getElementById('editWhToggle');
+  var rot = document.getElementById('editWhRotate');
+  if(!statusEl || !btn) return;
+  try {
+    var r = await api('GET','/api/agents/'+id+'/webhook');
+    if(r.enabled && r.url){
+      statusEl.innerHTML =
+        '<div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'URL':'Endpoint')+'</div>'+
+        '<div style="display:flex;gap:4px"><input id="whUrlIn" readonly value="'+esc(r.url)+'" style="flex:1;padding:7px 9px;border:1px solid rgba(14,165,233,.3);border-radius:6px;font-size:11.5px;font-family:ui-monospace,monospace;background:#fff;color:var(--text)"><button onclick="_whCopy()" style="padding:7px 10px;background:#0ea5e9;color:#fff;border:0;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
+        '<pre style="margin-top:8px;background:#0f1216;color:#e5e7eb;padding:8px 10px;border-radius:6px;font-size:10.5px;line-height:1.5;overflow-x:auto">curl -X POST '+esc(r.url)+' \\\n  -H "Content-Type: application/json" \\\n  -d \'{"message":"Hello agent"}\'</pre>';
+      btn.textContent = isJa?'Webhook を無効化':'Disable webhook';
+      btn.style.background = '#fff';
+      btn.style.color = '#dc2626';
+      btn.style.borderColor = '#dc2626';
+      btn.dataset.state = 'on';
+      if(rot) rot.style.display = '';
+    } else {
+      statusEl.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:4px 0">'+(isJa?'まだ有効化されていません':'Not enabled yet')+'</div>';
+      btn.textContent = isJa?'Webhook を有効化':'Enable webhook';
+      btn.style.background = '#fff';
+      btn.style.color = '#0369a1';
+      btn.style.borderColor = '#0ea5e9';
+      btn.dataset.state = 'off';
+      if(rot) rot.style.display = 'none';
+    }
+  } catch(e){ /* silent */ }
+}
+async function _whToggle(){
+  var id = window._editAgentId; if(!id) return;
+  var btn = document.getElementById('editWhToggle');
+  var on = btn && btn.dataset.state === 'on';
+  try {
+    await api('POST','/api/agents/'+id+'/webhook',{ enabled: !on });
+    _whLoad();
+    showToast(on ? (isJa?'無効化しました':'Disabled') : (isJa?'Webhook を有効化しました':'Webhook enabled'),'ok');
+  } catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+async function _whRotate(){
+  var id = window._editAgentId; if(!id) return;
+  if(!confirm(isJa?'URLを再生成しますか？古いURLは無効になります':'Regenerate URL? Old URL will stop working.')) return;
+  try { await api('POST','/api/agents/'+id+'/webhook',{ regenerate: true }); _whLoad(); showToast(isJa?'再生成しました':'Regenerated','ok'); }
+  catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+function _whCopy(){
+  var inp = document.getElementById('whUrlIn'); if(!inp) return;
+  if(navigator.clipboard) navigator.clipboard.writeText(inp.value);
+  else { inp.select(); document.execCommand('copy'); }
+  showToast(isJa?'コピーしました':'Copied','ok');
+}
+
+/* ── Scheduled execution ────────────────────────────── */
+async function _schedLoadList(){
+  var id = window._editAgentId; if(!id) return;
+  var listEl = document.getElementById('editSchedList'); if(!listEl) return;
+  try {
+    var r = await api('GET','/api/agents/'+id+'/schedules');
+    var rows = (r && r.schedules) || [];
+    if(!rows.length){
+      listEl.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:4px 0">'+(isJa?'まだスケジュールがありません':'No schedules yet')+'</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(function(s){
+      var time = (s.kind==='hourly')
+        ? (isJa?('毎時 :'+String(s.minute||0).padStart(2,'0')):('hourly @ :'+String(s.minute||0).padStart(2,'0')))
+        : (isJa?('毎日 '+String(s.hour||0).padStart(2,'0')+':'+String(s.minute||0).padStart(2,'0')):(String(s.hour||0).padStart(2,'0')+':'+String(s.minute||0).padStart(2,'0')+' daily'));
+      var next = s.next_run ? new Date(s.next_run).toLocaleString() : '—';
+      var deliver = s.deliver==='email' ? '✉️' : '💬';
+      var ena = s.enabled !== false;
+      return '<div style="padding:8px 10px;background:#fff;border:1px solid rgba(245,158,11,.2);border-radius:8px">'+
+        '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:12px;color:var(--text)">'+deliver+' '+esc(s.label||time)+'</span>'+
+        '<label style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" '+(ena?'checked':'')+' onchange="_schedToggle(\''+esc(s.id)+'\',this.checked)"> '+(isJa?'ON':'On')+'</label>'+
+        '<button onclick="_schedDelete(\''+esc(s.id)+'\')" style="background:none;border:0;color:var(--text3);cursor:pointer;font-size:14px" title="'+(isJa?'削除':'Delete')+'">✕</button></div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px">'+esc(time)+' · '+(isJa?'次回':'next')+': '+esc(next)+'</div>'+
+        '<div style="font-size:11px;color:var(--text2);margin-top:3px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(s.prompt||'')+'">'+esc((s.prompt||'').slice(0,80))+'</div>'+
+      '</div>';
+    }).join('');
+  } catch(e){
+    listEl.innerHTML = '<div style="font-size:11.5px;color:#dc2626;padding:4px 0">'+(isJa?'読み込めません':'Failed to load')+'</div>';
+  }
+}
+async function _schedToggle(sid, enabled){
+  var id = window._editAgentId; if(!id) return;
+  try { await api('PUT','/api/agents/'+id+'/schedules/'+sid,{ enabled: !!enabled }); _schedLoadList(); }
+  catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+async function _schedDelete(sid){
+  var id = window._editAgentId; if(!id || !sid) return;
+  if(!confirm(isJa?'このスケジュールを削除しますか？':'Delete this schedule?')) return;
+  try { await api('DELETE','/api/agents/'+id+'/schedules/'+sid); _schedLoadList(); }
+  catch(e){ showToast((isJa?'失敗: ':'Failed: ')+(e.message||''),'ng'); }
+}
+function _schedOpenForm(){
+  if(document.getElementById('schedOv')) return;
+  var ov=document.createElement('div');
+  ov.id='schedOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9000;padding:14px;';
+  var hours=''; for(var h=0;h<24;h++){ hours+='<option value="'+h+'">'+String(h).padStart(2,'0')+'</option>'; }
+  var mins=''; for(var m=0;m<60;m+=5){ mins+='<option value="'+m+'">'+String(m).padStart(2,'0')+'</option>'; }
+  ov.innerHTML=
+    '<div style="background:var(--card);border-radius:14px;max-width:460px;width:100%;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:inherit">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-weight:800;font-size:16px">⏰ '+(isJa?'スケジュールを追加':'Add schedule')+'</div><button onclick="document.getElementById(\'schedOv\').remove()" style="background:none;border:0;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">×</button></div>'+
+      '<label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'ラベル':'Label')+'</label>'+
+      '<input id="schLabel" maxlength="80" placeholder="'+(isJa?'例: 朝のニュース要約':'e.g. Morning news digest')+'" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;margin-bottom:12px;font-family:inherit">'+
+      '<label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'プロンプト':'Prompt')+'</label>'+
+      '<textarea id="schPrompt" rows="3" maxlength="1000" placeholder="'+(isJa?'AI に毎回送るメッセージ':'Message to send the AI on each run')+'" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;margin-bottom:12px;font-family:inherit;resize:vertical;min-height:70px"></textarea>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'+
+        '<div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'頻度':'Kind')+'</label><select id="schKind" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;font-family:inherit"><option value="daily">'+(isJa?'毎日':'Daily')+'</option><option value="hourly">'+(isJa?'毎時':'Hourly')+'</option></select></div>'+
+        '<div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'時':'Hour')+'</label><select id="schHour" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;font-family:inherit">'+hours+'</select></div>'+
+        '<div><label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'分':'Min')+'</label><select id="schMin" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;font-family:inherit">'+mins+'</select></div>'+
+      '</div>'+
+      '<label style="display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'結果の受け取り':'Deliver')+'</label>'+
+      '<select id="schDeliver" style="width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;margin-bottom:14px;font-family:inherit">'+
+        '<option value="chat">'+(isJa?'チャットに追加':'Append to chat')+'</option>'+
+        '<option value="email">'+(isJa?'メールで受け取る':'Email me')+'</option>'+
+      '</select>'+
+      '<button onclick="_schedSave()" style="width:100%;padding:11px;background:var(--peach);color:#fff;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'追加':'Add')+'</button>'+
+    '</div>';
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  // Default hour: 9
+  setTimeout(function(){ var hr=document.getElementById('schHour'); if(hr) hr.value='9'; }, 30);
+}
+async function _schedSave(){
+  var id = window._editAgentId; if(!id) return;
+  var label = (document.getElementById('schLabel')||{}).value || '';
+  var prompt = (document.getElementById('schPrompt')||{}).value || '';
+  var kind = (document.getElementById('schKind')||{}).value || 'daily';
+  var hour = parseInt((document.getElementById('schHour')||{}).value || '9', 10);
+  var minute = parseInt((document.getElementById('schMin')||{}).value || '0', 10);
+  var deliver = (document.getElementById('schDeliver')||{}).value || 'chat';
+  if(!prompt.trim()){ showToast(isJa?'プロンプトを入力してください':'Prompt required','ng'); return; }
+  try {
+    await api('POST','/api/agents/'+id+'/schedules',{
+      prompt, kind, hour, minute, deliver, label,
+      tz_offset_min: -new Date().getTimezoneOffset(),  // user's local tz, minutes from UTC
+    });
+    var ov=document.getElementById('schedOv'); if(ov) ov.remove();
+    _schedLoadList();
+    showToast(isJa?'スケジュールを追加しました':'Schedule added','ok');
+  } catch(e){
+    showToast((isJa?'失敗: ':'Failed: ')+(e.message||''),'ng');
+  }
+}
+
+async function _kbUploadDoc(file){
+  var id = window._editAgentId; if(!id) return;
+  var isDocx = _isDocx(file);
+  if(!isDocx && !_isTextLike(file)){
+    showToast((isJa?'未対応の形式: ':'Unsupported: ')+file.name,'ng'); return;
+  }
+  if(file.size > 5*1024*1024){ showToast(isJa?'ファイルが大きすぎます (5MB)':'File too large (5MB)','ng'); return; }
+  showToast((isJa?'追加中: ':'Adding: ')+file.name, 'ok');
+  try {
+    var text;
+    if(isDocx){
+      var b64 = await new Promise(function(resolve, reject){
+        var r = new FileReader();
+        r.onload = function(ev){ resolve(String(ev.target.result||'').split(',')[1] || ''); };
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      var r = await api('POST','/api/parse/docx',{ b64: b64, name: file.name });
+      text = (r && r.text) || '';
+    } else {
+      text = await new Promise(function(resolve, reject){
+        var r = new FileReader();
+        r.onload = function(ev){ resolve(String(ev.target.result||'')); };
+        r.onerror = reject;
+        r.readAsText(file, 'utf-8');
+      });
+    }
+    if(!text || !text.trim()){ showToast(isJa?'本文を取得できませんでした':'No text extracted','ng'); return; }
+    await api('POST','/api/agents/'+id+'/knowledge',{ name: file.name, text: text });
+    _kbLoadList();
+    showToast((isJa?'追加しました: ':'Added: ')+file.name,'ok');
+  } catch(e){
+    showToast((isJa?'追加に失敗: ':'Failed: ')+(e.message||''),'ng');
+  }
 }
 
 function closeEditAgent(){
@@ -12854,6 +13622,14 @@ function openSettings(){
     }
     const nameEl = document.getElementById('sName');
     if(nameEl) nameEl.value = me.name||'';
+    const handleEl = document.getElementById('sHandle');
+    if(handleEl) handleEl.value = me.handle||'';
+    const handleStatus = document.getElementById('sHandleStatus');
+    if(handleStatus){
+      handleStatus.innerHTML = me.handle
+        ? '<span style="color:#16a34a">✓ Public URL: <a href="/u/'+esc(me.handle)+'" target="_blank" style="color:#16a34a;font-weight:700">'+location.origin+'/u/'+esc(me.handle)+'</a></span>'
+        : '3-30 文字の a-z, 0-9, _ のみ。公開プロフィールページを使うために設定。';
+    }
     const bioEl = document.getElementById('sBio');
     if(bioEl) bioEl.value = _prefGet('bio','');
     const roleEl = document.getElementById('sRole');

@@ -267,7 +267,12 @@ function render(){
 
 async function load(){
   try{
-    const r = await fetch(API + '/api/marketplace?sort=popular');
+    // Honor ?sort=trending|recent|top_rated|popular from the URL so /trending
+    // can route here and stay deep-linkable.
+    const params = new URLSearchParams(location.search);
+    const sort = ['popular','recent','top_rated','trending'].includes(params.get('sort')) ? params.get('sort') : 'popular';
+    document.title = (sort==='trending' ? '🔥 Trending — ' : '') + document.title;
+    const r = await fetch(API + '/api/marketplace?sort='+sort);
     if(!r.ok) throw new Error('Failed to load');
     const data = await r.json();
     LISTINGS = data.listings || [];

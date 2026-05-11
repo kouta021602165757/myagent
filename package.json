@@ -20,6 +20,7 @@
         "bcryptjs": "^2.4.3",
         "ffmpeg-static": "^5.3.0",
         "jsonwebtoken": "^9.0.2",
+        "mammoth": "^1.8.0",
         "nodemailer": "^6.9.16",
         "pg": "^8.13.1",
         "playwright": "^1.49.0",

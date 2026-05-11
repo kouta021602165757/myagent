@@ -395,6 +395,45 @@ function googleLogin() {
   }).catch(()=>{});
 })();
 
+// ── Founder 100 celebration modal ───────────────────────
+function showFounderModal(user){
+  var seat = user.founder_seat_no || '?';
+  var tweetText = encodeURIComponent(
+    "I just became Founder #" + seat + " of @MYAIAGENT.\n\n" +
+    "Type one goal → AI assembles a 5-agent specialist team in 30s. Talk to them like Slack.\n\n" +
+    "First 100 only → " + (location.origin || 'https://myaiagents.agency')
+  );
+  var html = `
+    <div id="founderOverlay" style="position:fixed;inset:0;background:rgba(10,10,12,.78);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(6px);">
+      <div style="max-width:480px;width:100%;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);font-family:-apple-system,'Hiragino Sans',sans-serif;">
+        <div style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;padding:32px 28px;text-align:center;">
+          <div style="font-family:'Bebas Neue',serif;font-size:14px;letter-spacing:.18em;opacity:.85;">★ FOUNDER ${seat} / 100</div>
+          <div style="font-family:'Bebas Neue',serif;font-size:46px;line-height:1.05;margin-top:6px;letter-spacing:-.01em;">You're a Founder.</div>
+        </div>
+        <div style="padding:26px 28px 12px;color:#1a0a00;">
+          <div style="font-size:14.5px;line-height:1.65;color:#5c3a1e;margin-bottom:18px;">
+            Welcome to MY AI Agent. Your account just unlocked:
+          </div>
+          <ul style="list-style:none;padding:0;margin:0 0 22px;font-size:14px;line-height:1.85;">
+            <li>✅ <b>1 month of BUSINESS</b> — Opus, unlimited Teams, full toolset</li>
+            <li>✅ <b>Founder badge</b> on your profile, forever</li>
+            <li>✅ <b>0% Agent Store fees</b>, forever (keep 100% of sales)</li>
+          </ul>
+          <a href="https://twitter.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener" style="display:block;background:#1da1f2;color:#fff;text-decoration:none;padding:13px 16px;border-radius:11px;font-weight:700;text-align:center;margin-bottom:10px;font-size:14.5px;">
+            𝕏 &nbsp;Share that you're Founder #${seat}
+          </a>
+          <button onclick="document.getElementById('founderOverlay').remove();window.location.href='app.html';" style="display:block;width:100%;background:#fb923c;color:#fff;border:0;padding:13px 16px;border-radius:11px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14.5px;">
+            Open my AI team →
+          </button>
+        </div>
+        <div style="padding:12px 28px 22px;text-align:center;font-size:11.5px;color:#9a6a4a;font-family:'DM Mono',monospace;letter-spacing:.04em;">
+          Trial ends ${new Date(user.business_trial_until || Date.now()+30*86400000).toLocaleDateString()}.
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
 // ── Multi-account append ────────────────────────────────
 function _maaAppend(token, user){
   try{
@@ -503,6 +542,12 @@ async function doSignup() {
     localStorage.setItem('user', JSON.stringify(r.user));
     localStorage.removeItem('pendingRef');
     if(r.user) _maaAppend(r.token, r.user);
+    // Founder 100: pop the celebration modal before redirecting, so the
+    // user shares the moment (and gets a Tweet button to do it).
+    if(r.user && r.user.is_founder){
+      showFounderModal(r.user);
+      return; // modal owns the redirect to app.html
+    }
     var _next=(new URLSearchParams(location.search)).get('next');
     window.location.href = (_next && /^\/[a-zA-Z0-9_\-/?=&]*$/.test(_next)) ? _next : 'app.html';
   } catch (e) {

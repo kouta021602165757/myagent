@@ -482,6 +482,61 @@ footer{background:#0c0a09;color:rgba(255,245,230,.6);padding:48px 24px 32px;text
 </head>
 <body>
 
+<!-- ─────────── Founder 100 sticky banner ─────────── -->
+<a href="/auth.html?tab=signup" id="founderBanner" style="
+  display:none;
+  position:sticky; top:0; z-index:40;
+  background:linear-gradient(135deg,#fb923c,#ea580c);
+  color:#fff; text-decoration:none;
+  padding:11px 24px;
+  font-family:var(--sans);
+  font-size:13.5px; font-weight:700; letter-spacing:.005em;
+  text-align:center;
+  border-bottom:1px solid rgba(0,0,0,.12);
+  box-shadow:0 6px 18px rgba(251,146,60,.32);
+">
+  <span style="font-size:11px;letter-spacing:.18em;font-weight:900;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:99px;margin-right:10px;">★ FOUNDER 100</span>
+  <span id="founderBannerText">Loading…</span>
+  <span style="margin-left:12px;font-weight:800;text-decoration:underline;">Claim →</span>
+</a>
+<style>
+  @keyframes founderPulse {
+    0%, 100% { box-shadow:0 6px 18px rgba(251,146,60,.32); }
+    50%      { box-shadow:0 6px 24px rgba(251,146,60,.62); }
+  }
+  #founderBanner.pulse { animation:founderPulse 1.4s ease-in-out infinite; }
+  #founderBanner.sold-out {
+    background:linear-gradient(135deg,#1a0a00,#2a1408);
+    cursor:default;
+  }
+</style>
+<script>
+// Poll the founder seat count every 8s. Shows the banner only while there
+// are seats left (or for ~10 mins after sell-out to convey scarcity).
+(function(){
+  var banner = document.getElementById('founderBanner');
+  var text   = document.getElementById('founderBannerText');
+  function fmt(remaining, total){
+    if(remaining > 70) return remaining + ' / ' + total + ' seats left · 1 month BUSINESS free · permanent Store fee 0%';
+    if(remaining > 30) return 'Only ' + remaining + ' / ' + total + ' Founder seats left · BUSINESS free for 1 month + permanent perks';
+    if(remaining > 0)  return '🔥 Last ' + remaining + ' Founder seats — 1 month BUSINESS free + permanent badge & 0% Store fees';
+    return 'Founder 100 SOLD OUT — thank you. Free tier is still open ↓';
+  }
+  async function poll(){
+    try {
+      var r = await fetch('/api/founder/status').then(r => r.json());
+      banner.style.display = '';
+      text.textContent = fmt(r.remaining, r.total);
+      banner.classList.toggle('pulse', r.remaining > 0 && r.remaining <= 30);
+      banner.classList.toggle('sold-out', r.sold_out);
+      if(r.sold_out) banner.removeAttribute('href');
+    } catch(e){ /* hidden on error */ }
+  }
+  poll();
+  setInterval(poll, 8000);
+})();
+</script>
+
 <!-- ─────────── NAV ─────────── -->
 <nav class="nav">
   <div class="nav-inner">

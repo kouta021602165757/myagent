@@ -43,6 +43,12 @@ const CURRENCY = 'usd';
 
 // ── PRICING ───────────────────────────────────────────────────
 const PRICING={ user:{ input:4.5, output:22.5 } };
+
+// ── FOUNDER 100 ─────────────────────────────────────────────
+// First N sign-ups get: 1 month BUSINESS free + permanent Founder badge
+// + permanent 0% Agent Store fees. After the 1-month BUSINESS trial they
+// auto-downgrade to 'free' (handled lazily on /api/me reads).
+const FOUNDER_LIMIT = 100;
 const {createClient}=require('@supabase/supabase-js');
 const supabase=USE_SUPA?createClient(SUPA_URL,SUPA_KEY):null;
 function calcCost(inputTok,outputTok){
@@ -174,6 +180,14 @@ const DB={
     const r=await sbReq('DELETE','users','?id=eq.'+id);
     return r.s<300;
   },
+  // Founder 100: count how many seats are already allocated.
+  async countFounders(){
+    if(!USE_SUPA){
+      return LDB.all().filter(u => u.is_founder).length;
+    }
+    const r = await sbReq('GET','users','?select=id&is_founder=eq.true&limit=200');
+    return Array.isArray(r.d) ? r.d.length : 0;
+  },
   // For marketing daily-report aggregation: pull users created in a UTC window.
   async findAllCreatedBetween(startIso, endIso){
     if(!USE_SUPA){
@@ -297,6 +311,13 @@ function newUser(base){
     // Google Sheets API tokens — null when not connected.
     // {access_token, refresh_token, expires_at, scope, email}
     google_oauth:null,
+    // ── Founder 100 ────────────────────────────────────────────
+    // First 100 sign-ups get: 1 month BUSINESS free + permanent badge
+    // + permanent 0% Agent Store fees. Allocated at signup.
+    is_founder:false,
+    founder_seat_no:null,           // 1-100
+    founder_granted_at:null,        // ISO timestamp
+    business_trial_until:null,      // ISO timestamp; trial is over when now > this
     verified:false,verify_token:null,reset_token:null,reset_expiry:null,
     created_at:new Date().toISOString(),...base};
 }
@@ -3677,6 +3698,23 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true,ts:Date.now()});
   }
 
+  // ── GET /api/founder/status (PUBLIC) ───────────────────────
+  // Drives the LP "X / 100 founder seats left" counter. Polled every
+  // ~8s by the LP, so kept fast (single COUNT) and unrate-limited.
+  if(pathname==='/api/founder/status'&&method==='GET'){
+    try {
+      const taken = await DB.countFounders();
+      return jres(res,200,{
+        taken,
+        total: FOUNDER_LIMIT,
+        remaining: Math.max(0, FOUNDER_LIMIT - taken),
+        sold_out: taken >= FOUNDER_LIMIT,
+      });
+    } catch(e){
+      return jres(res,200,{ taken:0, total:FOUNDER_LIMIT, remaining:FOUNDER_LIMIT, sold_out:false });
+    }
+  }
+
   if(!rateLimit(ip,150,60000))return jres(res,429,{error:'リクエストが多すぎます。しばらく待ってから試してください。'});
 
 
@@ -3712,6 +3750,19 @@ async function handleAPI(req,res,pathname,method,ip){
         }
       } catch(e){ console.warn('[signup] referral lookup failed:', e.message); }
     }
+
+    // ── Founder 100: first 100 sign-ups get BUSINESS for 30 days + perks
+    try {
+      const taken = await DB.countFounders();
+      if(taken < FOUNDER_LIMIT){
+        user.is_founder = true;
+        user.founder_seat_no = taken + 1;
+        user.founder_granted_at = new Date().toISOString();
+        // 1 month of BUSINESS, then auto-downgrades on next /api/me touch
+        user.plan = 'business';
+        user.business_trial_until = new Date(Date.now() + 30*24*3600*1000).toISOString();
+      }
+    } catch(e){ console.warn('[signup] founder allocation failed:', e.message); }
 
     // ── Marketing attribution: stamp the X-utm campaign that brought them in
     try {
@@ -4393,7 +4444,16 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── GET /api/me ────────────────────────────────────────────
-  if(pathname==='/api/me'&&method==='GET')return jres(res,200,{user:safe(user)});
+  if(pathname==='/api/me'&&method==='GET'){
+    // Lazy Founder 100 trial expiry: if the 1-month BUSINESS trial elapsed,
+    // downgrade back to free (badge + 0% Store fees persist forever).
+    if(user.is_founder && user.business_trial_until && user.plan === 'business'
+       && new Date(user.business_trial_until).getTime() < Date.now()){
+      user.plan = 'free';
+      try { await DB.save(user); } catch(e){ /* noop */ }
+    }
+    return jres(res,200,{user:safe(user)});
+  }
 
   // ── GET /api/agents ────────────────────────────────────────
   if(pathname==='/api/agents'&&method==='GET')return jres(res,200,{agents:user.agents||[]});
@@ -6904,8 +6964,12 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res,500,{error:'購入処理に失敗しました'});
     }
 
-    // Credit creator (70% of upfront purchase)
-    const share = _r3(price * PURCHASE_SHARE_RATE);
+    // Credit creator. Founders get 100% (0% Store fee perk); BUSINESS gets
+    // 80%; everyone else gets 70% (PURCHASE_SHARE_RATE).
+    const _creatorRate = found.user.is_founder ? 1.0
+                       : found.user.plan === 'business' ? 0.80
+                       : PURCHASE_SHARE_RATE;
+    const share = _r3(price * _creatorRate);
     found.user.balance_jpy_pending = _r3((found.user.balance_jpy_pending||0) + share);
     found.user.revenue_history = found.user.revenue_history || [];
     found.user.revenue_history.push({

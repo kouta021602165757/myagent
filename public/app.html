@@ -1415,6 +1415,77 @@ input,textarea{font-family:var(--sans);}
   transition:all .12s;font-family:inherit;
 }
 .m-act:hover{background:var(--cream3);color:var(--text);border-color:rgba(251,146,60,.3);}
+/* Slash command palette ─ floats above composer */
+.slash-palette{
+  position:absolute;bottom:100%;left:0;right:0;margin-bottom:8px;
+  background:var(--card,#fff);border:1px solid var(--wire2);border-radius:12px;
+  box-shadow:0 14px 32px rgba(0,0,0,.14), 0 2px 6px rgba(0,0,0,.06);
+  max-height:280px;overflow-y:auto;z-index:80;padding:6px;
+}
+.slash-item{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;
+  transition:background .08s;
+}
+.slash-item:hover, .slash-item.sel{background:rgba(251,146,60,.1);}
+.slash-item-ic{width:28px;height:28px;border-radius:7px;background:var(--cream2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.slash-item-body{flex:1;min-width:0;}
+.slash-item-cmd{font-family:'SF Mono',Menlo,monospace;font-size:12.5px;font-weight:700;color:var(--text);}
+.slash-item-desc{font-size:11.5px;color:var(--text3);margin-top:1px;line-height:1.4;}
+.slash-item-key{font-size:10px;color:var(--text3);font-weight:600;padding:2px 6px;background:var(--cream3);border-radius:5px;flex-shrink:0;}
+
+/* In-chat search bar */
+.chat-search{
+  position:absolute;top:60px;right:24px;z-index:50;
+  background:var(--card,#fff);border:1px solid var(--wire2);border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.14);padding:8px;
+  display:flex;align-items:center;gap:6px;min-width:300px;
+}
+.chat-search input{
+  flex:1;border:0;outline:none;background:transparent;font-size:13px;
+  color:var(--text);font-family:inherit;padding:4px 6px;
+}
+.chat-search-count{font-size:11px;color:var(--text3);font-family:'SF Mono',monospace;font-weight:600;min-width:40px;text-align:center;}
+.chat-search-btn{
+  width:24px;height:24px;border-radius:5px;border:0;background:var(--cream2);color:var(--text2);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;font-size:11px;
+}
+.chat-search-btn:hover{background:var(--cream3);color:var(--text);}
+.chat-search-hit{background:rgba(251,146,60,.32);border-radius:3px;}
+.chat-search-hit.current{background:var(--peach);color:#fff;}
+
+/* Inline citation markers from web_search */
+.cite{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;padding:0 4px;
+  background:var(--cream3);color:var(--peach-dark);
+  font-size:10px;font-weight:800;border-radius:4px;
+  vertical-align:1px;text-decoration:none;margin-left:2px;
+  border:1px solid rgba(251,146,60,.3);
+}
+.cite:hover{background:var(--peach);color:#fff;}
+.m-citations{
+  margin-top:10px;padding-top:10px;border-top:1px dashed var(--wire2);
+  display:flex;flex-direction:column;gap:6px;
+}
+.m-citation{
+  display:flex;align-items:center;gap:8px;padding:6px 10px;
+  background:var(--cream2);border:1px solid var(--wire2);border-radius:8px;
+  font-size:11.5px;text-decoration:none;color:var(--text2);
+}
+.m-citation:hover{background:var(--cream3);color:var(--text);border-color:rgba(251,146,60,.3);}
+.m-citation-n{font-weight:800;color:var(--peach-dark);font-family:'SF Mono',monospace;flex-shrink:0;}
+.m-citation-ti{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.m-citation-host{color:var(--text3);font-size:10.5px;flex-shrink:0;}
+
+/* Continue button when AI was cut off at max_tokens — peach gradient, pulses */
+.m-act.m-act-continue{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;border-color:transparent;font-weight:700;
+  box-shadow:0 2px 8px rgba(234,88,12,.32);
+  animation:contPulse 1.6s ease-in-out infinite;
+}
+.m-act.m-act-continue:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(234,88,12,.42);}
+@keyframes contPulse{0%,100%{box-shadow:0 2px 8px rgba(234,88,12,.32)}50%{box-shadow:0 4px 14px rgba(234,88,12,.5)}}
 
 /* attachment chip inside message */
 .m-attach{
@@ -1527,6 +1598,7 @@ input,textarea{font-family:var(--sans);}
   background:#fff;border:1.5px solid var(--wire2);border-radius:18px;
   padding:14px 16px 8px;transition:border-color .14s, box-shadow .14s;
   box-shadow:0 1px 3px rgba(0,0,0,.04);
+  position:relative;  /* anchor for #slashPalette floating menu above */
 }
 .composer:focus-within{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.16),0 1px 3px rgba(0,0,0,.04);}
 
@@ -2708,7 +2780,9 @@ body{color:#f0f0f8;}
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
             <div id="mentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>
-            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this);_mentionOnInput(this);_extHintCheck(this.value)" onkeydown="_mentionOnKeydown(event) || taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
+            <!-- Slash command palette — appears when '/' is the first char of composer. -->
+            <div id="slashPalette" class="slash-palette" style="display:none" role="listbox"></div>
+            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this);_mentionOnInput(this);_extHintCheck(this.value);_slashOnInput(this.value)" onkeydown="_slashOnKeydown(event) || _mentionOnKeydown(event) || taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
             <div class="composer-tools">
               <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイルを添付 (画像/PDF/テキスト/コード)" id="attachBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -8441,10 +8515,20 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       var editBtn = isMyMsg ? '<button class="m-act" onclick="editMsgStart(this)" title="'+(isJa?'編集して再生成':'Edit & resend')+'">✏️ '+(isJa?'編集':'Edit')+'</button>' : '';
       acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+editBtn+bmBtn+pinBtn;
     } else {
+      // "Remember this" — saves the assistant reply (truncated to 400 chars)
+      // to long-term memories so it persists across chats.
+      var rememberBtn = '<button class="m-act" onclick="rememberMsg(this)" title="'+(isJa?'記憶として保存':'Save to memory')+'">🧠 '+(isJa?'記憶':'Remember')+'</button>';
+      var replyBtn = '<button class="m-act" onclick="replyToMsg(this)" title="'+(isJa?'引用して返信':'Reply to this')+'">↩️ '+(isJa?'返信':'Reply')+'</button>';
       acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+
              '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
+             replyBtn+
+             rememberBtn+
              '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊</button>'+
              bmBtn+pinBtn;
+    }
+    // Continue button — only assistant messages cut off at max_tokens.
+    if(!isU && raw && raw.truncated){
+      acts += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを書く':'Continue')+'">▶ '+(isJa?'続きを書く':'Continue')+'</button>';
     }
   }
   // In groups, highlight @AI / @name mentions in the body.
@@ -9247,6 +9331,55 @@ async function editMsgSave(btn){
   renderMsgs(ag);  // sticky-bottom — if user scrolled up reading reply mid-stream, respect that
 }
 
+/* ── Continue (recover from max_tokens) ─────────────── */
+async function continueMsg(btn){
+  if(!activeId) return;
+  var ag = agents.find(function(a){return a.id===activeId;}); if(!ag) return;
+  // Inject "続きを書いて" as a new user turn — Anthropic naturally picks up
+  // where it left off when the prior assistant ended at max_tokens.
+  var ci = document.getElementById('ci');
+  if(ci){ ci.value = isJa ? '続きを書いて' : 'Please continue.'; }
+  // Mark this message no longer truncated so the button disappears.
+  var row = btn.closest('.m');
+  var idx = row ? parseInt(row.dataset.idx||'-1',10) : -1;
+  if(idx >= 0 && ag.history[idx]){ ag.history[idx].truncated = false; }
+  sendMsg();
+}
+
+/* ── "Remember this" — save assistant reply to long-term memory ───── */
+async function rememberMsg(btn){
+  var row = btn.closest('.m'); if(!row) return;
+  var bodyEl = row.querySelector('.m-body'); if(!bodyEl) return;
+  // Pull the user-visible text (strip <pre>/<img> etc).
+  var text = (bodyEl.innerText || '').trim().slice(0, 600);
+  if(!text){ showToast(isJa?'保存する内容がありません':'Nothing to remember','ng'); return; }
+  try {
+    await api('POST','/api/me/memories',{ text });
+    showToast(isJa?'✓ 記憶に保存しました':'✓ Saved to memory','ok');
+  } catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+
+/* ── Reply (quote-reply) ────────────────────────────── */
+function replyToMsg(btn){
+  var row = btn.closest('.m'); if(!row) return;
+  var bodyEl = row.querySelector('.m-body'); if(!bodyEl) return;
+  var speaker = (row.querySelector('.m-name')||{}).textContent || (row.classList.contains('a') ? 'AI' : 'User');
+  var snippet = (bodyEl.innerText || '').trim().slice(0, 140).replace(/\n+/g,' ');
+  if(snippet.length === 140) snippet += '…';
+  var ci = document.getElementById('ci');
+  if(!ci) return;
+  // Prepend a Markdown blockquote so the AI sees the cited content + speaker.
+  var prefix = '> **'+speaker+'**: '+snippet+'\n\n';
+  ci.value = prefix + (ci.value||'');
+  ci.focus();
+  // Place caret after the quote so user types their reply directly.
+  try {
+    var pos = prefix.length;
+    ci.setSelectionRange(pos, pos);
+  } catch(e){}
+  if(typeof exTA === 'function') exTA(ci);
+}
+
 async function regenerateMsg(btn){
   if(!activeId) return;
   var ag=agents.find(function(a){return a.id===activeId;}); if(!ag) return;
@@ -9617,6 +9750,218 @@ function _resizeImageToDataURL(file, maxSize, quality){
 }
 
 /* ── Slash commands (/search etc.) ──────────────────────────── */
+/* ── Slash command palette ─────────────────────────────
+ * Fires when '/' is the first char of the composer. Shows a floating menu
+ * filtered by the typed prefix. Arrow keys + Enter to select. */
+var _SLASH_CMDS = [
+  {cmd:'/search', alias:'/s',        icon:'🔍', desc_ja:'Web 検索結果を context として AI に渡す',  desc_en:'Inject Web search results into the prompt',  tmpl:'/search '},
+  {cmd:'/image',  alias:'/img',      icon:'🎨', desc_ja:'画像を生成 (Pollinations, 無料)',          desc_en:'Generate an image (free, via Pollinations)',  tmpl:'/image '},
+  {cmd:'/remember',alias:'/memo',    icon:'🧠', desc_ja:'長期メモリに保存 — 別チャットでも参照',     desc_en:'Save to long-term memory across chats',       tmpl:'/remember '},
+  {cmd:'/pin',    alias:null,        icon:'📌', desc_ja:'直前の返答をピン留め',                      desc_en:'Pin the previous reply',                       tmpl:'/pin'},
+  {cmd:'/clear',  alias:'/new',      icon:'↻',  desc_ja:'新規会話 (履歴クリア)',                      desc_en:'Start a new chat (clear history)',             tmpl:'/clear'},
+  {cmd:'/share',  alias:null,        icon:'💬', desc_ja:'この会話を公開リンクで共有',                 desc_en:'Share this conversation as a public link',     tmpl:'/share'},
+];
+var _slashSelIdx = 0;
+
+function _slashOnInput(text){
+  var pal = document.getElementById('slashPalette');
+  if(!pal) return;
+  // Only fire when the composer STARTS with "/" and has no space yet — once
+  // the user types a space the command is locked in and we hide the menu.
+  var m = text.match(/^\/(\S*)$/);
+  if(!m){ pal.style.display = 'none'; return; }
+  var prefix = ('/' + m[1]).toLowerCase();
+  var filtered = _SLASH_CMDS.filter(function(c){
+    return c.cmd.startsWith(prefix) || (c.alias && c.alias.startsWith(prefix));
+  });
+  if(!filtered.length){ pal.style.display = 'none'; return; }
+  _slashSelIdx = 0;
+  pal.innerHTML = filtered.map(function(c, i){
+    var desc = isJa ? c.desc_ja : c.desc_en;
+    var key = i === 0 ? '↵' : '';
+    return '<div class="slash-item'+(i===0?' sel':'')+'" data-tmpl="'+esc(c.tmpl)+'" data-i="'+i+'" onclick="_slashPick('+i+')">'+
+      '<div class="slash-item-ic">'+c.icon+'</div>'+
+      '<div class="slash-item-body"><div class="slash-item-cmd">'+esc(c.cmd)+(c.alias?' <span style="color:var(--text3);font-weight:400">(or '+esc(c.alias)+')</span>':'')+'</div><div class="slash-item-desc">'+esc(desc)+'</div></div>'+
+      (key?'<span class="slash-item-key">'+key+'</span>':'')+
+    '</div>';
+  }).join('');
+  pal.style.display = 'block';
+  // Store the filtered set on the palette so keydown can read it.
+  pal._items = filtered;
+}
+function _slashOnKeydown(e){
+  var pal = document.getElementById('slashPalette');
+  if(!pal || pal.style.display === 'none') return false;
+  var items = pal._items || [];
+  if(!items.length) return false;
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    _slashSelIdx = (_slashSelIdx + 1) % items.length;
+    _slashUpdateSel();
+    return true;
+  }
+  if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    _slashSelIdx = (_slashSelIdx - 1 + items.length) % items.length;
+    _slashUpdateSel();
+    return true;
+  }
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    _slashPick(_slashSelIdx);
+    return true;
+  }
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    _slashPick(_slashSelIdx);
+    return true;
+  }
+  if(e.key === 'Escape'){
+    e.preventDefault();
+    pal.style.display = 'none';
+    return true;
+  }
+  return false;
+}
+function _slashUpdateSel(){
+  var pal = document.getElementById('slashPalette');
+  if(!pal) return;
+  pal.querySelectorAll('.slash-item').forEach(function(el, i){
+    el.classList.toggle('sel', i === _slashSelIdx);
+  });
+}
+function _slashPick(i){
+  var pal = document.getElementById('slashPalette');
+  if(!pal) return;
+  var items = pal._items || [];
+  var picked = items[i];
+  if(!picked) return;
+  var ci = document.getElementById('ci'); if(!ci) return;
+  // Commands with no args (/pin, /clear, /share) execute immediately.
+  if(picked.tmpl === '/pin' || picked.tmpl === '/clear' || picked.tmpl === '/share'){
+    pal.style.display = 'none';
+    ci.value = '';
+    if(picked.tmpl === '/clear'){ if(typeof newChat==='function') newChat(); }
+    else if(picked.tmpl === '/share'){ if(typeof openChatShareModal==='function') openChatShareModal(); }
+    else if(picked.tmpl === '/pin'){
+      // Pin the last assistant message
+      var ag = agents.find(function(a){return a.id===activeId;});
+      if(ag && ag.history){
+        for(var k=ag.history.length-1;k>=0;k--){
+          if(ag.history[k].role==='assistant'){ ag.history[k].pinned = true; renderMsgs(ag); break; }
+        }
+      }
+    }
+    return;
+  }
+  // Commands with args: fill template + focus for typing.
+  ci.value = picked.tmpl;
+  ci.focus();
+  ci.setSelectionRange(ci.value.length, ci.value.length);
+  pal.style.display = 'none';
+  if(typeof exTA === 'function') exTA(ci);
+}
+
+/* ── In-chat search (Cmd+F / Ctrl+F) ─────────────────── */
+var _chatSearchHits = [];
+var _chatSearchIdx = 0;
+
+document.addEventListener('keydown', function(e){
+  // Cmd+F (mac) or Ctrl+F → in-chat search if a chat is open.
+  if((e.metaKey || e.ctrlKey) && e.key === 'f' && activeId){
+    var bar = document.getElementById('chatSearchBar');
+    var msgs = document.getElementById('msgs');
+    if(bar || msgs){
+      e.preventDefault();
+      _openChatSearch();
+    }
+  }
+  if(e.key === 'Escape'){
+    var bar = document.getElementById('chatSearchBar');
+    if(bar){ _closeChatSearch(); }
+  }
+});
+
+function _openChatSearch(){
+  var existing = document.getElementById('chatSearchBar');
+  if(existing){ existing.querySelector('input').focus(); return; }
+  var bar = document.createElement('div');
+  bar.id = 'chatSearchBar';
+  bar.className = 'chat-search';
+  bar.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
+    '<input type="search" placeholder="'+(isJa?'チャット内を検索…':'Search in chat…')+'" oninput="_chatSearchInput(this.value)" onkeydown="_chatSearchKey(event)" autofocus>'+
+    '<span class="chat-search-count" id="chatSearchCount">—</span>'+
+    '<button class="chat-search-btn" onclick="_chatSearchNav(-1)" title="前へ">▲</button>'+
+    '<button class="chat-search-btn" onclick="_chatSearchNav(1)" title="次へ">▼</button>'+
+    '<button class="chat-search-btn" onclick="_closeChatSearch()" title="閉じる">×</button>';
+  var chatWrap = document.querySelector('.main') || document.body;
+  chatWrap.appendChild(bar);
+  setTimeout(function(){ var inp = bar.querySelector('input'); if(inp) inp.focus(); }, 30);
+}
+function _closeChatSearch(){
+  _chatSearchClear();
+  var bar = document.getElementById('chatSearchBar'); if(bar) bar.remove();
+}
+function _chatSearchClear(){
+  document.querySelectorAll('.chat-search-hit').forEach(function(el){
+    var t = document.createTextNode(el.textContent);
+    el.parentNode.replaceChild(t, el);
+  });
+  document.querySelectorAll('#msgs .m-body').forEach(function(el){ el.normalize(); });
+  _chatSearchHits = []; _chatSearchIdx = 0;
+}
+function _chatSearchInput(q){
+  _chatSearchClear();
+  q = (q||'').trim();
+  var countEl = document.getElementById('chatSearchCount');
+  if(!q){ if(countEl) countEl.textContent = '—'; return; }
+  // Highlight matches in every visible message body
+  var re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+  document.querySelectorAll('#msgs .m-body').forEach(function(body){
+    _highlightWalk(body, re);
+  });
+  _chatSearchHits = Array.prototype.slice.call(document.querySelectorAll('.chat-search-hit'));
+  _chatSearchIdx = 0;
+  if(_chatSearchHits.length){
+    _chatSearchHits[0].classList.add('current');
+    _chatSearchHits[0].scrollIntoView({block:'center', behavior:'smooth'});
+  }
+  if(countEl) countEl.textContent = _chatSearchHits.length ? '1/'+_chatSearchHits.length : '0/0';
+}
+function _highlightWalk(node, re){
+  if(node.nodeType === 3){
+    var t = node.nodeValue;
+    if(!re.test(t)) return;
+    re.lastIndex = 0;
+    var span = document.createElement('span');
+    span.innerHTML = t.replace(re, function(m){ return '<span class="chat-search-hit">'+m.replace(/[&<>]/g, function(c){return c==='&'?'&amp;':c==='<'?'&lt;':'&gt;'})+'</span>'; });
+    var frag = document.createDocumentFragment();
+    while(span.firstChild) frag.appendChild(span.firstChild);
+    node.parentNode.replaceChild(frag, node);
+    return;
+  }
+  if(node.nodeType === 1 && !/^(SCRIPT|STYLE|PRE)$/.test(node.tagName)){
+    Array.prototype.slice.call(node.childNodes).forEach(function(c){ _highlightWalk(c, re); });
+  }
+}
+function _chatSearchNav(dir){
+  if(!_chatSearchHits.length) return;
+  _chatSearchHits[_chatSearchIdx].classList.remove('current');
+  _chatSearchIdx = (_chatSearchIdx + dir + _chatSearchHits.length) % _chatSearchHits.length;
+  _chatSearchHits[_chatSearchIdx].classList.add('current');
+  _chatSearchHits[_chatSearchIdx].scrollIntoView({block:'center', behavior:'smooth'});
+  var c = document.getElementById('chatSearchCount');
+  if(c) c.textContent = (_chatSearchIdx+1)+'/'+_chatSearchHits.length;
+}
+function _chatSearchKey(e){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    _chatSearchNav(e.shiftKey ? -1 : 1);
+  }
+  if(e.key === 'Escape'){ _closeChatSearch(); }
+}
+
 async function _runSlashCommand(text){
   // /image <prompt> — generate an image via Replicate, attach the URL to the chat
   var imM = text.match(/^\/(?:image|img|imagine)\s+(.+)$/i);
@@ -9962,6 +10307,25 @@ function onComposerPaste(ev){
   try{
     var data = (ev.clipboardData || window.clipboardData);
     if(!data) return;
+    // ── Image paste (one or many) ──
+    // Clipboard can contain multiple image items (e.g. select 3 images in
+    // Finder → Cmd+C → Cmd+V here). Iterate over data.items and ingest each
+    // as a File. typeof _ingestFiles is defined later — guard for hoist.
+    var imageFiles = [];
+    if(data.items){
+      for(var i=0; i<data.items.length; i++){
+        var it = data.items[i];
+        if(it && it.kind === 'file' && it.type && it.type.startsWith('image/')){
+          var f = it.getAsFile && it.getAsFile();
+          if(f) imageFiles.push(f);
+        }
+      }
+    }
+    if(imageFiles.length && typeof _ingestFiles === 'function'){
+      ev.preventDefault();  // block default behavior of pasting <img> blob URL
+      _ingestFiles(imageFiles);
+      return;
+    }
     var txt = data.getData && data.getData('text');
     if(!txt) return;
     txt = txt.trim();
@@ -10346,6 +10710,9 @@ async function _sendMsgStream(ag, text, imgs, texts){
         ag.history[streamIdx].content = obj.reply || acc;
         ag.history[streamIdx].streaming = false;
         if(obj.tool_log && obj.tool_log.length){ ag.history[streamIdx].tool_log = obj.tool_log; }
+        // Tag the message as truncated if the model hit max_tokens — UI
+        // renders a "▶ 続きを書く" Continue button under it.
+        if(obj.truncated){ ag.history[streamIdx].truncated = true; }
         if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
         me.usage_count = (me.usage_count||0) + 1;
         updateBalance();

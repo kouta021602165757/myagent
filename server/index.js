@@ -10590,7 +10590,11 @@ async function handleAPI(req,res,pathname,method,ip){
             is_mention: aiMentioned,
           }).catch(()=>{});
         }
-        sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd } });
+        // Surface stop_reason so the client can show a "▶ 続きを書く" button
+        // when the model was cut off at max_tokens.
+        const _stopReason = (result && result.stopReason) || null;
+        const _truncated = _stopReason === 'max_tokens';
+        sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, stop_reason: _stopReason, truncated: _truncated });
       }catch(e){
         try{ sse('error', { message: e.message }); }catch(_){}
       }
@@ -10885,9 +10889,13 @@ async function handleAPI(req,res,pathname,method,ip){
       }).catch(()=>{});
     }
     if(sse){
+      // Surface stop_reason from the last tool-loop response so the client
+      // can decide whether to show a "▶ 続きを書く" Continue button.
+      const _stopReason = (resp && resp.stop_reason) || null;
+      const _truncated = _stopReason === 'max_tokens';
       // Emit the (possibly already-streamed) reply once at the end so the client
       // can finalize the bubble. delta events were sent inside the loop.
-      sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog });
+      sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog, stop_reason: _stopReason, truncated: _truncated });
       if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; }
       res.end();
       return;

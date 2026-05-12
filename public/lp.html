@@ -276,6 +276,117 @@
   footer{padding:34px 24px 56px;border-top:1px solid var(--wire);text-align:center;font-size:12px;color:var(--text3)}
   footer a{font-weight:700;color:var(--text2)}
   footer a:hover{color:var(--peach-dark)}
+
+  /* ─────────────── Mobile · tablet · phone ─────────────── */
+  /* Layout existing at <= 920px already collapses 3-col grids to 1-col.
+     The blocks below handle the actual phone-size details. */
+
+  @media(max-width:760px){
+    /* Nav: tight; hide section links and the redundant "ログイン" ghost button
+       on phone — primary action is "無料で始める" which we keep visible. */
+    .nav-wrap{padding:0 14px;gap:8px}
+    .nav-links{display:none}
+    .nav-cta .btn.ghost{display:none}
+    .nav-cta{gap:6px}
+    .logo{font-size:13px}
+    .logo-sq{width:26px;height:26px;font-size:12px}
+    .lang-tog button{padding:3px 7px;font-size:10.5px}
+
+    /* Hero — give it actual horizontal breathing room */
+    .hero{padding:28px 16px 24px;gap:28px}
+    .h-eyebrow{font-size:10px;padding:4px 10px}
+    .h-title{font-size:30px;line-height:1.18}
+    .h-sub{font-size:14.5px}
+    .h-cta{flex-direction:column;align-items:stretch;width:100%}
+    .h-cta .btn{width:100%;justify-content:center}
+    .h-meta{font-size:11px;gap:12px}
+
+    /* Hire widget — 2-col on phones (was 3) */
+    .hire-grid{grid-template-columns:1fr 1fr;gap:7px;padding:14px}
+    .ai-card{padding:11px 8px}
+    .ai-av{width:34px;height:34px;font-size:18px}
+    .ai-name{font-size:11px}
+    .ai-role{font-size:9.5px}
+    .hire-h{padding:13px 16px}
+    .hire-h .t{font-size:12.5px}
+    .hire-h .s{font-size:10.5px}
+    .hire-bar{padding:11px 14px;flex-wrap:wrap}
+    .hire-bar .cnt{font-size:11px;width:100%}
+    .hire-bar .start{width:100%}
+
+    /* Live preview: stack sidebar above the chat on phones */
+    .preview{padding:0 12px;margin:24px auto 56px}
+    .preview-bar{padding:9px 12px}
+    .preview-bar .url{font-size:10px;padding:2px 8px;margin-left:8px}
+    .app{flex-direction:column;height:auto}
+    .sb{width:100%;border-right:0;border-bottom:1px solid var(--wire);max-height:200px}
+    .sb-list{padding:2px 8px 6px}
+    .main{min-height:480px}
+    .ch{padding:10px 14px;gap:8px}
+    .ch-title .nm{font-size:13px}
+    .ch-pill.intel{display:none}     /* @mention list is too long for phones */
+    .ch-pill.ctx{display:none}
+    .ch .acts .ic{width:24px;height:24px;font-size:11px}
+    .msgs{padding:14px}
+    .m-col{max-width:78vw}
+    .composer{padding:9px 11px 11px}
+    .ci-hint{display:none}            /* keyboard shortcuts are desktop-only */
+
+    /* Sections */
+    section{padding:64px 16px}
+    .sec-h{margin-bottom:34px}
+    .sec-h h2{font-size:24px}
+    .sec-h .eye{font-size:10.5px}
+    .sec-h .sub{font-size:13.5px}
+
+    /* Features */
+    .feat{padding:20px}
+    .feat h3{font-size:15.5px}
+    .feat p{font-size:13px}
+
+    /* Steps */
+    .steps{margin-top:36px;gap:30px}
+    .step .body{padding:30px 18px 18px}
+
+    /* Founder banner — stack the seats card on mobile */
+    .founder{padding:22px;gap:16px;flex-direction:column;text-align:left}
+    .founder .em{font-size:32px}
+    .founder .body h3{font-size:16px}
+    .founder .body p{font-size:12.5px}
+    .founder .seats{align-self:center}
+
+    /* Pricing — drop the scale to avoid horizontal overflow */
+    .pricing{gap:18px}
+    .price-card{padding:22px 18px}
+    .price-card.pop{transform:none}
+    .price-am{font-size:30px}
+
+    /* Final CTA */
+    .cta-final{padding:64px 16px}
+    .cta-final h2{font-size:28px;line-height:1.25}
+    .cta-final p{font-size:14px}
+
+    /* Footer */
+    footer{font-size:11px;padding:26px 16px 44px}
+  }
+
+  /* Tiny phones (iPhone SE, 320–380px) */
+  @media(max-width:420px){
+    .h-title{font-size:26px}
+    .h-sub{font-size:13.5px}
+    .hire-grid{padding:12px;gap:5px}
+    .ai-card{padding:9px 6px}
+    .ai-av{width:30px;height:30px;font-size:16px}
+    .ai-name{font-size:10.5px}
+    .ai-role{font-size:9px;line-height:1.25}
+    .sec-h h2{font-size:21px}
+    .cta-final h2{font-size:24px}
+    .preview{padding:0 8px}
+    .ch{padding:9px 12px}
+    .ch-pill.model{font-size:9px;padding:2px 6px}
+    .m-col{max-width:74vw}
+    .bb{font-size:12.3px;padding:8px 11px}
+  }
 </style>
 </head>
 <body>
@@ -804,7 +915,20 @@
     en: { footerTerms:'/terms-en.html', footerPrivacy:'/privacy-en.html', footerLegal:'/legal-en.html', footerContact:'/contact-en.html' },
   };
   let CUR_LANG = (function(){
-    try { return localStorage.getItem('mya_lang') || (navigator.language||'').toLowerCase().startsWith('ja') ? 'ja' : 'ja'; } catch(e){ return 'ja'; }
+    // 1) honor explicit user selection
+    try {
+      const stored = localStorage.getItem('mya_lang');
+      if(stored === 'ja' || stored === 'en') return stored;
+    } catch(e){}
+    // 2) default to JP (primary audience); only fall to EN if the browser
+    //    declares an English locale and no Japanese fallback exists
+    try {
+      const langs = (navigator.languages || [navigator.language || '']).map(String);
+      const hasJa = langs.some(l => l.toLowerCase().startsWith('ja'));
+      if(hasJa) return 'ja';
+      const hasEn = langs.some(l => l.toLowerCase().startsWith('en'));
+      return hasEn ? 'en' : 'ja';
+    } catch(e){ return 'ja'; }
   })();
   // EN-only legal section ("特商法") doesn't have an equivalent in EN → hide that link when EN
   function setLang(lang){

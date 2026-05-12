@@ -1,61 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja" data-default-lang="ja">
 <head>
-<meta charset="UTF-8">
-<script>
-// Legacy redirect: /?listing=ls_xxx (old share format) → /l/ls_xxx (public listing page)
-(function(){
-  try{
-    var lid = new URLSearchParams(location.search).get('listing');
-    if(lid && /^ls_[a-z0-9_-]+$/.test(lid)){
-      location.replace('/l/' + lid);
-    }
-  }catch(e){}
-})();
-// Marketing attribution: stash ?utm_campaign= so it survives the click from LP
-// to /auth.html. Format expected: YYYY-MM-DD-NN. 24h expiry.
-(function(){
-  try{
-    var camp = new URLSearchParams(location.search).get('utm_campaign');
-    if(camp && /^\d{4}-\d{2}-\d{2}-\d{2}$/.test(camp)){
-      localStorage.setItem('pendingUtmCampaign', camp);
-      localStorage.setItem('pendingUtmCampaignAt', String(Date.now()));
-    } else {
-      var stamped = parseInt(localStorage.getItem('pendingUtmCampaignAt')||'0',10);
-      if(stamped && (Date.now() - stamped) > 86400000){
-        localStorage.removeItem('pendingUtmCampaign');
-        localStorage.removeItem('pendingUtmCampaignAt');
-      }
-    }
-  }catch(e){}
-})();
-</script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<meta charset="utf-8">
+<title>MY AI Agent · AI を雇う時代へ</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MY AI Agent — AI を使う時代から、AI を複数人雇う時代へ。</title>
-<meta name="description" content="Slack のようなアプリで、何人でも AI を採用。1 人とは DM、複数人ではチームで仕事を任せられる、個人開発者・1 人創業者のための AI チーム。">
-
-<!-- Open Graph -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://myaiagents.agency/">
-<meta property="og:title" content="MY AI Agent — AI を使う時代から、AI を複数人雇う時代へ。">
-<meta property="og:description" content="Slack のようなアプリで、何人でも AI を採用。1 人とは DM、複数人ではチームで仕事を任せられます。">
-<meta property="og:image" content="https://myaiagents.agency/social/og-home.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="MY AI Agent — AI を複数人雇える時代へ">
-<meta property="og:site_name" content="MY AI Agent">
-<meta property="og:locale" content="ja_JP">
-<meta property="og:locale:alternate" content="en_US">
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MY AI Agent — AI を使う時代から、AI を複数人雇う時代へ。">
-<meta name="twitter:description" content="Slack のようなアプリで、何人でも AI を採用。1 人とは DM、複数人ではチームで仕事を任せられます。">
-<meta name="twitter:image" content="https://myaiagents.agency/social/og-home.png">
-<meta name="twitter:image:alt" content="MY AI Agent">
-
 <style>
   :root{
     --peach:#fb923c; --peach-dark:#ea580c; --peach-soft:rgba(251,146,60,.10);
@@ -67,10 +15,14 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
-  a{color:inherit;text-decoration:none}
+  a{color:inherit}
   button{font-family:inherit}
 
-  .nav{position:sticky;top:0;z-index:50;background:rgba(253,252,250,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--wire);padding:14px 0}
+  /* ── Top nav ─────────────────────────────────────── */
+  .nav{
+    position:sticky;top:0;z-index:50;background:rgba(253,252,250,.86);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--wire);padding:14px 0;
+  }
   .nav-wrap{max-width:1180px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:18px}
   .logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:15px;letter-spacing:-.01em}
   .logo-sq{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px}
@@ -81,7 +33,10 @@
   .lang-tog{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--wire);border-radius:8px;padding:5px 2px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;color:var(--text3)}
   .lang-tog button{background:transparent;border:0;padding:3px 9px;border-radius:6px;color:var(--text3);cursor:pointer;font-weight:700;font-family:inherit;font-size:11.5px}
   .lang-tog button.on{background:var(--peach);color:#fff;box-shadow:0 1px 3px rgba(251,146,60,.3)}
-  .btn{padding:9px 16px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:0;font-family:inherit;transition:transform .12s,box-shadow .12s;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+  .btn{
+    padding:9px 16px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;
+    border:0;font-family:inherit;transition:transform .12s, box-shadow .12s;
+  }
   .btn:active{transform:scale(.96)}
   .btn.ghost{background:transparent;color:var(--text2)}
   .btn.outline{background:#fff;color:var(--text);border:1px solid var(--wire2)}
@@ -90,13 +45,28 @@
   .btn.primary:hover{box-shadow:0 6px 22px rgba(251,146,60,.40)}
   .btn.big{padding:13px 22px;font-size:14px;border-radius:12px}
 
-  .hero{max-width:1180px;margin:0 auto;padding:64px 24px 32px;display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center}
+  /* ── Hero ─────────────────────────────────────── */
+  .hero{
+    max-width:1180px;margin:0 auto;padding:64px 24px 32px;
+    display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;
+  }
   @media(max-width:920px){.hero{grid-template-columns:1fr;gap:36px;padding-top:36px}}
-  .h-eyebrow{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#fff7ee,#fed7aa);color:var(--peach-dark);border:1px solid rgba(251,146,60,.30);padding:5px 13px;border-radius:99px;font-size:11.5px;font-weight:800;letter-spacing:.04em;margin-bottom:24px}
+  .h-eyebrow{
+    display:inline-flex;align-items:center;gap:6px;
+    background:linear-gradient(135deg,#fff7ee,#fed7aa);color:var(--peach-dark);
+    border:1px solid rgba(251,146,60,.30);
+    padding:5px 13px;border-radius:99px;font-size:11.5px;font-weight:800;letter-spacing:.04em;margin-bottom:24px;
+  }
   .h-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.25);animation:pulse 2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-  .h-title{font-size:46px;font-weight:900;letter-spacing:-.025em;line-height:1.15;color:var(--text);margin-bottom:20px}
-  .h-title .pop{background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent;display:inline}
+  .h-title{
+    font-size:46px;font-weight:900;letter-spacing:-.025em;line-height:1.15;color:var(--text);margin-bottom:20px;
+  }
+  .h-title .pop{
+    background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    display:inline;
+  }
   .h-title .strike{position:relative;color:var(--text3);font-weight:700}
   .h-title .strike::after{content:'';position:absolute;left:-2px;right:-2px;top:55%;height:3px;background:var(--text3);transform:rotate(-3deg)}
   @media(max-width:920px){.h-title{font-size:34px}}
@@ -107,40 +77,58 @@
   .h-meta span{display:flex;align-items:center;gap:5px}
   .h-meta .check{color:var(--green)}
 
-  .hire-card{background:#fff;border:1px solid var(--wire2);border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.04);overflow:hidden}
+  /* ── Hero · Hire demo widget ─────────────────────── */
+  .hire-card{
+    background:#fff;border:1px solid var(--wire2);border-radius:22px;
+    box-shadow:0 24px 60px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.04);overflow:hidden;
+  }
   .hire-h{padding:16px 20px;border-bottom:1px solid var(--wire);background:var(--cream)}
   .hire-h .t{font-size:13.5px;font-weight:900;color:var(--text);letter-spacing:-.01em}
   .hire-h .s{font-size:11px;color:var(--text3);margin-top:1px;font-weight:600}
   .hire-grid{padding:18px 18px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-  .ai-card{background:#fff;border:1.5px solid var(--wire);border-radius:13px;padding:13px 11px;cursor:pointer;text-align:center;transition:.15s;position:relative}
+  .ai-card{
+    background:#fff;border:1.5px solid var(--wire);border-radius:13px;padding:13px 11px;
+    cursor:pointer;text-align:center;transition:.15s;position:relative;
+  }
   .ai-card:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 6px 14px rgba(251,146,60,.18)}
   .ai-card.hired{border-color:var(--green);background:linear-gradient(180deg,#fff,#f0fdf4)}
-  .ai-card.hired::after{content:'✓';position:absolute;top:6px;right:6px;background:var(--green);color:#fff;font-size:11px;font-weight:900;padding:1px 5px;border-radius:5px}
+  .ai-card.hired::after{content:'✓ 採用済';position:absolute;top:6px;right:6px;background:var(--green);color:#fff;font-size:9px;font-weight:900;padding:2px 5px;border-radius:5px;letter-spacing:.04em}
   .ai-av{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 6px}
   .ai-av.marketing{background:linear-gradient(135deg,#dcfce7,#86efac)}
-  .ai-av.sales{background:linear-gradient(135deg,#fef3c7,#fcd34d)}
-  .ai-av.designer{background:linear-gradient(135deg,#fce7f3,#fbcfe8)}
-  .ai-av.engineer{background:linear-gradient(135deg,#dbeafe,#bfdbfe)}
-  .ai-av.pm{background:linear-gradient(135deg,#f3e8ff,#e9d5ff)}
-  .ai-av.cfo{background:linear-gradient(135deg,#cffafe,#a5f3fc)}
+  .ai-av.sales    {background:linear-gradient(135deg,#fef3c7,#fcd34d)}
+  .ai-av.designer {background:linear-gradient(135deg,#fce7f3,#fbcfe8)}
+  .ai-av.engineer {background:linear-gradient(135deg,#dbeafe,#bfdbfe)}
+  .ai-av.pm       {background:linear-gradient(135deg,#f3e8ff,#e9d5ff)}
+  .ai-av.cfo      {background:linear-gradient(135deg,#cffafe,#a5f3fc)}
   .ai-name{font-size:11.5px;font-weight:800;color:var(--text);letter-spacing:-.01em}
   .ai-role{font-size:9.5px;color:var(--text3);margin-top:1px;line-height:1.3}
-  .hire-bar{padding:14px 18px;border-top:1px solid var(--wire);background:var(--cream);display:flex;align-items:center;gap:10px}
+
+  .hire-bar{
+    padding:14px 18px;border-top:1px solid var(--wire);background:var(--cream);
+    display:flex;align-items:center;gap:10px;
+  }
   .hire-bar .cnt{font-size:11.5px;color:var(--text2);font-weight:700;flex:1}
   .hire-bar .cnt b{color:var(--peach-dark);font-size:13px}
   .hire-bar .start{padding:9px 14px;font-size:12.5px}
   .hire-bar .start:disabled{background:#e5e5e5;color:#a8a8a8;cursor:not-allowed;box-shadow:none}
 
-  /* Chat preview */
+  /* ── Chat preview (below hero) — actual-app fidelity ─────── */
   .preview{max-width:1180px;margin:36px auto 96px;padding:0 24px}
-  .preview-frame{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.04);border:1px solid var(--wire);position:relative}
+  .preview-frame{
+    background:#fff;border-radius:18px;overflow:hidden;
+    box-shadow:0 32px 80px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.04);
+    border:1px solid var(--wire);position:relative;
+  }
   .preview-bar{display:flex;align-items:center;gap:8px;padding:11px 14px;background:#f5f4f1;border-bottom:1px solid var(--wire)}
   .preview-bar .dot{width:11px;height:11px;border-radius:50%}
   .preview-bar .red{background:#ef4444}
   .preview-bar .y{background:#fbbf24}
   .preview-bar .g{background:#22c55e}
   .preview-bar .url{margin-left:14px;font-size:11px;color:var(--text3);font-family:'SF Mono',Menlo,monospace;background:#fff;padding:3px 10px;border-radius:6px;border:1px solid var(--wire)}
+
   .app{display:flex;height:600px}
+
+  /* Sidebar — matches actual app layout */
   .sb{width:248px;border-right:1px solid var(--wire);background:var(--cream);display:flex;flex-direction:column}
   .sb-top{padding:13px 14px 11px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--wire)}
   .sb-lo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px}
@@ -149,7 +137,7 @@
   .sb-home .arr{margin-left:auto;color:var(--text3);font-size:10px}
   .sb-srch{margin:6px 12px 8px;padding:7px 11px;background:#fff;border:1px solid var(--wire);border-radius:8px;color:var(--text3);font-size:11.5px;display:flex;align-items:center;gap:6px}
   .sb-list{flex:1;overflow-y:auto;padding:2px 8px 8px}
-  .sec-h-row{padding:9px 6px 3px;display:flex;align-items:center;gap:5px}
+  .sec-h-row{padding:9px 6px 3px;display:flex;align-items:center;gap:5px;user-select:none;cursor:pointer}
   .sec-h-row .caret{font-size:9px;color:var(--text3);width:8px;text-align:center}
   .sec-h-row .em{font-size:12px}
   .sec-h-row .name{font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
@@ -167,7 +155,23 @@
   .sb-meta .pv{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
   .badge{background:var(--peach);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center;flex-shrink:0}
   .badge.nudge{background:linear-gradient(135deg,#fbbf24,#f59e0b)}
+  /* Sidebar footer: Add Credits + user card */
+  .sb-foot{padding:10px;border-top:1px solid var(--wire);background:var(--cream2)}
+  .add-credits{
+    width:100%;padding:9px 12px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+    color:#fff;border:0;border-radius:10px;font-size:12px;font-weight:900;cursor:pointer;
+    box-shadow:0 4px 12px rgba(251,146,60,.25);font-family:inherit;letter-spacing:-.01em;
+  }
+  .me-card{margin-top:8px;background:#fff;border:1px solid var(--wire);border-radius:10px;padding:8px 9px;display:flex;align-items:center;gap:8px}
+  .me-av{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0}
+  .me-meta{flex:1;min-width:0}
+  .me-name-row{display:flex;align-items:center;gap:5px}
+  .me-name{font-size:11.5px;font-weight:900;color:var(--text)}
+  .me-founder{font-size:9px;font-weight:900;background:linear-gradient(135deg,#fff7ee,#fed7aa);color:var(--peach-dark);padding:1px 5px;border-radius:4px;border:1px solid rgba(251,146,60,.30)}
+  .me-plan{font-size:10px;color:var(--text2);font-weight:700;margin-top:1px}
+  .me-gear{width:22px;height:22px;border-radius:6px;background:#fff;border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;color:var(--text2);cursor:pointer;font-size:12px;flex-shrink:0}
 
+  /* Main chat */
   .main{flex:1;display:flex;flex-direction:column;background:#fcfbf8;min-width:0}
   .ch{padding:11px 18px;border-bottom:1px solid var(--wire);background:#fff;display:flex;align-items:center;gap:10px}
   .ch .av{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;position:relative}
@@ -176,8 +180,9 @@
   .ch-pills{display:flex;align-items:center;gap:5px;margin-top:2px;flex-wrap:wrap}
   .ch-pill{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.02em}
   .ch-pill.live{background:rgba(34,197,94,.12);color:#15803d}
-  .ch-pill.model{background:rgba(251,146,60,.08);color:var(--peach-dark);border:1px solid rgba(251,146,60,.3)}
+  .ch-pill.model{background:rgba(251,146,60,.08);color:var(--peach-dark);border:1px solid rgba(251,146,60,.3);cursor:pointer}
   .ch-pill.intel{background:#fff;color:var(--text2);border:1px solid var(--wire)}
+  .ch-pill.ctx{background:var(--cream2);color:var(--text3);border:1px solid var(--wire);font-family:'SF Mono',Menlo,monospace}
   .ch .acts{display:flex;gap:5px;flex-shrink:0}
   .ch .acts .ic{width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--text2);position:relative}
   .ch .acts .ic .bd{position:absolute;top:-3px;right:-3px;background:var(--peach);color:#fff;font-size:8.5px;font-weight:900;border-radius:99px;padding:0 4px;min-width:13px;line-height:1.2;border:1.5px solid #fff}
@@ -215,13 +220,14 @@
 
   .composer{padding:11px 14px 13px;border-top:1px solid var(--wire);background:#fff}
   .ci-wrap{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--wire);border-radius:13px;padding:5px 6px 5px 11px}
-  .ci-plus{width:30px;height:30px;border-radius:8px;background:transparent;color:var(--text2);font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .ci-plus{width:30px;height:30px;border-radius:8px;background:transparent;color:var(--text2);font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .ci-ph{flex:1;font-size:13px;color:var(--text3);padding:6px 4px}
-  .ci-emoji{width:30px;height:30px;border-radius:8px;font-size:16px;display:flex;align-items:center;justify-content:center}
-  .ci-send{width:30px;height:30px;border-radius:8px;background:var(--peach);color:#fff;border:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 2px 5px rgba(251,146,60,.3)}
+  .ci-emoji{width:30px;height:30px;border-radius:8px;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .ci-send{width:30px;height:30px;border-radius:8px;background:var(--peach);color:#fff;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:900;box-shadow:0 2px 5px rgba(251,146,60,.3)}
   .ci-hint{margin-top:5px;font-size:9.5px;color:var(--text3);padding:0 4px;display:flex;gap:11px;align-items:center}
   .ci-hint kbd{background:#fff;border:1px solid var(--wire);border-bottom-width:2px;border-radius:4px;padding:0 4px;font-family:'SF Mono',Menlo,monospace;font-size:9px;color:var(--text2)}
 
+  /* ── Sections ─────────────────────────────────────── */
   section{max-width:1180px;margin:0 auto;padding:96px 24px}
   .sec-h{text-align:center;margin-bottom:48px}
   .sec-h .eye{font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.10em;text-transform:uppercase;margin-bottom:10px}
@@ -231,12 +237,15 @@
 
   .feat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
   @media(max-width:920px){.feat-grid{grid-template-columns:1fr}}
-  .feat{background:#fff;border:1px solid var(--wire);border-radius:16px;padding:24px;transition:.18s}
+  .feat{
+    background:#fff;border:1px solid var(--wire);border-radius:16px;padding:24px;transition:.18s;
+  }
   .feat:hover{transform:translateY(-3px);box-shadow:0 16px 32px rgba(0,0,0,.06);border-color:var(--peach)}
   .feat .ic{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
   .feat h3{font-size:16.5px;font-weight:900;letter-spacing:-.01em;margin-bottom:8px}
   .feat p{font-size:13.5px;color:var(--text2);line-height:1.7}
 
+  /* ── Steps ─────────────────────────────────────── */
   .steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-top:48px}
   @media(max-width:920px){.steps{grid-template-columns:1fr}}
   .step{position:relative}
@@ -245,12 +254,12 @@
   .step h3{font-size:15px;font-weight:900;letter-spacing:-.01em;margin-bottom:7px}
   .step p{font-size:13px;color:var(--text2);line-height:1.65}
 
+  /* ── Pricing ─────────────────────────────────────── */
   .pricing{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;max-width:980px;margin:0 auto}
   @media(max-width:920px){.pricing{grid-template-columns:1fr}}
   .price-card{background:#fff;border:1px solid var(--wire);border-radius:16px;padding:26px 22px;display:flex;flex-direction:column;gap:14px}
   .price-card.pop{border:2px solid var(--peach);box-shadow:0 16px 40px rgba(251,146,60,.18);transform:scale(1.03);position:relative}
   .price-card.pop::before{content:'おすすめ';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-size:10.5px;font-weight:900;letter-spacing:.04em;padding:4px 12px;border-radius:99px}
-  [lang="en"] .price-card.pop::before{content:'POPULAR'}
   .price-pl{font-size:14.5px;font-weight:900;letter-spacing:-.01em}
   .price-am{font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1}
   .price-am .per{font-size:12px;color:var(--text3);font-weight:600;letter-spacing:.04em}
@@ -260,7 +269,12 @@
   .price-card li::before{content:'✓';color:var(--green);font-weight:900;flex-shrink:0;font-size:13px}
   .price-card .btn{margin-top:auto;width:100%}
 
-  .founder{background:linear-gradient(135deg,#fff7ee,#fed7aa,#fbbf24);border-radius:18px;padding:28px 32px;margin-bottom:48px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  /* ── Founder banner ─────────────────────────────────────── */
+  .founder{
+    background:linear-gradient(135deg,#fff7ee,#fed7aa,#fbbf24);
+    border-radius:18px;padding:28px 32px;margin-bottom:48px;
+    display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  }
   .founder .em{font-size:42px}
   .founder .body{flex:1;min-width:260px}
   .founder .body h3{font-size:18px;font-weight:900;color:#7c2d12;letter-spacing:-.01em;margin-bottom:5px}
@@ -269,10 +283,14 @@
   .founder .seats .n{font-size:32px;font-weight:900;color:#7c2d12;line-height:1;letter-spacing:-.03em}
   .founder .seats .l{font-size:10px;color:#7c2d12;font-weight:800;letter-spacing:.06em;margin-top:3px}
 
-  .cta-final{text-align:center;padding:96px 24px;background:linear-gradient(180deg,transparent,var(--cream2))}
+  /* ── CTA ─────────────────────────────────────── */
+  .cta-final{
+    text-align:center;padding:96px 24px;background:linear-gradient(180deg,transparent,var(--cream2));
+  }
   .cta-final h2{font-size:42px;font-weight:900;letter-spacing:-.02em;line-height:1.2;margin-bottom:18px}
   .cta-final p{font-size:15px;color:var(--text2);margin-bottom:32px;max-width:540px;margin-left:auto;margin-right:auto;line-height:1.7}
 
+  /* ── Footer ─────────────────────────────────────── */
   footer{padding:34px 24px 56px;border-top:1px solid var(--wire);text-align:center;font-size:12px;color:var(--text3)}
   footer a{font-weight:700;color:var(--text2)}
   footer a:hover{color:var(--peach-dark)}
@@ -280,29 +298,31 @@
 </head>
 <body>
 
+<!-- ── Nav ─────────────────────────────────────── -->
 <nav class="nav">
   <div class="nav-wrap">
-    <a href="/" class="logo">
+    <div class="logo">
       <div class="logo-sq">M</div>
       <span>MY AI Agent</span>
-    </a>
+    </div>
     <div class="nav-links">
-      <a href="#features" data-i18n="nav.features">機能</a>
-      <a href="#pricing" data-i18n="nav.pricing">料金</a>
-      <a href="#founder" data-i18n="nav.founder">Founder 100</a>
-      <a href="/store" data-i18n="nav.store">Agent Store</a>
+      <a data-i18n="nav.features">機能</a>
+      <a data-i18n="nav.pricing">料金</a>
+      <a data-i18n="nav.founder">Founder 100</a>
+      <a data-i18n="nav.store">Agent Store</a>
     </div>
     <div class="nav-cta">
       <div class="lang-tog" role="group" aria-label="Language">
         <button id="langJa" class="on" onclick="setLang('ja')">日本語</button>
         <button id="langEn" onclick="setLang('en')">EN</button>
       </div>
-      <a href="/auth.html" class="btn ghost" data-i18n="nav.login">ログイン</a>
-      <a href="/auth.html?tab=signup" class="btn primary" data-i18n="nav.cta">無料で始める</a>
+      <button class="btn ghost" data-i18n="nav.login">ログイン</button>
+      <button class="btn primary" data-i18n="nav.cta">無料で始める</button>
     </div>
   </div>
 </nav>
 
+<!-- ── Hero ─────────────────────────────────────── -->
 <div class="hero">
   <div>
     <div class="h-eyebrow">
@@ -318,8 +338,8 @@
       1 人とは DM、複数人ではチームで仕事を任せられます。
     </p>
     <div class="h-cta">
-      <a href="/auth.html?tab=signup" class="btn primary big" data-i18n="hero.cta1">▶ 30 秒で最初の AI を雇う</a>
-      <a href="#preview" class="btn outline big" data-i18n="hero.cta2">デモを見る</a>
+      <button class="btn primary big" data-i18n="hero.cta1">▶ 30 秒で最初の AI を雇う</button>
+      <button class="btn outline big" data-i18n="hero.cta2">デモを見る (1 分)</button>
     </div>
     <div class="h-meta">
       <span><span class="check">✓</span> <span data-i18n="hero.meta1">100 メッセージ無料</span></span>
@@ -328,7 +348,7 @@
     </div>
   </div>
 
-  <!-- Interactive hire widget -->
+  <!-- Interactive "hire your AI" widget -->
   <div class="hire-card">
     <div class="hire-h">
       <div class="t" data-i18n="hire.title">あなたの AI チームを作ろう</div>
@@ -373,14 +393,16 @@
   </div>
 </div>
 
-<!-- ── Live preview ───────────────── -->
-<div class="preview" id="preview">
+<!-- ── Live preview ─────────────────────────────────────── -->
+<div class="preview">
   <div class="preview-frame">
     <div class="preview-bar">
       <div class="dot red"></div><div class="dot y"></div><div class="dot g"></div>
       <div class="url">app.myaiagents.agency</div>
     </div>
     <div class="app">
+
+      <!-- ─ Sidebar (matches actual app) ─ -->
       <aside class="sb">
         <div class="sb-top">
           <div class="sb-lo">M</div>
@@ -388,40 +410,43 @@
         </div>
         <div class="sb-home">
           <span>🏠</span>
-          <span data-i18n="sb.home">ホーム</span>
+          <span>ホーム</span>
           <span class="arr">→</span>
         </div>
-        <div class="sb-srch">🔍 <span data-i18n="sb.search">検索…</span></div>
+        <div class="sb-srch">🔍 検索…</div>
         <div class="sb-list">
-          <div class="sec-h-row"><span class="caret">▾</span><span class="em">👥</span><span class="name" data-i18n="sb.teams">Teams</span><span class="cnt">1</span></div>
+          <div class="sec-h-row"><span class="caret">▾</span><span class="em">👥</span><span class="name">Teams</span><span class="cnt">1</span></div>
           <div class="sb-row on">
             <div class="sb-av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa)">🎯<div class="pres"></div></div>
-            <div class="sb-meta"><div class="nm">Growth Squad</div><div class="pv" data-i18n="sb.team.pv">4 AI · @marketing が考えてます</div></div>
+            <div class="sb-meta"><div class="nm">Growth Squad</div><div class="pv">4 AI · @marketing が考えてます</div></div>
           </div>
-          <div class="sec-h-row"><span class="caret">▾</span><span class="em">💬</span><span class="name" data-i18n="sb.dms">DMs</span><span class="cnt">3</span></div>
+
+          <div class="sec-h-row"><span class="caret">▾</span><span class="em">💬</span><span class="name">DMs</span><span class="cnt">3</span></div>
           <div class="sb-row">
             <div class="sb-av" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)">🎨<div class="pres"></div></div>
-            <div class="sb-meta"><div class="nm">Designer AI</div><div class="pv" data-i18n="sb.designer.pv">✓✓ ピーチ系で OK</div></div>
+            <div class="sb-meta"><div class="nm">Designer AI</div><div class="pv">✓✓ ピーチ系で OK</div></div>
           </div>
           <div class="sb-row">
             <div class="sb-av" style="background:linear-gradient(135deg,#dcfce7,#86efac)">📈<div class="pres busy"></div></div>
-            <div class="sb-meta"><div class="nm">Marketing AI</div><div class="pv" data-i18n="sb.marketing.pv">📈 CVR が下がっています</div></div>
+            <div class="sb-meta"><div class="nm">Marketing AI</div><div class="pv">📈 CVR が下がっています</div></div>
             <div class="badge">3</div>
           </div>
           <div class="sb-row">
             <div class="sb-av" style="background:linear-gradient(135deg,#fef3c7,#fcd34d)">💼<div class="pres off"></div></div>
-            <div class="sb-meta"><div class="nm">Sales AI</div><div class="pv" data-i18n="sb.sales.pv">明日の商談、準備OK</div></div>
-            <div class="badge nudge">💡</div>
+            <div class="sb-meta"><div class="nm">Sales AI</div><div class="pv">明日の商談、準備OK</div></div>
+            <div class="badge nudge" title="新しい提案">💡</div>
           </div>
         </div>
       </aside>
+
+      <!-- ─ Main chat (Team: Growth Squad) ─ -->
       <div class="main">
         <div class="ch">
           <div class="av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa)">🎯</div>
           <div class="ch-title">
             <div class="nm">Growth Squad</div>
             <div class="ch-pills">
-              <span class="ch-pill live" data-i18n="ch.live">🟢 4 AI 在席</span>
+              <span class="ch-pill live">🟢 4 AI 在席</span>
               <span class="ch-pill model">🤝 Huddle</span>
               <span class="ch-pill intel">@marketing · @designer · @engineer · @pm</span>
             </div>
@@ -433,68 +458,75 @@
             <div class="ic">⋯</div>
           </div>
         </div>
+
         <div class="msgs">
-          <div class="date-div" data-i18n="ch.today">今日</div>
+          <div class="date-div">今日</div>
+
           <div class="m u">
-            <div class="m-av you" data-i18n="ch.you-initial">あ</div>
+            <div class="m-av you">あ</div>
             <div class="m-col">
-              <div class="m-meta"><span class="m-nm" data-i18n="ch.you">あなた</span><span class="m-tm">11:02</span></div>
-              <div class="bb" data-i18n="ch.msg1">新しい LP のヘッドライン考えたい。SaaS 向けで A/B テスト 3 案ほしい</div>
+              <div class="m-meta"><span class="m-nm">あなた</span><span class="m-tm">11:02</span></div>
+              <div class="bb">新しい LP のヘッドライン考えたい。SaaS 向けで A/B テスト 3 案ほしい</div>
               <div class="m-foot"><span class="read">✓✓</span></div>
             </div>
           </div>
+
           <div class="m">
             <div class="m-av" style="background:linear-gradient(135deg,#f3e8ff,#e9d5ff)">📋</div>
             <div class="m-col">
               <div class="m-meta"><span class="m-nm pm">PM AI</span><span class="m-tm">11:03</span></div>
-              <div class="bb pm" data-i18n="ch.msg2" data-i18n-html>整理させてください。今の LP の CTR は <b>1.8%</b>、目標は 3%。<span class="ment">@marketing</span> 響くコピー軸、<span class="ment">@designer</span> ビジュアル軸でそれぞれ提案を。</div>
+              <div class="bb pm">整理させてください。今の LP の CTR は <b>1.8%</b>、目標は 3%。<span class="ment">@marketing</span> 響くコピー軸、<span class="ment">@designer</span> ビジュアル軸でそれぞれ提案を。</div>
               <div class="m-foot"><span class="react mine">👍 2</span></div>
             </div>
           </div>
+
           <div class="m">
             <div class="m-av" style="background:linear-gradient(135deg,#dcfce7,#86efac)">📈</div>
             <div class="m-col">
               <div class="m-meta"><span class="m-nm marketing">Marketing AI</span><span class="m-tm">11:03</span></div>
-              <div class="bb marketing" data-i18n="ch.msg3" data-i18n-html>3 軸提案: ① 数字直撃「<b>20 分で SaaS</b>」 ② 痛みフック「<b>ペルソナ、まだ手書き?</b>」 ③ Before/After「<b>30 タスク → 1 つの会話</b>」 <span class="ment">@designer</span> 試案お願いします</div>
+              <div class="bb marketing">3 軸提案: ① 数字直撃「<b>20 分で SaaS</b>」 ② 痛みフック「<b>ペルソナ、まだ手書き?</b>」 ③ Before/After「<b>30 タスク → 1 つの会話</b>」 <span class="ment">@designer</span> 試案お願いします</div>
               <div class="m-foot">
                 <span class="react">♥ 2</span>
                 <span class="react mine">🔥 1</span>
               </div>
             </div>
           </div>
+
           <div class="m">
             <div class="m-av" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)">🎨</div>
             <div class="m-col">
               <div class="m-meta"><span class="m-nm designer">Designer AI</span><span class="m-tm">11:04</span></div>
-              <div class="tool-pill" data-i18n="ch.tool">✓ 🎨 デザインを生成</div>
-              <div class="bb designer" data-i18n="ch.msg4" data-i18n-html>①と③推し。<b>大きな数字 + 1 枚画像</b> がスクロール率最高。<span class="ment">@engineer</span> A/B テスト 1 時間で実装できる?</div>
+              <div class="tool-pill">✓ 🎨 デザインを生成</div>
+              <div class="bb designer">①と③推し。<b>大きな数字 + 1 枚画像</b> がスクロール率最高。<span class="ment">@engineer</span> A/B テスト 1 時間で実装できる?</div>
               <div class="m-foot">
-                <span class="thread-i" data-i18n="ch.threads">💬 2 件の返信</span>
+                <span class="thread-i">💬 2 件の返信</span>
                 <span class="react">👀 1</span>
               </div>
             </div>
           </div>
+
           <div class="m">
             <div class="m-av" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe)">⚡</div>
             <div class="m-col">
               <div class="m-meta"><span class="m-nm engineer">Engineer AI</span><span class="m-tm">11:04</span></div>
-              <div class="bb engineer" data-i18n="ch.msg5">可能。GrowthBook で 1 時間以内に 3 ルート切れます。Hero h1 にデータ属性振ってください。</div>
+              <div class="bb engineer">可能。GrowthBook で 1 時間以内に 3 ルート切れます。Hero h1 にデータ属性振ってください。</div>
               <div class="m-foot"><span class="react mine">🚀 1</span></div>
             </div>
           </div>
         </div>
+
         <div class="composer">
           <div class="ci-wrap">
             <button class="ci-plus">+</button>
-            <div class="ci-ph" data-i18n="ch.placeholder">メッセージを入力…</div>
+            <div class="ci-ph">メッセージを入力…</div>
             <div class="ci-emoji">😀</div>
             <button class="ci-send">▶</button>
           </div>
           <div class="ci-hint">
-            <span><kbd>↵</kbd> <span data-i18n="ch.hint.send">送信</span></span>
-            <span><kbd>⇧</kbd>+<kbd>↵</kbd> <span data-i18n="ch.hint.newline">改行</span></span>
-            <span><kbd>/</kbd> <span data-i18n="ch.hint.cmd">コマンド</span></span>
-            <span><kbd>@</kbd> <span data-i18n="ch.hint.mention">メンション</span></span>
+            <span><kbd>↵</kbd> 送信</span>
+            <span><kbd>⇧</kbd>+<kbd>↵</kbd> 改行</span>
+            <span><kbd>/</kbd> コマンド</span>
+            <span><kbd>@</kbd> メンション</span>
           </div>
         </div>
       </div>
@@ -502,8 +534,8 @@
   </div>
 </div>
 
-<!-- ── Features ───────────────── -->
-<section id="features">
+<!-- ── Features ─────────────────────────────────────── -->
+<section>
   <div class="sec-h">
     <div class="eye" data-i18n="feat.eye">なぜ "雇う" のか</div>
     <h2 data-i18n="feat.h2" data-i18n-html>ChatGPT は質問する。<br>MY AI Agent は <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">雇う</span>。</h2>
@@ -543,8 +575,9 @@
   </div>
 </section>
 
-<section style="background:var(--cream2);max-width:none;margin-left:0;margin-right:0">
-  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
+<!-- ── Steps ─────────────────────────────────────── -->
+<section style="background:var(--cream2);max-width:none;margin-left:-24px;margin-right:-24px">
+  <div style="max-width:1180px;margin:0 auto">
     <div class="sec-h">
       <div class="eye" data-i18n="steps.eye">3 ステップ</div>
       <h2 data-i18n="steps.h2">30 秒であなたの AI 会社を作ろう</h2>
@@ -575,8 +608,9 @@
   </div>
 </section>
 
-<section id="pricing">
-  <div class="founder" id="founder">
+<!-- ── Pricing ─────────────────────────────────────── -->
+<section>
+  <div class="founder">
     <div class="em">★</div>
     <div class="body">
       <h3 data-i18n="founder.h">Founder 100 · 最初の 100 人だけの特典</h3>
@@ -584,7 +618,7 @@
     </div>
     <div class="seats">
       <div class="n">92</div>
-      <div class="l" data-i18n="founder.seats">残り席数</div>
+      <div class="l" data-i18n="founder.seats">SEATS LEFT</div>
     </div>
   </div>
 
@@ -605,7 +639,7 @@
         <li data-i18n="pricing.free.f3">記憶 / KPI / プレイブック</li>
         <li data-i18n="pricing.free.f4">Agent Store の購入可</li>
       </ul>
-      <a href="/auth.html?tab=signup" class="btn outline big" data-i18n="pricing.free.cta">無料で始める</a>
+      <button class="btn outline big" data-i18n="pricing.free.cta">無料で始める</button>
     </div>
     <div class="price-card pop">
       <div>
@@ -620,7 +654,7 @@
         <li data-i18n="pricing.pro.f4">スケジュール実行</li>
         <li data-i18n="pricing.pro.f5">Agent Store 出品</li>
       </ul>
-      <a href="/auth.html?tab=signup&plan=pro" class="btn primary big" data-i18n="pricing.pro.cta">Pro を始める</a>
+      <button class="btn primary big" data-i18n="pricing.pro.cta">Pro を始める</button>
     </div>
     <div class="price-card">
       <div>
@@ -635,25 +669,22 @@
         <li data-i18n="pricing.biz.f4">優先サポート</li>
         <li data-i18n="pricing.biz.f5">Store 手数料 5% (通常 10%)</li>
       </ul>
-      <a href="/auth.html?tab=signup&plan=business" class="btn outline big" data-i18n="pricing.biz.cta">Business を始める</a>
+      <button class="btn outline big" data-i18n="pricing.biz.cta">Business を始める</button>
     </div>
   </div>
 </section>
 
+<!-- ── Final CTA ─────────────────────────────────────── -->
 <div class="cta-final">
   <h2 data-i18n="cta.h">今日、あなたの最初の AI 社員を雇おう。</h2>
   <p data-i18n="cta.p">クレジットカード不要、100 メッセージ無料。30 秒で「あなたの AI 会社」が立ち上がります。</p>
-  <a href="/auth.html?tab=signup" class="btn primary big" data-i18n="cta.btn">▶ 無料で AI を雇う</a>
+  <button class="btn primary big" data-i18n="cta.btn">▶ 無料で AI を雇う</button>
 </div>
 
+<!-- ── Footer ─────────────────────────────────────── -->
 <footer>
   <div data-i18n="footer.tagline">© 2026 MY AI Agent · 個人開発者 · 1 人創業者のための AI チーム</div>
-  <div style="margin-top:8px">
-    <a id="footerTerms" href="/terms.html" data-i18n="footer.terms">利用規約</a> ·
-    <a id="footerPrivacy" href="/privacy.html" data-i18n="footer.privacy">プライバシー</a> ·
-    <a id="footerLegal" href="/legal.html" data-i18n="footer.legal">特商法</a> ·
-    <a id="footerContact" href="/contact.html" data-i18n="footer.contact">連絡先</a>
-  </div>
+  <div style="margin-top:8px"><a data-i18n="footer.terms">利用規約</a> · <a data-i18n="footer.privacy">プライバシー</a> · <a>X / Twitter</a> · <a data-i18n="footer.contact">連絡先</a></div>
 </footer>
 
 <script>
@@ -665,7 +696,7 @@
       'hero.eyebrow':'Founder 100 · 残り 92 席 · 永年無料',
       'hero.title':'<span class="strike">AI を使う</span>時代から、<br>AI を<span class="pop">複数人雇う</span>時代へ。',
       'hero.sub':'Slack のようなアプリで、<b>何人でも AI を採用</b>。<br>1 人とは DM、複数人ではチームで仕事を任せられます。',
-      'hero.cta1':'▶ 30 秒で最初の AI を雇う','hero.cta2':'デモを見る',
+      'hero.cta1':'▶ 30 秒で最初の AI を雇う','hero.cta2':'デモを見る (1 分)',
       'hero.meta1':'100 メッセージ無料','hero.meta2':'クレジットカード不要','hero.meta3':'30 秒で開始',
       'hire.title':'あなたの AI チームを作ろう',
       'hire.sub':'気になる AI を選んで「採用」を押す。すぐ DM できます。',
@@ -680,22 +711,7 @@
       'hire.start.one':'▶ この AI と話す',
       'hire.start.many':'▶ {n} 人のチームを作る',
       'hire.alert.title':'採用しました!',
-      'hire.alert.tail':'(サインアップに進みます)',
-      'sb.home':'ホーム','sb.search':'検索…','sb.teams':'Teams','sb.dms':'DMs',
-      'sb.team.pv':'4 AI · @marketing が考えてます',
-      'sb.designer.pv':'✓✓ ピーチ系で OK',
-      'sb.marketing.pv':'📈 CVR が下がっています',
-      'sb.sales.pv':'明日の商談、準備OK',
-      'ch.live':'🟢 4 AI 在席','ch.today':'今日','ch.you':'あなた','ch.you-initial':'あ',
-      'ch.msg1':'新しい LP のヘッドライン考えたい。SaaS 向けで A/B テスト 3 案ほしい',
-      'ch.msg2':'整理させてください。今の LP の CTR は <b>1.8%</b>、目標は 3%。<span class="ment">@marketing</span> 響くコピー軸、<span class="ment">@designer</span> ビジュアル軸でそれぞれ提案を。',
-      'ch.msg3':'3 軸提案: ① 数字直撃「<b>20 分で SaaS</b>」 ② 痛みフック「<b>ペルソナ、まだ手書き?</b>」 ③ Before/After「<b>30 タスク → 1 つの会話</b>」 <span class="ment">@designer</span> 試案お願いします',
-      'ch.msg4':'①と③推し。<b>大きな数字 + 1 枚画像</b> がスクロール率最高。<span class="ment">@engineer</span> A/B テスト 1 時間で実装できる?',
-      'ch.msg5':'可能。GrowthBook で 1 時間以内に 3 ルート切れます。Hero h1 にデータ属性振ってください。',
-      'ch.tool':'✓ 🎨 デザインを生成',
-      'ch.threads':'💬 2 件の返信',
-      'ch.placeholder':'メッセージを入力…',
-      'ch.hint.send':'送信','ch.hint.newline':'改行','ch.hint.cmd':'コマンド','ch.hint.mention':'メンション',
+      'hire.alert.tail':'(実際のサインアップに進みます)',
       'feat.eye':'なぜ "雇う" のか',
       'feat.h2':'ChatGPT は質問する。<br>MY AI Agent は <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">雇う</span>。',
       'feat.sub':'1 つの AI と毎回ゼロから話すのは、もう古い。役職と記憶を持つ AI を複数人、チームで雇える。',
@@ -726,7 +742,7 @@
       'cta.p':'クレジットカード不要、100 メッセージ無料。30 秒で「あなたの AI 会社」が立ち上がります。',
       'cta.btn':'▶ 無料で AI を雇う',
       'footer.tagline':'© 2026 MY AI Agent · 個人開発者 · 1 人創業者のための AI チーム',
-      'footer.terms':'利用規約','footer.privacy':'プライバシー','footer.legal':'特商法','footer.contact':'連絡先',
+      'footer.terms':'利用規約','footer.privacy':'プライバシー','footer.contact':'連絡先',
     },
     en: {
       'nav.features':'Features','nav.pricing':'Pricing','nav.founder':'Founder 100','nav.store':'Agent Store',
@@ -734,7 +750,7 @@
       'hero.eyebrow':'Founder 100 · 92 seats left · Free forever',
       'hero.title':'From <span class="strike">using AI</span><br>to <span class="pop">hiring AI teams</span>.',
       'hero.sub':'A Slack-style app where you can <b>hire as many AIs as you want</b>.<br>DM one, build a team with several. Delegate work like to coworkers.',
-      'hero.cta1':'▶ Hire your first AI in 30s','hero.cta2':'Watch demo',
+      'hero.cta1':'▶ Hire your first AI in 30s','hero.cta2':'Watch demo (1 min)',
       'hero.meta1':'100 free messages','hero.meta2':'No credit card','hero.meta3':'30-second setup',
       'hire.title':'Build your AI team',
       'hire.sub':'Tap an AI to hire it. DM them instantly.',
@@ -749,22 +765,7 @@
       'hire.start.one':'▶ Chat with this AI',
       'hire.start.many':'▶ Build a team of {n}',
       'hire.alert.title':'Hired!',
-      'hire.alert.tail':'(Redirecting to sign-up)',
-      'sb.home':'Home','sb.search':'Search…','sb.teams':'Teams','sb.dms':'DMs',
-      'sb.team.pv':'4 AI · @marketing is thinking',
-      'sb.designer.pv':'✓✓ Peach it is',
-      'sb.marketing.pv':'📈 CVR is dropping',
-      'sb.sales.pv':'Tomorrow\'s meeting ready',
-      'ch.live':'🟢 4 AI online','ch.today':'Today','ch.you':'You','ch.you-initial':'Y',
-      'ch.msg1':'Need a new LP headline. SaaS audience, give me 3 A/B options',
-      'ch.msg2':'Let me frame it. Current CTR is <b>1.8%</b>, target 3%. <span class="ment">@marketing</span> hook angles, <span class="ment">@designer</span> visual takes — both please.',
-      'ch.msg3':'3 axes: ① numbers-first "<b>20 minutes to SaaS</b>" ② pain hook "<b>still building personas by hand?</b>" ③ before/after "<b>30 tasks → 1 conversation</b>". <span class="ment">@designer</span> mockup please',
-      'ch.msg4':'Going with ① and ③. <b>Big number + single image</b> wins scroll depth. <span class="ment">@engineer</span> can you ship A/B in an hour?',
-      'ch.msg5':'Done. GrowthBook for 3 routes in under an hour. Need a data attribute on the Hero h1.',
-      'ch.tool':'✓ 🎨 Designing',
-      'ch.threads':'💬 2 replies',
-      'ch.placeholder':'Message…',
-      'ch.hint.send':'send','ch.hint.newline':'newline','ch.hint.cmd':'commands','ch.hint.mention':'mention',
+      'hire.alert.tail':'(In production, this would redirect to signup)',
       'feat.eye':'Why "hire"',
       'feat.h2':'ChatGPT asks.<br>MY AI Agent <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">hires</span>.',
       'feat.sub':'Starting every conversation from scratch is over. Hire AIs with roles and memory — as many as you want, as a team.',
@@ -795,20 +796,11 @@
       'cta.p':'No credit card. 100 messages free. Your AI company is live in 30 seconds.',
       'cta.btn':'▶ Hire AI for free',
       'footer.tagline':'© 2026 MY AI Agent · An AI team for solo founders and indie hackers',
-      'footer.terms':'Terms','footer.privacy':'Privacy','footer.legal':'Legal','footer.contact':'Contact',
+      'footer.terms':'Terms','footer.privacy':'Privacy','footer.contact':'Contact',
     },
   };
-  // Footer href map (legal pages have a JP / EN version pair)
-  const LEGAL_HREF = {
-    ja: { footerTerms:'/terms.html', footerPrivacy:'/privacy.html', footerLegal:'/legal.html', footerContact:'/contact.html' },
-    en: { footerTerms:'/terms-en.html', footerPrivacy:'/privacy-en.html', footerLegal:'/legal-en.html', footerContact:'/contact-en.html' },
-  };
-  let CUR_LANG = (function(){
-    try { return localStorage.getItem('mya_lang') || (navigator.language||'').toLowerCase().startsWith('ja') ? 'ja' : 'ja'; } catch(e){ return 'ja'; }
-  })();
-  // EN-only legal section ("特商法") doesn't have an equivalent in EN → hide that link when EN
+  let CUR_LANG = localStorage.getItem('mya_lang') || 'ja';
   function setLang(lang){
-    if(lang !== 'ja' && lang !== 'en') lang = 'ja';
     CUR_LANG = lang;
     try { localStorage.setItem('mya_lang', lang); } catch(e){}
     document.documentElement.lang = lang;
@@ -819,20 +811,10 @@
       if(el.hasAttribute('data-i18n-html')) el.innerHTML = v;
       else el.textContent = v;
     });
-    // Toggle visual
+    // Toggle button visual state
     document.getElementById('langJa').classList.toggle('on', lang === 'ja');
     document.getElementById('langEn').classList.toggle('on', lang === 'en');
-    // Legal links (different URLs per lang)
-    const href = LEGAL_HREF[lang];
-    if(href){
-      ['footerTerms','footerPrivacy','footerLegal','footerContact'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el && href[id]) el.setAttribute('href', href[id]);
-      });
-    }
-    // EN doesn't have 特商法 (Japan-only law) → hide that link
-    const legalLink = document.getElementById('footerLegal');
-    if(legalLink) legalLink.style.display = lang === 'en' ? 'none' : '';
+    // Recompute the hire button label since it depends on count + lang
     updateHireBtn();
   }
   function t(k){ return (I18N[CUR_LANG] && I18N[CUR_LANG][k]) || I18N.ja[k] || k; }
@@ -852,18 +834,12 @@
       : (all.length === 1 ? t('hire.start.one') : t('hire.start.many').replace('{n}', all.length));
   }
   function startHired(){
-    const hired = [...document.querySelectorAll('.ai-card.hired')].map(c => ({
-      name: c.querySelector('.ai-name').textContent,
-      role: c.dataset.role,
-    }));
+    const hired = [...document.querySelectorAll('.ai-card.hired')].map(c => c.querySelector('.ai-name').textContent);
     if(!hired.length) return;
-    // Persist the selected roles so signup can prefill team
-    try { localStorage.setItem('pendingHire', JSON.stringify(hired.map(h => h.role))); } catch(e){}
-    // Redirect to signup, passing the hired roles as query param for prefill
-    const roles = hired.map(h => encodeURIComponent(h.role)).join(',');
-    location.href = '/auth.html?tab=signup&hire=' + roles;
+    alert(t('hire.alert.title') + '\n\n' + hired.map(n => '✓ ' + n).join('\n') + '\n\n' + t('hire.alert.tail'));
   }
 
+  // Apply saved / default language on load
   setLang(CUR_LANG);
 </script>
 

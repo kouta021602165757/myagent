@@ -1370,6 +1370,14 @@ input,textarea{font-family:var(--sans);}
   overflow-x:auto;position:relative;font-size:12.5px;line-height:1.6;
 }
 .m-body pre code{background:transparent;color:inherit;padding:0;font-size:12.5px;}
+/* highlight.js inherits the dark pre background; just tweak token colors so
+   they pop on our #1e1410 chrome */
+.m-body pre code.hljs{padding:0;background:transparent;}
+.m-body pre .cb-lang{
+  position:absolute;top:8px;left:12px;font-size:10px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:rgba(245,235,224,.45);
+  font-family:'SF Mono',Menlo,monospace;
+}
 .m-body pre .cb-copy{
   position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;
   background:rgba(255,255,255,.12);color:#f5ebe0;border:1px solid rgba(255,255,255,.18);
@@ -2413,6 +2421,9 @@ body{color:#f0f0f8;}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<!-- highlight.js for chat code-block syntax highlighting (atom-one-dark theme tuned for our peach UI) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/atom-one-dark.min.css">
+<script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/highlight.min.js"></script>
 </head>
 <body>
 
@@ -2707,6 +2718,9 @@ body{color:#f0f0f8;}
               </button>
               <button class="tool-btn" id="micBtn" onclick="toggleMic()" title="音声入力">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <button class="tool-btn" id="codeBtn" onclick="insertCodeBlock()" title="コードブロック挿入 (\`\`\`)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
               </button>
               <button class="tool-btn" id="chromeTool" title="" style="display:none">
                 <span style="font-size:14px">🌐</span><span style="font-size:12px;font-weight:700">Chrome</span>
@@ -8107,7 +8121,24 @@ function _md(src){
     var runBtn = isPy
       ? '<button class="cb-run" data-code="'+enc+'" onclick="runPyCode(event,this)" title="Run with Pyodide (in-browser Python)">▶ Run</button>'
       : '';
-    return '<pre'+langAttr+'>'+runBtn+'<button class="cb-copy" data-code="'+enc+'" onclick="copyCodeBlock(event,this)">📋 Copy</button><code>'+esc(b.code)+'</code></pre>';
+    // Syntax highlight via highlight.js when loaded. Lang hint helps;
+    // fall back to highlightAuto if no lang. If hljs hasn't loaded yet
+    // (deferred), we emit plain escaped code.
+    var lang = (b.lang||'').toLowerCase();
+    var rendered;
+    if(window.hljs){
+      try {
+        if(lang && window.hljs.getLanguage && window.hljs.getLanguage(lang)){
+          rendered = window.hljs.highlight(b.code, {language:lang, ignoreIllegals:true}).value;
+        } else {
+          rendered = window.hljs.highlightAuto(b.code).value;
+        }
+      } catch(e){ rendered = esc(b.code); }
+    } else {
+      rendered = esc(b.code);
+    }
+    var langTag = lang ? '<span class="cb-lang">'+esc(lang)+'</span>' : '';
+    return '<pre'+langAttr+'>'+langTag+runBtn+'<button class="cb-copy" data-code="'+enc+'" onclick="copyCodeBlock(event,this)">📋 Copy</button><code class="hljs">'+rendered+'</code></pre>';
   });
   // Headings
   html=html.replace(/^#### (.+)$/gm,'<h4>$1</h4>');
@@ -8172,6 +8203,41 @@ function _md(src){
   html=html.replace(/<br>(<(?:h[1-6]|ul|ol|pre|blockquote|li))/g,'$1');
   return html;
 }
+// Once highlight.js finishes loading (defer script), walk every code block
+// already in the DOM and apply highlighting. New code blocks emitted by _md()
+// during chat will pick up window.hljs synchronously after this point.
+window.addEventListener('load', function(){
+  if(window.hljs){
+    document.querySelectorAll('pre code.hljs').forEach(function(b){
+      try { window.hljs.highlightElement(b); } catch(e){}
+    });
+  }
+});
+
+function insertCodeBlock(){
+  // Pop the composer textarea, wrap selection (if any) in ```code fences```.
+  // Empty selection → insert empty fences + place caret inside on the lang line.
+  var ta = document.getElementById('ci'); if(!ta) return;
+  ta.focus();
+  var start = ta.selectionStart, end = ta.selectionEnd;
+  var selected = ta.value.slice(start, end);
+  var leading  = ta.value.slice(0, start).match(/(?:^|\n)$/) ? '' : '\n';
+  var trailing = ta.value.slice(end).match(/^(?:\n|$)/) ? '' : '\n';
+  var insert;
+  var caretPos;
+  if(selected){
+    insert = leading + '```\n' + selected + '\n```' + trailing;
+    caretPos = start + leading.length + 3; // place caret right after opening ``` for lang hint
+  } else {
+    insert = leading + '```\n\n```' + trailing;
+    caretPos = start + leading.length + 4; // inside the fences
+  }
+  ta.value = ta.value.slice(0, start) + insert + ta.value.slice(end);
+  ta.setSelectionRange(caretPos, caretPos);
+  // Trigger composer height recalc + send-button enable state
+  if(typeof exTA === 'function') exTA(ta);
+}
+
 function copyCodeBlock(ev,btn){
   ev&&ev.stopPropagation();
   var code=decodeURIComponent(btn.getAttribute('data-code')||'');

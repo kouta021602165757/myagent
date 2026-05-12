@@ -3965,19 +3965,23 @@ body{color:#f0f0f8;}
      下半分 = アコーディオン (ツール連携 / ナレッジ / 高度な設定 / 危険ゾーン)
      -->
 <style>
-  .ea-acc{background:#fff;border:1px solid var(--wire2);border-radius:11px;overflow:hidden}
+  /* `flex-shrink:0` is critical — the edit-panel body is a flex column,
+     and without it the <details> elements get crushed to almost-zero height
+     when the model-pill row wraps to 2 rows (or other expansion above). */
+  .ea-acc{background:#fff;border:1px solid var(--wire2);border-radius:11px;overflow:hidden;flex-shrink:0}
   .ea-acc > summary{
-    list-style:none;padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
-    font-size:12.5px;font-weight:800;color:var(--text);user-select:none;
+    list-style:none;padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
+    font-size:13px;font-weight:800;color:var(--text);user-select:none;
+    line-height:1.4;min-height:44px;box-sizing:border-box;
   }
   .ea-acc > summary::-webkit-details-marker{display:none}
+  .ea-acc > summary::marker{display:none}
   /* The label span has flex:1 to claim leftover space, so the count + arrow
-     pin to the right consistently — with or without a count text. Previously
-     both .cnt and ::after had margin-left:auto, which split space unevenly
-     and made the arrow drift left when no count was present (高度な設定 / 削除). */
-  .ea-acc > summary .ea-label{flex:1;min-width:0}
-  .ea-acc > summary .cnt{font-size:10.5px;color:var(--text3);font-weight:700}
-  .ea-acc > summary::after{content:'›';color:var(--text3);font-size:16px;font-weight:700;transition:.15s;transform:rotate(0);margin-left:8px}
+     pin to the right consistently — with or without a count text. */
+  .ea-acc > summary > span:first-child{flex-shrink:0;font-size:15px;line-height:1}
+  .ea-acc > summary .ea-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ea-acc > summary .cnt{font-size:11px;color:var(--text3);font-weight:700;flex-shrink:0}
+  .ea-acc > summary::after{content:'›';color:var(--text3);font-size:16px;font-weight:700;transition:.15s;transform:rotate(0);margin-left:8px;flex-shrink:0}
   .ea-acc[open] > summary::after{transform:rotate(90deg)}
   .ea-acc > summary:hover{background:var(--cream2)}
   .ea-acc[open] > summary{border-bottom:1px solid var(--wire2)}

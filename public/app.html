@@ -2799,6 +2799,12 @@ body{color:#f0f0f8;}
               <button class="tool-btn" id="chromeTool" title="" style="display:none">
                 <span style="font-size:14px">🌐</span><span style="font-size:12px;font-weight:700">Chrome</span>
               </button>
+              <button class="tool-btn" id="huddleTool" onclick="_toggleHuddle()" title="チーム議論モード · メンバー全員が順に発言します" style="display:none">
+                <span style="font-size:14px">🤝</span><span style="font-size:12px;font-weight:700">Huddle</span>
+              </button>
+              <button class="tool-btn" id="stickerTool" onclick="_toggleStickerPicker(event)" title="スタンプ" style="display:none">
+                <span style="font-size:14px">😀</span>
+              </button>
               <div class="tool-spacer"></div>
               <button class="send-btn" id="sndBtn" onclick="sendMsg()" title="送信">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
@@ -3963,21 +3969,25 @@ body{color:#f0f0f8;}
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">🤖 使用する AI モデル</label>
-      <div id="editModelGroup" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-        <button type="button" data-model="haiku" onclick="_setEditModel('haiku')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
-          <div style="font-size:12px;font-weight:700;color:var(--text)">⚡ Haiku</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">高速・安価</div>
+      <div id="editModelGroup" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button type="button" data-model="gemini-flash" onclick="_setEditModel('gemini-flash')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">⚡ Gemini Flash</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">超高速・推奨</div>
         </button>
         <button type="button" data-model="sonnet" onclick="_setEditModel('sonnet')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
           <div style="font-size:12px;font-weight:700;color:var(--text)">🎯 Sonnet</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">標準・推奨</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">標準品質</div>
+        </button>
+        <button type="button" data-model="gemini-pro" onclick="_setEditModel('gemini-pro')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">💎 Gemini Pro</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">高品質・高速</div>
         </button>
         <button type="button" data-model="opus" onclick="_setEditModel('opus')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
           <div style="font-size:12px;font-weight:700;color:var(--text)">🧠 Opus</div>
           <div style="font-size:10px;color:var(--text3);margin-top:1px">最高性能・高価</div>
         </button>
       </div>
-      <input type="hidden" id="editModel" value="sonnet">
+      <input type="hidden" id="editModel" value="gemini-flash">
     </div>
     <!-- 1. Web 検索 / URL 取得 -->
     <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
@@ -5987,7 +5997,7 @@ var T = {
       bsPaygTab:   isJa ? '都度チャージ'                                : 'Pay as you go',
       bsCurPlan:   isJa ? '現在のプラン'                                : 'Current plan',
       bsCurBal:    isJa ? '現在の残高'                                  : 'Current balance',
-      bsFreeNote:  isJa ? '無料枠 10メッセージ'                          : '10 free messages',
+      bsFreeNote:  isJa ? '無料枠 100メッセージ'                         : '100 free messages',
       bsProNote:   isJa ? '毎月 $15 分のクレジット'                       : '$15 monthly credit',
       bsBizNote:   isJa ? '毎月 $45 分のクレジット'                       : '$45 monthly credit',
       bsAddNote:   isJa ? '$0.01 単位で利用可'                            : 'Use in $0.01 increments',
@@ -6011,7 +6021,7 @@ var T = {
       sBalance:    isJa ? '残高'                                        : 'Balance',
       sCurPlan:    isJa ? '現在のプラン'                                 : 'Current plan',
       sUsageFmt:   isJa ? '累計 {n} 回利用'                              : '{n} messages used',
-      sFreeBlurb:  isJa ? '無料枠 10メッセージ'                          : '10 free messages',
+      sFreeBlurb:  isJa ? '無料枠 100メッセージ'                         : '100 free messages',
       sProBlurb:   isJa ? '$12.99 / 月 ・ $15分のクレジット'              : '$12.99/mo · $15 credit',
       sBizBlurb:   isJa ? '$32.99 / 月 ・ $45分のクレジット'              : '$32.99/mo · $45 credit',
       sAddCredits: isJa ? '+ クレジット追加 / プラン変更'                  : '+ Add credits / Change plan',
@@ -7815,36 +7825,43 @@ function renderAgList(){
         + L('まだトークがありません','No conversations yet') + '<br>'
         + '<button class="btn-volt" onclick="goHome()" style="margin-top:14px;font-size:11px;padding:7px 14px">＋ ' + L('ホームから作成','Create from home') + '</button></div>';
     } else {
-      // Section: Teams (AI-only multi-agent groups)
+      // Collapsible sections — state in localStorage per key.
+      var collapsed = (function(){ try{ return JSON.parse(localStorage.getItem('mya_sb_collapsed')||'{}'); }catch(e){ return {}; } })();
+      function _section(key, emoji, label, count, addOnclick, addTitle, itemsHTML){
+        var isCollapsed = !!collapsed[key];
+        var caret = isCollapsed ? '▸' : '▾';
+        return '<div class="sb-section-h" style="cursor:pointer" onclick="_toggleSbSection(\''+key+'\')">'
+             +   '<span style="display:flex;align-items:center;gap:6px"><span style="color:var(--text3);font-size:10px;width:10px;display:inline-block">'+caret+'</span>'+emoji+' '+esc(label)+' <span style="color:var(--text3);font-weight:600;font-size:10px">·'+count+'</span></span>'
+             +   (addOnclick?'<button class="sb-section-add" onclick="event.stopPropagation();'+addOnclick+'" title="'+esc(addTitle||'')+'">+</button>':'')
+             + '</div>'
+             + (isCollapsed ? '' : itemsHTML);
+      }
+      // Section: 👥 Teams (AI-only multi-agent groups)
       if(teamsAg.length > 0){
-        html += '<div class="sb-section-h"><span>🎯 ' + L('Agent Team','Agent Teams') + '</span>'
-          + '<button class="sb-section-add" onclick="openTeamGallery()" title="' + L('Agent Team を作成','Create Agent Team') + '">+</button></div>';
-        teamsAg
-          .slice().sort(_sortByLastActivity)
-          .forEach(a => { html += _renderAgItem(a, false); });
+        var items = teamsAg.slice().sort(_sortByLastActivity).map(function(a){return _renderAgItem(a, false);}).join('');
+        html += _section('teams','👥', L('Teams','Teams'), teamsAg.length, "openTeamGallery()", L('Agent Team を作成','Create Agent Team'), items);
       }
-      // Section: Groups (humans + AI)
+      // Section: 👫 Groups (humans + AI)
       if(totalGroups > 0){
-        html += '<div class="sb-section-h"><span>👥 ' + L('グループ','Groups') + '</span>'
-          + '<button class="sb-section-add" onclick="openCreateGroup()" title="' + L('グループを作成','Create a group') + '">+</button></div>';
-        hostedGroups
-          .slice().sort(_sortByLastActivity)
-          .forEach(a => { html += _renderAgItem(a, false); });
-        _joinedGroups
-          .slice().sort(_sortByLastActivity)
-          .forEach(g => { html += _renderAgItem(g, true); });
+        var items2 = hostedGroups.slice().sort(_sortByLastActivity).map(function(a){return _renderAgItem(a, false);}).join('')
+                    + _joinedGroups.slice().sort(_sortByLastActivity).map(function(g){return _renderAgItem(g, true);}).join('');
+        html += _section('groups','👫', L('グループ','Groups'), totalGroups, "openCreateGroup()", L('グループを作成','Create a group'), items2);
       }
-      // Section: DMs
+      // Section: 💬 DMs
       if(dmAgents.length > 0){
-        html += '<div class="sb-section-h"><span>🤖 DM</span>'
-          + '<button class="sb-section-add" onclick="openNewAgent()" title="' + L('AI を作成','Create AI') + '">+</button></div>';
-        dmAgents
-          .slice().sort(_sortByLastActivity)
-          .forEach(a => { html += _renderAgItem(a, false); });
+        var items3 = dmAgents.slice().sort(_sortByLastActivity).map(function(a){return _renderAgItem(a, false);}).join('');
+        html += _section('dms','💬', L('DMs','DMs'), dmAgents.length, "openNewAgent()", L('AI を作成','Create AI'), items3);
       }
     }
   }
   document.getElementById('agList').innerHTML = html;
+}
+function _toggleSbSection(key){
+  var col;
+  try{ col = JSON.parse(localStorage.getItem('mya_sb_collapsed')||'{}'); }catch(e){ col = {}; }
+  col[key] = !col[key];
+  try{ localStorage.setItem('mya_sb_collapsed', JSON.stringify(col)); }catch(e){}
+  renderAgList();
 }
 
 // Sort by most-recent activity descending. Falls back to created_at.
@@ -7940,9 +7957,15 @@ function _renderAgItem(a, isJoined){
   // Unread badge: TODO — for now, derive from `unread_count` if server provides it,
   // otherwise omit. Group joined records may include unread.
   const unread = a.unread_count || 0;
-  const unreadBadge = unread > 0
-    ? `<div class="ag-unread">${unread > 99 ? '99+' : unread}</div>`
-    : '';
+  // Proactive nudge: when an undismissed/unacted nudge exists, replace the
+  // numeric unread badge with a 💡 so the user knows the AI has something
+  // to say (even when there are no unread group messages).
+  const hasActiveNudge = Array.isArray(a.proactive_nudges) && a.proactive_nudges.some(function(n){return n && !n.dismissed && !n.acted;});
+  const unreadBadge = hasActiveNudge
+    ? `<div class="ag-unread" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)" title="${L('提案あり','New suggestion')}">💡</div>`
+    : (unread > 0
+        ? `<div class="ag-unread">${unread > 99 ? '99+' : unread}</div>`
+        : '');
 
   // Joined groups don't support drag-reorder
   const dragAttrs = isJoined ? '' : 'draggable="true" ondragstart="agDragStart(event)" ondragover="agDragOver(event)" ondragleave="agDragLeave(event)" ondrop="agDrop(event)" ondragend="agDragEnd(event)"';
@@ -8121,6 +8144,7 @@ async function openAgent(id){
     actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
     actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
     if(!ag._is_joined_group){
+      actsHTML += '<button class="ct-act" onclick="openAgentProfile(\''+ag.id+'\')" title="'+L('AIプロフィール (記憶 / 目標 / プレイブック / タスク)','Agent profile (memory / goals / playbook / tasks)')+'">🧠</button>';
       actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
     }
   }
@@ -8136,12 +8160,36 @@ async function openAgent(id){
   var ctxColor = ctxPct < 50 ? 'var(--text3)' : ctxPct < 80 ? 'var(--peach-dark)' : '#dc2626';
   var ctxLbl = ctxTok >= 1000 ? (ctxTok/1000).toFixed(1)+'k' : String(ctxTok);
   var ctxPill = '<span class="ct-ctx" title="'+(isJa?'コンテキスト使用量 (推定)':'Context window used (approx)')+'" style="font-size:10px;font-weight:700;color:'+ctxColor+';background:var(--cream2);border:1px solid var(--wire2);padding:3px 8px;border-radius:99px;letter-spacing:.02em;font-family:\'SF Mono\',Menlo,monospace">'+ctxLbl+' / 200k</span>';
+  // Quick model picker pill — click to switch between Fast / Smart / Best
+  // without opening the full edit panel. Saved per-agent via PATCH.
+  var _modelMap = {'gemini-flash':{lbl:'⚡ Fast',title:'Gemini 2.5 Flash · 超高速'},
+                   'gemini-pro':{lbl:'💎 Pro',title:'Gemini 2.5 Pro · 高品質+高速'},
+                   'sonnet':{lbl:'🎯 Smart',title:'Claude Sonnet · 標準品質'},
+                   'opus':{lbl:'🧠 Best',title:'Claude Opus · 最高性能'},
+                   'haiku':{lbl:'⚡ Lite',title:'Claude Haiku · 軽量'}};
+  var _mInfo = _modelMap[ag.model] || _modelMap['gemini-flash'];
+  var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit">'+_mInfo.lbl+'</button>');
+  // Agent-intelligence indicators — KPI count + active task count. Clicking
+  // opens the unified Agent Profile panel. Group chats hide these.
+  var intelPill = '';
+  if(!isGroup && !ag._is_joined_group){
+    var kpiN  = Array.isArray(ag.kpis) ? ag.kpis.length : 0;
+    var taskN = Array.isArray(ag.open_tasks) ? ag.open_tasks.filter(function(t){return t && t.status!=='done';}).length : 0;
+    var memN  = Array.isArray(ag.memories) ? ag.memories.length : 0;
+    if(kpiN + taskN + memN > 0){
+      var parts = [];
+      if(taskN) parts.push('📋 '+taskN);
+      if(kpiN)  parts.push('🎯 '+kpiN);
+      if(memN)  parts.push('🧠 '+memN);
+      intelPill = '<button onclick="event.stopPropagation(); openAgentProfile(\''+ag.id+'\')" title="'+L('AI が憶えてる事 / 目標 / 案件','What this AI remembers / goals / tasks')+'" style="font-size:10px;font-weight:700;color:var(--text2);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit">'+parts.join(' · ')+'</button>';
+    }
+  }
   document.getElementById('chatTop').innerHTML=
     '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+
     '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
       '<div class="ct-name"><span class="live-status"></span>'+esc(ag.name)+'</div>'+
-      '<div class="ct-pills">'+topPills+' '+ctxPill+'</div>'+
+      '<div class="ct-pills">'+topPills+' '+modelPill+' '+intelPill+' '+ctxPill+'</div>'+
     '</div>'+
     '<div class="ct-actions">'+ actsHTML +'</div>';
   // Hide share card whenever agent changes
@@ -8418,9 +8466,51 @@ function renderMsgs(ag, forceScrollBottom){
     _updateScrollFAB();
     return;
   }
-  inner.innerHTML=ag.history.map(function(m,i){
+  // Proactive nudge card — render at the very top of the chat if there's
+  // an undismissed, unacted nudge for this agent.
+  var _activeNudge = (Array.isArray(ag.proactive_nudges) ? ag.proactive_nudges : []).find(function(n){return n && !n.dismissed && !n.acted;});
+  var _nudgeHTML = '';
+  if(_activeNudge){
+    var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(251,146,60,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+    _nudgeHTML = '<div class="nudge-card" style="margin:14px auto;max-width:760px;background:'+accent.soft+';border:1px solid '+accent.color+';border-radius:14px;padding:14px 18px;font-size:13px;line-height:1.65;animation:fadeUp .35s ease">'
+      + '<div style="display:flex;align-items:flex-start;gap:11px">'
+      +   '<div style="width:30px;height:30px;border-radius:9px;background:'+accent.grad+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">💡</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:11px;font-weight:800;color:'+accent.color+';letter-spacing:.04em;margin-bottom:3px;text-transform:uppercase">'+esc(ag.name||'AI')+' '+L('から','says')+'</div>'
+      +     '<div style="color:var(--text);white-space:pre-wrap">'+esc(_activeNudge.text||'')+'</div>'
+      +     '<div style="display:flex;gap:8px;margin-top:10px">'
+      +       '<button onclick="_actOnNudge(\''+esc(ag.id)+'\',\''+esc(_activeNudge.id)+'\')" style="background:'+accent.color+';color:#fff;border:0;border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'+L('話を聞く','Tell me more')+' →</button>'
+      +       '<button onclick="_dismissNudge(\''+esc(ag.id)+'\',\''+esc(_activeNudge.id)+'\')" style="background:#fff;color:var(--text3);border:1px solid var(--wire2);border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+L('あとで','Later')+'</button>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }
+  // Build a parent-id → reply-count map so each parent message can show "↩️ N".
+  var threadCounts = {};
+  (ag.history||[]).forEach(function(m){
+    if(m && m.thread_parent_id){ threadCounts[m.thread_parent_id] = (threadCounts[m.thread_parent_id]||0) + 1; }
+  });
+  ag._threadCounts = threadCounts;
+  inner.innerHTML = _nudgeHTML + ag.history.map(function(m,i){
+    // Thread children are hidden from the main timeline; they live in the
+    // thread drawer attached to the parent.
+    if(m && m.thread_parent_id) return '';
     if(m.role === 'system'){
       return '<div class="sys-row"><span class="sys-pill">✨ '+esc(m.content||'')+'</span></div>';
+    }
+    if(m && m._summary){
+      // Rolling-summary message: folded card with "全履歴を見る" trigger.
+      var sumCount = m._summary_count || 0;
+      var preview = (m.content||'').slice(0, 220);
+      return '<div class="sum-row" style="margin:14px auto;max-width:760px;background:linear-gradient(135deg,#fff7ee,#fed7aa22);border:1px dashed rgba(251,146,60,.4);border-radius:13px;padding:12px 16px;font-size:12.5px;color:var(--text2);line-height:1.65">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:800;color:var(--peach-dark)">'
+        +   '📋 '+L('これまでの経緯','Conversation so far')
+        +   '<span style="font-weight:600;color:var(--text3);font-size:11px">· '+sumCount+L(' 件を折りたたみ',' turns folded')+'</span>'
+        +   '<button onclick="_openHistoryArchive(\''+esc(ag.id)+'\')" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">'+L('全履歴を見る','See full archive')+'</button>'
+        + '</div>'
+        + '<div style="white-space:pre-wrap">'+esc(preview)+((m.content||'').length>220?'…':'')+'</div>'
+        + '</div>';
     }
     return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i,m.tool_log,m);
   }).join('');
@@ -8539,14 +8629,31 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const speakerName = (raw && raw.user_name) ? raw.user_name : '';
   const speakerInitial = (raw && raw.user_avatar) ? raw.user_avatar : null;
   const isMyMsg = isU && (!raw || !raw.user_id || raw.user_id === me?.id);
+  // Huddle: each assistant turn carries the speaking member's identity,
+  // so the bubble shows that member's avatar / name rather than the team's.
+  const huddleMember = (!isU && raw && raw.huddle_member_id) ? raw : null;
+  const huddleSummary = (!isU && raw && raw.huddle_summary) ? true : false;
   const av = isU
     ? (speakerInitial || esc((me?(me.name||me.email||'?').charAt(0).toUpperCase():'?')))
-    : _avHTML(ag.avatar);
+    : (huddleMember ? _avHTML(huddleMember.huddle_member_avatar || '🤖') : _avHTML(ag.avatar));
   const name = isU
     ? (isGroup && speakerName ? speakerName : (isJa?'あなた':'You'))
-    : (ag.name||'');
+    : (huddleMember ? (huddleMember.huddle_member_name || ag.name || '')
+       : huddleSummary ? L('📋 議論サマリ','📋 Discussion summary')
+       : (ag.name||''));
   // Color code by user_id so each speaker has a stable hue (deterministic)
   const userColor = isU && raw && raw.user_id ? _userColor(raw.user_id) : null;
+  // Per-agent accent — only in groups/teams (DMs don't need to disambiguate).
+  // For huddle member turns, seed by member_id so each member's bubble is
+  // visually distinct from the team's coordinator bubble.
+  let agentAccent = null;
+  if(!isU && isGroup){
+    if(huddleMember){
+      agentAccent = _agentAccent({ id: huddleMember.huddle_member_id, name: huddleMember.huddle_member_name, skills:[huddleMember.huddle_member_name||'x'] });
+    } else if(!huddleSummary){
+      agentAccent = _agentAccent(ag);
+    }
+  }
   const cls = 'm '+(isU?(isMyMsg?'u':'u other'):'a');
   let imgHtml='';
   if(images && images.length){
@@ -8581,10 +8688,14 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const isPinned = !!(raw && raw.pinned);
     const bmBtn = '<button class="m-act bm'+(isBookmarked?' bm-on':'')+'" onclick="toggleBookmark(this)" title="ブックマーク">'+(isBookmarked?'★':'☆')+'</button>';
     const pinBtn = '<button class="m-act pin'+(isPinned?' pin-on':'')+'" onclick="togglePin(this)" title="ピン留め">'+(isPinned?'📌':'📍')+'</button>';
+    // Thread button — only shown on messages that have a stable id (post-thread-feature).
+    var threadId = raw && raw.id;
+    var threadN  = threadId && ag && ag._threadCounts ? (ag._threadCounts[threadId]||0) : 0;
+    var threadBtn = threadId ? '<button class="m-act" onclick="_openThread(\''+esc(threadId)+'\')" title="'+L('スレッドで返信','Reply in thread')+'">💬 '+(threadN>0?threadN:L('スレッド','Thread'))+'</button>' : '';
     if(isU){
       // Only show edit on your own user messages (not other group members').
       var editBtn = isMyMsg ? '<button class="m-act" onclick="editMsgStart(this)" title="'+(isJa?'編集して再生成':'Edit & resend')+'">✏️ '+(isJa?'編集':'Edit')+'</button>' : '';
-      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+editBtn+bmBtn+pinBtn;
+      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+editBtn+threadBtn+bmBtn+pinBtn;
     } else {
       // "Remember this" — saves the assistant reply (truncated to 400 chars)
       // to long-term memories so it persists across chats.
@@ -8593,6 +8704,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+
              '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
              replyBtn+
+             threadBtn+
              rememberBtn+
              '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊</button>'+
              bmBtn+pinBtn;
@@ -8673,10 +8785,18 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       }
     }
   }
-  return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'">'+
+  // Apply the agent accent to the outer row + avatar in group/team chats.
+  const rowStyle = agentAccent
+    ? ' style="border-left:3px solid '+agentAccent.color+';padding-left:9px;background:linear-gradient(90deg,'+agentAccent.soft+' 0%,transparent 26%);border-radius:9px"'
+    : '';
+  const aiAvStyle = (!isU && agentAccent)
+    ? ' style="background:'+agentAccent.grad+';box-shadow:0 0 0 2px '+agentAccent.soft+'"'
+    : avStyle;
+  const nameStyle = agentAccent ? ' style="color:'+agentAccent.color+';font-weight:800"' : '';
+  return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'"'+rowStyle+'>'+
     '<div class="m-meta">'+
-      '<div class="m-av'+(isU?' user':'')+'"'+avStyle+'>'+av+'</div>'+
-      '<span class="m-name">'+esc(name)+'</span>'+
+      '<div class="m-av'+(isU?' user':'')+'"'+aiAvStyle+'>'+av+'</div>'+
+      '<span class="m-name"'+nameStyle+'>'+esc(name)+'</span>'+
       '<span class="m-time">'+esc(time||'')+'</span>'+
       readReceipt+
     '</div>'+
@@ -8754,6 +8874,29 @@ function _userColor(uid){
   for(let i=0;i<uid.length;i++) h = (h*31 + uid.charCodeAt(i)) | 0;
   const hue = Math.abs(h) % 360;
   return 'linear-gradient(135deg, hsl('+hue+',70%,55%), hsl('+(hue+30)%360+',70%,40%))';
+}
+
+// Deterministic per-agent accent. Same agent name → always same color, so a
+// "Designer AI" in any team chat is recognizably pink-ish, an "Engineer AI"
+// is blue-ish, etc. Used in team chats to give each member a visual handle.
+// Returns {hue, name (CSS color), bg (light tint), grad (avatar gradient)}.
+function _agentAccent(ag){
+  if(!ag) return null;
+  // Seed: prefer skills.join(',') over name so renaming doesn't lose identity.
+  // Fall back to name + id.
+  const seed = (Array.isArray(ag.skills) && ag.skills.length
+    ? ag.skills.join(',')
+    : ((ag.name||'') + ':' + (ag.id||''))) || 'x';
+  let h = 0;
+  for(let i=0;i<seed.length;i++) h = (h*31 + seed.charCodeAt(i)) | 0;
+  const hue = Math.abs(h) % 360;
+  return {
+    hue,
+    color: 'hsl('+hue+',62%,46%)',
+    bg:    'hsl('+hue+',75%,96%)',
+    soft:  'hsla('+hue+',62%,46%,.12)',
+    grad:  'linear-gradient(135deg, hsl('+hue+',75%,92%), hsl('+((hue+30)%360)+',70%,85%))',
+  };
 }
 
 // Member panel — slide-out drawer showing all members + invite/remove actions.
@@ -9285,12 +9428,100 @@ function _updateChromeTool(ag){
   var btn=document.getElementById('chromeTool');
   if(!btn) return;
   if(!ag||!ag.chrome_enabled){
-    btn.style.display='none'; return;
+    btn.style.display='none';
+  } else {
+    btn.style.display='inline-flex';
+    btn.classList.remove('warn');
+    btn.classList.add('active');
+    btn.title=isJa?'Google Chrome 連携 ON':'Google Chrome integration ON';
   }
-  btn.style.display='inline-flex';
-  btn.classList.remove('warn');
-  btn.classList.add('active');
-  btn.title=isJa?'Google Chrome 連携 ON':'Google Chrome integration ON';
+  // Huddle button: only on team chats with 2+ members.
+  var huddle = document.getElementById('huddleTool');
+  if(huddle){
+    var isTeam = !!(ag && ag.is_team && Array.isArray(ag.team_member_agent_ids) && ag.team_member_agent_ids.length >= 2);
+    huddle.style.display = isTeam ? 'inline-flex' : 'none';
+    // Restore visual state for this agent (per-agent toggle persists in
+    // window._huddleOn map so switching chats doesn't carry it across).
+    var on = !!(window._huddleOn && ag && window._huddleOn[ag.id]);
+    huddle.classList.toggle('active', on);
+    huddle.title = on ? L('Huddle ON · 全員が順に発言します','Huddle ON · all members speak in turn') : L('Huddle: チーム全員で議論','Huddle: team-wide discussion');
+  }
+  // Sticker button: shown on DM agents (not on joined groups / teams).
+  var stk = document.getElementById('stickerTool');
+  if(stk){
+    var canStick = !!(ag && !ag._is_joined_group && !ag.is_group);
+    stk.style.display = canStick ? 'inline-flex' : 'none';
+  }
+}
+function _toggleHuddle(){
+  if(!activeId) return;
+  window._huddleOn = window._huddleOn || {};
+  window._huddleOn[activeId] = !window._huddleOn[activeId];
+  var ag = (agents||[]).find(function(a){return a.id===activeId;});
+  if(ag) _updateChromeTool(ag);
+  showToast(window._huddleOn[activeId] ? L('🤝 Huddle ON · 送信すると全員で議論','🤝 Huddle ON · send to start the discussion') : L('🤝 Huddle OFF','🤝 Huddle OFF'), 'ok');
+}
+
+// ── 😀 Agent stickers ────────────────────────────────────────
+// Each agent has up to 6 emoji stickers (server-generated on first use).
+// Click → palette pops above the composer → click an emoji to insert it
+// into the composer.  Personality-as-quick-reactions.
+async function _toggleStickerPicker(ev){
+  if(ev) ev.stopPropagation();
+  var existing = document.getElementById('stickerPicker');
+  if(existing){ existing.remove(); return; }
+  if(!activeId) return;
+  var ag = (agents||[]).find(function(a){return a.id===activeId;});
+  if(!ag) return;
+  // If no stickers yet, generate now (one-shot, ~1s). Show a tiny pending toast.
+  if(!Array.isArray(ag.stickers) || ag.stickers.length === 0){
+    showToast(L('スタンプを生成中…','Generating stickers…'),'ok');
+    try {
+      var r = await api('POST','/api/agents/'+ag.id+'/stickers/generate',{});
+      if(r && Array.isArray(r.stickers)) ag.stickers = r.stickers;
+    } catch(e){ showToast((e&&e.message)||'failed','ng'); return; }
+  }
+  var stickers = (ag.stickers||[]).slice(0, 8);
+  if(stickers.length === 0){ showToast(L('スタンプなし','No stickers'),'ng'); return; }
+  var picker = document.createElement('div');
+  picker.id = 'stickerPicker';
+  picker.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--wire2);border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:9990;font-family:inherit;display:flex;gap:4px;flex-wrap:wrap;max-width:280px';
+  picker.innerHTML = stickers.map(function(s){
+    return '<button onclick="event.stopPropagation();_insertSticker(\''+esc(s).replace(/\\/g,'\\\\').replace(/\'/g,"\\'")+'\')" style="background:transparent;border:0;border-radius:8px;padding:6px 8px;font-size:24px;cursor:pointer;line-height:1;transition:transform .1s" onmouseover="this.style.transform=\'scale(1.25)\'" onmouseout="this.style.transform=\'scale(1)\'">'+s+'</button>';
+  }).join('') + '<button onclick="event.stopPropagation();_regenStickers(\''+esc(ag.id)+'\')" style="background:var(--cream2);border:0;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit">'+L('🔄 再生成','🔄 Reroll')+'</button>';
+  document.body.appendChild(picker);
+  var btn = document.getElementById('stickerTool');
+  if(btn){
+    var r = btn.getBoundingClientRect();
+    picker.style.bottom = (window.innerHeight - r.top + 6) + 'px';
+    picker.style.left   = Math.max(8, Math.min(window.innerWidth - 290, r.left)) + 'px';
+  }
+  setTimeout(function(){
+    var off = function(e){
+      if(!picker.contains(e.target)){ picker.remove(); document.removeEventListener('click', off, true); }
+    };
+    document.addEventListener('click', off, true);
+  }, 0);
+}
+function _insertSticker(s){
+  var ta = document.getElementById('ci'); if(!ta) return;
+  var cursor = ta.selectionStart || ta.value.length;
+  ta.value = ta.value.slice(0, cursor) + s + ' ' + ta.value.slice(cursor);
+  ta.focus();
+  var p = document.getElementById('stickerPicker'); if(p) p.remove();
+  if(typeof exTA === 'function') exTA(ta);
+}
+async function _regenStickers(agId){
+  var ag = (agents||[]).find(function(a){return a.id===agId;});
+  if(!ag) return;
+  showToast(L('再生成中…','Regenerating…'),'ok');
+  try {
+    var r = await api('POST','/api/agents/'+agId+'/stickers/generate',{});
+    if(r && Array.isArray(r.stickers)){
+      ag.stickers = r.stickers;
+      var p = document.getElementById('stickerPicker'); if(p){ p.remove(); _toggleStickerPicker(); }
+    }
+  } catch(e){ showToast((e&&e.message)||'failed','ng'); }
 }
 
 /* ── Extension hint banner — shown above composer when the user types a
@@ -10664,6 +10895,15 @@ async function _sendMsgStream(ag, text, imgs, texts){
   const payload = { message: text, stream: true };
   if(imgs && imgs.length > 0) payload.images = imgs;
   if(texts && texts.length > 0) payload.texts = texts;
+  // Team Huddle: when toggle is ON for this agent, server runs the
+  // multi-agent dialogue path. Auto-disable the toggle after sending so
+  // each huddle is opt-in.
+  if(window._huddleOn && window._huddleOn[ag.id] && ag.is_team){
+    payload.huddle = true;
+    payload.huddle_rounds = 2;
+    window._huddleOn[ag.id] = false;
+    _updateChromeTool(ag);
+  }
   // Per-call AbortController so the user can hit ⏹ to stop mid-stream.
   const ctrl = new AbortController();
   _chatStreamCtrl = ctrl;
@@ -10720,6 +10960,31 @@ async function _sendMsgStream(ag, text, imgs, texts){
   let acc = '';
   let lastRender = 0;
   let errorMsg = null;
+  // Thinking-state escalator. As time passes without any tool / delta event,
+  // we swap the indicator text from "考えています…" → "🔎 詳しく調べています…" →
+  // "⚙️ 複雑な処理中…". Makes the agent feel responsive even on slow turns.
+  let _thinkStartedAt = Date.now();
+  let _thinkTimer = null;
+  const _agName = (ag && ag.name) || (isJa?'AI':'AI');
+  const _thinkStages = isJa ? [
+    { at:0,    text:'考えています…' },
+    { at:4000, text:_agName + ' が深く考えています…' },
+    { at:12000,text:'🔎 詳しく調べています…' },
+    { at:24000,text:'⚙️ 複雑な処理中… (もう少しお待ちください)' },
+  ] : [
+    { at:0,    text:'Thinking…' },
+    { at:4000, text:_agName + ' is thinking deeply…' },
+    { at:12000,text:'🔎 Going deeper…' },
+    { at:24000,text:'⚙️ Complex task — almost there' },
+  ];
+  function _renderThinking(){
+    if(!liveBody || acc || (ag.history[streamIdx] && ag.history[streamIdx].tool_log && ag.history[streamIdx].tool_log.length)) return;
+    const elapsed = Date.now() - _thinkStartedAt;
+    let label = _thinkStages[0].text;
+    for(const s of _thinkStages){ if(elapsed >= s.at) label = s.text; }
+    liveBody.innerHTML = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">' + label + '</div></div>';
+  }
+  function _stopThink(){ if(_thinkTimer){ clearInterval(_thinkTimer); _thinkTimer = null; } }
 
   try { while(true){
     let value, done;
@@ -10742,6 +11007,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
       let obj=null; try{ obj=JSON.parse(dataStr); }catch(e){ continue; }
       if(evType === 'delta'){
         acc += obj.text || '';
+        _stopThink();
         // Throttle DOM updates to ~30fps
         const nowT = Date.now();
         if(nowT - lastRender > 32 && liveBody){
@@ -10750,15 +11016,16 @@ async function _sendMsgStream(ag, text, imgs, texts){
           _scrollMsgsToEnd();
         }
       } else if(evType === 'thinking'){
-        // Server about to call AI for an iteration. Show a subtle hint above the
-        // bubble so the user feels something is moving even before tools fire.
+        // Server about to call AI for an iteration. Kick off the escalator so
+        // the indicator text deepens as the wait stretches.
         if(liveBody && !acc){
-          // Use the brand gen-indicator (pulsing logo + shimmering text) so
-          // the user has obvious motion the instant a request starts.
-          liveBody.innerHTML = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
-            + (isJa?'考えています…':'Thinking…') + '</div></div>';
+          _thinkStartedAt = Date.now();
+          _renderThinking();
+          _stopThink();
+          _thinkTimer = setInterval(_renderThinking, 1000);
         }
       } else if(evType === 'tool_call'){
+        _stopThink();
         // Tool requested by AI (about to execute). Track in tool_log + render.
         ag.history[streamIdx].tool_log = ag.history[streamIdx].tool_log || [];
         ag.history[streamIdx].tool_log.push({
@@ -10778,6 +11045,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
         if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
         _scrollMsgsToEnd();
       } else if(evType === 'done'){
+        _stopThink();
         ag.history[streamIdx].content = obj.reply || acc;
         ag.history[streamIdx].streaming = false;
         if(obj.tool_log && obj.tool_log.length){ ag.history[streamIdx].tool_log = obj.tool_log; }
@@ -10789,9 +11057,74 @@ async function _sendMsgStream(ag, text, imgs, texts){
         updateBalance();
       } else if(evType === 'error'){
         errorMsg = obj.message || 'エラー';
+        _stopThink();
+      } else if(evType === 'huddle_start'){
+        // Replace the single placeholder bubble with a "huddle in progress"
+        // banner. Each member gets their own bubble pushed on huddle_turn_start.
+        _stopThink();
+        // Drop the placeholder
+        const idx = ag.history.length - 1;
+        if(ag.history[idx] && ag.history[idx].streaming){ ag.history.splice(idx, 1); }
+        ag.history.push({
+          role: 'system',
+          content: L('🤝 Huddle 開始 · ' + (obj.members||[]).map(function(m){return m.name;}).join(' · '),
+                     '🤝 Huddle started · ' + (obj.members||[]).map(function(m){return m.name;}).join(' · ')),
+          time: now(),
+          _huddle_banner: true,
+        });
+        renderMsgs(ag);
+      } else if(evType === 'huddle_turn_start'){
+        // Push a new streaming bubble attributed to this member.
+        ag.history.push({
+          role: 'assistant',
+          content: '',
+          time: now(),
+          streaming: true,
+          huddle_member_id: obj.member_id,
+          huddle_member_name: obj.member_name,
+          huddle_member_avatar: obj.member_avatar,
+          huddle_round: obj.round,
+        });
+        renderMsgs(ag);
+        // Refresh live bubble pointer
+        var _bubbles = document.querySelectorAll('#msgsInner .m.a');
+        liveEl = _bubbles[_bubbles.length - 1];
+        liveBody = liveEl ? liveEl.querySelector('.m-body') : null;
+        acc = ''; // reset accumulator per turn
+      } else if(evType === 'huddle_turn_end'){
+        var last = ag.history[ag.history.length - 1];
+        if(last && last.streaming){
+          last.content = acc;
+          last.streaming = false;
+        }
+        renderMsgs(ag);
+      } else if(evType === 'huddle_summary_start'){
+        ag.history.push({
+          role: 'assistant',
+          content: '',
+          time: now(),
+          streaming: true,
+          huddle_summary: true,
+        });
+        renderMsgs(ag);
+        var _b2 = document.querySelectorAll('#msgsInner .m.a');
+        liveEl = _b2[_b2.length - 1];
+        liveBody = liveEl ? liveEl.querySelector('.m-body') : null;
+        acc = '';
+      } else if(evType === 'huddle_summary_delta'){
+        acc += obj.text || '';
+        if(liveBody){
+          liveBody.innerHTML = _md(acc) + '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
+          _scrollMsgsToEnd();
+        }
+      } else if(evType === 'huddle_summary_end'){
+        var lastS = ag.history[ag.history.length - 1];
+        if(lastS && lastS.streaming){ lastS.content = acc; lastS.streaming = false; }
+        renderMsgs(ag);
       }
     }
   } } finally {
+    _stopThink();
     _chatStreamCtrl = null;
     _setChatStreaming(false);
   }
@@ -11478,7 +11811,7 @@ function openTeamMembersPanel(teamId){
       var skillsTxt = (m.skills||[]).map(function(s){var sk=SKILLS.find(function(x){return x.id===s;});return '<span style="display:inline-block;background:var(--cream2);color:var(--text2);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--wire2);margin-right:4px;margin-top:3px">'+esc(sk?sk.name:s)+'</span>';}).join('');
       var personaPreview = (m.persona||'').slice(0,140);
       if((m.persona||'').length>140) personaPreview += '…';
-      var modelLabel = ({haiku:'Haiku',sonnet:'Sonnet',opus:'Opus'}[m.model||'sonnet']) || 'Sonnet';
+      var modelLabel = ({haiku:'Haiku',sonnet:'Sonnet',opus:'Opus','gemini-flash':'Gemini Flash','gemini-pro':'Gemini Pro'}[m.model||'gemini-flash']) || 'Gemini Flash';
       // Remove button only for hosts AND when team has > 1 member (server enforces this too)
       var canRemove = isTeamHost && members.length > 1;
       var rmBtn = canRemove
@@ -13411,7 +13744,7 @@ function openEditAgent(id){
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('editChromeSw','editChromeDesc',!!ag.chrome_enabled);
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
   if(typeof _renderExtensionStatus==='function') _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn',!!ag.extension_enabled);
-  _setEditModel(ag.model || 'sonnet');
+  _setEditModel(ag.model || 'gemini-flash');
   // Group section: swap copy when already a group
   const grpBtn = document.getElementById('editGroupBtn');
   const grpDesc = document.getElementById('editGroupDesc');
@@ -13819,9 +14152,518 @@ async function _promoteToGroupFromEdit(){
   }
 }
 
-// Per-agent model picker (Haiku / Sonnet / Opus)
+// ── 💬 Thread drawer ─────────────────────────────────────────
+// Slack-style: click "💬 Thread" on any message → side drawer slides in
+// with the parent message + all replies + a composer that posts thread
+// replies (server tags them with thread_parent_id; they're hidden from
+// the main timeline).
+function _openThread(parentId){
+  if(!parentId) return;
+  window._activeThreadParent = parentId;
+  _renderThreadDrawer();
+}
+function _renderThreadDrawer(){
+  var parentId = window._activeThreadParent;
+  if(!parentId){ _closeThread(); return; }
+  var ag = (agents||[]).find(function(a){return a.id===activeId;});
+  if(!ag) return;
+  var parent = (ag.history||[]).find(function(m){return m && m.id === parentId;});
+  if(!parent){ showToast(L('元メッセージが見つかりません','Parent message not found'),'ng'); _closeThread(); return; }
+  var replies = (ag.history||[]).filter(function(m){return m && m.thread_parent_id === parentId;});
+  var existing = document.getElementById('threadDrawer');
+  if(existing) existing.remove();
+  var d = document.createElement('div');
+  d.id = 'threadDrawer';
+  d.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:#fff;border-left:1px solid var(--wire2);z-index:9985;display:flex;flex-direction:column;box-shadow:-12px 0 28px rgba(0,0,0,.10);font-family:inherit;animation:slideInRight .25s ease';
+  // Render parent + replies as plain message rows
+  function _renderRow(m){
+    var isU = m.role === 'user';
+    var who = isU ? (m.user_name || L('あなた','You')) : (m.huddle_member_name || ag.name || 'AI');
+    var avatar = isU ? (m.user_avatar || '?') : (m.huddle_member_avatar || ag.avatar || '🤖');
+    var time = m.time || '';
+    return '<div style="padding:10px 14px;border-bottom:1px dashed var(--wire2)">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
+      +   '<div style="width:26px;height:26px;border-radius:8px;background:'+(isU?'var(--cream2)':'linear-gradient(135deg,#fff7ee,#fed7aa)')+';display:flex;align-items:center;justify-content:center;font-size:13px">'+esc(avatar)+'</div>'
+      +   '<span style="font-size:12px;font-weight:800;color:var(--text)">'+esc(who)+'</span>'
+      +   '<span style="font-size:10px;color:var(--text3)">'+esc(time)+'</span>'
+      + '</div>'
+      + '<div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;padding-left:34px">'+_md(m.content||'')+'</div>'
+      + '</div>';
+  }
+  d.innerHTML =
+    '<div style="padding:14px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px;background:#fdfcfa">'
+    +  '<div style="font-size:14px;font-weight:900;color:var(--text)">💬 '+L('スレッド','Thread')+'</div>'
+    +  '<div style="font-size:11px;color:var(--text3);font-weight:700">· '+replies.length+L(' 件の返信',' replies')+'</div>'
+    +  '<button onclick="_closeThread()" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
+    + '</div>'
+    + '<div id="threadDrawerBody" style="flex:1;overflow-y:auto;padding-bottom:8px">'
+    +   '<div style="background:rgba(251,146,60,.06);border-bottom:1px solid var(--wire2)">'
+    +     '<div style="padding:6px 14px 0 14px;font-size:10px;font-weight:800;color:var(--peach-dark);letter-spacing:.04em">'+L('元のメッセージ','ORIGINAL')+'</div>'
+    +     _renderRow(parent)
+    +   '</div>'
+    +   replies.map(_renderRow).join('')
+    + '</div>'
+    + '<div style="border-top:1px solid var(--wire2);padding:10px;display:flex;gap:6px">'
+    +   '<textarea id="threadCi" rows="2" placeholder="'+L('スレッドに返信…','Reply in thread…')+'" style="flex:1;padding:8px 11px;border:1px solid var(--wire2);border-radius:9px;font-family:inherit;font-size:13px;resize:none" onkeydown="if(event.key===\'Enter\' && !event.shiftKey){event.preventDefault();_sendThreadReply()}"></textarea>'
+    +   '<button onclick="_sendThreadReply()" style="background:var(--peach);color:#fff;border:0;border-radius:9px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('送信','Send')+'</button>'
+    + '</div>';
+  document.body.appendChild(d);
+  setTimeout(function(){ var t = document.getElementById('threadCi'); if(t) t.focus(); }, 50);
+}
+function _closeThread(){
+  window._activeThreadParent = null;
+  var d = document.getElementById('threadDrawer');
+  if(d) d.remove();
+}
+async function _sendThreadReply(){
+  var ta = document.getElementById('threadCi');
+  if(!ta) return;
+  var text = (ta.value||'').trim();
+  if(!text) return;
+  var parentId = window._activeThreadParent;
+  if(!parentId || !activeId) return;
+  ta.value = '';
+  ta.disabled = true;
+  try {
+    var data = await api('POST', '/api/chat/'+activeId, { message: text, thread_parent_id: parentId, stream: false });
+    var ag = (agents||[]).find(function(a){return a.id===activeId;});
+    if(ag && data){
+      // The server already saved both turns; refresh agent.history by re-fetching me.
+      try { var fresh = await api('GET','/api/agents'); if(fresh && Array.isArray(fresh.agents)){
+        var srv = fresh.agents.find(function(a){return a.id===activeId;});
+        if(srv){ ag.history = srv.history; renderMsgs(ag, false); _renderThreadDrawer(); }
+      } } catch(e){}
+    }
+  } catch(e){
+    showToast((e&&e.message)||'failed','ng');
+  } finally {
+    ta.disabled = false;
+    ta.focus();
+  }
+}
+
+// ── 🧠 Agent Profile panel ───────────────────────────────────
+// Full-screen overlay with 4 tabs: 記憶 / 目標 / プレイブック / 案件 + 自律ルーチン.
+// Pulls live state from /api/agents/:id/profile so it's always in sync with
+// what the AI is using as context.
+async function openAgentProfile(agId){
+  var ag = (agents||[]).find(function(a){return a.id===agId;});
+  if(!ag) return;
+  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(251,146,60,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+  // Pull live profile
+  var data;
+  try { data = await api('GET', '/api/agents/'+agId+'/profile'); }
+  catch(e){ showToast((e && e.message)||'failed','ng'); return; }
+  // Local working state
+  window._agProfile = { agId: agId, data: data, tab: 'memories' };
+  _renderAgentProfile();
+}
+
+function _renderAgentProfile(){
+  var st = window._agProfile;
+  if(!st) return;
+  var ag = (agents||[]).find(function(a){return a.id===st.agId;});
+  if(!ag) return;
+  var d = st.data || {};
+  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(251,146,60,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+  var memCount = (d.memories||[]).length;
+  var kpiCount = (d.kpis||[]).length;
+  var pbCount  = (d.playbook||[]).length;
+  var taskCount= (d.open_tasks||[]).filter(function(t){return t.status!=='done';}).length;
+  var routineCount = (d.routines||[]).length;
+  var tabs = [
+    {id:'memories', label:L('🧠 記憶','🧠 Memory'),      count:memCount},
+    {id:'kpis',     label:L('🎯 目標 / KPI','🎯 Goals/KPI'),count:kpiCount},
+    {id:'playbook', label:L('📘 プレイブック','📘 Playbook'),count:pbCount},
+    {id:'tasks',    label:L('📋 案件','📋 Tasks'),         count:taskCount},
+    {id:'routines', label:L('⏰ 自律ルーチン','⏰ Routines'), count:routineCount},
+  ];
+  var tabHTML = tabs.map(function(t){
+    var on = (t.id === st.tab);
+    return '<button onclick="_agProfTab(\''+t.id+'\')" style="background:'+(on?accent.color:'transparent')+';color:'+(on?'#fff':'var(--text2)')+';border:0;border-radius:9px 9px 0 0;padding:9px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;border-bottom:'+(on?'0':'1px solid transparent')+'">'+t.label+' <span style="font-size:10px;font-weight:700;opacity:.7">'+t.count+'</span></button>';
+  }).join('');
+  var pane = '';
+  if(st.tab === 'memories')  pane = _agProfMemories(d.memories||[]);
+  if(st.tab === 'kpis')      pane = _agProfKpis(d.kpis||[]);
+  if(st.tab === 'playbook')  pane = _agProfPlaybook(d.playbook||[]);
+  if(st.tab === 'tasks')     pane = _agProfTasks(d.open_tasks||[]);
+  if(st.tab === 'routines')  pane = _agProfRoutines(d.routines||[]);
+  var existing = document.getElementById('agProfileOverlay');
+  if(existing) existing.remove();
+  var ov = document.createElement('div');
+  ov.id = 'agProfileOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:16px;max-width:860px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+    +  '<div style="padding:16px 20px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:12px">'
+    +    '<div style="width:38px;height:38px;border-radius:11px;background:'+accent.grad+';display:flex;align-items:center;justify-content:center;font-size:18px">'+_avHTML(ag.avatar||'🤖')+'</div>'
+    +    '<div style="flex:1;min-width:0">'
+    +      '<div style="font-size:15px;font-weight:900;color:var(--text)">'+esc(ag.name||'AI')+' '+L('のプロフィール',' profile')+'</div>'
+    +      '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('AI が憶えて働いてる情報', 'What this AI remembers and works on')+'</div>'
+    +    '</div>'
+    +    '<button onclick="document.getElementById(\'agProfileOverlay\').remove()" style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
+    +  '</div>'
+    +  '<div style="display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--wire2)">'+tabHTML+'</div>'
+    +  '<div style="padding:18px 22px;overflow-y:auto;flex:1;background:#fdfcfa">'+pane+'</div>'
+    + '</div>';
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
+function _agProfTab(t){ if(window._agProfile){ window._agProfile.tab = t; _renderAgentProfile(); } }
+
+async function _agProfReload(){
+  var st = window._agProfile; if(!st) return;
+  try { st.data = await api('GET', '/api/agents/'+st.agId+'/profile'); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); return; }
+  // Also patch local agent record so chat header / sidebar see new state.
+  var ag = (agents||[]).find(function(a){return a.id===st.agId;});
+  if(ag){
+    ag.memories   = st.data.memories;
+    ag.kpis       = st.data.kpis;
+    ag.playbook   = st.data.playbook;
+    ag.open_tasks = st.data.open_tasks;
+  }
+  _renderAgentProfile();
+}
+
+function _agProfMemories(items){
+  var sorted = (items||[]).slice().sort(function(a,b){ return (b.pinned?1:0)-(a.pinned?1:0) || (new Date(b.created_at||0)-new Date(a.created_at||0)); });
+  var addBtn = '<div style="margin-bottom:14px"><input id="agProfNewMem" placeholder="'+L('AI に憶えてもらう事実 (例: ターゲットは SaaS スタートアップ)','Fact for AI to remember (e.g. target = SaaS startups)')+'" style="width:100%;padding:10px 13px;border:1px solid var(--wire2);border-radius:9px;font-family:inherit;font-size:13px;box-sizing:border-box" onkeydown="if(event.key===\'Enter\'){_agProfAddMem(event)}"><div style="text-align:right;margin-top:6px"><button onclick="_agProfAddMem()" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div></div>';
+  if(!sorted.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px">'+L('まだ記憶はありません。会話するほど自動で蓄積されます。','No memories yet. They build up automatically as you chat.')+'</div>';
+  return addBtn + sorted.map(function(m){
+    var pinIcon = m.pinned ? '📌' : '📍';
+    var srcBadge = m.source === 'auto' ? '<span style="font-size:9px;font-weight:700;color:var(--text3);background:var(--cream2);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('AUTO','AUTO')+'</span>' : '<span style="font-size:9px;font-weight:700;color:var(--peach-dark);background:rgba(251,146,60,.12);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('手動','MANUAL')+'</span>';
+    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div style="margin-bottom:3px">'+srcBadge+'<span style="font-size:9.5px;color:var(--text3)">'+esc((m.created_at||'').slice(0,10))+'</span></div>'
+      +   '<div style="font-size:13px;color:var(--text);line-height:1.55;white-space:pre-wrap">'+esc(m.text||'')+'</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:4px">'
+      +   '<button onclick="_agProfPinMem(\''+esc(m.id)+'\','+(!m.pinned)+')" title="'+(m.pinned?L('固定解除','Unpin'):L('固定','Pin'))+'" style="background:'+(m.pinned?'rgba(251,146,60,.12)':'#fff')+';border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:13px;font-family:inherit">'+pinIcon+'</button>'
+      +   '<button onclick="_agProfDelMem(\''+esc(m.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:11px;color:var(--rose);font-family:inherit">🗑</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+async function _agProfAddMem(ev){
+  if(ev && ev.preventDefault) ev.preventDefault();
+  var inp = document.getElementById('agProfNewMem');
+  var text = (inp && inp.value || '').trim();
+  if(text.length < 4){ showToast(L('もう少し長く','Too short'),'ng'); return; }
+  var st = window._agProfile;
+  try { await api('POST', '/api/agents/'+st.agId+'/memories', {text:text}); inp.value=''; await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+async function _agProfPinMem(mid, pin){
+  var st = window._agProfile;
+  try { await api('PATCH', '/api/agents/'+st.agId+'/memories/'+mid, {pinned:pin}); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+async function _agProfDelMem(mid){
+  if(!confirm(L('この記憶を削除?','Delete this memory?'))) return;
+  var st = window._agProfile;
+  try { await api('DELETE', '/api/agents/'+st.agId+'/memories/'+mid); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+
+function _agProfKpis(items){
+  var addBtn = '<div style="background:#fff;border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px">'+L('+ 新規 KPI','+ New KPI')+'</div>'
+    + '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px">'
+    + '<input id="agpKpiName" placeholder="'+L('指標名 (例: 月商)','KPI name (e.g. MRR)')+'" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
+    + '<input id="agpKpiCur"  placeholder="'+L('現在','Current')+'" type="number" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
+    + '<input id="agpKpiTgt"  placeholder="'+L('目標','Target')+'" type="number" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
+    + '<input id="agpKpiUnit" placeholder="'+L('単位 (円,%)','Unit')+'" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
+    + '</div>'
+    + '<div style="text-align:right;margin-top:8px"><button onclick="_agProfAddKpi()" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div>'
+    + '</div>';
+  if(!items.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('まだ KPI はありません。','No KPIs yet.')+'</div>';
+  return addBtn + items.map(function(k){
+    var pct = (k.target && k.current != null) ? Math.max(0, Math.min(100, Math.round((k.current / k.target) * 100))) : null;
+    var bar = pct != null ? '<div style="background:var(--cream2);border-radius:99px;height:6px;overflow:hidden;margin-top:6px"><div style="background:linear-gradient(90deg,var(--peach),var(--peach-dark));height:100%;width:'+pct+'%;border-radius:99px;transition:width .3s"></div></div>' : '';
+    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:10px">'
+      + '<div style="display:flex;align-items:center;gap:12px">'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:13px;font-weight:800;color:var(--text)">'+esc(k.name||'')+'</div>'
+      +     '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('現在','Now')+': <b style="color:var(--text)">'+esc(String(k.current!=null?k.current:'?'))+'</b> / '+L('目標','Target')+': '+esc(String(k.target!=null?k.target:'?'))+(k.unit?' '+esc(k.unit):'')+(pct!=null?' · '+pct+'%':'')+'</div>'
+      +   '</div>'
+      +   '<input type="number" placeholder="'+L('現在値を更新','Update value')+'" id="agpKpiUpd_'+esc(k.id)+'" style="padding:7px 10px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px;width:120px" onkeydown="if(event.key===\'Enter\'){_agProfKpiUpdate(\''+esc(k.id)+'\')}">'
+      +   '<button onclick="_agProfKpiUpdate(\''+esc(k.id)+'\')" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">'+L('更新','Save')+'</button>'
+      +   '<button onclick="_agProfKpiDel(\''+esc(k.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
+      + '</div>'
+      + bar
+      + '</div>';
+  }).join('');
+}
+async function _agProfAddKpi(){
+  var st = window._agProfile;
+  var name = document.getElementById('agpKpiName').value.trim();
+  if(!name){ showToast(L('指標名は必須','Name required'),'ng'); return; }
+  var current = parseFloat(document.getElementById('agpKpiCur').value);
+  var target  = parseFloat(document.getElementById('agpKpiTgt').value);
+  var unit    = document.getElementById('agpKpiUnit').value.trim();
+  try { await api('POST', '/api/agents/'+st.agId+'/kpis', {name, current:isFinite(current)?current:0, target:isFinite(target)?target:null, unit}); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+async function _agProfKpiUpdate(kid){
+  var st = window._agProfile;
+  var v = parseFloat(document.getElementById('agpKpiUpd_'+kid).value);
+  if(!isFinite(v)){ showToast(L('数値を入れてください','Enter a number'),'ng'); return; }
+  try { await api('PATCH', '/api/agents/'+st.agId+'/kpis/'+kid, {current:v}); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+async function _agProfKpiDel(kid){
+  if(!confirm(L('この KPI を削除?','Delete this KPI?'))) return;
+  var st = window._agProfile;
+  try { await api('DELETE', '/api/agents/'+st.agId+'/kpis/'+kid); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+
+function _agProfPlaybook(items){
+  if(!items.length) return '<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px">'+L('まだプレイブックなし。AI が成功したパターンが自動で蓄積されます。','No playbook yet. Successful patterns will be saved here automatically.')+'</div>';
+  var sorted = items.slice().sort(function(a,b){ return (b.success_count||0)-(a.success_count||0); });
+  return sorted.map(function(p){
+    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:10px">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+      +   '<span style="font-size:9.5px;font-weight:800;background:rgba(34,197,94,.12);color:#15803d;padding:2px 7px;border-radius:4px">✓ '+L('成功','SUCCESS')+' ×'+(p.success_count||1)+'</span>'
+      +   '<span style="font-size:9.5px;color:var(--text3)">'+esc((p.created_at||'').slice(0,10))+'</span>'
+      +   '<button onclick="_agProfPbDel(\''+esc(p.id)+'\')" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:3px 7px;font-size:10px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:4px"><b>'+L('状況','When')+':</b> '+esc(p.context||'')+'</div>'
+      + '<div style="font-size:13px;color:var(--text);line-height:1.55"><b>'+L('うまくいったやり方','What worked')+':</b> '+esc(p.pattern||'')+'</div>'
+      + '</div>';
+  }).join('');
+}
+async function _agProfPbDel(pid){
+  if(!confirm(L('このプレイブックを削除?','Delete?'))) return;
+  var st = window._agProfile;
+  try { await api('DELETE', '/api/agents/'+st.agId+'/playbook/'+pid); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+
+function _agProfTasks(items){
+  var addBtn = '<div style="background:#fff;border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;gap:6px">'
+    + '<input id="agpTaskTitle" placeholder="'+L('新規案件 (例: LP 改善 v2)','New task (e.g. LP rev v2)')+'" style="flex:1;padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px" onkeydown="if(event.key===\'Enter\'){_agProfAddTask()}">'
+    + '<button onclick="_agProfAddTask()" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button>'
+    + '</div>';
+  if(!items.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('進行中の案件はありません。','No tasks in progress.')+'</div>';
+  return addBtn + items.map(function(t){
+    var pct = Math.max(0, Math.min(100, parseInt(t.progress_pct,10)||0));
+    var isDone = t.status === 'done';
+    return '<div style="background:'+(isDone?'#f9fafb':'#fff')+';border:1px solid var(--wire2);border-radius:11px;padding:12px 15px;margin-bottom:9px;opacity:'+(isDone?.6:1)+'">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      +   '<input type="checkbox"'+(isDone?' checked':'')+' onchange="_agProfTaskToggle(\''+esc(t.id)+'\',this.checked)" style="cursor:pointer">'
+      +   '<div style="flex:1;min-width:0;font-size:13px;font-weight:'+(isDone?'600':'700')+';color:var(--text);text-decoration:'+(isDone?'line-through':'none')+'">'+esc(t.title||'')+'</div>'
+      +   '<input type="number" min="0" max="100" value="'+pct+'" onchange="_agProfTaskPct(\''+esc(t.id)+'\',this.value)" style="width:60px;padding:5px 8px;border:1px solid var(--wire2);border-radius:6px;font-family:inherit;font-size:11px">'
+      +   '<span style="font-size:10px;color:var(--text3)">%</span>'
+      +   '<button onclick="_agProfTaskDel(\''+esc(t.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 7px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
+      + '</div>'
+      + (t.notes ? '<div style="font-size:11px;color:var(--text3);margin-top:5px;padding-left:24px">'+esc(t.notes)+'</div>' : '')
+      + '<div style="margin-top:6px;background:var(--cream2);border-radius:99px;height:4px;overflow:hidden"><div style="background:'+(isDone?'#22c55e':'var(--peach)')+';height:100%;width:'+pct+'%"></div></div>'
+      + '</div>';
+  }).join('');
+}
+async function _agProfAddTask(){
+  var st = window._agProfile;
+  var inp = document.getElementById('agpTaskTitle');
+  var title = (inp && inp.value || '').trim();
+  if(!title){ return; }
+  try { await api('POST', '/api/agents/'+st.agId+'/tasks', {title}); inp.value=''; await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+async function _agProfTaskToggle(tid, done){
+  var st = window._agProfile;
+  try { await api('PATCH', '/api/agents/'+st.agId+'/tasks/'+tid, {status: done?'done':'progress', progress_pct: done?100:50}); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+async function _agProfTaskPct(tid, val){
+  var st = window._agProfile;
+  var v = parseInt(val,10);
+  if(!isFinite(v)) return;
+  try { await api('PATCH', '/api/agents/'+st.agId+'/tasks/'+tid, {progress_pct: v, status: v>=100?'done':'progress'}); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+async function _agProfTaskDel(tid){
+  if(!confirm(L('この案件を削除?','Delete this task?'))) return;
+  var st = window._agProfile;
+  try { await api('DELETE', '/api/agents/'+st.agId+'/tasks/'+tid); await _agProfReload(); }
+  catch(e){ showToast((e&&e.message)||'failed','ng'); }
+}
+
+function _agProfRoutines(items){
+  var st = window._agProfile;
+  var ag = (agents||[]).find(function(a){return a.id===st.agId;});
+  var hint = '<div style="background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.25);border-radius:10px;padding:11px 15px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.55">💡 '+L('自律ルーチンは「メニュー → スケジュール」から追加します。このエージェントが定期的に行う仕事一覧です。','Routines are added from "Menu → Schedules". This shows the recurring jobs assigned to this agent.')+'</div>';
+  if(!items.length) return hint + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('まだルーチンはありません。','No routines yet.')+'</div>';
+  return hint + items.map(function(s){
+    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:9px">'
+      + '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">⏰ '+esc(s.name||s.prompt||'Routine')+'</div>'
+      + '<div style="font-size:11px;color:var(--text3);font-family:\'SF Mono\',Menlo,monospace">'+esc(s.cron||'')+' · '+esc(s.timezone||'UTC')+'</div>'
+      + (s.last_run_at?'<div style="font-size:10.5px;color:var(--text3);margin-top:3px">'+L('最終実行','Last run')+': '+esc(s.last_run_at)+'</div>':'')
+      + '</div>';
+  }).join('');
+}
+
+// Proactive nudge handlers. The card lives at the top of the chat until
+// the user takes it (sends it as a user message) or dismisses it.
+async function _dismissNudge(agId, nudgeId){
+  var ag = (agents||[]).find(function(a){return a.id===agId;});
+  if(ag && Array.isArray(ag.proactive_nudges)){
+    var n = ag.proactive_nudges.find(function(x){return x && x.id===nudgeId;});
+    if(n) n.dismissed = true;
+  }
+  if(activeId === agId) renderMsgs(ag, false);
+  try { await api('POST', '/api/agents/'+agId+'/nudges/'+nudgeId+'/dismiss', {}); } catch(e){}
+}
+async function _actOnNudge(agId, nudgeId){
+  var ag = (agents||[]).find(function(a){return a.id===agId;});
+  if(!ag) return;
+  var n = (ag.proactive_nudges||[]).find(function(x){return x && x.id===nudgeId;});
+  if(!n) return;
+  // Mark acted locally so the card disappears, then inject the nudge text
+  // into the composer and send it through the normal chat path.
+  n.acted = true;
+  try { api('POST', '/api/agents/'+agId+'/nudges/'+nudgeId+'/act', {}).catch(()=>{}); } catch(e){}
+  if(activeId !== agId){
+    await openAgent(agId);
+  }
+  var ci = document.getElementById('ci');
+  if(ci){
+    ci.value = n.text;
+    // Trigger the send button if available, else dispatch Enter.
+    if(typeof sendChat === 'function') sendChat();
+    else { ci.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'})); }
+  } else {
+    renderMsgs(ag, false);
+  }
+}
+
+// "全履歴を見る" — fetches the archived (folded) chat history for an agent
+// and renders it in a full-screen overlay. The summary card stays in chat;
+// the raw turns it was synthesized from live in agent.history_archive on
+// the server and are only loaded on demand.
+async function _openHistoryArchive(agId){
+  try {
+    var data = await api('GET', '/api/agents/'+agId+'/history_archive');
+    var items = (data && data.items) || [];
+    if(!items.length){ showToast(L('履歴アーカイブは空です','Archive is empty'),'ng'); return; }
+    var ag = (agents||[]).find(function(a){return a.id===agId;});
+    var agName = (ag && ag.name) || 'Agent';
+    var body = items.map(function(m){
+      var role = m.role === 'assistant' ? agName : (m.user_name || (isJa?'あなた':'You'));
+      var roleColor = m.role === 'assistant' ? 'var(--peach-dark)' : 'var(--text2)';
+      var body = '';
+      if(typeof m.content === 'string') body = m.content;
+      else if(Array.isArray(m.content)) body = m.content.filter(function(b){return b && b.type==='text';}).map(function(b){return b.text;}).join(' ');
+      return '<div style="padding:10px 0;border-bottom:1px dashed var(--wire2)">'
+        +    '<div style="font-size:11px;font-weight:800;color:'+roleColor+';margin-bottom:4px">'+esc(role)+(m.time?' · '+esc(m.time):'')+'</div>'
+        +    '<div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+esc(body)+'</div>'
+        +  '</div>';
+    }).join('');
+    var overlay = document.createElement('div');
+    overlay.id = 'historyArchiveOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit';
+    overlay.innerHTML =
+      '<div style="background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+      +  '<div style="padding:14px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px">'
+      +    '<div style="font-size:14px;font-weight:800;color:var(--text)">📋 '+L('折りたたまれた会話履歴','Folded chat archive')+'</div>'
+      +    '<div style="font-size:11px;color:var(--text3);font-weight:700">· '+items.length+L(' 件','')+'</div>'
+      +    '<button onclick="document.getElementById(\'historyArchiveOverlay\').remove()" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
+      +  '</div>'
+      +  '<div style="padding:8px 22px;overflow-y:auto;flex:1">'+body+'</div>'
+      + '</div>';
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  } catch(e){
+    showToast((e && e.message) || 'failed', 'ng');
+  }
+}
+
+// Quick model switcher in the chat header. Pops a tiny menu so users can
+// pick Fast / Smart / Best without diving into the full agent-edit panel.
+// PATCHes the agent so the choice sticks across reloads.
+function _toggleQuickModel(agId){
+  var existing = document.getElementById('quickModelMenu');
+  if(existing){ existing.remove(); return; }
+  var ag = (agents||[]).find(function(a){return a.id===agId;});
+  if(!ag) return;
+  var current = ag.model || 'gemini-flash';
+  var planAllows = function(m){
+    var plan = (me && me.plan) || 'free';
+    if(plan === 'free') return (m === 'gemini-flash' || m === 'haiku');
+    if(plan === 'pro')  return m !== 'opus';
+    return true;
+  };
+  var opts = [
+    {v:'gemini-flash', lbl:'⚡ Fast',  sub:'Gemini 2.5 Flash · 超高速'},
+    {v:'gemini-pro',   lbl:'💎 Pro',   sub:'Gemini 2.5 Pro · 高品質'},
+    {v:'sonnet',       lbl:'🎯 Smart', sub:'Claude Sonnet · 標準'},
+    {v:'opus',         lbl:'🧠 Best',  sub:'Claude Opus · 最高性能'},
+  ];
+  var menu = document.createElement('div');
+  menu.id = 'quickModelMenu';
+  menu.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--wire2);border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;min-width:220px;z-index:9999;font-family:inherit';
+  menu.innerHTML = opts.map(function(o){
+    var disabled = !planAllows(o.v);
+    var sel = (current === o.v);
+    var bg = sel ? 'rgba(251,146,60,.10)' : '#fff';
+    var bd = sel ? '1px solid var(--peach)' : '1px solid transparent';
+    return '<button onclick="event.stopPropagation(); _quickPickModel(\''+esc(agId)+'\',\''+o.v+'\')"'
+      + (disabled ? ' disabled' : '')
+      + ' style="display:block;width:100%;text-align:left;padding:8px 10px;border-radius:9px;background:'+bg+';border:'+bd+';cursor:'+(disabled?'not-allowed':'pointer')+';opacity:'+(disabled?'.45':'1')+';font-family:inherit;margin-bottom:2px">'
+      + '<div style="font-size:12.5px;font-weight:800;color:var(--text)">'+o.lbl+(disabled?' 🔒':'')+'</div>'
+      + '<div style="font-size:10px;color:var(--text3);margin-top:1px">'+esc(o.sub)+'</div>'
+      + '</button>';
+  }).join('');
+  document.body.appendChild(menu);
+  // Position next to the trigger pill
+  try{
+    var trigger = document.querySelector('.ct-model');
+    if(trigger){
+      var rect = trigger.getBoundingClientRect();
+      menu.style.top  = (rect.bottom + 6) + 'px';
+      menu.style.left = Math.max(8, rect.left) + 'px';
+    } else {
+      menu.style.top = '80px'; menu.style.left = '300px';
+    }
+  }catch(e){}
+  // Click outside to close
+  setTimeout(function(){
+    var off = function(e){
+      if(!menu.contains(e.target)){
+        menu.remove();
+        document.removeEventListener('click', off, true);
+      }
+    };
+    document.addEventListener('click', off, true);
+  }, 0);
+}
+async function _quickPickModel(agId, model){
+  var menu = document.getElementById('quickModelMenu');
+  if(menu) menu.remove();
+  var ag = (agents||[]).find(function(a){return a.id===agId;});
+  if(!ag) return;
+  if(ag.model === model) return;
+  var prev = ag.model;
+  ag.model = model;
+  try{
+    if(activeId === ag.id && typeof openAgent === 'function') openAgent(ag.id);
+    await api('PATCH', '/api/agents/'+agId, {model: model});
+    showToast(L('モデル切替: ','Switched to ')+model, 'ok');
+  }catch(e){
+    ag.model = prev;
+    showToast((e && e.message) || 'failed', 'ng');
+  }
+}
+
+// Per-agent model picker (Gemini Flash / Sonnet / Gemini Pro / Opus / Haiku).
+// `haiku` stays a valid value for backward compatibility with older agents,
+// but isn't shown in the UI anymore — Gemini Flash replaced it as the cheap
+// default since it's faster and similar quality at our price point.
 function _setEditModel(name){
-  if(!['haiku','sonnet','opus'].includes(name)) name = 'sonnet';
+  const valid = ['gemini-flash','gemini-pro','haiku','sonnet','opus'];
+  if(!valid.includes(name)) name = 'gemini-flash';
   const inp = document.getElementById('editModel');
   if(inp) inp.value = name;
   document.querySelectorAll('#editModelGroup .model-pick').forEach(b => {
@@ -13846,7 +14688,7 @@ async function saveEditAgent(){
   var swExt=document.getElementById('editExtSw');
   var extensionEnabled = !!(swExt && swExt.classList.contains('on') && me && me.extension_paired);
   var modelSel = document.getElementById('editModel');
-  var model = (modelSel && modelSel.value) || 'sonnet';
+  var model = (modelSel && modelSel.value) || 'gemini-flash';
   if(!newName){ showToast(L('名前を入力してください','Please enter a name'),'ng'); return; }
   try{
     const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled, model});
@@ -14319,6 +15161,8 @@ function _mentionMembers(){
       .filter(Boolean)
       .map(function(a){
         var nm = a.name || 'AI';
+        // Skill labels for the role hint (e.g. "Marketing · ライティング")
+        var skLabels = (a.skills||[]).map(function(s){var sk=SKILLS && SKILLS.find(function(x){return x.id===s;});return sk?sk.name:s;}).slice(0,2).join(' · ');
         return {
           key: nm.replace(/\s+/g,''),
           name: nm,
@@ -14327,13 +15171,17 @@ function _mentionMembers(){
           isAI: true,
           isTeamAI: true,
           isMe: false,
+          skillsLabel: skLabels,
         };
       });
   }
-  // Always include @AI as the first option, then team AIs (if any), then humans
-  return [{ key:'AI', name:'AI', email:'', isAI:true, isMe:false }]
-    .concat(teamAIs)
-    .concat(humans);
+  // Always include @AI as the first option, then team AIs (if any), then humans.
+  // Add @all on team chats — triggers Huddle (everyone speaks).
+  var head = [{ key:'AI', name:'AI', email:'', isAI:true, isMe:false }];
+  if(ag.is_team && teamAIs.length >= 2){
+    head.push({ key:'all', name:'all', email:'', isAI:true, isMe:false, isAll:true, skillsLabel: L('チーム全員で議論 (Huddle)','Discuss with the whole team (Huddle)') });
+  }
+  return head.concat(teamAIs).concat(humans);
 }
 
 function _mentionFindStart(text, cursor){
@@ -14361,20 +15209,31 @@ function _mentionRender(){
   _mentionState.items.forEach(function(it, i){
     var initial = (it.name || '?').charAt(0).toUpperCase();
     var av;
-    if(it.isTeamAI){
+    if(it.isAll){
+      av = '<div class="mr-av" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:13px">🤝</div>';
+    } else if(it.isTeamAI){
       av = '<div class="mr-av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa);font-size:14px">'+esc(it.avatar||'🤖')+'</div>';
     } else if(it.isAI){
       av = '<div class="mr-av">🤖</div>';
     } else {
       av = '<div class="mr-av" style="background:'+_userColor(it.email||it.name)+'">'+esc(initial)+'</div>';
     }
-    var tag = it.isTeamAI
-      ? '<span class="mr-tag">'+L('チームの AI','Team AI')+'</span>'
-      : (it.isAI ? '<span class="mr-tag">'+L('AI を呼ぶ','Call the AI')+'</span>' : '');
+    var tag = '';
+    if(it.isAll){
+      tag = '<span class="mr-tag" style="background:rgba(251,191,36,.18);color:#92400e">'+L('全員に振る','To everyone')+'</span>';
+    } else if(it.isTeamAI){
+      tag = '<span class="mr-tag">'+L('チームの AI','Team AI')+'</span>';
+    } else if(it.isAI){
+      tag = '<span class="mr-tag">'+L('AI を呼ぶ','Call the AI')+'</span>';
+    }
+    var skillLine = it.skillsLabel ? '<div class="mr-skills" style="font-size:10px;color:var(--text3);margin-top:1px">'+esc(it.skillsLabel)+'</div>' : '';
     html += '<div class="mention-row '+(it.isAI?'is-ai ':'')+(i===_mentionState.sel?'sel':'')+'" '
          +  'data-idx="'+i+'" onmousedown="event.preventDefault();_mentionPick('+i+')">'
          +  av
-         +  '<span class="mr-name">'+esc(it.name)+(it.isMe?' <span class="mr-tag">'+L('(あなた)','(you)')+'</span>':'')+'</span>'
+         +  '<div style="flex:1;min-width:0">'
+         +    '<span class="mr-name">'+esc(it.name)+(it.isMe?' <span class="mr-tag">'+L('(あなた)','(you)')+'</span>':'')+'</span>'
+         +    skillLine
+         +  '</div>'
          +  tag
          +  '</div>';
   });
@@ -14428,6 +15287,16 @@ function _mentionPick(idx){
   var ta = document.getElementById('ci');
   if(!ta || !_mentionState.items[idx]) return;
   var it = _mentionState.items[idx];
+  // Picking @all flips Huddle ON for the next send so everyone speaks in turn.
+  if(it.isAll){
+    window._huddleOn = window._huddleOn || {};
+    if(activeId){
+      window._huddleOn[activeId] = true;
+      var _ag = (agents||[]).find(function(a){return a.id===activeId;});
+      if(_ag) _updateChromeTool(_ag);
+    }
+    showToast(L('🤝 Huddle ON · 送信するとチーム全員が発言します','🤝 Huddle ON · the whole team will respond when you send'),'ok');
+  }
   var start = _mentionState.start;
   var cursor = ta.selectionStart;
   var before = ta.value.slice(0, start);

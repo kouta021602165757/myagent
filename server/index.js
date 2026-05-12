@@ -22,6 +22,18 @@ loadEnv();
 const PORT         = process.env.PORT||3000;
 const JWT_SECRET   = process.env.JWT_SECRET||(()=>{throw new Error('JWT_SECRET required')})();
 const ANTHROPIC    = process.env.ANTHROPIC_API_KEY||'';
+// Google Gemini — used for the `gemini-flash` / `gemini-pro` aliases. Gemini
+// 2.5 Flash is roughly 5x faster than Sonnet on first-token + cheap, so it's
+// the default for new agents. If GEMINI_API_KEY is unset, the provider
+// router transparently falls back to Sonnet so the chat keeps working.
+const GEMINI_KEY   = process.env.GEMINI_API_KEY||'';
+// ── Image providers (paid, optional) ──────────────────────────
+// If a key is set, generate_image routes premium "style" values to that
+// provider. Unset keys gracefully fall through to the free Pollinations
+// fallback, so the app still works on a fresh install.
+const FAL_KEY      = process.env.FAL_KEY||'';            // FLUX 1.1 Pro Ultra + FLUX Kontext
+const RECRAFT_KEY  = process.env.RECRAFT_KEY||'';        // Recraft V3 — typography/logo/vector
+const IDEOGRAM_KEY = process.env.IDEOGRAM_KEY||'';       // Ideogram V3 — text-in-image
 const SUPA_URL     = process.env.SUPABASE_URL||'';
 const SUPA_KEY     = process.env.SUPABASE_SERVICE_KEY||'';
 const STRIPE_SK    = process.env.STRIPE_SECRET_KEY||'';
@@ -1158,35 +1170,901 @@ function _trimHistory(messages){
   });
 }
 
-// Resolve a per-agent model alias ('haiku'|'sonnet'|'opus') to an actual
-// Anthropic model id. Defaults to sonnet.
-function _resolveModel(alias){
-  switch((alias||'').toLowerCase()){
-    case 'haiku': return 'claude-haiku-4-5-20251001';
-    case 'opus':  return 'claude-opus-4-7';
-    case 'sonnet':
-    case '':
-    case null:
-    case undefined:
-    default:      return 'claude-sonnet-4-6';
-  }
-}
-// Output-token budget per model. Long replies (slide wireframes, code,
-// document drafts) need >4K — Sonnet/Opus can go much higher.
-function _maxTokensFor(alias){
-  switch((alias||'').toLowerCase()){
-    case 'haiku': return 8000;
-    case 'opus':  return 32000;
-    case 'sonnet':
-    default:      return 16000;
+// ── ROLLING CONVERSATION SUMMARY ──────────────────────────────
+// Once an agent.history exceeds SUMMARY_TRIGGER turns, fold the oldest
+// SUMMARY_BATCH non-summary turns into one synthesized assistant message
+// with _summary:true. The archived raw turns move to agent.history_archive
+// for "全履歴を見る" UI access. Cuts input tokens by ~60-70% in long chats
+// and prevents the "途中で記憶が飛ぶ" effect we kept hearing about.
+const SUMMARY_TRIGGER = 40;
+const SUMMARY_BATCH   = 20;
+async function _summarizeOldHistory(agent){
+  try {
+    if(!agent || !Array.isArray(agent.history)) return false;
+    const nonSummary = agent.history.filter(m => m && !m._summary);
+    if(nonSummary.length < SUMMARY_TRIGGER) return false;
+    // Find the existing summary (if any) and the slice to fold.
+    const existingSummary = agent.history.find(m => m && m._summary);
+    const oldSummaryText  = (existingSummary && existingSummary.content) || '';
+    const toFold = nonSummary.slice(0, SUMMARY_BATCH);
+    if(toFold.length === 0) return false;
+    // Render the slice as a transcript for the summarizer.
+    const transcript = toFold.map(m => {
+      const role = m.role === 'assistant' ? 'AI' : (m.user_name || 'USER');
+      let body = '';
+      if(typeof m.content === 'string') body = m.content;
+      else if(Array.isArray(m.content)) body = m.content.filter(b => b && b.type==='text').map(b => b.text).join(' ');
+      return role + ': ' + (body || '').slice(0, 1500);
+    }).join('\n');
+    const prompt = (oldSummaryText
+      ? `これまでの要約:\n${oldSummaryText}\n\n` : '')
+      + `追加で発生した会話 (${toFold.length} 件):\n${transcript}\n\n`
+      + `上記を踏まえ、ユーザーの目的・主要な決定事項・未解決の論点・固有名詞 (人名・サービス名・URL・数値) を中心に、`
+      + `次の会話で AI が参照できる「これまでの経緯」を 400 字以内で日本語で要約してください。`
+      + `箇条書きではなく自然な文で。冗長な前置きや「以下に要約します」は不要。`;
+    // Use the cheapest fast model available. Prefer Gemini Flash, else Haiku.
+    const summarizerAlias = GEMINI_KEY ? 'gemini-flash' : 'haiku';
+    const info = _resolveModelInfo(summarizerAlias);
+    let summaryText = '';
+    if(info.provider === 'gemini'){
+      const r = await _callGemini([{ role:'user', content: prompt }], '', info);
+      summaryText = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+    } else {
+      // Anthropic fallback
+      const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'};
+      const r = await httpsReq('POST','api.anthropic.com','/v1/messages', headers,
+        { model: info.modelId, max_tokens: 800, messages: [{role:'user', content: prompt}] },
+        { timeout: 30000 });
+      if(r.s === 200){
+        summaryText = (r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
+      }
+    }
+    if(!summaryText || summaryText.length < 30){
+      console.warn('[summary] generation failed or too short, abort');
+      return false;
+    }
+    // Archive the raw folded turns.
+    agent.history_archive = Array.isArray(agent.history_archive) ? agent.history_archive : [];
+    agent.history_archive.push(...toFold);
+    if(agent.history_archive.length > 2000){
+      agent.history_archive = agent.history_archive.slice(-2000);
+    }
+    // Replace folded turns + old summary with a single new summary message.
+    const folded = toFold.length;
+    const newSummary = {
+      role: 'assistant',
+      _summary: true,
+      content: summaryText,
+      time: new Date().toLocaleTimeString('en-GB', { hour12:false, hour:'2-digit', minute:'2-digit' }),
+      _summary_count: ((existingSummary && existingSummary._summary_count) || 0) + folded,
+      _summary_updated_at: new Date().toISOString(),
+    };
+    // Rebuild history: [summary, ...non-summary non-folded].
+    const remaining = nonSummary.slice(folded); // keep the newer half
+    agent.history = [newSummary, ...remaining];
+    console.log('[summary] folded ' + folded + ' turns into summary for agent=' + (agent.id||'?'));
+    return true;
+  } catch(e){
+    console.warn('[summary] error:', e.message);
+    return false;
   }
 }
 
-async function callAI(messages,system,modelAlias){
+// ── AGENT INTELLIGENCE: memory · KPI · playbook · tasks ───────
+// One unified per-agent context layer. Four shapes live on the agent:
+//
+//   agent.memories     = [{id, text, source, created_at, last_used_at, score}]
+//   agent.kpis         = [{id, name, target, current, unit, history:[{at,value}]}]
+//   agent.playbook     = [{id, pattern, context, success_count, last_used_at}]
+//   agent.open_tasks   = [{id, title, status, progress_pct, notes, started_at}]
+//
+// After each chat turn we run ONE Gemini Flash call that extracts
+// updates for all four dimensions from the latest exchange — way cheaper
+// than running 4 separate "what should we remember" calls. Failures are
+// silent: this is enrichment, not correctness-critical.
+
+function _agentMemoryScore(memText, query){
+  // CJK-friendly bigram overlap (no embeddings required). Same approach
+  // as the KB retriever in `_kbHits`. Returns roughly the number of
+  // shared bigrams + a recency boost (added by the caller).
+  if(!memText || !query) return 0;
+  const ngrams = (s) => {
+    const out = new Set();
+    const t = String(s||'').toLowerCase().replace(/\s+/g,'');
+    for(let i=0;i<t.length-1;i++) out.add(t.slice(i,i+2));
+    return out;
+  };
+  const a = ngrams(memText), b = ngrams(query);
+  let n = 0;
+  for(const g of a) if(b.has(g)) n++;
+  return n;
+}
+
+function _injectAgentContext(agent, opts){
+  // Build a compact "現在の文脈" block to append to the agent's system
+  // prompt. Pulls top-N relevant memories + active KPIs + open tasks +
+  // 2-3 relevant playbook entries. Capped to ~800 chars to keep the
+  // prompt budget tight.
+  if(!agent) return '';
+  const userQuery = String((opts && opts.userQuery) || '').slice(0, 2000);
+  const lines = [];
+  // 1) Open tasks first — most actionable.
+  const tasks = Array.isArray(agent.open_tasks) ? agent.open_tasks.filter(t => t && t.status !== 'done') : [];
+  if(tasks.length){
+    lines.push('【進行中の案件】');
+    tasks.slice(0, 3).forEach(t => {
+      const pct = (typeof t.progress_pct === 'number') ? ' (' + t.progress_pct + '%)' : '';
+      lines.push(' • ' + (t.title || 'untitled') + pct + (t.notes ? ' — ' + String(t.notes).slice(0,80) : ''));
+    });
+  }
+  // 2) KPIs — keep numerical orientation.
+  const kpis = Array.isArray(agent.kpis) ? agent.kpis : [];
+  if(kpis.length){
+    lines.push('【今期の目標 (応答は常にこれに沿わせる)】');
+    kpis.slice(0, 4).forEach(k => {
+      const cur = (k.current != null ? k.current : '?');
+      const tgt = (k.target  != null ? k.target  : '?');
+      lines.push(' • ' + (k.name || '?') + ': ' + cur + ' / ' + tgt + (k.unit ? ' ' + k.unit : ''));
+    });
+  }
+  // 3) Memories — bigram overlap against the current user message.
+  const mems = Array.isArray(agent.memories) ? agent.memories : [];
+  if(mems.length && userQuery){
+    const scored = mems.map(m => ({
+      m,
+      score: _agentMemoryScore(m.text, userQuery)
+        // small recency boost (last 30 days)
+        + (m.created_at && (Date.now() - new Date(m.created_at).getTime()) < 30*86400*1000 ? 0.5 : 0)
+        + (m.pinned ? 5 : 0),
+    })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 5);
+    if(scored.length){
+      lines.push('【ユーザーについての記憶】');
+      scored.forEach(x => lines.push(' • ' + String(x.m.text||'').slice(0, 160)));
+    }
+  } else if(mems.length){
+    // No query (group / first message) — surface pinned + most-recent few.
+    const pinned = mems.filter(m => m && m.pinned).slice(0, 3);
+    const recent = mems.filter(m => !m.pinned).slice(-3);
+    const picks = [...pinned, ...recent].slice(0, 5);
+    if(picks.length){
+      lines.push('【ユーザーについての記憶】');
+      picks.forEach(p => lines.push(' • ' + String(p.text||'').slice(0, 160)));
+    }
+  }
+  // 4) Playbook — relevant successful patterns.
+  const plays = Array.isArray(agent.playbook) ? agent.playbook : [];
+  if(plays.length && userQuery){
+    const scored = plays.map(p => ({
+      p,
+      score: _agentMemoryScore(p.context + ' ' + p.pattern, userQuery)
+        + Math.min(2, (p.success_count || 0) * 0.3),
+    })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 3);
+    if(scored.length){
+      lines.push('【過去にうまくいったアプローチ (参考)】');
+      scored.forEach(x => lines.push(' • ' + String(x.p.pattern||'').slice(0, 160)));
+    }
+  }
+  if(lines.length === 0) return '';
+  // Cap total payload.
+  let out = lines.join('\n');
+  if(out.length > 1200) out = out.slice(0, 1200) + '\n…(要約省略)';
+  return '\n\n' + out;
+}
+
+async function _afterTurnExtract(agent, opts){
+  // Runs ONCE after a chat turn completes. One Gemini Flash call extracts:
+  //   - new_memories: 0-3 facts about the user worth remembering
+  //   - task_updates: started/progressed/done items
+  //   - kpi_updates : { name → current } when AI mentioned a metric
+  //   - playbook    : 0-1 successful patterns to save (only when user reacted positively)
+  // Cheap (< $0.001) but compounds into long-term value. Fail-silently.
+  try {
+    if(!agent || !opts) return false;
+    const userMsg = String(opts.userMsg || '').slice(0, 1500);
+    const aiReply = String(opts.aiReply || '').slice(0, 1500);
+    if(!userMsg && !aiReply) return false;
+    const existingKpis = (Array.isArray(agent.kpis) ? agent.kpis : []).map(k => k.name).slice(0, 8).join(', ');
+    const prompt = `あなたはエージェント "${agent.name || ''}" の長期記憶を整理するアシスタントです。\n\n直前のターン:\nUSER: ${userMsg}\nAI: ${aiReply}\n\n既存の KPI 名: ${existingKpis || '(なし)'}\n\n以下を JSON で返してください (該当なければ空配列 / 空オブジェクト):\n{\n  "new_memories": ["事実 1", "事実 2"],   // ユーザーの好み・事業・固有名詞・数値・NG事項のうち、将来の会話で参照に値する事実を 0-3 個。1 件 80 字以内。雑談・挨拶は無視。\n  "task_updates": [                         // タスクの新規開始 / 進捗 / 完了\n    { "title": "...", "status": "started|progress|done", "progress_pct": 0-100, "notes": "短い補足" }\n  ],\n  "kpi_updates": { "<既存KPI名>": <現在値> },  // AI または USER が KPI 数値に言及していれば\n  "playbook": [                             // ユーザーが明確にポジティブなリアクションをした場合に限り、AI のアプローチを 1 件抽出\n    { "context": "どんな状況で", "pattern": "AI はどう動いたか / どう答えたか", "success_count": 1 }\n  ]\n}\n\n注意:\n- 余計な文言、Markdown、コードブロック、説明は禁止。JSON のみ。\n- USER がネガティブ反応 / 修正要求をした場合 playbook は []。\n- 明らかな雑談 (挨拶 / 確認 / 軽い感想) は new_memories から除外。`;
+    const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+    let raw = '';
+    if(info.provider === 'gemini'){
+      const r = await _callGemini([{role:'user', content: prompt}], '', info);
+      raw = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+    } else if(ANTHROPIC){
+      const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
+        {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+        { model: info.modelId, max_tokens: 600, messages:[{role:'user', content: prompt}] },
+        { timeout: 25000 });
+      if(r.s === 200) raw = (r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
+    }
+    if(!raw) return false;
+    raw = raw.replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    let parsed; try { parsed = JSON.parse(raw); } catch(e){ return false; }
+    if(!parsed || typeof parsed !== 'object') return false;
+    let dirty = false;
+    // ── new_memories ──
+    if(Array.isArray(parsed.new_memories) && parsed.new_memories.length){
+      agent.memories = Array.isArray(agent.memories) ? agent.memories : [];
+      for(const t of parsed.new_memories){
+        const text = String(t||'').trim().slice(0, 200);
+        if(text.length < 6) continue;
+        // De-dupe: skip if a very similar memory exists
+        const dupe = agent.memories.find(m => m && m.text && _agentMemoryScore(m.text, text) > Math.min(8, ngramSize(text) * 0.6));
+        if(dupe) continue;
+        agent.memories.push({
+          id: 'mem_'+crypto.randomBytes(4).toString('hex'),
+          text,
+          source: 'auto',
+          pinned: false,
+          created_at: new Date().toISOString(),
+        });
+        dirty = true;
+      }
+      if(agent.memories.length > 200){
+        // Drop oldest non-pinned first.
+        agent.memories.sort((a,b) => (b.pinned?1:0) - (a.pinned?1:0));
+        agent.memories = agent.memories.slice(0, 200);
+      }
+    }
+    // ── task_updates ──
+    if(Array.isArray(parsed.task_updates) && parsed.task_updates.length){
+      agent.open_tasks = Array.isArray(agent.open_tasks) ? agent.open_tasks : [];
+      for(const t of parsed.task_updates){
+        if(!t || typeof t !== 'object') continue;
+        const title = String(t.title||'').trim().slice(0, 100);
+        if(!title) continue;
+        const status = ['started','progress','done'].includes(t.status) ? t.status : 'progress';
+        const pct = Math.max(0, Math.min(100, parseInt(t.progress_pct, 10) || (status === 'done' ? 100 : 50)));
+        // Match an existing open task by case-insensitive title contains
+        const existing = agent.open_tasks.find(x => x && x.title && (x.title.toLowerCase().includes(title.toLowerCase()) || title.toLowerCase().includes(x.title.toLowerCase())));
+        if(existing){
+          existing.progress_pct = pct;
+          existing.notes = String(t.notes||existing.notes||'').slice(0, 200);
+          existing.status = status;
+          existing.last_touched_at = new Date().toISOString();
+        } else {
+          agent.open_tasks.push({
+            id: 'tsk_'+crypto.randomBytes(4).toString('hex'),
+            title,
+            status,
+            progress_pct: pct,
+            notes: String(t.notes||'').slice(0, 200),
+            started_at: new Date().toISOString(),
+            last_touched_at: new Date().toISOString(),
+          });
+        }
+        dirty = true;
+      }
+      // Trim done tasks older than 30 days.
+      const cutoff = Date.now() - 30*86400*1000;
+      agent.open_tasks = agent.open_tasks.filter(t => !(t && t.status==='done' && t.last_touched_at && new Date(t.last_touched_at).getTime() < cutoff));
+      if(agent.open_tasks.length > 50) agent.open_tasks = agent.open_tasks.slice(-50);
+    }
+    // ── kpi_updates ──
+    if(parsed.kpi_updates && typeof parsed.kpi_updates === 'object'){
+      agent.kpis = Array.isArray(agent.kpis) ? agent.kpis : [];
+      for(const [name, val] of Object.entries(parsed.kpi_updates)){
+        const k = agent.kpis.find(x => x && x.name === name);
+        if(!k) continue;
+        const num = parseFloat(val);
+        if(!isFinite(num)) continue;
+        k.current = num;
+        k.history = Array.isArray(k.history) ? k.history : [];
+        k.history.push({ at: new Date().toISOString(), value: num });
+        if(k.history.length > 200) k.history = k.history.slice(-200);
+        k.updated_at = new Date().toISOString();
+        dirty = true;
+      }
+    }
+    // ── playbook ──
+    if(Array.isArray(parsed.playbook) && parsed.playbook.length){
+      agent.playbook = Array.isArray(agent.playbook) ? agent.playbook : [];
+      for(const p of parsed.playbook){
+        if(!p || typeof p !== 'object') continue;
+        const pattern = String(p.pattern||'').trim().slice(0, 240);
+        const context = String(p.context||'').trim().slice(0, 160);
+        if(pattern.length < 12) continue;
+        const dupe = agent.playbook.find(x => x && x.pattern && _agentMemoryScore(x.pattern, pattern) > Math.min(10, ngramSize(pattern) * 0.5));
+        if(dupe){
+          dupe.success_count = (dupe.success_count || 0) + 1;
+          dupe.last_used_at = new Date().toISOString();
+        } else {
+          agent.playbook.push({
+            id: 'pb_'+crypto.randomBytes(4).toString('hex'),
+            context,
+            pattern,
+            success_count: 1,
+            created_at: new Date().toISOString(),
+            last_used_at: new Date().toISOString(),
+          });
+        }
+        dirty = true;
+      }
+      if(agent.playbook.length > 60){
+        // Drop least-used + oldest first.
+        agent.playbook.sort((a,b) => (b.success_count||0) - (a.success_count||0));
+        agent.playbook = agent.playbook.slice(0, 60);
+      }
+    }
+    return dirty;
+  } catch(e){
+    console.warn('[after-turn] failed:', e.message);
+    return false;
+  }
+}
+function ngramSize(s){
+  const t = String(s||'').toLowerCase().replace(/\s+/g,'');
+  return Math.max(1, t.length - 1);
+}
+
+// ── PROACTIVE NUDGES ──────────────────────────────────────────
+// "AI が自発的に言ってくる" minimal implementation. Once per day per user,
+// pick one qualifying agent (some real chat history, >24h since last user
+// message) and generate a short 1-2 sentence nudge. The user sees it as
+// a card at the top of that agent's chat on next open. Click → injected
+// as a user message and the conversation continues. Dismiss → marked
+// read. This is the cheapest possible "alive feel" without any cron.
+async function _maybeGenerateNudgeForUser(user){
+  try {
+    if(!user || !Array.isArray(user.agents) || user.agents.length === 0) return false;
+    const now = Date.now();
+    // Global daily throttle.
+    if(user.last_nudge_global_at && now - new Date(user.last_nudge_global_at).getTime() < 22 * 3600 * 1000) return false;
+    // Qualifying agents: solo (skip groups for v1), have at least 4 history
+    // turns, no active undismissed nudge, last_nudge_at older than 24h.
+    const candidates = user.agents.filter(a => {
+      if(!a || a.is_group) return false;
+      if(!Array.isArray(a.history) || a.history.length < 4) return false;
+      const nudges = Array.isArray(a.proactive_nudges) ? a.proactive_nudges : [];
+      if(nudges.find(n => !n.dismissed && !n.acted)) return false;
+      if(a.last_nudge_at && now - new Date(a.last_nudge_at).getTime() < 24 * 3600 * 1000) return false;
+      return true;
+    });
+    if(candidates.length === 0) return false;
+    // Pick the one with the most recent activity (most relevant context).
+    candidates.sort((a, b) => (b.history.length || 0) - (a.history.length || 0));
+    const agent = candidates[0];
+    const recent = (agent.history || []).slice(-6).map(m => {
+      const role = m.role === 'assistant' ? agent.name : (m.user_name || 'USER');
+      const body = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(b => b && b.type==='text').map(b => b.text).join(' ') : '');
+      return role + ': ' + (body || '').slice(0, 240);
+    }).join('\n');
+    const prompt = `あなたは "${agent.name}" という AI エージェントです。\nPersona: ${(agent.persona||'').slice(0,400)}\n\n直近の会話:\n${recent}\n\nユーザーから問いかけがない今、こちらから自発的にユーザーに送る短い「つぶやき」を 1 つだけ生成してください。条件:\n- 1〜2 文、80 字以内\n- 直前の会話の続き / 気づき / 提案 / 確認 のどれか (脈絡が伝わるもの)\n- 売り込み・煽り・誇張は禁止、自然で親しみやすいトーン\n- 出力は本文のみ。前置きや「以下が…」のような枕詞、句読点による飾りは禁止`;
+    const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+    let text = '';
+    if(info.provider === 'gemini'){
+      const r = await _callGemini([{role:'user', content: prompt}], '', info);
+      text = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+    } else if(ANTHROPIC) {
+      const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
+        {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+        { model: info.modelId, max_tokens: 200, messages:[{role:'user',content:prompt}] },
+        { timeout: 20000 });
+      if(r.s === 200) text = (r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
+    }
+    text = (text || '').replace(/^["'「『]|["'」』]$/g, '').trim();
+    if(!text || text.length < 6) return false;
+    if(text.length > 240) text = text.slice(0, 240);
+    agent.proactive_nudges = Array.isArray(agent.proactive_nudges) ? agent.proactive_nudges : [];
+    agent.proactive_nudges.push({
+      id: 'nud_' + crypto.randomBytes(5).toString('hex'),
+      text,
+      created_at: new Date().toISOString(),
+      dismissed: false,
+      acted: false,
+    });
+    if(agent.proactive_nudges.length > 5) agent.proactive_nudges = agent.proactive_nudges.slice(-5);
+    agent.last_nudge_at = new Date().toISOString();
+    user.last_nudge_global_at = new Date().toISOString();
+    await DB.save(user);
+    console.log('[nudge] generated agent=' + agent.id + ' text=' + text.slice(0, 60));
+    return true;
+  } catch(e){
+    console.warn('[nudge] failed:', e.message);
+    return false;
+  }
+}
+
+// Resolve a per-agent model alias to {provider, modelId, maxTokens}.
+// Supported aliases:
+//   - 'haiku' | 'sonnet' | 'opus'             → Anthropic
+//   - 'gemini-flash' | 'gemini-pro'           → Google Gemini
+// If a Gemini alias is requested but GEMINI_API_KEY is unset, the resolver
+// transparently downgrades to Sonnet so the chat keeps working. Defaults to
+// 'gemini-flash' (cheap + fast) when no alias is set and the key is present;
+// otherwise to Sonnet.
+function _resolveModelInfo(alias){
+  const a = (alias||'').toLowerCase();
+  if(a === 'gemini-flash' || a === 'gemini-pro'){
+    if(!GEMINI_KEY){
+      // Fall through to Anthropic Sonnet — no Gemini key configured.
+      return { provider:'anthropic', modelId:'claude-sonnet-4-6', maxTokens:16000, alias:'sonnet' };
+    }
+    return a === 'gemini-pro'
+      ? { provider:'gemini', modelId:'gemini-2.5-pro',   maxTokens:16000, alias:'gemini-pro' }
+      : { provider:'gemini', modelId:'gemini-2.5-flash', maxTokens:8192,  alias:'gemini-flash' };
+  }
+  switch(a){
+    case 'haiku':  return { provider:'anthropic', modelId:'claude-haiku-4-5-20251001', maxTokens:8000,  alias:'haiku' };
+    case 'opus':   return { provider:'anthropic', modelId:'claude-opus-4-7',           maxTokens:32000, alias:'opus' };
+    case 'sonnet': return { provider:'anthropic', modelId:'claude-sonnet-4-6',         maxTokens:16000, alias:'sonnet' };
+    default:
+      // Unset alias: pick Gemini Flash if available, else Sonnet.
+      return GEMINI_KEY
+        ? { provider:'gemini',    modelId:'gemini-2.5-flash', maxTokens:8192,  alias:'gemini-flash' }
+        : { provider:'anthropic', modelId:'claude-sonnet-4-6', maxTokens:16000, alias:'sonnet' };
+  }
+}
+// Legacy helpers — kept so existing callsites that only need the Anthropic
+// model id keep working. New code should use _resolveModelInfo directly.
+function _resolveModel(alias){ return _resolveModelInfo(alias).modelId; }
+function _maxTokensFor(alias){ return _resolveModelInfo(alias).maxTokens; }
+
+// ── GEMINI ↔ ANTHROPIC FORMAT CONVERSION ──────────────────────
+// Gemini's REST API uses a different shape:
+//   contents:[{role:'user'|'model', parts:[{text}|{inlineData}|{functionCall}|{functionResponse}]}]
+//   systemInstruction: {parts:[{text}]}
+//   tools:[{functionDeclarations:[{name,description,parameters}]}]
+//   toolConfig:{functionCallingConfig:{mode:'AUTO'|'ANY'|'NONE', allowedFunctionNames?}}
+// We accept Anthropic-shaped inputs everywhere internally and convert here.
+function _antToGeminiMessages(messages){
+  const out = [];
+  for(const m of (messages||[])){
+    const role = m.role === 'assistant' ? 'model' : 'user';
+    const parts = [];
+    if(typeof m.content === 'string'){
+      const t = (m.content||'').trim();
+      if(t) parts.push({ text: t });
+    } else if(Array.isArray(m.content)){
+      for(const b of m.content){
+        if(b.type === 'text' && b.text){ parts.push({ text: b.text }); continue; }
+        if(b.type === 'image' && b.source){
+          // Anthropic source: {type:'base64'|'url', media_type, data|url}
+          if(b.source.type === 'base64'){
+            parts.push({ inlineData: { mimeType: b.source.media_type || 'image/png', data: b.source.data } });
+          } else if(b.source.type === 'url' && b.source.url){
+            // Gemini doesn't accept image URLs directly via inlineData. Skip
+            // gracefully — most UI image uploads come through as base64 anyway.
+            parts.push({ text: '[image: '+b.source.url+']' });
+          }
+          continue;
+        }
+        if(b.type === 'tool_use'){
+          parts.push({ functionCall: { name: b.name, args: b.input || {} } });
+          continue;
+        }
+        if(b.type === 'tool_result'){
+          // Anthropic tool_result.content can be string or array of blocks.
+          let resp;
+          if(typeof b.content === 'string'){
+            resp = { result: b.content };
+          } else if(Array.isArray(b.content)){
+            const texts = b.content.filter(x => x && x.type==='text').map(x => x.text).join('\n');
+            resp = texts ? { result: texts } : { result: '(omitted)' };
+          } else {
+            resp = { result: '' };
+          }
+          // We don't know the tool name here from Anthropic's shape — it's
+          // referenced via tool_use_id. Gemini wants the function name.
+          // Resolve by scanning earlier assistant messages for the matching id.
+          let name = '';
+          for(const prior of messages){
+            if(!Array.isArray(prior.content)) continue;
+            for(const pb of prior.content){
+              if(pb && pb.type==='tool_use' && pb.id === b.tool_use_id){ name = pb.name; break; }
+            }
+            if(name) break;
+          }
+          parts.push({ functionResponse: { name: name || 'tool', response: resp } });
+          continue;
+        }
+      }
+    }
+    if(parts.length === 0) parts.push({ text: '(empty)' });
+    // Merge consecutive same-role turns — Gemini rejects alternation breaks.
+    if(out.length && out[out.length-1].role === role){
+      out[out.length-1].parts.push(...parts);
+    } else {
+      out.push({ role, parts });
+    }
+  }
+  return out;
+}
+function _antToGeminiTools(tools){
+  if(!Array.isArray(tools) || tools.length===0) return undefined;
+  // Drop Anthropic server tools (web_search_*, web_fetch_*, computer_*) —
+  // Gemini doesn't host them and would 400 on the unknown type field.
+  const decls = tools
+    .filter(t => t && t.name && t.input_schema)
+    .map(t => ({
+      name: t.name,
+      description: t.description || '',
+      parameters: _sanitizeJsonSchema(t.input_schema),
+    }));
+  if(decls.length === 0) return undefined;
+  return [{ functionDeclarations: decls }];
+}
+function _sanitizeJsonSchema(s){
+  // Gemini's parameters schema is a subset of JSON Schema — it rejects
+  // fields like `$schema`, `additionalProperties` (sometimes), and
+  // cache_control. Recursively strip cache_control + a few unsafe keys.
+  if(!s || typeof s !== 'object') return s;
+  if(Array.isArray(s)) return s.map(_sanitizeJsonSchema);
+  const out = {};
+  for(const k of Object.keys(s)){
+    if(k === 'cache_control' || k === '$schema' || k === 'additionalProperties') continue;
+    out[k] = _sanitizeJsonSchema(s[k]);
+  }
+  return out;
+}
+function _antToGeminiToolChoice(tc){
+  if(!tc) return undefined;
+  if(tc.type === 'tool' && tc.name){
+    return { functionCallingConfig: { mode:'ANY', allowedFunctionNames:[tc.name] } };
+  }
+  if(tc.type === 'any')  return { functionCallingConfig: { mode:'ANY' } };
+  if(tc.type === 'none') return { functionCallingConfig: { mode:'NONE' } };
+  return { functionCallingConfig: { mode:'AUTO' } };
+}
+function _systemTextOf(system){
+  if(Array.isArray(system)){
+    return system.map(b => (b && typeof b.text === 'string') ? b.text : '').filter(Boolean).join('\n\n');
+  }
+  return String(system||'');
+}
+
+// ── GEMINI CONTEXT CACHING ────────────────────────────────────
+// Google's cachedContents API holds the systemInstruction + tools spec on
+// their side. Re-using the cache cuts input tokens by ~75% for the cached
+// portion (persona + tool defs are static per-agent, so this pays off after
+// the first message). TTL = 1h; we refresh-on-use.
+//
+// Storage: each agent carries `agent.gemini_cache = {name, expires_at,
+// persona_hash, tools_hash, model_id}`. Cache invalidates automatically when
+// persona or tools change (hash mismatch). Pure best-effort — any cache
+// failure silently falls back to the uncached path.
+const GEMINI_CACHE_TTL_SEC = 3600; // 1h
+const GEMINI_CACHE_MIN_TOKENS = 4096; // gemini-2.5-flash requires >=4096 tokens to cache; below this Google rejects
+function _geminiHashFor(personaText, tools){
+  const h = crypto.createHash('sha256');
+  h.update(personaText || ''); h.update('|');
+  h.update(JSON.stringify(tools || []));
+  return h.digest('hex').slice(0, 16);
+}
+function _geminiCacheValid(agent, info, systemText, tools){
+  const c = agent && agent.gemini_cache;
+  if(!c || !c.name || !c.expires_at) return false;
+  if(c.model_id !== info.modelId) return false;
+  if(c.expires_at < Date.now() + 60_000) return false; // 60s safety margin
+  const personaHash = _geminiHashFor(systemText, []);
+  const toolsHash   = _geminiHashFor('', tools || []);
+  return c.persona_hash === personaHash && c.tools_hash === toolsHash;
+}
+async function _geminiCacheCreate(info, systemText, tools, agentLabel){
+  // Heuristic skip: cache requires ~4K input tokens. If persona + tools
+  // doesn't reach that, Google will 400. Cheap chars/4 estimate.
+  const estChars = (systemText || '').length + JSON.stringify(tools || []).length;
+  if(Math.ceil(estChars / 4) < GEMINI_CACHE_MIN_TOKENS){
+    return null;
+  }
+  return new Promise((resolve)=>{
+    const body = {
+      model: 'models/' + info.modelId,
+      ttl: GEMINI_CACHE_TTL_SEC + 's',
+      displayName: agentLabel ? agentLabel.slice(0, 40) : 'agent-cache',
+    };
+    if(systemText) body.systemInstruction = { parts:[{text: systemText}] };
+    const gtools = _antToGeminiTools(tools);
+    if(gtools) body.tools = gtools;
+    const payload = JSON.stringify(body);
+    const req = https.request({
+      hostname:'generativelanguage.googleapis.com',
+      path: '/v1beta/cachedContents?key=' + encodeURIComponent(GEMINI_KEY),
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(payload) }
+    }, (r)=>{
+      let buf = '';
+      r.setEncoding('utf8');
+      r.on('data', c => buf += c);
+      r.on('end', ()=>{
+        try{
+          const obj = JSON.parse(buf || '{}');
+          if(r.statusCode >= 400 || !obj.name){
+            // Common case: input below 4096 token threshold — silently skip.
+            const msg = (obj.error && obj.error.message) || ('HTTP '+r.statusCode);
+            console.warn('[gemini-cache] create failed:', msg.slice(0, 200));
+            resolve(null);
+            return;
+          }
+          const expireMs = obj.expireTime ? Date.parse(obj.expireTime) : (Date.now() + GEMINI_CACHE_TTL_SEC*1000);
+          resolve({
+            name: obj.name,
+            expires_at: expireMs,
+            persona_hash: _geminiHashFor(systemText, []),
+            tools_hash: _geminiHashFor('', tools || []),
+            model_id: info.modelId,
+            usage_tokens: (obj.usageMetadata && obj.usageMetadata.totalTokenCount) || 0,
+          });
+        }catch(e){ console.warn('[gemini-cache] create parse:', e.message); resolve(null); }
+      });
+      r.on('error', e => { console.warn('[gemini-cache] create http:', e.message); resolve(null); });
+    });
+    req.on('error', e => { console.warn('[gemini-cache] create req:', e.message); resolve(null); });
+    req.write(payload); req.end();
+  });
+}
+// Touch — extend TTL on re-use without re-uploading content.
+function _geminiCacheTouch(name){
+  if(!name) return;
+  const payload = JSON.stringify({ ttl: GEMINI_CACHE_TTL_SEC + 's' });
+  const req = https.request({
+    hostname:'generativelanguage.googleapis.com',
+    path: '/v1beta/' + name + '?key=' + encodeURIComponent(GEMINI_KEY),
+    method:'PATCH',
+    headers:{ 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(payload) }
+  }, (r)=>{ r.resume(); });
+  req.on('error', ()=>{});
+  req.write(payload); req.end();
+}
+// Per-call entry point: returns {cacheName, systemForReq, toolsForReq, freshlyCreated}.
+// If a valid cache exists, sysText/tools come back as undefined (caller must
+// drop them from payload). Otherwise the caller sends them inline AND we
+// fire-and-forget create a cache for the NEXT call.
+async function _geminiResolveCache(opts){
+  const { info, system, tools, agent, agentLabel } = opts;
+  const sysText = _systemTextOf(system);
+  if(!GEMINI_KEY || !agent){
+    return { cacheName: null, systemForReq: sysText, toolsForReq: tools };
+  }
+  if(_geminiCacheValid(agent, info, sysText, tools)){
+    // Hit. Touch async so TTL extends without blocking the call.
+    _geminiCacheTouch(agent.gemini_cache.name);
+    console.log('[gemini-cache] hit agent=' + (agent.id||'?') + ' name=' + agent.gemini_cache.name);
+    return { cacheName: agent.gemini_cache.name, systemForReq: undefined, toolsForReq: undefined };
+  }
+  // Miss → kick off creation in the background. This call still sends full
+  // payload uncached; the next call within TTL will hit.
+  _geminiCacheCreate(info, sysText, tools, agentLabel).then((c)=>{
+    if(!c) return;
+    agent.gemini_cache = c;
+    console.log('[gemini-cache] created agent=' + (agent.id||'?') + ' name=' + c.name + ' tokens=' + c.usage_tokens);
+  }).catch(()=>{});
+  return { cacheName: null, systemForReq: sysText, toolsForReq: tools };
+}
+
+// Gemini streaming endpoint (SSE-style chunks). Returns
+// {text, inputTokens, outputTokens, stopReason}.
+function _callGeminiStream(messages, system, onText, info, cacheCtx){
+  return new Promise((resolve, reject)=>{
+    const contents = _antToGeminiMessages(messages);
+    const bodyObj = {
+      contents,
+      generationConfig: { maxOutputTokens: info.maxTokens, temperature: 0.7 },
+    };
+    if(cacheCtx && cacheCtx.cacheName){
+      bodyObj.cachedContent = cacheCtx.cacheName;
+    } else {
+      const sysText = _systemTextOf(system);
+      if(sysText) bodyObj.systemInstruction = { parts:[{text: sysText}] };
+    }
+    const body = JSON.stringify(bodyObj);
+    const reqPath = '/v1beta/models/'+encodeURIComponent(info.modelId)+':streamGenerateContent?key='+encodeURIComponent(GEMINI_KEY)+'&alt=sse';
+    const req = https.request({
+      hostname:'generativelanguage.googleapis.com',
+      path: reqPath,
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (r)=>{
+      let buf = '';
+      let fullText = '';
+      let inputTokens = 0, outputTokens = 0;
+      let stopReason = null;
+      let errored = false;
+      r.setEncoding('utf8');
+      r.on('data', (chunk)=>{
+        buf += chunk;
+        let i;
+        while((i = buf.indexOf('\n\n')) >= 0){
+          const event = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          let dataLine = '';
+          for(const line of event.split('\n')){
+            if(line.startsWith('data: ')) dataLine = line.slice(6);
+          }
+          if(!dataLine || dataLine === '[DONE]') continue;
+          try{
+            const obj = JSON.parse(dataLine);
+            if(obj.error){
+              errored = true;
+              reject(new Error(obj.error.message || 'Gemini stream error'));
+              try{ r.destroy(); }catch(e){}
+              return;
+            }
+            const cands = obj.candidates || [];
+            for(const c of cands){
+              const parts = (c.content && c.content.parts) || [];
+              for(const p of parts){
+                if(typeof p.text === 'string'){
+                  fullText += p.text;
+                  try{ onText(p.text); }catch(e){}
+                }
+              }
+              if(c.finishReason){
+                // Gemini reasons: STOP, MAX_TOKENS, SAFETY, RECITATION, OTHER
+                stopReason = c.finishReason === 'MAX_TOKENS' ? 'max_tokens' :
+                             c.finishReason === 'STOP'       ? 'end_turn'   :
+                             c.finishReason;
+              }
+            }
+            if(obj.usageMetadata){
+              inputTokens  = obj.usageMetadata.promptTokenCount || inputTokens;
+              outputTokens = obj.usageMetadata.candidatesTokenCount || outputTokens;
+            }
+          }catch(e){ /* partial event */ }
+        }
+      });
+      r.on('end', ()=>{
+        if(errored) return;
+        if(r.statusCode && r.statusCode >= 400){
+          reject(new Error('Gemini '+r.statusCode+': '+(fullText||'request failed').slice(0,200)));
+          return;
+        }
+        let finalText = fullText;
+        if(stopReason === 'max_tokens'){
+          finalText += '\n\n…（出力上限に達したため途中までです。続きを生成するには「続けて」と送ってください）';
+        }
+        resolve({ text: finalText, inputTokens, outputTokens, stopReason });
+      });
+      r.on('error', (e)=>{ if(!errored) reject(e); });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// Non-streaming Gemini call — returns an Anthropic-shaped response object
+// (so callers don't care which provider answered). Used by callAI().
+async function _callGemini(messages, system, info, cacheCtx){
+  return new Promise((resolve, reject)=>{
+    const bodyObj = {
+      contents: _antToGeminiMessages(messages),
+      generationConfig: { maxOutputTokens: info.maxTokens, temperature: 0.7 },
+    };
+    if(cacheCtx && cacheCtx.cacheName){
+      bodyObj.cachedContent = cacheCtx.cacheName;
+    } else {
+      const sysText = _systemTextOf(system);
+      if(sysText) bodyObj.systemInstruction = { parts:[{text: sysText}] };
+    }
+    const body = JSON.stringify(bodyObj);
+    const reqPath = '/v1beta/models/'+encodeURIComponent(info.modelId)+':generateContent?key='+encodeURIComponent(GEMINI_KEY);
+    const req = https.request({
+      hostname:'generativelanguage.googleapis.com',
+      path: reqPath,
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (r)=>{
+      let buf = '';
+      r.setEncoding('utf8');
+      r.on('data', c => buf += c);
+      r.on('end', ()=>{
+        try{
+          const obj = JSON.parse(buf || '{}');
+          if(r.statusCode && r.statusCode >= 400){
+            reject(new Error(obj?.error?.message || 'Gemini '+r.statusCode));
+            return;
+          }
+          const cand = (obj.candidates||[])[0] || {};
+          const parts = (cand.content && cand.content.parts) || [];
+          const text = parts.filter(p => typeof p.text === 'string').map(p => p.text).join('');
+          // Shape like Anthropic so callAI() consumers (which expect r.content[0].text) keep working.
+          resolve({
+            content: [{ type:'text', text }],
+            usage: {
+              input_tokens: (obj.usageMetadata && obj.usageMetadata.promptTokenCount) || 0,
+              output_tokens: (obj.usageMetadata && obj.usageMetadata.candidatesTokenCount) || 0,
+            },
+            stop_reason: cand.finishReason === 'MAX_TOKENS' ? 'max_tokens'
+                       : cand.finishReason === 'STOP'       ? 'end_turn'
+                       : (cand.finishReason || 'end_turn'),
+          });
+        }catch(e){ reject(e); }
+      });
+      r.on('error', reject);
+    });
+    req.on('error', reject);
+    req.write(body); req.end();
+  });
+}
+
+// Gemini tool-use call — single round-trip. Returns an Anthropic-shaped
+// response so the existing tool-loop driver in /api/chat works unchanged.
+async function _callGeminiWithTools(messages, system, tools, toolChoice, info, cacheCtx){
+  return new Promise((resolve, reject)=>{
+    const body = {
+      contents: _antToGeminiMessages(messages),
+      generationConfig: { maxOutputTokens: info.maxTokens, temperature: 0.7 },
+    };
+    if(cacheCtx && cacheCtx.cacheName){
+      body.cachedContent = cacheCtx.cacheName;
+    } else {
+      const sysText = _systemTextOf(system);
+      if(sysText) body.systemInstruction = { parts:[{text: sysText}] };
+      const gtools = _antToGeminiTools(tools);
+      if(gtools) body.tools = gtools;
+    }
+    // tool_choice always goes inline — it's a per-call control, not cached.
+    const gtc = _antToGeminiToolChoice(toolChoice);
+    if(gtc) body.toolConfig = gtc;
+    const payload = JSON.stringify(body);
+    const reqPath = '/v1beta/models/'+encodeURIComponent(info.modelId)+':generateContent?key='+encodeURIComponent(GEMINI_KEY);
+    const req = https.request({
+      hostname:'generativelanguage.googleapis.com',
+      path: reqPath,
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(payload) }
+    }, (r)=>{
+      let buf = '';
+      r.setEncoding('utf8');
+      r.on('data', c => buf += c);
+      r.on('end', ()=>{
+        try{
+          const obj = JSON.parse(buf || '{}');
+          if(r.statusCode && r.statusCode >= 400){
+            reject(new Error(obj?.error?.message || 'Gemini '+r.statusCode));
+            return;
+          }
+          const cand = (obj.candidates||[])[0] || {};
+          const parts = (cand.content && cand.content.parts) || [];
+          // Translate Gemini parts → Anthropic content blocks.
+          const content = [];
+          let toolUseSeen = false;
+          for(const p of parts){
+            if(typeof p.text === 'string' && p.text){
+              content.push({ type:'text', text: p.text });
+            } else if(p.functionCall){
+              toolUseSeen = true;
+              content.push({
+                type:'tool_use',
+                id: 'gem_'+crypto.randomBytes(8).toString('hex'),
+                name: p.functionCall.name,
+                input: p.functionCall.args || {},
+              });
+            }
+          }
+          if(content.length === 0) content.push({ type:'text', text:'' });
+          const stop_reason = toolUseSeen ? 'tool_use'
+                            : cand.finishReason === 'MAX_TOKENS' ? 'max_tokens'
+                            : cand.finishReason === 'STOP'       ? 'end_turn'
+                            : (cand.finishReason || 'end_turn');
+          resolve({
+            content,
+            stop_reason,
+            usage: {
+              input_tokens: (obj.usageMetadata && obj.usageMetadata.promptTokenCount) || 0,
+              output_tokens: (obj.usageMetadata && obj.usageMetadata.candidatesTokenCount) || 0,
+            },
+          });
+        }catch(e){ reject(e); }
+      });
+      r.on('error', reject);
+    });
+    req.on('error', reject);
+    req.write(payload); req.end();
+  });
+}
+
+async function callAI(messages,system,modelAlias,cacheAgent){
+  const info = _resolveModelInfo(modelAlias);
   const trimmedMsgs = _trimHistory(_capHistory(messages));
+  if(info.provider === 'gemini'){
+    const cacheCtx = await _geminiResolveCache({ info, system, tools: [], agent: cacheAgent, agentLabel: cacheAgent && cacheAgent.name });
+    return _callGemini(trimmedMsgs, system, info, cacheCtx);
+  }
   const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01','anthropic-beta':'prompt-caching-2024-07-31'};
   const tryCall = async (sys) => httpsReq('POST','api.anthropic.com','/v1/messages',headers,
-    {model:_resolveModel(modelAlias),max_tokens:_maxTokensFor(modelAlias),system:sys,messages:trimmedMsgs},
+    {model:info.modelId,max_tokens:info.maxTokens,system:sys,messages:trimmedMsgs},
     {timeout: 180000});
   let r = await tryCall(_systemBlocks(system));
   // If Anthropic rejected cache_control formatting, retry with plain string system
@@ -1202,11 +2080,16 @@ async function callAI(messages,system,modelAlias){
  * Streaming variant. Calls onText(chunk) for each text_delta.
  * Resolves with {text, inputTokens, outputTokens}.
  */
-function callAIStream(messages, system, onText, modelAlias){
+function callAIStream(messages, system, onText, modelAlias, cacheAgent){
+  const info = _resolveModelInfo(modelAlias);
+  if(info.provider === 'gemini'){
+    return _geminiResolveCache({ info, system, tools: [], agent: cacheAgent, agentLabel: cacheAgent && cacheAgent.name })
+      .then(cacheCtx => _callGeminiStream(_trimHistory(_capHistory(messages)), system, onText, info, cacheCtx));
+  }
   return new Promise((resolve, reject)=>{
     const body = JSON.stringify({
-      model:_resolveModel(modelAlias),
-      max_tokens:_maxTokensFor(modelAlias),
+      model: info.modelId,
+      max_tokens: info.maxTokens,
       system: _systemBlocks(system),
       messages: _trimHistory(_capHistory(messages)),
       stream:true,
@@ -1280,7 +2163,16 @@ function callAIStream(messages, system, onText, modelAlias){
 }
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
-async function callAIWithTools(messages,system,tools,toolChoice,modelAlias){
+async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cacheAgent){
+  const info = _resolveModelInfo(modelAlias);
+  // Gemini: route through the Gemini-specific implementation. Server-managed
+  // Anthropic tools (web_search / web_fetch) are stripped inside _antToGeminiTools
+  // because Gemini doesn't host them — if the agent really needs web, the
+  // user should pick a Sonnet/Opus agent for that task.
+  if(info.provider === 'gemini'){
+    const cacheCtx = await _geminiResolveCache({ info, system, tools, agent: cacheAgent, agentLabel: cacheAgent && cacheAgent.name });
+    return _callGeminiWithTools(messages, system, tools, toolChoice, info, cacheCtx);
+  }
   // Single retry on 429 with short backoff — Render edge times out around 60–100s
   // so we can't afford long waits. Surface the rate limit to the user instead.
   let attempt = 0;
@@ -1306,8 +2198,8 @@ async function callAIWithTools(messages,system,tools,toolChoice,modelAlias){
     // they were comparing Claude.ai's Sonnet/Opus output to our chat running
     // on the cheapest tier despite the agent.model selector.
     const reqBody = {
-      model: _resolveModel(modelAlias),
-      max_tokens: _maxTokensFor(modelAlias),
+      model: info.modelId,
+      max_tokens: info.maxTokens,
       system: sys,
       messages: _trimHistory(messages),
       tools: cachedTools,
@@ -1571,23 +2463,39 @@ const BROWSER_TOOLS = [
   },
 ];
 
-// ── Image generation tool (Pollinations.ai, free, no key) ────
-// Anthropic doesn't generate images. We bolt on Pollinations (Flux Schnell)
-// because: free, no auth, single-GET API, ~5-15s latency. The AI calls
-// generate_image, gets a URL back, then embeds it via markdown
-// ![alt](url) in its final reply — which the chat renderer turns into <img>.
+// ── Image generation tools ───────────────────────────────────
+// generate_image routes to the best provider for the requested `style`:
+//   - 'photo' / 'illustration' / 'anime' → FLUX 1.1 Pro Ultra (fal.ai, $0.06)
+//   - 'logo' / 'icon' / 'typography'     → Recraft V3 OR Ideogram V3 ($0.04)
+//   - 'auto' / undefined                 → AI hints + best-available
+// edit_image takes an existing image URL + instruction → FLUX Kontext.
+// Without provider keys, both fall back to Pollinations FLUX Schnell (free).
 const IMAGE_TOOLS = [
   {
     name:'generate_image',
-    description:'画像を生成して返します。プロンプトは英語の方が品質が高いです。ロゴ、図解、イラスト、サムネイル、モックアップなどに使用。返ってきた URL を後続の最終応答で必ず markdown 画像構文 ![短い説明](URL) として埋め込んでください — そうするとユーザーには画像が直接表示されます。生成は 5-15 秒。',
+    description:'画像を生成。プロンプトは英語の方が品質が高い。style パラメータで「写真風」「ロゴ・タイポグラフィ」「イラスト」を出し分けてください — 用途が違うとモデルが違うので品質が大きく変わります。返ってきた URL は最終応答で必ず markdown 構文 ![短い説明](URL) として埋め込んでください。生成は 5-20 秒。',
     input_schema:{
       type:'object',
       properties:{
         prompt:{type:'string',description:'画像の詳細な英語説明。スタイル・構図・雰囲気も含める。例: "minimalist isometric illustration of a smartphone with 5 AI avatars floating above it, peach gradient background"'},
+        style:{type:'string',enum:['auto','photo','illustration','anime','logo','typography','icon'],description:'用途。auto=AI 判断 (default), photo=写真ライク (FLUX Ultra), illustration/anime=イラスト (FLUX Ultra), logo/typography/icon=ロゴ・文字入り・アイコン (Recraft/Ideogram)。'},
         width:{type:'integer',description:'生成幅 (256-1536, 既定 1024)'},
         height:{type:'integer',description:'生成高さ (256-1536, 既定 1024)'},
       },
       required:['prompt'],
+    },
+  },
+  {
+    name:'edit_image',
+    description:'既存画像を編集 (背景差し替え、要素追加・削除、スタイル変更など)。元画像 URL + 編集指示を英語で渡す。例: "remove the person, keep the cafe interior" / "change the sky to sunset". FLUX Kontext を使うので元画像の構図・キャラクター同一性は維持される。',
+    input_schema:{
+      type:'object',
+      properties:{
+        image_url:{type:'string',description:'編集対象の画像 URL (https://... or /generated/...). 直前の generate_image の返り値を渡せる。'},
+        instruction:{type:'string',description:'編集指示 (英語推奨, 100 字以内). 例: "replace background with a beach at sunset"'},
+        aspect:{type:'string',enum:['1:1','16:9','9:16','4:3','3:4'],description:'出力比率 (既定 1:1)'},
+      },
+      required:['image_url','instruction'],
     },
   },
 ];
@@ -2292,24 +3200,285 @@ async function executeImageTool(name, input){
   if(prompt.length > 800) return { error: 'prompt too long (max 800 chars)' };
   const width  = Math.max(256, Math.min(1536, parseInt(input.width)  || 1024));
   const height = Math.max(256, Math.min(1536, parseInt(input.height) || 1024));
-  // Pollinations.ai serves a synthesized image on GET. The chat renderer
-  // hydrates it from this URL — we just return the URL.
+  const style  = String(input && input.style || 'auto').toLowerCase();
+
+  // Provider selection — best paid tier first, fall back to free.
+  let provider = 'pollinations';
+  if(style === 'logo' || style === 'typography' || style === 'icon'){
+    if(IDEOGRAM_KEY)     provider = 'ideogram';
+    else if(RECRAFT_KEY) provider = 'recraft';
+    else if(FAL_KEY)     provider = 'flux-ultra';
+  } else if(style === 'photo' || style === 'illustration' || style === 'anime'){
+    if(FAL_KEY)         provider = 'flux-ultra';
+    else if(RECRAFT_KEY) provider = 'recraft';
+  } else {
+    // auto — go for the most general high-quality model we have a key for.
+    if(FAL_KEY)         provider = 'flux-ultra';
+    else if(IDEOGRAM_KEY) provider = 'ideogram';
+    else if(RECRAFT_KEY) provider = 'recraft';
+  }
+
+  try {
+    let result;
+    if(provider === 'flux-ultra'){
+      result = await _imgFluxUltra(prompt, width, height);
+    } else if(provider === 'ideogram'){
+      result = await _imgIdeogram(prompt, width, height, style);
+    } else if(provider === 'recraft'){
+      result = await _imgRecraft(prompt, width, height, style);
+    } else {
+      result = _imgPollinations(prompt, width, height);
+    }
+    if(!result || !result.url){
+      // Last-ditch fallback so the model always gets *some* image back.
+      result = _imgPollinations(prompt, width, height);
+      result.provider_fallback = true;
+    }
+    const altSafe = prompt.replace(/[\[\]()]/g, '').slice(0,120);
+    return {
+      url: result.url,
+      provider: result.provider,
+      prompt, style,
+      width, height,
+      markdown: '![' + altSafe + '](' + result.url + ')',
+      instructions: '次の最終応答で必ず上記 markdown を本文に含めてください。そうするとユーザーには画像が直接表示されます。',
+    };
+  } catch(e){
+    console.warn('[image] provider=' + provider + ' failed:', e.message);
+    const fb = _imgPollinations(prompt, width, height);
+    const altSafe = prompt.replace(/[\[\]()]/g, '').slice(0,120);
+    return {
+      url: fb.url,
+      provider: 'pollinations-fallback',
+      prompt, style,
+      width, height,
+      markdown: '![' + altSafe + '](' + fb.url + ')',
+      warning: 'primary provider failed: ' + (e.message||'unknown') + ' — fell back to free tier',
+    };
+  }
+}
+
+// ── Image edit tool — FLUX Kontext ────────────────────────────
+async function executeImageEditTool(input){
+  const imageUrl = String(input && input.image_url || '').trim();
+  const instr    = String(input && input.instruction || '').trim();
+  const aspect   = ['1:1','16:9','9:16','4:3','3:4'].includes(input && input.aspect) ? input.aspect : '1:1';
+  if(!imageUrl) return { error: 'image_url required' };
+  if(!instr)    return { error: 'instruction required' };
+  if(instr.length > 400) return { error: 'instruction too long (max 400 chars)' };
+  if(!FAL_KEY){
+    return { error: 'FLUX Kontext は FAL_KEY が必要です。サーバー管理者に依頼してください。' };
+  }
+  try {
+    // Resolve local /generated/ paths to absolute URLs FAL can fetch.
+    let absUrl = imageUrl;
+    if(absUrl.startsWith('/generated/')){
+      absUrl = APP_URL.replace(/\/$/,'') + absUrl;
+    }
+    const result = await _imgFluxKontext(absUrl, instr, aspect);
+    if(!result || !result.url) return { error: 'edit_failed' };
+    const altSafe = instr.replace(/[\[\]()]/g, '').slice(0,120);
+    return {
+      url: result.url,
+      provider: 'flux-kontext',
+      source_image: imageUrl,
+      instruction: instr,
+      aspect,
+      markdown: '![' + altSafe + '](' + result.url + ')',
+      instructions: '次の最終応答で必ず上記 markdown を本文に含めてください。',
+    };
+  } catch(e){
+    return { error: 'edit_failed: ' + (e.message || 'unknown') };
+  }
+}
+
+// ── Image provider clients ───────────────────────────────────
+
+function _imgPollinations(prompt, width, height){
+  // Free fallback — FLUX Schnell via Pollinations.ai (GET URL, no auth).
   const seed = Math.floor(Math.random() * 999999999);
   const url = 'https://image.pollinations.ai/prompt/'
     + _encodeForMd(prompt)
     + '?width=' + width
     + '&height=' + height
     + '&model=flux&nologo=true&safe=true&seed=' + seed;
-  // Strip parens/brackets from the alt text too so neither side of the
-  // markdown ![](...) syntax can be ambiguous to the renderer.
-  const altSafe = prompt.replace(/[\[\]()]/g, '').slice(0,120);
-  return {
-    url,
+  return { url, provider: 'pollinations' };
+}
+
+// Generic JSON POST helper for the image providers below.
+function _httpsJsonPost(opts){
+  return new Promise((resolve, reject)=>{
+    const payload = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
+    const req = https.request({
+      hostname: opts.hostname,
+      path: opts.path,
+      method: 'POST',
+      headers: Object.assign({
+        'Content-Type':'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      }, opts.headers || {}),
+    }, (r)=>{
+      let buf = '';
+      r.setEncoding('utf8');
+      r.on('data', c => buf += c);
+      r.on('end', ()=>{
+        try {
+          const data = buf ? JSON.parse(buf) : {};
+          if(r.statusCode >= 400){
+            reject(new Error((data && (data.error?.message || data.message)) || ('HTTP '+r.statusCode+': '+buf.slice(0,160))));
+            return;
+          }
+          resolve(data);
+        } catch(e){ reject(new Error('parse failed: '+e.message+' / '+buf.slice(0,160))); }
+      });
+      r.on('error', reject);
+    });
+    req.setTimeout(opts.timeout || 60000, ()=>{ req.destroy(new Error('timeout')); });
+    req.on('error', reject);
+    req.write(payload); req.end();
+  });
+}
+
+// fal.ai uses a request → queue → result pattern. We poll up to ~30s.
+async function _falQueueRun(modelPath, input){
+  const submit = await _httpsJsonPost({
+    hostname: 'queue.fal.run',
+    path: '/' + modelPath,
+    headers: { Authorization: 'Key ' + FAL_KEY },
+    body: input,
+  });
+  // Synchronous queue can return {images:[...]} directly OR a status_url.
+  if(submit && submit.images && submit.images[0] && submit.images[0].url){
+    return submit.images[0].url;
+  }
+  if(!submit || !submit.status_url) throw new Error('fal queue submit returned no status_url');
+  // Poll
+  for(let i = 0; i < 30; i++){
+    await new Promise(r => setTimeout(r, 1500));
+    const st = await new Promise((resolve, reject)=>{
+      const req = https.request({
+        hostname: 'queue.fal.run',
+        path: new URL(submit.status_url).pathname + (new URL(submit.status_url).search || ''),
+        method: 'GET',
+        headers: { Authorization: 'Key ' + FAL_KEY },
+      }, (r)=>{
+        let buf=''; r.setEncoding('utf8');
+        r.on('data', c=>buf+=c);
+        r.on('end', ()=>{ try{ resolve(JSON.parse(buf||'{}')); }catch(e){ reject(e); } });
+        r.on('error', reject);
+      });
+      req.on('error', reject); req.end();
+    });
+    if(st && st.status === 'COMPLETED' && submit.response_url){
+      const out = await new Promise((resolve, reject)=>{
+        const req = https.request({
+          hostname: 'queue.fal.run',
+          path: new URL(submit.response_url).pathname,
+          method: 'GET',
+          headers: { Authorization: 'Key ' + FAL_KEY },
+        }, (r)=>{
+          let buf=''; r.setEncoding('utf8');
+          r.on('data', c=>buf+=c);
+          r.on('end', ()=>{ try{ resolve(JSON.parse(buf||'{}')); }catch(e){ reject(e); } });
+          r.on('error', reject);
+        });
+        req.on('error', reject); req.end();
+      });
+      const u = out && out.images && out.images[0] && out.images[0].url;
+      if(u) return u;
+      throw new Error('fal completed but no image url');
+    }
+    if(st && st.status === 'FAILED') throw new Error('fal job failed: ' + JSON.stringify(st).slice(0,200));
+  }
+  throw new Error('fal timeout');
+}
+
+async function _imgFluxUltra(prompt, width, height){
+  // FLUX 1.1 [pro] Ultra — fal.ai endpoint.
+  const aspect = (width > height) ? '16:9' : (height > width) ? '9:16' : '1:1';
+  const url = await _falQueueRun('fal-ai/flux-pro/v1.1-ultra', {
     prompt,
-    width, height,
-    markdown: '![' + altSafe + '](' + url + ')',
-    instructions: '次の最終応答で必ず上記 markdown を本文に含めてください。そうするとユーザーには画像が直接表示されます。',
-  };
+    aspect_ratio: aspect,
+    num_images: 1,
+    safety_tolerance: '2',
+    output_format: 'jpeg',
+    enable_safety_checker: true,
+  });
+  return { url, provider: 'flux-ultra' };
+}
+
+async function _imgFluxKontext(imageUrl, instruction, aspect){
+  const url = await _falQueueRun('fal-ai/flux-pro/kontext', {
+    prompt: instruction,
+    image_url: imageUrl,
+    aspect_ratio: aspect,
+    num_images: 1,
+    safety_tolerance: '2',
+    output_format: 'jpeg',
+  });
+  return { url, provider: 'flux-kontext' };
+}
+
+async function _imgRecraft(prompt, width, height, style){
+  // Recraft V3 — recraftai.com API.
+  // Style mapping: realistic_image, digital_illustration, vector_illustration, icon.
+  let recraftStyle = 'realistic_image';
+  if(style === 'illustration' || style === 'anime') recraftStyle = 'digital_illustration';
+  if(style === 'logo' || style === 'typography')    recraftStyle = 'vector_illustration';
+  if(style === 'icon')                              recraftStyle = 'icon';
+  // Recraft expects size like "1024x1024" — pick the closest supported step.
+  const size = _recraftSize(width, height);
+  const data = await _httpsJsonPost({
+    hostname: 'external.api.recraft.ai',
+    path: '/v1/images/generations',
+    headers: { Authorization: 'Bearer ' + RECRAFT_KEY },
+    body: { prompt, style: recraftStyle, size, n: 1, response_format: 'url' },
+  });
+  const u = data && data.data && data.data[0] && data.data[0].url;
+  if(!u) throw new Error('recraft returned no url');
+  return { url: u, provider: 'recraft' };
+}
+function _recraftSize(w, h){
+  // Recraft accepts a fixed set: 1024x1024, 1365x1024, 1024x1365, 1536x1024, 1024x1536, 1820x1024, 1024x1820, 2048x1024, 1024x2048
+  if(w === h) return '1024x1024';
+  if(w > h){
+    if(w / h >= 1.6) return '1536x1024';
+    return '1365x1024';
+  }
+  if(h / w >= 1.6) return '1024x1536';
+  return '1024x1365';
+}
+
+async function _imgIdeogram(prompt, width, height, style){
+  // Ideogram V3 — best for text-in-image and typography/logos.
+  const aspect = _ideogramAspect(width, height);
+  const styleType = (style === 'logo' || style === 'typography' || style === 'icon') ? 'DESIGN' : 'GENERAL';
+  const data = await _httpsJsonPost({
+    hostname: 'api.ideogram.ai',
+    path: '/v1/ideogram-v3/generate',
+    headers: { 'Api-Key': IDEOGRAM_KEY },
+    body: {
+      prompt,
+      aspect_ratio: aspect,
+      rendering_speed: 'DEFAULT',
+      style_type: styleType,
+      num_images: 1,
+    },
+  });
+  const u = data && data.data && data.data[0] && data.data[0].url;
+  if(!u) throw new Error('ideogram returned no url');
+  return { url: u, provider: 'ideogram' };
+}
+function _ideogramAspect(w, h){
+  if(w === h) return '1x1';
+  if(w > h){
+    if(w / h >= 1.7) return '16x9';
+    if(w / h >= 1.4) return '3x2';
+    return '4x3';
+  }
+  if(h / w >= 1.7) return '9x16';
+  if(h / w >= 1.4) return '2x3';
+  return '3x4';
 }
 
 // ── helpers shared by media utility tools ────────────────────
@@ -5759,7 +6928,8 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 
 正しい挙動:
 - ✅ LP / モック / デザイン / ダッシュボード / 計算機 / インタラクティブ図表 → \`create_artifact\` を今このメッセージで呼ぶ (HTML 1 ファイル)
-- ✅ 画像 → \`generate_image\` / 動画 → \`generate_video\` / 音声 → \`generate_audio\`
+- ✅ 画像 → \`generate_image\` (\`style:'logo'\` で文字入り / \`'photo'\` で写真 / \`'illustration'\` でイラスト) / 動画 → \`generate_video\` / 音声 → \`generate_audio\`
+- ✅ 既存画像の編集 (背景差し替え / 要素追加・削除 / スタイル変更) → \`edit_image\` (直前 generate_image の URL を渡す)
 - ✅ PDF → \`generate_pdf\` / グラフ → \`generate_chart\` / 図 → \`generate_diagram\` / QR → \`generate_qr\`
 - ✅ メール → \`send_email\` / Slack → \`notify_slack\` / Discord → \`notify_discord\`
 - ✅ 予定 → \`create_calendar_event\`
@@ -5767,6 +6937,11 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 - ✅ 要件が曖昧なら 「○○ですか? △△ですか?」と 1 問だけ聞く (空約束はしない)
 - ✅ できない要件なら「○○の理由でできません。代わりに△△ならできます」と即答 (先送りしない)`;
 
+  // Per-agent context: open tasks + KPIs + relevant memories + playbook hits.
+  // Pulled live from the agent record so chats feel like they remember
+  // what's going on. `userQuery` is the latest user message; the injector
+  // scores memories / playbook against it for relevance.
+  const agentCtx = _injectAgentContext(agent, { userQuery: (opts && opts.userQuery) || '' });
   return`${deliveryRules}
 ${stallNudge}
 
@@ -5774,7 +6949,7 @@ ${stallNudge}
 
 あなたは「${agent.name}」というAIエージェントです。
 得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}
-${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}
+${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}${agentCtx}
 ユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
@@ -6865,6 +8040,10 @@ async function handleAPI(req,res,pathname,method,ip){
       user.plan = 'free';
       try { await DB.save(user); } catch(e){ /* noop */ }
     }
+    // Proactive nudge: fire-and-forget, will surface in the next /api/me call.
+    // Quietly tries to generate one short "AI が思い出したように言ってくる"
+    // message for a qualifying agent. Capped to 1/day per user.
+    _maybeGenerateNudgeForUser(user).catch(()=>{});
     return jres(res,200,{user:safe(user)});
   }
 
@@ -6920,7 +8099,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'sonnet',
+      model: 'gemini-flash',
       history: [],
       created_at: new Date().toISOString(),
       via_onboarding: true,
@@ -6964,7 +8143,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: !!t.chrome_enabled,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'sonnet',
+      model: 'gemini-flash',
       history: [],
       created_at: new Date().toISOString(),
       from_template: t.id,
@@ -7056,7 +8235,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
-    if(model!==undefined && ['haiku','sonnet','opus'].includes(model)) ag.model=model;
+    if(model!==undefined && ['haiku','sonnet','opus','gemini-flash','gemini-pro'].includes(model)) ag.model=model;
     if(Array.isArray(skills)) ag.skills = skills.filter(s => typeof s === 'string').slice(0, 16);
     if(ai_auto_respond !== undefined){
       // Group-only setting; treat null as "unset" (use size heuristic).
@@ -7079,6 +8258,262 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.updated_at = new Date().toISOString();
     await DB.save(user);
     return jres(res,200,{agent:ag});
+  }
+
+  // ── POST /api/agents/:id/stickers/generate ─────────────────
+  // Pick 6 emoji that fit this agent's persona / skills. Cheap (Gemini Flash
+  // single call ~$0.0003) but gives the agent a recognizable "sticker pack".
+  const _stkM = pathname.match(/^\/api\/agents\/([^/]+)\/stickers\/generate$/);
+  if(_stkM && method === 'POST'){
+    const ag = (user.agents||[]).find(a => a.id === _stkM[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const prompt = `エージェント "${ag.name||'AI'}" のスキル: ${(ag.skills||[]).join(', ')||'(none)'}\nペルソナ: ${(ag.persona||'').slice(0,400)}\n\nこのエージェントの性格・専門が伝わる絵文字を 6 個選んで JSON 配列で返してください。Slack の "リアクション" 的に、チャットでサクッと押せるもの。\n出力例: ["🎨","🖌","✨","💅","📐","🌈"]\n\n注意: JSON 配列のみ。説明・前置き・コードブロックは禁止。重複なし、明らかに同義なものは選ばない。`;
+    let raw = '';
+    try {
+      const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+      if(info.provider === 'gemini'){
+        const r = await _callGemini([{role:'user', content: prompt}], '', info);
+        raw = (r?.content?.[0]?.text || '').trim();
+      } else if(ANTHROPIC){
+        const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
+          {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+          { model: info.modelId, max_tokens: 200, messages:[{role:'user', content: prompt}] },
+          { timeout: 20000 });
+        if(r.s===200) raw = (r.d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+      }
+    } catch(e){ console.warn('[stickers] generate failed:', e.message); }
+    raw = (raw||'').replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    let stickers;
+    try { stickers = JSON.parse(raw); } catch(e){ stickers = null; }
+    if(!Array.isArray(stickers) || stickers.length < 3){
+      // Fallback emoji set based on first skill.
+      const fb = {
+        writing:['✍','📝','💡','📖','✨','📚'],
+        research:['🔬','📊','🔍','📈','🧪','💭'],
+        coding:['💻','🛠','⚡','🐛','🚀','⚙'],
+        marketing:['📣','📈','🎯','🔥','💌','🚀'],
+        planning:['📋','📅','🗂','✅','🧭','📌'],
+        analysis:['📊','📈','🔍','🧮','💹','🎯'],
+        translate:['🌐','🈯','🔄','📜','🗣','✅'],
+        support:['💬','🙏','✅','💖','🎀','✨'],
+        idea:['💡','✨','🌟','🚀','🎨','🧠'],
+        teaching:['📚','🎓','✏','📐','💡','✅'],
+        ceo:['🎩','📊','🚀','💼','💎','🔥'],
+        coo:['⚙','📈','🗂','✅','📋','🤝'],
+        secretary:['📅','📞','✉','📋','🗂','🌸'],
+        designer:['🎨','🖌','💅','✨','📐','🌈'],
+        sns:['📱','💬','🔥','✨','📸','🎯'],
+      };
+      const sk = (ag.skills||[])[0];
+      stickers = fb[sk] || ['👍','❤','🔥','✨','🚀','💡'];
+    }
+    stickers = stickers.filter(s => typeof s === 'string' && s.length <= 8).slice(0, 6);
+    ag.stickers = stickers;
+    ag.stickers_updated_at = new Date().toISOString();
+    await DB.save(user);
+    return jres(res, 200, { stickers });
+  }
+
+  // ── AGENT INTELLIGENCE CRUD ────────────────────────────────
+  // GET  /api/agents/:id/profile           → memories + kpis + playbook + open_tasks + routines
+  // POST /api/agents/:id/memories          → add { text, pinned? }
+  // PATCH /api/agents/:id/memories/:mid    → update { text?, pinned? }
+  // DELETE /api/agents/:id/memories/:mid   → remove
+  // POST /api/agents/:id/kpis              → add { name, target, current?, unit? }
+  // PATCH /api/agents/:id/kpis/:kid        → update { current?, target?, name?, unit? }
+  // DELETE /api/agents/:id/kpis/:kid       → remove
+  // DELETE /api/agents/:id/playbook/:pid   → remove
+  // PATCH /api/agents/:id/tasks/:tid       → update { title?, status?, progress_pct?, notes? }
+  // DELETE /api/agents/:id/tasks/:tid      → remove
+  const _profM = pathname.match(/^\/api\/agents\/([^/]+)\/profile$/);
+  if(_profM && method === 'GET'){
+    const ag = (user.agents||[]).find(a => a.id === _profM[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    return jres(res, 200, {
+      memories: ag.memories || [],
+      kpis: ag.kpis || [],
+      playbook: ag.playbook || [],
+      open_tasks: ag.open_tasks || [],
+      // Schedules are stored on user.schedules; filter to this agent.
+      routines: (Array.isArray(user.schedules) ? user.schedules : []).filter(s => s && s.agent_id === _profM[1]),
+    });
+  }
+  const _memCreate = pathname.match(/^\/api\/agents\/([^/]+)\/memories$/);
+  if(_memCreate && method === 'POST'){
+    const ag = (user.agents||[]).find(a => a.id === _memCreate[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const body = await readBody(req);
+    const text = String(body && body.text || '').trim().slice(0, 240);
+    if(text.length < 4) return jres(res,400,{error:'text too short'});
+    ag.memories = Array.isArray(ag.memories) ? ag.memories : [];
+    const entry = {
+      id: 'mem_'+crypto.randomBytes(4).toString('hex'),
+      text,
+      source: 'manual',
+      pinned: !!(body && body.pinned),
+      created_at: new Date().toISOString(),
+    };
+    ag.memories.push(entry);
+    if(ag.memories.length > 200) ag.memories = ag.memories.slice(-200);
+    await DB.save(user);
+    return jres(res, 200, { memory: entry });
+  }
+  const _memUpd = pathname.match(/^\/api\/agents\/([^/]+)\/memories\/([^/]+)$/);
+  if(_memUpd && (method === 'PATCH' || method === 'DELETE')){
+    const ag = (user.agents||[]).find(a => a.id === _memUpd[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    ag.memories = Array.isArray(ag.memories) ? ag.memories : [];
+    const idx = ag.memories.findIndex(m => m && m.id === _memUpd[2]);
+    if(idx < 0) return jres(res,404,{error:'memory not found'});
+    if(method === 'DELETE'){
+      ag.memories.splice(idx, 1);
+    } else {
+      const body = await readBody(req);
+      if(typeof body.text === 'string') ag.memories[idx].text = body.text.trim().slice(0, 240);
+      if(body.pinned !== undefined) ag.memories[idx].pinned = !!body.pinned;
+      ag.memories[idx].updated_at = new Date().toISOString();
+    }
+    await DB.save(user);
+    return jres(res, 200, { ok: true });
+  }
+  const _kpiCreate = pathname.match(/^\/api\/agents\/([^/]+)\/kpis$/);
+  if(_kpiCreate && method === 'POST'){
+    const ag = (user.agents||[]).find(a => a.id === _kpiCreate[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const body = await readBody(req);
+    const name = String(body && body.name || '').trim().slice(0, 60);
+    if(!name) return jres(res,400,{error:'name required'});
+    const target = body.target != null ? parseFloat(body.target) : null;
+    const current = body.current != null ? parseFloat(body.current) : 0;
+    const unit = String(body && body.unit || '').slice(0, 16);
+    ag.kpis = Array.isArray(ag.kpis) ? ag.kpis : [];
+    if(ag.kpis.length >= 10) return jres(res,400,{error:'too many KPIs (max 10)'});
+    const entry = {
+      id: 'kpi_'+crypto.randomBytes(4).toString('hex'),
+      name, target, current, unit,
+      history: [{ at: new Date().toISOString(), value: current }],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    ag.kpis.push(entry);
+    await DB.save(user);
+    return jres(res, 200, { kpi: entry });
+  }
+  const _kpiUpd = pathname.match(/^\/api\/agents\/([^/]+)\/kpis\/([^/]+)$/);
+  if(_kpiUpd && (method === 'PATCH' || method === 'DELETE')){
+    const ag = (user.agents||[]).find(a => a.id === _kpiUpd[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    ag.kpis = Array.isArray(ag.kpis) ? ag.kpis : [];
+    const idx = ag.kpis.findIndex(k => k && k.id === _kpiUpd[2]);
+    if(idx < 0) return jres(res,404,{error:'kpi not found'});
+    if(method === 'DELETE'){
+      ag.kpis.splice(idx, 1);
+    } else {
+      const body = await readBody(req);
+      const k = ag.kpis[idx];
+      if(body.name !== undefined)   k.name   = String(body.name||'').trim().slice(0, 60);
+      if(body.target !== undefined) k.target = parseFloat(body.target);
+      if(body.unit !== undefined)   k.unit   = String(body.unit||'').slice(0, 16);
+      if(body.current !== undefined){
+        const v = parseFloat(body.current);
+        if(isFinite(v)){
+          k.current = v;
+          k.history = Array.isArray(k.history) ? k.history : [];
+          k.history.push({ at: new Date().toISOString(), value: v });
+          if(k.history.length > 200) k.history = k.history.slice(-200);
+        }
+      }
+      k.updated_at = new Date().toISOString();
+    }
+    await DB.save(user);
+    return jres(res, 200, { ok: true });
+  }
+  const _pbDel = pathname.match(/^\/api\/agents\/([^/]+)\/playbook\/([^/]+)$/);
+  if(_pbDel && method === 'DELETE'){
+    const ag = (user.agents||[]).find(a => a.id === _pbDel[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    ag.playbook = Array.isArray(ag.playbook) ? ag.playbook : [];
+    const idx = ag.playbook.findIndex(p => p && p.id === _pbDel[2]);
+    if(idx < 0) return jres(res,404,{error:'playbook entry not found'});
+    ag.playbook.splice(idx, 1);
+    await DB.save(user);
+    return jres(res, 200, { ok: true });
+  }
+  const _taskUpd = pathname.match(/^\/api\/agents\/([^/]+)\/tasks\/([^/]+)$/);
+  if(_taskUpd && (method === 'PATCH' || method === 'DELETE')){
+    const ag = (user.agents||[]).find(a => a.id === _taskUpd[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    ag.open_tasks = Array.isArray(ag.open_tasks) ? ag.open_tasks : [];
+    const idx = ag.open_tasks.findIndex(t => t && t.id === _taskUpd[2]);
+    if(idx < 0) return jres(res,404,{error:'task not found'});
+    if(method === 'DELETE'){
+      ag.open_tasks.splice(idx, 1);
+    } else {
+      const body = await readBody(req);
+      const t = ag.open_tasks[idx];
+      if(body.title !== undefined)        t.title        = String(body.title||'').trim().slice(0, 100);
+      if(body.status !== undefined && ['started','progress','done'].includes(body.status)) t.status = body.status;
+      if(body.progress_pct !== undefined) t.progress_pct = Math.max(0, Math.min(100, parseInt(body.progress_pct, 10) || 0));
+      if(body.notes !== undefined)        t.notes        = String(body.notes||'').slice(0, 200);
+      t.last_touched_at = new Date().toISOString();
+    }
+    await DB.save(user);
+    return jres(res, 200, { ok: true });
+  }
+  const _taskCreate = pathname.match(/^\/api\/agents\/([^/]+)\/tasks$/);
+  if(_taskCreate && method === 'POST'){
+    const ag = (user.agents||[]).find(a => a.id === _taskCreate[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const body = await readBody(req);
+    const title = String(body && body.title || '').trim().slice(0, 100);
+    if(!title) return jres(res,400,{error:'title required'});
+    ag.open_tasks = Array.isArray(ag.open_tasks) ? ag.open_tasks : [];
+    if(ag.open_tasks.length >= 50) return jres(res,400,{error:'too many tasks'});
+    const entry = {
+      id: 'tsk_'+crypto.randomBytes(4).toString('hex'),
+      title,
+      status: 'progress',
+      progress_pct: 0,
+      notes: String(body && body.notes || '').slice(0, 200),
+      started_at: new Date().toISOString(),
+      last_touched_at: new Date().toISOString(),
+    };
+    ag.open_tasks.push(entry);
+    await DB.save(user);
+    return jres(res, 200, { task: entry });
+  }
+
+  // ── POST /api/agents/:id/nudges/:nudgeId/:action ───────────
+  // action = "dismiss" | "act" — dismiss hides the card, act marks it as
+  // sent so we don't re-show it after the user clicks "話を聞く".
+  const _nm = pathname.match(/^\/api\/agents\/([^/]+)\/nudges\/([^/]+)\/(dismiss|act)$/);
+  if(_nm && method === 'POST'){
+    const agId = _nm[1], nudgeId = _nm[2], action = _nm[3];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const nudges = Array.isArray(ag.proactive_nudges) ? ag.proactive_nudges : [];
+    const n = nudges.find(x => x && x.id === nudgeId);
+    if(!n) return jres(res,404,{error:'nudge not found'});
+    if(action === 'dismiss') n.dismissed = true;
+    else                     n.acted     = true;
+    await DB.save(user);
+    return jres(res,200,{ok:true});
+  }
+
+  // ── GET /api/agents/:id/history_archive ────────────────────
+  // Returns the folded (archived) chat history for the "全履歴を見る" UI.
+  // Sliced to a sane max so a very long-lived agent doesn't blow up the wire.
+  const _ham = pathname.match(/^\/api\/agents\/([^/]+)\/history_archive$/);
+  if(_ham && method==='GET'){
+    const agId = _ham[1];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const arch = Array.isArray(ag.history_archive) ? ag.history_archive : [];
+    return jres(res, 200, {
+      count: arch.length,
+      items: arch.slice(-500),
+      summary: (ag.history||[]).find(m => m && m._summary) || null,
+    });
   }
 
   // ── POST /api/teams/activate ──────────────────────────────
@@ -7120,7 +8555,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'sonnet',
+      model: 'gemini-flash',
       history: [],
       created_at: now,
       // team_origin marks an agent as belonging to a team — DM list filters
@@ -7274,7 +8709,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'sonnet',
+      model: 'gemini-flash',
       history: [],
       created_at: now,
       team_origin: { team_id: groupId, generated: true, goal: goal.slice(0,400) },
@@ -7496,7 +8931,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'sonnet',
+      model: 'gemini-flash',
       history: [],
       created_at: now,
       team_origin: { team_id: teamId, added_after: true },
@@ -10035,7 +11470,7 @@ async function handleAPI(req,res,pathname,method,ip){
         chrome_enabled: false,
         sheets_enabled: false,
         extension_enabled: false,
-        model: 'sonnet',
+        model: 'gemini-flash',
         history: [],
         created_at: now,
         team_origin: { team_id: newGroupId, source_team_id: src.id, marketplace_origin: { listing_id: src.marketplace.listing_id, creator_user_id: found.user.id } },
@@ -10141,7 +11576,7 @@ async function handleAPI(req,res,pathname,method,ip){
         chrome_enabled: false,
         sheets_enabled: false,
         extension_enabled: false,
-        model: 'sonnet',
+        model: 'gemini-flash',
         history: [],
         created_at: now,
         team_origin: { team_id: newGroupId, source_team_id: src.id, source_share_id: src.share_id || null },
@@ -10222,20 +11657,26 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!agent) return jres(res,404,{error:'エージェントが見つかりません'});
 
     // Plan-based model gating (charged-side payer drives this).
-    // Free → Haiku only; Pro → no Opus; Biz → all. Grandfathered users keep
-    // whatever the agent's saved model says (they don't get nudged down).
+    //   Free → gemini-flash or haiku only (cheap tier)
+    //   Pro  → no Opus
+    //   Biz  → all
+    // Grandfathered users keep whatever the agent's saved model says.
     if(!_isGrandfathered(payerUser)){
       const _plan = payerUser.plan || 'free';
-      if(_plan === 'free' && agent.model !== 'haiku'){
-        agent = { ...agent, model: 'haiku' };
+      const _cheapTier = new Set(['gemini-flash', 'haiku']);
+      if(_plan === 'free' && !_cheapTier.has(agent.model)){
+        agent = { ...agent, model: 'gemini-flash' };
       } else if(_plan === 'pro' && agent.model === 'opus'){
         agent = { ...agent, model: 'sonnet' };
       }
     }
 
     const isGroup = !!agent.is_group;
-    // Free-tier / balance gate runs against the PAYER (host for groups)
-    var FREE_MSGS = 10;
+    // Free-tier / balance gate runs against the PAYER (host for groups).
+    // 10 was too tight — most users hit it before reaching their "aha"
+    // moment (multi-agent team, first creator earning, first artifact).
+    // 100 lets the user fully experience the product, then meter kicks in.
+    var FREE_MSGS = 100;
     var usageCount = payerUser.usage_count || 0;
     var balance = payerUser.balance_jpy || 0;
     if(usageCount >= FREE_MSGS && balance <= 0){
@@ -10412,7 +11853,177 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res,200,{ok:true, ai_replied:false, reply:'', balance_jpy: payerUser.balance_jpy});
     }
 
-    const hist=(agent.history||[]).slice(-14);
+    // ─────────────────────────────────────────────────────────
+    // TEAM HUDDLE — multi-agent auto-dialogue
+    // ─────────────────────────────────────────────────────────
+    // When body.huddle === true on a team chat, instead of one AI replying,
+    // every team member speaks in turn for up to MAX_ROUNDS rounds, then we
+    // emit a synthesized summary. Streamed via SSE so the UI can render each
+    // member's bubble live. Strictly text-only (no tools) to keep latency
+    // manageable inside the Render edge budget.
+    if(body.huddle === true && agent.is_team && Array.isArray(agent.team_member_agent_ids) && agent.team_member_agent_ids.length){
+      const memberAgents = agent.team_member_agent_ids
+        .map(id => (payerUser.agents||[]).find(a => a.id === id))
+        .filter(Boolean)
+        .slice(0, 6); // hard cap at 6 members
+      if(memberAgents.length === 0){
+        return jres(res,400,{error:'no team members'});
+      }
+      const MAX_ROUNDS = Math.max(1, Math.min(4, parseInt(body.huddle_rounds, 10) || 2));
+      const BUDGET_MS  = 90 * 1000;
+      const huddleStart = Date.now();
+      res.writeHead(200, {
+        'Content-Type':'text/event-stream; charset=utf-8',
+        'Cache-Control':'no-cache, no-transform',
+        'Connection':'keep-alive',
+        'X-Accel-Buffering':'no',
+        'Access-Control-Allow-Origin':APP_URL,
+      });
+      const sse = (ev, data)=>{ try{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); }catch(e){} };
+      const sseKeep = setInterval(()=>{ try{ res.write(': keepalive\n\n'); }catch(e){} }, 15000);
+      req.on('close', ()=>{ try{ clearInterval(sseKeep); }catch(e){} });
+      // Persist the user message
+      const ts0 = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+      agent.history = [...(agent.history||[]), {
+        role:'user', content:message, time:ts0,
+        user_id:user.id, user_name:speakerName, user_avatar:speakerInitial,
+      }];
+      sse('huddle_start', {
+        members: memberAgents.map(m => ({ id: m.id, name: m.name, avatar: m.avatar })),
+        rounds: MAX_ROUNDS,
+      });
+      // Conversation accumulator — every member sees the same growing transcript.
+      const transcript = [];
+      transcript.push('USER (' + speakerName + '): ' + message);
+      let totalIn = 0, totalOut = 0;
+      let stopped = false;
+      try {
+        for(let round = 1; round <= MAX_ROUNDS && !stopped; round++){
+          // Round-aware ordering: round 1 = persona order; later rounds = whoever
+          // got @mentioned in the previous round first.
+          let order = memberAgents.slice();
+          if(round > 1){
+            const lastChunk = transcript.slice(-memberAgents.length).join('\n');
+            order.sort((a, b) => {
+              const aMentioned = lastChunk.toLowerCase().includes('@' + (a.name||'').toLowerCase().replace(/\s+/g,'').slice(0,8));
+              const bMentioned = lastChunk.toLowerCase().includes('@' + (b.name||'').toLowerCase().replace(/\s+/g,'').slice(0,8));
+              return (bMentioned?1:0) - (aMentioned?1:0);
+            });
+          }
+          for(const member of order){
+            if(Date.now() - huddleStart > BUDGET_MS){ stopped = true; break; }
+            sse('huddle_turn_start', {
+              member_id: member.id,
+              member_name: member.name,
+              member_avatar: member.avatar,
+              round,
+            });
+            const otherNames = memberAgents.filter(m => m.id !== member.id).map(m => m.name).join(', ');
+            const huddleSys = `あなたは "${member.name}" として "${agent.name||'チーム'}" の議論に参加しています。\n性格・スキル: ${member.persona || ''}\nスキル: ${(member.skills||[]).join(', ')}\n他のメンバー: ${otherNames}\n\n【議論ルール (厳守)】\n- 1 発言 = 2-4 文 (200 字程度) で簡潔に\n- 他メンバーの発言があれば、その意見に対して同意/反論/補足する形で\n- 自分の専門領域に関する具体提案を 1 つ含める\n- 他メンバーに振りたい時は「@名前」で呼びかけてよい\n- 既に発言した内容を繰り返さない\n- 自分の番が終わったら短く締める (「以上です」等は不要)`;
+            const huddleMsgs = [{
+              role: 'user',
+              content: 'チームへの相談:\n' + message + '\n\nここまでの議論:\n' + transcript.join('\n') + '\n\n上記を踏まえ、' + member.name + ' として次の発言をしてください。',
+            }];
+            let memberReply = '';
+            try {
+              const info = _resolveModelInfo(member.model || 'gemini-flash');
+              const callOpts = {
+                ...info,
+                maxTokens: Math.min(600, info.maxTokens),
+              };
+              const r = await callAIStream(huddleMsgs, huddleSys,
+                (delta) => {
+                  memberReply += delta;
+                  sse('delta', { text: delta, member_id: member.id });
+                },
+                callOpts.alias || member.model || 'gemini-flash',
+                member);
+              totalIn  += (r.inputTokens || 0);
+              totalOut += (r.outputTokens || 0);
+            } catch(e){
+              sse('huddle_turn_error', { member_id: member.id, message: e.message });
+              continue;
+            }
+            const cleaned = (memberReply || '').trim();
+            if(cleaned){
+              transcript.push((member.name||'AI') + ': ' + cleaned);
+              const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+              agent.history.push({
+                role: 'assistant', content: cleaned, time: ts,
+                huddle_member_id: member.id,
+                huddle_member_name: member.name,
+                huddle_member_avatar: member.avatar,
+                huddle_round: round,
+              });
+            }
+            sse('huddle_turn_end', { member_id: member.id, round });
+          }
+          // Early stop: if the latest member explicitly says "結論" or "以上で" /
+          // "no further input", break the loop early.
+          const tail = transcript.slice(-1)[0] || '';
+          if(/(結論|まとめると|以上|no further|that['']?s all|nothing else to add)/i.test(tail)){
+            break;
+          }
+        }
+        // Summary turn — synthesize a 4-6 sentence digest of the discussion.
+        try {
+          if(Date.now() - huddleStart < BUDGET_MS && transcript.length >= 2){
+            sse('huddle_summary_start', {});
+            const sumSys = 'あなたはチームファシリテーター。下記の議論を整理してください。';
+            const sumPrompt = `元のユーザー依頼: ${message}\n\n議論:\n${transcript.join('\n')}\n\n以下の形式で簡潔に整理してください (合計 6-8 行):\n\n📋 **論点**: ...\n💡 **主な提案**: \n  - <発言者>: <提案>\n  - <発言者>: <提案>\n🎯 **次のアクション**: <ユーザーが取るべき次の 1 ステップ>\n\n出力は本文のみ。前置きや「以下に要約します」は禁止。`;
+            const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+            let summary = '';
+            await callAIStream([{role:'user', content: sumPrompt}], sumSys,
+              (delta) => { summary += delta; sse('huddle_summary_delta', { text: delta }); },
+              info.alias);
+            const cleanedSum = (summary || '').trim();
+            if(cleanedSum){
+              const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+              agent.history.push({
+                role: 'assistant', content: cleanedSum, time: ts,
+                huddle_summary: true,
+              });
+            }
+            sse('huddle_summary_end', {});
+          }
+        } catch(e){
+          sse('huddle_summary_error', { message: e.message });
+        }
+        // Cost accounting
+        const cost = calcCost(totalIn, totalOut);
+        payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
+        payerUser.usage_count = (payerUser.usage_count||0) + 1;
+        payerUser.billing_history = payerUser.billing_history || [];
+        payerUser.billing_history.push({
+          date: new Date().toISOString(), type:'usage', agentId: agent.id, agentName: agent.name,
+          input_tokens: cost.inputTok, output_tokens: cost.outputTok,
+          cost_usd: cost.usd, cost_jpy: cost.jpy, mode: 'huddle',
+        });
+        if(payerUser.billing_history.length>1000) payerUser.billing_history = payerUser.billing_history.slice(-1000);
+        if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+        const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+        if(ai>=0) payerUser.agents[ai] = agent;
+        await DB.save(payerUser);
+        sse('done', {
+          balance_jpy: payerUser.balance_jpy,
+          cost: { jpy: cost.jpy, usd: cost.usd },
+          rounds_run: Math.min(MAX_ROUNDS, Math.ceil(transcript.length / Math.max(1, memberAgents.length))),
+        });
+      } catch(e){
+        sse('error', { message: e.message });
+      }
+      clearInterval(sseKeep);
+      res.end();
+      return;
+    }
+
+    // Rolling-summary aware history selection:
+    // - Pin any leading `_summary:true` message so the AI never loses long-term
+    //   context once we've archived old turns.
+    // - Take the last 14 NON-summary entries as the recent window.
+    const _summaryMsg = (agent.history||[]).find(m => m && m._summary);
+    const _recentHist = (agent.history||[]).filter(m => !(m && m._summary)).slice(-14);
+    const hist = _summaryMsg ? [_summaryMsg, ..._recentHist] : _recentHist;
     // ユーザーメッセージのcontentを構築（画像 + PDF + テキスト/URL添付対応）
     let userContent;
     if(images.length > 0 || texts.length > 0){
@@ -10552,22 +12163,26 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
-        }, agent.model);
+        }, agent.model, agent);
         const cost = calcCost(result.inputTokens, result.outputTokens);
         const reply = streamReply || result.text || 'エラー';
         const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+        // Stable id + optional thread parent for Slack-style threading.
+        const _threadParent = body.thread_parent_id ? String(body.thread_parent_id).slice(0, 32) : null;
+        const _newUid = 'u_'+crypto.randomBytes(4).toString('hex');
+        const _newAid = 'a_'+crypto.randomBytes(4).toString('hex');
         const _userMsgEntry = isGroup
-          ? {role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial}
-          : {role:'user',content:message,time:ts};
+          ? {id:_newUid,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent}
+          : {id:_newUid,role:'user',content:message,time:ts,thread_parent_id:_threadParent};
         if(effectiveRegen){
-          agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
+          agent.history=[...(agent.history||[]),{id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent}];
         } else {
           agent.history=[...(agent.history||[]),
             _userMsgEntry,
-            {role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
+            {id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent}];
         }
         if(agent.history.length>200) agent.history = agent.history.slice(-200);
         payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
@@ -10580,6 +12195,24 @@ async function handleAPI(req,res,pathname,method,ip){
         const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
         if(ai>=0) payerUser.agents[ai] = agent;
         await DB.save(payerUser);
+        // Rolling summary — fire-and-forget so the response isn't blocked.
+        // Saves separately if it folded anything.
+        _summarizeOldHistory(agent).then(folded => {
+          if(folded){
+            const ai2 = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+            if(ai2>=0) payerUser.agents[ai2] = agent;
+            DB.save(payerUser).catch(()=>{});
+          }
+        }).catch(()=>{});
+        // After-turn enrichment: extract memories / task updates / KPI signals
+        // / playbook into the agent. Fire-and-forget, ~$0.001 per turn.
+        _afterTurnExtract(agent, { userMsg: message, aiReply: reply }).then(dirty => {
+          if(dirty){
+            const ai2 = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+            if(ai2>=0) payerUser.agents[ai2] = agent;
+            DB.save(payerUser).catch(()=>{});
+          }
+        }).catch(()=>{});
         if(agent.marketplace_origin && agent.marketplace_origin.creator_user_id && cost.jpy>0){
           creditCreatorRevenue(agent.marketplace_origin.creator_user_id, {
             listing_id: agent.marketplace_origin.listing_id,
@@ -10651,6 +12284,10 @@ async function handleAPI(req,res,pathname,method,ip){
         const hasBuildVerb = /(作って|作成して|作りたい|出して|用意して|生成して|描いて|デザインして|送って|送信して|投稿して|見せて|表示して|make|create|build|generate|send (?:me|this|it)?|show me|draw|design)/i.test(raw);
         if(!hasBuildVerb) return null;
         // Route ONLY when a specific deliverable noun is present.
+        // Edit beats generate: "この画像を変えて" / "背景を白に" / "remove the person"
+        const hasEditNoun = /(画像|写真|image|photo|picture)/i.test(raw);
+        const hasEditVerb = /(編集|変えて|差し替え|削除|消して|追加して|背景を|スタイルを|edit|remove|change.*background|replace.*background|swap)/i.test(raw);
+        if(hasEditNoun && hasEditVerb) return { type:'tool', name:'edit_image' };
         if(/(画像|イラスト|アイコン|ロゴ|illustration|icon|logo|picture|image)/i.test(raw)) return { type:'tool', name:'generate_image' };
         if(/(動画|movie|video)/i.test(raw) && !/エージェント|agent.*promo|プロモ/i.test(raw)) return { type:'tool', name:'generate_video' };
         if(/(音声|ボイス|読み上げ|tts|audio|voice|speech)/i.test(raw)) return { type:'tool', name:'generate_audio' };
@@ -10697,7 +12334,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // to chat / call more tools / stop.
           const _tc = (iters === 0 && !effectiveRegen) ? _firstToolChoice : null;
           if(_tc){ console.log('[chat] tool_choice forced:', JSON.stringify(_tc)); }
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), tools, _tc, agent.model);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -10741,6 +12378,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeSheetsTool(user, block.name, block.input||{});
             } else if(block.name === 'generate_image'){
               result = await executeImageTool(block.name, block.input||{});
+            } else if(block.name === 'edit_image'){
+              result = await executeImageEditTool(block.input||{});
             } else if(block.name === 'generate_video'){
               result = await executeVideoTool(block.name, block.input||{});
             } else if(block.name === 'generate_audio'){
@@ -10796,6 +12435,50 @@ async function handleAPI(req,res,pathname,method,ip){
             if(sse) sse('tool_result', logEntry);
           }
           convMsgs.push({role:'user', content: toolResultBlocks});
+
+          // ── Wrap-up turn skip ─────────────────────────────────
+          // When the only tool calls were self-contained "produce a final
+          // artifact" generators (image / video / audio / pdf / chart /
+          // diagram / qr / artifact), the model's next turn is a polite
+          // "Here's your X: <link>" — a full LLM round-trip we can synthesize
+          // locally. Skipping it on the first iteration cuts perceived
+          // latency for image/video gen by ~40–60%.
+          const FINAL_ARTIFACT_TOOLS = new Set([
+            'generate_image','edit_image','generate_video','generate_audio','generate_pdf',
+            'generate_chart','generate_diagram','generate_qr',
+            'generate_agent_promo_video','create_artifact',
+          ]);
+          const toolUseBlocks = (resp.content||[]).filter(b=>b.type==='tool_use');
+          const allFinalArtifact = toolUseBlocks.length > 0
+            && toolUseBlocks.every(b => FINAL_ARTIFACT_TOOLS.has(b.name));
+          const anySuccess = toolLog.slice(-toolUseBlocks.length).some(l => l && l.ok);
+          if(iters === 1 && allFinalArtifact && anySuccess){
+            const preText = (resp.content||[])
+              .filter(b => b.type==='text')
+              .map(b => b.text).join('').trim();
+            // Pull the successful tool results from this turn (last N entries).
+            const turnResults = toolLog.slice(-toolUseBlocks.length).filter(l => l && l.ok);
+            const lines = turnResults.map(l => {
+              if(l.name === 'create_artifact'){
+                const t = l.title || l.text || 'artifact';
+                return l.url ? '🎨 **'+t+'**\n'+l.url : '🎨 '+t;
+              }
+              if(l.name === 'generate_image') return l.url ? '🖼️ '+l.url : '🖼️ 画像を生成しました';
+              if(l.name === 'edit_image')     return l.url ? '✂️ '+l.url : '✂️ 画像を編集しました';
+              if(l.name === 'generate_video') return l.url ? '🎬 '+l.url : '🎬 動画を生成しました';
+              if(l.name === 'generate_audio') return l.url ? '🎵 '+l.url : '🎵 音声を生成しました';
+              if(l.name === 'generate_pdf')   return l.url ? '📄 '+l.url : '📄 PDF を生成しました';
+              if(l.name === 'generate_chart') return l.url ? '📊 '+l.url : '📊 グラフを生成しました';
+              if(l.name === 'generate_diagram')return l.url? '📐 '+l.url : '📐 図を生成しました';
+              if(l.name === 'generate_qr')    return l.url ? '🔗 '+l.url : '🔗 QR を生成しました';
+              if(l.name === 'generate_agent_promo_video') return l.url ? '🎬 '+l.url : '🎬 動画を生成しました';
+              return l.url || l.text || '完了しました';
+            });
+            reply = (preText ? preText + '\n\n' : '') + lines.join('\n');
+            // Track that we synthesized so the existing fallback below doesn't
+            // overwrite reply with empty resp.content text.
+            break;
+          }
         }
 
         // Final reply (text from last assistant turn)
@@ -10827,7 +12510,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), agent.model);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -10848,7 +12531,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), agent.model);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);
@@ -10856,15 +12539,18 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     const msgs = baseMsgs;
     const ts=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    const _threadParent2 = body.thread_parent_id ? String(body.thread_parent_id).slice(0, 32) : null;
+    const _newUid2 = 'u_'+crypto.randomBytes(4).toString('hex');
+    const _newAid2 = 'a_'+crypto.randomBytes(4).toString('hex');
     const _userMsgEntry2 = isGroup
-      ? {role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial}
-      : {role:'user',content:message,time:ts};
+      ? {id:_newUid2,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent2}
+      : {id:_newUid2,role:'user',content:message,time:ts,thread_parent_id:_threadParent2};
     if(effectiveRegen){
-      agent.history=[...(agent.history||[]),{role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
+      agent.history=[...(agent.history||[]),{id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent2}];
     } else {
       agent.history=[...(agent.history||[]),
         _userMsgEntry2,
-        {role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy}];
+        {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent2}];
     }
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
     payerUser.balance_jpy=Math.round(((payerUser.balance_jpy||0)-cost.jpy)*1000)/1000;
@@ -10877,6 +12563,22 @@ async function handleAPI(req,res,pathname,method,ip){
     const ai=(payerUser.agents||[]).findIndex(a=>a.id===agent.id);
     if(ai>=0)payerUser.agents[ai]=agent;
     await DB.save(payerUser);
+    // Rolling summary — fire-and-forget. If it folds, re-save.
+    _summarizeOldHistory(agent).then(folded => {
+      if(folded){
+        const ai2 = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+        if(ai2>=0) payerUser.agents[ai2] = agent;
+        DB.save(payerUser).catch(()=>{});
+      }
+    }).catch(()=>{});
+    // After-turn enrichment — memories / tasks / KPI / playbook.
+    _afterTurnExtract(agent, { userMsg: message, aiReply: reply }).then(dirty => {
+      if(dirty){
+        const ai2 = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+        if(ai2>=0) payerUser.agents[ai2] = agent;
+        DB.save(payerUser).catch(()=>{});
+      }
+    }).catch(()=>{});
     // Credit the marketplace creator (#5 revenue ledger) — fire-and-forget
     if(agent.marketplace_origin && agent.marketplace_origin.creator_user_id && cost.jpy>0){
       creditCreatorRevenue(agent.marketplace_origin.creator_user_id, {

@@ -11176,6 +11176,17 @@ async function _sendMsgStream(ag, text, imgs, texts){
     ag.history.pop();                    // drop the empty streaming bubble
     throw new Error(errorMsg);
   }
+  // Fallback: stream ended without a 'done' SSE event (Render edge cut,
+  // Anthropic max_tokens, network blip etc.). The placeholder bubble would
+  // otherwise stay in `streaming:true` forever with no Continue button. Mark
+  // it truncated so the ▶ 続きを書く action appears.
+  const _lastStreaming = ag.history[ag.history.length - 1];
+  if(_lastStreaming && _lastStreaming.streaming){
+    _lastStreaming.content = (acc || '').trim() || (isJa ? '応答が途中で切れました' : 'Reply was cut short');
+    _lastStreaming.streaming = false;
+    _lastStreaming.truncated = true;
+    renderMsgs(ag);
+  }
 }
 
 // Renders the streaming bubble: tool log (if any) + the markdown text + cursor.

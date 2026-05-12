@@ -12497,9 +12497,12 @@ async function handleAPI(req,res,pathname,method,ip){
             && toolUseBlocks.every(b => FINAL_ARTIFACT_TOOLS.has(b.name));
           const anySuccess = toolLog.slice(-toolUseBlocks.length).some(l => l && l.ok);
           if(iters === 1 && allFinalArtifact && anySuccess){
-            const preText = (resp.content||[])
-              .filter(b => b.type==='text')
-              .map(b => b.text).join('').trim();
+            // NOTE: do NOT re-include the AI's preamble text here. By the time
+            // we reach this point the iter-0 text has ALREADY been streamed to
+            // the client via the reasonText path above. Including it again
+            // here would cause the chunk-streaming loop after the main loop
+            // to re-emit the same paragraph, which showed up as visible
+            // duplication ("見えてます！…" appearing twice in the bubble).
             // Pull the successful tool results from this turn (last N entries).
             const turnResults = toolLog.slice(-toolUseBlocks.length).filter(l => l && l.ok);
             const lines = turnResults.map(l => {
@@ -12518,7 +12521,7 @@ async function handleAPI(req,res,pathname,method,ip){
               if(l.name === 'generate_agent_promo_video') return l.url ? '🎬 '+l.url : '🎬 動画を生成しました';
               return l.url || l.text || '完了しました';
             });
-            reply = (preText ? preText + '\n\n' : '') + lines.join('\n');
+            reply = lines.join('\n');
             // Track that we synthesized so the existing fallback below doesn't
             // overwrite reply with empty resp.content text.
             break;
@@ -12536,13 +12539,18 @@ async function handleAPI(req,res,pathname,method,ip){
         // Use Array.from() to iterate by code points (Unicode-aware), so emojis and
         // surrogate-pair characters never get split across chunk boundaries.
         if(sse && reply){
+          // Faster pseudo-stream of the final reply. Was 25 chars + 8ms (≈ 1-2s
+          // of artificial typewriter delay on long replies). Bumped to 200
+          // chars + 0ms so the artifact / URL appears near-instantly once
+          // the loop ends; the user still sees streaming-style growth instead
+          // of a single dump because Anthropic's chunk arrival itself paces
+          // delivery during iteration loops.
           const chars = Array.from(reply);
-          const chunkSize = 25;
+          const chunkSize = 200;
           for(let i=0; i<chars.length; i+=chunkSize){
             const chunk = chars.slice(i, i+chunkSize).join('');
             streamedText += chunk;
             sse('delta', { text: chunk });
-            await new Promise(r=>setTimeout(r, 8));
           }
         }
         // Save the full streamed transcript (intermediate reasoning + final answer)

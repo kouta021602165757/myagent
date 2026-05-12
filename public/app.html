@@ -8724,10 +8724,15 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     var threadId = raw && raw.id;
     var threadN  = threadId && ag && ag._threadCounts ? (ag._threadCounts[threadId]||0) : 0;
     var threadBtn = threadId ? '<button class="m-act" onclick="_openThread(\''+esc(threadId)+'\')" title="'+L('スレッドで返信','Reply in thread')+'">💬 '+(threadN>0?threadN:L('スレッド','Thread'))+'</button>' : '';
+    // Delete button — shown on own DMs / hosted-group messages. Joined-group
+    // messages can't be deleted (server returns 403); we hide the button there.
+    var delBtn = (idx>=0 && !(ag && ag._is_joined_group))
+      ? '<button class="m-act" onclick="deleteMsg(this)" title="'+(isJa?'メッセージを削除':'Delete message')+'">🗑</button>'
+      : '';
     if(isU){
       // Only show edit on your own user messages (not other group members').
       var editBtn = isMyMsg ? '<button class="m-act" onclick="editMsgStart(this)" title="'+(isJa?'編集して再生成':'Edit & resend')+'">✏️ '+(isJa?'編集':'Edit')+'</button>' : '';
-      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+editBtn+threadBtn+bmBtn+pinBtn;
+      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+editBtn+threadBtn+bmBtn+pinBtn+delBtn;
     } else {
       // "Remember this" — saves the assistant reply (truncated to 400 chars)
       // to long-term memories so it persists across chats.
@@ -8739,7 +8744,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
              threadBtn+
              rememberBtn+
              '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊</button>'+
-             bmBtn+pinBtn;
+             bmBtn+pinBtn+delBtn;
     }
     // Continue button — only assistant messages cut off at max_tokens.
     if(!isU && raw && raw.truncated){
@@ -9691,6 +9696,26 @@ async function rememberMsg(btn){
     await api('POST','/api/me/memories',{ text });
     showToast(isJa?'✓ 記憶に保存しました':'✓ Saved to memory','ok');
   } catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+
+/* ── Delete a single message (Slack / LINE-style) ───── */
+async function deleteMsg(btn){
+  if(!activeId) return;
+  var row = btn.closest('.m'); if(!row) return;
+  var idx = parseInt(row.dataset.idx, 10);
+  if(!Number.isInteger(idx) || idx < 0) return;
+  if(!confirm(isJa ? 'このメッセージを削除しますか?\n（履歴から完全に消えます）' : 'Delete this message?\n(Removed from history permanently)')) return;
+  try {
+    await api('DELETE', '/api/agents/'+activeId+'/messages/'+idx);
+    var ag = (agents||[]).find(function(a){return a.id===activeId;});
+    if(ag && Array.isArray(ag.history)){
+      ag.history.splice(idx, 1);
+      renderMsgs(ag);
+    }
+    showToast(isJa ? '削除しました' : 'Deleted', 'ok');
+  } catch(e){
+    showToast((e && e.message) || (isJa?'削除に失敗':'Delete failed'), 'ng');
+  }
 }
 
 /* ── Reply (quote-reply) ────────────────────────────── */

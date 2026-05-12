@@ -8270,6 +8270,38 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{agent:ag});
   }
 
+  // ── DELETE /api/agents/:id/messages/:idx ───────────────────
+  // Slack/LINE-style: let the user remove an unwanted message from a chat.
+  // For DMs: any message in their own agent's history.
+  // For groups: only your own messages, or any message if you're the host.
+  // (Server-side guard mirrors the UI's hover-only delete button.)
+  const _delMsgM = pathname.match(/^\/api\/agents\/([^/]+)\/messages\/(\d+)$/);
+  if(_delMsgM && method === 'DELETE'){
+    const agId = _delMsgM[1];
+    const idx  = parseInt(_delMsgM[2], 10);
+    // v1: only agents in the user's own list (covers DMs + hosted groups).
+    // Joined-group message deletion is out of scope until we add host-lookup.
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    if(!Array.isArray(ag.history) || idx < 0 || idx >= ag.history.length){
+      return jres(res,400,{error:'invalid index'});
+    }
+    const target = ag.history[idx];
+    if(!target) return jres(res,404,{error:'message not found'});
+    // Group permission: only sender or host can delete (host = the agent's owner = user here).
+    if(ag.is_group){
+      const isSender = target.user_id === user.id;
+      // The agent lives in user.agents, so user is the host.
+      const isHost = true;
+      if(!isHost && !isSender){
+        return jres(res,403,{error:'permission denied'});
+      }
+    }
+    ag.history.splice(idx, 1);
+    await DB.save(user);
+    return jres(res, 200, { ok:true, idx });
+  }
+
   // ── POST /api/agents/:id/stickers/generate ─────────────────
   // Pick 6 emoji that fit this agent's persona / skills. Cheap (Gemini Flash
   // single call ~$0.0003) but gives the agent a recognizable "sticker pack".
@@ -12376,16 +12408,18 @@ async function handleAPI(req,res,pathname,method,ip){
             const partial = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
             if(successes.length){
               const lines = successes.map(l => {
-                if(l.name === 'create_artifact') return '🎨 **' + (l.title || 'artifact') + '**\n' + l.url;
-                if(l.name === 'generate_image')  return '🖼️ ' + l.url;
-                if(l.name === 'edit_image')      return '✂️ ' + l.url;
-                if(l.name === 'generate_video' || l.name === 'generate_agent_promo_video') return '🎬 ' + l.url;
-                if(l.name === 'generate_audio')  return '🎵 ' + l.url;
-                if(l.name === 'generate_pdf')    return '📄 ' + l.url;
-                if(l.name === 'generate_chart')  return '📊 ' + l.url;
-                if(l.name === 'generate_diagram')return '📐 ' + l.url;
-                if(l.name === 'generate_qr')     return '🔗 ' + l.url;
-                return l.url;
+                // Same markdown-link policy as wrap-up skip — make all URLs
+                // clickable / inline-rendered.
+                if(l.name === 'create_artifact') return '🎨 [**' + (l.title || 'artifact') + '**](' + l.url + ')';
+                if(l.name === 'generate_image')  return '🖼️ ![](' + l.url + ')';
+                if(l.name === 'edit_image')      return '✂️ ![](' + l.url + ')';
+                if(l.name === 'generate_video' || l.name === 'generate_agent_promo_video') return '🎬 ![](' + l.url + ')';
+                if(l.name === 'generate_audio')  return '🎵 ![](' + l.url + ')';
+                if(l.name === 'generate_pdf')    return '📄 [PDF を開く](' + l.url + ')';
+                if(l.name === 'generate_chart')  return '📊 ![](' + l.url + ')';
+                if(l.name === 'generate_diagram')return '📐 ![](' + l.url + ')';
+                if(l.name === 'generate_qr')     return '🔗 ![](' + l.url + ')';
+                return '[開く](' + l.url + ')';
               });
               reply = (partial ? partial + '\n\n' : '✅ 完成しました\n\n')
                 + lines.join('\n')
@@ -12506,20 +12540,23 @@ async function handleAPI(req,res,pathname,method,ip){
             // Pull the successful tool results from this turn (last N entries).
             const turnResults = toolLog.slice(-toolUseBlocks.length).filter(l => l && l.ok);
             const lines = turnResults.map(l => {
+              // Wrap URLs in markdown so the chat renderer turns them into
+              // clickable links / inline images / video tags. Plain text URLs
+              // were getting shown as text instead of being openable.
               if(l.name === 'create_artifact'){
                 const t = l.title || l.text || 'artifact';
-                return l.url ? '🎨 **'+t+'**\n'+l.url : '🎨 '+t;
+                return l.url ? '🎨 [**'+t+'**]('+l.url+')' : '🎨 '+t;
               }
-              if(l.name === 'generate_image') return l.url ? '🖼️ '+l.url : '🖼️ 画像を生成しました';
-              if(l.name === 'edit_image')     return l.url ? '✂️ '+l.url : '✂️ 画像を編集しました';
-              if(l.name === 'generate_video') return l.url ? '🎬 '+l.url : '🎬 動画を生成しました';
-              if(l.name === 'generate_audio') return l.url ? '🎵 '+l.url : '🎵 音声を生成しました';
-              if(l.name === 'generate_pdf')   return l.url ? '📄 '+l.url : '📄 PDF を生成しました';
-              if(l.name === 'generate_chart') return l.url ? '📊 '+l.url : '📊 グラフを生成しました';
-              if(l.name === 'generate_diagram')return l.url? '📐 '+l.url : '📐 図を生成しました';
-              if(l.name === 'generate_qr')    return l.url ? '🔗 '+l.url : '🔗 QR を生成しました';
-              if(l.name === 'generate_agent_promo_video') return l.url ? '🎬 '+l.url : '🎬 動画を生成しました';
-              return l.url || l.text || '完了しました';
+              if(l.name === 'generate_image') return l.url ? '🖼️ ![]('+l.url+')' : '🖼️ 画像を生成しました';
+              if(l.name === 'edit_image')     return l.url ? '✂️ ![]('+l.url+')' : '✂️ 画像を編集しました';
+              if(l.name === 'generate_video') return l.url ? '🎬 ![]('+l.url+')' : '🎬 動画を生成しました';
+              if(l.name === 'generate_audio') return l.url ? '🎵 ![]('+l.url+')' : '🎵 音声を生成しました';
+              if(l.name === 'generate_pdf')   return l.url ? '📄 [PDF を開く]('+l.url+')' : '📄 PDF を生成しました';
+              if(l.name === 'generate_chart') return l.url ? '📊 ![]('+l.url+')' : '📊 グラフを生成しました';
+              if(l.name === 'generate_diagram')return l.url? '📐 ![]('+l.url+')' : '📐 図を生成しました';
+              if(l.name === 'generate_qr')    return l.url ? '🔗 ![]('+l.url+')' : '🔗 QR を生成しました';
+              if(l.name === 'generate_agent_promo_video') return l.url ? '🎬 ![]('+l.url+')' : '🎬 動画を生成しました';
+              return l.url ? '[開く]('+l.url+')' : (l.text || '完了しました');
             });
             reply = lines.join('\n');
             // Track that we synthesized so the existing fallback below doesn't

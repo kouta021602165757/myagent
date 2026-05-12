@@ -10229,7 +10229,15 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     }
     if(!regenerate && !message?.trim() && images.length===0 && texts.length===0) return jres(res,400,{error:'メッセージを入力してください'});
-    if(message.length>4000)return jres(res,400,{error:'メッセージが長すぎます'});
+    // Cap at 50 KB so code paste + commentary fits. (Was 4000 chars which
+    // broke even a small React component.) Anthropic input budget is ~200K
+    // tokens so 50KB user message + history + tools is comfortable.
+    const MSG_CAP = 50000;
+    if(message.length > MSG_CAP){
+      return jres(res,400,{
+        error:`メッセージが長すぎます (${message.length.toLocaleString()} 文字 / 上限 ${MSG_CAP.toLocaleString()})。コードならファイル添付 (📎) でアップロードしてください — 添付なら ${(200*1024).toLocaleString()} 文字までいけます。`,
+      });
+    }
 
     // Edit: replace a past user message and resend.
     //   edit_index: 0-based index of the user message to overwrite.

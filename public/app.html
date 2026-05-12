@@ -2072,6 +2072,8 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
 
 /* ── Mobile / Tablet (≤700px) — slide-in drawer for sidebar ── */
 @media(max-width:700px){
+  /* Tighten the chat header by hiding low-priority badges on phones. */
+  .hide-on-mobile{display:none !important}
   :root{--sb:0px;}
   .layout{grid-template-columns:1fr;}
   /* Sidebar becomes a slide-in drawer (closed by default) */
@@ -3950,11 +3952,15 @@ body{color:#f0f0f8;}
     font-size:12.5px;font-weight:800;color:var(--text);user-select:none;
   }
   .ea-acc > summary::-webkit-details-marker{display:none}
-  .ea-acc > summary::after{content:'›';margin-left:auto;color:var(--text3);font-size:14px;transition:.15s;transform:rotate(0)}
+  /* The label span has flex:1 to claim leftover space, so the count + arrow
+     pin to the right consistently — with or without a count text. Previously
+     both .cnt and ::after had margin-left:auto, which split space unevenly
+     and made the arrow drift left when no count was present (高度な設定 / 削除). */
+  .ea-acc > summary .ea-label{flex:1;min-width:0}
+  .ea-acc > summary .cnt{font-size:10.5px;color:var(--text3);font-weight:700}
+  .ea-acc > summary::after{content:'›';color:var(--text3);font-size:16px;font-weight:700;transition:.15s;transform:rotate(0);margin-left:8px}
   .ea-acc[open] > summary::after{transform:rotate(90deg)}
   .ea-acc > summary:hover{background:var(--cream2)}
-  .ea-acc > summary .cnt{font-size:10.5px;color:var(--text3);font-weight:700;margin-left:auto}
-  .ea-acc > summary::after{margin-left:8px}
   .ea-acc[open] > summary{border-bottom:1px solid var(--wire2)}
   .ea-acc-body{padding:12px 14px;display:flex;flex-direction:column;gap:11px;background:#fdfcfa}
   .ea-row{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--wire)}
@@ -4022,7 +4028,7 @@ body{color:#f0f0f8;}
     <details class="ea-acc">
       <summary>
         <span>🔌</span>
-        <span>ツール連携</span>
+        <span class="ea-label">ツール連携</span>
         <span class="cnt" id="editToolsCnt">—</span>
       </summary>
       <div class="ea-acc-body">
@@ -4063,7 +4069,7 @@ body{color:#f0f0f8;}
     <details class="ea-acc" id="editKbBox">
       <summary>
         <span>📚</span>
-        <span>ナレッジベース</span>
+        <span class="ea-label">ナレッジベース</span>
         <span class="cnt" id="editKbCnt">—</span>
       </summary>
       <div class="ea-acc-body">
@@ -4078,7 +4084,7 @@ body{color:#f0f0f8;}
     <details class="ea-acc">
       <summary>
         <span>⚙</span>
-        <span>高度な設定</span>
+        <span class="ea-label">高度な設定</span>
       </summary>
       <div class="ea-acc-body">
         <!-- Webhook -->
@@ -4128,7 +4134,7 @@ body{color:#f0f0f8;}
     <details class="ea-acc" style="border-color:rgba(239,68,68,.25)">
       <summary style="color:#dc2626">
         <span>⚠️</span>
-        <span>削除</span>
+        <span class="ea-label">削除</span>
       </summary>
       <div class="ea-acc-body" style="background:rgba(239,68,68,.03)">
         <div class="desc" style="font-size:11px;color:var(--text2);line-height:1.55">このエージェントと会話履歴がすべて削除されます。元に戻せません。</div>
@@ -8142,16 +8148,22 @@ async function openAgent(id){
   const isGroup = !!ag.is_group;
   const memberCount = (ag.members||[]).length;
   const sns=(ag.skills||[]).map(s=>SKILLS.find(x=>x.id===s)?.name||s);
-  var topPills = sns.map(n=>`<span class="pill">${n}</span>`).join('');
-  if(ag.chrome_enabled){
-    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+(isJa?'Web 検索 / URL 取得 有効':'Web search / fetch enabled')+'">🌐 Web</span>';
-  }
+  // Simplified header: drop the per-skill pill array. Skills are visible in
+  // the avatar/profile panel; chat header should be uncluttered.
+  // We only keep ONE context badge:
+  //   - Team chats: 🎯 N AI
+  //   - Hosted groups: 🤝 N 名
+  //   - DMs with Web tool ON: 🌐 Web
+  //   - Otherwise: nothing (cleaner)
+  var topPills = '';
   const isTeam = !!(ag.is_team && Array.isArray(ag.team_member_agent_ids));
   const teamCount = isTeam ? ag.team_member_agent_ids.length : 0;
   if(isTeam){
     topPills += '<span class="pill" style="background:rgba(251,146,60,.14);color:var(--peach-dark);border-color:rgba(251,146,60,.3)">🎯 '+L('チーム','Team')+' · '+teamCount+' AI</span>';
   } else if(isGroup){
-    topPills += '<span class="pill" style="background:rgba(99,102,241,.12);color:#4f46e5;border-color:rgba(99,102,241,.3)">🤝 グループ · '+memberCount+'名</span>';
+    topPills += '<span class="pill" style="background:rgba(99,102,241,.12);color:#4f46e5;border-color:rgba(99,102,241,.3)">🤝 '+memberCount+'</span>';
+  } else if(ag.chrome_enabled){
+    topPills += '<span class="pill" style="background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)" title="'+(isJa?'Web 検索 / URL 取得 有効':'Web search / fetch enabled')+'">🌐 Web</span>';
   }
   // Action buttons differ for groups (host shows ＋招待, member shows メンバー)
   const isHost = isGroup && ag.host_id === me?.id;
@@ -8191,7 +8203,12 @@ async function openAgent(id){
   var ctxPct = Math.min(100, Math.round(ctxTok / ctxBudget * 100));
   var ctxColor = ctxPct < 50 ? 'var(--text3)' : ctxPct < 80 ? 'var(--peach-dark)' : '#dc2626';
   var ctxLbl = ctxTok >= 1000 ? (ctxTok/1000).toFixed(1)+'k' : String(ctxTok);
-  var ctxPill = '<span class="ct-ctx" title="'+(isJa?'コンテキスト使用量 (推定)':'Context window used (approx)')+'" style="font-size:10px;font-weight:700;color:'+ctxColor+';background:var(--cream2);border:1px solid var(--wire2);padding:3px 8px;border-radius:99px;letter-spacing:.02em;font-family:\'SF Mono\',Menlo,monospace">'+ctxLbl+' / 200k</span>';
+  // Context usage pill — desktop only, and only meaningful when filling up.
+  // Hidden on phones (saves header space) and hidden when usage < 25% on
+  // desktop (less noise for new chats).
+  var ctxPill = (ctxPct >= 25)
+    ? '<span class="ct-ctx hide-on-mobile" title="'+(isJa?'コンテキスト使用量 (推定)':'Context window used (approx)')+'" style="font-size:10px;font-weight:700;color:'+ctxColor+';background:var(--cream2);border:1px solid var(--wire2);padding:3px 8px;border-radius:99px;letter-spacing:.02em;font-family:\'SF Mono\',Menlo,monospace">'+ctxLbl+' / 200k</span>'
+    : '';
   // Quick model picker pill — click to switch between Fast / Smart / Best
   // without opening the full edit panel. Saved per-agent via PATCH.
   var _modelMap = {'gemini-flash':{lbl:'⚡ Fast',title:'Gemini 2.5 Flash · 超高速'},

@@ -34,6 +34,10 @@ const GEMINI_KEY   = process.env.GEMINI_API_KEY||'';
 const FAL_KEY      = process.env.FAL_KEY||'';            // FLUX 1.1 Pro Ultra + FLUX Kontext
 const RECRAFT_KEY  = process.env.RECRAFT_KEY||'';        // Recraft V3 — typography/logo/vector
 const IDEOGRAM_KEY = process.env.IDEOGRAM_KEY||'';       // Ideogram V3 — text-in-image
+// OpenAI — used for `text-embedding-3-small` (1536-dim) to power vector
+// retrieval in the knowledge base. Falls back to CJK bigram scoring when
+// the key isn't set, so the app keeps working on a fresh install.
+const OPENAI_KEY   = process.env.OPENAI_API_KEY||'';
 const SUPA_URL     = process.env.SUPABASE_URL||'';
 const SUPA_KEY     = process.env.SUPABASE_SERVICE_KEY||'';
 const STRIPE_SK    = process.env.STRIPE_SECRET_KEY||'';
@@ -294,12 +298,14 @@ function safe(u){
   const{password:_,verify_token:__,reset_token:___,reset_expiry:____,
         google_oauth:gOAuth,
         extension_device_token:extTok,
+        github_pat:ghPat,
         ...s}=u;
   // Expose only the *connection state* — never the secret tokens themselves.
   s.google_sheets_connected = !!(gOAuth && gOAuth.refresh_token);
   s.google_sheets_email = (gOAuth && gOAuth.email) || null;
   s.extension_paired = !!extTok;
   s.extension_connected = !!(extTok && _extConnections.has(extTok));
+  s.github_connected = !!ghPat;
   // Plan v2 surface (frontend uses this to render correct credit amount and
   // gate Team / agent-cap UIs without doing date math itself).
   s.plan_v2_grandfathered = _isGrandfathered(u);
@@ -1514,9 +1520,132 @@ function ngramSize(s){
 // a card at the top of that agent's chat on next open. Click → injected
 // as a user message and the conversation continues. Dismiss → marked
 // read. This is the cheapest possible "alive feel" without any cron.
+// ── KPI ALERT nudges ──────────────────────────────────────────
+// Triggered before the conversational nudge in _maybeGenerateNudgeForUser.
+// When any KPI dips < 80% of target and hasn't fired an alert in 7 days,
+// emit a focused nudge to the owning agent. Bypasses the 22h global cooldown
+// because KPI dips are time-sensitive (better one extra ping than missing it).
+async function _maybeGenerateKpiAlert(user){
+  try {
+    if(!user || !Array.isArray(user.agents)) return false;
+    const now = Date.now();
+    for(const ag of user.agents){
+      if(!ag || ag.is_group) continue;
+      const kpis = Array.isArray(ag.kpis) ? ag.kpis : [];
+      // Skip if there's an undismissed nudge already (avoid stacking).
+      const nudges = Array.isArray(ag.proactive_nudges) ? ag.proactive_nudges : [];
+      if(nudges.find(n => n && !n.dismissed && !n.acted)) continue;
+      for(const k of kpis){
+        if(!k || k.target == null || k.current == null) continue;
+        const target = parseFloat(k.target);
+        const current = parseFloat(k.current);
+        if(!isFinite(target) || target === 0 || !isFinite(current)) continue;
+        const ratio = current / target;
+        if(ratio >= 0.8) continue;             // healthy — skip
+        const lastAlert = k.last_alert_at ? new Date(k.last_alert_at).getTime() : 0;
+        if(now - lastAlert < 7 * 86400000) continue;  // already alerted recently
+        const pct = Math.round(ratio * 100);
+        const text = '📉 ' + k.name + ' が目標未達: '
+          + current + (k.unit||'') + ' / 目標 ' + target + (k.unit||'')
+          + ' (' + pct + '%)。改善策を一緒に考えませんか?';
+        ag.proactive_nudges = nudges;
+        ag.proactive_nudges.push({
+          id: 'nud_'+crypto.randomBytes(5).toString('hex'),
+          text,
+          source: 'kpi-alert',
+          kpi_id: k.id,
+          created_at: new Date().toISOString(),
+          dismissed: false,
+          acted: false,
+        });
+        if(ag.proactive_nudges.length > 5) ag.proactive_nudges = ag.proactive_nudges.slice(-5);
+        k.last_alert_at = new Date().toISOString();
+        ag.last_nudge_at = new Date().toISOString();
+        user.last_nudge_global_at = new Date().toISOString();
+        await DB.save(user);
+        console.log('[nudge:kpi-alert] agent=' + ag.id + ' kpi=' + k.name + ' ratio=' + pct + '%');
+        return true; // one per call
+      }
+    }
+    return false;
+  } catch(e){
+    console.warn('[nudge:kpi-alert] failed:', e.message);
+    return false;
+  }
+}
+
+// ── WEEKLY DIGEST nudge ───────────────────────────────────────
+// On Monday morning (JST), pick the most-active agent and generate a
+// "今週のまとめ + 今週やること" digest as a proactive nudge. Fires at most
+// once per ISO week per user.
+async function _maybeGenerateWeeklyDigest(user){
+  try {
+    if(!user || !Array.isArray(user.agents)) return false;
+    const now = new Date();
+    // Convert to JST (UTC+9) to decide what "Monday morning" means.
+    const jst = new Date(now.getTime() + 9 * 3600 * 1000);
+    if(jst.getUTCDay() !== 1) return false;        // 1 = Monday
+    if(jst.getUTCHours() < 7 || jst.getUTCHours() > 12) return false; // 7-12 JST window
+    const last = user.last_weekly_digest_at ? new Date(user.last_weekly_digest_at).getTime() : 0;
+    if(Date.now() - last < 6 * 86400000) return false;
+    // Pick the agent with most history in the last 7 days.
+    const activeAgents = (user.agents||[]).filter(a => a && !a.is_group && Array.isArray(a.history) && a.history.length >= 6);
+    if(activeAgents.length === 0) return false;
+    activeAgents.sort((a,b) => b.history.length - a.history.length);
+    const ag = activeAgents[0];
+    // Avoid stacking on an existing undismissed nudge.
+    const nudges = Array.isArray(ag.proactive_nudges) ? ag.proactive_nudges : [];
+    if(nudges.find(n => n && !n.dismissed && !n.acted)) return false;
+    const recent = ag.history.slice(-20).map(m => {
+      const role = m.role === 'assistant' ? ag.name : (m.user_name || 'USER');
+      const body = typeof m.content === 'string' ? m.content : '';
+      return role + ': ' + body.slice(0, 200);
+    }).join('\n');
+    const kpiBlock = (ag.kpis||[]).slice(0,4).map(k => '・' + k.name + ': ' + (k.current||'?') + '/' + (k.target||'?')+(k.unit||'')).join('\n');
+    const prompt = '今週のまとめを 1 つの「つぶやき」として 100 字以内で生成してください。形式: 「先週は X、Y。今週は Z をやりませんか?」\n\n直近の会話:\n' + recent + '\n\nKPI:\n' + (kpiBlock || '(なし)') + '\n\n出力は本文のみ。';
+    const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+    let text = '';
+    if(info.provider === 'gemini'){
+      const r = await _callGemini([{role:'user', content: prompt}], '', info);
+      text = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+    } else if(ANTHROPIC){
+      const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
+        {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+        { model: info.modelId, max_tokens: 200, messages:[{role:'user', content: prompt}] },
+        { timeout: 25000 });
+      if(r.s === 200) text = (r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
+    }
+    if(!text || text.length < 12) return false;
+    text = '📅 今週のまとめ\n' + text;
+    if(text.length > 280) text = text.slice(0, 280);
+    ag.proactive_nudges = nudges;
+    ag.proactive_nudges.push({
+      id: 'nud_'+crypto.randomBytes(5).toString('hex'),
+      text, source:'weekly-digest',
+      created_at: new Date().toISOString(),
+      dismissed:false, acted:false,
+    });
+    if(ag.proactive_nudges.length > 5) ag.proactive_nudges = ag.proactive_nudges.slice(-5);
+    ag.last_nudge_at = new Date().toISOString();
+    user.last_nudge_global_at = new Date().toISOString();
+    user.last_weekly_digest_at = new Date().toISOString();
+    await DB.save(user);
+    console.log('[nudge:weekly] agent=' + ag.id);
+    return true;
+  } catch(e){
+    console.warn('[nudge:weekly] failed:', e.message);
+    return false;
+  }
+}
+
 async function _maybeGenerateNudgeForUser(user){
   try {
     if(!user || !Array.isArray(user.agents) || user.agents.length === 0) return false;
+    // KPI alert has priority — fires even if regular cooldown not elapsed,
+    // because a KPI dip is time-sensitive.
+    if(await _maybeGenerateKpiAlert(user)) return true;
+    // Weekly digest — Monday morning, once per week.
+    if(await _maybeGenerateWeeklyDigest(user)) return true;
     const now = Date.now();
     // Global daily throttle.
     if(user.last_nudge_global_at && now - new Date(user.last_nudge_global_at).getTime() < 22 * 3600 * 1000) return false;
@@ -3036,6 +3165,140 @@ function _encodeForMd(s){
 }
 
 // ── Server-side public-web tools (no extension required) ────────────
+// ── GitHub integration tools ──────────────────────────────────
+// Indie / solo developers store their "second brain" in GitHub repos:
+// READMEs, issue threads, commit messages, design docs. With a personal
+// access token (PAT) the AI can read this context and answer specifically
+// against the user's actual codebase — something ChatGPT structurally
+// cannot do.
+// MVP: read-only (search / read / list). Write support (create issue,
+// open PR comment) deferred to phase 2.
+const GITHUB_TOOLS = [
+  {
+    name:'github_search_code',
+    description:'GitHub のあなたのリポジトリ全体からコード検索。"todo handler" のような自然語クエリでも OK。返ってきたファイルパスは github_get_file で詳細を取得できます。',
+    input_schema:{
+      type:'object',
+      properties:{
+        query:{type:'string',description:'検索文字列 (関数名 / TODO 文字列 / 設定キー など)'},
+        repo:{type:'string',description:'特定 repo に限定する場合: owner/repo 形式 (任意)'},
+        max_results:{type:'integer',description:'最大件数 (1-20, 既定 8)'},
+      },
+      required:['query'],
+    },
+  },
+  {
+    name:'github_get_file',
+    description:'GitHub repo 内の特定ファイルの中身を取得。README、設定ファイル、コードファイルなど。',
+    input_schema:{
+      type:'object',
+      properties:{
+        repo:{type:'string',description:'owner/repo 形式 (例: myorg/myapp)'},
+        path:{type:'string',description:'リポジトリルートからのファイルパス (例: src/index.ts)'},
+        ref:{type:'string',description:'ブランチ / コミット / タグ (任意, 既定 default branch)'},
+      },
+      required:['repo','path'],
+    },
+  },
+  {
+    name:'github_list_issues',
+    description:'GitHub repo の Issue / PR を一覧。タイトル + 本文の冒頭 + 状態を返す。バグ調査・タスク棚卸しに使う。',
+    input_schema:{
+      type:'object',
+      properties:{
+        repo:{type:'string',description:'owner/repo 形式'},
+        state:{type:'string',enum:['open','closed','all'],description:'状態フィルタ (既定 open)'},
+        labels:{type:'string',description:'カンマ区切りラベル (任意)'},
+        max_results:{type:'integer',description:'最大件数 (1-30, 既定 10)'},
+      },
+      required:['repo'],
+    },
+  },
+];
+
+async function executeGitHubTool(user, name, input){
+  const pat = (user && (user.github_pat || (user.integrations && user.integrations.github && user.integrations.github.pat))) || '';
+  if(!pat){
+    return { error: 'GitHub PAT が未登録です。設定 → 連携 で Personal Access Token を登録してください。' };
+  }
+  const headers = {
+    'Authorization': 'Bearer ' + pat,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'MY-AI-Agent',
+  };
+  const getJson = (path) => new Promise((resolve)=>{
+    const url = new URL('https://api.github.com' + path);
+    const req = https.request({
+      hostname: url.hostname, path: url.pathname + url.search, method:'GET', headers,
+    }, (r)=>{
+      let buf=''; r.on('data', c => buf += c);
+      r.on('end', ()=>{ try { resolve({ status:r.statusCode, data: JSON.parse(buf||'null') }); } catch(e){ resolve({status:r.statusCode, data:null, raw:buf}); } });
+    });
+    req.on('error', e => resolve({status:0, data:null, error:e.message}));
+    req.setTimeout(25000, ()=> req.destroy(new Error('timeout')));
+    req.end();
+  });
+  try {
+    if(name === 'github_search_code'){
+      const q = String(input.query||'').trim();
+      if(!q) return { error: 'query required' };
+      const max = Math.max(1, Math.min(20, parseInt(input.max_results)||8));
+      // GitHub search syntax: q + qualifiers
+      let query = encodeURIComponent(q);
+      if(input.repo) query += '+repo:'+encodeURIComponent(input.repo);
+      else query += '+user:@me'; // search user's own repos
+      const r = await getJson('/search/code?q=' + query + '&per_page=' + max);
+      if(r.status === 422) return { error: 'GitHub 検索は user/repo 修飾子が必要。repo を指定するか、PAT に repo スコープが必要です。' };
+      if(r.status !== 200) return { error: 'github_search_code HTTP '+r.status };
+      const items = (r.data && r.data.items || []).slice(0, max).map(x => ({
+        repo: x.repository && x.repository.full_name,
+        path: x.path,
+        url: x.html_url,
+        score: x.score,
+      }));
+      return { count: items.length, results: items };
+    }
+    if(name === 'github_get_file'){
+      const repo = String(input.repo||'').trim();
+      const path = String(input.path||'').trim();
+      if(!repo || !path) return { error: 'repo and path required' };
+      const ref = input.ref ? '?ref=' + encodeURIComponent(input.ref) : '';
+      const r = await getJson('/repos/' + repo + '/contents/' + encodeURI(path) + ref);
+      if(r.status === 404) return { error: 'file not found' };
+      if(r.status !== 200) return { error: 'github_get_file HTTP '+r.status };
+      const d = r.data;
+      if(d.type !== 'file') return { error: 'not a file (got: '+d.type+')' };
+      let content = '';
+      try { content = Buffer.from(d.content || '', 'base64').toString('utf8'); } catch(e){}
+      if(content.length > 30000) content = content.slice(0, 30000) + '\n…(truncated)';
+      return { repo, path, size: d.size, content, url: d.html_url };
+    }
+    if(name === 'github_list_issues'){
+      const repo = String(input.repo||'').trim();
+      if(!repo) return { error: 'repo required' };
+      const state = ['open','closed','all'].includes(input.state) ? input.state : 'open';
+      const max = Math.max(1, Math.min(30, parseInt(input.max_results)||10));
+      const labels = input.labels ? '&labels=' + encodeURIComponent(input.labels) : '';
+      const r = await getJson('/repos/' + repo + '/issues?state=' + state + '&per_page=' + max + labels);
+      if(r.status !== 200) return { error: 'github_list_issues HTTP '+r.status };
+      const items = (r.data || []).map(x => ({
+        number: x.number,
+        title: x.title,
+        state: x.state,
+        body: (x.body || '').slice(0, 400),
+        labels: (x.labels||[]).map(l => l.name),
+        url: x.html_url,
+        is_pr: !!x.pull_request,
+      }));
+      return { count: items.length, issues: items };
+    }
+    return { error: 'unknown github tool: ' + name };
+  } catch(e){
+    return { error: 'github_tool_failed: ' + (e.message||'unknown') };
+  }
+}
+
 // These let the agent operate on PUBLIC sites without needing the Chrome
 // extension or even being on desktop. Anything that needs login still
 // goes through ext_* (the user's authenticated browser). Anything public
@@ -6567,6 +6830,56 @@ function _kbScoreChunk(qTokens, chunkText){
   // Normalize by chunk length so very long chunks don't always win.
   return hits / Math.sqrt(cTokens.length);
 }
+
+// ── Vector RAG (optional, requires OPENAI_API_KEY) ─────────────
+// When the key is set, KB chunks are embedded at upload time and stored as
+// 1536-dim float arrays. Retrieval then does cosine similarity for vastly
+// better semantic recall than CJK bigrams. Without the key, the code path
+// silently falls back to the lexical scorer above — zero behavior change
+// on existing installs.
+function _cosine(a, b){
+  if(!a || !b || a.length !== b.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for(let i=0;i<a.length;i++){ dot += a[i]*b[i]; na += a[i]*a[i]; nb += b[i]*b[i]; }
+  if(!na || !nb) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+async function _openaiEmbeddings(texts){
+  // Batches up to 100 inputs per call (text-embedding-3-small max is 2048,
+  // but we cap at 100 to keep payload tiny and stay way under rate limits).
+  if(!OPENAI_KEY || !Array.isArray(texts) || texts.length === 0) return null;
+  const inputs = texts.map(t => String(t||'').slice(0, 8000));
+  return new Promise((resolve)=>{
+    const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
+    const req = https.request({
+      hostname:'api.openai.com', path:'/v1/embeddings', method:'POST',
+      headers:{
+        'Content-Type':'application/json', 'Authorization':'Bearer '+OPENAI_KEY,
+        'Content-Length': Buffer.byteLength(body),
+      }
+    }, (r)=>{
+      let buf=''; r.setEncoding('utf8');
+      r.on('data', c => buf += c);
+      r.on('end', ()=>{
+        try {
+          const obj = JSON.parse(buf||'{}');
+          if(r.statusCode >= 400 || !Array.isArray(obj.data)){
+            console.warn('[openai-embed] HTTP '+r.statusCode+':', (obj.error?.message||'').slice(0,200));
+            resolve(null); return;
+          }
+          resolve(obj.data.map(d => d.embedding));
+        } catch(e){ console.warn('[openai-embed] parse:', e.message); resolve(null); }
+      });
+    });
+    req.on('error', e => { console.warn('[openai-embed] err:', e.message); resolve(null); });
+    req.setTimeout(20000, ()=> req.destroy(new Error('timeout')));
+    req.write(body); req.end();
+  });
+}
+// Sync (lexical / bigram) retrieval. Existing callers (schedules, email,
+// webhook entry, chat handler) all use this. Vector retrieval is opt-in via
+// the async `_retrieveKbChunksVector` below and used only by the chat
+// handler when OPENAI_API_KEY is set + the doc has embeddings.
 function _retrieveKbChunks(agent, query, k=3){
   if(!agent || !Array.isArray(agent.knowledge) || !agent.knowledge.length) return [];
   const qTokens = _kbTokenize(query);
@@ -6581,6 +6894,36 @@ function _retrieveKbChunks(agent, query, k=3){
   }
   scored.sort((a,b) => b.score - a.score);
   return scored.slice(0, k);
+}
+
+// Vector retrieval. Async because it embeds the query via OpenAI before
+// scoring. Returns [] if OpenAI key isn't set OR no doc has embeddings —
+// the chat handler then falls back to the sync lexical scorer.
+async function _retrieveKbChunksVector(agent, query, k=3){
+  if(!OPENAI_KEY || !agent || !Array.isArray(agent.knowledge)) return [];
+  const hasEmbeddings = agent.knowledge.some(d => Array.isArray(d.embeddings) && d.embeddings.length > 0);
+  if(!hasEmbeddings) return [];
+  try {
+    const qEmb = await _openaiEmbeddings([String(query||'').slice(0, 2000)]);
+    if(!qEmb || !qEmb[0]) return [];
+    const qv = qEmb[0];
+    const scored = [];
+    for(const doc of agent.knowledge){
+      const chunks = Array.isArray(doc.chunks) ? doc.chunks : [];
+      const embs = Array.isArray(doc.embeddings) ? doc.embeddings : [];
+      for(let i = 0; i < chunks.length; i++){
+        const emb = embs[i];
+        if(!Array.isArray(emb)) continue;
+        const s = _cosine(qv, emb);
+        if(s > 0.20) scored.push({ score: s, doc_name: doc.name, text: chunks[i] });
+      }
+    }
+    scored.sort((a,b) => b.score - a.score);
+    return scored.slice(0, k);
+  } catch(e){
+    console.warn('[kb-vector] retrieval failed:', e.message);
+    return [];
+  }
 }
 function genKbDocId(){ return 'kb_'+Math.random().toString(36).slice(2,9); }
 
@@ -8234,7 +8577,7 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pam&&method==='PATCH'){
     const agId=pam[1];
     const body=await readBody(req);
-    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,avatar,model,skills,ai_auto_respond,team_goal}=body;
+    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,github_enabled,avatar,model,skills,ai_auto_respond,team_goal}=body;
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
@@ -8245,6 +8588,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(chrome_enabled!==undefined)ag.chrome_enabled=!!chrome_enabled;
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
+    if(github_enabled!==undefined)ag.github_enabled=!!github_enabled;
     if(model!==undefined && ['haiku','sonnet','opus','gemini-flash','gemini-pro'].includes(model)) ag.model=model;
     if(Array.isArray(skills)) ag.skills = skills.filter(s => typeof s === 'string').slice(0, 16);
     if(ai_auto_respond !== undefined){
@@ -8268,6 +8612,47 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.updated_at = new Date().toISOString();
     await DB.save(user);
     return jres(res,200,{agent:ag});
+  }
+
+  // ── PUT / DELETE /api/me/integrations/github  ──────────────
+  // Stores the user's GitHub PAT (read-only scope is enough for MVP).
+  // PAT lives on user.github_pat as a top-level field for simplicity.
+  // The token is never returned to the client (only a boolean "connected").
+  if(pathname === '/api/me/integrations/github' && method === 'PUT'){
+    const b = await readBody(req);
+    const pat = String((b && b.pat) || '').trim();
+    if(!/^gh[pous]_[A-Za-z0-9_]{20,}$/i.test(pat) && !/^github_pat_[A-Za-z0-9_]{50,}$/i.test(pat)){
+      return jres(res, 400, { error: 'invalid PAT format (expected ghp_… / github_pat_…)' });
+    }
+    user.github_pat = pat;
+    await DB.save(user);
+    // Probe /user to confirm the token is valid + return the GitHub username
+    let login = '';
+    try {
+      const probe = await new Promise((resolve)=>{
+        const req2 = https.request({
+          hostname:'api.github.com', path:'/user', method:'GET',
+          headers:{ Authorization:'Bearer '+pat, 'Accept':'application/vnd.github+json', 'User-Agent':'MY-AI-Agent' },
+        }, (r)=>{
+          let buf=''; r.on('data', c => buf+=c);
+          r.on('end', ()=>{ try{ resolve({status:r.statusCode, data:JSON.parse(buf||'null')}); }catch(e){ resolve({status:r.statusCode, data:null}); } });
+        });
+        req2.on('error', e => resolve({status:0, error:e.message}));
+        req2.end();
+      });
+      if(probe.status === 200 && probe.data && probe.data.login){
+        login = probe.data.login;
+      } else if(probe.status === 401){
+        return jres(res, 401, { error: 'GitHub に拒否されました — トークンが無効か期限切れです' });
+      }
+    } catch(e){}
+    return jres(res, 200, { ok: true, connected: true, login });
+  }
+  if(pathname === '/api/me/integrations/github' && method === 'DELETE'){
+    delete user.github_pat;
+    if(user.integrations && user.integrations.github) delete user.integrations.github;
+    await DB.save(user);
+    return jres(res, 200, { ok: true, connected: false });
   }
 
   // ── DELETE /api/agents/:id/messages/:idx ───────────────────
@@ -9381,9 +9766,19 @@ async function handleAPI(req,res,pathname,method,ip){
       chunks,
       created_at: new Date().toISOString(),
     };
+    // If OpenAI key is configured, embed chunks now so vector retrieval
+    // works on this doc. Cheap (text-embedding-3-small ≈ $0.02 / 1M tokens)
+    // and avoids users having to "rebuild index" later. Failure is silent —
+    // doc still saves and is searchable via lexical scorer.
+    if(OPENAI_KEY && chunks.length){
+      try {
+        const embs = await _openaiEmbeddings(chunks);
+        if(Array.isArray(embs) && embs.length === chunks.length) doc.embeddings = embs;
+      } catch(e){ console.warn('[kb-upload] embed failed:', e.message); }
+    }
     ag.knowledge.push(doc);
     await DB.save(user);
-    return jres(res,200,{ id:doc.id, name:doc.name, chunks:chunks.length, length:text.length });
+    return jres(res,200,{ id:doc.id, name:doc.name, chunks:chunks.length, length:text.length, embedded:!!doc.embeddings });
   }
   const kbDel = pathname.match(/^\/api\/agents\/([^/]+)\/knowledge\/([a-z0-9_]+)$/);
   if(kbDel && method==='DELETE'){
@@ -11845,7 +12240,13 @@ async function handleAPI(req,res,pathname,method,ip){
     // Knowledge-base retrieval — runs against the responding agent's KB.
     // Empty/missing KB returns []; injected into every buildSystem call below.
     const _kbAgent = teamMemberAgent || agent;
-    const _kbHits = _retrieveKbChunks(_kbAgent, message || '', 3);
+    // Prefer vector retrieval when (a) OPENAI_API_KEY is set on the server
+    // and (b) the agent's knowledge has embeddings. Falls back to lexical
+    // automatically when either condition fails.
+    let _kbHits = await _retrieveKbChunksVector(_kbAgent, message || '', 3);
+    if(!_kbHits || !_kbHits.length){
+      _kbHits = _retrieveKbChunks(_kbAgent, message || '', 3);
+    }
 
     // Team context for buildSystem — pass team name + goal + sibling members
     // so the AI knows what team it belongs to and what handoffs to suggest.
@@ -12161,9 +12562,13 @@ async function handleAPI(req,res,pathname,method,ip){
     const videoGenActive = true;
     const mediaUtilActive = true;
     const webNativeActive = true;   // server-side Playwright for public sites
+    // GitHub: only ON when (a) agent has it toggled (b) the user registered a PAT.
+    // Without a PAT every tool call returns the same error, so it's pointless
+    // to even list the tools in those cases.
+    const githubActive = !!(agent.github_enabled && payerUser && (payerUser.github_pat || (payerUser.integrations && payerUser.integrations.github && payerUser.integrations.github.pat)));
     const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive
                    || imageGenActive || videoGenActive || mediaUtilActive
-                   || webNativeActive;
+                   || webNativeActive || githubActive;
     // send_email auto-routes to the user's own address, but the AI doesn't
     // know what that address IS — so it sometimes asks the user for one
     // or refuses with "no recipient". Inject the email into the tool's
@@ -12189,6 +12594,7 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(videoGenActive ? VIDEO_TOOLS : []),
       ...(mediaUtilActive ? _mediaTools : []),
       ...(webNativeActive ? WEB_NATIVE_TOOLS : []),
+      ...(githubActive ? GITHUB_TOOLS : []),
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
@@ -12489,6 +12895,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeWebReadMdTool(block.input||{});
             } else if(block.name === 'web_extract'){
               result = await executeWebExtractTool(block.input||{});
+            } else if(block.name && block.name.startsWith('github_')){
+              result = await executeGitHubTool(payerUser, block.name, block.input||{});
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(session){

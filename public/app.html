@@ -8324,13 +8324,12 @@ function _md(src){
   // Audio — same shape but mp3/wav/ogg → <audio>.
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.(?:mp3|wav|ogg|m4a))\)/g,
     '<audio class="m-genaudio" src="$2" controls preload="metadata"></audio>');
-  // Artifacts — .html URLs in image markdown syntax render as a prominent
-  // link card (full URL + "新タブで開く" CTA). Previously we used iframes
-  // here but Render's X-Frame headers + sandboxing made some artifacts blank
-  // for users; the link card is simpler, always works, and lets the rendered
-  // page use the full viewport for design impact.
-  html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
-    const safeAlt = String(alt||'').replace(/"/g,'&quot;').slice(0,80);
+  // Artifact card — .html URLs in EITHER image (`![](url.html)`) OR link
+  // (`[label](url.html)`) markdown render as a prominent card. The server's
+  // wrap-up skip now emits link syntax (`🎨 [title](url.html)`) so users get
+  // a real clickable result instead of a raw URL.
+  function _renderArtifactCard(alt, src){
+    const safeAlt = String(alt||'').replace(/\*\*/g,'').replace(/"/g,'&quot;').slice(0,80);
     const safeSrc = String(src||'').replace(/"/g,'&quot;');
     return '<a class="m-artifact-card" href="'+safeSrc+'" target="_blank" rel="noopener">'
       + '<div class="m-artifact-card-ic">📄</div>'
@@ -8341,14 +8340,22 @@ function _md(src){
       + '<button class="m-artifact-card-copy" onclick="event.preventDefault();event.stopPropagation();navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(()=>{this.textContent=\'✓\';setTimeout(()=>this.textContent=\'📋\',1200)})" title="URL コピー">📋</button>'
       + '<span class="m-artifact-card-cta">新タブで開く ↗</span>'
       + '</a>';
+  }
+  html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
+    return _renderArtifactCard(alt, src);
+  });
+  html=html.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
+    return _renderArtifactCard(alt, src);
   });
   // Images — MUST come before links so the leading '!' is consumed cleanly.
-  // Renders the AI-generated image inline. Lazy-loaded to avoid blocking
-  // long chats; click-to-expand on tap.
-  html=html.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
+  // Renders the AI-generated image inline. Now accepts root-relative URLs
+  // (the image-routing tools sometimes return /generated/*.jpg directly).
+  html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+)\)/g,
     '<img class="m-genimg" src="$2" alt="$1" loading="lazy" onclick="this.classList.toggle(\'expanded\')" referrerpolicy="no-referrer">');
-  // Links
-  html=html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Links — accept absolute (https://) AND root-relative (/path) URLs so
+  // generated artifacts, PDFs, and other in-app URLs render as clickable
+  // links instead of raw markdown text.
+  html=html.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   // Blockquotes
   html=html.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
   // Bullet lists (- or ・ at start of line)

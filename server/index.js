@@ -70,6 +70,170 @@ const PRICING={ user:{ input:4.5, output:22.5 } };
 // + permanent 0% Agent Store fees. After the 1-month BUSINESS trial they
 // auto-downgrade to 'free' (handled lazily on /api/me reads).
 const FOUNDER_LIMIT = 100;
+
+// ── INTEGRATIONS CATALOG (50 services) ─────────────────────
+// Single source of truth used by:
+//   ・ /api/me/integrations/catalog (UI cards)
+//   ・ generic PUT/DELETE handler (field validation per service)
+//   ・ inline CTA emitter (when a tool fails for missing integration)
+//
+// flow types:
+//   'form'    — user pastes API key / token. Fields validated server-side.
+//   'webhook' — user pastes a Webhook URL (Slack / Discord style).
+//   'oauth'   — 1-click OAuth flow. `has_backend:true` means we have a route.
+//
+// `priority` flags the 15-service "recommended starter set".
+function _integrationsCatalog(){
+  return [
+    // ── 開発 / インフラ ─────────────────────────
+    { id:'github', name:'GitHub', logo:'🐙', group:'dev', desc:'PR/Issue/コードを AI が読み書き', flow:'form', priority:true, has_backend:true,
+      fields:[{key:'pat', label:'Personal Access Token', type:'password', required:true, pattern:'^(ghp_|github_pat_|gho_|ghu_|ghs_)[A-Za-z0-9_]{20,}$', help:'github.com/settings/tokens?type=beta で発行 (Contents/Metadata/Issues = Read)'}] },
+    { id:'vercel', name:'Vercel', logo:'▲', group:'dev', desc:'デプロイ・プレビュー URL・ビルドログ参照', flow:'form', priority:true,
+      fields:[{key:'token', label:'API Token', type:'password', required:true, help:'vercel.com/account/tokens'}] },
+    { id:'cloudflare', name:'Cloudflare', logo:'☁️', group:'dev', desc:'Workers / Pages / DNS / R2 を操作', flow:'form', priority:true,
+      fields:[{key:'apiToken', label:'API Token', type:'password', required:true, help:'dash.cloudflare.com → My Profile → API Tokens'},
+              {key:'accountId', label:'Account ID', type:'text', required:false}] },
+    { id:'netlify', name:'Netlify', logo:'🟦', group:'dev', desc:'静的サイトデプロイ・フォーム・Edge Functions', flow:'form',
+      fields:[{key:'token', label:'Personal Access Token', type:'password', required:true, help:'app.netlify.com/user/applications'}] },
+    { id:'render', name:'Render', logo:'🟢', group:'dev', desc:'フルスタックデプロイ・再起動・ログ', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'dashboard.render.com/u/settings'}] },
+    { id:'sentry', name:'Sentry', logo:'🐛', group:'dev', desc:'エラー監視・スタックトレース解析', flow:'form',
+      fields:[{key:'authToken', label:'Auth Token', type:'password', required:true},
+              {key:'orgSlug', label:'Org Slug', type:'text', required:true}] },
+    { id:'aws', name:'AWS', logo:'📦', group:'dev', desc:'S3 / Lambda / CloudWatch', flow:'oauth' },
+    { id:'supabase', name:'Supabase', logo:'⚡', group:'dev', desc:'DB / Auth / Storage', flow:'form',
+      fields:[{key:'projectUrl', label:'Project URL', type:'url', required:true},
+              {key:'serviceKey', label:'Service Role Key', type:'password', required:true}] },
+
+    // ── ドキュメント / ナレッジ ───────────────────
+    { id:'notion', name:'Notion', logo:'📝', group:'docs', desc:'ドキュメント / DB 読み書き', flow:'oauth', priority:true },
+    { id:'google_drive', name:'Google Drive', logo:'📁', group:'docs', desc:'ファイル横断検索・Docs/Sheets 作成', flow:'oauth', priority:true },
+    { id:'dropbox', name:'Dropbox', logo:'📦', group:'docs', desc:'ファイル取得・アップロード・共有リンク', flow:'oauth' },
+    { id:'airtable', name:'Airtable', logo:'🗂️', group:'docs', desc:'DB / シートの読み書き', flow:'form',
+      fields:[{key:'apiKey', label:'Personal Access Token', type:'password', required:true, help:'airtable.com/create/tokens'}] },
+    { id:'obsidian', name:'Obsidian', logo:'🟣', group:'docs', desc:'ローカル Vault に MCP 経由でアクセス', flow:'form',
+      fields:[{key:'mcpUrl', label:'Local MCP Server URL', type:'url', required:true, help:'例: http://localhost:3010/sse'}] },
+
+    // ── コミュニケーション ────────────────────────
+    { id:'slack', name:'Slack', logo:'💬', group:'chat', desc:'メッセージ送信・通知', flow:'webhook', priority:true, has_backend:true,
+      fields:[{key:'webhookUrl', label:'Incoming Webhook URL', type:'url', required:true, pattern:'^https://hooks\\.slack\\.com/', help:'api.slack.com/messaging/webhooks'}] },
+    { id:'discord', name:'Discord', logo:'🎮', group:'chat', desc:'チャンネル通知・コミュニティ運営', flow:'webhook', priority:true, has_backend:true,
+      fields:[{key:'webhookUrl', label:'Webhook URL', type:'url', required:true, pattern:'^https://discord(?:app)?\\.com/api/webhooks/', help:'チャンネル設定 → Integrations → Webhooks'}] },
+    { id:'telegram', name:'Telegram', logo:'✈️', group:'chat', desc:'Bot API でメッセージ送受信', flow:'form', priority:true,
+      fields:[{key:'botToken', label:'Bot Token', type:'password', required:true, pattern:'^\\d+:[A-Za-z0-9_-]{30,}$', help:'@BotFather にメッセージして作成'}] },
+    { id:'line', name:'LINE', logo:'🟢', group:'chat', desc:'Messaging API (日本向け Bot)', flow:'form',
+      fields:[{key:'channelAccessToken', label:'Channel Access Token', type:'password', required:true, help:'developers.line.biz'}] },
+    { id:'zoom', name:'Zoom', logo:'🎥', group:'chat', desc:'会議録画・文字起こし・予定作成', flow:'oauth' },
+
+    // ── メール ───────────────────────────────
+    { id:'gmail', name:'Gmail', logo:'📧', group:'mail', desc:'受信箱検索・自動返信', flow:'oauth', priority:true },
+    { id:'resend', name:'Resend', logo:'💌', group:'mail', desc:'モダン送信 API・月 3,000 通無料', flow:'form', priority:true,
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, pattern:'^re_', help:'resend.com/api-keys'}] },
+    { id:'sendgrid', name:'SendGrid', logo:'📨', group:'mail', desc:'大量配信・トランザクション送信', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, pattern:'^SG\\.', help:'app.sendgrid.com/settings/api_keys'}] },
+
+    // ── カレンダー / タスク ──────────────────────
+    { id:'google_calendar', name:'Google Calendar', logo:'📆', group:'cal', desc:'予定登録・空き時間提案', flow:'oauth', priority:true },
+    { id:'linear', name:'Linear', logo:'📐', group:'cal', desc:'Issue 作成・進捗管理', flow:'oauth', priority:true },
+    { id:'cal_com', name:'Cal.com', logo:'🗓️', group:'cal', desc:'予約リンク生成・空き時間公開', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'app.cal.com/settings/developer/api-keys'}] },
+    { id:'todoist', name:'Todoist', logo:'✅', group:'cal', desc:'個人タスクの追加・完了', flow:'form',
+      fields:[{key:'apiToken', label:'API Token', type:'password', required:true, help:'todoist.com/app/settings/integrations'}] },
+    { id:'trello', name:'Trello', logo:'📋', group:'cal', desc:'カンバン操作・カード移動', flow:'oauth' },
+
+    // ── ブログ / 発信 ─────────────────────────
+    { id:'wordpress', name:'WordPress', logo:'📰', group:'blog', desc:'記事作成・更新・公開', flow:'form', priority:true,
+      fields:[{key:'siteUrl', label:'Site URL', type:'url', required:true, pattern:'^https?://'},
+              {key:'username', label:'ユーザー名', type:'text', required:true},
+              {key:'appPassword', label:'Application Password', type:'password', required:true, help:'ダッシュボード → ユーザー → プロフィール → Application Passwords'}] },
+    { id:'ghost', name:'Ghost', logo:'👻', group:'blog', desc:'記事投稿・ニュースレター送信', flow:'form',
+      fields:[{key:'adminUrl', label:'Admin URL', type:'url', required:true},
+              {key:'apiKey', label:'Admin API Key', type:'password', required:true}] },
+    { id:'substack', name:'Substack', logo:'📩', group:'blog', desc:'ニュースレター下書き・配信予約', flow:'oauth' },
+    { id:'beehiiv', name:'Beehiiv', logo:'🐝', group:'blog', desc:'記事投稿・統計取得', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'app.beehiiv.com/settings/integrations/api'}] },
+    { id:'note', name:'note', logo:'📓', group:'blog', desc:'下書き作成・公開予約', flow:'oauth' },
+
+    // ── SNS ─────────────────────────────────
+    { id:'twitter', name:'X (Twitter)', logo:'𝕏', group:'sns', desc:'投稿・スレッド・DM 自動応答', flow:'oauth', priority:true },
+    { id:'linkedin', name:'LinkedIn', logo:'💼', group:'sns', desc:'B2B 投稿・つながり管理', flow:'oauth', priority:true },
+    { id:'youtube', name:'YouTube', logo:'▶️', group:'sns', desc:'動画アップロード・字幕生成', flow:'oauth' },
+    { id:'instagram', name:'Instagram', logo:'📷', group:'sns', desc:'投稿・ストーリーズ・コメント返信', flow:'oauth' },
+    { id:'threads', name:'Threads', logo:'🧵', group:'sns', desc:'Instagram 連動の投稿', flow:'oauth' },
+    { id:'reddit', name:'Reddit', logo:'🤖', group:'sns', desc:'投稿・コメント・サブレディット監視', flow:'oauth' },
+    { id:'producthunt', name:'Product Hunt', logo:'🏆', group:'sns', desc:'ローンチ予約・コメント監視', flow:'oauth' },
+
+    // ── EC / 決済 ───────────────────────────
+    { id:'stripe', name:'Stripe', logo:'💳', group:'pay', desc:'顧客・サブスク・売上・払い戻し', flow:'form', priority:true,
+      fields:[{key:'secretKey', label:'Secret API Key', type:'password', required:true, pattern:'^sk_(test|live)_', help:'dashboard.stripe.com/apikeys'}] },
+    { id:'shopify', name:'Shopify', logo:'🛒', group:'pay', desc:'商品・注文・在庫・顧客', flow:'form', priority:true,
+      fields:[{key:'shopDomain', label:'Shop Domain', type:'text', required:true, pattern:'\\.myshopify\\.com$'},
+              {key:'accessToken', label:'Admin API Access Token', type:'password', required:true}] },
+    { id:'lemon_squeezy', name:'Lemon Squeezy', logo:'🍋', group:'pay', desc:'MoR インディー決済・サブスク', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'app.lemonsqueezy.com/settings/api'}] },
+    { id:'gumroad', name:'Gumroad', logo:'📦', group:'pay', desc:'デジタル販売・顧客リスト', flow:'form',
+      fields:[{key:'accessToken', label:'Access Token', type:'password', required:true}] },
+
+    // ── アナリティクス / マーケ ──────────────────
+    { id:'ga4', name:'Google Analytics 4', logo:'📈', group:'data', desc:'トラフィック分析・コンバージョン', flow:'oauth', priority:true },
+    { id:'posthog', name:'PostHog', logo:'🎯', group:'data', desc:'プロダクト分析・ファネル可視化', flow:'form',
+      fields:[{key:'apiKey', label:'Project API Key', type:'password', required:true},
+              {key:'host', label:'Host (省略可)', type:'url', required:false}] },
+    { id:'search_console', name:'Search Console', logo:'🔍', group:'data', desc:'SEO 検索クエリ・順位', flow:'oauth' },
+    { id:'plausible', name:'Plausible', logo:'📉', group:'data', desc:'プライバシー重視のシンプル解析', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true},
+              {key:'siteId', label:'Site ID', type:'text', required:true}] },
+
+    // ── AI / 検索 / 音声 ────────────────────
+    { id:'tavily', name:'Tavily', logo:'🔎', group:'ai', desc:'Web 検索 API (AI 用)', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, pattern:'^tvly-', help:'tavily.com'}] },
+    { id:'elevenlabs', name:'ElevenLabs', logo:'🎙️', group:'ai', desc:'高品質 TTS', flow:'form',
+      fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'elevenlabs.io/app/settings/api-keys'}] },
+
+    // ── ワークフロー / メタ連携 ──────────────────
+    { id:'zapier', name:'Zapier', logo:'⚡', group:'flow', desc:'5,000+ サービスへブリッジ', flow:'webhook', priority:true, has_backend:true,
+      fields:[{key:'webhookUrl', label:'Zap Webhook URL', type:'url', required:true, help:'Zapier で Webhook by Zapier トリガーを作って URL を取得'}] },
+    { id:'n8n', name:'n8n', logo:'🔧', group:'flow', desc:'OSS ワークフロー・独自トリガー', flow:'webhook',
+      fields:[{key:'webhookUrl', label:'Webhook URL', type:'url', required:true}] },
+  ];
+}
+
+const INTEGRATION_GROUP_LABELS = {
+  dev: '💻 開発 / インフラ',
+  docs: '📚 ドキュメント / ナレッジ',
+  chat: '💬 コミュニケーション',
+  mail: '✉️ メール',
+  cal: '📅 カレンダー / タスク',
+  blog: '✍️ ブログ / 発信',
+  sns: '🐦 SNS',
+  pay: '💰 EC / 決済',
+  data: '📊 アナリティクス / マーケ',
+  ai: '🤖 AI / 検索 / 音声',
+  flow: '🔌 ワークフロー / メタ連携',
+};
+
+// Returns { connected, account? } for a single service. Reads legacy fields
+// (user.github_pat, user.outgoing_webhooks.{slack,discord}) so MIGRATING
+// users see their existing setup reflected as ✓ Connected without re-entry.
+function _getIntegrationStatus(user, id){
+  if(!user) return { connected: false };
+  if(id === 'github'){
+    if(user.github_pat) return { connected: true, account: user.github_login || '' };
+    return { connected: false };
+  }
+  if(id === 'slack' && user.outgoing_webhooks && user.outgoing_webhooks.slack){
+    return { connected: true };
+  }
+  if(id === 'discord' && user.outgoing_webhooks && user.outgoing_webhooks.discord){
+    return { connected: true };
+  }
+  const v = user.integrations && user.integrations[id];
+  if(v && (v.connected_at || v.apiKey || v.token || v.webhookUrl || v.botToken || v.secretKey || v.accessToken || v.appPassword || v.pat)){
+    return { connected: true, connected_at: v.connected_at || null };
+  }
+  return { connected: false };
+}
+
 const {createClient}=require('@supabase/supabase-js');
 const supabase=USE_SUPA?createClient(SUPA_URL,SUPA_KEY):null;
 function calcCost(inputTok,outputTok){
@@ -7837,8 +8001,20 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
   // what's going on. `userQuery` is the latest user message; the injector
   // scores memories / playbook against it for relevance.
   const agentCtx = _injectAgentContext(agent, { userQuery: (opts && opts.userQuery) || '' });
+
+  // Inline-CTA nudge: when an action requires an external service that
+  // hasn't been connected, the AI can emit `<connect:service_id>` once at
+  // the end of its reply. The frontend strips the marker and renders a
+  // "[🔌 X を接続]" button inline. Service IDs match the catalog
+  // (github, slack, wordpress, stripe, shopify, twitter, gmail, notion …).
+  const integrationsHint = `
+
+【外部サービス連携 — inline 提案】
+ユーザーの依頼を実行するには未接続の外部サービス (GitHub / Slack / WordPress / Stripe / X / Notion / Shopify / Gmail / Google Calendar / Linear など) との連携が必要だと気付いた場合は、回答末尾に 1 度だけ次の形式で **接続マーカー** を出してください:
+- 例: \`<connect:github>\` ・ \`<connect:wordpress>\` ・ \`<connect:stripe>\`
+このマーカーは UI 側で「🔌 X を接続」ボタンに自動置換されます。マーカーは 1 メッセージにつき最大 2 個まで、不要な時は出さないこと。`;
   return`${deliveryRules}
-${stallNudge}
+${stallNudge}${integrationsHint}
 
 ──────────────────────────────
 
@@ -9209,6 +9385,98 @@ async function handleAPI(req,res,pathname,method,ip){
     }
   }
 
+  // ── Agent-scoped notes (shared in Teams / Groups) ──────────
+  // Per-chat notebook. Lives on the agent record (ag.notes), so:
+  //   ・ DM (solo agent): private to the owner — only that user can read/edit
+  //   ・ Team (is_team): all collaborators with chat access see the same notes
+  //   ・ Group (is_group with host_id): host + joined members share the notes
+  // For joined groups the agent record lives on the host's user; we resolve
+  // via group_memberships and save back to the host so edits propagate.
+  // Shape: ag.notes = [{id, title, content, created_at, updated_at, author_id}]
+  const _agNoteListM = pathname.match(/^\/api\/agents\/([^/]+)\/notes$/);
+  if(_agNoteListM){
+    const agId = _agNoteListM[1];
+    // Resolve agent — owner first, then joined groups
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let ownerUser = user;
+    if(!ag){
+      const m = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!m) return jres(res,404,{error:'agent not found'});
+      const hostUser = await DB.findBy('id', m.host_id);
+      if(!hostUser) return jres(res,404,{error:'host not found'});
+      ag = (hostUser.agents||[]).find(a => a.id === agId);
+      if(!ag) return jres(res,404,{error:'agent not found'});
+      ownerUser = hostUser;
+    }
+    ag.notes = Array.isArray(ag.notes) ? ag.notes : [];
+    if(method === 'GET'){
+      const notes = ag.notes.map(n => ({
+        id: n.id,
+        title: n.title || '',
+        snippet: String(n.content||'').slice(0, 120).replace(/\n+/g, ' '),
+        updated_at: n.updated_at || n.created_at,
+        author_id: n.author_id || null,
+      }));
+      notes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+      return jres(res, 200, {
+        notes,
+        shared: !!(ag.is_team || ag.is_group),
+        is_team: !!ag.is_team,
+        is_group: !!ag.is_group,
+      });
+    }
+    if(method === 'POST'){
+      if(ag.notes.length >= 200) return jres(res,400,{error:'too many notes (max 200)'});
+      const b = await readBody(req);
+      const now = new Date().toISOString();
+      const note = {
+        id: 'note_' + crypto.randomBytes(5).toString('hex'),
+        title: String((b && b.title) || '').slice(0, 200),
+        content: String((b && b.content) || '').slice(0, 100000),
+        created_at: now,
+        updated_at: now,
+        author_id: user.id,
+      };
+      ag.notes.push(note);
+      await DB.save(ownerUser);
+      return jres(res, 200, { note });
+    }
+  }
+  const _agNoteOneM = pathname.match(/^\/api\/agents\/([^/]+)\/notes\/([a-z0-9_]+)$/);
+  if(_agNoteOneM){
+    const agId = _agNoteOneM[1];
+    const noteId = _agNoteOneM[2];
+    let ag = (user.agents||[]).find(a => a.id === agId);
+    let ownerUser = user;
+    if(!ag){
+      const m = (user.group_memberships||[]).find(g => g.agent_id === agId);
+      if(!m) return jres(res,404,{error:'agent not found'});
+      const hostUser = await DB.findBy('id', m.host_id);
+      if(!hostUser) return jres(res,404,{error:'host not found'});
+      ag = (hostUser.agents||[]).find(a => a.id === agId);
+      if(!ag) return jres(res,404,{error:'agent not found'});
+      ownerUser = hostUser;
+    }
+    ag.notes = Array.isArray(ag.notes) ? ag.notes : [];
+    const idx = ag.notes.findIndex(n => n && n.id === noteId);
+    if(idx < 0) return jres(res, 404, { error: 'note not found' });
+    if(method === 'GET') return jres(res, 200, { note: ag.notes[idx] });
+    if(method === 'DELETE'){
+      ag.notes.splice(idx, 1);
+      await DB.save(ownerUser);
+      return jres(res, 200, { ok: true });
+    }
+    if(method === 'PATCH'){
+      const b = await readBody(req);
+      if(typeof b.title === 'string')   ag.notes[idx].title   = b.title.slice(0, 200);
+      if(typeof b.content === 'string') ag.notes[idx].content = b.content.slice(0, 100000);
+      ag.notes[idx].updated_at = new Date().toISOString();
+      ag.notes[idx].last_editor_id = user.id;
+      await DB.save(ownerUser);
+      return jres(res, 200, { note: ag.notes[idx] });
+    }
+  }
+
   // ── MCP server management ──────────────────────────────────
   // GET     /api/me/mcp-servers              → list user's servers (sans auth)
   // POST    /api/me/mcp-servers              → register {name, url, auth?}
@@ -9280,6 +9548,90 @@ async function handleAPI(req,res,pathname,method,ip){
       await DB.save(user);
       return jres(res, 200, { enabled: user.mcp_servers[idx].enabled });
     }
+  }
+
+  // ── /api/me/integrations/catalog ───────────────────────────
+  // Unified integrations catalog (50 services). Returns each service's
+  // definition along with the caller's per-service connection status, so
+  // the UI can render cards + Connect/Manage buttons in a single round-trip.
+  if(pathname === '/api/me/integrations/catalog' && method === 'GET'){
+    const list = _integrationsCatalog().map(s => {
+      const st = _getIntegrationStatus(user, s.id);
+      return {
+        id: s.id, name: s.name, logo: s.logo, group: s.group, desc: s.desc,
+        flow: s.flow, fields: s.fields || null, oauth: s.oauth || null,
+        priority: !!s.priority,
+        status: st,
+      };
+    });
+    const groups = {};
+    list.forEach(s => { (groups[s.group] = groups[s.group] || []).push(s); });
+    const connected = list.filter(s => s.status && s.status.connected).length;
+    return jres(res, 200, {
+      total: list.length,
+      connected,
+      services: list,
+      groups,
+    });
+  }
+
+  // PUT  /api/me/integrations/:id    → save credentials for a service
+  // DELETE /api/me/integrations/:id  → remove credentials
+  // The "form" flow accepts service-specific fields. OAuth services that
+  // haven't been registered yet (no env var Client ID) return 503 so the UI
+  // can show a "setup-pending" message.
+  const _intGeneric = pathname.match(/^\/api\/me\/integrations\/([a-z0-9_-]+)$/);
+  if(_intGeneric && (method === 'PUT' || method === 'DELETE') && _intGeneric[1] !== 'github'){
+    const intId = _intGeneric[1];
+    const service = _integrationsCatalog().find(s => s.id === intId);
+    if(!service) return jres(res, 404, { error: 'unknown integration: ' + intId });
+    user.integrations = user.integrations || {};
+    if(method === 'DELETE'){
+      delete user.integrations[intId];
+      // Legacy fields cleanup
+      if(intId === 'slack' && user.outgoing_webhooks) delete user.outgoing_webhooks.slack;
+      if(intId === 'discord' && user.outgoing_webhooks) delete user.outgoing_webhooks.discord;
+      await DB.save(user);
+      return jres(res, 200, { ok: true, connected: false });
+    }
+    // PUT — validate per flow type
+    const body = (await readBody(req)) || {};
+    if(service.flow === 'oauth' && !service.has_backend){
+      return jres(res, 503, {
+        error: 'OAuth セットアップ準備中',
+        message: 'このサービスは OAuth App の開発者登録が必要です。docs/oauth-setup.md を参照してください。',
+        service: service.name,
+      });
+    }
+    if(service.flow === 'form' || service.flow === 'webhook'){
+      const out = {};
+      for(const f of (service.fields || [])){
+        const v = String((body[f.key]||'')).trim();
+        if(f.required !== false && !v) return jres(res, 400, { error: `${f.label} は必須です` });
+        if(f.pattern && v && !new RegExp(f.pattern).test(v)){
+          return jres(res, 400, { error: `${f.label} の形式が不正です` });
+        }
+        if(v) out[f.key] = v;
+      }
+      // Legacy parallel-write for slack / discord webhooks so the existing
+      // notify_slack / notify_discord tools keep working without changes.
+      if(intId === 'slack' && out.webhookUrl){
+        user.outgoing_webhooks = user.outgoing_webhooks || {};
+        user.outgoing_webhooks.slack = out.webhookUrl;
+      }
+      if(intId === 'discord' && out.webhookUrl){
+        user.outgoing_webhooks = user.outgoing_webhooks || {};
+        user.outgoing_webhooks.discord = out.webhookUrl;
+      }
+      user.integrations[intId] = {
+        ...out,
+        connected_at: new Date().toISOString(),
+        flow: service.flow,
+      };
+      await DB.save(user);
+      return jres(res, 200, { ok: true, connected: true, integration: { id: intId, flow: service.flow } });
+    }
+    return jres(res, 400, { error: 'unsupported flow: ' + service.flow });
   }
 
   // ── PUT / DELETE /api/me/integrations/github  ──────────────

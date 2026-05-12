@@ -1390,6 +1390,19 @@ input,textarea{font-family:var(--sans);}
   padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;
 }
 .m-body pre .cb-run:hover{background:rgba(74,222,128,.3);color:#bbf7d0;}
+/* Inline integration CTA button — rendered from <connect:id> AI markers */
+.intg-cta{
+  display:inline-flex;align-items:center;gap:5px;margin:4px 4px 4px 0;
+  background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+  color:var(--peach-dark);border:1px solid #fed7aa;border-radius:99px;
+  padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;
+  font-family:inherit;transition:all .15s;
+}
+.intg-cta:hover{background:var(--peach);color:#fff;border-color:var(--peach);transform:translateY(-1px)}
+.intg-cta-on{
+  background:#d1fae5;color:#10b981;border-color:#86efac;cursor:default;
+}
+.intg-cta-on:hover{transform:none}
 .m-body pre .cb-run:disabled{opacity:.6;cursor:wait;}
 .cb-out{
   margin:6px 0 12px;background:#0c1014;color:#cbd5e1;border:1px solid rgba(74,222,128,.25);
@@ -2652,6 +2665,9 @@ body{color:#f0f0f8;}
             </div>
             <span style="font-size:9px;color:var(--text3);margin-left:2px">▾</span>
           </button>
+          <button onclick="openIntegrationsTab()" title="連携サービス (N/50 接続済)" style="position:relative;height:28px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:8px;display:flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;color:var(--text2);padding:0 8px;font-family:inherit;font-size:12.5px">
+            🔌<span id="sbConnectBadge" style="font-size:9.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.02em"></span>
+          </button>
           <button onclick="openSettings()" title="設定" style="width:28px;height:28px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--text2)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
@@ -3775,88 +3791,32 @@ body{color:#f0f0f8;}
 
         <!-- 🔌 Integrations -->
         <div id="s-integrations" class="snav-pane" style="display:none">
-          <h3 class="spane-h">Integrations</h3>
-          <div class="spane-sub"><span data-i18n>Slack や Discord に通知を送るための連携設定です。</span></div>
+          <h3 class="spane-h">🔌 連携サービス</h3>
+          <div class="spane-sub">50 個のサービスを 1 クリックで AI に接続。OAuth / API キー / MCP を統一 UI で。</div>
 
-          <section class="spane-section">
-            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px"><span style="background:#4a154b;color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">Slack</span> <span data-i18n>Incoming Webhook</span></div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
-              <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener" style="color:var(--peach-dark)" data-i18n>Slack で Incoming Webhook を作成</a> <span data-i18n>して URL を貼り付け。</span>
-            </div>
-            <div id="intSlackStatus" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
-            <div style="display:flex;gap:6px">
-              <input id="intSlackUrl" type="url" placeholder="https://hooks.slack.com/services/..." style="flex:1;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace">
-              <button onclick="_saveIntegration('slack')" class="btn-primary" style="padding:9px 14px"><span data-i18n>保存</span></button>
-              <button onclick="_clearIntegration('slack')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;font-family:inherit"><span data-i18n>削除</span></button>
-            </div>
-          </section>
+          <!-- Catalog renders here. _loadIntegrations() hits /api/me/integrations/catalog -->
+          <div id="intgCatalog" style="margin-top:14px"></div>
 
-          <section class="spane-section">
-            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px"><span style="background:#5865f2;color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">Discord</span> Webhook</div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
-              <span data-i18n>チャンネル設定 → Integrations → Webhooks → New Webhook → URL をコピー。</span>
+          <!-- Advanced: custom MCP servers / Webhooks (preserved from old UI) -->
+          <details style="margin-top:24px;background:#f9f8f5;border:1px solid var(--wire);border-radius:11px;padding:14px 16px">
+            <summary style="cursor:pointer;font-size:13px;font-weight:900;color:var(--text);list-style:none">🔧 上級者向け — カスタム MCP サーバー</summary>
+            <div style="margin-top:10px;font-size:12px;color:var(--text2);line-height:1.6">
+              カタログにないサービスも MCP プロトコル経由で追加できます。Anthropic 公式 MCP サーバー・自作サーバー・社内 API などを直接登録。<br>
+              <span style="color:var(--text3);font-size:11px">主要サーバー: <a href="https://mcp.zapier.com" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Zapier MCP</a> · <a href="https://github.com/modelcontextprotocol/servers" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">公式サーバー一覧</a></span>
             </div>
-            <div id="intDiscordStatus" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
-            <div style="display:flex;gap:6px">
-              <input id="intDiscordUrl" type="url" placeholder="https://discord.com/api/webhooks/..." style="flex:1;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace">
-              <button onclick="_saveIntegration('discord')" class="btn-primary" style="padding:9px 14px"><span data-i18n>保存</span></button>
-              <button onclick="_clearIntegration('discord')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;font-family:inherit"><span data-i18n>削除</span></button>
-            </div>
-          </section>
-
-          <section class="spane-section">
-            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">MCP</span>
-              Model Context Protocol
-              <span style="font-size:10.5px;color:var(--text3);font-weight:600">— 1 個登録で数百のサービスが解放</span>
-            </div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
-              MCP サーバーを登録すると、その先のツール (GitHub・Notion・Linear・Stripe・Zapier 等) が自動でこの AI に届きます。<br>
-              <span style="color:var(--text3);font-size:11px">主要サーバー: <a href="https://mcp.zapier.com" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Zapier MCP (6,000+ アプリ)</a> · <a href="https://github.com/modelcontextprotocol/servers" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">公式サーバー一覧</a></span>
-            </div>
-            <div id="mcpServersList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
-            <details style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:10px 12px">
-              <summary style="cursor:pointer;font-size:12.5px;font-weight:800;color:var(--text);list-style:none">＋ MCP サーバーを追加</summary>
-              <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                  <button type="button" onclick="_mcpPresetZapier()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🚀 Zapier MCP テンプレ</button>
-                  <button type="button" onclick="_mcpPresetGitHub()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🐙 GitHub Official</button>
-                  <button type="button" onclick="_mcpPresetNotion()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">📝 Notion</button>
-                </div>
-                <input id="mcpAddName" placeholder="名前 (例: Zapier)" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:inherit">
-                <input id="mcpAddUrl"  placeholder="https://mcp.example.com/sse" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:ui-monospace,monospace">
-                <input id="mcpAddAuth" type="password" placeholder="Authorization ヘッダ (任意, 例: Bearer xxxxx)" autocomplete="off" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12px;font-family:ui-monospace,monospace">
-                <button type="button" onclick="_mcpAddServer()" class="btn-primary" style="padding:9px;font-size:12.5px">+ 接続して試す</button>
+            <div id="mcpServersList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;margin-bottom:12px"></div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button type="button" onclick="_mcpPresetZapier()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🚀 Zapier MCP</button>
+                <button type="button" onclick="_mcpPresetGitHub()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🐙 GitHub Official</button>
+                <button type="button" onclick="_mcpPresetNotion()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">📝 Notion</button>
               </div>
-            </details>
-          </section>
-
-          <section class="spane-section">
-            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px"><span style="background:#0f172a;color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">GitHub</span> Personal Access Token</div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
-              あなたの GitHub repo (README / コード / Issue) を AI が読めるようになります。<br>
-              <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Fine-grained PAT を作成 →</a>
-              <span style="color:var(--text3);font-size:11px"> · 推奨スコープ: Contents (Read), Metadata (Read), Issues (Read)</span>
+              <input id="mcpAddName" placeholder="名前 (例: Zapier)" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:inherit">
+              <input id="mcpAddUrl"  placeholder="https://mcp.example.com/sse" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:ui-monospace,monospace">
+              <input id="mcpAddAuth" type="password" placeholder="Authorization ヘッダ (任意, 例: Bearer xxxxx)" autocomplete="off" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12px;font-family:ui-monospace,monospace">
+              <button type="button" onclick="_mcpAddServer()" class="btn-primary" style="padding:9px;font-size:12.5px">+ 接続して試す</button>
             </div>
-            <div id="intGitHubStatus" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
-            <div style="display:flex;gap:6px">
-              <input id="intGitHubPat" type="password" placeholder="ghp_… または github_pat_…" autocomplete="off" style="flex:1;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace">
-              <button onclick="_saveGitHubPat()" class="btn-primary" style="padding:9px 14px">保存</button>
-              <button onclick="_clearGitHubPat()" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;font-family:inherit">削除</button>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5">
-              🔒 PAT は暗号化なしで保存されます。本番環境では <b>read-only</b> スコープのみ推奨。
-            </div>
-          </section>
-
-          <section class="spane-section">
-            <div class="spane-section-h"><span data-i18n>使い方</span></div>
-            <div style="font-size:12.5px;color:var(--text2);line-height:1.7">
-              <span data-i18n>AI に「Slack に売上レポートを送って」と指示すると、自動で notify_slack ツールを呼びます。</span><br>
-              <span data-i18n>スケジュール実行 + Slack 通知 を組み合わせて、毎朝 9 時に分析結果を投げる、といったオートメーションも可能です。</span><br>
-              GitHub を連携したエージェントには「自分の repo のバグを調べて」「README を読んで改善案を出して」と頼めます。
-            </div>
-          </section>
+          </details>
         </div>
 
         <!-- 📦 データ -->
@@ -7359,6 +7319,9 @@ function renderAll(){
   updateBalance();
   updatePlanBadge();
   renderAgList();
+  // Lazy: hydrate integrations catalog so the sidebar 🔌 badge shows
+  // immediately. Doesn't block render — runs in the background.
+  setTimeout(function(){ try { _loadIntegrations(); } catch(e){} }, 300);
   // "Open last chat on startup" preference (default off → land on home dashboard).
   const openLast = _prefBool('behav_open_last', false);
   if(openLast && agents.length>0){
@@ -8244,12 +8207,14 @@ async function openAgent(id){
     if(isHost && !isTeam){
       actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="'+L('AI を編集','Edit AI')+'">🤖</button>';
     }
+    // Shared notebook for Teams / Groups — visible to everyone with chat access.
+    actsHTML += '<button class="ct-act" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('共有メモ (メンバー全員で閲覧・編集)','Shared notes (visible & editable by all members)')+'">📝</button>';
     actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="'+L('グループ設定','Group settings')+'">⚙</button>';
   } else {
     actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
     actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
     actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
-    actsHTML += '<button class="ct-act" onclick="openNotesPanel()" title="'+L('メモ (この会話と独立した自分用ノート)','Notes (your personal notebook)')+'">📝</button>';
+    actsHTML += '<button class="ct-act" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('メモ (この AI とのチャット専用)','Notes (private to this chat)')+'">📝</button>';
     if(!ag._is_joined_group){
       actsHTML += '<button class="ct-act" onclick="openAgentProfile(\''+ag.id+'\')" title="'+L('AIプロフィール (記憶 / 目標 / プレイブック / タスク)','Agent profile (memory / goals / playbook / tasks)')+'">🧠</button>';
       actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
@@ -8323,6 +8288,15 @@ async function openAgent(id){
 /* ── Markdown rendering ──────────────────────────────── */
 function _md(src){
   if(!src) return '';
+  // Inline integration CTA — extract <connect:service_id> markers before escape.
+  // The AI emits these when an action needs a service that is not connected.
+  // We render them as a "[🔌 X を接続]" button that opens the catalog modal.
+  var connectMarkers=[];
+  src=String(src).replace(/<connect:([a-z0-9_]+)>/gi, function(_,sid){
+    var ci=connectMarkers.length;
+    connectMarkers.push(String(sid).toLowerCase());
+    return " CM"+ci+" ";
+  });
   // Extract code blocks first to placeholders so other rules don't touch them
   var codeBlocks=[];
   src=String(src).replace(/```(\w*)\n?([\s\S]*?)```/g,function(_,lang,code){
@@ -8452,6 +8426,21 @@ function _md(src){
     return '<ol>'+items+'</ol>';
   });
   // Convert remaining \n to <br>, then strip <br> adjacent to block tags
+  // Inline CTA restore — replace NUL-padded CM markers with a button.
+  // The button opens the integrations catalog modal scoped to that service.
+  html=html.replace(/ CM(\d+) /g, function(_,i){
+    var sid = connectMarkers[+i] || "";
+    if(!sid) return "";
+    // Pretty name lookup from the local catalog cache (loaded on boot).
+    var cat = window._intgCatalog;
+    var s = (cat && cat.services || []).find(function(x){return x.id===sid;});
+    var st = s && s.status || {};
+    if(st.connected){
+      return "<span class=\"intg-cta intg-cta-on\" title=\"接続済\">✓ "+ (s ? s.name : sid) +" 接続済</span>";
+    }
+    var label = s ? s.name : sid;
+    return "<button class=\"intg-cta\" onclick=\"openIntegrationsTab('"+ sid +"')\">🔌 "+ label +" を接続</button>";
+  });
   html=html.replace(/\n/g,'<br>');
   html=html.replace(/(<\/(?:h[1-6]|ul|ol|pre|blockquote|li)>)<br>/g,'$1');
   html=html.replace(/<br>(<(?:h[1-6]|ul|ol|pre|blockquote|li))/g,'$1');
@@ -14054,30 +14043,275 @@ async function _saveHandle(){
   } catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
 }
 
-/* ── Integrations (Slack / Discord) ─────────────────── */
+/* ── Integrations Catalog (50 services) ─────────────────
+ * Renders the 50-service catalog into #intgCatalog. Cards are grouped by
+ * category and show: logo + name + 1-line desc + status badge + Connect/
+ * Manage button. Click → modal with the service's input fields.
+ */
+window._intgCatalog = null;
 async function _loadIntegrations(){
+  var host = document.getElementById('intgCatalog');
+  if(!host) return;
+  host.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">読み込み中…</div>';
   try {
-    var r = await api('GET','/api/integrations');
-    var sStatus = document.getElementById('intSlackStatus');
-    var dStatus = document.getElementById('intDiscordStatus');
-    if(sStatus) sStatus.innerHTML = r.slack.configured
-      ? '<span style="color:#16a34a;font-weight:700">✓ '+esc(r.slack.preview||'設定済み')+'</span>'
-      : '<span style="color:var(--text3)">未設定</span>';
-    if(dStatus) dStatus.innerHTML = r.discord.configured
-      ? '<span style="color:#16a34a;font-weight:700">✓ '+esc(r.discord.preview||'設定済み')+'</span>'
-      : '<span style="color:var(--text3)">未設定</span>';
-  } catch(e){}
-  // GitHub status comes from the /api/me payload (already loaded into `me`)
-  var ghStatus = document.getElementById('intGitHubStatus');
-  if(ghStatus){
-    if(me && me.github_connected){
-      ghStatus.innerHTML = '<span style="color:#16a34a;font-weight:700">✓ '+(isJa?'接続中':'Connected')+'</span>';
-    } else {
-      ghStatus.innerHTML = '<span style="color:var(--text3)">'+(isJa?'未設定':'Not configured')+'</span>';
-    }
+    var r = await api('GET', '/api/me/integrations/catalog');
+    window._intgCatalog = r;
+    _renderIntgCatalog(r);
+  } catch(e){
+    host.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:14px">カタログの読み込みに失敗: '+esc(e.message||'')+'</div>';
   }
-  // MCP servers list
+  // Refresh sidebar badge
+  _updateConnectBadge();
+  // Custom MCP servers list (preserved from old UI, lives in details)
   if(typeof _mcpLoadList === 'function') _mcpLoadList();
+}
+
+var INTG_GROUP_LABEL = {
+  dev:  '💻 開発 / インフラ',
+  docs: '📚 ドキュメント / ナレッジ',
+  chat: '💬 コミュニケーション',
+  mail: '✉️ メール',
+  cal:  '📅 カレンダー / タスク',
+  blog: '✍️ ブログ / 発信',
+  sns:  '🐦 SNS',
+  pay:  '💰 EC / 決済',
+  data: '📊 アナリティクス / マーケ',
+  ai:   '🤖 AI / 検索 / 音声',
+  flow: '🔌 ワークフロー / メタ連携',
+};
+var INTG_GROUP_ORDER = ['dev','docs','chat','mail','cal','blog','sns','pay','data','ai','flow'];
+
+function _renderIntgCatalog(r){
+  var host = document.getElementById('intgCatalog');
+  if(!host) return;
+  var connected = r.connected || 0;
+  var total = r.total || (r.services ? r.services.length : 50);
+  var groups = r.groups || {};
+
+  // Header strip: counts + filter
+  var pctNum = total ? Math.round(connected/total*100) : 0;
+  var head =
+    '<div style="background:#fff;border:1px solid var(--wire);border-radius:12px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+    + '<div style="display:flex;gap:14px">'
+    +   '<div><div style="font-size:18px;font-weight:900;color:var(--peach-dark)">'+connected+'</div><div style="font-size:10.5px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px">接続済</div></div>'
+    +   '<div><div style="font-size:18px;font-weight:900;color:var(--text)">'+(total-connected)+'</div><div style="font-size:10.5px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px">利用可能</div></div>'
+    +   '<div><div style="font-size:18px;font-weight:900;color:var(--text)">'+pctNum+'%</div><div style="font-size:10.5px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px">進捗</div></div>'
+    + '</div>'
+    + '<div style="flex:1"></div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    +   '<button onclick="_intgFilter(\'all\')" id="intgFAll" class="intg-chip on">すべて</button>'
+    +   '<button onclick="_intgFilter(\'connected\')" id="intgFConn" class="intg-chip">接続済</button>'
+    +   '<button onclick="_intgFilter(\'priority\')" id="intgFPri" class="intg-chip">⭐ 推奨</button>'
+    +   '<button onclick="_intgFilter(\'oauth\')" id="intgFOauth" class="intg-chip">公式 OAuth</button>'
+    +   '<button onclick="_intgFilter(\'form\')" id="intgFForm" class="intg-chip">API キー</button>'
+    + '</div>'
+    + '</div>';
+
+  // Group blocks
+  var html = head;
+  INTG_GROUP_ORDER.forEach(function(g){
+    var arr = groups[g] || [];
+    if(!arr.length) return;
+    html += '<div class="intg-grp" data-grp="'+g+'" style="margin-bottom:22px">';
+    html += '<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px">'+esc(INTG_GROUP_LABEL[g]||g)+' <span style="font-size:11px;color:var(--text3);font-weight:700;margin-left:6px">'+arr.length+'</span></div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">';
+    arr.forEach(function(s){
+      html += _intgCardHtml(s);
+    });
+    html += '</div></div>';
+  });
+
+  // Inject chip styles (lightweight, scoped)
+  if(!document.getElementById('intgChipStyles')){
+    var st = document.createElement('style'); st.id = 'intgChipStyles';
+    st.textContent = '.intg-chip{background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}'
+      + '.intg-chip.on{background:var(--peach);color:#fff;border-color:var(--peach)}'
+      + '.intg-card{background:#fff;border:1px solid var(--wire);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;transition:all .15s}'
+      + '.intg-card:hover{border-color:var(--peach);transform:translateY(-1px);box-shadow:0 8px 22px rgba(251,146,60,.06)}'
+      + '.intg-card.dimmed{opacity:.45}';
+    document.head.appendChild(st);
+  }
+  host.innerHTML = html;
+}
+
+function _intgCardHtml(s){
+  var st = s.status || {};
+  var bg = st.connected
+    ? '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;background:#d1fae5;color:#10b981;border:1px solid #86efac">✓ 接続済</span>'
+    : (s.flow === 'oauth' && !s.has_backend
+        ? '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d">🔧 準備中</span>'
+        : '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--cream2);color:var(--text3);border:1px solid var(--wire2)">未接続</span>');
+  var btn = st.connected
+    ? '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto">管理</button>'
+    : '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:auto">接続</button>';
+  var acc = st.account ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:1px">@'+esc(st.account)+'</div>') : '';
+  var pri = s.priority ? '<span title="推奨セット" style="font-size:9.5px;color:var(--peach-dark);font-weight:900;margin-left:4px">⭐</span>' : '';
+  return ''
+    + '<div class="intg-card" data-flow="'+esc(s.flow)+'" data-conn="'+(st.connected?'1':'0')+'" data-pri="'+(s.priority?'1':'0')+'">'
+    +   '<div style="display:flex;align-items:flex-start;gap:9px">'
+    +     '<div style="width:36px;height:36px;border-radius:9px;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+esc(s.logo||'🔌')+'</div>'
+    +     '<div style="flex:1;min-width:0">'
+    +       '<div style="font-size:13.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(s.name)+pri+'</div>'
+    +       acc
+    +     '</div>'
+    +   '</div>'
+    +   '<div style="font-size:11.5px;color:var(--text2);line-height:1.5;min-height:32px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+esc(s.desc||'')+'</div>'
+    +   '<div style="display:flex;align-items:center;gap:8px;margin-top:auto">'
+    +     bg + btn
+    +   '</div>'
+    + '</div>';
+}
+
+function _intgFilter(kind){
+  // Toggle chip on
+  ['All','Conn','Pri','Oauth','Form'].forEach(function(k){
+    var el = document.getElementById('intgF'+k);
+    if(el) el.classList.remove('on');
+  });
+  var map = {all:'intgFAll',connected:'intgFConn',priority:'intgFPri',oauth:'intgFOauth',form:'intgFForm'};
+  var ot = document.getElementById(map[kind]||'intgFAll');
+  if(ot) ot.classList.add('on');
+  // Apply dim filter to cards
+  var cards = document.querySelectorAll('.intg-card');
+  cards.forEach(function(c){
+    var keep = true;
+    if(kind === 'connected') keep = c.getAttribute('data-conn') === '1';
+    else if(kind === 'priority') keep = c.getAttribute('data-pri') === '1';
+    else if(kind === 'oauth') keep = c.getAttribute('data-flow') === 'oauth';
+    else if(kind === 'form') keep = (c.getAttribute('data-flow') === 'form' || c.getAttribute('data-flow') === 'webhook');
+    c.classList.toggle('dimmed', !keep);
+    c.style.display = keep ? '' : 'none';
+  });
+  // Hide empty groups
+  document.querySelectorAll('.intg-grp').forEach(function(g){
+    var any = g.querySelectorAll('.intg-card:not([style*="display: none"])').length > 0;
+    g.style.display = any ? '' : 'none';
+  });
+}
+
+// ── Connect modal ───────────────────────────────────
+function _intgOpen(id){
+  var cat = window._intgCatalog;
+  if(!cat) return;
+  var s = (cat.services||[]).find(function(x){return x.id===id;});
+  if(!s) return;
+  var st = s.status || {};
+
+  var existing = document.getElementById('intgModal');
+  if(existing) existing.remove();
+  var ov = document.createElement('div');
+  ov.id = 'intgModal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:24px';
+
+  var body = '';
+  if(s.flow === 'oauth' && !s.has_backend){
+    body =
+      '<div style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;margin-bottom:12px">'
+      + '<b>🔧 セットアップ準備中</b><br>'
+      + 'このサービスは「OAuth App の開発者登録」が必要です。Render に Client ID/Secret を投入後、自動でこのカードが「接続」ボタンに昇格します。<br>'
+      + '<a href="/docs/oauth-setup.md" target="_blank" style="color:var(--peach-dark);font-weight:800">セットアップ手順を見る →</a>'
+      + '</div>';
+  } else {
+    var fields = s.fields || [];
+    body = fields.map(function(f){
+      var ph = f.help ? f.help.slice(0, 80) : '';
+      var inputType = f.type === 'password' ? 'password' : (f.type === 'url' ? 'url' : 'text');
+      return ''
+        + '<div style="margin-bottom:12px">'
+        +   '<label style="display:block;font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:5px">'+esc(f.label)+(f.required!==false?' <span style="color:#dc2626">*</span>':'')+'</label>'
+        +   '<input id="intgF_'+esc(f.key)+'" type="'+inputType+'" placeholder="'+esc(ph||f.label)+'" autocomplete="off" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:'+(f.type==='password'||f.type==='url'?'ui-monospace,monospace':'inherit')+'">'
+        +   (f.help ? '<div style="font-size:10.5px;color:var(--text3);margin-top:4px;line-height:1.4">💡 '+esc(f.help)+'</div>' : '')
+        + '</div>';
+    }).join('');
+    body =
+      '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'+esc(s.desc||'')+'</div>'
+      + body
+      + (st.connected
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">再接続</button></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔌 接続</button></div>');
+  }
+
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+    +   '<div style="padding:16px 20px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:11px">'
+    +     '<div style="width:38px;height:38px;border-radius:9px;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:22px">'+esc(s.logo||'🔌')+'</div>'
+    +     '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:900;color:var(--text)">'+esc(s.name)+'</div><div style="font-size:11px;color:var(--text3);margin-top:1px">'+esc(INTG_GROUP_LABEL[s.group]||'')+'</div></div>'
+    +     '<button onclick="_intgClose()" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:18px;padding:4px 8px">×</button>'
+    +   '</div>'
+    +   '<div style="flex:1;overflow-y:auto;padding:18px 20px">'+body+'</div>'
+    + '</div>';
+  ov.addEventListener('click', function(e){ if(e.target === ov) _intgClose(); });
+  document.body.appendChild(ov);
+}
+
+function _intgClose(){
+  var ov = document.getElementById('intgModal');
+  if(ov) ov.remove();
+}
+
+async function _intgSave(id){
+  var cat = window._intgCatalog;
+  var s = (cat && cat.services || []).find(function(x){return x.id===id;});
+  if(!s) return;
+  var fields = s.fields || [];
+  var body = {};
+  var missing = false;
+  fields.forEach(function(f){
+    var el = document.getElementById('intgF_'+f.key);
+    var v = el ? (el.value||'').trim() : '';
+    if(f.required !== false && !v) missing = true;
+    if(v) body[f.key] = v;
+  });
+  if(missing){ showToast('必須項目を入力してください','ng'); return; }
+  // GitHub uses the existing /api/me/integrations/github endpoint
+  var endpoint = '/api/me/integrations/' + id;
+  try {
+    var r = await api('PUT', endpoint, body);
+    showToast('✓ '+esc(s.name)+' に接続しました','ok');
+    _intgClose();
+    _loadIntegrations();
+    // Refresh `me.github_connected` flag for compatibility with edit-agent UI
+    if(id === 'github' && me){ me.github_connected = true; }
+  } catch(e){
+    showToast((e.message||'接続失敗'),'ng');
+  }
+}
+
+async function _intgDisconnect(id){
+  var s = (window._intgCatalog && window._intgCatalog.services || []).find(function(x){return x.id===id;});
+  if(!confirm((s?s.name:'この連携')+' を解除しますか?')) return;
+  try {
+    await api('DELETE', '/api/me/integrations/' + id);
+    showToast('解除しました','ok');
+    _intgClose();
+    _loadIntegrations();
+    if(id === 'github' && me){ me.github_connected = false; }
+  } catch(e){
+    showToast((e.message||'失敗'),'ng');
+  }
+}
+
+// Sidebar 🔌 連携 badge — shows N/50. Updated whenever catalog reloads.
+function _updateConnectBadge(){
+  var el = document.getElementById('sbConnectBadge');
+  if(!el) return;
+  var cat = window._intgCatalog;
+  if(!cat){ el.textContent = ''; return; }
+  el.textContent = (cat.connected||0) + '/' + (cat.total||50);
+}
+
+// Open Settings → 連携 tab from anywhere (sidebar, inline CTA, etc.)
+function openIntegrationsTab(highlightId){
+  if(typeof openSettings === 'function'){
+    openSettings();
+    setTimeout(function(){
+      var tab = document.querySelector('.snav-item[data-tab="integrations"]');
+      if(tab) tab.click();
+      if(highlightId){
+        setTimeout(function(){ _intgOpen(highlightId); }, 300);
+      }
+    }, 120);
+  }
 }
 
 /* ── MCP servers (Settings → Integrations) ─────────── */
@@ -14169,35 +14403,15 @@ function _mcpPresetNotion(){
   showToast('Notion Integration token を取得して Bearer の後に貼り付け','ok');
 }
 
-/* ── GitHub PAT (Settings → Integrations) ────────────── */
-async function _saveGitHubPat(){
-  var inp = document.getElementById('intGitHubPat'); if(!inp) return;
-  var pat = (inp.value||'').trim();
-  if(!pat){ showToast(isJa?'PAT を入力してください':'Enter a PAT','ng'); return; }
-  if(!/^(gh[pous]_|github_pat_)/i.test(pat)){
-    showToast(isJa?'PAT 形式が違います (ghp_… / github_pat_… で始まる)':'Invalid PAT format','ng');
-    return;
-  }
-  try {
-    var r = await api('PUT','/api/me/integrations/github',{pat:pat});
-    inp.value = '';
-    if(me){ me.github_connected = true; }
-    _loadIntegrations();
-    showToast(isJa
-      ? ('✓ GitHub に接続しました' + (r.login ? ' ('+r.login+')' : ''))
-      : ('✓ Connected to GitHub' + (r.login ? ' ('+r.login+')' : '')),
-      'ok');
-  } catch(e){
-    showToast((e.message||(isJa?'失敗':'Failed')),'ng');
-  }
-}
+/* ── GitHub PAT — legacy wrappers (kept for Edit Agent callsite) ──── */
+// New flow: the catalog modal handles save/clear via _intgSave/_intgDisconnect.
+// These thin wrappers are still used by disconnectGitHub() in the Edit Agent
+// panel, so we route them to the unified DELETE endpoint.
 async function _clearGitHubPat(){
-  if(!confirm(isJa?'GitHub 連携を解除しますか？':'Disconnect GitHub?')) return;
   try {
     await api('DELETE','/api/me/integrations/github');
     if(me){ me.github_connected = false; }
-    _loadIntegrations();
-    showToast(isJa?'解除しました':'Disconnected','ok');
+    if(typeof _loadIntegrations === 'function') _loadIntegrations();
   } catch(e){
     showToast((e.message||(isJa?'失敗':'Failed')),'ng');
   }
@@ -14244,18 +14458,10 @@ function toggleEditGitHub(){
   if(typeof _updateEditToolsCnt === 'function') _updateEditToolsCnt();
 }
 function openGitHubConnect(){
-  // Open settings → Integrations and scroll to GitHub section
-  if(typeof openSettings === 'function'){
-    closeEditAgent();
-    openSettings();
-    setTimeout(function(){
-      var tab = document.querySelector('.snav-item[data-tab="integrations"]');
-      if(tab) tab.click();
-      setTimeout(function(){
-        var inp = document.getElementById('intGitHubPat');
-        if(inp){ inp.focus(); inp.scrollIntoView({behavior:'smooth', block:'center'}); }
-      }, 200);
-    }, 150);
+  // Open settings → Integrations and pop the GitHub card modal
+  if(typeof closeEditAgent === 'function'){ try { closeEditAgent(); } catch(e){} }
+  if(typeof openIntegrationsTab === 'function'){
+    openIntegrationsTab('github');
   }
 }
 async function disconnectGitHub(){
@@ -14641,13 +14847,25 @@ async function _sendThreadReply(){
 // Full-screen overlay: 2 pane (notes list ← → editor). User-level notebook,
 // completely separate from chat history & AI memories. Auto-saves on blur
 // and after 1 s of idle typing.
-window._notesState = { notes: [], activeId: null, dirty: false, saveTimer: null };
+window._notesState = { notes: [], activeId: null, dirty: false, saveTimer: null, agentId: null, shared: false };
 
-async function openNotesPanel(){
+// _notesBase() returns the REST prefix.
+// When the panel is opened from a chat header (agentId passed) we read/write
+// against /api/agents/:id/notes — DM = private, Teams/Groups = shared with
+// all chat members. Falls back to /api/me/notes for the legacy global path.
+function _notesBase(){
+  var st = window._notesState;
+  return st.agentId ? ('/api/agents/' + st.agentId + '/notes') : '/api/me/notes';
+}
+
+async function openNotesPanel(agentId){
+  window._notesState.agentId = agentId || null;
+  window._notesState.shared = false;
   // Hydrate notes list, then render
   try {
-    var r = await api('GET', '/api/me/notes');
+    var r = await api('GET', _notesBase());
     window._notesState.notes = (r && r.notes) || [];
+    window._notesState.shared = !!(r && r.shared);
   } catch(e){ window._notesState.notes = []; }
   // Pick the most-recent note (already sorted server-side) or null
   window._notesState.activeId = (window._notesState.notes[0] || {}).id || null;
@@ -14673,10 +14891,16 @@ function _renderNotesPanel(){
           + '</div>';
       }).join('')
     : '<div style="text-align:center;padding:30px 12px;font-size:12px;color:var(--text3)">'+L('まだメモがありません','No notes yet')+'</div>';
+  var sharedBadge = st.shared
+    ? '<span title="'+L('このチャットのメンバー全員が閲覧・編集できます','Visible & editable by everyone in this chat')+'" style="font-size:10px;font-weight:800;color:#0369a1;background:#e0f2fe;border:1px solid #7dd3fc;padding:3px 9px;border-radius:99px;letter-spacing:.02em">👥 '+L('共有メモ','Shared')+'</span>'
+    : (st.agentId
+        ? '<span title="'+L('この AI とのチャットだけに紐づく自分用メモ','Private to this 1:1 chat')+'" style="font-size:10px;font-weight:800;color:var(--text3);background:var(--cream2);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;letter-spacing:.02em">🔒 '+L('DM 専用','Private')+'</span>'
+        : '');
   ov.innerHTML =
     '<div style="background:#fff;border-radius:16px;max-width:920px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
-    +  '<div style="padding:14px 18px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:10px">'
+    +  '<div style="padding:14px 18px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">📝 '+L('メモ','Notes')+'</div>'
+    +    sharedBadge
     +    '<div id="notesSavedFlag" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
     +    '<button onclick="_notesCreate()" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('新規','New')+'</button>'
     +    '<button onclick="_notesClose()" style="background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
@@ -14747,7 +14971,7 @@ async function _notesSaveNow(){
   var title = ti.value || '';
   var content = bo.value || '';
   try {
-    var r = await api('PATCH', '/api/me/notes/' + st.activeId, { title, content });
+    var r = await api('PATCH', _notesBase() + '/' + st.activeId, { title, content });
     if(r && r.note){
       var i = st.notes.findIndex(function(n){return n.id === st.activeId;});
       if(i >= 0){
@@ -14783,7 +15007,7 @@ async function _notesSaveNow(){
 
 async function _notesCreate(){
   try {
-    var r = await api('POST', '/api/me/notes', { title:'', content:'' });
+    var r = await api('POST', _notesBase(), { title:'', content:'' });
     if(r && r.note){
       window._notesState.notes.unshift({
         id: r.note.id, title: r.note.title || '', snippet:'',
@@ -14807,7 +15031,7 @@ async function _notesDelete(){
   if(!st.activeId) return;
   if(!confirm(isJa?'このメモを削除?':'Delete this note?')) return;
   try {
-    await api('DELETE', '/api/me/notes/' + st.activeId);
+    await api('DELETE', _notesBase() + '/' + st.activeId);
     st.notes = st.notes.filter(function(n){return n.id !== st.activeId;});
     st.activeId = (st.notes[0] || {}).id || null;
     st.dirty = false;

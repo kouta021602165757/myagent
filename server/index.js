@@ -1313,23 +1313,34 @@ function _injectAgentContext(agent, opts){
       lines.push(' • ' + (k.name || '?') + ': ' + cur + ' / ' + tgt + (k.unit ? ' ' + k.unit : ''));
     });
   }
-  // 3) Memories — bigram overlap against the current user message.
+  // 3) Memories — vector cosine if embedding available, otherwise bigram.
+  // The chat handler can pre-compute the user-query embedding (in parallel
+  // with the KB-query embedding) and pass it as opts.queryEmbedding to
+  // avoid an extra OpenAI round trip per turn.
   const mems = Array.isArray(agent.memories) ? agent.memories : [];
+  const qEmb = (opts && Array.isArray(opts.queryEmbedding)) ? opts.queryEmbedding : null;
   if(mems.length && userQuery){
-    const scored = mems.map(m => ({
-      m,
-      score: _agentMemoryScore(m.text, userQuery)
-        // small recency boost (last 30 days)
-        + (m.created_at && (Date.now() - new Date(m.created_at).getTime()) < 30*86400*1000 ? 0.5 : 0)
-        + (m.pinned ? 5 : 0),
-    })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 5);
+    let scored;
+    const hasMemEmb = qEmb && mems.some(m => Array.isArray(m.embedding));
+    if(hasMemEmb){
+      scored = mems.map(m => {
+        const cos = Array.isArray(m.embedding) ? _cosine(qEmb, m.embedding) : 0;
+        const recBoost = (m.created_at && (Date.now() - new Date(m.created_at).getTime()) < 30*86400*1000) ? 0.05 : 0;
+        return { m, score: cos + recBoost + (m.pinned ? 0.3 : 0) };
+      }).filter(x => x.score > 0.30).sort((a,b) => b.score - a.score).slice(0, 5);
+    } else {
+      scored = mems.map(m => ({
+        m,
+        score: _agentMemoryScore(m.text, userQuery)
+          + (m.created_at && (Date.now() - new Date(m.created_at).getTime()) < 30*86400*1000 ? 0.5 : 0)
+          + (m.pinned ? 5 : 0),
+      })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 5);
+    }
     if(scored.length){
       lines.push('【ユーザーについての記憶】');
       scored.forEach(x => lines.push(' • ' + String(x.m.text||'').slice(0, 100)));
     }
   } else if(mems.length){
-    // No query (group / first message) — surface pinned + most-recent few.
-    // Tightened to 2+2 (was 3+3) since this path runs without relevance signal.
     const pinned = mems.filter(m => m && m.pinned).slice(0, 2);
     const recent = mems.filter(m => !m.pinned).slice(-2);
     const picks = [...pinned, ...recent].slice(0, 3);
@@ -1338,14 +1349,23 @@ function _injectAgentContext(agent, opts){
       picks.forEach(p => lines.push(' • ' + String(p.text||'').slice(0, 100)));
     }
   }
-  // 4) Playbook — relevant successful patterns.
+  // 4) Playbook — same vector-if-available pattern as memories.
   const plays = Array.isArray(agent.playbook) ? agent.playbook : [];
   if(plays.length && userQuery){
-    const scored = plays.map(p => ({
-      p,
-      score: _agentMemoryScore(p.context + ' ' + p.pattern, userQuery)
-        + Math.min(2, (p.success_count || 0) * 0.3),
-    })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 2);
+    let scored;
+    const hasPbEmb = qEmb && plays.some(p => Array.isArray(p.embedding));
+    if(hasPbEmb){
+      scored = plays.map(p => {
+        const cos = Array.isArray(p.embedding) ? _cosine(qEmb, p.embedding) : 0;
+        return { p, score: cos + Math.min(0.1, (p.success_count||0) * 0.02) };
+      }).filter(x => x.score > 0.30).sort((a,b) => b.score - a.score).slice(0, 2);
+    } else {
+      scored = plays.map(p => ({
+        p,
+        score: _agentMemoryScore(p.context + ' ' + p.pattern, userQuery)
+          + Math.min(2, (p.success_count || 0) * 0.3),
+      })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 2);
+    }
     if(scored.length){
       lines.push('【過去にうまくいったアプローチ (参考)】');
       scored.forEach(x => lines.push(' • ' + String(x.p.pattern||'').slice(0, 100)));
@@ -1401,23 +1421,37 @@ async function _afterTurnExtract(agent, opts){
     // ── new_memories ──
     if(Array.isArray(parsed.new_memories) && parsed.new_memories.length){
       agent.memories = Array.isArray(agent.memories) ? agent.memories : [];
+      const toAdd = [];
       for(const t of parsed.new_memories){
         const text = String(t||'').trim().slice(0, 200);
         if(text.length < 6) continue;
-        // De-dupe: skip if a very similar memory exists
         const dupe = agent.memories.find(m => m && m.text && _agentMemoryScore(m.text, text) > Math.min(8, ngramSize(text) * 0.6));
         if(dupe) continue;
-        agent.memories.push({
+        toAdd.push({
           id: 'mem_'+crypto.randomBytes(4).toString('hex'),
           text,
           source: 'auto',
           pinned: false,
           created_at: new Date().toISOString(),
         });
-        dirty = true;
+      }
+      if(toAdd.length){
+        // Batch-embed new memories so retrieval can use vector similarity.
+        // Falls back silently if OpenAI key missing or embed fails.
+        if(OPENAI_KEY){
+          try {
+            const embs = await _openaiEmbeddings(toAdd.map(m => m.text));
+            if(Array.isArray(embs) && embs.length === toAdd.length){
+              toAdd.forEach((m,i) => { m.embedding = embs[i]; });
+            }
+          } catch(e){ /* fall back silently */ }
+        }
+        for(const m of toAdd){
+          agent.memories.push(m);
+          dirty = true;
+        }
       }
       if(agent.memories.length > 200){
-        // Drop oldest non-pinned first.
         agent.memories.sort((a,b) => (b.pinned?1:0) - (a.pinned?1:0));
         agent.memories = agent.memories.slice(0, 200);
       }
@@ -1702,6 +1736,199 @@ async function _maybeGenerateNudgeForUser(user){
     console.warn('[nudge] failed:', e.message);
     return false;
   }
+}
+
+// ── PLAN-EXECUTE-REVIEW ───────────────────────────────────────
+// Triggered by the user prefixing their message with `/plan `. Workflow:
+//   1. PLAN  — AI produces a 3-5 step JSON plan
+//   2. EXEC  — each step is run as its own AI turn (sequential, streamed)
+//   3. REVIEW — final pass concatenates the per-step outputs + reflection
+// Far slower than a single turn (3-5× LLM calls), so kept opt-in. Streams
+// progress via SSE so the user sees each step land.
+async function _runPlanExecuteReview(message, opts){
+  // opts = { agent, sse, baseSysFn, modelAlias }
+  const sse = opts && opts.sse;
+  const buildSys = opts && opts.baseSysFn; // function(extraOpts) → system string
+  const modelAlias = (opts && opts.modelAlias) || 'sonnet';   // plans benefit from Smart
+  const goal = String(message || '').replace(/^\/plan\s+/i, '').trim();
+  if(!goal || goal.length < 6){
+    return { reply: '`/plan` の後に目標を書いてください。例: `/plan SaaS の LP を作って収集ページまで`', tokens:{input:0, output:0} };
+  }
+  let totalIn = 0, totalOut = 0;
+  const planSys = (typeof buildSys === 'function' ? buildSys() : '')
+    + '\n\nあなたは複雑なタスクを 3-5 ステップに分解するプランナーです。各ステップは独立して実行可能で、入力と出力が明確である必要があります。';
+  const planPrompt = `次の目標を 3-5 ステップに分解してください。\n\n目標: ${goal}\n\nJSON で返してください (それ以外禁止):\n{\n  "steps": [\n    { "title": "ステップ短いタイトル", "instruction": "AI への詳細指示", "tool": null }\n  ]\n}`;
+  if(sse) sse('plan_status', { phase:'planning' });
+  let planRaw = '';
+  try {
+    const info = _resolveModelInfo(modelAlias);
+    if(info.provider === 'gemini'){
+      const r = await _callGemini([{role:'user', content: planPrompt}], planSys, info);
+      planRaw = (r?.content?.[0]?.text || '').trim();
+      totalIn += r?.usage?.input_tokens || 0;
+      totalOut += r?.usage?.output_tokens || 0;
+    } else {
+      const r = await callAI([{role:'user', content: planPrompt}], planSys, modelAlias, opts.agent);
+      planRaw = r?.content?.find(b=>b.type==='text')?.text || '';
+      totalIn += r?.usage?.input_tokens || 0;
+      totalOut += r?.usage?.output_tokens || 0;
+    }
+  } catch(e){
+    return { reply: 'プラン生成に失敗: ' + e.message, tokens:{input:totalIn, output:totalOut} };
+  }
+  planRaw = planRaw.replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+  let plan; try { plan = JSON.parse(planRaw); } catch(e){
+    return { reply: 'プランを JSON として読めませんでした:\n\n' + planRaw, tokens:{input:totalIn, output:totalOut} };
+  }
+  if(!plan || !Array.isArray(plan.steps) || !plan.steps.length){
+    return { reply: 'プランが空でした。もう少し具体的な依頼でお試しください。', tokens:{input:totalIn, output:totalOut} };
+  }
+  const steps = plan.steps.slice(0, 6); // hard cap
+  // Stream the plan to the client first
+  if(sse) sse('plan_outline', { steps: steps.map((s,i) => ({ n: i+1, title: s.title })) });
+  // EXEC — sequential
+  const stepResults = [];
+  for(let i = 0; i < steps.length; i++){
+    const step = steps[i];
+    if(sse) sse('plan_status', { phase:'executing', step: i+1, title: step.title });
+    const stepSys = (typeof buildSys === 'function' ? buildSys() : '')
+      + '\n\n[現在のプラン]\n' + steps.map((s,j)=>`${j+1}. ${s.title}`).join('\n')
+      + '\n\n[直前のステップ結果]\n' + (stepResults.slice(-2).map((r,j)=>`Step ${stepResults.length-1+j}: ${r.slice(0,400)}`).join('\n\n') || '(まだなし)');
+    const stepPrompt = `ステップ ${i+1}: ${step.title}\n\n指示: ${step.instruction}\n\n上記を実行して結果のみ返してください (前置きや「以下に…」禁止)。`;
+    try {
+      const info = _resolveModelInfo(modelAlias);
+      let txt = '';
+      if(info.provider === 'gemini'){
+        const r = await _callGemini([{role:'user', content: stepPrompt}], stepSys, info);
+        txt = (r?.content?.[0]?.text || '').trim();
+        totalIn += r?.usage?.input_tokens || 0;
+        totalOut += r?.usage?.output_tokens || 0;
+      } else {
+        const r = await callAI([{role:'user', content: stepPrompt}], stepSys, modelAlias, opts.agent);
+        txt = r?.content?.find(b=>b.type==='text')?.text || '';
+        totalIn += r?.usage?.input_tokens || 0;
+        totalOut += r?.usage?.output_tokens || 0;
+      }
+      stepResults.push(txt);
+      if(sse) sse('plan_step_done', { step: i+1, result: txt.slice(0, 600) });
+    } catch(e){
+      stepResults.push('(エラー: ' + e.message + ')');
+      if(sse) sse('plan_step_done', { step: i+1, result: '(エラー)', error: e.message });
+    }
+  }
+  // REVIEW
+  if(sse) sse('plan_status', { phase:'reviewing' });
+  const reviewPrompt = `目標: ${goal}\n\n実行結果:\n` +
+    steps.map((s, i) => `### ${i+1}. ${s.title}\n${stepResults[i] || '(no result)'}`).join('\n\n') +
+    `\n\n上記を統合した最終回答を作成してください。各ステップの良い部分を取り入れ、矛盾や重複を整理。出力は本文のみ。`;
+  let final = '';
+  try {
+    const info = _resolveModelInfo(modelAlias);
+    if(info.provider === 'gemini'){
+      const r = await _callGemini([{role:'user', content: reviewPrompt}], '', info);
+      final = (r?.content?.[0]?.text || '').trim();
+      totalIn += r?.usage?.input_tokens || 0;
+      totalOut += r?.usage?.output_tokens || 0;
+    } else {
+      const r = await callAI([{role:'user', content: reviewPrompt}], '', modelAlias, opts.agent);
+      final = r?.content?.find(b=>b.type==='text')?.text || '';
+      totalIn += r?.usage?.input_tokens || 0;
+      totalOut += r?.usage?.output_tokens || 0;
+    }
+  } catch(e){
+    final = stepResults.join('\n\n');
+  }
+  if(!final) final = stepResults.join('\n\n');
+  // Format as a structured reply with collapsible steps
+  const header = '📋 **' + steps.length + ' ステップで実行**\n\n' +
+    steps.map((s,i) => `${i+1}. ${s.title}`).join('\n');
+  const finalReply = header + '\n\n---\n\n' + final;
+  return { reply: finalReply, tokens: { input: totalIn, output: totalOut } };
+}
+
+// ── CRITIC PASS ───────────────────────────────────────────────
+// Optional second-pass quality check. When triggered, the model scores its
+// own reply 1-10 and rewrites it if < 7. Costs 1 extra AI round-trip, so
+// we only run it on:
+//   • long replies (≥ 1,000 chars) where quality dropoff is most visible
+//   • explicit /improve trigger from the user
+//   • optionally: when create_artifact / generate_pdf produced a result
+// Returns the (possibly rewritten) reply text. Failure → returns original.
+async function _runCriticPass(originalReply, opts){
+  try {
+    const userMsg = String((opts && opts.userMsg) || '').slice(0, 800);
+    const modelAlias = (opts && opts.model) || 'gemini-flash';
+    const info = _resolveModelInfo(modelAlias);
+    const reply = String(originalReply || '').slice(0, 12000);
+    if(reply.length < 60) return originalReply;
+    const prompt = `あなたは厳しい品質レビュアーです。以下の AI 応答を 1-10 で採点してください。\n\n[ユーザーの依頼]\n${userMsg}\n\n[AI の応答]\n${reply}\n\n採点基準:\n- ユーザーの依頼に正面から答えているか (5 点満点)\n- 情報の具体性・実用性 (3 点満点)\n- 構造・読みやすさ (2 点満点)\n\nJSON で返してください:\n{"score": <1-10>, "issues": ["問題 1", "問題 2"], "improved_reply": "<7 点未満なら必ず書き直した完全版を入れる。7 以上なら null>"}\n\n注意: JSON のみ。前置きや説明禁止。improved_reply を書く場合は markdown も完全な形で。`;
+    let raw = '';
+    if(info.provider === 'gemini'){
+      const r = await _callGemini([{role:'user', content: prompt}], '', info);
+      raw = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+    } else if(ANTHROPIC){
+      const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
+        {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+        { model: info.modelId, max_tokens: 4000, messages:[{role:'user', content: prompt}] },
+        { timeout: 60000 });
+      if(r.s === 200) raw = (r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
+    }
+    if(!raw) return originalReply;
+    raw = raw.replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    let parsed; try { parsed = JSON.parse(raw); } catch(e){ return originalReply; }
+    if(!parsed) return originalReply;
+    console.log('[critic] score=' + parsed.score + ' issues=' + (parsed.issues || []).length);
+    if(typeof parsed.score === 'number' && parsed.score >= 7) return originalReply;
+    if(typeof parsed.improved_reply === 'string' && parsed.improved_reply.length > 30){
+      return parsed.improved_reply;
+    }
+    return originalReply;
+  } catch(e){
+    console.warn('[critic] failed:', e.message);
+    return originalReply;
+  }
+}
+function _shouldRunCritic(message, reply, agent){
+  // Explicit /improve prefix from user
+  if(/^\/improve\b/i.test(String(message||'').trim())) return true;
+  // Long output gates: ≥ 1500 chars + non-trivial. Skip when reply is mostly
+  // a single URL (artifact paths) or an error message.
+  const r = String(reply || '');
+  if(r.length < 1500) return false;
+  if(/^[🎨🖼️✂️🎬🎵📄📊📐🔗✅⚠️]/.test(r) && r.length < 2000) return false; // wrap-up reply
+  if(/応答エラー|エラーが発生|生成できません/.test(r)) return false;
+  return true;
+}
+
+// ── AUTO MODEL ROUTING ────────────────────────────────────────
+// When agent.model === 'auto', the chat handler routes each turn through
+// _autoPickModel() to balance speed vs. quality. Light queries stay on
+// Gemini Flash (cheap + fast), complex tasks escalate to Sonnet. Opus is
+// reserved for explicit user request ("/opus" prefix) because it's pricy.
+//
+// Signals used:
+//   • Slash command for known complex tools  → Sonnet
+//   • Message > 400 chars                    → Sonnet (likely structured)
+//   • Multiple action verbs (3+ "して/して/して") → Sonnet
+//   • Code-block / multi-line input          → Sonnet
+//   • Plain conversation, < 100 chars        → Flash
+function _autoPickModel(message, agent){
+  const raw = String(message || '').trim();
+  // Explicit override via slash prefix
+  if(/^\/opus\b/i.test(raw))   return 'opus';
+  if(/^\/sonnet\b/i.test(raw)) return 'sonnet';
+  if(/^\/fast\b|^\/flash\b/i.test(raw)) return 'gemini-flash';
+  // Heuristics
+  if(raw.length > 400) return 'sonnet';
+  if(/```/.test(raw))  return 'sonnet';            // code block in input
+  if((raw.match(/\n/g)||[]).length >= 4) return 'sonnet';  // multi-line / structured
+  // Complex create_* requests
+  if(/(create_artifact|lp|サイト|モック|dashboard|プロトタイプ|prototype|landing|ホームページ)/i.test(raw)) return 'sonnet';
+  if(/(設計|アーキ|architecture|design.*system|データベース.*設計|API.*設計)/i.test(raw)) return 'sonnet';
+  // Multi-step requests (3+ "and"-like joiners)
+  const joiners = (raw.match(/(そして|それから|あと|また|and then|after that|\+)/gi)||[]).length;
+  if(joiners >= 2) return 'sonnet';
+  return 'gemini-flash';
 }
 
 // Resolve a per-agent model alias to {provider, modelId, maxTokens}.
@@ -8589,7 +8816,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
     if(github_enabled!==undefined)ag.github_enabled=!!github_enabled;
-    if(model!==undefined && ['haiku','sonnet','opus','gemini-flash','gemini-pro'].includes(model)) ag.model=model;
+    if(model!==undefined && ['auto','haiku','sonnet','opus','gemini-flash','gemini-pro'].includes(model)) ag.model=model;
     if(Array.isArray(skills)) ag.skills = skills.filter(s => typeof s === 'string').slice(0, 16);
     if(ai_auto_respond !== undefined){
       // Group-only setting; treat null as "unset" (use size heuristic).
@@ -8780,6 +9007,13 @@ async function handleAPI(req,res,pathname,method,ip){
       pinned: !!(body && body.pinned),
       created_at: new Date().toISOString(),
     };
+    // Embed the new memory so vector retrieval picks it up. Failure is silent.
+    if(OPENAI_KEY){
+      try {
+        const embs = await _openaiEmbeddings([text]);
+        if(Array.isArray(embs) && embs[0]) entry.embedding = embs[0];
+      } catch(e){}
+    }
     ag.memories.push(entry);
     if(ag.memories.length > 200) ag.memories = ag.memories.slice(-200);
     await DB.save(user);
@@ -12093,6 +12327,15 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     if(!agent) return jres(res,404,{error:'エージェントが見つかりません'});
 
+    // ── Auto model routing ─────────────────────────────────
+    // When agent.model === 'auto', derive an effective model per-turn from
+    // the user's message. Light queries stay on Flash (cheap + fast),
+    // complex queries escalate to Sonnet, /opus prefix bumps to Opus.
+    if(agent.model === 'auto'){
+      const auto = _autoPickModel(message || '', agent);
+      console.log('[chat] auto-routed model:', auto);
+      agent = { ...agent, model: auto };
+    }
     // Plan-based model gating (charged-side payer drives this).
     //   Free → gemini-flash or haiku only (cheap tier)
     //   Pro  → no Opus
@@ -12240,10 +12483,43 @@ async function handleAPI(req,res,pathname,method,ip){
     // Knowledge-base retrieval — runs against the responding agent's KB.
     // Empty/missing KB returns []; injected into every buildSystem call below.
     const _kbAgent = teamMemberAgent || agent;
-    // Prefer vector retrieval when (a) OPENAI_API_KEY is set on the server
-    // and (b) the agent's knowledge has embeddings. Falls back to lexical
-    // automatically when either condition fails.
-    let _kbHits = await _retrieveKbChunksVector(_kbAgent, message || '', 3);
+    // Pre-compute the user-query embedding ONCE per turn so KB retrieval
+    // and the agent-memory injector can share it. Costs ~$0.0001/turn and
+    // ~200ms — but we eliminate the duplicate roundtrip the memory path
+    // would otherwise add. Skip if no OpenAI key OR no vectorized data exists
+    // anywhere on this agent (KB chunks or memories).
+    const _kbAgentHasEmbed = _kbAgent && Array.isArray(_kbAgent.knowledge) && _kbAgent.knowledge.some(d => Array.isArray(d.embeddings) && d.embeddings.length > 0);
+    const _agHasMemEmb     = agent && Array.isArray(agent.memories) && agent.memories.some(m => Array.isArray(m.embedding));
+    let _queryEmbedding = null;
+    if(OPENAI_KEY && message && (_kbAgentHasEmbed || _agHasMemEmb)){
+      try {
+        const r = await _openaiEmbeddings([String(message).slice(0, 2000)]);
+        if(r && r[0]) _queryEmbedding = r[0];
+      } catch(e){ /* fall back to non-vector path silently */ }
+    }
+    // KB retrieval: prefer vector when we have an embedding + the KB is
+    // vectorized; fall back to lexical otherwise. We can re-use the
+    // pre-computed query embedding here too via a small refactor; for now
+    // _retrieveKbChunksVector embeds internally if not given.
+    let _kbHits = [];
+    if(_queryEmbedding && _kbAgentHasEmbed){
+      // Score KB chunks directly with the shared embedding (saves another
+      // OpenAI roundtrip vs. _retrieveKbChunksVector which would embed again).
+      const scored = [];
+      for(const doc of _kbAgent.knowledge){
+        const chunks = Array.isArray(doc.chunks) ? doc.chunks : [];
+        const embs = Array.isArray(doc.embeddings) ? doc.embeddings : [];
+        for(let i = 0; i < chunks.length; i++){
+          const e = embs[i]; if(!Array.isArray(e)) continue;
+          const s = _cosine(_queryEmbedding, e);
+          if(s > 0.20) scored.push({ score:s, doc_name:doc.name, text:chunks[i] });
+        }
+      }
+      scored.sort((a,b) => b.score - a.score);
+      _kbHits = scored.slice(0, 3);
+    } else {
+      _kbHits = await _retrieveKbChunksVector(_kbAgent, message || '', 3);
+    }
     if(!_kbHits || !_kbHits.length){
       _kbHits = _retrieveKbChunks(_kbAgent, message || '', 3);
     }
@@ -12601,6 +12877,72 @@ async function handleAPI(req,res,pathname,method,ip){
     const wantStreamTools = wantStream && useTools;
     let totalIn=0, totalOut=0;
 
+    // ── /plan branch — Plan-Execute-Review orchestrator ─────────────
+    // User explicitly opts in by prefixing their message with "/plan ". The
+    // server then runs a 3-5 step multi-AI pipeline and streams progress
+    // via SSE so the bubble updates in place.
+    if(/^\/plan\b/i.test((message||'').trim())){
+      if(wantStream){
+        res.writeHead(200, {
+          'Content-Type':'text/event-stream; charset=utf-8',
+          'Cache-Control':'no-cache, no-transform',
+          'Connection':'keep-alive',
+          'X-Accel-Buffering':'no',
+          'Access-Control-Allow-Origin':APP_URL,
+        });
+        const sse = (ev, data)=>{ try{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); }catch(e){} };
+        const ka = setInterval(()=>{ try{ res.write(': keepalive\n\n'); }catch(e){} }, 15000);
+        req.on('close', ()=>{ try{ clearInterval(ka); }catch(e){} });
+        try {
+          const planRes = await _runPlanExecuteReview(message, {
+            agent,
+            sse,
+            modelAlias: (agent.model === 'auto' ? 'sonnet' : agent.model),
+            baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{}) }),
+          });
+          totalIn += planRes.tokens.input;
+          totalOut += planRes.tokens.output;
+          const reply = planRes.reply;
+          const cost = calcCost(totalIn, totalOut);
+          const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+          const _newAid = 'a_'+crypto.randomBytes(4).toString('hex');
+          const _newUid = 'u_'+crypto.randomBytes(4).toString('hex');
+          agent.history = [...(agent.history||[]),
+            { id:_newUid, role:'user', content:message, time:ts },
+            { id:_newAid, role:'assistant', content:reply, time:ts, cost_jpy:cost.jpy, plan_mode:true }
+          ];
+          if(agent.history.length>200) agent.history = agent.history.slice(-200);
+          payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
+          payerUser.usage_count = (payerUser.usage_count||0) + 1;
+          payerUser.billing_history = payerUser.billing_history || [];
+          payerUser.billing_history.push({ date:new Date().toISOString(), type:'usage', agentId:agent.id, agentName:agent.name,
+            input_tokens:cost.inputTok, output_tokens:cost.outputTok, cost_usd:cost.usd, cost_jpy:cost.jpy, mode:'plan' });
+          const aiIdx = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
+          if(aiIdx>=0) payerUser.agents[aiIdx] = agent;
+          await DB.save(payerUser);
+          sse('delta', { text: reply });
+          sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost:{jpy:cost.jpy, usd:cost.usd} });
+        } catch(e){
+          sse('error', { message: e.message });
+        }
+        clearInterval(ka);
+        res.end();
+        return;
+      }
+      // Non-streaming fallback for legacy clients
+      try {
+        const planRes = await _runPlanExecuteReview(message, {
+          agent,
+          modelAlias: (agent.model === 'auto' ? 'sonnet' : agent.model),
+          baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{}) }),
+        });
+        const cost = calcCost(planRes.tokens.input, planRes.tokens.output);
+        return jres(res, 200, { reply: planRes.reply, cost: { jpy: cost.jpy, usd: cost.usd } });
+      } catch(e){
+        return jres(res, 502, { error: 'plan failed: ' + e.message });
+      }
+    }
+
     // ── SSE streaming branch (no tools) ─────────────────────────
     if(wantStreamPlain){
       res.writeHead(200, {
@@ -12613,12 +12955,27 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         }, agent.model, agent);
         const cost = calcCost(result.inputTokens, result.outputTokens);
-        const reply = streamReply || result.text || 'エラー';
+        let reply = streamReply || result.text || 'エラー';
+        // Critic pass — only fires when the reply is long enough or the user
+        // explicitly asked with /improve. Re-streams the improved version
+        // via SSE so the bubble updates in place.
+        if(_shouldRunCritic(message, reply, agent)){
+          try {
+            sse('thinking', { iter: 'critic' });
+            const improved = await _runCriticPass(reply, { userMsg: message, model: agent.model });
+            if(improved && improved !== reply){
+              reply = improved;
+              // Tell the client the reply was rewritten so it can flash a
+              // small "✨ 改善版" badge.
+              sse('critic_replaced', { reply });
+            }
+          } catch(e){ console.warn('[critic-plain] failed:', e.message); }
+        }
         const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
         // Stable id + optional thread parent for Slack-style threading.
         const _threadParent = body.thread_parent_id ? String(body.thread_parent_id).slice(0, 32) : null;
@@ -12727,6 +13084,38 @@ async function handleAPI(req,res,pathname,method,ip){
       const _firstToolChoice = (() => {
         const raw = (message||'').trim();
         const m = raw.toLowerCase();
+        // ── Slash commands (highest priority — explicit user intent) ─
+        // The user explicitly typed the tool name as `/cmd …`, so we force
+        // the matching tool without any question/verb gating.
+        const slashMatch = raw.match(/^\/([a-z_-]+)\b/i);
+        if(slashMatch){
+          const cmd = slashMatch[1].toLowerCase();
+          const slashMap = {
+            'image':'generate_image','img':'generate_image','draw':'generate_image',
+            'edit':'edit_image','edit-image':'edit_image',
+            'video':'generate_video','movie':'generate_video',
+            'audio':'generate_audio','tts':'generate_audio','voice':'generate_audio',
+            'pdf':'generate_pdf',
+            'chart':'generate_chart','graph':'generate_chart',
+            'diagram':'generate_diagram','flow':'generate_diagram','mermaid':'generate_diagram',
+            'qr':'generate_qr',
+            'email':'send_email','mail':'send_email','sendmail':'send_email',
+            'slack':'notify_slack','post-slack':'notify_slack',
+            'discord':'notify_discord','post-discord':'notify_discord',
+            'cal':'create_calendar_event','calendar':'create_calendar_event','meeting':'create_calendar_event',
+            'lp':'create_artifact','mock':'create_artifact','site':'create_artifact','app':'create_artifact','dashboard':'create_artifact',
+            'search':'web_search','web':'web_search',
+            'fetch':'web_fetch','url':'web_fetch',
+            'github-search':'github_search_code','code-search':'github_search_code',
+            'github-issues':'github_list_issues','issues':'github_list_issues',
+            'github-file':'github_get_file','readme':'github_get_file',
+          };
+          const toolName = slashMap[cmd];
+          if(toolName){
+            console.log('[chat] slash-command tool_choice:', cmd, '→', toolName);
+            return { type:'tool', name: toolName };
+          }
+        }
         // Skip pure questions / followups — no forcing.
         const isQuestion = /[?？]\s*$|です(か|の|ね)[?？]?\s*$|した[?？]\s*$|ますか[?？]?\s*$|でしょうか[?？]?\s*$|did you|are you|どこ|なに|何|いつ|なぜ|どう|how|why|when|where|what/i.test(raw);
         if(isQuestion) return null;
@@ -12789,7 +13178,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // to chat / call more tools / stop.
           const _tc = (iters === 0 && !effectiveRegen) ? _firstToolChoice : null;
           if(_tc){ console.log('[chat] tool_choice forced:', JSON.stringify(_tc)); }
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -12978,6 +13367,17 @@ async function handleAPI(req,res,pathname,method,ip){
           reply = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim()
             || '応答を生成できませんでした';
         }
+        // Critic pass — long answer or /improve trigger. Skipped on artifact
+        // wrap-up replies (the synthesized "🎨 [link]" string is short).
+        if(_shouldRunCritic(message, reply, agent)){
+          try {
+            const improved = await _runCriticPass(reply, { userMsg: message, model: agent.model });
+            if(improved && improved !== reply){
+              reply = improved;
+              if(sse) sse('critic_replaced', { reply });
+            }
+          } catch(e){ console.warn('[critic-tools] failed:', e.message); }
+        }
         // Stream the final reply text in chunks so the user sees it appear, since
         // we use non-streaming Anthropic calls for the tool loop (true delta streams
         // would require parsing input_json_delta deltas — left for a future revamp).
@@ -13007,7 +13407,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -13028,7 +13428,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

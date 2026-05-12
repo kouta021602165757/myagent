@@ -4035,12 +4035,13 @@ body{color:#f0f0f8;}
     <div>
       <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">AI モデル</label>
       <div id="editModelGroup" style="display:flex;flex-wrap:wrap;gap:5px">
+        <button type="button" data-model="auto"         onclick="_setEditModel('auto')"         class="model-pick ea-mpill" title="クエリの複雑度で Fast/Smart を自動切替 — 推奨">✨ Auto</button>
         <button type="button" data-model="gemini-flash" onclick="_setEditModel('gemini-flash')" class="model-pick ea-mpill">⚡ Fast</button>
         <button type="button" data-model="sonnet"       onclick="_setEditModel('sonnet')"       class="model-pick ea-mpill">🎯 Smart</button>
         <button type="button" data-model="gemini-pro"   onclick="_setEditModel('gemini-pro')"   class="model-pick ea-mpill">💎 Pro</button>
         <button type="button" data-model="opus"         onclick="_setEditModel('opus')"         class="model-pick ea-mpill">🧠 Best</button>
       </div>
-      <input type="hidden" id="editModel" value="gemini-flash">
+      <input type="hidden" id="editModel" value="auto">
     </div>
 
     <!-- ━━ アコーディオン: ツール連携 ━━ -->
@@ -8241,12 +8242,13 @@ async function openAgent(id){
     : '';
   // Quick model picker pill — click to switch between Fast / Smart / Best
   // without opening the full edit panel. Saved per-agent via PATCH.
-  var _modelMap = {'gemini-flash':{lbl:'⚡ Fast',title:'Gemini 2.5 Flash · 超高速'},
+  var _modelMap = {'auto':{lbl:'✨ Auto',title:'自動切替: クエリの複雑度で Fast/Smart を自動選択 (推奨)'},
+                   'gemini-flash':{lbl:'⚡ Fast',title:'Gemini 2.5 Flash · 超高速'},
                    'gemini-pro':{lbl:'💎 Pro',title:'Gemini 2.5 Pro · 高品質+高速'},
                    'sonnet':{lbl:'🎯 Smart',title:'Claude Sonnet · 標準品質'},
                    'opus':{lbl:'🧠 Best',title:'Claude Opus · 最高性能'},
                    'haiku':{lbl:'⚡ Lite',title:'Claude Haiku · 軽量'}};
-  var _mInfo = _modelMap[ag.model] || _modelMap['gemini-flash'];
+  var _mInfo = _modelMap[ag.model] || _modelMap['auto'];
   var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit">'+_mInfo.lbl+'</button>');
   // Agent-intelligence indicators — KPI count + active task count. Clicking
   // opens the unified Agent Profile panel. Group chats hide these.
@@ -10167,8 +10169,13 @@ function _resizeImageToDataURL(file, maxSize, quality){
  * Fires when '/' is the first char of the composer. Shows a floating menu
  * filtered by the typed prefix. Arrow keys + Enter to select. */
 var _SLASH_CMDS = [
+  {cmd:'/plan',   alias:null,        icon:'📋', desc_ja:'プランを 3-5 ステップに分解して順番に実行 (Plan→Execute→Review)', desc_en:'Break into 3-5 steps and execute sequentially', tmpl:'/plan '},
+  {cmd:'/improve',alias:null,        icon:'✨', desc_ja:'前の応答を品質チェック → 改善版を出す',     desc_en:'Self-critique and rewrite the previous reply',  tmpl:'/improve'},
+  {cmd:'/opus',   alias:null,        icon:'🧠', desc_ja:'このターンだけ Claude Opus (最高性能) を使う', desc_en:'Use Claude Opus for this turn only',         tmpl:'/opus '},
   {cmd:'/search', alias:'/s',        icon:'🔍', desc_ja:'Web 検索結果を context として AI に渡す',  desc_en:'Inject Web search results into the prompt',  tmpl:'/search '},
-  {cmd:'/image',  alias:'/img',      icon:'🎨', desc_ja:'画像を生成 (Pollinations, 無料)',          desc_en:'Generate an image (free, via Pollinations)',  tmpl:'/image '},
+  {cmd:'/image',  alias:'/img',      icon:'🎨', desc_ja:'画像を生成',                                desc_en:'Generate an image',                            tmpl:'/image '},
+  {cmd:'/pdf',    alias:null,        icon:'📄', desc_ja:'PDF を生成',                                 desc_en:'Generate a PDF',                                tmpl:'/pdf '},
+  {cmd:'/email',  alias:'/mail',     icon:'✉️', desc_ja:'自分宛にメールを送信',                       desc_en:'Send an email to yourself',                    tmpl:'/email '},
   {cmd:'/remember',alias:'/memo',    icon:'🧠', desc_ja:'長期メモリに保存 — 別チャットでも参照',     desc_en:'Save to long-term memory across chats',       tmpl:'/remember '},
   {cmd:'/pin',    alias:null,        icon:'📌', desc_ja:'直前の返答をピン留め',                      desc_en:'Pin the previous reply',                       tmpl:'/pin'},
   {cmd:'/clear',  alias:'/new',      icon:'↻',  desc_ja:'新規会話 (履歴クリア)',                      desc_en:'Start a new chat (clear history)',             tmpl:'/clear'},
@@ -11232,6 +11239,34 @@ async function _sendMsgStream(ag, text, imgs, texts){
         var lastS = ag.history[ag.history.length - 1];
         if(lastS && lastS.streaming){ lastS.content = acc; lastS.streaming = false; }
         renderMsgs(ag);
+      } else if(evType === 'plan_status'){
+        // /plan orchestrator progress — replace placeholder with status line.
+        _stopThink();
+        if(liveBody){
+          var ph = obj.phase || '';
+          var label = ph === 'planning' ? '📋 プランを生成中…'
+                    : ph === 'executing' ? ('▶ ステップ '+obj.step+': '+esc(obj.title||'…'))
+                    : ph === 'reviewing' ? '✨ 結果を統合中…'
+                    : ph;
+          liveBody.innerHTML = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'+label+'</div></div>';
+        }
+      } else if(evType === 'plan_outline'){
+        if(liveBody && Array.isArray(obj.steps)){
+          var html = '<div style="font-size:11.5px;color:var(--text2);background:var(--cream2);border:1px solid var(--wire2);border-radius:9px;padding:9px 12px;margin-bottom:8px;line-height:1.7">'
+            + '<div style="font-weight:800;color:var(--peach-dark);margin-bottom:4px">📋 プラン (' + obj.steps.length + ' ステップ)</div>'
+            + obj.steps.map(function(s){ return s.n + '. ' + esc(s.title); }).join('<br>')
+            + '</div>'
+            + '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">▶ 順番に実行します…</div></div>';
+          liveBody.innerHTML = html;
+        }
+      } else if(evType === 'plan_step_done'){
+        // No-op for now (status pill already shown). Could append per-step
+        // progress to the bubble if desired.
+      } else if(evType === 'critic_replaced'){
+        // The server rewrote the reply via critic. Replace acc with the
+        // improved version + show a small badge.
+        acc = obj.reply || acc;
+        if(liveBody) liveBody.innerHTML = _md(acc) + '<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:rgba(34,197,94,.12);color:#15803d;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px">✨ 改善版</div>';
       }
     }
   } } finally {
@@ -13870,7 +13905,7 @@ function openEditAgent(id){
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
   if(typeof _renderExtensionStatus==='function') _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn',!!ag.extension_enabled);
   if(typeof _renderGitHubStatus==='function') _renderGitHubStatus(!!ag.github_enabled);
-  _setEditModel(ag.model || 'gemini-flash');
+  _setEditModel(ag.model || 'auto');
   // Refresh accordion count badges after panel rehydrates
   setTimeout(() => {
     if(typeof _updateEditToolsCnt==='function') _updateEditToolsCnt();
@@ -14823,14 +14858,18 @@ function _toggleQuickModel(agId){
   if(existing){ existing.remove(); return; }
   var ag = (agents||[]).find(function(a){return a.id===agId;});
   if(!ag) return;
-  var current = ag.model || 'gemini-flash';
+  var current = ag.model || 'auto';
   var planAllows = function(m){
     var plan = (me && me.plan) || 'free';
+    // 'auto' is always allowed — it auto-downgrades when the plan can't
+    // afford the chosen model, so it's safe at every tier.
+    if(m === 'auto') return true;
     if(plan === 'free') return (m === 'gemini-flash' || m === 'haiku');
     if(plan === 'pro')  return m !== 'opus';
     return true;
   };
   var opts = [
+    {v:'auto',         lbl:'✨ Auto',  sub:'クエリ毎に自動切替 (推奨)'},
     {v:'gemini-flash', lbl:'⚡ Fast',  sub:'Gemini 2.5 Flash · 超高速'},
     {v:'gemini-pro',   lbl:'💎 Pro',   sub:'Gemini 2.5 Pro · 高品質'},
     {v:'sonnet',       lbl:'🎯 Smart', sub:'Claude Sonnet · 標準'},
@@ -14897,8 +14936,8 @@ async function _quickPickModel(agId, model){
 // but isn't shown in the UI anymore — Gemini Flash replaced it as the cheap
 // default since it's faster and similar quality at our price point.
 function _setEditModel(name){
-  const valid = ['gemini-flash','gemini-pro','haiku','sonnet','opus'];
-  if(!valid.includes(name)) name = 'gemini-flash';
+  const valid = ['auto','gemini-flash','gemini-pro','haiku','sonnet','opus'];
+  if(!valid.includes(name)) name = 'auto';
   const inp = document.getElementById('editModel');
   if(inp) inp.value = name;
   // The simplified panel uses .ea-mpill pills styled via CSS .on class.

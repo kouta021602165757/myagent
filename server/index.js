@@ -12335,7 +12335,12 @@ async function handleAPI(req,res,pathname,method,ip){
         // below — that's what stops runaway loops; this is a defense-in-depth limit.
         const MAX_ITERS = 30;
         const startedAt = Date.now();
-        const BUDGET_MS = 95000; // Render edge is ~100s; 5s margin to flush response
+        // Tool-loop budget. Was 95s (Render free tier edge cuts at ~100s),
+        // but Render Starter + our 15s SSE keepalives let us stretch this
+        // comfortably. 280s gives heavy tools (video render 60s, create_artifact
+        // 30-60s, image gen + wrap-up 20-40s) plenty of headroom while still
+        // protecting against runaway loops.
+        const BUDGET_MS = 280 * 1000;
         while(true){
           if(sse) sse('thinking', { iter: iters });
           // Trim heavy data from older tool_result blocks before each call
@@ -12357,11 +12362,38 @@ async function handleAPI(req,res,pathname,method,ip){
             break;
           }
           if(Date.now() - startedAt > BUDGET_MS){
-            // Render edge will close the request near 100s, so we must flush a response now.
-            // Salvage whatever text the AI produced this turn instead of throwing it away.
+            // Budget exhausted. Most heavy tools (image/video/artifact/pdf/etc.)
+            // actually produced a result before timing out — only the wrap-up
+            // commentary was incomplete. So if toolLog has a successful
+            // final-artifact entry with a URL, lead with that instead of a
+            // scary "上限に達した" message.
+            const FINAL_ARTIFACT_TOOLS_TO = new Set([
+              'generate_image','edit_image','generate_video','generate_audio','generate_pdf',
+              'generate_chart','generate_diagram','generate_qr',
+              'generate_agent_promo_video','create_artifact',
+            ]);
+            const successes = toolLog.filter(l => l && l.ok && FINAL_ARTIFACT_TOOLS_TO.has(l.name) && l.url);
             const partial = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
-            reply = (partial ? partial + '\n\n' : '')
-              + '（処理時間の上限（' + Math.round(BUDGET_MS/1000) + '秒）に達したのでここまでの結果をお伝えします。続けたい場合は「続けて」と送ってください）';
+            if(successes.length){
+              const lines = successes.map(l => {
+                if(l.name === 'create_artifact') return '🎨 **' + (l.title || 'artifact') + '**\n' + l.url;
+                if(l.name === 'generate_image')  return '🖼️ ' + l.url;
+                if(l.name === 'edit_image')      return '✂️ ' + l.url;
+                if(l.name === 'generate_video' || l.name === 'generate_agent_promo_video') return '🎬 ' + l.url;
+                if(l.name === 'generate_audio')  return '🎵 ' + l.url;
+                if(l.name === 'generate_pdf')    return '📄 ' + l.url;
+                if(l.name === 'generate_chart')  return '📊 ' + l.url;
+                if(l.name === 'generate_diagram')return '📐 ' + l.url;
+                if(l.name === 'generate_qr')     return '🔗 ' + l.url;
+                return l.url;
+              });
+              reply = (partial ? partial + '\n\n' : '✅ 完成しました\n\n')
+                + lines.join('\n')
+                + '\n\n_(追加の説明が途中で時間切れになりました。詳細が必要なら「説明して」と送ってください)_';
+            } else {
+              reply = (partial ? partial + '\n\n' : '')
+                + '（処理時間の上限（' + Math.round(BUDGET_MS/1000) + '秒）に達したのでここまでの結果をお伝えします。続けたい場合は「続けて」と送ってください）';
+            }
             break;
           }
 

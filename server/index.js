@@ -1104,8 +1104,14 @@ function _toolsWithCache(tools){
  * - cap any single text-string message at MAX_CHARS so a paste-bomb doesn't
  *   inflate the next request
  */
-const HIST_MAX_CHARS = 2000;
-const HIST_MAX_MSGS  = 12; // cap turns sent to AI for plain chat — older context rarely matters
+// Per-message char cap before "…[省略]" truncation. Was 2000 which clipped
+// even a small code paste mid-line — Anthropic context budget can easily
+// absorb 8K per message at standard model prices. Bumped to 8000.
+const HIST_MAX_CHARS = 8000;
+// Turns sent to AI per call. Was 12 (≈ 6 user-AI pairs) which often forgot
+// the original topic in extended planning chats. 30 is still well within
+// Anthropic's 200K context.
+const HIST_MAX_MSGS  = 30;
 // Cap history length. Only safe for plain-chat paths (no tool_use/result pairing risk).
 function _capHistory(messages){
   return messages.length > HIST_MAX_MSGS
@@ -1274,7 +1280,7 @@ function callAIStream(messages, system, onText, modelAlias){
 }
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
-async function callAIWithTools(messages,system,tools,toolChoice){
+async function callAIWithTools(messages,system,tools,toolChoice,modelAlias){
   // Single retry on 429 with short backoff — Render edge times out around 60–100s
   // so we can't afford long waits. Surface the rate limit to the user instead.
   let attempt = 0;
@@ -1294,7 +1300,18 @@ async function callAIWithTools(messages,system,tools,toolChoice){
   while(true){
     const sys = useCache ? _systemBlocks(system) : String(system||'');
     const cachedTools = useCache ? _toolsWithCache(tools) : tools;
-    const reqBody = {model:'claude-haiku-4-5-20251001',max_tokens:8000,system:sys,messages:_trimHistory(messages),tools:cachedTools};
+    // Honor the agent's chosen model (sonnet by default) instead of always
+    // falling back to Haiku. Tool-use chats used to be hardcoded to Haiku here
+    // which was the dominant reason users said "Claude.ai feels smarter" —
+    // they were comparing Claude.ai's Sonnet/Opus output to our chat running
+    // on the cheapest tier despite the agent.model selector.
+    const reqBody = {
+      model: _resolveModel(modelAlias),
+      max_tokens: _maxTokensFor(modelAlias),
+      system: sys,
+      messages: _trimHistory(messages),
+      tools: cachedTools,
+    };
     if(toolChoice){ reqBody.tool_choice = toolChoice; }
     const r=await httpsReq('POST','api.anthropic.com','/v1/messages',headers,
                            reqBody,
@@ -10668,7 +10685,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // to chat / call more tools / stop.
           const _tc = (iters === 0 && !effectiveRegen) ? _firstToolChoice : null;
           if(_tc){ console.log('[chat] tool_choice forced:', JSON.stringify(_tc)); }
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), tools, _tc);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, recentHistory: (agent.history||[]).slice(-6), ...(_teamCtx||{})}), tools, _tc, agent.model);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 

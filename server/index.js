@@ -1319,16 +1319,17 @@ function _injectAgentContext(agent, opts){
     })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 5);
     if(scored.length){
       lines.push('【ユーザーについての記憶】');
-      scored.forEach(x => lines.push(' • ' + String(x.m.text||'').slice(0, 160)));
+      scored.forEach(x => lines.push(' • ' + String(x.m.text||'').slice(0, 100)));
     }
   } else if(mems.length){
     // No query (group / first message) — surface pinned + most-recent few.
-    const pinned = mems.filter(m => m && m.pinned).slice(0, 3);
-    const recent = mems.filter(m => !m.pinned).slice(-3);
-    const picks = [...pinned, ...recent].slice(0, 5);
+    // Tightened to 2+2 (was 3+3) since this path runs without relevance signal.
+    const pinned = mems.filter(m => m && m.pinned).slice(0, 2);
+    const recent = mems.filter(m => !m.pinned).slice(-2);
+    const picks = [...pinned, ...recent].slice(0, 3);
     if(picks.length){
       lines.push('【ユーザーについての記憶】');
-      picks.forEach(p => lines.push(' • ' + String(p.text||'').slice(0, 160)));
+      picks.forEach(p => lines.push(' • ' + String(p.text||'').slice(0, 100)));
     }
   }
   // 4) Playbook — relevant successful patterns.
@@ -1338,16 +1339,17 @@ function _injectAgentContext(agent, opts){
       p,
       score: _agentMemoryScore(p.context + ' ' + p.pattern, userQuery)
         + Math.min(2, (p.success_count || 0) * 0.3),
-    })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 3);
+    })).filter(x => x.score >= 1).sort((a,b) => b.score - a.score).slice(0, 2);
     if(scored.length){
       lines.push('【過去にうまくいったアプローチ (参考)】');
-      scored.forEach(x => lines.push(' • ' + String(x.p.pattern||'').slice(0, 160)));
+      scored.forEach(x => lines.push(' • ' + String(x.p.pattern||'').slice(0, 100)));
     }
   }
   if(lines.length === 0) return '';
-  // Cap total payload.
+  // Cap total payload. Was 1200; tightened to 600 — system prompt was bloating
+  // by 1k chars on agents with rich memory, slowing TTFT on every turn.
   let out = lines.join('\n');
-  if(out.length > 1200) out = out.slice(0, 1200) + '\n…(要約省略)';
+  if(out.length > 600) out = out.slice(0, 600) + '\n…(要約省略)';
   return '\n\n' + out;
 }
 
@@ -1363,6 +1365,14 @@ async function _afterTurnExtract(agent, opts){
     const userMsg = String(opts.userMsg || '').slice(0, 1500);
     const aiReply = String(opts.aiReply || '').slice(0, 1500);
     if(!userMsg && !aiReply) return false;
+    // Skip on trivial exchanges: "ok"/"ありがとう"/"yes"/emoji-only → no
+    // meaningful facts to extract. Saves ~$0.0005 + a Gemini round-trip per
+    // ack message. Trivial = short user msg AND short AI reply.
+    const _isTrivialUser  = userMsg.length < 14 || /^[\s。、,.?!？！💯👍❤🎉🙏👀✨🚀💡🤖ok好yes是はいThank thank ありが おk 了解 わかr ack 👌]+$/iu.test(userMsg);
+    const _isTrivialReply = aiReply.length < 90;
+    if(_isTrivialUser && _isTrivialReply){
+      return false;
+    }
     const existingKpis = (Array.isArray(agent.kpis) ? agent.kpis : []).map(k => k.name).slice(0, 8).join(', ');
     const prompt = `あなたはエージェント "${agent.name || ''}" の長期記憶を整理するアシスタントです。\n\n直前のターン:\nUSER: ${userMsg}\nAI: ${aiReply}\n\n既存の KPI 名: ${existingKpis || '(なし)'}\n\n以下を JSON で返してください (該当なければ空配列 / 空オブジェクト):\n{\n  "new_memories": ["事実 1", "事実 2"],   // ユーザーの好み・事業・固有名詞・数値・NG事項のうち、将来の会話で参照に値する事実を 0-3 個。1 件 80 字以内。雑談・挨拶は無視。\n  "task_updates": [                         // タスクの新規開始 / 進捗 / 完了\n    { "title": "...", "status": "started|progress|done", "progress_pct": 0-100, "notes": "短い補足" }\n  ],\n  "kpi_updates": { "<既存KPI名>": <現在値> },  // AI または USER が KPI 数値に言及していれば\n  "playbook": [                             // ユーザーが明確にポジティブなリアクションをした場合に限り、AI のアプローチを 1 件抽出\n    { "context": "どんな状況で", "pattern": "AI はどう動いたか / どう答えたか", "success_count": 1 }\n  ]\n}\n\n注意:\n- 余計な文言、Markdown、コードブロック、説明は禁止。JSON のみ。\n- USER がネガティブ反応 / 修正要求をした場合 playbook は []。\n- 明らかな雑談 (挨拶 / 確認 / 軽い感想) は new_memories から除外。`;
     const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
@@ -6746,7 +6756,7 @@ function buildSystem(agent, opts){
   const kbNote = kbHits.length ? `
 
 【参考資料 (ナレッジベース) — ユーザーが事前にこの AI へ登録した文書からの抜粋】
-${kbHits.map((h,i) => `[${i+1}] ${h.doc_name || 'doc'}\n${(h.text||'').slice(0, 1800)}`).join('\n\n---\n\n')}
+${kbHits.map((h,i) => `[${i+1}] ${h.doc_name || 'doc'}\n${(h.text||'').slice(0, 800)}`).join('\n\n---\n\n')}
 
 これらは ユーザーが信頼できる情報源 として登録した内容です。回答する際はこの資料の内容を優先して使い、引用元 (例: 「[1] 〜より」) を明記してください。資料に書かれていないことは、その旨を正直に伝えてください。` : '';
   // Team context — injected into a team member's prompt so they know they're
@@ -12022,7 +12032,9 @@ async function handleAPI(req,res,pathname,method,ip){
     //   context once we've archived old turns.
     // - Take the last 14 NON-summary entries as the recent window.
     const _summaryMsg = (agent.history||[]).find(m => m && m._summary);
-    const _recentHist = (agent.history||[]).filter(m => !(m && m._summary)).slice(-14);
+    // 14 → 8: combined with the rolling-summary fold above, 8 recent turns is
+    // enough for short-term flow while keeping input-token cost down.
+    const _recentHist = (agent.history||[]).filter(m => !(m && m._summary)).slice(-8);
     const hist = _summaryMsg ? [_summaryMsg, ..._recentHist] : _recentHist;
     // ユーザーメッセージのcontentを構築（画像 + PDF + テキスト/URL添付対応）
     let userContent;

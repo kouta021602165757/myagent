@@ -3805,10 +3805,29 @@ body{color:#f0f0f8;}
           </section>
 
           <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px"><span style="background:#0f172a;color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">GitHub</span> Personal Access Token</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+              あなたの GitHub repo (README / コード / Issue) を AI が読めるようになります。<br>
+              <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Fine-grained PAT を作成 →</a>
+              <span style="color:var(--text3);font-size:11px"> · 推奨スコープ: Contents (Read), Metadata (Read), Issues (Read)</span>
+            </div>
+            <div id="intGitHubStatus" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px">
+              <input id="intGitHubPat" type="password" placeholder="ghp_… または github_pat_…" autocomplete="off" style="flex:1;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace">
+              <button onclick="_saveGitHubPat()" class="btn-primary" style="padding:9px 14px">保存</button>
+              <button onclick="_clearGitHubPat()" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;font-family:inherit">削除</button>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5">
+              🔒 PAT は暗号化なしで保存されます。本番環境では <b>read-only</b> スコープのみ推奨。
+            </div>
+          </section>
+
+          <section class="spane-section">
             <div class="spane-section-h"><span data-i18n>使い方</span></div>
             <div style="font-size:12.5px;color:var(--text2);line-height:1.7">
               <span data-i18n>AI に「Slack に売上レポートを送って」と指示すると、自動で notify_slack ツールを呼びます。</span><br>
-              <span data-i18n>スケジュール実行 + Slack 通知 を組み合わせて、毎朝 9 時に分析結果を投げる、といったオートメーションも可能です。</span>
+              <span data-i18n>スケジュール実行 + Slack 通知 を組み合わせて、毎朝 9 時に分析結果を投げる、といったオートメーションも可能です。</span><br>
+              GitHub を連携したエージェントには「自分の repo のバグを調べて」「README を読んで改善案を出して」と頼めます。
             </div>
           </section>
         </div>
@@ -4061,6 +4080,17 @@ body{color:#f0f0f8;}
             <button type="button" id="editSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:6px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウント接続</button>
           </div>
           <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
+        </div>
+
+        <!-- 4. GitHub 連携 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">🐙 GitHub <span id="editGitHubConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 7px;border-radius:99px;font-size:9.5px;font-weight:800"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#10b981"></span>接続中</span></div>
+            <div class="desc" id="editGitHubDesc">あなたの GitHub repo を AI が読めるようになります (README / コード / Issue)。ChatGPT に絶対できない「自分のコードを理解した上での回答」が可能に。</div>
+            <div id="editGitHubAccountRow" style="display:none;margin-top:5px;font-size:10.5px;color:var(--text3)">接続中: <b id="editGitHubLogin"></b> · <a href="#" onclick="event.preventDefault();disconnectGitHub()" style="color:#ef4444">切断</a></div>
+            <button type="button" id="editGitHubConnectBtn" onclick="openGitHubConnect()" style="display:none;margin-top:6px;background:#fff;color:#0f172a;border:1px solid #475569;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Personal Access Token を登録</button>
+          </div>
+          <button type="button" class="s-sw" id="editGitHubSw" onclick="toggleEditGitHub()"></button>
         </div>
       </div>
     </details>
@@ -13839,6 +13869,7 @@ function openEditAgent(id){
   if(typeof _renderChromeStatus==='function') _renderChromeStatus('editChromeSw','editChromeDesc',!!ag.chrome_enabled);
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
   if(typeof _renderExtensionStatus==='function') _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn',!!ag.extension_enabled);
+  if(typeof _renderGitHubStatus==='function') _renderGitHubStatus(!!ag.github_enabled);
   _setEditModel(ag.model || 'gemini-flash');
   // Refresh accordion count badges after panel rehydrates
   setTimeout(() => {
@@ -13967,6 +13998,109 @@ async function _loadIntegrations(){
       ? '<span style="color:#16a34a;font-weight:700">✓ '+esc(r.discord.preview||'設定済み')+'</span>'
       : '<span style="color:var(--text3)">未設定</span>';
   } catch(e){}
+  // GitHub status comes from the /api/me payload (already loaded into `me`)
+  var ghStatus = document.getElementById('intGitHubStatus');
+  if(ghStatus){
+    if(me && me.github_connected){
+      ghStatus.innerHTML = '<span style="color:#16a34a;font-weight:700">✓ '+(isJa?'接続中':'Connected')+'</span>';
+    } else {
+      ghStatus.innerHTML = '<span style="color:var(--text3)">'+(isJa?'未設定':'Not configured')+'</span>';
+    }
+  }
+}
+
+/* ── GitHub PAT (Settings → Integrations) ────────────── */
+async function _saveGitHubPat(){
+  var inp = document.getElementById('intGitHubPat'); if(!inp) return;
+  var pat = (inp.value||'').trim();
+  if(!pat){ showToast(isJa?'PAT を入力してください':'Enter a PAT','ng'); return; }
+  if(!/^(gh[pous]_|github_pat_)/i.test(pat)){
+    showToast(isJa?'PAT 形式が違います (ghp_… / github_pat_… で始まる)':'Invalid PAT format','ng');
+    return;
+  }
+  try {
+    var r = await api('PUT','/api/me/integrations/github',{pat:pat});
+    inp.value = '';
+    if(me){ me.github_connected = true; }
+    _loadIntegrations();
+    showToast(isJa
+      ? ('✓ GitHub に接続しました' + (r.login ? ' ('+r.login+')' : ''))
+      : ('✓ Connected to GitHub' + (r.login ? ' ('+r.login+')' : '')),
+      'ok');
+  } catch(e){
+    showToast((e.message||(isJa?'失敗':'Failed')),'ng');
+  }
+}
+async function _clearGitHubPat(){
+  if(!confirm(isJa?'GitHub 連携を解除しますか？':'Disconnect GitHub?')) return;
+  try {
+    await api('DELETE','/api/me/integrations/github');
+    if(me){ me.github_connected = false; }
+    _loadIntegrations();
+    showToast(isJa?'解除しました':'Disconnected','ok');
+  } catch(e){
+    showToast((e.message||(isJa?'失敗':'Failed')),'ng');
+  }
+}
+
+/* ── GitHub (Edit Agent panel) ────────────────────────── */
+function _renderGitHubStatus(agentEnabled){
+  var sw = document.getElementById('editGitHubSw');
+  var badge = document.getElementById('editGitHubConnBadge');
+  var desc = document.getElementById('editGitHubDesc');
+  var accountRow = document.getElementById('editGitHubAccountRow');
+  var connectBtn = document.getElementById('editGitHubConnectBtn');
+  if(!sw) return;
+  var connected = !!(me && me.github_connected);
+  if(connected){
+    if(badge) badge.style.display = 'inline-flex';
+    if(accountRow) accountRow.style.display = '';
+    if(connectBtn) connectBtn.style.display = 'none';
+    if(desc) desc.textContent = isJa
+      ? 'GitHub 接続済み。トグル ON でこのエージェントに repo アクセス権を与えます。'
+      : 'GitHub connected. Toggle ON to grant this agent repo access.';
+    sw.classList.toggle('on', !!agentEnabled);
+  } else {
+    if(badge) badge.style.display = 'none';
+    if(accountRow) accountRow.style.display = 'none';
+    if(connectBtn) connectBtn.style.display = '';
+    if(desc) desc.textContent = isJa
+      ? 'あなたの GitHub repo を AI が読めるようになります (README / コード / Issue)。ChatGPT に絶対できない「自分のコードを理解した上での回答」が可能に。'
+      : 'Let this AI read your GitHub repos (README / code / Issues). The kind of context-aware answer ChatGPT structurally can not give.';
+    sw.classList.remove('on');
+  }
+}
+function toggleEditGitHub(){
+  var sw = document.getElementById('editGitHubSw');
+  if(!sw) return;
+  var connected = !!(me && me.github_connected);
+  if(!connected){
+    showToast(isJa?'先に設定で GitHub PAT を登録してください':'Register a GitHub PAT in settings first','ng');
+    openGitHubConnect();
+    return;
+  }
+  var willEnable = !sw.classList.contains('on');
+  _renderGitHubStatus(willEnable);
+  if(typeof _updateEditToolsCnt === 'function') _updateEditToolsCnt();
+}
+function openGitHubConnect(){
+  // Open settings → Integrations and scroll to GitHub section
+  if(typeof openSettings === 'function'){
+    closeEditAgent();
+    openSettings();
+    setTimeout(function(){
+      var tab = document.querySelector('.snav-item[data-tab="integrations"]');
+      if(tab) tab.click();
+      setTimeout(function(){
+        var inp = document.getElementById('intGitHubPat');
+        if(inp){ inp.focus(); inp.scrollIntoView({behavior:'smooth', block:'center'}); }
+      }, 200);
+    }, 150);
+  }
+}
+async function disconnectGitHub(){
+  await _clearGitHubPat();
+  _renderGitHubStatus(false);
 }
 async function _saveIntegration(kind){
   var inp = document.getElementById(kind==='slack'?'intSlackUrl':'intDiscordUrl'); if(!inp) return;
@@ -14787,6 +14921,7 @@ function _updateEditToolsCnt(){
     if(document.getElementById('editChromeSw')?.classList.contains('on')) on++;
     if(document.getElementById('editExtSw')?.classList.contains('on'))    on++;
     if(document.getElementById('editSheetsSw')?.classList.contains('on')) on++;
+    if(document.getElementById('editGitHubSw')?.classList.contains('on')) on++;
     el.textContent = on ? on + ' 有効' : '未設定';
   } catch(e){}
 }
@@ -14814,16 +14949,19 @@ async function saveEditAgent(){
   var sheetsEnabled = !!(swSheets && swSheets.classList.contains('on') && me && me.google_sheets_connected);
   var swExt=document.getElementById('editExtSw');
   var extensionEnabled = !!(swExt && swExt.classList.contains('on') && me && me.extension_paired);
+  var swGitHub = document.getElementById('editGitHubSw');
+  var githubEnabled = !!(swGitHub && swGitHub.classList.contains('on') && me && me.github_connected);
   var modelSel = document.getElementById('editModel');
   var model = (modelSel && modelSel.value) || 'gemini-flash';
   if(!newName){ showToast(L('名前を入力してください','Please enter a name'),'ng'); return; }
   try{
-    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled, model});
+    const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled, github_enabled:githubEnabled, model});
     ag.name = newName;
     ag.persona = newPersona;
     ag.chrome_enabled = chromeEnabled;
     ag.sheets_enabled = sheetsEnabled;
     ag.extension_enabled = extensionEnabled;
+    ag.github_enabled = githubEnabled;
     ag.model = model;
     closeEditAgent();
     renderAgList();

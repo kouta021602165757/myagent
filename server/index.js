@@ -9157,6 +9157,58 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{agent:ag});
   }
 
+  // ── Notes (free-form memo pages) ───────────────────────────
+  // User-level notebook. Distinct from AI memories (user.memories /
+  // agent.memories) — these are plain documents the user writes themselves.
+  // Shape: user.notes = [{id, title, content, created_at, updated_at}]
+  if(pathname === '/api/me/notes' && method === 'GET'){
+    const notes = (user.notes || []).map(n => ({
+      id: n.id,
+      title: n.title || '',
+      snippet: String(n.content||'').slice(0, 120).replace(/\n+/g, ' '),
+      updated_at: n.updated_at || n.created_at,
+    }));
+    notes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+    return jres(res, 200, { notes });
+  }
+  if(pathname === '/api/me/notes' && method === 'POST'){
+    const b = await readBody(req);
+    user.notes = Array.isArray(user.notes) ? user.notes : [];
+    if(user.notes.length >= 200) return jres(res, 400, { error: 'too many notes (max 200)' });
+    const now = new Date().toISOString();
+    const note = {
+      id: 'note_' + crypto.randomBytes(5).toString('hex'),
+      title: String((b && b.title) || '').slice(0, 200),
+      content: String((b && b.content) || '').slice(0, 100000),
+      created_at: now,
+      updated_at: now,
+    };
+    user.notes.push(note);
+    await DB.save(user);
+    return jres(res, 200, { note });
+  }
+  const _noteM = pathname.match(/^\/api\/me\/notes\/([a-z0-9_]+)$/);
+  if(_noteM){
+    const id = _noteM[1];
+    user.notes = Array.isArray(user.notes) ? user.notes : [];
+    const idx = user.notes.findIndex(n => n && n.id === id);
+    if(idx < 0) return jres(res, 404, { error: 'note not found' });
+    if(method === 'GET') return jres(res, 200, { note: user.notes[idx] });
+    if(method === 'DELETE'){
+      user.notes.splice(idx, 1);
+      await DB.save(user);
+      return jres(res, 200, { ok: true });
+    }
+    if(method === 'PATCH'){
+      const b = await readBody(req);
+      if(typeof b.title === 'string')   user.notes[idx].title   = b.title.slice(0, 200);
+      if(typeof b.content === 'string') user.notes[idx].content = b.content.slice(0, 100000);
+      user.notes[idx].updated_at = new Date().toISOString();
+      await DB.save(user);
+      return jres(res, 200, { note: user.notes[idx] });
+    }
+  }
+
   // ── MCP server management ──────────────────────────────────
   // GET     /api/me/mcp-servers              → list user's servers (sans auth)
   // POST    /api/me/mcp-servers              → register {name, url, auth?}

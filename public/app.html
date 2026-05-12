@@ -8124,12 +8124,24 @@ async function openAgent(id){
       actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
     }
   }
+  // Context window usage indicator — rough: ~4 chars / token.
+  var ctxChars = 0;
+  (ag.history||[]).forEach(function(m){
+    if(typeof m.content === 'string') ctxChars += m.content.length;
+  });
+  if(ag.persona) ctxChars += ag.persona.length;
+  var ctxTok = Math.round(ctxChars / 4);
+  var ctxBudget = 200000;  // Anthropic 200K context
+  var ctxPct = Math.min(100, Math.round(ctxTok / ctxBudget * 100));
+  var ctxColor = ctxPct < 50 ? 'var(--text3)' : ctxPct < 80 ? 'var(--peach-dark)' : '#dc2626';
+  var ctxLbl = ctxTok >= 1000 ? (ctxTok/1000).toFixed(1)+'k' : String(ctxTok);
+  var ctxPill = '<span class="ct-ctx" title="'+(isJa?'コンテキスト使用量 (推定)':'Context window used (approx)')+'" style="font-size:10px;font-weight:700;color:'+ctxColor+';background:var(--cream2);border:1px solid var(--wire2);padding:3px 8px;border-radius:99px;letter-spacing:.02em;font-family:\'SF Mono\',Menlo,monospace">'+ctxLbl+' / 200k</span>';
   document.getElementById('chatTop').innerHTML=
     '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+
     '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
       '<div class="ct-name"><span class="live-status"></span>'+esc(ag.name)+'</div>'+
-      '<div class="ct-pills">'+topPills+'</div>'+
+      '<div class="ct-pills">'+topPills+' '+ctxPill+'</div>'+
     '</div>'+
     '<div class="ct-actions">'+ actsHTML +'</div>';
   // Hide share card whenever agent changes
@@ -8466,6 +8478,60 @@ function _renderToolLog(log){
   return '<details class="tlog" open><summary>'+head+'</summary><div class="tlog-body">'+rows+'</div></details>';
 }
 
+/* Collect URL-bearing tool steps (web_search, web_fetch, browse_url,
+   web_screenshot, web_read_markdown, ext_*) into a numbered citations
+   list rendered below an AI message body. Inline [N] markers in the text
+   are linked to the matching citation via _linkInlineCitations(). */
+function _collectCitations(toolLog){
+  if(!Array.isArray(toolLog) || !toolLog.length) return [];
+  var seen = new Set();
+  var cites = [];
+  for(var i=0;i<toolLog.length;i++){
+    var s = toolLog[i];
+    if(!s) continue;
+    // Anthropic web_search step yields step.results array; iterate.
+    if(s.name === 'search_web' && Array.isArray(s.results)){
+      for(var j=0;j<s.results.length && cites.length < 12;j++){
+        var r = s.results[j];
+        if(!r || !r.url || seen.has(r.url)) continue;
+        seen.add(r.url);
+        cites.push({ url: r.url, title: r.title || r.url, snippet: r.snippet||'' });
+      }
+      continue;
+    }
+    // Tools that return a single URL (web_fetch, browse_url, web_read_markdown
+    // etc). The fetched-page title is in step.title.
+    if(s.url && /^https?:\/\//.test(s.url) && !seen.has(s.url)){
+      seen.add(s.url);
+      cites.push({ url: s.url, title: s.title || s.url, snippet: (s.text||'').slice(0,140) });
+    }
+  }
+  return cites;
+}
+function _renderCitations(cites){
+  if(!cites || !cites.length) return '';
+  return '<div class="m-citations">' + cites.map(function(c, i){
+    var host = '';
+    try { host = new URL(c.url).hostname.replace(/^www\./,''); } catch(e){}
+    return '<a class="m-citation" href="'+esc(c.url)+'" target="_blank" rel="noopener" title="'+esc(c.snippet||c.url)+'">'+
+      '<span class="m-citation-n">['+(i+1)+']</span>'+
+      '<span class="m-citation-ti">'+esc(c.title)+'</span>'+
+      '<span class="m-citation-host">'+esc(host)+'</span>'+
+    '</a>';
+  }).join('') + '</div>';
+}
+/* Turn "[1]" / "[2]" markers the AI wrote in its text into clickable
+   superscripts linked to the matching citation URL. */
+function _linkInlineCitations(html, cites){
+  if(!cites || !cites.length) return html;
+  return html.replace(/\[(\d{1,2})\]/g, function(m, n){
+    var i = parseInt(n,10) - 1;
+    if(i < 0 || i >= cites.length) return m;
+    var c = cites[i];
+    return '<a class="cite" href="'+esc(c.url)+'" target="_blank" rel="noopener" title="'+esc(c.title)+'">'+n+'</a>';
+  });
+}
+
 function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const isU = role==='user';
   const isGroup = !!(ag && ag.is_group);
@@ -8502,8 +8568,13 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       return '<div class="m-attach"><img class="thumb" src="'+url+'"><span>'+esc(att.name||(isJa?'画像':'image'))+'</span></div>';
     }).join('');
   }
-  const body = content ? _md(content) : '';
+  // Collect URL citations from any web-search/fetch tools the agent ran,
+  // then turn [1]/[2] markers in the AI text into clickable superscripts.
+  const cites = !isU ? _collectCitations(tool_log) : [];
+  let body = content ? _md(content) : '';
+  if(cites.length) body = _linkInlineCitations(body, cites);
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
+  const citesHtml = cites.length ? _renderCitations(cites) : '';
   let acts = '';
   if(idx>=0){
     const isBookmarked = !!(raw && (raw.bookmarked || (Array.isArray(raw.bookmarked_by) && raw.bookmarked_by.includes(me?.id))));
@@ -8611,7 +8682,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     '</div>'+
     imgHtml+
     tlogHtml+
-    (renderBody?'<div class="m-body">'+(bodyMarkup||'')+'</div>':'')+
+    (renderBody?'<div class="m-body">'+(bodyMarkup||'')+citesHtml+'</div>':'')+
     reactionsHTML+
     (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
   '</div>';

@@ -3805,6 +3805,33 @@ body{color:#f0f0f8;}
           </section>
 
           <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">MCP</span>
+              Model Context Protocol
+              <span style="font-size:10.5px;color:var(--text3);font-weight:600">— 1 個登録で数百のサービスが解放</span>
+            </div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+              MCP サーバーを登録すると、その先のツール (GitHub・Notion・Linear・Stripe・Zapier 等) が自動でこの AI に届きます。<br>
+              <span style="color:var(--text3);font-size:11px">主要サーバー: <a href="https://mcp.zapier.com" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Zapier MCP (6,000+ アプリ)</a> · <a href="https://github.com/modelcontextprotocol/servers" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">公式サーバー一覧</a></span>
+            </div>
+            <div id="mcpServersList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+            <details style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:10px 12px">
+              <summary style="cursor:pointer;font-size:12.5px;font-weight:800;color:var(--text);list-style:none">＋ MCP サーバーを追加</summary>
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button type="button" onclick="_mcpPresetZapier()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🚀 Zapier MCP テンプレ</button>
+                  <button type="button" onclick="_mcpPresetGitHub()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🐙 GitHub Official</button>
+                  <button type="button" onclick="_mcpPresetNotion()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">📝 Notion</button>
+                </div>
+                <input id="mcpAddName" placeholder="名前 (例: Zapier)" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:inherit">
+                <input id="mcpAddUrl"  placeholder="https://mcp.example.com/sse" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:ui-monospace,monospace">
+                <input id="mcpAddAuth" type="password" placeholder="Authorization ヘッダ (任意, 例: Bearer xxxxx)" autocomplete="off" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12px;font-family:ui-monospace,monospace">
+                <button type="button" onclick="_mcpAddServer()" class="btn-primary" style="padding:9px;font-size:12.5px">+ 接続して試す</button>
+              </div>
+            </details>
+          </section>
+
+          <section class="spane-section">
             <div class="spane-section-h" style="display:flex;align-items:center;gap:8px"><span style="background:#0f172a;color:#fff;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800">GitHub</span> Personal Access Token</div>
             <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
               あなたの GitHub repo (README / コード / Issue) を AI が読めるようになります。<br>
@@ -10180,6 +10207,8 @@ var _SLASH_CMDS = [
   {cmd:'/image',  alias:'/img',      icon:'🎨', desc_ja:'画像を生成',                                desc_en:'Generate an image',                            tmpl:'/image '},
   {cmd:'/pdf',    alias:null,        icon:'📄', desc_ja:'PDF を生成',                                 desc_en:'Generate a PDF',                                tmpl:'/pdf '},
   {cmd:'/email',  alias:'/mail',     icon:'✉️', desc_ja:'自分宛にメールを送信',                       desc_en:'Send an email to yourself',                    tmpl:'/email '},
+  {cmd:'/pr',     alias:'/create-pr',icon:'🔀', desc_ja:'GitHub に PR を作成 (PAT 必要)',             desc_en:'Open a GitHub Pull Request (PAT required)',   tmpl:'/pr '},
+  {cmd:'/issue',  alias:null,        icon:'📋', desc_ja:'GitHub に Issue を作成 (PAT 必要)',          desc_en:'Open a GitHub Issue (PAT required)',          tmpl:'/issue '},
   {cmd:'/remember',alias:'/memo',    icon:'🧠', desc_ja:'長期メモリに保存 — 別チャットでも参照',     desc_en:'Save to long-term memory across chats',       tmpl:'/remember '},
   {cmd:'/pin',    alias:null,        icon:'📌', desc_ja:'直前の返答をピン留め',                      desc_en:'Pin the previous reply',                       tmpl:'/pin'},
   {cmd:'/clear',  alias:'/new',      icon:'↻',  desc_ja:'新規会話 (履歴クリア)',                      desc_en:'Start a new chat (clear history)',             tmpl:'/clear'},
@@ -14046,6 +14075,97 @@ async function _loadIntegrations(){
       ghStatus.innerHTML = '<span style="color:var(--text3)">'+(isJa?'未設定':'Not configured')+'</span>';
     }
   }
+  // MCP servers list
+  if(typeof _mcpLoadList === 'function') _mcpLoadList();
+}
+
+/* ── MCP servers (Settings → Integrations) ─────────── */
+async function _mcpLoadList(){
+  var listEl = document.getElementById('mcpServersList');
+  if(!listEl) return;
+  try {
+    var r = await api('GET', '/api/me/mcp-servers');
+    var servers = (r && r.servers) || [];
+    if(!servers.length){
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:10px;background:#f9f8f5;border-radius:9px;text-align:center">まだ MCP サーバー未登録。下のテンプレから始めましょう。</div>';
+      return;
+    }
+    listEl.innerHTML = servers.map(function(s){
+      var status = s.last_error
+        ? '<span style="color:#dc2626;font-size:10.5px;font-weight:700">⚠ ' + esc(String(s.last_error).slice(0, 60)) + '</span>'
+        : (s.tools_count != null
+            ? '<span style="color:#16a34a;font-size:10.5px;font-weight:700">✓ ' + s.tools_count + ' tools</span>'
+            : '<span style="color:var(--text3);font-size:10.5px">読込中…</span>');
+      return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
+        +    '<div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">🔌</div>'
+        +    '<div style="flex:1;min-width:0">'
+        +      '<div style="font-size:13px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.name) + (s.enabled === false ? ' <span style="font-size:9.5px;color:var(--text3);font-weight:600">(OFF)</span>' : '') + '</div>'
+        +      '<div style="font-size:10.5px;color:var(--text3);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">' + esc(s.url) + '</div>'
+        +      '<div style="margin-top:3px">' + status + '</div>'
+        +    '</div>'
+        +    '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'
+        +      '<button onclick="_mcpRefreshServer(\'' + esc(s.id) + '\')" title="ツール一覧を再取得" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit">🔄</button>'
+        +      '<button onclick="_mcpToggleServer(\'' + esc(s.id) + '\')" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:' + (s.enabled === false ? 'var(--text3)' : 'var(--peach-dark)') + ';font-family:inherit">' + (s.enabled === false ? 'OFF' : 'ON') + '</button>'
+        +      '<button onclick="_mcpDeleteServer(\'' + esc(s.id) + '\')" style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:#dc2626;font-family:inherit">🗑</button>'
+        +    '</div>'
+        +  '</div>';
+    }).join('');
+  } catch(e){
+    listEl.innerHTML = '<div style="font-size:11.5px;color:#dc2626;padding:8px">読込失敗: ' + esc(e.message||'') + '</div>';
+  }
+}
+async function _mcpAddServer(){
+  var name = (document.getElementById('mcpAddName').value||'').trim();
+  var url  = (document.getElementById('mcpAddUrl').value||'').trim();
+  var auth = (document.getElementById('mcpAddAuth').value||'').trim();
+  if(!name || !url){ showToast(isJa?'名前と URL は必須':'name and url are required','ng'); return; }
+  try {
+    var r = await api('POST', '/api/me/mcp-servers', { name, url, auth });
+    document.getElementById('mcpAddName').value = '';
+    document.getElementById('mcpAddUrl').value  = '';
+    document.getElementById('mcpAddAuth').value = '';
+    _mcpLoadList();
+    if(r.error){
+      showToast('⚠ ' + (r.error || '接続失敗'), 'ng');
+    } else if(r.tools_count > 0){
+      showToast('✓ ' + r.tools_count + ' ツール検出: ' + name, 'ok');
+    } else {
+      showToast('登録しました (ツール未検出 — URL を確認)', 'ng');
+    }
+  } catch(e){
+    showToast((e.message || (isJa?'登録失敗':'Failed')), 'ng');
+  }
+}
+async function _mcpDeleteServer(id){
+  if(!confirm(isJa?'この MCP サーバーを削除?':'Delete this MCP server?')) return;
+  try { await api('DELETE', '/api/me/mcp-servers/' + id); _mcpLoadList(); showToast(isJa?'削除しました':'Deleted','ok'); }
+  catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+async function _mcpRefreshServer(id){
+  try { var r = await api('POST', '/api/me/mcp-servers/' + id + '/refresh', {}); _mcpLoadList(); showToast('✓ ' + (r.tools_count||0) + ' tools','ok'); }
+  catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+async function _mcpToggleServer(id){
+  try { await api('POST', '/api/me/mcp-servers/' + id + '/toggle', {}); _mcpLoadList(); }
+  catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+}
+function _mcpPresetZapier(){
+  document.getElementById('mcpAddName').value = 'Zapier';
+  document.getElementById('mcpAddUrl').value  = 'https://mcp.zapier.com/api/mcp/s/YOUR_KEY/sse';
+  document.getElementById('mcpAddAuth').value = '';
+  showToast('Zapier MCP の URL を https://mcp.zapier.com で取得して貼り替えてください','ok');
+}
+function _mcpPresetGitHub(){
+  document.getElementById('mcpAddName').value = 'GitHub Official';
+  document.getElementById('mcpAddUrl').value  = 'https://api.githubcopilot.com/mcp';
+  document.getElementById('mcpAddAuth').value = 'Bearer YOUR_GITHUB_PAT';
+  showToast('Bearer の後を GitHub PAT に置き換えてください','ok');
+}
+function _mcpPresetNotion(){
+  document.getElementById('mcpAddName').value = 'Notion';
+  document.getElementById('mcpAddUrl').value  = 'https://mcp.notion.com/mcp';
+  document.getElementById('mcpAddAuth').value = 'Bearer YOUR_NOTION_TOKEN';
+  showToast('Notion Integration token を取得して Bearer の後に貼り付け','ok');
 }
 
 /* ── GitHub PAT (Settings → Integrations) ────────────── */

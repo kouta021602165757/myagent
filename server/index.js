@@ -3392,6 +3392,170 @@ function _encodeForMd(s){
 }
 
 // ── Server-side public-web tools (no extension required) ────────────
+// ── MCP (Model Context Protocol) client ───────────────────────
+// MCP is the emerging standard for AI-tool plumbing (Anthropic-led, now
+// industry-wide). One MCP client implementation gives this app instant
+// access to hundreds of services: GitHub, Slack, Notion, Linear, Stripe,
+// Zapier (→ 6,000+ apps), Brave Search, Puppeteer, etc.
+//
+// Wire shape:
+//   user.mcp_servers = [{id, name, url, auth?, enabled, added_at}]
+//   agent.mcp_server_ids = [serverId, ...]   (per-agent enable)
+//
+// Cache shape: in-memory only (cleared on server restart). Tools rarely
+// change so 30 min TTL is fine; users can hit "Refresh" in the UI to
+// invalidate.
+const _mcpToolsCache = new Map(); // serverId → { tools, at }
+const MCP_TOOLS_TTL_MS = 30 * 60 * 1000;
+
+// Sanitize a tool name into Anthropic's `[a-zA-Z0-9_-]+` constraint, max 64.
+function _mcpSafeToolName(serverId, toolName){
+  const prefix = 'mcp_' + serverId + '_';
+  const safe = String(toolName||'').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64 - prefix.length);
+  return (prefix + safe).slice(0, 64);
+}
+
+// Issue a JSON-RPC 2.0 call to an MCP HTTP endpoint. Supports both plain-JSON
+// and SSE-wrapped responses (some servers return "data: {...}\n\n").
+function _mcpRpc(serverUrl, method, params, auth){
+  return new Promise((resolve)=>{
+    let url;
+    try { url = new URL(serverUrl); } catch(e){ resolve({ ok:false, error:'invalid url' }); return; }
+    const body = JSON.stringify({ jsonrpc:'2.0', id: Date.now() + Math.floor(Math.random()*1000), method, params: params || {} });
+    const headers = {
+      'Content-Type':'application/json',
+      'Accept':'application/json, text/event-stream',
+      'Content-Length': Buffer.byteLength(body),
+      'User-Agent':'MY-AI-Agent/1.0',
+    };
+    if(auth) headers['Authorization'] = auth;
+    const lib = url.protocol === 'https:' ? https : http;
+    const req = lib.request({
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname + (url.search || ''),
+      method:'POST',
+      headers,
+    }, (r)=>{
+      let buf = '';
+      r.setEncoding('utf8');
+      r.on('data', c => buf += c);
+      r.on('end', ()=>{
+        if(r.statusCode >= 400){
+          resolve({ ok:false, status:r.statusCode, error:'HTTP '+r.statusCode+' '+buf.slice(0,200) });
+          return;
+        }
+        try {
+          // SSE-style? Pick the first `data: {...}` line.
+          let data;
+          if(buf.indexOf('data: ') === 0 || buf.indexOf('\ndata: ') >= 0){
+            const dataLine = buf.split('\n').find(l => l.startsWith('data: '));
+            data = dataLine ? JSON.parse(dataLine.slice(6)) : null;
+          } else {
+            data = JSON.parse(buf || '{}');
+          }
+          if(data && data.error){
+            resolve({ ok:false, error: data.error.message || JSON.stringify(data.error).slice(0,200) });
+            return;
+          }
+          resolve({ ok:true, data });
+        } catch(e){
+          resolve({ ok:false, error:'parse: ' + e.message, raw: buf.slice(0,200) });
+        }
+      });
+    });
+    req.on('error', e => resolve({ ok:false, error:e.message }));
+    req.setTimeout(30000, ()=> req.destroy(new Error('timeout')));
+    req.write(body); req.end();
+  });
+}
+
+async function _mcpListTools(server, opts){
+  if(!opts || !opts.force){
+    const cached = _mcpToolsCache.get(server.id);
+    if(cached && (Date.now() - cached.at) < MCP_TOOLS_TTL_MS) return cached.tools;
+  }
+  // Best-effort initialize (some MCP servers require this, others don't care)
+  await _mcpRpc(server.url, 'initialize', {
+    protocolVersion: '2024-11-05',
+    capabilities: {},
+    clientInfo: { name:'MY AI Agent', version:'1.0' },
+  }, server.auth);
+  const r = await _mcpRpc(server.url, 'tools/list', {}, server.auth);
+  if(!r.ok || !r.data || !r.data.result || !Array.isArray(r.data.result.tools)){
+    console.warn('[mcp] list_tools failed server=' + server.id + ' err=' + (r.error||''));
+    _mcpToolsCache.set(server.id, { tools: [], at: Date.now(), error: r.error || 'list_tools failed' });
+    return [];
+  }
+  const tools = r.data.result.tools;
+  _mcpToolsCache.set(server.id, { tools, at: Date.now() });
+  return tools;
+}
+
+async function _mcpCallTool(server, toolName, args){
+  const r = await _mcpRpc(server.url, 'tools/call', {
+    name: toolName,
+    arguments: args || {},
+  }, server.auth);
+  if(!r.ok){
+    return { error: 'mcp_call_failed: ' + (r.error || 'unknown') };
+  }
+  const result = (r.data && r.data.result) || {};
+  if(result.isError){
+    const errText = (result.content||[]).map(c => c.text||'').join('\n');
+    return { error: errText || 'mcp tool returned isError' };
+  }
+  // Aggregate textual content into a single string for AI consumption.
+  const blocks = result.content || [];
+  const textParts = [];
+  const imageUrls = [];
+  for(const b of blocks){
+    if(b.type === 'text' && b.text) textParts.push(b.text);
+    else if(b.type === 'image' && b.data){ imageUrls.push('data:'+(b.mimeType||'image/png')+';base64,'+b.data); }
+    else if(b.type === 'resource' && b.resource && b.resource.uri) textParts.push('[resource: '+b.resource.uri+']');
+  }
+  return {
+    ok: true,
+    text: textParts.join('\n\n').slice(0, 30000),
+    images: imageUrls,
+    raw: result,
+  };
+}
+
+// Compose MCP tools for chat: list user's MCP servers enabled for THIS agent,
+// fetch their tool catalog (cached), and wrap in Anthropic format with a
+// stable `mcp_<serverId>_<toolName>` prefix so the dispatch can route back.
+async function _composeMcpToolsForAgent(user, agent){
+  const allServers = Array.isArray(user && user.mcp_servers) ? user.mcp_servers : [];
+  if(allServers.length === 0) return { tools: [], routing: new Map() };
+  // Per-agent enable: if agent.mcp_server_ids is undefined → all servers; if
+  // present → only those listed. This way new servers default to on for
+  // existing agents (less friction).
+  const enabledIds = Array.isArray(agent && agent.mcp_server_ids) ? agent.mcp_server_ids : null;
+  const servers = allServers.filter(s => s && s.enabled !== false && (!enabledIds || enabledIds.includes(s.id)));
+  if(servers.length === 0) return { tools: [], routing: new Map() };
+  const tools = [];
+  const routing = new Map(); // anthropicToolName → { server, toolName }
+  for(const s of servers){
+    try {
+      const mcpTools = await _mcpListTools(s);
+      for(const t of mcpTools){
+        if(!t || !t.name) continue;
+        const anthName = _mcpSafeToolName(s.id, t.name);
+        tools.push({
+          name: anthName,
+          description: '[' + (s.name||s.id) + '] ' + (t.description||t.name||''),
+          input_schema: t.inputSchema || { type:'object', properties:{} },
+        });
+        routing.set(anthName, { server: s, toolName: t.name });
+      }
+    } catch(e){
+      console.warn('[mcp] compose failed server=' + s.id + ' err=' + e.message);
+    }
+  }
+  return { tools, routing };
+}
+
 // ── GitHub integration tools ──────────────────────────────────
 // Indie / solo developers store their "second brain" in GitHub repos:
 // READMEs, issue threads, commit messages, design docs. With a personal
@@ -3401,6 +3565,48 @@ function _encodeForMd(s){
 // MVP: read-only (search / read / list). Write support (create issue,
 // open PR comment) deferred to phase 2.
 const GITHUB_TOOLS = [
+  {
+    name:'github_create_pr',
+    description:'GitHub repo にファイル変更を含む Pull Request を作成。AI がコードを修正して PR を出すフロー。direct main push は禁止 — 必ず新ブランチ + PR 経由。ユーザーは GitHub の PR 画面でレビューしてマージする。',
+    input_schema:{
+      type:'object',
+      properties:{
+        repo:{type:'string',description:'owner/repo 形式 (例: myorg/myapp)'},
+        title:{type:'string',description:'PR タイトル (60 字以内推奨)'},
+        body:{type:'string',description:'PR 本文 (markdown OK, 変更理由 + テスト方針 を書く)'},
+        branch:{type:'string',description:'新規ブランチ名 (例: ai/fix-auth-bug)。base から枝分かれする。'},
+        base:{type:'string',description:'base branch (省略時は main / master)'},
+        changes:{
+          type:'array',
+          description:'変更ファイル群',
+          items:{
+            type:'object',
+            properties:{
+              path:{type:'string',description:'ルートからのパス'},
+              content:{type:'string',description:'新しいファイル全文 (UTF-8 テキスト)'},
+              message:{type:'string',description:'このファイルのコミットメッセージ (任意)'},
+            },
+            required:['path','content'],
+          },
+        },
+      },
+      required:['repo','title','branch','changes'],
+    },
+  },
+  {
+    name:'github_create_issue',
+    description:'GitHub repo に Issue を作成。バグ報告・タスク作成に使う。',
+    input_schema:{
+      type:'object',
+      properties:{
+        repo:{type:'string',description:'owner/repo 形式'},
+        title:{type:'string',description:'Issue タイトル'},
+        body:{type:'string',description:'本文 (markdown OK)'},
+        labels:{type:'array',items:{type:'string'},description:'ラベル配列 (任意)'},
+      },
+      required:['repo','title'],
+    },
+  },
   {
     name:'github_search_code',
     description:'GitHub のあなたのリポジトリ全体からコード検索。"todo handler" のような自然語クエリでも OK。返ってきたファイルパスは github_get_file で詳細を取得できます。',
@@ -3466,7 +3672,116 @@ async function executeGitHubTool(user, name, input){
     req.setTimeout(25000, ()=> req.destroy(new Error('timeout')));
     req.end();
   });
+  // POST/PUT helper for write ops. Body is JSON-serialized.
+  const sendJson = (method, path, body) => new Promise((resolve)=>{
+    const url = new URL('https://api.github.com' + path);
+    const payload = JSON.stringify(body || {});
+    const req = https.request({
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method,
+      headers: { ...headers, 'Content-Type':'application/json', 'Content-Length': Buffer.byteLength(payload) },
+    }, (r)=>{
+      let buf=''; r.on('data', c => buf += c);
+      r.on('end', ()=>{ try { resolve({ status:r.statusCode, data: JSON.parse(buf||'null') }); } catch(e){ resolve({status:r.statusCode, data:null, raw:buf}); } });
+    });
+    req.on('error', e => resolve({status:0, data:null, error:e.message}));
+    req.setTimeout(25000, ()=> req.destroy(new Error('timeout')));
+    req.write(payload); req.end();
+  });
   try {
+    // ── Write ops ───────────────────────────────────────
+    if(name === 'github_create_pr'){
+      const repo = String(input.repo||'').trim();
+      const title = String(input.title||'').trim();
+      const body = String(input.body||'');
+      const branch = String(input.branch||'').trim();
+      const baseRequested = String(input.base||'').trim();
+      const changes = Array.isArray(input.changes) ? input.changes.filter(c => c && c.path && typeof c.content === 'string') : [];
+      if(!repo || !title || !branch) return { error: 'repo / title / branch required' };
+      if(changes.length === 0) return { error: 'changes[] is empty' };
+      if(changes.length > 30) return { error: 'too many file changes in one PR (max 30)' };
+      // 1) Resolve base branch — use requested or repo default
+      let base = baseRequested;
+      if(!base){
+        const repoInfo = await getJson('/repos/' + repo);
+        if(repoInfo.status !== 200) return { error: 'repo lookup failed: HTTP ' + repoInfo.status };
+        base = repoInfo.data.default_branch || 'main';
+      }
+      // 2) Get base SHA
+      const baseRef = await getJson('/repos/' + repo + '/git/refs/heads/' + encodeURIComponent(base));
+      if(baseRef.status !== 200 || !baseRef.data.object){
+        return { error: 'base branch "' + base + '" not found (HTTP ' + baseRef.status + ')' };
+      }
+      const baseSha = baseRef.data.object.sha;
+      // 3) Create the new branch
+      const branchRes = await sendJson('POST', '/repos/' + repo + '/git/refs', {
+        ref: 'refs/heads/' + branch,
+        sha: baseSha,
+      });
+      if(branchRes.status !== 201 && branchRes.status !== 422){
+        // 422 = ref already exists → reuse it; everything else is a hard fail
+        return { error: 'branch create failed: HTTP ' + branchRes.status + ' ' + ((branchRes.data && branchRes.data.message) || '') };
+      }
+      // 4) Commit each file change to the new branch
+      const committed = [];
+      for(const ch of changes){
+        const path = String(ch.path).replace(/^\//,'');
+        // Need to know whether file exists on this branch (PUT requires SHA when updating)
+        const existing = await getJson('/repos/' + repo + '/contents/' + encodeURI(path) + '?ref=' + encodeURIComponent(branch));
+        const putBody = {
+          message: String(ch.message || 'AI: update ' + path),
+          content: Buffer.from(String(ch.content), 'utf8').toString('base64'),
+          branch,
+        };
+        if(existing.status === 200 && existing.data && existing.data.sha) putBody.sha = existing.data.sha;
+        const putRes = await sendJson('PUT', '/repos/' + repo + '/contents/' + encodeURI(path), putBody);
+        if(putRes.status !== 200 && putRes.status !== 201){
+          return { error: 'file write failed (' + path + '): HTTP ' + putRes.status + ' ' + ((putRes.data && putRes.data.message) || '') };
+        }
+        committed.push({ path, url: putRes.data && putRes.data.content && putRes.data.content.html_url });
+      }
+      // 5) Open the PR
+      const prRes = await sendJson('POST', '/repos/' + repo + '/pulls', {
+        title, body, head: branch, base,
+      });
+      if(prRes.status !== 201){
+        return {
+          error: 'PR open failed: HTTP ' + prRes.status + ' ' + ((prRes.data && prRes.data.message) || ''),
+          branch_url: 'https://github.com/' + repo + '/tree/' + branch,
+          committed,
+        };
+      }
+      return {
+        ok: true,
+        url: prRes.data.html_url,
+        number: prRes.data.number,
+        branch,
+        base,
+        committed_files: committed.length,
+        markdown: '🔀 [PR #' + prRes.data.number + ': ' + title + '](' + prRes.data.html_url + ')',
+        instructions: '次の応答で markdown リンクを本文に含めてください。',
+      };
+    }
+    if(name === 'github_create_issue'){
+      const repo = String(input.repo||'').trim();
+      const title = String(input.title||'').trim();
+      if(!repo || !title) return { error: 'repo and title required' };
+      const r = await sendJson('POST', '/repos/' + repo + '/issues', {
+        title,
+        body: String(input.body || ''),
+        labels: Array.isArray(input.labels) ? input.labels.slice(0, 10) : undefined,
+      });
+      if(r.status !== 201){
+        return { error: 'issue create failed: HTTP ' + r.status + ' ' + ((r.data && r.data.message) || '') };
+      }
+      return {
+        ok: true,
+        url: r.data.html_url,
+        number: r.data.number,
+        markdown: '📋 [Issue #' + r.data.number + ': ' + title + '](' + r.data.html_url + ')',
+      };
+    }
     if(name === 'github_search_code'){
       const q = String(input.query||'').trim();
       if(!q) return { error: 'query required' };
@@ -8804,7 +9119,7 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pam&&method==='PATCH'){
     const agId=pam[1];
     const body=await readBody(req);
-    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,github_enabled,avatar,model,skills,ai_auto_respond,team_goal}=body;
+    const{name,persona,chrome_enabled,sheets_enabled,extension_enabled,github_enabled,mcp_server_ids,avatar,model,skills,ai_auto_respond,team_goal}=body;
     const ag=(user.agents||[]).find(a=>a.id===agId);
     if(!ag)return jres(res,404,{error:'エージェントが見つかりません'});
     if(name)ag.name=name.trim();
@@ -8816,6 +9131,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(sheets_enabled!==undefined)ag.sheets_enabled=!!sheets_enabled;
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
     if(github_enabled!==undefined)ag.github_enabled=!!github_enabled;
+    if(Array.isArray(mcp_server_ids)) ag.mcp_server_ids = mcp_server_ids.filter(x => typeof x === 'string').slice(0, 30);
     if(model!==undefined && ['auto','haiku','sonnet','opus','gemini-flash','gemini-pro'].includes(model)) ag.model=model;
     if(Array.isArray(skills)) ag.skills = skills.filter(s => typeof s === 'string').slice(0, 16);
     if(ai_auto_respond !== undefined){
@@ -8839,6 +9155,79 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.updated_at = new Date().toISOString();
     await DB.save(user);
     return jres(res,200,{agent:ag});
+  }
+
+  // ── MCP server management ──────────────────────────────────
+  // GET     /api/me/mcp-servers              → list user's servers (sans auth)
+  // POST    /api/me/mcp-servers              → register {name, url, auth?}
+  // DELETE  /api/me/mcp-servers/:id          → remove
+  // POST    /api/me/mcp-servers/:id/refresh  → invalidate tools cache + re-fetch
+  // POST    /api/me/mcp-servers/:id/toggle   → flip enabled flag
+  if(pathname === '/api/me/mcp-servers' && method === 'GET'){
+    const servers = (user.mcp_servers || []).map(s => ({
+      id: s.id, name: s.name, url: s.url, enabled: s.enabled !== false,
+      added_at: s.added_at,
+      tools_count: (_mcpToolsCache.get(s.id) || {}).tools ? _mcpToolsCache.get(s.id).tools.length : null,
+      last_error: (_mcpToolsCache.get(s.id) || {}).error || null,
+    }));
+    return jres(res, 200, { servers });
+  }
+  if(pathname === '/api/me/mcp-servers' && method === 'POST'){
+    const b = await readBody(req);
+    const name = String((b && b.name) || '').trim().slice(0, 60);
+    const url = String((b && b.url) || '').trim();
+    const auth = (b && b.auth) ? String(b.auth).slice(0, 500) : '';
+    if(!name) return jres(res, 400, { error: 'name required' });
+    if(!/^https?:\/\//.test(url)) return jres(res, 400, { error: 'url must be http(s)://' });
+    user.mcp_servers = Array.isArray(user.mcp_servers) ? user.mcp_servers : [];
+    if(user.mcp_servers.length >= 20) return jres(res, 400, { error: 'too many MCP servers (max 20)' });
+    const serverId = 'srv_' + crypto.randomBytes(4).toString('hex');
+    const entry = {
+      id: serverId, name, url,
+      auth: auth || undefined,
+      enabled: true,
+      added_at: new Date().toISOString(),
+    };
+    user.mcp_servers.push(entry);
+    await DB.save(user);
+    // Eagerly probe so the user sees tool count immediately + we surface
+    // connection errors instead of silent fail.
+    let tools = [];
+    try { tools = await _mcpListTools(entry, { force: true }); } catch(e){}
+    return jres(res, 200, {
+      server: { id: entry.id, name: entry.name, url: entry.url, enabled: true, added_at: entry.added_at },
+      tools_count: tools.length,
+      tools: tools.slice(0, 50).map(t => ({ name: t.name, description: (t.description||'').slice(0, 200) })),
+      error: (_mcpToolsCache.get(serverId) || {}).error || null,
+    });
+  }
+  const _mcpM = pathname.match(/^\/api\/me\/mcp-servers\/([^/]+)(?:\/(refresh|toggle))?$/);
+  if(_mcpM){
+    const serverId = _mcpM[1];
+    const action = _mcpM[2];
+    user.mcp_servers = Array.isArray(user.mcp_servers) ? user.mcp_servers : [];
+    const idx = user.mcp_servers.findIndex(s => s && s.id === serverId);
+    if(idx < 0) return jres(res, 404, { error: 'mcp server not found' });
+    if(method === 'DELETE'){
+      user.mcp_servers.splice(idx, 1);
+      _mcpToolsCache.delete(serverId);
+      await DB.save(user);
+      return jres(res, 200, { ok: true });
+    }
+    if(method === 'POST' && action === 'refresh'){
+      _mcpToolsCache.delete(serverId);
+      let tools = [];
+      try { tools = await _mcpListTools(user.mcp_servers[idx], { force: true }); } catch(e){}
+      return jres(res, 200, {
+        tools_count: tools.length,
+        error: (_mcpToolsCache.get(serverId) || {}).error || null,
+      });
+    }
+    if(method === 'POST' && action === 'toggle'){
+      user.mcp_servers[idx].enabled = user.mcp_servers[idx].enabled === false;
+      await DB.save(user);
+      return jres(res, 200, { enabled: user.mcp_servers[idx].enabled });
+    }
   }
 
   // ── PUT / DELETE /api/me/integrations/github  ──────────────
@@ -12860,6 +13249,11 @@ async function handleAPI(req,res,pathname,method,ip){
           + '要約・レポート・リマインダー・調査結果の自分宛通知に使ってください。他人への送信は不可。',
       };
     });
+    // MCP tools — list registered MCP servers, fetch their tool catalogs
+    // (cached 30 min), and merge into the tools array. Routing back to the
+    // correct server happens via `_mcpRouting` in the tool-dispatch switch.
+    const _mcpCompose = await _composeMcpToolsForAgent(payerUser, agent);
+    const _mcpRouting = _mcpCompose.routing;
     const tools = [
       // chrome_enabled now means "give the agent web access" — fulfilled
       // by Anthropic-hosted web_search / web_fetch (works on Render free).
@@ -12871,6 +13265,7 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(mediaUtilActive ? _mediaTools : []),
       ...(webNativeActive ? WEB_NATIVE_TOOLS : []),
       ...(githubActive ? GITHUB_TOOLS : []),
+      ..._mcpCompose.tools,
     ];
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
@@ -13109,6 +13504,8 @@ async function handleAPI(req,res,pathname,method,ip){
             'github-search':'github_search_code','code-search':'github_search_code',
             'github-issues':'github_list_issues','issues':'github_list_issues',
             'github-file':'github_get_file','readme':'github_get_file',
+            'pr':'github_create_pr','create-pr':'github_create_pr',
+            'issue':'github_create_issue','create-issue':'github_create_issue',
           };
           const toolName = slashMap[cmd];
           if(toolName){
@@ -13286,6 +13683,10 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeWebExtractTool(block.input||{});
             } else if(block.name && block.name.startsWith('github_')){
               result = await executeGitHubTool(payerUser, block.name, block.input||{});
+            } else if(block.name && block.name.startsWith('mcp_') && _mcpRouting && _mcpRouting.has(block.name)){
+              // Route back to the originating MCP server using the prefix map.
+              const route = _mcpRouting.get(block.name);
+              result = await _mcpCallTool(route.server, route.toolName, block.input || {});
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(session){

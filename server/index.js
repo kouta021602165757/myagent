@@ -1116,9 +1116,17 @@ function _trimHistory(messages){
   return messages.map((m, i) => {
     const isLast = i === messages.length - 1;
     if(typeof m.content === 'string'){
-      const c = m.content.length > HIST_MAX_CHARS
-        ? m.content.slice(0, HIST_MAX_CHARS - 10) + '…[省略]'
-        : m.content;
+      // Defensive: Anthropic rejects any message with empty content
+      // ("messages.N: user messages must have non-empty content"). This
+      // happens when a user sent attachments without typing text, or when
+      // a regenerate / edit path produced an empty entry. Replace with a
+      // single-char placeholder so the API call succeeds.
+      let c = m.content == null ? '' : m.content;
+      if(c.length === 0 || !c.trim()){
+        c = m.role === 'user' ? '(添付のみ)' : '(empty)';
+      } else if(c.length > HIST_MAX_CHARS){
+        c = c.slice(0, HIST_MAX_CHARS - 10) + '…[省略]';
+      }
       return { role:m.role, content:c };
     }
     if(Array.isArray(m.content)){
@@ -1132,6 +1140,12 @@ function _trimHistory(messages){
         }
         return b;
       });
+      // Catch fully-empty text blocks too.
+      const allEmpty = trimmed.every(b =>
+        (b.type === 'text' && (!b.text || !b.text.trim())) ||
+        (b.type === 'tool_result' && (!b.content || (Array.isArray(b.content) && b.content.length===0)))
+      );
+      if(allEmpty){ return { role:m.role, content: m.role === 'user' ? '(添付のみ)' : '(empty)' }; }
       return { role:m.role, content:trimmed };
     }
     return m;

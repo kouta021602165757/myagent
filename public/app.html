@@ -3939,176 +3939,208 @@ body{color:#f0f0f8;}
 </div>
 
 
-<!-- ── エージェント右パネル ── -->
-<div id="editPanel" style="position:fixed;top:0;right:-320px;bottom:0;width:300px;background:var(--cream);border-left:1px solid rgba(180,120,80,.2);box-shadow:-8px 0 24px rgba(0,0,0,.1);z-index:400;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(180,120,80,.12)">
-    <div style="font-size:15px;font-weight:700;color:var(--text)">エージェントを編集</div>
-    <button onclick="closeEditAgent()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:0">×</button>
-  </div>
-  <div style="padding:18px;display:flex;flex-direction:column;gap:14px;flex:1;overflow-y:auto">
-    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(251,146,60,.06);border-radius:12px;border:1px solid rgba(251,146,60,.12)">
-      <div id="editAgAvatar" style="font-size:28px;width:44px;height:44px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
-      <div style="flex:1;min-width:0">
-        <div id="editAgName2" style="font-size:14px;font-weight:700;color:var(--text)"></div>
-        <div id="editAgSkills" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
-      </div>
+<!-- ── エージェント編集パネル (シンプル化版) ──
+     上半分 = 常時表示 (名前 / 業務 / モデル) ・80% のユーザーはここで完結
+     下半分 = アコーディオン (ツール連携 / ナレッジ / 高度な設定 / 危険ゾーン)
+     -->
+<style>
+  .ea-acc{background:#fff;border:1px solid var(--wire2);border-radius:11px;overflow:hidden}
+  .ea-acc > summary{
+    list-style:none;padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
+    font-size:12.5px;font-weight:800;color:var(--text);user-select:none;
+  }
+  .ea-acc > summary::-webkit-details-marker{display:none}
+  .ea-acc > summary::after{content:'›';margin-left:auto;color:var(--text3);font-size:14px;transition:.15s;transform:rotate(0)}
+  .ea-acc[open] > summary::after{transform:rotate(90deg)}
+  .ea-acc > summary:hover{background:var(--cream2)}
+  .ea-acc > summary .cnt{font-size:10.5px;color:var(--text3);font-weight:700;margin-left:auto}
+  .ea-acc > summary::after{margin-left:8px}
+  .ea-acc[open] > summary{border-bottom:1px solid var(--wire2)}
+  .ea-acc-body{padding:12px 14px;display:flex;flex-direction:column;gap:11px;background:#fdfcfa}
+  .ea-row{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--wire)}
+  .ea-row:last-child{border-bottom:0}
+  .ea-row > div{flex:1;min-width:0}
+  .ea-row .hd{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .ea-row .desc{font-size:10.5px;color:var(--text3);margin-top:2px;line-height:1.55}
+  .ea-mpill{
+    padding:7px 12px;border-radius:99px;background:#fff;border:1.5px solid var(--wire2);
+    cursor:pointer;font-size:11.5px;font-weight:700;color:var(--text2);
+    display:inline-flex;align-items:center;gap:5px;transition:.12s;font-family:inherit;
+  }
+  .ea-mpill:hover{border-color:var(--peach-dark);color:var(--peach-dark)}
+  .ea-mpill.on{background:var(--peach);color:#fff;border-color:var(--peach-dark);box-shadow:0 2px 6px rgba(251,146,60,.25)}
+  /* Hide compatibility-only fields (kept so saveEditAgent works) */
+  #editPurposeRow{display:none !important}
+</style>
+<div id="editPanel" style="position:fixed;top:0;right:-380px;bottom:0;width:360px;background:var(--cream);border-left:1px solid rgba(180,120,80,.2);box-shadow:-8px 0 24px rgba(0,0,0,.1);z-index:400;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);">
+  <!-- Compact header -->
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;border-bottom:1px solid rgba(180,120,80,.12)">
+    <div style="position:relative">
+      <div id="editAgAvatar" style="font-size:22px;width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer" onclick="document.getElementById('avFileEdit').click()"></div>
+      <div style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;background:#fff;border:1px solid var(--wire2);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;pointer-events:none">📸</div>
       <input type="file" id="avFileEdit" accept="image/*" style="display:none" onchange="onAvatarUpload(event,'edit')">
-      <button type="button" onclick="document.getElementById('avFileEdit').click()" title="アバター画像をアップロード" style="background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:7px 9px;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">📸</button>
     </div>
-    <div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">エージェント名</label>
-      <input id="editName" type="text" placeholder="名前を入力" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+    <div style="flex:1;min-width:0">
+      <div id="editAgName2" style="font-size:14.5px;font-weight:900;color:var(--text);letter-spacing:-.01em"></div>
+      <div id="editAgSkills" style="font-size:10.5px;color:var(--text3);margin-top:1px"></div>
     </div>
+    <button onclick="closeEditAgent()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:6px;margin:-6px">×</button>
+  </div>
+
+  <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;flex:1;overflow-y:auto">
+
+    <!-- 名前 -->
     <div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">採用目的</label>
-      <input id="editPurpose" type="text" placeholder="例：アポ取り" maxlength="80" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+      <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">名前</label>
+      <input id="editName" type="text" placeholder="例：Sales AI" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(251,146,60,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''">
     </div>
-    <div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">業務内容</label>
-      <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信内容の整理、面談日程の調整" rows="6" style="width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
+
+    <!-- 採用目的: 後方互換のため hidden で保持 -->
+    <div id="editPurposeRow">
+      <input id="editPurpose" type="text" maxlength="80">
     </div>
+
+    <!-- 業務内容 (主要フィールド) -->
     <div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">🤖 使用する AI モデル</label>
-      <div id="editModelGroup" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <button type="button" data-model="gemini-flash" onclick="_setEditModel('gemini-flash')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
-          <div style="font-size:12px;font-weight:700;color:var(--text)">⚡ Gemini Flash</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">超高速・推奨</div>
-        </button>
-        <button type="button" data-model="sonnet" onclick="_setEditModel('sonnet')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
-          <div style="font-size:12px;font-weight:700;color:var(--text)">🎯 Sonnet</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">標準品質</div>
-        </button>
-        <button type="button" data-model="gemini-pro" onclick="_setEditModel('gemini-pro')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
-          <div style="font-size:12px;font-weight:700;color:var(--text)">💎 Gemini Pro</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">高品質・高速</div>
-        </button>
-        <button type="button" data-model="opus" onclick="_setEditModel('opus')" class="model-pick" style="padding:10px 8px;border-radius:9px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-family:inherit;text-align:left">
-          <div style="font-size:12px;font-weight:700;color:var(--text)">🧠 Opus</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px">最高性能・高価</div>
-        </button>
+      <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">何をする AI?</label>
+      <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信整理、面談日程の調整" rows="5" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.62;min-height:100px;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(251,146,60,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''"></textarea>
+    </div>
+
+    <!-- AI モデル (ピル一行) -->
+    <div>
+      <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">AI モデル</label>
+      <div id="editModelGroup" style="display:flex;flex-wrap:wrap;gap:5px">
+        <button type="button" data-model="gemini-flash" onclick="_setEditModel('gemini-flash')" class="model-pick ea-mpill">⚡ Fast</button>
+        <button type="button" data-model="sonnet"       onclick="_setEditModel('sonnet')"       class="model-pick ea-mpill">🎯 Smart</button>
+        <button type="button" data-model="gemini-pro"   onclick="_setEditModel('gemini-pro')"   class="model-pick ea-mpill">💎 Pro</button>
+        <button type="button" data-model="opus"         onclick="_setEditModel('opus')"         class="model-pick ea-mpill">🧠 Best</button>
       </div>
       <input type="hidden" id="editModel" value="gemini-flash">
     </div>
-    <!-- 1. Web 検索 / URL 取得 -->
-    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">🌐 Web 検索 / URL 取得</div>
-          <div id="editChromeDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
-        </div>
-        <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
-      </div>
-    </div>
 
-    <!-- 2. ブラウザ拡張連携 -->
-    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em">BETA</span> <span id="editExtConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>接続中</span></div>
-          <div id="editExtDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
-          <div id="editExtAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" id="editExtReconnect" onclick="event.preventDefault();reconnectExtension()" style="display:none;color:#3730a3;font-weight:700">🔄 再接続</a><span id="editExtReconnectSep" style="display:none"> · </span><a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
-          <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:8px;background:#fff;color:#3730a3;border:1px solid #6366f1;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ ブラウザ拡張をペアリング</button>
+    <!-- ━━ アコーディオン: ツール連携 ━━ -->
+    <details class="ea-acc">
+      <summary>
+        <span>🔌</span>
+        <span>ツール連携</span>
+        <span class="cnt" id="editToolsCnt">—</span>
+      </summary>
+      <div class="ea-acc-body">
+        <!-- 1. Web 検索 / URL 取得 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">🌐 Web 検索 / URL 取得</div>
+            <div class="desc" id="editChromeDesc"></div>
+          </div>
+          <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
         </div>
-        <button type="button" class="s-sw" id="editExtSw" onclick="toggleEditExtension()"></button>
-      </div>
-    </div>
 
-    <!-- 3. Google スプレッドシート連携 -->
-    <div style="padding:12px 14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">📊 Google スプレッドシート連携 <span id="editSheetsConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.04em"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>接続中</span></div>
-          <div id="editSheetsDesc" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
-          <div id="editSheetsAccountRow" style="display:none;margin-top:8px;font-size:11px;color:var(--text3)">接続中: <b id="editSheetsEmail"></b> · <a href="#" onclick="event.preventDefault();disconnectGoogleSheets()" style="color:#ef4444">切断</a></div>
-          <button type="button" id="editSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウントと接続</button>
-          <div style="margin-top:6px;font-size:10.5px;color:var(--text3)"><a href="/setup-google-sheets.html" target="_blank" style="color:var(--text3);text-decoration:underline">🔧 接続できない場合のセットアップ手順</a></div>
+        <!-- 2. ブラウザ拡張連携 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">🧩 ブラウザ拡張 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:.04em">BETA</span> <span id="editExtConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 7px;border-radius:99px;font-size:9.5px;font-weight:800"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#10b981"></span>接続中</span></div>
+            <div class="desc" id="editExtDesc"></div>
+            <div id="editExtAccountRow" style="display:none;margin-top:5px;font-size:10.5px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" id="editExtReconnect" onclick="event.preventDefault();reconnectExtension()" style="display:none;color:#3730a3;font-weight:700">🔄 再接続</a><span id="editExtReconnectSep" style="display:none"> · </span><a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
+            <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:6px;background:#fff;color:#3730a3;border:1px solid #6366f1;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ ペアリング</button>
+          </div>
+          <button type="button" class="s-sw" id="editExtSw" onclick="toggleEditExtension()"></button>
         </div>
-        <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
-      </div>
-    </div>
 
-    <!-- 4. ナレッジベース (RAG) -->
-    <div id="editKbBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(16,185,129,.1));border:1px solid rgba(16,185,129,.22);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#047857;display:flex;align-items:center;gap:6px">📚 ナレッジベース</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">PDF・DOCX・テキストを登録すると、関連する質問でこのAIが自動で参照します。</div>
+        <!-- 3. Google スプレッドシート連携 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">📊 Google スプレッドシート <span id="editSheetsConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 7px;border-radius:99px;font-size:9.5px;font-weight:800"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#10b981"></span>接続中</span></div>
+            <div class="desc" id="editSheetsDesc"></div>
+            <div id="editSheetsAccountRow" style="display:none;margin-top:5px;font-size:10.5px;color:var(--text3)">接続中: <b id="editSheetsEmail"></b> · <a href="#" onclick="event.preventDefault();disconnectGoogleSheets()" style="color:#ef4444">切断</a></div>
+            <button type="button" id="editSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:6px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウント接続</button>
+          </div>
+          <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
         </div>
       </div>
-      <div id="editKbList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto"></div>
-      <input type="file" id="editKbInput" accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.xml,.yaml,.yml,.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv" multiple style="display:none" onchange="onKbFileSelect(event)">
-      <button type="button" onclick="document.getElementById('editKbInput').click()" style="margin-top:10px;width:100%;background:#fff;color:#047857;border:1px solid #10b981;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ ドキュメントを追加</button>
-    </div>
+    </details>
 
-    <!-- 5. Webhook -->
-    <div id="editWhBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(14,165,233,.05),rgba(14,165,233,.1));border:1px solid rgba(14,165,233,.25);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#0369a1;display:flex;align-items:center;gap:6px">🔌 Webhook</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">外部サービスから POST すると、AI が応答を JSON で返します。Zapier・GitHub・Slack などから呼び出せます。</div>
+    <!-- ━━ アコーディオン: ナレッジベース ━━ -->
+    <details class="ea-acc" id="editKbBox">
+      <summary>
+        <span>📚</span>
+        <span>ナレッジベース</span>
+        <span class="cnt" id="editKbCnt">—</span>
+      </summary>
+      <div class="ea-acc-body">
+        <div class="desc" style="font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:6px">PDF・DOCX・テキストを登録すると、関連する質問でこの AI が自動で参照します。</div>
+        <div id="editKbList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto"></div>
+        <input type="file" id="editKbInput" accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.xml,.yaml,.yml,.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv" multiple style="display:none" onchange="onKbFileSelect(event)">
+        <button type="button" onclick="document.getElementById('editKbInput').click()" style="margin-top:6px;width:100%;background:#fff;color:#047857;border:1px solid #10b981;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ ドキュメントを追加</button>
+      </div>
+    </details>
+
+    <!-- ━━ アコーディオン: 高度な設定 ━━ -->
+    <details class="ea-acc">
+      <summary>
+        <span>⚙</span>
+        <span>高度な設定</span>
+      </summary>
+      <div class="ea-acc-body">
+        <!-- Webhook -->
+        <div id="editWhBox">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">🔗 Webhook</div>
+          <div class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">外部サービスから POST すると、AI が JSON で応答。Zapier・GitHub・Slack 等から呼び出せます。</div>
+          <div id="editWhStatus" style="margin-top:8px"></div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button id="editWhToggle" type="button" onclick="_whToggle()" style="flex:1;background:#fff;color:#0369a1;border:1px solid #0ea5e9;border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">Webhook を有効化</button>
+            <button id="editWhRotate" type="button" onclick="_whRotate()" style="display:none;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px 11px;font-size:11px;cursor:pointer;font-family:inherit">URL 再生成</button>
+          </div>
+        </div>
+
+        <!-- スケジュール -->
+        <div id="editSchedBox" style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">⏰ スケジュール実行</div>
+          <div class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">毎日 / 毎時 のタイミングで自動的に AI を走らせ、結果をチャットまたはメールで受け取れます。</div>
+          <div id="editSchedList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto"></div>
+          <button type="button" onclick="_schedOpenForm()" style="margin-top:8px;width:100%;background:#fff;color:#b45309;border:1px solid #f59e0b;border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">＋ 新しいスケジュール</button>
+        </div>
+
+        <!-- グループ作成 -->
+        <div id="editGroupBox" style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">🤝 グループ化</div>
+          <div id="editGroupDesc" class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">仲間を招待して、このエージェントと一緒に話せるグループを作ります</div>
+          <button id="editGroupBtn" type="button" onclick="_promoteToGroupFromEdit()" style="margin-top:8px;width:100%;background:#fff;color:#4338ca;border:1px solid rgba(99,102,241,.4);border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">＋ グループ化して招待</button>
+        </div>
+
+        <!-- Store 出店 -->
+        <div id="editListingBox" style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">🏪 Agent Store に出店</div>
+          <div id="editListingDesc" class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">買い切り価格の 70% + 利用料の 10% が収益になります</div>
+          <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:8px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">＋ 出店フォーム</button>
+        </div>
+
+        <!-- データ -->
+        <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2);display:flex;flex-direction:column;gap:5px">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text)">📥 データ</div>
+          <button type="button" onclick="exportChatForEditAgent('md')" style="background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;margin-top:4px">📥 Markdown でエクスポート</button>
+          <button type="button" onclick="exportChatForEditAgent('json')" style="background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px">📦 JSON でエクスポート</button>
+          <button type="button" onclick="closeEditAgent();openBookmarks()" style="background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px">★ ブックマーク一覧</button>
         </div>
       </div>
-      <div id="editWhStatus" style="margin-top:10px"></div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button id="editWhToggle" type="button" onclick="_whToggle()" style="flex:1;background:#fff;color:#0369a1;border:1px solid #0ea5e9;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">Webhook を有効化</button>
-        <button id="editWhRotate" type="button" onclick="_whRotate()" style="display:none;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:8px;padding:9px 12px;font-size:11.5px;cursor:pointer;font-family:inherit">URL 再生成</button>
+    </details>
+
+    <!-- ━━ アコーディオン: 危険ゾーン ━━ -->
+    <details class="ea-acc" style="border-color:rgba(239,68,68,.25)">
+      <summary style="color:#dc2626">
+        <span>⚠️</span>
+        <span>削除</span>
+      </summary>
+      <div class="ea-acc-body" style="background:rgba(239,68,68,.03)">
+        <div class="desc" style="font-size:11px;color:var(--text2);line-height:1.55">このエージェントと会話履歴がすべて削除されます。元に戻せません。</div>
+        <button onclick="deleteAgent()" style="width:100%;background:#fff;color:#dc2626;border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;margin-top:8px">🗑 このエージェントを削除</button>
       </div>
-    </div>
+    </details>
+  </div>
 
-    <!-- 6. スケジュール実行 -->
-    <div id="editSchedBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,.05),rgba(245,158,11,.1));border:1px solid rgba(245,158,11,.25);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#b45309;display:flex;align-items:center;gap:6px">⏰ スケジュール実行</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">毎日 / 毎時 のタイミングで自動的に AI を走らせ、結果をチャットまたはメールで受け取れます。</div>
-        </div>
-      </div>
-      <div id="editSchedList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto"></div>
-      <button type="button" onclick="_schedOpenForm()" style="margin-top:10px;width:100%;background:#fff;color:#b45309;border:1px solid #f59e0b;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 新しいスケジュール</button>
-    </div>
-
-    <!-- 7. グループを作成 -->
-    <div id="editGroupBox" style="padding:12px 14px;background:linear-gradient(135deg,rgba(99,102,241,.05),rgba(99,102,241,.1));border:1px solid rgba(99,102,241,.22);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#4338ca;display:flex;align-items:center;gap:6px">🤝 グループを作成</div>
-          <div id="editGroupDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">仲間を招待して、このエージェントと一緒に話せるグループを作ります</div>
-        </div>
-      </div>
-      <button id="editGroupBtn" type="button" onclick="_promoteToGroupFromEdit()" style="margin-top:10px;width:100%;background:#fff;color:#4338ca;border:1px solid rgba(99,102,241,.4);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ グループを作成して招待</button>
-    </div>
-
-    <!-- 8. Agent Store に出店 -->
-    <div id="editListingBox" style="padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.25);border-radius:11px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--peach-dark);display:flex;align-items:center;gap:6px">🏪 Agent Store に出店</div>
-          <div id="editListingDesc" style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">買い切り価格の 70% + 利用料の 10% が収益になります</div>
-        </div>
-      </div>
-      <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:10px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ 出店フォームを開く</button>
-    </div>
-
-    <!-- 9. 保存 -->
-    <button onclick="saveEditAgent()" style="width:100%;background:var(--peach);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">保存する</button>
-
-    <!-- データ操作: エクスポート / ブックマーク -->
-    <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:14px;display:flex;flex-direction:column;gap:6px">
-      <div style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">データ</div>
-      <button type="button" onclick="exportChatForEditAgent('md')" style="width:100%;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:9px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px">
-        <span style="font-size:14px">📥</span><span>Markdown でエクスポート</span>
-      </button>
-      <button type="button" onclick="exportChatForEditAgent('json')" style="width:100%;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:9px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px">
-        <span style="font-size:14px">📦</span><span>JSON でエクスポート</span>
-      </button>
-      <button type="button" onclick="closeEditAgent();openBookmarks()" style="width:100%;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:9px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px">
-        <span style="font-size:14px">★</span><span>ブックマーク一覧</span>
-      </button>
-    </div>
-
-    <div style="border-top:1px solid rgba(180,120,80,.12);padding-top:12px;margin-top:6px">
-      <button onclick="deleteAgent()" style="width:100%;background:rgba(239,68,68,.06);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">🗑 このエージェントを削除</button>
-    </div>
+  <!-- Sticky footer: 保存 -->
+  <div style="padding:12px 18px;border-top:1px solid var(--wire);background:#fff;display:flex;gap:8px">
+    <button onclick="closeEditAgent()" style="flex:1;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">キャンセル</button>
+    <button onclick="saveEditAgent()" style="flex:2;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(251,146,60,.25)">保存</button>
   </div>
 </div>
 
@@ -13226,6 +13258,7 @@ function toggleEditChrome(){
   if(!sw) return;
   var willEnable=!sw.classList.contains('on');
   _renderChromeStatus('editChromeSw','editChromeDesc',willEnable);
+  if(typeof _updateEditToolsCnt==='function') _updateEditToolsCnt();
 }
 
 /* ── Google Sheets integration helpers ────────────────────── */
@@ -13312,6 +13345,7 @@ function toggleEditSheets(){
   if(!sw) return;
   var willEnable=!sw.classList.contains('on');
   _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn', willEnable);
+  if(typeof _updateEditToolsCnt==='function') _updateEditToolsCnt();
 }
 
 /* ── Browser Extension integration helpers ────────────────── */
@@ -13710,6 +13744,7 @@ async function toggleEditExtension(){
   try {
     await api('PATCH', '/api/agents/'+id, { extension_enabled: willEnable });
     ag.extension_enabled = willEnable;
+    if(typeof _updateEditToolsCnt==='function') _updateEditToolsCnt();
     showToast(willEnable
       ? (isJa ? 'ブラウザ拡張連携を有効化しました' : 'Extension enabled')
       : (isJa ? 'ブラウザ拡張連携を無効化しました' : 'Extension disabled'),
@@ -13745,6 +13780,11 @@ function openEditAgent(id){
   if(typeof _renderSheetsStatus==='function') _renderSheetsStatus('editSheetsSw','editSheetsDesc','editSheetsAccountRow','editSheetsEmail','editSheetsConnectBtn',!!ag.sheets_enabled);
   if(typeof _renderExtensionStatus==='function') _renderExtensionStatus('editExtSw','editExtDesc','editExtAccountRow','editExtDeviceId','editExtConnectBtn',!!ag.extension_enabled);
   _setEditModel(ag.model || 'gemini-flash');
+  // Refresh accordion count badges after panel rehydrates
+  setTimeout(() => {
+    if(typeof _updateEditToolsCnt==='function') _updateEditToolsCnt();
+    if(typeof _updateEditKbCnt==='function')    _updateEditKbCnt();
+  }, 30);
   // Group section: swap copy when already a group
   const grpBtn = document.getElementById('editGroupBtn');
   const grpDesc = document.getElementById('editGroupDesc');
@@ -13792,13 +13832,14 @@ async function _kbLoadList(){
     }
     listEl.innerHTML = docs.map(function(d){
       var kb = Math.max(1, Math.round(d.length/1024));
-      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:#fff;border:1px solid rgba(16,185,129,.18);border-radius:8px">'+
+      return '<div data-kb-doc="'+esc(d.id)+'" style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:#fff;border:1px solid rgba(16,185,129,.18);border-radius:8px">'+
         '<div style="width:24px;height:24px;border-radius:5px;background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">DOC</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(d.name||'doc')+'</div>'+
         '<div style="font-size:10.5px;color:var(--text3)">'+kb+'KB · '+(d.chunks||0)+(isJa?' チャンク':' chunks')+'</div></div>'+
         '<button onclick="_kbDelete(\''+esc(d.id)+'\')" style="background:none;border:0;color:var(--text3);cursor:pointer;font-size:14px" title="'+(isJa?'削除':'Delete')+'">✕</button>'+
       '</div>';
     }).join('');
+    if(typeof _updateEditKbCnt==='function') _updateEditKbCnt();
   } catch(e){
     listEl.innerHTML = '<div style="font-size:11.5px;color:#dc2626;padding:4px 0">'+(isJa?'読み込めません':'Failed to load')+'</div>';
   }
@@ -14085,7 +14126,7 @@ async function _kbUploadDoc(file){
 }
 
 function closeEditAgent(){
-  document.getElementById('editPanel').style.right = '-320px';
+  document.getElementById('editPanel').style.right = '-380px';
   document.getElementById('editPanelOverlay').style.display = 'none';
 }
 
@@ -14666,11 +14707,37 @@ function _setEditModel(name){
   if(!valid.includes(name)) name = 'gemini-flash';
   const inp = document.getElementById('editModel');
   if(inp) inp.value = name;
+  // The simplified panel uses .ea-mpill pills styled via CSS .on class.
+  // Toggle the class so the peach background lights up the selected pill.
   document.querySelectorAll('#editModelGroup .model-pick').forEach(b => {
     const sel = b.dataset.model === name;
-    b.style.borderColor = sel ? 'var(--peach)' : 'var(--wire2)';
-    b.style.background = sel ? 'rgba(251,146,60,.08)' : '#fff';
+    b.classList.toggle('on', sel);
+    // Clear any legacy inline styles from the old grid layout.
+    b.style.borderColor = ''; b.style.background = '';
   });
+}
+
+// Update the "ツール連携" accordion count badge (e.g. "2 有効 / 3").
+// Called after openEditAgent and after each toggle.
+function _updateEditToolsCnt(){
+  try {
+    const el = document.getElementById('editToolsCnt');
+    if(!el) return;
+    let on = 0;
+    if(document.getElementById('editChromeSw')?.classList.contains('on')) on++;
+    if(document.getElementById('editExtSw')?.classList.contains('on'))    on++;
+    if(document.getElementById('editSheetsSw')?.classList.contains('on')) on++;
+    el.textContent = on ? on + ' 有効' : '未設定';
+  } catch(e){}
+}
+function _updateEditKbCnt(){
+  try {
+    const el = document.getElementById('editKbCnt');
+    const list = document.getElementById('editKbList');
+    if(!el || !list) return;
+    const n = list.querySelectorAll('[data-kb-doc]').length || list.children.length;
+    el.textContent = n > 0 ? n + ' 件' : '未登録';
+  } catch(e){}
 }
 
 async function saveEditAgent(){

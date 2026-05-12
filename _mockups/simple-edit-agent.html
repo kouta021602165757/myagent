@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Edit Agent · Simplified mock</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --peach:#fb923c; --peach-dark:#ea580c; --peach-soft:rgba(251,146,60,.10);
+    --cream:#fdf8f3; --cream2:#fef3e8;
+    --text:#1c1917; --text2:#44403c; --text3:#78716c;
+    --wire:#e7e5e4; --wire2:#d6d3d1;
+    --green:#22c55e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;background:#f0eee9;color:var(--text)}
+  .stage{display:flex;gap:24px;padding:24px;max-width:1680px;margin:0 auto;flex-wrap:wrap;align-items:flex-start}
+  .stage-h{font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px 8px;display:flex;align-items:center;gap:8px}
+  .stage-h .tag{font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:5px;letter-spacing:.04em}
+  .stage-h .tag.bad{background:#fee2e2;color:#991b1b}
+  .stage-h .tag.good{background:#dcfce7;color:#166534}
+
+  /* ── BEFORE: current dense modal ────────────────── */
+  .modal{
+    width:340px;background:var(--cream);border-radius:16px;
+    box-shadow:0 16px 40px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.04);
+    border:1px solid var(--wire);overflow:hidden;
+  }
+  .modal-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--wire)}
+  .modal-h .t{font-size:14px;font-weight:800;color:var(--text)}
+  .modal-h .x{background:none;border:0;font-size:20px;color:var(--text3);cursor:pointer;line-height:1;padding:0}
+
+  .b1{padding:14px 16px;display:flex;flex-direction:column;gap:12px;max-height:600px;overflow-y:auto}
+  .b1 label{font-size:11.5px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px}
+  .b1 input,.b1 textarea{
+    width:100%;background:var(--cream2);border:1px solid rgba(180,120,80,.25);
+    border-radius:9px;padding:9px 11px;color:var(--text);font-size:13px;
+    font-family:inherit;outline:none;box-sizing:border-box;
+  }
+  .b1 textarea{resize:vertical;line-height:1.5;min-height:90px}
+  .av-card{display:flex;align-items:center;gap:11px;padding:11px;background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.12);border-radius:11px}
+  .av-card .av{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .av-card .nm{font-size:13px;font-weight:700;color:var(--text)}
+  .av-card .sk{font-size:10.5px;color:var(--text3);margin-top:1px}
+  .av-card .ph{margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:6px 8px;font-size:11px;cursor:pointer}
+
+  .model-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .model-card{padding:8px 7px;border-radius:8px;border:1px solid var(--wire2);background:#fff;cursor:pointer;font-size:11.5px;font-weight:700;text-align:left}
+  .model-card .sub{font-size:9.5px;color:var(--text3);font-weight:500;margin-top:1px}
+  .model-card.on{border-color:var(--peach);background:rgba(251,146,60,.06)}
+
+  .int-box{padding:11px 13px;background:var(--cream2);border:1px solid var(--wire2);border-radius:10px;display:flex;align-items:flex-start;gap:9px}
+  .int-box .ix{flex:1;min-width:0}
+  .int-box .ix .h{font-size:12px;font-weight:700;color:var(--text)}
+  .int-box .ix .d{font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.5}
+  .sw{width:34px;height:20px;background:#cbd5e1;border-radius:99px;border:0;cursor:pointer;position:relative;flex-shrink:0}
+  .sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+  .sw.on{background:var(--peach)}
+  .sw.on::after{left:16px}
+
+  .kb-box{padding:11px 13px;background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(16,185,129,.1));border:1px solid rgba(16,185,129,.22);border-radius:10px}
+  .kb-box .h{font-size:12px;font-weight:700;color:#047857;display:flex;align-items:center;gap:5px}
+
+  .foot{padding:11px 16px;border-top:1px solid var(--wire);display:flex;gap:8px;background:#fff}
+  .btn{padding:9px 14px;border-radius:9px;border:0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+  .btn.primary{background:var(--peach);color:#fff;flex:1}
+  .btn.ghost{background:#fff;color:var(--text2);border:1px solid var(--wire2)}
+  .btn.danger{background:#fff;color:#dc2626;border:1px solid rgba(220,38,38,.3)}
+
+  /* ── AFTER: simplified modal ────────────────── */
+  .clean-h{display:flex;align-items:center;gap:12px;padding:16px 20px 14px;border-bottom:1px solid var(--wire)}
+  .clean-h .av{width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;position:relative}
+  .clean-h .av::after{content:'📸';position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;background:#fff;border:1px solid var(--wire2);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center}
+  .clean-h .meta{flex:1;min-width:0}
+  .clean-h .meta .nm{font-size:15px;font-weight:900;color:var(--text);letter-spacing:-.01em}
+  .clean-h .meta .hd{font-size:11px;color:var(--text3);font-weight:600;margin-top:1px}
+  .clean-h .x{background:none;border:0;font-size:20px;color:var(--text3);cursor:pointer;line-height:1;padding:6px;margin:-6px}
+  .clean-h .x:hover{color:var(--text)}
+
+  .clean-body{padding:18px 22px;display:flex;flex-direction:column;gap:18px;max-height:560px;overflow-y:auto}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field > label{font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+  .field > input, .field > textarea{
+    width:100%;background:#fff;border:1px solid var(--wire2);
+    border-radius:10px;padding:10px 13px;font-size:13.5px;color:var(--text);
+    font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .12s;
+  }
+  .field > input:focus, .field > textarea:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.12)}
+  .field > textarea{resize:vertical;line-height:1.62;min-height:100px}
+
+  .model-pills{display:flex;gap:5px;flex-wrap:wrap}
+  .mpill{
+    padding:7px 12px;border-radius:99px;background:#fff;border:1.5px solid var(--wire2);
+    cursor:pointer;font-size:11.5px;font-weight:700;color:var(--text2);display:inline-flex;align-items:center;gap:5px;
+    transition:.12s;font-family:inherit;
+  }
+  .mpill:hover{border-color:var(--peach-dark);color:var(--peach-dark)}
+  .mpill.on{background:var(--peach);color:#fff;border-color:var(--peach-dark);box-shadow:0 2px 6px rgba(251,146,60,.25)}
+
+  .accordion{border:1px solid var(--wire);border-radius:11px;overflow:hidden;background:#fff}
+  .acc-h{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
+  .acc-h:hover{background:var(--cream2)}
+  .acc-h .ic{font-size:14px}
+  .acc-h .name{font-size:12.5px;font-weight:800;color:var(--text);flex:1}
+  .acc-h .cnt{font-size:11px;color:var(--text3);font-weight:700}
+  .acc-h .arr{color:var(--text3);font-size:11px;transition:.15s}
+  .accordion.open .acc-h .arr{transform:rotate(90deg)}
+  .acc-body{padding:0 14px 14px;display:none;border-top:1px solid var(--wire)}
+  .accordion.open .acc-body{display:block;padding-top:12px}
+
+  .clean-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--wire)}
+  .clean-row:last-child{border-bottom:0}
+  .clean-row .ix{flex:1;min-width:0}
+  .clean-row .ix .nm{font-size:12.5px;font-weight:700;color:var(--text)}
+  .clean-row .ix .st{font-size:10.5px;color:var(--text3);margin-top:1px}
+
+  .clean-foot{padding:14px 20px;border-top:1px solid var(--wire);display:flex;gap:8px;align-items:center;background:#fff}
+  .clean-foot .btn.primary{padding:11px 18px;font-size:13px}
+
+  /* Annotations */
+  .arrow{
+    position:absolute;left:calc(100% + 20px);top:50%;transform:translateY(-50%);
+    color:var(--peach-dark);font-size:34px;font-weight:900;
+  }
+  .approach{font-size:10.5px;color:var(--text3);margin:6px 8px 0;line-height:1.55}
+
+  /* Compact left rail variant */
+  .rail-modal{width:580px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.10);border:1px solid var(--wire);display:flex;flex-direction:column}
+  .rail-body{display:flex;height:480px}
+  .rail-nav{width:160px;background:var(--cream);border-right:1px solid var(--wire);padding:14px 8px;display:flex;flex-direction:column;gap:2px}
+  .rail-nav-item{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--text2)}
+  .rail-nav-item:hover{background:rgba(0,0,0,.03)}
+  .rail-nav-item.on{background:var(--peach-soft);color:var(--peach-dark)}
+  .rail-nav-item .ic{font-size:14px}
+  .rail-content{flex:1;padding:22px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:18px;background:#fff}
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- BEFORE: current dense version -->
+  <div>
+    <div class="stage-h">
+      <span>① 現状 (Before)</span>
+      <span class="tag bad">9 セクション · 縦長 · 視覚的に騒がしい</span>
+    </div>
+
+    <div class="modal" style="position:relative">
+      <div class="modal-h">
+        <div class="t">エージェントを編集</div>
+        <button class="x">×</button>
+      </div>
+      <div class="b1">
+        <div class="av-card">
+          <div class="av">🎨</div>
+          <div style="flex:1">
+            <div class="nm">Designer AI</div>
+            <div class="sk">デザイナー / イラスト</div>
+          </div>
+          <button class="ph">📸</button>
+        </div>
+        <div><label>エージェント名</label><input value="Designer AI"></div>
+        <div><label>採用目的</label><input value="LP のデザイン"></div>
+        <div><label>業務内容</label><textarea>ヒーロー作成、ロゴ、UI モック、画像生成、配色提案など</textarea></div>
+        <div>
+          <label>🤖 使用する AI モデル</label>
+          <div class="model-grid">
+            <div class="model-card on">⚡ Gemini Flash<div class="sub">超高速・推奨</div></div>
+            <div class="model-card">🎯 Sonnet<div class="sub">標準品質</div></div>
+            <div class="model-card">💎 Gemini Pro<div class="sub">高品質・高速</div></div>
+            <div class="model-card">🧠 Opus<div class="sub">最高性能・高価</div></div>
+          </div>
+        </div>
+        <div class="int-box">
+          <div class="ix">
+            <div class="h">🌐 Web 検索 / URL 取得</div>
+            <div class="d">最新情報を Web から取得します。検索クエリ・URL を AI が判断して呼びます。</div>
+          </div>
+          <button class="sw on"></button>
+        </div>
+        <div class="int-box">
+          <div class="ix">
+            <div class="h">🌐 ブラウザ拡張連携 <span style="background:rgba(99,102,241,.12);color:#3730a3;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:800">BETA</span></div>
+            <div class="d">Chrome 拡張をペアリングすると、自分のブラウザで X / Slack / Gmail を操作できます。</div>
+          </div>
+          <button class="sw"></button>
+        </div>
+        <div class="int-box">
+          <div class="ix">
+            <div class="h">📊 Google スプレッドシート連携</div>
+            <div class="d">Google アカウントに接続すると、表データの読み書きができます。</div>
+          </div>
+          <button class="sw"></button>
+        </div>
+        <div class="kb-box">
+          <div class="h">📚 ナレッジベース</div>
+          <div style="font-size:10.5px;color:var(--text3);margin-top:4px;line-height:1.5">2 件の文書が登録されています</div>
+        </div>
+      </div>
+      <div class="foot">
+        <button class="btn danger">削除</button>
+        <button class="btn ghost" style="flex:1">キャンセル</button>
+        <button class="btn primary" style="flex:1">保存</button>
+      </div>
+    </div>
+    <div class="approach">↑ 9 セクションが等しい強さで並ぶ。スクロール必須。視線が彷徨う。</div>
+  </div>
+
+  <!-- AFTER (推奨): simplified -->
+  <div>
+    <div class="stage-h">
+      <span>② シンプル化 (推奨案)</span>
+      <span class="tag good">3 セクション · アコーディオン · 80% は変更しない設定を隠す</span>
+    </div>
+
+    <div class="modal" style="width:380px">
+      <div class="clean-h">
+        <div class="av">🎨</div>
+        <div class="meta">
+          <div class="nm">Designer AI</div>
+          <div class="hd">@designer · 編集</div>
+        </div>
+        <button class="x">×</button>
+      </div>
+      <div class="clean-body">
+        <div class="field">
+          <label>名前</label>
+          <input value="Designer AI">
+        </div>
+        <div class="field">
+          <label>何をする AI?</label>
+          <textarea>LP デザイン作成、ヒーロー画像、配色提案、ロゴ生成、UI モックアップを担当します</textarea>
+        </div>
+        <div class="field">
+          <label>AI モデル</label>
+          <div class="model-pills">
+            <button class="mpill on">⚡ Fast</button>
+            <button class="mpill">🎯 Smart</button>
+            <button class="mpill">💎 Pro</button>
+            <button class="mpill">🧠 Best</button>
+          </div>
+        </div>
+        <div class="accordion">
+          <div class="acc-h">
+            <span class="ic">🔌</span>
+            <span class="name">ツール連携</span>
+            <span class="cnt">1 有効</span>
+            <span class="arr">›</span>
+          </div>
+        </div>
+        <div class="accordion">
+          <div class="acc-h">
+            <span class="ic">📚</span>
+            <span class="name">ナレッジベース</span>
+            <span class="cnt">2 件</span>
+            <span class="arr">›</span>
+          </div>
+        </div>
+        <div class="accordion">
+          <div class="acc-h">
+            <span class="ic">⚠️</span>
+            <span class="name" style="color:#dc2626">エージェントを削除</span>
+            <span class="arr">›</span>
+          </div>
+        </div>
+      </div>
+      <div class="clean-foot">
+        <button class="btn ghost" style="flex:1">キャンセル</button>
+        <button class="btn primary" style="flex:2">保存</button>
+      </div>
+    </div>
+    <div class="approach">↑ 上半分 (名前 / 業務 / モデル) は常時表示・80% のユーザーはここしか触らない。連携・KB・削除は折りたたみ。</div>
+  </div>
+
+  <!-- AFTER (alt): accordion opened -->
+  <div>
+    <div class="stage-h">
+      <span>③ ツール連携 開いた状態</span>
+      <span class="tag good">親切な行レイアウト</span>
+    </div>
+
+    <div class="modal" style="width:380px">
+      <div class="clean-h">
+        <div class="av">🎨</div>
+        <div class="meta">
+          <div class="nm">Designer AI</div>
+          <div class="hd">@designer · 編集</div>
+        </div>
+        <button class="x">×</button>
+      </div>
+      <div class="clean-body">
+        <div class="accordion open">
+          <div class="acc-h">
+            <span class="ic">🔌</span>
+            <span class="name">ツール連携</span>
+            <span class="cnt">1 有効</span>
+            <span class="arr">›</span>
+          </div>
+          <div class="acc-body">
+            <div class="clean-row">
+              <div class="ix">
+                <div class="nm">🌐 Web 検索 / URL 取得</div>
+                <div class="st" style="color:var(--green)">✓ 接続済 · AI が必要に応じて呼ぶ</div>
+              </div>
+              <button class="sw on"></button>
+            </div>
+            <div class="clean-row">
+              <div class="ix">
+                <div class="nm">📊 Google スプレッドシート</div>
+                <div class="st">未接続 · <a href="#" style="color:var(--peach-dark);font-weight:700">接続する →</a></div>
+              </div>
+              <button class="sw"></button>
+            </div>
+            <div class="clean-row">
+              <div class="ix">
+                <div class="nm">🧩 ブラウザ拡張 (BETA)</div>
+                <div class="st">未ペアリング · <a href="#" style="color:var(--peach-dark);font-weight:700">設定 →</a></div>
+              </div>
+              <button class="sw"></button>
+            </div>
+          </div>
+        </div>
+        <div class="accordion">
+          <div class="acc-h">
+            <span class="ic">📚</span>
+            <span class="name">ナレッジベース</span>
+            <span class="cnt">2 件</span>
+            <span class="arr">›</span>
+          </div>
+        </div>
+      </div>
+      <div class="clean-foot">
+        <button class="btn ghost" style="flex:1">キャンセル</button>
+        <button class="btn primary" style="flex:2">保存</button>
+      </div>
+    </div>
+    <div class="approach">↑ クリックで展開。3 つのツールが 1 つの行スタイルに統一 (枠線でカコまない / 接続状態を 1 行で表現)。</div>
+  </div>
+
+  <!-- Alt: Rail style (Linear/Notion風) -->
+  <div style="width:100%">
+    <div class="stage-h">
+      <span>④ 別案: 左ナビ方式 (Linear / Notion 風)</span>
+      <span class="tag">広めのモーダルが許せる場合</span>
+    </div>
+
+    <div class="rail-modal">
+      <div class="clean-h">
+        <div class="av">🎨</div>
+        <div class="meta">
+          <div class="nm">Designer AI · 編集</div>
+          <div class="hd">@designer</div>
+        </div>
+        <button class="x">×</button>
+      </div>
+      <div class="rail-body">
+        <div class="rail-nav">
+          <div class="rail-nav-item on"><span class="ic">📝</span> 基本</div>
+          <div class="rail-nav-item"><span class="ic">🤖</span> AI モデル</div>
+          <div class="rail-nav-item"><span class="ic">🔌</span> ツール連携</div>
+          <div class="rail-nav-item"><span class="ic">📚</span> 知識</div>
+          <div class="rail-nav-item" style="margin-top:auto;color:#dc2626"><span class="ic">⚠️</span> 削除</div>
+        </div>
+        <div class="rail-content">
+          <div class="field">
+            <label>名前</label>
+            <input value="Designer AI">
+          </div>
+          <div class="field">
+            <label>何をする AI?</label>
+            <textarea>LP デザイン作成、ヒーロー画像、配色提案、ロゴ生成、UI モックアップを担当します</textarea>
+          </div>
+          <div class="field">
+            <label>アバター</label>
+            <div style="display:flex;align-items:center;gap:12px"><div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:26px">🎨</div><button style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📸 画像を選ぶ</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="clean-foot">
+        <button class="btn ghost">キャンセル</button>
+        <button class="btn primary">保存</button>
+      </div>
+    </div>
+    <div class="approach">↑ Linear / Notion の設定モーダル方式。左ナビで「どこを編集するか」明示、右でその設定だけ表示。視覚的に最も整理されるが、モーダルが広め (580px) になる。</div>
+  </div>
+
+</div>
+
+</body>
+</html>

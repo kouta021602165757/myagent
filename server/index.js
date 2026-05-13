@@ -1557,7 +1557,8 @@ function _injectAgentContext(agent, opts){
   // The chat handler can pre-compute the user-query embedding (in parallel
   // with the KB-query embedding) and pass it as opts.queryEmbedding to
   // avoid an extra OpenAI round trip per turn.
-  const mems = Array.isArray(agent.memories) ? agent.memories : [];
+  // Skip user-disabled memories — they live in storage but must not reach the AI.
+  const mems = (Array.isArray(agent.memories) ? agent.memories : []).filter(m => m && m.disabled !== true);
   const qEmb = (opts && Array.isArray(opts.queryEmbedding)) ? opts.queryEmbedding : null;
   if(mems.length && userQuery){
     let scored;
@@ -7041,7 +7042,7 @@ async function joinGroup(){
       return;
     }
     if(r.ok && d && d.ok){
-      location.href = '/app.html?openAgent=' + encodeURIComponent(d.agent_id || '');
+      location.href = '/app.html?openAgent=' + encodeURIComponent(d.agent_id || '') + '&joined=1';
       return;
     }
     // 401 with "ユーザーが見つかりません" → stale token from a failed signup.
@@ -8432,10 +8433,13 @@ ${kbHits.map((h,i) => `[${i+1}] ${h.doc_name || 'doc'}\n${(h.text||'').slice(0, 
 【あなたが所属するチーム】
 - チーム名: ${teamName || '(無題)'}
 ${teamGoal ? `- チームの目的: ${teamGoal}\n` : ''}${teamMembers.length ? `- 他のメンバー: ${teamMembers.map(m => '@'+(m.name||'').replace(/\s+/g,'')+'('+(m.name||'')+')').join(' / ')}\n` : ''}この目的を踏まえてあなたの専門性で貢献し、必要なら他メンバーへの引き継ぎ案 (例: 「次は @SocialManager に投稿文の生成を依頼しましょう」) を 1 行添えてください。` : '';
-  const memoriesNote = memories.length ? `
+  // Filter out user-disabled memories — they're kept in storage but the AI
+  // shouldn't see them. The user can re-enable from the 🧠 記憶 page.
+  const activeMemories = memories.filter(m => m && m.disabled !== true);
+  const memoriesNote = activeMemories.length ? `
 
 【ユーザーが覚えておいてほしいこと (long-term memories)】
-${memories.slice(-20).map(m => '- ' + (m.text||'')).join('\n')}
+${activeMemories.slice(-20).map(m => '- ' + (m.text||'')).join('\n')}
 これらの情報を踏まえて、ユーザーの状況・好みに合わせた応答をしてください。` : '';
   const groupNote = isGroup ? `
 
@@ -10804,6 +10808,10 @@ async function handleAPI(req,res,pathname,method,ip){
       const body = await readBody(req);
       if(typeof body.text === 'string') ag.memories[idx].text = body.text.trim().slice(0, 240);
       if(body.pinned !== undefined) ag.memories[idx].pinned = !!body.pinned;
+      // disabled flag: user toggle from the 🧠 記憶 page. Memory stays in
+      // storage so the user can re-enable later, but it's filtered out of
+      // the system prompt while disabled.
+      if(body.disabled !== undefined) ag.memories[idx].disabled = !!body.disabled;
       ag.memories[idx].updated_at = new Date().toISOString();
     }
     await DB.save(user);
@@ -12021,6 +12029,17 @@ async function handleAPI(req,res,pathname,method,ip){
     if(body.require_approval !== undefined){
       ag.invite_require_approval = !!body.require_approval;
     } // else preserve existing value (don't accidentally flip)
+    // Optional welcome message — shown to new joiners on first chat open.
+    // Capped at 400 chars to stay readable inline.
+    if(body.invite_welcome !== undefined){
+      ag.invite_welcome = String(body.invite_welcome || '').trim().slice(0, 400);
+    }
+    // Optional default role for new joiners (admin / contributor / reader).
+    if(body.invite_default_role !== undefined){
+      const allowed = new Set(['admin','contributor','reader']);
+      const r = String(body.invite_default_role || '').toLowerCase();
+      ag.invite_default_role = allowed.has(r) ? r : 'contributor';
+    }
 
     // Regenerate token only when explicitly asked OR when none exists yet.
     if(!ag.invite_token || body.regenerate === true){
@@ -12033,6 +12052,8 @@ async function handleAPI(req,res,pathname,method,ip){
       invite_url: APP_URL + '/g/' + ag.invite_token,
       invite_expires_at: ag.invite_expires_at,
       invite_max_members: ag.invite_max_members,
+      invite_welcome: ag.invite_welcome || '',
+      invite_default_role: ag.invite_default_role || 'contributor',
       members: ag.members.map(_safeMember),
       is_group: true,
     });
@@ -12078,6 +12099,10 @@ async function handleAPI(req,res,pathname,method,ip){
       invite_expires_at: ag.invite_expires_at || null,
       invite_max_members: ag.invite_max_members || 50,
       invite_require_approval: !!ag.invite_require_approval,
+      invite_welcome: ag.invite_welcome || '',
+      invite_default_role: ag.invite_default_role || 'contributor',
+      // The caller's own role (so the UI can show "あなた: 閲覧者" etc.)
+      my_role: ((ag.members||[]).find(m => m && m.user_id === user.id) || {}).role || (isCallerHost ? 'host' : 'contributor'),
       // Pending join requests — host-only
       pending_requests: isCallerHost ? (ag.pending_requests||[]) : [],
       // Full chat history (last 200 entries) so members see prior conversation.
@@ -12088,6 +12113,31 @@ async function handleAPI(req,res,pathname,method,ip){
       ai_auto_respond: ag.ai_auto_respond,  // undefined → use size heuristic
       history: (ag.history || []).slice(-200),
     });
+  }
+
+  // ── PATCH /api/agents/:id/members/:user_id  (host only) ────
+  // Body: { role: 'admin' | 'contributor' | 'reader' }
+  // Lets the host promote / demote a member without removing them. The host's
+  // own role ('host') is immutable — they can transfer ownership via the
+  // transfer endpoint instead.
+  const _mRoleM = pathname.match(/^\/api\/agents\/([^/]+)\/members\/([^/]+)\/role$/);
+  if(_mRoleM && method === 'PATCH'){
+    const agId = _mRoleM[1];
+    const targetUid = _mRoleM[2];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    if(ag.host_id !== user.id) return jres(res,403,{error:'ホストのみ権限を変更できます'});
+    const body = (await readBody(req)) || {};
+    const allowed = new Set(['admin','contributor','reader']);
+    const newRole = String(body.role || '').toLowerCase();
+    if(!allowed.has(newRole)) return jres(res,400,{error:'role は admin / contributor / reader のいずれか'});
+    ag.members = Array.isArray(ag.members) ? ag.members : [];
+    const m = ag.members.find(m => m && m.user_id === targetUid);
+    if(!m) return jres(res,404,{error:'メンバーが見つかりません'});
+    if(m.role === 'host') return jres(res,400,{error:'ホストの権限は変更できません (譲渡が必要)'});
+    m.role = newRole;
+    await DB.save(user);
+    return jres(res,200,{ ok:true, user_id: targetUid, role: newRole });
   }
 
   // ── POST /api/agents/:id/approve | /deny ──────────────────
@@ -12696,6 +12746,83 @@ async function handleAPI(req,res,pathname,method,ip){
     await DB.save(user);
     return jres(res,200,{ok:true, memories: user.memories});
   }
+  // PATCH /api/me/memories/:idx — toggle disabled (or update text)
+  if(memDelM && method === 'PATCH'){
+    const idx = parseInt(memDelM[1], 10);
+    if(!Array.isArray(user.memories) || idx < 0 || idx >= user.memories.length){
+      return jres(res,404,{error:'memory not found'});
+    }
+    const body = (await readBody(req)) || {};
+    if(typeof body.text === 'string') user.memories[idx].text = body.text.trim().slice(0, 500);
+    if(body.disabled !== undefined) user.memories[idx].disabled = !!body.disabled;
+    user.memories[idx].updated_at = new Date().toISOString();
+    await DB.save(user);
+    return jres(res, 200, { ok: true, memory: user.memories[idx] });
+  }
+
+  // ── GET /api/me/memories/all ──────────────────────────────
+  // Unified "everything AI knows about you" view. Combines:
+  //   - user.memories[]                — cross-agent, user-level facts
+  //   - user.agents[].memories[]       — per-agent learnings
+  // Returns each entry with its source label so the UI can group them.
+  if(pathname === '/api/me/memories/all' && method === 'GET'){
+    const items = [];
+    (user.memories || []).forEach((m, i) => {
+      items.push({
+        id: 'u_'+i,
+        scope: 'user',
+        agent_id: null,
+        agent_name: 'すべての AI で共有',
+        text: m.text || '',
+        tag: m.tag || '',
+        pinned: !!m.pinned,
+        disabled: !!m.disabled,
+        added_at: m.added_at || m.created_at || null,
+      });
+    });
+    (user.agents || []).forEach(ag => {
+      if(!ag || !Array.isArray(ag.memories)) return;
+      ag.memories.forEach(m => {
+        if(!m || !m.id) return;
+        items.push({
+          id: 'a_'+ag.id+'_'+m.id,
+          scope: 'agent',
+          agent_id: ag.id,
+          agent_name: ag.name || '(無題 Agent)',
+          agent_avatar: ag.avatar || '🤖',
+          memory_id: m.id,
+          text: m.text || '',
+          source: m.source || 'auto',
+          pinned: !!m.pinned,
+          disabled: !!m.disabled,
+          added_at: m.created_at || null,
+        });
+      });
+    });
+    // Most recent first
+    items.sort((a,b) => new Date(b.added_at||0) - new Date(a.added_at||0));
+    return jres(res, 200, {
+      total: items.length,
+      active: items.filter(x => !x.disabled).length,
+      disabled: items.filter(x => x.disabled).length,
+      items,
+    });
+  }
+
+  // ── DELETE /api/me/memories/all (GDPR — wipe all memories) ──
+  // Hard-deletes user.memories AND every agent.memories[]. Intended for the
+  // "Forget everything" button on the 🧠 記憶 page. Confirms server-side
+  // via {confirm:'DELETE ALL'} body so accidental requests can't fire it.
+  if(pathname === '/api/me/memories/all' && method === 'DELETE'){
+    const body = (await readBody(req)) || {};
+    if((body.confirm || '') !== 'DELETE ALL'){
+      return jres(res, 400, { error: 'confirm must be "DELETE ALL"' });
+    }
+    user.memories = [];
+    (user.agents || []).forEach(ag => { if(ag && Array.isArray(ag.memories)) ag.memories = []; });
+    await DB.save(user);
+    return jres(res, 200, { ok: true, message: 'All memories deleted' });
+  }
 
   // ── Scheduled reminders (lightweight: stored on user, fired by cron) ─
   // POST: {at, text, agent_id?}  GET: list  DELETE/:id: remove
@@ -12819,12 +12946,15 @@ async function handleAPI(req,res,pathname,method,ip){
         message: 'ホストの承認待ちです',
       });
     }
-    // Add to host's agent.members[]
+    // Add to host's agent.members[] — role inherits from agent.invite_default_role
+    // (default: 'contributor'). 'host' role is reserved for the original creator.
+    const _newRole = (found.agent.invite_default_role && ['admin','contributor','reader'].indexOf(found.agent.invite_default_role) >= 0)
+      ? found.agent.invite_default_role : 'contributor';
     found.agent.members = [...(found.agent.members||[]), {
       user_id: user.id,
       name: user.name || (user.email||'').split('@')[0] || 'メンバー',
       avatar: '',
-      role: 'member',
+      role: _newRole,
       joined_at: new Date().toISOString(),
       last_seen: new Date().toISOString(),
     }];
@@ -12857,6 +12987,9 @@ async function handleAPI(req,res,pathname,method,ip){
       agent_id: found.agent.id,
       host_id: found.host.id,
       group_name: found.agent.name,
+      // Host's welcome message — UI shows this as a banner on first chat open.
+      invite_welcome: found.agent.invite_welcome || '',
+      role: _newRole,
     });
   }
 
@@ -14098,6 +14231,17 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     }
     if(!agent) return jres(res,404,{error:'エージェントが見つかりません'});
+
+    // ── Permission gate: reader-only members can't send ────────
+    // Group roles: 'admin' / 'contributor' / 'reader'.  Default 'contributor'
+    // (legacy entries with role:'member' are also treated as contributor).
+    if(isGroupMember && Array.isArray(agent.members)){
+      const myEntry = agent.members.find(m => m && m.user_id === user.id);
+      const myRole = (myEntry && myEntry.role) || 'contributor';
+      if(myRole === 'reader'){
+        return jres(res, 403, { error: '閲覧専用メンバーはメッセージを送信できません。ホストに権限変更を依頼してください。' });
+      }
+    }
 
     // ── Auto model routing ─────────────────────────────────
     // When agent.model === 'auto', derive an effective model per-turn from

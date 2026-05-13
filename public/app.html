@@ -3447,6 +3447,7 @@ body{color:#f0f0f8;}
         <div class="snav-section" data-i18n="sNavGrpAdv">高度</div>
         <button class="snav-item" data-tab="creator" onclick="switchStab(this,'s-creator')"><span class="snav-ic">🏪</span><span data-i18n="sNavCreator">クリエイター</span><span class="snav-badge" data-i18n="sBadgeNew">NEW</span></button>
         <button class="snav-item" data-tab="integrations" onclick="switchStab(this,'s-integrations');_loadIntegrations()"><span class="snav-ic">🔌</span><span>Integrations</span></button>
+        <button class="snav-item" data-tab="memory" onclick="switchStab(this,'s-memory');_loadMemoryAll()"><span class="snav-ic">🧠</span><span>記憶</span></button>
         <button class="snav-item" data-tab="data" onclick="switchStab(this,'s-data')"><span class="snav-ic">📦</span><span data-i18n="sNavData">データ</span></button>
 
         <div class="snav-section" id="snavAdminSec" style="display:none">運営</div>
@@ -3823,6 +3824,52 @@ body{color:#f0f0f8;}
               <button type="button" onclick="_mcpAddServer()" class="btn-primary" style="padding:9px;font-size:12.5px">+ 接続して試す</button>
             </div>
           </details>
+        </div>
+
+        <!-- 🧠 記憶 — unified "what AI remembers about you" page -->
+        <div id="s-memory" class="snav-pane" style="display:none">
+          <h3 class="spane-h">🧠 記憶</h3>
+          <div class="spane-sub">AI があなたについて覚えていること一覧です。個別に ON/OFF 切替・削除できます (GDPR 対応)。</div>
+
+          <!-- Stats summary -->
+          <section class="spane-section">
+            <div id="memStats" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text2)">
+              <span>読み込み中…</span>
+            </div>
+          </section>
+
+          <!-- Filter + bulk actions row -->
+          <section class="spane-section" style="padding-top:0">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+              <button onclick="_memFilter('all')" id="memFAll" class="mem-chip on">すべて</button>
+              <button onclick="_memFilter('active')" id="memFAct" class="mem-chip">有効</button>
+              <button onclick="_memFilter('disabled')" id="memFDis" class="mem-chip">OFF</button>
+              <button onclick="_memFilter('user')" id="memFUsr" class="mem-chip">全体共有</button>
+              <button onclick="_memFilter('agent')" id="memFAg" class="mem-chip">Agent 別</button>
+              <div style="flex:1"></div>
+              <button onclick="_memExport()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">📥 JSON エクスポート</button>
+              <button onclick="_memDeleteAll()" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 全削除 (GDPR)</button>
+            </div>
+            <div id="memAllList" style="display:flex;flex-direction:column;gap:7px">
+              <div style="text-align:center;padding:30px;color:var(--text3);font-size:12.5px">読み込み中…</div>
+            </div>
+          </section>
+
+          <!-- Inject minimal scoped CSS once -->
+          <style>
+            .mem-chip{background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}
+            .mem-chip.on{background:var(--peach);color:#fff;border-color:var(--peach)}
+            .mem-row{background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;transition:all .15s}
+            .mem-row.dis{opacity:.5}
+            .mem-row .mem-src{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--peach-dark);background:var(--cream2);padding:2px 7px;border-radius:99px;white-space:nowrap;flex-shrink:0}
+            .mem-row .mem-src.user{background:#e0f2fe;color:#0369a1}
+            .mem-row .mem-tx{font-size:12.5px;line-height:1.55;color:var(--text);flex:1;min-width:0}
+            .mem-row .mem-meta{font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:.01em}
+            .mem-row .mem-toggle{background:transparent;border:1px solid var(--wire2);border-radius:99px;padding:3px 9px;font-size:10.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0}
+            .mem-row .mem-toggle.on{background:#d1fae5;border-color:#86efac;color:#059669}
+            .mem-row .mem-del{background:transparent;border:1px solid transparent;border-radius:99px;padding:3px 7px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0}
+            .mem-row .mem-del:hover{background:#fee2e2;border-color:#fecaca}
+          </style>
         </div>
 
         <!-- 📦 データ -->
@@ -4728,7 +4775,21 @@ body{color:#f0f0f8;}
             <div style="display:flex;justify-content:space-between"><span>有効期限</span><span id="grpInviteExp" style="font-weight:700"></span></div>
             <div style="display:flex;justify-content:space-between;margin-top:3px"><span>最大人数</span><span id="grpInviteMax" style="font-weight:700"></span></div>
           </div>
-          <div style="font-size:10.5px;color:var(--text3);line-height:1.5">
+          <!-- Welcome message + default role (host config) — saved on blur -->
+          <div style="margin-top:8px;background:#fff;border:.5px solid var(--wire2);border-radius:8px;padding:9px 11px">
+            <div style="font-size:10.5px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.02em">📣 新メンバー向けウェルカムメッセージ <span style="color:var(--text3);font-weight:500">(任意, 400 字まで)</span></div>
+            <textarea id="grpInviteWelcome" placeholder="例: ようこそ! このチームでは LP の A/B テストを進めています。まずは PM AI に「現状把握」と話しかけてみてください。" maxlength="400" rows="3" style="width:100%;background:transparent;border:0;border-bottom:1px solid var(--wire2);padding:4px 0;font-size:12px;font-family:inherit;color:var(--text);resize:vertical;outline:none"></textarea>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+              <label style="font-size:10.5px;font-weight:700;color:var(--text2)">新メンバーの権限:</label>
+              <select id="grpInviteRole" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:3px 7px;font-size:11px;font-weight:700;color:var(--text);font-family:inherit;cursor:pointer">
+                <option value="contributor" selected>メンバー (送信可)</option>
+                <option value="admin">管理者 (権限変更可)</option>
+                <option value="reader">閲覧専用 (送信不可)</option>
+              </select>
+              <button onclick="_saveInviteConfig()" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:6px;padding:5px 11px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">保存</button>
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-top:8px">
             💰 招待された人は <b style="color:var(--text)">無料</b> でこのグループを使えます<br>
             AI 利用料はあなた (ホスト) の残高から消費
           </div>
@@ -7053,6 +7114,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
               showToast(isJa
                 ? '✨ グループに参加しました! 早速メッセージを送ってみましょう。'
                 : '✨ You joined the group! Send a message to say hi.', 'ok');
+              // Fetch the host's welcome message and show it as a banner card
+              // at the top of the chat. Dismissable + persisted per-agent.
+              _showJoinWelcomeBanner(qsOpen);
             } catch(e){}
           }
         }, 200);
@@ -9090,11 +9154,28 @@ async function openMemberPanel(agId){
     const removeBtn = (isHost && !isMe)
       ? '<button class="mem-rm" onclick="_removeMember(\''+esc(agId)+'\',\''+esc(m.user_id)+'\')" title="削除">×</button>'
       : '';
+    // Role label + (host-only) dropdown to change non-host members
+    const curRole = m.role || 'contributor';
+    const roleLabel = curRole === 'host' ? 'ホスト'
+      : curRole === 'admin' ? '管理者'
+      : curRole === 'reader' ? '閲覧専用'
+      : 'メンバー';
+    const roleColor = curRole === 'host' ? 'var(--peach-dark)'
+      : curRole === 'admin' ? '#7c3aed'
+      : curRole === 'reader' ? 'var(--text3)'
+      : 'var(--text2)';
+    const roleControl = (isHost && !isMe && curRole !== 'host')
+      ? '<select onchange="_changeMemberRole(\''+esc(agId)+'\',\''+esc(m.user_id)+'\',this.value)" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:3px 6px;font-size:11px;font-weight:700;color:'+roleColor+';font-family:inherit;margin-right:6px;cursor:pointer">'
+        +   '<option value="admin"'+(curRole==='admin'?' selected':'')+'>管理者</option>'
+        +   '<option value="contributor"'+(curRole==='contributor'||curRole==='member'?' selected':'')+'>メンバー</option>'
+        +   '<option value="reader"'+(curRole==='reader'?' selected':'')+'>閲覧専用</option>'
+        + '</select>'
+      : '<span class="ag-pill" style="color:'+roleColor+';margin-right:6px">'+esc(roleLabel)+'</span>';
     return '<div class="mem-row">'
       + '<div class="mem-av" style="background:'+color+'">'+esc(initial)+'</div>'
-      + '<div class="mem-meta"><div class="mem-name">'+esc(m.name||'')+(m.role==='host'?'<span class="ag-pill">ホスト</span>':'')+(isMe?'<span class="ag-pill invitee">あなた</span>':'')+'</div>'
-      + '<div class="mem-sub">'+(m.joined_at?new Date(m.joined_at).toLocaleDateString('ja-JP'):'')+(m.role==='host'?' に作成':' に参加')+'</div></div>'
-      + removeBtn + '</div>';
+      + '<div class="mem-meta"><div class="mem-name">'+esc(m.name||'')+(isMe?'<span class="ag-pill invitee">あなた</span>':'')+'</div>'
+      + '<div class="mem-sub">'+(m.joined_at?new Date(m.joined_at).toLocaleDateString('ja-JP'):'')+(curRole==='host'?' に作成':' に参加')+'</div></div>'
+      + roleControl + removeBtn + '</div>';
   }).join('');
   // Action footer differs for host vs member
   document.getElementById('grpMemberFoot').innerHTML = isHost
@@ -9131,6 +9212,54 @@ async function _removeMember(agId, uid){
     closeMemberPanel();
     openMemberPanel(agId);
   } catch(e){ showToast(e.message, 'ng'); }
+}
+// First-time welcome banner shown when a user joins a group via invite. Pulls
+// the host's `invite_welcome` message from /api/agents/:id/members and renders
+// a dismissible card at the top of the chat. Dismissed state is per-agent in
+// localStorage so the banner doesn't reappear on every visit.
+async function _showJoinWelcomeBanner(agId){
+  if(!agId) return;
+  try {
+    var seenKey = 'mya_welcome_seen_'+agId;
+    if(localStorage.getItem(seenKey)) return;
+    var m = await api('GET', '/api/agents/'+agId+'/members');
+    var welcome = (m && m.invite_welcome || '').trim();
+    if(!welcome) return;
+    var msgs = document.getElementById('msgs');
+    if(!msgs) return;
+    var existing = document.getElementById('joinWelcomeCard');
+    if(existing) existing.remove();
+    var card = document.createElement('div');
+    card.id = 'joinWelcomeCard';
+    card.style.cssText = 'margin:14px auto;max-width:760px;background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:14px;padding:16px 20px;font-size:13.5px;line-height:1.7;animation:fadeUp .35s ease;position:relative';
+    card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:11px">'
+      + '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">👋</div>'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div style="font-size:11px;font-weight:800;color:#7c2d12;letter-spacing:.04em;margin-bottom:4px;text-transform:uppercase">ホストからのウェルカムメッセージ</div>'
+      +   '<div style="color:var(--text);white-space:pre-wrap">'+esc(welcome)+'</div>'
+      + '</div>'
+      + '<button onclick="this.closest(\'#joinWelcomeCard\').remove();localStorage.setItem(\''+esc(seenKey)+'\',\'1\');" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:4px;flex-shrink:0">×</button>'
+      + '</div>';
+    var inner = document.getElementById('msgsInner');
+    if(inner) inner.insertBefore(card, inner.firstChild);
+    else msgs.insertBefore(card, msgs.firstChild);
+  } catch(e){
+    console.warn('[welcome banner]', e.message);
+  }
+}
+
+// Host-only: promote / demote a member without removing them.
+async function _changeMemberRole(agId, uid, newRole){
+  try {
+    await api('PATCH', '/api/agents/'+agId+'/members/'+uid+'/role', { role: newRole });
+    var label = newRole === 'admin' ? '管理者' : newRole === 'reader' ? '閲覧専用' : 'メンバー';
+    showToast('✓ 権限を「'+label+'」に変更しました', 'ok');
+    closeMemberPanel();
+    openMemberPanel(agId);
+  } catch(e){
+    showToast((e.message||'変更失敗'), 'ng');
+    openMemberPanel(agId); // re-render to revert select
+  }
 }
 async function _leaveGroup(agId){
   if(!confirm(isJa?'このグループを退出しますか？':'Leave this group?')) return;
@@ -11617,23 +11746,35 @@ async function _pickGrpAgent(agId){
 async function openInviteModal(agId){
   const ag = agents.find(a => a.id === agId);
   if(!ag) return;
+  // Stash on window so the save button below can pick up the right agentId.
+  window._currentInviteAgId = agId;
   // Re-fetch members + token to ensure freshness
   let token = ag.invite_token, expires = ag.invite_expires_at, maxMembers = ag.invite_max_members || 50;
+  let welcome = '', defaultRole = 'contributor';
   try {
     const m = await api('GET', '/api/agents/' + agId + '/members');
     if(m && m.invite_token){ token = m.invite_token; expires = m.invite_expires_at; maxMembers = m.invite_max_members; }
+    welcome = (m && m.invite_welcome) || '';
+    defaultRole = (m && m.invite_default_role) || 'contributor';
   } catch(e){}
   if(!token){
     // No invite yet — generate one
     try {
       const r = await api('POST', '/api/agents/' + agId + '/invite', {});
       token = r.invite_token; expires = r.invite_expires_at; maxMembers = r.invite_max_members;
+      welcome = r.invite_welcome || welcome;
+      defaultRole = r.invite_default_role || defaultRole;
       if(ag) { ag.invite_token = token; ag.is_group = true; ag.host_id = me.id; ag.member_count = (r.members||[]).length; }
     } catch(e){
       showToast((isJa ? '招待リンク生成失敗: ' : 'Invite create failed: ') + e.message, 'ng');
       return;
     }
   }
+  // Hydrate welcome message + default role fields
+  var wEl = document.getElementById('grpInviteWelcome');
+  if(wEl) wEl.value = welcome;
+  var rEl = document.getElementById('grpInviteRole');
+  if(rEl) rEl.value = defaultRole;
   const url = location.origin + '/g/' + token;
   const expDate = expires ? new Date(expires) : null;
   const expStr = expDate ? expDate.toLocaleDateString('ja-JP', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '無期限';
@@ -11666,6 +11807,23 @@ async function openInviteModal(agId){
 }
 function closeInviteModal(){
   document.getElementById('grpInviteOverlay')?.classList.remove('open');
+}
+// Save the welcome message + default-role from the invite modal back to the
+// group/team agent. Called by the "保存" button next to the textarea.
+async function _saveInviteConfig(){
+  const agId = window._currentInviteAgId;
+  if(!agId){ showToast('対象グループが特定できません','ng'); return; }
+  const welcome = (document.getElementById('grpInviteWelcome')||{}).value || '';
+  const defaultRole = (document.getElementById('grpInviteRole')||{}).value || 'contributor';
+  try {
+    await api('POST', '/api/agents/'+agId+'/invite', {
+      invite_welcome: welcome,
+      invite_default_role: defaultRole,
+    });
+    showToast('✓ ウェルカム設定を保存','ok');
+  } catch(e){
+    showToast((e.message||'保存失敗'),'ng');
+  }
 }
 function openTemplate(){
   _wizardMode='preset';
@@ -17218,6 +17376,178 @@ function _downloadBlob(filename, content, mime){
   a.href=url; a.download=filename; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 100);
 }
+// ── Unified Memory page (🧠 記憶 tab) ────────────────────
+// Pulls user-level + every agent's memories into one list with per-item
+// ON/OFF toggle, delete, JSON export, and a GDPR "全削除" button.
+window._memAllCache = null;
+window._memAllFilter = 'all';
+
+async function _loadMemoryAll(){
+  const host = document.getElementById('memAllList');
+  if(!host) return;
+  host.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12.5px">読み込み中…</div>';
+  try {
+    const r = await api('GET', '/api/me/memories/all');
+    window._memAllCache = r;
+    _renderMemoryStats(r);
+    _renderMemoryAllList();
+  } catch(e){
+    host.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:14px">読み込み失敗: '+esc(e.message||'')+'</div>';
+  }
+}
+
+function _renderMemoryStats(r){
+  const el = document.getElementById('memStats');
+  if(!el) return;
+  el.innerHTML = ''
+    + '<span><b style="font-size:15px;color:var(--text);font-weight:900">'+(r.total||0)+'</b> 件</span>'
+    + '<span style="color:#059669"><b style="font-size:15px;font-weight:900">'+(r.active||0)+'</b> 有効</span>'
+    + '<span style="color:var(--text3)"><b style="font-size:15px;font-weight:900">'+(r.disabled||0)+'</b> OFF</span>';
+}
+
+function _memFilter(kind){
+  window._memAllFilter = kind;
+  ['All','Act','Dis','Usr','Ag'].forEach(function(k){
+    var el = document.getElementById('memF'+k);
+    if(el) el.classList.remove('on');
+  });
+  var map = {all:'memFAll',active:'memFAct',disabled:'memFDis',user:'memFUsr',agent:'memFAg'};
+  var ot = document.getElementById(map[kind]||'memFAll');
+  if(ot) ot.classList.add('on');
+  _renderMemoryAllList();
+}
+
+function _renderMemoryAllList(){
+  const host = document.getElementById('memAllList');
+  if(!host) return;
+  const r = window._memAllCache;
+  if(!r || !Array.isArray(r.items)){ host.innerHTML = ''; return; }
+  const filt = window._memAllFilter || 'all';
+  let items = r.items;
+  if(filt === 'active')   items = items.filter(x => !x.disabled);
+  if(filt === 'disabled') items = items.filter(x =>  x.disabled);
+  if(filt === 'user')     items = items.filter(x => x.scope === 'user');
+  if(filt === 'agent')    items = items.filter(x => x.scope === 'agent');
+  if(!items.length){
+    host.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12.5px">該当する記憶はありません</div>';
+    return;
+  }
+  host.innerHTML = items.map(function(it){
+    var when = it.added_at ? (new Date(it.added_at)).toLocaleDateString('ja-JP', {year:'numeric',month:'2-digit',day:'2-digit'}) : '';
+    var srcCls = it.scope === 'user' ? 'mem-src user' : 'mem-src';
+    var srcLbl = it.scope === 'user' ? '🌐 全体共有' : ((it.agent_avatar||'🤖')+' '+it.agent_name);
+    var toggleLbl = it.disabled ? 'OFF' : '✓ ON';
+    var toggleCls = it.disabled ? 'mem-toggle' : 'mem-toggle on';
+    return '<div class="mem-row '+(it.disabled?'dis':'')+'">'
+      + '<span class="'+srcCls+'">'+esc(srcLbl)+'</span>'
+      + '<div class="mem-tx">'
+      +   esc(it.text)
+      +   '<div class="mem-meta">'+esc(when)+(it.pinned?' · 📌 ピン留め':'')+'</div>'
+      + '</div>'
+      + '<button class="'+toggleCls+'" onclick="_memToggle(\''+esc(it.id)+'\')">'+toggleLbl+'</button>'
+      + '<button class="mem-del" onclick="_memDelete(\''+esc(it.id)+'\')" title="削除">🗑</button>'
+      + '</div>';
+  }).join('');
+}
+
+// Parse our composite IDs: "u_<idx>" or "a_<agentId>_<memoryId>"
+function _memParseId(id){
+  if(!id) return null;
+  if(id.indexOf('u_') === 0){
+    return { scope:'user', idx: parseInt(id.slice(2), 10) };
+  }
+  if(id.indexOf('a_') === 0){
+    var rest = id.slice(2);
+    var sep = rest.lastIndexOf('_');
+    if(sep < 0) return null;
+    return { scope:'agent', agentId: rest.slice(0, sep), memId: rest.slice(sep+1) };
+  }
+  return null;
+}
+
+async function _memToggle(id){
+  const p = _memParseId(id);
+  if(!p) return;
+  // Find the cached item to flip its current state
+  var item = (window._memAllCache && window._memAllCache.items || []).find(function(x){return x.id===id;});
+  if(!item) return;
+  const newDisabled = !item.disabled;
+  try {
+    if(p.scope === 'user'){
+      await api('PATCH', '/api/me/memories/'+p.idx, { disabled: newDisabled });
+    } else {
+      await api('PATCH', '/api/agents/'+p.agentId+'/memories/'+p.memId, { disabled: newDisabled });
+    }
+    item.disabled = newDisabled;
+    // Update stats inline
+    if(window._memAllCache){
+      window._memAllCache.active   = (window._memAllCache.items||[]).filter(function(x){return !x.disabled;}).length;
+      window._memAllCache.disabled = (window._memAllCache.items||[]).filter(function(x){return  x.disabled;}).length;
+      _renderMemoryStats(window._memAllCache);
+    }
+    _renderMemoryAllList();
+  } catch(e){
+    showToast((e.message||'切替失敗'),'ng');
+  }
+}
+
+async function _memDelete(id){
+  const p = _memParseId(id);
+  if(!p) return;
+  if(!confirm('この記憶を削除しますか?')) return;
+  try {
+    if(p.scope === 'user'){
+      await api('DELETE', '/api/me/memories/'+p.idx);
+    } else {
+      await api('DELETE', '/api/agents/'+p.agentId+'/memories/'+p.memId);
+    }
+    showToast('削除しました','ok');
+    _loadMemoryAll();
+  } catch(e){
+    showToast((e.message||'削除失敗'),'ng');
+  }
+}
+
+function _memExport(){
+  const r = window._memAllCache;
+  if(!r){ showToast('まだ読み込まれていません','ng'); return; }
+  const exportData = {
+    exported_at: new Date().toISOString(),
+    total: r.total,
+    items: (r.items||[]).map(function(it){
+      return {
+        scope: it.scope,
+        agent_name: it.agent_name,
+        text: it.text,
+        added_at: it.added_at,
+        pinned: it.pinned,
+        disabled: it.disabled,
+      };
+    }),
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'my-ai-agent-memories-'+(new Date()).toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 100);
+  showToast('JSON エクスポート完了','ok');
+}
+
+async function _memDeleteAll(){
+  if(!confirm('⚠️ あなたについて AI が覚えている全ての記憶を削除します。\n\nこの操作は取り消せません。よろしいですか?')) return;
+  const phrase = prompt('確認のため「DELETE ALL」と入力してください:');
+  if(phrase !== 'DELETE ALL'){ showToast('キャンセルしました','ng'); return; }
+  try {
+    await api('DELETE', '/api/me/memories/all', { confirm: 'DELETE ALL' });
+    showToast('全ての記憶を削除しました','ok');
+    _loadMemoryAll();
+  } catch(e){
+    showToast((e.message||'削除失敗'),'ng');
+  }
+}
+
 // Memories (long-term AI memory) management
 async function _loadMemories(){
   const list = document.getElementById('memList');

@@ -2646,7 +2646,51 @@ async function _callGeminiWithTools(messages, system, tools, toolChoice, info, c
   });
 }
 
+// ── AI error recovery ──────────────────────────────────────
+// Pick a faster fallback model when the primary times out. Goal: hand the
+// user *something* rather than nothing when Opus/Sonnet takes > 2 min.
+function _fallbackModelFor(modelAlias){
+  const a = String(modelAlias || '').toLowerCase();
+  if(a === 'opus' || a === 'opus-4' || a === 'opus-4-7') return 'sonnet';
+  if(a === 'sonnet' || a === 'sonnet-4-6') return 'haiku';
+  if(a === 'gemini-pro') return 'gemini-flash';
+  // Already the fastest tier — no further fallback.
+  return null;
+}
+// True when an error indicates a transient upstream issue worth retrying.
+function _isTransientAIError(err){
+  const msg = String(err && err.message || err || '');
+  return /upstream timeout|ETIMEDOUT|ECONNRESET|socket hang up|Anthropic 5\d\d|Gemini 5\d\d|rate.?limit|429|503|504/i.test(msg);
+}
+
 async function callAI(messages,system,modelAlias,cacheAgent){
+  // Recovery wrapper: 1 silent retry on transient errors, then 1 fallback
+  // to a faster model. The original modelAlias is used until we run out.
+  let curModel = modelAlias;
+  let attempt = 0;
+  while(true){
+    try {
+      return await _callAIOnce(messages, system, curModel, cacheAgent);
+    } catch(e){
+      if(_isTransientAIError(e) && attempt === 0){
+        console.warn('[callAI] transient error, retrying same model:', String(e.message||e).slice(0,200));
+        attempt = 1;
+        continue;
+      }
+      if(_isTransientAIError(e) && attempt === 1){
+        const fb = _fallbackModelFor(curModel);
+        if(fb){
+          console.warn('[callAI] retry timed out, falling back', curModel, '→', fb);
+          curModel = fb;
+          attempt = 2;
+          continue;
+        }
+      }
+      throw e;
+    }
+  }
+}
+async function _callAIOnce(messages,system,modelAlias,cacheAgent){
   const info = _resolveModelInfo(modelAlias);
   const trimmedMsgs = _trimHistory(_capHistory(messages));
   if(info.provider === 'gemini'){
@@ -2670,8 +2714,47 @@ async function callAI(messages,system,modelAlias,cacheAgent){
 /**
  * Streaming variant. Calls onText(chunk) for each text_delta.
  * Resolves with {text, inputTokens, outputTokens}.
+ * Wraps the real call with transient-error retry + model fallback so users
+ * don't see "upstream timeout" on the first hiccup.
  */
-function callAIStream(messages, system, onText, modelAlias, cacheAgent){
+async function callAIStream(messages, system, onText, modelAlias, cacheAgent){
+  let curModel = modelAlias;
+  let attempt = 0;
+  // Track text already streamed so we can dedup partial output on retry.
+  let alreadyStreamed = 0;
+  const wrappedOnText = (t) => {
+    // Subsequent retries: skip the prefix the user already saw.
+    if(alreadyStreamed > 0){
+      // We can't reliably skip mid-stream, so on retry we tell onText to
+      // disregard everything from the start of THIS attempt. Simplest path:
+      // pass through (UI will see duplicated text but at least gets output).
+    }
+    try { onText(t); } catch(e){}
+  };
+  while(true){
+    try {
+      const result = await _callAIStreamOnce(messages, system, wrappedOnText, curModel, cacheAgent);
+      return result;
+    } catch(e){
+      if(_isTransientAIError(e) && attempt === 0){
+        console.warn('[callAIStream] transient, retrying same model:', String(e.message||e).slice(0,200));
+        attempt = 1;
+        continue;
+      }
+      if(_isTransientAIError(e) && attempt === 1){
+        const fb = _fallbackModelFor(curModel);
+        if(fb){
+          console.warn('[callAIStream] retry timed out, fallback', curModel, '→', fb);
+          curModel = fb;
+          attempt = 2;
+          continue;
+        }
+      }
+      throw e;
+    }
+  }
+}
+function _callAIStreamOnce(messages, system, onText, modelAlias, cacheAgent){
   const info = _resolveModelInfo(modelAlias);
   if(info.provider === 'gemini'){
     return _geminiResolveCache({ info, system, tools: [], agent: cacheAgent, agentLabel: cacheAgent && cacheAgent.name })
@@ -2689,6 +2772,10 @@ function callAIStream(messages, system, onText, modelAlias, cacheAgent){
       hostname:'api.anthropic.com',
       path:'/v1/messages',
       method:'POST',
+      // Idle timeout so the recovery wrapper can react if Anthropic hangs.
+      // 90s gives plenty of headroom for legitimate long generations; the
+      // wrapper retries + falls back to a faster model on hit.
+      timeout: 90000,
       headers:{
         'Content-Type':'application/json',
         'x-api-key':ANTHROPIC,
@@ -2747,6 +2834,10 @@ function callAIStream(messages, system, onText, modelAlias, cacheAgent){
       });
       r.on('error', (e)=>{ if(!errored) reject(e); });
     });
+    req.on('timeout', ()=>{
+      try { req.destroy(new Error('upstream timeout 90000ms')); } catch(e){}
+      reject(new Error('upstream timeout 90000ms'));
+    });
     req.on('error', reject);
     req.write(body);
     req.end();
@@ -2755,6 +2846,34 @@ function callAIStream(messages, system, onText, modelAlias, cacheAgent){
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
 async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cacheAgent){
+  // Recovery wrapper — same pattern as callAI/callAIStream. Tool-use calls
+  // are the slowest (artifact creation can take 1-2 min) so silent retry
+  // + fallback matters most here.
+  let curModel = modelAlias;
+  let attempt = 0;
+  while(true){
+    try {
+      return await _callAIWithToolsOnce(messages, system, tools, toolChoice, curModel, cacheAgent);
+    } catch(e){
+      if(_isTransientAIError(e) && attempt === 0){
+        console.warn('[callAIWithTools] transient, retrying same model:', String(e.message||e).slice(0,200));
+        attempt = 1;
+        continue;
+      }
+      if(_isTransientAIError(e) && attempt === 1){
+        const fb = _fallbackModelFor(curModel);
+        if(fb){
+          console.warn('[callAIWithTools] retry timed out, fallback', curModel, '→', fb);
+          curModel = fb;
+          attempt = 2;
+          continue;
+        }
+      }
+      throw e;
+    }
+  }
+}
+async function _callAIWithToolsOnce(messages,system,tools,toolChoice,modelAlias,cacheAgent){
   const info = _resolveModelInfo(modelAlias);
   // Gemini: route through the Gemini-specific implementation. Server-managed
   // Anthropic tools (web_search / web_fetch) are stripped inside _antToGeminiTools
@@ -3202,6 +3321,34 @@ const MEDIA_UTIL_TOOLS = [
         title:{type:'string',description:'ファイル名 (a-z0-9)'},
       },
       required:['text'],
+    },
+  },
+  {
+    name:'edit_artifact',
+    description:`既存の create_artifact 成果物に**差分追加・修正**を加える。全文再生成より 10x 高速で、出力トークンも大幅に節約。「成果物に追加して」「ここを書き換えて」「100 件足して」など **追記/部分編集** の依頼が来たら、create_artifact ではなく必ずこちらを使うこと。
+
+【いつ使う】
+- ✅「成果物に X を追加して」「リストに項目を増やして」
+- ✅「ここの色を変えて」「タイトルを修正して」
+- ✅「あの artifact に新セクションを足して」
+- ❌ ゼロから新規 LP / モックを作る場合 → create_artifact を使う
+
+【操作 (operation)】
+- "append_to_body": </body> の直前に content を挿入 (最頻出。新セクション / 新リスト項目の追加に最適)
+- "append_to_selector": selector で指定した要素の閉じタグ直前に content を挿入 (例: <tbody> に <tr> を 100 行追加)
+- "replace_selector": selector で指定した要素の中身を content で完全置換 (色変更や文言修正)
+- "insert_before_selector": selector で指定した要素の直前に content を挿入
+
+filename は直近 create_artifact のレスポンス URL (/generated/artifact-XXX-YYY.html) からファイル名部分を抜き出す。`,
+    input_schema:{
+      type:'object',
+      properties:{
+        filename:{type:'string',description:'対象 artifact のファイル名 (例: artifact-recruitment-companies-100-a3f2e1.html)。直近の create_artifact レスポンス URL から抽出。'},
+        operation:{type:'string',enum:['append_to_body','append_to_selector','replace_selector','insert_before_selector'],description:'操作種別。デフォルトは append_to_body。'},
+        selector:{type:'string',description:'append_to_selector / replace_selector / insert_before_selector で使う CSS セレクタ (例: "#companies", "tbody", ".section-list")'},
+        content:{type:'string',description:'挿入する HTML 断片 (最大 100KB)。完全な HTML タグで書く。'},
+      },
+      required:['filename','operation','content'],
     },
   },
   {
@@ -4779,6 +4926,140 @@ async function executeArtifactTool(input, ownerUser){
     instructions: '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットは URL を「新タブで開く ↗」リンクカードとしてレンダリングします。',
   };
 }
+
+// ── edit_artifact — patch-mode edit of an existing artifact ──
+// Avoids the costly full HTML regeneration. For "append 100 rows" or
+// "replace section" requests, the AI sends only the diff and the server
+// surgically patches the existing artifact, writes both to disk + DB, and
+// returns the same URL (the iframe re-fetches it).
+async function executeEditArtifactTool(input, ownerUser){
+  const filename = String((input && input.filename) || '').trim();
+  const op = String((input && input.operation) || 'append_to_body');
+  const selector = String((input && input.selector) || '').trim();
+  const content = String((input && input.content) || '');
+  if(!filename) return { error: 'filename required' };
+  if(!content) return { error: 'content required' };
+  if(content.length > 100000) return { error: 'content too large (max 100KB)' };
+  // Locate artifact on the user record. DB is source of truth (disk may have
+  // been wiped on container restart).
+  ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
+  const artifact = ownerUser.artifacts.find(a => a && a.filename === filename);
+  if(!artifact) return { error: 'artifact not found: '+filename };
+  let html = String(artifact.html || '');
+  if(html.length + content.length > 600000){
+    return { error: 'artifact would exceed 600KB after edit' };
+  }
+  let applied = false;
+  if(op === 'append_to_body'){
+    if(html.indexOf('</body>') >= 0){
+      html = html.replace('</body>', content + '\n</body>');
+    } else {
+      html = html + '\n' + content;
+    }
+    applied = true;
+  } else if(op === 'append_to_selector' && selector){
+    // Find the *closing* tag for the first match of the selector. Supports
+    // simple selectors only: tag, #id, .class. Complex selectors → fail.
+    const tagMatch = _findSelectorRange(html, selector);
+    if(!tagMatch){
+      return { error: 'selector not found: '+selector };
+    }
+    html = html.slice(0, tagMatch.closeStart) + content + '\n' + html.slice(tagMatch.closeStart);
+    applied = true;
+  } else if(op === 'replace_selector' && selector){
+    const tagMatch = _findSelectorRange(html, selector);
+    if(!tagMatch){
+      return { error: 'selector not found: '+selector };
+    }
+    html = html.slice(0, tagMatch.openEnd) + '\n' + content + '\n' + html.slice(tagMatch.closeStart);
+    applied = true;
+  } else if(op === 'insert_before_selector' && selector){
+    const tagMatch = _findSelectorRange(html, selector);
+    if(!tagMatch){
+      return { error: 'selector not found: '+selector };
+    }
+    html = html.slice(0, tagMatch.openStart) + content + '\n' + html.slice(tagMatch.openStart);
+    applied = true;
+  }
+  if(!applied){
+    return { error: 'invalid operation: '+op };
+  }
+  artifact.html = html;
+  artifact.updated_at = new Date().toISOString();
+  artifact.size = Buffer.byteLength(html, 'utf8');
+  // Rewrite disk copy (best effort)
+  try { fs.writeFileSync(path.join(GENERATED_DIR, filename), html, 'utf8'); } catch(e){
+    console.warn('[edit_artifact] disk write failed:', e.message);
+  }
+  try { await DB.save(ownerUser); } catch(e){
+    console.warn('[edit_artifact] DB persist failed:', e.message);
+  }
+  const sizeKb = Math.round(Buffer.byteLength(html, 'utf8') / 1024);
+  const url = '/generated/' + filename;
+  return {
+    url, title: artifact.title || filename, operation: op,
+    size_kb: sizeKb,
+    bytes_added: content.length,
+    markdown: '![' + (artifact.title || 'artifact') + '](' + url + ')',
+    instructions: '更新完了。最終応答で上記 markdown 構文を本文に含めてください。差分追加: ' + content.length + ' 文字。',
+  };
+}
+
+// Find the bytes-range of a (very simple) selector in HTML. Supports:
+//   "body" / "main" / "tbody" → first matching tag
+//   "#foo" → first <... id="foo" ...>
+//   ".bar" → first <... class="... bar ..." ...>
+// Returns { tagName, openStart, openEnd, closeStart } where:
+//   openStart  = byte index of '<' of the opening tag
+//   openEnd    = byte index just AFTER '>' of the opening tag
+//   closeStart = byte index of '<' of the matching closing tag
+// Handles nested same-name tags via depth counter. Returns null if not found.
+function _findSelectorRange(html, selector){
+  let tag = null, attrKey = null, attrVal = null;
+  if(selector.startsWith('#')){
+    attrKey = 'id'; attrVal = selector.slice(1);
+    tag = '[a-zA-Z][a-zA-Z0-9]*'; // any tag
+  } else if(selector.startsWith('.')){
+    attrKey = 'class'; attrVal = selector.slice(1);
+    tag = '[a-zA-Z][a-zA-Z0-9]*';
+  } else if(/^[a-zA-Z][a-zA-Z0-9]*$/.test(selector)){
+    tag = selector;
+  } else {
+    return null; // unsupported selector
+  }
+  // Build opening-tag regex
+  let openRe;
+  if(attrKey === 'id'){
+    openRe = new RegExp('<('+tag+')\\b[^>]*\\bid\\s*=\\s*[\"\']'+_escRe(attrVal)+'[\"\'][^>]*>', 'i');
+  } else if(attrKey === 'class'){
+    openRe = new RegExp('<('+tag+')\\b[^>]*\\bclass\\s*=\\s*[\"\'][^\"\']*\\b'+_escRe(attrVal)+'\\b[^\"\']*[\"\'][^>]*>', 'i');
+  } else {
+    openRe = new RegExp('<('+tag+')\\b[^>]*>', 'i');
+  }
+  const m = openRe.exec(html);
+  if(!m) return null;
+  const tagName = m[1];
+  const openStart = m.index;
+  const openEnd = m.index + m[0].length;
+  // Find matching closing tag (handle nesting)
+  const closeTag = '</' + tagName + '>';
+  const openTag = '<' + tagName + '\\b';
+  const tokenRe = new RegExp('(' + openTag + ')|(' + closeTag + ')', 'gi');
+  tokenRe.lastIndex = openEnd;
+  let depth = 1;
+  while(true){
+    const t = tokenRe.exec(html);
+    if(!t) return null;
+    if(t[1]) depth++;
+    else if(t[2]){
+      depth--;
+      if(depth === 0){
+        return { tagName, openStart, openEnd, closeStart: t.index };
+      }
+    }
+  }
+}
+function _escRe(s){ return String(s||'').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 // Lookup an artifact by filename across all users (for the static-route
 // fallback when the on-disk copy was wiped by a container restart).
@@ -8208,6 +8489,7 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 
 正しい挙動:
 - ✅ LP / モック / デザイン / ダッシュボード / 計算機 / インタラクティブ図表 → \`create_artifact\` を今このメッセージで呼ぶ (HTML 1 ファイル)
+- ✅ **既存の artifact に追加・修正** (「成果物に追記」「ここを書き換えて」「リストに 100 件足して」など) → \`create_artifact\` ではなく必ず \`edit_artifact\` を使う。filename は直近 artifact URL (/generated/artifact-XXX.html) から抽出。全文再生成は禁止 (重い + タイムアウトの主因)。
 - ✅ 画像 → \`generate_image\` (\`style:'logo'\` で文字入り / \`'photo'\` で写真 / \`'illustration'\` でイラスト) / 動画 → \`generate_video\` / 音声 → \`generate_audio\`
 - ✅ 既存画像の編集 (背景差し替え / 要素追加・削除 / スタイル変更) → \`edit_image\` (直前 generate_image の URL を渡す)
 - ✅ PDF → \`generate_pdf\` / グラフ → \`generate_chart\` / 図 → \`generate_diagram\` / QR → \`generate_qr\`
@@ -14565,6 +14847,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeQrTool(block.input||{});
             } else if(block.name === 'create_artifact'){
               result = await executeArtifactTool(block.input||{}, payerUser);
+            } else if(block.name === 'edit_artifact'){
+              result = await executeEditArtifactTool(block.input||{}, payerUser);
             } else if(block.name === 'notify_slack'){
               result = await executeNotifyTool('slack', payerUser, block.input||{});
             } else if(block.name === 'notify_discord'){

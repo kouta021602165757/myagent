@@ -8842,6 +8842,11 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     if(!isU && raw && raw.truncated){
       acts += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを書く':'Continue')+'">▶ '+(isJa?'続きを書く':'Continue')+'</button>';
     }
+    // Retry button — assistant messages that resulted in an error
+    // (timeout / 5xx / network). Re-sends the most recent user message.
+    if(!isU && raw && raw.is_error){
+      acts += '<button class="m-act m-act-retry" onclick="retryMsg(this)" title="'+(isJa?'もう一度試す':'Retry')+'">🔄 '+(isJa?'再試行':'Retry')+'</button>';
+    }
   }
   // In groups, highlight @AI / @name mentions in the body.
   let bodyMarkup = body;
@@ -9756,10 +9761,37 @@ async function editMsgSave(btn){
     ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
     if(r.balance_jpy!==undefined) me.balance_jpy=r.balance_jpy;
   }catch(e){
-    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
+    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now(),is_error:true});
   }
   var t=document.getElementById('thinking'); if(t) t.remove();
   renderMsgs(ag);  // sticky-bottom — if user scrolled up reading reply mid-stream, respect that
+}
+
+/* ── Retry (recover from error / timeout / 5xx) ─────── */
+async function retryMsg(btn){
+  if(!activeId) return;
+  var ag = agents.find(function(a){return a.id===activeId;}); if(!ag) return;
+  var row = btn.closest('.m');
+  var idx = row ? parseInt(row.dataset.idx||'-1', 10) : -1;
+  // Find the most recent user message before this error bubble — that's what
+  // failed and needs re-sending.
+  var hist = ag.history || [];
+  var startIdx = (idx >= 0) ? idx : hist.length;
+  var userIdx = -1;
+  for(var i = startIdx - 1; i >= 0; i--){
+    if(hist[i] && hist[i].role === 'user'){ userIdx = i; break; }
+  }
+  if(userIdx < 0){ showToast(isJa?'再送する元メッセージが見つかりません':'No user message to retry','ng'); return; }
+  var lastUser = hist[userIdx];
+  var text = String(lastUser.content||'').trim();
+  if(!text){ showToast(isJa?'空のメッセージは再送できません':'Empty user message','ng'); return; }
+  // Remove the error bubble + any partially streamed bubbles after the user msg.
+  if(idx >= 0){ hist.splice(idx, 1); }
+  // Pre-fill composer and trigger send. This re-runs the chat through the
+  // normal sendMsg path so silent-retry + model-fallback chains all apply.
+  var ci = document.getElementById('ci');
+  if(ci){ ci.value = text; }
+  sendMsg();
 }
 
 /* ── Continue (recover from max_tokens) ─────────────── */
@@ -9861,7 +9893,7 @@ async function regenerateMsg(btn){
     ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
     if(r.balance_jpy!==undefined) me.balance_jpy=r.balance_jpy;
   }catch(e){
-    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
+    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now(),is_error:true});
   }
   var t=document.getElementById('thinking'); if(t) t.remove();
   renderMsgs(ag);
@@ -10997,7 +11029,7 @@ async function sendMsg(){
       updateBalance();
     }
   }catch(e){
-    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now()});
+    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now(),is_error:true});
     if(e.message.includes('クレジット')||e.message.includes('残高')){ openCharge(); }
   }
   document.getElementById('thinking')?.remove();

@@ -14263,20 +14263,34 @@ function _intgOpen(id){
     // List is fetched async after the modal is mounted.
     body =
       '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'+esc(s.desc||'')+'</div>'
-      + '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:9px;padding:11px 13px;font-size:11.5px;color:#9a3412;line-height:1.55;margin-bottom:14px">'
-      +   '<b style="color:#7c2d12">🎯 人気のレシピ — Zapier 経由でこれが全部できる</b><br>'
-      +   '<span style="font-size:11px;color:#9a3412">'
-      +     '・<b>X (Twitter)</b> 投稿 (Dev Portal 不要)・<b>Instagram</b> 投稿 (Business アカ)・<b>LinkedIn</b> 投稿'
-      +     '<br>・<b>Google Sheets</b> 追記・<b>Mailchimp</b> でメール送信・<b>Trello</b> でカード追加'
-      +     '<br>・<b>Buffer</b> 経由で SNS 一斉投稿・<b>Notion</b> ページ作成・<b>HubSpot</b> リード追加'
-      +   '</span>'
+      // ── One-click template cards — each links to Zapier's app-pair page
+      //    where Webhooks-by-Zapier + the target service are pre-selected, so
+      //    the user can pick a ready-made template instead of building from
+      //    scratch. Much friendlier for non-Zapier users.
+      + '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:.02em">🎯 ワンクリックで始める — 人気のテンプレート</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px">'
+      +   _zapTplCard('🐦', 'X (Twitter) 投稿', 'twitter', 'AI に「ツイートして」と言うだけ')
+      +   _zapTplCard('💬', 'Slack 通知', 'slack', '#general に AI から通知')
+      +   _zapTplCard('📋', 'Google Sheets', 'google-sheets', '行追加 / 検索 / 集計')
+      +   _zapTplCard('📧', 'Gmail 送信', 'gmail', '本文を AI に書かせて送る')
+      +   _zapTplCard('💼', 'LinkedIn 投稿', 'linkedin', 'B2B 向け SNS')
+      +   _zapTplCard('📷', 'Instagram 投稿', 'instagram-for-business', 'Business アカウント必須')
+      +   _zapTplCard('📝', 'Notion ページ作成', 'notion', 'AI に議事録を保存')
+      +   _zapTplCard('🎮', 'Discord 通知', 'discord', 'コミュニティに告知')
+      +   _zapTplCard('📋', 'Trello カード', 'trello', 'タスクを自動追加')
+      +   _zapTplCard('📬', 'Mailchimp', 'mailchimp', 'メルマガ送信')
+      +   _zapTplCard('🗂️', 'Airtable', 'airtable', 'DB に行追加')
+      +   _zapTplCard('🚀', 'HubSpot CRM', 'hubspot', 'リード自動追加')
       + '</div>'
-      + '<div style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:12px;font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'
-      +   '<b style="color:var(--text)">⚡ 使い方</b><br>'
-      +   '1. <a href="https://zapier.com/app/editor" target="_blank" style="color:var(--peach-dark);font-weight:700">Zapier で新しい Zap を作成</a><br>'
-      +   '2. トリガーに「Webhooks by Zapier → Catch Hook」を選択<br>'
-      +   '3. アクションに使いたいサービス (X / Slack / Sheets …) を追加<br>'
-      +   '4. Catch Hook の URL をコピー → 下のフォームに登録'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;padding-left:6px;border-left:2px solid var(--wire2)">クリックすると Zapier の準備済みテンプレート一覧が新しいタブで開きます。Zap を公開後、画面に出る Catch Hook URL を ↓ 下のフォームに貼り付けてください。</div>'
+      + '<div style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'
+      +   '<details><summary style="cursor:pointer;font-weight:800;color:var(--text);list-style:none">📖 詳しい手順を見る (4 ステップ)</summary>'
+      +   '<div style="margin-top:8px">'
+      +     '1. 上のテンプレからやりたいことを選ぶ (Zapier が新タブで開く)<br>'
+      +     '2. Zapier に <a href="https://zapier.com/sign-up" target="_blank" style="color:var(--peach-dark);font-weight:700">無料登録</a> or ログイン<br>'
+      +     '3. テンプレを「Try it」 → 連携先 (X / Slack 等) のアカウントを Zapier に接続 → Publish<br>'
+      +     '4. 表示される <b>Catch Hook URL</b> をコピー → 下のフォームに登録'
+      +   '</div></details>'
       + '</div>'
       + '<div style="font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:8px">📋 登録済みの Zap <span id="zapierCount" style="font-size:10px;color:var(--text3);font-weight:700">読込中…</span></div>'
       + '<div id="zapierList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">'
@@ -14368,6 +14382,22 @@ function _intgOpen(id){
 }
 
 // ── Zapier multi-webhook helpers ─────────────────────────
+// One-click template card. Opens Zapier's app-pair marketplace page in a
+// new tab where Webhooks-by-Zapier + the target app are pre-selected. The
+// user picks a template, clicks "Try it", connects their account, and gets
+// a Catch Hook URL to paste back into the form below.
+function _zapTplCard(emoji, name, appSlug, hint){
+  var url = 'https://zapier.com/apps/webhook/integrations/' + appSlug;
+  return '<a href="'+esc(url)+'" target="_blank" rel="noopener" '
+    + 'style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 11px;text-decoration:none;color:inherit;font-family:inherit;display:flex;flex-direction:column;gap:3px;transition:all .15s;cursor:pointer" '
+    + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 16px rgba(251,146,60,.1)\'" '
+    + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'"'
+    + '>'
+    + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px;line-height:1">'+esc(emoji)+'</span><span style="font-size:11.5px;font-weight:800;color:var(--text);line-height:1.2">'+esc(name)+'</span></div>'
+    + '<div style="font-size:10px;color:var(--text3);line-height:1.4">'+esc(hint)+'</div>'
+    + '</a>';
+}
+
 async function _zapierLoadList(){
   var listEl = document.getElementById('zapierList');
   var countEl = document.getElementById('zapierCount');

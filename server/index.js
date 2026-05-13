@@ -11406,6 +11406,37 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { ok: true, default_site_id: user.integrations.wordpress.default_site_id });
   }
 
+  // Legacy compat — PUT /api/me/integrations/wordpress (old single-site form).
+  // Auto-migrates to the new sites[] shape so users on stale browser caches
+  // can still register their first WordPress site without hard refresh.
+  if(pathname === '/api/me/integrations/wordpress' && method === 'PUT'){
+    const b = (await readBody(req)) || {};
+    const siteUrl = String(b.siteUrl||'').trim();
+    const username = String(b.username||'').trim();
+    const appPassword = String(b.appPassword||'').trim();
+    if(!/^https?:\/\//.test(siteUrl)) return jres(res, 400, { error: 'siteUrl は http(s):// で始まる必要あり' });
+    if(!username) return jres(res, 400, { error: 'username は必須' });
+    if(!appPassword) return jres(res, 400, { error: 'appPassword は必須' });
+    user.integrations = user.integrations || {};
+    user.integrations.wordpress = user.integrations.wordpress || { sites: [] };
+    if(!Array.isArray(user.integrations.wordpress.sites)) user.integrations.wordpress.sites = [];
+    const niceName = siteUrl.replace(/^https?:\/\//,'').replace(/\/.*$/,'') || 'WordPress';
+    const s = { id: 'wp_'+crypto.randomBytes(4).toString('hex'), name: niceName, siteUrl, username, appPassword, created_at: new Date().toISOString() };
+    user.integrations.wordpress.sites.push(s);
+    if(!user.integrations.wordpress.default_site_id){
+      user.integrations.wordpress.default_site_id = s.id;
+    }
+    await DB.save(user);
+    return jres(res, 200, { ok: true, connected: true, integration: { id: 'wordpress', flow: 'wp_multi', site: { id: s.id, name: niceName } } });
+  }
+  if(pathname === '/api/me/integrations/wordpress' && method === 'DELETE'){
+    if(user.integrations && user.integrations.wordpress){
+      delete user.integrations.wordpress;
+      await DB.save(user);
+    }
+    return jres(res, 200, { ok: true, connected: false });
+  }
+
   const _intGeneric = pathname.match(/^\/api\/me\/integrations\/([a-z0-9_-]+)$/);
   if(_intGeneric && (method === 'PUT' || method === 'DELETE') && _intGeneric[1] !== 'github' && _intGeneric[1] !== 'zapier' && _intGeneric[1] !== 'slack' && _intGeneric[1] !== 'wordpress'){
     const intId = _intGeneric[1];

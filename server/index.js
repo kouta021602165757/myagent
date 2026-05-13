@@ -203,8 +203,11 @@ function _integrationsCatalog(){
       fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'elevenlabs.io/app/settings/api-keys'}] },
 
     // ── ワークフロー / メタ連携 ──────────────────
-    { id:'zapier', name:'Zapier', logo:'⚡', group:'flow', desc:'5,000+ サービスへブリッジ', flow:'webhook', priority:true, has_backend:true,
-      fields:[{key:'webhookUrl', label:'Zap Webhook URL', type:'url', required:true, help:'Zapier で Webhook by Zapier トリガーを作って URL を取得'}] },
+    // Zapier uses a custom flow ('zapier_multi') so the UI shows a list of
+    // registered Zaps + an add form instead of a single URL input. Each Zap
+    // is a (name, url, hint) triple — AI picks one by name when calling
+    // zapier_run. 5,000+ services via Zapier = unlimited reach.
+    { id:'zapier', name:'Zapier', logo:'⚡', group:'flow', desc:'5,000+ サービス (SNS / Slack / Sheets / Gmail …) へブリッジ', flow:'zapier_multi', priority:true, has_backend:true },
     { id:'n8n', name:'n8n', logo:'🔧', group:'flow', desc:'OSS ワークフロー・独自トリガー', flow:'webhook',
       fields:[{key:'webhookUrl', label:'Webhook URL', type:'url', required:true}] },
   ];
@@ -238,6 +241,18 @@ function _getIntegrationStatus(user, id){
   }
   if(id === 'discord' && user.outgoing_webhooks && user.outgoing_webhooks.discord){
     return { connected: true };
+  }
+  // Zapier: multi-webhook — connected if at least 1 Zap registered. Also
+  // surface the count so the catalog UI can show "3 Zaps connected".
+  if(id === 'zapier'){
+    const z = user.integrations && user.integrations.zapier;
+    if(!z) return { connected: false };
+    const hooks = Array.isArray(z.webhooks) ? z.webhooks : [];
+    // Backward compat: legacy single-URL shape from earlier release.
+    const legacyUrl = !hooks.length && z.webhookUrl ? 1 : 0;
+    const total = hooks.length + legacyUrl;
+    if(total > 0) return { connected: true, count: total };
+    return { connected: false };
   }
   const v = user.integrations && user.integrations[id];
   if(v && (v.connected_at || v.apiKey || v.token || v.webhookUrl || v.botToken || v.secretKey || v.accessToken || v.appPassword || v.pat)){
@@ -3283,6 +3298,18 @@ const MEDIA_UTIL_TOOLS = [
       required:['text'],
     },
   },
+  {
+    name:'zapier_run',
+    description:'ユーザーが Zapier に登録した Zap (Webhook) を実行する。Zapier を経由して X (Twitter) / LinkedIn / Slack / Gmail / Google Sheets / Notion / Stripe など 5,000+ サービスに繋ぐ。利用可能な Zap の名前は system prompt の【Zapier 登録済み Zap】セクションを参照すること。webhook_name は登録名と完全一致または部分一致で OK (例: 「X 投稿」と登録されてれば "X 投稿" でも "X" でも可)。payload には Zap に渡したいデータを自由な構造で。',
+    input_schema:{
+      type:'object',
+      properties:{
+        webhook_name:{type:'string',description:'実行する Zap の登録名 (完全 / 部分一致)。'},
+        payload:{type:'object',description:'Zap に渡す JSON (例: {text:"...", title:"...", url:"..."} など、Zap 側で受け取りやすい構造)'},
+      },
+      required:['webhook_name'],
+    },
+  },
 ];
 
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
@@ -4818,6 +4845,68 @@ async function executeNotifyTool(kind, user, input){
       });
       r.on('error', e => resolve({ error: 'request_failed', detail: e.message }));
       r.setTimeout(8000, () => { r.destroy(new Error('timeout')); });
+      r.write(body); r.end();
+    } catch(e){ resolve({ error: 'request_failed', detail: e.message }); }
+  });
+}
+
+// ── Zapier: multi-webhook executor ──────────────────────────
+// Picks the right registered Zap by name (fuzzy/contains match), then POSTs
+// the AI-supplied payload. AI sees the list of available Zaps in its system
+// prompt so it can choose the right one.
+async function executeZapierTool(user, input){
+  const name = String(input && input.webhook_name || '').trim();
+  if(!name) return { error: 'webhook_name required' };
+  const z = user && user.integrations && user.integrations.zapier;
+  const list = (z && Array.isArray(z.webhooks)) ? z.webhooks : [];
+  if(!list.length) return { error: 'zapier_not_configured', detail: 'Settings → 連携 → Zapier カードで Zap を 1 つ以上登録してください。' };
+  // Match priority: exact name → exact (case-insensitive) → contains (case-insensitive)
+  let pick = list.find(w => w.name === name);
+  if(!pick) pick = list.find(w => (w.name||'').toLowerCase() === name.toLowerCase());
+  if(!pick){
+    const nLow = name.toLowerCase();
+    pick = list.find(w => (w.name||'').toLowerCase().includes(nLow))
+        || list.find(w => nLow.includes((w.name||'').toLowerCase()));
+  }
+  if(!pick){
+    return { error: 'webhook_not_found', detail: '名前「'+name+'」に一致する Zap がありません。登録済み: '+list.map(w => w.name).join(' / ') };
+  }
+  // Sanity check the URL host
+  if(!/^https:\/\/hooks\.zapier\.com\//.test(pick.url||'')){
+    return { error: 'invalid_webhook_url', detail: 'Zap の URL が想定外: ' + pick.url };
+  }
+  const payload = input.payload || {};
+  // Always include some basic metadata so the Zap user can map fields easily.
+  const body = JSON.stringify({
+    ...payload,
+    _meta: {
+      from: 'MY AI Agent',
+      sent_at: new Date().toISOString(),
+      zap_name: pick.name,
+    },
+  });
+  return new Promise((resolve) => {
+    try {
+      const u = new URL(pick.url);
+      const opts = {
+        method: 'POST',
+        hostname: u.hostname,
+        path: u.pathname + (u.search || ''),
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      };
+      const r = https.request(opts, (rs) => {
+        let chunks = '';
+        rs.on('data', d => { if(chunks.length < 1000) chunks += d.toString(); });
+        rs.on('end', () => {
+          if(rs.statusCode && rs.statusCode < 300){
+            resolve({ ok: true, status: rs.statusCode, zap: pick.name, hint: pick.hint || '' });
+          } else {
+            resolve({ error: 'zapier_http_'+rs.statusCode, detail: chunks.slice(0, 200) });
+          }
+        });
+      });
+      r.on('error', e => resolve({ error: 'request_failed', detail: e.message }));
+      r.setTimeout(15000, () => { r.destroy(new Error('timeout')); });
       r.write(body); r.end();
     } catch(e){ resolve({ error: 'request_failed', detail: e.message }); }
   });
@@ -8063,8 +8152,25 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 ユーザーの依頼を実行するには未接続の外部サービス (GitHub / Slack / WordPress / Stripe / X / Notion / Shopify / Gmail / Google Calendar / Linear など) との連携が必要だと気付いた場合は、回答末尾に 1 度だけ次の形式で **接続マーカー** を出してください:
 - 例: \`<connect:github>\` ・ \`<connect:wordpress>\` ・ \`<connect:stripe>\`
 このマーカーは UI 側で「🔌 X を接続」ボタンに自動置換されます。マーカーは 1 メッセージにつき最大 2 個まで、不要な時は出さないこと。`;
+
+  // Zapier registered-Zaps list — when the user has set up Zaps, surface
+  // them so the AI knows what services it can hit via Zapier.
+  let zapierNote = '';
+  try {
+    const opUser = (opts && opts.opUser) || null;
+    const z = opUser && opUser.integrations && opUser.integrations.zapier;
+    const list = (z && Array.isArray(z.webhooks)) ? z.webhooks : [];
+    if(list.length){
+      zapierNote = `
+
+【Zapier 登録済み Zap (zapier_run ツールで実行可能)】
+${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` — ${(w.hint||'').slice(0,120)}`:'')).join('\n')}
+
+ユーザーから「X に投稿して」「Slack に通知して」「Sheets に追記して」など Zap で連携している外部サービスへの操作を頼まれたら、zapier_run ツールを呼んでください。webhook_name には上のリストの名前 (部分一致 OK)、payload には Zap 側で受け取りやすい JSON を入れてください。`;
+    }
+  } catch(e){}
   return`${deliveryRules}
-${stallNudge}${integrationsHint}
+${stallNudge}${integrationsHint}${zapierNote}
 
 ──────────────────────────────
 
@@ -9727,8 +9833,71 @@ async function handleAPI(req,res,pathname,method,ip){
   // The "form" flow accepts service-specific fields. OAuth services that
   // haven't been registered yet (no env var Client ID) return 503 so the UI
   // can show a "setup-pending" message.
+  // ── Zapier: multi-webhook CRUD ─────────────────────────────
+  // GET    /api/me/integrations/zapier/webhooks       → list registered Zaps
+  // POST   /api/me/integrations/zapier/webhooks       → add { name, url, hint? }
+  // DELETE /api/me/integrations/zapier/webhooks/:zid  → remove one
+  const _zapM = pathname.match(/^\/api\/me\/integrations\/zapier\/webhooks(?:\/([a-z0-9_]+))?$/);
+  if(_zapM){
+    user.integrations = user.integrations || {};
+    user.integrations.zapier = user.integrations.zapier || { webhooks: [], flow: 'zapier_multi' };
+    // Migrate legacy single-URL shape (one-time)
+    if(!Array.isArray(user.integrations.zapier.webhooks)) user.integrations.zapier.webhooks = [];
+    if(user.integrations.zapier.webhookUrl && !user.integrations.zapier.webhooks.length){
+      user.integrations.zapier.webhooks.push({
+        id: 'zwh_'+crypto.randomBytes(4).toString('hex'),
+        name: 'Default Zap',
+        url: user.integrations.zapier.webhookUrl,
+        hint: '',
+        created_at: user.integrations.zapier.connected_at || new Date().toISOString(),
+      });
+      delete user.integrations.zapier.webhookUrl;
+    }
+    const zid = _zapM[1];
+    if(method === 'GET'){
+      return jres(res, 200, {
+        webhooks: user.integrations.zapier.webhooks.map(w => ({
+          id: w.id, name: w.name, hint: w.hint || '',
+          url_preview: String(w.url||'').replace(/^(https:\/\/hooks\.zapier\.com\/[^\/]*\/)[^?]+/, '$1…'),
+          created_at: w.created_at,
+        })),
+        total: user.integrations.zapier.webhooks.length,
+      });
+    }
+    if(method === 'POST' && !zid){
+      const b = (await readBody(req)) || {};
+      const name = String(b.name||'').trim().slice(0, 60);
+      const urlVal = String(b.url||'').trim();
+      const hint = String(b.hint||'').trim().slice(0, 200);
+      if(!name) return jres(res, 400, { error: 'name は必須です' });
+      if(!/^https:\/\/hooks\.zapier\.com\//.test(urlVal)) return jres(res, 400, { error: 'Zap Webhook URL は https://hooks.zapier.com/... の形式である必要があります' });
+      if(user.integrations.zapier.webhooks.length >= 50) return jres(res, 400, { error: 'Zap が上限 (50) に達しています' });
+      const w = {
+        id: 'zwh_'+crypto.randomBytes(4).toString('hex'),
+        name, url: urlVal, hint,
+        created_at: new Date().toISOString(),
+      };
+      user.integrations.zapier.webhooks.push(w);
+      user.integrations.zapier.connected_at = user.integrations.zapier.connected_at || w.created_at;
+      user.integrations.zapier.flow = 'zapier_multi';
+      await DB.save(user);
+      return jres(res, 200, { ok: true, webhook: { id: w.id, name: w.name, hint: w.hint, created_at: w.created_at } });
+    }
+    if(method === 'DELETE' && zid){
+      const idx = user.integrations.zapier.webhooks.findIndex(w => w.id === zid);
+      if(idx < 0) return jres(res, 404, { error: 'webhook not found' });
+      user.integrations.zapier.webhooks.splice(idx, 1);
+      // If no webhooks remain, clear connection
+      if(!user.integrations.zapier.webhooks.length){
+        delete user.integrations.zapier;
+      }
+      await DB.save(user);
+      return jres(res, 200, { ok: true });
+    }
+  }
+
   const _intGeneric = pathname.match(/^\/api\/me\/integrations\/([a-z0-9_-]+)$/);
-  if(_intGeneric && (method === 'PUT' || method === 'DELETE') && _intGeneric[1] !== 'github'){
+  if(_intGeneric && (method === 'PUT' || method === 'DELETE') && _intGeneric[1] !== 'github' && _intGeneric[1] !== 'zapier'){
     const intId = _intGeneric[1];
     const service = _integrationsCatalog().find(s => s.id === intId);
     if(!service) return jres(res, 404, { error: 'unknown integration: ' + intId });
@@ -13844,7 +14013,7 @@ async function handleAPI(req,res,pathname,method,ip){
             agent,
             sse,
             modelAlias: (agent.model === 'auto' ? 'sonnet' : agent.model),
-            baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{}) }),
+            baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{}) }),
           });
           totalIn += planRes.tokens.input;
           totalOut += planRes.tokens.output;
@@ -13880,7 +14049,7 @@ async function handleAPI(req,res,pathname,method,ip){
         const planRes = await _runPlanExecuteReview(message, {
           agent,
           modelAlias: (agent.model === 'auto' ? 'sonnet' : agent.model),
-          baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{}) }),
+          baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{}) }),
         });
         const cost = calcCost(planRes.tokens.input, planRes.tokens.output);
         return jres(res, 200, { reply: planRes.reply, cost: { jpy: cost.jpy, usd: cost.usd } });
@@ -13901,7 +14070,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         }, agent.model, agent);
@@ -14126,7 +14295,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // to chat / call more tools / stop.
           const _tc = (iters === 0 && !effectiveRegen) ? _firstToolChoice : null;
           if(_tc){ console.log('[chat] tool_choice forced:', JSON.stringify(_tc)); }
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -14221,6 +14390,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeNotifyTool('slack', payerUser, block.input||{});
             } else if(block.name === 'notify_discord'){
               result = await executeNotifyTool('discord', payerUser, block.input||{});
+            } else if(block.name === 'zapier_run'){
+              result = await executeZapierTool(payerUser, block.input||{});
             } else if(block.name === 'generate_agent_promo_video'){
               const promoAgent = (block.input && block.input.tagline)
                 ? { ...(teamMemberAgent || agent), persona: String(block.input.tagline).slice(0,140) }
@@ -14359,7 +14530,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), agent.model, agent);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -14380,7 +14551,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, ...(_teamCtx||{})}), agent.model, agent);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), agent.model, agent);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

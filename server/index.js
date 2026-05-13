@@ -51,6 +51,10 @@ const GOOGLE_SEC   = process.env.GOOGLE_CLIENT_SECRET||'';
 // 1-click OAuth instead of the legacy PAT input flow.
 const GITHUB_OAUTH_ID  = process.env.GITHUB_OAUTH_CLIENT_ID||'';
 const GITHUB_OAUTH_SEC = process.env.GITHUB_OAUTH_CLIENT_SECRET||'';
+// X (Twitter) OAuth 2.0 with PKCE — confidential client. Posts tweets,
+// reads user info, refresh tokens (offline.access scope).
+const X_OAUTH_ID  = process.env.X_OAUTH_CLIENT_ID||'';
+const X_OAUTH_SEC = process.env.X_OAUTH_CLIENT_SECRET||'';
 const RESEND_KEY   = process.env.RESEND_API_KEY||'';
 const BRAVE_KEY    = process.env.BRAVE_API_KEY||'';                  // optional, falls back to DDG
 const GA_ID        = process.env.GA_MEASUREMENT_ID||'';              // optional, e.g. G-XXXXXXXXXX
@@ -178,7 +182,10 @@ function _integrationsCatalog(){
     { id:'note', name:'note', logo:'📓', group:'blog', desc:'下書き作成・公開予約', flow:'oauth' },
 
     // ── SNS ─────────────────────────────────
-    { id:'twitter', name:'X (Twitter)', logo:'𝕏', group:'sns', desc:'投稿・スレッド・DM 自動応答', flow:'oauth', priority:true },
+    (X_OAUTH_ID && X_OAUTH_SEC)
+      ? { id:'twitter', name:'X (Twitter)', logo:'𝕏', group:'sns', desc:'投稿・スレッド・DM 自動応答 (1-クリック OAuth)', flow:'oauth', priority:true, has_backend:true,
+          oauth:{ start:'/api/auth/x/start' } }
+      : { id:'twitter', name:'X (Twitter)', logo:'𝕏', group:'sns', desc:'投稿・スレッド・DM 自動応答', flow:'oauth', priority:true },
     { id:'linkedin', name:'LinkedIn', logo:'💼', group:'sns', desc:'B2B 投稿・つながり管理', flow:'oauth', priority:true },
     _googleEntry('youtube', 'YouTube', '▶️', 'sns', '動画アップロード・字幕生成', false),
     { id:'instagram', name:'Instagram', logo:'📷', group:'sns', desc:'投稿・ストーリーズ・コメント返信', flow:'oauth' },
@@ -275,6 +282,14 @@ function _getIntegrationStatus(user, id){
   }
   if(id === 'discord' && user.outgoing_webhooks && user.outgoing_webhooks.discord){
     return { connected: true };
+  }
+  // X (Twitter): connected when OAuth flow completed
+  if(id === 'twitter'){
+    const t = user.integrations && user.integrations.twitter;
+    if(t && t.access_token){
+      return { connected: true, account: t.username || '' };
+    }
+    return { connected: false };
   }
   // Zapier: multi-webhook — connected if at least 1 Zap registered. Also
   // surface the count so the catalog UI can show "3 Zaps connected".
@@ -5942,6 +5957,58 @@ async function githubFetchUser(accessToken){
   return r.d;
 }
 
+// ── X (Twitter) OAUTH 2.0 with PKCE ──────────────────────────
+// Confidential client flow. PKCE adds a code_verifier (random 64-char)
+// that's regenerated on each /start and required at code-exchange time.
+// We embed the verifier in the (signed) state JWT — short-lived (10 min)
+// and only reachable via HTTPS, acceptable for this server-side flow.
+const X_OAUTH_SCOPES = 'tweet.read tweet.write users.read offline.access';
+function _xGenVerifier(){
+  // base64url(32 random bytes) → ~43 chars, well within PKCE spec 43-128.
+  return crypto.randomBytes(32).toString('base64')
+    .replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+}
+function _xVerifierToChallenge(verifier){
+  return crypto.createHash('sha256').update(verifier).digest('base64')
+    .replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+}
+function xAuthURL(stateJwt, codeChallenge){
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: X_OAUTH_ID,
+    redirect_uri: `${APP_URL}/api/auth/x/callback`,
+    scope: X_OAUTH_SCOPES,
+    state: stateJwt,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+  });
+  // X currently serves the OAuth UI at https://x.com (and twitter.com still works).
+  return `https://x.com/i/oauth2/authorize?${params}`;
+}
+async function xExchangeCode(code, codeVerifier){
+  // Confidential client → HTTP Basic with client_id:client_secret
+  const basic = Buffer.from(X_OAUTH_ID+':'+X_OAUTH_SEC).toString('base64');
+  const body = new URLSearchParams({
+    code,
+    grant_type: 'authorization_code',
+    client_id: X_OAUTH_ID,  // required even with Basic auth for X
+    redirect_uri: `${APP_URL}/api/auth/x/callback`,
+    code_verifier: codeVerifier,
+  }).toString();
+  const r = await httpsReq('POST', 'api.x.com', '/2/oauth2/token',
+    { 'Content-Type':'application/x-www-form-urlencoded', 'Authorization':'Basic '+basic },
+    body);
+  if(r.s !== 200) throw new Error('X token exchange failed: ' + JSON.stringify(r.d).slice(0,200));
+  if(r.d && r.d.error) throw new Error('X OAuth error: ' + (r.d.error_description || r.d.error));
+  return r.d; // { access_token, refresh_token, token_type, expires_in, scope }
+}
+async function xFetchUser(accessToken){
+  const r = await httpsReq('GET', 'api.x.com', '/2/users/me?user.fields=username,name,profile_image_url',
+    { 'Authorization':'Bearer '+accessToken }, null);
+  if(r.s !== 200) throw new Error('X /users/me failed: ' + r.s);
+  return r.d && r.d.data ? r.d.data : r.d;
+}
+
 // ── STRIPE ────────────────────────────────────────────────────
 
 async function stripeCreateCustomer(email, name){
@@ -8933,6 +9000,96 @@ async function handleAPI(req,res,pathname,method,ip){
         : (e.message||'').includes('exchange') ? 'token_exchange_failed'
         : 'unknown';
       res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason='+reason });
+      res.end();
+    }
+    return;
+  }
+
+  // ── GET /api/auth/x/start ──────────────────────────────────
+  // X (Twitter) OAuth 2.0 with PKCE. Generates code_verifier server-side,
+  // signs it into the state JWT (so the callback can recover it without DB),
+  // then 302s the user to x.com/i/oauth2/authorize.
+  if(pathname === '/api/auth/x/start' && method === 'GET'){
+    if(!X_OAUTH_ID || !X_OAUTH_SEC){
+      res.writeHead(302, { Location:'/app.html?intg=twitter&error=not_configured' });
+      res.end(); return;
+    }
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const tokenQ = qs.get('token') || '';
+    const tokenH = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const jwt = tokenQ || tokenH;
+    let uid = '';
+    try { const p = JWT.verify(jwt); uid = p && p.userId; } catch(e){}
+    if(!uid){
+      res.writeHead(302, { Location:'/auth.html?next=/app.html' });
+      res.end(); return;
+    }
+    const verifier = _xGenVerifier();
+    const challenge = _xVerifierToChallenge(verifier);
+    const state = JWT.sign({
+      userId: uid, kind: 'x_oauth', v: verifier,
+      exp: Math.floor(Date.now()/1000) + 600,
+    });
+    res.writeHead(302, { Location: xAuthURL(state, challenge) });
+    res.end();
+    return;
+  }
+
+  // ── GET /api/auth/x/callback ───────────────────────────────
+  if(pathname === '/api/auth/x/callback' && method === 'GET'){
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const code = qs.get('code');
+    const stateRaw = qs.get('state');
+    const oauthErr = qs.get('error');
+    if(oauthErr){
+      console.error('[X OAuth] returned error:', oauthErr);
+      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason='+encodeURIComponent(oauthErr) });
+      res.end(); return;
+    }
+    if(!code || !stateRaw){
+      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason=no_code' });
+      res.end(); return;
+    }
+    let payload = null;
+    try { payload = JWT.verify(stateRaw); } catch(e){}
+    if(!payload || payload.kind !== 'x_oauth' || !payload.userId || !payload.v){
+      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason=bad_state' });
+      res.end(); return;
+    }
+    try {
+      const tok = await xExchangeCode(code, payload.v);
+      const accessToken = tok && tok.access_token;
+      if(!accessToken) throw new Error('no_access_token');
+      const xUser = await xFetchUser(accessToken);
+      let user = null;
+      try { user = await DB.findBy('id', payload.userId); } catch(e){}
+      if(!user){
+        res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason=user_not_found' });
+        res.end(); return;
+      }
+      user.integrations = user.integrations || {};
+      user.integrations.twitter = {
+        type: 'oauth',
+        access_token: accessToken,
+        refresh_token: tok.refresh_token || '',
+        scope: tok.scope || X_OAUTH_SCOPES,
+        expires_at: Date.now() + ((tok.expires_in || 7200) * 1000),
+        user_id: xUser && xUser.id || '',
+        username: xUser && xUser.username || '',
+        name: xUser && xUser.name || '',
+        profile_image_url: xUser && xUser.profile_image_url || '',
+        connected_at: new Date().toISOString(),
+        flow: 'oauth',
+      };
+      await DB.save(user);
+      res.writeHead(302, { Location:'/app.html?intg=twitter&status=ok&login='+encodeURIComponent(xUser && xUser.username || '') });
+      res.end();
+    } catch(e){
+      console.error('[X OAuth] callback failed:', e.message);
+      const reason = (e.message||'').includes('no_access_token') ? 'no_token'
+        : (e.message||'').includes('exchange') ? 'token_exchange_failed'
+        : 'unknown';
+      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason='+reason });
       res.end();
     }
     return;

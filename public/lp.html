@@ -757,62 +757,96 @@
     <div class="em">★</div>
     <div class="body">
       <h3 data-i18n="founder.h">Founder 100 · 最初の 100 人だけの特典</h3>
-      <p data-i18n="founder.p">永年無料の Agent Store 手数料 0%、30 日 BUSINESS プラン無料、Founder バッジが LP に表示されます。</p>
+      <p data-i18n="founder.p" data-i18n-html><b>30 日 BUSINESS プラン無料</b> ・ 永年 Store 手数料 0% (通常 10%) ・ LP に Founder バッジ表示</p>
     </div>
     <div class="seats">
-      <div class="n">92</div>
+      <div class="n" id="founderSeatsLP">—</div>
       <div class="l" data-i18n="founder.seats">残り席数</div>
     </div>
   </div>
 
   <div class="sec-h">
     <div class="eye" data-i18n="pricing.eye">料金</div>
-    <h2 data-i18n="pricing.h2">まず無料で試そう</h2>
+    <h2 data-i18n="pricing.h2" data-i18n-html>まず<span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">無料で試す</span>。気に入ったらアップグレード。</h2>
+    <div class="sub" data-i18n="pricing.sub">クレジットカード不要・いつでも解約 OK</div>
   </div>
   <div class="pricing">
+    <!-- Free -->
     <div class="price-card">
       <div>
         <div class="price-pl">Free</div>
         <div class="price-am">$0 <span class="per" data-i18n="pricing.per">/月</span></div>
+        <div style="font-size:11px;color:var(--text3);font-weight:700;margin-top:4px" data-i18n="pricing.free.noCard">💳 クレジットカード不要</div>
       </div>
       <div class="price-credit" data-i18n="pricing.free.credit">100 メッセージ無料</div>
+      <div style="font-size:11.5px;color:var(--text3);font-weight:700;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase" data-i18n="pricing.free.who">こんな人向け</div>
       <ul>
-        <li data-i18n="pricing.free.f1">AI 3 人まで採用</li>
-        <li data-i18n="pricing.free.f2">1 つの DM チャット</li>
+        <li data-i18n="pricing.free.f1">まず試したい・お小遣い感覚で使う</li>
+        <li data-i18n="pricing.free.f2">AI 3 人まで採用</li>
         <li data-i18n="pricing.free.f3">記憶 / KPI / プレイブック</li>
-        <li data-i18n="pricing.free.f4">Agent Store の購入可</li>
+        <li data-i18n="pricing.free.f4">Agent Store で AI 購入</li>
+        <li data-i18n="pricing.free.f5">50 サービス連携 (Zapier 込)</li>
       </ul>
-      <a href="/auth.html?tab=signup" class="btn outline big" data-i18n="pricing.free.cta">無料で始める</a>
+      <a href="/auth.html?tab=signup" class="btn outline big" data-i18n="pricing.free.cta">▶ 30 秒で無料登録</a>
     </div>
+    <!-- Pro -->
     <div class="price-card pop">
+      <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:10.5px;font-weight:900;padding:4px 13px;border-radius:99px;letter-spacing:.06em;white-space:nowrap;box-shadow:0 4px 12px rgba(234,88,12,.32)">🏆 おすすめ</div>
       <div>
         <div class="price-pl">Pro</div>
         <div class="price-am">$12.99 <span class="per" data-i18n="pricing.per">/月</span></div>
+        <div style="font-size:11px;color:var(--peach-dark);font-weight:800;margin-top:4px" data-i18n="pricing.pro.bonus">🎁 Founder 100 特典 → 最初 30 日 Business 無料</div>
       </div>
-      <div class="price-credit" data-i18n="pricing.pro.credit">$15 クレジット / 月</div>
+      <div class="price-credit" data-i18n="pricing.pro.credit">$15 クレジット / 月 (= 約 1,500 メッセージ)</div>
+      <div style="font-size:11.5px;color:var(--text3);font-weight:700;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase" data-i18n="pricing.pro.who">こんな人向け</div>
       <ul>
+        <li data-i18n="pricing.pro.f0">本業で AI チームを組みたい個人開発者</li>
         <li data-i18n="pricing.pro.f1" data-i18n-html>AI <b>無制限</b> 採用</li>
-        <li data-i18n="pricing.pro.f2">チーム機能 (Team Huddle)</li>
-        <li data-i18n="pricing.pro.f3">外部連携 (Slack / Sheets / Gmail)</li>
-        <li data-i18n="pricing.pro.f4">スケジュール実行</li>
-        <li data-i18n="pricing.pro.f5">Agent Store 出品</li>
+        <li data-i18n="pricing.pro.f2">チーム機能 + Team Huddle</li>
+        <li data-i18n="pricing.pro.f3">⏰ スケジュール自動実行</li>
+        <li data-i18n="pricing.pro.f4">📧 メール / Slack / Sheets 連携</li>
+        <li data-i18n="pricing.pro.f5">🏪 Agent Store 出品 (収益化)</li>
       </ul>
-      <a href="/auth.html?tab=signup&plan=pro" class="btn primary big" data-i18n="pricing.pro.cta">Pro を始める</a>
+      <a href="/auth.html?tab=signup&plan=pro" class="btn primary big" data-i18n="pricing.pro.cta">▶ Pro で始める</a>
     </div>
+    <!-- Business -->
     <div class="price-card">
       <div>
         <div class="price-pl">Business</div>
         <div class="price-am">$32.99 <span class="per" data-i18n="pricing.per">/月</span></div>
+        <div style="font-size:11px;color:var(--text3);font-weight:700;margin-top:4px" data-i18n="pricing.biz.tag">SaaS 運営者・SMB 向け</div>
       </div>
-      <div class="price-credit" data-i18n="pricing.biz.credit">$45 クレジット / 月</div>
+      <div class="price-credit" data-i18n="pricing.biz.credit">$45 クレジット / 月 (= 約 4,500 メッセージ)</div>
+      <div style="font-size:11.5px;color:var(--text3);font-weight:700;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase" data-i18n="pricing.biz.who">こんな人向け</div>
       <ul>
+        <li data-i18n="pricing.biz.f0">事業で重要業務を AI に任せたい</li>
         <li data-i18n="pricing.biz.f1">Pro の全機能</li>
-        <li data-i18n="pricing.biz.f2">Opus 4.7 (最高性能モデル)</li>
-        <li data-i18n="pricing.biz.f3">Webhook / API 連携</li>
-        <li data-i18n="pricing.biz.f4">優先サポート</li>
-        <li data-i18n="pricing.biz.f5">Store 手数料 5% (通常 10%)</li>
+        <li data-i18n="pricing.biz.f2" data-i18n-html>🧠 <b>Opus 4.7</b> (最高性能モデル)</li>
+        <li data-i18n="pricing.biz.f3">🔌 Webhook / API 連携</li>
+        <li data-i18n="pricing.biz.f4">⚡ 優先サポート (24h 以内)</li>
+        <li data-i18n="pricing.biz.f5">🏪 Store 手数料 5% (Pro: 10%)</li>
       </ul>
-      <a href="/auth.html?tab=signup&plan=business" class="btn outline big" data-i18n="pricing.biz.cta">Business を始める</a>
+      <a href="/auth.html?tab=signup&plan=business" class="btn outline big" data-i18n="pricing.biz.cta">▶ Business を始める</a>
+    </div>
+  </div>
+
+  <!-- FAQ row -->
+  <div style="max-width:880px;margin:48px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;font-size:12.5px;color:var(--text2);line-height:1.6">
+    <div>
+      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q1">❓ クレジットを使い切ったら?</div>
+      <div data-i18n="faq.a1">AI が動かなくなるだけで、データは消えません。$5 単位で随時チャージ可。</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q2">❓ いつでも解約できる?</div>
+      <div data-i18n="faq.a2">はい。設定 → プラン → 解約 をクリックするだけ。違約金なし。</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q3">❓ 課金で何が変わる?</div>
+      <div data-i18n="faq.a3">月額クレジット = メッセージ数の上限。Pro 以上で AI 無制限・スケジュール・Store 出品が解放されます。</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q4">❓ Founder 100 は何?</div>
+      <div data-i18n="faq.a4">最初の 100 人だけ「Business 30 日無料 + Store 手数料 0% 永年」。残席カウントダウン中。</div>
     </div>
   </div>
 </section>
@@ -893,18 +927,31 @@
       'steps.s2.h':'DM またはチーム結成','steps.s2.p':'1 人とサシで話すなら DM。複数人で議論させたいなら Team を作って @all。Slack 感覚で使えます。',
       'steps.s3.h':'仕事を任せる','steps.s3.p':'「LP 作って」「メール 5 通書いて」と振るだけ。生成だけじゃなく、実際にメール送信や SNS 投稿まで実行。',
       'founder.h':'Founder 100 · 最初の 100 人だけの特典',
-      'founder.p':'永年無料の Agent Store 手数料 0%、30 日 BUSINESS プラン無料、Founder バッジが LP に表示されます。',
+      'founder.p':'<b>30 日 BUSINESS プラン無料</b> ・ 永年 Store 手数料 0% (通常 10%) ・ LP に Founder バッジ表示',
       'founder.seats':'残り席数',
-      'pricing.eye':'料金','pricing.h2':'まず無料で試そう','pricing.per':'/月',
+      'pricing.eye':'料金',
+      'pricing.h2':'まず <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">無料で試す</span>。気に入ったらアップグレード。',
+      'pricing.sub':'クレジットカード不要・いつでも解約 OK',
+      'pricing.per':'/月',
+      'pricing.free.noCard':'💳 クレジットカード不要',
       'pricing.free.credit':'100 メッセージ無料',
-      'pricing.free.f1':'AI 3 人まで採用','pricing.free.f2':'1 つの DM チャット','pricing.free.f3':'記憶 / KPI / プレイブック','pricing.free.f4':'Agent Store の購入可',
-      'pricing.free.cta':'無料で始める',
-      'pricing.pro.credit':'$15 クレジット / 月',
-      'pricing.pro.f1':'AI <b>無制限</b> 採用','pricing.pro.f2':'チーム機能 (Team Huddle)','pricing.pro.f3':'外部連携 (Slack / Sheets / Gmail)','pricing.pro.f4':'スケジュール実行','pricing.pro.f5':'Agent Store 出品',
-      'pricing.pro.cta':'Pro を始める',
-      'pricing.biz.credit':'$45 クレジット / 月',
-      'pricing.biz.f1':'Pro の全機能','pricing.biz.f2':'Opus 4.7 (最高性能モデル)','pricing.biz.f3':'Webhook / API 連携','pricing.biz.f4':'優先サポート','pricing.biz.f5':'Store 手数料 5% (通常 10%)',
-      'pricing.biz.cta':'Business を始める',
+      'pricing.free.who':'こんな人向け',
+      'pricing.free.f1':'まず試したい・お小遣い感覚で使う','pricing.free.f2':'AI 3 人まで採用','pricing.free.f3':'記憶 / KPI / プレイブック','pricing.free.f4':'Agent Store で AI 購入','pricing.free.f5':'50 サービス連携 (Zapier 込)',
+      'pricing.free.cta':'▶ 30 秒で無料登録',
+      'pricing.pro.bonus':'🎁 Founder 100 特典 → 最初 30 日 Business 無料',
+      'pricing.pro.credit':'$15 クレジット / 月 (= 約 1,500 メッセージ)',
+      'pricing.pro.who':'こんな人向け',
+      'pricing.pro.f0':'本業で AI チームを組みたい個人開発者','pricing.pro.f1':'AI <b>無制限</b> 採用','pricing.pro.f2':'チーム機能 + Team Huddle','pricing.pro.f3':'⏰ スケジュール自動実行','pricing.pro.f4':'📧 メール / Slack / Sheets 連携','pricing.pro.f5':'🏪 Agent Store 出品 (収益化)',
+      'pricing.pro.cta':'▶ Pro で始める',
+      'pricing.biz.tag':'SaaS 運営者・SMB 向け',
+      'pricing.biz.credit':'$45 クレジット / 月 (= 約 4,500 メッセージ)',
+      'pricing.biz.who':'こんな人向け',
+      'pricing.biz.f0':'事業で重要業務を AI に任せたい','pricing.biz.f1':'Pro の全機能','pricing.biz.f2':'🧠 <b>Opus 4.7</b> (最高性能モデル)','pricing.biz.f3':'🔌 Webhook / API 連携','pricing.biz.f4':'⚡ 優先サポート (24h 以内)','pricing.biz.f5':'🏪 Store 手数料 5% (Pro: 10%)',
+      'pricing.biz.cta':'▶ Business を始める',
+      'faq.q1':'❓ クレジットを使い切ったら?','faq.a1':'AI が動かなくなるだけで、データは消えません。$5 単位で随時チャージ可。',
+      'faq.q2':'❓ いつでも解約できる?','faq.a2':'はい。設定 → プラン → 解約 をクリックするだけ。違約金なし。',
+      'faq.q3':'❓ 課金で何が変わる?','faq.a3':'月額クレジット = メッセージ数の上限。Pro 以上で AI 無制限・スケジュール・Store 出品が解放されます。',
+      'faq.q4':'❓ Founder 100 は何?','faq.a4':'最初の 100 人だけ「Business 30 日無料 + Store 手数料 0% 永年」。残席カウントダウン中。',
       'cta.h':'今日、あなたの最初の AI 社員を雇おう。',
       'cta.p':'クレジットカード不要、100 メッセージ無料。30 秒で「あなたの AI 会社」が立ち上がります。',
       'cta.btn':'▶ 無料で AI を雇う',
@@ -968,9 +1015,25 @@
       'steps.s2.h':'DM or form a team','steps.s2.p':'1-on-1 chat? Use DM. Multi-AI brainstorm? Build a Team and @all. Slack-style.',
       'steps.s3.h':'Delegate the work','steps.s3.p':'"Build a landing page", "Write 5 emails" — they generate AND execute (send, post, schedule).',
       'founder.h':'Founder 100 · Perks reserved for the first 100',
-      'founder.p':'0% Agent Store fees forever, 30-day BUSINESS plan free, and your Founder badge on the public LP.',
+      'founder.p':'<b>30-day BUSINESS plan free</b> · 0% Store fees forever (normally 10%) · Founder badge on the public LP',
       'founder.seats':'SEATS LEFT',
-      'pricing.eye':'Pricing','pricing.h2':'Try free first','pricing.per':'/mo',
+      'pricing.eye':'Pricing',
+      'pricing.h2':'Start <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">free</span>. Upgrade when you love it.',
+      'pricing.sub':'No credit card · Cancel anytime',
+      'pricing.per':'/mo',
+      'pricing.free.noCard':'💳 No credit card',
+      'pricing.free.who':'For',
+      'pricing.free.f5':'50+ integrations (incl. Zapier)',
+      'pricing.pro.bonus':'🎁 Founder 100 bonus → first 30 days Business free',
+      'pricing.pro.who':'For',
+      'pricing.pro.f0':'Indie devs building an AI team for real',
+      'pricing.biz.tag':'SaaS operators / SMB',
+      'pricing.biz.who':'For',
+      'pricing.biz.f0':'Run mission-critical work on AI',
+      'faq.q1':'❓ What if I burn through credits?','faq.a1':'AI stops working until you recharge — your data stays. Top up any amount, any time.',
+      'faq.q2':'❓ Can I cancel anytime?','faq.a2':'Yes. Settings → Plan → Cancel. No fees, no questions.',
+      'faq.q3':'❓ What changes with a paid plan?','faq.a3':'Monthly credits = message ceiling. Pro+ unlocks unlimited AI, scheduled runs, and Store listing.',
+      'faq.q4':'❓ What is Founder 100?','faq.a4':'First 100 signups get 30-day Business free + 0% Store fees forever. Live seat counter.',
       'pricing.free.credit':'100 free messages',
       'pricing.free.f1':'Hire up to 3 AIs','pricing.free.f2':'1 DM chat','pricing.free.f3':'Memory / KPI / Playbook','pricing.free.f4':'Browse Agent Store',
       'pricing.free.cta':'Start free',
@@ -1067,6 +1130,48 @@
   }
 
   setLang(CUR_LANG);
+
+  // ── Founder 100 — live seat counter ────────────────────────
+  // Pulls remaining seats from /api/founder/status. Updates both the hero
+  // eyebrow pill and the Pricing section's big seats card. Auto-polls every
+  // 60s so newly-claimed seats are reflected without a reload.
+  async function _refreshFounderSeats(){
+    try {
+      const r = await fetch('/api/founder/status', { cache: 'no-store' });
+      if(!r.ok) return;
+      const d = await r.json();
+      const remaining = (d && Number.isFinite(d.remaining)) ? d.remaining : null;
+      const total = (d && d.total) || 100;
+      const soldOut = !!(d && d.sold_out);
+      if(remaining == null) return;
+      // Update the pricing section big counter
+      const seatsEl = document.getElementById('founderSeatsLP');
+      if(seatsEl){
+        seatsEl.textContent = soldOut ? '0' : String(remaining);
+        // Visual urgency: red when ≤ 10
+        seatsEl.style.color = remaining <= 10 ? '#dc2626' : '';
+      }
+      // Update the hero eyebrow pill (replace the static text)
+      const heroEbEl = document.querySelector('[data-i18n="hero.eyebrow"]');
+      if(heroEbEl){
+        const tagJa = soldOut
+          ? '🔥 Founder 100 完売 · ウェイトリスト受付中'
+          : (remaining <= 10
+              ? '🔥 ラスト '+remaining+' 席 · Founder 100 永年無料'
+              : 'Founder 100 · 残り '+remaining+' 席 · 永年無料');
+        const tagEn = soldOut
+          ? '🔥 Founder 100 sold out · Waitlist open'
+          : (remaining <= 10
+              ? '🔥 Last '+remaining+' seats · Founder 100 perks forever'
+              : 'Founder 100 · '+remaining+' seats left · Free forever');
+        heroEbEl.textContent = (CUR_LANG === 'en') ? tagEn : tagJa;
+      }
+    } catch(e){
+      // Silent fail — keep the placeholder "—" rather than breaking the page.
+    }
+  }
+  _refreshFounderSeats();
+  setInterval(_refreshFounderSeats, 60000);
 </script>
 
 </body>

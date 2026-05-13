@@ -8928,6 +8928,38 @@ async function handleAPI(req,res,pathname,method,ip){
       from_email: FROM_EMAIL,
     });
   }
+  // ── DEBUG: Stripe webhook health ─────────────────────────
+  // Shows whether the webhook secret is set + the last N events the server
+  // received. Crucial when MRR is computed from u.plan but no `invoice.paid`
+  // is showing up (= webhook URL not registered in Stripe Dashboard).
+  if(pathname === '/api/debug-stripe' && method === 'GET'){
+    const auth = (req.headers.authorization||'').replace(/^Bearer\s+/i,'');
+    let uid = '';
+    try { uid = JWT.verify(auth).userId; } catch(e){}
+    if(!uid) return jres(res, 401, { error: 'auth required' });
+    const u = await DB.findBy('id', uid);
+    if(!u) return jres(res, 404, { error: 'user not found' });
+    return jres(res, 200, {
+      stripe_sk_configured: !!STRIPE_SK,
+      stripe_wh_configured: !!STRIPE_WH,
+      stripe_pro_price: STRIPE_PRO_PRICE ? STRIPE_PRO_PRICE.slice(0,15)+'...' : 'EMPTY',
+      stripe_biz_price: STRIPE_BIZ_PRICE ? STRIPE_BIZ_PRICE.slice(0,15)+'...' : 'EMPTY',
+      webhook_path: '/api/stripe/webhook',
+      webhook_url_to_register: APP_URL + '/api/stripe/webhook',
+      last_50_events: _stripeEventLog.slice(-50),
+      caller: {
+        email: u.email,
+        plan: u.plan || 'free',
+        subscription_id: u.subscription_id || null,
+        subscription_status: u.subscription_status || null,
+        stripe_customer_id: u.stripe_customer_id || null,
+        balance_jpy: u.balance_jpy || 0,
+        last_stripe_event_at: u.last_stripe_event_at || null,
+        billing_history_count: Array.isArray(u.billing_history) ? u.billing_history.length : 0,
+      },
+    });
+  }
+
   // ── DEBUG: probe Resend by sending a test mail to the caller (auth req)
   // Usage: POST /api/debug-email  body: { to: "you@example.com" } — falls
   // back to user.email when `to` is omitted. Returns the raw Resend status.
@@ -15873,71 +15905,167 @@ async function handleAPI(req,res,pathname,method,ip){
 }
 
 // ── STRIPE WEBHOOK ────────────────────────────────────────────
+// In-memory ring buffer of recent events for /api/debug-stripe diagnostics.
+const _stripeEventLog = [];
+function _logStripeEvent(entry){
+  _stripeEventLog.push({ ts: new Date().toISOString(), ...entry });
+  if(_stripeEventLog.length > 100) _stripeEventLog.shift();
+}
+
+// Map a Stripe price_id back to one of our plan tiers. Driven by env so we
+// can flip tiers without redeploying code.
+function _planFromPriceId(priceId){
+  if(!priceId) return null;
+  if(priceId === STRIPE_PRO_PRICE) return 'pro';
+  if(priceId === STRIPE_BIZ_PRICE) return 'business';
+  return null;
+}
+
 async function handleWebhook(req,res){
   const sig=req.headers['stripe-signature'];
-  if(!sig||!STRIPE_WH)return jres(res,400,{error:'No signature'});
+  if(!sig||!STRIPE_WH){
+    _logStripeEvent({ ok:false, reason:'no_signature_or_secret' });
+    return jres(res,400,{error:'No signature'});
+  }
   try{
     const raw=await readRaw(req);
     const event=await verifyStripeWebhook(raw,sig);
+    console.log('[stripe webhook]', event.type, 'id=', event.id);
+    _logStripeEvent({ type: event.type, id: event.id, ok: true });
 
-    // サブスクリプション更新（毎月クレジット付与）
-    if(event.type==='invoice.payment_succeeded'){
-      const invoice=event.data.object;
-      const customerId=invoice.customer;
-      const subId=invoice.subscription;
+    // ① Subscription created / updated — keep u.plan in sync with whatever
+    // is actually billed in Stripe. Before, plan was set only by the
+    // subscribe endpoint; if Stripe later flipped status (3DS auth, invoice
+    // paid, cancelation, plan change) we drifted out of sync.
+    if(event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated'){
+      const sub = event.data.object;
+      const u = await DB.findBy('stripe_customer_id', sub.customer);
+      if(u){
+        const priceId = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.id || '';
+        const plan = _planFromPriceId(priceId);
+        u.subscription_id = sub.id;
+        u.subscription_status = sub.status;
+        // Only flip plan when the subscription is actually live (paid or
+        // trialing). incomplete / incomplete_expired = no plan upgrade.
+        if(plan && ['active','trialing','past_due'].includes(sub.status)){
+          u.plan = plan;
+          u.plan_v2 = true;
+        }
+        if(['canceled','incomplete_expired','unpaid'].includes(sub.status)){
+          u.plan = 'free';
+        }
+        u.last_stripe_event_at = new Date().toISOString();
+        await DB.save(u);
+        console.log('[stripe webhook] subscription sync:', u.email, '→ plan=', u.plan, 'status=', sub.status);
+      }
+    }
+
+    // ② Invoice paid (also `invoice.payment_succeeded` for legacy support) —
+    // grants monthly credit balance based on the user's current plan.
+    if(event.type === 'invoice.payment_succeeded' || event.type === 'invoice.paid'){
+      const invoice = event.data.object;
+      const customerId = invoice.customer;
+      const subId = invoice.subscription;
       if(subId){
-        const u=await DB.findBy('stripe_customer_id',customerId);
+        const u = await DB.findBy('stripe_customer_id', customerId);
         if(u){
-          const plan=u.plan||'free';
+          const plan = u.plan || 'free';
           // Grandfathered (pre-migration registrants) keep $20 / $60.
           // Everyone else gets new $15 / $45 amounts.
           const _gf = _isGrandfathered(u);
-          const credits = plan==='pro'   ? (_gf ? 3000 : 2250)
-                        : plan==='business' ? (_gf ? 9000 : 6750)
+          const credits = plan === 'pro'        ? (_gf ? 3000 : 2250)
+                        : plan === 'business'    ? (_gf ? 9000 : 6750)
                         : 0;
-          if(credits>0){
-            u.balance_jpy=(u.balance_jpy||0)+credits;
-            u.subscription_status='active';
-            u.billing_history=u.billing_history||[];
-            u.billing_history.push({date:new Date().toISOString(),type:'subscription',plan,credit_jpy:credits});
-            if(u.billing_history.length>1000)u.billing_history=u.billing_history.slice(-1000);
+          if(credits > 0){
+            u.balance_jpy = (u.balance_jpy || 0) + credits;
+            u.subscription_status = 'active';
+            u.billing_history = u.billing_history || [];
+            u.billing_history.push({date:new Date().toISOString(), type:'subscription', plan, credit_jpy: credits, invoice_id: invoice.id});
+            if(u.billing_history.length > 1000) u.billing_history = u.billing_history.slice(-1000);
+            u.last_stripe_event_at = new Date().toISOString();
             await DB.save(u);
-            console.log('Credits added:', credits, 'JPY to', u.email);
+            console.log('[stripe webhook] credits added:', credits, 'JPY to', u.email);
+          } else {
+            console.warn('[stripe webhook] invoice paid but plan='+plan+' → no credit. user=', u.email);
           }
         }
       }
     }
-    // サブスクリプションキャンセル
-    if(event.type==='customer.subscription.deleted'){
-      const sub=event.data.object;
-      const u=await DB.findBy('stripe_customer_id',sub.customer);
+
+    // ③ Subscription canceled / deleted — drop to free.
+    if(event.type === 'customer.subscription.deleted'){
+      const sub = event.data.object;
+      const u = await DB.findBy('stripe_customer_id', sub.customer);
       if(u){
-        u.plan='free';
-        u.subscription_id=null;
-        u.subscription_status='canceled';
+        u.plan = 'free';
+        u.subscription_id = null;
+        u.subscription_status = 'canceled';
+        u.last_stripe_event_at = new Date().toISOString();
         await DB.save(u);
+        console.log('[stripe webhook] canceled:', u.email);
       }
     }
 
-    if(event.type==='payment_intent.succeeded'){
-      const pi=event.data.object;
-      const userId=pi.metadata?.userId;
-      const amtCentsUsd=parseInt(pi.metadata?.amount_cents_usd||'0',10);
-      if(userId&&amtCentsUsd>0){
-        const user=await DB.findBy('id',userId);
+    // ④ Checkout session completed (hosted Checkout flow).
+    if(event.type === 'checkout.session.completed'){
+      const session = event.data.object;
+      const customerId = session.customer;
+      const subId = session.subscription;
+      const u = await DB.findBy('stripe_customer_id', customerId);
+      if(u){
+        if(subId){ u.subscription_id = subId; }
+        u.subscription_status = 'active';
+        // If the session has line items with price IDs, infer plan
+        try {
+          if(session.metadata && session.metadata.plan){
+            u.plan = session.metadata.plan;
+            u.plan_v2 = true;
+          }
+        } catch(e){}
+        u.last_stripe_event_at = new Date().toISOString();
+        await DB.save(u);
+        console.log('[stripe webhook] checkout completed:', u.email);
+      }
+    }
+
+    // ⑤ One-off top-up (Payment Intent).
+    if(event.type === 'payment_intent.succeeded'){
+      const pi = event.data.object;
+      const userId = pi.metadata && pi.metadata.userId;
+      const amtCentsUsd = parseInt(pi.metadata && pi.metadata.amount_cents_usd || '0', 10);
+      if(userId && amtCentsUsd > 0){
+        const user = await DB.findBy('id', userId);
         if(user){
-          const creditJpy=Math.round(amtCentsUsd/100*USD_TO_JPY*1000)/1000;
-          user.balance_jpy=Math.round(((user.balance_jpy||0)+creditJpy)*1000)/1000;
-          user.billing_history=user.billing_history||[];
-          user.billing_history.push({date:new Date().toISOString(),type:'topup',amount_cents_usd:amtCentsUsd,credit_jpy:creditJpy});
-          if(user.billing_history.length>1000)user.billing_history=user.billing_history.slice(-1000);
+          const creditJpy = Math.round(amtCentsUsd / 100 * USD_TO_JPY * 1000) / 1000;
+          user.balance_jpy = Math.round(((user.balance_jpy || 0) + creditJpy) * 1000) / 1000;
+          user.billing_history = user.billing_history || [];
+          user.billing_history.push({date:new Date().toISOString(), type:'topup', amount_cents_usd: amtCentsUsd, credit_jpy: creditJpy, payment_intent_id: pi.id});
+          if(user.billing_history.length > 1000) user.billing_history = user.billing_history.slice(-1000);
+          user.last_stripe_event_at = new Date().toISOString();
           await DB.save(user);
-          console.log('Credits added (PI):',creditJpy,'JPY to',user.email);
+          console.log('[stripe webhook] top-up credits:', creditJpy, 'JPY to', user.email);
         }
       }
     }
-    return jres(res,200,{received:true});
-  }catch(e){return jres(res,400,{error:e.message});}
+
+    // ⑥ Payment failed — keep grace state but warn.
+    if(event.type === 'invoice.payment_failed'){
+      const invoice = event.data.object;
+      const u = await DB.findBy('stripe_customer_id', invoice.customer);
+      if(u){
+        u.subscription_status = 'past_due';
+        u.last_stripe_event_at = new Date().toISOString();
+        await DB.save(u);
+        console.warn('[stripe webhook] payment FAILED for', u.email, 'invoice=', invoice.id);
+      }
+    }
+
+    return jres(res, 200, { received: true, type: event.type });
+  } catch(e){
+    console.error('[stripe webhook] handler error:', e.message);
+    _logStripeEvent({ ok:false, reason:'handler_error', detail:e.message });
+    return jres(res, 400, { error: e.message });
+  }
 }
 
 // ── STATIC FILES ──────────────────────────────────────────────

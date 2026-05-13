@@ -11055,6 +11055,11 @@ var _chatStreamCtrl = null;
 function _setChatStreaming(on){
   const btn = document.getElementById('sndBtn');
   if(!btn) return;
+  // CRITICAL: always re-enable the button. sendMsg() disables it just before
+  // _sendMsgStream() runs — if we don't clear that, the user can SEE the stop
+  // icon but can't click it (button is greyed out). Whenever streaming flips,
+  // the button must accept clicks (either to stop, or to send again).
+  btn.disabled = false;
   if(on){
     btn.classList.add('streaming');
     btn.title = '生成を停止 (Stop)';

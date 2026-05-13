@@ -3564,6 +3564,55 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
       required:['webhook_name'],
     },
   },
+  {
+    name:'schedule_routine',
+    description:`定期実行スケジュールを **このエージェント** に登録する。「毎朝 9 時に〇〇して」「毎週金曜の 18 時に〇〇」のような自動化リクエストが来たら呼ぶ。
+
+【動作】
+- 指定した時刻になると、自動で AI (このエージェント) が prompt を実行
+- 結果は deliver で指定した宛先に届く (chat = チャットに投稿 / email = ユーザーのメール)
+
+【使い分け】
+- "毎日" "毎朝" "毎週" "毎月" 等 → kind:'daily', hour, minute を指定
+- "毎時" "1 時間ごと" → kind:'hourly'
+- 単発予約 (例: 明日 14 時) は別途 reminders を使うが、まずはこのツールで daily 登録を案内するのが基本
+
+【必ず守る】
+- 登録後の最終応答で「✅ 毎朝 9:00 に〜を実行する予定を登録しました」とユーザーに具体的に伝える
+- hour/minute は **ユーザーのローカル時刻** を尊重 (日本なら JST のつもりで指定 = サーバーが tz_offset_min を考慮)`,
+    input_schema:{
+      type:'object',
+      properties:{
+        prompt:{type:'string',description:'実行時に AI に渡す指示 (例: "今日の優先タスク 3 つを 5 行で")。最大 1000 文字。'},
+        kind:{type:'string',enum:['daily','hourly'],description:'daily = 毎日 / hourly = 毎時。デフォルト daily。'},
+        hour:{type:'number',description:'(daily 時) 0-23 の時刻。例: 9 = 9 時'},
+        minute:{type:'number',description:'(daily 時) 0-59 の分。デフォルト 0'},
+        deliver:{type:'string',enum:['chat','email'],description:'実行結果の配信先。chat = チャットに投稿 (デフォルト) / email = ユーザー宛にメール'},
+        label:{type:'string',description:'人間が見て分かるラベル (例: "毎朝の優先タスク")'},
+      },
+      required:['prompt'],
+    },
+  },
+  {
+    name:'list_routines',
+    description:'このエージェントに登録されているスケジュール (毎日/毎時 の自動実行) の一覧を取得する。「予約されてる自動化を確認したい」「ルーティン何登録した?」のような質問で呼ぶ。',
+    input_schema:{
+      type:'object',
+      properties:{},
+    },
+  },
+  {
+    name:'cancel_routine',
+    description:'登録済みスケジュールを **削除 / 一時停止** する。「あの毎朝のやつ止めて」「○○のルーティン削除して」と頼まれたら呼ぶ。先に list_routines で id を確認すること。',
+    input_schema:{
+      type:'object',
+      properties:{
+        id:{type:'string',description:'削除/停止するスケジュールの id (list_routines で取得)'},
+        action:{type:'string',enum:['delete','disable','enable'],description:'delete = 完全削除 / disable = 一時停止 / enable = 再開。デフォルト delete'},
+      },
+      required:['id'],
+    },
+  },
 ];
 
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
@@ -5315,6 +5364,97 @@ async function executeZapierTool(user, input){
       r.write(body); r.end();
     } catch(e){ resolve({ error: 'request_failed', detail: e.message }); }
   });
+}
+
+// ── Routine (schedule) tools — chat-based create / list / cancel ─
+// Lets the AI register a recurring task when the user says "毎朝 9 時に〜".
+// Writes to ag.schedules[] which the existing _startAgentScheduler() consumes.
+async function executeScheduleRoutineTool(user, agent, input){
+  if(!agent) return { error: 'no agent context' };
+  // For group chats the agent record may live on the host's user — but
+  // scheduling is a host-only feature; just refuse in non-owner contexts.
+  if(!Array.isArray(user.agents) || !user.agents.find(a => a && a.id === agent.id)){
+    return { error: 'this chat is not on your own agent — routines can only be registered on agents you own' };
+  }
+  const prompt = String(input && input.prompt || '').trim();
+  if(!prompt) return { error: 'prompt required' };
+  if(prompt.length > 1000) return { error: 'prompt too long (max 1000 chars)' };
+  const kind = (input && input.kind === 'hourly') ? 'hourly' : 'daily';
+  const hour = Math.max(0, Math.min(23, Number((input && input.hour)||9)));
+  const minute = Math.max(0, Math.min(59, Number((input && input.minute)||0)));
+  const deliver = (input && input.deliver === 'email') ? 'email' : 'chat';
+  const label = String((input && input.label) || '').slice(0, 80);
+  agent.schedules = Array.isArray(agent.schedules) ? agent.schedules : [];
+  if(agent.schedules.length >= 20) return { error: 'too many schedules on this agent (max 20)' };
+  // Tz: server is UTC on Render, but most users live in JST. Default to JST
+  // offset = 540 min, AI can override via input.tz_offset_min if user is overseas.
+  const tz_offset_min = Number.isFinite(input && input.tz_offset_min) ? Math.max(-840, Math.min(840, input.tz_offset_min)) : 540;
+  const sched = {
+    id: genScheduleId(),
+    prompt, kind, hour, minute, tz_offset_min, deliver, label,
+    enabled: true,
+    created_at: new Date().toISOString(),
+    last_run: null,
+    next_run: null,
+  };
+  sched.next_run = _scheduleNextRun(sched);
+  agent.schedules.push(sched);
+  try { await DB.save(user); } catch(e){
+    return { error: 'failed to save: '+e.message };
+  }
+  // Human-friendly summary
+  const when = kind === 'hourly'
+    ? '毎時 ' + String(minute).padStart(2,'0') + ' 分'
+    : '毎日 ' + String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0');
+  return {
+    ok: true,
+    schedule_id: sched.id,
+    when, deliver, label: label || '(無題)',
+    next_run: sched.next_run,
+    instructions: '最終応答で「✅ '+when+' に "'+ (label || prompt.slice(0,30)) +'" を実行する予定を登録しました ('+ (deliver==='email'?'メールで配信':'チャットに投稿') +')」とユーザーに伝えてください。',
+  };
+}
+
+async function executeListRoutinesTool(user, agent){
+  if(!agent) return { error: 'no agent context' };
+  const list = Array.isArray(agent.schedules) ? agent.schedules : [];
+  if(!list.length) return { ok: true, schedules: [], note: 'このエージェントに登録されているルーティンはまだありません。' };
+  return {
+    ok: true,
+    count: list.length,
+    schedules: list.map(s => ({
+      id: s.id,
+      label: s.label || '(無題)',
+      when: s.kind === 'hourly'
+        ? '毎時 ' + String(s.minute||0).padStart(2,'0') + ' 分'
+        : '毎日 ' + String(s.hour||9).padStart(2,'0') + ':' + String(s.minute||0).padStart(2,'0'),
+      prompt: (s.prompt || '').slice(0, 80),
+      deliver: s.deliver || 'chat',
+      enabled: s.enabled !== false,
+      next_run: s.next_run,
+      last_run: s.last_run,
+    })),
+  };
+}
+
+async function executeCancelRoutineTool(user, agent, input){
+  if(!agent) return { error: 'no agent context' };
+  const id = String((input && input.id) || '').trim();
+  const action = ['delete','disable','enable'].indexOf(String((input && input.action)||'delete')) >= 0 ? String(input.action||'delete') : 'delete';
+  if(!id) return { error: 'id required' };
+  agent.schedules = Array.isArray(agent.schedules) ? agent.schedules : [];
+  const idx = agent.schedules.findIndex(s => s && s.id === id);
+  if(idx < 0) return { error: 'schedule not found: '+id };
+  const s = agent.schedules[idx];
+  if(action === 'delete'){
+    agent.schedules.splice(idx, 1);
+    await DB.save(user);
+    return { ok: true, action: 'deleted', schedule_id: id, label: s.label || '(無題)' };
+  }
+  if(action === 'disable'){ s.enabled = false; }
+  if(action === 'enable'){ s.enabled = true; s.next_run = _scheduleNextRun(s); }
+  await DB.save(user);
+  return { ok: true, action, schedule_id: id, label: s.label || '(無題)', enabled: s.enabled };
 }
 
 // ── Browser-extension live connection registry ───────────────
@@ -8639,6 +8779,8 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 - ✅ 既存画像の編集 (背景差し替え / 要素追加・削除 / スタイル変更) → \`edit_image\` (直前 generate_image の URL を渡す)
 - ✅ PDF → \`generate_pdf\` / グラフ → \`generate_chart\` / 図 → \`generate_diagram\` / QR → \`generate_qr\`
 - ✅ メール → \`send_email\` / Slack → \`notify_slack\` / Discord → \`notify_discord\`
+- ✅ **定期実行スケジュール** (「毎朝 9 時に〜」「毎週金曜に〜」「毎時〜」など) → \`schedule_routine\` を **必ず呼ぶ** (口頭でやり方を説明するだけはダメ、ツールで登録する)
+- ✅ 登録済みルーティンの確認 → \`list_routines\` / 削除 → \`cancel_routine\`
 - ✅ 予定 → \`create_calendar_event\`
 - ✅ Web 調査 → \`web_search\` / \`web_fetch\` / \`web_screenshot\` / \`web_read_markdown\`
 - ✅ 要件が曖昧なら 「○○ですか? △△ですか?」と 1 問だけ聞く (空約束はしない)
@@ -15270,6 +15412,12 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeNotifyTool('discord', payerUser, block.input||{});
             } else if(block.name === 'zapier_run'){
               result = await executeZapierTool(payerUser, block.input||{});
+            } else if(block.name === 'schedule_routine'){
+              result = await executeScheduleRoutineTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'list_routines'){
+              result = await executeListRoutinesTool(payerUser, (teamMemberAgent || agent));
+            } else if(block.name === 'cancel_routine'){
+              result = await executeCancelRoutineTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'generate_agent_promo_video'){
               const promoAgent = (block.input && block.input.tagline)
                 ? { ...(teamMemberAgent || agent), persona: String(block.input.tagline).slice(0,140) }

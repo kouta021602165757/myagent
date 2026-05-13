@@ -15447,14 +15447,30 @@ function _notesBase(){
 async function openNotesPanel(agentId){
   window._notesState.agentId = agentId || null;
   window._notesState.shared = false;
+  console.log('[notes] open — agentId=', agentId, 'base=', _notesBase());
   // Hydrate notes list, then render
   try {
     var r = await api('GET', _notesBase());
+    console.log('[notes] list response — count=', (r && r.notes||[]).length);
     window._notesState.notes = (r && r.notes) || [];
     window._notesState.shared = !!(r && r.shared);
-  } catch(e){ window._notesState.notes = []; }
+  } catch(e){
+    console.error('[notes] list failed:', e);
+    showToast((e.message||'メモ一覧の読込失敗'),'ng');
+    window._notesState.notes = [];
+  }
   // Pick the most-recent note (already sorted server-side) or null
   window._notesState.activeId = (window._notesState.notes[0] || {}).id || null;
+  // Fetch full content for the auto-selected note so the editor isn't blank
+  if(window._notesState.activeId){
+    try {
+      var rOne = await api('GET', _notesBase() + '/' + window._notesState.activeId);
+      if(rOne && rOne.note){
+        var i = window._notesState.notes.findIndex(function(n){return n.id === window._notesState.activeId;});
+        if(i >= 0){ window._notesState.notes[i].content = rOne.note.content || ''; }
+      }
+    } catch(e){ console.error('[notes] fetch initial note failed:', e); }
+  }
   _renderNotesPanel();
 }
 
@@ -15517,6 +15533,7 @@ function _notesRenderEditor(){
     + '<div style="padding:8px 16px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;background:var(--cream)">'
     +   '<div id="notesCharCount" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
     +   '<button onclick="_notesDelete()" style="margin-left:auto;background:#fff;border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 '+L('削除','Delete')+'</button>'
+    +   '<button onclick="_notesSaveExplicit()" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:6px 16px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">💾 '+L('保存','Save')+'</button>'
     + '</div>';
   // Hydrate fields
   var ti = document.getElementById('notesTitle');
@@ -15548,16 +15565,26 @@ function _notesOnEdit(){
   st.saveTimer = setTimeout(_notesSaveNow, 1000);
 }
 
-async function _notesSaveNow(){
+async function _notesSaveNow(opts){
   var st = window._notesState;
-  if(!st.activeId || !st.dirty) return;
+  var force = opts && opts.force === true;
+  if(!st.activeId){
+    if(force) showToast(isJa?'保存対象のメモがありません':'No note to save','ng');
+    return;
+  }
+  if(!st.dirty && !force) return;
   var ti = document.getElementById('notesTitle');
   var bo = document.getElementById('notesBody');
-  if(!ti || !bo) return;
+  if(!ti || !bo){
+    if(force) showToast(isJa?'エディタが見つかりません':'Editor not found','ng');
+    return;
+  }
   var title = ti.value || '';
   var content = bo.value || '';
+  console.log('[notes] save — id=', st.activeId, 'len=', content.length, 'base=', _notesBase());
   try {
     var r = await api('PATCH', _notesBase() + '/' + st.activeId, { title, content });
+    console.log('[notes] save response=', r);
     if(r && r.note){
       var i = st.notes.findIndex(function(n){return n.id === st.activeId;});
       if(i >= 0){
@@ -15565,11 +15592,16 @@ async function _notesSaveNow(){
         st.notes[i].snippet = String(r.note.content||'').slice(0, 120).replace(/\n+/g,' ');
         st.notes[i].updated_at = r.note.updated_at;
       }
+      st.dirty = false;
+      var flag = document.getElementById('notesSavedFlag');
+      if(flag) flag.textContent = '・' + (isJa?'✓ 保存済':'✓ Saved');
+      setTimeout(function(){ var f = document.getElementById('notesSavedFlag'); if(f) f.textContent = ''; }, 1500);
+      // Explicit save (button) shows toast for clear confirmation
+      if(force){ showToast(isJa?'✓ 保存しました':'✓ Saved','ok'); }
+    } else {
+      console.error('[notes] save returned no .note field:', r);
+      showToast(isJa?'保存失敗 (空レスポンス) - DevTools で詳細確認':'Save failed (empty response)','ng');
     }
-    st.dirty = false;
-    var flag = document.getElementById('notesSavedFlag');
-    if(flag) flag.textContent = '・' + (isJa?'✓ 保存済':'✓ Saved');
-    setTimeout(function(){ var f = document.getElementById('notesSavedFlag'); if(f) f.textContent = ''; }, 1500);
     // Re-render the list pane (in-place — keep the editor untouched)
     var ov = document.getElementById('notesOverlay');
     if(ov){
@@ -15586,29 +15618,63 @@ async function _notesSaveNow(){
       }
     }
   } catch(e){
+    console.error('[notes] save error:', e);
     var f = document.getElementById('notesSavedFlag');
     if(f) f.textContent = '⚠ ' + (e.message||'save failed');
+    // Loud toast so the user can't miss it
+    showToast(isJa?('⚠ 保存失敗: '+(e.message||'unknown')):('Save failed: '+(e.message||'unknown')),'ng');
   }
+}
+// Explicit save trigger from the 💾 button
+function _notesSaveExplicit(){
+  // Mark dirty so saveNow will run even if no recent edit
+  window._notesState.dirty = true;
+  _notesSaveNow({ force: true });
 }
 
 async function _notesCreate(){
+  console.log('[notes] create — base=', _notesBase());
   try {
     var r = await api('POST', _notesBase(), { title:'', content:'' });
+    console.log('[notes] create response=', r);
     if(r && r.note){
       window._notesState.notes.unshift({
         id: r.note.id, title: r.note.title || '', snippet:'',
         updated_at: r.note.updated_at,
       });
       window._notesState.activeId = r.note.id;
+      showToast(isJa?'✓ 新しいメモを作成':'✓ New note created','ok');
       _renderNotesPanel();
+    } else {
+      console.error('[notes] create returned no .note field:', r);
+      showToast(isJa?'メモ作成失敗 (空レスポンス)':'Create failed (empty response)','ng');
     }
-  } catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+  } catch(e){
+    console.error('[notes] create error:', e);
+    showToast((e.message||(isJa?'メモ作成失敗':'Failed')),'ng');
+  }
 }
 
-function _notesSelect(id){
+async function _notesSelect(id){
   // Save current before switching
-  if(window._notesState.dirty) _notesSaveNow();
+  if(window._notesState.dirty){ await _notesSaveNow(); }
   window._notesState.activeId = id;
+  // CRITICAL: fetch full content. GET /notes (list) only returns snippet to
+  // keep the payload tiny — if we don't fetch the body here, the editor
+  // shows EMPTY for previously-saved notes, making users think their content
+  // was lost. That was the root cause of "保存されない" reports.
+  try {
+    var r = await api('GET', _notesBase() + '/' + id);
+    if(r && r.note){
+      var i = window._notesState.notes.findIndex(function(n){return n.id === id;});
+      if(i >= 0){
+        window._notesState.notes[i].content = r.note.content || '';
+        window._notesState.notes[i].title = r.note.title || window._notesState.notes[i].title;
+      }
+    }
+  } catch(e){
+    console.error('[notes] fetch full note failed:', e);
+  }
   _renderNotesPanel();
 }
 

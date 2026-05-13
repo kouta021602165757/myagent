@@ -8838,9 +8838,14 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
              '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊</button>'+
              bmBtn+pinBtn+delBtn;
     }
-    // Continue button — only assistant messages cut off at max_tokens.
+    // Continue button — assistant messages cut off (max_tokens OR user stopped).
+    // For user-stopped messages we use a slightly more inviting label so the
+    // user understands the partial output is intentional and resumable.
     if(!isU && raw && raw.truncated){
-      acts += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを書く':'Continue')+'">▶ '+(isJa?'続きを書く':'Continue')+'</button>';
+      var contLabel = raw.was_stopped
+        ? (isJa ? '▶ 続きから生成' : '▶ Resume')
+        : (isJa ? '▶ 続きを書く' : '▶ Continue');
+      acts += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを生成':'Continue')+'">'+contLabel+'</button>';
     }
     // Retry button — assistant messages that resulted in an error
     // (timeout / 5xx / network). Re-sends the most recent user message.
@@ -8852,6 +8857,12 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   let bodyMarkup = body;
   if(isU && isGroup && bodyMarkup){
     bodyMarkup = bodyMarkup.replace(/(@AI|＠AI|@ai|＠ai)\b/g, '<span class="mention ai">$1</span>');
+  }
+  // Stopped-mid-stream badge: small inline tag at the end of partial content so
+  // the user immediately understands the bubble was cut by their own action
+  // (vs. an error). The Continue button under it explains the recovery path.
+  if(!isU && raw && raw.was_stopped && bodyMarkup){
+    bodyMarkup += '<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:#fff7ee;border:1px solid #fed7aa;color:var(--peach-dark);padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.01em">⏸ '+(isJa?'ここで停止しました':'Stopped here')+'</div>';
   }
   // Streaming placeholder: show the live "生成中…" indicator INSIDE the .m-body
   // so the bubble has a visible body even before any text arrives. Without
@@ -11350,13 +11361,17 @@ async function _sendMsgStream(ag, text, imgs, texts){
     _setChatStreaming(false);
   }
   if(_aborted){
-    // User pressed ⏹. Preserve whatever text we already streamed and tag the
-    // bubble as stopped so it's obvious in history.
+    // User pressed ⏹. Preserve the partial text exactly as streamed and mark
+    // the bubble as truncated so the "▶ 続きを書く" Continue action appears.
+    // No more "_(停止しました)_" sentinel — it dirtied the markdown and the
+    // Continue button itself signals "stopped" clearly enough.
     const last = ag.history[ag.history.length - 1];
     if(last && last.streaming){
       const partial = (acc || '').trim();
-      last.content  = partial ? partial + '\n\n_(停止しました)_' : '_(停止しました)_';
+      last.content   = partial || (isJa ? '(停止しました — 続きを書くボタンで再開できます)' : '(stopped — hit Continue to resume)');
       last.streaming = false;
+      last.truncated = true;
+      last.was_stopped = true;
       renderMsgs(ag);
     }
     return; // not an error

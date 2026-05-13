@@ -1242,9 +1242,21 @@ function _safeFromName(name){
 async function sendEmail(to,subject,html,opts){
   if(!RESEND_KEY){console.log(`[DEV EMAIL] To:${to}\nSubject:${subject}\n${html.replace(/<[^>]+>/g,'')}\n`);return;}
   const displayName = _safeFromName(opts && opts.fromName);
-  await httpsReq('POST','api.resend.com','/emails',
+  // CRITICAL: httpsReq does NOT throw on 4xx/5xx — it just resolves with
+  // {s, d}. Without this check, Resend errors (422 Domain not verified,
+  // 401 Invalid key, 403 Suppressed recipient) get silently swallowed and
+  // the AI tells the user "✅ 送信完了" while nothing actually went out.
+  const r = await httpsReq('POST','api.resend.com','/emails',
     {'Content-Type':'application/json','Authorization':`Bearer ${RESEND_KEY}`},
     {from:`${displayName} <${FROM_EMAIL}>`,to,subject,html});
+  if(r.s >= 200 && r.s < 300){
+    console.log(`[email ok] to=${to} subject="${subject.slice(0,40)}" resend_id=${(r.d && r.d.id)||'?'}`);
+    return r.d;
+  }
+  // Surface the actual Resend error so the caller can show it to the user.
+  const detail = (r.d && (r.d.message || r.d.error || r.d.name)) || `HTTP ${r.s}`;
+  console.error(`[email FAIL] to=${to} status=${r.s} detail=${JSON.stringify(r.d).slice(0,300)}`);
+  throw new Error(`Resend ${r.s}: ${detail}`);
 }
 
 async function sendVerifyEmail(user){
@@ -4921,10 +4933,26 @@ async function executeEmailTool(user, agent, input){
     : 'MY AI Agent';
   // Restricted: only to the user's own address. Prevents the agent from
   // spraying mails on the user's behalf without explicit consent.
+  let resendResult = null;
   try {
-    await sendEmail(user.email, subject, htmlBody, { fromName });
+    resendResult = await sendEmail(user.email, subject, htmlBody, { fromName });
   } catch(e){
-    return { error: 'email_send_failed: ' + (e.message || 'unknown') };
+    const msg = e.message || 'unknown';
+    // Common, actionable error patterns get a friendlier human message so the
+    // AI can tell the user what to fix instead of just dumping the raw error.
+    let hint = '';
+    if(/Domain not verified|verified domain/i.test(msg)){
+      hint = ' → Resend ダッシュボードで myaiagents.agency ドメインの検証 (SPF/DKIM) が必要です。';
+    } else if(/401|Invalid.*key/i.test(msg)){
+      hint = ' → RESEND_API_KEY が無効か未設定。Render 環境変数を確認してください。';
+    } else if(/403|suppressed|bounce/i.test(msg)){
+      hint = ' → 宛先がサプレッションリスト or 過去にバウンスしている可能性。Resend Audience 設定を確認。';
+    }
+    return {
+      error: 'email_send_failed',
+      detail: msg + hint,
+      instructions: '次の応答で「⚠️ メール送信に失敗しました: ' + msg + hint + '」とユーザーに伝えてください。「送信完了」と嘘の報告をしてはいけません。',
+    };
   }
   return {
     ok: true,
@@ -4932,6 +4960,7 @@ async function executeEmailTool(user, agent, input){
     sent_from: FROM_EMAIL,
     from_display: fromName,
     subject,
+    resend_id: (resendResult && resendResult.id) || null,
     instructions: '送信完了。次の応答で 「✉️ メールを ' + user.email + ' に送信しました (差出人: ' + fromName + ')」 と報告してください。',
   };
 }
@@ -8752,7 +8781,47 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{
       anthropic_key_prefix: ANTHROPIC ? ANTHROPIC.substring(0,15) : 'EMPTY',
       anthropic_key_len: ANTHROPIC ? ANTHROPIC.length : 0,
+      resend_configured: !!RESEND_KEY,
+      resend_key_prefix: RESEND_KEY ? RESEND_KEY.substring(0,4)+'...' : 'EMPTY',
+      from_email: FROM_EMAIL,
     });
+  }
+  // ── DEBUG: probe Resend by sending a test mail to the caller (auth req)
+  // Usage: POST /api/debug-email  body: { to: "you@example.com" } — falls
+  // back to user.email when `to` is omitted. Returns the raw Resend status.
+  if(pathname==='/api/debug-email' && method==='POST'){
+    // Require auth so we don't accidentally enable open-relay testing.
+    const auth = (req.headers.authorization||'').replace(/^Bearer\s+/i,'');
+    let uid = '';
+    try { uid = JWT.verify(auth).userId; } catch(e){}
+    if(!uid) return jres(res, 401, { error: 'auth required' });
+    const u = await DB.findBy('id', uid);
+    if(!u) return jres(res, 404, { error: 'user not found' });
+    const body = (await readBody(req)) || {};
+    const to = String(body.to || u.email || '').trim();
+    if(!to) return jres(res, 400, { error: 'to address required' });
+    if(!RESEND_KEY){
+      return jres(res, 503, { error: 'RESEND_API_KEY not configured on server' });
+    }
+    try {
+      const result = await sendEmail(to, '【MY AI Agent】テスト送信',
+        '<div style="font-family:sans-serif;padding:24px"><h2>✅ Resend 接続テスト成功</h2><p>このメールは MY AI Agent のメール送信機能をテストするために送信されました。</p><p>このメールが届いたら、AI からのメールも届くはずです。</p><p style="color:#888;font-size:12px">送信時刻: '+new Date().toLocaleString('ja-JP')+'</p></div>',
+        { fromName: 'MY AI Agent Test' });
+      return jres(res, 200, {
+        ok: true,
+        sent_to: to,
+        from: FROM_EMAIL,
+        resend_id: (result && result.id) || null,
+        note: 'メールが届かない場合は迷惑メールフォルダもチェックしてください。',
+      });
+    } catch(e){
+      return jres(res, 500, {
+        error: 'email_send_failed',
+        detail: e.message || 'unknown',
+        from_email: FROM_EMAIL,
+        hint: '422 = ドメイン未検証 / 401 = APIキー無効 / 403 = 宛先サプレッション中',
+      });
+    }
   }
 
   // ── POST /api/auth/signup ──────────────────────────────────

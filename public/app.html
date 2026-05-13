@@ -1403,6 +1403,37 @@ input,textarea{font-family:var(--sans);}
   background:#d1fae5;color:#10b981;border-color:#86efac;cursor:default;
 }
 .intg-cta-on:hover{transform:none}
+/* Share-intent buttons auto-styled when AI emits share URLs in markdown */
+.m-body a[href*="intent/post"],
+.m-body a[href*="sharing/share-offsite"],
+.m-body a[href*="sharer/sharer"],
+.m-body a[href*="reddit.com/submit"],
+.m-body a[href*="bsky.app/intent"],
+.m-body a[href*="t.me/share"],
+.m-body a[href*="wa.me/?text"],
+.m-body a[href*="line.me/R/msg"],
+.m-body a[href*="pinterest.com/pin/create"],
+.m-body a[href*="mastodon.social/share"],
+.m-body a[href*="news.ycombinator.com/submitlink"]{
+  display:inline-flex;align-items:center;gap:4px;margin:4px 6px 4px 0;padding:7px 14px;
+  background:#fff;border:1px solid rgba(180,120,80,.22);border-radius:99px;
+  color:var(--text);font-size:12.5px;font-weight:800;text-decoration:none;
+  transition:all .15s;cursor:pointer;
+}
+.m-body a[href*="intent/post"]:hover,
+.m-body a[href*="sharing/share-offsite"]:hover,
+.m-body a[href*="sharer/sharer"]:hover,
+.m-body a[href*="reddit.com/submit"]:hover,
+.m-body a[href*="bsky.app/intent"]:hover,
+.m-body a[href*="t.me/share"]:hover,
+.m-body a[href*="wa.me/?text"]:hover,
+.m-body a[href*="line.me/R/msg"]:hover,
+.m-body a[href*="pinterest.com/pin/create"]:hover,
+.m-body a[href*="mastodon.social/share"]:hover,
+.m-body a[href*="news.ycombinator.com/submitlink"]:hover{
+  background:var(--peach);color:#fff;border-color:var(--peach);transform:translateY(-1px);
+  box-shadow:0 6px 14px rgba(251,146,60,.18);
+}
 .m-body pre .cb-run:disabled{opacity:.6;cursor:wait;}
 .cb-out{
   margin:6px 0 12px;background:#0c1014;color:#cbd5e1;border:1px solid rgba(74,222,128,.25);
@@ -7131,7 +7162,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
       if(qsIntg){
         history.replaceState({}, '', location.pathname);
         if(qsSt === 'ok'){
-          var label = qsIntg === 'google' ? 'Google Workspace (6 サービス)' : qsIntg;
+          var qsProfiles = qs0.get('profiles');
+          var label = qsIntg === 'google' ? 'Google Workspace (6 サービス)'
+            : qsIntg === 'buffer' ? ('Buffer' + (qsProfiles ? ' (' + qsProfiles + ' SNS 接続済)' : ''))
+            : qsIntg;
           showToast('✓ ' + label + ' に接続しました' + (qsAccount?' ('+qsAccount+')':''), 'ok');
           if(qsIntg === 'github' && me){ me.github_connected = true; }
           if(qsIntg === 'google' && me){ me.google_sheets_connected = true; }

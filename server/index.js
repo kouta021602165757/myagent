@@ -221,6 +221,14 @@ function _integrationsCatalog(){
       fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'elevenlabs.io/app/settings/api-keys'}] },
 
     // ── ワークフロー / メタ連携 ──────────────────
+    // Buffer: 1 OAuth connection covers X / Threads / Instagram / LinkedIn /
+    // Facebook / Pinterest / TikTok — the practical replacement for direct
+    // X OAuth (which is blocked by X dev portal issues). Card flips to
+    // 1-click connect when BUFFER_OAUTH_CLIENT_ID/SECRET are set.
+    ((BUFFER_OAUTH_ID && BUFFER_OAUTH_SEC)
+      ? { id:'buffer', name:'Buffer (SNS ハブ)', logo:'📦', group:'sns', desc:'X / Threads / IG / LinkedIn / FB / Pinterest / TikTok を 1 OAuth で', flow:'oauth', priority:true, has_backend:true,
+          oauth:{ start:'/api/auth/buffer/start' } }
+      : { id:'buffer', name:'Buffer (SNS ハブ)', logo:'📦', group:'sns', desc:'X / Threads / IG / LinkedIn / FB / Pinterest / TikTok を 1 OAuth で', flow:'oauth', priority:true, has_backend:false }),
     // Zapier uses a custom flow ('zapier_multi') so the UI shows a list of
     // registered Zaps + an add form instead of a single URL input. Each Zap
     // is a (name, url, hint) triple — AI picks one by name when calling
@@ -3609,6 +3617,61 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
       required:['title','html_content'],
     },
   },
+  // ── Share-intent tool — zero-setup SNS posting ──────────────
+  {
+    name:'share_to_sns',
+    description:`SNS への投稿文を生成して、各 SNS の公式 share intent URL ボタンを表示する。
+ユーザーの設定・連携が一切不要 (Zapier / Buffer / OAuth 全て不要)。
+**ユーザーの最終確認 + 1 タップで投稿** が成立する最もシンプルなフロー。
+
+【いつ使う】
+- 「X に投稿して」「Threads に書いて」「LinkedIn にも」など SNS 投稿リクエスト
+- ユーザーが自前 OAuth (X / Buffer 等) を設定してない時の **デフォルト**
+- 投稿前に **ユーザーに最終確認** させたい時 (自動投稿との比較で安全)
+
+【動作】
+- 投稿文を整える (各 SNS の文字数制限考慮: X 280, Threads 500, LinkedIn 3000 等)
+- 各 SNS の share intent URL を生成
+- ユーザーは表示されたボタンをクリック → 該当 SNS が prefilled で開く → 投稿ボタン押すだけ
+
+【platforms 配列】 (全部入りなら省略 OK)
+twitter / threads / linkedin / facebook / reddit / mastodon / bluesky / line / telegram / whatsapp`,
+    input_schema:{
+      type:'object',
+      properties:{
+        text:{type:'string',description:'投稿本文 (URL 込みで X なら 280 字以内推奨)'},
+        url:{type:'string',description:'(任意) 投稿に付加する URL (例: https://myaiagents.agency/)'},
+        platforms:{type:'array',items:{type:'string'},description:'(任意) 表示する SNS 一覧。省略時は主要 6 つ (twitter / threads / linkedin / facebook / reddit / bluesky)'},
+        title:{type:'string',description:'(Reddit など title が別途必要な SNS 用)'},
+      },
+      required:['text'],
+    },
+  },
+  // ── Buffer (OAuth) — automated multi-SNS posting ────────────
+  {
+    name:'buffer_list_profiles',
+    description:'Buffer に接続済みの SNS プロフィール (X / IG / LinkedIn 等) 一覧を取得する。要 Buffer OAuth。',
+    input_schema:{ type:'object', properties:{} },
+  },
+  {
+    name:'buffer_post',
+    description:`Buffer 経由で指定 SNS に投稿する (自動投稿)。**Buffer OAuth 接続済の場合のみ**。
+接続なしなら share_to_sns (Intent URL) を使ってください。
+
+【profile_ids】 (省略可)
+未指定 → ユーザーの全 Buffer プロフィールに同時投稿
+指定 → 該当 profile だけに投稿`,
+    input_schema:{
+      type:'object',
+      properties:{
+        text:{type:'string',description:'投稿本文'},
+        profile_ids:{type:'array',items:{type:'string'},description:'(任意) 投稿先 Buffer profile ID 配列'},
+        now:{type:'boolean',description:'(任意) true で即時投稿 (デフォルト false = キュー追加)'},
+        media_url:{type:'string',description:'(任意) 添付画像/動画 URL'},
+      },
+      required:['text'],
+    },
+  },
   // ── GA4 (analytics) tools — uses resolved per-agent property ─
   {
     name:'ga4_list_properties',
@@ -5512,6 +5575,182 @@ async function executeZapierTool(user, input){
 // ── Routine (schedule) tools — chat-based create / list / cancel ─
 // Lets the AI register a recurring task when the user says "毎朝 9 時に〜".
 // Writes to ag.schedules[] which the existing _startAgentScheduler() consumes.
+// ── Share-intent URL generator — zero-setup SNS posting ─────
+// Returns ready-to-click share URLs for major SNS. No OAuth, no Zapier, no
+// account linking needed — the user clicks → SNS opens prefilled → 1-tap post.
+function _shareIntentUrl(platform, text, opts){
+  const url = (opts && opts.url) || '';
+  const title = (opts && opts.title) || '';
+  const T = encodeURIComponent(text || '');
+  const U = encodeURIComponent(url || '');
+  const TI = encodeURIComponent(title || '');
+  const TU = encodeURIComponent((text||'') + (url ? ' '+url : '')); // combined for X
+  switch(platform){
+    case 'twitter':
+    case 'x':
+      return 'https://x.com/intent/post?text=' + TU;
+    case 'threads':
+      return 'https://threads.net/intent/post?text=' + TU;
+    case 'linkedin':
+      return url
+        ? 'https://www.linkedin.com/sharing/share-offsite/?url=' + U + (text ? '&summary='+T : '')
+        : 'https://www.linkedin.com/feed/?shareActive=true&text=' + T;
+    case 'facebook':
+      return 'https://www.facebook.com/sharer/sharer.php?u=' + U + (text ? '&quote='+T : '');
+    case 'reddit':
+      return 'https://www.reddit.com/submit?title=' + (title ? TI : T) + (text && title ? '&text='+T : '');
+    case 'mastodon':
+      return 'https://mastodon.social/share?text=' + TU;
+    case 'bluesky':
+      return 'https://bsky.app/intent/compose?text=' + TU;
+    case 'line':
+      return 'https://line.me/R/msg/text/?' + T;
+    case 'telegram':
+      return 'https://t.me/share/url?url=' + U + '&text=' + T;
+    case 'whatsapp':
+      return 'https://wa.me/?text=' + TU;
+    case 'pinterest':
+      return 'https://www.pinterest.com/pin/create/button/?url=' + U + '&description=' + T;
+    case 'hackernews':
+      return 'https://news.ycombinator.com/submitlink?u=' + U + '&t=' + TI;
+    default:
+      return null;
+  }
+}
+
+const _SHARE_DEFAULT_PLATFORMS = ['twitter','threads','linkedin','facebook','reddit','bluesky'];
+const _SHARE_LABELS = {
+  twitter:'🐦 X (Twitter)', threads:'🧵 Threads', linkedin:'💼 LinkedIn',
+  facebook:'📘 Facebook', reddit:'🤖 Reddit', mastodon:'🐘 Mastodon',
+  bluesky:'🦋 Bluesky', line:'💚 LINE', telegram:'✈️ Telegram',
+  whatsapp:'💬 WhatsApp', pinterest:'📌 Pinterest', hackernews:'🔶 Hacker News',
+};
+
+async function executeShareToSnsTool(input){
+  const text = String((input && input.text) || '').trim();
+  if(!text) return { error: 'text required' };
+  const url = String((input && input.url) || '').trim();
+  const title = String((input && input.title) || '').trim();
+  const platforms = (Array.isArray(input && input.platforms) && input.platforms.length)
+    ? input.platforms.map(p => String(p).toLowerCase()).filter(p => _SHARE_LABELS[p])
+    : _SHARE_DEFAULT_PLATFORMS;
+  const buttons = platforms.map(p => {
+    const u = _shareIntentUrl(p, text, { url, title });
+    return u ? { platform: p, label: _SHARE_LABELS[p] || p, url: u } : null;
+  }).filter(Boolean);
+  // Markdown that the assistant should include in its final reply. Renders as
+  // a tidy preview card + buttons. The _md() pipeline turns these into
+  // styled "share-cta" buttons (see CSS .share-cta).
+  const markdownLines = ['📝 **投稿文 (' + text.length + ' 文字)**', '', '> ' + text.replace(/\n/g, '\n> ')];
+  if(url) markdownLines.push('> ', '> ' + url);
+  markdownLines.push('', '↓ クリックで該当 SNS が prefilled で開きます:');
+  markdownLines.push(buttons.map(b => '[' + b.label + '](' + b.url + ')').join(' '));
+  return {
+    ok: true,
+    text, url, title,
+    platforms: buttons.map(b => b.platform),
+    buttons,
+    markdown: markdownLines.join('\n'),
+    instructions: '最終応答に上記 markdown をそのまま含めてください。各 [ラベル](URL) は UI 側でクリック可能なボタンとして表示されます。「設定不要で 1 タップ投稿できます」と添えると親切。',
+  };
+}
+
+// ── Buffer OAuth helpers + post executor ─────────────────────
+const BUFFER_OAUTH_ID  = process.env.BUFFER_OAUTH_CLIENT_ID || '';
+const BUFFER_OAUTH_SEC = process.env.BUFFER_OAUTH_CLIENT_SECRET || '';
+function bufferAuthURL(stateJwt){
+  const params = new URLSearchParams({
+    client_id: BUFFER_OAUTH_ID,
+    redirect_uri: `${APP_URL}/api/auth/buffer/callback`,
+    response_type: 'code',
+    state: stateJwt,
+  });
+  return `https://bufferapp.com/oauth2/authorize?${params}`;
+}
+async function bufferExchangeCode(code){
+  const body = new URLSearchParams({
+    code,
+    client_id: BUFFER_OAUTH_ID,
+    client_secret: BUFFER_OAUTH_SEC,
+    redirect_uri: `${APP_URL}/api/auth/buffer/callback`,
+    grant_type: 'authorization_code',
+  }).toString();
+  const r = await httpsReq('POST', 'api.bufferapp.com', '/oauth2/token.json',
+    { 'Content-Type':'application/x-www-form-urlencoded' }, body);
+  if(r.s !== 200) throw new Error('Buffer token exchange failed: ' + JSON.stringify(r.d).slice(0,200));
+  return r.d; // { access_token, ... }
+}
+async function bufferListProfiles(accessToken){
+  const r = await httpsReq('GET', 'api.bufferapp.com',
+    '/1/profiles.json?access_token=' + encodeURIComponent(accessToken),
+    {}, null);
+  if(r.s !== 200) throw new Error('Buffer profiles failed: ' + r.s);
+  return Array.isArray(r.d) ? r.d : [];
+}
+async function bufferCreateUpdate(accessToken, profileIds, text, opts){
+  const params = new URLSearchParams();
+  params.set('access_token', accessToken);
+  for(const pid of profileIds){ params.append('profile_ids[]', pid); }
+  params.set('text', text);
+  if(opts && opts.now) params.set('now', 'true');
+  if(opts && opts.media_url){ params.set('media[link]', opts.media_url); }
+  const r = await httpsReq('POST', 'api.bufferapp.com', '/1/updates/create.json',
+    { 'Content-Type':'application/x-www-form-urlencoded' }, params.toString());
+  if(r.s !== 200) throw new Error('Buffer create failed: ' + JSON.stringify(r.d).slice(0,200));
+  return r.d;
+}
+
+async function executeBufferListProfilesTool(user){
+  const tok = user.integrations && user.integrations.buffer && user.integrations.buffer.access_token;
+  if(!tok) return { error: 'buffer_not_connected', detail: 'Buffer を OAuth で接続してください (設定 → 連携 → Buffer)。' };
+  try {
+    const profiles = await bufferListProfiles(tok);
+    return {
+      ok: true,
+      count: profiles.length,
+      profiles: profiles.map(p => ({
+        id: p.id || p._id,
+        service: p.service,           // twitter / linkedin / facebook / instagram / pinterest / etc.
+        formatted_username: p.formatted_username || p.formatted_service || '',
+        service_username: p.service_username || p.username || '',
+        avatar: p.avatar || '',
+      })),
+    };
+  } catch(e){
+    return { error: 'buffer_list_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
+async function executeBufferPostTool(user, input){
+  const tok = user.integrations && user.integrations.buffer && user.integrations.buffer.access_token;
+  if(!tok) return { error: 'buffer_not_connected', detail: 'Buffer を OAuth で接続してください。share_to_sns で代替可能です (設定不要)。' };
+  const text = String((input && input.text) || '').trim();
+  if(!text) return { error: 'text required' };
+  let profileIds = Array.isArray(input && input.profile_ids) ? input.profile_ids.filter(Boolean) : [];
+  // If no profile_ids specified, fetch all and post to every channel
+  if(!profileIds.length){
+    try {
+      const list = await bufferListProfiles(tok);
+      profileIds = list.map(p => p.id || p._id).filter(Boolean);
+    } catch(e){
+      return { error: 'buffer_list_failed', detail: e.message };
+    }
+  }
+  if(!profileIds.length) return { error: 'no_profiles', detail: 'Buffer に接続済 SNS プロフィールがありません。Buffer 内で SNS アカウントを接続してください。' };
+  try {
+    const r = await bufferCreateUpdate(tok, profileIds, text, { now: !!input.now, media_url: input.media_url });
+    return {
+      ok: true,
+      buffer_id: r && r.updates && r.updates[0] && r.updates[0].id,
+      posted_to: profileIds,
+      now: !!input.now,
+      message: input.now ? '即時投稿しました' : 'Buffer キューに追加 (Buffer のスケジュールに従って配信)',
+    };
+  } catch(e){
+    return { error: 'buffer_post_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
 // ── WordPress executor — multi-site, per-agent ────────────
 async function executeWordPressPublishTool(user, agent, input){
   const title = String((input && input.title) || '').trim();
@@ -9236,6 +9475,10 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 - ✅ **Google Drive** → \`drive_search_files\` (folder は同じ解決順) / \`drive_list_folders\` でリスト / \`drive_set_default_folder\` で記憶
 - ✅ **WordPress 投稿** → \`wordpress_publish\` (複数サイト登録時は agent override に従う / 明示は input.site_id)
 - ✅ **Slack 投稿 (複数チャンネル)** → \`notify_slack\` の input.channel で「#sales」「営業」など名前指定可、未指定なら agent default → user default の順
+- ✅ **SNS 投稿 (X / Threads / LinkedIn / FB / Reddit / Bluesky 等)** ← 解決順:
+    1. Buffer 接続済なら → \`buffer_post\` で自動投稿 (Buffer 経由で全 SNS 同時可)
+    2. Buffer 未接続なら → \`share_to_sns\` で intent URL ボタンを表示し、**ユーザーが 1 タップで投稿** (設定不要・無料・無制限)
+  「X に投稿して」「Threads にも」等のリクエストで使う。share_to_sns は zero-setup で動くので、明示的に「Buffer 経由で」と指定されない限り **share_to_sns を優先** すること。
 - ✅ 予定 → \`create_calendar_event\`
 - ✅ Web 調査 → \`web_search\` / \`web_fetch\` / \`web_screenshot\` / \`web_read_markdown\`
 - ✅ 要件が曖昧なら 「○○ですか? △△ですか?」と 1 問だけ聞く (空約束はしない)
@@ -9747,6 +9990,63 @@ async function handleAPI(req,res,pathname,method,ip){
         : (e.message||'').includes('exchange') ? 'token_exchange_failed'
         : 'unknown';
       res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason='+reason });
+      res.end();
+    }
+    return;
+  }
+
+  // ── Buffer OAuth (account-linking) ─────────────────────────
+  if(pathname === '/api/auth/buffer/start' && method === 'GET'){
+    if(!BUFFER_OAUTH_ID || !BUFFER_OAUTH_SEC){
+      res.writeHead(302, { Location: '/app.html?intg=buffer&error=not_configured' });
+      res.end(); return;
+    }
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const jwt = qs.get('token') || (req.headers.authorization||'').replace(/^Bearer\s+/i,'');
+    let uid = '';
+    try { uid = JWT.verify(jwt).userId; } catch(e){}
+    if(!uid){ res.writeHead(302, { Location:'/auth.html?next=/app.html' }); res.end(); return; }
+    const state = JWT.sign({ userId: uid, kind:'buffer_oauth', exp: Math.floor(Date.now()/1000) + 600 });
+    res.writeHead(302, { Location: bufferAuthURL(state) });
+    res.end(); return;
+  }
+  if(pathname === '/api/auth/buffer/callback' && method === 'GET'){
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const code = qs.get('code');
+    const stateRaw = qs.get('state');
+    if(qs.get('error') || !code || !stateRaw){
+      res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason='+encodeURIComponent(qs.get('error')||'no_code') });
+      res.end(); return;
+    }
+    let payload = null;
+    try { payload = JWT.verify(stateRaw); } catch(e){}
+    if(!payload || payload.kind !== 'buffer_oauth' || !payload.userId){
+      res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason=bad_state' });
+      res.end(); return;
+    }
+    try {
+      const tok = await bufferExchangeCode(code);
+      if(!tok || !tok.access_token) throw new Error('no_access_token');
+      let u = null;
+      try { u = await DB.findBy('id', payload.userId); } catch(e){}
+      if(!u){ res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason=user_not_found' }); res.end(); return; }
+      // Quick profile fetch for nicer UI display
+      let profileCount = 0;
+      try { const profiles = await bufferListProfiles(tok.access_token); profileCount = profiles.length; } catch(e){}
+      u.integrations = u.integrations || {};
+      u.integrations.buffer = {
+        type: 'oauth',
+        access_token: tok.access_token,
+        profile_count: profileCount,
+        connected_at: new Date().toISOString(),
+        flow: 'oauth',
+      };
+      await DB.save(u);
+      res.writeHead(302, { Location:'/app.html?intg=buffer&status=ok&profiles='+profileCount });
+      res.end();
+    } catch(e){
+      console.error('[Buffer OAuth] callback failed:', e.message);
+      res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason='+encodeURIComponent('exchange_failed') });
       res.end();
     }
     return;
@@ -16140,6 +16440,12 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeDriveSetDefaultFolderTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'wordpress_publish'){
               result = await executeWordPressPublishTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'share_to_sns'){
+              result = await executeShareToSnsTool(block.input||{});
+            } else if(block.name === 'buffer_list_profiles'){
+              result = await executeBufferListProfilesTool(payerUser);
+            } else if(block.name === 'buffer_post'){
+              result = await executeBufferPostTool(payerUser, block.input||{});
             } else if(block.name === 'generate_agent_promo_video'){
               const promoAgent = (block.input && block.input.tagline)
                 ? { ...(teamMemberAgent || agent), persona: String(block.input.tagline).slice(0,140) }

@@ -2662,37 +2662,60 @@ async function _callGeminiWithTools(messages, system, tools, toolChoice, info, c
 }
 
 // ── AI error recovery ──────────────────────────────────────
-// Pick a faster fallback model when the primary times out. Goal: hand the
-// user *something* rather than nothing when Opus/Sonnet takes > 2 min.
+// Pick a faster fallback model when the primary times out OR hits a quota
+// limit. Critical: gemini-flash → haiku is a CROSS-PROVIDER fallback so a
+// Gemini Free-tier quota hit doesn't kill the chat (separate quotas).
 function _fallbackModelFor(modelAlias){
   const a = String(modelAlias || '').toLowerCase();
   if(a === 'opus' || a === 'opus-4' || a === 'opus-4-7') return 'sonnet';
   if(a === 'sonnet' || a === 'sonnet-4-6') return 'haiku';
-  if(a === 'gemini-pro') return 'gemini-flash';
-  // Already the fastest tier — no further fallback.
+  if(a === 'gemini-pro' || a === 'gemini-2.5-pro') return 'gemini-flash';
+  if(a === 'gemini-flash' || a === 'gemini-2.5-flash') return 'haiku'; // ← cross-provider rescue
+  // haiku is the last-resort — already cheapest, no further fallback.
   return null;
 }
 // True when an error indicates a transient upstream issue worth retrying.
+// Now also catches Google "quota exceeded" messages from Gemini Free tier.
 function _isTransientAIError(err){
   const msg = String(err && err.message || err || '');
-  return /upstream timeout|ETIMEDOUT|ECONNRESET|socket hang up|Anthropic 5\d\d|Gemini 5\d\d|rate.?limit|429|503|504/i.test(msg);
+  return /upstream timeout|ETIMEDOUT|ECONNRESET|socket hang up|Anthropic 5\d\d|Gemini 5\d\d|rate.?limit|quota|exceeded|429|503|504/i.test(msg);
+}
+// Stronger signal — same-model retry is FUTILE when the upstream told us to
+// "retry in N seconds". Skip the same-model retry and go straight to fallback.
+function _isQuotaError(err){
+  const msg = String(err && err.message || err || '');
+  return /quota|exceeded|rate.?limit|429|Please retry in/i.test(msg);
 }
 
 async function callAI(messages,system,modelAlias,cacheAgent){
-  // Recovery wrapper: 1 silent retry on transient errors, then 1 fallback
-  // to a faster model. The original modelAlias is used until we run out.
+  // Recovery wrapper:
+  //   ・ Quota / rate-limit errors → skip same-model retry (futile), go to fallback
+  //   ・ Other transient errors → 1 silent retry on same model, then fallback
+  // The original modelAlias is used until we run out of fallbacks.
   let curModel = modelAlias;
   let attempt = 0;
   while(true){
     try {
       return await _callAIOnce(messages, system, curModel, cacheAgent);
     } catch(e){
-      if(_isTransientAIError(e) && attempt === 0){
+      const transient = _isTransientAIError(e);
+      const quota = _isQuotaError(e);
+      // Quota: jump straight to fallback (cross-provider has separate quota)
+      if(quota && attempt < 2){
+        const fb = _fallbackModelFor(curModel);
+        if(fb){
+          console.warn('[callAI] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
+          curModel = fb;
+          attempt = 2;
+          continue;
+        }
+      }
+      if(transient && attempt === 0){
         console.warn('[callAI] transient error, retrying same model:', String(e.message||e).slice(0,200));
         attempt = 1;
         continue;
       }
-      if(_isTransientAIError(e) && attempt === 1){
+      if(transient && attempt === 1){
         const fb = _fallbackModelFor(curModel);
         if(fb){
           console.warn('[callAI] retry timed out, falling back', curModel, '→', fb);
@@ -2751,12 +2774,23 @@ async function callAIStream(messages, system, onText, modelAlias, cacheAgent){
       const result = await _callAIStreamOnce(messages, system, wrappedOnText, curModel, cacheAgent);
       return result;
     } catch(e){
-      if(_isTransientAIError(e) && attempt === 0){
+      const transient = _isTransientAIError(e);
+      const quota = _isQuotaError(e);
+      if(quota && attempt < 2){
+        const fb = _fallbackModelFor(curModel);
+        if(fb){
+          console.warn('[callAIStream] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
+          curModel = fb;
+          attempt = 2;
+          continue;
+        }
+      }
+      if(transient && attempt === 0){
         console.warn('[callAIStream] transient, retrying same model:', String(e.message||e).slice(0,200));
         attempt = 1;
         continue;
       }
-      if(_isTransientAIError(e) && attempt === 1){
+      if(transient && attempt === 1){
         const fb = _fallbackModelFor(curModel);
         if(fb){
           console.warn('[callAIStream] retry timed out, fallback', curModel, '→', fb);
@@ -2870,12 +2904,23 @@ async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cache
     try {
       return await _callAIWithToolsOnce(messages, system, tools, toolChoice, curModel, cacheAgent);
     } catch(e){
-      if(_isTransientAIError(e) && attempt === 0){
+      const transient = _isTransientAIError(e);
+      const quota = _isQuotaError(e);
+      if(quota && attempt < 2){
+        const fb = _fallbackModelFor(curModel);
+        if(fb){
+          console.warn('[callAIWithTools] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
+          curModel = fb;
+          attempt = 2;
+          continue;
+        }
+      }
+      if(transient && attempt === 0){
         console.warn('[callAIWithTools] transient, retrying same model:', String(e.message||e).slice(0,200));
         attempt = 1;
         continue;
       }
-      if(_isTransientAIError(e) && attempt === 1){
+      if(transient && attempt === 1){
         const fb = _fallbackModelFor(curModel);
         if(fb){
           console.warn('[callAIWithTools] retry timed out, fallback', curModel, '→', fb);

@@ -97,6 +97,17 @@ function _integrationsCatalog(){
         oauth:{ start:'/api/auth/github/start' } }
     : { id:'github', name:'GitHub', logo:'🐙', group:'dev', desc:'PR/Issue/コードを AI が読み書き', flow:'form', priority:true, has_backend:true,
         fields:[{key:'pat', label:'Personal Access Token', type:'password', required:true, pattern:'^(ghp_|github_pat_|gho_|ghu_|ghs_)[A-Za-z0-9_]{20,}$', help:'github.com/settings/tokens?type=beta で発行 (Contents/Metadata/Issues = Read)'}] };
+  // Google: 6 services share a single OAuth flow. When GOOGLE_ID/SEC env is
+  // present (already required for Google sign-in), all 6 cards expose the
+  // same /api/auth/google-intg/start endpoint. One consent screen = all 6
+  // services connected.
+  const googleOauthOn = !!(GOOGLE_ID && GOOGLE_SEC);
+  function _googleEntry(id, name, logo, group, desc, priority){
+    return googleOauthOn
+      ? { id, name, logo, group, desc: desc + ' (Google Workspace 共通 OAuth)', flow:'oauth', priority: !!priority, has_backend:true,
+          oauth:{ start:'/api/auth/google-intg/start', bundle:'google' } }
+      : { id, name, logo, group, desc, flow:'oauth', priority: !!priority };
+  }
   return [
     // ── 開発 / インフラ ─────────────────────────
     githubEntry,
@@ -119,7 +130,7 @@ function _integrationsCatalog(){
 
     // ── ドキュメント / ナレッジ ───────────────────
     { id:'notion', name:'Notion', logo:'📝', group:'docs', desc:'ドキュメント / DB 読み書き', flow:'oauth', priority:true },
-    { id:'google_drive', name:'Google Drive', logo:'📁', group:'docs', desc:'ファイル横断検索・Docs/Sheets 作成', flow:'oauth', priority:true },
+    _googleEntry('google_drive', 'Google Drive', '📁', 'docs', 'ファイル横断検索・Docs/Sheets 作成', true),
     { id:'dropbox', name:'Dropbox', logo:'📦', group:'docs', desc:'ファイル取得・アップロード・共有リンク', flow:'oauth' },
     { id:'airtable', name:'Airtable', logo:'🗂️', group:'docs', desc:'DB / シートの読み書き', flow:'form',
       fields:[{key:'apiKey', label:'Personal Access Token', type:'password', required:true, help:'airtable.com/create/tokens'}] },
@@ -138,14 +149,14 @@ function _integrationsCatalog(){
     { id:'zoom', name:'Zoom', logo:'🎥', group:'chat', desc:'会議録画・文字起こし・予定作成', flow:'oauth' },
 
     // ── メール ───────────────────────────────
-    { id:'gmail', name:'Gmail', logo:'📧', group:'mail', desc:'受信箱検索・自動返信', flow:'oauth', priority:true },
+    _googleEntry('gmail', 'Gmail', '📧', 'mail', '受信箱検索・自動返信', true),
     { id:'resend', name:'Resend', logo:'💌', group:'mail', desc:'モダン送信 API・月 3,000 通無料', flow:'form', priority:true,
       fields:[{key:'apiKey', label:'API Key', type:'password', required:true, pattern:'^re_', help:'resend.com/api-keys'}] },
     { id:'sendgrid', name:'SendGrid', logo:'📨', group:'mail', desc:'大量配信・トランザクション送信', flow:'form',
       fields:[{key:'apiKey', label:'API Key', type:'password', required:true, pattern:'^SG\\.', help:'app.sendgrid.com/settings/api_keys'}] },
 
     // ── カレンダー / タスク ──────────────────────
-    { id:'google_calendar', name:'Google Calendar', logo:'📆', group:'cal', desc:'予定登録・空き時間提案', flow:'oauth', priority:true },
+    _googleEntry('google_calendar', 'Google Calendar', '📆', 'cal', '予定登録・空き時間提案', true),
     { id:'linear', name:'Linear', logo:'📐', group:'cal', desc:'Issue 作成・進捗管理', flow:'oauth', priority:true },
     { id:'cal_com', name:'Cal.com', logo:'🗓️', group:'cal', desc:'予約リンク生成・空き時間公開', flow:'form',
       fields:[{key:'apiKey', label:'API Key', type:'password', required:true, help:'app.cal.com/settings/developer/api-keys'}] },
@@ -169,7 +180,7 @@ function _integrationsCatalog(){
     // ── SNS ─────────────────────────────────
     { id:'twitter', name:'X (Twitter)', logo:'𝕏', group:'sns', desc:'投稿・スレッド・DM 自動応答', flow:'oauth', priority:true },
     { id:'linkedin', name:'LinkedIn', logo:'💼', group:'sns', desc:'B2B 投稿・つながり管理', flow:'oauth', priority:true },
-    { id:'youtube', name:'YouTube', logo:'▶️', group:'sns', desc:'動画アップロード・字幕生成', flow:'oauth' },
+    _googleEntry('youtube', 'YouTube', '▶️', 'sns', '動画アップロード・字幕生成', false),
     { id:'instagram', name:'Instagram', logo:'📷', group:'sns', desc:'投稿・ストーリーズ・コメント返信', flow:'oauth' },
     { id:'threads', name:'Threads', logo:'🧵', group:'sns', desc:'Instagram 連動の投稿', flow:'oauth' },
     { id:'reddit', name:'Reddit', logo:'🤖', group:'sns', desc:'投稿・コメント・サブレディット監視', flow:'oauth' },
@@ -187,11 +198,11 @@ function _integrationsCatalog(){
       fields:[{key:'accessToken', label:'Access Token', type:'password', required:true}] },
 
     // ── アナリティクス / マーケ ──────────────────
-    { id:'ga4', name:'Google Analytics 4', logo:'📈', group:'data', desc:'トラフィック分析・コンバージョン', flow:'oauth', priority:true },
+    _googleEntry('ga4', 'Google Analytics 4', '📈', 'data', 'トラフィック分析・コンバージョン', true),
     { id:'posthog', name:'PostHog', logo:'🎯', group:'data', desc:'プロダクト分析・ファネル可視化', flow:'form',
       fields:[{key:'apiKey', label:'Project API Key', type:'password', required:true},
               {key:'host', label:'Host (省略可)', type:'url', required:false}] },
-    { id:'search_console', name:'Search Console', logo:'🔍', group:'data', desc:'SEO 検索クエリ・順位', flow:'oauth' },
+    _googleEntry('search_console', 'Search Console', '🔍', 'data', 'SEO 検索クエリ・順位', false),
     { id:'plausible', name:'Plausible', logo:'📉', group:'data', desc:'プライバシー重視のシンプル解析', flow:'form',
       fields:[{key:'apiKey', label:'API Key', type:'password', required:true},
               {key:'siteId', label:'Site ID', type:'text', required:true}] },
@@ -230,10 +241,33 @@ const INTEGRATION_GROUP_LABELS = {
 // Returns { connected, account? } for a single service. Reads legacy fields
 // (user.github_pat, user.outgoing_webhooks.{slack,discord}) so MIGRATING
 // users see their existing setup reflected as ✓ Connected without re-entry.
+// Google Workspace bundle — these 6 service IDs all share one OAuth flow.
+// When user.integrations.google is populated, all 6 are marked connected.
+const GOOGLE_BUNDLE_IDS = new Set(['gmail','google_calendar','google_drive','ga4','youtube','search_console']);
+
 function _getIntegrationStatus(user, id){
   if(!user) return { connected: false };
   if(id === 'github'){
     if(user.github_pat) return { connected: true, account: user.github_login || '' };
+    return { connected: false };
+  }
+  // Google bundle: any of the 6 service IDs reads from user.integrations.google.
+  // Also surface backward-compat with the older google_oauth field (set when
+  // user paired Sheets via the legacy /api/google/sheets flow).
+  if(GOOGLE_BUNDLE_IDS.has(id)){
+    const g = user.integrations && user.integrations.google;
+    if(g && g.access_token){
+      return { connected: true, account: g.email || '' };
+    }
+    // Legacy: Sheets-only token gives a partial connection — flag Calendar
+    // and Drive (Sheets is covered by sheets scope) as connected.
+    if(user.google_oauth && user.google_oauth.access_token){
+      // The legacy scope was sheets + calendar. We don't know if it included
+      // gmail/drive/ga4/yt/sc, so only mark gmail-adjacent ones if scopes match.
+      const scope = String(user.google_oauth.scope || '');
+      if((id === 'google_calendar') && scope.includes('calendar')) return { connected: true, account: g && g.email || '' };
+      if((id === 'google_drive') && scope.includes('drive')) return { connected: true };
+    }
     return { connected: false };
   }
   if(id === 'slack' && user.outgoing_webhooks && user.outgoing_webhooks.slack){
@@ -5541,6 +5575,54 @@ async function getValidGoogleAccessToken(user){
   return user.google_oauth.access_token;
 }
 
+// ── GOOGLE WORKSPACE OAUTH (account-linking, 6-in-1) ────────────
+// Single OAuth flow that requests scopes for all 6 Google services in the
+// integrations catalog: Gmail / Calendar / Drive / GA4 / YouTube / Search
+// Console. Reuses GOOGLE_CLIENT_ID/SECRET (already set on Render for login),
+// so kota only needs to add the new callback URL to the OAuth client.
+const GOOGLE_INTG_SCOPES = [
+  'openid', 'email', 'profile',
+  'https://www.googleapis.com/auth/gmail.modify',          // Gmail: read, send, drafts, labels
+  'https://www.googleapis.com/auth/calendar',              // Calendar: full
+  'https://www.googleapis.com/auth/drive',                 // Drive: full
+  'https://www.googleapis.com/auth/spreadsheets',          // Sheets (mirrors existing google_oauth)
+  'https://www.googleapis.com/auth/analytics.readonly',    // GA4
+  'https://www.googleapis.com/auth/youtube',               // YouTube: full
+  'https://www.googleapis.com/auth/webmasters.readonly',   // Search Console
+].join(' ');
+function googleIntgAuthURL(stateJwt){
+  const params = new URLSearchParams({
+    client_id: GOOGLE_ID,
+    redirect_uri: `${APP_URL}/api/auth/google-intg/callback`,
+    response_type: 'code',
+    scope: GOOGLE_INTG_SCOPES,
+    access_type: 'offline',     // request refresh_token
+    prompt: 'consent',          // force re-consent so refresh_token comes back even on re-link
+    state: stateJwt,
+    include_granted_scopes: 'true',
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+async function googleIntgExchangeCode(code){
+  const r = await httpsReq('POST', 'oauth2.googleapis.com', '/token',
+    { 'Content-Type':'application/x-www-form-urlencoded' },
+    new URLSearchParams({
+      code,
+      client_id: GOOGLE_ID,
+      client_secret: GOOGLE_SEC,
+      redirect_uri: `${APP_URL}/api/auth/google-intg/callback`,
+      grant_type: 'authorization_code',
+    }).toString());
+  if(r.s !== 200) throw new Error('Google integration token exchange failed: ' + JSON.stringify(r.d).slice(0,200));
+  return r.d; // { access_token, refresh_token, expires_in, scope, ... }
+}
+async function googleIntgFetchUser(accessToken){
+  const r = await httpsReq('GET', 'www.googleapis.com', '/oauth2/v2/userinfo',
+    { 'Authorization':'Bearer '+accessToken }, null);
+  if(r.s !== 200) throw new Error('Google userinfo failed');
+  return r.d;
+}
+
 // ── GITHUB OAUTH (account-linking, not signup) ──────────────────
 // Used by the integrations catalog GitHub card. The state token is a short-
 // lived JWT carrying the caller's userId so the callback knows whose account
@@ -8381,6 +8463,103 @@ async function handleAPI(req,res,pathname,method,ip){
       res.end(); return;
     }
     res.writeHead(302,{Location:googleAuthURL()});res.end();return;
+  }
+
+  // ── GET /api/auth/google-intg/start ────────────────────────
+  // Account-linking OAuth start for the Google Workspace 6-in-1 integration.
+  // Reuses the same GOOGLE_CLIENT_ID/SECRET as Google sign-in but requests a
+  // much wider scope set covering all 6 Google services in the catalog.
+  if(pathname === '/api/auth/google-intg/start' && method === 'GET'){
+    if(!GOOGLE_ID || !GOOGLE_SEC){
+      res.writeHead(302,{Location:'/app.html?intg=google&error=not_configured'});
+      res.end(); return;
+    }
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const tokenQ = qs.get('token') || '';
+    const tokenH = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const jwt = tokenQ || tokenH;
+    let uid = '';
+    try { const p = JWT.verify(jwt); uid = p && p.userId; } catch(e){}
+    if(!uid){
+      res.writeHead(302,{Location:'/auth.html?next=/app.html'});
+      res.end(); return;
+    }
+    const state = JWT.sign({ userId: uid, kind: 'g_intg_oauth', exp: Math.floor(Date.now()/1000) + 600 });
+    res.writeHead(302, { Location: googleIntgAuthURL(state) });
+    res.end();
+    return;
+  }
+
+  // ── GET /api/auth/google-intg/callback ─────────────────────
+  if(pathname === '/api/auth/google-intg/callback' && method === 'GET'){
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const code = qs.get('code');
+    const stateRaw = qs.get('state');
+    const oauthErr = qs.get('error');
+    if(oauthErr){
+      console.error('[Google Integration OAuth] error:', oauthErr);
+      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason='+encodeURIComponent(oauthErr) });
+      res.end(); return;
+    }
+    if(!code || !stateRaw){
+      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason=no_code' });
+      res.end(); return;
+    }
+    let payload = null;
+    try { payload = JWT.verify(stateRaw); } catch(e){}
+    if(!payload || payload.kind !== 'g_intg_oauth' || !payload.userId){
+      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason=bad_state' });
+      res.end(); return;
+    }
+    try {
+      const tok = await googleIntgExchangeCode(code);
+      const accessToken = tok && tok.access_token;
+      const refreshToken = tok && tok.refresh_token;
+      const scope = (tok && tok.scope) || '';
+      const expiresIn = (tok && tok.expires_in) || 3600;
+      if(!accessToken) throw new Error('no_access_token');
+      const gUser = await googleIntgFetchUser(accessToken);
+      let user = null;
+      try { user = await DB.findBy('id', payload.userId); } catch(e){}
+      if(!user){
+        res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason=user_not_found' });
+        res.end(); return;
+      }
+      user.integrations = user.integrations || {};
+      user.integrations.google = {
+        type: 'oauth',
+        access_token: accessToken,
+        refresh_token: refreshToken || (user.integrations.google && user.integrations.google.refresh_token) || '',
+        scope,
+        email: (gUser && gUser.email) || '',
+        name: (gUser && gUser.name) || '',
+        picture: (gUser && gUser.picture) || '',
+        expires_at: Date.now() + expiresIn * 1000,
+        connected_at: new Date().toISOString(),
+        flow: 'oauth',
+      };
+      // Backward compat: existing Sheets / Calendar tools read user.google_oauth.
+      // Mirror the new token there so legacy flows keep working without rewiring.
+      user.google_oauth = {
+        ...(user.google_oauth || {}),
+        access_token: accessToken,
+        refresh_token: refreshToken || (user.google_oauth && user.google_oauth.refresh_token) || '',
+        scope,
+        expires_at: Date.now() + expiresIn * 1000,
+      };
+      user.google_sheets_connected = true;
+      await DB.save(user);
+      res.writeHead(302, { Location:'/app.html?intg=google&status=ok&email='+encodeURIComponent((gUser&&gUser.email)||'') });
+      res.end();
+    } catch(e){
+      console.error('[Google Integration OAuth] callback failed:', e.message);
+      const reason = (e.message||'').includes('no_access_token') ? 'no_token'
+        : (e.message||'').includes('exchange') ? 'token_exchange_failed'
+        : 'unknown';
+      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason='+reason });
+      res.end();
+    }
+    return;
   }
 
   // ── GET /api/auth/github/start ─────────────────────────────

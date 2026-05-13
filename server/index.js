@@ -9705,6 +9705,9 @@ async function handleAPI(req,res,pathname,method,ip){
         id: s.id, name: s.name, logo: s.logo, group: s.group, desc: s.desc,
         flow: s.flow, fields: s.fields || null, oauth: s.oauth || null,
         priority: !!s.priority,
+        // has_backend tells the UI whether to show the 1-click button or the
+        // "setup pending" notice for OAuth services. Critical for github.
+        has_backend: !!s.has_backend,
         status: st,
       };
     });

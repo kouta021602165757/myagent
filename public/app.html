@@ -14431,7 +14431,45 @@ function _intgOpen(id){
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:24px';
 
   var body = '';
-  if(s.flow === 'zapier_multi'){
+  // Slack multi-channel modal — list + add (named webhook URLs)
+  if(s.id === 'slack'){
+    body =
+      '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">複数チャンネルを登録できます。AI が <code>notify_slack</code> を呼ぶ際は <b>input.channel</b> で名前指定可。各エージェントに既定チャンネルを紐付けることもできます。</div>'
+      + '<div style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'
+      +   '<b style="color:var(--text)">📖 Incoming Webhook URL の取り方</b><br>'
+      +   '<a href="https://api.slack.com/messaging/webhooks" target="_blank" style="color:var(--peach-dark);font-weight:700">Slack で Incoming Webhook を作成 →</a> 投稿先チャンネルを選んで URL を取得'
+      + '</div>'
+      + '<div style="font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:8px">📋 登録済みチャンネル <span id="slackCount" style="font-size:10px;color:var(--text3);font-weight:700">読込中…</span></div>'
+      + '<div id="slackList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"><div style="font-size:11.5px;color:var(--text3);padding:10px;background:var(--cream);border-radius:8px;text-align:center">読込中…</div></div>'
+      + '<div style="border-top:1px dashed var(--wire2);padding-top:14px">'
+      +   '<div style="font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:8px">＋ チャンネルを追加</div>'
+      +   '<input id="slackAddName" placeholder="名前 (例: #sales / 営業 / general)" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
+      +   '<input id="slackAddUrl" type="url" placeholder="https://hooks.slack.com/services/..." style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
+      +   '<button onclick="_slackChAdd()" style="width:100%;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このチャンネルを追加</button>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
+  } else if(s.flow === 'wp_multi'){
+    // WordPress multi-site
+    body =
+      '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">複数の WordPress サイトを登録できます。各エージェントに専用サイトを紐付けて「Blog AI はブログ A、メディア AI はサイト B」のような運用が可能。</div>'
+      + '<div style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'
+      +   '<b style="color:var(--text)">📖 Application Password の取り方</b><br>'
+      +   '1. WordPress ダッシュボード → ユーザー → プロフィール<br>'
+      +   '2. ページ下部「Application Passwords」セクション<br>'
+      +   '3. 名前 (例: "MY AI Agent") を入れて Add → 表示されたパスワードをコピー'
+      + '</div>'
+      + '<div style="font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:8px">📋 登録済みサイト <span id="wpCount" style="font-size:10px;color:var(--text3);font-weight:700">読込中…</span></div>'
+      + '<div id="wpList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"><div style="font-size:11.5px;color:var(--text3);padding:10px;background:var(--cream);border-radius:8px;text-align:center">読込中…</div></div>'
+      + '<div style="border-top:1px dashed var(--wire2);padding-top:14px">'
+      +   '<div style="font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:8px">＋ WordPress サイトを追加</div>'
+      +   '<input id="wpAddName" placeholder="名前 (例: メインブログ / 案件 A)" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
+      +   '<input id="wpAddUrl" type="url" placeholder="https://example.com" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:6px">'
+      +   '<input id="wpAddUser" placeholder="WordPress ユーザー名" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
+      +   '<input id="wpAddPw" type="password" placeholder="Application Password" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
+      +   '<button onclick="_wpSiteAdd()" style="width:100%;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このサイトを追加</button>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
+  } else if(s.flow === 'zapier_multi'){
     // Zapier: multi-webhook. Render a list of registered Zaps + an add form.
     // List is fetched async after the modal is mounted.
     body =
@@ -14552,6 +14590,8 @@ function _intgOpen(id){
   document.body.appendChild(ov);
   // Zapier-specific: hydrate the list of registered Zaps after mount
   if(s.flow === 'zapier_multi'){ setTimeout(_zapierLoadList, 0); }
+  if(s.id === 'slack'){ setTimeout(_slackChLoadList, 0); }
+  if(s.flow === 'wp_multi'){ setTimeout(_wpSitesLoadList, 0); }
 }
 
 // ── Zapier multi-webhook helpers ─────────────────────────
@@ -14633,6 +14673,114 @@ async function _zapierDelete(id){
 function _intgClose(){
   var ov = document.getElementById('intgModal');
   if(ov) ov.remove();
+}
+
+// ── Slack multi-channel helpers ─────────────────────────────
+async function _slackChLoadList(){
+  var listEl = document.getElementById('slackList');
+  var countEl = document.getElementById('slackCount');
+  if(!listEl) return;
+  try {
+    var r = await api('GET', '/api/me/integrations/slack/webhooks');
+    var ws = (r && r.webhooks) || [];
+    if(countEl) countEl.textContent = '(' + ws.length + ')';
+    if(!ws.length){ listEl.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:12px;background:var(--cream);border-radius:8px;text-align:center">まだチャンネル未登録。下のフォームから追加してください。</div>'; return; }
+    listEl.innerHTML = ws.map(function(w){
+      return ''
+        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
+        +   '<div style="width:30px;height:30px;border-radius:7px;background:#4a154b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">💬</div>'
+        +   '<div style="flex:1;min-width:0">'
+        +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.name)+(w.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(251,146,60,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
+        +     '<div style="font-size:9.5px;color:var(--text3);margin-top:1px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.url_preview||'')+'</div>'
+        +   '</div>'
+        +   (w.is_default ? '' : '<button onclick="_slackChDefault(\''+esc(w.id)+'\')" title="既定にする" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
+        +   '<button onclick="_slackChDelete(\''+esc(w.id)+'\')" title="削除" style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
+        + '</div>';
+    }).join('');
+  } catch(e){
+    listEl.innerHTML = '<div style="font-size:11px;color:#dc2626;padding:8px">読込失敗: '+esc(e.message||'')+'</div>';
+  }
+}
+async function _slackChAdd(){
+  var name = (document.getElementById('slackAddName').value||'').trim();
+  var url = (document.getElementById('slackAddUrl').value||'').trim();
+  if(!name){ showToast('名前を入力','ng'); return; }
+  if(!/^https:\/\/hooks\.slack\.com\//.test(url)){ showToast('https://hooks.slack.com/... 形式の URL を','ng'); return; }
+  try {
+    await api('POST', '/api/me/integrations/slack/webhooks', { name, url });
+    document.getElementById('slackAddName').value = '';
+    document.getElementById('slackAddUrl').value = '';
+    showToast('✓ 追加','ok'); _slackChLoadList();
+    if(typeof _loadIntegrations === 'function') _loadIntegrations();
+  } catch(e){ showToast((e.message||'失敗'),'ng'); }
+}
+async function _slackChDelete(id){
+  if(!confirm('このチャンネルを削除?')) return;
+  try {
+    await api('DELETE', '/api/me/integrations/slack/webhooks/'+id);
+    showToast('削除','ok'); _slackChLoadList();
+    if(typeof _loadIntegrations === 'function') _loadIntegrations();
+  } catch(e){ showToast((e.message||'失敗'),'ng'); }
+}
+async function _slackChDefault(id){
+  try {
+    await api('POST', '/api/me/integrations/slack/default', { id });
+    showToast('✓ 既定に設定','ok'); _slackChLoadList();
+  } catch(e){ showToast((e.message||'失敗'),'ng'); }
+}
+
+// ── WordPress multi-site helpers ────────────────────────────
+async function _wpSitesLoadList(){
+  var listEl = document.getElementById('wpList');
+  var countEl = document.getElementById('wpCount');
+  if(!listEl) return;
+  try {
+    var r = await api('GET', '/api/me/integrations/wordpress/sites');
+    var sites = (r && r.sites) || [];
+    if(countEl) countEl.textContent = '(' + sites.length + ')';
+    if(!sites.length){ listEl.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:12px;background:var(--cream);border-radius:8px;text-align:center">まだサイト未登録。下のフォームから追加してください。</div>'; return; }
+    listEl.innerHTML = sites.map(function(s){
+      return ''
+        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
+        +   '<div style="width:30px;height:30px;border-radius:7px;background:#21759b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">W</div>'
+        +   '<div style="flex:1;min-width:0">'
+        +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+(s.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(251,146,60,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
+        +     '<div style="font-size:10px;color:var(--text3);margin-top:1px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.siteUrl)+' · @'+esc(s.username||'')+'</div>'
+        +   '</div>'
+        +   (s.is_default ? '' : '<button onclick="_wpSiteDefault(\''+esc(s.id)+'\')" title="既定にする" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
+        +   '<button onclick="_wpSiteDelete(\''+esc(s.id)+'\')" title="削除" style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
+        + '</div>';
+    }).join('');
+  } catch(e){
+    listEl.innerHTML = '<div style="font-size:11px;color:#dc2626;padding:8px">読込失敗: '+esc(e.message||'')+'</div>';
+  }
+}
+async function _wpSiteAdd(){
+  var name = (document.getElementById('wpAddName').value||'').trim();
+  var siteUrl = (document.getElementById('wpAddUrl').value||'').trim();
+  var username = (document.getElementById('wpAddUser').value||'').trim();
+  var appPassword = (document.getElementById('wpAddPw').value||'').trim();
+  if(!name || !siteUrl || !username || !appPassword){ showToast('全項目入力してください','ng'); return; }
+  try {
+    await api('POST', '/api/me/integrations/wordpress/sites', { name, siteUrl, username, appPassword });
+    ['wpAddName','wpAddUrl','wpAddUser','wpAddPw'].forEach(function(id){ var el = document.getElementById(id); if(el) el.value = ''; });
+    showToast('✓ 追加','ok'); _wpSitesLoadList();
+    if(typeof _loadIntegrations === 'function') _loadIntegrations();
+  } catch(e){ showToast((e.message||'失敗'),'ng'); }
+}
+async function _wpSiteDelete(id){
+  if(!confirm('このサイトを削除?')) return;
+  try {
+    await api('DELETE', '/api/me/integrations/wordpress/sites/'+id);
+    showToast('削除','ok'); _wpSitesLoadList();
+    if(typeof _loadIntegrations === 'function') _loadIntegrations();
+  } catch(e){ showToast((e.message||'失敗'),'ng'); }
+}
+async function _wpSiteDefault(id){
+  try {
+    await api('POST', '/api/me/integrations/wordpress/default', { id });
+    showToast('✓ 既定に設定','ok'); _wpSitesLoadList();
+  } catch(e){ showToast((e.message||'失敗'),'ng'); }
 }
 
 async function _intgSave(id){

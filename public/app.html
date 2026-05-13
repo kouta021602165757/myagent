@@ -14478,26 +14478,40 @@ function _intgOpen(id){
       //    where Webhooks-by-Zapier + the target service are pre-selected, so
       //    the user can pick a ready-made template instead of building from
       //    scratch. Much friendlier for non-Zapier users.
-      + '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:.02em">🎯 ワンクリックで始める — 人気のテンプレート</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px">'
-      +   _zapTplCard('🐦', 'X 投稿 (Buffer 経由)', 'buffer', 'X / Threads / IG 一斉投稿')
+      // SNS 投稿セクションを最初に独立して見せる — ユーザーが「X や Threads
+      // どこから設定する?」で迷わないように、サービス名を直接クリッカブルに。
+      + '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:.02em">📱 SNS に AI から投稿する</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.55">どれをクリックしても、Zapier の準備済みテンプレ一覧が新タブで開きます。X / Threads / IG / FB / TikTok は <b>Buffer 経由</b> がおすすめ (1 アカで 7 SNS 一括)。</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:8px;margin-bottom:14px">'
+      +   _zapTplCard('🐦', 'X (Twitter)', 'buffer', 'Buffer 経由')
+      +   _zapTplCard('🧵', 'Threads', 'buffer', 'Buffer 経由')
+      +   _zapTplCard('📷', 'Instagram', 'buffer', 'Buffer 経由')
+      +   _zapTplCard('💼', 'LinkedIn', 'linkedin', '直接 or Buffer')
+      +   _zapTplCard('📘', 'Facebook', 'facebook-pages', 'Pages 直接')
+      +   _zapTplCard('▶️', 'YouTube', 'youtube', '動画 / コメント')
+      +   _zapTplCard('🎵', 'TikTok', 'tiktok-for-business', 'Business アカ必須')
+      +   _zapTplCard('📌', 'Pinterest', 'pinterest', '直接')
+      +   _zapTplCard('🐘', 'Mastodon', 'mastodon', '直接')
+      +   _zapTplCard('🦋', 'Bluesky', 'bluesky', '新興 SNS')
+      +   _zapTplCard('🎮', 'Discord', 'discord', 'コミュニティ通知')
+      +   _zapTplCard('📦', 'Buffer まとめ', 'buffer', 'SNS ハブ')
+      + '</div>'
+      + '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:.02em;margin-top:14px">💼 他のサービス</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:8px;margin-bottom:12px">'
       +   _zapTplCard('💬', 'Slack 通知', 'slack', '#general に AI から通知')
-      +   _zapTplCard('📋', 'Google Sheets', 'google-sheets', '行追加 / 検索 / 集計')
-      +   _zapTplCard('📧', 'Gmail 送信', 'gmail', '本文を AI に書かせて送る')
-      +   _zapTplCard('💼', 'LinkedIn 投稿', 'linkedin', 'B2B 向け SNS')
-      +   _zapTplCard('📷', 'Instagram 投稿', 'instagram-for-business', 'Business アカウント必須')
-      +   _zapTplCard('📝', 'Notion ページ作成', 'notion', 'AI に議事録を保存')
-      +   _zapTplCard('🎮', 'Discord 通知', 'discord', 'コミュニティに告知')
-      +   _zapTplCard('📋', 'Trello カード', 'trello', 'タスクを自動追加')
+      +   _zapTplCard('📋', 'Google Sheets', 'google-sheets', '行追加 / 検索')
+      +   _zapTplCard('📧', 'Gmail 送信', 'gmail', '本文を AI に書かせる')
+      +   _zapTplCard('📝', 'Notion', 'notion', '議事録を保存')
+      +   _zapTplCard('📋', 'Trello', 'trello', 'タスクを自動追加')
       +   _zapTplCard('📬', 'Mailchimp', 'mailchimp', 'メルマガ送信')
       +   _zapTplCard('🗂️', 'Airtable', 'airtable', 'DB に行追加')
       +   _zapTplCard('🚀', 'HubSpot CRM', 'hubspot', 'リード自動追加')
       + '</div>'
-      + '<div style="background:#fff7ee;border:1px solid #fed7aa;border-radius:9px;padding:11px 13px;font-size:11.5px;color:#9a3412;line-height:1.6;margin-bottom:14px">'
-      +   '<b style="color:#7c2d12">🐦 X (Twitter) 投稿について</b><br>'
-      +   '<span style="font-size:11px">2023 年 8 月以降、Zapier は X API 料金変更により <b>直接の X 連携を廃止</b>。代わりに <b>Buffer 経由</b> で X 投稿が可能です (Buffer 無料プラン: 3 SNS / 10 投稿先まで)。または <a href="https://www.make.com/en/integrations/twitter" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Make.com</a> でも可能。</span>'
+      + '<div style="background:#fff7ee;border:1px solid #fed7aa;border-radius:9px;padding:11px 13px;font-size:11.5px;color:#9a3412;line-height:1.55;margin-bottom:14px">'
+      +   '<b style="color:#7c2d12">🐦 X / Threads / IG はなぜ Buffer 経由?</b><br>'
+      +   '<span style="font-size:11px">X は 2023 年 8 月に Zapier 直接連携を廃止 (API 有料化の影響)。Threads / Instagram も Meta が API 制限中。<b>Buffer</b> は X / Threads / IG / FB / LinkedIn / Pinterest / TikTok と直接契約済なので、Buffer 無料登録 → MY AI Agent → Buffer → 各 SNS の経路で動きます。<a href="https://buffer.com/" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Buffer 無料登録 →</a> (3 SNS / 10 投稿先まで無料)</span>'
       + '</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;padding-left:6px;border-left:2px solid var(--wire2)">クリックすると Zapier の準備済みテンプレート一覧が新しいタブで開きます。Zap を公開後、画面に出る Catch Hook URL を ↓ 下のフォームに貼り付けてください。</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;padding-left:6px;border-left:2px solid var(--wire2)">クリックすると Zapier の準備済みテンプレート一覧が新タブで開きます。Zap を公開後、画面に出る Catch Hook URL を ↓ 下のフォームに貼り付けてください。</div>'
       + '<div style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'
       +   '<details><summary style="cursor:pointer;font-weight:800;color:var(--text);list-style:none">📖 詳しい手順を見る (4 ステップ)</summary>'
       +   '<div style="margin-top:8px">'

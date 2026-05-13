@@ -1457,8 +1457,11 @@ function _trimHistory(messages){
 // with _summary:true. The archived raw turns move to agent.history_archive
 // for "全履歴を見る" UI access. Cuts input tokens by ~60-70% in long chats
 // and prevents the "途中で記憶が飛ぶ" effect we kept hearing about.
-const SUMMARY_TRIGGER = 40;
-const SUMMARY_BATCH   = 20;
+// Trigger lowered from 40→20 (and batch 20→10) to fold sooner — long
+// chats were costing 5-15k extra input tokens per turn before the first
+// fold ever fired.
+const SUMMARY_TRIGGER = 20;
+const SUMMARY_BATCH   = 10;
 async function _summarizeOldHistory(agent){
   try {
     if(!agent || !Array.isArray(agent.history)) return false;
@@ -2291,6 +2294,96 @@ function _autoPickModel(message, agent){
   const joiners = (raw.match(/(そして|それから|あと|また|and then|after that|\+)/gi)||[]).length;
   if(joiners >= 2) return 'sonnet';
   return 'gemini-flash';
+}
+
+// Intent classifier — keyword-based detection of which tool category the user
+// is asking for. Output drives system-prompt slimming + tool filtering so we
+// only send instructions / tools relevant to the current turn instead of the
+// kitchen sink. Cuts prompt size by 40–70% on typical chats.
+//
+// Categories:
+//   sns      — share_to_sns, buffer_post, notify_slack, notify_discord
+//   content  — create_artifact, edit_artifact, generate_image/video/pdf/chart/...
+//   research — web_search, web_fetch, web_screenshot, web_read_markdown
+//   email    — send_email
+//   calendar — create_calendar_event
+//   analytics— ga4_*
+//   docs     — drive_*, sheets_*
+//   github   — github_*
+//   routines — schedule_routine, list_routines, cancel_routine
+//   chat     — pure conversation, no tool likely
+//
+// Returns an array of detected categories. Always includes 'chat' as a fallback.
+function _detectIntentCategories(message){
+  const m = String(message || '').toLowerCase();
+  const cats = new Set();
+  // SNS posting
+  if(/(投稿|つぶやき|tweet|post|スレッド|threads|linkedin|instagram|reddit|bluesky|mastodon|sns|share|x.*に|twitter)/i.test(m)) cats.add('sns');
+  // Slack / Discord
+  if(/(slack|スラック|discord|ディスコード|通知|notify|チャンネル|channel)/i.test(m)) cats.add('sns');
+  // Content / artifact creation
+  if(/(作って|作成|create|build|generate|画像|image|動画|video|pdf|chart|グラフ|diagram|図|qr|lp|ランディング|landing|サイト|モック|mock|デザイン|design|ロゴ|アイコン|illustration|illustration)/i.test(m)) cats.add('content');
+  // Web research
+  if(/(検索|search|調べ|research|最新|latest|news|ニュース|reviews|レビュー|fetch|アクセス|read.*page|web)/i.test(m)) cats.add('research');
+  // Email
+  if(/(メール|mail|email|送信|送って|送る|reply|返信)/i.test(m)) cats.add('email');
+  // Calendar
+  if(/(予定|スケジュール|schedule|calendar|カレンダー|会議|meeting|appointment|アポ|入れて|setup.*time)/i.test(m)) cats.add('calendar');
+  // Analytics
+  if(/(ga4|google analytics|アナリティクス|pv|page.?view|conversion|cvr|ctr|bounce|流入|データ.*分析|metrics)/i.test(m)) cats.add('analytics');
+  // Drive / Sheets
+  if(/(drive|ドライブ|フォルダ|folder|file|ファイル|sheets|シート|スプレッドシート|spreadsheet|google.*sheet)/i.test(m)) cats.add('docs');
+  // GitHub
+  if(/(github|pr|pull request|issue|コード|code.*read|repo|リポジトリ|commit)/i.test(m)) cats.add('github');
+  // Routines / schedules
+  if(/(毎朝|毎日|毎週|毎月|毎時|定期|cron|ルーチン|routine|タイマー|timer|何時に|スケジュール.*実行|自動.*実行)/i.test(m)) cats.add('routines');
+  // WordPress
+  if(/(wordpress|ワードプレス|ブログ|blog|記事|article|publish|公開)/i.test(m)) cats.add('content');
+  // Always include 'chat' as fallback so the AI can still respond conversationally
+  cats.add('chat');
+  return Array.from(cats);
+}
+
+// Tool name → intent category. Tools NOT in this map are always included
+// (web/sheets/extension/image/video/github/mcp + always-on basics).
+// When intent classification confidently says "this user wants X", we drop
+// schemas for unrelated tools to cut per-turn input tokens.
+const _TOOL_INTENT_MAP = Object.freeze({
+  // sns / notifications
+  notify_slack: 'sns',
+  notify_discord: 'sns',
+  zapier_run: 'sns',
+  share_to_sns: 'sns',
+  buffer_list_profiles: 'sns',
+  buffer_post: 'sns',
+  // email
+  send_email: 'email',
+  // analytics
+  ga4_list_properties: 'analytics',
+  ga4_query: 'analytics',
+  ga4_set_default: 'analytics',
+  // docs (Drive)
+  drive_list_folders: 'docs',
+  drive_search_files: 'docs',
+  drive_set_default_folder: 'docs',
+  // routines / scheduling
+  schedule_routine: 'routines',
+  list_routines: 'routines',
+  cancel_routine: 'routines',
+  // content publishing
+  wordpress_publish: 'content',
+});
+
+// Drop tools whose category is not in the detected intent set.
+// Tools without a mapped category pass through. `null` intentCats means
+// "no filtering" (safety fallback).
+function _filterToolsByIntent(tools, intentCats){
+  if(!intentCats || !intentCats.size) return tools;
+  return tools.filter(t => {
+    const cat = _TOOL_INTENT_MAP[t.name];
+    if(!cat) return true; // always-on
+    return intentCats.has(cat);
+  });
 }
 
 // Resolve a per-agent model alias to {provider, modelId, maxTokens}.
@@ -9358,6 +9451,10 @@ function buildSystem(agent, opts){
   const isGroup = !!(opts && opts.isGroup);
   const speakerName = (opts && opts.speakerName) || '';
   const memories = (opts && Array.isArray(opts.memories)) ? opts.memories : [];
+  // Intent categories (drives prompt slimming). Empty = include all (legacy).
+  const intentCats = (opts && Array.isArray(opts.intentCategories) && opts.intentCategories.length)
+    ? new Set(opts.intentCategories) : null;
+  const wants = (cat) => !intentCats || intentCats.has(cat);
   // Knowledge-base retrieval hits, already pre-selected by `_retrieveKbChunks`.
   // Each hit: { doc_name, text }. Injected before the persona so the AI treats
   // them as authoritative context.
@@ -9537,38 +9634,53 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
   3) 「ユーザーの要件を確認させてください」と聞き直す (具体的に何を作るか不明な場合のみ)
 3) を選ぶ場合も、"作ります" などの空約束は絶対に禁止。質問を 1 つ投げるだけ。` : '';
 
-  const deliveryRules = `
-
-【最重要：成果物の即時納品ルール — このルールは persona より優先】
-ユーザーが「作って / 作成して / 出して / 用意して / 送って / 完成させて / 見せて / make / create / build / send / generate / show me」のように依頼してきたら、**そのターン内に必ずツールを呼んで成果物を出す**こと。以下を厳禁:
-- ❌「作ります！」「今から作ります！」「完成したら連絡します！」「少々お待ちください」「今この瞬間に作成・送信します」だけ返してツールを呼ばない
-- ❌「完成しました！」と言いつつ実際の成果物 (URL / 画像 / ファイル) を出さない
-- ❌「完成までしばらくかかります」と先送り
-- ❌ 同じ「作ります」を繰り返すループ (あなたはこのループに陥りやすい — 常に警戒)
-
-ツール呼び出し = "今すぐここで実行"。"後で送る" という概念は存在しない — このターンを終えたら、あなたは次のユーザー発話まで完全に停止する。「完成したら送ります」「今から制作します」は技術的に不可能な嘘になる。
-
-正しい挙動:
-- ✅ LP / モック / デザイン / ダッシュボード / 計算機 / インタラクティブ図表 → \`create_artifact\` を今このメッセージで呼ぶ (HTML 1 ファイル)
-- ✅ **既存の artifact に追加・修正** (「成果物に追記」「ここを書き換えて」「リストに 100 件足して」など) → \`create_artifact\` ではなく必ず \`edit_artifact\` を使う。filename は直近 artifact URL (/generated/artifact-XXX.html) から抽出。全文再生成は禁止 (重い + タイムアウトの主因)。
-- ✅ 画像 → \`generate_image\` (\`style:'logo'\` で文字入り / \`'photo'\` で写真 / \`'illustration'\` でイラスト) / 動画 → \`generate_video\` / 音声 → \`generate_audio\`
-- ✅ 既存画像の編集 (背景差し替え / 要素追加・削除 / スタイル変更) → \`edit_image\` (直前 generate_image の URL を渡す)
-- ✅ PDF → \`generate_pdf\` / グラフ → \`generate_chart\` / 図 → \`generate_diagram\` / QR → \`generate_qr\`
-- ✅ メール → \`send_email\` / Slack → \`notify_slack\` / Discord → \`notify_discord\`
-- ✅ **定期実行スケジュール** (「毎朝 9 時に〜」「毎週金曜に〜」「毎時〜」など) → \`schedule_routine\` を **必ず呼ぶ** (口頭でやり方を説明するだけはダメ、ツールで登録する)
-- ✅ 登録済みルーティンの確認 → \`list_routines\` / 削除 → \`cancel_routine\`
-- ✅ **Google Analytics 4** → \`ga4_query\` (property は agent → user の順で自動解決、未設定なら \`ga4_list_properties\` でリスト → ユーザーに 1 つ選ばせて \`ga4_set_default\` で記憶)
-- ✅ **Google Drive** → \`drive_search_files\` (folder は同じ解決順) / \`drive_list_folders\` でリスト / \`drive_set_default_folder\` で記憶
-- ✅ **WordPress 投稿** → \`wordpress_publish\` (複数サイト登録時は agent override に従う / 明示は input.site_id)
-- ✅ **Slack 投稿 (複数チャンネル)** → \`notify_slack\` の input.channel で「#sales」「営業」など名前指定可、未指定なら agent default → user default の順
-- ✅ **SNS 投稿 (X / Threads / LinkedIn / FB / Reddit / Bluesky 等)** ← 解決順:
-    1. Buffer 接続済なら → \`buffer_post\` で自動投稿 (Buffer 経由で全 SNS 同時可)
-    2. Buffer 未接続なら → \`share_to_sns\` で intent URL ボタンを表示し、**ユーザーが 1 タップで投稿** (設定不要・無料・無制限)
-  「X に投稿して」「Threads にも」等のリクエストで使う。share_to_sns は zero-setup で動くので、明示的に「Buffer 経由で」と指定されない限り **share_to_sns を優先** すること。
-- ✅ 予定 → \`create_calendar_event\`
-- ✅ Web 調査 → \`web_search\` / \`web_fetch\` / \`web_screenshot\` / \`web_read_markdown\`
-- ✅ 要件が曖昧なら 「○○ですか? △△ですか?」と 1 問だけ聞く (空約束はしない)
-- ✅ できない要件なら「○○の理由でできません。代わりに△△ならできます」と即答 (先送りしない)`;
+  // deliveryRules is built dynamically based on intent categories so we only
+  // send the AI instructions relevant to the current turn (saves ~3-5k input
+  // tokens on typical chats vs. dumping every tool's docs).
+  const rules = [];
+  rules.push('【最重要：成果物の即時納品ルール — このルールは persona より優先】');
+  rules.push('ユーザーが「作って / 作成して / 出して / 用意して / 送って / 完成させて / 見せて / make / create / build / send / generate / show me」のように依頼してきたら、**そのターン内に必ずツールを呼んで成果物を出す**こと。');
+  rules.push('- ❌「作ります！」「完成したら連絡します！」だけ返してツールを呼ばない');
+  rules.push('- ❌「完成しました！」と言いつつ実際の成果物 (URL / 画像 / ファイル) を出さない');
+  rules.push('- ❌ 同じ「作ります」を繰り返すループ');
+  rules.push('');
+  rules.push('正しい挙動 (該当する場面のみ):');
+  if(wants('content')){
+    rules.push("- ✅ LP / モック / デザイン / ダッシュボード / 計算機 → `create_artifact` を今このメッセージで呼ぶ");
+    rules.push("- ✅ **既存 artifact に追記・修正** → `edit_artifact` を使う (全文再生成は禁止)");
+    rules.push("- ✅ 画像 → `generate_image` / 動画 → `generate_video` / 音声 → `generate_audio`");
+    rules.push("- ✅ 既存画像の編集 → `edit_image` (直前 URL を渡す)");
+    rules.push("- ✅ PDF → `generate_pdf` / グラフ → `generate_chart` / 図 → `generate_diagram` / QR → `generate_qr`");
+  }
+  if(wants('email')){
+    rules.push("- ✅ メール → `send_email`");
+  }
+  if(wants('sns')){
+    rules.push("- ✅ Slack → `notify_slack` (input.channel で名前指定可) / Discord → `notify_discord`");
+    rules.push("- ✅ **SNS 投稿 (X / Threads / LinkedIn / FB / Reddit 等)** ← Buffer 接続済なら `buffer_post`、未接続なら **`share_to_sns`** (zero-setup の intent URL ボタン)。デフォルトは `share_to_sns` を優先。");
+  }
+  if(wants('routines')){
+    rules.push("- ✅ **定期実行** (「毎朝 9 時に〜」等) → `schedule_routine` を必ず呼ぶ (口頭説明だけは禁止)");
+    rules.push("- ✅ 登録済みルーティンの確認 → `list_routines` / 削除 → `cancel_routine`");
+  }
+  if(wants('analytics')){
+    rules.push("- ✅ **GA4** → `ga4_query` (property 未設定なら `ga4_list_properties` → ユーザー選択 → `ga4_set_default`)");
+  }
+  if(wants('docs')){
+    rules.push("- ✅ **Drive** → `drive_search_files` (folder は agent→user で解決) / `drive_list_folders`");
+  }
+  if(wants('content')){
+    rules.push("- ✅ **WordPress 投稿** → `wordpress_publish` (複数サイト登録時は agent override に従う)");
+  }
+  if(wants('calendar')){
+    rules.push("- ✅ 予定 → `create_calendar_event`");
+  }
+  if(wants('research')){
+    rules.push("- ✅ Web 調査 → `web_search` / `web_fetch` / `web_screenshot` / `web_read_markdown`");
+  }
+  rules.push("- ✅ 要件が曖昧なら 「○○ですか? △△ですか?」と 1 問だけ聞く (空約束はしない)");
+  rules.push("- ✅ できない要件なら「○○できません。代わりに△△ならできます」と即答");
+  const deliveryRules = '\n' + rules.join('\n');
 
   // Per-agent context: open tasks + KPIs + relevant memories + playbook hits.
   // Pulled live from the agent record so chats feel like they remember
@@ -9576,34 +9688,32 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
   // scores memories / playbook against it for relevance.
   const agentCtx = _injectAgentContext(agent, { userQuery: (opts && opts.userQuery) || '' });
 
-  // Inline-CTA nudge: when an action requires an external service that
-  // hasn't been connected, the AI can emit `<connect:service_id>` once at
-  // the end of its reply. The frontend strips the marker and renders a
-  // "[🔌 X を接続]" button inline. Service IDs match the catalog
-  // (github, slack, wordpress, stripe, shopify, twitter, gmail, notion …).
-  const integrationsHint = `
+  // Inline-CTA nudge — only relevant when the turn involves external services.
+  // Skip on pure conversational turns to save tokens.
+  const needsIntegrations = wants('sns') || wants('email') || wants('analytics') || wants('docs') || wants('github') || wants('content');
+  const integrationsHint = needsIntegrations ? `
 
 【外部サービス連携 — inline 提案】
-ユーザーの依頼を実行するには未接続の外部サービス (GitHub / Slack / WordPress / Stripe / X / Notion / Shopify / Gmail / Google Calendar / Linear など) との連携が必要だと気付いた場合は、回答末尾に 1 度だけ次の形式で **接続マーカー** を出してください:
-- 例: \`<connect:github>\` ・ \`<connect:wordpress>\` ・ \`<connect:stripe>\`
-このマーカーは UI 側で「🔌 X を接続」ボタンに自動置換されます。マーカーは 1 メッセージにつき最大 2 個まで、不要な時は出さないこと。`;
+ユーザーの依頼を実行するために未接続のサービス (GitHub / Slack / WordPress / Stripe / X / Notion / Shopify / Gmail / Google Calendar / Linear など) が必要なら、回答末尾に 1 度だけ \`<connect:service_id>\` マーカーを出してください (例: \`<connect:github>\`)。UI が「🔌 X を接続」ボタンに自動置換します。1 メッセージ最大 2 個、不要な時は出さない。` : '';
 
-  // Zapier registered-Zaps list — when the user has set up Zaps, surface
-  // them so the AI knows what services it can hit via Zapier.
+  // Zapier list — only when SNS / content category is active (the typical
+  // case where the AI might want to use zapier_run). Skip otherwise.
   let zapierNote = '';
-  try {
-    const opUser = (opts && opts.opUser) || null;
-    const z = opUser && opUser.integrations && opUser.integrations.zapier;
-    const list = (z && Array.isArray(z.webhooks)) ? z.webhooks : [];
-    if(list.length){
-      zapierNote = `
+  if(wants('sns') || wants('content') || wants('docs')){
+    try {
+      const opUser = (opts && opts.opUser) || null;
+      const z = opUser && opUser.integrations && opUser.integrations.zapier;
+      const list = (z && Array.isArray(z.webhooks)) ? z.webhooks : [];
+      if(list.length){
+        zapierNote = `
 
 【Zapier 登録済み Zap (zapier_run ツールで実行可能)】
 ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` — ${(w.hint||'').slice(0,120)}`:'')).join('\n')}
 
-ユーザーから「X に投稿して」「Slack に通知して」「Sheets に追記して」など Zap で連携している外部サービスへの操作を頼まれたら、zapier_run ツールを呼んでください。webhook_name には上のリストの名前 (部分一致 OK)、payload には Zap 側で受け取りやすい JSON を入れてください。`;
-    }
-  } catch(e){}
+外部サービスへの操作なら zapier_run を呼ぶ。webhook_name は部分一致 OK。`;
+      }
+    } catch(e){}
+  }
   return`${deliveryRules}
 ${stallNudge}${integrationsHint}${zapierNote}
 
@@ -15595,6 +15705,15 @@ async function handleAPI(req,res,pathname,method,ip){
       console.log('[chat] auto-routed model:', auto);
       agent = { ...agent, model: auto };
     }
+
+    // ── Intent classification (turn-scoped) ─────────────────
+    // Cheap keyword classifier used to (a) trim the tools array sent on
+    // each tool-loop iteration, and (b) slim the system prompt to only
+    // the rules that apply to this turn. Cuts ~30-50% input tokens on
+    // typical short messages. `null` for /plan branch (no classification
+    // needed — that uses its own pipeline).
+    const intentCategories = _detectIntentCategories(message || '');
+    const _intentCatsSet = new Set(intentCategories);
     // Plan-based model gating (charged-side payer drives this).
     //   Free → gemini-flash or haiku only (cheap tier)
     //   Pro  → no Opus
@@ -16124,7 +16243,7 @@ async function handleAPI(req,res,pathname,method,ip){
     // correct server happens via `_mcpRouting` in the tool-dispatch switch.
     const _mcpCompose = await _composeMcpToolsForAgent(payerUser, agent);
     const _mcpRouting = _mcpCompose.routing;
-    const tools = [
+    const _allTools = [
       // chrome_enabled now means "give the agent web access" — fulfilled
       // by Anthropic-hosted web_search / web_fetch (works on Render free).
       ...(agent.chrome_enabled ? WEB_TOOLS : []),
@@ -16137,6 +16256,11 @@ async function handleAPI(req,res,pathname,method,ip){
       ...(githubActive ? GITHUB_TOOLS : []),
       ..._mcpCompose.tools,
     ];
+    const tools = _filterToolsByIntent(_allTools, _intentCatsSet);
+    if(_allTools.length !== tools.length){
+      console.log('[chat] intent-filtered tools:', _allTools.length, '→', tools.length,
+                  '(cats: ' + intentCategories.join(',') + ')');
+    }
     const wantStream = body.stream === true; // streaming is now supported on the tools path too
     const wantStreamPlain = wantStream && !useTools;
     const wantStreamTools = wantStream && useTools;
@@ -16163,7 +16287,7 @@ async function handleAPI(req,res,pathname,method,ip){
             agent,
             sse,
             modelAlias: (agent.model === 'auto' ? 'sonnet' : agent.model),
-            baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{}) }),
+            baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{}) }),
           });
           totalIn += planRes.tokens.input;
           totalOut += planRes.tokens.output;
@@ -16199,7 +16323,7 @@ async function handleAPI(req,res,pathname,method,ip){
         const planRes = await _runPlanExecuteReview(message, {
           agent,
           modelAlias: (agent.model === 'auto' ? 'sonnet' : agent.model),
-          baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{}) }),
+          baseSysFn: () => buildSystem(teamMemberAgent || agent, { sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{}) }),
         });
         const cost = calcCost(planRes.tokens.input, planRes.tokens.output);
         return jres(res, 200, { reply: planRes.reply, cost: { jpy: cost.jpy, usd: cost.usd } });
@@ -16220,7 +16344,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), (delta)=>{
           streamReply += delta;
           try{ sse('delta', {text: delta}); }catch(e){}
         }, agent.model, agent);
@@ -16445,7 +16569,7 @@ async function handleAPI(req,res,pathname,method,ip){
           // to chat / call more tools / stop.
           const _tc = (iters === 0 && !effectiveRegen) ? _firstToolChoice : null;
           if(_tc){ console.log('[chat] tool_choice forced:', JSON.stringify(_tc)); }
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -16640,16 +16764,22 @@ async function handleAPI(req,res,pathname,method,ip){
           } catch(e){ console.warn('[evolution] track failed:', e.message); }
 
           // ── Wrap-up turn skip ─────────────────────────────────
-          // When the only tool calls were self-contained "produce a final
-          // artifact" generators (image / video / audio / pdf / chart /
-          // diagram / qr / artifact), the model's next turn is a polite
-          // "Here's your X: <link>" — a full LLM round-trip we can synthesize
-          // locally. Skipping it on the first iteration cuts perceived
-          // latency for image/video gen by ~40–60%.
+          // When the only tool calls were self-contained "side-effect or
+          // artifact" tools (image/video/pdf/etc OR send_email / notify_slack
+          // / wordpress_publish / share_to_sns / buffer_post / zapier_run /
+          // schedule_routine), the model's next turn is a polite "I did X"
+          // — a full LLM round-trip we can synthesize locally. Skipping it
+          // cuts perceived latency for these flows by ~40–60%.
           const FINAL_ARTIFACT_TOOLS = new Set([
+            // Local artifact generators
             'generate_image','edit_image','generate_video','generate_audio','generate_pdf',
             'generate_chart','generate_diagram','generate_qr',
-            'generate_agent_promo_video','create_artifact',
+            'generate_agent_promo_video','create_artifact','edit_artifact',
+            // Side-effect / delivery tools — output is a status, not analysis
+            'send_email','notify_slack','notify_discord',
+            'zapier_run','wordpress_publish',
+            'share_to_sns','buffer_post',
+            'schedule_routine','cancel_routine',
           ]);
           const toolUseBlocks = (resp.content||[]).filter(b=>b.type==='tool_use');
           const allFinalArtifact = toolUseBlocks.length > 0
@@ -16672,6 +16802,10 @@ async function handleAPI(req,res,pathname,method,ip){
                 const t = l.title || l.text || 'artifact';
                 return l.url ? '🎨 [**'+t+'**]('+l.url+')' : '🎨 '+t;
               }
+              if(l.name === 'edit_artifact'){
+                const t = l.title || l.text || 'artifact';
+                return l.url ? '✏️ [**'+t+'**]('+l.url+') を更新しました' : '✏️ 成果物を更新しました';
+              }
               if(l.name === 'generate_image') return l.url ? '🖼️ ![]('+l.url+')' : '🖼️ 画像を生成しました';
               if(l.name === 'edit_image')     return l.url ? '✂️ ![]('+l.url+')' : '✂️ 画像を編集しました';
               if(l.name === 'generate_video') return l.url ? '🎬 ![]('+l.url+')' : '🎬 動画を生成しました';
@@ -16681,6 +16815,32 @@ async function handleAPI(req,res,pathname,method,ip){
               if(l.name === 'generate_diagram')return l.url? '📐 ![]('+l.url+')' : '📐 図を生成しました';
               if(l.name === 'generate_qr')    return l.url ? '🔗 ![]('+l.url+')' : '🔗 QR を生成しました';
               if(l.name === 'generate_agent_promo_video') return l.url ? '🎬 ![]('+l.url+')' : '🎬 動画を生成しました';
+              // Side-effect / delivery tools
+              if(l.name === 'send_email'){
+                const subj = (l.input && l.input.subject) ? ' 「' + String(l.input.subject).slice(0,60) + '」' : '';
+                return '📧 メール' + subj + ' を送信しました';
+              }
+              if(l.name === 'notify_slack'){
+                const ch = (l.input && l.input.channel) ? ' (' + l.input.channel + ')' : '';
+                return '💬 Slack' + ch + ' に投稿しました';
+              }
+              if(l.name === 'notify_discord') return '💬 Discord に投稿しました';
+              if(l.name === 'zapier_run'){
+                const z = (l.input && l.input.webhook_name) ? ' (' + l.input.webhook_name + ')' : '';
+                return '⚡ Zapier' + z + ' を実行しました';
+              }
+              if(l.name === 'wordpress_publish'){
+                const t = (l.input && l.input.title) ? '「' + String(l.input.title).slice(0,60) + '」' : '';
+                return l.url ? '📰 WordPress に' + t + ' を [公開しました](' + l.url + ')'
+                             : '📰 WordPress に' + t + ' を投稿しました';
+              }
+              if(l.name === 'share_to_sns') return '📱 SNS シェアボタンを用意しました (上のボタンから投稿)';
+              if(l.name === 'buffer_post')  return '📦 Buffer に投稿を送りました';
+              if(l.name === 'schedule_routine'){
+                const lbl = (l.input && l.input.label) ? '「' + l.input.label + '」' : '';
+                return '⏰ 自動実行' + lbl + ' を登録しました';
+              }
+              if(l.name === 'cancel_routine') return '🗑️ ルーティンを削除しました';
               return l.url ? '[開く]('+l.url+')' : (l.text || '完了しました');
             });
             reply = lines.join('\n');
@@ -16735,7 +16895,7 @@ async function handleAPI(req,res,pathname,method,ip){
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{
-            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), agent.model, agent);
+            const d=await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), agent.model, agent);
             reply = d.content?.find(b=>b.type==='text')?.text || 'エラー';
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
@@ -16756,7 +16916,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       // Existing path — no tools
       try{
-        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, ...(_teamCtx||{})}), agent.model, agent);
+        const d = await callAI(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), agent.model, agent);
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);

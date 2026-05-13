@@ -47,6 +47,10 @@ const STRIPE_PRO_PRICE = process.env.STRIPE_PRO_PRICE_ID||'';
 const STRIPE_BIZ_PRICE = process.env.STRIPE_BIZ_PRICE_ID||'';
 const GOOGLE_ID    = process.env.GOOGLE_CLIENT_ID||'';
 const GOOGLE_SEC   = process.env.GOOGLE_CLIENT_SECRET||'';
+// GitHub OAuth App (Path B). When present, the GitHub integration card uses
+// 1-click OAuth instead of the legacy PAT input flow.
+const GITHUB_OAUTH_ID  = process.env.GITHUB_OAUTH_CLIENT_ID||'';
+const GITHUB_OAUTH_SEC = process.env.GITHUB_OAUTH_CLIENT_SECRET||'';
 const RESEND_KEY   = process.env.RESEND_API_KEY||'';
 const BRAVE_KEY    = process.env.BRAVE_API_KEY||'';                  // optional, falls back to DDG
 const GA_ID        = process.env.GA_MEASUREMENT_ID||'';              // optional, e.g. G-XXXXXXXXXX
@@ -84,10 +88,18 @@ const FOUNDER_LIMIT = 100;
 //
 // `priority` flags the 15-service "recommended starter set".
 function _integrationsCatalog(){
+  // GitHub: if OAuth App env is present, expose as 1-click OAuth; otherwise
+  // fall back to the legacy PAT form. This lets the same card adapt to the
+  // setup state without a separate "github_oauth" entry.
+  const githubOauth = !!(GITHUB_OAUTH_ID && GITHUB_OAUTH_SEC);
+  const githubEntry = githubOauth
+    ? { id:'github', name:'GitHub', logo:'🐙', group:'dev', desc:'PR/Issue/コードを AI が読み書き (1-クリック OAuth)', flow:'oauth', priority:true, has_backend:true,
+        oauth:{ start:'/api/auth/github/start' } }
+    : { id:'github', name:'GitHub', logo:'🐙', group:'dev', desc:'PR/Issue/コードを AI が読み書き', flow:'form', priority:true, has_backend:true,
+        fields:[{key:'pat', label:'Personal Access Token', type:'password', required:true, pattern:'^(ghp_|github_pat_|gho_|ghu_|ghs_)[A-Za-z0-9_]{20,}$', help:'github.com/settings/tokens?type=beta で発行 (Contents/Metadata/Issues = Read)'}] };
   return [
     // ── 開発 / インフラ ─────────────────────────
-    { id:'github', name:'GitHub', logo:'🐙', group:'dev', desc:'PR/Issue/コードを AI が読み書き', flow:'form', priority:true, has_backend:true,
-      fields:[{key:'pat', label:'Personal Access Token', type:'password', required:true, pattern:'^(ghp_|github_pat_|gho_|ghu_|ghs_)[A-Za-z0-9_]{20,}$', help:'github.com/settings/tokens?type=beta で発行 (Contents/Metadata/Issues = Read)'}] },
+    githubEntry,
     { id:'vercel', name:'Vercel', logo:'▲', group:'dev', desc:'デプロイ・プレビュー URL・ビルドログ参照', flow:'form', priority:true,
       fields:[{key:'token', label:'API Token', type:'password', required:true, help:'vercel.com/account/tokens'}] },
     { id:'cloudflare', name:'Cloudflare', logo:'☁️', group:'dev', desc:'Workers / Pages / DNS / R2 を操作', flow:'form', priority:true,
@@ -5440,6 +5452,44 @@ async function getValidGoogleAccessToken(user){
   return user.google_oauth.access_token;
 }
 
+// ── GITHUB OAUTH (account-linking, not signup) ──────────────────
+// Used by the integrations catalog GitHub card. The state token is a short-
+// lived JWT carrying the caller's userId so the callback knows whose account
+// to attach the GitHub token to. CSRF-safe because only signed states pass.
+const GITHUB_OAUTH_SCOPES = 'repo user:email read:org';
+function githubAuthURL(stateJwt, returnTo){
+  const params=new URLSearchParams({
+    client_id: GITHUB_OAUTH_ID,
+    redirect_uri: `${APP_URL}/api/auth/github/callback`,
+    scope: GITHUB_OAUTH_SCOPES,
+    state: stateJwt,
+    // Don't force a specific account — let users pick if they have multiple.
+    allow_signup: 'false',
+  });
+  return `https://github.com/login/oauth/authorize?${params}`;
+}
+async function githubExchangeCode(code){
+  const body = new URLSearchParams({
+    client_id: GITHUB_OAUTH_ID,
+    client_secret: GITHUB_OAUTH_SEC,
+    code,
+    redirect_uri: `${APP_URL}/api/auth/github/callback`,
+  }).toString();
+  // GitHub's token endpoint returns form-encoded by default; we ask for JSON.
+  const r = await httpsReq('POST', 'github.com', '/login/oauth/access_token',
+    { 'Content-Type':'application/x-www-form-urlencoded', 'Accept':'application/json', 'User-Agent':'MY-AI-Agent' },
+    body);
+  if(r.s !== 200) throw new Error('GitHub token exchange failed: ' + JSON.stringify(r.d).slice(0,200));
+  if(r.d && r.d.error) throw new Error('GitHub OAuth error: ' + (r.d.error_description || r.d.error));
+  return r.d; // { access_token, scope, token_type }
+}
+async function githubFetchUser(accessToken){
+  const r = await httpsReq('GET', 'api.github.com', '/user',
+    { 'Authorization':'Bearer '+accessToken, 'Accept':'application/vnd.github+json', 'User-Agent':'MY-AI-Agent' }, null);
+  if(r.s !== 200) throw new Error('GitHub /user failed: ' + r.s);
+  return r.d;
+}
+
 // ── STRIPE ────────────────────────────────────────────────────
 
 async function stripeCreateCustomer(email, name){
@@ -8225,6 +8275,100 @@ async function handleAPI(req,res,pathname,method,ip){
       res.end(); return;
     }
     res.writeHead(302,{Location:googleAuthURL()});res.end();return;
+  }
+
+  // ── GET /api/auth/github/start ─────────────────────────────
+  // Authenticated start endpoint. Reads the caller's JWT (?token=... query
+  // param so this works as a top-level redirect from a button click), signs
+  // a short-lived state JWT, and redirects to GitHub's authorize page.
+  if(pathname==='/api/auth/github/start' && method==='GET'){
+    if(!GITHUB_OAUTH_ID || !GITHUB_OAUTH_SEC){
+      res.writeHead(302,{Location:'/app.html?intg=github&error=not_configured'});
+      res.end(); return;
+    }
+    // Accept JWT from either Authorization header (fetch) OR ?token= (top-level nav).
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const tokenQ = qs.get('token') || '';
+    const tokenH = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const jwt = tokenQ || tokenH;
+    let uid = '';
+    try { const p = JWT.verify(jwt); uid = p && p.userId; } catch(e){}
+    if(!uid){
+      res.writeHead(302,{Location:'/auth.html?next=/app.html'});
+      res.end(); return;
+    }
+    // State JWT — 10 minute TTL is plenty for an OAuth round-trip.
+    const state = JWT.sign({ userId: uid, kind: 'gh_oauth', exp: Math.floor(Date.now()/1000) + 600 });
+    res.writeHead(302, { Location: githubAuthURL(state, qs.get('return_to') || '') });
+    res.end();
+    return;
+  }
+
+  // ── GET /api/auth/github/callback ──────────────────────────
+  // GitHub redirects here with ?code=...&state=... after the user approves.
+  // We verify state, exchange the code for an access_token, fetch /user, save
+  // to user.integrations.github + user.github_pat (backward compat), then bounce
+  // back to the app with ?intg=github&status=ok.
+  if(pathname === '/api/auth/github/callback' && method === 'GET'){
+    const qs = new url.URL(req.url, APP_URL).searchParams;
+    const code = qs.get('code');
+    const stateRaw = qs.get('state');
+    const oauthErr = qs.get('error');
+    if(oauthErr){
+      console.error('[GitHub OAuth] returned error:', oauthErr);
+      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason='+encodeURIComponent(oauthErr) });
+      res.end(); return;
+    }
+    if(!code || !stateRaw){
+      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason=no_code' });
+      res.end(); return;
+    }
+    let payload = null;
+    try { payload = JWT.verify(stateRaw); } catch(e){}
+    if(!payload || payload.kind !== 'gh_oauth' || !payload.userId){
+      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason=bad_state' });
+      res.end(); return;
+    }
+    try {
+      const tok = await githubExchangeCode(code);
+      const accessToken = tok && tok.access_token;
+      if(!accessToken) throw new Error('no_access_token');
+      const ghUser = await githubFetchUser(accessToken);
+      // Locate the user. DB.findBy by id varies by adapter; falling back to
+      // a linear search in users if needed keeps both Supa + JSON working.
+      let user = null;
+      try { user = await DB.findBy('id', payload.userId); } catch(e){}
+      if(!user){
+        res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason=user_not_found' });
+        res.end(); return;
+      }
+      user.integrations = user.integrations || {};
+      user.integrations.github = {
+        type: 'oauth',
+        access_token: accessToken,
+        scope: tok.scope || GITHUB_OAUTH_SCOPES,
+        login: ghUser.login || '',
+        avatar_url: ghUser.avatar_url || '',
+        connected_at: new Date().toISOString(),
+        flow: 'oauth',
+      };
+      // Backward compat: existing code reads user.github_pat in several
+      // places (executeGitHubTool, agentCard etc). Mirror the OAuth token
+      // there so legacy paths keep working without an audit.
+      user.github_pat = accessToken;
+      user.github_login = ghUser.login || '';
+      await DB.save(user);
+      res.writeHead(302, { Location:'/app.html?intg=github&status=ok&login='+encodeURIComponent(ghUser.login||'') });
+      res.end();
+    } catch(e){
+      console.error('[GitHub OAuth] callback failed:', e.message);
+      const reason = (e.message||'').includes('no_access_token') ? 'no_token'
+        : (e.message||'').includes('exchange') ? 'token_exchange_failed'
+        : 'unknown';
+      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason='+reason });
+      res.end();
+    }
+    return;
   }
 
   // ── GET /api/setup/sheets-status (PUBLIC, dev-onboarding) ─

@@ -7051,6 +7051,23 @@ document.addEventListener('DOMContentLoaded',async()=>{
           }
         }, 200);
       }
+      // Post-OAuth redirect: ?intg=github&status=ok|err&login=...
+      // Triggered by /api/auth/github/callback. We toast, then reload the
+      // catalog so the card flips to "✓ 接続済".
+      var qsIntg = qs0.get('intg');
+      var qsSt = qs0.get('status');
+      var qsLogin = qs0.get('login') || '';
+      var qsReason = qs0.get('reason') || '';
+      if(qsIntg){
+        history.replaceState({}, '', location.pathname);
+        if(qsSt === 'ok'){
+          showToast('✓ ' + qsIntg + ' に接続しました' + (qsLogin?' (@'+qsLogin+')':''), 'ok');
+          if(qsIntg === 'github' && me){ me.github_connected = true; }
+          setTimeout(function(){ try { _loadIntegrations(); openIntegrationsTab(); } catch(e){} }, 200);
+        } else if(qsSt === 'err'){
+          showToast('⚠ ' + qsIntg + ' 連携失敗: ' + qsReason, 'ng');
+        }
+      }
     } catch(e){}
     // Show email verify banner if not verified
     if(!me.verified) showVerifyBanner();
@@ -14204,7 +14221,25 @@ function _intgOpen(id){
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:24px';
 
   var body = '';
-  if(s.flow === 'oauth' && !s.has_backend){
+  if(s.flow === 'oauth' && s.has_backend){
+    // 1-click OAuth — single big button that top-level-redirects to /api/auth/:provider/start.
+    // We pass the JWT as ?token=... because top-level nav can't set Authorization headers.
+    var startUrl = (s.oauth && s.oauth.start) ? s.oauth.start : ('/api/auth/'+s.id+'/start');
+    var jwt = localStorage.getItem('token') || '';
+    var fullStart = startUrl + (startUrl.indexOf('?')<0?'?':'&') + 'token=' + encodeURIComponent(jwt);
+    body =
+      '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:18px">'+esc(s.desc||'')+'</div>'
+      + (st.connected
+        ? '<div style="background:#d1fae5;color:#10b981;border:1px solid #86efac;border-radius:9px;padding:11px 13px;font-size:12.5px;font-weight:700;margin-bottom:14px">✓ 接続済'+(st.account?' (@'+esc(st.account)+')':'')+'</div>'
+        : '')
+      + '<div style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:12px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">'
+      +   '<b style="color:var(--text)">🔒 1 クリックで安全に接続</b><br>'
+      +   '次の画面で '+esc(s.name)+' の認可ページに移動します。承認すると自動でこのアプリに戻ります。トークンはあなたの端末経由ではなく、サーバー間で直接交換されます。'
+      + '</div>'
+      + (st.connected
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
+  } else if(s.flow === 'oauth' && !s.has_backend){
     body =
       '<div style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;margin-bottom:12px">'
       + '<b>🔧 セットアップ準備中</b><br>'

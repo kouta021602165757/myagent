@@ -11411,6 +11411,17 @@ async function _sendMsgStream(ag, text, imgs, texts){
         }
         if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
         _scrollMsgsToEnd();
+      } else if(evType === 'skill_evolved'){
+        // Agent leveled up — show a 🌱 floating card + toast. Stash on the
+        // streaming bubble so renderMsgs can re-display on re-render.
+        const tierEmoji = obj.tier === '達人' ? '🌳' : obj.tier === '習熟' ? '🌿' : '🌱';
+        const tierLabel = obj.tier === '達人' ? '達人' : obj.tier === '習熟' ? '習熟' : '入門';
+        showToast(tierEmoji+' '+(obj.agent_name||'AI')+' が「'+(obj.skill_label||obj.skill_id)+'」を'+tierLabel+'しました ('+obj.count+' 回使用)', 'ok');
+        // Attach to bubble so it's persisted in history
+        ag.history[streamIdx].evolution_events = ag.history[streamIdx].evolution_events || [];
+        ag.history[streamIdx].evolution_events.push(obj);
+        // Trigger sidebar refresh so the agent name might show level badge later
+        try { renderAgList(); } catch(e){}
       } else if(evType === 'done'){
         _stopThink();
         ag.history[streamIdx].content = obj.reply || acc;
@@ -15705,10 +15716,17 @@ async function openAgentProfile(agId){
   var ag = (agents||[]).find(function(a){return a.id===agId;});
   if(!ag) return;
   var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(251,146,60,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
-  // Pull live profile
-  var data;
-  try { data = await api('GET', '/api/agents/'+agId+'/profile'); }
-  catch(e){ showToast((e && e.message)||'failed','ng'); return; }
+  // Pull live profile + evolution data in parallel
+  var data, evo;
+  try {
+    var [p, e] = await Promise.all([
+      api('GET', '/api/agents/'+agId+'/profile'),
+      api('GET', '/api/agents/'+agId+'/evolution').catch(function(){return null;}),
+    ]);
+    data = p;
+    evo = e;
+  } catch(e){ showToast((e && e.message)||'failed','ng'); return; }
+  if(data && evo) data.evolution = evo;
   // Local working state
   window._agProfile = { agId: agId, data: data, tab: 'memories' };
   _renderAgentProfile();
@@ -15726,12 +15744,14 @@ function _renderAgentProfile(){
   var pbCount  = (d.playbook||[]).length;
   var taskCount= (d.open_tasks||[]).filter(function(t){return t.status!=='done';}).length;
   var routineCount = (d.routines||[]).length;
+  var evoCount = (d.evolution && d.evolution.skills_mastered) ? d.evolution.skills_mastered.length : 0;
   var tabs = [
     {id:'memories', label:L('🧠 記憶','🧠 Memory'),      count:memCount},
     {id:'kpis',     label:L('🎯 目標 / KPI','🎯 Goals/KPI'),count:kpiCount},
     {id:'playbook', label:L('📘 プレイブック','📘 Playbook'),count:pbCount},
     {id:'tasks',    label:L('📋 案件','📋 Tasks'),         count:taskCount},
     {id:'routines', label:L('⏰ 自律ルーチン','⏰ Routines'), count:routineCount},
+    {id:'evolution',label:L('🌱 進化履歴','🌱 Evolution'),  count:evoCount},
   ];
   var tabHTML = tabs.map(function(t){
     var on = (t.id === st.tab);
@@ -15743,6 +15763,7 @@ function _renderAgentProfile(){
   if(st.tab === 'playbook')  pane = _agProfPlaybook(d.playbook||[]);
   if(st.tab === 'tasks')     pane = _agProfTasks(d.open_tasks||[]);
   if(st.tab === 'routines')  pane = _agProfRoutines(d.routines||[]);
+  if(st.tab === 'evolution') pane = _agProfEvolution(d.evolution||{});
   var existing = document.getElementById('agProfileOverlay');
   if(existing) existing.remove();
   var ov = document.createElement('div');
@@ -15958,6 +15979,62 @@ function _agProfRoutines(items){
       + (s.last_run_at?'<div style="font-size:10.5px;color:var(--text3);margin-top:3px">'+L('最終実行','Last run')+': '+esc(s.last_run_at)+'</div>':'')
       + '</div>';
   }).join('');
+}
+
+// 🌱 Evolution log — shows total tool uses, mastered skills, and milestone history.
+function _agProfEvolution(d){
+  var hint = '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:10px;padding:12px 15px;margin-bottom:14px;font-size:12.5px;color:#7c2d12;line-height:1.6">'
+    + '<b>🌱 進化システム</b> — このエージェントがツールを使うたびに経験値が貯まり、 <b>1 回 = 入門</b>、<b>5 回 = 習熟</b>、<b>20 回 = 達人</b> のマイルストーンを達成します。使うほど "あなた専属の AI" に進化していきます。'
+    + '</div>';
+  var total = d.total_uses || 0;
+  var mastered = Array.isArray(d.skills_mastered) ? d.skills_mastered : [];
+  var history = Array.isArray(d.history) ? d.history : [];
+
+  // Stats strip
+  var stats = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;font-size:12.5px">'
+    + '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:var(--peach-dark)">'+total+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">総ツール使用</div></div>'
+    + '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:#10b981">'+mastered.length+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">習得スキル</div></div>'
+    + '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:#7c3aed">'+history.length+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">マイルストーン</div></div>'
+    + '</div>';
+
+  if(!total && !mastered.length){
+    return hint + stats + '<div style="text-align:center;color:var(--text3);padding:32px 16px;font-size:13px;line-height:1.7">'
+      + 'まだツールを使った形跡がありません。<br>このエージェントに何か依頼すると、自動でスキルが習得されていきます。<br><br>例: 「画像作って」「Web で調べて」「メール送って」<br>「ブログ書いて」「スケジュール組んで」</div>';
+  }
+
+  // Mastered skills section
+  var skillsHTML = mastered.length
+    ? '<div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px">🎓 習得済スキル</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:18px">'
+      + mastered.map(function(s){
+          var tierBg = s.tier === '達人' ? 'linear-gradient(135deg,#fff7ee,#fed7aa)' : s.tier === '習熟' ? '#ecfdf5' : '#fff';
+          var tierColor = s.tier === '達人' ? '#7c2d12' : s.tier === '習熟' ? '#065f46' : 'var(--text2)';
+          var tierEmoji = s.tier === '達人' ? '🌳' : s.tier === '習熟' ? '🌿' : '🌱';
+          return '<div style="background:'+tierBg+';border:1px solid var(--wire2);border-radius:10px;padding:10px 12px">'
+            + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px">'+tierEmoji+'</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:'+tierColor+'">'+esc(s.label)+'</div><div style="font-size:10px;color:var(--text3);margin-top:1px">'+esc(s.tier)+' · '+s.last_count+' 回使用</div></div></div>'
+            + '</div>';
+        }).join('')
+      + '</div>'
+    : '';
+
+  // Milestone history timeline
+  var histHTML = history.length
+    ? '<div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px">📅 進化履歴</div>'
+      + '<div style="display:flex;flex-direction:column;gap:6px">'
+      + history.slice(0, 30).map(function(h){
+          var d = h.date ? new Date(h.date) : null;
+          var when = d ? (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') : '';
+          var tierEmoji = h.tier === '達人' ? '🌳' : h.tier === '習熟' ? '🌿' : '🌱';
+          return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:10px">'
+            + '<span style="font-size:14px;flex-shrink:0">'+tierEmoji+'</span>'
+            + '<div style="flex:1;min-width:0;font-size:12px"><b>'+esc(h.skill_label)+'</b> を '+esc(h.tier)+' (' + h.count + ' 回)</div>'
+            + '<div style="font-size:10.5px;color:var(--text3);font-family:ui-monospace,monospace;flex-shrink:0">'+esc(when)+'</div>'
+            + '</div>';
+        }).join('')
+      + '</div>'
+    : '';
+
+  return hint + stats + skillsHTML + histHTML;
 }
 
 // Proactive nudge handlers. The card lives at the top of the chat until

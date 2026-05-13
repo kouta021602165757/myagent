@@ -1655,6 +1655,92 @@ function _injectAgentContext(agent, opts){
   return '\n\n' + out;
 }
 
+// ── Agent evolution (Lv1) ─────────────────────────────────
+// "Used a tool" → "experience" → "milestone" → "skill mastered".
+// Each tool use increments agent.tool_stats[name]. When the count crosses a
+// milestone (1, 5, 20), we log to agent.skill_history and fire a chat-side
+// SSE event so the UI can show a "🌱 進化しました" notification.
+const _TOOL_TO_SKILL = {
+  generate_image: { id:'image', label:'🎨 画像生成' },
+  edit_image: { id:'image', label:'🎨 画像編集' },
+  generate_video: { id:'video', label:'🎬 動画生成' },
+  generate_audio: { id:'audio', label:'🎙 音声合成' },
+  generate_pdf: { id:'pdf', label:'📄 PDF 作成' },
+  generate_chart: { id:'chart', label:'📊 グラフ描画' },
+  generate_diagram: { id:'diagram', label:'🔀 図解作成' },
+  generate_qr: { id:'qr', label:'🔲 QR 生成' },
+  create_artifact: { id:'design', label:'🎨 LP / モック設計' },
+  edit_artifact: { id:'design', label:'🎨 LP / モック編集' },
+  generate_agent_promo_video: { id:'video', label:'🎬 動画生成' },
+  send_email: { id:'email', label:'📧 メール送信' },
+  notify_slack: { id:'slack', label:'💬 Slack 投稿' },
+  notify_discord: { id:'discord', label:'🎮 Discord 投稿' },
+  zapier_run: { id:'zapier', label:'⚡ Zapier 連携' },
+  buffer_post: { id:'sns', label:'📦 Buffer 経由 SNS' },
+  share_to_sns: { id:'sns', label:'📱 SNS 投稿 (intent)' },
+  wordpress_publish: { id:'blog', label:'📰 WordPress 投稿' },
+  schedule_routine: { id:'automation', label:'⏰ 自動化スケジュール' },
+  web_search: { id:'research', label:'🔍 Web リサーチ' },
+  web_fetch: { id:'research', label:'🌐 Web 取得' },
+  web_screenshot: { id:'research', label:'📸 Web スクショ' },
+  web_read_markdown: { id:'research', label:'📄 Web 解析' },
+  web_extract: { id:'research', label:'🔎 Web 抽出' },
+  ga4_query: { id:'analytics', label:'📈 GA4 分析' },
+  ga4_list_properties: { id:'analytics', label:'📈 GA4 探索' },
+  drive_search_files: { id:'docs', label:'📁 Drive 検索' },
+  drive_list_folders: { id:'docs', label:'📁 Drive 探索' },
+  sheets_read: { id:'sheets', label:'📊 Sheets 読取' },
+  sheets_write: { id:'sheets', label:'📊 Sheets 書込' },
+  sheets_append: { id:'sheets', label:'📊 Sheets 追記' },
+  sheets_create_spreadsheet: { id:'sheets', label:'📊 Sheets 作成' },
+  create_calendar_event: { id:'calendar', label:'📅 予定作成' },
+  github_create_pr: { id:'coding', label:'🐙 PR 作成' },
+  github_create_issue: { id:'coding', label:'🐙 Issue 作成' },
+  github_search_code: { id:'coding', label:'🐙 コード検索' },
+  github_get_file: { id:'coding', label:'🐙 コード読取' },
+};
+const _SKILL_MILESTONES = [1, 5, 20]; // 入門 / 習熟 / 達人
+
+function _trackAgentEvolution(agent, toolNames){
+  if(!agent || !Array.isArray(toolNames) || !toolNames.length) return [];
+  agent.tool_stats = agent.tool_stats || {};
+  agent.skill_history = agent.skill_history || [];
+  const milestonesReached = [];
+  for(const t of toolNames){
+    if(!t) continue;
+    const prev = agent.tool_stats[t] || 0;
+    const next = prev + 1;
+    agent.tool_stats[t] = next;
+    // Check for milestone crossing
+    if(_SKILL_MILESTONES.includes(next)){
+      const meta = _TOOL_TO_SKILL[t] || { id: t, label: t };
+      const tier = next === 1 ? '入門' : next === 5 ? '習熟' : '達人';
+      const entry = {
+        date: new Date().toISOString(),
+        tool: t,
+        skill_id: meta.id,
+        skill_label: meta.label,
+        count: next,
+        tier,
+      };
+      agent.skill_history.push(entry);
+      // Cap history at 200 most recent entries
+      if(agent.skill_history.length > 200){
+        agent.skill_history = agent.skill_history.slice(-200);
+      }
+      milestonesReached.push(entry);
+      // Auto-add the skill to agent.skills if not present and tier >= 入門
+      if(next === 1){
+        agent.skills = Array.isArray(agent.skills) ? agent.skills : [];
+        if(!agent.skills.includes(meta.id)){
+          agent.skills.push(meta.id);
+        }
+      }
+    }
+  }
+  return milestonesReached;
+}
+
 async function _afterTurnExtract(agent, opts){
   // Runs ONCE after a chat turn completes. One Gemini Flash call extracts:
   //   - new_memories: 0-3 facts about the user worth remembering
@@ -13289,6 +13375,44 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  // ── GET /api/agents/:id/evolution ─────────────────────────
+  // Returns tool_stats + skill_history for the "🌱 進化履歴" tab.
+  // Aggregates milestones by skill_id and lists the most recent crossings.
+  const _evoM = pathname.match(/^\/api\/agents\/([^/]+)\/evolution$/);
+  if(_evoM && method === 'GET'){
+    const ag = (user.agents||[]).find(a => a.id === _evoM[1]);
+    if(!ag) return jres(res, 404, { error: 'エージェントが見つかりません' });
+    const stats = ag.tool_stats || {};
+    const history = Array.isArray(ag.skill_history) ? ag.skill_history : [];
+    // Sort newest first
+    const recent = history.slice().sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+    // Aggregate per skill_id — most-recent tier + total uses
+    const bySkill = {};
+    for(const h of history){
+      if(!h || !h.skill_id) continue;
+      const cur = bySkill[h.skill_id];
+      if(!cur || (new Date(h.date||0) > new Date(cur.last_at||0))){
+        bySkill[h.skill_id] = {
+          skill_id: h.skill_id,
+          label: h.skill_label || h.skill_id,
+          tier: h.tier || '入門',
+          last_count: h.count || 1,
+          last_at: h.date,
+        };
+      }
+    }
+    // Total tool calls (any tool)
+    const total_uses = Object.values(stats).reduce((a,b) => a + (Number(b)||0), 0);
+    return jres(res, 200, {
+      agent_id: ag.id,
+      agent_name: ag.name,
+      total_uses,
+      tool_stats: stats,
+      skills_mastered: Object.values(bySkill).sort((a,b) => new Date(b.last_at||0) - new Date(a.last_at||0)),
+      history: recent.slice(0, 100),
+    });
+  }
+
   // ── PATCH /api/agents/:id/targets ─────────────────────────
   // Set per-agent service target overrides. Body: { ga4_property_id?,
   // drive_folder_id?, slack_webhook_id?, notion_db_id?, wordpress_site_id? }
@@ -16487,6 +16611,33 @@ async function handleAPI(req,res,pathname,method,ip){
             if(sse) sse('tool_result', logEntry);
           }
           convMsgs.push({role:'user', content: toolResultBlocks});
+
+          // ── Agent evolution: count tool uses + fire milestones ──
+          // Only count successful uses so failed tool calls don't level up.
+          try {
+            const successfulTools = toolLog.slice(-toolResultBlocks.length)
+              .filter(l => l && l.ok && l.name)
+              .map(l => l.name);
+            if(successfulTools.length){
+              // Mutate the live agent record (teamMemberAgent in team chats,
+              // or agent otherwise). Save happens later in the normal turn flow.
+              const evoTarget = (teamMemberAgent || agent);
+              const milestones = _trackAgentEvolution(evoTarget, successfulTools);
+              if(milestones.length && sse){
+                for(const m of milestones){
+                  sse('skill_evolved', {
+                    tool: m.tool,
+                    skill_id: m.skill_id,
+                    skill_label: m.skill_label,
+                    tier: m.tier,
+                    count: m.count,
+                    agent_id: evoTarget.id,
+                    agent_name: evoTarget.name,
+                  });
+                }
+              }
+            }
+          } catch(e){ console.warn('[evolution] track failed:', e.message); }
 
           // ── Wrap-up turn skip ─────────────────────────────────
           // When the only tool calls were self-contained "produce a final

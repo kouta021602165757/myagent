@@ -435,7 +435,7 @@
     <div class="h-meta">
       <span><span class="check">✓</span> <span data-i18n="hero.meta1">100 メッセージ無料</span></span>
       <span><span class="check">✓</span> <span data-i18n="hero.meta2">クレジットカード不要</span></span>
-      <span><span class="check">✓</span> <span data-i18n="hero.meta3">30 秒で開始</span></span>
+      <span><span class="check">✓</span> <span data-i18n="hero.meta4">50 サービスに 1-クリック接続</span></span>
     </div>
   </div>
 
@@ -654,6 +654,72 @@
   </div>
 </section>
 
+<!-- ── INTEGRATIONS — 50 サービスに 1 クリックで接続 ────────────── -->
+<section id="integrations">
+  <div class="sec-h">
+    <div class="eye" data-i18n="intg.eye">🔌 連携</div>
+    <h2 data-i18n="intg.h2" data-i18n-html>50 サービスに <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">1 クリック</span> で接続。</h2>
+    <div class="sub" data-i18n="intg.sub" data-i18n-html>OAuth ・ API キー ・ MCP ・ Zapier を統一 UI で。<br>AI に「Slack に投稿」「Sheets に追記」と頼むだけ。</div>
+  </div>
+  <!-- Service logo grid: a tight cluster of emoji "stamps" that lets visitors -->
+  <!-- scan the breadth of integrations at a glance. Order = priority. -->
+  <div class="intg-stamps" style="max-width:880px;margin:24px auto 8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:10px">
+    <div class="istamp" data-name="GitHub" data-logo="🐙"></div>
+    <div class="istamp" data-name="Slack" data-logo="💬"></div>
+    <div class="istamp" data-name="Gmail" data-logo="📧"></div>
+    <div class="istamp" data-name="Google Drive" data-logo="📁"></div>
+    <div class="istamp" data-name="Google Calendar" data-logo="📆"></div>
+    <div class="istamp" data-name="Notion" data-logo="📝"></div>
+    <div class="istamp" data-name="X" data-logo="𝕏"></div>
+    <div class="istamp" data-name="LinkedIn" data-logo="💼"></div>
+    <div class="istamp" data-name="Discord" data-logo="🎮"></div>
+    <div class="istamp" data-name="Linear" data-logo="📐"></div>
+    <div class="istamp" data-name="Stripe" data-logo="💳"></div>
+    <div class="istamp" data-name="Shopify" data-logo="🛒"></div>
+    <div class="istamp" data-name="WordPress" data-logo="📰"></div>
+    <div class="istamp" data-name="Airtable" data-logo="🗂️"></div>
+    <div class="istamp" data-name="YouTube" data-logo="▶️"></div>
+    <div class="istamp" data-name="Vercel" data-logo="▲"></div>
+    <div class="istamp" data-name="Cloudflare" data-logo="☁️"></div>
+    <div class="istamp" data-name="Telegram" data-logo="✈️"></div>
+    <div class="istamp" data-name="LINE" data-logo="🟢"></div>
+    <div class="istamp" data-name="Zapier" data-logo="⚡"></div>
+    <div class="istamp" data-name="+30 more" data-logo="…" style="background:transparent;border:1px dashed var(--wire2);color:var(--text3);font-size:12px"></div>
+  </div>
+  <!-- Stamp tile styles injected here so the section is self-contained. -->
+  <style>
+    .istamp{aspect-ratio:1/1;background:#fff;border:1px solid var(--wire);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .15s;cursor:default}
+    .istamp:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 8px 22px rgba(251,146,60,.08)}
+    .istamp::before{content:attr(data-logo);font-size:24px;line-height:1}
+    .istamp::after{content:attr(data-name);font-size:10.5px;font-weight:700;color:var(--text2);letter-spacing:.01em;text-align:center;line-height:1.2;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .intg-flow{max-width:760px;margin:32px auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:13px;color:var(--text2)}
+    .intg-flow-card{background:#fff;border:1px solid var(--wire);border-radius:13px;padding:16px 18px;text-align:center}
+    .intg-flow-card .ic{font-size:24px;margin-bottom:6px;line-height:1}
+    .intg-flow-card .ttl{font-size:12px;font-weight:800;color:var(--text);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+    .intg-flow-card .d{font-size:12.5px;line-height:1.6}
+    @media(max-width:640px){
+      .intg-flow{grid-template-columns:1fr;gap:10px}
+    }
+  </style>
+  <div class="intg-flow">
+    <div class="intg-flow-card">
+      <div class="ic">🔌</div>
+      <div class="ttl" data-i18n="intg.f1.t">公式 OAuth</div>
+      <div class="d" data-i18n="intg.f1.d">GitHub・Google・X など主要サービスは 1 クリックで認証完了。</div>
+    </div>
+    <div class="intg-flow-card">
+      <div class="ic">🔑</div>
+      <div class="ttl" data-i18n="intg.f2.t">API キー</div>
+      <div class="d" data-i18n="intg.f2.d">WordPress・Stripe・Notion・Airtable など、貼り付けるだけで連携。</div>
+    </div>
+    <div class="intg-flow-card">
+      <div class="ic">⚡</div>
+      <div class="ttl" data-i18n="intg.f3.t">Zapier 経由</div>
+      <div class="d" data-i18n="intg.f3.d">残り 5,000+ サービスも Zapier を介して接続可能。</div>
+    </div>
+  </div>
+</section>
+
 <section style="background:var(--cream2);max-width:none;margin-left:0;margin-right:0">
   <div style="max-width:1180px;margin:0 auto;padding:0 24px">
     <div class="sec-h">
@@ -777,7 +843,7 @@
       'hero.title':'<span class="strike">AI を使う</span>時代から、<br>AI を<span class="pop">複数人雇う</span>時代へ。',
       'hero.sub':'Slack のようなアプリで、<b>何人でも AI を採用</b>。<br>1 人とは DM、複数人ではチームで仕事を任せられます。',
       'hero.cta1':'▶ 30 秒で最初の AI を雇う','hero.cta2':'デモを見る',
-      'hero.meta1':'100 メッセージ無料','hero.meta2':'クレジットカード不要','hero.meta3':'30 秒で開始',
+      'hero.meta1':'100 メッセージ無料','hero.meta2':'クレジットカード不要','hero.meta3':'30 秒で開始','hero.meta4':'50 サービスに 1-クリック接続',
       'hire.title':'あなたの AI チームを作ろう',
       'hire.sub':'気になる AI を選んで「採用」を押す。すぐ DM できます。',
       'hire.role.marketing':'広告 / SNS<br>KPI 分析',
@@ -813,7 +879,13 @@
       'feat.f1.h':'記憶する AI','feat.f1.p':'会話するほど、あなたの事業・目標・好みを学習。3 回目の会話から「前回の続きやりますか?」と言える AI。',
       'feat.f2.h':'AI 同士が議論する','feat.f2.p':'「@all」と書けば、チームの全員が順番に意見を出して結論を出す。1 人の AI じゃ気づかない視点を集約。',
       'feat.f3.h':'KPI を追う AI','feat.f3.p':'「月商 100 万」「CVR 3%」など目標を持つと、雑談じゃなく業務になる。週次レポートも自動。',
-      'feat.f4.h':'外部サービス連携','feat.f4.p':'Google Sheets / Slack / Gmail / Chrome 拡張で、AI があなたの代わりに送信・投稿・記録までやる。',
+      'feat.f4.h':'50 サービス連携','feat.f4.p':'GitHub / Google / Slack / Notion / Stripe / X など 50+ サービスに 1 クリック接続。Zapier 経由で 5,000+ サービスにも対応。',
+      'intg.eye':'🔌 連携',
+      'intg.h2':'50 サービスに <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">1 クリック</span> で接続。',
+      'intg.sub':'OAuth ・ API キー ・ MCP ・ Zapier を統一 UI で。<br>AI に「Slack に投稿」「Sheets に追記」と頼むだけ。',
+      'intg.f1.t':'公式 OAuth','intg.f1.d':'GitHub・Google・X など主要サービスは 1 クリックで認証完了。',
+      'intg.f2.t':'API キー','intg.f2.d':'WordPress・Stripe・Notion・Airtable など、貼り付けるだけで連携。',
+      'intg.f3.t':'Zapier 経由','intg.f3.d':'残り 5,000+ サービスも Zapier を介して接続可能。',
       'feat.f5.h':'24 時間働く','feat.f5.p':'「毎朝 9 時に競合チェック」「金曜に週次レポート」など、寝てる間に AI が仕事を進めてる状態。',
       'feat.f6.h':'AI を売れる','feat.f6.p':'自分が育てた AI を Agent Store で販売。利用料の 70-100% (Founder は) があなたの収益に。',
       'steps.eye':'3 ステップ','steps.h2':'30 秒であなたの AI 会社を作ろう',
@@ -846,7 +918,7 @@
       'hero.title':'From <span class="strike">using AI</span><br>to <span class="pop">hiring AI teams</span>.',
       'hero.sub':'A Slack-style app where you can <b>hire as many AIs as you want</b>.<br>DM one, build a team with several. Delegate work like to coworkers.',
       'hero.cta1':'▶ Hire your first AI in 30s','hero.cta2':'Watch demo',
-      'hero.meta1':'100 free messages','hero.meta2':'No credit card','hero.meta3':'30-second setup',
+      'hero.meta1':'100 free messages','hero.meta2':'No credit card','hero.meta3':'30-second setup','hero.meta4':'1-click to 50+ services',
       'hire.title':'Build your AI team',
       'hire.sub':'Tap an AI to hire it. DM them instantly.',
       'hire.role.marketing':'Ads / Social<br>KPI analytics',
@@ -882,7 +954,13 @@
       'feat.f1.h':'AI that remembers','feat.f1.p':'Learns your business, goals, and preferences over time. By the third chat: "Want to pick up where we left off?"',
       'feat.f2.h':'AIs debate each other','feat.f2.p':'Type @all and the whole team chimes in turn by turn — perspectives one AI alone would miss.',
       'feat.f3.h':'AIs that chase KPIs','feat.f3.p':'Set goals like "MRR 1M" or "CVR 3%" and chats become work, not banter. Weekly reports automatic.',
-      'feat.f4.h':'Real integrations','feat.f4.p':'Google Sheets / Slack / Gmail / Chrome extension. The AI actually sends, posts, records — not just generates.',
+      'feat.f4.h':'50+ integrations','feat.f4.p':'GitHub / Google / Slack / Notion / Stripe / X — 50+ services with 1-click connect. Plus 5,000+ more via Zapier.',
+      'intg.eye':'🔌 Integrations',
+      'intg.h2':'<span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">1-click</span> to 50 services.',
+      'intg.sub':'OAuth · API keys · MCP · Zapier in one unified UI.<br>Just say "post to Slack" or "add to Sheets" — done.',
+      'intg.f1.t':'Official OAuth','intg.f1.d':'GitHub, Google, X and other major services — 1 click to authorize.',
+      'intg.f2.t':'API keys','intg.f2.d':'WordPress, Stripe, Notion, Airtable — paste your key and you\'re done.',
+      'intg.f3.t':'via Zapier','intg.f3.d':'5,000+ remaining services covered via Zapier bridge.',
       'feat.f5.h':'Works 24/7','feat.f5.p':'"Check competitors every 9 AM", "Friday weekly report". Your AI keeps shipping while you sleep.',
       'feat.f6.h':'Sell your AIs','feat.f6.p':'List your trained agents on the Agent Store. Keep 70-100% of usage revenue (Founder tier).',
       'steps.eye':'3 steps','steps.h2':'Build your AI company in 30 seconds',

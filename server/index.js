@@ -3564,6 +3564,75 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
       required:['webhook_name'],
     },
   },
+  // ── GA4 (analytics) tools — uses resolved per-agent property ─
+  {
+    name:'ga4_list_properties',
+    description:'ユーザーがアクセス権を持つ Google Analytics 4 のプロパティ一覧を取得する。「どのプロパティ使う?」と聞きたい場面、または ga4_set_default の前に呼ぶ。要 Google OAuth (analytics.readonly scope)。',
+    input_schema:{ type:'object', properties:{} },
+  },
+  {
+    name:'ga4_query',
+    description:`GA4 のレポートを実行する。デフォルトは過去 7 日 / pageviews + users + sessions / 日別。
+
+【プロパティ解決順】
+1. このエージェントの ga4_property_id (個別設定)
+2. ユーザーのデフォルト ga4_property_id
+3. なければ property_id 引数で明示
+
+未指定でどれもなければ ga4_list_properties を呼んでユーザーに聞いてください。`,
+    input_schema:{
+      type:'object',
+      properties:{
+        property_id:{type:'string',description:'(任意) 明示する場合の GA4 property_id (例: "123456789" or "properties/123456789")'},
+        metrics:{type:'array',items:{type:'string'},description:'(任意) メトリクス名一覧 (例: ["screenPageViews","totalUsers","sessions","bounceRate"])'},
+        dimensions:{type:'array',items:{type:'string'},description:'(任意) ディメンション一覧 (例: ["date","pagePath","country","deviceCategory"])'},
+        start_date:{type:'string',description:'(任意) 開始日 YYYY-MM-DD or "7daysAgo"。デフォルト "7daysAgo"'},
+        end_date:{type:'string',description:'(任意) 終了日 YYYY-MM-DD or "yesterday"。デフォルト "yesterday"'},
+        limit:{type:'number',description:'(任意) 最大行数 (デフォルト 50, 最大 1000)'},
+      },
+    },
+  },
+  {
+    name:'ga4_set_default',
+    description:'GA4 のデフォルトプロパティを保存する。scope=user で全体デフォルト、scope=agent で **このエージェントだけ** に適用 (個別運用に便利)。',
+    input_schema:{
+      type:'object',
+      properties:{
+        property_id:{type:'string',description:'GA4 property_id (例: "123456789")'},
+        scope:{type:'string',enum:['user','agent'],description:'保存先。user = ユーザー全体のデフォルト / agent = このエージェントだけ。デフォルト user'},
+      },
+      required:['property_id'],
+    },
+  },
+  // ── Drive (file/folder) tools ───────────────────────────────
+  {
+    name:'drive_list_folders',
+    description:'Google Drive のフォルダ一覧を取得する。「どのフォルダ使う?」と聞きたい場面で呼ぶ。要 Google OAuth (drive scope)。',
+    input_schema:{ type:'object', properties:{} },
+  },
+  {
+    name:'drive_search_files',
+    description:'Google Drive 内のファイルを検索する。エージェント / ユーザーのデフォルトフォルダ内に絞り込まれる (overriden by folder_id 引数)。',
+    input_schema:{
+      type:'object',
+      properties:{
+        folder_id:{type:'string',description:'(任意) 検索対象フォルダ。未指定なら resolved default'},
+        query:{type:'string',description:'(任意) ファイル名に含まれる文字列'},
+      },
+    },
+  },
+  {
+    name:'drive_set_default_folder',
+    description:'Google Drive のデフォルトフォルダを保存する。user/agent スコープを選択可。',
+    input_schema:{
+      type:'object',
+      properties:{
+        folder_id:{type:'string',description:'Drive folder ID (URL の /folders/XXX 部分)'},
+        scope:{type:'string',enum:['user','agent']},
+      },
+      required:['folder_id'],
+    },
+  },
   {
     name:'schedule_routine',
     description:`定期実行スケジュールを **このエージェント** に登録する。「毎朝 9 時に〇〇して」「毎週金曜の 18 時に〇〇」のような自動化リクエストが来たら呼ぶ。
@@ -5369,6 +5438,142 @@ async function executeZapierTool(user, input){
 // ── Routine (schedule) tools — chat-based create / list / cancel ─
 // Lets the AI register a recurring task when the user says "毎朝 9 時に〜".
 // Writes to ag.schedules[] which the existing _startAgentScheduler() consumes.
+// ── GA4 executors ───────────────────────────────────────────
+async function executeGa4ListPropertiesTool(user){
+  if(!user.google_oauth || !user.google_oauth.refresh_token){
+    return { error: 'google_not_connected', detail: 'Google を OAuth で連携してください (Gmail / Drive / Calendar / GA4 6-in-1)。' };
+  }
+  try {
+    const props = await ga4ListProperties(user);
+    if(!props.length) return { ok: true, properties: [], note: 'GA4 プロパティが見つかりませんでした。この Google アカウントに GA4 のアクセス権が付与されているか確認してください。' };
+    return {
+      ok: true,
+      count: props.length,
+      properties: props.map(p => ({
+        property_id: p.property_id,
+        name: p.display_name,
+        account: p.account_name,
+        timezone: p.time_zone,
+      })),
+      instructions: '応答で番号付きリストで提示し、ユーザーに 1 つ選んでもらってください。選択後は ga4_set_default で保存。',
+    };
+  } catch(e){
+    return { error: 'ga4_list_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
+async function executeGa4QueryTool(user, agent, input){
+  // Resolve property_id from: input → agent → user
+  let propertyId = (input && input.property_id) ? String(input.property_id).replace('properties/','') : null;
+  if(!propertyId){
+    const r = _resolveServiceTarget(agent, user, 'ga4');
+    if(r) propertyId = String(r.id).replace('properties/','');
+  }
+  if(!propertyId){
+    return { error: 'no_property_set', instructions: 'まず ga4_list_properties を呼んでユーザーに使うプロパティを選んでもらってください。選択後は ga4_set_default で保存し、それから再度クエリしてください。' };
+  }
+  try {
+    const r = await ga4RunReport(user, propertyId, {
+      metrics: (input.metrics||[]).map(name => ({ name })).length ? (input.metrics||[]).map(name => ({ name })) : undefined,
+      dimensions: (input.dimensions||[]).map(name => ({ name })).length ? (input.dimensions||[]).map(name => ({ name })) : undefined,
+      dateRanges: (input.start_date || input.end_date)
+        ? [{ startDate: input.start_date || '7daysAgo', endDate: input.end_date || 'yesterday' }]
+        : undefined,
+      limit: input.limit,
+    });
+    // Compact + AI-friendly format
+    const rows = (r.rows||[]).map(row => {
+      const dims = (row.dimensionValues||[]).map(v => v.value);
+      const mets = (row.metricValues||[]).map(v => v.value);
+      return { dimensions: dims, metrics: mets };
+    });
+    return {
+      ok: true,
+      property_id: propertyId,
+      dimensionHeaders: (r.dimensionHeaders||[]).map(h => h.name),
+      metricHeaders: (r.metricHeaders||[]).map(h => h.name + ' ('+h.type+')'),
+      row_count: rows.length,
+      rows: rows.slice(0, 200),
+      total_rows: r.rowCount || rows.length,
+    };
+  } catch(e){
+    return { error: 'ga4_query_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
+async function executeGa4SetDefaultTool(user, agent, input){
+  const pid = String((input && input.property_id) || '').replace('properties/','').trim();
+  if(!pid) return { error: 'property_id required' };
+  const scope = (input && input.scope === 'agent') ? 'agent' : 'user';
+  if(scope === 'agent'){
+    if(!agent) return { error: 'agent context missing' };
+    agent.ga4_property_id = pid;
+  } else {
+    user.integrations = user.integrations || {};
+    user.integrations.google = user.integrations.google || {};
+    user.integrations.google.ga4_property_id = pid;
+  }
+  await DB.save(user);
+  return {
+    ok: true, scope, property_id: pid,
+    instructions: 'AI への通知: "✓ '+(scope==='agent'?'このエージェント用に':'デフォルトとして')+' GA4 プロパティ '+pid+' を保存しました。以降の質問では自動でこのプロパティを使います"',
+  };
+}
+
+// ── Drive executors ─────────────────────────────────────────
+async function executeDriveListFoldersTool(user){
+  if(!user.google_oauth || !user.google_oauth.refresh_token){
+    return { error: 'google_not_connected', detail: 'Google を OAuth で連携してください。' };
+  }
+  try {
+    const folders = await driveListFolders(user);
+    return {
+      ok: true,
+      count: folders.length,
+      folders: folders.slice(0, 100).map(f => ({ id: f.id, name: f.name, modified: f.modifiedTime })),
+    };
+  } catch(e){
+    return { error: 'drive_list_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
+async function executeDriveSearchFilesTool(user, agent, input){
+  let folderId = (input && input.folder_id) || null;
+  if(!folderId){
+    const r = _resolveServiceTarget(agent, user, 'drive');
+    if(r) folderId = r.id;
+  }
+  const query = String((input && input.query) || '').trim();
+  try {
+    const files = await driveSearchFiles(user, folderId, query);
+    return {
+      ok: true,
+      folder_id: folderId || null,
+      query: query || '(全件)',
+      count: files.length,
+      files: files.slice(0, 50).map(f => ({ id: f.id, name: f.name, mime: f.mimeType, modified: f.modifiedTime, url: f.webViewLink })),
+    };
+  } catch(e){
+    return { error: 'drive_search_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
+async function executeDriveSetDefaultFolderTool(user, agent, input){
+  const fid = String((input && input.folder_id) || '').trim();
+  if(!fid) return { error: 'folder_id required' };
+  const scope = (input && input.scope === 'agent') ? 'agent' : 'user';
+  if(scope === 'agent'){
+    if(!agent) return { error: 'agent context missing' };
+    agent.drive_folder_id = fid;
+  } else {
+    user.integrations = user.integrations || {};
+    user.integrations.google = user.integrations.google || {};
+    user.integrations.google.drive_folder_id = fid;
+  }
+  await DB.save(user);
+  return { ok: true, scope, folder_id: fid };
+}
+
 async function executeScheduleRoutineTool(user, agent, input){
   if(!agent) return { error: 'no agent context' };
   // For group chats the agent record may live on the host's user — but
@@ -6086,6 +6291,87 @@ async function getValidGoogleAccessToken(user){
   return user.google_oauth.access_token;
 }
 
+// ── GA4 API helpers ─────────────────────────────────────────
+// List the GA4 properties the user has access to (Admin API). Returns each
+// property's resource name (e.g. "properties/123") and display name so the
+// UI / AI can let the user pick one.
+async function ga4ListProperties(user){
+  const token = await getValidGoogleAccessToken(user);
+  // 1) List accounts first — the user usually has 1–3 GA accounts
+  const accR = await httpsReq('GET', 'analyticsadmin.googleapis.com', '/v1beta/accounts',
+    { 'Authorization':'Bearer '+token }, null);
+  if(accR.s !== 200) throw new Error('GA accounts list failed: '+JSON.stringify(accR.d).slice(0,200));
+  const accounts = (accR.d && accR.d.accounts) || [];
+  if(!accounts.length) return [];
+  // 2) For each account, list properties under it
+  const out = [];
+  for(const a of accounts){
+    const accName = a.name; // "accounts/123"
+    const filter = encodeURIComponent('parent:'+accName);
+    const pR = await httpsReq('GET', 'analyticsadmin.googleapis.com', '/v1beta/properties?filter='+filter,
+      { 'Authorization':'Bearer '+token }, null);
+    if(pR.s === 200 && pR.d && Array.isArray(pR.d.properties)){
+      for(const p of pR.d.properties){
+        out.push({
+          name: p.name,                                   // "properties/123"
+          property_id: (p.name || '').replace('properties/',''),
+          display_name: p.displayName || '(no name)',
+          account_name: a.displayName || '',
+          time_zone: p.timeZone || '',
+          currency_code: p.currencyCode || '',
+          created_at: p.createTime || null,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+// Run a GA4 Data API report. Defaults to last 7 days, pageviews + users +
+// sessions across the top dates. AI can override metrics / dimensions /
+// dateRanges via input.
+async function ga4RunReport(user, propertyId, opts){
+  if(!propertyId) throw new Error('property_id required');
+  const token = await getValidGoogleAccessToken(user);
+  const body = {
+    dateRanges: (opts && opts.dateRanges) || [{ startDate: '7daysAgo', endDate: 'yesterday' }],
+    metrics: (opts && opts.metrics) || [
+      { name: 'screenPageViews' }, { name: 'totalUsers' }, { name: 'sessions' },
+    ],
+    dimensions: (opts && opts.dimensions) || [{ name: 'date' }],
+    limit: Math.min(1000, Math.max(1, Number((opts && opts.limit)||50))),
+  };
+  const r = await httpsReq('POST', 'analyticsdata.googleapis.com',
+    '/v1beta/properties/'+String(propertyId).replace('properties/','')+':runReport',
+    { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' }, body);
+  if(r.s !== 200) throw new Error('GA runReport failed: '+JSON.stringify(r.d).slice(0,300));
+  return r.d;
+}
+
+// ── Drive API helpers ───────────────────────────────────────
+async function driveListFolders(user, opts){
+  const token = await getValidGoogleAccessToken(user);
+  const q = encodeURIComponent("mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const r = await httpsReq('GET', 'www.googleapis.com',
+    '/drive/v3/files?q='+q+'&pageSize=100&fields=files(id,name,modifiedTime,parents)',
+    { 'Authorization':'Bearer '+token }, null);
+  if(r.s !== 200) throw new Error('Drive list failed: '+JSON.stringify(r.d).slice(0,200));
+  return (r.d && r.d.files) || [];
+}
+async function driveSearchFiles(user, folderId, query){
+  const token = await getValidGoogleAccessToken(user);
+  const parts = [];
+  if(folderId) parts.push(`'${folderId}' in parents`);
+  if(query) parts.push(`name contains '${String(query).replace(/'/g, "\\'")}'`);
+  parts.push('trashed=false');
+  const q = encodeURIComponent(parts.join(' and '));
+  const r = await httpsReq('GET', 'www.googleapis.com',
+    '/drive/v3/files?q='+q+'&pageSize=50&fields=files(id,name,mimeType,modifiedTime,webViewLink,size)',
+    { 'Authorization':'Bearer '+token }, null);
+  if(r.s !== 200) throw new Error('Drive search failed: '+JSON.stringify(r.d).slice(0,200));
+  return (r.d && r.d.files) || [];
+}
+
 // ── GOOGLE WORKSPACE OAUTH (account-linking, 6-in-1) ────────────
 // Single OAuth flow that requests scopes for all 6 Google services in the
 // integrations catalog: Gmail / Calendar / Drive / GA4 / YouTube / Search
@@ -6472,6 +6758,37 @@ function _isGrandfathered(user){
   const t = user.created_at ? new Date(user.created_at).getTime() : NaN;
   if(!isFinite(t)) return false; // unknown → treat as new
   return t < new Date(PLAN_V2_LAUNCH_AT).getTime();
+}
+
+// ── Per-agent service target resolution ────────────────────
+// 3-tier lookup for "which property / folder / channel / DB / site to use
+// for this AI when calling an external service":
+//   1. agent.{service}_target_id           (per-agent override)
+//   2. user.integrations.{service}.default_target_id  (user default)
+//   3. null  → AI should ask the user or list_targets and pick
+//
+// Used by GA4 / Drive / Slack / WordPress / Notion tools so each AI can be
+// "scoped" to a specific site / folder / channel without leaking data from
+// other tenants the user has access to.
+function _resolveServiceTarget(agent, user, service){
+  const FIELD = {
+    ga4:        { agent: 'ga4_property_id',  user: ['integrations','google','ga4_property_id'] },
+    drive:      { agent: 'drive_folder_id',  user: ['integrations','google','drive_folder_id'] },
+    slack:      { agent: 'slack_webhook_id', user: ['integrations','slack','default_webhook_id'] },
+    notion:     { agent: 'notion_db_id',     user: ['integrations','notion','default_db_id'] },
+    wordpress:  { agent: 'wordpress_site_id',user: ['integrations','wordpress','default_site_id'] },
+  };
+  const f = FIELD[service];
+  if(!f) return null;
+  // Agent override first
+  if(agent && agent[f.agent]) return { id: agent[f.agent], source: 'agent' };
+  // Walk user path
+  let cur = user;
+  for(const k of f.user){
+    if(cur && typeof cur === 'object') cur = cur[k]; else { cur = null; break; }
+  }
+  if(cur) return { id: cur, source: 'user' };
+  return null;
 }
 
 /**
@@ -15450,6 +15767,18 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeListRoutinesTool(payerUser, (teamMemberAgent || agent));
             } else if(block.name === 'cancel_routine'){
               result = await executeCancelRoutineTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'ga4_list_properties'){
+              result = await executeGa4ListPropertiesTool(payerUser);
+            } else if(block.name === 'ga4_query'){
+              result = await executeGa4QueryTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'ga4_set_default'){
+              result = await executeGa4SetDefaultTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'drive_list_folders'){
+              result = await executeDriveListFoldersTool(payerUser);
+            } else if(block.name === 'drive_search_files'){
+              result = await executeDriveSearchFilesTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'drive_set_default_folder'){
+              result = await executeDriveSetDefaultFolderTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'generate_agent_promo_video'){
               const promoAgent = (block.input && block.input.tagline)
                 ? { ...(teamMemberAgent || agent), persona: String(block.input.tagline).slice(0,140) }

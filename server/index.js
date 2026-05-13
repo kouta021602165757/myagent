@@ -169,10 +169,10 @@ function _integrationsCatalog(){
     { id:'trello', name:'Trello', logo:'📋', group:'cal', desc:'カンバン操作・カード移動', flow:'oauth' },
 
     // ── ブログ / 発信 ─────────────────────────
-    { id:'wordpress', name:'WordPress', logo:'📰', group:'blog', desc:'記事作成・更新・公開', flow:'form', priority:true,
-      fields:[{key:'siteUrl', label:'Site URL', type:'url', required:true, pattern:'^https?://'},
-              {key:'username', label:'ユーザー名', type:'text', required:true},
-              {key:'appPassword', label:'Application Password', type:'password', required:true, help:'ダッシュボード → ユーザー → プロフィール → Application Passwords'}] },
+    // WordPress now uses 'wp_multi' flow — array of sites with per-agent
+    // override. Lets one user manage multiple WP blogs from one MY AI Agent
+    // account ("ブログ A は AI X, ブログ B は AI Y" 構成 OK).
+    { id:'wordpress', name:'WordPress', logo:'📰', group:'blog', desc:'記事の作成・更新・公開 (複数サイト対応)', flow:'wp_multi', priority:true, has_backend:true },
     { id:'ghost', name:'Ghost', logo:'👻', group:'blog', desc:'記事投稿・ニュースレター送信', flow:'form',
       fields:[{key:'adminUrl', label:'Admin URL', type:'url', required:true},
               {key:'apiKey', label:'Admin API Key', type:'password', required:true}] },
@@ -277,8 +277,23 @@ function _getIntegrationStatus(user, id){
     }
     return { connected: false };
   }
-  if(id === 'slack' && user.outgoing_webhooks && user.outgoing_webhooks.slack){
-    return { connected: true };
+  if(id === 'slack'){
+    // New multi-webhook shape OR legacy single URL
+    const sl = user.integrations && user.integrations.slack;
+    const list = (sl && Array.isArray(sl.webhooks)) ? sl.webhooks : [];
+    const legacy = user.outgoing_webhooks && user.outgoing_webhooks.slack ? 1 : 0;
+    const total = list.length + legacy;
+    if(total > 0) return { connected: true, count: total };
+    return { connected: false };
+  }
+  if(id === 'wordpress'){
+    const wp = user.integrations && user.integrations.wordpress;
+    const sites = (wp && Array.isArray(wp.sites)) ? wp.sites : [];
+    // Legacy single-site shape
+    const legacy = wp && wp.siteUrl ? 1 : 0;
+    const total = sites.length + legacy;
+    if(total > 0) return { connected: true, count: total };
+    return { connected: false };
   }
   if(id === 'discord' && user.outgoing_webhooks && user.outgoing_webhooks.discord){
     return { connected: true };
@@ -3530,11 +3545,20 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
   },
   {
     name:'notify_slack',
-    description:'ユーザーが設定済みの Slack Incoming Webhook へメッセージを投稿します。リマインダー・売上アラート・新規ユーザー通知・スケジュールの結果など、Slack で受け取りたい内容に使う。事前に Settings で Slack Webhook URL を保存している必要があります。',
+    description:`ユーザーが設定済みの Slack Incoming Webhook へメッセージを投稿します。
+
+【チャンネル解決順】
+1. input.channel で明示されたチャンネル名 (部分一致 OK)
+2. このエージェントの slack_webhook_id (個別設定)
+3. ユーザーのデフォルト Slack Webhook
+4. なければ最初に登録された Webhook
+
+複数チャンネルを登録した時は input.channel で「#sales」「営業」など名前を渡せば該当 Webhook を選択します。`,
     input_schema:{
       type:'object',
       properties:{
         text:{type:'string',description:'Slack に投稿する本文 (1-3500 文字, Slack mrkdwn 可)'},
+        channel:{type:'string',description:'(任意) 投稿先 Webhook の登録名 (例: "#sales" "営業" "general")'},
         username:{type:'string',description:'(任意) 投稿者名の上書き'},
       },
       required:['text'],
@@ -3562,6 +3586,27 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
         payload:{type:'object',description:'Zap に渡す JSON (例: {text:"...", title:"...", url:"..."} など、Zap 側で受け取りやすい構造)'},
       },
       required:['webhook_name'],
+    },
+  },
+  {
+    name:'wordpress_publish',
+    description:`登録済み WordPress サイトに記事を投稿する。3 階層解決 (input.site_id → agent.wordpress_site_id → user default)。
+
+【使用例】
+- "ブログに記事公開して" → wordpress_publish({title, html_content, status:'publish'})
+- "下書き保存して" → status:'draft'
+- "案件 A のブログに" → input.site_id で明示`,
+    input_schema:{
+      type:'object',
+      properties:{
+        title:{type:'string',description:'記事タイトル (1-200 文字)'},
+        html_content:{type:'string',description:'記事本文 (HTML)'},
+        status:{type:'string',enum:['publish','draft','private','pending'],description:'公開状態。デフォルト draft'},
+        site_id:{type:'string',description:'(任意) 投稿先サイト ID を明示する場合'},
+        categories:{type:'array',items:{type:'number'},description:'(任意) カテゴリ ID 配列'},
+        tags:{type:'array',items:{type:'number'},description:'(任意) タグ ID 配列'},
+      },
+      required:['title','html_content'],
     },
   },
   // ── GA4 (analytics) tools — uses resolved per-agent property ─
@@ -5330,10 +5375,39 @@ async function executeQrTool(input){
 }
 
 // ── Slack / Discord notify (via user-supplied incoming webhooks) ──
-async function executeNotifyTool(kind, user, input){
+async function executeNotifyTool(kind, user, input, agent){
   const text = String(input && input.text || '').trim();
   if(!text) return { error: 'text required' };
-  const url = (user && user.outgoing_webhooks && user.outgoing_webhooks[kind]) || '';
+  // Resolve target webhook URL — Slack supports multi-channel (named webhooks)
+  // with per-agent override; Discord stays single-URL for now.
+  let url = '';
+  if(kind === 'slack'){
+    // 1) Explicit input.channel — match by name from user.integrations.slack.webhooks[]
+    const list = (user.integrations && user.integrations.slack && Array.isArray(user.integrations.slack.webhooks))
+      ? user.integrations.slack.webhooks : [];
+    const wanted = String((input && input.channel) || '').trim().toLowerCase();
+    if(wanted){
+      const m = list.find(w => (w.name||'').toLowerCase() === wanted)
+             || list.find(w => (w.name||'').toLowerCase().includes(wanted));
+      if(m) url = m.url;
+    }
+    // 2) Agent override
+    if(!url && agent && agent.slack_webhook_id){
+      const m = list.find(w => w.id === agent.slack_webhook_id);
+      if(m) url = m.url;
+    }
+    // 3) User default
+    if(!url && user.integrations && user.integrations.slack && user.integrations.slack.default_webhook_id){
+      const m = list.find(w => w.id === user.integrations.slack.default_webhook_id);
+      if(m) url = m.url;
+    }
+    // 4) Pick first registered webhook as a last resort
+    if(!url && list.length){ url = list[0].url; }
+    // 5) Legacy single-URL field
+    if(!url) url = (user.outgoing_webhooks && user.outgoing_webhooks.slack) || '';
+  } else {
+    url = (user.outgoing_webhooks && user.outgoing_webhooks[kind]) || '';
+  }
   if(!url){
     return { error: kind + '_not_configured', detail: 'Settings → Integrations で ' + kind + ' webhook URL を保存してください。' };
   }
@@ -5438,6 +5512,66 @@ async function executeZapierTool(user, input){
 // ── Routine (schedule) tools — chat-based create / list / cancel ─
 // Lets the AI register a recurring task when the user says "毎朝 9 時に〜".
 // Writes to ag.schedules[] which the existing _startAgentScheduler() consumes.
+// ── WordPress executor — multi-site, per-agent ────────────
+async function executeWordPressPublishTool(user, agent, input){
+  const title = String((input && input.title) || '').trim();
+  const html = String((input && input.html_content) || '');
+  if(!title) return { error: 'title required' };
+  if(html.length < 10) return { error: 'html_content too short' };
+  // Resolve site
+  const wp = user.integrations && user.integrations.wordpress;
+  const sites = (wp && Array.isArray(wp.sites)) ? wp.sites : [];
+  if(!sites.length) return { error: 'wordpress_not_configured', detail: '連携カードで WordPress サイトを 1 つ以上登録してください。' };
+  let site = null;
+  if(input && input.site_id){ site = sites.find(s => s.id === input.site_id); }
+  if(!site && agent && agent.wordpress_site_id){ site = sites.find(s => s.id === agent.wordpress_site_id); }
+  if(!site && wp.default_site_id){ site = sites.find(s => s.id === wp.default_site_id); }
+  if(!site){ site = sites[0]; }
+  if(!site) return { error: 'site not found' };
+  // Compose request to WP REST API
+  const status = ['publish','draft','private','pending'].indexOf(String(input.status||'draft')) >= 0
+    ? String(input.status||'draft') : 'draft';
+  const body = JSON.stringify({
+    title, content: html, status,
+    categories: Array.isArray(input.categories) ? input.categories : undefined,
+    tags: Array.isArray(input.tags) ? input.tags : undefined,
+  });
+  const auth = 'Basic ' + Buffer.from(site.username + ':' + site.appPassword).toString('base64');
+  try {
+    const u = new URL(site.siteUrl.replace(/\/$/, '') + '/wp-json/wp/v2/posts');
+    const r = await new Promise((resolve) => {
+      const opts = {
+        method: 'POST',
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        headers: {
+          'Content-Type':'application/json',
+          'Authorization': auth,
+          'Content-Length': Buffer.byteLength(body),
+        },
+      };
+      const lib = u.protocol === 'http:' ? require('http') : https;
+      const req = lib.request(opts, (rs) => {
+        let chunks=''; rs.on('data', d => chunks += d);
+        rs.on('end', () => { try { resolve({ s: rs.statusCode, d: JSON.parse(chunks) }); } catch(e){ resolve({ s: rs.statusCode, d: chunks }); } });
+      });
+      req.on('error', e => resolve({ s: 0, error: e.message }));
+      req.setTimeout(15000, () => { req.destroy(new Error('timeout')); });
+      req.write(body); req.end();
+    });
+    if(r.s >= 200 && r.s < 300){
+      return {
+        ok: true, site_name: site.name, site_url: site.siteUrl,
+        post_id: r.d && r.d.id, post_url: r.d && r.d.link,
+        status, instructions: '最終応答で「✅ '+site.name+' に "'+title+'" を投稿しました ('+status+')」と URL 付きで報告。',
+      };
+    }
+    return { error: 'wp_http_'+r.s, detail: typeof r.d === 'string' ? r.d.slice(0,200) : JSON.stringify(r.d).slice(0,200) };
+  } catch(e){
+    return { error: 'wp_publish_failed', detail: (e.message||'').slice(0,200) };
+  }
+}
+
 // ── GA4 executors ───────────────────────────────────────────
 async function executeGa4ListPropertiesTool(user){
   if(!user.google_oauth || !user.google_oauth.refresh_token){
@@ -9098,6 +9232,10 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 - ✅ メール → \`send_email\` / Slack → \`notify_slack\` / Discord → \`notify_discord\`
 - ✅ **定期実行スケジュール** (「毎朝 9 時に〜」「毎週金曜に〜」「毎時〜」など) → \`schedule_routine\` を **必ず呼ぶ** (口頭でやり方を説明するだけはダメ、ツールで登録する)
 - ✅ 登録済みルーティンの確認 → \`list_routines\` / 削除 → \`cancel_routine\`
+- ✅ **Google Analytics 4** → \`ga4_query\` (property は agent → user の順で自動解決、未設定なら \`ga4_list_properties\` でリスト → ユーザーに 1 つ選ばせて \`ga4_set_default\` で記憶)
+- ✅ **Google Drive** → \`drive_search_files\` (folder は同じ解決順) / \`drive_list_folders\` でリスト / \`drive_set_default_folder\` で記憶
+- ✅ **WordPress 投稿** → \`wordpress_publish\` (複数サイト登録時は agent override に従う / 明示は input.site_id)
+- ✅ **Slack 投稿 (複数チャンネル)** → \`notify_slack\` の input.channel で「#sales」「営業」など名前指定可、未指定なら agent default → user default の順
 - ✅ 予定 → \`create_calendar_event\`
 - ✅ Web 調査 → \`web_search\` / \`web_fetch\` / \`web_screenshot\` / \`web_read_markdown\`
 - ✅ 要件が曖昧なら 「○○ですか? △△ですか?」と 1 問だけ聞く (空約束はしない)
@@ -11123,8 +11261,153 @@ async function handleAPI(req,res,pathname,method,ip){
     }
   }
 
+  // ── Slack: multi-webhook (named channels) ──────────────────
+  // GET    /api/me/integrations/slack/webhooks            → list
+  // POST   /api/me/integrations/slack/webhooks            → add {name, url}
+  // DELETE /api/me/integrations/slack/webhooks/:id        → remove
+  // POST   /api/me/integrations/slack/default             → set default {id}
+  const _slackM = pathname.match(/^\/api\/me\/integrations\/slack\/webhooks(?:\/([a-z0-9_]+))?$/);
+  if(_slackM){
+    user.integrations = user.integrations || {};
+    user.integrations.slack = user.integrations.slack || { webhooks: [] };
+    if(!Array.isArray(user.integrations.slack.webhooks)) user.integrations.slack.webhooks = [];
+    // Migrate legacy single URL once
+    const legacyUrl = user.outgoing_webhooks && user.outgoing_webhooks.slack;
+    if(legacyUrl && !user.integrations.slack.webhooks.length){
+      user.integrations.slack.webhooks.push({
+        id: 'sl_'+crypto.randomBytes(4).toString('hex'),
+        name: 'Default',
+        url: legacyUrl,
+        created_at: new Date().toISOString(),
+      });
+    }
+    const wid = _slackM[1];
+    if(method === 'GET'){
+      return jres(res, 200, {
+        webhooks: user.integrations.slack.webhooks.map(w => ({
+          id: w.id, name: w.name,
+          url_preview: String(w.url||'').replace(/^(https:\/\/hooks\.slack\.com\/[^\/]*\/)[^?]+/, '$1…'),
+          created_at: w.created_at,
+          is_default: user.integrations.slack.default_webhook_id === w.id,
+        })),
+        default_webhook_id: user.integrations.slack.default_webhook_id || null,
+        total: user.integrations.slack.webhooks.length,
+      });
+    }
+    if(method === 'POST' && !wid){
+      const b = (await readBody(req)) || {};
+      const name = String(b.name||'').trim().slice(0, 40);
+      const url = String(b.url||'').trim();
+      if(!name) return jres(res, 400, { error: 'name は必須です' });
+      if(!/^https:\/\/hooks\.slack\.com\//.test(url)) return jres(res, 400, { error: 'Slack Webhook URL は https://hooks.slack.com/... 形式である必要があります' });
+      if(user.integrations.slack.webhooks.length >= 20) return jres(res, 400, { error: 'チャンネルは上限 20 個' });
+      const w = { id: 'sl_'+crypto.randomBytes(4).toString('hex'), name, url, created_at: new Date().toISOString() };
+      user.integrations.slack.webhooks.push(w);
+      // First registration auto-becomes default
+      if(!user.integrations.slack.default_webhook_id){
+        user.integrations.slack.default_webhook_id = w.id;
+      }
+      // Mirror to outgoing_webhooks for legacy notify_slack compatibility
+      user.outgoing_webhooks = user.outgoing_webhooks || {};
+      if(!user.outgoing_webhooks.slack) user.outgoing_webhooks.slack = url;
+      await DB.save(user);
+      return jres(res, 200, { ok: true, webhook: { id: w.id, name: w.name } });
+    }
+    if(method === 'DELETE' && wid){
+      const idx = user.integrations.slack.webhooks.findIndex(w => w.id === wid);
+      if(idx < 0) return jres(res, 404, { error: 'webhook not found' });
+      user.integrations.slack.webhooks.splice(idx, 1);
+      if(user.integrations.slack.default_webhook_id === wid){
+        user.integrations.slack.default_webhook_id = (user.integrations.slack.webhooks[0]||{}).id || null;
+      }
+      await DB.save(user);
+      return jres(res, 200, { ok: true });
+    }
+  }
+  if(pathname === '/api/me/integrations/slack/default' && method === 'POST'){
+    const b = (await readBody(req)) || {};
+    user.integrations = user.integrations || {};
+    user.integrations.slack = user.integrations.slack || { webhooks: [] };
+    user.integrations.slack.default_webhook_id = String(b.id||'').trim() || null;
+    await DB.save(user);
+    return jres(res, 200, { ok: true, default_webhook_id: user.integrations.slack.default_webhook_id });
+  }
+
+  // ── WordPress: multi-site ──────────────────────────────────
+  // Same shape as Slack: array of {id, name, siteUrl, username, appPassword},
+  // plus default_site_id. Per-agent override via agent.wordpress_site_id.
+  const _wpSitesM = pathname.match(/^\/api\/me\/integrations\/wordpress\/sites(?:\/([a-z0-9_]+))?$/);
+  if(_wpSitesM){
+    user.integrations = user.integrations || {};
+    user.integrations.wordpress = user.integrations.wordpress || { sites: [] };
+    if(!Array.isArray(user.integrations.wordpress.sites)) user.integrations.wordpress.sites = [];
+    // Migrate legacy single-site once
+    if(user.integrations.wordpress.siteUrl && !user.integrations.wordpress.sites.length){
+      user.integrations.wordpress.sites.push({
+        id: 'wp_'+crypto.randomBytes(4).toString('hex'),
+        name: user.integrations.wordpress.siteUrl.replace(/^https?:\/\//,'').replace(/\/.*$/,''),
+        siteUrl: user.integrations.wordpress.siteUrl,
+        username: user.integrations.wordpress.username || '',
+        appPassword: user.integrations.wordpress.appPassword || '',
+        created_at: new Date().toISOString(),
+      });
+      delete user.integrations.wordpress.siteUrl;
+      delete user.integrations.wordpress.username;
+      delete user.integrations.wordpress.appPassword;
+    }
+    const sid = _wpSitesM[1];
+    if(method === 'GET'){
+      return jres(res, 200, {
+        sites: user.integrations.wordpress.sites.map(s => ({
+          id: s.id, name: s.name, siteUrl: s.siteUrl, username: s.username,
+          is_default: user.integrations.wordpress.default_site_id === s.id,
+          created_at: s.created_at,
+        })),
+        default_site_id: user.integrations.wordpress.default_site_id || null,
+        total: user.integrations.wordpress.sites.length,
+      });
+    }
+    if(method === 'POST' && !sid){
+      const b = (await readBody(req)) || {};
+      const name = String(b.name||'').trim().slice(0, 60);
+      const siteUrl = String(b.siteUrl||'').trim();
+      const username = String(b.username||'').trim();
+      const appPassword = String(b.appPassword||'').trim();
+      if(!name) return jres(res, 400, { error: 'name は必須' });
+      if(!/^https?:\/\//.test(siteUrl)) return jres(res, 400, { error: 'siteUrl は http(s):// で始まる必要あり' });
+      if(!username) return jres(res, 400, { error: 'username は必須' });
+      if(!appPassword) return jres(res, 400, { error: 'appPassword は必須' });
+      if(user.integrations.wordpress.sites.length >= 20) return jres(res, 400, { error: 'サイトは上限 20 個' });
+      const s = { id: 'wp_'+crypto.randomBytes(4).toString('hex'), name, siteUrl, username, appPassword, created_at: new Date().toISOString() };
+      user.integrations.wordpress.sites.push(s);
+      if(!user.integrations.wordpress.default_site_id){
+        user.integrations.wordpress.default_site_id = s.id;
+      }
+      await DB.save(user);
+      return jres(res, 200, { ok: true, site: { id: s.id, name: s.name, siteUrl: s.siteUrl } });
+    }
+    if(method === 'DELETE' && sid){
+      const idx = user.integrations.wordpress.sites.findIndex(s => s.id === sid);
+      if(idx < 0) return jres(res, 404, { error: 'site not found' });
+      user.integrations.wordpress.sites.splice(idx, 1);
+      if(user.integrations.wordpress.default_site_id === sid){
+        user.integrations.wordpress.default_site_id = (user.integrations.wordpress.sites[0]||{}).id || null;
+      }
+      await DB.save(user);
+      return jres(res, 200, { ok: true });
+    }
+  }
+  if(pathname === '/api/me/integrations/wordpress/default' && method === 'POST'){
+    const b = (await readBody(req)) || {};
+    user.integrations = user.integrations || {};
+    user.integrations.wordpress = user.integrations.wordpress || { sites: [] };
+    user.integrations.wordpress.default_site_id = String(b.id||'').trim() || null;
+    await DB.save(user);
+    return jres(res, 200, { ok: true, default_site_id: user.integrations.wordpress.default_site_id });
+  }
+
   const _intGeneric = pathname.match(/^\/api\/me\/integrations\/([a-z0-9_-]+)$/);
-  if(_intGeneric && (method === 'PUT' || method === 'DELETE') && _intGeneric[1] !== 'github' && _intGeneric[1] !== 'zapier'){
+  if(_intGeneric && (method === 'PUT' || method === 'DELETE') && _intGeneric[1] !== 'github' && _intGeneric[1] !== 'zapier' && _intGeneric[1] !== 'slack' && _intGeneric[1] !== 'wordpress'){
     const intId = _intGeneric[1];
     const service = _integrationsCatalog().find(s => s.id === intId);
     if(!service) return jres(res, 404, { error: 'unknown integration: ' + intId });
@@ -12672,6 +12955,51 @@ async function handleAPI(req,res,pathname,method,ip){
       persona: ag.persona || '',
       ai_auto_respond: ag.ai_auto_respond,  // undefined → use size heuristic
       history: (ag.history || []).slice(-200),
+    });
+  }
+
+  // ── PATCH /api/agents/:id/targets ─────────────────────────
+  // Set per-agent service target overrides. Body: { ga4_property_id?,
+  // drive_folder_id?, slack_webhook_id?, notion_db_id?, wordpress_site_id? }
+  // Pass `null` to clear an override (fall back to user default).
+  const _agTargetsM = pathname.match(/^\/api\/agents\/([^/]+)\/targets$/);
+  if(_agTargetsM && method === 'PATCH'){
+    const agId = _agTargetsM[1];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    const body = (await readBody(req)) || {};
+    const ALLOWED = ['ga4_property_id','drive_folder_id','slack_webhook_id','notion_db_id','wordpress_site_id'];
+    const changed = {};
+    for(const k of ALLOWED){
+      if(k in body){
+        const v = body[k];
+        if(v === null || v === ''){ delete ag[k]; changed[k] = null; }
+        else { ag[k] = String(v).slice(0, 200); changed[k] = ag[k]; }
+      }
+    }
+    await DB.save(user);
+    return jres(res, 200, { ok: true, agent_id: agId, changed });
+  }
+  if(_agTargetsM && method === 'GET'){
+    const agId = _agTargetsM[1];
+    const ag = (user.agents||[]).find(a => a.id === agId);
+    if(!ag) return jres(res,404,{error:'エージェントが見つかりません'});
+    return jres(res, 200, {
+      agent_id: agId,
+      overrides: {
+        ga4_property_id: ag.ga4_property_id || null,
+        drive_folder_id: ag.drive_folder_id || null,
+        slack_webhook_id: ag.slack_webhook_id || null,
+        notion_db_id: ag.notion_db_id || null,
+        wordpress_site_id: ag.wordpress_site_id || null,
+      },
+      resolved: {
+        ga4: _resolveServiceTarget(ag, user, 'ga4'),
+        drive: _resolveServiceTarget(ag, user, 'drive'),
+        slack: _resolveServiceTarget(ag, user, 'slack'),
+        notion: _resolveServiceTarget(ag, user, 'notion'),
+        wordpress: _resolveServiceTarget(ag, user, 'wordpress'),
+      },
     });
   }
 
@@ -15756,9 +16084,9 @@ async function handleAPI(req,res,pathname,method,ip){
             } else if(block.name === 'edit_artifact'){
               result = await executeEditArtifactTool(block.input||{}, payerUser);
             } else if(block.name === 'notify_slack'){
-              result = await executeNotifyTool('slack', payerUser, block.input||{});
+              result = await executeNotifyTool('slack', payerUser, block.input||{}, (teamMemberAgent || agent));
             } else if(block.name === 'notify_discord'){
-              result = await executeNotifyTool('discord', payerUser, block.input||{});
+              result = await executeNotifyTool('discord', payerUser, block.input||{}, (teamMemberAgent || agent));
             } else if(block.name === 'zapier_run'){
               result = await executeZapierTool(payerUser, block.input||{});
             } else if(block.name === 'schedule_routine'){
@@ -15779,6 +16107,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeDriveSearchFilesTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'drive_set_default_folder'){
               result = await executeDriveSetDefaultFolderTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'wordpress_publish'){
+              result = await executeWordPressPublishTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'generate_agent_promo_video'){
               const promoAgent = (block.input && block.input.tagline)
                 ? { ...(teamMemberAgent || agent), persona: String(block.input.tagline).slice(0,140) }

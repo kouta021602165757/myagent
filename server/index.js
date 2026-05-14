@@ -3109,15 +3109,18 @@ function _callAIStreamOnce(messages, system, onText, modelAlias, cacheAgent){
 }
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
-async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cacheAgent){
+async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cacheAgent,onText){
   // Recovery wrapper — same pattern as callAI/callAIStream. Tool-use calls
   // are the slowest (artifact creation can take 1-2 min) so silent retry
   // + fallback matters most here.
+  // `onText` (optional) is forwarded into the underlying call so we can stream
+  // text_delta events from Anthropic to the SSE channel in real time. Without
+  // it, the tool-loop blocks for the full duration of each iteration.
   let curModel = modelAlias;
   let attempt = 0;
   while(true){
     try {
-      return await _callAIWithToolsOnce(messages, system, tools, toolChoice, curModel, cacheAgent);
+      return await _callAIWithToolsOnce(messages, system, tools, toolChoice, curModel, cacheAgent, onText);
     } catch(e){
       const transient = _isTransientAIError(e);
       const quota = _isQuotaError(e);
@@ -3148,7 +3151,7 @@ async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cache
     }
   }
 }
-async function _callAIWithToolsOnce(messages,system,tools,toolChoice,modelAlias,cacheAgent){
+async function _callAIWithToolsOnce(messages,system,tools,toolChoice,modelAlias,cacheAgent,onText){
   const info = _resolveModelInfo(modelAlias);
   // Gemini: route through the Gemini-specific implementation. Server-managed
   // Anthropic tools (web_search / web_fetch) are stripped inside _antToGeminiTools
@@ -3157,6 +3160,13 @@ async function _callAIWithToolsOnce(messages,system,tools,toolChoice,modelAlias,
   if(info.provider === 'gemini'){
     const cacheCtx = await _geminiResolveCache({ info, system, tools, agent: cacheAgent, agentLabel: cacheAgent && cacheAgent.name });
     return _callGeminiWithTools(messages, system, tools, toolChoice, info, cacheCtx);
+  }
+  // When a streaming sink (onText) is provided AND the model is Anthropic,
+  // use the streaming variant so text deltas appear in the UI as they're
+  // generated — even across multiple tool-loop iterations. This is the
+  // fundamental fix for "止まって見える" between iter 1+.
+  if(typeof onText === 'function'){
+    return _callAIWithToolsStreamOnce(messages, system, tools, toolChoice, info, onText);
   }
   // Single retry on 429 with short backoff — Render edge times out around 60–100s
   // so we can't afford long waits. Surface the rate limit to the user instead.
@@ -3216,6 +3226,152 @@ async function _callAIWithToolsOnce(messages,system,tools,toolChoice,modelAlias,
     console.error('[chat] Anthropic '+r.s+':', JSON.stringify(r.d||'').slice(0,400));
     throw new Error(r.d?.error?.message||`Anthropic ${r.s}`);
   }
+}
+
+// ── Streaming tool-use call (Anthropic only) ────────────────
+// Parses the Anthropic SSE stream and:
+//   1. Forwards every text_delta to onText immediately (live UI updates)
+//   2. Accumulates input_json_delta for tool_use blocks (build JSON inputs)
+//   3. Assembles a full Anthropic-shaped `content` array on completion
+//   4. Returns the same { content, stop_reason, usage } shape that the
+//      non-streaming variant returns, so the rest of the tool loop is
+//      unchanged.
+// Without this, every tool-loop iteration was a non-streaming round-trip
+// and the bubble could sit silent for 10-30 seconds. With it, text flows
+// continuously and the user never sees "止まった" gaps.
+function _callAIWithToolsStreamOnce(messages, system, tools, toolChoice, info, onText){
+  return new Promise((resolve, reject) => {
+    const betas = ['prompt-caching-2024-07-31'];
+    const hasWebFetch = Array.isArray(tools) && tools.some(t => t && (t.type==='web_fetch_20250910' || t.name==='web_fetch'));
+    if(hasWebFetch) betas.push('web-fetch-2025-09-10');
+    const reqBody = {
+      model: info.modelId,
+      max_tokens: info.maxTokens,
+      system: _systemBlocks(system),
+      messages: _trimHistory(messages),
+      tools: _toolsWithCache(tools),
+      stream: true,
+    };
+    if(toolChoice){ reqBody.tool_choice = toolChoice; }
+    const body = JSON.stringify(reqBody);
+    const req = https.request({
+      hostname:'api.anthropic.com', path:'/v1/messages', method:'POST',
+      timeout: 120000,
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':ANTHROPIC,
+        'anthropic-version':'2023-06-01',
+        'anthropic-beta': betas.join(','),
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (r) => {
+      // Anthropic surfaces 4xx/5xx via SSE-shaped error frames AND/OR an
+      // initial non-SSE JSON body. Detect by content-type when possible.
+      const ctype = String(r.headers['content-type']||'');
+      if(r.statusCode && r.statusCode >= 400){
+        let errBuf = '';
+        r.setEncoding('utf8');
+        r.on('data', c => errBuf += c);
+        r.on('end', () => {
+          let msg = errBuf.slice(0, 400);
+          try { const j = JSON.parse(errBuf); msg = (j && j.error && j.error.message) || msg; } catch(e){}
+          reject(new Error('Anthropic '+r.statusCode+': '+msg));
+        });
+        return;
+      }
+      if(!/event-stream/.test(ctype)){
+        // Defensive: shouldn't happen on 200 but handle gracefully.
+        let buf=''; r.setEncoding('utf8'); r.on('data',c=>buf+=c);
+        r.on('end',()=>{ try { resolve(JSON.parse(buf)); } catch(e){ reject(new Error('non-SSE response: '+buf.slice(0,200))); }});
+        return;
+      }
+      // Parse SSE event stream.
+      let buf = '';
+      // Per-block accumulators, indexed by content_block.index.
+      // text:     { type:'text', text:'...' }
+      // tool_use: { type:'tool_use', id, name, input(parsed obj after _stop), _partialJson }
+      const blocks = {};
+      let stopReason = null;
+      let usage = { input_tokens: 0, output_tokens: 0 };
+      r.setEncoding('utf8');
+      r.on('data', (chunk) => {
+        buf += chunk;
+        let i;
+        while((i = buf.indexOf('\n\n')) >= 0){
+          const eventBlock = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          let dataLine = '';
+          for(const line of eventBlock.split('\n')){
+            if(line.startsWith('data: ')) dataLine = line.slice(6);
+          }
+          if(!dataLine) continue;
+          let obj; try { obj = JSON.parse(dataLine); } catch(e){ continue; }
+          if(obj.type === 'message_start' && obj.message && obj.message.usage){
+            usage.input_tokens  = obj.message.usage.input_tokens  || 0;
+            usage.output_tokens = obj.message.usage.output_tokens || 0;
+          } else if(obj.type === 'content_block_start'){
+            const cb = obj.content_block || {};
+            if(cb.type === 'text'){
+              blocks[obj.index] = { type:'text', text: cb.text || '' };
+            } else if(cb.type === 'tool_use'){
+              blocks[obj.index] = { type:'tool_use', id: cb.id, name: cb.name, input: {}, _partialJson: '' };
+            } else if(cb.type === 'server_tool_use'){
+              blocks[obj.index] = { type:'server_tool_use', id: cb.id, name: cb.name, input: {}, _partialJson: '' };
+            } else {
+              // Unknown block type — preserve as-is so we don't lose data
+              blocks[obj.index] = { ...cb };
+            }
+          } else if(obj.type === 'content_block_delta'){
+            const idx = obj.index;
+            const blk = blocks[idx];
+            if(!blk) continue;
+            const d = obj.delta || {};
+            if(d.type === 'text_delta'){
+              const t = d.text || '';
+              blk.text = (blk.text || '') + t;
+              try { onText(t); } catch(e){}
+            } else if(d.type === 'input_json_delta'){
+              blk._partialJson = (blk._partialJson || '') + (d.partial_json || '');
+            }
+          } else if(obj.type === 'content_block_stop'){
+            const blk = blocks[obj.index];
+            if(blk && (blk.type === 'tool_use' || blk.type === 'server_tool_use')){
+              // Finalize tool_use: parse accumulated JSON into the input object.
+              if(blk._partialJson){
+                try { blk.input = JSON.parse(blk._partialJson); } catch(e){ blk.input = { _raw: blk._partialJson }; }
+              }
+              delete blk._partialJson;
+            }
+          } else if(obj.type === 'message_delta'){
+            if(obj.delta && obj.delta.stop_reason) stopReason = obj.delta.stop_reason;
+            if(obj.usage && obj.usage.output_tokens) usage.output_tokens = obj.usage.output_tokens;
+          } else if(obj.type === 'error'){
+            reject(new Error(obj.error?.message || 'Anthropic stream error'));
+            try { r.destroy(); } catch(e){}
+            return;
+          }
+        }
+      });
+      r.on('end', () => {
+        // Assemble content[] in index order.
+        const content = Object.keys(blocks)
+          .map(k => parseInt(k, 10))
+          .sort((a,b) => a-b)
+          .map(k => blocks[k]);
+        // Debug log mirrors the non-streaming path.
+        try {
+          const used = content.filter(b => b.type==='tool_use' || b.type==='server_tool_use').map(b => b.name||b.type);
+          console.log('[chat-stream] stop=', stopReason, '/ tools_used=', used.join(',') || 'none');
+        } catch(e){}
+        resolve({ content, stop_reason: stopReason, usage });
+      });
+      r.on('error', reject);
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { try { req.destroy(new Error('upstream timeout 120s')); } catch(e){} reject(new Error('upstream timeout 120s')); });
+    req.write(body);
+    req.end();
+  });
 }
 
 /**
@@ -16892,7 +17048,18 @@ async function handleAPI(req,res,pathname,method,ip){
           // to chat / call more tools / stop.
           const _tc = (iters === 0 && !effectiveRegen) ? _firstToolChoice : null;
           if(_tc){ console.log('[chat] tool_choice forced:', JSON.stringify(_tc)); }
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), tools, _tc, agent.model, agent);
+          // Stream text_delta events from Anthropic straight through to the
+          // SSE channel. This is THE fix for "止まって見える" mid-conversation:
+          // every character the model writes appears in the bubble live,
+          // even across multiple tool-loop iterations. (Gemini auto-falls
+          // back to non-streaming inside callAIWithTools — onText is ignored
+          // there for now.)
+          const _onIterText = sse ? (txt) => {
+            if(!txt) return;
+            streamedText += txt;
+            try { sse('delta', { text: txt }); } catch(e){}
+          } : null;
+          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), tools, _tc, agent.model, agent, _onIterText);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
@@ -16943,12 +17110,18 @@ async function handleAPI(req,res,pathname,method,ip){
           // Append the assistant's tool_use turn
           convMsgs.push({role:'assistant', content: resp.content});
 
-          // Stream any text the AI emitted alongside its tool calls so the user sees
-          // its reasoning even before tools finish. Track in streamedText so the final
-          // saved reply matches what the user actually saw on screen.
+          // Note: text the model wrote alongside its tool calls was already
+          // streamed live via _onIterText (text_delta events from Anthropic's
+          // SSE). Emitting it again here would double the text in the UI.
+          // For Gemini (non-streaming path) we still need to emit because
+          // _onIterText was ignored there.
+          if(sse && info && false){ /* deprecated — kept for ref */ }
           if(sse){
+            // If the iteration completed WITHOUT live streaming (e.g. Gemini
+            // routed model), surface the text now. We detect this by checking
+            // whether streamedText already contains the iter's text.
             const reasonText = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
-            if(reasonText){
+            if(reasonText && !streamedText.endsWith(reasonText)){
               streamedText += reasonText + '\n\n';
               sse('delta', { text: reasonText + '\n\n' });
             }
@@ -17191,24 +17364,24 @@ async function handleAPI(req,res,pathname,method,ip){
             }
           } catch(e){ console.warn('[critic-tools] failed:', e.message); }
         }
-        // Stream the final reply text in chunks so the user sees it appear, since
-        // we use non-streaming Anthropic calls for the tool loop (true delta streams
-        // would require parsing input_json_delta deltas — left for a future revamp).
-        // Use Array.from() to iterate by code points (Unicode-aware), so emojis and
-        // surrogate-pair characters never get split across chunk boundaries.
+        // Final-reply emission policy:
+        //   • Anthropic path: text was streamed live via _onIterText during
+        //     each iter. streamedText already contains everything. Skip.
+        //   • Gemini / wrap-up skip / critic_replaced path: `reply` may
+        //     contain text NOT yet streamed. Emit only the new tail.
+        //   • Budget-exhausted path: same — emit the new portion only.
         if(sse && reply){
-          // Faster pseudo-stream of the final reply. Was 25 chars + 8ms (≈ 1-2s
-          // of artificial typewriter delay on long replies). Bumped to 200
-          // chars + 0ms so the artifact / URL appears near-instantly once
-          // the loop ends; the user still sees streaming-style growth instead
-          // of a single dump because Anthropic's chunk arrival itself paces
-          // delivery during iteration loops.
-          const chars = Array.from(reply);
-          const chunkSize = 200;
-          for(let i=0; i<chars.length; i+=chunkSize){
-            const chunk = chars.slice(i, i+chunkSize).join('');
-            streamedText += chunk;
-            sse('delta', { text: chunk });
+          const tail = streamedText.endsWith(reply)
+            ? ''
+            : (reply.startsWith(streamedText) ? reply.slice(streamedText.length) : reply);
+          if(tail){
+            const chars = Array.from(tail);
+            const chunkSize = 200;
+            for(let i=0; i<chars.length; i+=chunkSize){
+              const chunk = chars.slice(i, i+chunkSize).join('');
+              streamedText += chunk;
+              sse('delta', { text: chunk });
+            }
           }
         }
         // Save the full streamed transcript (intermediate reasoning + final answer)

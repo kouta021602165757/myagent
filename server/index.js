@@ -15696,24 +15696,6 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     }
 
-    // ── Auto model routing ─────────────────────────────────
-    // When agent.model === 'auto', derive an effective model per-turn from
-    // the user's message. Light queries stay on Flash (cheap + fast),
-    // complex queries escalate to Sonnet, /opus prefix bumps to Opus.
-    if(agent.model === 'auto'){
-      const auto = _autoPickModel(message || '', agent);
-      console.log('[chat] auto-routed model:', auto);
-      agent = { ...agent, model: auto };
-    }
-
-    // ── Intent classification (turn-scoped) ─────────────────
-    // Cheap keyword classifier used to (a) trim the tools array sent on
-    // each tool-loop iteration, and (b) slim the system prompt to only
-    // the rules that apply to this turn. Cuts ~30-50% input tokens on
-    // typical short messages. `null` for /plan branch (no classification
-    // needed — that uses its own pipeline).
-    const intentCategories = _detectIntentCategories(message || '');
-    const _intentCatsSet = new Set(intentCategories);
     // Plan-based model gating (charged-side payer drives this).
     //   Free → gemini-flash or haiku only (cheap tier)
     //   Pro  → no Opus
@@ -15754,6 +15736,26 @@ async function handleAPI(req,res,pathname,method,ip){
     const regenerate=!!body.regenerate;
     const message=body.message||'';
     const images=body.images||[];
+
+    // ── Auto model routing ─────────────────────────────────
+    // When agent.model === 'auto', derive an effective model per-turn from
+    // the user's message. Light queries stay on Flash (cheap + fast),
+    // complex queries escalate to Sonnet, /opus prefix bumps to Opus.
+    // (Must run AFTER `message` is read from body — accessing it earlier
+    // would hit the const TDZ for any agent with model='auto'.)
+    if(agent.model === 'auto'){
+      const auto = _autoPickModel(message || '', agent);
+      console.log('[chat] auto-routed model:', auto);
+      agent = { ...agent, model: auto };
+    }
+
+    // ── Intent classification (turn-scoped) ─────────────────
+    // Cheap keyword classifier used to (a) trim the tools array sent on
+    // each tool-loop iteration, and (b) slim the system prompt to only
+    // the rules that apply to this turn. Cuts ~30-50% input tokens on
+    // typical short messages.
+    const intentCategories = _detectIntentCategories(message || '');
+    const _intentCatsSet = new Set(intentCategories);
     // Text attachments: files (txt/md/csv/json/code) or fetched URLs.
     // Each: { kind: 'text'|'url', name, source?, text }
     const texts = Array.isArray(body.texts) ? body.texts.filter(t => t && typeof t.text === 'string') : [];

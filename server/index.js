@@ -9357,32 +9357,160 @@ function _scheduleNextRun(s, fromMs){
   return new Date(now.getTime() + 60*60*1000).toISOString();
 }
 async function _runOneSchedule(user, agent, sched){
-  // Execute the schedule's prompt as if the user sent it. No tools (keeps the
-  // scheduled run fast & cheap). Reply is appended to agent.history and, if
-  // deliver='email', emailed to the user.
+  // Execute the schedule's prompt as if the user sent it, WITH the same tool
+  // suite the live chat has (minus Chrome/Playwright — too heavy to spin up
+  // every minute). Without tools, prompts like "GA4データを取得→メール送信"
+  // would hallucinate <tool_call> XML into the reply (the bug we're fixing).
+  //
+  // Caps:
+  //   MAX_ITERS = 10   — scheduled tasks shouldn't chain endlessly
+  //   BUDGET_MS = 90s  — Render scheduler tick is 60s, give some headroom
+  //
+  // Double-send guard: if the AI calls send_email itself, skip the deliver=email
+  // wrap-up so the user doesn't get the same report twice.
   try {
+    const promptStr = String(sched.prompt || '');
+    // Build the same tool catalog as the chat handler, modulo browser.
+    const sheetsActive = !!(agent.sheets_enabled && user.google_tokens);
+    const githubActive = !!(agent.github_enabled && user && (user.github_pat || (user.integrations && user.integrations.github && user.integrations.github.pat)));
+    const _mediaTools = MEDIA_UTIL_TOOLS.map(t => {
+      if(t.name !== 'send_email') return t;
+      const ownerEmail = (user && user.email) || '';
+      if(!ownerEmail) return t;
+      return { ...t,
+        description: 'メールを ' + ownerEmail + ' (この AI を呼んだユーザー本人のメールアドレス) に送信します。'
+          + '宛先は ' + ownerEmail + ' に固定されているので「メールアドレスを教えて」と聞く必要はありません。'
+          + '要約・レポート・リマインダー・調査結果の自分宛通知に使ってください。他人への送信は不可。',
+      };
+    });
+    const _mcpCompose = await _composeMcpToolsForAgent(user, agent);
+    const _mcpRouting = _mcpCompose.routing;
+    const _allTools = [
+      ...IMAGE_TOOLS,
+      ...VIDEO_TOOLS,
+      ..._mediaTools,
+      ...WEB_NATIVE_TOOLS,
+      ...(sheetsActive ? SHEETS_TOOLS : []),
+      ...(githubActive ? GITHUB_TOOLS : []),
+      ..._mcpCompose.tools,
+    ];
+    // Intent-based filtering reuses the chat handler's logic.
+    const intentCategories = _detectIntentCategories(promptStr);
+    const tools = _filterToolsByIntent(_allTools, new Set(intentCategories));
+
     const sys = buildSystem(agent, {
       memories: (user.memories || []),
-      kbHits: _retrieveKbChunks(agent, sched.prompt || '', 3),
+      kbHits: _retrieveKbChunks(agent, promptStr, 3),
+      userQuery: promptStr,
+      opUser: user,
+      intentCategories,
+      sheetsActive,
+      recentHistory: (agent.history||[]).slice(-6),
     });
-    const msgs = [...(agent.history||[]), { role:'user', content: String(sched.prompt||'') }];
-    const r = await callAI(msgs, sys, agent.model);
-    const reply = (r && r.content && r.content[0] && r.content[0].text) || '';
-    const cost = (r && r.usage)
-      ? calcCost(r.usage.input_tokens||0, r.usage.output_tokens||0)
-      : { jpy:0, usd:0, inputTok:0, outputTok:0 };
-    // Neutral HH:MM (24h) — no locale tied. Renderer treats this as display-only.
+
+    const sheetsToolNames = new Set(SHEETS_TOOLS.map(t => t.name));
+    let convMsgs = [...(agent.history||[]), { role:'user', content: promptStr }];
+    let totalIn = 0, totalOut = 0;
+    let finalReply = '';
+    const toolLog = [];
+    let sendEmailCalled = false;     // double-send guard
+    const startedAt = Date.now();
+    const MAX_ITERS = 10;
+    const BUDGET_MS = 90 * 1000;
+
+    for(let iter = 0; iter < MAX_ITERS; iter++){
+      if(Date.now() - startedAt > BUDGET_MS){
+        console.warn('[schedule] budget exhausted on iter', iter, 'sched=', sched.id);
+        break;
+      }
+      _trimToolHistory(convMsgs);
+      const resp = await callAIWithTools(convMsgs, sys, tools, null, agent.model, agent);
+      totalIn  += (resp.usage?.input_tokens)  || 0;
+      totalOut += (resp.usage?.output_tokens) || 0;
+
+      // Text portion of this turn — used as the final reply if no further tools fire.
+      const text = (resp.content||[]).filter(b => b.type==='text').map(b => b.text).join('\n').trim();
+      if(text) finalReply = text;
+
+      if(resp.stop_reason !== 'tool_use') break;
+      convMsgs.push({ role:'assistant', content: resp.content });
+
+      const toolResultBlocks = [];
+      for(const block of (resp.content||[])){
+        if(block.type !== 'tool_use') continue;
+        let result;
+        try {
+          if(block.name === 'generate_image')      result = await executeImageTool(block.name, block.input||{});
+          else if(block.name === 'edit_image')     result = await executeImageEditTool(block.input||{});
+          else if(block.name === 'generate_video') result = await executeVideoTool(block.name, block.input||{});
+          else if(block.name === 'generate_audio') result = await executeAudioTool(block.input||{});
+          else if(block.name === 'generate_pdf')   result = await executePdfTool(block.input||{});
+          else if(block.name === 'generate_chart') result = await executeChartTool(block.input||{});
+          else if(block.name === 'generate_diagram') result = await executeDiagramTool(block.input||{});
+          else if(block.name === 'generate_qr')    result = await executeQrTool(block.input||{});
+          else if(block.name === 'send_email'){
+            sendEmailCalled = true;
+            result = await executeEmailTool(user, agent, block.input||{});
+          }
+          else if(block.name === 'create_artifact') result = await executeArtifactTool(block.input||{}, user);
+          else if(block.name === 'edit_artifact')   result = await executeEditArtifactTool(block.input||{}, user);
+          else if(block.name === 'notify_slack')    result = await executeNotifyTool('slack', user, block.input||{}, agent);
+          else if(block.name === 'notify_discord')  result = await executeNotifyTool('discord', user, block.input||{}, agent);
+          else if(block.name === 'zapier_run')      result = await executeZapierTool(user, block.input||{});
+          else if(block.name === 'ga4_list_properties') result = await executeGa4ListPropertiesTool(user);
+          else if(block.name === 'ga4_query')           result = await executeGa4QueryTool(user, agent, block.input||{});
+          else if(block.name === 'ga4_set_default')     result = await executeGa4SetDefaultTool(user, agent, block.input||{});
+          else if(block.name === 'drive_list_folders')  result = await executeDriveListFoldersTool(user);
+          else if(block.name === 'drive_search_files')  result = await executeDriveSearchFilesTool(user, agent, block.input||{});
+          else if(block.name === 'drive_set_default_folder') result = await executeDriveSetDefaultFolderTool(user, agent, block.input||{});
+          else if(block.name === 'wordpress_publish')   result = await executeWordPressPublishTool(user, agent, block.input||{});
+          else if(block.name === 'share_to_sns')        result = await executeShareToSnsTool(block.input||{});
+          else if(block.name === 'buffer_list_profiles') result = await executeBufferListProfilesTool(user);
+          else if(block.name === 'buffer_post')          result = await executeBufferPostTool(user, block.input||{});
+          else if(block.name === 'generate_agent_promo_video') result = await executeAgentPromoVideo(agent);
+          else if(block.name === 'web_screenshot')   result = await executeWebScreenshotTool(block.input||{});
+          else if(block.name === 'web_read_markdown') result = await executeWebReadMdTool(block.input||{});
+          else if(block.name === 'web_extract')      result = await executeWebExtractTool(block.input||{});
+          else if(sheetsToolNames.has(block.name))   result = await executeSheetsTool(user, block.name, block.input||{});
+          else if(block.name && block.name.startsWith('github_')) result = await executeGitHubTool(user, block.name, block.input||{});
+          else if(block.name && block.name.startsWith('mcp_') && _mcpRouting && _mcpRouting.has(block.name)){
+            const route = _mcpRouting.get(block.name);
+            result = await _mcpCallTool(route.server, route.toolName, block.input || {});
+          }
+          else result = { error: 'tool_unavailable_in_schedule: ' + block.name };
+        } catch(toolErr){
+          result = { error: (toolErr && toolErr.message) || String(toolErr) };
+        }
+        toolResultBlocks.push(buildToolResult(block.id, block.name, result));
+        toolLog.push({
+          name: block.name,
+          input: block.input || {},
+          ok: !(result && result.error),
+          url: result && result.url,
+          title: result && result.title,
+          error: result && result.error,
+        });
+      }
+      convMsgs.push({ role:'user', content: toolResultBlocks });
+    }
+
+    if(!finalReply) finalReply = '(レポートを生成できませんでした)';
+    const cost = calcCost(totalIn, totalOut);
     const ts = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',hour12:false});
     agent.history = [
       ...(agent.history||[]),
-      { role:'user', content: sched.prompt, time: ts, scheduled:true, schedule_id:sched.id },
-      { role:'assistant', content: reply, time: ts, cost_jpy: cost.jpy, scheduled:true },
+      { role:'user', content: promptStr, time: ts, scheduled:true, schedule_id:sched.id },
+      { role:'assistant', content: finalReply, time: ts, cost_jpy: cost.jpy, scheduled:true,
+        tool_log: toolLog.length ? toolLog : undefined },
     ];
     if(agent.history.length > 200) agent.history = agent.history.slice(-200);
     user.balance_jpy = Math.round(((user.balance_jpy||0) - cost.jpy) * 1000) / 1000;
-    if(sched.deliver === 'email' && user.email){
-      // Match recipient language: if their email contains a Japanese name or
-      // their user.name has CJK characters, send in Japanese. Otherwise English.
+
+    // Auto-deliver email — skip if the AI already called send_email itself
+    // (otherwise the user gets two emails — one with the report + one with the
+    // raw text). `wrap-up` email is for routines where the AI just generates
+    // text and we email it on the AI's behalf.
+    if(sched.deliver === 'email' && user.email && !sendEmailCalled){
       const isJa = /[ぁ-んァ-ヶー一-龠]/.test((user.name||'') + (user.email||''));
       const subj = isJa
         ? `🤖 ${sched.label || agent.name || 'AI'} — 定期実行レポート`
@@ -9397,7 +9525,7 @@ async function _runOneSchedule(user, agent, sched){
           '<h2 style="margin:0 0 8px">'+_xmlEscape(agent.name||'AI')+'</h2>'+
           '<div style="color:#52525b;font-size:13px;margin-bottom:14px">'+tagline+': <i>'+_xmlEscape(sched.label||noLabel)+'</i></div>'+
           '<div style="font-size:11px;color:#a1a1aa;margin-bottom:6px"><b>'+promptLbl+'</b> '+_xmlEscape(sched.prompt||'')+'</div>'+
-          '<div style="background:#fff7ed;border:1px solid #f5e1cd;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:14px;line-height:1.55">'+_xmlEscape(reply)+'</div>'+
+          '<div style="background:#fff7ed;border:1px solid #f5e1cd;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:14px;line-height:1.55">'+_xmlEscape(finalReply)+'</div>'+
           '<div style="margin-top:18px;text-align:center;color:#a1a1aa;font-size:11px">— MY AI AGENT</div>'+
           '</div>'
         );
@@ -9406,6 +9534,7 @@ async function _runOneSchedule(user, agent, sched){
     sched.last_run = new Date().toISOString();
     sched.next_run = _scheduleNextRun(sched);
     sched.last_error = null;
+    console.log('[schedule] ran sched=', sched.id, 'iters=', toolLog.length, 'send_email=', sendEmailCalled);
   } catch(e){
     sched.last_error = (e && e.message || String(e)).slice(0, 200);
     console.warn('[schedule] run failed:', sched.id, sched.last_error);

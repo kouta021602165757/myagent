@@ -1455,6 +1455,37 @@ input,textarea{font-family:var(--sans);}
 .m-acts{display:none;gap:4px;padding:0 4px;margin-top:2px;}
 .m:hover .m-acts{display:flex;}
 .m.u .m-acts{flex-direction:row-reverse;}
+
+/* ── Slack-style thread indicator (below message body) ──
+   "N 件の返信" link with stacked avatars + last reply time.
+   Always visible (not hover-only) so users see thread activity at a glance. */
+.thread-indicator{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:6px;padding:5px 11px 5px 6px;
+  border-radius:8px;cursor:pointer;
+  transition:all .12s;
+  max-width:100%;
+}
+.thread-indicator:hover{background:#fff;box-shadow:0 0 0 1px var(--wire2);}
+.thread-indicator .thread-reps{display:flex;}
+.thread-indicator .thread-rep-av{
+  width:24px;height:24px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:11px;color:#fff;
+  border:2px solid var(--cream);margin-left:-5px;
+  flex-shrink:0;
+}
+.thread-indicator .thread-rep-av:first-child{margin-left:0;}
+.thread-indicator .thread-count{
+  color:#1264a3;font-weight:700;font-size:13px;letter-spacing:-.005em;
+}
+.thread-indicator:hover .thread-count{text-decoration:underline;}
+.thread-indicator .thread-last{
+  color:var(--text3);font-size:12px;font-weight:500;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* User messages — right-align indicator so it sits flush with the bubble's edge */
+.m.u .thread-indicator{margin-left:auto;}
 .m-act{
   background:var(--cream2);border:1px solid var(--wire2);color:var(--text2);
   padding:4px 9px;border-radius:7px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;
@@ -8728,11 +8759,29 @@ function renderMsgs(ag, forceScrollBottom){
       + '</div>'
       + '</div>';
   }
-  // Build a parent-id → reply-count map so each parent message can show "↩️ N".
-  var threadCounts = {};
+  // Build a parent-id → thread metadata map so each parent can render a
+  // Slack-style "N 件の返信" indicator (count + last reply time + repliers).
+  var threadMeta = {};
   (ag.history||[]).forEach(function(m){
-    if(m && m.thread_parent_id){ threadCounts[m.thread_parent_id] = (threadCounts[m.thread_parent_id]||0) + 1; }
+    if(!(m && m.thread_parent_id)) return;
+    var p = m.thread_parent_id;
+    if(!threadMeta[p]){ threadMeta[p] = { count:0, last_time:'', repliers:{} }; }
+    threadMeta[p].count++;
+    if(m.time && m.time > threadMeta[p].last_time) threadMeta[p].last_time = m.time;
+    // Track unique repliers (role + user_id pair) for the stacked avatars
+    var key = m.role === 'user' ? ('u:' + (m.user_id||'me')) : 'ai';
+    if(!threadMeta[p].repliers[key]){
+      threadMeta[p].repliers[key] = {
+        role: m.role,
+        avatar: m.user_avatar || (m.role==='user' ? (m.user_name||'?').charAt(0).toUpperCase() : (ag.avatar||'🤖')),
+        bg: m.role === 'user' ? '#1f1f1f' : 'linear-gradient(135deg,#fda85e,#ea580c)',
+      };
+    }
   });
+  ag._threadMeta = threadMeta;
+  // Back-compat: keep _threadCounts so existing code paths (action row 💬 button) still work
+  var threadCounts = {};
+  Object.keys(threadMeta).forEach(function(k){ threadCounts[k] = threadMeta[k].count; });
   ag._threadCounts = threadCounts;
   inner.innerHTML = _nudgeHTML + ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline; they live in the
@@ -9056,6 +9105,23 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     ? ' style="background:'+agentAccent.grad+';box-shadow:0 0 0 2px '+agentAccent.soft+'"'
     : avStyle;
   const nameStyle = agentAccent ? ' style="color:'+agentAccent.color+';font-weight:800"' : '';
+  // Slack-style thread indicator — only shown when this message has replies.
+  // Format mirrors Slack: stacked avatars + "N 件の返信" (link color) + last
+  // reply time. Clicking opens the thread drawer.
+  var threadIndicatorHTML = '';
+  var _tid = raw && raw.id;
+  var _tmeta = _tid && ag && ag._threadMeta ? ag._threadMeta[_tid] : null;
+  if(_tmeta && _tmeta.count > 0 && !isStreaming){
+    var _avHtml = Object.values(_tmeta.repliers).slice(0,3).map(function(r){
+      return '<div class="thread-rep-av" style="background:'+r.bg+'">'+esc(r.avatar||'?')+'</div>';
+    }).join('');
+    var _lastT = _tmeta.last_time ? ' · '+L('最終返信','last reply')+' '+esc(_tmeta.last_time) : '';
+    threadIndicatorHTML = '<div class="thread-indicator" onclick="_openThread(\''+esc(_tid)+'\')">'
+      + '<div class="thread-reps">'+_avHtml+'</div>'
+      + '<span class="thread-count">'+_tmeta.count+L(' 件の返信',' replies')+'</span>'
+      + '<span class="thread-last">'+_lastT+'</span>'
+      + '</div>';
+  }
   return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'"'+rowStyle+'>'+
     '<div class="m-meta">'+
       '<div class="m-av'+(isU?' user':'')+'"'+aiAvStyle+'>'+av+'</div>'+
@@ -9067,6 +9133,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     tlogHtml+
     (renderBody?'<div class="m-body">'+(bodyMarkup||'')+citesHtml+'</div>':'')+
     reactionsHTML+
+    threadIndicatorHTML+
     (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
   '</div>';
 }
@@ -15482,41 +15549,46 @@ function _renderThreadDrawer(){
   if(existing) existing.remove();
   var d = document.createElement('div');
   d.id = 'threadDrawer';
-  d.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:#fff;border-left:1px solid var(--wire2);z-index:9985;display:flex;flex-direction:column;box-shadow:-12px 0 28px rgba(0,0,0,.10);font-family:inherit;animation:slideInRight .25s ease';
-  // Render parent + replies as plain message rows
-  function _renderRow(m){
-    var isU = m.role === 'user';
-    var who = isU ? (m.user_name || L('あなた','You')) : (m.huddle_member_name || ag.name || 'AI');
-    var avatar = isU ? (m.user_avatar || '?') : (m.huddle_member_avatar || ag.avatar || '🤖');
-    var time = m.time || '';
-    return '<div style="padding:10px 14px;border-bottom:1px dashed var(--wire2)">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
-      +   '<div style="width:26px;height:26px;border-radius:8px;background:'+(isU?'var(--cream2)':'linear-gradient(135deg,#fff7ee,#fed7aa)')+';display:flex;align-items:center;justify-content:center;font-size:13px">'+esc(avatar)+'</div>'
-      +   '<span style="font-size:12px;font-weight:800;color:var(--text)">'+esc(who)+'</span>'
-      +   '<span style="font-size:10px;color:var(--text3)">'+esc(time)+'</span>'
-      + '</div>'
-      + '<div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;padding-left:34px">'+_md(m.content||'')+'</div>'
-      + '</div>';
+  d.className = 'thread-drawer';
+  d.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--cream);border-left:1px solid var(--wire2);z-index:9985;display:flex;flex-direction:column;box-shadow:-12px 0 28px rgba(0,0,0,.10);font-family:inherit;animation:slideInRight .25s ease';
+  // Use the full _renderMsg so markdown / tool_log / artifact cards render
+  // properly inside threads (critical for LP-edit flows where each reply
+  // contains a fresh artifact URL).
+  function _renderInThread(m, idx){
+    return _renderMsg(m.role, ag, m.content, m.time||'', m.images, -1, m.tool_log, m);
   }
   d.innerHTML =
-    '<div style="padding:14px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px;background:#fdfcfa">'
-    +  '<div style="font-size:14px;font-weight:900;color:var(--text)">💬 '+L('スレッド','Thread')+'</div>'
-    +  '<div style="font-size:11px;color:var(--text3);font-weight:700">· '+replies.length+L(' 件の返信',' replies')+'</div>'
-    +  '<button onclick="_closeThread()" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
+    '<div style="padding:13px 16px;border-bottom:1px solid var(--wire2);display:flex;align-items:flex-start;gap:10px;background:var(--cream);flex-shrink:0">'
+    +  '<div style="flex:1;min-width:0">'
+    +    '<div style="font-size:15px;font-weight:900;color:var(--text)">'+L('スレッド','Thread')+'</div>'
+    +    '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+esc(ag.name||'')+' ・ '+replies.length+L(' 件の返信',' replies')+'</div>'
+    +  '</div>'
+    +  '<button onclick="_closeThread()" title="'+L('閉じる','Close')+'" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:20px;padding:4px 8px;border-radius:6px">×</button>'
     + '</div>'
-    + '<div id="threadDrawerBody" style="flex:1;overflow-y:auto;padding-bottom:8px">'
-    +   '<div style="background:rgba(251,146,60,.06);border-bottom:1px solid var(--wire2)">'
-    +     '<div style="padding:6px 14px 0 14px;font-size:10px;font-weight:800;color:var(--peach-dark);letter-spacing:.04em">'+L('元のメッセージ','ORIGINAL')+'</div>'
-    +     _renderRow(parent)
+    + '<div id="threadDrawerBody" class="msgs" style="flex:1;overflow-y:auto;padding:6px 14px 12px;background:var(--cream)">'
+    +   '<div class="msgs-inner" style="max-width:none">'
+    +     _renderInThread(parent)
+    +     (replies.length ?
+    +       '<div style="display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-size:10.5px;font-weight:800;color:var(--text2);letter-spacing:.04em">'
+    +       '<span style="flex:1;height:1px;background:var(--wire)"></span>'
+    +       '<span>'+replies.length+L(' 件の返信',' replies')+'</span>'
+    +       '<span style="flex:1;height:1px;background:var(--wire)"></span>'
+    +       '</div>'
+    +       replies.map(_renderInThread).join('') : '')
     +   '</div>'
-    +   replies.map(_renderRow).join('')
     + '</div>'
-    + '<div style="border-top:1px solid var(--wire2);padding:10px;display:flex;gap:6px">'
-    +   '<textarea id="threadCi" rows="2" placeholder="'+L('スレッドに返信…','Reply in thread…')+'" style="flex:1;padding:8px 11px;border:1px solid var(--wire2);border-radius:9px;font-family:inherit;font-size:13px;resize:none" onkeydown="if(event.key===\'Enter\' && !event.shiftKey){event.preventDefault();_sendThreadReply()}"></textarea>'
-    +   '<button onclick="_sendThreadReply()" style="background:var(--peach);color:#fff;border:0;border-radius:9px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('送信','Send')+'</button>'
+    + '<div style="border-top:1px solid var(--wire2);padding:10px 14px 14px;background:var(--cream);flex-shrink:0">'
+    +   '<div style="display:flex;gap:6px;background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:8px 10px">'
+    +     '<textarea id="threadCi" rows="2" placeholder="'+L('このスレッドに返信…','Reply in thread…')+'" style="flex:1;border:0;outline:none;font-family:inherit;font-size:13px;resize:none;background:transparent" onkeydown="if(event.key===\'Enter\' && !event.shiftKey){event.preventDefault();_sendThreadReply()}"></textarea>'
+    +     '<button onclick="_sendThreadReply()" style="align-self:flex-end;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">↵</button>'
+    +   '</div>'
+    +   '<div style="font-size:10.5px;color:var(--text3);margin-top:6px;text-align:center">'+L('このスレッド内では AI が全履歴を保持します','AI keeps the full thread context')+'</div>'
     + '</div>';
   document.body.appendChild(d);
-  setTimeout(function(){ var t = document.getElementById('threadCi'); if(t) t.focus(); }, 50);
+  setTimeout(function(){
+    var t = document.getElementById('threadCi'); if(t) t.focus();
+    var b = document.getElementById('threadDrawerBody'); if(b) b.scrollTop = b.scrollHeight;
+  }, 50);
 }
 function _closeThread(){
   window._activeThreadParent = null;
@@ -15530,23 +15602,110 @@ async function _sendThreadReply(){
   if(!text) return;
   var parentId = window._activeThreadParent;
   if(!parentId || !activeId) return;
+  var ag = (agents||[]).find(function(a){return a.id===activeId;});
+  if(!ag) return;
   ta.value = '';
   ta.disabled = true;
+  // Optimistically push user msg into history with thread_parent_id; the
+  // streaming response will push the AI reply (also with thread_parent_id
+  // — server stamps it). Re-render drawer between events so the new bubbles
+  // appear live.
+  var ts = now();
+  var userMsgId = 'u_local_' + Math.random().toString(36).slice(2,8);
+  ag.history.push({ id: userMsgId, role:'user', content: text, time: ts, thread_parent_id: parentId });
+  var aiPlaceholderIdx = ag.history.length;
+  ag.history.push({ role:'assistant', content:'', time: ts, streaming:true, thread_parent_id: parentId });
+  _renderThreadDrawer();
   try {
-    var data = await api('POST', '/api/chat/'+activeId, { message: text, thread_parent_id: parentId, stream: false });
-    var ag = (agents||[]).find(function(a){return a.id===activeId;});
-    if(ag && data){
-      // The server already saved both turns; refresh agent.history by re-fetching me.
-      try { var fresh = await api('GET','/api/agents'); if(fresh && Array.isArray(fresh.agents)){
-        var srv = fresh.agents.find(function(a){return a.id===activeId;});
-        if(srv){ ag.history = srv.history; renderMsgs(ag, false); _renderThreadDrawer(); }
-      } } catch(e){}
+    var res = await fetch(API + '/api/chat/' + activeId, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ message: text, thread_parent_id: parentId, stream: true }),
+    });
+    var ctype = (res.headers.get('content-type')||'').toLowerCase();
+    if(!ctype.includes('text/event-stream')){
+      // Non-stream fallback (shouldn't normally happen)
+      if(!res.ok){ var ed; try{ ed = await res.json(); }catch(e){} throw new Error((ed&&ed.error)||'通信エラー'); }
+      var data = await res.json();
+      if(ag.history[aiPlaceholderIdx]){
+        ag.history[aiPlaceholderIdx].content = data.reply || '';
+        ag.history[aiPlaceholderIdx].streaming = false;
+        if(data.tool_log) ag.history[aiPlaceholderIdx].tool_log = data.tool_log;
+      }
+      _renderThreadDrawer();
+      renderMsgs(ag, false);
+      return;
+    }
+    // SSE stream — patch into the placeholder.
+    var reader = res.body.getReader();
+    var dec = new TextDecoder();
+    var buf = '';
+    var acc = '';
+    while(true){
+      var chunk = await reader.read();
+      if(chunk.done) break;
+      buf += dec.decode(chunk.value, { stream:true });
+      var i;
+      while((i = buf.indexOf('\n\n')) >= 0){
+        var ev = buf.slice(0, i); buf = buf.slice(i+2);
+        var ln, evType=''; var dataStr='';
+        for(ln of ev.split('\n')){
+          if(ln.startsWith('event: ')) evType = ln.slice(7).trim();
+          else if(ln.startsWith('data: ')) dataStr += ln.slice(6);
+        }
+        if(!dataStr) continue;
+        var obj; try{ obj = JSON.parse(dataStr); }catch(e){ continue; }
+        if(evType === 'delta'){
+          acc += obj.text || '';
+          if(ag.history[aiPlaceholderIdx]){ ag.history[aiPlaceholderIdx].content = acc; }
+          _renderThreadDrawer();
+        } else if(evType === 'tool_call'){
+          if(ag.history[aiPlaceholderIdx]){
+            ag.history[aiPlaceholderIdx].tool_log = ag.history[aiPlaceholderIdx].tool_log || [];
+            ag.history[aiPlaceholderIdx].tool_log.push({ name: obj.name, input: obj.input||{}, ok:null, _pending:true });
+            _renderThreadDrawer();
+          }
+        } else if(evType === 'tool_result'){
+          if(ag.history[aiPlaceholderIdx]){
+            var log = ag.history[aiPlaceholderIdx].tool_log || [];
+            for(var k=log.length-1; k>=0; k--){
+              if(log[k]._pending && log[k].name === obj.name){ log[k] = { ...obj, _pending:false }; break; }
+            }
+            _renderThreadDrawer();
+          }
+        } else if(evType === 'done'){
+          if(ag.history[aiPlaceholderIdx]){
+            ag.history[aiPlaceholderIdx].content = obj.reply || acc;
+            ag.history[aiPlaceholderIdx].streaming = false;
+            if(obj.tool_log && obj.tool_log.length) ag.history[aiPlaceholderIdx].tool_log = obj.tool_log;
+            if(obj.truncated) ag.history[aiPlaceholderIdx].truncated = true;
+          }
+          if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
+          me.usage_count = (me.usage_count||0) + 1;
+          updateBalance();
+          _renderThreadDrawer();
+          renderMsgs(ag, false);  // main feed updates the "N 件の返信" count
+        } else if(evType === 'error'){
+          if(ag.history[aiPlaceholderIdx]){
+            ag.history[aiPlaceholderIdx].content = 'エラー: ' + (obj.message||'');
+            ag.history[aiPlaceholderIdx].streaming = false;
+            ag.history[aiPlaceholderIdx].is_error = true;
+          }
+          _renderThreadDrawer();
+        }
+      }
     }
   } catch(e){
+    if(ag.history[aiPlaceholderIdx]){
+      ag.history[aiPlaceholderIdx].content = 'エラー: ' + ((e && e.message)||'failed');
+      ag.history[aiPlaceholderIdx].streaming = false;
+      ag.history[aiPlaceholderIdx].is_error = true;
+    }
+    _renderThreadDrawer();
     showToast((e&&e.message)||'failed','ng');
   } finally {
-    ta.disabled = false;
-    ta.focus();
+    var ta2 = document.getElementById('threadCi');
+    if(ta2){ ta2.disabled = false; ta2.focus(); }
   }
 }
 

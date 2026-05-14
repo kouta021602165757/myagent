@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MY AI Agent — Slack 風スレッド モック v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#faf8f4; --cream2:#f5f1ea; --cream3:#ede5d7;
+  --peach:#fb923c; --peach-dark:#ea580c;
+  --peach-soft:rgba(251,146,60,.08); --peach-mid:rgba(251,146,60,.22);
+  --text:#1a1d21; --text2:#454850; --text3:#868686;
+  --wire:#e8e3d8; --wire2:#ddd6c6;
+  --hover:#f4ede0;
+  --link:#1264a3;
+  --ok:#10b981; --warn:#f59e0b; --err:#dc2626;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:#0a0a0a;color:#fff;font-family:'Inter','Noto Sans JP',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+body{padding:40px 24px;line-height:1.55;}
+
+/* Page chrome */
+.page-h{max-width:1500px;margin:0 auto 32px;text-align:center;}
+.page-h h1{font-size:34px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px;}
+.page-h .sub{color:#a1a1aa;font-size:14px;}
+.page-h .accent{color:var(--peach);}
+
+.section{max-width:1500px;margin:0 auto 48px;}
+.section-h{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-left:6px;}
+.section-h .badge{background:var(--peach);color:#fff;font-weight:900;font-size:11px;padding:3px 10px;border-radius:99px;letter-spacing:.04em;}
+.section-h h2{font-size:18px;font-weight:800;color:#fff;}
+.section-h .desc{color:#a1a1aa;font-size:13px;margin-left:auto;}
+
+.frame{background:var(--cream);border-radius:18px;overflow:hidden;color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.4);position:relative;}
+.browser{background:#dcd6c4;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--wire2);}
+.browser .dot{width:11px;height:11px;border-radius:50%;background:#e8e3d8;}
+.browser .dot.r{background:#ff5f56;}
+.browser .dot.y{background:#ffbd2e;}
+.browser .dot.g{background:#27c93f;}
+.browser .url{margin-left:14px;font-family:'SF Mono',Menlo,monospace;font-size:11.5px;color:var(--text3);background:#fff;padding:3px 10px;border-radius:6px;border:1px solid var(--wire2);flex:1;max-width:340px;}
+
+/* ── Layout (keep MY AI Agent's existing sidebar) ── */
+.app{display:flex;height:780px;}
+
+/* SIDEBAR (cream/peach, MY AI Agent existing style) */
+.sb{width:260px;background:var(--cream2);border-right:1px solid var(--wire);display:flex;flex-direction:column;flex-shrink:0;}
+.sb-brand{padding:18px 16px 14px;display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;}
+.sb-brand .logo{width:24px;height:24px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;}
+.sb-section{padding:18px 16px 0;}
+.sb-home{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 12px;cursor:pointer;}
+.sb-home .ic{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.sb-home .nm{flex:1;font-weight:800;font-size:13px;color:var(--text);}
+.sb-home .ar{font-size:13px;color:var(--peach-dark);}
+.sb-search{margin:12px 16px;background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:7px 10px;font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;}
+.sb-section-h{padding:8px 18px 6px;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:5px;}
+.sb-section-h .n{margin-left:auto;font-weight:600;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:7px 16px;cursor:pointer;font-size:12.5px;}
+.sb-item:hover{background:var(--cream);}
+.sb-item.active{background:var(--peach-soft);}
+.sb-item .av{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#fda85e,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sb-item .info{flex:1;min-width:0;}
+.sb-item .nm{font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-item .last{font-size:10.5px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;}
+.sb-item .badge-n{font-size:9.5px;background:var(--peach);color:#fff;border-radius:99px;padding:1px 7px;font-weight:800;flex-shrink:0;}
+.sb-foot{margin-top:auto;padding:12px 14px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:9px;background:var(--cream);}
+.sb-foot .u-av{width:32px;height:32px;border-radius:8px;background:#1f1f1f;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
+.sb-foot .info{flex:1;min-width:0;}
+.sb-foot .nm{font-weight:800;font-size:12.5px;color:var(--text);display:flex;align-items:center;gap:6px;}
+.sb-foot .nm .pro{background:var(--peach);color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:5px;letter-spacing:.02em;}
+.sb-foot .sub{font-size:10.5px;color:var(--text3);margin-top:1px;}
+
+/* MAIN */
+.main{flex:1;background:var(--cream);display:flex;flex-direction:column;min-width:0;}
+
+.ch-head{padding:11px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px;background:var(--cream);flex-shrink:0;}
+.ch-head .ic{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#fda85e,var(--peach-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.ch-head .h-title{font-weight:900;font-size:15px;display:flex;align-items:center;gap:8px;}
+.ch-head .h-title::before{content:'';width:8px;height:8px;background:var(--ok);border-radius:50%;box-shadow:0 0 5px var(--ok);}
+.ch-head .h-meta{font-size:10.5px;color:var(--peach-dark);background:var(--peach-soft);border:1px solid var(--peach-mid);padding:2px 8px;border-radius:99px;margin-top:3px;font-weight:700;display:inline-block;}
+.ch-head .h-acts{margin-left:auto;display:flex;gap:5px;}
+.ch-head .h-act{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text3);cursor:pointer;background:var(--cream2);border:1px solid var(--wire2);}
+.ch-head .h-act:hover{background:var(--cream3);}
+
+.pinned-banner{background:#fff7ed;border-bottom:1px solid var(--peach-mid);padding:7px 18px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--peach-dark);}
+.pinned-banner b{font-weight:800;}
+
+/* Feed */
+.feed{flex:1;overflow-y:auto;padding:6px 0 6px;}
+.day-divider{display:flex;align-items:center;padding:14px 22px 8px;}
+.day-divider .line{flex:1;height:1px;background:var(--wire2);}
+.day-divider .lbl{padding:3px 13px;font-size:11px;font-weight:800;color:var(--text2);border:1px solid var(--wire2);border-radius:99px;background:var(--cream);margin:0 10px;}
+
+/* Slack-style message */
+.msg{padding:8px 22px;display:flex;gap:11px;transition:background .12s;position:relative;}
+.msg:hover{background:var(--hover);}
+.msg .av{width:38px;height:38px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;}
+.msg .av.user{background:#1f1f1f;color:#fff;}
+.msg .av.ai{background:linear-gradient(135deg,#fda85e,var(--peach-dark));color:#fff;}
+.msg .body{flex:1;min-width:0;}
+.msg .head{display:flex;align-items:baseline;gap:7px;margin-bottom:2px;line-height:1.3;}
+.msg .head .nm{font-weight:900;font-size:14.5px;color:var(--text);}
+.msg .head .time{font-size:11px;color:var(--text3);font-weight:500;}
+.msg .head .you{font-size:10px;color:var(--text3);background:var(--cream2);padding:1px 6px;border-radius:5px;border:1px solid var(--wire);}
+.msg .text{font-size:14.5px;line-height:1.55;color:var(--text);}
+.msg .text strong{font-weight:700;}
+
+/* ── HOVER TOOLBAR (Slack の上部右に出るやつ) ── */
+.hover-bar{
+  position:absolute;
+  top:-14px;right:24px;
+  display:none;
+  background:#fff;
+  border:1px solid var(--wire2);
+  border-radius:9px;
+  padding:2px;
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+  z-index:5;
+}
+.msg:hover .hover-bar{display:flex;align-items:center;gap:1px;}
+.hover-bar .b{
+  width:34px;height:30px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--text3);
+  cursor:pointer;border-radius:6px;
+  position:relative;
+}
+.hover-bar .b:hover{background:var(--cream2);color:var(--text);}
+/* Highlight the thread button (this is the key one for our use case) */
+.hover-bar .b.thread{position:relative;}
+.hover-bar .b.thread::after{
+  content:'スレッドで返信';
+  position:absolute;
+  bottom:-26px;
+  left:50%;transform:translateX(-50%);
+  background:#1a1d21;color:#fff;
+  font-size:10.5px;font-weight:700;
+  padding:3px 8px;border-radius:5px;
+  white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;
+}
+.hover-bar .b.thread:hover::after{opacity:1;}
+.hover-bar .divider{width:1px;height:18px;background:var(--wire2);margin:0 2px;}
+
+/* For the demo: force the toolbar visible on the highlighted message */
+.msg.show-hover .hover-bar{display:flex;align-items:center;gap:1px;}
+.msg.show-hover{background:var(--hover);}
+
+/* Reactions */
+.reactions{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;}
+.reaction{background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:1px 9px;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;}
+.reaction:hover{border-color:var(--peach-mid);}
+.reaction.me{background:#e6f3ff;border-color:#9ec5e8;color:#1264a3;font-weight:700;}
+.reaction .add{width:24px;height:22px;display:inline-flex;align-items:center;justify-content:center;border:1px dashed var(--wire2);border-radius:99px;color:var(--text3);font-size:13px;background:transparent;}
+
+/* Artifact inline card */
+.artifact-inline{margin-top:8px;background:#fff;border:1px solid var(--wire);border-radius:8px;padding:10px 13px;display:flex;align-items:center;gap:10px;max-width:540px;}
+.artifact-inline .ic{width:36px;height:36px;border-radius:7px;background:linear-gradient(135deg,#fde68a,var(--peach));color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.artifact-inline .info{flex:1;min-width:0;}
+.artifact-inline .info .t{font-weight:800;font-size:13px;}
+.artifact-inline .info .u{font-family:'SF Mono',Menlo,monospace;font-size:10.5px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;}
+.artifact-inline .open{font-size:11.5px;font-weight:700;color:var(--peach-dark);border:1px solid var(--peach-mid);background:var(--peach-soft);padding:4px 10px;border-radius:7px;}
+
+/* Tool pill */
+.tool-pill{display:inline-flex;align-items:center;gap:4px;background:var(--cream2);border:1px solid var(--wire);padding:2px 9px;border-radius:99px;font-size:10.5px;color:var(--text2);font-weight:600;font-family:'SF Mono',Menlo,monospace;}
+
+/* ── THREAD INDICATOR (Slack 本家準拠) ──
+   メッセージ下に出る "6 件の返信 最終返信: 20日前" のヤツ
+   ・ 返信者のアバターを左に積み重ね (overlap)
+   ・ "N 件の返信" は LINK 色 (青)
+   ・ "最終返信: ..." はグレー
+   ・ "→ スレッドを表示" などのリンクテキストは無し (クリック対象は全体)
+*/
+.thread-link{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:6px;padding:4px 9px 4px 5px;
+  border-radius:7px;
+  cursor:pointer;
+  transition:all .12s;
+}
+.thread-link:hover{background:#fff;box-shadow:0 0 0 1px var(--wire2);}
+.thread-link .repliers{display:flex;}
+.thread-link .repliers .r{
+  width:24px;height:24px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:11px;
+  border:2px solid var(--cream);
+  margin-left:-5px;
+}
+.thread-link .repliers .r:first-child{margin-left:0;}
+.thread-link .repliers .r.user{background:#1f1f1f;color:#fff;}
+.thread-link .repliers .r.ai{background:linear-gradient(135deg,#fda85e,var(--peach-dark));color:#fff;}
+.thread-link .count{
+  color:var(--link);font-weight:700;font-size:13px;
+}
+.thread-link:hover .count{text-decoration:underline;}
+.thread-link .last{color:var(--text3);font-size:12px;font-weight:500;}
+/* Hover-state version (when the message is hovered, thread link gets the underline-ready state) */
+.msg:hover .thread-link{background:#fff;}
+
+/* Composer */
+.compose-wrap{padding:0 22px 16px;flex-shrink:0;}
+.compose{background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:7px;}
+.compose:focus-within{border-color:var(--peach-mid);box-shadow:0 0 0 3px rgba(251,146,60,.1);}
+.compose .input-row{font-size:14px;color:var(--text3);min-height:28px;display:flex;align-items:center;}
+.compose .input-row .ph{color:var(--text3);}
+.compose .tools{display:flex;align-items:center;gap:4px;font-size:14px;color:var(--text3);border-top:1px solid var(--wire);padding-top:7px;}
+.compose .tools .t{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;}
+.compose .tools .t:hover{background:var(--cream2);color:var(--text);}
+.compose .tools .send{margin-left:auto;background:var(--peach);color:#fff;width:auto;padding:0 14px;height:30px;border-radius:7px;display:flex;align-items:center;gap:5px;font-weight:700;font-size:12.5px;}
+.compose-hint{font-size:10.5px;color:var(--text3);margin-top:6px;text-align:center;}
+.compose-hint b{color:var(--peach-dark);}
+
+/* THREAD PANEL */
+.thread-panel{width:430px;background:var(--cream);border-left:1px solid var(--wire);display:flex;flex-direction:column;flex-shrink:0;}
+.tp-head{padding:11px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--cream);}
+.tp-head .title{font-weight:900;font-size:15px;}
+.tp-head .sub{font-size:11.5px;color:var(--text3);margin-top:1px;}
+.tp-head .acts{margin-left:auto;display:flex;gap:3px;}
+.tp-head .acts .a{width:30px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;color:var(--text3);}
+.tp-head .acts .a:hover{background:var(--cream2);color:var(--text);}
+.tp-head .acts .a.pinned{background:var(--peach-soft);color:var(--peach-dark);}
+
+.tp-body{flex:1;overflow-y:auto;padding:6px 0;}
+.tp-parent{padding:4px 0 12px;border-bottom:1px solid var(--wire);}
+.tp-parent .msg{padding:6px 18px;}
+.tp-parent .msg:hover{background:transparent;}
+.tp-parent .msg .hover-bar{display:none;}
+
+.tp-rep-count{padding:10px 18px 6px;font-size:11px;font-weight:800;color:var(--text2);display:flex;align-items:center;gap:8px;}
+.tp-rep-count .line{flex:1;height:1px;background:var(--wire);}
+
+.tp-msg{padding:6px 18px;display:flex;gap:9px;}
+.tp-msg .av{width:32px;height:32px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;}
+.tp-msg .av.user{background:#1f1f1f;color:#fff;}
+.tp-msg .av.ai{background:linear-gradient(135deg,#fda85e,var(--peach-dark));color:#fff;}
+.tp-msg .body{flex:1;min-width:0;}
+.tp-msg .head{display:flex;align-items:baseline;gap:6px;}
+.tp-msg .head .nm{font-weight:800;font-size:13px;}
+.tp-msg .head .time{font-size:10.5px;color:var(--text3);}
+.tp-msg .text{font-size:13.5px;line-height:1.55;color:var(--text);margin-top:1px;}
+
+.tp-compose{padding:10px 14px 14px;background:var(--cream);border-top:1px solid var(--wire);}
+.tp-compose .also{font-size:11px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:6px;}
+.tp-compose .also input{accent-color:var(--peach);}
+
+/* Notes */
+.note{max-width:1500px;margin:0 auto 24px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.3);border-radius:12px;padding:14px 18px;color:#ffd9b3;font-size:13px;line-height:1.65;}
+.note b{color:var(--peach);}
+
+.caption{color:#a1a1aa;font-size:12.5px;line-height:1.65;padding:14px 6px;}
+.caption b{color:#fff;}
+
+/* Mobile */
+.mobile-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:24px;}
+.mobile-frame{max-width:380px;margin:0 auto;border-radius:32px;background:#000;padding:14px;}
+.mobile-screen{background:var(--cream);border-radius:24px;height:680px;display:flex;flex-direction:column;overflow:hidden;color:var(--text);}
+.mobile-screen .ch-head{padding:11px 14px;}
+.mobile-screen .ch-head .h-title{font-size:14px;}
+.mobile-screen .feed .msg{padding:6px 14px;}
+.mobile-screen .feed .msg .av{width:32px;height:32px;font-size:13px;}
+.mobile-screen .feed .msg .head .nm{font-size:13.5px;}
+.mobile-screen .feed .msg .text{font-size:14px;}
+.mobile-screen .compose-wrap{padding:0 14px 12px;}
+.mobile-screen .day-divider{padding:10px 14px 6px;}
+.mobile-screen .thread-link{padding:3px 7px 3px 4px;}
+.mobile-screen .thread-link .count{font-size:12.5px;}
+.mobile-screen .thread-link .last{font-size:11px;}
+
+/* Annotation */
+.annotation{
+  position:absolute;background:var(--peach);color:#fff;
+  padding:6px 12px;border-radius:8px;
+  font-size:11.5px;font-weight:700;
+  box-shadow:0 6px 18px rgba(251,146,60,.5);
+  z-index:50;pointer-events:none;
+}
+.annotation .arrow{position:absolute;width:0;height:0;}
+.annotation.bottom-right{
+  top:-40px;right:0;
+}
+.annotation.bottom-right .arrow{
+  bottom:-7px;right:18px;
+  border-top:7px solid var(--peach);
+  border-left:7px solid transparent;
+  border-right:7px solid transparent;
+}
+.annotation.right{
+  left:calc(100% + 16px);top:50%;transform:translateY(-50%);
+  white-space:nowrap;
+}
+.annotation.right .arrow{
+  left:-7px;top:50%;transform:translateY(-50%);
+  border-right:7px solid var(--peach);
+  border-top:7px solid transparent;
+  border-bottom:7px solid transparent;
+}
+
+.label{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:3px 10px;border-radius:99px;margin-bottom:10px;}
+.label.after{background:var(--peach);color:#fff;}
+.label.detail{background:#1264a3;color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="page-h">
+  <h1><span class="accent">Slack 風スレッド</span> モック v3</h1>
+  <div class="sub">サイドバーは既存のまま ・ メッセージにホバー → 💬 でスレッド開始 ・ スレッドが既にある場合は "N 件の返信" リンクで開く</div>
+</div>
+
+<div class="note">
+  <b>📌 v3 の変更:</b> 既存の cream サイドバー維持 ・ <b>ホバー時の上部ツールバー</b>を Slack 本家通りに大きく表示 ・ スレッドインジケータも本家準拠 ("返信者アバター + N 件の返信 + 最終返信日時") に修正。
+</div>
+
+<!-- ─────────────────────────────────────── -->
+<!-- メイン: デスクトップ                       -->
+<!-- ─────────────────────────────────────── -->
+<div class="section">
+  <div class="section-h">
+    <span class="badge">01</span>
+    <h2>デスクトップ — サイドバー既存 + Slack 風スレッド</h2>
+    <span class="desc">クリーム系の MY AI Agent サイドバーはそのまま、メイン feed だけ Slack 風に</span>
+  </div>
+
+  <span class="label after">AFTER (v3) — サイドバー据置 + Slack-style 中央</span>
+  <div class="frame">
+    <div class="browser">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="url">myaiagents.agency/app.html</span>
+    </div>
+
+    <div class="app">
+
+      <!-- SIDEBAR (既存のまま) -->
+      <aside class="sb">
+        <div class="sb-brand"><span class="logo">M</span>MY AI AGENT</div>
+
+        <div class="sb-section">
+          <div class="sb-home">
+            <span class="ic">🏠</span>
+            <span class="nm">Home</span>
+            <span class="ar">→</span>
+          </div>
+        </div>
+
+        <div class="sb-search">🔍 検索 <span style="margin-left:auto;font-family:monospace;font-size:10px;background:var(--cream2);padding:1px 5px;border-radius:4px;">⌘K</span></div>
+
+        <div class="sb-section-h">👤 DMs <span class="n">・ 5</span></div>
+        <div class="sb-item active">
+          <div class="av">🦊</div>
+          <div class="info"><div class="nm">投資家対応</div><div class="last">8 件の返信スレッド</div></div>
+        </div>
+        <div class="sb-item">
+          <div class="av" style="background:linear-gradient(135deg,#fde68a,#f59e0b)">🐻</div>
+          <div class="info"><div class="nm">LP 制作</div><div class="last">海老フライ屋 v3 完成</div></div>
+          <div class="badge-n">2</div>
+        </div>
+        <div class="sb-item">
+          <div class="av" style="background:linear-gradient(135deg,#a3e635,#22c55e)">📊</div>
+          <div class="info"><div class="nm">GA4 分析</div><div class="last">先週の PV 12,340</div></div>
+        </div>
+
+        <div class="sb-section-h" style="margin-top:6px;">👥 グループ <span class="n">・ 3</span></div>
+        <div class="sb-item">
+          <div class="av" style="background:linear-gradient(135deg,#c084fc,#7c3aed);border-radius:9px;">🚀</div>
+          <div class="info"><div class="nm">MY AI Agent 成長チーム</div><div class="last">6 AI ・ 7 件未読</div></div>
+          <div class="badge-n">7</div>
+        </div>
+        <div class="sb-item">
+          <div class="av" style="background:linear-gradient(135deg,#f87171,#dc2626);border-radius:9px;">🎯</div>
+          <div class="info"><div class="nm">投資家 PR チーム</div><div class="last">3 AI</div></div>
+        </div>
+
+        <div class="sb-foot">
+          <div class="u-av">k</div>
+          <div class="info">
+            <div class="nm">kota <span class="pro">PRO</span></div>
+            <div class="sub">Business プラン</div>
+          </div>
+          <span style="color:var(--text3);font-size:13px;cursor:pointer;">⚙</span>
+        </div>
+      </aside>
+
+      <!-- MAIN feed -->
+      <main class="main">
+        <div class="ch-head">
+          <div class="ic">🦊</div>
+          <div>
+            <div class="h-title">投資家対応</div>
+            <span class="h-meta">🎯 Smart ・ 📌 1 件 ・ 🧵 3 件アクティブ</span>
+          </div>
+          <div class="h-acts">
+            <div class="h-act" title="検索">🔍</div>
+            <div class="h-act" title="メンバー">👥</div>
+            <div class="h-act" title="設定">⚙</div>
+          </div>
+        </div>
+
+        <div class="pinned-banner">
+          📌 <b>ピン留め:</b> <span style="color:var(--text2)">海老フライ LP 制作 (v3 完成) ・ <span style="color:var(--link);font-weight:700;cursor:pointer;">スレッドを表示</span></span>
+        </div>
+
+        <div class="feed">
+          <div class="day-divider"><span class="line"></span><span class="lbl">今日</span><span class="line"></span></div>
+
+          <!-- Message 1 -->
+          <div class="msg">
+            <div class="av user">k</div>
+            <div class="body">
+              <div class="head"><span class="nm">kota</span><span class="time">9:30</span></div>
+              <div class="text">海老フライ屋の LP 作って。渋谷駅 5 分、ロゴは大きく</div>
+            </div>
+            <!-- HOVER BAR (always visible in mock — Slack の正確な並び) -->
+            <div class="hover-bar">
+              <div class="b" title="完了マーク">✅</div>
+              <div class="b" title="見たマーク">👀</div>
+              <div class="b" title="いいね">👍</div>
+              <div class="b" title="リアクションを追加">😀<span style="font-size:10px;position:relative;top:-3px;margin-left:1px;">+</span></div>
+              <div class="b thread" title="スレッドで返信">💬</div>
+              <div class="b" title="共有">↗</div>
+              <div class="b" title="保存">🔖</div>
+              <div class="divider"></div>
+              <div class="b" title="メニュー">⋯</div>
+            </div>
+          </div>
+
+          <!-- Message 2: AI reply (highlighted to demonstrate hover state) -->
+          <div class="msg show-hover" style="position:relative;">
+            <div class="av ai">🦊</div>
+            <div class="body">
+              <div class="head"><span class="nm">投資家対応</span><span class="time">9:31</span><span class="you">AI</span></div>
+              <div style="margin-bottom:5px;"><span class="tool-pill">⚙ create_artifact</span></div>
+              <div class="text">作りました! 🎨</div>
+              <div class="artifact-inline">
+                <div class="ic">🎨</div>
+                <div class="info">
+                  <div class="t">海老フライ屋 LP <span style="color:var(--text3);font-weight:600;font-size:11px;margin-left:4px;">v3</span></div>
+                  <div class="u">/generated/artifact-ebi-fry-abc.html</div>
+                </div>
+                <div class="open">開く →</div>
+              </div>
+
+              <div class="reactions">
+                <span class="reaction me">🎉 <b>2</b></span>
+                <span class="reaction">👀 <b>1</b></span>
+                <span class="reaction"><span class="add">+</span></span>
+              </div>
+
+              <!-- THREAD LINK (Slack 本家準拠) -->
+              <div class="thread-link">
+                <div class="repliers">
+                  <div class="r user">k</div>
+                  <div class="r ai">🦊</div>
+                </div>
+                <span class="count">8 件の返信</span>
+                <span class="last">最終返信: 30 分前</span>
+              </div>
+            </div>
+
+            <!-- HOVER BAR (Slack 本家準拠 — 横並びの大きなツールバー) -->
+            <div class="hover-bar">
+              <div class="b" title="完了マーク">✅</div>
+              <div class="b" title="見たマーク">👀</div>
+              <div class="b" title="いいね">👍</div>
+              <div class="b" title="リアクションを追加">😀<span style="font-size:10px;position:relative;top:-3px;margin-left:1px;">+</span></div>
+              <div class="b thread" title="スレッドで返信" style="background:var(--peach-soft);color:var(--peach-dark);">💬</div>
+              <div class="b" title="共有">↗</div>
+              <div class="b" title="保存">🔖</div>
+              <div class="divider"></div>
+              <div class="b" title="ピン留め">📌</div>
+              <div class="b" title="メニュー">⋯</div>
+            </div>
+
+            <!-- Annotation pointing to the thread button -->
+            <div class="annotation right" style="top:-2px;">
+              💬 = スレッドで返信開始
+              <span class="arrow"></span>
+            </div>
+          </div>
+
+          <!-- Message 3 -->
+          <div class="msg">
+            <div class="av user">k</div>
+            <div class="body">
+              <div class="head"><span class="nm">kota</span><span class="time">11:30</span></div>
+              <div class="text">投資家リスト Sheets に AG ビジネスサポート 木下さんを追加して。面談済み</div>
+            </div>
+            <div class="hover-bar">
+              <div class="b">✅</div><div class="b">👀</div><div class="b">👍</div><div class="b">😀<span style="font-size:10px;position:relative;top:-3px;margin-left:1px;">+</span></div>
+              <div class="b thread">💬</div><div class="b">↗</div><div class="b">🔖</div><div class="divider"></div><div class="b">⋯</div>
+            </div>
+          </div>
+
+          <!-- Message 4 -->
+          <div class="msg">
+            <div class="av ai">🦊</div>
+            <div class="body">
+              <div class="head"><span class="nm">投資家対応</span><span class="time">11:31</span><span class="you">AI</span></div>
+              <div style="margin-bottom:5px;"><span class="tool-pill">⚙ sheets_append</span></div>
+              <div class="text">追加しました!</div>
+              <div class="artifact-inline">
+                <div class="ic" style="background:linear-gradient(135deg,#a3e635,#22c55e);">📊</div>
+                <div class="info">
+                  <div class="t">投資家リスト</div>
+                  <div class="u">Google スプレッドシート ・ 12 行目に追加</div>
+                </div>
+                <div class="open">開く →</div>
+              </div>
+              <div class="thread-link">
+                <div class="repliers">
+                  <div class="r user">k</div>
+                  <div class="r ai">🦊</div>
+                </div>
+                <span class="count">3 件の返信</span>
+                <span class="last">最終返信: 2 時間前</span>
+              </div>
+            </div>
+            <div class="hover-bar">
+              <div class="b">✅</div><div class="b">👀</div><div class="b">👍</div><div class="b">😀<span style="font-size:10px;position:relative;top:-3px;margin-left:1px;">+</span></div>
+              <div class="b thread">💬</div><div class="b">↗</div><div class="b">🔖</div><div class="divider"></div><div class="b">⋯</div>
+            </div>
+          </div>
+
+          <!-- Message 5: no replies yet -->
+          <div class="msg">
+            <div class="av user">k</div>
+            <div class="body">
+              <div class="head"><span class="nm">kota</span><span class="time">14:20</span></div>
+              <div class="text">来週の投資家アポ、3 件あるんだけど準備資料そろってる?</div>
+            </div>
+            <div class="hover-bar">
+              <div class="b">✅</div><div class="b">👀</div><div class="b">👍</div><div class="b">😀<span style="font-size:10px;position:relative;top:-3px;margin-left:1px;">+</span></div>
+              <div class="b thread">💬</div><div class="b">↗</div><div class="b">🔖</div><div class="divider"></div><div class="b">⋯</div>
+            </div>
+          </div>
+          <div class="msg">
+            <div class="av ai">🦊</div>
+            <div class="body">
+              <div class="head"><span class="nm">投資家対応</span><span class="time">14:20</span><span class="you">AI</span></div>
+              <div class="text">3 社の準備状況を整理しました:<br>
+                ・<strong>AG ビジネスサポート</strong> — 月曜 14:00 ・ 資料 ✅<br>
+                ・<strong>○○キャピタル</strong> — 水曜 11:00 ・ 資料 ⚠️ 未作成<br>
+                ・<strong>△△ベンチャーズ</strong> — 金曜 16:00 ・ 資料 ✅</div>
+              <div class="reactions">
+                <span class="reaction me">👍 <b>1</b></span>
+                <span class="reaction"><span class="add">+</span></span>
+              </div>
+              <!-- ホバー前なので thread-link なし (まだスレッド未生成) -->
+            </div>
+            <div class="hover-bar">
+              <div class="b">✅</div><div class="b">👀</div><div class="b">👍</div><div class="b">😀<span style="font-size:10px;position:relative;top:-3px;margin-left:1px;">+</span></div>
+              <div class="b thread">💬</div><div class="b">↗</div><div class="b">🔖</div><div class="divider"></div><div class="b">⋯</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Composer -->
+        <div class="compose-wrap">
+          <div class="compose">
+            <div class="input-row"><span class="ph">投資家対応にメッセージを送る…</span></div>
+            <div class="tools">
+              <span class="t">📎</span>
+              <span class="t">🔗</span>
+              <span class="t">🎤</span>
+              <span class="t">⟨/⟩</span>
+              <span class="t">😀</span>
+              <span style="margin-left:10px;color:var(--text3);font-size:10.5px;">⌘+Enter で送信</span>
+              <span class="t send">↵ 送信</span>
+            </div>
+          </div>
+          <div class="compose-hint">
+            ここに送ると <b>新しいトピック</b> = 記憶リセット ・ 既存の話題は ↑ メッセージにホバーして <b>💬</b> でスレッド継続
+          </div>
+        </div>
+      </main>
+
+      <!-- THREAD PANEL -->
+      <aside class="thread-panel">
+        <div class="tp-head">
+          <div>
+            <div class="title">スレッド</div>
+            <div class="sub">投資家対応 ・ 8 件の返信</div>
+          </div>
+          <div class="acts">
+            <div class="a pinned" title="ピン留め">📌</div>
+            <div class="a" title="アーカイブ">🗃</div>
+            <div class="a" title="メニュー">⋯</div>
+            <div class="a" title="閉じる">×</div>
+          </div>
+        </div>
+
+        <div class="tp-body">
+          <div class="tp-parent">
+            <div class="msg">
+              <div class="av ai">🦊</div>
+              <div class="body">
+                <div class="head"><span class="nm">投資家対応</span><span class="time">9:31</span></div>
+                <div class="text">作りました! 🎨</div>
+                <div class="artifact-inline" style="max-width:none;">
+                  <div class="ic">🎨</div>
+                  <div class="info">
+                    <div class="t">海老フライ屋 LP <span style="color:var(--text3);font-weight:600;font-size:11px;">v1</span></div>
+                    <div class="u">/generated/artifact-ebi-fry-abc.html</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tp-rep-count"><span class="line"></span><span>8 件の返信</span><span class="line"></span></div>
+
+          <div class="tp-msg">
+            <div class="av user">k</div>
+            <div class="body">
+              <div class="head"><span class="nm">kota</span><span class="time">9:35</span></div>
+              <div class="text">ヒーローを赤にして</div>
+            </div>
+          </div>
+          <div class="tp-msg">
+            <div class="av ai">🦊</div>
+            <div class="body">
+              <div class="head"><span class="nm">投資家対応</span><span class="time">9:36</span></div>
+              <div style="margin:2px 0;"><span class="tool-pill">⚙ edit_artifact #hero</span></div>
+              <div class="text">更新しました ✏️ <span style="color:var(--text3);font-size:11px;">v2</span></div>
+            </div>
+          </div>
+          <div class="tp-msg">
+            <div class="av user">k</div>
+            <div class="body">
+              <div class="head"><span class="nm">kota</span><span class="time">9:50</span></div>
+              <div class="text">もう少し控えめな赤に</div>
+            </div>
+          </div>
+          <div class="tp-msg">
+            <div class="av ai">🦊</div>
+            <div class="body">
+              <div class="head"><span class="nm">投資家対応</span><span class="time">9:51</span></div>
+              <div style="margin:2px 0;"><span class="tool-pill">⚙ edit_artifact #hero</span></div>
+              <div class="text">#d96b5c に変更しました ✏️ <span style="color:var(--text3);font-size:11px;">v3</span></div>
+            </div>
+          </div>
+          <div class="tp-msg">
+            <div class="av user">k</div>
+            <div class="body">
+              <div class="head"><span class="nm">kota</span><span class="time">10:05</span></div>
+              <div class="text">完璧! メニュー 5 品も追加して</div>
+            </div>
+          </div>
+          <div class="tp-msg">
+            <div class="av ai">🦊</div>
+            <div class="body">
+              <div class="head"><span class="nm">投資家対応</span><span class="time">10:06</span></div>
+              <div style="margin:2px 0;"><span class="tool-pill">⚙ edit_artifact #menu</span></div>
+              <div class="text">メニュー 5 品追加しました 🍤</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-compose">
+          <div class="compose">
+            <div class="input-row"><span class="ph">このスレッドに返信…</span></div>
+            <div class="tools">
+              <span class="t">📎</span>
+              <span class="t">🔗</span>
+              <span class="t">⟨/⟩</span>
+              <span class="t">😀</span>
+              <span class="t send" style="margin-left:auto;">↵ 送信</span>
+            </div>
+          </div>
+          <div class="also">
+            <input type="checkbox" id="also" />
+            <label for="also">投資家対応 にも表示する</label>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <div class="caption">
+    ✅ <b>サイドバー (左)</b> は MY AI Agent の cream/peach デザイン据置。<br>
+    ✅ <b>ホバーバー (上部右)</b> = Slack 本家準拠の横並び。<b style="color:var(--peach);">💬 が「スレッドで返信」</b>のメインボタン。<br>
+    ✅ <b>"8 件の返信" リンク</b> = 既にスレッドが存在する場合に表示 (Slack そのまま)。<br>
+    ✅ <b>右パネル (スレッド)</b> = 親メッセージ + 全返信。AI はこのスレッド全文を context として保持。
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────── -->
+<!-- ホバーバー詳細                              -->
+<!-- ─────────────────────────────────────── -->
+<div class="section">
+  <div class="section-h">
+    <span class="badge">02</span>
+    <h2>ホバーバーの拡大図 — Slack 本家との完全一致</h2>
+    <span class="desc">ユーザー提供スクショ準拠</span>
+  </div>
+
+  <span class="label detail">アクション 1 個ずつ説明</span>
+  <div style="background:var(--cream);border-radius:14px;padding:32px 28px;color:var(--text);">
+    <!-- 拡大ホバーバー -->
+    <div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.04);display:inline-flex;align-items:center;gap:2px;margin-bottom:24px;">
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:7px;" title="完了">✅</div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:7px;" title="見たマーク">👀</div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:7px;" title="いいね">👍</div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:7px;" title="リアクション追加">😀<span style="font-size:13px;position:relative;top:-5px;margin-left:1px;">+</span></div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:7px;background:var(--peach-soft);color:var(--peach-dark);border:1px solid var(--peach-mid);" title="スレッドで返信">💬</div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:7px;" title="共有">↗</div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:7px;" title="保存">🔖</div>
+      <div style="width:1px;height:24px;background:var(--wire2);margin:0 4px;"></div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border-radius:7px;" title="ピン留め">📌</div>
+      <div style="width:46px;height:40px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border-radius:7px;" title="メニュー">⋯</div>
+    </div>
+
+    <!-- 各アイコン解説 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">✅</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">完了マーク</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">タスクや決定事項として完了マークを付ける</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">👀</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">見たマーク</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">「読んだよ」の軽い既読フィードバック</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">👍</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">いいね</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">よくある絵文字反応のショートカット</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">😀+</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">リアクション追加</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">絵文字ピッカーが開く / 自由に絵文字反応</div>
+      </div>
+      <div style="background:var(--peach-soft);border:1.5px solid var(--peach-mid);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;color:var(--peach-dark);">💬</div>
+        <div style="font-weight:900;font-size:12.5px;margin-bottom:3px;color:var(--peach-dark);">スレッドで返信 ⭐</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;"><b>これが今回の主役。</b>右パネルにスレッドが開き、そのメッセージの文脈を保持したまま追加質問できる。LP 修正の連続にはこれを使う。</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">↗</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">共有</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">他チャンネル / DM に転送 ・ または外部リンク化</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">🔖</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">保存 (後で見る)</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">サイドバーの "後で読む" リストに追加</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">📌</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">ピン留め</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">上部のピンバナーに表示 + 長期記憶に昇格</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:18px;margin-bottom:5px;">⋯</div>
+        <div style="font-weight:800;font-size:12.5px;margin-bottom:3px;">メニュー</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">コピー / 編集 / 削除 / リンクコピー など</div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;background:#fff7ed;border:1px solid var(--peach-mid);border-radius:9px;padding:11px 14px;font-size:12.5px;color:var(--text);line-height:1.7;">
+      <b style="color:var(--peach-dark);">📌 MVP では:</b> ✅ 👀 👍 😀+ <b style="color:var(--peach-dark);">💬</b> ⋯ の <b>6 個だけ</b>を Phase 1 で実装すれば十分。残り (↗ / 🔖 / 📌) は Phase 3 で追加。
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────── -->
+<!-- モバイル                                  -->
+<!-- ─────────────────────────────────────── -->
+<div class="section">
+  <div class="section-h">
+    <span class="badge">03</span>
+    <h2>モバイル — long-press で同じツールバー</h2>
+    <span class="desc">スマホでは「長押し」で同じアクションメニューがボトムシートで開く (Slack iOS)</span>
+  </div>
+
+  <div class="mobile-row">
+    <!-- Mobile 1: feed -->
+    <div>
+      <div class="mobile-frame">
+        <div class="mobile-screen">
+          <div class="ch-head">
+            <span style="font-size:18px;cursor:pointer;">☰</span>
+            <div class="ic" style="width:30px;height:30px;font-size:14px;">🦊</div>
+            <div>
+              <div class="h-title" style="font-size:14px;">投資家対応</div>
+              <div style="font-size:10px;color:var(--text3);">3 スレッドアクティブ</div>
+            </div>
+            <div class="h-acts"><div class="h-act" style="width:28px;height:28px;">🔍</div></div>
+          </div>
+          <div class="pinned-banner" style="padding:6px 14px;font-size:11px;">📌 海老フライ LP</div>
+          <div class="feed">
+            <div class="day-divider"><span class="line"></span><span class="lbl">今日</span><span class="line"></span></div>
+            <div class="msg">
+              <div class="av user">k</div>
+              <div class="body">
+                <div class="head"><span class="nm">kota</span><span class="time">9:30</span></div>
+                <div class="text">海老フライ屋 LP 作って</div>
+              </div>
+            </div>
+            <div class="msg">
+              <div class="av ai">🦊</div>
+              <div class="body">
+                <div class="head"><span class="nm">投資家対応</span><span class="time">9:31</span></div>
+                <div style="margin-bottom:4px;"><span class="tool-pill">⚙ create_artifact</span></div>
+                <div class="text">作りました! 🎨</div>
+                <div class="artifact-inline" style="max-width:none;">
+                  <div class="ic">🎨</div>
+                  <div class="info"><div class="t">海老フライ屋 LP</div><div class="u">v3</div></div>
+                </div>
+                <div class="thread-link">
+                  <div class="repliers"><div class="r user">k</div><div class="r ai">🦊</div></div>
+                  <span class="count">8 件</span>
+                  <span class="last">30 分前</span>
+                </div>
+              </div>
+            </div>
+            <div class="msg">
+              <div class="av user">k</div>
+              <div class="body">
+                <div class="head"><span class="nm">kota</span><span class="time">11:30</span></div>
+                <div class="text">投資家リストに追加</div>
+              </div>
+            </div>
+            <div class="msg">
+              <div class="av ai">🦊</div>
+              <div class="body">
+                <div class="head"><span class="nm">投資家対応</span><span class="time">11:31</span></div>
+                <div class="text">追加しました!</div>
+                <div class="thread-link">
+                  <div class="repliers"><div class="r user">k</div></div>
+                  <span class="count">3 件</span>
+                  <span class="last">2h 前</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="compose-wrap">
+            <div class="compose">
+              <div class="input-row"><span class="ph">メッセージを送る…</span></div>
+              <div class="tools">
+                <span class="t">📎</span><span class="t">🎤</span>
+                <span class="t send" style="margin-left:auto;height:26px;padding:0 8px;">↵</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;color:#a1a1aa;font-size:12px;padding:10px;">
+        メインフィード <b style="color:#fff">(時系列 + 🧵 リンク)</b>
+      </div>
+    </div>
+
+    <!-- Mobile 2: long-press action sheet -->
+    <div>
+      <div class="mobile-frame">
+        <div class="mobile-screen" style="position:relative;">
+          <!-- dimmed feed -->
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:1;"></div>
+          <div class="ch-head" style="opacity:.5;">
+            <span style="font-size:18px;">☰</span>
+            <div class="ic" style="width:30px;height:30px;font-size:14px;">🦊</div>
+            <div style="font-weight:900;font-size:14px;">投資家対応</div>
+          </div>
+          <div class="feed" style="opacity:.4;">
+            <div class="msg">
+              <div class="av ai">🦊</div>
+              <div class="body">
+                <div class="head"><span class="nm">投資家対応</span></div>
+                <div class="text">作りました! 🎨</div>
+              </div>
+            </div>
+          </div>
+          <!-- bottom sheet (Slack iOS pattern) -->
+          <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;padding:14px 16px 24px;z-index:5;box-shadow:0 -10px 30px rgba(0,0,0,.2);">
+            <div style="width:38px;height:4px;background:#cbd5e1;border-radius:99px;margin:0 auto 14px;"></div>
+            <div style="display:flex;justify-content:space-around;padding:14px 0;border-bottom:1px solid var(--wire);">
+              <div style="text-align:center;cursor:pointer;">
+                <div style="font-size:24px;">✅</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:3px;">完了</div>
+              </div>
+              <div style="text-align:center;cursor:pointer;">
+                <div style="font-size:24px;">👀</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:3px;">既読</div>
+              </div>
+              <div style="text-align:center;cursor:pointer;">
+                <div style="font-size:24px;">👍</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:3px;">いいね</div>
+              </div>
+              <div style="text-align:center;cursor:pointer;">
+                <div style="font-size:24px;">😀</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:3px;">絵文字</div>
+              </div>
+            </div>
+            <div style="padding:8px 4px;cursor:pointer;display:flex;align-items:center;gap:14px;background:var(--peach-soft);border:1px solid var(--peach-mid);border-radius:9px;margin:10px 0;">
+              <div style="font-size:22px;color:var(--peach-dark);">💬</div>
+              <div>
+                <div style="font-weight:900;color:var(--peach-dark);">スレッドで返信</div>
+                <div style="font-size:11px;color:var(--text3);">このメッセージの文脈を保ったまま続ける</div>
+              </div>
+              <div style="margin-left:auto;color:var(--text3);">→</div>
+            </div>
+            <div style="padding:11px 4px;cursor:pointer;display:flex;align-items:center;gap:14px;">
+              <div style="font-size:20px;">📌</div>
+              <div style="font-weight:700;">ピン留め</div>
+              <div style="margin-left:auto;color:var(--text3);">→</div>
+            </div>
+            <div style="padding:11px 4px;cursor:pointer;display:flex;align-items:center;gap:14px;">
+              <div style="font-size:20px;">🔖</div>
+              <div style="font-weight:700;">保存 (後で見る)</div>
+              <div style="margin-left:auto;color:var(--text3);">→</div>
+            </div>
+            <div style="padding:11px 4px;cursor:pointer;display:flex;align-items:center;gap:14px;">
+              <div style="font-size:20px;">↗</div>
+              <div style="font-weight:700;">共有</div>
+              <div style="margin-left:auto;color:var(--text3);">→</div>
+            </div>
+            <div style="padding:11px 4px;cursor:pointer;display:flex;align-items:center;gap:14px;color:var(--text3);">
+              <div style="font-size:20px;">⋯</div>
+              <div style="font-weight:700;">その他</div>
+              <div style="margin-left:auto;">→</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;color:#a1a1aa;font-size:12px;padding:10px;">
+        メッセージ <b style="color:#fff">長押し</b> → アクション展開
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────── -->
+<!-- フロー説明                                 -->
+<!-- ─────────────────────────────────────── -->
+<div class="section">
+  <div class="section-h">
+    <span class="badge">04</span>
+    <h2>典型フロー — LP 修正シナリオ</h2>
+  </div>
+
+  <div style="background:var(--cream);border-radius:14px;padding:24px 28px;color:var(--text);">
+
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;">
+      <div style="background:var(--peach);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;">1</div>
+      <div>
+        <div style="font-weight:800;font-size:14px;margin-bottom:3px;">トップフィードで「LP 作って」と送信</div>
+        <div style="color:var(--text2);font-size:12.5px;line-height:1.7;">サイドバー下のメイン compose 欄から普通に投稿。AI が iter-loop で artifact を作って応答する。</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;">
+      <div style="background:var(--peach);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;">2</div>
+      <div>
+        <div style="font-weight:800;font-size:14px;margin-bottom:3px;">AI 応答にホバー → 💬 (スレッドで返信) クリック</div>
+        <div style="color:var(--text2);font-size:12.5px;line-height:1.7;">右側にスレッドパネルが開く。「このスレッドに返信…」欄に「ヒーロー赤に」と入力。</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;">
+      <div style="background:var(--peach);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;">3</div>
+      <div>
+        <div style="font-weight:800;font-size:14px;margin-bottom:3px;">AI が <b style="color:var(--peach-dark);">edit_artifact で差分修正</b></div>
+        <div style="color:var(--text2);font-size:12.5px;line-height:1.7;">スレッド内では artifact ファイル名と構造を AI が常に把握 → create_artifact じゃなく必ず edit_artifact が呼ばれる → <b>違う LP が生まれない</b>。</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;">
+      <div style="background:var(--peach);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;">4</div>
+      <div>
+        <div style="font-weight:800;font-size:14px;margin-bottom:3px;">「もう少し控えめに」「メニュー追加」など継続</div>
+        <div style="color:var(--text2);font-size:12.5px;line-height:1.7;">全部このスレッド内で完結。v1 → v2 → v3 と版が積み重なる。AI は <b>スレッド内全履歴</b> を見て一貫した応答。</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;">
+      <div style="background:var(--peach);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;">5</div>
+      <div>
+        <div style="font-weight:800;font-size:14px;margin-bottom:3px;">完成したら 📌 ピン留め</div>
+        <div style="color:var(--text2);font-size:12.5px;line-height:1.7;">スレッド全体のサマリが <b>長期記憶</b>に昇格。次回別の質問しても「あの LP」を AI が思い出せる。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

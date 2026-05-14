@@ -16599,15 +16599,35 @@ async function handleAPI(req,res,pathname,method,ip){
       return;
     }
 
-    // Rolling-summary aware history selection:
-    // - Pin any leading `_summary:true` message so the AI never loses long-term
-    //   context once we've archived old turns.
-    // - Take the last 14 NON-summary entries as the recent window.
-    const _summaryMsg = (agent.history||[]).find(m => m && m._summary);
-    // 14 → 8: combined with the rolling-summary fold above, 8 recent turns is
-    // enough for short-term flow while keeping input-token cost down.
-    const _recentHist = (agent.history||[]).filter(m => !(m && m._summary)).slice(-8);
-    const hist = _summaryMsg ? [_summaryMsg, ..._recentHist] : _recentHist;
+    // ── Thread-aware history selection ──────────────────────
+    // When the message is being sent INSIDE a thread (body.thread_parent_id
+    // is set), the AI sees ONLY the thread's parent + all its descendants.
+    // Threads keep their own focused context — no rolling summary, no
+    // last-8 cutoff — so long edit chains (LP v1 → v2 → v3 → …) stay
+    // coherent and AI never "forgets" earlier instructions.
+    //
+    // When sending a TOP-LEVEL message (no thread_parent_id), the main
+    // feed context is built from non-threaded messages only. This keeps
+    // threads isolated from each other (different topics don't pollute).
+    const _threadParentForCtx = body.thread_parent_id
+      ? String(body.thread_parent_id).slice(0, 32) : null;
+    let hist;
+    if(_threadParentForCtx){
+      // Thread mode: parent + all descendants, full history (no truncation).
+      const _all = agent.history || [];
+      const _parent  = _all.find(m => m && m.id === _threadParentForCtx);
+      const _replies = _all.filter(m => m && m.thread_parent_id === _threadParentForCtx);
+      hist = _parent ? [_parent, ..._replies] : _replies;
+    } else {
+      // Main-feed mode: skip threaded messages so different threads don't
+      // bleed context into a fresh topic.
+      const _summaryMsg = (agent.history||[]).find(m => m && m._summary);
+      const _recentHist = (agent.history||[])
+        .filter(m => !(m && m._summary))
+        .filter(m => !(m && m.thread_parent_id))
+        .slice(-8);
+      hist = _summaryMsg ? [_summaryMsg, ..._recentHist] : _recentHist;
+    }
     // ユーザーメッセージのcontentを構築（画像 + PDF + テキスト/URL添付対応）
     let userContent;
     if(images.length > 0 || texts.length > 0){

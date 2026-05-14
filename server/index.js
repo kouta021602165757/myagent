@@ -6075,6 +6075,42 @@ async function executeWordPressTestConnectionTool(user, agent, input){
         site_url: site.siteUrl, username: site.username,
       };
     }
+    if(r.s === 403){
+      // 403 はサーバー側の WAF / IP 制限 / セキュリティプラグインに引っかかってる
+      // ことがほぼ確定。レスポンス本文に XSERVER の HTML が含まれる場合が
+      // よくあるので、その signature でホスティング業者を特定し、各社の
+      // 設定画面への動線を案内する。
+      const bodyStr = typeof r.d === 'string' ? r.d : JSON.stringify(r.d||'');
+      const lowered = bodyStr.toLowerCase();
+      let hostHint = '';
+      if(/xserver/i.test(bodyStr)){
+        hostHint = `[XSERVER 検出] XSERVER の「国外IPアクセス制限 (REST API)」がデフォルトで ON になっており、海外サーバー (このアプリは US Oregon) からの API リクエストを 403 で遮断します。
+
+【解除手順】
+1. https://www.xserver.ne.jp/login_server.php からサーバーパネルにログイン
+2. 「WordPress セキュリティ設定」を開く
+3. ドメイン「${u.hostname}」を選択
+4. 「国外IPアクセス制限設定 (REST API)」を **OFF** にして「設定を更新」
+5. 同様に「ダッシュボード」「XML-RPC」も OFF 推奨
+
+それでも 403 なら「WAF 設定」も一度全 OFF にして再試行 → 動いたら 1 つずつ ON に戻す。
+SiteGuard WP Plugin が入ってる場合は「XMLRPC 防御」「WAF チューニングサポート」も無効化。`;
+      } else if(/sakura|さくら/i.test(bodyStr)){
+        hostHint = `[さくらインターネット 検出] さくらの「ウェブアプリケーションファイアウォール (WAF)」または「IPアドレス制限」に引っかかってる可能性。コントロールパネル → WAF設定 で一時的に OFF にして検証してください。`;
+      } else if(/cloudflare/i.test(lowered) || /cf-ray/i.test(lowered)){
+        hostHint = `[Cloudflare 検出] Cloudflare の WAF / Bot Fight Mode / Security Level が高くなってる可能性。Cloudflare ダッシュボード → セキュリティ → WAF カスタムルールで /wp-json/* への外部 IP を許可してください。`;
+      } else if(/wordfence|sitelock|sucuri/i.test(lowered)){
+        hostHint = `[セキュリティプラグイン検出] Wordfence / SiteLock / Sucuri などのプラグインが REST API をブロックしてる可能性。プラグイン設定で「REST API 認証エンドポイント」を許可リストに追加してください。`;
+      } else {
+        hostHint = `ホスティング業者の WAF / セキュリティプラグインに引っかかってる可能性大。「海外 IP からの REST API アクセスを許可」「WAF を一時無効化」のいずれかで切り分けてください。`;
+      }
+      return {
+        error: 'forbidden_403',
+        detail: hostHint,
+        site_url: site.siteUrl,
+        raw_body: bodyStr.slice(0,300),
+      };
+    }
     if(r.s === 404){
       return {
         error: 'rest_disabled',
@@ -12136,16 +12172,20 @@ async function handleAPI(req,res,pathname,method,ip){
         null, { site_id: 'tmp' }
       );
       if(probeRes && probeRes.error){
-        const hint = ({
+        // 403 (forbidden_403) のような長文ヒントは probeRes.detail にすでに
+        // ホスティング業者別の手順が入ってるのでそれを優先。auth_failed 等
+        // の固定エラーは下のマップから取る。
+        const fallbackHints = {
           auth_failed:    '認証失敗。Application Password が正しいか / 期限切れでないか確認してください。WordPress ログインパスワードでは動きません。',
           rest_disabled:  'WordPress REST API が無効か、URL が間違ってます。セキュリティプラグイン (Wordfence/iThemes 等) で /wp-json/ をブロックしてないか確認。',
           network_failed: 'サイト URL に到達できません。URL が正しいか、サイトがダウンしてないか確認してください。',
-        })[probeRes.error] || probeRes.detail || '接続テストに失敗しました。';
+        };
+        const hint = probeRes.detail || fallbackHints[probeRes.error] || '接続テストに失敗しました。';
         return jres(res, 400, {
           error: 'connection_test_failed',
           code: probeRes.error,
           detail: hint,
-          raw: probeRes.detail || '',
+          raw: probeRes.raw_body || '',
         });
       }
       // Tests passed — actually save.

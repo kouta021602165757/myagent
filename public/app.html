@@ -8787,28 +8787,29 @@ function renderMsgs(ag, forceScrollBottom){
   const el=document.getElementById('msgs');
   if(!el) return;
   // ── Scrub stale "streaming: true" entries ───────────────────
-  // A message with streaming:true that's *not* the actively-streaming bubble
-  // means an earlier SSE session was interrupted (browser closed, Render
-  // deploy, network blip). Without scrubbing, it stays rendered as
-  // "🍑 生成中…" forever. Convert to an interrupted/truncated entry so the
-  // user can hit "▶ 続きを書く" to recover.
-  // Safety: only scrub when there's no active SSE controller. If a stream is
-  // genuinely in progress, leave the live bubble alone.
-  if(typeof window._chatStreamCtrl === 'undefined' || !window._chatStreamCtrl){
-    if(ag && Array.isArray(ag.history)){
-      for(let i=0; i<ag.history.length; i++){
-        const m = ag.history[i];
-        if(m && m.streaming){
-          m.streaming = false;
-          if(!m.content || !String(m.content).trim()){
-            m.content = isJa
-              ? '(応答が途中で切れました — 「▶ 続きを書く」で再開できます)'
-              : '(reply was interrupted — hit "▶ Continue" to resume)';
-            m.was_stopped = true;
-          }
-          m.truncated = true;
-        }
+  // The ACTIVE streaming bubble is always the LAST item in ag.history (the
+  // placeholder pushed by sendMsg just before SSE starts). Any earlier entry
+  // with streaming:true is from an interrupted past session (browser closed,
+  // Render deploy, network blip) — those would otherwise render as
+  // "🍑 生成中…" forever even while a new stream is running on top.
+  // Strategy: scrub every streaming:true entry EXCEPT the last one when an
+  // SSE controller is currently active. Without active stream, scrub all.
+  if(ag && Array.isArray(ag.history)){
+    const hasActiveStream = !!(typeof window !== 'undefined' && window._chatStreamCtrl);
+    const lastIdx = ag.history.length - 1;
+    for(let i=0; i<ag.history.length; i++){
+      const m = ag.history[i];
+      if(!(m && m.streaming)) continue;
+      // Last entry + active stream → that's the live bubble, leave alone.
+      if(i === lastIdx && hasActiveStream) continue;
+      m.streaming = false;
+      if(!m.content || !String(m.content).trim()){
+        m.content = isJa
+          ? '(応答が途中で切れました — 「▶ 続きを書く」で再開できます)'
+          : '(reply was interrupted — hit "▶ Continue" to resume)';
+        m.was_stopped = true;
       }
+      m.truncated = true;
     }
   }
   // Preserve scroll behavior across re-render:

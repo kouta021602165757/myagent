@@ -17113,16 +17113,12 @@ async function handleAPI(req,res,pathname,method,ip){
           // Append the assistant's tool_use turn
           convMsgs.push({role:'assistant', content: resp.content});
 
-          // Note: text the model wrote alongside its tool calls was already
-          // streamed live via _onIterText (text_delta events from Anthropic's
-          // SSE). Emitting it again here would double the text in the UI.
-          // For Gemini (non-streaming path) we still need to emit because
-          // _onIterText was ignored there.
-          if(sse && info && false){ /* deprecated — kept for ref */ }
+          // Text the model wrote alongside its tool calls was already streamed
+          // live via _onIterText (text_delta events). Only re-emit here if the
+          // iteration produced text that wasn't streamed (e.g. a path that
+          // bypasses _onIterText — defensive fallback). We detect by checking
+          // whether streamedText already ends with the iter's text.
           if(sse){
-            // If the iteration completed WITHOUT live streaming (e.g. Gemini
-            // routed model), surface the text now. We detect this by checking
-            // whether streamedText already contains the iter's text.
             const reasonText = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
             if(reasonText && !streamedText.endsWith(reasonText)){
               streamedText += reasonText + '\n\n';

@@ -91,6 +91,37 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS memories              jsonb DEFAULT '
 ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_pinned           jsonb DEFAULT '[]'::jsonb;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reactions             jsonb DEFAULT '[]'::jsonb;
 
+-- ── 統合 (Integrations) — 接続バグ防止の最重要列 ─────────────────
+-- WordPress (sites[]) / Slack (multi-webhooks) / Zapier (multi-webhooks) /
+-- Buffer OAuth / X (Twitter) OAuth / Google bundle (Gmail/Drive/GA4/...) /
+-- Stripe Connect / Notion / その他 OAuth & API キーの保存先。
+-- 形式: { wordpress:{sites:[...]}, slack:{webhooks:[...]}, github:{pat:...},
+--        buffer:{access_token:...}, twitter:{access_token:...}, ... }
+-- これが無いと「接続成功トースト出るのに次回 GET で未接続のまま」になる
+-- (DB.save が unknown column を silently ドロップするため)。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS integrations         jsonb DEFAULT '{}'::jsonb;
+
+-- ── GitHub PAT (top-level for fast lookup by tool dispatch) ──────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS github_pat            text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS github_login          text;
+
+-- ── 共有メモ / リマインダー / 購入履歴 / MCP / オンボ ─────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notes                 jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reminders             jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS purchases             jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mcp_servers           jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at          text;
+
+-- ── マーケ系 last_* (重複通知ガード) ─────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_nudge_global_at  text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_stripe_event_at  text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_weekly_digest_at text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_attribution jsonb;
+
+-- ── i18n / 互換フラグ ────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lang                  text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sheets_connected boolean DEFAULT false;
+
 -- ── PostgREST のスキーマキャッシュをリロード ──────────────────────
 NOTIFY pgrst, 'reload schema';
 

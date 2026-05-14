@@ -3796,6 +3796,26 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
       required:['title','html_content'],
     },
   },
+  {
+    name:'wordpress_test_connection',
+    description:`登録済み WordPress サイトに**実際に認証リクエストを送って接続が生きてるか確認する**。「○○ 接続できてる?」「ブログ繋がってる?」と聞かれたら、勝手に「ツール環境障害」と返さずに必ずこれを呼ぶこと。GET /wp-json/wp/v2/users/me を auth 付きで叩くので副作用なし。
+
+【返り値】
+- ok:true → 接続成功 + WP ユーザー情報 (display_name / roles)
+- error:'auth_failed' → Application Password 期限切れ or 間違い
+- error:'rest_disabled' → REST API 無効化 / URL 間違い
+- error:'network_failed' → サイト到達不可
+
+【使用例】
+- "メディア接続できた? / 確認して" → wordpress_test_connection()
+- "案件 A のサイトと繋がってる?" → wordpress_test_connection({site_id})`,
+    input_schema:{
+      type:'object',
+      properties:{
+        site_id:{type:'string',description:'(任意) 確認したいサイト ID。未指定なら agent → user default 順で解決'},
+      },
+    },
+  },
   // ── Share-intent tool — zero-setup SNS posting ──────────────
   {
     name:'share_to_sns',
@@ -5987,6 +6007,95 @@ async function executeWordPressPublishTool(user, agent, input){
     return { error: 'wp_http_'+r.s, detail: typeof r.d === 'string' ? r.d.slice(0,200) : JSON.stringify(r.d).slice(0,200) };
   } catch(e){
     return { error: 'wp_publish_failed', detail: (e.message||'').slice(0,200) };
+  }
+}
+
+// ── WordPress: lightweight connection check ─────────────────
+// Hits GET /wp-json/wp/v2/users/me with the stored Application Password.
+// Used by the AI when the user asks "is X connected?" — before this tool
+// existed, the AI would hallucinate "tool environment errors" because there
+// was no real way to verify auth without doing a (destructive) test post.
+//
+// Returns:
+//   200 → { ok:true, site_name, site_url, username, display_name, role }
+//   401 → { error:'auth_failed', detail:'Application Password が無効' }
+//   404 → { error:'rest_disabled', detail:'WP REST API が無効化されてる' }
+//   その他 → { error:'wp_http_XXX', detail:… }
+async function executeWordPressTestConnectionTool(user, agent, input){
+  const wp = user.integrations && user.integrations.wordpress;
+  const sites = (wp && Array.isArray(wp.sites)) ? wp.sites : [];
+  if(!sites.length){
+    return { error: 'wordpress_not_configured', detail: '連携カードで WordPress サイトを 1 つ以上登録してください。' };
+  }
+  let site = null;
+  if(input && input.site_id){ site = sites.find(s => s.id === input.site_id); }
+  if(!site && agent && agent.wordpress_site_id){ site = sites.find(s => s.id === agent.wordpress_site_id); }
+  if(!site && wp.default_site_id){ site = sites.find(s => s.id === wp.default_site_id); }
+  if(!site){ site = sites[0]; }
+  if(!site){ return { error: 'site not found' }; }
+  const auth = 'Basic ' + Buffer.from(site.username + ':' + site.appPassword).toString('base64');
+  try {
+    const u = new URL(site.siteUrl.replace(/\/$/, '') + '/wp-json/wp/v2/users/me?context=edit');
+    const r = await new Promise((resolve) => {
+      const opts = {
+        method: 'GET',
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        headers: {
+          'Accept':'application/json',
+          'Authorization': auth,
+          'User-Agent': 'MY-AI-Agent/1.0',
+        },
+      };
+      const lib = u.protocol === 'http:' ? require('http') : https;
+      const req = lib.request(opts, (rs) => {
+        let chunks=''; rs.on('data', d => chunks += d);
+        rs.on('end', () => { try { resolve({ s: rs.statusCode, d: JSON.parse(chunks) }); } catch(e){ resolve({ s: rs.statusCode, d: chunks }); } });
+      });
+      req.on('error', e => resolve({ s: 0, error: e.message }));
+      req.setTimeout(10000, () => { req.destroy(new Error('timeout')); });
+      req.end();
+    });
+    if(r.s >= 200 && r.s < 300){
+      const d = r.d || {};
+      return {
+        ok: true,
+        site_id: site.id, site_name: site.name, site_url: site.siteUrl,
+        username: site.username,
+        display_name: d.name || '',
+        roles: d.roles || [],
+        capabilities_can_publish: !!(d.capabilities && (d.capabilities.publish_posts || d.capabilities.administrator)),
+        instructions: '応答で「✅ '+site.name+' に '+site.username+' として接続成功」と明示し、display_name と roles も伝える。投稿権限が無い場合は警告。',
+      };
+    }
+    if(r.s === 401){
+      return {
+        error: 'auth_failed',
+        detail: 'Application Password が無効または期限切れです。WordPress ダッシュボード → ユーザー → プロフィール → Application Passwords で新規発行し、連携カードで登録し直してください。',
+        site_url: site.siteUrl, username: site.username,
+      };
+    }
+    if(r.s === 404){
+      return {
+        error: 'rest_disabled',
+        detail: site.siteUrl + '/wp-json/wp/v2/users/me が 404。WordPress REST API が無効化されてるか、URL が間違ってる可能性があります。',
+        site_url: site.siteUrl,
+      };
+    }
+    if(r.s === 0){
+      return {
+        error: 'network_failed',
+        detail: site.siteUrl + ' に接続できません。URL が間違ってるか、サーバーがダウンしてる可能性があります。' + ((r && r.error) ? ' (' + r.error + ')' : ''),
+        site_url: site.siteUrl,
+      };
+    }
+    return {
+      error: 'wp_http_'+r.s,
+      detail: typeof r.d === 'string' ? r.d.slice(0,300) : JSON.stringify(r.d).slice(0,300),
+      site_url: site.siteUrl,
+    };
+  } catch(e){
+    return { error: 'wp_test_failed', detail: (e.message||'').slice(0,200), site_url: site.siteUrl };
   }
 }
 
@@ -9464,6 +9573,7 @@ async function _runOneSchedule(user, agent, sched){
           else if(block.name === 'drive_search_files')  result = await executeDriveSearchFilesTool(user, agent, block.input||{});
           else if(block.name === 'drive_set_default_folder') result = await executeDriveSetDefaultFolderTool(user, agent, block.input||{});
           else if(block.name === 'wordpress_publish')   result = await executeWordPressPublishTool(user, agent, block.input||{});
+          else if(block.name === 'wordpress_test_connection') result = await executeWordPressTestConnectionTool(user, agent, block.input||{});
           else if(block.name === 'share_to_sns')        result = await executeShareToSnsTool(block.input||{});
           else if(block.name === 'buffer_list_profiles') result = await executeBufferListProfilesTool(user);
           else if(block.name === 'buffer_post')          result = await executeBufferPostTool(user, block.input||{});
@@ -16819,6 +16929,8 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeDriveSetDefaultFolderTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'wordpress_publish'){
               result = await executeWordPressPublishTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'wordpress_test_connection'){
+              result = await executeWordPressTestConnectionTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'share_to_sns'){
               result = await executeShareToSnsTool(block.input||{});
             } else if(block.name === 'buffer_list_profiles'){

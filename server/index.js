@@ -572,6 +572,25 @@ function safe(u){
   // Plan v2 surface (frontend uses this to render correct credit amount and
   // gate Team / agent-cap UIs without doing date math itself).
   s.plan_v2_grandfathered = _isGrandfathered(u);
+  // Scrub stale streaming flags in every agent's history before sending.
+  // A streaming:true entry that was persisted means the previous SSE session
+  // was interrupted (Render deploy, browser close, network blip). Without
+  // this, the bubble renders as "🍑 生成中…" forever after reload.
+  if(Array.isArray(s.agents)){
+    for(const ag of s.agents){
+      if(!ag || !Array.isArray(ag.history)) continue;
+      for(const m of ag.history){
+        if(m && m.streaming){
+          m.streaming = false;
+          m.truncated = true;
+          if(!m.content || !String(m.content).trim()){
+            m.content = '(応答が途中で切れました)';
+            m.was_stopped = true;
+          }
+        }
+      }
+    }
+  }
   return s;
 }
 function newUser(base){

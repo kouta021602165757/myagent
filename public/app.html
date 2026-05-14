@@ -8786,6 +8786,31 @@ async function runPyCode(ev, btn){
 function renderMsgs(ag, forceScrollBottom){
   const el=document.getElementById('msgs');
   if(!el) return;
+  // ── Scrub stale "streaming: true" entries ───────────────────
+  // A message with streaming:true that's *not* the actively-streaming bubble
+  // means an earlier SSE session was interrupted (browser closed, Render
+  // deploy, network blip). Without scrubbing, it stays rendered as
+  // "🍑 生成中…" forever. Convert to an interrupted/truncated entry so the
+  // user can hit "▶ 続きを書く" to recover.
+  // Safety: only scrub when there's no active SSE controller. If a stream is
+  // genuinely in progress, leave the live bubble alone.
+  if(typeof window._chatStreamCtrl === 'undefined' || !window._chatStreamCtrl){
+    if(ag && Array.isArray(ag.history)){
+      for(let i=0; i<ag.history.length; i++){
+        const m = ag.history[i];
+        if(m && m.streaming){
+          m.streaming = false;
+          if(!m.content || !String(m.content).trim()){
+            m.content = isJa
+              ? '(応答が途中で切れました — 「▶ 続きを書く」で再開できます)'
+              : '(reply was interrupted — hit "▶ Continue" to resume)';
+            m.was_stopped = true;
+          }
+          m.truncated = true;
+        }
+      }
+    }
+  }
   // Preserve scroll behavior across re-render:
   //   - If user is at/near the bottom → snap to new bottom after render
   //   - If user scrolled up to read past messages → keep their scroll position

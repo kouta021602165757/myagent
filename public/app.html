@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>MY AI Agent — ダッシュボード</title>
 <script src="https://js.stripe.com/v3/"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -564,8 +564,10 @@ input,textarea{font-family:var(--sans);}
   box-shadow:0 2px 8px rgba(251,146,60,.25);
 }
 .ct-titles{min-width:0;flex:1;}
-.ct-name{font-size:15px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;}
+.ct-name{font-size:15px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;min-width:0;}
 .ct-name .live-status{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 5px #10b981;flex-shrink:0;}
+/* Wrapped span so text can truncate as a flex child (text nodes alone can't). */
+.ct-name-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ct-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;align-items:center;}
 .pill{
   padding:2px 9px;border-radius:18px;font-size:10px;font-weight:700;
@@ -2174,9 +2176,17 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
   /* Chat composer + msgs need more vertical room */
   .chat-foot{padding:6px 14px 12px;}
   .msgs-inner{padding:10px 4px;gap:10px;}
-  .ct-icon{width:36px;height:36px;border-radius:10px;font-size:17px;}
+  .ct-icon{width:34px;height:34px;border-radius:10px;font-size:16px;}
+  /* Title must truncate, never wrap mid-CJK-word like "成長チ↩︎ーム"
+     (the actual ellipsis lives on .ct-name-text — inner span). */
   .ct-name{font-size:14px;}
   .pill{font-size:9.5px;padding:1px 7px;}
+  /* Hide the floating empty-state hamburger when a chat is open
+     — without this, mobile shows two ☰ stacked at top-left. */
+  main.main:has(.chat[style*="display: flex"]) .mobile-hamburger-empty,
+  main.main:has(.chat[style*="display:flex"]) .mobile-hamburger-empty{
+    display:none !important;
+  }
 
   /* Hide the old desktop-style action buttons that were duplicated below */
   .sb-new-row{padding:10px 12px;}
@@ -2186,7 +2196,12 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
 @media(max-width:480px){
   .empty-glyph{font-size:42px;}
   .empty h2{font-size:20px;}
-  .ct-act{width:32px;height:32px;font-size:13px;}
+  .ct-act{width:30px;height:30px;font-size:12.5px;border-radius:8px;}
+  .ct-actions{gap:3px;}
+  /* Even narrower title font so 5+ action icons + name fit on one row */
+  .ct-name{font-size:13px;}
+  .ct-icon{width:32px;height:32px;font-size:15px;}
+  .chat-top{padding:8px 10px;gap:7px;}
   .av-grid{grid-template-columns:repeat(6,1fr);gap:6px}
   .sk-grid{grid-template-columns:repeat(2,1fr);gap:8px}
   .preset-grid{grid-template-columns:1fr;max-height:60vh;}
@@ -8379,7 +8394,7 @@ async function openAgent(id){
     '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+
     '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
-      '<div class="ct-name"><span class="live-status"></span>'+esc(ag.name)+'</div>'+
+      '<div class="ct-name"><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
       '<div class="ct-pills">'+topPills+' '+modelPill+' '+intelPill+' '+ctxPill+'</div>'+
     '</div>'+
     '<div class="ct-actions">'+ actsHTML +'</div>';

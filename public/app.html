@@ -67,9 +67,13 @@ html[data-theme="dark"] .sb-pm-item:hover{background:#1c1c22;}
 html[data-theme="dark"] .ct-icon{box-shadow:0 2px 8px rgba(251,146,60,.4);}
 html[data-theme="dark"] body{background:var(--cream);}
 
-/* Dark theme — message bubbles + content (was hard-coded #fff) */
-html[data-theme="dark"] .m-body{background:#1c1c22;border-color:rgba(255,255,255,.08);color:#f5f5f7;box-shadow:0 1px 3px rgba(0,0,0,.3);}
-html[data-theme="dark"] .m.u .m-body{background:rgba(251,146,60,.14);border-color:rgba(251,146,60,.28);}
+/* Dark theme — Slack-flat = no bubble. Just text on theme background. */
+html[data-theme="dark"] .m-body{background:transparent;border:0;color:#f5f5f7;box-shadow:none;}
+html[data-theme="dark"] .m.u .m-body{background:transparent;border:0;}
+html[data-theme="dark"] .m:hover{background:rgba(255,255,255,.04);}
+html[data-theme="dark"] .hover-bar{background:#252530;border-color:rgba(255,255,255,.1);}
+html[data-theme="dark"] .hover-bar .hb-b{color:#c0c0c8;}
+html[data-theme="dark"] .hover-bar .hb-b:hover{background:rgba(255,255,255,.08);color:#fff;}
 html[data-theme="dark"] .m-body code{background:rgba(255,255,255,.08);color:#fed7aa;}
 html[data-theme="dark"] .m-body blockquote{background:rgba(251,146,60,.08);color:#c8c8d0;}
 html[data-theme="dark"] .m-body table{background:#141418;}
@@ -625,26 +629,77 @@ input,textarea{font-family:var(--sans);}
 
 /* messages */
 .msgs-wrap{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;}
-.msgs{flex:1;overflow-y:auto;padding:22px 22px 28px;background:var(--cream);}
-.msgs-inner{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.msgs{flex:1;overflow-y:auto;padding:8px 0 28px;background:var(--cream);}
+/* Slack-flat: no max-width, no gap between rows. Each .m has its own padding
+   (left+right 16px) for full-bleed look. */
+.msgs-inner{max-width:none;margin:0;display:flex;flex-direction:column;gap:0;}
 
 @keyframes msgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
 .day-sep{display:flex;align-items:center;gap:12px;margin:8px 0 4px;color:var(--text3);font-size:11px;font-weight:700;letter-spacing:.06em;}
 .day-sep::before,.day-sep::after{content:'';flex:1;height:1px;background:var(--wire);}
 
-/* New message blocks */
-.m{display:flex;flex-direction:column;gap:6px;animation:msgIn .18s ease;}
-.m.u{align-items:flex-end;}
-.m-meta{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3);padding:0 4px;}
-.m.u .m-meta{flex-direction:row-reverse;}
-.m-av{
-  width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;
-  font-size:11px;flex-shrink:0;background:var(--cream3);border:1px solid var(--wire2);color:var(--text);
+/* ── Slack-flat message rows ──
+   Layout: avatar (left, 38px) ┃ content (name/time/body/reactions/thread)
+   No more user vs AI bubble distinction — both styled identically.
+   Hover bar floats top-right (overlay). Hover row background = subtle gray. */
+.m{
+  display:flex;flex-direction:row;align-items:flex-start;gap:11px;
+  padding:8px 16px;position:relative;
+  animation:msgIn .18s ease;transition:background .12s;
 }
-.m-av.user{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-weight:800;border:0;font-size:10px;}
-.m-name{font-weight:700;color:var(--text2);}
-.m-time{color:var(--text3);}
+.m:hover{background:rgba(29,28,29,.035);}
+.m.u, .m.a{align-items:flex-start;}  /* identical layout */
+
+.m-av-wrap{flex-shrink:0;}
+.m-av{
+  width:38px;height:38px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;background:linear-gradient(135deg,#fda85e,var(--peach-dark));
+  color:#fff;font-weight:900;border:0;
+}
+.m-av.user{background:#1f1f1f;color:#fff;font-weight:800;font-size:14px;}
+
+.m-content{flex:1;min-width:0;}
+
+.m-meta{
+  display:flex;align-items:baseline;gap:8px;
+  font-size:11px;color:var(--text3);padding:0;
+  line-height:1.3;margin-bottom:2px;
+}
+.m.u .m-meta{flex-direction:row;}
+.m-name{font-weight:900;font-size:14.5px;color:var(--text);letter-spacing:-.005em;}
+.m-time{font-size:11px;color:var(--text3);font-weight:500;}
+
+/* ── Hover bar (Slack signature top-right toolbar) ── */
+.hover-bar{
+  position:absolute;
+  top:-14px;right:18px;
+  display:none;
+  background:#fff;border:1px solid var(--wire2);
+  border-radius:9px;padding:2px;
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+  z-index:5;gap:1px;
+}
+.m:hover .hover-bar{display:flex;align-items:center;}
+.hover-bar .hb-b{
+  width:32px;height:28px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:var(--text3);
+  cursor:pointer;border-radius:6px;
+  background:transparent;border:0;font-family:inherit;
+}
+.hover-bar .hb-b:hover{background:var(--cream2);color:var(--text);}
+.hover-bar .hb-b.hb-thread{position:relative;}
+.hover-bar .hb-b.hb-thread::after{
+  content:'スレッドで返信';
+  position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);
+  background:#1a1d21;color:#fff;font-size:10.5px;font-weight:700;
+  padding:3px 8px;border-radius:5px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;
+}
+.hover-bar .hb-b.hb-thread:hover::after{opacity:1;}
+.hover-bar .hb-b.hb-on{background:var(--peach-soft);color:var(--peach-dark);}
 
 /* ── Creator dashboard tab ──────────────────────────────────── */
 .creator-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px;}
@@ -1351,12 +1406,14 @@ input,textarea{font-family:var(--sans);}
   }
 }
 
+/* Slack-flat body: no bubble, no border, no background. Text only.
+   User and AI use identical styling (Slack convention). */
 .m-body{
-  max-width:680px;background:#fff;border:1px solid var(--wire2);border-radius:14px;
-  padding:14px 18px;font-size:14.5px;line-height:1.75;color:var(--text);
-  box-shadow:0 1px 3px rgba(0,0,0,.04);word-break:break-word;
+  max-width:none;background:transparent;border:0;border-radius:0;
+  padding:0;font-size:14.5px;line-height:1.55;color:var(--text);
+  box-shadow:none;word-break:break-word;
 }
-.m.u .m-body{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.25);}
+.m.u .m-body{background:transparent;border:0;}
 .m-body p{margin:0 0 10px;}
 .m-body p:last-child{margin-bottom:0;}
 .m-body h1,.m-body h2,.m-body h3,.m-body h4{margin:14px 0 8px;color:var(--text);line-height:1.3;}
@@ -1452,9 +1509,14 @@ input,textarea{font-family:var(--sans);}
 .m-body em{font-style:italic;}
 
 /* hover actions */
-.m-acts{display:none;gap:4px;padding:0 4px;margin-top:2px;}
+/* Detailed action row — Slack-flat now uses the hover-bar for primary actions
+   (💬 📋 📌 etc). The full m-acts (📋 🔄 💬 🧠 🔊 📌 🗑 …) is shown when
+   the user clicks the ⋯ button on the hover-bar (toggles .show-acts class).
+   Also still shown on hover of the message row for power users. */
+.m-acts{display:none;gap:4px;padding:0;margin-top:6px;flex-wrap:wrap;}
 .m:hover .m-acts{display:flex;}
-.m.u .m-acts{flex-direction:row-reverse;}
+.m.show-acts .m-acts{display:flex;}
+.m.u .m-acts{flex-direction:row;}  /* don't reverse (Slack-flat = same direction) */
 
 /* ── Slack-style thread indicator (below message body) ──
    "N 件の返信" link with stacked avatars + last reply time.
@@ -9122,19 +9184,44 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       + '<span class="thread-last">'+_lastT+'</span>'
       + '</div>';
   }
+  // Slack-style hover toolbar (top-right of each message). Shown only on
+  // hover via CSS. Contains the 6 most-used quick actions; full action set
+  // lives in the existing .m-acts row below the message.
+  var hoverBarHTML = '';
+  if(idx >= 0 && !isStreaming){
+    var hbThreadId = raw && raw.id;
+    var hbThreadBtn = hbThreadId
+      ? '<button class="hb-b hb-thread" onclick="_openThread(\''+esc(hbThreadId)+'\')" title="'+L('スレッドで返信','Reply in thread')+'">💬</button>'
+      : '';
+    hoverBarHTML = '<div class="hover-bar">'
+      + (isGroup ? '<button class="hb-b" onclick="_openReactionPicker(this.closest(\'.m\').querySelector(\'.reaction.add\'), event)" title="'+L('リアクションを追加','Add reaction')+'">😀</button>' : '')
+      + hbThreadBtn
+      + '<button class="hb-b" onclick="copyMsgText(this.closest(\'.m\').querySelector(\'.m-body\'))" title="'+L('コピー','Copy')+'">📋</button>'
+      + (raw && raw.pinned ? '<button class="hb-b hb-on" onclick="togglePin(this.closest(\'.m\').querySelector(\'.pin\'))" title="'+L('ピン留めを解除','Unpin')+'">📌</button>' : '<button class="hb-b" onclick="togglePin(this.closest(\'.m\').querySelector(\'.pin\'))" title="'+L('ピン留め','Pin')+'">📌</button>')
+      + '<button class="hb-b" onclick="this.closest(\'.m\').classList.toggle(\'show-acts\')" title="'+L('その他','More')+'">⋯</button>'
+      + '</div>';
+  }
+  // Slack-flat layout:
+  //   .m (row) = .m-av-wrap (left) + .m-content (right) + .hover-bar (overlay)
+  //   .m-content contains the existing .m-meta / images / tool log / body / reactions / thread-indicator / acts
   return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'"'+rowStyle+'>'+
-    '<div class="m-meta">'+
+    '<div class="m-av-wrap">'+
       '<div class="m-av'+(isU?' user':'')+'"'+aiAvStyle+'>'+av+'</div>'+
-      '<span class="m-name"'+nameStyle+'>'+esc(name)+'</span>'+
-      '<span class="m-time">'+esc(time||'')+'</span>'+
-      readReceipt+
     '</div>'+
-    imgHtml+
-    tlogHtml+
-    (renderBody?'<div class="m-body">'+(bodyMarkup||'')+citesHtml+'</div>':'')+
-    reactionsHTML+
-    threadIndicatorHTML+
-    (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
+    '<div class="m-content">'+
+      '<div class="m-meta">'+
+        '<span class="m-name"'+nameStyle+'>'+esc(name)+'</span>'+
+        '<span class="m-time">'+esc(time||'')+'</span>'+
+        readReceipt+
+      '</div>'+
+      imgHtml+
+      tlogHtml+
+      (renderBody?'<div class="m-body">'+(bodyMarkup||'')+citesHtml+'</div>':'')+
+      reactionsHTML+
+      threadIndicatorHTML+
+      (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
+    '</div>'+
+    hoverBarHTML+
   '</div>';
 }
 

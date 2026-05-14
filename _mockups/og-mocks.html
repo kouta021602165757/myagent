@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>OGP デザイン案 5 種比較 — MY AI Agent</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#fafaf7; --text:#171717; --text2:#525252; --text3:#a3a3a3;
+    --peach:#fb923c; --peach-dark:#ea580c; --peach-soft:#fff7ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;padding:32px}
+  h1{margin:0 0 8px;font-size:24px;font-weight:900}
+  .lede{color:var(--text2);margin-bottom:28px;font-size:13.5px}
+  .row{margin-bottom:48px;background:#fff;border:1px solid #f0ece1;border-radius:14px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,.04)}
+  .row-h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .row-h .name{font-size:17px;font-weight:900}
+  .row-h .tag{font-size:11px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid #fed7aa;padding:2px 8px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase}
+  .row-h .reco{font-size:11px;color:var(--text3);font-weight:700}
+  .row-pros{font-size:12.5px;color:var(--text2);margin-bottom:14px}
+  .row-pros b{color:var(--text)}
+  /* Each OG mock is rendered at 1200x630 but scaled-down for preview */
+  .og-frame{width:600px;height:315px;border:1px solid #f0ece1;border-radius:10px;overflow:hidden;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+  .og-frame > svg{width:100%;height:100%;display:block}
+  .compare{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .meta{font-size:11.5px;color:var(--text3);font-family:ui-monospace,monospace}
+  @media (max-width:1100px){
+    .og-frame{width:100%;height:auto;aspect-ratio:1200/630}
+  }
+</style>
+</head>
+<body>
+
+<h1>🎨 OGP デザイン 5 案 — 実物比較</h1>
+<div class="lede">1200×630px (Twitter / OG 標準サイズ) を 600×315 に縮小表示。確定したらこの SVG を PNG 出力して <code>public/social/og-home.png</code> に置き換えます。</div>
+
+<!-- ── 🅰 Hero copy direct ─────────────────────────────────── -->
+<div class="row">
+  <div class="row-h">
+    <span class="name">🅐 Hero コピー直撃版</span>
+    <span class="tag">推奨 / 安全</span>
+    <span class="reco">LP と完全一致 · 5 分で完成</span>
+  </div>
+  <div class="row-pros"><b>強み</b>: LP のメインメッセージと矛盾しない、ブランド一貫性  <b>弱み</b>: 製品の絵がないから「で、何ができるの?」が伝わりにくい</div>
+  <div class="compare">
+    <div class="og-frame">
+      <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+        <!-- bg -->
+        <defs>
+          <linearGradient id="bgA" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0a0a0a"/>
+            <stop offset="100%" stop-color="#1a0f08"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="630" fill="url(#bgA)"/>
+        <!-- subtle peach radial accent -->
+        <circle cx="980" cy="540" r="380" fill="#fb923c" opacity="0.08"/>
+        <!-- top row: brand + founder pill -->
+        <g transform="translate(60,52)">
+          <!-- logo block -->
+          <rect width="48" height="48" rx="11" fill="#fb923c"/>
+          <text x="24" y="33" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="24" font-weight="900" fill="#fff">M</text>
+          <text x="64" y="32" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="800" fill="#fff" letter-spacing="0.5">MY AI AGENT</text>
+        </g>
+        <g transform="translate(880,60)">
+          <rect width="260" height="36" rx="18" fill="rgba(251,146,60,0.18)" stroke="rgba(251,146,60,0.42)" stroke-width="1"/>
+          <text x="130" y="24" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="800" fill="#fb923c" letter-spacing="0.6">★ Founder 100 · 残 92 席</text>
+        </g>
+        <!-- headline -->
+        <text x="60" y="240" font-family="Inter,system-ui,sans-serif" font-size="68" font-weight="900" fill="#ffffff" letter-spacing="-2">
+          <tspan x="60" dy="0">AI を <tspan fill="#666" text-decoration="line-through">使う</tspan> 時代から、</tspan>
+          <tspan x="60" dy="84">AI を <tspan fill="#fb923c">複数人雇う</tspan> 時代へ。</tspan>
+        </text>
+        <!-- sub -->
+        <text x="60" y="430" font-family="Inter,system-ui,sans-serif" font-size="22" font-weight="500" fill="rgba(255,255,255,0.72)">Slack のような UI で AI を何人でも採用。</text>
+        <!-- meta row -->
+        <g transform="translate(60,490)" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="700" fill="rgba(255,255,255,0.78)">
+          <g><circle cx="10" cy="10" r="6" fill="#10b981"/><text x="28" y="16">30 秒で開始</text></g>
+          <g transform="translate(180,0)"><circle cx="10" cy="10" r="6" fill="#10b981"/><text x="28" y="16">永年無料</text></g>
+          <g transform="translate(310,0)"><circle cx="10" cy="10" r="6" fill="#10b981"/><text x="28" y="16">50 サービス連携</text></g>
+        </g>
+        <!-- footer URL -->
+        <text x="60" y="585" font-family="'SF Mono',monospace" font-size="18" font-weight="600" fill="rgba(255,255,255,0.42)">myaiagents.agency</text>
+      </svg>
+    </div>
+    <div class="meta">1200 × 630 px</div>
+  </div>
+</div>
+
+<!-- ── 🅑 Product Reveal ───────────────────────────────────── -->
+<div class="row">
+  <div class="row-h">
+    <span class="name">🅑 プロダクト Reveal 版</span>
+    <span class="tag">信頼性 No.1</span>
+    <span class="reco">中身が一目でわかる</span>
+  </div>
+  <div class="row-pros"><b>強み</b>: 「マルチエージェント議論」が一目で伝わる  <b>弱み</b>: 文字量が多いので 1200×630 だと若干読みにくい</div>
+  <div class="compare">
+    <div class="og-frame">
+      <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+        <!-- bg -->
+        <defs>
+          <linearGradient id="bgB" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fff7ee"/>
+            <stop offset="100%" stop-color="#fed7aa"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="630" fill="url(#bgB)"/>
+        <!-- title -->
+        <text x="60" y="100" font-family="Inter,system-ui,sans-serif" font-size="44" font-weight="900" fill="#171717" letter-spacing="-1.2">AI を <tspan fill="#ea580c">複数人雇う</tspan> 時代へ。</text>
+        <text x="60" y="138" font-family="Inter,system-ui,sans-serif" font-size="17" font-weight="600" fill="#525252">myaiagents.agency · Founder 100 残 92 席</text>
+        <!-- mock chat window -->
+        <g transform="translate(60,180)">
+          <rect width="1080" height="400" rx="16" fill="#ffffff" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+          <!-- header bar -->
+          <rect width="1080" height="48" rx="16" fill="#fafaf7"/>
+          <rect y="32" width="1080" height="16" fill="#fafaf7"/>
+          <text x="22" y="30" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="800" fill="#171717"># Growth Squad · 4 AI</text>
+          <circle cx="980" cy="24" r="5" fill="#10b981"/>
+          <text x="996" y="29" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="700" fill="#10b981">LIVE</text>
+
+          <!-- chat rows -->
+          <g transform="translate(0,68)">
+            <!-- row 1: PM -->
+            <g transform="translate(20,0)">
+              <rect width="42" height="42" rx="11" fill="#a78bfa"/>
+              <text x="21" y="29" text-anchor="middle" font-size="20">📋</text>
+              <text x="56" y="20" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="800" fill="#171717">PM AI</text>
+              <text x="56" y="40" font-family="Inter,system-ui,sans-serif" font-size="13.5" fill="#525252">整理します。CTR 1.8 → 3% 目標。<tspan fill="#fb923c" font-weight="700">@marketing</tspan> コピー、<tspan fill="#fb923c" font-weight="700">@designer</tspan> ビジュアル</text>
+            </g>
+            <!-- row 2: Marketing -->
+            <g transform="translate(20,76)">
+              <rect width="42" height="42" rx="11" fill="#10b981"/>
+              <text x="21" y="29" text-anchor="middle" font-size="20">📈</text>
+              <text x="56" y="20" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="800" fill="#171717">Marketing AI</text>
+              <text x="56" y="40" font-family="Inter,system-ui,sans-serif" font-size="13.5" fill="#525252">3 案: ① 数字直撃  ② 痛みフック  ③ Before/After</text>
+            </g>
+            <!-- row 3: Designer -->
+            <g transform="translate(20,152)">
+              <rect width="42" height="42" rx="11" fill="#f472b6"/>
+              <text x="21" y="29" text-anchor="middle" font-size="20">🎨</text>
+              <text x="56" y="20" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="800" fill="#171717">Designer AI</text>
+              <text x="56" y="40" font-family="Inter,system-ui,sans-serif" font-size="13.5" fill="#525252">①③ 推し。大きな数字 + 1 枚画像が CTR ↑</text>
+            </g>
+            <!-- row 4: Engineer -->
+            <g transform="translate(20,228)">
+              <rect width="42" height="42" rx="11" fill="#3b82f6"/>
+              <text x="21" y="29" text-anchor="middle" font-size="20">⚡</text>
+              <text x="56" y="20" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="800" fill="#171717">Engineer AI</text>
+              <text x="56" y="40" font-family="Inter,system-ui,sans-serif" font-size="13.5" fill="#525252">GrowthBook で 1h で 3 ルート実装可能</text>
+            </g>
+            <!-- summary card -->
+            <g transform="translate(20,302)">
+              <rect width="1040" height="38" rx="9" fill="#fff7ee" stroke="rgba(251,146,60,0.4)" stroke-width="1"/>
+              <text x="14" y="25" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="800" fill="#ea580c">📋 結論: ①③ を Hero h1 data 属性で A/B テスト → 1h で稼働</text>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="meta">1200 × 630 px</div>
+  </div>
+</div>
+
+<!-- ── 🅒 50 services hero ─────────────────────────────────── -->
+<div class="row">
+  <div class="row-h">
+    <span class="name">🅒 50 サービス連携 推し版</span>
+    <span class="tag">ローンチ告知</span>
+    <span class="reco">直近の最大機能</span>
+  </div>
+  <div class="row-pros"><b>強み</b>: 「50 サービスに 1 クリック接続」が一発で伝わる  <b>弱み</b>: ロゴ羅列だけだと記憶喚起力やや弱め</div>
+  <div class="compare">
+    <div class="og-frame">
+      <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgC" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0f0a06"/>
+            <stop offset="100%" stop-color="#1a1208"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="630" fill="url(#bgC)"/>
+        <circle cx="200" cy="100" r="280" fill="#fb923c" opacity="0.06"/>
+        <circle cx="1100" cy="500" r="320" fill="#fb923c" opacity="0.05"/>
+
+        <!-- header -->
+        <g transform="translate(60,52)">
+          <rect width="44" height="44" rx="10" fill="#fb923c"/>
+          <text x="22" y="30" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="22" font-weight="900" fill="#fff">M</text>
+          <text x="60" y="30" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="800" fill="#fff" letter-spacing="0.4">MY AI AGENT</text>
+        </g>
+        <g transform="translate(900,60)">
+          <rect width="240" height="32" rx="16" fill="rgba(251,146,60,0.16)" stroke="rgba(251,146,60,0.35)" stroke-width="1"/>
+          <text x="120" y="22" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="#fb923c">★ Founder 100 · 残 92 席</text>
+        </g>
+
+        <!-- big headline -->
+        <text x="600" y="200" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="78" font-weight="900" fill="#ffffff" letter-spacing="-2.5">50 サービスに、</text>
+        <text x="600" y="298" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="78" font-weight="900" letter-spacing="-2.5">
+          <tspan fill="#fb923c">1 クリック</tspan>
+          <tspan fill="#ffffff"> で接続。</tspan>
+        </text>
+
+        <!-- service stamps grid -->
+        <g transform="translate(140,360)">
+          <!-- row 1 -->
+          <g font-size="36" text-anchor="middle">
+            <g transform="translate(0,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">🐙</text></g>
+            <g transform="translate(80,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">💬</text></g>
+            <g transform="translate(160,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">📧</text></g>
+            <g transform="translate(240,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">📁</text></g>
+            <g transform="translate(320,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">📆</text></g>
+            <g transform="translate(400,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">📝</text></g>
+            <g transform="translate(480,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">𝕏</text></g>
+            <g transform="translate(560,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">💼</text></g>
+            <g transform="translate(640,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">💳</text></g>
+            <g transform="translate(720,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)"/><text y="12">🛒</text></g>
+            <g transform="translate(800,0)"><rect x="-30" y="-30" width="60" height="60" rx="14" fill="rgba(255,255,255,0.08)" stroke="rgba(251,146,60,0.4)" stroke-width="1" stroke-dasharray="3,3"/><text y="6" font-size="14" font-weight="800" fill="#fb923c">+40</text><text y="22" font-size="9" font-weight="700" fill="rgba(255,255,255,0.5)">MORE</text></g>
+          </g>
+        </g>
+
+        <!-- subline -->
+        <text x="600" y="490" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="600" fill="rgba(255,255,255,0.7)">「Slack に投稿して」「Sheets に追記して」と言うだけ。</text>
+
+        <!-- footer -->
+        <text x="600" y="588" text-anchor="middle" font-family="'SF Mono',monospace" font-size="17" font-weight="600" fill="rgba(255,255,255,0.42)">myaiagents.agency</text>
+      </svg>
+    </div>
+    <div class="meta">1200 × 630 px</div>
+  </div>
+</div>
+
+<!-- ── 🅓 Before/After ─────────────────────────────────────── -->
+<div class="row">
+  <div class="row-h">
+    <span class="name">🅓 Before / After 対比版</span>
+    <span class="tag">バズ向き</span>
+    <span class="reco">1 秒で違いがわかる</span>
+  </div>
+  <div class="row-pros"><b>強み</b>: ChatGPT と並べて圧倒的差別化、X で RT されやすい  <b>弱み</b>: ChatGPT 引用が公式テンプレ的に NG なケースもあり (慎重に表現)</div>
+  <div class="compare">
+    <div class="og-frame">
+      <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgD" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fafaf7"/>
+            <stop offset="100%" stop-color="#f5f1e8"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="630" fill="url(#bgD)"/>
+
+        <!-- title -->
+        <text x="600" y="80" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="32" font-weight="900" fill="#171717" letter-spacing="-1">AI を <tspan fill="#ea580c">使う</tspan> 時代から、AI を <tspan fill="#ea580c">複数人雇う</tspan> 時代へ。</text>
+
+        <!-- Left: ChatGPT -->
+        <g transform="translate(100,150)">
+          <rect width="450" height="380" rx="20" fill="#ffffff" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+          <text x="225" y="50" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="800" fill="#a3a3a3" letter-spacing="0.4">これまで</text>
+          <text x="225" y="90" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="32" font-weight="900" fill="#525252">1 対 1</text>
+
+          <!-- avatar diagram -->
+          <g transform="translate(225,210)">
+            <!-- user -->
+            <circle cx="-90" cy="0" r="40" fill="#171717"/>
+            <text x="-90" y="8" text-anchor="middle" font-size="28" fill="#fff">👤</text>
+            <text x="-90" y="62" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="700" fill="#525252">YOU</text>
+            <!-- arrow -->
+            <line x1="-40" y1="0" x2="40" y2="0" stroke="#a3a3a3" stroke-width="2" stroke-dasharray="4,4"/>
+            <!-- AI -->
+            <circle cx="90" cy="0" r="40" fill="#525252"/>
+            <text x="90" y="8" text-anchor="middle" font-size="28" fill="#fff">🤖</text>
+            <text x="90" y="62" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="700" fill="#525252">1 AI</text>
+          </g>
+
+          <text x="225" y="340" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="600" fill="#525252">毎回ゼロから質問する</text>
+        </g>
+
+        <!-- Right: MY AI Agent -->
+        <g transform="translate(650,150)">
+          <rect width="450" height="380" rx="20" fill="#0a0a0a" stroke="#fb923c" stroke-width="2"/>
+          <text x="225" y="50" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="800" fill="#fb923c" letter-spacing="0.4">MY AI AGENT</text>
+          <text x="225" y="90" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="32" font-weight="900" fill="#fff">1 対 N チーム</text>
+
+          <!-- team diagram -->
+          <g transform="translate(225,210)">
+            <!-- user -->
+            <circle cx="-120" cy="0" r="36" fill="#fb923c"/>
+            <text x="-120" y="8" text-anchor="middle" font-size="24" fill="#fff">👤</text>
+            <text x="-120" y="56" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.7)">YOU</text>
+            <!-- lines -->
+            <line x1="-80" y1="-20" x2="40" y2="-60" stroke="#fb923c" stroke-width="1.5" opacity="0.7"/>
+            <line x1="-80" y1="-10" x2="40" y2="-25" stroke="#fb923c" stroke-width="1.5" opacity="0.7"/>
+            <line x1="-80" y1="10" x2="40" y2="25" stroke="#fb923c" stroke-width="1.5" opacity="0.7"/>
+            <line x1="-80" y1="20" x2="40" y2="60" stroke="#fb923c" stroke-width="1.5" opacity="0.7"/>
+            <!-- 4 AIs -->
+            <circle cx="80" cy="-70" r="26" fill="#a78bfa"/><text x="80" y="-62" text-anchor="middle" font-size="18">📋</text>
+            <circle cx="80" cy="-30" r="26" fill="#10b981"/><text x="80" y="-22" text-anchor="middle" font-size="18">📈</text>
+            <circle cx="80" cy="30" r="26" fill="#f472b6"/><text x="80" y="38" text-anchor="middle" font-size="18">🎨</text>
+            <circle cx="80" cy="70" r="26" fill="#3b82f6"/><text x="80" y="78" text-anchor="middle" font-size="18">⚡</text>
+          </g>
+
+          <text x="225" y="340" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="600" fill="rgba(255,255,255,0.85)">@all で AI 同士が議論 → 結論</text>
+        </g>
+
+        <text x="600" y="588" text-anchor="middle" font-family="'SF Mono',monospace" font-size="16" font-weight="600" fill="#a3a3a3">myaiagents.agency · Founder 100 残 92 席</text>
+      </svg>
+    </div>
+    <div class="meta">1200 × 630 px</div>
+  </div>
+</div>
+
+<!-- ── 🅔 Founder urgency ─────────────────────────────────── -->
+<div class="row">
+  <div class="row-h">
+    <span class="name">🅔 Founder 緊急性版</span>
+    <span class="tag">セールス特化</span>
+    <span class="reco">締切煽り・CTR 最大化</span>
+  </div>
+  <div class="row-pros"><b>強み</b>: 緊急性 + 経済メリットでクリックされやすい  <b>弱み</b>: SaaS の中身が伝わらず、Founder 100 だけ目立つ</div>
+  <div class="compare">
+    <div class="og-frame">
+      <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgE" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fb923c"/>
+            <stop offset="100%" stop-color="#ea580c"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="630" fill="url(#bgE)"/>
+
+        <!-- decorative stars -->
+        <g fill="rgba(255,255,255,0.12)" font-size="22" font-family="Inter,system-ui,sans-serif">
+          <text x="80" y="140">★</text>
+          <text x="1100" y="120">★</text>
+          <text x="200" y="540">★</text>
+          <text x="1000" y="560">★</text>
+        </g>
+
+        <!-- header -->
+        <text x="600" y="100" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="800" fill="rgba(255,255,255,0.85)" letter-spacing="1">🔥 MY AI AGENT · FOUNDER 100</text>
+
+        <!-- huge seats counter -->
+        <text x="600" y="260" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="180" font-weight="900" fill="#ffffff" letter-spacing="-6">残 92 席</text>
+
+        <!-- divider -->
+        <line x1="500" y1="295" x2="700" y2="295" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
+
+        <!-- benefits -->
+        <g transform="translate(600,355)" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-weight="800" fill="#ffffff">
+          <text font-size="28">永年無料 + Store 手数料 0% + Founder バッジ</text>
+        </g>
+
+        <!-- tagline -->
+        <text x="600" y="450" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="700" fill="#ffffff">AI を複数人雇える時代へ。</text>
+        <text x="600" y="490" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="500" fill="rgba(255,255,255,0.85)">30 秒で開始 · 100 メッセージ無料 · 50 サービス連携</text>
+
+        <!-- footer -->
+        <g transform="translate(600,580)" text-anchor="middle">
+          <rect x="-180" y="-30" width="360" height="44" rx="22" fill="#ffffff"/>
+          <text y="-3" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="900" fill="#ea580c">myaiagents.agency</text>
+        </g>
+      </svg>
+    </div>
+    <div class="meta">1200 × 630 px</div>
+  </div>
+</div>
+
+<div style="margin-top:48px;padding:20px;background:var(--peach-soft);border:1px solid #fed7aa;border-radius:12px;font-size:13px;line-height:1.7">
+  <b>🎯 選んでください:</b><br>
+  メッセージで「<b>🅐 でいく</b>」「<b>🅒 でいく</b>」など番号で。確定したらこの SVG を <code>public/social/og-home.png</code> に書き出し → meta タグ書き換え → push まで一気に完了します。<br>
+  <br>
+  特定の修正案 (色変えたい / 文字変えたい / 別 ideas) があれば素直に教えてください。
+</div>
+
+</body>
+</html>

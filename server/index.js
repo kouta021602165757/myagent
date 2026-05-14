@@ -12105,21 +12105,63 @@ async function handleAPI(req,res,pathname,method,ip){
     if(method === 'POST' && !sid){
       const b = (await readBody(req)) || {};
       const name = String(b.name||'').trim().slice(0, 60);
-      const siteUrl = String(b.siteUrl||'').trim();
+      const siteUrl = String(b.siteUrl||'').trim().replace(/\/+$/, '');
       const username = String(b.username||'').trim();
       const appPassword = String(b.appPassword||'').trim();
       if(!name) return jres(res, 400, { error: 'name は必須' });
       if(!/^https?:\/\//.test(siteUrl)) return jres(res, 400, { error: 'siteUrl は http(s):// で始まる必要あり' });
       if(!username) return jres(res, 400, { error: 'username は必須' });
       if(!appPassword) return jres(res, 400, { error: 'appPassword は必須' });
+      // Application Password format check: XXXX XXXX XXXX XXXX XXXX XXXX
+      // (6 groups of 4 chars, space-separated). WordPress 5.6+ standard.
+      // Without this check, users paste their LOGIN password and the save
+      // succeeds (because there's no validation) — but the actual REST API
+      // call rejects every time. We reject early with a clear hint.
+      const apLooks = /^(?:[A-Za-z0-9]{4}\s){5}[A-Za-z0-9]{4}$/.test(appPassword)
+                   || /^[A-Za-z0-9]{24}$/.test(appPassword); // also accept no-space form
+      if(!apLooks){
+        return jres(res, 400, {
+          error: 'invalid_application_password_format',
+          detail: '「XXXX XXXX XXXX XXXX XXXX XXXX」形式の Application Password を入れてください。WordPress ログインパスワードは API では使えません。WP ダッシュボード → ユーザー → プロフィール → 下部「Application Passwords」セクションで新規発行してください。',
+        });
+      }
       if(user.integrations.wordpress.sites.length >= 20) return jres(res, 400, { error: 'サイトは上限 20 個' });
+      // ── Live connection test BEFORE persisting ─────────────
+      // Hit GET /wp-json/wp/v2/users/me with the given credentials. If auth
+      // fails, return a 400 with the actual cause so the user can fix it
+      // instead of seeing a misleading "✓ 接続成功" toast on garbage creds.
+      const testSite = { id: 'tmp', name, siteUrl, username, appPassword };
+      const probeRes = await executeWordPressTestConnectionTool(
+        { integrations: { wordpress: { sites: [testSite] } } },
+        null, { site_id: 'tmp' }
+      );
+      if(probeRes && probeRes.error){
+        const hint = ({
+          auth_failed:    '認証失敗。Application Password が正しいか / 期限切れでないか確認してください。WordPress ログインパスワードでは動きません。',
+          rest_disabled:  'WordPress REST API が無効か、URL が間違ってます。セキュリティプラグイン (Wordfence/iThemes 等) で /wp-json/ をブロックしてないか確認。',
+          network_failed: 'サイト URL に到達できません。URL が正しいか、サイトがダウンしてないか確認してください。',
+        })[probeRes.error] || probeRes.detail || '接続テストに失敗しました。';
+        return jres(res, 400, {
+          error: 'connection_test_failed',
+          code: probeRes.error,
+          detail: hint,
+          raw: probeRes.detail || '',
+        });
+      }
+      // Tests passed — actually save.
       const s = { id: 'wp_'+crypto.randomBytes(4).toString('hex'), name, siteUrl, username, appPassword, created_at: new Date().toISOString() };
       user.integrations.wordpress.sites.push(s);
       if(!user.integrations.wordpress.default_site_id){
         user.integrations.wordpress.default_site_id = s.id;
       }
       await DB.save(user);
-      return jres(res, 200, { ok: true, site: { id: s.id, name: s.name, siteUrl: s.siteUrl } });
+      return jres(res, 200, {
+        ok: true,
+        site: { id: s.id, name: s.name, siteUrl: s.siteUrl },
+        verified: true,
+        display_name: probeRes.display_name || '',
+        roles: probeRes.roles || [],
+      });
     }
     if(method === 'DELETE' && sid){
       const idx = user.integrations.wordpress.sites.findIndex(s => s.id === sid);

@@ -1487,7 +1487,7 @@ async function _summarizeOldHistory(agent){
       + `次の会話で AI が参照できる「これまでの経緯」を 400 字以内で日本語で要約してください。`
       + `箇条書きではなく自然な文で。冗長な前置きや「以下に要約します」は不要。`;
     // Use the cheapest fast model available. Prefer Gemini Flash, else Haiku.
-    const summarizerAlias = GEMINI_KEY ? 'gemini-flash' : 'haiku';
+    const summarizerAlias = 'haiku';
     const info = _resolveModelInfo(summarizerAlias);
     let summaryText = '';
     if(info.provider === 'gemini'){
@@ -1766,7 +1766,7 @@ async function _afterTurnExtract(agent, opts){
     }
     const existingKpis = (Array.isArray(agent.kpis) ? agent.kpis : []).map(k => k.name).slice(0, 8).join(', ');
     const prompt = `あなたはエージェント "${agent.name || ''}" の長期記憶を整理するアシスタントです。\n\n直前のターン:\nUSER: ${userMsg}\nAI: ${aiReply}\n\n既存の KPI 名: ${existingKpis || '(なし)'}\n\n以下を JSON で返してください (該当なければ空配列 / 空オブジェクト):\n{\n  "new_memories": ["事実 1", "事実 2"],   // ユーザーの好み・事業・固有名詞・数値・NG事項のうち、将来の会話で参照に値する事実を 0-3 個。1 件 80 字以内。雑談・挨拶は無視。\n  "task_updates": [                         // タスクの新規開始 / 進捗 / 完了\n    { "title": "...", "status": "started|progress|done", "progress_pct": 0-100, "notes": "短い補足" }\n  ],\n  "kpi_updates": { "<既存KPI名>": <現在値> },  // AI または USER が KPI 数値に言及していれば\n  "playbook": [                             // ユーザーが明確にポジティブなリアクションをした場合に限り、AI のアプローチを 1 件抽出\n    { "context": "どんな状況で", "pattern": "AI はどう動いたか / どう答えたか", "success_count": 1 }\n  ]\n}\n\n注意:\n- 余計な文言、Markdown、コードブロック、説明は禁止。JSON のみ。\n- USER がネガティブ反応 / 修正要求をした場合 playbook は []。\n- 明らかな雑談 (挨拶 / 確認 / 軽い感想) は new_memories から除外。`;
-    const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+    const info = _resolveModelInfo('haiku');
     let raw = '';
     if(info.provider === 'gemini'){
       const r = await _callGemini([{role:'user', content: prompt}], '', info);
@@ -2002,7 +2002,7 @@ async function _maybeGenerateWeeklyDigest(user){
     }).join('\n');
     const kpiBlock = (ag.kpis||[]).slice(0,4).map(k => '・' + k.name + ': ' + (k.current||'?') + '/' + (k.target||'?')+(k.unit||'')).join('\n');
     const prompt = '今週のまとめを 1 つの「つぶやき」として 100 字以内で生成してください。形式: 「先週は X、Y。今週は Z をやりませんか?」\n\n直近の会話:\n' + recent + '\n\nKPI:\n' + (kpiBlock || '(なし)') + '\n\n出力は本文のみ。';
-    const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+    const info = _resolveModelInfo('haiku');
     let text = '';
     if(info.provider === 'gemini'){
       const r = await _callGemini([{role:'user', content: prompt}], '', info);
@@ -2068,7 +2068,7 @@ async function _maybeGenerateNudgeForUser(user){
       return role + ': ' + (body || '').slice(0, 240);
     }).join('\n');
     const prompt = `あなたは "${agent.name}" という AI エージェントです。\nPersona: ${(agent.persona||'').slice(0,400)}\n\n直近の会話:\n${recent}\n\nユーザーから問いかけがない今、こちらから自発的にユーザーに送る短い「つぶやき」を 1 つだけ生成してください。条件:\n- 1〜2 文、80 字以内\n- 直前の会話の続き / 気づき / 提案 / 確認 のどれか (脈絡が伝わるもの)\n- 売り込み・煽り・誇張は禁止、自然で親しみやすいトーン\n- 出力は本文のみ。前置きや「以下が…」のような枕詞、句読点による飾りは禁止`;
-    const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+    const info = _resolveModelInfo('haiku');
     let text = '';
     if(info.provider === 'gemini'){
       const r = await _callGemini([{role:'user', content: prompt}], '', info);
@@ -2222,7 +2222,7 @@ async function _runPlanExecuteReview(message, opts){
 async function _runCriticPass(originalReply, opts){
   try {
     const userMsg = String((opts && opts.userMsg) || '').slice(0, 800);
-    const modelAlias = (opts && opts.model) || 'gemini-flash';
+    const modelAlias = (opts && opts.model) || 'haiku';
     const info = _resolveModelInfo(modelAlias);
     const reply = String(originalReply || '').slice(0, 12000);
     if(reply.length < 60) return originalReply;
@@ -2282,7 +2282,7 @@ function _autoPickModel(message, agent){
   // Explicit override via slash prefix
   if(/^\/opus\b/i.test(raw))   return 'opus';
   if(/^\/sonnet\b/i.test(raw)) return 'sonnet';
-  if(/^\/fast\b|^\/flash\b/i.test(raw)) return 'gemini-flash';
+  if(/^\/fast\b|^\/flash\b/i.test(raw)) return 'haiku';
   // Heuristics
   if(raw.length > 400) return 'sonnet';
   if(/```/.test(raw))  return 'sonnet';            // code block in input
@@ -2293,7 +2293,9 @@ function _autoPickModel(message, agent){
   // Multi-step requests (3+ "and"-like joiners)
   const joiners = (raw.match(/(そして|それから|あと|また|and then|after that|\+)/gi)||[]).length;
   if(joiners >= 2) return 'sonnet';
-  return 'gemini-flash';
+  // Default: Haiku 4.5 (cheap + fast). Was gemini-flash, but Gemini's
+  // non-streaming tool path caused "止まる" perception.
+  return 'haiku';
 }
 
 // Intent classifier — keyword-based detection of which tool category the user
@@ -2387,33 +2389,31 @@ function _filterToolsByIntent(tools, intentCats){
 }
 
 // Resolve a per-agent model alias to {provider, modelId, maxTokens}.
-// Supported aliases:
-//   - 'haiku' | 'sonnet' | 'opus'             → Anthropic
-//   - 'gemini-flash' | 'gemini-pro'           → Google Gemini
-// If a Gemini alias is requested but GEMINI_API_KEY is unset, the resolver
-// transparently downgrades to Sonnet so the chat keeps working. Defaults to
-// 'gemini-flash' (cheap + fast) when no alias is set and the key is present;
-// otherwise to Sonnet.
+// Supported aliases (all Anthropic):
+//   - 'haiku'  → Claude Haiku 4.5  (cheap + fast)
+//   - 'sonnet' → Claude Sonnet 4.6 (mid)
+//   - 'opus'   → Claude Opus 4.7   (top)
+// Gemini was removed 2026-05. Legacy 'gemini-flash' / 'gemini-pro' rows
+// in the DB silently map to haiku / sonnet so no migration is needed.
+// Default (alias unset) → haiku.
 function _resolveModelInfo(alias){
   const a = (alias||'').toLowerCase();
-  if(a === 'gemini-flash' || a === 'gemini-pro'){
-    if(!GEMINI_KEY){
-      // Fall through to Anthropic Sonnet — no Gemini key configured.
-      return { provider:'anthropic', modelId:'claude-sonnet-4-6', maxTokens:16000, alias:'sonnet' };
-    }
-    return a === 'gemini-pro'
-      ? { provider:'gemini', modelId:'gemini-2.5-pro',   maxTokens:16000, alias:'gemini-pro' }
-      : { provider:'gemini', modelId:'gemini-2.5-flash', maxTokens:8192,  alias:'gemini-flash' };
-  }
+  // Gemini was removed (2026-05). Legacy 'gemini-flash' / 'gemini-pro' aliases
+  // — still saved on old agent records — silently map to their Anthropic
+  // equivalents so existing chats keep working without a DB migration:
+  //   gemini-flash  → haiku   (cheap + fast tier)
+  //   gemini-pro    → sonnet  (mid tier)
+  // Reason for removal: Gemini's tool-use path is non-streaming and the
+  // free-tier quota (20 req/min) caused frequent "混雑のため" errors.
+  if(a === 'gemini-flash') return { provider:'anthropic', modelId:'claude-haiku-4-5-20251001', maxTokens:8000,  alias:'haiku' };
+  if(a === 'gemini-pro')   return { provider:'anthropic', modelId:'claude-sonnet-4-6',         maxTokens:16000, alias:'sonnet' };
   switch(a){
     case 'haiku':  return { provider:'anthropic', modelId:'claude-haiku-4-5-20251001', maxTokens:8000,  alias:'haiku' };
     case 'opus':   return { provider:'anthropic', modelId:'claude-opus-4-7',           maxTokens:32000, alias:'opus' };
     case 'sonnet': return { provider:'anthropic', modelId:'claude-sonnet-4-6',         maxTokens:16000, alias:'sonnet' };
     default:
-      // Unset alias: pick Gemini Flash if available, else Sonnet.
-      return GEMINI_KEY
-        ? { provider:'gemini',    modelId:'gemini-2.5-flash', maxTokens:8192,  alias:'gemini-flash' }
-        : { provider:'anthropic', modelId:'claude-sonnet-4-6', maxTokens:16000, alias:'sonnet' };
+      // Unset alias → cheap tier (Haiku 4.5).
+      return { provider:'anthropic', modelId:'claude-haiku-4-5-20251001', maxTokens:8000, alias:'haiku' };
   }
 }
 // Legacy helpers — kept so existing callsites that only need the Anthropic
@@ -2878,14 +2878,15 @@ async function _callGeminiWithTools(messages, system, tools, toolChoice, info, c
 
 // ── AI error recovery ──────────────────────────────────────
 // Pick a faster fallback model when the primary times out OR hits a quota
-// limit. Critical: gemini-flash → haiku is a CROSS-PROVIDER fallback so a
-// Gemini Free-tier quota hit doesn't kill the chat (separate quotas).
+// limit. Gemini was removed (2026-05) — only Anthropic chain remains:
+//   opus → sonnet → haiku → (null, no further fallback)
 function _fallbackModelFor(modelAlias){
   const a = String(modelAlias || '').toLowerCase();
   if(a === 'opus' || a === 'opus-4' || a === 'opus-4-7') return 'sonnet';
   if(a === 'sonnet' || a === 'sonnet-4-6') return 'haiku';
-  if(a === 'gemini-pro' || a === 'gemini-2.5-pro') return 'gemini-flash';
-  if(a === 'gemini-flash' || a === 'gemini-2.5-flash') return 'haiku'; // ← cross-provider rescue
+  // Legacy gemini aliases (from old DB rows) — bounce straight to haiku.
+  if(a === 'gemini-pro' || a === 'gemini-2.5-pro') return 'sonnet';
+  if(a === 'gemini-flash' || a === 'gemini-2.5-flash') return 'haiku';
   // haiku is the last-resort — already cheapest, no further fallback.
   return null;
 }
@@ -11712,7 +11713,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'gemini-flash',
+      model: 'haiku',
       history: [],
       created_at: new Date().toISOString(),
       via_onboarding: true,
@@ -11756,7 +11757,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: !!t.chrome_enabled,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'gemini-flash',
+      model: 'haiku',
       history: [],
       created_at: new Date().toISOString(),
       from_template: t.id,
@@ -11850,7 +11851,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(extension_enabled!==undefined)ag.extension_enabled=!!extension_enabled;
     if(github_enabled!==undefined)ag.github_enabled=!!github_enabled;
     if(Array.isArray(mcp_server_ids)) ag.mcp_server_ids = mcp_server_ids.filter(x => typeof x === 'string').slice(0, 30);
-    if(model!==undefined && ['auto','haiku','sonnet','opus','gemini-flash','gemini-pro'].includes(model)) ag.model=model;
+    if(model!==undefined && ['auto','haiku','sonnet','opus'].includes(model)) ag.model=model;
     if(Array.isArray(skills)) ag.skills = skills.filter(s => typeof s === 'string').slice(0, 16);
     if(ai_auto_respond !== undefined){
       // Group-only setting; treat null as "unset" (use size heuristic).
@@ -12547,7 +12548,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const prompt = `エージェント "${ag.name||'AI'}" のスキル: ${(ag.skills||[]).join(', ')||'(none)'}\nペルソナ: ${(ag.persona||'').slice(0,400)}\n\nこのエージェントの性格・専門が伝わる絵文字を 6 個選んで JSON 配列で返してください。Slack の "リアクション" 的に、チャットでサクッと押せるもの。\n出力例: ["🎨","🖌","✨","💅","📐","🌈"]\n\n注意: JSON 配列のみ。説明・前置き・コードブロックは禁止。重複なし、明らかに同義なものは選ばない。`;
     let raw = '';
     try {
-      const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+      const info = _resolveModelInfo('haiku');
       if(info.provider === 'gemini'){
         const r = await _callGemini([{role:'user', content: prompt}], '', info);
         raw = (r?.content?.[0]?.text || '').trim();
@@ -12843,7 +12844,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'gemini-flash',
+      model: 'haiku',
       history: [],
       created_at: now,
       // team_origin marks an agent as belonging to a team — DM list filters
@@ -12997,7 +12998,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'gemini-flash',
+      model: 'haiku',
       history: [],
       created_at: now,
       team_origin: { team_id: groupId, generated: true, goal: goal.slice(0,400) },
@@ -13219,7 +13220,7 @@ async function handleAPI(req,res,pathname,method,ip){
       chrome_enabled: false,
       sheets_enabled: false,
       extension_enabled: false,
-      model: 'gemini-flash',
+      model: 'haiku',
       history: [],
       created_at: now,
       team_origin: { team_id: teamId, added_after: true },
@@ -15976,7 +15977,7 @@ async function handleAPI(req,res,pathname,method,ip){
         chrome_enabled: false,
         sheets_enabled: false,
         extension_enabled: false,
-        model: 'gemini-flash',
+        model: 'haiku',
         history: [],
         created_at: now,
         team_origin: { team_id: newGroupId, source_team_id: src.id, marketplace_origin: { listing_id: src.marketplace.listing_id, creator_user_id: found.user.id } },
@@ -16082,7 +16083,7 @@ async function handleAPI(req,res,pathname,method,ip){
         chrome_enabled: false,
         sheets_enabled: false,
         extension_enabled: false,
-        model: 'gemini-flash',
+        model: 'haiku',
         history: [],
         created_at: now,
         team_origin: { team_id: newGroupId, source_team_id: src.id, source_share_id: src.share_id || null },
@@ -16174,15 +16175,17 @@ async function handleAPI(req,res,pathname,method,ip){
     }
 
     // Plan-based model gating (charged-side payer drives this).
-    //   Free → gemini-flash or haiku only (cheap tier)
+    //   Free → haiku only (cheap tier)
     //   Pro  → no Opus
     //   Biz  → all
     // Grandfathered users keep whatever the agent's saved model says.
+    // (Legacy gemini-* values get silently mapped to haiku in _resolveModelInfo,
+    // so we coerce them to haiku here too for consistency in stored agent.model.)
     if(!_isGrandfathered(payerUser)){
       const _plan = payerUser.plan || 'free';
-      const _cheapTier = new Set(['gemini-flash', 'haiku']);
+      const _cheapTier = new Set(['haiku']);
       if(_plan === 'free' && !_cheapTier.has(agent.model)){
-        agent = { ...agent, model: 'gemini-flash' };
+        agent = { ...agent, model: 'haiku' };
       } else if(_plan === 'pro' && agent.model === 'opus'){
         agent = { ...agent, model: 'sonnet' };
       }
@@ -16502,7 +16505,7 @@ async function handleAPI(req,res,pathname,method,ip){
             }];
             let memberReply = '';
             try {
-              const info = _resolveModelInfo(member.model || 'gemini-flash');
+              const info = _resolveModelInfo(member.model || 'haiku');
               const callOpts = {
                 ...info,
                 maxTokens: Math.min(600, info.maxTokens),
@@ -16512,7 +16515,7 @@ async function handleAPI(req,res,pathname,method,ip){
                   memberReply += delta;
                   sse('delta', { text: delta, member_id: member.id });
                 },
-                callOpts.alias || member.model || 'gemini-flash',
+                callOpts.alias || member.model || 'haiku',
                 member);
               totalIn  += (r.inputTokens || 0);
               totalOut += (r.outputTokens || 0);
@@ -16547,7 +16550,7 @@ async function handleAPI(req,res,pathname,method,ip){
             sse('huddle_summary_start', {});
             const sumSys = 'あなたはチームファシリテーター。下記の議論を整理してください。';
             const sumPrompt = `元のユーザー依頼: ${message}\n\n議論:\n${transcript.join('\n')}\n\n以下の形式で簡潔に整理してください (合計 6-8 行):\n\n📋 **論点**: ...\n💡 **主な提案**: \n  - <発言者>: <提案>\n  - <発言者>: <提案>\n🎯 **次のアクション**: <ユーザーが取るべき次の 1 ステップ>\n\n出力は本文のみ。前置きや「以下に要約します」は禁止。`;
-            const info = _resolveModelInfo(GEMINI_KEY ? 'gemini-flash' : 'haiku');
+            const info = _resolveModelInfo('haiku');
             let summary = '';
             await callAIStream([{role:'user', content: sumPrompt}], sumSys,
               (delta) => { summary += delta; sse('huddle_summary_delta', { text: delta }); },

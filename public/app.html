@@ -4125,11 +4125,10 @@ body{color:#f0f0f8;}
     <div>
       <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">AI モデル</label>
       <div id="editModelGroup" style="display:flex;flex-wrap:wrap;gap:5px">
-        <button type="button" data-model="auto"         onclick="_setEditModel('auto')"         class="model-pick ea-mpill" title="クエリの複雑度で Fast/Smart を自動切替 — 推奨">✨ Auto</button>
-        <button type="button" data-model="gemini-flash" onclick="_setEditModel('gemini-flash')" class="model-pick ea-mpill">⚡ Fast</button>
-        <button type="button" data-model="sonnet"       onclick="_setEditModel('sonnet')"       class="model-pick ea-mpill">🎯 Smart</button>
-        <button type="button" data-model="gemini-pro"   onclick="_setEditModel('gemini-pro')"   class="model-pick ea-mpill">💎 Pro</button>
-        <button type="button" data-model="opus"         onclick="_setEditModel('opus')"         class="model-pick ea-mpill">🧠 Best</button>
+        <button type="button" data-model="auto"   onclick="_setEditModel('auto')"   class="model-pick ea-mpill" title="クエリの複雑度で Fast/Smart を自動切替 — 推奨">✨ Auto</button>
+        <button type="button" data-model="haiku"  onclick="_setEditModel('haiku')"  class="model-pick ea-mpill" title="Claude Haiku 4.5 · 高速 + 低コスト">⚡ Fast</button>
+        <button type="button" data-model="sonnet" onclick="_setEditModel('sonnet')" class="model-pick ea-mpill" title="Claude Sonnet 4.6 · 高品質 + バランス">🎯 Smart</button>
+        <button type="button" data-model="opus"   onclick="_setEditModel('opus')"   class="model-pick ea-mpill" title="Claude Opus 4.7 · 最高品質">🧠 Best</button>
       </div>
       <input type="hidden" id="editModel" value="auto">
     </div>
@@ -8372,12 +8371,13 @@ async function openAgent(id){
     : '';
   // Quick model picker pill — click to switch between Fast / Smart / Best
   // without opening the full edit panel. Saved per-agent via PATCH.
-  var _modelMap = {'auto':{lbl:'✨ Auto',title:'自動切替: クエリの複雑度で Fast/Smart を自動選択 (推奨)'},
-                   'gemini-flash':{lbl:'⚡ Fast',title:'Gemini 2.5 Flash · 超高速'},
-                   'gemini-pro':{lbl:'💎 Pro',title:'Gemini 2.5 Pro · 高品質+高速'},
-                   'sonnet':{lbl:'🎯 Smart',title:'Claude Sonnet · 標準品質'},
-                   'opus':{lbl:'🧠 Best',title:'Claude Opus · 最高性能'},
-                   'haiku':{lbl:'⚡ Lite',title:'Claude Haiku · 軽量'}};
+  var _modelMap = {'auto':  {lbl:'✨ Auto', title:'自動切替: クエリの複雑度で Fast/Smart を自動選択 (推奨)'},
+                   'haiku': {lbl:'⚡ Fast', title:'Claude Haiku 4.5 · 高速 + 低コスト'},
+                   'sonnet':{lbl:'🎯 Smart',title:'Claude Sonnet 4.6 · 高品質 + バランス'},
+                   'opus':  {lbl:'🧠 Best', title:'Claude Opus 4.7 · 最高品質'},
+                   // Legacy gemini-* values map to the same display as haiku.
+                   'gemini-flash':{lbl:'⚡ Fast',title:'Claude Haiku 4.5'},
+                   'gemini-pro':  {lbl:'🎯 Smart',title:'Claude Sonnet 4.6'}};
   var _mInfo = _modelMap[ag.model] || _modelMap['auto'];
   var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit">'+_mInfo.lbl+'</button>');
   // Agent-intelligence indicators — KPI count + active task count. Clicking
@@ -12314,7 +12314,7 @@ function openTeamMembersPanel(teamId){
       var skillsTxt = (m.skills||[]).map(function(s){var sk=SKILLS.find(function(x){return x.id===s;});return '<span style="display:inline-block;background:var(--cream2);color:var(--text2);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--wire2);margin-right:4px;margin-top:3px">'+esc(sk?sk.name:s)+'</span>';}).join('');
       var personaPreview = (m.persona||'').slice(0,140);
       if((m.persona||'').length>140) personaPreview += '…';
-      var modelLabel = ({haiku:'Haiku',sonnet:'Sonnet',opus:'Opus','gemini-flash':'Gemini Flash','gemini-pro':'Gemini Pro'}[m.model||'gemini-flash']) || 'Gemini Flash';
+      var modelLabel = ({haiku:'Haiku',sonnet:'Sonnet',opus:'Opus','gemini-flash':'Haiku','gemini-pro':'Sonnet'}[m.model||'haiku']) || 'Haiku';
       // Remove button only for hosts AND when team has > 1 member (server enforces this too)
       var canRemove = isTeamHost && members.length > 1;
       var rmBtn = canRemove
@@ -16236,16 +16236,15 @@ function _toggleQuickModel(agId){
     // 'auto' is always allowed — it auto-downgrades when the plan can't
     // afford the chosen model, so it's safe at every tier.
     if(m === 'auto') return true;
-    if(plan === 'free') return (m === 'gemini-flash' || m === 'haiku');
+    if(plan === 'free') return m === 'haiku';
     if(plan === 'pro')  return m !== 'opus';
     return true;
   };
   var opts = [
-    {v:'auto',         lbl:'✨ Auto',  sub:'クエリ毎に自動切替 (推奨)'},
-    {v:'gemini-flash', lbl:'⚡ Fast',  sub:'Gemini 2.5 Flash · 超高速'},
-    {v:'gemini-pro',   lbl:'💎 Pro',   sub:'Gemini 2.5 Pro · 高品質'},
-    {v:'sonnet',       lbl:'🎯 Smart', sub:'Claude Sonnet · 標準'},
-    {v:'opus',         lbl:'🧠 Best',  sub:'Claude Opus · 最高性能'},
+    {v:'auto',   lbl:'✨ Auto',  sub:'クエリ毎に自動切替 (推奨)'},
+    {v:'haiku',  lbl:'⚡ Fast',  sub:'Claude Haiku 4.5 · 高速'},
+    {v:'sonnet', lbl:'🎯 Smart', sub:'Claude Sonnet 4.6 · 標準'},
+    {v:'opus',   lbl:'🧠 Best',  sub:'Claude Opus 4.7 · 最高性能'},
   ];
   var menu = document.createElement('div');
   menu.id = 'quickModelMenu';
@@ -16305,10 +16304,11 @@ async function _quickPickModel(agId, model){
 
 // Per-agent model picker (Gemini Flash / Sonnet / Gemini Pro / Opus / Haiku).
 // `haiku` stays a valid value for backward compatibility with older agents,
-// but isn't shown in the UI anymore — Gemini Flash replaced it as the cheap
-// default since it's faster and similar quality at our price point.
+// (Gemini was removed 2026-05 — legacy gemini-* values are accepted here
+// for backward compat on old DB rows; the server transparently maps them
+// to haiku/sonnet in _resolveModelInfo.)
 function _setEditModel(name){
-  const valid = ['auto','gemini-flash','gemini-pro','haiku','sonnet','opus'];
+  const valid = ['auto','haiku','sonnet','opus','gemini-flash','gemini-pro'];
   if(!valid.includes(name)) name = 'auto';
   const inp = document.getElementById('editModel');
   if(inp) inp.value = name;
@@ -16363,7 +16363,7 @@ async function saveEditAgent(){
   var swGitHub = document.getElementById('editGitHubSw');
   var githubEnabled = !!(swGitHub && swGitHub.classList.contains('on') && me && me.github_connected);
   var modelSel = document.getElementById('editModel');
-  var model = (modelSel && modelSel.value) || 'gemini-flash';
+  var model = (modelSel && modelSel.value) || 'haiku';
   if(!newName){ showToast(L('名前を入力してください','Please enter a name'),'ng'); return; }
   try{
     const r = await api('PATCH', '/api/agents/'+id, {name:newName, persona:newPersona, chrome_enabled:chromeEnabled, sheets_enabled:sheetsEnabled, extension_enabled:extensionEnabled, github_enabled:githubEnabled, model});

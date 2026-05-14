@@ -2254,15 +2254,12 @@ async function _runCriticPass(originalReply, opts){
   }
 }
 function _shouldRunCritic(message, reply, agent){
-  // Explicit /improve prefix from user
+  // Plan A: critic は **明示的に /improve と打った時だけ** 走らせる。
+  // 自動 critic は streamedText / reply の同期を壊し、ストリーミング後に
+  // 「同じ応答が 2 回出る」原因になるため。長い応答の品質を上げたい時は
+  // ユーザーが /improve を明示する設計に統一。
   if(/^\/improve\b/i.test(String(message||'').trim())) return true;
-  // Long output gates: ≥ 1500 chars + non-trivial. Skip when reply is mostly
-  // a single URL (artifact paths) or an error message.
-  const r = String(reply || '');
-  if(r.length < 1500) return false;
-  if(/^[🎨🖼️✂️🎬🎵📄📊📐🔗✅⚠️]/.test(r) && r.length < 2000) return false; // wrap-up reply
-  if(/応答エラー|エラーが発生|生成できません/.test(r)) return false;
-  return true;
+  return false;
 }
 
 // ── AUTO MODEL ROUTING ────────────────────────────────────────
@@ -3111,18 +3108,24 @@ function _callAIStreamOnce(messages, system, onText, modelAlias, cacheAgent){
 
 // Variant with tool definitions (for Google Chrome integration via Tool Use)
 async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cacheAgent,onText){
-  // Recovery wrapper — same pattern as callAI/callAIStream. Tool-use calls
-  // are the slowest (artifact creation can take 1-2 min) so silent retry
-  // + fallback matters most here.
-  // `onText` (optional) is forwarded into the underlying call so we can stream
-  // text_delta events from Anthropic to the SSE channel in real time. Without
-  // it, the tool-loop blocks for the full duration of each iteration.
+  // Recovery wrapper — retry on transient errors / quota.
+  // PLAN A: if partial text was already streamed to the client, do NOT
+  // retry — replaying the same iter would emit duplicate text. Surface
+  // the error instead and let the user manually re-send.
   let curModel = modelAlias;
   let attempt = 0;
+  let didStream = false;
+  const wrappedOnText = (typeof onText === 'function')
+    ? (t) => { if(t){ didStream = true; } try { onText(t); } catch(_){} }
+    : null;
   while(true){
     try {
-      return await _callAIWithToolsOnce(messages, system, tools, toolChoice, curModel, cacheAgent, onText);
+      return await _callAIWithToolsOnce(messages, system, tools, toolChoice, curModel, cacheAgent, wrappedOnText);
     } catch(e){
+      if(didStream){
+        console.warn('[callAIWithTools] partial stream already sent — surfacing error instead of retrying:', String(e.message||e).slice(0,140));
+        throw e;
+      }
       const transient = _isTransientAIError(e);
       const quota = _isQuotaError(e);
       if(quota && attempt < 2){
@@ -17360,31 +17363,34 @@ async function handleAPI(req,res,pathname,method,ip){
             if(improved && improved !== reply){
               reply = improved;
               if(sse) sse('critic_replaced', { reply });
+              // Critic event already updated the client's acc to the improved
+              // text. Sync streamedText so the diff-emit below sees nothing
+              // new to send — without this, the improved reply gets emitted
+              // again as a delta and the bubble shows the rewrite twice.
+              streamedText = reply;
             }
           } catch(e){ console.warn('[critic-tools] failed:', e.message); }
         }
-        // Final-reply emission policy:
-        //   • Anthropic path: text was streamed live via _onIterText during
-        //     each iter. streamedText already contains everything. Skip.
-        //   • Gemini / wrap-up skip / critic_replaced path: `reply` may
-        //     contain text NOT yet streamed. Emit only the new tail.
-        //   • Budget-exhausted path: same — emit the new portion only.
+        // Final-reply emission — Plan A simplification.
+        // The text portion of every iter is already streamed live via
+        // _onIterText (text_delta events). Server-synthesized text (wrap-up
+        // skip / budget-exhausted) is not. Emit such synthesized strings as
+        // a SINGLE delta event — no chunking, no double-emit risk.
         if(sse && reply){
-          const tail = streamedText.endsWith(reply)
-            ? ''
-            : (reply.startsWith(streamedText) ? reply.slice(streamedText.length) : reply);
-          if(tail){
-            const chars = Array.from(tail);
-            const chunkSize = 200;
-            for(let i=0; i<chars.length; i+=chunkSize){
-              const chunk = chars.slice(i, i+chunkSize).join('');
-              streamedText += chunk;
-              sse('delta', { text: chunk });
+          const norm = (s) => String(s||'').replace(/\s+$/,'');
+          if(norm(reply) !== norm(streamedText)){
+            // streamedText doesn't already contain reply → server synthesized.
+            // Emit the whole thing as one delta. Client appends to acc.
+            const delta = (norm(reply).startsWith(norm(streamedText)) && streamedText)
+              ? reply.slice(streamedText.length)
+              : reply;
+            if(delta){
+              streamedText += delta;
+              sse('delta', { text: delta });
             }
           }
         }
-        // Save the full streamed transcript (intermediate reasoning + final answer)
-        // so the persisted history matches what the user saw on screen.
+        // Persist what was actually streamed (history matches client view).
         if(sse && streamedText.trim()) reply = streamedText.trim();
       }catch(e){
         // Browser unavailable on this host — fall back to plain chat so user still gets an answer

@@ -14606,6 +14606,48 @@ function _intgOpen(id){
       + (st.connected
         ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
         : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
+  } else if(s.id === 'buffer' && !s.has_backend){
+    // Buffer-specific setup walkthrough — when admin hasn't set
+    // BUFFER_OAUTH_CLIENT_ID/SECRET yet, give a clear step-by-step.
+    body =
+      '<div style="background:#fff7ee;border:1px solid #fed7aa;border-radius:10px;padding:13px 15px;font-size:12.5px;line-height:1.65;color:#7c2d12;margin-bottom:14px">'
+      +   '<b style="color:#7c2d12;font-size:13.5px">📦 Buffer とは?</b><br>'
+      +   '<span style="color:#9a3412">1 アカウントで X / Threads / Instagram / LinkedIn / FB / Pinterest / TikTok の 7 SNS に投稿可能なハブサービス。<b>無料プラン</b>で 3 SNS / 10 投稿先まで使えます。Buffer に AI から投稿させたいので、まず Buffer 側で「アプリ」を作ってその鍵をこのアプリに渡す必要があります。</span>'
+      + '</div>'
+      + '<div style="font-size:12.5px;font-weight:900;color:var(--text);margin:14px 0 8px;letter-spacing:.02em">🛠 接続手順 (所要 5-10 分)</div>'
+      + '<ol style="font-size:12.5px;color:var(--text);line-height:1.75;padding-left:24px;margin:0 0 14px">'
+      +   '<li style="margin-bottom:10px"><b><a href="https://buffer.com/" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:800">Buffer 無料登録</a></b> (まだなら) → メールで認証</li>'
+      +   '<li style="margin-bottom:10px">Buffer にログインしたまま <b><a href="https://buffer.com/developers/apps/create" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:800">Developer Apps ページ</a></b> を開く</li>'
+      +   '<li style="margin-bottom:10px">「<b>Create an app</b>」ボタンで以下を入力:'
+      +     '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:8px;padding:10px 12px;margin-top:6px;font-size:11.5px;line-height:1.7">'
+      +       '<b>App Name:</b> <span style="font-family:ui-monospace,monospace">MY AI Agent</span><br>'
+      +       '<b>Description:</b> <span style="font-family:ui-monospace,monospace">AI-powered SNS posting</span><br>'
+      +       '<b>Website URL:</b> <span style="font-family:ui-monospace,monospace">https://myaiagents.agency</span><br>'
+      +       '<b>Callback URL:</b> <span style="font-family:ui-monospace,monospace;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--wire2)">https://myaiagents.agency/api/auth/buffer/callback</span> <button onclick="navigator.clipboard.writeText(\'https://myaiagents.agency/api/auth/buffer/callback\');showToast(\'✓ コピーしました\',\'ok\')" style="background:var(--peach);color:#fff;border:0;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">📋 コピー</button>'
+      +     '</div>'
+      +   '</li>'
+      +   '<li style="margin-bottom:10px">作成後の <b>Client ID</b> と <b>Client Secret</b> をコピー (Secret は 1 度しか見られない! 注意)</li>'
+      +   '<li style="margin-bottom:10px">Render → <b>myagent</b> サービス → <b>Environment</b> タブ → 環境変数を 2 つ追加:'
+      +     '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:8px;padding:10px 12px;margin-top:6px;font-size:11.5px;line-height:1.7;font-family:ui-monospace,monospace">'
+      +       'BUFFER_OAUTH_CLIENT_ID = <span style="color:var(--text3)">[Client ID]</span><br>'
+      +       'BUFFER_OAUTH_CLIENT_SECRET = <span style="color:var(--text3)">[Client Secret]</span>'
+      +     '</div>'
+      +   '</li>'
+      +   '<li style="margin-bottom:10px"><b>Save Changes</b> → Render が自動で再起動 (2-3 分)</li>'
+      +   '<li>このカードを再度開く → 「🔌 Buffer で接続」ボタンに変化 → 1 クリックで完了 ✅</li>'
+      + '</ol>'
+      + '<div style="background:#f9f8f5;border:1px solid var(--wire);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--text2);line-height:1.55;margin-bottom:14px">'
+      +   '<b style="color:var(--text)">💡 困ったら</b><br>'
+      +   '・ Callback URL は <b>必ず https</b>で。http だと Buffer が拒否します。<br>'
+      +   '・ Secret を紛失したら Developer Apps ページから新規発行 → Render を上書き保存。<br>'
+      +   '・ <a href="https://buffer.com/developers/api" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Buffer API ドキュメント →</a>'
+      + '</div>'
+      // ── 代替案: 設定なしで使いたい人向け ──
+      + '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#9a3412">'
+      +   '<b style="color:#7c2d12">⚡ Buffer 登録なしで今すぐ投稿したい?</b><br>'
+      +   '<b>share_to_sns</b> ツールなら **設定ゼロ** で X / Threads / LinkedIn / FB / Reddit / Bluesky 等に投稿できます (intent URL ボタンが出るので 1 タップで投稿)。'
+      +   '<button onclick="_intgClose()" style="display:block;margin-top:10px;background:var(--peach);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">了解 (チャットで「X に投稿して」と言うだけで OK)</button>'
+      + '</div>';
   } else if(s.flow === 'oauth' && !s.has_backend){
     body =
       '<div style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;margin-bottom:12px">'

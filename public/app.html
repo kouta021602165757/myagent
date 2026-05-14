@@ -1723,7 +1723,10 @@ input,textarea{font-family:var(--sans);}
   background:rgba(251,146,60,.92); color:#fff; font-weight:700; font-size:14px;
   border:2px dashed #fff; border-radius:14px; pointer-events:none; z-index:10;
 }
-.chat-foot-inner{max-width:760px;margin:0 auto;}
+/* Slack-flat: composer extends to fill the channel pane.
+   The thread panel (when open) reduces available space automatically since
+   .chat is part of a flex row with the drawer as a sibling. */
+.chat-foot-inner{max-width:none;margin:0;}
 
 .chips{display:flex;align-items:center;gap:6px;margin:8px 0 10px;flex-wrap:wrap;}
 .chip{

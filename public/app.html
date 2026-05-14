@@ -11395,10 +11395,13 @@ async function _sendMsgStream(ag, text, imgs, texts){
       if(evType === 'delta'){
         acc += obj.text || '';
         _stopThink();
+        // New text arrived — clear the "next-step thinking" flag set by
+        // tool_result / thinking events.
+        if(ag.history[streamIdx]) ag.history[streamIdx]._streamThinking = false;
         // Throttle DOM updates to ~30fps
         const nowT = Date.now();
         if(nowT - lastRender > 32 && liveBody){
-          liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
+          liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log, false);
           lastRender = nowT;
           _scrollMsgsToEnd();
         }
@@ -11410,6 +11413,13 @@ async function _sendMsgStream(ag, text, imgs, texts){
           _renderThinking();
           _stopThink();
           _thinkTimer = setInterval(_renderThinking, 1000);
+        } else if(liveBody && acc && (obj.iter || 0) >= 1){
+          // iter >= 1: we already have text in the bubble, but the server is
+          // about to call AI again for the next iteration (non-streaming, can
+          // take 5-30s). Without an indicator the bubble looks frozen.
+          ag.history[streamIdx]._streamThinking = true;
+          liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log, true);
+          _scrollMsgsToEnd();
         }
       } else if(evType === 'tool_call'){
         _stopThink();
@@ -11418,7 +11428,10 @@ async function _sendMsgStream(ag, text, imgs, texts){
         ag.history[streamIdx].tool_log.push({
           name: obj.name, input: obj.input || {}, ok: null, _pending: true,
         });
-        if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
+        // Tool call means AI emitted a tool_use block — no longer "thinking
+        // about next step", it's running a tool now.
+        ag.history[streamIdx]._streamThinking = false;
+        if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log, false);
         _scrollMsgsToEnd();
       } else if(evType === 'tool_result'){
         // Tool finished — patch the latest pending entry with the same name.
@@ -11429,7 +11442,10 @@ async function _sendMsgStream(ag, text, imgs, texts){
             break;
           }
         }
-        if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log);
+        // After tool result, the server will fire `thinking` for iter+1.
+        // Pre-emptively show the next-step indicator so there's no gap.
+        ag.history[streamIdx]._streamThinking = true;
+        if(liveBody) liveBody.innerHTML = _renderStreamingBody(acc, ag.history[streamIdx].tool_log, true);
         _scrollMsgsToEnd();
       } else if(evType === 'skill_evolved'){
         // Agent leveled up — show a 🌱 floating card + toast. Stash on the
@@ -11665,7 +11681,7 @@ function _toolDoneLabel(name){
   return lbl;
 }
 
-function _renderStreamingBody(text, toolLog){
+function _renderStreamingBody(text, toolLog, thinking){
   let html = '';
   if(toolLog && toolLog.length){
     html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
@@ -11681,11 +11697,22 @@ function _renderStreamingBody(text, toolLog){
     }
     html += '</div>';
   }
-  // While there are no tools fired yet and no text yet, show the brand
-  // "thinking" pill so the user has visible motion immediately.
+  // Cursor / "next-step" indicator policy:
+  //   • text + thinking → text + "次のステップを考え中…" pill (iter >= 1)
+  //   • text only       → text + blinking cursor (mid-stream within an iter)
+  //   • no text + tools → just the tool pills (preamble was empty)
+  //   • no text + no tools → big "Thinking…" indicator (initial wait)
   if(text){
     html += _md(text);
-    html += '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
+    if(thinking){
+      // Visible indicator between iterations so the bubble doesn't look frozen
+      // while the next callAIWithTools API call (non-streaming) is running.
+      html += '<div style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:6px 12px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.25);border-radius:99px;font-size:11.5px;font-weight:700;color:var(--peach-dark);font-family:inherit"><span class="tool-pill-spin"></span>'
+           + (isJa?'次のステップを考えています…':'Thinking about next step…')
+           + '</div>';
+    } else {
+      html += '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
+    }
   } else if(!toolLog || !toolLog.length){
     html += '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
          + (isJa?'考えています…':'Thinking…')

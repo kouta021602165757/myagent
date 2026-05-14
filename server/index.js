@@ -9838,8 +9838,8 @@ async function handleAPI(req,res,pathname,method,ip){
       stripe_wh_configured: !!STRIPE_WH,
       stripe_pro_price: STRIPE_PRO_PRICE ? STRIPE_PRO_PRICE.slice(0,15)+'...' : 'EMPTY',
       stripe_biz_price: STRIPE_BIZ_PRICE ? STRIPE_BIZ_PRICE.slice(0,15)+'...' : 'EMPTY',
-      webhook_path: '/api/stripe/webhook',
-      webhook_url_to_register: APP_URL + '/api/stripe/webhook',
+      webhook_path: '/api/webhook/stripe',
+      webhook_url_to_register: APP_URL + '/api/webhook/stripe',
       last_50_events: _stripeEventLog.slice(-50),
       caller: {
         email: u.email,

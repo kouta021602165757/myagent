@@ -11462,6 +11462,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
         _stopThink();
         ag.history[streamIdx].content = obj.reply || acc;
         ag.history[streamIdx].streaming = false;
+        ag.history[streamIdx]._streamThinking = false;
         if(obj.tool_log && obj.tool_log.length){ ag.history[streamIdx].tool_log = obj.tool_log; }
         // Tag the message as truncated if the model hit max_tokens — UI
         // renders a "▶ 続きを書く" Continue button under it.
@@ -11469,6 +11470,11 @@ async function _sendMsgStream(ag, text, imgs, texts){
         if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
         me.usage_count = (me.usage_count||0) + 1;
         updateBalance();
+        // CRITICAL: switch from streaming DOM (no action buttons / no
+        // Continue button) to the regular rendered message. Without this,
+        // a bubble that hit max_tokens stays "frozen" with no Continue
+        // button — user sees a half-finished message and no way to resume.
+        renderMsgs(ag);
       } else if(evType === 'error'){
         errorMsg = obj.message || 'エラー';
         _stopThink();

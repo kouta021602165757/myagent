@@ -7482,9 +7482,11 @@ document.addEventListener('DOMContentLoaded',async()=>{
   try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
   document.getElementById('loader').classList.add('gone');
   // First-run wizard: only when the user has zero agents AND hasn't completed
-  // onboarding yet. Skips on subsequent visits.
+  // onboarding yet. Gate on onboarded_at (the persisted DB column) — NOT
+  // onboarded_v1, which was never a column so it never persisted, causing the
+  // wizard to re-nag skippers on every single visit.
   try {
-    if(me && !me.onboarded_v1 && (!me.agents || me.agents.length === 0)){
+    if(me && !me.onboarded_at && (!me.agents || me.agents.length === 0)){
       _showOnboarding();
     }
   } catch(e){ console.warn('[onboarding]', e.message); }
@@ -7574,12 +7576,18 @@ function _renderOnboardingStep(step, state){
           setTimeout(() => {
             const inp = document.getElementById('ci') || document.getElementById('msgInput');
             if(inp){
-              inp.placeholder = isJa
-                ? '例: 「' + (state.goal || '上記の目標') + '」について最初の一歩を提案して'
-                : 'Try: "Suggest first steps for: ' + (state.goal || 'this goal') + '"';
+              // Pre-fill the first message so sending it is one tap (Enter),
+              // not a blank-box decision. Only ~22% of signups ever send a
+              // first message — removing the "what do I type" friction here
+              // is the highest-leverage activation fix.
+              inp.value = isJa
+                ? '「' + (state.goal || 'この目標') + '」を達成するための最初の一歩を、具体的に提案して。'
+                : 'Suggest concrete first steps to achieve: ' + (state.goal || 'this goal');
+              try { if(typeof exTA === 'function') exTA(inp); } catch(e){}
               inp.focus();
+              try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch(e){}
             }
-          }, 200);
+          }, 250);
         }
       } catch(e){ console.warn(e); }
     };
@@ -7602,7 +7610,7 @@ async function _runOnboardingGen(goal){
     if(!Array.isArray(me.agents)) me.agents = [];
     me.agents.push(r.agent);
     if(Array.isArray(agents)) agents.push(r.agent);
-    me.onboarded_v1 = true;
+    me.onboarded_at = new Date().toISOString();
     try { renderAgList(); } catch(e){}
     _renderOnboardingStep(3, { agent: r.agent, goal });
   } catch(e){
@@ -7611,7 +7619,7 @@ async function _runOnboardingGen(goal){
 }
 async function _skipOnboarding(){
   try { await api('POST', '/api/onboarding/dismiss', {}); } catch(e){}
-  if(me) me.onboarded_v1 = true;
+  if(me) me.onboarded_at = new Date().toISOString();
   _closeOnboarding();
 }
 

@@ -1364,7 +1364,7 @@ async function _notifyMentionsByEmail(host, agent, opts){
     const groupId = agent.id;
     // Sanitize for the email subject header — strip CR/LF and other control
     // chars to prevent header injection / API rejection by Resend.
-    const _safeForHeader = (s) => String(s || '').replace(/[ -\r\n]+/g, ' ').trim().slice(0, 80);
+    const _safeForHeader = (s) => String(s || '').replace(/[\u0000-\r\n]+/g, ' ').trim().slice(0, 80);
     const groupName     = _safeForHeader(agent.name || 'グループ');
     const safeSenderName = _safeForHeader(senderName);
     const previewText = text.length > 200 ? text.slice(0, 200) + '…' : text;

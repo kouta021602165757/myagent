@@ -1846,6 +1846,21 @@ input,textarea{font-family:var(--sans);}
   position:relative;  /* anchor for #slashPalette floating menu above */
 }
 .composer:focus-within{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.16),0 1px 3px rgba(0,0,0,.04);}
+/* Thread mode — visual cue that composer targets the open thread.
+   Subtle peach background + thicker peach border so the user can't miss
+   that their next message lands in the drawer, not the main feed. */
+.composer:has(.thread-mode){
+  background:linear-gradient(180deg,#fff7ee,#fff);
+  border-color:var(--peach);
+}
+.composer:has(.thread-mode)::before{
+  content:'↪ スレッドに返信中';
+  position:absolute;top:-10px;left:14px;
+  background:var(--peach);color:#fff;
+  font-size:10px;font-weight:800;letter-spacing:.04em;
+  padding:2px 9px;border-radius:99px;
+  box-shadow:0 2px 6px rgba(251,146,60,.32);
+}
 
 /* Slack-style @mention picker */
 .mention-picker{
@@ -8625,6 +8640,11 @@ async function openAgent(id){
   // Flag for renderMsgs — snap to bottom on the first render after switching
   // chats. Cleared once that render runs.
   window._chatJustOpened = true;
+  // Close any open thread from a different chat — composer mode (Option A)
+  // could otherwise post the user's next message to the wrong thread.
+  if(window._activeThreadParent){
+    try { _closeThread(); } catch(e){}
+  }
   let ag = agents.find(a=>a.id===id);
   // If not in own list, look in joined groups (fetch full record from host)
   let joined = null;
@@ -11823,6 +11843,14 @@ async function _sendMsgStream(ag, text, imgs, texts){
   const payload = { message: text, stream: true };
   if(imgs && imgs.length > 0) payload.images = imgs;
   if(texts && texts.length > 0) payload.texts = texts;
+  // Option A — when a thread drawer is open, the main composer's send
+  // targets the open thread. Server stamps both the user msg and AI reply
+  // with thread_parent_id so they land in the drawer, not the main feed.
+  // Empty payload.thread_parent_id keeps the previous "auto-thread under
+  // new top-level msg" behavior intact.
+  if(window._activeThreadParent){
+    payload.thread_parent_id = window._activeThreadParent;
+  }
   // Team Huddle: when toggle is ON for this agent, server runs the
   // multi-agent dialogue path. Auto-disable the toggle after sending so
   // each huddle is opt-in.
@@ -16094,23 +16122,48 @@ function _renderThreadDrawer(){
     +       replies.map(_renderInThread).join('') : '')
     +   '</div>'
     + '</div>'
-    + '<div style="border-top:1px solid var(--wire2);padding:10px 14px 14px;background:var(--cream);flex-shrink:0">'
-    +   '<div style="display:flex;gap:6px;background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:8px 10px">'
-    +     '<textarea id="threadCi" rows="2" placeholder="'+L('このスレッドに返信…','Reply in thread…')+'" style="flex:1;border:0;outline:none;font-family:inherit;font-size:13px;resize:none;background:transparent" onkeydown="if(event.key===\'Enter\' && !event.shiftKey){event.preventDefault();_sendThreadReply()}"></textarea>'
-    +     '<button onclick="_sendThreadReply()" style="align-self:flex-end;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">↵</button>'
+    // Option A — drawer no longer has its own textarea. The MAIN composer
+    // becomes the thread's input (file attach / slash commands / voice etc
+    // all available). A subtle banner reminds the user where their input
+    // will land.
+    + '<div style="border-top:1px solid var(--wire2);padding:11px 14px;background:var(--cream);flex-shrink:0;display:flex;align-items:center;gap:10px">'
+    +   '<div style="flex:1;font-size:11.5px;color:var(--text2);line-height:1.4">'
+    +     '<div style="font-weight:800;color:var(--peach-dark)">↓ 下の入力欄でこのスレッドに返信</div>'
+    +     '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">添付 / スラッシュコマンドもそのまま使えます</div>'
     +   '</div>'
-    +   '<div style="font-size:10.5px;color:var(--text3);margin-top:6px;text-align:center">'+L('このスレッド内では AI が全履歴を保持します','AI keeps the full thread context')+'</div>'
+    +   '<button onclick="_closeThread()" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);border-radius:8px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">スレッドを閉じる</button>'
     + '</div>';
   document.body.appendChild(d);
+  // Sync the main composer placeholder + focus it so the user sees they
+  // can type into the main bar to reply in-thread.
+  _syncComposerForThread();
   setTimeout(function(){
-    var t = document.getElementById('threadCi'); if(t) t.focus();
+    var ci = document.getElementById('ci') || document.getElementById('msgInput');
+    if(ci) ci.focus();
     var b = document.getElementById('threadDrawerBody'); if(b) b.scrollTop = b.scrollHeight;
   }, 50);
+}
+
+/* When the thread drawer is open, the main composer's placeholder reflects
+ * "reply in thread" so the user knows where their next message lands. */
+function _syncComposerForThread(){
+  var ci = document.getElementById('ci') || document.getElementById('msgInput');
+  if(!ci) return;
+  if(window._activeThreadParent){
+    if(!ci._origPlaceholder) ci._origPlaceholder = ci.placeholder;
+    ci.placeholder = (isJa ? '↪ このスレッドに返信… (Shift+Enter で改行)' : '↪ Reply in thread… (Shift+Enter for newline)');
+    ci.classList.add('thread-mode');
+  } else {
+    if(ci._origPlaceholder) ci.placeholder = ci._origPlaceholder;
+    ci.classList.remove('thread-mode');
+  }
 }
 function _closeThread(){
   window._activeThreadParent = null;
   var d = document.getElementById('threadDrawer');
   if(d) d.remove();
+  // Restore the main composer's placeholder + remove the thread-mode tint.
+  try { _syncComposerForThread(); } catch(e){}
 }
 async function _sendThreadReply(){
   var ta = document.getElementById('threadCi');

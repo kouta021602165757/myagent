@@ -1546,10 +1546,17 @@ input,textarea{font-family:var(--sans);}
    (💬 📋 📌 etc). The full m-acts (📋 🔄 💬 🧠 🔊 📌 🗑 …) is shown when
    the user clicks the ⋯ button on the hover-bar (toggles .show-acts class).
    Also still shown on hover of the message row for power users. */
+/* Slack-style: bottom action row is NEVER shown on hover.
+   Only the top-right hover-bar appears on message hover.
+   Click the ⋯ button on the hover-bar to toggle this row (.show-acts).
+   This eliminates the visual duplicate (📋 / 💬 / 📌 appearing in
+   both bars at once) the user reported. */
 .m-acts{display:none;gap:4px;padding:0;margin-top:6px;flex-wrap:wrap;}
-.m:hover .m-acts{display:flex;}
 .m.show-acts .m-acts{display:flex;}
 .m.u .m-acts{flex-direction:row;}  /* don't reverse (Slack-flat = same direction) */
+/* Continue / Retry stay ALWAYS visible (not gated by show-acts) — they're
+   recovery actions critical for truncated or errored replies. */
+.m-inline-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
 
 /* ── Slack-style thread indicator (below message body) ──
    "N 件の返信" link with stacked avatars + last reply time.
@@ -9169,50 +9176,41 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
   const citesHtml = cites.length ? _renderCitations(cites) : '';
   let acts = '';
+  let inlineActs = '';  // Continue / Retry — always visible, not gated by show-acts
   if(idx>=0){
     const isBookmarked = !!(raw && (raw.bookmarked || (Array.isArray(raw.bookmarked_by) && raw.bookmarked_by.includes(me?.id))));
-    const isPinned = !!(raw && raw.pinned);
     const bmBtn = '<button class="m-act bm'+(isBookmarked?' bm-on':'')+'" onclick="toggleBookmark(this)" title="ブックマーク">'+(isBookmarked?'★':'☆')+'</button>';
-    const pinBtn = '<button class="m-act pin'+(isPinned?' pin-on':'')+'" onclick="togglePin(this)" title="ピン留め">'+(isPinned?'📌':'📍')+'</button>';
-    // Thread button — only shown on messages that have a stable id (post-thread-feature).
-    var threadId = raw && raw.id;
-    var threadN  = threadId && ag && ag._threadCounts ? (ag._threadCounts[threadId]||0) : 0;
-    var threadBtn = threadId ? '<button class="m-act" onclick="_openThread(\''+esc(threadId)+'\')" title="'+L('スレッドで返信','Reply in thread')+'">💬 '+(threadN>0?threadN:L('スレッド','Thread'))+'</button>' : '';
     // Delete button — shown on own DMs / hosted-group messages. Joined-group
     // messages can't be deleted (server returns 403); we hide the button there.
     var delBtn = (idx>=0 && !(ag && ag._is_joined_group))
-      ? '<button class="m-act" onclick="deleteMsg(this)" title="'+(isJa?'メッセージを削除':'Delete message')+'">🗑</button>'
+      ? '<button class="m-act" onclick="deleteMsg(this)" title="'+(isJa?'メッセージを削除':'Delete message')+'">🗑 '+(isJa?'削除':'Delete')+'</button>'
       : '';
+    // Slack-style: Copy / Thread / Pin live in the HOVER BAR only.
+    // The bottom .m-acts row is reserved for secondary actions (Edit /
+    // Regenerate / Remember / Speak / Bookmark / Delete) — shown only when
+    // the user clicks the ⋯ button on the hover-bar. No duplicates.
     if(isU){
-      // Only show edit on your own user messages (not other group members').
       var editBtn = isMyMsg ? '<button class="m-act" onclick="editMsgStart(this)" title="'+(isJa?'編集して再生成':'Edit & resend')+'">✏️ '+(isJa?'編集':'Edit')+'</button>' : '';
-      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+editBtn+threadBtn+bmBtn+pinBtn+delBtn;
+      acts = editBtn+bmBtn+delBtn;
     } else {
-      // "Remember this" — saves the assistant reply (truncated to 400 chars)
-      // to long-term memories so it persists across chats.
       var rememberBtn = '<button class="m-act" onclick="rememberMsg(this)" title="'+(isJa?'記憶として保存':'Save to memory')+'">🧠 '+(isJa?'記憶':'Remember')+'</button>';
       var replyBtn = '<button class="m-act" onclick="replyToMsg(this)" title="'+(isJa?'引用して返信':'Reply to this')+'">↩️ '+(isJa?'返信':'Reply')+'</button>';
-      acts = '<button class="m-act" onclick="copyMsgText(this)">📋 '+(isJa?'コピー':'Copy')+'</button>'+
-             '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
+      acts = '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
              replyBtn+
-             threadBtn+
              rememberBtn+
-             '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊</button>'+
-             bmBtn+pinBtn+delBtn;
+             '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊 '+(isJa?'読み上げ':'Speak')+'</button>'+
+             bmBtn+delBtn;
     }
-    // Continue button — assistant messages cut off (max_tokens OR user stopped).
-    // For user-stopped messages we use a slightly more inviting label so the
-    // user understands the partial output is intentional and resumable.
+    // Continue / Retry — ALWAYS visible (separate row, not gated by show-acts).
+    // Critical recovery actions for truncated or errored replies.
     if(!isU && raw && raw.truncated){
       var contLabel = raw.was_stopped
         ? (isJa ? '▶ 続きから生成' : '▶ Resume')
         : (isJa ? '▶ 続きを書く' : '▶ Continue');
-      acts += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを生成':'Continue')+'">'+contLabel+'</button>';
+      inlineActs += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを生成':'Continue')+'">'+contLabel+'</button>';
     }
-    // Retry button — assistant messages that resulted in an error
-    // (timeout / 5xx / network). Re-sends the most recent user message.
     if(!isU && raw && raw.is_error){
-      acts += '<button class="m-act m-act-retry" onclick="retryMsg(this)" title="'+(isJa?'もう一度試す':'Retry')+'">🔄 '+(isJa?'再試行':'Retry')+'</button>';
+      inlineActs += '<button class="m-act m-act-retry" onclick="retryMsg(this)" title="'+(isJa?'もう一度試す':'Retry')+'">🔄 '+(isJa?'再試行':'Retry')+'</button>';
     }
   }
   // In groups, highlight @AI / @name mentions in the body.
@@ -9368,6 +9366,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       (renderBody?'<div class="m-body">'+(bodyMarkup||'')+citesHtml+'</div>':'')+
       reactionsHTML+
       threadIndicatorHTML+
+      (inlineActs?'<div class="m-inline-actions">'+inlineActs+'</div>':'')+
       (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
     '</div>'+
     hoverBarHTML+

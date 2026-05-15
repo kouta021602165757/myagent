@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MY AI Agent プロダクト分析レポート</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f2ea; --card:#fff; --ink:#1c1917; --muted:#78716c;
+    --line:#e7e1d6; --accent:#ea580c; --accent-soft:#fff1e6;
+    --good:#15803d; --good-soft:#ecfdf3; --warn:#b45309; --warn-soft:#fffbeb;
+    --bad:#b91c1c; --bad-soft:#fef2f2; --info:#1d4ed8; --info-soft:#eff6ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.75; padding:40px 20px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:30px 32px;margin-bottom:20px;}
+  h2{font-size:19px;font-weight:900;letter-spacing:-.01em;margin-bottom:4px;display:flex;align-items:baseline;gap:10px;}
+  h2 .no{color:var(--accent);font-size:13px;font-weight:900;}
+  h3{font-size:14px;font-weight:800;margin:20px 0 8px;color:var(--ink);}
+  p{font-size:14px;margin:8px 0;}
+  .lead{font-size:14.5px;}
+  ul{margin:8px 0 8px 4px;}
+  li{font-size:14px;margin:5px 0;list-style:none;padding-left:18px;position:relative;}
+  li::before{content:"";position:absolute;left:2px;top:10px;width:5px;height:5px;border-radius:50%;background:var(--accent);}
+  .sec-t{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;}
+  b{font-weight:800;}
+  .muted{color:var(--muted);}
+
+  /* header */
+  .head{background:linear-gradient(135deg,#fff7ef,#ffe9d6);border:1px solid #f3d6bb;}
+  .badge{display:inline-block;background:var(--accent);color:#fff;font-size:11px;font-weight:800;letter-spacing:.08em;padding:4px 10px;border-radius:999px;margin-bottom:14px;}
+  h1{font-size:27px;font-weight:900;letter-spacing:-.01em;line-height:1.35;}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:8px;}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--muted);border-top:1px dashed #e8c9ac;padding-top:14px;}
+  .meta b{color:var(--ink);}
+
+  /* note box */
+  .note{background:var(--info-soft);border:1px solid #c7dbff;border-radius:12px;padding:14px 16px;font-size:12.5px;color:#1e3a8a;}
+
+  /* TOC */
+  .toc{columns:2;column-gap:28px;}
+  .toc a{display:block;font-size:13px;color:var(--ink);text-decoration:none;padding:5px 0;border-bottom:1px dashed var(--line);}
+  .toc a span{color:var(--accent);font-weight:800;margin-right:7px;}
+
+  /* KPI cards */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 4px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 14px;}
+  .kpi.accent{background:var(--accent-soft);border-color:#f3d6bb;}
+  .kpi .label{font-size:11px;color:var(--muted);font-weight:700;}
+  .kpi .val{font-size:24px;font-weight:900;letter-spacing:-.02em;margin-top:5px;}
+  .kpi.accent .val{color:var(--accent);}
+  .kpi .val span{font-size:12px;font-weight:700;color:var(--muted);}
+  .kpi .note2{font-size:10.5px;color:var(--muted);margin-top:3px;}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0;}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.03em;background:#faf7f1;}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  tr:last-child td{border-bottom:0;}
+  .need{color:var(--warn);font-weight:800;background:var(--warn-soft);padding:1px 7px;border-radius:6px;font-size:11px;}
+
+  /* charts */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .chart-box{position:relative;height:240px;}
+
+  /* SWOT */
+  .swot{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .swot .q{border-radius:12px;padding:16px 18px;}
+  .swot .q h4{font-size:13px;font-weight:900;margin-bottom:8px;}
+  .swot .q li{font-size:12.5px;}
+  .swot .s{background:var(--good-soft);border:1px solid #bbf7d0;} .swot .s h4{color:var(--good);} .swot .s li::before{background:var(--good);}
+  .swot .w{background:var(--bad-soft);border:1px solid #fecaca;} .swot .w h4{color:var(--bad);} .swot .w li::before{background:var(--bad);}
+  .swot .o{background:var(--info-soft);border:1px solid #c7dbff;} .swot .o h4{color:var(--info);} .swot .o li::before{background:var(--info);}
+  .swot .t{background:var(--warn-soft);border:1px solid #fde68a;} .swot .t h4{color:var(--warn);} .swot .t li::before{background:var(--warn);}
+
+  /* priority items */
+  .prio{display:flex;gap:13px;padding:13px 0;border-bottom:1px dashed var(--line);}
+  .prio:last-child{border-bottom:0;}
+  .pill{flex-shrink:0;font-size:10.5px;font-weight:900;padding:3px 9px;border-radius:999px;height:fit-content;letter-spacing:.03em;}
+  .pill.h{background:var(--bad-soft);color:var(--bad);border:1px solid #fecaca;}
+  .pill.m{background:var(--warn-soft);color:var(--warn);border:1px solid #fde68a;}
+  .pill.l{background:#f1f0ed;color:var(--muted);border:1px solid var(--line);}
+  .prio .body{font-size:13.5px;}
+  .prio .body b{display:block;margin-bottom:2px;}
+
+  .insight{border-left:3px solid var(--accent);padding:3px 0 3px 15px;margin:12px 0;font-size:13.5px;}
+  .foot{text-align:center;color:var(--muted);font-size:11.5px;margin-top:8px;}
+  .foot b{color:var(--accent);}
+
+  @media(max-width:680px){
+    .kpi-grid,.toc,.chart-grid,.swot{grid-template-columns:1fr;columns:1;}
+    body{padding:20px 12px;} .card{padding:22px 18px;}
+  }
+  @media print{ body{background:#fff;padding:0;} .card{break-inside:avoid;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="card head">
+    <span class="badge">プロダクト分析レポート</span>
+    <h1>MY AI Agent — サービス分析レポート</h1>
+    <div class="sub">サイト/UX 監査・機能棚卸し・収益モデル・強み弱み・改善提案を一括で診断</div>
+    <div class="meta">
+      <span>発行日: <b>2026-05-15</b></span>
+      <span>対象: <b>myaiagents.agency</b></span>
+      <span>分析範囲: <b>LP / アプリ / 収益モデル / KPI</b></span>
+      <span>生成: <b>MY AI Agent</b></span>
+    </div>
+  </div>
+
+  <!-- Data note -->
+  <div class="card" style="padding:18px 22px">
+    <div class="note">
+      <b>このレポートのデータ根拠について。</b>
+      §1〜§5・§8〜§10 は <b>実際のソースコードとサイト構成</b>に基づく事実・分析です。
+      §6（グロース数値）と §7（Web トラフィック）は、ユーザー数・収益・GA4 等の<b>本番実数値が未取得</b>のため、
+      「追うべき指標」の枠組みとして提示しています（現状値は <span class="need">要データ</span> 表示）。
+      管理画面 / Supabase / GA4 のエクスポートを頂ければ数値を差し込み、完全版に更新します。
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="card">
+    <div class="sec-t">目次</div>
+    <div class="toc">
+      <a href="#s1"><span>01</span>エグゼクティブサマリー</a>
+      <a href="#s2"><span>02</span>サービス概要</a>
+      <a href="#s3"><span>03</span>サイト / UX 監査</a>
+      <a href="#s4"><span>04</span>機能棚卸し</a>
+      <a href="#s5"><span>05</span>収益モデル分析</a>
+      <a href="#s6"><span>06</span>グロース KPI フレーム</a>
+      <a href="#s7"><span>07</span>Web トラフィック KPI フレーム</a>
+      <a href="#s8"><span>08</span>強み・弱み（SWOT）</a>
+      <a href="#s9"><span>09</span>改善提案（優先度つき）</a>
+      <a href="#s10"><span>10</span>次のアクション</a>
+    </div>
+  </div>
+
+  <!-- 1. Executive summary -->
+  <div class="card" id="s1">
+    <h2><span class="no">01</span>エグゼクティブサマリー</h2>
+    <p class="lead">
+      MY AI Agent は「AI を<b>雇う</b>」というメタファーと Slack 風のチームチャットを軸にした、
+      日本語ファーストの AI エージェント SaaS。ChatGPT との差別化が言語化されており、
+      メモリ・KPI 追従・50+ 連携・マーケットプレイス・自動実行と機能の幅は強い。
+    </p>
+    <div class="insight"><b>総評:</b> ポジショニングと機能基盤は明確で良い。一方で「LP に情報を盛り込みすぎ」「核となるチャット体験の安定化が途上」「バイラル装置（紹介プログラム）が表に出ていない」の 3 点が、獲得と継続のボトルネックになり得る。</div>
+    <h3>最重要テイクアウェイ 3 点</h3>
+    <ul>
+      <li><b>① LP は「1 番刺さる訴求」に絞る。</b> 6 機能＋50 連携＋マーケット＋Founder 100 を同列に並べており、乗り換え理由が 1 つに定まらない。</li>
+      <li><b>② 紹介プログラムを表に出す。</b> コードには紹介機構（referral_code / 紹介クレジット）があるが LP・アプリ導線で訴求されておらず、無料の獲得チャネルを取りこぼしている。</li>
+      <li><b>③ コアのチャット体験を継続的に堅牢化。</b> 直近で「生成中の固着」「入力欄」等の不具合修正が続いており、プロダクトの心臓部の信頼性が最優先課題。</li>
+    </ul>
+  </div>
+
+  <!-- 2. Overview -->
+  <div class="card" id="s2">
+    <h2><span class="no">02</span>サービス概要</h2>
+    <table>
+      <tr><th style="width:130px">項目</th><th>内容</th></tr>
+      <tr><td>キャッチコピー</td><td>「AI を使う時代から、AI を複数人<b>雇う</b>時代へ。」</td></tr>
+      <tr><td>提供価値</td><td>1 人とは DM、複数人ではチームで仕事を任せられる Slack 風 AI ワークスペース</td></tr>
+      <tr><td>ターゲット</td><td>個人開発者・1 人創業者・小規模スタートアップ（海外インディーハッカー想定、日英バイリンガル）</td></tr>
+      <tr><td>コア体験</td><td>AI を「採用」→ DM / チームで会話 → 仕事を委任。記憶・KPI 追従・スケジュール自動実行</td></tr>
+      <tr><td>差別化軸</td><td>「使うツール」ではなく「雇う同僚」。複数 AI の議論・チーム化・マーケットプレイス</td></tr>
+      <tr><td>基盤モデル</td><td>Anthropic Claude（Haiku 4.5 / Sonnet 4.6 / Opus 4.7）</td></tr>
+      <tr><td>収益源</td><td>サブスク 3 プラン＋クレジット課金＋マーケットプレイス手数料</td></tr>
+    </table>
+  </div>
+
+  <!-- 3. UX audit -->
+  <div class="card" id="s3">
+    <h2><span class="no">03</span>サイト / UX 監査</h2>
+    <p class="muted" style="font-size:12px">※ ソースコードとサイト構成に基づくヒューリスティック評価。</p>
+
+    <h3>ランディングページ（lp.html）</h3>
+    <p>構成は 6 セクション: ヒーロー（インタラクティブな「AI チームを雇う」ウィジェット・6 役割カード）→ 機能 → 連携 → 3 ステップ導入 → Founder 100（残席カウンター）→ 価格。</p>
+    <table>
+      <tr><th style="width:50%">良い点</th><th>懸念点</th></tr>
+      <tr>
+        <td>
+          ・ キャッチが大胆かつ差別化が明確<br>
+          ・ ヒーローの役割カードは体験的で離脱を防ぐ<br>
+          ・ 3 ステップ導入で利用イメージを先に提示<br>
+          ・ Founder 100 のライブ残席表示で希少性・緊急性を演出<br>
+          ・ 日英バイリンガル対応
+        </td>
+        <td>
+          ・ 機能 6＋連携 50＋マーケット＋Founder を同列に羅列 → <b>「乗り換える理由」が 1 つに定まらない</b><br>
+          ・ CTA が Free / Pro / Business の 3 種 → ファネル入口で<b>選択過多</b><br>
+          ・ 価格が USD（$12.99 / $32.99）表記。日本語 UI 主体の訪問者には通貨・ロケールの段差<br>
+          ・ 紹介プログラムが LP 上に出ていない
+        </td>
+      </tr>
+    </table>
+
+    <h3>サインアップ → オンボーディング導線</h3>
+    <ul>
+      <li>auth.html: Google OAuth ＋ メール登録、プラン事前選択（<code>?plan=</code>）。クレカ不要・100 通無料で<b>登録障壁は低い（良い）</b>。</li>
+      <li>初回ウィザード 3 ステップ（AI を雇う → DM/チーム → 仕事を委任）＋ <b>クイックスタート（目標 1 文 → 3〜10 体の専門 AI を自動生成）</b>。後者は「aha 体験」を最短化する強い設計。</li>
+      <li>懸念: ウィザードをスキップすると AI 0 体の空のアプリに着地し得る。クイックスタートを既定の主動線にすべき。</li>
+    </ul>
+
+    <h3>アプリ本体</h3>
+    <ul>
+      <li>コア＝チャット。直近で Slack 風スレッド・タスク管理・ホバーツールバー等の改善が進行中で、磨き込みの方向性は良い。</li>
+      <li>一方で直近の不具合修正（生成中スタックの固着、入力欄、添付の消失 等）が示すとおり、<b>心臓部であるチャット面の信頼性が現在進行形の課題</b>。</li>
+      <li>無料枠 100 通・AI 3 体は「aha」到達には十分に寛大。</li>
+    </ul>
+  </div>
+
+  <!-- 4. Feature inventory -->
+  <div class="card" id="s4">
+    <h2><span class="no">04</span>機能棚卸し</h2>
+    <table>
+      <tr><th style="width:150px">カテゴリ</th><th>主な機能</th></tr>
+      <tr><td>コア対話</td><td>AI エージェント作成（ウィザード/テンプレ）、DM チャット、ストリーミング応答、添付（画像/PDF/テキスト/コード/URL）、音声入力、スラッシュコマンド</td></tr>
+      <tr><td>チーム / グループ</td><td>複数 AI のチーム化、グループチャット、@メンション、Team Huddle（多者議論）、Slack 風スレッド</td></tr>
+      <tr><td>知能 / 継続性</td><td>長期メモリ、KPI 追従エージェント、週次自動レポート、プレイブック、タスク管理</td></tr>
+      <tr><td>自動化</td><td>スケジュール実行（毎朝/毎週など）、ツールループ、成果物（artifact）の HTML 生成・永続化</td></tr>
+      <tr><td>マーケットプレイス</td><td>学習済みエージェントの出品・販売、お気に入り、検証バッジ、クリエイターハンドル（/u/:handle）、収益台帳・出金（Stripe Connect）</td></tr>
+      <tr><td>連携</td><td>直接連携 約50 サービス（OAuth / API キー / Webhook）＋ Zapier 経由 5,000+。下記 §5 図参照</td></tr>
+      <tr><td>マルチデバイス</td><td>ブラウザ拡張（Chrome / ログイン必須サイト操作）、モバイル端末登録</td></tr>
+      <tr><td>成長 / 獲得</td><td>Founder 100、紹介プログラム（紹介コード・紹介クレジット）、オンボーディング クイックスタート</td></tr>
+    </table>
+  </div>
+
+  <!-- 5. Revenue model -->
+  <div class="card" id="s5">
+    <h2><span class="no">05</span>収益モデル分析</h2>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Free</div><div class="val">$0</div><div class="note2">100通 / AI 3体 / カード不要</div></div>
+      <div class="kpi accent"><div class="label">Pro</div><div class="val">$12.99<span>/月</span></div><div class="note2">$15分 ≈1,500通 / AI 無制限</div></div>
+      <div class="kpi accent"><div class="label">Business</div><div class="val">$32.99<span>/月</span></div><div class="note2">$45分 ≈4,500通 / Opus 4.7</div></div>
+      <div class="kpi"><div class="label">追加チャージ</div><div class="val">$5<span>〜</span></div><div class="note2">クレジット切れ時に随時</div></div>
+    </div>
+
+    <div class="chart-grid" style="margin:18px 0 6px">
+      <div>
+        <div class="sec-t">プラン別 月間クレジット (USD)</div>
+        <div class="chart-box"><canvas id="planChart"></canvas></div>
+      </div>
+      <div>
+        <div class="sec-t">マーケットプレイス手数料率</div>
+        <div class="chart-box"><canvas id="feeChart"></canvas></div>
+      </div>
+    </div>
+
+    <h3>構造の評価</h3>
+    <ul>
+      <li><b>クレジット＝利用上限モデルは明快。</b> 月額クレジットが上限を兼ね、$5 追加で硬い壁を作らない設計は良い。</li>
+      <li><b>クリエイター取り分 90 / 95 / 100% は供給側に非常に有利。</b> マーケットプレイスの出品（供給）を増やす方向に効く。</li>
+      <li><b>Founder 100 の「手数料 0% 永久」は強力な launch インセンティブ</b>だが、特定コホートに永続コストを負う。100 名規模なら許容。</li>
+      <li>ファネルは Free →（無料枠 100 通で aha）→ Pro → Business。<b>Free→Pro の転換率がビジネスの生命線</b>で、ここを必ず計測すべき（§6）。</li>
+      <li>原価リスク: クレジット（売上）と実トークンコスト（原価）の差が利益。モデル別（Haiku/Sonnet/Opus）の原価率を継続監視。</li>
+    </ul>
+  </div>
+
+  <!-- 6. Growth KPI -->
+  <div class="card" id="s6">
+    <h2><span class="no">06</span>グロース KPI フレーム</h2>
+    <p class="muted" style="font-size:12px">追うべき指標。現状値は本番データ取得後に差し込み。</p>
+    <table>
+      <tr><th>指標</th><th style="width:120px">現状値</th><th>取得元</th></tr>
+      <tr><td>累計ユーザー数</td><td><span class="need">要データ</span></td><td>管理画面 / Supabase</td></tr>
+      <tr><td>新規登録（日次・週次）</td><td><span class="need">要データ</span></td><td>管理画面（日次グラフ）</td></tr>
+      <tr><td>有料転換率（Pro+Business ÷ 全体）</td><td><span class="need">要データ</span></td><td>Supabase users</td></tr>
+      <tr><td>MRR / 累計収益</td><td><span class="need">要データ</span></td><td>管理画面 / Stripe</td></tr>
+      <tr><td>メッセージ数・トークン消費・API 原価率</td><td><span class="need">要データ</span></td><td>管理画面</td></tr>
+      <tr><td>マーケットプレイス 出品数・利用回数</td><td><span class="need">要データ</span></td><td>管理画面</td></tr>
+      <tr><td>Founder 100 残席・拡張連携数</td><td><span class="need">要データ</span></td><td>管理画面</td></tr>
+      <tr><td>（追加推奨）コホート継続率 / Free→Pro CVR / Founder トライアル後の残存率</td><td><span class="need">未計測</span></td><td>新規ダッシュボード</td></tr>
+    </table>
+    <div class="insight">現行の管理画面は<b>ボリューム系（累計・日次）の指標が中心</b>。継続率・転換率・チャーンといった<b>率（レート）系の指標</b>を足すと、健全性が一段見えるようになる。</div>
+  </div>
+
+  <!-- 7. Traffic KPI -->
+  <div class="card" id="s7">
+    <h2><span class="no">07</span>Web トラフィック KPI フレーム</h2>
+    <p class="muted" style="font-size:12px">GA4 等のエクスポート取得後に差し込み。</p>
+    <table>
+      <tr><th>指標</th><th style="width:120px">現状値</th><th>意味</th></tr>
+      <tr><td>セッション数 / PV</td><td><span class="need">要GA4</span></td><td>流入量の総量</td></tr>
+      <tr><td>流入チャネル構成（オーガニック / SNS / 直接 / 紹介）</td><td><span class="need">要GA4</span></td><td>獲得チャネルの偏り</td></tr>
+      <tr><td>LP 直帰率</td><td><span class="need">要GA4</span></td><td>ヒーローの訴求力</td></tr>
+      <tr><td>セクション別スクロール到達率</td><td><span class="need">要GA4</span></td><td>どこで離脱しているか</td></tr>
+      <tr><td>登録 CVR（訪問 → サインアップ）</td><td><span class="need">要GA4</span></td><td>LP→登録の効率</td></tr>
+      <tr><td>言語別構成（JP / EN）</td><td><span class="need">要GA4</span></td><td>実際の利用者層と想定の一致度</td></tr>
+    </table>
+  </div>
+
+  <!-- 8. SWOT -->
+  <div class="card" id="s8">
+    <h2><span class="no">08</span>強み・弱み（SWOT）</h2>
+    <div class="swot">
+      <div class="q s">
+        <h4>強み（Strengths）</h4>
+        <ul>
+          <li>「AI を雇う」明快で差別化されたポジショニング</li>
+          <li>50+ の連携と Zapier 5,000+ で実務に刺さる</li>
+          <li>マーケットプレイスが供給・需要の両面ネットワーク効果を生む</li>
+          <li>メモリ・KPI 追従による継続性（スイッチングコスト）</li>
+        </ul>
+      </div>
+      <div class="q w">
+        <h4>弱み（Weaknesses）</h4>
+        <ul>
+          <li>LP の情報過多で核訴求がぼやける</li>
+          <li>コアのチャット体験が安定化の途上</li>
+          <li>USD 価格 × 日本語 UI のロケール段差</li>
+          <li>紹介プログラムが導線に出ておらず未活用</li>
+        </ul>
+      </div>
+      <div class="q o">
+        <h4>機会（Opportunities）</h4>
+        <ul>
+          <li>「AI 従業員」カテゴリ自体がまだ黎明期</li>
+          <li>マーケットプレイスのネットワーク効果で堀を作れる</li>
+          <li>Founder 100 を事例・社会的証明に転化できる</li>
+          <li>Zapier 5,000 連携をロングテール獲得の楔にできる</li>
+        </ul>
+      </div>
+      <div class="q t">
+        <h4>脅威（Threats）</h4>
+        <ul>
+          <li>ChatGPT / Claude 本体の「Projects / Agents」機能の侵食</li>
+          <li>クレジット売上 vs 実トークン原価のマージン圧迫</li>
+          <li>Founder トライアル終了 → Free 降格時のチャーン段差</li>
+          <li>個人開発者市場の価格感度の高さ</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Recommendations -->
+  <div class="card" id="s9">
+    <h2><span class="no">09</span>改善提案（優先度つき）</h2>
+    <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>LP を「1 番刺さる訴求」に絞る</b>ファーストビューは単一の最強価値だけ、主 CTA も 1 つ（例「最初の AI を雇う」）。機能の幅は折りたたんで下部へ。</div></div>
+    <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>紹介プログラムを表に出す</b>既存の紹介機構（紹介コード・紹介クレジット）を LP とアプリ内に露出。無料のバイラル獲得ループを起動する。</div></div>
+    <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>コアのチャット信頼性を継続的に堅牢化</b>エラー計測（どのくらいの頻度で生成失敗・固着が起きるか）を入れ、心臓部の品質を数値で監視する。</div></div>
+    <div class="prio"><span class="pill m">MID</span><div class="body"><b>価格のローカライズ</b>日本語訪問者には JPY 表記、または USD の理由を明示。通貨の段差で離脱させない。</div></div>
+    <div class="prio"><span class="pill m">MID</span><div class="body"><b>Founder トライアル後の残存フロー</b>30 日トライアル → Free 自動降格はチャーンの崖。終了前のリマインドと win-back オファーを用意。</div></div>
+    <div class="prio"><span class="pill m">MID</span><div class="body"><b>クイックスタートを既定の主動線に</b>「目標 1 文 → AI チーム自動生成」が最短の aha。初回はこれを中心に据える。</div></div>
+    <div class="prio"><span class="pill l">LOW</span><div class="body"><b>管理画面に率系の指標を追加</b>継続率・Free→Pro CVR・チャーンのカードを足し、健全性を可視化。</div></div>
+    <div class="prio"><span class="pill l">LOW</span><div class="body"><b>マーケットプレイスの発見性向上</b>カテゴリ・ランキング・検証バッジの見せ方を磨き、出品の流通を促進。</div></div>
+  </div>
+
+  <!-- 10. Next actions -->
+  <div class="card" id="s10">
+    <h2><span class="no">10</span>次のアクション</h2>
+    <ul>
+      <li><b>このレポートを完全版にする</b> — 管理画面 / Supabase / GA4 の実数値を頂ければ §6・§7 を埋め、グラフ付きの完成版に更新。</li>
+      <li><b>HIGH 3 項目から着手</b> — LP の訴求集約 → 紹介プログラムの露出 → チャットのエラー計測。</li>
+      <li><b>レポート機能の本実装</b> — この体裁を <code>generate_report</code> ツール化し、チャットから「◯◯を分析してレポートにして」で自動生成・URL/メール送付できるようにする。</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    このレポートは <b>MY AI Agent</b> のレポート機能サンプルです ・ ⌘P で PDF 保存できます ・ §6/§7 は実データ取得後に更新予定
+  </div>
+
+</div>
+
+<script>
+  var COMMON = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } },
+  };
+
+  // Plan monthly credit (USD)
+  new Chart(document.getElementById('planChart'), {
+    type:'bar',
+    data:{
+      labels:['Free','Pro','Business'],
+      datasets:[{ data:[0,15,45],
+        backgroundColor:['#d6d3d1','#fb923c','#ea580c'], borderRadius:7, barThickness:46 }],
+    },
+    options:Object.assign({}, COMMON, {
+      scales:{
+        y:{ beginAtZero:true, ticks:{ callback:function(v){return '$'+v;}, font:{size:11} }, grid:{color:'#eee'} },
+        x:{ grid:{display:false}, ticks:{font:{size:12,weight:'700'}} },
+      },
+    }),
+  });
+
+  // Marketplace fee by tier
+  new Chart(document.getElementById('feeChart'), {
+    type:'bar',
+    data:{
+      labels:['Free / Pro','Business','Founder 100'],
+      datasets:[{ data:[10,5,0],
+        backgroundColor:['#fb923c','#0ea5e9','#15803d'], borderRadius:7, barThickness:46 }],
+    },
+    options:Object.assign({}, COMMON, {
+      scales:{
+        y:{ beginAtZero:true, max:12, ticks:{ callback:function(v){return v+'%';}, font:{size:11} }, grid:{color:'#eee'} },
+        x:{ grid:{display:false}, ticks:{font:{size:11,weight:'700'}} },
+      },
+    }),
+  });
+</script>
+</body>
+</html>

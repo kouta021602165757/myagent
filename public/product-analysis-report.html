@@ -121,10 +121,9 @@
   <div class="card" style="padding:18px 22px">
     <div class="note">
       <b>このレポートのデータ根拠について。</b>
-      §1〜§5・§8〜§10 は <b>実際のソースコードとサイト構成</b>に基づく事実・分析です。
-      §6（グロース数値）と §7（Web トラフィック）は、ユーザー数・収益・GA4 等の<b>本番実数値が未取得</b>のため、
-      「追うべき指標」の枠組みとして提示しています（現状値は <span class="need">要データ</span> 表示）。
-      管理画面 / Supabase / GA4 のエクスポートを頂ければ数値を差し込み、完全版に更新します。
+      §1〜§5・§8〜§10 は <b>実際のソースコードとサイト構成</b>に基づく事実・分析。
+      §7（Web トラフィック）は <b>GA4 の実データ（過去28日間）を反映済み</b>。
+      §6（グロース数値）はユーザー数・収益の<b>本番値が未取得</b>のため枠のみ（管理ダッシュボードのデータを頂き次第、実数に更新します）。
     </div>
   </div>
 
@@ -284,19 +283,46 @@
     <div class="insight">現行の管理画面は<b>ボリューム系（累計・日次）の指標が中心</b>。継続率・転換率・チャーンといった<b>率（レート）系の指標</b>を足すと、健全性が一段見えるようになる。</div>
   </div>
 
-  <!-- 7. Traffic KPI -->
+  <!-- 7. Traffic -->
   <div class="card" id="s7">
-    <h2><span class="no">07</span>Web トラフィック KPI フレーム</h2>
-    <p class="muted" style="font-size:12px">GA4 等のエクスポート取得後に差し込み。</p>
-    <table>
-      <tr><th>指標</th><th style="width:120px">現状値</th><th>意味</th></tr>
-      <tr><td>セッション数 / PV</td><td><span class="need">要GA4</span></td><td>流入量の総量</td></tr>
-      <tr><td>流入チャネル構成（オーガニック / SNS / 直接 / 紹介）</td><td><span class="need">要GA4</span></td><td>獲得チャネルの偏り</td></tr>
-      <tr><td>LP 直帰率</td><td><span class="need">要GA4</span></td><td>ヒーローの訴求力</td></tr>
-      <tr><td>セクション別スクロール到達率</td><td><span class="need">要GA4</span></td><td>どこで離脱しているか</td></tr>
-      <tr><td>登録 CVR（訪問 → サインアップ）</td><td><span class="need">要GA4</span></td><td>LP→登録の効率</td></tr>
-      <tr><td>言語別構成（JP / EN）</td><td><span class="need">要GA4</span></td><td>実際の利用者層と想定の一致度</td></tr>
-    </table>
+    <h2><span class="no">07</span>Web トラフィック分析（GA4 実データ）</h2>
+    <p class="muted" style="font-size:12px">出典: GA4「ウェブ/アプリのトラフィック分析」/ 過去28日間（2026-04-17〜05-14）</p>
+
+    <div class="kpi-grid">
+      <div class="kpi accent"><div class="label">新規ユーザー</div><div class="val">284</div><div class="note2">first_visit</div></div>
+      <div class="kpi"><div class="label">セッション</div><div class="val">378</div><div class="note2">session_start</div></div>
+      <div class="kpi"><div class="label">ページビュー</div><div class="val">1,020</div><div class="note2">page_view</div></div>
+      <div class="kpi"><div class="label">平均エンゲージ時間</div><div class="val">3:06</div><div class="note2">/ ユーザー</div></div>
+    </div>
+
+    <div class="chart-grid" style="margin:18px 0 6px">
+      <div>
+        <div class="sec-t">国別 アクティブユーザー</div>
+        <div class="chart-box"><canvas id="countryChart"></canvas></div>
+      </div>
+      <div>
+        <div class="sec-t">主要ページ 表示回数</div>
+        <table>
+          <tr><th>ページ</th><th class="num">表示</th></tr>
+          <tr><td>ダッシュボード</td><td class="num">355</td></tr>
+          <tr><td>トップ（AI を雇う）</td><td class="num">222</td></tr>
+          <tr><td>Build / 機能</td><td class="num">112</td></tr>
+          <tr><td>サインアップ</td><td class="num">61</td></tr>
+          <tr><td>管理ダッシュボード</td><td class="num">56</td></tr>
+          <tr><td>ログイン</td><td class="num">23</td></tr>
+          <tr><td>モバイル</td><td class="num">21</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>わかったこと</h3>
+    <div class="insight"><b>狙い通り「海外主導」。</b> 国別は 米国 91 ＞ 日本 44 ＞ インド 33 ＞ ドイツ 10。海外インディーハッカーを狙うポジショニングと、実際の訪問者層が一致している。</div>
+    <div class="insight"><b>着地後の没入は良好。</b> 平均エンゲージメント時間 3分06秒、エンゲージメント率 0.6 台。来た人はちゃんと触っている＝プロダクト面の第一印象は悪くない。</div>
+    <div class="insight"><b>登録ファネルに漏れの疑い。</b> サインアップページは 61 表示あるのに、フォーム操作開始（form_start）はわずか 3。実際の登録数（§6）との突合が必要だが、登録フォームでの大きな離脱、または GA のフォーム計測の取りこぼしの可能性。<b>最優先で要確認。</b></div>
+    <div class="insight"><b>5月10日前後にトラフィックの山。</b> 何らかの施策・投稿が当たった形跡。当たった流入元を特定して再現するのが次の一手。</div>
+
+    <h3>規模感の評価</h3>
+    <p>28日で 新規 284 / セッション 378 / PV 1,020。立ち上げ初期のアーリーステージの数字。母数が小さいうちは、広告で流入を増やすより<b>「来た 284 人をちゃんと登録まで運ぶ（ファネルの漏れを塞ぐ）」</b>方が費用対効果が高い。§6 の実登録数が分かれば、訪問→登録の CVR を確定できる。</p>
   </div>
 
   <!-- 8. SWOT -->
@@ -351,6 +377,7 @@
     <div class="prio"><span class="pill m">MID</span><div class="body"><b>価格のローカライズ</b>日本語訪問者には JPY 表記、または USD の理由を明示。通貨の段差で離脱させない。</div></div>
     <div class="prio"><span class="pill m">MID</span><div class="body"><b>Founder トライアル後の残存フロー</b>30 日トライアル → Free 自動降格はチャーンの崖。終了前のリマインドと win-back オファーを用意。</div></div>
     <div class="prio"><span class="pill m">MID</span><div class="body"><b>クイックスタートを既定の主動線に</b>「目標 1 文 → AI チーム自動生成」が最短の aha。初回はこれを中心に据える。</div></div>
+    <div class="prio"><span class="pill m">MID</span><div class="body"><b>登録ファネルの計測と改善</b>GA4 上、サインアップページ 61 表示に対し form_start が 3 と極端に低い（§7）。フォームの GA 計測が正しく動いているか確認し、漏れていれば登録導線そのものを見直す。</div></div>
     <div class="prio"><span class="pill l">LOW</span><div class="body"><b>管理画面に率系の指標を追加</b>継続率・Free→Pro CVR・チャーンのカードを足し、健全性を可視化。</div></div>
     <div class="prio"><span class="pill l">LOW</span><div class="body"><b>マーケットプレイスの発見性向上</b>カテゴリ・ランキング・検証バッジの見せ方を磨き、出品の流通を促進。</div></div>
   </div>
@@ -366,7 +393,7 @@
   </div>
 
   <div class="foot">
-    このレポートは <b>MY AI Agent</b> のレポート機能サンプルです ・ ⌘P で PDF 保存できます ・ §6/§7 は実データ取得後に更新予定
+    このレポートは <b>MY AI Agent</b> のレポート機能サンプルです ・ ⌘P で PDF 保存できます ・ §7 は GA4 実データ反映済み ・ §6 は管理ダッシュボードのデータ取得後に更新予定
   </div>
 
 </div>
@@ -407,6 +434,25 @@
         x:{ grid:{display:false}, ticks:{font:{size:11,weight:'700'}} },
       },
     }),
+  });
+
+  // §7 — Active users by country (GA4, last 28 days)
+  new Chart(document.getElementById('countryChart'), {
+    type:'bar',
+    data:{
+      labels:['米国','日本','インド','ドイツ','中国','豪州','英国'],
+      datasets:[{ data:[91,44,33,10,8,7,7],
+        backgroundColor:['#ea580c','#fb923c','#f59e0b','#0ea5e9','#6366f1','#14b8a6','#84cc16'],
+        borderRadius:6, barThickness:18 }],
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ beginAtZero:true, ticks:{ font:{size:11} }, grid:{color:'#eee'} },
+        y:{ ticks:{ font:{size:11} }, grid:{display:false} },
+      },
+    },
   });
 </script>
 </body>

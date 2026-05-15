@@ -4365,11 +4365,15 @@ try { fs.mkdirSync(GENERATED_DIR, { recursive: true }); } catch(e){}
 // The client sends images / PDFs as {type, b64, name} (no URL). Anthropic
 // uses the b64 for vision; the saved chat history needs a URL so the
 // attachment survives a page reload. Write each blob to /generated/upload-*
-// and return a normalized shape suitable for agent.history. Texts are
-// stored inline (capped) since they're already small JSON.
+//
+// IMPORTANT: everything (images, PDFs, URLs, text files) is returned in a
+// SINGLE `images` array — the client renderer (_renderMsg) only iterates
+// `m.images` and dispatches by `kind` (image / pdf / text / url). A separate
+// `texts` field would be saved but never rendered → URL chips vanished on
+// reload. So url/text attachments are merged into the images array with
+// their `kind` preserved.
 function _persistUserAttachments(images, texts){
-  const outImages = [];
-  const outTexts = [];
+  const out = [];
   for(const img of (Array.isArray(images) ? images : [])){
     if(!img) continue;
     if(img.b64){
@@ -4380,7 +4384,7 @@ function _persistUserAttachments(images, texts){
         const filename = 'upload-' + fid + '.' + ext;
         const outPath = path.join(GENERATED_DIR, filename);
         fs.writeFileSync(outPath, Buffer.from(img.b64, 'base64'));
-        outImages.push({
+        out.push({
           url: '/generated/' + filename,
           name: img.name || '',
           type: safeType,
@@ -4390,23 +4394,27 @@ function _persistUserAttachments(images, texts){
         console.warn('[upload-persist] failed:', e.message);
       }
     } else if(img.url){
-      // Already had a URL (data: or hosted) — keep as-is, no rewrite.
-      outImages.push({
+      out.push({
         url: img.url, name: img.name || '', type: img.type || '',
         kind: img.kind || 'image', source: img.source || '',
       });
     }
   }
+  // URL / text-file attachments → same array, kind:'url' / 'text'.
+  // The renderer shows a labelled chip; the full text isn't re-rendered
+  // inline (it was already injected into the AI's context at send time),
+  // but we keep a short snippet so the chip is meaningful.
   for(const t of (Array.isArray(texts) ? texts : [])){
-    if(!t || typeof t.text !== 'string') continue;
-    outTexts.push({
+    if(!t) continue;
+    out.push({
       kind: t.kind || 'text',
-      name: t.name || '',
+      name: t.name || (t.kind === 'url' ? 'page' : 'file'),
       source: t.source || '',
-      text: String(t.text).slice(0, 8000),
+      // keep a snippet (renderer shows the chip label, not full body)
+      text: typeof t.text === 'string' ? t.text.slice(0, 2000) : '',
     });
   }
-  return { images: outImages, texts: outTexts };
+  return { images: out };
 }
 
 // Sweep videos older than 24h every hour to keep the public/ disk bounded.
@@ -17118,16 +17126,14 @@ async function handleAPI(req,res,pathname,method,ip){
         const _newAid = 'a_'+crypto.randomBytes(4).toString('hex');
         const _aiThreadParent = _threadParent || _newUid;
         // Persist attachments alongside the user msg so they survive reload.
-        // _persistUserAttachments writes b64 blobs to /generated/upload-* and
-        // returns {images:[{url,name,type,kind}], texts:[{...}]}.
+        // _persistUserAttachments returns { images:[...] } with images / PDFs
+        // / URLs / text files all merged (renderer dispatches by `kind`).
         const _persisted = _persistUserAttachments(body.images, body.texts);
         const _userMsgEntry = isGroup
           ? {id:_newUid,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent,
-             ...(_persisted.images.length ? {images:_persisted.images} : {}),
-             ...(_persisted.texts.length ? {texts:_persisted.texts} : {})}
+             ...(_persisted.images.length ? {images:_persisted.images} : {})}
           : {id:_newUid,role:'user',content:message,time:ts,thread_parent_id:_threadParent,
-             ...(_persisted.images.length ? {images:_persisted.images} : {}),
-             ...(_persisted.texts.length ? {texts:_persisted.texts} : {})};
+             ...(_persisted.images.length ? {images:_persisted.images} : {})};
         if(effectiveRegen){
           agent.history=[...(agent.history||[]),{id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent}];
         } else {
@@ -17713,11 +17719,9 @@ async function handleAPI(req,res,pathname,method,ip){
     const _persisted2 = _persistUserAttachments(body.images, body.texts);
     const _userMsgEntry2 = isGroup
       ? {id:_newUid2,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent2,
-         ...(_persisted2.images.length ? {images:_persisted2.images} : {}),
-         ...(_persisted2.texts.length ? {texts:_persisted2.texts} : {})}
+         ...(_persisted2.images.length ? {images:_persisted2.images} : {})}
       : {id:_newUid2,role:'user',content:message,time:ts,thread_parent_id:_threadParent2,
-         ...(_persisted2.images.length ? {images:_persisted2.images} : {}),
-         ...(_persisted2.texts.length ? {texts:_persisted2.texts} : {})};
+         ...(_persisted2.images.length ? {images:_persisted2.images} : {})};
     if(effectiveRegen){
       agent.history=[...(agent.history||[]),{id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent2}];
     } else {

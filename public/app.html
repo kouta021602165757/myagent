@@ -11421,7 +11421,10 @@ async function sendMsg(){
   if(!ag.history)ag.history=[];
 
   // ユーザーメッセージ（添付プレビュー含む）
-  const userMsg = {role:'user', content:text, time:now()};
+  // Stable client-side ID — used as the thread parent for the AI's reply so
+  // Slack-style threading shows "💬 N 件の返信" pill under this msg.
+  const _localUserMsgId = 'u_'+Math.random().toString(36).slice(2,10);
+  const userMsg = {id:_localUserMsgId, role:'user', content:text, time:now()};
   // For local rendering: unify image+pdf+text+url into one display array
   if(snap.length > 0){
     userMsg.images = snap.map(att => ({
@@ -11432,6 +11435,9 @@ async function sendMsg(){
       source: att.source || '',
     }));
   }
+  // Stash on window so the streaming-bubble push (below in _sendMsgStream)
+  // can attach it as thread_parent_id on the assistant placeholder.
+  window._lastTopLevelUserMsgId = _localUserMsgId;
   ag.history.push(userMsg);
   renderMsgs(ag, true);   // user just sent → snap to bottom
 
@@ -11579,7 +11585,11 @@ async function _sendMsgStream(ag, text, imgs, texts){
     return;
   }
 
-  // Remove thinking dots; push streaming placeholder bubble
+  // Remove thinking dots; push streaming placeholder bubble.
+  // Streaming bubble stays VISIBLE in main view (no thread_parent_id) so the
+  // user sees AI text flowing in. On the `done` event we move it into the
+  // thread by stamping thread_parent_id (matches what server saved). This
+  // gives "streaming feels immediate + final state is Slack threaded".
   var thinking=document.getElementById('thinking'); if(thinking) thinking.remove();
   ag.history.push({role:'assistant', content:'', time:now(), streaming:true});
   renderMsgs(ag);
@@ -11718,6 +11728,16 @@ async function _sendMsgStream(ag, text, imgs, texts){
         ag.history[streamIdx].streaming = false;
         ag.history[streamIdx]._streamThinking = false;
         if(obj.tool_log && obj.tool_log.length){ ag.history[streamIdx].tool_log = obj.tool_log; }
+        // Slack-style threading: when this is a NEW top-level message
+        // (no payload.thread_parent_id), promote the AI reply into the
+        // thread by stamping thread_parent_id = the user's just-sent msg id.
+        // Server-side already does the same on save, so on next /api/me
+        // reload the state matches. Doing it client-side immediately
+        // makes the bubble flip from main view → thread + the pill
+        // appears without waiting for a refresh.
+        if(!payload.thread_parent_id && window._lastTopLevelUserMsgId){
+          ag.history[streamIdx].thread_parent_id = window._lastTopLevelUserMsgId;
+        }
         // Tag the message as truncated if the model hit max_tokens — UI
         // renders a "▶ 続きを書く" Continue button under it.
         if(obj.truncated){ ag.history[streamIdx].truncated = true; }
@@ -11729,6 +11749,16 @@ async function _sendMsgStream(ag, text, imgs, texts){
         // a bubble that hit max_tokens stays "frozen" with no Continue
         // button — user sees a half-finished message and no way to resume.
         renderMsgs(ag);
+        // Slack-style auto-open: surface the AI reply in the thread drawer
+        // so user sees "💬 1 件の返信" + open drawer in one go.
+        // Mobile (narrow viewport) skips this — flat indent UX is better
+        // on small screens.
+        try {
+          if(!payload.thread_parent_id && window._lastTopLevelUserMsgId
+             && window.innerWidth >= 900){
+            _openThread(window._lastTopLevelUserMsgId);
+          }
+        } catch(e){}
       } else if(evType === 'error'){
         errorMsg = obj.message || 'エラー';
         _stopThink();

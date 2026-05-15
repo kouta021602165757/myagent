@@ -16845,9 +16845,10 @@ async function handleAPI(req,res,pathname,method,ip){
           const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
           const _newAid = 'a_'+crypto.randomBytes(4).toString('hex');
           const _newUid = 'u_'+crypto.randomBytes(4).toString('hex');
+          // Slack-style thread: AI reply lives under the user's new top-level msg.
           agent.history = [...(agent.history||[]),
             { id:_newUid, role:'user', content:message, time:ts },
-            { id:_newAid, role:'assistant', content:reply, time:ts, cost_jpy:cost.jpy, plan_mode:true }
+            { id:_newAid, role:'assistant', content:reply, time:ts, cost_jpy:cost.jpy, plan_mode:true, thread_parent_id:_newUid }
           ];
           if(agent.history.length>200) agent.history = agent.history.slice(-200);
           payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
@@ -16915,10 +16916,17 @@ async function handleAPI(req,res,pathname,method,ip){
           } catch(e){ console.warn('[critic-plain] failed:', e.message); }
         }
         const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-        // Stable id + optional thread parent for Slack-style threading.
+        // Stable id + Slack-style threading.
+        //  - If body.thread_parent_id is set → user is replying in an existing
+        //    thread; both user msg and AI reply inherit that parent id.
+        //  - Otherwise (new top-level msg) → user msg stays top-level
+        //    (thread_parent_id=null) and the AI reply auto-threads under it
+        //    using the new user msg id as the parent. This makes "AI replies
+        //    live in the thread drawer, user posts stay in main".
         const _threadParent = body.thread_parent_id ? String(body.thread_parent_id).slice(0, 32) : null;
         const _newUid = 'u_'+crypto.randomBytes(4).toString('hex');
         const _newAid = 'a_'+crypto.randomBytes(4).toString('hex');
+        const _aiThreadParent = _threadParent || _newUid;
         const _userMsgEntry = isGroup
           ? {id:_newUid,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent}
           : {id:_newUid,role:'user',content:message,time:ts,thread_parent_id:_threadParent};
@@ -16927,7 +16935,7 @@ async function handleAPI(req,res,pathname,method,ip){
         } else {
           agent.history=[...(agent.history||[]),
             _userMsgEntry,
-            {id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent}];
+            {id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent}];
         }
         if(agent.history.length>200) agent.history = agent.history.slice(-200);
         payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
@@ -17494,6 +17502,8 @@ async function handleAPI(req,res,pathname,method,ip){
     const _threadParent2 = body.thread_parent_id ? String(body.thread_parent_id).slice(0, 32) : null;
     const _newUid2 = 'u_'+crypto.randomBytes(4).toString('hex');
     const _newAid2 = 'a_'+crypto.randomBytes(4).toString('hex');
+    // Slack-style threading: AI reply auto-threads under a new top-level user msg.
+    const _aiThreadParent2 = _threadParent2 || _newUid2;
     const _userMsgEntry2 = isGroup
       ? {id:_newUid2,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent2}
       : {id:_newUid2,role:'user',content:message,time:ts,thread_parent_id:_threadParent2};
@@ -17502,7 +17512,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } else {
       agent.history=[...(agent.history||[]),
         _userMsgEntry2,
-        {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent2}];
+        {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent2}];
     }
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
     payerUser.balance_jpy=Math.round(((payerUser.balance_jpy||0)-cost.jpy)*1000)/1000;

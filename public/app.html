@@ -181,7 +181,10 @@ input,textarea{font-family:var(--sans);}
 /* ══════════════════════════════════════
    ROOT LAYOUT
 ══════════════════════════════════════ */
-.layout{display:grid;grid-template-columns:var(--sb) 1fr;height:100vh;overflow:hidden;}
+/* height:100% inherits from html/body (both 100%) so it works with body's
+   zoom factor. Using 100vh here would leave a ~10% gap at the bottom because
+   the viewport unit isn't scaled by zoom but the body content is. */
+.layout{display:grid;grid-template-columns:var(--sb) 1fr;height:100%;min-height:100%;overflow:hidden;}
 
 /* ══════════════════════════════════════
    SIDEBAR
@@ -429,7 +432,10 @@ input,textarea{font-family:var(--sans);}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#28c840;box-shadow:0 0 5px #28c840;flex-shrink:0;}
 
 /* bottom: balance + user */
-.sb-bot{padding:10px;border-top:1px solid var(--wire);display:flex;flex-direction:column;gap:8px;}
+/* flex-shrink:0 — never let the bottom block (Add Credits / user / 連携) be
+   compressed by an overflowing chat list. Always anchored to the very
+   bottom of the sidebar. */
+.sb-bot{padding:10px;border-top:1px solid var(--wire);display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
 
 .balance-card{
   padding:12px;border-radius:10px;

@@ -1884,12 +1884,12 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
 .composer-attach-strip .att-chip img{width:28px;height:28px;border-radius:5px;object-fit:cover;}
 .composer-attach-strip .att-chip .x{background:none;border:0;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;}
 
-#ci{
+#ci,#tci{
   width:100%;background:none;border:0;color:var(--text);font-size:15px;
   resize:none;line-height:1.6;padding:4px 0 6px;outline:none;font-family:inherit;
   min-height:48px;max-height:200px;
 }
-#ci::placeholder{color:var(--text3);}
+#ci::placeholder,#tci::placeholder{color:var(--text3);}
 
 .composer-tools{
   display:flex;align-items:center;gap:6px;
@@ -9101,10 +9101,10 @@ window.addEventListener('load', function(){
   }
 });
 
-function insertCodeBlock(){
+function insertCodeBlock(ciId){
   // Pop the composer textarea, wrap selection (if any) in ```code fences```.
   // Empty selection → insert empty fences + place caret inside on the lang line.
-  var ta = document.getElementById('ci'); if(!ta) return;
+  var ta = document.getElementById(ciId||'ci'); if(!ta) return;
   ta.focus();
   var start = ta.selectionStart, end = ta.selectionEnd;
   var selected = ta.value.slice(start, end);
@@ -10980,8 +10980,27 @@ function useFollowupChip(btn){
 }
 
 /* ── Send ──────────────────────────────────────────── */
-// 選択中の画像リスト
+// 選択中の画像リスト — メインの composer 用 (top-level chat)
 var _pendingImgs = [];
+// スレッドドロワーの composer 用。メインとは完全に独立した別の添付バッファ。
+// Slack 同様、メインチャットとスレッドの両方で同時に添付できるようにする。
+// 再代入は絶対にしない (.length=0 でクリア) — 非同期 ingest 中も参照が安定。
+var _threadPendingImgs = [];
+// composer 識別子 'main' | 'thread' → 添付配列 / プレビュー DOM id を返す。
+function _pendOf(which){ return which==='thread' ? _threadPendingImgs : _pendingImgs; }
+function _previewIdOf(which){ return which==='thread' ? 'tImgPreviewWrap' : 'imgPreviewWrap'; }
+// 添付チップの × ボタンから呼ばれる削除ハンドラ (main / thread 両対応)。
+function _removeAtt(which, i){
+  var arr = _pendOf(which);
+  if(i>=0 && i<arr.length) arr.splice(i,1);
+  renderImgPreview(which);
+}
+// スレッド composer の textarea 用 Enter ハンドラ (taKey のスレッド版)。
+function _threadTaKey(e){
+  if(e.isComposing || e.keyCode===229 || _imeActive) return;
+  if((Date.now()-_imeEndAt) < 200) return;
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); _sendThreadReply(); }
+}
 
 // 添付ファイル選択ハンドラ（画像 + PDF対応）
 /* ── Avatar upload (image) ──────────────────────────────────── */
@@ -11098,8 +11117,11 @@ var _SLASH_CMDS = [
 ];
 var _slashSelIdx = 0;
 
-function _slashOnInput(text){
-  var pal = document.getElementById('slashPalette');
+function _slashPalId(which){ return which==='thread' ? 'tSlashPalette' : 'slashPalette'; }
+function _slashCiId(which){ return which==='thread' ? 'tci' : 'ci'; }
+function _slashOnInput(text, which){
+  which = which || 'main';
+  var pal = document.getElementById(_slashPalId(which));
   if(!pal) return;
   // Only fire when the composer STARTS with "/" and has no space yet — once
   // the user types a space the command is locked in and we hide the menu.
@@ -11114,7 +11136,7 @@ function _slashOnInput(text){
   pal.innerHTML = filtered.map(function(c, i){
     var desc = isJa ? c.desc_ja : c.desc_en;
     var key = i === 0 ? '↵' : '';
-    return '<div class="slash-item'+(i===0?' sel':'')+'" data-tmpl="'+esc(c.tmpl)+'" data-i="'+i+'" onclick="_slashPick('+i+')">'+
+    return '<div class="slash-item'+(i===0?' sel':'')+'" data-tmpl="'+esc(c.tmpl)+'" data-i="'+i+'" onclick="_slashPick('+i+',\''+which+'\')">'+
       '<div class="slash-item-ic">'+c.icon+'</div>'+
       '<div class="slash-item-body"><div class="slash-item-cmd">'+esc(c.cmd)+(c.alias?' <span style="color:var(--text3);font-weight:400">(or '+esc(c.alias)+')</span>':'')+'</div><div class="slash-item-desc">'+esc(desc)+'</div></div>'+
       (key?'<span class="slash-item-key">'+key+'</span>':'')+
@@ -11124,31 +11146,32 @@ function _slashOnInput(text){
   // Store the filtered set on the palette so keydown can read it.
   pal._items = filtered;
 }
-function _slashOnKeydown(e){
-  var pal = document.getElementById('slashPalette');
+function _slashOnKeydown(e, which){
+  which = which || 'main';
+  var pal = document.getElementById(_slashPalId(which));
   if(!pal || pal.style.display === 'none') return false;
   var items = pal._items || [];
   if(!items.length) return false;
   if(e.key === 'ArrowDown'){
     e.preventDefault();
     _slashSelIdx = (_slashSelIdx + 1) % items.length;
-    _slashUpdateSel();
+    _slashUpdateSel(which);
     return true;
   }
   if(e.key === 'ArrowUp'){
     e.preventDefault();
     _slashSelIdx = (_slashSelIdx - 1 + items.length) % items.length;
-    _slashUpdateSel();
+    _slashUpdateSel(which);
     return true;
   }
   if(e.key === 'Enter' && !e.shiftKey){
     e.preventDefault();
-    _slashPick(_slashSelIdx);
+    _slashPick(_slashSelIdx, which);
     return true;
   }
   if(e.key === 'Tab'){
     e.preventDefault();
-    _slashPick(_slashSelIdx);
+    _slashPick(_slashSelIdx, which);
     return true;
   }
   if(e.key === 'Escape'){
@@ -11158,20 +11181,21 @@ function _slashOnKeydown(e){
   }
   return false;
 }
-function _slashUpdateSel(){
-  var pal = document.getElementById('slashPalette');
+function _slashUpdateSel(which){
+  var pal = document.getElementById(_slashPalId(which||'main'));
   if(!pal) return;
   pal.querySelectorAll('.slash-item').forEach(function(el, i){
     el.classList.toggle('sel', i === _slashSelIdx);
   });
 }
-function _slashPick(i){
-  var pal = document.getElementById('slashPalette');
+function _slashPick(i, which){
+  which = which || 'main';
+  var pal = document.getElementById(_slashPalId(which));
   if(!pal) return;
   var items = pal._items || [];
   var picked = items[i];
   if(!picked) return;
-  var ci = document.getElementById('ci'); if(!ci) return;
+  var ci = document.getElementById(_slashCiId(which)); if(!ci) return;
   // Commands with no args (/pin, /clear, /share) execute immediately.
   if(picked.tmpl === '/pin' || picked.tmpl === '/clear' || picked.tmpl === '/share'){
     pal.style.display = 'none';
@@ -11379,7 +11403,7 @@ var _recog = null, _recogActive = false;
 function _speechCtor(){
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
-function toggleMic(){
+function toggleMic(ciId, btnId){
   var Ctor = _speechCtor();
   if(!Ctor){
     showToast(isJa?'このブラウザは音声入力に対応していません (Chrome/Edge/Safari 推奨)':'Voice input not supported in this browser','ng');
@@ -11389,8 +11413,8 @@ function toggleMic(){
     try{ _recog && _recog.stop(); }catch(e){}
     return;
   }
-  var btn = document.getElementById('micBtn');
-  var ci  = document.getElementById('ci');
+  var btn = document.getElementById(btnId||'micBtn');
+  var ci  = document.getElementById(ciId||'ci');
   if(!ci) return;
   _recog = new Ctor();
   _recog.lang = isJa ? 'ja-JP' : 'en-US';
@@ -11437,9 +11461,9 @@ function _isTextLike(file){
     || /(^|\/)dockerfile$/i.test(n) || /(^|\/)makefile$/i.test(n);
 }
 
-function onImgSelect(e){
+function onImgSelect(e, which){
   const files = Array.from(e.target.files);
-  _ingestFiles(files);
+  _ingestFiles(files, which||'main');
   e.target.value = '';
 }
 
@@ -11459,11 +11483,13 @@ function _csvSummary(text, name){
   return note + '\n\n' + head + (lines.length>10 ? '\n…\n(full file below)\n\n' + text : '');
 }
 
-async function _ingestDocx(file){
+async function _ingestDocx(file, which){
+  which = which || 'main';
+  var P = _pendOf(which);
   // Read as base64, hand off to server for mammoth-based text extraction.
   var placeholder = { name: file.name, kind: 'text-loading', text: '' };
-  _pendingImgs.push(placeholder);
-  renderImgPreview();
+  P.push(placeholder);
+  renderImgPreview(which);
   try {
     var b64 = await new Promise(function(resolve, reject){
       var r = new FileReader();
@@ -11472,13 +11498,13 @@ async function _ingestDocx(file){
       r.readAsDataURL(file);
     });
     var r = await api('POST','/api/parse/docx',{ b64: b64, name: file.name });
-    var idx = _pendingImgs.indexOf(placeholder);
-    if(idx>=0) _pendingImgs.splice(idx,1);
+    var idx = P.indexOf(placeholder);
+    if(idx>=0) P.splice(idx,1);
     if(!r || !r.text){
       showToast(isJa?'DOCX を解析できませんでした':'Could not parse DOCX','ng');
-      renderImgPreview(); return;
+      renderImgPreview(which); return;
     }
-    _pendingImgs.push({
+    P.push({
       name: file.name,
       type: 'text/plain',
       kind: 'text',
@@ -11488,13 +11514,15 @@ async function _ingestDocx(file){
       source_kind: 'docx',
     });
   } catch(e){
-    var i = _pendingImgs.indexOf(placeholder); if(i>=0) _pendingImgs.splice(i,1);
+    var i = P.indexOf(placeholder); if(i>=0) P.splice(i,1);
     showToast((isJa?'DOCX 解析エラー: ':'DOCX parse error: ')+(e.message||''),'ng');
   }
-  renderImgPreview();
+  renderImgPreview(which);
 }
 
-function _ingestFiles(files){
+function _ingestFiles(files, which){
+  which = which || 'main';
+  var P = _pendOf(which);
   files.forEach(file => {
     var isImg = file.type.startsWith('image/');
     var isPdf = file.type === 'application/pdf';
@@ -11502,7 +11530,7 @@ function _ingestFiles(files){
     var isTxt = !isDocx && _isTextLike(file);
     if(isDocx){
       if(file.size > 20*1024*1024){ showToast(isJa?'DOCX が大きすぎます (20MB)':'DOCX too large (20MB)','ng'); return; }
-      return _ingestDocx(file);
+      return _ingestDocx(file, which);
     }
     if(!isImg && !isPdf && !isTxt){
       showToast((isJa?'未対応のファイル形式: ':'Unsupported file: ')+file.name,'ng');
@@ -11528,7 +11556,7 @@ function _ingestFiles(files){
         // immediately knows the shape of the data.
         var isCsv = /\.(csv|tsv)$/i.test(file.name);
         if(isCsv){ text = _csvSummary(text, file.name); }
-        _pendingImgs.push({
+        P.push({
           name: file.name,
           type: file.type || 'text/plain',
           kind: 'text',
@@ -11537,20 +11565,20 @@ function _ingestFiles(files){
           size: file.size,
           source_kind: isCsv ? 'csv' : 'text',
         });
-        renderImgPreview();
+        renderImgPreview(which);
       };
       reader.readAsText(file, 'utf-8');
     } else {
       reader.onload = ev => {
         const b64 = ev.target.result.split(',')[1];
-        _pendingImgs.push({
+        P.push({
           name:file.name,
           type:file.type,
           b64,
           url:ev.target.result,
           kind: isPdf ? 'pdf' : 'image'
         });
-        renderImgPreview();
+        renderImgPreview(which);
       };
       reader.readAsDataURL(file);
     }
@@ -11558,7 +11586,8 @@ function _ingestFiles(files){
 }
 
 // Open a quick URL-attach prompt; fetches server-side and adds to attachments.
-async function openUrlAttach(){
+async function openUrlAttach(which){
+  which = which || 'main';
   var initial = '';
   // If clipboard contains a URL, prefill it for convenience
   try{
@@ -11574,24 +11603,26 @@ async function openUrlAttach(){
     showToast(isJa?'http(s) URL を入力してください':'http(s) URL required','ng');
     return;
   }
-  await _ingestUrl(u);
+  await _ingestUrl(u, which);
 }
 
-async function _ingestUrl(u){
+async function _ingestUrl(u, which){
+  which = which || 'main';
+  var P = _pendOf(which);
   // Show a placeholder chip while fetching
   var placeholder = { name: u, source: u, kind: 'url-loading', text: '' };
-  _pendingImgs.push(placeholder);
-  renderImgPreview();
+  P.push(placeholder);
+  renderImgPreview(which);
   try{
     const r = await api('POST','/api/fetch-url',{url:u});
-    var idx = _pendingImgs.indexOf(placeholder);
-    if(idx>=0) _pendingImgs.splice(idx,1);
+    var idx = P.indexOf(placeholder);
+    if(idx>=0) P.splice(idx,1);
     if(!r || !r.text){
       showToast(isJa?'内容を取得できませんでした':'Could not fetch','ng');
-      renderImgPreview();
+      renderImgPreview(which);
       return;
     }
-    _pendingImgs.push({
+    P.push({
       name: r.title || u,
       source: r.url || u,
       kind: 'url',
@@ -11599,11 +11630,11 @@ async function _ingestUrl(u){
       truncated: !!r.truncated,
       size: r.text.length,
     });
-    renderImgPreview();
+    renderImgPreview(which);
   }catch(e){
-    var idx2 = _pendingImgs.indexOf(placeholder);
-    if(idx2>=0) _pendingImgs.splice(idx2,1);
-    renderImgPreview();
+    var idx2 = P.indexOf(placeholder);
+    if(idx2>=0) P.splice(idx2,1);
+    renderImgPreview(which);
     showToast((isJa?'URL 取得失敗: ':'URL fetch failed: ')+(e.message||''),'ng');
   }
 }
@@ -11638,7 +11669,8 @@ if(document.readyState !== 'loading'){ try{ _initComposerDnD(); }catch(e){} }
 else{ document.addEventListener('DOMContentLoaded', function(){ try{ _initComposerDnD(); }catch(e){} }); }
 
 // When the user pastes into the composer, detect a bare URL and offer to ingest.
-function onComposerPaste(ev){
+function onComposerPaste(ev, which){
+  which = which || 'main';
   try{
     var data = (ev.clipboardData || window.clipboardData);
     if(!data) return;
@@ -11658,7 +11690,7 @@ function onComposerPaste(ev){
     }
     if(imageFiles.length && typeof _ingestFiles === 'function'){
       ev.preventDefault();  // block default behavior of pasting <img> blob URL
-      _ingestFiles(imageFiles);
+      _ingestFiles(imageFiles, which);
       return;
     }
     var txt = data.getData && data.getData('text');
@@ -11670,22 +11702,24 @@ function onComposerPaste(ev){
       setTimeout(function(){
         if(confirm(isJa ? ('この URL を読み込んで添付しますか？\n' + txt) : ('Fetch this URL and attach?\n' + txt))){
           // Remove the URL text from the textarea since we'll attach it
-          var ci = document.getElementById('ci');
+          var ci = document.getElementById(which==='thread'?'tci':'ci');
           if(ci && ci.value.trim() === txt){ ci.value = ''; exTA(ci); }
-          _ingestUrl(txt);
+          _ingestUrl(txt, which);
         }
       }, 50);
     }
   }catch(e){}
 }
 
-// 添付プレビュー描画 (画像 / PDF / テキスト / URL)
-function renderImgPreview(){
-  const wrap = document.getElementById('imgPreviewWrap');
+// 添付プレビュー描画 (画像 / PDF / テキスト / URL) — main / thread 両対応
+function renderImgPreview(which){
+  which = which || 'main';
+  var P = _pendOf(which);
+  const wrap = document.getElementById(_previewIdOf(which));
   if(!wrap) return;
-  if(_pendingImgs.length === 0){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  if(P.length === 0){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   wrap.style.display='flex';
-  wrap.innerHTML = _pendingImgs.map(function(att,i){
+  wrap.innerHTML = P.map(function(att,i){
     var thumb, sub = '';
     if(att.kind==='pdf' || att.type==='application/pdf'){
       thumb = '<div style="width:28px;height:28px;border-radius:5px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0">PDF</div>';
@@ -11705,7 +11739,7 @@ function renderImgPreview(){
     return '<div class="att-chip">'+
       thumb+
       '<span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(att.name||'attachment')+sub+trunc+'</span>'+
-      '<button class="x" onclick="_pendingImgs.splice('+i+',1);renderImgPreview()" title="削除">×</button>'+
+      '<button class="x" onclick="_removeAtt(\''+which+'\','+i+')" title="削除">×</button>'+
     '</div>';
   }).join('');
 }
@@ -11716,10 +11750,10 @@ function _fmtBytes(n){
   return (n/(1024*1024)).toFixed(1)+'MB';
 }
 
-// Split _pendingImgs into the two arrays the chat API expects.
-function _attachmentPayload(){
+// Split the composer's attachments into the two arrays the chat API expects.
+function _attachmentPayload(which){
   const imgs = [], texts = [];
-  _pendingImgs.forEach(att => {
+  _pendOf(which||'main').forEach(att => {
     if(att.kind === 'url-loading' || att.kind === 'text-loading') return; // skip in-flight fetches/parses
     if(att.kind === 'text' || att.kind === 'url'){
       texts.push({
@@ -11736,9 +11770,6 @@ function _attachmentPayload(){
 }
 
 async function sendMsg(){
-  // Thread mode: the shared composer is docked inside the thread drawer —
-  // route this send as a thread reply rather than a top-level message.
-  if(window._composerThreadMode){ return _sendThreadReply(); }
   const ci=document.getElementById('ci')||document.getElementById('msgInput');
   const text=ci.value.trim();
   // Block if a URL is still loading
@@ -16178,6 +16209,42 @@ function _openThread(parentId){
   window._activeThreadParent = parentId;
   _renderThreadDrawer();
 }
+// Builds the thread drawer's OWN permanent composer — a fully independent
+// second composer (separate IDs, separate _threadPendingImgs buffer) that
+// coexists with the main chat composer, exactly like Slack. Full feature
+// parity: file/URL attach, voice, code blocks, slash commands.
+function _threadComposerHTML(){
+  var ICON = 'width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
+  return ''
+  + '<div class="composer" id="threadComposer" style="position:relative">'
+  +   '<input type="file" id="tImgInput" multiple style="display:none" onchange="onImgSelect(event,\'thread\')">'
+  +   '<div class="composer-attach-strip" id="tImgPreviewWrap" style="display:none"></div>'
+  +   '<div id="tSlashPalette" class="slash-palette" style="display:none" role="listbox"></div>'
+  +   '<textarea id="tci" rows="1" placeholder="'+L('このスレッドに返信… (Shift+Enter で改行)','Reply in thread… (Shift+Enter for newline)')+'"'
+  +     ' oninput="exTA(this);_slashOnInput(this.value,\'thread\')"'
+  +     ' onkeydown="_slashOnKeydown(event,\'thread\') || _threadTaKey(event)"'
+  +     ' oncompositionstart="_imeStart()" oncompositionend="_imeEnd()"'
+  +     ' onpaste="onComposerPaste(event,\'thread\')"></textarea>'
+  +   '<div class="composer-tools">'
+  +     '<button class="tool-btn" type="button" onclick="document.getElementById(\'tImgInput\').click()" title="'+L('ファイルを添付 (画像/PDF/テキスト/コード)','Attach a file')+'">'
+  +       '<svg '+ICON+' stroke-width="1.9"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>'
+  +     '</button>'
+  +     '<button class="tool-btn" type="button" onclick="openUrlAttach(\'thread\')" title="'+L('URL を読み込んで添付','Attach a URL')+'">'
+  +       '<svg '+ICON+' stroke-width="1.9"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+  +     '</button>'
+  +     '<button class="tool-btn" type="button" id="tMicBtn" onclick="toggleMic(\'tci\',\'tMicBtn\')" title="'+L('音声入力','Voice input')+'">'
+  +       '<svg '+ICON+' stroke-width="1.9"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>'
+  +     '</button>'
+  +     '<button class="tool-btn" type="button" onclick="insertCodeBlock(\'tci\')" title="'+L('コードブロック挿入','Insert code block')+'">'
+  +       '<svg '+ICON+' stroke-width="1.9"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>'
+  +     '</button>'
+  +     '<div class="tool-spacer"></div>'
+  +     '<button class="send-btn" type="button" id="tSndBtn" onclick="_sendThreadReply()" title="'+L('送信','Send')+'">'
+  +       '<svg '+ICON+' stroke-width="2.2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>'
+  +     '</button>'
+  +   '</div>'
+  + '</div>';
+}
 function _renderThreadDrawer(){
   var parentId = window._activeThreadParent;
   if(!parentId){ _closeThread(); return; }
@@ -16186,139 +16253,117 @@ function _renderThreadDrawer(){
   var parent = (ag.history||[]).find(function(m){return m && m.id === parentId;});
   if(!parent){ showToast(L('元メッセージが見つかりません','Parent message not found'),'ng'); _closeThread(); return; }
   var replies = (ag.history||[]).filter(function(m){return m && m.thread_parent_id === parentId;});
+  // Use the full _renderMsg so markdown / tool_log / artifact cards render
+  // properly inside threads (critical for LP-edit flows where each reply
+  // contains a fresh artifact URL).
+  function _renderInThread(m){
+    return _renderMsg(m.role, ag, m.content, m.time||'', m.images, -1, m.tool_log, m);
+  }
+  var bodyHTML =
+    '<div class="msgs-inner" style="max-width:none">'
+    + _renderInThread(parent)
+    + (replies.length ?
+        '<div style="display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-size:10.5px;font-weight:800;color:var(--text2);letter-spacing:.04em">'
+        + '<span style="flex:1;height:1px;background:var(--wire)"></span>'
+        + '<span>'+replies.length+L(' 件の返信',' replies')+'</span>'
+        + '<span style="flex:1;height:1px;background:var(--wire)"></span>'
+        + '</div>'
+        + replies.map(_renderInThread).join('')
+      : '')
+    + '</div>';
   var existing = document.getElementById('threadDrawer');
-  var firstOpen = !existing;
+  if(existing){
+    // In-place update — refresh ONLY the header count + message body. The
+    // thread composer in the footer is left completely untouched, so any
+    // typed text / staged attachments / focus survive streaming re-renders.
+    var cnt = existing.querySelector('[data-thread-count]');
+    if(cnt) cnt.textContent = (ag.name||'') + ' ・ ' + replies.length + L(' 件の返信',' replies');
+    var body0 = existing.querySelector('#threadDrawerBody');
+    if(body0){
+      var atBottom = (body0.scrollHeight - body0.scrollTop - body0.clientHeight) < 80;
+      body0.innerHTML = bodyHTML;
+      if(atBottom) body0.scrollTop = body0.scrollHeight;
+    }
+    return;
+  }
+  // ── First open: build the whole drawer (header + body + footer composer) ──
   var d = document.createElement('div');
   d.id = 'threadDrawer';
   d.className = 'thread-drawer';
   d.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--cream);border-left:1px solid var(--wire2);z-index:9985;display:flex;flex-direction:column;box-shadow:-12px 0 28px rgba(0,0,0,.10);font-family:inherit;animation:slideInRight .25s ease';
-  // Use the full _renderMsg so markdown / tool_log / artifact cards render
-  // properly inside threads (critical for LP-edit flows where each reply
-  // contains a fresh artifact URL).
-  function _renderInThread(m, idx){
-    return _renderMsg(m.role, ag, m.content, m.time||'', m.images, -1, m.tool_log, m);
-  }
   d.innerHTML =
     '<div style="padding:13px 16px;border-bottom:1px solid var(--wire2);display:flex;align-items:flex-start;gap:10px;background:var(--cream);flex-shrink:0">'
     +  '<div style="flex:1;min-width:0">'
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">'+L('スレッド','Thread')+'</div>'
-    +    '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+esc(ag.name||'')+' ・ '+replies.length+L(' 件の返信',' replies')+'</div>'
+    +    '<div data-thread-count style="font-size:11px;color:var(--text3);margin-top:2px">'+esc(ag.name||'')+' ・ '+replies.length+L(' 件の返信',' replies')+'</div>'
     +  '</div>'
     +  '<button onclick="_closeThread()" title="'+L('閉じる','Close')+'" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:20px;padding:4px 8px;border-radius:6px">×</button>'
     + '</div>'
-    + '<div id="threadDrawerBody" class="msgs" style="flex:1;overflow-y:auto;padding:6px 14px 12px;background:var(--cream)">'
-    +   '<div class="msgs-inner" style="max-width:none">'
-    +     _renderInThread(parent)
-    +     (replies.length ?
-    +       '<div style="display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-size:10.5px;font-weight:800;color:var(--text2);letter-spacing:.04em">'
-    +       '<span style="flex:1;height:1px;background:var(--wire)"></span>'
-    +       '<span>'+replies.length+L(' 件の返信',' replies')+'</span>'
-    +       '<span style="flex:1;height:1px;background:var(--wire)"></span>'
-    +       '</div>'
-    +       replies.map(_renderInThread).join('') : '')
-    +   '</div>'
-    + '</div>'
-    // The drawer hosts the REAL main composer (relocated here by
-    // _moveComposerToThread on open) so the thread input has 100% feature
-    // parity with the main chat: file/URL attach, voice, code blocks, emoji,
-    // @mention & slash commands. Moved back to .chat-foot on _closeThread.
+    + '<div id="threadDrawerBody" class="msgs" style="flex:1;overflow-y:auto;padding:6px 14px 12px;background:var(--cream)">'+bodyHTML+'</div>'
+    // The thread has its OWN permanent composer — like Slack. It coexists
+    // with the main chat composer (both usable at once, separate attachment
+    // buffers) and has full feature parity.
     + '<div style="border-top:1px solid var(--wire2);padding:10px 14px 12px;background:var(--cream);flex-shrink:0">'
-    +   '<div id="threadComposerSlot"></div>'
+    +   _threadComposerHTML()
     +   '<div style="display:flex;align-items:center;gap:8px;margin-top:7px">'
     +     '<span style="font-size:10.5px;color:var(--text3);flex:1">'+L('このスレッド内では AI が全履歴を保持します','AI keeps full thread context here')+'</span>'
     +     '<button onclick="_closeThread()" style="background:transparent;border:0;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline">'+L('スレッドを閉じる','Close')+'</button>'
     +   '</div>'
     + '</div>';
   document.body.appendChild(d);
-  // Drag & drop files anywhere onto the thread drawer → attach (the docked
-  // composer no longer sits inside .chat-foot's drop zone).
+  // Match the main file picker's accepted types exactly.
+  try {
+    var mainInp = document.getElementById('imgInput'), tInp = document.getElementById('tImgInput');
+    if(mainInp && tInp) tInp.accept = mainInp.accept;
+  } catch(e){}
+  // Drag & drop files onto the drawer → attach to the THREAD composer.
   ['dragenter','dragover'].forEach(function(ev){ d.addEventListener(ev, function(e){
     if(e.dataTransfer && Array.from(e.dataTransfer.types||[]).indexOf('Files')>=0){ e.preventDefault(); e.stopPropagation(); }
   }); });
   d.addEventListener('drop', function(e){
     if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length){
       e.preventDefault(); e.stopPropagation();
-      try { _ingestFiles(Array.from(e.dataTransfer.files)); } catch(err){}
+      try { _ingestFiles(Array.from(e.dataTransfer.files), 'thread'); } catch(err){}
     }
   });
-  // Relocate the shared composer into the NEW drawer (focus-preserving),
-  // THEN drop the old drawer — so remove() never destroys the docked
-  // composer or its event handlers / in-progress attachments.
-  _moveComposerToThread();
-  if(existing) existing.remove();
+  renderImgPreview('thread');  // restore any pre-staged thread attachments
   setTimeout(function(){
-    if(firstOpen){ var t = document.getElementById('ci'); if(t) t.focus(); }
+    var t = document.getElementById('tci'); if(t) t.focus();
     var b = document.getElementById('threadDrawerBody'); if(b) b.scrollTop = b.scrollHeight;
   }, 50);
 }
-// Dock the shared main composer inside the open thread drawer so thread
-// replies get the full composer feature set. Idempotent — safe to call on
-// every drawer re-render. Preserves focus + caret across the DOM move.
-function _moveComposerToThread(){
-  var slot = document.getElementById('threadComposerSlot');
-  var comp = document.querySelector('.composer');
-  if(!slot || !comp) return;
-  if(comp.parentNode !== slot){
-    var ciEl = document.getElementById('ci');
-    var hadFocus = ciEl && document.activeElement === ciEl;
-    var selS = hadFocus ? ciEl.selectionStart : 0, selE = hadFocus ? ciEl.selectionEnd : 0;
-    slot.appendChild(comp);
-    if(hadFocus){ try { ciEl.focus(); ciEl.setSelectionRange(selS, selE); } catch(e){} }
-  }
-  window._composerThreadMode = window._activeThreadParent;
-  var ci = document.getElementById('ci');
-  if(ci){
-    if(!ci.dataset.mainPlaceholder) ci.dataset.mainPlaceholder = ci.placeholder || '';
-    ci.placeholder = L('このスレッドに返信… (Shift+Enter で改行)','Reply in thread… (Shift+Enter for newline)');
-  }
-  // The main foot bar's only real control is the composer — hide the now
-  // empty bar while the composer is docked in the drawer.
-  var foot = document.querySelector('.chat-foot');
-  if(foot) foot.style.display = 'none';
-}
 function _closeThread(){
   window._activeThreadParent = null;
-  window._composerThreadMode = null;
-  // Return the shared composer to the main chat foot BEFORE dropping the drawer.
-  var comp = document.querySelector('.composer');
-  var foot = document.querySelector('.chat-foot');
-  var footInner = foot && foot.querySelector('.chat-foot-inner');
-  if(comp && footInner && comp.parentNode !== footInner){
-    var hint = footInner.querySelector('.foot-hint');
-    if(hint) footInner.insertBefore(comp, hint); else footInner.appendChild(comp);
-  }
-  var ci = document.getElementById('ci');
-  if(ci && ci.dataset.mainPlaceholder){ ci.placeholder = ci.dataset.mainPlaceholder; }
-  if(foot) foot.style.display = '';
+  _threadPendingImgs.length = 0;   // clear staged thread attachments
   var d = document.getElementById('threadDrawer');
   if(d) d.remove();
 }
 async function _sendThreadReply(){
-  // The thread drawer hosts the REAL main composer (docked by
-  // _moveComposerToThread) — read from #ci + _pendingImgs so thread replies
-  // get full attachment / slash-command parity with the main chat.
-  var ci = document.getElementById('ci');
+  // Reads from the thread drawer's OWN composer (#tci + _threadPendingImgs).
+  // Fully independent of the main chat composer — both can hold drafts /
+  // attachments simultaneously, like Slack.
+  var ci = document.getElementById('tci');
   if(!ci) return;
   var text = (ci.value||'').trim();
-  if(_pendingImgs.some(function(a){return a.kind==='url-loading';})){
-    showToast(isJa?'URL の読み込み完了をお待ちください':'Wait for URL to finish loading','ng');
+  if(_threadPendingImgs.some(function(a){return a.kind==='url-loading'||a.kind==='text-loading';})){
+    showToast(isJa?'添付の読み込み完了をお待ちください':'Wait for the attachment to finish loading','ng');
     return;
   }
-  if(!text && _pendingImgs.length===0) return;
+  if(!text && _threadPendingImgs.length===0) return;
   var parentId = window._activeThreadParent;
   if(!parentId || !activeId) return;
   var ag = (agents||[]).find(function(a){return a.id===activeId;});
   if(!ag) return;
-  // Snapshot attachments, then reset the composer.
-  var snap = _pendingImgs.slice();
-  var split = _attachmentPayload();
+  // Snapshot attachments, then reset the thread composer.
+  var snap = _threadPendingImgs.slice();
+  var split = _attachmentPayload('thread');
   var imgs = split.imgs;       // image/pdf base64 entries
   var texts = split.texts;     // text/url entries
-  _pendingImgs = [];
-  renderImgPreview();
+  _threadPendingImgs.length = 0;
+  renderImgPreview('thread');
   ci.value = '';
   exTA(ci);
-  var sndBtn = document.getElementById('sndBtn');
+  var sndBtn = document.getElementById('tSndBtn');
   if(sndBtn) sndBtn.disabled = true;
   // /search etc. — same slash handling as the main composer.
   var outbound = text;
@@ -16434,9 +16479,9 @@ async function _sendThreadReply(){
     _renderThreadDrawer();
     showToast((e&&e.message)||'failed','ng');
   } finally {
-    var sb = document.getElementById('sndBtn');
+    var sb = document.getElementById('tSndBtn');
     if(sb) sb.disabled = false;
-    var ci2 = document.getElementById('ci');
+    var ci2 = document.getElementById('tci');
     if(ci2) ci2.focus();
   }
 }

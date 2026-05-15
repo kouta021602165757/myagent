@@ -10413,6 +10413,11 @@ function _scrollMsgsToEnd(force){
     el.scrollTop = el.scrollHeight;
   }
   _updateScrollFAB();
+  // Strict Slack-style: when streaming into the drawer, keep it scrolled
+  // to the latest content too. Otherwise the new AI text scrolls off the
+  // bottom of the drawer and the user thinks it's stuck.
+  var dBody = document.getElementById('threadDrawerBody');
+  if(dBody){ dBody.scrollTop = dBody.scrollHeight; }
 }
 function scrollMsgsToBottom(){ _scrollMsgsToEnd(true); }   // FAB always forces
 function _updateScrollFAB(){
@@ -11634,20 +11639,43 @@ async function _sendMsgStream(ag, text, imgs, texts){
     return;
   }
 
-  // Remove thinking dots; push streaming placeholder bubble.
-  // Streaming bubble stays VISIBLE in main view (no thread_parent_id) so the
-  // user sees AI text flowing in. On the `done` event we move it into the
-  // thread by stamping thread_parent_id (matches what server saved). This
-  // gives "streaming feels immediate + final state is Slack threaded".
+  // Remove thinking dots.
   var thinking=document.getElementById('thinking'); if(thinking) thinking.remove();
-  ag.history.push({role:'assistant', content:'', time:now(), streaming:true});
-  renderMsgs(ag);
+  // Strict Slack-style: AI streams INSIDE the thread drawer from the start.
+  //   - Drawer-reply path: payload.thread_parent_id is set → use it
+  //   - New top-level: use the freshly-pushed user msg id as parent
+  // We open the drawer immediately (desktop only — mobile stays flat).
+  const _autoParent = payload.thread_parent_id || window._lastTopLevelUserMsgId || null;
+  ag.history.push({role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent});
   const streamIdx = ag.history.length - 1;
+  const _wideForDrawer = (typeof window !== 'undefined' && window.innerWidth >= 900);
+  if(_autoParent && _wideForDrawer){
+    try { _openThread(_autoParent); } catch(e){}
+  }
+  // Always re-render main so the user message + (live) thread pill appear.
+  renderMsgs(ag);
 
-  // Find the live bubble body once for in-place updates
-  var inner = document.getElementById('msgsInner');
-  var bubbles = inner ? inner.querySelectorAll('.m.a') : [];
-  var liveEl = bubbles[bubbles.length - 1];
+  // Find the live bubble body once for in-place updates.
+  // Strict Slack-style threading: if the streaming msg has thread_parent_id
+  // AND the drawer is open with that parent, the bubble lives in the drawer
+  // — write deltas there. Otherwise (mobile flat / pre-threading legacy)
+  // fall back to the main timeline's last assistant bubble.
+  function _findLiveBubble(){
+    const m = ag.history[streamIdx];
+    const parent = m && m.thread_parent_id;
+    if(parent && window._activeThreadParent === parent){
+      const dBody = document.getElementById('threadDrawerBody');
+      if(dBody){
+        const ds = dBody.querySelectorAll('.m.a');
+        const el = ds[ds.length - 1];
+        if(el) return el;
+      }
+    }
+    const inner = document.getElementById('msgsInner');
+    const bs = inner ? inner.querySelectorAll('.m.a') : [];
+    return bs[bs.length - 1];
+  }
+  var liveEl = _findLiveBubble();
   var liveBody = liveEl ? liveEl.querySelector('.m-body') : null;
   if(liveBody){
     // Show the polished generating indicator until the first delta arrives.
@@ -11777,37 +11805,18 @@ async function _sendMsgStream(ag, text, imgs, texts){
         ag.history[streamIdx].streaming = false;
         ag.history[streamIdx]._streamThinking = false;
         if(obj.tool_log && obj.tool_log.length){ ag.history[streamIdx].tool_log = obj.tool_log; }
-        // Slack-style threading: when this is a NEW top-level message
-        // (no payload.thread_parent_id), promote the AI reply into the
-        // thread by stamping thread_parent_id = the user's just-sent msg id.
-        // Server-side already does the same on save, so on next /api/me
-        // reload the state matches. Doing it client-side immediately
-        // makes the bubble flip from main view → thread + the pill
-        // appears without waiting for a refresh.
-        if(!payload.thread_parent_id && window._lastTopLevelUserMsgId){
-          ag.history[streamIdx].thread_parent_id = window._lastTopLevelUserMsgId;
-        }
         // Tag the message as truncated if the model hit max_tokens — UI
         // renders a "▶ 続きを書く" Continue button under it.
         if(obj.truncated){ ag.history[streamIdx].truncated = true; }
         if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
         me.usage_count = (me.usage_count||0) + 1;
         updateBalance();
-        // CRITICAL: switch from streaming DOM (no action buttons / no
-        // Continue button) to the regular rendered message. Without this,
-        // a bubble that hit max_tokens stays "frozen" with no Continue
-        // button — user sees a half-finished message and no way to resume.
+        // Re-render: main (shows the "💬 N 件の返信" pill under user msg)
+        // AND the drawer (so the finalized bubble has action buttons /
+        // Continue button if truncated). The streaming placeholder was
+        // already in the thread from the start, so no migration needed.
         renderMsgs(ag);
-        // Slack-style auto-open: surface the AI reply in the thread drawer
-        // so user sees "💬 1 件の返信" + open drawer in one go.
-        // Mobile (narrow viewport) skips this — flat indent UX is better
-        // on small screens.
-        try {
-          if(!payload.thread_parent_id && window._lastTopLevelUserMsgId
-             && window.innerWidth >= 900){
-            _openThread(window._lastTopLevelUserMsgId);
-          }
-        } catch(e){}
+        if(window._activeThreadParent){ try { _renderThreadDrawer(); } catch(e){} }
       } else if(evType === 'error'){
         errorMsg = obj.message || 'エラー';
         _stopThink();

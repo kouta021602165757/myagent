@@ -122,8 +122,8 @@
     <div class="note">
       <b>このレポートのデータ根拠について。</b>
       §1〜§5・§8〜§10 は <b>実際のソースコードとサイト構成</b>に基づく事実・分析。
-      §7（Web トラフィック）は <b>GA4 の実データ（過去28日間）を反映済み</b>。
-      §6（グロース数値）はユーザー数・収益の<b>本番値が未取得</b>のため枠のみ（管理ダッシュボードのデータを頂き次第、実数に更新します）。
+      §6（グロース数値）は <b>Supabase の実データ</b>、§7（Web トラフィック）は <b>GA4 の実データ（過去28日間）</b>を
+      反映した完全版です（2026-05-15 時点）。
     </div>
   </div>
 
@@ -149,15 +149,15 @@
     <h2><span class="no">01</span>エグゼクティブサマリー</h2>
     <p class="lead">
       MY AI Agent は「AI を<b>雇う</b>」というメタファーと Slack 風のチームチャットを軸にした、
-      日本語ファーストの AI エージェント SaaS。ChatGPT との差別化が言語化されており、
-      メモリ・KPI 追従・50+ 連携・マーケットプレイス・自動実行と機能の幅は強い。
+      日本語ファーストの AI エージェント SaaS。ChatGPT との差別化は言語化され、機能の幅も広い。
+      実データで見ると<b>ローンチ直後のアーリーステージ</b>で、直近1週間で 42 アカウント登録と立ち上がりは速い。
     </p>
-    <div class="insight"><b>総評:</b> ポジショニングと機能基盤は明確で良い。一方で「LP に情報を盛り込みすぎ」「核となるチャット体験の安定化が途上」「バイラル装置（紹介プログラム）が表に出ていない」の 3 点が、獲得と継続のボトルネックになり得る。</div>
+    <div class="insight"><b>総評:</b> 入口（訪問→登録）は機能している ── GA 新規 284 → 登録 51、CVR 約18%。問題は<b>「登録した後」</b>に集中している。オンボーディング完了は 51 アカウント中わずか 1、有料転換は 0（pre-revenue）。獲得の追い風があるうちに、登録後の活性化とマネタイズ導線を作るのが最優先。</div>
     <h3>最重要テイクアウェイ 3 点</h3>
     <ul>
-      <li><b>① LP は「1 番刺さる訴求」に絞る。</b> 6 機能＋50 連携＋マーケット＋Founder 100 を同列に並べており、乗り換え理由が 1 つに定まらない。</li>
-      <li><b>② 紹介プログラムを表に出す。</b> コードには紹介機構（referral_code / 紹介クレジット）があるが LP・アプリ導線で訴求されておらず、無料の獲得チャネルを取りこぼしている。</li>
-      <li><b>③ コアのチャット体験を継続的に堅牢化。</b> 直近で「生成中の固着」「入力欄」等の不具合修正が続いており、プロダクトの心臓部の信頼性が最優先課題。</li>
+      <li><b>① 最大の穴は「登録の後」。</b> オンボーディング完了（onboarded_at）が記録されているのは 51 中 1 のみ。完了フローに到達していない、または計測が壊れている。最優先で原因特定。</li>
+      <li><b>② マネタイズが未起動。</b> 有料サブスク 0。"business" プラン 11 は全て Founder 無料トライアル。Stripe 顧客化も 2 のみ。トライアル→有料、および通常ユーザーの課金導線の設計が次の収益の鍵。</li>
+      <li><b>③ 獲得には追い風。</b> 直近28日で GA 新規 284→登録 51、訪問者は海外主導（米→日→印）。勢いがあるうちに ①② を塞ぐ。LP 整理・紹介プログラム露出（§3・§9）も並行で。</li>
     </ul>
   </div>
 
@@ -265,22 +265,40 @@
     </ul>
   </div>
 
-  <!-- 6. Growth KPI -->
+  <!-- 6. Growth -->
   <div class="card" id="s6">
-    <h2><span class="no">06</span>グロース KPI フレーム</h2>
-    <p class="muted" style="font-size:12px">追うべき指標。現状値は本番データ取得後に差し込み。</p>
+    <h2><span class="no">06</span>グロース / ビジネス数値（実データ）</h2>
+    <p class="muted" style="font-size:12px">出典: Supabase users テーブル / 2026-05-15 時点 ・ 運営/テスト用アカウントが数件含まれる可能性あり</p>
+
+    <div class="kpi-grid">
+      <div class="kpi accent"><div class="label">総アカウント</div><div class="val">51</div><div class="note2">削除 0</div></div>
+      <div class="kpi"><div class="label">有料サブスク</div><div class="val">0</div><div class="note2">pre-revenue</div></div>
+      <div class="kpi"><div class="label">Founder</div><div class="val">10<span>/100</span></div><div class="note2">残 90 席</div></div>
+      <div class="kpi accent"><div class="label">直近7日 新規</div><div class="val">42</div><div class="note2">急立ち上がり</div></div>
+    </div>
+
     <table>
-      <tr><th>指標</th><th style="width:120px">現状値</th><th>取得元</th></tr>
-      <tr><td>累計ユーザー数</td><td><span class="need">要データ</span></td><td>管理画面 / Supabase</td></tr>
-      <tr><td>新規登録（日次・週次）</td><td><span class="need">要データ</span></td><td>管理画面（日次グラフ）</td></tr>
-      <tr><td>有料転換率（Pro+Business ÷ 全体）</td><td><span class="need">要データ</span></td><td>Supabase users</td></tr>
-      <tr><td>MRR / 累計収益</td><td><span class="need">要データ</span></td><td>管理画面 / Stripe</td></tr>
-      <tr><td>メッセージ数・トークン消費・API 原価率</td><td><span class="need">要データ</span></td><td>管理画面</td></tr>
-      <tr><td>マーケットプレイス 出品数・利用回数</td><td><span class="need">要データ</span></td><td>管理画面</td></tr>
-      <tr><td>Founder 100 残席・拡張連携数</td><td><span class="need">要データ</span></td><td>管理画面</td></tr>
-      <tr><td>（追加推奨）コホート継続率 / Free→Pro CVR / Founder トライアル後の残存率</td><td><span class="need">未計測</span></td><td>新規ダッシュボード</td></tr>
+      <tr><th>指標</th><th class="num" style="width:120px">値</th><th>備考</th></tr>
+      <tr><td>総アカウント</td><td class="num">51</td><td>削除 0 / 全て直近1ヶ月の登録</td></tr>
+      <tr><td>登録方法</td><td class="num">G23 / M29</td><td>Google 23・メール 29（ほぼ半々）</td></tr>
+      <tr><td>直近28日 新規</td><td class="num">51</td><td>＝ 実質ローンチ直後</td></tr>
+      <tr><td>直近7日 新規</td><td class="num">42</td><td>GA の 5/10 トラフィックの山と一致</td></tr>
+      <tr><td>プラン内訳</td><td class="num">free 40 / biz 11</td><td>biz 11 ＝ Founder 無料トライアル</td></tr>
+      <tr><td>有料サブスク</td><td class="num">0</td><td>subscription_id なし ・ サブスク MRR ¥0</td></tr>
+      <tr><td>Stripe 顧客化</td><td class="num">2</td><td>チェックアウトに到達も未完了</td></tr>
+      <tr><td>実購入（purchases）</td><td class="num">0</td><td>クレジット購入も発生なし</td></tr>
+      <tr><td>Founder 100</td><td class="num">10 / 100</td><td>残 90 席</td></tr>
+      <tr><td>オンボーディング完了</td><td class="num">1 / 51</td><td><span class="need">要調査</span> ほぼ未到達 / 未計測</td></tr>
+      <tr><td>累計メッセージ（usage_count）</td><td class="num">604</td><td>≈ 12 / アカウント</td></tr>
+      <tr><td>クレジット残高 合計</td><td class="num">¥8,359</td><td>実購入 0 のため大半は付与分</td></tr>
+      <tr><td>訪問→登録 CVR</td><td class="num">≈ 18%</td><td>GA 新規 284 → 登録 51</td></tr>
     </table>
-    <div class="insight">現行の管理画面は<b>ボリューム系（累計・日次）の指標が中心</b>。継続率・転換率・チャーンといった<b>率（レート）系の指標</b>を足すと、健全性が一段見えるようになる。</div>
+
+    <h3>わかったこと</h3>
+    <div class="insight"><b>ローンチ直後の急立ち上がり。</b> 51 アカウント中 42 が直近7日。GA の 5/10 トラフィックの山と一致しており、何かの施策・露出が当たっている。</div>
+    <div class="insight"><b>pre-revenue。</b> 有料サブスク 0・実購入 0。"business" 11 は全て Founder 無料トライアル。Stripe 顧客化は 2 のみ（チェックアウトに来たが完了せず）。マネタイズはまだ起動していない。</div>
+    <div class="insight"><b>⚠️ 最大の異常値: オンボーディング完了 1 / 51。</b> onboarded_at がほぼ書かれていない。完了フローに到達していないか、計測自体が壊れている。<b>原因特定が最優先。</b> 登録後の活性化が起きていなければ、いくら登録を集めても穴から漏れ続ける。</div>
+    <div class="insight"><b>入口（訪問→登録）は機能。</b> CVR 約18% は悪くない。問題は登録の "後"（オンボード・課金）に集中している。</div>
   </div>
 
   <!-- 7. Traffic -->
@@ -371,6 +389,8 @@
   <!-- 9. Recommendations -->
   <div class="card" id="s9">
     <h2><span class="no">09</span>改善提案（優先度つき）</h2>
+    <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>オンボーディング完了の調査・改善</b>onboarded_at が記録されているのは 51 中 1（§6）。完了フローに到達していないか、計測自体が壊れている。原因特定が全施策の最優先 ── ここが漏れていると獲得を増やしても無駄になる。</div></div>
+    <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>マネタイズ導線を起動する</b>有料サブスク 0・実購入 0・Stripe 到達 2 のみ（§6）。Founder トライアル→有料の転換設計と、通常ユーザーの課金導線・計測を用意する。</div></div>
     <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>LP を「1 番刺さる訴求」に絞る</b>ファーストビューは単一の最強価値だけ、主 CTA も 1 つ（例「最初の AI を雇う」）。機能の幅は折りたたんで下部へ。</div></div>
     <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>紹介プログラムを表に出す</b>既存の紹介機構（紹介コード・紹介クレジット）を LP とアプリ内に露出。無料のバイラル獲得ループを起動する。</div></div>
     <div class="prio"><span class="pill h">HIGH</span><div class="body"><b>コアのチャット信頼性を継続的に堅牢化</b>エラー計測（どのくらいの頻度で生成失敗・固着が起きるか）を入れ、心臓部の品質を数値で監視する。</div></div>
@@ -393,7 +413,7 @@
   </div>
 
   <div class="foot">
-    このレポートは <b>MY AI Agent</b> のレポート機能サンプルです ・ ⌘P で PDF 保存できます ・ §7 は GA4 実データ反映済み ・ §6 は管理ダッシュボードのデータ取得後に更新予定
+    このレポートは <b>MY AI Agent</b> のレポート機能サンプルです ・ ⌘P で PDF 保存できます ・ §6・§7 とも実データ反映済み（Supabase / GA4）
   </div>
 
 </div>

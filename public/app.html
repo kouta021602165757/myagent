@@ -8914,11 +8914,13 @@ function renderMsgs(ag, forceScrollBottom){
   }
   // Build a parent-id → thread metadata map so each parent can render a
   // Slack-style "N 件の返信" indicator (count + last reply time + repliers).
+  // Also extract any artifact URLs from tool_log of thread children so the
+  // main view can show clickable "📄 [filename]" pills (Slack file-share UX).
   var threadMeta = {};
   (ag.history||[]).forEach(function(m){
     if(!(m && m.thread_parent_id)) return;
     var p = m.thread_parent_id;
-    if(!threadMeta[p]){ threadMeta[p] = { count:0, last_time:'', repliers:{} }; }
+    if(!threadMeta[p]){ threadMeta[p] = { count:0, last_time:'', repliers:{}, artifacts:[] }; }
     threadMeta[p].count++;
     if(m.time && m.time > threadMeta[p].last_time) threadMeta[p].last_time = m.time;
     // Track unique repliers (role + user_id pair) for the stacked avatars
@@ -8930,16 +8932,41 @@ function renderMsgs(ag, forceScrollBottom){
         bg: m.role === 'user' ? '#1f1f1f' : 'linear-gradient(135deg,#fda85e,#ea580c)',
       };
     }
+    // Extract artifacts (URLs produced by tools) for the main-view pills.
+    var tl = Array.isArray(m.tool_log) ? m.tool_log : [];
+    tl.forEach(function(t){
+      if(!t || !t.ok || !t.url) return;
+      var icon = '📄', label = t.title || t.name || 'artifact';
+      var nm = String(t.name||'');
+      if(nm === 'create_artifact'){ icon = '🎨'; label = t.title || 'LP'; }
+      else if(nm === 'edit_artifact'){ icon = '✏️'; label = t.title || 'edit'; }
+      else if(nm === 'generate_image'){ icon = '🖼️'; label = '画像'; }
+      else if(nm === 'edit_image'){ icon = '✂️'; label = '編集画像'; }
+      else if(nm === 'generate_video'){ icon = '🎬'; label = '動画'; }
+      else if(nm === 'generate_audio'){ icon = '🎵'; label = '音声'; }
+      else if(nm === 'generate_pdf'){ icon = '📄'; label = t.title || 'PDF'; }
+      else if(nm === 'generate_chart'){ icon = '📊'; label = 'グラフ'; }
+      else if(nm === 'generate_diagram'){ icon = '📐'; label = '図'; }
+      else if(nm === 'generate_qr'){ icon = '🔗'; label = 'QR'; }
+      else if(nm === 'wordpress_publish'){ icon = '📰'; label = t.title || 'WP'; }
+      else if(nm === 'generate_agent_promo_video'){ icon = '🎬'; label = 'プロモ'; }
+      threadMeta[p].artifacts.push({ icon: icon, label: String(label).slice(0,30), url: t.url });
+    });
   });
   ag._threadMeta = threadMeta;
   // Back-compat: keep _threadCounts so existing code paths (action row 💬 button) still work
   var threadCounts = {};
   Object.keys(threadMeta).forEach(function(k){ threadCounts[k] = threadMeta[k].count; });
   ag._threadCounts = threadCounts;
+  // On narrow viewports (≤ 900px) the drawer doesn't fit comfortably, so we
+  // render thread children INLINE (flat) — preserves Slack UX on desktop +
+  // ChatGPT-style flow on mobile. The "💬 N 件の返信" pill still shows on
+  // both for consistency.
+  var _wideEnoughForDrawer = (typeof window !== 'undefined' && window.innerWidth >= 900);
   inner.innerHTML = _nudgeHTML + ag.history.map(function(m,i){
-    // Thread children are hidden from the main timeline; they live in the
-    // thread drawer attached to the parent.
-    if(m && m.thread_parent_id) return '';
+    // Thread children are hidden from the main timeline ONLY on desktop;
+    // on mobile they show inline so the user always sees the AI reply.
+    if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';
     if(m.role === 'system'){
       return '<div class="sys-row"><span class="sys-pill">✨ '+esc(m.content||'')+'</span></div>';
     }
@@ -9278,10 +9305,26 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       return '<div class="thread-rep-av" style="background:'+r.bg+'">'+esc(r.avatar||'?')+'</div>';
     }).join('');
     var _lastT = _tmeta.last_time ? ' · '+L('最終返信','last reply')+' '+esc(_tmeta.last_time) : '';
+    // Slack-style artifact "file" pills: produced URLs surface in the main
+    // timeline next to the thread indicator, so users can open the LP / image
+    // / PDF without entering the drawer. event.stopPropagation prevents the
+    // thread-indicator's onclick from firing when the pill is clicked.
+    var _artifactsHtml = '';
+    if(Array.isArray(_tmeta.artifacts) && _tmeta.artifacts.length){
+      _artifactsHtml = _tmeta.artifacts.slice(0, 5).map(function(a){
+        return '<a href="'+esc(a.url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" '
+          + 'style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:2px 8px 2px 6px;font-size:11.5px;font-weight:700;color:var(--text);text-decoration:none;margin-left:4px;transition:all .12s" '
+          + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.color=\'var(--peach-dark)\'" '
+          + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.color=\'var(--text)\'">'
+          + '<span>'+esc(a.icon)+'</span><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.label)+'</span>'
+          + '</a>';
+      }).join('');
+    }
     threadIndicatorHTML = '<div class="thread-indicator" onclick="_openThread(\''+esc(_tid)+'\')">'
       + '<div class="thread-reps">'+_avHtml+'</div>'
       + '<span class="thread-count">'+_tmeta.count+L(' 件の返信',' replies')+'</span>'
       + '<span class="thread-last">'+_lastT+'</span>'
+      + _artifactsHtml
       + '</div>';
   }
   // Slack-style hover toolbar (top-right of each message). Shown only on

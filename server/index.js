@@ -4361,17 +4361,69 @@ const _CHROMIUM_LAUNCH_ARGS = [
 const GENERATED_DIR = path.join(PUBLIC_DIR, 'generated');
 try { fs.mkdirSync(GENERATED_DIR, { recursive: true }); } catch(e){}
 
+// ── Persist user-uploaded attachments to disk ─────────────────────
+// The client sends images / PDFs as {type, b64, name} (no URL). Anthropic
+// uses the b64 for vision; the saved chat history needs a URL so the
+// attachment survives a page reload. Write each blob to /generated/upload-*
+// and return a normalized shape suitable for agent.history. Texts are
+// stored inline (capped) since they're already small JSON.
+function _persistUserAttachments(images, texts){
+  const outImages = [];
+  const outTexts = [];
+  for(const img of (Array.isArray(images) ? images : [])){
+    if(!img) continue;
+    if(img.b64){
+      try {
+        const safeType = String(img.type || 'image/png');
+        const ext = (safeType.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi,'').toLowerCase().slice(0,6) || 'bin';
+        const fid = Date.now().toString(36) + '-' + crypto.randomBytes(4).toString('hex');
+        const filename = 'upload-' + fid + '.' + ext;
+        const outPath = path.join(GENERATED_DIR, filename);
+        fs.writeFileSync(outPath, Buffer.from(img.b64, 'base64'));
+        outImages.push({
+          url: '/generated/' + filename,
+          name: img.name || '',
+          type: safeType,
+          kind: img.kind || (safeType === 'application/pdf' ? 'pdf' : 'image'),
+        });
+      } catch(e){
+        console.warn('[upload-persist] failed:', e.message);
+      }
+    } else if(img.url){
+      // Already had a URL (data: or hosted) — keep as-is, no rewrite.
+      outImages.push({
+        url: img.url, name: img.name || '', type: img.type || '',
+        kind: img.kind || 'image', source: img.source || '',
+      });
+    }
+  }
+  for(const t of (Array.isArray(texts) ? texts : [])){
+    if(!t || typeof t.text !== 'string') continue;
+    outTexts.push({
+      kind: t.kind || 'text',
+      name: t.name || '',
+      source: t.source || '',
+      text: String(t.text).slice(0, 8000),
+    });
+  }
+  return { images: outImages, texts: outTexts };
+}
+
 // Sweep videos older than 24h every hour to keep the public/ disk bounded.
 setInterval(() => {
   try {
     const now = Date.now();
-    const ttl = 24 * 3600 * 1000;
+    const ttl = 24 * 3600 * 1000;            // videos: 24h
+    const uploadTtl = 14 * 24 * 3600 * 1000;  // user uploads: 14 days
     for(const f of fs.readdirSync(GENERATED_DIR)){
-      if(!/\.(mp4|webm)$/.test(f)) continue;
+      const isVid = /\.(mp4|webm)$/.test(f);
+      const isUpload = /^upload-/.test(f);
+      if(!isVid && !isUpload) continue;
       const p = path.join(GENERATED_DIR, f);
       try {
         const st = fs.statSync(p);
-        if((now - st.mtimeMs) > ttl) fs.unlinkSync(p);
+        const limit = isUpload ? uploadTtl : ttl;
+        if((now - st.mtimeMs) > limit) fs.unlinkSync(p);
       } catch(e){}
     }
   } catch(e){}
@@ -17065,9 +17117,17 @@ async function handleAPI(req,res,pathname,method,ip){
         const _newUid = 'u_'+crypto.randomBytes(4).toString('hex');
         const _newAid = 'a_'+crypto.randomBytes(4).toString('hex');
         const _aiThreadParent = _threadParent || _newUid;
+        // Persist attachments alongside the user msg so they survive reload.
+        // _persistUserAttachments writes b64 blobs to /generated/upload-* and
+        // returns {images:[{url,name,type,kind}], texts:[{...}]}.
+        const _persisted = _persistUserAttachments(body.images, body.texts);
         const _userMsgEntry = isGroup
-          ? {id:_newUid,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent}
-          : {id:_newUid,role:'user',content:message,time:ts,thread_parent_id:_threadParent};
+          ? {id:_newUid,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent,
+             ...(_persisted.images.length ? {images:_persisted.images} : {}),
+             ...(_persisted.texts.length ? {texts:_persisted.texts} : {})}
+          : {id:_newUid,role:'user',content:message,time:ts,thread_parent_id:_threadParent,
+             ...(_persisted.images.length ? {images:_persisted.images} : {}),
+             ...(_persisted.texts.length ? {texts:_persisted.texts} : {})};
         if(effectiveRegen){
           agent.history=[...(agent.history||[]),{id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent}];
         } else {
@@ -17649,9 +17709,15 @@ async function handleAPI(req,res,pathname,method,ip){
     const _newAid2 = 'a_'+crypto.randomBytes(4).toString('hex');
     // Slack-style threading: AI reply auto-threads under a new top-level user msg.
     const _aiThreadParent2 = _threadParent2 || _newUid2;
+    // Persist attachments (see streaming branch for rationale).
+    const _persisted2 = _persistUserAttachments(body.images, body.texts);
     const _userMsgEntry2 = isGroup
-      ? {id:_newUid2,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent2}
-      : {id:_newUid2,role:'user',content:message,time:ts,thread_parent_id:_threadParent2};
+      ? {id:_newUid2,role:'user',content:message,time:ts,user_id:user.id,user_name:speakerName,user_avatar:speakerInitial,thread_parent_id:_threadParent2,
+         ...(_persisted2.images.length ? {images:_persisted2.images} : {}),
+         ...(_persisted2.texts.length ? {texts:_persisted2.texts} : {})}
+      : {id:_newUid2,role:'user',content:message,time:ts,thread_parent_id:_threadParent2,
+         ...(_persisted2.images.length ? {images:_persisted2.images} : {}),
+         ...(_persisted2.texts.length ? {texts:_persisted2.texts} : {})};
     if(effectiveRegen){
       agent.history=[...(agent.history||[]),{id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent2}];
     } else {

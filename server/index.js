@@ -1309,25 +1309,52 @@ async function _notifyMentionsByEmail(host, agent, opts){
     const senderName = opts.sender_name || 'メンバー';
     const text       = String(opts.text || '');
     if(!text || text.length < 1) return;
-    // Extract @mentions: @<name> where name is up to 24 word-like chars
-    // (CJK / latin / digits / underscore). Ignore @AI / @ai.
-    const matches = (text.match(/(?:^|[\s　])[@＠]([^\s@＠]{1,24})/g) || [])
-      .map(m => m.replace(/^[\s　]*[@＠]/,'').replace(/[\s　]+$/,''))
-      .filter(t => t && !/^(ai|here|all|channel|everyone)$/i.test(t));
+    // Extract @mentions: whitelist-only chars so trailing punctuation like
+    // "@田中、" doesn't get swallowed into the captured name.
+    //   - a-zA-Z0-9_       latin alnum + underscore
+    //   - 3040-309f         Hiragana
+    //   - 30a0-30ff         Katakana
+    //   - 4e00-9fff         CJK Unified Ideographs (common kanji)
+    //   - ff10-ff19,21-3a,41-5a,61-7a  Fullwidth alnum (rare)
+    const MENTION_RE = /(?:^|[\s　])[@＠]([a-zA-Z0-9_぀-ゟ゠-ヿ一-鿿０-９Ａ-Ｚａ-ｚ]{1,24})/g;
+    const matches = [];
+    let _mm;
+    while((_mm = MENTION_RE.exec(text)) !== null){
+      const tok = (_mm[1] || '').trim();
+      if(tok && !/^(ai|here|all|channel|everyone)$/i.test(tok)) matches.push(tok);
+    }
     if(!matches.length) return;
-    // Map mentions to group members by name (case-insensitive prefix match).
+    // Resolve mentions → group members.
+    //   1. exact match (case-insensitive, whitespace-normalized) — preferred
+    //   2. member name is a 2+ char prefix of the mention   ("@田中太郎" → "田中")
+    //   3. mention is a 2+ char prefix of the member name   ("@田" → "田中")
+    // Without the 2-char floor, "@k" would match any member starting with "k".
     const _norm = (s) => String(s||'').toLowerCase().replace(/[\s　]+/g,'');
     const seenUids = new Set();
     const targets = [];
     for(const m of matches){
       const mn = _norm(m);
-      const hit = agent.members.find(mem => {
+      if(!mn) continue;
+      // First pass: exact match
+      let hit = agent.members.find(mem => {
         if(!mem || !mem.user_id) return false;
-        if(mem.user_id === senderUid) return false; // skip self
+        if(mem.user_id === senderUid) return false;
         if(seenUids.has(mem.user_id)) return false;
-        const nm = _norm(mem.name);
-        return nm && (nm === mn || nm.startsWith(mn) || mn.startsWith(nm));
+        return _norm(mem.name) === mn;
       });
+      // Second pass: prefix (with 2-char floor)
+      if(!hit){
+        hit = agent.members.find(mem => {
+          if(!mem || !mem.user_id) return false;
+          if(mem.user_id === senderUid) return false;
+          if(seenUids.has(mem.user_id)) return false;
+          const nm = _norm(mem.name);
+          if(!nm) return false;
+          if(mn.length >= 2 && nm.startsWith(mn)) return true;
+          if(nm.length >= 2 && mn.startsWith(nm)) return true;
+          return false;
+        });
+      }
       if(hit){
         seenUids.add(hit.user_id);
         targets.push(hit);
@@ -1335,7 +1362,11 @@ async function _notifyMentionsByEmail(host, agent, opts){
     }
     if(!targets.length) return;
     const groupId = agent.id;
-    const groupName = agent.name || 'グループ';
+    // Sanitize for the email subject header — strip CR/LF and other control
+    // chars to prevent header injection / API rejection by Resend.
+    const _safeForHeader = (s) => String(s || '').replace(/[ -\r\n]+/g, ' ').trim().slice(0, 80);
+    const groupName     = _safeForHeader(agent.name || 'グループ');
+    const safeSenderName = _safeForHeader(senderName);
     const previewText = text.length > 200 ? text.slice(0, 200) + '…' : text;
     const appUrl = (APP_URL || 'https://myaiagents.agency').replace(/\/$/, '');
     for(const tgt of targets){

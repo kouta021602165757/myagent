@@ -9355,9 +9355,12 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
           + '</a>';
       }).join('');
     }
+    // Defensive: if count was corrupted (race condition, malformed history)
+    // fall back to 0 so we never render "NaN 件の返信" in the UI.
+    var _safeCount = (typeof _tmeta.count === 'number' && _tmeta.count > 0) ? _tmeta.count : 0;
     threadIndicatorHTML = '<div class="thread-indicator" onclick="_openThread(\''+esc(_tid)+'\')">'
       + '<div class="thread-reps">'+_avHtml+'</div>'
-      + '<span class="thread-count">'+_tmeta.count+L(' 件の返信',' replies')+'</span>'
+      + '<span class="thread-count">'+_safeCount+L(' 件の返信',' replies')+'</span>'
       + '<span class="thread-last">'+_lastT+'</span>'
       + _artifactsHtml
       + '</div>';
@@ -11635,6 +11638,15 @@ async function _sendMsgStream(ag, text, imgs, texts){
     window._huddleOn[ag.id] = false;
     _updateChromeTool(ag);
   }
+  // If a previous SSE is still running, abort it cleanly before starting
+  // a new one. Without this, the old request keeps streaming in the
+  // background and its done/error event eventually patches the wrong bubble
+  // (the latest one, via ag.history[ag.history.length-1]) — leaving the
+  // ACTUAL old bubble stuck in "🍑 生成中…" forever.
+  if(_chatStreamCtrl){
+    try { _chatStreamCtrl.abort(); } catch(e){}
+    _chatStreamCtrl = null;
+  }
   // Per-call AbortController so the user can hit ⏹ to stop mid-stream.
   const ctrl = new AbortController();
   _chatStreamCtrl = ctrl;
@@ -11969,15 +11981,21 @@ async function _sendMsgStream(ag, text, imgs, texts){
     throw new Error(errorMsg);
   }
   // Fallback: stream ended without a 'done' SSE event (Render edge cut,
-  // Anthropic max_tokens, network blip etc.). The placeholder bubble would
-  // otherwise stay in `streaming:true` forever with no Continue button. Mark
-  // it truncated so the ▶ 続きを書く action appears.
-  const _lastStreaming = ag.history[ag.history.length - 1];
-  if(_lastStreaming && _lastStreaming.streaming){
-    _lastStreaming.content = (acc || '').trim() || (isJa ? '応答が途中で切れました' : 'Reply was cut short');
-    _lastStreaming.streaming = false;
-    _lastStreaming.truncated = true;
+  // Anthropic max_tokens, network blip, user-triggered abort etc.). The
+  // placeholder bubble would otherwise stay in `streaming:true` forever with
+  // no Continue button. Mark it truncated so the ▶ 続きを書く action appears.
+  //
+  // CRITICAL: use streamIdx (this closure's own bubble) — NOT
+  // ag.history.length-1. If the user already sent the next message in the
+  // meantime, "the last entry" is the NEW placeholder. Fixing that would
+  // leave THIS run's bubble stuck "生成中" forever.
+  const _stuck = ag.history[streamIdx];
+  if(_stuck && _stuck.streaming){
+    _stuck.content = (acc || '').trim() || (isJa ? '応答が途中で切れました' : 'Reply was cut short');
+    _stuck.streaming = false;
+    _stuck.truncated = true;
     renderMsgs(ag);
+    if(window._activeThreadParent){ try { _renderThreadDrawer(); } catch(e){} }
   }
 }
 

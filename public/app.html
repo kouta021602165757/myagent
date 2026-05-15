@@ -165,6 +165,15 @@ html[data-theme="dark"] .msgs{background:#0d0d10;}
 /* Dark theme — cookie banner readability */
 html[data-theme="dark"] #cookieBanner{box-shadow:0 12px 40px rgba(0,0,0,.6);}
 html,body{height:100%;font-family:var(--sans);background:var(--cream);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden;}
+/* ── UI scale ──────────────────────────────────────────────
+   Default 90% — feedback was "圧迫感がある / 大きい". Use zoom (not
+   transform:scale) so layout / scrollbars / viewport units all adapt.
+   Override per-user via Settings → 表示倍率 (saved in localStorage as
+   --ui-scale on :root). Mobile keeps 100% — small screens already
+   constrained. */
+@media(min-width:701px){
+  body{ zoom: var(--ui-scale, 0.9); }
+}
 button{font-family:var(--sans);cursor:pointer;border:none;transition:all .17s cubic-bezier(.4,0,.2,1);}
 input,textarea{font-family:var(--sans);}
 ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--fog);border-radius:2px;}
@@ -650,6 +659,24 @@ input,textarea{font-family:var(--sans);}
 }
 .m:hover{background:rgba(29,28,29,.035);}
 .m.u, .m.a{align-items:flex-start;}  /* identical layout */
+
+/* ── Slack-style reply indent ───────────────────────────────
+   AI messages that directly answer the immediately-previous user
+   message get rendered as an inline reply: 36px left indent + a thin
+   vertical line on the left, smaller avatar. Makes Q→A pairs visually
+   tied together (Slack thread-style). */
+.m.a.reply{ padding-left:54px; }
+.m.a.reply::before{
+  content:''; position:absolute; left:24px; top:6px; bottom:6px;
+  width:2px; border-radius:1px;
+  background:linear-gradient(180deg, rgba(251,146,60,.4), rgba(251,146,60,.08));
+}
+.m.a.reply .m-av{ width:30px; height:30px; font-size:13px; }
+.m.a.reply .m-name{ font-size:13.5px; }
+@media(max-width:480px){
+  .m.a.reply{ padding-left:38px; }
+  .m.a.reply::before{ left:18px; }
+}
 
 .m-av-wrap{flex-shrink:0;}
 .m-av{
@@ -3840,6 +3867,16 @@ body{color:#f0f0f8;}
                 <div class="s-theme-nm">日本語</div>
                 <div class="s-theme-sub">Japanese</div>
               </button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">🔍 表示倍率</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">大きすぎる / 圧迫感がある時は縮小してください。スマホは常に 100%。</div>
+            <div class="row3 s-theme-grid">
+              <button class="s-theme-c" data-uiscale="0.75" onclick="setUiScale(75);_markUiScale(75)"><div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">75%</div><div class="s-theme-nm">小</div></button>
+              <button class="s-theme-c" data-uiscale="0.9"  onclick="setUiScale(90);_markUiScale(90)"><div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--peach-dark);font-weight:800">90%</div><div class="s-theme-nm">標準</div><div class="s-theme-sub">推奨</div></button>
+              <button class="s-theme-c" data-uiscale="1.0"  onclick="setUiScale(100);_markUiScale(100)"><div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">100%</div><div class="s-theme-nm">大</div></button>
             </div>
           </section>
 
@@ -7121,6 +7158,31 @@ function _enableRuntimeTranslator(){
 }
 
 /* ── Boot ──────────────────────────────────────────── */
+// Apply saved UI zoom EARLY (before any rendering) so we don't flash at
+// default size. zoom is a CSS variable so the media query in <style> picks
+// it up automatically.
+(function _applyUiScaleEarly(){
+  try {
+    var s = parseFloat(localStorage.getItem('ui_scale') || '0.9');
+    if(s >= 0.6 && s <= 1.2){
+      document.documentElement.style.setProperty('--ui-scale', String(s));
+    }
+  } catch(e){}
+})();
+// Public API for the Settings panel.
+window.setUiScale = function(pct){
+  var n = Math.max(60, Math.min(120, parseInt(pct, 10) || 90)) / 100;
+  document.documentElement.style.setProperty('--ui-scale', String(n));
+  try { localStorage.setItem('ui_scale', String(n)); } catch(e){}
+};
+// Highlight the active scale button in the Settings panel.
+window._markUiScale = function(pct){
+  var n = String(Math.max(60, Math.min(120, parseInt(pct, 10) || 90)) / 100);
+  document.querySelectorAll('[data-uiscale]').forEach(function(el){
+    if(el.getAttribute('data-uiscale') === n) el.classList.add('sel');
+    else el.classList.remove('sel');
+  });
+};
 document.addEventListener('DOMContentLoaded',async()=>{
   // i18n apply
   const _applyI18n=()=>{
@@ -9036,7 +9098,16 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       agentAccent = _agentAccent(ag);
     }
   }
-  const cls = 'm '+(isU?(isMyMsg?'u':'u other'):'a');
+  // Slack-style reply: AI message that directly answers the immediately-
+  // previous user message gets a left-indent + vertical line.
+  // Don't apply to: huddle bubbles (already have their own visual), error
+  // bubbles, summary cards, or messages with thread_parent_id (different UI).
+  let _isReply = false;
+  if(!isU && idx > 0 && ag && Array.isArray(ag.history) && !huddleMember && !huddleSummary && !(raw && raw.is_error) && !(raw && raw.thread_parent_id)){
+    const _prev = ag.history[idx-1];
+    if(_prev && _prev.role === 'user' && !_prev.thread_parent_id) _isReply = true;
+  }
+  const cls = 'm '+(isU?(isMyMsg?'u':'u other'):'a'+(_isReply?' reply':''));
   let imgHtml='';
   if(images && images.length){
     imgHtml = images.map(function(att){
@@ -17293,6 +17364,11 @@ function openSettings(){
   var firstNav=document.querySelector('.snav-item[data-tab="account"]');
   if(firstNav) firstNav.classList.add('active');
   document.querySelectorAll('.snav-pane').forEach(p=>{p.style.display = p.id==='s-account' ? '' : 'none';});
+  // Highlight current UI scale (defaults to 90%).
+  try {
+    var saved = parseFloat(localStorage.getItem('ui_scale') || '0.9');
+    window._markUiScale(Math.round(saved * 100));
+  } catch(e){}
 
   if(me){
     const av = document.getElementById('sAv');

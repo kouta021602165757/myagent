@@ -429,9 +429,34 @@ const DB={
     throw new Error('Supabase create failed after column-drop retries');
   },
   async save(user){
+    // ── Sanitize: never persist streaming:true on history entries ──
+    // An interrupted SSE leaves a stale "🍑 生成中…" bubble in the in-memory
+    // agent.history. Without this sanitize step, the chat handler's append
+    // pattern (history = [...existing, new]) preserves the bad entry on
+    // every subsequent save → the stuck bubble lives forever in the DB.
+    // Run on BOTH in-memory user (so subsequent reads are clean) and the
+    // PATCH payload (so the DB is definitively cleaned).
+    const _sanitizeAgentHistories = (u) => {
+      if(!u || !Array.isArray(u.agents)) return;
+      for(const ag of u.agents){
+        if(!ag || !Array.isArray(ag.history)) continue;
+        for(const m of ag.history){
+          if(m && m.streaming){
+            m.streaming = false;
+            m.truncated = true;
+            if(!m.content || !String(m.content).trim()){
+              m.content = '(応答が途中で切れました)';
+              m.was_stopped = true;
+            }
+          }
+        }
+      }
+    };
+    _sanitizeAgentHistories(user);
     if(!USE_SUPA){LDB.upd(user);return;}
     const payload = {...user};
     delete payload.id; // never update primary key
+    _sanitizeAgentHistories(payload);
     for(let attempt=0; attempt<12; attempt++){
       const r = await sbReq('PATCH','users','?id=eq.'+user.id,payload);
       if(r.s<400){

@@ -8222,6 +8222,104 @@ async function fetchJoinedGroups(){
   }catch(e){ _joinedGroups = []; }
 }
 
+/* Per-agent tasks popout (案 B mini) — clicked from the "📋 タスク N" pill
+ * in the chat header. Floats below the pill, lists this agent's tasks
+ * with ▶ run buttons. Click outside closes. */
+window._openTasksPopout = function(anchor, agentId){
+  // Toggle: if already open for same agent, close.
+  var existing = document.getElementById('tasksPopout');
+  if(existing){
+    var sameAgent = existing.getAttribute('data-agent') === agentId;
+    existing.remove();
+    if(sameAgent) return;
+  }
+  var ag = (agents||[]).find(function(a){return a.id===agentId;});
+  if(!ag) return;
+  var tasks = (ag.open_tasks||[]).filter(function(t){return t && t.status!=='done';});
+  var rect = anchor.getBoundingClientRect();
+  var pop = document.createElement('div');
+  pop.id = 'tasksPopout';
+  pop.setAttribute('data-agent', agentId);
+  pop.style.cssText = 'position:fixed;top:'+(rect.bottom + 6)+'px;left:'+rect.left+'px;background:#fff;border:1px solid var(--wire);border-radius:11px;padding:8px;width:320px;max-height:60vh;overflow-y:auto;box-shadow:0 14px 36px rgba(0,0,0,.14);z-index:9990;font-family:inherit';
+  var inner = '<div style="padding:8px 10px 10px;font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:8px">'
+    + '<span style="color:var(--peach-dark)">' + esc(ag.name||'AI') + '</span>'
+    + ' のタスク'
+    + '<span style="margin-left:auto;font-size:10px;color:var(--text3)">' + tasks.length + ' 件</span>'
+    + '</div>';
+  if(!tasks.length){
+    inner += '<div style="padding:14px;font-size:12px;color:var(--text3);text-align:center;font-style:italic">未対応のタスクはありません</div>';
+  } else {
+    inner += tasks.slice(0,8).map(function(t){
+      var run = (t.status === 'progress' || t.status === 'started')
+        ? '<span style="background:#fef3c7;color:#a16207;border:1px solid #fde047;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">⏳</span>'
+        : '<button onclick="_runHomeTask(\''+esc(agentId)+'\',\''+esc(t.id)+'\');document.getElementById(\'tasksPopout\').remove()" style="background:var(--peach);color:#fff;border:0;border-radius:6px;padding:4px 10px;font-weight:800;font-size:10.5px;cursor:pointer;font-family:inherit">▶</button>';
+      return '<div style="display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border-radius:8px;cursor:default" onmouseover="this.style.background=\'var(--cream)\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<div onclick="_markHomeTaskDone(\''+esc(agentId)+'\',\''+esc(t.id)+'\',event)" style="width:16px;height:16px;border-radius:5px;border:2px solid var(--wire2);flex-shrink:0;cursor:pointer;margin-top:2px" title="完了"></div>'
+        + '<div style="flex:1;min-width:0;font-size:12.5px;font-weight:700;line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+esc(t.title||'')+'</div>'
+        + run
+        + '</div>';
+    }).join('');
+  }
+  inner += '<div style="border-top:1px solid var(--wire);padding-top:6px;margin-top:6px"><div onclick="goHome();document.getElementById(\'tasksPopout\').remove()" style="padding:7px 10px;font-size:11px;color:var(--peach-dark);font-weight:800;cursor:pointer;text-align:center;border-radius:7px" onmouseover="this.style.background=\'var(--peach-soft)\'" onmouseout="this.style.background=\'transparent\'">🏠 Home で全タスク一覧を見る →</div></div>';
+  pop.innerHTML = inner;
+  document.body.appendChild(pop);
+  // Click outside → close
+  setTimeout(function(){
+    var off = function(e){
+      if(pop.contains(e.target) || (anchor && anchor.contains && anchor.contains(e.target))) return;
+      pop.remove();
+      document.removeEventListener('mousedown', off, true);
+    };
+    document.addEventListener('mousedown', off, true);
+  }, 50);
+};
+
+/* Hover-bar "✓ タスクに" — convert this message to a task on the active
+ * agent. Uses the message body text as the task title (truncated to fit). */
+window._addMsgToTasks = async function(btn){
+  if(!activeId) return;
+  var ag = (agents||[]).find(function(a){return a.id===activeId;});
+  if(!ag) return;
+  var row = btn.closest('.m');
+  if(!row) return;
+  var bodyEl = row.querySelector('.m-body');
+  var text = bodyEl ? (bodyEl.innerText || bodyEl.textContent || '') : '';
+  text = text.trim();
+  if(!text){ showToast('テキストがありません','ng'); return; }
+  var title = text.split('\n')[0].slice(0, 80) || text.slice(0, 80);
+  try {
+    await api('POST', '/api/agents/'+activeId+'/tasks', { title });
+    // Reflect locally + bump pill count without full reload.
+    ag.open_tasks = Array.isArray(ag.open_tasks) ? ag.open_tasks : [];
+    ag.open_tasks.push({
+      id: 'tsk_local_'+Math.random().toString(36).slice(2,8),
+      title, status:'started', progress_pct:0,
+      started_at:new Date().toISOString(),
+      last_touched_at:new Date().toISOString(),
+    });
+    showToast('✓ タスクに追加: '+title.slice(0,30)+(title.length>30?'…':''),'ok');
+    // Visual feedback: temporarily mark the button as success.
+    btn.textContent = '✓✓';
+    btn.style.color = '#22c55e';
+    setTimeout(function(){ btn.textContent = '✓'; btn.style.color = ''; }, 1200);
+    // Refresh chat-top so the "📋 タスク N" pill updates.
+    if(typeof openAgent === 'function'){
+      // Just re-render chat top (lighter than full openAgent).
+      try {
+        var ct = document.getElementById('chatTop');
+        if(ct){
+          var rerender = (window._chatTopRerender ||
+            function(){ try { openAgent(activeId); } catch(e){} });
+          // For now just re-call openAgent — cheap and correct.
+          // (Skip to avoid scroll jump if it becomes an issue.)
+        }
+      } catch(e){}
+    }
+  } catch(e){
+    showToast((e.message||'追加に失敗'),'ng');
+  }
+};
+
 /* Home tasks panel — aggregates agent.open_tasks across every owned
  * agent so the user opens the app and sees "今日やる事". Tasks are
  * auto-extracted by the server's _afterTurnExtract from chat content.
@@ -8798,17 +8896,29 @@ async function openAgent(id){
   var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit">'+_mInfo.lbl+'</button>');
   // Agent-intelligence indicators — KPI count + active task count. Clicking
   // opens the unified Agent Profile panel. Group chats hide these.
+  // Tasks pill is separated out so it's always discoverable as a primary
+  // action — clicking it pops out this agent's tasks with a 1-click
+  // "▶ 実行" path. Even at 0 tasks we show a faint hint so users know
+  // there's a task surface they can use.
+  var taskN = Array.isArray(ag.open_tasks) ? ag.open_tasks.filter(function(t){return t && t.status!=='done';}).length : 0;
+  var tasksPill = '';
+  if(!ag._is_joined_group){
+    var taskLabel = taskN > 0 ? ('📋 タスク '+taskN) : '📋 タスク';
+    var taskStyle = taskN > 0
+      ? 'font-size:10.5px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid #fed7aa;padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em'
+      : 'font-size:10px;font-weight:700;color:var(--text3);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.7';
+    tasksPill = '<button onclick="event.stopPropagation(); _openTasksPopout(this, \''+ag.id+'\')" title="'+L('このエージェントのタスク一覧','Tasks for this agent')+'" style="'+taskStyle+'">'+taskLabel+'</button>';
+  }
+  // Intel pill — KPIs / memories only (tasks moved out above).
   var intelPill = '';
   if(!isGroup && !ag._is_joined_group){
     var kpiN  = Array.isArray(ag.kpis) ? ag.kpis.length : 0;
-    var taskN = Array.isArray(ag.open_tasks) ? ag.open_tasks.filter(function(t){return t && t.status!=='done';}).length : 0;
     var memN  = Array.isArray(ag.memories) ? ag.memories.length : 0;
-    if(kpiN + taskN + memN > 0){
+    if(kpiN + memN > 0){
       var parts = [];
-      if(taskN) parts.push('📋 '+taskN);
       if(kpiN)  parts.push('🎯 '+kpiN);
       if(memN)  parts.push('🧠 '+memN);
-      intelPill = '<button onclick="event.stopPropagation(); openAgentProfile(\''+ag.id+'\')" title="'+L('AI が憶えてる事 / 目標 / 案件','What this AI remembers / goals / tasks')+'" style="font-size:10px;font-weight:700;color:var(--text2);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit">'+parts.join(' · ')+'</button>';
+      intelPill = '<button onclick="event.stopPropagation(); openAgentProfile(\''+ag.id+'\')" title="'+L('AI が憶えてる事 / 目標','What this AI remembers / goals')+'" style="font-size:10px;font-weight:700;color:var(--text2);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit">'+parts.join(' · ')+'</button>';
     }
   }
   document.getElementById('chatTop').innerHTML=
@@ -8816,7 +8926,7 @@ async function openAgent(id){
     '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
       '<div class="ct-name"><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
-      '<div class="ct-pills">'+topPills+' '+modelPill+' '+intelPill+' '+ctxPill+'</div>'+
+      '<div class="ct-pills">'+topPills+' '+modelPill+' '+tasksPill+' '+intelPill+' '+ctxPill+'</div>'+
     '</div>'+
     '<div class="ct-actions">'+ actsHTML +'</div>';
   // Hide share card whenever agent changes
@@ -9591,6 +9701,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     hoverBarHTML = '<div class="hover-bar">'
       + (isGroup ? '<button class="hb-b" onclick="_openReactionPicker(this.closest(\'.m\').querySelector(\'.reaction.add\'), event)" title="'+L('リアクションを追加','Add reaction')+'">😀</button>' : '')
       + hbThreadBtn
+      + '<button class="hb-b" onclick="_addMsgToTasks(this)" title="'+L('タスクに追加','Add to tasks')+'">✓</button>'
       + '<button class="hb-b" onclick="copyMsgText(this.closest(\'.m\').querySelector(\'.m-body\'))" title="'+L('コピー','Copy')+'">📋</button>'
       + (raw && raw.pinned ? '<button class="hb-b hb-on" onclick="togglePin(this.closest(\'.m\').querySelector(\'.pin\'))" title="'+L('ピン留めを解除','Unpin')+'">📌</button>' : '<button class="hb-b" onclick="togglePin(this.closest(\'.m\').querySelector(\'.pin\'))" title="'+L('ピン留め','Pin')+'">📌</button>')
       + '<button class="hb-b" onclick="this.closest(\'.m\').classList.toggle(\'show-acts\')" title="'+L('その他','More')+'">⋯</button>'

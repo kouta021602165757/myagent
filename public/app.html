@@ -4834,8 +4834,11 @@ body{color:#f0f0f8;}
 
 /* Reactions */
 .m-reactions{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;padding:0 4px;}
-.m-reactions.empty{opacity:0;transition:opacity .15s;}
-.m:hover .m-reactions.empty{opacity:1;}
+/* Empty reactions: no layout space when idle. Hover reveals the "+" only
+   when there's a real reason to add one. (opacity:0 used to leave a
+   ghost gap below every message — fix.) */
+.m-reactions.empty{display:none;}
+.m:hover .m-reactions.empty{display:flex;}
 .reaction{
   display:inline-flex;align-items:center;gap:3px;
   background:#fff;border:.5px solid var(--wire2);color:var(--text);

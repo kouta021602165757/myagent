@@ -1295,6 +1295,95 @@ async function notifyGroupMembers(host, agent, opts){
   }
 }
 
+// ── @MENTION → EMAIL NOTIFICATION ─────────────────────────────
+// When a user @mentions someone by name in a group chat, email that person
+// (Slack-style "you were mentioned" notification). Resolves names against
+// group.members[], throttles to 1 email per (sender, recipient, group) per
+// 5 min, and honors per-user opt-out (user.mention_email_pref === 'off').
+const _mentionEmailThrottle = new Map(); // key: senderUid+recipientUid+groupId → ts(ms)
+const _MENTION_EMAIL_THROTTLE_MS = 5 * 60 * 1000; // 5 min
+async function _notifyMentionsByEmail(host, agent, opts){
+  try {
+    if(!agent || !agent.is_group || !Array.isArray(agent.members)) return;
+    const senderUid  = opts.sender_user_id || '';
+    const senderName = opts.sender_name || 'メンバー';
+    const text       = String(opts.text || '');
+    if(!text || text.length < 1) return;
+    // Extract @mentions: @<name> where name is up to 24 word-like chars
+    // (CJK / latin / digits / underscore). Ignore @AI / @ai.
+    const matches = (text.match(/(?:^|[\s　])[@＠]([^\s@＠]{1,24})/g) || [])
+      .map(m => m.replace(/^[\s　]*[@＠]/,'').replace(/[\s　]+$/,''))
+      .filter(t => t && !/^(ai|here|all|channel|everyone)$/i.test(t));
+    if(!matches.length) return;
+    // Map mentions to group members by name (case-insensitive prefix match).
+    const _norm = (s) => String(s||'').toLowerCase().replace(/[\s　]+/g,'');
+    const seenUids = new Set();
+    const targets = [];
+    for(const m of matches){
+      const mn = _norm(m);
+      const hit = agent.members.find(mem => {
+        if(!mem || !mem.user_id) return false;
+        if(mem.user_id === senderUid) return false; // skip self
+        if(seenUids.has(mem.user_id)) return false;
+        const nm = _norm(mem.name);
+        return nm && (nm === mn || nm.startsWith(mn) || mn.startsWith(nm));
+      });
+      if(hit){
+        seenUids.add(hit.user_id);
+        targets.push(hit);
+      }
+    }
+    if(!targets.length) return;
+    const groupId = agent.id;
+    const groupName = agent.name || 'グループ';
+    const previewText = text.length > 200 ? text.slice(0, 200) + '…' : text;
+    const appUrl = (APP_URL || 'https://myaiagents.agency').replace(/\/$/, '');
+    for(const tgt of targets){
+      // Throttle: skip if we already emailed this pair recently.
+      const key = senderUid + '|' + tgt.user_id + '|' + groupId;
+      const last = _mentionEmailThrottle.get(key) || 0;
+      if(Date.now() - last < _MENTION_EMAIL_THROTTLE_MS) continue;
+      // Fetch recipient (need email + opt-out pref).
+      const recipient = await DB.findBy('id', tgt.user_id);
+      if(!recipient || !recipient.email) continue;
+      // Opt-out: per-user setting, default ON.
+      if(recipient.mention_email_pref === 'off') continue;
+      const subj = '🔔 ' + senderName + ' さんがあなたをメンションしました — ' + groupName;
+      const settingsUrl = appUrl + '/app.html#settings/notif';
+      const chatUrl = appUrl + '/app.html?agent=' + encodeURIComponent(groupId);
+      const html = '<div style="font-family:system-ui,-apple-system,Segoe UI,Hiragino Sans,Noto Sans JP,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#27272a">'
+        + '<div style="font-size:13px;color:#71717a;margin-bottom:6px">🔔 ' + _xmlEscape(groupName) + '</div>'
+        + '<div style="font-size:17px;font-weight:800;margin-bottom:14px;color:#18181b">'
+        +   _xmlEscape(senderName) + ' さんがあなたをメンションしました'
+        + '</div>'
+        + '<div style="background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #fb923c;border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.55;white-space:pre-wrap;margin-bottom:18px;color:#1c1917">'
+        +   _xmlEscape(previewText)
+        + '</div>'
+        + '<a href="' + _xmlEscape(chatUrl) + '" style="display:inline-block;background:#fb923c;color:#fff;text-decoration:none;font-weight:800;padding:11px 22px;border-radius:9px;font-size:13.5px">このメッセージに返信 →</a>'
+        + '<div style="margin-top:30px;padding-top:14px;border-top:1px solid #e4e4e7;font-size:11px;color:#a1a1aa;line-height:1.55">'
+        +   'このメールは <b>'+ _xmlEscape(groupName) +'</b> グループでメンションされたため送信されました。<br>'
+        +   '<a href="' + _xmlEscape(settingsUrl) + '" style="color:#9a3412">メール通知をオフにする</a>'
+        + '</div>'
+        + '</div>';
+      sendEmail(recipient.email, subj, html, { fromName: senderName + ' (MY AI Agent)' })
+        .then(() => { _mentionEmailThrottle.set(key, Date.now()); })
+        .catch(e => { console.warn('[mention-email] failed:', e.message); });
+    }
+  } catch(e){
+    console.warn('[mention-email] error:', e.message);
+  }
+}
+
+// Periodic cleanup of stale throttle entries (every 10 min).
+setInterval(() => {
+  try {
+    const cutoff = Date.now() - _MENTION_EMAIL_THROTTLE_MS;
+    for(const [k, ts] of _mentionEmailThrottle){
+      if(ts < cutoff) _mentionEmailThrottle.delete(k);
+    }
+  } catch(e){}
+}, 10 * 60 * 1000);
+
 // ── EMAIL (Resend) ────────────────────────────────────────────
 // fromName: optional human-friendly display name. Defaults to "MY AI Agent"
 // for system mails (verify, reset, daily report). The send_email tool passes
@@ -11923,6 +12012,18 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{agent:ag});
   }
 
+  // ── Notification preferences ───────────────────────────────
+  // PUT /api/me/notif-pref → body { mention_email: 'on'|'off' }
+  // Currently just toggles email-on-mention. Easy to extend later.
+  if(pathname === '/api/me/notif-pref' && method === 'PUT'){
+    const b = await readBody(req);
+    const v = String((b && b.mention_email) || '').toLowerCase();
+    if(v !== 'on' && v !== 'off') return jres(res, 400, { error: 'mention_email must be "on" or "off"' });
+    user.mention_email_pref = v;
+    await DB.save(user);
+    return jres(res, 200, { ok: true, mention_email_pref: v });
+  }
+
   // ── Notes (free-form memo pages) ───────────────────────────
   // User-level notebook. Distinct from AI memories (user.memories /
   // agent.memories) — these are plain documents the user writes themselves.
@@ -16476,6 +16577,12 @@ async function handleAPI(req,res,pathname,method,ip){
         is_ai_reply: false,
         is_mention: false,
       }).catch(()=>{});
+      // Email notification: @<name> mentions inside the message → email them.
+      _notifyMentionsByEmail(payerUser, agent, {
+        sender_user_id: user.id,
+        sender_name: speakerName,
+        text: message,
+      }).catch(()=>{});
       return jres(res,200,{ok:true, ai_replied:false, reply:'', balance_jpy: payerUser.balance_jpy});
     }
 
@@ -16982,6 +17089,13 @@ async function handleAPI(req,res,pathname,method,ip){
             text: reply,
             is_ai_reply: true,
             is_mention: aiMentioned,
+          }).catch(()=>{});
+          // Email any humans mentioned in the user's ORIGINAL message
+          // (not the AI's reply — the AI itself wouldn't @-mention humans).
+          _notifyMentionsByEmail(payerUser, agent, {
+            sender_user_id: user.id,
+            sender_name: speakerName,
+            text: message,
           }).catch(()=>{});
         }
         // Surface stop_reason so the client can show a "▶ 続きを書く" button
@@ -17558,6 +17672,12 @@ async function handleAPI(req,res,pathname,method,ip){
         text: reply,
         is_ai_reply: true,
         is_mention: aiMentioned,
+      }).catch(()=>{});
+      // Email any humans mentioned in the user's ORIGINAL message.
+      _notifyMentionsByEmail(payerUser, agent, {
+        sender_user_id: user.id,
+        sender_name: speakerName,
+        text: message,
       }).catch(()=>{});
     }
     if(sse){

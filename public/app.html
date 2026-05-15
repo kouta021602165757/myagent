@@ -3795,7 +3795,18 @@ body{color:#f0f0f8;}
           <div class="spane-sub" data-i18n="sNotifSub">どんな通知をいつ受け取るかを管理します。設定はこのブラウザに保存されます。</div>
 
           <section class="spane-section">
-            <div class="spane-section-h" data-i18n="sNotifEmail">メール通知</div>
+            <div class="spane-section-h">🔔 グループ通知 (有効)</div>
+            <div class="s-toggle" id="mentionEmailToggle" onclick="_toggleMentionEmail()" style="cursor:pointer">
+              <div class="lbl">
+                <div class="t">@メンションでメール通知</div>
+                <div class="d">グループで @&lt;あなたの名前&gt; とメンションされた時、メールで通知 (5 分内に同じ送信元からの連投は 1 通のみ)</div>
+              </div>
+              <div class="s-sw" id="mentionEmailSw"></div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sNotifEmail">その他メール通知</div>
             <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifBalT">残高アラート</div><div class="d" data-i18n="sNotifBalD">残高が $1.00 を下回ったらメール</div></div><div class="s-sw" data-pref="notif_balance"></div></div>
             <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifSubT">月額プラン更新通知</div><div class="d" data-i18n="sNotifSubD">サブスク更新の数日前に予告</div></div><div class="s-sw" data-pref="notif_renewal"></div></div>
             <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifRcptT">領収書（請求書）</div><div class="d" data-i18n="sNotifRcptD">決済完了時に PDF を自動送付</div></div><div class="s-sw" data-pref="notif_receipt"></div></div>
@@ -7182,6 +7193,26 @@ function _enableRuntimeTranslator(){
     }
   } catch(e){}
 })();
+// Toggle "email me when mentioned in a group" — saved on server.
+window._toggleMentionEmail = async function(){
+  var sw = document.getElementById('mentionEmailSw');
+  if(!sw) return;
+  var currentlyOn = sw.classList.contains('on');
+  var next = currentlyOn ? 'off' : 'on';
+  // Optimistic UI
+  sw.classList.toggle('on', next === 'on');
+  try {
+    await api('PUT', '/api/me/notif-pref', { mention_email: next });
+    if(me) me.mention_email_pref = next;
+    showToast(next === 'on'
+      ? (isJa?'✓ メンション時にメール通知 ON':'✓ Email-on-mention ON')
+      : (isJa?'✓ メール通知 OFF':'✓ Email-on-mention OFF'), 'ok');
+  } catch(e){
+    sw.classList.toggle('on', currentlyOn); // rollback on error
+    showToast((e.message||'保存失敗'),'ng');
+  }
+};
+
 // Public API for the Settings panel.
 window.setUiScale = function(pct){
   var n = Math.max(60, Math.min(120, parseInt(pct, 10) || 90)) / 100;
@@ -17455,6 +17486,14 @@ function openSettings(){
   try {
     var saved = parseFloat(localStorage.getItem('ui_scale') || '0.9');
     window._markUiScale(Math.round(saved * 100));
+  } catch(e){}
+  // Sync the mention-email toggle from server state.
+  try {
+    var sw = document.getElementById('mentionEmailSw');
+    if(sw){
+      var on = (me && me.mention_email_pref !== 'off'); // default ON
+      sw.classList.toggle('on', on);
+    }
   } catch(e){}
 
   if(me){

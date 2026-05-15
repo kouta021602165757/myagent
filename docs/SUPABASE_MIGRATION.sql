@@ -122,6 +122,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_attribution jsonb;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS lang                  text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sheets_connected boolean DEFAULT false;
 
+-- ── 通知環境設定 ────────────────────────────────────────────────
+-- グループで @<名前> でメンションされた時にメール通知を送るかどうか
+-- 値: 'on' (デフォルト) | 'off'
+-- 未設定 = 'on' (NULL / 列なし) でメール送信される。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mention_email_pref    text;
+
 -- ── PostgREST のスキーマキャッシュをリロード ──────────────────────
 NOTIFY pgrst, 'reload schema';
 

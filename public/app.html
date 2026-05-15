@@ -11736,6 +11736,9 @@ function _attachmentPayload(){
 }
 
 async function sendMsg(){
+  // Thread mode: the shared composer is docked inside the thread drawer —
+  // route this send as a thread reply rather than a top-level message.
+  if(window._composerThreadMode){ return _sendThreadReply(); }
   const ci=document.getElementById('ci')||document.getElementById('msgInput');
   const text=ci.value.trim();
   // Block if a URL is still loading
@@ -16184,7 +16187,7 @@ function _renderThreadDrawer(){
   if(!parent){ showToast(L('元メッセージが見つかりません','Parent message not found'),'ng'); _closeThread(); return; }
   var replies = (ag.history||[]).filter(function(m){return m && m.thread_parent_id === parentId;});
   var existing = document.getElementById('threadDrawer');
-  if(existing) existing.remove();
+  var firstOpen = !existing;
   var d = document.createElement('div');
   d.id = 'threadDrawer';
   d.className = 'thread-drawer';
@@ -16215,55 +16218,139 @@ function _renderThreadDrawer(){
     +       replies.map(_renderInThread).join('') : '')
     +   '</div>'
     + '</div>'
-    // The drawer has its OWN input — like Slack's thread panel. Users
-    // expect to type right where the thread is, not in a far-away main bar.
-    + '<div style="border-top:1px solid var(--wire2);padding:10px 14px 14px;background:var(--cream);flex-shrink:0">'
-    +   '<div style="display:flex;gap:6px;background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:8px 10px">'
-    +     '<textarea id="threadCi" rows="2" placeholder="'+L('このスレッドに返信… (Shift+Enter で改行)','Reply in thread… (Shift+Enter for newline)')+'" style="flex:1;border:0;outline:none;font-family:inherit;font-size:13px;resize:none;background:transparent" onkeydown="if(event.key===\'Enter\' && !event.shiftKey){event.preventDefault();_sendThreadReply()}"></textarea>'
-    +     '<button onclick="_sendThreadReply()" title="'+L('スレッドに送信','Send to thread')+'" style="align-self:flex-end;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">↑</button>'
-    +   '</div>'
+    // The drawer hosts the REAL main composer (relocated here by
+    // _moveComposerToThread on open) so the thread input has 100% feature
+    // parity with the main chat: file/URL attach, voice, code blocks, emoji,
+    // @mention & slash commands. Moved back to .chat-foot on _closeThread.
+    + '<div style="border-top:1px solid var(--wire2);padding:10px 14px 12px;background:var(--cream);flex-shrink:0">'
+    +   '<div id="threadComposerSlot"></div>'
     +   '<div style="display:flex;align-items:center;gap:8px;margin-top:7px">'
     +     '<span style="font-size:10.5px;color:var(--text3);flex:1">'+L('このスレッド内では AI が全履歴を保持します','AI keeps full thread context here')+'</span>'
     +     '<button onclick="_closeThread()" style="background:transparent;border:0;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline">'+L('スレッドを閉じる','Close')+'</button>'
     +   '</div>'
     + '</div>';
   document.body.appendChild(d);
+  // Drag & drop files anywhere onto the thread drawer → attach (the docked
+  // composer no longer sits inside .chat-foot's drop zone).
+  ['dragenter','dragover'].forEach(function(ev){ d.addEventListener(ev, function(e){
+    if(e.dataTransfer && Array.from(e.dataTransfer.types||[]).indexOf('Files')>=0){ e.preventDefault(); e.stopPropagation(); }
+  }); });
+  d.addEventListener('drop', function(e){
+    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length){
+      e.preventDefault(); e.stopPropagation();
+      try { _ingestFiles(Array.from(e.dataTransfer.files)); } catch(err){}
+    }
+  });
+  // Relocate the shared composer into the NEW drawer (focus-preserving),
+  // THEN drop the old drawer — so remove() never destroys the docked
+  // composer or its event handlers / in-progress attachments.
+  _moveComposerToThread();
+  if(existing) existing.remove();
   setTimeout(function(){
-    var t = document.getElementById('threadCi'); if(t) t.focus();
+    if(firstOpen){ var t = document.getElementById('ci'); if(t) t.focus(); }
     var b = document.getElementById('threadDrawerBody'); if(b) b.scrollTop = b.scrollHeight;
   }, 50);
 }
+// Dock the shared main composer inside the open thread drawer so thread
+// replies get the full composer feature set. Idempotent — safe to call on
+// every drawer re-render. Preserves focus + caret across the DOM move.
+function _moveComposerToThread(){
+  var slot = document.getElementById('threadComposerSlot');
+  var comp = document.querySelector('.composer');
+  if(!slot || !comp) return;
+  if(comp.parentNode !== slot){
+    var ciEl = document.getElementById('ci');
+    var hadFocus = ciEl && document.activeElement === ciEl;
+    var selS = hadFocus ? ciEl.selectionStart : 0, selE = hadFocus ? ciEl.selectionEnd : 0;
+    slot.appendChild(comp);
+    if(hadFocus){ try { ciEl.focus(); ciEl.setSelectionRange(selS, selE); } catch(e){} }
+  }
+  window._composerThreadMode = window._activeThreadParent;
+  var ci = document.getElementById('ci');
+  if(ci){
+    if(!ci.dataset.mainPlaceholder) ci.dataset.mainPlaceholder = ci.placeholder || '';
+    ci.placeholder = L('このスレッドに返信… (Shift+Enter で改行)','Reply in thread… (Shift+Enter for newline)');
+  }
+  // The main foot bar's only real control is the composer — hide the now
+  // empty bar while the composer is docked in the drawer.
+  var foot = document.querySelector('.chat-foot');
+  if(foot) foot.style.display = 'none';
+}
 function _closeThread(){
   window._activeThreadParent = null;
+  window._composerThreadMode = null;
+  // Return the shared composer to the main chat foot BEFORE dropping the drawer.
+  var comp = document.querySelector('.composer');
+  var foot = document.querySelector('.chat-foot');
+  var footInner = foot && foot.querySelector('.chat-foot-inner');
+  if(comp && footInner && comp.parentNode !== footInner){
+    var hint = footInner.querySelector('.foot-hint');
+    if(hint) footInner.insertBefore(comp, hint); else footInner.appendChild(comp);
+  }
+  var ci = document.getElementById('ci');
+  if(ci && ci.dataset.mainPlaceholder){ ci.placeholder = ci.dataset.mainPlaceholder; }
+  if(foot) foot.style.display = '';
   var d = document.getElementById('threadDrawer');
   if(d) d.remove();
 }
 async function _sendThreadReply(){
-  var ta = document.getElementById('threadCi');
-  if(!ta) return;
-  var text = (ta.value||'').trim();
-  if(!text) return;
+  // The thread drawer hosts the REAL main composer (docked by
+  // _moveComposerToThread) — read from #ci + _pendingImgs so thread replies
+  // get full attachment / slash-command parity with the main chat.
+  var ci = document.getElementById('ci');
+  if(!ci) return;
+  var text = (ci.value||'').trim();
+  if(_pendingImgs.some(function(a){return a.kind==='url-loading';})){
+    showToast(isJa?'URL の読み込み完了をお待ちください':'Wait for URL to finish loading','ng');
+    return;
+  }
+  if(!text && _pendingImgs.length===0) return;
   var parentId = window._activeThreadParent;
   if(!parentId || !activeId) return;
   var ag = (agents||[]).find(function(a){return a.id===activeId;});
   if(!ag) return;
-  ta.value = '';
-  ta.disabled = true;
+  // Snapshot attachments, then reset the composer.
+  var snap = _pendingImgs.slice();
+  var split = _attachmentPayload();
+  var imgs = split.imgs;       // image/pdf base64 entries
+  var texts = split.texts;     // text/url entries
+  _pendingImgs = [];
+  renderImgPreview();
+  ci.value = '';
+  exTA(ci);
+  var sndBtn = document.getElementById('sndBtn');
+  if(sndBtn) sndBtn.disabled = true;
+  // /search etc. — same slash handling as the main composer.
+  var outbound = text;
+  try { var slashCtx = await _runSlashCommand(text); if(slashCtx) outbound = slashCtx; } catch(e){}
   // Optimistically push user msg into history with thread_parent_id; the
   // streaming response will push the AI reply (also with thread_parent_id
   // — server stamps it). Re-render drawer between events so the new bubbles
   // appear live.
   var ts = now();
   var userMsgId = 'u_local_' + Math.random().toString(36).slice(2,8);
-  ag.history.push({ id: userMsgId, role:'user', content: text, time: ts, thread_parent_id: parentId });
+  var userMsg = { id: userMsgId, role:'user', content: text, time: ts, thread_parent_id: parentId };
+  if(snap.length > 0){
+    userMsg.images = snap.map(function(att){ return {
+      url: att.url,
+      name: att.name,
+      type: att.type,
+      kind: att.kind || (att.type === 'application/pdf' ? 'pdf' : 'image'),
+      source: att.source || '',
+    }; });
+  }
+  ag.history.push(userMsg);
   var aiPlaceholderIdx = ag.history.length;
   ag.history.push({ role:'assistant', content:'', time: ts, streaming:true, thread_parent_id: parentId });
   _renderThreadDrawer();
   try {
+    var _body = { message: outbound, thread_parent_id: parentId, stream: true };
+    if(imgs && imgs.length) _body.images = imgs;
+    if(texts && texts.length) _body.texts = texts;
     var res = await fetch(API + '/api/chat/' + activeId, {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body: JSON.stringify({ message: text, thread_parent_id: parentId, stream: true }),
+      body: JSON.stringify(_body),
     });
     var ctype = (res.headers.get('content-type')||'').toLowerCase();
     if(!ctype.includes('text/event-stream')){
@@ -16347,8 +16434,10 @@ async function _sendThreadReply(){
     _renderThreadDrawer();
     showToast((e&&e.message)||'failed','ng');
   } finally {
-    var ta2 = document.getElementById('threadCi');
-    if(ta2){ ta2.disabled = false; ta2.focus(); }
+    var sb = document.getElementById('sndBtn');
+    if(sb) sb.disabled = false;
+    var ci2 = document.getElementById('ci');
+    if(ci2) ci2.focus();
   }
 }
 

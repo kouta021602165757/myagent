@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人材紹介会社 カテゴリ分析レポート — MY AI Agent</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f2ea; --card:#ffffff; --ink:#1c1917; --muted:#78716c;
+    --line:#e7e1d6; --accent:#ea580c; --accent-soft:#fff1e6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.7;
+    padding:40px 20px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:28px 30px; margin-bottom:20px;
+  }
+
+  /* ── Header ── */
+  .report-head{
+    background:linear-gradient(135deg,#fff7ef,#ffe9d6);
+    border:1px solid #f3d6bb;
+  }
+  .badge{
+    display:inline-block; background:var(--accent); color:#fff;
+    font-size:11px; font-weight:800; letter-spacing:.08em;
+    padding:4px 10px; border-radius:999px; margin-bottom:14px;
+  }
+  h1{font-size:26px; font-weight:900; letter-spacing:-.01em; line-height:1.35;}
+  .sub{color:var(--muted); font-size:13.5px; margin-top:8px;}
+  .meta{
+    display:flex; gap:18px; flex-wrap:wrap; margin-top:16px;
+    font-size:12px; color:var(--muted); border-top:1px dashed #e8c9ac; padding-top:14px;
+  }
+  .meta b{color:var(--ink); font-weight:700;}
+
+  /* ── Section title ── */
+  .sec-t{
+    font-size:13px; font-weight:800; color:var(--accent);
+    letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px;
+  }
+
+  /* ── Summary ── */
+  .summary{font-size:14.5px;}
+
+  /* ── KPI cards ── */
+  .kpi-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;
+  }
+  .kpi{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px 16px;
+  }
+  .kpi .label{font-size:11.5px; color:var(--muted); font-weight:700;}
+  .kpi .val{font-size:30px; font-weight:900; letter-spacing:-.02em; margin-top:6px;}
+  .kpi .val span{font-size:14px; font-weight:700; color:var(--muted);}
+  .kpi .note{font-size:11px; color:var(--muted); margin-top:4px;}
+  .kpi.accent{background:var(--accent-soft); border-color:#f3d6bb;}
+  .kpi.accent .val{color:var(--accent);}
+
+  /* ── Charts ── */
+  .chart-box{position:relative; height:300px;}
+  .chart-grid{display:grid; grid-template-columns:1.3fr 1fr; gap:20px;}
+  .chart-grid .card{margin-bottom:0;}
+
+  /* ── Table ── */
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line);}
+  th{font-size:11.5px; color:var(--muted); font-weight:800; letter-spacing:.04em;}
+  td.num,th.num{text-align:right; font-variant-numeric:tabular-nums;}
+  tr:last-child td{border-bottom:0;}
+  .bar-cell{display:flex; align-items:center; gap:8px;}
+  .bar{height:8px; border-radius:4px; background:var(--accent);}
+
+  /* ── Insights ── */
+  .insight{
+    border-left:3px solid var(--accent); padding:4px 0 4px 16px;
+    margin-bottom:14px; font-size:14px;
+  }
+  .insight b{font-weight:800;}
+  .actions{counter-reset:a; list-style:none;}
+  .actions li{
+    position:relative; padding:8px 0 8px 34px; font-size:14px;
+    border-bottom:1px dashed var(--line);
+  }
+  .actions li:last-child{border-bottom:0;}
+  .actions li::before{
+    counter-increment:a; content:counter(a);
+    position:absolute; left:0; top:8px;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--accent); color:#fff; font-size:12px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .foot{text-align:center; color:var(--muted); font-size:11.5px; margin-top:8px;}
+  .foot b{color:var(--accent); font-weight:800;}
+
+  @media(max-width:680px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr);}
+    .chart-grid{grid-template-columns:1fr;}
+    body{padding:20px 12px;}
+    .card{padding:22px 18px;}
+  }
+  @media print{
+    body{background:#fff; padding:0;}
+    .card,.kpi{break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="card report-head">
+    <span class="badge">サンプルレポート</span>
+    <h1>人材紹介会社 カテゴリ分析レポート</h1>
+    <div class="sub">対象: 登録企業 No.101–200（第2バッチ 100社）／ カテゴリ構成の偏りと拡充候補を可視化</div>
+    <div class="meta">
+      <span>発行日: <b>2026-05-15</b></span>
+      <span>担当エージェント: <b>小林秘書</b></span>
+      <span>データソース: <b>登録企業リスト</b></span>
+      <span>生成: <b>MY AI Agent</b></span>
+    </div>
+  </div>
+
+  <!-- Executive summary -->
+  <div class="card">
+    <div class="sec-t">サマリー</div>
+    <div class="summary">
+      No.101–200 の 100社は <b>9カテゴリ</b> に分類されている。最多は「総合型」と「IT・エンジニア特化」で各15社（各15%）、
+      最少は「クリエイティブ・デザイン特化」の8社。最大と最小の差は7社で、特定カテゴリへの極端な偏りはなく
+      <b>バランス型のポートフォリオ</b>と言える。一方で専門特化型カテゴリが計75社（75%）を占め、
+      幅広い業界・職種をカバーする構成になっている。統合版（200社1ファイル）の作成前に、
+      指摘済みの<b>重複データの排除</b>を行うことを推奨する。
+    </div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-grid">
+    <div class="kpi accent">
+      <div class="label">対象企業数</div>
+      <div class="val">100<span> 社</span></div>
+      <div class="note">No.101–200</div>
+    </div>
+    <div class="kpi">
+      <div class="label">カテゴリ数</div>
+      <div class="val">9</div>
+      <div class="note">分類軸</div>
+    </div>
+    <div class="kpi">
+      <div class="label">最大カテゴリ</div>
+      <div class="val">15<span> 社</span></div>
+      <div class="note">総合型 / IT特化</div>
+    </div>
+    <div class="kpi">
+      <div class="label">平均 / カテゴリ</div>
+      <div class="val">11.1<span> 社</span></div>
+      <div class="note">最小8 〜 最大15</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid" style="margin-bottom:20px">
+    <div class="card">
+      <div class="sec-t">カテゴリ別 企業数</div>
+      <div class="chart-box"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="sec-t">構成比</div>
+      <div class="chart-box"><canvas id="pieChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="sec-t">カテゴリ別 内訳</div>
+    <table>
+      <thead>
+        <tr><th>カテゴリ</th><th class="num">企業数</th><th class="num">構成比</th><th style="width:38%">分布</th></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Insights -->
+  <div class="card">
+    <div class="sec-t">インサイト</div>
+    <div class="insight"><b>汎用 + IT に最も厚い。</b> 「総合型」「IT・エンジニア特化」が各15社（計30%）。一般的な採用ニーズと IT 人材ニーズの両方に強い体制。</div>
+    <div class="insight"><b>専門特化型が全体の3/4。</b> 医療・外資・士業・SV・地方・建設・クリエイティブの専門カテゴリが計75社。業界横断のカバレッジが広い。</div>
+    <div class="insight"><b>クリエイティブ枠が手薄。</b> 8社と最少。デザイン／クリエイティブ採用の需要があれば優先的な拡充候補。</div>
+    <div class="insight"><b>偏りは小さい。</b> 9カテゴリで最大15・最小8、レンジ7。突出も空白もなく、構成としては健全。</div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card">
+    <div class="sec-t">推奨アクション</div>
+    <ol class="actions">
+      <li><b>重複排除を先に実施。</b> 統合版（200社1ファイル）の精度を担保するため、dedup を統合の前工程として実行する。</li>
+      <li><b>クリエイティブ枠の拡充を検討。</b> 最少カテゴリ。需要に応じて 2〜4社の追加で他カテゴリと水準を揃える。</li>
+      <li><b>運用台帳化。</b> 各社に「担当者名」「優先度」「面談済み」列を追加し、リストを管理台帳として運用できる形にする。</li>
+    </ol>
+  </div>
+
+  <div class="foot">
+    このレポートは <b>MY AI Agent</b> のレポート機能サンプルです ・ ブラウザの印刷（⌘P）から PDF 保存できます
+  </div>
+
+</div>
+
+<script>
+  var DATA = [
+    { name:'総合型',                       n:15, color:'#ea580c' },
+    { name:'IT・エンジニア特化',            n:15, color:'#f97316' },
+    { name:'医療・ヘルスケア特化',          n:12, color:'#fb923c' },
+    { name:'外資・グローバル特化',          n:10, color:'#0ea5e9' },
+    { name:'管理部門・士業特化',            n:10, color:'#6366f1' },
+    { name:'スタートアップ・ベンチャー特化', n:10, color:'#14b8a6' },
+    { name:'地方・エリア特化',              n:10, color:'#84cc16' },
+    { name:'建設・不動産・製造特化',        n:10, color:'#a16207' },
+    { name:'クリエイティブ・デザイン特化',   n:8,  color:'#ec4899' },
+  ];
+  var TOTAL = DATA.reduce(function(s,d){ return s + d.n; }, 0);
+  var MAX = Math.max.apply(null, DATA.map(function(d){ return d.n; }));
+
+  // ── Table ──
+  document.getElementById('tableBody').innerHTML = DATA.map(function(d){
+    var pct = (d.n / TOTAL * 100).toFixed(1);
+    var w = (d.n / MAX * 100).toFixed(0);
+    return '<tr>'
+      + '<td>' + d.name + '</td>'
+      + '<td class="num">' + d.n + '</td>'
+      + '<td class="num">' + pct + '%</td>'
+      + '<td><div class="bar-cell"><div class="bar" style="width:' + w + '%;background:' + d.color + '"></div></div></td>'
+      + '</tr>';
+  }).join('');
+
+  // ── Bar chart ──
+  new Chart(document.getElementById('barChart'), {
+    type:'bar',
+    data:{
+      labels: DATA.map(function(d){ return d.name; }),
+      datasets:[{
+        data: DATA.map(function(d){ return d.n; }),
+        backgroundColor: DATA.map(function(d){ return d.color; }),
+        borderRadius:6, barThickness:18,
+      }],
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ beginAtZero:true, ticks:{ stepSize:5, font:{ size:11 } }, grid:{ color:'#eee' } },
+        y:{ ticks:{ font:{ size:11 } }, grid:{ display:false } },
+      },
+    },
+  });
+
+  // ── Pie / doughnut chart ──
+  new Chart(document.getElementById('pieChart'), {
+    type:'doughnut',
+    data:{
+      labels: DATA.map(function(d){ return d.name; }),
+      datasets:[{
+        data: DATA.map(function(d){ return d.n; }),
+        backgroundColor: DATA.map(function(d){ return d.color; }),
+        borderColor:'#fff', borderWidth:2,
+      }],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{ size:10 }, boxWidth:10, padding:8 } },
+      },
+    },
+  });
+</script>
+</body>
+</html>

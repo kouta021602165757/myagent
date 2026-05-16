@@ -12231,9 +12231,13 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!Array.isArray(art.versions) || !art.versions.length){
       return jres(res,400,{error:'戻せる以前のバージョンがありません'});
     }
-    const prev = art.versions.pop();
-    art.html = String((prev && prev.html) || '');
-    art.version = Math.max(1, (art.version || 2) - 1);
+    // index into versions[] (oldest→newest snapshots). Default = newest = 1-step undo.
+    let _vi = (body && body.index != null) ? parseInt(body.index, 10) : art.versions.length - 1;
+    if(isNaN(_vi) || _vi < 0 || _vi >= art.versions.length) _vi = art.versions.length - 1;
+    const restored = art.versions[_vi];
+    art.html = String((restored && restored.html) || '');
+    art.versions = art.versions.slice(0, _vi);   // drop the restored snapshot + any newer ones
+    art.version = art.versions.length + 1;
     art.updated_at = new Date().toISOString();
     art.size = Buffer.byteLength(art.html, 'utf8');
     try { fs.writeFileSync(path.join(GENERATED_DIR, fn), art.html, 'utf8'); } catch(e){}

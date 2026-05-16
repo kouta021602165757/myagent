@@ -8916,9 +8916,9 @@ async function openAgent(id){
   }
   document.getElementById('chatTop').innerHTML=
     '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+
-    '<div class="ct-icon">'+_avHTML(ag.avatar)+'</div>'+
+    '<div class="ct-icon" onclick="_openAgentCard(\''+esc(ag.id)+'\')" style="cursor:pointer" title="'+L('エージェントカードを開く','Open agent card')+'">'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
-      '<div class="ct-name"><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
+      '<div class="ct-name" onclick="_openAgentCard(\''+esc(ag.id)+'\')" style="cursor:pointer" title="'+L('エージェントカードを開く','Open agent card')+'"><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
       '<div class="ct-pills">'+topPills+' '+modelPill+' '+tasksPill+' '+intelPill+' '+ctxPill+'</div>'+
     '</div>'+
     '<div class="ct-actions">'+ actsHTML +'</div>';
@@ -16350,6 +16350,164 @@ function _closeThread(){
   _threadPendingImgs.length = 0;   // clear staged thread attachments
   var d = document.getElementById('threadDrawer');
   if(d) d.remove();
+}
+
+// ── 🪪 Agent Card — the agent's stats "顔" screen ────────────────
+// Opened by tapping the agent avatar / name in the chat header. Reads the
+// live agent state model (progress / trust / outcomes / digest — computed
+// server-side in safe()). Full-screen dark slide-in, self-contained CSS.
+var _AGENT_CARD_CSS = [
+  '#agentCardScreen{position:fixed;inset:0;z-index:9990;overflow-y:auto;background:#07090F;color:#fff;font-family:inherit;animation:acIn .26s ease}',
+  '@keyframes acIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}',
+  '#agentCardScreen *{box-sizing:border-box}',
+  '.ac-wrap{max-width:440px;margin:0 auto;padding-bottom:40px;position:relative}',
+  '.ac-hd{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 6px;position:sticky;top:0;background:linear-gradient(180deg,#07090F 65%,transparent);z-index:5}',
+  '.ac-x{width:38px;height:38px;border-radius:50%;background:#161B27;border:1px solid rgba(0,240,255,.1);color:rgba(255,255,255,.6);font-size:17px;cursor:pointer;display:grid;place-items:center}',
+  '.ac-id{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.18em;color:rgba(255,255,255,.35)}',
+  '.ac-hero{position:relative;padding:8px 20px 22px;text-align:center;overflow:hidden}',
+  '.ac-rings{position:absolute;top:46%;left:50%;width:300px;height:300px;transform:translate(-50%,-50%);pointer-events:none}',
+  '.ac-rings::before,.ac-rings::after{content:"";position:absolute;border-radius:50%;inset:0;border:1px solid rgba(0,240,255,.06)}',
+  '.ac-rings::before{inset:24px;border-top-color:rgba(0,240,255,.35);animation:acRot 18s linear infinite}',
+  '.ac-rings::after{inset:54px;border-right-color:rgba(0,240,255,.22);animation:acRot 22s linear infinite reverse}',
+  '@keyframes acRot{to{transform:rotate(360deg)}}',
+  '.ac-av{position:relative;width:128px;height:128px;margin:14px auto 0;border-radius:50%;display:grid;place-items:center;font-size:64px;background:radial-gradient(circle at 30% 30%,#1a2436,#0a0e18);border:1px solid rgba(0,240,255,.18);box-shadow:inset 0 0 36px rgba(0,240,255,.1),0 0 48px rgba(0,240,255,.14);animation:acBreathe 4s ease-in-out infinite}',
+  '@keyframes acBreathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}',
+  '.ac-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}',
+  '.ac-name{font-size:32px;font-weight:900;letter-spacing:.05em;margin-top:18px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.45));-webkit-background-clip:text;background-clip:text;color:transparent;word-break:break-word}',
+  '.ac-pill{display:inline-flex;align-items:center;gap:9px;margin-top:10px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.62);padding:6px 14px;background:#161B27;border:1px solid rgba(0,240,255,.1);border-radius:99px}',
+  '.ac-pill b{color:#00F0FF}',
+  '.ac-quote{margin-top:12px;font-style:italic;font-size:13.5px;color:rgba(255,255,255,.5);padding:0 12px;line-height:1.6}',
+  '.ac-stats{display:grid;grid-template-columns:repeat(3,1fr);margin:20px 16px 0;background:#11151F;border:1px solid rgba(0,240,255,.08);border-radius:18px;padding:18px 6px}',
+  '.ac-stat{text-align:center;position:relative}',
+  '.ac-stat+.ac-stat::before{content:"";position:absolute;left:0;top:14%;bottom:14%;width:1px;background:rgba(0,240,255,.12)}',
+  '.ac-stat .v{font-size:25px;font-weight:800;line-height:1}',
+  '.ac-stat .v.cy{color:#00F0FF}',
+  '.ac-stat .l{font-family:ui-monospace,monospace;font-size:8.5px;letter-spacing:.13em;color:rgba(255,255,255,.35);margin-top:7px;text-transform:uppercase}',
+  '.ac-lvbar{margin:13px 16px 0;padding:13px 16px;background:#11151F;border:1px solid rgba(0,240,255,.08);border-radius:14px}',
+  '.ac-lvbar-top{display:flex;justify-content:space-between;font-family:ui-monospace,monospace;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:9px;letter-spacing:.08em}',
+  '.ac-lvbar-top b{color:#00F0FF}',
+  '.ac-track{height:7px;background:rgba(0,240,255,.08);border-radius:99px;overflow:hidden}',
+  '.ac-fill{height:100%;width:0;background:linear-gradient(90deg,#00F0FF,#00B8FF);border-radius:99px;box-shadow:0 0 10px rgba(0,240,255,.4);transition:width 1.1s cubic-bezier(.16,.84,.4,1)}',
+  '.ac-tabs{display:flex;gap:4px;margin:20px 16px 0;padding:4px;background:#11151F;border:1px solid rgba(0,240,255,.08);border-radius:13px}',
+  '.ac-tab{flex:1;padding:10px;background:transparent;border:0;color:rgba(255,255,255,.35);font-family:inherit;font-size:12px;font-weight:700;border-radius:9px;cursor:pointer}',
+  '.ac-tab.on{background:rgba(0,240,255,.09);color:#00F0FF}',
+  '.ac-body{padding:16px}',
+  '.ac-pane{display:none}.ac-pane.on{display:block;animation:acIn .3s ease}',
+  '.ac-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}',
+  '.ac-sc{background:#11151F;border:1px solid rgba(0,240,255,.08);border-radius:12px;padding:13px 4px;text-align:center}',
+  '.ac-sc .n{font-size:21px;font-weight:800}.ac-sc .n.g{color:#00FF88}.ac-sc .n.r{color:#FF4D6D}.ac-sc .n.cy{color:#00F0FF}',
+  '.ac-sc .l{font-family:ui-monospace,monospace;font-size:8px;letter-spacing:.08em;color:rgba(255,255,255,.35);margin-top:5px}',
+  '.ac-row{display:flex;gap:12px;padding:13px 14px;background:#11151F;border:1px solid rgba(0,240,255,.08);border-radius:13px;margin-bottom:7px}',
+  '.ac-row .mk{width:5px;border-radius:3px;flex-shrink:0;background:#00FF88}',
+  '.ac-row.fail .mk{background:#FF4D6D}',
+  '.ac-row .tt{font-size:13px;font-weight:600;line-height:1.45}',
+  '.ac-row .mt{font-family:ui-monospace,monospace;font-size:9.5px;color:rgba(255,255,255,.35);margin-top:5px}',
+  '.ac-empty{text-align:center;padding:28px 20px;color:rgba(255,255,255,.42);font-size:13px;line-height:1.75}',
+  '.ac-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;background:#11151F;border:1px solid rgba(0,240,255,.1);border-radius:11px;font-size:13px;font-weight:600;margin:0 6px 6px 0}',
+  '.ac-sub{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.35);text-transform:uppercase;margin:16px 0 9px}',
+  '.ac-persona{background:#11151F;border:1px solid rgba(0,240,255,.08);border-radius:12px;padding:13px 15px;font-size:13px;line-height:1.75;color:rgba(255,255,255,.62)}',
+  '.ac-digest{margin:18px 16px 0;padding:14px 16px;border-radius:15px;background:linear-gradient(135deg,rgba(0,240,255,.07),rgba(0,240,255,.02));border:1px solid rgba(0,240,255,.18)}',
+  '.ac-digest .t{font-size:12px;font-weight:700;margin-bottom:5px}',
+  '.ac-digest .b{font-size:12px;color:rgba(255,255,255,.62);line-height:1.6}',
+  '.ac-digest .b b{color:#00F0FF}',
+  '.ac-foot{text-align:center;font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,.3);padding:26px 20px 6px;text-transform:uppercase}',
+].join('');
+function _closeAgentCard(){ var s=document.getElementById('agentCardScreen'); if(s) s.remove(); }
+function _acTab(btn,name){
+  var r=document.getElementById('agentCardScreen'); if(!r) return;
+  r.querySelectorAll('.ac-tab').forEach(function(t){t.classList.remove('on');});
+  r.querySelectorAll('.ac-pane').forEach(function(pn){pn.classList.remove('on');});
+  btn.classList.add('on');
+  var pane=r.querySelector('#acPane_'+name); if(pane) pane.classList.add('on');
+}
+function _openAgentCard(agentId){
+  var ag=(agents||[]).find(function(a){return a.id===agentId;});
+  if(!ag){ showToast(L('エージェントが見つかりません','Agent not found'),'ng'); return; }
+  _closeAgentCard();
+  if(!document.getElementById('agentCardCss')){
+    var st=document.createElement('style'); st.id='agentCardCss'; st.textContent=_AGENT_CARD_CSS;
+    document.head.appendChild(st);
+  }
+  var p =ag.progress||{level:1,output_count:0,progress_pct:0,xp_into_level:0,xp_to_next:1};
+  var tr=ag.trust||{level:1};
+  var oc=ag.outcomes||{total:0,completed:0,failed:0,success_rate:0,recent:[]};
+  var dg=ag.digest||{turns_24h:0,turns_7d:0};
+  var idCode=(String(ag.id||'').replace(/[^0-9a-fA-F]/g,'').slice(0,4).toUpperCase())||'0000';
+  var av=String(ag.avatar||'🤖');
+  var avInner=/^(https?:|\/|data:)/.test(av) ? '<img src="'+esc(av)+'">' : esc(av);
+  var role=((SKILLS.find(function(s){return ag.skills&&ag.skills[0]===s.id;})||{}).name)||'AI Agent';
+  var persona=String(ag.persona||'').replace(/\s+/g,' ').trim();
+  var quote=persona ? '“'+persona.slice(0,52)+(persona.length>52?'…':'')+'”' : '';
+  var skillHtml=((ag.skills||[]).map(function(id){
+    var s=SKILLS.find(function(x){return x.id===id;});
+    return '<span class="ac-chip">'+(s?(s.icon+' '+esc(s.name)):esc(id))+'</span>';
+  }).join(''))||'<span class="ac-chip" style="opacity:.5">スキル未設定</span>';
+  var recentHtml=(oc.recent&&oc.recent.length)
+    ? oc.recent.map(function(o){
+        return '<div class="ac-row'+(o.status==='failed'?' fail':'')+'">'
+          +'<div class="mk"></div><div style="flex:1;min-width:0">'
+          +'<div class="tt">'+esc(o.title||'')+'</div>'
+          +'<div class="mt">'+(o.status==='failed'?'✕ 失敗':'✓ 完了')+(o.time?' · '+esc(o.time):'')+'</div>'
+          +'</div></div>';
+      }).join('')
+    : '<div class="ac-empty">まだ出力がありません。<br>このエージェントにタスクを任せると、ここに実績が積み上がります。</div>';
+  var digestHtml=(dg.turns_24h||dg.turns_7d)
+    ? '24時間で <b>'+(dg.turns_24h||0)+'回</b> ・ 直近7日で <b>'+(dg.turns_7d||0)+'回</b> 稼働しました。'
+    : 'まだ稼働記録がありません。タスクを任せると、ここに活動が表示されます。';
+  var d=document.createElement('div');
+  d.id='agentCardScreen';
+  d.innerHTML=
+    '<div class="ac-wrap">'
+    + '<div class="ac-hd">'
+    +   '<button class="ac-x" onclick="_closeAgentCard()" aria-label="close">‹</button>'
+    +   '<div class="ac-id">AGENT · #'+idCode+'</div>'
+    +   '<div style="width:38px"></div>'
+    + '</div>'
+    + '<div class="ac-hero">'
+    +   '<div class="ac-rings"></div>'
+    +   '<div class="ac-av">'+avInner+'</div>'
+    +   '<div class="ac-name">'+esc(ag.name||'AI Agent')+'</div>'
+    +   '<div class="ac-pill"><b>Lv.'+(p.level||1)+'</b> / '+esc(role)+'</div>'
+    +   (quote ? '<div class="ac-quote">'+esc(quote)+'</div>' : '')
+    + '</div>'
+    + '<div class="ac-stats">'
+    +   '<div class="ac-stat"><div class="v">'+(p.output_count||0)+'</div><div class="l">出力</div></div>'
+    +   '<div class="ac-stat"><div class="v cy">'+(oc.success_rate||0)+'%</div><div class="l">成功率</div></div>'
+    +   '<div class="ac-stat"><div class="v">Lv.'+(tr.level||1)+'</div><div class="l">信頼</div></div>'
+    + '</div>'
+    + '<div class="ac-lvbar">'
+    +   '<div class="ac-lvbar-top"><span>NEXT — <b>Lv.'+((p.level||1)+1)+'</b></span>'
+    +     '<span>'+(p.xp_into_level||0)+' / '+(p.xp_to_next||0)+' XP</span></div>'
+    +   '<div class="ac-track"><div class="ac-fill"></div></div>'
+    + '</div>'
+    + '<div class="ac-tabs">'
+    +   '<button class="ac-tab on" onclick="_acTab(this,\'outcome\')">📊 成果</button>'
+    +   '<button class="ac-tab" onclick="_acTab(this,\'skill\')">⚡ スキル</button>'
+    + '</div>'
+    + '<div class="ac-body">'
+    +   '<div class="ac-pane on" id="acPane_outcome">'
+    +     '<div class="ac-sum">'
+    +       '<div class="ac-sc"><div class="n g">'+(oc.completed||0)+'</div><div class="l">完了</div></div>'
+    +       '<div class="ac-sc"><div class="n r">'+(oc.failed||0)+'</div><div class="l">失敗</div></div>'
+    +       '<div class="ac-sc"><div class="n cy">'+(oc.success_rate||0)+'%</div><div class="l">成功率</div></div>'
+    +     '</div>'
+    +     recentHtml
+    +   '</div>'
+    +   '<div class="ac-pane" id="acPane_skill">'
+    +     '<div class="ac-sub">スキル</div>'+skillHtml
+    +     (persona ? '<div class="ac-sub">性格・キャラクター</div><div class="ac-persona">'+esc(persona.slice(0,400))+'</div>' : '')
+    +   '</div>'
+    + '</div>'
+    + '<div class="ac-digest">'
+    +   '<div class="t">🌙 直近の稼働</div>'
+    +   '<div class="b">'+digestHtml+'</div>'
+    + '</div>'
+    + '<div class="ac-foot">MY AI AGENT · '+esc(ag.name||'')+'</div>'
+    + '</div>';
+  document.body.appendChild(d);
+  setTimeout(function(){
+    var f=d.querySelector('.ac-fill'); if(f) f.style.width=Math.min(100,Math.max(0,p.progress_pct||0))+'%';
+  },60);
 }
 async function _sendThreadReply(){
   // Reads from the thread drawer's OWN composer (#tci + _threadPendingImgs).

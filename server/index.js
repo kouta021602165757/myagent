@@ -4248,13 +4248,19 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
 ▼ 引数:
 - title: ファイル名 + 表示タイトル (a-z0-9-, 1-40 文字)
 - html: 完全な単一 HTML 文書 (<!doctype html>...). 自己完結 — JS / CSS は CDN のみ参照可。
-- description: (任意) 何を作ったか 1-2 行の説明`,
+- description: (任意) 何を作ったか 1-2 行の説明
+- project: (任意だが強く推奨) この成果物が属する「プロジェクト名」。同じテーマ・同じ案件
+  の成果物は**必ず同じ project 名**を付けること (例: "タスク管理ツール", "会社 LP")。
+  こうすると一覧で同じプロジェクトとしてまとまり、後から「あれを直して」が正しく解決できる。
+  会話の中で既に同じテーマの成果物を作っている場合は、その時の project 名をそのまま再利用する。
+  全く新しい無関係なテーマのときだけ新しい project 名にする。`,
     input_schema:{
       type:'object',
       properties:{
         title:{type:'string',description:'ファイル名 + 表示タイトル (a-z0-9-, 1-40 文字)'},
         html:{type:'string',description:'完全な単一 HTML 文書 (<!doctype html>...)。デザイン品質は上記 10 ルールに厳密に従うこと — default Tailwind 貼り付けレベルではダメ。'},
         description:{type:'string',description:'(任意) 何を作ったか 1-2 行の説明'},
+        project:{type:'string',description:'(任意・推奨) この成果物が属するプロジェクト名 (1-40 文字)。同じテーマ/案件の成果物は同じ名前にする。省略時は title から自動推定。'},
         style_ref:{type:'string',description:'(任意) 目指す美意識のリファレンス。例: "linear", "stripe", "apple", "vercel", "notion", "figma", "editorial-magazine", "brutalist", "soft-pastel". 1 つ選ぶと出力が安定する。'},
       },
       required:['title','html'],
@@ -6000,6 +6006,11 @@ async function executeArtifactTool(input, ownerUser){
   const title = _safeName(input && input.title, 'artifact');
   const html  = String(input && input.html || '');
   const desc  = String(input && input.description || '').slice(0, 240);
+  // Project grouping — related artifacts share a project name so the library
+  // can group them and "あれを直して" resolves within the right project.
+  // Falls back to the (human) title when the AI doesn't supply one.
+  const project = String((input && input.project) || (input && input.title) || title)
+    .trim().slice(0, 40) || title;
   if(html.length < 50)     return { error: 'html too short' };
   if(html.length > 500000) return { error: 'html too long (max 500KB)' };
   const id = crypto.randomBytes(5).toString('hex');
@@ -6021,6 +6032,7 @@ async function executeArtifactTool(input, ownerUser){
       ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
       ownerUser.artifacts.push({
         id, filename, title, description: desc,
+        project,
         html,
         version: 1,
         created_at: new Date().toISOString(),
@@ -6072,9 +6084,17 @@ async function executeEditArtifactTool(input, ownerUser){
     // Hand it the REAL list so its retry uses a correct name. This is the
     // durable fix for the artifact-not-found loop.
     const recent = ownerUser.artifacts.slice(-25).reverse();
-    const avail = recent
-      .map(a => '- ' + a.filename + (a.title ? '  (「' + a.title + '」)' : ''))
-      .join('\n');
+    // Group the available list by project so the AI picks within the right one.
+    const _byProj = {};
+    recent.forEach(a => {
+      const p = String(a.project || a.title || '(プロジェクト未設定)');
+      (_byProj[p] = _byProj[p] || []).push(a);
+    });
+    const avail = Object.keys(_byProj).map(p =>
+      '【プロジェクト: ' + p + '】\n' + _byProj[p]
+        .map(a => '  - ' + a.filename + (a.title ? '  (「' + a.title + '」)' : ''))
+        .join('\n')
+    ).join('\n');
     return {
       error: 'artifact not found: ' + filename
         + (recent.length

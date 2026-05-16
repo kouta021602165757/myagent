@@ -11834,6 +11834,10 @@ var _ARTIFACT_LIB_CSS = [
   '.al-x{width:32px;height:32px;border-radius:50%;border:0;background:var(--cream2,#f4efe6);color:var(--text3,#a8a29e);font-size:13px;cursor:pointer}',
   '.al-filter{margin:12px 18px 4px;padding:9px 12px;border:1px solid var(--wire2,#e1dacb);border-radius:10px;font-size:13px;font-family:inherit;outline:none}',
   '.al-list{flex:1;overflow-y:auto;padding:8px 12px 14px}',
+  '.al-proj{margin-bottom:14px}',
+  '.al-proj-hd{display:flex;align-items:center;gap:7px;padding:5px 4px 8px}',
+  '.al-proj-nm{font-size:11.5px;font-weight:900;color:var(--text2,#57534e)}',
+  '.al-proj-ct{font-size:10px;font-weight:800;color:var(--text3,#a8a29e);background:var(--cream2,#f4efe6);padding:1px 7px;border-radius:99px}',
   '.al-rowwrap{margin-bottom:7px}',
   '.al-row{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid var(--wire,#ece7dd);border-radius:12px;background:var(--card,#fff)}',
   '.al-row-main{flex:1;min-width:0}',
@@ -11860,6 +11864,12 @@ function _alFilter(q){
   document.querySelectorAll('#artifactLibrary .al-rowwrap').forEach(function(r){
     r.style.display = (!q || (r.dataset.t||'').indexOf(q)>=0) ? '' : 'none';
   });
+  // Hide a project section when none of its rows match the filter.
+  document.querySelectorAll('#artifactLibrary .al-proj').forEach(function(p){
+    var shown=0;
+    p.querySelectorAll('.al-rowwrap').forEach(function(r){ if(r.style.display!=='none') shown++; });
+    p.style.display = shown ? '' : 'none';
+  });
 }
 // Expand / collapse a row's inline version-history list.
 function _toggleHist(id){
@@ -11870,49 +11880,70 @@ function _toggleHist(id){
   el.style.display=open?'none':'block';
   if(btn) btn.classList.toggle('on',!open);
 }
+// One artifact row (+ inline version history). `i` is a unique running index
+// used to wire up the per-row history toggle.
+function _alRowHTML(a,i){
+  var url='/generated/'+a.filename;
+  var when=String(a.created_at||'').slice(0,10);
+  var t=String(a.title||a.filename);
+  var tArg=t.replace(/'/g,"\\'");
+  var fArg=String(a.filename).replace(/'/g,"\\'");
+  var proj=String(a.project||a.title||'');
+  var ver=a.version||1;
+  var vers=Array.isArray(a.versions)?a.versions:[];
+  var hasVers=vers.length>0;
+  // versions[] is oldest→newest; show newest first. Each snapshot is the html
+  // BEFORE an edit, so versions[k] is artifact-version (ver - (len-k)).
+  var histRows='';
+  for(var k=vers.length-1;k>=0;k--){
+    var v=vers[k]||{};
+    var vnum=ver-(vers.length-k);
+    var vat=String(v.at||'').slice(0,16).replace('T',' ');
+    var vop=v.op?String(v.op):'';
+    histRows+='<div class="al-hist-row">'
+      + '<div class="al-hist-info"><b>v'+(vnum>0?vnum:'?')+'</b>'
+      +   (vop?' <span class="al-hist-op">'+esc(vop)+'</span>':'')
+      +   (vat?' <span class="al-hist-at">'+esc(vat)+'</span>':'')
+      + '</div>'
+      + '<button class="al-hist-btn2" onclick="_rollbackArtifact(\''+esc(fArg)+'\','+k+')">'
+      +   L('この版に戻す','Restore')+'</button>'
+      + '</div>';
+  }
+  return '<div class="al-rowwrap" data-t="'+esc((t+' '+proj).toLowerCase())+'">'
+    + '<div class="al-row">'
+    +   '<div class="al-row-main">'
+    +     '<div class="al-row-ti">'+esc(t)+'</div>'
+    +     '<div class="al-row-meta">v'+ver+' · '+esc(when)+' · '+esc(a.filename)+'</div>'
+    +   '</div>'
+    +   (hasVers ? '<button class="al-hist-toggle" id="al-histbtn-'+i+'" onclick="_toggleHist('+i+')" title="'+L('バージョン履歴','Version history')+'">🕘 '+vers.length+'</button>' : '')
+    +   '<button class="al-open" onclick="window.open(\''+esc(url)+'\',\'_blank\')" title="'+L('開く','Open')+'">🔗</button>'
+    +   '<button class="al-edit" onclick="_setEditTarget(\''+esc(fArg)+'\',\''+tArg+'\');_closeArtifactLibrary()">✏️ '+L('編集','Edit')+'</button>'
+    + '</div>'
+    + (hasVers ? '<div class="al-hist" id="al-hist-'+i+'">'+histRows+'</div>' : '')
+    + '</div>';
+}
+// Render all artifacts grouped into project sections.
 function _alRows(arts){
   if(!arts.length){
     return '<div class="al-empty">'+L('まだ成果物がありません。AI にサイトやツールを作ってもらうと、ここに並びます。',
       'No sites yet — when an AI builds something, it shows up here.')+'</div>';
   }
-  return arts.map(function(a,i){
-    if(!a || !a.filename) return '';
-    var url='/generated/'+a.filename;
-    var when=String(a.created_at||'').slice(0,10);
-    var t=String(a.title||a.filename);
-    var tArg=t.replace(/'/g,"\\'");
-    var fArg=String(a.filename).replace(/'/g,"\\'");
-    var ver=a.version||1;
-    var vers=Array.isArray(a.versions)?a.versions:[];
-    var hasVers=vers.length>0;
-    // versions[] is oldest→newest; show newest first. Each snapshot is the html
-    // BEFORE an edit, so versions[k] is artifact-version (ver - (len-k)).
-    var histRows='';
-    for(var k=vers.length-1;k>=0;k--){
-      var v=vers[k]||{};
-      var vnum=ver-(vers.length-k);
-      var vat=String(v.at||'').slice(0,16).replace('T',' ');
-      var vop=v.op?String(v.op):'';
-      histRows+='<div class="al-hist-row">'
-        + '<div class="al-hist-info"><b>v'+(vnum>0?vnum:'?')+'</b>'
-        +   (vop?' <span class="al-hist-op">'+esc(vop)+'</span>':'')
-        +   (vat?' <span class="al-hist-at">'+esc(vat)+'</span>':'')
-        + '</div>'
-        + '<button class="al-hist-btn2" onclick="_rollbackArtifact(\''+esc(fArg)+'\','+k+')">'
-        +   L('この版に戻す','Restore')+'</button>'
-        + '</div>';
-    }
-    return '<div class="al-rowwrap" data-t="'+esc(t.toLowerCase())+'">'
-      + '<div class="al-row">'
-      +   '<div class="al-row-main">'
-      +     '<div class="al-row-ti">'+esc(t)+'</div>'
-      +     '<div class="al-row-meta">v'+ver+' · '+esc(when)+' · '+esc(a.filename)+'</div>'
-      +   '</div>'
-      +   (hasVers ? '<button class="al-hist-toggle" id="al-histbtn-'+i+'" onclick="_toggleHist('+i+')" title="'+L('バージョン履歴','Version history')+'">🕘 '+vers.length+'</button>' : '')
-      +   '<button class="al-open" onclick="window.open(\''+esc(url)+'\',\'_blank\')" title="'+L('開く','Open')+'">🔗</button>'
-      +   '<button class="al-edit" onclick="_setEditTarget(\''+esc(fArg)+'\',\''+tArg+'\');_closeArtifactLibrary()">✏️ '+L('編集','Edit')+'</button>'
+  var groups={}, order=[];
+  arts.forEach(function(a){
+    if(!a || !a.filename) return;
+    var p=String(a.project||a.title||L('(その他)','(Other)'));
+    if(!groups[p]){ groups[p]=[]; order.push(p); }
+    groups[p].push(a);
+  });
+  var idx=0;
+  return order.map(function(p){
+    var rows=groups[p].map(function(a){ return _alRowHTML(a,idx++); }).join('');
+    return '<div class="al-proj">'
+      + '<div class="al-proj-hd">'
+      +   '<span class="al-proj-nm">📁 '+esc(p)+'</span>'
+      +   '<span class="al-proj-ct">'+groups[p].length+'</span>'
       + '</div>'
-      + (hasVers ? '<div class="al-hist" id="al-hist-'+i+'">'+histRows+'</div>' : '')
+      + rows
       + '</div>';
   }).join('');
 }

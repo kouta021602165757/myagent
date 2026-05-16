@@ -785,6 +785,17 @@ function safe(u){
       }
     }
   }
+  // Strip the heavy `html` body from artifacts in the chat-load payload — the
+  // client renders artifacts by URL, never from this field. Each artifact's
+  // html can be 100s of KB; with up to 100 artifacts that bloated every
+  // /api/me. Full html stays in the DB (edit_artifact / static serving use it).
+  if(Array.isArray(s.artifacts)){
+    s.artifacts = s.artifacts.map(a => {
+      if(!a || typeof a !== 'object') return a;
+      const { html:_html, ...rest } = a;
+      return rest;
+    });
+  }
   return s;
 }
 function newUser(base){

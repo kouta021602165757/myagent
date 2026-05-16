@@ -695,6 +695,55 @@ function _agentTrust(agent){
   return { score, level };
 }
 
+// ── Agent outcomes (Phase 4) — derived result summary, display-only ──
+// v1 reports what we can know automatically: turn completion vs failure
+// (a turn "failed" if the assistant errored or any tool in it returned
+// ok:false). Richer real-world outcomes (返信獲得/アポ獲得) need user
+// marking or CRM integration → deferred to v2.
+function _agentOutcomes(agent){
+  const scan = (agent && typeof agent.turn_count === 'number') ? null : _scanHistoryXp(agent);
+  const total  = scan ? scan.turns  : agent.turn_count;
+  const failed = (agent && typeof agent.error_count === 'number')
+    ? agent.error_count : (scan ? scan.errors : _scanHistoryXp(agent).errors);
+  const completed = Math.max(0, total - failed);
+  const success_rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  // Recent outputs for the card list — most recent assistant turns first.
+  const recent = [];
+  const h = Array.isArray(agent && agent.history) ? agent.history : [];
+  for(let i = h.length - 1; i >= 0 && recent.length < 6; i--){
+    const m = h[i];
+    if(!m || m.role !== 'assistant' || m._summary) continue;
+    const toolFail = Array.isArray(m.tool_log) && m.tool_log.some(t => t && t.ok === false);
+    recent.push({
+      title: String(m.content || '').replace(/[#*`>_\n\r]+/g, ' ').trim().slice(0, 64) || '(出力)',
+      time: m.time || '',
+      status: (m.is_error || toolFail) ? 'failed' : 'done',
+    });
+  }
+  return { total, completed, failed, success_rate, recent };
+}
+
+// ── Agent digest (Phase 5) — recent activity, derived from billing_history ──
+// billing_history carries a timestamped (ISO `date`) record per turn, so we
+// can honestly report recent-activity windows. A richer per-tool breakdown
+// ("emails sent / research done") needs a timestamped action log → v2.
+function _agentDigest(agent, user){
+  const bh = Array.isArray(user && user.billing_history) ? user.billing_history : [];
+  const now = Date.now(), DAY = 86400000;
+  const aid = agent && agent.id;
+  let t24 = 0, t7d = 0;
+  let lastAt = (agent && agent.last_active_at) || null;
+  for(const e of bh){
+    if(!e || e.agentId !== aid || e.type !== 'usage') continue;
+    const d = e.date && Date.parse(e.date);
+    if(!d || isNaN(d)) continue;
+    if(now - d <= DAY)      t24++;
+    if(now - d <= 7 * DAY)  t7d++;
+    if(!lastAt || d > Date.parse(lastAt)) lastAt = e.date;
+  }
+  return { turns_24h: t24, turns_7d: t7d, last_active_at: lastAt };
+}
+
 function safe(u){
   const{password:_,verify_token:__,reset_token:___,reset_expiry:____,
         google_oauth:gOAuth,
@@ -717,10 +766,12 @@ function safe(u){
   if(Array.isArray(s.agents)){
     for(const ag of s.agents){
       if(!ag) continue;
-      // Attach computed level/XP + trust snapshots so the client doesn't
-      // re-implement the curves (Phase 1 + 2 of the agent state model).
+      // Attach computed agent-state snapshots so the client doesn't
+      // re-implement the logic (Phase 1/2/4 of the agent state model).
       ag.progress = _agentProgress(ag);
       ag.trust = _agentTrust(ag);
+      ag.outcomes = _agentOutcomes(ag);
+      ag.digest = _agentDigest(ag, u);
       if(!Array.isArray(ag.history)) continue;
       for(const m of ag.history){
         if(m && m.streaming){

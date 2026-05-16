@@ -12133,6 +12133,10 @@ async function _sendMsgStream(ag, text, imgs, texts){
       if(!dataStr) continue;
       let obj=null; try{ obj=JSON.parse(dataStr); }catch(e){ continue; }
       if(evType === 'delta'){
+        // reset=true → the server retried mid-stream and is re-sending the
+        // answer from scratch; discard partial text so the bubble doesn't
+        // show duplicated content.
+        if(obj.reset){ acc = ''; }
         acc += obj.text || '';
         _stopThink();
         // New text arrived — clear the "next-step thinking" flag set by
@@ -12273,6 +12277,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
         liveBody = liveEl ? liveEl.querySelector('.m-body') : null;
         acc = '';
       } else if(evType === 'huddle_summary_delta'){
+        if(obj.reset){ acc = ''; }
         acc += obj.text || '';
         if(liveBody){
           liveBody.innerHTML = _md(acc) + '<span style="display:inline-block;width:7px;height:14px;background:var(--peach);animation:cursorBlink 1s steps(2) infinite;vertical-align:text-bottom;margin-left:2px"></span>';
@@ -16439,6 +16444,9 @@ async function _sendThreadReply(){
         if(!dataStr) continue;
         var obj; try{ obj = JSON.parse(dataStr); }catch(e){ continue; }
         if(evType === 'delta'){
+          // reset=true → server retried mid-stream; discard partial text so
+          // the thread bubble doesn't show duplicated content.
+          if(obj.reset){ acc = ''; }
           acc += obj.text || '';
           if(ag.history[aiPlaceholderIdx]){ ag.history[aiPlaceholderIdx].content = acc; }
           _renderThreadDrawer();

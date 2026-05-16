@@ -1634,7 +1634,16 @@ async function _summarizeOldHistory(agent){
     // Find the existing summary (if any) and the slice to fold.
     const existingSummary = agent.history.find(m => m && m._summary);
     const oldSummaryText  = (existingSummary && existingSummary.content) || '';
-    const toFold = nonSummary.slice(0, SUMMARY_BATCH);
+    let toFold = nonSummary.slice(0, SUMMARY_BATCH);
+    // Thread-safety: never fold a message that is the thread-parent of a
+    // message we are KEEPING. Folding it would orphan that reply — the thread
+    // drawer can't find its parent and the whole conversation becomes
+    // unreachable. (This is the bug that broke the 小林秘書 group thread.)
+    const _keptAfter = nonSummary.slice(toFold.length);
+    const _survivingParentIds = new Set(
+      _keptAfter.map(m => m && m.thread_parent_id).filter(Boolean)
+    );
+    toFold = toFold.filter(m => !(m && m.id && _survivingParentIds.has(m.id)));
     if(toFold.length === 0) return false;
     // Render the slice as a transcript for the summarizer.
     const transcript = toFold.map(m => {
@@ -1687,8 +1696,11 @@ async function _summarizeOldHistory(agent){
       _summary_count: ((existingSummary && existingSummary._summary_count) || 0) + folded,
       _summary_updated_at: new Date().toISOString(),
     };
-    // Rebuild history: [summary, ...non-summary non-folded].
-    const remaining = nonSummary.slice(folded); // keep the newer half
+    // Rebuild history: [summary, ...everything not folded]. The folded set may
+    // be non-contiguous (thread-parents were excluded above), so filter by set
+    // membership rather than slicing a prefix.
+    const _foldSet = new Set(toFold);
+    const remaining = nonSummary.filter(m => !_foldSet.has(m));
     agent.history = [newSummary, ...remaining];
     console.log('[summary] folded ' + folded + ' turns into summary for agent=' + (agent.id||'?'));
     return true;
@@ -3084,6 +3096,7 @@ async function callAI(messages,system,modelAlias,cacheAgent){
           console.warn('[callAI] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
           curModel = fb;
           attempt = 2;
+          _armResetOnRetry();
           continue;
         }
       }
@@ -3098,6 +3111,7 @@ async function callAI(messages,system,modelAlias,cacheAgent){
           console.warn('[callAI] retry timed out, falling back', curModel, '→', fb);
           curModel = fb;
           attempt = 2;
+          _armResetOnRetry();
           continue;
         }
       }
@@ -3135,17 +3149,20 @@ async function _callAIOnce(messages,system,modelAlias,cacheAgent){
 async function callAIStream(messages, system, onText, modelAlias, cacheAgent){
   let curModel = modelAlias;
   let attempt = 0;
-  // Track text already streamed so we can dedup partial output on retry.
-  let alreadyStreamed = 0;
+  // On a mid-stream retry/fallback the next attempt re-streams the answer from
+  // scratch. Passing it straight through would show attempt-1 text + attempt-2
+  // text concatenated — the duplicated-bubble bug. So the FIRST delta of a
+  // retry attempt carries reset=true; the consumer must discard whatever it
+  // accumulated and start fresh. Armed only if we already emitted something.
+  let needReset = false;
+  let emittedAny = false;
   const wrappedOnText = (t) => {
-    // Subsequent retries: skip the prefix the user already saw.
-    if(alreadyStreamed > 0){
-      // We can't reliably skip mid-stream, so on retry we tell onText to
-      // disregard everything from the start of THIS attempt. Simplest path:
-      // pass through (UI will see duplicated text but at least gets output).
-    }
-    try { onText(t); } catch(e){}
+    const reset = needReset;
+    needReset = false;
+    emittedAny = true;
+    try { onText(t, reset); } catch(e){}
   };
+  const _armResetOnRetry = () => { if(emittedAny) needReset = true; };
   while(true){
     try {
       const result = await _callAIStreamOnce(messages, system, wrappedOnText, curModel, cacheAgent);
@@ -3159,12 +3176,14 @@ async function callAIStream(messages, system, onText, modelAlias, cacheAgent){
           console.warn('[callAIStream] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
           curModel = fb;
           attempt = 2;
+          _armResetOnRetry();
           continue;
         }
       }
       if(transient && attempt === 0){
         console.warn('[callAIStream] transient, retrying same model:', String(e.message||e).slice(0,200));
         attempt = 1;
+        _armResetOnRetry();
         continue;
       }
       if(transient && attempt === 1){
@@ -3173,6 +3192,7 @@ async function callAIStream(messages, system, onText, modelAlias, cacheAgent){
           console.warn('[callAIStream] retry timed out, fallback', curModel, '→', fb);
           curModel = fb;
           attempt = 2;
+          _armResetOnRetry();
           continue;
         }
       }
@@ -3298,6 +3318,7 @@ async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cache
           console.warn('[callAIWithTools] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
           curModel = fb;
           attempt = 2;
+          _armResetOnRetry();
           continue;
         }
       }
@@ -3312,6 +3333,7 @@ async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cache
           console.warn('[callAIWithTools] retry timed out, fallback', curModel, '→', fb);
           curModel = fb;
           attempt = 2;
+          _armResetOnRetry();
           continue;
         }
       }
@@ -5832,7 +5854,11 @@ async function executeArtifactTool(input, ownerUser){
 // surgically patches the existing artifact, writes both to disk + DB, and
 // returns the same URL (the iframe re-fetches it).
 async function executeEditArtifactTool(input, ownerUser){
-  const filename = String((input && input.filename) || '').trim();
+  let filename = String((input && input.filename) || '').trim();
+  // The AI often passes a full URL or /generated/ path instead of the bare
+  // filename — normalize so the lookup matches.
+  if(filename.indexOf('/') >= 0) filename = filename.split('/').filter(Boolean).pop() || filename;
+  filename = filename.split('?')[0].split('#')[0];
   const op = String((input && input.operation) || 'append_to_body');
   const selector = String((input && input.selector) || '').trim();
   const content = String((input && input.content) || '');
@@ -5843,7 +5869,26 @@ async function executeEditArtifactTool(input, ownerUser){
   // been wiped on container restart).
   ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
   const artifact = ownerUser.artifacts.find(a => a && a.filename === filename);
-  if(!artifact) return { error: 'artifact not found: '+filename };
+  if(!artifact){
+    // Don't just fail — the AI frequently GUESSES / hallucinates filenames
+    // (e.g. inventing a "v4" that never existed), then loops on "not found".
+    // Hand it the REAL list so its retry uses a correct name. This is the
+    // durable fix for the artifact-not-found loop.
+    const recent = ownerUser.artifacts.slice(-25).reverse();
+    const avail = recent
+      .map(a => '- ' + a.filename + (a.title ? '  (「' + a.title + '」)' : ''))
+      .join('\n');
+    return {
+      error: 'artifact not found: ' + filename
+        + (recent.length
+            ? '\n\n【重要】推測でファイル名を作らないこと。'
+          + '編集できる既存 artifact は以下が全てです。'
+          + 'この一覧の中から正しい filename を選んで edit_artifact を呼び直してください。'
+          + '一覧に無いものを編集したい場合は create_artifact で新規作成すること:\n' + avail
+            : '\nこのユーザーにはまだ artifact がありません。create_artifact で新規作成してください。'),
+      available_filenames: recent.map(a => a.filename),
+    };
+  }
   let html = String(artifact.html || '');
   if(html.length + content.length > 600000){
     return { error: 'artifact would exceed 600KB after edit' };
@@ -16756,9 +16801,11 @@ async function handleAPI(req,res,pathname,method,ip){
                 maxTokens: Math.min(600, info.maxTokens),
               };
               const r = await callAIStream(huddleMsgs, huddleSys,
-                (delta) => {
+                (delta, reset) => {
+                  if(reset){ memberReply = ''; }
                   memberReply += delta;
-                  sse('delta', { text: delta, member_id: member.id });
+                  sse('delta', reset ? { text: delta, member_id: member.id, reset:true }
+                                     : { text: delta, member_id: member.id });
                 },
                 callOpts.alias || member.model || 'haiku',
                 member);
@@ -16798,7 +16845,11 @@ async function handleAPI(req,res,pathname,method,ip){
             const info = _resolveModelInfo('haiku');
             let summary = '';
             await callAIStream([{role:'user', content: sumPrompt}], sumSys,
-              (delta) => { summary += delta; sse('huddle_summary_delta', { text: delta }); },
+              (delta, reset) => {
+                if(reset){ summary = ''; }
+                summary += delta;
+                sse('huddle_summary_delta', reset ? { text: delta, reset:true } : { text: delta });
+              },
               info.alias);
             const cleanedSum = (summary || '').trim();
             if(cleanedSum){
@@ -17092,9 +17143,12 @@ async function handleAPI(req,res,pathname,method,ip){
       const sse = (ev, data)=>{ res.write('event: '+ev+'\ndata: '+JSON.stringify(data)+'\n\n'); };
       let streamReply = '';
       try{
-        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), (delta)=>{
+        const result = await callAIStream(baseMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), (delta, reset)=>{
+          // reset=true → a mid-stream retry restarted the answer; drop what we
+          // accumulated so the bubble doesn't show duplicated text.
+          if(reset){ streamReply = ''; }
           streamReply += delta;
-          try{ sse('delta', {text: delta}); }catch(e){}
+          try{ sse('delta', reset ? {text: delta, reset:true} : {text: delta}); }catch(e){}
         }, agent.model, agent);
         const cost = calcCost(result.inputTokens, result.outputTokens);
         let reply = streamReply || result.text || 'エラー';

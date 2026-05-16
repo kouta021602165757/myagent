@@ -6052,6 +6052,55 @@ async function executeEmailTool(user, agent, input){
   };
 }
 
+// ── ARTIFACT SELF-VERIFICATION ────────────────────────────────
+// Static, browser-free checks run right after create/edit_artifact. Catches
+// the bug classes behind "ボタンが動かない" / broken-render complaints:
+// inline-JS syntax errors, unbalanced <div>/<script>/<style>, and truncated
+// (incomplete) documents. Findings go back in the tool result so the AI can
+// self-correct with edit_artifact inside the same agentic loop.
+function _verifyArtifactHtml(html){
+  const issues = [];
+  const h = String(html || '');
+  // 1) Structural completeness — a truncated doc is the #1 silent failure.
+  if(!/<!doctype html/i.test(h)) issues.push('<!doctype html> 宣言が無い');
+  if(!/<html[\s>]/i.test(h))     issues.push('<html> タグが無い');
+  if(!/<\/html>/i.test(h))       issues.push('</html> が無い — 出力が途中で切れている可能性が高い');
+  if(!/<body[\s>]/i.test(h))     issues.push('<body> タグが無い');
+  if(!/<\/body>/i.test(h))       issues.push('</body> が無い');
+  // 2) Tag balance — div/script/style are never void nor optionally-closed,
+  //    so an open/close count mismatch is a genuine structural bug. <div> is
+  //    counted on markup with <script>/<style>/comment bodies removed, so HTML
+  //    inside JS template strings doesn't cause false positives.
+  const _count = (s, re) => (s.match(re) || []).length;
+  const hMarkup = h
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  const divO = _count(hMarkup, /<div[\s>]/gi), divC = _count(hMarkup, /<\/div\s*>/gi);
+  if(divO !== divC) issues.push('<div> の開閉タグ数が不一致 (開 ' + divO + ' / 閉 ' + divC + ')');
+  [['script', /<script[\s>]/gi, /<\/script\s*>/gi],
+   ['style', /<style[\s>]/gi, /<\/style\s*>/gi]].forEach(([name, openRe, closeRe]) => {
+    const o = _count(h, openRe), c = _count(h, closeRe);
+    if(o !== c) issues.push('<' + name + '> の開閉タグ数が不一致 (開 ' + o + ' / 閉 ' + c + ')');
+  });
+  // 3) Inline-JS syntax — extract non-module <script> blocks and compile them.
+  //    new Function() checks syntax only (never executes), so undefined CDN
+  //    globals never false-positive. Module / ESM-import scripts are skipped.
+  const scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+  let sm, idx = 0;
+  while((sm = scriptRe.exec(h))){
+    const attrs = sm[1] || '', code = sm[2] || '';
+    idx++;
+    if(/\bsrc\s*=/i.test(attrs)) continue;                 // external — nothing to check
+    if(/type\s*=\s*["']?module/i.test(attrs)) continue;    // ESM module
+    if(/(^|[^.\w])(import|export)[\s({]/.test(code)) continue; // ESM syntax — new Function rejects it
+    if(code.trim().length < 2) continue;
+    try { new Function(code); }
+    catch(e){ issues.push('inline <script> #' + idx + ' に JS 構文エラー: ' + String((e && e.message) || e).slice(0, 140)); }
+  }
+  return { ok: issues.length === 0, issues };
+}
+
 // ── 7) create_artifact — save AI-authored HTML as a live page ────
 // Claude.ai-style "Artifacts" — the AI writes a complete self-contained
 // HTML doc, we drop it in /generated/ and hand back a URL. The chat
@@ -6103,12 +6152,26 @@ async function executeArtifactTool(input, ownerUser){
     }
   }
   const url = '/generated/' + filename;
-  return {
+  // Self-verification — catch broken output before the user ever sees it.
+  const verify = _verifyArtifactHtml(html);
+  const baseInstr = '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットは URL を「新タブで開く ↗」リンクカードとしてレンダリングします。';
+  const result = {
     url, title, description: desc,
     size_kb: sizeKb,
     markdown: '![' + title + '](' + url + ')',
-    instructions: '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットは URL を「新タブで開く ↗」リンクカードとしてレンダリングします。',
+    verification: verify,
   };
+  if(verify.ok){
+    result.instructions = baseInstr;
+  } else {
+    result.instructions = '⚠️ 自動検証で ' + verify.issues.length + ' 件の問題を検出しました:\n- '
+      + verify.issues.join('\n- ')
+      + '\n\nこのまま完了せず、edit_artifact (filename: ' + filename + ') でこれらを必ず修正すること。'
+      + '修正後に再検証されます。検証を通過してからユーザーに最終応答を返してください。'
+      + (/<\/html>/i.test(html) ? '' : ' 特に出力が途中で切れている場合は、足りない部分を append_to_body 等で補完すること。')
+      + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
+  }
+  return result;
 }
 
 // ── edit_artifact — patch-mode edit of an existing artifact ──
@@ -6163,6 +6226,7 @@ async function executeEditArtifactTool(input, ownerUser){
     };
   }
   let html = String(artifact.html || '');
+  const _htmlBefore = html;
   if(html.length + content.length > 600000){
     return { error: 'artifact would exceed 600KB after edit' };
   }
@@ -6223,13 +6287,29 @@ async function executeEditArtifactTool(input, ownerUser){
   }
   const sizeKb = Math.round(Buffer.byteLength(html, 'utf8') / 1024);
   const url = '/generated/' + filename;
-  return {
+  // Self-verification — report only issues this edit INTRODUCED (regressions),
+  // so a pre-existing quirk in an old artifact doesn't trigger needless churn.
+  const _vBefore = _verifyArtifactHtml(_htmlBefore);
+  const _vAfter  = _verifyArtifactHtml(html);
+  const newIssues = _vAfter.issues.filter(i => _vBefore.issues.indexOf(i) < 0);
+  const baseInstr = '更新完了。最終応答で上記 markdown 構文を本文に含めてください。差分追加: ' + content.length + ' 文字。';
+  const result = {
     url, title: artifact.title || filename, operation: op,
     size_kb: sizeKb,
     bytes_added: content.length,
     markdown: '![' + (artifact.title || 'artifact') + '](' + url + ')',
-    instructions: '更新完了。最終応答で上記 markdown 構文を本文に含めてください。差分追加: ' + content.length + ' 文字。',
+    verification: { ok: newIssues.length === 0, issues: newIssues },
   };
+  if(newIssues.length === 0){
+    result.instructions = baseInstr;
+  } else {
+    result.instructions = '⚠️ この編集で ' + newIssues.length + ' 件の不具合が新たに発生しました:\n- '
+      + newIssues.join('\n- ')
+      + '\n\nこのまま完了せず、続けて edit_artifact (filename: ' + filename + ') で必ず修正すること。'
+      + '修正後に再検証されます。検証を通過してからユーザーに最終応答を返してください。'
+      + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
+  }
+  return result;
 }
 
 // Find the bytes-range of a (very simple) selector in HTML. Supports:

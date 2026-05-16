@@ -601,17 +601,18 @@ function _levelForXp(xp){
 // Count completed assistant turns + tool runs across an agent's full history
 // (live + archived) — used to backfill agents that predate the XP system.
 function _scanHistoryXp(agent){
-  let turns = 0, tools = 0;
+  let turns = 0, tools = 0, errors = 0;
   for(const arr of [agent && agent.history, agent && agent.history_archive]){
     if(!Array.isArray(arr)) continue;
     for(const m of arr){
       if(m && m.role === 'assistant' && !m._summary){
         turns++;
+        if(m.is_error) errors++;
         if(Array.isArray(m.tool_log)) tools += m.tool_log.length;
       }
     }
   }
-  return { turns, tools };
+  return { turns, tools, errors };
 }
 // Read-only progress snapshot for the client (level / xp / progress bar).
 function _agentProgress(agent){
@@ -646,23 +647,52 @@ function _awardAgentXp(agent){
     const s = _scanHistoryXp(agent);
     agent.turn_count = s.turns;
     agent.tool_count = s.tools;
+    agent.error_count = s.errors;
     agent.xp = s.turns * XP_PER_TURN + s.tools * XP_PER_TOOL;
     agent.last_active_at = new Date().toISOString();
     return;
   }
-  // Tools used in the just-completed turn = last assistant msg's tool_log.
-  let tools = 0;
+  // Tools used / error state of the just-completed turn = last assistant msg.
+  let tools = 0, wasError = false;
   const h = agent.history || [];
   for(let i = h.length - 1; i >= 0; i--){
     if(h[i] && h[i].role === 'assistant'){
       tools = Array.isArray(h[i].tool_log) ? h[i].tool_log.length : 0;
+      wasError = !!h[i].is_error;
       break;
     }
   }
   agent.turn_count = (agent.turn_count || 0) + 1;
   agent.tool_count = (agent.tool_count || 0) + tools;
+  agent.error_count = (agent.error_count || 0) + (wasError ? 1 : 0);
   agent.xp = (agent.xp || 0) + XP_PER_TURN + tools * XP_PER_TOOL;
   agent.last_active_at = new Date().toISOString();
+}
+
+// ── Agent trust (Phase 2) — derived reliability score, display-only in v1 ──
+// Distinct from level (level = experience/volume). Trust = "how much you can
+// rely on it": sustained work + tenure − error rate. Fully derived (no stored
+// field). The autonomy-unlock role comes with the delegation system (v2).
+function _agentTrust(agent){
+  const scan = (agent && typeof agent.turn_count === 'number') ? null : _scanHistoryXp(agent);
+  const turns = scan ? scan.turns : agent.turn_count;
+  // An agent that has done no work is unproven — lowest trust, full stop.
+  if(!turns || turns < 1) return { score: 0, level: 1 };
+  const errors = (agent && typeof agent.error_count === 'number')
+    ? agent.error_count : (scan ? scan.errors : _scanHistoryXp(agent).errors);
+  // Work done is the main driver (caps at 85).
+  const workPts = Math.min(85, turns * 1.1);
+  // Tenure — a small bonus for an agent that has been around (caps at 15).
+  let tenurePts = 0;
+  const created = agent && agent.created_at && Date.parse(agent.created_at);
+  if(created && !isNaN(created)){
+    tenurePts = Math.min(15, Math.max(0, (Date.now() - created) / 86400000) * 0.5);
+  }
+  // Errors scale the whole score down.
+  const errRate = Math.min(1, errors / turns);
+  const score = Math.round(Math.min(100, Math.max(0, (workPts + tenurePts) * (1 - errRate * 0.7))));
+  const level = Math.max(1, Math.min(5, 1 + Math.floor(score / 20)));
+  return { score, level };
 }
 
 function safe(u){
@@ -687,9 +717,10 @@ function safe(u){
   if(Array.isArray(s.agents)){
     for(const ag of s.agents){
       if(!ag) continue;
-      // Attach a computed level/XP snapshot so the client doesn't re-implement
-      // the curve (Phase 1 of the agent state model).
+      // Attach computed level/XP + trust snapshots so the client doesn't
+      // re-implement the curves (Phase 1 + 2 of the agent state model).
       ag.progress = _agentProgress(ag);
+      ag.trust = _agentTrust(ag);
       if(!Array.isArray(ag.history)) continue;
       for(const m of ag.history){
         if(m && m.streaming){

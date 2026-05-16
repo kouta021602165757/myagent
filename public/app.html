@@ -3086,6 +3086,9 @@ body{color:#f0f0f8;}
               <button class="tool-btn" id="codeBtn" onclick="insertCodeBlock()" title="コードブロック挿入 (\`\`\`)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
               </button>
+              <button class="tool-btn" id="libraryBtn" onclick="_openArtifactLibrary()" title="作った成果物の一覧">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              </button>
               <button class="tool-btn" id="chromeTool" title="" style="display:none">
                 <span style="font-size:14px">🌐</span><span style="font-size:12px;font-weight:700">Chrome</span>
               </button>
@@ -11814,6 +11817,81 @@ function _renderEditChip(){
     + '<span class="ec-name">'+esc(_editTarget.title)+'</span>'
     + '<button class="ec-x" onclick="_clearEditTarget()" title="'+L('編集をやめる','Stop editing')+'">✕</button>';
   if(comp) comp.classList.add('editing');
+}
+
+// ── 📁 Artifact library — every site the user has made, reachable anytime ──
+// Solves "I can't find my site": a flat, newest-first, filterable list (the
+// chat scroll / summarization can't lose it). Each row → 🔗開く or ✏️編集
+// (which sets the edit-target chip). Reads me.artifacts (now html-stripped
+// and light — see safe()).
+var _ARTIFACT_LIB_CSS = [
+  '#artifactLibrary{position:fixed;inset:0;z-index:9992;background:rgba(10,10,12,.5);display:flex;align-items:center;justify-content:center;padding:20px;animation:alIn .2s ease}',
+  '@keyframes alIn{from{opacity:0}to{opacity:1}}',
+  '.al-panel{width:100%;max-width:480px;max-height:82vh;background:var(--card,#fff);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.32);font-family:inherit}',
+  '.al-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--wire2,#e1dacb)}',
+  '.al-title{font-size:15px;font-weight:900;color:var(--text,#1c1917)}',
+  '.al-count{font-size:11px;font-weight:700;color:var(--text3,#a8a29e);background:var(--cream2,#f4efe6);padding:2px 8px;border-radius:99px;margin-left:5px}',
+  '.al-x{width:32px;height:32px;border-radius:50%;border:0;background:var(--cream2,#f4efe6);color:var(--text3,#a8a29e);font-size:13px;cursor:pointer}',
+  '.al-filter{margin:12px 18px 4px;padding:9px 12px;border:1px solid var(--wire2,#e1dacb);border-radius:10px;font-size:13px;font-family:inherit;outline:none}',
+  '.al-list{flex:1;overflow-y:auto;padding:8px 12px 14px}',
+  '.al-row{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid var(--wire,#ece7dd);border-radius:12px;margin-bottom:7px;background:var(--card,#fff)}',
+  '.al-row-main{flex:1;min-width:0}',
+  '.al-row-ti{font-size:13.5px;font-weight:700;color:var(--text,#1c1917);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.al-row-meta{font-size:10.5px;color:var(--text3,#a8a29e);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}',
+  '.al-open{width:36px;height:33px;border-radius:8px;border:1px solid var(--wire2,#e1dacb);background:var(--cream,#faf6f0);cursor:pointer;flex-shrink:0;font-size:13px}',
+  '.al-edit{padding:8px 11px;border-radius:8px;border:1px solid rgba(251,146,60,.34);background:rgba(251,146,60,.12);color:var(--peach-dark,#ea580c);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:inherit}',
+  '.al-empty{text-align:center;padding:36px 20px;color:var(--text3,#a8a29e);font-size:13px;line-height:1.75}',
+].join('');
+function _closeArtifactLibrary(){ var d=document.getElementById('artifactLibrary'); if(d) d.remove(); }
+function _alFilter(q){
+  q=String(q||'').toLowerCase().trim();
+  document.querySelectorAll('#artifactLibrary .al-row').forEach(function(r){
+    r.style.display = (!q || (r.dataset.t||'').indexOf(q)>=0) ? '' : 'none';
+  });
+}
+function _alRows(arts){
+  if(!arts.length){
+    return '<div class="al-empty">'+L('まだ成果物がありません。AI にサイトやツールを作ってもらうと、ここに並びます。',
+      'No sites yet — when an AI builds something, it shows up here.')+'</div>';
+  }
+  return arts.map(function(a){
+    if(!a || !a.filename) return '';
+    var url='/generated/'+a.filename;
+    var when=String(a.created_at||'').slice(0,10);
+    var t=String(a.title||a.filename);
+    var tArg=t.replace(/'/g,"\\'");
+    return '<div class="al-row" data-t="'+esc(t.toLowerCase())+'">'
+      + '<div class="al-row-main">'
+      +   '<div class="al-row-ti">'+esc(t)+'</div>'
+      +   '<div class="al-row-meta">'+esc(when)+' · '+esc(a.filename)+'</div>'
+      + '</div>'
+      + '<button class="al-open" onclick="window.open(\''+esc(url)+'\',\'_blank\')" title="'+L('開く','Open')+'">🔗</button>'
+      + '<button class="al-edit" onclick="_setEditTarget(\''+esc(a.filename)+'\',\''+tArg+'\');_closeArtifactLibrary()">✏️ '+L('編集','Edit')+'</button>'
+      + '</div>';
+  }).join('');
+}
+function _openArtifactLibrary(){
+  _closeArtifactLibrary();
+  if(!document.getElementById('artifactLibCss')){
+    var st=document.createElement('style'); st.id='artifactLibCss'; st.textContent=_ARTIFACT_LIB_CSS;
+    document.head.appendChild(st);
+  }
+  var arts=(typeof me!=='undefined' && me && Array.isArray(me.artifacts)) ? me.artifacts.slice() : [];
+  arts.sort(function(a,b){ return String((b&&b.created_at)||'').localeCompare(String((a&&a.created_at)||'')); });
+  var d=document.createElement('div');
+  d.id='artifactLibrary';
+  d.innerHTML =
+    '<div class="al-panel">'
+    + '<div class="al-hd">'
+    +   '<div class="al-title">📁 '+L('作った成果物','Your sites')+'<span class="al-count">'+arts.length+'</span></div>'
+    +   '<button class="al-x" onclick="_closeArtifactLibrary()" aria-label="close">✕</button>'
+    + '</div>'
+    + (arts.length>8 ? '<input id="alFilter" class="al-filter" placeholder="'+L('絞り込み… (例: task manager)','Filter…')+'" oninput="_alFilter(this.value)">' : '')
+    + '<div class="al-list">'+_alRows(arts)+'</div>'
+    + '</div>';
+  d.onclick=function(e){ if(e.target===d) _closeArtifactLibrary(); };
+  document.body.appendChild(d);
+  setTimeout(function(){ var f=document.getElementById('alFilter'); if(f) f.focus(); }, 60);
 }
 
 // Split the composer's attachments into the two arrays the chat API expects.

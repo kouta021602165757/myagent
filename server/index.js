@@ -582,6 +582,89 @@ function readBody(req,max=50*1024*1024){
 function readRaw(req){return new Promise((resolve,reject)=>{const c=[];req.on('data',d=>c.push(d));req.on('end',()=>resolve(Buffer.concat(c)));req.on('error',reject);});}
 function getAuth(req){return JWT.verify((req.headers['authorization']||'').replace('Bearer ',''));}
 function getIP(req){return(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();}
+// ── Agent progression (level / XP) — Phase 1 of the agent state model ──
+// XP accrues from real work: each completed chat turn + each tool run.
+// `level` is always DERIVED from xp (xp is the single source of truth).
+// Agent fields live inside the users.agents jsonb, so no schema migration.
+const XP_PER_TURN = 12;
+const XP_PER_TOOL = 6;
+function _xpForLevel(lv){              // cumulative XP required to REACH level lv
+  if(lv <= 1) return 0;
+  return Math.round(30 * Math.pow(lv - 1, 1.6));
+}
+function _levelForXp(xp){
+  xp = Math.max(0, xp || 0);
+  let lv = 1;
+  while(lv < 999 && _xpForLevel(lv + 1) <= xp) lv++;
+  return lv;
+}
+// Count completed assistant turns + tool runs across an agent's full history
+// (live + archived) — used to backfill agents that predate the XP system.
+function _scanHistoryXp(agent){
+  let turns = 0, tools = 0;
+  for(const arr of [agent && agent.history, agent && agent.history_archive]){
+    if(!Array.isArray(arr)) continue;
+    for(const m of arr){
+      if(m && m.role === 'assistant' && !m._summary){
+        turns++;
+        if(Array.isArray(m.tool_log)) tools += m.tool_log.length;
+      }
+    }
+  }
+  return { turns, tools };
+}
+// Read-only progress snapshot for the client (level / xp / progress bar).
+function _agentProgress(agent){
+  let xp;
+  if(agent && typeof agent.xp === 'number'){
+    xp = Math.max(0, agent.xp);
+  } else {
+    const s = _scanHistoryXp(agent);   // derive for legacy agents
+    xp = s.turns * XP_PER_TURN + s.tools * XP_PER_TOOL;
+  }
+  const level = _levelForXp(xp);
+  const cur = _xpForLevel(level), next = _xpForLevel(level + 1);
+  const span = Math.max(1, next - cur);
+  const scan = (agent && typeof agent.turn_count === 'number') ? null : _scanHistoryXp(agent);
+  return {
+    xp, level,
+    output_count: (agent && typeof agent.turn_count === 'number') ? agent.turn_count : scan.turns,
+    tool_count:   (agent && typeof agent.tool_count === 'number') ? agent.tool_count : scan.tools,
+    xp_into_level: xp - cur,
+    xp_to_next:    next - cur,
+    progress_pct:  Math.min(100, Math.max(0, Math.round(((xp - cur) / span) * 100))),
+  };
+}
+// Award XP for a just-completed turn. Call AFTER the assistant message is
+// pushed to agent.history. Backfills xp from history on first use so legacy
+// agents keep their accumulated progress instead of resetting to Lv.1.
+function _awardAgentXp(agent){
+  if(!agent) return;
+  if(typeof agent.xp !== 'number'){
+    // First award for a legacy agent — seed from full history, which already
+    // includes the turn that just completed, so don't double-count it.
+    const s = _scanHistoryXp(agent);
+    agent.turn_count = s.turns;
+    agent.tool_count = s.tools;
+    agent.xp = s.turns * XP_PER_TURN + s.tools * XP_PER_TOOL;
+    agent.last_active_at = new Date().toISOString();
+    return;
+  }
+  // Tools used in the just-completed turn = last assistant msg's tool_log.
+  let tools = 0;
+  const h = agent.history || [];
+  for(let i = h.length - 1; i >= 0; i--){
+    if(h[i] && h[i].role === 'assistant'){
+      tools = Array.isArray(h[i].tool_log) ? h[i].tool_log.length : 0;
+      break;
+    }
+  }
+  agent.turn_count = (agent.turn_count || 0) + 1;
+  agent.tool_count = (agent.tool_count || 0) + tools;
+  agent.xp = (agent.xp || 0) + XP_PER_TURN + tools * XP_PER_TOOL;
+  agent.last_active_at = new Date().toISOString();
+}
+
 function safe(u){
   const{password:_,verify_token:__,reset_token:___,reset_expiry:____,
         google_oauth:gOAuth,
@@ -603,7 +686,11 @@ function safe(u){
   // this, the bubble renders as "🍑 生成中…" forever after reload.
   if(Array.isArray(s.agents)){
     for(const ag of s.agents){
-      if(!ag || !Array.isArray(ag.history)) continue;
+      if(!ag) continue;
+      // Attach a computed level/XP snapshot so the client doesn't re-implement
+      // the curve (Phase 1 of the agent state model).
+      ag.progress = _agentProgress(ag);
+      if(!Array.isArray(ag.history)) continue;
       for(const m of ag.history){
         if(m && m.streaming){
           m.streaming = false;
@@ -17196,6 +17283,7 @@ async function handleAPI(req,res,pathname,method,ip){
             {id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent}];
         }
         if(agent.history.length>200) agent.history = agent.history.slice(-200);
+        _awardAgentXp(agent);  // Phase 1: level/XP progression
         payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
         payerUser.usage_count = (payerUser.usage_count||0) + 1;
         payerUser.billing_history = payerUser.billing_history || [];
@@ -17784,6 +17872,7 @@ async function handleAPI(req,res,pathname,method,ip){
         {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent2}];
     }
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
+    _awardAgentXp(agent);  // Phase 1: level/XP progression
     payerUser.balance_jpy=Math.round(((payerUser.balance_jpy||0)-cost.jpy)*1000)/1000;
     payerUser.usage_count=(payerUser.usage_count||0)+1;
     payerUser.billing_history=payerUser.billing_history||[];

@@ -16432,6 +16432,8 @@ function _openAgentCard(agentId){
   var tr=ag.trust||{level:1};
   var oc=ag.outcomes||{total:0,completed:0,failed:0,success_rate:0,recent:[]};
   var dg=ag.digest||{turns_24h:0,turns_7d:0};
+  // No outputs yet → show "—", not "0%" (0% reads as "fails everything").
+  var srDisp=(oc.total>0)?((oc.success_rate||0)+'%'):'—';
   var idCode=(String(ag.id||'').replace(/[^0-9a-fA-F]/g,'').slice(0,4).toUpperCase())||'0000';
   var av=String(ag.avatar||'🤖');
   var avInner=/^(https?:|\/|data:)/.test(av) ? '<img src="'+esc(av)+'">' : esc(av);
@@ -16472,7 +16474,7 @@ function _openAgentCard(agentId){
     + '</div>'
     + '<div class="ac-stats">'
     +   '<div class="ac-stat"><div class="v">'+(p.output_count||0)+'</div><div class="l">出力</div></div>'
-    +   '<div class="ac-stat"><div class="v cy">'+(oc.success_rate||0)+'%</div><div class="l">成功率</div></div>'
+    +   '<div class="ac-stat"><div class="v cy">'+srDisp+'</div><div class="l">成功率</div></div>'
     +   '<div class="ac-stat"><div class="v">Lv.'+(tr.level||1)+'</div><div class="l">信頼</div></div>'
     + '</div>'
     + '<div class="ac-lvbar">'
@@ -16489,7 +16491,7 @@ function _openAgentCard(agentId){
     +     '<div class="ac-sum">'
     +       '<div class="ac-sc"><div class="n g">'+(oc.completed||0)+'</div><div class="l">完了</div></div>'
     +       '<div class="ac-sc"><div class="n r">'+(oc.failed||0)+'</div><div class="l">失敗</div></div>'
-    +       '<div class="ac-sc"><div class="n cy">'+(oc.success_rate||0)+'%</div><div class="l">成功率</div></div>'
+    +       '<div class="ac-sc"><div class="n cy">'+srDisp+'</div><div class="l">成功率</div></div>'
     +     '</div>'
     +     recentHtml
     +   '</div>'

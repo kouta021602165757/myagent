@@ -792,7 +792,9 @@ function safe(u){
   if(Array.isArray(s.artifacts)){
     s.artifacts = s.artifacts.map(a => {
       if(!a || typeof a !== 'object') return a;
-      const { html:_html, ...rest } = a;
+      const { html:_html, versions, ...rest } = a;
+      // Version metadata only — drop the heavy html snapshots from the payload.
+      if(Array.isArray(versions)) rest.versions = versions.map(v => ({ at: v && v.at, op: v && v.op }));
       return rest;
     });
   }
@@ -6020,6 +6022,7 @@ async function executeArtifactTool(input, ownerUser){
       ownerUser.artifacts.push({
         id, filename, title, description: desc,
         html,
+        version: 1,
         created_at: new Date().toISOString(),
         size: Buffer.byteLength(html, 'utf8'),
       });
@@ -6124,6 +6127,16 @@ async function executeEditArtifactTool(input, ownerUser){
   if(!applied){
     return { error: 'invalid operation: '+op };
   }
+  // Non-destructive edit: snapshot the version we're about to overwrite, so a
+  // bad edit can be rolled back. Capped at 3 (html is heavy in the JSONB row).
+  artifact.versions = Array.isArray(artifact.versions) ? artifact.versions : [];
+  artifact.versions.push({
+    html: artifact.html,
+    at: artifact.updated_at || artifact.created_at || new Date().toISOString(),
+    op,
+  });
+  if(artifact.versions.length > 3) artifact.versions = artifact.versions.slice(-3);
+  artifact.version = (artifact.version || 1) + 1;
   artifact.html = html;
   artifact.updated_at = new Date().toISOString();
   artifact.size = Buffer.byteLength(html, 'utf8');
@@ -12200,6 +12213,32 @@ async function handleAPI(req,res,pathname,method,ip){
     user.onboarded_at = new Date().toISOString();
     try { await DB.save(user); } catch(e){}
     return jres(res,200,{ok:true});
+  }
+
+  // ── POST /api/artifacts/rollback ───────────────────────────
+  // One-step undo for an artifact: restore the most recent snapshot that
+  // edit_artifact saved before its last overwrite. The bad current version
+  // is discarded (that's the point — it's the one being undone).
+  if(pathname==='/api/artifacts/rollback' && method==='POST'){
+    const body = await readBody(req);
+    let fn = String((body && body.filename) || '').trim();
+    if(fn.indexOf('/') >= 0) fn = fn.split('/').filter(Boolean).pop() || fn;
+    fn = fn.split('?')[0].split('#')[0];
+    if(!fn) return jres(res,400,{error:'filename required'});
+    user.artifacts = Array.isArray(user.artifacts) ? user.artifacts : [];
+    const art = user.artifacts.find(a => a && a.filename === fn);
+    if(!art) return jres(res,404,{error:'artifact not found'});
+    if(!Array.isArray(art.versions) || !art.versions.length){
+      return jres(res,400,{error:'戻せる以前のバージョンがありません'});
+    }
+    const prev = art.versions.pop();
+    art.html = String((prev && prev.html) || '');
+    art.version = Math.max(1, (art.version || 2) - 1);
+    art.updated_at = new Date().toISOString();
+    art.size = Buffer.byteLength(art.html, 'utf8');
+    try { fs.writeFileSync(path.join(GENERATED_DIR, fn), art.html, 'utf8'); } catch(e){}
+    try { await DB.save(user); } catch(e){}
+    return jres(res,200,{ ok:true, url:'/generated/'+fn, version: art.version });
   }
 
   // ── POST /api/agents ───────────────────────────────────────

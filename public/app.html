@@ -11839,6 +11839,7 @@ var _ARTIFACT_LIB_CSS = [
   '.al-row-ti{font-size:13.5px;font-weight:700;color:var(--text,#1c1917);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
   '.al-row-meta{font-size:10.5px;color:var(--text3,#a8a29e);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}',
   '.al-open{width:36px;height:33px;border-radius:8px;border:1px solid var(--wire2,#e1dacb);background:var(--cream,#faf6f0);cursor:pointer;flex-shrink:0;font-size:13px}',
+  '.al-roll{width:34px;height:33px;border-radius:8px;border:1px solid var(--wire2,#e1dacb);background:var(--cream,#faf6f0);cursor:pointer;flex-shrink:0;font-size:14px;color:var(--text2,#57534e)}',
   '.al-edit{padding:8px 11px;border-radius:8px;border:1px solid rgba(251,146,60,.34);background:rgba(251,146,60,.12);color:var(--peach-dark,#ea580c);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:inherit}',
   '.al-empty{text-align:center;padding:36px 20px;color:var(--text3,#a8a29e);font-size:13px;line-height:1.75}',
 ].join('');
@@ -11860,11 +11861,14 @@ function _alRows(arts){
     var when=String(a.created_at||'').slice(0,10);
     var t=String(a.title||a.filename);
     var tArg=t.replace(/'/g,"\\'");
+    var ver=a.version||1;
+    var hasVers=Array.isArray(a.versions)&&a.versions.length>0;
     return '<div class="al-row" data-t="'+esc(t.toLowerCase())+'">'
       + '<div class="al-row-main">'
       +   '<div class="al-row-ti">'+esc(t)+'</div>'
-      +   '<div class="al-row-meta">'+esc(when)+' · '+esc(a.filename)+'</div>'
+      +   '<div class="al-row-meta">v'+ver+' · '+esc(when)+' · '+esc(a.filename)+'</div>'
       + '</div>'
+      + (hasVers ? '<button class="al-roll" onclick="_rollbackArtifact(\''+esc(a.filename)+'\')" title="1つ前の版に戻す">↩</button>' : '')
       + '<button class="al-open" onclick="window.open(\''+esc(url)+'\',\'_blank\')" title="'+L('開く','Open')+'">🔗</button>'
       + '<button class="al-edit" onclick="_setEditTarget(\''+esc(a.filename)+'\',\''+tArg+'\');_closeArtifactLibrary()">✏️ '+L('編集','Edit')+'</button>'
       + '</div>';
@@ -11892,6 +11896,23 @@ function _openArtifactLibrary(){
   d.onclick=function(e){ if(e.target===d) _closeArtifactLibrary(); };
   document.body.appendChild(d);
   setTimeout(function(){ var f=document.getElementById('alFilter'); if(f) f.focus(); }, 60);
+}
+// One-step undo for an artifact — restores the version before its last edit.
+async function _rollbackArtifact(filename){
+  if(!filename) return;
+  if(!confirm(L('「'+filename+'」を 1 つ前の版に戻しますか？\n（最後の編集が取り消されます）',
+                'Roll back this site to its previous version?'))) return;
+  try{
+    await api('POST','/api/artifacts/rollback',{filename:filename});
+    showToast(L('1 つ前の版に戻しました','Rolled back'),'ok');
+    try{
+      var meRes=await api('GET','/api/me');
+      if(meRes&&meRes.user){ me=meRes.user; if(Array.isArray(me.agents)) agents=me.agents; }
+    }catch(e){}
+    _openArtifactLibrary();   // re-render with refreshed data
+  }catch(e){
+    showToast((e&&e.message)||L('戻せませんでした','Rollback failed'),'ng');
+  }
 }
 
 // Split the composer's attachments into the two arrays the chat API expects.

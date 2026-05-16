@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HARU · MY AI Agent — 構想反映版モック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --bg-deep:#07090F; --bg-card:#11151F; --bg-elev:#161B27;
+    --border:rgba(0,240,255,0.08); --border-strong:rgba(0,240,255,0.18);
+    --text-primary:#FFFFFF; --text-secondary:rgba(255,255,255,0.62); --text-tertiary:rgba(255,255,255,0.35);
+    --cyan:#00F0FF; --cyan-soft:rgba(0,240,255,0.5); --cyan-glow:rgba(0,240,255,0.35);
+    --gold:#FFD700; --success:#00FF88; --warn:#FFB800; --danger:#FF4D6D;
+    --font-display:'Bricolage Grotesque',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',monospace; --font-serif:'Instrument Serif',serif;
+  }
+  html,body{ background:var(--bg-deep); color:var(--text-primary); font-family:var(--font-display);
+    overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+  body{ min-height:100vh; display:flex; justify-content:center; align-items:flex-start;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,240,255,0.12), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 110%, rgba(0,240,255,0.06), transparent 60%),
+      var(--bg-deep); }
+  body::before{ content:''; position:fixed; inset:0; opacity:.025; pointer-events:none; z-index:1; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  .phone{ width:100%; max-width:420px; min-height:100vh; background:var(--bg-deep);
+    position:relative; z-index:2; padding-bottom:32px; }
+
+  /* HEADER */
+  .header{ display:flex; justify-content:space-between; align-items:center; padding:20px 20px 8px;
+    position:sticky; top:0; background:linear-gradient(180deg,var(--bg-deep) 60%,transparent);
+    z-index:10; backdrop-filter:blur(8px); }
+  .icon-btn{ width:38px; height:38px; border-radius:50%; background:var(--bg-elev);
+    border:1px solid var(--border); display:grid; place-items:center; color:var(--text-secondary);
+    cursor:pointer; transition:all .25s ease; }
+  .icon-btn:hover{ color:var(--cyan); border-color:var(--border-strong); }
+  .icon-btn:active{ transform:scale(.95); }
+  .header-id{ font-family:var(--font-mono); font-size:10px; letter-spacing:.18em;
+    color:var(--text-tertiary); text-transform:uppercase; }
+
+  /* HERO */
+  .hero{ position:relative; padding:12px 20px 28px; overflow:hidden; }
+  .hero-grid{ position:absolute; inset:0; pointer-events:none;
+    background-image:linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);
+    background-size:32px 32px; mask-image:radial-gradient(ellipse at center,black,transparent 70%); }
+  .hero-rings{ position:absolute; top:50%; left:50%; transform:translate(-50%,-55%);
+    width:320px; height:320px; pointer-events:none; }
+  .hero-rings::before,.hero-rings::after{ content:''; position:absolute; border-radius:50%;
+    border:1px solid var(--border); inset:0; animation:rotate 24s linear infinite; }
+  .hero-rings::before{ inset:30px; border-color:rgba(0,240,255,.06); border-top-color:rgba(0,240,255,.35); animation-duration:16s; }
+  .hero-rings::after{ inset:60px; border-color:rgba(0,240,255,.04); border-right-color:rgba(0,240,255,.22);
+    animation-duration:22s; animation-direction:reverse; }
+  @keyframes rotate{ to{ transform:rotate(360deg);} }
+  .sparks{ position:absolute; inset:0; pointer-events:none; }
+  .sparks span{ position:absolute; width:3px; height:3px; background:var(--cyan); border-radius:50%;
+    box-shadow:0 0 8px var(--cyan-glow); animation:float 4s ease-in-out infinite; opacity:.6; }
+  .sparks span:nth-child(1){ top:18%; left:18%; animation-delay:0s; }
+  .sparks span:nth-child(2){ top:32%; left:78%; animation-delay:.8s; }
+  .sparks span:nth-child(3){ top:70%; left:12%; animation-delay:1.6s; }
+  .sparks span:nth-child(4){ top:60%; left:86%; animation-delay:2.4s; }
+  .sparks span:nth-child(5){ top:80%; left:50%; animation-delay:3.2s; width:2px; height:2px; }
+  .sparks span:nth-child(6){ top:12%; left:50%; animation-delay:.4s; width:2px; height:2px; }
+  @keyframes float{ 0%,100%{ transform:translateY(0) scale(1); opacity:.6; }
+    50%{ transform:translateY(-12px) scale(1.3); opacity:1; } }
+  .avatar-wrap{ position:relative; width:180px; height:180px; margin:16px auto 0;
+    display:grid; place-items:center; animation:breathe 4s ease-in-out infinite; }
+  @keyframes breathe{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-6px);} }
+  .avatar-glow{ position:absolute; inset:0; filter:blur(20px); animation:pulse 3s ease-in-out infinite;
+    background:radial-gradient(circle,var(--cyan-glow) 0%,transparent 60%); }
+  @keyframes pulse{ 0%,100%{ opacity:.5; transform:scale(1);} 50%{ opacity:.9; transform:scale(1.1);} }
+  .avatar{ position:relative; width:140px; height:140px; border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,#1a2436,#0a0e18); border:1px solid var(--border-strong);
+    display:grid; place-items:center; font-size:80px;
+    box-shadow:inset 0 0 40px rgba(0,240,255,.1),0 0 60px rgba(0,240,255,.15); }
+  .live-dot{ position:absolute; bottom:16px; right:16px; display:flex; align-items:center; gap:6px;
+    background:rgba(0,255,136,.12); border:1px solid rgba(0,255,136,.3); padding:4px 10px 4px 8px;
+    border-radius:100px; backdrop-filter:blur(8px); }
+  .live-dot .pulse{ width:6px; height:6px; background:var(--success); border-radius:50%;
+    box-shadow:0 0 8px var(--success); animation:blink 1.4s ease-in-out infinite; }
+  @keyframes blink{ 0%,100%{ opacity:1;} 50%{ opacity:.4;} }
+  .live-dot span{ font-family:var(--font-mono); font-size:9px; letter-spacing:.15em;
+    color:var(--success); text-transform:uppercase; font-weight:600; }
+
+  /* IDENTITY */
+  .identity{ text-align:center; margin-top:24px; padding:0 20px; }
+  .name{ font-family:var(--font-display); font-size:52px; font-weight:700; letter-spacing:.16em;
+    line-height:1; background:linear-gradient(180deg,#fff 30%,rgba(255,255,255,.4) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:12px; }
+  .level-row{ display:inline-flex; align-items:center; gap:12px; font-family:var(--font-mono);
+    font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--text-secondary);
+    padding:6px 14px; background:var(--bg-elev); border:1px solid var(--border); border-radius:100px; }
+  .level-row .lv{ color:var(--cyan); font-weight:600; }
+  .level-row .sep{ color:var(--text-tertiary); }
+  .quote{ margin-top:14px; font-family:var(--font-serif); font-style:italic; font-size:17px;
+    color:var(--text-secondary); }
+  .quote::before{ content:'"'; color:var(--cyan-soft); margin:0 2px; }
+  .quote::after{ content:'"'; color:var(--cyan-soft); margin:0 2px; }
+
+  /* STATS */
+  .stats{ margin:24px 16px 0; display:grid; grid-template-columns:repeat(3,1fr);
+    background:var(--bg-card); border:1px solid var(--border); border-radius:20px; padding:20px 8px;
+    position:relative; overflow:hidden; }
+  .stats::before{ content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(180deg,rgba(0,240,255,.04),transparent); }
+  .stat{ display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; z-index:1; }
+  .stat:not(:last-child)::after{ content:''; position:absolute; right:0; top:12%; bottom:12%; width:1px;
+    background:linear-gradient(180deg,transparent,var(--border-strong),transparent); }
+  .stat-icon{ font-size:14px; margin-bottom:4px; opacity:.7; }
+  .stat-val{ font-family:var(--font-display); font-size:30px; font-weight:700; letter-spacing:-.02em;
+    color:var(--text-primary); line-height:1; }
+  .stat-val .unit{ font-size:15px; color:var(--text-tertiary); font-weight:500; margin-left:1px; }
+  .stat-val.cyan{ color:var(--cyan); }
+  .stat-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:.18em;
+    color:var(--text-tertiary); text-transform:uppercase; margin-top:6px; }
+
+  /* LEVEL BAR */
+  .level-bar{ margin:14px 16px 0; padding:14px 18px; background:var(--bg-card);
+    border:1px solid var(--border); border-radius:16px; }
+  .level-bar-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .level-bar-label{ font-family:var(--font-mono); font-size:10px; letter-spacing:.2em;
+    color:var(--text-tertiary); text-transform:uppercase; }
+  .level-bar-pct{ font-family:var(--font-mono); font-size:11px; color:var(--cyan); font-weight:600; }
+  .level-bar-track{ height:6px; background:rgba(0,240,255,.08); border-radius:100px; overflow:hidden; }
+  .level-bar-fill{ height:100%; width:82%; border-radius:100px; position:relative;
+    background:linear-gradient(90deg,#00F0FF 0%,#00B8FF 100%); box-shadow:0 0 12px var(--cyan-glow);
+    animation:fillBar 1.5s cubic-bezier(.16,.84,.4,1); }
+  .level-bar-fill::after{ content:''; position:absolute; right:0; top:-2px; bottom:-2px; width:12px;
+    background:linear-gradient(90deg,transparent,white); opacity:.5; }
+  @keyframes fillBar{ from{ width:0; } to{ width:82%; } }
+
+  /* DELEGATION CARD (NEW) */
+  .deleg{ margin:14px 16px 0; padding:16px 18px; background:var(--bg-card);
+    border:1px solid var(--border); border-radius:16px; }
+  .deleg-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .deleg-title{ font-size:13px; font-weight:700; color:var(--text-primary); }
+  .deleg-title .sub{ font-family:var(--font-mono); font-size:9px; letter-spacing:.1em;
+    color:var(--text-tertiary); margin-left:6px; text-transform:uppercase; }
+  .seg{ display:flex; gap:4px; padding:4px; background:var(--bg-deep); border:1px solid var(--border);
+    border-radius:12px; }
+  .seg button{ flex:1; padding:9px 6px; background:transparent; border:none; cursor:pointer;
+    color:var(--text-tertiary); font-family:var(--font-mono); font-size:10px; letter-spacing:.08em;
+    border-radius:9px; transition:all .25s ease; font-weight:600; }
+  .seg button.on{ background:rgba(0,240,255,.1); color:var(--cyan);
+    box-shadow:inset 0 0 0 1px var(--border-strong); }
+  .seg button:not(.on):active{ transform:scale(.97); }
+  .deleg-note{ display:flex; align-items:center; gap:7px; margin-top:11px;
+    font-size:11px; color:var(--text-secondary); }
+  .deleg-note .ic{ color:var(--success); }
+  .deleg-note b{ color:var(--cyan); font-weight:600; }
+
+  /* TABS */
+  .tabs{ margin:20px 16px 0; display:flex; gap:4px; padding:4px; background:var(--bg-card);
+    border:1px solid var(--border); border-radius:14px; }
+  .tab{ flex:1; padding:10px 6px; background:transparent; border:none; cursor:pointer;
+    color:var(--text-tertiary); font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em;
+    text-transform:uppercase; border-radius:10px; transition:all .3s ease;
+    display:flex; align-items:center; justify-content:center; gap:5px; }
+  .tab.active{ background:rgba(0,240,255,.08); color:var(--cyan);
+    box-shadow:inset 0 0 0 1px var(--border-strong); }
+  .tab-count{ font-size:9px; background:rgba(255,255,255,.05); padding:2px 6px; border-radius:10px; font-weight:600; }
+  .tab.active .tab-count{ background:rgba(0,240,255,.15); color:var(--cyan); }
+
+  .tab-content{ padding:16px; }
+  .tab-pane{ display:none; }
+  .tab-pane.active{ display:block; animation:slideIn .4s ease; }
+  @keyframes slideIn{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
+
+  /* OUTCOME SUMMARY */
+  .outcome-sum{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+  .osum{ background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+    padding:12px 6px; text-align:center; }
+  .osum .n{ font-family:var(--font-display); font-size:22px; font-weight:700; line-height:1; }
+  .osum.s .n{ color:var(--success); } .osum.p .n{ color:var(--warn); } .osum.f .n{ color:var(--danger); }
+  .osum .l{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.12em;
+    color:var(--text-tertiary); text-transform:uppercase; margin-top:5px; }
+
+  /* OUTPUT LIST */
+  .output-item{ display:flex; gap:14px; padding:14px 16px; background:var(--bg-card);
+    border:1px solid var(--border); border-radius:14px; margin-bottom:8px; cursor:pointer;
+    transition:all .25s ease; }
+  .output-item:hover{ border-color:var(--border-strong); background:var(--bg-elev); }
+  .output-item:active{ transform:scale(.99); }
+  .output-mark{ flex-shrink:0; width:6px; border-radius:3px; background:var(--border-strong); }
+  .output-item[data-status="success"] .output-mark{ background:var(--success); box-shadow:0 0 8px rgba(0,255,136,.4); }
+  .output-item[data-status="pending"] .output-mark{ background:var(--warn); box-shadow:0 0 8px rgba(255,184,0,.3); }
+  .output-item[data-status="failed"] .output-mark{ background:var(--danger); }
+  .output-body{ flex:1; min-width:0; }
+  .output-title{ font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
+  .output-desc{ font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary);
+    letter-spacing:.08em; text-transform:uppercase; }
+  .output-meta{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .status-pill{ font-family:var(--font-mono); font-size:9px; padding:3px 8px; border-radius:100px;
+    letter-spacing:.1em; font-weight:600; }
+  .status-pill.success{ background:rgba(0,255,136,.1); color:var(--success); }
+  .status-pill.pending{ background:rgba(255,184,0,.1); color:var(--warn); }
+  .status-pill.failed{ background:rgba(255,77,109,.1); color:var(--danger); }
+  .output-time{ font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); }
+  .see-more{ display:block; width:100%; padding:12px; text-align:center; background:transparent;
+    border:1px dashed var(--border-strong); color:var(--cyan); border-radius:12px;
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase;
+    cursor:pointer; margin-top:8px; transition:all .25s ease; }
+  .see-more:hover{ background:rgba(0,240,255,.05); border-style:solid; }
+
+  /* SKILL */
+  .skill-section{ margin-bottom:20px; } .skill-section:last-child{ margin-bottom:0; }
+  .skill-section-title{ display:flex; align-items:center; gap:8px; margin-bottom:10px;
+    font-family:var(--font-mono); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--text-tertiary); }
+  .skill-section-title::before{ content:''; width:14px; height:1px; background:var(--border-strong); }
+  .skill-section-title.strong{ color:var(--cyan); }
+  .skill-section-title.growth{ color:var(--success); }
+  .skill-section-title.personality{ color:#FF9FE5; }
+  .skill-section-title.warning{ color:var(--warn); }
+  .skill-item{ padding:12px 14px; background:var(--bg-card); border:1px solid var(--border);
+    border-radius:12px; margin-bottom:6px; }
+  .skill-item:last-child{ margin-bottom:0; }
+  .skill-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .skill-name{ display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; }
+  .skill-name .emoji{ font-size:15px; }
+  .skill-stars{ font-size:11px; letter-spacing:1px; }
+  .skill-stars .filled{ color:var(--cyan); }
+  .skill-stars.growth .filled{ color:var(--success); }
+  .skill-stars .empty{ color:rgba(255,255,255,.15); }
+  .skill-meta{ font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); }
+  .skill-meta .hl{ color:var(--cyan); font-weight:500; }
+  .skill-section.growth .skill-meta .hl{ color:var(--success); }
+  .text-list{ background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
+  .text-list ul{ list-style:none; }
+  .text-list li{ font-size:13px; color:var(--text-secondary); padding:5px 0 5px 18px;
+    position:relative; line-height:1.5; }
+  .text-list li::before{ content:''; position:absolute; left:0; top:12px; width:6px; height:1px;
+    background:var(--text-tertiary); }
+  .text-list.warn li::before{ background:var(--warn); }
+
+  /* APPROVAL QUEUE (NEW) */
+  .approve-head{ font-family:var(--font-mono); font-size:10px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--warn); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .approve-head::before{ content:''; width:14px; height:1px; background:var(--warn); }
+  .approve-item{ background:var(--bg-card); border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px; margin-bottom:8px; }
+  .approve-row{ display:flex; gap:12px; align-items:flex-start; }
+  .approve-ic{ width:34px; height:34px; border-radius:9px; flex-shrink:0; display:grid; place-items:center;
+    font-size:16px; background:rgba(255,184,0,.1); border:1px solid rgba(255,184,0,.25); }
+  .approve-body{ flex:1; min-width:0; }
+  .approve-title{ font-size:13.5px; font-weight:600; margin-bottom:3px; }
+  .approve-desc{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:.06em;
+    color:var(--text-tertiary); text-transform:uppercase; }
+  .approve-actions{ display:flex; gap:6px; margin-top:11px; }
+  .ab{ flex:1; padding:8px 4px; border-radius:9px; font-family:var(--font-mono); font-size:10px;
+    font-weight:600; letter-spacing:.05em; cursor:pointer; border:1px solid var(--border);
+    background:var(--bg-elev); color:var(--text-secondary); transition:all .2s ease; }
+  .ab:active{ transform:scale(.97); }
+  .ab.view:hover{ color:var(--cyan); border-color:var(--border-strong); }
+  .ab.ok{ background:rgba(0,255,136,.1); border-color:rgba(0,255,136,.3); color:var(--success); }
+  .ab.no{ flex:0 0 44px; color:var(--danger); }
+  .approve-foot{ font-size:11px; color:var(--text-tertiary); margin-top:6px; line-height:1.6; }
+  .approve-foot b{ color:var(--cyan); }
+
+  /* DIGEST STRIP (NEW) */
+  .digest{ margin:18px 16px 0; padding:15px 16px; border-radius:16px;
+    background:linear-gradient(135deg,rgba(0,240,255,.07),rgba(0,240,255,.02));
+    border:1px solid var(--border-strong); }
+  .digest-top{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700;
+    color:var(--text-primary); margin-bottom:6px; }
+  .digest-body{ font-size:12px; color:var(--text-secondary); line-height:1.6; }
+  .digest-body b{ color:var(--cyan); font-weight:600; }
+  .digest-link{ display:inline-flex; align-items:center; gap:4px; margin-top:9px;
+    font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--cyan); cursor:pointer; }
+
+  .footer-note{ text-align:center; padding:28px 20px 8px; font-family:var(--font-mono);
+    font-size:9px; color:var(--text-tertiary); letter-spacing:.25em; text-transform:uppercase; }
+  .footer-note span{ color:var(--cyan-soft); }
+
+  .phone > *{ animation:revealUp .6s cubic-bezier(.16,.84,.4,1) backwards; }
+  .header{ animation-delay:0s; } .hero{ animation-delay:.08s; } .stats{ animation-delay:.16s; }
+  .level-bar{ animation-delay:.24s; } .deleg{ animation-delay:.32s; } .tabs{ animation-delay:.4s; }
+  .tab-content{ animation-delay:.48s; } .digest{ animation-delay:.56s; }
+  @keyframes revealUp{ from{ opacity:0; transform:translateY(20px);} to{ opacity:1; transform:translateY(0);} }
+</style>
+</head>
+<body>
+  <div class="phone">
+
+    <header class="header">
+      <button class="icon-btn" aria-label="back">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="header-id">AGENT · #0247</div>
+      <button class="icon-btn" aria-label="menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/><circle cx="5" cy="12" r="1.2"/></svg>
+      </button>
+    </header>
+
+    <section class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-rings"></div>
+      <div class="sparks"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="avatar-wrap">
+        <div class="avatar-glow"></div>
+        <div class="avatar">🤖</div>
+        <div class="live-dot"><span class="pulse"></span><span>Live</span></div>
+      </div>
+      <div class="identity">
+        <h1 class="name">H A R U</h1>
+        <div class="level-row">
+          <span class="lv">Lv.12</span><span class="sep">/</span><span>営業 Agent</span>
+        </div>
+        <p class="quote">まだまだしんじん</p>
+      </div>
+    </section>
+
+    <!-- STATS: 稼働 / 成功率(成果) / 信頼 -->
+    <section class="stats">
+      <div class="stat">
+        <div class="stat-icon">⏱</div>
+        <div class="stat-val" data-count="340">0<span class="unit">h</span></div>
+        <div class="stat-label">稼働</div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon">◎</div>
+        <div class="stat-val cyan" data-count="87">0<span class="unit">%</span></div>
+        <div class="stat-label">成果 / 成功率</div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon">🤝</div>
+        <div class="stat-val">Lv.<span data-count="3">0</span></div>
+        <div class="stat-label">信頼</div>
+      </div>
+    </section>
+
+    <!-- 能力レベル進行 -->
+    <section class="level-bar">
+      <div class="level-bar-top">
+        <span class="level-bar-label">Next Level — 能力</span>
+        <span class="level-bar-pct">82%</span>
+      </div>
+      <div class="level-bar-track"><div class="level-bar-fill"></div></div>
+    </section>
+
+    <!-- 委任レベル (NEW) -->
+    <section class="deleg">
+      <div class="deleg-head">
+        <div class="deleg-title">委任レベル<span class="sub">どこまで任せる</span></div>
+      </div>
+      <div class="seg" id="seg">
+        <button data-lv="approve">承認制</button>
+        <button data-lv="semi">半自動</button>
+        <button data-lv="full" class="on">● 全自動</button>
+      </div>
+      <div class="deleg-note">
+        <span class="ic">🔓</span>
+        <span><b>信頼 Lv.3</b> 到達 — 「全自動」が開放されました</span>
+      </div>
+    </section>
+
+    <!-- TABS -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="outcome">📊 成果</button>
+      <button class="tab" data-tab="skill">⚡ スキル <span class="tab-count">7</span></button>
+      <button class="tab" data-tab="approve">⏳ 承認 <span class="tab-count">2</span></button>
+    </nav>
+
+    <div class="tab-content">
+
+      <!-- 成果 TAB -->
+      <div class="tab-pane active" id="outcome">
+        <div class="outcome-sum">
+          <div class="osum s"><div class="n">47</div><div class="l">返信獲得</div></div>
+          <div class="osum p"><div class="n">12</div><div class="l">アポ獲得</div></div>
+          <div class="osum f"><div class="n">8</div><div class="l">失敗</div></div>
+        </div>
+        <div class="output-item" data-status="success">
+          <div class="output-mark"></div>
+          <div class="output-body">
+            <div class="output-title">田中商事 / コールドメール送信</div>
+            <div class="output-desc">B2B Outreach · #1247</div>
+            <div class="output-meta"><span class="status-pill success">✓ 返信あり</span><span class="output-time">2h ago</span></div>
+          </div>
+        </div>
+        <div class="output-item" data-status="pending">
+          <div class="output-mark"></div>
+          <div class="output-body">
+            <div class="output-title">佐藤建設 / follow-up送信</div>
+            <div class="output-desc">Nurture · 3rd touch</div>
+            <div class="output-meta"><span class="status-pill pending">⏳ 返信待ち</span><span class="output-time">5h ago</span></div>
+          </div>
+        </div>
+        <div class="output-item" data-status="success">
+          <div class="output-mark"></div>
+          <div class="output-body">
+            <div class="output-title">高橋商会 / follow-up送信</div>
+            <div class="output-desc">Closing · 4th touch</div>
+            <div class="output-meta"><span class="status-pill success">✓ アポ獲得</span><span class="output-time">2日前</span></div>
+          </div>
+        </div>
+        <div class="output-item" data-status="failed">
+          <div class="output-mark"></div>
+          <div class="output-body">
+            <div class="output-title">鈴木物産 / コールドメール送信</div>
+            <div class="output-desc">B2B Outreach · Bounced</div>
+            <div class="output-meta"><span class="status-pill failed">✕ 配信失敗</span><span class="output-time">昨日 14:15</span></div>
+          </div>
+        </div>
+        <button class="see-more">View all 1,247 outputs →</button>
+      </div>
+
+      <!-- スキル TAB -->
+      <div class="tab-pane" id="skill">
+        <div class="skill-section">
+          <div class="skill-section-title strong">⚡ Strong Skills</div>
+          <div class="skill-item">
+            <div class="skill-top">
+              <div class="skill-name"><span class="emoji">📝</span>コールドメール作成</div>
+              <div class="skill-stars"><span class="filled">★★★★★</span></div>
+            </div>
+            <div class="skill-meta">使用 <span class="hl">1,247回</span> · 成功率 <span class="hl">92%</span></div>
+          </div>
+          <div class="skill-item">
+            <div class="skill-top">
+              <div class="skill-name"><span class="emoji">🔍</span>企業リサーチ</div>
+              <div class="skill-stars"><span class="filled">★★★★</span><span class="empty">★</span></div>
+            </div>
+            <div class="skill-meta">使用 <span class="hl">1,089回</span> · 平均 <span class="hl">18秒</span></div>
+          </div>
+        </div>
+        <div class="skill-section growth">
+          <div class="skill-section-title growth">🌱 Growing</div>
+          <div class="skill-item">
+            <div class="skill-top">
+              <div class="skill-name"><span class="emoji">🎨</span>クリエイティブ文章</div>
+              <div class="skill-stars growth"><span class="filled">★★</span><span class="empty">★★★</span></div>
+            </div>
+            <div class="skill-meta">学習中… <span class="hl">42%</span></div>
+          </div>
+          <div class="skill-item">
+            <div class="skill-top">
+              <div class="skill-name"><span class="emoji">🌐</span>英語対応</div>
+              <div class="skill-stars growth"><span class="filled">★★★</span><span class="empty">★★</span></div>
+            </div>
+            <div class="skill-meta">練習中 · <span class="hl">68%</span></div>
+          </div>
+        </div>
+        <div class="skill-section">
+          <div class="skill-section-title personality">🎭 Personality</div>
+          <div class="text-list"><ul>
+            <li>即興より準備派</li>
+            <li>スピードより丁寧さを優先</li>
+            <li>冗談は理解できません</li>
+          </ul></div>
+        </div>
+        <div class="skill-section">
+          <div class="skill-section-title warning">⚠ Not My Strength</div>
+          <div class="text-list warn"><ul>
+            <li>カスタマーサポート</li>
+            <li>医療・法務領域</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <!-- 承認 TAB (NEW) -->
+      <div class="tab-pane" id="approve">
+        <div class="approve-head">実行前に承認が必要</div>
+        <div class="approve-item">
+          <div class="approve-row">
+            <div class="approve-ic">✉</div>
+            <div class="approve-body">
+              <div class="approve-title">鈴木物産へ 営業メール送信</div>
+              <div class="approve-desc">B2B Outreach · 下書き完成</div>
+            </div>
+          </div>
+          <div class="approve-actions">
+            <button class="ab view">内容を見る</button>
+            <button class="ab ok">✓ 承認</button>
+            <button class="ab no">✕</button>
+          </div>
+        </div>
+        <div class="approve-item">
+          <div class="approve-row">
+            <div class="approve-ic">𝕏</div>
+            <div class="approve-body">
+              <div class="approve-title">X に投稿 — 新機能のお知らせ</div>
+              <div class="approve-desc">Social · 予約 18:00</div>
+            </div>
+          </div>
+          <div class="approve-actions">
+            <button class="ab view">内容を見る</button>
+            <button class="ab ok">✓ 承認</button>
+            <button class="ab no">✕</button>
+          </div>
+        </div>
+        <div class="approve-foot">
+          委任レベルを <b>「全自動」</b> にすると、これらは承認なしで実行されます。<br>
+          信頼が上がるほど、承認が要る操作は減っていきます。
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 稼働ダイジェスト (NEW) -->
+    <section class="digest">
+      <div class="digest-top">🌙 あなたが離れている間に</div>
+      <div class="digest-body">
+        メール <b>12通</b> 送信 · 企業リサーチ <b>3件</b> 完了 · <b>1件</b> が承認待ち。
+      </div>
+      <div class="digest-link">今日のまとめを見る →</div>
+    </section>
+
+    <div class="footer-note">MY AI AGENT <span>·</span> SYSTEM v2.6</div>
+  </div>
+
+<script>
+  // Tabs
+  var tabs = document.querySelectorAll('.tab');
+  var panes = document.querySelectorAll('.tab-pane');
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.classList.remove('active'); });
+      panes.forEach(function(p){ p.classList.remove('active'); });
+      t.classList.add('active');
+      document.getElementById(t.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Delegation segmented control
+  var seg = document.getElementById('seg');
+  seg.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click', function(){
+      seg.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+
+  // Count-up
+  var counters = document.querySelectorAll('[data-count]');
+  function animate(el){
+    var target = +el.dataset.count;
+    var unit = el.querySelector ? el.querySelector('.unit') : null;
+    var unitHTML = unit ? unit.outerHTML : '';
+    var start = performance.now(), dur = 1200;
+    function step(now){
+      var t = Math.min((now - start) / dur, 1);
+      var cur = Math.floor(target * (1 - Math.pow(1 - t, 3)));
+      el.innerHTML = cur.toLocaleString() + unitHTML;
+      if(t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  setTimeout(function(){ counters.forEach(animate); }, 400);
+
+  // Haptic
+  document.querySelectorAll('.tab,.icon-btn,.output-item,.see-more,.seg button,.ab,.digest-link').forEach(function(el){
+    el.addEventListener('click', function(){ if(navigator.vibrate) navigator.vibrate(8); });
+  });
+</script>
+</body>
+</html>

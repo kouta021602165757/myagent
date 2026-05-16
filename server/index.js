@@ -6052,8 +6052,10 @@ async function executeEditArtifactTool(input, ownerUser){
         + (recent.length
             ? '\n\n【重要】推測でファイル名を作らないこと。'
           + '編集できる既存 artifact は以下が全てです。'
-          + 'この一覧の中から正しい filename を選んで edit_artifact を呼び直してください。'
-          + '一覧に無いものを編集したい場合は create_artifact で新規作成すること:\n' + avail
+          + 'ユーザーがどれを指しているか明らかなら、一覧から正しい filename を選んで edit_artifact を呼び直す。'
+          + 'どのサイトを指しているか確信が持てない場合は、推測で実行(編集も新規作成も)せず、'
+          + '候補を提示して「どのサイトですか？」と必ずユーザーに聞き返すこと。'
+          + '一覧に無いものを新規で作る場合のみ create_artifact を使う:\n' + avail
             : '\nこのユーザーにはまだ artifact がありません。create_artifact で新規作成してください。'),
       available_filenames: recent.map(a => a.filename),
     };
@@ -16669,6 +16671,17 @@ async function handleAPI(req,res,pathname,method,ip){
     const regenerate=!!body.regenerate;
     const message=body.message||'';
     const images=body.images||[];
+    // Edit-target directive — set when the user pressed "このサイトを編集" on an
+    // artifact card. Grounds the AI on the EXACT file (no guessing among
+    // similar artifacts) WITHOUT polluting the stored/displayed user message.
+    let _editDirective='';
+    if(body.edit_target && body.edit_target.filename){
+      const _et=body.edit_target;
+      _editDirective='【編集指示】ユーザーは既存の成果物「'+String(_et.title||_et.filename).slice(0,80)
+        +'」の編集を指示しています。filename は "'+String(_et.filename).slice(0,150)+'"。'
+        +'この依頼は必ず edit_artifact ツールを filename="'+String(_et.filename).slice(0,150)+'" で使って処理し、'
+        +'create_artifact での新規作成や別ファイルの編集は絶対にしないこと。\n\n';
+    }
 
     // ── Auto model routing ─────────────────────────────────
     // When agent.model === 'auto', derive an effective model per-turn from
@@ -17164,9 +17177,16 @@ async function handleAPI(req,res,pathname,method,ip){
           : userContent);
     // For regenerate / edit: history already ends with the (possibly edited) user
     // msg; skip adding a new one.
+    // Prepend the edit-target directive to the AI-facing message only (the
+    // stored user msg / chat bubble stays clean — it uses `message`).
+    let _ucFinal = _outboundUC;
+    if(_editDirective && !effectiveRegen){
+      if(typeof _ucFinal === 'string') _ucFinal = _editDirective + _ucFinal;
+      else if(Array.isArray(_ucFinal)) _ucFinal = [{type:'text', text:_editDirective}].concat(_ucFinal);
+    }
     const baseMsgs = effectiveRegen
       ? _histForAI
-      : [..._histForAI, {role:'user', content: _outboundUC}];
+      : [..._histForAI, {role:'user', content: _ucFinal}];
     let reply,cost;
 
     // Branch: Chrome 連携 ON or Sheets 連携 ON or Extension 連携 ON のエージェントは Tool Use ループを通す

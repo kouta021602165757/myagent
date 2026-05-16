@@ -1884,6 +1884,15 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
 .composer-attach-strip .att-chip img{width:28px;height:28px;border-radius:5px;object-fit:cover;}
 .composer-attach-strip .att-chip .x{background:none;border:0;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;}
 
+/* ── Edit-target chip 「このサイトを編集」 ───────────────────── */
+#editChipWrap{display:none;align-items:center;gap:8px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.32);border-radius:10px;padding:7px 9px 7px 11px;margin-bottom:9px;}
+#editChipWrap .ec-ic{font-size:14px;flex-shrink:0;}
+#editChipWrap .ec-label{font-size:9.5px;font-weight:800;letter-spacing:.05em;color:var(--peach-dark);background:#fff;border:1px solid rgba(251,146,60,.4);padding:2px 7px;border-radius:6px;flex-shrink:0;}
+#editChipWrap .ec-name{font-size:13px;font-weight:800;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#editChipWrap .ec-x{width:24px;height:24px;border-radius:50%;border:0;cursor:pointer;background:rgba(234,88,12,.13);color:var(--peach-dark);font-size:11px;flex-shrink:0;}
+.composer.editing{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.14),0 1px 3px rgba(0,0,0,.04);}
+.m-artifact-card-edit{background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.34);color:var(--peach-dark);font-size:11px;font-weight:800;padding:5px 9px;border-radius:7px;cursor:pointer;font-family:inherit;flex-shrink:0;}
+
 #ci,#tci{
   width:100%;background:none;border:0;color:var(--text);font-size:15px;
   resize:none;line-height:1.6;padding:4px 0 6px;outline:none;font-family:inherit;
@@ -3057,6 +3066,7 @@ body{color:#f0f0f8;}
           <!-- Claude-style composer -->
           <div class="composer" style="position:relative">
             <input type="file" id="imgInput" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
+            <div id="editChipWrap"></div>
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
             <div id="mentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>
@@ -9038,12 +9048,17 @@ function _md(src){
   function _renderArtifactCard(alt, src){
     const safeAlt = String(alt||'').replace(/\*\*/g,'').replace(/"/g,'&quot;').slice(0,80);
     const safeSrc = String(src||'').replace(/"/g,'&quot;');
+    // Bare filename + whether it's an editable artifact (artifact-*.html).
+    const _afName = String(src||'').split('?')[0].split('#')[0].split('/').filter(Boolean).pop() || '';
+    const _afIsArtifact = /^artifact-/.test(_afName);
+    const _afTitleArg = safeAlt.replace(/'/g,"\\'");
     return '<a class="m-artifact-card" href="'+safeSrc+'" target="_blank" rel="noopener">'
       + '<div class="m-artifact-card-ic">📄</div>'
       + '<div class="m-artifact-card-body">'
       +   '<div class="m-artifact-card-ti">'+safeAlt+'</div>'
       +   '<div class="m-artifact-card-url">'+safeSrc+'</div>'
       + '</div>'
+      + (_afIsArtifact ? '<button class="m-artifact-card-edit" onclick="event.preventDefault();event.stopPropagation();_setEditTarget(\''+_afName+'\',\''+_afTitleArg+'\')" title="このサイトを編集">✏️ 編集</button>' : '')
       + '<button class="m-artifact-card-copy" onclick="event.preventDefault();event.stopPropagation();navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(()=>{this.textContent=\'✓\';setTimeout(()=>this.textContent=\'📋\',1200)})" title="URL コピー">📋</button>'
       + '<span class="m-artifact-card-cta">新タブで開く ↗</span>'
       + '</a>';
@@ -11758,6 +11773,49 @@ function _fmtBytes(n){
   return (n/(1024*1024)).toFixed(1)+'MB';
 }
 
+// ── 「このサイトを編集」 edit-target chip ─────────────────────
+// Set by the ✏️ button on an artifact card. While set, the composer shows a
+// chip and the next message(s) are routed (server-side) to edit that EXACT
+// file — the AI never has to guess among similar artifacts. Sticky: stays
+// until the user clicks ✕, so consecutive tweaks to one site just work.
+var _editTarget = null;  // { filename, title }
+function _setEditTarget(filename, title){
+  if(!filename) return;
+  _editTarget = { filename: String(filename), title: String(title || filename) };
+  _renderEditChip();
+  var ci = document.getElementById('ci');
+  if(ci){
+    ci.placeholder = isJa ? ('「'+_editTarget.title+'」をどう変えますか？')
+                          : ('How should I change "'+_editTarget.title+'"?');
+    try{ ci.focus(); }catch(e){}
+  }
+  try{ showToast(L('「'+_editTarget.title+'」の編集モード','Editing: '+_editTarget.title),'ok'); }catch(e){}
+}
+function _clearEditTarget(){
+  _editTarget = null;
+  _renderEditChip();
+  var ci = document.getElementById('ci');
+  if(ci) ci.placeholder = isJa ? '何をお願いしますか？ (ファイルや URL もドロップで添付可)'
+                               : 'What can I help with?';
+}
+function _renderEditChip(){
+  var wrap = document.getElementById('editChipWrap');
+  var comp = document.querySelector('.composer');
+  if(!wrap) return;
+  if(!_editTarget){
+    wrap.style.display='none'; wrap.innerHTML='';
+    if(comp) comp.classList.remove('editing');
+    return;
+  }
+  wrap.style.display='flex';
+  wrap.innerHTML =
+    '<span class="ec-ic">✏️</span>'
+    + '<span class="ec-label">'+L('編集対象','EDITING')+'</span>'
+    + '<span class="ec-name">'+esc(_editTarget.title)+'</span>'
+    + '<button class="ec-x" onclick="_clearEditTarget()" title="'+L('編集をやめる','Stop editing')+'">✕</button>';
+  if(comp) comp.classList.add('editing');
+}
+
 // Split the composer's attachments into the two arrays the chat API expects.
 function _attachmentPayload(which){
   const imgs = [], texts = [];
@@ -11981,6 +12039,8 @@ async function _sendMsgStream(ag, text, imgs, texts){
   const payload = { message: text, stream: true };
   if(imgs && imgs.length > 0) payload.images = imgs;
   if(texts && texts.length > 0) payload.texts = texts;
+  // Edit-target chip active → tell the server to route this to edit that exact file.
+  if(_editTarget && _editTarget.filename) payload.edit_target = _editTarget;
   // NOTE: the MAIN composer always posts a NEW top-level message. Thread
   // replies go through the drawer's own composer (_sendThreadReply) — see
   // _renderThreadDrawer. (The earlier "main composer becomes thread input"

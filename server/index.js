@@ -1838,29 +1838,53 @@ async function _summarizeOldHistory(agent){
     const prompt = (oldSummaryText
       ? `これまでの要約:\n${oldSummaryText}\n\n` : '')
       + `追加で発生した会話 (${toFold.length} 件):\n${transcript}\n\n`
-      + `上記を踏まえ、ユーザーの目的・主要な決定事項・未解決の論点・固有名詞 (人名・サービス名・URL・数値) を中心に、`
-      + `次の会話で AI が参照できる「これまでの経緯」を 400 字以内で日本語で要約してください。`
-      + `箇条書きではなく自然な文で。冗長な前置きや「以下に要約します」は不要。`;
+      + `次の 2 つを JSON で返してください:\n`
+      + `{\n`
+      + `  "summary": "ユーザーの目的・主要な決定事項・未解決の論点を中心にした『これまでの経緯』。400字以内の日本語の自然文。箇条書き不可。前置き不要。",\n`
+      + `  "facts": ["将来の会話で確実に参照すべき恒久的な事実だけを抜き出す。ユーザーの固有名詞 (人名/会社/サービス名/URL)・数値・明確な好み・NG事項・締切など。1件80字以内、0〜6件。挨拶や一時的な話題・雑談は絶対に含めない。"]\n`
+      + `}\n`
+      + `JSON オブジェクトのみを返す。Markdown・コードブロック・説明文は禁止。`;
     // Use the cheapest fast model available. Prefer Gemini Flash, else Haiku.
     const summarizerAlias = 'haiku';
     const info = _resolveModelInfo(summarizerAlias);
-    let summaryText = '';
+    let raw = '';
     if(info.provider === 'gemini'){
       const r = await _callGemini([{ role:'user', content: prompt }], '', info);
-      summaryText = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+      raw = (r && r.content && r.content[0] && r.content[0].text || '').trim();
     } else {
       // Anthropic fallback
       const headers = {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'};
       const r = await httpsReq('POST','api.anthropic.com','/v1/messages', headers,
-        { model: info.modelId, max_tokens: 800, messages: [{role:'user', content: prompt}] },
+        { model: info.modelId, max_tokens: 1000, messages: [{role:'user', content: prompt}] },
         { timeout: 30000 });
       if(r.s === 200){
-        summaryText = (r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
+        raw = (r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
       }
+    }
+    // Parse the JSON envelope. If the model ignored the format, treat the whole
+    // output as the prose summary (backward-compatible) so we never regress.
+    let summaryText = '', extractedFacts = [];
+    if(raw){
+      const jt = raw.replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+      try {
+        const parsed = JSON.parse(jt);
+        if(parsed && typeof parsed === 'object' && !Array.isArray(parsed)){
+          summaryText = String(parsed.summary||'').trim();
+          if(Array.isArray(parsed.facts)) extractedFacts = parsed.facts;
+        }
+      } catch(e){ /* not JSON — fall through to prose handling */ }
+      if(!summaryText) summaryText = raw;
     }
     if(!summaryText || summaryText.length < 30){
       console.warn('[summary] generation failed or too short, abort');
       return false;
+    }
+    // Fold-time safety net: durable facts in the batch being archived are
+    // merged into agent.memories — which are NEVER re-compressed — so nothing
+    // important is lost even if per-turn extraction missed it.
+    if(extractedFacts.length){
+      const n = _mergeMemories(agent, extractedFacts, 'fold');
+      if(n) console.log('[summary] preserved ' + n + ' fact(s) into long-term memory for agent=' + (agent.id||'?'));
     }
     // Archive the raw folded turns.
     agent.history_archive = Array.isArray(agent.history_archive) ? agent.history_archive : [];
@@ -2268,6 +2292,36 @@ async function _afterTurnExtract(agent, opts){
 function ngramSize(s){
   const t = String(s||'').toLowerCase().replace(/\s+/g,'');
   return Math.max(1, t.length - 1);
+}
+
+// Merge extracted fact strings into agent.memories, deduping against existing
+// memories with the same bigram-overlap heuristic _afterTurnExtract uses.
+// Shared by the per-turn extractor and the fold-time safety net so a fact is
+// never lost just because one extraction path missed it. Returns count added.
+function _mergeMemories(agent, texts, source){
+  if(!agent || !Array.isArray(texts) || !texts.length) return 0;
+  agent.memories = Array.isArray(agent.memories) ? agent.memories : [];
+  let added = 0;
+  for(const t of texts){
+    const text = String(t||'').trim().slice(0, 200);
+    if(text.length < 6) continue;
+    const dupe = agent.memories.find(m => m && m.text
+      && _agentMemoryScore(m.text, text) > Math.min(8, ngramSize(text) * 0.6));
+    if(dupe) continue;
+    agent.memories.push({
+      id: 'mem_'+crypto.randomBytes(4).toString('hex'),
+      text,
+      source: source || 'auto',
+      pinned: false,
+      created_at: new Date().toISOString(),
+    });
+    added++;
+  }
+  if(agent.memories.length > 200){
+    agent.memories.sort((a,b) => (b.pinned?1:0) - (a.pinned?1:0));
+    agent.memories = agent.memories.slice(0, 200);
+  }
+  return added;
 }
 
 // ── PROACTIVE NUDGES ──────────────────────────────────────────

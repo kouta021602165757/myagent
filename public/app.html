@@ -11934,7 +11934,7 @@ function _alRowHTML(a,i){
     var vat=String(v.at||'').slice(0,16).replace('T',' ');
     var vop=v.op?String(v.op):'';
     histRows+='<div class="al-hist-row">'
-      + '<div class="al-hist-info"><b>v'+(vnum>0?vnum:'?')+'</b>'
+      + '<div class="al-hist-info"><b>Ver.'+(vnum>0?vnum:'?')+'</b>'
       +   (vop?' <span class="al-hist-op">'+esc(vop)+'</span>':'')
       +   (vat?' <span class="al-hist-at">'+esc(vat)+'</span>':'')
       + '</div>'
@@ -11948,7 +11948,7 @@ function _alRowHTML(a,i){
     + '<div class="al-row">'
     +   '<div class="al-row-main">'
     +     '<div class="al-row-ti">'+esc(t)+'</div>'
-    +     '<div class="al-row-meta">v'+ver+' · '+esc(when)+' · '+esc(a.filename)+'</div>'
+    +     '<div class="al-row-meta">Ver.'+ver+' · '+esc(when)+' · '+esc(a.filename)+'</div>'
     +   '</div>'
     +   (hasVers ? '<button class="al-hist-toggle" id="al-histbtn-'+i+'" onclick="_toggleHist('+i+')" title="'+L('バージョン履歴','Version history')+'">🕘 '+vers.length+'</button>' : '')
     +   '<button class="al-open" onclick="_openCodeViewer(\''+esc(fArg)+'\')" title="'+L('コードを見る','View code')+'">📄</button>'
@@ -12113,7 +12113,7 @@ async function _openCodeViewer(filename){
     '<div class="acm-pre" style="color:#9b9384">'+L('読み込み中…','Loading…')+'</div>');
   try{
     var r=await api('POST','/api/artifacts/inspect',{filename:filename});
-    _codeModalShell('<div class="acm-title">📄 '+esc(r.title||filename)+'（v'+(r.version||1)+'）</div>',
+    _codeModalShell('<div class="acm-title">📄 '+esc(r.title||filename)+'（Ver.'+(r.version||1)+'）</div>',
       '<pre class="acm-pre">'+esc(String(r.html||''))+'</pre>');
   }catch(e){
     _codeModalShell('<div class="acm-title">📄 '+esc(filename)+'</div>',
@@ -12135,7 +12135,7 @@ async function _openVersionDiff(filename, k){
     var curVer=r.version||1;
     var vFrom=curVer-(vs.length-k), vTo=vFrom+1;
     var diff=_renderDiff(oldHtml, newHtml);
-    var ttl='<div class="acm-title">🔍 v'+(vFrom>0?vFrom:'?')+' → v'+(vTo>0?vTo:'?')+L(' の変更点',' changes')+'</div>'
+    var ttl='<div class="acm-title">🔍 Ver.'+(vFrom>0?vFrom:'?')+' → Ver.'+(vTo>0?vTo:'?')+L(' の変更点',' changes')+'</div>'
       +'<div class="acm-sum"><span class="add">+'+diff.add+'</span><span class="del">−'+diff.del+'</span></div>';
     _codeModalShell(ttl, diff.html || '<div class="df-skip">'+L('差分なし','No changes')+'</div>');
   }catch(e){

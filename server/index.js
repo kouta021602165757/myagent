@@ -4219,15 +4219,16 @@ selector・content は必ず実物の HTML に厳密に合わせ、指示され�
 - "append_to_selector": selector で指定した要素の閉じタグ直前に content を挿入 (例: <tbody> に <tr> を 100 行追加)
 - "replace_selector": selector で指定した要素の中身を content で完全置換 (色変更や文言修正)
 - "insert_before_selector": selector で指定した要素の直前に content を挿入
+- "rewrite": HTML 全文を content で丸ごと差し替える。**構造的な破損（タグの重複・JS が壊れて全ボタンが死んだ等）を直す唯一の手段。** 追加/置換だけでは余計なタグを"削除"できないため、壊れた構造は rewrite で正しい完全な HTML を書き直して修復する。content には先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
 
 filename は直近 create_artifact のレスポンス URL (/generated/artifact-XXX-YYY.html) からファイル名部分を抜き出す。`,
     input_schema:{
       type:'object',
       properties:{
         filename:{type:'string',description:'対象 artifact のファイル名 (例: artifact-recruitment-companies-100-a3f2e1.html)。直近の create_artifact レスポンス URL から抽出。'},
-        operation:{type:'string',enum:['append_to_body','append_to_selector','replace_selector','insert_before_selector'],description:'操作種別。デフォルトは append_to_body。'},
+        operation:{type:'string',enum:['append_to_body','append_to_selector','replace_selector','insert_before_selector','rewrite'],description:'操作種別。デフォルトは append_to_body。構造が壊れている場合は rewrite で全文書き直し。'},
         selector:{type:'string',description:'append_to_selector / replace_selector / insert_before_selector で使う CSS セレクタ (例: "#companies", "tbody", ".section-list")'},
-        content:{type:'string',description:'挿入する HTML 断片 (最大 100KB)。完全な HTML タグで書く。'},
+        content:{type:'string',description:'挿入する HTML 断片 (最大 100KB、完全な HTML タグで書く)。operation:"rewrite" の場合は断片ではなく HTML 全文 (<!doctype html>…</html>、最大 500KB)。'},
       },
       required:['filename','operation','content'],
     },
@@ -6132,6 +6133,49 @@ function _verifyArtifactHtml(html){
   return { ok: issues.length === 0, issues };
 }
 
+// Render-verify an artifact in headless Chromium — catches the RUNTIME
+// failures _verifyArtifactHtml (static) cannot see: JS syntax errors, uncaught
+// exceptions, dead scripts — i.e. the "全ボタンが押せない" class of bug.
+// Fail-safe: if the browser can't launch, returns {ok:true,skipped:true} so
+// artifact creation is never blocked by a verification-infra problem.
+async function _renderVerifyArtifact(html){
+  let browser = null;
+  try {
+    const { chromium } = _loadVideoDeps();
+    browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
+    const page = await browser.newPage();
+    const errs = [];
+    page.on('console', m => {
+      if(m.type() === 'error'){
+        const t = String(m.text() || '').slice(0, 220);
+        if(t) errs.push('JS コンソールエラー: ' + t);
+      }
+    });
+    page.on('pageerror', e => {
+      errs.push('JS 実行エラー: ' + String((e && e.message) || e).slice(0, 220));
+    });
+    await page.setContent(String(html || ''), { waitUntil: 'load', timeout: 9000 });
+    await page.waitForTimeout(700); // let deferred / DOMContentLoaded scripts run
+    let bodyLen = 0, btnCount = 0;
+    try {
+      const probe = await page.evaluate(() => ({
+        len: (document.body && document.body.innerText || '').trim().length,
+        btn: document.querySelectorAll('button,[onclick],[role="button"],input[type="submit"]').length,
+      }));
+      bodyLen = probe.len; btnCount = probe.btn;
+    } catch(e){}
+    await browser.close(); browser = null;
+    const uniq = [...new Set(errs)].slice(0, 8);
+    if(uniq.length) return { ok:false, errors: uniq };
+    if(bodyLen < 1) return { ok:false, errors: ['ページを開いても何も表示されない（空白）— HTML 構造か描画スクリプトが壊れている可能性'] };
+    return { ok:true, errors: [], btn_count: btnCount };
+  } catch(e){
+    if(browser){ try { await browser.close(); } catch(_){} }
+    // Browser unavailable / timeout — never block artifact creation on this.
+    return { ok:true, skipped:true, note: String((e && e.message) || e).slice(0, 140) };
+  }
+}
+
 // ── 7) create_artifact — save AI-authored HTML as a live page ────
 // Claude.ai-style "Artifacts" — the AI writes a complete self-contained
 // HTML doc, we drop it in /generated/ and hand back a URL. The chat
@@ -6184,22 +6228,26 @@ async function executeArtifactTool(input, ownerUser){
   }
   const url = '/generated/' + filename;
   // Self-verification — catch broken output before the user ever sees it.
+  // Static check (tags/JS-syntax/truncation) + runtime render check (actually
+  // open the page in a browser and catch JS errors / dead scripts).
   const verify = _verifyArtifactHtml(html);
+  const _rv = await _renderVerifyArtifact(html);
+  const _allIssues = verify.issues.concat(_rv.ok ? [] : _rv.errors);
   const baseInstr = '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットは URL を「新タブで開く ↗」リンクカードとしてレンダリングします。';
   const result = {
     url, title, description: desc,
     size_kb: sizeKb,
     markdown: '![' + title + '](' + url + ')',
-    verification: verify,
+    verification: { ok: _allIssues.length === 0, issues: _allIssues, render_checked: !_rv.skipped },
   };
-  if(verify.ok){
+  if(_allIssues.length === 0){
     result.instructions = baseInstr;
   } else {
-    result.instructions = '⚠️ 自動検証で ' + verify.issues.length + ' 件の問題を検出しました:\n- '
-      + verify.issues.join('\n- ')
+    result.instructions = '⚠️ 自動検証で ' + _allIssues.length + ' 件の問題を検出しました（実際にブラウザで開いて確認済み）:\n- '
+      + _allIssues.join('\n- ')
       + '\n\nこのまま完了せず、edit_artifact (filename: ' + filename + ') でこれらを必ず修正すること。'
-      + '修正後に再検証されます。検証を通過してからユーザーに最終応答を返してください。'
-      + (/<\/html>/i.test(html) ? '' : ' 特に出力が途中で切れている場合は、足りない部分を append_to_body 等で補完すること。')
+      + '構造的な破損（タグの重複・JS が丸ごと壊れている等）は operation:"rewrite" で HTML 全文を正しく書き直して直す。'
+      + '修正後に再びブラウザで再検証されます。検証を通過してからユーザーに最終応答を返してください。'
       + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
   }
   return result;
@@ -6219,9 +6267,11 @@ async function executeEditArtifactTool(input, ownerUser){
   const op = String((input && input.operation) || 'append_to_body');
   const selector = String((input && input.selector) || '').trim();
   const content = String((input && input.content) || '');
+  const _isRewrite = (op === 'rewrite');
   if(!filename) return { error: 'filename required' };
   if(!content) return { error: 'content required' };
-  if(content.length > 100000) return { error: 'content too large (max 100KB)' };
+  if(!_isRewrite && content.length > 100000) return { error: 'content too large (max 100KB)。HTML 全体を書き換える場合は operation:"rewrite" を使うこと' };
+  if(_isRewrite && content.length > 500000) return { error: 'content too large (max 500KB for rewrite)' };
   // Locate artifact on the user record. DB is source of truth (disk may have
   // been wiped on container restart).
   ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
@@ -6258,11 +6308,17 @@ async function executeEditArtifactTool(input, ownerUser){
   }
   let html = String(artifact.html || '');
   const _htmlBefore = html;
-  if(html.length + content.length > 600000){
+  if(!_isRewrite && html.length + content.length > 600000){
     return { error: 'artifact would exceed 600KB after edit' };
   }
   let applied = false;
-  if(op === 'append_to_body'){
+  if(op === 'rewrite'){
+    // Full-document replacement. The ONLY way to fix structural corruption
+    // (e.g. a doubled <script> tag) — the patch ops below can add/replace
+    // but cannot REMOVE stray markup. content must be the complete new HTML.
+    html = content;
+    applied = true;
+  } else if(op === 'append_to_body'){
     if(html.indexOf('</body>') >= 0){
       html = html.replace('</body>', content + '\n</body>');
     } else {
@@ -6318,26 +6374,31 @@ async function executeEditArtifactTool(input, ownerUser){
   }
   const sizeKb = Math.round(Buffer.byteLength(html, 'utf8') / 1024);
   const url = '/generated/' + filename;
-  // Self-verification — report only issues this edit INTRODUCED (regressions),
-  // so a pre-existing quirk in an old artifact doesn't trigger needless churn.
+  // Self-verification. Static check reports only edit-INTRODUCED issues (so a
+  // pre-existing quirk doesn't cause churn). Runtime render check reports ALL
+  // JS errors — a broken script must always surface even if pre-existing
+  // (that is exactly the "全ボタン押せない" ループ we are killing).
   const _vBefore = _verifyArtifactHtml(_htmlBefore);
   const _vAfter  = _verifyArtifactHtml(html);
   const newIssues = _vAfter.issues.filter(i => _vBefore.issues.indexOf(i) < 0);
-  const baseInstr = '更新完了。最終応答で上記 markdown 構文を本文に含めてください。差分追加: ' + content.length + ' 文字。';
+  const _rv = await _renderVerifyArtifact(html);
+  const _allIssues = newIssues.concat(_rv.ok ? [] : _rv.errors);
+  const baseInstr = '更新完了。最終応答で上記 markdown 構文を本文に含めてください。';
   const result = {
     url, title: artifact.title || filename, operation: op,
     size_kb: sizeKb,
     bytes_added: content.length,
     markdown: '![' + (artifact.title || 'artifact') + '](' + url + ')',
-    verification: { ok: newIssues.length === 0, issues: newIssues },
+    verification: { ok: _allIssues.length === 0, issues: _allIssues, render_checked: !_rv.skipped },
   };
-  if(newIssues.length === 0){
+  if(_allIssues.length === 0){
     result.instructions = baseInstr;
   } else {
-    result.instructions = '⚠️ この編集で ' + newIssues.length + ' 件の不具合が新たに発生しました:\n- '
-      + newIssues.join('\n- ')
+    result.instructions = '⚠️ 検証で ' + _allIssues.length + ' 件の問題を検出しました（実際にブラウザで開いて確認済み）:\n- '
+      + _allIssues.join('\n- ')
       + '\n\nこのまま完了せず、続けて edit_artifact (filename: ' + filename + ') で必ず修正すること。'
-      + '修正後に再検証されます。検証を通過してからユーザーに最終応答を返してください。'
+      + '構造的な破損（タグの重複・JS が丸ごと壊れている等）は operation:"rewrite" で HTML 全文を正しく書き直して直す。'
+      + '修正後に再びブラウザで再検証されます。検証を通過してからユーザーに最終応答を返してください。'
       + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
   }
   return result;

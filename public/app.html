@@ -694,6 +694,21 @@ input,textarea{font-family:var(--sans);}
   .hm-hero h2,.hm-welcome h2{font-size:21px}
 }
 
+/* Thread drawer — drag-to-resize handle on the left edge */
+#threadResizeHandle{
+  position:absolute;left:0;top:0;bottom:0;width:7px;
+  cursor:ew-resize;z-index:6;background:transparent;transition:background .12s;
+}
+#threadResizeHandle::before{
+  content:"";position:absolute;left:2px;top:50%;transform:translateY(-50%);
+  width:3px;height:38px;border-radius:99px;background:var(--wire3);transition:background .12s;
+}
+#threadResizeHandle:hover{background:rgba(251,146,60,.12)}
+#threadResizeHandle:hover::before{background:var(--peach)}
+#threadResizeHandle.dragging{background:rgba(251,146,60,.18)}
+#threadResizeHandle.dragging::before{background:var(--peach)}
+@media (max-width:899px){ #threadResizeHandle{display:none} }
+
 .qc{background:#fff;border:1.5px solid var(--wire2);border-radius:16px;padding:22px 20px;cursor:pointer;transition:all .18s;text-align:left;font-family:inherit;color:var(--text);position:relative;}
 .qc:hover{transform:translateY(-3px);border-color:var(--peach);box-shadow:0 10px 26px rgba(251,146,60,.12);}
 .qc.feat{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);}
@@ -17034,6 +17049,41 @@ function _threadComposerHTML(){
   +   '</div>'
   + '</div>';
 }
+// Thread drawer width — persisted in localStorage, clamped. On mobile the
+// drawer is full-width, so return a large value (min(…,100vw) wins).
+function _threadDrawerWidth(){
+  if(window.innerWidth < 900) return 9999;
+  var w = parseInt(localStorage.getItem('threadDrawerW'),10);
+  if(!isFinite(w) || w <= 0) w = 460;
+  var max = Math.round(window.innerWidth * 0.7);
+  return Math.max(320, Math.min(w, max));
+}
+// Wire up the left-edge drag handle so the user can resize the drawer.
+function _initThreadResize(d){
+  var h = d.querySelector('#threadResizeHandle');
+  if(!h) return;
+  h.addEventListener('pointerdown', function(e){
+    if(window.innerWidth < 900) return; // mobile = full width, no resize
+    e.preventDefault();
+    h.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    var move = function(ev){
+      var max = Math.round(window.innerWidth * 0.7);
+      var w = Math.max(320, Math.min(window.innerWidth - ev.clientX, max));
+      d.style.width = w + 'px';
+    };
+    var up = function(){
+      h.classList.remove('dragging');
+      document.body.style.userSelect = '';
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      var finalW = parseInt(d.style.width,10);
+      if(isFinite(finalW) && finalW > 0){ try { localStorage.setItem('threadDrawerW', finalW); } catch(err){} }
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  });
+}
 function _renderThreadDrawer(){
   var parentId = window._activeThreadParent;
   if(!parentId){ _closeThread(); return; }
@@ -17081,9 +17131,10 @@ function _renderThreadDrawer(){
   var d = document.createElement('div');
   d.id = 'threadDrawer';
   d.className = 'thread-drawer';
-  d.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--cream);border-left:1px solid var(--wire2);z-index:9985;display:flex;flex-direction:column;box-shadow:-12px 0 28px rgba(0,0,0,.10);font-family:inherit;animation:slideInRight .25s ease';
+  d.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min('+_threadDrawerWidth()+'px,100vw);background:var(--cream);border-left:1px solid var(--wire2);z-index:9985;display:flex;flex-direction:column;box-shadow:-12px 0 28px rgba(0,0,0,.10);font-family:inherit;animation:slideInRight .25s ease';
   d.innerHTML =
-    '<div style="padding:13px 16px;border-bottom:1px solid var(--wire2);display:flex;align-items:flex-start;gap:10px;background:var(--cream);flex-shrink:0">'
+    '<div id="threadResizeHandle" title="'+L('ドラッグで幅を調整','Drag to resize')+'"></div>'
+    + '<div style="padding:13px 16px;border-bottom:1px solid var(--wire2);display:flex;align-items:flex-start;gap:10px;background:var(--cream);flex-shrink:0">'
     +  '<div style="flex:1;min-width:0">'
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">'+L('スレッド','Thread')+'</div>'
     +    '<div data-thread-count style="font-size:11px;color:var(--text3);margin-top:2px">'+esc(ag.name||'')+' ・ '+replies.length+L(' 件の返信',' replies')+'</div>'
@@ -17103,6 +17154,7 @@ function _renderThreadDrawer(){
     +   '</div>'
     + '</div>';
   document.body.appendChild(d);
+  try { _initThreadResize(d); } catch(e){}
   // Match the main file picker's accepted types exactly.
   try {
     var mainInp = document.getElementById('imgInput'), tInp = document.getElementById('tImgInput');

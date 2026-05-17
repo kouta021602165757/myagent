@@ -1505,6 +1505,17 @@ input,textarea{font-family:var(--sans);}
   box-shadow:0 4px 10px rgba(234,88,12,.22);
 }
 .m-artifact-card-acts .ac-open:hover{background:linear-gradient(135deg,#fb923c,#ea580c);filter:brightness(1.06);}
+.m-artifact-card-acts .ac-pin.on{background:var(--peach);color:#fff;border-color:transparent;}
+
+/* 📌 Pinned-site bar — sits at the top of the thread drawer */
+.pin-bar{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--peach-soft,#fff1e3);border-bottom:1px solid rgba(251,146,60,.3);}
+.pin-bar .pin-ic{font-size:15px;flex-shrink:0;}
+.pin-bar .pin-main{flex:1;min-width:0;}
+.pin-bar .pin-name{font-size:13px;font-weight:900;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pin-bar .pin-ver{font-size:10.5px;font-weight:800;color:var(--peach-dark);font-family:'SF Mono',Menlo,monospace;}
+.pin-bar .pin-sub{font-size:10px;color:var(--peach-dark);font-weight:700;margin-top:1px;}
+.pin-bar .pin-b{width:30px;height:30px;border-radius:8px;border:1px solid rgba(251,146,60,.34);background:#fff;color:var(--text2);font-size:12px;cursor:pointer;flex-shrink:0;font-family:inherit;}
+.pin-bar .pin-b:hover{background:var(--peach);color:#fff;border-color:transparent;}
 
 /* Slack-flat body: no bubble, no border, no background. Text only.
    User and AI use identical styling (Slack convention). */
@@ -9083,6 +9094,12 @@ function _md(src){
       if(_aHit) _afVer = _aHit.version || 1;
     } catch(e){}
     const _verBadge = _afVer ? '<span class="m-artifact-card-ver">Ver.'+_afVer+'</span>' : '';
+    // Is this artifact the conversation's pinned site?
+    let _afPinned = false;
+    try {
+      const _pa = (typeof agents!=='undefined' && agents) ? agents.find(function(a){return a&&a.id===activeId;}) : null;
+      _afPinned = !!(_pa && _pa.pinned_artifact === _afName);
+    } catch(e){}
     return '<div class="m-artifact-card">'
       + '<div class="m-artifact-card-top">'
       +   '<div class="m-artifact-card-ic">'+(_afIsArtifact?'🌐':'📄')+'</div>'
@@ -9093,6 +9110,7 @@ function _md(src){
       + '</div>'
       + '<div class="m-artifact-card-acts">'
       +   (_afIsArtifact ? '<button class="ac-edit" onclick="_setEditTarget(\''+_afNameArg+'\',\''+_afTitleArg+'\',_ecWhich(this))" title="このサイトを修正">✏️ '+(isJa?'修正':'Edit')+'</button>' : '')
+      +   (_afIsArtifact ? '<button class="ac-pin'+(_afPinned?' on':'')+'" onclick="'+(_afPinned?'_unpinArtifact()':'_pinArtifact(\''+_afNameArg+'\')')+'" title="'+(_afPinned?'このチャットの編集対象（固定中）':'このチャットの編集対象に固定')+'">📌 '+(_afPinned?(isJa?'固定中':'Pinned'):(isJa?'固定':'Pin'))+'</button>' : '')
       +   (_afIsArtifact ? '<button class="ac-code" onclick="_openCodeViewer(\''+_afNameArg+'\')" title="コードを見る">📄 '+(isJa?'コード':'Code')+'</button>' : '')
       +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 コピー\';},1400);})">📋 コピー</button>'
       +   '<a class="ac-open" href="'+safeSrc+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
@@ -12169,6 +12187,52 @@ async function _openVersionDiff(filename, k){
     _codeModalShell('<div class="acm-title">🔍 '+esc(filename)+'</div>',
       '<div class="acm-pre" style="color:#fecaca">'+esc((e&&e.message)||'failed')+'</div>');
   }
+}
+
+// ── 📌 Pinned site — the conversation's locked artifact ───────────────
+// current_artifact drifts to "last touched" and lands on stale files in
+// messy multi-artifact chats. A pin lets the user lock "this is THE site",
+// shown in a thread-top bar; the server prioritises it for edit targeting.
+function _pinBarHTML(ag){
+  if(!ag || !ag.pinned_artifact) return '';
+  var fn = String(ag.pinned_artifact);
+  var art = (typeof me!=='undefined' && me && Array.isArray(me.artifacts))
+    ? me.artifacts.find(function(a){ return a && a.filename === fn; }) : null;
+  var title = art ? String(art.title || fn) : fn;
+  var ver = art ? ('Ver.'+(art.version||1)) : '';
+  var fArg = fn.replace(/'/g,"\\'");
+  return '<div class="pin-bar">'
+    + '<span class="pin-ic">📌</span>'
+    + '<div class="pin-main">'
+    +   '<div class="pin-name">'+esc(title)+(ver?' <span class="pin-ver">'+ver+'</span>':'')+'</div>'
+    +   '<div class="pin-sub">'+L('このチャットの編集対象に固定中','Pinned as this chat’s site')+'</div>'
+    + '</div>'
+    + '<button class="pin-b" onclick="window.open(\'/generated/'+esc(fArg)+'\',\'_blank\')" title="'+L('開く','Open')+'">🔗</button>'
+    + '<button class="pin-b" onclick="_openCodeViewer(\''+fArg+'\')" title="'+L('コードを見る','View code')+'">📄</button>'
+    + '<button class="pin-b" onclick="_unpinArtifact()" title="'+L('固定を解除','Unpin')+'">✕</button>'
+    + '</div>';
+}
+async function _pinArtifact(filename){
+  if(!filename || !activeId) return;
+  try{
+    await api('POST','/api/agents/'+activeId+'/pin-artifact',{filename:filename});
+    var ag=(agents||[]).find(function(a){return a.id===activeId;});
+    if(ag) ag.pinned_artifact=String(filename);
+    showToast(L('このサイトを固定しました','Pinned this site'),'ok');
+    try{ if(ag) renderMsgs(ag); }catch(e){}
+    if(window._activeThreadParent){ try{ _renderThreadDrawer(); }catch(e){} }
+  }catch(e){ showToast((e&&e.message)||L('固定に失敗しました','Pin failed'),'ng'); }
+}
+async function _unpinArtifact(){
+  if(!activeId) return;
+  try{
+    await api('POST','/api/agents/'+activeId+'/pin-artifact',{filename:''});
+    var ag=(agents||[]).find(function(a){return a.id===activeId;});
+    if(ag) ag.pinned_artifact=null;
+    showToast(L('固定を解除しました','Unpinned'),'ok');
+    try{ if(ag) renderMsgs(ag); }catch(e){}
+    if(window._activeThreadParent){ try{ _renderThreadDrawer(); }catch(e){} }
+  }catch(e){ showToast((e&&e.message)||'failed','ng'); }
 }
 
 // Split the composer's attachments into the two arrays the chat API expects.
@@ -16797,6 +16861,8 @@ function _renderThreadDrawer(){
     // typed text / staged attachments / focus survive streaming re-renders.
     var cnt = existing.querySelector('[data-thread-count]');
     if(cnt) cnt.textContent = (ag.name||'') + ' ・ ' + replies.length + L(' 件の返信',' replies');
+    var pb0 = existing.querySelector('#threadPinBar');
+    if(pb0) pb0.innerHTML = _pinBarHTML(ag);
     var body0 = existing.querySelector('#threadDrawerBody');
     if(body0){
       var atBottom = (body0.scrollHeight - body0.scrollTop - body0.clientHeight) < 80;
@@ -16818,6 +16884,7 @@ function _renderThreadDrawer(){
     +  '</div>'
     +  '<button onclick="_closeThread()" title="'+L('閉じる','Close')+'" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:20px;padding:4px 8px;border-radius:6px">×</button>'
     + '</div>'
+    + '<div id="threadPinBar" style="flex-shrink:0">'+_pinBarHTML(ag)+'</div>'
     + '<div id="threadDrawerBody" class="msgs" style="flex:1;overflow-y:auto;padding:6px 14px 12px;background:var(--cream)">'+bodyHTML+'</div>'
     // The thread has its OWN permanent composer — like Slack. It coexists
     // with the main chat composer (both usable at once, separate attachment

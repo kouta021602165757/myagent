@@ -13497,6 +13497,21 @@ async function handleAPI(req,res,pathname,method,ip){
     await DB.save(user);
     return jres(res, 200, { ok: true });
   }
+  // POST /api/agents/:id/pin-artifact — pin (or clear) the conversation's
+  // "current site" so edits always target it instead of drifting to a stale
+  // artifact. body { filename } — empty filename clears the pin.
+  const _pinM = pathname.match(/^\/api\/agents\/([^/]+)\/pin-artifact$/);
+  if(_pinM && method === 'POST'){
+    const ag = (user.agents||[]).find(a => a.id === _pinM[1]);
+    if(!ag) return jres(res,404,{error:'agent not found'});
+    const body = await readBody(req);
+    let fn = String((body && body.filename) || '').trim();
+    if(fn.indexOf('/') >= 0) fn = fn.split('/').filter(Boolean).pop() || fn;
+    fn = fn.split('?')[0].split('#')[0];
+    ag.pinned_artifact = fn || null;
+    await DB.save(user);
+    return jres(res, 200, { ok: true, pinned_artifact: ag.pinned_artifact });
+  }
   const _kpiCreate = pathname.match(/^\/api\/agents\/([^/]+)\/kpis$/);
   if(_kpiCreate && method === 'POST'){
     const ag = (user.agents||[]).find(a => a.id === _kpiCreate[1]);
@@ -17068,10 +17083,17 @@ async function handleAPI(req,res,pathname,method,ip){
       _targetExplicit=true;
     } else {
       const _urlM=String(message||'').match(/artifact-[a-z0-9-]+\.html?/i);
+      const _isEdit=/(直し|なおし|修正|変え|変更|調整|追加|足し|減ら|削除|消し|大きく|小さく|色|配置|レイアウト|ボタン|バグ|壊れ|動かな|表示|デザイン|ズレ|崩れ|再生成|作り直|バージョンアップ|更新|なおして|直して)/.test(String(message||''));
       if(_urlM){
         _targetArtifact=_urlM[0]; _targetTitle=_urlM[0]; _targetExplicit=true;
-      } else if(agent && agent.current_artifact
-                && /(直し|なおし|修正|変え|変更|調整|追加|足し|減ら|削除|消し|大きく|小さく|色|配置|レイアウト|ボタン|バグ|壊れ|動かな|表示|デザイン|ズレ|崩れ|再生成|作り直|バージョンアップ|更新|なおして|直して)/.test(String(message||''))){
+      } else if(agent && agent.pinned_artifact && _isEdit){
+        // User explicitly pinned this conversation's site → firm target.
+        // Takes priority over current_artifact (which drifts to "last touched"
+        // and was landing on stale files in messy multi-artifact chats).
+        _targetArtifact=String(agent.pinned_artifact);
+        _targetTitle=String(agent.pinned_artifact);
+        _targetExplicit=true;
+      } else if(agent && agent.current_artifact && _isEdit){
         _targetArtifact=String(agent.current_artifact);
         _targetTitle=String(agent.current_artifact);
         _targetExplicit=false;

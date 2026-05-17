@@ -11888,6 +11888,7 @@ var _ARTIFACT_LIB_CSS = [
   '.al-hist-at{color:var(--text3,#a8a29e)}',
   '.al-hist-btn2{flex-shrink:0;padding:6px 10px;border-radius:7px;border:1px solid var(--wire2,#e1dacb);background:var(--card,#fff);color:var(--text2,#57534e);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}',
   '.al-hist-btn2:hover{background:var(--peach,#fb923c);color:#fff;border-color:transparent}',
+  '.al-hist-acts{display:flex;gap:6px;flex-shrink:0}',
   '.al-edit{padding:8px 11px;border-radius:8px;border:1px solid rgba(251,146,60,.34);background:rgba(251,146,60,.12);color:var(--peach-dark,#ea580c);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:inherit}',
   '.al-empty{text-align:center;padding:36px 20px;color:var(--text3,#a8a29e);font-size:13px;line-height:1.75}',
 ].join('');
@@ -11938,8 +11939,10 @@ function _alRowHTML(a,i){
       +   (vop?' <span class="al-hist-op">'+esc(vop)+'</span>':'')
       +   (vat?' <span class="al-hist-at">'+esc(vat)+'</span>':'')
       + '</div>'
-      + '<button class="al-hist-btn2" onclick="_rollbackArtifact(\''+esc(fArg)+'\','+k+')">'
-      +   L('この版に戻す','Restore')+'</button>'
+      + '<span class="al-hist-acts">'
+      +   '<button class="al-hist-btn2" onclick="_openVersionDiff(\''+esc(fArg)+'\','+k+')" title="この版で何が変わったか">'+L('差分','Diff')+'</button>'
+      +   '<button class="al-hist-btn2" onclick="_rollbackArtifact(\''+esc(fArg)+'\','+k+')">'+L('この版に戻す','Restore')+'</button>'
+      + '</span>'
       + '</div>';
   }
   return '<div class="al-rowwrap" data-t="'+esc((t+' '+proj).toLowerCase())+'">'
@@ -11949,6 +11952,7 @@ function _alRowHTML(a,i){
     +     '<div class="al-row-meta">v'+ver+' · '+esc(when)+' · '+esc(a.filename)+'</div>'
     +   '</div>'
     +   (hasVers ? '<button class="al-hist-toggle" id="al-histbtn-'+i+'" onclick="_toggleHist('+i+')" title="'+L('バージョン履歴','Version history')+'">🕘 '+vers.length+'</button>' : '')
+    +   '<button class="al-open" onclick="_openCodeViewer(\''+esc(fArg)+'\')" title="'+L('コードを見る','View code')+'">📄</button>'
     +   '<button class="al-open" onclick="window.open(\''+esc(url)+'\',\'_blank\')" title="'+L('開く','Open')+'">🔗</button>'
     +   '<button class="al-edit" onclick="_setEditTarget(\''+esc(fArg)+'\',\''+tArg+'\');_closeArtifactLibrary()">✏️ '+L('編集','Edit')+'</button>'
     + '</div>'
@@ -12026,6 +12030,118 @@ async function _rollbackArtifact(filename, index){
     _openArtifactLibrary();   // re-render with refreshed data
   }catch(e){
     showToast((e&&e.message)||L('戻せませんでした','Rollback failed'),'ng');
+  }
+}
+
+// ── Artifact code viewer + version diff ───────────────────────────────
+// Makes the 5-step pipeline visible: ③格納したコード and ⑤バージョンアップで
+// 何が変わったか become inspectable. The AI can no longer change code silently.
+var _CODE_VIEW_CSS = [
+  '#alCodeModal{position:fixed;inset:0;z-index:9994;background:rgba(10,10,12,.62);display:flex;align-items:center;justify-content:center;padding:20px;animation:alIn .2s ease}',
+  '.acm-panel{width:100%;max-width:780px;max-height:86vh;background:var(--card,#fff);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.36);font-family:inherit}',
+  '.acm-hd{display:flex;align-items:center;gap:9px;padding:13px 16px;border-bottom:1px solid var(--wire2,#e1dacb);flex-shrink:0}',
+  '.acm-title{font-size:13.5px;font-weight:900;color:var(--text,#1c1917);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.acm-sum{font-size:12px;font-weight:800;font-family:ui-monospace,monospace;flex-shrink:0}',
+  '.acm-sum .add{color:#16a34a}',
+  '.acm-sum .del{color:#dc2626;margin-left:6px}',
+  '.acm-x{width:30px;height:30px;border-radius:50%;border:0;background:var(--cream2,#f4efe6);color:var(--text3,#a8a29e);font-size:13px;cursor:pointer;flex-shrink:0}',
+  '.acm-body{flex:1;overflow:auto;background:#1e1b16}',
+  '.acm-pre{margin:0;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.6;color:#e8e0d4;white-space:pre-wrap;word-break:break-word}',
+  '.df-line{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word;padding:1px 16px}',
+  '.df-add{background:rgba(34,197,94,.17);color:#bbf7d0}',
+  '.df-del{background:rgba(239,68,68,.17);color:#fecaca}',
+  '.df-ctx{color:#9b9384}',
+  '.df-skip{padding:5px 16px;font-size:10.5px;color:#8a8270;background:#171510;font-family:ui-monospace,monospace}',
+].join('');
+function _closeCodeModal(){ var d=document.getElementById('alCodeModal'); if(d) d.remove(); }
+function _codeModalShell(titleHTML, bodyHTML){
+  _closeCodeModal();
+  if(!document.getElementById('codeViewCss')){
+    var st=document.createElement('style'); st.id='codeViewCss'; st.textContent=_CODE_VIEW_CSS;
+    document.head.appendChild(st);
+  }
+  var d=document.createElement('div'); d.id='alCodeModal';
+  d.innerHTML='<div class="acm-panel"><div class="acm-hd">'+titleHTML
+    +'<button class="acm-x" onclick="_closeCodeModal()" aria-label="close">✕</button></div>'
+    +'<div class="acm-body">'+bodyHTML+'</div></div>';
+  d.onclick=function(e){ if(e.target===d) _closeCodeModal(); };
+  document.body.appendChild(d);
+}
+// LCS-based line diff. Returns [{t:' '|'+'|'-', v:line}] or null when too big.
+function _lineDiff(oldText, newText){
+  var a=String(oldText||'').split('\n'), b=String(newText||'').split('\n');
+  var n=a.length, m=b.length;
+  if(n>4000 || m>4000) return null; // O(n*m) table would be too heavy
+  var lcs=[]; for(var i=0;i<=n;i++) lcs.push(new Int16Array(m+1));
+  for(var i=n-1;i>=0;i--) for(var j=m-1;j>=0;j--)
+    lcs[i][j] = a[i]===b[j] ? lcs[i+1][j+1]+1 : Math.max(lcs[i+1][j], lcs[i][j+1]);
+  var out=[], i=0, j=0;
+  while(i<n && j<m){
+    if(a[i]===b[j]){ out.push({t:' ',v:a[i]}); i++; j++; }
+    else if(lcs[i+1][j] >= lcs[i][j+1]){ out.push({t:'-',v:a[i]}); i++; }
+    else { out.push({t:'+',v:b[j]}); j++; }
+  }
+  while(i<n){ out.push({t:'-',v:a[i]}); i++; }
+  while(j<m){ out.push({t:'+',v:b[j]}); j++; }
+  return out;
+}
+// Render a unified diff with unchanged runs collapsed (2 lines of context).
+function _renderDiff(oldText, newText){
+  var d=_lineDiff(oldText, newText);
+  if(!d) return { html:'<div class="df-skip">'+L('差分が大きすぎるため表示を省略しました','Diff too large to display')+'</div>', add:0, del:0 };
+  var CTX=2, keep=new Array(d.length).fill(false), add=0, del=0;
+  for(var i=0;i<d.length;i++){
+    if(d[i].t==='+') add++; else if(d[i].t==='-') del++;
+    if(d[i].t!==' ') for(var j=Math.max(0,i-CTX);j<=Math.min(d.length-1,i+CTX);j++) keep[j]=true;
+  }
+  if(!add && !del) return { html:'<div class="df-skip">'+L('差分なし — 内容は同じです','No changes')+'</div>', add:0, del:0 };
+  var html='', hidden=0;
+  for(var i=0;i<d.length;i++){
+    if(keep[i]){
+      if(hidden){ html+='<div class="df-skip">… '+hidden+L(' 行 変更なし …',' unchanged …')+'</div>'; hidden=0; }
+      var cls=d[i].t==='+'?'df-add':d[i].t==='-'?'df-del':'df-ctx';
+      var sign=d[i].t==='+'?'+ ':d[i].t==='-'?'- ':'  ';
+      html+='<div class="df-line '+cls+'">'+esc(sign+d[i].v)+'</div>';
+    } else hidden++;
+  }
+  if(hidden) html+='<div class="df-skip">… '+hidden+L(' 行 変更なし …',' unchanged …')+'</div>';
+  return { html:html, add:add, del:del };
+}
+// View an artifact's current full HTML.
+async function _openCodeViewer(filename){
+  if(!filename) return;
+  _codeModalShell('<div class="acm-title">📄 '+esc(filename)+'</div>',
+    '<div class="acm-pre" style="color:#9b9384">'+L('読み込み中…','Loading…')+'</div>');
+  try{
+    var r=await api('POST','/api/artifacts/inspect',{filename:filename});
+    _codeModalShell('<div class="acm-title">📄 '+esc(r.title||filename)+'（v'+(r.version||1)+'）</div>',
+      '<pre class="acm-pre">'+esc(String(r.html||''))+'</pre>');
+  }catch(e){
+    _codeModalShell('<div class="acm-title">📄 '+esc(filename)+'</div>',
+      '<div class="acm-pre" style="color:#fecaca">'+esc((e&&e.message)||'failed')+'</div>');
+  }
+}
+// Show what changed in one version step: snapshot k → the next state.
+async function _openVersionDiff(filename, k){
+  if(!filename) return;
+  _codeModalShell('<div class="acm-title">🔍 '+esc(filename)+'</div>',
+    '<div class="acm-pre" style="color:#9b9384">'+L('差分を計算中…','Computing diff…')+'</div>');
+  try{
+    var r=await api('POST','/api/artifacts/inspect',{filename:filename});
+    var vs=Array.isArray(r.versions)?r.versions:[];
+    if(!vs.length){ _codeModalShell('<div class="acm-title">🔍 '+esc(filename)+'</div>','<div class="df-skip">'+L('バージョン履歴がありません','No version history')+'</div>'); return; }
+    if(k<0||k>=vs.length) k=vs.length-1;
+    var oldHtml=String(vs[k].html||'');
+    var newHtml=(k+1<vs.length)?String(vs[k+1].html||''):String(r.html||'');
+    var curVer=r.version||1;
+    var vFrom=curVer-(vs.length-k), vTo=vFrom+1;
+    var diff=_renderDiff(oldHtml, newHtml);
+    var ttl='<div class="acm-title">🔍 v'+(vFrom>0?vFrom:'?')+' → v'+(vTo>0?vTo:'?')+L(' の変更点',' changes')+'</div>'
+      +'<div class="acm-sum"><span class="add">+'+diff.add+'</span><span class="del">−'+diff.del+'</span></div>';
+    _codeModalShell(ttl, diff.html || '<div class="df-skip">'+L('差分なし','No changes')+'</div>');
+  }catch(e){
+    _codeModalShell('<div class="acm-title">🔍 '+esc(filename)+'</div>',
+      '<div class="acm-pre" style="color:#fecaca">'+esc((e&&e.message)||'failed')+'</div>');
   }
 }
 

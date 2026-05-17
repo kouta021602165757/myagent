@@ -12523,6 +12523,34 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ ok:true, url:'/generated/'+fn, version: art.version });
   }
 
+  // ── POST /api/artifacts/inspect ────────────────────────────
+  // Returns an artifact's CURRENT html + every stored version snapshot WITH
+  // its html, so the client can show the code and a version-by-version diff.
+  // (/api/me strips html for payload size — this is the on-demand full read.)
+  if(pathname==='/api/artifacts/inspect' && method==='POST'){
+    const body = await readBody(req);
+    let fn = String((body && body.filename) || '').trim();
+    if(fn.indexOf('/') >= 0) fn = fn.split('/').filter(Boolean).pop() || fn;
+    fn = fn.split('?')[0].split('#')[0];
+    if(!fn) return jres(res,400,{error:'filename required'});
+    user.artifacts = Array.isArray(user.artifacts) ? user.artifacts : [];
+    const art = user.artifacts.find(a => a && a.filename === fn);
+    if(!art) return jres(res,404,{error:'artifact not found'});
+    const versions = (Array.isArray(art.versions) ? art.versions : []).map(v => ({
+      at: (v && v.at) || null,
+      op: (v && v.op) || null,
+      html: String((v && v.html) || ''),
+    }));
+    return jres(res,200,{
+      ok:true,
+      filename: art.filename,
+      title: art.title || fn,
+      version: art.version || 1,
+      html: String(art.html || ''),
+      versions,
+    });
+  }
+
   // ── POST /api/agents ───────────────────────────────────────
   // ── POST /api/templates/:id/install — 1-click apply ──────────
   // Creates a new agent from the template, optionally seeds its first

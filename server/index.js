@@ -16912,7 +16912,27 @@ async function handleAPI(req,res,pathname,method,ip){
       _editDirective='【編集指示】ユーザーは既存の成果物「'+String(_et.title||_et.filename).slice(0,80)
         +'」の編集を指示しています。filename は "'+String(_et.filename).slice(0,150)+'"。'
         +'この依頼は必ず edit_artifact ツールを filename="'+String(_et.filename).slice(0,150)+'" で使って処理し、'
-        +'create_artifact での新規作成や別ファイルの編集は絶対にしないこと。\n\n';
+        +'create_artifact での新規作成や別ファイルの編集は絶対にしないこと。\n'
+        +'【最重要】指示された箇所「だけ」を変更すること。それ以外の HTML・CSS・レイアウト・'
+        +'文言・配置は 1 文字も変えてはいけない。全体の作り直し・書き換えは厳禁。\n\n';
+      // Auto-inject the artifact's CURRENT html so the AI edits the REAL file,
+      // not a guess. This is the core fix for "出力がズレる": chat summarization
+      // erases the original html from context, so without this the AI patches
+      // a file it can't see → selectors/classes mismatch → layout drifts.
+      try {
+        const _arts = Array.isArray(payerUser && payerUser.artifacts) ? payerUser.artifacts : [];
+        const _editArt = _arts.find(a => a && a.filename === _et.filename);
+        if(_editArt && _editArt.html){
+          let _curHtml = String(_editArt.html);
+          const _CAP = 200000; // ~200KB — covers virtually every artifact
+          let _trunc = '';
+          if(_curHtml.length > _CAP){ _curHtml = _curHtml.slice(0, _CAP); _trunc = '\n…(長すぎるため以下省略 — 該当箇所のみ部分編集すること)'; }
+          _editDirective += '【この成果物の現在の HTML — これが唯一の正しい状態です。推測禁止】\n'
+            + 'edit_artifact のセレクタ・content は、必ず下記の実物 HTML をそのまま参照して組み立てること。'
+            + 'クラス名・入れ子構造・既存の余白を想像で書くと表示がズレる。\n'
+            + '```html\n' + _curHtml + _trunc + '\n```\n\n';
+        }
+      } catch(e){ /* non-fatal — fall back to the directive without html */ }
     }
 
     // ── Auto model routing ─────────────────────────────────

@@ -1454,53 +1454,48 @@ input,textarea{font-family:var(--sans);}
 }
 
 /* Link-card variant — used by chat for .html artifacts (iframe replaced). */
+/* Artifact card — 2-row layout so the title is never crushed by the action
+   buttons (the old single-row card squeezed titles down to "ta…"). */
 .m-artifact-card{
-  display:flex;align-items:center;gap:12px;
-  max-width:560px;width:100%;margin:12px 0;
-  padding:14px 16px;
-  background:#fff;border:1px solid var(--wire2);border-radius:12px;
+  display:flex;flex-direction:column;gap:11px;
+  max-width:520px;width:100%;margin:12px 0;
+  padding:13px 14px;
+  background:#fff;border:1px solid var(--wire2);border-radius:14px;
   box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 20px rgba(0,0,0,.05);
-  text-decoration:none;color:inherit;font-family:inherit;
-  transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;
-  position:relative;
+  color:inherit;font-family:inherit;
 }
-.m-artifact-card:hover{
-  transform:translateY(-1px);
-  border-color:rgba(251,146,60,.4);
-  box-shadow:0 2px 6px rgba(251,146,60,.10), 0 14px 28px rgba(251,146,60,.10);
-}
+.m-artifact-card-top{display:flex;align-items:flex-start;gap:11px;}
 .m-artifact-card-ic{
-  width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
   background:linear-gradient(135deg,#fff3e6,#ffe5cc);
-  display:flex;align-items:center;justify-content:center;font-size:22px;
+  display:flex;align-items:center;justify-content:center;font-size:21px;
 }
-.m-artifact-card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.m-artifact-card-body{flex:1;min-width:0;}
 .m-artifact-card-ti{
-  font-weight:800;font-size:14px;color:var(--text);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-weight:800;font-size:14.5px;color:var(--text);line-height:1.42;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
 }
 .m-artifact-card-url{
-  font-family:'SF Mono','Menlo',monospace;font-size:11.5px;color:var(--text3);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:'SF Mono','Menlo',monospace;font-size:10.5px;color:var(--text3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;
 }
-.m-artifact-card-copy{
-  background:transparent;border:1px solid var(--wire2);border-radius:7px;
-  width:30px;height:30px;cursor:pointer;font-size:13px;line-height:1;color:var(--text2);
-  flex-shrink:0;font-family:inherit;
+.m-artifact-card-acts{display:flex;flex-wrap:wrap;gap:7px;}
+.m-artifact-card-acts > *{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;font-weight:800;font-family:inherit;line-height:1;
+  padding:9px 13px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--wire2);background:var(--cream,#faf6f0);color:var(--text2);
+  text-decoration:none;transition:background .12s,transform .12s;
 }
-.m-artifact-card-copy:hover{background:var(--cream3);color:var(--text);}
-.m-artifact-card-cta{
-  display:none;
+.m-artifact-card-acts > *:hover{background:var(--cream3);transform:translateY(-1px);}
+.m-artifact-card-acts .ac-edit{background:rgba(251,146,60,.12);border-color:rgba(251,146,60,.34);color:var(--peach-dark);}
+.m-artifact-card-acts .ac-edit:hover{background:rgba(251,146,60,.2);}
+.m-artifact-card-acts .ac-open{
+  margin-left:auto;
+  background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;border-color:transparent;
+  box-shadow:0 4px 10px rgba(234,88,12,.22);
 }
-@media (min-width:560px){
-  .m-artifact-card-cta{
-    display:inline-flex;align-items:center;
-    background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;
-    padding:7px 12px;border-radius:8px;font-weight:700;font-size:12px;
-    letter-spacing:.02em;white-space:nowrap;flex-shrink:0;
-    box-shadow:0 4px 10px rgba(234,88,12,.22);
-  }
-}
+.m-artifact-card-acts .ac-open:hover{background:linear-gradient(135deg,#fb923c,#ea580c);filter:brightness(1.06);}
 
 /* Slack-flat body: no bubble, no border, no background. Text only.
    User and AI use identical styling (Slack convention). */
@@ -1908,8 +1903,6 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
 .ec-wrap .ec-name{font-size:13px;font-weight:800;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ec-wrap .ec-x{width:24px;height:24px;border-radius:50%;border:0;cursor:pointer;background:rgba(234,88,12,.13);color:var(--peach-dark);font-size:11px;flex-shrink:0;}
 .composer.editing{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.14),0 1px 3px rgba(0,0,0,.04);}
-.m-artifact-card-edit{background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.34);color:var(--peach-dark);font-size:11px;font-weight:800;padding:5px 9px;border-radius:7px;cursor:pointer;font-family:inherit;flex-shrink:0;}
-
 #ci,#tci{
   width:100%;background:none;border:0;color:var(--text);font-size:15px;
   resize:none;line-height:1.6;padding:4px 0 6px;outline:none;font-family:inherit;
@@ -9066,22 +9059,28 @@ function _md(src){
   // wrap-up skip now emits link syntax (`🎨 [title](url.html)`) so users get
   // a real clickable result instead of a raw URL.
   function _renderArtifactCard(alt, src){
-    const safeAlt = String(alt||'').replace(/\*\*/g,'').replace(/"/g,'&quot;').slice(0,80);
+    const safeAlt = (String(alt||'').replace(/\*\*/g,'').replace(/"/g,'&quot;').slice(0,80)) || (isJa?'作成したサイト':'Site');
     const safeSrc = String(src||'').replace(/"/g,'&quot;');
     // Bare filename + whether it's an editable artifact (artifact-*.html).
     const _afName = String(src||'').split('?')[0].split('#')[0].split('/').filter(Boolean).pop() || '';
     const _afIsArtifact = /^artifact-/.test(_afName);
     const _afTitleArg = safeAlt.replace(/'/g,"\\'");
-    return '<a class="m-artifact-card" href="'+safeSrc+'" target="_blank" rel="noopener">'
-      + '<div class="m-artifact-card-ic">📄</div>'
-      + '<div class="m-artifact-card-body">'
-      +   '<div class="m-artifact-card-ti">'+safeAlt+'</div>'
-      +   '<div class="m-artifact-card-url">'+safeSrc+'</div>'
+    const _afNameArg = _afName.replace(/'/g,"\\'");
+    return '<div class="m-artifact-card">'
+      + '<div class="m-artifact-card-top">'
+      +   '<div class="m-artifact-card-ic">'+(_afIsArtifact?'🌐':'📄')+'</div>'
+      +   '<div class="m-artifact-card-body">'
+      +     '<div class="m-artifact-card-ti">'+safeAlt+'</div>'
+      +     '<div class="m-artifact-card-url">'+esc(_afName||safeSrc)+'</div>'
+      +   '</div>'
       + '</div>'
-      + (_afIsArtifact ? '<button class="m-artifact-card-edit" onclick="event.preventDefault();event.stopPropagation();_setEditTarget(\''+_afName+'\',\''+_afTitleArg+'\',_ecWhich(this))" title="このサイトを編集">✏️ 編集</button>' : '')
-      + '<button class="m-artifact-card-copy" onclick="event.preventDefault();event.stopPropagation();navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(()=>{this.textContent=\'✓\';setTimeout(()=>this.textContent=\'📋\',1200)})" title="URL コピー">📋</button>'
-      + '<span class="m-artifact-card-cta">新タブで開く ↗</span>'
-      + '</a>';
+      + '<div class="m-artifact-card-acts">'
+      +   (_afIsArtifact ? '<button class="ac-edit" onclick="_setEditTarget(\''+_afNameArg+'\',\''+_afTitleArg+'\',_ecWhich(this))" title="このサイトを編集">✏️ '+(isJa?'編集':'Edit')+'</button>' : '')
+      +   (_afIsArtifact ? '<button class="ac-code" onclick="_openCodeViewer(\''+_afNameArg+'\')" title="コードを見る">📄 '+(isJa?'コード':'Code')+'</button>' : '')
+      +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 URL\';},1400);})">📋 URL</button>'
+      +   '<a class="ac-open" href="'+safeSrc+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
+      + '</div>'
+      + '</div>';
   }
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
     return _renderArtifactCard(alt, src);

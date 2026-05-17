@@ -1471,9 +1471,18 @@ input,textarea{font-family:var(--sans);}
   display:flex;align-items:center;justify-content:center;font-size:21px;
 }
 .m-artifact-card-body{flex:1;min-width:0;}
+.m-artifact-card-titlerow{display:flex;align-items:flex-start;gap:8px;}
 .m-artifact-card-ti{
+  flex:1;min-width:0;
   font-weight:800;font-size:14.5px;color:var(--text);line-height:1.42;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.m-artifact-card-ver{
+  flex-shrink:0;font-size:10.5px;font-weight:800;
+  color:var(--peach-dark);background:rgba(251,146,60,.13);
+  border:1px solid rgba(251,146,60,.32);
+  padding:2px 8px;border-radius:99px;
+  font-family:'SF Mono','Menlo',monospace;white-space:nowrap;
 }
 .m-artifact-card-url{
   font-family:'SF Mono','Menlo',monospace;font-size:10.5px;color:var(--text3);
@@ -9066,11 +9075,19 @@ function _md(src){
     const _afIsArtifact = /^artifact-/.test(_afName);
     const _afTitleArg = safeAlt.replace(/'/g,"\\'");
     const _afNameArg = _afName.replace(/'/g,"\\'");
+    // Look up the stored version so the card shows "Ver.N".
+    let _afVer = 0;
+    try {
+      const _aHit = (typeof me!=='undefined' && me && Array.isArray(me.artifacts))
+        ? me.artifacts.find(function(a){ return a && a.filename === _afName; }) : null;
+      if(_aHit) _afVer = _aHit.version || 1;
+    } catch(e){}
+    const _verBadge = _afVer ? '<span class="m-artifact-card-ver">Ver.'+_afVer+'</span>' : '';
     return '<div class="m-artifact-card">'
       + '<div class="m-artifact-card-top">'
       +   '<div class="m-artifact-card-ic">'+(_afIsArtifact?'🌐':'📄')+'</div>'
       +   '<div class="m-artifact-card-body">'
-      +     '<div class="m-artifact-card-ti">'+safeAlt+'</div>'
+      +     '<div class="m-artifact-card-titlerow"><div class="m-artifact-card-ti">'+safeAlt+'</div>'+_verBadge+'</div>'
       +     '<div class="m-artifact-card-url">'+esc(_afName||safeSrc)+'</div>'
       +   '</div>'
       + '</div>'
@@ -12433,6 +12450,22 @@ function _turnStatusFromEvent(evType, obj){
   else if(evType==='plan_status') _turnStatusPhase(isJa?'プランを実行中…':'Running plan…');
 }
 
+// After a turn that created/edited an artifact, refresh me.artifacts so the
+// in-chat cards show the correct "Ver.N" (the version bumped server-side).
+function _refreshArtifactsIfNeeded(toolLog, ag){
+  try{
+    var tl = toolLog || [];
+    if(!tl.some(function(t){ return t && /artifact/.test(String(t.name||'')); })) return;
+    api('GET','/api/me').then(function(r){
+      if(r && r.user && Array.isArray(r.user.artifacts)){
+        me.artifacts = r.user.artifacts;
+        try{ renderMsgs(ag); }catch(e){}
+        if(window._activeThreadParent){ try{ _renderThreadDrawer(); }catch(e){} }
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+
 async function _sendMsgStream(ag, text, imgs, texts){
   const payload = { message: text, stream: true };
   if(imgs && imgs.length > 0) payload.images = imgs;
@@ -12680,6 +12713,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
         // already in the thread from the start, so no migration needed.
         renderMsgs(ag);
         if(window._activeThreadParent){ try { _renderThreadDrawer(); } catch(e){} }
+        _refreshArtifactsIfNeeded(ag.history[streamIdx] && ag.history[streamIdx].tool_log, ag);
       } else if(evType === 'error'){
         errorMsg = obj.message || 'エラー';
         _stopThink();
@@ -17103,6 +17137,7 @@ async function _sendThreadReply(){
           updateBalance();
           _renderThreadDrawer();
           renderMsgs(ag, false);  // main feed updates the "N 件の返信" count
+          _refreshArtifactsIfNeeded(ag.history[aiPlaceholderIdx] && ag.history[aiPlaceholderIdx].tool_log, ag);
         } else if(evType === 'error'){
           if(ag.history[aiPlaceholderIdx]){
             ag.history[aiPlaceholderIdx].content = 'エラー: ' + (obj.message||'');

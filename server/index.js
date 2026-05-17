@@ -4208,6 +4208,12 @@ filename が分からなくても作り直しは厳禁 — その場合はベス
 を呼ぶ(見つからなければ実在ファイル一覧がエラーで返る)。それでも特定できなければ、
 推測で実行せず必ずユーザーに「どのサイトですか?」と候補を出して聞くこと。
 
+【編集前に現物を見る — 配置ズレ防止の必須手順】
+編集する成果物の現在 HTML が文脈に無い場合、構造を推測で書くと配置が崩れる。
+システムが【この成果物の現在の HTML】を渡していればそれを唯一の正として使う。
+渡されていなければ、まず read_artifact で現在 HTML を取得してから edit_artifact を呼ぶこと。
+selector・content は必ず実物の HTML に厳密に合わせ、指示された箇所以外は 1 文字も変えない。
+
 【操作 (operation)】
 - "append_to_body": </body> の直前に content を挿入 (最頻出。新セクション / 新リスト項目の追加に最適)
 - "append_to_selector": selector で指定した要素の閉じタグ直前に content を挿入 (例: <tbody> に <tr> を 100 行追加)
@@ -4224,6 +4230,21 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
         content:{type:'string',description:'挿入する HTML 断片 (最大 100KB)。完全な HTML タグで書く。'},
       },
       required:['filename','operation','content'],
+    },
+  },
+  {
+    name:'read_artifact',
+    description:`既存の成果物 (create_artifact で作った HTML) の**現在の中身 (HTML 全文) を読み取る**。
+
+【いつ使う — 最重要】
+既存の成果物を編集する依頼で、その成果物の現在 HTML が会話の文脈に無い・古い・自信が無いときは、**まず read_artifact で現在の HTML を取得してから** edit_artifact を呼ぶこと。会話は要約圧縮で過去の HTML が消えるため、推測でセレクタや構造を書くと配置が崩れる (実際に「なんで配置を勝手に変えるの」というクレームが発生済み)。
+※ システムが既に【この成果物の現在の HTML】を文脈に渡している場合は再取得不要 — そのまま使う。`,
+    input_schema:{
+      type:'object',
+      properties:{
+        filename:{type:'string',description:'読み取る artifact のファイル名 (例: artifact-task-manager-abc123.html)'},
+      },
+      required:['filename'],
     },
   },
   {
@@ -6320,6 +6341,37 @@ async function executeEditArtifactTool(input, ownerUser){
       + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
   }
   return result;
+}
+
+// read_artifact — hand the AI the CURRENT html of an artifact. Chat
+// summarization erases the original html from context, so without a way to
+// re-read it the AI edits blind and the layout drifts. This is the on-demand
+// counterpart to the auto-injected 【編集指示】 html.
+async function executeReadArtifactTool(input, ownerUser){
+  let filename = String((input && input.filename) || '').trim();
+  if(filename.indexOf('/') >= 0) filename = filename.split('/').filter(Boolean).pop() || filename;
+  filename = filename.split('?')[0].split('#')[0];
+  if(!filename) return { error: 'filename required' };
+  ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
+  const artifact = ownerUser.artifacts.find(a => a && a.filename === filename);
+  if(!artifact){
+    const recent = ownerUser.artifacts.slice(-25).reverse();
+    return {
+      error: 'artifact not found: ' + filename,
+      available_filenames: recent.map(a => a.filename),
+    };
+  }
+  let html = String(artifact.html || '');
+  let truncated = false;
+  if(html.length > 300000){ html = html.slice(0, 300000); truncated = true; }
+  return {
+    filename: artifact.filename,
+    title: artifact.title || filename,
+    version: artifact.version || 1,
+    truncated,
+    html,
+    instructions: 'これがこの成果物の現在の HTML（実物・最新）です。編集する時は edit_artifact の selector / content をこの実物に厳密に合わせること。指示された箇所以外は 1 文字も変えないこと。',
+  };
 }
 
 // Find the bytes-range of a (very simple) selector in HTML. Supports:
@@ -10399,8 +10451,9 @@ async function _runOneSchedule(user, agent, sched){
             sendEmailCalled = true;
             result = await executeEmailTool(user, agent, block.input||{});
           }
-          else if(block.name === 'create_artifact') result = await executeArtifactTool(block.input||{}, user);
-          else if(block.name === 'edit_artifact')   result = await executeEditArtifactTool(block.input||{}, user);
+          else if(block.name === 'create_artifact'){ result = await executeArtifactTool(block.input||{}, user); if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop(); }
+          else if(block.name === 'edit_artifact'){ result = await executeEditArtifactTool(block.input||{}, user); if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop(); }
+          else if(block.name === 'read_artifact')   result = await executeReadArtifactTool(block.input||{}, user);
           else if(block.name === 'notify_slack')    result = await executeNotifyTool('slack', user, block.input||{}, agent);
           else if(block.name === 'notify_discord')  result = await executeNotifyTool('discord', user, block.input||{}, agent);
           else if(block.name === 'zapier_run')      result = await executeZapierTool(user, block.input||{});
@@ -16906,22 +16959,48 @@ async function handleAPI(req,res,pathname,method,ip){
     // Edit-target directive — set when the user pressed "このサイトを編集" on an
     // artifact card. Grounds the AI on the EXACT file (no guessing among
     // similar artifacts) WITHOUT polluting the stored/displayed user message.
+    // ── Resolve the artifact this turn is about, then hand the AI its REAL
+    // current html so it never edits blind. Three sources, in priority order:
+    //   1. body.edit_target  — user pressed ✏️編集 on an artifact card (explicit)
+    //   2. an artifact-*.html / URL in the message text          (explicit)
+    //   3. an edit-style request + agent.current_artifact        (inferred)
+    // This is the core fix for "出力がズレる": claude.ai always shows the model
+    // the current artifact; here we replicate that regardless of how the user
+    // phrased the request. current_artifact persists on the agent so it
+    // survives chat summarization.
     let _editDirective='';
+    let _targetArtifact='', _targetTitle='', _targetExplicit=false;
     if(body.edit_target && body.edit_target.filename){
-      const _et=body.edit_target;
-      _editDirective='【編集指示】ユーザーは既存の成果物「'+String(_et.title||_et.filename).slice(0,80)
-        +'」の編集を指示しています。filename は "'+String(_et.filename).slice(0,150)+'"。'
-        +'この依頼は必ず edit_artifact ツールを filename="'+String(_et.filename).slice(0,150)+'" で使って処理し、'
-        +'create_artifact での新規作成や別ファイルの編集は絶対にしないこと。\n'
+      _targetArtifact=String(body.edit_target.filename);
+      _targetTitle=String(body.edit_target.title||body.edit_target.filename);
+      _targetExplicit=true;
+    } else {
+      const _urlM=String(message||'').match(/artifact-[a-z0-9-]+\.html?/i);
+      if(_urlM){
+        _targetArtifact=_urlM[0]; _targetTitle=_urlM[0]; _targetExplicit=true;
+      } else if(agent && agent.current_artifact
+                && /(直し|なおし|修正|変え|変更|調整|追加|足し|減ら|削除|消し|大きく|小さく|色|配置|レイアウト|ボタン|バグ|壊れ|動かな|表示|デザイン|ズレ|崩れ|再生成|作り直|バージョンアップ|更新|なおして|直して)/.test(String(message||''))){
+        _targetArtifact=String(agent.current_artifact);
+        _targetTitle=String(agent.current_artifact);
+        _targetExplicit=false;
+      }
+    }
+    if(_targetArtifact){
+      // Remember it as the conversation's current artifact (survives summary).
+      if(agent) agent.current_artifact=_targetArtifact;
+      _editDirective='【編集指示】ユーザーは既存の成果物「'+_targetTitle.slice(0,80)+'」'
+        +(_targetExplicit?'の編集を指示しています':'を編集しようとしている可能性が高いです')
+        +'。filename は "'+_targetArtifact.slice(0,150)+'"。\n'
+        +(_targetExplicit
+          ? 'この依頼は必ず edit_artifact をこの filename で使って処理し、create_artifact での作り直しや別ファイルの編集は絶対にしないこと。\n'
+          : '編集の依頼であれば edit_artifact をこの filename で使うこと（全く新しい物を作る依頼の場合のみ create_artifact）。作り直しでなく差分編集を優先する。\n')
         +'【最重要】指示された箇所「だけ」を変更すること。それ以外の HTML・CSS・レイアウト・'
         +'文言・配置は 1 文字も変えてはいけない。全体の作り直し・書き換えは厳禁。\n\n';
-      // Auto-inject the artifact's CURRENT html so the AI edits the REAL file,
-      // not a guess. This is the core fix for "出力がズレる": chat summarization
-      // erases the original html from context, so without this the AI patches
-      // a file it can't see → selectors/classes mismatch → layout drifts.
+      // Auto-inject the artifact's CURRENT html — the AI edits the real file,
+      // not a guess (chat summarization erases the original html from context).
       try {
         const _arts = Array.isArray(payerUser && payerUser.artifacts) ? payerUser.artifacts : [];
-        const _editArt = _arts.find(a => a && a.filename === _et.filename);
+        const _editArt = _arts.find(a => a && a.filename === _targetArtifact);
         if(_editArt && _editArt.html){
           let _curHtml = String(_editArt.html);
           const _CAP = 200000; // ~200KB — covers virtually every artifact
@@ -17937,8 +18016,12 @@ async function handleAPI(req,res,pathname,method,ip){
               result = await executeQrTool(block.input||{});
             } else if(block.name === 'create_artifact'){
               result = await executeArtifactTool(block.input||{}, payerUser);
+              if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop();
             } else if(block.name === 'edit_artifact'){
               result = await executeEditArtifactTool(block.input||{}, payerUser);
+              if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop();
+            } else if(block.name === 'read_artifact'){
+              result = await executeReadArtifactTool(block.input||{}, payerUser);
             } else if(block.name === 'notify_slack'){
               result = await executeNotifyTool('slack', payerUser, block.input||{}, (teamMemberAgent || agent));
             } else if(block.name === 'notify_discord'){

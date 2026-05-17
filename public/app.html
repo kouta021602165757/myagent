@@ -1742,6 +1742,23 @@ input,textarea{font-family:var(--sans);}
 .td:nth-child(2){animation-delay:.18s;}.td:nth-child(3){animation-delay:.36s;}
 @keyframes tdot{0%,60%,100%{transform:scale(.8);opacity:.4;}30%{transform:scale(1.3);opacity:1;}}
 
+/* Turn-status chip — a persistent "AI is working" pill, visible the whole
+   agentic turn (incl. silent render-verification waits) with a live seconds
+   counter. Driven by _turnStatus* in JS. pointer-events:none so it blocks
+   nothing; z-index above the thread drawer so it shows during thread replies. */
+.turn-status{
+  position:fixed; left:50%; bottom:92px; transform:translateX(-50%);
+  z-index:99999; display:flex; align-items:center; gap:8px;
+  background:#1c1c22; color:#fff; padding:8px 15px; border-radius:99px;
+  font-size:12.5px; font-weight:700; white-space:nowrap;
+  box-shadow:0 6px 22px rgba(0,0,0,.3); pointer-events:none;
+  animation:tsIn .22s ease;
+}
+@keyframes tsIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.turn-status .ts-dot{width:8px;height:8px;border-radius:50%;background:var(--peach);animation:tsPulse 1s ease-in-out infinite;flex-shrink:0;}
+@keyframes tsPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
+.turn-status .ts-sec{opacity:.55;font-variant-numeric:tabular-nums;font-size:11.5px;}
+
 /* Pulsing logo + label, like Claude.ai's thinking state */
 .gen-indicator{
   display:inline-flex;align-items:center;gap:10px;
@@ -12231,6 +12248,76 @@ function stopChatStream(){
  * its content as text deltas arrive. Updates balance + final reply on 'done'.
  * Falls back to throwing on error so the caller's catch path runs.
  */
+// ── Turn-status chip ───────────────────────────────────────────────────
+// A persistent "AI is working" indicator shown for the WHOLE agentic turn
+// (text streaming + tool calls + the now-slower render verification), in
+// both the main chat and the thread drawer, with a live elapsed-seconds
+// counter so even silent server-side waits never look frozen.
+var _turnStatus = { el:null, timer:null, startedAt:0, phase:'' };
+function _toolLabel(name){
+  var M = {
+    read_artifact:['🔍 サイトの中身を確認中','🔍 Reading the site'],
+    create_artifact:['🎨 サイトを作成・検証中','🎨 Building & checking'],
+    edit_artifact:['✏️ サイトを編集・検証中','✏️ Editing & checking'],
+    generate_image:['🖼 画像を生成中','🖼 Generating image'],
+    edit_image:['🖼 画像を編集中','🖼 Editing image'],
+    generate_video:['🎬 動画を生成中','🎬 Generating video'],
+    generate_pdf:['📄 PDF を作成中','📄 Building PDF'],
+    generate_chart:['📊 グラフを描画中','📊 Drawing chart'],
+    web_search:['🔍 Web を検索中','🔍 Searching the web'],
+    web_fetch:['🌐 ページを取得中','🌐 Fetching page'],
+    web_screenshot:['📸 ページを撮影中','📸 Screenshotting'],
+    send_email:['📧 メールを送信中','📧 Sending email'],
+    notify_slack:['💬 Slack に投稿中','💬 Posting to Slack'],
+    ga4_query:['📊 アクセス解析中','📊 Analyzing traffic'],
+    sheets_read:['📊 シートを読込中','📊 Reading sheet'],
+    sheets_write:['📊 シートに書込中','📊 Writing sheet'],
+    sheets_append:['📊 シートに追記中','📊 Appending to sheet'],
+  };
+  var hit = M[name];
+  if(hit) return isJa ? hit[0] : hit[1];
+  return isJa ? ('🔧 '+String(name||'ツール')+' を実行中') : ('🔧 Running '+String(name||'tool'));
+}
+function _turnStatusTick(){
+  if(!_turnStatus.el) return;
+  var sec = Math.floor((Date.now()-_turnStatus.startedAt)/1000);
+  if(sec > 600){ _turnStatusEnd(); return; } // safety: no real turn runs this long
+  var lab = _turnStatus.el.querySelector('.ts-label');
+  var s = _turnStatus.el.querySelector('.ts-sec');
+  if(lab) lab.textContent = _turnStatus.phase;
+  if(s) s.textContent = sec + (isJa?' 秒':'s');
+}
+function _turnStatusStart(){
+  _turnStatusEnd(); // clear any stale chip first
+  var el = document.createElement('div');
+  el.id = 'turnStatus'; el.className = 'turn-status';
+  el.innerHTML = '<span class="ts-dot"></span><span class="ts-label"></span><span class="ts-sec"></span>';
+  document.body.appendChild(el);
+  _turnStatus.el = el;
+  _turnStatus.startedAt = Date.now();
+  _turnStatus.phase = isJa ? '考え中…' : 'Thinking…';
+  _turnStatusTick();
+  _turnStatus.timer = setInterval(_turnStatusTick, 1000);
+}
+function _turnStatusPhase(label){
+  if(!_turnStatus.el) _turnStatusStart();
+  if(label) _turnStatus.phase = label;
+  _turnStatusTick();
+}
+function _turnStatusEnd(){
+  if(_turnStatus.timer){ clearInterval(_turnStatus.timer); _turnStatus.timer=null; }
+  if(_turnStatus.el){ _turnStatus.el.remove(); _turnStatus.el=null; }
+  _turnStatus.phase=''; _turnStatus.startedAt=0;
+}
+// Map an SSE event → a turn-status phase. Shared by main + thread SSE loops.
+function _turnStatusFromEvent(evType, obj){
+  if(evType==='delta' || evType==='huddle_summary_delta') _turnStatusPhase(isJa?'回答を生成中…':'Writing response…');
+  else if(evType==='thinking') _turnStatusPhase(isJa?'考え中…':'Thinking…');
+  else if(evType==='tool_call') _turnStatusPhase(_toolLabel(obj && obj.name));
+  else if(evType==='tool_result') _turnStatusPhase(isJa?'次のステップを考え中…':'Thinking…');
+  else if(evType==='plan_status') _turnStatusPhase(isJa?'プランを実行中…':'Running plan…');
+}
+
 async function _sendMsgStream(ag, text, imgs, texts){
   const payload = { message: text, stream: true };
   if(imgs && imgs.length > 0) payload.images = imgs;
@@ -12303,6 +12390,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
   const _autoParent = payload.thread_parent_id || window._lastTopLevelUserMsgId || null;
   ag.history.push({role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent});
   const streamIdx = ag.history.length - 1;
+  _turnStatusStart();
   const _wideForDrawer = (typeof window !== 'undefined' && window.innerWidth >= 900);
   if(_autoParent && _wideForDrawer){
     try { _openThread(_autoParent); } catch(e){}
@@ -12388,6 +12476,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
       }
       if(!dataStr) continue;
       let obj=null; try{ obj=JSON.parse(dataStr); }catch(e){ continue; }
+      _turnStatusFromEvent(evType, obj);
       if(evType === 'delta'){
         // reset=true → the server retried mid-stream and is re-sending the
         // answer from scratch; discard partial text so the bubble doesn't
@@ -12575,6 +12664,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
     }
   } } finally {
     _stopThink();
+    _turnStatusEnd();
     _chatStreamCtrl = null;
     _setChatStreaming(false);
   }
@@ -16817,6 +16907,7 @@ async function _sendThreadReply(){
   ag.history.push(userMsg);
   var aiPlaceholderIdx = ag.history.length;
   ag.history.push({ role:'assistant', content:'', time: ts, streaming:true, thread_parent_id: parentId });
+  _turnStatusStart();
   _renderThreadDrawer();
   try {
     var _body = { message: outbound, thread_parent_id: parentId, stream: true };
@@ -16863,6 +16954,7 @@ async function _sendThreadReply(){
         }
         if(!dataStr) continue;
         var obj; try{ obj = JSON.parse(dataStr); }catch(e){ continue; }
+        _turnStatusFromEvent(evType, obj);
         if(evType === 'delta'){
           // reset=true → server retried mid-stream; discard partial text so
           // the thread bubble doesn't show duplicated content.
@@ -16915,6 +17007,7 @@ async function _sendThreadReply(){
     _renderThreadDrawer();
     showToast((e&&e.message)||'failed','ng');
   } finally {
+    _turnStatusEnd();
     var sb = document.getElementById('tSndBtn');
     if(sb) sb.disabled = false;
     var ci2 = document.getElementById('tci');

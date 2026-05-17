@@ -9092,9 +9092,9 @@ function _md(src){
       +   '</div>'
       + '</div>'
       + '<div class="m-artifact-card-acts">'
-      +   (_afIsArtifact ? '<button class="ac-edit" onclick="_setEditTarget(\''+_afNameArg+'\',\''+_afTitleArg+'\',_ecWhich(this))" title="このサイトを編集">✏️ '+(isJa?'編集':'Edit')+'</button>' : '')
+      +   (_afIsArtifact ? '<button class="ac-edit" onclick="_setEditTarget(\''+_afNameArg+'\',\''+_afTitleArg+'\',_ecWhich(this))" title="このサイトを修正">✏️ '+(isJa?'修正':'Edit')+'</button>' : '')
       +   (_afIsArtifact ? '<button class="ac-code" onclick="_openCodeViewer(\''+_afNameArg+'\')" title="コードを見る">📄 '+(isJa?'コード':'Code')+'</button>' : '')
-      +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 URL\';},1400);})">📋 URL</button>'
+      +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 コピー\';},1400);})">📋 コピー</button>'
       +   '<a class="ac-open" href="'+safeSrc+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
       + '</div>'
       + '</div>';
@@ -11836,7 +11836,7 @@ function _setEditTarget(filename, title, which){
                           : ('How should I change "'+tgt.title+'"?');
     try{ ci.focus(); }catch(e){}
   }
-  try{ showToast(L('「'+tgt.title+'」の編集モード','Editing: '+tgt.title),'ok'); }catch(e){}
+  try{ showToast(L('「'+tgt.title+'」の修正モード','Editing: '+tgt.title),'ok'); }catch(e){}
 }
 function _clearEditTarget(which){
   which = which || 'main';
@@ -11862,9 +11862,9 @@ function _renderEditChip(which){
   wrap.style.display='flex';
   wrap.innerHTML =
     '<span class="ec-ic">✏️</span>'
-    + '<span class="ec-label">'+L('編集対象','EDITING')+'</span>'
+    + '<span class="ec-label">'+L('修正対象','EDITING')+'</span>'
     + '<span class="ec-name">'+esc(tgt.title)+'</span>'
-    + '<button class="ec-x" onclick="_clearEditTarget(\''+which+'\')" title="'+L('編集をやめる','Stop editing')+'">✕</button>';
+    + '<button class="ec-x" onclick="_clearEditTarget(\''+which+'\')" title="'+L('修正をやめる','Stop editing')+'">✕</button>';
   if(comp) comp.classList.add('editing');
 }
 
@@ -11970,7 +11970,7 @@ function _alRowHTML(a,i){
     +   (hasVers ? '<button class="al-hist-toggle" id="al-histbtn-'+i+'" onclick="_toggleHist('+i+')" title="'+L('バージョン履歴','Version history')+'">🕘 '+vers.length+'</button>' : '')
     +   '<button class="al-open" onclick="_openCodeViewer(\''+esc(fArg)+'\')" title="'+L('コードを見る','View code')+'">📄</button>'
     +   '<button class="al-open" onclick="window.open(\''+esc(url)+'\',\'_blank\')" title="'+L('開く','Open')+'">🔗</button>'
-    +   '<button class="al-edit" onclick="_setEditTarget(\''+esc(fArg)+'\',\''+tArg+'\');_closeArtifactLibrary()">✏️ '+L('編集','Edit')+'</button>'
+    +   '<button class="al-edit" onclick="_setEditTarget(\''+esc(fArg)+'\',\''+tArg+'\');_closeArtifactLibrary()">✏️ '+L('修正','Edit')+'</button>'
     + '</div>'
     + (hasVers ? '<div class="al-hist" id="al-hist-'+i+'">'+histRows+'</div>' : '')
     + '</div>';

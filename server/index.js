@@ -18329,10 +18329,19 @@ async function handleAPI(req,res,pathname,method,ip){
         // a SINGLE delta event — no chunking, no double-emit risk.
         if(sse && reply){
           const norm = (s) => String(s||'').replace(/\s+$/,'');
-          if(norm(reply) !== norm(streamedText)){
+          const nReply = norm(reply), nStream = norm(streamedText);
+          // Skip the re-emit when `reply` is already in the streamed text —
+          // equal to it, OR already its tail. The tail case is the bug behind
+          // "同じ回答が2回表示される": on a multi-iteration tool turn the final
+          // answer is streamed live via _onIterText, but `reply` then gets
+          // re-derived from the last response's text blocks. streamedText is
+          // "preamble + finalanswer" so it != reply and doesn't START with
+          // reply — the old check then re-emitted the whole finalanswer,
+          // duplicating it. endsWith() catches that.
+          if(nReply !== nStream && !nStream.endsWith(nReply)){
             // streamedText doesn't already contain reply → server synthesized.
             // Emit the whole thing as one delta. Client appends to acc.
-            const delta = (norm(reply).startsWith(norm(streamedText)) && streamedText)
+            const delta = (nReply.startsWith(nStream) && streamedText)
               ? reply.slice(streamedText.length)
               : reply;
             if(delta){

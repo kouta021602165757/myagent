@@ -393,6 +393,13 @@ function sbReq(method,table,qs='',body=null){
   });
 }
 
+// All `users` columns EXCEPT the heavy `artifacts` jsonb. Table-scan queries
+// (admin stats, marketplace, creator pages) never read artifact HTML, so
+// excluding the single heaviest column cuts Supabase egress hard. DB.findBy
+// keeps select=* because /api/me needs artifacts. NOTE: if a new column is
+// added to the schema, append it here so table-scan endpoints still see it.
+const USER_COLS_LEAN = 'id,name,email,password,plan,balance_jpy,agents,usage_count,billing_history,stripe_customer_id,google_id,verified,verify_token,reset_token,reset_expiry,deleted,created_at,balance_jpy_pending,balance_jpy_available,revenue_history,payout_history,is_verified,favorites,stripe_connect_id,stripe_connect_payouts_enabled,stripe_connect_charges_enabled,stripe_connect_details_submitted,subscription_id,subscription_status,is_admin,google_oauth,extension_device_id,extension_device_token,extension_device_meta,mobile_devices,group_memberships,outgoing_webhooks,handle,is_founder,founder_seat_no,founder_granted_at,business_trial_until,referral_code,referred_by,referral_stats,login_history,role,memories,chat_pinned,reactions,integrations,github_pat,github_login,notes,reminders,purchases,mcp_servers,onboarded_at,last_nudge_global_at,last_stripe_event_at,last_weekly_digest_at,marketing_attribution,lang,google_sheets_connected,mention_email_pref';
+
 // ── DB ABSTRACTION ────────────────────────────────────────────
 // 注意: コードと Supabase スキーマは共に snake_case を使用。case 変換は不要。
 const DB={
@@ -458,7 +465,10 @@ const DB={
     delete payload.id; // never update primary key
     _sanitizeAgentHistories(payload);
     for(let attempt=0; attempt<12; attempt++){
-      const r = await sbReq('PATCH','users','?id=eq.'+user.id,payload);
+      // select=id → the PATCH echoes back only [{id}] instead of the entire
+      // (multi-KB, artifacts+history-laden) row. Halves egress on every save;
+      // the 0-rows RLS check below still works on the trimmed array.
+      const r = await sbReq('PATCH','users','?id=eq.'+user.id+'&select=id',payload);
       if(r.s<400){
         // Verify the PATCH actually hit a row. With Prefer: return=representation,
         // r.d should be an array of updated rows. Empty array == nothing matched.
@@ -9942,7 +9952,7 @@ async function listAllPublicListings(){
   };
   try{
     if(USE_SUPA){
-      const r = await sbReq('GET','users','?select=*&limit=500');
+      const r = await sbReq('GET','users','?select='+USER_COLS_LEAN+'&limit=500');
       if(Array.isArray(r.d)) collect(r.d);
     } else {
       collect(LDB.data||[]);
@@ -9974,7 +9984,7 @@ async function findAgentByListingId(listingId){
       const hit = Array.isArray(r.d) ? match(r.d) : null;
       if(hit) return hit;
       // Fallback (broad scan) if containment isn't supported / didn't match
-      const r2=await sbReq('GET','users','?select=*&limit=2000');
+      const r2=await sbReq('GET','users','?select='+USER_COLS_LEAN+'&limit=2000');
       return Array.isArray(r2.d) ? match(r2.d) : null;
     }
     return match(LDB.data||[]);
@@ -15829,7 +15839,7 @@ async function handleAPI(req,res,pathname,method,ip){
       if(USE_SUPA){
         // Pull all users (could be paginated for large scale, but Supabase
         // returns up to 1000 per request which is plenty for now)
-        const r = await sbReq('GET','users','?select=*&limit=10000');
+        const r = await sbReq('GET','users','?select='+USER_COLS_LEAN+'&limit=10000');
         if(r.s >= 400){
           console.error('[admin/stats] Supabase fetch failed:', r.s, JSON.stringify(r.d).slice(0,200));
           return jres(res, 502, { error: 'Supabase fetch failed: ' + r.s });
@@ -16456,7 +16466,7 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     };
     if(USE_SUPA){
-      const r = await sbReq('GET','users','?select=*&limit=2000');
+      const r = await sbReq('GET','users','?select='+USER_COLS_LEAN+'&limit=2000');
       if(Array.isArray(r.d)) collect(r.d);
     } else {
       collect(LDB.data||[]);
@@ -16509,7 +16519,7 @@ async function handleAPI(req,res,pathname,method,ip){
     let creator = null;
     try{
       if(USE_SUPA){
-        const r = await sbReq('GET','users','?select=*&limit=500');
+        const r = await sbReq('GET','users','?select='+USER_COLS_LEAN+'&limit=500');
         if(Array.isArray(r.d)) creator = matchUser(r.d);
       } else {
         creator = matchUser(LDB.data||[]);

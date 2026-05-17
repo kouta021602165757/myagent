@@ -582,6 +582,118 @@ input,textarea{font-family:var(--sans);}
   .hr-card{width:calc(50% - 6px)}
 }
 
+/* ════ HOME redesign — hero / create / エージェント図鑑 / 最近の会話 / new-user ════ */
+#homeBody{max-width:1040px;margin:0 auto}
+.hm-hero h2{font-size:26px;font-weight:900;letter-spacing:-.02em;color:var(--text);line-height:1.25;margin:0}
+.hm-status{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.hm-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:800;color:var(--text2);
+  background:#fff;border:1px solid var(--wire2);padding:6px 13px;border-radius:99px;
+}
+.hm-chip .dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.hm-sec{margin-top:28px}
+.hm-sec-h{display:flex;align-items:baseline;gap:11px;margin-bottom:13px;flex-wrap:wrap}
+.hm-sec-h h3{font-size:16px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:0}
+.hm-sec-h .hm-cnt{font-size:10.5px;font-weight:900;color:var(--peach-dark);
+  background:#fff1e3;border:1px solid #fed7aa;border-radius:99px;padding:2px 10px}
+.hm-sec-h .hm-grow{flex:1}
+.hm-sec-h .hm-sub{font-size:11.5px;color:var(--text3);font-weight:700}
+/* create row */
+.hm-create{display:flex;gap:12px;flex-wrap:wrap}
+.hm-ce{
+  flex:1;min-width:210px;display:flex;align-items:flex-start;gap:13px;
+  background:#fff;border:1.5px solid var(--wire2);border-radius:15px;
+  padding:16px;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s;
+}
+.hm-ce:hover{transform:translateY(-2px);border-color:var(--peach);box-shadow:0 8px 22px rgba(251,146,60,.14)}
+.hm-ce.feat{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee)}
+.hm-ce-ic{font-size:28px;line-height:1;flex-shrink:0}
+.hm-ce-tx h4{font-size:14px;font-weight:900;color:var(--text);margin:0 0 3px}
+.hm-ce-tx p{font-size:11.5px;font-weight:600;color:var(--text3);line-height:1.5;margin:0}
+/* エージェント図鑑 dex */
+.hm-dex{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hm-dc{
+  background:#fff;border:1px solid var(--wire2);border-radius:16px;
+  padding:15px;display:flex;gap:13px;cursor:pointer;transition:all .14s;
+}
+.hm-dc:hover{border-color:var(--peach);box-shadow:0 8px 22px rgba(251,146,60,.16);transform:translateY(-2px)}
+.hm-dc-av{
+  width:60px;height:60px;border-radius:16px;flex-shrink:0;overflow:hidden;
+  background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+  display:flex;align-items:center;justify-content:center;font-size:32px;
+}
+.hm-dc-av img{width:100%;height:100%;object-fit:cover}
+.hm-dc-info{flex:1;min-width:0}
+.hm-dc-top{display:flex;align-items:center;gap:8px}
+.hm-dc-nm{font-size:14px;font-weight:900;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-dc-lv{font-size:10px;font-weight:900;color:var(--peach-dark);
+  background:#fff1e3;border:1px solid #fed7aa;border-radius:99px;padding:2px 8px;margin-left:auto;flex-shrink:0}
+.hm-dc-role{font-size:10.5px;font-weight:700;color:var(--text3);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-dc-metrics{display:flex;gap:16px;margin-top:8px}
+.hm-dc-m{font-size:9.5px;font-weight:700;color:var(--text3)}
+.hm-dc-m b{font-size:14px;font-weight:800;color:var(--text)}
+.hm-dc-m b.cy{color:var(--peach-dark)}
+.hm-dc-xp{height:6px;background:#f0e6da;border-radius:99px;overflow:hidden;margin-top:10px}
+.hm-dc-xp i{display:block;height:100%;background:linear-gradient(90deg,var(--peach),var(--peach-dark));border-radius:99px}
+.hm-dc-xptext{font-size:9px;font-weight:700;color:var(--text3);margin-top:5px}
+.hm-dc.add{background:linear-gradient(135deg,#fff7ee,#fff);border:1.5px dashed #fed7aa;align-items:center}
+.hm-dc.add .hm-dc-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-weight:800;font-size:30px}
+.hm-dc-at{font-size:13.5px;font-weight:900;color:var(--peach-dark)}
+.hm-dc-as{font-size:10.5px;font-weight:700;color:var(--text3);margin-top:3px}
+/* 最近の会話 */
+.hm-convo{background:#fff;border:1px solid var(--wire2);border-radius:14px;overflow:hidden}
+.hm-cv{display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--wire);cursor:pointer;transition:background .12s}
+.hm-cv:last-child{border-bottom:0}
+.hm-cv:hover{background:#fff7ee}
+.hm-cv-av{
+  width:40px;height:40px;border-radius:11px;flex-shrink:0;overflow:hidden;
+  background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+  display:flex;align-items:center;justify-content:center;font-size:21px;
+}
+.hm-cv-av img{width:100%;height:100%;object-fit:cover}
+.hm-cv-body{flex:1;min-width:0}
+.hm-cv-top{display:flex;align-items:center;gap:8px}
+.hm-cv-nm{font-size:13px;font-weight:900;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-cv-tag{font-size:9px;font-weight:900;padding:1px 7px;border-radius:99px;flex-shrink:0;letter-spacing:.02em}
+.hm-cv-tag.dm{background:#fff1e3;color:var(--peach-dark)}
+.hm-cv-tag.group{background:#e8f0ff;color:#3b82f6}
+.hm-cv-tag.team{background:#f1ebff;color:#8b5cf6}
+.hm-cv-msg{font-size:11.5px;color:var(--text3);font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-cv-time{font-size:10.5px;color:var(--text3);font-weight:700;flex-shrink:0}
+/* new-user welcome */
+.hm-welcome{text-align:center;padding:14px 0 2px}
+.hm-welcome h2{font-size:25px;font-weight:900;color:var(--text);letter-spacing:-.02em;margin:0}
+.hm-welcome-lead{font-size:13px;font-weight:700;color:var(--text2);margin-top:10px}
+.hm-steps{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.hm-step{flex:1;min-width:200px;background:#fff;border:1px solid var(--wire2);border-radius:15px;padding:20px 18px;text-align:center}
+.hm-step-n{
+  width:30px;height:30px;border-radius:50%;margin:0 auto 11px;
+  background:#fff1e3;color:var(--peach-dark);font-size:14px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;border:1.5px solid #fed7aa;
+}
+.hm-step-e{font-size:30px;margin-bottom:8px}
+.hm-step h3{font-size:14px;font-weight:900;color:var(--text);margin:0 0 5px}
+.hm-step p{font-size:11.5px;font-weight:600;color:var(--text3);line-height:1.55;margin:0}
+.hm-cta-row{display:flex;gap:11px;justify-content:center;margin-top:26px;flex-wrap:wrap}
+.hm-cta-primary{
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;border:0;border-radius:99px;padding:15px 30px;
+  font-size:15px;font-weight:900;font-family:inherit;cursor:pointer;
+  box-shadow:0 8px 22px rgba(234,88,12,.32);
+}
+.hm-cta-primary:hover{transform:translateY(-1px)}
+.hm-cta-sub{
+  background:#fff;color:var(--text2);border:1.5px solid var(--wire2);
+  border-radius:99px;padding:15px 22px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;
+}
+.hm-cta-sub:hover{border-color:var(--peach);color:var(--peach-dark)}
+@media (max-width:680px){
+  .hm-dex{grid-template-columns:1fr}
+  .hm-hero h2,.hm-welcome h2{font-size:21px}
+}
+
 .qc{background:#fff;border:1.5px solid var(--wire2);border-radius:16px;padding:22px 20px;cursor:pointer;transition:all .18s;text-align:left;font-family:inherit;color:var(--text);position:relative;}
 .qc:hover{transform:translateY(-3px);border-color:var(--peach);box-shadow:0 10px 26px rgba(251,146,60,.12);}
 .qc.feat{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);}
@@ -3019,105 +3131,9 @@ body{color:#f0f0f8;}
   <main class="main">
     <button class="mobile-hamburger-empty" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>
     <div class="empty" id="emptyWrap">
-      <div class="empty-greet">
-        <h2 id="homeGreeting">Welcome 🍑</h2>
-        <div class="now" id="homeNow"></div>
-      </div>
-      <div class="empty-sub" data-i18n="homeSub">3 つの世界 ・ 個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務丸ごと自動化</div>
-
-      <!-- Home tasks panel — aggregates agent.open_tasks across all agents.
-           Populated by _renderHomeTasks() on Home load. Hidden when zero
-           tasks exist (clean empty state for new users). -->
-      <div id="homeTasksWrap" class="home-tasks" style="display:none">
-        <div class="home-tasks-h">
-          <h3>📋 今日のタスク</h3>
-          <span class="home-tasks-sub" id="homeTasksSub">読込中…</span>
-        </div>
-        <div id="homeTasksList" class="home-tasks-list"></div>
-      </div>
-
-      <!-- Quick start: 3 cards -->
-      <div class="empty-quick">
-        <button class="qc" onclick="openNewAgent()">
-          <div class="qc-ic">🤖</div>
-          <h3 data-i18n="homeQcAgentH">AI Agent を作成</h3>
-          <div class="qc-desc" data-i18n="homeQcAgentD">1 体ずつ ・ あなた専属の AI を組み立てる。</div>
-          <div class="qc-sub">
-            <span class="qc-pill new" data-i18n="homeQcAgentP1">🆕 新規</span>
-            <span class="qc-pill" onclick="event.stopPropagation();openTemplate()" data-i18n="homeQcAgentP2">📋 テンプレートから</span>
-          </div>
-        </button>
-        <button class="qc feat" onclick="openTeamGallery()">
-          <div class="qc-ic">🎯</div>
-          <h3 data-i18n="homeQcTeamH">AI Agent Team を作成</h3>
-          <div class="qc-desc" data-i18n="homeQcTeamD">複数 AI が連携 ・ 業務丸ごと自動化。</div>
-          <div class="qc-sub">
-            <span class="qc-pill" data-i18n="homeQcTeamP1">🆕 新規</span>
-            <span class="qc-pill new" data-i18n="homeQcTeamP2">📋 テンプレートから</span>
-          </div>
-        </button>
-        <button class="qc" onclick="openAgentStore()">
-          <div class="qc-ic">🏪</div>
-          <h3 data-i18n="homeQcStoreH">Agent Store</h3>
-          <div class="qc-desc" data-i18n="homeQcStoreD">他クリエイターの Agent / Team を購入・無料 DL。</div>
-          <div class="qc-sub">
-            <span class="qc-pill" data-i18n="homeQcStoreP1">🤖 単体 Agent</span>
-            <span class="qc-pill" data-i18n="homeQcStoreP2">🎯 Team パック</span>
-          </div>
-        </button>
-      </div>
-
-      <!-- Legend -->
-      <div class="legend">
-        <span class="lbl" data-i18n="homeLegendLbl">3 KINDS OF CONVERSATIONS</span>
-        <span class="l"><span class="dot dm"></span><span data-i18n="homeLegendDm"><b>DM</b> ・ あなた + AI 1 体</span></span>
-        <span class="l"><span class="dot group"></span><span data-i18n="homeLegendGr"><b>Group</b> ・ あなた + 友達 + AI</span></span>
-        <span class="l"><span class="dot team"></span><span data-i18n="homeLegendTm"><b>Team</b> ・ あなた + AI 複数体</span></span>
-      </div>
-
-      <!-- 3 kinds -->
-      <div class="kinds-row">
-        <div class="kind dm">
-          <div class="kind-head">
-            <div class="ic">🤖</div>
-            <h3>AI Agents (DM)</h3>
-            <span class="count" id="homeDmCount">—</span>
-          </div>
-          <div class="kind-desc" data-i18n="homeKindDmD">あなたと AI が <b>1 対 1</b>。集中して 1 タスクを進めるのに最適。</div>
-          <div class="kind-list" id="homeDmList"></div>
-          <button class="kind-cta" onclick="openNewAgent()" data-i18n="homeKindDmCta">＋ Create new agent →</button>
-        </div>
-        <div class="kind group">
-          <div class="kind-head">
-            <div class="ic">👥</div>
-            <h3>Groups</h3>
-            <span class="count" id="homeGroupCount">—</span>
-          </div>
-          <div class="kind-desc" data-i18n="homeKindGrD"><b>人間 + AI</b> がいる LINE 風グループ。チーム作業や友達と一緒に。</div>
-          <div class="kind-list" id="homeGroupList"></div>
-          <button class="kind-cta" onclick="openCreateGroup()" data-i18n="homeKindGrCta">＋ Create a group →</button>
-        </div>
-        <div class="kind team">
-          <div class="kind-head">
-            <div class="ic">🎯</div>
-            <h3>Teams</h3>
-            <span class="count" id="homeTeamCount">—</span>
-          </div>
-          <div class="kind-desc" data-i18n="homeKindTmD"><b>AI が複数体連携</b>して業務を丸ごと自動化。</div>
-          <div class="kind-list" id="homeTeamList"></div>
-          <button class="kind-cta" onclick="openTeamGallery()" data-i18n="homeKindTmCta">＋ Build a new team →</button>
-        </div>
-      </div>
-
-      <!-- My AI roster — card 名鑑. Populated by _renderHomeRoster().
-           Hidden when the user has no individual AI agents yet. -->
-      <div id="homeRosterWrap" class="home-roster" style="display:none">
-        <div class="home-roster-h">
-          <h3>🪪 マイAIチーム</h3>
-          <span class="home-roster-sub">カードをタップで成績を見る</span>
-        </div>
-        <div id="homeRosterGrid" class="home-roster-grid"></div>
-      </div>
+      <!-- HOME — fully rendered by renderHomeDashboard() into #homeBody.
+           Two states: new user (welcome + steps) / returning (hero + 図鑑 …). -->
+      <div id="homeBody"></div>
     </div>
     <!-- Mobile sidebar backdrop -->
     <div class="sb-backdrop" id="sbBackdrop" onclick="_toggleMobileSidebar(false)"></div>
@@ -8533,81 +8549,181 @@ window._deleteHomeTask = async function(agentId, taskId, ev){
 /* Home dashboard: 3-kind overview shown on the empty state. Re-renders
  * whenever the agent list changes, so the user sees a live picture of
  * what's going on. */
+/* Home dashboard — fully re-rendered into #homeBody on every agent-list
+ * change. Two states:
+ *   new user (no agents)  → welcome + 3-step guide + hire CTAs
+ *   returning             → hero status + 新しく始める + tasks + 図鑑 + 最近の会話 */
 function renderHomeDashboard(){
-  var greet = document.getElementById('homeGreeting');
-  var nowEl = document.getElementById('homeNow');
-  if(!greet) return; // empty state not in DOM
-  _renderHomeTasks();
+  var body = document.getElementById('homeBody');
+  if(!body) return; // empty state not in DOM
+
+  var owned  = agents || [];
+  var joined = _joinedGroups || [];
   var nameStr = (me && (me.name || (me.email||'').split('@')[0])) || 'there';
-  greet.textContent = 'Welcome back, ' + nameStr + ' 🍑';
-  if(nowEl){
-    var d = new Date();
-    var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var pad = function(n){return n<10?'0'+n:''+n;};
-    nowEl.textContent = days[d.getDay()] + ', ' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + pad(d.getHours())+':'+pad(d.getMinutes());
-  }
-  var owned = agents || [];
-  var teams  = owned.filter(function(a){ return a.is_group && a.is_team; });
-  var groups = owned.filter(function(a){ return a.is_group && !a.is_team; }).concat(_joinedGroups || []);
-  // DMs hide any agent that's a member of a Team (cloned via template, or
-  // added when the user built a custom team) — those live in the Team only.
-  var dms    = owned.filter(function(a){ return !a.is_group && !a.team_origin; });
 
-  function fmtItem(a, badgeColor){
-    var nm = esc(a.name || 'Untitled');
-    var skills = (a.skills || []).map(function(s){var sk=SKILLS.find(function(x){return x.id===s;});return sk?sk.name:s;}).slice(0,3).join(' · ');
-    var meta = a.is_team
-      ? (Array.isArray(a.team_member_agent_ids) ? a.team_member_agent_ids.length+' agents' : 'team')
-      : (a.is_group ? ((a.members||[]).length + ' members') : (skills || ''));
-    var when = a.history && a.history.length ? '' : '';
-    return '<div class="k-row" onclick="openAgent(\''+a.id+'\')">'
-      + '<div class="av">'+_avHTML(a.avatar)+'</div>'
-      + '<div class="body"><div class="nm">'+nm+'</div><div class="meta">'+esc(meta)+'</div></div>'
-      + '</div>';
+  // ── New user: nothing owned, no joined groups ──
+  if(owned.length === 0 && joined.length === 0){
+    body.innerHTML = _homeNewUserHTML(nameStr);
+    return;
   }
 
-  function fillList(elId, countId, items, emptyMsg){
-    var listEl = document.getElementById(elId);
-    var countEl = document.getElementById(countId);
-    if(countEl) countEl.textContent = items.length + ' active';
-    if(!listEl) return;
-    if(items.length === 0){
-      listEl.innerHTML = '<div class="kind-empty">'+emptyMsg+'</div>';
-    } else {
-      listEl.innerHTML = items.slice(0,4).map(fmtItem).join('');
-    }
+  // ── Returning user ──
+  var ais = owned.filter(function(a){ return a && !a.is_group; });
+  var taskN = 0;
+  owned.forEach(function(a){
+    if(Array.isArray(a.open_tasks)) taskN += a.open_tasks.filter(function(t){ return t && t.status!=='done'; }).length;
+  });
+
+  var d = new Date();
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var pad = function(n){ return n<10?'0'+n:''+n; };
+  var dateStr = days[d.getDay()] + ', ' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
+    + ' · ' + pad(d.getHours())+':'+pad(d.getMinutes());
+
+  var chips = '';
+  if(ais.length > 0){
+    chips += '<span class="hm-chip"><span class="dot"></span>'
+      + esc(L('AI '+ais.length+'体', ais.length+' AI'+(ais.length>1?'s':''))) + '</span>';
   }
-  fillList('homeDmList','homeDmCount', dms, 'まだ AI がいません');
-  fillList('homeGroupList','homeGroupCount', groups, 'まだグループがありません');
-  fillList('homeTeamList','homeTeamCount', teams, 'まだチームがありません');
-  try { _renderHomeRoster(); } catch(e){}
+  if(taskN > 0){
+    chips += '<span class="hm-chip">📋 '
+      + esc(L('今日のタスク '+taskN+'件', taskN+' task'+(taskN>1?'s':'')+' today')) + '</span>';
+  }
+  chips += '<span class="hm-chip">' + esc(dateStr) + '</span>';
+
+  var html = ''
+    + '<div class="hm-hero">'
+    +   '<h2>' + esc(L('おかえりなさい、'+nameStr+' さん 🍑', 'Welcome back, '+nameStr+' 🍑')) + '</h2>'
+    +   '<div class="hm-status">' + chips + '</div>'
+    + '</div>'
+    + '<div class="hm-sec">'
+    +   '<div class="hm-sec-h"><h3>＋ ' + esc(L('新しく始める','Start something new')) + '</h3></div>'
+    +   '<div class="hm-create">'
+    +     _homeCreateCard('feat','🤖', L('AI を雇う','Hire an AI'),
+                          L('1体ずつ・あなた専属の AI を組み立てる','Build your own dedicated AI, one at a time'), 'openNewAgent()')
+    +     _homeCreateCard('','🎯', L('AI チームを組む','Build an AI team'),
+                          L('複数 AI が連携して業務を丸ごと自動化','Multiple AIs collaborate to automate whole workflows'), 'openTeamGallery()')
+    +     _homeCreateCard('','🏪', L('Agent Store','Agent Store'),
+                          L('他クリエイターの既製 AI を導入する','Add ready-made AIs from other creators'), 'openAgentStore()')
+    +   '</div>'
+    + '</div>'
+    + '<div id="homeTasksWrap" class="home-tasks" style="display:none;margin-top:28px">'
+    +   '<div class="home-tasks-h"><h3>📋 ' + esc(L('今日のタスク','Today’s tasks')) + '</h3>'
+    +     '<span class="home-tasks-sub" id="homeTasksSub">' + esc(L('読込中…','Loading…')) + '</span></div>'
+    +   '<div id="homeTasksList" class="home-tasks-list"></div>'
+    + '</div>'
+    + '<div class="hm-sec">'
+    +   '<div class="hm-sec-h"><h3>🪪 ' + esc(L('エージェント図鑑','Agent dex')) + '</h3>'
+    +     '<span class="hm-cnt">' + esc(L(ais.length+' 体', String(ais.length))) + '</span>'
+    +     '<span class="hm-grow"></span>'
+    +     '<span class="hm-sub">' + esc(L('カードをタップで成績カードを開く','Tap a card for full stats')) + '</span></div>'
+    +   '<div class="hm-dex">' + _homeDexHTML(ais) + '</div>'
+    + '</div>'
+    + _homeConvoSectionHTML(owned.concat(joined));
+
+  body.innerHTML = html;
+  try { _renderHomeTasks(); } catch(e){}
 }
 
-// My AI roster — a card 名鑑 of every individual AI agent, shown at the
-// bottom of Home. Each card opens that agent's stat card (_openAgentCard).
-// Hidden entirely when the user has no individual AI yet (clean empty state).
-function _renderHomeRoster(){
-  var wrap = document.getElementById('homeRosterWrap');
-  var grid = document.getElementById('homeRosterGrid');
-  if(!wrap || !grid) return;
-  // Individual AIs only — groups/teams are containers, not card-bearing AIs.
-  var ais = (agents || []).filter(function(a){ return a && !a.is_group; });
-  if(ais.length === 0){ wrap.style.display = 'none'; return; }
-  wrap.style.display = '';
-  var cards = ais.map(function(a){
-    var p  = a.progress || {level:1};
-    var oc = a.outcomes || {total:0,success_rate:0};
-    var srDisp = (oc.total > 0) ? ('✓ '+(oc.success_rate||0)+'%') : '✓ —';
-    return '<div class="hr-card" onclick="_openAgentCard(\''+esc(a.id)+'\')" title="'+esc(a.name||'AI')+' の成績カードを開く">'
-      + '<div class="hr-av">'+_avHTML(a.avatar)+'</div>'
-      + '<div class="hr-nm">'+esc(a.name||'AI')+'</div>'
-      + '<div class="hr-stats"><span class="hr-lv">Lv.'+(p.level||1)+'</span>'
-      + '<span class="hr-sr">'+srDisp+'</span></div>'
+function _homeCreateCard(cls, ic, title, desc, onclick){
+  return '<button class="hm-ce'+(cls?' '+cls:'')+'" onclick="'+onclick+'">'
+    + '<div class="hm-ce-ic">'+ic+'</div>'
+    + '<div class="hm-ce-tx"><h4>'+esc(title)+'</h4><p>'+esc(desc)+'</p></div>'
+    + '</button>';
+}
+
+// エージェント図鑑 — rich card per individual AI. Tap → _openAgentCard.
+function _homeDexHTML(ais){
+  var cards = (ais||[]).map(function(a){
+    var p  = a.progress || {};
+    var oc = a.outcomes || {};
+    var tr = a.trust || {};
+    var lvl = p.level || 1;
+    var srDisp = (oc.total > 0) ? ((oc.success_rate||0)+'%') : '—';
+    var outN = p.output_count || 0;
+    var into = p.xp_into_level || 0;
+    var need = p.xp_to_next || 0;
+    var pct  = need > 0 ? Math.max(0, Math.min(100, Math.round(into/need*100))) : 0;
+    var remain = Math.max(0, need - into);
+    var sk = SKILLS.find(function(s){ return a.skills && a.skills[0] === s.id; });
+    var role = sk ? (sk.icon+' '+sk.name) : L('AI エージェント','AI agent');
+    return '<div class="hm-dc" onclick="_openAgentCard(\''+esc(a.id)+'\')" title="'+esc(a.name||'AI')+'">'
+      + '<div class="hm-dc-av">'+_avHTML(a.avatar)+'</div>'
+      + '<div class="hm-dc-info">'
+      +   '<div class="hm-dc-top"><span class="hm-dc-nm">'+esc(a.name||'AI')+'</span>'
+      +     '<span class="hm-dc-lv">Lv.'+lvl+'</span></div>'
+      +   '<div class="hm-dc-role">'+esc(role)+'</div>'
+      +   '<div class="hm-dc-metrics">'
+      +     '<span class="hm-dc-m"><b class="cy">'+esc(srDisp)+'</b> '+esc(L('成功率','success'))+'</span>'
+      +     '<span class="hm-dc-m"><b>'+outN+'</b> '+esc(L('出力','outputs'))+'</span>'
+      +     '<span class="hm-dc-m"><b>Lv.'+(tr.level||1)+'</b> '+esc(L('信頼','trust'))+'</span>'
+      +   '</div>'
+      +   '<div class="hm-dc-xp"><i style="width:'+pct+'%"></i></div>'
+      +   '<div class="hm-dc-xptext">'+esc(L('次のレベルまで '+remain+' XP', remain+' XP to next level'))+'</div>'
+      + '</div></div>';
+  }).join('');
+  cards += '<div class="hm-dc add" onclick="openNewAgent()" title="'+esc(L('新しい AI を雇う','Hire a new AI'))+'">'
+    + '<div class="hm-dc-av">＋</div>'
+    + '<div class="hm-dc-info"><div class="hm-dc-at">'+esc(L('AI を雇う','Hire an AI'))+'</div>'
+    +   '<div class="hm-dc-as">'+esc(L('専門 AI を何人でも図鑑に追加','Add as many specialist AIs as you like'))+'</div></div>'
+    + '</div>';
+  return cards;
+}
+
+// 最近の会話 — unified DM/Group/Team list, newest first. Returns '' when empty.
+function _homeConvoSectionHTML(list){
+  var convos = (list||[]).filter(function(a){
+    if(!a) return false;
+    return (Array.isArray(a.history) && a.history.length > 0)
+      || (typeof a.last_message === 'string' && a.last_message);
+  });
+  convos.sort(_sortByLastActivity);
+  convos = convos.slice(0, 6);
+  if(convos.length === 0) return '';
+  var rows = convos.map(function(a){
+    var tag = (a.is_group && a.is_team) ? 'team' : (a.is_group ? 'group' : 'dm');
+    var tagLabel = tag==='team' ? 'Team' : (tag==='group' ? 'Group' : 'DM');
+    var preview = esc(_previewFromHistory(a) || '');
+    var lastTime = a.last_at
+      || (a.history && a.history.slice(-1)[0] && a.history.slice(-1)[0].time)
+      || a.created_at;
+    var timeStr = esc(_formatChatTime(lastTime) || '');
+    return '<div class="hm-cv" onclick="openAgent(\''+esc(a.id)+'\')">'
+      + '<div class="hm-cv-av">'+_avHTML(a.avatar)+'</div>'
+      + '<div class="hm-cv-body">'
+      +   '<div class="hm-cv-top"><span class="hm-cv-nm">'+esc(a.name||'AI')+'</span>'
+      +     '<span class="hm-cv-tag '+tag+'">'+tagLabel+'</span></div>'
+      +   '<div class="hm-cv-msg">'+preview+'</div>'
+      + '</div>'
+      + '<div class="hm-cv-time">'+timeStr+'</div>'
       + '</div>';
   }).join('');
-  cards += '<div class="hr-card hr-add" onclick="openNewAgent()" title="新しい AI を雇う">'
-    + '<div class="hr-av">＋</div><div class="hr-nm">AIを雇う</div></div>';
-  grid.innerHTML = cards;
+  return '<div class="hm-sec">'
+    + '<div class="hm-sec-h"><h3>💬 '+esc(L('最近の会話','Recent conversations'))+'</h3></div>'
+    + '<div class="hm-convo">'+rows+'</div>'
+    + '</div>';
+}
+
+// New-user empty state: welcome + 雇う→任せる→成果 guide + hire CTAs.
+function _homeNewUserHTML(nameStr){
+  var step = function(n, e, h, p){
+    return '<div class="hm-step"><div class="hm-step-n">'+n+'</div>'
+      + '<div class="hm-step-e">'+e+'</div><h3>'+esc(h)+'</h3><p>'+esc(p)+'</p></div>';
+  };
+  return '<div class="hm-welcome">'
+    +   '<h2>'+esc(L('ようこそ、'+nameStr+' さん 🍑','Welcome, '+nameStr+' 🍑'))+'</h2>'
+    +   '<div class="hm-welcome-lead">'+esc(L('まずは最初の AI を1体雇って、仕事を任せてみましょう。','Hire your first AI and hand it a task to get started.'))+'</div>'
+    + '</div>'
+    + '<div class="hm-steps">'
+    +   step('1','🤖',L('雇う','Hire'),L('得意分野を選んで、あなた専属の AI を1体つくる','Pick a specialty and build your own dedicated AI'))
+    +   step('2','📋',L('任せる','Delegate'),L('やってほしい仕事を伝えるだけ。AI が手を動かす','Just tell it the job — the AI does the work'))
+    +   step('3','📈',L('成果を受け取る','Get results'),L('こなすほど AI がレベルアップ。チームが強くなる','The more it does, the more your team levels up'))
+    + '</div>'
+    + '<div class="hm-cta-row">'
+    +   '<button class="hm-cta-primary" onclick="openNewAgent()">🤖 '+esc(L('最初の AI を雇う','Hire your first AI'))+'</button>'
+    +   '<button class="hm-cta-sub" onclick="openTemplate()">📋 '+esc(L('テンプレートから選ぶ','Browse templates'))+'</button>'
+    +   '<button class="hm-cta-sub" onclick="openAgentStore()">🏪 '+esc(L('Agent Store を見る','Visit Agent Store'))+'</button>'
+    + '</div>';
 }
 
 function renderAgList(){

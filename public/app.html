@@ -1573,6 +1573,17 @@ input,textarea{font-family:var(--sans);}
   background:#d1fae5;color:#10b981;border-color:#86efac;cursor:default;
 }
 .intg-cta-on:hover{transform:none}
+/* "Create in a new chat" CTA — rendered from <newchat> AI marker (1 chat = 1 site) */
+.newchat-cta{
+  display:inline-flex;align-items:center;gap:6px;margin:8px 0 2px;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff;border:0;border-radius:99px;
+  padding:9px 18px;font-size:13px;font-weight:800;cursor:pointer;
+  font-family:inherit;transition:all .15s;
+  box-shadow:0 4px 14px rgba(234,88,12,.32);
+}
+.newchat-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(234,88,12,.42)}
+.newchat-cta:active{transform:translateY(0)}
 /* Share-intent buttons auto-styled when AI emits share URLs in markdown */
 .m-body a[href*="intent/post"],
 .m-body a[href*="sharing/share-offsite"],
@@ -8992,6 +9003,9 @@ function _md(src){
     connectMarkers.push(String(sid).toLowerCase());
     return " CM"+ci+" ";
   });
+  // <newchat> marker — the AI emits this when a 2nd site was blocked
+  // (1 chat = 1 site). Becomes a "🆕 新しいチャットで作る" button.
+  src=String(src).replace(/<newchat>/gi,' NCBTN0 ');
   // Extract code blocks first to placeholders so other rules don't touch them
   var codeBlocks=[];
   src=String(src).replace(/```(\w*)\n?([\s\S]*?)```/g,function(_,lang,code){
@@ -9165,6 +9179,7 @@ function _md(src){
   html=html.replace(/\n/g,'<br>');
   html=html.replace(/(<\/(?:h[1-6]|ul|ol|pre|blockquote|li)>)<br>/g,'$1');
   html=html.replace(/<br>(<(?:h[1-6]|ul|ol|pre|blockquote|li))/g,'$1');
+  html=html.replace(/ ?NCBTN0 ?/g, '<button class="newchat-cta" onclick="openNewAgent()">🆕 '+(isJa?'新しいチャットで作る':'Create in a new chat')+'</button>');
   return html;
 }
 // Once highlight.js finishes loading (defer script), walk every code block

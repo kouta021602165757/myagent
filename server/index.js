@@ -10512,7 +10512,7 @@ async function _runOneSchedule(user, agent, sched){
             sendEmailCalled = true;
             result = await executeEmailTool(user, agent, block.input||{});
           }
-          else if(block.name === 'create_artifact'){ result = await executeArtifactTool(block.input||{}, user); if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop(); }
+          else if(block.name === 'create_artifact'){ result = await executeArtifactTool(block.input||{}, user); if(result&&result.url&&agent){var _afn1=String(result.url).split('/').pop();agent.current_artifact=_afn1;if(!agent.pinned_artifact)agent.pinned_artifact=_afn1;} }
           else if(block.name === 'edit_artifact'){ result = await executeEditArtifactTool(block.input||{}, user); if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop(); }
           else if(block.name === 'read_artifact')   result = await executeReadArtifactTool(block.input||{}, user);
           else if(block.name === 'notify_slack')    result = await executeNotifyTool('slack', user, block.input||{}, agent);
@@ -18129,8 +18129,27 @@ async function handleAPI(req,res,pathname,method,ip){
             } else if(block.name === 'generate_qr'){
               result = await executeQrTool(block.input||{});
             } else if(block.name === 'create_artifact'){
-              result = await executeArtifactTool(block.input||{}, payerUser);
-              if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop();
+              // 1 チャット = 1 サイト。既にこのチャットに固定サイトがある状態で
+              // 新しいサイトを作ると、また複数サイトが絡まる（今まさに潰している
+              // 元凶）。ブロックして新チャットへ誘導する。ユーザーが「このチャットで
+              // 作る」と明示した場合のみ許可。
+              const _ovRe = /(このチャットで|ここで作|ここに作|そのまま作|構わず|強制|別チャット.*(しない|不要|いらない|なし)|新しいチャット.*(しない|不要|いらない)|いいから作)/;
+              if(agent && agent.pinned_artifact && !_ovRe.test(String(message||''))){
+                result = {
+                  error: 'このチャットは既に成果物「'+String(agent.pinned_artifact)+'」専用です（1チャット＝1サイトの原則）。'
+                    + 'このチャットで新しいサイトを create_artifact してはいけません。'
+                    + '最終応答では「新しいサイトは新しいチャットで作りましょう」と案内し、応答内に必ず半角の <newchat> という文字列を 1 つ含めること（UI が「🆕 新しいチャットで作る」ボタンに変換します）。'
+                    + '今のサイトの修正依頼なら edit_artifact を使う。ユーザーが「このチャットで作る」と明示した場合のみ create_artifact を実行してよい。',
+                  need_new_chat: true,
+                };
+              } else {
+                result = await executeArtifactTool(block.input||{}, payerUser);
+                if(result && result.url && agent){
+                  const _afn = String(result.url).split('/').pop();
+                  agent.current_artifact = _afn;
+                  if(!agent.pinned_artifact) agent.pinned_artifact = _afn; // 初回サイトを自動固定
+                }
+              }
             } else if(block.name === 'edit_artifact'){
               result = await executeEditArtifactTool(block.input||{}, payerUser);
               if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop();

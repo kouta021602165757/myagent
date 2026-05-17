@@ -642,6 +642,13 @@ input,textarea{font-family:var(--sans);}
 .hm-dc.add .hm-dc-av{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-weight:800;font-size:30px}
 .hm-dc-at{font-size:13.5px;font-weight:900;color:var(--peach-dark)}
 .hm-dc-as{font-size:10.5px;font-weight:700;color:var(--text3);margin-top:3px}
+.hm-dex-more{
+  width:100%;margin-top:10px;padding:9px;
+  background:#fff;border:1px dashed var(--wire3);border-radius:10px;
+  font-size:12px;font-weight:800;color:var(--text2);font-family:inherit;
+  cursor:pointer;transition:all .14s;
+}
+.hm-dex-more:hover{border-color:var(--peach);color:var(--peach-dark);background:#fff7ee}
 /* 最近の会話 */
 .hm-convo{background:#fff;border:1px solid var(--wire2);border-radius:14px;overflow:hidden}
 .hm-cv{display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--wire);cursor:pointer;transition:background .12s}
@@ -8633,7 +8640,7 @@ function renderHomeDashboard(){
     +     '<span class="hm-cnt">' + esc(L(ais.length+' 体', String(ais.length))) + '</span>'
     +     '<span class="hm-grow"></span>'
     +     '<span class="hm-sub">' + esc(L('カードをタップで成績カードを開く','Tap a card for full stats')) + '</span></div>'
-    +   '<div class="hm-dex">' + _homeDexHTML(ais) + '</div>'
+    +   '<div id="homeDexWrap">' + _homeDexHTML(ais) + '</div>'
     + '</div>'
     + _homeConvoSectionHTML(owned.concat(joined));
 
@@ -8648,42 +8655,68 @@ function _homeCreateCard(cls, ic, title, desc, onclick){
     + '</button>';
 }
 
-// エージェント図鑑 — rich card per individual AI. Tap → _openAgentCard.
+// One エージェント図鑑 card — rich stats for a single AI.
+function _homeDexCard(a){
+  var p  = a.progress || {};
+  var oc = a.outcomes || {};
+  var tr = a.trust || {};
+  var lvl = p.level || 1;
+  var srDisp = (oc.total > 0) ? ((oc.success_rate||0)+'%') : '—';
+  var outN = p.output_count || 0;
+  var into = p.xp_into_level || 0;
+  var need = p.xp_to_next || 0;
+  var pct  = need > 0 ? Math.max(0, Math.min(100, Math.round(into/need*100))) : 0;
+  var remain = Math.max(0, need - into);
+  var sk = SKILLS.find(function(s){ return a.skills && a.skills[0] === s.id; });
+  var role = sk ? (sk.icon+' '+sk.name) : L('AI エージェント','AI agent');
+  return '<div class="hm-dc" onclick="_openAgentCard(\''+esc(a.id)+'\')" title="'+esc(a.name||'AI')+'">'
+    + '<div class="hm-dc-av">'+_avHTML(a.avatar)+'</div>'
+    + '<div class="hm-dc-info">'
+    +   '<div class="hm-dc-top"><span class="hm-dc-nm">'+esc(a.name||'AI')+'</span>'
+    +     '<span class="hm-dc-lv">Lv.'+lvl+'</span></div>'
+    +   '<div class="hm-dc-role">'+esc(role)+'</div>'
+    +   '<div class="hm-dc-metrics">'
+    +     '<span class="hm-dc-m"><b class="cy">'+esc(srDisp)+'</b> '+esc(L('成功率','success'))+'</span>'
+    +     '<span class="hm-dc-m"><b>'+outN+'</b> '+esc(L('出力','outputs'))+'</span>'
+    +     '<span class="hm-dc-m"><b>Lv.'+(tr.level||1)+'</b> '+esc(L('信頼','trust'))+'</span>'
+    +   '</div>'
+    +   '<div class="hm-dc-xp"><i style="width:'+pct+'%"></i></div>'
+    +   '<div class="hm-dc-xptext">'+esc(L('次のレベルまで '+remain+' XP', remain+' XP to next level'))+'</div>'
+    + '</div></div>';
+}
+// エージェント図鑑 — 5 most-recently-active cards by default; "もっと見る"
+// reveals the rest. The ＋雇う card is always last. Tap a card → _openAgentCard.
 function _homeDexHTML(ais){
-  var cards = (ais||[]).map(function(a){
-    var p  = a.progress || {};
-    var oc = a.outcomes || {};
-    var tr = a.trust || {};
-    var lvl = p.level || 1;
-    var srDisp = (oc.total > 0) ? ((oc.success_rate||0)+'%') : '—';
-    var outN = p.output_count || 0;
-    var into = p.xp_into_level || 0;
-    var need = p.xp_to_next || 0;
-    var pct  = need > 0 ? Math.max(0, Math.min(100, Math.round(into/need*100))) : 0;
-    var remain = Math.max(0, need - into);
-    var sk = SKILLS.find(function(s){ return a.skills && a.skills[0] === s.id; });
-    var role = sk ? (sk.icon+' '+sk.name) : L('AI エージェント','AI agent');
-    return '<div class="hm-dc" onclick="_openAgentCard(\''+esc(a.id)+'\')" title="'+esc(a.name||'AI')+'">'
-      + '<div class="hm-dc-av">'+_avHTML(a.avatar)+'</div>'
-      + '<div class="hm-dc-info">'
-      +   '<div class="hm-dc-top"><span class="hm-dc-nm">'+esc(a.name||'AI')+'</span>'
-      +     '<span class="hm-dc-lv">Lv.'+lvl+'</span></div>'
-      +   '<div class="hm-dc-role">'+esc(role)+'</div>'
-      +   '<div class="hm-dc-metrics">'
-      +     '<span class="hm-dc-m"><b class="cy">'+esc(srDisp)+'</b> '+esc(L('成功率','success'))+'</span>'
-      +     '<span class="hm-dc-m"><b>'+outN+'</b> '+esc(L('出力','outputs'))+'</span>'
-      +     '<span class="hm-dc-m"><b>Lv.'+(tr.level||1)+'</b> '+esc(L('信頼','trust'))+'</span>'
-      +   '</div>'
-      +   '<div class="hm-dc-xp"><i style="width:'+pct+'%"></i></div>'
-      +   '<div class="hm-dc-xptext">'+esc(L('次のレベルまで '+remain+' XP', remain+' XP to next level'))+'</div>'
-      + '</div></div>';
-  }).join('');
-  cards += '<div class="hm-dc add" onclick="openNewAgent()" title="'+esc(L('新しい AI を雇う','Hire a new AI'))+'">'
+  var sorted = (ais||[]).slice().sort(_sortByLastActivity);
+  var CAP = 5;
+  var expanded = !!window._homeDexExpanded;
+  var collapsed = sorted.length > CAP && !expanded;
+  var shown = collapsed ? sorted.slice(0, CAP) : sorted;
+  var cells = shown.map(_homeDexCard).join('');
+  cells += '<div class="hm-dc add" onclick="openNewAgent()" title="'+esc(L('新しい AI を雇う','Hire a new AI'))+'">'
     + '<div class="hm-dc-av">＋</div>'
     + '<div class="hm-dc-info"><div class="hm-dc-at">'+esc(L('AI を雇う','Hire an AI'))+'</div>'
     +   '<div class="hm-dc-as">'+esc(L('専門 AI を何人でも図鑑に追加','Add as many specialist AIs as you like'))+'</div></div>'
     + '</div>';
-  return cards;
+  var html = '<div class="hm-dex">' + cells + '</div>';
+  if(sorted.length > CAP){
+    var rest = sorted.length - CAP;
+    html += '<button class="hm-dex-more" onclick="_toggleHomeDex()">'
+      + (expanded ? esc(L('▴ 閉じる','▴ Show less'))
+                  : esc(L('▾ もっと見る（残り '+rest+' 体）','▾ Show '+rest+' more')))
+      + '</button>';
+  }
+  return html;
+}
+// Toggle the dex between collapsed (5 cards) and expanded (all). The flag
+// lives on window so it survives Home re-renders within the session.
+function _toggleHomeDex(){
+  window._homeDexExpanded = !window._homeDexExpanded;
+  var wrap = document.getElementById('homeDexWrap');
+  if(wrap){
+    var ais = (agents||[]).filter(function(a){ return a && !a.is_group; });
+    wrap.innerHTML = _homeDexHTML(ais);
+  }
 }
 
 // 最近の会話 — unified DM/Group/Team list, newest first. Returns '' when empty.

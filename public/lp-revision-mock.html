@@ -16,6 +16,7 @@
     --dark:#1f140c;
     --wire:rgba(180,120,80,.16); --wire2:rgba(180,120,80,.26);
     --shadow-lg:0 2px 8px rgba(70,40,20,.06), 0 30px 64px rgba(70,40,20,.14);
+    --t-dm:#fb923c; --t-group:#3b82f6; --t-team:#8b5cf6;
   }
   *{margin:0; padding:0; box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -27,11 +28,7 @@
   .wrap{max-width:1000px; margin:0 auto; padding:0 24px}
   a{color:inherit; text-decoration:none}
 
-  /* mock notice */
-  .mock-strip{
-    background:var(--peach-soft); border-bottom:1px solid rgba(251,146,60,.3);
-    color:var(--peach-d); font-size:12px; font-weight:700; text-align:center; padding:7px 16px;
-  }
+  .mock-strip{background:var(--peach-soft); border-bottom:1px solid rgba(251,146,60,.3); color:var(--peach-d); font-size:12px; font-weight:700; text-align:center; padding:7px 16px}
 
   /* nav */
   nav{position:sticky; top:0; z-index:50; background:rgba(253,248,243,.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--wire)}
@@ -40,121 +37,136 @@
   .logo .mark{width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,var(--peach),var(--peach-d)); display:flex; align-items:center; justify-content:center; font-size:16px}
 
   /* buttons */
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    font-family:inherit; font-weight:800; border:0; border-radius:13px; cursor:pointer;
-    transition:transform .16s cubic-bezier(.4,0,.2,1), box-shadow .16s;
-  }
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; font-weight:800; border:0; border-radius:13px; cursor:pointer; transition:transform .16s cubic-bezier(.4,0,.2,1), box-shadow .16s}
   .btn-primary{background:linear-gradient(135deg,var(--peach),var(--peach-d)); color:#fff}
   .btn-primary:hover{transform:translateY(-2px); box-shadow:0 14px 32px rgba(234,88,12,.38)}
   .btn-sm{font-size:13.5px; padding:10px 19px}
   .btn-lg{font-size:16px; padding:17px 36px}
 
   /* HERO */
-  .hero{text-align:center; padding:clamp(64px,12vh,124px) 0 clamp(48px,8vh,90px)}
-  .hero h1{
-    font-size:clamp(34px,6vw,62px); font-weight:900; letter-spacing:-.035em; line-height:1.16;
-    animation:rise .7s cubic-bezier(.2,.7,.2,1) both;
-  }
+  .hero{text-align:center; padding:clamp(60px,11vh,116px) 0 clamp(44px,7vh,80px)}
+  .hero h1{font-size:clamp(34px,6vw,62px); font-weight:900; letter-spacing:-.035em; line-height:1.16; animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
   .hero h1 .pop{background:linear-gradient(135deg,var(--peach),var(--peach-d)); -webkit-background-clip:text; background-clip:text; color:transparent}
   .hero h1 .strike{color:var(--ink3); text-decoration:line-through; text-decoration-thickness:3px}
-  .hero-sub{
-    font-size:clamp(15px,2vw,18px); color:var(--ink2); margin:22px auto 0; max-width:560px;
-    animation:rise .7s .08s cubic-bezier(.2,.7,.2,1) both;
-  }
-  .hero-cta{margin-top:34px; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
+  .hero-sub{font-size:clamp(15px,2vw,18px); color:var(--ink2); margin:22px auto 0; max-width:560px; animation:rise .7s .08s cubic-bezier(.2,.7,.2,1) both}
+  .hero-cta{margin-top:32px; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
   .hero-note{margin-top:14px; font-size:13px; color:var(--ink3); font-weight:600; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
   .hero-note b{color:var(--peach-d); font-weight:800}
   @keyframes rise{from{opacity:0; transform:translateY(20px)}to{opacity:1; transform:none}}
 
-  /* product visual — Slack-flat chat window (matches the app's HOME) */
-  .chat{
-    max-width:540px; margin:48px auto 0; background:var(--card);
-    border:1px solid var(--wire); border-radius:18px; overflow:hidden;
-    box-shadow:var(--shadow-lg); text-align:left;
-    animation:rise .8s .24s cubic-bezier(.2,.7,.2,1) both;
+  /* ════ product visual: HOME screen (faithful recreation of the app) ════ */
+  .home{
+    max-width:940px; margin:48px auto 0; background:#fff;
+    border:1px solid var(--wire); border-radius:16px; overflow:hidden;
+    box-shadow:var(--shadow-lg); text-align:left; display:flex;
+    animation:rise .85s .24s cubic-bezier(.2,.7,.2,1) both;
   }
-  .chat-bar{
-    display:flex; align-items:center; gap:8px; padding:14px 18px;
-    border-bottom:1px solid var(--wire); font-weight:900; font-size:14.5px; color:var(--ink);
-  }
-  .chat-bar .live{margin-left:auto; font-size:11px; font-weight:800; color:#16a34a; display:flex; align-items:center; gap:5px}
-  .chat-bar .live::before{content:""; width:7px; height:7px; border-radius:50%; background:#22c55e}
-  .chat-body{padding:8px 0 4px}
-  .day-sep{display:flex; align-items:center; gap:12px; padding:6px 18px 8px; color:var(--ink3); font-size:10.5px; font-weight:700; letter-spacing:.06em}
-  .day-sep::before,.day-sep::after{content:""; flex:1; height:1px; background:var(--wire)}
-  /* Slack-flat message row — avatar + name + plain text, no bubble */
-  .m{display:flex; gap:11px; align-items:flex-start; padding:9px 18px}
-  .m-av{
-    width:38px; height:38px; border-radius:9px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:17px;
-    font-weight:900; color:#fff; background:linear-gradient(135deg,#fda85e,var(--peach-d));
-  }
-  .m-av.user{background:#241a12; font-size:14px; font-weight:800}
-  .m-content{flex:1; min-width:0}
-  .m-meta{display:flex; align-items:baseline; gap:7px; margin-bottom:3px; flex-wrap:wrap}
-  .m-name{font-weight:900; font-size:14px; color:var(--ink); letter-spacing:-.005em}
-  .m-role{font-size:10.5px; font-weight:700; color:var(--peach-d); background:var(--peach-soft); padding:1px 8px; border-radius:99px}
-  .m-time{font-size:11px; color:var(--ink3); font-weight:500}
-  .m-body{font-size:14px; line-height:1.62; color:var(--ink)}
-  .m-body .ment{color:var(--peach-d); font-weight:800}
-  .chat-input{
-    display:flex; align-items:center; gap:9px; margin:6px 16px 16px;
-    padding:11px 14px; border:1px solid var(--wire2); border-radius:14px;
-    font-size:13px; color:var(--ink3);
-  }
-  .chat-input .send{
-    margin-left:auto; width:30px; height:30px; border-radius:9px;
-    background:linear-gradient(135deg,var(--peach),var(--peach-d)); color:#fff;
-    display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900;
-  }
+  /* sidebar */
+  .h-sb{width:204px; flex-shrink:0; border-right:1px solid var(--wire); padding:14px 10px; display:flex; flex-direction:column}
+  .h-brand{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:900; letter-spacing:.05em; padding:3px 6px 13px}
+  .h-bars{display:flex; gap:2px; align-items:flex-end}
+  .h-bars i{width:4px; background:var(--peach); border-radius:2px; display:block}
+  .h-bars i:nth-child(1){height:15px}
+  .h-bars i:nth-child(2){height:11px; opacity:.6}
+  .h-bars i:nth-child(3){height:7px; opacity:.34}
+  .h-search{display:flex; align-items:center; gap:7px; padding:7px 10px; background:var(--bg); border-radius:8px; font-size:11px; color:var(--ink3); font-weight:700; margin-bottom:9px}
+  .h-search kbd{margin-left:auto; background:#fff; border:1px solid var(--wire); font-size:9px; padding:1px 5px; border-radius:4px; font-family:'Outfit',monospace}
+  .h-new{display:flex; align-items:center; gap:6px; padding:8px 11px; background:var(--peach-soft); border:1px solid rgba(251,146,60,.32); border-radius:9px; color:var(--peach-d); font-size:12px; font-weight:800; margin-bottom:6px}
+  .h-cat{font-size:9px; font-weight:800; color:var(--ink3); letter-spacing:.1em; text-transform:uppercase; padding:11px 6px 4px}
+  .h-item{display:flex; align-items:center; gap:8px; padding:6px 7px; border-radius:7px; font-size:12px; font-weight:700; color:var(--ink)}
+  .h-item.on{background:var(--peach-soft); color:var(--peach-d); font-weight:800}
+  .h-item .hic{width:24px; height:24px; border-radius:6px; background:var(--cream2); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0}
+  .h-item .hnm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .h-badge{font-size:8.5px; font-weight:900; padding:1px 6px; border-radius:99px; color:#fff}
+  .h-badge.dm{background:var(--t-dm)}
+  .h-badge.group{background:var(--t-group)}
+  .h-badge.team{background:var(--t-team)}
+  .h-user{margin-top:auto; display:flex; align-items:center; gap:8px; padding:11px 6px 2px; border-top:1px solid var(--wire); font-size:11.5px; font-weight:800}
+  .h-user .ua{width:25px; height:25px; border-radius:6px; background:linear-gradient(135deg,var(--peach),var(--peach-d)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:11px}
+  .h-user .gear{margin-left:auto; color:var(--ink3)}
+  /* main */
+  .h-main{flex:1; min-width:0; padding:22px 24px; background:var(--bg)}
+  .h-greet{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+  .h-greet h2{font-size:21px; font-weight:900; letter-spacing:-.02em}
+  .h-greet .now{font-size:10.5px; color:var(--ink3); font-weight:700; flex-shrink:0}
+  .h-subg{font-size:11px; color:var(--ink2); margin:4px 0 18px}
+  .h-qgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:11px}
+  .h-qc{background:#fff; border:1.5px solid var(--wire); border-radius:13px; padding:15px 13px; position:relative}
+  .h-qc.feat{border:2px solid var(--peach); background:linear-gradient(135deg,#fff,#fff7ee)}
+  .h-qc.feat::before{content:"⚡ NEW"; position:absolute; top:-8px; right:9px; background:var(--peach); color:#fff; font-size:8px; font-weight:900; padding:2px 7px; border-radius:99px; letter-spacing:.04em}
+  .h-qc .qic{font-size:25px; margin-bottom:8px}
+  .h-qc h3{font-size:12.5px; font-weight:900; margin-bottom:4px; letter-spacing:-.01em}
+  .h-qc p{font-size:10px; color:var(--ink2); line-height:1.55}
 
-  /* 4-step strip */
-  .steps{background:var(--cream2); padding:clamp(52px,9vh,92px) 0; border-top:1px solid var(--wire)}
+  /* ════ 4 STEPS — each with a mini product visual ════ */
+  .steps{background:var(--cream2); padding:clamp(54px,9vh,94px) 0; border-top:1px solid var(--wire)}
   .steps-h{text-align:center; font-size:clamp(20px,3vw,28px); font-weight:900; letter-spacing:-.02em; margin-bottom:8px}
-  .steps-sub{text-align:center; font-size:14px; color:var(--ink3); margin-bottom:44px}
-  .steps-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
-  .step{
-    position:relative; background:var(--card); border:1px solid var(--wire);
-    border-radius:18px; padding:24px 21px; box-shadow:0 1px 2px rgba(70,40,20,.04);
-    transition:transform .18s cubic-bezier(.4,0,.2,1), box-shadow .18s;
+  .steps-sub{text-align:center; font-size:14px; color:var(--ink3); margin-bottom:42px}
+  .steps-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  .step{background:#fff; border:1px solid var(--wire); border-radius:18px; padding:18px; box-shadow:0 1px 2px rgba(70,40,20,.04); transition:transform .18s cubic-bezier(.4,0,.2,1), box-shadow .18s}
+  .step:hover{transform:translateY(-4px); box-shadow:var(--shadow-lg)}
+  .step-visual{
+    background:var(--bg); border:1px solid var(--wire); border-radius:13px;
+    padding:13px; margin-bottom:15px; min-height:138px;
+    display:flex; flex-direction:column; justify-content:center; gap:8px;
   }
-  .step:hover{transform:translateY(-5px); box-shadow:var(--shadow-lg)}
-  .step-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:15px}
+  .step-foot{display:flex; align-items:center; gap:12px}
   .step-num{
-    font-family:'Outfit',sans-serif; font-size:38px; font-weight:800; line-height:.9;
+    font-family:'Outfit',sans-serif; font-size:30px; font-weight:800; line-height:.9; flex-shrink:0;
     letter-spacing:-.03em;
     background:linear-gradient(135deg,var(--peach),var(--peach-d));
     -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  .step-ic{
-    width:44px; height:44px; border-radius:13px; background:var(--peach-soft);
-    border:1px solid rgba(251,146,60,.22);
-    display:flex; align-items:center; justify-content:center; font-size:21px;
-  }
-  .step h3{font-size:18px; font-weight:900; margin-bottom:6px; letter-spacing:-.01em}
-  .step p{font-size:12.5px; color:var(--ink2); line-height:1.72}
-  .step:not(:last-child)::after{
-    content:"→"; position:absolute; right:-12px; top:40px; z-index:2;
-    width:26px; height:26px; border-radius:50%;
-    background:var(--peach); color:#fff; font-size:12px; font-weight:900;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 4px 10px rgba(234,88,12,.42);
-  }
+  .step-txt h3{font-size:16px; font-weight:900; letter-spacing:-.01em}
+  .step-txt p{font-size:11.5px; color:var(--ink2); line-height:1.6; margin-top:2px}
+
+  /* mini visual: 雇う (hire) */
+  .mv-hire{display:flex; align-items:center; gap:9px; background:#fff; border:1px solid var(--wire); border-radius:10px; padding:8px 10px}
+  .mv-hire .mh-av{width:30px; height:30px; border-radius:8px; background:var(--cream2); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0}
+  .mv-hire .mh-info{flex:1; min-width:0}
+  .mv-hire .mh-info b{font-size:12px; font-weight:900; display:block}
+  .mv-hire .mh-info small{font-size:10px; color:var(--ink3); font-weight:600}
+  .mv-hire .mh-btn{font-size:11px; font-weight:900; color:#fff; background:linear-gradient(135deg,var(--peach),var(--peach-d)); padding:5px 12px; border-radius:8px; flex-shrink:0}
+
+  /* mini visual: 任せる (chat) */
+  .mv-m{display:flex; gap:8px; align-items:flex-start}
+  .mv-m .mm-av{width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#fff; background:linear-gradient(135deg,#fda85e,var(--peach-d))}
+  .mv-m .mm-av.user{background:#241a12; font-size:11px}
+  .mv-m .mm-bd{font-size:11.5px; line-height:1.5; color:var(--ink)}
+  .mv-m .mm-bd b{font-weight:900; margin-right:5px}
+
+  /* mini visual: 強化 (level) */
+  .mv-lv-top{display:flex; align-items:center; gap:9px}
+  .mv-lv-av{width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#fda85e,var(--peach-d)); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0}
+  .mv-lv-nm{flex:1; min-width:0; font-size:12.5px; font-weight:900}
+  .mv-lv-nm small{display:block; font-size:9.5px; color:var(--ink3); font-weight:600}
+  .mv-lv-badge{font-family:'Outfit',sans-serif; font-size:13px; font-weight:800; color:var(--peach-d); background:var(--peach-soft); border:1px solid rgba(251,146,60,.3); padding:3px 10px; border-radius:9px}
+  .mv-xp-top{display:flex; justify-content:space-between; font-size:9.5px; font-weight:700; color:var(--ink3); margin:9px 0 4px}
+  .mv-xp-track{height:7px; border-radius:99px; background:var(--cream2); overflow:hidden}
+  .mv-xp-fill{height:100%; width:68%; border-radius:99px; background:linear-gradient(90deg,var(--peach),#ffb067)}
+  .mv-chips{display:flex; gap:6px; margin-top:9px; flex-wrap:wrap}
+  .mv-chips span{font-size:9.5px; font-weight:700; background:#fff; border:1px solid var(--wire); border-radius:99px; padding:3px 8px}
+  .mv-chips b{color:var(--peach-d)}
+
+  /* mini visual: 成果 (artifact) */
+  .mv-art{display:flex; gap:9px}
+  .mv-art .ma-card{flex:1; background:#fff; border:1px solid var(--wire); border-radius:10px; overflow:hidden}
+  .mv-art .ma-thumb{height:52px; padding:8px; display:flex; flex-direction:column; gap:3px; justify-content:center}
+  .mv-art .ma-thumb.a{background:linear-gradient(135deg,#fff1e3,#ffd9b3)}
+  .mv-art .ma-thumb.b{background:linear-gradient(135deg,#e7e2f7,#cdc3ef)}
+  .mv-art .ma-thumb i{display:block; height:4px; border-radius:2px; background:rgba(45,26,14,.22)}
+  .mv-art .ma-thumb i:nth-child(1){width:46%}
+  .mv-art .ma-thumb i:nth-child(2){width:78%}
+  .mv-art .ma-thumb i:nth-child(3){width:60%}
+  .mv-art .ma-meta{padding:7px 9px; border-top:1px solid var(--wire)}
+  .mv-art .ma-meta b{font-size:10.5px; font-weight:900; display:block}
+  .mv-art .ma-meta small{font-size:8.5px; color:var(--ink3); font-family:'Outfit',monospace}
 
   /* final CTA */
-  .final{
-    background:radial-gradient(640px 360px at 50% -10%, rgba(251,146,60,.24), transparent 64%), var(--dark);
-    color:#fff; text-align:center; padding:clamp(64px,11vh,116px) 0;
-  }
+  .final{background:radial-gradient(640px 360px at 50% -10%, rgba(251,146,60,.24), transparent 64%), var(--dark); color:#fff; text-align:center; padding:clamp(64px,11vh,116px) 0}
   .final h2{font-size:clamp(26px,4.2vw,42px); font-weight:900; letter-spacing:-.03em; line-height:1.25}
   .final p{color:rgba(255,255,255,.82); margin:16px 0 30px; font-size:15.5px}
-  .final .scarcity{
-    display:inline-flex; align-items:center; gap:8px; margin-top:22px;
-    font-size:12.5px; font-weight:800; color:#ffd9b3;
-    background:rgba(251,146,60,.14); border:1px solid rgba(251,146,60,.32);
-    padding:8px 16px; border-radius:99px;
-  }
+  .final .scarcity{display:inline-flex; align-items:center; gap:8px; margin-top:22px; font-size:12.5px; font-weight:800; color:#ffd9b3; background:rgba(251,146,60,.14); border:1px solid rgba(251,146,60,.32); padding:8px 16px; border-radius:99px}
 
   /* footer */
   footer{background:var(--dark); border-top:1px solid rgba(255,255,255,.08); padding:30px 0}
@@ -163,8 +175,9 @@
   .foot-cp{font-size:12px; color:rgba(255,255,255,.5)}
 
   @media (max-width:680px){
-    .steps-grid{grid-template-columns:1fr 1fr; gap:14px}
-    .step:not(:last-child)::after{display:none}
+    .h-sb{display:none}
+    .h-qgrid{grid-template-columns:1fr}
+    .steps-grid{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -192,40 +205,47 @@
     </div>
     <p class="hero-note"><b>100 メッセージ無料</b> ・ クレジットカード不要 ・ 30 秒で開始</p>
 
-    <!-- product visual — Slack-flat chat (matches the app HOME) -->
-    <div class="chat">
-      <div class="chat-bar">
-        💬 グロース戦略チーム
-        <span class="live">4 AI 在席</span>
-      </div>
-      <div class="chat-body">
-        <div class="day-sep">今日</div>
-        <div class="m">
-          <div class="m-av user">あ</div>
-          <div class="m-content">
-            <div class="m-meta"><span class="m-name">あなた</span><span class="m-time">9:24</span></div>
-            <div class="m-body">新しい LP のヘッドライン、3 案ほしい</div>
+    <!-- product visual: HOME screen -->
+    <div class="home">
+      <aside class="h-sb">
+        <div class="h-brand"><span class="h-bars"><i></i><i></i><i></i></span> MY AI AGENT</div>
+        <div class="h-search">🔍 <span>検索…</span><kbd>⌘K</kbd></div>
+        <div class="h-new">＋ New</div>
+        <div class="h-cat">📊 ダッシュボード</div>
+        <div class="h-item on"><span class="hic">🏠</span><span class="hnm">ホーム</span></div>
+        <div class="h-cat">🤖 AI エージェント</div>
+        <div class="h-item"><span class="hic">💼</span><span class="hnm">Sales Agent</span><span class="h-badge dm">DM</span></div>
+        <div class="h-item"><span class="hic">📝</span><span class="hnm">SEO Writer</span><span class="h-badge dm">DM</span></div>
+        <div class="h-item"><span class="hic">🐦</span><span class="hnm">X Auto-Ops</span><span class="h-badge dm">DM</span></div>
+        <div class="h-cat">🎯 チーム</div>
+        <div class="h-item"><span class="hic">🛍</span><span class="hnm">EC Launch Team</span><span class="h-badge team">●</span></div>
+        <div class="h-item"><span class="hic">📱</span><span class="hnm">SNS Growth</span><span class="h-badge team">●</span></div>
+        <div class="h-user"><span class="ua">武</span><span>武内 洸太</span><span class="gear">⚙</span></div>
+      </aside>
+      <main class="h-main">
+        <div class="h-greet">
+          <h2>おかえりなさい、武内 🍑</h2>
+          <span class="now">土曜 5/10 ・ 21:00</span>
+        </div>
+        <div class="h-subg">個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務を自動化</div>
+        <div class="h-qgrid">
+          <div class="h-qc">
+            <div class="qic">🤖</div>
+            <h3>AI を作成</h3>
+            <p>あなた専属の AI を 1 体ずつ組み立てる。</p>
+          </div>
+          <div class="h-qc feat">
+            <div class="qic">🎯</div>
+            <h3>AI チームを作成</h3>
+            <p>やりたいことから AI が自動で編成。</p>
+          </div>
+          <div class="h-qc">
+            <div class="qic">🏪</div>
+            <h3>Agent Store</h3>
+            <p>他クリエイターの AI を購入・無料 DL。</p>
           </div>
         </div>
-        <div class="m">
-          <div class="m-av">📈</div>
-          <div class="m-content">
-            <div class="m-meta"><span class="m-name">グロース</span><span class="m-role">分析担当</span><span class="m-time">9:24</span></div>
-            <div class="m-body">現状 CVR 1.8% → 目標 3%。<span class="ment">@コピー</span> に案出しを依頼します。</div>
-          </div>
-        </div>
-        <div class="m">
-          <div class="m-av">✍️</div>
-          <div class="m-content">
-            <div class="m-meta"><span class="m-name">コピー</span><span class="m-role">ライティング</span><span class="m-time">9:25</span></div>
-            <div class="m-body">3 案できました。<span class="ment">@アオイ</span> ビジュアル試案お願いします 🎨</div>
-          </div>
-        </div>
-      </div>
-      <div class="chat-input">
-        メッセージを入力…
-        <span class="send">↑</span>
-      </div>
+      </main>
     </div>
   </div>
 </header>
@@ -236,38 +256,100 @@
     <div class="steps-h">雇う → 任せる → 強化 → 成果</div>
     <div class="steps-sub">むずかしい設定はなし。たった 4 ステップ。</div>
     <div class="steps-grid">
+
+      <!-- 01 雇う -->
       <div class="step">
-        <div class="step-top">
+        <div class="step-visual">
+          <div class="mv-hire">
+            <span class="mh-av">💼</span>
+            <span class="mh-info"><b>Sales Agent</b><small>Marketing ・ Research</small></span>
+            <span class="mh-btn">採用</span>
+          </div>
+          <div class="mv-hire">
+            <span class="mh-av">📝</span>
+            <span class="mh-info"><b>SEO Writer</b><small>SEO ・ Writing</small></span>
+            <span class="mh-btn">採用</span>
+          </div>
+        </div>
+        <div class="step-foot">
           <span class="step-num">01</span>
-          <span class="step-ic">🧑‍💼</span>
+          <div class="step-txt">
+            <h3>雇う</h3>
+            <p>専門の AI を選んで「採用」。何人でも。</p>
+          </div>
         </div>
-        <h3>雇う</h3>
-        <p>専門の AI を選んで「採用」。何人でも。</p>
       </div>
+
+      <!-- 02 任せる -->
       <div class="step">
-        <div class="step-top">
+        <div class="step-visual">
+          <div class="mv-m">
+            <span class="mm-av user">あ</span>
+            <span class="mm-bd"><b>あなた</b>競合を 3 社、調べてまとめて</span>
+          </div>
+          <div class="mv-m">
+            <span class="mm-av">💼</span>
+            <span class="mm-bd"><b>Sales Agent</b>承知しました。調べてレポートにします 🔍</span>
+          </div>
+        </div>
+        <div class="step-foot">
           <span class="step-num">02</span>
-          <span class="step-ic">💬</span>
+          <div class="step-txt">
+            <h3>任せる</h3>
+            <p>チャットで仕事を渡すだけ。</p>
+          </div>
         </div>
-        <h3>任せる</h3>
-        <p>チャットで仕事を渡すだけ。</p>
       </div>
+
+      <!-- 03 強化 -->
       <div class="step">
-        <div class="step-top">
+        <div class="step-visual">
+          <div class="mv-lv-top">
+            <span class="mv-lv-av">📈</span>
+            <span class="mv-lv-nm">グロース<small>分析担当</small></span>
+            <span class="mv-lv-badge">Lv.7</span>
+          </div>
+          <div>
+            <div class="mv-xp-top"><span>経験値</span><span>あと 140 XP で Lv.8</span></div>
+            <div class="mv-xp-track"><div class="mv-xp-fill"></div></div>
+          </div>
+          <div class="mv-chips">
+            <span>🔍 リサーチ <b>達人</b></span>
+            <span>📊 分析 <b>習熟</b></span>
+          </div>
+        </div>
+        <div class="step-foot">
           <span class="step-num">03</span>
-          <span class="step-ic">📈</span>
+          <div class="step-txt">
+            <h3>強化</h3>
+            <p>使うほど AI が育つ。記憶も増える。</p>
+          </div>
         </div>
-        <h3>強化</h3>
-        <p>使うほど AI が育つ。記憶も増える。</p>
       </div>
+
+      <!-- 04 成果 -->
       <div class="step">
-        <div class="step-top">
-          <span class="step-num">04</span>
-          <span class="step-ic">✨</span>
+        <div class="step-visual">
+          <div class="mv-art">
+            <div class="ma-card">
+              <div class="ma-thumb a"><i></i><i></i><i></i></div>
+              <div class="ma-meta"><b>新商品 LP</b><small>artifact-lp.html</small></div>
+            </div>
+            <div class="ma-card">
+              <div class="ma-thumb b"><i></i><i></i><i></i></div>
+              <div class="ma-meta"><b>競合分析レポート</b><small>report.html</small></div>
+            </div>
+          </div>
         </div>
-        <h3>成果</h3>
-        <p>サイトもレポートも、実物で返ってくる。</p>
+        <div class="step-foot">
+          <span class="step-num">04</span>
+          <div class="step-txt">
+            <h3>成果</h3>
+            <p>サイトもレポートも、実物で返ってくる。</p>
+          </div>
+        </div>
       </div>
+
     </div>
   </div>
 </section>

@@ -55,1123 +55,479 @@
 <meta name="twitter:description" content="Slack のようなアプリで、何人でも AI を採用。1 人とは DM、複数人ではチームで仕事を任せられます。">
 <meta name="twitter:image" content="https://myaiagents.agency/social/og-home.png">
 <meta name="twitter:image:alt" content="MY AI Agent">
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* palette aligned with the product app (warm cream / brown ink) */
   :root{
-    --peach:#fb923c; --peach-dark:#ea580c; --peach-soft:rgba(251,146,60,.10);
-    --cream:#fdf8f3; --cream2:#fef3e8;
-    --text:#1c1917; --text2:#44403c; --text3:#78716c;
-    --wire:#e7e5e4; --wire2:#d6d3d1;
-    --green:#22c55e; --amber:#fbbf24; --pink:#ec4899; --indigo:#6366f1;
-    --bg:#fdfcfa;
+    --bg:#fdf8f3; --card:#ffffff; --cream2:#faf3eb;
+    --ink:#2d1a0e; --ink2:#6b4226; --ink3:#9a6a4a;
+    --peach:#fb923c; --peach-d:#ea580c; --peach-soft:#fff1e3;
+    --dark:#1f140c;
+    --wire:rgba(180,120,80,.16); --wire2:rgba(180,120,80,.26);
+    --shadow-lg:0 2px 8px rgba(70,40,20,.06), 0 30px 64px rgba(70,40,20,.14);
+    --t-dm:#fb923c; --t-group:#3b82f6; --t-team:#8b5cf6;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
-  a{color:inherit;text-decoration:none}
-  button{font-family:inherit}
-
-  .nav{position:sticky;top:0;z-index:50;background:rgba(253,252,250,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--wire);padding:14px 0}
-  .nav-wrap{max-width:1180px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:18px}
-  .logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:15px;letter-spacing:-.01em}
-  .logo-sq{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px}
-  .nav-links{display:flex;gap:24px;margin-left:24px;font-size:13px;font-weight:600;color:var(--text2)}
-  .nav-links a{cursor:pointer}
-  .nav-links a:hover{color:var(--peach-dark)}
-  .nav-cta{margin-left:auto;display:flex;gap:8px;align-items:center}
-  .lang-tog{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--wire);border-radius:8px;padding:5px 2px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;color:var(--text3)}
-  .lang-tog button{background:transparent;border:0;padding:3px 9px;border-radius:6px;color:var(--text3);cursor:pointer;font-weight:700;font-family:inherit;font-size:11.5px}
-  .lang-tog button.on{background:var(--peach);color:#fff;box-shadow:0 1px 3px rgba(251,146,60,.3)}
-  .btn{padding:9px 16px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:0;font-family:inherit;transition:transform .12s,box-shadow .12s;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
-  .btn:active{transform:scale(.96)}
-  .btn.ghost{background:transparent;color:var(--text2)}
-  .btn.outline{background:#fff;color:var(--text);border:1px solid var(--wire2)}
-  .btn.outline:hover{background:var(--cream2);border-color:var(--peach-dark);color:var(--peach-dark)}
-  .btn.primary{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;box-shadow:0 4px 14px rgba(251,146,60,.30)}
-  .btn.primary:hover{box-shadow:0 6px 22px rgba(251,146,60,.40)}
-  .btn.big{padding:13px 22px;font-size:14px;border-radius:12px}
-
-  .hero{max-width:1180px;margin:0 auto;padding:64px 24px 32px;display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center}
-  @media(max-width:920px){.hero{grid-template-columns:1fr;gap:36px;padding-top:36px}}
-  .h-eyebrow{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#fff7ee,#fed7aa);color:var(--peach-dark);border:1px solid rgba(251,146,60,.30);padding:5px 13px;border-radius:99px;font-size:11.5px;font-weight:800;letter-spacing:.04em;margin-bottom:24px}
-  .h-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.25);animation:pulse 2s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-  .h-title{font-size:46px;font-weight:900;letter-spacing:-.025em;line-height:1.15;color:var(--text);margin-bottom:20px}
-  .h-title .pop{background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent;display:inline}
-  .h-title .strike{position:relative;color:var(--text3);font-weight:700}
-  .h-title .strike::after{content:'';position:absolute;left:-2px;right:-2px;top:55%;height:3px;background:var(--text3);transform:rotate(-3deg)}
-  @media(max-width:920px){.h-title{font-size:34px}}
-  .h-sub{font-size:16px;color:var(--text2);line-height:1.75;margin-bottom:28px;max-width:520px}
-  .h-sub b{color:var(--text);font-weight:800}
-  .h-cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:22px}
-  .h-meta{display:flex;gap:18px;color:var(--text3);font-size:11.5px;font-weight:600;flex-wrap:wrap}
-  .h-meta span{display:flex;align-items:center;gap:5px}
-  .h-meta .check{color:var(--green)}
-
-  .hire-card{background:#fff;border:1px solid var(--wire2);border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.04);overflow:hidden}
-  .hire-h{padding:16px 20px;border-bottom:1px solid var(--wire);background:var(--cream)}
-  .hire-h .t{font-size:13.5px;font-weight:900;color:var(--text);letter-spacing:-.01em}
-  .hire-h .s{font-size:11px;color:var(--text3);margin-top:1px;font-weight:600}
-  .hire-grid{padding:18px 18px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-  .ai-card{background:#fff;border:1.5px solid var(--wire);border-radius:13px;padding:13px 11px;cursor:pointer;text-align:center;transition:.15s;position:relative}
-  .ai-card:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 6px 14px rgba(251,146,60,.18)}
-  .ai-card.hired{border-color:var(--green);background:linear-gradient(180deg,#fff,#f0fdf4)}
-  .ai-card.hired::after{content:'✓';position:absolute;top:6px;right:6px;background:var(--green);color:#fff;font-size:11px;font-weight:900;padding:1px 5px;border-radius:5px}
-  .ai-av{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 6px}
-  .ai-av.marketing{background:linear-gradient(135deg,#dcfce7,#86efac)}
-  .ai-av.sales{background:linear-gradient(135deg,#fef3c7,#fcd34d)}
-  .ai-av.designer{background:linear-gradient(135deg,#fce7f3,#fbcfe8)}
-  .ai-av.engineer{background:linear-gradient(135deg,#dbeafe,#bfdbfe)}
-  .ai-av.pm{background:linear-gradient(135deg,#f3e8ff,#e9d5ff)}
-  .ai-av.cfo{background:linear-gradient(135deg,#cffafe,#a5f3fc)}
-  .ai-name{font-size:11.5px;font-weight:800;color:var(--text);letter-spacing:-.01em}
-  .ai-role{font-size:9.5px;color:var(--text3);margin-top:1px;line-height:1.3}
-  .hire-bar{padding:14px 18px;border-top:1px solid var(--wire);background:var(--cream);display:flex;align-items:center;gap:10px}
-  .hire-bar .cnt{font-size:11.5px;color:var(--text2);font-weight:700;flex:1}
-  .hire-bar .cnt b{color:var(--peach-dark);font-size:13px}
-  .hire-bar .start{padding:9px 14px;font-size:12.5px}
-  .hire-bar .start:disabled{background:#e5e5e5;color:#a8a8a8;cursor:not-allowed;box-shadow:none}
-
-  /* Chat preview */
-  .preview{max-width:1180px;margin:36px auto 96px;padding:0 24px}
-  .preview-frame{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.04);border:1px solid var(--wire);position:relative}
-  .preview-bar{display:flex;align-items:center;gap:8px;padding:11px 14px;background:#f5f4f1;border-bottom:1px solid var(--wire)}
-  .preview-bar .dot{width:11px;height:11px;border-radius:50%}
-  .preview-bar .red{background:#ef4444}
-  .preview-bar .y{background:#fbbf24}
-  .preview-bar .g{background:#22c55e}
-  .preview-bar .url{margin-left:14px;font-size:11px;color:var(--text3);font-family:'SF Mono',Menlo,monospace;background:#fff;padding:3px 10px;border-radius:6px;border:1px solid var(--wire)}
-  .app{display:flex;height:600px}
-  .sb{width:248px;border-right:1px solid var(--wire);background:var(--cream);display:flex;flex-direction:column}
-  .sb-top{padding:13px 14px 11px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--wire)}
-  .sb-lo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px}
-  .sb-br{font-size:13px;font-weight:900;color:var(--text);letter-spacing:-.01em}
-  .sb-home{margin:10px 12px 4px;padding:8px 11px;background:#fff;border:1px solid var(--wire);border-radius:9px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:800;color:var(--text)}
-  .sb-home .arr{margin-left:auto;color:var(--text3);font-size:10px}
-  .sb-srch{margin:6px 12px 8px;padding:7px 11px;background:#fff;border:1px solid var(--wire);border-radius:8px;color:var(--text3);font-size:11.5px;display:flex;align-items:center;gap:6px}
-  .sb-list{flex:1;overflow-y:auto;padding:2px 8px 8px}
-  .sec-h-row{padding:9px 6px 3px;display:flex;align-items:center;gap:5px}
-  .sec-h-row .caret{font-size:9px;color:var(--text3);width:8px;text-align:center}
-  .sec-h-row .em{font-size:12px}
-  .sec-h-row .name{font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
-  .sec-h-row .cnt{font-size:9.5px;color:var(--text3);font-weight:700;margin-left:auto}
-  .sb-row{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:9px;cursor:pointer;position:relative;margin-bottom:1px}
-  .sb-row:hover{background:rgba(0,0,0,.03)}
-  .sb-row.on{background:var(--peach-soft)}
-  .sb-row.on .nm{color:var(--peach-dark);font-weight:800}
-  .sb-av{position:relative;width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-  .pres{position:absolute;right:-1px;bottom:-1px;width:8px;height:8px;border-radius:50%;border:2px solid var(--cream);background:var(--green)}
-  .pres.busy{background:var(--amber)}
-  .pres.off{background:#cbd5e1}
-  .sb-meta{flex:1;min-width:0}
-  .sb-meta .nm{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
-  .sb-meta .pv{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-  .badge{background:var(--peach);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center;flex-shrink:0}
-  .badge.nudge{background:linear-gradient(135deg,#fbbf24,#f59e0b)}
-
-  .main{flex:1;display:flex;flex-direction:column;background:#fcfbf8;min-width:0}
-  .ch{padding:11px 18px;border-bottom:1px solid var(--wire);background:#fff;display:flex;align-items:center;gap:10px}
-  .ch .av{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;position:relative}
-  .ch-title{flex:1;min-width:0}
-  .ch-title .nm{font-size:13.5px;font-weight:900;color:var(--text);letter-spacing:-.01em}
-  .ch-pills{display:flex;align-items:center;gap:5px;margin-top:2px;flex-wrap:wrap}
-  .ch-pill{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.02em}
-  .ch-pill.live{background:rgba(34,197,94,.12);color:#15803d}
-  .ch-pill.model{background:rgba(251,146,60,.08);color:var(--peach-dark);border:1px solid rgba(251,146,60,.3)}
-  .ch-pill.intel{background:#fff;color:var(--text2);border:1px solid var(--wire)}
-  .ch .acts{display:flex;gap:5px;flex-shrink:0}
-  .ch .acts .ic{width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--text2);position:relative}
-  .ch .acts .ic .bd{position:absolute;top:-3px;right:-3px;background:var(--peach);color:#fff;font-size:8.5px;font-weight:900;border-radius:99px;padding:0 4px;min-width:13px;line-height:1.2;border:1.5px solid #fff}
-
-  .msgs{flex:1;overflow-y:auto;padding:18px 20px 10px;display:flex;flex-direction:column;gap:13px;background:#fcfbf8}
-  .date-div{align-self:center;font-size:10px;color:var(--text3);background:#fff;border:1px solid var(--wire);padding:3px 11px;border-radius:99px;font-weight:700;letter-spacing:.04em}
-  .m{display:flex;gap:9px}
-  .m.u{flex-direction:row-reverse}
-  .m-av{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-  .m-av.you{background:linear-gradient(135deg,#fcd34d,#f59e0b);color:#fff;font-weight:900;font-size:12px}
-  .m-col{display:flex;flex-direction:column;gap:3px;max-width:420px;min-width:0}
-  .m.u .m-col{align-items:flex-end}
-  .m-meta{display:flex;gap:6px;align-items:baseline;padding:0 4px}
-  .m.u .m-meta{flex-direction:row-reverse}
-  .m-nm{font-size:11.5px;font-weight:800;color:var(--text)}
-  .m-nm.designer{color:#be185d}
-  .m-nm.marketing{color:#15803d}
-  .m-nm.engineer{color:#1d4ed8}
-  .m-nm.pm{color:#7e22ce}
-  .m-tm{font-size:10px;color:var(--text3);font-weight:600}
-  .bb{padding:9px 13px;border-radius:14px;background:#fff;border:1px solid var(--wire);font-size:12.7px;line-height:1.6;color:var(--text)}
-  .m.u .bb{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border:0}
-  .bb.designer{background:linear-gradient(180deg,#fff,#fff5fa);border-color:#fbcfe8}
-  .bb.marketing{background:linear-gradient(180deg,#fff,#f0fdf4);border-color:#86efac}
-  .bb.engineer{background:linear-gradient(180deg,#fff,#f0f7ff);border-color:#bfdbfe}
-  .bb.pm{background:linear-gradient(180deg,#fff,#fbf5ff);border-color:#e9d5ff}
-  .ment{background:rgba(99,102,241,.13);color:#4f46e5;font-weight:700;padding:0 4px;border-radius:4px}
-  .m-foot{display:flex;align-items:center;gap:6px;padding:1px 4px;flex-wrap:wrap}
-  .m.u .m-foot{flex-direction:row-reverse}
-  .read{font-size:10.5px;color:#0ea5e9;font-weight:900;letter-spacing:-.04em}
-  .react{display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid var(--wire);border-radius:99px;padding:1.5px 8px;font-size:10.5px;font-weight:700;color:var(--text2)}
-  .react.mine{background:var(--peach-soft);border-color:rgba(251,146,60,.4);color:var(--peach-dark)}
-  .thread-i{display:inline-flex;align-items:center;gap:5px;background:var(--cream2);border:1px solid var(--wire);border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700;color:var(--text2)}
-  .tool-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.25);border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700;color:#15803d;margin-bottom:5px}
-
-  .composer{padding:11px 14px 13px;border-top:1px solid var(--wire);background:#fff}
-  .ci-wrap{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--wire);border-radius:13px;padding:5px 6px 5px 11px}
-  .ci-plus{width:30px;height:30px;border-radius:8px;background:transparent;color:var(--text2);font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center}
-  .ci-ph{flex:1;font-size:13px;color:var(--text3);padding:6px 4px}
-  .ci-emoji{width:30px;height:30px;border-radius:8px;font-size:16px;display:flex;align-items:center;justify-content:center}
-  .ci-send{width:30px;height:30px;border-radius:8px;background:var(--peach);color:#fff;border:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 2px 5px rgba(251,146,60,.3)}
-  .ci-hint{margin-top:5px;font-size:9.5px;color:var(--text3);padding:0 4px;display:flex;gap:11px;align-items:center}
-  .ci-hint kbd{background:#fff;border:1px solid var(--wire);border-bottom-width:2px;border-radius:4px;padding:0 4px;font-family:'SF Mono',Menlo,monospace;font-size:9px;color:var(--text2)}
-
-  section{max-width:1180px;margin:0 auto;padding:96px 24px}
-  .sec-h{text-align:center;margin-bottom:48px}
-  .sec-h .eye{font-size:11px;font-weight:800;color:var(--peach-dark);letter-spacing:.10em;text-transform:uppercase;margin-bottom:10px}
-  .sec-h h2{font-size:38px;font-weight:900;letter-spacing:-.02em;line-height:1.2;color:var(--text)}
-  .sec-h .sub{font-size:15px;color:var(--text2);margin-top:14px;max-width:600px;margin-left:auto;margin-right:auto}
-  @media(max-width:920px){.sec-h h2{font-size:28px}}
-
-  .feat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
-  @media(max-width:920px){.feat-grid{grid-template-columns:1fr}}
-  .feat{background:#fff;border:1px solid var(--wire);border-radius:16px;padding:24px;transition:.18s}
-  .feat:hover{transform:translateY(-3px);box-shadow:0 16px 32px rgba(0,0,0,.06);border-color:var(--peach)}
-  .feat .ic{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
-  .feat h3{font-size:16.5px;font-weight:900;letter-spacing:-.01em;margin-bottom:8px}
-  .feat p{font-size:13.5px;color:var(--text2);line-height:1.7}
-
-  .steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-top:48px}
-  @media(max-width:920px){.steps{grid-template-columns:1fr}}
-  .step{position:relative}
-  .step-n{position:absolute;left:-6px;top:-12px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(251,146,60,.30)}
-  .step .body{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:34px 22px 22px}
-  .step h3{font-size:15px;font-weight:900;letter-spacing:-.01em;margin-bottom:7px}
-  .step p{font-size:13px;color:var(--text2);line-height:1.65}
-
-  .pricing{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;max-width:980px;margin:0 auto}
-  @media(max-width:920px){.pricing{grid-template-columns:1fr}}
-  .price-card{background:#fff;border:1px solid var(--wire);border-radius:16px;padding:26px 22px;display:flex;flex-direction:column;gap:14px}
-  .price-card.pop{border:2px solid var(--peach);box-shadow:0 16px 40px rgba(251,146,60,.18);transform:scale(1.03);position:relative}
-  .price-card.pop::before{content:'おすすめ';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-size:10.5px;font-weight:900;letter-spacing:.04em;padding:4px 12px;border-radius:99px}
-  [lang="en"] .price-card.pop::before{content:'POPULAR'}
-  .price-pl{font-size:14.5px;font-weight:900;letter-spacing:-.01em}
-  .price-am{font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1}
-  .price-am .per{font-size:12px;color:var(--text3);font-weight:600;letter-spacing:.04em}
-  .price-credit{font-size:11.5px;color:var(--text3);font-weight:700;background:var(--cream2);padding:5px 11px;border-radius:99px;width:fit-content}
-  .price-card ul{list-style:none;padding:0;margin:6px 0 0;display:flex;flex-direction:column;gap:7px}
-  .price-card li{font-size:12.5px;color:var(--text2);display:flex;align-items:flex-start;gap:8px;line-height:1.55}
-  .price-card li::before{content:'✓';color:var(--green);font-weight:900;flex-shrink:0;font-size:13px}
-  .price-card .btn{margin-top:auto;width:100%}
-
-  .founder{background:linear-gradient(135deg,#fff7ee,#fed7aa,#fbbf24);border-radius:18px;padding:28px 32px;margin-bottom:48px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
-  .founder .em{font-size:42px}
-  .founder .body{flex:1;min-width:260px}
-  .founder .body h3{font-size:18px;font-weight:900;color:#7c2d12;letter-spacing:-.01em;margin-bottom:5px}
-  .founder .body p{font-size:13px;color:#7c2d12;line-height:1.65;font-weight:600;opacity:.85}
-  .founder .seats{background:#fff;border:2px solid #7c2d12;border-radius:13px;padding:14px 20px;text-align:center;flex-shrink:0}
-  .founder .seats .n{font-size:32px;font-weight:900;color:#7c2d12;line-height:1;letter-spacing:-.03em}
-  .founder .seats .l{font-size:10px;color:#7c2d12;font-weight:800;letter-spacing:.06em;margin-top:3px}
-
-  .cta-final{text-align:center;padding:96px 24px;background:linear-gradient(180deg,transparent,var(--cream2))}
-  .cta-final h2{font-size:42px;font-weight:900;letter-spacing:-.02em;line-height:1.2;margin-bottom:18px}
-  .cta-final p{font-size:15px;color:var(--text2);margin-bottom:32px;max-width:540px;margin-left:auto;margin-right:auto;line-height:1.7}
-
-  footer{padding:34px 24px 56px;border-top:1px solid var(--wire);text-align:center;font-size:12px;color:var(--text3)}
-  footer a{font-weight:700;color:var(--text2)}
-  footer a:hover{color:var(--peach-dark)}
-
-  /* ─────────────── Mobile · tablet · phone ─────────────── */
-  /* Layout existing at <= 920px already collapses 3-col grids to 1-col.
-     The blocks below handle the actual phone-size details. */
-
-  @media(max-width:760px){
-    /* Nav: tight; hide section links and the redundant "ログイン" ghost button
-       on phone — primary action is "無料で始める" which we keep visible. */
-    .nav-wrap{padding:0 14px;gap:8px}
-    .nav-links{display:none}
-    .nav-cta .btn.ghost{display:none}
-    .nav-cta{gap:6px}
-    .logo{font-size:13px}
-    .logo-sq{width:26px;height:26px;font-size:12px}
-    .lang-tog button{padding:3px 7px;font-size:10.5px}
-
-    /* Hero — give it actual horizontal breathing room */
-    .hero{padding:28px 16px 24px;gap:28px}
-    .h-eyebrow{font-size:10px;padding:4px 10px}
-    .h-title{font-size:30px;line-height:1.18}
-    .h-sub{font-size:14.5px}
-    .h-cta{flex-direction:column;align-items:stretch;width:100%}
-    .h-cta .btn{width:100%;justify-content:center}
-    .h-meta{font-size:11px;gap:12px}
-
-    /* Hire widget — 2-col on phones (was 3) */
-    .hire-grid{grid-template-columns:1fr 1fr;gap:7px;padding:14px}
-    .ai-card{padding:11px 8px}
-    .ai-av{width:34px;height:34px;font-size:18px}
-    .ai-name{font-size:11px}
-    .ai-role{font-size:9.5px}
-    .hire-h{padding:13px 16px}
-    .hire-h .t{font-size:12.5px}
-    .hire-h .s{font-size:10.5px}
-    .hire-bar{padding:11px 14px;flex-wrap:wrap}
-    .hire-bar .cnt{font-size:11px;width:100%}
-    .hire-bar .start{width:100%}
-
-    /* Live preview: stack sidebar above the chat on phones */
-    .preview{padding:0 12px;margin:24px auto 56px}
-    .preview-bar{padding:9px 12px}
-    .preview-bar .url{font-size:10px;padding:2px 8px;margin-left:8px}
-    .app{flex-direction:column;height:auto}
-    .sb{width:100%;border-right:0;border-bottom:1px solid var(--wire);max-height:200px}
-    .sb-list{padding:2px 8px 6px}
-    .main{min-height:480px}
-    .ch{padding:10px 14px;gap:8px}
-    .ch-title .nm{font-size:13px}
-    .ch-pill.intel{display:none}     /* @mention list is too long for phones */
-    .ch-pill.ctx{display:none}
-    .ch .acts .ic{width:24px;height:24px;font-size:11px}
-    .msgs{padding:14px}
-    .m-col{max-width:78vw}
-    .composer{padding:9px 11px 11px}
-    .ci-hint{display:none}            /* keyboard shortcuts are desktop-only */
-
-    /* Sections */
-    section{padding:64px 16px}
-    .sec-h{margin-bottom:34px}
-    .sec-h h2{font-size:24px}
-    .sec-h .eye{font-size:10.5px}
-    .sec-h .sub{font-size:13.5px}
-
-    /* Features */
-    .feat{padding:20px}
-    .feat h3{font-size:15.5px}
-    .feat p{font-size:13px}
-
-    /* Steps */
-    .steps{margin-top:36px;gap:30px}
-    .step .body{padding:30px 18px 18px}
-
-    /* Founder banner — stack the seats card on mobile */
-    .founder{padding:22px;gap:16px;flex-direction:column;text-align:left}
-    .founder .em{font-size:32px}
-    .founder .body h3{font-size:16px}
-    .founder .body p{font-size:12.5px}
-    .founder .seats{align-self:center}
-
-    /* Pricing — drop the scale to avoid horizontal overflow */
-    .pricing{gap:18px}
-    .price-card{padding:22px 18px}
-    .price-card.pop{transform:none}
-    .price-am{font-size:30px}
-
-    /* Final CTA */
-    .cta-final{padding:64px 16px}
-    .cta-final h2{font-size:28px;line-height:1.25}
-    .cta-final p{font-size:14px}
-
-    /* Footer */
-    footer{font-size:11px;padding:26px 16px 44px}
+  *{margin:0; padding:0; box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.75;
+    -webkit-font-smoothing:antialiased;
   }
+  .wrap{max-width:1000px; margin:0 auto; padding:0 24px}
+  a{color:inherit; text-decoration:none}
 
-  /* Tiny phones (iPhone SE, 320–380px) */
-  @media(max-width:420px){
-    .h-title{font-size:26px}
-    .h-sub{font-size:13.5px}
-    .hire-grid{padding:12px;gap:5px}
-    .ai-card{padding:9px 6px}
-    .ai-av{width:30px;height:30px;font-size:16px}
-    .ai-name{font-size:10.5px}
-    .ai-role{font-size:9px;line-height:1.25}
-    .sec-h h2{font-size:21px}
-    .cta-final h2{font-size:24px}
-    .preview{padding:0 8px}
-    .ch{padding:9px 12px}
-    .ch-pill.model{font-size:9px;padding:2px 6px}
-    .m-col{max-width:74vw}
-    .bb{font-size:12.3px;padding:8px 11px}
+  /* nav */
+  nav{position:sticky; top:0; z-index:50; background:rgba(253,248,243,.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--wire)}
+  .nav-in{display:flex; align-items:center; justify-content:space-between; height:64px}
+  .logo{display:flex; align-items:center; gap:9px; font-weight:900; font-size:17px}
+  /* product logo — 3-bar mark (matches app.html .logomark) */
+  .logo .bars{display:flex; gap:2.5px; align-items:flex-end}
+  .logo .bars i{width:5px; background:var(--peach); border-radius:2px; display:block}
+  .logo .bars i:nth-child(1){height:22px}
+  .logo .bars i:nth-child(2){height:15px; opacity:.62}
+  .logo .bars i:nth-child(3){height:9px; opacity:.34}
+  .nav-right{display:flex; align-items:center; gap:10px}
+  .lang-btn{
+    font-family:inherit; font-size:12.5px; font-weight:800; color:var(--ink2);
+    background:transparent; border:1px solid var(--wire2); border-radius:9px;
+    padding:8px 13px; cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  .lang-btn:hover{border-color:var(--peach); color:var(--peach-d)}
+  .nav-login{font-size:13.5px; font-weight:700; color:var(--ink2); transition:color .15s}
+  .nav-login:hover{color:var(--ink)}
+
+  /* buttons */
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; font-weight:800; border:0; border-radius:13px; cursor:pointer; transition:transform .16s cubic-bezier(.4,0,.2,1), box-shadow .16s}
+  .btn-primary{background:linear-gradient(135deg,var(--peach),var(--peach-d)); color:#fff}
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 14px 32px rgba(234,88,12,.38)}
+  .btn-sm{font-size:13.5px; padding:10px 19px}
+  .btn-lg{font-size:16px; padding:17px 36px}
+
+  /* HERO */
+  .hero{text-align:center; padding:clamp(60px,11vh,116px) 0 clamp(44px,7vh,80px)}
+  .hero h1{font-size:clamp(34px,6vw,62px); font-weight:900; letter-spacing:-.035em; line-height:1.16; animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+  .hero h1 .pop{background:linear-gradient(135deg,var(--peach),var(--peach-d)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero h1 .strike{color:var(--ink3); text-decoration:line-through; text-decoration-thickness:3px}
+  .hero-sub{font-size:clamp(15px,2vw,18px); color:var(--ink2); margin:22px auto 0; max-width:580px; animation:rise .7s .08s cubic-bezier(.2,.7,.2,1) both}
+  .hero-cta{margin-top:32px; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
+  .hero-note{margin-top:14px; font-size:13px; color:var(--ink3); font-weight:600; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
+  .hero-note b{color:var(--peach-d); font-weight:800}
+  @keyframes rise{from{opacity:0; transform:translateY(20px)}to{opacity:1; transform:none}}
+
+  /* ════ product visual: HOME screen (faithful recreation of the app) ════ */
+  .home{
+    max-width:940px; margin:48px auto 0; background:#fff;
+    border:1px solid var(--wire); border-radius:16px; overflow:hidden;
+    box-shadow:var(--shadow-lg); text-align:left; display:flex;
+    animation:rise .85s .24s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .h-sb{width:204px; flex-shrink:0; border-right:1px solid var(--wire); padding:14px 10px; display:flex; flex-direction:column}
+  .h-brand{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:900; letter-spacing:.05em; padding:3px 6px 13px}
+  .h-bars{display:flex; gap:2px; align-items:flex-end}
+  .h-bars i{width:4px; background:var(--peach); border-radius:2px; display:block}
+  .h-bars i:nth-child(1){height:15px}
+  .h-bars i:nth-child(2){height:11px; opacity:.6}
+  .h-bars i:nth-child(3){height:7px; opacity:.34}
+  .h-search{display:flex; align-items:center; gap:7px; padding:7px 10px; background:var(--bg); border-radius:8px; font-size:11px; color:var(--ink3); font-weight:700; margin-bottom:9px}
+  .h-search kbd{margin-left:auto; background:#fff; border:1px solid var(--wire); font-size:9px; padding:1px 5px; border-radius:4px; font-family:'Outfit',monospace}
+  .h-new{display:flex; align-items:center; gap:6px; padding:8px 11px; background:var(--peach-soft); border:1px solid rgba(251,146,60,.32); border-radius:9px; color:var(--peach-d); font-size:12px; font-weight:800; margin-bottom:6px}
+  .h-cat{font-size:9px; font-weight:800; color:var(--ink3); letter-spacing:.1em; text-transform:uppercase; padding:11px 6px 4px}
+  .h-item{display:flex; align-items:center; gap:8px; padding:6px 7px; border-radius:7px; font-size:12px; font-weight:700; color:var(--ink)}
+  .h-item.on{background:var(--peach-soft); color:var(--peach-d); font-weight:800}
+  .h-item .hic{width:24px; height:24px; border-radius:6px; background:var(--cream2); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0}
+  .h-item .hnm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .h-badge{font-size:8.5px; font-weight:900; padding:1px 6px; border-radius:99px; color:#fff}
+  .h-badge.dm{background:var(--t-dm)}
+  .h-badge.team{background:var(--t-team)}
+  .h-user{margin-top:auto; display:flex; align-items:center; gap:8px; padding:11px 6px 2px; border-top:1px solid var(--wire); font-size:11.5px; font-weight:800}
+  .h-user .ua{width:25px; height:25px; border-radius:6px; background:linear-gradient(135deg,var(--peach),var(--peach-d)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:11px}
+  .h-user .gear{margin-left:auto; color:var(--ink3)}
+  .h-main{flex:1; min-width:0; padding:22px 24px; background:var(--bg)}
+  .h-greet{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+  .h-greet h2{font-size:21px; font-weight:900; letter-spacing:-.02em}
+  .h-greet .now{font-size:10.5px; color:var(--ink3); font-weight:700; flex-shrink:0}
+  .h-subg{font-size:11px; color:var(--ink2); margin:4px 0 18px}
+  .h-qgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:11px}
+  .h-qc{background:#fff; border:1.5px solid var(--wire); border-radius:13px; padding:15px 13px; position:relative}
+  .h-qc.feat{border:2px solid var(--peach); background:linear-gradient(135deg,#fff,#fff7ee)}
+  .h-qc.feat::before{content:"⚡ NEW"; position:absolute; top:-8px; right:9px; background:var(--peach); color:#fff; font-size:8px; font-weight:900; padding:2px 7px; border-radius:99px; letter-spacing:.04em}
+  .h-qc .qic{font-size:25px; margin-bottom:8px}
+  .h-qc h3{font-size:12.5px; font-weight:900; margin-bottom:4px; letter-spacing:-.01em}
+  .h-qc p{font-size:10px; color:var(--ink2); line-height:1.55}
+  /* home — recent activity panel */
+  .h-activity{background:#fff; border:1px solid var(--wire); border-radius:13px; padding:15px 16px; margin-top:14px}
+  .h-activity h3{font-size:12.5px; font-weight:900; margin-bottom:5px}
+  .h-act{display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid var(--wire)}
+  .h-act:last-child{border-bottom:0}
+  .h-act .aic{width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; background:var(--cream2)}
+  .h-act .abd{flex:1; min-width:0; font-size:11px; line-height:1.5; color:var(--ink)}
+  .h-act .abd b{font-weight:900}
+  .h-act .awhen{font-size:9.5px; color:var(--ink3); font-weight:700; flex-shrink:0}
+
+  /* ════ 4 STEPS — each with a mini product visual ════ */
+  .steps{background:var(--cream2); padding:clamp(54px,9vh,94px) 0; border-top:1px solid var(--wire)}
+  .steps-h{text-align:center; font-size:clamp(20px,3vw,28px); font-weight:900; letter-spacing:-.02em; margin-bottom:8px}
+  .steps-sub{text-align:center; font-size:14px; color:var(--ink3); margin-bottom:42px}
+  .steps-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  .step{background:#fff; border:1px solid var(--wire); border-radius:18px; padding:18px; box-shadow:0 1px 2px rgba(70,40,20,.04); transition:transform .18s cubic-bezier(.4,0,.2,1), box-shadow .18s}
+  .step:hover{transform:translateY(-4px); box-shadow:var(--shadow-lg)}
+  .step-visual{
+    background:var(--bg); border:1px solid var(--wire); border-radius:13px;
+    padding:13px; margin-bottom:15px; min-height:138px;
+    display:flex; flex-direction:column; justify-content:center; gap:8px;
+  }
+  .step-foot{display:flex; align-items:center; gap:12px}
+  .step-num{
+    font-family:'Outfit',sans-serif; font-size:30px; font-weight:800; line-height:.9; flex-shrink:0;
+    letter-spacing:-.03em;
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .step-txt h3{font-size:16px; font-weight:900; letter-spacing:-.01em}
+  .step-txt p{font-size:11.5px; color:var(--ink2); line-height:1.6; margin-top:2px}
+
+  .mv-hire{display:flex; align-items:center; gap:9px; background:#fff; border:1px solid var(--wire); border-radius:10px; padding:8px 10px}
+  .mv-hire .mh-av{width:30px; height:30px; border-radius:8px; background:var(--cream2); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0}
+  .mv-hire .mh-info{flex:1; min-width:0}
+  .mv-hire .mh-info b{font-size:12px; font-weight:900; display:block}
+  .mv-hire .mh-info small{font-size:10px; color:var(--ink3); font-weight:600}
+  .mv-hire .mh-btn{font-size:11px; font-weight:900; color:#fff; background:linear-gradient(135deg,var(--peach),var(--peach-d)); padding:5px 12px; border-radius:8px; flex-shrink:0}
+
+  .mv-m{display:flex; gap:8px; align-items:flex-start}
+  .mv-m .mm-av{width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#fff; background:linear-gradient(135deg,#fda85e,var(--peach-d))}
+  .mv-m .mm-av.user{background:#241a12; font-size:11px}
+  .mv-m .mm-bd{font-size:11.5px; line-height:1.5; color:var(--ink)}
+  .mv-m .mm-bd b{font-weight:900; margin-right:5px}
+
+  .mv-lv-top{display:flex; align-items:center; gap:9px}
+  .mv-lv-av{width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#fda85e,var(--peach-d)); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0}
+  .mv-lv-nm{flex:1; min-width:0; font-size:12.5px; font-weight:900}
+  .mv-lv-nm small{display:block; font-size:9.5px; color:var(--ink3); font-weight:600}
+  .mv-lv-badge{font-family:'Outfit',sans-serif; font-size:13px; font-weight:800; color:var(--peach-d); background:var(--peach-soft); border:1px solid rgba(251,146,60,.3); padding:3px 10px; border-radius:9px}
+  .mv-xp-top{display:flex; justify-content:space-between; font-size:9.5px; font-weight:700; color:var(--ink3); margin:9px 0 4px}
+  .mv-xp-track{height:7px; border-radius:99px; background:var(--cream2); overflow:hidden}
+  .mv-xp-fill{height:100%; width:68%; border-radius:99px; background:linear-gradient(90deg,var(--peach),#ffb067)}
+  .mv-chips{display:flex; gap:6px; margin-top:9px; flex-wrap:wrap}
+  .mv-chips span{font-size:9.5px; font-weight:700; background:#fff; border:1px solid var(--wire); border-radius:99px; padding:3px 8px}
+  .mv-chips b{color:var(--peach-d)}
+
+  .mv-art{display:flex; gap:9px}
+  .mv-art .ma-card{flex:1; background:#fff; border:1px solid var(--wire); border-radius:10px; overflow:hidden}
+  .mv-art .ma-thumb{height:52px; padding:8px; display:flex; flex-direction:column; gap:3px; justify-content:center}
+  .mv-art .ma-thumb.a{background:linear-gradient(135deg,#fff1e3,#ffd9b3)}
+  .mv-art .ma-thumb.b{background:linear-gradient(135deg,#e7e2f7,#cdc3ef)}
+  .mv-art .ma-thumb i{display:block; height:4px; border-radius:2px; background:rgba(45,26,14,.22)}
+  .mv-art .ma-thumb i:nth-child(1){width:46%}
+  .mv-art .ma-thumb i:nth-child(2){width:78%}
+  .mv-art .ma-thumb i:nth-child(3){width:60%}
+  .mv-art .ma-meta{padding:7px 9px; border-top:1px solid var(--wire)}
+  .mv-art .ma-meta b{font-size:10.5px; font-weight:900; display:block}
+  .mv-art .ma-meta small{font-size:8.5px; color:var(--ink3); font-family:'Outfit',monospace}
+
+  /* final CTA */
+  .final{background:radial-gradient(640px 360px at 50% -10%, rgba(251,146,60,.24), transparent 64%), var(--dark); color:#fff; text-align:center; padding:clamp(64px,11vh,116px) 0}
+  .final h2{font-size:clamp(26px,4.2vw,42px); font-weight:900; letter-spacing:-.03em; line-height:1.25}
+  .final p{color:rgba(255,255,255,.82); margin:16px 0 30px; font-size:15.5px}
+  .final .scarcity{display:inline-flex; align-items:center; gap:8px; margin-top:22px; font-size:12.5px; font-weight:800; color:#ffd9b3; background:rgba(251,146,60,.14); border:1px solid rgba(251,146,60,.32); padding:8px 16px; border-radius:99px}
+
+  /* footer */
+  footer{background:var(--dark); border-top:1px solid rgba(255,255,255,.08); padding:30px 0}
+  .foot-in{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px}
+  .foot-in .logo{color:#fff}
+  .foot-cp{font-size:12px; color:rgba(255,255,255,.5)}
+
+  @media (max-width:680px){
+    .h-sb{display:none}
+    .h-qgrid{grid-template-columns:1fr}
+    .steps-grid{grid-template-columns:1fr}
   }
 </style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-wrap">
-    <a href="/" class="logo">
-      <div class="logo-sq">M</div>
-      <span>MY AI Agent</span>
-    </a>
-    <div class="nav-links">
-      <a href="#features" data-i18n="nav.features">機能</a>
-      <a href="#pricing" data-i18n="nav.pricing">料金</a>
-      <a href="#founder" data-i18n="nav.founder">Founder 100</a>
-      <a href="/store" data-i18n="nav.store">Agent Store</a>
-    </div>
-    <div class="nav-cta">
-      <div class="lang-tog" role="group" aria-label="Language">
-        <button id="langJa" class="on" onclick="setLang('ja')">日本語</button>
-        <button id="langEn" onclick="setLang('en')">EN</button>
-      </div>
-      <a href="/auth.html" class="btn ghost" data-i18n="nav.login">ログイン</a>
-      <a href="/auth.html?tab=signup" class="btn primary" data-i18n="nav.cta">無料で始める</a>
+<nav>
+  <div class="wrap nav-in">
+    <a href="/" class="logo"><span class="bars"><i></i><i></i><i></i></span> MY AI Agent</a>
+    <div class="nav-right">
+      <a href="/auth.html" class="nav-login" data-i18n="nav.login">ログイン</a>
+      <button class="lang-btn" id="langBtn" onclick="toggleLang()">EN</button>
+      <a href="/auth.html?tab=signup" class="btn btn-primary btn-sm" data-i18n="nav.cta">無料で始める</a>
     </div>
   </div>
 </nav>
 
-<div class="hero">
-  <div>
-    <div class="h-eyebrow">
-      <span class="dot"></span>
-      <span data-i18n="hero.eyebrow">Founder 100 · 残り 92 席 · 永年無料</span>
-    </div>
-    <h1 class="h-title" data-i18n="hero.title" data-i18n-html>
-      <span class="strike">AI を使う</span>時代から、<br>
-      AI を<span class="pop">複数人雇う</span>時代へ。
-    </h1>
-    <p class="h-sub" data-i18n="hero.sub" data-i18n-html>
-      Slack のようなアプリで、<b>何人でも AI を採用</b>。<br>
-      1 人とは DM、複数人ではチームで仕事を任せられます。
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <h1 data-i18n="hero.h1"><span class="strike">AI を使う</span>時代から、<br>AI を<span class="pop">複数人雇う</span>時代へ。</h1>
+    <p class="hero-sub" data-i18n="hero.sub">
+      Slack のようなアプリで、専門の AI を何人でも採用。<br>
+      仕事は、任せるだけ。
     </p>
-    <div class="h-cta">
-      <a href="/auth.html?tab=signup" class="btn primary big" data-i18n="hero.cta1">▶ 30 秒で最初の AI を雇う</a>
-      <a href="#preview" class="btn outline big" data-i18n="hero.cta2">デモを見る</a>
+    <div class="hero-cta">
+      <a href="/auth.html?tab=signup" class="btn btn-primary btn-lg" data-i18n="hero.cta">▶ 30 秒で無料で始める</a>
     </div>
-    <div class="h-meta">
-      <span><span class="check">✓</span> <span data-i18n="hero.meta1">100 メッセージ無料</span></span>
-      <span><span class="check">✓</span> <span data-i18n="hero.meta2">クレジットカード不要</span></span>
-      <span><span class="check">✓</span> <span data-i18n="hero.meta4">50 サービスに 1-クリック接続</span></span>
-    </div>
-  </div>
+    <p class="hero-note" data-i18n="hero.note"><b>100 メッセージ無料</b> ・ クレジットカード不要 ・ 30 秒で開始</p>
 
-  <!-- Interactive hire widget -->
-  <div class="hire-card">
-    <div class="hire-h">
-      <div class="t" data-i18n="hire.title">あなたの AI チームを作ろう</div>
-      <div class="s" data-i18n="hire.sub">気になる AI を選んで「採用」を押す。すぐ DM できます。</div>
-    </div>
-    <div class="hire-grid" id="aiGrid">
-      <div class="ai-card" data-role="marketing" onclick="toggleHire(this)">
-        <div class="ai-av marketing">📈</div>
-        <div class="ai-name">Marketing AI</div>
-        <div class="ai-role" data-i18n="hire.role.marketing" data-i18n-html>広告 / SNS<br>KPI 分析</div>
-      </div>
-      <div class="ai-card" data-role="sales" onclick="toggleHire(this)">
-        <div class="ai-av sales">💼</div>
-        <div class="ai-name">Sales AI</div>
-        <div class="ai-role" data-i18n="hire.role.sales" data-i18n-html>商談メール<br>パイプライン</div>
-      </div>
-      <div class="ai-card" data-role="designer" onclick="toggleHire(this)">
-        <div class="ai-av designer">🎨</div>
-        <div class="ai-name">Designer AI</div>
-        <div class="ai-role" data-i18n="hire.role.designer" data-i18n-html>LP / ロゴ<br>UI モック</div>
-      </div>
-      <div class="ai-card" data-role="engineer" onclick="toggleHire(this)">
-        <div class="ai-av engineer">⚡</div>
-        <div class="ai-name">Engineer AI</div>
-        <div class="ai-role" data-i18n="hire.role.engineer" data-i18n-html>実装 / レビュー<br>バグ調査</div>
-      </div>
-      <div class="ai-card" data-role="pm" onclick="toggleHire(this)">
-        <div class="ai-av pm">📋</div>
-        <div class="ai-name">PM AI</div>
-        <div class="ai-role" data-i18n="hire.role.pm" data-i18n-html>進行管理<br>ロードマップ</div>
-      </div>
-      <div class="ai-card" data-role="cfo" onclick="toggleHire(this)">
-        <div class="ai-av cfo">💰</div>
-        <div class="ai-name">CFO AI</div>
-        <div class="ai-role" data-i18n="hire.role.cfo" data-i18n-html>経費分析<br>収支管理</div>
-      </div>
-    </div>
-    <div class="hire-bar">
-      <div class="cnt"><b id="hireCnt">0</b> <span data-i18n="hire.count">人 採用中 · 残り席数 ∞</span></div>
-      <button class="btn primary start" id="hireStartBtn" disabled onclick="startHired()" data-i18n="hire.start">▶ チームを作る</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Live preview ───────────────── -->
-<div class="preview" id="preview">
-  <div class="preview-frame">
-    <div class="preview-bar">
-      <div class="dot red"></div><div class="dot y"></div><div class="dot g"></div>
-      <div class="url">app.myaiagents.agency</div>
-    </div>
-    <div class="app">
-      <aside class="sb">
-        <div class="sb-top">
-          <div class="sb-lo">M</div>
-          <div class="sb-br">MY AI Agent</div>
-        </div>
-        <div class="sb-home">
-          <span>🏠</span>
-          <span data-i18n="sb.home">ホーム</span>
-          <span class="arr">→</span>
-        </div>
-        <div class="sb-srch">🔍 <span data-i18n="sb.search">検索…</span></div>
-        <div class="sb-list">
-          <div class="sec-h-row"><span class="caret">▾</span><span class="em">👥</span><span class="name" data-i18n="sb.teams">Teams</span><span class="cnt">1</span></div>
-          <div class="sb-row on">
-            <div class="sb-av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa)">🎯<div class="pres"></div></div>
-            <div class="sb-meta"><div class="nm">Growth Squad</div><div class="pv" data-i18n="sb.team.pv">4 AI · @marketing が考えてます</div></div>
-          </div>
-          <div class="sec-h-row"><span class="caret">▾</span><span class="em">💬</span><span class="name" data-i18n="sb.dms">DMs</span><span class="cnt">3</span></div>
-          <div class="sb-row">
-            <div class="sb-av" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)">🎨<div class="pres"></div></div>
-            <div class="sb-meta"><div class="nm">Designer AI</div><div class="pv" data-i18n="sb.designer.pv">✓✓ ピーチ系で OK</div></div>
-          </div>
-          <div class="sb-row">
-            <div class="sb-av" style="background:linear-gradient(135deg,#dcfce7,#86efac)">📈<div class="pres busy"></div></div>
-            <div class="sb-meta"><div class="nm">Marketing AI</div><div class="pv" data-i18n="sb.marketing.pv">📈 CVR が下がっています</div></div>
-            <div class="badge">3</div>
-          </div>
-          <div class="sb-row">
-            <div class="sb-av" style="background:linear-gradient(135deg,#fef3c7,#fcd34d)">💼<div class="pres off"></div></div>
-            <div class="sb-meta"><div class="nm">Sales AI</div><div class="pv" data-i18n="sb.sales.pv">明日の商談、準備OK</div></div>
-            <div class="badge nudge">💡</div>
-          </div>
-        </div>
+    <!-- product visual: HOME screen -->
+    <div class="home">
+      <aside class="h-sb">
+        <div class="h-brand"><span class="h-bars"><i></i><i></i><i></i></span> MY AI AGENT</div>
+        <div class="h-search">🔍 <span data-i18n="h.search">検索…</span><kbd>⌘K</kbd></div>
+        <div class="h-new">＋ New</div>
+        <div class="h-cat" data-i18n="h.cat.dash">📊 ダッシュボード</div>
+        <div class="h-item on"><span class="hic">🏠</span><span class="hnm" data-i18n="h.home">ホーム</span></div>
+        <div class="h-cat" data-i18n="h.cat.agents">🤖 AI エージェント</div>
+        <div class="h-item"><span class="hic">💼</span><span class="hnm">Sales Agent</span><span class="h-badge dm">DM</span></div>
+        <div class="h-item"><span class="hic">📝</span><span class="hnm">SEO Writer</span><span class="h-badge dm">DM</span></div>
+        <div class="h-item"><span class="hic">🐦</span><span class="hnm">X Auto-Ops</span><span class="h-badge dm">DM</span></div>
+        <div class="h-cat" data-i18n="h.cat.teams">🎯 チーム</div>
+        <div class="h-item"><span class="hic">🛍</span><span class="hnm">EC Launch Team</span><span class="h-badge team">●</span></div>
+        <div class="h-item"><span class="hic">📱</span><span class="hnm">SNS Growth</span><span class="h-badge team">●</span></div>
+        <div class="h-user"><span class="ua" data-i18n="h.ua">山</span><span data-i18n="h.user">山田 洸太</span><span class="gear">⚙</span></div>
       </aside>
-      <div class="main">
-        <div class="ch">
-          <div class="av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa)">🎯</div>
-          <div class="ch-title">
-            <div class="nm">Growth Squad</div>
-            <div class="ch-pills">
-              <span class="ch-pill live" data-i18n="ch.live">🟢 4 AI 在席</span>
-              <span class="ch-pill model">🤝 Huddle</span>
-              <span class="ch-pill intel">@marketing · @designer · @engineer · @pm</span>
-            </div>
+      <main class="h-main">
+        <div class="h-greet">
+          <h2 data-i18n="h.greet">おかえりなさい、山田さん 🍑</h2>
+          <span class="now" data-i18n="h.now">土曜 5/10 ・ 21:00</span>
+        </div>
+        <div class="h-subg" data-i18n="h.subg">個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務を自動化</div>
+        <div class="h-qgrid">
+          <div class="h-qc">
+            <div class="qic">🤖</div>
+            <h3 data-i18n="h.qc1t">AI を作成</h3>
+            <p data-i18n="h.qc1p">あなた専属の AI を 1 体ずつ組み立てる。</p>
           </div>
-          <div class="acts">
-            <div class="ic">👥<span class="bd">4</span></div>
-            <div class="ic" style="background:var(--peach);color:#fff;border-color:var(--peach-dark)">＋</div>
-            <div class="ic">⚙</div>
-            <div class="ic">⋯</div>
+          <div class="h-qc feat">
+            <div class="qic">🎯</div>
+            <h3 data-i18n="h.qc2t">AI チームを作成</h3>
+            <p data-i18n="h.qc2p">やりたいことから AI が自動で編成。</p>
+          </div>
+          <div class="h-qc">
+            <div class="qic">🏪</div>
+            <h3>Agent Store</h3>
+            <p data-i18n="h.qc3p">他クリエイターの AI を購入・無料 DL。</p>
           </div>
         </div>
-        <div class="msgs">
-          <div class="date-div" data-i18n="ch.today">今日</div>
-          <div class="m u">
-            <div class="m-av you" data-i18n="ch.you-initial">あ</div>
-            <div class="m-col">
-              <div class="m-meta"><span class="m-nm" data-i18n="ch.you">あなた</span><span class="m-tm">11:02</span></div>
-              <div class="bb" data-i18n="ch.msg1">新しい LP のヘッドライン考えたい。SaaS 向けで A/B テスト 3 案ほしい</div>
-              <div class="m-foot"><span class="read">✓✓</span></div>
-            </div>
-          </div>
-          <div class="m">
-            <div class="m-av" style="background:linear-gradient(135deg,#f3e8ff,#e9d5ff)">📋</div>
-            <div class="m-col">
-              <div class="m-meta"><span class="m-nm pm">PM AI</span><span class="m-tm">11:03</span></div>
-              <div class="bb pm" data-i18n="ch.msg2" data-i18n-html>整理させてください。今の LP の CTR は <b>1.8%</b>、目標は 3%。<span class="ment">@marketing</span> 響くコピー軸、<span class="ment">@designer</span> ビジュアル軸でそれぞれ提案を。</div>
-              <div class="m-foot"><span class="react mine">👍 2</span></div>
-            </div>
-          </div>
-          <div class="m">
-            <div class="m-av" style="background:linear-gradient(135deg,#dcfce7,#86efac)">📈</div>
-            <div class="m-col">
-              <div class="m-meta"><span class="m-nm marketing">Marketing AI</span><span class="m-tm">11:03</span></div>
-              <div class="bb marketing" data-i18n="ch.msg3" data-i18n-html>3 軸提案: ① 数字直撃「<b>20 分で SaaS</b>」 ② 痛みフック「<b>ペルソナ、まだ手書き?</b>」 ③ Before/After「<b>30 タスク → 1 つの会話</b>」 <span class="ment">@designer</span> 試案お願いします</div>
-              <div class="m-foot">
-                <span class="react">♥ 2</span>
-                <span class="react mine">🔥 1</span>
-              </div>
-            </div>
-          </div>
-          <div class="m">
-            <div class="m-av" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)">🎨</div>
-            <div class="m-col">
-              <div class="m-meta"><span class="m-nm designer">Designer AI</span><span class="m-tm">11:04</span></div>
-              <div class="tool-pill" data-i18n="ch.tool">✓ 🎨 デザインを生成</div>
-              <div class="bb designer" data-i18n="ch.msg4" data-i18n-html>①と③推し。<b>大きな数字 + 1 枚画像</b> がスクロール率最高。<span class="ment">@engineer</span> A/B テスト 1 時間で実装できる?</div>
-              <div class="m-foot">
-                <span class="thread-i" data-i18n="ch.threads">💬 2 件の返信</span>
-                <span class="react">👀 1</span>
-              </div>
-            </div>
-          </div>
-          <div class="m">
-            <div class="m-av" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe)">⚡</div>
-            <div class="m-col">
-              <div class="m-meta"><span class="m-nm engineer">Engineer AI</span><span class="m-tm">11:04</span></div>
-              <div class="bb engineer" data-i18n="ch.msg5">可能。GrowthBook で 1 時間以内に 3 ルート切れます。Hero h1 にデータ属性振ってください。</div>
-              <div class="m-foot"><span class="react mine">🚀 1</span></div>
-            </div>
-          </div>
+        <div class="h-activity">
+          <h3 data-i18n="h.actt">最近のアクティビティ</h3>
+          <div class="h-act"><span class="aic">💼</span><span class="abd" data-i18n="h.act1"><b>Sales Agent</b> が競合分析レポートを作成しました</span><span class="awhen" data-i18n="h.act1w">2 分前</span></div>
+          <div class="h-act"><span class="aic">🛍</span><span class="abd" data-i18n="h.act2"><b>EC Launch Team</b> がワークフローを完了しました</span><span class="awhen" data-i18n="h.act2w">1 時間前</span></div>
+          <div class="h-act"><span class="aic">📝</span><span class="abd" data-i18n="h.act3"><b>SEO Writer</b> が記事を 3 本 書き上げました</span><span class="awhen" data-i18n="h.act3w">3 時間前</span></div>
+          <div class="h-act"><span class="aic">🐦</span><span class="abd" data-i18n="h.act4"><b>X Auto-Ops</b> が投稿を 5 件 予約しました</span><span class="awhen" data-i18n="h.act4w">5 時間前</span></div>
+          <div class="h-act"><span class="aic">📈</span><span class="abd" data-i18n="h.act5"><b>グロース</b> が Lv.8 に上がりました</span><span class="awhen" data-i18n="h.act5w">昨日</span></div>
         </div>
-        <div class="composer">
-          <div class="ci-wrap">
-            <button class="ci-plus">+</button>
-            <div class="ci-ph" data-i18n="ch.placeholder">メッセージを入力…</div>
-            <div class="ci-emoji">😀</div>
-            <button class="ci-send">▶</button>
-          </div>
-          <div class="ci-hint">
-            <span><kbd>↵</kbd> <span data-i18n="ch.hint.send">送信</span></span>
-            <span><kbd>⇧</kbd>+<kbd>↵</kbd> <span data-i18n="ch.hint.newline">改行</span></span>
-            <span><kbd>/</kbd> <span data-i18n="ch.hint.cmd">コマンド</span></span>
-            <span><kbd>@</kbd> <span data-i18n="ch.hint.mention">メンション</span></span>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   </div>
-</div>
+</header>
 
-<!-- ── Features ───────────────── -->
-<section id="features">
-  <div class="sec-h">
-    <div class="eye" data-i18n="feat.eye">なぜ "雇う" のか</div>
-    <h2 data-i18n="feat.h2" data-i18n-html>ChatGPT は質問する。<br>MY AI Agent は <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">雇う</span>。</h2>
-    <div class="sub" data-i18n="feat.sub">1 つの AI と毎回ゼロから話すのは、もう古い。役職と記憶を持つ AI を複数人、チームで雇える。</div>
-  </div>
-  <div class="feat-grid">
-    <div class="feat">
-      <div class="ic">🧠</div>
-      <h3 data-i18n="feat.f1.h">記憶する AI</h3>
-      <p data-i18n="feat.f1.p">会話するほど、あなたの事業・目標・好みを学習。3 回目の会話から「前回の続きやりますか?」と言える AI。</p>
-    </div>
-    <div class="feat">
-      <div class="ic">🤝</div>
-      <h3 data-i18n="feat.f2.h">AI 同士が議論する</h3>
-      <p data-i18n="feat.f2.p">「@all」と書けば、チームの全員が順番に意見を出して結論を出す。1 人の AI じゃ気づかない視点を集約。</p>
-    </div>
-    <div class="feat">
-      <div class="ic">🎯</div>
-      <h3 data-i18n="feat.f3.h">KPI を追う AI</h3>
-      <p data-i18n="feat.f3.p">「月商 100 万」「CVR 3%」など目標を持つと、雑談じゃなく業務になる。週次レポートも自動。</p>
-    </div>
-    <div class="feat">
-      <div class="ic">🔌</div>
-      <h3 data-i18n="feat.f4.h">外部サービス連携</h3>
-      <p data-i18n="feat.f4.p">Google Sheets / Slack / Gmail / Chrome 拡張で、AI があなたの代わりに送信・投稿・記録までやる。</p>
-    </div>
-    <div class="feat">
-      <div class="ic">⏰</div>
-      <h3 data-i18n="feat.f5.h">24 時間働く</h3>
-      <p data-i18n="feat.f5.p">「毎朝 9 時に競合チェック」「金曜に週次レポート」など、寝てる間に AI が仕事を進めてる状態。</p>
-    </div>
-    <div class="feat">
-      <div class="ic">🏪</div>
-      <h3 data-i18n="feat.f6.h">AI を売れる</h3>
-      <p data-i18n="feat.f6.p">自分が育てた AI を Agent Store で販売。利用料の 70-100% (Founder は) があなたの収益に。</p>
-    </div>
-  </div>
-</section>
+<!-- 4 STEPS -->
+<section class="steps">
+  <div class="wrap">
+    <div class="steps-h" data-i18n="st.h">雇う → 任せる → 強化 → 成果</div>
+    <div class="steps-sub" data-i18n="st.sub">むずかしい設定はなし。たった 4 ステップ。</div>
+    <div class="steps-grid">
 
-<!-- ── INTEGRATIONS — 50 サービスに 1 クリックで接続 ────────────── -->
-<section id="integrations">
-  <div class="sec-h">
-    <div class="eye" data-i18n="intg.eye">🔌 連携</div>
-    <h2 data-i18n="intg.h2" data-i18n-html>50 サービスに <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">1 クリック</span> で接続。</h2>
-    <div class="sub" data-i18n="intg.sub" data-i18n-html>OAuth ・ API キー ・ MCP ・ Zapier を統一 UI で。<br>AI に「Slack に投稿」「Sheets に追記」と頼むだけ。</div>
-  </div>
-  <!-- Service logo grid: a tight cluster of emoji "stamps" that lets visitors -->
-  <!-- scan the breadth of integrations at a glance. Order = priority. -->
-  <div class="intg-stamps" style="max-width:880px;margin:24px auto 8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:10px">
-    <div class="istamp" data-name="GitHub" data-logo="🐙"></div>
-    <div class="istamp" data-name="Slack" data-logo="💬"></div>
-    <div class="istamp" data-name="Gmail" data-logo="📧"></div>
-    <div class="istamp" data-name="Google Drive" data-logo="📁"></div>
-    <div class="istamp" data-name="Google Calendar" data-logo="📆"></div>
-    <div class="istamp" data-name="Notion" data-logo="📝"></div>
-    <div class="istamp" data-name="X" data-logo="𝕏"></div>
-    <div class="istamp" data-name="LinkedIn" data-logo="💼"></div>
-    <div class="istamp" data-name="Discord" data-logo="🎮"></div>
-    <div class="istamp" data-name="Linear" data-logo="📐"></div>
-    <div class="istamp" data-name="Stripe" data-logo="💳"></div>
-    <div class="istamp" data-name="Shopify" data-logo="🛒"></div>
-    <div class="istamp" data-name="WordPress" data-logo="📰"></div>
-    <div class="istamp" data-name="Airtable" data-logo="🗂️"></div>
-    <div class="istamp" data-name="YouTube" data-logo="▶️"></div>
-    <div class="istamp" data-name="Vercel" data-logo="▲"></div>
-    <div class="istamp" data-name="Cloudflare" data-logo="☁️"></div>
-    <div class="istamp" data-name="Telegram" data-logo="✈️"></div>
-    <div class="istamp" data-name="LINE" data-logo="🟢"></div>
-    <div class="istamp" data-name="Zapier" data-logo="⚡"></div>
-    <div class="istamp" data-name="+30 more" data-logo="…" style="background:transparent;border:1px dashed var(--wire2);color:var(--text3);font-size:12px"></div>
-  </div>
-  <!-- Stamp tile styles injected here so the section is self-contained. -->
-  <style>
-    .istamp{aspect-ratio:1/1;background:#fff;border:1px solid var(--wire);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .15s;cursor:default}
-    .istamp:hover{border-color:var(--peach);transform:translateY(-2px);box-shadow:0 8px 22px rgba(251,146,60,.08)}
-    .istamp::before{content:attr(data-logo);font-size:24px;line-height:1}
-    .istamp::after{content:attr(data-name);font-size:10.5px;font-weight:700;color:var(--text2);letter-spacing:.01em;text-align:center;line-height:1.2;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .intg-flow{max-width:760px;margin:32px auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:13px;color:var(--text2)}
-    .intg-flow-card{background:#fff;border:1px solid var(--wire);border-radius:13px;padding:16px 18px;text-align:center}
-    .intg-flow-card .ic{font-size:24px;margin-bottom:6px;line-height:1}
-    .intg-flow-card .ttl{font-size:12px;font-weight:800;color:var(--text);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
-    .intg-flow-card .d{font-size:12.5px;line-height:1.6}
-    @media(max-width:640px){
-      .intg-flow{grid-template-columns:1fr;gap:10px}
-    }
-  </style>
-  <div class="intg-flow">
-    <div class="intg-flow-card">
-      <div class="ic">🔌</div>
-      <div class="ttl" data-i18n="intg.f1.t">公式 OAuth</div>
-      <div class="d" data-i18n="intg.f1.d">GitHub・Google・X など主要サービスは 1 クリックで認証完了。</div>
-    </div>
-    <div class="intg-flow-card">
-      <div class="ic">🔑</div>
-      <div class="ttl" data-i18n="intg.f2.t">API キー</div>
-      <div class="d" data-i18n="intg.f2.d">WordPress・Stripe・Notion・Airtable など、貼り付けるだけで連携。</div>
-    </div>
-    <div class="intg-flow-card">
-      <div class="ic">⚡</div>
-      <div class="ttl" data-i18n="intg.f3.t">Zapier 経由</div>
-      <div class="d" data-i18n="intg.f3.d">残り 5,000+ サービスも Zapier を介して接続可能。</div>
-    </div>
-  </div>
-</section>
-
-<section style="background:var(--cream2);max-width:none;margin-left:0;margin-right:0">
-  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
-    <div class="sec-h">
-      <div class="eye" data-i18n="steps.eye">3 ステップ</div>
-      <h2 data-i18n="steps.h2">30 秒であなたの AI 会社を作ろう</h2>
-    </div>
-    <div class="steps">
+      <!-- 01 雇う -->
       <div class="step">
-        <div class="step-n">1</div>
-        <div class="body">
-          <h3 data-i18n="steps.s1.h">AI を採用する</h3>
-          <p data-i18n="steps.s1.p">役職を選んで、名前と業務内容を入れるだけ。Marketing AI、Designer AI、Engineer AI… 何人でも作れます。</p>
+        <div class="step-visual">
+          <div class="mv-hire">
+            <span class="mh-av">💼</span>
+            <span class="mh-info"><b>Sales Agent</b><small>Marketing ・ Research</small></span>
+            <span class="mh-btn" data-i18n="st.hire">採用</span>
+          </div>
+          <div class="mv-hire">
+            <span class="mh-av">📝</span>
+            <span class="mh-info"><b>SEO Writer</b><small>SEO ・ Writing</small></span>
+            <span class="mh-btn" data-i18n="st.hire2">採用</span>
+          </div>
+        </div>
+        <div class="step-foot">
+          <span class="step-num">01</span>
+          <div class="step-txt">
+            <h3 data-i18n="st1.h">雇う</h3>
+            <p data-i18n="st1.p">専門の AI を選んで「採用」。何人でも。</p>
+          </div>
         </div>
       </div>
+
+      <!-- 02 任せる -->
       <div class="step">
-        <div class="step-n">2</div>
-        <div class="body">
-          <h3 data-i18n="steps.s2.h">DM またはチーム結成</h3>
-          <p data-i18n="steps.s2.p">1 人とサシで話すなら DM。複数人で議論させたいなら Team を作って @all。Slack 感覚で使えます。</p>
+        <div class="step-visual">
+          <div class="mv-m">
+            <span class="mm-av user">あ</span>
+            <span class="mm-bd" data-i18n="st2.m1"><b>あなた</b>競合を 3 社、調べてまとめて</span>
+          </div>
+          <div class="mv-m">
+            <span class="mm-av">💼</span>
+            <span class="mm-bd" data-i18n="st2.m2"><b>Sales Agent</b>承知しました。調べてレポートにします 🔍</span>
+          </div>
+        </div>
+        <div class="step-foot">
+          <span class="step-num">02</span>
+          <div class="step-txt">
+            <h3 data-i18n="st2.h">任せる</h3>
+            <p data-i18n="st2.p">チャットで仕事を渡すだけ。</p>
+          </div>
         </div>
       </div>
+
+      <!-- 03 強化 -->
       <div class="step">
-        <div class="step-n">3</div>
-        <div class="body">
-          <h3 data-i18n="steps.s3.h">仕事を任せる</h3>
-          <p data-i18n="steps.s3.p">「LP 作って」「メール 5 通書いて」と振るだけ。生成だけじゃなく、実際にメール送信や SNS 投稿まで実行。</p>
+        <div class="step-visual">
+          <div class="mv-lv-top">
+            <span class="mv-lv-av">📈</span>
+            <span class="mv-lv-nm" data-i18n="st3.nm">グロース<small>分析担当</small></span>
+            <span class="mv-lv-badge">Lv.7</span>
+          </div>
+          <div>
+            <div class="mv-xp-top"><span data-i18n="st3.xp">経験値</span><span data-i18n="st3.xpn">あと 140 XP で Lv.8</span></div>
+            <div class="mv-xp-track"><div class="mv-xp-fill"></div></div>
+          </div>
+          <div class="mv-chips">
+            <span data-i18n="st3.c1">🔍 リサーチ <b>達人</b></span>
+            <span data-i18n="st3.c2">📊 分析 <b>習熟</b></span>
+          </div>
+        </div>
+        <div class="step-foot">
+          <span class="step-num">03</span>
+          <div class="step-txt">
+            <h3 data-i18n="st3.h">強化</h3>
+            <p data-i18n="st3.p">使うほど AI が育つ。記憶も増える。</p>
+          </div>
         </div>
       </div>
+
+      <!-- 04 成果 -->
+      <div class="step">
+        <div class="step-visual">
+          <div class="mv-art">
+            <div class="ma-card">
+              <div class="ma-thumb a"><i></i><i></i><i></i></div>
+              <div class="ma-meta"><b data-i18n="st4.a1">新商品 LP</b><small>artifact-lp.html</small></div>
+            </div>
+            <div class="ma-card">
+              <div class="ma-thumb b"><i></i><i></i><i></i></div>
+              <div class="ma-meta"><b data-i18n="st4.a2">競合分析レポート</b><small>report.html</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-foot">
+          <span class="step-num">04</span>
+          <div class="step-txt">
+            <h3 data-i18n="st4.h">成果</h3>
+            <p data-i18n="st4.p">サイトもレポートも、実物で返ってくる。</p>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
 
-<section id="pricing">
-  <div class="founder" id="founder">
-    <div class="em">★</div>
-    <div class="body">
-      <h3 data-i18n="founder.h">Founder 100 · 最初の 100 人だけの特典</h3>
-      <p data-i18n="founder.p" data-i18n-html><b>30 日 BUSINESS プラン無料</b> ・ 永年 Store 手数料 0% (通常 10%) ・ LP に Founder バッジ表示</p>
-    </div>
-    <div class="seats">
-      <div class="n" id="founderSeatsLP">—</div>
-      <div class="l" data-i18n="founder.seats">残り席数</div>
-    </div>
-  </div>
-
-  <div class="sec-h">
-    <div class="eye" data-i18n="pricing.eye">料金</div>
-    <h2 data-i18n="pricing.h2" data-i18n-html>まず<span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">無料で試す</span>。気に入ったらアップグレード。</h2>
-    <div class="sub" data-i18n="pricing.sub">クレジットカード不要・いつでも解約 OK</div>
-  </div>
-  <div class="pricing">
-    <!-- Free -->
-    <div class="price-card">
-      <div>
-        <div class="price-pl">Free</div>
-        <div class="price-am">$0 <span class="per" data-i18n="pricing.per">/月</span></div>
-        <div style="font-size:11px;color:var(--text3);font-weight:700;margin-top:4px" data-i18n="pricing.free.noCard">💳 クレジットカード不要</div>
-      </div>
-      <div class="price-credit" data-i18n="pricing.free.credit">100 メッセージ無料</div>
-      <div style="font-size:11.5px;color:var(--text3);font-weight:700;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase" data-i18n="pricing.free.who">こんな人向け</div>
-      <ul>
-        <li data-i18n="pricing.free.f1">まず試したい・お小遣い感覚で使う</li>
-        <li data-i18n="pricing.free.f2">AI 3 人まで採用</li>
-        <li data-i18n="pricing.free.f3">記憶 / KPI / プレイブック</li>
-        <li data-i18n="pricing.free.f4">Agent Store で AI 購入</li>
-        <li data-i18n="pricing.free.f5">50 サービス連携 (Zapier 込)</li>
-      </ul>
-      <a href="/auth.html?tab=signup" class="btn outline big" data-i18n="pricing.free.cta">▶ 30 秒で無料登録</a>
-    </div>
-    <!-- Pro -->
-    <div class="price-card pop">
-      <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:10.5px;font-weight:900;padding:4px 13px;border-radius:99px;letter-spacing:.06em;white-space:nowrap;box-shadow:0 4px 12px rgba(234,88,12,.32)">🏆 おすすめ</div>
-      <div>
-        <div class="price-pl">Pro</div>
-        <div class="price-am">$12.99 <span class="per" data-i18n="pricing.per">/月</span></div>
-        <div style="font-size:11px;color:var(--peach-dark);font-weight:800;margin-top:4px" data-i18n="pricing.pro.bonus">🎁 Founder 100 特典 → 最初 30 日 Business 無料</div>
-      </div>
-      <div class="price-credit" data-i18n="pricing.pro.credit">$15 クレジット / 月 (= 約 1,500 メッセージ)</div>
-      <div style="font-size:11.5px;color:var(--text3);font-weight:700;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase" data-i18n="pricing.pro.who">こんな人向け</div>
-      <ul>
-        <li data-i18n="pricing.pro.f0">本業で AI チームを組みたい個人開発者</li>
-        <li data-i18n="pricing.pro.f1" data-i18n-html>AI <b>無制限</b> 採用</li>
-        <li data-i18n="pricing.pro.f2">チーム機能 + Team Huddle</li>
-        <li data-i18n="pricing.pro.f3">⏰ スケジュール自動実行</li>
-        <li data-i18n="pricing.pro.f4">📧 メール / Slack / Sheets 連携</li>
-        <li data-i18n="pricing.pro.f5">🏪 Agent Store 出品 (収益化)</li>
-      </ul>
-      <a href="/auth.html?tab=signup&plan=pro" class="btn primary big" data-i18n="pricing.pro.cta">▶ Pro で始める</a>
-    </div>
-    <!-- Business -->
-    <div class="price-card">
-      <div>
-        <div class="price-pl">Business</div>
-        <div class="price-am">$32.99 <span class="per" data-i18n="pricing.per">/月</span></div>
-        <div style="font-size:11px;color:var(--text3);font-weight:700;margin-top:4px" data-i18n="pricing.biz.tag">SaaS 運営者・SMB 向け</div>
-      </div>
-      <div class="price-credit" data-i18n="pricing.biz.credit">$45 クレジット / 月 (= 約 4,500 メッセージ)</div>
-      <div style="font-size:11.5px;color:var(--text3);font-weight:700;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase" data-i18n="pricing.biz.who">こんな人向け</div>
-      <ul>
-        <li data-i18n="pricing.biz.f0">事業で重要業務を AI に任せたい</li>
-        <li data-i18n="pricing.biz.f1">Pro の全機能</li>
-        <li data-i18n="pricing.biz.f2" data-i18n-html>🧠 <b>Opus 4.7</b> (最高性能モデル)</li>
-        <li data-i18n="pricing.biz.f3">🔌 Webhook / API 連携</li>
-        <li data-i18n="pricing.biz.f4">⚡ 優先サポート (24h 以内)</li>
-        <li data-i18n="pricing.biz.f5">🏪 Store 手数料 5% (Pro: 10%)</li>
-      </ul>
-      <a href="/auth.html?tab=signup&plan=business" class="btn outline big" data-i18n="pricing.biz.cta">▶ Business を始める</a>
-    </div>
-  </div>
-
-  <!-- FAQ row -->
-  <div style="max-width:880px;margin:48px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;font-size:12.5px;color:var(--text2);line-height:1.6">
-    <div>
-      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q1">❓ クレジットを使い切ったら?</div>
-      <div data-i18n="faq.a1">AI が動かなくなるだけで、データは消えません。$5 単位で随時チャージ可。</div>
-    </div>
-    <div>
-      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q2">❓ いつでも解約できる?</div>
-      <div data-i18n="faq.a2">はい。設定 → プラン → 解約 をクリックするだけ。違約金なし。</div>
-    </div>
-    <div>
-      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q3">❓ 課金で何が変わる?</div>
-      <div data-i18n="faq.a3">月額クレジット = メッセージ数の上限。Pro 以上で AI 無制限・スケジュール・Store 出品が解放されます。</div>
-    </div>
-    <div>
-      <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px" data-i18n="faq.q4">❓ Founder 100 は何?</div>
-      <div data-i18n="faq.a4">最初の 100 人だけ「Business 30 日無料 + Store 手数料 0% 永年」。残席カウントダウン中。</div>
-    </div>
+<!-- FINAL CTA -->
+<section class="final">
+  <div class="wrap">
+    <h2 data-i18n="f.h2">今日、あなたの<br>最初の AI を雇おう。</h2>
+    <p data-i18n="f.p">30 秒で、あなたの専門チームが動き出す。</p>
+    <div><a href="/auth.html?tab=signup" class="btn btn-primary btn-lg" data-i18n="f.btn">▶ 無料で始める</a></div>
+    <div class="scarcity" data-i18n="f.sc">🔥 Founder 100 · 残り 92 席 · 永年無料</div>
   </div>
 </section>
-
-<div class="cta-final">
-  <h2 data-i18n="cta.h">今日、あなたの最初の AI 社員を雇おう。</h2>
-  <p data-i18n="cta.p">クレジットカード不要、100 メッセージ無料。30 秒で「あなたの AI 会社」が立ち上がります。</p>
-  <a href="/auth.html?tab=signup" class="btn primary big" data-i18n="cta.btn">▶ 無料で AI を雇う</a>
-</div>
 
 <footer>
-  <div data-i18n="footer.tagline">© 2026 MY AI Agent · 個人開発者 · 1 人創業者のための AI チーム</div>
-  <div style="margin-top:8px">
-    <a id="footerTerms" href="/terms.html" data-i18n="footer.terms">利用規約</a> ·
-    <a id="footerPrivacy" href="/privacy.html" data-i18n="footer.privacy">プライバシー</a> ·
-    <a id="footerLegal" href="/legal.html" data-i18n="footer.legal">特商法</a> ·
-    <a id="footerContact" href="/contact.html" data-i18n="footer.contact">連絡先</a>
+  <div class="wrap foot-in">
+    <a href="/" class="logo"><span class="bars"><i></i><i></i><i></i></span> MY AI Agent</a>
+    <div class="foot-cp">© 2026 MY AI Agent</div>
   </div>
 </footer>
 
 <script>
-  // ── i18n dictionary (JP primary, EN secondary) ────────────
-  const I18N = {
-    ja: {
-      'nav.features':'機能','nav.pricing':'料金','nav.founder':'Founder 100','nav.store':'Agent Store',
-      'nav.login':'ログイン','nav.cta':'無料で始める',
-      'hero.eyebrow':'Founder 100 · 残り 92 席 · 永年無料',
-      'hero.title':'<span class="strike">AI を使う</span>時代から、<br>AI を<span class="pop">複数人雇う</span>時代へ。',
-      'hero.sub':'Slack のようなアプリで、<b>何人でも AI を採用</b>。<br>1 人とは DM、複数人ではチームで仕事を任せられます。',
-      'hero.cta1':'▶ 30 秒で最初の AI を雇う','hero.cta2':'デモを見る',
-      'hero.meta1':'100 メッセージ無料','hero.meta2':'クレジットカード不要','hero.meta3':'30 秒で開始','hero.meta4':'50 サービスに 1-クリック接続',
-      'hire.title':'あなたの AI チームを作ろう',
-      'hire.sub':'気になる AI を選んで「採用」を押す。すぐ DM できます。',
-      'hire.role.marketing':'広告 / SNS<br>KPI 分析',
-      'hire.role.sales':'商談メール<br>パイプライン',
-      'hire.role.designer':'LP / ロゴ<br>UI モック',
-      'hire.role.engineer':'実装 / レビュー<br>バグ調査',
-      'hire.role.pm':'進行管理<br>ロードマップ',
-      'hire.role.cfo':'経費分析<br>収支管理',
-      'hire.count':'人 採用中 · 残り席数 ∞',
-      'hire.start':'▶ チームを作る',
-      'hire.start.one':'▶ この AI と話す',
-      'hire.start.many':'▶ {n} 人のチームを作る',
-      'hire.alert.title':'採用しました!',
-      'hire.alert.tail':'(サインアップに進みます)',
-      'sb.home':'ホーム','sb.search':'検索…','sb.teams':'Teams','sb.dms':'DMs',
-      'sb.team.pv':'4 AI · @marketing が考えてます',
-      'sb.designer.pv':'✓✓ ピーチ系で OK',
-      'sb.marketing.pv':'📈 CVR が下がっています',
-      'sb.sales.pv':'明日の商談、準備OK',
-      'ch.live':'🟢 4 AI 在席','ch.today':'今日','ch.you':'あなた','ch.you-initial':'あ',
-      'ch.msg1':'新しい LP のヘッドライン考えたい。SaaS 向けで A/B テスト 3 案ほしい',
-      'ch.msg2':'整理させてください。今の LP の CTR は <b>1.8%</b>、目標は 3%。<span class="ment">@marketing</span> 響くコピー軸、<span class="ment">@designer</span> ビジュアル軸でそれぞれ提案を。',
-      'ch.msg3':'3 軸提案: ① 数字直撃「<b>20 分で SaaS</b>」 ② 痛みフック「<b>ペルソナ、まだ手書き?</b>」 ③ Before/After「<b>30 タスク → 1 つの会話</b>」 <span class="ment">@designer</span> 試案お願いします',
-      'ch.msg4':'①と③推し。<b>大きな数字 + 1 枚画像</b> がスクロール率最高。<span class="ment">@engineer</span> A/B テスト 1 時間で実装できる?',
-      'ch.msg5':'可能。GrowthBook で 1 時間以内に 3 ルート切れます。Hero h1 にデータ属性振ってください。',
-      'ch.tool':'✓ 🎨 デザインを生成',
-      'ch.threads':'💬 2 件の返信',
-      'ch.placeholder':'メッセージを入力…',
-      'ch.hint.send':'送信','ch.hint.newline':'改行','ch.hint.cmd':'コマンド','ch.hint.mention':'メンション',
-      'feat.eye':'なぜ "雇う" のか',
-      'feat.h2':'ChatGPT は質問する。<br>MY AI Agent は <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">雇う</span>。',
-      'feat.sub':'1 つの AI と毎回ゼロから話すのは、もう古い。役職と記憶を持つ AI を複数人、チームで雇える。',
-      'feat.f1.h':'記憶する AI','feat.f1.p':'会話するほど、あなたの事業・目標・好みを学習。3 回目の会話から「前回の続きやりますか?」と言える AI。',
-      'feat.f2.h':'AI 同士が議論する','feat.f2.p':'「@all」と書けば、チームの全員が順番に意見を出して結論を出す。1 人の AI じゃ気づかない視点を集約。',
-      'feat.f3.h':'KPI を追う AI','feat.f3.p':'「月商 100 万」「CVR 3%」など目標を持つと、雑談じゃなく業務になる。週次レポートも自動。',
-      'feat.f4.h':'50 サービス連携','feat.f4.p':'GitHub / Google / Slack / Notion / Stripe / X など 50+ サービスに 1 クリック接続。Zapier 経由で 5,000+ サービスにも対応。',
-      'intg.eye':'🔌 連携',
-      'intg.h2':'50 サービスに <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">1 クリック</span> で接続。',
-      'intg.sub':'OAuth ・ API キー ・ MCP ・ Zapier を統一 UI で。<br>AI に「Slack に投稿」「Sheets に追記」と頼むだけ。',
-      'intg.f1.t':'公式 OAuth','intg.f1.d':'GitHub・Google・X など主要サービスは 1 クリックで認証完了。',
-      'intg.f2.t':'API キー','intg.f2.d':'WordPress・Stripe・Notion・Airtable など、貼り付けるだけで連携。',
-      'intg.f3.t':'Zapier 経由','intg.f3.d':'残り 5,000+ サービスも Zapier を介して接続可能。',
-      'feat.f5.h':'24 時間働く','feat.f5.p':'「毎朝 9 時に競合チェック」「金曜に週次レポート」など、寝てる間に AI が仕事を進めてる状態。',
-      'feat.f6.h':'AI を売れる','feat.f6.p':'自分が育てた AI を Agent Store で販売。利用料の 70-100% (Founder は) があなたの収益に。',
-      'steps.eye':'3 ステップ','steps.h2':'30 秒であなたの AI 会社を作ろう',
-      'steps.s1.h':'AI を採用する','steps.s1.p':'役職を選んで、名前と業務内容を入れるだけ。Marketing AI、Designer AI、Engineer AI… 何人でも作れます。',
-      'steps.s2.h':'DM またはチーム結成','steps.s2.p':'1 人とサシで話すなら DM。複数人で議論させたいなら Team を作って @all。Slack 感覚で使えます。',
-      'steps.s3.h':'仕事を任せる','steps.s3.p':'「LP 作って」「メール 5 通書いて」と振るだけ。生成だけじゃなく、実際にメール送信や SNS 投稿まで実行。',
-      'founder.h':'Founder 100 · 最初の 100 人だけの特典',
-      'founder.p':'<b>30 日 BUSINESS プラン無料</b> ・ 永年 Store 手数料 0% (通常 10%) ・ LP に Founder バッジ表示',
-      'founder.seats':'残り席数',
-      'pricing.eye':'料金',
-      'pricing.h2':'まず <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">無料で試す</span>。気に入ったらアップグレード。',
-      'pricing.sub':'クレジットカード不要・いつでも解約 OK',
-      'pricing.per':'/月',
-      'pricing.free.noCard':'💳 クレジットカード不要',
-      'pricing.free.credit':'100 メッセージ無料',
-      'pricing.free.who':'こんな人向け',
-      'pricing.free.f1':'まず試したい・お小遣い感覚で使う','pricing.free.f2':'AI 3 人まで採用','pricing.free.f3':'記憶 / KPI / プレイブック','pricing.free.f4':'Agent Store で AI 購入','pricing.free.f5':'50 サービス連携 (Zapier 込)',
-      'pricing.free.cta':'▶ 30 秒で無料登録',
-      'pricing.pro.bonus':'🎁 Founder 100 特典 → 最初 30 日 Business 無料',
-      'pricing.pro.credit':'$15 クレジット / 月 (= 約 1,500 メッセージ)',
-      'pricing.pro.who':'こんな人向け',
-      'pricing.pro.f0':'本業で AI チームを組みたい個人開発者','pricing.pro.f1':'AI <b>無制限</b> 採用','pricing.pro.f2':'チーム機能 + Team Huddle','pricing.pro.f3':'⏰ スケジュール自動実行','pricing.pro.f4':'📧 メール / Slack / Sheets 連携','pricing.pro.f5':'🏪 Agent Store 出品 (収益化)',
-      'pricing.pro.cta':'▶ Pro で始める',
-      'pricing.biz.tag':'SaaS 運営者・SMB 向け',
-      'pricing.biz.credit':'$45 クレジット / 月 (= 約 4,500 メッセージ)',
-      'pricing.biz.who':'こんな人向け',
-      'pricing.biz.f0':'事業で重要業務を AI に任せたい','pricing.biz.f1':'Pro の全機能','pricing.biz.f2':'🧠 <b>Opus 4.7</b> (最高性能モデル)','pricing.biz.f3':'🔌 Webhook / API 連携','pricing.biz.f4':'⚡ 優先サポート (24h 以内)','pricing.biz.f5':'🏪 Store 手数料 5% (Pro: 10%)',
-      'pricing.biz.cta':'▶ Business を始める',
-      'faq.q1':'❓ クレジットを使い切ったら?','faq.a1':'AI が動かなくなるだけで、データは消えません。$5 単位で随時チャージ可。',
-      'faq.q2':'❓ いつでも解約できる?','faq.a2':'はい。設定 → プラン → 解約 をクリックするだけ。違約金なし。',
-      'faq.q3':'❓ 課金で何が変わる?','faq.a3':'月額クレジット = メッセージ数の上限。Pro 以上で AI 無制限・スケジュール・Store 出品が解放されます。',
-      'faq.q4':'❓ Founder 100 は何?','faq.a4':'最初の 100 人だけ「Business 30 日無料 + Store 手数料 0% 永年」。残席カウントダウン中。',
-      'cta.h':'今日、あなたの最初の AI 社員を雇おう。',
-      'cta.p':'クレジットカード不要、100 メッセージ無料。30 秒で「あなたの AI 会社」が立ち上がります。',
-      'cta.btn':'▶ 無料で AI を雇う',
-      'footer.tagline':'© 2026 MY AI Agent · 個人開発者 · 1 人創業者のための AI チーム',
-      'footer.terms':'利用規約','footer.privacy':'プライバシー','footer.legal':'特商法','footer.contact':'連絡先',
-    },
-    en: {
-      'nav.features':'Features','nav.pricing':'Pricing','nav.founder':'Founder 100','nav.store':'Agent Store',
-      'nav.login':'Log in','nav.cta':'Start free',
-      'hero.eyebrow':'Founder 100 · 92 seats left · Free forever',
-      'hero.title':'From <span class="strike">using AI</span><br>to <span class="pop">hiring AI teams</span>.',
-      'hero.sub':'A Slack-style app where you can <b>hire as many AIs as you want</b>.<br>DM one, build a team with several. Delegate work like to coworkers.',
-      'hero.cta1':'▶ Hire your first AI in 30s','hero.cta2':'Watch demo',
-      'hero.meta1':'100 free messages','hero.meta2':'No credit card','hero.meta3':'30-second setup','hero.meta4':'1-click to 50+ services',
-      'hire.title':'Build your AI team',
-      'hire.sub':'Tap an AI to hire it. DM them instantly.',
-      'hire.role.marketing':'Ads / Social<br>KPI analytics',
-      'hire.role.sales':'Sales emails<br>Pipeline ops',
-      'hire.role.designer':'LP / Logo<br>UI mockups',
-      'hire.role.engineer':'Code review<br>Bug hunting',
-      'hire.role.pm':'Roadmap<br>Coordination',
-      'hire.role.cfo':'Expense audit<br>P&L review',
-      'hire.count':'hired · ∞ seats available',
-      'hire.start':'▶ Build the team',
-      'hire.start.one':'▶ Chat with this AI',
-      'hire.start.many':'▶ Build a team of {n}',
-      'hire.alert.title':'Hired!',
-      'hire.alert.tail':'(Redirecting to sign-up)',
-      'sb.home':'Home','sb.search':'Search…','sb.teams':'Teams','sb.dms':'DMs',
-      'sb.team.pv':'4 AI · @marketing is thinking',
-      'sb.designer.pv':'✓✓ Peach it is',
-      'sb.marketing.pv':'📈 CVR is dropping',
-      'sb.sales.pv':'Tomorrow\'s meeting ready',
-      'ch.live':'🟢 4 AI online','ch.today':'Today','ch.you':'You','ch.you-initial':'Y',
-      'ch.msg1':'Need a new LP headline. SaaS audience, give me 3 A/B options',
-      'ch.msg2':'Let me frame it. Current CTR is <b>1.8%</b>, target 3%. <span class="ment">@marketing</span> hook angles, <span class="ment">@designer</span> visual takes — both please.',
-      'ch.msg3':'3 axes: ① numbers-first "<b>20 minutes to SaaS</b>" ② pain hook "<b>still building personas by hand?</b>" ③ before/after "<b>30 tasks → 1 conversation</b>". <span class="ment">@designer</span> mockup please',
-      'ch.msg4':'Going with ① and ③. <b>Big number + single image</b> wins scroll depth. <span class="ment">@engineer</span> can you ship A/B in an hour?',
-      'ch.msg5':'Done. GrowthBook for 3 routes in under an hour. Need a data attribute on the Hero h1.',
-      'ch.tool':'✓ 🎨 Designing',
-      'ch.threads':'💬 2 replies',
-      'ch.placeholder':'Message…',
-      'ch.hint.send':'send','ch.hint.newline':'newline','ch.hint.cmd':'commands','ch.hint.mention':'mention',
-      'feat.eye':'Why "hire"',
-      'feat.h2':'ChatGPT asks.<br>MY AI Agent <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">hires</span>.',
-      'feat.sub':'Starting every conversation from scratch is over. Hire AIs with roles and memory — as many as you want, as a team.',
-      'feat.f1.h':'AI that remembers','feat.f1.p':'Learns your business, goals, and preferences over time. By the third chat: "Want to pick up where we left off?"',
-      'feat.f2.h':'AIs debate each other','feat.f2.p':'Type @all and the whole team chimes in turn by turn — perspectives one AI alone would miss.',
-      'feat.f3.h':'AIs that chase KPIs','feat.f3.p':'Set goals like "MRR 1M" or "CVR 3%" and chats become work, not banter. Weekly reports automatic.',
-      'feat.f4.h':'50+ integrations','feat.f4.p':'GitHub / Google / Slack / Notion / Stripe / X — 50+ services with 1-click connect. Plus 5,000+ more via Zapier.',
-      'intg.eye':'🔌 Integrations',
-      'intg.h2':'<span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">1-click</span> to 50 services.',
-      'intg.sub':'OAuth · API keys · MCP · Zapier in one unified UI.<br>Just say "post to Slack" or "add to Sheets" — done.',
-      'intg.f1.t':'Official OAuth','intg.f1.d':'GitHub, Google, X and other major services — 1 click to authorize.',
-      'intg.f2.t':'API keys','intg.f2.d':'WordPress, Stripe, Notion, Airtable — paste your key and you\'re done.',
-      'intg.f3.t':'via Zapier','intg.f3.d':'5,000+ remaining services covered via Zapier bridge.',
-      'feat.f5.h':'Works 24/7','feat.f5.p':'"Check competitors every 9 AM", "Friday weekly report". Your AI keeps shipping while you sleep.',
-      'feat.f6.h':'Sell your AIs','feat.f6.p':'List your trained agents on the Agent Store. Keep 70-100% of usage revenue (Founder tier).',
-      'steps.eye':'3 steps','steps.h2':'Build your AI company in 30 seconds',
-      'steps.s1.h':'Hire an AI','steps.s1.p':'Pick a role, give them a name and a job description. Marketing AI, Designer AI, Engineer AI… as many as you want.',
-      'steps.s2.h':'DM or form a team','steps.s2.p':'1-on-1 chat? Use DM. Multi-AI brainstorm? Build a Team and @all. Slack-style.',
-      'steps.s3.h':'Delegate the work','steps.s3.p':'"Build a landing page", "Write 5 emails" — they generate AND execute (send, post, schedule).',
-      'founder.h':'Founder 100 · Perks reserved for the first 100',
-      'founder.p':'<b>30-day BUSINESS plan free</b> · 0% Store fees forever (normally 10%) · Founder badge on the public LP',
-      'founder.seats':'SEATS LEFT',
-      'pricing.eye':'Pricing',
-      'pricing.h2':'Start <span style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;color:transparent">free</span>. Upgrade when you love it.',
-      'pricing.sub':'No credit card · Cancel anytime',
-      'pricing.per':'/mo',
-      'pricing.free.noCard':'💳 No credit card',
-      'pricing.free.who':'For',
-      'pricing.free.f5':'50+ integrations (incl. Zapier)',
-      'pricing.pro.bonus':'🎁 Founder 100 bonus → first 30 days Business free',
-      'pricing.pro.who':'For',
-      'pricing.pro.f0':'Indie devs building an AI team for real',
-      'pricing.biz.tag':'SaaS operators / SMB',
-      'pricing.biz.who':'For',
-      'pricing.biz.f0':'Run mission-critical work on AI',
-      'faq.q1':'❓ What if I burn through credits?','faq.a1':'AI stops working until you recharge — your data stays. Top up any amount, any time.',
-      'faq.q2':'❓ Can I cancel anytime?','faq.a2':'Yes. Settings → Plan → Cancel. No fees, no questions.',
-      'faq.q3':'❓ What changes with a paid plan?','faq.a3':'Monthly credits = message ceiling. Pro+ unlocks unlimited AI, scheduled runs, and Store listing.',
-      'faq.q4':'❓ What is Founder 100?','faq.a4':'First 100 signups get 30-day Business free + 0% Store fees forever. Live seat counter.',
-      'pricing.free.credit':'100 free messages',
-      'pricing.free.f1':'Hire up to 3 AIs','pricing.free.f2':'1 DM chat','pricing.free.f3':'Memory / KPI / Playbook','pricing.free.f4':'Browse Agent Store',
-      'pricing.free.cta':'Start free',
-      'pricing.pro.credit':'$15 credit / mo',
-      'pricing.pro.f1':'<b>Unlimited</b> AI hires','pricing.pro.f2':'Team features (Team Huddle)','pricing.pro.f3':'Integrations (Slack / Sheets / Gmail)','pricing.pro.f4':'Scheduled jobs','pricing.pro.f5':'List on Agent Store',
-      'pricing.pro.cta':'Start Pro',
-      'pricing.biz.credit':'$45 credit / mo',
-      'pricing.biz.f1':'Everything in Pro','pricing.biz.f2':'Opus 4.7 (top-tier model)','pricing.biz.f3':'Webhook / API access','pricing.biz.f4':'Priority support','pricing.biz.f5':'Store fees 5% (normally 10%)',
-      'pricing.biz.cta':'Start Business',
-      'cta.h':'Hire your first AI employee today.',
-      'cta.p':'No credit card. 100 messages free. Your AI company is live in 30 seconds.',
-      'cta.btn':'▶ Hire AI for free',
-      'footer.tagline':'© 2026 MY AI Agent · An AI team for solo founders and indie hackers',
-      'footer.terms':'Terms','footer.privacy':'Privacy','footer.legal':'Legal','footer.contact':'Contact',
-    },
+  // ── JP / EN toggle ──────────────────────────────────────────
+  // The Japanese copy lives inline (default). English is in the dict
+  // below. On first run we snapshot the JA innerHTML so the toggle
+  // can swap both ways. HTML attributes inside dict values use single
+  // quotes so the double-quoted JS strings stay clean.
+  var I18N_EN = {
+    "nav.login": "Log in",
+    "nav.cta": "Get started free",
+    "hero.h1": "Stop <span class='strike'>using</span> AI.<br><span class='pop'>Hire a team</span> of them.",
+    "hero.sub": "Hire as many specialist AIs as you want — in a Slack-style app.<br>Then just delegate.",
+    "hero.cta": "▶ Start free in 30 seconds",
+    "hero.note": "<b>100 messages free</b> ・ No credit card ・ 30-second setup",
+    "h.search": "Search…",
+    "h.cat.dash": "📊 Dashboard",
+    "h.home": "Home",
+    "h.cat.agents": "🤖 AI Agents",
+    "h.cat.teams": "🎯 Teams",
+    "h.ua": "K",
+    "h.user": "Kota Yamada",
+    "h.greet": "Welcome back, Kota 🍑",
+    "h.now": "Sat, May 10 ・ 21:00",
+    "h.subg": "1-on-1 with an AI ・ Groups with friends + AI ・ AI teams that automate whole workflows",
+    "h.qc1t": "Create an AI",
+    "h.qc1p": "Build your own dedicated AI, one at a time.",
+    "h.qc2t": "Create an AI Team",
+    "h.qc2p": "Describe a goal — AI assembles the team.",
+    "h.qc3p": "Buy or download AIs from other creators.",
+    "h.actt": "Recent activity",
+    "h.act1": "<b>Sales Agent</b> created a competitor analysis report",
+    "h.act1w": "2m ago",
+    "h.act2": "<b>EC Launch Team</b> completed a workflow",
+    "h.act2w": "1h ago",
+    "h.act3": "<b>SEO Writer</b> finished 3 articles",
+    "h.act3w": "3h ago",
+    "h.act4": "<b>X Auto-Ops</b> scheduled 5 posts",
+    "h.act4w": "5h ago",
+    "h.act5": "<b>Growth</b> leveled up to Lv.8",
+    "h.act5w": "Yesterday",
+    "st.h": "Hire → Delegate → Strengthen → Deliver",
+    "st.sub": "No complex setup. Just 4 steps.",
+    "st.hire": "Hire",
+    "st.hire2": "Hire",
+    "st1.h": "Hire",
+    "st1.p": "Pick a specialist AI and hire it — as many as you want.",
+    "st2.m1": "<b>You</b>Research 3 competitors and summarize them",
+    "st2.m2": "<b>Sales Agent</b>On it — researching now and writing a report 🔍",
+    "st2.h": "Delegate",
+    "st2.p": "Just hand off the work in chat.",
+    "st3.nm": "Growth<small>Analytics</small>",
+    "st3.xp": "XP",
+    "st3.xpn": "140 XP to Lv.8",
+    "st3.c1": "🔍 Research <b>Master</b>",
+    "st3.c2": "📊 Analytics <b>Skilled</b>",
+    "st3.h": "Strengthen",
+    "st3.p": "Your AI grows as you use it — and remembers more.",
+    "st4.a1": "New Product LP",
+    "st4.a2": "Competitor Report",
+    "st4.h": "Deliver",
+    "st4.p": "Sites and reports — delivered as finished work.",
+    "f.h2": "Hire your first AI<br>today.",
+    "f.p": "Your specialist team starts working in 30 seconds.",
+    "f.btn": "▶ Get started free",
+    "f.sc": "🔥 Founder 100 · 92 seats left · Free forever"
   };
-  // Footer href map (legal pages have a JP / EN version pair)
-  const LEGAL_HREF = {
-    ja: { footerTerms:'/terms.html', footerPrivacy:'/privacy.html', footerLegal:'/legal.html', footerContact:'/contact.html' },
-    en: { footerTerms:'/terms-en.html', footerPrivacy:'/privacy-en.html', footerLegal:'/legal-en.html', footerContact:'/contact-en.html' },
-  };
-  let CUR_LANG = (function(){
-    // 1) honor explicit user selection
-    try {
-      const stored = localStorage.getItem('mya_lang');
-      if(stored === 'ja' || stored === 'en') return stored;
-    } catch(e){}
-    // 2) default to JP (primary audience); only fall to EN if the browser
-    //    declares an English locale and no Japanese fallback exists
-    try {
-      const langs = (navigator.languages || [navigator.language || '']).map(String);
-      const hasJa = langs.some(l => l.toLowerCase().startsWith('ja'));
-      if(hasJa) return 'ja';
-      const hasEn = langs.some(l => l.toLowerCase().startsWith('en'));
-      return hasEn ? 'en' : 'ja';
-    } catch(e){ return 'ja'; }
-  })();
-  // EN-only legal section ("特商法") doesn't have an equivalent in EN → hide that link when EN
+  var I18N_JA = {};
+  var curLang = 'ja';
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    I18N_JA[el.getAttribute('data-i18n')] = el.innerHTML;
+  });
   function setLang(lang){
-    if(lang !== 'ja' && lang !== 'en') lang = 'ja';
-    CUR_LANG = lang;
-    try { localStorage.setItem('mya_lang', lang); } catch(e){}
-    document.documentElement.lang = lang;
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      const k = el.dataset.i18n;
-      const v = (I18N[lang] && I18N[lang][k]) || (I18N.ja[k]);
-      if(v == null) return;
-      if(el.hasAttribute('data-i18n-html')) el.innerHTML = v;
-      else el.textContent = v;
+    curLang = lang;
+    var dict = (lang === 'en') ? I18N_EN : I18N_JA;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var v = dict[el.getAttribute('data-i18n')];
+      if(v != null) el.innerHTML = v;
     });
-    // Toggle visual
-    document.getElementById('langJa').classList.toggle('on', lang === 'ja');
-    document.getElementById('langEn').classList.toggle('on', lang === 'en');
-    // Legal links (different URLs per lang)
-    const href = LEGAL_HREF[lang];
-    if(href){
-      ['footerTerms','footerPrivacy','footerLegal','footerContact'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el && href[id]) el.setAttribute('href', href[id]);
-      });
-    }
-    // EN doesn't have 特商法 (Japan-only law) → hide that link
-    const legalLink = document.getElementById('footerLegal');
-    if(legalLink) legalLink.style.display = lang === 'en' ? 'none' : '';
-    updateHireBtn();
+    document.documentElement.lang = lang;
+    var btn = document.getElementById('langBtn');
+    if(btn) btn.textContent = (lang === 'en') ? '日本語' : 'EN';
   }
-  function t(k){ return (I18N[CUR_LANG] && I18N[CUR_LANG][k]) || I18N.ja[k] || k; }
-
-  // ── Interactive hire demo ─────────────────────────────
-  function toggleHire(el){
-    el.classList.toggle('hired');
-    updateHireBtn();
-  }
-  function updateHireBtn(){
-    const all = document.querySelectorAll('.ai-card.hired');
-    document.getElementById('hireCnt').textContent = all.length;
-    const btn = document.getElementById('hireStartBtn');
-    btn.disabled = all.length === 0;
-    btn.textContent = all.length === 0
-      ? t('hire.start')
-      : (all.length === 1 ? t('hire.start.one') : t('hire.start.many').replace('{n}', all.length));
-  }
-  function startHired(){
-    const hired = [...document.querySelectorAll('.ai-card.hired')].map(c => ({
-      name: c.querySelector('.ai-name').textContent,
-      role: c.dataset.role,
-    }));
-    if(!hired.length) return;
-    // Persist the selected roles so signup can prefill team
-    try { localStorage.setItem('pendingHire', JSON.stringify(hired.map(h => h.role))); } catch(e){}
-    // Redirect to signup, passing the hired roles as query param for prefill
-    const roles = hired.map(h => encodeURIComponent(h.role)).join(',');
-    location.href = '/auth.html?tab=signup&hire=' + roles;
-  }
-
-  setLang(CUR_LANG);
-
-  // ── Founder 100 — live seat counter ────────────────────────
-  // Pulls remaining seats from /api/founder/status. Updates both the hero
-  // eyebrow pill and the Pricing section's big seats card. Auto-polls every
-  // 60s so newly-claimed seats are reflected without a reload.
-  async function _refreshFounderSeats(){
-    try {
-      const r = await fetch('/api/founder/status', { cache: 'no-store' });
-      if(!r.ok) return;
-      const d = await r.json();
-      const remaining = (d && Number.isFinite(d.remaining)) ? d.remaining : null;
-      const total = (d && d.total) || 100;
-      const soldOut = !!(d && d.sold_out);
-      if(remaining == null) return;
-      // Update the pricing section big counter
-      const seatsEl = document.getElementById('founderSeatsLP');
-      if(seatsEl){
-        seatsEl.textContent = soldOut ? '0' : String(remaining);
-        // Visual urgency: red when ≤ 10
-        seatsEl.style.color = remaining <= 10 ? '#dc2626' : '';
-      }
-      // Update the hero eyebrow pill (replace the static text)
-      const heroEbEl = document.querySelector('[data-i18n="hero.eyebrow"]');
-      if(heroEbEl){
-        const tagJa = soldOut
-          ? '🔥 Founder 100 完売 · ウェイトリスト受付中'
-          : (remaining <= 10
-              ? '🔥 ラスト '+remaining+' 席 · Founder 100 永年無料'
-              : 'Founder 100 · 残り '+remaining+' 席 · 永年無料');
-        const tagEn = soldOut
-          ? '🔥 Founder 100 sold out · Waitlist open'
-          : (remaining <= 10
-              ? '🔥 Last '+remaining+' seats · Founder 100 perks forever'
-              : 'Founder 100 · '+remaining+' seats left · Free forever');
-        heroEbEl.textContent = (CUR_LANG === 'en') ? tagEn : tagJa;
-      }
-    } catch(e){
-      // Silent fail — keep the placeholder "—" rather than breaking the page.
-    }
-  }
-  _refreshFounderSeats();
-  setInterval(_refreshFounderSeats, 60000);
+  function toggleLang(){ setLang(curLang === 'en' ? 'ja' : 'en'); }
 </script>
 
 </body>

@@ -12515,7 +12515,10 @@ async function handleAPI(req,res,pathname,method,ip){
     const restored = art.versions[_vi];
     art.html = String((restored && restored.html) || '');
     art.versions = art.versions.slice(0, _vi);   // drop the restored snapshot + any newer ones
-    art.version = art.versions.length + 1;
+    // version は「累積の変更回数」を表す単調増加カウンタ。ロールバックも 1 つの
+    // 変更とみなして +1 する。以前は versions.length+1 にしていたため、3 版
+    // キャップにより Ver.26 が一気に Ver.3 等へ潰れていた（番号破壊バグ）。
+    art.version = (art.version || 1) + 1;
     art.updated_at = new Date().toISOString();
     art.size = Buffer.byteLength(art.html, 'utf8');
     try { fs.writeFileSync(path.join(GENERATED_DIR, fn), art.html, 'utf8'); } catch(e){}

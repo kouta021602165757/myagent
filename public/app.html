@@ -1885,11 +1885,11 @@ html[data-theme="dark"] .mention-row:hover, html[data-theme="dark"] .mention-row
 .composer-attach-strip .att-chip .x{background:none;border:0;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;}
 
 /* ── Edit-target chip 「このサイトを編集」 ───────────────────── */
-#editChipWrap{display:none;align-items:center;gap:8px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.32);border-radius:10px;padding:7px 9px 7px 11px;margin-bottom:9px;}
-#editChipWrap .ec-ic{font-size:14px;flex-shrink:0;}
-#editChipWrap .ec-label{font-size:9.5px;font-weight:800;letter-spacing:.05em;color:var(--peach-dark);background:#fff;border:1px solid rgba(251,146,60,.4);padding:2px 7px;border-radius:6px;flex-shrink:0;}
-#editChipWrap .ec-name{font-size:13px;font-weight:800;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#editChipWrap .ec-x{width:24px;height:24px;border-radius:50%;border:0;cursor:pointer;background:rgba(234,88,12,.13);color:var(--peach-dark);font-size:11px;flex-shrink:0;}
+.ec-wrap{display:none;align-items:center;gap:8px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.32);border-radius:10px;padding:7px 9px 7px 11px;margin-bottom:9px;}
+.ec-wrap .ec-ic{font-size:14px;flex-shrink:0;}
+.ec-wrap .ec-label{font-size:9.5px;font-weight:800;letter-spacing:.05em;color:var(--peach-dark);background:#fff;border:1px solid rgba(251,146,60,.4);padding:2px 7px;border-radius:6px;flex-shrink:0;}
+.ec-wrap .ec-name{font-size:13px;font-weight:800;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ec-wrap .ec-x{width:24px;height:24px;border-radius:50%;border:0;cursor:pointer;background:rgba(234,88,12,.13);color:var(--peach-dark);font-size:11px;flex-shrink:0;}
 .composer.editing{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.14),0 1px 3px rgba(0,0,0,.04);}
 .m-artifact-card-edit{background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.34);color:var(--peach-dark);font-size:11px;font-weight:800;padding:5px 9px;border-radius:7px;cursor:pointer;font-family:inherit;flex-shrink:0;}
 
@@ -3066,7 +3066,7 @@ body{color:#f0f0f8;}
           <!-- Claude-style composer -->
           <div class="composer" style="position:relative">
             <input type="file" id="imgInput" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
-            <div id="editChipWrap"></div>
+            <div id="editChipWrap" class="ec-wrap"></div>
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
             <div id="mentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>
@@ -9061,7 +9061,7 @@ function _md(src){
       +   '<div class="m-artifact-card-ti">'+safeAlt+'</div>'
       +   '<div class="m-artifact-card-url">'+safeSrc+'</div>'
       + '</div>'
-      + (_afIsArtifact ? '<button class="m-artifact-card-edit" onclick="event.preventDefault();event.stopPropagation();_setEditTarget(\''+_afName+'\',\''+_afTitleArg+'\')" title="このサイトを編集">✏️ 編集</button>' : '')
+      + (_afIsArtifact ? '<button class="m-artifact-card-edit" onclick="event.preventDefault();event.stopPropagation();_setEditTarget(\''+_afName+'\',\''+_afTitleArg+'\',_ecWhich(this))" title="このサイトを編集">✏️ 編集</button>' : '')
       + '<button class="m-artifact-card-copy" onclick="event.preventDefault();event.stopPropagation();navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(()=>{this.textContent=\'✓\';setTimeout(()=>this.textContent=\'📋\',1200)})" title="URL コピー">📋</button>'
       + '<span class="m-artifact-card-cta">新タブで開く ↗</span>'
       + '</a>';
@@ -11781,31 +11781,47 @@ function _fmtBytes(n){
 // chip and the next message(s) are routed (server-side) to edit that EXACT
 // file — the AI never has to guess among similar artifacts. Sticky: stays
 // until the user clicks ✕, so consecutive tweaks to one site just work.
-var _editTarget = null;  // { filename, title }
-function _setEditTarget(filename, title){
+// Edit-target is per-composer: the main chat and the thread drawer each keep
+// their own, so pressing ✏️編集 on an artifact inside a thread targets the
+// thread composer (not the main one). `which` = 'main' | 'thread'.
+var _editTarget = null;        // main composer { filename, title }
+var _editTargetThread = null;  // thread drawer composer { filename, title }
+// Which composer is an element in — used by artifact-card edit buttons that
+// render identically in the main chat and inside the thread drawer.
+function _ecWhich(el){
+  return (el && el.closest && el.closest('#threadDrawer')) ? 'thread' : 'main';
+}
+function _setEditTarget(filename, title, which){
   if(!filename) return;
-  _editTarget = { filename: String(filename), title: String(title || filename) };
-  _renderEditChip();
-  var ci = document.getElementById('ci');
+  which = which || 'main';
+  var tgt = { filename: String(filename), title: String(title || filename) };
+  if(which === 'thread') _editTargetThread = tgt; else _editTarget = tgt;
+  _renderEditChip(which);
+  var ci = document.getElementById(which === 'thread' ? 'tci' : 'ci');
   if(ci){
-    ci.placeholder = isJa ? ('「'+_editTarget.title+'」をどう変えますか？')
-                          : ('How should I change "'+_editTarget.title+'"?');
+    ci.placeholder = isJa ? ('「'+tgt.title+'」をどう変えますか？')
+                          : ('How should I change "'+tgt.title+'"?');
     try{ ci.focus(); }catch(e){}
   }
-  try{ showToast(L('「'+_editTarget.title+'」の編集モード','Editing: '+_editTarget.title),'ok'); }catch(e){}
+  try{ showToast(L('「'+tgt.title+'」の編集モード','Editing: '+tgt.title),'ok'); }catch(e){}
 }
-function _clearEditTarget(){
-  _editTarget = null;
-  _renderEditChip();
-  var ci = document.getElementById('ci');
-  if(ci) ci.placeholder = isJa ? '何をお願いしますか？ (ファイルや URL もドロップで添付可)'
-                               : 'What can I help with?';
+function _clearEditTarget(which){
+  which = which || 'main';
+  if(which === 'thread') _editTargetThread = null; else _editTarget = null;
+  _renderEditChip(which);
+  var ci = document.getElementById(which === 'thread' ? 'tci' : 'ci');
+  if(ci) ci.placeholder = (which === 'thread')
+    ? (isJa ? 'このスレッドに返信… (Shift+Enter で改行)' : 'Reply in thread… (Shift+Enter for newline)')
+    : (isJa ? '何をお願いしますか？ (ファイルや URL もドロップで添付可)' : 'What can I help with?');
 }
-function _renderEditChip(){
-  var wrap = document.getElementById('editChipWrap');
-  var comp = document.querySelector('.composer');
+function _renderEditChip(which){
+  which = which || 'main';
+  var isThread = which === 'thread';
+  var wrap = document.getElementById(isThread ? 'editChipWrapThread' : 'editChipWrap');
+  var comp = isThread ? document.getElementById('threadComposer') : document.querySelector('.composer');
+  var tgt = isThread ? _editTargetThread : _editTarget;
   if(!wrap) return;
-  if(!_editTarget){
+  if(!tgt){
     wrap.style.display='none'; wrap.innerHTML='';
     if(comp) comp.classList.remove('editing');
     return;
@@ -11814,8 +11830,8 @@ function _renderEditChip(){
   wrap.innerHTML =
     '<span class="ec-ic">✏️</span>'
     + '<span class="ec-label">'+L('編集対象','EDITING')+'</span>'
-    + '<span class="ec-name">'+esc(_editTarget.title)+'</span>'
-    + '<button class="ec-x" onclick="_clearEditTarget()" title="'+L('編集をやめる','Stop editing')+'">✕</button>';
+    + '<span class="ec-name">'+esc(tgt.title)+'</span>'
+    + '<button class="ec-x" onclick="_clearEditTarget(\''+which+'\')" title="'+L('編集をやめる','Stop editing')+'">✕</button>';
   if(comp) comp.classList.add('editing');
 }
 
@@ -16470,6 +16486,7 @@ function _threadComposerHTML(){
   var ICON = 'width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
   return ''
   + '<div class="composer" id="threadComposer" style="position:relative">'
+  +   '<div id="editChipWrapThread" class="ec-wrap"></div>'
   +   '<input type="file" id="tImgInput" multiple style="display:none" onchange="onImgSelect(event,\'thread\')">'
   +   '<div class="composer-attach-strip" id="tImgPreviewWrap" style="display:none"></div>'
   +   '<div id="tSlashPalette" class="slash-palette" style="display:none" role="listbox"></div>'
@@ -16805,6 +16822,9 @@ async function _sendThreadReply(){
     var _body = { message: outbound, thread_parent_id: parentId, stream: true };
     if(imgs && imgs.length) _body.images = imgs;
     if(texts && texts.length) _body.texts = texts;
+    // Carry the thread composer's own edit target so "fix this site" inside a
+    // thread reaches the AI (the main composer's _editTarget is separate).
+    if(_editTargetThread && _editTargetThread.filename) _body.edit_target = _editTargetThread;
     var res = await fetch(API + '/api/chat/' + activeId, {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},

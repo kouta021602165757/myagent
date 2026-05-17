@@ -35,6 +35,13 @@
   .nav-in{display:flex; align-items:center; justify-content:space-between; height:64px}
   .logo{display:flex; align-items:center; gap:9px; font-weight:900; font-size:17px}
   .logo .mark{width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,var(--peach),var(--peach-d)); display:flex; align-items:center; justify-content:center; font-size:16px}
+  .nav-right{display:flex; align-items:center; gap:10px}
+  .lang-btn{
+    font-family:inherit; font-size:12.5px; font-weight:800; color:var(--ink2);
+    background:transparent; border:1px solid var(--wire2); border-radius:9px;
+    padding:8px 13px; cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  .lang-btn:hover{border-color:var(--peach); color:var(--peach-d)}
 
   /* buttons */
   .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; font-weight:800; border:0; border-radius:13px; cursor:pointer; transition:transform .16s cubic-bezier(.4,0,.2,1), box-shadow .16s}
@@ -48,7 +55,7 @@
   .hero h1{font-size:clamp(34px,6vw,62px); font-weight:900; letter-spacing:-.035em; line-height:1.16; animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
   .hero h1 .pop{background:linear-gradient(135deg,var(--peach),var(--peach-d)); -webkit-background-clip:text; background-clip:text; color:transparent}
   .hero h1 .strike{color:var(--ink3); text-decoration:line-through; text-decoration-thickness:3px}
-  .hero-sub{font-size:clamp(15px,2vw,18px); color:var(--ink2); margin:22px auto 0; max-width:560px; animation:rise .7s .08s cubic-bezier(.2,.7,.2,1) both}
+  .hero-sub{font-size:clamp(15px,2vw,18px); color:var(--ink2); margin:22px auto 0; max-width:580px; animation:rise .7s .08s cubic-bezier(.2,.7,.2,1) both}
   .hero-cta{margin-top:32px; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
   .hero-note{margin-top:14px; font-size:13px; color:var(--ink3); font-weight:600; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
   .hero-note b{color:var(--peach-d); font-weight:800}
@@ -61,7 +68,6 @@
     box-shadow:var(--shadow-lg); text-align:left; display:flex;
     animation:rise .85s .24s cubic-bezier(.2,.7,.2,1) both;
   }
-  /* sidebar */
   .h-sb{width:204px; flex-shrink:0; border-right:1px solid var(--wire); padding:14px 10px; display:flex; flex-direction:column}
   .h-brand{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:900; letter-spacing:.05em; padding:3px 6px 13px}
   .h-bars{display:flex; gap:2px; align-items:flex-end}
@@ -79,12 +85,10 @@
   .h-item .hnm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .h-badge{font-size:8.5px; font-weight:900; padding:1px 6px; border-radius:99px; color:#fff}
   .h-badge.dm{background:var(--t-dm)}
-  .h-badge.group{background:var(--t-group)}
   .h-badge.team{background:var(--t-team)}
   .h-user{margin-top:auto; display:flex; align-items:center; gap:8px; padding:11px 6px 2px; border-top:1px solid var(--wire); font-size:11.5px; font-weight:800}
   .h-user .ua{width:25px; height:25px; border-radius:6px; background:linear-gradient(135deg,var(--peach),var(--peach-d)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:11px}
   .h-user .gear{margin-left:auto; color:var(--ink3)}
-  /* main */
   .h-main{flex:1; min-width:0; padding:22px 24px; background:var(--bg)}
   .h-greet{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
   .h-greet h2{font-size:21px; font-weight:900; letter-spacing:-.02em}
@@ -129,7 +133,6 @@
   .step-txt h3{font-size:16px; font-weight:900; letter-spacing:-.01em}
   .step-txt p{font-size:11.5px; color:var(--ink2); line-height:1.6; margin-top:2px}
 
-  /* mini visual: 雇う (hire) */
   .mv-hire{display:flex; align-items:center; gap:9px; background:#fff; border:1px solid var(--wire); border-radius:10px; padding:8px 10px}
   .mv-hire .mh-av{width:30px; height:30px; border-radius:8px; background:var(--cream2); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0}
   .mv-hire .mh-info{flex:1; min-width:0}
@@ -137,14 +140,12 @@
   .mv-hire .mh-info small{font-size:10px; color:var(--ink3); font-weight:600}
   .mv-hire .mh-btn{font-size:11px; font-weight:900; color:#fff; background:linear-gradient(135deg,var(--peach),var(--peach-d)); padding:5px 12px; border-radius:8px; flex-shrink:0}
 
-  /* mini visual: 任せる (chat) */
   .mv-m{display:flex; gap:8px; align-items:flex-start}
   .mv-m .mm-av{width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#fff; background:linear-gradient(135deg,#fda85e,var(--peach-d))}
   .mv-m .mm-av.user{background:#241a12; font-size:11px}
   .mv-m .mm-bd{font-size:11.5px; line-height:1.5; color:var(--ink)}
   .mv-m .mm-bd b{font-weight:900; margin-right:5px}
 
-  /* mini visual: 強化 (level) */
   .mv-lv-top{display:flex; align-items:center; gap:9px}
   .mv-lv-av{width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#fda85e,var(--peach-d)); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0}
   .mv-lv-nm{flex:1; min-width:0; font-size:12.5px; font-weight:900}
@@ -157,7 +158,6 @@
   .mv-chips span{font-size:9.5px; font-weight:700; background:#fff; border:1px solid var(--wire); border-radius:99px; padding:3px 8px}
   .mv-chips b{color:var(--peach-d)}
 
-  /* mini visual: 成果 (artifact) */
   .mv-art{display:flex; gap:9px}
   .mv-art .ma-card{flex:1; background:#fff; border:1px solid var(--wire); border-radius:10px; overflow:hidden}
   .mv-art .ma-thumb{height:52px; padding:8px; display:flex; flex-direction:column; gap:3px; justify-content:center}
@@ -197,70 +197,73 @@
 <nav>
   <div class="wrap nav-in">
     <a href="#" class="logo"><span class="mark">🍑</span> MY AI Agent</a>
-    <a href="#" class="btn btn-primary btn-sm">無料で始める</a>
+    <div class="nav-right">
+      <button class="lang-btn" id="langBtn" onclick="toggleLang()">EN</button>
+      <a href="#" class="btn btn-primary btn-sm" data-i18n="nav.cta">無料で始める</a>
+    </div>
   </div>
 </nav>
 
 <!-- HERO -->
 <header class="hero">
   <div class="wrap">
-    <h1><span class="strike">AI を使う</span>時代から、<br>AI を<span class="pop">複数人雇う</span>時代へ。</h1>
-    <p class="hero-sub">
+    <h1 data-i18n="hero.h1"><span class="strike">AI を使う</span>時代から、<br>AI を<span class="pop">複数人雇う</span>時代へ。</h1>
+    <p class="hero-sub" data-i18n="hero.sub">
       Slack のようなアプリで、専門の AI を何人でも採用。<br>
       仕事は、任せるだけ。
     </p>
     <div class="hero-cta">
-      <a href="#" class="btn btn-primary btn-lg">▶ 30 秒で無料で始める</a>
+      <a href="#" class="btn btn-primary btn-lg" data-i18n="hero.cta">▶ 30 秒で無料で始める</a>
     </div>
-    <p class="hero-note"><b>100 メッセージ無料</b> ・ クレジットカード不要 ・ 30 秒で開始</p>
+    <p class="hero-note" data-i18n="hero.note"><b>100 メッセージ無料</b> ・ クレジットカード不要 ・ 30 秒で開始</p>
 
     <!-- product visual: HOME screen -->
     <div class="home">
       <aside class="h-sb">
         <div class="h-brand"><span class="h-bars"><i></i><i></i><i></i></span> MY AI AGENT</div>
-        <div class="h-search">🔍 <span>検索…</span><kbd>⌘K</kbd></div>
+        <div class="h-search">🔍 <span data-i18n="h.search">検索…</span><kbd>⌘K</kbd></div>
         <div class="h-new">＋ New</div>
-        <div class="h-cat">📊 ダッシュボード</div>
-        <div class="h-item on"><span class="hic">🏠</span><span class="hnm">ホーム</span></div>
-        <div class="h-cat">🤖 AI エージェント</div>
+        <div class="h-cat" data-i18n="h.cat.dash">📊 ダッシュボード</div>
+        <div class="h-item on"><span class="hic">🏠</span><span class="hnm" data-i18n="h.home">ホーム</span></div>
+        <div class="h-cat" data-i18n="h.cat.agents">🤖 AI エージェント</div>
         <div class="h-item"><span class="hic">💼</span><span class="hnm">Sales Agent</span><span class="h-badge dm">DM</span></div>
         <div class="h-item"><span class="hic">📝</span><span class="hnm">SEO Writer</span><span class="h-badge dm">DM</span></div>
         <div class="h-item"><span class="hic">🐦</span><span class="hnm">X Auto-Ops</span><span class="h-badge dm">DM</span></div>
-        <div class="h-cat">🎯 チーム</div>
+        <div class="h-cat" data-i18n="h.cat.teams">🎯 チーム</div>
         <div class="h-item"><span class="hic">🛍</span><span class="hnm">EC Launch Team</span><span class="h-badge team">●</span></div>
         <div class="h-item"><span class="hic">📱</span><span class="hnm">SNS Growth</span><span class="h-badge team">●</span></div>
-        <div class="h-user"><span class="ua">山</span><span>山田 洸太</span><span class="gear">⚙</span></div>
+        <div class="h-user"><span class="ua" data-i18n="h.ua">山</span><span data-i18n="h.user">山田 洸太</span><span class="gear">⚙</span></div>
       </aside>
       <main class="h-main">
         <div class="h-greet">
-          <h2>おかえりなさい、山田さん 🍑</h2>
-          <span class="now">土曜 5/10 ・ 21:00</span>
+          <h2 data-i18n="h.greet">おかえりなさい、山田さん 🍑</h2>
+          <span class="now" data-i18n="h.now">土曜 5/10 ・ 21:00</span>
         </div>
-        <div class="h-subg">個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務を自動化</div>
+        <div class="h-subg" data-i18n="h.subg">個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務を自動化</div>
         <div class="h-qgrid">
           <div class="h-qc">
             <div class="qic">🤖</div>
-            <h3>AI を作成</h3>
-            <p>あなた専属の AI を 1 体ずつ組み立てる。</p>
+            <h3 data-i18n="h.qc1t">AI を作成</h3>
+            <p data-i18n="h.qc1p">あなた専属の AI を 1 体ずつ組み立てる。</p>
           </div>
           <div class="h-qc feat">
             <div class="qic">🎯</div>
-            <h3>AI チームを作成</h3>
-            <p>やりたいことから AI が自動で編成。</p>
+            <h3 data-i18n="h.qc2t">AI チームを作成</h3>
+            <p data-i18n="h.qc2p">やりたいことから AI が自動で編成。</p>
           </div>
           <div class="h-qc">
             <div class="qic">🏪</div>
             <h3>Agent Store</h3>
-            <p>他クリエイターの AI を購入・無料 DL。</p>
+            <p data-i18n="h.qc3p">他クリエイターの AI を購入・無料 DL。</p>
           </div>
         </div>
         <div class="h-activity">
-          <h3>最近のアクティビティ</h3>
-          <div class="h-act"><span class="aic">💼</span><span class="abd"><b>Sales Agent</b> が競合分析レポートを作成しました</span><span class="awhen">2 分前</span></div>
-          <div class="h-act"><span class="aic">🛍</span><span class="abd"><b>EC Launch Team</b> がワークフローを完了しました</span><span class="awhen">1 時間前</span></div>
-          <div class="h-act"><span class="aic">📝</span><span class="abd"><b>SEO Writer</b> が記事を 3 本 書き上げました</span><span class="awhen">3 時間前</span></div>
-          <div class="h-act"><span class="aic">🐦</span><span class="abd"><b>X Auto-Ops</b> が投稿を 5 件 予約しました</span><span class="awhen">5 時間前</span></div>
-          <div class="h-act"><span class="aic">📈</span><span class="abd"><b>グロース</b> が Lv.8 に上がりました</span><span class="awhen">昨日</span></div>
+          <h3 data-i18n="h.actt">最近のアクティビティ</h3>
+          <div class="h-act"><span class="aic">💼</span><span class="abd" data-i18n="h.act1"><b>Sales Agent</b> が競合分析レポートを作成しました</span><span class="awhen" data-i18n="h.act1w">2 分前</span></div>
+          <div class="h-act"><span class="aic">🛍</span><span class="abd" data-i18n="h.act2"><b>EC Launch Team</b> がワークフローを完了しました</span><span class="awhen" data-i18n="h.act2w">1 時間前</span></div>
+          <div class="h-act"><span class="aic">📝</span><span class="abd" data-i18n="h.act3"><b>SEO Writer</b> が記事を 3 本 書き上げました</span><span class="awhen" data-i18n="h.act3w">3 時間前</span></div>
+          <div class="h-act"><span class="aic">🐦</span><span class="abd" data-i18n="h.act4"><b>X Auto-Ops</b> が投稿を 5 件 予約しました</span><span class="awhen" data-i18n="h.act4w">5 時間前</span></div>
+          <div class="h-act"><span class="aic">📈</span><span class="abd" data-i18n="h.act5"><b>グロース</b> が Lv.8 に上がりました</span><span class="awhen" data-i18n="h.act5w">昨日</span></div>
         </div>
       </main>
     </div>
@@ -270,8 +273,8 @@
 <!-- 4 STEPS -->
 <section class="steps">
   <div class="wrap">
-    <div class="steps-h">雇う → 任せる → 強化 → 成果</div>
-    <div class="steps-sub">むずかしい設定はなし。たった 4 ステップ。</div>
+    <div class="steps-h" data-i18n="st.h">雇う → 任せる → 強化 → 成果</div>
+    <div class="steps-sub" data-i18n="st.sub">むずかしい設定はなし。たった 4 ステップ。</div>
     <div class="steps-grid">
 
       <!-- 01 雇う -->
@@ -280,19 +283,19 @@
           <div class="mv-hire">
             <span class="mh-av">💼</span>
             <span class="mh-info"><b>Sales Agent</b><small>Marketing ・ Research</small></span>
-            <span class="mh-btn">採用</span>
+            <span class="mh-btn" data-i18n="st.hire">採用</span>
           </div>
           <div class="mv-hire">
             <span class="mh-av">📝</span>
             <span class="mh-info"><b>SEO Writer</b><small>SEO ・ Writing</small></span>
-            <span class="mh-btn">採用</span>
+            <span class="mh-btn" data-i18n="st.hire2">採用</span>
           </div>
         </div>
         <div class="step-foot">
           <span class="step-num">01</span>
           <div class="step-txt">
-            <h3>雇う</h3>
-            <p>専門の AI を選んで「採用」。何人でも。</p>
+            <h3 data-i18n="st1.h">雇う</h3>
+            <p data-i18n="st1.p">専門の AI を選んで「採用」。何人でも。</p>
           </div>
         </div>
       </div>
@@ -302,18 +305,18 @@
         <div class="step-visual">
           <div class="mv-m">
             <span class="mm-av user">あ</span>
-            <span class="mm-bd"><b>あなた</b>競合を 3 社、調べてまとめて</span>
+            <span class="mm-bd" data-i18n="st2.m1"><b>あなた</b>競合を 3 社、調べてまとめて</span>
           </div>
           <div class="mv-m">
             <span class="mm-av">💼</span>
-            <span class="mm-bd"><b>Sales Agent</b>承知しました。調べてレポートにします 🔍</span>
+            <span class="mm-bd" data-i18n="st2.m2"><b>Sales Agent</b>承知しました。調べてレポートにします 🔍</span>
           </div>
         </div>
         <div class="step-foot">
           <span class="step-num">02</span>
           <div class="step-txt">
-            <h3>任せる</h3>
-            <p>チャットで仕事を渡すだけ。</p>
+            <h3 data-i18n="st2.h">任せる</h3>
+            <p data-i18n="st2.p">チャットで仕事を渡すだけ。</p>
           </div>
         </div>
       </div>
@@ -323,23 +326,23 @@
         <div class="step-visual">
           <div class="mv-lv-top">
             <span class="mv-lv-av">📈</span>
-            <span class="mv-lv-nm">グロース<small>分析担当</small></span>
+            <span class="mv-lv-nm" data-i18n="st3.nm">グロース<small>分析担当</small></span>
             <span class="mv-lv-badge">Lv.7</span>
           </div>
           <div>
-            <div class="mv-xp-top"><span>経験値</span><span>あと 140 XP で Lv.8</span></div>
+            <div class="mv-xp-top"><span data-i18n="st3.xp">経験値</span><span data-i18n="st3.xpn">あと 140 XP で Lv.8</span></div>
             <div class="mv-xp-track"><div class="mv-xp-fill"></div></div>
           </div>
           <div class="mv-chips">
-            <span>🔍 リサーチ <b>達人</b></span>
-            <span>📊 分析 <b>習熟</b></span>
+            <span data-i18n="st3.c1">🔍 リサーチ <b>達人</b></span>
+            <span data-i18n="st3.c2">📊 分析 <b>習熟</b></span>
           </div>
         </div>
         <div class="step-foot">
           <span class="step-num">03</span>
           <div class="step-txt">
-            <h3>強化</h3>
-            <p>使うほど AI が育つ。記憶も増える。</p>
+            <h3 data-i18n="st3.h">強化</h3>
+            <p data-i18n="st3.p">使うほど AI が育つ。記憶も増える。</p>
           </div>
         </div>
       </div>
@@ -350,19 +353,19 @@
           <div class="mv-art">
             <div class="ma-card">
               <div class="ma-thumb a"><i></i><i></i><i></i></div>
-              <div class="ma-meta"><b>新商品 LP</b><small>artifact-lp.html</small></div>
+              <div class="ma-meta"><b data-i18n="st4.a1">新商品 LP</b><small>artifact-lp.html</small></div>
             </div>
             <div class="ma-card">
               <div class="ma-thumb b"><i></i><i></i><i></i></div>
-              <div class="ma-meta"><b>競合分析レポート</b><small>report.html</small></div>
+              <div class="ma-meta"><b data-i18n="st4.a2">競合分析レポート</b><small>report.html</small></div>
             </div>
           </div>
         </div>
         <div class="step-foot">
           <span class="step-num">04</span>
           <div class="step-txt">
-            <h3>成果</h3>
-            <p>サイトもレポートも、実物で返ってくる。</p>
+            <h3 data-i18n="st4.h">成果</h3>
+            <p data-i18n="st4.p">サイトもレポートも、実物で返ってくる。</p>
           </div>
         </div>
       </div>
@@ -374,10 +377,10 @@
 <!-- FINAL CTA -->
 <section class="final">
   <div class="wrap">
-    <h2>今日、あなたの<br>最初の AI を雇おう。</h2>
-    <p>30 秒で、あなたの専門チームが動き出す。</p>
-    <div><a href="#" class="btn btn-primary btn-lg">▶ 無料で始める</a></div>
-    <div class="scarcity">🔥 Founder 100 · 残り 92 席 · 永年無料</div>
+    <h2 data-i18n="f.h2">今日、あなたの<br>最初の AI を雇おう。</h2>
+    <p data-i18n="f.p">30 秒で、あなたの専門チームが動き出す。</p>
+    <div><a href="#" class="btn btn-primary btn-lg" data-i18n="f.btn">▶ 無料で始める</a></div>
+    <div class="scarcity" data-i18n="f.sc">🔥 Founder 100 · 残り 92 席 · 永年無料</div>
   </div>
 </section>
 
@@ -387,6 +390,89 @@
     <div class="foot-cp">© 2026 MY AI Agent</div>
   </div>
 </footer>
+
+<script>
+  // ── JP / EN toggle ──────────────────────────────────────────
+  // The Japanese copy lives inline (default). English is in the dict
+  // below. On first run we snapshot the JA innerHTML so the toggle
+  // can swap both ways. HTML attributes inside dict values use single
+  // quotes so the double-quoted JS strings stay clean.
+  var I18N_EN = {
+    "nav.cta": "Get started free",
+    "hero.h1": "Stop <span class='strike'>using</span> AI.<br><span class='pop'>Hire a team</span> of them.",
+    "hero.sub": "Hire as many specialist AIs as you want — in a Slack-style app.<br>Then just delegate.",
+    "hero.cta": "▶ Start free in 30 seconds",
+    "hero.note": "<b>100 messages free</b> ・ No credit card ・ 30-second setup",
+    "h.search": "Search…",
+    "h.cat.dash": "📊 Dashboard",
+    "h.home": "Home",
+    "h.cat.agents": "🤖 AI Agents",
+    "h.cat.teams": "🎯 Teams",
+    "h.ua": "K",
+    "h.user": "Kota Yamada",
+    "h.greet": "Welcome back, Kota 🍑",
+    "h.now": "Sat, May 10 ・ 21:00",
+    "h.subg": "1-on-1 with an AI ・ Groups with friends + AI ・ AI teams that automate whole workflows",
+    "h.qc1t": "Create an AI",
+    "h.qc1p": "Build your own dedicated AI, one at a time.",
+    "h.qc2t": "Create an AI Team",
+    "h.qc2p": "Describe a goal — AI assembles the team.",
+    "h.qc3p": "Buy or download AIs from other creators.",
+    "h.actt": "Recent activity",
+    "h.act1": "<b>Sales Agent</b> created a competitor analysis report",
+    "h.act1w": "2m ago",
+    "h.act2": "<b>EC Launch Team</b> completed a workflow",
+    "h.act2w": "1h ago",
+    "h.act3": "<b>SEO Writer</b> finished 3 articles",
+    "h.act3w": "3h ago",
+    "h.act4": "<b>X Auto-Ops</b> scheduled 5 posts",
+    "h.act4w": "5h ago",
+    "h.act5": "<b>Growth</b> leveled up to Lv.8",
+    "h.act5w": "Yesterday",
+    "st.h": "Hire → Delegate → Strengthen → Deliver",
+    "st.sub": "No complex setup. Just 4 steps.",
+    "st.hire": "Hire",
+    "st.hire2": "Hire",
+    "st1.h": "Hire",
+    "st1.p": "Pick a specialist AI and hire it — as many as you want.",
+    "st2.m1": "<b>You</b>Research 3 competitors and summarize them",
+    "st2.m2": "<b>Sales Agent</b>On it — researching now and writing a report 🔍",
+    "st2.h": "Delegate",
+    "st2.p": "Just hand off the work in chat.",
+    "st3.nm": "Growth<small>Analytics</small>",
+    "st3.xp": "XP",
+    "st3.xpn": "140 XP to Lv.8",
+    "st3.c1": "🔍 Research <b>Master</b>",
+    "st3.c2": "📊 Analytics <b>Skilled</b>",
+    "st3.h": "Strengthen",
+    "st3.p": "Your AI grows as you use it — and remembers more.",
+    "st4.a1": "New Product LP",
+    "st4.a2": "Competitor Report",
+    "st4.h": "Deliver",
+    "st4.p": "Sites and reports — delivered as finished work.",
+    "f.h2": "Hire your first AI<br>today.",
+    "f.p": "Your specialist team starts working in 30 seconds.",
+    "f.btn": "▶ Get started free",
+    "f.sc": "🔥 Founder 100 · 92 seats left · Free forever"
+  };
+  var I18N_JA = {};
+  var curLang = 'ja';
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    I18N_JA[el.getAttribute('data-i18n')] = el.innerHTML;
+  });
+  function setLang(lang){
+    curLang = lang;
+    var dict = (lang === 'en') ? I18N_EN : I18N_JA;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var v = dict[el.getAttribute('data-i18n')];
+      if(v != null) el.innerHTML = v;
+    });
+    document.documentElement.lang = lang;
+    var btn = document.getElementById('langBtn');
+    if(btn) btn.textContent = (lang === 'en') ? '日本語' : 'EN';
+  }
+  function toggleLang(){ setLang(curLang === 'en' ? 'ja' : 'en'); }
+</script>
 
 </body>
 </html>

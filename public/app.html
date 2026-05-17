@@ -4883,6 +4883,7 @@ body{color:#f0f0f8;}
           <button id="grpSetRenameBtn" class="grpset-btn primary" onclick="_grpSettingsRename()">保存</button>
         </div>
       </div>
+      <div id="grpSetNameNote" style="display:none;font-size:11px;color:var(--text3);margin:3px 0 0;padding-left:2px"></div>
 
       <!-- 通知設定 (per-user) -->
       <div class="grpset-h">通知</div>
@@ -10283,20 +10284,31 @@ async function openGroupSettings(agId){
   // Single round-trip: fetch members + invite settings together
   let members = ag.members || [];
   let requireApproval = !!ag.invite_require_approval;
+  let serverMyRole = null;
   try {
     const m = await api('GET', '/api/agents/' + agId + '/members');
     if(Array.isArray(m.members)) { members = m.members; ag.members = members; }
     if(typeof m.name === 'string') ag.name = m.name;
+    if(m.host_id) ag.host_id = m.host_id;       // authoritative host_id from server
+    if(m.my_role) serverMyRole = m.my_role;     // 'host' / 'admin' / 'contributor' / 'reader'
     requireApproval = !!m.invite_require_approval;
     ag.invite_require_approval = requireApproval;
   } catch(e){}
-  const isHost = ag.host_id === me?.id;
+  // Host detection: trust the server's my_role, fall back to host_id match.
+  // (The client `agents` copy of a group can be stale/partial — the /members
+  //  response is authoritative, so the host always gets the rename controls.)
+  const isHost = (serverMyRole === 'host') || (!!ag.host_id && ag.host_id === me?.id);
   const myMember = members.find(m => m.user_id === me?.id);
   const myPref = (myMember && myMember.notify_pref) || 'all';
 
   document.getElementById('grpSetName').value = ag.name || '';
   document.getElementById('grpSetName').disabled = !isHost;
   document.getElementById('grpSetRenameBtn').style.display = isHost ? '' : 'none';
+  var _grpNameNote = document.getElementById('grpSetNameNote');
+  if(_grpNameNote){
+    _grpNameNote.style.display = isHost ? 'none' : '';
+    if(!isHost) _grpNameNote.textContent = L('✏️ グループ名を変更できるのはホストのみです','✏️ Only the host can rename this group');
+  }
 
   // Notification radios
   ['all','mentions','mute'].forEach(p => {

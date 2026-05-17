@@ -97,6 +97,15 @@
   .h-qc .qic{font-size:25px; margin-bottom:8px}
   .h-qc h3{font-size:12.5px; font-weight:900; margin-bottom:4px; letter-spacing:-.01em}
   .h-qc p{font-size:10px; color:var(--ink2); line-height:1.55}
+  /* home — recent activity panel */
+  .h-activity{background:#fff; border:1px solid var(--wire); border-radius:13px; padding:15px 16px; margin-top:14px}
+  .h-activity h3{font-size:12.5px; font-weight:900; margin-bottom:5px}
+  .h-act{display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid var(--wire)}
+  .h-act:last-child{border-bottom:0}
+  .h-act .aic{width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; background:var(--cream2)}
+  .h-act .abd{flex:1; min-width:0; font-size:11px; line-height:1.5; color:var(--ink)}
+  .h-act .abd b{font-weight:900}
+  .h-act .awhen{font-size:9.5px; color:var(--ink3); font-weight:700; flex-shrink:0}
 
   /* ════ 4 STEPS — each with a mini product visual ════ */
   .steps{background:var(--cream2); padding:clamp(54px,9vh,94px) 0; border-top:1px solid var(--wire)}
@@ -220,11 +229,11 @@
         <div class="h-cat">🎯 チーム</div>
         <div class="h-item"><span class="hic">🛍</span><span class="hnm">EC Launch Team</span><span class="h-badge team">●</span></div>
         <div class="h-item"><span class="hic">📱</span><span class="hnm">SNS Growth</span><span class="h-badge team">●</span></div>
-        <div class="h-user"><span class="ua">武</span><span>武内 洸太</span><span class="gear">⚙</span></div>
+        <div class="h-user"><span class="ua">山</span><span>山田 洸太</span><span class="gear">⚙</span></div>
       </aside>
       <main class="h-main">
         <div class="h-greet">
-          <h2>おかえりなさい、武内 🍑</h2>
+          <h2>おかえりなさい、山田さん 🍑</h2>
           <span class="now">土曜 5/10 ・ 21:00</span>
         </div>
         <div class="h-subg">個別 AI とサシで話す ・ 友達 + AI のグループ ・ AI 同士のチームで業務を自動化</div>
@@ -244,6 +253,14 @@
             <h3>Agent Store</h3>
             <p>他クリエイターの AI を購入・無料 DL。</p>
           </div>
+        </div>
+        <div class="h-activity">
+          <h3>最近のアクティビティ</h3>
+          <div class="h-act"><span class="aic">💼</span><span class="abd"><b>Sales Agent</b> が競合分析レポートを作成しました</span><span class="awhen">2 分前</span></div>
+          <div class="h-act"><span class="aic">🛍</span><span class="abd"><b>EC Launch Team</b> がワークフローを完了しました</span><span class="awhen">1 時間前</span></div>
+          <div class="h-act"><span class="aic">📝</span><span class="abd"><b>SEO Writer</b> が記事を 3 本 書き上げました</span><span class="awhen">3 時間前</span></div>
+          <div class="h-act"><span class="aic">🐦</span><span class="abd"><b>X Auto-Ops</b> が投稿を 5 件 予約しました</span><span class="awhen">5 時間前</span></div>
+          <div class="h-act"><span class="aic">📈</span><span class="abd"><b>グロース</b> が Lv.8 に上がりました</span><span class="awhen">昨日</span></div>
         </div>
       </main>
     </div>

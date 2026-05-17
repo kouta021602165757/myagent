@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OG サムネイル案 — MY AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fdf8f3; --ink:#2d1a0e; --ink2:#6b4226; --ink3:#9a6a4a;
+    --peach:#fb923c; --peach-d:#ea580c; --peach-soft:#fff1e3;
+    --cream2:#faf3eb; --wire:rgba(180,120,80,.18);
+  }
+  *{margin:0; padding:0; box-sizing:border-box}
+  body{
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    background:#e7e2da; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; gap:16px; padding:44px 20px;
+  }
+  .cap{font-size:13px; color:#6b4226; font-weight:700; letter-spacing:.02em}
+
+  /* ── OG canvas — exactly 1200 × 630 ── */
+  .og{
+    width:1200px; height:630px; flex-shrink:0;
+    background:
+      radial-gradient(720px 420px at 84% 12%, rgba(251,146,60,.22), transparent 60%),
+      radial-gradient(560px 360px at 6% 104%, rgba(251,146,60,.12), transparent 58%),
+      var(--bg);
+    border-radius:18px; overflow:hidden;
+    box-shadow:0 30px 70px rgba(70,40,20,.28);
+    padding:70px 76px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    position:relative;
+  }
+
+  /* logo */
+  .og-logo{display:flex; align-items:center; gap:13px}
+  .og-bars{display:flex; gap:4px; align-items:flex-end}
+  .og-bars i{width:8px; background:var(--peach); border-radius:3px; display:block}
+  .og-bars i:nth-child(1){height:38px}
+  .og-bars i:nth-child(2){height:26px; opacity:.62}
+  .og-bars i:nth-child(3){height:15px; opacity:.34}
+  .og-logo span{font-size:25px; font-weight:900; letter-spacing:.07em; color:var(--ink)}
+
+  /* headline */
+  .og-mid{margin-top:-6px}
+  .og-h1{
+    font-size:66px; font-weight:900; line-height:1.2; letter-spacing:-.035em; color:var(--ink);
+  }
+  .og-h1 .strike{color:var(--ink3); text-decoration:line-through; text-decoration-thickness:5px}
+  .og-h1 .pop{
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .og-sub{font-size:25px; font-weight:700; color:var(--ink2); margin-top:22px; letter-spacing:-.01em}
+
+  /* agent team row */
+  .og-team{display:flex; flex-direction:column; gap:14px}
+  .og-team-label{
+    font-size:15px; font-weight:800; color:var(--peach-d);
+    display:flex; align-items:center; gap:8px;
+  }
+  .og-team-label::before{content:""; width:26px; height:3px; background:var(--peach); border-radius:2px}
+  .og-tiles{display:flex; gap:14px}
+  .og-tile{
+    width:96px; display:flex; flex-direction:column; align-items:center; gap:7px;
+  }
+  .og-tile .av{
+    width:84px; height:84px; border-radius:21px;
+    background:#fff; border:1px solid var(--wire);
+    box-shadow:0 6px 18px rgba(70,40,20,.1);
+    display:flex; align-items:center; justify-content:center; font-size:40px;
+  }
+  .og-tile.add .av{
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    border:0; color:#fff; font-size:42px; font-weight:800;
+  }
+  .og-tile .nm{font-size:13px; font-weight:800; color:var(--ink2)}
+  .og-tile.add .nm{color:var(--peach-d)}
+
+  /* free badge top-right */
+  .og-badge{
+    position:absolute; top:70px; right:76px;
+    display:flex; align-items:center; gap:8px;
+    background:#fff; border:1px solid var(--wire);
+    box-shadow:0 6px 18px rgba(70,40,20,.1);
+    padding:11px 18px; border-radius:99px;
+    font-size:16px; font-weight:800; color:var(--ink);
+  }
+  .og-badge b{color:var(--peach-d)}
+</style>
+</head>
+<body>
+<div class="cap">OG サムネイル案 — 1200 × 630px（SNS でシェアした時に表示される画像）</div>
+
+<div class="og">
+  <div class="og-badge">🍑 <b>100 メッセージ無料</b></div>
+
+  <div class="og-logo">
+    <span class="og-bars"><i></i><i></i><i></i></span>
+    <span>MY AI AGENT</span>
+  </div>
+
+  <div class="og-mid">
+    <div class="og-h1">
+      <span class="strike">AI を使う</span>時代から、<br>
+      AI を<span class="pop">複数人雇う</span>時代へ。
+    </div>
+    <div class="og-sub">専門の AI を何人でも採用。仕事は、チームに任せるだけ。</div>
+  </div>
+
+  <div class="og-team">
+    <div class="og-team-label">あなたが雇える、専門 AI チーム</div>
+    <div class="og-tiles">
+      <div class="og-tile"><div class="av">💼</div><div class="nm">営業</div></div>
+      <div class="og-tile"><div class="av">📝</div><div class="nm">SEO</div></div>
+      <div class="og-tile"><div class="av">📈</div><div class="nm">分析</div></div>
+      <div class="og-tile"><div class="av">✍️</div><div class="nm">ライター</div></div>
+      <div class="og-tile"><div class="av">🎨</div><div class="nm">デザイン</div></div>
+      <div class="og-tile add"><div class="av">＋</div><div class="nm">何人でも</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

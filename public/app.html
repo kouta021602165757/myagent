@@ -12567,6 +12567,15 @@ async function sendMsg(){
   // AI 応答中（メインチャット）は新規送信をブロック。送信ボタンは⏹停止に
   // 変わっているので、ここに到達するのは Enter キー経由のみ。
   if(_chatStreamCtrl){
+    // 自己修復: 制御が 4 分以上居座っている = 前ターンの接続がハングした残骸。
+    // 中断・解除してロックアウトを解く（もう一度送信すればクリーンに通る）。
+    if(Date.now() - (_chatStreamCtrl._startedAt || 0) > 240000){
+      try { _chatStreamCtrl.abort(); } catch(e){}
+      _chatStreamCtrl = null;
+      try { _setChatStreaming(false); } catch(e){}
+      showToast(L('前の応答が固まっていたため解除しました。もう一度送信してください。','Cleared a stuck response — please send again.'),'ng');
+      return;
+    }
     showToast(L('AI が応答中です。完了するか ⏹ で停止してください','AI is responding — wait or press ⏹ to stop'),'ng');
     return;
   }
@@ -12913,6 +12922,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
   // Per-call AbortController so the user can hit ⏹ to stop mid-stream.
   const ctrl = new AbortController();
   _chatStreamCtrl = ctrl;
+  _chatStreamCtrl._startedAt = Date.now();
   _setChatStreaming(true);
   let _aborted = false;
   // Inactivity watchdog: if the SSE stream goes fully silent for too long the
@@ -17484,6 +17494,14 @@ async function _sendThreadReply(){
   // AI 応答中（スレッド）は新規送信をブロック。送信ボタンは⏹停止に
   // 変わっているので、ここに到達するのは Enter キー経由のみ。
   if(_threadStreamCtrl){
+    // 自己修復: 制御が 4 分以上居座っている = 前ターンの接続がハングした残骸。
+    if(Date.now() - (_threadStreamCtrl._startedAt || 0) > 240000){
+      try { _threadStreamCtrl.abort(); } catch(e){}
+      _threadStreamCtrl = null;
+      try { _setThreadStreaming(false); } catch(e){}
+      showToast(L('前の応答が固まっていたため解除しました。もう一度送信してください。','Cleared a stuck response — please send again.'),'ng');
+      return;
+    }
     showToast(L('AI が応答中です。完了するか ⏹ で停止してください','AI is responding — wait or press ⏹ to stop'),'ng');
     return;
   }
@@ -17513,6 +17531,7 @@ async function _sendThreadReply(){
   exTA(ci);
   var _tctrl = new AbortController();
   _threadStreamCtrl = _tctrl;
+  _threadStreamCtrl._startedAt = Date.now();
   _setThreadStreaming(true);
   // Inactivity watchdog — abort a dead/hung SSE stream so the thread never
   // sits on "生成中" forever (server keepalives reset it on a healthy turn).

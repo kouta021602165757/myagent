@@ -7302,7 +7302,7 @@ const _extPending = new Map();        // command_id → { resolve, t0, timeout }
 const EXTENSION_TOOLS = [
   {
     name:'ext_open_url',
-    description:'ユーザーのブラウザで指定URLを新しいタブまたは現在のタブで開きます。ログイン済みのサイト (X / Slack / Gmail / 社内SaaS 等) をそのまま操作できます。',
+    description:'ユーザーのブラウザで指定URLを新しいタブまたは現在のタブで開きます。ログイン済みのサイト (X / Slack / Gmail / 社内SaaS 等) をそのまま操作できます。※ 自分が create_artifact / edit_artifact で作った成果物 (/generated/artifact-*.html) には絶対に使わないこと — それらは最終応答に `[タイトル](URL)` のリンク記法で本文に書けば、自動で「修正 / コード / 開く」ボタン付きのカードとして表示される。ext_open_url は外部サイト専用。',
     input_schema:{
       type:'object',
       properties:{

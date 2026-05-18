@@ -9747,12 +9747,41 @@ function _collectCitations(toolLog){
     }
     // Tools that return a single URL (web_fetch, browse_url, web_read_markdown
     // etc). The fetched-page title is in step.title.
-    if(s.url && /^https?:\/\//.test(s.url) && !seen.has(s.url)){
+    // Skip our own artifact URLs — those render as a proper artifact card
+    // (修正/コード/開く) via _artifactCardsFromToolLog, not a [N] citation.
+    if(s.url && /^https?:\/\//.test(s.url) && !seen.has(s.url) && !/\/generated\/artifact-/i.test(s.url)){
       seen.add(s.url);
       cites.push({ url: s.url, title: s.title || s.url, snippet: (s.text||'').slice(0,140) });
     }
   }
   return cites;
+}
+// Artifact URLs (/generated/artifact-*.html) that surfaced only via a tool
+// step — e.g. the AI ran ext_open_url on its own site — get rendered as the
+// standard artifact card (修正 / コード / 開く), reusing _md's card renderer.
+// Skipped when the AI already referenced that file in its message body.
+function _artifactCardsFromToolLog(toolLog, rawContent){
+  if(!Array.isArray(toolLog) || !toolLog.length) return '';
+  var rc = String(rawContent || '');
+  var seen = {};
+  var out = [];
+  for(var i=0;i<toolLog.length;i++){
+    var s = toolLog[i];
+    if(!s) continue;
+    var cands = [s.url, s.input && s.input.url];
+    for(var k=0;k<cands.length;k++){
+      var u = cands[k];
+      if(typeof u !== 'string') continue;
+      var m = u.match(/\/generated\/(artifact-[^/?#\s"']+\.html?)/i);
+      if(!m) continue;
+      var fn = m[1];
+      if(seen[fn]) continue;
+      seen[fn] = 1;
+      if(rc.indexOf(fn) >= 0) continue; // AI already showed it in the body
+      out.push(_md('[' + (isJa ? '作成したサイト' : 'Site') + '](' + u + ')'));
+    }
+  }
+  return out.join('');
 }
 function _renderCitations(cites){
   if(!cites || !cites.length) return '';
@@ -9847,6 +9876,9 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   if(cites.length) body = _linkInlineCitations(body, cites);
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
   const citesHtml = cites.length ? _renderCitations(cites) : '';
+  // Artifact cards for any /generated/artifact-*.html the AI touched via a
+  // tool (ext_open_url etc.) but didn't write as a [title](url) link itself.
+  const artifactCards = !isU ? _artifactCardsFromToolLog(tool_log, content) : '';
   let acts = '';
   let inlineActs = '';  // Continue / Retry — always visible, not gated by show-acts
   if(idx>=0){
@@ -10039,7 +10071,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       '</div>'+
       imgHtml+
       tlogHtml+
-      (renderBody?'<div class="m-body">'+(bodyMarkup||'')+citesHtml+'</div>':'')+
+      (renderBody?'<div class="m-body">'+(bodyMarkup||'')+artifactCards+citesHtml+'</div>':'')+
       reactionsHTML+
       threadIndicatorHTML+
       (inlineActs?'<div class="m-inline-actions">'+inlineActs+'</div>':'')+

@@ -4222,6 +4222,8 @@ selector・content は必ず実物の HTML に厳密に合わせ、指示され�
 - "insert_before_selector": selector で指定した要素の直前に content を挿入
 - "rewrite": HTML 全文を content で丸ごと差し替える。**最終手段 — 全文を再生成するため非常に遅く（数分）コストも高い。** まず replace_selector / append_to_selector など"部分編集"で直せないか必ず先に検討すること。rewrite を使ってよいのは「タグの重複・JS が壊れて全ボタンが死んだ等の構造的な破損で、部分編集では直せない」場合**だけ**。色変更・文言修正・1セクションの差し替え程度で rewrite を使ってはいけない（遅さの最大の原因になる）。rewrite 時は content に先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
 
+【高速化 — セクション単位で直す】ページが id 付きの <section> で組まれている場合、修正対象のセクションを replace_selector "#<id>" で狙うこと。そのセクション 1 区画だけの差分編集になり、全文 rewrite（数分かかる）を避けられる。
+
 filename は直近 create_artifact のレスポンス URL (/generated/artifact-XXX-YYY.html) からファイル名部分を抜き出す。`,
     input_schema:{
       type:'object',
@@ -4325,7 +4327,13 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
     - 真四角の枠線 box-shadow 強めのコンビ ("Bootstrap 2014" になる)
     - placeholder 画像のリンク先が画像でない (404 になる)
 
+11. **セクション構造 — 後の修正を速くする最重要ルール**
+    - ページは「意味のある区画ごとの独立した <section>」で必ず組む。各 section に安定した id を付ける (例: id="hero" / "features" / "pricing" / "testimonials" / "faq" / "cta" / "footer")。1 枚の絡まった塊にしない。
+    - CSS は section ごとにまとめ、直前に「/* ── hero ── */」のようなコメント見出しを置く。クラス名にも section 接頭辞を付ける (.hero-title, .pricing-card 等) → 1 セクションを直しても他へ波及しない。
+    - こうしておけば後の修正依頼が edit_artifact の replace_selector "#hero" 等で「1 区画だけの差分編集」で済み、全文再生成（数分かかる）を避けられる。生成・修正速度の根幹なので必ず守ること。
+
 ▼ 出力前の self-check:
+- 各区画は id 付きの独立した <section> で組まれているか? (後の部分修正・速度に必須)
 - 見出しのフォントは display フォントになっているか?
 - カラーパレットは 3 色 (+ニュートラル) 以内か?
 - セクション間に十分な余白 (80px+) があるか?

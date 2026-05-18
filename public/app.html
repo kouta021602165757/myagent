@@ -11871,6 +11871,14 @@ function _ingestFiles(files, which){
     var isPdf = file.type === 'application/pdf';
     var isDocx = _isDocx(file);
     var isTxt = !isDocx && _isTextLike(file);
+    // Anthropic accepts only these 4 image media types — reject others
+    // (iPhone HEIC, SVG, BMP, …) up front so they never hit the API as a 400.
+    if(isImg && ['image/jpeg','image/png','image/gif','image/webp'].indexOf((file.type||'').toLowerCase()) < 0){
+      showToast(isJa
+        ? 'この形式の画像は使えません。JPEG / PNG / GIF / WebP に変換してください'
+        : 'This image format is not supported — use JPEG, PNG, GIF or WebP', 'ng');
+      return;
+    }
     if(isDocx){
       if(file.size > 20*1024*1024){ showToast(isJa?'DOCX が大きすぎます (20MB)':'DOCX too large (20MB)','ng'); return; }
       return _ingestDocx(file, which);
@@ -12521,6 +12529,12 @@ function _attachmentPayload(which){
 }
 
 async function sendMsg(){
+  // AI 応答中（メインチャット）は新規送信をブロック。送信ボタンは⏹停止に
+  // 変わっているので、ここに到達するのは Enter キー経由のみ。
+  if(_chatStreamCtrl){
+    showToast(L('AI が応答中です。完了するか ⏹ で停止してください','AI is responding — wait or press ⏹ to stop'),'ng');
+    return;
+  }
   const ci=document.getElementById('ci')||document.getElementById('msgInput');
   const text=ci.value.trim();
   // Block if a URL is still loading
@@ -12712,6 +12726,32 @@ function _setChatStreaming(on){
 function stopChatStream(){
   if(_chatStreamCtrl){
     try { _chatStreamCtrl.abort(); } catch(e){}
+  }
+}
+
+// ── Thread composer streaming state — mirrors _setChatStreaming for the
+//    thread drawer's own send button (#tSndBtn). While the thread AI is
+//    responding the button becomes a ⏹ stop button. ──
+var _threadStreamCtrl = null;
+function _setThreadStreaming(on){
+  var btn = document.getElementById('tSndBtn');
+  if(!btn) return;
+  btn.disabled = false;
+  if(on){
+    btn.classList.add('streaming');
+    btn.title = L('生成を停止 (Stop)','Stop');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.6"/></svg>';
+    btn.onclick = stopThreadStream;
+  } else {
+    btn.classList.remove('streaming');
+    btn.title = L('送信','Send');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>';
+    btn.onclick = _sendThreadReply;
+  }
+}
+function stopThreadStream(){
+  if(_threadStreamCtrl){
+    try { _threadStreamCtrl.abort(); } catch(e){}
   }
 }
 
@@ -17388,6 +17428,12 @@ function _openAgentCard(agentId){
   },60);
 }
 async function _sendThreadReply(){
+  // AI 応答中（スレッド）は新規送信をブロック。送信ボタンは⏹停止に
+  // 変わっているので、ここに到達するのは Enter キー経由のみ。
+  if(_threadStreamCtrl){
+    showToast(L('AI が応答中です。完了するか ⏹ で停止してください','AI is responding — wait or press ⏹ to stop'),'ng');
+    return;
+  }
   // Reads from the thread drawer's OWN composer (#tci + _threadPendingImgs).
   // Fully independent of the main chat composer — both can hold drafts /
   // attachments simultaneously, like Slack.
@@ -17412,8 +17458,9 @@ async function _sendThreadReply(){
   renderImgPreview('thread');
   ci.value = '';
   exTA(ci);
-  var sndBtn = document.getElementById('tSndBtn');
-  if(sndBtn) sndBtn.disabled = true;
+  var _tctrl = new AbortController();
+  _threadStreamCtrl = _tctrl;
+  _setThreadStreaming(true);
   // /search etc. — same slash handling as the main composer.
   var outbound = text;
   try { var slashCtx = await _runSlashCommand(text); if(slashCtx) outbound = slashCtx; } catch(e){}
@@ -17449,6 +17496,7 @@ async function _sendThreadReply(){
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
       body: JSON.stringify(_body),
+      signal: _tctrl.signal,
     });
     var ctype = (res.headers.get('content-type')||'').toLowerCase();
     if(!ctype.includes('text/event-stream')){
@@ -17529,17 +17577,26 @@ async function _sendThreadReply(){
       }
     }
   } catch(e){
+    var _tAborted = !!(e && e.name === 'AbortError');
     if(ag.history[aiPlaceholderIdx]){
-      ag.history[aiPlaceholderIdx].content = 'エラー: ' + ((e && e.message)||'failed');
-      ag.history[aiPlaceholderIdx].streaming = false;
-      ag.history[aiPlaceholderIdx].is_error = true;
+      if(_tAborted){
+        // User pressed ⏹ — keep whatever streamed so far, mark as stopped (no error).
+        var _sofar = ag.history[aiPlaceholderIdx].content || '';
+        ag.history[aiPlaceholderIdx].content = _sofar || L('（停止しました）','(stopped)');
+        ag.history[aiPlaceholderIdx].streaming = false;
+        ag.history[aiPlaceholderIdx].was_stopped = true;
+      } else {
+        ag.history[aiPlaceholderIdx].content = 'エラー: ' + ((e && e.message)||'failed');
+        ag.history[aiPlaceholderIdx].streaming = false;
+        ag.history[aiPlaceholderIdx].is_error = true;
+      }
     }
     _renderThreadDrawer();
-    showToast((e&&e.message)||'failed','ng');
+    if(!_tAborted) showToast((e&&e.message)||'failed','ng');
   } finally {
     _turnStatusEnd();
-    var sb = document.getElementById('tSndBtn');
-    if(sb) sb.disabled = false;
+    _threadStreamCtrl = null;
+    _setThreadStreaming(false);
     var ci2 = document.getElementById('tci');
     if(ci2) ci2.focus();
   }

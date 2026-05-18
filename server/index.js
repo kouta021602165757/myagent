@@ -18154,11 +18154,15 @@ async function handleAPI(req,res,pathname,method,ip){
               const _ovRe = /(このチャットで|ここで作|ここに作|そのまま作|構わず|強制|別チャット.*(しない|不要|いらない|なし)|新しいチャット.*(しない|不要|いらない)|いいから作)/;
               if(agent && agent.pinned_artifact && !_ovRe.test(String(message||''))){
                 result = {
-                  error: 'このチャットは既に成果物「'+String(agent.pinned_artifact)+'」専用です（1チャット＝1サイトの原則）。'
-                    + 'このチャットで新しいサイトを create_artifact してはいけません。'
-                    + '最終応答では「新しいサイトは新しいチャットで作りましょう」と案内し、応答内に必ず半角の <newchat> という文字列を 1 つ含めること（UI が「🆕 新しいチャットで作る」ボタンに変換します）。'
-                    + '今のサイトの修正依頼なら edit_artifact を使う。ユーザーが「このチャットで作る」と明示した場合のみ create_artifact を実行してよい。',
-                  need_new_chat: true,
+                  error: '🚫 このチャットでは create_artifact を使えません（既に成果物「'+String(agent.pinned_artifact)+'」専用 ＝ 1チャット1サイト）。\n'
+                    + '【最優先・ほぼ必ずこれに該当】ユーザーの依頼は既存サイト「'+String(agent.pinned_artifact)+'」の"修正・変更"です。'
+                    + 'いま即座に、同じターン内で edit_artifact（filename:「'+String(agent.pinned_artifact)+'」）を呼び直して修正を適用しなさい。'
+                    + '「直して」「変えて」「対応して」「追加して」「削除して」「〜にして」等は全て修正依頼 → edit_artifact。'
+                    + '大規模な変更・全面リニューアルでも、edit_artifact（必要なら operation:"rewrite"）で同じファイルを直す。新規作り直しは禁止。\n'
+                    + '※「新しいチャットで作りましょう」と案内したり <newchat> を出してよいのは、ユーザーが「これとは別個の、全く新しい無関係なサイトをもう1つ作りたい」と明確に述べた場合のみ。'
+                    + 'それ以外（修正依頼）では新チャットへの案内を一切せず、<newchat> も絶対に含めず、必ず edit_artifact でこのサイトを直すこと。',
+                  use_edit_artifact: true,
+                  pinned_filename: String(agent.pinned_artifact),
                 };
               } else {
                 result = await executeArtifactTool(block.input||{}, payerUser);

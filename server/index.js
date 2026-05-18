@@ -6258,7 +6258,7 @@ async function executeArtifactTool(input, ownerUser){
 // "replace section" requests, the AI sends only the diff and the server
 // surgically patches the existing artifact, writes both to disk + DB, and
 // returns the same URL (the iframe re-fetches it).
-async function executeEditArtifactTool(input, ownerUser){
+async function executeEditArtifactTool(input, ownerUser, pinnedFn){
   let filename = String((input && input.filename) || '').trim();
   // The AI often passes a full URL or /generated/ path instead of the bare
   // filename — normalize so the lookup matches.
@@ -6275,6 +6275,13 @@ async function executeEditArtifactTool(input, ownerUser){
   // Locate artifact on the user record. DB is source of truth (disk may have
   // been wiped on container restart).
   ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
+  // Pinned chat = one canonical site. If the AI named a missing / hallucinated
+  // file (the usual trigger of the "which artifact?" retry loop), silently
+  // redirect to the pinned artifact instead of dumping a 25-file menu.
+  if(pinnedFn && !ownerUser.artifacts.some(a => a && a.filename === filename)
+     && ownerUser.artifacts.some(a => a && a.filename === pinnedFn)){
+    filename = pinnedFn;
+  }
   const artifact = ownerUser.artifacts.find(a => a && a.filename === filename);
   if(!artifact){
     // Don't just fail — the AI frequently GUESSES / hallucinates filenames
@@ -6408,12 +6415,18 @@ async function executeEditArtifactTool(input, ownerUser){
 // summarization erases the original html from context, so without a way to
 // re-read it the AI edits blind and the layout drifts. This is the on-demand
 // counterpart to the auto-injected 【編集指示】 html.
-async function executeReadArtifactTool(input, ownerUser){
+async function executeReadArtifactTool(input, ownerUser, pinnedFn){
   let filename = String((input && input.filename) || '').trim();
   if(filename.indexOf('/') >= 0) filename = filename.split('/').filter(Boolean).pop() || filename;
   filename = filename.split('?')[0].split('#')[0];
-  if(!filename) return { error: 'filename required' };
   ownerUser.artifacts = Array.isArray(ownerUser.artifacts) ? ownerUser.artifacts : [];
+  // Pinned chat = one canonical site. Always read the pinned file so the AI
+  // never re-reads / second-guesses other (old) artifacts — this is the fix
+  // for the "which LP is the right one?" loop.
+  if(pinnedFn && ownerUser.artifacts.some(a => a && a.filename === pinnedFn)){
+    filename = pinnedFn;
+  }
+  if(!filename) return { error: 'filename required' };
   const artifact = ownerUser.artifacts.find(a => a && a.filename === filename);
   if(!artifact){
     const recent = ownerUser.artifacts.slice(-25).reverse();
@@ -10513,8 +10526,8 @@ async function _runOneSchedule(user, agent, sched){
             result = await executeEmailTool(user, agent, block.input||{});
           }
           else if(block.name === 'create_artifact'){ result = await executeArtifactTool(block.input||{}, user); if(result&&result.url&&agent){var _afn1=String(result.url).split('/').pop();agent.current_artifact=_afn1;if(!agent.pinned_artifact)agent.pinned_artifact=_afn1;} }
-          else if(block.name === 'edit_artifact'){ result = await executeEditArtifactTool(block.input||{}, user); if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop(); }
-          else if(block.name === 'read_artifact')   result = await executeReadArtifactTool(block.input||{}, user);
+          else if(block.name === 'edit_artifact'){ result = await executeEditArtifactTool(block.input||{}, user, agent && agent.pinned_artifact); if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop(); }
+          else if(block.name === 'read_artifact')   result = await executeReadArtifactTool(block.input||{}, user, agent && agent.pinned_artifact);
           else if(block.name === 'notify_slack')    result = await executeNotifyTool('slack', user, block.input||{}, agent);
           else if(block.name === 'notify_discord')  result = await executeNotifyTool('discord', user, block.input||{}, agent);
           else if(block.name === 'zapier_run')      result = await executeZapierTool(user, block.input||{});
@@ -18151,10 +18164,10 @@ async function handleAPI(req,res,pathname,method,ip){
                 }
               }
             } else if(block.name === 'edit_artifact'){
-              result = await executeEditArtifactTool(block.input||{}, payerUser);
+              result = await executeEditArtifactTool(block.input||{}, payerUser, agent && agent.pinned_artifact);
               if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop();
             } else if(block.name === 'read_artifact'){
-              result = await executeReadArtifactTool(block.input||{}, payerUser);
+              result = await executeReadArtifactTool(block.input||{}, payerUser, agent && agent.pinned_artifact);
             } else if(block.name === 'notify_slack'){
               result = await executeNotifyTool('slack', payerUser, block.input||{}, (teamMemberAgent || agent));
             } else if(block.name === 'notify_discord'){

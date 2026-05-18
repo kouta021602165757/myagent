@@ -2053,6 +2053,24 @@ input,textarea{font-family:var(--sans);}
 }
 .chip:hover{border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.06);color:var(--peach-dark);}
 
+/* Fresh-agent starter prompts — prominent one-click first actions shown in
+   the empty chat so new users don't stall (onboarding activation). */
+.starter-wrap{max-width:760px;margin:6px auto 0;padding:0 16px;animation:fadeUp .35s ease;}
+.starter-label{font-size:11.5px;font-weight:800;color:var(--text3);margin:16px 0 9px;letter-spacing:.02em;}
+.starter-list{display:flex;flex-direction:column;gap:8px;}
+.starter-chip{
+  display:block;width:100%;text-align:left;
+  background:#fff;border:1.5px solid var(--wire2);border-radius:13px;
+  padding:13px 16px;font-size:13.5px;font-weight:700;color:var(--text);
+  font-family:inherit;cursor:pointer;transition:all .14s;
+}
+.starter-chip::before{content:"💬";margin-right:9px;opacity:.65;}
+.starter-chip:hover{
+  border-color:var(--peach);background:linear-gradient(135deg,#fff,#fff7ee);
+  color:var(--peach-dark);transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(251,146,60,.16);
+}
+
 .composer{
   background:#fff;border:1.5px solid var(--wire2);border-radius:18px;
   padding:14px 16px 8px;transition:border-color .14s, box-shadow .14s;
@@ -9571,7 +9589,24 @@ function renderMsgs(ag, forceScrollBottom){
   el.innerHTML='<div class="msgs-inner" id="msgsInner"></div>';
   const inner=document.getElementById('msgsInner');
   if(!ag.history||!ag.history.length){
-    inner.innerHTML=_renderMsg('assistant',ag,'はじめまして！'+esc(ag.name)+'です 👋\n\nなんでも気軽に話しかけてください！',now(),null,-1,null);
+    // Fresh agent: a bare "talk to me about anything" greeting is the #1
+    // onboarding drop-off — users create an agent then never send a message.
+    // Show concrete one-click starter prompts so they actually begin.
+    var _starters = (Array.isArray(ag.skills)?ag.skills:[]).flatMap(function(s){ return (typeof CHIPS!=='undefined' && CHIPS[s]) || []; });
+    if(_starters.length < 3){
+      _starters = _starters.concat(isJa
+        ? ['得意なことと、できることを教えて','まず何から始めればいい？提案して','今お願いしたい仕事を相談したい']
+        : ['What are you good at? What can you do?','What should we start with? Suggest something.','I want to discuss a task for you']);
+    }
+    _starters = _starters.slice(0, 4);
+    var _startersHtml = _starters.map(function(c){
+      return '<button class="starter-chip" onclick="useChip(\''+esc(c)+'\')">'+esc(c)+'</button>';
+    }).join('');
+    var _greet = 'はじめまして！'+esc(ag.name)+'です 👋\n\n'
+      + (isJa?'下のボタンから、気軽に始めてみてください。':'Pick one below to get started.');
+    inner.innerHTML = _renderMsg('assistant',ag,_greet,now(),null,-1,null)
+      + '<div class="starter-wrap"><div class="starter-label">💡 '+(isJa?'こう始めてみましょう':'Try starting with')+'</div>'
+      + '<div class="starter-list">'+_startersHtml+'</div></div>';
     el.scrollTop = el.scrollHeight;
     window._chatJustOpened = false;
     _updateScrollFAB();

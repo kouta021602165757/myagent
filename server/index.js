@@ -2,6 +2,7 @@
 const http=require('http'),https=require('https'),fs=require('fs'),
       path=require('path'),crypto=require('crypto'),url=require('url');
 const marketing = require('./marketing');
+const seoReport = require('./seo-report');
 
 // ── ENV ───────────────────────────────────────────────────────
 function loadEnv(){
@@ -4219,7 +4220,7 @@ selector・content は必ず実物の HTML に厳密に合わせ、指示され�
 - "append_to_selector": selector で指定した要素の閉じタグ直前に content を挿入 (例: <tbody> に <tr> を 100 行追加)
 - "replace_selector": selector で指定した要素の中身を content で完全置換 (色変更や文言修正)
 - "insert_before_selector": selector で指定した要素の直前に content を挿入
-- "rewrite": HTML 全文を content で丸ごと差し替える。**構造的な破損（タグの重複・JS が壊れて全ボタンが死んだ等）を直す唯一の手段。** 追加/置換だけでは余計なタグを"削除"できないため、壊れた構造は rewrite で正しい完全な HTML を書き直して修復する。content には先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
+- "rewrite": HTML 全文を content で丸ごと差し替える。**最終手段 — 全文を再生成するため非常に遅く（数分）コストも高い。** まず replace_selector / append_to_selector など"部分編集"で直せないか必ず先に検討すること。rewrite を使ってよいのは「タグの重複・JS が壊れて全ボタンが死んだ等の構造的な破損で、部分編集では直せない」場合**だけ**。色変更・文言修正・1セクションの差し替え程度で rewrite を使ってはいけない（遅さの最大の原因になる）。rewrite 時は content に先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
 
 filename は直近 create_artifact のレスポンス URL (/generated/artifact-XXX-YYY.html) からファイル名部分を抜き出す。`,
     input_schema:{
@@ -6388,7 +6389,11 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
   const _vBefore = _verifyArtifactHtml(_htmlBefore);
   const _vAfter  = _verifyArtifactHtml(html);
   const newIssues = _vAfter.issues.filter(i => _vBefore.issues.indexOf(i) < 0);
-  const _rv = await _renderVerifyArtifact(html);
+  // Render-verify (headless Chromium launch ≈ 3-8s) only for full-document
+  // rewrites. Small diff edits (append/replace) can't structurally break
+  // rendering, and the static check above already catches inline-JS syntax
+  // errors — skipping the browser launch here is the main speed win for edits.
+  const _rv = _isRewrite ? await _renderVerifyArtifact(html) : { ok:true, skipped:true };
   const _allIssues = newIssues.concat(_rv.ok ? [] : _rv.errors);
   const baseInstr = '更新完了。最終応答で上記 markdown 構文を本文に含めてください。';
   const result = {
@@ -19350,6 +19355,19 @@ if(require.main === module){
     console.log('[marketing] autopilot started — report → ' + process.env.MKT_ADMIN_EMAIL);
   } else {
     console.log('[marketing] autopilot OFF (set MKT_AUTOPILOT=1 + MKT_ADMIN_EMAIL to enable)');
+  }
+
+  // ── SEO daily report: protocol.ooo の Search Console + GA4 を集計し、
+  // Claude の分析コメントを添えて毎朝メール送信する。
+  // Disabled by default — set SEO_REPORT=1 + SEO_REPORT_TO to enable.
+  if(process.env.SEO_REPORT === '1' && process.env.SEO_REPORT_TO){
+    seoReport.startScheduler({
+      callAI, sendEmail,
+      to: process.env.SEO_REPORT_TO,
+    });
+    console.log('[seo-report] daily report ON — → ' + process.env.SEO_REPORT_TO);
+  } else {
+    console.log('[seo-report] OFF (set SEO_REPORT=1 + SEO_REPORT_TO to enable)');
   }
 
   // ── Per-agent schedule runner: 60s tick that fires due schedules.

@@ -3,6 +3,7 @@ const http=require('http'),https=require('https'),fs=require('fs'),
       path=require('path'),crypto=require('crypto'),url=require('url');
 const marketing = require('./marketing');
 const seoReport = require('./seo-report');
+const { LP_BLOCKS } = require('./lp-blocks'); // LP セクション見本帳 (案B1)
 
 // ── ENV ───────────────────────────────────────────────────────
 function loadEnv(){
@@ -4348,7 +4349,15 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
   の成果物は**必ず同じ project 名**を付けること (例: "タスク管理ツール", "会社 LP")。
   こうすると一覧で同じプロジェクトとしてまとまり、後から「あれを直して」が正しく解決できる。
   会話の中で既に同じテーマの成果物を作っている場合は、その時の project 名をそのまま再利用する。
-  全く新しい無関係なテーマのときだけ新しい project 名にする。`,
+  全く新しい無関係なテーマのときだけ新しい project 名にする。
+
+━━━━━━ LP セクション見本帳 ━━━━━━
+LP・ランディングページ・紹介サイト等を作るときは、下記の見本帳から必要なセクションを選び、
+HTML/CSS をコピーして組み立て、:root のカラー変数とコンテンツ（文章・画像）をユーザーの内容に
+差し替えること。ゼロから設計するより速く、品質も安定する。各ブロックは id 付き <section> なので
+後の部分修正も replace_selector で速い。LP でない成果物（ダッシュボード/計算機/ツール等）には
+無理に使わなくてよい。
+` + LP_BLOCKS,
     input_schema:{
       type:'object',
       properties:{

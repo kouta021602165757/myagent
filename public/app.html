@@ -12915,6 +12915,16 @@ async function _sendMsgStream(ag, text, imgs, texts){
   _chatStreamCtrl = ctrl;
   _setChatStreaming(true);
   let _aborted = false;
+  // Inactivity watchdog: if the SSE stream goes fully silent for too long the
+  // connection is dead/hung — abort so the finally runs and the UI never sits
+  // on "生成中" forever. The server sends keepalives, so a healthy turn keeps
+  // resetting this; only a truly dead connection trips it.
+  let _idleTimer = null, _idleHung = false;
+  function _bumpIdle(){
+    if(_idleTimer) clearTimeout(_idleTimer);
+    _idleTimer = setTimeout(function(){ _idleHung = true; try { ctrl.abort(); } catch(e){} }, 90000);
+  }
+  function _clearIdle(){ if(_idleTimer){ clearTimeout(_idleTimer); _idleTimer = null; } }
   let res;
   try {
     res = await fetch(API + '/api/chat/' + activeId, {
@@ -13020,6 +13030,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
   }
   function _stopThink(){ if(_thinkTimer){ clearInterval(_thinkTimer); _thinkTimer = null; } }
 
+  _bumpIdle();
   try { while(true){
     let value, done;
     try { ({value, done} = await reader.read()); }
@@ -13027,6 +13038,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
       if(e && e.name === 'AbortError'){ _aborted = true; break; }
       throw e;
     }
+    _bumpIdle();
     if(done) break;
     buf += decoder.decode(value, {stream:true});
     let i;
@@ -13227,6 +13239,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
       }
     }
   } } finally {
+    _clearIdle();
     _stopThink();
     _turnStatusEnd();
     _chatStreamCtrl = null;
@@ -13235,6 +13248,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
     // flag (covers done / error / abort / disconnect uniformly) + re-render.
     try { (ag.history||[]).forEach(function(m){ if(m && m.streaming) m.streaming = false; }); } catch(e){}
     try { renderMsgs(ag); } catch(e){}
+    if(_idleHung){ try { showToast(L('接続が応答しないため中断しました。再読み込みで最新を確認できます','Connection stalled — reload to see the latest result'),'ng'); } catch(e){} }
   }
   if(_aborted){
     // User pressed ⏹. Preserve the partial text exactly as streamed and mark
@@ -17500,6 +17514,14 @@ async function _sendThreadReply(){
   var _tctrl = new AbortController();
   _threadStreamCtrl = _tctrl;
   _setThreadStreaming(true);
+  // Inactivity watchdog — abort a dead/hung SSE stream so the thread never
+  // sits on "生成中" forever (server keepalives reset it on a healthy turn).
+  var _tIdleTimer = null, _tIdleHung = false;
+  function _tBumpIdle(){
+    if(_tIdleTimer) clearTimeout(_tIdleTimer);
+    _tIdleTimer = setTimeout(function(){ _tIdleHung = true; try { _tctrl.abort(); } catch(e){} }, 90000);
+  }
+  function _tClearIdle(){ if(_tIdleTimer){ clearTimeout(_tIdleTimer); _tIdleTimer = null; } }
   // /search etc. — same slash handling as the main composer.
   var outbound = text;
   try { var slashCtx = await _runSlashCommand(text); if(slashCtx) outbound = slashCtx; } catch(e){}
@@ -17556,8 +17578,10 @@ async function _sendThreadReply(){
     var dec = new TextDecoder();
     var buf = '';
     var acc = '';
+    _tBumpIdle();
     while(true){
       var chunk = await reader.read();
+      _tBumpIdle();
       if(chunk.done) break;
       buf += dec.decode(chunk.value, { stream:true });
       var i;
@@ -17633,6 +17657,7 @@ async function _sendThreadReply(){
     _renderThreadDrawer();
     if(!_tAborted) showToast((e&&e.message)||'failed','ng');
   } finally {
+    _tClearIdle();
     _turnStatusEnd();
     _threadStreamCtrl = null;
     _setThreadStreaming(false);
@@ -17640,6 +17665,7 @@ async function _sendThreadReply(){
     try { (ag.history||[]).forEach(function(m){ if(m && m.streaming) m.streaming = false; }); } catch(e){}
     try { _renderThreadDrawer(); } catch(e){}
     try { renderMsgs(ag, false); } catch(e){}
+    if(_tIdleHung){ try { showToast(L('接続が応答しないため中断しました。再読み込みで最新を確認できます','Connection stalled — reload to see the latest result'),'ng'); } catch(e){} }
     var ci2 = document.getElementById('tci');
     if(ci2) ci2.focus();
   }

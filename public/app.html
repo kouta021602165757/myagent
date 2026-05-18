@@ -9932,7 +9932,10 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // so the bubble has a visible body even before any text arrives. Without
   // this, an empty assistant entry rendered as just header+actions and the
   // _sendMsgStream patch path failed to find .m-body to write deltas into.
-  const isStreaming = !!(raw && raw.streaming);
+  // A message shows "生成中" only while a turn is genuinely in flight. If the
+  // streaming flag is left over (turn errored / aborted / page reloaded) but
+  // no stream controller is active, it is stale — never show the indicator.
+  const isStreaming = !!(raw && raw.streaming) && !!(_chatStreamCtrl || _threadStreamCtrl);
   if(!isU && isStreaming && !bodyMarkup){
     bodyMarkup = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
       + (isJa?'生成中…':'Generating…') + '</div></div>';
@@ -13228,6 +13231,10 @@ async function _sendMsgStream(ag, text, imgs, texts){
     _turnStatusEnd();
     _chatStreamCtrl = null;
     _setChatStreaming(false);
+    // Turn is over — no message may still show "生成中". Clear every streaming
+    // flag (covers done / error / abort / disconnect uniformly) + re-render.
+    try { (ag.history||[]).forEach(function(m){ if(m && m.streaming) m.streaming = false; }); } catch(e){}
+    try { renderMsgs(ag); } catch(e){}
   }
   if(_aborted){
     // User pressed ⏹. Preserve the partial text exactly as streamed and mark
@@ -17629,6 +17636,10 @@ async function _sendThreadReply(){
     _turnStatusEnd();
     _threadStreamCtrl = null;
     _setThreadStreaming(false);
+    // Turn over — clear any leftover "生成中" flag + re-render both surfaces.
+    try { (ag.history||[]).forEach(function(m){ if(m && m.streaming) m.streaming = false; }); } catch(e){}
+    try { _renderThreadDrawer(); } catch(e){}
+    try { renderMsgs(ag, false); } catch(e){}
     var ci2 = document.getElementById('tci');
     if(ci2) ci2.focus();
   }

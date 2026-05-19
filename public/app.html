@@ -1677,6 +1677,8 @@ input,textarea{font-family:var(--sans);}
 }
 .m-artifact-card-acts .ac-open:hover{background:linear-gradient(135deg,#fb923c,#ea580c);filter:brightness(1.06);}
 .m-artifact-card-acts .ac-pin.on{background:var(--peach);color:#fff;border-color:transparent;}
+.m-artifact-card-acts .ac-dl{background:rgba(251,146,60,.12);border-color:rgba(251,146,60,.34);color:var(--peach-dark);}
+.m-artifact-card-acts .ac-dl:hover{background:rgba(251,146,60,.2);}
 
 /* 📌 Pinned-site bar — sits at the top of the thread drawer */
 .pin-bar{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--peach-soft,#fff1e3);border-bottom:1px solid rgba(251,146,60,.3);}
@@ -3209,7 +3211,7 @@ body{color:#f0f0f8;}
 
           <!-- Claude-style composer -->
           <div class="composer" style="position:relative">
-            <input type="file" id="imgInput" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
+            <input type="file" id="imgInput" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.xlsx,.xls,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
             <div id="editChipWrap" class="ec-wrap"></div>
             <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
             <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
@@ -9389,11 +9391,39 @@ function _md(src){
       + '</div>'
       + '</div>';
   }
+  // PDF card — generate_pdf returns `[📄 title (PDF)](/generated/xxx.pdf)`.
+  // Renders a card with Download (download attr) + Open, mirroring the
+  // .html artifact card so a generated PDF isn't just a bare link.
+  function _renderPdfCard(alt, src){
+    const safeAlt = (String(alt||'').replace(/\*\*/g,'').replace(/\s*\((?:PDF|pdf)\)\s*$/,'').replace(/^[^0-9A-Za-z぀-ヿ一-鿿]+/,'').replace(/"/g,'&quot;').trim().slice(0,80)) || (isJa?'PDF ドキュメント':'PDF document');
+    const safeSrc = String(src||'').replace(/"/g,'&quot;');
+    const _pfName = String(src||'').split('?')[0].split('#')[0].split('/').filter(Boolean).pop() || 'document.pdf';
+    return '<div class="m-artifact-card">'
+      + '<div class="m-artifact-card-top">'
+      +   '<div class="m-artifact-card-ic">📄</div>'
+      +   '<div class="m-artifact-card-body">'
+      +     '<div class="m-artifact-card-titlerow"><div class="m-artifact-card-ti">'+safeAlt+'</div><span class="m-artifact-card-ver">PDF</span></div>'
+      +     '<div class="m-artifact-card-url">'+esc(_pfName)+'</div>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="m-artifact-card-acts">'
+      +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 コピー\';},1400);})">📋 コピー</button>'
+      +   '<a class="ac-dl" href="'+safeSrc+'" download="'+esc(_pfName)+'">⬇ '+(isJa?'ダウンロード':'Download')+'</a>'
+      +   '<a class="ac-open" href="'+safeSrc+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
+      + '</div>'
+      + '</div>';
+  }
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
     return _renderArtifactCard(alt, src);
   });
   html=html.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
     return _renderArtifactCard(alt, src);
+  });
+  html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.pdf)\)/gi, function(_, alt, src){
+    return _renderPdfCard(alt, src);
+  });
+  html=html.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+\.pdf)\)/gi, function(_, alt, src){
+    return _renderPdfCard(alt, src);
   });
   // Images — MUST come before links so the leading '!' is consumed cleanly.
   // Renders the AI-generated image inline. Now accepts root-relative URLs
@@ -9717,6 +9747,10 @@ function renderMsgs(ag, forceScrollBottom){
     el.scrollTop = el.scrollHeight - prevScrollFromBottom;
   }
   _updateScrollFAB();
+  // Keep the thread drawer (if open) in sync — any action that re-renders
+  // the main timeline (react / delete / pin / bookmark …) also refreshes
+  // the thread so changes to thread messages show up immediately.
+  if(window._activeThreadParent){ try{ _renderThreadDrawer(); }catch(e){} }
 }
 
 /* Compact action labels per tool name */
@@ -9842,6 +9876,11 @@ function _linkInlineCitations(html, cites){
   });
 }
 
+// True only while _renderThreadDrawer renders a message inside the thread
+// drawer. Lets _renderMsg suppress actions that aren't thread-aware
+// (edit / regenerate / quote-reply / continue / retry target the MAIN
+// timeline or composer and would corrupt history if run on a thread msg).
+var _renderingInThread = false;
 function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const isU = role==='user';
   const isGroup = !!(ag && ag.is_group);
@@ -9879,7 +9918,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // Don't apply to: huddle bubbles (already have their own visual), error
   // bubbles, summary cards, or messages with thread_parent_id (different UI).
   let _isReply = false;
-  if(!isU && idx > 0 && ag && Array.isArray(ag.history) && !huddleMember && !huddleSummary && !(raw && raw.is_error) && !(raw && raw.thread_parent_id)){
+  if(!isU && idx > 0 && ag && Array.isArray(ag.history) && !huddleMember && !huddleSummary && !(raw && raw.is_error) && !(raw && raw.thread_parent_id) && !_renderingInThread){
     const _prev = ag.history[idx-1];
     if(_prev && _prev.role === 'user' && !_prev.thread_parent_id) _isReply = true;
   }
@@ -9929,12 +9968,15 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     // Regenerate / Remember / Speak / Bookmark / Delete) — shown only when
     // the user clicks the ⋯ button on the hover-bar. No duplicates.
     if(isU){
-      var editBtn = isMyMsg ? '<button class="m-act" onclick="editMsgStart(this)" title="'+(isJa?'編集して再生成':'Edit & resend')+'">✏️ '+(isJa?'編集':'Edit')+'</button>' : '';
+      var editBtn = (isMyMsg && !_renderingInThread) ? '<button class="m-act" onclick="editMsgStart(this)" title="'+(isJa?'編集して再生成':'Edit & resend')+'">✏️ '+(isJa?'編集':'Edit')+'</button>' : '';
       acts = editBtn+bmBtn+delBtn;
     } else {
       var rememberBtn = '<button class="m-act" onclick="rememberMsg(this)" title="'+(isJa?'記憶として保存':'Save to memory')+'">🧠 '+(isJa?'記憶':'Remember')+'</button>';
-      var replyBtn = '<button class="m-act" onclick="replyToMsg(this)" title="'+(isJa?'引用して返信':'Reply to this')+'">↩️ '+(isJa?'返信':'Reply')+'</button>';
-      acts = '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>'+
+      // Quote-reply writes to the MAIN composer and Regenerate re-runs the
+      // last MAIN message — neither is thread-aware, so hide them in threads.
+      var replyBtn = _renderingInThread ? '' : '<button class="m-act" onclick="replyToMsg(this)" title="'+(isJa?'引用して返信':'Reply to this')+'">↩️ '+(isJa?'返信':'Reply')+'</button>';
+      var regenBtn = _renderingInThread ? '' : '<button class="m-act" onclick="regenerateMsg(this)">🔄 '+(isJa?'再生成':'Regenerate')+'</button>';
+      acts = regenBtn+
              replyBtn+
              rememberBtn+
              '<button class="m-act" onclick="speakMsg(this)" title="読み上げ">🔊 '+(isJa?'読み上げ':'Speak')+'</button>'+
@@ -9942,13 +9984,13 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     }
     // Continue / Retry — ALWAYS visible (separate row, not gated by show-acts).
     // Critical recovery actions for truncated or errored replies.
-    if(!isU && raw && raw.truncated){
+    if(!isU && raw && raw.truncated && !_renderingInThread){
       var contLabel = raw.was_stopped
         ? (isJa ? '▶ 続きから生成' : '▶ Resume')
         : (isJa ? '▶ 続きを書く' : '▶ Continue');
       inlineActs += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを生成':'Continue')+'">'+contLabel+'</button>';
     }
-    if(!isU && raw && raw.is_error){
+    if(!isU && raw && raw.is_error && !_renderingInThread){
       inlineActs += '<button class="m-act m-act-retry" onclick="retryMsg(this)" title="'+(isJa?'もう一度試す':'Retry')+'">🔄 '+(isJa?'再試行':'Retry')+'</button>';
     }
   }
@@ -10082,7 +10124,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   var hoverBarHTML = '';
   if(idx >= 0 && !isStreaming){
     var hbThreadId = raw && raw.id;
-    var hbThreadBtn = hbThreadId
+    var hbThreadBtn = (hbThreadId && !_renderingInThread)
       ? '<button class="hb-b hb-thread" onclick="_openThread(\''+esc(hbThreadId)+'\')" title="'+L('スレッドで返信','Reply in thread')+'">💬</button>'
       : '';
     hoverBarHTML = '<div class="hover-bar">'
@@ -11885,6 +11927,14 @@ function _isDocx(file){
   return file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/.test(n);
 }
 
+function _isXlsx(file){
+  // Match by extension (.xlsx/.xls) — the xlsx MIME is the only unambiguous
+  // one; application/vnd.ms-excel is skipped because some browsers tag .csv
+  // with it, and .csv should keep its text-with-CSV-summary path.
+  var n=(file.name||'').toLowerCase();
+  return file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || /\.xlsx?$/.test(n);
+}
+
 function _csvSummary(text, name){
   // Quick rows × cols preview prepended so the AI sees structure right away.
   var lines = text.split(/\r?\n/).filter(function(l){return l.length>0;});
@@ -11933,6 +11983,44 @@ async function _ingestDocx(file, which){
   renderImgPreview(which);
 }
 
+async function _ingestXlsx(file, which){
+  which = which || 'main';
+  var P = _pendOf(which);
+  // Read as base64, hand off to the server which uses SheetJS to turn each
+  // sheet into CSV text the AI can read.
+  var placeholder = { name: file.name, kind: 'text-loading', text: '' };
+  P.push(placeholder);
+  renderImgPreview(which);
+  try {
+    var b64 = await new Promise(function(resolve, reject){
+      var r = new FileReader();
+      r.onload = function(ev){ resolve(String(ev.target.result||'').split(',')[1] || ''); };
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    var r = await api('POST','/api/parse/xlsx',{ b64: b64, name: file.name });
+    var idx = P.indexOf(placeholder);
+    if(idx>=0) P.splice(idx,1);
+    if(!r || !r.text){
+      showToast(isJa?'Excel を解析できませんでした':'Could not parse Excel','ng');
+      renderImgPreview(which); return;
+    }
+    P.push({
+      name: file.name,
+      type: 'text/plain',
+      kind: 'text',
+      text: r.text,
+      truncated: !!r.truncated,
+      size: file.size,
+      source_kind: 'xlsx',
+    });
+  } catch(e){
+    var i = P.indexOf(placeholder); if(i>=0) P.splice(i,1);
+    showToast((isJa?'Excel 解析エラー: ':'Excel parse error: ')+(e.message||''),'ng');
+  }
+  renderImgPreview(which);
+}
+
 function _ingestFiles(files, which){
   which = which || 'main';
   var P = _pendOf(which);
@@ -11940,7 +12028,8 @@ function _ingestFiles(files, which){
     var isImg = file.type.startsWith('image/');
     var isPdf = file.type === 'application/pdf';
     var isDocx = _isDocx(file);
-    var isTxt = !isDocx && _isTextLike(file);
+    var isXlsx = _isXlsx(file);
+    var isTxt = !isDocx && !isXlsx && _isTextLike(file);
     // Anthropic accepts only these 4 image media types — reject others
     // (iPhone HEIC, SVG, BMP, …) up front so they never hit the API as a 400.
     if(isImg && ['image/jpeg','image/png','image/gif','image/webp'].indexOf((file.type||'').toLowerCase()) < 0){
@@ -11952,6 +12041,10 @@ function _ingestFiles(files, which){
     if(isDocx){
       if(file.size > 20*1024*1024){ showToast(isJa?'DOCX が大きすぎます (20MB)':'DOCX too large (20MB)','ng'); return; }
       return _ingestDocx(file, which);
+    }
+    if(isXlsx){
+      if(file.size > 20*1024*1024){ showToast(isJa?'Excel が大きすぎます (20MB)':'Excel too large (20MB)','ng'); return; }
+      return _ingestXlsx(file, which);
     }
     if(!isImg && !isPdf && !isTxt){
       showToast((isJa?'未対応のファイル形式: ':'Unsupported file: ')+file.name,'ng');
@@ -17226,6 +17319,9 @@ function _threadComposerHTML(){
   +     '<button class="tool-btn" type="button" onclick="insertCodeBlock(\'tci\')" title="'+L('コードブロック挿入','Insert code block')+'">'
   +       '<svg '+ICON+' stroke-width="1.9"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>'
   +     '</button>'
+  +     '<button class="tool-btn" type="button" onclick="_openArtifactLibrary()" title="'+L('作った成果物の一覧','Your artifacts')+'">'
+  +       '<svg '+ICON+' stroke-width="1.9"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'
+  +     '</button>'
   +     '<div class="tool-spacer"></div>'
   +     '<button class="send-btn" type="button" id="tSndBtn" onclick="_sendThreadReply()" title="'+L('送信','Send')+'">'
   +       '<svg '+ICON+' stroke-width="2.2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>'
@@ -17280,7 +17376,14 @@ function _renderThreadDrawer(){
   // properly inside threads (critical for LP-edit flows where each reply
   // contains a fresh artifact URL).
   function _renderInThread(m){
-    return _renderMsg(m.role, ag, m.content, m.time||'', m.images, -1, m.tool_log, m);
+    // Pass the real ag.history index (not -1) so the message gets its
+    // hover bar / reactions / action buttons. _renderingInThread tells
+    // _renderMsg to drop the non-thread-safe actions.
+    var _ti = (ag.history||[]).indexOf(m);
+    _renderingInThread = true;
+    var _h = _renderMsg(m.role, ag, m.content, m.time||'', m.images, _ti, m.tool_log, m);
+    _renderingInThread = false;
+    return _h;
   }
   var bodyHTML =
     '<div class="msgs-inner" style="max-width:none">'

@@ -14458,6 +14458,42 @@ async function handleAPI(req,res,pathname,method,ip){
     }
   }
 
+  // ── POST /api/parse/xlsx ───────────────────────────────────
+  // Body: { b64: string, name?: string }
+  // Extracts every sheet of an Excel workbook (.xlsx / .xls) as CSV text so
+  // the AI can read tabular data. Uses `xlsx` (SheetJS), lazy-required like
+  // mammoth/pdf-parse so a deploy without `npm install` still boots.
+  if(pathname==='/api/parse/xlsx' && method==='POST'){
+    const auth=getAuth(req); if(!auth) return jres(res,401,{error:'認証が必要です'});
+    const body = (await readBody(req)) || {};
+    const b64=(body.b64||'').toString();
+    if(!b64) return jres(res,400,{error:'b64 が必要です'});
+    let buf;
+    try { buf = Buffer.from(b64, 'base64'); }
+    catch { return jres(res,400,{error:'base64 デコードに失敗'}); }
+    if(buf.length > 20*1024*1024) return jres(res,413,{error:'ファイルが大きすぎます (上限 20MB)'});
+    let xlsx;
+    try { xlsx = require('xlsx'); }
+    catch(e){ return jres(res,500,{error:'xlsx 未インストール — npm install を実行してください'}); }
+    try {
+      const wb = xlsx.read(buf, { type:'buffer', cellDates:true });
+      const names = wb.SheetNames || [];
+      const parts = [];
+      for(const sn of names){
+        const ws = wb.Sheets[sn];
+        if(!ws) continue;
+        const csv = (xlsx.utils.sheet_to_csv(ws, { blankrows:false }) || '').trim();
+        parts.push('### シート: ' + sn + (csv ? '\n' + csv : '\n(空のシート)'));
+      }
+      let text = parts.join('\n\n').trim();
+      let truncated = false;
+      if(text.length > 120000){ text = text.slice(0,120000); truncated = true; }
+      return jres(res,200,{ text, truncated, name: body.name||'workbook.xlsx', length: text.length, sheets: names.length });
+    } catch(e){
+      return jres(res,400,{ error:'Excel 解析に失敗', detail: (e&&e.message||'').slice(0,200) });
+    }
+  }
+
   // ── POST /api/fetch-url ────────────────────────────────────
   // Body: { url: string }
   // Fetches the URL server-side, strips HTML, returns extracted text so the

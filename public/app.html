@@ -4585,7 +4585,7 @@ body{color:#f0f0f8;}
       <div class="ea-acc-body">
         <div class="desc" style="font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:6px">PDF・DOCX・テキストを登録すると、関連する質問でこの AI が自動で参照します。</div>
         <div id="editKbList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto"></div>
-        <input type="file" id="editKbInput" accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.xml,.yaml,.yml,.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv" multiple style="display:none" onchange="onKbFileSelect(event)">
+        <input type="file" id="editKbInput" accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.xml,.yaml,.yml,.docx,.pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/plain,text/markdown,text/csv" multiple style="display:none" onchange="onKbFileSelect(event)">
         <button type="button" onclick="document.getElementById('editKbInput').click()" style="margin-top:6px;width:100%;background:#fff;color:#047857;border:1px solid #10b981;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ ドキュメントを追加</button>
       </div>
     </details>
@@ -17176,21 +17176,22 @@ async function _kbUploadDoc(file){
   var id = window._editAgentId; if(!id) return;
   var isDocx = _isDocx(file);
   var isPdf = (file.type === 'application/pdf') || /\.pdf$/i.test(file.name||'');
-  if(!isDocx && !isPdf && !_isTextLike(file)){
+  var isXlsx = _isXlsx(file);
+  if(!isDocx && !isPdf && !isXlsx && !_isTextLike(file)){
     showToast((isJa?'未対応の形式: ':'Unsupported: ')+file.name,'ng'); return;
   }
   if(file.size > 10*1024*1024){ showToast(isJa?'ファイルが大きすぎます (10MB)':'File too large (10MB)','ng'); return; }
   showToast((isJa?'追加中: ':'Adding: ')+file.name, 'ok');
   try {
     var text;
-    if(isDocx || isPdf){
+    if(isDocx || isPdf || isXlsx){
       var b64 = await new Promise(function(resolve, reject){
         var r = new FileReader();
         r.onload = function(ev){ resolve(String(ev.target.result||'').split(',')[1] || ''); };
         r.onerror = reject;
         r.readAsDataURL(file);
       });
-      var endpoint = isPdf ? '/api/parse/pdf' : '/api/parse/docx';
+      var endpoint = isPdf ? '/api/parse/pdf' : isXlsx ? '/api/parse/xlsx' : '/api/parse/docx';
       var r = await api('POST', endpoint, { b64: b64, name: file.name });
       text = (r && r.text) || '';
     } else {

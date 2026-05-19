@@ -17206,10 +17206,11 @@ function _threadComposerHTML(){
   +   '<div id="editChipWrapThread" class="ec-wrap"></div>'
   +   '<input type="file" id="tImgInput" multiple style="display:none" onchange="onImgSelect(event,\'thread\')">'
   +   '<div class="composer-attach-strip" id="tImgPreviewWrap" style="display:none"></div>'
+  +   '<div id="tMentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>'
   +   '<div id="tSlashPalette" class="slash-palette" style="display:none" role="listbox"></div>'
   +   '<textarea id="tci" rows="1" placeholder="'+L('このスレッドに返信… (Shift+Enter で改行)','Reply in thread… (Shift+Enter for newline)')+'"'
-  +     ' oninput="exTA(this);_slashOnInput(this.value,\'thread\')"'
-  +     ' onkeydown="_slashOnKeydown(event,\'thread\') || _threadTaKey(event)"'
+  +     ' oninput="exTA(this);_mentionOnInput(this,\'thread\');_slashOnInput(this.value,\'thread\')"'
+  +     ' onkeydown="_slashOnKeydown(event,\'thread\') || _mentionOnKeydown(event,\'thread\') || _threadTaKey(event)"'
   +     ' oncompositionstart="_imeStart()" oncompositionend="_imeEnd()"'
   +     ' onpaste="onComposerPaste(event,\'thread\')"></textarea>'
   +   '<div class="composer-tools">'
@@ -17362,6 +17363,8 @@ function _renderThreadDrawer(){
 function _closeThread(){
   window._activeThreadParent = null;
   _threadPendingImgs.length = 0;   // clear staged thread attachments
+  // Drop any open thread-side @mention picker state — its DOM is about to go.
+  if(_mentionState.which === 'thread'){ _mentionState.open = false; _mentionState.which = 'main'; }
   var d = document.getElementById('threadDrawer');
   if(d) d.remove();
 }
@@ -18986,7 +18989,7 @@ function taKey(e){
 }
 
 /* ── @mention picker (Slack-style) ─────────────────────────── */
-var _mentionState = { open:false, start:-1, query:'', items:[], sel:0 };
+var _mentionState = { open:false, start:-1, query:'', items:[], sel:0, which:'main' };
 
 function _mentionMembers(){
   // Returns [{key, name, label, isAI}] for the active group's members + AI.
@@ -19051,7 +19054,12 @@ function _mentionFindStart(text, cursor){
 }
 
 function _mentionRender(){
-  var picker = document.getElementById('mentionPicker');
+  var which = _mentionState.which || 'main';
+  var picker = document.getElementById(which==='thread' ? 'tMentionPicker' : 'mentionPicker');
+  // Hide the other composer's picker so a stale one never lingers when the
+  // user moves between the main composer and an open thread.
+  var other = document.getElementById(which==='thread' ? 'mentionPicker' : 'tMentionPicker');
+  if(other){ other.style.display='none'; other.innerHTML=''; }
   if(!picker) return;
   if(!_mentionState.open || _mentionState.items.length === 0){
     picker.style.display='none'; picker.innerHTML=''; _mentionState.open=false; return;
@@ -19092,7 +19100,8 @@ function _mentionRender(){
   picker.style.display='';
 }
 
-function _mentionOnInput(ta){
+function _mentionOnInput(ta, which){
+  _mentionState.which = which || 'main';
   var cursor = ta.selectionStart;
   var text = ta.value;
   var start = _mentionFindStart(text, cursor);
@@ -19111,8 +19120,9 @@ function _mentionOnInput(ta){
   _mentionRender();
 }
 
-function _mentionOnKeydown(e){
+function _mentionOnKeydown(e, which){
   if(!_mentionState.open) return false;
+  if((which || 'main') !== (_mentionState.which || 'main')) return false;
   if(e.key === 'ArrowDown'){
     e.preventDefault();
     _mentionState.sel = (_mentionState.sel + 1) % _mentionState.items.length;
@@ -19135,7 +19145,7 @@ function _mentionOnKeydown(e){
 }
 
 function _mentionPick(idx){
-  var ta = document.getElementById('ci');
+  var ta = document.getElementById(_mentionState.which==='thread' ? 'tci' : 'ci');
   if(!ta || !_mentionState.items[idx]) return;
   var it = _mentionState.items[idx];
   // Picking @all flips Huddle ON for the next send so everyone speaks in turn.

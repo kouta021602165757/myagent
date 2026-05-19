@@ -9367,6 +9367,10 @@ function _md(src){
         ? me.artifacts.find(function(a){ return a && a.filename === _afName; }) : null;
       if(_aHit) _afVer = _aHit.version || 1;
     } catch(e){}
+    // Fallback: any artifact-*.html is at least v1, so show "Ver.1" even
+    // before me.artifacts has refreshed (or if that refresh failed). The
+    // real version replaces this once the lookup above finds the entry.
+    if(_afIsArtifact && !_afVer) _afVer = 1;
     const _verBadge = _afVer ? '<span class="m-artifact-card-ver">Ver.'+_afVer+'</span>' : '';
     // Is this artifact the conversation's pinned site?
     let _afPinned = false;
@@ -11060,6 +11064,7 @@ async function editMsgSave(btn){
   }
   var t=document.getElementById('thinking'); if(t) t.remove();
   renderMsgs(ag);  // sticky-bottom — if user scrolled up reading reply mid-stream, respect that
+  _refreshArtifactsIfNeeded(r && r.tool_log, ag);
 }
 
 /* ── Retry (recover from error / timeout / 5xx) ─────── */
@@ -11192,6 +11197,7 @@ async function regenerateMsg(btn){
   }
   var t=document.getElementById('thinking'); if(t) t.remove();
   renderMsgs(ag);
+  _refreshArtifactsIfNeeded(r && r.tool_log, ag);
 }
 
 // "Sticky bottom" — auto-scroll while user is at/near the bottom, but DON'T
@@ -13004,7 +13010,7 @@ function _turnStatusFromEvent(evType, obj){
 
 // After a turn that created/edited an artifact, refresh me.artifacts so the
 // in-chat cards show the correct "Ver.N" (the version bumped server-side).
-function _refreshArtifactsIfNeeded(toolLog, ag){
+function _refreshArtifactsIfNeeded(toolLog, ag, _retried){
   try{
     var tl = toolLog || [];
     if(!tl.some(function(t){ return t && /artifact/.test(String(t.name||'')); })) return;
@@ -13014,7 +13020,14 @@ function _refreshArtifactsIfNeeded(toolLog, ag){
         try{ renderMsgs(ag); }catch(e){}
         if(window._activeThreadParent){ try{ _renderThreadDrawer(); }catch(e){} }
       }
-    }).catch(function(){});
+    }).catch(function(e){
+      // Don't swallow silently — a failed refresh leaves cards without their
+      // Ver.N badge. Log it, and retry once after a short delay.
+      console.warn('[artifacts] /api/me refresh failed', e && e.message);
+      if(!_retried){
+        setTimeout(function(){ _refreshArtifactsIfNeeded(toolLog, ag, true); }, 2500);
+      }
+    });
   }catch(e){}
 }
 

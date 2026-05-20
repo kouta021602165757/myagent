@@ -4175,10 +4175,15 @@ function _md(src){
       + '</div>'
       + '</div>';
   }
-  html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
+  // URL pattern allows an optional ?query / #fragment after .html — the
+  // server now stamps `?v=N` onto artifact URLs (see _stampArtifactVersions),
+  // and the old `\.html?\)` regex required `)` immediately after .html, so
+  // every versioned artifact URL was silently rendered as plain text (the
+  // "freecracy-dd-report" naked-filename bug).
+  html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?(?:[?#][^)]*)?)\)/g, function(_, alt, src){
     return _renderArtifactCard(alt, src);
   });
-  html=html.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
+  html=html.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+\.html?(?:[?#][^)]*)?)\)/g, function(_, alt, src){
     return _renderArtifactCard(alt, src);
   });
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.pdf)\)/gi, function(_, alt, src){

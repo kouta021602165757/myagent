@@ -6757,6 +6757,34 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
   if(!applied){
     return { error: 'invalid operation: '+op };
   }
+  // ── Diff sanity check — surface no-op / negligible-change edits as errors ──
+  // The "AI claimed completion but nothing changed" bug pattern: AI picks a
+  // selector that doesn't match (or content identical to existing) → the
+  // tool silently succeeds with applied=true but `html === _htmlBefore`.
+  // Force the AI to recognize this failure so it can retry with rewrite or
+  // a different selector instead of falsely reporting ✅ to the user.
+  //
+  // - byte_delta === 0 (nothing actually changed): hard error
+  // - byte_delta < 20 (likely a no-op edit / whitespace only): warn + suggest rewrite
+  // - sizable change: pass through
+  const _deltaBytes = Math.abs(Buffer.byteLength(html, 'utf8') - Buffer.byteLength(_htmlBefore, 'utf8'));
+  const _bodyChanged = (html !== _htmlBefore);
+  if(!_bodyChanged){
+    return {
+      error: 'no-op edit: operation `' + op + '` produced identical HTML. '
+        + 'Likely causes: (1) selector didn\'t match anything, '
+        + '(2) the `replace_*` content was identical to existing, '
+        + '(3) you tried a structural change (section reorder/move) with a non-rewrite op. '
+        + '→ もし依頼が構造変更 (セクション移動・並び替え・節構成変更) なら `operation: "rewrite"` で HTML 全文を書き直して再試行。'
+        + 'それ以外なら selector を見直して再試行。',
+      operation_attempted: op,
+      filename: filename,
+    };
+  }
+  if(_deltaBytes < 20 && op !== 'replace_text'){
+    console.warn('[edit_artifact] tiny delta', _deltaBytes, 'bytes for op=' + op + ' fn=' + filename);
+    // Not a hard error — could be a legit small edit — but stamp a warning.
+  }
   // Non-destructive edit: snapshot the version we're about to overwrite, so a
   // bad edit can be rolled back. Capped at 3 (html is heavy in the JSONB row).
   artifact.versions = Array.isArray(artifact.versions) ? artifact.versions : [];
@@ -6793,12 +6821,41 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
   const _rv = _isRewrite ? await _renderVerifyArtifact(html) : { ok:true, skipped:true };
   const _allIssues = newIssues.concat(_rv.ok ? [] : _rv.errors);
   const baseInstr = '更新完了。最終応答で上記 markdown 構文を本文に含めてください。';
+  // Build a human-readable "what changed" summary for AI + client. Helps
+  // both: (a) the AI re-read its own action to verify it was correct, and
+  // (b) the client surface the change to the user without diffing the HTML.
+  const _byteDelta = Buffer.byteLength(html, 'utf8') - Buffer.byteLength(_htmlBefore, 'utf8');
+  const _byteDeltaLabel = _byteDelta >= 0 ? ('+' + _byteDelta) : String(_byteDelta);
+  let _changeSummary;
+  if(op === 'rewrite'){
+    _changeSummary = '全文を書き直し (' + _byteDeltaLabel + ' bytes)';
+  } else if(op === 'replace_text'){
+    const findRaw = String((input && input.find) || '').slice(0, 40);
+    const replaceRaw = String((input && input.replace) || '').slice(0, 40);
+    _changeSummary = '「' + findRaw + '」→「' + replaceRaw + '」を置換 (' + _byteDeltaLabel + ' bytes)';
+  } else if(op === 'replace_selector'){
+    _changeSummary = 'selector `' + (selector||'').slice(0,40) + '` の中身を差し替え (' + _byteDeltaLabel + ' bytes)';
+  } else if(op === 'append_to_body'){
+    _changeSummary = '末尾に追記 (' + _byteDeltaLabel + ' bytes)';
+  } else if(op === 'append_to_selector'){
+    _changeSummary = 'selector `' + (selector||'').slice(0,40) + '` の末尾に追記 (' + _byteDeltaLabel + ' bytes)';
+  } else if(op === 'insert_before_selector'){
+    _changeSummary = 'selector `' + (selector||'').slice(0,40) + '` の前に挿入 (' + _byteDeltaLabel + ' bytes)';
+  } else {
+    _changeSummary = op + ' (' + _byteDeltaLabel + ' bytes)';
+  }
   const result = {
     url, title: artifact.title || filename, operation: op,
     filename,
     version: artifact.version || 1,
     size_kb: sizeKb,
     bytes_added: content.length,
+    // byte_delta は signed (+ なら膨らみ、- なら縮み)。0 なら no-op error
+    // で既に return しているので、ここに到達した時点で必ず非ゼロ。
+    byte_delta: _byteDelta,
+    // 人間が読める変更サマリー。client 側でカードに「✏️ rewrite (+1.2KB)」
+    // のように surface できる。AI も自分が何をしたかを再確認できる。
+    change_summary: _changeSummary,
     // Stamp the new version into the suggested markdown so the AI's reply
     // already carries the right Ver in the URL. _stampArtifactVersions
     // also re-stamps later, but doing it at the source avoids one round-trip.
@@ -11447,17 +11504,28 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
      ✅ 「3 期分の PL/BS を取得 (第6期から赤字傾向)。次に HTML に統合します」
    - 数値・テーブルは成果物 (HTML/PDF/CSV) に入れる。チャット本文は要約だけ。
 
-2. **edit_artifact では rewrite を最後の手段に**
-   - まず replace_text / replace_selector / append_to_body / insert_before_selector を試す
-   - rewrite (HTML 全文書き直し) は Chromium 検証で 5-13 秒かかる
-   - 「セクション追加」「色だけ変更」「文言修正」は rewrite 不要。部分編集で済む
-   - rewrite が必要なケース: ① 構造が壊れた時の修復 ② 全体テーマ刷新
+2. **edit_artifact のツール選択 — 依頼の性質で判断**
+   - **小さな変更** (文言修正・色変更・要素追加・属性変更): replace_text / replace_selector / append_to_body
+   - **構造的変更** (セクションの移動・並び替え・節構成の変更・複数箇所をまたぐ整合性のある修正): **必ず rewrite を使う**。replace_selector では DOM の順序入れ替えはできない
+   - **判断基準**: 「もし replace_selector を 1 回だけで実現できないなら rewrite」
+   - 例:
+     - 「セクション 5 を 7 に移動」→ DOM 並び替え必須 → **rewrite**
+     - 「セクション 1 に新しい要素を埋め込み」→ append_to_selector で可
+     - 「全体のデザイン刷新」→ **rewrite**
+     - 「フッターの文言修正」→ replace_selector で可
+   - rewrite は Chromium 検証で 5-13 秒かかるが、構造変更を中途半端な partial edit で済まそうとして失敗する方が**ユーザー体験は遥かに悪い** (= 「指示通り直ってない」「嘘の完了報告」)
 
-3. **冗長な前置き・後置き禁止**
+3. **依頼を完全に実現できないときは正直に言う — 嘘の完了報告は絶対禁止**
+   - edit_artifact / create_artifact が error を返した → 「✅ ステップN 完了」を絶対に書かない
+   - 依頼の一部しか実現できなかった → 「○○は完了、△△はうまくできず ××のせいで保留」と書く
+   - tool 選択を間違えて変更が反映されなかったと気付いた → 「先ほどの修正は反映されていませんでした。rewrite で再修正します」と正直に言ってから再試行
+   - 「実装しました」「修正しました」と書く前に: **本当に変更されたか** edit_artifact の verification フィールドを確認
+
+4. **冗長な前置き・後置き禁止**
    - 「以下が抽出した内容です:」「では次に進みます」「お待たせしました」などは無駄
    - 必要なことだけ、要点のみ
 
-4. **独立したステップは parallel_tool_use で並列に**
+5. **独立したステップは parallel_tool_use で並列に**
    - データ取得系 (read_artifact / web_search / web_fetch / sheets_read) で互いに依存しないものは同時に呼ぶ
    - Anthropic API は 1 ターンで複数 tool_use を返せる
 
@@ -18887,6 +18955,12 @@ async function handleAPI(req,res,pathname,method,ip){
               // distinct artifacts touched in the turn.
               filename: result&&result.filename,
               version: result&&result.version,
+              // change_summary surfaces "✏️ rewrite (+1.2KB)" / "selector x の中身を差し替え"
+              // to the client so the user sees what specifically changed,
+              // without having to open the artifact and diff manually.
+              change_summary: result&&result.change_summary,
+              byte_delta: result&&result.byte_delta,
+              operation: result&&result.operation,
               title: result&&result.title,
               text: result&&result.text ? String(result.text).slice(0,400) : '',
               results: result&&result.results,

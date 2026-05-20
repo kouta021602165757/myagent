@@ -9494,14 +9494,20 @@ function _md(src){
     const _afIsArtifact = /^artifact-/.test(_afName);
     const _afTitleArg = safeAlt.replace(/'/g,"\\'");
     const _afNameArg = _afName.replace(/'/g,"\\'");
-    // Look up the stored version + vision review so the card shows them.
+    // Version sourcing — prefer ?v=N baked into the URL by the server (the
+    // structural fix: each message carries the version it referred to at the
+    // time, so history shows historically-correct version numbers and there
+    // is no 3-path local-cache sync to keep in step). Fall back to me.artifacts
+    // for older replies that pre-date the stamping.
     let _afVer = 0, _afVR = null;
+    const _vMatch = String(src||'').match(/[?&]v=(\d+)/);
+    if(_vMatch) _afVer = parseInt(_vMatch[1], 10) || 0;
     try {
       const _aHit = (typeof me!=='undefined' && me && Array.isArray(me.artifacts))
         ? me.artifacts.find(function(a){ return a && a.filename === _afName; }) : null;
       if(_aHit){
-        _afVer = _aHit.version || 1;
-        _afVR  = _aHit.vision_review || null;
+        if(!_afVer) _afVer = _aHit.version || 1;
+        _afVR = _aHit.vision_review || null;
       }
     } catch(e){}
     if(_afIsArtifact && !_afVer) _afVer = 1;
@@ -9535,7 +9541,14 @@ function _md(src){
       +   (_afIsArtifact ? '<button class="ac-pin'+(_afPinned?' on':'')+'" onclick="'+(_afPinned?'_unpinArtifact()':'_pinArtifact(\''+_afNameArg+'\')')+'" title="'+(_afPinned?'このチャットの編集対象（固定中）':'このチャットの編集対象に固定')+'">📌 '+(_afPinned?(isJa?'固定中':'Pinned'):(isJa?'固定':'Pin'))+'</button>' : '')
       +   (_afIsArtifact ? '<button class="ac-code" onclick="_openCodeViewer(\''+_afNameArg+'\')" title="コードを見る">📄 '+(isJa?'コード':'Code')+'</button>' : '')
       +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 コピー\';},1400);})">📋 コピー</button>'
-      +   '<a class="ac-open" href="'+(_afIsArtifact && _afVer ? safeSrc + (safeSrc.indexOf('?')>=0?'&':'?') + 'v=' + _afVer : safeSrc)+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
+      +   '<a class="ac-open" href="'+(
+              // Cache buster: only add ?v=N if the URL doesn't already have one
+              // (server-side stamping may have baked it in already). Prevents
+              // duplicate ?v=...&v=... or stale-overrides-fresh situations.
+              _afIsArtifact && _afVer && !/[?&]v=\d+/.test(safeSrc)
+                ? safeSrc + (safeSrc.indexOf('?')>=0?'&':'?') + 'v=' + _afVer
+                : safeSrc
+            )+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
       + '</div>'
       + '</div>';
   }

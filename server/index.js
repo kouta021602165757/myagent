@@ -6383,7 +6383,10 @@ async function executeArtifactTool(input, ownerUser, ctx){
     filename,
     version: 1,
     size_kb: sizeKb,
-    markdown: '![' + title + '](' + url + ')',
+    // Markdown link includes ?v=1 from creation so the very first message
+    // referencing the artifact already carries the version. Edits will stamp
+    // higher numbers, again at the source.
+    markdown: '![' + title + '](' + url + '?v=1)',
     verification: { ok: _allIssues.length === 0, issues: _allIssues, render_checked: !_rv.skipped },
   };
   if(_allIssues.length === 0){
@@ -6608,7 +6611,10 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
     version: artifact.version || 1,
     size_kb: sizeKb,
     bytes_added: content.length,
-    markdown: '![' + (artifact.title || 'artifact') + '](' + url + ')',
+    // Stamp the new version into the suggested markdown so the AI's reply
+    // already carries the right Ver in the URL. _stampArtifactVersions
+    // also re-stamps later, but doing it at the source avoids one round-trip.
+    markdown: '![' + (artifact.title || 'artifact') + '](' + url + '?v=' + (artifact.version || 1) + ')',
     verification: { ok: _allIssues.length === 0, issues: _allIssues, render_checked: !_rv.skipped },
   };
   if(_allIssues.length === 0){
@@ -6641,6 +6647,43 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
     });
   } catch(e){ console.warn('[vision-review] setup failed:', e.message); }
   return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Artifact version stamping — bake `?v=N` into every /generated/artifact-X.html
+// URL in an AI reply, right before the reply is persisted/streamed to the
+// client. Lets the client read version directly from the URL and stops the
+// 3-path local-state-sync dance (server → SSE logEntry → me.artifacts) that
+// kept developing new holes. Idempotent: skips URLs that already have v=.
+// Past replies (already in history without v=) gracefully fall back to the
+// client's me.artifacts lookup, so this rollout is fully backward-compat.
+// ─────────────────────────────────────────────────────────────────────
+function _stampArtifactVersions(text, ownerUser){
+  if(!text || typeof text !== 'string') return text;
+  if(text.indexOf('/generated/artifact-') < 0) return text; // fast path
+  const arts = (ownerUser && Array.isArray(ownerUser.artifacts)) ? ownerUser.artifacts : [];
+  if(!arts.length) return text;
+  // Index by filename for O(1) lookup. Cap version to a sane integer just
+  // in case data got corrupted (e.g. NaN, negative).
+  const verByName = new Map();
+  for(const a of arts){
+    if(a && a.filename){
+      const v = Number.isInteger(a.version) && a.version > 0 ? a.version : 1;
+      verByName.set(a.filename, v);
+    }
+  }
+  // Capture group 1 = url path up to .html; 2 = optional ?query (may be absent).
+  // Followed by a closing-paren / whitespace / end so we don't eat surrounding
+  // markdown punctuation.
+  return text.replace(/(\/generated\/artifact-[A-Za-z0-9_-]+\.html)(\?[^\s)#]*)?/g,
+    function(whole, url, qs){
+      const fn = url.split('/').pop();
+      const ver = verByName.get(fn);
+      if(!ver) return whole;
+      if(qs && /[?&]v=\d+/.test(qs)) return whole; // already stamped, idempotent
+      const sep = qs ? '&' : '?';
+      return url + (qs || '') + sep + 'v=' + ver;
+    });
 }
 
 // read_artifact — hand the AI the CURRENT html of an artifact. Chat
@@ -18121,6 +18164,9 @@ async function handleAPI(req,res,pathname,method,ip){
           } catch(e){ console.warn('[critic-plain] failed:', e.message); }
         }
         const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+        // Stamp ?v=N onto /generated/artifact-X.html URLs in the reply so the
+        // client can read version directly from the URL. See _stampArtifactVersions.
+        reply = _stampArtifactVersions(reply, payerUser);
         // Stable id + Slack-style threading.
         //  - If body.thread_parent_id is set → user is replying in an existing
         //    thread; both user msg and AI reply inherit that parent id.
@@ -18774,6 +18820,12 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     const msgs = baseMsgs;
     const ts=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    // Stamp ?v=N onto every /generated/artifact-X.html URL in the reply so
+    // the client can read the version directly from the URL. Eliminates the
+    // me.artifacts client-side cache sync as the source of "Ver.N stuck at
+    // old number" bugs. Idempotent + backward-compat (old replies without
+    // ?v= still fall back to the me.artifacts lookup in _renderArtifactCard).
+    reply = _stampArtifactVersions(reply, payerUser);
     const _threadParent2 = body.thread_parent_id ? String(body.thread_parent_id).slice(0, 32) : null;
     const _newUid2 = 'u_'+crypto.randomBytes(4).toString('hex');
     const _newAid2 = 'a_'+crypto.randomBytes(4).toString('hex');

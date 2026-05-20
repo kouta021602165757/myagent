@@ -10981,7 +10981,7 @@ function _exportAgent(ag, format){
       history: ag.history || [],
       exported_at: new Date().toISOString(),
     }, null, 2)], {type:'application/json'});
-    _downloadBlob(blob, fname+'_'+_dateSlug()+'.json');
+    _downloadBlobOf(blob, fname+'_'+_dateSlug()+'.json');
   } else {
     // Markdown
     const lines = [];
@@ -11007,11 +11007,16 @@ function _exportAgent(ag, format){
       lines.push(body+'\n');
     });
     const blob = new Blob([lines.join('\n')], {type:'text/markdown;charset=utf-8'});
-    _downloadBlob(blob, fname+'_'+_dateSlug()+'.md');
+    _downloadBlobOf(blob, fname+'_'+_dateSlug()+'.md');
   }
   showToast(isJa?'エクスポートしました':'Exported','ok');
 }
-function _downloadBlob(blob, fname){
+// NB: this takes an already-built Blob. The OTHER _downloadBlob defined later
+// (around L20605) takes (filename, content, mime) and builds the Blob itself.
+// They had the same name historically — the later one was winning in JS hoist
+// order, silently breaking the Blob-form callers. Renamed to make both
+// callable. Audit catches re-introductions of name collisions.
+function _downloadBlobOf(blob, fname){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = fname;

@@ -1,0 +1,20 @@
+name: audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # No deps installed — audit script only uses Node built-ins. Keeps the
+      # job under 30s and avoids a needless playwright/chromium download.
+      - name: Run audit
+        run: node scripts/audit.js --quick

@@ -4262,8 +4262,12 @@ function _md(src){
   // declare the plan once and update progress purely via the completion
   // marker, instead of re-emitting the whole list each step.
   var _stepDone = 0;
-  (String(src).match(/✅\s*ステップ\s*(\d+)\s*完了/g) || []).forEach(function(m){
-    var n = parseInt((m.match(/(\d+)/)||[])[1], 10);
+  // 寛容なマッチ: ✅/✓/☑ + ステップ/Step + 半角/全角数字 + 完了/done
+  // 「✅ ステップ1 完了」「✓ Step 1 done」「☑ ステップ１完了」全部拾う。
+  (String(src).match(/(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*([\d０-９]+)\s*(?:完了|done|完成|終了|done)/g) || []).forEach(function(m){
+    var ds = (m.match(/([\d０-９]+)/)||[])[1] || '';
+    // 全角数字を半角に
+    var n = parseInt(ds.replace(/[０-９]/g, function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}), 10);
     if(n && n > _stepDone) _stepDone = n;
   });
   var _taskIdx = 0;
@@ -4352,9 +4356,10 @@ function _renderDelegateCard(inner, stepDone){
       for(var _hi = 0; _hi < _ag2.history.length; _hi++){
         var _hm = _ag2.history[_hi];
         if(!_hm || typeof _hm.content !== 'string') continue;
-        var _ms = _hm.content.match(/✅\s*ステップ\s*(\d+)\s*完了/g) || [];
+        var _ms = _hm.content.match(/(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*([\d０-９]+)\s*(?:完了|done|完成|終了)/g) || [];
         for(var _mi = 0; _mi < _ms.length; _mi++){
-          var _nv = parseInt((_ms[_mi].match(/(\d+)/)||[])[1], 10);
+          var _ds = (_ms[_mi].match(/([\d０-９]+)/)||[])[1] || '';
+          var _nv = parseInt(_ds.replace(/[０-９]/g, function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}), 10);
           if(_nv && _nv > historicalStepDone) historicalStepDone = _nv;
         }
       }
@@ -5015,13 +5020,24 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   let approvalHTML = '';
   if(!isU && !isStreaming && content){
     // 1) この message に含まれる最大のステップ完了番号
-    const _stepCompleteRe = /✅\s*ステップ\s*(\d+)\s*完了/g;
+    // 寛容なマッチ — ✅/✓/☑ + ステップ/Step + 半角/全角数字 + 完了/done variations
+    const _stepCompleteRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*([\d０-９]+)\s*(?:完了|done|完成|終了)/g;
     let _lastStepN = 0;
     let _scm;
     const _ct = String(content);
     while((_scm = _stepCompleteRe.exec(_ct)) !== null){
-      const n = parseInt(_scm[1], 10);
+      // 全角数字も拾う
+      const _ds = String(_scm[1]||'').replace(/[０-９]/g, function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});
+      const n = parseInt(_ds, 10);
       if(n && n > _lastStepN) _lastStepN = n;
+    }
+    // ── Fallback: 「✅ ステップN 完了」マーカーが無くても、tool_log に
+    //    成功した artifact 変更系の tool があれば step 1 として扱う。
+    //    AI が完了マーカーを書き忘れた / 表記が変わったケースのセーフネット。
+    if(_lastStepN === 0 && Array.isArray(tool_log) && tool_log.length){
+      const _mutatingTools = ['edit_artifact','create_artifact','replace_text','sheets_write','sheets_append','send_email','notify_slack','notify_discord','generate_image','edit_image','generate_pdf','generate_chart','wordpress_publish'];
+      const _hasMutation = tool_log.some(function(t){ return t && t.ok !== false && _mutatingTools.indexOf(t.name) >= 0; });
+      if(_hasMutation) _lastStepN = 1;  // 1 ステップは完了したとみなす
     }
     if(_lastStepN > 0){
       // 2) 履歴を遡って最近の <delegate> を探し、合計ステップ数と「次のステップ」テキストを取り出す

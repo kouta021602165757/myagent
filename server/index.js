@@ -4732,6 +4732,50 @@ const _CHROMIUM_LAUNCH_ARGS = [
   '--mute-audio',
 ];
 
+// ── Persistent / shared Chromium instance ─────────────────────────────
+// chromium.launch() costs 3-8 seconds. Every artifact edit triggered a fresh
+// launch — multiply by 3-5 tool iterations and a single chat turn lost
+// 15-40 seconds just to chrome startup. Reusing the browser across calls
+// (each call gets its own newContext for cookie/storage isolation) drops
+// the per-call overhead to ~100ms.
+//
+// Resilience:
+//   ・If the shared browser dies (OOM, crash, deploy restart) `disconnected`
+//     fires → next caller re-launches transparently.
+//   ・Launch is guarded by a promise so concurrent first-callers don't race
+//     and start 2 browsers.
+//   ・Each caller must use `browser.newContext()` and close THE CONTEXT
+//     (not the browser) when done. Closing the browser blows away the
+//     shared instance for everyone else.
+let _sharedChromium = null;
+let _sharedChromiumLaunchP = null;
+async function _getSharedChromium(){
+  if(_sharedChromium){
+    try { _sharedChromium.contexts(); return _sharedChromium; }
+    catch(_){ _sharedChromium = null; /* fall through and re-launch */ }
+  }
+  if(_sharedChromiumLaunchP){
+    try { return await _sharedChromiumLaunchP; }
+    catch(_){ _sharedChromiumLaunchP = null; /* fall through */ }
+  }
+  _sharedChromiumLaunchP = (async () => {
+    const { chromium } = _loadVideoDeps();
+    console.log('[chromium] launching shared browser');
+    const b = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
+    b.on('disconnected', () => {
+      console.warn('[chromium] shared browser disconnected — will re-launch on next use');
+      if(_sharedChromium === b) _sharedChromium = null;
+    });
+    _sharedChromium = b;
+    return b;
+  })();
+  try { return await _sharedChromiumLaunchP; }
+  finally { _sharedChromiumLaunchP = null; }
+}
+// Close cleanly on shutdown so the OS doesn't accumulate zombie chromium.
+process.on('SIGTERM', () => { if(_sharedChromium){ try { _sharedChromium.close(); } catch(_){} } });
+process.on('SIGINT',  () => { if(_sharedChromium){ try { _sharedChromium.close(); } catch(_){} } });
+
 const GENERATED_DIR = path.join(PUBLIC_DIR, 'generated');
 try { fs.mkdirSync(GENERATED_DIR, { recursive: true }); } catch(e){}
 
@@ -5535,21 +5579,23 @@ const WEB_NATIVE_TOOLS = [
 ];
 
 async function _runWebTask(url, action){
-  const { chromium } = _loadVideoDeps();
   if(!/^https?:\/\//i.test(url)) throw new Error('url must be http(s)');
-  const browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
+  // Shared chromium — see _getSharedChromium. Each web tool gets its own
+  // context (isolated cookies / userAgent / viewport) and closes the context
+  // when done. Browser stays warm for the next caller.
+  const browser = await _getSharedChromium();
+  const ctx = await browser.newContext({
+    viewport: action.viewport === 'mobile' ? { width:390, height:844 } : { width:1280, height:800 },
+    userAgent: action.viewport === 'mobile'
+      ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'
+      : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+  });
   try {
-    const ctx = await browser.newContext({
-      viewport: action.viewport === 'mobile' ? { width:390, height:844 } : { width:1280, height:800 },
-      userAgent: action.viewport === 'mobile'
-        ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'
-        : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
-    });
     const page = await ctx.newPage();
     await page.goto(url, { waitUntil:'networkidle', timeout: 25000 });
     return await action.run(page);
   } finally {
-    await browser.close();
+    try { await ctx.close(); } catch(_){}
   }
 }
 
@@ -5988,10 +6034,13 @@ async function executePdfTool(input){
   const outPath = path.join(GENERATED_DIR, filename);
   const tmpHtml = path.join(GENERATED_DIR, '.tmp-pdf-' + id + '.html');
   fs.writeFileSync(tmpHtml, html);
-  let browser;
+  // Shared chromium — see _getSharedChromium. Close the context (not the
+  // browser) so the next caller doesn't pay the launch cost again.
+  let context = null;
   try {
-    browser = await chromium.launch();
-    const page = await browser.newPage();
+    const browser = await _getSharedChromium();
+    context = await browser.newContext();
+    const page = await context.newPage();
     await page.goto('file://' + tmpHtml, { waitUntil:'networkidle' });
     await page.waitForTimeout(400);
     await page.pdf({ path: outPath, format, landscape, printBackground: true,
@@ -6000,7 +6049,7 @@ async function executePdfTool(input){
     console.error('[generate_pdf] failed:', e.message);
     return { error: 'pdf_render_failed: ' + (e.message || 'unknown') };
   } finally {
-    if(browser) await browser.close();
+    if(context){ try { await context.close(); } catch(_){} }
     try { fs.unlinkSync(tmpHtml); } catch(e){}
   }
   const url = '/generated/' + filename;
@@ -6033,16 +6082,16 @@ async function executeChartTool(input){
     + '<script>const cfg = ' + JSON.stringify(config) + ';'
     + 'new Chart(document.getElementById("c"), cfg);</script></body></html>';
 
-  const { chromium } = _loadVideoDeps();
   const id = crypto.randomBytes(5).toString('hex');
   const filename = title + '-' + id + '.png';
   const outPath = path.join(GENERATED_DIR, filename);
   const tmpHtml = path.join(GENERATED_DIR, '.tmp-chart-' + id + '.html');
   fs.writeFileSync(tmpHtml, html);
-  let browser;
+  // Shared chromium. Close context only.
+  let context = null;
   try {
-    browser = await chromium.launch();
-    const context = await browser.newContext({ viewport:{ width, height }, deviceScaleFactor:2 });
+    const browser = await _getSharedChromium();
+    context = await browser.newContext({ viewport:{ width, height }, deviceScaleFactor:2 });
     const page = await context.newPage();
     await page.goto('file://' + tmpHtml, { waitUntil:'networkidle' });
     await page.waitForTimeout(500); // let Chart.js render
@@ -6051,7 +6100,7 @@ async function executeChartTool(input){
     console.error('[generate_chart] failed:', e.message);
     return { error: 'chart_render_failed: ' + (e.message || 'unknown') };
   } finally {
-    if(browser) await browser.close();
+    if(context){ try { await context.close(); } catch(_){} }
     try { fs.unlinkSync(tmpHtml); } catch(e){}
   }
   const url = '/generated/' + filename;
@@ -6211,11 +6260,15 @@ function _verifyArtifactHtml(html){
 // Fail-safe: if the browser can't launch, returns {ok:true,skipped:true} so
 // artifact creation is never blocked by a verification-infra problem.
 async function _renderVerifyArtifact(html){
-  let browser = null;
+  // Uses the shared browser (see _getSharedChromium). Each call owns its own
+  // newContext for cookie/storage isolation; closing the context (NOT the
+  // browser) preserves the warm chrome for the next caller. Was previously a
+  // 3-8 second hit per call due to chromium.launch.
+  let context = null;
   try {
-    const { chromium } = _loadVideoDeps();
-    browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
-    const page = await browser.newPage();
+    const browser = await _getSharedChromium();
+    context = await browser.newContext();
+    const page = await context.newPage();
     const errs = [];
     page.on('console', m => {
       if(m.type() === 'error'){
@@ -6238,13 +6291,13 @@ async function _renderVerifyArtifact(html){
       /* eslint-enable no-undef */
       bodyLen = probe.len; btnCount = probe.btn;
     } catch(e){}
-    await browser.close(); browser = null;
+    await context.close(); context = null;
     const uniq = [...new Set(errs)].slice(0, 8);
     if(uniq.length) return { ok:false, errors: uniq };
     if(bodyLen < 1) return { ok:false, errors: ['ページを開いても何も表示されない（空白）— HTML 構造か描画スクリプトが壊れている可能性'] };
     return { ok:true, errors: [], btn_count: btnCount };
   } catch(e){
-    if(browser){ try { await browser.close(); } catch(_){} }
+    if(context){ try { await context.close(); } catch(_){} }
     // Browser unavailable / timeout — never block artifact creation on this.
     return { ok:true, skipped:true, note: String((e && e.message) || e).slice(0, 140) };
   }
@@ -6257,15 +6310,16 @@ async function _renderVerifyArtifact(html){
 // never blocks the response. Result is persisted on the artifact
 // (vision_review) and surfaced as a "✨ 検証" badge in the chat card.
 async function _visionReviewArtifact(html){
-  let browser = null;
+  // Uses shared chromium — see _renderVerifyArtifact comments.
+  let context = null;
   try {
-    const { chromium } = _loadVideoDeps();
-    browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const browser = await _getSharedChromium();
+    context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await context.newPage();
     await page.setContent(String(html || ''), { waitUntil: 'load', timeout: 12000 });
     await page.waitForTimeout(900);
     const buf = await page.screenshot({ fullPage: true, type: 'jpeg', quality: 72 });
-    await browser.close(); browser = null;
+    await context.close(); context = null;
     if(!buf || buf.length > 4 * 1024 * 1024){
       return { ok:true, skipped:true, note:'screenshot too large or empty' };
     }
@@ -6308,7 +6362,7 @@ async function _visionReviewArtifact(html){
     });
     return { ok:true, findings, reviewed_at: new Date().toISOString() };
   } catch(e){
-    if(browser){ try { await browser.close(); } catch(_){} }
+    if(context){ try { await context.close(); } catch(_){} }
     return { ok:false, skipped:true, note: String((e && e.message) || e).slice(0, 160) };
   }
 }

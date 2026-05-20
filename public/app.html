@@ -1679,6 +1679,46 @@ input,textarea{font-family:var(--sans);}
 .m-artifact-card-acts .ac-pin.on{background:var(--peach);color:#fff;border-color:transparent;}
 .m-artifact-card-acts .ac-dl{background:rgba(251,146,60,.12);border-color:rgba(251,146,60,.34);color:var(--peach-dark);}
 .m-artifact-card-acts .ac-dl:hover{background:rgba(251,146,60,.2);}
+/* Vision review badge (案B verifier) — sits next to Ver.N */
+.m-artifact-card-vr{
+  background:#fff7ee;border:1px solid #fed7aa;color:var(--peach-dark);
+  font-size:10.5px;font-weight:900;padding:2px 9px;border-radius:99px;
+  font-family:inherit;cursor:pointer;transition:all .12s;letter-spacing:.01em;
+}
+.m-artifact-card-vr:hover{background:var(--peach);color:#fff;border-color:transparent}
+.m-artifact-card-vr-ok{
+  background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.34);color:#15803d;
+  font-size:10.5px;font-weight:900;padding:2px 9px;border-radius:99px;letter-spacing:.01em;
+}
+/* Vision review modal */
+.vr-modal{
+  background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:88vh;
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 24px 48px rgba(0,0,0,.18);
+}
+.vr-modal-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--wire2);flex-shrink:0;background:#fff}
+.vr-title{font-size:14px;font-weight:900;color:var(--text)}
+.vr-meta{font-size:11px;color:var(--text3);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.vr-close{margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:9px;width:32px;height:32px;cursor:pointer;font-size:18px;color:var(--text3);font-family:inherit;flex-shrink:0}
+.vr-modal-body{overflow-y:auto;flex:1;background:#faf8f3;padding:14px 16px}
+.vr-row{display:flex;gap:11px;background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:13px 15px;margin-bottom:9px}
+.vr-row-n{
+  width:24px;height:24px;border-radius:50%;background:var(--peach-soft, rgba(251,146,60,.12));
+  color:var(--peach-dark);font-size:11px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #fed7aa;
+}
+.vr-row-body{flex:1;min-width:0}
+.vr-where{font-size:10.5px;font-weight:800;color:var(--peach-dark);margin-bottom:3px;letter-spacing:.02em}
+.vr-issue{font-size:13px;font-weight:700;color:var(--text);line-height:1.55}
+.vr-fix{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.55}
+.vr-modal-foot{display:flex;gap:9px;padding:12px 16px;border-top:1px solid var(--wire2);background:#fff;flex-shrink:0}
+.vr-apply{
+  flex:1;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;
+  border:0;border-radius:11px;padding:11px 16px;font-size:13px;font-weight:900;
+  font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(234,88,12,.28);
+}
+.vr-apply:hover{transform:translateY(-1px)}
+.vr-dismiss{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:11px 16px;font-size:12.5px;font-weight:800;color:var(--text2);font-family:inherit;cursor:pointer}
 /* Edit-failure banner — surface a failed create_artifact / edit_artifact so
    the user sees the failure even when the AI's reply text sounds successful. */
 .m-edit-fails{margin:8px 0;display:flex;flex-direction:column;gap:6px}
@@ -9371,18 +9411,28 @@ function _md(src){
     const _afIsArtifact = /^artifact-/.test(_afName);
     const _afTitleArg = safeAlt.replace(/'/g,"\\'");
     const _afNameArg = _afName.replace(/'/g,"\\'");
-    // Look up the stored version so the card shows "Ver.N".
-    let _afVer = 0;
+    // Look up the stored version + vision review so the card shows them.
+    let _afVer = 0, _afVR = null;
     try {
       const _aHit = (typeof me!=='undefined' && me && Array.isArray(me.artifacts))
         ? me.artifacts.find(function(a){ return a && a.filename === _afName; }) : null;
-      if(_aHit) _afVer = _aHit.version || 1;
+      if(_aHit){
+        _afVer = _aHit.version || 1;
+        _afVR  = _aHit.vision_review || null;
+      }
     } catch(e){}
-    // Fallback: any artifact-*.html is at least v1, so show "Ver.1" even
-    // before me.artifacts has refreshed (or if that refresh failed). The
-    // real version replaces this once the lookup above finds the entry.
     if(_afIsArtifact && !_afVer) _afVer = 1;
     const _verBadge = _afVer ? '<span class="m-artifact-card-ver">Ver.'+_afVer+'</span>' : '';
+    // Vision review badge (案B verifier) — shows 件数 if findings, ✅ if clean.
+    let _vrBadge = '';
+    if(_afIsArtifact && _afVR && Array.isArray(_afVR.findings)){
+      const _vrN = _afVR.findings.length;
+      if(_vrN > 0){
+        _vrBadge = '<button class="m-artifact-card-vr" onclick="_openVisionReview(\''+_afNameArg+'\')" title="'+(isJa?'検証AIの指摘':'Vision review findings')+'">✨ '+_vrN+(isJa?'件指摘':' issues')+'</button>';
+      } else {
+        _vrBadge = '<span class="m-artifact-card-vr-ok" title="'+(isJa?'検証AIチェック済 — 問題なし':'Reviewed — no issues')+'">✅ '+(isJa?'検証OK':'Reviewed')+'</span>';
+      }
+    }
     // Is this artifact the conversation's pinned site?
     let _afPinned = false;
     try {
@@ -9393,7 +9443,7 @@ function _md(src){
       + '<div class="m-artifact-card-top">'
       +   '<div class="m-artifact-card-ic">'+(_afIsArtifact?'🌐':'📄')+'</div>'
       +   '<div class="m-artifact-card-body">'
-      +     '<div class="m-artifact-card-titlerow"><div class="m-artifact-card-ti">'+safeAlt+'</div>'+_verBadge+'</div>'
+      +     '<div class="m-artifact-card-titlerow"><div class="m-artifact-card-ti">'+safeAlt+'</div>'+_verBadge+_vrBadge+'</div>'
       +     '<div class="m-artifact-card-url">'+esc(_afName||safeSrc)+'</div>'
       +   '</div>'
       + '</div>'
@@ -12645,6 +12695,68 @@ function _renderDiff(oldText, newText){
   return { html:html, add:add, del:del };
 }
 // View an artifact's current full HTML.
+// ── Vision review viewer (案B verifier) ─────────────────────────
+// Opens a modal showing the screenshot-based AI review's findings for an
+// artifact. A "AI に修正してもらう" button consolidates findings into a chat
+// message and sends it (one-click apply via the existing edit flow).
+function _openVisionReview(filename){
+  const art = (me && Array.isArray(me.artifacts))
+    ? me.artifacts.find(function(a){ return a && a.filename === filename; }) : null;
+  if(!art || !art.vision_review){
+    showToast(L('まだ検証結果がありません','No review yet'),'ng'); return;
+  }
+  const vr = art.vision_review;
+  const findings = Array.isArray(vr.findings) ? vr.findings : [];
+  // Close any existing modal
+  var ex = document.getElementById('visionReviewOverlay'); if(ex) ex.remove();
+  var ov = document.createElement('div');
+  ov.id = 'visionReviewOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit';
+  var rowsHtml = findings.length
+    ? findings.map(function(f,i){
+        return '<div class="vr-row">'
+          + '<div class="vr-row-n">'+(i+1)+'</div>'
+          + '<div class="vr-row-body">'
+          +   (f.where ? '<div class="vr-where">'+esc(f.where)+'</div>' : '')
+          +   '<div class="vr-issue">'+esc(f.issue||'')+'</div>'
+          +   (f.fix ? '<div class="vr-fix">→ '+esc(f.fix)+'</div>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('')
+    : '<div style="padding:18px;color:var(--text3);font-weight:700;text-align:center">'+L('指摘はありません ✅','No findings — looks clean ✅')+'</div>';
+  var fnArg = filename.replace(/'/g,"\\'");
+  ov.innerHTML =
+    '<div class="vr-modal">'
+    +  '<div class="vr-modal-h">'
+    +    '<div class="vr-title">✨ '+L('検証AIの指摘','Vision review')+'</div>'
+    +    '<div class="vr-meta">'+esc(filename)+(vr.version_at?' · Ver.'+vr.version_at:'')+' · '+findings.length+L('件',' issues')+'</div>'
+    +    '<button class="vr-close" onclick="document.getElementById(\'visionReviewOverlay\').remove()">×</button>'
+    +  '</div>'
+    +  '<div class="vr-modal-body">'+rowsHtml+'</div>'
+    +  (findings.length ? '<div class="vr-modal-foot">'
+        +  '<button class="vr-apply" onclick="_applyVisionReview(\''+fnArg+'\')">🛠 '+L('AI に全部直してもらう','Have the AI fix all')+'</button>'
+        +  '<button class="vr-dismiss" onclick="document.getElementById(\'visionReviewOverlay\').remove()">'+L('閉じる','Close')+'</button>'
+        +'</div>' : '')
+    + '</div>';
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+function _applyVisionReview(filename){
+  const art = (me && Array.isArray(me.artifacts))
+    ? me.artifacts.find(function(a){ return a && a.filename === filename; }) : null;
+  if(!art || !art.vision_review) return;
+  const findings = Array.isArray(art.vision_review.findings) ? art.vision_review.findings : [];
+  if(!findings.length){ showToast(L('指摘はありません','No findings to apply'),'ok'); return; }
+  var lines = findings.map(function(f,i){
+    return (i+1)+'. ['+(f.where||'')+'] '+(f.issue||'')+(f.fix?' — '+f.fix:'');
+  });
+  var msg = L('検証AIから以下の指摘が出ました。','The vision review found these issues. ')
+    + filename + L(' を edit_artifact で順に直してください。\n\n','— please apply the fixes via edit_artifact, one by one:\n\n')
+    + lines.join('\n');
+  var ci = document.getElementById('ci') || document.getElementById('msgInput');
+  if(ci){ ci.value = msg; try { sendMsg(); } catch(e){} }
+  var ov = document.getElementById('visionReviewOverlay'); if(ov) ov.remove();
+}
 async function _openCodeViewer(filename){
   if(!filename) return;
   _codeModalShell('<div class="acm-title">📄 '+esc(filename)+'</div>',

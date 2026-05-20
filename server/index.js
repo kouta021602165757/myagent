@@ -4264,6 +4264,8 @@ selector・content は必ず実物の HTML に厳密に合わせ、指示され�
 
 【高速化 — セクション単位で直す】ページが id 付きの <section> で組まれている場合、修正対象のセクションを replace_selector "#<id>" で狙うこと。そのセクション 1 区画だけの差分編集になり、全文 rewrite（数分かかる）を避けられる。
 
+【コンテナ制約 — 視覚崩れ防止（最重要）】セクション編集時、**親コンテナの制約（max-width / margin:0 auto / 左右 padding / 中央寄せ）を絶対に外さないこと**。「画面いっぱいに」「広げて」「モバイル対応して」と指示されても、container 自体の枠は保持し、内側だけ調整する。これを守らないと、セクションが左右の余白を飛び越えてページ端まで張り出す崩れになる（実例で繰り返し報告あり）。共通の :root カラー変数（var(--brand) 等）も常に再利用し、独自カラーをベタ書きしない。
+
 filename は直近 create_artifact のレスポンス URL (/generated/artifact-XXX-YYY.html) からファイル名部分を抜き出す。`,
     input_schema:{
       type:'object',
@@ -6237,6 +6239,69 @@ async function _renderVerifyArtifact(html){
   }
 }
 
+// ── ARTIFACT VISION REVIEW (案B verifier) ─────────────────────
+// Async visual QA: screenshot the rendered HTML, ask Claude Vision (haiku)
+// to flag visual issues a text-based check can't catch — container overflow,
+// broken padding, contrast, alignment. Fire-and-forget from create / edit;
+// never blocks the response. Result is persisted on the artifact
+// (vision_review) and surfaced as a "✨ 検証" badge in the chat card.
+async function _visionReviewArtifact(html){
+  let browser = null;
+  try {
+    const { chromium } = _loadVideoDeps();
+    browser = await chromium.launch({ args: _CHROMIUM_LAUNCH_ARGS });
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.setContent(String(html || ''), { waitUntil: 'load', timeout: 12000 });
+    await page.waitForTimeout(900);
+    const buf = await page.screenshot({ fullPage: true, type: 'jpeg', quality: 72 });
+    await browser.close(); browser = null;
+    if(!buf || buf.length > 4 * 1024 * 1024){
+      return { ok:true, skipped:true, note:'screenshot too large or empty' };
+    }
+    const b64 = buf.toString('base64');
+    const prompt = 'あなたは LP / Web ページの視覚品質を点検するレビュアーです。\n'
+      + '添付スクリーンショットを見て、明確な視覚問題のみ最大5件、JSON 配列で報告してください。\n'
+      + '問題が無ければ空配列 [] を返してください。\n\n'
+      + 'チェック観点:\n'
+      + '1. セクションが親コンテナからはみ出していないか (左右の余白崩れ・横スクロール)\n'
+      + '2. 余白が極端に詰まり過ぎ / 開き過ぎ\n'
+      + '3. 文字色・コントラストの読みづらさ\n'
+      + '4. CTA / ボタンの視認性・位置\n'
+      + '5. 要素の整列 (中央寄せ・右寄せ・グリッド) の崩れ\n\n'
+      + '回答形式 — 必ず JSON 配列のみ。コードブロック・余計な文章禁止。\n'
+      + '[{"where":"場所の説明","issue":"何が問題か","fix":"具体的な修正案"}]\n'
+      + '問題なしなら: []';
+    const messages = [{
+      role: 'user',
+      content: [
+        { type:'image', source:{ type:'base64', media_type:'image/jpeg', data: b64 } },
+        { type:'text', text: prompt }
+      ]
+    }];
+    let txt = '';
+    try { txt = String(await callAI(messages, '', 'haiku') || ''); }
+    catch(e){ return { ok:false, skipped:true, note:'callAI failed: '+String(e.message||e).slice(0,140) }; }
+    let findings = [];
+    try {
+      const m = txt.match(/\[[\s\S]*\]/);
+      if(m) findings = JSON.parse(m[0]);
+      if(!Array.isArray(findings)) findings = [];
+    } catch(e){ findings = []; }
+    findings = findings.slice(0, 6).map(function(f){
+      f = f || {};
+      return {
+        where: String(f.where || '').slice(0, 120),
+        issue: String(f.issue || '').slice(0, 220),
+        fix:   String(f.fix   || '').slice(0, 220),
+      };
+    });
+    return { ok:true, findings, reviewed_at: new Date().toISOString() };
+  } catch(e){
+    if(browser){ try { await browser.close(); } catch(_){} }
+    return { ok:false, skipped:true, note: String((e && e.message) || e).slice(0, 160) };
+  }
+}
+
 // ── 7) create_artifact — save AI-authored HTML as a live page ────
 // Claude.ai-style "Artifacts" — the AI writes a complete self-contained
 // HTML doc, we drop it in /generated/ and hand back a URL. The chat
@@ -6329,6 +6394,29 @@ async function executeArtifactTool(input, ownerUser, ctx){
       + '修正後に再びブラウザで再検証されます。検証を通過してからユーザーに最終応答を返してください。'
       + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
   }
+  // ── Vision review (案B) ──
+  // Fire-and-forget: screenshot + Claude Vision review. Async, never blocks
+  // the response. Result lands on artifact.vision_review and is shown as a
+  // "✨ 検証" badge in the chat card. Stale (newer edit happened) reviews
+  // are discarded by the version_at check.
+  try {
+    const _vrFn  = filename;
+    const _vrVer = (ownerUser.artifacts.find(a => a && a.filename === filename) || {}).version || 1;
+    setImmediate(async () => {
+      try {
+        const review = await _visionReviewArtifact(html);
+        if(!review || !review.ok || review.skipped) return;
+        const artNow = (ownerUser.artifacts||[]).find(a => a && a.filename === _vrFn);
+        if(!artNow || artNow.version !== _vrVer) return; // stale
+        artNow.vision_review = {
+          findings: review.findings || [],
+          reviewed_at: review.reviewed_at,
+          version_at: _vrVer,
+        };
+        try { await DB.save(ownerUser); } catch(e){ console.warn('[vision-review] save failed:', e.message); }
+      } catch(e){ console.warn('[vision-review] crashed:', e.message); }
+    });
+  } catch(e){ console.warn('[vision-review] setup failed:', e.message); }
   return result;
 }
 
@@ -6529,6 +6617,25 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
       + '修正後に再びブラウザで再検証されます。検証を通過してからユーザーに最終応答を返してください。'
       + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
   }
+  // ── Vision review (案B) — same fire-and-forget pattern as create_artifact.
+  try {
+    const _vrFn  = filename;
+    const _vrVer = artifact.version || 1;
+    setImmediate(async () => {
+      try {
+        const review = await _visionReviewArtifact(html);
+        if(!review || !review.ok || review.skipped) return;
+        const artNow = (ownerUser.artifacts||[]).find(a => a && a.filename === _vrFn);
+        if(!artNow || artNow.version !== _vrVer) return; // stale
+        artNow.vision_review = {
+          findings: review.findings || [],
+          reviewed_at: review.reviewed_at,
+          version_at: _vrVer,
+        };
+        try { await DB.save(ownerUser); } catch(e){ console.warn('[vision-review] save failed:', e.message); }
+      } catch(e){ console.warn('[vision-review] crashed:', e.message); }
+    });
+  } catch(e){ console.warn('[vision-review] setup failed:', e.message); }
   return result;
 }
 
@@ -11039,8 +11146,27 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
       }
     } catch(e){}
   }
+  // Plan-mode — for complex multi-step requests, instruct the AI to first
+  // declare a Markdown task list, then execute one step at a time and
+  // announce each completion with "✅ ステップN 完了". The client renders
+  // - [ ] / - [x] as checkboxes and auto-checks them on the ✅ marker.
+  const planModeNote = `
+
+【複数手順タスクの進め方 — 必ずこの形式で】
+依頼が「複数の独立した手順 (3 個以上)」または「複数ツール呼び出し」を必要とする場合 (例: サイト作成・データ分析・複数編集・調査+執筆+配信のような連鎖) は、必ず以下の形式で進めること:
+
+1. まず最初に、これから行う手順を Markdown のタスクリストで提示する:
+   - [ ] 1つ目にやること (短く)
+   - [ ] 2つ目にやること
+   - [ ] 3つ目にやること
+
+2. その後、上から順に 1 ステップずつ実行する。ステップが完了するたびに本文中で必ず「✅ ステップN 完了」と書く (例: 「✅ ステップ2 完了」)。UI がこのマーカーを検出して該当のチェックボックスを自動で☑に切り替える。
+
+3. 全ステップ完了後に、最終結果を簡潔にまとめる。
+
+判断基準: 「1問1答」「1編集だけ」「単純な質問への返答」などはこの形式不要。3 手順未満の依頼ではタスクリストを出さなくて良い。逆に複雑な依頼で計画を出さず黙って着手すると、ユーザーは「何をしようとしているか分からない」状態になるので必ず計画を先に出すこと。`;
   return`${deliveryRules}
-${stallNudge}${integrationsHint}${zapierNote}
+${stallNudge}${planModeNote}${integrationsHint}${zapierNote}
 
 ──────────────────────────────
 

@@ -4371,17 +4371,51 @@ function _renderDelegateCard(inner, stepDone){
   }
   var totalDone = tasks.filter(function(t){return t.done;}).length;
   var allDone = tasks.length > 0 && totalDone === tasks.length;
-  // Visual: "受領しました" / "N / M ステップ" / "完了"
+  // ── 「中断」検知 ─────────────────────────────────────────
+  // ユーザー提案: 「次の会話いったらタスク表一旦停止とか表示」
+  // このカードより**後**にもう 1 つ <delegate> カードが履歴にあれば、
+  // この古い計画は「別件で中断された」扱い → 「⏸ 中断」バッジを表示。
+  // 何個までチェックついてるかは保持されたまま、status だけ変える。
+  var _isInterrupted = false;
+  try {
+    var _ag3 = (typeof agents !== 'undefined' && agents)
+      ? agents.find(function(a){ return a && a.id === activeId; }) : null;
+    if(_ag3 && Array.isArray(_ag3.history) && !allDone){
+      // 自分自身の delegate ブロック位置を探す (inner 一致で判定)
+      var _selfIdx = -1;
+      for(var _i2 = 0; _i2 < _ag3.history.length; _i2++){
+        var _h = _ag3.history[_i2];
+        if(_h && typeof _h.content === 'string' && _h.content.indexOf(inner) >= 0){
+          _selfIdx = _i2; break;
+        }
+      }
+      // 自分より「後」のメッセージに別の <delegate> がある？
+      if(_selfIdx >= 0){
+        for(var _j2 = _selfIdx + 1; _j2 < _ag3.history.length; _j2++){
+          var _h2 = _ag3.history[_j2];
+          if(_h2 && typeof _h2.content === 'string' && /<delegate>[\s\S]*?<\/delegate>/.test(_h2.content)){
+            _isInterrupted = true; break;
+          }
+        }
+      }
+    }
+  } catch(_){}
+  // Visual: "受領しました" / "N / M ステップ" / "完了" / "⏸ 中断"
   var status;
-  if(tasks.length === 0)            status = isJa ? '受領しました' : 'Received';
-  else if(allDone)                   status = isJa ? (tasks.length + ' / ' + tasks.length + ' ステップ') : ('Done ' + tasks.length + '/' + tasks.length);
-  else if(totalDone === 0)           status = isJa ? '受領しました' : 'Received';
-  else                               status = totalDone + ' / ' + tasks.length + (isJa ? ' ステップ' : ' steps');
-  var headLabel = allDone
-    ? (isJa ? '✅ お任せ完了' : '✅ Done')
-    : (totalDone > 0
-        ? (isJa ? '📋 お任せ進行中' : '📋 In progress')
-        : (isJa ? '📋 お任せ受領' : '📋 Received'));
+  if(_isInterrupted){
+    status = isJa ? '⏸ 別件で中断' : '⏸ Paused';
+  }
+  else if(tasks.length === 0)            status = isJa ? '受領しました' : 'Received';
+  else if(allDone)                       status = isJa ? (tasks.length + ' / ' + tasks.length + ' ステップ') : ('Done ' + tasks.length + '/' + tasks.length);
+  else if(totalDone === 0)               status = isJa ? '受領しました' : 'Received';
+  else                                   status = totalDone + ' / ' + tasks.length + (isJa ? ' ステップ' : ' steps');
+  var headLabel = _isInterrupted
+    ? (isJa ? '⏸ お任せ中断' : '⏸ Paused')
+    : (allDone
+        ? (isJa ? '✅ お任せ完了' : '✅ Done')
+        : (totalDone > 0
+            ? (isJa ? '📋 お任せ進行中' : '📋 In progress')
+            : (isJa ? '📋 お任せ受領' : '📋 Received')));
   // Build HTML
   var rows = '';
   if(requested){
@@ -4412,7 +4446,7 @@ function _renderDelegateCard(inner, stepDone){
   if(estimate){
     foot = '<div class="deli-foot">⏱ ' + (isJa ? '見積もり: ' : 'Estimate: ') + esc(estimate) + '</div>';
   }
-  return '<div class="deli-card ' + (allDone ? 'done' : '') + '">'
+  return '<div class="deli-card' + (allDone ? ' done' : '') + (_isInterrupted ? ' paused' : '') + '">'
        +   '<div class="deli-head">' + headLabel
        +     '<span class="deli-head-status">' + esc(status) + '</span>'
        +   '</div>'

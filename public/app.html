@@ -1690,6 +1690,15 @@ html[data-theme="dark"] .m-edit-fail{background:#2a1414;border-color:#7c2d2d;col
 html[data-theme="dark"] .m-edit-fail-h{color:#fca5a5}
 .m-edit-fail-d{font-family:'SF Mono','Menlo',monospace;font-size:11px;color:#7f1d1d;word-break:break-word;white-space:pre-wrap}
 html[data-theme="dark"] .m-edit-fail-d{color:#fecaca}
+/* Plan-mode task list — Markdown "- [ ] / - [x]" → styled checkbox rows.
+   AI declares steps at start of a complex turn and ✅ marks complete inline,
+   the client auto-toggles ☐ → ☑ as it reads the "✅ ステップN 完了" markers. */
+.m-todo{display:flex;align-items:flex-start;gap:8px;padding:4px 2px;font-size:13.5px;line-height:1.55}
+.m-todo.done{color:var(--text3,#a8a29e)}
+.m-todo.done .m-todo-tx{text-decoration:line-through;text-decoration-thickness:1px;text-decoration-color:rgba(160,160,160,.6)}
+.m-todo-cb{flex-shrink:0;font-size:17px;line-height:1.2;width:20px;text-align:center;color:var(--text3,#a8a29e);user-select:none;transition:color .15s}
+.m-todo.done .m-todo-cb{color:#16a34a}
+.m-todo-tx{flex:1;min-width:0}
 
 /* 📌 Pinned-site bar — sits at the top of the thread drawer */
 .pin-bar{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--peach-soft,#fff1e3);border-bottom:1px solid rgba(251,146,60,.3);}
@@ -9428,6 +9437,19 @@ function _md(src){
       + '</div>'
       + '</div>';
   }
+  // Auto-link bare artifact references the AI mentioned in prose but forgot
+  // to wrap as a markdown link (so the card / Open button still appears).
+  // Two patterns:
+  //   1) "artifact-foo-abc123.html" standing alone — wrap as link to /generated/
+  //   2) "/generated/artifact-foo-abc123.html" written as a raw path — same
+  // Lookbehinds skip filenames already inside a markdown URL (...](/generated/X)
+  // or a path (/generated/X) so we don't double-wrap.
+  html = html.replace(/(?<![\/(])\b(artifact-[A-Za-z0-9_-]+\.html?)\b/g, function(_, fn){
+    return '[' + fn + '](/generated/' + fn + ')';
+  });
+  html = html.replace(/(?<!\()\/generated\/(artifact-[A-Za-z0-9_-]+\.html?)/g, function(_, fn){
+    return '[' + fn + '](/generated/' + fn + ')';
+  });
   html=html.replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+\.html?)\)/g, function(_, alt, src){
     return _renderArtifactCard(alt, src);
   });
@@ -9451,6 +9473,14 @@ function _md(src){
   html=html.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   // Blockquotes
   html=html.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  // Markdown task lists "- [ ] item" / "- [x] item" → styled checkbox rows.
+  // Used by plan-mode (AI declares steps at start, marks them complete as it
+  // goes). Must run BEFORE the bullet-list rule which would otherwise eat
+  // these lines into a generic <ul>.
+  html=html.replace(/^[-*] \[( |x|X)\] (.+)$/gm, function(_, mark, text){
+    var done = mark.toLowerCase() === 'x';
+    return '<div class="m-todo'+(done?' done':'')+'"><span class="m-todo-cb">'+(done?'☑':'☐')+'</span><span class="m-todo-tx">'+text+'</span></div>';
+  });
   // Bullet lists (- or ・ at start of line)
   html=html.replace(/((?:^[-・] .+(?:\n|$))+)/gm,function(m){
     var items=m.split('\n').filter(function(l){return /^[-・] /.test(l);})
@@ -9728,10 +9758,18 @@ function renderMsgs(ag, forceScrollBottom){
   // ChatGPT-style flow on mobile. The "💬 N 件の返信" pill still shows on
   // both for consistency.
   var _wideEnoughForDrawer = (typeof window !== 'undefined' && window.innerWidth >= 900);
-  inner.innerHTML = _nudgeHTML + ag.history.map(function(m,i){
+  // Render only the latest _summary card — server aims for one rolling
+  // summary but legacy data / edge cases can leave multiples in history.
+  var _lastSumIdx = -1;
+  for(var _si = 0; _si < (ag.history||[]).length; _si++){
+    if(ag.history[_si] && ag.history[_si]._summary) _lastSumIdx = _si;
+  }
+  var _liveHtml = ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline ONLY on desktop;
     // on mobile they show inline so the user always sees the AI reply.
     if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';
+    // Older summary cards: hide so only the newest "これまでの経緯" shows.
+    if(m && m._summary && i !== _lastSumIdx) return '';
     if(m.role === 'system'){
       return '<div class="sys-row"><span class="sys-pill">✨ '+esc(m.content||'')+'</span></div>';
     }
@@ -9750,6 +9788,24 @@ function renderMsgs(ag, forceScrollBottom){
     }
     return _renderMsg(m.role,ag,m.content,m.time||'',m.images,i,m.tool_log,m);
   }).join('');
+  // If the summary card is the visual tail (nothing real after it in live),
+  // surface the last few archived turns below so the chat doesn't look empty.
+  // Slack-style: "the most recent context before the fold" stays visible.
+  var _archiveTailHtml = '';
+  if(_lastSumIdx >= 0 && Array.isArray(ag.history_archive) && ag.history_archive.length){
+    var _hasAfter = false;
+    for(var _ti = _lastSumIdx + 1; _ti < ag.history.length; _ti++){
+      var _tm = ag.history[_ti];
+      if(_tm && _tm.role !== 'system' && !(_tm.thread_parent_id && _wideEnoughForDrawer)){ _hasAfter = true; break; }
+    }
+    if(!_hasAfter){
+      _archiveTailHtml = ag.history_archive.slice(-3)
+        .filter(function(m){ return m && m.role !== 'system'; })
+        .map(function(m){ return _renderMsg(m.role, ag, m.content, m.time||'', m.images, -1, m.tool_log, m); })
+        .join('');
+    }
+  }
+  inner.innerHTML = _nudgeHTML + _liveHtml + _archiveTailHtml;
   try { _renderPinnedBanner(ag); } catch(e){}
   // Sticky-bottom: stick if user was near bottom, this is a fresh open,
   // or the caller explicitly forced scroll (user-initiated action).
@@ -9963,6 +10019,24 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const cites = !isU ? _collectCitations(tool_log) : [];
   let body = content ? _md(content) : '';
   if(cites.length) body = _linkInlineCitations(body, cites);
+  // Plan-mode auto-check: when the body has "✅ ステップN 完了" markers,
+  // toggle the Nth task-list checkbox to done. AI emits these inline as it
+  // completes each step (see buildSystem plan-mode prompt).
+  if(body && body.indexOf('class="m-todo') >= 0 && /✅/.test(body)){
+    var _done = new Set();
+    var _re = /✅\s*(?:ステップ|Step|step)\s*(\d+)/g;
+    var _mm; while((_mm = _re.exec(body))){ _done.add(parseInt(_mm[1],10)); }
+    if(_done.size){
+      var _i = 0;
+      body = body.replace(/<div class="m-todo(?!\s+done)([^"]*)"><span class="m-todo-cb">☐<\/span>/g, function(match, classRest){
+        _i++;
+        if(_done.has(_i)){
+          return '<div class="m-todo done'+classRest+'"><span class="m-todo-cb">☑</span>';
+        }
+        return match;
+      });
+    }
+  }
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
   const citesHtml = cites.length ? _renderCitations(cites) : '';
   // Artifact cards for any /generated/artifact-*.html the AI touched via a
@@ -18537,31 +18611,29 @@ async function _openHistoryArchive(agId){
     if(!items.length){ showToast(L('履歴アーカイブは空です','Archive is empty'),'ng'); return; }
     var ag = (agents||[]).find(function(a){return a.id===agId;});
     var agName = (ag && ag.name) || 'Agent';
-    var body = items.map(function(m){
-      var role = m.role === 'assistant' ? agName : (m.user_name || (isJa?'あなた':'You'));
-      var roleColor = m.role === 'assistant' ? 'var(--peach-dark)' : 'var(--text2)';
-      var body = '';
-      if(typeof m.content === 'string') body = m.content;
-      else if(Array.isArray(m.content)) body = m.content.filter(function(b){return b && b.type==='text';}).map(function(b){return b.text;}).join(' ');
-      return '<div style="padding:10px 0;border-bottom:1px dashed var(--wire2)">'
-        +    '<div style="font-size:11px;font-weight:800;color:'+roleColor+';margin-bottom:4px">'+esc(role)+(m.time?' · '+esc(m.time):'')+'</div>'
-        +    '<div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+esc(body)+'</div>'
-        +  '</div>';
-    }).join('');
+    // Slack-style scrollback: render each archived turn as a proper chat
+    // bubble via _renderMsg (avatar + name + timestamp + body), not a
+    // cramped role-prefixed line. Same visual language as the live chat.
+    var bodyInner = items.filter(function(m){ return m && m.role !== 'system'; })
+      .map(function(m){ return _renderMsg(m.role, ag, m.content, m.time||'', m.images, -1, m.tool_log, m); })
+      .join('');
+    var body = '<div class="msgs-inner" style="max-width:none;padding:14px 22px 28px">' + bodyInner + '</div>';
     var overlay = document.createElement('div');
     overlay.id = 'historyArchiveOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit';
     overlay.innerHTML =
-      '<div style="background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
-      +  '<div style="padding:14px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px">'
+      '<div style="background:#fff;border-radius:16px;max-width:900px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden">'
+      +  '<div style="padding:14px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px;background:#fff;flex-shrink:0">'
       +    '<div style="font-size:14px;font-weight:800;color:var(--text)">📋 '+L('折りたたまれた会話履歴','Folded chat archive')+'</div>'
       +    '<div style="font-size:11px;color:var(--text3);font-weight:700">· '+items.length+L(' 件','')+'</div>'
       +    '<button onclick="document.getElementById(\'historyArchiveOverlay\').remove()" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
       +  '</div>'
-      +  '<div style="padding:8px 22px;overflow-y:auto;flex:1">'+body+'</div>'
+      +  '<div id="archiveScroll" style="overflow-y:auto;flex:1;background:var(--cream)">'+body+'</div>'
       + '</div>';
     overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
     document.body.appendChild(overlay);
+    // Land at the bottom (newest), Slack-style.
+    setTimeout(function(){ var s=document.getElementById('archiveScroll'); if(s) s.scrollTop = s.scrollHeight; }, 0);
   } catch(e){
     showToast((e && e.message) || 'failed', 'ng');
   }

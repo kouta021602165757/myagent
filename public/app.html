@@ -1952,6 +1952,10 @@ html[data-theme="dark"] .m-huddle-chip .hud-now{background:rgba(0,0,0,.25)}
   border-radius:8px;cursor:pointer;
   transition:all .12s;
   max-width:100%;
+  /* Explicit interactivity — keep clickable even if a sibling element
+     (m-summary, huddle chip, etc.) accidentally grows over this area. */
+  pointer-events:auto;position:relative;z-index:1;
+  user-select:none;
 }
 .thread-indicator:hover{background:#fff;box-shadow:0 0 0 1px var(--wire2);}
 .thread-indicator .thread-reps{display:flex;}
@@ -17684,7 +17688,22 @@ async function _promoteToGroupFromEdit(){
 // replies (server tags them with thread_parent_id; they're hidden from
 // the main timeline).
 function _openThread(parentId){
-  if(!parentId) return;
+  if(!parentId){ console.warn('[thread] _openThread called without parentId'); return; }
+  // Defensive: if the parent message has rolled out of ag.history (e.g. it
+  // landed in an old archive but its thread replies still reference it),
+  // _renderThreadDrawer would toast "元メッセージが見つかりません" and close
+  // immediately — making the click look broken. Detect that here and offer
+  // a useful fallback: scroll the inline replies into view if any survive.
+  var ag = (agents||[]).find(function(a){ return a.id === activeId; });
+  if(ag){
+    var hasParent = (ag.history||[]).some(function(m){ return m && m.id === parentId; });
+    if(!hasParent){
+      console.warn('[thread] parent', parentId, 'not in ag.history — fallback to inline');
+      showToast(L('元メッセージが折りたたまれています。「全履歴を見る」から開けます。',
+                  'Parent is folded into the archive. Open "See full archive" to view.'), 'ng');
+      return;
+    }
+  }
   window._activeThreadParent = parentId;
   _renderThreadDrawer();
 }

@@ -4336,9 +4336,33 @@ function _renderDelegateCard(inner, stepDone){
     }
     tasks.push({ done: done, text: txt, tool: tool });
   }
+  // ── 履歴全体から step 完了マーカーを集計 ────────────────────
+  // <delegate> カードは最初のターン (1 message) で出る。
+  // 「✅ ステップN 完了」は subsequent ターンで書かれる。
+  // 既存の stepDone は「この 1 メッセージの中だけ」しか見てないので、
+  // ターンをまたぐと永遠に 0 のままだった。
+  // 履歴の全 assistant メッセージから ✅ マーカーを拾って集計し、
+  // それを stepDone に上書き反映する。これでカードは履歴の蓄積に
+  // 応じて自動的にチェックが進んでいき、完了後もチェック状態を維持する。
+  var historicalStepDone = stepDone || 0;
+  try {
+    var _ag2 = (typeof agents !== 'undefined' && agents)
+      ? agents.find(function(a){ return a && a.id === activeId; }) : null;
+    if(_ag2 && Array.isArray(_ag2.history)){
+      for(var _hi = 0; _hi < _ag2.history.length; _hi++){
+        var _hm = _ag2.history[_hi];
+        if(!_hm || typeof _hm.content !== 'string') continue;
+        var _ms = _hm.content.match(/✅\s*ステップ\s*(\d+)\s*完了/g) || [];
+        for(var _mi = 0; _mi < _ms.length; _mi++){
+          var _nv = parseInt((_ms[_mi].match(/(\d+)/)||[])[1], 10);
+          if(_nv && _nv > historicalStepDone) historicalStepDone = _nv;
+        }
+      }
+    }
+  } catch(_){}
   // Apply step-auto-check: first N tasks tick green when stepDone advances.
   for(var i = 0; i < tasks.length; i++){
-    if(stepDone && i < stepDone) tasks[i].done = true;
+    if(historicalStepDone && i < historicalStepDone) tasks[i].done = true;
   }
   var totalDone = tasks.filter(function(t){return t.done;}).length;
   var allDone = tasks.length > 0 && totalDone === tasks.length;

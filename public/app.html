@@ -13629,16 +13629,18 @@ async function _sendMsgStream(ag, text, imgs, texts){
           }
         }
         // Keep me.artifacts in sync with edit/create results so the Ver.N
-        // badge updates without a page reload.
+        // badge updates without a page reload. We push on edit too (not just
+        // create) — if the local `me.artifacts` array was loaded BEFORE this
+        // artifact existed (e.g. created in a different tab, or a team-mate's
+        // session), the edit's filename won't have an entry to update and the
+        // badge would silently stay at 1.
         if((obj.name === 'edit_artifact' || obj.name === 'create_artifact') && obj.filename && obj.version != null){
           try {
-            if(me && Array.isArray(me.artifacts)){
-              const _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
-              if(_hit){ _hit.version = obj.version; }
-              else if(obj.name === 'create_artifact'){
-                me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' });
-              }
-            }
+            me = me || {};
+            if(!Array.isArray(me.artifacts)) me.artifacts = [];
+            const _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
+            if(_hit){ _hit.version = obj.version; }
+            else { me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' }); }
           } catch(_){}
         }
         // After tool result, the server will fire `thinking` for iter+1.
@@ -18173,15 +18175,15 @@ async function _sendThreadReply(){
               if(log[k]._pending && log[k].name === obj.name){ log[k] = { ...obj, _pending:false }; break; }
             }
             // Keep me.artifacts in sync with edit/create results — Ver.N badge.
+            // Push on edit too: a stale local me.artifacts (loaded before the
+            // file existed) would otherwise silently fail to update.
             if((obj.name === 'edit_artifact' || obj.name === 'create_artifact') && obj.filename && obj.version != null){
               try {
-                if(me && Array.isArray(me.artifacts)){
-                  var _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
-                  if(_hit){ _hit.version = obj.version; }
-                  else if(obj.name === 'create_artifact'){
-                    me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' });
-                  }
-                }
+                me = me || {};
+                if(!Array.isArray(me.artifacts)) me.artifacts = [];
+                var _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
+                if(_hit){ _hit.version = obj.version; }
+                else { me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' }); }
               } catch(_){}
             }
             _renderThreadDrawer();

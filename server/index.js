@@ -18541,6 +18541,12 @@ async function handleAPI(req,res,pathname,method,ip){
               input: block.input||{},
               ok: !(result&&result.error),
               url: result&&result.url,
+              // filename + version surface from create_artifact / edit_artifact /
+              // read_artifact so the client can update me.artifacts[fn].version
+              // (cache buster, Ver.N badge) and the completion summary can count
+              // distinct artifacts touched in the turn.
+              filename: result&&result.filename,
+              version: result&&result.version,
               title: result&&result.title,
               text: result&&result.text ? String(result.text).slice(0,400) : '',
               results: result&&result.results,

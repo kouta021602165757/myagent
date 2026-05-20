@@ -411,7 +411,22 @@ input,textarea{font-family:var(--sans);}
 .ag-icon{
   width:44px;height:44px;border-radius:11px;background:var(--ink4);
   border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;
-  font-size:22px;flex-shrink:0;
+  font-size:22px;flex-shrink:0;position:relative;
+}
+/* "Agent is working" dot — green pulsing dot on the avatar of whichever
+   agent is currently streaming a reply (main chat OR thread). Driven by
+   window._streamingAgentId, set by _setChatStreaming / _setThreadStreaming. */
+.ag-working-dot{
+  position:absolute;right:-2px;bottom:-2px;width:12px;height:12px;border-radius:50%;
+  background:#22c55e;border:2px solid var(--sidebar-bg, #1a1d24);
+  box-shadow:0 0 0 0 rgba(34,197,94,.6);
+  animation:agWorkingPulse 1.4s ease-out infinite;
+  z-index:2;
+}
+@keyframes agWorkingPulse{
+  0%{box-shadow:0 0 0 0 rgba(34,197,94,.6);}
+  70%{box-shadow:0 0 0 8px rgba(34,197,94,0);}
+  100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}
 }
 /* Drag handle: absolutely positioned so it doesn't steal layout space */
 .ag-handle{
@@ -1690,6 +1705,26 @@ input,textarea{font-family:var(--sans);}
   background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.34);color:#15803d;
   font-size:10.5px;font-weight:900;padding:2px 9px;border-radius:99px;letter-spacing:.01em;
 }
+/* Markdown task list — "- [ ] task" / "- [x] task" emitted by the AI when
+   it lays out its plan up-front. Read-only checkboxes (no toggle); the AI
+   re-emits the same plan with newly-ticked items as work progresses so the
+   list grows green. See `_md` for the conversion logic. */
+.md-task{
+  display:flex;align-items:flex-start;gap:8px;padding:3px 0;
+  font-size:13.5px;line-height:1.55;
+}
+.md-task-box{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:4px;flex-shrink:0;margin-top:3px;
+  border:1.5px solid var(--wire2,#d8c5b0);background:#fff;
+  font-size:11px;font-weight:900;color:transparent;line-height:1;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.md-task-box-on{background:#22c55e;border-color:#22c55e;color:#fff}
+.md-task-done .md-task-txt{color:var(--text3,#9a6a4a);text-decoration:line-through;text-decoration-color:rgba(34,197,94,.55);text-decoration-thickness:1.5px}
+.md-task-txt{flex:1;min-width:0}
+html[data-theme="dark"] .md-task-box{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18)}
+html[data-theme="dark"] .md-task-box-on{background:#22c55e;border-color:#22c55e}
 /* Vision review modal */
 .vr-modal{
   background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:88vh;
@@ -1730,6 +1765,43 @@ html[data-theme="dark"] .m-edit-fail{background:#2a1414;border-color:#7c2d2d;col
 html[data-theme="dark"] .m-edit-fail-h{color:#fca5a5}
 .m-edit-fail-d{font-family:'SF Mono','Menlo',monospace;font-size:11px;color:#7f1d1d;word-break:break-word;white-space:pre-wrap}
 html[data-theme="dark"] .m-edit-fail-d{color:#fecaca}
+
+/* Completion summary chip — surfaces "the AI actually worked" with a one-line
+   breakdown (tool count, artifacts touched, elapsed time) above the body of
+   a finished assistant message. Tool log shows the details; this gives the
+   gist in one glance. See _renderMsg's summaryHTML block. */
+.m-summary{
+  display:inline-flex;align-items:center;gap:8px;margin:4px 0 8px;
+  padding:5px 11px;background:linear-gradient(90deg,rgba(34,197,94,.10),rgba(34,197,94,.04));
+  border:1px solid rgba(34,197,94,.32);border-radius:99px;
+  font-size:11.5px;font-weight:800;color:#15803d;letter-spacing:.01em;
+}
+.m-summary-ic{font-size:12px;line-height:1}
+.m-summary-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
+html[data-theme="dark"] .m-summary{background:rgba(34,197,94,.12);color:#86efac;border-color:rgba(34,197,94,.34)}
+
+/* Huddle sub-agent identity chip — sits next to the speaker name so each
+   member bubble in a huddle reads as a distinct identity (team + round +
+   "currently speaking" pulse while streaming). Color is per-member, set
+   inline from agentAccent. See _renderMsg's huddleChipHTML block. */
+.m-huddle-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10.5px;font-weight:900;padding:1px 8px;border-radius:99px;
+  letter-spacing:.02em;line-height:1.5;flex-shrink:0;
+}
+.m-huddle-chip .hud-now{
+  display:inline-block;padding:0 5px;border-radius:99px;
+  background:rgba(255,255,255,.35);color:inherit;font-weight:900;
+  animation:hudNowPulse 1.4s ease-in-out infinite;
+}
+@keyframes hudNowPulse{
+  0%,100%{opacity:1}
+  50%{opacity:.55}
+}
+/* Huddle turn — slightly tighter accent on the row so the team voice
+   visually clusters. Border-left is already set inline via rowStyle. */
+.m.a.huddle-turn{padding-top:6px}
+html[data-theme="dark"] .m-huddle-chip .hud-now{background:rgba(0,0,0,.25)}
 
 /* 📌 Pinned-site bar — sits at the top of the thread drawer */
 .pin-bar{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--peach-soft,#fff1e3);border-bottom:1px solid rgba(251,146,60,.3);}
@@ -9010,8 +9082,14 @@ function _renderAgItem(a, isJoined){
   const id = esc(a.id);
   const onActive = (a.id === activeId) ? ' on' : '';
   const isGroup = !!a.is_group;
+  // "Working" indicator — set when streaming chat/thread reply is in flight
+  // for this agent. Drives a green pulsing dot on the avatar so users can
+  // visually confirm the agent is actually doing something. See
+  // _setChatStreaming / _setThreadStreaming.
+  const isWorking = (a.id === window._streamingAgentId);
+  const workingDot = isWorking ? '<span class="ag-working-dot" title="作業中"></span>' : '';
   // Single avatar (matches both groups and DMs in the new design)
-  const avatarHTML = `<div class="ag-icon">${_avHTML(a.avatar)}</div>`;
+  const avatarHTML = `<div class="ag-icon">${_avHTML(a.avatar)}${workingDot}</div>`;
   // Last message preview (LINE-style)
   const preview = _previewFromHistory(a);
   // Time string
@@ -9529,9 +9607,39 @@ function _md(src){
     var label = s ? s.name : sid;
     return "<button class=\"intg-cta\" onclick=\"openIntegrationsTab('"+ sid +"')\">🔌 "+ label +" を接続</button>";
   });
+  // Task-list rendering — convert GFM-style "- [ ] task" / "- [x] task" lines
+  // into styled checklist rows. Used by the "AI's plan" narration where the
+  // model emits a 3–6 step plan up-front and ticks items as it works through
+  // them. Visual is read-only (no toggle handler) — these reflect AI state,
+  // not user state. Matches both - and * bullet markers; preserves leading
+  // indentation (esc() already turned it into &nbsp;-equivalent spaces).
+  //
+  // Auto-check: when the AI emits "✅ ステップN 完了" markers later in the
+  // same message, we tick off the first N unchecked items. Lets the model
+  // declare the plan once and update progress purely via the completion
+  // marker, instead of re-emitting the whole list each step.
+  var _stepDone = 0;
+  (String(src).match(/✅\s*ステップ\s*(\d+)\s*完了/g) || []).forEach(function(m){
+    var n = parseInt((m.match(/(\d+)/)||[])[1], 10);
+    if(n && n > _stepDone) _stepDone = n;
+  });
+  var _taskIdx = 0;
+  // NB: this runs BEFORE \n→<br> so we match newline separators, not <br>.
+  html=html.replace(/(^|\n)\s*[\-*] \[([ xX])\]\s+(.+?)(?=\n|$)/g, function(_, lead, mk, txt){
+    _taskIdx++;
+    var done = (mk === 'x' || mk === 'X') || (_taskIdx <= _stepDone);
+    var cls  = 'md-task' + (done ? ' md-task-done' : '');
+    var box  = done
+      ? '<span class="md-task-box md-task-box-on">✓</span>'
+      : '<span class="md-task-box"></span>';
+    return lead + '<div class="' + cls + '">' + box + '<span class="md-task-txt">' + txt + '</span></div>';
+  });
   html=html.replace(/\n/g,'<br>');
   html=html.replace(/(<\/(?:h[1-6]|ul|ol|pre|blockquote|li)>)<br>/g,'$1');
   html=html.replace(/<br>(<(?:h[1-6]|ul|ol|pre|blockquote|li))/g,'$1');
+  // Tighten <br> immediately around task-list rows so adjacent items pack.
+  html=html.replace(/<br>(<div class="md-task)/g,'$1');
+  html=html.replace(/(<\/div>)<br>(<div class="md-task)/g,'$1$2');
   html=html.replace(/ ?NCBTN0 ?/g, '<button class="newchat-cta" onclick="openNewAgent()">🆕 '+(isJa?'新しいチャットで作る':'Create in a new chat')+'</button>');
   return html;
 }
@@ -9826,7 +9934,42 @@ var _TOOL_META = {
   type_text:      { icon:'⌨️', label: function(inp){ return (isJa?'入力: ':'Type: ')+(inp.selector||'')+' = '+(inp.text||''); } },
   press_key:      { icon:'↩️', label: function(inp){ return (isJa?'キー押下: ':'Press: ')+(inp.key||''); } },
   take_screenshot:{ icon:'📸', label: function(){ return isJa?'スクリーンショット撮影':'Took screenshot'; } },
-  read_page:      { icon:'📄', label: function(){ return isJa?'ページ再取得':'Re-read page'; } }
+  read_page:      { icon:'📄', label: function(){ return isJa?'ページ再取得':'Re-read page'; } },
+  // Narration — render tool log in human language ("仕事してる感" UX)
+  read_artifact:  { icon:'👀', label: function(){ return isJa?'現在のサイト/HTML を確認':'Inspecting the site/HTML'; } },
+  create_artifact:{ icon:'🎨', label: function(inp){ return (isJa?'サイトを作成':'Building the site')+(inp&&inp.title?': '+String(inp.title).slice(0,40):''); } },
+  edit_artifact:  { icon:'✏️', label: function(inp){
+                      var op = inp && inp.operation;
+                      var ops = { append_to_body:'末尾に追記', append_to_selector:'要素に追加', replace_selector:'区画を書き換え', insert_before_selector:'要素の前に挿入', rewrite:'全文を書き直し' };
+                      var opEn = { append_to_body:'append', append_to_selector:'append to selector', replace_selector:'replace section', insert_before_selector:'insert before', rewrite:'rewrite' };
+                      var opTxt = isJa ? (ops[op]||op||'編集') : (opEn[op]||op||'edit');
+                      return (isJa?'サイトを編集 — ':'Editing site — ')+opTxt+(inp&&inp.selector?' ('+inp.selector+')':'');
+                    } },
+  web_search:     { icon:'🔍', label: function(inp){ return (isJa?'Web を検索: ':'Web search: ')+(inp&&inp.query?inp.query:''); } },
+  web_fetch:      { icon:'🌐', label: function(inp){ return (isJa?'ページを取得: ':'Fetching: ')+(inp&&inp.url?inp.url:''); } },
+  web_screenshot: { icon:'📸', label: function(inp){ return (isJa?'ページを撮影: ':'Screenshotting: ')+(inp&&inp.url?inp.url:''); } },
+  web_read_markdown:{ icon:'📖', label: function(inp){ return (isJa?'ページを読み込み: ':'Reading: ')+(inp&&inp.url?inp.url:''); } },
+  web_extract:    { icon:'🔎', label: function(inp){ return (isJa?'情報を抽出: ':'Extracting: ')+(inp&&(inp.url||inp.query)?(inp.url||inp.query):''); } },
+  generate_image: { icon:'🖼', label: function(inp){ return (isJa?'画像を生成':'Generating image')+(inp&&inp.prompt?': '+String(inp.prompt).slice(0,40):''); } },
+  edit_image:     { icon:'🖼', label: function(){ return isJa?'画像を編集':'Editing image'; } },
+  generate_video: { icon:'🎬', label: function(){ return isJa?'動画を生成中… (30-60秒)':'Rendering video… (30-60s)'; } },
+  generate_audio: { icon:'🎙', label: function(){ return isJa?'音声を生成':'Synthesizing audio'; } },
+  generate_pdf:   { icon:'📄', label: function(){ return isJa?'PDF を作成':'Building PDF'; } },
+  generate_chart: { icon:'📊', label: function(){ return isJa?'グラフを描画':'Drawing chart'; } },
+  generate_diagram:{ icon:'🔀', label: function(){ return isJa?'図を作成':'Drawing diagram'; } },
+  generate_qr:    { icon:'🔲', label: function(){ return isJa?'QR コードを作成':'Generating QR'; } },
+  send_email:     { icon:'✉️', label: function(inp){ return (isJa?'メール送信':'Sending email')+(inp&&inp.subject?': '+inp.subject:''); } },
+  notify_slack:   { icon:'💬', label: function(){ return isJa?'Slack に投稿':'Posting to Slack'; } },
+  notify_discord: { icon:'💬', label: function(){ return isJa?'Discord に投稿':'Posting to Discord'; } },
+  ga4_query:      { icon:'📊', label: function(){ return isJa?'アクセス解析':'Analyzing traffic'; } },
+  sheets_read:    { icon:'📊', label: function(){ return isJa?'スプレッドシートを読込':'Reading sheet'; } },
+  sheets_write:   { icon:'📊', label: function(){ return isJa?'スプレッドシートに書込':'Writing sheet'; } },
+  sheets_append:  { icon:'📊', label: function(){ return isJa?'スプレッドシートに追記':'Appending to sheet'; } },
+  create_calendar_event: { icon:'📅', label: function(inp){ return (isJa?'予定を作成':'Calendar event')+(inp&&inp.title?': '+inp.title:''); } },
+  ext_open_url:   { icon:'🌐', label: function(inp){ return (isJa?'タブを開く: ':'Open tab: ')+(inp&&inp.url?inp.url:''); } },
+  ext_read_page:  { icon:'📖', label: function(){ return isJa?'開いてるページを読む':'Reading active page'; } },
+  ext_screenshot: { icon:'📸', label: function(){ return isJa?'画面を撮影':'Screenshotting'; } },
+  ext_click:      { icon:'👆', label: function(inp){ return (isJa?'クリック: ':'Click: ')+(inp&&inp.selector?inp.selector:''); } },
 };
 
 function _renderToolLog(log){
@@ -10014,6 +10157,38 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   let body = content ? _md(content) : '';
   if(cites.length) body = _linkInlineCitations(body, cites);
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
+  // ── Completion summary badge ─────────────────────────────────────────
+  // After a finished agentic turn, surface a one-line "what just happened"
+  // chip at the top of the bubble — number of tools used + new/edited
+  // artifacts + elapsed wall time. Lets users see at a glance that the AI
+  // actually worked (vs. just chatting), without scanning the full tool log.
+  // Suppressed during streaming and when no tool ran (pure-text reply).
+  let summaryHTML = '';
+  if(!isU && !isStreaming && Array.isArray(tool_log) && tool_log.length > 0){
+    const _okTools  = tool_log.filter(t => t && t.ok !== false).length;
+    const _artNames = new Set();
+    let _newArts = 0, _editArts = 0;
+    tool_log.forEach(t => {
+      if(!t) return;
+      if(t.name === 'create_artifact' && t.ok !== false){ _newArts++;  if(t.filename) _artNames.add(t.filename); }
+      if(t.name === 'edit_artifact'   && t.ok !== false){ _editArts++; if(t.filename) _artNames.add(t.filename); }
+    });
+    const _elapsed = (raw && (raw.elapsed_ms || raw.elapsed)) || 0;
+    const _elapsedTxt = _elapsed > 0
+      ? (_elapsed < 60000
+          ? (Math.round(_elapsed/100)/10).toFixed(1) + 's'
+          : Math.round(_elapsed/60000) + 'm')
+      : '';
+    const _parts = [];
+    _parts.push('🛠 ' + _okTools + (isJa?' 個のツール':' tools'));
+    if(_newArts)  _parts.push('🆕 ' + _newArts + (isJa?' 件作成':' new'));
+    if(_editArts) _parts.push('✏️ ' + _editArts + (isJa?' 件編集':' edits'));
+    if(_elapsedTxt) _parts.push('⏱ ' + _elapsedTxt);
+    summaryHTML = '<div class="m-summary" title="'+(isJa?'このターンで AI が行った作業':'What this turn did')+'">'
+      + '<span class="m-summary-ic">✅</span>'
+      + '<span class="m-summary-txt">'+_parts.join(' · ')+'</span>'
+      + '</div>';
+  }
   const citesHtml = cites.length ? _renderCitations(cites) : '';
   // Artifact cards for any /generated/artifact-*.html the AI touched via a
   // tool (ext_open_url etc.) but didn't write as a [title](url) link itself.
@@ -10229,19 +10404,42 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // Slack-flat layout:
   //   .m (row) = .m-av-wrap (left) + .m-content (right) + .hover-bar (overlay)
   //   .m-content contains the existing .m-meta / images / tool log / body / reactions / thread-indicator / acts
-  return '<div class="'+cls+(isStreaming?' streaming':'')+'" data-idx="'+idx+'"'+rowStyle+'>'+
+  // Huddle sub-agent identity chip — clearly mark "this bubble is member X
+  // from team Y, currently speaking in round R". Without it, huddle turns
+  // can blur into a single voice. The chip lives next to the name and uses
+  // the same accent color as the bubble border so it reads as one identity.
+  let huddleChipHTML = '';
+  if(huddleMember){
+    const _teamLbl = esc(ag && ag.name || '');
+    const _roundN  = huddleMember.huddle_round;
+    const _chipBg  = agentAccent ? agentAccent.soft : 'rgba(251,146,60,.12)';
+    const _chipCol = agentAccent ? agentAccent.color : 'var(--peach-dark)';
+    huddleChipHTML = '<span class="m-huddle-chip" style="background:'+_chipBg+';color:'+_chipCol+'"'
+      + ' title="'+L('チーム '+(ag&&ag.name||'')+' のメンバー','Team '+(ag&&ag.name||'')+' member')+'">'
+      + '🎙 '+_teamLbl
+      + (Number.isInteger(_roundN) ? ' · R'+(_roundN+1) : '')
+      + (isStreaming ? ' · <span class="hud-now">'+L('発言中','speaking')+'</span>' : '')
+      + '</span>';
+  } else if(huddleSummary){
+    huddleChipHTML = '<span class="m-huddle-chip" style="background:rgba(251,146,60,.12);color:var(--peach-dark)">'
+      + '📋 '+esc(ag && ag.name || '') + ' · ' + L('議論まとめ','summary')
+      + '</span>';
+  }
+  return '<div class="'+cls+(isStreaming?' streaming':'')+(huddleMember?' huddle-turn':'')+'" data-idx="'+idx+'"'+rowStyle+'>'+
     '<div class="m-av-wrap">'+
       '<div class="m-av'+(isU?' user':'')+'"'+aiAvStyle+'>'+av+'</div>'+
     '</div>'+
     '<div class="m-content">'+
       '<div class="m-meta">'+
         '<span class="m-name"'+nameStyle+'>'+esc(name)+'</span>'+
+        huddleChipHTML+
         '<span class="m-time">'+esc(time||'')+'</span>'+
         readReceipt+
       '</div>'+
       imgHtml+
       tlogHtml+
       editFailHTML+
+      summaryHTML+
       (renderBody?'<div class="m-body">'+(bodyMarkup||'')+artifactCards+citesHtml+'</div>':'')+
       reactionsHTML+
       threadIndicatorHTML+
@@ -13043,6 +13241,12 @@ async function sendMsg(){
 var _chatStreamCtrl = null;
 
 function _setChatStreaming(on){
+  // Track which agent is currently being streamed to, so the sidebar can
+  // show a "working" dot next to it. Cleared only if it's still our agent
+  // (avoids racing with a different agent that started streaming since).
+  if(on){ window._streamingAgentId = activeId; }
+  else if(window._streamingAgentId === activeId){ window._streamingAgentId = null; }
+  try { renderAgList(); } catch(_){}
   const btn = document.getElementById('sndBtn');
   if(!btn) return;
   // CRITICAL: always re-enable the button. sendMsg() disables it just before
@@ -13074,6 +13278,11 @@ function stopChatStream(){
 //    responding the button becomes a ⏹ stop button. ──
 var _threadStreamCtrl = null;
 function _setThreadStreaming(on){
+  // Mirror main-chat tracking: the sidebar shows a working dot next to
+  // whichever agent the user is currently streaming a thread reply for.
+  if(on){ window._streamingAgentId = activeId; }
+  else if(window._streamingAgentId === activeId){ window._streamingAgentId = null; }
+  try { renderAgList(); } catch(_){}
   var btn = document.getElementById('tSndBtn');
   if(!btn) return;
   btn.disabled = false;

@@ -6940,6 +6940,43 @@ function _stampArtifactVersions(text, ownerUser){
     });
 }
 
+// ──────────────────────────────────────────────────────────────────
+// Promise-without-delivery detector.
+//   Pattern we keep seeing: AI says "修正します" / "実装します" / "追加します"
+//   in the reply body but never actually calls edit_artifact / create_artifact
+//   in that turn. The user sees a confident "✅ ... will fix" message and
+//   waits — but nothing changed. This function spots that mismatch so the
+//   client can show a "⚠️ 約束されたが未実行" chip prompting the user to
+//   resend ("やって") instead of staring at a confused screen.
+//
+//   Returns: { detected: boolean, phrases: string[] }
+// ──────────────────────────────────────────────────────────────────
+function _detectPromiseWithoutDelivery(reply, toolLog){
+  const text = String(reply || '');
+  if(text.length < 10) return { detected:false, phrases:[] };
+  // Did this turn actually mutate an artifact? If yes, no promise issue.
+  const tl = Array.isArray(toolLog) ? toolLog : [];
+  const editingToolNames = new Set([
+    'edit_artifact', 'create_artifact',
+    'generate_image', 'edit_image', 'generate_video', 'generate_audio',
+    'generate_pdf', 'generate_chart', 'generate_diagram', 'generate_qr',
+    'send_email', 'notify_slack', 'notify_discord',
+    'sheets_write', 'sheets_append', 'sheets_format',
+    'create_calendar_event', 'wordpress_publish',
+    'replace_text', // also counts — direct text replace
+  ]);
+  const didMutate = tl.some(t => t && t.ok !== false && editingToolNames.has(t.name));
+  if(didMutate) return { detected:false, phrases:[] };
+  // Look for Japanese future-tense / promise patterns in the reply.
+  // Each phrase = a strong signal that the AI promised to act this turn.
+  const promiseRe = /(修正|追加|更新|実装|変更|挿入|統合|削除|並び替え|移動|構築|生成|作成|送信|投稿|送り|書き換え|書き直し|書き加え|入れ替え|差し替え|まとめ)\s*(し)?(ます|ましょう|します|していきます|していく)/g;
+  const found = (text.match(promiseRe) || []).slice(0, 3);
+  if(found.length === 0) return { detected:false, phrases:[] };
+  // De-dup
+  const phrases = Array.from(new Set(found));
+  return { detected:true, phrases };
+}
+
 // read_artifact — hand the AI the CURRENT html of an artifact. Chat
 // summarization erases the original html from context, so without a way to
 // re-read it the AI edits blind and the layout drifts. This is the on-demand
@@ -11489,6 +11526,31 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
 - 簡潔な動詞で書く (「○○を確認」「○○を設計」「○○を統合」)。
 
 そのあと作業を始め、ステップが完了するたびに本文中で必ず「✅ ステップN 完了」と書く (例: 「✅ ステップ2 完了」)。UI がこのマーカーを検出して該当のチェックボックスを自動で☑に切り替える。
+
+🚨 【✅ 絵文字の使用ルール — 絶対遵守】
+✅ 絵文字は **ツールが実際に成功した直後のステップ完了マーカー** にだけ使う。意味の混在を絶対に避けること。
+
+- ✅ 使ってよい: 「✅ ステップN 完了」「✅ HTMLレポート完成」(tool 成功後)
+- ✅ 使ってはいけない:
+  - 計画リストや「これからやること」の箇条書きに ✅ を付ける (= ユーザーは「完了」と誤解する)
+  - 未来形の文「○○します」「実装します」と一緒に ✅
+  - bullet point 代わりに ✅ を並べる
+
+計画 / 予定 / 提案リストには **数字 (1. 2. 3.)** または **• (中点)** を使うこと。**✅ は完了の証**であって装飾ではない。
+
+【誤った例】
+❌ 修正します:
+  ✅ セクション1 に役員構成を追加
+  ✅ セクション5 を 7 に移動
+  ✅ セクション6 に予算を追加
+→ これだとユーザーは「もう完了した」と思うが、実際は予定。
+
+【正しい例】
+修正します:
+  1. セクション1 に役員構成を追加
+  2. セクション5 を 7 に移動
+  3. セクション6 に予算を追加
+→ 数字で予定を列挙、その後 edit_artifact を実行、各完了で「✅ ステップN 完了」と書く。
 
 全ステップ完了後に、最終結果を簡潔にまとめる。
 
@@ -19276,9 +19338,24 @@ async function handleAPI(req,res,pathname,method,ip){
       const _turnMs = Date.now() - _turnT0;
       const _toolCount = Array.isArray(toolLog) ? toolLog.length : 0;
       console.log('[turn] DONE ' + _turnMs + 'ms, tools=' + _toolCount + ', tokens=' + totalIn + 'in/' + totalOut + 'out, model=' + (agent.model||'auto'));
+      // Detect "promise without delivery" — AI said 修正します/実装します etc.
+      // but didn't actually call any mutating tool. Surfaces a warning chip
+      // on the client so the user knows to resend instead of waiting.
+      const _promise = _detectPromiseWithoutDelivery(reply, toolLog);
+      if(_promise.detected){
+        console.warn('[turn] promise_without_delivery:', _promise.phrases.join(' / '));
+      }
+      // Persist the flag on the assistant message we just pushed (history's
+      // last assistant entry) so on reload the chip is still visible.
+      if(_promise.detected && agent.history && agent.history.length){
+        const last = agent.history[agent.history.length - 1];
+        if(last && last.role === 'assistant'){
+          last.promise_unfulfilled = _promise.phrases;
+        }
+      }
       // Emit the (possibly already-streamed) reply once at the end so the client
       // can finalize the bubble. delta events were sent inside the loop.
-      sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog, stop_reason: _stopReason, truncated: _truncated });
+      sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog, stop_reason: _stopReason, truncated: _truncated, promise_unfulfilled: _promise.detected ? _promise.phrases : null });
       if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; }
       res.end();
       return;

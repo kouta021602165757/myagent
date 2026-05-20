@@ -1836,6 +1836,27 @@ html[data-theme="dark"] .m-edit-fail-d{color:#fecaca}
 .m-summary-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
 html[data-theme="dark"] .m-summary{background:rgba(34,197,94,.12);color:#86efac;border-color:rgba(34,197,94,.34)}
 
+/* Promise-without-delivery warning — surfaces when the AI said "修正します"
+   etc. but no mutating tool was called this turn. Tells the user it didn't
+   actually happen, and gives a one-click "実行する" button to push forward. */
+.m-promise-warn{
+  display:flex;align-items:center;gap:10px;margin:6px 0 8px;
+  padding:9px 13px;background:#fff8e1;border:1px solid #f59e0b;border-left:4px solid #f59e0b;
+  border-radius:10px;font-size:12.5px;color:#7c2d12;line-height:1.5;
+}
+.m-pw-ic{font-size:16px;flex-shrink:0;line-height:1}
+.m-pw-txt{flex:1;min-width:0}
+.m-pw-act{
+  background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:0;
+  padding:6px 12px;border-radius:8px;font-size:12px;font-weight:800;
+  cursor:pointer;font-family:inherit;flex-shrink:0;
+  transition:transform .12s,box-shadow .12s;
+}
+.m-pw-act:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(245,158,11,.3)}
+html[data-theme="dark"] .m-promise-warn{
+  background:rgba(245,158,11,.10);border-color:#f59e0b;color:#fcd34d;
+}
+
 /* Huddle sub-agent identity chip — sits next to the speaker name so each
    member bubble in a huddle reads as a distinct identity (team + round +
    "currently speaking" pulse while streaming). Color is per-member, set

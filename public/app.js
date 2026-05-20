@@ -4962,6 +4962,27 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       + '<span class="m-summary-txt">'+_parts.join(' · ')+'</span>'
       + '</div>';
   }
+  // ── 約束未実行 警告チップ ─────────────────────────────────
+  // Server detected the AI said 修正します/実装します etc. but no mutating
+  // tool actually ran this turn. Surface a visible warning so the user
+  // knows the AI didn't actually do the work — and a 「実行する」 button
+  // that auto-resends a "やって" message to push the AI to actually execute.
+  let promiseWarnHTML = '';
+  if(!isU && !isStreaming && raw && Array.isArray(raw.promise_unfulfilled) && raw.promise_unfulfilled.length){
+    const phrase = String(raw.promise_unfulfilled[0]||'').slice(0, 40);
+    promiseWarnHTML = '<div class="m-promise-warn" title="'
+      + (isJa?'AI が「やります」と言ったが、実際の編集ツールが呼ばれていません':'AI promised but no mutating tool ran')+'">'
+      + '<span class="m-pw-ic">⚠️</span>'
+      + '<span class="m-pw-txt">'
+      +   (isJa
+            ? ('「' + esc(phrase) + '」と言いましたが、実際の編集はまだ実行されていません。')
+            : ('AI said "' + esc(phrase) + '" but the actual edit didn\'t run.'))
+      + '</span>'
+      + '<button class="m-pw-act" onclick="_pwGoAhead(this)">'
+      +   (isJa?'▶ 実行する':'▶ Run it')
+      + '</button>'
+      + '</div>';
+  }
   const citesHtml = cites.length ? _renderCitations(cites) : '';
   // Artifact cards for any /generated/artifact-*.html the AI touched via a
   // tool (ext_open_url etc.) but didn't write as a [title](url) link itself.
@@ -5213,6 +5234,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       tlogHtml+
       editFailHTML+
       summaryHTML+
+      promiseWarnHTML+
       (renderBody?'<div class="m-body">'+(bodyMarkup||'')+artifactCards+citesHtml+'</div>':'')+
       reactionsHTML+
       threadIndicatorHTML+
@@ -6238,6 +6260,26 @@ function _retryThreadMsg(btn){
   if(ci){ ci.value = text; try { exTA(ci); } catch(e){} }
   // Defer a tick so the drawer / composer is in the DOM before send.
   setTimeout(function(){ try { _sendThreadReply(); } catch(e){ console.warn('[thread-retry]', e); } }, 30);
+}
+
+/* ── "Promise without delivery" — click to push the AI to actually execute.
+   The chip's "▶ 実行する" button fires this. We just slot "やって" into the
+   appropriate composer (main or thread, depending on context) and send.
+   The AI then takes the un-fulfilled promise from its previous message as
+   the instruction and (hopefully) actually calls the tool this time. */
+function _pwGoAhead(btn){
+  if(!activeId) return;
+  var inThread = !!btn.closest('#threadDrawer');
+  var taId = inThread ? 'tci' : 'ci';
+  var ta = document.getElementById(taId);
+  if(!ta) return;
+  ta.value = (isJa ? 'やってください' : 'go ahead and do it');
+  try { exTA(ta); } catch(_){}
+  if(inThread){
+    try { _sendThreadReply(); } catch(e){ console.warn('[pw] thread send failed:', e); }
+  } else {
+    try { sendMsg(); } catch(e){ console.warn('[pw] main send failed:', e); }
+  }
 }
 
 /* ── Reply (quote-reply) ────────────────────────────── */
@@ -8508,6 +8550,9 @@ async function _sendMsgStream(ag, text, imgs, texts){
         // Tag the message as truncated if the model hit max_tokens — UI
         // renders a "▶ 続きを書く" Continue button under it.
         if(obj.truncated){ ag.history[streamIdx].truncated = true; }
+        // Server-detected "promise without delivery" — surfaces a warning
+        // chip + "▶ 実行する" button on the bubble. See _pwGoAhead.
+        if(obj.promise_unfulfilled){ ag.history[streamIdx].promise_unfulfilled = obj.promise_unfulfilled; }
         if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
         me.usage_count = (me.usage_count||0) + 1;
         updateBalance();
@@ -13088,6 +13133,8 @@ async function _sendThreadReply(){
             ag.history[aiPlaceholderIdx].streaming = false;
             if(obj.tool_log && obj.tool_log.length) ag.history[aiPlaceholderIdx].tool_log = obj.tool_log;
             if(obj.truncated) ag.history[aiPlaceholderIdx].truncated = true;
+            // Server-detected promise without delivery — see _pwGoAhead.
+            if(obj.promise_unfulfilled) ag.history[aiPlaceholderIdx].promise_unfulfilled = obj.promise_unfulfilled;
           }
           if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
           me.usage_count = (me.usage_count||0) + 1;

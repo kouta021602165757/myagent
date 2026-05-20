@@ -9087,10 +9087,11 @@ function _renderAgItem(a, isJoined){
   const onActive = (a.id === activeId) ? ' on' : '';
   const isGroup = !!a.is_group;
   // "Working" indicator — set when streaming chat/thread reply is in flight
-  // for this agent. Drives a green pulsing dot on the avatar so users can
-  // visually confirm the agent is actually doing something. See
-  // _setChatStreaming / _setThreadStreaming.
-  const isWorking = (a.id === window._streamingAgentId);
+  // for this agent. Driven by the _streamingAgents Set maintained by
+  // _setChatStreaming / _setThreadStreaming. Falls back to the single-id
+  // mirror for safety. Multiple agents can be lit at once.
+  const isWorking = !!(window._streamingAgents && window._streamingAgents.has(a.id))
+                 || (a.id === window._streamingAgentId);
   const workingDot = isWorking ? '<span class="ag-working-dot" title="作業中"></span>' : '';
   // Single avatar (matches both groups and DMs in the new design)
   const avatarHTML = `<div class="ag-icon">${_avHTML(a.avatar)}${workingDot}</div>`;
@@ -13245,11 +13246,27 @@ async function sendMsg(){
 var _chatStreamCtrl = null;
 
 function _setChatStreaming(on){
-  // Track which agent is currently being streamed to, so the sidebar can
-  // show a "working" dot next to it. Cleared only if it's still our agent
-  // (avoids racing with a different agent that started streaming since).
-  if(on){ window._streamingAgentId = activeId; }
-  else if(window._streamingAgentId === activeId){ window._streamingAgentId = null; }
+  // Track streaming agents in a set so the sidebar shows a dot next to any
+  // agent currently receiving a stream — in EITHER main chat OR a thread (or
+  // both concurrently). Pin the agentId at stream START so a chat-switch
+  // mid-stream still clears the right agent at stream END.
+  window._streamingAgents = window._streamingAgents || new Set();
+  if(on){
+    window._chatStreamingAgentId = activeId;
+    if(activeId) window._streamingAgents.add(activeId);
+  } else {
+    var _aid = window._chatStreamingAgentId;
+    window._chatStreamingAgentId = null;
+    // Only clear from the set if no other channel (thread) is still streaming
+    // for the same agent.
+    if(_aid && _aid !== window._threadStreamingAgentId){
+      window._streamingAgents.delete(_aid);
+    }
+  }
+  // Back-compat: keep _streamingAgentId pointing to any currently-streaming
+  // agent so existing checks (renderAgItem) still light up the dot.
+  window._streamingAgentId = window._streamingAgents.size
+    ? window._streamingAgents.values().next().value : null;
   try { renderAgList(); } catch(_){}
   const btn = document.getElementById('sndBtn');
   if(!btn) return;
@@ -13282,10 +13299,21 @@ function stopChatStream(){
 //    responding the button becomes a ⏹ stop button. ──
 var _threadStreamCtrl = null;
 function _setThreadStreaming(on){
-  // Mirror main-chat tracking: the sidebar shows a working dot next to
-  // whichever agent the user is currently streaming a thread reply for.
-  if(on){ window._streamingAgentId = activeId; }
-  else if(window._streamingAgentId === activeId){ window._streamingAgentId = null; }
+  // Mirror _setChatStreaming. Tracks the thread channel separately so the
+  // dot stays lit while either main OR thread is streaming for the agent.
+  window._streamingAgents = window._streamingAgents || new Set();
+  if(on){
+    window._threadStreamingAgentId = activeId;
+    if(activeId) window._streamingAgents.add(activeId);
+  } else {
+    var _aid = window._threadStreamingAgentId;
+    window._threadStreamingAgentId = null;
+    if(_aid && _aid !== window._chatStreamingAgentId){
+      window._streamingAgents.delete(_aid);
+    }
+  }
+  window._streamingAgentId = window._streamingAgents.size
+    ? window._streamingAgents.values().next().value : null;
   try { renderAgList(); } catch(_){}
   var btn = document.getElementById('tSndBtn');
   if(!btn) return;
@@ -17689,21 +17717,20 @@ async function _promoteToGroupFromEdit(){
 // the main timeline).
 function _openThread(parentId){
   if(!parentId){ console.warn('[thread] _openThread called without parentId'); return; }
-  // Defensive: if the parent message has rolled out of ag.history (e.g. it
-  // landed in an old archive but its thread replies still reference it),
-  // _renderThreadDrawer would toast "元メッセージが見つかりません" and close
-  // immediately — making the click look broken. Detect that here and offer
-  // a useful fallback: scroll the inline replies into view if any survive.
-  var ag = (agents||[]).find(function(a){ return a.id === activeId; });
-  if(ag){
-    var hasParent = (ag.history||[]).some(function(m){ return m && m.id === parentId; });
-    if(!hasParent){
-      console.warn('[thread] parent', parentId, 'not in ag.history — fallback to inline');
-      showToast(L('元メッセージが折りたたまれています。「全履歴を見る」から開けます。',
-                  'Parent is folded into the archive. Open "See full archive" to view.'), 'ng');
-      return;
+  // Diagnostic only — log whether the parent actually exists in ag.history,
+  // but DO NOT block the open. _renderThreadDrawer has its own handling,
+  // and an over-eager pre-check here previously blocked legitimate threads
+  // when the id-matching had subtle differences (string vs number, trimmed
+  // whitespace, server-vs-client id generation skew).
+  try {
+    var ag = (agents||[]).find(function(a){ return a.id === activeId; });
+    if(ag){
+      var hasParent = (ag.history||[]).some(function(m){ return m && m.id === parentId; });
+      if(!hasParent){
+        console.warn('[thread] parent', parentId, 'not in ag.history (will let _renderThreadDrawer decide)');
+      }
     }
-  }
+  } catch(_){}
   window._activeThreadParent = parentId;
   _renderThreadDrawer();
 }
@@ -17789,7 +17816,28 @@ function _renderThreadDrawer(){
   var ag = (agents||[]).find(function(a){return a.id===activeId;});
   if(!ag) return;
   var parent = (ag.history||[]).find(function(m){return m && m.id === parentId;});
-  if(!parent){ showToast(L('元メッセージが見つかりません','Parent message not found'),'ng'); _closeThread(); return; }
+  // Fallback: if no exact id match, the parent may have come from server
+  // history without an `id` field assigned. In that case, the children's
+  // `thread_parent_id` was likely set against the parent's time string
+  // or some other property. Try matching by `time` so old threads still open.
+  if(!parent){
+    parent = (ag.history||[]).find(function(m){
+      return m && !m.thread_parent_id && (m.time === parentId || (''+m.time) === (''+parentId));
+    });
+  }
+  if(!parent){
+    // Last-resort: any message whose `id`-like fields stringify-match
+    parent = (ag.history||[]).find(function(m){
+      return m && (String(m.id||'') === String(parentId) || String(m.local_id||'') === String(parentId));
+    });
+  }
+  if(!parent){
+    console.warn('[thread] parent not found — parentId=', parentId,
+                 'history sample:', (ag.history||[]).slice(-3).map(function(m){return m && {id:m.id, time:m.time, role:m.role};}));
+    showToast(L('元メッセージが見つかりません','Parent message not found'),'ng'); _closeThread(); return;
+  }
+  // Replies match by thread_parent_id. Use the same flexible matching so old
+  // children whose thread_parent_id may differ in format still resolve.
   var replies = (ag.history||[]).filter(function(m){return m && m.thread_parent_id === parentId;});
   // Use the full _renderMsg so markdown / tool_log / artifact cards render
   // properly inside threads (critical for LP-edit flows where each reply

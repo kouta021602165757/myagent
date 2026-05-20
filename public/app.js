@@ -4777,6 +4777,15 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   if(cites.length) body = _linkInlineCitations(body, cites);
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
   // ── Completion summary badge ─────────────────────────────────────────
+  // Streaming flag — needed by summaryHTML (suppresses the chip mid-turn) and
+  // by every downstream block that checks "is this bubble still being built?".
+  // Declared HERE (before summaryHTML) so the const isn't referenced in its
+  // own temporal dead zone — that was the "Cannot access 'isStreaming' before
+  // initialization" crash that took out the thread drawer.
+  // A bubble shows streaming UI only while a real stream controller is active;
+  // a leftover streaming:true flag from a crashed/reloaded turn is treated as
+  // stale.
+  const isStreaming = !!(raw && raw.streaming) && !!(_chatStreamCtrl || _threadStreamCtrl);
   // After a finished agentic turn, surface a one-line "what just happened"
   // chip at the top of the bubble — number of tools used + new/edited
   // artifacts + elapsed wall time. Lets users see at a glance that the AI
@@ -4893,10 +4902,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // so the bubble has a visible body even before any text arrives. Without
   // this, an empty assistant entry rendered as just header+actions and the
   // _sendMsgStream patch path failed to find .m-body to write deltas into.
-  // A message shows "生成中" only while a turn is genuinely in flight. If the
-  // streaming flag is left over (turn errored / aborted / page reloaded) but
-  // no stream controller is active, it is stale — never show the indicator.
-  const isStreaming = !!(raw && raw.streaming) && !!(_chatStreamCtrl || _threadStreamCtrl);
+  // (isStreaming declared earlier — see the summaryHTML block above.)
   if(!isU && isStreaming && !bodyMarkup){
     bodyMarkup = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
       + (isJa?'生成中…':'Generating…') + '</div></div>';

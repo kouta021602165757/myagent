@@ -18824,7 +18824,19 @@ async function handleAPI(req,res,pathname,method,ip){
           // doesn't mutate the cached buildSystem output.
           let _sysForTurn = buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})});
           if(_earlyPlan){
-            _sysForTurn += '\n\n🚨 [このターン限定の指示] お任せ受領カード <delegate>...</delegate> は既にユーザー画面に表示済みです (' + (_earlyPlan.steps||[]).length + ' ステップ計画済み)。<delegate> を絶対に再度出力しないでください。計画されたステップを順に実行し、各完了時に「✅ ステップN 完了」とだけ短く書くこと。';
+            _sysForTurn += '\n\n🚨 [このターン限定 — 段階承認モード]\n'
+              + 'お任せ受領カード <delegate>...</delegate> は既にユーザー画面に表示済み (' + (_earlyPlan.steps||[]).length + ' ステップ計画済み)。<delegate> を絶対に再度出力しないでください。\n'
+              + '\n'
+              + '**このターンでは「次の 1 ステップだけ」を実行**してください。これは段階承認フロー: 「社員 (AI) が作って → 上司 (ユーザー) が確認 → 次へ進める」を繰り返す設計。\n'
+              + '\n'
+              + '手順:\n'
+              + '1. 会話履歴に「✅ ステップN 完了」が無ければ → ステップ 1 から開始\n'
+              + '2. 既にあれば、その最大の N + 1 (= 次の未完了ステップ) を実行する\n'
+              + '3. そのステップに必要な tool を呼ぶ (1 ステップ = 1-2 tool 呼び出し以内が理想)\n'
+              + '4. 完了したら本文に「✅ ステップM 完了」と書いて停止 (M は今やったステップ番号)\n'
+              + '5. **次以降のステップは絶対に実行しない** — ユーザーが「次へ」と確認してから進む\n'
+              + '\n'
+              + 'なぜこの設計か: ユーザーが各ステップの結果を見てから承認することで、暴走を防ぎ、修正があれば早期に介入できる。';
           }
           resp = await callAIWithTools(convMsgs, _sysForTurn, tools, _tc, agent.model, agent, _onIterText);
           totalIn  += (resp.usage?.input_tokens)||0;

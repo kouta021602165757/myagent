@@ -4983,6 +4983,68 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       + '</button>'
       + '</div>';
   }
+  // ── 段階承認カード ─────────────────────────────────────
+  // 「社員 (AI) が作って → 上司 (ユーザー) が確認 → 次へ進める」フロー。
+  // この AI メッセージで「✅ ステップN 完了」が emit されていて、かつ
+  // 計画 (<delegate>) にまだ未消化のステップが残っているとき、メッセージ
+  // 末尾に「✅ OK 進める / ⏸ 一時停止」カードを描画する。
+  let approvalHTML = '';
+  if(!isU && !isStreaming && content){
+    // 1) この message に含まれる最大のステップ完了番号
+    const _stepCompleteRe = /✅\s*ステップ\s*(\d+)\s*完了/g;
+    let _lastStepN = 0;
+    let _scm;
+    const _ct = String(content);
+    while((_scm = _stepCompleteRe.exec(_ct)) !== null){
+      const n = parseInt(_scm[1], 10);
+      if(n && n > _lastStepN) _lastStepN = n;
+    }
+    if(_lastStepN > 0){
+      // 2) 履歴を遡って最近の <delegate> を探し、合計ステップ数と「次のステップ」テキストを取り出す
+      let _totalSteps = 0;
+      let _nextStepText = '';
+      const _ag = (typeof agents !== 'undefined' && agents)
+        ? agents.find(function(a){ return a && a.id === activeId; }) : null;
+      if(_ag && Array.isArray(_ag.history)){
+        for(let _hi = _ag.history.length - 1; _hi >= 0; _hi--){
+          const _hm = _ag.history[_hi];
+          if(!_hm || typeof _hm.content !== 'string') continue;
+          const _delM = _hm.content.match(/<delegate>([\s\S]*?)<\/delegate>/);
+          if(_delM){
+            // 計画の中のタスク行を全部数える
+            const _tasks = _delM[1].match(/^\s*[-*]\s*\[[ xX]\]\s+.+?$/gm) || [];
+            _totalSteps = _tasks.length;
+            if(_lastStepN < _tasks.length){
+              const _nextLine = _tasks[_lastStepN]; // 0-indexed (lastStepN=1 なら index 1 = step 2)
+              const _txM = _nextLine.match(/\]\s+(.+?)\s*$/);
+              if(_txM){
+                // ツール annotation (バックティック) を除いた本文を抽出
+                _nextStepText = String(_txM[1]).replace(/`[^`]*`\s*$/, '').trim().slice(0, 60);
+              }
+            }
+            break;
+          }
+        }
+      }
+      // 3) 全ステップ完了してれば表示不要、未完了ステップがあれば表示
+      if(_totalSteps > 0 && _lastStepN < _totalSteps){
+        approvalHTML = '<div class="m-approval">'
+          + '<div class="m-app-row">'
+          +   '<span class="m-app-ic">✋</span>'
+          +   '<div class="m-app-bd">'
+          +     '<div class="m-app-q">' + (isJa?'次のステップに進んでいいですか?':'Continue to the next step?') + '</div>'
+          +     (_nextStepText ? '<div class="m-app-next">' + (isJa?'次: ':'Next: ') + esc(_nextStepText) + '</div>' : '')
+          +     '<div class="m-app-progress">' + _lastStepN + ' / ' + _totalSteps + (isJa?' ステップ完了':' steps done') + '</div>'
+          +   '</div>'
+          + '</div>'
+          + '<div class="m-app-acts">'
+          +   '<button class="m-app-btn ok" onclick="_approveNext(this)">' + (isJa?'✅ OK 進める':'✅ OK continue') + '</button>'
+          +   '<button class="m-app-btn pause" onclick="_approvePause(this)">' + (isJa?'⏸ 一時停止':'⏸ Pause') + '</button>'
+          + '</div>'
+          + '</div>';
+      }
+    }
+  }
   const citesHtml = cites.length ? _renderCitations(cites) : '';
   // Artifact cards for any /generated/artifact-*.html the AI touched via a
   // tool (ext_open_url etc.) but didn't write as a [title](url) link itself.
@@ -5236,6 +5298,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       summaryHTML+
       promiseWarnHTML+
       (renderBody?'<div class="m-body">'+(bodyMarkup||'')+artifactCards+citesHtml+'</div>':'')+
+      approvalHTML+
       reactionsHTML+
       threadIndicatorHTML+
       (inlineActs?'<div class="m-inline-actions">'+inlineActs+'</div>':'')+
@@ -6260,6 +6323,38 @@ function _retryThreadMsg(btn){
   if(ci){ ci.value = text; try { exTA(ci); } catch(e){} }
   // Defer a tick so the drawer / composer is in the DOM before send.
   setTimeout(function(){ try { _sendThreadReply(); } catch(e){ console.warn('[thread-retry]', e); } }, 30);
+}
+
+/* ── 段階承認カード のボタン handlers ─────────────────────────
+   「✅ OK 進める」: 次のステップを実行させるトリガーメッセージを送信
+   「⏸ 一時停止」: 視覚的に「停止中」表示に変えるだけ。ユーザーが手動で
+                  「▶ 次へ」と送信すれば再開する。
+   どちらも main chat / thread の両方で動く (composer を自動判別)。*/
+function _approveNext(btn){
+  if(!activeId) return;
+  var inThread = !!btn.closest('#threadDrawer');
+  var taId = inThread ? 'tci' : 'ci';
+  var ta = document.getElementById(taId);
+  if(!ta) return;
+  // Hide the approval card so it can't double-fire while the next turn streams.
+  var card = btn.closest('.m-approval');
+  if(card){ card.style.opacity = '.5'; card.style.pointerEvents = 'none'; }
+  ta.value = isJa ? '▶ 次のステップへ進めてください' : '▶ Continue to the next step';
+  try { exTA(ta); } catch(_){}
+  if(inThread){
+    try { _sendThreadReply(); } catch(e){ console.warn('[approve] thread send failed:', e); }
+  } else {
+    try { sendMsg(); } catch(e){ console.warn('[approve] main send failed:', e); }
+  }
+}
+function _approvePause(btn){
+  var card = btn.closest('.m-approval');
+  if(!card) return;
+  card.innerHTML = '<div class="m-app-paused">⏸ '
+    + (isJa
+        ? '一時停止中。続けるには「▶ 次へ」とメッセージしてください。'
+        : 'Paused. Send "▶ next" to resume.')
+    + '</div>';
 }
 
 /* ── "Promise without delivery" — click to push the AI to actually execute.

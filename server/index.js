@@ -3382,7 +3382,8 @@ async function callAI(messages,system,modelAlias,cacheAgent){
           console.warn('[callAI] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
           curModel = fb;
           attempt = 2;
-          _armResetOnRetry();
+          // (no _armResetOnRetry here — this is non-streaming callAI; the
+          // reset signal is only meaningful for the streamer's onText path.)
           continue;
         }
       }
@@ -3397,7 +3398,6 @@ async function callAI(messages,system,modelAlias,cacheAgent){
           console.warn('[callAI] retry timed out, falling back', curModel, '→', fb);
           curModel = fb;
           attempt = 2;
-          _armResetOnRetry();
           continue;
         }
       }
@@ -3604,7 +3604,8 @@ async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cache
           console.warn('[callAIWithTools] quota hit, fallback', curModel, '→', fb, ':', String(e.message||e).slice(0,140));
           curModel = fb;
           attempt = 2;
-          _armResetOnRetry();
+          // (no _armResetOnRetry here — if anything had streamed, didStream
+          // is true and we've already thrown above; if not, nothing to reset.)
           continue;
         }
       }
@@ -3619,7 +3620,7 @@ async function callAIWithTools(messages,system,tools,toolChoice,modelAlias,cache
           console.warn('[callAIWithTools] retry timed out, fallback', curModel, '→', fb);
           curModel = fb;
           attempt = 2;
-          _armResetOnRetry();
+          // (no _armResetOnRetry — see note above on the quota branch.)
           continue;
         }
       }
@@ -5585,6 +5586,9 @@ async function executeWebReadMdTool(input){
       run: async (page) => {
         await page.waitForTimeout(300);
         // Server-side DOM walk that mirrors the content.js getMarkdown logic.
+        // The arrow runs inside the headless browser via page.evaluate, so
+        // document / Node / etc. are defined there (not Node.js globals).
+        /* eslint-disable no-undef */
         return await page.evaluate(() => {
           const root = document.querySelector('main, article, [role="main"]') || document.body;
           const out = [];
@@ -5609,6 +5613,7 @@ async function executeWebReadMdTool(input){
         });
       },
     });
+    /* eslint-enable no-undef */
     return { source_url: url, ...result };
   } catch(e){
     console.error('[web_read_markdown] failed:', e.message);
@@ -5625,6 +5630,9 @@ async function executeWebExtractTool(input){
     const data = await _runWebTask(url, {
       run: async (page) => {
         await page.waitForTimeout(300);
+        // page.evaluate body runs in the headless browser, where `document`
+        // exists. ESLint can't see that — locally disable no-undef.
+        /* eslint-disable no-undef */
         return await page.evaluate((items) => {
           const out = {};
           for (const it of items) {
@@ -5638,6 +5646,7 @@ async function executeWebExtractTool(input){
           }
           return out;
         }, items);
+        /* eslint-enable no-undef */
       },
     });
     return { source_url: url, data };
@@ -6221,10 +6230,12 @@ async function _renderVerifyArtifact(html){
     await page.waitForTimeout(700); // let deferred / DOMContentLoaded scripts run
     let bodyLen = 0, btnCount = 0;
     try {
+      /* eslint-disable no-undef */
       const probe = await page.evaluate(() => ({
         len: (document.body && document.body.innerText || '').trim().length,
         btn: document.querySelectorAll('button,[onclick],[role="button"],input[type="submit"]').length,
       }));
+      /* eslint-enable no-undef */
       bodyLen = probe.len; btnCount = probe.btn;
     } catch(e){}
     await browser.close(); browser = null;
@@ -18281,6 +18292,10 @@ async function handleAPI(req,res,pathname,method,ip){
       // Stop pinging when client disconnects.
       req.on('close', ()=>{ if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; } });
     }
+    // `resp` is the final AI response object from the tool loop. Declared here
+    // (outside `if(useTools)`) so the SSE-done block at the bottom of the route
+    // can still read resp.stop_reason after the tool-loop scope exits.
+    let resp;
     if(useTools){
       let session = null;
       const sheetsToolNames = new Set(SHEETS_TOOLS.map(t=>t.name));
@@ -18359,6 +18374,8 @@ async function handleAPI(req,res,pathname,method,ip){
         // clarifying question or pick the best fit on its own.
         return null;
       })();
+      // `resp` is declared at the outer scope (above `if(useTools)`) so the
+      // SSE-done block further down can still see it. No re-declaration here.
       try{
         // Lazy-create the browser session only when Chrome tools are actually wired in.
         // Sheets-only agents don't need Playwright at all.
@@ -18366,7 +18383,6 @@ async function handleAPI(req,res,pathname,method,ip){
           session = browser.newSession();
         }
         let convMsgs = baseMsgs.slice();
-        let resp;
         let iters = 0;
         let streamedText = ''; // accumulator of everything emitted via SSE 'delta'
         // Hard cap on tool-use iterations. Spreadsheet/browser tasks routinely

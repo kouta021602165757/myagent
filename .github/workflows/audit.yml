@@ -14,7 +14,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # No deps installed — audit script only uses Node built-ins. Keeps the
-      # job under 30s and avoids a needless playwright/chromium download.
+      # Need ESLint for the audit. Use a stripped install that skips heavy
+      # optional packages (playwright/chromium) to keep CI under a minute.
+      - name: Install dev deps (ESLint only)
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm install --no-audit --no-fund --ignore-scripts eslint globals
       - name: Run audit
         run: node scripts/audit.js --quick

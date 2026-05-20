@@ -36,6 +36,44 @@ function warn(msg) { console.log('  \x1b[33m⚠ WARN\x1b[0m', msg); warns++; }
 function head(msg) { console.log('\n\x1b[1m▶', msg + '\x1b[0m'); }
 
 // ─────────────────────────────────────────────────────────────
+// 0. ESLint — catches use-before-define / no-undef / no-redeclare on both
+//    server and client. Configured to error only on real bug classes
+//    (no-undef as typo detector). Other rules warn — fail only on >0 errors.
+// ─────────────────────────────────────────────────────────────
+head('ESLint');
+try {
+  // ESLint --format json gives machine-readable output. Exits 0 on no errors,
+  // 1 if any errors. Warnings don't trigger non-zero exit.
+  const eslintBin = path.join(ROOT, 'node_modules/.bin/eslint');
+  // maxBuffer raised because ESLint JSON output for the whole codebase can be
+  // multi-megabytes (each warning carries suggestions + ranges). 10MB is plenty.
+  const out = execSync(eslintBin + ' --format json public/app.js server/index.js scripts/', { stdio: 'pipe', maxBuffer: 10 * 1024 * 1024 }).toString();
+  const reports = JSON.parse(out);
+  const errs = reports.flatMap(r => (r.messages || []).filter(m => m.severity === 2).map(m => ({ f: r.filePath, ...m })));
+  const warns = reports.flatMap(r => (r.messages || []).filter(m => m.severity === 1));
+  if (errs.length === 0) ok(`0 errors${warns.length ? `, ${warns.length} warning(s)` : ''}`);
+  // Surface let/const before-define warnings specifically — that's the TDZ
+  // class. Without this, real TDZ bugs hide in the warning noise.
+  const tdz = warns.filter(w => w.ruleId === 'no-use-before-define');
+  if (tdz.length) {
+    warn(`${tdz.length} use-before-define warning(s) — inspect any involving let/const (TDZ risk).`);
+    tdz.slice(0, 3).forEach(w => console.log('        ', `${path.basename(w.filePath||'')}:${w.line}: ${w.message}`));
+  }
+} catch (e) {
+  // Non-zero exit means errors. Parse + print top 5. Use same large buffer
+  // assumption — but the catch path's stdout is already captured.
+  const out = (e.stdout || '').toString();
+  try {
+    const reports = JSON.parse(out);
+    const errs = reports.flatMap(r => (r.messages || []).filter(m => m.severity === 2).map(m => ({ f: r.filePath, ...m })));
+    fail(`ESLint: ${errs.length} error(s) — first 5:`);
+    errs.slice(0, 5).forEach(x => console.log('        ', `${path.basename(x.f)}:${x.line}: ${x.message} (${x.ruleId})`));
+  } catch (_) {
+    fail(`ESLint crashed (exit ${e.status}): ${(e.stderr||'').toString().slice(0, 300) || (e.message||'').slice(0,300)}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // 1. Syntax — server/index.js
 // ─────────────────────────────────────────────────────────────
 head('Syntax: server/index.js');
@@ -138,6 +176,17 @@ if (unsafeFind.length === 0) {
   unsafeFind.slice(0, 5).forEach(x => console.log('       ', x));
   if (unsafeFind.length > 5) console.log('        ... and ' + (unsafeFind.length - 5) + ' more');
 }
+
+// ─────────────────────────────────────────────────────────────
+// 4b. TDZ trap (let / const used before declaration) is caught upstream
+//     by ESLint's no-use-before-define (configured as warning). The
+//     warning surfaces both var and let/const cases — when reviewing
+//     ESLint output, **any let/const before-define is a likely TDZ crash
+//     in the making and should be fixed immediately** (var hoists, so var
+//     cases are typically harmless legacy noise). A regex-based custom
+//     check was attempted here but produced too many false positives on
+//     huge functions like handleAPI() where shadowed locals span branches.
+// ─────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────
 // 5. require('./xxx') of files NOT in git

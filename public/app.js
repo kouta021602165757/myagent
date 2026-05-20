@@ -12335,7 +12335,16 @@ async function _promoteToGroupFromEdit(){
 // replies (server tags them with thread_parent_id; they're hidden from
 // the main timeline).
 function _openThread(parentId){
-  if(!parentId){ console.warn('[thread] _openThread called without parentId'); return; }
+  // Visible debug — show a toast immediately so the user knows their click
+  // was received. If the drawer fails to open they'll see WHY (the toast
+  // self-replaces with the failure reason from _renderThreadDrawer's
+  // fallback paths). Without this, "click does nothing" looks identical to
+  // "click → toast appeared and vanished too fast to read".
+  try { console.log('[thread] _openThread called with parentId =', parentId); } catch(_){}
+  if(!parentId){
+    try { showToast(L('スレッドの親メッセージ ID が空です','Empty thread parent id'), 'ng'); } catch(_){}
+    return;
+  }
   // Diagnostic only — log whether the parent actually exists in ag.history,
   // but DO NOT block the open. _renderThreadDrawer has its own handling,
   // and an over-eager pre-check here previously blocked legitimate threads
@@ -12345,13 +12354,23 @@ function _openThread(parentId){
     var ag = (agents||[]).find(function(a){ return a.id === activeId; });
     if(ag){
       var hasParent = (ag.history||[]).some(function(m){ return m && m.id === parentId; });
+      console.log('[thread] history.length =', (ag.history||[]).length, 'has matching parent.id?', hasParent);
       if(!hasParent){
-        console.warn('[thread] parent', parentId, 'not in ag.history (will let _renderThreadDrawer decide)');
+        // Surface the failure visibly. The console.warn also lists the
+        // last 3 history entries so we can see what was actually there.
+        console.warn('[thread] parent', parentId, 'NOT in ag.history. Tail:',
+          (ag.history||[]).slice(-3).map(function(m){return m && {id:m.id, time:m.time, role:m.role, has_thread_parent_id: !!m.thread_parent_id};}));
       }
+    } else {
+      console.warn('[thread] activeId =', activeId, 'has no matching agent in agents[]');
     }
-  } catch(_){}
+  } catch(e){ console.warn('[thread] pre-check threw:', e && e.message); }
   window._activeThreadParent = parentId;
-  _renderThreadDrawer();
+  try { _renderThreadDrawer(); }
+  catch(e){
+    console.error('[thread] _renderThreadDrawer threw:', e);
+    try { showToast(L('スレッドを開けませんでした: ','Could not open thread: ') + ((e && e.message) || 'unknown error'), 'ng'); } catch(_){}
+  }
 }
 // Builds the thread drawer's OWN permanent composer — a fully independent
 // second composer (separate IDs, separate _threadPendingImgs buffer) that

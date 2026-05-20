@@ -812,8 +812,12 @@ function safe(u){
   }
   return s;
 }
+// Free-tier starting credit (JPY). Tunable via env so we can throttle burn
+// from Render without a deploy. ¥500 ≒ a few chats + 1〜2 artifacts — enough
+// to hit the "aha", small enough that 10-account farming isn't profitable.
+const FREE_INITIAL_CREDIT_JPY = parseInt(process.env.FREE_INITIAL_CREDIT_JPY||'500',10) || 500;
 function newUser(base){
-  return{id:crypto.randomUUID(),plan:'free',balance_jpy:0,usage_count:0,
+  return{id:crypto.randomUUID(),plan:'free',balance_jpy:FREE_INITIAL_CREDIT_JPY,free_credit_v1_applied:true,usage_count:0,
     agents:[],billing_history:[],stripe_customer_id:null,
     // Creator revenue ledger (#5)
     balance_jpy_pending:0,         // 7日経過前の未確定収益
@@ -1638,6 +1642,40 @@ async function sendEmail(to,subject,html,opts){
   const detail = (r.d && (r.d.message || r.d.error || r.d.name)) || `HTTP ${r.s}`;
   console.error(`[email FAIL] to=${to} status=${r.s} detail=${JSON.stringify(r.d).slice(0,300)}`);
   throw new Error(`Resend ${r.s}: ${detail}`);
+}
+
+// ── Anthropic credit-exhausted detection + admin alert ─────────────
+// The Anthropic host account (not the user's in-app balance) has run out
+// of credit. Map the raw English error to a friendly Japanese message for
+// the end user, and email the admin so they can top up the API account.
+function _isCreditExhaustedError(msg){
+  return /credit balance is too low|low to access the anthropic api|billing.*upgrade.*credits?/i
+    .test(String(msg || ''));
+}
+const _USER_MSG_CREDIT_EXHAUSTED = '⚠️ AI サービスが一時的に利用できません。管理者に通知済みです。少し時間をおいてからお試しください。';
+let _lastAdminCreditNotify = 0;
+async function _notifyAdminCreditLow(rawMsg){
+  const now = Date.now();
+  // Throttle to once per 30 minutes — same incident shouldn't spam the inbox.
+  if(now - _lastAdminCreditNotify < 30 * 60 * 1000) return;
+  _lastAdminCreditNotify = now;
+  console.error('[admin-alert] Anthropic credit exhausted:', String(rawMsg||'').slice(0,400));
+  const to = process.env.ADMIN_ALERT_EMAIL || process.env.SEO_REPORT_TO || 'kota.takeuchi@protocol.ooo';
+  const safeRaw = String(rawMsg||'').slice(0,400).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const html = '<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.7;color:#1a0a00;padding:24px;max-width:560px;margin:0 auto;background:#fdf8f3">'
+    + '<h2 style="color:#dc2626;margin:0 0 12px">🚨 Anthropic クレジットを課金してください</h2>'
+    + '<p>本番チャットが <b>Anthropic API の残高不足</b> で停止しています。今この瞬間、ユーザーは AI 応答を受け取れません。</p>'
+    + '<p style="background:#fef2f2;border-left:3px solid #dc2626;padding:10px 14px;font-size:12px;color:#991b1b;font-family:monospace;border-radius:4px">' + safeRaw + '</p>'
+    + '<h3 style="margin:20px 0 8px">🛠 対応</h3>'
+    + '<ol style="padding-left:20px">'
+    +   '<li><a href="https://console.anthropic.com/settings/billing" style="color:#2563eb;font-weight:700">Anthropic Console を開く</a></li>'
+    +   '<li><b>Add credits</b> でチャージ（最低 $5、推奨 $20+）</li>'
+    +   '<li>数分で自動的に復旧します</li>'
+    + '</ol>'
+    + '<p style="font-size:11px;color:#6b7280;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:12px">同一事象につき 30 分に 1 通のみ送信されます。送信先は環境変数 <code>ADMIN_ALERT_EMAIL</code> で変更できます。</p>'
+    + '</body></html>';
+  try { await sendEmail(to, '🚨 [MY AI AGENT] Anthropic クレジットを課金してください', html); }
+  catch(e){ console.error('[admin-alert] email send failed:', e && e.message); }
 }
 
 async function sendVerifyEmail(user){
@@ -4217,11 +4255,12 @@ filename が分からなくても作り直しは厳禁 — その場合はベス
 selector・content は必ず実物の HTML に厳密に合わせ、指示された箇所以外は 1 文字も変えない。
 
 【操作 (operation)】
-- "append_to_body": </body> の直前に content を挿入 (最頻出。新セクション / 新リスト項目の追加に最適)
+- "replace_text": **テキスト置換系の依頼は最優先でこれ。** find に置換元文字列、replace に置換後を渡すと HTML 内の全箇所を一括置換する (CSS セレクタ不要)。「18% を 24% に全部変えて」「○○という表現を全部××に」「数値を更新して」など、文字列レベルの修正はほぼ確実に当たる。selector を推測する必要がないので失敗ループに陥らない。is_regex:true で正規表現も可、count で件数制限可 (省略で全件)。content は不要。
+- "append_to_body": </body> の直前に content を挿入 (新セクション / 新リスト項目の追加に最適)
 - "append_to_selector": selector で指定した要素の閉じタグ直前に content を挿入 (例: <tbody> に <tr> を 100 行追加)
-- "replace_selector": selector で指定した要素の中身を content で完全置換 (色変更や文言修正)
+- "replace_selector": selector で指定した要素の中身を content で完全置換 (1要素まるごとの差し替え。**単純なテキスト変更には replace_text の方が確実**)
 - "insert_before_selector": selector で指定した要素の直前に content を挿入
-- "rewrite": HTML 全文を content で丸ごと差し替える。**最終手段 — 全文を再生成するため非常に遅く（数分）コストも高い。** まず replace_selector / append_to_selector など"部分編集"で直せないか必ず先に検討すること。rewrite を使ってよいのは「タグの重複・JS が壊れて全ボタンが死んだ等の構造的な破損で、部分編集では直せない」場合**だけ**。色変更・文言修正・1セクションの差し替え程度で rewrite を使ってはいけない（遅さの最大の原因になる）。rewrite 時は content に先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
+- "rewrite": HTML 全文を content で丸ごと差し替える。**最終手段 — 全文を再生成するため非常に遅く（数分）コストも高い。** まず replace_text / replace_selector / append_to_selector など"部分編集"で直せないか必ず先に検討すること。rewrite を使ってよいのは「タグの重複・JS が壊れて全ボタンが死んだ等の構造的な破損で、部分編集では直せない」場合**だけ**。色変更・文言修正・1セクションの差し替え程度で rewrite を使ってはいけない（遅さの最大の原因になる）。rewrite 時は content に先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
 
 【高速化 — セクション単位で直す】ページが id 付きの <section> で組まれている場合、修正対象のセクションを replace_selector "#<id>" で狙うこと。そのセクション 1 区画だけの差分編集になり、全文 rewrite（数分かかる）を避けられる。
 
@@ -4230,11 +4269,15 @@ filename は直近 create_artifact のレスポンス URL (/generated/artifact-X
       type:'object',
       properties:{
         filename:{type:'string',description:'対象 artifact のファイル名 (例: artifact-recruitment-companies-100-a3f2e1.html)。直近の create_artifact レスポンス URL から抽出。'},
-        operation:{type:'string',enum:['append_to_body','append_to_selector','replace_selector','insert_before_selector','rewrite'],description:'操作種別。デフォルトは append_to_body。構造が壊れている場合は rewrite で全文書き直し。'},
+        operation:{type:'string',enum:['replace_text','append_to_body','append_to_selector','replace_selector','insert_before_selector','rewrite'],description:'操作種別。テキスト置換は replace_text を最優先。構造的破損のみ rewrite。'},
         selector:{type:'string',description:'append_to_selector / replace_selector / insert_before_selector で使う CSS セレクタ (例: "#companies", "tbody", ".section-list")'},
-        content:{type:'string',description:'挿入する HTML 断片 (最大 100KB、完全な HTML タグで書く)。operation:"rewrite" の場合は断片ではなく HTML 全文 (<!doctype html>…</html>、最大 500KB)。'},
+        content:{type:'string',description:'挿入する HTML 断片 (最大 100KB、完全な HTML タグで書く)。operation:"rewrite" の場合は断片ではなく HTML 全文 (<!doctype html>…</html>、最大 500KB)。replace_text の場合は不要 (find/replace を使う)。'},
+        find:{type:'string',description:'replace_text 専用: 置換元の文字列 (HTML 内に実在するテキストをそのまま渡す)。'},
+        replace:{type:'string',description:'replace_text 専用: 置換後の文字列。空文字列を渡せば該当箇所を削除。'},
+        is_regex:{type:'boolean',description:'replace_text 専用: true で find を正規表現として扱う (デフォルト false = 文字列リテラル)。'},
+        count:{type:'integer',description:'replace_text 専用: 置換する最大件数 (省略 or 0 で全件、最大 1000)。'},
       },
-      required:['filename','operation','content'],
+      required:['filename','operation'],
     },
   },
   {
@@ -6198,7 +6241,22 @@ async function _renderVerifyArtifact(html){
 // Claude.ai-style "Artifacts" — the AI writes a complete self-contained
 // HTML doc, we drop it in /generated/ and hand back a URL. The chat
 // renders .html URLs as a sandboxed iframe with a control bar.
-async function executeArtifactTool(input, ownerUser){
+// Builds the origin context stamped onto a freshly created artifact so the
+// library can group by where it was made (main chat vs a specific thread).
+function _artifactOriginCtx(agent, threadParentId){
+  const c = { chat_id: (agent && agent.id) || '' };
+  if(threadParentId){
+    c.thread_id = String(threadParentId);
+    let label = '';
+    if(agent && Array.isArray(agent.history)){
+      const parent = agent.history.find(m => m && m.id === threadParentId);
+      if(parent) label = String(parent.content || '').replace(/\s+/g,' ').trim().slice(0,80);
+    }
+    c.thread_label = label;
+  }
+  return c;
+}
+async function executeArtifactTool(input, ownerUser, ctx){
   const title = _safeName(input && input.title, 'artifact');
   const html  = String(input && input.html || '');
   const desc  = String(input && input.description || '').slice(0, 240);
@@ -6231,6 +6289,9 @@ async function executeArtifactTool(input, ownerUser){
         project,
         html,
         version: 1,
+        chat_id:      (ctx && ctx.chat_id)      || '',
+        thread_id:    (ctx && ctx.thread_id)    || '',
+        thread_label: (ctx && ctx.thread_label) || '',
         created_at: new Date().toISOString(),
         size: Buffer.byteLength(html, 'utf8'),
       });
@@ -6286,9 +6347,10 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
   const selector = String((input && input.selector) || '').trim();
   const content = String((input && input.content) || '');
   const _isRewrite = (op === 'rewrite');
+  const _isTextOp = (op === 'replace_text');
   if(!filename) return { error: 'filename required' };
-  if(!content) return { error: 'content required' };
-  if(!_isRewrite && content.length > 100000) return { error: 'content too large (max 100KB)。HTML 全体を書き換える場合は operation:"rewrite" を使うこと' };
+  if(!_isTextOp && !content) return { error: 'content required' };
+  if(!_isRewrite && !_isTextOp && content.length > 100000) return { error: 'content too large (max 100KB)。HTML 全体を書き換える場合は operation:"rewrite" を使うこと' };
   if(_isRewrite && content.length > 500000) return { error: 'content too large (max 500KB for rewrite)' };
   // Locate artifact on the user record. DB is source of truth (disk may have
   // been wiped on container restart).
@@ -6342,6 +6404,43 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
     // (e.g. a doubled <script> tag) — the patch ops below can add/replace
     // but cannot REMOVE stray markup. content must be the complete new HTML.
     html = content;
+    applied = true;
+  } else if(op === 'replace_text'){
+    // Direct string/regex find-and-replace. The most reliable way to do
+    // "change all X to Y" tasks where guessing a CSS selector fails (the
+    // failure loop this op was designed to kill).
+    const find = String((input && input.find) || '');
+    const replace = String((input && input.replace) || '');
+    const isRegex = !!(input && input.is_regex);
+    const count = Math.max(0, Math.min(1000, parseInt((input && input.count), 10) || 0));
+    if(!find) return { error: 'find required for replace_text (置換元の文字列を渡してください)' };
+    let matches = 0;
+    let next;
+    if(isRegex){
+      let re;
+      try { re = new RegExp(find, 'g'); }
+      catch(e){ return { error: 'invalid regex: ' + (e && e.message) }; }
+      next = html.replace(re, (m) => {
+        matches++;
+        return (count > 0 && matches > count) ? m : replace;
+      });
+    } else {
+      // split/join is the fastest non-regex global replace and gives us the
+      // match count for free (parts.length - 1).
+      const parts = html.split(find);
+      matches = parts.length - 1;
+      if(count > 0 && matches > count){
+        // First `count` separators → replace; remaining → restore find. parts
+        // has matches+1 elements; the first count+1 elements give `count` joins.
+        next = parts.slice(0, count + 1).join(replace) + find + parts.slice(count + 1).join(find);
+      } else {
+        next = parts.join(replace);
+      }
+    }
+    if(matches === 0){
+      return { error: 'find string not found in artifact: ' + JSON.stringify(find.slice(0, 80)) + ' — read_artifact で現在の HTML を再確認して、実在する文字列をそのまま find に渡してください' };
+    }
+    html = next;
     applied = true;
   } else if(op === 'append_to_body'){
     if(html.indexOf('</body>') >= 0){
@@ -10547,7 +10646,7 @@ async function _runOneSchedule(user, agent, sched){
             sendEmailCalled = true;
             result = await executeEmailTool(user, agent, block.input||{});
           }
-          else if(block.name === 'create_artifact'){ result = await executeArtifactTool(block.input||{}, user); if(result&&result.url&&agent){var _afn1=String(result.url).split('/').pop();agent.current_artifact=_afn1;if(!agent.pinned_artifact)agent.pinned_artifact=_afn1;} }
+          else if(block.name === 'create_artifact'){ result = await executeArtifactTool(block.input||{}, user, _artifactOriginCtx(agent, null)); if(result&&result.url&&agent){var _afn1=String(result.url).split('/').pop();agent.current_artifact=_afn1;if(!agent.pinned_artifact)agent.pinned_artifact=_afn1;} }
           else if(block.name === 'edit_artifact'){ result = await executeEditArtifactTool(block.input||{}, user, agent && agent.pinned_artifact); if(result&&result.url&&agent)agent.current_artifact=String(result.url).split('/').pop(); }
           else if(block.name === 'read_artifact')   result = await executeReadArtifactTool(block.input||{}, user, agent && agent.pinned_artifact);
           else if(block.name === 'notify_slack')    result = await executeNotifyTool('slack', user, block.input||{}, agent);
@@ -12432,6 +12531,17 @@ async function handleAPI(req,res,pathname,method,ip){
   if(!claims)return jres(res,401,{error:'認証が必要です'});
   const user=await DB.findBy('id',claims.userId);
   if(!user)return jres(res,401,{error:'ユーザーが見つかりません'});
+  // Free credit migration — top up legacy free users to the new starting
+  // credit exactly once (flagged so subsequent zero balances aren't re-funded).
+  if(user.plan === 'free' && !user.free_credit_v1_applied){
+    const _prev = user.balance_jpy || 0;
+    if(_prev < FREE_INITIAL_CREDIT_JPY){
+      user.balance_jpy = FREE_INITIAL_CREDIT_JPY;
+      console.log('[free-credit] migrated user', user.id, 'balance', _prev, '->', FREE_INITIAL_CREDIT_JPY);
+    }
+    user.free_credit_v1_applied = true;
+    try { await DB.save(user); } catch(e){}
+  }
   // Promote any pending creator revenue past the 7-day hold
   if(user.revenue_history && user.revenue_history.length){
     const before = user.balance_jpy_available || 0;
@@ -17114,17 +17224,25 @@ async function handleAPI(req,res,pathname,method,ip){
     // 10 was too tight — most users hit it before reaching their "aha"
     // moment (multi-agent team, first creator earning, first artifact).
     // 100 lets the user fully experience the product, then meter kicks in.
-    var FREE_MSGS = 100;
     var usageCount = payerUser.usage_count || 0;
     var balance = payerUser.balance_jpy || 0;
-    if(usageCount >= FREE_MSGS && balance <= 0){
+    var _payerPlan = payerUser.plan || 'free';
+    // Free: balance-only gate — the FREE_INITIAL_CREDIT_JPY (¥500) starting
+    // credit IS the budget; once drained, upgrade or top up to continue.
+    // Paid: keep a 100-message safety buffer in case of subscription/balance
+    // hiccups so a paying customer isn't surprise-blocked by a billing race.
+    var _blocked = (_payerPlan === 'free')
+      ? (balance <= 0)
+      : (usageCount >= 100 && balance <= 0);
+    if(_blocked){
       return jres(res,402,{
         error: isGroupMember ? 'ホストの残高が不足しています' : '残高が不足しています',
         detail: isGroupMember
           ? 'ホストにチャージを依頼してください'
-          : '残高をチャージするか、プランをご確認ください',
+          : (_payerPlan === 'free'
+              ? '無料クレジットを使い切りました。チャージするか、プランをアップグレードしてください'
+              : '残高をチャージするか、プランをご確認ください'),
         free_used: usageCount,
-        free_limit: FREE_MSGS,
         balance: balance,
         upgrade: !isGroupMember,
         host_low_balance: isGroupMember,
@@ -18218,7 +18336,7 @@ async function handleAPI(req,res,pathname,method,ip){
                   pinned_filename: String(agent.pinned_artifact),
                 };
               } else {
-                result = await executeArtifactTool(block.input||{}, payerUser);
+                result = await executeArtifactTool(block.input||{}, payerUser, _artifactOriginCtx(agent, body && body.thread_parent_id ? String(body.thread_parent_id).slice(0,32) : null));
                 if(result && result.url && agent){
                   const _afn = String(result.url).split('/').pop();
                   agent.current_artifact = _afn;
@@ -18482,11 +18600,19 @@ async function handleAPI(req,res,pathname,method,ip){
             totalIn  = d.usage?.input_tokens || 0;
             totalOut = d.usage?.output_tokens || 0;
           }catch(e2){
+            if(_isCreditExhaustedError(e2 && e2.message)){
+              _notifyAdminCreditLow(e2.message).catch(()=>{});
+              return jres(res,503,{error:_USER_MSG_CREDIT_EXHAUSTED});
+            }
             return jres(res,502,{error:`AI応答エラー: ${e2.message}`});
           }
         } else if(/rate limit|429|input tokens per minute/i.test(msg)){
           if(sse){ sse('error', { message:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。' }); if(sseKeepalive){clearInterval(sseKeepalive);} res.end(); return; }
           return jres(res,429,{error:'混雑のため一時的に応答できません。30秒ほど待ってから再送信してください。'});
+        } else if(_isCreditExhaustedError(msg)){
+          _notifyAdminCreditLow(msg).catch(()=>{});
+          if(sse){ sse('error', { message:_USER_MSG_CREDIT_EXHAUSTED }); if(sseKeepalive){clearInterval(sseKeepalive);} res.end(); return; }
+          return jres(res,503,{error:_USER_MSG_CREDIT_EXHAUSTED});
         } else {
           if(sse){ sse('error', { message:`AI応答エラー: ${msg}` }); if(sseKeepalive){clearInterval(sseKeepalive);} res.end(); return; }
           return jres(res,502,{error:`AI応答エラー: ${msg}`});
@@ -18502,7 +18628,13 @@ async function handleAPI(req,res,pathname,method,ip){
         reply = d.content?.find(b=>b.type==='text')?.text || 'エラーが発生しました';
         const u = d.usage||{};
         cost = calcCost(u.input_tokens||0, u.output_tokens||0);
-      }catch(e){return jres(res,502,{error:`AI応答エラー: ${e.message}`});}
+      }catch(e){
+        if(_isCreditExhaustedError(e && e.message)){
+          _notifyAdminCreditLow(e.message).catch(()=>{});
+          return jres(res,503,{error:_USER_MSG_CREDIT_EXHAUSTED});
+        }
+        return jres(res,502,{error:`AI応答エラー: ${e.message}`});
+      }
     }
     const msgs = baseMsgs;
     const ts=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});

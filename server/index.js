@@ -2742,18 +2742,26 @@ function _autoPickModel(message, agent){
   if(/^\/opus\b/i.test(raw))   return 'opus';
   if(/^\/sonnet\b/i.test(raw)) return 'sonnet';
   if(/^\/fast\b|^\/flash\b/i.test(raw)) return 'haiku';
-  // Heuristics
-  if(raw.length > 400) return 'sonnet';
-  if(/```/.test(raw))  return 'sonnet';            // code block in input
-  if((raw.match(/\n/g)||[]).length >= 4) return 'sonnet';  // multi-line / structured
-  // Complex create_* requests
-  if(/(create_artifact|lp|サイト|モック|dashboard|プロトタイプ|prototype|landing|ホームページ)/i.test(raw)) return 'sonnet';
+  // Data-extraction / read-only tasks → Haiku regardless of message size.
+  // These are deterministic (no creativity needed), and Haiku is 3-5× faster
+  // than Sonnet — major win on PDF parsing, sheet reads, summarization etc.
+  if(/(PDF|csv|excel|表|テーブル|抽出|読み込|集計|要約|まとめ|summarize|extract|parse|read|list|一覧)/i.test(raw)
+     && !/(設計|デザイン|作成|create|design|build)/i.test(raw)){
+    return 'haiku';
+  }
+  // Heuristics — escalate to Sonnet only when creativity / structured output
+  // genuinely matters.
+  if(raw.length > 600) return 'sonnet';                    // was 400 — too aggressive
+  if(/```/.test(raw))  return 'sonnet';                    // code block in input
+  if((raw.match(/\n/g)||[]).length >= 6) return 'sonnet';  // was 4 — be stingier
+  // Creative create_* requests stay on Sonnet (these need quality)
+  if(/(create_artifact|lp|モック|dashboard|プロトタイプ|prototype|landing|ホームページ|デザイン.*作|design.*build)/i.test(raw)) return 'sonnet';
   if(/(設計|アーキ|architecture|design.*system|データベース.*設計|API.*設計)/i.test(raw)) return 'sonnet';
-  // Multi-step requests (3+ "and"-like joiners)
+  // Multi-step requests (3+ "and"-like joiners) — was 2, raise to 3 to keep
+  // Haiku for moderately compound requests.
   const joiners = (raw.match(/(そして|それから|あと|また|and then|after that|\+)/gi)||[]).length;
-  if(joiners >= 2) return 'sonnet';
-  // Default: Haiku 4.5 (cheap + fast). Was gemini-flash, but Gemini's
-  // non-streaming tool path caused "止まる" perception.
+  if(joiners >= 3) return 'sonnet';
+  // Default: Haiku 4.5 (cheap + fast).
   return 'haiku';
 }
 
@@ -6693,24 +6701,33 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
       + '\n\n(修正完了後の最終応答では: ' + baseInstr + ')';
   }
   // ── Vision review (案B) — same fire-and-forget pattern as create_artifact.
-  try {
-    const _vrFn  = filename;
-    const _vrVer = artifact.version || 1;
-    setImmediate(async () => {
-      try {
-        const review = await _visionReviewArtifact(html);
-        if(!review || !review.ok || review.skipped) return;
-        const artNow = (ownerUser.artifacts||[]).find(a => a && a.filename === _vrFn);
-        if(!artNow || artNow.version !== _vrVer) return; // stale
-        artNow.vision_review = {
-          findings: review.findings || [],
-          reviewed_at: review.reviewed_at,
-          version_at: _vrVer,
-        };
-        try { await DB.save(ownerUser); } catch(e){ console.warn('[vision-review] save failed:', e.message); }
-      } catch(e){ console.warn('[vision-review] crashed:', e.message); }
-    });
-  } catch(e){ console.warn('[vision-review] setup failed:', e.message); }
+  // Skip on partial edits (append_to_body / replace_selector / etc.) because:
+  //   1. They rarely change layout dramatically
+  //   2. AI often makes 5-6 consecutive small edits per turn — running
+  //      Vision on each one spawns 5-6 parallel Chromium screenshots,
+  //      starving the single Render instance of CPU.
+  //   3. Only `rewrite` is structurally risky enough to warrant a visual check.
+  // The "✨ 検証" badge will still appear on rewrite outputs.
+  if(_isRewrite){
+    try {
+      const _vrFn  = filename;
+      const _vrVer = artifact.version || 1;
+      setImmediate(async () => {
+        try {
+          const review = await _visionReviewArtifact(html);
+          if(!review || !review.ok || review.skipped) return;
+          const artNow = (ownerUser.artifacts||[]).find(a => a && a.filename === _vrFn);
+          if(!artNow || artNow.version !== _vrVer) return; // stale
+          artNow.vision_review = {
+            findings: review.findings || [],
+            reviewed_at: review.reviewed_at,
+            version_at: _vrVer,
+          };
+          try { await DB.save(ownerUser); } catch(e){ console.warn('[vision-review] save failed:', e.message); }
+        } catch(e){ console.warn('[vision-review] crashed:', e.message); }
+      });
+    } catch(e){ console.warn('[vision-review] setup failed:', e.message); }
+  }
   return result;
 }
 
@@ -11303,7 +11320,32 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
 
 全ステップ完了後に、最終結果を簡潔にまとめる。
 
-判断基準: 「1 問 1 答」「1 編集だけ」「単純な質問への返答」などはこの形式不要。3 手順未満の依頼では <delegate> を出さなくて良い。逆に複雑な依頼で計画を出さず黙って着手すると、ユーザーは「何をしようとしているか分からない」状態になるので必ず受領カードを先に出すこと。`;
+判断基準: 「1 問 1 答」「1 編集だけ」「単純な質問への返答」などはこの形式不要。3 手順未満の依頼では <delegate> を出さなくて良い。逆に複雑な依頼で計画を出さず黙って着手すると、ユーザーは「何をしようとしているか分からない」状態になるので必ず受領カードを先に出すこと。
+
+🚨 【速度最優先 — 必ず守る】
+ユーザー応答速度が品質と同じくらい重要。出力を最小化することで生成時間を 1/3 以下にできる:
+
+1. **ツール結果データを本文にコピペしない**
+   - read_artifact / web_fetch / PDF 抽出などで得たデータ (HTML 全文・テーブル・長い数値) を **本文にダンプ禁止**
+   - 進捗は 1-2 文の要約のみ。例:
+     ❌ 「3 期分のデータを取得しました: PL: 第5期 ¥206,277,931... BS: ...」(数百トークン浪費)
+     ✅ 「3 期分の PL/BS を取得 (第6期から赤字傾向)。次に HTML に統合します」
+   - 数値・テーブルは成果物 (HTML/PDF/CSV) に入れる。チャット本文は要約だけ。
+
+2. **edit_artifact では rewrite を最後の手段に**
+   - まず replace_text / replace_selector / append_to_body / insert_before_selector を試す
+   - rewrite (HTML 全文書き直し) は Chromium 検証で 5-13 秒かかる
+   - 「セクション追加」「色だけ変更」「文言修正」は rewrite 不要。部分編集で済む
+   - rewrite が必要なケース: ① 構造が壊れた時の修復 ② 全体テーマ刷新
+
+3. **冗長な前置き・後置き禁止**
+   - 「以下が抽出した内容です:」「では次に進みます」「お待たせしました」などは無駄
+   - 必要なことだけ、要点のみ
+
+4. **独立したステップは parallel_tool_use で並列に**
+   - データ取得系 (read_artifact / web_search / web_fetch / sheets_read) で互いに依存しないものは同時に呼ぶ
+   - Anthropic API は 1 ターンで複数 tool_use を返せる
+`;
   return`${deliveryRules}
 ${stallNudge}${planModeNote}${integrationsHint}${zapierNote}
 

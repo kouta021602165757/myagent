@@ -2815,6 +2815,12 @@ function _shouldRunPlanner(message){
 async function _emitDelegationCardEarly(message, sse, agent){
   if(!sse) return null;                          // only for streaming requests
   if(!_shouldRunPlanner(message)) return null;   // skip simple requests
+  // Hard wall-clock timeout — planner is a UX optimization, NEVER allowed to
+  // block the chat. If Haiku is slow (Anthropic congestion, network) we just
+  // skip it and let the main AI proceed without a pre-emitted card. The
+  // previous version used callAI's default 180s timeout which could hang the
+  // whole turn long enough for Render's edge proxy to 504.
+  const PLANNER_BUDGET_MS = 5000;
   const planSys =
 `あなたはユーザーの依頼を見て「複数手順の作業かどうか」を判定し、複数手順なら計画を JSON で返すプランナーです。
 
@@ -2837,13 +2843,22 @@ steps の書き方:
 
 needs_delegation が false なら steps は [] でよい。`;
   try {
-    // Haiku is fast (<2s). Cap message size to keep prompt small.
-    const planRes = await callAI(
-      [{role:'user', content: String(message).slice(0, 1200)}],
-      planSys,
-      'haiku',
-      null
-    );
+    // Haiku is fast (<2s typical). Cap message size to keep prompt small.
+    // Promise.race against PLANNER_BUDGET_MS — if Haiku doesn't return in
+    // 5 seconds, we abandon the planner and proceed without a pre-emitted
+    // card. The Haiku call itself keeps running in the background and is
+    // garbage-collected; nothing else depends on it.
+    const _budgetTimer = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('planner_timeout')), PLANNER_BUDGET_MS));
+    const planRes = await Promise.race([
+      callAI(
+        [{role:'user', content: String(message).slice(0, 1200)}],
+        planSys,
+        'haiku',
+        null
+      ),
+      _budgetTimer,
+    ]);
     const txt = ((planRes && planRes.content)||[]).find(b => b && b.type==='text');
     const raw = txt && txt.text || '';
     const m = raw.match(/\{[\s\S]*\}/);
@@ -18537,8 +18552,16 @@ async function handleAPI(req,res,pathname,method,ip){
     // any error (planner is purely a UX optimization, never blocks).
     let _earlyPlan = null;
     if(wantStreamTools && sse){
+      const _plannerT0 = Date.now();
       _earlyPlan = await _emitDelegationCardEarly(message, sse, agent);
+      const _plannerMs = Date.now() - _plannerT0;
+      console.log('[turn] planner', _plannerMs + 'ms', _earlyPlan ? ('plan=' + (_earlyPlan.steps||[]).length + ' steps') : 'skipped');
     }
+    // Turn-level wall-clock timer — emits a single line at the end so we can
+    // see, per-turn, how much wall-clock was spent. This is the missing
+    // observability that's been making "なんで遅い?" guesswork instead of
+    // diagnosable.
+    const _turnT0 = Date.now();
     // `resp` is the final AI response object from the tool loop. Declared here
     // (outside `if(useTools)`) so the SSE-done block at the bottom of the route
     // can still read resp.stop_reason after the tool-loop scope exits.
@@ -19174,6 +19197,11 @@ async function handleAPI(req,res,pathname,method,ip){
       // can decide whether to show a "▶ 続きを書く" Continue button.
       const _stopReason = (resp && resp.stop_reason) || null;
       const _truncated = _stopReason === 'max_tokens';
+      // Turn timing summary — one log line per chat turn so we can see at a
+      // glance which turns were slow + how much was tool work vs AI gen.
+      const _turnMs = Date.now() - _turnT0;
+      const _toolCount = Array.isArray(toolLog) ? toolLog.length : 0;
+      console.log('[turn] DONE ' + _turnMs + 'ms, tools=' + _toolCount + ', tokens=' + totalIn + 'in/' + totalOut + 'out, model=' + (agent.model||'auto'));
       // Emit the (possibly already-streamed) reply once at the end so the client
       // can finalize the bubble. delta events were sent inside the loop.
       sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog, stop_reason: _stopReason, truncated: _truncated });

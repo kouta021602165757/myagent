@@ -4673,13 +4673,29 @@ function _artifactCardsFromToolLog(toolLog, rawContent){
     for(var k=0;k<cands.length;k++){
       var u = cands[k];
       if(typeof u !== 'string') continue;
-      var m = u.match(/\/generated\/(artifact-[^/?#\s"']+\.html?)/i);
+      // Loosened: accept ANY /generated/*.html — not just artifact-* prefixed
+      // ones. Users name files anything (e.g. freecracy-dd-report.html); the
+      // old regex's `artifact-` requirement excluded them and they fell out
+      // of the card fallback entirely.
+      var m = u.match(/\/generated\/([^/?#\s"']+\.html?)/i);
       if(!m) continue;
       var fn = m[1];
       if(seen[fn]) continue;
       seen[fn] = 1;
-      if(rc.indexOf(fn) >= 0) continue; // AI already showed it in the body
-      out.push(_md('[' + (isJa ? '作成したサイト' : 'Site') + '](' + u + ')'));
+      // Only skip when the AI rendered an actual MARKDOWN link to this URL
+      // (which `_md` would have turned into a card already). Checking just
+      // for the bare filename string is wrong — the AI sometimes mentions
+      // the filename in prose without wrapping it as a link, and we still
+      // need the card to be injected. URL-substring match is the right
+      // signal: it means there's a real `(/generated/...)` in the markdown.
+      if(rc.indexOf(u) >= 0) continue;
+      // Also tolerate stamped variants — `?v=N` appended URLs.
+      var urlNoQS = u.split('?')[0];
+      if(rc.indexOf(urlNoQS + '?') >= 0) continue;
+      // Use the artifact's title from the tool result if available; otherwise
+      // fall back to the bare filename so the card still has a meaningful label.
+      var label = (s.title && String(s.title).slice(0, 80)) || fn || (isJa ? '作成したサイト' : 'Site');
+      out.push(_md('[' + label + '](' + u + ')'));
     }
   }
   return out.join('');

@@ -11205,24 +11205,41 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
     } catch(e){}
   }
   // Plan-mode — for complex multi-step requests, instruct the AI to first
-  // declare a Markdown task list, then execute one step at a time and
-  // announce each completion with "✅ ステップN 完了". The client renders
-  // - [ ] / - [x] as checkboxes and auto-checks them on the ✅ marker.
+  // declare an "お任せ受領カード" (delegation card) inside a <delegate> tag.
+  // The client wraps the inner content in a styled card with:
+  //   ・依頼の復唱 (任されたこと)
+  //   ・タスクリスト (進め方) with auto-check from "✅ ステップN 完了" markers
+  //   ・見積もり (estimate)
+  // This makes the AI feel like a real subordinate accepting a task — confirming
+  // understanding + showing the plan + reporting progress.
   const planModeNote = `
 
-【複数手順タスクの進め方 — 必ずこの形式で】
-依頼が「複数の独立した手順 (3 個以上)」または「複数ツール呼び出し」を必要とする場合 (例: サイト作成・データ分析・複数編集・調査+執筆+配信のような連鎖) は、必ず以下の形式で進めること:
+【お任せ受領カード — 必ずこの形式で】
+依頼が「3 個以上の独立した手順」または「複数ツール呼び出し」を必要とする場合 (例: サイト作成・データ分析・複数編集・調査+執筆+配信のような連鎖) は、必ず最初に <delegate>...</delegate> ブロックを出すこと。**応答の冒頭に置く。**
 
-1. まず最初に、これから行う手順を Markdown のタスクリストで提示する:
-   - [ ] 1つ目にやること (短く)
-   - [ ] 2つ目にやること
-   - [ ] 3つ目にやること
+形式:
 
-2. その後、上から順に 1 ステップずつ実行する。ステップが完了するたびに本文中で必ず「✅ ステップN 完了」と書く (例: 「✅ ステップ2 完了」)。UI がこのマーカーを検出して該当のチェックボックスを自動で☑に切り替える。
+<delegate>
+**任されたこと:** <ユーザーの依頼を 1〜2 文で自分の言葉で要約 (理解確認)>
 
-3. 全ステップ完了後に、最終結果を簡潔にまとめる。
+**進め方:**
+- [ ] 1. <1 つ目にやること (短く)> \`<使用するツール名>\`
+- [ ] 2. <2 つ目にやること>
+- [ ] 3. <3 つ目にやること> \`<使用するツール名>\`
 
-判断基準: 「1問1答」「1編集だけ」「単純な質問への返答」などはこの形式不要。3 手順未満の依頼ではタスクリストを出さなくて良い。逆に複雑な依頼で計画を出さず黙って着手すると、ユーザーは「何をしようとしているか分からない」状態になるので必ず計画を先に出すこと。`;
+**見積もり:** 約 N 分
+</delegate>
+
+ルール:
+- バッククォートでツール名を書くと UI がチップ表示する (任意・分かるときだけ)。
+- ステップは 3〜6 個。多すぎる場合はまとめる。
+- 簡潔な動詞で書く (「○○を確認」「○○を設計」「○○を統合」)。
+
+そのあと作業を始め、ステップが完了するたびに本文中で必ず「✅ ステップN 完了」と書く (例: 「✅ ステップ2 完了」)。UI がこのマーカーを検出して該当のチェックボックスを自動で☑に切り替える。
+
+全ステップ完了後に、最終結果を簡潔にまとめる。
+
+判断基準: 「1 問 1 答」「1 編集だけ」「単純な質問への返答」などはこの形式不要。3 手順未満の依頼では <delegate> を出さなくて良い。逆に複雑な依頼で計画を出さず黙って着手すると、ユーザーは「何をしようとしているか分からない」状態になるので必ず受領カードを先に出すこと。`;
   return`${deliveryRules}
 ${stallNudge}${planModeNote}${integrationsHint}${zapierNote}
 

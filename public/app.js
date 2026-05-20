@@ -4001,6 +4001,25 @@ function _md(src){
   // <newchat> marker — the AI emits this when a 2nd site was blocked
   // (1 chat = 1 site). Becomes a "🆕 新しいチャットで作る" button.
   src=String(src).replace(/<newchat>/gi,' NCBTN0 ');
+  // <delegate>...</delegate> — お任せ受領カード envelope. AI emits this at
+  // the TOP of complex multi-step replies (3+ steps). We extract the inner
+  // block BEFORE HTML escape so the structured content survives intact,
+  // then render as a styled card after the rest of _md has run. See
+  // _renderDelegateCard for the inner format.
+  // Streaming-tolerant: also catch UNCLOSED <delegate>... (still typing —
+  // closing tag hasn't arrived yet). Renders whatever can be parsed so far.
+  var deliBlocks=[];
+  src=String(src).replace(/<delegate>([\s\S]*?)<\/delegate>/gi, function(_, inner){
+    var di=deliBlocks.length;
+    deliBlocks.push(inner);
+    return ' DELI'+di+' ';
+  });
+  src=String(src).replace(/<delegate>([\s\S]*)$/gi, function(_, inner){
+    // No closing tag yet → AI is still typing the card. Render what we have.
+    var di=deliBlocks.length;
+    deliBlocks.push(inner);
+    return ' DELI'+di+' ';
+  });
   // Extract code blocks first to placeholders so other rules don't touch them
   var codeBlocks=[];
   src=String(src).replace(/```(\w*)\n?([\s\S]*?)```/g,function(_,lang,code){
@@ -4265,7 +4284,105 @@ function _md(src){
   html=html.replace(/<br>(<div class="md-task)/g,'$1');
   html=html.replace(/(<\/div>)<br>(<div class="md-task)/g,'$1$2');
   html=html.replace(/ ?NCBTN0 ?/g, '<button class="newchat-cta" onclick="openNewAgent()">🆕 '+(isJa?'新しいチャットで作る':'Create in a new chat')+'</button>');
+  // Restore delegate cards LAST (after all other markdown) so the surrounding
+  // <br> noise is already cleaned up. _stepDone is in scope from the auto-check
+  // logic above and drives the "first N steps automatically ticked" behavior.
+  html=html.replace(/ ?DELI(\d+) ?/g, function(_, i){
+    return _renderDelegateCard(deliBlocks[+i] || '', _stepDone);
+  });
   return html;
+}
+
+// Render <delegate>...</delegate> contents as a styled "お任せ受領カード".
+// Inner format (lenient — order can vary, all sections optional):
+//   **任されたこと:** one-line restatement
+//   **進め方:**
+//   - [ ] 1. step text `tool_name`
+//   - [ ] 2. step text
+//   **見積もり:** estimate text
+// `stepDone` is the count of "✅ ステップN 完了" markers found in the
+// surrounding message; steps up to that count are pre-checked.
+function _renderDelegateCard(inner, stepDone){
+  if(!inner) return '';
+  // Pull out labeled sections. Tolerant of ** wrap and various punctuation.
+  function _grab(label){
+    var re = new RegExp('\\*{0,2}\\s*' + label + '\\s*[:：]\\s*\\*{0,2}\\s*([^\\n]+)','i');
+    var m = String(inner).match(re);
+    return m ? m[1].trim().replace(/\*+$/, '').trim() : '';
+  }
+  var requested = _grab('任されたこと') || _grab('依頼') || _grab('Request');
+  var estimate  = _grab('見積もり')   || _grab('見積')   || _grab('Estimate');
+  // Task lines — `- [ ] N. text \`tool\`` or `- [x] N. text`. Number prefix
+  // is optional. Tool annotation is the last backticked word on the line.
+  var taskRe = /^\s*[-*]\s*\[([ xX])\]\s+(.+?)\s*$/gm;
+  var tasks = [];
+  var mm;
+  while((mm = taskRe.exec(inner))){
+    var done = (mm[1] === 'x' || mm[1] === 'X');
+    var txt  = mm[2];
+    // Extract tool annotation (in backticks at end OR " → tool")
+    var tool = '';
+    var tm = txt.match(/`([a-zA-Z0-9_]+)`\s*$/) || txt.match(/[→→]\s*([a-zA-Z0-9_]+)\s*$/);
+    if(tm){
+      tool = tm[1];
+      txt = txt.slice(0, tm.index).trim();
+    }
+    tasks.push({ done: done, text: txt, tool: tool });
+  }
+  // Apply step-auto-check: first N tasks tick green when stepDone advances.
+  for(var i = 0; i < tasks.length; i++){
+    if(stepDone && i < stepDone) tasks[i].done = true;
+  }
+  var totalDone = tasks.filter(function(t){return t.done;}).length;
+  var allDone = tasks.length > 0 && totalDone === tasks.length;
+  // Visual: "受領しました" / "N / M ステップ" / "完了"
+  var status;
+  if(tasks.length === 0)            status = isJa ? '受領しました' : 'Received';
+  else if(allDone)                   status = isJa ? (tasks.length + ' / ' + tasks.length + ' ステップ') : ('Done ' + tasks.length + '/' + tasks.length);
+  else if(totalDone === 0)           status = isJa ? '受領しました' : 'Received';
+  else                               status = totalDone + ' / ' + tasks.length + (isJa ? ' ステップ' : ' steps');
+  var headLabel = allDone
+    ? (isJa ? '✅ お任せ完了' : '✅ Done')
+    : (totalDone > 0
+        ? (isJa ? '📋 お任せ進行中' : '📋 In progress')
+        : (isJa ? '📋 お任せ受領' : '📋 Received'));
+  // Build HTML
+  var rows = '';
+  if(requested){
+    rows += '<div class="deli-row">'
+         +   '<div class="deli-label">' + (isJa ? '任されたこと' : 'Request') + '</div>'
+         +   '<div class="deli-text">' + esc(requested) + '</div>'
+         + '</div>';
+  }
+  if(tasks.length){
+    var taskHtml = tasks.map(function(t, idx){
+      var nextUndone = !t.done && tasks.slice(0, idx).every(function(s){return s.done;});
+      var cls = t.done ? 'done' : (nextUndone ? 'now' : '');
+      var box = t.done
+        ? '<span class="deli-box on">✓</span>'
+        : (nextUndone ? '<span class="deli-box now"></span>' : '<span class="deli-box"></span>');
+      var toolChip = t.tool ? '<span class="deli-tool">' + esc(t.tool) + '</span>' : '';
+      return '<div class="deli-task ' + cls + '">'
+           +   box
+           +   '<span class="deli-tx">' + esc(t.text) + toolChip + '</span>'
+           + '</div>';
+    }).join('');
+    rows += '<div class="deli-row">'
+         +   '<div class="deli-label">' + (isJa ? '進め方' : 'Plan') + '</div>'
+         +   '<div class="deli-tasks">' + taskHtml + '</div>'
+         + '</div>';
+  }
+  var foot = '';
+  if(estimate){
+    foot = '<div class="deli-foot">⏱ ' + (isJa ? '見積もり: ' : 'Estimate: ') + esc(estimate) + '</div>';
+  }
+  return '<div class="deli-card ' + (allDone ? 'done' : '') + '">'
+       +   '<div class="deli-head">' + headLabel
+       +     '<span class="deli-head-status">' + esc(status) + '</span>'
+       +   '</div>'
+       +   rows
+       +   foot
+       + '</div>';
 }
 // Once highlight.js finishes loading (defer script), walk every code block
 // already in the DOM and apply highlighting. New code blocks emitted by _md()

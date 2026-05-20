@@ -1713,6 +1713,74 @@ input,textarea{font-family:var(--sans);}
 .md-task-txt{flex:1;min-width:0}
 html[data-theme="dark"] .md-task-box{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18)}
 html[data-theme="dark"] .md-task-box-on{background:#22c55e;border-color:#22c55e}
+
+/* ── お任せ受領カード (delegation card) ──────────────────────
+   Wraps the AI's <delegate>...</delegate> block. Shows the AI's restatement
+   of the request + the step plan + estimate, with the same checkbox states
+   as inline `- [ ]` task lists. State transitions (peach → green) when all
+   steps tick. See _md / _renderDelegateCard in app.js. */
+.deli-card{
+  margin:8px 0 10px;
+  background:linear-gradient(180deg,#fff,#fffaf3);
+  border:1.5px solid rgba(251,146,60,.32);
+  border-left:4px solid var(--peach,#fb923c);
+  border-radius:13px;
+  padding:13px 16px 14px;
+  box-shadow:0 2px 10px rgba(251,146,60,.08);
+}
+.deli-card.done{
+  border-color:rgba(34,197,94,.40);
+  border-left-color:#16a34a;
+  background:linear-gradient(180deg,#fff,#f0fdf4);
+}
+.deli-head{
+  display:flex;align-items:center;gap:8px;margin-bottom:9px;
+  font-size:11.5px;font-weight:800;color:var(--peach-dark,#ea580c);letter-spacing:.04em;
+}
+.deli-card.done .deli-head{color:#16a34a}
+.deli-head-status{
+  margin-left:auto;background:rgba(251,146,60,.13);color:var(--peach-dark,#ea580c);
+  font-size:10px;font-weight:900;padding:2px 9px;border-radius:99px;letter-spacing:.02em;
+}
+.deli-card.done .deli-head-status{background:rgba(34,197,94,.13);color:#16a34a}
+.deli-row{display:flex;align-items:flex-start;gap:9px;margin-bottom:8px}
+.deli-row:last-child{margin-bottom:0}
+.deli-label{
+  font-size:11px;font-weight:800;color:var(--text3,#9a6a4a);
+  min-width:84px;flex-shrink:0;margin-top:2px;
+}
+.deli-text{flex:1;font-size:13px;line-height:1.6;color:var(--text,#2d1a0e);font-weight:500}
+.deli-tasks{display:flex;flex-direction:column;gap:5px;width:100%}
+.deli-task{display:flex;align-items:flex-start;gap:9px;padding:3px 0;font-size:13px;line-height:1.55}
+.deli-box{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;
+  border:1.6px solid rgba(180,120,80,.30);background:#fff;
+  font-size:11px;font-weight:900;color:transparent;line-height:1;
+  transition:background .25s,border-color .25s,color .25s;
+}
+.deli-box.on{background:#16a34a;border-color:#16a34a;color:#fff}
+.deli-box.now{background:rgba(251,146,60,.12);border-color:var(--peach,#fb923c);animation:deliPulse 1.3s ease-in-out infinite}
+@keyframes deliPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.55)}50%{box-shadow:0 0 0 5px rgba(251,146,60,0)}}
+.deli-tx{flex:1;min-width:0}
+.deli-task.done .deli-tx{color:var(--text3,#9a6a4a);text-decoration:line-through;text-decoration-color:rgba(34,197,94,.5)}
+.deli-task.now .deli-tx{color:var(--text,#2d1a0e);font-weight:600}
+.deli-tool{
+  display:inline-block;background:rgba(180,120,80,.10);color:var(--text2,#6b4226);
+  font-size:10px;padding:1px 7px;border-radius:99px;margin-left:6px;
+  font-family:'SF Mono',Menlo,monospace;font-weight:600;
+}
+.deli-task.done .deli-tool{background:rgba(34,197,94,.10);color:#16a34a}
+.deli-task.now .deli-tool{background:rgba(251,146,60,.12);color:var(--peach-dark,#ea580c)}
+.deli-foot{
+  margin-top:11px;padding-top:10px;border-top:1px dashed rgba(180,120,80,.25);
+  font-size:11px;color:var(--text2,#6b4226);display:flex;align-items:center;gap:7px;font-weight:700;
+}
+html[data-theme="dark"] .deli-card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(251,146,60,.04));border-color:rgba(251,146,60,.30)}
+html[data-theme="dark"] .deli-card.done{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(34,197,94,.04));border-color:rgba(34,197,94,.32)}
+html[data-theme="dark"] .deli-box{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18)}
+html[data-theme="dark"] .deli-foot{border-top-color:rgba(255,255,255,.12)}
+
 /* Vision review modal */
 .vr-modal{
   background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:88vh;

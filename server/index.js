@@ -11345,6 +11345,21 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
 4. **独立したステップは parallel_tool_use で並列に**
    - データ取得系 (read_artifact / web_search / web_fetch / sheets_read) で互いに依存しないものは同時に呼ぶ
    - Anthropic API は 1 ターンで複数 tool_use を返せる
+
+🚨 【artifact の表示 — 必ず守る】
+「show me / 見せて / 開いて / どこ?」のように **既存の artifact を見たい** という依頼への応答ルール:
+
+- 余計なコメント禁止。「申し訳ありません」「直接URLでは見られない」「リンクで確認できます」などの**前置き / 言い訳は絶対禁止**。これらは事実と違う (artifact は普通に URL で開ける)。
+- 答えは **markdown 画像構文 1 行だけ**:
+  \`![<title>](/generated/<filename>.html)\`
+  これでクライアントが **編集 / 固定 / コード / コピー / 開く ボタン付きのカード** をレンダリングする。
+- 例:
+  ❌ 「申し訳ありません。artifact の直接URLでは…」(誤った前置き)
+  ❌ 「[freecracy-dd-report を新タブで開く](url)」(リンク形式 — カードにならない)
+  ✅ 「![freecracy-dd-report](/generated/freecracy-dd-report.html)」(画像形式 — フルカード)
+
+- title は短く artifact 名と同じか日本語タイトル。
+- ファイル名が分からなければ read_artifact で取得してから出す (やり直しでなく確実な一手)。
 `;
   return`${deliveryRules}
 ${stallNudge}${planModeNote}${integrationsHint}${zapierNote}

@@ -2783,6 +2783,106 @@ function _autoPickModel(message, agent){
 //   chat     — pure conversation, no tool likely
 //
 // Returns an array of detected categories. Always includes 'chat' as a fallback.
+
+// ──────────────────────────────────────────────────────────────────
+// Phase A — Delegation card pre-emit planner.
+//   The user-visible flow:
+//     1. User sends a complex request
+//     2. Card (📋 お任せ受領) appears in <1 second
+//     3. Steps tick off as the main AI runs
+//     4. Final artifact card appears
+//   Today step 2 takes 3-5 seconds because the main Sonnet/Opus call has
+//   to compose the entire <delegate> block before any token streams. This
+//   shifts step 2 to a dedicated Haiku call (~1-2s) that runs BEFORE the
+//   main tool loop and streams the card via SSE immediately. The main AI
+//   is then told "card is already shown" so it doesn't re-emit.
+// ──────────────────────────────────────────────────────────────────
+function _shouldRunPlanner(message){
+  const raw = String(message || '').trim();
+  // Too short to be a multi-step task
+  if(raw.length < 25) return false;
+  // Pure question / lookup → no plan needed
+  if(/^(見せて|開いて|どこ|何|なに|なぜ|どうして|教えて|これ\s*は|\?|？)/.test(raw)) return false;
+  // Multi-step indicators
+  const joiners = (raw.match(/(そして|それから|あと|また|\+|、)/g) || []).length;
+  const actions = (raw.match(/(して|する|作って|作る|追加|修正|分析|調べ|まとめ|送|統合|挿入|生成|更新)/g) || []).length;
+  return joiners >= 1 || actions >= 2 || raw.length > 80;
+}
+
+// Run a dedicated Haiku planner and stream the お任せ受領カード via SSE.
+// Returns the parsed plan object (or null if planner shouldn't fire / failed).
+// Errors are swallowed — planner is purely a UX optimization, never blocks chat.
+async function _emitDelegationCardEarly(message, sse, agent){
+  if(!sse) return null;                          // only for streaming requests
+  if(!_shouldRunPlanner(message)) return null;   // skip simple requests
+  const planSys =
+`あなたはユーザーの依頼を見て「複数手順の作業かどうか」を判定し、複数手順なら計画を JSON で返すプランナーです。
+
+判定基準:
+- 3 個以上の独立した手順を要する → needs_delegation: true
+- 1-2 手順、見るだけ、純粋な質問 → needs_delegation: false
+
+steps の書き方:
+- 3-6 個。簡潔な動詞 (例: 「○○を確認」「○○を設計」「○○を統合」「○○を生成」「○○を送信」)
+- 各 step に対応する tool 名を tool フィールドに入れる (不明なら null)
+- 利用可能 tool 例: read_artifact, edit_artifact, create_artifact, web_search, web_fetch, web_screenshot, web_read_markdown, generate_image, generate_pdf, generate_chart, sheets_read, sheets_write, send_email, notify_slack
+
+出力形式: JSON のみ。前置きや \`\`\` も禁止。
+{
+  "needs_delegation": boolean,
+  "requested": "ユーザー依頼の 1-2 文要約 (60 字以内)",
+  "steps": [{"n":1,"text":"...(40 字以内)","tool":"tool_name か null"}],
+  "estimate_minutes": 1-10
+}
+
+needs_delegation が false なら steps は [] でよい。`;
+  try {
+    // Haiku is fast (<2s). Cap message size to keep prompt small.
+    const planRes = await callAI(
+      [{role:'user', content: String(message).slice(0, 1200)}],
+      planSys,
+      'haiku',
+      null
+    );
+    const txt = ((planRes && planRes.content)||[]).find(b => b && b.type==='text');
+    const raw = txt && txt.text || '';
+    const m = raw.match(/\{[\s\S]*\}/);
+    if(!m) return null;
+    let plan;
+    try { plan = JSON.parse(m[0]); }
+    catch(_){ return null; }
+    if(!plan || !plan.needs_delegation) return null;
+    const steps = Array.isArray(plan.steps) ? plan.steps : [];
+    if(steps.length < 3) return null;  // not worth a card for 1-2 steps
+    // Build the <delegate>...</delegate> markdown the client already knows
+    // how to render. The same format the main AI was supposed to emit —
+    // just sourced from a faster, dedicated call.
+    const stepsMd = steps.slice(0, 8).map((s, i) => {
+      const n = (Number.isInteger(s && s.n) ? s.n : (i + 1));
+      const txt2 = String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60);
+      const tool = (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? (' `' + s.tool + '`') : '';
+      return '- [ ] ' + n + '. ' + txt2 + tool;
+    }).join('\n');
+    const requested = String(plan.requested || '').replace(/[\r\n]+/g, ' ').slice(0, 100) || String(message).slice(0, 60);
+    const estMin = Math.max(1, Math.min(20, parseInt(plan.estimate_minutes, 10) || 3));
+    const card = '<delegate>\n'
+      + '**任されたこと:** ' + requested + '\n\n'
+      + '**進め方:**\n' + stepsMd + '\n\n'
+      + '**見積もり:** 約 ' + estMin + ' 分\n'
+      + '</delegate>\n\n';
+    // Stream the card as a single SSE delta event. The client's _md parses
+    // <delegate> just the same as if the main AI had emitted it.
+    try { sse('delta', { text: card }); } catch(_){}
+    console.log('[planner] emitted delegation card,', steps.length, 'steps');
+    return plan;
+  } catch(e){
+    // Planner failures are non-fatal — main AI flow proceeds without a
+    // pre-emitted card and may emit its own <delegate> as before.
+    console.warn('[planner] failed:', (e && e.message) || e);
+    return null;
+  }
+}
+
 function _detectIntentCategories(message){
   const m = String(message || '').toLowerCase();
   const cats = new Set();
@@ -18430,6 +18530,15 @@ async function handleAPI(req,res,pathname,method,ip){
       // Stop pinging when client disconnects.
       req.on('close', ()=>{ if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; } });
     }
+    // Phase A — pre-emit the お任せ受領カード via a dedicated Haiku planner
+    // call. Runs in parallel-ish with the main AI prep so the card appears
+    // in ~1 second instead of waiting 3-5s for Sonnet to compose it.
+    // See _emitDelegationCardEarly. Returns null for simple requests or on
+    // any error (planner is purely a UX optimization, never blocks).
+    let _earlyPlan = null;
+    if(wantStreamTools && sse){
+      _earlyPlan = await _emitDelegationCardEarly(message, sse, agent);
+    }
     // `resp` is the final AI response object from the tool loop. Declared here
     // (outside `if(useTools)`) so the SSE-done block at the bottom of the route
     // can still read resp.stop_reason after the tool-loop scope exits.
@@ -18556,7 +18665,15 @@ async function handleAPI(req,res,pathname,method,ip){
             streamedText += txt;
             try { sse('delta', { text: txt }); } catch(e){}
           } : null;
-          resp = await callAIWithTools(convMsgs, buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})}), tools, _tc, agent.model, agent, _onIterText);
+          // Phase A — if the planner already streamed a <delegate> card,
+          // append a turn-scoped instruction so the main AI doesn't repeat it.
+          // This is just additive text on the system string for this call —
+          // doesn't mutate the cached buildSystem output.
+          let _sysForTurn = buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})});
+          if(_earlyPlan){
+            _sysForTurn += '\n\n🚨 [このターン限定の指示] お任せ受領カード <delegate>...</delegate> は既にユーザー画面に表示済みです (' + (_earlyPlan.steps||[]).length + ' ステップ計画済み)。<delegate> を絶対に再度出力しないでください。計画されたステップを順に実行し、各完了時に「✅ ステップN 完了」とだけ短く書くこと。';
+          }
+          resp = await callAIWithTools(convMsgs, _sysForTurn, tools, _tc, agent.model, agent, _onIterText);
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 

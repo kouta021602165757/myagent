@@ -369,7 +369,13 @@ const LDB=(()=>{
 })();
 
 // ── SUPABASE ──────────────────────────────────────────────────
-function sbReq(method,table,qs='',body=null){
+// Bumped timeout from 8s → 20s. Reasoning:
+//   ・write paths can carry a 500KB+ artifacts jsonb row
+//   ・Render → Supabase across regions sometimes spikes to 5-10s
+//   ・8s was hitting too aggressively under normal load
+// _sbReqOnce is the raw single-attempt; sbReq retries once on timeout/network
+// error with a fresh attempt, so transient hiccups don't break chat turns.
+function _sbReqOnce(method,table,qs='',body=null,timeoutMs=20000){
   return new Promise((res,rej)=>{
     const u=new url.URL(`${SUPA_URL}/rest/v1/${table}${qs}`);
     const pay=body?JSON.stringify(body):null;
@@ -377,7 +383,7 @@ function sbReq(method,table,qs='',body=null){
       'Content-Type':'application/json','Prefer':'return=representation',
       ...(pay?{'Content-Length':Buffer.byteLength(pay)}:{})};
     const req=https.request({
-      hostname:u.hostname,path:u.pathname+u.search,method,headers,timeout:8000
+      hostname:u.hostname,path:u.pathname+u.search,method,headers,timeout:timeoutMs
     },r=>{
       // CRITICAL: setEncoding('utf8') so Node buffers incomplete multi-byte
       // sequences across data chunks. Without it, "d += chunk" can split a
@@ -388,11 +394,28 @@ function sbReq(method,table,qs='',body=null){
       r.on('data',c=>d+=c);
       r.on('end',()=>{try{res({s:r.statusCode,d:JSON.parse(d||'[]')});}catch{res({s:r.statusCode,d});}});
     });
-    req.on('error',e=>{console.error('sbReq error:',e.message);rej(e);});
+    req.on('error',e=>{rej(e);});
     req.on('timeout',()=>{req.destroy();rej(new Error('Supabase timeout'));});
     if(pay)req.write(pay);
     req.end();
   });
+}
+async function sbReq(method,table,qs='',body=null){
+  // 1st attempt with default 20s budget.
+  try { return await _sbReqOnce(method,table,qs,body,20000); }
+  catch(e){
+    const isTimeout = /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ECONNREFUSED/i.test(String(e && e.message || ''));
+    if(!isTimeout) throw e;
+    console.warn('[sbReq] retry after timeout:', method, table, qs.slice(0,60));
+    // One retry with a generous 25s budget. If this also fails, surface a
+    // user-friendly error message via _supaTimeoutErr so the UI shows
+    // something actionable instead of "Supabase timeout".
+    try { return await _sbReqOnce(method,table,qs,body,25000); }
+    catch(e2){
+      console.error('[sbReq] FAILED both attempts:', method, table, e2.message);
+      throw new Error('データベース混雑のため一時的に保存できませんでした。30 秒待って再試行してください');
+    }
+  }
 }
 
 // All `users` columns EXCEPT the heavy `artifacts` jsonb. Table-scan queries
@@ -19899,6 +19922,13 @@ const server=http.createServer(async(req,res)=>{
       }
       if(e && /too large|payload|body/i.test(e.message||'')){
         return jres(res,413,{error:'リクエストが大きすぎます'});
+      }
+      // DB / Supabase timeout — distinct from AI/tool timeout. Surfaces a
+      // different message because the action the user should take differs
+      // (here: wait briefly, the work might still be in DB; for AI timeout
+      // they should split the task).
+      if(e && /Supabase timeout|データベース混雑/i.test(e.message||'')){
+        return jres(res,503,{error:'データベースが一時的に混雑しています。30 秒ほど待って再試行してください'});
       }
       if(e && /timeout/i.test(e.message||'')){
         // The client surfaces this verbatim in the chat bubble; keep the

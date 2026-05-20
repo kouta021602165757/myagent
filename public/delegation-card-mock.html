@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>お任せ受領カード — モック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e7e2da;
+    --cream:#faf3eb;
+    --cream2:#fff7ee;
+    --ink:#2d1a0e;
+    --ink2:#6b4226;
+    --ink3:#9a6a4a;
+    --peach:#fb923c;
+    --peach-d:#ea580c;
+    --peach-soft:rgba(251,146,60,.12);
+    --wire2:rgba(180,120,80,.18);
+    --ok:#16a34a;
+    --ok-soft:rgba(34,197,94,.12);
+    --warn:#eab308;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Zen Kaku Gothic New',sans-serif;background:var(--bg);color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;gap:14px;padding:40px 18px 80px;
+  }
+  .pagecap{font-size:13px;color:#6b4226;font-weight:700;text-align:center;line-height:1.7;max-width:680px}
+  .pagecap b{color:var(--peach-d)}
+  .framecap{font-size:13px;font-weight:900;color:#fff;padding:7px 16px;border-radius:99px;margin-top:24px}
+  .framecap.bad{background:#9a6a4a}
+  .framecap.good{background:#16a34a}
+  .framecap.now{background:#fb923c}
+
+  /* chat window */
+  .win{
+    width:620px;max-width:100%;background:var(--cream);border-radius:16px;overflow:hidden;
+    box-shadow:0 18px 44px rgba(70,40,20,.2);display:flex;flex-direction:column;
+  }
+  .ct{display:flex;align-items:center;gap:11px;padding:13px 16px;background:#fff;border-bottom:1px solid var(--wire2)}
+  .ct-ic{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+    display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+  .ct-nm{font-size:14.5px;font-weight:900;color:var(--ink)}
+  .ct-sub{font-size:10.5px;color:var(--ink3);font-weight:700;margin-top:1px}
+
+  /* messages */
+  .msgs{padding:18px 18px 8px}
+  .m{display:flex;gap:10px;align-items:flex-start;margin-bottom:14px}
+  .m-av{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+    display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .m-av.user{background:#1f1f1f;color:#fff;font-weight:900;font-size:14px}
+  .m-main{flex:1;min-width:0}
+  .m-meta{display:flex;align-items:baseline;gap:7px;margin-bottom:3px}
+  .m-name{font-size:12.5px;font-weight:900;color:var(--ink)}
+  .m-time{font-size:10px;color:var(--ink3);font-weight:700}
+  .m-body{font-size:13.5px;line-height:1.65;color:var(--ink)}
+
+  /* ── お任せ受領カード ───────────────────── */
+  .deli-card{
+    margin:8px 0 10px;
+    background:linear-gradient(180deg,#fff,#fffaf3);
+    border:1.5px solid rgba(251,146,60,.32);
+    border-left:4px solid var(--peach);
+    border-radius:13px;
+    padding:13px 16px 14px;
+    box-shadow:0 2px 10px rgba(251,146,60,.08);
+  }
+  .deli-card.done{border-color:rgba(34,197,94,.40);border-left-color:var(--ok);
+    background:linear-gradient(180deg,#fff,#f0fdf4);}
+  .deli-head{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:11.5px;
+    font-weight:800;color:var(--peach-d);letter-spacing:.04em}
+  .deli-card.done .deli-head{color:var(--ok)}
+  .deli-head .deli-status{margin-left:auto;background:rgba(251,146,60,.13);color:var(--peach-d);
+    font-size:10px;font-weight:900;padding:2px 9px;border-radius:99px;letter-spacing:.02em}
+  .deli-card.done .deli-head .deli-status{background:rgba(34,197,94,.13);color:var(--ok)}
+
+  .deli-row{display:flex;align-items:flex-start;gap:9px;margin-bottom:8px}
+  .deli-row:last-child{margin-bottom:0}
+  .deli-label{font-size:11px;font-weight:800;color:var(--ink3);min-width:84px;flex-shrink:0;margin-top:2px}
+  .deli-text{flex:1;font-size:13px;line-height:1.6;color:var(--ink);font-weight:500}
+
+  .deli-tasks{display:flex;flex-direction:column;gap:5px;width:100%}
+  .deli-task{display:flex;align-items:flex-start;gap:9px;padding:3px 0;font-size:13px;line-height:1.55}
+  .deli-box{display:inline-flex;align-items:center;justify-content:center;
+    width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;
+    border:1.6px solid rgba(180,120,80,.30);background:#fff;
+    font-size:11px;font-weight:900;color:transparent;line-height:1;
+    transition:all .25s;}
+  .deli-box.on{background:var(--ok);border-color:var(--ok);color:#fff}
+  .deli-box.now{background:var(--peach-soft);border-color:var(--peach);color:transparent;
+    animation:deliPulse 1.3s ease-in-out infinite}
+  @keyframes deliPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.55)}50%{box-shadow:0 0 0 5px rgba(251,146,60,0)}}
+  .deli-tx{flex:1;min-width:0}
+  .deli-task.done .deli-tx{color:var(--ink3);text-decoration:line-through;text-decoration-color:rgba(34,197,94,.5)}
+  .deli-task.now .deli-tx{color:var(--ink);font-weight:600}
+  .deli-tool{display:inline-block;background:rgba(180,120,80,.10);color:var(--ink2);font-size:10px;
+    padding:1px 7px;border-radius:99px;margin-left:6px;font-family:'SF Mono',monospace;font-weight:600}
+  .deli-task.done .deli-tool{background:rgba(34,197,94,.10);color:var(--ok)}
+  .deli-task.now .deli-tool{background:var(--peach-soft);color:var(--peach-d)}
+
+  .deli-time{font-size:10.5px;color:var(--ink3);margin-left:6px;font-weight:600}
+
+  .deli-foot{margin-top:11px;padding-top:10px;border-top:1px dashed rgba(180,120,80,.25);
+    font-size:11px;color:var(--ink2);display:flex;align-items:center;gap:7px;font-weight:700}
+
+  /* artifact card */
+  .art-card{margin-top:8px;background:#fff;border:1px solid var(--wire2);border-radius:12px;
+    padding:12px 14px;display:flex;align-items:center;gap:11px;
+    box-shadow:0 1px 4px rgba(70,40,20,.06)}
+  .art-ic{font-size:22px;width:36px;height:36px;border-radius:9px;
+    background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .art-bd{flex:1;min-width:0}
+  .art-ti{font-size:13.5px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:6px}
+  .art-ver{background:rgba(251,146,60,.15);color:var(--peach-d);font-size:10px;font-weight:900;
+    padding:1px 7px;border-radius:99px;letter-spacing:.01em}
+  .art-url{font-size:11px;color:var(--ink3);margin-top:2px;font-family:'SF Mono',monospace}
+  .art-acts{display:flex;gap:6px}
+  .art-acts a,.art-acts button{background:#fff;border:1px solid var(--wire2);color:var(--ink2);
+    border-radius:7px;padding:5px 10px;font-size:11.5px;font-weight:700;cursor:pointer;
+    font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+  .art-acts .pri{background:linear-gradient(135deg,var(--peach),var(--peach-d));color:#fff;border:0}
+
+  /* ── BEFORE styling ────────────────────────── */
+  .gen{display:flex;align-items:center;gap:8px;color:var(--ink3);font-size:13px;font-weight:600;
+    background:rgba(180,120,80,.06);padding:9px 13px;border-radius:9px;font-style:italic}
+  .gen .dot{width:6px;height:6px;border-radius:50%;background:var(--peach);
+    animation:dotPulse 1.2s ease-in-out infinite}
+  @keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* composer */
+  .composer{margin:14px 16px 16px;background:#fff;border:1.5px solid var(--wire2);border-radius:14px;
+    padding:11px 14px;display:flex;align-items:center;gap:10px;color:var(--ink3);font-size:12.5px}
+  .composer .send{width:30px;height:30px;border-radius:8px;
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    display:flex;align-items:center;justify-content:center;color:#fff;margin-left:auto}
+
+  /* explanatory chip */
+  .why{margin:10px 0 0;font-size:11.5px;color:var(--ink2);background:rgba(251,146,60,.07);
+    border-left:3px solid var(--peach);padding:8px 12px;border-radius:0 8px 8px 0;line-height:1.6;
+    max-width:580px}
+  .why b{color:var(--peach-d)}
+</style>
+</head>
+<body>
+
+<div class="pagecap">
+  <b>お任せ受領カード — Agent が「部下らしく」仕事を受ける UX モック</b><br>
+  ① 任されたことを復唱  ② 進め方を出す  ③ 1 ステップずつ ☑ にしていく
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ❌ BEFORE — 今 -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="framecap bad">❌ 今 — 「了解しました!」と即着手、中身が見えない</div>
+
+<div class="win">
+  <div class="ct">
+    <div class="ct-ic">🦊</div>
+    <div><div class="ct-nm">DDチーム</div><div class="ct-sub">M&A・財務分析</div></div>
+  </div>
+  <div class="msgs">
+    <div class="m">
+      <div class="m-av user">K</div>
+      <div class="m-main">
+        <div class="m-meta"><span class="m-name">kota</span><span class="m-time">14:32</span></div>
+        <div class="m-body">freecracy の DD レポートに財務分析セクション追加してほしい</div>
+      </div>
+    </div>
+    <div class="m">
+      <div class="m-av">🦊</div>
+      <div class="m-main">
+        <div class="m-meta"><span class="m-name">DDチーム</span><span class="m-time">14:32</span></div>
+        <div class="m-body">
+          了解しました！財務分析セクションを追加します。少々お待ちください。
+          <div class="gen" style="margin-top:8px"><span class="dot"></span><span>回答を生成中… 47 秒</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="composer">何をお願いしますか？ <div class="send">→</div></div>
+</div>
+
+<div class="why">
+  問題: <b>「47 秒の沈黙」がそのまま 229 秒に伸びる</b>。ユーザーは「ちゃんと理解してる？何やってる？」と
+  不安なまま待つ。手で渡したのに、相手が何もしてないように見える。
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ✅ AFTER 1: 受領直後 -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="framecap good">✅ 改修後 ① — 受領直後 (3 秒で出る)</div>
+
+<div class="win">
+  <div class="ct">
+    <div class="ct-ic">🦊</div>
+    <div><div class="ct-nm">DDチーム</div><div class="ct-sub">M&A・財務分析</div></div>
+  </div>
+  <div class="msgs">
+    <div class="m">
+      <div class="m-av user">K</div>
+      <div class="m-main">
+        <div class="m-meta"><span class="m-name">kota</span><span class="m-time">14:32</span></div>
+        <div class="m-body">freecracy の DD レポートに財務分析セクション追加してほしい</div>
+      </div>
+    </div>
+    <div class="m">
+      <div class="m-av">🦊</div>
+      <div class="m-main">
+        <div class="m-meta"><span class="m-name">DDチーム</span><span class="m-time">14:32</span></div>
+        <div class="m-body">
+
+          <div class="deli-card">
+            <div class="deli-head">
+              📋 お任せ受領
+              <span class="deli-status">受領しました</span>
+            </div>
+
+            <div class="deli-row">
+              <div class="deli-label">任されたこと</div>
+              <div class="deli-text">既存の freecracy DD レポート (Ver.27) に、<b>3 期分の決算データを元にした財務分析セクション</b>を追加。既存デザインのトーンに合わせて統合する。</div>
+            </div>
+
+            <div class="deli-row">
+              <div class="deli-label">進め方</div>
+              <div class="deli-tasks">
+                <div class="deli-task">
+                  <span class="deli-box"></span>
+                  <span class="deli-tx">1. 既存レポートの構造を確認<span class="deli-tool">read_artifact</span></span>
+                </div>
+                <div class="deli-task">
+                  <span class="deli-box"></span>
+                  <span class="deli-tx">2. 財務分析セクションを設計 (KPI / 推移グラフ / コメント)</span>
+                </div>
+                <div class="deli-task">
+                  <span class="deli-box"></span>
+                  <span class="deli-tx">3. レポートに統合 + デザイン整合<span class="deli-tool">edit_artifact</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="deli-foot">⏱ 見積もり: 約 3〜5 分<span style="margin-left:auto;color:var(--ink3);font-weight:500">確認です — この理解で進めて OK ですか？</span></div>
+          </div>
+
+          <div style="font-size:13.5px;line-height:1.65;color:var(--ink);margin-top:6px">着手します。途中で判断が必要になったら止めて聞きます。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="composer">「OK、進めて」もしくは修正ポイントを入力 <div class="send">→</div></div>
+</div>
+
+<div class="why">
+  狙い: <b>「任された仕事の理解」</b>を最初の 3 秒で見える化。<b>違っていればこの時点で訂正</b>できる
+  → 数分後にやり直し、が無くなる。「何もしてない」見え方が「準備中」に変わる。
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ✅ AFTER 2: 進行中 -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="framecap now">⏳ 改修後 ② — 進行中 (1 ステップ目完了、2 ステップ目中)</div>
+
+<div class="win">
+  <div class="ct">
+    <div class="ct-ic">🦊</div>
+    <div><div class="ct-nm">DDチーム</div><div class="ct-sub">M&A・財務分析</div></div>
+  </div>
+  <div class="msgs">
+    <div class="m">
+      <div class="m-av">🦊</div>
+      <div class="m-main">
+        <div class="m-meta"><span class="m-name">DDチーム</span><span class="m-time">14:33</span></div>
+        <div class="m-body">
+
+          <div class="deli-card">
+            <div class="deli-head">
+              📋 お任せ進行中
+              <span class="deli-status">2 / 3 ステップ</span>
+            </div>
+
+            <div class="deli-row">
+              <div class="deli-label">任されたこと</div>
+              <div class="deli-text">freecracy DD レポートに財務分析セクションを追加</div>
+            </div>
+
+            <div class="deli-row">
+              <div class="deli-label">進め方</div>
+              <div class="deli-tasks">
+                <div class="deli-task done">
+                  <span class="deli-box on">✓</span>
+                  <span class="deli-tx">1. 既存レポートの構造を確認<span class="deli-tool">read_artifact</span><span class="deli-time">+ 0:12</span></span>
+                </div>
+                <div class="deli-task now">
+                  <span class="deli-box now"></span>
+                  <span class="deli-tx">2. 財務分析セクションを設計 (KPI / 推移グラフ / コメント)<span class="deli-time">進行中…</span></span>
+                </div>
+                <div class="deli-task">
+                  <span class="deli-box"></span>
+                  <span class="deli-tx">3. レポートに統合 + デザイン整合<span class="deli-tool">edit_artifact</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="deli-foot">⏱ 経過 47 秒 / 見積 3〜5 分<span style="margin-left:auto;color:var(--ink2)">📊 3 期分の数値整理が完了 → グラフ化中</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="composer">回答を待つ間に別件も話せます <div class="send">→</div></div>
+</div>
+
+<div class="why">
+  狙い: <b>「何もしてない」を「いま 2 ステップ目をやってる」に変える</b>。同じ 47 秒でも体感が全然違う。
+  <b>1 ステップ完了 = ✓ がつく瞬間</b>に小さな達成感が積み上がる (心理的進捗)。
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ✅ AFTER 3: 完了 -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="framecap good">✅ 改修後 ③ — 完了 (全 ☑、納品)</div>
+
+<div class="win">
+  <div class="ct">
+    <div class="ct-ic">🦊</div>
+    <div><div class="ct-nm">DDチーム</div><div class="ct-sub">M&A・財務分析</div></div>
+  </div>
+  <div class="msgs">
+    <div class="m">
+      <div class="m-av">🦊</div>
+      <div class="m-main">
+        <div class="m-meta"><span class="m-name">DDチーム</span><span class="m-time">14:35</span></div>
+        <div class="m-body">
+
+          <div class="deli-card done">
+            <div class="deli-head">
+              ✅ お任せ完了
+              <span class="deli-status">3 / 3 ステップ</span>
+            </div>
+
+            <div class="deli-row">
+              <div class="deli-label">任されたこと</div>
+              <div class="deli-text">freecracy DD レポートに財務分析セクションを追加</div>
+            </div>
+
+            <div class="deli-row">
+              <div class="deli-label">進め方</div>
+              <div class="deli-tasks">
+                <div class="deli-task done">
+                  <span class="deli-box on">✓</span>
+                  <span class="deli-tx">1. 既存レポートの構造を確認<span class="deli-time">+ 0:12</span></span>
+                </div>
+                <div class="deli-task done">
+                  <span class="deli-box on">✓</span>
+                  <span class="deli-tx">2. 財務分析セクションを設計<span class="deli-time">+ 1:48</span></span>
+                </div>
+                <div class="deli-task done">
+                  <span class="deli-box on">✓</span>
+                  <span class="deli-tx">3. レポートに統合 + デザイン整合<span class="deli-time">+ 0:38</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="deli-foot">⏱ 合計 2 分 38 秒 / Vision 検証 OK<span style="margin-left:auto;color:var(--ok);font-weight:900">納品しました</span></div>
+          </div>
+
+          <!-- 成果物カード -->
+          <div class="art-card">
+            <div class="art-ic">📄</div>
+            <div class="art-bd">
+              <div class="art-ti">freecracy-dd-report <span class="art-ver">Ver.28</span></div>
+              <div class="art-url">freecracy-dd-report.html</div>
+            </div>
+            <div class="art-acts">
+              <button>✏️ 修正</button>
+              <a class="pri" href="#">🔗 開く ↗</a>
+            </div>
+          </div>
+
+          <div style="font-size:13.5px;line-height:1.65;color:var(--ink);margin-top:9px">
+            <b>納品内容:</b><br>
+            ・KPI 3 指標 (売上 / 粗利 / 営業利益) の 3 期推移<br>
+            ・前年同月比のヒートマップ<br>
+            ・コメント (財務観点での示唆 3 点)<br><br>
+            ⚠ 1 点だけ確認したい点があります: <b>営業外損益の取り扱い</b>を「本業の利益」に含めるか分けるか —
+            会計方針次第なのでお教えいただければ調整します。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="composer">続きを指示 / 修正依頼 <div class="send">→</div></div>
+</div>
+
+<div class="why">
+  狙い: <b>「全 ☑ + 納品」の絵が一目で分かる</b>。仕事が 1 件こなされた、という気持ち良さ。
+  <b>「確認したい点があります」</b>と Agent が判断を求めてくる ⇒ 上司として decide する体験になる。
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="pagecap" style="margin-top:30px;max-width:580px">
+  <b>実装の段階</b><br>
+  ① プロンプト強化だけで「カードっぽい markdown」は今日中に出せる (約 30 分)<br>
+  ② 専用 UI でカード化 (半日)<br>
+  ③ ツール実行と ☑ を deterministic に連動 (半日)<br>
+  ④ サブタスクごとの所要時間 / 経過時間記録 (1 日)
+</div>
+
+</body>
+</html>

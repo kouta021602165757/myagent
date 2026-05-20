@@ -5026,19 +5026,39 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
           }
         }
       }
-      // 3) 全ステップ完了してれば表示不要、未完了ステップがあれば表示
-      if(_totalSteps > 0 && _lastStepN < _totalSteps){
-        approvalHTML = '<div class="m-approval">'
+      // 3) カード描画判定:
+      //    A. <delegate> あり & 未完ステップあり → 進捗付きフルカード
+      //    B. <delegate> あり & 全完了 → カード出さない (仕事終わってる)
+      //    C. <delegate> 無し → 「総ステップ数不明だけど何かしら完了マーク
+      //       はある」ケース。AI が `<delegate>` 出さずに本文で番号付き
+      //       リストで計画したパターン (実際の使用でよく起きる)。
+      //       「次があるか」分からないが、続行する道は残しておくべきなので
+      //       ミニマルなカード (続ける? / 一時停止) を出す。
+      const _hasDelegate = _totalSteps > 0;
+      const _allDoneInPlan = _hasDelegate && _lastStepN >= _totalSteps;
+      if(!_allDoneInPlan){
+        // 進捗 / 次のステップ表示は <delegate> がある時だけ
+        const _progressLine = _hasDelegate
+          ? ('<div class="m-app-progress">' + _lastStepN + ' / ' + _totalSteps + (isJa?' ステップ完了':' steps done') + '</div>')
+          : ('<div class="m-app-progress">' + (isJa?'ステップ ':'Step ') + _lastStepN + (isJa?' 完了 — 続きがあれば進めます':' done — continue if more remains') + '</div>');
+        const _nextLine = (_hasDelegate && _nextStepText)
+          ? ('<div class="m-app-next">' + (isJa?'次: ':'Next: ') + esc(_nextStepText) + '</div>')
+          : '';
+        // Question wording differs slightly: 「次のステップに」 vs 単に「続けますか?」
+        const _qText = _hasDelegate
+          ? (isJa?'次のステップに進んでいいですか?':'Continue to the next step?')
+          : (isJa?'続けますか?':'Continue?');
+        approvalHTML = '<div class="m-approval' + (_hasDelegate ? '' : ' minimal') + '">'
           + '<div class="m-app-row">'
           +   '<span class="m-app-ic">✋</span>'
           +   '<div class="m-app-bd">'
-          +     '<div class="m-app-q">' + (isJa?'次のステップに進んでいいですか?':'Continue to the next step?') + '</div>'
-          +     (_nextStepText ? '<div class="m-app-next">' + (isJa?'次: ':'Next: ') + esc(_nextStepText) + '</div>' : '')
-          +     '<div class="m-app-progress">' + _lastStepN + ' / ' + _totalSteps + (isJa?' ステップ完了':' steps done') + '</div>'
+          +     '<div class="m-app-q">' + _qText + '</div>'
+          +     _nextLine
+          +     _progressLine
           +   '</div>'
           + '</div>'
           + '<div class="m-app-acts">'
-          +   '<button class="m-app-btn ok" onclick="_approveNext(this)">' + (isJa?'✅ OK 進める':'✅ OK continue') + '</button>'
+          +   '<button class="m-app-btn ok" onclick="_approveNext(this)">' + (isJa?'▶ 続ける':'▶ Continue') + '</button>'
           +   '<button class="m-app-btn pause" onclick="_approvePause(this)">' + (isJa?'⏸ 一時停止':'⏸ Pause') + '</button>'
           + '</div>'
           + '</div>';

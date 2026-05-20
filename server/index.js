@@ -6380,6 +6380,8 @@ async function executeArtifactTool(input, ownerUser, ctx){
   const baseInstr = '最終応答で必ず上記 markdown 構文を本文に含めてください。チャットは URL を「新タブで開く ↗」リンクカードとしてレンダリングします。';
   const result = {
     url, title, description: desc,
+    filename,
+    version: 1,
     size_kb: sizeKb,
     markdown: '![' + title + '](' + url + ')',
     verification: { ok: _allIssues.length === 0, issues: _allIssues, render_checked: !_rv.skipped },
@@ -6602,6 +6604,8 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
   const baseInstr = '更新完了。最終応答で上記 markdown 構文を本文に含めてください。';
   const result = {
     url, title: artifact.title || filename, operation: op,
+    filename,
+    version: artifact.version || 1,
     size_kb: sizeKb,
     bytes_added: content.length,
     markdown: '![' + (artifact.title || 'artifact') + '](' + url + ')',

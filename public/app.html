@@ -9452,7 +9452,7 @@ function _md(src){
       +   (_afIsArtifact ? '<button class="ac-pin'+(_afPinned?' on':'')+'" onclick="'+(_afPinned?'_unpinArtifact()':'_pinArtifact(\''+_afNameArg+'\')')+'" title="'+(_afPinned?'このチャットの編集対象（固定中）':'このチャットの編集対象に固定')+'">📌 '+(_afPinned?(isJa?'固定中':'Pinned'):(isJa?'固定':'Pin'))+'</button>' : '')
       +   (_afIsArtifact ? '<button class="ac-code" onclick="_openCodeViewer(\''+_afNameArg+'\')" title="コードを見る">📄 '+(isJa?'コード':'Code')+'</button>' : '')
       +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 コピー\';},1400);})">📋 コピー</button>'
-      +   '<a class="ac-open" href="'+safeSrc+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
+      +   '<a class="ac-open" href="'+(_afIsArtifact && _afVer ? safeSrc + (safeSrc.indexOf('?')>=0?'&':'?') + 'v=' + _afVer : safeSrc)+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
       + '</div>'
       + '</div>';
   }
@@ -13418,6 +13418,19 @@ async function _sendMsgStream(ag, text, imgs, texts){
             log[k] = { ...obj, _pending: false };
             break;
           }
+        }
+        // Keep me.artifacts in sync with edit/create results so the Ver.N
+        // badge updates without a page reload.
+        if((obj.name === 'edit_artifact' || obj.name === 'create_artifact') && obj.filename && obj.version != null){
+          try {
+            if(me && Array.isArray(me.artifacts)){
+              const _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
+              if(_hit){ _hit.version = obj.version; }
+              else if(obj.name === 'create_artifact'){
+                me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' });
+              }
+            }
+          } catch(_){}
         }
         // After tool result, the server will fire `thinking` for iter+1.
         // Pre-emptively show the next-step indicator so there's no gap.
@@ -17949,6 +17962,18 @@ async function _sendThreadReply(){
             var log = ag.history[aiPlaceholderIdx].tool_log || [];
             for(var k=log.length-1; k>=0; k--){
               if(log[k]._pending && log[k].name === obj.name){ log[k] = { ...obj, _pending:false }; break; }
+            }
+            // Keep me.artifacts in sync with edit/create results — Ver.N badge.
+            if((obj.name === 'edit_artifact' || obj.name === 'create_artifact') && obj.filename && obj.version != null){
+              try {
+                if(me && Array.isArray(me.artifacts)){
+                  var _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
+                  if(_hit){ _hit.version = obj.version; }
+                  else if(obj.name === 'create_artifact'){
+                    me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' });
+                  }
+                }
+              } catch(_){}
             }
             _renderThreadDrawer();
           }

@@ -4287,8 +4287,15 @@ function _md(src){
   // Restore delegate cards LAST (after all other markdown) so the surrounding
   // <br> noise is already cleaned up. _stepDone is in scope from the auto-check
   // logic above and drives the "first N steps automatically ticked" behavior.
+  // Defensive try/catch so a render bug in the card doesn't break the whole
+  // message bubble — fall back to plain escaped text of the inner block.
   html=html.replace(/ ?DELI(\d+) ?/g, function(_, i){
-    return _renderDelegateCard(deliBlocks[+i] || '', _stepDone);
+    try {
+      return _renderDelegateCard(deliBlocks[+i] || '', _stepDone);
+    } catch(e){
+      console.warn('[delegate] render failed:', e && e.message);
+      return '<pre>' + esc(deliBlocks[+i] || '') + '</pre>';
+    }
   });
   return html;
 }

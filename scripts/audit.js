@@ -47,11 +47,11 @@ try {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 2. Syntax — every inline <script> in app.html
-//    Catches mismatched braces, stray `}` etc. The harness-time syntax
-//    check we've been running manually, automated.
+// 2. Syntax — every inline <script> in app.html PLUS the extracted app.js
+//    Catches mismatched braces, stray `}` etc. Both surfaces because we
+//    moved the bulk of JS to public/app.js but a few inline scripts remain.
 // ─────────────────────────────────────────────────────────────
-head('Syntax: inline <script> blocks in public/app.html');
+head('Syntax: JS (inline + public/app.js)');
 const appHtml = fs.readFileSync(path.join(ROOT, 'public/app.html'), 'utf8');
 const scriptRe = /<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g;
 let m, i = 0;
@@ -60,18 +60,24 @@ while ((m = scriptRe.exec(appHtml))) {
   i++;
   const before    = appHtml.slice(0, m.index);
   const startLine = (before.match(/\n/g) || []).length + 1;
-  scripts.push({ idx: i, code: m[1], startLine });
+  scripts.push({ idx: i, code: m[1], startLine, source: 'app.html' });
+}
+// Append the extracted main app.js if present (post-refactor). Treated as a
+// single virtual <script> for the duplicate-name + safety checks below.
+const appJsPath = path.join(ROOT, 'public/app.js');
+if (fs.existsSync(appJsPath)) {
+  scripts.push({ idx: scripts.length + 1, code: fs.readFileSync(appJsPath, 'utf8'), startLine: 1, source: 'public/app.js' });
 }
 let parsedAll = true;
 for (const s of scripts) {
   try {
-    new vm.Script(s.code, { filename: `app.html:script#${s.idx} @ L${s.startLine}` });
+    new vm.Script(s.code, { filename: `${s.source}:script#${s.idx} @ L${s.startLine}` });
   } catch (e) {
-    fail(`script #${s.idx} (starts L${s.startLine}): ${e.message}`);
+    fail(`${s.source} script #${s.idx} (starts L${s.startLine}): ${e.message}`);
     parsedAll = false;
   }
 }
-if (parsedAll) ok(`${scripts.length} inline scripts parse`);
+if (parsedAll) ok(`${scripts.length} script source(s) parse`);
 
 // ─────────────────────────────────────────────────────────────
 // 3. Duplicate function definitions
@@ -172,12 +178,19 @@ if (missing === 0) ok(`${localReqs.length} local requires all resolve & are trac
 head('File size');
 const sizeAppKb    = Math.round(fs.statSync(path.join(ROOT, 'public/app.html')).size / 1024);
 const sizeServerKb = Math.round(fs.statSync(path.join(ROOT, 'server/index.js')).size / 1024);
+const sizeJsKb     = fs.existsSync(path.join(ROOT, 'public/app.js'))  ? Math.round(fs.statSync(path.join(ROOT, 'public/app.js')).size  / 1024) : 0;
+const sizeCssKb    = fs.existsSync(path.join(ROOT, 'public/app.css')) ? Math.round(fs.statSync(path.join(ROOT, 'public/app.css')).size / 1024) : 0;
 console.log(`        public/app.html : ${sizeAppKb} KB`);
+console.log(`        public/app.js   : ${sizeJsKb} KB`);
+console.log(`        public/app.css  : ${sizeCssKb} KB`);
 console.log(`        server/index.js : ${sizeServerKb} KB`);
-const APP_LIMIT_KB    = 1500; // current ~1086. Warn when nearing 1.5MB.
+const APP_LIMIT_KB    = 1500;
+const JS_LIMIT_KB     = 1500;
 const SERVER_LIMIT_KB = 1500;
 if (sizeAppKb > APP_LIMIT_KB)       warn(`app.html exceeds ${APP_LIMIT_KB} KB — consider splitting`);
 else                                ok(`app.html under ${APP_LIMIT_KB} KB limit`);
+if (sizeJsKb > JS_LIMIT_KB)         warn(`app.js exceeds ${JS_LIMIT_KB} KB — consider splitting`);
+else if (sizeJsKb > 0)              ok(`app.js under ${JS_LIMIT_KB} KB limit`);
 if (sizeServerKb > SERVER_LIMIT_KB) warn(`server/index.js exceeds ${SERVER_LIMIT_KB} KB — consider splitting`);
 else                                ok(`server/index.js under ${SERVER_LIMIT_KB} KB limit`);
 

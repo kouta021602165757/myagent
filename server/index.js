@@ -19295,6 +19295,23 @@ const MIME={'.html':'text/html','.css':'text/css','.js':'application/javascript'
   '.json':'application/json','.png':'image/png','.ico':'image/x-icon',
   '.svg':'image/svg+xml','.woff2':'font/woff2','.webp':'image/webp'};
 
+// Asset version stamp — replaces `/app.css?v=…` / `/app.js?v=…` URLs in the
+// served HTML with the actual file mtime so a deploy that updates the asset
+// busts the 1-year browser cache automatically. Without this, the ?v= written
+// into app.html stays constant across deploys and users see stale JS/CSS.
+function _stampAssetVersions(html){
+  let s = String(html);
+  const stamp = (assetPath) => {
+    try {
+      const st = fs.statSync(path.join(PUBLIC_DIR, assetPath));
+      return Math.floor(st.mtimeMs);
+    } catch(e){ return Date.now(); }
+  };
+  s = s.replace(/\/app\.css\?v=\d+/g, '/app.css?v=' + stamp('app.css'));
+  s = s.replace(/\/app\.js\?v=\d+/g,  '/app.js?v='  + stamp('app.js'));
+  return s;
+}
+
 // If a GA measurement ID is configured, inject the gtag.js snippet into the
 // <head> of every served HTML page. Idempotent — skips if already present.
 function _injectGA(html){
@@ -19360,8 +19377,12 @@ function serveStatic(res,fp){
       const h={'Content-Type':mime,...headerSEC};
       if(ext==='.html'){
         h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';
-        const needInject = !isGenerated && (GA_ID || (process.env.SENTRY_DSN || '').trim());
-        const body = needInject ? Buffer.from(_injectGA(data.toString('utf8')), 'utf8') : data;
+        const needGA  = !isGenerated && (GA_ID || (process.env.SENTRY_DSN || '').trim());
+        const needStamp = !isGenerated && /\/app\.(css|js)\?v=/.test(data.toString('utf8'));
+        let text = (needGA || needStamp) ? data.toString('utf8') : null;
+        if(needGA) text = _injectGA(text);
+        if(needStamp) text = _stampAssetVersions(text);
+        const body = text != null ? Buffer.from(text, 'utf8') : data;
         res.writeHead(200,h);res.end(body);
         return;
       }

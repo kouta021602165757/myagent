@@ -2822,14 +2822,19 @@ function _autoPickModel(message, agent){
 // ──────────────────────────────────────────────────────────────────
 function _shouldRunPlanner(message){
   const raw = String(message || '').trim();
+  // 継続メッセージ (ボタンクリック起源など) — 短すぎて新規 plan には弱い、
+  // 既存のフローに任せる
+  if(/^(続き|つづき|next|▶|やって|お願い|それで|OK|どうぞ)/i.test(raw)) return false;
   // Too short to be a multi-step task
-  if(raw.length < 25) return false;
+  if(raw.length < 20) return false;       // was 25, lowered for shorter design-spec messages
   // Pure question / lookup → no plan needed
   if(/^(見せて|開いて|どこ|何|なに|なぜ|どうして|教えて|これ\s*は|\?|？)/.test(raw)) return false;
-  // Multi-step indicators
-  const joiners = (raw.match(/(そして|それから|あと|また|\+|、)/g) || []).length;
-  const actions = (raw.match(/(して|する|作って|作る|追加|修正|分析|調べ|まとめ|送|統合|挿入|生成|更新)/g) || []).length;
-  return joiners >= 1 || actions >= 2 || raw.length > 80;
+  // Multi-step indicators — kicked aggressively, even single action verb is enough
+  const joiners = (raw.match(/(そして|それから|あと|また|\+|、|，|,)/g) || []).length;
+  const actions = (raw.match(/(して|する|作って|作る|追加|修正|分析|調べ|まとめ|送|統合|挿入|生成|更新|変更|改善|調整|刷新|デザイン|セクション|機能|構成)/g) || []).length;
+  // Lower bars to fire planner more often — false positives are cheap (Haiku
+  // returns needs_delegation:false), false negatives hurt UX (no task card).
+  return joiners >= 1 || actions >= 1 || raw.length > 50;
 }
 
 // Run a dedicated Haiku planner and stream the お任せ受領カード via SSE.
@@ -2847,12 +2852,17 @@ async function _emitDelegationCardEarly(message, sse, agent){
   const planSys =
 `あなたはユーザーの依頼を見て「複数手順の作業かどうか」を判定し、複数手順なら計画を JSON で返すプランナーです。
 
-判定基準:
-- 3 個以上の独立した手順を要する → needs_delegation: true
-- 1-2 手順、見るだけ、純粋な質問 → needs_delegation: false
+判定基準 (積極的に true にすること — ユーザーが「何をやるか」見えないと困る):
+- 2 個以上の手順 / 複数の側面 / 複数の要素を含む → needs_delegation: true
+- 「カード化、グラデーション、アニメーション」のような複数項目列挙 → needs_delegation: true (それぞれを step に)
+- 「デザインを改善」「セクション追加」のような複合作業 → needs_delegation: true (read → 設計 → 適用 の 3 step に分解)
+- 純粋な質問 (「これいくら?」「何ができる?」) や 1 単語応答 → needs_delegation: false
+- 「見せて」「開いて」だけ → needs_delegation: false (artifact 表示のみ)
+
+迷ったら true にする。ユーザーは task card で何をやるか見える方を好む。
 
 steps の書き方:
-- 3-6 個。簡潔な動詞 (例: 「○○を確認」「○○を設計」「○○を統合」「○○を生成」「○○を送信」)
+- 2-6 個。簡潔な動詞 (例: 「現在の HTML を確認」「カード化を適用」「グラデーションを追加」「アニメーション動作を実装」「結果を確認」)
 - 各 step に対応する tool 名を tool フィールドに入れる (不明なら null)
 - 利用可能 tool 例: read_artifact, edit_artifact, create_artifact, web_search, web_fetch, web_screenshot, web_read_markdown, generate_image, generate_pdf, generate_chart, sheets_read, sheets_write, send_email, notify_slack
 
@@ -2891,7 +2901,10 @@ needs_delegation が false なら steps は [] でよい。`;
     catch(_){ return null; }
     if(!plan || !plan.needs_delegation) return null;
     const steps = Array.isArray(plan.steps) ? plan.steps : [];
-    if(steps.length < 3) return null;  // not worth a card for 1-2 steps
+    if(steps.length < 2) return null;  // 2+ steps gets a card; was 3+ but
+                                       // too many 2-step tasks were falling
+                                       // through and leaving users with no
+                                       // visibility into the plan.
     // Build the <delegate>...</delegate> markdown the client already knows
     // how to render. The same format the main AI was supposed to emit —
     // just sourced from a faster, dedicated call.

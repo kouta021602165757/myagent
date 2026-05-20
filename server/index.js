@@ -19434,6 +19434,19 @@ const server=http.createServer(async(req,res)=>{
     try{await handleAPI(req,res,pathname,method,ip);}
     catch(e){
       console.error('[API]',e.message,e.stack ? e.stack.split('\n').slice(0,3).join(' | ') : '');
+      // If the chat endpoint already started an SSE response, we cannot send a
+      // fresh JSON 4xx/5xx (Node would throw "headers already sent" silently
+      // and the client would see only an abrupt close). Emit a SSE error
+      // event instead so the client's existing 'error' handler renders a
+      // proper bubble + retry button.
+      if(res.headersSent){
+        try {
+          const msg = (e && e.message) ? String(e.message).slice(0, 240) : 'unknown error';
+          res.write('event: error\ndata: ' + JSON.stringify({ message: msg }) + '\n\n');
+        } catch(_){}
+        try { res.end(); } catch(_){}
+        return;
+      }
       // Surface specific known errors with a friendlier status + message
       if(e && e.statusCode === 413){
         return jres(res,413,{error:'ファイルが大きすぎます (上限 32MB)'});
@@ -19442,7 +19455,9 @@ const server=http.createServer(async(req,res)=>{
         return jres(res,413,{error:'リクエストが大きすぎます'});
       }
       if(e && /timeout/i.test(e.message||'')){
-        return jres(res,504,{error:'タイムアウトしました。少し時間をおいて再試行してください'});
+        // The client surfaces this verbatim in the chat bubble; keep the
+        // wording short and add an actionable suggestion (split-the-task).
+        return jres(res,504,{error:'処理に時間がかかりすぎました。再送するか、依頼を小さく分けてみてください'});
       }
       jres(res,500,{error:'Internal server error', detail: (e && e.message ? e.message.slice(0,200) : '')});
     }

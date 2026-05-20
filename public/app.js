@@ -4904,8 +4904,11 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
         : (isJa ? '▶ 続きを書く' : '▶ Continue');
       inlineActs += '<button class="m-act m-act-continue" onclick="continueMsg(this)" title="'+(isJa?'続きを生成':'Continue')+'">'+contLabel+'</button>';
     }
-    if(!isU && raw && raw.is_error && !_renderingInThread){
-      inlineActs += '<button class="m-act m-act-retry" onclick="retryMsg(this)" title="'+(isJa?'もう一度試す':'Retry')+'">🔄 '+(isJa?'再試行':'Retry')+'</button>';
+    if(!isU && raw && raw.is_error){
+      // Retry button. In threads, we use _retryThreadMsg which re-sends the
+      // previous USER message in this thread; in main chat, retryMsg.
+      var _retryFn = _renderingInThread ? '_retryThreadMsg(this)' : 'retryMsg(this)';
+      inlineActs += '<button class="m-act m-act-retry" onclick="'+_retryFn+'" title="'+(isJa?'もう一度試す':'Retry')+'">🔄 '+(isJa?'再試行':'Retry')+'</button>';
     }
   }
   // In groups, highlight @AI / @name mentions in the body.
@@ -6076,6 +6079,41 @@ async function deleteMsg(btn){
   } catch(e){
     showToast((e && e.message) || (isJa?'削除に失敗':'Delete failed'), 'ng');
   }
+}
+
+/* ── Retry a failed THREAD reply ─────────────────────────
+   Finds the most recent USER message in the same thread (by thread_parent_id),
+   removes the error bubble, refills the thread composer with that text, and
+   triggers _sendThreadReply. Used by the 🔄 再試行 button on thread-level
+   error bubbles (the main-chat retry path is the existing retryMsg). */
+function _retryThreadMsg(btn){
+  if(!activeId) return;
+  var ag = agents.find(function(a){return a.id===activeId;}); if(!ag) return;
+  var row = btn.closest('.m');
+  var idx = row ? parseInt(row.dataset.idx||'-1', 10) : -1;
+  if(idx < 0) return;
+  var hist = ag.history || [];
+  var errMsg = hist[idx];
+  if(!errMsg) return;
+  var parentId = errMsg.thread_parent_id;
+  if(!parentId){ showToast(isJa?'スレッド情報が見つかりません':'Thread reference missing','ng'); return; }
+  // Walk back to the last USER message in the same thread.
+  var userIdx = -1;
+  for(var i = idx - 1; i >= 0; i--){
+    if(hist[i] && hist[i].role === 'user' && hist[i].thread_parent_id === parentId){ userIdx = i; break; }
+  }
+  if(userIdx < 0){ showToast(isJa?'再送する元メッセージが見つかりません':'No user message to retry','ng'); return; }
+  var text = String(hist[userIdx].content||'').trim();
+  if(!text){ showToast(isJa?'空のメッセージは再送できません':'Empty user message','ng'); return; }
+  // Remove the error bubble so the new reply takes its place.
+  hist.splice(idx, 1);
+  // Ensure the thread drawer is open for this parent, then drop text + send.
+  window._activeThreadParent = parentId;
+  _renderThreadDrawer();
+  var ci = document.getElementById('tci');
+  if(ci){ ci.value = text; try { exTA(ci); } catch(e){} }
+  // Defer a tick so the drawer / composer is in the DOM before send.
+  setTimeout(function(){ try { _sendThreadReply(); } catch(e){ console.warn('[thread-retry]', e); } }, 30);
 }
 
 /* ── Reply (quote-reply) ────────────────────────────── */
@@ -12953,7 +12991,22 @@ async function _sendThreadReply(){
         ag.history[aiPlaceholderIdx].streaming = false;
         ag.history[aiPlaceholderIdx].was_stopped = true;
       } else {
-        ag.history[aiPlaceholderIdx].content = 'エラー: ' + ((e && e.message)||'failed');
+        // Timeout/edit-of-large-artifact failures are common when a single
+        // request triggers Chromium render-verify + Vision review + multiple
+        // AI iterations. Add a concrete hint so the user knows how to retry
+        // productively (split the task) instead of hitting the same wall.
+        var _errMsg = (e && e.message) || 'failed';
+        var _hint = '';
+        if(/タイムアウト|timeout|応答が遅すぎ|busy/i.test(_errMsg)){
+          _hint = L(
+            '\n\n💡 大きな編集（HTML 全体の書き直し / 検証付き）は時間がかかりやすく、'+
+            'プロキシ側でタイムアウトすることがあります。**🔄 再試行** で再送するか、'+
+            '依頼を「まず A だけ」「次に B」のように分割してみてください。',
+            '\n\n💡 Large edits (full HTML rewrite + verification) can hit proxy timeouts. '+
+            'Press **🔄 Retry** to re-send, or break the request into smaller steps.'
+          );
+        }
+        ag.history[aiPlaceholderIdx].content = 'エラー: ' + _errMsg + _hint;
         ag.history[aiPlaceholderIdx].streaming = false;
         ag.history[aiPlaceholderIdx].is_error = true;
       }

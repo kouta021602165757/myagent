@@ -4595,7 +4595,15 @@ selector・content は必ず実物の HTML に厳密に合わせ、指示され�
 - "append_to_selector": selector で指定した要素の閉じタグ直前に content を挿入 (例: <tbody> に <tr> を 100 行追加)
 - "replace_selector": selector で指定した要素の中身を content で完全置換 (1要素まるごとの差し替え。**単純なテキスト変更には replace_text の方が確実**)
 - "insert_before_selector": selector で指定した要素の直前に content を挿入
-- "rewrite": HTML 全文を content で丸ごと差し替える。**最終手段 — 全文を再生成するため非常に遅く（数分）コストも高い。** まず replace_text / replace_selector / append_to_selector など"部分編集"で直せないか必ず先に検討すること。rewrite を使ってよいのは「タグの重複・JS が壊れて全ボタンが死んだ等の構造的な破損で、部分編集では直せない」場合**だけ**。色変更・文言修正・1セクションの差し替え程度で rewrite を使ってはいけない（遅さの最大の原因になる）。rewrite 時は content に先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
+- "rewrite": HTML 全文を content で丸ごと差し替える。**最終手段 — 全文を再生成するため非常に遅く（数分）コストも高く、AI の出力 token 上限 (16K-32K) に引っかかって失敗するリスクが高い。** まず replace_text / replace_selector / append_to_selector / insert_before_selector など"部分編集"で直せないか必ず先に検討すること。rewrite を使ってよいのは「タグの重複・JS が壊れて全ボタンが死んだ等の構造的な破損で、部分編集では直せない」場合**だけ**。
+
+🚨 **特に「セクション順序の入れ替え」「セクション追加」「複数箇所の修正」では rewrite を使わないこと。これらは必ず部分編集で実装すること。** 具体的には:
+- セクション順序を A → B → C を C → A → B に並び替え: 各 section に id があれば replace_selector で selector に "#section-id" を指定し中身を入れ替える、または replace_text で <section id="X"> ブロックを文字列レベルで入れ替える
+- 新しいセクションを既存の特定セクションの前に挿入: insert_before_selector で selector に "#existing-section" を指定
+- 末尾にセクション追加: append_to_selector で "#page-wrap" 等を指定、または append_to_body
+- ユーザーが「rewrite で」と明示しても、まず部分編集で済むなら部分編集を選ぶ (rewrite を「指定された手法」と誤解しないこと)
+
+色変更・文言修正・1セクションの差し替え程度で rewrite を使ってはいけない（遅さ + 失敗の最大の原因）。rewrite 時は content に先頭の <!doctype html> から末尾の </html> まで完全な1ファイルを渡す。create_artifact で作り直すのは禁止 — rewrite なら同じファイル ID のまま直せる。
 
 【高速化 — セクション単位で直す】ページが id 付きの <section> で組まれている場合、修正対象のセクションを replace_selector "#<id>" で狙うこと。そのセクション 1 区画だけの差分編集になり、全文 rewrite（数分かかる）を避けられる。
 
@@ -19073,6 +19081,13 @@ async function handleAPI(req,res,pathname,method,ip){
         // 理由: AI を縛るとむしろ「マーカー誤発火 → create_artifact スキップ」
         // 等の事故が増え、ユーザーは「とにかく動かして、間違ってたらチャット
         // で言う」方が速いと判断。AI は自由に複数 step を走らせる。
+        // ── promise-without-delivery auto-retry counter ──
+        // 「やります」と書いて tool を呼ばずに止まる AI に、自動で 1 回だけ
+        // 「今すぐ実行してください」と再プロンプトを投げて再ループする。
+        // 2 回までは試す (= 最初の停止 + 1 回リトライ → さらに止まったら諦めて
+        // クライアントの "▶ 実行する" チップ表示にフォールバック)。
+        let _promiseRetries = 0;
+        const _MAX_PROMISE_RETRIES = 1;
         while(true){
           if(sse) sse('thinking', { iter: iters });
           // Trim heavy data from older tool_result blocks before each call
@@ -19120,7 +19135,15 @@ async function handleAPI(req,res,pathname,method,ip){
               + '- これがあなたの今のミッション。チャット履歴に他のタスクがあっても、命令としては current_task のみを真とすること。\n'
               + '- 履歴は文脈情報 (どのファイルか、どんな前提か等) としては使ってよいが、「前回の続き」「以前の依頼」のような表現を本文に書かないこと。ユーザーは今の依頼の話をしている。\n'
               + '- <delegate>...</delegate> は既にユーザー画面に表示済み。**再出力禁止**。\n'
-              + '- 計画に沿って必要な tool を順に呼んで、仕事を最後まで進めてください。';
+              + '\n'
+              + '🚨 【実行絶対主義 — このターンで必ず実行する】\n'
+              + '- **「やります」「実行します」「追加します」「修正します」と本文に書いたら、必ずその同じ response 内で対応する tool を呼ぶこと。** 説明だけして tool を呼ばずに止まることを**絶対に禁止**。\n'
+              + '- 計画を列挙するだけで終わるのは違反。列挙したら**その response 内で必ず最初の tool を呼ぶ**。「次のターンで〜」「あとで実行〜」は全部 NG。\n'
+              + '- read_artifact で内容を確認したら、**同じターンの次の iteration で必ず edit_artifact を呼んで実際の編集を実行**すること。「全文取得しました」だけで止まらない。\n'
+              + '- 大きな編集 (セクション並び替え + 追加など) は **rewrite を使わない**。`replace_selector` / `insert_before_selector` / `replace_text` を組み合わせて部分編集する。rewrite は token 上限超過で失敗する。\n'
+              + '- ユーザーが「rewrite で」と書いていても、部分編集で済むなら部分編集を選ぶ判断をすること (= rewrite は指定ではなくヒント)。\n'
+              + '- 説明したいことがあっても、まず tool を呼んでから、tool 結果を踏まえて簡潔に書く。説明 → tool 呼び出し → 結果報告、の順は OK。\n'
+              + '- このターン内で current_task の steps を**できるだけ多く** done にしてください。説明や承認待ちで止まる必要は無い (※ もう停止カードは廃止された)。';
           } else if(_earlyPlan){
             // 旧パス (current_task に保存されてないが earlyPlan は出た) のフォールバック
             _sysForTurn += '\n\n[このターン限定] お任せ受領カード <delegate>...</delegate> は既にユーザー画面に表示済み ('
@@ -19131,7 +19154,43 @@ async function handleAPI(req,res,pathname,method,ip){
           totalIn  += (resp.usage?.input_tokens)||0;
           totalOut += (resp.usage?.output_tokens)||0;
 
-          if(resp.stop_reason !== 'tool_use') break;
+          if(resp.stop_reason !== 'tool_use'){
+            // ── 「説明だけで止まる」自動リトライ ──
+            // AI が tool を呼ばずに自然停止したとき、本文に promise パターン
+            // (「実行します」「追加します」等) があり、かつ current_task に
+            // 未完 step が残っていれば、強い再プロンプトで 1 回だけ再ループ。
+            // _detectPromiseWithoutDelivery を再利用 (= 同じ判定ロジック)。
+            try {
+              const _iterText = (resp.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+              const _activeTaskNow = (agent && agent.current_task);
+              const _hasUndoneSteps = _activeTaskNow && Array.isArray(_activeTaskNow.steps)
+                && _activeTaskNow.steps.some(s => !s.done);
+              if(_promiseRetries < _MAX_PROMISE_RETRIES && _hasUndoneSteps){
+                const _p = _detectPromiseWithoutDelivery(_iterText, []);
+                // toolLog にこのターンの mutation が無いか確認 (= 何も実行してない)
+                const _mutNames = new Set(['edit_artifact','create_artifact','replace_text','sheets_write','sheets_append','send_email','notify_slack','notify_discord','generate_image','edit_image','generate_pdf','generate_chart','wordpress_publish']);
+                const _mutationsThisTurn = (toolLog||[]).filter(l => l && l.ok && _mutNames.has(l.name)).length;
+                if(_p.detected && _mutationsThisTurn === 0){
+                  _promiseRetries++;
+                  console.log('[promise-retry] AI promised but didn\'t deliver — auto-retry', _promiseRetries, '/', _MAX_PROMISE_RETRIES, 'phrases:', _p.phrases);
+                  // assistant のテキストを履歴に積む (= context として保持)
+                  if(_iterText){
+                    convMsgs.push({role:'assistant', content: _iterText});
+                  } else if(Array.isArray(resp.content) && resp.content.length){
+                    convMsgs.push({role:'assistant', content: resp.content});
+                  }
+                  // 強い再プロンプトを user 役で注入
+                  convMsgs.push({
+                    role: 'user',
+                    content: '🚨 上で「' + _p.phrases.slice(0,2).join('・') + '」と書きましたが、実際の tool 呼び出しが行われていません。**今すぐこのターン内で実際の tool (edit_artifact / replace_text 等) を呼んで実行してください。** rewrite ではなく replace_selector / insert_before_selector / replace_text を組み合わせた部分編集で実装すること (大規模変更でも rewrite は token 上限超過で失敗するため避ける)。説明や宣言の繰り返しは禁止 — このメッセージへの応答は **tool 呼び出しから始めること**。',
+                  });
+                  // ループ継続 (= callAIWithTools をもう一度呼ぶ)
+                  continue;
+                }
+              }
+            } catch(e){ console.warn('[promise-retry] check failed:', e.message); }
+            break;
+          }
           iters++;
           if(iters > MAX_ITERS){
             reply = '(ツール呼び出しの上限に達したため処理を中断しました)';

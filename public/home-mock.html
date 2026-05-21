@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOME リデザイン案 — MY AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fdf8f3; --panel:#ffffff;
+    --ink:#2d1a0e; --ink2:#6b4226; --ink3:#9a6a4a;
+    --peach:#fb923c; --peach-d:#ea580c; --peach-soft:#fff1e3;
+    --wire:rgba(180,120,80,.16); --wire2:rgba(180,120,80,.28);
+    --green:#22c55e; --blue:#3b82f6; --purple:#8b5cf6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    background:#e7e2da; color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    padding:40px 18px 80px;
+  }
+  .pagecap{font-size:13px;color:#6b4226;font-weight:700;text-align:center;line-height:1.7}
+  .pagecap b{color:var(--peach-d)}
+  .framecap{
+    font-size:13px;font-weight:900;color:#fff;background:var(--ink);
+    padding:7px 16px;border-radius:99px;margin-top:26px;letter-spacing:.02em;
+  }
+
+  /* ── window frame ── */
+  .frame{
+    width:980px;max-width:100%;background:var(--bg);
+    border-radius:16px;overflow:hidden;
+    box-shadow:0 24px 60px rgba(70,40,20,.24);
+  }
+  .frame-bar{
+    height:38px;background:#f3ece3;border-bottom:1px solid var(--wire);
+    display:flex;align-items:center;gap:7px;padding:0 14px;
+  }
+  .frame-bar i{width:11px;height:11px;border-radius:50%;background:#d9cabb;display:block}
+  .frame-bar i:nth-child(1){background:#f0a98c}
+  .frame-bar span{margin-left:10px;font-size:11px;color:var(--ink3);font-weight:700}
+
+  /* ── HOME content ── */
+  .home{padding:36px 44px 46px}
+
+  /* hero */
+  .hero h1{
+    font-size:30px;font-weight:900;letter-spacing:-.02em;color:var(--ink);
+  }
+  .hero h1 .peach{color:var(--peach-d)}
+  .hero-status{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;
+  }
+  .hs-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:800;color:var(--ink2);
+    background:var(--panel);border:1px solid var(--wire);
+    padding:6px 13px;border-radius:99px;
+  }
+  .hs-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+
+  /* section heads */
+  .sec{margin-top:34px}
+  .sec-h{display:flex;align-items:baseline;gap:11px;margin-bottom:14px;flex-wrap:wrap}
+  .sec-h h2{font-size:17px;font-weight:900;color:var(--ink);letter-spacing:-.01em}
+  .sec-h .sub{font-size:12px;color:var(--ink3);font-weight:700}
+  .sec-h .grow{flex:1}
+  .sec-h .more{font-size:12px;font-weight:800;color:var(--peach-d);cursor:pointer}
+
+  /* today tasks */
+  .tasks{
+    background:linear-gradient(135deg,#fff7ee,#fff);
+    border:1.5px solid #fed7aa;border-radius:16px;padding:18px 20px;
+  }
+  .tasks-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .tasks-h h2{font-size:15.5px;font-weight:900;color:var(--ink)}
+  .tasks-h .n{
+    font-size:11px;font-weight:900;color:#fff;background:var(--peach-d);
+    border-radius:99px;padding:2px 9px;
+  }
+  .task{
+    display:flex;align-items:center;gap:12px;
+    background:var(--panel);border:1px solid var(--wire);border-radius:12px;
+    padding:12px 14px;margin-top:9px;
+  }
+  .task .chk{width:20px;height:20px;border:2px solid var(--wire2);border-radius:6px;flex-shrink:0}
+  .task .body{flex:1;min-width:0}
+  .task .ti{font-size:13.5px;font-weight:800;color:var(--ink)}
+  .task .who{font-size:11px;font-weight:700;color:var(--ink3);margin-top:3px}
+  .task .run{
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    color:#fff;border:0;border-radius:99px;padding:7px 15px;
+    font-size:12px;font-weight:800;font-family:inherit;flex-shrink:0;
+  }
+
+  /* エージェント図鑑 — dex cards */
+  .cnt{
+    font-size:10.5px;font-weight:900;color:var(--peach-d);
+    background:var(--peach-soft);border:1px solid #fed7aa;
+    border-radius:99px;padding:2px 10px;
+  }
+  .dex{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .dc{
+    background:var(--panel);border:1px solid var(--wire);border-radius:16px;
+    padding:16px;display:flex;gap:13px;cursor:pointer;transition:all .14s;
+  }
+  .dc:hover{border-color:var(--peach);box-shadow:0 8px 22px rgba(251,146,60,.16);transform:translateY(-2px)}
+  .dc-av{
+    width:62px;height:62px;border-radius:16px;flex-shrink:0;
+    background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+    display:flex;align-items:center;justify-content:center;font-size:33px;
+  }
+  .dc-info{flex:1;min-width:0}
+  .dc-top{display:flex;align-items:center;gap:8px}
+  .dc-nm{font-size:14.5px;font-weight:900;color:var(--ink)}
+  .dc-lv{
+    font-size:10.5px;font-weight:900;color:var(--peach-d);
+    background:var(--peach-soft);border:1px solid #fed7aa;
+    border-radius:99px;padding:2px 9px;margin-left:auto;
+  }
+  .dc-role{font-size:11px;font-weight:700;color:var(--ink3);margin-top:3px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dc-metrics{display:flex;gap:18px;margin-top:9px}
+  .dc-m{font-size:10px;font-weight:700;color:var(--ink3)}
+  .dc-m b{font-size:15px;font-weight:800;color:var(--ink);font-family:'Outfit',sans-serif}
+  .dc-m b.cy{color:var(--peach-d)}
+  .dc-xp{height:6px;background:#f0e6da;border-radius:99px;overflow:hidden;margin-top:11px}
+  .dc-xp i{display:block;height:100%;background:linear-gradient(90deg,var(--peach),var(--peach-d));border-radius:99px}
+  .dc-xptext{font-size:9.5px;font-weight:700;color:var(--ink3);margin-top:5px}
+  .dc-add{
+    background:linear-gradient(135deg,#fff7ee,#fff);
+    border:1.5px dashed #fed7aa;align-items:center;
+  }
+  .dc-add .dc-av{background:linear-gradient(135deg,var(--peach),var(--peach-d));color:#fff;font-weight:800;font-size:31px}
+  .dc-add .at{font-size:14px;font-weight:900;color:var(--peach-d)}
+  .dc-add .as{font-size:11px;font-weight:700;color:var(--ink3);margin-top:3px}
+
+  /* recent conversations */
+  .convo{
+    background:var(--panel);border:1px solid var(--wire);border-radius:14px;
+    overflow:hidden;
+  }
+  .cv{
+    display:flex;align-items:center;gap:13px;padding:13px 16px;
+    border-bottom:1px solid var(--wire);
+  }
+  .cv:last-child{border-bottom:0}
+  .cv .av{
+    width:40px;height:40px;border-radius:11px;flex-shrink:0;
+    background:linear-gradient(135deg,#fff7ee,#ffe4c4);
+    display:flex;align-items:center;justify-content:center;font-size:21px;
+  }
+  .cv .body{flex:1;min-width:0}
+  .cv .top{display:flex;align-items:center;gap:8px}
+  .cv .nm{font-size:13.5px;font-weight:900;color:var(--ink)}
+  .cv .tag{font-size:9.5px;font-weight:900;padding:1px 7px;border-radius:99px;letter-spacing:.03em}
+  .cv .tag.dm{background:#fff1e3;color:var(--peach-d)}
+  .cv .tag.group{background:#e8f0ff;color:var(--blue)}
+  .cv .tag.team{background:#f1ebff;color:var(--purple)}
+  .cv .msg{font-size:12px;color:var(--ink3);font-weight:600;margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cv .time{font-size:11px;color:var(--ink3);font-weight:700;flex-shrink:0}
+
+  /* create row */
+  .create{display:flex;gap:13px;flex-wrap:wrap}
+  .ce{
+    flex:1;min-width:200px;background:var(--panel);
+    border:1.5px solid var(--wire2);border-radius:15px;padding:18px 18px;
+    cursor:pointer;
+  }
+  .ce.feat{border:2px solid var(--peach);background:linear-gradient(135deg,#fff,#fff7ee)}
+  .ce .ic{font-size:30px;margin-bottom:9px}
+  .ce h3{font-size:14.5px;font-weight:900;color:var(--ink);margin-bottom:4px}
+  .ce p{font-size:11.5px;font-weight:600;color:var(--ink3);line-height:1.5}
+
+  /* ── empty / new-user state ── */
+  .welcome{text-align:center;padding:18px 0 4px}
+  .welcome h1{font-size:28px;font-weight:900;color:var(--ink);letter-spacing:-.02em}
+  .welcome h1 .peach{color:var(--peach-d)}
+  .welcome .lead{font-size:13.5px;font-weight:700;color:var(--ink2);margin-top:10px}
+  .steps{display:flex;gap:13px;flex-wrap:wrap;margin-top:24px}
+  .step{
+    flex:1;min-width:200px;background:var(--panel);
+    border:1px solid var(--wire);border-radius:15px;padding:20px 18px;text-align:center;
+  }
+  .step .num{
+    width:30px;height:30px;border-radius:50%;margin:0 auto 11px;
+    background:var(--peach-soft);color:var(--peach-d);
+    font-size:14px;font-weight:900;font-family:'Outfit',sans-serif;
+    display:flex;align-items:center;justify-content:center;border:1.5px solid #fed7aa;
+  }
+  .step .se{font-size:30px;margin-bottom:8px}
+  .step h3{font-size:14px;font-weight:900;color:var(--ink);margin-bottom:5px}
+  .step p{font-size:11.5px;font-weight:600;color:var(--ink3);line-height:1.55}
+  .cta-row{display:flex;gap:12px;justify-content:center;margin-top:28px;flex-wrap:wrap}
+  .cta-primary{
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    color:#fff;border:0;border-radius:99px;padding:15px 32px;
+    font-size:15px;font-weight:900;font-family:inherit;
+    box-shadow:0 8px 22px rgba(234,88,12,.34);
+  }
+  .cta-sub{
+    background:var(--panel);color:var(--ink2);
+    border:1.5px solid var(--wire2);border-radius:99px;padding:15px 24px;
+    font-size:13px;font-weight:800;font-family:inherit;
+  }
+
+  /* annotation callouts */
+  .notes{
+    width:980px;max-width:100%;background:var(--panel);
+    border:1px solid var(--wire);border-radius:14px;padding:20px 24px;margin-top:8px;
+  }
+  .notes h4{font-size:13px;font-weight:900;color:var(--peach-d);margin-bottom:11px}
+  .notes ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .notes li{font-size:12.5px;color:var(--ink2);font-weight:600;line-height:1.6;padding-left:20px;position:relative}
+  .notes li::before{content:"→";position:absolute;left:0;color:var(--peach);font-weight:900}
+  .notes li b{color:var(--ink);font-weight:900}
+  @media(max-width:680px){ .home{padding:26px 20px 34px} .dex{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<div class="pagecap">
+  <b>HOME リデザイン案</b> — 「わかりやすく」するための再構成モック<br>
+  ① いつものユーザー（AIが数体いる状態） ／ ② 新規ユーザー（まだ0体）
+</div>
+
+<!-- ════════ ① RETURNING USER ════════ -->
+<div class="framecap">① いつものユーザー</div>
+<div class="frame">
+  <div class="frame-bar"><i></i><i></i><i></i><span>myaiagents.agency — HOME</span></div>
+  <div class="home">
+
+    <!-- hero -->
+    <div class="hero">
+      <h1>おかえりなさい、kota さん <span class="peach">🍑</span></h1>
+      <div class="hero-status">
+        <span class="hs-chip"><span class="dot"></span>AI 3体が稼働中</span>
+        <span class="hs-chip">📋 今日のタスク 2件</span>
+        <span class="hs-chip">Mon, May 18 · 09:24</span>
+      </div>
+    </div>
+
+    <!-- create new (top) -->
+    <div class="sec">
+      <div class="sec-h"><h2>＋ 新しく始める</h2></div>
+      <div class="create">
+        <div class="ce feat">
+          <div class="ic">🤖</div>
+          <h3>AI を雇う</h3>
+          <p>1体ずつ・あなた専属の AI を組み立てる</p>
+        </div>
+        <div class="ce">
+          <div class="ic">🎯</div>
+          <h3>AI チームを組む</h3>
+          <p>複数 AI が連携して業務を丸ごと自動化</p>
+        </div>
+        <div class="ce">
+          <div class="ic">🏪</div>
+          <h3>Agent Store</h3>
+          <p>他クリエイターの既製 AI を導入する</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- today tasks -->
+    <div class="sec">
+      <div class="tasks">
+        <div class="tasks-h"><h2>📋 今日のタスク</h2><span class="n">2</span></div>
+        <div class="task">
+          <div class="chk"></div>
+          <div class="body">
+            <div class="ti">競合3社の料金プランを比較してまとめる</div>
+            <div class="who">🧑‍💼 小林秘書</div>
+          </div>
+          <button class="run">▶ 実行</button>
+        </div>
+        <div class="task">
+          <div class="chk"></div>
+          <div class="body">
+            <div class="ti">新着記事のドラフトを書く（SEOキーワード入り）</div>
+            <div class="who">📝 SEO太郎</div>
+          </div>
+          <button class="run">▶ 実行</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- agent dex -->
+    <div class="sec">
+      <div class="sec-h">
+        <h2>🪪 エージェント図鑑</h2>
+        <span class="cnt">3 体</span>
+        <span class="grow"></span>
+        <span class="sub">カードをタップで成績カードを開く</span>
+      </div>
+      <div class="dex">
+        <div class="dc">
+          <div class="dc-av">🧑‍💼</div>
+          <div class="dc-info">
+            <div class="dc-top"><span class="dc-nm">小林秘書</span><span class="dc-lv">Lv.3</span></div>
+            <div class="dc-role">🗂 秘書・スケジュール / リサーチ</div>
+            <div class="dc-metrics">
+              <span class="dc-m"><b class="cy">92%</b> 成功率</span>
+              <span class="dc-m"><b>24</b> 出力</span>
+              <span class="dc-m"><b>Lv.3</b> 信頼</span>
+            </div>
+            <div class="dc-xp"><i style="width:64%"></i></div>
+            <div class="dc-xptext">次のレベルまで 36 XP</div>
+          </div>
+        </div>
+        <div class="dc">
+          <div class="dc-av">📝</div>
+          <div class="dc-info">
+            <div class="dc-top"><span class="dc-nm">SEO太郎</span><span class="dc-lv">Lv.2</span></div>
+            <div class="dc-role">✍️ Web ライター・SEO 記事</div>
+            <div class="dc-metrics">
+              <span class="dc-m"><b class="cy">80%</b> 成功率</span>
+              <span class="dc-m"><b>11</b> 出力</span>
+              <span class="dc-m"><b>Lv.2</b> 信頼</span>
+            </div>
+            <div class="dc-xp"><i style="width:38%"></i></div>
+            <div class="dc-xptext">次のレベルまで 62 XP</div>
+          </div>
+        </div>
+        <div class="dc">
+          <div class="dc-av">📊</div>
+          <div class="dc-info">
+            <div class="dc-top"><span class="dc-nm">分析くん</span><span class="dc-lv">Lv.1</span></div>
+            <div class="dc-role">📈 データ分析・レポート</div>
+            <div class="dc-metrics">
+              <span class="dc-m"><b>—</b> 成功率</span>
+              <span class="dc-m"><b>2</b> 出力</span>
+              <span class="dc-m"><b>Lv.1</b> 信頼</span>
+            </div>
+            <div class="dc-xp"><i style="width:12%"></i></div>
+            <div class="dc-xptext">次のレベルまで 88 XP</div>
+          </div>
+        </div>
+        <div class="dc dc-add">
+          <div class="dc-av">＋</div>
+          <div class="dc-info">
+            <div class="at">AI を雇う</div>
+            <div class="as">専門 AI を何人でも図鑑に追加</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- recent conversations -->
+    <div class="sec">
+      <div class="sec-h">
+        <h2>💬 最近の会話</h2>
+        <span class="grow"></span>
+        <span class="more">すべて見る →</span>
+      </div>
+      <div class="convo">
+        <div class="cv">
+          <div class="av">🧑‍💼</div>
+          <div class="body">
+            <div class="top"><span class="nm">小林秘書</span><span class="tag dm">DM</span></div>
+            <div class="msg">競合3社の価格をまとめました。表をご確認ください 👇</div>
+          </div>
+          <div class="time">2分前</div>
+        </div>
+        <div class="cv">
+          <div class="av">🎯</div>
+          <div class="body">
+            <div class="top"><span class="nm">営業オートメ・チーム</span><span class="tag team">Team</span></div>
+            <div class="msg">来週の提案資料、ドラフトが完成しました</div>
+          </div>
+          <div class="time">1時間前</div>
+        </div>
+        <div class="cv">
+          <div class="av">👥</div>
+          <div class="body">
+            <div class="top"><span class="nm">田中さん + AI 企画部屋</span><span class="tag group">Group</span></div>
+            <div class="msg">ロゴ案、3つに絞りました</div>
+          </div>
+          <div class="time">昨日</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════ ② NEW USER ════════ -->
+<div class="framecap">② 新規ユーザー（まだ AI が0体）</div>
+<div class="frame">
+  <div class="frame-bar"><i></i><i></i><i></i><span>myaiagents.agency — HOME</span></div>
+  <div class="home">
+
+    <div class="welcome">
+      <h1>ようこそ、kota さん <span class="peach">🍑</span></h1>
+      <div class="lead">まずは最初の AI を1体雇って、仕事を任せてみましょう。</div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div class="se">🤖</div>
+        <h3>雇う</h3>
+        <p>得意分野を選んで、あなた専属の AI を1体つくる</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div class="se">📋</div>
+        <h3>任せる</h3>
+        <p>やってほしい仕事を伝えるだけ。AI が手を動かす</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div class="se">📈</div>
+        <h3>成果を受け取る</h3>
+        <p>こなすほど AI がレベルアップ。チームが強くなる</p>
+      </div>
+    </div>
+
+    <div class="cta-row">
+      <button class="cta-primary">🤖 最初の AI を雇う</button>
+      <button class="cta-sub">📋 テンプレートから選ぶ</button>
+      <button class="cta-sub">🏪 Agent Store を見る</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- annotations -->
+<div class="notes">
+  <h4>現状の HOME からの変更点</h4>
+  <ul>
+    <li><b>状態を一目で：</b> 挨拶の下に「AI 3体が稼働中・タスク2件」のチップを置き、開いた瞬間に“今どうなっているか”が分かる。</li>
+    <li><b>今日のタスクを最上段に：</b> 一番やるべき行動（▶実行）をスクロールせず見える位置へ。</li>
+    <li><b>エージェント図鑑を主役に昇格：</b> 最下部だった小カードを、2段目のリッチな図鑑カードへ。役割・Lv・成功率・出力数・信頼Lv・XPバーを載せ、“集めて育てる”コレクション感を出す。タップで成績カードへ。</li>
+    <li><b>3つの箱 → 「最近の会話」1本に：</b> DM/Group/Team を別々の箱で並べるのをやめ、LINE/Slack 風に新着順の1リスト＋小タグに統合。重複が消え、迷わない。</li>
+    <li><b>作成導線を最上段に集約：</b> 「3つのクイックカード」＋「凡例」＋「各箱の＋ボタン」がバラバラだったのを、挨拶直下の「＋新しく始める」3枚に一本化。雇う動線を常に最初に見せる。</li>
+    <li><b>新規ユーザー専用の空状態：</b> 0体のときは「雇う→任せる→成果」の3ステップ＋大きな1ボタンだけ。情報を出しすぎず、最初の1体に集中させる（オンボーディング完了率対策）。</li>
+  </ul>
+</div>
+
+</body>
+</html>

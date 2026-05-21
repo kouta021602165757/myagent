@@ -4474,13 +4474,55 @@ function _renderDelegateCard(inner, stepDone){
   if(estimate){
     foot = '<div class="deli-foot">⏱ ' + (isJa ? '見積もり: ' : 'Estimate: ') + esc(estimate) + '</div>';
   }
+  // ── 「✏ 違うなら修正」ボタン ─────────────────────────────────
+  // タスク解釈が違うときにユーザーが即座に直せる経路。完了済み / 中断済み
+  // タスクには出さない (= 進行中の "📋 お任せ受領" / "📋 お任せ進行中" 状態のみ)。
+  // クリックで composer に「違くて、〜」のテンプレを入れて focus する。
+  // 送信すると server の _understandTask が scope: "correction" を返して
+  // current_task が新しい解釈に置き換わる、という流れ。
+  var fixBtn = '';
+  if(!allDone && !_isInterrupted){
+    fixBtn = '<div class="deli-fix"><button class="deli-fix-btn" onclick="_correctTask(this)">'
+           + (isJa ? '✏ 違うなら修正' : '✏ Correct this')
+           + '</button></div>';
+  }
   return '<div class="deli-card' + (allDone ? ' done' : '') + (_isInterrupted ? ' paused' : '') + '">'
        +   '<div class="deli-head">' + headLabel
        +     '<span class="deli-head-status">' + esc(status) + '</span>'
        +   '</div>'
        +   rows
        +   foot
+       +   fixBtn
        + '</div>';
+}
+
+/* ── タスク解釈の訂正ハンドラ ───────────────────────────────
+   お任せ受領カードの「✏ 違うなら修正」ボタンから呼ばれる。
+   composer (メイン or thread) に訂正テンプレを差し込んで focus するだけ。
+   ユーザーが内容を編集して送信 → 次ターンの _understandTask が
+   scope: "correction" を返して current_task が置き換わる。 */
+function _correctTask(btn){
+  if(!activeId) return;
+  var inThread = !!(btn && btn.closest && btn.closest('#threadDrawer'));
+  var taId = inThread ? 'tci' : 'ci';
+  var ta = document.getElementById(taId);
+  if(!ta) return;
+  // 既に composer に内容があれば末尾に足す、無ければテンプレを入れる
+  var tmpl = isJa
+    ? '違くて、'
+    : 'Actually, ';
+  if(ta.value && ta.value.trim()){
+    ta.value = ta.value.trim() + '\n\n' + tmpl;
+  } else {
+    ta.value = tmpl;
+  }
+  try { exTA(ta); } catch(_){}
+  ta.focus();
+  // カーソルを末尾に
+  try {
+    var len = ta.value.length;
+    ta.setSelectionRange(len, len);
+  } catch(_){}
 }
 // Once highlight.js finishes loading (defer script), walk every code block
 // already in the DOM and apply highlighting. New code blocks emitted by _md()

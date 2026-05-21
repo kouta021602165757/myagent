@@ -1793,6 +1793,19 @@ html[data-theme="dark"] .deli-card{background:linear-gradient(180deg,rgba(255,25
 html[data-theme="dark"] .deli-card.done{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(34,197,94,.04));border-color:rgba(34,197,94,.32)}
 html[data-theme="dark"] .deli-box{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18)}
 html[data-theme="dark"] .deli-foot{border-top-color:rgba(255,255,255,.12)}
+/* 「✏ 違うなら修正」 — タスク解釈の訂正ボタン。お任せ受領カードの右下に
+   ひっそり置く (主要 CTA ではないため目立ち過ぎないトーン)。 */
+.deli-fix{margin-top:8px;text-align:right}
+.deli-fix-btn{
+  background:transparent;border:1px solid rgba(180,120,80,.25);
+  color:var(--text3,#9a6a4a);
+  font-size:11px;font-weight:700;padding:5px 10px;border-radius:7px;
+  cursor:pointer;font-family:inherit;
+  transition:background .15s, border-color .15s, color .15s;
+}
+.deli-fix-btn:hover{background:rgba(180,120,80,.08);border-color:rgba(180,120,80,.4);color:var(--text2,#6b4226)}
+html[data-theme="dark"] .deli-fix-btn{border-color:rgba(255,255,255,.16);color:#a8a8b0}
+html[data-theme="dark"] .deli-fix-btn:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.28);color:#d8d8e0}
 
 /* Vision review modal */
 .vr-modal{

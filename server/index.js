@@ -2870,52 +2870,70 @@ function _shouldRunPlanner(message){
 // Run a dedicated Haiku planner and stream the お任せ受領カード via SSE.
 // Returns the parsed plan object (or null if planner shouldn't fire / failed).
 // Errors are swallowed — planner is purely a UX optimization, never blocks chat.
-async function _emitDelegationCardEarly(message, sse, agent){
-  if(!sse) return null;                          // only for streaming requests
-  if(!_shouldRunPlanner(message)) return null;   // skip simple requests
-  // Hard wall-clock timeout — planner is a UX optimization, NEVER allowed to
-  // block the chat. If Haiku is slow (Anthropic congestion, network) we just
-  // skip it and let the main AI proceed without a pre-emitted card. The
-  // previous version used callAI's default 180s timeout which could hang the
-  // whole turn long enough for Render's edge proxy to 504.
-  const PLANNER_BUDGET_MS = 5000;
+// ── Task Understanding (Haiku) ────────────────────────────────
+// 「指示 → Agent が理解 → 最新の任された仕事として state に保存」を
+// 担当する単発の Haiku コール。チャット履歴は**見せない** — 過去の
+// 未完タスクと現在の依頼が混ざる事故 (「前回の続き」と勝手に書く等) を
+// 構造的に防ぐ。前回の current_task の要約だけは「scope 判定」のために
+// 1 行渡す。
+//
+// 出力:
+//   - scope: "new" (新規・上書き) / "continuation" (前のタスクの追記) / "correction" (直前タスクの訂正)
+//   - requested: ユーザー依頼の要約 (1-2 文)
+//   - steps: 進め方の配列 (空でも OK)
+//   - estimate_minutes: 見積もり
+//
+// 返り値の task は agent.current_task に保存される。
+async function _understandTask(message, sse, agent){
+  if(!_shouldRunPlanner(message)) return null;   // 単純な依頼は task 化しない
+  const BUDGET_MS = 6000;  // 5s → 6s に拡張 (1 段 AI コールで安定化したい)
+  const prevTask = (agent && agent.current_task) || null;
+  const prevSummary = prevTask && prevTask.requested
+    ? ('\n\n## 直前の任された仕事 (scope 判定にのみ使用)\n'
+       + '「' + String(prevTask.requested).slice(0, 200) + '」'
+       + (prevTask.status === 'completed' ? ' (完了済み)' : ' (未完 / 中断中)'))
+    : '';
   const planSys =
-`あなたはユーザーの依頼を見て「複数手順の作業かどうか」を判定し、複数手順なら計画を JSON で返すプランナーです。
+`あなたは「ユーザーの依頼を理解して、現在の任された仕事 (current_task) を作成する」専任の理解エージェントです。
 
-判定基準 (積極的に true にすること — ユーザーが「何をやるか」見えないと困る):
-- 2 個以上の手順 / 複数の側面 / 複数の要素を含む → needs_delegation: true
-- 「カード化、グラデーション、アニメーション」のような複数項目列挙 → needs_delegation: true (それぞれを step に)
-- 「デザインを改善」「セクション追加」のような複合作業 → needs_delegation: true (read → 設計 → 適用 の 3 step に分解)
-- 純粋な質問 (「これいくら?」「何ができる?」) や 1 単語応答 → needs_delegation: false
-- 「見せて」「開いて」だけ → needs_delegation: false (artifact 表示のみ)
+## 重要なルール
+- ユーザーが今送ったメッセージ**だけ**を見て要約すること
+- チャット履歴を推測してはいけない — 「前回の続き」「以前のタスクの〜」のような表現は**絶対に書かない**
+- 「直前の任された仕事」が下に書かれていれば、それは **scope 判定の参考** にのみ使用すること (= 同じ仕事の継続か / 訂正か / 別件か)
+- 不明なら scope は "new" にする (= 上書き)。誤って「continuation」にして前のタスクを引きずる方が UX 損害が大きい
 
-迷ったら true にする。ユーザーは task card で何をやるか見える方を好む。
+## scope 判定
+- "new" (新規・上書き): ユーザーが「新しく〜」「別件で〜」「次は〜」など明示 / または前のタスクと無関係な内容 / または前のタスクが完了済み
+- "continuation" (継続): ユーザーが「あれも追加して」「さらに〜」「続きで〜」など明示 / 前のタスクと明らかに地続き
+- "correction" (訂正): 「違くて」「じゃなくて」「あ、〜にして」「やっぱり〜」など直前を修正する意図
 
-steps の書き方:
-- 2-6 個。簡潔な動詞 (例: 「現在の HTML を確認」「カード化を適用」「グラデーションを追加」「アニメーション動作を実装」「結果を確認」)
-- 各 step に対応する tool 名を tool フィールドに入れる (不明なら null)
-- 利用可能 tool 例: read_artifact, edit_artifact, create_artifact, web_search, web_fetch, web_screenshot, web_read_markdown, generate_image, generate_pdf, generate_chart, sheets_read, sheets_write, send_email, notify_slack
+## steps の書き方
+- 1-6 個。簡潔な動詞 (例: 「現在の HTML を確認」「カード化を適用」)
+- 1 step に対応する tool 名を tool フィールドに (不明なら null)
+- 利用可能 tool 例: read_artifact, edit_artifact, create_artifact, web_search, web_fetch, web_screenshot, generate_image, generate_pdf, generate_chart, sheets_read, sheets_write, send_email, notify_slack
 
-出力形式: JSON のみ。前置きや \`\`\` も禁止。
+## needs_task 判定
+- 純粋な質問 (「これいくら?」「何ができる?」) → false (task 不要)
+- 「見せて」「開いて」だけ → false
+- 1 アクション以上を AI に実行させる依頼 → true (積極的に true)
+
+## 出力形式
+JSON のみ。前置きや \`\`\` も禁止。
 {
-  "needs_delegation": boolean,
-  "requested": "ユーザー依頼の 1-2 文要約 (60 字以内)",
+  "needs_task": boolean,
+  "scope": "new" | "continuation" | "correction",
+  "requested": "ユーザー依頼の 1-2 文要約 (100 字以内)",
   "steps": [{"n":1,"text":"...(40 字以内)","tool":"tool_name か null"}],
   "estimate_minutes": 1-10
 }
 
-needs_delegation が false なら steps は [] でよい。`;
+needs_task が false なら scope は "new"、steps は []、estimate_minutes は 1 で良い。`;
   try {
-    // Haiku is fast (<2s typical). Cap message size to keep prompt small.
-    // Promise.race against PLANNER_BUDGET_MS — if Haiku doesn't return in
-    // 5 seconds, we abandon the planner and proceed without a pre-emitted
-    // card. The Haiku call itself keeps running in the background and is
-    // garbage-collected; nothing else depends on it.
     const _budgetTimer = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('planner_timeout')), PLANNER_BUDGET_MS));
+      setTimeout(() => reject(new Error('planner_timeout')), BUDGET_MS));
     const planRes = await Promise.race([
       callAI(
-        [{role:'user', content: String(message).slice(0, 1200)}],
+        [{role:'user', content: String(message).slice(0, 1200) + prevSummary}],
         planSys,
         'haiku',
         null
@@ -2929,40 +2947,103 @@ needs_delegation が false なら steps は [] でよい。`;
     let plan;
     try { plan = JSON.parse(m[0]); }
     catch(_){ return null; }
-    if(!plan || !plan.needs_delegation) return null;
+    if(!plan || !plan.needs_task) return null;
     const steps = Array.isArray(plan.steps) ? plan.steps : [];
-    if(steps.length < 2) return null;  // 2+ steps gets a card; was 3+ but
-                                       // too many 2-step tasks were falling
-                                       // through and leaving users with no
-                                       // visibility into the plan.
-    // Build the <delegate>...</delegate> markdown the client already knows
-    // how to render. The same format the main AI was supposed to emit —
-    // just sourced from a faster, dedicated call.
-    const stepsMd = steps.slice(0, 8).map((s, i) => {
-      const n = (Number.isInteger(s && s.n) ? s.n : (i + 1));
-      const txt2 = String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60);
-      const tool = (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? (' `' + s.tool + '`') : '';
-      return '- [ ] ' + n + '. ' + txt2 + tool;
-    }).join('\n');
-    const requested = String(plan.requested || '').replace(/[\r\n]+/g, ' ').slice(0, 100) || String(message).slice(0, 60);
+    // 0 step は task 化しない (= 単発質問扱い)。1+ step なら state 化する。
+    if(steps.length < 1) return null;
+    const requested = String(plan.requested || '').replace(/[\r\n]+/g, ' ').slice(0, 200)
+                       || String(message).slice(0, 60);
     const estMin = Math.max(1, Math.min(20, parseInt(plan.estimate_minutes, 10) || 3));
-    const card = '<delegate>\n'
-      + '**任されたこと:** ' + requested + '\n\n'
-      + '**進め方:**\n' + stepsMd + '\n\n'
-      + '**見積もり:** 約 ' + estMin + ' 分\n'
-      + '</delegate>\n\n';
-    // Stream the card as a single SSE delta event. The client's _md parses
-    // <delegate> just the same as if the main AI had emitted it.
-    try { sse('delta', { text: card }); } catch(_){}
-    console.log('[planner] emitted delegation card,', steps.length, 'steps');
-    return plan;
+    const scope = ['new','continuation','correction'].includes(plan.scope) ? plan.scope : 'new';
+    // ── scope によって current_task を作る/合成する ──
+    let nextTask;
+    const _nowIso = new Date().toISOString();
+    if(scope === 'continuation' && prevTask && prevTask.status !== 'completed'){
+      // 前タスクの steps を残しつつ新しい steps を末尾に足す
+      const baseSteps = Array.isArray(prevTask.steps) ? prevTask.steps.slice(0, 8) : [];
+      const offset = baseSteps.length;
+      const extra = steps.slice(0, 8).map((s, i) => ({
+        n: offset + i + 1,
+        text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
+        tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
+        done: false,
+      }));
+      nextTask = {
+        requested: (prevTask.requested || '') + ' / ' + requested,
+        steps: baseSteps.concat(extra).slice(0, 10),
+        scope: 'continuation',
+        estimate_minutes: estMin,
+        status: 'in_progress',
+        created_at: prevTask.created_at || _nowIso,
+        updated_at: _nowIso,
+      };
+    } else if(scope === 'correction' && prevTask){
+      // 訂正 — requested と steps を新規に置き換えつつ created_at は維持
+      nextTask = {
+        requested: requested,
+        steps: steps.slice(0, 8).map((s, i) => ({
+          n: i + 1,
+          text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
+          tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
+          done: false,
+        })),
+        scope: 'correction',
+        estimate_minutes: estMin,
+        status: 'in_progress',
+        created_at: prevTask.created_at || _nowIso,
+        updated_at: _nowIso,
+        corrected_from: prevTask.requested || '',
+      };
+    } else {
+      // new (デフォルト)
+      nextTask = {
+        requested: requested,
+        steps: steps.slice(0, 8).map((s, i) => ({
+          n: i + 1,
+          text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
+          tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
+          done: false,
+        })),
+        scope: 'new',
+        estimate_minutes: estMin,
+        status: 'in_progress',
+        created_at: _nowIso,
+        updated_at: _nowIso,
+      };
+    }
+    // ── agent に保存 (DB.save は呼び出し側で turn 終了時に走る) ──
+    if(agent){
+      agent.current_task = nextTask;
+    }
+    // ── SSE で「お任せ受領カード」を即時 emit (UX: 1 秒以内に画面に出す) ──
+    // クライアントは <delegate>...</delegate> をパースして既存の deli-card
+    // 描画ロジックに乗せる。state ベース描画は次フェーズで導入予定だが、
+    // 当面は state も <delegate> も両方使う (state は AI 注入用、card は表示用)。
+    if(sse){
+      const stepsMd = nextTask.steps.map((s, i) => {
+        const tool = s.tool ? (' `' + s.tool + '`') : '';
+        const check = s.done ? 'x' : ' ';
+        return '- [' + check + '] ' + (i + 1) + '. ' + s.text + tool;
+      }).join('\n');
+      const card = '<delegate>\n'
+        + '**任されたこと:** ' + nextTask.requested + '\n\n'
+        + '**進め方:**\n' + stepsMd + '\n\n'
+        + '**見積もり:** 約 ' + nextTask.estimate_minutes + ' 分\n'
+        + '</delegate>\n\n';
+      try { sse('delta', { text: card }); } catch(_){}
+      // 構造化 state を別チャネルで送る (将来のクライアント側 state-based 描画用)
+      try { sse('task_assigned', nextTask); } catch(_){}
+    }
+    console.log('[task] understood,', nextTask.scope, '/', nextTask.steps.length, 'steps');
+    return nextTask;
   } catch(e){
-    // Planner failures are non-fatal — main AI flow proceeds without a
-    // pre-emitted card and may emit its own <delegate> as before.
-    console.warn('[planner] failed:', (e && e.message) || e);
+    console.warn('[task] understanding failed:', (e && e.message) || e);
     return null;
   }
 }
+
+// 旧名 alias — 既存呼び出し箇所互換 (Phase 2 で削除予定)
+const _emitDelegationCardEarly = _understandTask;
 
 function _detectIntentCategories(message){
   const m = String(message || '').toLowerCase();
@@ -18766,17 +18847,18 @@ async function handleAPI(req,res,pathname,method,ip){
       // Stop pinging when client disconnects.
       req.on('close', ()=>{ if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; } });
     }
-    // Phase A — pre-emit the お任せ受領カード via a dedicated Haiku planner
-    // call. Runs in parallel-ish with the main AI prep so the card appears
-    // in ~1 second instead of waiting 3-5s for Sonnet to compose it.
-    // See _emitDelegationCardEarly. Returns null for simple requests or on
-    // any error (planner is purely a UX optimization, never blocks).
+    // Task Understanding — Haiku が「ユーザーの今のメッセージだけ」を見て
+    // 任された仕事を理解し、agent.current_task に保存する。チャット履歴を
+    // 見せないため、過去の未完タスクとの混同 (「前回の続き」と勝手に書く等) が
+    // 構造的に起きない。See _understandTask. 失敗時は null (このターンでは
+    // current_task を更新しないだけ、チャット自体は通常通り進む)。
     let _earlyPlan = null;
     if(wantStreamTools && sse){
       const _plannerT0 = Date.now();
-      _earlyPlan = await _emitDelegationCardEarly(message, sse, agent);
+      _earlyPlan = await _understandTask(message, sse, agent);
       const _plannerMs = Date.now() - _plannerT0;
-      console.log('[turn] planner', _plannerMs + 'ms', _earlyPlan ? ('plan=' + (_earlyPlan.steps||[]).length + ' steps') : 'skipped');
+      console.log('[turn] task-understand', _plannerMs + 'ms',
+        _earlyPlan ? ('scope=' + _earlyPlan.scope + ' steps=' + (_earlyPlan.steps||[]).length) : 'skipped');
     }
     // Turn-level wall-clock timer — emits a single line at the end so we can
     // see, per-turn, how much wall-clock was spent. This is the missing
@@ -18913,10 +18995,35 @@ async function handleAPI(req,res,pathname,method,ip){
             streamedText += txt;
             try { sse('delta', { text: txt }); } catch(e){}
           } : null;
-          // _earlyPlan があれば <delegate> は既に画面に表示済みなので再出力させない、
-          // だけのシンプルな指示に縮小。段階承認の縛りは無し (= AI は計画全体を走らせる)。
+          // current_task が agent state に保存されていれば、それを **最優先の
+          // 指示** として system prompt に注入。これがチャット履歴の他のタスクと
+          // 競合した場合は current_task を真とする。← 「履歴から AI が勝手に
+          // 『前回の続き』と解釈する事故」の根本対策。
           let _sysForTurn = buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})});
-          if(_earlyPlan){
+          // 優先: agent.current_task (新システム) > _earlyPlan (Phase 1 互換)
+          const _activeTask = (agent && agent.current_task) || _earlyPlan;
+          if(_activeTask && _activeTask.requested){
+            const _ts = (Array.isArray(_activeTask.steps) ? _activeTask.steps : []);
+            const _stepsLine = _ts.length
+              ? _ts.map((s, i) => '  ' + (i+1) + '. ' + (s.text||'') + (s.tool ? ' ('+s.tool+')' : '') + (s.done ? ' ✅' : '')).join('\n')
+              : '  (進め方は AI が判断)';
+            _sysForTurn += '\n\n🎯 【あなたが今受け持っている仕事 — current_task】\n'
+              + '任されたこと: ' + _activeTask.requested + '\n'
+              + '進め方:\n' + _stepsLine + '\n'
+              + (_activeTask.scope === 'correction'
+                  ? '※ 直前のタスク「' + (_activeTask.corrected_from || '') + '」をユーザーが訂正した結果がこれ。古い解釈は破棄して新しい requested に集中すること。\n'
+                  : '')
+              + (_activeTask.scope === 'continuation'
+                  ? '※ 直前のタスクの継続として追加された仕事。前の進捗は保持しつつ追加分を進める。\n'
+                  : '')
+              + '\n'
+              + '【重要なルール】\n'
+              + '- これがあなたの今のミッション。チャット履歴に他のタスクがあっても、命令としては current_task のみを真とすること。\n'
+              + '- 履歴は文脈情報 (どのファイルか、どんな前提か等) としては使ってよいが、「前回の続き」「以前の依頼」のような表現を本文に書かないこと。ユーザーは今の依頼の話をしている。\n'
+              + '- <delegate>...</delegate> は既にユーザー画面に表示済み。**再出力禁止**。\n'
+              + '- 計画に沿って必要な tool を順に呼んで、仕事を最後まで進めてください。';
+          } else if(_earlyPlan){
+            // 旧パス (current_task に保存されてないが earlyPlan は出た) のフォールバック
             _sysForTurn += '\n\n[このターン限定] お任せ受領カード <delegate>...</delegate> は既にユーザー画面に表示済み ('
               + (_earlyPlan.steps||[]).length
               + ' ステップ)。<delegate> を再度出力しないこと。計画に沿って必要な tool を順に呼んで仕事を最後まで進めてください。';
@@ -19371,6 +19478,50 @@ async function handleAPI(req,res,pathname,method,ip){
         {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent2}];
     }
     if(agent.history.length>200)agent.history=agent.history.slice(-200);
+    // ── current_task の進捗を更新 ────────────────────────────────
+    // 1) reply 本文の「✅ ステップN 完了」マーカーで明示済み step を done に
+    // 2) 加えて、このターンで mutating tool (create_artifact / edit_artifact /
+    //    send_email / sheets_write 等) が成功した数だけ「最初の未完 step から
+    //    順に done を埋める」フォールバック (= AI がマーカー忘れても進捗が出る)
+    // 全 step が done になったら status を completed に。
+    try {
+      if(agent.current_task && Array.isArray(agent.current_task.steps) && agent.current_task.steps.length){
+        const _t = agent.current_task;
+        // (a) marker — 「✅ ステップN 完了」の最大 N まで done
+        const _replyText = String(reply || '');
+        const _markRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*([\d０-９]+)\s*(?:完了|done|完成|終了)/g;
+        let _maxN = 0;
+        let _mk;
+        while((_mk = _markRe.exec(_replyText)) !== null){
+          const _ds = String(_mk[1]||'').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+          const n = parseInt(_ds, 10);
+          if(n && n > _maxN) _maxN = n;
+        }
+        if(_maxN > 0){
+          for(let i = 0; i < Math.min(_maxN, _t.steps.length); i++){
+            _t.steps[i].done = true;
+          }
+        }
+        // (b) mutating tool fallback
+        const _mutToolNames = new Set(['edit_artifact','create_artifact','replace_text','sheets_write','sheets_append','send_email','notify_slack','notify_discord','generate_image','edit_image','generate_pdf','generate_chart','wordpress_publish']);
+        const _mutCount = (Array.isArray(toolLog) ? toolLog : [])
+          .filter(l => l && l.ok && _mutToolNames.has(l.name)).length;
+        if(_mutCount > 0){
+          // 既に done の数を超えた分だけ追加で done に
+          const _alreadyDone = _t.steps.filter(s => s.done).length;
+          const _newDone = Math.min(_t.steps.length, _alreadyDone + _mutCount);
+          for(let i = 0; i < _newDone; i++){
+            _t.steps[i].done = true;
+          }
+        }
+        // status 更新
+        if(_t.steps.every(s => s.done)){
+          _t.status = 'completed';
+          _t.completed_at = new Date().toISOString();
+        }
+        _t.updated_at = new Date().toISOString();
+      }
+    } catch(e){ console.warn('[task] progress update failed:', e.message); }
     _awardAgentXp(agent);  // Phase 1: level/XP progression
     payerUser.balance_jpy=Math.round(((payerUser.balance_jpy||0)-cost.jpy)*1000)/1000;
     payerUser.usage_count=(payerUser.usage_count||0)+1;

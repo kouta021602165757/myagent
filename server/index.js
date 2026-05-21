@@ -461,6 +461,35 @@ const DB={
     throw new Error('Supabase create failed after column-drop retries');
   },
   async save(user){
+    // ── JSONB row diet — safety net for old / accumulated state ──
+    // Even if create/edit paths cap properly going forward, users may already
+    // have multi-MB rows from before. Run every save through a compactor so
+    // the row shrinks on next write. Same 3 rules as the create path:
+    //   (1) max 30 artifacts (oldest dropped)
+    //   (2) max 1 version snapshot per artifact
+    //   (3) artifacts not touched in 7+ days → html stripped (keep metadata)
+    // Mutation is on the in-memory user too, not just the payload — so
+    // subsequent calls in the same request see the diet'd version.
+    const _compactArtifacts = (u) => {
+      if(!u || !Array.isArray(u.artifacts) || u.artifacts.length === 0) return;
+      if(u.artifacts.length > 30){
+        u.artifacts.splice(0, u.artifacts.length - 30);
+      }
+      const STALE_MS = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      for(const a of u.artifacts){
+        if(!a) continue;
+        if(Array.isArray(a.versions) && a.versions.length > 1){
+          a.versions = a.versions.slice(-1);
+        }
+        const ts = Date.parse(a.updated_at || a.created_at || '') || 0;
+        if(ts > 0 && now - ts > STALE_MS && typeof a.html === 'string' && a.html.length > 500){
+          a.html = null;
+          a.html_stripped = true;
+        }
+      }
+    };
+    _compactArtifacts(user);
     // ── Sanitize: never persist streaming:true on history entries ──
     // An interrupted SSE leaves a stale "🍑 生成中…" bubble in the in-memory
     // agent.history. Without this sanitize step, the chat handler's append
@@ -488,6 +517,7 @@ const DB={
     if(!USE_SUPA){LDB.upd(user);return;}
     const payload = {...user};
     delete payload.id; // never update primary key
+    _compactArtifacts(payload);  // double-apply on payload for safety
     _sanitizeAgentHistories(payload);
     for(let attempt=0; attempt<12; attempt++){
       // select=id → the PATCH echoes back only [{id}] instead of the entire
@@ -6584,9 +6614,32 @@ async function executeArtifactTool(input, ownerUser, ctx){
         created_at: new Date().toISOString(),
         size: Buffer.byteLength(html, 'utf8'),
       });
-      // Cap at 100 most-recent artifacts per user to keep JSONB row small.
-      if(ownerUser.artifacts.length > 100){
-        ownerUser.artifacts.splice(0, ownerUser.artifacts.length - 100);
+      // ── JSONB row サイズの徹底削減 ────────────────────────────
+      // Supabase row が肥大化すると save が 8-20s かかり「データベース混雑」
+      // エラーの主因になる。3 段で diet:
+      //   (1) 最新 30 件を超えたら最古を捨てる (cap 100 → 30)
+      //   (2) 全 artifact の versions[] (HTML スナップショット) を最新 1 件だけに
+      //   (3) 7 日以上 update されてない artifact は html を null にする
+      //       (URL / title / version / vision_review メタは保持。再生成時に
+      //       DB から URL 引いて新規 read_artifact すれば作業継続可能)
+      // 結果: 行サイズが数 MB → 数百 KB 程度に圧縮される。
+      if(ownerUser.artifacts.length > 30){
+        ownerUser.artifacts.splice(0, ownerUser.artifacts.length - 30);
+      }
+      const _STALE_MS = 7 * 24 * 60 * 60 * 1000;
+      const _now = Date.now();
+      for(const _a of ownerUser.artifacts){
+        if(!_a) continue;
+        // version snapshots — 最新 1 つだけ (rollback 1 段) 残す
+        if(Array.isArray(_a.versions) && _a.versions.length > 1){
+          _a.versions = _a.versions.slice(-1);
+        }
+        // 7 日以上触ってない artifact は html を null に (メタは保持)
+        const _ts = Date.parse(_a.updated_at || _a.created_at || '') || 0;
+        if(_ts > 0 && _now - _ts > _STALE_MS && typeof _a.html === 'string' && _a.html.length > 500){
+          _a.html = null;
+          _a.html_stripped = true;  // UI fallback フラグ
+        }
       }
       await DB.save(ownerUser);
     } catch(e){
@@ -6822,14 +6875,16 @@ async function executeEditArtifactTool(input, ownerUser, pinnedFn){
     // Not a hard error — could be a legit small edit — but stamp a warning.
   }
   // Non-destructive edit: snapshot the version we're about to overwrite, so a
-  // bad edit can be rolled back. Capped at 3 (html is heavy in the JSONB row).
+  // bad edit can be rolled back. CAP 1 (was 3) — 3 snapshots × 200KB html ≈
+  // 600KB extra per artifact × N artifacts = 数 MB の JSONB 肥大化が
+  // 「データベース混雑」 timeout の主因だった。1 段だけ残せば直前まで戻せる。
   artifact.versions = Array.isArray(artifact.versions) ? artifact.versions : [];
   artifact.versions.push({
     html: artifact.html,
     at: artifact.updated_at || artifact.created_at || new Date().toISOString(),
     op,
   });
-  if(artifact.versions.length > 3) artifact.versions = artifact.versions.slice(-3);
+  if(artifact.versions.length > 1) artifact.versions = artifact.versions.slice(-1);
   artifact.version = (artifact.version || 1) + 1;
   artifact.html = html;
   artifact.updated_at = new Date().toISOString();

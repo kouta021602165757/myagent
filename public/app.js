@@ -5073,6 +5073,39 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       const _hasMutation = tool_log.some(function(t){ return t && t.ok !== false && _mutatingTools.indexOf(t.name) >= 0; });
       if(_hasMutation) _lastStepN = 1;  // 1 ステップは完了したとみなす
     }
+    // 2.5) このメッセージが「最新の進行点」かチェック。
+    //   ユーザーが過去のスクロールで古いメッセージを見ても、
+    //   そこに「▶ 続ける」が出続けるのは UX 上邪魔。
+    //   後続の assistant メッセージに同じ or 大きな step marker があれば、
+    //   こちらの approval card は出さない (ユーザーは既に進んでる)。
+    if(_lastStepN > 0){
+      try {
+        const _ag0 = (typeof agents !== 'undefined' && agents)
+          ? agents.find(function(a){ return a && a.id === activeId; }) : null;
+        if(_ag0 && Array.isArray(_ag0.history) && idx >= 0){
+          // NEW regex object — _stepCompleteRe は /g フラグを持つので
+          // 別箇所の lastIndex で挙動が変わるリスクを避ける
+          const _staleCheckRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*[\d０-９]+\s*(?:完了|done|完成|終了)/;
+          for(let _ji = idx + 1; _ji < _ag0.history.length; _ji++){
+            const _jm = _ag0.history[_ji];
+            if(!_jm || _jm.role !== 'assistant' || typeof _jm.content !== 'string') continue;
+            // 後続 assistant メッセージに step マーカー or mutating tool があれば
+            // この承認カードは「もう古い」のでスキップ。
+            if(_staleCheckRe.test(_jm.content)){
+              _lastStepN = 0;  // 承認カード描画を suppress
+              break;
+            }
+            // tool_log も見る (マーカー無しで edit_artifact だけ呼んだケース)
+            if(Array.isArray(_jm.tool_log) && _jm.tool_log.some(function(t){
+              return t && t.ok !== false && ['edit_artifact','create_artifact','replace_text'].indexOf(t.name) >= 0;
+            })){
+              _lastStepN = 0;
+              break;
+            }
+          }
+        }
+      } catch(_){}
+    }
     if(_lastStepN > 0){
       // 2) 履歴を遡って最近の <delegate> を探し、合計ステップ数と「次のステップ」テキストを取り出す
       let _totalSteps = 0;

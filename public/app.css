@@ -1682,6 +1682,42 @@ input,textarea{font-family:var(--sans);}
 .m-artifact-card-acts .ac-pin.on{background:var(--peach);color:#fff;border-color:transparent;}
 .m-artifact-card-acts .ac-dl{background:rgba(251,146,60,.12);border-color:rgba(251,146,60,.34);color:var(--peach-dark);}
 .m-artifact-card-acts .ac-dl:hover{background:rgba(251,146,60,.2);}
+/* 編集中表示 — AI が同じ artifact を編集中の間、「↗ 開く」「📄 コード」を
+   1 個の disabled ボタン「✏ 編集中…」に置換する。ユーザーが中間状態を
+   間違って開かないようにする UX 改善。stream 終了 (next renderMsgs) で
+   自動的に通常ボタンに戻る。 */
+.m-artifact-card.editing{
+  border-color:rgba(251,146,60,.4);
+  background:linear-gradient(135deg,rgba(251,146,60,.06),rgba(251,146,60,.02));
+}
+.m-artifact-card-acts .ac-editing{
+  margin-left:auto;
+  background:rgba(251,146,60,.14);
+  border:1px dashed rgba(251,146,60,.55);
+  color:var(--peach-dark,#ea580c);
+  cursor:not-allowed;opacity:.92;
+  font-weight:800;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.m-artifact-card-acts .ac-editing:hover{background:rgba(251,146,60,.14);transform:none;filter:none;}
+.ac-editing-spin{
+  display:inline-block;width:11px;height:11px;
+  border:2px solid rgba(234,88,12,.25);
+  border-top-color:var(--peach-dark,#ea580c);
+  border-radius:50%;
+  animation:_acEditSpin .8s linear infinite;
+}
+@keyframes _acEditSpin{ to{ transform:rotate(360deg); } }
+html[data-theme="dark"] .m-artifact-card.editing{
+  background:linear-gradient(135deg,rgba(251,146,60,.10),rgba(255,255,255,.02));
+  border-color:rgba(251,146,60,.4);
+}
+html[data-theme="dark"] .m-artifact-card-acts .ac-editing{
+  background:rgba(251,146,60,.16);border-color:rgba(251,146,60,.5);color:#fdba74;
+}
+html[data-theme="dark"] .ac-editing-spin{
+  border-color:rgba(253,186,116,.25);border-top-color:#fdba74;
+}
 /* Vision review badge (案B verifier) — sits next to Ver.N */
 .m-artifact-card-vr{
   background:#fff7ee;border:1px solid #fed7aa;color:var(--peach-dark);

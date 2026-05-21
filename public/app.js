@@ -3987,8 +3987,12 @@ async function openAgent(id){
 }
 
 /* ── Markdown rendering ──────────────────────────────── */
-function _md(src){
+// ctx 任意: { isStreaming: bool, editingFnames: Set<filename> } — artifact カードが
+// 「開く / コード」ボタンを「✏ 編集中…」に差し替える判定材料。呼び出し側
+// (_renderMsg) で計算済みのものを渡してもらう。
+function _md(src, ctx){
   if(!src) return '';
+  var _mdCtx = ctx || {};
   // Inline integration CTA — extract <connect:service_id> markers before escape.
   // The AI emits these when an action needs a service that is not connected.
   // We render them as a "[🔌 X を接続]" button that opens the catalog modal.
@@ -4154,7 +4158,39 @@ function _md(src){
       const _pa = (typeof agents!=='undefined' && agents) ? agents.find(function(a){return a&&a.id===activeId;}) : null;
       _afPinned = !!(_pa && _pa.pinned_artifact === _afName);
     } catch(e){}
-    return '<div class="m-artifact-card">'
+    // ── 「編集中」判定 ──────────────────────────────────────────
+    // streaming 中、かつこの filename が tool_log で touch されていれば、
+    // 「↗ 開く」「📄 コード」を「✏ 編集中…」(disabled) に差し替える。
+    // ユーザーが中間状態 (Ver.N で AI がまだ続きを編集する予定) を間違って
+    // 開かないようにするための UX 改善。
+    var _isEditingNow = false;
+    try {
+      if(_mdCtx && _mdCtx.isStreaming && _mdCtx.editingFnames
+         && _afIsArtifact && _mdCtx.editingFnames.has(_afName)){
+        _isEditingNow = true;
+      }
+    } catch(_){}
+    var _openOrEditingHtml;
+    if(_isEditingNow){
+      // 「開く」と「コード」を 1 個の「✏ 編集中…」(disabled) に置換
+      _openOrEditingHtml =
+        '<button class="ac-editing" disabled title="'+(isJa?'AI が編集中。完了したら自動で「開く」ボタンに切り替わります':'AI is editing. Will switch to Open when done')+'">'
+        + '<span class="ac-editing-spin"></span>'
+        + (isJa ? '編集中…' : 'Editing…')
+        + '</button>';
+    } else {
+      _openOrEditingHtml =
+          (_afIsArtifact ? '<button class="ac-code" onclick="_openCodeViewer(\''+_afNameArg+'\')" title="コードを見る">📄 '+(isJa?'コード':'Code')+'</button>' : '')
+        + '<a class="ac-open" href="'+(
+              // Cache buster: only add ?v=N if the URL doesn't already have one
+              // (server-side stamping may have baked it in already). Prevents
+              // duplicate ?v=...&v=... or stale-overrides-fresh situations.
+              _afIsArtifact && _afVer && !/[?&]v=\d+/.test(safeSrc)
+                ? safeSrc + (safeSrc.indexOf('?')>=0?'&':'?') + 'v=' + _afVer
+                : safeSrc
+            )+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>';
+    }
+    return '<div class="m-artifact-card'+(_isEditingNow?' editing':'')+'">'
       + '<div class="m-artifact-card-top">'
       +   '<div class="m-artifact-card-ic">'+(_afIsArtifact?'🌐':'📄')+'</div>'
       +   '<div class="m-artifact-card-body">'
@@ -4165,16 +4201,8 @@ function _md(src){
       + '<div class="m-artifact-card-acts">'
       +   (_afIsArtifact ? '<button class="ac-edit" onclick="_setEditTarget(\''+_afNameArg+'\',\''+_afTitleArg+'\',_ecWhich(this))" title="このサイトを修正">✏️ '+(isJa?'修正':'Edit')+'</button>' : '')
       +   (_afIsArtifact ? '<button class="ac-pin'+(_afPinned?' on':'')+'" onclick="'+(_afPinned?'_unpinArtifact()':'_pinArtifact(\''+_afNameArg+'\')')+'" title="'+(_afPinned?'このチャットの編集対象（固定中）':'このチャットの編集対象に固定')+'">📌 '+(_afPinned?(isJa?'固定中':'Pinned'):(isJa?'固定':'Pin'))+'</button>' : '')
-      +   (_afIsArtifact ? '<button class="ac-code" onclick="_openCodeViewer(\''+_afNameArg+'\')" title="コードを見る">📄 '+(isJa?'コード':'Code')+'</button>' : '')
       +   '<button class="ac-copy" onclick="var b=this;navigator.clipboard.writeText(location.origin+\''+safeSrc+'\').then(function(){b.textContent=\'✓ '+(isJa?'コピー!':'Copied!')+'\';setTimeout(function(){b.textContent=\'📋 コピー\';},1400);})">📋 コピー</button>'
-      +   '<a class="ac-open" href="'+(
-              // Cache buster: only add ?v=N if the URL doesn't already have one
-              // (server-side stamping may have baked it in already). Prevents
-              // duplicate ?v=...&v=... or stale-overrides-fresh situations.
-              _afIsArtifact && _afVer && !/[?&]v=\d+/.test(safeSrc)
-                ? safeSrc + (safeSrc.indexOf('?')>=0?'&':'?') + 'v=' + _afVer
-                : safeSrc
-            )+'" target="_blank" rel="noopener">🔗 '+(isJa?'開く':'Open')+' ↗</a>'
+      +   _openOrEditingHtml
       + '</div>'
       + '</div>';
   }
@@ -4981,7 +5009,7 @@ function _collectCitations(toolLog){
 // step — e.g. the AI ran ext_open_url on its own site — get rendered as the
 // standard artifact card (修正 / コード / 開く), reusing _md's card renderer.
 // Skipped when the AI already referenced that file in its message body.
-function _artifactCardsFromToolLog(toolLog, rawContent){
+function _artifactCardsFromToolLog(toolLog, rawContent, mdCtx){
   if(!Array.isArray(toolLog) || !toolLog.length) return '';
   var rc = String(rawContent || '');
   var seen = {};
@@ -5015,7 +5043,7 @@ function _artifactCardsFromToolLog(toolLog, rawContent){
       // Use the artifact's title from the tool result if available; otherwise
       // fall back to the bare filename so the card still has a meaningful label.
       var label = (s.title && String(s.title).slice(0, 80)) || fn || (isJa ? '作成したサイト' : 'Site');
-      out.push(_md('[' + label + '](' + u + ')'));
+      out.push(_md('[' + label + '](' + u + ')', mdCtx));
     }
   }
   return out.join('');
@@ -5114,19 +5142,29 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // Collect URL citations from any web-search/fetch tools the agent ran,
   // then turn [1]/[2] markers in the AI text into clickable superscripts.
   const cites = !isU ? _collectCitations(tool_log) : [];
-  let body = content ? _md(content) : '';
-  if(cites.length) body = _linkInlineCitations(body, cites);
-  const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
-  // ── Completion summary badge ─────────────────────────────────────────
-  // Streaming flag — needed by summaryHTML (suppresses the chip mid-turn) and
-  // by every downstream block that checks "is this bubble still being built?".
-  // Declared HERE (before summaryHTML) so the const isn't referenced in its
-  // own temporal dead zone — that was the "Cannot access 'isStreaming' before
-  // initialization" crash that took out the thread drawer.
+  // ── Streaming flag (moved up — needed by _md for artifact-card editing state) ──
   // A bubble shows streaming UI only while a real stream controller is active;
   // a leftover streaming:true flag from a crashed/reloaded turn is treated as
   // stale.
   const isStreaming = !!(raw && raw.streaming) && !!(_chatStreamCtrl || _threadStreamCtrl);
+  // 「このターンで編集中の artifact ファイル名」セット — _md の中の artifact
+  // カードが「開く / コード」ボタンを「✏ 編集中…」に差し替えるのに使う。
+  // 編集系 tool が走った filename を全部入れる。streaming 中のみ有効。
+  const _editingFnames = (isStreaming && Array.isArray(tool_log))
+    ? new Set(tool_log
+        .filter(t => t && t.ok !== false && t.filename
+                 && ['edit_artifact','create_artifact','replace_text'].indexOf(t.name) >= 0)
+        .map(t => t.filename))
+    : null;
+  let body = content ? _md(content, { isStreaming, editingFnames: _editingFnames }) : '';
+  if(cites.length) body = _linkInlineCitations(body, cites);
+  const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
+  // ── Completion summary badge ─────────────────────────────────────────
+  // Surface a one-line "what just happened" chip at the top of the bubble —
+  // number of tools used + new/edited artifacts + elapsed wall time. Lets
+  // users see at a glance that the AI actually worked (vs. just chatting),
+  // without scanning the full tool log.
+  // Suppressed during streaming and when no tool ran (pure-text reply).
   // After a finished agentic turn, surface a one-line "what just happened"
   // chip at the top of the bubble — number of tools used + new/edited
   // artifacts + elapsed wall time. Lets users see at a glance that the AI
@@ -5193,7 +5231,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   const citesHtml = cites.length ? _renderCitations(cites) : '';
   // Artifact cards for any /generated/artifact-*.html the AI touched via a
   // tool (ext_open_url etc.) but didn't write as a [title](url) link itself.
-  const artifactCards = !isU ? _artifactCardsFromToolLog(tool_log, content) : '';
+  const artifactCards = !isU ? _artifactCardsFromToolLog(tool_log, content, { isStreaming, editingFnames: _editingFnames }) : '';
   // Edit-failure banner — surface a failed create_artifact / edit_artifact
   // so the user sees what happened even when the AI's reply text says it
   // succeeded ("修正します！" but the tool actually returned error).

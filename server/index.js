@@ -2884,28 +2884,53 @@ function _shouldRunPlanner(message){
 //   - estimate_minutes: 見積もり
 //
 // 返り値の task は agent.current_task に保存される。
+// 短い task_id 生成 — クライアント側で <delegate> ブロックからこれを抽出して
+// 「再開」ボタンに渡す。crypto.randomBytes は heavy なのでミリ秒 + ランダム小
+// で十分 (衝突可能性は無視できる; 同一 agent 内で同時に複数 turn 走らないため)。
+function _genTaskId(){
+  return 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
 async function _understandTask(message, sse, agent){
   if(!_shouldRunPlanner(message)) return null;   // 単純な依頼は task 化しない
-  const BUDGET_MS = 6000;  // 5s → 6s に拡張 (1 段 AI コールで安定化したい)
+  const BUDGET_MS = 6000;
   const prevTask = (agent && agent.current_task) || null;
-  const prevSummary = prevTask && prevTask.requested
-    ? ('\n\n## 直前の任された仕事 (scope 判定にのみ使用)\n'
-       + '「' + String(prevTask.requested).slice(0, 200) + '」'
-       + (prevTask.status === 'completed' ? ' (完了済み)' : ' (未完 / 中断中)'))
-    : '';
+  // paused タスク一覧 (resume 判定用に 1 行ずつ要約を渡す)
+  const pausedList = Array.isArray(agent && agent.tasks)
+    ? agent.tasks.filter(t => t && t.status === 'paused').slice(-5)
+    : [];
+  let prevSummary = '';
+  if(prevTask && prevTask.requested){
+    prevSummary += '\n\n## 直前の任された仕事 (scope 判定の参考)\n'
+                + '「' + String(prevTask.requested).slice(0, 200) + '」'
+                + (prevTask.status === 'completed' ? ' (完了済み)' : ' (進行中)');
+  }
+  if(pausedList.length){
+    prevSummary += '\n\n## 停止中のタスク (resume 判定の参考 — ユーザーが「あれ再開」等と言ったときに該当しそうなもの)\n'
+                + pausedList.map((t, i) => '- [' + i + '] 「' + String(t.requested || '').slice(0, 100) + '」').join('\n');
+  }
   const planSys =
 `あなたは「ユーザーの依頼を理解して、現在の任された仕事 (current_task) を作成する」専任の理解エージェントです。
 
 ## 重要なルール
 - ユーザーが今送ったメッセージ**だけ**を見て要約すること
 - チャット履歴を推測してはいけない — 「前回の続き」「以前のタスクの〜」のような表現は**絶対に書かない**
-- 「直前の任された仕事」が下に書かれていれば、それは **scope 判定の参考** にのみ使用すること (= 同じ仕事の継続か / 訂正か / 別件か)
-- 不明なら scope は "new" にする (= 上書き)。誤って「continuation」にして前のタスクを引きずる方が UX 損害が大きい
+- 「直前の任された仕事」「停止中のタスク」が下に書かれていれば、それは **scope 判定の参考** にのみ使用すること
 
-## scope 判定
-- "new" (新規・上書き): ユーザーが「新しく〜」「別件で〜」「次は〜」など明示 / または前のタスクと無関係な内容 / または前のタスクが完了済み
-- "continuation" (継続): ユーザーが「あれも追加して」「さらに〜」「続きで〜」など明示 / 前のタスクと明らかに地続き
-- "correction" (訂正): 「違くて」「じゃなくて」「あ、〜にして」「やっぱり〜」など直前を修正する意図
+## scope 判定 — **強く new バイアス**
+- **デフォルト: "new"** (新規タスク扱い)。迷ったら必ず new。
+- "new" の対象 (積極的に new とする):
+  - 「新しく〜」「別件で〜」「次は〜」のような新規宣言
+  - 「あれも追加して」「さらに〜」「あ、〇〇も」のような **接続助詞での追加依頼も new** (それぞれ独立したタスクとして扱う)
+  - 完全に別の話題
+  - 迷ったとき
+- "correction" (訂正): **明示的に直前を否定する場合のみ**
+  - 「違くて、〜」「じゃなくて〜」「あ、〇〇じゃなくて△△」「やっぱり〜」「すまん、〇〇に変更で」
+  - 直前タスクの "やり直し" / "言い直し" の意図
+- "resume" (再開): **明示的に過去のタスクに戻る意図がある場合のみ**
+  - 「あれ再開して」「停止したやつ続けて」「さっきの〇〇のタスク戻して」
+  - 「停止中のタスク」リストに該当しそうなものがあれば resume_index も返す (上のリストの番号)
+- **"continuation" は廃止** — 接続助詞での追加 (「あれも」「さらに」等) は new に分類すること
 
 ## steps の書き方
 - 1-6 個。簡潔な動詞 (例: 「現在の HTML を確認」「カード化を適用」)
@@ -2913,18 +2938,20 @@ async function _understandTask(message, sse, agent){
 - 利用可能 tool 例: read_artifact, edit_artifact, create_artifact, web_search, web_fetch, web_screenshot, generate_image, generate_pdf, generate_chart, sheets_read, sheets_write, send_email, notify_slack
 
 ## needs_task 判定
-- 純粋な質問 (「これいくら?」「何ができる?」) → false (task 不要)
+- 純粋な質問 (「これいくら?」「何ができる?」) → false
 - 「見せて」「開いて」だけ → false
 - 1 アクション以上を AI に実行させる依頼 → true (積極的に true)
+- scope: "resume" の場合は needs_task: true、steps は [] でも OK (resume 時はサーバ側で復元される)
 
 ## 出力形式
 JSON のみ。前置きや \`\`\` も禁止。
 {
   "needs_task": boolean,
-  "scope": "new" | "continuation" | "correction",
+  "scope": "new" | "correction" | "resume",
   "requested": "ユーザー依頼の 1-2 文要約 (100 字以内)",
   "steps": [{"n":1,"text":"...(40 字以内)","tool":"tool_name か null"}],
-  "estimate_minutes": 1-10
+  "estimate_minutes": 1-10,
+  "resume_index": 0  // scope=resume のときのみ。停止中タスクリストの番号
 }
 
 needs_task が false なら scope は "new"、steps は []、estimate_minutes は 1 で良い。`;
@@ -2948,45 +2975,77 @@ needs_task が false なら scope は "new"、steps は []、estimate_minutes �
     try { plan = JSON.parse(m[0]); }
     catch(_){ return null; }
     if(!plan || !plan.needs_task) return null;
-    const steps = Array.isArray(plan.steps) ? plan.steps : [];
-    // 0 step は task 化しない (= 単発質問扱い)。1+ step なら state 化する。
-    if(steps.length < 1) return null;
     const requested = String(plan.requested || '').replace(/[\r\n]+/g, ' ').slice(0, 200)
                        || String(message).slice(0, 60);
     const estMin = Math.max(1, Math.min(20, parseInt(plan.estimate_minutes, 10) || 3));
-    const scope = ['new','continuation','correction'].includes(plan.scope) ? plan.scope : 'new';
-    // ── scope によって current_task を作る/合成する ──
-    let nextTask;
+    const scope = ['new','correction','resume'].includes(plan.scope) ? plan.scope : 'new';
     const _nowIso = new Date().toISOString();
-    if(scope === 'continuation' && prevTask && prevTask.status !== 'completed'){
-      // 前タスクの steps を残しつつ新しい steps を末尾に足す
-      const baseSteps = Array.isArray(prevTask.steps) ? prevTask.steps.slice(0, 8) : [];
-      const offset = baseSteps.length;
-      const extra = steps.slice(0, 8).map((s, i) => ({
-        n: offset + i + 1,
-        text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
-        tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
-        done: false,
-      }));
+    // ── resume: 停止中タスクを current_task に戻す ──
+    if(scope === 'resume'){
+      if(!agent) return null;
+      agent.tasks = Array.isArray(agent.tasks) ? agent.tasks : [];
+      const idx = parseInt(plan.resume_index, 10);
+      let target = null;
+      // index が有効なら直接そこから取り出す
+      if(Number.isInteger(idx) && idx >= 0 && idx < pausedList.length){
+        target = pausedList[idx];
+      } else {
+        // 候補が 1 個だけなら自動選択
+        if(pausedList.length === 1) target = pausedList[0];
+      }
+      if(!target){
+        // 該当無し / 候補複数で曖昧 → resume は諦めて new として扱う
+        console.log('[task] resume ambiguous — falling back to new');
+      } else {
+        // 旧 current_task は paused にして tasks[] に push
+        if(prevTask && prevTask.status === 'in_progress'){
+          prevTask.status = 'paused';
+          prevTask.updated_at = _nowIso;
+          agent.tasks.push(prevTask);
+        }
+        // target を tasks[] から取り除いて current_task に戻す
+        agent.tasks = agent.tasks.filter(t => t && t.id !== target.id);
+        target.status = 'in_progress';
+        target.updated_at = _nowIso;
+        target.resumed_at = _nowIso;
+        agent.current_task = target;
+        // SSE emit
+        if(sse){
+          const stepsMd = (target.steps||[]).map((s, i) => {
+            const tool = s.tool ? (' `' + s.tool + '`') : '';
+            const check = s.done ? 'x' : ' ';
+            return '- [' + check + '] ' + (i + 1) + '. ' + s.text + tool;
+          }).join('\n');
+          const card = '<delegate id="' + target.id + '">\n'
+            + '**任されたこと:** [▶ 再開] ' + target.requested + '\n\n'
+            + '**進め方:**\n' + stepsMd + '\n\n'
+            + '**見積もり:** 約 ' + (target.estimate_minutes || 3) + ' 分\n'
+            + '</delegate>\n\n';
+          try { sse('delta', { text: card }); } catch(_){}
+          try { sse('task_assigned', target); } catch(_){}
+        }
+        console.log('[task] resumed', target.id);
+        return target;
+      }
+    }
+    // ── ここから new / correction / (resume 失敗フォールバック) ──
+    const steps = Array.isArray(plan.steps) ? plan.steps : [];
+    if(steps.length < 1) return null;
+    const _newId = _genTaskId();
+    const _builtSteps = steps.slice(0, 8).map((s, i) => ({
+      n: i + 1,
+      text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
+      tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
+      done: false,
+    }));
+    let nextTask;
+    if(scope === 'correction' && prevTask){
+      // 訂正: 直前 current_task の requested を corrected_from に退避して上書き
+      // (= 新しい id は振らない。同じ task の解釈変更扱い)
       nextTask = {
-        requested: (prevTask.requested || '') + ' / ' + requested,
-        steps: baseSteps.concat(extra).slice(0, 10),
-        scope: 'continuation',
-        estimate_minutes: estMin,
-        status: 'in_progress',
-        created_at: prevTask.created_at || _nowIso,
-        updated_at: _nowIso,
-      };
-    } else if(scope === 'correction' && prevTask){
-      // 訂正 — requested と steps を新規に置き換えつつ created_at は維持
-      nextTask = {
+        id: prevTask.id || _newId,
         requested: requested,
-        steps: steps.slice(0, 8).map((s, i) => ({
-          n: i + 1,
-          text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
-          tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
-          done: false,
-        })),
+        steps: _builtSteps,
         scope: 'correction',
         estimate_minutes: estMin,
         status: 'in_progress',
@@ -2995,15 +3054,23 @@ needs_task が false なら scope は "new"、steps は []、estimate_minutes �
         corrected_from: prevTask.requested || '',
       };
     } else {
-      // new (デフォルト)
+      // new (デフォルト) — 旧 current_task を paused にして tasks[] に push
+      if(agent){
+        agent.tasks = Array.isArray(agent.tasks) ? agent.tasks : [];
+        if(prevTask && prevTask.status === 'in_progress'){
+          prevTask.status = 'paused';
+          prevTask.updated_at = _nowIso;
+          agent.tasks.push(prevTask);
+          // 50 件 cap (古い方から削除)
+          if(agent.tasks.length > 50){
+            agent.tasks = agent.tasks.slice(-50);
+          }
+        }
+      }
       nextTask = {
+        id: _newId,
         requested: requested,
-        steps: steps.slice(0, 8).map((s, i) => ({
-          n: i + 1,
-          text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
-          tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
-          done: false,
-        })),
+        steps: _builtSteps,
         scope: 'new',
         estimate_minutes: estMin,
         status: 'in_progress',
@@ -3011,30 +3078,27 @@ needs_task が false なら scope は "new"、steps は []、estimate_minutes �
         updated_at: _nowIso,
       };
     }
-    // ── agent に保存 (DB.save は呼び出し側で turn 終了時に走る) ──
     if(agent){
       agent.current_task = nextTask;
     }
-    // ── SSE で「お任せ受領カード」を即時 emit (UX: 1 秒以内に画面に出す) ──
-    // クライアントは <delegate>...</delegate> をパースして既存の deli-card
-    // 描画ロジックに乗せる。state ベース描画は次フェーズで導入予定だが、
-    // 当面は state も <delegate> も両方使う (state は AI 注入用、card は表示用)。
+    // ── SSE で <delegate> カードを emit ──
+    // id を data 属性として埋める → クライアント側の「▶ 再開」ボタンが
+    // 該当 task_id を server に送れる。
     if(sse){
       const stepsMd = nextTask.steps.map((s, i) => {
         const tool = s.tool ? (' `' + s.tool + '`') : '';
         const check = s.done ? 'x' : ' ';
         return '- [' + check + '] ' + (i + 1) + '. ' + s.text + tool;
       }).join('\n');
-      const card = '<delegate>\n'
+      const card = '<delegate id="' + nextTask.id + '">\n'
         + '**任されたこと:** ' + nextTask.requested + '\n\n'
         + '**進め方:**\n' + stepsMd + '\n\n'
         + '**見積もり:** 約 ' + nextTask.estimate_minutes + ' 分\n'
         + '</delegate>\n\n';
       try { sse('delta', { text: card }); } catch(_){}
-      // 構造化 state を別チャネルで送る (将来のクライアント側 state-based 描画用)
       try { sse('task_assigned', nextTask); } catch(_){}
     }
-    console.log('[task] understood,', nextTask.scope, '/', nextTask.steps.length, 'steps');
+    console.log('[task] understood,', nextTask.scope, '/', nextTask.steps.length, 'steps, id=', nextTask.id);
     return nextTask;
   } catch(e){
     console.warn('[task] understanding failed:', (e && e.message) || e);
@@ -15418,6 +15482,41 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.knowledge.splice(i,1);
     await DB.save(user);
     return jres(res,200,{ok:true});
+  }
+
+  // ── Task resume ─────────────────────────────────────────
+  // 停止中タスクを current_task に戻すための明示エンドポイント。
+  // クライアントの「▶ 再開」ボタンから呼ばれる。
+  //   POST /api/agents/:id/tasks/:taskId/resume
+  // body 無し。成功時は { ok:true, resumed: <task> } を返す。
+  // 旧 current_task が in_progress なら paused にして tasks[] に push。
+  const resumeMatch = pathname.match(/^\/api\/agents\/([^/]+)\/tasks\/([^/]+)\/resume$/);
+  if(resumeMatch && method === 'POST'){
+    const ag = (user.agents||[]).find(a => a.id === resumeMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'エージェントが見つかりません' });
+    const taskId = resumeMatch[2];
+    ag.tasks = Array.isArray(ag.tasks) ? ag.tasks : [];
+    const target = ag.tasks.find(t => t && t.id === taskId);
+    if(!target) return jres(res, 404, { error: 'タスクが見つかりません (既に再開済み / 完了済みの可能性)' });
+    if(target.status === 'completed') return jres(res, 400, { error: 'このタスクは既に完了しています' });
+    const _nowIso = new Date().toISOString();
+    // 旧 current_task を paused に
+    if(ag.current_task && ag.current_task.status === 'in_progress'){
+      ag.current_task.status = 'paused';
+      ag.current_task.updated_at = _nowIso;
+      ag.tasks.push(ag.current_task);
+    }
+    // target を current_task に
+    ag.tasks = ag.tasks.filter(t => t && t.id !== taskId);
+    target.status = 'in_progress';
+    target.updated_at = _nowIso;
+    target.resumed_at = _nowIso;
+    ag.current_task = target;
+    // tasks[] cap
+    if(ag.tasks.length > 50) ag.tasks = ag.tasks.slice(-50);
+    await DB.save(user);
+    console.log('[task] resumed via endpoint:', taskId);
+    return jres(res, 200, { ok: true, resumed: target });
   }
 
   // ── Scheduled runs ─────────────────────────────────────────

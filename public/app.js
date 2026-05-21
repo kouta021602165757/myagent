@@ -4008,16 +4008,22 @@ function _md(src){
   // _renderDelegateCard for the inner format.
   // Streaming-tolerant: also catch UNCLOSED <delegate>... (still typing —
   // closing tag hasn't arrived yet). Renders whatever can be parsed so far.
+  // <delegate id="t_xxx"> 属性を任意で受け入れる (新システムでは必ず id 付き、
+  // 旧履歴 / 互換のために属性無しも受け入れる)。inner 本体と id をペアで保存。
   var deliBlocks=[];
-  src=String(src).replace(/<delegate>([\s\S]*?)<\/delegate>/gi, function(_, inner){
+  function _parseDeliAttrs(tag){
+    var m = String(tag||'').match(/id\s*=\s*"([^"]+)"|id\s*=\s*'([^']+)'/i);
+    return { id: (m && (m[1] || m[2])) || '' };
+  }
+  src=String(src).replace(/<delegate(\s+[^>]*)?>([\s\S]*?)<\/delegate>/gi, function(_, attrs, inner){
     var di=deliBlocks.length;
-    deliBlocks.push(inner);
+    deliBlocks.push({ inner: inner, id: _parseDeliAttrs(attrs).id });
     return ' DELI'+di+' ';
   });
-  src=String(src).replace(/<delegate>([\s\S]*)$/gi, function(_, inner){
+  src=String(src).replace(/<delegate(\s+[^>]*)?>([\s\S]*)$/gi, function(_, attrs, inner){
     // No closing tag yet → AI is still typing the card. Render what we have.
     var di=deliBlocks.length;
-    deliBlocks.push(inner);
+    deliBlocks.push({ inner: inner, id: _parseDeliAttrs(attrs).id });
     return ' DELI'+di+' ';
   });
   // Extract code blocks first to placeholders so other rules don't touch them
@@ -4295,10 +4301,16 @@ function _md(src){
   // message bubble — fall back to plain escaped text of the inner block.
   html=html.replace(/ ?DELI(\d+) ?/g, function(_, i){
     try {
-      return _renderDelegateCard(deliBlocks[+i] || '', _stepDone);
+      var blk = deliBlocks[+i] || { inner: '', id: '' };
+      // 旧形式 (文字列だけ push されてた場合) と新形式 ({inner,id}) の両方を受け入れる
+      var inner = (typeof blk === 'string') ? blk : (blk.inner || '');
+      var tid = (typeof blk === 'object' && blk) ? (blk.id || '') : '';
+      return _renderDelegateCard(inner, _stepDone, tid);
     } catch(e){
       console.warn('[delegate] render failed:', e && e.message);
-      return '<pre>' + esc(deliBlocks[+i] || '') + '</pre>';
+      var blk2 = deliBlocks[+i];
+      var raw = (typeof blk2 === 'string') ? blk2 : (blk2 && blk2.inner || '');
+      return '<pre>' + esc(raw) + '</pre>';
     }
   });
   return html;
@@ -4313,7 +4325,7 @@ function _md(src){
 //   **見積もり:** estimate text
 // `stepDone` is the count of "✅ ステップN 完了" markers found in the
 // surrounding message; steps up to that count are pre-checked.
-function _renderDelegateCard(inner, stepDone){
+function _renderDelegateCard(inner, stepDone, taskId){
   if(!inner) return '';
   // Pull out labeled sections. Tolerant of ** wrap and various punctuation.
   function _grab(label){
@@ -4474,26 +4486,77 @@ function _renderDelegateCard(inner, stepDone){
   if(estimate){
     foot = '<div class="deli-foot">⏱ ' + (isJa ? '見積もり: ' : 'Estimate: ') + esc(estimate) + '</div>';
   }
-  // ── 「✏ 違うなら修正」ボタン ─────────────────────────────────
-  // タスク解釈が違うときにユーザーが即座に直せる経路。完了済み / 中断済み
-  // タスクには出さない (= 進行中の "📋 お任せ受領" / "📋 お任せ進行中" 状態のみ)。
-  // クリックで composer に「違くて、〜」のテンプレを入れて focus する。
-  // 送信すると server の _understandTask が scope: "correction" を返して
-  // current_task が新しい解釈に置き換わる、という流れ。
-  var fixBtn = '';
-  if(!allDone && !_isInterrupted){
-    fixBtn = '<div class="deli-fix"><button class="deli-fix-btn" onclick="_correctTask(this)">'
-           + (isJa ? '✏ 違うなら修正' : '✏ Correct this')
-           + '</button></div>';
+  // ── アクションボタン ──
+  // 進行中 (= 未完 & 中断されてない): 「✏ 違うなら修正」
+  // 中断中 (= paused): 「▶ 再開」 (task_id が分かるときだけ)
+  // 完了済み: 何も出さない
+  var actions = '';
+  if(!allDone){
+    if(_isInterrupted && taskId){
+      // 「▶ 再開」 — 該当 task_id を server の resume endpoint に投げる。
+      // task_id は <delegate id="..."> から抽出済み (data 属性経由)。
+      actions = '<div class="deli-fix"><button class="deli-fix-btn deli-resume-btn" '
+              + 'data-task-id="' + esc(taskId) + '" '
+              + 'onclick="_resumeTask(this)">'
+              + (isJa ? '▶ 再開' : '▶ Resume')
+              + '</button></div>';
+    } else if(!_isInterrupted){
+      // 進行中 — 解釈訂正ボタン
+      actions = '<div class="deli-fix"><button class="deli-fix-btn" onclick="_correctTask(this)">'
+              + (isJa ? '✏ 違うなら修正' : '✏ Correct this')
+              + '</button></div>';
+    }
   }
-  return '<div class="deli-card' + (allDone ? ' done' : '') + (_isInterrupted ? ' paused' : '') + '">'
+  return '<div class="deli-card' + (allDone ? ' done' : '') + (_isInterrupted ? ' paused' : '') + '"'
+       +   (taskId ? ' data-task-id="' + esc(taskId) + '"' : '')
+       +   '>'
        +   '<div class="deli-head">' + headLabel
        +     '<span class="deli-head-status">' + esc(status) + '</span>'
        +   '</div>'
        +   rows
        +   foot
-       +   fixBtn
+       +   actions
        + '</div>';
+}
+
+/* ── タスク再開ハンドラ ──────────────────────────────────────
+   paused お任せ受領カードの「▶ 再開」ボタンから呼ばれる。
+   POST /api/agents/:id/tasks/:taskId/resume を叩いて、サーバ側で
+   旧 current_task を paused 化 + 該当 task を current_task に復帰させる。
+   成功後はチャット履歴を再読込して状態反映 (新しい <delegate> カードが
+   下に出るのは次の AI ターンで起きる)。 */
+async function _resumeTask(btn){
+  if(!activeId) return;
+  var tid = btn && btn.getAttribute('data-task-id');
+  if(!tid){ showToast(isJa?'タスク ID が取れませんでした':'Missing task id','ng'); return; }
+  btn.disabled = true;
+  btn.textContent = isJa ? '再開中…' : 'Resuming…';
+  try {
+    var r = await api('POST', '/api/agents/' + activeId + '/tasks/' + tid + '/resume', null);
+    if(r && r.ok){
+      showToast(isJa?'タスクを再開しました — 次のメッセージから続きを書いてください':'Task resumed — continue with your next message','ok');
+      // ローカル agent state を更新 (server レスポンスから直接)
+      var ag = agents.find(function(a){ return a.id === activeId; });
+      if(ag && r.resumed){
+        ag.tasks = (ag.tasks||[]).filter(function(t){ return t && t.id !== tid; });
+        if(ag.current_task && ag.current_task.status === 'in_progress'){
+          ag.current_task.status = 'paused';
+          ag.tasks.push(ag.current_task);
+        }
+        ag.current_task = r.resumed;
+        try { renderMsgs(ag); } catch(_){}
+      }
+    } else {
+      showToast((r && r.error) || (isJa?'再開に失敗':'Resume failed'), 'ng');
+      btn.disabled = false;
+      btn.textContent = isJa ? '▶ 再開' : '▶ Resume';
+    }
+  } catch(e){
+    showToast(isJa?'再開エラー':'Resume error', 'ng');
+    btn.disabled = false;
+    btn.textContent = isJa ? '▶ 再開' : '▶ Resume';
+    console.warn('[task] resume error:', e);
+  }
 }
 
 /* ── タスク解釈の訂正ハンドラ ───────────────────────────────

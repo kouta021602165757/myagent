@@ -4349,22 +4349,50 @@ function _renderDelegateCard(inner, stepDone){
   // それを stepDone に上書き反映する。これでカードは履歴の蓄積に
   // 応じて自動的にチェックが進んでいき、完了後もチェック状態を維持する。
   var historicalStepDone = stepDone || 0;
+  // tool_log フォールバック用: AI が「✅ ステップN 完了」マーカーを忘れても、
+  // 実際に成果物を編集する tool を呼べていれば、それを 1 ステップ進んだ扱いにする。
+  // これがないと「edit_artifact は成功してるのに ☐ のまま」が起きる。
+  var _mutTools = ['edit_artifact','create_artifact','replace_text','sheets_write','sheets_append','send_email','notify_slack','notify_discord','generate_image','edit_image','generate_pdf','generate_chart','wordpress_publish'];
+  var _toolLogSteps = 0;
   try {
     var _ag2 = (typeof agents !== 'undefined' && agents)
       ? agents.find(function(a){ return a && a.id === activeId; }) : null;
     if(_ag2 && Array.isArray(_ag2.history)){
+      // 自分の delegate カード位置を探す。tool_log カウントは「この計画より後」の
+      // メッセージだけ拾う (古い計画の tool_log を流用しない)。
+      var _selfIdxForTL = -1;
+      for(var _si = 0; _si < _ag2.history.length; _si++){
+        var _sm = _ag2.history[_si];
+        if(_sm && typeof _sm.content === 'string' && _sm.content.indexOf(inner) >= 0){
+          _selfIdxForTL = _si; break;
+        }
+      }
       for(var _hi = 0; _hi < _ag2.history.length; _hi++){
         var _hm = _ag2.history[_hi];
-        if(!_hm || typeof _hm.content !== 'string') continue;
-        var _ms = _hm.content.match(/(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*([\d０-９]+)\s*(?:完了|done|完成|終了)/g) || [];
-        for(var _mi = 0; _mi < _ms.length; _mi++){
-          var _ds = (_ms[_mi].match(/([\d０-９]+)/)||[])[1] || '';
-          var _nv = parseInt(_ds.replace(/[０-９]/g, function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}), 10);
-          if(_nv && _nv > historicalStepDone) historicalStepDone = _nv;
+        if(!_hm) continue;
+        // (a) 明示マーカー集計 (全履歴対象 — 古い動作と互換)
+        if(typeof _hm.content === 'string'){
+          var _ms = _hm.content.match(/(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*([\d０-９]+)\s*(?:完了|done|完成|終了)/g) || [];
+          for(var _mi = 0; _mi < _ms.length; _mi++){
+            var _ds = (_ms[_mi].match(/([\d０-９]+)/)||[])[1] || '';
+            var _nv = parseInt(_ds.replace(/[０-９]/g, function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}), 10);
+            if(_nv && _nv > historicalStepDone) historicalStepDone = _nv;
+          }
+        }
+        // (b) tool_log フォールバック (この delegate より後のメッセージのみ)
+        if(_selfIdxForTL >= 0 && _hi > _selfIdxForTL
+           && _hm.role === 'assistant'
+           && Array.isArray(_hm.tool_log) && _hm.tool_log.length){
+          var _hasMut = _hm.tool_log.some(function(t){
+            return t && t.ok !== false && _mutTools.indexOf(t.name) >= 0;
+          });
+          if(_hasMut) _toolLogSteps++;
         }
       }
     }
   } catch(_){}
+  // 明示マーカー数と tool_log 由来カウントの大きい方を採用。
+  if(_toolLogSteps > historicalStepDone) historicalStepDone = _toolLogSteps;
   // Apply step-auto-check: first N tasks tick green when stepDone advances.
   for(var i = 0; i < tasks.length; i++){
     if(historicalStepDone && i < historicalStepDone) tasks[i].done = true;

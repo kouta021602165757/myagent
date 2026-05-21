@@ -5079,127 +5079,12 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // この AI メッセージで「✅ ステップN 完了」が emit されていて、かつ
   // 計画 (<delegate>) にまだ未消化のステップが残っているとき、メッセージ
   // 末尾に「✅ OK 進める / ⏸ 一時停止」カードを描画する。
-  let approvalHTML = '';
-  if(!isU && !isStreaming && content){
-    // 1) この message に含まれる最大のステップ完了番号
-    // 寛容なマッチ — ✅/✓/☑ + ステップ/Step + 半角/全角数字 + 完了/done variations
-    const _stepCompleteRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*([\d０-９]+)\s*(?:完了|done|完成|終了)/g;
-    let _lastStepN = 0;
-    let _scm;
-    const _ct = String(content);
-    while((_scm = _stepCompleteRe.exec(_ct)) !== null){
-      // 全角数字も拾う
-      const _ds = String(_scm[1]||'').replace(/[０-９]/g, function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});
-      const n = parseInt(_ds, 10);
-      if(n && n > _lastStepN) _lastStepN = n;
-    }
-    // ── Fallback: 「✅ ステップN 完了」マーカーが無くても、tool_log に
-    //    成功した artifact 変更系の tool があれば step 1 として扱う。
-    //    AI が完了マーカーを書き忘れた / 表記が変わったケースのセーフネット。
-    if(_lastStepN === 0 && Array.isArray(tool_log) && tool_log.length){
-      const _mutatingTools = ['edit_artifact','create_artifact','replace_text','sheets_write','sheets_append','send_email','notify_slack','notify_discord','generate_image','edit_image','generate_pdf','generate_chart','wordpress_publish'];
-      const _hasMutation = tool_log.some(function(t){ return t && t.ok !== false && _mutatingTools.indexOf(t.name) >= 0; });
-      if(_hasMutation) _lastStepN = 1;  // 1 ステップは完了したとみなす
-    }
-    // 2.5) このメッセージが「最新の進行点」かチェック。
-    //   ユーザーが過去のスクロールで古いメッセージを見ても、
-    //   そこに「▶ 続ける」が出続けるのは UX 上邪魔。
-    //   後続の assistant メッセージに同じ or 大きな step marker があれば、
-    //   こちらの approval card は出さない (ユーザーは既に進んでる)。
-    if(_lastStepN > 0){
-      try {
-        const _ag0 = (typeof agents !== 'undefined' && agents)
-          ? agents.find(function(a){ return a && a.id === activeId; }) : null;
-        if(_ag0 && Array.isArray(_ag0.history) && idx >= 0){
-          // NEW regex object — _stepCompleteRe は /g フラグを持つので
-          // 別箇所の lastIndex で挙動が変わるリスクを避ける
-          const _staleCheckRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*[\d０-９]+\s*(?:完了|done|完成|終了)/;
-          for(let _ji = idx + 1; _ji < _ag0.history.length; _ji++){
-            const _jm = _ag0.history[_ji];
-            if(!_jm || _jm.role !== 'assistant' || typeof _jm.content !== 'string') continue;
-            // 後続 assistant メッセージに step マーカー or mutating tool があれば
-            // この承認カードは「もう古い」のでスキップ。
-            if(_staleCheckRe.test(_jm.content)){
-              _lastStepN = 0;  // 承認カード描画を suppress
-              break;
-            }
-            // tool_log も見る (マーカー無しで edit_artifact だけ呼んだケース)
-            if(Array.isArray(_jm.tool_log) && _jm.tool_log.some(function(t){
-              return t && t.ok !== false && ['edit_artifact','create_artifact','replace_text'].indexOf(t.name) >= 0;
-            })){
-              _lastStepN = 0;
-              break;
-            }
-          }
-        }
-      } catch(_){}
-    }
-    if(_lastStepN > 0){
-      // 2) 履歴を遡って最近の <delegate> を探し、合計ステップ数と「次のステップ」テキストを取り出す
-      let _totalSteps = 0;
-      let _nextStepText = '';
-      const _ag = (typeof agents !== 'undefined' && agents)
-        ? agents.find(function(a){ return a && a.id === activeId; }) : null;
-      if(_ag && Array.isArray(_ag.history)){
-        for(let _hi = _ag.history.length - 1; _hi >= 0; _hi--){
-          const _hm = _ag.history[_hi];
-          if(!_hm || typeof _hm.content !== 'string') continue;
-          const _delM = _hm.content.match(/<delegate>([\s\S]*?)<\/delegate>/);
-          if(_delM){
-            // 計画の中のタスク行を全部数える
-            const _tasks = _delM[1].match(/^\s*[-*]\s*\[[ xX]\]\s+.+?$/gm) || [];
-            _totalSteps = _tasks.length;
-            if(_lastStepN < _tasks.length){
-              const _nextLine = _tasks[_lastStepN]; // 0-indexed (lastStepN=1 なら index 1 = step 2)
-              const _txM = _nextLine.match(/\]\s+(.+?)\s*$/);
-              if(_txM){
-                // ツール annotation (バックティック) を除いた本文を抽出
-                _nextStepText = String(_txM[1]).replace(/`[^`]*`\s*$/, '').trim().slice(0, 60);
-              }
-            }
-            break;
-          }
-        }
-      }
-      // 3) カード描画判定:
-      //    A. <delegate> あり & 未完ステップあり → 進捗付きフルカード
-      //    B. <delegate> あり & 全完了 → カード出さない (仕事終わってる)
-      //    C. <delegate> 無し → 「総ステップ数不明だけど何かしら完了マーク
-      //       はある」ケース。AI が `<delegate>` 出さずに本文で番号付き
-      //       リストで計画したパターン (実際の使用でよく起きる)。
-      //       「次があるか」分からないが、続行する道は残しておくべきなので
-      //       ミニマルなカード (続ける? / 一時停止) を出す。
-      const _hasDelegate = _totalSteps > 0;
-      const _allDoneInPlan = _hasDelegate && _lastStepN >= _totalSteps;
-      if(!_allDoneInPlan){
-        // 進捗 / 次のステップ表示は <delegate> がある時だけ
-        const _progressLine = _hasDelegate
-          ? ('<div class="m-app-progress">' + _lastStepN + ' / ' + _totalSteps + (isJa?' ステップ完了':' steps done') + '</div>')
-          : ('<div class="m-app-progress">' + (isJa?'ステップ ':'Step ') + _lastStepN + (isJa?' 完了 — 続きがあれば進めます':' done — continue if more remains') + '</div>');
-        const _nextLine = (_hasDelegate && _nextStepText)
-          ? ('<div class="m-app-next">' + (isJa?'次: ':'Next: ') + esc(_nextStepText) + '</div>')
-          : '';
-        // Question wording differs slightly: 「次のステップに」 vs 単に「続けますか?」
-        const _qText = _hasDelegate
-          ? (isJa?'次のステップに進んでいいですか?':'Continue to the next step?')
-          : (isJa?'続けますか?':'Continue?');
-        approvalHTML = '<div class="m-approval' + (_hasDelegate ? '' : ' minimal') + '">'
-          + '<div class="m-app-row">'
-          +   '<span class="m-app-ic">✋</span>'
-          +   '<div class="m-app-bd">'
-          +     '<div class="m-app-q">' + _qText + '</div>'
-          +     _nextLine
-          +     _progressLine
-          +   '</div>'
-          + '</div>'
-          + '<div class="m-app-acts">'
-          +   '<button class="m-app-btn ok" onclick="_approveNext(this)">' + (isJa?'▶ 続ける':'▶ Continue') + '</button>'
-          +   '<button class="m-app-btn pause" onclick="_approvePause(this)">' + (isJa?'⏸ 一時停止':'⏸ Pause') + '</button>'
-          + '</div>'
-          + '</div>';
-      }
-    }
-  }
+  // 段階承認カード (▶ 続ける / ⏸ 一時停止) は廃止。
+  // 理由: 単発依頼 (LP 1 個作成 / メール 1 通送信 / 画像生成) でも誤発火して
+  // 「続けますか?」が出る、判定ロジックが複雑で false-positive 多発、
+  // そもそも AI はとにかく動かして、修正があればチャットで言わせる方が
+  // 試行錯誤が早い、というユーザー判断。差し替え変数だけ残す (下流参照)。
+  const approvalHTML = '';
   const citesHtml = cites.length ? _renderCitations(cites) : '';
   // Artifact cards for any /generated/artifact-*.html the AI touched via a
   // tool (ext_open_url etc.) but didn't write as a [title](url) link itself.
@@ -6480,37 +6365,12 @@ function _retryThreadMsg(btn){
   setTimeout(function(){ try { _sendThreadReply(); } catch(e){ console.warn('[thread-retry]', e); } }, 30);
 }
 
-/* ── 段階承認カード のボタン handlers ─────────────────────────
-   「✅ OK 進める」: 次のステップを実行させるトリガーメッセージを送信
-   「⏸ 一時停止」: 視覚的に「停止中」表示に変えるだけ。ユーザーが手動で
-                  「▶ 次へ」と送信すれば再開する。
-   どちらも main chat / thread の両方で動く (composer を自動判別)。*/
-function _approveNext(btn){
-  if(!activeId) return;
-  var inThread = !!btn.closest('#threadDrawer');
-  var taId = inThread ? 'tci' : 'ci';
-  var ta = document.getElementById(taId);
-  if(!ta) return;
-  // Hide the approval card so it can't double-fire while the next turn streams.
-  var card = btn.closest('.m-approval');
-  if(card){ card.style.opacity = '.5'; card.style.pointerEvents = 'none'; }
-  ta.value = isJa ? '▶ 次のステップへ進めてください' : '▶ Continue to the next step';
-  try { exTA(ta); } catch(_){}
-  if(inThread){
-    try { _sendThreadReply(); } catch(e){ console.warn('[approve] thread send failed:', e); }
-  } else {
-    try { sendMsg(); } catch(e){ console.warn('[approve] main send failed:', e); }
-  }
-}
-function _approvePause(btn){
-  var card = btn.closest('.m-approval');
-  if(!card) return;
-  card.innerHTML = '<div class="m-app-paused">⏸ '
-    + (isJa
-        ? '一時停止中。続けるには「▶ 次へ」とメッセージしてください。'
-        : 'Paused. Send "▶ next" to resume.')
-    + '</div>';
-}
+/* 段階承認カードは廃止済み (描画ロジック削除済み)。
+   過去メッセージに残った onclick="_approveNext(...)" の click が空 onclick
+   で潰されないよう、no-op stub は残しておく。次回の DB.save で履歴
+   compaction されれば自然に消える。*/
+function _approveNext(){ /* deprecated — approval card removed */ }
+function _approvePause(){ /* deprecated — approval card removed */ }
 
 /* ── "Promise without delivery" — click to push the AI to actually execute.
    The chip's "▶ 実行する" button fires this. We just slot "やって" into the

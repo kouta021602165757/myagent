@@ -18888,24 +18888,11 @@ async function handleAPI(req,res,pathname,method,ip){
         // 30-60s, image gen + wrap-up 20-40s) plenty of headroom while still
         // protecting against runaway loops.
         const BUDGET_MS = 280 * 1000;
-        // ── 段階承認モード — サーバ側強制中断フラグ ────────────────
-        // _earlyPlan が存在する (= planner がお任せ受領カードを emit した) ターン
-        // では「1 ターンで 1 ステップだけ」を**コード側で強制**する。
-        // AI が prompt を無視して連続実行しようとしても、最初の「✅ ステップN
-        // 完了」マーカーを streaming 中に検出した瞬間に true になり、その
-        // iteration のツール処理を skip して loop を break する。
-        // これでユーザー承認なしに 2 step 以上が走る事故を構造的に防ぐ。
-        let _stepCompletedThisTurn = false;
-        // 寛容な完了マーカー検出 (✅/✓/☑ + ステップ/Step + 半角/全角数字 + 完了/done)
-        const _stepCompleteRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*[\d０-９]+\s*(?:完了|done|完成|終了)/;
+        // 段階承認モード (1 ターン = 1 ステップを強制する HALT) は廃止。
+        // 理由: AI を縛るとむしろ「マーカー誤発火 → create_artifact スキップ」
+        // 等の事故が増え、ユーザーは「とにかく動かして、間違ってたらチャット
+        // で言う」方が速いと判断。AI は自由に複数 step を走らせる。
         while(true){
-          // Reset step-completion flag at the start of each iteration.
-          // The flag is only relevant within an iteration: detected during
-          // streaming, checked after callAIWithTools returns. By resetting
-          // here we ensure that even if a future refactor adds a continue or
-          // skips a break, the next iteration starts with a clean slate
-          // instead of inheriting a stale 'true' from the previous one.
-          _stepCompletedThisTurn = false;
           if(sse) sse('thinking', { iter: iters });
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)
@@ -18921,40 +18908,18 @@ async function handleAPI(req,res,pathname,method,ip){
           // even across multiple tool-loop iterations. (Gemini auto-falls
           // back to non-streaming inside callAIWithTools — onText is ignored
           // there for now.)
-          //
-          // 加えて段階承認モード時は streaming 中に完了マーカーを検出して
-          // _stepCompletedThisTurn フラグを立てる。
           const _onIterText = sse ? (txt) => {
             if(!txt) return;
             streamedText += txt;
             try { sse('delta', { text: txt }); } catch(e){}
-            if(_earlyPlan && !_stepCompletedThisTurn){
-              // streamedText は累積文字列。マーカーがいま検出されたかをチェック。
-              if(_stepCompleteRe.test(streamedText)){
-                _stepCompletedThisTurn = true;
-                console.log('[step-mode] step completion marker detected mid-stream — will halt after this iteration');
-              }
-            }
           } : null;
-          // Phase A — if the planner already streamed a <delegate> card,
-          // append a turn-scoped instruction so the main AI doesn't repeat it.
-          // This is just additive text on the system string for this call —
-          // doesn't mutate the cached buildSystem output.
+          // _earlyPlan があれば <delegate> は既に画面に表示済みなので再出力させない、
+          // だけのシンプルな指示に縮小。段階承認の縛りは無し (= AI は計画全体を走らせる)。
           let _sysForTurn = buildSystem(teamMemberAgent || agent, {sheetsActive, extensionActive, isGroup, speakerName, memories: (payerUser.memories || user.memories), kbHits: _kbHits, queryEmbedding: _queryEmbedding, recentHistory: (agent.history||[]).slice(-6), userQuery: message, opUser: payerUser, intentCategories, ...(_teamCtx||{})});
           if(_earlyPlan){
-            _sysForTurn += '\n\n🚨 [このターン限定 — 段階承認モード]\n'
-              + 'お任せ受領カード <delegate>...</delegate> は既にユーザー画面に表示済み (' + (_earlyPlan.steps||[]).length + ' ステップ計画済み)。<delegate> を絶対に再度出力しないでください。\n'
-              + '\n'
-              + '**このターンでは「次の 1 ステップだけ」を実行**してください。これは段階承認フロー: 「社員 (AI) が作って → 上司 (ユーザー) が確認 → 次へ進める」を繰り返す設計。\n'
-              + '\n'
-              + '手順:\n'
-              + '1. 会話履歴に「✅ ステップN 完了」が無ければ → ステップ 1 から開始\n'
-              + '2. 既にあれば、その最大の N + 1 (= 次の未完了ステップ) を実行する\n'
-              + '3. そのステップに必要な tool を呼ぶ (1 ステップ = 1-2 tool 呼び出し以内が理想)\n'
-              + '4. 完了したら本文に「✅ ステップM 完了」と書いて停止 (M は今やったステップ番号)\n'
-              + '5. **次以降のステップは絶対に実行しない** — ユーザーが「次へ」と確認してから進む\n'
-              + '\n'
-              + 'なぜこの設計か: ユーザーが各ステップの結果を見てから承認することで、暴走を防ぎ、修正があれば早期に介入できる。';
+            _sysForTurn += '\n\n[このターン限定] お任せ受領カード <delegate>...</delegate> は既にユーザー画面に表示済み ('
+              + (_earlyPlan.steps||[]).length
+              + ' ステップ)。<delegate> を再度出力しないこと。計画に沿って必要な tool を順に呼んで仕事を最後まで進めてください。';
           }
           resp = await callAIWithTools(convMsgs, _sysForTurn, tools, _tc, agent.model, agent, _onIterText);
           totalIn  += (resp.usage?.input_tokens)||0;
@@ -19276,21 +19241,6 @@ async function handleAPI(req,res,pathname,method,ip){
             reply = lines.join('\n');
             // Track that we synthesized so the existing fallback below doesn't
             // overwrite reply with empty resp.content text.
-            break;
-          }
-          // ── 段階承認モード — tool 実行**後**に強制中断 ──
-          // _onIterText が完了マーカーを検出していたら、tool は既に走り終わって
-          // いるので、次の iteration (次のステップ実行) に行かずにここで止める。
-          // 「1 ターン = 1 ステップ」をコード側で保証。
-          //
-          // ⚠️ 以前は callAIWithTools 直後 (tool 実行前) で HALT していたが、
-          // それだと「AI が同一 response 内で text『✅ ステップ1 完了』+ tool_use
-          // create_artifact」を返してきたとき、tool を実行する前に loop を
-          // 抜けてしまい create_artifact が呼ばれなかった (= 成果物が作られない)。
-          // tool を実行してから判定することで「実際に動いた」を最優先にする。
-          if(_earlyPlan && _stepCompletedThisTurn){
-            console.log('[step-mode] HALT after tool execution — step completion marker seen');
-            try { resp.stop_reason = 'end_turn'; } catch(_){}
             break;
           }
         }

@@ -18833,6 +18833,16 @@ async function handleAPI(req,res,pathname,method,ip){
         // 30-60s, image gen + wrap-up 20-40s) plenty of headroom while still
         // protecting against runaway loops.
         const BUDGET_MS = 280 * 1000;
+        // ── 段階承認モード — サーバ側強制中断フラグ ────────────────
+        // _earlyPlan が存在する (= planner がお任せ受領カードを emit した) ターン
+        // では「1 ターンで 1 ステップだけ」を**コード側で強制**する。
+        // AI が prompt を無視して連続実行しようとしても、最初の「✅ ステップN
+        // 完了」マーカーを streaming 中に検出した瞬間に true になり、その
+        // iteration のツール処理を skip して loop を break する。
+        // これでユーザー承認なしに 2 step 以上が走る事故を構造的に防ぐ。
+        let _stepCompletedThisTurn = false;
+        // 寛容な完了マーカー検出 (✅/✓/☑ + ステップ/Step + 半角/全角数字 + 完了/done)
+        const _stepCompleteRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*[\d０-９]+\s*(?:完了|done|完成|終了)/;
         while(true){
           if(sse) sse('thinking', { iter: iters });
           // Trim heavy data from older tool_result blocks before each call
@@ -18849,10 +18859,20 @@ async function handleAPI(req,res,pathname,method,ip){
           // even across multiple tool-loop iterations. (Gemini auto-falls
           // back to non-streaming inside callAIWithTools — onText is ignored
           // there for now.)
+          //
+          // 加えて段階承認モード時は streaming 中に完了マーカーを検出して
+          // _stepCompletedThisTurn フラグを立てる。
           const _onIterText = sse ? (txt) => {
             if(!txt) return;
             streamedText += txt;
             try { sse('delta', { text: txt }); } catch(e){}
+            if(_earlyPlan && !_stepCompletedThisTurn){
+              // streamedText は累積文字列。マーカーがいま検出されたかをチェック。
+              if(_stepCompleteRe.test(streamedText)){
+                _stepCompletedThisTurn = true;
+                console.log('[step-mode] step completion marker detected mid-stream — will halt after this iteration');
+              }
+            }
           } : null;
           // Phase A — if the planner already streamed a <delegate> card,
           // append a turn-scoped instruction so the main AI doesn't repeat it.
@@ -18879,6 +18899,19 @@ async function handleAPI(req,res,pathname,method,ip){
           totalOut += (resp.usage?.output_tokens)||0;
 
           if(resp.stop_reason !== 'tool_use') break;
+          // ── 段階承認モード — サーバ側で強制中断 ──
+          // _onIterText が完了マーカーを検出していた場合、たとえ AI が
+          // 次のステップのために tool_use を返してきても処理しない。
+          // 「1 ターン = 1 ステップ」を構造的に保証 (prompt 任せじゃない)。
+          // すでに streaming で text は送られているので、UI 側は普通の done
+          // 扱いで継続。承認カードがクライアントで描画される。
+          if(_earlyPlan && _stepCompletedThisTurn){
+            console.log('[step-mode] HALT — step completion seen; skipping next tool iteration');
+            // resp.stop_reason を強制的に書き換えて 「自然終了」 扱いに。
+            // これにより外側の SSE done では truncated 表示にならない。
+            try { resp.stop_reason = 'end_turn'; } catch(_){}
+            break;
+          }
           iters++;
           if(iters > MAX_ITERS){
             reply = '(ツール呼び出しの上限に達したため処理を中断しました)';

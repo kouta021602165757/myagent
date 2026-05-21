@@ -18961,19 +18961,6 @@ async function handleAPI(req,res,pathname,method,ip){
           totalOut += (resp.usage?.output_tokens)||0;
 
           if(resp.stop_reason !== 'tool_use') break;
-          // ── 段階承認モード — サーバ側で強制中断 ──
-          // _onIterText が完了マーカーを検出していた場合、たとえ AI が
-          // 次のステップのために tool_use を返してきても処理しない。
-          // 「1 ターン = 1 ステップ」を構造的に保証 (prompt 任せじゃない)。
-          // すでに streaming で text は送られているので、UI 側は普通の done
-          // 扱いで継続。承認カードがクライアントで描画される。
-          if(_earlyPlan && _stepCompletedThisTurn){
-            console.log('[step-mode] HALT — step completion seen; skipping next tool iteration');
-            // resp.stop_reason を強制的に書き換えて 「自然終了」 扱いに。
-            // これにより外側の SSE done では truncated 表示にならない。
-            try { resp.stop_reason = 'end_turn'; } catch(_){}
-            break;
-          }
           iters++;
           if(iters > MAX_ITERS){
             reply = '(ツール呼び出しの上限に達したため処理を中断しました)';
@@ -19289,6 +19276,21 @@ async function handleAPI(req,res,pathname,method,ip){
             reply = lines.join('\n');
             // Track that we synthesized so the existing fallback below doesn't
             // overwrite reply with empty resp.content text.
+            break;
+          }
+          // ── 段階承認モード — tool 実行**後**に強制中断 ──
+          // _onIterText が完了マーカーを検出していたら、tool は既に走り終わって
+          // いるので、次の iteration (次のステップ実行) に行かずにここで止める。
+          // 「1 ターン = 1 ステップ」をコード側で保証。
+          //
+          // ⚠️ 以前は callAIWithTools 直後 (tool 実行前) で HALT していたが、
+          // それだと「AI が同一 response 内で text『✅ ステップ1 完了』+ tool_use
+          // create_artifact」を返してきたとき、tool を実行する前に loop を
+          // 抜けてしまい create_artifact が呼ばれなかった (= 成果物が作られない)。
+          // tool を実行してから判定することで「実際に動いた」を最優先にする。
+          if(_earlyPlan && _stepCompletedThisTurn){
+            console.log('[step-mode] HALT after tool execution — step completion marker seen');
+            try { resp.stop_reason = 'end_turn'; } catch(_){}
             break;
           }
         }

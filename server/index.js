@@ -18844,6 +18844,13 @@ async function handleAPI(req,res,pathname,method,ip){
         // 寛容な完了マーカー検出 (✅/✓/☑ + ステップ/Step + 半角/全角数字 + 完了/done)
         const _stepCompleteRe = /(?:✅|✓|☑|✔)\s*(?:ステップ|Step|step)\s*(?:No\.?)?\s*[\d０-９]+\s*(?:完了|done|完成|終了)/;
         while(true){
+          // Reset step-completion flag at the start of each iteration.
+          // The flag is only relevant within an iteration: detected during
+          // streaming, checked after callAIWithTools returns. By resetting
+          // here we ensure that even if a future refactor adds a continue or
+          // skips a break, the next iteration starts with a clean slate
+          // instead of inheriting a stale 'true' from the previous one.
+          _stepCompletedThisTurn = false;
           if(sse) sse('thinking', { iter: iters });
           // Trim heavy data from older tool_result blocks before each call
           // (keeps input tokens under the org rate limit)

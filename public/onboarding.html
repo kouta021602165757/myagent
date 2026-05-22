@@ -68,7 +68,7 @@
 
   /* ── Team avatars (visible while team forms) ───────────── */
   .team{
-    display:flex; justify-content:center; gap:14px; margin-bottom:28px;
+    display:flex; justify-content:center; flex-wrap:wrap; gap:14px; margin-bottom:28px;
     animation:rise .6s .1s cubic-bezier(.2,.7,.2,1) both;
   }
   .team-mem{
@@ -77,6 +77,11 @@
     display:flex; align-items:center; justify-content:center;
     font-size:22px; box-shadow:var(--shadow);
     transition:border-color .3s, transform .3s;
+  }
+  /* モバイル: 5 個並ぶと幅が苦しい → gap を縮める + 折り返し許可 */
+  @media (max-width:500px){
+    .team{ gap:8px; }
+    .team-mem{ width:42px; height:42px; font-size:19px; }
   }
   .team-mem.active{
     border-color:var(--peach);

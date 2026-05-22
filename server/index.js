@@ -13995,6 +13995,14 @@ async function handleAPI(req,res,pathname,method,ip){
     }
 
     // 旧 agent に site_url 紐付け
+    // ── 部分更新後 save 失敗時の rollback 用に snapshot を取る ──
+    // 旧 agent オブジェクトのトップレベル enumerable プロパティを浅くコピー。
+    // (history / artifacts は同じ参照を保持するが、追加するフィールド
+    //  site_url / site_vertical / etc. の "before" 状態を保てれば十分)
+    const _backup = {};
+    for(const k of Object.keys(agent)) _backup[k] = agent[k];
+    const _appliedKeys = ['site_url','site_vertical','site_title','team_members','persona','legacy_persona','via_onboarding_site','via_migration','avatar','current_task'];
+
     const preset = _teamPresetFor(vertical);
     agent.site_url = siteUrl;
     agent.site_vertical = vertical;
@@ -14021,9 +14029,16 @@ async function handleAPI(req,res,pathname,method,ip){
         updated_at: new Date().toISOString(),
       };
     }
-    try { await DB.save(user); } catch(e){
-      console.warn('[onboarding/migrate] save failed:', e.message);
-      return jres(res, 500, { error: '保存に失敗しました。' });
+    try {
+      await DB.save(user);
+    } catch(e){
+      console.warn('[onboarding/migrate] save failed, rolling back:', e.message);
+      // rollback — 適用した全フィールドを backup の値に戻す
+      for(const k of _appliedKeys){
+        if(k in _backup) agent[k] = _backup[k];
+        else delete agent[k];
+      }
+      return jres(res, 500, { error: '保存に失敗しました。少し待って再試行してください。', rolled_back: true });
     }
     console.log('[onboarding/migrate] migrated', agentId, '→', siteUrl, '(' + vertical + ')');
     return jres(res, 200, { agent, vertical, team: preset, site_url: siteUrl });

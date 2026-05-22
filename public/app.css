@@ -728,6 +728,10 @@ input,textarea{font-family:var(--sans);}
 }
 .sd-art-open:hover{text-decoration:underline}
 
+/* 中サイズ画面 (タブレット縦 / 小さい laptop): 3 → 2 列 */
+@media (max-width:1000px){
+  .sd-art-grid{grid-template-columns:repeat(2,1fr); gap:10px}
+}
 @media (max-width:760px){
   .sd-grid{grid-template-columns:1fr}
   .sd-head{flex-direction:column; align-items:stretch; gap:12px}

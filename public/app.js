@@ -3388,9 +3388,101 @@ function renderHomeDashboard(){
     return;
   }
 
+  // ── 状態 C: サイト一覧 view (= 「すべてのサイト」モード) ──
+  // window._allSitesMode が true なら、activeId に関係なく全サイト grid を出す。
+  if(window._allSitesMode){
+    body.innerHTML = _renderAllSitesHTML(sites, nameStr);
+    return;
+  }
+
   // ── 状態 B: サイトあり ── アクティブなサイトのダッシュボード
   var activeSite = sites.find(function(s){ return s.id === activeId; }) || sites[0];
   body.innerHTML = _renderSiteDashboardHTML(activeSite);
+}
+
+// 「すべてのサイト」 = 生成済み AI チームの一覧 grid view
+// サイドバーの「📋 すべてのサイト」リンク or サイト ic クリックで遷移。
+function goAllSitesHome(){
+  window._allSitesMode = true;
+  // activeId はクリアして「どれも選択されてない」状態にする
+  try { document.querySelectorAll('.ag-item.on, .ag-site.active').forEach(function(el){ el.classList.remove('on'); el.classList.remove('active'); }); } catch(_){}
+  try {
+    document.getElementById('emptyWrap').style.display = '';
+    document.getElementById('chatWrap').style.display = 'none';
+  } catch(_){}
+  try { renderHomeDashboard(); } catch(_){}
+  try { renderAgList(); } catch(_){}
+}
+
+// 「全サイト grid view」 — 1 つのサイトをクリックすると _allSitesMode を解除して
+// そのサイトのダッシュボードを開く。
+function _renderAllSitesHTML(sites, name){
+  var sorted = sites.slice().sort(_sortByLastActivity);
+  var cards = sorted.map(function(s){
+    var v = s.site_vertical || 'other';
+    var ic = _verticalIcon(v);
+    var vLabel = _verticalLabel(v);
+    var hostname = _siteHostname(s);
+    var allArts = _siteAllArtifacts(s.id);
+    var todayN = _siteTodayArtifacts(s.id).length;
+    var members = (s.team_members || []).slice(0, 5);
+    var memHtml = members.map(function(m){
+      var mi = (typeof _MEMBER_ICONS !== 'undefined' && _MEMBER_ICONS[m.role]) || '🤖';
+      return '<span class="ass-mem" title="' + esc(m.name||'') + '">' + mi + '</span>';
+    }).join('');
+    var kpi = s.kpi || {};
+    var kpiBits = [];
+    if(kpi.pv)   kpiBits.push('PV ' + Number(kpi.pv).toLocaleString());
+    if(kpi.cvr)  kpiBits.push('CVR ' + kpi.cvr + '%');
+    if(kpi.leads)kpiBits.push('Leads ' + Number(kpi.leads).toLocaleString());
+    var kpiText = kpiBits.length ? kpiBits.join(' ・ ') : 'KPI 未設定';
+    var lastTs = _lastActivityMs(s);
+    var lastRel = lastTs ? _formatRel(lastTs) : '';
+    var isLive = !!(window._streamingAgents && window._streamingAgents.has(s.id))
+              || (s.id === window._streamingAgentId);
+    return '<div class="ass-card' + (isLive ? ' live' : '') + '" onclick="_openSiteFromAllSites(\'' + esc(s.id) + '\')">'
+         +   '<div class="ass-card-h">'
+         +     '<div class="ass-ic">' + ic + (isLive ? '<span class="ass-live-dot" title="作業中"></span>' : '') + '</div>'
+         +     '<div class="ass-ti-wrap">'
+         +       '<div class="ass-host">' + esc(hostname) + '</div>'
+         +       '<div class="ass-vt">' + esc(vLabel) + '</div>'
+         +     '</div>'
+         +   '</div>'
+         +   '<div class="ass-stats">'
+         +     '<div class="ass-stat"><div class="ass-stat-v">' + allArts.length + '</div><div class="ass-stat-l">累計納品</div></div>'
+         +     '<div class="ass-stat"><div class="ass-stat-v">' + todayN + '</div><div class="ass-stat-l">今日</div></div>'
+         +   '</div>'
+         +   '<div class="ass-kpi">🎯 ' + esc(kpiText) + '</div>'
+         +   '<div class="ass-foot">'
+         +     '<div class="ass-team">' + (memHtml || '<span style="opacity:.5">チームなし</span>') + '</div>'
+         +     '<div class="ass-last">' + (lastRel ? '更新: ' + esc(lastRel) : '未稼働') + '</div>'
+         +   '</div>'
+         + '</div>';
+  }).join('');
+
+  return '<div class="all-sites">'
+    + '<div class="all-sites-h">'
+    +   '<div class="all-sites-tag"><span class="hm-tag-dot"></span>すべての AI チーム</div>'
+    +   '<h1>' + esc(name) + ' さんの集客チーム一覧</h1>'
+    +   '<p>あなたが派遣した <b>' + sorted.length + '</b> サイトの AI チーム。クリックでダッシュボードを開きます。</p>'
+    + '</div>'
+    + '<div class="all-sites-grid">'
+    +   cards
+    +   '<button class="ass-add" onclick="openAddSiteModal()">'
+    +     '<div class="ass-add-ic">+</div>'
+    +     '<div class="ass-add-lbl">新しいサイトを追加</div>'
+    +     '<div class="ass-add-sub">URL を貼るだけ ・ 60 秒で納品</div>'
+    +   '</button>'
+    + '</div>'
+    + '</div>';
+}
+// クリックで全サイトモードを抜けて、その site のダッシュボードを開く。
+function _openSiteFromAllSites(siteId){
+  window._allSitesMode = false;
+  activeId = siteId;
+  try { renderHomeDashboard(); } catch(_){}
+  try { renderAgList(); } catch(_){}
+  try { document.getElementById('emptyWrap').scrollTop = 0; } catch(_){}
 }
 
 // 「サイト 0 件」 = 「+ サイトを追加して AI チームを派遣」の入口
@@ -3766,6 +3858,26 @@ function _renderSiteDashboardHTML(site){
     +   '</div>'
     +   '<button class="sd-chat-cta" onclick="openSite(\'' + esc(site.id) + '\')">'
     +     '💬 AI チームに依頼 <span class="arrow">→</span>'
+    +   '</button>'
+    + '</div>'
+
+    // ── アクション集約 row (= 旧チャット header の 5 ボタンをここに集めた) ──
+    // 🔗 共有URL / 💬 会話共有 / 📝 メモ / ⚙ 設定 / ↻ 新規会話
+    + '<div class="sd-actions">'
+    +   '<button class="sd-act" onclick="openSite(\'' + esc(site.id) + '\');setTimeout(openShareCard,150)" title="共有 URL を取得 / SNS で広報">'
+    +     '<span class="sd-act-ic">🔗</span><span class="sd-act-lbl">共有URL</span>'
+    +   '</button>'
+    +   '<button class="sd-act" onclick="openSite(\'' + esc(site.id) + '\');setTimeout(openChatShareModal,150)" title="この会話を公開リンクで共有">'
+    +     '<span class="sd-act-ic">💬</span><span class="sd-act-lbl">会話共有</span>'
+    +   '</button>'
+    +   '<button class="sd-act" onclick="openNotesPanel(\'' + esc(site.id) + '\')" title="メモ (この AI とのチャット専用)">'
+    +     '<span class="sd-act-ic">📝</span><span class="sd-act-lbl">メモ</span>'
+    +   '</button>'
+    +   '<button class="sd-act" onclick="openEditAgent(\'' + esc(site.id) + '\')" title="チーム設定 (モデル / ペルソナ / 権限)">'
+    +     '<span class="sd-act-ic">⚙</span><span class="sd-act-lbl">設定</span>'
+    +   '</button>'
+    +   '<button class="sd-act" onclick="openSite(\'' + esc(site.id) + '\');setTimeout(newChat,150)" title="この AI チームに新しい依頼を開始">'
+    +     '<span class="sd-act-ic">↻</span><span class="sd-act-lbl">新規依頼</span>'
     +   '</button>'
     + '</div>'
 
@@ -4227,6 +4339,8 @@ async function _submitAddSite(ev){
 //   バグになってたので、明示的に openAgent を呼んでチャット画面を開く)
 function openSite(siteId){
   if(!siteId) return;
+  // _allSitesMode に居たら抜ける (= 「すべてのサイト」一覧から site をクリック)
+  window._allSitesMode = false;
   try { openAgent(siteId); } catch(e){ console.warn('[openSite] openAgent failed:', e && e.message); }
 }
 
@@ -4493,6 +4607,17 @@ function renderAgList(){
        +    '<span class="ag-add-ic">+</span>'
        +    '<span class="ag-add-tx">新しいサイトを追加</span>'
        +  '</button>';
+
+  // 1b) 「📋 すべてのサイトを見る」 — 全 AI チーム一覧 page
+  //     (= 生成済み Agent 一覧へのエントリーポイント)
+  if(sites.length > 0){
+    var allSitesActive = !!window._allSitesMode;
+    html += '<button class="ag-all-sites' + (allSitesActive ? ' on' : '') + '" onclick="goAllSitesHome()">'
+         +    '<span class="ag-all-ic">📋</span>'
+         +    '<span class="ag-all-tx">すべてのサイトを見る</span>'
+         +    '<span class="ag-all-n">' + sites.length + '</span>'
+         + '</button>';
+  }
 
   // 2) サイト一覧 (= AI チーム)
   if(sites.length > 0){
@@ -4857,17 +4982,20 @@ async function openAgent(id){
     actsHTML += '<button class="ct-act" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('共有メモ (メンバー全員で閲覧・編集)','Shared notes (visible & editable by all members)')+'">📝</button>';
     actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="'+L('グループ設定','Group settings')+'">⚙</button>';
   } else {
-    // site agent (= site_url を持つ) なら最前部に「📊 ダッシュボード」ボタン
+    // site agent (= site_url を持つ) はチャット上部を「📊 ダッシュボード」だけに絞る。
+    // 他のアクション (🔗 共有 / 💬 会話共有 / ↻ 新規 / 📝 メモ / ⚙ 設定) は
+    // ダッシュボード内のアクションパネルに集約 — chat header をスッキリ。
     if(_isSiteAgent(ag)){
       actsHTML += '<button class="ct-act dashboard-btn" onclick="goSiteDashboard()" title="'+L('ダッシュボード (KPI ・ 納品物 ・ 進捗)','Dashboard')+'">📊 ダッシュボード</button>';
-    }
-    actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
-    actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
-    actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
-    actsHTML += '<button class="ct-act" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('メモ (この AI とのチャット専用)','Notes (private to this chat)')+'">📝</button>';
-    if(!ag._is_joined_group){
-      actsHTML += '<button class="ct-act" onclick="openAgentProfile(\''+ag.id+'\')" title="'+L('AIプロフィール (記憶 / 目標 / プレイブック / タスク)','Agent profile (memory / goals / playbook / tasks)')+'">🧠</button>';
-      actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
+    } else {
+      actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
+      actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
+      actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
+      actsHTML += '<button class="ct-act" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('メモ (この AI とのチャット専用)','Notes (private to this chat)')+'">📝</button>';
+      if(!ag._is_joined_group){
+        actsHTML += '<button class="ct-act" onclick="openAgentProfile(\''+ag.id+'\')" title="'+L('AIプロフィール (記憶 / 目標 / プレイブック / タスク)','Agent profile (memory / goals / playbook / tasks)')+'">🧠</button>';
+        actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
+      }
     }
   }
   // Context window usage indicator — rough: ~4 chars / token.
@@ -4925,11 +5053,21 @@ async function openAgent(id){
       intelPill = '<button onclick="event.stopPropagation(); openAgentProfile(\''+ag.id+'\')" title="'+L('AI が憶えてる事 / 目標','What this AI remembers / goals')+'" style="font-size:10px;font-weight:700;color:var(--text2);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit">'+parts.join(' · ')+'</button>';
     }
   }
+  // Site agent はホスト名 = 「fukuyama-note.com」みたいな表示で、
+  // ここをクリックして profile を開く挙動は不要 (= プロフィールボタン削除指示)。
+  // 旧 generic agent / group は引き続き Agent カード (= level / xp / 成果率) を開ける。
+  var _isSite = _isSiteAgent(ag);
+  var _iconAttrs = _isSite
+    ? 'style="cursor:default" title="' + esc(ag.name) + '"'
+    : 'onclick="_openAgentCard(\''+esc(ag.id)+'\')" style="cursor:pointer" title="'+L('エージェントカードを開く','Open agent card')+'"';
+  var _nameAttrs = _isSite
+    ? 'style="cursor:default"'
+    : 'onclick="_openAgentCard(\''+esc(ag.id)+'\')" style="cursor:pointer" title="'+L('エージェントカードを開く','Open agent card')+'"';
   document.getElementById('chatTop').innerHTML=
     '<button class="mobile-hamburger" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>'+
-    '<div class="ct-icon" onclick="_openAgentCard(\''+esc(ag.id)+'\')" style="cursor:pointer" title="'+L('エージェントカードを開く','Open agent card')+'">'+_avHTML(ag.avatar)+'</div>'+
+    '<div class="ct-icon" '+_iconAttrs+'>'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
-      '<div class="ct-name" onclick="_openAgentCard(\''+esc(ag.id)+'\')" style="cursor:pointer" title="'+L('エージェントカードを開く','Open agent card')+'"><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
+      '<div class="ct-name" '+_nameAttrs+'><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
       '<div class="ct-pills">'+topPills+' '+modelPill+' '+tasksPill+' '+intelPill+' '+ctxPill+'</div>'+
     '</div>'+
     '<div class="ct-actions">'+ actsHTML +'</div>';

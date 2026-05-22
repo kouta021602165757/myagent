@@ -672,6 +672,36 @@ input,textarea{font-family:var(--sans);}
 .sd-chat-cta .arrow{transition:transform .2s}
 .sd-chat-cta:hover .arrow{transform:translateX(3px)}
 
+/* ── アクション集約 row (= 旧チャット header の 5 ボタンを統合) ── */
+.sd-actions{
+  display:grid; grid-template-columns:repeat(5,1fr); gap:8px;
+  margin-bottom:16px;
+}
+.sd-act{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+  padding:11px 6px;
+  background:#fff; border:1px solid var(--wire);
+  border-radius:11px;
+  cursor:pointer;
+  font-family:inherit; color:var(--text2);
+  transition:background .15s, border-color .15s, color .15s, transform .12s, box-shadow .15s;
+}
+.sd-act:hover{
+  background:var(--peach-soft, #fff1e3);
+  border-color:rgba(251,146,60,.4);
+  color:var(--peach-dark,#ea580c);
+  transform:translateY(-1px);
+  box-shadow:0 4px 10px rgba(234,88,12,.08);
+}
+.sd-act-ic{font-size:18px; line-height:1}
+.sd-act-lbl{font-size:11px; font-weight:800; letter-spacing:.02em}
+@media (max-width:560px){
+  .sd-actions{grid-template-columns:repeat(5,1fr); gap:5px}
+  .sd-act{padding:9px 4px}
+  .sd-act-ic{font-size:16px}
+  .sd-act-lbl{font-size:9.5px}
+}
+
 /* ── KPI row (= 月間目標 PV / CVR / リード数) ─────────────── */
 .sd-kpi-row{
   display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px;
@@ -1463,6 +1493,153 @@ input,textarea{font-family:var(--sans);}
   100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   ── 「すべてのサイト」 ページ (= 全 AI チーム grid) ──
+   サイドバーの「📋 すべてのサイトを見る」 から遷移。
+   各サイトの現状サマリ + チームメンバー + KPI を一目で。
+   ══════════════════════════════════════════════════════════════════ */
+.all-sites{
+  max-width:1100px; margin:0 auto; padding:32px 24px;
+}
+.all-sites-h{
+  margin-bottom:24px;
+}
+.all-sites-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:10.5px; font-weight:800; letter-spacing:.06em;
+  color:var(--peach-dark,#ea580c); text-transform:uppercase;
+  background:rgba(251,146,60,.08); border:1px solid rgba(251,146,60,.22);
+  padding:4px 12px; border-radius:99px;
+  margin-bottom:14px;
+}
+.all-sites-h h1{
+  font-size:28px; font-weight:900; letter-spacing:-.02em; color:var(--text);
+  margin:0 0 7px;
+}
+.all-sites-h p{
+  font-size:14px; color:var(--text2); line-height:1.6; margin:0;
+}
+.all-sites-h p b{color:var(--peach-dark,#ea580c); font-family:'Outfit',sans-serif; font-weight:800}
+.all-sites-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px;
+}
+
+/* ── 各サイトカード ── */
+.ass-card{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:18px 20px;
+  cursor:pointer;
+  display:flex; flex-direction:column; gap:12px;
+  transition:transform .15s, border-color .15s, box-shadow .15s;
+}
+.ass-card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(251,146,60,.4);
+  box-shadow:0 12px 32px rgba(234,88,12,.10);
+}
+.ass-card.live{
+  border-color:rgba(34,197,94,.4);
+  background:linear-gradient(135deg, rgba(34,197,94,.04), #fff);
+}
+.ass-card-h{
+  display:flex; align-items:center; gap:12px;
+}
+.ass-ic{
+  position:relative;
+  width:44px; height:44px; border-radius:12px;
+  background:var(--peach-soft, #fff1e3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.ass-live-dot{
+  position:absolute; right:-2px; top:-2px;
+  width:11px; height:11px; border-radius:50%;
+  background:#22c55e; border:2px solid #fff;
+  box-shadow:0 0 0 0 rgba(34,197,94,.6);
+  animation:ass-pulse 1.6s ease-out infinite;
+}
+@keyframes ass-pulse{
+  0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}
+  70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}
+  100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+}
+.ass-ti-wrap{flex:1; min-width:0}
+.ass-host{
+  font-size:14.5px; font-weight:900; color:var(--text); letter-spacing:-.01em;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ass-vt{
+  font-size:11px; font-weight:700; color:var(--text3);
+  letter-spacing:.04em; margin-top:1px;
+}
+.ass-stats{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  padding:10px 0; border-top:1px solid var(--wire); border-bottom:1px solid var(--wire);
+}
+.ass-stat{display:flex; flex-direction:column; gap:2px; align-items:center}
+.ass-stat-v{
+  font-family:'Outfit',sans-serif;
+  font-size:22px; font-weight:900; color:var(--peach-dark,#ea580c);
+  letter-spacing:-.02em; line-height:1;
+}
+.ass-stat-l{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase;
+}
+.ass-kpi{
+  font-size:11.5px; font-weight:700; color:var(--text2);
+  background:var(--cream); border-radius:8px; padding:7px 10px;
+  letter-spacing:.01em;
+}
+.ass-foot{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.ass-team{display:flex; gap:3px; flex:1; min-width:0; overflow:hidden}
+.ass-mem{
+  width:24px; height:24px; border-radius:7px;
+  background:var(--peach-soft, #fff1e3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; flex-shrink:0;
+  border:1px solid rgba(251,146,60,.22);
+}
+.ass-last{
+  font-size:10.5px; font-weight:700; color:var(--text3);
+  letter-spacing:.02em; flex-shrink:0;
+}
+
+/* 「+ 新しいサイトを追加」カード (= grid 最後の card と同じサイズの dashed CTA) */
+.ass-add{
+  background:#fff; border:1.5px dashed rgba(251,146,60,.4);
+  border-radius:14px; padding:18px 20px;
+  cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  font-family:inherit;
+  color:var(--peach-dark,#ea580c);
+  transition:background .15s, border-color .15s, transform .15s;
+  min-height:200px;
+}
+.ass-add:hover{
+  background:rgba(251,146,60,.06);
+  border-color:var(--peach,#fb923c);
+  transform:translateY(-3px);
+}
+.ass-add-ic{
+  width:48px; height:48px; border-radius:14px;
+  background:linear-gradient(135deg,var(--peach,#fb923c),var(--peach-dark,#ea580c));
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:900;
+  box-shadow:0 6px 14px rgba(234,88,12,.24);
+}
+.ass-add-lbl{font-size:14.5px; font-weight:900; letter-spacing:-.01em}
+.ass-add-sub{font-size:11.5px; font-weight:700; color:var(--text3); letter-spacing:.02em}
+@media (max-width:680px){
+  .all-sites{padding:24px 16px}
+  .all-sites-h h1{font-size:22px}
+  .all-sites-grid{grid-template-columns:1fr; gap:10px}
+  .ass-add{min-height:140px}
+}
+
 /* ── サイドバー: サイト一覧 + add-site CTA ───────────────────── */
 .ag-add-site{
   display:flex; align-items:center; gap:8px;
@@ -1475,6 +1652,38 @@ input,textarea{font-family:var(--sans);}
 }
 .ag-add-site:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(234,88,12,.30); filter:brightness(1.05)}
 .ag-add-ic{font-size:18px; font-weight:900}
+
+/* ── サイドバー: 「📋 すべてのサイトを見る」 (= Agent 一覧 entry) ── */
+.ag-all-sites{
+  display:flex; align-items:center; gap:8px;
+  background:#fff; color:var(--text2); border:1px solid var(--wire2);
+  width:calc(100% - 16px); margin:0 8px 8px;
+  padding:9px 12px; border-radius:9px;
+  font-family:inherit; font-size:12.5px; font-weight:800;
+  cursor:pointer;
+  transition:background .12s, border-color .12s, color .12s;
+}
+.ag-all-sites:hover{
+  background:var(--peach-soft, #fff1e3);
+  border-color:var(--peach,#fb923c);
+  color:var(--peach-dark,#ea580c);
+}
+.ag-all-sites.on{
+  background:linear-gradient(135deg, rgba(251,146,60,.14), rgba(234,88,12,.06));
+  border-color:rgba(251,146,60,.4);
+  color:var(--peach-dark,#ea580c);
+}
+.ag-all-ic{font-size:15px; flex-shrink:0}
+.ag-all-tx{flex:1; text-align:left}
+.ag-all-n{
+  font-family:'Outfit',sans-serif;
+  font-size:11px; font-weight:800;
+  background:var(--cream); color:var(--text3);
+  padding:1px 8px; border-radius:99px;
+  flex-shrink:0;
+}
+.ag-all-sites.on .ag-all-n{background:#fff; color:var(--peach-dark,#ea580c)}
+
 .sb-sec-h{
   padding:11px 16px 4px; font-size:10.5px; font-weight:800;
   color:var(--text3); letter-spacing:.05em; text-transform:uppercase;

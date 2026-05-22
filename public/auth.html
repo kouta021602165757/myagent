@@ -623,16 +623,17 @@ async function doSignup() {
     }
 
     // ── 「Web サイト集客」 onboarding 経路: site_url がある場合は AI チームを自動編成 ──
-    //   サーバ側で URL → vertical 判定 → agent (= site team) 作成。
-    //   完了後は /app.html?onboarding=site&agent_id=... に着地、新規ホーム画面が
-    //   そのチームの artifact を見せる (artifact 並列生成は Day 3 で実装)。
+    //   1) サーバ側で URL → vertical 判定 → agent (= site team) 作成
+    //   2) 成功時は /onboarding.html?agent_id=... に redirect (= スプラッシュ画面)
+    //   3) スプラッシュが SSE で 5 artifact 並列生成の進捗を表示
+    //   4) 完了後にスプラッシュが /app.html に redirect
     if(siteUrl){
       setLoading('s-btn', true, L('AI チームを編成中…','Forming AI team…'));
       try {
         var onb = await post('/api/onboarding/site', { site_url: siteUrl });
         try { localStorage.removeItem('pendingSiteUrl'); } catch(e){}
         if(onb && onb.agent && onb.agent.id){
-          window.location.href = '/app.html?onboarding=site&agent_id=' + encodeURIComponent(onb.agent.id);
+          window.location.href = '/onboarding.html?agent_id=' + encodeURIComponent(onb.agent.id);
           return;
         }
       } catch(e){

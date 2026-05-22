@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI チームを編成中… — MY AI Agent</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fdf8f3; --card:#ffffff; --cream:#faf3eb;
+    --ink:#2d1a0e; --ink2:#6b4226; --ink3:#9a6a4a;
+    --peach:#fb923c; --peach-d:#ea580c; --peach-soft:#fff1e3;
+    --wire:rgba(180,120,80,.16); --wire2:rgba(180,120,80,.28);
+    --green:#16a34a; --green-soft:rgba(34,197,94,.10);
+    --shadow:0 6px 20px rgba(70,40,20,.08), 0 1px 3px rgba(70,40,20,.05);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.7;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  body::before{
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:-1;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(251,146,60,.12), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 20% 80%, rgba(251,146,60,.05), transparent 70%);
+  }
+  .wrap{max-width:640px; width:100%}
+
+  /* ── Header — site info ─────────────────────────────────── */
+  .site-bar{
+    background:var(--card); border:1px solid var(--wire);
+    border-radius:12px; padding:14px 18px;
+    display:flex; align-items:center; gap:12px;
+    box-shadow:var(--shadow); margin-bottom:24px;
+  }
+  .site-ic{font-size:24px; flex-shrink:0}
+  .site-bd{flex:1; min-width:0}
+  .site-url{
+    font-size:13px; font-weight:700; color:var(--ink);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .site-vt{font-size:11px; font-weight:700; color:var(--peach-d); margin-top:2px}
+
+  /* ── Headline ──────────────────────────────────────────── */
+  .head{
+    text-align:center; margin-bottom:36px;
+    animation:rise .6s cubic-bezier(.2,.7,.2,1);
+  }
+  .head h1{
+    font-size:clamp(24px,4vw,32px); font-weight:900;
+    letter-spacing:-.02em; line-height:1.3;
+  }
+  .head h1 .pop{
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .head .sub{
+    font-size:14px; color:var(--ink2); margin-top:10px;
+  }
+  @keyframes rise{from{opacity:0; transform:translateY(20px)}to{opacity:1; transform:none}}
+
+  /* ── Team avatars (visible while team forms) ───────────── */
+  .team{
+    display:flex; justify-content:center; gap:14px; margin-bottom:28px;
+    animation:rise .6s .1s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .team-mem{
+    width:48px; height:48px; border-radius:50%; background:var(--card);
+    border:2px solid var(--wire2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; box-shadow:var(--shadow);
+    transition:border-color .3s, transform .3s;
+  }
+  .team-mem.active{
+    border-color:var(--peach);
+    animation:bounce 1s ease-in-out infinite;
+  }
+  @keyframes bounce{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-6px)}
+  }
+
+  /* ── Progress steps ────────────────────────────────────── */
+  .steps{
+    background:var(--card); border:1px solid var(--wire);
+    border-radius:14px; padding:22px 26px;
+    box-shadow:var(--shadow);
+  }
+  .step{
+    display:flex; align-items:flex-start; gap:14px;
+    padding:11px 0; border-bottom:1px solid var(--wire);
+    transition:opacity .3s;
+  }
+  .step:last-child{border-bottom:0}
+  .step-icon{
+    width:24px; height:24px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800;
+    border-radius:50%; background:var(--cream); color:var(--ink3);
+    border:1.5px solid var(--wire2);
+    transition:all .3s;
+  }
+  .step.active .step-icon{
+    background:var(--peach); color:#fff; border-color:var(--peach);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  .step.done .step-icon{
+    background:var(--green); color:#fff; border-color:var(--green);
+  }
+  .step.done .step-icon::before{content:'✓'}
+  .step.done .step-text{color:var(--ink3)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.35)}50%{box-shadow:0 0 0 10px rgba(251,146,60,0)}}
+  .step-bd{flex:1; min-width:0}
+  .step-text{font-size:14px; font-weight:700; color:var(--ink)}
+  .step-meta{font-size:11.5px; color:var(--ink3); margin-top:2px}
+
+  /* ── Result panel — appears after done ─────────────────── */
+  .result{
+    background:linear-gradient(180deg, var(--peach-soft), #fff);
+    border:1px solid rgba(251,146,60,.32); border-radius:14px;
+    padding:24px; margin-top:24px; text-align:center;
+    box-shadow:var(--shadow);
+    animation:rise .5s cubic-bezier(.2,.7,.2,1);
+    display:none;
+  }
+  .result.show{display:block}
+  .result h2{
+    font-size:20px; font-weight:900; margin-bottom:8px;
+    color:var(--peach-d);
+  }
+  .result p{font-size:13.5px; color:var(--ink2); margin-bottom:18px}
+  .result-cta{
+    display:inline-flex; align-items:center; gap:8px;
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    color:#fff; border:0; padding:14px 28px; border-radius:11px;
+    font-family:inherit; font-size:14.5px; font-weight:800;
+    cursor:pointer; text-decoration:none;
+    box-shadow:0 6px 18px rgba(234,88,12,.22);
+    transition:transform .15s, box-shadow .15s, filter .15s;
+  }
+  .result-cta:hover{transform:translateY(-1px); box-shadow:0 10px 24px rgba(234,88,12,.32); filter:brightness(1.05)}
+  .result-arrow{transition:transform .2s}
+  .result-cta:hover .result-arrow{transform:translateX(3px)}
+
+  /* ── Error state ───────────────────────────────────────── */
+  .err{
+    background:#fff; border:1px solid rgba(220,80,60,.32);
+    border-radius:14px; padding:18px 22px; margin-top:24px;
+    color:#9a3a2a; font-size:13.5px; display:none;
+  }
+  .err.show{display:block}
+  .err-cta{
+    display:inline-block; margin-top:12px;
+    background:transparent; border:1px solid var(--wire2);
+    color:var(--ink2); padding:8px 16px; border-radius:8px;
+    font-family:inherit; font-size:13px; font-weight:700;
+    text-decoration:none; cursor:pointer;
+  }
+
+  /* ── Logo (small, top) ─────────────────────────────────── */
+  .logo{
+    position:fixed; top:18px; left:24px;
+    display:flex; align-items:center; gap:8px;
+    font-weight:900; font-size:14px; color:var(--ink);
+    text-decoration:none;
+  }
+  .logo .bars{display:flex; gap:2px; align-items:flex-end}
+  .logo .bars i{width:4px; background:var(--peach); border-radius:1.5px; display:block}
+  .logo .bars i:nth-child(1){height:18px}
+  .logo .bars i:nth-child(2){height:13px; opacity:.62}
+  .logo .bars i:nth-child(3){height:8px; opacity:.34}
+</style>
+</head>
+<body>
+
+<a href="/" class="logo">
+  <span class="bars"><i></i><i></i><i></i></span> MY AI Agent
+</a>
+
+<div class="wrap">
+  <!-- 担当サイトの表示 (vertical 判定後に埋まる) -->
+  <div class="site-bar" id="siteBar" style="display:none">
+    <div class="site-ic" id="siteIc">🌐</div>
+    <div class="site-bd">
+      <div class="site-url" id="siteUrl">-</div>
+      <div class="site-vt" id="siteVt">vertical 判定中…</div>
+    </div>
+  </div>
+
+  <div class="head">
+    <h1><span class="pop">AI チーム</span>が動き始めています</h1>
+    <p class="sub">あなたのサイト用に編成して、最初の集客プランを納品します。</p>
+  </div>
+
+  <!-- チームメンバーアバター -->
+  <div class="team" id="team">
+    <div class="team-mem">📋</div>
+    <div class="team-mem">📊</div>
+    <div class="team-mem">✍️</div>
+    <div class="team-mem">📱</div>
+    <div class="team-mem">🎯</div>
+  </div>
+
+  <!-- 進捗ステップ -->
+  <div class="steps" id="steps">
+    <div class="step active" data-step="connecting">
+      <div class="step-icon">1</div>
+      <div class="step-bd">
+        <div class="step-text">サイトを解析中</div>
+        <div class="step-meta">URL を確認して、業種を判定しています</div>
+      </div>
+    </div>
+    <div class="step" data-step="team">
+      <div class="step-icon">2</div>
+      <div class="step-bd">
+        <div class="step-text">AI チームを編成中</div>
+        <div class="step-meta">あなたのサイトに合う専門家を 5 人選出</div>
+      </div>
+    </div>
+    <div class="step" data-step="artifacts">
+      <div class="step-icon">3</div>
+      <div class="step-bd">
+        <div class="step-text">最初の納品物を作成中</div>
+        <div class="step-meta" id="artifactsProgress">記事 / SNS / 改善案 / 競合分析 / メルマガ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 完了時のリザルト -->
+  <div class="result" id="result">
+    <h2 id="resultTitle">✓ AI チームの編成が完了しました</h2>
+    <p id="resultDesc">最初の納品物がダッシュボードに届いています。</p>
+    <a class="result-cta" id="resultCta" href="#">
+      <span>ダッシュボードへ</span>
+      <span class="result-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- エラー時 -->
+  <div class="err" id="err">
+    <div id="errMsg">エラーが発生しました。</div>
+    <a class="err-cta" href="/app.html">アプリへ進む</a>
+  </div>
+</div>
+
+<script>
+  // ── パラメータと token ──────────────────────────────────
+  var params = new URLSearchParams(location.search);
+  var agentId = params.get('agent_id') || '';
+  var token = '';
+  try { token = localStorage.getItem('token') || ''; } catch(e){}
+
+  if(!agentId || !token){
+    // 不正な遷移 — アプリへ
+    location.replace('/app.html');
+  }
+
+  // ── UI ヘルパ ────────────────────────────────────────────
+  function setStepActive(name){
+    document.querySelectorAll('.step').forEach(function(el){
+      var s = el.getAttribute('data-step');
+      if(s === name) el.classList.add('active');
+      else el.classList.remove('active');
+    });
+  }
+  function setStepDone(name){
+    var el = document.querySelector('.step[data-step="'+name+'"]');
+    if(el){ el.classList.remove('active'); el.classList.add('done'); }
+  }
+  function showResult(title, desc, ctaHref){
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultDesc').textContent = desc;
+    document.getElementById('resultCta').href = ctaHref;
+    document.getElementById('result').classList.add('show');
+  }
+  function showError(msg){
+    document.getElementById('errMsg').textContent = msg || 'エラーが発生しました';
+    document.getElementById('err').classList.add('show');
+  }
+
+  // ── サーバの POST /api/onboarding/site/artifacts に SSE 接続 ─
+  // EventSource は GET オンリーなので fetch + ReadableStream で SSE をパース。
+  async function startOnboarding(){
+    try {
+      var resp = await fetch('/api/onboarding/site/artifacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+        },
+        body: JSON.stringify({ agent_id: agentId }),
+      });
+      if(!resp.ok){
+        var errText = await resp.text();
+        try { var ej = JSON.parse(errText); errText = ej.error || errText; } catch(e){}
+        showError(errText);
+        return;
+      }
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+      var doneArtifacts = 0;
+      var totalArtifacts = 0;
+
+      while(true){
+        var chunk = await reader.read();
+        if(chunk.done) break;
+        buf += decoder.decode(chunk.value, { stream: true });
+        // SSE のフレーム単位 ( "\n\n" 区切り) でパース
+        var frames = buf.split(/\n\n/);
+        buf = frames.pop();  // 最後は未完成かも、残す
+        for(var i = 0; i < frames.length; i++){
+          var lines = frames[i].split('\n');
+          var ev = '', data = '';
+          for(var j = 0; j < lines.length; j++){
+            var ln = lines[j];
+            if(ln.startsWith('event:')) ev = ln.slice(6).trim();
+            else if(ln.startsWith('data:')) data += ln.slice(5).trim();
+            // keepalive (": ...") は無視
+          }
+          if(!ev) continue;
+          var payload = null;
+          try { payload = JSON.parse(data); } catch(e){}
+          handleEvent(ev, payload, function(){
+            doneArtifacts++;
+            updateArtifactsMeta();
+          });
+        }
+      }
+    } catch(e){
+      console.error('onboarding stream error:', e);
+      showError('接続エラー: ' + (e && e.message || 'unknown'));
+    }
+  }
+
+  function updateArtifactsMeta(n, total){
+    var el = document.getElementById('artifactsProgress');
+    if(el && total) el.textContent = n + ' / ' + total + ' 個 完成';
+  }
+
+  function handleEvent(ev, data, onArtifactDone){
+    if(ev === 'start' && data){
+      // サイト情報を表示
+      var bar = document.getElementById('siteBar');
+      if(bar) bar.style.display = 'flex';
+      document.getElementById('siteUrl').textContent = data.site_url || '';
+      var team = data.team || {};
+      document.getElementById('siteIc').textContent = team.icon || '🌐';
+      document.getElementById('siteVt').textContent = team.label || data.vertical || '';
+      // チーム編成アバターを更新
+      if(Array.isArray(team.members)){
+        var teamEl = document.getElementById('team');
+        if(teamEl){
+          var iconMap = { analyst:'📊', seo_writer:'✍️', community:'📱', cro:'🎯', email:'📧',
+                          product_writer:'📦', creative_director:'📸', review_strategy:'⭐', shopping_optimizer:'🛒', ec_analyst:'📊',
+                          local_seo:'🗺', instagram:'📱', review_mgmt:'💬', local_blogger:'✍️', booking_funnel:'📞',
+                          content_strategy:'✍️', seo:'🔍', twitter:'📱', newsletter:'📧',
+                          linkedin:'💼', sales_writer:'✍️', case_study:'📚', lead_gen:'🎯', sns:'📱',
+                          pm:'📋', researcher:'🔍', writer:'✍️', operator:'🛠' };
+          teamEl.innerHTML = team.members.slice(0,5).map(function(m){
+            return '<div class="team-mem" title="' + (m.name||'') + '">' + (iconMap[m.role] || '🤖') + '</div>';
+          }).join('');
+        }
+      }
+      // step 1 → 2 へ
+      setStepDone('connecting');
+      setStepActive('team');
+      // 短い遅延を入れて視覚的に進む感じ
+      setTimeout(function(){
+        setStepDone('team');
+        setStepActive('artifacts');
+      }, 500);
+    }
+    else if(ev === 'artifact_started' && data){
+      if(data.total) updateArtifactsMeta((data.n - 1), data.total);
+    }
+    else if(ev === 'artifact_done' && data){
+      if(data.total) updateArtifactsMeta(data.n, data.total);
+      // 該当 team-mem をハイライト
+      var team = document.getElementById('team');
+      if(team && data.n){
+        var members = team.querySelectorAll('.team-mem');
+        var idx = (data.n - 1) % members.length;
+        members.forEach(function(m, i){ m.classList.toggle('active', i === idx); });
+      }
+    }
+    else if(ev === 'done' && data){
+      setStepDone('artifacts');
+      var team = document.getElementById('team');
+      if(team) team.querySelectorAll('.team-mem').forEach(function(m){ m.classList.remove('active'); });
+      var ok = data.ok || 0, tot = data.total || 0;
+      showResult(
+        '✓ ' + ok + ' / ' + tot + ' 個の納品物が完成',
+        'あなたのサイト用 AI チームが動き始めました。ダッシュボードで内容を確認できます。',
+        '/app.html?onboarded=1&agent_id=' + encodeURIComponent(agentId)
+      );
+    }
+    else if(ev === 'error' && data){
+      showError(data.message || 'エラーが発生しました');
+    }
+  }
+
+  // ── 開始 ───────────────────────────────────────────────
+  if(agentId && token){
+    startOnboarding();
+  }
+</script>
+</body>
+</html>

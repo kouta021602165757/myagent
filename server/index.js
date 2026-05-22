@@ -7048,6 +7048,78 @@ async function executeArtifactTool(input, ownerUser, ctx){
   return result;
 }
 
+// ── Initial artifact generation for new site onboarding ─────────────
+// agent.site_vertical → TEAM_PRESETS[*].initial_artifact_prompts[] を
+// 並列 (3 並列) で Sonnet に投げて HTML artifact を生成し、executeArtifactTool で
+// 永続化する。SSE callback (sseCb) があれば進捗を流す。
+// 失敗した artifact は skip — 全失敗でも user は生きる、寛容な設計。
+async function _generateInitialArtifacts(agent, ownerUser, sseCb){
+  if(!agent || !agent.site_vertical) return [];
+  const preset = _teamPresetFor(agent.site_vertical);
+  const prompts = Array.isArray(preset.initial_artifact_prompts)
+    ? preset.initial_artifact_prompts.slice(0, 5)
+    : [];
+  if(!prompts.length) return [];
+  const siteCtx = '担当サイト: ' + (agent.site_url || '不明')
+    + (agent.site_title ? ' (' + agent.site_title + ')' : '')
+    + '\nvertical: ' + preset.label;
+  const generateOne = async (p, idx) => {
+    const n = idx + 1;
+    if(sseCb) try { sseCb('artifact_started', { n, total: prompts.length, title: p.title, type: p.type }); } catch(_){}
+    const sys = preset.system_prompt
+      + '\n\n【出力指示】\n'
+      + p.title + ' を 1 つの完全な HTML ファイルとして生成してください。\n'
+      + '- <!doctype html> から </html> まで完全な単一ファイル\n'
+      + '- スタイル (CSS) は <style> タグでインラインで含める。控えめで読みやすく\n'
+      + '- 印刷 / コピー可能な納品物として扱える形式\n'
+      + '- 余計な解説や前置きは禁止、HTML のみを出力 (\\\`\\\`\\\` も無し)\n'
+      + '- ' + siteCtx + '\n\n'
+      + '【納品物の指示】\n' + p.prompt;
+    try {
+      const r = await callAI(
+        [{ role: 'user', content: p.title + ' を ' + (agent.site_url || agent.name) + ' のために作成してください。' }],
+        sys,
+        'sonnet',
+        agent,
+      );
+      let raw = ((r && r.content) || []).map(b => b.text || '').join('').trim();
+      // ```html ... ``` フェンス除去
+      raw = raw.replace(/^```(?:html)?\s*\n?/i, '').replace(/```\s*$/, '').trim();
+      // 不完全 HTML の救済 — <!doctype html> が無ければラップ
+      if(!/<\!doctype\s+html/i.test(raw) && !/<html/i.test(raw)){
+        raw = '<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>'
+            + p.title + '</title><style>body{font-family:-apple-system,sans-serif;line-height:1.7;max-width:800px;margin:40px auto;padding:0 20px;color:#2d1a0e}</style></head><body>'
+            + raw + '</body></html>';
+      }
+      if(raw.length < 100){
+        throw new Error('content too short (' + raw.length + ' chars)');
+      }
+      const saveRes = await executeArtifactTool(
+        { title: p.title, html: raw, description: p.title, project: agent.name || 'onboarding' },
+        ownerUser,
+        { chat_id: agent.id },
+      );
+      if(saveRes && saveRes.error) throw new Error(saveRes.error);
+      if(sseCb) try { sseCb('artifact_done', { n, total: prompts.length, title: p.title, type: p.type, url: saveRes && saveRes.url, filename: saveRes && saveRes.filename }); } catch(_){}
+      return { ok: true, title: p.title, type: p.type, url: saveRes && saveRes.url, filename: saveRes && saveRes.filename };
+    } catch(e){
+      console.warn('[onboarding] artifact gen failed:', p.title, e.message);
+      if(sseCb) try { sseCb('artifact_done', { n, total: prompts.length, title: p.title, type: p.type, error: e.message }); } catch(_){}
+      return { ok: false, title: p.title, type: p.type, error: e.message };
+    }
+  };
+  // 並列度 3 (rate limit 安全マージン)。5 にすると Anthropic の per-min 制限に
+  // 触る可能性が上がる。5 個でも 2 batch なので体感はほぼ並列。
+  const CONCURRENCY = 3;
+  const results = [];
+  for(let i = 0; i < prompts.length; i += CONCURRENCY){
+    const batch = prompts.slice(i, i + CONCURRENCY).map((p, j) => generateOne(p, i + j));
+    const batchRes = await Promise.all(batch);
+    results.push(...batchRes);
+  }
+  return results;
+}
+
 // ── edit_artifact — patch-mode edit of an existing artifact ──
 // Avoids the costly full HTML regeneration. For "append 100 rows" or
 // "replace section" requests, the AI sends only the diff and the server
@@ -13801,6 +13873,70 @@ async function handleAPI(req,res,pathname,method,ip){
       site_url: siteUrl,
       site_title: pageTitle,
     });
+  }
+
+  // ── POST /api/onboarding/site/artifacts ────────────────────
+  // SSE で 5 個の初期 artifact を並列生成して進捗を流す。
+  // /onboarding.html (スプラッシュ画面) から呼ぶ前提。
+  // body: { agent_id } — /api/onboarding/site で作成した agent を指す。
+  // events: start / artifact_started / artifact_done / done / error
+  if(pathname === '/api/onboarding/site/artifacts' && method === 'POST'){
+    const body = await readBody(req);
+    const agentId = String(body && body.agent_id || '').trim();
+    if(!agentId) return jres(res, 400, { error: 'agent_id required' });
+    const agent = (user.agents || []).find(a => a && a.id === agentId);
+    if(!agent) return jres(res, 404, { error: 'agent not found' });
+    if(!agent.site_vertical){
+      return jres(res, 400, { error: 'agent has no site_vertical — use /api/onboarding/site first' });
+    }
+
+    // SSE 開始
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': APP_URL,
+    });
+    const sse = (event, data) => {
+      try { res.write('event: ' + event + '\ndata: ' + JSON.stringify(data) + '\n\n'); } catch(e){}
+    };
+    const ka = setInterval(() => { try{ res.write(': keepalive\n\n'); }catch(e){} }, 15000);
+    req.on('close', () => { try{ clearInterval(ka); }catch(e){} });
+
+    try {
+      sse('start', {
+        agent_id: agentId,
+        vertical: agent.site_vertical,
+        site_url: agent.site_url,
+        site_title: agent.site_title,
+        team: _teamPresetFor(agent.site_vertical),
+      });
+      const results = await _generateInitialArtifacts(agent, user, sse);
+      // 全 artifact 完了後、agent の current_task.steps を全部 done に
+      if(agent.current_task && Array.isArray(agent.current_task.steps)){
+        for(let i = 0; i < agent.current_task.steps.length && i < results.length; i++){
+          if(results[i] && results[i].ok){
+            agent.current_task.steps[i].done = true;
+          }
+        }
+        agent.current_task.updated_at = new Date().toISOString();
+      }
+      try { await DB.save(user); } catch(e){ console.warn('[onboarding/artifacts] save failed:', e.message); }
+      sse('done', {
+        ok: results.filter(r => r.ok).length,
+        total: results.length,
+        artifacts: results,
+        agent_id: agentId,
+      });
+    } catch(e){
+      console.error('[onboarding/artifacts] crashed:', e.message);
+      sse('error', { message: e.message || 'generation failed' });
+    } finally {
+      try { clearInterval(ka); } catch(_){}
+      try { res.end(); } catch(_){}
+    }
+    return;
   }
 
   // ── POST /api/artifacts/rollback ───────────────────────────

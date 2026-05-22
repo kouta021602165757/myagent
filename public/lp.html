@@ -32,27 +32,27 @@
 </script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjZmI5MjNjIi8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjE0IiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMTQiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iLjY1Ii8+PHJlY3QgeD0iMjAiIHk9IjE1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxMCIgcng9IjIiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MY AI Agent — AI を使う時代から、AI を複数人雇う時代へ。</title>
-<meta name="description" content="Slack のようなアプリで、何人でも AI を採用。1 人とは DM、複数人ではチームで仕事を任せられる、個人開発者・1 人創業者のための AI チーム。">
+<title>MY AI Agent — あなたの Web サイトに人を呼ぶ AI チーム</title>
+<meta name="description" content="URL を入れるだけ。AI 5 人が、あなたのサイトに合わせた集客プランを納品。SaaS の LP も、EC も、店舗も、ブログも。ツール接続は不要。">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://myaiagents.agency/">
-<meta property="og:title" content="MY AI Agent — AI を使う時代から、AI を複数人雇う時代へ。">
-<meta property="og:description" content="Slack のようなアプリで、何人でも AI を採用。1 人とは DM、複数人ではチームで仕事を任せられます。">
+<meta property="og:title" content="MY AI Agent — あなたの Web サイトに人を呼ぶ AI チーム">
+<meta property="og:description" content="URL を入れるだけ。AI 5 人が、あなたのサイトに合わせた集客プランを納品。SaaS の LP も、EC も、店舗も、ブログも。ツール接続は不要。">
 <meta property="og:image" content="https://myaiagents.agency/social/og-home.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="MY AI Agent — AI を複数人雇える時代へ">
+<meta property="og:image:alt" content="MY AI Agent — Web サイト集客 AI チーム">
 <meta property="og:site_name" content="MY AI Agent">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:locale:alternate" content="en_US">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MY AI Agent — AI を使う時代から、AI を複数人雇う時代へ。">
-<meta name="twitter:description" content="Slack のようなアプリで、何人でも AI を採用。1 人とは DM、複数人ではチームで仕事を任せられます。">
+<meta name="twitter:title" content="MY AI Agent — あなたの Web サイトに人を呼ぶ AI チーム">
+<meta name="twitter:description" content="URL を入れるだけ。AI 5 人が、あなたのサイトに合わせた集客プランを納品。ツール接続は不要。">
 <meta name="twitter:image" content="https://myaiagents.agency/social/og-home.png">
 <meta name="twitter:image:alt" content="MY AI Agent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -116,6 +116,26 @@
   .hero-note{margin-top:14px; font-size:13px; color:var(--ink3); font-weight:600; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
   .hero-note b{color:var(--peach-d); font-weight:800}
   @keyframes rise{from{opacity:0; transform:translateY(20px)}to{opacity:1; transform:none}}
+  /* 5 vertical アイコン行 — 「広く対応」を 1 行で示す */
+  .verticals{
+    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
+    margin:36px auto 0; max-width:760px;
+    animation:rise .7s .24s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .vt{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--card); border:1px solid var(--wire);
+    border-radius:99px; padding:9px 16px;
+    font-size:13px; font-weight:700; color:var(--ink2);
+    transition:border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .vt:hover{border-color:var(--peach); transform:translateY(-2px); box-shadow:0 4px 14px rgba(234,88,12,.10)}
+  .vt-ic{font-size:17px; line-height:1}
+  @media (max-width:560px){
+    .verticals{gap:8px; margin-top:24px}
+    .vt{padding:7px 12px; font-size:12px}
+    .vt-ic{font-size:15px}
+  }
 
   /* ════ product visual: HOME screen (faithful recreation of the app) ════ */
   .home{
@@ -262,15 +282,24 @@
 <!-- HERO -->
 <header class="hero">
   <div class="wrap">
-    <h1 data-i18n="hero.h1"><span class="strike">AI を使う</span>時代から、<br>AI を<span class="pop">複数人雇う</span>時代へ。</h1>
+    <h1 data-i18n="hero.h1">あなたの Web サイトに<br>人を呼ぶ <span class="pop">AI チーム</span>。</h1>
     <p class="hero-sub" data-i18n="hero.sub">
-      Slack のようなアプリで、専門の AI を何人でも採用。<br>
-      仕事は、任せるだけ。
+      URL を入れるだけ。AI 5 人がサイトを診断して、<br>
+      あなたに合わせた集客プランを 60 秒で納品。
     </p>
     <div class="hero-cta">
-      <a href="/auth.html?tab=signup" class="btn btn-primary btn-lg" data-i18n="hero.cta">▶ 30 秒で無料で始める</a>
+      <a href="/auth.html?tab=signup" class="btn btn-primary btn-lg" data-i18n="hero.cta">▶ URL を入れて無料で試す</a>
     </div>
-    <p class="hero-note" data-i18n="hero.note"><b>100 メッセージ無料</b> ・ クレジットカード不要 ・ 30 秒で開始</p>
+    <p class="hero-note" data-i18n="hero.note"><b>ツール接続不要</b> ・ クレジットカード不要 ・ 60 秒で最初の納品</p>
+
+    <!-- 5 vertical アイコン: 「広く対応」を 1 行で示す -->
+    <div class="verticals">
+      <div class="vt"><span class="vt-ic">🚀</span><span class="vt-tx" data-i18n="vt.saas">SaaS / サービス LP</span></div>
+      <div class="vt"><span class="vt-ic">🛒</span><span class="vt-tx" data-i18n="vt.ec">EC ストア</span></div>
+      <div class="vt"><span class="vt-ic">🏪</span><span class="vt-tx" data-i18n="vt.store">店舗・サロン</span></div>
+      <div class="vt"><span class="vt-ic">✍️</span><span class="vt-tx" data-i18n="vt.blog">ブログ・メディア</span></div>
+      <div class="vt"><span class="vt-ic">💼</span><span class="vt-tx" data-i18n="vt.portfolio">ポートフォリオ</span></div>
+    </div>
 
     <!-- product visual: HOME screen -->
     <div class="home">
@@ -432,9 +461,9 @@
 <!-- FINAL CTA -->
 <section class="final">
   <div class="wrap">
-    <h2 data-i18n="f.h2">今日、あなたの<br>最初の AI を雇おう。</h2>
-    <p data-i18n="f.p">30 秒で、あなたの専門チームが動き出す。</p>
-    <div><a href="/auth.html?tab=signup" class="btn btn-primary btn-lg" data-i18n="f.btn">▶ 無料で始める</a></div>
+    <h2 data-i18n="f.h2">あなたの Web サイトに、<br>AI チームを派遣しよう。</h2>
+    <p data-i18n="f.p">URL を入れるだけで、60 秒後に最初の集客プランが届きます。</p>
+    <div><a href="/auth.html?tab=signup" class="btn btn-primary btn-lg" data-i18n="f.btn">▶ URL を入れて無料で試す</a></div>
     <div class="scarcity" data-i18n="f.sc">🔥 Founder 100 · 残り 92 席 · 永年無料</div>
   </div>
 </section>
@@ -455,10 +484,15 @@
   var I18N_EN = {
     "nav.login": "Log in",
     "nav.cta": "Get started free",
-    "hero.h1": "Stop <span class='strike'>using</span> AI.<br><span class='pop'>Hire a team</span> of them.",
-    "hero.sub": "Hire as many specialist AIs as you want — in a Slack-style app.<br>Then just delegate.",
-    "hero.cta": "▶ Start free in 30 seconds",
-    "hero.note": "<b>100 messages free</b> ・ No credit card ・ 30-second setup",
+    "hero.h1": "An <span class='pop'>AI team</span> that drives<br>traffic to your website.",
+    "hero.sub": "Just drop in your URL. 5 AI specialists audit your site and<br>deliver a tailored growth plan in 60 seconds.",
+    "hero.cta": "▶ Drop URL & try free",
+    "hero.note": "<b>No integrations required</b> ・ No credit card ・ First deliverable in 60s",
+    "vt.saas": "SaaS / Product LPs",
+    "vt.ec": "E-commerce stores",
+    "vt.store": "Local businesses",
+    "vt.blog": "Blogs / media",
+    "vt.portfolio": "Portfolios",
     "h.search": "Search…",
     "h.cat.dash": "📊 Dashboard",
     "h.home": "Home",
@@ -506,9 +540,9 @@
     "st4.a2": "Competitor Report",
     "st4.h": "Deliver",
     "st4.p": "Sites and reports — delivered as finished work.",
-    "f.h2": "Hire your first AI<br>today.",
-    "f.p": "Your specialist team starts working in 30 seconds.",
-    "f.btn": "▶ Get started free",
+    "f.h2": "Send an AI team to<br>your website today.",
+    "f.p": "Drop your URL. Your first growth plan arrives in 60 seconds.",
+    "f.btn": "▶ Drop URL & try free",
     "f.sc": "🔥 Founder 100 · 92 seats left · Free forever"
   };
   var I18N_JA = {};

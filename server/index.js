@@ -869,6 +869,199 @@ function safe(u){
 // from Render without a deploy. ¥500 ≒ a few chats + 1〜2 artifacts — enough
 // to hit the "aha", small enough that 10-account farming isn't profitable.
 const FREE_INITIAL_CREDIT_JPY = parseInt(process.env.FREE_INITIAL_CREDIT_JPY||'500',10) || 500;
+
+// ── TEAM PRESETS — Web サイト集客 AI チームの 6 vertical 定義 ──────────
+// LP で打ち出してる 5 vertical (SaaS / EC / 店舗 / ブログ / ポートフォリオ)
+// + fallback の汎用チーム。 URL から Haiku が site_vertical を判定 → ここから
+// 該当 preset を引いて agent (= site team) を編成する。
+//
+// 構造:
+//   - label / icon: UI 表示用
+//   - description: ユーザーに見せる「このチームは何をやるか」の 1 文
+//   - members[]: 5 役。name / role / focus は チームメンバー UI 表示用
+//   - system_prompt: 編成された agent.persona に注入される (= AI の behavior 定義)
+//   - initial_artifact_prompts[]: onboarding 直後に並列生成する artifact のプロンプト
+//   - detection_keywords[]: Haiku の参考材料 (hints) — 厳密には使わず prompt 注入のみ
+const TEAM_PRESETS = {
+  saas: {
+    vertical: 'saas',
+    label: 'SaaS / Product LP',
+    icon: '🚀',
+    description: 'SaaS / プロダクト LP の集客を加速する AI チーム。SEO ・コミュニティ拡散・CRO・メールマーケを並走。',
+    members: [
+      { name: 'アナリスト', role: 'analyst', focus: 'サイト診断・競合動向・ポジション分析' },
+      { name: 'SEO ライター', role: 'seo_writer', focus: '検索意図に合わせた技術ブログ・ユースケース集執筆' },
+      { name: 'コミュニティ担当', role: 'community', focus: 'Twitter / IndieHackers / 開発者向け SNS 運用' },
+      { name: 'CRO スペシャリスト', role: 'cro', focus: 'LP 改善案・CTA / フォーム最適化' },
+      { name: 'Email マーケター', role: 'email', focus: 'トライアル誘導・Welcome メール・リード育成' },
+    ],
+    system_prompt: `あなたは SaaS / プロダクト LP の集客に特化した AI マーケティングチームです。5 人の専門家で構成されています:
+- 📊 アナリスト: サイト診断・競合分析・市場ポジション分析
+- ✍️ SEO ライター: 検索意図に合わせた技術記事・ユースケース執筆
+- 📱 コミュニティ担当: Twitter / IndieHackers / 開発者向け SNS
+- 🎯 CRO スペシャリスト: LP / CTA / フォーム最適化
+- 📧 Email マーケター: トライアル誘導・Welcome メール
+
+ユーザーの SaaS プロダクトの集客成長が唯一の目的。記事 / SNS 投稿 / LP 改善案 / 競合分析 / メルマガを毎日 artifact として届けること。`,
+    initial_artifact_prompts: [
+      { type: 'diagnosis', title: 'サイト診断レポート', prompt: 'このサイトを分析し、集客面で最も改善すべき 3 点を提案。優先度 (高/中/低) + 期待される効果 + 実装難易度を明記。' },
+      { type: 'blog', title: 'SEO ブログ記事ドラフト', prompt: 'ターゲット顧客が検索しそうなキーワード 1 つを選定し、検索意図に合致する 1500 字程度の技術ブログ記事を作成。' },
+      { type: 'twitter', title: 'Twitter スレッドテンプレ', prompt: 'プロダクトの価値訴求のために X (Twitter) で投稿できる、共感を呼ぶスレッド (5 ツイート) を 1 本作成。' },
+      { type: 'cro', title: 'LP CTR 改善案', prompt: '現在の LP の CTA / ボタンコピー / フォーム を分析し、CTR を上げる A/B テスト案を 3 つ提案。' },
+      { type: 'email', title: 'リード獲得メルマガ', prompt: 'プロダクトに興味を持った見込み客に送る、価値訴求型のメールマガジン本文を 1 本作成。Subject + Body の形式。' },
+    ],
+    detection_keywords: ['saas', 'product', 'pricing', 'free trial', 'api', 'platform', 'sign up', 'integration'],
+  },
+
+  ec: {
+    vertical: 'ec',
+    label: 'EC ストア',
+    icon: '🛒',
+    description: 'EC ストアの売上を伸ばす AI チーム。商品ページ最適化・SNS 運用・レビュー戦略・広告最適化。',
+    members: [
+      { name: '商品ライター', role: 'product_writer', focus: '商品ページ説明文 SEO 最適化' },
+      { name: 'クリエイティブディレクター', role: 'creative_director', focus: 'Instagram / Pinterest 用ビジュアル戦略' },
+      { name: 'レビュー戦略担当', role: 'review_strategy', focus: 'レビュー誘導フロー・口コミ管理' },
+      { name: 'Shopping 最適化', role: 'shopping_optimizer', focus: 'Google Shopping 説明文・価格戦略' },
+      { name: 'ECアナリスト', role: 'ec_analyst', focus: 'カート放棄分析・客単価向上案' },
+    ],
+    system_prompt: `あなたは EC ストアの売上成長に特化した AI マーケティングチームです。5 人の専門家で構成:
+- 📦 商品ライター: 商品ページ説明文・SEO 最適化
+- 📸 クリエイティブディレクター: Instagram / Pinterest 用画像案
+- ⭐ レビュー戦略担当: レビュー誘導・口コミ管理
+- 🛒 Shopping 最適化: Google Shopping・価格戦略
+- 📊 EC アナリスト: カート放棄・客単価向上
+
+ユーザーの EC ストアの売上向上が唯一の目的。商品最適化 / SNS / レビュー / 広告 / 分析を毎日 artifact として届ける。`,
+    initial_artifact_prompts: [
+      { type: 'diagnosis', title: 'ストア診断レポート', prompt: 'この EC ストアを分析し、商品ページ・導線・SEO の観点で最も改善すべき 3 点を提案。' },
+      { type: 'product_seo', title: '売れ筋商品の SEO 最適化案', prompt: 'サイトから売れ筋と思われる商品を 3 つ推測し、それぞれの商品ページタイトル・説明文の SEO 改善案を提示。' },
+      { type: 'instagram', title: 'Instagram 投稿テンプレ (1 週間分)', prompt: '商品を魅力的に見せる Instagram 投稿のアイデア 7 日分。キャプション + ハッシュタグ + 投稿時間提案を含む。' },
+      { type: 'review', title: 'レビュー誘導メールフロー', prompt: '購入後 3 日 / 7 日 / 14 日でレビュー依頼を送るメールフローを作成。文面 3 本セット。' },
+      { type: 'shopping', title: 'Google Shopping 用説明文 (5 商品)', prompt: 'サイトから 5 商品を選び、Google Shopping 用の魅力的な短文説明 (各 ~30 字) を作成。' },
+    ],
+    detection_keywords: ['shop', 'store', 'cart', 'product', '商品', 'カート', '購入', '通販', 'ec', 'shopify', 'base'],
+  },
+
+  store: {
+    vertical: 'store',
+    label: '店舗 / サロン',
+    icon: '🏪',
+    description: '地域密着の店舗 / サロンの集客 AI チーム。ローカル SEO・Instagram・口コミ・予約導線。',
+    members: [
+      { name: 'ローカル SEO 担当', role: 'local_seo', focus: 'Google ビジネスプロフィール・地域キーワード' },
+      { name: 'Instagram 担当', role: 'instagram', focus: '地域訴求投稿・ストーリーズ運用' },
+      { name: '口コミ戦略', role: 'review_mgmt', focus: 'レビュー収集・返信テンプレ' },
+      { name: '地域ブログライター', role: 'local_blogger', focus: '「地域名 + 業種」記事' },
+      { name: '予約導線設計', role: 'booking_funnel', focus: '予約フォーム・問い合わせ最適化' },
+    ],
+    system_prompt: `あなたは地域店舗・サロンの集客に特化した AI マーケティングチームです。5 人の専門家:
+- 🗺 ローカル SEO 担当: Google ビジネスプロフィール最適化
+- 📱 Instagram 担当: 地域訴求投稿・ストーリーズ
+- 💬 口コミ戦略: レビュー収集・返信
+- ✍️ 地域ブログライター: 「地域名 + 業種」狙いの記事
+- 📞 予約導線設計: 予約フォーム最適化
+
+ユーザーの店舗への来店数・予約数を増やすことが唯一の目的。地域密着の施策を毎日 artifact として届ける。`,
+    initial_artifact_prompts: [
+      { type: 'diagnosis', title: 'サイト診断 + 集客チャネル提案', prompt: 'この店舗サイトを分析し、地域集客の観点で最重要の改善点 3 つを提案。' },
+      { type: 'gbp', title: 'Google ビジネスプロフィール最適化案', prompt: 'Google ビジネスプロフィールを最適化するための具体策を提示。説明文ドラフト・投稿アイデア・カテゴリ推奨を含む。' },
+      { type: 'local_seo', title: '地域 SEO 記事ドラフト', prompt: '「地域名 + 業種」で検索されそうなクエリを 1 つ選び、その記事を 1500 字で作成。' },
+      { type: 'instagram', title: 'Instagram 1 週間分の投稿テンプレ', prompt: '店舗の雰囲気・サービスを伝える Instagram 投稿のアイデア 7 日分。' },
+      { type: 'review_reply', title: '口コミ返信テンプレ集', prompt: 'good レビュー / 微妙レビュー / クレームの 3 パターンへの返信テンプレートを作成。' },
+    ],
+    detection_keywords: ['店舗', 'サロン', '予約', 'アクセス', '営業時間', '住所', 'tel', '電話', 'reservation', 'booking', '来店'],
+  },
+
+  blog: {
+    vertical: 'blog',
+    label: 'ブログ / メディア',
+    icon: '✍️',
+    description: 'ブログ・メディアの読者拡大 AI チーム。SEO・コンテンツ戦略・SNS 拡散・メルマガ。',
+    members: [
+      { name: 'コンテンツ戦略', role: 'content_strategy', focus: '編集方針・記事ネタ管理' },
+      { name: 'SEO 担当', role: 'seo', focus: 'キーワード調査・検索意図分析' },
+      { name: 'Twitter 担当', role: 'twitter', focus: 'スレッド化・引用 RT 用テンプレ' },
+      { name: 'コミュニティ担当', role: 'community', focus: 'Reddit / HN / IH 投稿' },
+      { name: 'Newsletter 担当', role: 'newsletter', focus: 'メルマガ展開・リスト育成' },
+    ],
+    system_prompt: `あなたはブログ / メディアの読者拡大に特化した AI コンテンツチームです。5 人の専門家:
+- ✍️ コンテンツ戦略: 編集方針・記事ネタ管理
+- 🔍 SEO 担当: キーワード調査・検索意図
+- 📱 Twitter 担当: スレッド化・引用テンプレ
+- 📰 コミュニティ担当: Reddit / HN / IH 投稿
+- 📧 Newsletter 担当: メルマガ展開
+
+ユーザーのブログ / メディアの読者数・PV・購読者を増やすことが唯一の目的。コンテンツ戦略を毎日 artifact として届ける。`,
+    initial_artifact_prompts: [
+      { type: 'diagnosis', title: 'サイト診断 + コンテンツ傾向分析', prompt: 'このメディアを分析し、現状の流入源・記事傾向・改善余地を提示。' },
+      { type: 'article_ideas', title: '記事ネタ 10 本 (キーワード + ボリューム推定)', prompt: '今書くべき記事ネタを 10 本提案。各案にメインキーワードと検索ボリューム推定を付与。' },
+      { type: 'twitter_thread', title: '既存記事の Twitter スレッド化', prompt: 'サイト内の代表的な記事 1 本を、Twitter で読まれる 7 ツイートのスレッドに変換。' },
+      { type: 'newsletter', title: 'メルマガ 1 本ドラフト', prompt: '読者向けに送るメールニュースレターを 1 本作成。Subject + Body 形式。' },
+      { type: 'competitor', title: '競合メディア動向', prompt: '同ジャンルの競合メディアを 2-3 サイト推測し、最近の動き・人気記事・差別化のヒントを提示。' },
+    ],
+    detection_keywords: ['blog', 'ブログ', 'note', 'substack', 'medium', 'article', '記事', 'newsletter', 'メルマガ', 'rss'],
+  },
+
+  portfolio: {
+    vertical: 'portfolio',
+    label: 'ポートフォリオ',
+    icon: '💼',
+    description: 'フリーランス / 個人事業のリード獲得 AI チーム。LinkedIn・営業文・ケーススタディ。',
+    members: [
+      { name: 'LinkedIn 戦略', role: 'linkedin', focus: 'プロフィール最適化・投稿戦略' },
+      { name: '営業ライター', role: 'sales_writer', focus: 'DM テンプレ・提案メール' },
+      { name: 'ケーススタディ展開', role: 'case_study', focus: '過去実績の articulate 化' },
+      { name: 'リード獲得導線', role: 'lead_gen', focus: '問い合わせフォーム改善' },
+      { name: 'SNS 担当', role: 'sns', focus: 'Twitter / Wantedly でのプレゼンス' },
+    ],
+    system_prompt: `あなたはフリーランス / 個人事業のリード獲得に特化した AI チームです。5 人の専門家:
+- 💼 LinkedIn 戦略: プロフィール・投稿戦略
+- ✍️ 営業ライター: DM・提案メール
+- 📚 ケーススタディ展開: 過去実績の articulation
+- 🎯 リード獲得導線: 問い合わせフォーム最適化
+- 📱 SNS 担当: Twitter / Wantedly
+
+ユーザーのポートフォリオサイトから問い合わせ・受注を増やすことが唯一の目的。営業活動を毎日 artifact として届ける。`,
+    initial_artifact_prompts: [
+      { type: 'diagnosis', title: 'ポートフォリオ診断', prompt: 'このポートフォリオサイトを分析し、リード獲得の観点でどこで離脱してるか・改善点 3 つを提示。' },
+      { type: 'linkedin', title: 'LinkedIn 投稿 1 週間分テンプレ', prompt: 'LinkedIn でプレゼンスを高める投稿アイデアを 7 日分。専門性が伝わる内容で。' },
+      { type: 'sales_email', title: '営業メール 3 種類', prompt: '新規アプローチ / フォローアップ / リクエスト返信、の 3 パターンの営業メール文面を作成。' },
+      { type: 'case_study', title: 'ケーススタディ テンプレ', prompt: '過去案件 (架空可) を魅力的なケーススタディに変換するテンプレートと、書き方ガイドを作成。' },
+      { type: 'dm_script', title: 'DM スクリプト (LinkedIn / Wantedly)', prompt: 'LinkedIn / Wantedly で初回コンタクト時に使える DM スクリプトを 3 種類作成。' },
+    ],
+    detection_keywords: ['portfolio', 'ポートフォリオ', 'freelance', 'consultant', 'コンサル', 'about me', '自己紹介', 'works', '実績'],
+  },
+
+  other: {
+    vertical: 'other',
+    label: 'その他 / 汎用',
+    icon: '🛠',
+    description: '5 つの vertical に該当しないサイト向けの汎用 AI チーム。対話駆動で支援。',
+    members: [
+      { name: 'PM', role: 'pm', focus: 'タスク分解・進行管理' },
+      { name: 'リサーチャー', role: 'researcher', focus: 'Web 検索・情報収集' },
+      { name: 'ライター', role: 'writer', focus: '文書生成全般' },
+      { name: 'アナリスト', role: 'analyst', focus: 'データ分析' },
+      { name: 'オペレーター', role: 'operator', focus: 'tool 実行・artifact 生成' },
+    ],
+    system_prompt: `あなたは汎用の AI 業務支援チームです。5 人の専門家:
+- 📋 PM: タスク分解・進行管理
+- 🔍 リサーチャー: Web 検索・情報収集
+- ✍️ ライター: 文書生成
+- 📊 アナリスト: データ分析
+- 🛠 オペレーター: tool 実行
+
+ユーザーのサイトに紐づく業務を幅広く支援。最初の対話でユーザーが何を任せたいかを確認し、それに沿って動く。`,
+    initial_artifact_prompts: [
+      { type: 'diagnosis', title: 'サイト初期診断', prompt: 'このサイトを見て、何をやっているサイトか・主な訪問者は誰か・どんな業務改善が考えられるかをまとめ、ユーザーに「何を任せたいですか?」と聞き返す対話開始メッセージを作成。' },
+    ],
+    detection_keywords: [],
+  },
+};
+function _teamPresetFor(vertical){
+  return TEAM_PRESETS[vertical] || TEAM_PRESETS.other;
+}
 function newUser(base){
   return{id:crypto.randomUUID(),plan:'free',balance_jpy:FREE_INITIAL_CREDIT_JPY,free_credit_v1_applied:true,usage_count:0,
     agents:[],billing_history:[],stripe_customer_id:null,
@@ -13447,6 +13640,167 @@ async function handleAPI(req,res,pathname,method,ip){
     user.onboarded_at = new Date().toISOString();
     try { await DB.save(user); } catch(e){}
     return jres(res,200,{ok:true});
+  }
+
+  // ── POST /api/onboarding/site ──────────────────────────────
+  // 「Web サイト集客 AI チーム」の新 onboarding フロー。
+  // body: { site_url: "https://..." } を受けて:
+  //   1. URL 検証
+  //   2. web_fetch でサイト内容取得
+  //   3. Haiku が site_vertical を判定 (saas/ec/store/blog/portfolio/other)
+  //   4. TEAM_PRESETS から該当 preset を引いて agent を作成
+  //   5. agent を user.agents[] に追加して返す
+  // (Day 3 で並列 artifact 生成 + SSE 進捗を追加予定)
+  if(pathname === '/api/onboarding/site' && method === 'POST'){
+    const body = await readBody(req);
+    let siteUrl = String(body && body.site_url || '').trim();
+    if(!siteUrl) return jres(res, 400, { error: 'site_url が必要です' });
+    if(!/^https?:\/\//i.test(siteUrl)) siteUrl = 'https://' + siteUrl;
+    try { new URL(siteUrl); } catch(e){ return jres(res, 400, { error: '不正な URL 形式です' }); }
+
+    // 5 サイト上限 (free プラン)
+    const SITE_LIMIT_FREE = 5;
+    const existingSites = (user.agents || []).filter(a => a && a.site_url);
+    if(existingSites.length >= SITE_LIMIT_FREE && user.plan === 'free'){
+      return jres(res, 402, {
+        error: '無料プランは ' + SITE_LIMIT_FREE + ' サイトまで。追加するには Pro プランへ',
+        upgrade_required: true,
+        current_sites: existingSites.length,
+      });
+    }
+    // 同じ URL のサイトが既にある場合は再利用
+    const _norm = (u) => String(u).replace(/\/+$/, '').toLowerCase();
+    const existing = existingSites.find(a => _norm(a.site_url) === _norm(siteUrl));
+    if(existing){
+      return jres(res, 200, {
+        agent: existing,
+        vertical: existing.site_vertical,
+        already_exists: true,
+        team: _teamPresetFor(existing.site_vertical),
+      });
+    }
+
+    if(!ANTHROPIC) return jres(res, 500, { error: 'AI is not configured' });
+
+    // 1) 軽量 HTTP fetch でサイト内容を取得 (タイトル + body 抜粋)
+    //    Playwright を経由しない (= onboarding は速度優先、SPA レンダリングは諦める)。
+    //    取れなくても他の vertical 判定にフォールバックして入口を塞がない。
+    let pageContent = '';
+    let pageTitle = '';
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      const fres = await fetch(siteUrl, {
+        signal: ctrl.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MY-AI-Agent-Onboarding/1.0)' },
+        redirect: 'follow',
+      }).catch(e => { clearTimeout(timer); throw e; });
+      clearTimeout(timer);
+      if(fres && fres.ok){
+        const html = await fres.text();
+        const titleM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        pageTitle = titleM ? String(titleM[1]).replace(/\s+/g,' ').trim().slice(0, 200) : '';
+        // HTML → 簡易テキスト変換 (script/style 削除 + tag 削除)
+        pageContent = String(html)
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<!--[\s\S]*?-->/g, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&[a-z#0-9]+;/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 4000);
+      }
+    } catch(e){
+      console.warn('[onboarding/site] fetch failed:', e.message);
+    }
+    // fetch 失敗時も other vertical で進める (= 入口を塞がない)
+
+    // 2) Haiku が vertical 判定
+    let vertical = 'other';
+    if(pageContent.length > 50){
+      try {
+        const detectSys = `あなたは Web サイトの種類を判定する分類エージェントです。
+与えられたサイト内容を見て、以下の 6 カテゴリのうち最も適切な 1 つを返してください:
+- saas: SaaS / プロダクト LP (例: free trial, signup, pricing, API, integration が訴求要素)
+- ec: EC ストア (例: 商品ページ, 購入ボタン, カート, レビュー)
+- store: 店舗・サロン (例: 予約, アクセス, 営業時間, 住所、地域名)
+- blog: ブログ・メディア (例: 記事一覧, タグ, 著者, RSS, newsletter 申込)
+- portfolio: 個人事業ポートフォリオ (例: about, works, 実績紹介, 営業導線)
+- other: 上記に該当しない / 判断つかない場合
+
+迷ったら other を選んで構いません。
+出力は JSON のみ。前置きや \`\`\` も禁止。
+{"vertical": "<saas|ec|store|blog|portfolio|other>"}`;
+        const detectRes = await callAI(
+          [{ role: 'user', content: 'URL: ' + siteUrl + '\nTitle: ' + pageTitle + '\n\nContent:\n' + pageContent }],
+          detectSys,
+          'haiku',
+          null,
+        );
+        const txt = ((detectRes && detectRes.content) || []).map(b => b.text || '').join('').trim();
+        const m = txt.match(/\{[\s\S]*\}/);
+        if(m){
+          const parsed = JSON.parse(m[0]);
+          if(parsed && ['saas','ec','store','blog','portfolio','other'].includes(parsed.vertical)){
+            vertical = parsed.vertical;
+          }
+        }
+      } catch(e){
+        console.warn('[onboarding/site] vertical detection failed:', e.message);
+      }
+    }
+
+    // 3) TEAM_PRESETS から preset を取得して agent 作成
+    const preset = _teamPresetFor(vertical);
+    const hostname = (() => { try { return new URL(siteUrl).hostname.replace(/^www\./, ''); } catch(e){ return siteUrl; }})();
+    const siteName = pageTitle || hostname;
+    const agent = {
+      id: 'ag_' + crypto.randomUUID(),
+      avatar: preset.icon,
+      name: hostname.slice(0, 40),
+      site_url: siteUrl,
+      site_vertical: vertical,
+      site_title: pageTitle.slice(0, 200),
+      team_members: preset.members,
+      skills: ['marketing','writing','research','analysis','planning'],
+      persona: preset.system_prompt + '\n\n【担当サイト】 ' + siteUrl + ' (' + siteName + ')',
+      chrome_enabled: false,
+      sheets_enabled: false,
+      extension_enabled: false,
+      model: 'sonnet',
+      history: [],
+      created_at: new Date().toISOString(),
+      via_onboarding_site: true,
+      // current_task として「サイトを成長させる」永続タスクをセット
+      current_task: {
+        id: 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        requested: siteName + ' (' + preset.label + ') の集客を成長させる',
+        steps: preset.initial_artifact_prompts.map((p, i) => ({
+          n: i + 1, text: p.title, tool: 'create_artifact', done: false,
+        })),
+        scope: 'new',
+        estimate_minutes: 5,
+        status: 'in_progress',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    };
+    user.agents = [...(user.agents || []), agent];
+    user.onboarded_v1 = true;
+    user.onboarded_at = user.onboarded_at || new Date().toISOString();
+    try { await DB.save(user); } catch(e){
+      console.warn('[onboarding/site] save failed:', e.message);
+      return jres(res, 500, { error: '保存に失敗しました。少し待ってから再試行してください。' });
+    }
+    console.log('[onboarding/site] created agent', agent.id, 'for', siteUrl, '→', vertical);
+    return jres(res, 201, {
+      agent,
+      vertical,
+      team: preset,
+      site_url: siteUrl,
+      site_title: pageTitle,
+    });
   }
 
   // ── POST /api/artifacts/rollback ───────────────────────────

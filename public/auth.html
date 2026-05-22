@@ -581,6 +581,12 @@ async function doSignup() {
     // Carry ?utm_campaign= from the landing URL (or stashed) for marketing attribution
     var _qsUtm = (new URLSearchParams(location.search)).get('utm_campaign') || '';
     var utm_campaign = _qsUtm || localStorage.getItem('pendingUtmCampaign') || '';
+    // ── 「Web サイト集客」 onboarding: LP の URL 入力フォームから渡ってくる site_url ──
+    //   LP で URL を貼ったユーザーが signup する場合、その URL を保持して
+    //   signup 完了後に /api/onboarding/site にかける。
+    var _qsSiteUrl = (new URLSearchParams(location.search)).get('site_url') || '';
+    var siteUrl = '';
+    try { siteUrl = _qsSiteUrl || localStorage.getItem('pendingSiteUrl') || ''; } catch(e){}
     const r = await post('/api/auth/signup', { name, email, password: pass,
       ...(ref ? {ref} : {}),
       ...(utm_campaign && /^\d{4}-\d{2}-\d{2}-\d{2}$/.test(utm_campaign) ? {utm_campaign} : {})
@@ -614,6 +620,26 @@ async function doSignup() {
           return;
         }
       } catch(e){ /* fall through to normal redirect */ }
+    }
+
+    // ── 「Web サイト集客」 onboarding 経路: site_url がある場合は AI チームを自動編成 ──
+    //   サーバ側で URL → vertical 判定 → agent (= site team) 作成。
+    //   完了後は /app.html?onboarding=site&agent_id=... に着地、新規ホーム画面が
+    //   そのチームの artifact を見せる (artifact 並列生成は Day 3 で実装)。
+    if(siteUrl){
+      setLoading('s-btn', true, L('AI チームを編成中…','Forming AI team…'));
+      try {
+        var onb = await post('/api/onboarding/site', { site_url: siteUrl });
+        try { localStorage.removeItem('pendingSiteUrl'); } catch(e){}
+        if(onb && onb.agent && onb.agent.id){
+          window.location.href = '/app.html?onboarding=site&agent_id=' + encodeURIComponent(onb.agent.id);
+          return;
+        }
+      } catch(e){
+        // onboarding 失敗してもユーザーは登録済 → 通常 redirect で旧 UI に着地
+        console.warn('[signup] onboarding/site failed:', e && e.message);
+        try { localStorage.removeItem('pendingSiteUrl'); } catch(e){}
+      }
     }
 
     // Founder 100: pop the celebration modal before redirecting, so the

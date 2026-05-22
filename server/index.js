@@ -13875,6 +13875,122 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  // ── POST /api/onboarding/migrate ───────────────────────────
+  // 既存の旧 agent (site_url なし) を「サイト集客チーム」に移行する。
+  // body: { agent_id, site_url } — 旧 agent を指定して URL を紐付け。
+  // 処理:
+  //   1. agent 検証 (本人所有 / site_url 未設定の旧 agent か)
+  //   2. URL fetch + Haiku vertical 判定
+  //   3. agent.site_url / site_vertical / team_members を埋める
+  //   4. agent.persona を新しい preset.system_prompt に差し替え (旧 persona は legacy_persona に退避)
+  //   5. current_task が無ければ作成 (initial_artifact_prompts ベース)
+  //   6. history / artifacts はそのまま残す (= 過去の会話・資産は保持)
+  // SSE は付けず JSON 同期で返す (= 移行は少数のヘビーユーザーが手動でやる想定)。
+  if(pathname === '/api/onboarding/migrate' && method === 'POST'){
+    const body = await readBody(req);
+    const agentId = String(body && body.agent_id || '').trim();
+    let siteUrl = String(body && body.site_url || '').trim();
+    if(!agentId) return jres(res, 400, { error: 'agent_id required' });
+    if(!siteUrl) return jres(res, 400, { error: 'site_url required' });
+    if(!/^https?:\/\//i.test(siteUrl)) siteUrl = 'https://' + siteUrl;
+    try { new URL(siteUrl); } catch(e){ return jres(res, 400, { error: '不正な URL 形式です' }); }
+
+    const agent = (user.agents || []).find(a => a && a.id === agentId);
+    if(!agent) return jres(res, 404, { error: 'agent not found' });
+    if(agent.site_url){
+      return jres(res, 400, { error: 'この agent は既にサイト紐付け済みです' });
+    }
+    if(agent.is_group){
+      return jres(res, 400, { error: 'グループ agent は移行対象外です' });
+    }
+    if(!ANTHROPIC) return jres(res, 500, { error: 'AI is not configured' });
+
+    // URL fetch
+    let pageContent = '';
+    let pageTitle = '';
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      const fres = await fetch(siteUrl, {
+        signal: ctrl.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MY-AI-Agent-Migrate/1.0)' },
+        redirect: 'follow',
+      }).catch(e => { clearTimeout(timer); throw e; });
+      clearTimeout(timer);
+      if(fres && fres.ok){
+        const html = await fres.text();
+        const titleM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        pageTitle = titleM ? String(titleM[1]).replace(/\s+/g,' ').trim().slice(0, 200) : '';
+        pageContent = String(html)
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<!--[\s\S]*?-->/g, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&[a-z#0-9]+;/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim().slice(0, 4000);
+      }
+    } catch(e){
+      console.warn('[onboarding/migrate] fetch failed:', e.message);
+    }
+
+    // Vertical 判定
+    let vertical = 'other';
+    if(pageContent.length > 50){
+      try {
+        const detectSys = `あなたは Web サイトの種類を判定する分類エージェントです。saas / ec / store / blog / portfolio / other の 1 つを返してください。出力は JSON のみ: {"vertical": "..."}`;
+        const detectRes = await callAI(
+          [{ role: 'user', content: 'URL: ' + siteUrl + '\nTitle: ' + pageTitle + '\n\nContent:\n' + pageContent }],
+          detectSys,
+          'haiku',
+          null,
+        );
+        const txt = ((detectRes && detectRes.content) || []).map(b => b.text || '').join('').trim();
+        const m = txt.match(/\{[\s\S]*\}/);
+        if(m){
+          const parsed = JSON.parse(m[0]);
+          if(parsed && ['saas','ec','store','blog','portfolio','other'].includes(parsed.vertical)){
+            vertical = parsed.vertical;
+          }
+        }
+      } catch(e){ console.warn('[onboarding/migrate] detect failed:', e.message); }
+    }
+
+    // 旧 agent に site_url 紐付け
+    const preset = _teamPresetFor(vertical);
+    agent.site_url = siteUrl;
+    agent.site_vertical = vertical;
+    agent.site_title = pageTitle.slice(0, 200);
+    agent.team_members = preset.members;
+    if(agent.persona){ agent.legacy_persona = agent.persona; }  // 旧 persona を退避
+    agent.persona = preset.system_prompt + '\n\n【担当サイト】 ' + siteUrl + ' (' + pageTitle + ')';
+    agent.via_onboarding_site = true;
+    agent.via_migration = true;
+    agent.avatar = preset.icon;
+    if(!agent.current_task){
+      let _siteHostnameForLog = siteUrl;
+      try { _siteHostnameForLog = new URL(siteUrl).hostname.replace(/^www\./, ''); } catch(e){}
+      agent.current_task = {
+        id: 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        requested: (pageTitle || _siteHostnameForLog) + ' (' + preset.label + ') の集客を成長させる',
+        steps: preset.initial_artifact_prompts.map((p, i) => ({
+          n: i + 1, text: p.title, tool: 'create_artifact', done: false,
+        })),
+        scope: 'new',
+        estimate_minutes: 5,
+        status: 'in_progress',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+    try { await DB.save(user); } catch(e){
+      console.warn('[onboarding/migrate] save failed:', e.message);
+      return jres(res, 500, { error: '保存に失敗しました。' });
+    }
+    console.log('[onboarding/migrate] migrated', agentId, '→', siteUrl, '(' + vertical + ')');
+    return jres(res, 200, { agent, vertical, team: preset, site_url: siteUrl });
+  }
+
   // ── POST /api/onboarding/site/artifacts ────────────────────
   // SSE で 5 個の初期 artifact を並列生成して進捗を流す。
   // /onboarding.html (スプラッシュ画面) から呼ぶ前提。

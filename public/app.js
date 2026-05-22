@@ -3370,9 +3370,27 @@ function renderHomeDashboard(){
 
 // 「サイト 0 件」 = 「+ サイトを追加して AI チームを派遣」の入口
 function _renderHomeEmptyHTML(name, totalAgents){
-  var legacyNote = '';
-  if(totalAgents > 0){
-    legacyNote = '<p class="hm-empty-legacy">過去に作った Agent が ' + totalAgents + ' 体あります。サイドバーから「サイトに紐づける」と AI チームに移行できます。</p>';
+  // legacy agents の移行 banner — 旧 agent (非グループ・サイト未紐付け) がある場合
+  var legacy = (agents || []).filter(function(a){
+    return a && !a.site_url && !a.is_group && !a.team_origin;
+  });
+  var legacyBanner = '';
+  if(legacy.length > 0){
+    var items = legacy.slice(0, 5).map(function(a){
+      return '<div class="hm-legacy-item">'
+           +   '<div class="hm-legacy-meta">'
+           +     '<div class="hm-legacy-av">' + (a.avatar || '🤖') + '</div>'
+           +     '<div class="hm-legacy-nm">' + esc(a.name || 'AI') + '</div>'
+           +   '</div>'
+           +   '<button class="hm-legacy-go" onclick="openMigrateAgentModal(\'' + esc(a.id) + '\')">サイトに紐づける →</button>'
+           + '</div>';
+    }).join('');
+    legacyBanner = '<div class="hm-legacy-banner">'
+      + '<div class="hm-legacy-h">📦 過去の Agent (' + legacy.length + ' 体)</div>'
+      + '<div class="hm-legacy-sub">サイトに紐づけて AI チームに移行できます。会話履歴・成果物はそのまま残ります。</div>'
+      + '<div class="hm-legacy-list">' + items + '</div>'
+      + (legacy.length > 5 ? '<div class="hm-legacy-more">他 ' + (legacy.length - 5) + ' 体はサイドバーから移行できます</div>' : '')
+      + '</div>';
   }
   return '<div class="hm-empty">'
     + '<div class="hm-empty-tag"><span class="hm-tag-dot"></span>Web サイト集客 AI チーム</div>'
@@ -3384,7 +3402,7 @@ function _renderHomeEmptyHTML(name, totalAgents){
     + '<div class="hm-empty-vts">'
     +   '<span>🚀 SaaS</span><span>🛒 EC</span><span>🏪 店舗</span><span>✍️ ブログ</span><span>💼 ポートフォリオ</span>'
     + '</div>'
-    + legacyNote
+    + legacyBanner
     + '</div>';
 }
 
@@ -3536,6 +3554,65 @@ function openSite(siteId){
   try { renderAgList(); } catch(e){}
   try { renderHomeDashboard(); } catch(e){}
   // 既存 openAgent と同等の動作 (チャットを開く) は明示クリックのみで起動
+}
+
+// ── 旧 agent → site migration モーダル ─────────────────────────
+// legacy agent を「サイトに紐づけて AI チームに移行」するための URL 入力モーダル。
+// クリックで開き、URL → /api/onboarding/migrate を叩いて agent を更新する。
+function openMigrateAgentModal(agentId){
+  if(!agentId) return;
+  var ag = (agents || []).find(function(a){ return a && a.id === agentId; });
+  if(!ag) return;
+  var existing = document.getElementById('addSiteModal');
+  if(existing) existing.remove();
+  var html = '<div id="addSiteModal" class="add-site-overlay" onclick="if(event.target===this)closeAddSiteModal()">'
+    + '<div class="add-site-card">'
+    +   '<button class="add-site-close" onclick="closeAddSiteModal()">×</button>'
+    +   '<div class="add-site-tag"><span class="hm-tag-dot"></span>サイトに紐づける</div>'
+    +   '<h2>' + esc(ag.name || 'エージェント') + ' をサイトに紐づける</h2>'
+    +   '<p>このエージェントを「Web サイト集客 AI チーム」に移行します。'
+    +   '会話履歴・成果物はそのまま残ります。</p>'
+    +   '<form class="add-site-form" onsubmit="return _submitMigrateAgent(event,\'' + esc(agentId) + '\')">'
+    +     '<input id="addSiteInput" class="add-site-input" type="url" placeholder="https://yoursite.com" autocomplete="off" />'
+    +     '<button type="submit" class="add-site-go">移行する <span class="arrow">→</span></button>'
+    +   '</form>'
+    +   '<div class="add-site-note">既存の会話履歴・成果物は保持されます</div>'
+    + '</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  setTimeout(function(){ var inp = document.getElementById('addSiteInput'); if(inp) inp.focus(); }, 50);
+}
+async function _submitMigrateAgent(ev, agentId){
+  if(ev && ev.preventDefault) ev.preventDefault();
+  var inp = document.getElementById('addSiteInput');
+  if(!inp) return false;
+  var raw = String(inp.value || '').trim();
+  if(!raw){ inp.focus(); return false; }
+  var url = raw;
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  try { var u = new URL(url); if(!u.hostname || u.hostname.indexOf('.') < 0) throw new Error('invalid'); }
+  catch(e){ inp.style.borderColor = '#dc3232'; setTimeout(function(){ inp.style.borderColor = ''; }, 1500); return false; }
+  var btn = ev.target.querySelector('button[type="submit"]');
+  if(btn){ btn.disabled = true; btn.innerHTML = '移行中…'; }
+  try {
+    var r = await api('POST', '/api/onboarding/migrate', { agent_id: agentId, site_url: url });
+    if(r && r.agent){
+      // ローカルの agents[] を更新
+      var idx = agents.findIndex(function(a){ return a && a.id === agentId; });
+      if(idx >= 0) agents[idx] = r.agent;
+      closeAddSiteModal();
+      showToast('サイトに紐づけました', 'ok');
+      try { renderAgList(); } catch(e){}
+      try { renderHomeDashboard(); } catch(e){}
+      // この agent をアクティブに
+      openSite(agentId);
+      return false;
+    }
+  } catch(e){
+    showToast((e && e.message) || 'エラーが発生しました', 'ng');
+    if(btn){ btn.disabled = false; btn.innerHTML = '移行する <span class="arrow">→</span>'; }
+  }
+  return false;
 }
 
 function _homeCreateCard(cls, ic, title, desc, onclick){
@@ -3691,7 +3768,7 @@ function renderAgList(){
     html += '<div class="ag-empty">サイトを追加すると<br>AI チームが派遣されます</div>';
   }
 
-  // 3) Legacy agents (旧 agent / Day 6 で移行予定)
+  // 3) Legacy agents (旧 agent / 移行可能)
   if(legacy.length > 0){
     var lcCollapsed = false;
     try { lcCollapsed = (localStorage.getItem('mya_legacy_collapsed') === '1'); } catch(e){}
@@ -3701,7 +3778,13 @@ function renderAgList(){
          +   '<span class="sb-sec-cnt">' + legacy.length + '</span>'
          + '</div>';
     if(!lcCollapsed){
-      html += legacy.slice().sort(_sortByLastActivity).map(function(a){ return _renderAgItem(a, false); }).join('');
+      html += legacy.slice().sort(_sortByLastActivity).map(function(a){
+        // 既存の _renderAgItem に「サイトに紐づける」ボタンを overlay 付加
+        var base = _renderAgItem(a, false);
+        var migrateBtn = '<button class="ag-migrate" onclick="event.stopPropagation();openMigrateAgentModal(\'' + esc(a.id) + '\')" title="サイトに紐づけて AI チームに移行">→ 紐づける</button>';
+        // base の末尾 div を分解して migrateBtn を挿入
+        return base.replace(/<\/div>\s*$/, migrateBtn + '</div>');
+      }).join('');
     }
   }
 

@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>MY AI Agent — シンプル化モック</title>
+<style>
+  :root{
+    --peach:#fb923c; --peach-dark:#ea580c; --peach-soft:rgba(251,146,60,.12);
+    --cream:#faf6f0; --cream2:#fff7ee; --cream3:#f5ebde;
+    --text:#2d1a0e; --text2:#6b4226; --text3:#9a6a4a;
+    --wire:rgba(180,120,80,.18); --wire2:rgba(180,120,80,.28);
+    --green:#16a34a; --green-soft:rgba(34,197,94,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;background:#ede5d8;color:var(--text);font-size:14px}
+  /* ── ナビ ── */
+  .mock-nav{
+    background:#fff;border-bottom:1px solid var(--wire);
+    padding:12px 24px;display:flex;align-items:center;gap:24px;position:sticky;top:0;z-index:10;
+  }
+  .mock-nav-title{font-weight:900;font-size:14px;letter-spacing:.02em}
+  .mock-tabs{display:flex;gap:6px}
+  .mock-tab{
+    padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;
+    color:var(--text2);cursor:pointer;border:1px solid transparent;background:transparent;
+    transition:all .12s;
+  }
+  .mock-tab:hover{background:var(--cream2)}
+  .mock-tab.on{background:var(--peach);color:#fff}
+  .mock-note{margin-left:auto;font-size:11.5px;color:var(--text3)}
+  /* ── ステージ (1280px の擬似アプリ) ── */
+  .stage-wrap{padding:24px;display:flex;justify-content:center}
+  .stage{
+    width:1280px;max-width:100%;height:780px;background:var(--cream);
+    border:1px solid var(--wire2);border-radius:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,.08);
+    overflow:hidden;display:none;position:relative;
+  }
+  .stage.on{display:block}
+  .view-caption{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    background:var(--text);color:#fff;font-size:11.5px;font-weight:700;
+    padding:5px 14px;border-radius:99px;letter-spacing:.02em;z-index:5;
+  }
+
+  /* ============================================
+     VIEW 1: 新規ユーザー ランディング
+     ============================================ */
+  .v1-root{
+    width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#fff,var(--cream));
+    flex-direction:column;
+  }
+  .v1-logo{font-size:20px;font-weight:900;color:var(--peach-dark);margin-bottom:48px;letter-spacing:.02em}
+  .v1-hero{font-size:34px;font-weight:900;color:var(--text);margin-bottom:14px;letter-spacing:-.01em;text-align:center}
+  .v1-sub{font-size:14px;color:var(--text2);margin-bottom:36px;text-align:center;max-width:540px;line-height:1.7}
+  .v1-input-wrap{
+    background:#fff;border:1.5px solid var(--wire2);border-radius:14px;
+    padding:24px;width:580px;box-shadow:0 8px 24px rgba(180,120,80,.08);
+  }
+  .v1-input{
+    width:100%;border:0;outline:0;font-family:inherit;font-size:15.5px;
+    min-height:92px;resize:none;color:var(--text);background:transparent;line-height:1.6;
+  }
+  .v1-input::placeholder{color:var(--text3)}
+  .v1-input-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+  .v1-hint{font-size:11.5px;color:var(--text3)}
+  .v1-go{
+    background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+    color:#fff;border:0;padding:10px 24px;border-radius:10px;font-weight:800;font-size:13.5px;
+    cursor:pointer;box-shadow:0 4px 12px rgba(234,88,12,.22);
+  }
+  .v1-examples{display:flex;gap:10px;margin-top:24px;justify-content:center;flex-wrap:wrap;max-width:600px}
+  .v1-ex{
+    background:#fff;border:1px solid var(--wire);border-radius:99px;
+    padding:8px 16px;font-size:12px;color:var(--text2);cursor:pointer;
+  }
+  .v1-ex:hover{background:var(--cream2);border-color:var(--peach)}
+
+  /* ============================================
+     VIEW 2: チーム自動編成
+     ============================================ */
+  .v2-root{
+    width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#fff,var(--cream));padding:40px;
+  }
+  .v2-card{
+    background:#fff;border:1px solid var(--wire2);border-radius:16px;
+    padding:32px;width:700px;box-shadow:0 12px 32px rgba(180,120,80,.10);
+  }
+  .v2-prompt{
+    background:var(--cream2);border-left:3px solid var(--peach);
+    padding:12px 16px;border-radius:6px;margin-bottom:24px;font-size:13.5px;color:var(--text2);
+  }
+  .v2-title{font-size:20px;font-weight:900;margin-bottom:4px}
+  .v2-sub{font-size:12.5px;color:var(--text3);margin-bottom:24px}
+  .v2-members{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+  .v2-mem{
+    background:var(--cream);border:1px solid var(--wire);border-radius:12px;
+    padding:14px 16px;display:flex;gap:12px;align-items:flex-start;
+  }
+  .v2-mem-av{
+    width:42px;height:42px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    background:#fff;border:1px solid var(--wire);
+  }
+  .v2-mem-bd{flex:1;min-width:0}
+  .v2-mem-name{font-size:14px;font-weight:900;margin-bottom:3px}
+  .v2-mem-role{font-size:11.5px;color:var(--peach-dark);font-weight:700;margin-bottom:6px}
+  .v2-mem-desc{font-size:11.5px;color:var(--text2);line-height:1.55}
+  .v2-acts{display:flex;gap:10px;justify-content:flex-end}
+  .v2-secondary{
+    background:transparent;border:1px solid var(--wire2);color:var(--text2);
+    padding:10px 18px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;
+  }
+  .v2-primary{
+    background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+    color:#fff;border:0;padding:10px 24px;border-radius:10px;font-weight:800;font-size:13.5px;
+    cursor:pointer;box-shadow:0 4px 12px rgba(234,88,12,.22);
+  }
+
+  /* ============================================
+     VIEW 3: プロジェクト ワークスペース (主役)
+     ============================================ */
+  .v3-root{display:flex;height:100%}
+  .v3-side{
+    width:240px;background:#fff;border-right:1px solid var(--wire);
+    display:flex;flex-direction:column;padding:14px 0;
+  }
+  .v3-side-brand{padding:0 16px 16px;border-bottom:1px solid var(--wire);margin-bottom:10px}
+  .v3-side-brand-name{font-size:13px;font-weight:900;color:var(--peach-dark);letter-spacing:.02em}
+  .v3-side-label{
+    padding:8px 16px;font-size:10.5px;font-weight:800;color:var(--text3);
+    letter-spacing:.06em;text-transform:uppercase;
+  }
+  .v3-newbtn{
+    margin:0 12px 8px;padding:9px 14px;
+    background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+    color:#fff;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;
+    border:0;width:calc(100% - 24px);box-shadow:0 4px 12px rgba(234,88,12,.18);
+  }
+  .v3-proj{
+    padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;
+    border-left:3px solid transparent;
+  }
+  .v3-proj:hover{background:var(--cream2)}
+  .v3-proj.on{background:var(--peach-soft);border-left-color:var(--peach);font-weight:700}
+  .v3-proj-sub{font-size:10.5px;color:var(--text3);margin-top:2px}
+  .v3-side-foot{margin-top:auto;padding:14px 16px;border-top:1px solid var(--wire);font-size:11.5px;color:var(--text3)}
+
+  .v3-main{flex:1;display:flex;flex-direction:column}
+  .v3-head{
+    padding:14px 24px;border-bottom:1px solid var(--wire);background:#fff;
+    display:flex;align-items:center;gap:14px;
+  }
+  .v3-head-ti{font-size:15px;font-weight:900}
+  .v3-head-team{display:flex;gap:-6px;margin-left:auto}
+  .v3-head-av{
+    width:30px;height:30px;border-radius:50%;background:#fff;
+    border:2px solid #fff;box-shadow:0 0 0 1px var(--wire);
+    display:flex;align-items:center;justify-content:center;font-size:15px;margin-left:-6px;
+  }
+  .v3-head-av:first-child{margin-left:0}
+  .v3-head-count{
+    background:var(--cream);border-radius:99px;padding:4px 10px;
+    font-size:11px;color:var(--text2);margin-left:8px;font-weight:700;
+  }
+
+  .v3-thread{flex:1;overflow-y:auto;padding:20px 24px;background:var(--cream)}
+  .v3-msg{margin-bottom:18px;display:flex;gap:10px}
+  .v3-msg-av{
+    width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid var(--wire);
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  }
+  .v3-msg-bd{flex:1;min-width:0}
+  .v3-msg-meta{font-size:11.5px;color:var(--text3);margin-bottom:4px}
+  .v3-msg-meta b{color:var(--text);font-weight:800}
+  .v3-msg-body{
+    background:#fff;border:1px solid var(--wire);border-radius:12px;
+    padding:12px 14px;font-size:13.5px;line-height:1.65;color:var(--text);
+  }
+  .v3-msg.you .v3-msg-body{background:var(--peach-soft);border-color:rgba(251,146,60,.3)}
+  /* 進め方チェックリスト (現状のお任せ受領カードからガワを外したシンプル版) */
+  .v3-checklist{margin:8px 0}
+  .v3-check-item{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13px}
+  .v3-check-box{
+    width:16px;height:16px;border-radius:4px;border:1.5px solid var(--wire2);
+    display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0;
+  }
+  .v3-check-item.done .v3-check-box{background:var(--green);border-color:var(--green)}
+  .v3-check-item.done .v3-check-tx{color:var(--text3);text-decoration:line-through}
+  .v3-check-item.active .v3-check-box{
+    border-color:var(--peach);background:#fff;
+  }
+  .v3-check-item.active .v3-check-box::after{
+    content:'';width:7px;height:7px;border-radius:50%;background:var(--peach);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  .v3-check-tx{color:var(--text2)}
+
+  /* 成果物カード (2 ボタン版) */
+  .v3-artifact{
+    background:#fff;border:1px solid var(--wire);border-radius:12px;
+    padding:14px;margin-top:10px;display:flex;align-items:center;gap:12px;
+  }
+  .v3-art-ic{
+    width:42px;height:42px;border-radius:8px;background:var(--cream);
+    display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+  }
+  .v3-art-body{flex:1;min-width:0}
+  .v3-art-title{font-size:13px;font-weight:900}
+  .v3-art-meta{font-size:11px;color:var(--text3);margin-top:1px}
+  .v3-art-acts{display:flex;gap:6px}
+  .v3-art-btn{
+    background:#fff;border:1px solid var(--wire2);color:var(--text2);
+    padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+    text-decoration:none;
+  }
+  .v3-art-btn.primary{
+    background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border-color:transparent;
+    box-shadow:0 3px 8px rgba(234,88,12,.18);
+  }
+  .v3-art-more{
+    background:transparent;border:0;color:var(--text3);font-size:18px;cursor:pointer;padding:4px 8px;
+  }
+
+  .v3-composer{padding:14px 24px;border-top:1px solid var(--wire);background:#fff}
+  .v3-comp-wrap{
+    background:var(--cream);border:1px solid var(--wire);border-radius:12px;padding:12px 14px;
+    display:flex;align-items:flex-end;gap:10px;
+  }
+  .v3-comp-ta{
+    flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:13.5px;
+    resize:none;min-height:24px;color:var(--text);
+  }
+  .v3-comp-ta::placeholder{color:var(--text3)}
+  .v3-comp-attach{
+    background:transparent;border:0;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;
+  }
+  .v3-comp-send{
+    background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+    color:#fff;border:0;width:34px;height:34px;border-radius:10px;font-size:14px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+
+  /* ============================================
+     VIEW 4: Before / After 比較
+     ============================================ */
+  .v4-root{padding:40px;background:#fff;height:100%;overflow-y:auto}
+  .v4-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:1180px;margin:0 auto}
+  .v4-col h3{margin:0 0 16px;font-size:15px;letter-spacing:.02em}
+  .v4-col.before h3{color:var(--text2)}
+  .v4-col.after h3{color:var(--peach-dark)}
+  .v4-table{width:100%;border-collapse:collapse;font-size:13px}
+  .v4-table th{
+    text-align:left;padding:9px 10px;background:var(--cream);
+    font-weight:800;font-size:11.5px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;
+  }
+  .v4-table td{padding:11px 10px;border-bottom:1px solid var(--wire);font-size:12.5px;line-height:1.55;vertical-align:top}
+  .v4-table td:first-child{font-weight:700;color:var(--text);width:140px}
+  .v4-before-cell{color:var(--text3)}
+  .v4-after-cell{color:var(--text);font-weight:600}
+  .v4-numbers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px;max-width:1180px;margin-left:auto;margin-right:auto}
+  .v4-num-card{
+    background:linear-gradient(135deg,var(--cream2),#fff);
+    border:1px solid var(--wire);border-radius:12px;padding:16px 18px;
+  }
+  .v4-num-card-label{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
+  .v4-num{font-size:22px;font-weight:900}
+  .v4-num-after{color:var(--peach-dark)}
+  .v4-num-arrow{margin:0 8px;color:var(--text3);font-size:14px}
+
+</style>
+</head>
+<body>
+
+<!-- ── ナビ ── -->
+<div class="mock-nav">
+  <div class="mock-nav-title">🟠 MY AI Agent — シンプル化モック</div>
+  <div class="mock-tabs">
+    <button class="mock-tab on" data-view="v1">① ランディング</button>
+    <button class="mock-tab" data-view="v2">② チーム編成</button>
+    <button class="mock-tab" data-view="v3">③ ワークスペース</button>
+    <button class="mock-tab" data-view="v4">④ Before/After</button>
+  </div>
+  <div class="mock-note">プロト用モック · 実装は未</div>
+</div>
+
+<!-- ============================================
+     VIEW 1: 新規ユーザー ランディング
+     ============================================ -->
+<div class="stage-wrap"><div class="stage on" data-view="v1">
+  <div class="view-caption">① 新規ユーザー — agent 作成画面は消滅。1 文だけ</div>
+  <div class="v1-root">
+    <div class="v1-logo">🟠 MY AI Agent</div>
+    <div class="v1-hero">何の仕事を任せたい?</div>
+    <div class="v1-sub">1 文で OK。AI が最適なチームを編成して、すぐ着手します。<br>後から追加・調整も可能です。</div>
+    <div class="v1-input-wrap">
+      <textarea class="v1-input" placeholder="例: BtoB SaaS のアウトバウンドセールスを自動化したい">freecracy 株式会社の DD レポートを作成したい。財務分析・競合調査・リスク評価を含めて、HTML レポートで納品。</textarea>
+      <div class="v1-input-foot">
+        <div class="v1-hint">⌘ + Enter で送信</div>
+        <button class="v1-go">▶ チームを編成</button>
+      </div>
+    </div>
+    <div class="v1-examples">
+      <div class="v1-ex">📊 競合分析レポートを作りたい</div>
+      <div class="v1-ex">📧 毎朝の問い合わせメールを処理したい</div>
+      <div class="v1-ex">📈 GA4 から週次レポートを自動生成</div>
+      <div class="v1-ex">🎨 LP デザインと文言を改善したい</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ============================================
+     VIEW 2: チーム自動編成
+     ============================================ -->
+<div class="stage-wrap"><div class="stage" data-view="v2">
+  <div class="view-caption">② チーム編成完了 — Haiku が 1 秒で提案、ユーザーは confirm するだけ</div>
+  <div class="v2-root">
+    <div class="v2-card">
+      <div class="v2-prompt">「freecracy 株式会社の DD レポートを作成したい。財務分析・競合調査・リスク評価を含めて、HTML レポートで納品」</div>
+      <div class="v2-title">このチームでいきましょう</div>
+      <div class="v2-sub">それぞれの専門家を呼びました。後から追加・削除もできます。</div>
+      <div class="v2-members">
+        <div class="v2-mem">
+          <div class="v2-mem-av">📋</div>
+          <div class="v2-mem-bd">
+            <div class="v2-mem-name">PM</div>
+            <div class="v2-mem-role">プロジェクトマネージャー</div>
+            <div class="v2-mem-desc">全体の進行管理、ユーザーからの依頼を専門家に振り分け、結果を集約。</div>
+          </div>
+        </div>
+        <div class="v2-mem">
+          <div class="v2-mem-av">📊</div>
+          <div class="v2-mem-bd">
+            <div class="v2-mem-name">財務アナリスト</div>
+            <div class="v2-mem-role">数値分析担当</div>
+            <div class="v2-mem-desc">決算情報、財務指標、KPI を読み解いてレポートに反映。</div>
+          </div>
+        </div>
+        <div class="v2-mem">
+          <div class="v2-mem-av">🔍</div>
+          <div class="v2-mem-bd">
+            <div class="v2-mem-name">リサーチャー</div>
+            <div class="v2-mem-role">情報収集担当</div>
+            <div class="v2-mem-desc">競合企業、業界動向、ニュース記事を Web から収集してまとめる。</div>
+          </div>
+        </div>
+        <div class="v2-mem">
+          <div class="v2-mem-av">⚠️</div>
+          <div class="v2-mem-bd">
+            <div class="v2-mem-name">リスク評価担当</div>
+            <div class="v2-mem-role">法務・与信</div>
+            <div class="v2-mem-desc">与信、法務、契約上のリスクを洗い出してフラグを立てる。</div>
+          </div>
+        </div>
+        <div class="v2-mem">
+          <div class="v2-mem-av">🎨</div>
+          <div class="v2-mem-bd">
+            <div class="v2-mem-name">ライター</div>
+            <div class="v2-mem-role">レポート執筆</div>
+            <div class="v2-mem-desc">各セクションの文章作成、HTML レポートのデザイン・組版。</div>
+          </div>
+        </div>
+        <div class="v2-mem" style="background:transparent;border:1px dashed var(--wire2);align-items:center;justify-content:center;color:var(--text3);font-size:12.5px">
+          + メンバー追加
+        </div>
+      </div>
+      <div class="v2-acts">
+        <button class="v2-secondary">調整する</button>
+        <button class="v2-primary">▶ このチームで始める</button>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ============================================
+     VIEW 3: プロジェクト ワークスペース (主役)
+     ============================================ -->
+<div class="stage-wrap"><div class="stage" data-view="v3">
+  <div class="view-caption">③ ワークスペース — サイドバーは Projects のみ。1 画面で全部見える</div>
+  <div class="v3-root">
+    <!-- サイドバー -->
+    <div class="v3-side">
+      <div class="v3-side-brand">
+        <div class="v3-side-brand-name">🟠 MY AI Agent</div>
+      </div>
+      <button class="v3-newbtn">+ 新しいプロジェクト</button>
+      <div class="v3-side-label">Projects</div>
+      <div class="v3-proj on">
+        <div>Freecracy DD</div>
+        <div class="v3-proj-sub">5 人 ・ 進行中 3/6</div>
+      </div>
+      <div class="v3-proj">
+        <div>小川タスク管理</div>
+        <div class="v3-proj-sub">3 人 ・ 完了</div>
+      </div>
+      <div class="v3-proj">
+        <div>資金調達資料</div>
+        <div class="v3-proj-sub">4 人 ・ 一時停止</div>
+      </div>
+      <div class="v3-proj">
+        <div>X 投稿運用</div>
+        <div class="v3-proj-sub">2 人 ・ 進行中</div>
+      </div>
+      <div class="v3-proj">
+        <div>カスタマー対応</div>
+        <div class="v3-proj-sub">2 人 ・ 進行中</div>
+      </div>
+      <div class="v3-side-foot">
+        kota ・ Business プラン<br>
+        <span style="color:var(--peach-dark);font-weight:700">7 / 51 連携</span>
+      </div>
+    </div>
+
+    <!-- メイン -->
+    <div class="v3-main">
+      <div class="v3-head">
+        <div class="v3-head-ti">Freecracy DD</div>
+        <div class="v3-head-team">
+          <div class="v3-head-av" title="PM">📋</div>
+          <div class="v3-head-av" title="財務">📊</div>
+          <div class="v3-head-av" title="リサーチ">🔍</div>
+          <div class="v3-head-av" title="リスク">⚠️</div>
+          <div class="v3-head-av" title="ライター">🎨</div>
+          <div class="v3-head-count">5 人</div>
+        </div>
+      </div>
+
+      <div class="v3-thread">
+
+        <!-- ユーザーメッセージ -->
+        <div class="v3-msg you">
+          <div class="v3-msg-av">🧑</div>
+          <div class="v3-msg-bd">
+            <div class="v3-msg-meta"><b>あなた</b> · 17:28</div>
+            <div class="v3-msg-body">
+              新しく <b>2026 年中の確定している債権</b>セクションをレポートに追加してほしい。<br>
+              全体的なセクション順: 会社概要 → 株主一覧 → 事業概要 → 過去の決算情報 → 今期の事業計画 → <b>2026 年中の確定している債権</b>→ 口座の入出金 → 人員・組織
+            </div>
+          </div>
+        </div>
+
+        <!-- PM からのアサインメッセージ -->
+        <div class="v3-msg">
+          <div class="v3-msg-av">📋</div>
+          <div class="v3-msg-bd">
+            <div class="v3-msg-meta"><b>PM</b> がアサインしました · 17:28</div>
+            <div class="v3-msg-body">
+              リサーチャー (確定債権データの収集) → 財務アナリスト (構造化) → ライター (レポート反映) の順で進めます。
+              <div class="v3-checklist">
+                <div class="v3-check-item done"><div class="v3-check-box">✓</div><div class="v3-check-tx">確定債権データの収集 <span style="color:var(--text3);font-size:11px">— 🔍 リサーチャー</span></div></div>
+                <div class="v3-check-item done"><div class="v3-check-box">✓</div><div class="v3-check-tx">セクション構造の設計 <span style="color:var(--text3);font-size:11px">— 📊 財務</span></div></div>
+                <div class="v3-check-item active"><div class="v3-check-box"></div><div class="v3-check-tx">レポートに section 挿入 + 順序入れ替え <span style="color:var(--text3);font-size:11px">— 🎨 ライター</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ライターが artifact を作成 -->
+        <div class="v3-msg">
+          <div class="v3-msg-av">🎨</div>
+          <div class="v3-msg-bd">
+            <div class="v3-msg-meta"><b>ライター</b> · 17:32</div>
+            <div class="v3-msg-body" style="padding:10px 12px">
+              新セクションを挿入しました。
+              <div class="v3-artifact">
+                <div class="v3-art-ic">🌐</div>
+                <div class="v3-art-body">
+                  <div class="v3-art-title">freecracy-dd-report</div>
+                  <div class="v3-art-meta">Ver. 20 ・ 更新済</div>
+                </div>
+                <div class="v3-art-acts">
+                  <button class="v3-art-btn">✏️ 修正</button>
+                  <a class="v3-art-btn primary" href="#">↗ 開く</a>
+                  <button class="v3-art-more">⋯</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="v3-composer">
+        <div class="v3-comp-wrap">
+          <button class="v3-comp-attach" title="ファイル添付">📎</button>
+          <textarea class="v3-comp-ta" placeholder="このチームに依頼する…"></textarea>
+          <button class="v3-comp-send">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ============================================
+     VIEW 4: Before / After 比較
+     ============================================ -->
+<div class="stage-wrap"><div class="stage" data-view="v4">
+  <div class="view-caption">④ Before / After — 何を消したか</div>
+  <div class="v4-root">
+    <div class="v4-grid">
+      <div class="v4-col before">
+        <h3>今 (Before)</h3>
+        <table class="v4-table">
+          <tr><th colspan="2">サイドバー</th></tr>
+          <tr><td>セクション</td><td class="v4-before-cell">Home · Teams · グループ · DMs · 検索 · 連携 · Credits · 設定 = <b>8 個</b></td></tr>
+          <tr><td>新規ボタン</td><td class="v4-before-cell">「+ Add Credits」が常時露出</td></tr>
+          <tr><th colspan="2">onboarding</th></tr>
+          <tr><td>新規エージェント作成</td><td class="v4-before-cell">アバター → 名前 → スキル選択 → ペルソナ入力 → 連携 = <b>5 ステップ</b></td></tr>
+          <tr><td>離脱率</td><td class="v4-before-cell">30 人作成 → 9 人使用 (= <b>70% 死亡</b>)</td></tr>
+          <tr><th colspan="2">メッセージカード</th></tr>
+          <tr><td>artifact ボタン</td><td class="v4-before-cell">修正 · 固定中 · コード · コピー · 開く = <b>5 個</b></td></tr>
+          <tr><td>お任せ受領カード</td><td class="v4-before-cell">大きな枠 + ステップリスト + 違うなら修正 + 見積もり</td></tr>
+          <tr><td>composer</td><td class="v4-before-cell">クイックチップ 2 個常時 + 📎🔗🎤📁 + /search Web 検索ボタン</td></tr>
+          <tr><th colspan="2">概念</th></tr>
+          <tr><td>覚える用語</td><td class="v4-before-cell">agent · team · group · DM · thread · skill · persona · integration · KB · schedule = <b>10+</b></td></tr>
+        </table>
+      </div>
+      <div class="v4-col after">
+        <h3>提案 (After)</h3>
+        <table class="v4-table">
+          <tr><th colspan="2">サイドバー</th></tr>
+          <tr><td>セクション</td><td class="v4-after-cell">Projects + 新規プロジェクト + アカウント = <b>3 個</b></td></tr>
+          <tr><td>新規ボタン</td><td class="v4-after-cell">「+ 新しいプロジェクト」だけ</td></tr>
+          <tr><th colspan="2">onboarding</th></tr>
+          <tr><td>新規プロジェクト</td><td class="v4-after-cell">「やりたいこと」1 文 → チーム自動編成 → confirm = <b>2 ステップ</b></td></tr>
+          <tr><td>離脱率 (推定)</td><td class="v4-after-cell">「作成」自体が消えるので構造的に下がる</td></tr>
+          <tr><th colspan="2">メッセージカード</th></tr>
+          <tr><td>artifact ボタン</td><td class="v4-after-cell">修正 · 開く + ⋯ (more) = <b>2 個 + 隠し</b></td></tr>
+          <tr><td>進め方表示</td><td class="v4-after-cell">チェックリスト形式 (○ ☐ ☐) 1 個だけ。ガワなし</td></tr>
+          <tr><td>composer</td><td class="v4-after-cell">📎 + 入力 + ↑ 送信 = <b>3 要素</b>。Quick chip はランディングだけ</td></tr>
+          <tr><th colspan="2">概念</th></tr>
+          <tr><td>覚える用語</td><td class="v4-after-cell">Project · Team (= Project 内) · Thread (= Project 内) = <b>1 + 内側 2</b></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="v4-numbers">
+      <div class="v4-num-card">
+        <div class="v4-num-card-label">サイドバー要素</div>
+        <div class="v4-num">8 <span class="v4-num-arrow">→</span> <span class="v4-num-after">3</span></div>
+      </div>
+      <div class="v4-num-card">
+        <div class="v4-num-card-label">onboarding ステップ</div>
+        <div class="v4-num">5 <span class="v4-num-arrow">→</span> <span class="v4-num-after">2</span></div>
+      </div>
+      <div class="v4-num-card">
+        <div class="v4-num-card-label">artifact ボタン</div>
+        <div class="v4-num">5 <span class="v4-num-arrow">→</span> <span class="v4-num-after">2</span></div>
+      </div>
+      <div class="v4-num-card">
+        <div class="v4-num-card-label">主要概念の数</div>
+        <div class="v4-num">10+ <span class="v4-num-arrow">→</span> <span class="v4-num-after">3</span></div>
+      </div>
+      <div class="v4-num-card">
+        <div class="v4-num-card-label">composer 要素</div>
+        <div class="v4-num">7 <span class="v4-num-arrow">→</span> <span class="v4-num-after">3</span></div>
+      </div>
+      <div class="v4-num-card">
+        <div class="v4-num-card-label">モデル選択</div>
+        <div class="v4-num">3 <span class="v4-num-arrow">→</span> <span class="v4-num-after">0</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+  // タブ切り替え
+  document.querySelectorAll('.mock-tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      var view = t.getAttribute('data-view');
+      document.querySelectorAll('.mock-tab').forEach(function(x){ x.classList.toggle('on', x === t); });
+      document.querySelectorAll('.stage').forEach(function(s){
+        s.classList.toggle('on', s.getAttribute('data-view') === view);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

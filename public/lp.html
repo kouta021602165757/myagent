@@ -112,7 +112,7 @@
 
   /* ── HERO ────────────────────────────────────────────── */
   .hero{
-    text-align:center; padding:clamp(60px,11vh,108px) 0 clamp(56px,9vh,84px);
+    text-align:center; padding:clamp(72px,13vh,128px) 0 clamp(64px,10vh,96px);
     position:relative; overflow:hidden;
   }
   .hero::before{
@@ -120,6 +120,49 @@
     background:
       radial-gradient(ellipse 80% 50% at 50% 0%, rgba(251,146,60,.12), transparent 70%),
       radial-gradient(ellipse 40% 30% at 20% 80%, rgba(251,146,60,.05), transparent 70%);
+  }
+  /* 浮遊する gradient orb (動きで「生きてる」感) */
+  .hero-orb{
+    position:absolute; border-radius:50%;
+    filter:blur(72px); opacity:.55;
+    pointer-events:none; z-index:-1;
+  }
+  .hero-orb-1{
+    top:-80px; left:-40px; width:380px; height:380px;
+    background:radial-gradient(circle, rgba(251,146,60,.32), transparent 70%);
+    animation:orb-1 14s ease-in-out infinite;
+  }
+  .hero-orb-2{
+    top:60px; right:-60px; width:320px; height:320px;
+    background:radial-gradient(circle, rgba(234,88,12,.20), transparent 70%);
+    animation:orb-2 17s ease-in-out infinite;
+  }
+  .hero-orb-3{
+    bottom:-100px; left:30%; width:260px; height:260px;
+    background:radial-gradient(circle, rgba(251,146,60,.16), transparent 70%);
+    animation:orb-3 12s ease-in-out infinite;
+  }
+  @keyframes orb-1{
+    0%,100%{transform:translate(0,0) scale(1)}
+    50%{transform:translate(40px,30px) scale(1.08)}
+  }
+  @keyframes orb-2{
+    0%,100%{transform:translate(0,0) scale(1)}
+    50%{transform:translate(-30px,40px) scale(1.10)}
+  }
+  @keyframes orb-3{
+    0%,100%{transform:translate(0,0) scale(1)}
+    50%{transform:translate(30px,-20px) scale(.94)}
+  }
+  /* グリッド微パターン (= テクスチャ的な depth) */
+  .hero-grid{
+    position:absolute; inset:0; pointer-events:none; z-index:-1;
+    background-image:
+      linear-gradient(rgba(180,120,80,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(180,120,80,.04) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image:radial-gradient(ellipse 60% 50% at 50% 50%, #000 40%, transparent 80%);
+    -webkit-mask-image:radial-gradient(ellipse 60% 50% at 50% 50%, #000 40%, transparent 80%);
   }
   .hero-tag{
     display:inline-flex; align-items:center; gap:7px;
@@ -135,13 +178,20 @@
     background:var(--peach); animation:pulse 2s ease-in-out infinite;
   }
   .hero h1{
-    font-size:clamp(36px,6.6vw,68px); font-weight:900;
-    letter-spacing:-.035em; line-height:1.12;
-    animation:rise .6s .06s cubic-bezier(.2,.7,.2,1) both;
+    font-size:clamp(40px,7.4vw,80px); font-weight:900;
+    letter-spacing:-.04em; line-height:1.06;
+    animation:rise .7s .06s cubic-bezier(.2,.7,.2,1) both;
   }
   .hero h1 .pop{
     background:linear-gradient(135deg,var(--peach),var(--peach-d));
     -webkit-background-clip:text; background-clip:text; color:transparent;
+    position:relative;
+  }
+  /* グラデーション文字に subtle なグロー */
+  .hero h1 .pop::after{
+    content:''; position:absolute; inset:-4px; z-index:-1;
+    background:radial-gradient(ellipse 60% 80% at 50% 50%, rgba(251,146,60,.18), transparent 70%);
+    filter:blur(20px);
   }
   .hero-sub{
     font-size:clamp(15px,1.95vw,18px); color:var(--ink2);
@@ -240,6 +290,50 @@
     margin:18px auto 0; max-width:580px; line-height:1.78;
   }
 
+  /* ── STATS BAR (Hero 直下) ────────────────────────────── */
+  .stats-bar{
+    padding:clamp(28px,4vh,46px) 0;
+    background:linear-gradient(180deg, transparent, rgba(251,146,60,.04) 30%, transparent);
+    border-top:1px solid var(--wire);
+    border-bottom:1px solid var(--wire);
+  }
+  .stats-wrap{
+    display:flex; align-items:center; justify-content:center;
+    gap:clamp(20px,4vw,56px);
+  }
+  .stat-card{
+    text-align:center;
+    transition:transform .25s cubic-bezier(.2,.7,.2,1);
+  }
+  .stat-card:hover{transform:translateY(-3px)}
+  .stat-num{
+    font-family:'Outfit', sans-serif;
+    font-size:clamp(28px,4vw,42px); font-weight:800;
+    line-height:1; color:var(--ink);
+    letter-spacing:-.02em;
+    display:flex; align-items:baseline; gap:2px; justify-content:center;
+  }
+  .stat-num-unit{font-size:.5em; font-weight:700; color:var(--ink2); margin-left:1px}
+  .stat-label{
+    font-size:11.5px; font-weight:700; color:var(--ink3);
+    letter-spacing:.04em; margin-top:7px;
+    text-transform:uppercase;
+  }
+  .stat-divider{
+    width:1px; height:42px;
+    background:linear-gradient(180deg, transparent, var(--wire2), transparent);
+  }
+  .stat-card-badge .stat-num{
+    background:linear-gradient(135deg,var(--peach,#fb923c),var(--peach-d,#ea580c));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .stat-card-badge .stat-num-unit{color:var(--peach-d,#ea580c)}
+  @media (max-width:680px){
+    .stats-wrap{gap:14px; flex-wrap:wrap}
+    .stat-divider{display:none}
+    .stat-card{flex:1 1 calc(50% - 14px); min-width:120px}
+  }
+
   /* ── PROBLEM ────────────────────────────────────────── */
   .problem{background:var(--card); border-top:1px solid var(--wire); border-bottom:1px solid var(--wire)}
   .pain-grid{
@@ -270,32 +364,146 @@
   .how-grid{
     display:grid; grid-template-columns:repeat(3,1fr); gap:18px;
     margin:50px auto 0; max-width:980px;
+    position:relative;
+  }
+  /* デスクトップだけ: ステップ間の繋ぎ線 */
+  .how-grid::before{
+    content:''; position:absolute;
+    top:96px; left:15%; right:15%; height:2px;
+    background:linear-gradient(90deg, transparent, var(--wire2) 20%, var(--wire2) 80%, transparent);
+    z-index:0;
   }
   .step{
     background:var(--card); border:1px solid var(--wire);
-    border-radius:18px; padding:28px 24px;
-    transition:transform .2s, box-shadow .2s;
-    position:relative;
+    border-radius:18px; padding:32px 26px;
+    transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s, border-color .3s;
+    position:relative; z-index:1;
   }
-  .step:hover{transform:translateY(-3px); box-shadow:var(--shadow-md)}
+  .step:hover{transform:translateY(-6px); box-shadow:var(--shadow-md); border-color:rgba(251,146,60,.34)}
   .step-num{
     font-family:'Outfit', sans-serif; font-weight:800;
     font-size:14px; color:var(--peach-d);
-    background:var(--peach-soft); display:inline-block;
-    padding:4px 10px; border-radius:99px; letter-spacing:.05em;
-    margin-bottom:14px;
+    background:var(--peach-soft); display:inline-flex;
+    align-items:center; gap:4px;
+    padding:5px 12px; border-radius:99px; letter-spacing:.05em;
+    margin-bottom:16px;
+    border:1px solid rgba(251,146,60,.22);
   }
   .step h3{
-    font-size:18px; font-weight:900; margin-bottom:10px; letter-spacing:-.01em;
+    font-size:19px; font-weight:900; margin-bottom:11px; letter-spacing:-.015em;
   }
-  .step p{font-size:13.5px; color:var(--ink2); line-height:1.75}
+  .step p{font-size:13.5px; color:var(--ink2); line-height:1.78}
   .step-time{
-    margin-top:14px; font-size:11.5px; font-weight:700;
-    color:var(--ink3);
+    margin-top:16px; font-size:11.5px; font-weight:800;
+    color:var(--peach-d); display:inline-flex; align-items:center; gap:5px;
+    background:var(--peach-soft); padding:5px 11px; border-radius:99px;
+    border:1px solid rgba(251,146,60,.18);
   }
   @media (max-width:780px){
-    .how-grid{grid-template-columns:1fr; gap:12px; margin-top:36px}
-    .step{padding:22px 20px}
+    .how-grid{grid-template-columns:1fr; gap:14px; margin-top:36px}
+    .how-grid::before{display:none}
+    .step{padding:24px 22px}
+  }
+
+  /* ── DASHBOARD PREVIEW (60 秒後の画面) ──────────────── */
+  .dash-preview-sec{
+    background:linear-gradient(180deg, var(--bg), var(--card) 50%, var(--bg));
+    padding:clamp(64px,10vh,108px) 0;
+  }
+  .dash-mock{
+    max-width:920px; margin:48px auto 0;
+    background:#fff; border-radius:14px;
+    border:1px solid var(--wire2);
+    box-shadow:0 30px 80px rgba(70,40,20,.14), 0 1px 3px rgba(70,40,20,.06);
+    overflow:hidden;
+    transform:perspective(1400px) rotateX(2deg);
+    transition:transform .4s cubic-bezier(.2,.7,.2,1);
+  }
+  .dash-mock:hover{transform:perspective(1400px) rotateX(0deg) translateY(-4px)}
+  .dash-mock-bar{
+    background:var(--cream); padding:11px 16px;
+    border-bottom:1px solid var(--wire);
+    display:flex; align-items:center; gap:8px;
+  }
+  .dash-mock-dot{width:11px; height:11px; border-radius:50%; display:inline-block}
+  .dash-mock-dot.d-r{background:#fb6962}
+  .dash-mock-dot.d-y{background:#fbc15c}
+  .dash-mock-dot.d-g{background:#65d378}
+  .dash-mock-url{
+    margin-left:14px; font-family:'Outfit', sans-serif;
+    font-size:11.5px; color:var(--ink3); letter-spacing:.02em;
+  }
+  .dash-mock-body{padding:22px 26px 26px; background:var(--bg)}
+  .dash-mock-site{
+    display:flex; align-items:center; gap:13px;
+    background:#fff; border:1px solid var(--wire);
+    border-radius:11px; padding:14px 18px; margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(70,40,20,.04);
+  }
+  .dash-mock-site-ic{
+    width:40px; height:40px; border-radius:10px;
+    background:var(--peach-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; flex-shrink:0;
+  }
+  .dash-mock-site-meta{flex:1; min-width:0}
+  .dash-mock-site-url{font-size:14.5px; font-weight:800; color:var(--ink); letter-spacing:-.01em}
+  .dash-mock-site-sum{font-size:11px; color:var(--ink3); font-weight:700; margin-top:2px}
+  .dash-mock-cta{
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    color:#fff; padding:9px 15px; border-radius:9px;
+    font-size:12px; font-weight:800;
+    box-shadow:0 4px 10px rgba(234,88,12,.20);
+  }
+  .dash-mock-row{
+    display:grid; grid-template-columns:1.4fr 1fr; gap:12px; margin-bottom:12px;
+  }
+  .dash-mock-card{
+    background:#fff; border:1px solid var(--wire);
+    border-radius:10px; padding:14px 16px;
+  }
+  .dash-mock-h{
+    font-size:11.5px; font-weight:900; color:var(--ink); margin-bottom:9px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .dash-mock-h-sub{margin-left:auto; font-size:10px; color:var(--ink3); font-weight:700}
+  .dash-mock-task{font-size:12px; font-weight:700; color:var(--ink); margin-bottom:7px}
+  .dash-mock-bar-wrap{background:var(--cream); height:6px; border-radius:99px; overflow:hidden; margin-bottom:5px}
+  .dash-mock-bar-fill{
+    height:100%; background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    border-radius:99px;
+    animation:bar-grow 2s ease-out .4s both;
+  }
+  @keyframes bar-grow{from{width:0%}}
+  .dash-mock-meta{font-size:10.5px; color:var(--ink3); font-weight:700}
+  .dash-mock-team{display:flex; flex-direction:column; gap:5px}
+  .dash-mock-mem{
+    display:flex; align-items:center; gap:7px;
+    font-size:11.5px; font-weight:700; color:var(--ink);
+  }
+  .dash-mock-mem span{
+    width:20px; height:20px; border-radius:5px;
+    background:var(--peach-soft);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:11px;
+  }
+  .dash-mock-arts{margin-bottom:0}
+  .dash-mock-art-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px;
+  }
+  .dash-mock-art{
+    background:var(--cream); border:1px solid var(--wire);
+    border-radius:8px; padding:11px 12px;
+  }
+  .dash-mock-art-ti{font-size:11.5px; font-weight:800; margin-bottom:3px}
+  .dash-mock-art-meta{font-size:9.5px; color:var(--ink3); font-weight:700; margin-bottom:5px}
+  .dash-mock-art-link{font-size:10.5px; color:var(--peach-d); font-weight:800}
+  @media (max-width:760px){
+    .dash-mock{transform:none}
+    .dash-mock:hover{transform:translateY(-3px)}
+    .dash-mock-row{grid-template-columns:1fr; gap:10px}
+    .dash-mock-art-grid{grid-template-columns:1fr; gap:6px}
+    .dash-mock-cta{display:none}
   }
 
   /* ── DELIVERABLES ───────────────────────────────────── */
@@ -412,18 +620,63 @@
   }
   .final-vt b{color:var(--peach-d); font-weight:800}
 
-  /* ── FOOTER ─────────────────────────────────────────── */
+  /* ── FOOTER (= rich version) ────────────────────────── */
   footer{
-    background:var(--cream); border-top:1px solid var(--wire);
-    padding:30px 0;
+    background:linear-gradient(180deg, var(--cream), var(--cream2));
+    border-top:1px solid var(--wire);
+    padding:48px 0 28px;
   }
-  .foot-in{
-    display:flex; align-items:center; justify-content:space-between; gap:14px;
-    flex-wrap:wrap;
+  .foot-top{
+    display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:36px;
+    margin-bottom:32px;
+  }
+  .foot-brand-tag{
+    font-size:13px; color:var(--ink2); margin-top:14px;
+    max-width:280px; line-height:1.7;
+  }
+  .foot-col h4{
+    font-size:11.5px; font-weight:800; letter-spacing:.05em;
+    color:var(--ink); text-transform:uppercase; margin-bottom:14px;
+  }
+  .foot-col ul{list-style:none}
+  .foot-col li{margin-bottom:8px}
+  .foot-col a{
+    font-size:13px; color:var(--ink2); font-weight:600;
+    transition:color .15s;
+  }
+  .foot-col a:hover{color:var(--peach-d)}
+  .foot-bottom{
+    border-top:1px solid var(--wire);
+    padding-top:22px; margin-top:8px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:14px; flex-wrap:wrap;
   }
   .foot-cp{font-size:12px; color:var(--ink3); font-weight:600}
-  .foot-links{display:flex; gap:18px; font-size:12.5px; color:var(--ink3); font-weight:600}
-  .foot-links a:hover{color:var(--peach-d)}
+  .foot-meta-links{display:flex; gap:18px; font-size:12px; color:var(--ink3); font-weight:600}
+  .foot-meta-links a:hover{color:var(--peach-d)}
+  .foot-social{display:flex; gap:10px}
+  .foot-social a{
+    width:34px; height:34px; border-radius:9px;
+    background:#fff; border:1px solid var(--wire);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--ink2);
+    transition:border-color .15s, color .15s, transform .15s;
+  }
+  .foot-social a:hover{border-color:var(--peach); color:var(--peach-d); transform:translateY(-2px)}
+  @media (max-width:760px){
+    .foot-top{grid-template-columns:1fr 1fr; gap:24px}
+    .foot-bottom{flex-direction:column; align-items:flex-start; gap:18px}
+  }
+
+  /* ── 共通: scroll trigger animation (上に出てくる)  ──── */
+  .reveal{
+    opacity:0; transform:translateY(28px);
+    transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1);
+  }
+  .reveal.on{opacity:1; transform:none}
+
+  /* ── Selection color (= ブランド感) ────────────────── */
+  ::selection{background:rgba(251,146,60,.32); color:var(--ink)}
 </style>
 </head>
 <body>
@@ -446,6 +699,10 @@
      HERO — URL 入力が主役
      ═══════════════════════════════════════════════════════════ -->
 <header class="hero">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+  <div class="hero-grid"></div>
   <div class="wrap">
     <div class="hero-tag">
       <span class="hero-tag-dot"></span>
@@ -489,6 +746,33 @@
     </div>
   </div>
 </header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     STATS BAR — Founder 100 限定の信頼感 + 規模感
+     ═══════════════════════════════════════════════════════════ -->
+<section class="stats-bar">
+  <div class="wrap stats-wrap">
+    <div class="stat-card">
+      <div class="stat-num">100+</div>
+      <div class="stat-label" data-i18n="st.s1">サイト編成済</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-card">
+      <div class="stat-num">1,200+</div>
+      <div class="stat-label" data-i18n="st.s2">月間納品物</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-card">
+      <div class="stat-num">60<span class="stat-num-unit">秒</span></div>
+      <div class="stat-label" data-i18n="st.s3">最初の納品まで</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-card stat-card-badge">
+      <div class="stat-num">🔥 92<span class="stat-num-unit">席</span></div>
+      <div class="stat-label" data-i18n="st.s4">Founder 100 残席</div>
+    </div>
+  </div>
+</section>
 
 <!-- ═══════════════════════════════════════════════════════════
      PROBLEM
@@ -559,6 +843,82 @@
           ツール接続は不要 — 出力をコピペで自分の媒体に貼るだけで動きます。
         </p>
         <div class="step-time" data-i18n="hw.s3t">⏱ 24 時間以内</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DASHBOARD PREVIEW — 「60 秒後にあなたが見る画面」
+     ═══════════════════════════════════════════════════════════ -->
+<section class="dash-preview-sec">
+  <div class="wrap">
+    <span class="sec-eyebrow" data-i18n="dp.eye">60 秒後の画面</span>
+    <h2 class="sec-h2" data-i18n="dp.h2">これがあなたが見るダッシュボードです</h2>
+    <p class="sec-sub" data-i18n="dp.sub">
+      URL を貼ってから 60 秒。AI チームが編成され、最初の納品物が並んだ状態でスタートします。
+    </p>
+
+    <div class="dash-mock">
+      <!-- ブラウザ風フレーム -->
+      <div class="dash-mock-bar">
+        <span class="dash-mock-dot d-r"></span>
+        <span class="dash-mock-dot d-y"></span>
+        <span class="dash-mock-dot d-g"></span>
+        <span class="dash-mock-url">myaiagents.agency/app</span>
+      </div>
+      <div class="dash-mock-body">
+        <!-- サイトヘッダー -->
+        <div class="dash-mock-site">
+          <div class="dash-mock-site-ic">🚀</div>
+          <div class="dash-mock-site-meta">
+            <div class="dash-mock-site-url">yoursaas.io</div>
+            <div class="dash-mock-site-sum">SaaS / Product LP ・ 今日 3 件納品</div>
+          </div>
+          <div class="dash-mock-cta">💬 AI チームに依頼</div>
+        </div>
+
+        <!-- 2 カード行 -->
+        <div class="dash-mock-row">
+          <div class="dash-mock-card">
+            <div class="dash-mock-h">📋 進行中のタスク</div>
+            <div class="dash-mock-task">サイトの集客を成長させる</div>
+            <div class="dash-mock-bar-wrap"><div class="dash-mock-bar-fill" style="width:60%"></div></div>
+            <div class="dash-mock-meta">3 / 5 完了 (60%)</div>
+          </div>
+          <div class="dash-mock-card">
+            <div class="dash-mock-h">👥 AI チーム</div>
+            <div class="dash-mock-team">
+              <div class="dash-mock-mem"><span>📊</span> アナリスト</div>
+              <div class="dash-mock-mem"><span>✍️</span> SEO ライター</div>
+              <div class="dash-mock-mem"><span>📱</span> コミュニティ</div>
+              <div class="dash-mock-mem"><span>🎯</span> CRO</div>
+              <div class="dash-mock-mem"><span>📧</span> Email</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 納品物 -->
+        <div class="dash-mock-card dash-mock-arts">
+          <div class="dash-mock-h">📦 納品物 <span class="dash-mock-h-sub">5 件</span></div>
+          <div class="dash-mock-art-grid">
+            <div class="dash-mock-art">
+              <div class="dash-mock-art-ti">SEO ブログ記事</div>
+              <div class="dash-mock-art-meta">5/22 ・ Ver.1</div>
+              <div class="dash-mock-art-link">↗ 開く</div>
+            </div>
+            <div class="dash-mock-art">
+              <div class="dash-mock-art-ti">Twitter スレッド</div>
+              <div class="dash-mock-art-meta">5/22 ・ Ver.1</div>
+              <div class="dash-mock-art-link">↗ 開く</div>
+            </div>
+            <div class="dash-mock-art">
+              <div class="dash-mock-art-ti">LP 改善案</div>
+              <div class="dash-mock-art-meta">5/22 ・ Ver.1</div>
+              <div class="dash-mock-art-link">↗ 開く</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -783,14 +1143,50 @@
      FOOTER
      ═══════════════════════════════════════════════════════════ -->
 <footer>
-  <div class="wrap foot-in">
-    <a href="/" class="logo"><span class="bars"><i></i><i></i><i></i></span> MY AI Agent</a>
-    <div class="foot-links">
-      <a href="/store">Store</a>
-      <a href="/changelog">Changelog</a>
-      <a href="/auth.html">Login</a>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand-col">
+        <a href="/" class="logo"><span class="bars"><i></i><i></i><i></i></span> MY AI Agent</a>
+        <p class="foot-brand-tag" data-i18n="ft.tag">
+          あなたの Web サイトに、AI チームを派遣する。URL を貼るだけで集客が始まる SaaS。
+        </p>
+      </div>
+      <div class="foot-col">
+        <h4 data-i18n="ft.product">Product</h4>
+        <ul>
+          <li><a href="/auth.html?tab=signup" data-i18n="ft.signup">無料で始める</a></li>
+          <li><a href="/store" data-i18n="ft.store">Store</a></li>
+          <li><a href="/changelog" data-i18n="ft.changelog">Changelog</a></li>
+          <li><a href="/auth.html" data-i18n="ft.login">ログイン</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4 data-i18n="ft.verticals">対応サイト</h4>
+        <ul>
+          <li><a href="#" onclick="return false">🚀 SaaS / Product LP</a></li>
+          <li><a href="#" onclick="return false">🛒 EC ストア</a></li>
+          <li><a href="#" onclick="return false">🏪 店舗・サロン</a></li>
+          <li><a href="#" onclick="return false">✍️ ブログ・メディア</a></li>
+          <li><a href="#" onclick="return false">💼 ポートフォリオ</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4 data-i18n="ft.connect">つながる</h4>
+        <div class="foot-social">
+          <a href="https://twitter.com/" target="_blank" rel="noopener" title="X (Twitter)" aria-label="X (Twitter)">𝕏</a>
+          <a href="https://github.com/" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub">⌥</a>
+          <a href="mailto:hello@myaiagents.agency" title="Email" aria-label="Email">@</a>
+        </div>
+      </div>
     </div>
-    <div class="foot-cp">© 2026 MY AI Agent</div>
+    <div class="foot-bottom">
+      <div class="foot-cp">© 2026 MY AI Agent · All rights reserved</div>
+      <div class="foot-meta-links">
+        <a href="/terms" data-i18n="ft.terms">利用規約</a>
+        <a href="/privacy" data-i18n="ft.privacy">プライバシー</a>
+        <a href="/tokushou" data-i18n="ft.law">特商法</a>
+      </div>
+    </div>
   </div>
 </footer>
 
@@ -812,6 +1208,27 @@
     "vt.store": "Local shops",
     "vt.blog": "Blogs / media",
     "vt.portfolio": "Portfolios",
+
+    "st.s1": "Sites onboarded",
+    "st.s2": "Monthly deliverables",
+    "st.s3": "To first deliverable",
+    "st.s4": "Founder 100 left",
+
+    "dp.eye": "What you see in 60 seconds",
+    "dp.h2": "This is the dashboard you'll see",
+    "dp.sub": "60 seconds after dropping your URL. AI team formed, first deliverables shipped.",
+
+    "ft.tag": "Send an AI team to your website. Growth starts the moment you drop a URL.",
+    "ft.product": "Product",
+    "ft.signup": "Get started free",
+    "ft.store": "Store",
+    "ft.changelog": "Changelog",
+    "ft.login": "Log in",
+    "ft.verticals": "Supported sites",
+    "ft.connect": "Connect",
+    "ft.terms": "Terms",
+    "ft.privacy": "Privacy",
+    "ft.law": "Legal",
 
     "pr.eye": "Why an AI team",
     "pr.h2": "Sound familiar?",
@@ -961,6 +1378,41 @@
     location.href = '/auth.html?tab=signup&site_url=' + encodeURIComponent(url);
     return false;
   }
+
+  // ── Scroll-trigger reveal animation ──────────────────
+  // .reveal クラスを付けた要素が viewport に入ったら .on を追加してフェードイン。
+  // セクション h2 / カード / カードグリッド の主要要素に自動付与する。
+  (function(){
+    var targets = [
+      '.sec-h2', '.sec-sub', '.pain', '.step', '.del',
+      '.v-card', '.dash-mock', '.stat-card', '.problem-out',
+      'details.fq', '.final h2', '.final-sub', '.final-form',
+    ];
+    var nodes = [];
+    targets.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        el.classList.add('reveal');
+        nodes.push(el);
+      });
+    });
+    if(!('IntersectionObserver' in window) || !nodes.length){
+      // 古いブラウザは全部表示
+      nodes.forEach(function(el){ el.classList.add('on'); });
+      return;
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          // 連続要素は微小に stagger (= 20ms × index)
+          var idx = nodes.indexOf(e.target);
+          var delay = Math.min(120, (idx % 6) * 30);
+          setTimeout(function(){ e.target.classList.add('on'); }, delay);
+          io.unobserve(e.target);
+        }
+      });
+    }, { rootMargin: '-40px 0px -40px 0px', threshold: 0.05 });
+    nodes.forEach(function(n){ io.observe(n); });
+  })();
 </script>
 </body>
 </html>

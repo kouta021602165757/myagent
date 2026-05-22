@@ -6927,18 +6927,24 @@ function _artifactOriginCtx(agent, threadParentId){
   return c;
 }
 async function executeArtifactTool(input, ownerUser, ctx){
-  const title = _safeName(input && input.title, 'artifact');
+  // ── タイトルは「表示用 (原文)」と「filename slug」を別管理 ──
+  // 旧実装は _safeName で ASCII slug に潰してから title として保存していたため、
+  // 日本語タイトル ("ターゲットペルソナ設計" 等) が全部 "artifact" になり、
+  // ダッシュボードの納品物名称が壊れていた。今は raw title を別変数で保持。
+  const rawTitle = String((input && input.title) || '').trim().slice(0, 200) || 'artifact';
+  const filenameSlug = _safeName(input && input.title, 'artifact');
+  const title = rawTitle;  // 後段の references は表示用 title (= rawTitle) を使う
   const html  = String(input && input.html || '');
   const desc  = String(input && input.description || '').slice(0, 240);
   // Project grouping — related artifacts share a project name so the library
   // can group them and "あれを直して" resolves within the right project.
   // Falls back to the (human) title when the AI doesn't supply one.
-  const project = String((input && input.project) || (input && input.title) || title)
-    .trim().slice(0, 40) || title;
+  const project = String((input && input.project) || (input && input.title) || rawTitle)
+    .trim().slice(0, 40) || rawTitle;
   if(html.length < 50)     return { error: 'html too short' };
   if(html.length > 500000) return { error: 'html too long (max 500KB)' };
   const id = crypto.randomBytes(5).toString('hex');
-  const filename = 'artifact-' + title + '-' + id + '.html';
+  const filename = 'artifact-' + filenameSlug + '-' + id + '.html';
   const outPath = path.join(GENERATED_DIR, filename);
   // Write to ephemeral disk (fast path for this container's lifetime).
   let sizeKb = Math.round(Buffer.byteLength(html, 'utf8') / 1024);

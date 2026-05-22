@@ -3371,6 +3371,30 @@ function _siteAllArtifacts(siteId){
     .sort(function(a,b){ return Date.parse(b.created_at||0) - Date.parse(a.created_at||0); });
 }
 
+// Artifact の表示用 URL (= 旧コードは a.url のみ参照していたため、streaming
+// で push された url 欠落レコードに対して click が「?v=N だけ」になって死ぬ
+// 問題があった)。filename から /generated/ パスを fallback で組み立てる。
+function _artUrl(a){
+  if(!a) return '';
+  var base = a.url || (a.filename ? '/generated/' + a.filename : '');
+  if(!base) return '';
+  return base + (a.version ? (base.indexOf('?') >= 0 ? '&' : '?') + 'v=' + a.version : '');
+}
+// 表示タイトル — title が空 or "artifact" (= 旧 _safeName 経由の壊れた値)
+// なら filename をフォーマットして読める形に直す。
+function _artDisplayTitle(a){
+  if(!a) return '無題';
+  var t = (a.title || '').trim();
+  if(t && t !== 'artifact') return t;
+  // filename から「artifact-<slug>-<id>.html」 → "<slug>" を抜き出して整形
+  var fn = a.filename || '';
+  var m = fn.match(/^artifact-(.+?)-[a-f0-9]{8,12}\.html$/);
+  if(m && m[1] && m[1] !== 'artifact'){
+    return m[1].replace(/-/g, ' ');
+  }
+  return '納品物';
+}
+
 /* Home dashboard — サイトベースに完全リライト。
  * - サイト 0 件 → 「URL を貼って AI チームを派遣」エントリーポイント
  * - サイトあり → アクティブなサイトの集客ダッシュボード */
@@ -3388,24 +3412,22 @@ function renderHomeDashboard(){
     return;
   }
 
-  // ── 状態 C: サイト一覧 view (= 「すべてのサイト」モード) ──
-  // window._allSitesMode が true なら、activeId に関係なく全サイト grid を出す。
-  if(window._allSitesMode){
-    body.innerHTML = _renderAllSitesHTML(sites, nameStr);
-    return;
-  }
-
-  // ── 状態 B: サイトあり ── アクティブなサイトのダッシュボード
+  // ── 状態 B: サイトあり ── アクティブサイトのダッシュボードを描画。
+  //  「すべてのサイト」 mode (= サイドバー link クリック) でもタブ内で表示されるため
+  //   常に dashboard を描画して、tab だけ切り替える。
   var activeSite = sites.find(function(s){ return s.id === activeId; }) || sites[0];
   body.innerHTML = _renderSiteDashboardHTML(activeSite);
 }
 
-// 「すべてのサイト」 = 生成済み AI チームの一覧 grid view
-// サイドバーの「📋 すべてのサイト」リンク or サイト ic クリックで遷移。
+// 「すべてのサイト」 = ダッシュボード内の「📋 サイト一覧」 tab に飛ぶ shortcut。
+// サイドバーの「📋 すべてのサイトを見る」 link から呼ばれる。
 function goAllSitesHome(){
   window._allSitesMode = true;
-  // activeId はクリアして「どれも選択されてない」状態にする
-  try { document.querySelectorAll('.ag-item.on, .ag-site.active').forEach(function(el){ el.classList.remove('on'); el.classList.remove('active'); }); } catch(_){}
+  // 現在のサイトの localStorage を 'agents' に固定 (= tab 切替が永続化)
+  try {
+    var firstSite = (agents || []).find(_isSiteAgent);
+    if(firstSite) localStorage.setItem('sd_tab_' + firstSite.id, 'agents');
+  } catch(_){}
   try {
     document.getElementById('emptyWrap').style.display = '';
     document.getElementById('chatWrap').style.display = 'none';
@@ -3440,7 +3462,8 @@ function _renderAllSitesHTML(sites, name){
     var lastRel = lastTs ? _formatRel(lastTs) : '';
     var isLive = !!(window._streamingAgents && window._streamingAgents.has(s.id))
               || (s.id === window._streamingAgentId);
-    return '<div class="ass-card' + (isLive ? ' live' : '') + '" onclick="_openSiteFromAllSites(\'' + esc(s.id) + '\')">'
+    var isCurrent = (s.id === (window._dashCurrentSiteId || activeId));
+    return '<div class="ass-card' + (isLive ? ' live' : '') + (isCurrent ? ' current' : '') + '" onclick="_openSiteFromAllSites(\'' + esc(s.id) + '\')">'
          +   '<div class="ass-card-h">'
          +     '<div class="ass-ic">' + ic + (isLive ? '<span class="ass-live-dot" title="作業中"></span>' : '') + '</div>'
          +     '<div class="ass-ti-wrap">'
@@ -3476,10 +3499,12 @@ function _renderAllSitesHTML(sites, name){
     + '</div>'
     + '</div>';
 }
-// クリックで全サイトモードを抜けて、その site のダッシュボードを開く。
+// クリックで全サイトモードを抜けて、その site のダッシュボードを開く (= numbers tab に jump)。
 function _openSiteFromAllSites(siteId){
   window._allSitesMode = false;
   activeId = siteId;
+  // 数字 tab を初期表示にする (= サイト切替時の自然な着地点)
+  try { localStorage.setItem('sd_tab_' + siteId, 'numbers'); } catch(_){}
   try { renderHomeDashboard(); } catch(_){}
   try { renderAgList(); } catch(_){}
   try { document.getElementById('emptyWrap').scrollTop = 0; } catch(_){}
@@ -3565,11 +3590,13 @@ function _renderSiteDashboardHTML(site){
       + allArts.slice(0, 6).map(function(a){
           var dt = '';
           try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric'}); } catch(e){}
-          var openUrl = (a.url || '') + (a.version ? '?v=' + a.version : '');
+          var openUrl = _artUrl(a);
           return '<div class="sd-art-card">'
-               +   '<div class="sd-art-ti">' + esc(a.title || a.filename || '納品物') + '</div>'
+               +   '<div class="sd-art-ti">' + esc(_artDisplayTitle(a)) + '</div>'
                +   '<div class="sd-art-meta">' + dt + (a.version ? ' ・ Ver.' + a.version : '') + '</div>'
-               +   '<a class="sd-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗ 開く</a>'
+               +   (openUrl
+                     ? '<a class="sd-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗ 開く</a>'
+                     : '<span class="sd-art-open" style="opacity:.5;cursor:default">準備中…</span>')
                + '</div>';
         }).join('')
       + '</div>'
@@ -3844,53 +3871,49 @@ function _renderSiteDashboardHTML(site){
   }
 
   // ── アクティブ tab を localStorage で記憶 ──
+  // 5 tab: numbers / strategy / actions / agents / settings
   var activeTab = 'numbers';
-  try { var saved = localStorage.getItem('sd_tab_' + site.id); if(['numbers','strategy','actions'].indexOf(saved) >= 0) activeTab = saved; } catch(_){}
+  try { var saved = localStorage.getItem('sd_tab_' + site.id); if(['numbers','strategy','actions','agents','settings'].indexOf(saved) >= 0) activeTab = saved; } catch(_){}
+  // _allSitesMode = true なら強制 Agent 一覧 tab (= サイドバーの「すべてのサイト」リンクから来た)
+  if(window._allSitesMode) activeTab = 'agents';
 
+  // ── ヘッダー: site identity (gradient) + back-to-chat CTA ──
+  // CTA 文言を「AI チームに依頼」 → 「チャットに戻る」 に変更 (= ダッシュボードに来た
+  // 後の自然な戻り口がなかった問題)。実装は openSite() = チャット画面を開く。
   return '<div class="site-dash">'
-    + '<div class="sd-head">'
+    + '<div class="sd-head sd-head-rich">'
+    +   '<div class="sd-head-bg"></div>'
     +   '<div class="sd-head-l">'
-    +     '<div class="sd-ic">' + icon + '</div>'
+    +     '<div class="sd-ic sd-ic-rich">' + icon + '</div>'
     +     '<div class="sd-head-meta">'
-    +       '<div class="sd-url"><a href="' + esc(site.site_url) + '" target="_blank" rel="noopener">' + esc(hostname) + '</a></div>'
+    +       '<div class="sd-vt-tag">' + esc(label) + '</div>'
+    +       '<div class="sd-url"><a href="' + esc(site.site_url) + '" target="_blank" rel="noopener">' + esc(hostname) + ' ↗</a></div>'
     +       '<div class="sd-summary">' + esc(summary) + '</div>'
     +     '</div>'
     +   '</div>'
-    +   '<button class="sd-chat-cta" onclick="openSite(\'' + esc(site.id) + '\')">'
-    +     '💬 AI チームに依頼 <span class="arrow">→</span>'
+    +   '<button class="sd-chat-cta sd-chat-cta-rich" onclick="openSite(\'' + esc(site.id) + '\')" title="この AI チームのチャット画面に戻る">'
+    +     '<span class="sd-cta-ic">💬</span>'
+    +     '<span class="sd-cta-lbl">チャットに戻る</span>'
+    +     '<span class="arrow">→</span>'
     +   '</button>'
     + '</div>'
 
-    // ── アクション集約 row (= 旧チャット header の 5 ボタンをここに集めた) ──
-    // 🔗 共有URL / 💬 会話共有 / 📝 メモ / ⚙ 設定 / ↻ 新規会話
-    + '<div class="sd-actions">'
-    +   '<button class="sd-act" onclick="openSite(\'' + esc(site.id) + '\');setTimeout(openShareCard,150)" title="共有 URL を取得 / SNS で広報">'
-    +     '<span class="sd-act-ic">🔗</span><span class="sd-act-lbl">共有URL</span>'
-    +   '</button>'
-    +   '<button class="sd-act" onclick="openSite(\'' + esc(site.id) + '\');setTimeout(openChatShareModal,150)" title="この会話を公開リンクで共有">'
-    +     '<span class="sd-act-ic">💬</span><span class="sd-act-lbl">会話共有</span>'
-    +   '</button>'
-    +   '<button class="sd-act" onclick="openNotesPanel(\'' + esc(site.id) + '\')" title="メモ (この AI とのチャット専用)">'
-    +     '<span class="sd-act-ic">📝</span><span class="sd-act-lbl">メモ</span>'
-    +   '</button>'
-    +   '<button class="sd-act" onclick="openEditAgent(\'' + esc(site.id) + '\')" title="チーム設定 (モデル / ペルソナ / 権限)">'
-    +     '<span class="sd-act-ic">⚙</span><span class="sd-act-lbl">設定</span>'
-    +   '</button>'
-    +   '<button class="sd-act" onclick="openSite(\'' + esc(site.id) + '\');setTimeout(newChat,150)" title="この AI チームに新しい依頼を開始">'
-    +     '<span class="sd-act-ic">↻</span><span class="sd-act-lbl">新規依頼</span>'
-    +   '</button>'
-    + '</div>'
-
-    // ── Tab ナビ ──
+    // ── Tab ナビ (5 タブ) ──
     + '<div class="sd-tabs">'
-    +   '<button class="sd-tab' + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
+    +   '<button class="sd-tab sd-tab-numbers' + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
     +     '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字</span><span class="sd-tab-sub">現状の推移</span>'
     +   '</button>'
-    +   '<button class="sd-tab' + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
+    +   '<button class="sd-tab sd-tab-strategy' + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
     +     '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略</span><span class="sd-tab-sub">設計図</span>'
     +   '</button>'
-    +   '<button class="sd-tab' + (activeTab === 'actions' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'actions\')">'
+    +   '<button class="sd-tab sd-tab-actions' + (activeTab === 'actions' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'actions\')">'
     +     '<span class="sd-tab-ic">⚡</span><span class="sd-tab-lbl">アクション</span><span class="sd-tab-sub">今後の動き</span>'
+    +   '</button>'
+    +   '<button class="sd-tab sd-tab-agents' + (activeTab === 'agents' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'agents\')">'
+    +     '<span class="sd-tab-ic">📋</span><span class="sd-tab-lbl">サイト一覧</span><span class="sd-tab-sub">全 AI チーム</span>'
+    +   '</button>'
+    +   '<button class="sd-tab sd-tab-settings' + (activeTab === 'settings' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'settings\')">'
+    +     '<span class="sd-tab-ic">⚙</span><span class="sd-tab-lbl">設定</span><span class="sd-tab-sub">共有 / 編集</span>'
     +   '</button>'
     + '</div>'
 
@@ -3901,15 +3924,22 @@ function _renderSiteDashboardHTML(site){
             _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site))
         : activeTab === 'strategy'
           ? _renderTabStrategy(site, _siteAllArtifacts(site.id))
-          : _renderTabActions(site, _siteActivityFeed(site), _siteNextSchedule(site),
-              _siteQuickActions(site), _siteWeeklyStats(site), progressHTML, teamHTML))
+        : activeTab === 'agents'
+          ? _renderTabAgents(site)
+        : activeTab === 'settings'
+          ? _renderTabSettings(site)
+        : _renderTabActions(site, _siteActivityFeed(site), _siteNextSchedule(site),
+            _siteQuickActions(site), _siteWeeklyStats(site), progressHTML, teamHTML))
     + '</div>'
     + '</div>';
 }
 
 function _switchDashTab(siteId, tab){
   try { localStorage.setItem('sd_tab_' + siteId, tab); } catch(_){}
+  // 「サイト一覧」 tab 以外を踏んだら _allSitesMode を解除 (= サイトコンテキスト復元)
+  if(tab !== 'agents') window._allSitesMode = false;
   try { renderHomeDashboard(); } catch(_){}
+  try { renderAgList(); } catch(_){}
 }
 
 // 「3 分前」「2 時間前」みたいな相対時刻フォーマット (module 共有)
@@ -4055,14 +4085,16 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       +   topArts.map(function(a, i){
           var dt = '';
           try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){}
-          var openUrl = (a.url || '') + (a.version ? '?v=' + a.version : '');
+          var openUrl = _artUrl(a);
           return '<div class="sd-top-art">'
                +   '<div class="sd-top-art-n">' + (i + 1) + '</div>'
                +   '<div class="sd-top-art-bd">'
-               +     '<div class="sd-top-art-ti">' + esc(a.title || a.filename || '無題') + '</div>'
+               +     '<div class="sd-top-art-ti">' + esc(_artDisplayTitle(a)) + '</div>'
                +     '<div class="sd-top-art-meta">' + esc(dt) + (a.version ? ' ・ Ver.' + a.version : '') + '</div>'
                +   '</div>'
-               +   '<a class="sd-top-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗ 開く</a>'
+               +   (openUrl
+                     ? '<a class="sd-top-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗ 開く</a>'
+                     : '<span class="sd-top-art-open" style="opacity:.5;cursor:default">準備中</span>')
                + '</div>';
         }).join('')
       +   '</div>'
@@ -4261,6 +4293,131 @@ function _renderTabActions(site, events, next, quickActions, weekly, progressHTM
     + '</div>';
 
   return todaysHTML + nextHTML + taskTeamHTML + moreHTML + activityHTML;
+}
+
+// ─── Tab 4: 📋 サイト一覧 (= 全 AI チーム grid) ────────────────────
+// 既存の _renderAllSitesHTML を tab body 内に埋め込み (= 同じ grid を再利用)。
+function _renderTabAgents(currentSite){
+  var sites = (agents || []).filter(_isSiteAgent);
+  var nameStr = (me && (me.name || (me.email||'').split('@')[0])) || 'there';
+  // 現在のサイト ID を覚えておく — switch 時に highlight
+  window._dashCurrentSiteId = currentSite && currentSite.id;
+  return _renderAllSitesHTML(sites, nameStr);
+}
+
+// ─── Tab 5: ⚙ 設定 (= 旧チャット header の全ボタン + 拡張) ──────────
+// 共有 / 会話共有 / メモ / 編集 / 新規依頼 / KPI / スケジュール / 連携。
+// 大きめのカード行で「クリックすると何が起きるか」を明確に。
+function _renderTabSettings(site){
+  var kpi = site.kpi || {};
+  var hasKpi = !!(kpi.pv || kpi.cvr || kpi.leads);
+  var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
+  var schedules = Array.isArray(site.schedules) ? site.schedules : [];
+  var enabledScheds = schedules.filter(function(s){ return s && s.enabled !== false; });
+
+  // 行を 1 件分組み立てる helper
+  function _row(icon, color, title, desc, btnLbl, onClick){
+    return ''
+      + '<div class="sd-set-row" style="--row-c:' + color + '">'
+      +   '<div class="sd-set-ic">' + icon + '</div>'
+      +   '<div class="sd-set-bd">'
+      +     '<div class="sd-set-ti">' + esc(title) + '</div>'
+      +     '<div class="sd-set-de">' + esc(desc) + '</div>'
+      +   '</div>'
+      +   '<button class="sd-set-btn" onclick="' + onClick + '">' + esc(btnLbl) + ' →</button>'
+      + '</div>';
+  }
+
+  // 共有グループ
+  var shareGroup = ''
+    + '<div class="sd-set-group">'
+    +   '<div class="sd-set-group-h">🤝 共有</div>'
+    +   _row('🔗', '#22c55e', '共有 URL を取得',
+            'このサイト専属の AI チームを SNS や名刺で広報できる public URL。',
+            '取得 / 開く',
+            "openSite('" + esc(site.id) + "');setTimeout(openShareCard,150)")
+    +   _row('💬', '#3b82f6', 'この会話を公開リンクで共有',
+            'チャットの履歴を read-only の URL として人に渡せる (招待ではない)。',
+            '公開リンク',
+            "openSite('" + esc(site.id) + "');setTimeout(openChatShareModal,150)")
+    + '</div>';
+
+  // 運用グループ
+  var opsGroup = ''
+    + '<div class="sd-set-group">'
+    +   '<div class="sd-set-group-h">⚡ 運用</div>'
+    +   _row('📝', '#a855f7', 'メモ',
+            'この AI とのチャットだけに紐づくメモ。背景情報や指示の置き場所。',
+            'メモを開く',
+            "openNotesPanel('" + esc(site.id) + "')")
+    +   _row('↻', '#ec4899', '新しい依頼を開始',
+            '別件の新規スレッドを開く (履歴は残る)。',
+            '新規依頼',
+            "openSite('" + esc(site.id) + "');setTimeout(newChat,150)")
+    +   _row('🎯', '#fb923c', 'KPI を設定',
+            (hasKpi ? '月間 PV / CVR / リード目標が設定済み — AI が毎朝達成度を評価。' : '未設定 — 月間目標を入れると、AI が毎朝達成度をレポート。'),
+            (hasKpi ? '編集' : '設定する'),
+            "openKpiModal('" + esc(site.id) + "')")
+    +   _row('📅', '#f59e0b', 'スケジュール',
+            (enabledScheds.length > 0 ? enabledScheds.length + ' 件の自動実行が動いてます (毎朝レポート等)。' : '自動実行のスケジュール (毎朝 / 毎週 / 毎月) を設定。'),
+            '管理',
+            "openScheduleManager && openScheduleManager('" + esc(site.id) + "')")
+    + '</div>';
+
+  // チーム / 連携
+  var teamGroup = ''
+    + '<div class="sd-set-group">'
+    +   '<div class="sd-set-group-h">👥 チーム / 連携</div>'
+    +   _row('⚙', '#64748b', 'AI チームを編集',
+            'チームメンバー / モデル / ペルソナ / 権限を変更。',
+            '編集する',
+            "openEditAgent('" + esc(site.id) + "')")
+    +   _row('📊', '#0ea5e9', 'Google Analytics (GA4)',
+            (ga4Connected ? '接続済 — AI が流入数 / CVR を使って分析中。' : '未接続 — 接続するとデータドリブンな施策が打てる。'),
+            (ga4Connected ? '管理' : '接続する'),
+            "openIntegrationsTab && openIntegrationsTab('ga4')")
+    +   _row('🔌', '#8b5cf6', 'その他の連携サービス',
+            'Slack / Gmail / Twitter (X) / WordPress / Notion 等の接続。',
+            '一覧を開く',
+            "openIntegrationsTab && openIntegrationsTab()")
+    + '</div>';
+
+  // 危険ゾーン (削除)
+  var dangerGroup = ''
+    + '<div class="sd-set-group sd-set-danger">'
+    +   '<div class="sd-set-group-h">⚠️ 危険ゾーン</div>'
+    +   _row('🗑', '#dc2626', 'この AI チームを削除',
+            '会話履歴 / 納品物 / スケジュール 全部が消えます。元に戻せません。',
+            '削除',
+            "_confirmDeleteSite && _confirmDeleteSite('" + esc(site.id) + "')")
+    + '</div>';
+
+  return shareGroup + opsGroup + teamGroup + dangerGroup;
+}
+
+// 削除確認 — 簡易 confirm。ユーザーが OK したら本当に消す。
+function _confirmDeleteSite(siteId){
+  if(!siteId) return;
+  var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
+  if(!ag) return;
+  var host = _siteHostname(ag);
+  if(!confirm('「' + host + '」の AI チームを削除します。\n会話履歴 / 納品物 / スケジュール もすべて消えます。\n本当に削除しますか?')) return;
+  // 既存の deleteAgent (もしあれば) を呼ぶ — UI 側のリスト除外まで含む。
+  if(typeof deleteAgent === 'function'){
+    try { deleteAgent(siteId); return; } catch(e){ console.warn('[delete-site] deleteAgent failed:', e); }
+  }
+  // フォールバック: API 直叩き
+  api('DELETE', '/api/agents/' + encodeURIComponent(siteId))
+    .then(function(){
+      agents = (agents || []).filter(function(a){ return a && a.id !== siteId; });
+      activeId = null;
+      try { renderHomeDashboard(); } catch(_){}
+      try { renderAgList(); } catch(_){}
+      showToast && showToast('削除しました', 'ok');
+    })
+    .catch(function(e){
+      showToast && showToast((e && e.message) || '削除に失敗しました', 'ng');
+    });
 }
 
 // Quick Action のハンドラ — チャットに飛んで prompt を pre-fill して送信
@@ -9898,8 +10055,24 @@ async function _sendMsgStream(ag, text, imgs, texts){
             me = me || {};
             if(!Array.isArray(me.artifacts)) me.artifacts = [];
             const _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
-            if(_hit){ _hit.version = obj.version; }
-            else { me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' }); }
+            if(_hit){
+              _hit.version = obj.version;
+              if(obj.title)  _hit.title = obj.title;
+              if(obj.url)    _hit.url   = obj.url;
+              if(!_hit.chat_id) _hit.chat_id = ag.id;
+            } else {
+              // ダッシュボードが artifact を正しく拾えるよう chat_id / url /
+              // created_at を必ず埋める (= 旧実装はこれらが欠落していて
+              // 「クリックしても何も出ない」「サイトに紐づかない」の原因)。
+              me.artifacts.push({
+                filename: obj.filename,
+                version: obj.version,
+                title: obj.title || '',
+                url: obj.url || ('/generated/' + obj.filename),
+                chat_id: ag.id,
+                created_at: new Date().toISOString(),
+              });
+            }
           } catch(_){}
         }
         // After tool result, the server will fire `thinking` for iter+1.
@@ -14498,8 +14671,21 @@ async function _sendThreadReply(){
                 me = me || {};
                 if(!Array.isArray(me.artifacts)) me.artifacts = [];
                 var _hit = me.artifacts.find(function(a){ return a && a.filename === obj.filename; });
-                if(_hit){ _hit.version = obj.version; }
-                else { me.artifacts.push({ filename: obj.filename, version: obj.version, title: obj.title || '' }); }
+                if(_hit){
+                  _hit.version = obj.version;
+                  if(obj.title) _hit.title = obj.title;
+                  if(obj.url)   _hit.url   = obj.url;
+                  if(!_hit.chat_id) _hit.chat_id = ag.id;
+                } else {
+                  me.artifacts.push({
+                    filename: obj.filename,
+                    version: obj.version,
+                    title: obj.title || '',
+                    url: obj.url || ('/generated/' + obj.filename),
+                    chat_id: ag.id,
+                    created_at: new Date().toISOString(),
+                  });
+                }
               } catch(_){}
             }
             _renderThreadDrawer();

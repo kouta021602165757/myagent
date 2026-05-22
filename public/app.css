@@ -638,69 +638,97 @@ input,textarea{font-family:var(--sans);}
 
 /* ── 状態 B: サイトダッシュボード ─────────────────────────── */
 .site-dash{
-  max-width:1040px; margin:0 auto; padding:24px;
+  max-width:1100px; margin:0 auto; padding:24px;
+  /* 全体に淡いグラデーション背景を敷いて単調さを軽減 */
+  background:
+    radial-gradient(1200px 600px at 0% -10%, rgba(251,146,60,.06), transparent 60%),
+    radial-gradient(900px 500px at 100% 110%, rgba(168,85,247,.05), transparent 60%);
 }
-.sd-head{
+
+/* ══════════════════════════════════════════════════════════════════
+   ── Rich ヘッダー (= グラデーション + 大きめ ic + vertical tag) ──
+   ══════════════════════════════════════════════════════════════════ */
+.sd-head-rich{
+  position:relative; overflow:hidden;
+  display:flex; align-items:center; gap:18px;
+  background:linear-gradient(135deg, #fff 0%, #fff7ee 65%, #ffe8d4 100%);
+  border:1px solid rgba(251,146,60,.18);
+  border-radius:18px; padding:22px 26px;
+  margin-bottom:20px;
+  box-shadow:0 8px 24px rgba(234,88,12,.06), inset 0 1px 0 rgba(255,255,255,.6);
+}
+/* ヘッダー右上にぼかしオレンジ球 (= deco) */
+.sd-head-bg{
+  position:absolute; right:-60px; top:-60px;
+  width:220px; height:220px;
+  background:radial-gradient(circle, rgba(251,146,60,.18), transparent 70%);
+  border-radius:50%;
+  pointer-events:none;
+}
+.sd-head-rich .sd-head-l{display:flex; align-items:center; gap:16px; flex:1; min-width:0; position:relative; z-index:1}
+.sd-ic-rich{
+  width:58px; height:58px; border-radius:16px;
+  background:linear-gradient(135deg, #fff 0%, #fff1e3 100%);
+  border:1px solid rgba(251,146,60,.28);
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px; flex-shrink:0;
+  box-shadow:0 6px 18px rgba(234,88,12,.14), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.sd-vt-tag{
+  display:inline-block;
+  font-size:9.5px; font-weight:800;
+  color:var(--peach-dark,#ea580c);
+  background:rgba(251,146,60,.14);
+  border:1px solid rgba(251,146,60,.3);
+  letter-spacing:.06em; text-transform:uppercase;
+  padding:2px 9px; border-radius:99px;
+  margin-bottom:5px;
+}
+.sd-head-rich .sd-url{font-size:18px; font-weight:900; letter-spacing:-.015em}
+.sd-head-rich .sd-url a{color:var(--text); text-decoration:none; transition:color .15s}
+.sd-head-rich .sd-url a:hover{color:var(--peach-dark,#ea580c)}
+.sd-head-rich .sd-summary{
+  font-size:12px; color:var(--text2); font-weight:700; margin-top:4px;
+  display:flex; align-items:center; gap:6px;
+}
+
+/* 「💬 チャットに戻る」 CTA — グラデーション + 横並び icon + label + arrow */
+.sd-chat-cta-rich{
+  position:relative; z-index:1;
+  background:linear-gradient(135deg,var(--peach,#fb923c),var(--peach-dark,#ea580c));
+  color:#fff; border:0; padding:13px 20px; border-radius:12px;
+  font-family:inherit; font-size:14px; font-weight:800;
+  cursor:pointer; flex-shrink:0;
+  box-shadow:0 6px 18px rgba(234,88,12,.28), inset 0 1px 0 rgba(255,255,255,.18);
+  transition:transform .15s, box-shadow .15s, filter .15s;
+  display:inline-flex; align-items:center; gap:9px;
+  letter-spacing:.01em;
+}
+.sd-chat-cta-rich:hover{transform:translateY(-2px); box-shadow:0 12px 28px rgba(234,88,12,.38); filter:brightness(1.05)}
+.sd-chat-cta-rich .sd-cta-ic{font-size:16px}
+.sd-chat-cta-rich .arrow{transition:transform .2s; font-weight:900}
+.sd-chat-cta-rich:hover .arrow{transform:translateX(4px)}
+@media (max-width:680px){
+  .sd-head-rich{flex-direction:column; align-items:stretch; gap:14px; padding:18px}
+  .sd-chat-cta-rich{justify-content:center}
+}
+
+/* ── 旧 .sd-head / .sd-chat-cta (= 後方互換、現在 site dashboard では未使用) ── */
+.sd-head:not(.sd-head-rich){
   display:flex; align-items:center; gap:16px;
   background:#fff; border:1px solid var(--wire);
   border-radius:14px; padding:18px 22px;
   margin-bottom:18px;
   box-shadow:0 1px 3px rgba(70,40,20,.04);
 }
-.sd-head-l{display:flex; align-items:center; gap:14px; flex:1; min-width:0}
-.sd-ic{
+.sd-head:not(.sd-head-rich) .sd-head-l{display:flex; align-items:center; gap:14px; flex:1; min-width:0}
+.sd-head:not(.sd-head-rich) .sd-ic{
   width:48px; height:48px; border-radius:12px;
   background:var(--peach-soft,#fff1e3);
   display:flex; align-items:center; justify-content:center;
   font-size:26px; flex-shrink:0;
 }
 .sd-head-meta{flex:1; min-width:0}
-.sd-url{font-size:16px; font-weight:900; letter-spacing:-.01em}
-.sd-url a{color:var(--text); text-decoration:none}
-.sd-url a:hover{color:var(--peach-dark,#ea580c)}
-.sd-summary{font-size:12px; color:var(--text3); font-weight:700; margin-top:3px}
-.sd-chat-cta{
-  background:linear-gradient(135deg,var(--peach,#fb923c),var(--peach-dark,#ea580c));
-  color:#fff; border:0; padding:11px 18px; border-radius:10px;
-  font-family:inherit; font-size:13.5px; font-weight:800;
-  cursor:pointer; flex-shrink:0;
-  box-shadow:0 4px 12px rgba(234,88,12,.22);
-  transition:transform .15s, box-shadow .15s, filter .15s;
-  display:inline-flex; align-items:center; gap:6px;
-}
-.sd-chat-cta:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(234,88,12,.32); filter:brightness(1.05)}
-.sd-chat-cta .arrow{transition:transform .2s}
-.sd-chat-cta:hover .arrow{transform:translateX(3px)}
-
-/* ── アクション集約 row (= 旧チャット header の 5 ボタンを統合) ── */
-.sd-actions{
-  display:grid; grid-template-columns:repeat(5,1fr); gap:8px;
-  margin-bottom:16px;
-}
-.sd-act{
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
-  padding:11px 6px;
-  background:#fff; border:1px solid var(--wire);
-  border-radius:11px;
-  cursor:pointer;
-  font-family:inherit; color:var(--text2);
-  transition:background .15s, border-color .15s, color .15s, transform .12s, box-shadow .15s;
-}
-.sd-act:hover{
-  background:var(--peach-soft, #fff1e3);
-  border-color:rgba(251,146,60,.4);
-  color:var(--peach-dark,#ea580c);
-  transform:translateY(-1px);
-  box-shadow:0 4px 10px rgba(234,88,12,.08);
-}
-.sd-act-ic{font-size:18px; line-height:1}
-.sd-act-lbl{font-size:11px; font-weight:800; letter-spacing:.02em}
-@media (max-width:560px){
-  .sd-actions{grid-template-columns:repeat(5,1fr); gap:5px}
-  .sd-act{padding:9px 4px}
-  .sd-act-ic{font-size:16px}
-  .sd-act-lbl{font-size:9.5px}
-}
 
 /* ── KPI row (= 月間目標 PV / CVR / リード数) ─────────────── */
 .sd-kpi-row{
@@ -1071,46 +1099,87 @@ input,textarea{font-family:var(--sans);}
    プロマーケッターレベルの情報密度を目指したデザイン。
    ══════════════════════════════════════════════════════════════════ */
 .sd-tabs{
-  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  display:grid; grid-template-columns:repeat(5,1fr); gap:6px;
   background:#fff; border:1px solid var(--wire);
-  border-radius:14px; padding:6px; margin-bottom:16px;
-  box-shadow:0 1px 3px rgba(70,40,20,.04);
+  border-radius:16px; padding:6px; margin-bottom:20px;
+  box-shadow:0 4px 16px rgba(70,40,20,.05), inset 0 1px 0 rgba(255,255,255,.6);
 }
 .sd-tab{
   background:transparent; border:0;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
-  padding:11px 10px; border-radius:10px;
+  padding:12px 8px; border-radius:11px;
   font-family:inherit; color:var(--text3);
   cursor:pointer;
+  position:relative;
   transition:background .15s, color .15s, transform .12s;
 }
-.sd-tab:hover{background:rgba(251,146,60,.05); color:var(--text2)}
-.sd-tab.on{
-  background:linear-gradient(135deg, rgba(251,146,60,.12), rgba(234,88,12,.06));
-  color:var(--peach-dark,#ea580c);
-  box-shadow:inset 0 0 0 1px rgba(251,146,60,.22);
+.sd-tab:hover{background:rgba(70,40,20,.035); color:var(--text2); transform:translateY(-1px)}
+.sd-tab-ic{font-size:18px; line-height:1; transition:transform .2s}
+.sd-tab:hover .sd-tab-ic{transform:scale(1.1)}
+.sd-tab-lbl{font-size:12.5px; font-weight:900; letter-spacing:.01em; margin-top:5px}
+.sd-tab-sub{font-size:9.5px; font-weight:700; color:var(--text3); letter-spacing:.04em; margin-top:1px}
+.sd-tab.on{color:#fff; box-shadow:0 4px 12px var(--tab-shadow, rgba(251,146,60,.28))}
+.sd-tab.on .sd-tab-sub{color:rgba(255,255,255,.85)}
+
+/* タブ別の色分け (= active 状態のみ色適用) */
+.sd-tab.sd-tab-numbers.on{
+  background:linear-gradient(135deg, #fb923c, #ea580c);
+  --tab-shadow:rgba(234,88,12,.32);
 }
-.sd-tab-ic{font-size:17px; line-height:1}
-.sd-tab-lbl{font-size:13px; font-weight:900; letter-spacing:.01em; margin-top:4px}
-.sd-tab-sub{font-size:9.5px; font-weight:700; color:var(--text3); letter-spacing:.04em}
-.sd-tab.on .sd-tab-sub{color:var(--peach,#fb923c)}
-.sd-tab-body{display:flex; flex-direction:column; gap:14px}
-@media (max-width:560px){
-  .sd-tabs{padding:4px; gap:4px}
-  .sd-tab{padding:9px 4px}
-  .sd-tab-lbl{font-size:11.5px}
+.sd-tab.sd-tab-strategy.on{
+  background:linear-gradient(135deg, #60a5fa, #2563eb);
+  --tab-shadow:rgba(37,99,235,.32);
+}
+.sd-tab.sd-tab-actions.on{
+  background:linear-gradient(135deg, #34d399, #059669);
+  --tab-shadow:rgba(5,150,105,.32);
+}
+.sd-tab.sd-tab-agents.on{
+  background:linear-gradient(135deg, #c084fc, #9333ea);
+  --tab-shadow:rgba(147,51,234,.32);
+}
+.sd-tab.sd-tab-settings.on{
+  background:linear-gradient(135deg, #94a3b8, #475569);
+  --tab-shadow:rgba(71,85,105,.32);
+}
+
+.sd-tab-body{display:flex; flex-direction:column; gap:16px}
+@media (max-width:760px){
+  .sd-tabs{grid-template-columns:repeat(5,1fr); padding:4px; gap:3px}
+  .sd-tab{padding:9px 3px}
+  .sd-tab-lbl{font-size:10.5px}
   .sd-tab-sub{display:none}
+  .sd-tab-ic{font-size:16px}
+}
+@media (max-width:480px){
+  .sd-tab-lbl{font-size:9.5px}
+  .sd-tab-ic{font-size:14px}
 }
 
 /* ── Tab 1: ヒーロー数字グリッド ──────────────────────────────── */
 .sd-num-hero{
-  display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+  display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
 }
+/* Hero カード 4 枚を 4 色で塗り分け — 単調さを解消 */
 .sd-num-hero-card{
+  position:relative; overflow:hidden;
   background:#fff; border:1px solid var(--wire);
-  border-radius:13px; padding:16px 18px;
+  border-radius:14px; padding:18px 20px;
   transition:transform .15s, border-color .15s, box-shadow .15s;
 }
+.sd-num-hero-card::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+  background:var(--card-accent, var(--peach,#fb923c));
+  border-radius:14px 0 0 14px;
+}
+.sd-num-hero-card:nth-child(1){--card-accent:#ea580c; background:linear-gradient(135deg, #fff 0%, #fff5eb 100%); border-color:rgba(234,88,12,.18)}
+.sd-num-hero-card:nth-child(2){--card-accent:#059669; background:linear-gradient(135deg, #fff 0%, #f0fdf4 100%); border-color:rgba(5,150,105,.18)}
+.sd-num-hero-card:nth-child(3){--card-accent:#2563eb; background:linear-gradient(135deg, #fff 0%, #eff6ff 100%); border-color:rgba(37,99,235,.18)}
+.sd-num-hero-card:nth-child(4){--card-accent:#9333ea; background:linear-gradient(135deg, #fff 0%, #faf5ff 100%); border-color:rgba(147,51,234,.18)}
+.sd-num-hero-card:nth-child(1) .sd-num-val{color:#ea580c}
+.sd-num-hero-card:nth-child(2) .sd-num-val{color:#059669}
+.sd-num-hero-card:nth-child(3) .sd-num-val{color:#2563eb}
+.sd-num-hero-card:nth-child(4) .sd-num-val{color:#9333ea}
 .sd-num-hero-card:hover{
   transform:translateY(-2px);
   border-color:rgba(251,146,60,.32);
@@ -1494,6 +1563,82 @@ input,textarea{font-family:var(--sans);}
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   ── Tab 5: ⚙ 設定 (= 共有 / 会話共有 / メモ / 編集 / 新規 / KPI 等) ──
+   各行は左色アクセント + アイコン + タイトル + 説明 + アクション button。
+   グループに分けて視認性を上げる: 共有 / 運用 / チーム-連携 / 危険ゾーン。
+   ══════════════════════════════════════════════════════════════════ */
+.sd-set-group{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:18px 22px;
+  box-shadow:0 2px 8px rgba(70,40,20,.04);
+}
+.sd-set-group + .sd-set-group{margin-top:0}
+.sd-set-group-h{
+  font-size:13px; font-weight:900; letter-spacing:.01em;
+  color:var(--text); margin-bottom:14px;
+  display:flex; align-items:center; gap:8px;
+}
+.sd-set-danger{
+  background:linear-gradient(135deg, #fff 0%, #fef2f2 100%);
+  border-color:rgba(220,38,38,.22);
+}
+.sd-set-danger .sd-set-group-h{color:#b91c1c}
+.sd-set-row{
+  position:relative;
+  display:flex; align-items:center; gap:14px;
+  padding:13px 14px;
+  border-radius:11px;
+  background:var(--cream);
+  transition:background .15s, transform .12s;
+}
+.sd-set-row + .sd-set-row{margin-top:8px}
+.sd-set-row::before{
+  content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
+  background:var(--row-c, var(--peach,#fb923c));
+  border-radius:3px;
+}
+.sd-set-row:hover{background:#fff; transform:translateX(2px)}
+.sd-set-ic{
+  width:44px; height:44px; border-radius:12px;
+  background:#fff;
+  border:1px solid rgba(0,0,0,.04);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.sd-set-bd{flex:1; min-width:0}
+.sd-set-ti{
+  font-size:14px; font-weight:900; color:var(--text);
+  letter-spacing:-.005em; margin-bottom:2px;
+}
+.sd-set-de{
+  font-size:11.5px; font-weight:600; color:var(--text2);
+  line-height:1.5;
+}
+.sd-set-btn{
+  background:#fff; border:1px solid var(--wire2); color:var(--text2);
+  padding:8px 14px; border-radius:9px;
+  font-family:inherit; font-size:12px; font-weight:800;
+  cursor:pointer; flex-shrink:0;
+  transition:background .15s, border-color .15s, color .15s, transform .12s;
+}
+.sd-set-btn:hover{
+  background:var(--row-c, var(--peach,#fb923c)); color:#fff;
+  border-color:var(--row-c, var(--peach,#fb923c));
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+.sd-set-danger .sd-set-btn:hover{
+  background:#dc2626; border-color:#dc2626;
+  box-shadow:0 4px 14px rgba(220,38,38,.32);
+}
+@media (max-width:560px){
+  .sd-set-row{padding:11px 12px; gap:10px; flex-wrap:wrap}
+  .sd-set-ic{width:38px; height:38px; font-size:18px}
+  .sd-set-btn{width:100%; margin-top:6px}
+}
+
+/* ══════════════════════════════════════════════════════════════════
    ── 「すべてのサイト」 ページ (= 全 AI チーム grid) ──
    サイドバーの「📋 すべてのサイトを見る」 から遷移。
    各サイトの現状サマリ + チームメンバー + KPI を一目で。
@@ -1541,6 +1686,19 @@ input,textarea{font-family:var(--sans);}
   border-color:rgba(34,197,94,.4);
   background:linear-gradient(135deg, rgba(34,197,94,.04), #fff);
 }
+.ass-card.current{
+  border-color:rgba(251,146,60,.5);
+  background:linear-gradient(135deg, rgba(251,146,60,.06), #fff);
+  box-shadow:0 6px 20px rgba(234,88,12,.10);
+}
+.ass-card.current::after{
+  content:'現在表示中'; position:absolute; right:14px; top:14px;
+  font-size:9.5px; font-weight:800; color:var(--peach-dark,#ea580c);
+  background:rgba(251,146,60,.16); border:1px solid rgba(251,146,60,.32);
+  letter-spacing:.05em;
+  padding:2px 8px; border-radius:99px;
+}
+.ass-card{position:relative}
 .ass-card-h{
   display:flex; align-items:center; gap:12px;
 }

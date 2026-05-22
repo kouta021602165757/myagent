@@ -882,6 +882,81 @@ const FREE_INITIAL_CREDIT_JPY = parseInt(process.env.FREE_INITIAL_CREDIT_JPY||'5
 //   - system_prompt: 編成された agent.persona に注入される (= AI の behavior 定義)
 //   - initial_artifact_prompts[]: onboarding 直後に並列生成する artifact のプロンプト
 //   - detection_keywords[]: Haiku の参考材料 (hints) — 厳密には使わず prompt 注入のみ
+// ── 組織テンプレ helper: 部門→チーム→メンバー の 3 階層を組み立てる ──
+// 各 vertical の .org は { departments: [...] } の形。department は icon / color /
+// teams[] を持つ。各 team は members[] を持つ。
+// member は { id, name, role, focus } — role は AI agent の専門性スラグ。
+function _orgD(id, name, icon, color, teams){
+  return { id, name, icon, color, teams };
+}
+function _orgT(id, name, members){
+  return { id, name, members };
+}
+function _orgM(id, name, role, focus){
+  return { id, name, role, focus };
+}
+// 組織 → 「代表 5 名」フラット配列 (= 旧 team_members 互換)。各部門の最初のメンバーを「部門長」と
+// して 5 名抜き出す (= サイドバー / チャット header で「チーム」を 5 名以下で表示する既存 UI 用)。
+function _orgToFlatMembers(org){
+  if(!org || !org.departments) return [];
+  const out = [];
+  for(const d of org.departments){
+    const firstTeam = (d.teams || [])[0];
+    const firstMember = firstTeam && (firstTeam.members || [])[0];
+    if(firstMember){
+      out.push({
+        name: firstMember.name,
+        role: firstMember.role,
+        focus: firstMember.focus,
+        dept: d.name,
+        dept_color: d.color,
+      });
+    }
+  }
+  return out;
+}
+// 組織内の全メンバー総数を数える (= UI で「○○名のチーム」表示用)
+function _orgMemberCount(org){
+  if(!org || !org.departments) return 0;
+  let n = 0;
+  for(const d of org.departments){
+    for(const t of (d.teams || [])){
+      n += (t.members || []).length;
+    }
+  }
+  return n;
+}
+
+// ── 共通: リサーチ部門・分析部門 (= ほぼ全 vertical で使い回せる) ──
+function _commonResearchDept(){
+  return _orgD('d_research', 'リサーチ部門', '🔍', '#9333ea', [
+    _orgT('t_competitor', '競合監視', [
+      _orgM('m_comp_track', '競合トラッカー', 'competitor_tracker', '価格・機能・新リリースの定期監視'),
+      _orgM('m_comp_swot', 'SWOT 分析官', 'swot_analyst', '競合の強み弱み・差別化ポイント抽出'),
+      _orgM('m_pricing', '価格戦略アナリスト', 'pricing_analyst', '価格モデル比較・最適価格提案'),
+    ]),
+    _orgT('t_market', '市場・トレンド', [
+      _orgM('m_trend', 'トレンド検出', 'trend_detector', 'Google Trends / X / Reddit でトレンド察知'),
+      _orgM('m_persona', 'ペルソナ研究員', 'persona_researcher', 'インタビュー記事 / SNS から顧客像構築'),
+      _orgM('m_demand', '需要検証', 'demand_validator', '新機能の需要をフォーラム / Twitter から検証'),
+    ]),
+  ]);
+}
+function _commonAnalyticsDept(){
+  return _orgD('d_analytics', '分析部門', '📊', '#059669', [
+    _orgT('t_ga', 'GA / Search Console', [
+      _orgM('m_ga4', 'GA4 アナリスト', 'ga4_analyst', '流入経路・コンバージョン・行動分析'),
+      _orgM('m_sc', 'Search Console アナリスト', 'search_console', '検索キーワード・順位・CTR 分析'),
+      _orgM('m_anomaly', '異常検知', 'anomaly_detector', '急増・急落の検知と原因分析'),
+    ]),
+    _orgT('t_funnel', 'ファネル / コホート', [
+      _orgM('m_funnel', 'ファネル分析官', 'funnel_analyst', '漏れ箇所特定と改善提案 + 金額換算'),
+      _orgM('m_cohort', 'コホート分析', 'cohort_analyst', 'ユーザーセグメント別継続率分析'),
+      _orgM('m_attribution', 'アトリビューション', 'attribution_analyst', 'どの施策が結果に寄与したか算出'),
+    ]),
+  ]);
+}
+
 const TEAM_PRESETS = {
   saas: {
     vertical: 'saas',
@@ -912,6 +987,69 @@ const TEAM_PRESETS = {
       { type: 'email', title: 'リード獲得メルマガ', prompt: 'プロダクトに興味を持った見込み客に送る、価値訴求型のメールマガジン本文を 1 本作成。Subject + Body の形式。' },
     ],
     detection_keywords: ['saas', 'product', 'pricing', 'free trial', 'api', 'platform', 'sign up', 'integration'],
+    // ── 組織 (5 部門 ・ 約 40 名) ──
+    // 雇った瞬間「マーケティング会社が 1 つ手に入った」感を出すための、リッチな組織構造。
+    // 部門 = 大きな役割。チーム = その中の専門領域。メンバー = 1 つの方法に特化した AI agent。
+    org: { departments: [
+      _orgD('d_acq', '集客部門', '🎯', '#2563eb', [
+        _orgT('t_seo', 'SEO 課', [
+          _orgM('m_kw', 'キーワード戦略家', 'keyword_strategist', '検索意図リサーチ + キーワードマップ作成'),
+          _orgM('m_seo_writer', 'SEO ライター', 'seo_writer', '検索意図に沿った 1500-3000 字の本格記事'),
+          _orgM('m_tech_seo', 'テクニカル SEO', 'tech_seo', 'meta / OGP / sitemap / robots / Core Web Vitals'),
+          _orgM('m_internal_link', '内部リンク設計', 'internal_link', 'トピッククラスター・回遊率最適化'),
+          _orgM('m_eeat', 'E-E-A-T 強化', 'eeat', '著者プロフ・引用・信頼性シグナル整備'),
+        ]),
+        _orgT('t_aeo', 'AEO / LLM SEO 課', [
+          _orgM('m_llmstxt', 'llms.txt 担当', 'llms_txt', 'llms.txt 整備・AI 自己紹介ファイル設計'),
+          _orgM('m_schema', 'Schema マークアップ', 'schema_markup', 'FAQ/HowTo/Product Schema 実装'),
+          _orgM('m_reddit', 'Reddit 種まき', 'reddit_seeder', 'AI training data に入りやすいプラットフォーム狙撃'),
+          _orgM('m_comparison', '比較記事ライター', 'comparison_writer', '"X vs Y" "Best X for Y" ボトムファネル量産'),
+          _orgM('m_quora', 'Quora 回答員', 'quora_answerer', '質問プラットフォームへの権威ある回答'),
+          _orgM('m_citation', 'Citation Bait', 'citation_bait', 'AI が引用しやすい統計・断定文の量産'),
+        ]),
+        _orgT('t_x', 'X (Twitter) 課', [
+          _orgM('m_x_thread', 'X スレッド職人', 'x_thread', 'バイラルになるスレッド構造の設計'),
+          _orgM('m_x_reply', 'リプライ係', 'x_reply', '大型アカウントへの賢いリプライで露出獲得'),
+          _orgM('m_x_viral', 'バイラル分析官', 'x_viral_analyst', '伸びる投稿パターンの解析'),
+          _orgM('m_x_profile', 'プロフ最適化', 'x_profile_optimizer', 'バイオ / ピン留め / ハイライト最適化'),
+        ]),
+        _orgT('t_other_sns', 'その他 SNS', [
+          _orgM('m_linkedin', 'LinkedIn 投稿', 'linkedin_writer', 'B2B 向けプロフェッショナル投稿'),
+          _orgM('m_ih', 'IndieHackers / HN', 'indie_hackers', '開発者コミュニティでのストーリー投稿'),
+          _orgM('m_youtube', 'YouTube 台本', 'youtube_script', 'チャンネル設計 + 動画台本'),
+        ]),
+      ]),
+      _commonResearchDept(),
+      _commonAnalyticsDept(),
+      _orgD('d_content', 'コンテンツ部', '🎨', '#fb923c', [
+        _orgT('t_blog', 'ブログチーム', [
+          _orgM('m_longform', '長文 SEO ライター', 'longform_writer', '2000+ 字の本格 SEO 記事'),
+          _orgM('m_tutorial', 'チュートリアル', 'tutorial_writer', 'ハンズオン形式の使い方解説'),
+          _orgM('m_case', 'ケーススタディ', 'case_study_writer', '事例 / インタビュー記事'),
+        ]),
+        _orgT('t_email', 'メールチーム', [
+          _orgM('m_newsletter', 'メルマガライター', 'newsletter_writer', '週次 / 月次メルマガ本文'),
+          _orgM('m_drip', 'ドリップシーケンス設計', 'drip_designer', 'オンボ / リード育成シーケンス'),
+          _orgM('m_lead_magnet', 'リードマグネット', 'lead_magnet', 'ホワイトペーパー / テンプレ集 / 無料ツール'),
+        ]),
+        _orgT('t_visual', 'ビジュアル', [
+          _orgM('m_infographic', 'インフォグラフィック', 'infographic', 'データを図解 + 引用されやすい形式'),
+          _orgM('m_video_script', '動画台本', 'video_script', 'YouTube / 短尺動画の台本'),
+        ]),
+      ]),
+      _orgD('d_cro', 'CVR 改善部', '🎯', '#ec4899', [
+        _orgT('t_lp', 'LP 最適化', [
+          _orgM('m_lp_diagnose', 'LP 診断官', 'lp_diagnoser', '現状 LP の問題点抽出 + 改善提案'),
+          _orgM('m_cta', 'CTA コピー', 'cta_writer', 'ボタン文言 / マイクロコピー最適化'),
+          _orgM('m_headline', 'ヘッドライン作家', 'headline_writer', 'メインヘッドコピー A/B 案生成'),
+        ]),
+        _orgT('t_form', 'フォーム / オンボ', [
+          _orgM('m_form', 'フォーム最適化', 'form_optimizer', '入力項目削減 / エラー設計'),
+          _orgM('m_onboarding', 'オンボ設計', 'onboarding_designer', 'サインアップ後の体験設計'),
+          _orgM('m_ab', 'A/B テスト設計', 'ab_test_designer', '優先順位 + 実装案 + 仮説出し'),
+        ]),
+      ]),
+    ]},
   },
 
   ec: {
@@ -943,6 +1081,69 @@ const TEAM_PRESETS = {
       { type: 'shopping', title: 'Google Shopping 用説明文 (5 商品)', prompt: 'サイトから 5 商品を選び、Google Shopping 用の魅力的な短文説明 (各 ~30 字) を作成。' },
     ],
     detection_keywords: ['shop', 'store', 'cart', 'product', '商品', 'カート', '購入', '通販', 'ec', 'shopify', 'base'],
+    // ── 組織 (5 部門 ・ 約 40 名) ──
+    org: { departments: [
+      _orgD('d_acq', '集客部門', '🛒', '#2563eb', [
+        _orgT('t_product_seo', '商品 SEO 課', [
+          _orgM('m_product_writer', '商品ライター', 'product_writer', '商品ページタイトル・説明文 SEO 最適化'),
+          _orgM('m_product_keyword', '商品キーワード調査', 'product_keyword', '購買意図キーワード調査'),
+          _orgM('m_pdp_seo', 'PDP SEO 最適化', 'pdp_seo', 'スキーマ / レビュー / FAQ section 最適化'),
+        ]),
+        _orgT('t_shopping', 'Google Shopping 課', [
+          _orgM('m_shopping_optimizer', 'Shopping 最適化', 'shopping_optimizer', 'Shopping フィード説明文 + 価格戦略'),
+          _orgM('m_pmax', 'P-Max 運用', 'pmax_specialist', 'Performance Max キャンペーン設計'),
+        ]),
+        _orgT('t_social_commerce', 'SNS コマース課', [
+          _orgM('m_instagram', 'Instagram 戦略', 'instagram_strategist', '投稿カレンダー + リール + ストーリー'),
+          _orgM('m_pinterest', 'Pinterest 戦略', 'pinterest_strategist', 'ピン作成・ボード設計・ビジュアル戦略'),
+          _orgM('m_tiktok', 'TikTok 動画', 'tiktok_creator', '商品紹介ショート動画台本'),
+          _orgM('m_ugc', 'UGC キャンペーン', 'ugc_campaign', 'ユーザー投稿促進フロー'),
+        ]),
+        _orgT('t_influencer', 'インフルエンサー課', [
+          _orgM('m_influencer_outreach', 'インフルエンサー開拓', 'influencer_outreach', '同価値観インフルエンサーの選定 + アプローチ'),
+          _orgM('m_affiliate', 'アフィリエイト設計', 'affiliate_designer', '報酬体系 + マーケ素材作成'),
+        ]),
+      ]),
+      _orgD('d_product', '商品最適化部', '📦', '#fb923c', [
+        _orgT('t_pricing', '価格・在庫', [
+          _orgM('m_pricing_strategy', '価格戦略', 'ec_pricing', '競合価格分析 + 最適価格提案'),
+          _orgM('m_inventory', '在庫最適化', 'inventory_optimizer', '欠品防止 + 過剰在庫検出'),
+        ]),
+        _orgT('t_review', 'レビュー戦略', [
+          _orgM('m_review_strategy', 'レビュー誘導設計', 'review_strategy', '購入後フォローメール + LINE'),
+          _orgM('m_review_response', '口コミ返信', 'review_responder', 'クレーム・低評価への返信テンプレ'),
+        ]),
+        _orgT('t_bundle', 'バンドル / アップセル', [
+          _orgM('m_bundle', 'バンドル設計', 'bundle_designer', 'クロスセル組み合わせ + 値引き設計'),
+          _orgM('m_upsell', 'アップセル戦略', 'upsell_strategist', '購入後 / カート内アップセル設計'),
+        ]),
+      ]),
+      _commonResearchDept(),
+      _commonAnalyticsDept(),
+      _orgD('d_cro', 'CVR 改善部', '🎯', '#ec4899', [
+        _orgT('t_pdp', '商品ページ最適化', [
+          _orgM('m_pdp_diag', 'PDP 診断', 'pdp_diagnoser', '商品ページのコンバージョン障害分析'),
+          _orgM('m_product_image', '商品画像戦略', 'product_image', '画像枚数・順序・コンテキスト'),
+          _orgM('m_pdp_copy', 'PDP コピー', 'pdp_copywriter', 'ベネフィット訴求 + 不安解消'),
+        ]),
+        _orgT('t_checkout', 'チェックアウト最適化', [
+          _orgM('m_cart_abandonment', 'カート放棄対策', 'cart_abandonment', 'メール + 再ターゲ広告フロー'),
+          _orgM('m_checkout_flow', 'チェックアウトフロー', 'checkout_flow', '入力項目削減・決済オプション'),
+          _orgM('m_trust_signals', '信頼シグナル', 'trust_signals', '送料・返品保証・認証バッジ最適化'),
+        ]),
+      ]),
+      _orgD('d_retention', 'リテンション部', '📧', '#a855f7', [
+        _orgT('t_email_auto', 'メール自動化', [
+          _orgM('m_welcome', 'Welcome シリーズ', 'welcome_email', '新規顧客のオンボメール 3-5 通'),
+          _orgM('m_winback', 'Winback', 'winback_email', '休眠顧客の復活フロー'),
+          _orgM('m_post_purchase', '購入後フォロー', 'post_purchase_email', '使い方 + レビュー + リピート促進'),
+        ]),
+        _orgT('t_line', 'LINE / SMS', [
+          _orgM('m_line_official', 'LINE 公式', 'line_official', 'メッセージ配信 + リッチメニュー'),
+          _orgM('m_sms', 'SMS マーケ', 'sms_marketer', '在庫戻り通知 + セール開始通知'),
+        ]),
+      ]),
+    ]},
   },
 
   store: {
@@ -974,6 +1175,48 @@ const TEAM_PRESETS = {
       { type: 'review_reply', title: '口コミ返信テンプレ集', prompt: 'good レビュー / 微妙レビュー / クレームの 3 パターンへの返信テンプレートを作成。' },
     ],
     detection_keywords: ['店舗', 'サロン', '予約', 'アクセス', '営業時間', '住所', 'tel', '電話', 'reservation', 'booking', '来店'],
+    // ── 組織 (5 部門 ・ 約 30 名) ──
+    org: { departments: [
+      _orgD('d_acq', '地域集客部門', '🗺', '#2563eb', [
+        _orgT('t_gbp', 'Google ビジネスプロフィール', [
+          _orgM('m_gbp_optimizer', 'GBP 最適化', 'gbp_optimizer', '説明文 / カテゴリ / 写真 / 投稿の最適化'),
+          _orgM('m_gbp_qa', 'GBP Q&A 担当', 'gbp_qa', 'よくある質問への回答整備'),
+        ]),
+        _orgT('t_local_seo', '地域 SEO 課', [
+          _orgM('m_local_keyword', '地域キーワード調査', 'local_keyword', '「地域 + 業種」検索キーワード調査'),
+          _orgM('m_local_blogger', '地域ブログライター', 'local_blogger', '地域 + 業種ロングテール記事'),
+          _orgM('m_local_link', '地域被リンク', 'local_link', '地域団体・自治体への被リンク獲得'),
+        ]),
+        _orgT('t_local_sns', 'ローカル SNS 課', [
+          _orgM('m_instagram_local', 'Instagram (地域)', 'instagram_local', '地域訴求投稿 + ハッシュタグ戦略'),
+          _orgM('m_tiktok_local', 'TikTok (地域)', 'tiktok_local', '地域住民向けの短尺動画'),
+          _orgM('m_line_local', 'LINE 公式', 'line_local', '常連客とのコミュニケーション設計'),
+        ]),
+      ]),
+      _orgD('d_review', '口コミ・評判部', '⭐', '#fb923c', [
+        _orgT('t_review_collect', 'レビュー収集', [
+          _orgM('m_review_request', 'レビュー依頼フロー', 'review_request', '来店後の依頼メール / QR コード設計'),
+          _orgM('m_review_incentive', '特典設計', 'review_incentive', 'レビュー特典 + ループ設計'),
+        ]),
+        _orgT('t_review_respond', 'レビュー返信', [
+          _orgM('m_good_review', '好評レビュー返信', 'good_review_responder', '感謝 + リピート促進文'),
+          _orgM('m_neg_review', 'クレーム対応', 'neg_review_responder', '謝罪 + 解決策提示の返信テンプレ'),
+        ]),
+      ]),
+      _commonResearchDept(),
+      _commonAnalyticsDept(),
+      _orgD('d_booking', '予約・来店部', '📞', '#ec4899', [
+        _orgT('t_booking_funnel', '予約導線設計', [
+          _orgM('m_booking_form', '予約フォーム最適化', 'booking_form', 'フォーム入力簡略化 + 確認画面'),
+          _orgM('m_phone_funnel', '電話誘導', 'phone_funnel', '電話ボタン配置 + 通話ベース解析'),
+          _orgM('m_pre_visit', '来店前ナーチャ', 'pre_visit_nurture', '予約後 → 来店前のメール / LINE'),
+        ]),
+        _orgT('t_visit_followup', '来店後フォロー', [
+          _orgM('m_thanks', 'お礼メッセージ', 'thanks_messenger', '来店当日 + 翌日のフォローメッセージ'),
+          _orgM('m_repeat', 'リピート促進', 'repeat_promoter', 'クーポン + LINE 配信設計'),
+        ]),
+      ]),
+    ]},
   },
 
   blog: {
@@ -1005,6 +1248,60 @@ const TEAM_PRESETS = {
       { type: 'competitor', title: '競合メディア動向', prompt: '同ジャンルの競合メディアを 2-3 サイト推測し、最近の動き・人気記事・差別化のヒントを提示。' },
     ],
     detection_keywords: ['blog', 'ブログ', 'note', 'substack', 'medium', 'article', '記事', 'newsletter', 'メルマガ', 'rss'],
+    // ── 組織 (5 部門 ・ 約 35 名) ──
+    org: { departments: [
+      _orgD('d_acq', '読者獲得部門', '📰', '#2563eb', [
+        _orgT('t_seo', 'SEO 課', [
+          _orgM('m_kw_strategy', 'キーワード戦略家', 'kw_strategist', 'クラスター + ロングテール戦略'),
+          _orgM('m_search_intent', '検索意図分析', 'search_intent', '上位記事の構造分解 + 差別化案'),
+          _orgM('m_internal_link', '内部リンク設計', 'internal_link', 'クラスター内の回遊率最大化'),
+          _orgM('m_tech_seo', 'テクニカル SEO', 'tech_seo', 'sitemap / robots / 構造化データ整備'),
+        ]),
+        _orgT('t_aeo', 'AEO / LLM SEO 課', [
+          _orgM('m_llmstxt', 'llms.txt 担当', 'llms_txt', 'AI 自己紹介ファイル整備'),
+          _orgM('m_schema', 'Schema マークアップ', 'schema_markup', 'Article / Author / FAQ Schema'),
+          _orgM('m_citation', 'Citation Bait', 'citation_bait', 'AI が引用したがる統計 + 断定文'),
+          _orgM('m_reddit', 'Reddit / Quora', 'reddit_seeder', 'AI training data に入る種まき'),
+        ]),
+        _orgT('t_x', 'X / Twitter 課', [
+          _orgM('m_thread_writer', 'スレッド職人', 'thread_writer', '記事を 7 ツイートのスレッドに分解'),
+          _orgM('m_quote_amplify', '引用 RT 戦略', 'quote_amplify', '大型アカウント引用 RT を狙う仕組み'),
+        ]),
+        _orgT('t_community', 'コミュニティ課', [
+          _orgM('m_hn', 'Hacker News 投稿', 'hn_submitter', 'HN front page 狙い + 議論喚起'),
+          _orgM('m_ih', 'IndieHackers', 'indie_hackers', '開発者向けストーリー投稿'),
+          _orgM('m_substack_cross', 'Substack 相互拡散', 'substack_cross', '関連 Substack との相互リコメンド'),
+        ]),
+      ]),
+      _orgD('d_content', 'コンテンツ部', '✍️', '#fb923c', [
+        _orgT('t_longform', '長文記事チーム', [
+          _orgM('m_longform_writer', '長文記事ライター', 'longform_writer', '2000+ 字の本格コンテンツ'),
+          _orgM('m_listicle', 'リスティクル作家', 'listicle_writer', '「○ 選」形式の拡散しやすい記事'),
+          _orgM('m_how_to', 'How-to 記事', 'howto_writer', 'ハンズオン手順記事'),
+          _orgM('m_opinion', 'オピニオン記事', 'opinion_writer', '議論を呼ぶ視点の主張記事'),
+        ]),
+        _orgT('t_editing', '編集・校正', [
+          _orgM('m_editor', '編集者', 'editor', '記事全体の構成 + 流れチェック'),
+          _orgM('m_proofreader', '校正・ファクトチェック', 'proofreader', '誤字 / 事実誤認 / 統計裏取り'),
+        ]),
+        _orgT('t_email', 'メルマガ・購読', [
+          _orgM('m_newsletter', 'メルマガ作家', 'newsletter_writer', '週次まとめ + 独自視点'),
+          _orgM('m_subscriber_growth', '購読者拡大', 'subscriber_growth', 'リードマグネット + LP 設計'),
+        ]),
+      ]),
+      _commonResearchDept(),
+      _commonAnalyticsDept(),
+      _orgD('d_monetize', 'マネタイズ部', '💰', '#ec4899', [
+        _orgT('t_affiliate', 'アフィリエイト', [
+          _orgM('m_affiliate_select', '案件選定', 'affiliate_selector', '記事内容と相性の良い案件発掘'),
+          _orgM('m_affiliate_cta', 'CTA 最適化', 'affiliate_cta', '記事内挿入位置 + ボタン文言'),
+        ]),
+        _orgT('t_ads', '広告最適化', [
+          _orgM('m_adsense', 'AdSense 最適化', 'adsense_optimizer', '配置 + サイズ + 表示密度'),
+          _orgM('m_direct_ads', '純広告開拓', 'direct_ads', 'スポンサー記事 + バナー直販'),
+        ]),
+      ]),
+    ]},
   },
 
   portfolio: {
@@ -1036,6 +1333,38 @@ const TEAM_PRESETS = {
       { type: 'dm_script', title: 'DM スクリプト (LinkedIn / Wantedly)', prompt: 'LinkedIn / Wantedly で初回コンタクト時に使える DM スクリプトを 3 種類作成。' },
     ],
     detection_keywords: ['portfolio', 'ポートフォリオ', 'freelance', 'consultant', 'コンサル', 'about me', '自己紹介', 'works', '実績'],
+    // ── 組織 (4 部門 ・ 約 25 名) ──
+    org: { departments: [
+      _orgD('d_pb', '個人ブランド部門', '💼', '#2563eb', [
+        _orgT('t_linkedin', 'LinkedIn 課', [
+          _orgM('m_linkedin_profile', 'プロフィール戦略家', 'linkedin_profile', 'バナー / 見出し / About 最適化'),
+          _orgM('m_linkedin_post', 'LinkedIn 投稿作家', 'linkedin_writer', '専門性が伝わる投稿カレンダー'),
+          _orgM('m_linkedin_engage', 'エンゲージメント担当', 'linkedin_engage', '関連投稿への質の高いコメント戦略'),
+        ]),
+        _orgT('t_x_thread', 'X / Thread 課', [
+          _orgM('m_x_authority', 'X 専門性発信', 'x_authority', '専門性で覚えてもらう投稿戦略'),
+          _orgM('m_x_thread_pf', 'スレッド職人', 'x_thread_pf', '実績をストーリー化したスレッド'),
+        ]),
+        _orgT('t_portfolio_optimize', 'ポートフォリオ最適化', [
+          _orgM('m_pf_hero', 'ヘッドコピー作家', 'pf_hero_writer', 'メインヘッダーで「何屋か」を 3 秒で伝える'),
+          _orgM('m_pf_case', 'ケーススタディ作家', 'pf_case_writer', '事例の articulation + 数字明示'),
+          _orgM('m_pf_testimonial', '推薦文収集', 'pf_testimonial', 'クライアント推薦文の依頼 + 整形'),
+        ]),
+      ]),
+      _orgD('d_lead', 'リード獲得部', '🎯', '#fb923c', [
+        _orgT('t_outbound', 'アウトバウンド', [
+          _orgM('m_dm_script', 'DM スクリプト', 'dm_scripter', 'LinkedIn / Wantedly 初回コンタクト'),
+          _orgM('m_cold_email', 'コールドメール', 'cold_email', '案件提案メール + フォローアップ'),
+          _orgM('m_proposal', '提案書テンプレ', 'proposal_writer', '見積もり + 進め方の説得力ある資料'),
+        ]),
+        _orgT('t_inbound', 'インバウンド', [
+          _orgM('m_contact_form', '問い合わせフォーム最適化', 'contact_form', '入力項目 + 確認画面'),
+          _orgM('m_qualifier', '案件マッチング', 'lead_qualifier', '受注前のヒアリング設計'),
+        ]),
+      ]),
+      _commonResearchDept(),
+      _commonAnalyticsDept(),
+    ]},
   },
 
   other: {
@@ -1062,6 +1391,25 @@ const TEAM_PRESETS = {
       { type: 'diagnosis', title: 'サイト初期診断', prompt: 'このサイトを見て、何をやっているサイトか・主な訪問者は誰か・どんな業務改善が考えられるかをまとめ、ユーザーに「何を任せたいですか?」と聞き返す対話開始メッセージを作成。' },
     ],
     detection_keywords: [],
+    // ── 組織 (3 部門 ・ 約 15 名 ・ 汎用) ──
+    org: { departments: [
+      _orgD('d_general', '汎用業務部', '🛠', '#64748b', [
+        _orgT('t_pm', 'PM / オペレーション', [
+          _orgM('m_pm', 'プロジェクトマネージャー', 'pm', '全体進行 + タスク分解'),
+          _orgM('m_operator', 'オペレーター', 'operator', 'tool 実行 + 自動化'),
+        ]),
+        _orgT('t_writer', '文書作成', [
+          _orgM('m_writer', 'ジェネラルライター', 'writer', '汎用的な文書執筆'),
+          _orgM('m_editor_g', '編集者', 'editor_general', '校正 + 構成チェック'),
+        ]),
+        _orgT('t_researcher', 'リサーチ', [
+          _orgM('m_researcher', 'リサーチャー', 'researcher', 'Web 検索 + 情報まとめ'),
+          _orgM('m_data_collector', 'データ収集', 'data_collector', 'CSV / シート / API'),
+        ]),
+      ]),
+      _commonResearchDept(),
+      _commonAnalyticsDept(),
+    ]},
   },
 };
 function _teamPresetFor(vertical){
@@ -14034,6 +14382,10 @@ async function handleAPI(req,res,pathname,method,ip){
     const preset = _teamPresetFor(vertical);
     const hostname = (() => { try { return new URL(siteUrl).hostname.replace(/^www\./, ''); } catch(e){ return siteUrl; }})();
     const siteName = pageTitle || hostname;
+    // 組織 (= 部門 → チーム → メンバー) をディープコピーで agent に保存。
+    // 旧 team_members も互換のため flatten 版を残す (= サイドバー / chat header の既存 UI)。
+    const orgCopy = preset.org ? JSON.parse(JSON.stringify(preset.org)) : null;
+    const flatMembers = orgCopy ? _orgToFlatMembers(orgCopy) : preset.members;
     const agent = {
       id: 'ag_' + crypto.randomUUID(),
       avatar: preset.icon,
@@ -14041,7 +14393,8 @@ async function handleAPI(req,res,pathname,method,ip){
       site_url: siteUrl,
       site_vertical: vertical,
       site_title: pageTitle.slice(0, 200),
-      team_members: preset.members,
+      org: orgCopy,            // 新: 部門→チーム→メンバー の階層
+      team_members: flatMembers,  // 旧: 各部門長 5 名のフラット (= 後方互換)
       skills: ['marketing','writing','research','analysis','planning','sns','content','design','idea','teaching','support','translate','planning','coding','ceo','coo','secretary','designer'],
       persona: preset.system_prompt + '\n\n【担当サイト】 ' + siteUrl + ' (' + siteName + ')',
       // ── 100+ 機能を内蔵: site agent は全ツール解禁 (= 「接続不要で何でもできる」訴求の担保) ──
@@ -21652,7 +22005,42 @@ if(require.main === module){
     //    マイグレーションは起動時に 1 回だけ走る (= idempotent)。
     setTimeout(() => _migrateMorningReportToEmail().catch(e =>
       console.warn('[migrate-morning-report] failed:', e.message)), 5000);
+    setTimeout(() => _migrateBackfillOrg().catch(e =>
+      console.warn('[migrate-org] failed:', e.message)), 8000);
   }
+}
+
+// 既存 site agent に organization 階層を backfill する (= TEAM_PRESETS から復元)
+async function _migrateBackfillOrg(){
+  let users;
+  try {
+    users = USE_SUPA
+      ? (await sbReq('GET','users','?select=id,email,agents&limit=2000')).d || []
+      : LDB.all();
+  } catch(e){
+    console.warn('[migrate-org] fetch failed:', e.message);
+    return;
+  }
+  let migrated = 0;
+  for(const u of users){
+    let changed = false;
+    for(const ag of (u.agents || [])){
+      if(!ag || !ag.site_url) continue;     // site agent のみ対象
+      if(ag.org && ag.org.departments) continue;  // 既に org あり → スキップ
+      const preset = _teamPresetFor(ag.site_vertical || 'other');
+      if(!preset || !preset.org) continue;
+      ag.org = JSON.parse(JSON.stringify(preset.org));
+      // team_members も flat version で上書き (= 旧 5 名から組織の部門長 5 名へ)
+      ag.team_members = _orgToFlatMembers(ag.org);
+      migrated++;
+      changed = true;
+    }
+    if(changed){
+      try { await DB.save(u); }
+      catch(e){ console.warn('[migrate-org] save failed for', u.email, e.message); }
+    }
+  }
+  if(migrated > 0) console.log('[migrate-org] backfilled org for ' + migrated + ' agent(s)');
 }
 
 async function _migrateMorningReportToEmail(){

@@ -4655,116 +4655,152 @@ function _renderTabActions(site, events, next, quickActions, weekly, progressHTM
 // 担当 / CRO / Email マーケター…) を雇っている。そのメンバー一覧を rich card
 // で表示する。役割 / 専門領域 / 担当した納品物の数 / 直近の貢献を見せる。
 function _renderTabAgents(site){
-  var members = Array.isArray(site.team_members) ? site.team_members : [];
   var allArts = _siteAllArtifacts(site.id);
-  // 週次の集計を inline で算出 (= _siteWeeklyStats は nested なので module 越し
-  // に呼べない。簡易計算で済むので独立に展開)。
-  var weekly = (function(){
-    var now = Date.now();
-    var since = now - 7 * 86400000;
-    var n = 0;
-    for(var i = 0; i < allArts.length; i++){
-      var ts = Date.parse(allArts[i].created_at || 0) || 0;
-      if(ts > since) n++;
-    }
-    return { artifacts: n };
-  })();
 
-  if(members.length === 0){
-    return '<div class="sd-agents-empty">'
-      + '<div class="sd-agents-empty-ic">🤖</div>'
-      + '<div class="sd-agents-empty-ti">チームメンバーが未編成です</div>'
-      + '<div class="sd-agents-empty-tx">サイトの vertical を再判定してチームを編成しましょう。</div>'
-      + '</div>';
+  // ── ORG 構造 (新) を優先。なければ team_members (旧) で fallback。 ──
+  var org = site.org && Array.isArray(site.org.departments) ? site.org : null;
+  if(!org){
+    // 旧 site (org 未付与) — 簡易フォールバック
+    var legacyMembers = Array.isArray(site.team_members) ? site.team_members : [];
+    if(legacyMembers.length === 0){
+      return '<div class="sd-agents-empty">'
+        + '<div class="sd-agents-empty-ic">🤖</div>'
+        + '<div class="sd-agents-empty-ti">組織が未編成です</div>'
+        + '<div class="sd-agents-empty-tx">サーバー起動後しばらく待つと自動で組織が編成されます。</div>'
+        + '</div>';
+    }
+    org = { departments: [{
+      id: 'd_legacy', name: 'AI チーム', icon: '🤖', color: '#fb923c',
+      teams: [{ id: 't_legacy', name: 'メンバー', members: legacyMembers.map(function(m, i){
+        return { id: 'm_legacy_' + i, name: m.name, role: m.role, focus: m.focus };
+      })}]
+    }]};
   }
 
-  // 役割 → 色 マッピング (= カードを単調にしない)
-  var ROLE_ACCENT = {
-    analyst:'#0ea5e9', ec_analyst:'#0ea5e9',
-    seo_writer:'#fb923c', content_strategy:'#fb923c', local_blogger:'#fb923c', sales_writer:'#fb923c', case_study:'#fb923c', writer:'#fb923c',
-    community:'#a855f7', twitter:'#a855f7', instagram:'#a855f7', linkedin:'#a855f7', sns:'#a855f7', local_seo:'#a855f7',
-    cro:'#22c55e', shopping_optimizer:'#22c55e', booking_funnel:'#22c55e', lead_gen:'#22c55e',
-    email:'#ec4899', newsletter:'#ec4899',
-    product_writer:'#f59e0b', creative_director:'#f59e0b',
-    review_strategy:'#eab308', review_mgmt:'#eab308',
-    pm:'#64748b', researcher:'#64748b', operator:'#64748b', seo:'#64748b',
-  };
+  // メンバー総数
+  var totalMembers = 0;
+  org.departments.forEach(function(d){
+    (d.teams || []).forEach(function(t){ totalMembers += (t.members || []).length; });
+  });
 
-  // メンバー別の納品貢献数 (= 簡易的に title に role キーワード含むか)
+  // 各メンバーの納品貢献数 (= 簡易キーワードマッチ)
   function _memberArtCount(role){
     var kw = String(role || '').toLowerCase();
     return allArts.filter(function(a){
       var t = String(a.title || a.filename || '').toLowerCase();
-      // analyst→分析, seo_writer→記事/seo, twitter→twitter等
-      if(kw === 'analyst' || kw === 'ec_analyst') return /分析|診断|レポート|analysis/i.test(t);
-      if(kw === 'seo_writer' || kw === 'content_strategy' || kw === 'local_blogger' || kw === 'sales_writer' || kw === 'writer') return /記事|ブログ|seo|blog/i.test(t);
-      if(kw === 'community' || kw === 'twitter') return /twitter|x|sns|reddit/i.test(t);
-      if(kw === 'instagram') return /instagram|insta/i.test(t);
-      if(kw === 'linkedin') return /linkedin/i.test(t);
-      if(kw === 'cro' || kw === 'booking_funnel' || kw === 'lead_gen') return /cro|cv|lp|cta|フォーム/i.test(t);
-      if(kw === 'email' || kw === 'newsletter') return /メール|mail|メルマガ|newsletter/i.test(t);
-      if(kw === 'product_writer' || kw === 'creative_director') return /商品|product/i.test(t);
-      if(kw === 'review_strategy' || kw === 'review_mgmt') return /レビュー|口コミ|review/i.test(t);
+      // role キーワード → 検索パターンの簡易対応
+      if(/seo_writer|longform|tutorial|case_study|writer|blogger|opinion|listicle|product_writer|pdp_copy/.test(kw))
+        return /記事|ブログ|seo|blog|長文|chapter/i.test(t);
+      if(/x_thread|x_reply|thread/.test(kw)) return /twitter|x|thread|スレッド/i.test(t);
+      if(/instagram|reels/.test(kw)) return /instagram|insta|reel/i.test(t);
+      if(/linkedin/.test(kw)) return /linkedin/i.test(t);
+      if(/cro|cta|headline|form|onboarding|ab/.test(kw)) return /cro|cv|lp|cta|フォーム|ヘッドライン/i.test(t);
+      if(/email|newsletter|drip|lead_magnet|welcome|winback/.test(kw)) return /メール|mail|メルマガ|newsletter|drip/i.test(t);
+      if(/competitor|swot|pricing|trend|persona|demand/.test(kw)) return /競合|分析|診断|trend|persona/i.test(t);
+      if(/analyst|ga4|search_console|funnel|cohort|anomaly|attribution/.test(kw)) return /分析|レポート|ga4|funnel|cohort/i.test(t);
+      if(/review|gbp/.test(kw)) return /レビュー|口コミ|review|gbp/i.test(t);
+      if(/llmstxt|schema|reddit|comparison|quora|citation/.test(kw)) return /aeo|llms|schema|reddit|比較|quora/i.test(t);
       return false;
     }).length;
   }
 
-  var memberCards = members.map(function(m, i){
-    var ic = _MEMBER_ICONS[m.role] || '🤖';
-    var color = ROLE_ACCENT[m.role] || '#fb923c';
-    var name = m.name || 'AI';
-    var focus = m.focus || '';
+  // 役割別 emoji の簡易マッピング (= TEAM_PRESETS が動的なので大まかに)
+  var ROLE_ICON_KW = [
+    [/keyword|kw_strategist/, '🔑'],
+    [/seo_writer|longform|tutorial|case_study|writer|blogger|opinion|listicle|howto/, '✍️'],
+    [/tech_seo|internal_link|eeat|schema|llms_txt/, '🛠'],
+    [/aeo|reddit|comparison|quora|citation/, '🤖'],
+    [/x_thread|x_reply|x_viral|x_profile|x_authority/, '🐦'],
+    [/linkedin/, '💼'],
+    [/instagram|tiktok|reel|pinterest|youtube|video_script/, '📱'],
+    [/ih|hn|community|substack/, '💬'],
+    [/ga4|search_console|analyst|anomaly|funnel|cohort|attribution/, '📊'],
+    [/competitor|swot|pricing|trend|persona|demand/, '🔍'],
+    [/cro|cta|headline|form|onboarding|ab|lp_diagn|pdp/, '🎯'],
+    [/email|newsletter|drip|lead_magnet|welcome|winback|post_purchase/, '📧'],
+    [/line|sms/, '💌'],
+    [/review|gbp/, '⭐'],
+    [/product|bundle|upsell|inventory|shopping|pmax/, '🛒'],
+    [/local|booking|phone/, '🗺'],
+    [/infographic|visual/, '🎨'],
+    [/influencer|affiliate|ugc/, '🤝'],
+    [/dm_script|cold_email|proposal|outreach|sales/, '💼'],
+    [/pm|operator|editor|proofreader|researcher|data_collector/, '🛠'],
+  ];
+  function _roleIcon(role){
+    var r = String(role || '').toLowerCase();
+    for(var i = 0; i < ROLE_ICON_KW.length; i++){
+      if(ROLE_ICON_KW[i][0].test(r)) return ROLE_ICON_KW[i][1];
+    }
+    return '🤖';
+  }
+
+  // 1 メンバー の card HTML
+  function _renderMember(m, deptColor){
+    var ic = _roleIcon(m.role);
     var artN = _memberArtCount(m.role);
-    var isLive = !!(window._streamingAgents && window._streamingAgents.has(site.id))
-              || (site.id === window._streamingAgentId);
-    return '<div class="sd-agent-card" style="--ag-c:' + color + '">'
-         +   '<div class="sd-agent-bar"></div>'
-         +   '<div class="sd-agent-head">'
-         +     '<div class="sd-agent-ic">' + ic + (isLive && i === 0 ? '<span class="sd-agent-live"></span>' : '') + '</div>'
-         +     '<div class="sd-agent-meta">'
-         +       '<div class="sd-agent-name">' + esc(name) + '</div>'
-         +       '<div class="sd-agent-role">' + esc(m.role || 'AI agent') + '</div>'
-         +     '</div>'
-         +     '<div class="sd-agent-stat">'
-         +       '<div class="sd-agent-stat-v">' + artN + '</div>'
-         +       '<div class="sd-agent-stat-l">納品</div>'
-         +     '</div>'
+    var promptText = m.name + ' (' + (m.role || 'AI') + ') に依頼: ';
+    return '<div class="sd-mb" style="--ag-c:' + deptColor + '" title="' + esc(m.focus || '') + '">'
+         +   '<div class="sd-mb-ic">' + ic + '</div>'
+         +   '<div class="sd-mb-bd">'
+         +     '<div class="sd-mb-nm">' + esc(m.name || 'AI') + '</div>'
+         +     '<div class="sd-mb-fc">' + esc(m.focus || '') + '</div>'
          +   '</div>'
-         +   '<div class="sd-agent-focus">' + esc(focus) + '</div>'
-         +   '<div class="sd-agent-foot">'
-         +     '<button class="sd-agent-ask" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(name + 'に依頼: ').replace(/'/g, '&#39;') + ')" title="このメンバーを名指しで依頼">'
-         +       '💬 依頼する'
-         +     '</button>'
-         +     '<button class="sd-agent-info" onclick="_showAgentMemberDetail(\'' + esc(site.id) + '\',' + i + ')" title="詳細を見る">'
-         +       'ℹ︎'
-         +     '</button>'
+         +   (artN > 0 ? '<div class="sd-mb-n" title="納品物 ' + artN + ' 件">' + artN + '</div>' : '')
+         +   '<button class="sd-mb-ask" onclick="event.stopPropagation();_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(promptText).replace(/'/g, '&#39;') + ')" title="このメンバーに依頼">💬</button>'
+         + '</div>';
+  }
+
+  // 1 チームの HTML (= memberの list)
+  function _renderTeam(t, deptColor){
+    var teamN = (t.members || []).length;
+    return '<div class="sd-org-team">'
+         +   '<div class="sd-org-team-h">'
+         +     '<span class="sd-org-team-nm">' + esc(t.name) + '</span>'
+         +     '<span class="sd-org-team-n">' + teamN + ' 名</span>'
+         +   '</div>'
+         +   '<div class="sd-org-team-members">'
+         +     (t.members || []).map(function(m){ return _renderMember(m, deptColor); }).join('')
          +   '</div>'
          + '</div>';
-  }).join('');
+  }
 
-  // ヘッダー (チーム全体のサマリ)
+  // 1 部門の HTML (= teams の grid)
+  function _renderDept(d){
+    var deptMembers = (d.teams || []).reduce(function(s, t){ return s + (t.members || []).length; }, 0);
+    return '<div class="sd-org-dept" style="--dept-c:' + d.color + '">'
+         +   '<div class="sd-org-dept-h">'
+         +     '<div class="sd-org-dept-ic">' + d.icon + '</div>'
+         +     '<div class="sd-org-dept-meta">'
+         +       '<div class="sd-org-dept-nm">' + esc(d.name) + '</div>'
+         +       '<div class="sd-org-dept-sub">' + deptMembers + ' 名 ・ ' + (d.teams || []).length + ' チーム</div>'
+         +     '</div>'
+         +     '<button class="sd-org-dept-ask" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(d.name + 'に依頼: ').replace(/'/g, '&#39;') + ')" title="この部門に依頼">部門に依頼 →</button>'
+         +   '</div>'
+         +   '<div class="sd-org-dept-teams">'
+         +     (d.teams || []).map(function(t){ return _renderTeam(t, d.color); }).join('')
+         +   '</div>'
+         + '</div>';
+  }
+
+  // ── 全体ヘッダー (= 「○○名のマーケ組織」感を出す) ──
   var headerHTML = ''
-    + '<div class="sd-agents-h">'
-    +   '<div class="sd-agents-h-l">'
-    +     '<div class="sd-agents-h-ti">🤖 AI チームメンバー <span class="sd-agents-h-n">' + members.length + ' 名</span></div>'
-    +     '<div class="sd-agents-h-sub">あなたのサイト専属の AI チーム。役割ごとに分業して集客を加速します。</div>'
+    + '<div class="sd-org-h">'
+    +   '<div class="sd-org-h-l">'
+    +     '<div class="sd-org-h-tag"><span class="sd-rp-dot"></span>あなた専属の AI マーケティング組織</div>'
+    +     '<div class="sd-org-h-ti">🏢 ' + totalMembers + ' 名の AI 専門組織</div>'
+    +     '<div class="sd-org-h-sub">' + org.departments.length + ' 部門 ・ 各部門の AI が 1 つの手法に特化。クリックでそのメンバーに直接依頼できます。</div>'
     +   '</div>'
-    +   '<div class="sd-agents-h-r">'
-    +     '<div class="sd-agents-h-stat"><div class="v">' + allArts.length + '</div><div class="l">累計納品</div></div>'
-    +     '<div class="sd-agents-h-stat"><div class="v">' + weekly.artifacts + '</div><div class="l">今週</div></div>'
-    +   '</div>'
+    +   '<button class="sd-org-h-edit" onclick="openEditAgent(\'' + esc(site.id) + '\')" title="組織編成を変更">⚙ 編成を編集</button>'
     + '</div>';
 
-  // 「+ メンバーを追加」 CTA (= チーム編集に飛ぶ)
-  var addCard = ''
-    + '<div class="sd-agent-add" onclick="openEditAgent(\'' + esc(site.id) + '\')">'
-    +   '<div class="sd-agent-add-ic">+</div>'
-    +   '<div class="sd-agent-add-lbl">メンバーを追加 / 編集</div>'
-    +   '<div class="sd-agent-add-sub">チーム編成を変更</div>'
+  // ── 部門グリッド (= 大きい column 表示) ──
+  var orgHTML = ''
+    + '<div class="sd-org-chart">'
+    +   org.departments.map(_renderDept).join('')
     + '</div>';
 
-  return headerHTML
-    + '<div class="sd-agent-grid">' + memberCards + addCard + '</div>';
+  return headerHTML + orgHTML;
 }
 
 // メンバー詳細 popout (= 軽量 alert で OK)

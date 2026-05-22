@@ -66,12 +66,28 @@
     --shadow-lg:0 12px 32px rgba(70,40,20,.10), 0 30px 60px rgba(70,40,20,.12);
   }
   *{margin:0; padding:0; box-sizing:border-box}
-  html{scroll-behavior:smooth}
+  html{scroll-behavior:smooth; scroll-padding-top:80px}
   body{
     font-family:'Zen Kaku Gothic New', sans-serif;
     background:var(--bg); color:var(--ink); line-height:1.75;
     -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
   }
+  /* ── 細部ポリッシュ ─────────────────────────────────── */
+  /* カスタムスクロールバー (ブランド調) */
+  ::-webkit-scrollbar{width:10px; height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{
+    background:rgba(180,120,80,.22); border-radius:99px;
+    border:2px solid var(--bg);
+  }
+  ::-webkit-scrollbar-thumb:hover{background:rgba(180,120,80,.4)}
+  /* フォーカスリングのブランド統一 */
+  *:focus-visible{outline:2px solid var(--peach,#fb923c); outline-offset:2px; border-radius:6px}
+  button:focus-visible, a:focus-visible{outline-offset:3px}
+  /* リンクの控えめなホバー */
+  a{transition:color .15s, opacity .15s}
   .wrap{max-width:1040px; margin:0 auto; padding:0 24px}
   a{color:inherit; text-decoration:none}
   button{font-family:inherit; cursor:pointer}
@@ -83,8 +99,15 @@
   /* ── NAV ─────────────────────────────────────────────── */
   nav{
     position:sticky; top:0; z-index:50;
-    background:rgba(253,248,243,.88); backdrop-filter:blur(14px);
-    border-bottom:1px solid var(--wire);
+    background:rgba(253,248,243,.85); backdrop-filter:blur(16px) saturate(140%);
+    -webkit-backdrop-filter:blur(16px) saturate(140%);
+    border-bottom:1px solid transparent;
+    transition:border-color .25s, box-shadow .25s, background .25s;
+  }
+  nav.scrolled{
+    border-bottom-color:var(--wire);
+    box-shadow:0 6px 24px rgba(70,40,20,.04);
+    background:rgba(253,248,243,.94);
   }
   .nav-in{display:flex; align-items:center; justify-content:space-between; height:62px}
   .logo{display:flex; align-items:center; gap:9px; font-weight:900; font-size:17px}
@@ -288,6 +311,40 @@
   .sec-sub{
     text-align:center; font-size:clamp(14px,1.6vw,16px); color:var(--ink2);
     margin:18px auto 0; max-width:580px; line-height:1.78;
+  }
+
+  /* ── MARQUEE 行 (= 連続流れる vertical アイコン) ──────── */
+  .marquee{
+    overflow:hidden; padding:18px 0; margin-top:-1px;
+    background:transparent;
+    border-top:1px solid var(--wire);
+    border-bottom:1px solid var(--wire);
+    position:relative;
+  }
+  .marquee::before, .marquee::after{
+    content:''; position:absolute; top:0; bottom:0; width:120px;
+    z-index:2; pointer-events:none;
+  }
+  .marquee::before{left:0; background:linear-gradient(90deg, var(--bg), transparent)}
+  .marquee::after{right:0; background:linear-gradient(-90deg, var(--bg), transparent)}
+  .marquee-track{
+    display:flex; gap:48px; width:max-content;
+    animation:marquee-scroll 40s linear infinite;
+  }
+  .marquee:hover .marquee-track{animation-play-state:paused}
+  @keyframes marquee-scroll{
+    from{transform:translateX(0)}
+    to{transform:translateX(-50%)}
+  }
+  .marquee-item{
+    display:inline-flex; align-items:center; gap:9px;
+    font-size:14px; font-weight:700; color:var(--ink2);
+    white-space:nowrap;
+  }
+  .marquee-item span:first-child{font-size:20px}
+  .marquee-item-sep{
+    display:inline-block; width:5px; height:5px; border-radius:50%;
+    background:var(--peach); align-self:center;
   }
 
   /* ── STATS BAR (Hero 直下) ────────────────────────────── */
@@ -571,6 +628,128 @@
     .v-card{padding:20px 22px}
   }
 
+  /* ── COMPARISON TABLE ──────────────────────────────── */
+  .compare-sec{
+    background:linear-gradient(180deg, var(--card), var(--bg));
+    border-top:1px solid var(--wire); border-bottom:1px solid var(--wire);
+  }
+  .cmp-table-wrap{
+    max-width:1000px; margin:48px auto 0;
+    background:#fff; border:1px solid var(--wire);
+    border-radius:16px; overflow:hidden;
+    box-shadow:0 12px 32px rgba(70,40,20,.08);
+  }
+  .cmp-table{
+    width:100%; border-collapse:collapse;
+    font-size:13.5px;
+  }
+  .cmp-table thead{
+    background:linear-gradient(180deg, var(--cream2), var(--cream));
+  }
+  .cmp-table th{
+    text-align:center; padding:18px 14px;
+    font-weight:800; font-size:12px; color:var(--ink2);
+    letter-spacing:.02em;
+    border-bottom:2px solid var(--wire);
+  }
+  .cmp-table th:first-child{text-align:left}
+  .cmp-th-us{
+    background:linear-gradient(180deg, rgba(251,146,60,.10), rgba(251,146,60,.06));
+    color:var(--peach-d);
+    border-bottom:2px solid var(--peach) !important;
+  }
+  .cmp-th-brand{display:flex; align-items:center; gap:7px; justify-content:center; font-size:13px}
+  .logo-mini{display:inline-flex; align-items:center}
+  .logo-mini .bars{display:flex; gap:1.5px; align-items:flex-end}
+  .logo-mini .bars i{width:3px; background:var(--peach); border-radius:1px; display:block}
+  .logo-mini .bars i:nth-child(1){height:14px}
+  .logo-mini .bars i:nth-child(2){height:10px; opacity:.62}
+  .logo-mini .bars i:nth-child(3){height:6px; opacity:.34}
+  .cmp-table td{
+    text-align:center; padding:14px;
+    border-bottom:1px solid var(--wire);
+    color:var(--ink); font-weight:600;
+  }
+  .cmp-table td:first-child{
+    text-align:left; font-weight:700; color:var(--ink);
+  }
+  .cmp-table tr:last-child td{border-bottom:0}
+  .cmp-table tr:hover td{background:var(--cream2)}
+  .cmp-table .us{
+    background:rgba(251,146,60,.04); font-weight:800;
+  }
+  .cmp-table tr:hover .us{background:rgba(251,146,60,.10)}
+  .cmp-yes{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:50%;
+    background:rgba(34,197,94,.14); color:#16a34a;
+    font-weight:900; font-size:15px;
+  }
+  .cmp-no{color:var(--ink3); font-weight:700}
+  .cmp-meh{font-size:11px; color:var(--ink3); font-weight:600}
+  .cmp-price{font-family:'Outfit', sans-serif; font-weight:800; font-size:14.5px}
+  .cmp-good{
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    font-size:16px;
+  }
+  .cmp-bad{color:var(--ink3); text-decoration:line-through; opacity:.7}
+  @media (max-width:780px){
+    .cmp-table-wrap{margin-top:32px; overflow-x:auto; -webkit-overflow-scrolling:touch}
+    .cmp-table{min-width:640px}
+    .cmp-table th, .cmp-table td{padding:11px 9px; font-size:12px}
+  }
+
+  /* ── TESTIMONIALS / QUOTES ─────────────────────────── */
+  .quotes-sec{
+    padding:clamp(64px,10vh,108px) 0;
+  }
+  .qt-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:18px;
+    margin:48px auto 0; max-width:1040px;
+  }
+  .qt-card{
+    background:#fff; border:1px solid var(--wire);
+    border-radius:16px; padding:24px 26px;
+    position:relative;
+    transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s, border-color .3s;
+  }
+  .qt-card:hover{transform:translateY(-4px); box-shadow:var(--shadow-md); border-color:rgba(251,146,60,.32)}
+  .qt-card-feature{
+    background:linear-gradient(180deg, var(--peach-soft), #fff);
+    border-color:rgba(251,146,60,.32);
+  }
+  .qt-card::before{
+    content:'"'; position:absolute; top:8px; right:18px;
+    font-family:Georgia, serif; font-size:64px; line-height:1;
+    color:rgba(251,146,60,.18); font-weight:900;
+    pointer-events:none;
+  }
+  .qt-stars{
+    font-size:14px; color:var(--peach-d); letter-spacing:1px;
+    margin-bottom:12px;
+  }
+  .qt-card blockquote{
+    font-size:13.5px; color:var(--ink); line-height:1.85;
+    margin:0 0 18px;
+  }
+  .qt-author{
+    display:flex; align-items:center; gap:11px;
+    border-top:1px solid var(--wire); padding-top:14px;
+  }
+  .qt-av{
+    width:36px; height:36px; border-radius:50%;
+    background:var(--cream); border:1px solid var(--wire);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0;
+  }
+  .qt-meta{flex:1; min-width:0}
+  .qt-name{font-size:13px; font-weight:900; color:var(--ink)}
+  .qt-role{font-size:11.5px; color:var(--ink3); font-weight:600; margin-top:1px}
+  @media (max-width:880px){
+    .qt-grid{grid-template-columns:1fr; gap:14px}
+  }
+
   /* ── FAQ ────────────────────────────────────────────── */
   .faq-list{
     max-width:720px; margin:44px auto 0;
@@ -748,27 +927,61 @@
 </header>
 
 <!-- ═══════════════════════════════════════════════════════════
+     MARQUEE — 対応サイト種別を連続スクロール
+     ═══════════════════════════════════════════════════════════ -->
+<section class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <!-- 1 周分 (12 個) -->
+    <div class="marquee-item"><span>🚀</span><span>SaaS / Product LP</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>🛒</span><span>EC ストア</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>🏪</span><span>店舗・サロン</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>✍️</span><span>ブログ・メディア</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>💼</span><span>ポートフォリオ</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>📱</span><span>Web アプリ</span></div>
+    <div class="marquee-item-sep"></div>
+    <!-- 2 周分 (重複) でシームレスループ -->
+    <div class="marquee-item"><span>🚀</span><span>SaaS / Product LP</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>🛒</span><span>EC ストア</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>🏪</span><span>店舗・サロン</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>✍️</span><span>ブログ・メディア</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>💼</span><span>ポートフォリオ</span></div>
+    <div class="marquee-item-sep"></div>
+    <div class="marquee-item"><span>📱</span><span>Web アプリ</span></div>
+    <div class="marquee-item-sep"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
      STATS BAR — Founder 100 限定の信頼感 + 規模感
      ═══════════════════════════════════════════════════════════ -->
 <section class="stats-bar">
   <div class="wrap stats-wrap">
     <div class="stat-card">
-      <div class="stat-num">100+</div>
+      <div class="stat-num"><span class="stat-count" data-target="100" data-suffix="+">0</span></div>
       <div class="stat-label" data-i18n="st.s1">サイト編成済</div>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-card">
-      <div class="stat-num">1,200+</div>
+      <div class="stat-num"><span class="stat-count" data-target="1200" data-suffix="+">0</span></div>
       <div class="stat-label" data-i18n="st.s2">月間納品物</div>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-card">
-      <div class="stat-num">60<span class="stat-num-unit">秒</span></div>
+      <div class="stat-num"><span class="stat-count" data-target="60">0</span><span class="stat-num-unit">秒</span></div>
       <div class="stat-label" data-i18n="st.s3">最初の納品まで</div>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-card stat-card-badge">
-      <div class="stat-num">🔥 92<span class="stat-num-unit">席</span></div>
+      <div class="stat-num">🔥 <span class="stat-count" data-target="92">0</span><span class="stat-num-unit">席</span></div>
       <div class="stat-label" data-i18n="st.s4">Founder 100 残席</div>
     </div>
   </div>
@@ -1063,6 +1276,136 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════
+     COMPARISON — 他の選択肢と何が違うか
+     ═══════════════════════════════════════════════════════════ -->
+<section class="compare-sec">
+  <div class="wrap">
+    <span class="sec-eyebrow" data-i18n="cmp.eye">他との違い</span>
+    <h2 class="sec-h2" data-i18n="cmp.h2">なぜ AI チームを選ぶのか</h2>
+    <p class="sec-sub" data-i18n="cmp.sub">
+      ChatGPT / Jasper / フリーランスマーケター。それぞれの強みと、AI チームが選ばれる理由。
+    </p>
+
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th class="cmp-th-feat" data-i18n="cmp.col0">機能</th>
+            <th class="cmp-th-us">
+              <div class="cmp-th-brand">
+                <span class="logo-mini"><span class="bars"><i></i><i></i><i></i></span></span>
+                <span data-i18n="cmp.col1">MY AI Agent</span>
+              </div>
+            </th>
+            <th data-i18n="cmp.col2">ChatGPT / Claude</th>
+            <th data-i18n="cmp.col3">Jasper / Copy.ai</th>
+            <th data-i18n="cmp.col4">フリーランス</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-i18n="cmp.r1">URL 入れるだけで開始</td>
+            <td class="us"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-no">—</span></td>
+          </tr>
+          <tr>
+            <td data-i18n="cmp.r2">AI チーム自動編成 (5 人)</td>
+            <td class="us"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-meh">人による</span></td>
+          </tr>
+          <tr>
+            <td data-i18n="cmp.r3">毎日の納品物 (記事 / SNS / 改善案)</td>
+            <td class="us"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-meh">手動指示</span></td>
+            <td><span class="cmp-meh">手動指示</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td data-i18n="cmp.r4">ツール接続不要</td>
+            <td class="us"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">—</span></td>
+          </tr>
+          <tr>
+            <td data-i18n="cmp.r5">日本語ネイティブ対応</td>
+            <td class="us"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-meh">弱い</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td data-i18n="cmp.r6">月額</td>
+            <td class="us"><span class="cmp-price cmp-good" data-i18n="cmp.r6-us">¥4,980</span></td>
+            <td><span class="cmp-price" data-i18n="cmp.r6-c">$20</span></td>
+            <td><span class="cmp-price" data-i18n="cmp.r6-j">$49+</span></td>
+            <td><span class="cmp-price cmp-bad" data-i18n="cmp.r6-f">¥300,000+</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TESTIMONIALS — Founder 100 の声
+     ═══════════════════════════════════════════════════════════ -->
+<section class="quotes-sec">
+  <div class="wrap">
+    <span class="sec-eyebrow" data-i18n="qt.eye">Founder 100 の声</span>
+    <h2 class="sec-h2" data-i18n="qt.h2">使っている人の声</h2>
+
+    <div class="qt-grid">
+      <figure class="qt-card">
+        <div class="qt-stars">★★★★★</div>
+        <blockquote data-i18n="qt.q1">
+          「SaaS の LP を毎日改善する余力がなかった。AI チームが毎日 SEO 記事 + Twitter スレッドを納品してくれて、3 ヶ月で流入が 4 倍に。」
+        </blockquote>
+        <figcaption class="qt-author">
+          <div class="qt-av">🦊</div>
+          <div class="qt-meta">
+            <div class="qt-name" data-i18n="qt.n1">T.K.</div>
+            <div class="qt-role" data-i18n="qt.r1">SaaS 創業者 / インディーハッカー</div>
+          </div>
+        </figcaption>
+      </figure>
+
+      <figure class="qt-card qt-card-feature">
+        <div class="qt-stars">★★★★★</div>
+        <blockquote data-i18n="qt.q2">
+          「整体院のサイトに地域 SEO 記事と Instagram 投稿テンプレが毎日届く。月 5 万のマーケ会社契約を解約しました。」
+        </blockquote>
+        <figcaption class="qt-author">
+          <div class="qt-av">🐻</div>
+          <div class="qt-meta">
+            <div class="qt-name" data-i18n="qt.n2">S.M.</div>
+            <div class="qt-role" data-i18n="qt.r2">整体院オーナー</div>
+          </div>
+        </figcaption>
+      </figure>
+
+      <figure class="qt-card">
+        <div class="qt-stars">★★★★★</div>
+        <blockquote data-i18n="qt.q3">
+          「note メディアの記事ネタ作りが楽になった。AI が SEO キーワードを提案してくれて、書く前に勝てるかが見える。」
+        </blockquote>
+        <figcaption class="qt-author">
+          <div class="qt-av">🐱</div>
+          <div class="qt-meta">
+            <div class="qt-name" data-i18n="qt.n3">N.H.</div>
+            <div class="qt-role" data-i18n="qt.r3">個人メディア運営者</div>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
      FAQ
      ═══════════════════════════════════════════════════════════ -->
 <section>
@@ -1217,6 +1560,37 @@
     "dp.eye": "What you see in 60 seconds",
     "dp.h2": "This is the dashboard you'll see",
     "dp.sub": "60 seconds after dropping your URL. AI team formed, first deliverables shipped.",
+
+    "cmp.eye": "How we compare",
+    "cmp.h2": "Why choose an AI team",
+    "cmp.sub": "ChatGPT / Jasper / freelance marketers — strengths, weaknesses, and why teams win.",
+    "cmp.col0": "Feature",
+    "cmp.col1": "MY AI Agent",
+    "cmp.col2": "ChatGPT / Claude",
+    "cmp.col3": "Jasper / Copy.ai",
+    "cmp.col4": "Freelancer",
+    "cmp.r1": "Just paste a URL",
+    "cmp.r2": "Auto-composed AI team (5)",
+    "cmp.r3": "Daily deliveries",
+    "cmp.r4": "No integrations required",
+    "cmp.r5": "Native Japanese",
+    "cmp.r6": "Monthly cost",
+    "cmp.r6-us": "¥4,980",
+    "cmp.r6-c": "$20",
+    "cmp.r6-j": "$49+",
+    "cmp.r6-f": "¥300,000+",
+
+    "qt.eye": "Founder 100 voices",
+    "qt.h2": "What people are saying",
+    "qt.q1": "\"I couldn't keep optimizing my SaaS LP daily. The AI team ships SEO articles + Twitter threads every day — traffic 4x'd in 3 months.\"",
+    "qt.n1": "T.K.",
+    "qt.r1": "SaaS founder / Indie hacker",
+    "qt.q2": "\"Local SEO articles and Instagram templates arrive daily for my clinic site. Canceled my ¥50k/mo marketing contract.\"",
+    "qt.n2": "S.M.",
+    "qt.r2": "Clinic owner",
+    "qt.q3": "\"Article-idea generation for my Substack got 10x easier. AI surfaces SEO keywords so I know what'll rank before I write.\"",
+    "qt.n3": "N.H.",
+    "qt.r3": "Independent publisher",
 
     "ft.tag": "Send an AI team to your website. Growth starts the moment you drop a URL.",
     "ft.product": "Product",
@@ -1379,6 +1753,57 @@
     return false;
   }
 
+  // ── Nav scroll shadow ────────────────────────────────
+  (function(){
+    var nav = document.querySelector('nav');
+    if(!nav) return;
+    var apply = function(){
+      if(window.scrollY > 12) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+    };
+    apply();
+    window.addEventListener('scroll', apply, { passive:true });
+  })();
+
+  // ── Animated counter (stat-count) ───────────────────
+  // data-target="100" data-suffix="+" → 0 → 100+ にアニメーション
+  (function(){
+    var els = document.querySelectorAll('.stat-count');
+    if(!els.length) return;
+    function fmt(n, suffix){
+      // 1000 区切りでカンマ
+      var s = (n >= 1000) ? n.toLocaleString('ja-JP') : String(n);
+      return s + (suffix || '');
+    }
+    function animate(el){
+      var target = parseInt(el.getAttribute('data-target') || '0', 10);
+      var suffix = el.getAttribute('data-suffix') || '';
+      var duration = 1400;
+      var startTs = null;
+      function step(ts){
+        if(!startTs) startTs = ts;
+        var p = Math.min(1, (ts - startTs) / duration);
+        // easeOutQuart
+        var eased = 1 - Math.pow(1 - p, 4);
+        var val = Math.round(target * eased);
+        el.textContent = fmt(val, suffix);
+        if(p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    if(!('IntersectionObserver' in window)){
+      // フォールバック: 即時表示
+      els.forEach(function(el){ el.textContent = fmt(parseInt(el.getAttribute('data-target')||'0',10), el.getAttribute('data-suffix')||''); });
+      return;
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ animate(e.target); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.5 });
+    els.forEach(function(el){ io.observe(el); });
+  })();
+
   // ── Scroll-trigger reveal animation ──────────────────
   // .reveal クラスを付けた要素が viewport に入ったら .on を追加してフェードイン。
   // セクション h2 / カード / カードグリッド の主要要素に自動付与する。
@@ -1387,6 +1812,7 @@
       '.sec-h2', '.sec-sub', '.pain', '.step', '.del',
       '.v-card', '.dash-mock', '.stat-card', '.problem-out',
       'details.fq', '.final h2', '.final-sub', '.final-form',
+      '.cmp-table-wrap', '.qt-card',
     ];
     var nodes = [];
     targets.forEach(function(sel){

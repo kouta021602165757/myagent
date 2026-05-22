@@ -622,22 +622,22 @@ async function doSignup() {
       } catch(e){ /* fall through to normal redirect */ }
     }
 
-    // ── 「Web サイト集客」 onboarding 経路: site_url がある場合は AI チームを自動編成 ──
+    // ── 「Web サイト集客」 onboarding 経路: site_url があれば AI チーム自動編成 ──
     //   1) サーバ側で URL → vertical 判定 → agent (= site team) 作成
-    //   2) 成功時は /onboarding.html?agent_id=... に redirect (= スプラッシュ画面)
-    //   3) スプラッシュが SSE で 5 artifact 並列生成の進捗を表示
-    //   4) 完了後にスプラッシュが /app.html に redirect
+    //   2) 成功時はそのまま /app.html?agent_id=...&kickoff=1 に redirect (チャット画面)
+    //   3) チャット画面で artifact 生成 SSE を裏で走らせ、進捗を chat に live 表示
+    //   4) ユーザーは splash 待ちじゃなく、チャットを通じて AI が「動いてる感」を体感
     if(siteUrl){
       setLoading('s-btn', true, L('AI チームを編成中…','Forming AI team…'));
       try {
         var onb = await post('/api/onboarding/site', { site_url: siteUrl });
         try { localStorage.removeItem('pendingSiteUrl'); } catch(e){}
         if(onb && onb.agent && onb.agent.id){
-          window.location.href = '/onboarding.html?agent_id=' + encodeURIComponent(onb.agent.id);
+          window.location.href = '/app.html?agent_id=' + encodeURIComponent(onb.agent.id) + '&kickoff=1';
           return;
         }
       } catch(e){
-        // onboarding 失敗してもユーザーは登録済 → 通常 redirect で旧 UI に着地
+        // onboarding 失敗してもユーザーは登録済 → 通常 redirect で /app.html に着地
         console.warn('[signup] onboarding/site failed:', e && e.message);
         try { localStorage.removeItem('pendingSiteUrl'); } catch(e){}
       }

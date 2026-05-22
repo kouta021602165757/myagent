@@ -2312,10 +2312,13 @@ document.addEventListener('DOMContentLoaded',async()=>{
     try { await fetchJoinedGroups(); } catch(e){ console.warn('[groups] fetch failed:', e.message); }
     // If URL has ?openAgent=ag_xxx (e.g., from invite redirect), focus that one.
     // ?joined=1 means the user just completed an invite → toast a welcome.
+    // ?agent_id=ag_xxx&kickoff=1 means signup just finished and the site agent was
+    //   created — open the chat and stream 6 artifact generations into the chat.
     try {
       var qs0 = new URLSearchParams(location.search);
-      var qsOpen = qs0.get('openAgent');
+      var qsOpen = qs0.get('openAgent') || qs0.get('agent_id');
       var qsJoined = qs0.get('joined') === '1';
+      var qsKickoff = qs0.get('kickoff') === '1';
       if(qsOpen){
         history.replaceState({}, '', location.pathname);
         // Defer until after agent list renders
@@ -2330,6 +2333,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
               // at the top of the chat. Dismissable + persisted per-agent.
               _showJoinWelcomeBanner(qsOpen);
             } catch(e){}
+          }
+          if(qsKickoff){
+            try { _kickoffOnboardingChat(qsOpen); } catch(e){ console.warn('[kickoff]', e); }
           }
         }, 200);
       }
@@ -2516,6 +2522,150 @@ function goHome(){
   try{ document.querySelectorAll('.ag-item').forEach(el=>el.classList.remove('on')); }catch(e){}
   try{ renderHomeDashboard(); }catch(e){}
   if(typeof _stopGroupPoll === 'function') _stopGroupPoll();
+}
+
+// チャット上部の「📊 ダッシュボード」ボタンから呼ばれる。
+// activeId は維持したまま (= サイドバーで site が selected な状態)、
+// メイン pane を chat → home dashboard に切替。サイトの dashboard が
+// その site の情報で render される (= renderHomeDashboard が activeId を見る)。
+function goSiteDashboard(){
+  document.getElementById('emptyWrap').style.display='';
+  document.getElementById('chatWrap').style.display='none';
+  try { renderHomeDashboard(); } catch(e){}
+  // スクロールを上に
+  var el = document.getElementById('emptyWrap');
+  if(el) el.scrollTop = 0;
+}
+
+/* ── Onboarding kickoff: signup 直後にチャット画面で artifact 生成を live 表示 ──
+   /api/onboarding/site で agent を作った直後、auth.html が /app.html?agent_id=X&kickoff=1
+   に redirect する。ここでチャットを開いた後、SSE で 6 artifact 並列生成の進捗を
+   chat の中に「AI からのメッセージ」として live 表示。
+
+   ユーザー体験:
+   - チャット画面に着地した瞬間、AI から「受領しました!」メッセージが届く
+   - 6 個の納品物のチェックリスト (一つずつ ✅ に変わる) が live update
+   - 各完成時に artifact カードがメッセージに追加される
+   - スプラッシュ画面で待つより遥かに「動いてる感」が出る */
+async function _kickoffOnboardingChat(agentId){
+  if(!agentId) return;
+  var ag = agents.find(function(a){ return a && a.id === agentId; });
+  if(!ag) return;
+  // すでに onboarding 走った agent ならスキップ (= 二重発火防止)
+  if(ag.history && ag.history.some(function(m){ return m && m.via_kickoff; })){
+    return;
+  }
+  var siteTitle = ag.site_title || _siteHostname(ag);
+
+  // 1) AI 受領メッセージを履歴に追加
+  var welcomeMsg = {
+    id: 'a_kickoff_' + Date.now(),
+    role: 'assistant',
+    time: now(),
+    via_kickoff: true,
+    content: '🎉 受領しました! **' + esc(siteTitle) + '** のためのチームを編成しました。\n\n'
+           + '👥 チームメンバー: ' + (ag.team_members||[]).map(function(m){return esc(m.name);}).join(' / ') + '\n\n'
+           + '📦 これから **6 件の納品物** を並列で作成します。完成順にお届けします。',
+  };
+  ag.history = (ag.history||[]).concat([welcomeMsg]);
+  renderMsgs(ag, true);
+
+  // 2) 進捗パネル用の "live" メッセージ (アップデートしていく)
+  var liveMsgId = 'a_live_' + Date.now();
+  var liveItems = [];  // [{n, total, title, status:'ing'|'done'|'err', url}]
+  function _renderLiveContent(){
+    var lines = liveItems.map(function(it){
+      var ic = it.status === 'done' ? '✅' : (it.status === 'err' ? '❌' : '⏳');
+      var link = (it.status === 'done' && it.url) ? ' → [開く](' + it.url + ')' : '';
+      return ic + ' ' + esc(it.title) + link;
+    }).join('\n');
+    return '⚡ **AI チームが作業中**\n\n' + lines;
+  }
+  var liveMsg = {
+    id: liveMsgId,
+    role: 'assistant',
+    time: now(),
+    via_kickoff: true,
+    content: '⚡ **AI チームが作業中**\n\n進捗を待っています…',
+    streaming: false,  // (= streaming UI ではなく完成型として表示)
+  };
+  ag.history.push(liveMsg);
+  renderMsgs(ag);
+
+  // 3) SSE で artifact 並列生成を開始
+  try {
+    var resp = await fetch('/api/onboarding/site/artifacts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''),
+      },
+      body: JSON.stringify({ agent_id: agentId }),
+    });
+    if(!resp.ok){
+      throw new Error('artifacts endpoint returned ' + resp.status);
+    }
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    var buf = '';
+    while(true){
+      var c = await reader.read();
+      if(c.done) break;
+      buf += decoder.decode(c.value, { stream: true });
+      var frames = buf.split('\n\n');
+      buf = frames.pop();
+      for(var i = 0; i < frames.length; i++){
+        var lines = frames[i].split('\n');
+        var ev = '', dat = '';
+        for(var j = 0; j < lines.length; j++){
+          var ln = lines[j];
+          if(ln.startsWith('event:')) ev = ln.slice(6).trim();
+          else if(ln.startsWith('data:')) dat += ln.slice(5).trim();
+        }
+        if(!ev) continue;
+        var p = null; try { p = JSON.parse(dat); } catch(_){}
+        if(ev === 'artifact_started' && p){
+          var existing = liveItems.find(function(x){ return x.n === p.n; });
+          if(existing){ existing.status = 'ing'; existing.title = p.title; }
+          else liveItems.push({ n: p.n, total: p.total, title: p.title, status: 'ing' });
+          liveItems.sort(function(a,b){return a.n - b.n;});
+        } else if(ev === 'artifact_done' && p){
+          var ex = liveItems.find(function(x){ return x.n === p.n; });
+          if(ex){
+            ex.status = p.error ? 'err' : 'done';
+            ex.url = p.url || '';
+            ex.title = p.title;
+          } else {
+            liveItems.push({ n: p.n, total: p.total, title: p.title, status: p.error?'err':'done', url: p.url||'' });
+          }
+          liveItems.sort(function(a,b){return a.n - b.n;});
+        } else if(ev === 'done' && p){
+          // 完了時に live message を最終版に更新
+          liveMsg.content = '🎉 **すべての納品物が完成しました!**\n\n'
+            + liveItems.map(function(it){
+                var link = it.url ? ' → [開く](' + it.url + ')' : '';
+                return '✅ ' + esc(it.title) + link;
+              }).join('\n')
+            + '\n\n📊 [ダッシュボードでまとめて見る](/app.html?dashboard=1)';
+          // local artifacts list を更新するために me を再 fetch
+          try {
+            var meR = await api('GET', '/api/me');
+            if(meR && meR.user){ me = meR.user; }
+          } catch(_){}
+          renderMsgs(ag);
+          showToast('✓ 6 件の納品物が完成しました', 'ok');
+          return;
+        }
+        // 進捗の都度 live メッセージを書き換え
+        liveMsg.content = _renderLiveContent();
+        renderMsgs(ag);
+      }
+    }
+  } catch(e){
+    console.warn('[kickoff] artifacts SSE failed:', e && e.message);
+    liveMsg.content = '⚠️ 納品物の生成中にエラーが発生しました: ' + esc(e.message || 'unknown');
+    renderMsgs(ag);
+  }
 }
 
 function updatePlanBadge(){
@@ -4262,6 +4412,10 @@ async function openAgent(id){
     actsHTML += '<button class="ct-act" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('共有メモ (メンバー全員で閲覧・編集)','Shared notes (visible & editable by all members)')+'">📝</button>';
     actsHTML += '<button class="ct-act" onclick="openGroupSettings(\''+ag.id+'\')" title="'+L('グループ設定','Group settings')+'">⚙</button>';
   } else {
+    // site agent (= site_url を持つ) なら最前部に「📊 ダッシュボード」ボタン
+    if(_isSiteAgent(ag)){
+      actsHTML += '<button class="ct-act dashboard-btn" onclick="goSiteDashboard()" title="'+L('ダッシュボード (KPI ・ 納品物 ・ 進捗)','Dashboard')+'">📊 ダッシュボード</button>';
+    }
     actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
     actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
     actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';

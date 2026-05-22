@@ -3333,6 +3333,41 @@ function _renderSiteDashboardHTML(site){
       + '</div>'
     : '<div class="sd-empty">まだ納品物がありません。チームに依頼してください。</div>';
 
+  // ── KPI 表示 (site.kpi に保存される目標値、未設定なら 0) ──
+  var kpi = site.kpi || {};
+  var kpiHTML = ''
+    + '<div class="sd-kpi-row">'
+    +   '<div class="sd-kpi-card">'
+    +     '<div class="sd-kpi-lbl">月間 PV 目標</div>'
+    +     '<div class="sd-kpi-val">' + (kpi.pv ? Number(kpi.pv).toLocaleString() : '<span class="sd-kpi-empty">—</span>') + '</div>'
+    +   '</div>'
+    +   '<div class="sd-kpi-card">'
+    +     '<div class="sd-kpi-lbl">目標 CVR</div>'
+    +     '<div class="sd-kpi-val">' + (kpi.cvr ? kpi.cvr + '<span class="sd-kpi-unit">%</span>' : '<span class="sd-kpi-empty">—</span>') + '</div>'
+    +   '</div>'
+    +   '<div class="sd-kpi-card">'
+    +     '<div class="sd-kpi-lbl">月間リード目標</div>'
+    +     '<div class="sd-kpi-val">' + (kpi.leads ? Number(kpi.leads).toLocaleString() : '<span class="sd-kpi-empty">—</span>') + '</div>'
+    +   '</div>'
+    +   '<button class="sd-kpi-edit" onclick="openKpiModal(\'' + esc(site.id) + '\')">'
+    +     '✏️ ' + (kpi.pv || kpi.cvr || kpi.leads ? '編集' : '設定する')
+    +   '</button>'
+    + '</div>';
+
+  // ── GA4 接続バナー (まだ接続してない場合) ──
+  var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
+  var ga4Banner = '';
+  if(!ga4Connected){
+    ga4Banner = '<div class="sd-ga4-banner">'
+      + '<div class="sd-ga4-ic">📊</div>'
+      + '<div class="sd-ga4-bd">'
+      +   '<div class="sd-ga4-h">より深く分析するには Google Analytics を接続</div>'
+      +   '<div class="sd-ga4-sub">流入数 / CVR / 滞在時間が AI の分析に反映されます</div>'
+      + '</div>'
+      + '<button class="sd-ga4-cta" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">接続する →</button>'
+      + '</div>';
+  }
+
   return '<div class="site-dash">'
     + '<div class="sd-head">'
     +   '<div class="sd-head-l">'
@@ -3346,6 +3381,9 @@ function _renderSiteDashboardHTML(site){
     +     '💬 AI チームに依頼 <span class="arrow">→</span>'
     +   '</button>'
     + '</div>'
+
+    + kpiHTML
+    + ga4Banner
 
     + '<div class="sd-grid">'
     +   '<div class="sd-card sd-card-progress">'
@@ -3427,6 +3465,66 @@ async function _submitAddSite(ev){
 function openSite(siteId){
   if(!siteId) return;
   try { openAgent(siteId); } catch(e){ console.warn('[openSite] openAgent failed:', e && e.message); }
+}
+
+// ── KPI 設定モーダル ──────────────────────────────────────
+// サイトの目標数値 (月間 PV / CVR / 月間リード数) を入力 → agent.kpi に保存。
+// GA4 連携時は実数値と比較する基準として使う。
+function openKpiModal(siteId){
+  if(!siteId) return;
+  var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
+  if(!ag) return;
+  var kpi = ag.kpi || {};
+  var existing = document.getElementById('kpiModal');
+  if(existing) existing.remove();
+  var html = '<div id="kpiModal" class="add-site-overlay" onclick="if(event.target===this)closeKpiModal()">'
+    + '<div class="add-site-card kpi-card">'
+    +   '<button class="add-site-close" onclick="closeKpiModal()">×</button>'
+    +   '<div class="add-site-tag"><span class="hm-tag-dot"></span>KPI 設定</div>'
+    +   '<h2>月間の目標を決める</h2>'
+    +   '<p>目標を設定すると、AI が達成度を毎日レポートしてくれます。空欄でも OK。</p>'
+    +   '<form class="kpi-form" onsubmit="return _submitKpi(event,\'' + esc(siteId) + '\')">'
+    +     '<label class="kpi-field">'
+    +       '<span class="kpi-lbl">月間 PV 目標</span>'
+    +       '<input type="number" id="kpiPv" min="0" placeholder="例: 10000" value="' + (kpi.pv || '') + '">'
+    +     '</label>'
+    +     '<label class="kpi-field">'
+    +       '<span class="kpi-lbl">目標 CVR (%)</span>'
+    +       '<input type="number" id="kpiCvr" min="0" step="0.1" placeholder="例: 2.5" value="' + (kpi.cvr || '') + '">'
+    +     '</label>'
+    +     '<label class="kpi-field">'
+    +       '<span class="kpi-lbl">月間リード / コンバージョン目標</span>'
+    +       '<input type="number" id="kpiLeads" min="0" placeholder="例: 50" value="' + (kpi.leads || '') + '">'
+    +     '</label>'
+    +     '<button type="submit" class="add-site-go">保存 <span class="arrow">→</span></button>'
+    +   '</form>'
+    + '</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  setTimeout(function(){ var inp = document.getElementById('kpiPv'); if(inp) inp.focus(); }, 50);
+}
+function closeKpiModal(){ var m = document.getElementById('kpiModal'); if(m) m.remove(); }
+async function _submitKpi(ev, siteId){
+  if(ev && ev.preventDefault) ev.preventDefault();
+  var pv = parseInt(document.getElementById('kpiPv').value || '0', 10) || 0;
+  var cvr = parseFloat(document.getElementById('kpiCvr').value || '0') || 0;
+  var leads = parseInt(document.getElementById('kpiLeads').value || '0', 10) || 0;
+  var btn = ev.target.querySelector('button[type="submit"]');
+  if(btn){ btn.disabled = true; btn.innerHTML = '保存中…'; }
+  try {
+    var r = await api('POST', '/api/agents/' + siteId + '/kpi', { pv: pv, cvr: cvr, leads: leads });
+    if(r && r.ok){
+      var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
+      if(ag) ag.kpi = { pv: pv, cvr: cvr, leads: leads };
+      closeKpiModal();
+      showToast('KPI を保存しました', 'ok');
+      try { renderHomeDashboard(); } catch(_){}
+    }
+  } catch(e){
+    showToast((e && e.message) || 'エラー', 'ng');
+    if(btn){ btn.disabled = false; btn.innerHTML = '保存 <span class="arrow">→</span>'; }
+  }
+  return false;
 }
 
 // ── 旧 agent → site migration モーダル ─────────────────────────

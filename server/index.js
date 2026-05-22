@@ -905,6 +905,7 @@ const TEAM_PRESETS = {
 ユーザーの SaaS プロダクトの集客成長が唯一の目的。記事 / SNS 投稿 / LP 改善案 / 競合分析 / メルマガを毎日 artifact として届けること。`,
     initial_artifact_prompts: [
       { type: 'diagnosis', title: 'サイト診断レポート', prompt: 'このサイトを分析し、集客面で最も改善すべき 3 点を提案。優先度 (高/中/低) + 期待される効果 + 実装難易度を明記。' },
+      { type: 'strategy', title: '戦略 + KPI 設計', prompt: 'SaaS LP の集客戦略を設計: (1) ターゲット顧客像、(2) 3 ヶ月後・6 ヶ月後の数値目標 (PV / CVR / トライアル登録数 / リード数)、(3) コンテンツマーケ施策 (SEO 記事の本数・テーマ・週次ペース)、(4) CVR 改善設計 (CTA / フォーム / ファネル)、(5) 月次アクション計画。具体的な数字とアクションリストを含めること。' },
       { type: 'blog', title: 'SEO ブログ記事ドラフト', prompt: 'ターゲット顧客が検索しそうなキーワード 1 つを選定し、検索意図に合致する 1500 字程度の技術ブログ記事を作成。' },
       { type: 'twitter', title: 'Twitter スレッドテンプレ', prompt: 'プロダクトの価値訴求のために X (Twitter) で投稿できる、共感を呼ぶスレッド (5 ツイート) を 1 本作成。' },
       { type: 'cro', title: 'LP CTR 改善案', prompt: '現在の LP の CTA / ボタンコピー / フォーム を分析し、CTR を上げる A/B テスト案を 3 つ提案。' },
@@ -935,6 +936,7 @@ const TEAM_PRESETS = {
 ユーザーの EC ストアの売上向上が唯一の目的。商品最適化 / SNS / レビュー / 広告 / 分析を毎日 artifact として届ける。`,
     initial_artifact_prompts: [
       { type: 'diagnosis', title: 'ストア診断レポート', prompt: 'この EC ストアを分析し、商品ページ・導線・SEO の観点で最も改善すべき 3 点を提案。' },
+      { type: 'strategy', title: '戦略 + KPI 設計', prompt: 'EC ストアの売上戦略を設計: (1) ターゲット顧客像、(2) 3 ヶ月後・6 ヶ月後の数値目標 (月間 PV / CVR / 客単価 / 月商)、(3) コンテンツ・SNS 施策 (Instagram / Pinterest 投稿頻度・テーマ)、(4) 商品ページ最適化計画、(5) リピーター獲得戦略、(6) 月次アクション計画。具体的な数字とアクションリストを含む。' },
       { type: 'product_seo', title: '売れ筋商品の SEO 最適化案', prompt: 'サイトから売れ筋と思われる商品を 3 つ推測し、それぞれの商品ページタイトル・説明文の SEO 改善案を提示。' },
       { type: 'instagram', title: 'Instagram 投稿テンプレ (1 週間分)', prompt: '商品を魅力的に見せる Instagram 投稿のアイデア 7 日分。キャプション + ハッシュタグ + 投稿時間提案を含む。' },
       { type: 'review', title: 'レビュー誘導メールフロー', prompt: '購入後 3 日 / 7 日 / 14 日でレビュー依頼を送るメールフローを作成。文面 3 本セット。' },
@@ -965,6 +967,7 @@ const TEAM_PRESETS = {
 ユーザーの店舗への来店数・予約数を増やすことが唯一の目的。地域密着の施策を毎日 artifact として届ける。`,
     initial_artifact_prompts: [
       { type: 'diagnosis', title: 'サイト診断 + 集客チャネル提案', prompt: 'この店舗サイトを分析し、地域集客の観点で最重要の改善点 3 つを提案。' },
+      { type: 'strategy', title: '戦略 + KPI 設計', prompt: '店舗集客の戦略を設計: (1) ターゲット顧客像 (地域・年齢層・性別)、(2) 3 ヶ月後・6 ヶ月後の数値目標 (月間来店数 / 予約数 / 客単価)、(3) ローカル SEO 施策 (記事本数・キーワード)、(4) Instagram / Google ビジネスの運用計画、(5) 口コミ獲得計画、(6) 月次アクション計画。具体的な数字を含む。' },
       { type: 'gbp', title: 'Google ビジネスプロフィール最適化案', prompt: 'Google ビジネスプロフィールを最適化するための具体策を提示。説明文ドラフト・投稿アイデア・カテゴリ推奨を含む。' },
       { type: 'local_seo', title: '地域 SEO 記事ドラフト', prompt: '「地域名 + 業種」で検索されそうなクエリを 1 つ選び、その記事を 1500 字で作成。' },
       { type: 'instagram', title: 'Instagram 1 週間分の投稿テンプレ', prompt: '店舗の雰囲気・サービスを伝える Instagram 投稿のアイデア 7 日分。' },
@@ -995,6 +998,7 @@ const TEAM_PRESETS = {
 ユーザーのブログ / メディアの読者数・PV・購読者を増やすことが唯一の目的。コンテンツ戦略を毎日 artifact として届ける。`,
     initial_artifact_prompts: [
       { type: 'diagnosis', title: 'サイト診断 + コンテンツ傾向分析', prompt: 'このメディアを分析し、現状の流入源・記事傾向・改善余地を提示。' },
+      { type: 'strategy', title: '戦略 + KPI 設計', prompt: 'ブログ・メディアの成長戦略を設計: (1) ターゲット読者像、(2) 3 ヶ月後・6 ヶ月後の数値目標 (月間 PV / UU / 購読者数 / 記事公開ペース)、(3) コンテンツ柱 (主要 3-5 カテゴリ・キーワード)、(4) 配信チャネル (SEO / Twitter / Reddit / Newsletter)、(5) 月次アクション計画。具体的な数字とアクションを含む。' },
       { type: 'article_ideas', title: '記事ネタ 10 本 (キーワード + ボリューム推定)', prompt: '今書くべき記事ネタを 10 本提案。各案にメインキーワードと検索ボリューム推定を付与。' },
       { type: 'twitter_thread', title: '既存記事の Twitter スレッド化', prompt: 'サイト内の代表的な記事 1 本を、Twitter で読まれる 7 ツイートのスレッドに変換。' },
       { type: 'newsletter', title: 'メルマガ 1 本ドラフト', prompt: '読者向けに送るメールニュースレターを 1 本作成。Subject + Body 形式。' },
@@ -1025,6 +1029,7 @@ const TEAM_PRESETS = {
 ユーザーのポートフォリオサイトから問い合わせ・受注を増やすことが唯一の目的。営業活動を毎日 artifact として届ける。`,
     initial_artifact_prompts: [
       { type: 'diagnosis', title: 'ポートフォリオ診断', prompt: 'このポートフォリオサイトを分析し、リード獲得の観点でどこで離脱してるか・改善点 3 つを提示。' },
+      { type: 'strategy', title: '戦略 + KPI 設計', prompt: 'フリーランス / 個人事業の案件獲得戦略を設計: (1) ターゲット顧客像、(2) 3 ヶ月後・6 ヶ月後の数値目標 (月間問い合わせ数 / 受注数 / 月商)、(3) LinkedIn / Wantedly 戦略、(4) 営業メール送信ペース、(5) ケーススタディ拡充計画、(6) 月次アクション計画。具体的な数字を含む。' },
       { type: 'linkedin', title: 'LinkedIn 投稿 1 週間分テンプレ', prompt: 'LinkedIn でプレゼンスを高める投稿アイデアを 7 日分。専門性が伝わる内容で。' },
       { type: 'sales_email', title: '営業メール 3 種類', prompt: '新規アプローチ / フォローアップ / リクエスト返信、の 3 パターンの営業メール文面を作成。' },
       { type: 'case_study', title: 'ケーススタディ テンプレ', prompt: '過去案件 (架空可) を魅力的なケーススタディに変換するテンプレートと、書き方ガイドを作成。' },
@@ -7057,7 +7062,7 @@ async function _generateInitialArtifacts(agent, ownerUser, sseCb){
   if(!agent || !agent.site_vertical) return [];
   const preset = _teamPresetFor(agent.site_vertical);
   const prompts = Array.isArray(preset.initial_artifact_prompts)
-    ? preset.initial_artifact_prompts.slice(0, 5)
+    ? preset.initial_artifact_prompts.slice(0, 6)
     : [];
   if(!prompts.length) return [];
   const siteCtx = '担当サイト: ' + (agent.site_url || '不明')
@@ -14096,6 +14101,32 @@ async function handleAPI(req,res,pathname,method,ip){
         }
         agent.current_task.updated_at = new Date().toISOString();
       }
+      // ── 毎朝レポートを自動でスケジュール (= LP の step 5「毎日のレポーティング」を担保) ──
+      // 既にスケジュール設定がある場合はスキップ (= 2 回目以降の onboarding 想定)
+      agent.schedules = Array.isArray(agent.schedules) ? agent.schedules : [];
+      const _hasReportSched = agent.schedules.some(s => s && s.label === '毎朝レポート');
+      if(!_hasReportSched){
+        const _sched = {
+          id: genScheduleId(),
+          prompt: '昨日 ' + (agent.site_title || agent.site_url || 'サイト') + ' に対して AI チームが届けた納品物を振り返り、'
+                + '今日 / 今週やるべきことを 3 件提案してください。'
+                + 'GA4 が接続されていれば前日の流入数も含める。'
+                + 'KPI が設定されていれば達成度も評価する。'
+                + '出力は「📊 昨日の数字」「✅ 完了タスク」「🎯 今日のおすすめ」の 3 ブロック形式で簡潔に。',
+          kind: 'daily',
+          hour: 9, minute: 0,
+          tz_offset_min: 540,  // JST
+          deliver: 'chat',
+          enabled: true,
+          label: '毎朝レポート',
+          created_at: new Date().toISOString(),
+          last_run: null,
+          next_run: null,
+        };
+        try { _sched.next_run = _scheduleNextRun(_sched); } catch(_){}
+        agent.schedules.push(_sched);
+        console.log('[onboarding/artifacts] auto-scheduled morning report for', agentId);
+      }
       try { await DB.save(user); } catch(e){ console.warn('[onboarding/artifacts] save failed:', e.message); }
       sse('done', {
         ok: results.filter(r => r.ok).length,
@@ -16154,6 +16185,26 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.knowledge.splice(i,1);
     await DB.save(user);
     return jres(res,200,{ok:true});
+  }
+
+  // ── Site KPI save ──────────────────────────────────────
+  // サイトの目標数値 (月間 PV / CVR / 月間リード数) を保存。
+  // GA4 接続時の達成度評価や毎朝レポートの参照に使う。
+  //   POST /api/agents/:id/kpi { pv, cvr, leads }
+  const kpiMatch = pathname.match(/^\/api\/agents\/([^/]+)\/kpi$/);
+  if(kpiMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === kpiMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req);
+    const pv = Math.max(0, Math.min(10000000, parseInt(body && body.pv, 10) || 0));
+    const cvr = Math.max(0, Math.min(100, parseFloat(body && body.cvr) || 0));
+    const leads = Math.max(0, Math.min(1000000, parseInt(body && body.leads, 10) || 0));
+    ag.kpi = { pv, cvr, leads, updated_at: new Date().toISOString() };
+    try { await DB.save(user); } catch(e){
+      console.warn('[kpi] save failed:', e.message);
+      return jres(res, 500, { error: '保存に失敗' });
+    }
+    return jres(res, 200, { ok: true, kpi: ag.kpi });
   }
 
   // ── Task resume ─────────────────────────────────────────

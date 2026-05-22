@@ -417,22 +417,22 @@
     .pain-tx{font-size:13.5px}
   }
 
-  /* ── HOW IT WORKS ───────────────────────────────────── */
+  /* ── HOW IT WORKS — 5 ステップ ───────────────────────── */
   .how-grid{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:18px;
-    margin:50px auto 0; max-width:980px;
+    display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
+    margin:50px auto 0; max-width:1180px;
     position:relative;
   }
   /* デスクトップだけ: ステップ間の繋ぎ線 */
   .how-grid::before{
     content:''; position:absolute;
-    top:96px; left:15%; right:15%; height:2px;
-    background:linear-gradient(90deg, transparent, var(--wire2) 20%, var(--wire2) 80%, transparent);
+    top:78px; left:10%; right:10%; height:2px;
+    background:linear-gradient(90deg, transparent, var(--wire2) 10%, var(--wire2) 90%, transparent);
     z-index:0;
   }
   .step{
     background:var(--card); border:1px solid var(--wire);
-    border-radius:18px; padding:32px 26px;
+    border-radius:14px; padding:22px 20px;
     transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s, border-color .3s;
     position:relative; z-index:1;
   }
@@ -447,19 +447,26 @@
     border:1px solid rgba(251,146,60,.22);
   }
   .step h3{
-    font-size:19px; font-weight:900; margin-bottom:11px; letter-spacing:-.015em;
+    font-size:15.5px; font-weight:900; margin-bottom:9px; letter-spacing:-.015em;
   }
-  .step p{font-size:13.5px; color:var(--ink2); line-height:1.78}
+  .step p{font-size:12.5px; color:var(--ink2); line-height:1.7}
+  .step p b{color:var(--peach-d); font-weight:800}
   .step-time{
-    margin-top:16px; font-size:11.5px; font-weight:800;
+    margin-top:14px; font-size:11px; font-weight:800;
     color:var(--peach-d); display:inline-flex; align-items:center; gap:5px;
-    background:var(--peach-soft); padding:5px 11px; border-radius:99px;
+    background:var(--peach-soft); padding:4px 9px; border-radius:99px;
     border:1px solid rgba(251,146,60,.18);
   }
-  @media (max-width:780px){
-    .how-grid{grid-template-columns:1fr; gap:14px; margin-top:36px}
+  @media (max-width:1080px){
+    .how-grid{grid-template-columns:repeat(3,1fr); gap:14px}
     .how-grid::before{display:none}
-    .step{padding:24px 22px}
+  }
+  @media (max-width:780px){
+    .how-grid{grid-template-columns:repeat(2,1fr); gap:12px; margin-top:36px}
+    .step{padding:20px 18px}
+  }
+  @media (max-width:520px){
+    .how-grid{grid-template-columns:1fr}
   }
 
   /* ── DASHBOARD PREVIEW (60 秒後の画面) ──────────────── */
@@ -1108,36 +1115,48 @@
 <section>
   <div class="wrap">
     <span class="sec-eyebrow" data-i18n="hw.eye">仕組み</span>
-    <h2 class="sec-h2" data-i18n="hw.h2">たった 3 ステップで動き始める</h2>
+    <h2 class="sec-h2" data-i18n="hw.h2">5 ステップで動き始める</h2>
 
     <div class="how-grid">
       <div class="step">
         <div class="step-num">01</div>
         <h3 data-i18n="hw.s1h">URL を貼る</h3>
         <p data-i18n="hw.s1p">
-          あなたのサイトの URL をフォームに入れる。それだけ。
-          会員登録は URL 入力後の 1 画面で完了します。
+          サイトの URL をフォームに入れる。会員登録は URL 入力後の 1 画面で完了。
         </p>
         <div class="step-time" data-i18n="hw.s1t">⏱ 10 秒</div>
       </div>
       <div class="step">
         <div class="step-num">02</div>
-        <h3 data-i18n="hw.s2h">AI チームが編成される</h3>
+        <h3 data-i18n="hw.s2h">AI チームが編成</h3>
         <p data-i18n="hw.s2p">
-          AI があなたのサイトを診断して、ぴったりの専門家チームを編成します。
-          SaaS なら SEO ライター、EC なら商品ライター、店舗なら地域 SEO など、
-          サイト種類に応じてチーム構成が変わります。
+          サイトを診断、ぴったりの専門家チームを自動編成。SaaS / EC / 店舗 / ブログ / ポートフォリオに対応。
         </p>
         <div class="step-time" data-i18n="hw.s2t">⏱ 50 秒</div>
       </div>
       <div class="step">
         <div class="step-num">03</div>
-        <h3 data-i18n="hw.s3h">毎日、結果が届く</h3>
+        <h3 data-i18n="hw.s3h">現状分析</h3>
         <p data-i18n="hw.s3p">
-          記事、投稿、改善案、レポートが、ダッシュボードに毎日納品されます。
-          ツール接続は不要 — 出力をコピペで自分の媒体に貼るだけで動きます。
+          サイト診断・競合動向・改善ポイントをレポート。<b>GA4 を接続するとさらに深く分析</b>できます。
         </p>
-        <div class="step-time" data-i18n="hw.s3t">⏱ 24 時間以内</div>
+        <div class="step-time" data-i18n="hw.s3t">⏱ 60 秒</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h3 data-i18n="hw.s4h">戦略 + KPI 設定</h3>
+        <p data-i18n="hw.s4p">
+          AI が <b>コンテンツマーケ戦略</b> + <b>CVR 改善設計</b> を提案。目標 PV / CVR / リード数を設定。
+        </p>
+        <div class="step-time" data-i18n="hw.s4t">⏱ 5 分</div>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <h3 data-i18n="hw.s5h">毎日のレポーティング</h3>
+        <p data-i18n="hw.s5p">
+          毎朝 KPI 数字 + AI レポートが届く。納品物・進捗・次のアクションが一目で見える。
+        </p>
+        <div class="step-time" data-i18n="hw.s5t">⏱ 毎日 9 時</div>
       </div>
     </div>
   </div>

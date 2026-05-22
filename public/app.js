@@ -3871,10 +3871,18 @@ function _renderSiteDashboardHTML(site){
   }
 
   // ── アクティブ tab を localStorage で記憶 ──
-  // 5 tab: numbers / strategy / actions / agents / settings
-  var activeTab = 'numbers';
-  try { var saved = localStorage.getItem('sd_tab_' + site.id); if(['numbers','strategy','actions','agents','settings'].indexOf(saved) >= 0) activeTab = saved; } catch(_){}
-  // _allSitesMode = true なら強制 Agent 一覧 tab (= サイドバーの「すべてのサイト」リンクから来た)
+  // 5 tab: report / numbers / strategy / agents / settings (新順序)
+  // デフォルトは 'report' (= 最新のレポート、朝開いた瞬間に AI が報告)
+  var activeTab = 'report';
+  try {
+    var saved = localStorage.getItem('sd_tab_' + site.id);
+    if(['report','numbers','strategy','agents','settings'].indexOf(saved) >= 0){
+      activeTab = saved;
+    } else if(saved === 'actions'){
+      // 旧 'actions' tab は 'report' に統合された (= alias)
+      activeTab = 'report';
+    }
+  } catch(_){}
   if(window._allSitesMode) activeTab = 'agents';
 
   // ── ヘッダー: site identity (gradient) + back-to-chat CTA ──
@@ -3898,16 +3906,16 @@ function _renderSiteDashboardHTML(site){
     +   '</button>'
     + '</div>'
 
-    // ── Tab ナビ (5 タブ) ──
+    // ── Tab ナビ (5 タブ・新順序: 報告 → 数字 → 戦略 → Agent → 設定) ──
     + '<div class="sd-tabs">'
+    +   '<button class="sd-tab sd-tab-report' + (activeTab === 'report' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'report\')">'
+    +     '<span class="sd-tab-ic">📰</span><span class="sd-tab-lbl">最新のレポート</span><span class="sd-tab-sub">毎日の briefing</span>'
+    +   '</button>'
     +   '<button class="sd-tab sd-tab-numbers' + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
-    +     '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字</span><span class="sd-tab-sub">現状の推移</span>'
+    +     '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字一覧</span><span class="sd-tab-sub">結果</span>'
     +   '</button>'
     +   '<button class="sd-tab sd-tab-strategy' + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
     +     '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略</span><span class="sd-tab-sub">設計図</span>'
-    +   '</button>'
-    +   '<button class="sd-tab sd-tab-actions' + (activeTab === 'actions' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'actions\')">'
-    +     '<span class="sd-tab-ic">⚡</span><span class="sd-tab-lbl">アクション</span><span class="sd-tab-sub">今後の動き</span>'
     +   '</button>'
     +   '<button class="sd-tab sd-tab-agents' + (activeTab === 'agents' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'agents\')">'
     +     '<span class="sd-tab-ic">🤖</span><span class="sd-tab-lbl">Agent一覧</span><span class="sd-tab-sub">チームメンバー</span>'
@@ -3918,18 +3926,22 @@ function _renderSiteDashboardHTML(site){
     + '</div>'
 
     + '<div class="sd-tab-body">'
-    + (activeTab === 'numbers'
-        ? _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner,
-            _siteAllArtifacts(site.id), _siteDailySeries(site),
-            _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site))
+    + (activeTab === 'report'
+        ? _renderTabReport(site, _siteActivityFeed(site), _siteNextSchedule(site),
+            _siteQuickActions(site), _siteWeeklyStats(site), _siteAllArtifacts(site.id), _siteInsights(site))
+        : activeTab === 'numbers'
+          ? _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner,
+              _siteAllArtifacts(site.id), _siteDailySeries(site),
+              _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site))
         : activeTab === 'strategy'
           ? _renderTabStrategy(site, _siteAllArtifacts(site.id))
         : activeTab === 'agents'
           ? _renderTabAgents(site)
         : activeTab === 'settings'
           ? _renderTabSettings(site)
-        : _renderTabActions(site, _siteActivityFeed(site), _siteNextSchedule(site),
-            _siteQuickActions(site), _siteWeeklyStats(site), progressHTML, teamHTML))
+        // legacy 'actions' tab (= 旧 URL bookmark 対応) — レポート tab にエイリアス
+        : _renderTabReport(site, _siteActivityFeed(site), _siteNextSchedule(site),
+            _siteQuickActions(site), _siteWeeklyStats(site), _siteAllArtifacts(site.id), _siteInsights(site)))
     + '</div>'
     + '</div>';
 }
@@ -3959,32 +3971,126 @@ function _formatRel(ts){
 
 // ─── Tab 1: 📊 数字 (= 現状の推移) ────────────────────────────────
 function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts, series, weekly, breakdown, insights){
-  // 巨大数字カード (= ヒーロー的)
-  var heroNumsHTML = ''
-    + '<div class="sd-num-hero">'
-    +   '<div class="sd-num-hero-card sd-num-primary">'
-    +     '<div class="sd-num-lbl">累計納品物</div>'
-    +     '<div class="sd-num-val">' + allArts.length + '<span class="sd-num-unit">件</span></div>'
-    +     '<div class="sd-num-sub">' + (weekly.delta > 0 ? '<span class="sd-trend-up">+' + weekly.delta + '</span>' : (weekly.delta < 0 ? '<span class="sd-trend-down">' + weekly.delta + '</span>' : '<span>±0</span>')) + ' 件 vs 先週</div>'
-    +   '</div>'
-    +   '<div class="sd-num-hero-card">'
-    +     '<div class="sd-num-lbl">今週納品</div>'
-    +     '<div class="sd-num-val">' + weekly.artifacts + '<span class="sd-num-unit">件</span></div>'
-    +     '<div class="sd-num-sub">先週: ' + weekly.lastWeek + ' 件</div>'
-    +   '</div>'
-    +   '<div class="sd-num-hero-card">'
-    +     '<div class="sd-num-lbl">今月目標 PV</div>'
-    +     '<div class="sd-num-val">' + (kpi.pv ? Number(kpi.pv).toLocaleString() : '<span class="sd-num-empty">未設定</span>') + '</div>'
-    +     '<div class="sd-num-sub">' + (ga4Connected ? 'GA4 接続済' : 'GA4 未接続 — 数値追跡不可') + '</div>'
-    +   '</div>'
-    +   '<div class="sd-num-hero-card">'
-    +     '<div class="sd-num-lbl">目標 CVR</div>'
-    +     '<div class="sd-num-val">' + (kpi.cvr ? kpi.cvr + '<span class="sd-num-unit">%</span>' : '<span class="sd-num-empty">未設定</span>') + '</div>'
-    +     '<div class="sd-num-sub">業界平均: 2-3%</div>'
-    +   '</div>'
-    + '</div>';
+  // ── 数字一覧 = ビジネスの結果 (= 納品物カウントは脚注に格下げ) ──
+  // KPI 未設定 → BIG CTA で「ここで設定すると数字が出る」
+  // KPI 設定済 + GA4 未接続 → 目標値だけ表示 + GA4 接続 CTA
+  // KPI 設定済 + GA4 接続済 → 実測値 + 達成率 + trend (= 将来の理想形)
+  var hasKpi = !!(kpi.pv || kpi.cvr || kpi.leads);
 
-  // Insights バー
+  // ── HERO: 主 KPI (PV) を巨大表示 ──
+  var heroHTML = '';
+  if(hasKpi && kpi.pv){
+    // 月末予測 = 今月の経過日数比で線形外挿。GA4 接続なしなら「目標値」だけ表示
+    var _heroValTx = ga4Connected
+      ? '<span style="opacity:.5">—</span>'
+      : Number(kpi.pv).toLocaleString();
+    var _heroFootTx = ga4Connected
+      ? 'GA4 接続済 — 数値はまもなく表示されます。'
+      : '<b>GA4 を接続</b>すると、ここに実数値・先月比・月末予測がリアルタイムで表示されます。';
+    var _heroGa4Btn = ga4Connected
+      ? ''
+      : '<button class="sd-hero-cta sd-hero-cta-primary" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">📊 GA4 を接続 →</button>';
+    heroHTML = ''
+      + '<div class="sd-hero-kpi">'
+      +   '<div class="sd-hero-tag"><span class="sd-rp-dot"></span>今月のメイン KPI ・ 月間 PV</div>'
+      +   '<div class="sd-hero-row">'
+      +     '<div class="sd-hero-main">'
+      +       '<div class="sd-hero-lbl">' + (ga4Connected ? '今月の累計 PV' : '目標 PV') + '</div>'
+      +       '<div class="sd-hero-val">' + _heroValTx + '<span class="sd-hero-unit">PV</span></div>'
+      +       '<div class="sd-hero-foot">' + _heroFootTx + '</div>'
+      +     '</div>'
+      +     '<div class="sd-hero-side">'
+      +       '<button class="sd-hero-cta" onclick="openKpiModal(\'' + esc(site.id) + '\')">🎯 KPI を編集</button>'
+      +       _heroGa4Btn
+      +     '</div>'
+      +   '</div>'
+      + '</div>';
+  } else {
+    // KPI 未設定 — 大きな「設定する」 CTA
+    heroHTML = ''
+      + '<div class="sd-hero-empty">'
+      +   '<div class="sd-hero-empty-ic">🎯</div>'
+      +   '<div class="sd-hero-empty-ti">主 KPI を設定して、結果を追いましょう</div>'
+      +   '<div class="sd-hero-empty-tx">月間 PV / 問い合わせ / リード数の目標を入れると、AI チームが毎朝達成度をレポートします。</div>'
+      +   '<button class="sd-hero-empty-cta" onclick="openKpiModal(\'' + esc(site.id) + '\')">'
+      +     '🎯 KPI を設定する <span class="arrow">→</span>'
+      +   '</button>'
+      + '</div>';
+  }
+
+  // ── 副 KPI 行 (CVR / リード / GA4 接続を促す placeholder) ──
+  var subKpiHTML = '';
+  if(hasKpi){
+    subKpiHTML = ''
+      + '<div class="sd-sub-row">'
+      +   '<div class="sd-sub-card ' + (ga4Connected ? 'flat' : 'flat') + '">'
+      +     '<div class="sd-sub-lbl"><span class="sd-sub-lbl-ic">🎯</span> 目標 CVR</div>'
+      +     '<div class="sd-sub-val">' + (kpi.cvr ? kpi.cvr + '<span class="sd-sub-val-unit">%</span>' : '<span style="opacity:.4;font-size:.6em">未設定</span>') + '</div>'
+      +     '<div class="sd-sub-sub">' + (ga4Connected ? '実測 — まもなく表示' : 'GA4 接続で実測値表示') + '</div>'
+      +   '</div>'
+      +   '<div class="sd-sub-card flat">'
+      +     '<div class="sd-sub-lbl"><span class="sd-sub-lbl-ic">📧</span> 目標リード</div>'
+      +     '<div class="sd-sub-val">' + (kpi.leads ? Number(kpi.leads).toLocaleString() + '<span class="sd-sub-val-unit">件</span>' : '<span style="opacity:.4;font-size:.6em">未設定</span>') + '</div>'
+      +     '<div class="sd-sub-sub">' + (ga4Connected ? '実測 — まもなく表示' : '手動入力 or フォーム連携') + '</div>'
+      +   '</div>'
+      +   '<div class="sd-sub-card flat">'
+      +     '<div class="sd-sub-lbl"><span class="sd-sub-lbl-ic">🔍</span> 検索順位</div>'
+      +     '<div class="sd-sub-val"><span style="opacity:.4;font-size:.6em">— </span></div>'
+      +     '<div class="sd-sub-sub">Search Console 連携で表示 (近日対応)</div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  // ── データ未接続のプレビュー (= 接続したら何が見られるかを説明) ──
+  var previewHTML = '';
+  if(!ga4Connected){
+    previewHTML = ''
+      + '<div class="sd-data-preview">'
+      +   '<div class="sd-data-preview-h">'
+      +     '<div class="sd-data-preview-ic">📊</div>'
+      +     '<div>'
+      +       '<div class="sd-data-preview-ti">数字を解放するには連携を</div>'
+      +       '<div class="sd-data-preview-sub">下記を接続すると、ここにリアルタイム数値が出ます。AI もこの数字で判断するようになります。</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="sd-data-preview-grid">'
+      +     '<div class="sd-data-item">'
+      +       '<div class="sd-data-item-ic">📊</div>'
+      +       '<div class="sd-data-item-bd">'
+      +         '<div class="sd-data-item-ti">Google Analytics 4</div>'
+      +         '<div class="sd-data-item-de">PV ・ セッション ・ 流入経路 ・ CVR ・ ユーザー属性</div>'
+      +       '</div>'
+      +       '<button class="sd-data-item-btn" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">接続 →</button>'
+      +     '</div>'
+      +     '<div class="sd-data-item">'
+      +       '<div class="sd-data-item-ic">🔍</div>'
+      +       '<div class="sd-data-item-bd">'
+      +         '<div class="sd-data-item-ti">Google Search Console</div>'
+      +         '<div class="sd-data-item-de">検索キーワード ・ 表示回数 ・ 平均順位 ・ クリック率</div>'
+      +       '</div>'
+      +       '<button class="sd-data-item-btn sd-data-item-btn-soon" disabled>近日 →</button>'
+      +     '</div>'
+      +     '<div class="sd-data-item">'
+      +       '<div class="sd-data-item-ic">💳</div>'
+      +       '<div class="sd-data-item-bd">'
+      +         '<div class="sd-data-item-ti">Stripe / 決済</div>'
+      +         '<div class="sd-data-item-de">売上 ・ MRR ・ 解約率 ・ LTV</div>'
+      +       '</div>'
+      +       '<button class="sd-data-item-btn sd-data-item-btn-soon" disabled>近日 →</button>'
+      +     '</div>'
+      +     '<div class="sd-data-item">'
+      +       '<div class="sd-data-item-ic">📝</div>'
+      +       '<div class="sd-data-item-bd">'
+      +         '<div class="sd-data-item-ti">フォーム / 問い合わせ</div>'
+      +         '<div class="sd-data-item-de">Typeform ・ Google Forms ・ Webflow フォーム</div>'
+      +       '</div>'
+      +       '<button class="sd-data-item-btn sd-data-item-btn-soon" disabled>近日 →</button>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  // ── Insights バー (= AI が今読み取れた事を要約) ──
   var insightsHTML = insights.length
     ? '<div class="sd-insights">'
       + insights.map(function(it){
@@ -3993,120 +4099,39 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       + '</div>'
     : '';
 
-  // 大きい trend chart (= 14d / 30d switcher なしで、納品数の bar + line overlay)
-  var max = Math.max(1, Math.max.apply(null, series));
-  var SVG_W = 720, SVG_H = 180;
-  var stepX = SVG_W / series.length;
-  var pts = series.map(function(n, i){
-    var x = i * stepX + stepX / 2;
-    var y = SVG_H - 20 - (n / max * (SVG_H - 40));
-    return x + ',' + y;
-  }).join(' ');
-  var pathD = 'M ' + pts.split(' ').join(' L ');
-  var areaD = 'M ' + (stepX/2) + ',' + (SVG_H - 20) + ' L ' + pts.split(' ').join(' L ') + ' L ' + (SVG_W - stepX/2) + ',' + (SVG_H - 20) + ' Z';
-  var dots = series.map(function(n, i){
-    var x = i * stepX + stepX / 2;
-    var y = SVG_H - 20 - (n / max * (SVG_H - 40));
-    var isToday = (i === series.length - 1);
-    return '<circle cx="' + x + '" cy="' + y + '" r="' + (isToday ? 5 : 3.5) + '" fill="' + (isToday ? '#ea580c' : '#fb923c') + '" />';
-  }).join('');
-  var trendHTML = ''
-    + '<div class="sd-bigchart">'
-    +   '<div class="sd-bigchart-h">'
-    +     '<div class="sd-bigchart-ti">📈 直近 14 日の納品数推移</div>'
-    +     '<div class="sd-bigchart-meta">'
-    +       (weekly.delta > 0 ? '<span class="sd-trend-up">+' + weekly.delta + '</span>' : (weekly.delta < 0 ? '<span class="sd-trend-down">' + weekly.delta + '</span>' : '±0'))
-    +       ' 件 vs 先週'
-    +     '</div>'
+  // ── 「AI 活動量」 footer (= 旧 hero を格下げ) ──
+  // 結果じゃなくて process なので、巨大化させずに小さく出す
+  var lwArts = (function(){
+    var since = Date.now() - 14 * 86400000;
+    var thisW = Date.now() - 7 * 86400000;
+    return allArts.filter(function(a){
+      var ts = Date.parse(a.created_at||0) || 0;
+      return ts > since && ts <= thisW;
+    }).length;
+  })();
+  var activityHTML = ''
+    + '<div class="sd-activity-footer">'
+    +   '<div class="sd-activity-h">'
+    +     '<span class="sd-activity-h-ic">🤖</span>'
+    +     '<span class="sd-activity-h-ti">AI チームの活動量 (参考値)</span>'
+    +     '<span class="sd-activity-h-sub">これは AI がやった「量」。結果ではない。</span>'
     +   '</div>'
-    +   '<svg class="sd-bigchart-svg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" preserveAspectRatio="none">'
-    +     '<defs>'
-    +       '<linearGradient id="sdGrad' + site.id.slice(-6) + '" x1="0" y1="0" x2="0" y2="1">'
-    +         '<stop offset="0%" stop-color="#fb923c" stop-opacity=".34" />'
-    +         '<stop offset="100%" stop-color="#fb923c" stop-opacity="0" />'
-    +       '</linearGradient>'
-    +     '</defs>'
-    +     '<path d="' + areaD + '" fill="url(#sdGrad' + site.id.slice(-6) + ')" />'
-    +     '<path d="' + pathD + '" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />'
-    +     dots
-    +   '</svg>'
-    +   '<div class="sd-bigchart-axis">'
-    +     '<span>14 日前</span><span style="flex:1"></span><span>今日</span>'
+    +   '<div class="sd-activity-grid">'
+    +     '<div class="sd-activity-stat"><div class="sd-activity-v">' + allArts.length + '</div><div class="sd-activity-l">累計納品</div></div>'
+    +     '<div class="sd-activity-stat"><div class="sd-activity-v">' + weekly.artifacts + '</div><div class="sd-activity-l">今週納品</div></div>'
+    +     '<div class="sd-activity-stat"><div class="sd-activity-v">' + lwArts + '</div><div class="sd-activity-l">先週納品</div></div>'
+    +     '<div class="sd-activity-stat ' + (weekly.delta > 0 ? 'up' : weekly.delta < 0 ? 'down' : 'flat') + '">'
+    +       '<div class="sd-activity-v">' + (weekly.delta > 0 ? '+' : '') + weekly.delta + '</div>'
+    +       '<div class="sd-activity-l">先週比</div>'
+    +     '</div>'
     +   '</div>'
     + '</div>';
 
-  // Donut chart (= channel breakdown)
-  var total = Object.values(breakdown).reduce(function(a,b){return a+b;}, 0);
-  var donutHTML = '';
-  if(total > 0){
-    var colors = ['#fb923c','#22c55e','#3b82f6','#a855f7','#ec4899','#64748b'];
-    var labels = Object.keys(breakdown).filter(function(k){return breakdown[k] > 0;});
-    var radius = 70, cx = 90, cy = 90;
-    var circumference = 2 * Math.PI * radius;
-    var offset = 0;
-    var arcs = labels.map(function(k, i){
-      var v = breakdown[k];
-      var dash = (v / total) * circumference;
-      var arc = '<circle cx="' + cx + '" cy="' + cy + '" r="' + radius + '" fill="none" stroke="' + colors[i % colors.length] + '" stroke-width="24" stroke-dasharray="' + dash + ' ' + (circumference - dash) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" />';
-      offset += dash;
-      return arc;
-    }).join('');
-    var legend = labels.map(function(k, i){
-      var v = breakdown[k];
-      var pct = Math.round(v / total * 100);
-      return '<div class="sd-donut-leg">'
-           +   '<span class="sd-donut-dot" style="background:' + colors[i % colors.length] + '"></span>'
-           +   '<span class="sd-donut-leg-l">' + esc(k) + '</span>'
-           +   '<span class="sd-donut-leg-r">' + v + ' <span class="sd-donut-pct">(' + pct + '%)</span></span>'
-           + '</div>';
-    }).join('');
-    donutHTML = ''
-      + '<div class="sd-donut-card">'
-      +   '<div class="sd-card-h">🗂 納品物の構成 <span class="sd-card-h-sub">' + total + ' 件</span></div>'
-      +   '<div class="sd-donut-body">'
-      +     '<svg class="sd-donut-svg" viewBox="0 0 180 180">'
-      +       arcs
-      +       '<text x="90" y="86" text-anchor="middle" font-size="14" font-weight="900" fill="#9a6a4a" font-family="\'Outfit\',sans-serif">' + total + '</text>'
-      +       '<text x="90" y="106" text-anchor="middle" font-size="9" fill="#9a6a4a" letter-spacing=".05em">納品物</text>'
-      +     '</svg>'
-      +     '<div class="sd-donut-legend">' + legend + '</div>'
-      +   '</div>'
-      + '</div>';
-  }
-
-  // Top recent artifacts (= ヒーロー的に 5 件)
-  var topArts = allArts.slice(0, 5);
-  var topArtsHTML = '';
-  if(topArts.length){
-    topArtsHTML = ''
-      + '<div class="sd-top-arts">'
-      +   '<div class="sd-card-h">🏆 直近の納品物</div>'
-      +   '<div class="sd-top-arts-list">'
-      +   topArts.map(function(a, i){
-          var dt = '';
-          try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){}
-          var openUrl = _artUrl(a);
-          return '<div class="sd-top-art">'
-               +   '<div class="sd-top-art-n">' + (i + 1) + '</div>'
-               +   '<div class="sd-top-art-bd">'
-               +     '<div class="sd-top-art-ti">' + esc(_artDisplayTitle(a)) + '</div>'
-               +     '<div class="sd-top-art-meta">' + esc(dt) + (a.version ? ' ・ Ver.' + a.version : '') + '</div>'
-               +   '</div>'
-               +   (openUrl
-                     ? '<a class="sd-top-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗ 開く</a>'
-                     : '<span class="sd-top-art-open" style="opacity:.5;cursor:default">準備中</span>')
-               + '</div>';
-        }).join('')
-      +   '</div>'
-      + '</div>';
-  }
-
-  return heroNumsHTML
-    + kpiHTML
-    + ga4Banner
+  return heroHTML
+    + subKpiHTML
     + insightsHTML
-    + trendHTML
-    + (donutHTML ? '<div class="sd-numbers-2col">' + donutHTML + topArtsHTML + '</div>' : topArtsHTML);
+    + previewHTML
+    + activityHTML;
 }
 
 // ─── Tab 2: 🎯 戦略 (= 設計図) ────────────────────────────────────
@@ -4201,6 +4226,182 @@ function _renderTabStrategy(site, allArts){
     + (kpiTreeHTML || '')
     + '<div class="sd-strat-grid">' + personaHTML + competitorHTML + '</div>'
     + calendarHTML;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ─── Tab 1: 📰 最新のレポート (= 朝開いた瞬間の briefing) ───────────
+// 設計: 「君は結果だけ見ればいい」を体現する 1 ページ briefing。
+//   1. 今日のひと言 (AI が状況サマリを 1 文)
+//   2. 今日の 1 提案 (黒背景 prominent card)
+//   3. 🚨 異常アラート (= 大きな変化があったら)
+//   4. 今週納品物 (写真付き list)
+//   5. 今日の予定 (= 次の自動実行)
+//   6. 過去 7 日のハイライト summary
+// ═══════════════════════════════════════════════════════════════════
+function _renderTabReport(site, events, next, quickActions, weekly, allArts, insights){
+  var hostname = _siteHostname(site);
+  var label = _verticalLabel(site.site_vertical || 'other');
+
+  // ── 1) 今日のひと言 — AI が weekly stats + insights から書く ──
+  var headline = '';
+  if(weekly.delta > 0){
+    headline = '今週は先週より <b>+' + weekly.delta + ' 件</b> 多く納品されました。順調に伸びてます。';
+  } else if(weekly.delta < 0){
+    headline = '今週は先週より ' + Math.abs(weekly.delta) + ' 件少なめ。チャットで何か依頼してみましょう。';
+  } else if(weekly.artifacts > 0){
+    headline = '今週も先週と同じ <b>' + weekly.artifacts + ' 件</b> 納品。安定運用中です。';
+  } else if(allArts.length === 0){
+    headline = 'まだ AI チームへの依頼がありません。チャットで「集客プランを作って」と話しかけてください。';
+  } else {
+    headline = '今週はまだ納品なし。チャットで依頼するとチームが動きます。';
+  }
+  var headlineHTML = ''
+    + '<div class="sd-rp-headline">'
+    +   '<div class="sd-rp-headline-tag"><span class="sd-rp-dot"></span>今日のひと言</div>'
+    +   '<div class="sd-rp-headline-tx">' + headline + '</div>'
+    +   '<div class="sd-rp-headline-meta">' + esc(hostname) + ' ・ ' + esc(label) + '</div>'
+    + '</div>';
+
+  // ── 2) 今日の 1 提案 (= 黒背景 prominent) ──
+  var topAction = (quickActions && quickActions[0]) || null;
+  var byMember = (site.team_members || [])[0];
+  var byMemberLine = byMember ? '提案者: ' + (_MEMBER_ICONS[byMember.role] || '🤖') + ' ' + esc(byMember.name) : '提案者: 🤖 AI チーム';
+  var todayHTML = '';
+  if(topAction){
+    todayHTML = ''
+      + '<div class="sd-rp-today">'
+      +   '<div class="sd-rp-today-h"><span class="sd-rp-today-dot"></span>今日 ・ AI からの 1 つの提案</div>'
+      +   '<div class="sd-rp-today-ti">' + topAction.icon + ' ' + esc(topAction.label) + '</div>'
+      +   '<div class="sd-rp-today-why">' + esc(topAction.prompt) + '</div>'
+      +   '<div class="sd-rp-today-row">'
+      +     '<button class="sd-rp-today-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(topAction.prompt).replace(/'/g, '&#39;') + ')">'
+      +       '✍️ チームに依頼する <span class="arrow">→</span>'
+      +     '</button>'
+      +     '<button class="sd-rp-today-skip" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">他の選択肢を見る</button>'
+      +     '<div class="sd-rp-today-by">' + byMemberLine + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  // ── 3) 異常アラート (= insights に「⚠️」絵文字含むもの) ──
+  var alertHTML = '';
+  var alerts = (insights || []).filter(function(it){ return /⚠️|🚨/.test(it.icon); });
+  if(alerts.length > 0){
+    alertHTML = '<div class="sd-rp-alerts">'
+      + alerts.map(function(it){
+          return '<div class="sd-rp-alert">'
+               +   '<div class="sd-rp-alert-ic">' + it.icon + '</div>'
+               +   '<div class="sd-rp-alert-bd">'
+               +     '<div class="sd-rp-alert-ti">気になる動き</div>'
+               +     '<div class="sd-rp-alert-tx">' + it.text + '</div>'
+               +   '</div>'
+               +   '<button class="sd-rp-alert-btn" onclick="openSite(\'' + esc(site.id) + '\')">確認 →</button>'
+               + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  // ── 4) 今週納品物 (= AI がやったこと、写真付きリスト) ──
+  var thisWeekTs = Date.now() - 7 * 86400000;
+  var weekArts = allArts.filter(function(a){
+    var ts = Date.parse(a.created_at || 0) || 0;
+    return ts > thisWeekTs;
+  }).slice(0, 6);
+  var weekArtsHTML = '';
+  if(weekArts.length > 0){
+    weekArtsHTML = ''
+      + '<div class="sd-rp-section">'
+      +   '<div class="sd-rp-section-h">'
+      +     '<span class="sd-rp-section-ti">📦 今週 AI チームが届けた納品物</span>'
+      +     '<span class="sd-rp-section-n">' + weekArts.length + ' 件</span>'
+      +   '</div>'
+      +   '<div class="sd-rp-arts">'
+      +   weekArts.map(function(a){
+          var dt = '';
+          try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric'}); } catch(e){}
+          var openUrl = _artUrl(a);
+          return '<div class="sd-rp-art">'
+               +   '<div class="sd-rp-art-ic">📄</div>'
+               +   '<div class="sd-rp-art-bd">'
+               +     '<div class="sd-rp-art-ti">' + esc(_artDisplayTitle(a)) + '</div>'
+               +     '<div class="sd-rp-art-meta">' + dt + (a.version ? ' ・ Ver.' + a.version : '') + '</div>'
+               +   '</div>'
+               +   (openUrl
+                     ? '<a class="sd-rp-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗</a>'
+                     : '<span class="sd-rp-art-open" style="opacity:.4;cursor:default">…</span>')
+               + '</div>';
+        }).join('')
+      +   '</div>'
+      + '</div>';
+  }
+
+  // ── 5) 今日の予定 (= 次の自動実行) ──
+  var nextHTML = '';
+  if(next){
+    nextHTML = ''
+      + '<div class="sd-rp-next">'
+      +   '<div class="sd-rp-next-ic">⏰</div>'
+      +   '<div class="sd-rp-next-bd">'
+      +     '<div class="sd-rp-next-l">次の自動実行</div>'
+      +     '<div class="sd-rp-next-r">' + esc(next.name) + '</div>'
+      +   '</div>'
+      +   '<div class="sd-rp-next-when">' + esc(next.label) + '</div>'
+      +   '<div class="sd-rp-next-pulse"></div>'
+      + '</div>';
+  }
+
+  // ── 6) 過去 7 日のハイライト ──
+  var lastWeekTs = Date.now() - 14 * 86400000;
+  var lastWeekArts = allArts.filter(function(a){
+    var ts = Date.parse(a.created_at || 0) || 0;
+    return ts > lastWeekTs && ts <= thisWeekTs;
+  });
+  var highlightsHTML = ''
+    + '<div class="sd-rp-highlights">'
+    +   '<div class="sd-rp-section-h">'
+    +     '<span class="sd-rp-section-ti">📅 過去 7 日のハイライト</span>'
+    +   '</div>'
+    +   '<div class="sd-rp-hi-grid">'
+    +     '<div class="sd-rp-hi"><div class="sd-rp-hi-v">' + weekly.artifacts + '</div><div class="sd-rp-hi-l">今週納品</div></div>'
+    +     '<div class="sd-rp-hi"><div class="sd-rp-hi-v">' + lastWeekArts.length + '</div><div class="sd-rp-hi-l">先週納品</div></div>'
+    +     '<div class="sd-rp-hi"><div class="sd-rp-hi-v">' + allArts.length + '</div><div class="sd-rp-hi-l">累計</div></div>'
+    +     '<div class="sd-rp-hi ' + (weekly.delta > 0 ? 'up' : weekly.delta < 0 ? 'down' : 'flat') + '">'
+    +       '<div class="sd-rp-hi-v">' + (weekly.delta > 0 ? '+' : '') + weekly.delta + '</div>'
+    +       '<div class="sd-rp-hi-l">先週比</div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+
+  // ── 最近のアクティビティ feed (= AI がいつ何を動かしたか、簡易表示) ──
+  var feedHTML = '';
+  if(events && events.length > 0){
+    feedHTML = ''
+      + '<div class="sd-rp-section">'
+      +   '<div class="sd-rp-section-h">'
+      +     '<span class="sd-rp-section-ti">⚡ 直近のアクティビティ</span>'
+      +     '<span class="sd-rp-section-n">' + events.length + ' 件</span>'
+      +   '</div>'
+      +   '<div class="sd-rp-feed">'
+      +   events.slice(0, 6).map(function(e){
+          return '<div class="sd-rp-feed-item">'
+               +   '<div class="sd-rp-feed-ic">' + e.icon + '</div>'
+               +   '<div class="sd-rp-feed-bd">'
+               +     '<div class="sd-rp-feed-lbl">' + esc(e.label) + '</div>'
+               +     '<div class="sd-rp-feed-ts">' + esc(_formatRel(e.ts)) + '</div>'
+               +   '</div>'
+               + '</div>';
+        }).join('')
+      +   '</div>'
+      + '</div>';
+  }
+
+  return headlineHTML
+    + todayHTML
+    + alertHTML
+    + highlightsHTML
+    + (nextHTML ? '<div class="sd-rp-row">' + nextHTML + '</div>' : '')
+    + weekArtsHTML
+    + feedHTML;
 }
 
 // ─── Tab 3: ⚡ アクション (= 今後の動き) ───────────────────────────

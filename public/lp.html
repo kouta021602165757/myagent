@@ -563,6 +563,88 @@
     .dash-mock-cta{display:none}
   }
 
+  /* ── CAPABILITIES — 100+ 機能を内蔵 ────────────────── */
+  .caps-sec{
+    background:linear-gradient(180deg, var(--bg), var(--card));
+    border-top:1px solid var(--wire); border-bottom:1px solid var(--wire);
+    position:relative; overflow:hidden;
+  }
+  .caps-sec::before{
+    content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(circle 600px at 20% 30%, rgba(251,146,60,.06), transparent 60%),
+      radial-gradient(circle 500px at 80% 70%, rgba(251,146,60,.04), transparent 60%);
+  }
+  .caps-sec > .wrap{position:relative; z-index:1}
+  .caps-hero-num{
+    text-align:center; margin:48px auto 30px;
+  }
+  .caps-num-big{
+    font-family:'Outfit', sans-serif; font-weight:800;
+    font-size:clamp(80px,12vw,140px); line-height:1;
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    letter-spacing:-.04em;
+    position:relative; display:inline-block;
+  }
+  .caps-num-big::after{
+    content:''; position:absolute; inset:-10px; z-index:-1;
+    background:radial-gradient(circle, rgba(251,146,60,.18), transparent 70%);
+    filter:blur(40px);
+  }
+  .caps-num-lbl{
+    font-size:13px; font-weight:800; letter-spacing:.06em;
+    color:var(--ink2); text-transform:uppercase; margin-top:6px;
+  }
+  .caps-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:18px;
+    max-width:1080px; margin:0 auto;
+  }
+  .caps-cat{
+    background:#fff; border:1px solid var(--wire); border-radius:14px;
+    padding:22px 22px 20px;
+    transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s, border-color .3s;
+  }
+  .caps-cat:hover{transform:translateY(-3px); box-shadow:var(--shadow-md); border-color:rgba(251,146,60,.32)}
+  .caps-cat-h{
+    font-size:14px; font-weight:900; letter-spacing:-.005em;
+    margin-bottom:12px; display:flex; align-items:center; gap:8px;
+  }
+  .caps-cat-h-ic{
+    width:28px; height:28px; border-radius:7px;
+    background:var(--peach-soft);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:15px;
+  }
+  .caps-cat-h-cnt{
+    margin-left:auto; font-size:11px; font-weight:700;
+    color:var(--peach-d); background:var(--peach-soft);
+    padding:3px 8px; border-radius:99px;
+  }
+  .caps-chips{display:flex; flex-wrap:wrap; gap:5px}
+  .caps-chip{
+    font-size:11px; font-weight:700; color:var(--ink2);
+    background:var(--cream); border:1px solid var(--wire);
+    padding:5px 10px; border-radius:7px;
+    transition:background .15s, border-color .15s, color .15s;
+  }
+  .caps-chip:hover{background:#fff; border-color:var(--peach); color:var(--peach-d)}
+  .caps-foot{
+    text-align:center; margin-top:36px;
+    font-size:13.5px; color:var(--ink2);
+    padding:14px 22px; background:var(--peach-soft);
+    border:1px solid rgba(251,146,60,.22); border-radius:12px;
+    max-width:620px; margin-left:auto; margin-right:auto;
+  }
+  .caps-foot b{color:var(--peach-d); font-weight:800}
+  @media (max-width:880px){
+    .caps-grid{grid-template-columns:repeat(2,1fr); gap:14px}
+  }
+  @media (max-width:560px){
+    .caps-grid{grid-template-columns:1fr; gap:10px}
+    .caps-cat{padding:18px 18px 16px}
+  }
+
   /* ── DELIVERABLES ───────────────────────────────────── */
   .deliverables{background:var(--card); border-top:1px solid var(--wire); border-bottom:1px solid var(--wire)}
   .del-grid{
@@ -1138,6 +1220,197 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════
+     CAPABILITIES — 100+ 機能を内蔵
+     ═══════════════════════════════════════════════════════════ -->
+<section class="caps-sec">
+  <div class="wrap">
+    <span class="sec-eyebrow" data-i18n="cp.eye">100+ 機能を内蔵</span>
+    <h2 class="sec-h2" data-i18n="cp.h2">外部ツール連携は要りません</h2>
+    <p class="sec-sub" data-i18n="cp.sub">
+      SNS 投稿・分析・コンテンツ生成・自動化 — 全部 MY AI Agent の中で完結。<br>
+      Buffer も Jasper も Hootsuite も不要です。
+    </p>
+
+    <div class="caps-hero-num">
+      <div class="caps-num-big">100<span style="font-size:.5em">+</span></div>
+      <div class="caps-num-lbl" data-i18n="cp.numlbl">内蔵機能</div>
+    </div>
+
+    <div class="caps-grid">
+      <!-- コンテンツ -->
+      <div class="caps-cat">
+        <div class="caps-cat-h">
+          <span class="caps-cat-h-ic">📝</span>
+          <span data-i18n="cp.c1">コンテンツ生成</span>
+          <span class="caps-cat-h-cnt">22</span>
+        </div>
+        <div class="caps-chips">
+          <span class="caps-chip">SEO ブログ記事</span>
+          <span class="caps-chip">記事ネタ提案</span>
+          <span class="caps-chip">見出し最適化</span>
+          <span class="caps-chip">Twitter スレッド</span>
+          <span class="caps-chip">X 投稿</span>
+          <span class="caps-chip">LinkedIn 投稿</span>
+          <span class="caps-chip">Instagram キャプション</span>
+          <span class="caps-chip">メルマガ</span>
+          <span class="caps-chip">営業メール</span>
+          <span class="caps-chip">件名 A/B</span>
+          <span class="caps-chip">LP コピー</span>
+          <span class="caps-chip">CTA 改善</span>
+          <span class="caps-chip">フォーム文言</span>
+          <span class="caps-chip">FAQ 生成</span>
+          <span class="caps-chip">ホワイトペーパー</span>
+          <span class="caps-chip">提案書</span>
+          <span class="caps-chip">ケーススタディ</span>
+          <span class="caps-chip">議事録</span>
+          <span class="caps-chip">プレスリリース</span>
+          <span class="caps-chip">商品説明文</span>
+          <span class="caps-chip">レビュー返信</span>
+          <span class="caps-chip">FAQ 回答</span>
+        </div>
+      </div>
+
+      <!-- 分析・データ -->
+      <div class="caps-cat">
+        <div class="caps-cat-h">
+          <span class="caps-cat-h-ic">📊</span>
+          <span data-i18n="cp.c2">分析・データ</span>
+          <span class="caps-cat-h-cnt">18</span>
+        </div>
+        <div class="caps-chips">
+          <span class="caps-chip">GA4 流入解析</span>
+          <span class="caps-chip">競合分析</span>
+          <span class="caps-chip">SEO 競合監視</span>
+          <span class="caps-chip">キーワード調査</span>
+          <span class="caps-chip">検索意図分析</span>
+          <span class="caps-chip">CVR 分析</span>
+          <span class="caps-chip">カート放棄</span>
+          <span class="caps-chip">A/B テスト案</span>
+          <span class="caps-chip">統計検定</span>
+          <span class="caps-chip">コホート分析</span>
+          <span class="caps-chip">KPI ダッシュボード</span>
+          <span class="caps-chip">レポート生成</span>
+          <span class="caps-chip">ユーザー行動</span>
+          <span class="caps-chip">ヒートマップ予測</span>
+          <span class="caps-chip">バックリンク調査</span>
+          <span class="caps-chip">技術 SEO 監査</span>
+          <span class="caps-chip">PageSpeed 分析</span>
+          <span class="caps-chip">Schema 検査</span>
+        </div>
+      </div>
+
+      <!-- ビジュアル -->
+      <div class="caps-cat">
+        <div class="caps-cat-h">
+          <span class="caps-cat-h-ic">🎨</span>
+          <span data-i18n="cp.c3">ビジュアル</span>
+          <span class="caps-cat-h-cnt">14</span>
+        </div>
+        <div class="caps-chips">
+          <span class="caps-chip">AI 画像生成</span>
+          <span class="caps-chip">画像編集</span>
+          <span class="caps-chip">動画生成</span>
+          <span class="caps-chip">音声生成</span>
+          <span class="caps-chip">グラフ・チャート</span>
+          <span class="caps-chip">図解</span>
+          <span class="caps-chip">PDF 生成</span>
+          <span class="caps-chip">QR コード</span>
+          <span class="caps-chip">インフォグラフィック</span>
+          <span class="caps-chip">バナー</span>
+          <span class="caps-chip">OG 画像</span>
+          <span class="caps-chip">ファビコン</span>
+          <span class="caps-chip">ロゴ案</span>
+          <span class="caps-chip">サムネ生成</span>
+        </div>
+      </div>
+
+      <!-- Web 操作 -->
+      <div class="caps-cat">
+        <div class="caps-cat-h">
+          <span class="caps-cat-h-ic">🌐</span>
+          <span data-i18n="cp.c4">Web 操作</span>
+          <span class="caps-cat-h-cnt">12</span>
+        </div>
+        <div class="caps-chips">
+          <span class="caps-chip">スクレイピング</span>
+          <span class="caps-chip">スクリーンショット</span>
+          <span class="caps-chip">ブラウザ自動操作</span>
+          <span class="caps-chip">フォーム送信</span>
+          <span class="caps-chip">ログイン操作</span>
+          <span class="caps-chip">マルチページ巡回</span>
+          <span class="caps-chip">DOM 取得</span>
+          <span class="caps-chip">競合監視</span>
+          <span class="caps-chip">価格監視</span>
+          <span class="caps-chip">ニュース監視</span>
+          <span class="caps-chip">RSS 取得</span>
+          <span class="caps-chip">サイトマップ生成</span>
+        </div>
+      </div>
+
+      <!-- 配信・通知 -->
+      <div class="caps-cat">
+        <div class="caps-cat-h">
+          <span class="caps-cat-h-ic">📧</span>
+          <span data-i18n="cp.c5">配信・通知</span>
+          <span class="caps-cat-h-cnt">14</span>
+        </div>
+        <div class="caps-chips">
+          <span class="caps-chip">メール送信</span>
+          <span class="caps-chip">SNS 即時投稿</span>
+          <span class="caps-chip">SNS 予約投稿</span>
+          <span class="caps-chip">Slack 通知</span>
+          <span class="caps-chip">Discord 投稿</span>
+          <span class="caps-chip">Buffer 連携</span>
+          <span class="caps-chip">LINE Bot</span>
+          <span class="caps-chip">メルマガ配信</span>
+          <span class="caps-chip">記事拡散</span>
+          <span class="caps-chip">WordPress 公開</span>
+          <span class="caps-chip">Google Drive 保存</span>
+          <span class="caps-chip">Sheets 書込</span>
+          <span class="caps-chip">通知ルール</span>
+          <span class="caps-chip">Webhook 送信</span>
+        </div>
+      </div>
+
+      <!-- 自動化 -->
+      <div class="caps-cat">
+        <div class="caps-cat-h">
+          <span class="caps-cat-h-ic">🛠</span>
+          <span data-i18n="cp.c6">自動化・統合</span>
+          <span class="caps-cat-h-cnt">20</span>
+        </div>
+        <div class="caps-chips">
+          <span class="caps-chip">スケジュール実行</span>
+          <span class="caps-chip">定期レポート</span>
+          <span class="caps-chip">イベントトリガー</span>
+          <span class="caps-chip">ワークフロー</span>
+          <span class="caps-chip">Zapier 連携</span>
+          <span class="caps-chip">MCP プラグイン</span>
+          <span class="caps-chip">GitHub 操作</span>
+          <span class="caps-chip">Issue 起票</span>
+          <span class="caps-chip">PR 作成</span>
+          <span class="caps-chip">タスク管理</span>
+          <span class="caps-chip">プロジェクト管理</span>
+          <span class="caps-chip">カレンダー</span>
+          <span class="caps-chip">Chrome 拡張</span>
+          <span class="caps-chip">CRM 連動</span>
+          <span class="caps-chip">ファイル変換</span>
+          <span class="caps-chip">音声書き起こし</span>
+          <span class="caps-chip">OCR</span>
+          <span class="caps-chip">翻訳</span>
+          <span class="caps-chip">バッチ処理</span>
+          <span class="caps-chip">API 呼び出し</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="caps-foot" data-i18n="cp.foot">
+      <b>全部内蔵</b>。Buffer / Jasper / Hootsuite / Make / Zapier 等の <b>外部ツール契約は不要</b>です。
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
      DELIVERABLES
      ═══════════════════════════════════════════════════════════ -->
 <section class="deliverables">
@@ -1561,6 +1834,18 @@
     "dp.h2": "This is the dashboard you'll see",
     "dp.sub": "60 seconds after dropping your URL. AI team formed, first deliverables shipped.",
 
+    "cp.eye": "100+ built-in",
+    "cp.h2": "No external tool subscriptions needed",
+    "cp.sub": "Social posting · analytics · content generation · automation — all native to MY AI Agent. Skip Buffer, Jasper, Hootsuite.",
+    "cp.numlbl": "Built-in features",
+    "cp.c1": "Content generation",
+    "cp.c2": "Analytics & data",
+    "cp.c3": "Visuals",
+    "cp.c4": "Web operations",
+    "cp.c5": "Delivery & notifications",
+    "cp.c6": "Automation",
+    "cp.foot": "<b>Everything built-in</b>. No more juggling external SaaS tools.",
+
     "cmp.eye": "How we compare",
     "cmp.h2": "Why choose an AI team",
     "cmp.sub": "ChatGPT / Jasper / freelance marketers — strengths, weaknesses, and why teams win.",
@@ -1812,7 +2097,7 @@
       '.sec-h2', '.sec-sub', '.pain', '.step', '.del',
       '.v-card', '.dash-mock', '.stat-card', '.problem-out',
       'details.fq', '.final h2', '.final-sub', '.final-form',
-      '.cmp-table-wrap', '.qt-card',
+      '.cmp-table-wrap', '.qt-card', '.caps-cat', '.caps-hero-num', '.caps-foot',
     ];
     var nodes = [];
     targets.forEach(function(sel){

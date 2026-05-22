@@ -13873,11 +13873,12 @@ async function handleAPI(req,res,pathname,method,ip){
       site_vertical: vertical,
       site_title: pageTitle.slice(0, 200),
       team_members: preset.members,
-      skills: ['marketing','writing','research','analysis','planning'],
+      skills: ['marketing','writing','research','analysis','planning','sns','content','design','idea','teaching','support','translate','planning','coding','ceo','coo','secretary','designer'],
       persona: preset.system_prompt + '\n\n【担当サイト】 ' + siteUrl + ' (' + siteName + ')',
-      chrome_enabled: false,
-      sheets_enabled: false,
-      extension_enabled: false,
+      // ── 100+ 機能を内蔵: site agent は全ツール解禁 (= 「接続不要で何でもできる」訴求の担保) ──
+      chrome_enabled: true,           // Web スクレイピング / スクショ / 自動操作
+      sheets_enabled: true,           // Google Sheets 一連
+      extension_enabled: true,        // Chrome 拡張連携 (ログイン状態維持)
       model: 'sonnet',
       history: [],
       created_at: new Date().toISOString(),
@@ -14001,7 +14002,7 @@ async function handleAPI(req,res,pathname,method,ip){
     //  site_url / site_vertical / etc. の "before" 状態を保てれば十分)
     const _backup = {};
     for(const k of Object.keys(agent)) _backup[k] = agent[k];
-    const _appliedKeys = ['site_url','site_vertical','site_title','team_members','persona','legacy_persona','via_onboarding_site','via_migration','avatar','current_task'];
+    const _appliedKeys = ['site_url','site_vertical','site_title','team_members','persona','legacy_persona','via_onboarding_site','via_migration','avatar','current_task','chrome_enabled','sheets_enabled','extension_enabled'];
 
     const preset = _teamPresetFor(vertical);
     agent.site_url = siteUrl;
@@ -14013,6 +14014,10 @@ async function handleAPI(req,res,pathname,method,ip){
     agent.via_onboarding_site = true;
     agent.via_migration = true;
     agent.avatar = preset.icon;
+    // 100+ 機能を内蔵: site team 化したら全ツール解禁
+    agent.chrome_enabled = true;
+    agent.sheets_enabled = true;
+    agent.extension_enabled = true;
     if(!agent.current_task){
       let _siteHostnameForLog = siteUrl;
       try { _siteHostnameForLog = new URL(siteUrl).hostname.replace(/^www\./, ''); } catch(e){}

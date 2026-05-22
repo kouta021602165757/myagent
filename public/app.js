@@ -3421,14 +3421,12 @@ async function _submitAddSite(ev){
   return false;
 }
 
-// サイトを「アクティブ」にする (= サイドバーで選択 → ダッシュボードに反映)
+// サイトを「アクティブ」にする → チャットを実際に開く
+// (= 旧 openSite は activeId 切替のみだったが、それだとチャットが開かない
+//   バグになってたので、明示的に openAgent を呼んでチャット画面を開く)
 function openSite(siteId){
   if(!siteId) return;
-  activeId = siteId;
-  try { localStorage.setItem('activeAgentId', siteId); } catch(e){}
-  try { renderAgList(); } catch(e){}
-  try { renderHomeDashboard(); } catch(e){}
-  // 既存 openAgent と同等の動作 (チャットを開く) は明示クリックのみで起動
+  try { openAgent(siteId); } catch(e){ console.warn('[openSite] openAgent failed:', e && e.message); }
 }
 
 // ── 旧 agent → site migration モーダル ─────────────────────────

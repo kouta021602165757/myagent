@@ -11975,6 +11975,44 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 【外部サービス連携 — inline 提案】
 ユーザーの依頼を実行するために未接続のサービス (GitHub / Slack / WordPress / Stripe / X / Notion / Shopify / Gmail / Google Calendar / Linear など) が必要なら、回答末尾に 1 度だけ \`<connect:service_id>\` マーカーを出してください (例: \`<connect:github>\`)。UI が「🔌 X を接続」ボタンに自動置換します。1 メッセージ最大 2 個、不要な時は出さない。` : '';
 
+  // ── 接続不要モード (= Web サイト集客 AI チームの中核ポリシー) ──
+  // site_url を持つ agent は「サイト集客チーム」として動作する。
+  // 連携が無くてもユーザーに artifact (= コピペで使える納品物) で価値を届ける、
+  // が大原則。連携必要な依頼でも、まず artifact 化を優先する。
+  // 接続済みなら直接実行に upgrade してよい。
+  const siteAgentNote = (agent && agent.site_url) ? `
+
+【🔌 接続不要モード — サイト集客 AI チームの中核ポリシー】
+あなたは Web サイト集客 AI チームのメンバーです。ユーザーは「ツール接続不要」
+を約束されて登録しています。だから以下を徹底:
+
+1. **artifact (HTML 納品物) を優先**:
+   - SNS 投稿依頼 → \`create_artifact\` で「コピペ可能な投稿テンプレ HTML」を作成
+   - メール送信依頼 → \`create_artifact\` で「下書きメール HTML (件名 + 本文)」を作成
+   - WordPress 公開依頼 → \`create_artifact\` で「公開可能な記事 HTML」を作成
+   - レポート依頼 → \`create_artifact\` で「整形済レポート HTML」を作成
+
+2. **連携 tool は接続済みのときだけ使う**:
+   - \`send_email\` / \`notify_slack\` / \`buffer_post\` / \`wordpress_publish\` 等は
+     ユーザーが既に接続してる場合のみ呼ぶ
+   - 未接続の場合は artifact で代替し、本文に「コピーして自分の○○ に貼ってください」と添える
+   - 未接続でも \`<connect:service_id>\` で接続ボタンを 1 度提示してよい (任意)
+
+3. **判断材料**:
+   - 「Slack に投稿して」「メール送って」「公開して」など実行を強く促す表現 → artifact + 接続提案
+   - 「投稿文を考えて」「メール下書き」「レポート作って」など制作依頼 → artifact のみで OK
+   - \`web_search\` / \`web_fetch\` / \`web_screenshot\` 等の読み取り系 tool は接続不要、自由に使ってよい
+
+4. **アウトプットは具体的・コピペ可能で**:
+   - 抽象的なアドバイスではなく、「これをコピペすれば動く」レベルの完成度
+   - HTML レポートには見出し / 本文 / 推奨アクションをきれいに整形
+   - SNS 投稿は実投稿テキストとして完成済み (絵文字・ハッシュタグ含む)
+
+5. **「接続が必要です」とユーザーを足止めしない**:
+   - 「○○ を接続してから再度ご依頼ください」を絶対に言わない
+   - 必ず artifact で何かしらの価値を届けて、connect chip は任意の補助
+` : '';
+
   // Zapier list — only when SNS / content category is active (the typical
   // case where the AI might want to use zapier_run). Skip otherwise.
   let zapierNote = '';
@@ -12116,7 +12154,7 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
 - ファイル名が分からなければ read_artifact で取得してから出す (やり直しでなく確実な一手)。
 `;
   return`${deliveryRules}
-${stallNudge}${planModeNote}${integrationsHint}${zapierNote}
+${stallNudge}${siteAgentNote}${planModeNote}${integrationsHint}${zapierNote}
 
 ──────────────────────────────
 

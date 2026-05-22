@@ -2369,15 +2369,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
   }catch(e){ console.error('[init]',e&&e.message); }
   try{ renderAll(); }catch(re){ console.warn('renderAll:',re.message); }
   document.getElementById('loader').classList.add('gone');
-  // First-run wizard: only when the user has zero agents AND hasn't completed
-  // onboarding yet. Gate on onboarded_at (the persisted DB column) — NOT
-  // onboarded_v1, which was never a column so it never persisted, causing the
-  // wizard to re-nag skippers on every single visit.
-  try {
-    if(me && !me.onboarded_at && (!me.agents || me.agents.length === 0)){
-      _showOnboarding();
-    }
-  } catch(e){ console.warn('[onboarding]', e.message); }
+  // 旧 onboarding wizard は廃止。新規ユーザーは LP / signup → /onboarding.html
+  // のフローを通る。サイト 0 件のユーザーは新ホームの「+ サイトを追加」CTA
+  // (= renderHomeDashboard 内) で onboarding に進む。
 });
 
 // ── First-run onboarding wizard logic ───────────────────────
@@ -3317,83 +3311,231 @@ window._deleteHomeTask = async function(agentId, taskId, ev){
   }
 };
 
-/* Home dashboard: 3-kind overview shown on the empty state. Re-renders
- * whenever the agent list changes, so the user sees a live picture of
- * what's going on. */
-/* Home dashboard — fully re-rendered into #homeBody on every agent-list
- * change. Two states:
- *   new user (no agents)  → welcome + 3-step guide + hire CTAs
- *   returning             → hero status + 新しく始める + tasks + 図鑑 + 最近の会話 */
+// ── サイト (= agent with site_url) を識別するヘルパー群 ─────────────────────
+var _VERTICAL_ICONS = { saas:'🚀', ec:'🛒', store:'🏪', blog:'✍️', portfolio:'💼', other:'🛠' };
+var _VERTICAL_LABELS = { saas:'SaaS / Product LP', ec:'EC ストア', store:'店舗・サロン', blog:'ブログ・メディア', portfolio:'ポートフォリオ', other:'汎用' };
+var _MEMBER_ICONS = {
+  analyst:'📊', seo_writer:'✍️', community:'📱', cro:'🎯', email:'📧',
+  product_writer:'📦', creative_director:'📸', review_strategy:'⭐', shopping_optimizer:'🛒', ec_analyst:'📊',
+  local_seo:'🗺', instagram:'📱', review_mgmt:'💬', local_blogger:'✍️', booking_funnel:'📞',
+  content_strategy:'✍️', seo:'🔍', twitter:'📱', newsletter:'📧',
+  linkedin:'💼', sales_writer:'✍️', case_study:'📚', lead_gen:'🎯', sns:'📱',
+  pm:'📋', researcher:'🔍', writer:'✍️', operator:'🛠',
+};
+function _isSiteAgent(a){ return !!(a && a.site_url); }
+function _verticalIcon(v){ return _VERTICAL_ICONS[v] || '🌐'; }
+function _verticalLabel(v){ return _VERTICAL_LABELS[v] || (v || ''); }
+function _siteHostname(site){
+  try { return new URL(site.site_url).hostname.replace(/^www\./, ''); }
+  catch(e){ return site.name || ''; }
+}
+function _siteTodayArtifacts(siteId){
+  if(!siteId || typeof me === 'undefined' || !me) return [];
+  var arts = Array.isArray(me.artifacts) ? me.artifacts : [];
+  var since = Date.now() - 86400000;
+  return arts.filter(function(a){
+    if(!a || a.chat_id !== siteId) return false;
+    var ts = Date.parse(a.created_at || a.updated_at || 0);
+    return ts && ts > since;
+  });
+}
+function _siteAllArtifacts(siteId){
+  if(!siteId || typeof me === 'undefined' || !me) return [];
+  return (Array.isArray(me.artifacts) ? me.artifacts : [])
+    .filter(function(a){ return a && a.chat_id === siteId; })
+    .sort(function(a,b){ return Date.parse(b.created_at||0) - Date.parse(a.created_at||0); });
+}
+
+/* Home dashboard — サイトベースに完全リライト。
+ * - サイト 0 件 → 「URL を貼って AI チームを派遣」エントリーポイント
+ * - サイトあり → アクティブなサイトの集客ダッシュボード */
 function renderHomeDashboard(){
   var body = document.getElementById('homeBody');
-  if(!body) return; // empty state not in DOM
+  if(!body) return;
 
-  var owned  = agents || [];
-  var joined = _joinedGroups || [];
+  var owned = agents || [];
+  var sites = owned.filter(_isSiteAgent);
   var nameStr = (me && (me.name || (me.email||'').split('@')[0])) || 'there';
 
-  // ── New user: nothing owned, no joined groups ──
-  if(owned.length === 0 && joined.length === 0){
-    body.innerHTML = _homeNewUserHTML(nameStr);
+  // ── 状態 A: サイト 0 件 (新規ユーザー or 移行が必要なユーザー) ──
+  if(sites.length === 0){
+    body.innerHTML = _renderHomeEmptyHTML(nameStr, owned.length);
     return;
   }
 
-  // ── Returning user ──
-  var ais = owned.filter(function(a){ return a && !a.is_group; });
-  var taskN = 0;
-  owned.forEach(function(a){
-    if(Array.isArray(a.open_tasks)) taskN += a.open_tasks.filter(function(t){ return t && t.status!=='done'; }).length;
-  });
+  // ── 状態 B: サイトあり ── アクティブなサイトのダッシュボード
+  var activeSite = sites.find(function(s){ return s.id === activeId; }) || sites[0];
+  body.innerHTML = _renderSiteDashboardHTML(activeSite);
+}
 
-  var d = new Date();
-  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var pad = function(n){ return n<10?'0'+n:''+n; };
-  var dateStr = days[d.getDay()] + ', ' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
-    + ' · ' + pad(d.getHours())+':'+pad(d.getMinutes());
-
-  var chips = '';
-  if(ais.length > 0){
-    chips += '<span class="hm-chip"><span class="dot"></span>'
-      + esc(L('AI '+ais.length+'体', ais.length+' AI'+(ais.length>1?'s':''))) + '</span>';
+// 「サイト 0 件」 = 「+ サイトを追加して AI チームを派遣」の入口
+function _renderHomeEmptyHTML(name, totalAgents){
+  var legacyNote = '';
+  if(totalAgents > 0){
+    legacyNote = '<p class="hm-empty-legacy">過去に作った Agent が ' + totalAgents + ' 体あります。サイドバーから「サイトに紐づける」と AI チームに移行できます。</p>';
   }
-  if(taskN > 0){
-    chips += '<span class="hm-chip">📋 '
-      + esc(L('今日のタスク '+taskN+'件', taskN+' task'+(taskN>1?'s':'')+' today')) + '</span>';
-  }
-  chips += '<span class="hm-chip">' + esc(dateStr) + '</span>';
-
-  var html = ''
-    + '<div class="hm-hero">'
-    +   '<h2>' + esc(L('おかえりなさい、'+nameStr+' さん 🍑', 'Welcome back, '+nameStr+' 🍑')) + '</h2>'
-    +   '<div class="hm-status">' + chips + '</div>'
+  return '<div class="hm-empty">'
+    + '<div class="hm-empty-tag"><span class="hm-tag-dot"></span>Web サイト集客 AI チーム</div>'
+    + '<h1>こんにちは、' + esc(name) + ' さん 🍑</h1>'
+    + '<p class="hm-empty-sub">サイトの URL を貼るだけで、AI チームが集客プランを 60 秒で納品します。</p>'
+    + '<button class="hm-empty-cta" onclick="openAddSiteModal()">'
+    +   '🌐 サイトを追加して AI チームを派遣 <span class="arrow">→</span>'
+    + '</button>'
+    + '<div class="hm-empty-vts">'
+    +   '<span>🚀 SaaS</span><span>🛒 EC</span><span>🏪 店舗</span><span>✍️ ブログ</span><span>💼 ポートフォリオ</span>'
     + '</div>'
-    + '<div class="hm-sec">'
-    +   '<div class="hm-sec-h"><h3>＋ ' + esc(L('新しく始める','Start something new')) + '</h3></div>'
-    +   '<div class="hm-create">'
-    +     _homeCreateCard('feat','🤖', L('AI を雇う','Hire an AI'),
-                          L('1体ずつ・あなた専属の AI を組み立てる','Build your own dedicated AI, one at a time'), 'openNewAgent()')
-    +     _homeCreateCard('','🎯', L('AI チームを組む','Build an AI team'),
-                          L('複数 AI が連携して業務を丸ごと自動化','Multiple AIs collaborate to automate whole workflows'), 'openTeamGallery()')
-    +     _homeCreateCard('','🏪', L('Agent Store','Agent Store'),
-                          L('他クリエイターの既製 AI を導入する','Add ready-made AIs from other creators'), 'openAgentStore()')
+    + legacyNote
+    + '</div>';
+}
+
+// サイト 1 つの集客ダッシュボード
+function _renderSiteDashboardHTML(site){
+  var v = site.site_vertical || 'other';
+  var icon = _verticalIcon(v);
+  var label = _verticalLabel(v);
+  var hostname = _siteHostname(site);
+  var todayArts = _siteTodayArtifacts(site.id);
+  var allArts = _siteAllArtifacts(site.id);
+  var task = site.current_task;
+  var stepsTotal = (task && Array.isArray(task.steps)) ? task.steps.length : 0;
+  var stepsDone = (task && Array.isArray(task.steps)) ? task.steps.filter(function(s){return s.done;}).length : 0;
+  var pct = stepsTotal > 0 ? Math.round(stepsDone / stepsTotal * 100) : 0;
+
+  // Today summary
+  var summary = todayArts.length > 0
+    ? '今日 ' + todayArts.length + ' 件納品 ・ ' + label
+    : 'チーム稼働中 ・ ' + label;
+
+  // Team avatars
+  var members = (site.team_members || []).slice(0, 5);
+  var teamHTML = members.length
+    ? members.map(function(m){
+        return '<div class="sd-mem" title="' + esc(m.name||'') + '">'
+             +   '<span class="sd-mem-ic">' + (_MEMBER_ICONS[m.role] || '🤖') + '</span>'
+             +   '<span class="sd-mem-nm">' + esc(m.name||'') + '</span>'
+             + '</div>';
+      }).join('')
+    : '<div class="sd-empty">チーム情報なし</div>';
+
+  // Progress bar
+  var progressHTML = task
+    ? '<div class="sd-task-tx">' + esc(task.requested || '集客作業') + '</div>'
+      + '<div class="sd-progress"><div class="sd-progress-bar" style="width:' + pct + '%"></div></div>'
+      + '<div class="sd-progress-meta">' + stepsDone + ' / ' + stepsTotal + ' 完了 (' + pct + '%)</div>'
+    : '<div class="sd-empty">タスクなし。「AI チームに依頼」 から始めましょう。</div>';
+
+  // Artifacts grid
+  var artsHTML = allArts.length
+    ? '<div class="sd-art-grid">'
+      + allArts.slice(0, 6).map(function(a){
+          var dt = '';
+          try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric'}); } catch(e){}
+          var openUrl = (a.url || '') + (a.version ? '?v=' + a.version : '');
+          return '<div class="sd-art-card">'
+               +   '<div class="sd-art-ti">' + esc(a.title || a.filename || '納品物') + '</div>'
+               +   '<div class="sd-art-meta">' + dt + (a.version ? ' ・ Ver.' + a.version : '') + '</div>'
+               +   '<a class="sd-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗ 開く</a>'
+               + '</div>';
+        }).join('')
+      + '</div>'
+    : '<div class="sd-empty">まだ納品物がありません。チームに依頼してください。</div>';
+
+  return '<div class="site-dash">'
+    + '<div class="sd-head">'
+    +   '<div class="sd-head-l">'
+    +     '<div class="sd-ic">' + icon + '</div>'
+    +     '<div class="sd-head-meta">'
+    +       '<div class="sd-url"><a href="' + esc(site.site_url) + '" target="_blank" rel="noopener">' + esc(hostname) + '</a></div>'
+    +       '<div class="sd-summary">' + esc(summary) + '</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<button class="sd-chat-cta" onclick="openSite(\'' + esc(site.id) + '\')">'
+    +     '💬 AI チームに依頼 <span class="arrow">→</span>'
+    +   '</button>'
+    + '</div>'
+
+    + '<div class="sd-grid">'
+    +   '<div class="sd-card sd-card-progress">'
+    +     '<div class="sd-card-h">📋 進行中のタスク</div>'
+    +     '<div class="sd-card-bd">' + progressHTML + '</div>'
+    +   '</div>'
+    +   '<div class="sd-card sd-card-team">'
+    +     '<div class="sd-card-h">👥 AI チーム</div>'
+    +     '<div class="sd-card-bd"><div class="sd-team-list">' + teamHTML + '</div></div>'
     +   '</div>'
     + '</div>'
-    + '<div id="homeTasksWrap" class="home-tasks" style="display:none;margin-top:28px">'
-    +   '<div class="home-tasks-h"><h3>📋 ' + esc(L('今日のタスク','Today’s tasks')) + '</h3>'
-    +     '<span class="home-tasks-sub" id="homeTasksSub">' + esc(L('読込中…','Loading…')) + '</span></div>'
-    +   '<div id="homeTasksList" class="home-tasks-list"></div>'
-    + '</div>'
-    + '<div class="hm-sec">'
-    +   '<div class="hm-sec-h"><h3>🪪 ' + esc(L('エージェント図鑑','Agent dex')) + '</h3>'
-    +     '<span class="hm-cnt">' + esc(L(ais.length+' 体', String(ais.length))) + '</span>'
-    +     '<span class="hm-grow"></span>'
-    +     '<span class="hm-sub">' + esc(L('カードをタップで成績カードを開く','Tap a card for full stats')) + '</span></div>'
-    +   '<div id="homeDexWrap">' + _homeDexHTML(ais) + '</div>'
-    + '</div>'
-    + _homeConvoSectionHTML(owned.concat(joined));
 
-  body.innerHTML = html;
-  try { _renderHomeTasks(); } catch(e){}
+    + '<div class="sd-card sd-card-arts">'
+    +   '<div class="sd-card-h">📦 納品物 <span class="sd-card-h-sub">' + allArts.length + ' 件</span></div>'
+    +   '<div class="sd-card-bd">' + artsHTML + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+// 「+ 新しいサイトを追加」モーダル
+function openAddSiteModal(){
+  var existing = document.getElementById('addSiteModal');
+  if(existing) existing.remove();
+  var html = '<div id="addSiteModal" class="add-site-overlay" onclick="if(event.target===this)closeAddSiteModal()">'
+    + '<div class="add-site-card">'
+    +   '<button class="add-site-close" onclick="closeAddSiteModal()" aria-label="閉じる">×</button>'
+    +   '<div class="add-site-tag"><span class="hm-tag-dot"></span>サイトを追加</div>'
+    +   '<h2>あなたのサイトの URL を教えてください</h2>'
+    +   '<p>AI が自動で診断して、専門チームを編成します。60 秒で最初の納品物が届きます。</p>'
+    +   '<form class="add-site-form" onsubmit="return _submitAddSite(event)">'
+    +     '<input id="addSiteInput" class="add-site-input" type="url" placeholder="https://yoursite.com" autocomplete="off" spellcheck="false" />'
+    +     '<button type="submit" class="add-site-go">AI チームを派遣 <span class="arrow">→</span></button>'
+    +   '</form>'
+    +   '<div class="add-site-note">無料プランは 5 サイトまで ・ クレカ不要</div>'
+    + '</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  setTimeout(function(){ var inp = document.getElementById('addSiteInput'); if(inp) inp.focus(); }, 50);
+}
+function closeAddSiteModal(){
+  var m = document.getElementById('addSiteModal');
+  if(m) m.remove();
+}
+async function _submitAddSite(ev){
+  if(ev && ev.preventDefault) ev.preventDefault();
+  var inp = document.getElementById('addSiteInput');
+  if(!inp) return false;
+  var raw = String(inp.value || '').trim();
+  if(!raw){ inp.focus(); return false; }
+  var url = raw;
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  try {
+    var u = new URL(url);
+    if(!u.hostname || u.hostname.indexOf('.') < 0) throw new Error('invalid');
+  } catch(e){
+    inp.style.borderColor = '#dc3232';
+    setTimeout(function(){ inp.style.borderColor = ''; }, 1500);
+    return false;
+  }
+  var btn = ev.target.querySelector('button[type="submit"]');
+  if(btn){ btn.disabled = true; btn.innerHTML = 'AI チームを編成中…'; }
+  try {
+    var r = await api('POST', '/api/onboarding/site', { site_url: url });
+    if(r && r.agent && r.agent.id){
+      closeAddSiteModal();
+      window.location.href = '/onboarding.html?agent_id=' + encodeURIComponent(r.agent.id);
+      return false;
+    }
+  } catch(e){
+    showToast((e && e.message) || 'エラーが発生しました', 'ng');
+    if(btn){ btn.disabled = false; btn.innerHTML = 'AI チームを派遣 <span class="arrow">→</span>'; }
+  }
+  return false;
+}
+
+// サイトを「アクティブ」にする (= サイドバーで選択 → ダッシュボードに反映)
+function openSite(siteId){
+  if(!siteId) return;
+  activeId = siteId;
+  try { localStorage.setItem('activeAgentId', siteId); } catch(e){}
+  try { renderAgList(); } catch(e){}
+  try { renderHomeDashboard(); } catch(e){}
+  // 既存 openAgent と同等の動作 (チャットを開く) は明示クリックのみで起動
 }
 
 function _homeCreateCard(cls, ic, title, desc, onclick){
@@ -3524,76 +3666,71 @@ function _homeNewUserHTML(nameStr){
 }
 
 function renderAgList(){
-  // Keep the home dashboard in sync with the agent list.
+  // ホームダッシュボードを同期 (= activeId 変更時に再描画)
   try { renderHomeDashboard(); } catch(e){}
-  const owned = agents || [];
-  const isAgentsTab = (_sbTab === 'agents');
-  let html = '';
+  var owned = agents || [];
+  // サイト (= AI チーム) と legacy agent を分離
+  var sites = owned.filter(_isSiteAgent);
+  var legacy = owned.filter(function(a){
+    return a && !a.site_url && !a.is_group && !a.team_origin;
+  });
 
-  // Agents that belong to a team are surfaced inside the team only, not in
-  // DMs / the agents tab. team_origin is set when a team is built (template
-  // clones or custom builder).
-  const visibleOwned = owned.filter(a => !a.team_origin);
+  var html = '';
 
-  if(isAgentsTab){
-    // 「Agents」タブ: 作る (3 ボタン) + 自分の AI 一覧 (DM 用)
-    html += '<div class="ag-create-row">'
-      + '<button class="ag-create" onclick="openNewAgent()" title="新規作成">'
-        + '<div class="ic peach">+</div><div class="lbl">新規</div></button>'
-      + '<button class="ag-create" onclick="openTemplate()" title="テンプレート">'
-        + '<div class="ic indigo">📋</div><div class="lbl">テンプレ</div></button>'
-      + '<button class="ag-create" onclick="openAgentStore()" title="Agent Store">'
-        + '<div class="ic green">🏪</div><div class="lbl">Store</div></button>'
-      + '</div>';
-    if(visibleOwned.length === 0){
-      html += '<div style="padding:20px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.55">まだエージェントがいません<br>「新規」ボタンで作成しましょう</div>';
-    } else {
-      // Compact AI list (no section header — they're all AIs)
-      html += visibleOwned.map(a => _renderAgItem(a, false)).join('');
-    }
+  // 1) 「+ サイトを追加」 CTA
+  html += '<button class="ag-add-site" onclick="openAddSiteModal()">'
+       +    '<span class="ag-add-ic">+</span>'
+       +    '<span class="ag-add-tx">新しいサイトを追加</span>'
+       +  '</button>';
+
+  // 2) サイト一覧 (= AI チーム)
+  if(sites.length > 0){
+    html += '<div class="sb-sec-h sb-sec-sites">あなたのサイト <span class="sb-sec-cnt">' + sites.length + '</span></div>';
+    html += sites.slice().sort(_sortByLastActivity).map(_renderSiteItem).join('');
   } else {
-    // 「Talks」タブ: Teams ・ Groups ・ DM の 3 セクション
-    const teamsAg      = visibleOwned.filter(a => a.is_group && a.is_team);
-    const hostedGroups = visibleOwned.filter(a => a.is_group && !a.is_team);
-    const dmAgents     = visibleOwned.filter(a => !a.is_group);
-    const totalGroups  = hostedGroups.length + _joinedGroups.length;
-    const total        = teamsAg.length + totalGroups + dmAgents.length;
+    html += '<div class="ag-empty">サイトを追加すると<br>AI チームが派遣されます</div>';
+  }
 
-    if(total === 0){
-      html += '<div style="padding:32px 16px;text-align:center;font-size:11.5px;color:var(--text3);line-height:1.55">'
-        + L('まだトークがありません','No conversations yet') + '<br>'
-        + '<button class="btn-volt" onclick="goHome()" style="margin-top:14px;font-size:11px;padding:7px 14px">＋ ' + L('ホームから作成','Create from home') + '</button></div>';
-    } else {
-      // Collapsible sections — state in localStorage per key.
-      var collapsed = (function(){ try{ return JSON.parse(localStorage.getItem('mya_sb_collapsed')||'{}'); }catch(e){ return {}; } })();
-      function _section(key, emoji, label, count, addOnclick, addTitle, itemsHTML){
-        var isCollapsed = !!collapsed[key];
-        var caret = isCollapsed ? '▸' : '▾';
-        return '<div class="sb-section-h" style="cursor:pointer" onclick="_toggleSbSection(\''+key+'\')">'
-             +   '<span style="display:flex;align-items:center;gap:6px"><span style="color:var(--text3);font-size:10px;width:10px;display:inline-block">'+caret+'</span>'+emoji+' '+esc(label)+' <span style="color:var(--text3);font-weight:600;font-size:10px">·'+count+'</span></span>'
-             +   (addOnclick?'<button class="sb-section-add" onclick="event.stopPropagation();'+addOnclick+'" title="'+esc(addTitle||'')+'">+</button>':'')
-             + '</div>'
-             + (isCollapsed ? '' : itemsHTML);
-      }
-      // Section: 👥 Teams (AI-only multi-agent groups)
-      if(teamsAg.length > 0){
-        var items = teamsAg.slice().sort(_sortByLastActivity).map(function(a){return _renderAgItem(a, false);}).join('');
-        html += _section('teams','👥', L('Teams','Teams'), teamsAg.length, "openTeamGallery()", L('Agent Team を作成','Create Agent Team'), items);
-      }
-      // Section: 👫 Groups (humans + AI)
-      if(totalGroups > 0){
-        var items2 = hostedGroups.slice().sort(_sortByLastActivity).map(function(a){return _renderAgItem(a, false);}).join('')
-                    + _joinedGroups.slice().sort(_sortByLastActivity).map(function(g){return _renderAgItem(g, true);}).join('');
-        html += _section('groups','👫', L('グループ','Groups'), totalGroups, "openCreateGroup()", L('グループを作成','Create a group'), items2);
-      }
-      // Section: 💬 DMs
-      if(dmAgents.length > 0){
-        var items3 = dmAgents.slice().sort(_sortByLastActivity).map(function(a){return _renderAgItem(a, false);}).join('');
-        html += _section('dms','💬', L('DMs','DMs'), dmAgents.length, "openNewAgent()", L('AI を作成','Create AI'), items3);
-      }
+  // 3) Legacy agents (旧 agent / Day 6 で移行予定)
+  if(legacy.length > 0){
+    var lcCollapsed = false;
+    try { lcCollapsed = (localStorage.getItem('mya_legacy_collapsed') === '1'); } catch(e){}
+    var caret = lcCollapsed ? '▸' : '▾';
+    html += '<div class="sb-sec-h sb-sec-legacy" onclick="_toggleLegacy()">'
+         +   '<span class="sb-sec-caret">' + caret + '</span> 過去のエージェント '
+         +   '<span class="sb-sec-cnt">' + legacy.length + '</span>'
+         + '</div>';
+    if(!lcCollapsed){
+      html += legacy.slice().sort(_sortByLastActivity).map(function(a){ return _renderAgItem(a, false); }).join('');
     }
   }
-  document.getElementById('agList').innerHTML = html;
+
+  var listEl = document.getElementById('agList');
+  if(listEl) listEl.innerHTML = html;
+}
+
+function _toggleLegacy(){
+  var was = false;
+  try { was = (localStorage.getItem('mya_legacy_collapsed') === '1'); } catch(e){}
+  try { localStorage.setItem('mya_legacy_collapsed', was ? '0' : '1'); } catch(e){}
+  renderAgList();
+}
+
+// サイト 1 件のサイドバーアイテム描画
+function _renderSiteItem(site){
+  var v = site.site_vertical || 'other';
+  var ic = _verticalIcon(v);
+  var hostname = _siteHostname(site);
+  var todayN = _siteTodayArtifacts(site.id).length;
+  var summary = todayN > 0 ? '今日 ' + todayN + ' 件' : 'チーム稼働中';
+  var isActive = (activeId === site.id);
+  return '<div class="ag-site' + (isActive ? ' active' : '') + '" onclick="openSite(\'' + esc(site.id) + '\')">'
+       +   '<div class="ag-site-ic">' + ic + '</div>'
+       +   '<div class="ag-site-bd">'
+       +     '<div class="ag-site-host">' + esc(hostname) + '</div>'
+       +     '<div class="ag-site-meta">' + esc(summary) + '</div>'
+       +   '</div>'
+       + '</div>';
 }
 function _toggleSbSection(key){
   var col;

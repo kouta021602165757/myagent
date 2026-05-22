@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock — Outcome-First Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --peach:#fb923c; --peach-dark:#ea580c; --peach-soft:#fff1e3;
+  --cream:#fdf8f3; --cream2:#faf3eb;
+  --text:#2d1a0e; --text2:#6b4226; --text3:#9a6a4a;
+  --wire:rgba(180,120,80,.08); --wire2:rgba(180,120,80,.18); --wire3:rgba(180,120,80,.28);
+  --up:#16a34a; --up-soft:rgba(22,163,74,.1);
+  --down:#dc2626; --down-soft:rgba(220,38,38,.1);
+  --blue:#2563eb; --green:#059669; --purple:#9333ea; --pink:#ec4899; --slate:#475569;
+  --sans:'Zen Kaku Gothic New','Hiragino Sans',sans-serif;
+}
+*{margin:0; padding:0; box-sizing:border-box}
+html,body{
+  font-family:var(--sans); color:var(--text);
+  background:
+    radial-gradient(1400px 700px at 0% -10%, rgba(251,146,60,.08), transparent 60%),
+    radial-gradient(1100px 600px at 100% 110%, rgba(168,85,247,.05), transparent 60%),
+    var(--cream);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit; text-decoration:none}
+
+/* ── Wrapper ── */
+.page{max-width:1180px; margin:0 auto; padding:24px}
+.note{
+  background:#fffbeb; border:1px dashed #f59e0b; border-radius:10px;
+  padding:10px 14px; margin-bottom:18px;
+  font-size:12px; color:#92400e; font-weight:700;
+}
+.note b{color:#78350f}
+
+/* ── Header (rich gradient) ── */
+.head{
+  position:relative; overflow:hidden;
+  display:flex; align-items:center; gap:18px;
+  background:linear-gradient(135deg, #fff 0%, #fff7ee 65%, #ffe8d4 100%);
+  border:1px solid rgba(251,146,60,.18);
+  border-radius:18px; padding:22px 26px;
+  margin-bottom:20px;
+  box-shadow:0 8px 24px rgba(234,88,12,.06), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.head-bg{
+  position:absolute; right:-60px; top:-60px;
+  width:220px; height:220px;
+  background:radial-gradient(circle, rgba(251,146,60,.18), transparent 70%);
+  border-radius:50%; pointer-events:none;
+}
+.head-l{display:flex; align-items:center; gap:16px; flex:1; min-width:0; position:relative; z-index:1}
+.head-ic{
+  width:58px; height:58px; border-radius:16px;
+  background:linear-gradient(135deg, #fff 0%, #fff1e3 100%);
+  border:1px solid rgba(251,146,60,.28);
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px; flex-shrink:0;
+  box-shadow:0 6px 18px rgba(234,88,12,.14), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.vt-tag{
+  display:inline-block;
+  font-size:9.5px; font-weight:800; color:var(--peach-dark);
+  background:rgba(251,146,60,.14); border:1px solid rgba(251,146,60,.3);
+  letter-spacing:.06em; text-transform:uppercase;
+  padding:2px 9px; border-radius:99px; margin-bottom:5px;
+}
+.head-url{font-size:18px; font-weight:900; letter-spacing:-.015em}
+.head-sub{font-size:12px; color:var(--text2); font-weight:700; margin-top:4px}
+.cta{
+  position:relative; z-index:1;
+  background:linear-gradient(135deg,var(--peach),var(--peach-dark));
+  color:#fff; border:0; padding:13px 20px; border-radius:12px;
+  font-family:inherit; font-size:14px; font-weight:800;
+  cursor:pointer; flex-shrink:0;
+  box-shadow:0 6px 18px rgba(234,88,12,.28);
+  display:inline-flex; align-items:center; gap:9px;
+}
+
+/* ── Tabs (color-coded) ── */
+.tabs{
+  display:grid; grid-template-columns:repeat(5,1fr); gap:6px;
+  background:#fff; border:1px solid var(--wire);
+  border-radius:16px; padding:6px; margin-bottom:20px;
+  box-shadow:0 4px 16px rgba(70,40,20,.05);
+}
+.tab{
+  background:transparent; border:0;
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  padding:12px 8px; border-radius:11px;
+  font-family:inherit; color:var(--text3);
+  cursor:pointer; transition:all .15s;
+}
+.tab-ic{font-size:18px; line-height:1}
+.tab-lbl{font-size:12.5px; font-weight:900; margin-top:5px}
+.tab-sub{font-size:9.5px; font-weight:700; color:var(--text3); margin-top:1px; letter-spacing:.04em}
+.tab.on{color:#fff; box-shadow:0 4px 12px var(--shadow)}
+.tab.on .tab-sub{color:rgba(255,255,255,.85)}
+.tab-numbers.on{background:linear-gradient(135deg,#fb923c,#ea580c); --shadow:rgba(234,88,12,.32)}
+
+/* ════════════════════════════════════════════════════════════ */
+/* HERO KPI — 1 つの巨大な outcome 数字                            */
+/* ════════════════════════════════════════════════════════════ */
+.hero{
+  position:relative; overflow:hidden;
+  background:
+    radial-gradient(800px 400px at 0% 0%, rgba(251,146,60,.10), transparent 60%),
+    linear-gradient(135deg, #fff 0%, #fffcf8 100%);
+  border:1px solid rgba(251,146,60,.20);
+  border-radius:20px; padding:32px 36px;
+  margin-bottom:18px;
+  box-shadow:0 10px 30px rgba(234,88,12,.06);
+}
+.hero-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:10.5px; font-weight:800; color:var(--peach-dark);
+  background:rgba(251,146,60,.12); border:1px solid rgba(251,146,60,.28);
+  letter-spacing:.05em; text-transform:uppercase;
+  padding:4px 10px; border-radius:99px; margin-bottom:14px;
+}
+.hero-tag .dot{width:6px; height:6px; border-radius:50%; background:var(--peach); box-shadow:0 0 8px var(--peach)}
+.hero-row{display:flex; align-items:flex-end; gap:22px; flex-wrap:wrap}
+.hero-main{flex:1; min-width:260px}
+.hero-lbl{
+  font-size:13px; font-weight:800; color:var(--text2);
+  letter-spacing:.02em; margin-bottom:8px;
+}
+.hero-val{
+  font-family:'Outfit',sans-serif;
+  font-size:84px; font-weight:900;
+  color:var(--peach-dark); line-height:.95;
+  letter-spacing:-.04em;
+  background:linear-gradient(135deg, #fb923c 0%, #ea580c 60%, #c2410c 100%);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.hero-unit{font-size:.4em; font-weight:800; color:var(--text2); -webkit-text-fill-color:var(--text2); margin-left:4px}
+.hero-delta{
+  display:inline-flex; align-items:center; gap:7px;
+  font-family:'Outfit',sans-serif;
+  font-size:18px; font-weight:800; color:var(--up);
+  background:var(--up-soft); border:1px solid rgba(22,163,74,.22);
+  padding:6px 12px; border-radius:11px;
+  margin-top:14px;
+}
+.hero-delta-arrow{font-size:14px}
+.hero-foot{
+  font-size:13px; color:var(--text2); margin-top:8px; line-height:1.55;
+}
+.hero-foot b{color:var(--peach-dark); font-family:'Outfit',sans-serif; font-weight:800}
+
+/* 月末予測 panel (右寄り) */
+.hero-forecast{
+  background:rgba(255,255,255,.7); backdrop-filter:blur(8px);
+  border:1px solid var(--wire2);
+  border-radius:14px; padding:18px 22px;
+  min-width:240px;
+}
+.hero-forecast-h{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.05em; text-transform:uppercase; margin-bottom:8px;
+}
+.hero-forecast-v{
+  font-family:'Outfit',sans-serif;
+  font-size:34px; font-weight:900; color:var(--text);
+  letter-spacing:-.02em; line-height:1;
+}
+.hero-forecast-goal{
+  font-size:11.5px; color:var(--text2); margin-top:8px; font-weight:700;
+}
+.hero-forecast-bar{
+  height:8px; background:var(--cream2); border-radius:99px; overflow:hidden;
+  margin-top:8px;
+}
+.hero-forecast-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg, var(--up) 0%, #10b981 100%);
+  border-radius:99px;
+  width:84%;
+}
+.hero-forecast-pct{
+  font-family:'Outfit',sans-serif;
+  font-size:11px; font-weight:800; color:var(--up); margin-top:4px;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* 2ND ROW: 3 sub KPIs                                          */
+/* ════════════════════════════════════════════════════════════ */
+.sub-row{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px;
+}
+.sub-card{
+  position:relative; overflow:hidden;
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:18px 20px;
+  transition:transform .15s, box-shadow .15s;
+}
+.sub-card::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+  background:var(--c);
+}
+.sub-card:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.06)}
+.sub-card.up{--c:var(--up); background:linear-gradient(135deg, #fff 0%, #f0fdf4 100%); border-color:rgba(22,163,74,.18)}
+.sub-card.down{--c:var(--down); background:linear-gradient(135deg, #fff 0%, #fef2f2 100%); border-color:rgba(220,38,38,.18)}
+.sub-card.flat{--c:var(--slate); background:linear-gradient(135deg, #fff 0%, #f8fafc 100%); border-color:rgba(71,85,105,.14)}
+.sub-lbl{
+  font-size:11px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase;
+  display:flex; align-items:center; gap:6px; margin-bottom:8px;
+}
+.sub-lbl-ic{font-size:14px}
+.sub-val{
+  font-family:'Outfit',sans-serif;
+  font-size:30px; font-weight:900; color:var(--c);
+  letter-spacing:-.025em; line-height:1;
+}
+.sub-val-unit{font-size:.5em; font-weight:700; color:var(--text2); margin-left:3px}
+.sub-delta{
+  display:inline-flex; align-items:center; gap:5px;
+  font-family:'Outfit',sans-serif;
+  font-size:12.5px; font-weight:800; color:var(--c);
+  margin-top:8px;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* TODAY'S RECOMMENDED ACTION (single, prominent)               */
+/* ════════════════════════════════════════════════════════════ */
+.today{
+  position:relative;
+  background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color:#fff;
+  border-radius:18px; padding:24px 28px;
+  margin-bottom:18px;
+  box-shadow:0 12px 32px rgba(15,23,42,.24);
+  overflow:hidden;
+}
+.today::before{
+  content:''; position:absolute; right:-80px; top:-80px;
+  width:280px; height:280px;
+  background:radial-gradient(circle, rgba(251,146,60,.22), transparent 70%);
+  border-radius:50%; pointer-events:none;
+}
+.today-h{
+  display:flex; align-items:center; gap:10px;
+  font-size:11px; font-weight:800;
+  color:rgba(255,255,255,.7); letter-spacing:.08em; text-transform:uppercase;
+  margin-bottom:10px;
+}
+.today-h-dot{width:8px; height:8px; border-radius:50%; background:#fb923c; box-shadow:0 0 12px #fb923c; animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.today-ti{
+  font-size:21px; font-weight:900; letter-spacing:-.01em; line-height:1.35;
+  margin-bottom:8px; position:relative; z-index:1;
+}
+.today-why{
+  font-size:13px; color:rgba(255,255,255,.75); line-height:1.65; font-weight:600;
+  margin-bottom:18px; max-width:680px;
+  position:relative; z-index:1;
+}
+.today-why b{color:#fb923c}
+.today-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; position:relative; z-index:1}
+.today-btn{
+  background:linear-gradient(135deg, #fb923c, #ea580c);
+  color:#fff; border:0;
+  padding:12px 22px; border-radius:11px;
+  font-family:inherit; font-size:13.5px; font-weight:800;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(234,88,12,.42);
+  display:inline-flex; align-items:center; gap:8px;
+}
+.today-skip{
+  background:rgba(255,255,255,.08); color:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.16);
+  padding:11px 18px; border-radius:11px;
+  font-family:inherit; font-size:12px; font-weight:700;
+  cursor:pointer;
+}
+.today-by{
+  font-size:11px; color:rgba(255,255,255,.5);
+  margin-left:auto;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* ANOMALY ALERT                                                */
+/* ════════════════════════════════════════════════════════════ */
+.anom{
+  background:linear-gradient(135deg, #fff 0%, #fef9c3 100%);
+  border:1px solid #fbbf24;
+  border-radius:14px; padding:16px 20px;
+  margin-bottom:18px;
+  display:flex; align-items:flex-start; gap:14px;
+}
+.anom-ic{
+  width:44px; height:44px; border-radius:12px;
+  background:#fbbf24;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+  box-shadow:0 4px 12px rgba(251,191,36,.32);
+}
+.anom-bd{flex:1; min-width:0}
+.anom-ti{
+  font-size:13.5px; font-weight:900; color:#78350f; letter-spacing:-.005em;
+  margin-bottom:4px;
+}
+.anom-tx{
+  font-size:12.5px; color:#92400e; line-height:1.6; font-weight:600;
+}
+.anom-tx b{color:#78350f}
+.anom-act{
+  background:#78350f; color:#fff; border:0;
+  padding:8px 14px; border-radius:9px;
+  font-family:inherit; font-size:12px; font-weight:800;
+  cursor:pointer; flex-shrink:0;
+  margin-top:2px;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* FUNNEL (with leak highlight + money)                          */
+/* ════════════════════════════════════════════════════════════ */
+.section-h{
+  display:flex; align-items:center; gap:10px;
+  font-size:14px; font-weight:900; color:var(--text);
+  letter-spacing:-.005em;
+  margin:8px 0 12px;
+}
+.section-h-sub{
+  font-size:11px; font-weight:700; color:var(--text3);
+  margin-left:auto; letter-spacing:.04em;
+}
+.funnel{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:22px 26px;
+  margin-bottom:18px;
+}
+.funnel-stages{display:flex; flex-direction:column; gap:8px}
+.fn-stage{
+  display:flex; align-items:center; gap:14px;
+  padding:12px 16px; border-radius:11px;
+  background:var(--cream); transition:transform .15s;
+}
+.fn-stage:hover{transform:translateX(2px)}
+.fn-stage.leak{
+  background:linear-gradient(90deg, #fef2f2 0%, #fff 80%);
+  border:1px solid rgba(220,38,38,.22);
+}
+.fn-num{
+  font-family:'Outfit',sans-serif;
+  font-size:13px; font-weight:900; color:var(--text3);
+  width:18px; flex-shrink:0;
+}
+.fn-bar-wrap{
+  flex:1; min-width:0;
+  height:30px; background:rgba(0,0,0,.04); border-radius:8px;
+  position:relative; overflow:hidden;
+}
+.fn-bar{
+  height:100%;
+  background:linear-gradient(90deg, var(--peach) 0%, var(--peach-dark) 100%);
+  border-radius:8px;
+  display:flex; align-items:center; padding:0 12px;
+  font-family:'Outfit',sans-serif;
+  font-size:13px; font-weight:900; color:#fff;
+  white-space:nowrap;
+  transition:width .4s;
+}
+.fn-stage.leak .fn-bar{
+  background:linear-gradient(90deg, var(--down) 0%, #991b1b 100%);
+}
+.fn-stage:nth-child(1) .fn-bar{background:linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%)}
+.fn-stage:nth-child(2) .fn-bar{background:linear-gradient(90deg, #fb923c 0%, #ea580c 100%)}
+.fn-stage:nth-child(3) .fn-bar{background:linear-gradient(90deg, var(--down) 0%, #991b1b 100%)}
+.fn-stage:nth-child(4) .fn-bar{background:linear-gradient(90deg, #059669 0%, #047857 100%)}
+.fn-lbl{
+  font-size:13px; font-weight:800; color:var(--text);
+  width:130px; flex-shrink:0;
+}
+.fn-rate{
+  font-family:'Outfit',sans-serif;
+  font-size:13px; font-weight:800; color:var(--text2);
+  width:64px; text-align:right; flex-shrink:0;
+}
+.fn-leak-callout{
+  margin-top:10px;
+  background:#fee2e2; border:1px solid #fca5a5;
+  border-radius:10px; padding:10px 14px;
+  display:flex; align-items:center; gap:10px;
+  font-size:12px; font-weight:700; color:#991b1b;
+}
+.fn-leak-callout b{color:#7f1d1d; font-family:'Outfit',sans-serif; font-weight:900}
+
+/* ════════════════════════════════════════════════════════════ */
+/* TREND CHART                                                  */
+/* ════════════════════════════════════════════════════════════ */
+.trend{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:22px 26px;
+  margin-bottom:18px;
+}
+.trend-h{
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:14px;
+}
+.trend-ti{font-size:14px; font-weight:900; color:var(--text)}
+.trend-period{
+  margin-left:auto; display:flex; gap:4px;
+}
+.trend-period span{
+  font-size:11px; font-weight:800;
+  padding:5px 12px; border-radius:8px;
+  background:var(--cream); color:var(--text3);
+  cursor:pointer;
+}
+.trend-period span.on{background:var(--peach-dark); color:#fff}
+.trend-chart{
+  width:100%; height:200px;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* COMPARISON GRID                                              */
+/* ════════════════════════════════════════════════════════════ */
+.cmp{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+  margin-bottom:18px;
+}
+.cmp-card{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:12px; padding:14px 16px;
+}
+.cmp-lbl{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-bottom:6px;
+}
+.cmp-val{
+  display:flex; align-items:baseline; gap:6px;
+}
+.cmp-num{
+  font-family:'Outfit',sans-serif;
+  font-size:24px; font-weight:900; color:var(--text);
+  line-height:1; letter-spacing:-.02em;
+}
+.cmp-delta{
+  font-family:'Outfit',sans-serif;
+  font-size:11.5px; font-weight:800;
+  padding:2px 7px; border-radius:99px;
+}
+.cmp-delta.up{color:var(--up); background:var(--up-soft)}
+.cmp-delta.down{color:var(--down); background:var(--down-soft)}
+.cmp-delta.flat{color:var(--text3); background:rgba(0,0,0,.04)}
+.cmp-sub{
+  font-size:10.5px; font-weight:700; color:var(--text3);
+  margin-top:3px;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* BEFORE / AFTER                                                */
+/* ════════════════════════════════════════════════════════════ */
+.ba{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:22px 26px;
+  margin-bottom:18px;
+}
+.ba-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px;
+  margin-top:14px;
+}
+.ba-card{
+  position:relative;
+  background:var(--cream);
+  border:1px solid var(--wire);
+  border-radius:12px; overflow:hidden;
+}
+.ba-stamp{
+  position:absolute; left:12px; top:12px;
+  background:rgba(255,255,255,.94); backdrop-filter:blur(6px);
+  border:1px solid var(--wire2);
+  font-size:10.5px; font-weight:800; color:var(--text);
+  padding:4px 10px; border-radius:99px;
+  letter-spacing:.04em; z-index:2;
+}
+.ba-stamp.after{background:rgba(22,163,74,.92); color:#fff; border-color:rgba(22,163,74,1)}
+.ba-img{
+  width:100%; aspect-ratio:16/10;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.5), rgba(255,255,255,0)),
+    repeating-linear-gradient(45deg, rgba(180,120,80,.05) 0 10px, transparent 10px 20px);
+  color:var(--text3); font-size:11px; font-weight:700;
+}
+.ba-card.after .ba-img{
+  background:
+    linear-gradient(135deg, rgba(34,197,94,.06), rgba(255,255,255,0)),
+    repeating-linear-gradient(45deg, rgba(34,197,94,.05) 0 10px, transparent 10px 20px);
+}
+.ba-mini-host{font-size:14px; font-weight:900; color:var(--text)}
+.ba-mini-pv{
+  font-family:'Outfit',sans-serif;
+  font-size:34px; font-weight:900; line-height:1;
+}
+.ba-card.before .ba-mini-pv{color:var(--text3)}
+.ba-card.after .ba-mini-pv{color:var(--up)}
+.ba-mini-lbl{font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text3)}
+.ba-cta{
+  margin-top:14px;
+  background:var(--cream); border-radius:10px; padding:11px 14px;
+  font-size:12px; font-weight:700; color:var(--text2);
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.ba-cta b{color:var(--up); font-family:'Outfit',sans-serif; font-weight:800}
+.ba-cta-btn{
+  background:var(--text); color:#fff; border:0;
+  padding:7px 14px; border-radius:8px;
+  font-size:11px; font-weight:800; cursor:pointer;
+  font-family:inherit;
+}
+
+/* ════════════════════════════════════════════════════════════ */
+/* AI が今週やった事 (demoted footer)                            */
+/* ════════════════════════════════════════════════════════════ */
+.ai-did{
+  background:rgba(255,255,255,.55);
+  backdrop-filter:blur(6px);
+  border:1px dashed var(--wire2);
+  border-radius:12px; padding:14px 18px;
+  display:flex; align-items:center; gap:14px;
+  margin-bottom:18px;
+}
+.ai-did-ic{font-size:18px; opacity:.6}
+.ai-did-bd{flex:1; font-size:12px; color:var(--text2); font-weight:700; line-height:1.55}
+.ai-did-bd b{color:var(--text); font-weight:800}
+.ai-did-arrow{font-size:14px; color:var(--text3); font-weight:800}
+
+/* ════════════════════════════════════════════════════════════ */
+/* Responsive                                                   */
+/* ════════════════════════════════════════════════════════════ */
+@media (max-width:880px){
+  .page{padding:18px}
+  .hero{padding:24px 22px}
+  .hero-val{font-size:60px}
+  .hero-row{flex-direction:column; align-items:stretch}
+  .sub-row{grid-template-columns:1fr; gap:10px}
+  .cmp{grid-template-columns:1fr 1fr}
+  .ba-grid{grid-template-columns:1fr}
+  .fn-lbl{width:90px; font-size:11.5px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="note">
+    <b>📐 Mock</b> ・ Outcome-First Dashboard. 本物のデータではなく、UI 構造の検討用。
+    現在の「数字 = 納品物カウント」 → 「数字 = ビジネスの結果」 に作り変える提案。
+  </div>
+
+  <!-- ── Header ───────────────────────────────────────────────── -->
+  <div class="head">
+    <div class="head-bg"></div>
+    <div class="head-l">
+      <div class="head-ic">✍️</div>
+      <div>
+        <div class="vt-tag">ブログ・メディア</div>
+        <div class="head-url">fukuyama-note.com ↗</div>
+        <div class="head-sub">チーム稼働中 ・ 今週 6 件の納品</div>
+      </div>
+    </div>
+    <button class="cta">💬 チャットに戻る →</button>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab tab-numbers on"><span class="tab-ic">📊</span><span class="tab-lbl">数字</span><span class="tab-sub">結果</span></button>
+    <button class="tab"><span class="tab-ic">🎯</span><span class="tab-lbl">戦略</span><span class="tab-sub">設計図</span></button>
+    <button class="tab"><span class="tab-ic">⚡</span><span class="tab-lbl">アクション</span><span class="tab-sub">今後の動き</span></button>
+    <button class="tab"><span class="tab-ic">🤖</span><span class="tab-lbl">Agent一覧</span><span class="tab-sub">チームメンバー</span></button>
+    <button class="tab"><span class="tab-ic">⚙</span><span class="tab-lbl">設定</span><span class="tab-sub">共有 / 編集</span></button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- HERO: 主 KPI (= 月間 PV — onboarding でユーザーが選択)         -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="hero">
+    <div class="hero-tag"><span class="dot"></span>今月のメイン KPI ・ 月間 PV</div>
+    <div class="hero-row">
+      <div class="hero-main">
+        <div class="hero-lbl">今月の累計 PV</div>
+        <div class="hero-val">42,180<span class="hero-unit">PV</span></div>
+        <div class="hero-delta"><span class="hero-delta-arrow">↗</span> +38% vs 先月 (30,540 PV)</div>
+        <div class="hero-foot">5/1 から本日まで。あと <b>9 日</b> で月末。このペースなら <b>48,300 PV</b> に到達予測。</div>
+      </div>
+      <div class="hero-forecast">
+        <div class="hero-forecast-h">📈 月末予測 vs 目標</div>
+        <div class="hero-forecast-v">48,300 PV</div>
+        <div class="hero-forecast-goal">目標 50,000 PV — あと <b>1,700 PV</b></div>
+        <div class="hero-forecast-bar"><div class="hero-forecast-bar-fill"></div></div>
+        <div class="hero-forecast-pct">84% 達成見込み</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- 2ND ROW: 3 個の副 KPI                                          -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="sub-row">
+    <div class="sub-card up">
+      <div class="sub-lbl"><span class="sub-lbl-ic">📧</span> 今月の問い合わせ</div>
+      <div class="sub-val">23<span class="sub-val-unit">件</span></div>
+      <div class="sub-delta">↗ +12 件 vs 先月</div>
+    </div>
+    <div class="sub-card up">
+      <div class="sub-lbl"><span class="sub-lbl-ic">🔍</span> 平均検索順位</div>
+      <div class="sub-val">12.1</div>
+      <div class="sub-delta">↗ 18.4 → 12.1 (改善)</div>
+    </div>
+    <div class="sub-card down">
+      <div class="sub-lbl"><span class="sub-lbl-ic">🎯</span> CVR</div>
+      <div class="sub-val">1.8<span class="sub-val-unit">%</span></div>
+      <div class="sub-delta">↘ -0.3pt vs 先月 (要対応)</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- TODAY'S RECOMMENDED ACTION (1 件だけ)                          -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="today">
+    <div class="today-h"><span class="today-h-dot"></span>今日 ・ AI からの 1 つの提案</div>
+    <div class="today-ti">流入が伸びている「副業×AI」関連の記事をもう 1 本書きましょう</div>
+    <div class="today-why">
+      過去 7 日で「副業 AI」流入が <b>+186%</b> に急増。検索順位も 24→9 まで上昇しているので、
+      関連トピック (例: 「副業 AI 活用法」「ChatGPT 副業」) で記事を増やすと、
+      この勢いに乗って今月の目標 <b>50,000 PV</b> を超える可能性が高いです。
+    </div>
+    <div class="today-row">
+      <button class="today-btn">✍️ SEO ライターに依頼する →</button>
+      <button class="today-skip">他の選択肢を見る</button>
+      <div class="today-by">提案者: 📊 アナリスト</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- ANOMALY ALERT                                                -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="anom">
+    <div class="anom-ic">🚨</div>
+    <div class="anom-bd">
+      <div class="anom-ti">火曜から流入が +186% に急増 — 拾われた可能性</div>
+      <div class="anom-tx">5/19 (火) 以降、検索流入が通常の 2.8 倍に。先週公開の「副業 AI ガイド」記事が <b>Hacker News</b> で言及された可能性。チャットで「この急増を活かす施策を出して」と依頼すると AI が分析します。</div>
+    </div>
+    <button class="anom-act">分析を依頼 →</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- FUNNEL (with leak detection)                                 -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="funnel">
+    <div class="section-h">🔻 集客ファネル <span class="section-h-sub">今月の流れ</span></div>
+    <div class="funnel-stages">
+      <div class="fn-stage">
+        <div class="fn-num">1</div>
+        <div class="fn-lbl">サイト訪問</div>
+        <div class="fn-bar-wrap"><div class="fn-bar" style="width:100%">42,180 PV</div></div>
+        <div class="fn-rate">100%</div>
+      </div>
+      <div class="fn-stage">
+        <div class="fn-num">2</div>
+        <div class="fn-lbl">記事を 30 秒以上閲覧</div>
+        <div class="fn-bar-wrap"><div class="fn-bar" style="width:45%">18,920</div></div>
+        <div class="fn-rate">44.8%</div>
+      </div>
+      <div class="fn-stage leak">
+        <div class="fn-num">3</div>
+        <div class="fn-lbl">メルマガ登録</div>
+        <div class="fn-bar-wrap"><div class="fn-bar" style="width:8%">312</div></div>
+        <div class="fn-rate">1.6%</div>
+      </div>
+      <div class="fn-stage">
+        <div class="fn-num">4</div>
+        <div class="fn-lbl">問い合わせ</div>
+        <div class="fn-bar-wrap"><div class="fn-bar" style="width:3%">23</div></div>
+        <div class="fn-rate">0.05%</div>
+      </div>
+    </div>
+    <div class="fn-leak-callout">
+      ⚠️ <span>ステップ 3「メルマガ登録」で <b>18,608 人</b> 離脱。LP の CTA を改善すれば、業界平均 (3.2%) まで上げて月 <b>+ 約 400 件</b> の登録獲得可能。 → AI に改善案を依頼できます。</span>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- TREND CHART                                                  -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="trend">
+    <div class="trend-h">
+      <div class="trend-ti">📈 PV 推移 (目標ラインと並走)</div>
+      <div class="trend-period">
+        <span>7d</span><span class="on">30d</span><span>90d</span>
+      </div>
+    </div>
+    <svg class="trend-chart" viewBox="0 0 720 200" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fb923c" stop-opacity=".34"/>
+          <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <!-- Goal line -->
+      <line x1="0" y1="55" x2="720" y2="55" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="6 5"/>
+      <text x="710" y="48" text-anchor="end" font-size="10" font-weight="700" fill="#16a34a" font-family="Outfit, sans-serif">目標 50,000 PV/月</text>
+      <!-- Area under line -->
+      <path d="M 0,170 L 24,165 L 48,168 L 72,160 L 96,158 L 120,155 L 144,148 L 168,150 L 192,145 L 216,142 L 240,138 L 264,140 L 288,135 L 312,130 L 336,125 L 360,128 L 384,118 L 408,108 L 432,98 L 456,82 L 480,68 L 504,62 L 528,70 L 552,72 L 576,75 L 600,78 L 624,80 L 648,82 L 672,80 L 696,82 L 720,82 L 720,200 L 0,200 Z" fill="url(#g1)"/>
+      <!-- Line -->
+      <path d="M 0,170 L 24,165 L 48,168 L 72,160 L 96,158 L 120,155 L 144,148 L 168,150 L 192,145 L 216,142 L 240,138 L 264,140 L 288,135 L 312,130 L 336,125 L 360,128 L 384,118 L 408,108 L 432,98 L 456,82 L 480,68 L 504,62 L 528,70 L 552,72 L 576,75 L 600,78 L 624,80 L 648,82 L 672,80 L 696,82 L 720,82" fill="none" stroke="#ea580c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Anomaly callout dot -->
+      <circle cx="456" cy="82" r="6" fill="#fbbf24" stroke="#fff" stroke-width="3"/>
+      <text x="456" y="62" text-anchor="middle" font-size="10" font-weight="800" fill="#92400e" font-family="Outfit, sans-serif">🚨 +186%</text>
+      <!-- Today dot -->
+      <circle cx="720" cy="82" r="6" fill="#ea580c" stroke="#fff" stroke-width="3"/>
+      <text x="710" y="100" text-anchor="end" font-size="10" font-weight="800" fill="#ea580c" font-family="Outfit, sans-serif">今日</text>
+    </svg>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- COMPARISON                                                   -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="section-h">📊 期間比較 <span class="section-h-sub">PV ベース</span></div>
+  <div class="cmp">
+    <div class="cmp-card">
+      <div class="cmp-lbl">今週</div>
+      <div class="cmp-val"><div class="cmp-num">12,460</div><div class="cmp-delta up">+24%</div></div>
+      <div class="cmp-sub">vs 先週 10,050</div>
+    </div>
+    <div class="cmp-card">
+      <div class="cmp-lbl">今月</div>
+      <div class="cmp-val"><div class="cmp-num">42,180</div><div class="cmp-delta up">+38%</div></div>
+      <div class="cmp-sub">vs 先月 30,540</div>
+    </div>
+    <div class="cmp-card">
+      <div class="cmp-lbl">今四半期</div>
+      <div class="cmp-val"><div class="cmp-num">108k</div><div class="cmp-delta up">+62%</div></div>
+      <div class="cmp-sub">vs 前四半期 66k</div>
+    </div>
+    <div class="cmp-card">
+      <div class="cmp-lbl">業界平均比</div>
+      <div class="cmp-val"><div class="cmp-num">1.9x</div><div class="cmp-delta up">+90%</div></div>
+      <div class="cmp-sub">同規模ブログ中央値</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- BEFORE / AFTER                                                -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="ba">
+    <div class="section-h">📷 サインアップ時 vs 今 <span class="section-h-sub">あなたのサイトの成長</span></div>
+    <div class="ba-grid">
+      <div class="ba-card before">
+        <div class="ba-stamp">📅 2026-04-23 (Before)</div>
+        <div class="ba-img">
+          <div class="ba-mini-host">fukuyama-note.com</div>
+          <div class="ba-mini-lbl">月間 PV</div>
+          <div class="ba-mini-pv">8,420</div>
+        </div>
+      </div>
+      <div class="ba-card after">
+        <div class="ba-stamp after">✨ 今日 (After ・ 30 日後)</div>
+        <div class="ba-img">
+          <div class="ba-mini-host">fukuyama-note.com</div>
+          <div class="ba-mini-lbl">月間 PV</div>
+          <div class="ba-mini-pv">42,180</div>
+        </div>
+      </div>
+    </div>
+    <div class="ba-cta">
+      <span>30 日間で月間 PV が <b>+501% (5 倍)</b> に成長。AI チームが届けた 21 件の納品物が貢献。</span>
+      <button class="ba-cta-btn">レポートを共有 →</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- AI が今週やった事 (DEMOTED ・ 折りたたみ風)                    -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="ai-did">
+    <div class="ai-did-ic">🤖</div>
+    <div class="ai-did-bd">
+      <b>AI チームが今週やった事:</b> 記事 3 本 / Twitter 投稿 2 件 / 戦略 sheet 更新 1 件 (合計 6 件)
+    </div>
+    <span class="ai-did-arrow">詳細 →</span>
+  </div>
+
+</div>
+</body>
+</html>

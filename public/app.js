@@ -6563,8 +6563,17 @@ async function regenerateMsg(btn){
   if(!ag.history.length || ag.history[ag.history.length-1].role!=='assistant'){
     showToast(isJa?'再生成できる返答がありません':'Nothing to regenerate','ng'); return;
   }
-  // Optimistically remove last assistant from UI
-  ag.history.pop();
+  // Optimistically remove last assistant from UI — but remember its thread_parent
+  // so the regenerated reply lands in the same thread (= 「絶対スレッド」原則)
+  var _droppedAsst = ag.history.pop();
+  var _regenParent = (_droppedAsst && _droppedAsst.thread_parent_id) || null;
+  if(!_regenParent){
+    // フォールバック: 末尾から逆走して最新の top-level user msg
+    for(var _i = ag.history.length - 1; _i >= 0; _i--){
+      var _hm = ag.history[_i];
+      if(_hm && _hm.role === 'user' && !_hm.thread_parent_id && _hm.id){ _regenParent = _hm.id; break; }
+    }
+  }
   renderMsgs(ag, true);  // user-initiated → force scroll
   // Append thinking indicator
   var inner=document.getElementById('msgsInner');
@@ -6583,13 +6592,15 @@ async function regenerateMsg(btn){
   _scrollMsgsToEnd(true);
   try{
     var r=await api('POST','/api/chat/'+activeId,{regenerate:true});
-    ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null});
+    ag.history.push({role:'assistant',content:r.reply,time:now(),tool_log:r.tool_log||null,thread_parent_id:_regenParent});
     if(r.balance_jpy!==undefined) me.balance_jpy=r.balance_jpy;
   }catch(e){
-    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now(),is_error:true});
+    ag.history.push({role:'assistant',content:'エラー: '+e.message,time:now(),is_error:true,thread_parent_id:_regenParent});
   }
   var t=document.getElementById('thinking'); if(t) t.remove();
   renderMsgs(ag);
+  // 再生成も thread drawer に入るように open
+  if(_regenParent){ try { _openThread(_regenParent); } catch(e){} }
   _refreshArtifactsIfNeeded(r && r.tool_log, ag);
 }
 
@@ -8613,16 +8624,29 @@ async function _sendMsgStream(ag, text, imgs, texts){
 
   // Remove thinking dots.
   var thinking=document.getElementById('thinking'); if(thinking) thinking.remove();
-  // Strict Slack-style: AI streams INSIDE the thread drawer from the start.
-  //   - Drawer-reply path: payload.thread_parent_id is set → use it
-  //   - New top-level: use the freshly-pushed user msg id as parent
-  // We open the drawer immediately (desktop only — mobile stays flat).
-  const _autoParent = payload.thread_parent_id || window._lastTopLevelUserMsgId || null;
+  // ── Strict Slack-style: **AI の返信は必ず thread に入れる** ──
+  //   優先順位で thread_parent_id を決定:
+  //     1. payload.thread_parent_id (drawer 内から返信)
+  //     2. window._lastTopLevelUserMsgId (今のターンで push 済みの user msg)
+  //     3. history を末尾から探して最新の top-level user msg id
+  //   どうしても見つからない場合のみ null (= 初回 / 何もない状態のレア edge)
+  let _autoParent = payload.thread_parent_id || window._lastTopLevelUserMsgId || null;
+  if(!_autoParent && Array.isArray(ag.history)){
+    // 末尾から逆走して最新の top-level user msg を探す
+    for(let _i = ag.history.length - 1; _i >= 0; _i--){
+      const _hm = ag.history[_i];
+      if(_hm && _hm.role === 'user' && !_hm.thread_parent_id && _hm.id){
+        _autoParent = _hm.id;
+        break;
+      }
+    }
+  }
   ag.history.push({role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent});
   const streamIdx = ag.history.length - 1;
   _turnStatusStart();
-  const _wideForDrawer = (typeof window !== 'undefined' && window.innerWidth >= 900);
-  if(_autoParent && _wideForDrawer){
+  // 画面幅ガードは廃止 — モバイルでも drawer を開く (= AI 返信は必ず thread 内)。
+  // モバイルでは drawer がフルスクリーンに広がる CSS 設定があるはず (確認要)。
+  if(_autoParent){
     try { _openThread(_autoParent); } catch(e){}
   }
   // Always re-render main so the user message + (live) thread pill appear.

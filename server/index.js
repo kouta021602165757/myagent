@@ -18861,7 +18861,27 @@ async function handleAPI(req,res,pathname,method,ip){
           : {id:_newUid,role:'user',content:message,time:ts,thread_parent_id:_threadParent,
              ...(_persisted.images.length ? {images:_persisted.images} : {})};
         if(effectiveRegen){
-          agent.history=[...(agent.history||[]),{id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent}];
+          // 「絶対スレッド」原則: 再生成も必ずスレッド内に。
+          // _threadParent が無ければ直前 assistant の thread_parent_id を継承、
+          // それも無ければ最新 top-level user msg を fallback として探す。
+          let _regenParentS = _threadParent;
+          if(!_regenParentS && Array.isArray(agent.history)){
+            for(let _i = agent.history.length - 1; _i >= 0; _i--){
+              const _hm = agent.history[_i];
+              if(_hm && _hm.role === 'assistant' && _hm.thread_parent_id){
+                _regenParentS = _hm.thread_parent_id; break;
+              }
+            }
+            if(!_regenParentS){
+              for(let _i = agent.history.length - 1; _i >= 0; _i--){
+                const _hm = agent.history[_i];
+                if(_hm && _hm.role === 'user' && !_hm.thread_parent_id && _hm.id){
+                  _regenParentS = _hm.id; break;
+                }
+              }
+            }
+          }
+          agent.history=[...(agent.history||[]),{id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_regenParentS}];
         } else {
           agent.history=[...(agent.history||[]),
             _userMsgEntry,
@@ -19629,7 +19649,29 @@ async function handleAPI(req,res,pathname,method,ip){
       : {id:_newUid2,role:'user',content:message,time:ts,thread_parent_id:_threadParent2,
          ...(_persisted2.images.length ? {images:_persisted2.images} : {})};
     if(effectiveRegen){
-      agent.history=[...(agent.history||[]),{id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_threadParent2}];
+      // ── 「絶対スレッド」原則: 再生成も必ずスレッド内に。 ──
+      // _threadParent2 (= body.thread_parent_id) が無くても、history を遡って
+      //   1. 直前 assistant の thread_parent_id (= 再生成対象のスレッド)
+      //   2. 最新 top-level user msg の id (fallback)
+      // を順に使う。これで「再生成だけ top-level に出る」が無くなる。
+      let _regenParentSrv = _threadParent2;
+      if(!_regenParentSrv && Array.isArray(agent.history)){
+        for(let _i = agent.history.length - 1; _i >= 0; _i--){
+          const _hm = agent.history[_i];
+          if(_hm && _hm.role === 'assistant' && _hm.thread_parent_id){
+            _regenParentSrv = _hm.thread_parent_id; break;
+          }
+        }
+        if(!_regenParentSrv){
+          for(let _i = agent.history.length - 1; _i >= 0; _i--){
+            const _hm = agent.history[_i];
+            if(_hm && _hm.role === 'user' && !_hm.thread_parent_id && _hm.id){
+              _regenParentSrv = _hm.id; break;
+            }
+          }
+        }
+      }
+      agent.history=[...(agent.history||[]),{id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_regenParentSrv}];
     } else {
       agent.history=[...(agent.history||[]),
         _userMsgEntry2,

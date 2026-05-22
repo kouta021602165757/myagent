@@ -754,6 +754,96 @@ input,textarea{font-family:var(--sans);}
 .kpi-field input:focus{border-color:var(--peach,#fb923c)}
 .kpi-card .add-site-go{width:100%; padding:13px 18px; margin-top:6px; justify-content:center}
 
+/* ── Activity feed / progress panel ─────────────────────── */
+.sd-progress-panel{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:12px; padding:18px 22px;
+  margin-bottom:14px;
+}
+.sd-progress-h{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; margin-bottom:14px;
+  padding-bottom:12px; border-bottom:1px solid var(--wire);
+}
+.sd-progress-h-l{display:flex; align-items:center; gap:9px}
+.sd-progress-h-ic{
+  width:30px; height:30px; border-radius:8px;
+  background:linear-gradient(135deg,var(--peach,#fb923c),var(--peach-dark,#ea580c));
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px;
+  box-shadow:0 3px 8px rgba(234,88,12,.22);
+}
+.sd-progress-h-tx{font-size:13px; font-weight:900; color:var(--text); letter-spacing:-.005em}
+.sd-weekly{
+  font-size:11.5px; font-weight:700; color:var(--text2);
+}
+.sd-weekly b{
+  font-family:'Outfit',sans-serif;
+  font-size:16px; font-weight:800;
+  background:linear-gradient(135deg,var(--peach,#fb923c),var(--peach-dark,#ea580c));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  margin:0 2px;
+}
+.sd-feed-list{display:flex; flex-direction:column; gap:0}
+.sd-feed-item{
+  display:flex; align-items:center; gap:11px;
+  padding:9px 0;
+  border-bottom:1px dashed rgba(180,120,80,.12);
+  transition:background .15s;
+}
+.sd-feed-item:last-child{border-bottom:0}
+.sd-feed-item:hover{background:rgba(251,146,60,.02)}
+.sd-feed-ic{
+  width:24px; height:24px; border-radius:6px;
+  background:var(--cream,#faf3eb);
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; flex-shrink:0;
+}
+.sd-feed-bd{flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:10px}
+.sd-feed-lbl{
+  font-size:12.5px; font-weight:700; color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sd-feed-ts{
+  font-size:10.5px; color:var(--text3); font-weight:700;
+  flex-shrink:0; font-family:'Outfit',sans-serif;
+}
+.sd-feed-empty{
+  text-align:center; padding:18px 14px;
+  font-size:12px; color:var(--text3); line-height:1.6;
+}
+.sd-next{
+  margin-top:14px; padding:11px 14px;
+  background:var(--cream2,#fff7ee);
+  border:1px solid rgba(251,146,60,.22);
+  border-radius:9px;
+  display:flex; align-items:center; gap:9px;
+  font-size:12px; color:var(--text2); font-weight:700;
+}
+.sd-next-pulse{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--peach,#fb923c);
+  animation:sd-pulse 1.6s ease-in-out infinite;
+  flex-shrink:0;
+}
+@keyframes sd-pulse{
+  0%,100%{opacity:.5; transform:scale(1)}
+  50%{opacity:1; transform:scale(1.3)}
+}
+.sd-next-lbl{flex:1; min-width:0}
+.sd-next-lbl b{color:var(--peach-dark,#ea580c); font-weight:800}
+.sd-next-ts{
+  font-family:'Outfit',sans-serif;
+  font-size:11px; font-weight:800;
+  color:var(--peach-dark,#ea580c); flex-shrink:0;
+}
+@media (max-width:560px){
+  .sd-progress-panel{padding:14px 16px}
+  .sd-progress-h-tx{font-size:12px}
+  .sd-feed-lbl{font-size:11.5px}
+}
+
 .sd-grid{
   display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:14px;
 }
@@ -868,6 +958,25 @@ input,textarea{font-family:var(--sans);}
 }
 .ag-site-meta{
   font-size:10.5px; color:var(--text3); font-weight:600; margin-top:1px;
+}
+.ag-site.live{background:rgba(34,197,94,.04)}
+.ag-site.live.active{background:rgba(34,197,94,.10)}
+.ag-site-ic{position:relative}
+.ag-site-live{
+  position:absolute; top:-2px; right:-2px;
+  width:9px; height:9px; border-radius:50%;
+  background:#22c55e;
+  border:2px solid var(--cream,#faf3eb);
+  animation:ag-live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ag-live-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}
+  50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}
+}
+.ag-site-meta-live{
+  color:#16a34a; font-weight:800;
+  font-family:'Outfit',sans-serif;
+  letter-spacing:.02em;
 }
 .ag-empty{
   padding:18px 16px; text-align:center;

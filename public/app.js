@@ -3333,6 +3333,134 @@ function _renderSiteDashboardHTML(site){
       + '</div>'
     : '<div class="sd-empty">まだ納品物がありません。チームに依頼してください。</div>';
 
+  // ── 直近の活動 (= AI が「動いてる感」を出す Activity Feed) ──
+  // 過去 48 時間の主要イベントを集計:
+  //   1. tool 成功 (mutating tool が走った瞬間)
+  //   2. artifact 完成
+  //   3. 「✅ ステップ N 完了」マーカー
+  // 各イベントを {ts, kind, label, icon} の形でまとめて時系列降順 → 上 8 件。
+  function _siteActivityFeed(site){
+    var events = [];
+    var now = Date.now();
+    var SINCE = now - 48 * 60 * 60 * 1000;  // 48h
+    // a) 履歴の tool_log と「ステップ完了」マーカー
+    var hist = Array.isArray(site.history) ? site.history : [];
+    var memberName = function(role){
+      var m = (site.team_members || []).find(function(x){ return x && x.role === role; });
+      return (m && m.name) || 'AI チーム';
+    };
+    var toolLabel = {
+      'create_artifact':'新しい納品物を作成',
+      'edit_artifact':'納品物を更新',
+      'replace_text':'テキストを修正',
+      'web_search':'Web 検索',
+      'web_fetch':'サイト解析',
+      'web_screenshot':'スクショ取得',
+      'generate_image':'画像を生成',
+      'generate_chart':'グラフを生成',
+      'generate_pdf':'PDF を生成',
+      'send_email':'メール下書き',
+      'notify_slack':'Slack 通知',
+      'ga4_query':'GA4 を分析',
+      'sheets_read':'Sheets を読込',
+      'sheets_write':'Sheets を更新',
+    };
+    var toolIcon = {
+      'create_artifact':'📝','edit_artifact':'✏️','replace_text':'✏️',
+      'web_search':'🔍','web_fetch':'🌐','web_screenshot':'📸',
+      'generate_image':'🎨','generate_chart':'📊','generate_pdf':'📄',
+      'send_email':'📧','notify_slack':'💬','ga4_query':'📊',
+      'sheets_read':'📑','sheets_write':'📑',
+    };
+    for(var i = 0; i < hist.length; i++){
+      var m = hist[i];
+      if(!m) continue;
+      var ts = Date.parse(m.time || m.created_at || 0) || 0;
+      if(!ts || ts < SINCE) continue;
+      if(Array.isArray(m.tool_log)){
+        for(var k = 0; k < m.tool_log.length; k++){
+          var t = m.tool_log[k];
+          if(!t || t.ok === false) continue;
+          var lbl = toolLabel[t.name];
+          if(!lbl) continue;
+          events.push({
+            ts: ts,
+            icon: toolIcon[t.name] || '🤖',
+            label: lbl + (t.title ? ': ' + String(t.title).slice(0, 30) : ''),
+            kind: 'tool',
+          });
+        }
+      }
+    }
+    // b) artifact 一覧 (= 完成した納品物)
+    var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
+      ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
+    for(var j = 0; j < arts.length; j++){
+      var a = arts[j];
+      var ats = Date.parse(a.created_at || 0) || 0;
+      if(!ats || ats < SINCE) continue;
+      events.push({
+        ts: ats,
+        icon: '✅',
+        label: '納品物完成: ' + (a.title || a.filename || '無題').slice(0, 40),
+        kind: 'artifact',
+      });
+    }
+    // 時系列降順 + 重複しがちな tool / artifact をマージ
+    events.sort(function(x, y){ return y.ts - x.ts; });
+    return events.slice(0, 8);
+  }
+  function _formatRel(ts){
+    var diff = Math.max(0, Date.now() - ts);
+    if(diff < 60000) return 'たった今';
+    if(diff < 3600000) return Math.floor(diff / 60000) + ' 分前';
+    if(diff < 86400000) return Math.floor(diff / 3600000) + ' 時間前';
+    return Math.floor(diff / 86400000) + ' 日前';
+  }
+
+  // ── 今週の累計 (= weekly stats bar) ──
+  function _siteWeeklyStats(site){
+    var now = Date.now();
+    var SINCE = now - 7 * 86400000;
+    var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
+      ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
+    var thisWeek = arts.filter(function(a){
+      var ts = Date.parse(a.created_at || 0) || 0;
+      return ts > SINCE;
+    });
+    return { artifacts: thisWeek.length };
+  }
+
+  // ── 次のスケジュール (= 「明朝 9:00」 ──
+  function _siteNextSchedule(site){
+    var schedules = Array.isArray(site.schedules) ? site.schedules : [];
+    var enabled = schedules.filter(function(s){ return s && s.enabled !== false; });
+    if(!enabled.length) return null;
+    // next_run が最も近いものを返す (= 文字列フォーマットで)
+    var soonest = null;
+    var soonestTs = Infinity;
+    for(var i = 0; i < enabled.length; i++){
+      var s = enabled[i];
+      var ts = Date.parse(s.next_run || 0);
+      if(ts && ts > Date.now() && ts < soonestTs){
+        soonestTs = ts;
+        soonest = s;
+      }
+    }
+    if(!soonest) return null;
+    // 「明朝 9:00 (毎朝レポート)」形式
+    var d = new Date(soonestTs);
+    var label = '';
+    var dayDiff = Math.floor((d.setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+    var t = new Date(soonestTs);
+    var hh = String(t.getHours()).padStart(2,'0');
+    var mm = String(t.getMinutes()).padStart(2,'0');
+    if(dayDiff === 0) label = '今日 ' + hh + ':' + mm;
+    else if(dayDiff === 1) label = '明日 ' + hh + ':' + mm;
+    else label = (dayDiff) + ' 日後 ' + hh + ':' + mm;
+    return { label: label, name: soonest.label || soonest.prompt.slice(0, 40) };
+  }
+
   // ── KPI 表示 (site.kpi に保存される目標値、未設定なら 0) ──
   var kpi = site.kpi || {};
   var kpiHTML = ''
@@ -3384,6 +3512,46 @@ function _renderSiteDashboardHTML(site){
 
     + kpiHTML
     + ga4Banner
+
+    // ── Activity feed + Weekly stats + Next scheduled = 「動いてる感」を出すパネル ──
+    + (function(){
+        var events = _siteActivityFeed(site);
+        var weekly = _siteWeeklyStats(site);
+        var next = _siteNextSchedule(site);
+        var feedHTML = events.length
+          ? '<div class="sd-feed-list">'
+            + events.map(function(e){
+                return '<div class="sd-feed-item">'
+                     +   '<div class="sd-feed-ic">' + e.icon + '</div>'
+                     +   '<div class="sd-feed-bd">'
+                     +     '<div class="sd-feed-lbl">' + esc(e.label) + '</div>'
+                     +     '<div class="sd-feed-ts">' + esc(_formatRel(e.ts)) + '</div>'
+                     +   '</div>'
+                     + '</div>';
+              }).join('')
+            + '</div>'
+          : '<div class="sd-feed-empty">まだアクティビティがありません。チャットで依頼すると AI が動きます。</div>';
+        var nextHTML = next
+          ? '<div class="sd-next">'
+            +   '<span class="sd-next-pulse"></span>'
+            +   '<span class="sd-next-lbl">次の予定: <b>' + esc(next.name) + '</b></span>'
+            +   '<span class="sd-next-ts">' + esc(next.label) + '</span>'
+            + '</div>'
+          : '';
+        return '<div class="sd-progress-panel">'
+          + '<div class="sd-progress-h">'
+          +   '<div class="sd-progress-h-l">'
+          +     '<span class="sd-progress-h-ic">⚡</span>'
+          +     '<span class="sd-progress-h-tx">AI チームの活動</span>'
+          +   '</div>'
+          +   '<div class="sd-progress-h-r">'
+          +     '<span class="sd-weekly">今週 <b>' + weekly.artifacts + '</b> 件納品</span>'
+          +   '</div>'
+          + '</div>'
+          + feedHTML
+          + nextHTML
+          + '</div>';
+      })()
 
     + '<div class="sd-grid">'
     +   '<div class="sd-card sd-card-progress">'
@@ -3778,11 +3946,15 @@ function _renderSiteItem(site){
   var todayN = _siteTodayArtifacts(site.id).length;
   var summary = todayN > 0 ? '今日 ' + todayN + ' 件' : 'チーム稼働中';
   var isActive = (activeId === site.id);
-  return '<div class="ag-site' + (isActive ? ' active' : '') + '" onclick="openSite(\'' + esc(site.id) + '\')">'
-       +   '<div class="ag-site-ic">' + ic + '</div>'
+  // AI が今このサイトで動いているか (= streaming 中)
+  var isLive = !!(window._streamingAgents && window._streamingAgents.has(site.id))
+            || (site.id === window._streamingAgentId);
+  var liveDot = isLive ? '<span class="ag-site-live" title="AI が作業中"></span>' : '';
+  return '<div class="ag-site' + (isActive ? ' active' : '') + (isLive ? ' live' : '') + '" onclick="openSite(\'' + esc(site.id) + '\')">'
+       +   '<div class="ag-site-ic">' + ic + liveDot + '</div>'
        +   '<div class="ag-site-bd">'
        +     '<div class="ag-site-host">' + esc(hostname) + '</div>'
-       +     '<div class="ag-site-meta">' + esc(summary) + '</div>'
+       +     '<div class="ag-site-meta">' + (isLive ? '<span class="ag-site-meta-live">▶ 作業中…</span>' : esc(summary)) + '</div>'
        +   '</div>'
        + '</div>';
 }

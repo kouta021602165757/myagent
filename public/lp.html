@@ -106,35 +106,134 @@
   .btn-sm{font-size:13.5px; padding:10px 19px}
   .btn-lg{font-size:16px; padding:17px 36px}
 
-  /* HERO */
-  .hero{text-align:center; padding:clamp(60px,11vh,116px) 0 clamp(44px,7vh,80px)}
-  .hero h1{font-size:clamp(34px,6vw,62px); font-weight:900; letter-spacing:-.035em; line-height:1.16; animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+  /* HERO — 背景にうっすら radial gradient で「光」を表現 */
+  .hero{
+    text-align:center; padding:clamp(56px,10vh,108px) 0 clamp(48px,8vh,88px);
+    position:relative; overflow:hidden;
+  }
+  .hero::before{
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(circle 700px at 50% 0%, rgba(251,146,60,.10), transparent 60%),
+      radial-gradient(circle 500px at 25% 80%, rgba(251,146,60,.05), transparent 60%);
+    pointer-events:none; z-index:-1;
+  }
+  /* 小さなタグ — 「カテゴリー名」感を出す */
+  .hero-tag{
+    display:inline-block; background:var(--peach-soft);
+    color:var(--peach-d); font-size:11.5px; font-weight:800;
+    letter-spacing:.05em; padding:6px 14px; border-radius:99px;
+    margin-bottom:20px; border:1px solid rgba(251,146,60,.22);
+    animation:rise .7s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .hero h1{font-size:clamp(36px,6.4vw,66px); font-weight:900; letter-spacing:-.035em; line-height:1.14; animation:rise .7s .04s cubic-bezier(.2,.7,.2,1) both}
   .hero h1 .pop{background:linear-gradient(135deg,var(--peach),var(--peach-d)); -webkit-background-clip:text; background-clip:text; color:transparent}
   .hero h1 .strike{color:var(--ink3); text-decoration:line-through; text-decoration-thickness:3px}
-  .hero-sub{font-size:clamp(15px,2vw,18px); color:var(--ink2); margin:22px auto 0; max-width:580px; animation:rise .7s .08s cubic-bezier(.2,.7,.2,1) both}
-  .hero-cta{margin-top:32px; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
-  .hero-note{margin-top:14px; font-size:13px; color:var(--ink3); font-weight:600; animation:rise .7s .16s cubic-bezier(.2,.7,.2,1) both}
+  .hero-sub{font-size:clamp(15px,2vw,18px); color:var(--ink2); margin:22px auto 0; max-width:620px; line-height:1.75; animation:rise .7s .12s cubic-bezier(.2,.7,.2,1) both}
+  .hero-note{margin-top:14px; font-size:12.5px; color:var(--ink3); font-weight:600}
   .hero-note b{color:var(--peach-d); font-weight:800}
   @keyframes rise{from{opacity:0; transform:translateY(20px)}to{opacity:1; transform:none}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  /* ── URL 入力フォーム = HERO の主役 CTA ─────────────────────── */
+  .url-form{
+    margin:38px auto 0; max-width:620px;
+    animation:rise .7s .2s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .url-input-wrap{
+    display:flex; align-items:center; gap:8px;
+    background:var(--card); border:2px solid var(--wire2);
+    border-radius:16px; padding:7px 7px 7px 20px;
+    box-shadow:0 4px 14px rgba(70,40,20,.06), 0 28px 56px rgba(70,40,20,.08);
+    transition:border-color .18s, box-shadow .18s, transform .18s;
+  }
+  .url-input-wrap:focus-within{
+    border-color:var(--peach);
+    box-shadow:0 6px 18px rgba(234,88,12,.14), 0 28px 56px rgba(234,88,12,.10);
+    transform:translateY(-1px);
+  }
+  .url-icon{font-size:20px; flex-shrink:0; line-height:1}
+  .url-input{
+    flex:1; border:0; outline:0; font-family:inherit;
+    font-size:16px; font-weight:600; color:var(--ink);
+    background:transparent; padding:14px 4px; min-width:0;
+  }
+  .url-input::placeholder{color:var(--ink3); font-weight:500}
+  .url-go{
+    display:inline-flex; align-items:center; gap:7px;
+    background:linear-gradient(135deg,var(--peach),var(--peach-d));
+    color:#fff; border:0; padding:13px 22px; border-radius:11px;
+    font-family:inherit; font-size:14.5px; font-weight:800;
+    cursor:pointer; transition:transform .15s, box-shadow .15s, filter .15s;
+    flex-shrink:0;
+  }
+  .url-go:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(234,88,12,.32); filter:brightness(1.04)}
+  .url-go:active{transform:translateY(0)}
+  .url-go-arrow{transition:transform .2s}
+  .url-go:hover .url-go-arrow{transform:translateX(3px)}
+  /* モバイル: 縦並びにして input が全幅取れるように */
+  @media (max-width:560px){
+    .url-input-wrap{padding:8px; flex-direction:column; gap:6px; border-radius:14px}
+    .url-icon{display:none}
+    .url-input{padding:12px 14px; font-size:15px; width:100%; text-align:center}
+    .url-go{width:100%; justify-content:center; padding:14px 18px; border-radius:10px}
+  }
+
   /* 5 vertical アイコン行 — 「広く対応」を 1 行で示す */
   .verticals{
-    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
-    margin:36px auto 0; max-width:760px;
-    animation:rise .7s .24s cubic-bezier(.2,.7,.2,1) both;
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin:30px auto 0; max-width:760px;
+    animation:rise .7s .28s cubic-bezier(.2,.7,.2,1) both;
   }
   .vt{
-    display:inline-flex; align-items:center; gap:8px;
-    background:var(--card); border:1px solid var(--wire);
-    border-radius:99px; padding:9px 16px;
-    font-size:13px; font-weight:700; color:var(--ink2);
-    transition:border-color .15s, transform .15s, box-shadow .15s;
+    display:inline-flex; align-items:center; gap:7px;
+    background:rgba(255,255,255,.7); border:1px solid var(--wire);
+    border-radius:99px; padding:8px 14px;
+    font-size:12.5px; font-weight:700; color:var(--ink2);
+    backdrop-filter:blur(8px);
+    transition:border-color .15s, transform .15s, box-shadow .15s, color .15s;
   }
-  .vt:hover{border-color:var(--peach); transform:translateY(-2px); box-shadow:0 4px 14px rgba(234,88,12,.10)}
-  .vt-ic{font-size:17px; line-height:1}
+  .vt:hover{border-color:var(--peach); color:var(--peach-d); transform:translateY(-2px); box-shadow:0 4px 14px rgba(234,88,12,.10)}
+  .vt-ic{font-size:15px; line-height:1}
   @media (max-width:560px){
-    .verticals{gap:8px; margin-top:24px}
-    .vt{padding:7px 12px; font-size:12px}
-    .vt-ic{font-size:15px}
+    .verticals{gap:6px; margin-top:22px}
+    .vt{padding:6px 11px; font-size:11.5px}
+    .vt-ic{font-size:13px}
+  }
+
+  /* AI チームプレビュー (= 何が来るかの先出し) */
+  .hero-team{
+    margin:36px auto 0; max-width:680px;
+    padding:20px 24px; background:rgba(255,255,255,.55);
+    border:1px solid var(--wire); border-radius:16px;
+    backdrop-filter:blur(8px);
+    animation:rise .7s .36s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .hero-team-label{
+    font-size:11.5px; font-weight:800; letter-spacing:.04em;
+    color:var(--ink3); text-transform:uppercase; margin-bottom:14px;
+  }
+  .hero-team-row{
+    display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
+  }
+  .ht-mem{
+    display:inline-flex; align-items:center; gap:8px;
+    background:#fff; border:1px solid var(--wire);
+    border-radius:10px; padding:8px 14px;
+  }
+  .ht-ic{
+    width:28px; height:28px; border-radius:50%;
+    background:var(--peach-soft);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:15px; flex-shrink:0;
+  }
+  .ht-tx{font-size:12.5px; font-weight:700; color:var(--ink)}
+  @media (max-width:560px){
+    .hero-team{padding:16px 14px; margin-top:24px}
+    .hero-team-row{gap:6px}
+    .ht-mem{padding:6px 10px}
+    .ht-ic{width:24px; height:24px; font-size:13px}
+    .ht-tx{font-size:11px}
   }
 
   /* ════ product visual: HOME screen (faithful recreation of the app) ════ */
@@ -279,18 +378,33 @@
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- HERO — URL 入力が主役 -->
 <header class="hero">
   <div class="wrap">
-    <h1 data-i18n="hero.h1">あなたの Web サイトに<br>人を呼ぶ <span class="pop">AI チーム</span>。</h1>
+    <div class="hero-tag" data-i18n="hero.tag">AI チーム編成サービス</div>
+    <h1 data-i18n="hero.h1">あなたの Web サイトに、<br><span class="pop">AI チーム</span>を派遣する。</h1>
     <p class="hero-sub" data-i18n="hero.sub">
-      URL を入れるだけ。AI 5 人がサイトを診断して、<br>
-      あなたに合わせた集客プランを 60 秒で納品。
+      URL を貼るだけ。SaaS の LP も、EC も、店舗も、ブログも。<br>
+      AI 5 人がサイトを診断して、60 秒で最初の集客プランを納品します。
     </p>
-    <div class="hero-cta">
-      <a href="/auth.html?tab=signup" class="btn btn-primary btn-lg" data-i18n="hero.cta">▶ URL を入れて無料で試す</a>
-    </div>
-    <p class="hero-note" data-i18n="hero.note"><b>ツール接続不要</b> ・ クレジットカード不要 ・ 60 秒で最初の納品</p>
+
+    <!-- URL 入力 = メイン CTA (これが主役) -->
+    <form class="url-form" onsubmit="return handleUrlSubmit(event)" novalidate>
+      <div class="url-input-wrap">
+        <span class="url-icon">🌐</span>
+        <input type="url" id="urlInput" class="url-input"
+               placeholder="https://yoursite.com"
+               autocomplete="off" spellcheck="false"
+               data-i18n-attr="placeholder|hero.url.placeholder">
+        <button type="submit" class="url-go">
+          <span class="url-go-tx" data-i18n="hero.url.btn">AI チームを派遣</span>
+          <span class="url-go-arrow">→</span>
+        </button>
+      </div>
+      <p class="hero-note" data-i18n="hero.note">
+        <b>ツール接続不要</b> ・ クレカ不要 ・ 60 秒で最初の納品
+      </p>
+    </form>
 
     <!-- 5 vertical アイコン: 「広く対応」を 1 行で示す -->
     <div class="verticals">
@@ -299,6 +413,18 @@
       <div class="vt"><span class="vt-ic">🏪</span><span class="vt-tx" data-i18n="vt.store">店舗・サロン</span></div>
       <div class="vt"><span class="vt-ic">✍️</span><span class="vt-tx" data-i18n="vt.blog">ブログ・メディア</span></div>
       <div class="vt"><span class="vt-ic">💼</span><span class="vt-tx" data-i18n="vt.portfolio">ポートフォリオ</span></div>
+    </div>
+
+    <!-- AI チームメンバーの可視化 (= 何が来るかのプレビュー) -->
+    <div class="hero-team">
+      <div class="hero-team-label" data-i18n="hero.team.label">あなたに編成される AI チーム例</div>
+      <div class="hero-team-row">
+        <div class="ht-mem"><span class="ht-ic">📊</span><span class="ht-tx" data-i18n="hero.team.m1">アナリスト</span></div>
+        <div class="ht-mem"><span class="ht-ic">✍️</span><span class="ht-tx" data-i18n="hero.team.m2">ライター</span></div>
+        <div class="ht-mem"><span class="ht-ic">📱</span><span class="ht-tx" data-i18n="hero.team.m3">SNS担当</span></div>
+        <div class="ht-mem"><span class="ht-ic">🔍</span><span class="ht-tx" data-i18n="hero.team.m4">SEO担当</span></div>
+        <div class="ht-mem"><span class="ht-ic">📧</span><span class="ht-tx" data-i18n="hero.team.m5">メーラー</span></div>
+      </div>
     </div>
 
     <!-- product visual: HOME screen -->
@@ -484,15 +610,23 @@
   var I18N_EN = {
     "nav.login": "Log in",
     "nav.cta": "Get started free",
-    "hero.h1": "An <span class='pop'>AI team</span> that drives<br>traffic to your website.",
-    "hero.sub": "Just drop in your URL. 5 AI specialists audit your site and<br>deliver a tailored growth plan in 60 seconds.",
-    "hero.cta": "▶ Drop URL & try free",
+    "hero.tag": "AI team dispatch service",
+    "hero.h1": "Send an <span class='pop'>AI team</span><br>to your website.",
+    "hero.sub": "Just drop your URL. SaaS LPs, e-commerce, local shops, blogs — anything.<br>5 AI specialists audit your site and deliver a growth plan in 60 seconds.",
+    "hero.url.placeholder": "https://yoursite.com",
+    "hero.url.btn": "Dispatch AI team",
     "hero.note": "<b>No integrations required</b> ・ No credit card ・ First deliverable in 60s",
     "vt.saas": "SaaS / Product LPs",
     "vt.ec": "E-commerce stores",
     "vt.store": "Local businesses",
     "vt.blog": "Blogs / media",
     "vt.portfolio": "Portfolios",
+    "hero.team.label": "Example team composition",
+    "hero.team.m1": "Analyst",
+    "hero.team.m2": "Writer",
+    "hero.team.m3": "Social",
+    "hero.team.m4": "SEO",
+    "hero.team.m5": "Email",
     "h.search": "Search…",
     "h.cat.dash": "📊 Dashboard",
     "h.home": "Home",
@@ -562,6 +696,68 @@
     if(btn) btn.textContent = (lang === 'en') ? '日本語' : 'EN';
   }
   function toggleLang(){ setLang(curLang === 'en' ? 'ja' : 'en'); }
+
+  // ── data-i18n-attr 対応: 「placeholder|hero.url.placeholder」のような書式で
+  //    属性名と辞書キーをペアで指定すると、setLang() 時に該当属性も翻訳できる。
+  function _applyI18nAttrs(){
+    var dict = (curLang === 'en') ? I18N_EN : I18N_JA;
+    document.querySelectorAll('[data-i18n-attr]').forEach(function(el){
+      var spec = el.getAttribute('data-i18n-attr');  // "attrName|i18nKey"
+      var parts = String(spec).split('|');
+      if(parts.length !== 2) return;
+      var attrName = parts[0].trim();
+      var key = parts[1].trim();
+      if(dict[key] != null) el.setAttribute(attrName, dict[key]);
+      // 初回 (JA snapshot 時) の値を控えて I18N_JA に退避
+      if(curLang === 'ja' && I18N_JA[key] == null){
+        I18N_JA[key] = el.getAttribute(attrName) || '';
+      }
+    });
+  }
+  _applyI18nAttrs();
+  // 言語切替時にも attribute を更新
+  (function(){
+    var _origSetLang = setLang;
+    setLang = function(lang){ _origSetLang(lang); _applyI18nAttrs(); };
+  })();
+
+  // ── URL 入力フォーム: HERO の主役 CTA ──────────────────────
+  // ユーザーが URL を貼って「派遣」を押したら、URL を保持したまま
+  // /auth.html?tab=signup に redirect。signup 完了後にこの URL を
+  // pickup して onboarding (Phase 2 で実装) で AI チーム編成に使う。
+  function handleUrlSubmit(ev){
+    if(ev && ev.preventDefault) ev.preventDefault();
+    var input = document.getElementById('urlInput');
+    if(!input) return false;
+    var raw = String(input.value || '').trim();
+    if(!raw){
+      input.focus();
+      input.style.animation = 'shake .35s';
+      setTimeout(function(){ input.style.animation = ''; }, 400);
+      return false;
+    }
+    // 軽い正規化: スキーマが無ければ https:// を補う
+    var url = raw;
+    if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    // URL の妥当性チェック (= ドメイン形式)
+    try {
+      var u = new URL(url);
+      if(!u.hostname || u.hostname.indexOf('.') < 0){
+        throw new Error('invalid hostname');
+      }
+    } catch(e){
+      input.focus();
+      input.style.animation = 'shake .35s';
+      setTimeout(function(){ input.style.animation = ''; }, 400);
+      return false;
+    }
+    // localStorage に保存 (signup → onboarding まで URL を運ぶ)
+    try { localStorage.setItem('pendingSiteUrl', url); } catch(e){}
+    // signup ページへ。URL もクエリで渡しておく (localStorage が消えても拾える)
+    var redirectTo = '/auth.html?tab=signup&site_url=' + encodeURIComponent(url);
+    location.href = redirectTo;
+    return false;
+  }
 </script>
 
 </body>

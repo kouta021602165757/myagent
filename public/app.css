@@ -754,6 +754,131 @@ input,textarea{font-family:var(--sans);}
 .kpi-field input:focus{border-color:var(--peach,#fb923c)}
 .kpi-card .add-site-go{width:100%; padding:13px 18px; margin-top:6px; justify-content:center}
 
+/* ── Insights panel (AI のコメント) ────────────────────── */
+.sd-insights{
+  background:linear-gradient(135deg, var(--peach-soft,#fff1e3), #fff);
+  border:1px solid rgba(251,146,60,.22); border-radius:12px;
+  padding:14px 18px; margin-bottom:14px;
+  display:flex; flex-direction:column; gap:9px;
+}
+.sd-insight{
+  display:flex; align-items:flex-start; gap:11px;
+  font-size:12.5px; line-height:1.6; color:var(--text);
+}
+.sd-insight-ic{
+  font-size:14px; flex-shrink:0; line-height:1.5;
+}
+.sd-insight-tx b{color:var(--peach-dark,#ea580c); font-weight:800}
+
+/* ── Quick Actions (= 「今すぐ AI に依頼」) ─────────────── */
+.sd-quick{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:12px; padding:16px 18px; margin-bottom:14px;
+}
+.sd-quick-h{
+  font-size:12.5px; font-weight:900; color:var(--text);
+  margin-bottom:11px; letter-spacing:-.005em;
+}
+.sd-quick-grid{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+}
+.sd-quick-btn{
+  background:var(--cream,#faf3eb); border:1px solid var(--wire);
+  border-radius:9px; padding:11px 13px;
+  display:flex; align-items:center; gap:9px;
+  cursor:pointer; transition:all .15s;
+  font-family:inherit; font-size:12px; color:var(--text); font-weight:700;
+  text-align:left; line-height:1.4;
+}
+.sd-quick-btn:hover{
+  background:#fff; border-color:var(--peach,#fb923c);
+  color:var(--peach-dark,#ea580c);
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(234,88,12,.10);
+}
+.sd-quick-ic{font-size:16px; flex-shrink:0}
+.sd-quick-lbl{flex:1; min-width:0}
+@media (max-width:760px){
+  .sd-quick-grid{grid-template-columns:repeat(2,1fr); gap:7px}
+}
+@media (max-width:480px){
+  .sd-quick-grid{grid-template-columns:1fr}
+}
+
+/* ── Trend Chart (= 直近 14 日の納品数 sparkline) ─────── */
+.sd-trend{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:12px; padding:16px 18px; margin-bottom:14px;
+}
+.sd-trend-h{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; margin-bottom:14px;
+}
+.sd-trend-h-tx{font-size:12.5px; font-weight:900; color:var(--text)}
+.sd-trend-h-delta{
+  font-size:11.5px; font-weight:700; color:var(--text3);
+}
+.sd-trend-h-delta .sd-trend-up{color:#16a34a; font-family:'Outfit',sans-serif; font-weight:800}
+.sd-trend-h-delta .sd-trend-down{color:#ea580c; font-family:'Outfit',sans-serif; font-weight:800}
+.sd-trend-chart{
+  display:flex; align-items:flex-end; gap:6px;
+  height:80px; padding:6px 0;
+  border-bottom:1px solid var(--wire);
+}
+.sd-bar{
+  flex:1; min-width:0;
+  background:rgba(251,146,60,.22); border-radius:3px 3px 0 0;
+  position:relative; transition:background .15s;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding-top:2px;
+}
+.sd-bar:hover{background:rgba(251,146,60,.4)}
+.sd-bar.today{
+  background:linear-gradient(180deg, var(--peach,#fb923c), var(--peach-dark,#ea580c));
+}
+.sd-bar-n{
+  font-family:'Outfit',sans-serif;
+  font-size:9px; font-weight:800; color:var(--peach-dark,#ea580c);
+  position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+}
+.sd-bar.today .sd-bar-n{color:var(--peach-dark)}
+.sd-trend-axis{
+  display:flex; margin-top:5px;
+  font-size:10px; color:var(--text3); font-weight:600;
+}
+@media (max-width:560px){
+  .sd-trend-chart{height:60px}
+  .sd-bar-n{font-size:8px}
+}
+
+/* ── Channel breakdown (= 納品物カテゴリ構成) ─────────── */
+.sd-card-ch{margin-bottom:0}
+.sd-ch-row{
+  display:flex; align-items:center; gap:11px;
+  padding:7px 0;
+  border-bottom:1px dashed rgba(180,120,80,.12);
+}
+.sd-ch-row:last-child{border-bottom:0}
+.sd-ch-lbl{
+  font-size:12px; font-weight:700; color:var(--text);
+  width:80px; flex-shrink:0;
+}
+.sd-ch-bar{
+  flex:1; height:8px;
+  background:var(--cream,#faf3eb); border-radius:99px; overflow:hidden;
+}
+.sd-ch-bar-fill{
+  height:100%; border-radius:99px;
+  background:linear-gradient(135deg, var(--peach,#fb923c), var(--peach-dark,#ea580c));
+  transition:width .4s ease;
+}
+.sd-ch-val{
+  font-family:'Outfit',sans-serif;
+  font-size:12px; font-weight:800; color:var(--text);
+  width:64px; text-align:right; flex-shrink:0;
+}
+.sd-ch-pct{font-size:10px; color:var(--text3); font-weight:700}
+
 /* ── Activity feed / progress panel ─────────────────────── */
 .sd-progress-panel{
   background:#fff; border:1px solid var(--wire);

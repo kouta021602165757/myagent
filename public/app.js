@@ -3568,17 +3568,130 @@ function _renderSiteDashboardHTML(site){
     return Math.floor(diff / 86400000) + ' 日前';
   }
 
-  // ── 今週の累計 (= weekly stats bar) ──
+  // ── 今週の累計 (= weekly stats bar) + 先週比 ──
   function _siteWeeklyStats(site){
     var now = Date.now();
-    var SINCE = now - 7 * 86400000;
+    var SINCE_THIS = now - 7 * 86400000;
+    var SINCE_LAST = now - 14 * 86400000;
     var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
       ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
     var thisWeek = arts.filter(function(a){
       var ts = Date.parse(a.created_at || 0) || 0;
-      return ts > SINCE;
+      return ts > SINCE_THIS;
     });
-    return { artifacts: thisWeek.length };
+    var lastWeek = arts.filter(function(a){
+      var ts = Date.parse(a.created_at || 0) || 0;
+      return ts > SINCE_LAST && ts <= SINCE_THIS;
+    });
+    var delta = thisWeek.length - lastWeek.length;
+    return { artifacts: thisWeek.length, lastWeek: lastWeek.length, delta: delta };
+  }
+
+  // ── 過去 14 日の日次納品数 (= sparkline 用) ──
+  function _siteDailySeries(site){
+    var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
+      ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
+    var DAYS = 14;
+    var bins = new Array(DAYS).fill(0);
+    var todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    for(var i = 0; i < arts.length; i++){
+      var ts = Date.parse(arts[i].created_at || 0) || 0;
+      if(!ts) continue;
+      var diff = Math.floor((todayStart.getTime() - new Date(new Date(ts).setHours(0,0,0,0)).getTime()) / 86400000);
+      if(diff >= 0 && diff < DAYS) bins[DAYS - 1 - diff]++;
+    }
+    return bins;
+  }
+
+  // ── Channel breakdown (= どの種類の納品物が多いか) ──
+  function _siteChannelBreakdown(site){
+    var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
+      ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
+    // title からカテゴリを推定 (ざっくり)
+    var groups = {
+      'コンテンツ': 0, 'SNS': 0, '分析': 0, '戦略': 0, 'メール': 0, 'その他': 0,
+    };
+    var GROUP_KW = [
+      ['SNS', /twitter|instagram|x\\.com|linkedin|sns|reddit/i],
+      ['メール', /メール|mail|newsletter|メルマガ|email/i],
+      ['分析', /分析|診断|レポート|report|analysis|kpi/i],
+      ['戦略', /戦略|strategy/i],
+      ['コンテンツ', /記事|ブログ|blog|seo|content/i],
+    ];
+    for(var i = 0; i < arts.length; i++){
+      var title = String(arts[i].title || arts[i].filename || '').toLowerCase();
+      var matched = false;
+      for(var j = 0; j < GROUP_KW.length; j++){
+        if(GROUP_KW[j][1].test(title)){ groups[GROUP_KW[j][0]]++; matched = true; break; }
+      }
+      if(!matched) groups['その他']++;
+    }
+    return groups;
+  }
+
+  // ── Quick action presets (vertical 別に「今すぐ依頼できる」テンプレ) ──
+  function _siteQuickActions(site){
+    var v = site.site_vertical || 'other';
+    var COMMON = [
+      { icon: '📝', label: '今週のブログ記事を書いて', prompt: '今週投稿する SEO 記事を 1 本書いてください。キーワード選定からお願いします。' },
+      { icon: '📱', label: 'SNS 投稿を 1 週間分', prompt: 'Twitter / X 用の投稿テンプレを 7 日分作ってください。曜日ごとに違うテーマで。' },
+      { icon: '🔍', label: '競合を調べて', prompt: '同業の競合サイトを 3 つ調べて、彼らの強み・弱み・差別化のヒントをまとめてください。' },
+      { icon: '📊', label: '今週の進捗をレポート', prompt: 'これまでに納品されたものを振り返って、今週やったこと + 来週やるべきことを箇条書きで。' },
+    ];
+    var PER_VERTICAL = {
+      saas: [
+        { icon: '🎯', label: 'LP の CVR を上げる案', prompt: 'LP の CVR を上げる A/B テスト案を 5 つ、優先度付きで提案してください。' },
+        { icon: '🐦', label: 'IndieHackers で告知', prompt: 'IndieHackers / X のスタートアップコミュニティで告知する投稿を作成してください。' },
+      ],
+      ec: [
+        { icon: '🛒', label: 'Instagram で売れる投稿', prompt: '商品を魅力的に見せて売上に繋げる Instagram 投稿を 5 案作ってください。' },
+        { icon: '⭐', label: 'レビュー誘導フロー', prompt: '購入後のお客様にレビューをもらうための連絡フロー (メール・LINE) を作成してください。' },
+      ],
+      store: [
+        { icon: '🗺', label: '地域 SEO 記事', prompt: '地域名 + 業種で検索される記事を 1 本書いてください。' },
+        { icon: '💬', label: '口コミ返信のテンプレ', prompt: '良い口コミ / 微妙な口コミ / クレームの 3 パターンへの返信テンプレを作成してください。' },
+      ],
+      blog: [
+        { icon: '✍️', label: '記事ネタを 10 本', prompt: '今書くべき記事ネタを 10 本、検索ボリューム推定付きで提案してください。' },
+        { icon: '📧', label: 'メルマガ 1 本', prompt: '読者向けに送るメルマガを 1 本作成してください (Subject + Body 形式)。' },
+      ],
+      portfolio: [
+        { icon: '💼', label: 'LinkedIn 投稿', prompt: 'LinkedIn でリードを集める投稿テンプレを 7 日分作ってください。' },
+        { icon: '📧', label: '営業メールを 3 種', prompt: '新規アプローチ / フォロー / リクエスト返信、の 3 種の営業メールを作成してください。' },
+      ],
+      other: [],
+    };
+    return COMMON.concat(PER_VERTICAL[v] || []);
+  }
+
+  // ── Insights — AI による現状コメント (= ダミー or 簡易 fallback) ──
+  function _siteInsights(site){
+    var weekly = _siteWeeklyStats(site);
+    var arts = _siteAllArtifacts(site.id);
+    var insights = [];
+    if(arts.length === 0){
+      insights.push({ icon: '💡', text: '最初のメッセージを AI チームに送って、依頼を始めましょう。' });
+    } else {
+      if(weekly.delta > 0){
+        insights.push({ icon: '📈', text: '今週は先週より <b>+' + weekly.delta + '</b> 件多く納品されました。順調に伸びてます。' });
+      } else if(weekly.delta < 0){
+        insights.push({ icon: '⚠️', text: '今週は先週より ' + Math.abs(weekly.delta) + ' 件少なめ。チャットで何か依頼してみましょう。' });
+      } else if(weekly.artifacts > 0){
+        insights.push({ icon: '👌', text: '今週も先週と同じく <b>' + weekly.artifacts + '</b> 件納品。安定運用中。' });
+      }
+      if(arts.length >= 10){
+        insights.push({ icon: '🎯', text: '納品累計 <b>' + arts.length + '</b> 件。次は KPI 達成度を AI に分析させましょう。' });
+      }
+    }
+    if(!site.kpi || (!site.kpi.pv && !site.kpi.cvr && !site.kpi.leads)){
+      insights.push({ icon: '🎯', text: '<b>KPI 未設定</b> です。月間目標を入れると、AI が達成度を毎朝レポートしてくれます。' });
+    }
+    // GA4 未接続
+    var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
+    if(!ga4Connected){
+      insights.push({ icon: '📊', text: '<b>GA4 未接続</b>。接続すると流入数・CVR の数字を使って深く分析できます。' });
+    }
+    return insights.slice(0, 4);
   }
 
   // ── 次のスケジュール (= 「明朝 9:00」 ──
@@ -3663,6 +3776,61 @@ function _renderSiteDashboardHTML(site){
     + kpiHTML
     + ga4Banner
 
+    // ── Insights panel (= AI による現状コメント) ──
+    + (function(){
+        var insights = _siteInsights(site);
+        if(!insights.length) return '';
+        return '<div class="sd-insights">'
+          + insights.map(function(it){
+              return '<div class="sd-insight"><span class="sd-insight-ic">' + it.icon + '</span><span class="sd-insight-tx">' + it.text + '</span></div>';
+            }).join('')
+          + '</div>';
+      })()
+
+    // ── Quick Actions (= 今すぐ AI に依頼できる preset) ──
+    + (function(){
+        var actions = _siteQuickActions(site);
+        if(!actions.length) return '';
+        return '<div class="sd-quick">'
+          + '<div class="sd-quick-h">⚡ 今すぐ AI に依頼</div>'
+          + '<div class="sd-quick-grid">'
+          + actions.slice(0, 6).map(function(q){
+              return '<button class="sd-quick-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(q.prompt).replace(/'/g, '&#39;') + ')">'
+                   +   '<span class="sd-quick-ic">' + q.icon + '</span>'
+                   +   '<span class="sd-quick-lbl">' + esc(q.label) + '</span>'
+                   + '</button>';
+            }).join('')
+          + '</div>'
+          + '</div>';
+      })()
+
+    // ── Trend chart (= 過去 14 日の納品数 sparkline) ──
+    + (function(){
+        var series = _siteDailySeries(site);
+        var max = Math.max(1, Math.max.apply(null, series));
+        var bars = series.map(function(n, i){
+          var h = Math.max(8, Math.round(n / max * 100));
+          var isToday = (i === series.length - 1);
+          return '<div class="sd-bar' + (isToday ? ' today' : '') + '" style="height:' + h + '%" title="' + n + ' 件">'
+               + (n > 0 ? '<span class="sd-bar-n">' + n + '</span>' : '')
+               + '</div>';
+        }).join('');
+        var weekly = _siteWeeklyStats(site);
+        var deltaTxt = weekly.delta > 0 ? '<span class="sd-trend-up">+' + weekly.delta + '</span> 件 / 先週比'
+                     : weekly.delta < 0 ? '<span class="sd-trend-down">' + weekly.delta + '</span> 件 / 先週比'
+                     : '<span>±0</span> 件 / 先週比';
+        return '<div class="sd-trend">'
+          + '<div class="sd-trend-h">'
+          +   '<span class="sd-trend-h-tx">📈 直近 14 日の納品数推移</span>'
+          +   '<span class="sd-trend-h-delta">' + deltaTxt + '</span>'
+          + '</div>'
+          + '<div class="sd-trend-chart">' + bars + '</div>'
+          + '<div class="sd-trend-axis">'
+          +   '<span>14 日前</span><span style="flex:1"></span><span>今日</span>'
+          + '</div>'
+          + '</div>';
+      })()
+
     // ── Activity feed + Weekly stats + Next scheduled = 「動いてる感」を出すパネル ──
     + (function(){
         var events = _siteActivityFeed(site);
@@ -3718,7 +3886,42 @@ function _renderSiteDashboardHTML(site){
     +   '<div class="sd-card-h">📦 納品物 <span class="sd-card-h-sub">' + allArts.length + ' 件</span></div>'
     +   '<div class="sd-card-bd">' + artsHTML + '</div>'
     + '</div>'
+
+    // ── Channel breakdown (= 納品物のカテゴリ別構成) ──
+    + (function(){
+        var bd = _siteChannelBreakdown(site);
+        var total = Object.values(bd).reduce(function(a,b){return a+b;}, 0);
+        if(total === 0) return '';
+        var rows = Object.keys(bd).filter(function(k){return bd[k] > 0;}).map(function(k){
+          var v = bd[k];
+          var pct = total > 0 ? Math.round(v / total * 100) : 0;
+          return '<div class="sd-ch-row">'
+               +   '<div class="sd-ch-lbl">' + esc(k) + '</div>'
+               +   '<div class="sd-ch-bar"><div class="sd-ch-bar-fill" style="width:' + pct + '%"></div></div>'
+               +   '<div class="sd-ch-val">' + v + ' <span class="sd-ch-pct">(' + pct + '%)</span></div>'
+               + '</div>';
+        }).join('');
+        return '<div class="sd-card sd-card-ch">'
+          + '<div class="sd-card-h">🗂 納品物の構成 <span class="sd-card-h-sub">' + total + ' 件</span></div>'
+          + '<div class="sd-card-bd">' + rows + '</div>'
+          + '</div>';
+      })()
     + '</div>';
+}
+
+// Quick Action のハンドラ — チャットに飛んで prompt を pre-fill して送信
+function _quickAskAI(siteId, prompt){
+  if(!siteId || !prompt) return;
+  openSite(siteId);  // チャット画面に切替
+  setTimeout(function(){
+    var ta = document.getElementById('ci');
+    if(ta){
+      ta.value = prompt;
+      try { exTA(ta); } catch(_){}
+      ta.focus();
+      // すぐに送信したいユーザー向けに、ボタンの色だけ強調 (= 自動送信はしない)
+    }
+  }, 250);
 }
 
 // 「+ 新しいサイトを追加」モーダル

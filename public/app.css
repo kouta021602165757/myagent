@@ -1036,6 +1036,433 @@ input,textarea{font-family:var(--sans);}
   .sd-art-grid{grid-template-columns:1fr; gap:8px}
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   ── ダッシュボード Tab UI (3 tab: 📊 数字 / 🎯 戦略 / ⚡ アクション) ──
+   プロマーケッターレベルの情報密度を目指したデザイン。
+   ══════════════════════════════════════════════════════════════════ */
+.sd-tabs{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:6px; margin-bottom:16px;
+  box-shadow:0 1px 3px rgba(70,40,20,.04);
+}
+.sd-tab{
+  background:transparent; border:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  padding:11px 10px; border-radius:10px;
+  font-family:inherit; color:var(--text3);
+  cursor:pointer;
+  transition:background .15s, color .15s, transform .12s;
+}
+.sd-tab:hover{background:rgba(251,146,60,.05); color:var(--text2)}
+.sd-tab.on{
+  background:linear-gradient(135deg, rgba(251,146,60,.12), rgba(234,88,12,.06));
+  color:var(--peach-dark,#ea580c);
+  box-shadow:inset 0 0 0 1px rgba(251,146,60,.22);
+}
+.sd-tab-ic{font-size:17px; line-height:1}
+.sd-tab-lbl{font-size:13px; font-weight:900; letter-spacing:.01em; margin-top:4px}
+.sd-tab-sub{font-size:9.5px; font-weight:700; color:var(--text3); letter-spacing:.04em}
+.sd-tab.on .sd-tab-sub{color:var(--peach,#fb923c)}
+.sd-tab-body{display:flex; flex-direction:column; gap:14px}
+@media (max-width:560px){
+  .sd-tabs{padding:4px; gap:4px}
+  .sd-tab{padding:9px 4px}
+  .sd-tab-lbl{font-size:11.5px}
+  .sd-tab-sub{display:none}
+}
+
+/* ── Tab 1: ヒーロー数字グリッド ──────────────────────────────── */
+.sd-num-hero{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+}
+.sd-num-hero-card{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:13px; padding:16px 18px;
+  transition:transform .15s, border-color .15s, box-shadow .15s;
+}
+.sd-num-hero-card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(251,146,60,.32);
+  box-shadow:0 6px 18px rgba(234,88,12,.08);
+}
+.sd-num-primary{
+  background:linear-gradient(135deg, rgba(251,146,60,.08), #fff);
+  border-color:rgba(251,146,60,.22);
+}
+.sd-num-lbl{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.05em; text-transform:uppercase; margin-bottom:7px;
+}
+.sd-num-val{
+  font-family:'Outfit',sans-serif,system-ui;
+  font-size:30px; font-weight:900; line-height:1; color:var(--text);
+  letter-spacing:-.025em;
+}
+.sd-num-primary .sd-num-val{color:var(--peach-dark,#ea580c)}
+.sd-num-unit{font-size:.5em; font-weight:700; color:var(--text2); margin-left:3px}
+.sd-num-empty{font-size:14px; font-weight:800; color:var(--text3); letter-spacing:0}
+.sd-num-sub{
+  font-size:11px; font-weight:700; color:var(--text3);
+  margin-top:8px; line-height:1.4;
+}
+.sd-num-sub .sd-trend-up{color:#16a34a; font-family:'Outfit',sans-serif; font-weight:800}
+.sd-num-sub .sd-trend-down{color:#ea580c; font-family:'Outfit',sans-serif; font-weight:800}
+@media (max-width:880px){
+  .sd-num-hero{grid-template-columns:repeat(2,1fr); gap:10px}
+  .sd-num-val{font-size:26px}
+}
+@media (max-width:480px){
+  .sd-num-hero{grid-template-columns:1fr; gap:8px}
+}
+
+/* ── Tab 1: 大きい line chart ─────────────────────────────────── */
+.sd-bigchart{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:13px; padding:18px 22px;
+}
+.sd-bigchart-h{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:10px; gap:10px;
+}
+.sd-bigchart-ti{
+  font-size:13px; font-weight:900; color:var(--text); letter-spacing:.01em;
+}
+.sd-bigchart-meta{
+  font-size:11.5px; font-weight:700; color:var(--text3);
+}
+.sd-bigchart-meta .sd-trend-up{color:#16a34a; font-family:'Outfit',sans-serif; font-weight:800}
+.sd-bigchart-meta .sd-trend-down{color:#ea580c; font-family:'Outfit',sans-serif; font-weight:800}
+.sd-bigchart-svg{
+  display:block; width:100%; height:180px;
+}
+.sd-bigchart-axis{
+  display:flex; justify-content:space-between;
+  font-size:10.5px; color:var(--text3); font-weight:700;
+  margin-top:4px; letter-spacing:.03em;
+}
+
+/* ── Tab 1: 2 列レイアウト (donut + top arts) ──────────────────── */
+.sd-numbers-2col{
+  display:grid; grid-template-columns:1fr 1.2fr; gap:14px;
+}
+@media (max-width:880px){
+  .sd-numbers-2col{grid-template-columns:1fr}
+}
+
+/* ── Tab 1: donut chart ──────────────────────────────────────── */
+.sd-donut-card{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:13px; padding:18px 22px;
+}
+.sd-donut-body{
+  display:flex; align-items:center; gap:16px;
+}
+.sd-donut-svg{
+  width:180px; height:180px; flex-shrink:0;
+}
+.sd-donut-legend{
+  flex:1; min-width:0; display:flex; flex-direction:column; gap:7px;
+}
+.sd-donut-leg{
+  display:flex; align-items:center; gap:8px;
+  font-size:12px; font-weight:700; color:var(--text);
+}
+.sd-donut-dot{
+  width:10px; height:10px; border-radius:3px; flex-shrink:0;
+}
+.sd-donut-leg-l{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sd-donut-leg-r{
+  font-family:'Outfit',sans-serif;
+  font-size:12px; font-weight:800; color:var(--text2);
+}
+.sd-donut-pct{color:var(--text3); font-weight:700; font-size:.92em}
+@media (max-width:520px){
+  .sd-donut-body{flex-direction:column; gap:12px}
+  .sd-donut-svg{width:150px; height:150px}
+}
+
+/* ── Tab 1: top recent artifacts ──────────────────────────────── */
+.sd-top-arts{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:13px; padding:18px 22px;
+}
+.sd-top-arts-list{
+  display:flex; flex-direction:column; gap:2px;
+}
+.sd-top-art{
+  display:flex; align-items:center; gap:12px;
+  padding:10px 4px; border-bottom:1px solid var(--wire);
+}
+.sd-top-art:last-child{border-bottom:0}
+.sd-top-art-n{
+  width:24px; height:24px; border-radius:50%;
+  background:var(--peach-soft, #fff1e3); color:var(--peach-dark, #ea580c);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Outfit',sans-serif;
+  font-size:12px; font-weight:900;
+  flex-shrink:0;
+}
+.sd-top-art-bd{flex:1; min-width:0}
+.sd-top-art-ti{
+  font-size:13px; font-weight:800; color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sd-top-art-meta{
+  font-size:10.5px; font-weight:700; color:var(--text3);
+  margin-top:2px; letter-spacing:.03em;
+}
+.sd-top-art-open{
+  font-size:11.5px; font-weight:800;
+  color:var(--peach-dark,#ea580c); text-decoration:none;
+  padding:5px 10px; border-radius:7px;
+  border:1px solid var(--wire2);
+  transition:background .15s, border-color .15s;
+  flex-shrink:0;
+}
+.sd-top-art-open:hover{
+  background:var(--peach-soft, #fff1e3);
+  border-color:var(--peach,#fb923c);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ── Tab 2: 🎯 戦略 (= 設計図) ──
+   ══════════════════════════════════════════════════════════════════ */
+.sd-strat-card,
+.sd-persona-card,
+.sd-compet-card,
+.sd-cal-card,
+.sd-kpi-tree{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:13px; padding:18px 22px;
+}
+.sd-strat-body{display:flex; flex-direction:column; gap:8px}
+.sd-strat-ti{
+  font-size:15px; font-weight:900; color:var(--text); letter-spacing:-.01em;
+}
+.sd-strat-meta{
+  font-size:11px; font-weight:700; color:var(--text3); letter-spacing:.03em;
+}
+.sd-strat-open{
+  display:inline-block; align-self:flex-start;
+  margin-top:4px; padding:8px 14px;
+  background:linear-gradient(135deg,var(--peach,#fb923c),var(--peach-dark,#ea580c));
+  color:#fff; text-decoration:none;
+  font-size:12.5px; font-weight:800;
+  border-radius:9px;
+  box-shadow:0 4px 12px rgba(234,88,12,.18);
+  transition:transform .15s, box-shadow .15s;
+}
+.sd-strat-open:hover{transform:translateY(-1px); box-shadow:0 6px 16px rgba(234,88,12,.28)}
+.sd-strat-hint{
+  font-size:11.5px; line-height:1.6; color:var(--text2);
+  background:var(--cream); border-radius:9px;
+  padding:10px 12px; margin-top:6px;
+}
+.sd-strat-empty{
+  padding:8px 0;
+}
+.sd-strat-empty p{
+  font-size:13px; line-height:1.65; color:var(--text2);
+  margin:0 0 12px;
+}
+.sd-strat-cta{
+  background:#fff; border:1px solid var(--peach,#fb923c);
+  color:var(--peach-dark,#ea580c);
+  padding:10px 16px; border-radius:9px;
+  font-family:inherit; font-size:12.5px; font-weight:800;
+  cursor:pointer;
+  transition:background .15s, transform .12s, box-shadow .15s;
+}
+.sd-strat-cta:hover{
+  background:var(--peach-soft, #fff1e3);
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(234,88,12,.12);
+}
+.sd-strat-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px;
+}
+@media (max-width:760px){
+  .sd-strat-grid{grid-template-columns:1fr}
+}
+
+/* ── Persona card ──────────────────────────────────────────── */
+.sd-persona-body{
+  display:flex; gap:14px; align-items:flex-start;
+}
+.sd-persona-ic{
+  width:48px; height:48px; border-radius:12px;
+  background:linear-gradient(135deg, rgba(251,146,60,.16), rgba(234,88,12,.04));
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; flex-shrink:0;
+}
+.sd-persona-meta{flex:1; min-width:0}
+.sd-persona-ti{
+  font-size:13.5px; font-weight:900; color:var(--text); margin-bottom:5px;
+}
+.sd-persona-tx{
+  font-size:12px; line-height:1.6; color:var(--text2); margin-bottom:10px;
+}
+.sd-persona-cta{
+  background:transparent; border:1px solid var(--wire2);
+  color:var(--text2);
+  padding:7px 12px; border-radius:8px;
+  font-family:inherit; font-size:11.5px; font-weight:800;
+  cursor:pointer;
+  transition:background .15s, border-color .15s, color .15s;
+}
+.sd-persona-cta:hover{
+  background:var(--peach-soft, #fff1e3);
+  border-color:var(--peach,#fb923c);
+  color:var(--peach-dark,#ea580c);
+}
+
+/* ── Competitor / Calendar shared ──────────────────────────── */
+.sd-compet-body{display:flex; flex-direction:column; gap:6px}
+.sd-compet-ti{font-size:13.5px; font-weight:900; color:var(--text)}
+.sd-compet-open{
+  display:inline-block; align-self:flex-start;
+  font-size:12px; font-weight:800;
+  color:var(--peach-dark,#ea580c); text-decoration:none;
+  margin-top:4px;
+}
+.sd-compet-open:hover{text-decoration:underline}
+.sd-compet-empty p,
+.sd-cal-empty{
+  font-size:12.5px; line-height:1.6; color:var(--text2);
+  margin:0 0 10px;
+}
+.sd-cal-body{display:flex; flex-direction:column; gap:0}
+
+/* ── KPI tree ──────────────────────────────────────────────── */
+.sd-tree-body{
+  display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px;
+}
+.sd-tree-node{
+  background:var(--cream); border-radius:10px;
+  padding:11px 14px;
+  display:flex; flex-direction:column; gap:4px;
+}
+.sd-tree-lbl{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase;
+}
+.sd-tree-val{
+  font-family:'Outfit',sans-serif;
+  font-size:18px; font-weight:900; color:var(--peach-dark,#ea580c);
+  letter-spacing:-.02em;
+}
+.sd-tree-edit{
+  background:transparent; border:1px solid var(--wire2);
+  color:var(--text2);
+  padding:0 14px; border-radius:10px;
+  font-family:inherit; font-size:11.5px; font-weight:800;
+  cursor:pointer;
+  transition:background .15s, border-color .15s;
+}
+.sd-tree-edit:hover{
+  background:var(--peach-soft, #fff1e3);
+  border-color:var(--peach,#fb923c);
+  color:var(--peach-dark,#ea580c);
+}
+@media (max-width:760px){
+  .sd-tree-body{grid-template-columns:1fr 1fr; gap:8px}
+  .sd-tree-edit{grid-column:span 2; padding:9px 14px}
+}
+@media (max-width:480px){
+  .sd-tree-body{grid-template-columns:1fr}
+  .sd-tree-edit{grid-column:span 1}
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ── Tab 3: ⚡ アクション (= 今後の動き) ──
+   ══════════════════════════════════════════════════════════════════ */
+.sd-today-card{
+  background:linear-gradient(135deg, rgba(251,146,60,.05), #fff);
+  border:1px solid rgba(251,146,60,.22);
+  border-radius:13px; padding:18px 22px;
+}
+.sd-today-list{
+  display:flex; flex-direction:column; gap:9px; margin-top:4px;
+}
+.sd-today-item{
+  display:flex; align-items:center; gap:14px;
+  background:#fff; border:1px solid var(--wire);
+  border-radius:11px; padding:14px 16px;
+  text-align:left; cursor:pointer;
+  font-family:inherit;
+  transition:transform .15s, border-color .15s, box-shadow .15s;
+}
+.sd-today-item:hover{
+  transform:translateY(-1px);
+  border-color:rgba(251,146,60,.4);
+  box-shadow:0 6px 18px rgba(234,88,12,.1);
+}
+.sd-today-rank{
+  width:30px; height:30px; border-radius:50%;
+  background:linear-gradient(135deg, var(--peach,#fb923c), var(--peach-dark,#ea580c));
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Outfit',sans-serif;
+  font-size:14px; font-weight:900;
+  flex-shrink:0;
+  box-shadow:0 3px 8px rgba(234,88,12,.22);
+}
+.sd-today-ic{font-size:22px; flex-shrink:0}
+.sd-today-bd{flex:1; min-width:0}
+.sd-today-lbl{
+  font-size:13.5px; font-weight:900; color:var(--text); margin-bottom:3px;
+}
+.sd-today-tx{
+  font-size:11.5px; line-height:1.5; color:var(--text3); font-weight:700;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sd-today-arrow{
+  font-size:18px; color:var(--peach,#fb923c); font-weight:900;
+  flex-shrink:0;
+  transition:transform .2s;
+}
+.sd-today-item:hover .sd-today-arrow{transform:translateX(4px)}
+@media (max-width:560px){
+  .sd-today-item{padding:12px 14px; gap:10px}
+  .sd-today-ic{font-size:18px}
+  .sd-today-lbl{font-size:12.5px}
+  .sd-today-tx{white-space:normal; -webkit-line-clamp:2; display:-webkit-box; -webkit-box-orient:vertical}
+}
+
+/* ── 次の自動実行 (大きい) ───────────────────────────────────── */
+.sd-next-card{
+  background:linear-gradient(135deg, #fff, var(--cream2,#faf3eb));
+  border:1px solid var(--wire);
+  border-radius:13px; padding:18px 22px;
+  position:relative; overflow:hidden;
+}
+.sd-next-bd{
+  display:flex; align-items:center; gap:14px;
+}
+.sd-next-name{
+  font-size:14px; font-weight:900; color:var(--text); flex:1; min-width:0;
+}
+.sd-next-when{
+  font-family:'Outfit',sans-serif;
+  font-size:15px; font-weight:800; color:var(--peach-dark,#ea580c);
+  letter-spacing:-.01em;
+  flex-shrink:0;
+}
+.sd-next-pulse-large{
+  width:12px; height:12px; border-radius:50%;
+  background:#22c55e;
+  position:relative;
+  flex-shrink:0;
+  box-shadow:0 0 0 0 rgba(34,197,94,.6);
+  animation:sd-pulse-l 2s ease-out infinite;
+}
+@keyframes sd-pulse-l{
+  0%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}
+  70%{box-shadow:0 0 0 12px rgba(34,197,94,0)}
+  100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+}
+
 /* ── サイドバー: サイト一覧 + add-site CTA ───────────────────── */
 .ag-add-site{
   display:flex; align-items:center; gap:8px;

@@ -3560,14 +3560,6 @@ function _renderSiteDashboardHTML(site){
     events.sort(function(x, y){ return y.ts - x.ts; });
     return events.slice(0, 8);
   }
-  function _formatRel(ts){
-    var diff = Math.max(0, Date.now() - ts);
-    if(diff < 60000) return 'たった今';
-    if(diff < 3600000) return Math.floor(diff / 60000) + ' 分前';
-    if(diff < 86400000) return Math.floor(diff / 3600000) + ' 時間前';
-    return Math.floor(diff / 86400000) + ' 日前';
-  }
-
   // ── 今週の累計 (= weekly stats bar) + 先週比 ──
   function _siteWeeklyStats(site){
     var now = Date.now();
@@ -3759,6 +3751,10 @@ function _renderSiteDashboardHTML(site){
       + '</div>';
   }
 
+  // ── アクティブ tab を localStorage で記憶 ──
+  var activeTab = 'numbers';
+  try { var saved = localStorage.getItem('sd_tab_' + site.id); if(['numbers','strategy','actions'].indexOf(saved) >= 0) activeTab = saved; } catch(_){}
+
   return '<div class="site-dash">'
     + '<div class="sd-head">'
     +   '<div class="sd-head-l">'
@@ -3773,104 +3769,345 @@ function _renderSiteDashboardHTML(site){
     +   '</button>'
     + '</div>'
 
+    // ── Tab ナビ ──
+    + '<div class="sd-tabs">'
+    +   '<button class="sd-tab' + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
+    +     '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字</span><span class="sd-tab-sub">現状の推移</span>'
+    +   '</button>'
+    +   '<button class="sd-tab' + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
+    +     '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略</span><span class="sd-tab-sub">設計図</span>'
+    +   '</button>'
+    +   '<button class="sd-tab' + (activeTab === 'actions' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'actions\')">'
+    +     '<span class="sd-tab-ic">⚡</span><span class="sd-tab-lbl">アクション</span><span class="sd-tab-sub">今後の動き</span>'
+    +   '</button>'
+    + '</div>'
+
+    + '<div class="sd-tab-body">'
+    + (activeTab === 'numbers'
+        ? _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner,
+            _siteAllArtifacts(site.id), _siteDailySeries(site),
+            _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site))
+        : activeTab === 'strategy'
+          ? _renderTabStrategy(site, _siteAllArtifacts(site.id))
+          : _renderTabActions(site, _siteActivityFeed(site), _siteNextSchedule(site),
+              _siteQuickActions(site), _siteWeeklyStats(site), progressHTML, teamHTML))
+    + '</div>'
+    + '</div>';
+}
+
+function _switchDashTab(siteId, tab){
+  try { localStorage.setItem('sd_tab_' + siteId, tab); } catch(_){}
+  try { renderHomeDashboard(); } catch(_){}
+}
+
+// 「3 分前」「2 時間前」みたいな相対時刻フォーマット (module 共有)
+function _formatRel(ts){
+  var diff = Math.max(0, Date.now() - ts);
+  if(diff < 60000) return 'たった今';
+  if(diff < 3600000) return Math.floor(diff / 60000) + ' 分前';
+  if(diff < 86400000) return Math.floor(diff / 3600000) + ' 時間前';
+  return Math.floor(diff / 86400000) + ' 日前';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ── ダッシュボード Tab 別 render 関数 ──
+   3 つの tab に分割: 📊 数字 / 🎯 戦略 / ⚡ アクション
+   プロマーケッターレベルの情報密度を目指す。
+   ══════════════════════════════════════════════════════════════════ */
+
+// ─── Tab 1: 📊 数字 (= 現状の推移) ────────────────────────────────
+function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts, series, weekly, breakdown, insights){
+  // 巨大数字カード (= ヒーロー的)
+  var heroNumsHTML = ''
+    + '<div class="sd-num-hero">'
+    +   '<div class="sd-num-hero-card sd-num-primary">'
+    +     '<div class="sd-num-lbl">累計納品物</div>'
+    +     '<div class="sd-num-val">' + allArts.length + '<span class="sd-num-unit">件</span></div>'
+    +     '<div class="sd-num-sub">' + (weekly.delta > 0 ? '<span class="sd-trend-up">+' + weekly.delta + '</span>' : (weekly.delta < 0 ? '<span class="sd-trend-down">' + weekly.delta + '</span>' : '<span>±0</span>')) + ' 件 vs 先週</div>'
+    +   '</div>'
+    +   '<div class="sd-num-hero-card">'
+    +     '<div class="sd-num-lbl">今週納品</div>'
+    +     '<div class="sd-num-val">' + weekly.artifacts + '<span class="sd-num-unit">件</span></div>'
+    +     '<div class="sd-num-sub">先週: ' + weekly.lastWeek + ' 件</div>'
+    +   '</div>'
+    +   '<div class="sd-num-hero-card">'
+    +     '<div class="sd-num-lbl">今月目標 PV</div>'
+    +     '<div class="sd-num-val">' + (kpi.pv ? Number(kpi.pv).toLocaleString() : '<span class="sd-num-empty">未設定</span>') + '</div>'
+    +     '<div class="sd-num-sub">' + (ga4Connected ? 'GA4 接続済' : 'GA4 未接続 — 数値追跡不可') + '</div>'
+    +   '</div>'
+    +   '<div class="sd-num-hero-card">'
+    +     '<div class="sd-num-lbl">目標 CVR</div>'
+    +     '<div class="sd-num-val">' + (kpi.cvr ? kpi.cvr + '<span class="sd-num-unit">%</span>' : '<span class="sd-num-empty">未設定</span>') + '</div>'
+    +     '<div class="sd-num-sub">業界平均: 2-3%</div>'
+    +   '</div>'
+    + '</div>';
+
+  // Insights バー
+  var insightsHTML = insights.length
+    ? '<div class="sd-insights">'
+      + insights.map(function(it){
+          return '<div class="sd-insight"><span class="sd-insight-ic">' + it.icon + '</span><span class="sd-insight-tx">' + it.text + '</span></div>';
+        }).join('')
+      + '</div>'
+    : '';
+
+  // 大きい trend chart (= 14d / 30d switcher なしで、納品数の bar + line overlay)
+  var max = Math.max(1, Math.max.apply(null, series));
+  var SVG_W = 720, SVG_H = 180;
+  var stepX = SVG_W / series.length;
+  var pts = series.map(function(n, i){
+    var x = i * stepX + stepX / 2;
+    var y = SVG_H - 20 - (n / max * (SVG_H - 40));
+    return x + ',' + y;
+  }).join(' ');
+  var pathD = 'M ' + pts.split(' ').join(' L ');
+  var areaD = 'M ' + (stepX/2) + ',' + (SVG_H - 20) + ' L ' + pts.split(' ').join(' L ') + ' L ' + (SVG_W - stepX/2) + ',' + (SVG_H - 20) + ' Z';
+  var dots = series.map(function(n, i){
+    var x = i * stepX + stepX / 2;
+    var y = SVG_H - 20 - (n / max * (SVG_H - 40));
+    var isToday = (i === series.length - 1);
+    return '<circle cx="' + x + '" cy="' + y + '" r="' + (isToday ? 5 : 3.5) + '" fill="' + (isToday ? '#ea580c' : '#fb923c') + '" />';
+  }).join('');
+  var trendHTML = ''
+    + '<div class="sd-bigchart">'
+    +   '<div class="sd-bigchart-h">'
+    +     '<div class="sd-bigchart-ti">📈 直近 14 日の納品数推移</div>'
+    +     '<div class="sd-bigchart-meta">'
+    +       (weekly.delta > 0 ? '<span class="sd-trend-up">+' + weekly.delta + '</span>' : (weekly.delta < 0 ? '<span class="sd-trend-down">' + weekly.delta + '</span>' : '±0'))
+    +       ' 件 vs 先週'
+    +     '</div>'
+    +   '</div>'
+    +   '<svg class="sd-bigchart-svg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" preserveAspectRatio="none">'
+    +     '<defs>'
+    +       '<linearGradient id="sdGrad' + site.id.slice(-6) + '" x1="0" y1="0" x2="0" y2="1">'
+    +         '<stop offset="0%" stop-color="#fb923c" stop-opacity=".34" />'
+    +         '<stop offset="100%" stop-color="#fb923c" stop-opacity="0" />'
+    +       '</linearGradient>'
+    +     '</defs>'
+    +     '<path d="' + areaD + '" fill="url(#sdGrad' + site.id.slice(-6) + ')" />'
+    +     '<path d="' + pathD + '" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />'
+    +     dots
+    +   '</svg>'
+    +   '<div class="sd-bigchart-axis">'
+    +     '<span>14 日前</span><span style="flex:1"></span><span>今日</span>'
+    +   '</div>'
+    + '</div>';
+
+  // Donut chart (= channel breakdown)
+  var total = Object.values(breakdown).reduce(function(a,b){return a+b;}, 0);
+  var donutHTML = '';
+  if(total > 0){
+    var colors = ['#fb923c','#22c55e','#3b82f6','#a855f7','#ec4899','#64748b'];
+    var labels = Object.keys(breakdown).filter(function(k){return breakdown[k] > 0;});
+    var radius = 70, cx = 90, cy = 90;
+    var circumference = 2 * Math.PI * radius;
+    var offset = 0;
+    var arcs = labels.map(function(k, i){
+      var v = breakdown[k];
+      var dash = (v / total) * circumference;
+      var arc = '<circle cx="' + cx + '" cy="' + cy + '" r="' + radius + '" fill="none" stroke="' + colors[i % colors.length] + '" stroke-width="24" stroke-dasharray="' + dash + ' ' + (circumference - dash) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" />';
+      offset += dash;
+      return arc;
+    }).join('');
+    var legend = labels.map(function(k, i){
+      var v = breakdown[k];
+      var pct = Math.round(v / total * 100);
+      return '<div class="sd-donut-leg">'
+           +   '<span class="sd-donut-dot" style="background:' + colors[i % colors.length] + '"></span>'
+           +   '<span class="sd-donut-leg-l">' + esc(k) + '</span>'
+           +   '<span class="sd-donut-leg-r">' + v + ' <span class="sd-donut-pct">(' + pct + '%)</span></span>'
+           + '</div>';
+    }).join('');
+    donutHTML = ''
+      + '<div class="sd-donut-card">'
+      +   '<div class="sd-card-h">🗂 納品物の構成 <span class="sd-card-h-sub">' + total + ' 件</span></div>'
+      +   '<div class="sd-donut-body">'
+      +     '<svg class="sd-donut-svg" viewBox="0 0 180 180">'
+      +       arcs
+      +       '<text x="90" y="86" text-anchor="middle" font-size="14" font-weight="900" fill="#9a6a4a" font-family="\'Outfit\',sans-serif">' + total + '</text>'
+      +       '<text x="90" y="106" text-anchor="middle" font-size="9" fill="#9a6a4a" letter-spacing=".05em">納品物</text>'
+      +     '</svg>'
+      +     '<div class="sd-donut-legend">' + legend + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  // Top recent artifacts (= ヒーロー的に 5 件)
+  var topArts = allArts.slice(0, 5);
+  var topArtsHTML = '';
+  if(topArts.length){
+    topArtsHTML = ''
+      + '<div class="sd-top-arts">'
+      +   '<div class="sd-card-h">🏆 直近の納品物</div>'
+      +   '<div class="sd-top-arts-list">'
+      +   topArts.map(function(a, i){
+          var dt = '';
+          try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){}
+          var openUrl = (a.url || '') + (a.version ? '?v=' + a.version : '');
+          return '<div class="sd-top-art">'
+               +   '<div class="sd-top-art-n">' + (i + 1) + '</div>'
+               +   '<div class="sd-top-art-bd">'
+               +     '<div class="sd-top-art-ti">' + esc(a.title || a.filename || '無題') + '</div>'
+               +     '<div class="sd-top-art-meta">' + esc(dt) + (a.version ? ' ・ Ver.' + a.version : '') + '</div>'
+               +   '</div>'
+               +   '<a class="sd-top-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗ 開く</a>'
+               + '</div>';
+        }).join('')
+      +   '</div>'
+      + '</div>';
+  }
+
+  return heroNumsHTML
     + kpiHTML
     + ga4Banner
+    + insightsHTML
+    + trendHTML
+    + (donutHTML ? '<div class="sd-numbers-2col">' + donutHTML + topArtsHTML + '</div>' : topArtsHTML);
+}
 
-    // ── Insights panel (= AI による現状コメント) ──
-    + (function(){
-        var insights = _siteInsights(site);
-        if(!insights.length) return '';
-        return '<div class="sd-insights">'
-          + insights.map(function(it){
-              return '<div class="sd-insight"><span class="sd-insight-ic">' + it.icon + '</span><span class="sd-insight-tx">' + it.text + '</span></div>';
-            }).join('')
-          + '</div>';
-      })()
+// ─── Tab 2: 🎯 戦略 (= 設計図) ────────────────────────────────────
+function _renderTabStrategy(site, allArts){
+  var v = site.site_vertical || 'other';
+  var label = _verticalLabel(v);
 
-    // ── Quick Actions (= 今すぐ AI に依頼できる preset) ──
-    + (function(){
-        var actions = _siteQuickActions(site);
-        if(!actions.length) return '';
-        return '<div class="sd-quick">'
-          + '<div class="sd-quick-h">⚡ 今すぐ AI に依頼</div>'
-          + '<div class="sd-quick-grid">'
-          + actions.slice(0, 6).map(function(q){
-              return '<button class="sd-quick-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(q.prompt).replace(/'/g, '&#39;') + ')">'
-                   +   '<span class="sd-quick-ic">' + q.icon + '</span>'
-                   +   '<span class="sd-quick-lbl">' + esc(q.label) + '</span>'
-                   + '</button>';
-            }).join('')
-          + '</div>'
-          + '</div>';
-      })()
+  // 戦略 artifact を探す (= title に「戦略」含む or type=strategy)
+  var strategyArt = allArts.find(function(a){
+    return a && (
+      (a.title && /戦略|strategy|KPI/i.test(a.title)) ||
+      (a.filename && /strategy|kpi/i.test(a.filename))
+    );
+  });
+  var strategyHTML = strategyArt
+    ? '<div class="sd-strat-card">'
+      + '<div class="sd-card-h">📋 戦略 + KPI 設計</div>'
+      + '<div class="sd-strat-body">'
+      +   '<div class="sd-strat-ti">' + esc(strategyArt.title) + '</div>'
+      +   '<div class="sd-strat-meta">作成: ' + (strategyArt.created_at ? new Date(strategyArt.created_at).toLocaleDateString('ja-JP') : '') + '</div>'
+      +   '<a class="sd-strat-open" href="' + esc(strategyArt.url || '') + '" target="_blank" rel="noopener">戦略 sheet を全文で開く →</a>'
+      +   '<div class="sd-strat-hint">📌 AI が生成した 1 ページの戦略 sheet。ターゲット顧客 / 数値目標 / 主力施策 をまとめています。チャットで「戦略を更新して」と頼むと改訂されます。</div>'
+      + '</div>'
+      + '</div>'
+    : '<div class="sd-strat-card">'
+      + '<div class="sd-card-h">📋 戦略 + KPI 設計</div>'
+      + '<div class="sd-strat-empty">'
+      +   '<p>まだ戦略 sheet が生成されていません。チャットで「戦略を設計して」と依頼してください。</p>'
+      +   '<button class="sd-strat-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このサイトの集客戦略を 1 ページの戦略 sheet にまとめてください。ターゲット顧客 / 3 ヶ月の数値目標 / 主力施策 3 つ。\')">戦略を設計する →</button>'
+      + '</div>'
+      + '</div>';
 
-    // ── Trend chart (= 過去 14 日の納品数 sparkline) ──
-    + (function(){
-        var series = _siteDailySeries(site);
-        var max = Math.max(1, Math.max.apply(null, series));
-        var bars = series.map(function(n, i){
-          var h = Math.max(8, Math.round(n / max * 100));
-          var isToday = (i === series.length - 1);
-          return '<div class="sd-bar' + (isToday ? ' today' : '') + '" style="height:' + h + '%" title="' + n + ' 件">'
-               + (n > 0 ? '<span class="sd-bar-n">' + n + '</span>' : '')
-               + '</div>';
-        }).join('');
-        var weekly = _siteWeeklyStats(site);
-        var deltaTxt = weekly.delta > 0 ? '<span class="sd-trend-up">+' + weekly.delta + '</span> 件 / 先週比'
-                     : weekly.delta < 0 ? '<span class="sd-trend-down">' + weekly.delta + '</span> 件 / 先週比'
-                     : '<span>±0</span> 件 / 先週比';
-        return '<div class="sd-trend">'
-          + '<div class="sd-trend-h">'
-          +   '<span class="sd-trend-h-tx">📈 直近 14 日の納品数推移</span>'
-          +   '<span class="sd-trend-h-delta">' + deltaTxt + '</span>'
-          + '</div>'
-          + '<div class="sd-trend-chart">' + bars + '</div>'
-          + '<div class="sd-trend-axis">'
-          +   '<span>14 日前</span><span style="flex:1"></span><span>今日</span>'
-          + '</div>'
-          + '</div>';
-      })()
+  // ペルソナカード (= placeholder, AI 生成想定)
+  var personaHTML = ''
+    + '<div class="sd-persona-card">'
+    +   '<div class="sd-card-h">👤 ターゲットペルソナ</div>'
+    +   '<div class="sd-persona-body">'
+    +     '<div class="sd-persona-ic">👤</div>'
+    +     '<div class="sd-persona-meta">'
+    +       '<div class="sd-persona-ti">' + esc(label) + ' の典型的訪問者</div>'
+    +       '<div class="sd-persona-tx">AI チャットで「ペルソナを詳しく設計して」と依頼すると、年齢層 / 関心 / 行動パターン / 痛みポイント を含む詳細ペルソナを artifact として作成します。</div>'
+    +       '<button class="sd-persona-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このサイトのターゲット顧客のペルソナを詳しく設計してください。年齢層、性別、職業、関心、行動パターン、痛みポイント、購買決定の鍵を含む 1 ページの artifact として。\')">ペルソナを設計 →</button>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
 
-    // ── Activity feed + Weekly stats + Next scheduled = 「動いてる感」を出すパネル ──
-    + (function(){
-        var events = _siteActivityFeed(site);
-        var weekly = _siteWeeklyStats(site);
-        var next = _siteNextSchedule(site);
-        var feedHTML = events.length
-          ? '<div class="sd-feed-list">'
-            + events.map(function(e){
-                return '<div class="sd-feed-item">'
-                     +   '<div class="sd-feed-ic">' + e.icon + '</div>'
-                     +   '<div class="sd-feed-bd">'
-                     +     '<div class="sd-feed-lbl">' + esc(e.label) + '</div>'
-                     +     '<div class="sd-feed-ts">' + esc(_formatRel(e.ts)) + '</div>'
-                     +   '</div>'
-                     + '</div>';
-              }).join('')
-            + '</div>'
-          : '<div class="sd-feed-empty">まだアクティビティがありません。チャットで依頼すると AI が動きます。</div>';
-        var nextHTML = next
-          ? '<div class="sd-next">'
-            +   '<span class="sd-next-pulse"></span>'
-            +   '<span class="sd-next-lbl">次の予定: <b>' + esc(next.name) + '</b></span>'
-            +   '<span class="sd-next-ts">' + esc(next.label) + '</span>'
-            + '</div>'
-          : '';
-        return '<div class="sd-progress-panel">'
-          + '<div class="sd-progress-h">'
-          +   '<div class="sd-progress-h-l">'
-          +     '<span class="sd-progress-h-ic">⚡</span>'
-          +     '<span class="sd-progress-h-tx">AI チームの活動</span>'
-          +   '</div>'
-          +   '<div class="sd-progress-h-r">'
-          +     '<span class="sd-weekly">今週 <b>' + weekly.artifacts + '</b> 件納品</span>'
-          +   '</div>'
-          + '</div>'
-          + feedHTML
-          + nextHTML
-          + '</div>';
-      })()
+  // 競合分析
+  var competitorArt = allArts.find(function(a){
+    return a && a.title && /競合|competitor/i.test(a.title);
+  });
+  var competitorHTML = ''
+    + '<div class="sd-compet-card">'
+    +   '<div class="sd-card-h">🔍 競合分析</div>'
+    +   (competitorArt
+      ? '<div class="sd-compet-body">'
+        + '<div class="sd-compet-ti">' + esc(competitorArt.title) + '</div>'
+        + '<a class="sd-compet-open" href="' + esc(competitorArt.url || '') + '" target="_blank" rel="noopener">分析レポートを開く →</a>'
+        + '</div>'
+      : '<div class="sd-compet-empty">'
+        + '<p>競合の動きを定期的に把握しましょう。</p>'
+        + '<button class="sd-strat-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このサイトの主要競合を 3 社特定し、それぞれの強み / 弱み / 差別化のヒント / 学べる点 を 1 ページの artifact にまとめてください。\')">競合を分析する →</button>'
+        + '</div>')
+    + '</div>';
 
+  // コンテンツカレンダー (= placeholder)
+  var calendarHTML = ''
+    + '<div class="sd-cal-card">'
+    +   '<div class="sd-card-h">📅 今月のコンテンツカレンダー</div>'
+    +   '<div class="sd-cal-body">'
+    +     '<p class="sd-cal-empty">月間の投稿スケジュールを AI が設計します。チャットで「今月のコンテンツカレンダーを作って」と依頼してください。</p>'
+    +     '<button class="sd-strat-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'今月のコンテンツカレンダーを設計してください。週 / 曜日ごとに何を投稿するか (ブログ記事 / SNS / メルマガ / 動画など)、テーマ、配信先を含む 1 ヶ月のカレンダー artifact として。\')">カレンダーを作成 →</button>'
+    +   '</div>'
+    + '</div>';
+
+  // KPI ツリー (= placeholder, KPI が設定されていれば visualize)
+  var kpi = site.kpi || {};
+  var kpiTreeHTML = '';
+  if(kpi.pv || kpi.cvr || kpi.leads){
+    kpiTreeHTML = ''
+      + '<div class="sd-kpi-tree">'
+      +   '<div class="sd-card-h">🎯 KPI ツリー</div>'
+      +   '<div class="sd-tree-body">'
+      +     (kpi.pv ? '<div class="sd-tree-node"><span class="sd-tree-lbl">月間 PV 目標</span><span class="sd-tree-val">' + Number(kpi.pv).toLocaleString() + '</span></div>' : '')
+      +     (kpi.cvr ? '<div class="sd-tree-node"><span class="sd-tree-lbl">CVR 目標</span><span class="sd-tree-val">' + kpi.cvr + '%</span></div>' : '')
+      +     (kpi.leads ? '<div class="sd-tree-node"><span class="sd-tree-lbl">月間リード目標</span><span class="sd-tree-val">' + Number(kpi.leads).toLocaleString() + '</span></div>' : '')
+      +     '<button class="sd-tree-edit" onclick="openKpiModal(\'' + esc(site.id) + '\')">編集</button>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  return strategyHTML
+    + (kpiTreeHTML || '')
+    + '<div class="sd-strat-grid">' + personaHTML + competitorHTML + '</div>'
+    + calendarHTML;
+}
+
+// ─── Tab 3: ⚡ アクション (= 今後の動き) ───────────────────────────
+function _renderTabActions(site, events, next, quickActions, weekly, progressHTML, teamHTML){
+  // 今日のおすすめ (= AI が提案する今日の 3 件)
+  var todaysHTML = ''
+    + '<div class="sd-today-card">'
+    +   '<div class="sd-card-h">⭐ 今日のおすすめアクション</div>'
+    +   '<div class="sd-today-list">'
+    +   quickActions.slice(0, 3).map(function(q, i){
+        return '<button class="sd-today-item" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(q.prompt).replace(/'/g, '&#39;') + ')">'
+             +   '<div class="sd-today-rank">' + (i + 1) + '</div>'
+             +   '<div class="sd-today-ic">' + q.icon + '</div>'
+             +   '<div class="sd-today-bd">'
+             +     '<div class="sd-today-lbl">' + esc(q.label) + '</div>'
+             +     '<div class="sd-today-tx">' + esc(q.prompt.slice(0, 80)) + (q.prompt.length > 80 ? '…' : '') + '</div>'
+             +   '</div>'
+             +   '<div class="sd-today-arrow">→</div>'
+             + '</button>';
+      }).join('')
+    +   '</div>'
+    + '</div>';
+
+  // その他の Quick Actions
+  var moreHTML = ''
+    + '<div class="sd-quick">'
+    +   '<div class="sd-quick-h">⚡ その他の依頼テンプレ</div>'
+    +   '<div class="sd-quick-grid">'
+    +   quickActions.slice(3, 9).map(function(q){
+        return '<button class="sd-quick-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(q.prompt).replace(/'/g, '&#39;') + ')">'
+             +   '<span class="sd-quick-ic">' + q.icon + '</span>'
+             +   '<span class="sd-quick-lbl">' + esc(q.label) + '</span>'
+             + '</button>';
+      }).join('')
+    +   '</div>'
+    + '</div>';
+
+  // 次の予定 (大きく表示)
+  var nextHTML = next
+    ? '<div class="sd-next-card">'
+      + '<div class="sd-card-h">⏰ 次の自動実行</div>'
+      + '<div class="sd-next-bd">'
+      +   '<div class="sd-next-name">' + esc(next.name) + '</div>'
+      +   '<div class="sd-next-when">' + esc(next.label) + '</div>'
+      +   '<div class="sd-next-pulse-large"></div>'
+      + '</div>'
+      + '</div>'
+    : '';
+
+  // 進行中タスク + チーム
+  var taskTeamHTML = ''
     + '<div class="sd-grid">'
     +   '<div class="sd-card sd-card-progress">'
     +     '<div class="sd-card-h">📋 進行中のタスク</div>'
@@ -3880,33 +4117,38 @@ function _renderSiteDashboardHTML(site){
     +     '<div class="sd-card-h">👥 AI チーム</div>'
     +     '<div class="sd-card-bd"><div class="sd-team-list">' + teamHTML + '</div></div>'
     +   '</div>'
-    + '</div>'
-
-    + '<div class="sd-card sd-card-arts">'
-    +   '<div class="sd-card-h">📦 納品物 <span class="sd-card-h-sub">' + allArts.length + ' 件</span></div>'
-    +   '<div class="sd-card-bd">' + artsHTML + '</div>'
-    + '</div>'
-
-    // ── Channel breakdown (= 納品物のカテゴリ別構成) ──
-    + (function(){
-        var bd = _siteChannelBreakdown(site);
-        var total = Object.values(bd).reduce(function(a,b){return a+b;}, 0);
-        if(total === 0) return '';
-        var rows = Object.keys(bd).filter(function(k){return bd[k] > 0;}).map(function(k){
-          var v = bd[k];
-          var pct = total > 0 ? Math.round(v / total * 100) : 0;
-          return '<div class="sd-ch-row">'
-               +   '<div class="sd-ch-lbl">' + esc(k) + '</div>'
-               +   '<div class="sd-ch-bar"><div class="sd-ch-bar-fill" style="width:' + pct + '%"></div></div>'
-               +   '<div class="sd-ch-val">' + v + ' <span class="sd-ch-pct">(' + pct + '%)</span></div>'
-               + '</div>';
-        }).join('');
-        return '<div class="sd-card sd-card-ch">'
-          + '<div class="sd-card-h">🗂 納品物の構成 <span class="sd-card-h-sub">' + total + ' 件</span></div>'
-          + '<div class="sd-card-bd">' + rows + '</div>'
-          + '</div>';
-      })()
     + '</div>';
+
+  // Activity feed
+  var feedHTML = events.length
+    ? '<div class="sd-feed-list">'
+      + events.map(function(e){
+          return '<div class="sd-feed-item">'
+               +   '<div class="sd-feed-ic">' + e.icon + '</div>'
+               +   '<div class="sd-feed-bd">'
+               +     '<div class="sd-feed-lbl">' + esc(e.label) + '</div>'
+               +     '<div class="sd-feed-ts">' + esc(_formatRel(e.ts)) + '</div>'
+               +   '</div>'
+               + '</div>';
+        }).join('')
+      + '</div>'
+    : '<div class="sd-feed-empty">まだアクティビティがありません。チャットで依頼すると AI が動きます。</div>';
+
+  var activityHTML = ''
+    + '<div class="sd-progress-panel">'
+    +   '<div class="sd-progress-h">'
+    +     '<div class="sd-progress-h-l">'
+    +       '<span class="sd-progress-h-ic">⚡</span>'
+    +       '<span class="sd-progress-h-tx">直近のアクティビティ</span>'
+    +     '</div>'
+    +     '<div class="sd-progress-h-r">'
+    +       '<span class="sd-weekly">今週 <b>' + weekly.artifacts + '</b> 件</span>'
+    +     '</div>'
+    +   '</div>'
+    +   feedHTML
+    + '</div>';
+
+  return todaysHTML + nextHTML + taskTeamHTML + moreHTML + activityHTML;
 }
 
 // Quick Action のハンドラ — チャットに飛んで prompt を pre-fill して送信

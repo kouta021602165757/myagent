@@ -3395,6 +3395,37 @@ function _artDisplayTitle(a){
   return '納品物';
 }
 
+// ── GA4 snapshot を遅延読み込み (= ダッシュボード mount 後にバックグラウンドで fetch) ──
+// キャッシュは window._ga4Snapshots[siteId] = { snapshot, fetched_at, connected }
+// 取得完了したら renderHomeDashboard を呼び直す (= chart 自動描画)
+window._ga4Snapshots = window._ga4Snapshots || {};
+function _fetchGa4Snapshot(siteId, opts){
+  if(!siteId) return;
+  var force = opts && opts.force;
+  var existing = window._ga4Snapshots[siteId];
+  // 5 分以内に取得済みならスキップ (= 何度も dashboard を re-render する時の保護)
+  if(!force && existing && existing._localFetchedMs && Date.now() - existing._localFetchedMs < 5*60*1000) return;
+  if(window._ga4FetchInFlight && window._ga4FetchInFlight[siteId]) return;
+  window._ga4FetchInFlight = window._ga4FetchInFlight || {};
+  window._ga4FetchInFlight[siteId] = true;
+  var method = force ? 'POST' : 'GET';
+  var path = '/api/agents/' + encodeURIComponent(siteId) + '/ga4' + (force ? '/refresh' : '');
+  api(method, path)
+    .then(function(r){
+      window._ga4Snapshots[siteId] = {
+        connected: !!(r && r.connected),
+        snapshot: r && r.snapshot,
+        _localFetchedMs: Date.now(),
+      };
+      window._ga4FetchInFlight[siteId] = false;
+      try { renderHomeDashboard(); } catch(_){}
+    })
+    .catch(function(e){
+      console.warn('[ga4-snapshot] fetch failed:', e && e.message);
+      window._ga4FetchInFlight[siteId] = false;
+    });
+}
+
 /* Home dashboard — サイトベースに完全リライト。
  * - サイト 0 件 → 「URL を貼って AI チームを派遣」エントリーポイント
  * - サイトあり → アクティブなサイトの集客ダッシュボード */
@@ -3417,6 +3448,8 @@ function renderHomeDashboard(){
   //   常に dashboard を描画して、tab だけ切り替える。
   var activeSite = sites.find(function(s){ return s.id === activeId; }) || sites[0];
   body.innerHTML = _renderSiteDashboardHTML(activeSite);
+  // GA4 snapshot を遅延 fetch (= dashboard 表示 → 数秒後に chart 描画)
+  try { _fetchGa4Snapshot(activeSite.id); } catch(_){}
 }
 
 // 「すべてのサイト」 = ダッシュボード内の「📋 サイト一覧」 tab に飛ぶ shortcut。
@@ -3974,19 +4007,39 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   // ── 数字一覧 = ビジネスの結果 (= 納品物カウントは脚注に格下げ) ──
   // KPI 未設定 → BIG CTA で「ここで設定すると数字が出る」
   // KPI 設定済 + GA4 未接続 → 目標値だけ表示 + GA4 接続 CTA
-  // KPI 設定済 + GA4 接続済 → 実測値 + 達成率 + trend (= 将来の理想形)
+  // KPI 設定済 + GA4 接続済 → 実測値 + 達成率 + trend chart
   var hasKpi = !!(kpi.pv || kpi.cvr || kpi.leads);
+  // GA4 snapshot (= バックグラウンド fetch 結果)
+  var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
+  var ga4Data = ga4Snap && ga4Snap.snapshot;
+  var hasGa4Data = !!(ga4Data && ga4Data.series && ga4Data.series.length > 0);
 
   // ── HERO: 主 KPI (PV) を巨大表示 ──
   var heroHTML = '';
   if(hasKpi && kpi.pv){
-    // 月末予測 = 今月の経過日数比で線形外挿。GA4 接続なしなら「目標値」だけ表示
-    var _heroValTx = ga4Connected
-      ? '<span style="opacity:.5">—</span>'
-      : Number(kpi.pv).toLocaleString();
-    var _heroFootTx = ga4Connected
-      ? 'GA4 接続済 — 数値はまもなく表示されます。'
-      : '<b>GA4 を接続</b>すると、ここに実数値・先月比・月末予測がリアルタイムで表示されます。';
+    // GA4 接続済 + データ取得済 → 実 PV 表示。それ以外は目標値 or プレースホルダ。
+    var _heroValTx;
+    var _heroFootTx;
+    var _heroSubBadge = '';
+    if(hasGa4Data){
+      var actualPv = ga4Data.total_30d.pv;
+      var goalPv = Number(kpi.pv);
+      var achievedPct = Math.round(actualPv / goalPv * 100);
+      var deltaPct = ga4Data.delta_pv_pct;
+      _heroValTx = actualPv.toLocaleString();
+      _heroFootTx = '直近 30 日の累計 PV。目標 <b>' + goalPv.toLocaleString() + ' PV/月</b> に対して <b>' + achievedPct + '%</b> 達成中。';
+      if(deltaPct !== null && deltaPct !== undefined){
+        var deltaCls = deltaPct > 0 ? 'sd-trend-up' : deltaPct < 0 ? 'sd-trend-down' : '';
+        var deltaSign = deltaPct > 0 ? '+' : '';
+        _heroSubBadge = '<div class="sd-hero-delta"><span class="' + deltaCls + '">' + deltaSign + deltaPct + '%</span> vs 先週 (直近 7 日)</div>';
+      }
+    } else if(ga4Connected){
+      _heroValTx = '<span style="opacity:.5">読込中…</span>';
+      _heroFootTx = 'GA4 接続済 — データを取得中。少し待ってください。';
+    } else {
+      _heroValTx = Number(kpi.pv).toLocaleString();
+      _heroFootTx = '<b>GA4 を接続</b>すると、ここに実数値・先月比・月末予測がリアルタイムで表示されます。';
+    }
     var _heroGa4Btn = ga4Connected
       ? ''
       : '<button class="sd-hero-cta sd-hero-cta-primary" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">📊 GA4 を接続 →</button>';
@@ -3995,8 +4048,9 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       +   '<div class="sd-hero-tag"><span class="sd-rp-dot"></span>今月のメイン KPI ・ 月間 PV</div>'
       +   '<div class="sd-hero-row">'
       +     '<div class="sd-hero-main">'
-      +       '<div class="sd-hero-lbl">' + (ga4Connected ? '今月の累計 PV' : '目標 PV') + '</div>'
+      +       '<div class="sd-hero-lbl">' + (hasGa4Data ? '直近 30 日の累計 PV (実測)' : ga4Connected ? '今月の累計 PV' : '目標 PV') + '</div>'
       +       '<div class="sd-hero-val">' + _heroValTx + '<span class="sd-hero-unit">PV</span></div>'
+      +       _heroSubBadge
       +       '<div class="sd-hero-foot">' + _heroFootTx + '</div>'
       +     '</div>'
       +     '<div class="sd-hero-side">'
@@ -4015,6 +4069,48 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       +   '<button class="sd-hero-empty-cta" onclick="openKpiModal(\'' + esc(site.id) + '\')">'
       +     '🎯 KPI を設定する <span class="arrow">→</span>'
       +   '</button>'
+      + '</div>';
+  }
+
+  // ── GA4 接続済 + データあり → 30 日 PV 推移 chart ──
+  var ga4ChartHTML = '';
+  if(hasGa4Data){
+    var s = ga4Data.series;
+    var pvMax = Math.max.apply(null, s.map(function(d){ return d.pv; })) || 1;
+    var SVG_W = 720, SVG_H = 200;
+    var stepX = SVG_W / Math.max(1, s.length - 1);
+    var pvPoints = s.map(function(d, i){
+      var x = i * stepX;
+      var y = SVG_H - 20 - (d.pv / pvMax * (SVG_H - 40));
+      return x + ',' + y;
+    });
+    var pathD = 'M ' + pvPoints.join(' L ');
+    var areaD = 'M 0,' + (SVG_H - 20) + ' L ' + pvPoints.join(' L ') + ' L ' + SVG_W + ',' + (SVG_H - 20) + ' Z';
+    // 最終日 dot を強調
+    var lastIdx = s.length - 1;
+    var lastX = lastIdx * stepX;
+    var lastY = SVG_H - 20 - (s[lastIdx].pv / pvMax * (SVG_H - 40));
+    var avgPvPerDay = Math.round(ga4Data.total_30d.pv / Math.max(1, s.length));
+    ga4ChartHTML = ''
+      + '<div class="sd-bigchart">'
+      +   '<div class="sd-bigchart-h">'
+      +     '<div class="sd-bigchart-ti">📈 直近 30 日の PV 推移 (GA4)</div>'
+      +     '<div class="sd-bigchart-meta">日平均 ' + avgPvPerDay.toLocaleString() + ' PV</div>'
+      +   '</div>'
+      +   '<svg class="sd-bigchart-svg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" preserveAspectRatio="none">'
+      +     '<defs>'
+      +       '<linearGradient id="ga4Grad' + site.id.slice(-6) + '" x1="0" y1="0" x2="0" y2="1">'
+      +         '<stop offset="0%" stop-color="#fb923c" stop-opacity=".4" />'
+      +         '<stop offset="100%" stop-color="#fb923c" stop-opacity="0" />'
+      +       '</linearGradient>'
+      +     '</defs>'
+      +     '<path d="' + areaD + '" fill="url(#ga4Grad' + site.id.slice(-6) + ')" />'
+      +     '<path d="' + pathD + '" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />'
+      +     '<circle cx="' + lastX + '" cy="' + lastY + '" r="5" fill="#ea580c" stroke="#fff" stroke-width="2" />'
+      +   '</svg>'
+      +   '<div class="sd-bigchart-axis">'
+      +     '<span>30 日前</span><span style="flex:1"></span><span>昨日</span>'
+      +   '</div>'
       + '</div>';
   }
 
@@ -4129,6 +4225,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
 
   return heroHTML
     + subKpiHTML
+    + ga4ChartHTML
     + insightsHTML
     + previewHTML
     + activityHTML;
@@ -4241,10 +4338,24 @@ function _renderTabStrategy(site, allArts){
 function _renderTabReport(site, events, next, quickActions, weekly, allArts, insights){
   var hostname = _siteHostname(site);
   var label = _verticalLabel(site.site_vertical || 'other');
+  // GA4 snapshot (= 接続済みならビジネス数字も載せる)
+  var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
+  var ga4Data = ga4Snap && ga4Snap.snapshot;
+  var hasGa4Data = !!(ga4Data && ga4Data.series && ga4Data.series.length > 0);
 
-  // ── 1) 今日のひと言 — AI が weekly stats + insights から書く ──
+  // ── 1) 今日のひと言 — GA4 がある時はビジネス数字を優先、なければ AI 活動量 ──
   var headline = '';
-  if(weekly.delta > 0){
+  if(hasGa4Data){
+    var deltaPct = ga4Data.delta_pv_pct;
+    var last7Pv = ga4Data.last_7d.pv;
+    if(deltaPct !== null && deltaPct > 5){
+      headline = '直近 7 日の PV は <b>+' + deltaPct + '%</b> 伸びて <b>' + last7Pv.toLocaleString() + ' PV</b>。順調です。';
+    } else if(deltaPct !== null && deltaPct < -5){
+      headline = '直近 7 日の PV は <b>' + deltaPct + '%</b> で <b>' + last7Pv.toLocaleString() + ' PV</b>。原因を探りましょう。';
+    } else {
+      headline = '直近 7 日の PV は <b>' + last7Pv.toLocaleString() + ' PV</b>。安定しています。';
+    }
+  } else if(weekly.delta > 0){
     headline = '今週は先週より <b>+' + weekly.delta + ' 件</b> 多く納品されました。順調に伸びてます。';
   } else if(weekly.delta < 0){
     headline = '今週は先週より ' + Math.abs(weekly.delta) + ' 件少なめ。チャットで何か依頼してみましょう。';
@@ -4261,6 +4372,48 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
     +   '<div class="sd-rp-headline-tx">' + headline + '</div>'
     +   '<div class="sd-rp-headline-meta">' + esc(hostname) + ' ・ ' + esc(label) + '</div>'
     + '</div>';
+
+  // ── 1b) GA4 数字バー (= 接続済みなら最上部、未接続なら控えめ CTA) ──
+  var ga4StripHTML = '';
+  if(hasGa4Data){
+    var stripDeltaCls = ga4Data.delta_pv_pct > 0 ? 'up' : ga4Data.delta_pv_pct < 0 ? 'down' : 'flat';
+    var stripDeltaSign = ga4Data.delta_pv_pct > 0 ? '+' : '';
+    ga4StripHTML = ''
+      + '<div class="sd-rp-ga4">'
+      +   '<div class="sd-rp-ga4-h">'
+      +     '<span class="sd-rp-ga4-tag">📊 GA4 直近 7 日</span>'
+      +     '<span class="sd-rp-ga4-meta">' + (ga4Data.fetched_at ? '更新: ' + _formatRel(Date.parse(ga4Data.fetched_at)) : '') + '</span>'
+      +   '</div>'
+      +   '<div class="sd-rp-ga4-grid">'
+      +     '<div class="sd-rp-ga4-cell">'
+      +       '<div class="sd-rp-ga4-l">PV</div>'
+      +       '<div class="sd-rp-ga4-v">' + ga4Data.last_7d.pv.toLocaleString() + '</div>'
+      +       (ga4Data.delta_pv_pct !== null
+        ? '<div class="sd-rp-ga4-d ' + stripDeltaCls + '">' + stripDeltaSign + ga4Data.delta_pv_pct + '% vs 先週</div>'
+        : '')
+      +     '</div>'
+      +     '<div class="sd-rp-ga4-cell">'
+      +       '<div class="sd-rp-ga4-l">セッション</div>'
+      +       '<div class="sd-rp-ga4-v">' + ga4Data.last_7d.sessions.toLocaleString() + '</div>'
+      +     '</div>'
+      +     '<div class="sd-rp-ga4-cell">'
+      +       '<div class="sd-rp-ga4-l">日平均 PV</div>'
+      +       '<div class="sd-rp-ga4-v">' + Math.round(ga4Data.last_7d.pv / 7).toLocaleString() + '</div>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>';
+  } else if(ga4Snap && !ga4Snap.connected){
+    // GA4 未接続 — 控えめな CTA
+    ga4StripHTML = ''
+      + '<div class="sd-rp-ga4-cta" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">'
+      +   '<div class="sd-rp-ga4-cta-ic">📊</div>'
+      +   '<div class="sd-rp-ga4-cta-bd">'
+      +     '<div class="sd-rp-ga4-cta-ti">Google Analytics を接続して数字を解放</div>'
+      +     '<div class="sd-rp-ga4-cta-de">毎朝この場所に PV / 流入 / CVR の実数値が入ります。</div>'
+      +   '</div>'
+      +   '<div class="sd-rp-ga4-cta-arrow">→</div>'
+      + '</div>';
+  }
 
   // ── 2) 今日の 1 提案 (= 黒背景 prominent) ──
   var topAction = (quickActions && quickActions[0]) || null;
@@ -4396,6 +4549,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
   }
 
   return headlineHTML
+    + ga4StripHTML
     + todayHTML
     + alertHTML
     + highlightsHTML

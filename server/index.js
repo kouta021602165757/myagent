@@ -1895,6 +1895,145 @@ async function sendEmail(to,subject,html,opts){
   throw new Error(`Resend ${r.s}: ${detail}`);
 }
 
+// ── 毎朝レポートのメール subject / HTML 生成 ─────────────────────
+// site agent の「毎朝レポート」 schedule が発火した時の専用テンプレ。
+// 設計: ダッシュボードにわざわざ見に来てもらうより、ユーザーの inbox
+// に直接届ける方が「使われる」 — open rate 30-40% を狙う briefing 形式。
+function _buildMorningReportSubject(agent, isJa){
+  const hostname = (() => {
+    try { return new URL(agent.site_url || '').hostname.replace(/^www\./, ''); }
+    catch(_){ return agent.name || 'your site'; }
+  })();
+  const today = new Date().toLocaleDateString(isJa ? 'ja-JP' : 'en-US',
+    { month: 'numeric', day: 'numeric', weekday: 'short' });
+  return isJa
+    ? `☀️ ${today} ・ ${hostname} の今朝のレポート`
+    : `☀️ ${today} · ${hostname} morning report`;
+}
+
+function _buildMorningReportHTML(user, agent, finalReply, sched, isJa){
+  const hostname = (() => {
+    try { return new URL(agent.site_url || '').hostname.replace(/^www\./, ''); }
+    catch(_){ return agent.name || ''; }
+  })();
+  const today = new Date().toLocaleDateString(isJa ? 'ja-JP' : 'en-US',
+    { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  const userName = (user.name || (user.email||'').split('@')[0] || 'there');
+
+  // チーム members 表示 (= 「誰が今朝のレポートを書いたか」の信頼感)
+  const members = (agent.team_members || []).slice(0, 4);
+  const memberPills = members.length
+    ? '<div style="margin:14px 0 18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center">'
+      + members.map(m => '<span style="display:inline-block;background:#fff;border:1px solid #f5e1cd;color:#9a6a4a;font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px">'+_xmlEscape(m.name||'AI')+'</span>').join('')
+      + '</div>'
+    : '';
+
+  // 今週納品数 (= サマリ)
+  const arts = Array.isArray(user.artifacts) ? user.artifacts.filter(a => a && a.chat_id === agent.id) : [];
+  const SINCE_WEEK = Date.now() - 7 * 86400000;
+  const weekArts = arts.filter(a => (Date.parse(a.created_at || 0) || 0) > SINCE_WEEK);
+
+  // finalReply (= AI が生成した本文) を markdown → HTML 変換
+  // 簡易変換: 見出し / 強調 / 箇条書きのみ
+  const bodyHtml = _md2htmlMinimal(finalReply);
+
+  // KPI 情報 (= 接続済 GA4 の数字、または手動 KPI 目標)
+  const kpi = agent.kpi || {};
+  const ga4Connected = !!((user.integrations || {}).ga4 && user.integrations.ga4.refresh_token);
+  let kpiStripHTML = '';
+  if(kpi.pv || kpi.cvr || kpi.leads){
+    const cells = [];
+    if(kpi.pv) cells.push({ lbl: '月間 PV 目標', val: Number(kpi.pv).toLocaleString() });
+    if(kpi.cvr) cells.push({ lbl: '目標 CVR', val: kpi.cvr + '%' });
+    if(kpi.leads) cells.push({ lbl: '月間リード目標', val: Number(kpi.leads).toLocaleString() });
+    kpiStripHTML = '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px"><tr>'
+      + cells.map(c =>
+          '<td align="center" style="padding:12px 8px;background:#fff;border:1px solid #f5e1cd;border-radius:10px;width:'+(100/cells.length)+'%">'
+          + '<div style="font-size:9.5px;font-weight:800;color:#9a6a4a;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">'+_xmlEscape(c.lbl)+'</div>'
+          + '<div style="font-family:Outfit,Arial,sans-serif;font-size:22px;font-weight:900;color:#ea580c;letter-spacing:-.02em">'+_xmlEscape(c.val)+'</div>'
+          + '</td>'
+          + (c === cells[cells.length-1] ? '' : '<td style="width:8px"></td>')
+        ).join('')
+      + '</tr></table>';
+  }
+
+  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app.html?agent_id=' + encodeURIComponent(agent.id);
+  const ga4Cta = !ga4Connected
+    ? '<div style="background:#fff7ed;border:1px dashed #fb923c;border-radius:11px;padding:14px 18px;margin:18px 0;font-size:12.5px;color:#9a3412;line-height:1.55">'
+      + '📊 <b>Google Analytics を接続</b>すると、毎朝この場所に PV / 流入 / CVR の実数値とグラフが入ります。'
+      + '<a href="' + _xmlEscape(dashUrl) + '" style="color:#ea580c;font-weight:800;text-decoration:none;margin-left:4px">接続する →</a>'
+      + '</div>'
+    : '';
+
+  return ''
+    + '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+    + '<body style="margin:0;padding:0;background:#fdf8f3;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif;color:#2d1a0e">'
+    + '<div style="max-width:640px;margin:0 auto;padding:28px 20px">'
+
+    // ── Hero ヘッダー (= ブランド + 日付 + あいさつ) ─────
+    + '<div style="background:linear-gradient(135deg,#fff7ee 0%,#ffe8d4 100%);border-radius:16px;padding:24px 28px;margin-bottom:18px;text-align:center">'
+    +   '<div style="font-size:11px;font-weight:800;color:#ea580c;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">☀️ ' + _xmlEscape(today) + '</div>'
+    +   '<div style="font-size:22px;font-weight:900;color:#2d1a0e;letter-spacing:-.015em;margin-bottom:6px">' + _xmlEscape(userName) + ' さん、おはようございます</div>'
+    +   '<div style="font-size:13px;color:#6b4226;font-weight:600;line-height:1.55">'
+    +     '<b style="color:#ea580c">' + _xmlEscape(hostname) + '</b> の AI チームから今朝のレポートが届きました。'
+    +   '</div>'
+    +   memberPills
+    + '</div>'
+
+    + kpiStripHTML
+
+    // ── 本文 (= AI が書いた今朝のレポート、markdown → HTML) ─────
+    + '<div style="background:#fff;border:1px solid #f5e1cd;border-radius:14px;padding:24px 28px;margin-bottom:18px;font-size:14px;line-height:1.7;color:#2d1a0e">'
+    +   bodyHtml
+    + '</div>'
+
+    + ga4Cta
+
+    // ── 今週納品物のサマリ ─────
+    + (weekArts.length > 0
+        ? '<div style="background:#fff;border:1px solid #f5e1cd;border-radius:14px;padding:18px 22px;margin-bottom:18px;font-size:12.5px;color:#6b4226">'
+          + '<div style="font-size:11px;font-weight:800;color:#9a6a4a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:9px">🤖 AI チームが今週やったこと</div>'
+          + '<div style="font-weight:700;color:#2d1a0e">'+weekArts.length+' 件の納品物を作成しました。</div>'
+          + '<div style="margin-top:6px;color:#9a6a4a">' + weekArts.slice(0,3).map(a => '・' + _xmlEscape(String(a.title || a.filename || '無題').slice(0,40))).join('<br>') + '</div>'
+          + '</div>'
+        : '')
+
+    // ── CTA ─────
+    + '<div style="text-align:center;margin:28px 0">'
+    +   '<a href="' + _xmlEscape(dashUrl) + '" style="display:inline-block;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;text-decoration:none;padding:13px 28px;border-radius:11px;font-size:14px;font-weight:800;box-shadow:0 6px 18px rgba(234,88,12,.28)">'
+    +     '📊 ダッシュボードを開く'
+    +   '</a>'
+    + '</div>'
+
+    // ── Footer ─────
+    + '<div style="text-align:center;color:#9a6a4a;font-size:11px;margin-top:32px;padding-top:18px;border-top:1px solid #f5e1cd">'
+    +   '<div style="font-weight:800;letter-spacing:.04em;color:#ea580c;margin-bottom:6px">MY AI AGENT</div>'
+    +   '<div>このメールは毎朝 7 時に届きます。<br>'
+    +   '配信を停止したい場合は <a href="' + _xmlEscape(dashUrl) + '" style="color:#ea580c;text-decoration:none">ダッシュボード → 設定</a> から。</div>'
+    + '</div>'
+
+    + '</div></body></html>';
+}
+
+// 超簡易 markdown → HTML (= 見出し / 強調 / 箇条書きだけ、メール用)
+function _md2htmlMinimal(src){
+  let h = _xmlEscape(String(src || ''));
+  // 見出し
+  h = h.replace(/^### (.+)$/gm, '<h3 style="margin:18px 0 8px;font-size:15px;font-weight:900;color:#2d1a0e;letter-spacing:-.005em">$1</h3>');
+  h = h.replace(/^## (.+)$/gm,  '<h2 style="margin:22px 0 10px;font-size:17px;font-weight:900;color:#2d1a0e;letter-spacing:-.01em">$1</h2>');
+  h = h.replace(/^# (.+)$/gm,   '<h1 style="margin:24px 0 12px;font-size:19px;font-weight:900;color:#ea580c;letter-spacing:-.015em">$1</h1>');
+  // 強調
+  h = h.replace(/\*\*([^*]+)\*\*/g, '<b style="color:#2d1a0e">$1</b>');
+  h = h.replace(/\*([^*]+)\*/g, '<i>$1</i>');
+  // 箇条書き
+  h = h.replace(/^[ \t]*[-・]\s+(.+)$/gm, '<li style="margin:4px 0;line-height:1.65">$1</li>');
+  h = h.replace(/(<li[^>]*>[\s\S]*?<\/li>(\n<li[^>]*>[\s\S]*?<\/li>)*)/g, '<ul style="margin:8px 0 12px;padding-left:22px">$1</ul>');
+  // 改行
+  h = h.replace(/\n{2,}/g, '</p><p style="margin:10px 0">');
+  h = '<p style="margin:10px 0">' + h + '</p>';
+  return h;
+}
+
 // ── Anthropic credit-exhausted detection + admin alert ─────────────
 // The Anthropic host account (not the user's in-app balance) has run out
 // of credit. Map the raw English error to a friendly Japanese message for
@@ -11669,23 +11808,34 @@ async function _runOneSchedule(user, agent, sched){
     // text and we email it on the AI's behalf.
     if(sched.deliver === 'email' && user.email && !sendEmailCalled){
       const isJa = /[ぁ-んァ-ヶー一-龠]/.test((user.name||'') + (user.email||''));
-      const subj = isJa
-        ? `🤖 ${sched.label || agent.name || 'AI'} — 定期実行レポート`
-        : `🤖 ${sched.label || agent.name || 'AI'} — scheduled report`;
-      const tagline   = isJa ? '定期タスクからの自動実行' : 'Triggered by your scheduled task';
-      const promptLbl = isJa ? 'プロンプト:'           : 'Prompt:';
-      const noLabel   = isJa ? '(ラベルなし)'           : '(no label)';
+      const isMorningReport = /毎朝レポート|morning.?report/i.test(sched.label || '');
       try {
-        await sendEmail(
-          user.email, subj,
-          '<div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px">'+
-          '<h2 style="margin:0 0 8px">'+_xmlEscape(agent.name||'AI')+'</h2>'+
-          '<div style="color:#52525b;font-size:13px;margin-bottom:14px">'+tagline+': <i>'+_xmlEscape(sched.label||noLabel)+'</i></div>'+
-          '<div style="font-size:11px;color:#a1a1aa;margin-bottom:6px"><b>'+promptLbl+'</b> '+_xmlEscape(sched.prompt||'')+'</div>'+
-          '<div style="background:#fff7ed;border:1px solid #f5e1cd;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:14px;line-height:1.55">'+_xmlEscape(finalReply)+'</div>'+
-          '<div style="margin-top:18px;text-align:center;color:#a1a1aa;font-size:11px">— MY AI AGENT</div>'+
-          '</div>'
-        );
+        if(isMorningReport){
+          // ── リッチ HTML テンプレ (= 朝の briefing 専用) ─────────────
+          await sendEmail(
+            user.email,
+            _buildMorningReportSubject(agent, isJa),
+            _buildMorningReportHTML(user, agent, finalReply, sched, isJa)
+          );
+        } else {
+          // ── 既存テンプレ (= 一般的な定期実行レポート) ────────────
+          const subj = isJa
+            ? `🤖 ${sched.label || agent.name || 'AI'} — 定期実行レポート`
+            : `🤖 ${sched.label || agent.name || 'AI'} — scheduled report`;
+          const tagline   = isJa ? '定期タスクからの自動実行' : 'Triggered by your scheduled task';
+          const promptLbl = isJa ? 'プロンプト:'           : 'Prompt:';
+          const noLabel   = isJa ? '(ラベルなし)'           : '(no label)';
+          await sendEmail(
+            user.email, subj,
+            '<div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:20px">'+
+            '<h2 style="margin:0 0 8px">'+_xmlEscape(agent.name||'AI')+'</h2>'+
+            '<div style="color:#52525b;font-size:13px;margin-bottom:14px">'+tagline+': <i>'+_xmlEscape(sched.label||noLabel)+'</i></div>'+
+            '<div style="font-size:11px;color:#a1a1aa;margin-bottom:6px"><b>'+promptLbl+'</b> '+_xmlEscape(sched.prompt||'')+'</div>'+
+            '<div style="background:#fff7ed;border:1px solid #f5e1cd;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:14px;line-height:1.55">'+_xmlEscape(finalReply)+'</div>'+
+            '<div style="margin-top:18px;text-align:center;color:#a1a1aa;font-size:11px">— MY AI AGENT</div>'+
+            '</div>'
+          );
+        }
       } catch(e){ console.warn('[schedule] email failed:', e.message); }
     }
     sched.last_run = new Date().toISOString();
@@ -13916,20 +14066,24 @@ async function handleAPI(req,res,pathname,method,ip){
         updated_at: new Date().toISOString(),
       },
     };
-    // ── 毎朝レポート schedule を agent 作成時点でセット (= artifacts 失敗しても schedule は残る) ──
+    // ── 毎朝レポート schedule を agent 作成時点でセット ──
+    // 7:00 にメール配信 (= ダッシュボードに来てもらうのではなく、ユーザーの inbox に届ける)。
+    // chat history にも残るので、後でアプリ開いた時にも会話として見れる。
     agent.schedules = [{
       id: genScheduleId(),
       prompt: '昨日 ' + (siteName || siteUrl) + ' に対して AI チームが届けた納品物を振り返り、'
             + '今日 / 今週やるべきことを 3 件提案してください。'
             + 'GA4 が接続されていれば前日の流入数も含める。'
             + 'KPI が設定されていれば達成度も評価する。'
-            + '出力は「📊 昨日の数字」「✅ 完了タスク」「🎯 今日のおすすめ」の 3 ブロック形式で簡潔に。',
+            + '出力は「📊 昨日の数字」「✅ 完了タスク」「🎯 今日のおすすめ」の 3 ブロック形式で簡潔に。'
+            + 'メールで届くので、簡潔に・読みやすく。Markdown OK。',
       kind: 'daily',
-      hour: 9, minute: 0,
+      hour: 7, minute: 0,
       tz_offset_min: 540,
-      deliver: 'chat',
+      deliver: 'email',
       enabled: true,
       label: '毎朝レポート',
+      site_id: agent.id,  // テンプレ判定用 (= morning_report HTML テンプレ trigger)
       created_at: new Date().toISOString(),
       last_run: null,
       next_run: null,
@@ -16213,6 +16367,85 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 500, { error: '保存に失敗' });
     }
     return jres(res, 200, { ok: true, kpi: ag.kpi });
+  }
+
+  // ── GA4 snapshot (= dashboard 用キャッシュ + 強制 refresh) ──
+  // ダッシュボードが mount 時に毎回 GA4 API を叩くと遅い + quota 食う。
+  // agent.ga4_snapshot にキャッシュして、1 時間以上古ければ refresh する設計。
+  //   GET  /api/agents/:id/ga4         → キャッシュ返却 (古ければ refresh も裏で fire)
+  //   POST /api/agents/:id/ga4/refresh → 同期 refresh して新しいスナップショットを返す
+  const ga4Match = pathname.match(/^\/api\/agents\/([^/]+)\/ga4(?:\/(refresh))?$/);
+  if(ga4Match && (method === 'GET' || method === 'POST')){
+    const ag = (user.agents || []).find(a => a && a.id === ga4Match[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const isRefresh = ga4Match[2] === 'refresh' || method === 'POST';
+    const ga4Connected = !!(user.google_oauth && user.google_oauth.refresh_token);
+    if(!ga4Connected){
+      return jres(res, 200, {
+        ok: true,
+        connected: false,
+        snapshot: null,
+        cta: 'GA4 を接続するとここにリアル数値が入ります。',
+      });
+    }
+    const cached = ag.ga4_snapshot || null;
+    const cacheAgeMs = cached && cached.fetched_at
+      ? (Date.now() - Date.parse(cached.fetched_at))
+      : Infinity;
+    const STALE_MS = 60 * 60 * 1000;  // 1 時間で stale
+
+    if(!isRefresh && cached && cacheAgeMs < STALE_MS){
+      return jres(res, 200, { ok: true, connected: true, snapshot: cached, stale: false });
+    }
+
+    // Fetch fresh — 過去 30 日の day-by-day pageviews / sessions / users
+    try {
+      const r = await executeGa4QueryTool(user, ag, {
+        metrics: ['screenPageViews', 'sessions', 'totalUsers'],
+        dimensions: ['date'],
+        start_date: '30daysAgo',
+        end_date: 'yesterday',
+        limit: 100,
+      });
+      if(r && r.ok){
+        // rows = [{ dimensions: ['20260423'], metrics: ['1234','56','78'] }, ...]
+        const series = (r.rows || []).map(row => ({
+          date: row.dimensions && row.dimensions[0],
+          pv: parseInt((row.metrics && row.metrics[0]) || 0, 10),
+          sessions: parseInt((row.metrics && row.metrics[1]) || 0, 10),
+          users: parseInt((row.metrics && row.metrics[2]) || 0, 10),
+        })).sort((a,b) => String(a.date).localeCompare(String(b.date)));
+        const sum = series.reduce((acc,s) => {
+          acc.pv += s.pv; acc.sessions += s.sessions; acc.users += s.users; return acc;
+        }, { pv:0, sessions:0, users:0 });
+        const last7 = series.slice(-7).reduce((acc,s) => {
+          acc.pv += s.pv; acc.sessions += s.sessions; return acc;
+        }, { pv:0, sessions:0 });
+        const prev7 = series.slice(-14, -7).reduce((acc,s) => {
+          acc.pv += s.pv; acc.sessions += s.sessions; return acc;
+        }, { pv:0, sessions:0 });
+        ag.ga4_snapshot = {
+          fetched_at: new Date().toISOString(),
+          property_id: r.property_id,
+          series,                              // 過去 30 日
+          total_30d: sum,
+          last_7d: last7,
+          prev_7d: prev7,
+          delta_pv_pct: prev7.pv > 0 ? Math.round((last7.pv - prev7.pv) / prev7.pv * 100) : null,
+        };
+        try { await DB.save(user); } catch(e){ console.warn('[ga4-snapshot] save failed:', e.message); }
+        return jres(res, 200, { ok: true, connected: true, snapshot: ag.ga4_snapshot, stale: false });
+      } else {
+        return jres(res, 200, {
+          ok: false, connected: true, snapshot: cached,
+          error: (r && r.error) || 'ga4_query_failed',
+          detail: r && r.detail,
+        });
+      }
+    } catch(e){
+      console.warn('[ga4-snapshot] fetch failed:', e.message);
+      return jres(res, 500, { error: 'ga4_fetch_failed', detail: e.message });
+    }
   }
 
   // ── Task resume ─────────────────────────────────────────
@@ -21413,7 +21646,47 @@ if(require.main === module){
   // Disabled in tests (LDB_PATH set => test mode).
   if(!process.env.LDB_PATH){
     _startAgentScheduler();
+    // ── 一回限りの migration: 既存ユーザーの「毎朝レポート」 schedule を
+    //    deliver:chat → deliver:email に切替 + hour 9→7 に前倒し。
+    //    新規ユーザーは onboarding 時点で email になっているので不要。
+    //    マイグレーションは起動時に 1 回だけ走る (= idempotent)。
+    setTimeout(() => _migrateMorningReportToEmail().catch(e =>
+      console.warn('[migrate-morning-report] failed:', e.message)), 5000);
   }
+}
+
+async function _migrateMorningReportToEmail(){
+  let users;
+  try {
+    users = USE_SUPA
+      ? (await sbReq('GET','users','?select=id,email,agents&limit=2000')).d || []
+      : LDB.all();
+  } catch(e){
+    console.warn('[migrate-morning-report] fetch failed:', e.message);
+    return;
+  }
+  let migrated = 0;
+  for(const u of users){
+    let changed = false;
+    for(const ag of (u.agents || [])){
+      for(const s of (ag.schedules || [])){
+        if(!s) continue;
+        const isMorning = /毎朝レポート|morning.?report/i.test(s.label || '');
+        if(isMorning && s.deliver !== 'email'){
+          s.deliver = 'email';
+          s.hour = 7;  // 9→7 に前倒し (= 出社前にチェックできる時刻)
+          s.next_run = _scheduleNextRun(s);
+          migrated++;
+          changed = true;
+        }
+      }
+    }
+    if(changed){
+      try { await DB.save(u); }
+      catch(e){ console.warn('[migrate-morning-report] save failed for', u.email, e.message); }
+    }
+  }
+  if(migrated > 0) console.log('[migrate-morning-report] migrated ' + migrated + ' schedule(s) to email delivery');
 }
 
 module.exports = server;

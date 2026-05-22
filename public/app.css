@@ -1195,6 +1195,76 @@ input,textarea{font-family:var(--sans);}
   margin-top:9px; letter-spacing:.02em;
 }
 
+/* ── GA4 数字バー (report tab) ── */
+.sd-rp-ga4{
+  background:linear-gradient(135deg, #fff 0%, #f0fdf4 100%);
+  border:1px solid rgba(22,163,74,.22);
+  border-radius:14px; padding:16px 22px;
+}
+.sd-rp-ga4-h{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-bottom:10px;
+}
+.sd-rp-ga4-tag{
+  font-size:11px; font-weight:800; color:#16a34a;
+  letter-spacing:.04em; text-transform:uppercase;
+}
+.sd-rp-ga4-meta{
+  font-size:10.5px; font-weight:700; color:var(--text3); letter-spacing:.02em;
+}
+.sd-rp-ga4-grid{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:14px;
+}
+.sd-rp-ga4-cell{}
+.sd-rp-ga4-l{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-bottom:4px;
+}
+.sd-rp-ga4-v{
+  font-family:'Outfit',sans-serif;
+  font-size:24px; font-weight:900; color:var(--text);
+  line-height:1; letter-spacing:-.02em;
+}
+.sd-rp-ga4-d{
+  font-family:'Outfit',sans-serif;
+  font-size:11px; font-weight:800; margin-top:5px;
+}
+.sd-rp-ga4-d.up{color:#16a34a}
+.sd-rp-ga4-d.down{color:#dc2626}
+.sd-rp-ga4-d.flat{color:var(--text3)}
+
+/* GA4 未接続 CTA (= 控えめなクリック可能 banner) */
+.sd-rp-ga4-cta{
+  display:flex; align-items:center; gap:14px;
+  background:#fff; border:1px dashed rgba(251,146,60,.4);
+  border-radius:13px; padding:14px 18px;
+  cursor:pointer;
+  transition:background .15s, border-color .15s, transform .12s;
+}
+.sd-rp-ga4-cta:hover{
+  background:rgba(251,146,60,.06);
+  border-color:var(--peach,#fb923c);
+  transform:translateY(-1px);
+}
+.sd-rp-ga4-cta-ic{
+  width:38px; height:38px; border-radius:11px;
+  background:linear-gradient(135deg, #60a5fa, #2563eb);
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
+.sd-rp-ga4-cta-bd{flex:1; min-width:0}
+.sd-rp-ga4-cta-ti{font-size:13px; font-weight:900; color:var(--text); letter-spacing:-.005em}
+.sd-rp-ga4-cta-de{font-size:11.5px; font-weight:600; color:var(--text2); margin-top:2px; line-height:1.5}
+.sd-rp-ga4-cta-arrow{
+  font-size:18px; font-weight:900; color:var(--peach,#fb923c); flex-shrink:0;
+}
+
+@media (max-width:560px){
+  .sd-rp-ga4-grid{grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .sd-rp-ga4-v{font-size:18px}
+}
+
 /* ── 今日の 1 提案 (黒背景 prominent) ── */
 .sd-rp-today{
   position:relative; overflow:hidden;

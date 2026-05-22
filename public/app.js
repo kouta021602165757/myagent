@@ -3910,7 +3910,7 @@ function _renderSiteDashboardHTML(site){
     +     '<span class="sd-tab-ic">⚡</span><span class="sd-tab-lbl">アクション</span><span class="sd-tab-sub">今後の動き</span>'
     +   '</button>'
     +   '<button class="sd-tab sd-tab-agents' + (activeTab === 'agents' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'agents\')">'
-    +     '<span class="sd-tab-ic">📋</span><span class="sd-tab-lbl">サイト一覧</span><span class="sd-tab-sub">全 AI チーム</span>'
+    +     '<span class="sd-tab-ic">🤖</span><span class="sd-tab-lbl">Agent一覧</span><span class="sd-tab-sub">チームメンバー</span>'
     +   '</button>'
     +   '<button class="sd-tab sd-tab-settings' + (activeTab === 'settings' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'settings\')">'
     +     '<span class="sd-tab-ic">⚙</span><span class="sd-tab-lbl">設定</span><span class="sd-tab-sub">共有 / 編集</span>'
@@ -4295,27 +4295,138 @@ function _renderTabActions(site, events, next, quickActions, weekly, progressHTM
   return todaysHTML + nextHTML + taskTeamHTML + moreHTML + activityHTML;
 }
 
-// ─── Tab 4: 📋 サイト一覧 (= 全 AI チーム grid) ────────────────────
-// 既存の _renderAllSitesHTML を tab body 内に埋め込み (= 同じ grid を再利用)。
-function _renderTabAgents(currentSite){
-  var sites = (agents || []).filter(_isSiteAgent);
-  var nameStr = (me && (me.name || (me.email||'').split('@')[0])) || 'there';
-  // 現在のサイト ID を覚えておく — switch 時に highlight
-  window._dashCurrentSiteId = currentSite && currentSite.id;
-  return _renderAllSitesHTML(sites, nameStr);
+// ─── Tab 4: 🤖 Agent一覧 (= このサイトの AI チームメンバー) ─────────
+// 各サイトは複数の AI エージェント (アナリスト / SEO ライター / コミュニティ
+// 担当 / CRO / Email マーケター…) を雇っている。そのメンバー一覧を rich card
+// で表示する。役割 / 専門領域 / 担当した納品物の数 / 直近の貢献を見せる。
+function _renderTabAgents(site){
+  var members = Array.isArray(site.team_members) ? site.team_members : [];
+  var allArts = _siteAllArtifacts(site.id);
+  // 週次の集計を inline で算出 (= _siteWeeklyStats は nested なので module 越し
+  // に呼べない。簡易計算で済むので独立に展開)。
+  var weekly = (function(){
+    var now = Date.now();
+    var since = now - 7 * 86400000;
+    var n = 0;
+    for(var i = 0; i < allArts.length; i++){
+      var ts = Date.parse(allArts[i].created_at || 0) || 0;
+      if(ts > since) n++;
+    }
+    return { artifacts: n };
+  })();
+
+  if(members.length === 0){
+    return '<div class="sd-agents-empty">'
+      + '<div class="sd-agents-empty-ic">🤖</div>'
+      + '<div class="sd-agents-empty-ti">チームメンバーが未編成です</div>'
+      + '<div class="sd-agents-empty-tx">サイトの vertical を再判定してチームを編成しましょう。</div>'
+      + '</div>';
+  }
+
+  // 役割 → 色 マッピング (= カードを単調にしない)
+  var ROLE_ACCENT = {
+    analyst:'#0ea5e9', ec_analyst:'#0ea5e9',
+    seo_writer:'#fb923c', content_strategy:'#fb923c', local_blogger:'#fb923c', sales_writer:'#fb923c', case_study:'#fb923c', writer:'#fb923c',
+    community:'#a855f7', twitter:'#a855f7', instagram:'#a855f7', linkedin:'#a855f7', sns:'#a855f7', local_seo:'#a855f7',
+    cro:'#22c55e', shopping_optimizer:'#22c55e', booking_funnel:'#22c55e', lead_gen:'#22c55e',
+    email:'#ec4899', newsletter:'#ec4899',
+    product_writer:'#f59e0b', creative_director:'#f59e0b',
+    review_strategy:'#eab308', review_mgmt:'#eab308',
+    pm:'#64748b', researcher:'#64748b', operator:'#64748b', seo:'#64748b',
+  };
+
+  // メンバー別の納品貢献数 (= 簡易的に title に role キーワード含むか)
+  function _memberArtCount(role){
+    var kw = String(role || '').toLowerCase();
+    return allArts.filter(function(a){
+      var t = String(a.title || a.filename || '').toLowerCase();
+      // analyst→分析, seo_writer→記事/seo, twitter→twitter等
+      if(kw === 'analyst' || kw === 'ec_analyst') return /分析|診断|レポート|analysis/i.test(t);
+      if(kw === 'seo_writer' || kw === 'content_strategy' || kw === 'local_blogger' || kw === 'sales_writer' || kw === 'writer') return /記事|ブログ|seo|blog/i.test(t);
+      if(kw === 'community' || kw === 'twitter') return /twitter|x|sns|reddit/i.test(t);
+      if(kw === 'instagram') return /instagram|insta/i.test(t);
+      if(kw === 'linkedin') return /linkedin/i.test(t);
+      if(kw === 'cro' || kw === 'booking_funnel' || kw === 'lead_gen') return /cro|cv|lp|cta|フォーム/i.test(t);
+      if(kw === 'email' || kw === 'newsletter') return /メール|mail|メルマガ|newsletter/i.test(t);
+      if(kw === 'product_writer' || kw === 'creative_director') return /商品|product/i.test(t);
+      if(kw === 'review_strategy' || kw === 'review_mgmt') return /レビュー|口コミ|review/i.test(t);
+      return false;
+    }).length;
+  }
+
+  var memberCards = members.map(function(m, i){
+    var ic = _MEMBER_ICONS[m.role] || '🤖';
+    var color = ROLE_ACCENT[m.role] || '#fb923c';
+    var name = m.name || 'AI';
+    var focus = m.focus || '';
+    var artN = _memberArtCount(m.role);
+    var isLive = !!(window._streamingAgents && window._streamingAgents.has(site.id))
+              || (site.id === window._streamingAgentId);
+    return '<div class="sd-agent-card" style="--ag-c:' + color + '">'
+         +   '<div class="sd-agent-bar"></div>'
+         +   '<div class="sd-agent-head">'
+         +     '<div class="sd-agent-ic">' + ic + (isLive && i === 0 ? '<span class="sd-agent-live"></span>' : '') + '</div>'
+         +     '<div class="sd-agent-meta">'
+         +       '<div class="sd-agent-name">' + esc(name) + '</div>'
+         +       '<div class="sd-agent-role">' + esc(m.role || 'AI agent') + '</div>'
+         +     '</div>'
+         +     '<div class="sd-agent-stat">'
+         +       '<div class="sd-agent-stat-v">' + artN + '</div>'
+         +       '<div class="sd-agent-stat-l">納品</div>'
+         +     '</div>'
+         +   '</div>'
+         +   '<div class="sd-agent-focus">' + esc(focus) + '</div>'
+         +   '<div class="sd-agent-foot">'
+         +     '<button class="sd-agent-ask" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(name + 'に依頼: ').replace(/'/g, '&#39;') + ')" title="このメンバーを名指しで依頼">'
+         +       '💬 依頼する'
+         +     '</button>'
+         +     '<button class="sd-agent-info" onclick="_showAgentMemberDetail(\'' + esc(site.id) + '\',' + i + ')" title="詳細を見る">'
+         +       'ℹ︎'
+         +     '</button>'
+         +   '</div>'
+         + '</div>';
+  }).join('');
+
+  // ヘッダー (チーム全体のサマリ)
+  var headerHTML = ''
+    + '<div class="sd-agents-h">'
+    +   '<div class="sd-agents-h-l">'
+    +     '<div class="sd-agents-h-ti">🤖 AI チームメンバー <span class="sd-agents-h-n">' + members.length + ' 名</span></div>'
+    +     '<div class="sd-agents-h-sub">あなたのサイト専属の AI チーム。役割ごとに分業して集客を加速します。</div>'
+    +   '</div>'
+    +   '<div class="sd-agents-h-r">'
+    +     '<div class="sd-agents-h-stat"><div class="v">' + allArts.length + '</div><div class="l">累計納品</div></div>'
+    +     '<div class="sd-agents-h-stat"><div class="v">' + weekly.artifacts + '</div><div class="l">今週</div></div>'
+    +   '</div>'
+    + '</div>';
+
+  // 「+ メンバーを追加」 CTA (= チーム編集に飛ぶ)
+  var addCard = ''
+    + '<div class="sd-agent-add" onclick="openEditAgent(\'' + esc(site.id) + '\')">'
+    +   '<div class="sd-agent-add-ic">+</div>'
+    +   '<div class="sd-agent-add-lbl">メンバーを追加 / 編集</div>'
+    +   '<div class="sd-agent-add-sub">チーム編成を変更</div>'
+    + '</div>';
+
+  return headerHTML
+    + '<div class="sd-agent-grid">' + memberCards + addCard + '</div>';
 }
 
-// ─── Tab 5: ⚙ 設定 (= 旧チャット header の全ボタン + 拡張) ──────────
-// 共有 / 会話共有 / メモ / 編集 / 新規依頼 / KPI / スケジュール / 連携。
-// 大きめのカード行で「クリックすると何が起きるか」を明確に。
-function _renderTabSettings(site){
-  var kpi = site.kpi || {};
-  var hasKpi = !!(kpi.pv || kpi.cvr || kpi.leads);
-  var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
-  var schedules = Array.isArray(site.schedules) ? site.schedules : [];
-  var enabledScheds = schedules.filter(function(s){ return s && s.enabled !== false; });
+// メンバー詳細 popout (= 軽量 alert で OK)
+function _showAgentMemberDetail(siteId, idx){
+  var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+  if(!site) return;
+  var m = (site.team_members || [])[idx];
+  if(!m) return;
+  var ic = _MEMBER_ICONS[m.role] || '🤖';
+  showToast(ic + ' ' + (m.name || 'AI') + ' — ' + (m.focus || m.role || ''), 'ok');
+}
 
-  // 行を 1 件分組み立てる helper
+// ─── Tab 5: ⚙ 設定 (= 必要最小限の 3 アクション) ─────────────────
+// ユーザーリクエスト: 💬 会話共有 / ⚙ 設定 / ↻ 新規依頼 の 3 つだけ。
+// KPI 編集 / スケジュール / 連携 / 削除は別ルート (ダッシュボード内の他 tab
+// or サイドバー) で提供するので、ここはシンプルに保つ。
+function _renderTabSettings(site){
   function _row(icon, color, title, desc, btnLbl, onClick){
     return ''
       + '<div class="sd-set-row" style="--row-c:' + color + '">'
@@ -4328,71 +4439,21 @@ function _renderTabSettings(site){
       + '</div>';
   }
 
-  // 共有グループ
-  var shareGroup = ''
-    + '<div class="sd-set-group">'
-    +   '<div class="sd-set-group-h">🤝 共有</div>'
-    +   _row('🔗', '#22c55e', '共有 URL を取得',
-            'このサイト専属の AI チームを SNS や名刺で広報できる public URL。',
-            '取得 / 開く',
-            "openSite('" + esc(site.id) + "');setTimeout(openShareCard,150)")
+  return '<div class="sd-set-group">'
+    +   '<div class="sd-set-group-h">⚙ サイト設定</div>'
     +   _row('💬', '#3b82f6', 'この会話を公開リンクで共有',
-            'チャットの履歴を read-only の URL として人に渡せる (招待ではない)。',
+            'チャットの履歴を read-only の URL として人に渡せる。',
             '公開リンク',
             "openSite('" + esc(site.id) + "');setTimeout(openChatShareModal,150)")
-    + '</div>';
-
-  // 運用グループ
-  var opsGroup = ''
-    + '<div class="sd-set-group">'
-    +   '<div class="sd-set-group-h">⚡ 運用</div>'
-    +   _row('📝', '#a855f7', 'メモ',
-            'この AI とのチャットだけに紐づくメモ。背景情報や指示の置き場所。',
-            'メモを開く',
-            "openNotesPanel('" + esc(site.id) + "')")
-    +   _row('↻', '#ec4899', '新しい依頼を開始',
-            '別件の新規スレッドを開く (履歴は残る)。',
-            '新規依頼',
-            "openSite('" + esc(site.id) + "');setTimeout(newChat,150)")
-    +   _row('🎯', '#fb923c', 'KPI を設定',
-            (hasKpi ? '月間 PV / CVR / リード目標が設定済み — AI が毎朝達成度を評価。' : '未設定 — 月間目標を入れると、AI が毎朝達成度をレポート。'),
-            (hasKpi ? '編集' : '設定する'),
-            "openKpiModal('" + esc(site.id) + "')")
-    +   _row('📅', '#f59e0b', 'スケジュール',
-            (enabledScheds.length > 0 ? enabledScheds.length + ' 件の自動実行が動いてます (毎朝レポート等)。' : '自動実行のスケジュール (毎朝 / 毎週 / 毎月) を設定。'),
-            '管理',
-            "openScheduleManager && openScheduleManager('" + esc(site.id) + "')")
-    + '</div>';
-
-  // チーム / 連携
-  var teamGroup = ''
-    + '<div class="sd-set-group">'
-    +   '<div class="sd-set-group-h">👥 チーム / 連携</div>'
     +   _row('⚙', '#64748b', 'AI チームを編集',
             'チームメンバー / モデル / ペルソナ / 権限を変更。',
             '編集する',
             "openEditAgent('" + esc(site.id) + "')")
-    +   _row('📊', '#0ea5e9', 'Google Analytics (GA4)',
-            (ga4Connected ? '接続済 — AI が流入数 / CVR を使って分析中。' : '未接続 — 接続するとデータドリブンな施策が打てる。'),
-            (ga4Connected ? '管理' : '接続する'),
-            "openIntegrationsTab && openIntegrationsTab('ga4')")
-    +   _row('🔌', '#8b5cf6', 'その他の連携サービス',
-            'Slack / Gmail / Twitter (X) / WordPress / Notion 等の接続。',
-            '一覧を開く',
-            "openIntegrationsTab && openIntegrationsTab()")
+    +   _row('↻', '#ec4899', '新しい依頼を開始',
+            '別件の新規スレッドを開く (履歴は残る)。',
+            '新規依頼',
+            "openSite('" + esc(site.id) + "');setTimeout(newChat,150)")
     + '</div>';
-
-  // 危険ゾーン (削除)
-  var dangerGroup = ''
-    + '<div class="sd-set-group sd-set-danger">'
-    +   '<div class="sd-set-group-h">⚠️ 危険ゾーン</div>'
-    +   _row('🗑', '#dc2626', 'この AI チームを削除',
-            '会話履歴 / 納品物 / スケジュール 全部が消えます。元に戻せません。',
-            '削除',
-            "_confirmDeleteSite && _confirmDeleteSite('" + esc(site.id) + "')")
-    + '</div>';
-
-  return shareGroup + opsGroup + teamGroup + dangerGroup;
 }
 
 // 削除確認 — 簡易 confirm。ユーザーが OK したら本当に消す。
@@ -4764,17 +4825,6 @@ function renderAgList(){
        +    '<span class="ag-add-ic">+</span>'
        +    '<span class="ag-add-tx">新しいサイトを追加</span>'
        +  '</button>';
-
-  // 1b) 「📋 すべてのサイトを見る」 — 全 AI チーム一覧 page
-  //     (= 生成済み Agent 一覧へのエントリーポイント)
-  if(sites.length > 0){
-    var allSitesActive = !!window._allSitesMode;
-    html += '<button class="ag-all-sites' + (allSitesActive ? ' on' : '') + '" onclick="goAllSitesHome()">'
-         +    '<span class="ag-all-ic">📋</span>'
-         +    '<span class="ag-all-tx">すべてのサイトを見る</span>'
-         +    '<span class="ag-all-n">' + sites.length + '</span>'
-         + '</button>';
-  }
 
   // 2) サイト一覧 (= AI チーム)
   if(sites.length > 0){

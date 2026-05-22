@@ -2268,13 +2268,31 @@ function _buildMorningReportHTML(user, agent, finalReply, sched, isJa){
     { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
   const userName = (user.name || (user.email||'').split('@')[0] || 'there');
 
-  // チーム members 表示 (= 「誰が今朝のレポートを書いたか」の信頼感)
-  const members = (agent.team_members || []).slice(0, 4);
-  const memberPills = members.length
-    ? '<div style="margin:14px 0 18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center">'
-      + members.map(m => '<span style="display:inline-block;background:#fff;border:1px solid #f5e1cd;color:#9a6a4a;font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px">'+_xmlEscape(m.name||'AI')+'</span>').join('')
-      + '</div>'
-    : '';
+  // 組織情報 — org があれば部門別 pills、なければ旧 team_members fallback
+  const org = agent.org && Array.isArray(agent.org.departments) ? agent.org : null;
+  let memberPills = '';
+  let orgTotalMembers = 0;
+  if(org){
+    org.departments.forEach(d => {
+      (d.teams || []).forEach(t => { orgTotalMembers += (t.members || []).length; });
+    });
+    // 各部門の色付き pill (= 「○○名の組織」感を強める)
+    memberPills = '<div style="margin:14px 0 18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center">'
+      + org.departments.map(d => {
+          const n = (d.teams || []).reduce((s, t) => s + (t.members || []).length, 0);
+          return '<span style="display:inline-block;background:#fff;border:1px solid ' + d.color + ';color:' + d.color + ';font-size:11px;font-weight:800;padding:5px 11px;border-radius:99px">'
+            + d.icon + ' ' + _xmlEscape(d.name) + ' (' + n + ')'
+            + '</span>';
+        }).join('')
+      + '</div>';
+  } else {
+    const members = (agent.team_members || []).slice(0, 4);
+    memberPills = members.length
+      ? '<div style="margin:14px 0 18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center">'
+        + members.map(m => '<span style="display:inline-block;background:#fff;border:1px solid #f5e1cd;color:#9a6a4a;font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px">'+_xmlEscape(m.name||'AI')+'</span>').join('')
+        + '</div>'
+      : '';
+  }
 
   // 今週納品数 (= サマリ)
   const arts = Array.isArray(user.artifacts) ? user.artifacts.filter(a => a && a.chat_id === agent.id) : [];
@@ -2318,12 +2336,14 @@ function _buildMorningReportHTML(user, agent, finalReply, sched, isJa){
     + '<body style="margin:0;padding:0;background:#fdf8f3;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif;color:#2d1a0e">'
     + '<div style="max-width:640px;margin:0 auto;padding:28px 20px">'
 
-    // ── Hero ヘッダー (= ブランド + 日付 + あいさつ) ─────
+    // ── Hero ヘッダー (= ブランド + 日付 + あいさつ + 組織紹介) ─────
     + '<div style="background:linear-gradient(135deg,#fff7ee 0%,#ffe8d4 100%);border-radius:16px;padding:24px 28px;margin-bottom:18px;text-align:center">'
     +   '<div style="font-size:11px;font-weight:800;color:#ea580c;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">☀️ ' + _xmlEscape(today) + '</div>'
     +   '<div style="font-size:22px;font-weight:900;color:#2d1a0e;letter-spacing:-.015em;margin-bottom:6px">' + _xmlEscape(userName) + ' さん、おはようございます</div>'
     +   '<div style="font-size:13px;color:#6b4226;font-weight:600;line-height:1.55">'
-    +     '<b style="color:#ea580c">' + _xmlEscape(hostname) + '</b> の AI チームから今朝のレポートが届きました。'
+    +     '<b style="color:#ea580c">' + _xmlEscape(hostname) + '</b> 専属 '
+    +     (org ? '<b>' + orgTotalMembers + ' 名の AI マーケ組織</b>' : 'の AI チーム')
+    +     ' から今朝のレポートが届きました。'
     +   '</div>'
     +   memberPills
     + '</div>'

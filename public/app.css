@@ -1265,6 +1265,131 @@ input,textarea{font-family:var(--sans);}
   .sd-rp-ga4-v{font-size:18px}
 }
 
+/* ── 部門別の今週 (= report tab 内のパネル) ── */
+.sd-rp-dept-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+  gap:10px;
+}
+.sd-rp-dept-card{
+  background:linear-gradient(135deg,
+    color-mix(in srgb, var(--ag-c, #fb923c) 8%, #fff) 0%,
+    #fff 100%);
+  border:1px solid color-mix(in srgb, var(--ag-c, #fb923c) 22%, transparent);
+  border-radius:12px; padding:14px 16px;
+  cursor:pointer;
+  transition:transform .15s, box-shadow .15s, border-color .15s;
+}
+.sd-rp-dept-card:hover{
+  transform:translateY(-2px);
+  border-color:var(--ag-c, #fb923c);
+  box-shadow:0 6px 16px rgba(0,0,0,.06);
+}
+.sd-rp-dept-h{
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:10px;
+}
+.sd-rp-dept-ic{
+  width:34px; height:34px; border-radius:10px;
+  background:#fff;
+  border:1px solid color-mix(in srgb, var(--ag-c, #fb923c) 28%, transparent);
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
+.sd-rp-dept-meta{flex:1; min-width:0}
+.sd-rp-dept-nm{
+  font-size:13px; font-weight:900; color:var(--text); letter-spacing:-.005em;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sd-rp-dept-sub{
+  font-size:10.5px; font-weight:700; color:var(--text3);
+  letter-spacing:.02em; margin-top:1px;
+}
+.sd-rp-dept-n{
+  font-family:'Outfit',sans-serif;
+  font-size:22px; font-weight:900; color:var(--ag-c, #fb923c);
+  letter-spacing:-.02em; flex-shrink:0;
+  line-height:1;
+}
+.sd-rp-dept-bar{
+  height:5px; background:rgba(0,0,0,.05); border-radius:99px; overflow:hidden;
+  margin-bottom:7px;
+}
+.sd-rp-dept-bar-fill{
+  height:100%; background:var(--ag-c, #fb923c); border-radius:99px;
+  transition:width .4s;
+}
+.sd-rp-dept-foot{
+  font-size:11px; font-weight:700; color:var(--text2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+/* 納品物の部門 tag (= 今週納品物 list の meta 行) */
+.sd-rp-art-dept{
+  display:inline-block;
+  font-size:9.5px; font-weight:800;
+  color:var(--ag-c, #fb923c);
+  background:color-mix(in srgb, var(--ag-c, #fb923c) 14%, transparent);
+  border:1px solid color-mix(in srgb, var(--ag-c, #fb923c) 28%, transparent);
+  padding:1px 7px; border-radius:99px;
+  letter-spacing:.02em;
+  margin-left:6px;
+}
+
+/* ── 部門別ランキング (= 数字 tab の累計貢献度) ── */
+.sd-dept-rank-card{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:18px 22px;
+}
+.sd-dept-rank-list{
+  display:flex; flex-direction:column; gap:8px;
+  margin-top:6px;
+}
+.sd-dept-rank{
+  display:flex; align-items:center; gap:10px;
+  background:var(--cream);
+  border-radius:10px; padding:10px 12px;
+  position:relative;
+  transition:transform .12s;
+}
+.sd-dept-rank:hover{transform:translateX(2px)}
+.sd-dept-rank-medal{
+  font-size:18px; width:22px; text-align:center; flex-shrink:0;
+}
+.sd-dept-rank-ic{
+  width:32px; height:32px; border-radius:9px;
+  background:#fff;
+  border:1px solid color-mix(in srgb, var(--ag-c, #fb923c) 24%, transparent);
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; flex-shrink:0;
+}
+.sd-dept-rank-bd{flex:1; min-width:0}
+.sd-dept-rank-nm{
+  font-size:12.5px; font-weight:900; color:var(--text); letter-spacing:-.005em;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sd-dept-rank-sub{
+  font-size:10.5px; font-weight:700; color:var(--text2);
+  margin-top:2px; letter-spacing:.02em;
+}
+.sd-dept-rank-bar{
+  width:100px; height:6px; background:rgba(0,0,0,.05); border-radius:99px;
+  overflow:hidden; flex-shrink:0;
+}
+.sd-dept-rank-bar-fill{
+  height:100%; background:var(--ag-c, #fb923c); border-radius:99px;
+}
+.sd-dept-rank-pct{
+  font-family:'Outfit',sans-serif;
+  font-size:18px; font-weight:900; color:var(--ag-c, #fb923c);
+  letter-spacing:-.02em; flex-shrink:0; width:50px; text-align:right;
+}
+@media (max-width:560px){
+  .sd-rp-dept-grid{grid-template-columns:1fr 1fr; gap:8px}
+  .sd-dept-rank-bar{display:none}
+  .sd-rp-dept-card{padding:11px 13px}
+  .sd-rp-dept-n{font-size:18px}
+}
+
 /* ── 今日の 1 提案 (黒背景 prominent) ── */
 .sd-rp-today{
   position:relative; overflow:hidden;

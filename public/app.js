@@ -3395,6 +3395,95 @@ function _artDisplayTitle(a){
   return '納品物';
 }
 
+// ──────────────────────────────────────────────────────────────────
+// ── 納品物 → 部門 attribution helpers (= レポート / 数字 / メール で再利用) ──
+// 各 artifact を 1 つの部門に紐づける (= 最初にマッチしたメンバーの部門)。
+// 100% 正確ではないが「○○部門が今週 X 件納品」表示には十分な近似。
+// 将来 attribution を厳密化したい時は artifact 作成時に dept_id を埋める。
+// ──────────────────────────────────────────────────────────────────
+function _artMatchesRole(art, role){
+  var r = String(role||'').toLowerCase();
+  var t = String(art.title || art.filename || '').toLowerCase();
+  if(/seo_writer|longform|tutorial|case_study|sales_writer|blogger|opinion|listicle|howto|writer/.test(r))
+    return /記事|ブログ|seo|blog|long|tutorial|how|chapter/i.test(t);
+  if(/x_thread|x_reply|x_viral|x_profile|x_authority|thread/.test(r))
+    return /twitter|\bx\b|thread|スレッド|tweet/i.test(t);
+  if(/instagram|reels/.test(r)) return /instagram|insta|reel/i.test(t);
+  if(/tiktok/.test(r)) return /tiktok|短尺|ショート/i.test(t);
+  if(/pinterest/.test(r)) return /pinterest|pin/i.test(t);
+  if(/youtube|video_script/.test(r)) return /youtube|video|動画/i.test(t);
+  if(/linkedin/.test(r)) return /linkedin/i.test(t);
+  if(/ih|indie_hackers|hn|hacker/.test(r)) return /indie|hacker.?news|hn|ih/i.test(t);
+  if(/llmstxt|schema|reddit|comparison|quora|citation/.test(r))
+    return /aeo|llms|schema|reddit|比較|vs |best|quora/i.test(t);
+  if(/cro|cta|headline|form|onboarding|ab|lp_diag|pdp/.test(r))
+    return /cro|cv|lp|cta|フォーム|ヘッドライン|onboard|a\/b/i.test(t);
+  if(/email|newsletter|drip|lead_magnet|welcome|winback|post_purchase/.test(r))
+    return /メール|mail|メルマガ|newsletter|drip|welcome/i.test(t);
+  if(/line|sms/.test(r)) return /line|sms|公式/i.test(t);
+  if(/review|gbp|google_business/.test(r)) return /レビュー|口コミ|review|gbp|プロフィール/i.test(t);
+  if(/product|bundle|upsell|inventory|shopping|pmax|pdp/.test(r))
+    return /商品|product|bundle|shopping|アップセル/i.test(t);
+  if(/local|booking|phone/.test(r)) return /地域|local|予約|booking|電話/i.test(t);
+  if(/influencer|affiliate|ugc/.test(r)) return /influencer|affiliate|ugc|アフィリ/i.test(t);
+  if(/competitor|swot|pricing|trend|persona|demand/.test(r))
+    return /競合|swot|trend|persona|需要|分析/i.test(t);
+  if(/ga4|search_console|analyst|anomaly|funnel|cohort|attribution/.test(r))
+    return /分析|レポート|ga4|funnel|cohort|kpi|診断/i.test(t);
+  if(/infographic|visual|image/.test(r)) return /infographic|図|画像|image/i.test(t);
+  if(/dm_script|cold_email|proposal|outreach/.test(r)) return /dm|営業|提案|outreach|cold/i.test(t);
+  if(/pm|operator|editor|proofreader|researcher/.test(r)) return /pm|operator|edit|校正|research/i.test(t);
+  return false;
+}
+
+// 1 つの artifact を最初にマッチした部門 / チーム / メンバーに帰属させる
+function _attributeArt(art, org){
+  if(!art || !org || !org.departments) return null;
+  for(var i = 0; i < org.departments.length; i++){
+    var d = org.departments[i];
+    for(var j = 0; j < (d.teams||[]).length; j++){
+      var t = d.teams[j];
+      for(var k = 0; k < (t.members||[]).length; k++){
+        var m = t.members[k];
+        if(_artMatchesRole(art, m.role)){
+          return { dept: d, team: t, member: m };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// 部門別の貢献度集計 — return: [{ dept, total, week, top_member_name }]
+function _orgContributionBreakdown(site){
+  if(!site || !site.org || !site.org.departments) return [];
+  var arts = _siteAllArtifacts(site.id);
+  var since = Date.now() - 7 * 86400000;
+  var result = site.org.departments.map(function(d){
+    return { dept: d, total: 0, week: 0, top_member: null, member_counts: {} };
+  });
+  arts.forEach(function(a){
+    var attr = _attributeArt(a, site.org);
+    if(!attr) return;
+    var rec = result.find(function(r){ return r.dept.id === attr.dept.id; });
+    if(!rec) return;
+    rec.total++;
+    var ts = Date.parse(a.created_at || 0) || 0;
+    if(ts > since) rec.week++;
+    var mk = attr.member.name;
+    rec.member_counts[mk] = (rec.member_counts[mk] || 0) + 1;
+  });
+  // top_member を抽出
+  result.forEach(function(r){
+    var best = null, bestN = 0;
+    for(var k in r.member_counts){
+      if(r.member_counts[k] > bestN){ bestN = r.member_counts[k]; best = k; }
+    }
+    r.top_member = best;
+  });
+  return result;
+}
+
 // ── GA4 snapshot を遅延読み込み (= ダッシュボード mount 後にバックグラウンドで fetch) ──
 // キャッシュは window._ga4Snapshots[siteId] = { snapshot, fetched_at, connected }
 // 取得完了したら renderHomeDashboard を呼び直す (= chart 自動描画)
@@ -4223,11 +4312,45 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     +   '</div>'
     + '</div>';
 
+  // ── 部門別 ランキング (= どの部門が結果に紐づく貢献をしたか可視化) ──
+  var deptRankHTML = '';
+  if(site.org && site.org.departments){
+    var ranking = _orgContributionBreakdown(site);
+    ranking.sort(function(a, b){ return b.total - a.total; });
+    var top3 = ranking.slice(0, 3);
+    var grandTotal = ranking.reduce(function(s, c){ return s + c.total; }, 0);
+    var rows = ranking.filter(function(c){ return c.total > 0; }).map(function(c, i){
+      var pct = grandTotal > 0 ? Math.round(c.total / grandTotal * 100) : 0;
+      var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+      return '<div class="sd-dept-rank" style="--ag-c:' + c.dept.color + '">'
+           +   '<div class="sd-dept-rank-medal">' + medal + '</div>'
+           +   '<div class="sd-dept-rank-ic">' + c.dept.icon + '</div>'
+           +   '<div class="sd-dept-rank-bd">'
+           +     '<div class="sd-dept-rank-nm">' + esc(c.dept.name) + '</div>'
+           +     '<div class="sd-dept-rank-sub">'
+           +       (c.top_member ? '🌟 ' + esc(c.top_member) + ' ・ ' : '')
+           +       '今週 ' + c.week + ' 件'
+           +     '</div>'
+           +   '</div>'
+           +   '<div class="sd-dept-rank-bar"><div class="sd-dept-rank-bar-fill" style="width:' + pct + '%"></div></div>'
+           +   '<div class="sd-dept-rank-pct">' + c.total + '<span style="font-size:.55em;font-weight:700;color:var(--text3)">件</span></div>'
+           + '</div>';
+    }).join('');
+    deptRankHTML = ''
+      + '<div class="sd-dept-rank-card">'
+      +   '<div class="sd-card-h">🏆 部門別の貢献度 <span class="sd-card-h-sub">累計納品で集計</span></div>'
+      +   (rows
+        ? '<div class="sd-dept-rank-list">' + rows + '</div>'
+        : '<div class="sd-empty" style="padding:20px 0;text-align:center">まだ納品物がないため、貢献度は集計できません。</div>')
+      + '</div>';
+  }
+
   return heroHTML
     + subKpiHTML
     + ga4ChartHTML
     + insightsHTML
     + previewHTML
+    + deptRankHTML
     + activityHTML;
 }
 
@@ -4454,7 +4577,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
       + '</div>';
   }
 
-  // ── 4) 今週納品物 (= AI がやったこと、写真付きリスト) ──
+  // ── 4) 今週納品物 (= AI がやったこと、部門タグ付き) ──
   var thisWeekTs = Date.now() - 7 * 86400000;
   var weekArts = allArts.filter(function(a){
     var ts = Date.parse(a.created_at || 0) || 0;
@@ -4473,15 +4596,55 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
           var dt = '';
           try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric'}); } catch(e){}
           var openUrl = _artUrl(a);
+          var attr = _attributeArt(a, site.org);
+          var deptTag = attr
+            ? '<span class="sd-rp-art-dept" style="--ag-c:' + attr.dept.color + '">' + attr.dept.icon + ' ' + esc(attr.dept.name) + '</span>'
+            : '';
           return '<div class="sd-rp-art">'
                +   '<div class="sd-rp-art-ic">📄</div>'
                +   '<div class="sd-rp-art-bd">'
                +     '<div class="sd-rp-art-ti">' + esc(_artDisplayTitle(a)) + '</div>'
-               +     '<div class="sd-rp-art-meta">' + dt + (a.version ? ' ・ Ver.' + a.version : '') + '</div>'
+               +     '<div class="sd-rp-art-meta">' + dt + (a.version ? ' ・ Ver.' + a.version : '') + ' ' + deptTag + '</div>'
                +   '</div>'
                +   (openUrl
                      ? '<a class="sd-rp-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗</a>'
                      : '<span class="sd-rp-art-open" style="opacity:.4;cursor:default">…</span>')
+               + '</div>';
+        }).join('')
+      +   '</div>'
+      + '</div>';
+  }
+
+  // ── 4b) 🏢 部門別の今週 (= どの部門が動いているか色分けで一目) ──
+  var deptBreakdownHTML = '';
+  if(site.org && site.org.departments){
+    var contribs = _orgContributionBreakdown(site);
+    // 今週の貢献度で sort + top メンバー表示
+    contribs.sort(function(a, b){ return b.week - a.week; });
+    var totalWeek = contribs.reduce(function(s, c){ return s + c.week; }, 0);
+    deptBreakdownHTML = ''
+      + '<div class="sd-rp-section">'
+      +   '<div class="sd-rp-section-h">'
+      +     '<span class="sd-rp-section-ti">🏢 部門別の今週の動き</span>'
+      +     '<span class="sd-rp-section-n">' + totalWeek + ' 件</span>'
+      +   '</div>'
+      +   '<div class="sd-rp-dept-grid">'
+      +   contribs.map(function(c){
+          var pct = totalWeek > 0 ? Math.round(c.week / totalWeek * 100) : 0;
+          var memberCount = (c.dept.teams || []).reduce(function(s, t){ return s + (t.members || []).length; }, 0);
+          return '<div class="sd-rp-dept-card" style="--ag-c:' + c.dept.color + '" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(c.dept.name + 'に依頼: ').replace(/'/g, '&#39;') + ')" title="この部門に直接依頼">'
+               +   '<div class="sd-rp-dept-h">'
+               +     '<div class="sd-rp-dept-ic">' + c.dept.icon + '</div>'
+               +     '<div class="sd-rp-dept-meta">'
+               +       '<div class="sd-rp-dept-nm">' + esc(c.dept.name) + '</div>'
+               +       '<div class="sd-rp-dept-sub">' + memberCount + ' 名</div>'
+               +     '</div>'
+               +     '<div class="sd-rp-dept-n">' + c.week + '</div>'
+               +   '</div>'
+               +   '<div class="sd-rp-dept-bar"><div class="sd-rp-dept-bar-fill" style="width:' + pct + '%"></div></div>'
+               +   '<div class="sd-rp-dept-foot">'
+               +     (c.top_member ? '🌟 ' + esc(c.top_member) : '<span style="opacity:.5">活動なし</span>')
+               +   '</div>'
                + '</div>';
         }).join('')
       +   '</div>'
@@ -4553,6 +4716,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
     + todayHTML
     + alertHTML
     + highlightsHTML
+    + deptBreakdownHTML
     + (nextHTML ? '<div class="sd-rp-row">' + nextHTML + '</div>' : '')
     + weekArtsHTML
     + feedHTML;

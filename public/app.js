@@ -4711,8 +4711,8 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   // note のみ post tool あり (publish_note)。 WP/Shopify/BASE は接続情報保存のみ。
   var CONTENT_EC_PLATFORMS = [
     { key: 'note',      name: 'note',      emoji: '📝', color: '#41c9b4', kind: 'content', hasPostTool: true  },
-    { key: 'wordpress', name: 'WordPress', emoji: '🌐', color: '#21759b', kind: 'content', hasPostTool: false },
-    { key: 'shopify',   name: 'Shopify',   emoji: '🛒', color: '#7ab55c', kind: 'ec',      hasPostTool: false },
+    { key: 'wordpress', name: 'WordPress', emoji: '🌐', color: '#21759b', kind: 'content', hasPostTool: true  },
+    { key: 'shopify',   name: 'Shopify',   emoji: '🛒', color: '#7ab55c', kind: 'ec',      hasPostTool: true  },
     { key: 'base',      name: 'BASE',      emoji: '🏪', color: '#ff7e2d', kind: 'ec',      hasPostTool: false },
   ];
   var ceAnyConnected = CONTENT_EC_PLATFORMS.some(function(p){ return snsStatus[p.key] && snsStatus[p.key].connected; });
@@ -4725,9 +4725,10 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       var profUrl = _profileUrl(st.profile);
       var handle = _profileHandle(st.profile);
       var linkLabel = p.kind === 'ec' ? 'ショップ' : (p.key === 'wordpress' ? 'サイト' : 'プロフィール');
+      var unitLbl = p.kind === 'ec' ? '出品商品' : '公開記事';
       var statsHTML = p.hasPostTool
         ? '<div class="nu-sns-stats">'
-          + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + hist.length + '</div><div class="nu-sns-stat-l">公開記事</div></div>'
+          + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + hist.length + '</div><div class="nu-sns-stat-l">' + unitLbl + '</div></div>'
           + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + (lastPostAt || '—') + '</div><div class="nu-sns-stat-l">直近</div></div>'
           + '</div>'
         : '<div class="nu-sns-soon">⏳ ' + (p.kind === 'ec' ? '商品出品' : '記事公開') + ' tool は近日対応 (接続情報は保存済)</div>';
@@ -4745,7 +4746,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
            + '</div>';
     } else {
       var lockedTx = p.hasPostTool
-        ? '接続すると 公開記事数 が表示'
+        ? '接続すると ' + (p.kind === 'ec' ? '出品商品数' : '公開記事数') + ' が表示'
         : '接続情報を保存 (' + (p.kind === 'ec' ? '商品出品' : '記事公開') + ' tool は近日対応)';
       return '<div class="nu-sns-card off">'
            +   '<div class="nu-sns-h">'

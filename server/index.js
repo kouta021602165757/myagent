@@ -9274,6 +9274,35 @@ const SNS_TOOLS = [
       required: ['title','content'],
     },
   },
+  // ── WordPress ──
+  {
+    name: 'publish_wordpress',
+    description: '⚠️ 事前にユーザーが WordPress 管理画面 ({site}/wp-admin) にブラウザでログイン済みであること。\nWordPress サイトに記事を公開 or 下書き保存します。Block (Gutenberg) と Classic editor の両方に対応。デフォルトは下書き (= ユーザー確認推奨)。\n\nユーザーがまだ WordPress を接続していない場合は 「接続 tab で WordPress を接続してください」 と案内すること。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '記事タイトル (1-200 字)' },
+        content: { type: 'string', description: '本文 (HTML or プレーンテキスト、改行で段落)' },
+        status: { type: 'string', enum: ['draft','publish'], description: 'default: draft' },
+      },
+      required: ['title','content'],
+    },
+  },
+  // ── Shopify ──
+  {
+    name: 'create_shopify_product',
+    description: '⚠️ 事前にユーザーが Shopify Admin ({shop}.myshopify.com/admin) にブラウザでログイン済みであること。\nShopify ショップに商品を作成します。Active (即公開) or Draft (下書き)。デフォルトは下書き (= ユーザー確認推奨)。\n\nユーザーがまだ Shopify を接続していない場合は 「接続 tab で Shopify を接続してください」 と案内すること。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '商品名 (1-200 字)' },
+        description: { type: 'string', description: '商品説明 (HTML 可、 改行で段落)' },
+        price: { type: 'string', description: '価格 (数字のみ、 単位なし。 例: "1980")' },
+        status: { type: 'string', enum: ['draft','active'], description: 'default: draft' },
+      },
+      required: ['title'],
+    },
+  },
 ];
 const SNS_TOOL_NAMES = new Set(SNS_TOOLS.map(t => t.name));
 
@@ -9906,6 +9935,216 @@ async function executePublishNoteTool(user, input){
   };
 }
 
+// ── WordPress 公開 ──
+// 拡張で {site}/wp-admin/post-new.php を開いて Block (Gutenberg) / Classic 両対応で記事公開。
+// 認証情報は保存せず、 ユーザーのログイン済みブラウザ session を使う (= 他 SNS と同じ pattern)。
+async function executePublishWordPressTool(user, input){
+  const title = String((input && input.title) || '').trim();
+  const content = String((input && input.content) || '').trim();
+  const status = (input && input.status === 'publish') ? 'publish' : 'draft';
+  if(!title || !content) return { error: 'title_and_content_required' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  const conn = user.sns_connections && user.sns_connections.wordpress;
+  if(!conn || !conn.connected){
+    return { error: 'not_connected', detail: 'WordPress サイトを先に接続してください (接続 tab)。' };
+  }
+  const adminUrl = (conn.profile && conn.profile.admin_url) || (conn.profile && conn.profile.site_url ? conn.profile.site_url + '/wp-admin' : null);
+  if(!adminUrl) return { error: 'admin_url_missing', detail: 'WordPress admin URL が保存されていません。 再接続してください。' };
+
+  // 1) post-new.php を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl.replace(/\/$/, '') + '/post-new.php' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(4000);  // wp-admin + editor 初期 load
+
+  // 2) ログイン check (= 未ログインなら login form へ redirect される)
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const currentUrl = String((r && r.url) || '');
+  if(/wp-login\.php/.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'WordPress 管理画面にログインしてください: ' + adminUrl };
+  }
+
+  // 3) タイトル入力 — Block editor (Gutenberg) を先に試す
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '.editor-post-title__input, h1.editor-post-title',
+    text: title,
+  });
+  let editorMode = 'block';
+  if(r && r.error){
+    // Classic editor fallback
+    r = await executeExtensionTool(user, 'ext_type', { selector: '#title', text: title });
+    if(r && r.error) return { error: 'title_type_failed', detail: 'WordPress エディタが見つかりません: ' + r.error };
+    editorMode = 'classic';
+  }
+  await _sleep(800);
+
+  // 4) 本文入力
+  if(editorMode === 'block'){
+    // Block editor: 「文章を入力、または / でブロックを選択」 paragraph block を click → type
+    r = await executeExtensionTool(user, 'ext_click', { target: '.block-editor-default-block-appender__content' });
+    if(r && r.error){
+      // 既に block があれば直接 type を試す
+      r = await executeExtensionTool(user, 'ext_type', {
+        selector: '.block-editor-rich-text__editable[contenteditable="true"]',
+        text: content,
+      });
+    } else {
+      await _sleep(500);
+      r = await executeExtensionTool(user, 'ext_type', {
+        selector: '.block-editor-rich-text__editable[contenteditable="true"]',
+        text: content,
+      });
+    }
+    if(r && r.error){
+      // 最後の fallback: 任意の contenteditable
+      r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"]', text: content });
+      if(r && r.error) return { error: 'content_type_failed', detail: 'WordPress 本文エリアが見つかりません: ' + r.error };
+    }
+  } else {
+    // Classic editor: テキスト mode の textarea#content か Visual mode の iframe#content_ifr
+    r = await executeExtensionTool(user, 'ext_type', { selector: '#content', text: content });
+    if(r && r.error) return { error: 'content_type_failed', detail: 'WordPress 本文エリアが見つかりません: ' + r.error };
+  }
+  await _sleep(1200);
+
+  // 5) 公開 or 下書き保存
+  if(status === 'publish'){
+    if(editorMode === 'block'){
+      // Block: 「公開」 button → 「公開」 確認 dialog
+      r = await executeExtensionTool(user, 'ext_click', { target: '.editor-post-publish-button__button' });
+      if(r && r.error){
+        r = await executeExtensionTool(user, 'ext_click', { target: '公開' });
+      }
+      await _sleep(1500);
+      // Pre-publish panel が出るので 「公開」 confirm を押す
+      r = await executeExtensionTool(user, 'ext_click', { target: '.editor-post-publish-button' });
+      if(r && r.error){
+        // 既に直接公開された可能性 — ignore
+      }
+    } else {
+      r = await executeExtensionTool(user, 'ext_click', { target: '#publish' });
+      if(r && r.error) return { error: 'publish_click_failed', detail: r.error };
+    }
+  } else {
+    // 下書き保存
+    if(editorMode === 'block'){
+      r = await executeExtensionTool(user, 'ext_click', { target: '.editor-post-save-draft' });
+      if(r && r.error){
+        r = await executeExtensionTool(user, 'ext_click', { target: '下書き保存' });
+      }
+    } else {
+      r = await executeExtensionTool(user, 'ext_click', { target: '#save-post' });
+      if(r && r.error){
+        r = await executeExtensionTool(user, 'ext_click', { target: '下書きとして保存' });
+      }
+    }
+  }
+  await _sleep(3000);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+
+  return {
+    ok: true, platform: 'wordpress',
+    url: (r && r.url) || '',
+    status,
+    editor: editorMode,
+    instructions: 'ユーザーに「✅ WordPress に' + (status === 'publish' ? '公開しました' : '下書き保存しました') + '」と短く報告してください。',
+  };
+}
+
+// ── Shopify 商品作成 ──
+// 拡張で {shop}.myshopify.com/admin/products/new を開いて React SPA に商品を入力。
+// Shopify Admin は重い SPA なので wait は長めに。
+async function executeCreateShopifyProductTool(user, input){
+  const title = String((input && input.title) || '').trim();
+  const description = String((input && input.description) || '').trim();
+  const price = String((input && input.price) || '').trim();
+  const status = (input && input.status === 'active') ? 'active' : 'draft';
+  if(!title) return { error: 'title_required' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  const conn = user.sns_connections && user.sns_connections.shopify;
+  if(!conn || !conn.connected){
+    return { error: 'not_connected', detail: 'Shopify ショップを先に接続してください (接続 tab)。' };
+  }
+  const adminUrl = (conn.profile && conn.profile.admin_url) || null;
+  if(!adminUrl) return { error: 'admin_url_missing', detail: 'Shopify admin URL が保存されていません。 再接続してください。' };
+
+  // 1) products/new を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl.replace(/\/$/, '') + '/products/new' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(5500);  // Shopify Admin は重い SPA (= 初回 5-6 秒)
+
+  // 2) ログイン check
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const currentUrl = String((r && r.url) || '');
+  if(/accounts\.shopify\.com\/lookup|\/login/.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'Shopify Admin にログインしてください: ' + adminUrl };
+  }
+
+  // 3) タイトル
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '#ProductTitleField, input[name="title"], [aria-label="Title"]',
+    text: title,
+  });
+  if(r && r.error){
+    return { error: 'title_type_failed', detail: 'Shopify 商品タイトル入力欄が見つかりません: ' + r.error };
+  }
+  await _sleep(800);
+
+  // 4) 説明 (= Polaris rich-text editor、 内部は contenteditable)
+  if(description){
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '.Polaris-Box [contenteditable="true"], [aria-label="Description"] [contenteditable="true"], iframe.cke_wysiwyg_frame, [contenteditable="true"]',
+      text: description,
+    });
+    if(r && r.error){
+      // 説明は省略可。 warn だけして続行
+      console.warn('[shopify] description type failed:', r.error);
+    }
+    await _sleep(800);
+  }
+
+  // 5) 価格
+  if(price){
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '#PriceField, input[name="price"], [aria-label="Price"]',
+      text: price,
+    });
+    if(r && r.error){
+      console.warn('[shopify] price type failed:', r.error);
+    }
+    await _sleep(600);
+  }
+
+  // 6) Status 切替 (= デフォルトは Active。Draft の場合のみ Status pill から変更)
+  if(status === 'draft'){
+    r = await executeExtensionTool(user, 'ext_click', { target: '[role="combobox"][aria-label*="Status"], select[name="status"]' });
+    if(r && !r.error){
+      await _sleep(500);
+      await executeExtensionTool(user, 'ext_click', { target: 'Draft' });
+    }
+  }
+  await _sleep(500);
+
+  // 7) Save
+  r = await executeExtensionTool(user, 'ext_click', { target: '[data-test-id="save-bar-save-button"], button[type="submit"][name="save"]' });
+  if(r && r.error){
+    // text fallback
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Save' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: '保存' });
+      if(r && r.error) return { error: 'save_click_failed', detail: r.error };
+    }
+  }
+  await _sleep(4000);  // Save 後 redirect
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+
+  return {
+    ok: true, platform: 'shopify',
+    url: (r && r.url) || '',
+    status,
+    instructions: 'ユーザーに「✅ Shopify に商品を' + (status === 'active' ? '公開しました' : '下書き保存しました') + '」と短く報告してください。',
+  };
+}
+
 // ── 投稿成功時に agent.sns_history[platform] に記録 (= 数字 tab で集計) ──
 function _recordSnsPost(agent, platform, info){
   if(!agent || !platform) return;
@@ -9931,6 +10170,8 @@ async function executeSnsTool(user, name, input, agent){
   else if(name === 'post_to_threads')  r = await executePostToThreadsTool(user, input);
   else if(name === 'post_to_facebook') r = await executePostToFacebookTool(user, input);
   else if(name === 'publish_note')     r = await executePublishNoteTool(user, input);
+  else if(name === 'publish_wordpress') r = await executePublishWordPressTool(user, input);
+  else if(name === 'create_shopify_product') r = await executeCreateShopifyProductTool(user, input);
   else return { error: 'unknown_sns_tool: ' + name };
 
   // 成功時のみ history 記録 (verify_x_login は post じゃないので除外)

@@ -3993,15 +3993,14 @@ function _renderSiteDashboardHTML(site){
   }
 
   // ── アクティブ tab を localStorage で記憶 ──
-  // 5 tab: report / numbers / strategy / agents / settings (新順序)
-  // デフォルトは 'report' (= 最新のレポート、朝開いた瞬間に AI が報告)
+  // 6 tab PDCA: report (A) / numbers (C) / strategy (P) / tasks (D) / agents / settings
+  // デフォルトは 'report' (= 朝開いた瞬間に AI が報告)
   var activeTab = 'report';
   try {
     var saved = localStorage.getItem('sd_tab_' + site.id);
-    if(['report','numbers','strategy','agents','settings'].indexOf(saved) >= 0){
+    if(['report','numbers','strategy','tasks','agents','settings'].indexOf(saved) >= 0){
       activeTab = saved;
     } else if(saved === 'actions'){
-      // 旧 'actions' tab は 'report' に統合された (= alias)
       activeTab = 'report';
     }
   } catch(_){}
@@ -4028,23 +4027,39 @@ function _renderSiteDashboardHTML(site){
     +   '</button>'
     + '</div>'
 
-    // ── Tab ナビ (5 タブ・新順序: 報告 → 数字 → 戦略 → Agent → 設定) ──
-    + '<div class="sd-tabs">'
-    +   '<button class="sd-tab sd-tab-report' + (activeTab === 'report' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'report\')">'
-    +     '<span class="sd-tab-ic">📰</span><span class="sd-tab-lbl">最新のレポート</span><span class="sd-tab-sub">毎日の briefing</span>'
-    +   '</button>'
-    +   '<button class="sd-tab sd-tab-numbers' + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
-    +     '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字一覧</span><span class="sd-tab-sub">結果</span>'
-    +   '</button>'
-    +   '<button class="sd-tab sd-tab-strategy' + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
-    +     '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略</span><span class="sd-tab-sub">設計図</span>'
-    +   '</button>'
-    +   '<button class="sd-tab sd-tab-agents' + (activeTab === 'agents' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'agents\')">'
-    +     '<span class="sd-tab-ic">🤖</span><span class="sd-tab-lbl">Agent一覧</span><span class="sd-tab-sub">チームメンバー</span>'
-    +   '</button>'
-    +   '<button class="sd-tab sd-tab-settings' + (activeTab === 'settings' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'settings\')">'
-    +     '<span class="sd-tab-ic">⚙</span><span class="sd-tab-lbl">設定</span><span class="sd-tab-sub">共有 / 編集</span>'
-    +   '</button>'
+    // ── Tab ナビ (6 タブ、PDCA サイクル 4 + 組織 + 設定) ──
+    //   A: 毎日分析 (= 最新のレポート) — Act
+    //   C: 数字一覧                    — Check
+    //   P: 戦略・KPI                   — Plan
+    //   D: タスク管理                  — Do
+    //   + 組織図 / 設定
+    + '<div class="sd-tabs sd-tabs-pdca">'
+    +   '<div class="sd-tabs-grp sd-tabs-grp-pdca" data-grp-lbl="🔁 PDCAサイクル">'
+    +     '<button class="sd-tab sd-tab-report' + (activeTab === 'report' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'report\')">'
+    +       '<span class="sd-tab-pdca">A</span>'
+    +       '<span class="sd-tab-ic">🔁</span><span class="sd-tab-lbl">毎日分析</span><span class="sd-tab-sub">改善 / 報告</span>'
+    +     '</button>'
+    +     '<button class="sd-tab sd-tab-numbers' + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
+    +       '<span class="sd-tab-pdca">C</span>'
+    +       '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字一覧</span><span class="sd-tab-sub">数字を常に確認</span>'
+    +     '</button>'
+    +     '<button class="sd-tab sd-tab-strategy' + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
+    +       '<span class="sd-tab-pdca">P</span>'
+    +       '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略・KPI</span><span class="sd-tab-sub">計画を立てる</span>'
+    +     '</button>'
+    +     '<button class="sd-tab sd-tab-tasks' + (activeTab === 'tasks' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'tasks\')">'
+    +       '<span class="sd-tab-pdca">D</span>'
+    +       '<span class="sd-tab-ic">✅</span><span class="sd-tab-lbl">タスク管理</span><span class="sd-tab-sub">部門別に実行</span>'
+    +     '</button>'
+    +   '</div>'
+    +   '<div class="sd-tabs-grp sd-tabs-grp-other">'
+    +     '<button class="sd-tab sd-tab-agents' + (activeTab === 'agents' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'agents\')">'
+    +       '<span class="sd-tab-ic">🏢</span><span class="sd-tab-lbl">組織図</span><span class="sd-tab-sub">AI チーム</span>'
+    +     '</button>'
+    +     '<button class="sd-tab sd-tab-settings' + (activeTab === 'settings' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'settings\')">'
+    +       '<span class="sd-tab-ic">⚙</span><span class="sd-tab-lbl">設定</span><span class="sd-tab-sub">共有 / 編集</span>'
+    +     '</button>'
+    +   '</div>'
     + '</div>'
 
     + '<div class="sd-tab-body">'
@@ -4057,11 +4072,12 @@ function _renderSiteDashboardHTML(site){
               _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site))
         : activeTab === 'strategy'
           ? _renderTabStrategy(site, _siteAllArtifacts(site.id))
+        : activeTab === 'tasks'
+          ? _renderTabTasks(site)
         : activeTab === 'agents'
           ? _renderTabAgents(site)
         : activeTab === 'settings'
           ? _renderTabSettings(site)
-        // legacy 'actions' tab (= 旧 URL bookmark 対応) — レポート tab にエイリアス
         : _renderTabReport(site, _siteActivityFeed(site), _siteNextSchedule(site),
             _siteQuickActions(site), _siteWeeklyStats(site), _siteAllArtifacts(site.id), _siteInsights(site)))
     + '</div>'
@@ -4070,7 +4086,6 @@ function _renderSiteDashboardHTML(site){
 
 function _switchDashTab(siteId, tab){
   try { localStorage.setItem('sd_tab_' + siteId, tab); } catch(_){}
-  // 「サイト一覧」 tab 以外を踏んだら _allSitesMode を解除 (= サイトコンテキスト復元)
   if(tab !== 'agents') window._allSitesMode = false;
   try { renderHomeDashboard(); } catch(_){}
   try { renderAgList(); } catch(_){}
@@ -4976,6 +4991,216 @@ function _renderTabActions(site, events, next, quickActions, weekly, progressHTM
 // 各サイトは複数の AI エージェント (アナリスト / SEO ライター / コミュニティ
 // 担当 / CRO / Email マーケター…) を雇っている。そのメンバー一覧を rich card
 // で表示する。役割 / 専門領域 / 担当した納品物の数 / 直近の貢献を見せる。
+// ═══════════════════════════════════════════════════════════════════
+// ── Tab 4 (D): ✅ タスク管理 ──
+// 6ヶ月の実行ロードマップを Week 単位で表示。各 Week 内に部門ごとに
+// 細かいタスクが並ぶ。AI 生成タスク + ユーザー追加タスクの両方を扱う。
+// チェック / 削除 / 手動追加 すべて inline で OK。
+// ═══════════════════════════════════════════════════════════════════
+function _renderTabTasks(site){
+  var roadmap = site.roadmap || null;
+  var hasRoadmap = !!(roadmap && Array.isArray(roadmap.weeks) && roadmap.weeks.length > 0);
+
+  // 部門 id → { name, icon, color } のマップ (= タスクに付ける dept tag 用)
+  var deptMap = {};
+  if(site.org && Array.isArray(site.org.departments)){
+    site.org.departments.forEach(function(d){
+      deptMap[d.id] = { name: d.name, icon: d.icon, color: d.color };
+    });
+  }
+
+  // ── Empty state (= ロードマップ未生成) ──
+  if(!hasRoadmap){
+    var hasKpi = !!(site.kpi && (site.kpi.pv || site.kpi.cvr || site.kpi.leads));
+    return ''
+      + '<div class="tk-empty">'
+      +   '<div class="tk-empty-ic">✅</div>'
+      +   '<div class="tk-empty-ti">12 週間の実行ロードマップを AI に作らせる</div>'
+      +   '<div class="tk-empty-tx">KPI と組織情報から、各部門が <b>毎週やるべきこと</b> を AI が具体的にリストアップします。<br>'
+      +     'AI 生成タスク (60-80 件) + 自分で追加するタスクを混ぜて管理できます。</div>'
+      +   (hasKpi
+          ? '<button class="tk-empty-cta" onclick="_generateRoadmap(\'' + esc(site.id) + '\', this)">🤖 ロードマップを生成する <span class="arrow">→</span></button>'
+          : '<div class="tk-empty-warn">⚠️ まず「戦略・KPI」 tab で KPI を設定してください</div>'
+            + '<button class="tk-empty-cta" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">🎯 戦略・KPI へ移動 <span class="arrow">→</span></button>')
+      +   '<div class="tk-empty-note">生成には約 30-60 秒かかります。途中で閉じても OK です。</div>'
+      + '</div>';
+  }
+
+  // ── 進捗統計 ──
+  var allWeekTasks = [];
+  roadmap.weeks.forEach(function(w){
+    (w.tasks || []).forEach(function(t){
+      allWeekTasks.push({ task: t, week: w.n });
+    });
+  });
+  var customTasks = Array.isArray(roadmap.custom_tasks) ? roadmap.custom_tasks : [];
+  var totalTasks = allWeekTasks.length + customTasks.length;
+  var doneTasks = allWeekTasks.filter(function(x){ return x.task.done; }).length
+                + customTasks.filter(function(t){ return t.done; }).length;
+  var progressPct = totalTasks > 0 ? Math.round(doneTasks / totalTasks * 100) : 0;
+
+  // 現在週を推定 (= 生成日から経過した週数 + 1)
+  var currentWeek = 1;
+  if(roadmap.generated_at){
+    var elapsed = Date.now() - Date.parse(roadmap.generated_at);
+    var weeksElapsed = Math.floor(elapsed / (7 * 86400000));
+    currentWeek = Math.min(12, Math.max(1, weeksElapsed + 1));
+  }
+
+  // ── ヘッダー (= 進捗バー + 再生成 button) ──
+  var generatedFmt = '';
+  try { generatedFmt = new Date(roadmap.generated_at).toLocaleDateString('ja-JP'); } catch(e){}
+  var headerHTML = ''
+    + '<div class="tk-head">'
+    +   '<div class="tk-head-l">'
+    +     '<div class="tk-head-tag"><span class="sd-rp-dot"></span>12 週間の実行ロードマップ</div>'
+    +     '<div class="tk-head-ti">' + doneTasks + ' / ' + totalTasks + ' タスク完了 <span class="tk-head-pct">' + progressPct + '%</span></div>'
+    +     '<div class="tk-head-sub">生成: ' + esc(generatedFmt) + ' ・ 今週: <b>Week ' + currentWeek + '</b></div>'
+    +   '</div>'
+    +   '<button class="tk-head-regen" onclick="if(confirm(\'既存タスクを上書きして再生成しますか? (手動追加タスクは保持されます)\'))_generateRoadmap(\'' + esc(site.id) + '\',this)" title="再生成 (既存 AI タスクは上書き、手動タスクは残る)">🔄 再生成</button>'
+    + '</div>'
+    + '<div class="tk-prog"><div class="tk-prog-fill" style="width:' + progressPct + '%"></div></div>';
+
+  // ── Week 別 accordion ──
+  function _renderTaskRow(t, weekNum){
+    var dept = deptMap[t.dept_id];
+    var deptTag = dept
+      ? '<span class="tk-task-dept" style="--ag-c:' + dept.color + '">' + dept.icon + ' ' + esc(dept.name) + '</span>'
+      : '';
+    var ownerTag = t.owner ? '<span class="tk-task-owner">👤 ' + esc(t.owner) + '</span>' : '';
+    var customBadge = !t.ai ? '<span class="tk-task-custom">+ 手動追加</span>' : '';
+    return '<div class="tk-task' + (t.done ? ' done' : '') + '" data-task-id="' + esc(t.id) + '">'
+         +   '<input type="checkbox" class="tk-task-cb" ' + (t.done ? 'checked' : '') + ' onchange="_toggleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\',this.checked)" />'
+         +   '<div class="tk-task-bd">'
+         +     '<div class="tk-task-tx">' + esc(t.text) + '</div>'
+         +     '<div class="tk-task-meta">' + deptTag + ownerTag + customBadge + '</div>'
+         +   '</div>'
+         +   '<button class="tk-task-del" onclick="_deleteTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\')" title="削除">×</button>'
+         + '</div>';
+  }
+
+  var weeksHTML = roadmap.weeks.map(function(w){
+    var weekCustom = customTasks.filter(function(t){ return (t.due_week || 1) === w.n; });
+    var allInWeek = (w.tasks || []).concat(weekCustom);
+    var doneInWeek = allInWeek.filter(function(t){ return t.done; }).length;
+    var totalInWeek = allInWeek.length;
+    var weekPct = totalInWeek > 0 ? Math.round(doneInWeek / totalInWeek * 100) : 0;
+    var isCurrent = w.n === currentWeek;
+    var isPast = w.n < currentWeek;
+    var weekCls = isCurrent ? 'current' : (isPast ? 'past' : 'future');
+    var expanded = isCurrent || (w.n >= currentWeek - 1 && w.n <= currentWeek + 1);
+
+    var taskRows = (w.tasks || []).map(function(t){ return _renderTaskRow(t, w.n); }).join('')
+                 + weekCustom.map(function(t){ return _renderTaskRow(t, w.n); }).join('');
+    var addBtn = '<button class="tk-week-add" onclick="_addCustomTask(\'' + esc(site.id) + '\',' + w.n + ',this)">+ Week ' + w.n + ' にタスク追加</button>';
+
+    return '<details class="tk-week ' + weekCls + '"' + (expanded ? ' open' : '') + '>'
+         +   '<summary class="tk-week-h">'
+         +     '<span class="tk-week-n">Week ' + w.n + '</span>'
+         +     '<span class="tk-week-theme">' + esc(w.theme || '') + '</span>'
+         +     '<span class="tk-week-stat">' + doneInWeek + '/' + totalInWeek + '</span>'
+         +     '<span class="tk-week-bar"><span class="tk-week-bar-fill" style="width:' + weekPct + '%"></span></span>'
+         +     '<span class="tk-week-pct">' + weekPct + '%</span>'
+         +     (isCurrent ? '<span class="tk-week-now">今週</span>' : '')
+         +   '</summary>'
+         +   '<div class="tk-week-body">'
+         +     '<div class="tk-tasks">' + taskRows + '</div>'
+         +     addBtn
+         +   '</div>'
+         + '</details>';
+  }).join('');
+
+  return headerHTML
+    + '<div class="tk-weeks">' + weeksHTML + '</div>';
+}
+
+// ─── Roadmap actions (frontend) ───────────────────────────────────
+async function _generateRoadmap(siteId, btnEl){
+  if(!siteId) return;
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🤖 生成中... (30-60s)'; }
+  try {
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/generate');
+    if(r && r.ok && r.roadmap){
+      // local state を更新
+      var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+      if(site) site.roadmap = r.roadmap;
+      showToast('✅ ロードマップ生成完了', 'ok');
+      try { renderHomeDashboard(); } catch(_){}
+    } else {
+      showToast((r && r.detail) || 'ロードマップ生成に失敗', 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 ロードマップを生成する <span class="arrow">→</span>'; }
+    }
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 ロードマップを生成する <span class="arrow">→</span>'; }
+  }
+}
+
+async function _toggleTask(siteId, taskId, checked){
+  try {
+    await api('PATCH', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks/' + encodeURIComponent(taskId),
+      { done: !!checked });
+    // local state を最小更新 (= rerender なしで完了マーク反映)
+    var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+    if(!site || !site.roadmap) return;
+    var found = null;
+    for(var i = 0; i < (site.roadmap.weeks || []).length; i++){
+      var w = site.roadmap.weeks[i];
+      var t = (w.tasks || []).find(function(x){ return x.id === taskId; });
+      if(t){ found = t; break; }
+    }
+    if(!found){
+      var ct = (site.roadmap.custom_tasks || []).find(function(x){ return x.id === taskId; });
+      if(ct) found = ct;
+    }
+    if(found){ found.done = checked; }
+    // 進捗バー更新のため再描画
+    try { renderHomeDashboard(); } catch(_){}
+  } catch(e){
+    showToast('更新に失敗', 'ng');
+  }
+}
+
+async function _deleteTask(siteId, taskId){
+  if(!confirm('このタスクを削除しますか?')) return;
+  try {
+    await api('DELETE', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks/' + encodeURIComponent(taskId));
+    var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+    if(site && site.roadmap){
+      (site.roadmap.weeks || []).forEach(function(w){
+        w.tasks = (w.tasks || []).filter(function(t){ return t.id !== taskId; });
+      });
+      site.roadmap.custom_tasks = (site.roadmap.custom_tasks || []).filter(function(t){ return t.id !== taskId; });
+    }
+    try { renderHomeDashboard(); } catch(_){}
+  } catch(e){
+    showToast('削除に失敗', 'ng');
+  }
+}
+
+async function _addCustomTask(siteId, weekNum, btnEl){
+  var text = prompt('Week ' + weekNum + ' に追加するタスクを入力:');
+  if(!text || !text.trim()) return;
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = '追加中…'; }
+  try {
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks',
+      { text: text.trim(), week: weekNum });
+    if(r && r.ok && r.task){
+      var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+      if(site){
+        site.roadmap = site.roadmap || { weeks: [], custom_tasks: [] };
+        site.roadmap.custom_tasks = site.roadmap.custom_tasks || [];
+        site.roadmap.custom_tasks.push(r.task);
+      }
+      showToast('✓ タスク追加', 'ok');
+      try { renderHomeDashboard(); } catch(_){}
+    }
+  } catch(e){
+    showToast('追加に失敗', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.textContent = '+ Week ' + weekNum + ' にタスク追加'; }
+  }
+}
+
 function _renderTabAgents(site){
   var allArts = _siteAllArtifacts(site.id);
 

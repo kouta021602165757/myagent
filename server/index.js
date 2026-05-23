@@ -16742,6 +16742,189 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { ok: true, kpi: ag.kpi });
   }
 
+  // ── Roadmap (= 6 ヶ月の実行ロードマップ。Week 1-12 / 各 Week 5-10 タスク) ──
+  // データモデル: agent.roadmap = {
+  //   generated_at, kpi_snapshot, weeks:[{n,theme,tasks:[{id,text,dept_id,owner,due_week,done,ai}]}],
+  //   custom_tasks:[]  // user 追加タスク (= 再生成しても消えない)
+  // }
+  //
+  // Endpoints:
+  //   POST   /api/agents/:id/roadmap/generate           — Sonnet で全 Week を生成
+  //   POST   /api/agents/:id/roadmap/tasks              — 手動タスク追加 { week, text, dept_id? }
+  //   PATCH  /api/agents/:id/roadmap/tasks/:taskId      — done toggle / text 修正
+  //   DELETE /api/agents/:id/roadmap/tasks/:taskId      — 削除
+
+  // 1) Generate roadmap (Sonnet)
+  const roadmapGenMatch = pathname.match(/^\/api\/agents\/([^/]+)\/roadmap\/generate$/);
+  if(roadmapGenMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === roadmapGenMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const kpi = ag.kpi || {};
+    const ga4 = ag.ga4_snapshot || {};
+    const org = ag.org || { departments: [] };
+    // 部門 / メンバー要約
+    const orgSummary = (org.departments || []).map(d => {
+      const teams = (d.teams || []).map(t => {
+        const mems = (t.members || []).map(m => m.name + '(' + m.role + ')').join(', ');
+        return '  - ' + t.name + ': ' + mems;
+      }).join('\n');
+      return d.name + ':\n' + teams;
+    }).join('\n');
+    const baseline = ga4.last_7d
+      ? '直近7日 PV ' + ga4.last_7d.pv + ' / セッション ' + ga4.last_7d.sessions
+      : 'GA4 未接続のため数値ベースなし';
+    const kpiGoal = (kpi.pv || kpi.cvr || kpi.leads)
+      ? '主 KPI: PV ' + (kpi.pv || '未設定') + ' / CVR ' + (kpi.cvr || '未設定') + ' / リード ' + (kpi.leads || '未設定')
+      : 'KPI 未設定 — 一般的な集客成長を目標';
+
+    const prompt = `あなたは集客マーケティングのストラテジストです。以下の情報から、サイト「` + (ag.site_url || ag.name) + `」(${ag.site_vertical || 'general'}) の今後 12 週間の実行ロードマップを JSON で出力してください。
+
+【現状】
+${baseline}
+${kpiGoal}
+
+【AI 専門組織】
+${orgSummary || '(汎用チーム)'}
+
+【出力ルール】
+- 12 週分 (Week 1-12) を出力
+- 各 Week は 5-8 個のタスク
+- 各タスクは 1 文 (40-80 文字) で具体的に
+- 各タスクに dept_id (部門の id を上記から選ぶ) と owner (担当メンバー名)
+- Week ごとに theme (= その週のフォーカス、10 字程度)
+- 後半週ほど高度・成果重視のタスクに
+
+出力フォーマット (JSON のみ、説明文や markdown は不要):
+{
+  "weeks": [
+    {"n": 1, "theme": "...", "tasks": [
+      {"text": "...", "dept_id": "d_acq", "owner": "..."},
+      ...
+    ]},
+    ...
+  ]
+}`;
+
+    try {
+      const apiResp = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+        { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+        {
+          model: 'claude-sonnet-4-6',
+          max_tokens: 8000,
+          messages: [{ role: 'user', content: prompt }],
+        });
+      if(apiResp.s < 200 || apiResp.s >= 300){
+        console.warn('[roadmap-gen] anthropic error:', apiResp.s, JSON.stringify(apiResp.d).slice(0, 300));
+        return jres(res, 500, { error: 'generation_failed', detail: 'AI 生成に失敗しました。少し待って再試行してください。' });
+      }
+      const raw = (apiResp.d && apiResp.d.content && apiResp.d.content[0] && apiResp.d.content[0].text) || '';
+      // JSON 抽出 (```json ... ``` フェンスや余計な文章があっても OK)
+      let parsed = null;
+      try {
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if(jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      } catch(e){
+        console.warn('[roadmap-gen] JSON parse failed:', e.message);
+      }
+      if(!parsed || !Array.isArray(parsed.weeks)){
+        return jres(res, 500, { error: 'parse_failed', detail: '生成結果の解析に失敗しました。再試行してください。' });
+      }
+      // 既存の custom_tasks は維持
+      const existingCustom = (ag.roadmap && Array.isArray(ag.roadmap.custom_tasks)) ? ag.roadmap.custom_tasks : [];
+      const weeks = parsed.weeks.slice(0, 12).map((w, i) => ({
+        n: w.n || (i + 1),
+        theme: String(w.theme || '').slice(0, 50),
+        tasks: (Array.isArray(w.tasks) ? w.tasks : []).slice(0, 10).map(t => ({
+          id: 't_' + crypto.randomBytes(4).toString('hex'),
+          text: String(t.text || '').slice(0, 200),
+          dept_id: String(t.dept_id || ''),
+          owner: String(t.owner || '').slice(0, 40),
+          due_week: w.n || (i + 1),
+          done: false,
+          ai: true,
+        })),
+      }));
+      ag.roadmap = {
+        generated_at: new Date().toISOString(),
+        kpi_snapshot: { ...kpi },
+        ga4_baseline: ga4.last_7d || null,
+        weeks,
+        custom_tasks: existingCustom,
+      };
+      try { await DB.save(user); } catch(e){ console.warn('[roadmap-gen] save failed:', e.message); }
+      console.log('[roadmap-gen] generated ' + weeks.length + ' weeks for agent', ag.id);
+      return jres(res, 200, { ok: true, roadmap: ag.roadmap });
+    } catch(e){
+      console.warn('[roadmap-gen] fetch failed:', e.message);
+      return jres(res, 500, { error: 'generation_failed', detail: e.message });
+    }
+  }
+
+  // 2) Add custom task
+  const taskAddMatch = pathname.match(/^\/api\/agents\/([^/]+)\/roadmap\/tasks$/);
+  if(taskAddMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === taskAddMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req);
+    const text = String((body && body.text) || '').trim();
+    if(!text) return jres(res, 400, { error: 'text required' });
+    const week = Math.max(1, Math.min(12, parseInt(body && body.week, 10) || 1));
+    const dept_id = String((body && body.dept_id) || '');
+    ag.roadmap = ag.roadmap || { weeks: [], custom_tasks: [] };
+    ag.roadmap.custom_tasks = Array.isArray(ag.roadmap.custom_tasks) ? ag.roadmap.custom_tasks : [];
+    const task = {
+      id: 't_custom_' + crypto.randomBytes(4).toString('hex'),
+      text: text.slice(0, 200),
+      dept_id, owner: '', due_week: week,
+      done: false, ai: false,
+      created_at: new Date().toISOString(),
+    };
+    ag.roadmap.custom_tasks.push(task);
+    try { await DB.save(user); } catch(e){ console.warn('[task-add] save failed:', e.message); }
+    return jres(res, 200, { ok: true, task });
+  }
+
+  // 3) Patch / Delete task
+  const taskOpMatch = pathname.match(/^\/api\/agents\/([^/]+)\/roadmap\/tasks\/([^/]+)$/);
+  if(taskOpMatch && (method === 'PATCH' || method === 'DELETE')){
+    const ag = (user.agents || []).find(a => a && a.id === taskOpMatch[1]);
+    if(!ag || !ag.roadmap) return jres(res, 404, { error: 'agent or roadmap not found' });
+    const taskId = taskOpMatch[2];
+    let target = null;
+    // weeks 内 + custom_tasks の両方で探す
+    for(const w of (ag.roadmap.weeks || [])){
+      const f = (w.tasks || []).find(t => t && t.id === taskId);
+      if(f){ target = { task: f, in_week: w }; break; }
+    }
+    if(!target){
+      const cf = (ag.roadmap.custom_tasks || []).find(t => t && t.id === taskId);
+      if(cf) target = { task: cf, in_custom: true };
+    }
+    if(!target) return jres(res, 404, { error: 'task not found' });
+
+    if(method === 'DELETE'){
+      if(target.in_custom){
+        ag.roadmap.custom_tasks = (ag.roadmap.custom_tasks || []).filter(t => t.id !== taskId);
+      } else {
+        target.in_week.tasks = (target.in_week.tasks || []).filter(t => t.id !== taskId);
+      }
+      try { await DB.save(user); } catch(_){}
+      return jres(res, 200, { ok: true, deleted: taskId });
+    }
+    // PATCH
+    const body = await readBody(req);
+    if(body && typeof body.done === 'boolean'){
+      target.task.done = body.done;
+      if(body.done) target.task.completed_at = new Date().toISOString();
+      else delete target.task.completed_at;
+    }
+    if(body && typeof body.text === 'string' && body.text.trim()){
+      target.task.text = body.text.trim().slice(0, 200);
+    }
+    try { await DB.save(user); } catch(_){}
+    return jres(res, 200, { ok: true, task: target.task });
+  }
+
   // ── GA4 snapshot (= dashboard 用キャッシュ + 強制 refresh) ──
   // ダッシュボードが mount 時に毎回 GA4 API を叩くと遅い + quota 食う。
   // agent.ga4_snapshot にキャッシュして、1 時間以上古ければ refresh する設計。

@@ -5959,6 +5959,8 @@ html[data-theme="dark"] .m-huddle-chip .hud-now{background:rgba(0,0,0,.25)}
   transition:all .14s;font-family:inherit;
 }
 .chip:hover{border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.06);color:var(--peach-dark);}
+.chip.chip-mention{font-weight:800; font-size:11.5px}
+.chip.chip-mention:hover{filter:brightness(.95); transform:translateY(-1px)}
 
 /* Fresh-agent starter prompts — prominent one-click first actions shown in
    the empty chat so new users don't stall (onboarding activation). */

@@ -2547,6 +2547,68 @@ function goSiteDashboard(){
    - 6 個の納品物のチェックリスト (一つずつ ✅ に変わる) が live update
    - 各完成時に artifact カードがメッセージに追加される
    - スプラッシュ画面で待つより遥かに「動いてる感」が出る */
+// kickoff 完了後の「次にやる 3 つ」 CTA を assistant メッセージとして注入。
+// vertical 別に意味のある初手 3 つを提示し、ボタンクリックで即チャット送信。
+function _addNextStepCTA(ag){
+  if(!ag || !ag.history) return;
+  // 二重追加防止
+  if(ag.history.some(function(m){ return m && m.via_next_step_cta; })) return;
+  var vertical = ag.site_vertical || 'other';
+  var hostname = _siteHostname(ag);
+  // vertical 別の最初の依頼テンプレ (= 効果が見えやすい 3 つ)
+  var NEXT_STEPS = {
+    saas: [
+      { ic: '🎯', label: 'LP CVR 改善案', prompt: 'この LP の CVR を上げる A/B テスト案を 5 個、優先度順に提案して。各案に仮説と期待される効果を含む。' },
+      { ic: '🐦', label: 'X スレッドを 1 本', prompt: 'プロダクトの価値を伝える X (Twitter) スレッドを 1 本作って。Hook → 痛みポイント → 解決 → CTA の構造で 5-7 ツイート。' },
+      { ic: '🔍', label: '競合 3 社を分析', prompt: 'このプロダクトの主要競合を 3 社特定して、強み・弱み・差別化のヒントを 1 ページにまとめて。' },
+    ],
+    ec: [
+      { ic: '🛒', label: '商品ページ最適化', prompt: '売れ筋商品 3 つを推測して、それぞれの商品ページの SEO 改善案 + 説明文書き直し案を提案して。' },
+      { ic: '📱', label: 'Instagram 投稿 1 週間分', prompt: '商品を魅力的に見せる Instagram 投稿を 7 日分作って。キャプション + ハッシュタグ + 投稿時間提案を含む。' },
+      { ic: '⭐', label: 'レビュー誘導フロー', prompt: '購入後 3 日 / 7 日 / 14 日でレビューを依頼するメールフローを作って。文面 3 本セット。' },
+    ],
+    store: [
+      { ic: '🗺', label: 'Google ビジネスプロフィール最適化', prompt: 'Google ビジネスプロフィールを最適化するための具体策を提案して。説明文・カテゴリ・投稿アイデアを含む。' },
+      { ic: '📱', label: 'Instagram 1 週間分', prompt: '店舗の雰囲気・サービスを伝える Instagram 投稿を 7 日分作って。' },
+      { ic: '💬', label: '口コミ返信テンプレ集', prompt: 'good レビュー / 微妙レビュー / クレーム の 3 パターンへの返信テンプレートを作って。' },
+    ],
+    blog: [
+      { ic: '✍️', label: '記事ネタを 10 本', prompt: '今書くべき記事ネタを 10 本提案して。各案にメインキーワードと検索ボリューム推定を付与。' },
+      { ic: '🐦', label: '既存記事を X スレッドに', prompt: 'サイトで最も注目された記事 1 本を選んで、X で読まれる 7 ツイートのスレッドに変換して。' },
+      { ic: '📧', label: 'メルマガを 1 本', prompt: '読者向けに送るメルマガを 1 本作って。Subject + Body 形式。' },
+    ],
+    portfolio: [
+      { ic: '💼', label: 'LinkedIn 投稿戦略', prompt: 'LinkedIn でプレゼンスを高める投稿戦略を 1 週間分作って。各日のテーマと投稿例を含む。' },
+      { ic: '📧', label: '営業メール 3 種', prompt: '新規アプローチ / フォローアップ / リクエスト返信 の 3 種の営業メール文面を作って。' },
+      { ic: '📚', label: 'ケーススタディ テンプレ', prompt: '実績を魅力的なケーススタディに変換するテンプレと書き方ガイドを作って。' },
+    ],
+    other: [
+      { ic: '🔍', label: 'サイト診断 + 改善案 3 つ', prompt: 'このサイトを分析して、最も改善すべき 3 点を提案して。優先度 (高/中/低) + 期待効果 + 実装難易度を明記。' },
+      { ic: '📝', label: 'コンテンツ案 5 つ', prompt: 'このサイトに合うコンテンツ案を 5 つ提案して。各案のターゲットと配信先を含む。' },
+      { ic: '🎯', label: '集客戦略 1 ページ', prompt: 'このサイトの集客戦略を 1 ページにまとめて。ターゲット / 3 ヶ月の数値目標 / 主力施策 3 つを簡潔に。' },
+    ],
+  };
+  var steps = NEXT_STEPS[vertical] || NEXT_STEPS.other;
+  // Markdown でボタン風に表示 (= 既存の renderer が clickable link を扱える)
+  var content = '✨ **AI チームへの最初の依頼を選んでください**\n\n'
+    + 'どれをクリックしても、その依頼がそのまま実行されます。AI 組織の動きが見えやすい初手を 3 つ用意しました。\n\n'
+    + steps.map(function(s, i){
+        // Special marker: NEXTSTEP|{prompt} で _md が button に変換する
+        return '🎯 **' + (i+1) + '. ' + s.ic + ' ' + s.label + '**\n   > ' + s.prompt;
+      }).join('\n\n')
+    + '\n\n💡 上記からテキストをコピーして送信するか、自分の言葉で依頼を書いてもらっても OK です。';
+
+  ag.history.push({
+    id: 'a_nextstep_' + Date.now(),
+    role: 'assistant',
+    time: now(),
+    via_next_step_cta: true,
+    content: content,
+    next_steps: steps,  // フロント側で button render する素材
+  });
+  renderMsgs(ag);
+}
+
 async function _kickoffOnboardingChat(agentId){
   if(!agentId) return;
   var ag = agents.find(function(a){ return a && a.id === agentId; });
@@ -2654,6 +2716,9 @@ async function _kickoffOnboardingChat(agentId){
           } catch(_){}
           renderMsgs(ag);
           showToast('✓ 6 件の納品物が完成しました', 'ok');
+          // ── 「次の 3 つ」 CTA を assistant メッセージとして追加 ──
+          // (= ユーザーが kickoff 後に「何していいか分からない」を防ぐ)
+          setTimeout(function(){ _addNextStepCTA(ag); }, 600);
           return;
         }
         // 進捗の都度 live メッセージを書き換え
@@ -6430,7 +6495,18 @@ async function openAgent(id){
 
   // Quick chips persist throughout the conversation (clickable shortcuts)
   const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);
-  var chipsHtml = allChips.length ? '<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-right:4px">'+(isJa?'クイック:':'Quick:')+'</span>' + allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('') : '';
+  // Site agent (= org 持ち) なら @mention chip も先頭に追加 (= 部門指名依頼の UX hint)
+  var mentionChips = '';
+  if(_isSiteAgent(ag) && ag.org && Array.isArray(ag.org.departments) && ag.org.departments.length > 0){
+    var topDepts = ag.org.departments.slice(0, 3);
+    mentionChips = '<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;margin-right:4px">@部門指名:</span>'
+      + topDepts.map(function(d){
+          var nm = String(d.name||'').replace(/\s+/g, '');
+          return '<button class="chip chip-mention" onclick="_insertMention(\''+ esc(nm) +'\')" style="background:color-mix(in srgb, ' + d.color + ' 10%, #fff); border-color:color-mix(in srgb, ' + d.color + ' 30%, transparent); color:' + d.color + '">' + d.icon + ' @' + esc(nm) + '</button>';
+        }).join('');
+  }
+  var chipsHtml = (mentionChips ? mentionChips + '<span class="chip-sep" style="display:inline-block;width:1px;height:14px;background:var(--wire2);margin:0 4px;vertical-align:middle"></span>' : '')
+                + (allChips.length ? '<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-right:4px">'+(isJa?'クイック:':'Quick:')+'</span>' + allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('') : '');
   document.getElementById('chips').innerHTML=chipsHtml;
   renderMsgs(ag);
   // Wire scroll listener so the FAB toggles on scroll
@@ -9265,6 +9341,24 @@ function useChip(t){
     t = '@AI ' + t;
   }
   document.getElementById('ci').value=t; sendMsg();
+}
+
+// 「@部門名」を composer に挿入 (= 部門指名依頼の UX hint)
+function _insertMention(deptName){
+  var ta = document.getElementById('ci');
+  if(!ta) return;
+  var prefix = '@' + deptName + ' ';
+  // 既に @ で始まってたら置換、そうでなければ先頭に prepend
+  var v = ta.value || '';
+  if(/^@\S+\s/.test(v)){
+    ta.value = v.replace(/^@\S+\s*/, prefix);
+  } else {
+    ta.value = prefix + v;
+  }
+  ta.focus();
+  try { exTA(ta); } catch(_){}
+  // カーソルを末尾に
+  ta.setSelectionRange(ta.value.length, ta.value.length);
 }
 
 /* ── Follow-up chip suggestions (Claude.ai-style) ───── */

@@ -895,6 +895,71 @@ function _orgT(id, name, members){
 function _orgM(id, name, role, focus){
   return { id, name, role, focus };
 }
+
+// ── 役割別の専門性 (specialty) prompt 辞書 ──
+// チャットで「@SEO 課」「@AEO 担当」みたいに名指しされた時、その role の
+// specialty を system prompt に prepend する。各 specialty は 2-4 文の濃い
+// プロフェッショナル指示で、その手法の defacto を知っている設定。
+const ROLE_SPECIALTIES = {
+  // ─── SEO 課 ───
+  keyword_strategist: 'あなたはキーワード戦略の専門家。検索意図 (Informational / Navigational / Transactional / Commercial) と KW Difficulty を必ず判定。クラスタ構造で関連 KW を網羅し、ロングテール優先 → 中規模 → ビッグ KW の段階を必ず提案する。Ahrefs / Semrush 的な発想で動く。',
+  seo_writer: 'あなたは SEO ライターの専門家。記事は H1 → リード → 結論 → 根拠 → 実例 → FAQ → CTA の構造で書く。検索意図に対応する見出しを必ず使い、関連 KW を H2/H3 に自然に分散させる。1500-3000 字、内部リンク 3 つ以上、引用元明示。',
+  tech_seo: 'あなたはテクニカル SEO の専門家。Core Web Vitals (LCP / CLS / INP)、構造化データ (JSON-LD)、robots.txt / sitemap.xml、内部リンクのアンカーテキスト最適化、Canonical タグ、hreflang、Mobile-First Index を必ず確認する。HTTP 301/302 の使い分けも提案できる。',
+  internal_link: 'あなたは内部リンク設計の専門家。トピッククラスター (Pillar Page + Cluster Articles) を設計し、Pillar に集約するハブ構造を作る。各クラスター記事間の自然な相互リンクを 3-5 個ずつ提案する。リンクスカルプティング (= 不要 link を nofollow / removed) も判断する。',
+  eeat: 'あなたは E-E-A-T 強化の専門家。Experience (実体験) / Expertise (専門性) / Authoritativeness (権威性) / Trust (信頼性) の各シグナルを記事に組み込む。著者プロフィール / 引用 / 統計 / 一次情報 / レビュー / 受賞歴 / メディア掲載歴を必ず提案。',
+
+  // ─── AEO / LLM SEO 課 ───
+  llms_txt: 'あなたは llms.txt の専門家。/.well-known/llms.txt (= AI クローラー向けの sitemap 的構造化ファイル) を設計できる。サイト概要・主要ページ・推奨 chunk 順序・更新頻度を記述する。Anthropic / OpenAI / Perplexity の AI クローラーが優先的に読む形式を熟知。',
+  schema_markup: 'あなたは構造化データ (Schema.org JSON-LD) の専門家。FAQPage / HowTo / Product / Review / Article / Organization の各 schema を正確に書ける。Google Rich Results Test を通す形式を必ず守る。AI 検索エンジンが引用しやすい構造を作る。',
+  reddit_seeder: 'あなたは Reddit 種まき戦略の専門家。AI training data に入りやすい場所 (Reddit / Stack Overflow / Quora / Hacker News) で、自然な引用文脈を作る方法を知っている。spam として bans されない自然な投稿パターンと、AI クローラーが見るタイミングを熟知。',
+  comparison_writer: 'あなたは比較記事 (X vs Y / Best X for Y) ライターの専門家。AI 検索で「○○ おすすめ」と聞かれた時に引用されやすい構造 (= 明確な比較表 + 各選択肢の Pros/Cons + 用途別推奨) で書く。各セクションを引用しやすい self-contained な形式に。',
+  quora_answerer: 'あなたは Quora / 質問サイト回答の専門家。質問に対して権威ある立場で回答し、自社サイトを自然に引用するパターンを熟知。回答は (1) 結論を 1 文 (2) 根拠 3 つ (3) 補足知識 (4) ソース引用 の構造。',
+  citation_bait: 'あなたは citation-bait コンテンツの専門家。AI / 他サイトが引用しやすい統計・断定文・命名・フレームワークを作る。「業界の 60% が…」「○○の 3 つの法則」「△△ index」のような引用されやすい単位を必ず提案。',
+
+  // ─── X / SNS 課 ───
+  x_thread: 'あなたは X (Twitter) スレッド職人。スレッドは Hook (1 ツイート目で続きを読ませる) → Build (3-5 ツイートで核心) → Twist (反転 or 意外性) → CTA の構造。1 ツイート 220-260 字 (改行で読みやすく)、絵文字は控えめ、数字 + 具体例を含める。',
+  x_reply: 'あなたは X リプライ戦略の専門家。フォロワー多いアカウントに、引用されたい質の高いリプライを返す技を知る。同意+補足 / 反論+根拠 / 体験談 のパターンを使い分け、相手の投稿に価値を加える。スパムにならない自然な露出獲得。',
+  x_viral_analyst: 'あなたはバイラル投稿の分析家。impression / 仕掛け / アルゴリズム傾向を観察し、何が伸びる投稿かを定量化する。Engagement / Save / Quote の比率や、投稿時間帯と impression の相関を分析する。',
+  x_profile_optimizer: 'あなたは X プロフィール最適化の専門家。バイオは 160 字以内で「肩書」+「実績数字」+「専門領域」+「CTA」の構造。ピン留めには最強投稿、ヘッダー画像はビジュアル CTA。',
+  linkedin_writer: 'あなたは LinkedIn 投稿の専門家。1300 字以内、最初の 3 行で続きを読ませる Hook を作る (= Read More をクリックさせる)。Story → Insight → Lesson → Question の構造。改行を多用、文末に問いかけ。',
+  indie_hackers: 'あなたは IndieHackers / Hacker News 投稿の専門家。「Show HN」「Built X in Y days」のようなビルダー文化に合うストーリーテリングを知る。MRR / users / 失敗エピソードを正直に出すことで信頼を得る。',
+  hn_submitter: 'あなたは Hacker News 投稿戦略の専門家。タイトルは中立的 + 具体的 (clickbait 厳禁)、submission 時刻は US 西海岸 6-9am 狙い、tech depth のある内容を最優先する。HN は技術者向けなので技術的妥当性を担保する。',
+
+  // ─── 競合・リサーチ ───
+  competitor_tracker: 'あなたは競合監視の専門家。価格 / 新機能リリース / マーケ施策 / SEO 順位の変動を定期的に観測し、変化点を要約する。競合の SNS / blog / press release を必ずソースとする。',
+  swot_analyst: 'あなたは SWOT 分析の専門家。Strengths / Weaknesses / Opportunities / Threats を各 3-5 個ずつ具体化し、自社の差別化アクションに必ず繋げる。抽象論ではなく実装可能な施策で示す。',
+  pricing_analyst: 'あなたは価格戦略の専門家。Cost-plus / Value-based / Competitive / Penetration / Skimming の各価格戦略を理解し、対象市場とフェーズに応じた最適価格を提案。Tier 構造 (Free / Pro / Enterprise) も設計できる。',
+  trend_detector: 'あなたはトレンド検出の専門家。Google Trends / X / Reddit / YouTube の検索ボリューム推移を観察し、業界の波形を読む。「上昇 / ピーク / 下降」フェーズを判定し、まだ伸びる前のキーワードを狙う。',
+  persona_researcher: 'あなたはペルソナ研究の専門家。具体的な人物像 (年齢層 / 職業 / 1 日のスケジュール / 情報収集源 / 痛みポイント / 購買決定基準) を必ず詰める。抽象的な「30 代の働く人」ではなく「東京勤務 / 月収 50 万 / 副業考え中の 32 歳エンジニア」レベル。',
+  demand_validator: 'あなたは需要検証の専門家。Reddit / Twitter / Quora での実投稿数 / 検索ボリューム / フォーラム議論を集めて、ある機能 / プロダクトの需要が実在するか判定。spam vs 本物の声を見分ける。',
+
+  // ─── 分析 ───
+  ga4_analyst: 'あなたは GA4 分析の専門家。ユーザー行動 (Acquisition → Engagement → Conversion) の各段階で離脱を特定。流入経路別の CVR 差、ランディングページ別の直帰率、デバイス別パフォーマンスを必ず確認する。',
+  search_console: 'あなたは Google Search Console の専門家。クエリ別の Impressions / Clicks / CTR / Position を分析し、CTR 低いクエリ (= タイトル改善余地)、Position 11-20 のクエリ (= あと一歩で 1 ページ目) を発見する。',
+  anomaly_detector: 'あなたは異常検知の専門家。直近の数値が前週 / 前月の標準偏差を超えた場合に検知。流入急増 / 急落 / CVR 急変動の原因 (= アルゴ変動 / 競合動き / SNS バズ / 自社の変更 / 季節要因) を仮説立て。',
+  funnel_analyst: 'あなたはファネル分析の専門家。Visit → 滞在 → CTA Click → Conversion の各 stage の漏れを定量化し、最も漏れてる step に施策を集中させる。漏れ箇所を金額換算 (= 月 X 万損失) で示す。',
+  cohort_analyst: 'あなたはコホート分析の専門家。ユーザーを登録週でグループ化し、Week N retention を計算。各コホート間の retention 差から、施策の効果や Product-Market Fit の進捗を読む。',
+
+  // ─── CRO / LP ───
+  lp_diagnoser: 'あなたは LP 診断の専門家。ヘッドコピー (3 秒で「何屋か」が伝わるか) / Social Proof (実績数字・推薦文・ロゴ) / CTA 配置 / ファーストビュー / フォーム摩擦 の 5 要素を必ず評価。',
+  cta_writer: 'あなたは CTA コピーの専門家。Generic な「お申し込み」「送信」ではなく、Value-driven (= 「無料で診断する」「30 日で 10 倍にする」) で書く。Action verb で始め、ベネフィットを含む。3 案 A/B テスト想定で出す。',
+  headline_writer: 'あなたは LP ヘッドラインの専門家。Headline は 3 秒以内に「何ができる」「誰向け」「何が違う」を伝える。「Result + Time + Mechanism」 公式で書く: 「あなたの LP の CVR を、30 日で、AI 組織が、改善する」。',
+  form_optimizer: 'あなたはフォーム最適化の専門家。入力項目を最少にし (= name + email のみで OK な場合多し)、エラー表示は inline、各 field に label 必須、CTA ボタン文言は specific。完了率を必ず追う。',
+  ab_test_designer: 'あなたは A/B テスト設計の専門家。仮説 (= why this will win) を必ず立て、対立変数 (= 1 つだけ変える)、サンプルサイズ (Min 1000 visitors / variant)、勝者判定基準 (95% statistical significance) を明確化。',
+
+  // ─── EC / 商品 ───
+  product_writer: 'あなたは商品ページ SEO の専門家。商品タイトルは「ブランド + キーワード + 用途/対象」、説明文は H1 → メリット 3 つ → 仕様 → FAQ → レビュー の構造。Schema (Product / Review / FAQ) を必ず実装する。',
+  shopping_optimizer: 'あなたは Google Shopping 最適化の専門家。商品 feed の title (= キーワード詰め込み NG、自然な並びで KW を含む)、description (50-160 字)、image (白背景必須)、product_type の hierarchical 階層を整える。',
+  review_strategy: 'あなたはレビュー戦略の専門家。購入後 3 日 / 7 日 / 14 日 の段階的レビュー依頼フロー、incentive (次回 10% OFF など)、低評価への建設的返信、bad review を改善に繋げる loop を設計。',
+
+  // ─── メール ───
+  newsletter_writer: 'あなたはメルマガライターの専門家。件名は 30 字以内で「数字 + 約束 + 緊急性」、本文は (1) hook (2) 価値ある insight (3) CTA の 3 部構成。週次なら 800-1500 字、月次なら 2000-3000 字。',
+  drip_designer: 'あなたはドリップシーケンス設計の専門家。サインアップ後の Day 0 / 1 / 3 / 7 / 14 / 30 の各タイミングで送るメールを設計。各メールに 1 つの目的 (= 教育 / 機能紹介 / 事例 / 残った穴を埋める) を持たせる。',
+  lead_magnet: 'あなたはリードマグネット設計の専門家。ホワイトペーパー / テンプレ集 / 計算機 / 診断ツール / ミニコース のうち、ターゲットの「今すぐ解決したい」 pain に最も応える形式を選ぶ。10-15 ページ目安、deliver は即時。',
+};
+function _getRoleSpecialty(role){
+  return ROLE_SPECIALTIES[String(role || '').toLowerCase()] || '';
+}
 // 組織 → 「代表 5 名」フラット配列 (= 旧 team_members 互換)。各部門の最初のメンバーを「部門長」と
 // して 5 名抜き出す (= サイドバー / チャット header で「チーム」を 5 名以下で表示する既存 UI 用)。
 function _orgToFlatMembers(org){
@@ -2241,6 +2306,78 @@ async function sendEmail(to,subject,html,opts){
   const detail = (r.d && (r.d.message || r.d.error || r.d.name)) || `HTTP ${r.s}`;
   console.error(`[email FAIL] to=${to} status=${r.s} detail=${JSON.stringify(r.d).slice(0,300)}`);
   throw new Error(`Resend ${r.s}: ${detail}`);
+}
+
+// ── サイト作成 直後の Welcome メール ──
+// 設計: signup → /api/onboarding/site で agent 作成された直後に fire。
+// ユーザーがブラウザを閉じても「AI チームができた」が inbox に届く。
+// 25-40% open rate を狙う、簡潔だが信頼感のあるテンプレ。
+async function _sendWelcomeMail(user, agent){
+  if(!user || !user.email || !RESEND_KEY) return;
+  const hostname = (() => {
+    try { return new URL(agent.site_url || '').hostname.replace(/^www\./, ''); }
+    catch(_){ return agent.name || 'your site'; }
+  })();
+  const userName = user.name || (user.email||'').split('@')[0] || 'there';
+  const isJa = /[ぁ-んァ-ヶー一-龠]/.test((user.name||'') + (user.email||''));
+  const subj = isJa
+    ? `🎉 ${hostname} の AI マーケ組織が編成完了しました`
+    : `🎉 Your AI marketing org for ${hostname} is ready`;
+
+  // 組織サイズ + 部門数
+  const orgN = _orgMemberCount(agent.org) || (agent.team_members || []).length || 5;
+  const deptN = (agent.org && agent.org.departments) ? agent.org.departments.length : 5;
+  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app.html?agent_id=' + encodeURIComponent(agent.id);
+  const memberPills = agent.org && agent.org.departments
+    ? agent.org.departments.slice(0, 5).map(d => {
+        const n = (d.teams || []).reduce((s, t) => s + (t.members || []).length, 0);
+        return '<span style="display:inline-block;background:#fff;border:1px solid ' + d.color + ';color:' + d.color + ';font-size:11px;font-weight:800;padding:5px 11px;border-radius:99px;margin:3px">'
+             + d.icon + ' ' + _xmlEscape(d.name) + ' (' + n + ')</span>';
+      }).join('')
+    : '';
+
+  const html = ''
+    + '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+    + '<body style="margin:0;padding:0;background:#fdf8f3;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif;color:#2d1a0e">'
+    + '<div style="max-width:640px;margin:0 auto;padding:28px 20px">'
+    + '<div style="background:linear-gradient(135deg,#fff7ee 0%,#ffe8d4 100%);border-radius:16px;padding:30px 28px;text-align:center;margin-bottom:18px">'
+    +   '<div style="font-size:11px;font-weight:800;color:#ea580c;letter-spacing:.1em;margin-bottom:10px">🎉 EDITORIAL COMPLETE</div>'
+    +   '<div style="font-size:24px;font-weight:900;color:#2d1a0e;letter-spacing:-.015em;margin-bottom:8px">'+ _xmlEscape(userName) +' さん、ようこそ</div>'
+    +   '<div style="font-size:14px;color:#6b4226;line-height:1.65;font-weight:600">'
+    +     '<b style="color:#ea580c">' + _xmlEscape(hostname) + '</b> 専属の<br>'
+    +     '<b style="font-size:18px">' + orgN + ' 名 / ' + deptN + ' 部門</b>の AI マーケ組織が編成完了しました。'
+    +   '</div>'
+    +   '<div style="margin-top:18px">' + memberPills + '</div>'
+    + '</div>'
+    + '<div style="background:#fff;border:1px solid #f5e1cd;border-radius:14px;padding:20px 24px;margin-bottom:18px">'
+    +   '<div style="font-size:12px;font-weight:800;color:#9a6a4a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">これから何が起きるか</div>'
+    +   '<div style="font-size:14px;line-height:1.85;color:#2d1a0e">'
+    +     '✅ AI 組織が <b>初回診断 + 6 件の納品物</b>を 5 分以内に作成<br>'
+    +     '✅ 毎朝 7 時、<b>昨日の数字 + 今日のおすすめアクション</b>がここに届きます<br>'
+    +     '✅ ダッシュボードで戦略・KPI・タスク・組織図がいつでも確認可能'
+    +   '</div>'
+    + '</div>'
+    + '<div style="text-align:center;margin:24px 0">'
+    +   '<a href="' + _xmlEscape(dashUrl) + '" style="display:inline-block;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;text-decoration:none;padding:14px 32px;border-radius:11px;font-size:15px;font-weight:800;box-shadow:0 6px 18px rgba(234,88,12,.32)">'
+    +     '📊 今すぐダッシュボードを見る →'
+    +   '</a>'
+    + '</div>'
+    + '<div style="background:#fff7ed;border:1px dashed #fb923c;border-radius:11px;padding:14px 18px;margin:18px 0;font-size:12.5px;color:#9a3412;line-height:1.65">'
+    +   '💡 <b>最初の依頼を投げてみましょう</b> — 「<i>このサイトの SEO 改善案を 3 つ出して</i>」 のようなプロンプトから始めると、AI 組織のフィードバックが見えやすいです。'
+    + '</div>'
+    + '<div style="text-align:center;color:#9a6a4a;font-size:11px;margin-top:32px;padding-top:18px;border-top:1px solid #f5e1cd">'
+    +   '<div style="font-weight:800;letter-spacing:.04em;color:#ea580c;margin-bottom:6px">MY AI AGENT</div>'
+    +   '<div>このメールはアカウント登録時に 1 度だけ送信されます。<br>'
+    +   '明日の朝 7 時から、定期レポートが届き始めます。</div>'
+    + '</div>'
+    + '</div></body></html>';
+
+  try {
+    await sendEmail(user.email, subj, html);
+    console.log('[welcome-mail] sent to', user.email, 'for agent', agent.id);
+  } catch(e){
+    console.warn('[welcome-mail] send failed:', e.message);
+  }
 }
 
 // ── 毎朝レポートのメール subject / HTML 生成 ─────────────────────
@@ -12278,6 +12415,7 @@ async function _runOneSchedule(user, agent, sched){
   }
 }
 let _scheduleTimer = null;
+let _lastInactivityCheck = 0;
 function _startAgentScheduler(){
   if(_scheduleTimer) return;
   _scheduleTimer = setInterval(async () => {
@@ -12302,11 +12440,105 @@ function _startAgentScheduler(){
           catch(e){ console.warn('[schedule] save failed:', e.message); }
         }
       }
+      // ── 1 時間に 1 回、未利用ユーザー呼び戻しチェック ──
+      if(nowMs - _lastInactivityCheck > 3600 * 1000){
+        _lastInactivityCheck = nowMs;
+        await _checkInactiveUsers(users).catch(e => console.warn('[inactivity] failed:', e.message));
+      }
     } catch(e){
       console.warn('[schedule] tick failed:', e.message);
     }
   }, 60 * 1000);
   console.log('[schedule] agent scheduler started (60s tick)');
+}
+
+// ── 24h 未利用ユーザーを検知して呼び戻しメール送信 ──
+// 条件: site agent 持ち + 作成から 24h 経過 + 一度もチャット履歴に user 発言なし
+//       + welcome mail と inactivity mail を未送信 (= 二重送信防止)
+async function _checkInactiveUsers(users){
+  const nowMs = Date.now();
+  const CUTOFF_MIN = 24 * 60 * 60 * 1000;
+  const CUTOFF_MAX = 72 * 60 * 60 * 1000;  // 24-72h の人だけ (= 古すぎる人には送らない)
+  for(const u of users){
+    if(!u || !u.email) continue;
+    if(u._inactivity_mail_sent) continue;  // 二重送信防止 flag
+    const siteAg = (u.agents || []).find(a => a && a.site_url);
+    if(!siteAg) continue;
+    const createdMs = Date.parse(siteAg.created_at || 0) || 0;
+    if(!createdMs) continue;
+    const ageMs = nowMs - createdMs;
+    if(ageMs < CUTOFF_MIN || ageMs > CUTOFF_MAX) continue;
+    // チャット履歴で user 発言が 1 件もない (= via_kickoff やシステム発言を除く)
+    const hasUserChat = (siteAg.history || []).some(m => m && m.role === 'user' && !m.scheduled && !m.via_kickoff);
+    if(hasUserChat) continue;
+    // 送信
+    try {
+      await _sendInactivityMail(u, siteAg);
+      u._inactivity_mail_sent = new Date().toISOString();
+      try { await DB.save(u); } catch(_){}
+      console.log('[inactivity-mail] sent to', u.email);
+    } catch(e){
+      console.warn('[inactivity-mail] send failed for', u.email, ':', e.message);
+    }
+  }
+}
+
+async function _sendInactivityMail(user, agent){
+  if(!user || !user.email || !RESEND_KEY) return;
+  const hostname = (() => {
+    try { return new URL(agent.site_url || '').hostname.replace(/^www\./, ''); }
+    catch(_){ return agent.name || ''; }
+  })();
+  const userName = user.name || (user.email||'').split('@')[0] || 'there';
+  const isJa = /[ぁ-んァ-ヶー一-龠]/.test((user.name||'') + (user.email||''));
+  const subj = isJa
+    ? `👋 AI チームが ${hostname} で待っています`
+    : `👋 Your AI team for ${hostname} is waiting`;
+  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app.html?agent_id=' + encodeURIComponent(agent.id);
+  // 最初の納品物があれば preview として 1 件出す
+  const arts = Array.isArray(user.artifacts) ? user.artifacts.filter(a => a && a.chat_id === agent.id) : [];
+  const previewArt = arts[0];
+  const previewBlock = previewArt
+    ? '<div style="background:#fff7ed;border:1px solid #f5e1cd;border-radius:11px;padding:14px 18px;margin:18px 0">'
+      + '<div style="font-size:10.5px;font-weight:800;color:#9a6a4a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">📦 AI が既に作った納品物の例</div>'
+      + '<div style="font-size:14px;font-weight:800;color:#2d1a0e">' + _xmlEscape(previewArt.title || previewArt.filename || '納品物') + '</div>'
+      + '<div style="font-size:11.5px;color:#6b4226;margin-top:4px">ダッシュボードを開いて中身を確認 →</div>'
+      + '</div>'
+    : '';
+
+  const html = ''
+    + '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+    + '<body style="margin:0;padding:0;background:#fdf8f3;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif;color:#2d1a0e">'
+    + '<div style="max-width:640px;margin:0 auto;padding:28px 20px">'
+    + '<div style="background:linear-gradient(135deg,#fff7ee 0%,#ffe8d4 100%);border-radius:16px;padding:30px 28px;text-align:center;margin-bottom:18px">'
+    +   '<div style="font-size:48px;margin-bottom:8px">👋</div>'
+    +   '<div style="font-size:22px;font-weight:900;color:#2d1a0e;letter-spacing:-.015em;margin-bottom:8px">'+ _xmlEscape(userName) +' さん、まだお会いできてません</div>'
+    +   '<div style="font-size:13.5px;color:#6b4226;line-height:1.7;font-weight:600">'
+    +     '<b style="color:#ea580c">' + _xmlEscape(hostname) + '</b> 用に編成した AI 組織が、最初の依頼を待っています。'
+    +   '</div>'
+    + '</div>'
+    + previewBlock
+    + '<div style="background:#fff;border:1px solid #f5e1cd;border-radius:14px;padding:20px 24px;margin-bottom:18px">'
+    +   '<div style="font-size:12px;font-weight:800;color:#9a6a4a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">💡 最初に試せる依頼の例</div>'
+    +   '<div style="font-size:13px;line-height:1.85;color:#2d1a0e">'
+    +     '▸ <b>「SEO 改善案を 3 つ提案して」</b><br>'
+    +     '▸ <b>「競合 3 社を分析して」</b><br>'
+    +     '▸ <b>「今週投稿する X スレッドを 1 本作って」</b>'
+    +   '</div>'
+    + '</div>'
+    + '<div style="text-align:center;margin:24px 0">'
+    +   '<a href="' + _xmlEscape(dashUrl) + '" style="display:inline-block;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;text-decoration:none;padding:14px 32px;border-radius:11px;font-size:15px;font-weight:800;box-shadow:0 6px 18px rgba(234,88,12,.32)">'
+    +     '💬 ダッシュボードを開く →'
+    +   '</a>'
+    + '</div>'
+    + '<div style="text-align:center;color:#9a6a4a;font-size:11px;margin-top:32px;padding-top:18px;border-top:1px solid #f5e1cd">'
+    +   '<div style="font-weight:800;letter-spacing:.04em;color:#ea580c;margin-bottom:6px">MY AI AGENT</div>'
+    +   '<div>このメールは、AI チーム編成後 24h 経過してご利用がない場合に 1 度だけ送信されます。<br>'
+    +   '今後の自動レポートが不要な場合は、ダッシュボード → 設定 から停止できます。</div>'
+    + '</div>'
+    + '</div></body></html>';
+
+  await sendEmail(user.email, subj, html);
 }
 
 function buildSystem(agent, opts){
@@ -12738,6 +12970,67 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
 - title は短く artifact 名と同じか日本語タイトル。
 - ファイル名が分からなければ read_artifact で取得してから出す (やり直しでなく確実な一手)。
 `;
+  // ── @mention 検出: agent.org 内の部門 / メンバーを user message から拾う ──
+  // 拾ったら ROLE_SPECIALTIES の専門 prompt を prepend して、その役割の AI
+  // として動作させる。「@SEO 課」「@AEO 担当」「@キーワード戦略家」を全部認識。
+  // 複数 mention は連結。マッチしなければ空 (= 通常動作)。
+  let mentionAddendum = '';
+  try {
+    const userQuery = (opts && opts.userQuery) || '';
+    const org = agent && agent.org;
+    if(userQuery && org && Array.isArray(org.departments)){
+      const mentions = new Set();
+      const mentionRegex = /@([^\s@、,。!?\n]+)/g;
+      let m;
+      while((m = mentionRegex.exec(userQuery)) !== null){
+        mentions.add(m[1].trim().toLowerCase());
+      }
+      if(mentions.size > 0){
+        const matched = [];
+        for(const d of org.departments){
+          const dKey = String(d.name || '').toLowerCase();
+          const dHit = Array.from(mentions).some(mn => dKey.includes(mn) || mn.includes(dKey));
+          if(dHit){
+            // 部門名指 → 部門全体のメンバー specialty を集約
+            for(const t of (d.teams || [])){
+              for(const mem of (t.members || [])){
+                const sp = _getRoleSpecialty(mem.role);
+                if(sp) matched.push({ name: mem.name, role: mem.role, specialty: sp });
+              }
+            }
+          }
+          for(const t of (d.teams || [])){
+            const tKey = String(t.name || '').toLowerCase();
+            const tHit = Array.from(mentions).some(mn => tKey.includes(mn) || mn.includes(tKey));
+            for(const mem of (t.members || [])){
+              const memKey = String(mem.name || '').toLowerCase();
+              const roleKey = String(mem.role || '').toLowerCase();
+              const memHit = Array.from(mentions).some(mn =>
+                memKey.includes(mn) || mn.includes(memKey) ||
+                roleKey.includes(mn) || mn.includes(roleKey)
+              );
+              if((tHit || memHit) && !dHit){
+                const sp = _getRoleSpecialty(mem.role);
+                if(sp && !matched.find(x => x.role === mem.role)){
+                  matched.push({ name: mem.name, role: mem.role, specialty: sp });
+                }
+              }
+            }
+          }
+        }
+        if(matched.length > 0){
+          const topMatched = matched.slice(0, 4);  // max 4 specialties (token control)
+          mentionAddendum = `
+
+【🎯 名指し依頼を検知 — 以下の専門家として回答】
+${topMatched.map(x => `■ ${x.name} (${x.role}):\n  ${x.specialty}`).join('\n\n')}
+
+ユーザーが上記の専門家を名指しで指定しています。あなたはこの専門家(達) の知見・思考様式・実装パターンを軸に回答してください。具体的な手法・defacto・実装ステップを必ず含める。`;
+        }
+      }
+    }
+  } catch(_){}
+
   return`${deliveryRules}
 ${stallNudge}${siteAgentNote}${planModeNote}${integrationsHint}${zapierNote}
 
@@ -12745,7 +13038,7 @@ ${stallNudge}${siteAgentNote}${planModeNote}${integrationsHint}${zapierNote}
 
 あなたは「${agent.name}」というAIエージェントです。
 得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}
-${agent.persona?`性格・指示：${agent.persona}`:''}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}${agentCtx}
+${agent.persona?`性格・指示：${agent.persona}`:''}${mentionAddendum}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}${agentCtx}
 ユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
@@ -14530,6 +14823,15 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 500, { error: '保存に失敗しました。少し待ってから再試行してください。' });
     }
     console.log('[onboarding/site] created agent', agent.id, 'for', siteUrl, '→', vertical);
+
+    // ── アクティベーション施策: signup 即時メール (fire-and-forget) ──
+    // ユーザーがタブを閉じても「AI チーム編成完了」と inbox に届くと、
+    // 後で開く動機が増える。離脱救済の重要 lever。
+    if(user.email && RESEND_KEY){
+      setImmediate(() => _sendWelcomeMail(user, agent).catch(e =>
+        console.warn('[welcome-mail] failed:', e.message)));
+    }
+
     return jres(res, 201, {
       agent,
       vertical,

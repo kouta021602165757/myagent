@@ -4742,6 +4742,13 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
   var hasGa4Data = !!(ga4Data && ga4Data.series && ga4Data.series.length > 0);
   var ga4Connected = !!(ga4Snap && ga4Snap.connected);
 
+  // 「m:ss」形式に整形 (= KPI 滞在時間カード + ページテーブル 共通)
+  function _fmtMinSec(sec){
+    if(!sec) return '—';
+    var m = Math.floor(sec / 60), s = Math.floor(sec - m*60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
   // 日付 (今日 / 昨日 = レポート対象)
   var todayFmt = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
   var yest = new Date(Date.now() - 86400000);
@@ -4782,11 +4789,6 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
            +   '<div class="rp-kpi-val">' + value + '</div>'
            +   (deltaTxt ? '<div class="rp-kpi-d ' + deltaCls + '">' + deltaTxt + '</div>' : '')
            + '</div>';
-    }
-    function _fmtMinSec(sec){
-      if(!sec) return '—';
-      var m = Math.floor(sec / 60), s = Math.floor(sec - m*60);
-      return m + ':' + (s < 10 ? '0' : '') + s;
     }
     kpiHTML = ''
       + '<div class="rp-card">'
@@ -4921,11 +4923,6 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
   // ── 5) ページ別パフォーマンス Top 5 ──
   var pagesHTML = '';
   if(hasGa4Data && Array.isArray(ga4Data.pages) && ga4Data.pages.length > 0){
-    function _fmtMinSec(sec){
-      if(!sec) return '—';
-      var m = Math.floor(sec / 60), ss = Math.floor(sec - m*60);
-      return m + ':' + (ss < 10 ? '0' : '') + ss;
-    }
     var prows = ga4Data.pages.map(function(p){
       var bouncePct = p.bounce ? Math.round(p.bounce * 1000)/10 : null;
       var bounceCls = bouncePct === null ? '' : (bouncePct < 35 ? 'good' : bouncePct > 60 ? 'bad' : '');

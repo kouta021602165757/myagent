@@ -3059,6 +3059,366 @@ input,textarea{font-family:var(--sans);}
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   ── Tab 3 (P): 🎯 戦略・KPI ──
+   ペルソナ / 競合 / 6 ヶ月 KPI シート の AI 生成 view。
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Empty state */
+.st-empty{
+  background:linear-gradient(135deg, #fff 0%, #eff6ff 100%);
+  border:1.5px dashed #2563eb;
+  border-radius:16px;
+  padding:48px 32px;
+  text-align:center;
+}
+.st-empty-ic{font-size:46px; margin-bottom:14px}
+.st-empty-ti{
+  font-size:20px; font-weight:900; color:var(--text);
+  letter-spacing:-.015em; margin-bottom:10px;
+}
+.st-empty-tx{
+  font-size:13px; color:var(--text2); line-height:1.85; font-weight:600;
+  max-width:560px; margin:0 auto 22px;
+  text-align:left;
+  background:#fff; border:1px solid var(--wire);
+  padding:14px 18px; border-radius:11px;
+}
+.st-empty-tx b{color:#2563eb; font-weight:800}
+.st-empty-cta{
+  background:linear-gradient(135deg, #60a5fa, #2563eb);
+  color:#fff; border:0; padding:13px 26px; border-radius:12px;
+  font-family:inherit; font-size:14px; font-weight:800;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(37,99,235,.28);
+  display:inline-flex; align-items:center; gap:9px;
+  transition:transform .15s, box-shadow .15s;
+}
+.st-empty-cta:hover:not(:disabled){transform:translateY(-1px); box-shadow:0 10px 24px rgba(37,99,235,.36)}
+.st-empty-cta:disabled{opacity:.7; cursor:wait}
+.st-empty-cta-secondary{
+  background:#fff; color:#2563eb;
+  border:1px solid #2563eb;
+  box-shadow:none;
+}
+.st-empty-cta .arrow{transition:transform .2s}
+.st-empty-cta:hover .arrow{transform:translateX(3px)}
+.st-empty-warn{
+  background:#fff7ed; border:1px solid #fb923c;
+  color:#9a3412; font-size:12.5px; font-weight:700;
+  padding:11px 18px; border-radius:10px;
+  margin:14px 0; display:inline-block;
+}
+.st-empty-note{
+  font-size:11px; color:var(--text3); font-weight:600;
+  margin-top:14px;
+}
+
+/* Header */
+.st-head{
+  display:flex; align-items:center; gap:14px;
+  background:linear-gradient(135deg, #fff 0%, #eff6ff 100%);
+  border:1px solid rgba(37,99,235,.18);
+  border-radius:14px; padding:18px 22px;
+}
+.st-head-l{flex:1; min-width:0}
+.st-head-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:10.5px; font-weight:800; color:#2563eb;
+  background:rgba(37,99,235,.12); border:1px solid rgba(37,99,235,.28);
+  letter-spacing:.05em; text-transform:uppercase;
+  padding:3px 10px; border-radius:99px; margin-bottom:9px;
+}
+.st-head-tag .sd-rp-dot{background:#3b82f6; box-shadow:0 0 6px #3b82f6}
+.st-head-ti{
+  font-size:18px; font-weight:900; color:var(--text); letter-spacing:-.01em;
+}
+.st-head-sub{
+  font-size:11.5px; color:var(--text2); margin-top:4px; font-weight:600;
+}
+.st-head-regen{
+  background:#fff; border:1px solid var(--wire2);
+  color:var(--text2);
+  padding:9px 14px; border-radius:10px;
+  font-family:inherit; font-size:12px; font-weight:800;
+  cursor:pointer;
+  transition:background .15s, color .15s, border-color .15s;
+  flex-shrink:0;
+}
+.st-head-regen:hover{
+  background:#eff6ff; border-color:#2563eb; color:#2563eb;
+}
+
+/* Common card */
+.st-card{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:14px; padding:18px 22px;
+}
+.st-card-h{
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:14px;
+}
+.st-card-ti{font-size:13.5px; font-weight:900; color:var(--text); letter-spacing:-.005em}
+.st-card-sub{
+  margin-left:auto;
+  font-family:'Outfit',sans-serif;
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  background:var(--cream);
+  padding:3px 9px; border-radius:99px;
+  letter-spacing:.04em;
+}
+
+/* 6ヶ月 KPI シート */
+.st-kpi-sheet{display:flex; flex-direction:column; gap:6px}
+.st-kpi-row{
+  display:grid; grid-template-columns:60px 140px 1fr 1fr; gap:14px;
+  padding:11px 14px;
+  background:var(--cream);
+  border:1px solid var(--wire);
+  border-radius:10px;
+  align-items:center;
+}
+.st-kpi-row.first{
+  background:linear-gradient(135deg, rgba(37,99,235,.06), var(--cream));
+  border-color:rgba(37,99,235,.22);
+}
+.st-kpi-row.last{
+  background:linear-gradient(135deg, rgba(34,197,94,.06), var(--cream));
+  border-color:rgba(34,197,94,.22);
+}
+.st-kpi-m{
+  font-family:'Outfit',sans-serif;
+  font-size:11px; font-weight:800; color:var(--text2);
+  letter-spacing:.02em;
+}
+.st-kpi-mn{
+  font-size:18px; font-weight:900; color:#2563eb;
+  margin-left:4px;
+}
+.st-kpi-row.first .st-kpi-mn{color:#2563eb}
+.st-kpi-row.last .st-kpi-mn{color:#16a34a}
+.st-kpi-theme{
+  font-size:12.5px; font-weight:800; color:var(--text); letter-spacing:-.005em;
+}
+.st-kpi-vals{
+  display:flex; gap:10px; flex-wrap:wrap;
+}
+.st-kpi-v{
+  font-family:'Outfit',sans-serif;
+  font-size:12px; font-weight:800; color:var(--text);
+}
+.st-kpi-vl{
+  font-size:9.5px; font-weight:700; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-right:4px;
+}
+.st-kpi-mil{
+  font-size:11px; color:var(--text2); font-weight:600;
+  grid-column:1 / -1;
+  padding-top:6px; border-top:1px dashed var(--wire2);
+}
+
+/* Persona */
+.st-persona-h{
+  display:flex; align-items:center; gap:14px; margin-bottom:14px;
+}
+.st-persona-av{
+  width:54px; height:54px; border-radius:50%;
+  background:linear-gradient(135deg, #60a5fa, #2563eb);
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; color:#fff;
+  box-shadow:0 6px 16px rgba(37,99,235,.24);
+  flex-shrink:0;
+}
+.st-persona-id{flex:1; min-width:0}
+.st-persona-nm{
+  font-size:17px; font-weight:900; color:var(--text); letter-spacing:-.015em;
+}
+.st-persona-sub{
+  font-size:12px; font-weight:700; color:var(--text2); margin-top:3px;
+}
+.st-persona-grid{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+}
+.st-persona-box{
+  background:var(--cream); border-radius:10px; padding:12px 14px;
+}
+.st-p-pain{background:linear-gradient(135deg, rgba(220,38,38,.05), var(--cream))}
+.st-p-mot{background:linear-gradient(135deg, rgba(34,197,94,.05), var(--cream))}
+.st-p-trig{background:linear-gradient(135deg, rgba(251,191,36,.05), var(--cream))}
+.st-persona-lbl{
+  font-size:11px; font-weight:800; color:var(--text2);
+  letter-spacing:.02em; margin-bottom:6px;
+}
+.st-persona-list{
+  font-size:11.5px; line-height:1.55; color:var(--text); font-weight:600;
+  padding-left:18px; margin:0;
+}
+.st-persona-list li{margin-bottom:3px}
+
+/* Competitor */
+.st-comp-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px;
+}
+.st-comp-card{
+  background:var(--cream); border:1px solid var(--wire);
+  border-left:4px solid var(--ag-c, #fb923c);
+  border-radius:11px; padding:14px 16px;
+}
+.st-comp-h{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px}
+.st-comp-nm{
+  font-size:14px; font-weight:900; color:var(--text); letter-spacing:-.005em;
+}
+.st-comp-url{
+  font-size:14px; text-decoration:none;
+  color:var(--ag-c, #fb923c);
+  width:24px; height:24px; border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.04);
+  transition:background .15s;
+}
+.st-comp-url:hover{background:color-mix(in srgb, var(--ag-c, #fb923c) 14%, transparent)}
+.st-comp-section{margin-bottom:8px}
+.st-comp-lbl{
+  font-size:10px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-bottom:3px;
+}
+.st-comp-list{
+  font-size:11.5px; line-height:1.55; color:var(--text); font-weight:600;
+  padding-left:18px; margin:0 0 4px;
+}
+.st-comp-list-good li::marker{color:#16a34a}
+.st-comp-list-bad li::marker{color:#dc2626}
+.st-comp-diff{
+  margin-top:8px; padding:8px 11px;
+  background:#fff; border-radius:8px;
+  font-size:11.5px; line-height:1.55; color:var(--text); font-weight:600;
+  border-left:3px solid var(--ag-c, #fb923c);
+}
+.st-comp-diff b{color:var(--ag-c, #fb923c); font-weight:800}
+
+/* Strategy artifact row */
+.st-art-row{
+  display:flex; align-items:center; gap:14px;
+  background:var(--cream); border-radius:10px;
+  padding:12px 16px;
+}
+.st-art-meta{flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.st-art-open{
+  font-size:12px; font-weight:800; color:#2563eb;
+  text-decoration:none; flex-shrink:0;
+}
+.st-art-open:hover{text-decoration:underline}
+
+@media (max-width:760px){
+  .st-kpi-row{grid-template-columns:60px 1fr; gap:8px}
+  .st-kpi-vals{grid-column:1 / -1; padding-top:4px; border-top:1px dashed var(--wire2)}
+  .st-persona-grid{grid-template-columns:1fr; gap:8px}
+  .st-comp-grid{grid-template-columns:1fr; gap:8px}
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ── Numbers tab: モジュラー (= integration 別) ──
+   各 integration が独立した「モジュール」として並ぶ。接続済 → data 表示、
+   未接続 → "接続して unlock" CTA。新しい integration の追加が容易な構造。
+   ══════════════════════════════════════════════════════════════════ */
+.nm-mod{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:13px; overflow:hidden;
+  transition:border-color .15s;
+}
+.nm-mod.nm-mod-on{border-color:rgba(34,197,94,.24); background:linear-gradient(135deg, #fff 0%, rgba(34,197,94,.02) 100%)}
+.nm-mod.nm-mod-off{opacity:.92}
+.nm-mod.nm-mod-off:hover{opacity:1}
+.nm-mod-h{
+  display:flex; align-items:center; gap:14px;
+  padding:14px 18px;
+  border-bottom:1px solid var(--wire);
+}
+.nm-mod-ic{
+  width:42px; height:42px; border-radius:11px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.nm-mod-meta{flex:1; min-width:0}
+.nm-mod-nm{
+  font-size:14px; font-weight:900; color:var(--text); letter-spacing:-.005em;
+}
+.nm-mod-status{
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:10.5px; font-weight:700; margin-top:3px;
+  letter-spacing:.02em;
+}
+.nm-mod-status.on{color:#16a34a}
+.nm-mod-status.off{color:var(--text3)}
+.nm-mod-dot{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--text3);
+}
+.nm-mod-dot.on{
+  background:#22c55e;
+  box-shadow:0 0 6px rgba(34,197,94,.5);
+}
+.nm-mod-btn{
+  background:#fff; border:1px solid var(--wire2);
+  color:var(--text2);
+  padding:7px 12px; border-radius:8px;
+  font-family:inherit; font-size:11.5px; font-weight:800;
+  cursor:pointer; flex-shrink:0;
+  transition:background .15s, color .15s, border-color .15s;
+}
+.nm-mod-btn:hover{background:var(--cream); border-color:var(--peach,#fb923c); color:var(--peach-dark,#ea580c)}
+.nm-mod-btn.primary{
+  background:linear-gradient(135deg, var(--peach,#fb923c), var(--peach-dark,#ea580c));
+  color:#fff; border-color:var(--peach-dark,#ea580c);
+  box-shadow:0 4px 10px rgba(234,88,12,.22);
+}
+.nm-mod-btn.primary:hover{filter:brightness(1.08); color:#fff}
+.nm-mod-soon{
+  font-size:11px; font-weight:800; color:var(--text3);
+  background:var(--cream); padding:4px 10px; border-radius:99px;
+  letter-spacing:.04em;
+  flex-shrink:0;
+}
+.nm-mod-body{padding:16px 18px 20px}
+
+/* Locked state */
+.nm-mod-locked{
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  padding:20px 16px;
+  background:linear-gradient(135deg, var(--cream) 0%, #fff 100%);
+  border:1px dashed var(--wire2);
+  border-radius:10px;
+}
+.nm-mod-locked-tx{
+  font-size:12px; line-height:1.6; color:var(--text2); font-weight:600;
+  text-align:center; max-width:520px;
+}
+.nm-mod-locked-btn{
+  background:linear-gradient(135deg, var(--peach,#fb923c), var(--peach-dark,#ea580c));
+  color:#fff; border:0;
+  padding:10px 20px; border-radius:10px;
+  font-family:inherit; font-size:12.5px; font-weight:800;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(234,88,12,.22);
+  transition:transform .15s, box-shadow .15s;
+}
+.nm-mod-locked-btn:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(234,88,12,.32)}
+.nm-mod-locked-soon{
+  font-size:11px; font-weight:800; color:var(--text3);
+  background:rgba(0,0,0,.04); padding:5px 12px; border-radius:99px;
+  letter-spacing:.04em;
+}
+.nm-mod-loading{
+  padding:30px; text-align:center;
+  font-size:13px; color:var(--text2); font-weight:600;
+}
+
+@media (max-width:560px){
+  .nm-mod-h{padding:12px 14px; gap:10px}
+  .nm-mod-ic{width:36px; height:36px; font-size:18px}
+  .nm-mod-body{padding:12px 14px}
+}
+
+/* ══════════════════════════════════════════════════════════════════
    ── Tab 4 (D): ✅ タスク管理 — 12 週ロードマップ ──
    生成前 = empty state with CTA
    生成後 = 進捗バー + Week 別 accordion + チェックボックス

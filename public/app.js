@@ -4360,107 +4360,271 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       + '</div>';
   }
 
+  // ── モジュラー化: 各 integration が「セクション」 として並ぶ ──
+  // 接続済みなら data 表示、未接続なら「接続して unlock」 CTA。
+  // GA4 module は既存の chart / sub-kpi を中に内包。他は plain unlock card。
+  function _moduleHeader(icon, name, connected, color, btnLabel, btnAction){
+    return '<div class="nm-mod-h">'
+         +   '<div class="nm-mod-ic" style="background:' + color + '20;color:' + color + '">' + icon + '</div>'
+         +   '<div class="nm-mod-meta">'
+         +     '<div class="nm-mod-nm">' + esc(name) + '</div>'
+         +     '<div class="nm-mod-status ' + (connected ? 'on' : 'off') + '">'
+         +       (connected ? '<span class="nm-mod-dot on"></span>接続済 — リアルタイム' : '<span class="nm-mod-dot"></span>未接続')
+         +     '</div>'
+         +   '</div>'
+         +   (btnAction
+             ? '<button class="nm-mod-btn' + (connected ? '' : ' primary') + '" onclick="' + btnAction + '">' + esc(btnLabel) + '</button>'
+             : '<span class="nm-mod-soon">近日対応</span>')
+         + '</div>';
+  }
+
+  // ── Module 1: Google Analytics 4 ──
+  var ga4ModBody = hasGa4Data
+    ? subKpiHTML + ga4ChartHTML
+    : (ga4Connected
+        ? '<div class="nm-mod-loading">📡 GA4 から数値を取得中…</div>'
+        : '<div class="nm-mod-locked">'
+          + '<div class="nm-mod-locked-tx">PV / セッション / ユーザー / 流入経路 / CVR / ユーザー属性 / 国別 — 接続すると毎日この場所に降ってきます。</div>'
+          + '<button class="nm-mod-locked-btn" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">📊 接続する →</button>'
+          + '</div>');
+  var ga4ModuleHTML = ''
+    + '<div class="nm-mod ' + (hasGa4Data ? 'nm-mod-on' : 'nm-mod-off') + '">'
+    +   _moduleHeader('📊', 'Google Analytics 4', hasGa4Data, '#fb923c',
+                     hasGa4Data ? '🔄 更新' : '接続 →',
+                     hasGa4Data
+                       ? '_fetchGa4Snapshot(\'' + esc(site.id) + '\', { force:true })'
+                       : 'openIntegrationsTab && openIntegrationsTab(\'ga4\')')
+    +   '<div class="nm-mod-body">' + ga4ModBody + '</div>'
+    + '</div>';
+
+  // ── Module 2: Search Console (近日) ──
+  var scModuleHTML = ''
+    + '<div class="nm-mod nm-mod-off">'
+    +   _moduleHeader('🔍', 'Google Search Console', false, '#3b82f6', null, null)
+    +   '<div class="nm-mod-body">'
+    +     '<div class="nm-mod-locked">'
+    +       '<div class="nm-mod-locked-tx">検索キーワード / 表示回数 / 平均順位 / CTR — どのクエリで何位なのか、競合 SEO の動きも追えます。</div>'
+    +       '<div class="nm-mod-locked-soon">⏳ Phase 4 で対応予定</div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+
+  // ── Module 3: Stripe (近日) ──
+  var stripeModuleHTML = ''
+    + '<div class="nm-mod nm-mod-off">'
+    +   _moduleHeader('💳', 'Stripe', false, '#635bff', null, null)
+    +   '<div class="nm-mod-body">'
+    +     '<div class="nm-mod-locked">'
+    +       '<div class="nm-mod-locked-tx">売上 / MRR / 解約率 / LTV / プラン別構成 — 売上 KPI が PV と並んで表示されます。</div>'
+    +       '<div class="nm-mod-locked-soon">⏳ Phase 4 で対応予定</div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+
+  // ── Module 4: フォーム (近日) ──
+  var formModuleHTML = ''
+    + '<div class="nm-mod nm-mod-off">'
+    +   _moduleHeader('📝', 'フォーム / 問い合わせ', false, '#22c55e', null, null)
+    +   '<div class="nm-mod-body">'
+    +     '<div class="nm-mod-locked">'
+    +       '<div class="nm-mod-locked-tx">Typeform / Google Forms / Webflow / Tally — 問い合わせ件数とソース別の内訳を可視化。</div>'
+    +       '<div class="nm-mod-locked-soon">⏳ Phase 4 で対応予定</div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+
+  // ── Module 5: SNS (近日) ──
+  var snsModuleHTML = ''
+    + '<div class="nm-mod nm-mod-off">'
+    +   _moduleHeader('📱', 'SNS Analytics', false, '#ec4899', null, null)
+    +   '<div class="nm-mod-body">'
+    +     '<div class="nm-mod-locked">'
+    +       '<div class="nm-mod-locked-tx">X / Instagram / LinkedIn — フォロワー / インプレッション / エンゲージメント / 投稿パフォーマンス。</div>'
+    +       '<div class="nm-mod-locked-soon">⏳ Phase 4 で対応予定</div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+
   return heroHTML
-    + subKpiHTML
-    + ga4ChartHTML
     + insightsHTML
-    + previewHTML
+    + ga4ModuleHTML
+    + scModuleHTML
+    + stripeModuleHTML
+    + formModuleHTML
+    + snsModuleHTML
     + deptRankHTML
     + activityHTML;
 }
 
 // ─── Tab 2: 🎯 戦略 (= 設計図) ────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// ── Tab 3 (P): 🎯 戦略・KPI ──
+// Sonnet 生成済の strategy {persona / competitors / kpi_6mo} を表示。
+// 未生成なら大型「戦略を生成する」 CTA。
+// 既存の戦略 artifact があれば下部に表示。
+// ═══════════════════════════════════════════════════════════════════
 function _renderTabStrategy(site, allArts){
   var v = site.site_vertical || 'other';
   var label = _verticalLabel(v);
+  var kpi = site.kpi || {};
+  var hasKpi = !!(kpi.pv || kpi.cvr || kpi.leads);
+  var strategy = site.strategy || null;
+  var hasStrategy = !!(strategy && (strategy.persona || (strategy.competitors && strategy.competitors.length) || (strategy.kpi_6mo && strategy.kpi_6mo.length)));
 
-  // 戦略 artifact を探す (= title に「戦略」含む or type=strategy)
+  // ── Empty state (= 戦略未生成) ──
+  if(!hasStrategy){
+    return ''
+      + '<div class="st-empty">'
+      +   '<div class="st-empty-ic">🎯</div>'
+      +   '<div class="st-empty-ti">AI に「6 ヶ月戦略」を作らせる</div>'
+      +   '<div class="st-empty-tx">'
+      +     'AI がサイトを分析して、以下を自動で作成します:<br>'
+      +     '・<b>ターゲットペルソナ</b> — 年齢層 / 痛みポイント / 購買動機<br>'
+      +     '・<b>競合分析</b> — 3 社の強み・弱み・差別化ポイント<br>'
+      +     '・<b>6 ヶ月 KPI シート</b> — 月別の数値目標 + マイルストーン'
+      +   '</div>'
+      +   (hasKpi
+          ? '<button class="st-empty-cta" onclick="_generateStrategy(\'' + esc(site.id) + '\', this)">🤖 戦略を生成する <span class="arrow">→</span></button>'
+          : '<div class="st-empty-warn">⚠️ まず KPI 目標を設定すると、より精度の高い戦略が立てられます</div>'
+            + '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'
+            + '<button class="st-empty-cta st-empty-cta-secondary" onclick="openKpiModal(\'' + esc(site.id) + '\')">🎯 KPI を先に設定</button>'
+            + '<button class="st-empty-cta" onclick="_generateStrategy(\'' + esc(site.id) + '\', this)">スキップして生成</button>'
+            + '</div>')
+      +   '<div class="st-empty-note">生成には約 30-60 秒かかります。途中で閉じても OK です。</div>'
+      + '</div>';
+  }
+
+  // ── Strategy 生成済 ──
+  var generatedFmt = '';
+  try { generatedFmt = new Date(strategy.generated_at).toLocaleDateString('ja-JP'); } catch(e){}
+
+  // Header
+  var headerHTML = ''
+    + '<div class="st-head">'
+    +   '<div class="st-head-l">'
+    +     '<div class="st-head-tag"><span class="sd-rp-dot"></span>AI 生成 ・ 6 ヶ月戦略</div>'
+    +     '<div class="st-head-ti">' + esc(label) + ' の戦略設計図</div>'
+    +     '<div class="st-head-sub">生成: ' + esc(generatedFmt) + '</div>'
+    +   '</div>'
+    +   '<button class="st-head-regen" onclick="if(confirm(\'戦略を再生成しますか? (現状の数字 + KPI を反映)\'))_generateStrategy(\'' + esc(site.id) + '\',this)" title="再生成">🔄 再生成</button>'
+    + '</div>';
+
+  // 6ヶ月 KPI シート
+  var kpiSheetHTML = '';
+  if(strategy.kpi_6mo && strategy.kpi_6mo.length > 0){
+    var rows = strategy.kpi_6mo.map(function(m, i){
+      return '<div class="st-kpi-row' + (i === 0 ? ' first' : '') + (i === strategy.kpi_6mo.length - 1 ? ' last' : '') + '">'
+           +   '<div class="st-kpi-m">Month <span class="st-kpi-mn">' + (m.month || (i+1)) + '</span></div>'
+           +   '<div class="st-kpi-theme">' + esc(m.label || '') + '</div>'
+           +   '<div class="st-kpi-vals">'
+           +     '<span class="st-kpi-v"><span class="st-kpi-vl">PV</span> ' + (m.pv ? Number(m.pv).toLocaleString() : '—') + '</span>'
+           +     '<span class="st-kpi-v"><span class="st-kpi-vl">Sessions</span> ' + (m.sessions ? Number(m.sessions).toLocaleString() : '—') + '</span>'
+           +     '<span class="st-kpi-v"><span class="st-kpi-vl">CVR</span> ' + (m.cvr || '—') + '%</span>'
+           +     '<span class="st-kpi-v"><span class="st-kpi-vl">Leads</span> ' + (m.leads || '—') + '</span>'
+           +   '</div>'
+           +   '<div class="st-kpi-mil">🎯 ' + esc(m.milestone || '') + '</div>'
+           + '</div>';
+    }).join('');
+    kpiSheetHTML = ''
+      + '<div class="st-card">'
+      +   '<div class="st-card-h"><span class="st-card-ti">📊 6 ヶ月 KPI シート</span><span class="st-card-sub">' + strategy.kpi_6mo.length + ' ヶ月の段階目標</span></div>'
+      +   '<div class="st-kpi-sheet">' + rows + '</div>'
+      + '</div>';
+  }
+
+  // ペルソナ
+  var personaHTML = '';
+  if(strategy.persona){
+    var p = strategy.persona;
+    function _bullets(arr){
+      if(!Array.isArray(arr) || !arr.length) return '<li style="opacity:.5">—</li>';
+      return arr.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
+    }
+    personaHTML = ''
+      + '<div class="st-card st-persona">'
+      +   '<div class="st-card-h"><span class="st-card-ti">👤 ターゲットペルソナ</span></div>'
+      +   '<div class="st-persona-h">'
+      +     '<div class="st-persona-av">👤</div>'
+      +     '<div class="st-persona-id">'
+      +       '<div class="st-persona-nm">' + esc(p.name || 'ペルソナ') + '</div>'
+      +       '<div class="st-persona-sub">' + esc(p.age || '') + (p.age && p.occupation ? ' ・ ' : '') + esc(p.occupation || '') + '</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="st-persona-grid">'
+      +     '<div class="st-persona-box st-p-pain"><div class="st-persona-lbl">💢 痛みポイント</div><ul class="st-persona-list">' + _bullets(p.painpoints) + '</ul></div>'
+      +     '<div class="st-persona-box st-p-mot"><div class="st-persona-lbl">💪 購買動機</div><ul class="st-persona-list">' + _bullets(p.motivations) + '</ul></div>'
+      +     '<div class="st-persona-box st-p-trig"><div class="st-persona-lbl">⚡ 行動のキッカケ</div><ul class="st-persona-list">' + _bullets(p.buying_triggers) + '</ul></div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  // 競合分析
+  var competitorHTML = '';
+  if(strategy.competitors && strategy.competitors.length > 0){
+    var COMP_COLORS = ['#fb923c', '#3b82f6', '#a855f7', '#22c55e', '#ec4899'];
+    var compCards = strategy.competitors.map(function(c, i){
+      var color = COMP_COLORS[i % COMP_COLORS.length];
+      var strBullets = (Array.isArray(c.strengths) ? c.strengths : []).map(function(s){ return '<li>' + esc(s) + '</li>'; }).join('');
+      var wkBullets = (Array.isArray(c.weaknesses) ? c.weaknesses : []).map(function(w){ return '<li>' + esc(w) + '</li>'; }).join('');
+      return '<div class="st-comp-card" style="--ag-c:' + color + '">'
+           +   '<div class="st-comp-h">'
+           +     '<div class="st-comp-nm">' + esc(c.name || '?') + '</div>'
+           +     (c.url ? '<a class="st-comp-url" href="' + esc(c.url) + '" target="_blank" rel="noopener">↗</a>' : '')
+           +   '</div>'
+           +   '<div class="st-comp-section"><div class="st-comp-lbl">💪 強み</div><ul class="st-comp-list st-comp-list-good">' + strBullets + '</ul></div>'
+           +   '<div class="st-comp-section"><div class="st-comp-lbl">⚠️ 弱み</div><ul class="st-comp-list st-comp-list-bad">' + wkBullets + '</ul></div>'
+           +   '<div class="st-comp-diff"><b>差別化:</b> ' + esc(c.differentiator || '') + '</div>'
+           + '</div>';
+    }).join('');
+    competitorHTML = ''
+      + '<div class="st-card">'
+      +   '<div class="st-card-h"><span class="st-card-ti">🔍 競合分析</span><span class="st-card-sub">主要 ' + strategy.competitors.length + ' 社</span></div>'
+      +   '<div class="st-comp-grid">' + compCards + '</div>'
+      + '</div>';
+  }
+
+  // 既存の戦略 artifact (= AI チャットで作ったもの)
   var strategyArt = allArts.find(function(a){
     return a && (
       (a.title && /戦略|strategy|KPI/i.test(a.title)) ||
       (a.filename && /strategy|kpi/i.test(a.filename))
     );
   });
-  var strategyHTML = strategyArt
-    ? '<div class="sd-strat-card">'
-      + '<div class="sd-card-h">📋 戦略 + KPI 設計</div>'
-      + '<div class="sd-strat-body">'
-      +   '<div class="sd-strat-ti">' + esc(strategyArt.title) + '</div>'
-      +   '<div class="sd-strat-meta">作成: ' + (strategyArt.created_at ? new Date(strategyArt.created_at).toLocaleDateString('ja-JP') : '') + '</div>'
-      +   '<a class="sd-strat-open" href="' + esc(strategyArt.url || '') + '" target="_blank" rel="noopener">戦略 sheet を全文で開く →</a>'
-      +   '<div class="sd-strat-hint">📌 AI が生成した 1 ページの戦略 sheet。ターゲット顧客 / 数値目標 / 主力施策 をまとめています。チャットで「戦略を更新して」と頼むと改訂されます。</div>'
-      + '</div>'
-      + '</div>'
-    : '<div class="sd-strat-card">'
-      + '<div class="sd-card-h">📋 戦略 + KPI 設計</div>'
-      + '<div class="sd-strat-empty">'
-      +   '<p>まだ戦略 sheet が生成されていません。チャットで「戦略を設計して」と依頼してください。</p>'
-      +   '<button class="sd-strat-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このサイトの集客戦略を 1 ページの戦略 sheet にまとめてください。ターゲット顧客 / 3 ヶ月の数値目標 / 主力施策 3 つ。\')">戦略を設計する →</button>'
-      + '</div>'
-      + '</div>';
-
-  // ペルソナカード (= placeholder, AI 生成想定)
-  var personaHTML = ''
-    + '<div class="sd-persona-card">'
-    +   '<div class="sd-card-h">👤 ターゲットペルソナ</div>'
-    +   '<div class="sd-persona-body">'
-    +     '<div class="sd-persona-ic">👤</div>'
-    +     '<div class="sd-persona-meta">'
-    +       '<div class="sd-persona-ti">' + esc(label) + ' の典型的訪問者</div>'
-    +       '<div class="sd-persona-tx">AI チャットで「ペルソナを詳しく設計して」と依頼すると、年齢層 / 関心 / 行動パターン / 痛みポイント を含む詳細ペルソナを artifact として作成します。</div>'
-    +       '<button class="sd-persona-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このサイトのターゲット顧客のペルソナを詳しく設計してください。年齢層、性別、職業、関心、行動パターン、痛みポイント、購買決定の鍵を含む 1 ページの artifact として。\')">ペルソナを設計 →</button>'
-    +     '</div>'
-    +   '</div>'
-    + '</div>';
-
-  // 競合分析
-  var competitorArt = allArts.find(function(a){
-    return a && a.title && /競合|competitor/i.test(a.title);
-  });
-  var competitorHTML = ''
-    + '<div class="sd-compet-card">'
-    +   '<div class="sd-card-h">🔍 競合分析</div>'
-    +   (competitorArt
-      ? '<div class="sd-compet-body">'
-        + '<div class="sd-compet-ti">' + esc(competitorArt.title) + '</div>'
-        + '<a class="sd-compet-open" href="' + esc(competitorArt.url || '') + '" target="_blank" rel="noopener">分析レポートを開く →</a>'
-        + '</div>'
-      : '<div class="sd-compet-empty">'
-        + '<p>競合の動きを定期的に把握しましょう。</p>'
-        + '<button class="sd-strat-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このサイトの主要競合を 3 社特定し、それぞれの強み / 弱み / 差別化のヒント / 学べる点 を 1 ページの artifact にまとめてください。\')">競合を分析する →</button>'
-        + '</div>')
-    + '</div>';
-
-  // コンテンツカレンダー (= placeholder)
-  var calendarHTML = ''
-    + '<div class="sd-cal-card">'
-    +   '<div class="sd-card-h">📅 今月のコンテンツカレンダー</div>'
-    +   '<div class="sd-cal-body">'
-    +     '<p class="sd-cal-empty">月間の投稿スケジュールを AI が設計します。チャットで「今月のコンテンツカレンダーを作って」と依頼してください。</p>'
-    +     '<button class="sd-strat-cta" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'今月のコンテンツカレンダーを設計してください。週 / 曜日ごとに何を投稿するか (ブログ記事 / SNS / メルマガ / 動画など)、テーマ、配信先を含む 1 ヶ月のカレンダー artifact として。\')">カレンダーを作成 →</button>'
-    +   '</div>'
-    + '</div>';
-
-  // KPI ツリー (= placeholder, KPI が設定されていれば visualize)
-  var kpi = site.kpi || {};
-  var kpiTreeHTML = '';
-  if(kpi.pv || kpi.cvr || kpi.leads){
-    kpiTreeHTML = ''
-      + '<div class="sd-kpi-tree">'
-      +   '<div class="sd-card-h">🎯 KPI ツリー</div>'
-      +   '<div class="sd-tree-body">'
-      +     (kpi.pv ? '<div class="sd-tree-node"><span class="sd-tree-lbl">月間 PV 目標</span><span class="sd-tree-val">' + Number(kpi.pv).toLocaleString() + '</span></div>' : '')
-      +     (kpi.cvr ? '<div class="sd-tree-node"><span class="sd-tree-lbl">CVR 目標</span><span class="sd-tree-val">' + kpi.cvr + '%</span></div>' : '')
-      +     (kpi.leads ? '<div class="sd-tree-node"><span class="sd-tree-lbl">月間リード目標</span><span class="sd-tree-val">' + Number(kpi.leads).toLocaleString() + '</span></div>' : '')
-      +     '<button class="sd-tree-edit" onclick="openKpiModal(\'' + esc(site.id) + '\')">編集</button>'
+  var artHTML = '';
+  if(strategyArt){
+    var openUrl = _artUrl(strategyArt);
+    artHTML = ''
+      + '<div class="st-card">'
+      +   '<div class="st-card-h"><span class="st-card-ti">📋 戦略 sheet (AI 生成)</span></div>'
+      +   '<div class="st-art-row">'
+      +     '<div class="st-art-meta">' + esc(_artDisplayTitle(strategyArt)) + '</div>'
+      +     (openUrl ? '<a class="st-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">全文を開く →</a>' : '')
       +   '</div>'
       + '</div>';
   }
 
-  return strategyHTML
-    + (kpiTreeHTML || '')
-    + '<div class="sd-strat-grid">' + personaHTML + competitorHTML + '</div>'
-    + calendarHTML;
+  return headerHTML + kpiSheetHTML + personaHTML + competitorHTML + artHTML;
+}
+
+// ─── Strategy 生成 action ─────────────────────────────────────
+async function _generateStrategy(siteId, btnEl){
+  if(!siteId) return;
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🤖 生成中... (30-60s)'; }
+  try {
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/strategy/generate');
+    if(r && r.ok && r.strategy){
+      var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+      if(site) site.strategy = r.strategy;
+      showToast('✅ 戦略生成完了', 'ok');
+      try { renderHomeDashboard(); } catch(_){}
+    } else {
+      showToast((r && r.detail) || '戦略生成に失敗', 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 戦略を生成する <span class="arrow">→</span>'; }
+    }
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 戦略を生成する <span class="arrow">→</span>'; }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════

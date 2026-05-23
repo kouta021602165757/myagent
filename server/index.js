@@ -16742,6 +16742,112 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { ok: true, kpi: ag.kpi });
   }
 
+  // ── Strategy (= ペルソナ + 競合 + 6ヶ月 KPI シート、Sonnet で 1 回生成) ──
+  //
+  // データモデル: agent.strategy = {
+  //   generated_at, ga4_baseline, kpi_target,
+  //   persona: { name, age, occupation, painpoints[], motivations[], buying_triggers[] },
+  //   competitors: [{ name, url?, strengths[], weaknesses[], differentiator }],
+  //   kpi_6mo: [{ month, label, pv, sessions, leads, cvr, milestone }],
+  // }
+  //
+  // POST /api/agents/:id/strategy/generate — Sonnet で全部一気に生成
+  const strategyGenMatch = pathname.match(/^\/api\/agents\/([^/]+)\/strategy\/generate$/);
+  if(strategyGenMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === strategyGenMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const kpi = ag.kpi || {};
+    const ga4 = ag.ga4_snapshot || {};
+    const baseline = ga4.last_7d
+      ? '直近 7 日: PV ' + ga4.last_7d.pv + ' / セッション ' + ga4.last_7d.sessions + ' / ユーザー ' + ga4.last_7d.users
+      : '(GA4 未接続のため数値ベースなし)';
+    const target = (kpi.pv || kpi.cvr || kpi.leads)
+      ? 'PV ' + (kpi.pv || '未設定') + ' / CVR ' + (kpi.cvr || '未設定') + '% / 月間リード ' + (kpi.leads || '未設定')
+      : '(KPI 未設定 — 一般的な成長を目標)';
+
+    const prompt = `あなたは集客マーケティングのストラテジストです。サイト「${ag.site_url || ag.name}」(${ag.site_vertical || 'general'}) の戦略を以下 3 種類の JSON で出力してください。
+
+【現状】 ${baseline}
+【目標】 ${target}
+
+【出力ルール】
+- persona: 1 名の典型的なターゲット顧客像 (実在しないが具体的な人物像として)
+- competitors: 3 社の主要競合 (実在 / 推測)
+- kpi_6mo: 月 1 から月 6 まで、現状 → 目標へ段階的に到達する月次 KPI
+- 数値はベースライン (${baseline}) から目標 (${target}) へ logical に逆算
+
+出力フォーマット (JSON のみ、コメントや説明文・markdown は不要):
+{
+  "persona": {
+    "name": "(例: 田中さん)",
+    "age": "(年齢層)",
+    "occupation": "(職業 / 業界)",
+    "painpoints": ["(痛みポイント 3 つ)"],
+    "motivations": ["(購買動機 3 つ)"],
+    "buying_triggers": ["(行動を起こすキッカケ 2 つ)"]
+  },
+  "competitors": [
+    {
+      "name": "(会社名)",
+      "url": "(URL があれば)",
+      "strengths": ["(強み 2-3 つ)"],
+      "weaknesses": ["(弱み 1-2 つ)"],
+      "differentiator": "(自社が勝てる差別化ポイント 1 文)"
+    }
+  ],
+  "kpi_6mo": [
+    {
+      "month": 1,
+      "label": "(月のテーマ 10 字程度)",
+      "pv": 1000,
+      "sessions": 800,
+      "leads": 5,
+      "cvr": 1.5,
+      "milestone": "(達成すべき具体的成果 1 文)"
+    }
+  ]
+}`;
+
+    try {
+      const apiResp = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+        { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+        {
+          model: 'claude-sonnet-4-6',
+          max_tokens: 6000,
+          messages: [{ role: 'user', content: prompt }],
+        });
+      if(apiResp.s < 200 || apiResp.s >= 300){
+        console.warn('[strategy-gen] anthropic error:', apiResp.s, JSON.stringify(apiResp.d).slice(0, 300));
+        return jres(res, 500, { error: 'generation_failed', detail: 'AI 生成に失敗しました。少し待って再試行してください。' });
+      }
+      const raw = (apiResp.d && apiResp.d.content && apiResp.d.content[0] && apiResp.d.content[0].text) || '';
+      let parsed = null;
+      try {
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if(jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      } catch(e){
+        console.warn('[strategy-gen] JSON parse failed:', e.message);
+      }
+      if(!parsed){
+        return jres(res, 500, { error: 'parse_failed', detail: '生成結果の解析に失敗しました。再試行してください。' });
+      }
+      ag.strategy = {
+        generated_at: new Date().toISOString(),
+        ga4_baseline: ga4.last_7d || null,
+        kpi_target: { ...kpi },
+        persona: parsed.persona || null,
+        competitors: Array.isArray(parsed.competitors) ? parsed.competitors.slice(0, 5) : [],
+        kpi_6mo: Array.isArray(parsed.kpi_6mo) ? parsed.kpi_6mo.slice(0, 6) : [],
+      };
+      try { await DB.save(user); } catch(e){ console.warn('[strategy-gen] save failed:', e.message); }
+      console.log('[strategy-gen] generated for agent', ag.id);
+      return jres(res, 200, { ok: true, strategy: ag.strategy });
+    } catch(e){
+      console.warn('[strategy-gen] fetch failed:', e.message);
+      return jres(res, 500, { error: 'generation_failed', detail: e.message });
+    }
+  }
+
   // ── Roadmap (= 6 ヶ月の実行ロードマップ。Week 1-12 / 各 Week 5-10 タスク) ──
   // データモデル: agent.roadmap = {
   //   generated_at, kpi_snapshot, weeks:[{n,theme,tasks:[{id,text,dept_id,owner,due_week,done,ai}]}],

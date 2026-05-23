@@ -5055,25 +5055,49 @@ function _buildStrategicInsights(site, ga4Data, allArts, weekly){
       }
     }
   }
-  // ga4 がない or 足りない場合は activity ベースで埋める
-  while(out.length < 3){
-    if(allArts && allArts.length === 0){
-      out.push({
-        cls: 'c-warn', icon: '🚀', title: 'まずは最初の依頼を',
-        body: 'チャットで「集客プランを作って」と話しかけると、AI チームが動き始めます。3 件ほど依頼を投入すると、結果が見え始めます。'
-      });
-    } else if(weekly && weekly.delta > 0){
-      out.push({
-        cls: 'c-good', icon: '🤖', title: 'AI 組織の生産性が向上',
-        body: '今週は先週より <b>+' + weekly.delta + ' 件</b> 多く納品。このペースを維持できれば、月内に多角的な施策展開が完成します。'
-      });
-    } else {
-      out.push({
-        cls: 'c-info', icon: '💡', title: '次の伸びを生む打ち手を仕込む',
-        body: 'チャットで「次の打ち手を提案して」と依頼すると、現状をふまえた具体的な施策を 3 案返します。'
-      });
-    }
-    if(out.length >= 3) break;
+  // GA4 由来の insight が 3 枚未満の場合、activity / generic 系で埋める。
+  // 各 fallback は 1 回しか push されないよう、既に存在する title を弾く。
+  var fallbackPool = [];
+  if(allArts && allArts.length === 0){
+    fallbackPool.push({
+      cls: 'c-warn', icon: '🚀', title: 'まずは最初の依頼を',
+      body: 'チャットで「集客プランを作って」と話しかけると、AI チームが動き始めます。3 件ほど依頼を投入すると、結果が見え始めます。'
+    });
+  }
+  if(weekly && weekly.delta > 0){
+    fallbackPool.push({
+      cls: 'c-good', icon: '🤖', title: 'AI 組織の生産性が向上',
+      body: '今週は先週より <b>+' + weekly.delta + ' 件</b> 多く納品。このペースを維持できれば、月内に多角的な施策展開が完成します。'
+    });
+  } else if(weekly && weekly.delta < 0){
+    fallbackPool.push({
+      cls: 'c-warn', icon: '⚠️', title: 'AI 組織の活動が鈍化',
+      body: '今週は先週より ' + Math.abs(weekly.delta) + ' 件少ない納品でした。チャットで次の依頼を投げると組織が動き出します。'
+    });
+  }
+  if(!ga4Data){
+    fallbackPool.push({
+      cls: 'c-info', icon: '📊', title: 'GA4 接続で施策の効果検証',
+      body: 'Google Analytics を接続すると、納品物の効果を <b>数字で検証</b> できるようになります。設定 tab から 1 クリックで接続。'
+    });
+  }
+  fallbackPool.push({
+    cls: 'c-info', icon: '💡', title: '次の伸びを生む打ち手を仕込む',
+    body: 'チャットで「次の打ち手を提案して」と依頼すると、現状をふまえた具体的な施策を 3 案返します。'
+  });
+  fallbackPool.push({
+    cls: 'c-info', icon: '🎯', title: 'KPI を見直すタイミング',
+    body: '今の KPI 目標が現状と合っているか定期的に見直しましょう。「戦略・KPI」 tab で 6 ヶ月シートを生成すると、現状を踏まえた段階目標が立てられます。'
+  });
+  fallbackPool.push({
+    cls: 'c-good', icon: '🏢', title: 'AI 組織が支援する範囲を広げる',
+    body: '組織図 tab を開くと、SEO / AEO / SNS / CRO など各部門の専門家が見えます。普段使っていないメンバーに依頼すると新しい施策が出ます。'
+  });
+  // 既存 title と被らないものから順に push
+  for(var i = 0; i < fallbackPool.length && out.length < 3; i++){
+    var cand = fallbackPool[i];
+    if(out.some(function(x){ return x.title === cand.title; })) continue;
+    out.push(cand);
   }
   return out.slice(0, 3);
 }

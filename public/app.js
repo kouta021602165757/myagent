@@ -2617,14 +2617,17 @@ function _addNextStepCTA(ag){
     ],
   };
   var steps = NEXT_STEPS[vertical] || NEXT_STEPS.other;
-  // Markdown でボタン風に表示 (= 既存の renderer が clickable link を扱える)
-  var content = '✨ **AI チームへの最初の依頼を選んでください**\n\n'
-    + 'どれをクリックしても、その依頼がそのまま実行されます。AI 組織の動きが見えやすい初手を 3 つ用意しました。\n\n'
+  // クリック → 即送信のボタン (= activation の最大の山。 コピペ摩擦を消す)
+  // <sendprompt:base64> marker を _md が button に変換する
+  function _b64encode(s){
+    try { return btoa(unescape(encodeURIComponent(s))); } catch(_){ return ''; }
+  }
+  var content = '✨ **AI チームへの最初の依頼を 1 クリックで実行**\n\n'
+    + '下のボタンをクリックすると、 その依頼が即座に AI に送信されます。 自分で書いてもらっても OK。\n\n'
     + steps.map(function(s, i){
-        // Special marker: NEXTSTEP|{prompt} で _md が button に変換する
-        return '🎯 **' + (i+1) + '. ' + s.ic + ' ' + s.label + '**\n   > ' + s.prompt;
-      }).join('\n\n')
-    + '\n\n💡 上記からテキストをコピーして送信するか、自分の言葉で依頼を書いてもらっても OK です。';
+        var b64 = _b64encode(s.prompt);
+        return '<sendprompt:' + b64 + '|' + esc(s.ic + ' ' + s.label) + '>';
+      }).join('');
 
   ag.history.push({
     id: 'a_nextstep_' + Date.now(),
@@ -3494,6 +3497,38 @@ window._promptAiToPost = function(siteId, platform, platformName){
     // 数字 tab を 1 度閉じて chat にユーザーを案内
     showToast('💬 チャット欄に prompt を入力しました — 送信すると AI が投稿します', 'ok');
   }, 200);
+};
+// 1 クリックで chat に prompt 送信 (= activation の next-step CTA で使用)
+// base64 で encode された prompt を decode → chat input prefill → auto-send
+window._quickSendPrompt = function(b64, btnEl){
+  if(btnEl){ btnEl.disabled = true; btnEl.style.opacity = '0.6'; }
+  try {
+    var prompt = decodeURIComponent(escape(atob(b64)));
+    var ci = document.getElementById('ci');
+    if(!ci){ console.warn('[quickSendPrompt] chat input not found'); return; }
+    ci.value = prompt;
+    ci.focus();
+    ci.dispatchEvent(new Event('input', { bubbles: true }));
+    // 「送信」 を trigger — form submit or send button click
+    var form = ci.closest && ci.closest('form');
+    if(form){
+      // 通常 form だと submit イベント、 chat の場合は別途 submit handler が登録されてる
+      var sendBtn = document.querySelector('button[type="submit"][form="' + (form.id||'') + '"]')
+                 || form.querySelector('button[type="submit"]')
+                 || document.querySelector('#sendBtn, [data-send-btn], .send-btn');
+      if(sendBtn){ sendBtn.click(); }
+      else {
+        // Enter キーを発火 (= chat input が keydown Enter を listen している場合)
+        ci.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+      }
+    } else {
+      // form なし — 直接 Enter で送信
+      ci.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+    }
+  } catch(e){
+    console.warn('[quickSendPrompt] failed:', e && e.message);
+    if(btnEl){ btnEl.disabled = false; btnEl.style.opacity = ''; }
+  }
 };
 // 数字 tab の GSC card から AI に検索流入を聞く CTA
 window._promptAiGscQuery = function(siteId){
@@ -7989,6 +8024,10 @@ function _md(src, ctx){
   // <x1click:SITE_ID> — 1 クリックで X テスト投稿フロー (= 拡張 check → 接続 → preview → 投稿)
   html=html.replace(/&lt;x1click:([a-z0-9_]+)&gt;/gi, function(_, sid){
     return '<button class="x1click-cta" onclick="_oneClickXPost(\''+sid+'\', this)">🚀 1 クリックで X に投稿する</button>';
+  });
+  // <sendprompt:base64|label> — クリックで chat input prefill + 自動送信 (= activation 摩擦消し)
+  html=html.replace(/&lt;sendprompt:([A-Za-z0-9+/=]+)\|([^&]+?)&gt;/gi, function(_, b64, label){
+    return '<button class="nextstep-cta" onclick="_quickSendPrompt(\''+b64+'\', this)">' + label + ' <span class="nextstep-arrow">→ 送信</span></button>';
   });
   // <extinstall> — 拡張インストール CTA (= /setup-extension.html へ)
   html=html.replace(/&lt;extinstall&gt;/gi,

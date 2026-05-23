@@ -3641,6 +3641,40 @@ input,textarea{font-family:var(--sans);}
   transform:translateY(-1px);
   box-shadow:0 4px 12px rgba(234,88,12,.28);
 }
+/* Activation next-step CTA (= AI 受領メッセージから 1 クリック送信) */
+.nextstep-cta{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  width:100%;
+  background:#fff; color:var(--text);
+  border:1.5px solid var(--peach, #fb923c);
+  padding:14px 18px;
+  margin:8px 0;
+  border-radius:11px;
+  font-family:inherit; font-size:13.5px; font-weight:800;
+  cursor:pointer; letter-spacing:-.005em; line-height:1.4;
+  transition:all .15s;
+  text-align:left;
+}
+.nextstep-cta:hover{
+  background:linear-gradient(135deg, rgba(251,146,60,.06), rgba(234,88,12,.04));
+  border-color:var(--peach-dark, #ea580c);
+  transform:translateX(2px);
+  box-shadow:0 4px 12px rgba(234,88,12,.18);
+}
+.nextstep-cta:disabled{
+  cursor:not-allowed; transform:none;
+}
+.nextstep-arrow{
+  font-size:11.5px; font-weight:800;
+  color:var(--peach-dark, #ea580c);
+  background:rgba(251,146,60,.12);
+  padding:4px 10px; border-radius:99px;
+  letter-spacing:.02em; flex-shrink:0;
+  white-space:nowrap;
+}
+.nextstep-cta:hover .nextstep-arrow{
+  background:var(--peach-dark, #ea580c); color:#fff;
+}
 .nu-sns-actions{display:flex; justify-content:flex-end}
 .nu-sns-link{
   font-size:10.5px; font-weight:800; color:var(--text2);

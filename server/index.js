@@ -1545,7 +1545,8 @@ async function ensureReferralCode(user){
 async function findUserByReferralCode(code){
   if(!code || typeof code !== 'string' || code.length !== 8) return null;
   if(USE_SUPA){
-    const r = await sbReq('GET','users','?select=*&referral_code=eq.'+encodeURIComponent(code)+'&limit=1');
+    // egress 削減: caller は id しか使わない (signup でリファラ ID を保存するだけ)
+    const r = await sbReq('GET','users','?select=id,name,referral_code,referral_stats&referral_code=eq.'+encodeURIComponent(code)+'&limit=1');
     return (r && r.d && r.d[0]) || null;
   } else {
     return LDB.find(u => u.referral_code === code) || null;
@@ -8345,20 +8346,18 @@ async function findArtifactByFilename(filename){
   if(!filename) return null;
   try {
     if(USE_SUPA){
+      // 2026-05-23: egress 削減のため select=artifacts (= 全 column 取得を避ける)。
+      // 加えて broad-scan fallback (= select=artifacts limit=2000) を削除。 JSONB cs
+      // filter は GIN index で確実に当たるので、 miss = 該当なし。
+      // 旧 fallback は 2000 user の artifacts JSONB を全 fetch して 100MB+ egress を
+      // 発生させていた (= 2026-05-17 outage の主因)。
       const filter = encodeURIComponent('[{"filename":"'+filename+'"}]');
-      const r = await sbReq('GET','users','?select=*&artifacts=cs.'+filter+'&limit=1');
+      const r = await sbReq('GET','users','?select=artifacts&artifacts=cs.'+filter+'&limit=1');
       if(Array.isArray(r.d) && r.d.length){
         const a = (r.d[0].artifacts||[]).find(x => x.filename===filename);
         if(a) return a;
       }
-      // Broad scan fallback.
-      const r2 = await sbReq('GET','users','?select=artifacts&limit=2000');
-      if(Array.isArray(r2.d)){
-        for(const u of r2.d){
-          const a = (u.artifacts||[]).find(x => x.filename===filename);
-          if(a) return a;
-        }
-      }
+      return null;
     } else {
       for(const u of LDB.all()){
         const a = (u.artifacts||[]).find(x => x.filename===filename);
@@ -13262,7 +13261,8 @@ async function serveCreatorProfilePage(res, handle){
   try {
     let owner = null;
     if(USE_SUPA){
-      const r = await sbReq('GET','users','?select=*&handle=eq.'+encodeURIComponent(handle)+'&limit=1');
+      // egress 削減: artifacts (= fat JSONB) を drop。 caller は agents (= marketplace listings) のみ参照
+      const r = await sbReq('GET','users','?select=id,name,handle,agents,is_verified,is_founder&handle=eq.'+encodeURIComponent(handle)+'&limit=1');
       owner = (r.d && r.d[0]) || null;
     } else {
       owner = LDB.find(u => (u.handle||'').toLowerCase() === handle) || null;
@@ -16246,7 +16246,8 @@ async function handleAPI(req,res,pathname,method,ip){
     let owner = null;
     try {
       if(USE_SUPA){
-        const r = await sbReq('GET','users','?select=*&handle=eq.'+encodeURIComponent(h)+'&limit=1');
+        // egress 削減: artifacts を drop
+        const r = await sbReq('GET','users','?select=id,name,handle,agents,is_verified,is_founder&handle=eq.'+encodeURIComponent(h)+'&limit=1');
         owner = (r.d && r.d[0]) || null;
       } else {
         owner = LDB.find(u => (u.handle||'').toLowerCase() === h) || null;
@@ -17098,6 +17099,59 @@ async function handleAPI(req,res,pathname,method,ip){
       team: preset,
       site_url: siteUrl,
       site_title: pageTitle,
+    });
+  }
+
+  // ── GET /api/onboarding/migration-stats (admin) ────────────
+  // Pivot v2 移行の進捗を観測: legacy agents (= site_url なし) を持つ user の数 +
+  // 既に migrate 完了の数。 admin のみアクセス可。
+  if(pathname === '/api/onboarding/migration-stats' && method === 'GET'){
+    if(!user.is_admin) return jres(res, 403, { error: 'admin_only' });
+    let users = [];
+    if(USE_SUPA){
+      // egress 削減: agents だけ取得
+      const r = await sbReq('GET','users','?select=id,name,email,agents,created_at&limit=5000');
+      users = Array.isArray(r.d) ? r.d : [];
+    } else {
+      users = LDB.all();
+    }
+    let totalUsers = 0;
+    let usersWithSiteAgent = 0;
+    let usersWithLegacyAgent = 0;
+    let usersWithMixedAgents = 0;
+    let totalLegacyAgents = 0;
+    let totalSiteAgents = 0;
+    const stuckSamples = [];
+    for(const u of users){
+      if(u.deleted) continue;
+      totalUsers++;
+      const agents = Array.isArray(u.agents) ? u.agents : [];
+      const legacy = agents.filter(a => a && !a.site_url && !a.is_group);
+      const sites  = agents.filter(a => a && a.site_url);
+      totalLegacyAgents += legacy.length;
+      totalSiteAgents += sites.length;
+      if(sites.length) usersWithSiteAgent++;
+      if(legacy.length) usersWithLegacyAgent++;
+      if(legacy.length && sites.length) usersWithMixedAgents++;
+      // 「移行未着手」 = legacy だけ持って site 0
+      if(legacy.length && !sites.length && stuckSamples.length < 30){
+        stuckSamples.push({
+          id: u.id, email: u.email || '(none)',
+          legacy_count: legacy.length,
+          created_at: u.created_at,
+        });
+      }
+    }
+    return jres(res, 200, {
+      ok: true,
+      total_users: totalUsers,
+      users_with_site_agent: usersWithSiteAgent,
+      users_with_legacy_only: usersWithLegacyAgent - usersWithMixedAgents,
+      users_mixed: usersWithMixedAgents,
+      total_legacy_agents: totalLegacyAgents,
+      total_site_agents: totalSiteAgents,
+      stuck_users_sample: stuckSamples,
+      generated_at: new Date().toISOString(),
     });
   }
 
@@ -21361,7 +21415,8 @@ ${orgSummary || '(汎用チーム)'}
     let allUsers = [];
     try {
       if(USE_SUPA){
-        const r = await sbReq('GET','users','?select=*&is_founder=eq.true&order=founder_seat_no.asc&limit=200');
+        // egress 削減: 200 founder × artifacts (fat JSONB) = 数十 MB を回避
+        const r = await sbReq('GET','users','?select=id,name,email,founder_seat_no,founder_granted_at,founder_email_sent,plan&is_founder=eq.true&order=founder_seat_no.asc&limit=200');
         allUsers = Array.isArray(r.d) ? r.d : [];
       } else {
         allUsers = LDB.all().filter(u => u.is_founder).sort((a,b)=>(a.founder_seat_no||0)-(b.founder_seat_no||0));

@@ -3467,6 +3467,34 @@ function _siteHostname(site){
   try { return new URL(site.site_url).hostname.replace(/^www\./, ''); }
   catch(e){ return site.name || ''; }
 }
+// 数字 tab の SNS card で 「投稿 0 のユーザー」 を AI に誘導する onboarding CTA
+// platform 別に サイト情報を盛り込んだ prompt を chat input に prefill
+window._promptAiToPost = function(siteId, platform, platformName){
+  var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+  if(!site){ console.warn('[promptAiToPost] site not found:', siteId); return; }
+  var hostname = (function(){ try{ return new URL(site.site_url).hostname.replace(/^www\./,''); } catch(_){ return site.name||''; } })();
+  // platform 別 prompt 雛形
+  var PROMPT_BY_PLATFORM = {
+    x:         '私のサイト「' + hostname + '」(' + site.site_url + ') の魅力を伝える X (Twitter) 投稿を 1 つ作って、 投稿してください。',
+    linkedin:  '私のサイト「' + hostname + '」(' + site.site_url + ') のサービスを LinkedIn 向けにプロフェッショナルなトーンで投稿してください。',
+    threads:   '私のサイト「' + hostname + '」(' + site.site_url + ') の最新情報を、 Threads にカジュアルな雰囲気で投稿してください。',
+    facebook:  '私のサイト「' + hostname + '」(' + site.site_url + ') を紹介する Facebook 投稿を作って、 投稿してください。',
+    note:      '私のサイト「' + hostname + '」(' + site.site_url + ') について、 note に 1 本記事を書いて、 まずは下書き保存してください。',
+    wordpress: '私のサイト「' + hostname + '」のテーマで WordPress に記事を 1 本書いて、 まずは下書き保存してください。 適切なカテゴリ・タグも付けて。',
+    shopify:   '私のショップに最初の商品を 1 つ作って、 まずは draft で保存してください (= 商品名 / 商品説明 / 仮の価格)。',
+  };
+  var prompt = PROMPT_BY_PLATFORM[platform] || ('私の ' + (platformName || platform) + ' アカウントに最初の投稿をしてください。');
+  // 数字 tab → chat へ切替 (= 同じ agent view 内で chat input がある)
+  try {
+    if(typeof openAgent === 'function') openAgent(siteId);
+  } catch(_){}
+  setTimeout(function(){
+    var ci = document.getElementById('ci');
+    if(ci){ ci.value = prompt; ci.focus(); ci.dispatchEvent(new Event('input', { bubbles: true })); }
+    // 数字 tab を 1 度閉じて chat にユーザーを案内
+    showToast('💬 チャット欄に prompt を入力しました — 送信すると AI が投稿します', 'ok');
+  }, 200);
+};
 // 「3 時間前」 / 「2 日前」 などの相対時間 (= 数字 tab の SNS card で使用)
 function _fmtRelTime(iso){
   if(!iso) return '';
@@ -4655,13 +4683,18 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     if(st.connected){
       var profUrl = _profileUrl(st.profile);
       var handle = _profileHandle(st.profile);
+      var hasZeroPosts = p.hasPostTool && hist.length === 0;
       var statsHTML = p.hasPostTool
         ? '<div class="nu-sns-stats">'
           + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + hist.length + '</div><div class="nu-sns-stat-l">累計投稿</div></div>'
           + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + (lastPostAt || '—') + '</div><div class="nu-sns-stat-l">直近</div></div>'
           + '</div>'
         : '<div class="nu-sns-soon">⏳ 投稿 tool は近日対応 (接続情報は保存済)</div>';
-      return '<div class="nu-sns-card on" style="--nu-c:' + p.color + '">'
+      // 投稿 0 のユーザーへの onboarding CTA (= 「AI に最初の投稿を任せる」)
+      var zeroCtaHTML = hasZeroPosts
+        ? '<button class="nu-sns-zero-cta" onclick="_promptAiToPost(\'' + esc(site.id) + '\',\'' + p.key + '\',' + JSON.stringify(p.name) + ')">✨ AI に最初の投稿を任せる →</button>'
+        : '';
+      return '<div class="nu-sns-card on' + (hasZeroPosts ? ' nu-sns-card-zero' : '') + '" style="--nu-c:' + p.color + '">'
            +   '<div class="nu-sns-h">'
            +     '<span class="nu-sns-emoji">' + p.emoji + '</span>'
            +     '<span class="nu-sns-name">' + esc(p.name) + '</span>'
@@ -4669,6 +4702,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
            +   '</div>'
            +   (handle ? '<div class="nu-sns-handle">' + esc(handle) + '</div>' : '')
            +   statsHTML
+           +   zeroCtaHTML
            +   '<div class="nu-sns-actions">'
            +     (profUrl ? '<a href="' + esc(profUrl) + '" target="_blank" rel="noopener" class="nu-sns-link">プロフィール ↗</a>' : '')
            +   '</div>'
@@ -4726,13 +4760,18 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       var handle = _profileHandle(st.profile);
       var linkLabel = p.kind === 'ec' ? 'ショップ' : (p.key === 'wordpress' ? 'サイト' : 'プロフィール');
       var unitLbl = p.kind === 'ec' ? '出品商品' : '公開記事';
+      var hasZeroPosts = p.hasPostTool && hist.length === 0;
       var statsHTML = p.hasPostTool
         ? '<div class="nu-sns-stats">'
           + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + hist.length + '</div><div class="nu-sns-stat-l">' + unitLbl + '</div></div>'
           + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + (lastPostAt || '—') + '</div><div class="nu-sns-stat-l">直近</div></div>'
           + '</div>'
         : '<div class="nu-sns-soon">⏳ ' + (p.kind === 'ec' ? '商品出品' : '記事公開') + ' tool は近日対応 (接続情報は保存済)</div>';
-      return '<div class="nu-sns-card on" style="--nu-c:' + p.color + '">'
+      var zeroCtaLbl = p.kind === 'ec' ? 'AI に最初の商品を作らせる' : 'AI に最初の記事を書かせる';
+      var zeroCtaHTML = hasZeroPosts
+        ? '<button class="nu-sns-zero-cta" onclick="_promptAiToPost(\'' + esc(site.id) + '\',\'' + p.key + '\',' + JSON.stringify(p.name) + ')">✨ ' + zeroCtaLbl + ' →</button>'
+        : '';
+      return '<div class="nu-sns-card on' + (hasZeroPosts ? ' nu-sns-card-zero' : '') + '" style="--nu-c:' + p.color + '">'
            +   '<div class="nu-sns-h">'
            +     '<span class="nu-sns-emoji">' + p.emoji + '</span>'
            +     '<span class="nu-sns-name">' + esc(p.name) + '</span>'
@@ -4740,6 +4779,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
            +   '</div>'
            +   (handle ? '<div class="nu-sns-handle">' + esc(handle) + '</div>' : '')
            +   statsHTML
+           +   zeroCtaHTML
            +   '<div class="nu-sns-actions">'
            +     (profUrl ? '<a href="' + esc(profUrl) + '" target="_blank" rel="noopener" class="nu-sns-link">' + linkLabel + ' ↗</a>' : '')
            +   '</div>'

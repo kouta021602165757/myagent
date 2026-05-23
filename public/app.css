@@ -3622,6 +3622,25 @@ input,textarea{font-family:var(--sans);}
   text-align:center; letter-spacing:.005em;
   border:1px dashed var(--wire2);
 }
+/* 投稿 0 のユーザー向け onboarding CTA — 接続済だけど一回も AI に投稿させてない */
+.nu-sns-card-zero{
+  background:linear-gradient(135deg, #fff 0%, rgba(251,146,60,.04) 100%);
+  border-color:rgba(251,146,60,.32);
+}
+.nu-sns-zero-cta{
+  background:linear-gradient(135deg, var(--peach,#fb923c), var(--peach-dark,#ea580c));
+  color:#fff; border:0;
+  padding:8px 10px; border-radius:8px;
+  font-family:inherit; font-size:11px; font-weight:800;
+  cursor:pointer; letter-spacing:-.005em; line-height:1.35;
+  box-shadow:0 2px 8px rgba(234,88,12,.18);
+  transition:transform .15s, box-shadow .15s;
+  margin-top:2px;
+}
+.nu-sns-zero-cta:hover{
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(234,88,12,.28);
+}
 .nu-sns-actions{display:flex; justify-content:flex-end}
 .nu-sns-link{
   font-size:10.5px; font-weight:800; color:var(--text2);

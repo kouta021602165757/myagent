@@ -9314,11 +9314,12 @@ const SNS_TOOLS = [
         tags: { type: 'array', items: { type: 'string' }, description: '(任意) タグ — 配列で完全に置換' },
         scheduled_at: { type: 'string', description: '(任意) 予約日時 ISO 8601。 未来日なら自動で status=future に' },
         featured_image_url: { type: 'string', description: '(任意) アイキャッチ画像 URL を差し替え' },
+        clear_featured_image: { type: 'boolean', description: '(任意) true にするとアイキャッチ画像を外す (= 「画像を変更しない」とは別)' },
       },
       required: [],
     },
   },
-  // ── Shopify ──
+  // ── Shopify: 商品新規作成 ──
   {
     name: 'create_shopify_product',
     description: '⚠️ 事前にユーザーが Shopify Admin ({shop}.myshopify.com/admin) にブラウザでログイン済みであること。\nShopify ショップに商品を作成します。Active (即公開) or Draft (下書き)。デフォルトは下書き (= ユーザー確認推奨)。\n\nユーザーがまだ Shopify を接続していない場合は 「接続 tab で Shopify を接続してください」 と案内すること。',
@@ -9331,6 +9332,38 @@ const SNS_TOOLS = [
         status: { type: 'string', enum: ['draft','active'], description: 'default: draft' },
       },
       required: ['title'],
+    },
+  },
+  // ── Shopify: 商品編集 ──
+  {
+    name: 'edit_shopify_product',
+    description: '⚠️ 事前にユーザーが Shopify Admin にブラウザでログイン済みであること。\n\n既存の Shopify 商品を編集します (= タイトル / 商品説明 / 価格 / ステータス の差し替え)。 product_id か product_url (= admin/products/<ID> 形式) のどちらかが必須。 渡したフィールドのみ上書きされます。\n\n値段変更、 説明文リライト、 ステータス切替 (= active ↔ draft) の用途に。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string', description: '(product_id か product_url のどちらか必須) 商品 ID (数値)' },
+        product_url: { type: 'string', description: '(product_id か product_url のどちらか必須) Shopify Admin の商品 URL (例: https://shop.myshopify.com/admin/products/12345)' },
+        title: { type: 'string', description: '(任意) 新しい商品名' },
+        description: { type: 'string', description: '(任意) 新しい商品説明' },
+        price: { type: 'string', description: '(任意) 新しい価格 (数字のみ)' },
+        status: { type: 'string', enum: ['draft','active'], description: '(任意) ステータス切替' },
+      },
+      required: [],
+    },
+  },
+  // ── note: 記事編集 ──
+  {
+    name: 'edit_note',
+    description: '⚠️ 事前にユーザーが note.com にブラウザでログイン済みであること。\n\n既存の note 記事を編集します (= タイトル / 本文 / ステータス の差し替え)。 post_url (公開ページ URL) で記事を特定。 渡したフィールドのみ上書きされます。\n\nリライト、 typo 修正、 下書き化、 後から公開 の用途に。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        post_url: { type: 'string', description: '記事の公開ページ URL (例: https://note.com/yourname/n/n12345abc)' },
+        title: { type: 'string', description: '(任意) 新しいタイトル' },
+        content: { type: 'string', description: '(任意) 新しい本文' },
+        status: { type: 'string', enum: ['draft','publish'], description: '(任意) ステータス切替' },
+      },
+      required: ['post_url'],
     },
   },
 ];
@@ -9965,7 +9998,110 @@ async function executePublishNoteTool(user, input){
   };
 }
 
+// ── note 記事編集 ──
+// note の編集 URL は `note.com/notes/<note_id>/edit`。 public URL `note.com/<user>/n/<note_id>` から ID 抽出。
+async function executeEditNoteTool(user, input){
+  const post_url = String((input && input.post_url) || '').trim();
+  const newTitle = String((input && input.title) || '');
+  const newContent = String((input && input.content) || '');
+  const newStatus = (input && input.status === 'publish') ? 'publish' : (input.status === 'draft' ? 'draft' : null);
+  if(!post_url) return { error: 'post_url_required', detail: 'note の記事 URL (= note.com/.../n/...) を指定してください。' };
+  if(!newTitle && !newContent && !newStatus) return { error: 'no_update_fields', detail: '更新する title / content / status のいずれかを指定してください。' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+
+  // note ID 抽出 (= /n/<id> パターン)
+  const idMatch = post_url.match(/\/n\/([A-Za-z0-9_-]+)/) || post_url.match(/\/notes\/([A-Za-z0-9_-]+)/);
+  if(!idMatch) return { error: 'note_id_extract_failed', detail: 'URL から note ID を抽出できません: ' + post_url };
+  const noteId = idMatch[1];
+  const editUrl = 'https://note.com/notes/' + noteId + '/edit';
+
+  // 1) 編集画面を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: editUrl });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await executeExtensionTool(user, 'ext_wait_for', { selector: '.ProseMirror,[contenteditable="true"]', timeout_ms: 12000 });
+
+  // 2) ログイン check (login redirect なら fail)
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const currentUrl = String((r && r.url) || '');
+  if(/note\.com\/login|sso\./i.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'note にログインしてください: https://note.com/login' };
+  }
+  if(!/\/notes\//.test(currentUrl)){
+    return { error: 'edit_page_not_reached', detail: '編集ページに到達できません (URL: ' + currentUrl + ')。 note の URL 仕様が変わった可能性。' };
+  }
+
+  // 3) Title 更新 (= 提供されている場合のみ)
+  if(newTitle){
+    // 既存タイトルを選択して上書きするため、 select-all → type で置換
+    r = await executeExtensionTool(user, 'ext_click', { target: '[placeholder*="記事タイトル"]' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: 'input[name="title"]' });
+    }
+    await _sleep(400);
+    await executeExtensionTool(user, 'ext_press_key', { key: 'Ctrl+A' });
+    await _sleep(150);
+    await executeExtensionTool(user, 'ext_press_key', { key: 'Delete' });
+    await _sleep(150);
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '[placeholder*="記事タイトル"]',
+      text: newTitle,
+    });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_type', { selector: 'input[name="title"]', text: newTitle });
+    }
+    await _sleep(600);
+  }
+
+  // 4) Content 更新 (= 提供されている場合のみ)
+  if(newContent){
+    r = await executeExtensionTool(user, 'ext_click', { target: '.ProseMirror[contenteditable="true"]' });
+    await _sleep(400);
+    await executeExtensionTool(user, 'ext_press_key', { key: 'Ctrl+A' });
+    await _sleep(150);
+    await executeExtensionTool(user, 'ext_press_key', { key: 'Delete' });
+    await _sleep(150);
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '.ProseMirror[contenteditable="true"]',
+      text: newContent,
+    });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"]', text: newContent });
+      if(r && r.error) return { error: 'content_type_failed', detail: r.error };
+    }
+    await _sleep(1000);
+  }
+
+  // 5) Save (status に応じて 公開 or 下書き保存)
+  if(newStatus === 'publish'){
+    r = await executeExtensionTool(user, 'ext_click', { target: '公開設定' });
+    await _sleep(1000);
+    r = await executeExtensionTool(user, 'ext_click', { target: '投稿する' });
+  } else {
+    // デフォルトは note の auto-save に任せつつ 「下書き保存」 ボタンも押す
+    r = await executeExtensionTool(user, 'ext_click', { target: '下書き保存' });
+  }
+  await _sleep(2500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+
+  return {
+    ok: true,
+    platform: 'note',
+    url: (r && r.url) || editUrl,
+    note_id: noteId,
+    action: 'edit',
+    instructions: 'ユーザーに「✅ note 記事を更新しました」と短く報告してください。',
+  };
+}
+
 // ── WordPress 共通 helpers ──
+// REST API result が nonce 期限切れ (= 401/403 / rest_cookie_invalid_nonce) かを判定
+function _wpIsNonceExpired(result){
+  if(!result || !result.error) return false;
+  if(result.error !== 'wp_api_error') return false;
+  if(result.status === 401 || result.status === 403) return true;
+  if(typeof result.detail === 'string' && /nonce|cookie_invalid_nonce|rest_cookie/i.test(result.detail)) return true;
+  return false;
+}
 // 接続済 user から admin URL を取得 (= site_url + /wp-admin を組み立て)
 function _wpGetAdminUrl(user){
   const conn = user && user.sns_connections && user.sns_connections.wordpress;
@@ -10096,7 +10232,9 @@ function _wpBuildRestEvalScript(op, fields){
     // categories / tags は array で provided なら送信 (= 空配列なら clear)
     if(Array.isArray(catIds)) body.categories = catIds;
     if(Array.isArray(tagIds)) body.tags = tagIds;
-    if(featuredId)            body.featured_media = featuredId;
+    // featured_media: ID set / 0 = 外す / 未指定 = 既存値保持
+    if(featuredId)                          body.featured_media = featuredId;
+    else if(fields.clear_featured_image)    body.featured_media = 0;
 
     // Status + scheduled date
     // scheduled_at が未来 → 自動で future status
@@ -10234,7 +10372,15 @@ async function executePublishWordPressTool(user, input){
     scheduled_at, post_type,
     featured_data_url, featured_filename,
   });
-  const restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+  let restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+
+  // 4b) Nonce 期限切れ (= 401/403) なら wp-admin を 再 open して 1 度だけ retry
+  if(_wpIsNonceExpired(restResult)){
+    console.warn('[wp] nonce expired (401/403), re-opening wp-admin and retrying once');
+    await executeExtensionTool(user, 'ext_open_url', { url: adminUrl });
+    await executeExtensionTool(user, 'ext_wait_for', { selector: '#wpadminbar', timeout_ms: 12000 });
+    restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+  }
 
   // 5) REST 失敗 → DOM fallback (= 基本 title + content + publish/draft のみ)
   if(!restResult || restResult.error){
@@ -10363,10 +10509,11 @@ async function executeEditWordPressTool(user, input){
     resolvedType = lookupResult.post_type || 'post';
   }
 
-  // 3) Featured image (= 任意)
+  // 3) Featured image (= 任意。 clear_featured_image=true で外せる)
   let featured_data_url = null;
   let featured_filename = null;
   const featured_image_url = String((input && input.featured_image_url) || '').trim();
+  const clear_featured_image = !!(input && input.clear_featured_image);
   if(featured_image_url){
     const fimg = await _wpFetchImageAsDataUrl(featured_image_url);
     if(fimg && fimg.error) return { error: 'featured_image_failed', detail: fimg.detail };
@@ -10389,10 +10536,21 @@ async function executeEditWordPressTool(user, input){
   if(featured_data_url){
     updateFields.featured_data_url = featured_data_url;
     updateFields.featured_filename = featured_filename;
+  } else if(clear_featured_image){
+    updateFields.clear_featured_image = true;
   }
 
   const evalScript = _wpBuildRestEvalScript('update', updateFields);
-  const restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+  let restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+
+  // Nonce 期限切れ → 再 open + 1 度だけ retry
+  if(_wpIsNonceExpired(restResult)){
+    console.warn('[wp] edit: nonce expired (401/403), re-opening wp-admin and retrying once');
+    await executeExtensionTool(user, 'ext_open_url', { url: adminUrl });
+    await executeExtensionTool(user, 'ext_wait_for', { selector: '#wpadminbar', timeout_ms: 12000 });
+    restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+  }
+
   if(!restResult || restResult.error){
     if(restResult && restResult.error === 'no_nonce') return { error: 'no_admin_access' };
     return { error: 'update_failed', detail: (restResult && restResult.detail) || 'REST API 更新に失敗しました' };
@@ -10431,20 +10589,26 @@ async function executeCreateShopifyProductTool(user, input){
   // 1) products/new を開く
   let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl.replace(/\/$/, '') + '/products/new' });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
-  await _sleep(5500);  // Shopify Admin は重い SPA (= 初回 5-6 秒)
+  // Polaris UI が render されるまで待つ — タイトル input が出現したら OK
+  await executeExtensionTool(user, 'ext_wait_for', {
+    selector: '[aria-label="Title"], #ProductTitleField, input[name="title"], input[name="product[title]"]',
+    timeout_ms: 15000,
+  });
 
   // 2) ログイン check
   r = await executeExtensionTool(user, 'ext_read_page', {});
   const currentUrl = String((r && r.url) || '');
-  if(/accounts\.shopify\.com\/lookup|\/login/.test(currentUrl)){
+  if(/accounts\.shopify\.com\/(?:lookup|login|store-login)/.test(currentUrl)){
     return { error: 'not_logged_in', detail: 'Shopify Admin にログインしてください: ' + adminUrl };
   }
 
-  // 3) タイトル
-  r = await executeExtensionTool(user, 'ext_type', {
-    selector: '#ProductTitleField, input[name="title"], [aria-label="Title"]',
-    text: title,
-  });
+  // 3) タイトル — 2024+ Shopify は aria-label = "Title" がもっとも安定
+  r = await _shopifyType(user, [
+    '[aria-label="Title"]',
+    '#ProductTitleField',
+    'input[name="product[title]"]',
+    'input[name="title"]',
+  ], title);
   if(r && r.error){
     return { error: 'title_type_failed', detail: 'Shopify 商品タイトル入力欄が見つかりません: ' + r.error };
   }
@@ -10452,12 +10616,14 @@ async function executeCreateShopifyProductTool(user, input){
 
   // 4) 説明 (= Polaris rich-text editor、 内部は contenteditable)
   if(description){
-    r = await executeExtensionTool(user, 'ext_type', {
-      selector: '.Polaris-Box [contenteditable="true"], [aria-label="Description"] [contenteditable="true"], iframe.cke_wysiwyg_frame, [contenteditable="true"]',
-      text: description,
-    });
+    r = await _shopifyType(user, [
+      '[aria-label="Description"] [contenteditable="true"]',
+      '.editor-content [contenteditable="true"]',
+      '.Polaris-Box [contenteditable="true"]',
+      'iframe.cke_wysiwyg_frame',
+      '[contenteditable="true"]',
+    ], description);
     if(r && r.error){
-      // 説明は省略可。 warn だけして続行
       console.warn('[shopify] description type failed:', r.error);
     }
     await _sleep(800);
@@ -10465,10 +10631,12 @@ async function executeCreateShopifyProductTool(user, input){
 
   // 5) 価格
   if(price){
-    r = await executeExtensionTool(user, 'ext_type', {
-      selector: '#PriceField, input[name="price"], [aria-label="Price"]',
-      text: price,
-    });
+    r = await _shopifyType(user, [
+      '[aria-label="Price"]',
+      '#PriceField',
+      'input[name="product[price]"]',
+      'input[name="price"]',
+    ], price);
     if(r && r.error){
       console.warn('[shopify] price type failed:', r.error);
     }
@@ -10486,23 +10654,143 @@ async function executeCreateShopifyProductTool(user, input){
   await _sleep(500);
 
   // 7) Save
-  r = await executeExtensionTool(user, 'ext_click', { target: '[data-test-id="save-bar-save-button"], button[type="submit"][name="save"]' });
-  if(r && r.error){
-    // text fallback
-    r = await executeExtensionTool(user, 'ext_click', { target: 'Save' });
-    if(r && r.error){
-      r = await executeExtensionTool(user, 'ext_click', { target: '保存' });
-      if(r && r.error) return { error: 'save_click_failed', detail: r.error };
+  r = await _shopifyClickSave(user);
+  if(r && r.error) return { error: 'save_click_failed', detail: r.error };
+  await _sleep(4500);  // Save 後 redirect / URL に product ID が入る
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const finalUrl = String((r && r.url) || '');
+  const idMatch = finalUrl.match(/\/admin\/products\/(\d+)/);
+  const productId = idMatch ? idMatch[1] : null;
+
+  return {
+    ok: true, platform: 'shopify',
+    url: finalUrl,
+    product_id: productId,
+    status,
+    instructions: 'ユーザーに「✅ Shopify に商品を' + (status === 'active' ? '公開しました' : '下書き保存しました') + '」と短く報告してください。',
+  };
+}
+
+// Shopify 用 helper: 複数 selector で順に type を試す
+async function _shopifyType(user, selectors, text){
+  for(const sel of selectors){
+    const r = await executeExtensionTool(user, 'ext_type', { selector: sel, text });
+    if(!r || !r.error) return r || { ok: true };
+  }
+  return { error: 'all_selectors_failed', detail: 'tried: ' + selectors.join(' / ') };
+}
+
+// Shopify 用 helper: Save 系の click (= Polaris UI が変わってもどれかでヒット)
+async function _shopifyClickSave(user){
+  const targets = [
+    '[data-polaris-save-bar] button[variant="primary"]',
+    '[data-test-id="save-bar-save-button"]',
+    '.Polaris-Frame-ContextualSaveBar__Contents button[type="submit"]',
+    'button[type="submit"][name="save"]',
+    'Save',
+    '保存',
+  ];
+  for(const t of targets){
+    const r = await executeExtensionTool(user, 'ext_click', { target: t });
+    if(!r || !r.error) return r || { ok: true };
+  }
+  return { error: 'all_save_selectors_failed' };
+}
+
+// ── Shopify 商品編集 ──
+// 既存商品の編集。 product_id 直接 or product_url (= 公開ページ URL or admin URL) から ID 抽出。
+async function executeEditShopifyProductTool(user, input){
+  const product_id = input && input.product_id ? String(input.product_id).trim() : null;
+  const product_url = String((input && input.product_url) || '').trim();
+  const updateTitle = String((input && input.title) || '');
+  const updateDescription = String((input && input.description) || '');
+  const updatePrice = String((input && input.price) || '');
+  const updateStatus = input && input.status;
+  if(!product_id && !product_url) return { error: 'product_id_or_url_required' };
+  if(!updateTitle && !updateDescription && !updatePrice && !updateStatus){
+    return { error: 'no_update_fields', detail: 'title / description / price / status のいずれかを指定してください。' };
+  }
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  const conn = user.sns_connections && user.sns_connections.shopify;
+  if(!conn || !conn.connected) return { error: 'not_connected' };
+  const adminUrl = (conn.profile && conn.profile.admin_url) || null;
+  if(!adminUrl) return { error: 'admin_url_missing' };
+
+  // product ID 解決
+  let resolvedId = product_id;
+  if(!resolvedId){
+    // admin URL なら /admin/products/<id> から抽出
+    const adminIdMatch = product_url.match(/\/admin\/products\/(\d+)/);
+    if(adminIdMatch){
+      resolvedId = adminIdMatch[1];
+    } else {
+      // 公開ページ URL (= /products/<handle>) なら handle 抽出 → admin で検索する代わりに、 admin で handle 検索ページに行く
+      return { error: 'admin_url_required', detail: 'Shopify admin URL (= /admin/products/<id>) または product_id を直接指定してください (= 公開ページ URL からの ID 解決は未対応)。' };
     }
   }
-  await _sleep(4000);  // Save 後 redirect
+
+  // 商品編集ページを開く
+  const editUrl = adminUrl.replace(/\/$/, '') + '/products/' + resolvedId;
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: editUrl });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await executeExtensionTool(user, 'ext_wait_for', {
+    selector: '[aria-label="Title"], #ProductTitleField',
+    timeout_ms: 15000,
+  });
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(r && /accounts\.shopify\.com\/(?:lookup|login)/.test(String(r.url||''))){
+    return { error: 'not_logged_in' };
+  }
+
+  // 各フィールド更新 (= 既存値を上書きするため Ctrl+A → type)
+  if(updateTitle){
+    await executeExtensionTool(user, 'ext_click', { target: '[aria-label="Title"]' });
+    await _sleep(300);
+    await executeExtensionTool(user, 'ext_press_key', { key: 'Ctrl+A' });
+    await _sleep(100);
+    await _shopifyType(user, ['[aria-label="Title"]','#ProductTitleField','input[name="product[title]"]'], updateTitle);
+    await _sleep(500);
+  }
+  if(updateDescription){
+    await executeExtensionTool(user, 'ext_click', { target: '[aria-label="Description"] [contenteditable="true"]' });
+    await _sleep(300);
+    await executeExtensionTool(user, 'ext_press_key', { key: 'Ctrl+A' });
+    await _sleep(100);
+    await _shopifyType(user, [
+      '[aria-label="Description"] [contenteditable="true"]',
+      '.editor-content [contenteditable="true"]',
+      '[contenteditable="true"]',
+    ], updateDescription);
+    await _sleep(500);
+  }
+  if(updatePrice){
+    await executeExtensionTool(user, 'ext_click', { target: '[aria-label="Price"]' });
+    await _sleep(300);
+    await executeExtensionTool(user, 'ext_press_key', { key: 'Ctrl+A' });
+    await _sleep(100);
+    await _shopifyType(user, ['[aria-label="Price"]','#PriceField','input[name="product[price]"]'], updatePrice);
+    await _sleep(500);
+  }
+  if(updateStatus === 'draft' || updateStatus === 'active'){
+    await executeExtensionTool(user, 'ext_click', { target: '[role="combobox"][aria-label*="Status"]' });
+    await _sleep(500);
+    await executeExtensionTool(user, 'ext_click', { target: updateStatus === 'draft' ? 'Draft' : 'Active' });
+    await _sleep(500);
+  }
+
+  // Save
+  r = await _shopifyClickSave(user);
+  if(r && r.error) return { error: 'save_click_failed', detail: r.error };
+  await _sleep(4500);
   r = await executeExtensionTool(user, 'ext_read_page', {});
 
   return {
     ok: true, platform: 'shopify',
-    url: (r && r.url) || '',
-    status,
-    instructions: 'ユーザーに「✅ Shopify に商品を' + (status === 'active' ? '公開しました' : '下書き保存しました') + '」と短く報告してください。',
+    url: (r && r.url) || editUrl,
+    product_id: resolvedId,
+    action: 'edit',
+    instructions: 'ユーザーに「✅ Shopify 商品 #' + resolvedId + ' を更新しました」と短く報告してください。',
   };
 }
 
@@ -10533,11 +10821,13 @@ async function executeSnsTool(user, name, input, agent){
   else if(name === 'publish_note')     r = await executePublishNoteTool(user, input);
   else if(name === 'publish_wordpress') r = await executePublishWordPressTool(user, input);
   else if(name === 'edit_wordpress')    r = await executeEditWordPressTool(user, input);
+  else if(name === 'edit_note')         r = await executeEditNoteTool(user, input);
   else if(name === 'create_shopify_product') r = await executeCreateShopifyProductTool(user, input);
+  else if(name === 'edit_shopify_product')   r = await executeEditShopifyProductTool(user, input);
   else return { error: 'unknown_sns_tool: ' + name };
 
-  // 成功時のみ history 記録 (verify_x_login や edit_wordpress (= 更新) は post じゃないので除外)
-  const EXCLUDE_FROM_HISTORY = new Set(['verify_x_login', 'edit_wordpress']);
+  // 成功時のみ history 記録 (verify_x_login や edit_* (= 更新) は new post じゃないので除外)
+  const EXCLUDE_FROM_HISTORY = new Set(['verify_x_login', 'edit_wordpress', 'edit_note', 'edit_shopify_product']);
   if(agent && r && r.ok && r.platform && !EXCLUDE_FROM_HISTORY.has(name)){
     _recordSnsPost(agent, r.platform, {
       url: r.url,

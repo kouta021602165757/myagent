@@ -4458,268 +4458,426 @@ function _renderTabStrategy(site, allArts){
 //   5. 今日の予定 (= 次の自動実行)
 //   6. 過去 7 日のハイライト summary
 // ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// ── Tab 1: 📰 日次グロースレポート ──
+// 設計: ダークテーマの「Growth Intelligence Report」スタイル。
+//   1. ヒーロー (日付 + GA4 property ID)
+//   2. 昨日の KPI サマリー (PV / Users / Sessions / Bounce / Dwell)
+//   3. 過去 7 日トレンド (棒グラフ + AI コメント)
+//   4. 国別ユーザー Top 5 (バー + AI コメント)
+//   5. ページ別パフォーマンス Top 5 (table)
+//   6. 流入元分析 (channel breakdown)
+//   7. 戦略インサイト (3 枚の AI 解説)
+//   8. 今日の優先アクション (3 件の番号付きアクション)
+//   9. AI 組織活動 (= 部門別納品サマリ、控えめに)
+//   10. フッター
+// ═══════════════════════════════════════════════════════════════════
 function _renderTabReport(site, events, next, quickActions, weekly, allArts, insights){
   var hostname = _siteHostname(site);
-  var label = _verticalLabel(site.site_vertical || 'other');
-  // GA4 snapshot (= 接続済みならビジネス数字も載せる)
   var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
   var ga4Data = ga4Snap && ga4Snap.snapshot;
   var hasGa4Data = !!(ga4Data && ga4Data.series && ga4Data.series.length > 0);
+  var ga4Connected = !!(ga4Snap && ga4Snap.connected);
 
-  // ── 1) 今日のひと言 — GA4 がある時はビジネス数字を優先、なければ AI 活動量 ──
-  var headline = '';
-  if(hasGa4Data){
-    var deltaPct = ga4Data.delta_pv_pct;
-    var last7Pv = ga4Data.last_7d.pv;
-    if(deltaPct !== null && deltaPct > 5){
-      headline = '直近 7 日の PV は <b>+' + deltaPct + '%</b> 伸びて <b>' + last7Pv.toLocaleString() + ' PV</b>。順調です。';
-    } else if(deltaPct !== null && deltaPct < -5){
-      headline = '直近 7 日の PV は <b>' + deltaPct + '%</b> で <b>' + last7Pv.toLocaleString() + ' PV</b>。原因を探りましょう。';
-    } else {
-      headline = '直近 7 日の PV は <b>' + last7Pv.toLocaleString() + ' PV</b>。安定しています。';
-    }
-  } else if(weekly.delta > 0){
-    headline = '今週は先週より <b>+' + weekly.delta + ' 件</b> 多く納品されました。順調に伸びてます。';
-  } else if(weekly.delta < 0){
-    headline = '今週は先週より ' + Math.abs(weekly.delta) + ' 件少なめ。チャットで何か依頼してみましょう。';
-  } else if(weekly.artifacts > 0){
-    headline = '今週も先週と同じ <b>' + weekly.artifacts + ' 件</b> 納品。安定運用中です。';
-  } else if(allArts.length === 0){
-    headline = 'まだ AI チームへの依頼がありません。チャットで「集客プランを作って」と話しかけてください。';
-  } else {
-    headline = '今週はまだ納品なし。チャットで依頼するとチームが動きます。';
-  }
-  var headlineHTML = ''
-    + '<div class="sd-rp-headline">'
-    +   '<div class="sd-rp-headline-tag"><span class="sd-rp-dot"></span>今日のひと言</div>'
-    +   '<div class="sd-rp-headline-tx">' + headline + '</div>'
-    +   '<div class="sd-rp-headline-meta">' + esc(hostname) + ' ・ ' + esc(label) + '</div>'
+  // 日付 (今日 / 昨日 = レポート対象)
+  var todayFmt = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
+  var yest = new Date(Date.now() - 86400000);
+  var yestFmt = yest.toLocaleDateString('ja-JP', { month:'numeric', day:'numeric', weekday:'short' });
+
+  // ── 1) ヒーロー ──
+  var heroHTML = ''
+    + '<div class="rp-hero">'
+    +   '<div class="rp-hero-bar"></div>'
+    +   '<div class="rp-hero-eye">MY AI AGENT — GROWTH INTELLIGENCE</div>'
+    +   '<h1 class="rp-hero-h1">日次グロースレポート</h1>'
+    +   '<div class="rp-hero-meta">'
+    +     '<span class="rp-hero-date">📅 ' + esc(todayFmt) + '</span>'
+    +     (ga4Connected && ga4Data && ga4Data.property_id
+        ? '<span class="rp-hero-prop">GA4 | p' + esc(ga4Data.property_id) + '</span>'
+        : '<span class="rp-hero-prop rp-hero-prop-off">GA4 未接続</span>')
+    +   '</div>'
     + '</div>';
 
-  // ── 1b) GA4 数字バー (= 接続済みなら最上部、未接続なら控えめ CTA) ──
-  var ga4StripHTML = '';
+  // ── 2) 昨日の KPI サマリー (5 カード) ──
+  var kpiHTML = '';
   if(hasGa4Data){
-    var stripDeltaCls = ga4Data.delta_pv_pct > 0 ? 'up' : ga4Data.delta_pv_pct < 0 ? 'down' : 'flat';
-    var stripDeltaSign = ga4Data.delta_pv_pct > 0 ? '+' : '';
-    ga4StripHTML = ''
-      + '<div class="sd-rp-ga4">'
-      +   '<div class="sd-rp-ga4-h">'
-      +     '<span class="sd-rp-ga4-tag">📊 GA4 直近 7 日</span>'
-      +     '<span class="sd-rp-ga4-meta">' + (ga4Data.fetched_at ? '更新: ' + _formatRel(Date.parse(ga4Data.fetched_at)) : '') + '</span>'
+    var ys = ga4Data.yesterday || {};
+    var db = ga4Data.day_before || {};
+    // delta 計算 helper
+    function _pctDelta(now, prev){
+      if(!prev) return null;
+      return Math.round((now - prev) / prev * 1000) / 10;
+    }
+    var pvDelta = _pctDelta(ys.pv, db.pv);
+    var userDelta = _pctDelta(ys.users, db.users);
+    var sessDelta = _pctDelta(ys.sessions, db.sessions);
+    var bouncePt = (ys.bounce && db.bounce) ? Math.round((ys.bounce - db.bounce) * 1000) / 10 : null;
+    var dwellDelta = (ys.dwell && db.dwell) ? Math.round(ys.dwell - db.dwell) : null;
+    function _kpiCard(cls, label, value, deltaTxt, deltaCls){
+      return '<div class="rp-kpi-cell ' + cls + '">'
+           +   '<div class="rp-kpi-lbl">' + label + '</div>'
+           +   '<div class="rp-kpi-val">' + value + '</div>'
+           +   (deltaTxt ? '<div class="rp-kpi-d ' + deltaCls + '">' + deltaTxt + '</div>' : '')
+           + '</div>';
+    }
+    function _fmtMinSec(sec){
+      if(!sec) return '—';
+      var m = Math.floor(sec / 60), s = Math.floor(sec - m*60);
+      return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+    kpiHTML = ''
+      + '<div class="rp-card">'
+      +   '<div class="rp-card-h">'
+      +     '<span class="rp-card-ti">📊 昨日の KPI サマリー</span>'
+      +     '<span class="rp-card-date">' + esc(yestFmt) + '</span>'
       +   '</div>'
-      +   '<div class="sd-rp-ga4-grid">'
-      +     '<div class="sd-rp-ga4-cell">'
-      +       '<div class="sd-rp-ga4-l">PV</div>'
-      +       '<div class="sd-rp-ga4-v">' + ga4Data.last_7d.pv.toLocaleString() + '</div>'
-      +       (ga4Data.delta_pv_pct !== null
-        ? '<div class="sd-rp-ga4-d ' + stripDeltaCls + '">' + stripDeltaSign + ga4Data.delta_pv_pct + '% vs 先週</div>'
-        : '')
-      +     '</div>'
-      +     '<div class="sd-rp-ga4-cell">'
-      +       '<div class="sd-rp-ga4-l">セッション</div>'
-      +       '<div class="sd-rp-ga4-v">' + ga4Data.last_7d.sessions.toLocaleString() + '</div>'
-      +     '</div>'
-      +     '<div class="sd-rp-ga4-cell">'
-      +       '<div class="sd-rp-ga4-l">日平均 PV</div>'
-      +       '<div class="sd-rp-ga4-v">' + Math.round(ga4Data.last_7d.pv / 7).toLocaleString() + '</div>'
-      +     '</div>'
+      +   '<div class="rp-kpi-grid">'
+      +     _kpiCard('c-pv',    'ページビュー', (ys.pv||0).toLocaleString(),
+                    pvDelta !== null ? (pvDelta > 0 ? '▲ +' : '▼ ') + pvDelta + '%' : null,
+                    pvDelta >= 0 ? 'up' : 'down')
+      +     _kpiCard('c-user',  'ユーザー数',   (ys.users||0).toLocaleString(),
+                    userDelta !== null ? (userDelta > 0 ? '▲ +' : '▼ ') + userDelta + '%' : null,
+                    userDelta >= 0 ? 'up' : 'down')
+      +     _kpiCard('c-sess',  'セッション',   (ys.sessions||0).toLocaleString(),
+                    sessDelta !== null ? (sessDelta > 0 ? '▲ +' : '▼ ') + sessDelta + '%' : null,
+                    sessDelta >= 0 ? 'up' : 'down')
+      +     _kpiCard('c-bnc',   '直帰率',       ys.bounce ? Math.round(ys.bounce * 1000)/10 + '%' : '—',
+                    bouncePt !== null ? (bouncePt > 0 ? '▲ +' : '▼ ') + bouncePt + 'pt' : null,
+                    bouncePt > 0 ? 'down' : 'up')  // bounce は低い方が良いので符号反転
+      +     _kpiCard('c-dwell', '平均滞在時間', _fmtMinSec(ys.dwell),
+                    dwellDelta !== null ? (dwellDelta > 0 ? '▲ +' : '▼ ') + dwellDelta + 's' : null,
+                    dwellDelta >= 0 ? 'up' : 'down')
       +   '</div>'
       + '</div>';
-  } else if(ga4Snap && !ga4Snap.connected){
-    // GA4 未接続 — 控えめな CTA
-    ga4StripHTML = ''
-      + '<div class="sd-rp-ga4-cta" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">'
-      +   '<div class="sd-rp-ga4-cta-ic">📊</div>'
-      +   '<div class="sd-rp-ga4-cta-bd">'
-      +     '<div class="sd-rp-ga4-cta-ti">Google Analytics を接続して数字を解放</div>'
-      +     '<div class="sd-rp-ga4-cta-de">毎朝この場所に PV / 流入 / CVR の実数値が入ります。</div>'
+  } else {
+    // GA4 未接続 — 大型 CTA
+    kpiHTML = ''
+      + '<div class="rp-card rp-card-cta" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">'
+      +   '<div class="rp-cta-ic">📊</div>'
+      +   '<div class="rp-cta-bd">'
+      +     '<div class="rp-cta-ti">Google Analytics を接続して数字を解放</div>'
+      +     '<div class="rp-cta-de">PV / セッション / 直帰率 / 滞在時間 / 国別 / ページ別 / 流入元 — 実数値を毎朝この場所に。</div>'
       +   '</div>'
-      +   '<div class="sd-rp-ga4-cta-arrow">→</div>'
+      +   '<div class="rp-cta-btn">接続する →</div>'
       + '</div>';
   }
 
-  // ── 2) 今日の 1 提案 (= 黒背景 prominent) ──
-  var topAction = (quickActions && quickActions[0]) || null;
-  var byMember = (site.team_members || [])[0];
-  var byMemberLine = byMember ? '提案者: ' + (_MEMBER_ICONS[byMember.role] || '🤖') + ' ' + esc(byMember.name) : '提案者: 🤖 AI チーム';
-  var todayHTML = '';
-  if(topAction){
-    todayHTML = ''
-      + '<div class="sd-rp-today">'
-      +   '<div class="sd-rp-today-h"><span class="sd-rp-today-dot"></span>今日 ・ AI からの 1 つの提案</div>'
-      +   '<div class="sd-rp-today-ti">' + topAction.icon + ' ' + esc(topAction.label) + '</div>'
-      +   '<div class="sd-rp-today-why">' + esc(topAction.prompt) + '</div>'
-      +   '<div class="sd-rp-today-row">'
-      +     '<button class="sd-rp-today-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(topAction.prompt).replace(/'/g, '&#39;') + ')">'
-      +       '✍️ チームに依頼する <span class="arrow">→</span>'
-      +     '</button>'
-      +     '<button class="sd-rp-today-skip" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">他の選択肢を見る</button>'
-      +     '<div class="sd-rp-today-by">' + byMemberLine + '</div>'
+  // ── 3) 過去 7 日トレンド (棒グラフ + AI コメント) ──
+  var trendHTML = '';
+  if(hasGa4Data){
+    var s = ga4Data.series.slice(-7);
+    var maxPv = Math.max.apply(null, s.map(function(d){ return d.pv; })) || 1;
+    var bars = s.map(function(d, i){
+      var h = Math.round(d.pv / maxPv * 100);
+      var dateLbl = '';
+      if(d.date && d.date.length === 8){
+        dateLbl = parseInt(d.date.slice(4,6),10) + '/' + parseInt(d.date.slice(6,8),10);
+      }
+      return '<div class="rp-bar-col">'
+           +   '<div class="rp-bar-wrap">'
+           +     '<div class="rp-bar" style="height:' + h + '%"></div>'
+           +     '<div class="rp-bar-v">' + d.pv.toLocaleString() + '</div>'
+           +   '</div>'
+           +   '<div class="rp-bar-lbl">' + dateLbl + '</div>'
+           + '</div>';
+    }).join('');
+    var firstPv = s[0] && s[0].pv;
+    var lastPv = s[s.length-1] && s[s.length-1].pv;
+    var growthPct = firstPv > 0 ? Math.round((lastPv - firstPv) / firstPv * 1000) / 10 : null;
+    var trendInsight = '';
+    if(growthPct !== null && growthPct > 10){
+      trendInsight = '🔔 7 日間で <b>+' + growthPct + '%</b> 増加 (' + firstPv.toLocaleString() + '→' + lastPv.toLocaleString() + 'PV)、上昇トレンド継続中。';
+    } else if(growthPct !== null && growthPct < -10){
+      trendInsight = '⚠️ 7 日間で <b>' + growthPct + '%</b> 下降 (' + firstPv.toLocaleString() + '→' + lastPv.toLocaleString() + 'PV)、原因分析が必要。';
+    } else if(growthPct !== null){
+      trendInsight = '📊 7 日間は <b>横ばい</b> (' + (growthPct >= 0 ? '+' : '') + growthPct + '%)。新しい施策を投入するタイミングです。';
+    }
+    trendHTML = ''
+      + '<div class="rp-card">'
+      +   '<div class="rp-card-h">'
+      +     '<span class="rp-card-ti">📈 過去 7 日間トレンド</span>'
+      +     '<span class="rp-card-sub">ページビュー推移</span>'
+      +   '</div>'
+      +   '<div class="rp-bars">' + bars + '</div>'
+      +   (trendInsight ? '<div class="rp-insight-line">' + trendInsight + '</div>' : '')
+      + '</div>';
+  }
+
+  // ── 4) 国別ユーザー Top 5 ──
+  var countryHTML = '';
+  if(hasGa4Data && Array.isArray(ga4Data.countries) && ga4Data.countries.length > 0){
+    var FLAGS = {
+      'Japan':'🇯🇵', 'United States':'🇺🇸', 'Taiwan':'🇹🇼', 'Singapore':'🇸🇬', 'South Korea':'🇰🇷',
+      'United Kingdom':'🇬🇧', 'Germany':'🇩🇪', 'France':'🇫🇷', 'Canada':'🇨🇦', 'Australia':'🇦🇺',
+      'India':'🇮🇳', 'China':'🇨🇳', 'Hong Kong':'🇭🇰', 'Thailand':'🇹🇭', 'Indonesia':'🇮🇩',
+      'Philippines':'🇵🇭', 'Vietnam':'🇻🇳', 'Malaysia':'🇲🇾', 'Brazil':'🇧🇷', 'Mexico':'🇲🇽',
+    };
+    var COUNTRY_JA = {
+      'Japan':'日本', 'United States':'米国', 'Taiwan':'台湾', 'Singapore':'シンガポール', 'South Korea':'韓国',
+      'United Kingdom':'英国', 'Germany':'ドイツ', 'France':'フランス', 'Canada':'カナダ', 'Australia':'豪州',
+      'India':'インド', 'China':'中国', 'Hong Kong':'香港', 'Thailand':'タイ', 'Indonesia':'インドネシア',
+      'Philippines':'フィリピン', 'Vietnam':'ベトナム', 'Malaysia':'マレーシア', 'Brazil':'ブラジル', 'Mexico':'メキシコ',
+    };
+    var COLORS = ['#fb923c','#a855f7','#3b82f6','#22c55e','#ec4899'];
+    var totalUsers = ga4Data.country_total || 1;
+    var countryMax = ga4Data.countries[0].users || 1;
+    var crows = ga4Data.countries.map(function(c, i){
+      var pct = Math.round(c.users / totalUsers * 1000) / 10;
+      var w = Math.round(c.users / countryMax * 100);
+      var flag = FLAGS[c.country] || '🌐';
+      var ja = COUNTRY_JA[c.country] || c.country;
+      return '<div class="rp-cn-row">'
+           +   '<div class="rp-cn-flag">' + flag + ' <span class="rp-cn-nm">' + esc(ja) + '</span></div>'
+           +   '<div class="rp-cn-bar-wrap"><div class="rp-cn-bar" style="width:' + w + '%;background:' + COLORS[i % 5] + '"></div></div>'
+           +   '<div class="rp-cn-v">' + c.users.toLocaleString() + '</div>'
+           +   '<div class="rp-cn-pct">' + pct + '%</div>'
+           + '</div>';
+    }).join('');
+    var jaIdx = ga4Data.countries.findIndex(function(c){ return c.country === 'Japan'; });
+    var enCountries = ga4Data.countries.filter(function(c){ return c.country !== 'Japan'; });
+    var enPct = enCountries.reduce(function(s, c){ return s + c.users; }, 0) / totalUsers * 100;
+    var countryInsight = '';
+    if(jaIdx === 0 && enPct < 30){
+      countryInsight = '💡 日本流入が中心 (' + Math.round((ga4Data.countries[0].users/totalUsers)*100) + '%)。英語圏への拡大余地あり。';
+    } else if(enPct > 50){
+      countryInsight = '🌍 海外からの流入が <b>' + Math.round(enPct) + '%</b>。英語コンテンツ強化が効きそう。';
+    } else {
+      countryInsight = '💡 地域別流入は分散。各市場向けの localized コンテンツを検討。';
+    }
+    countryHTML = ''
+      + '<div class="rp-card">'
+      +   '<div class="rp-card-h">'
+      +     '<span class="rp-card-ti">🌐 国別ユーザー 上位 5 カ国</span>'
+      +     '<span class="rp-card-sub">過去 7 日間合計</span>'
+      +   '</div>'
+      +   '<div class="rp-cn-list">' + crows + '</div>'
+      +   '<div class="rp-insight-line">' + countryInsight + '</div>'
+      + '</div>';
+  }
+
+  // ── 5) ページ別パフォーマンス Top 5 ──
+  var pagesHTML = '';
+  if(hasGa4Data && Array.isArray(ga4Data.pages) && ga4Data.pages.length > 0){
+    function _fmtMinSec(sec){
+      if(!sec) return '—';
+      var m = Math.floor(sec / 60), ss = Math.floor(sec - m*60);
+      return m + ':' + (ss < 10 ? '0' : '') + ss;
+    }
+    var prows = ga4Data.pages.map(function(p){
+      var bouncePct = p.bounce ? Math.round(p.bounce * 1000)/10 : null;
+      var bounceCls = bouncePct === null ? '' : (bouncePct < 35 ? 'good' : bouncePct > 60 ? 'bad' : '');
+      return '<div class="rp-pg-row">'
+           +   '<div class="rp-pg-path">' + esc(p.path || '/') + '</div>'
+           +   '<div class="rp-pg-pv">' + p.pv.toLocaleString() + '</div>'
+           +   '<div class="rp-pg-dwell">' + _fmtMinSec(p.dwell) + '</div>'
+           +   '<div class="rp-pg-bounce ' + bounceCls + '">' + (bouncePct !== null ? bouncePct + '%' : '—') + '</div>'
+           + '</div>';
+    }).join('');
+    pagesHTML = ''
+      + '<div class="rp-card">'
+      +   '<div class="rp-card-h"><span class="rp-card-ti">📄 ページ別パフォーマンス 上位 5</span></div>'
+      +   '<div class="rp-pg-table">'
+      +     '<div class="rp-pg-head">'
+      +       '<div>ページ</div><div>PV</div><div>滞在時間</div><div>直帰率</div>'
+      +     '</div>'
+      +     prows
       +   '</div>'
       + '</div>';
   }
 
-  // ── 3) 異常アラート (= insights に「⚠️」絵文字含むもの) ──
-  var alertHTML = '';
-  var alerts = (insights || []).filter(function(it){ return /⚠️|🚨/.test(it.icon); });
-  if(alerts.length > 0){
-    alertHTML = '<div class="sd-rp-alerts">'
-      + alerts.map(function(it){
-          return '<div class="sd-rp-alert">'
-               +   '<div class="sd-rp-alert-ic">' + it.icon + '</div>'
-               +   '<div class="sd-rp-alert-bd">'
-               +     '<div class="sd-rp-alert-ti">気になる動き</div>'
-               +     '<div class="sd-rp-alert-tx">' + it.text + '</div>'
-               +   '</div>'
-               +   '<button class="sd-rp-alert-btn" onclick="openSite(\'' + esc(site.id) + '\')">確認 →</button>'
+  // ── 6) 流入元分析 ──
+  var sourceHTML = '';
+  if(hasGa4Data && Array.isArray(ga4Data.sources) && ga4Data.sources.length > 0){
+    var SRC_COLORS = {
+      'Direct':'#fb923c', 'Organic Search':'#22c55e',
+      'Organic Social':'#a855f7', 'Referral':'#3b82f6',
+      'Email':'#ec4899', 'Paid Search':'#06b6d4', 'Paid Social':'#f59e0b',
+      '(Other)':'#64748b', 'Unassigned':'#64748b',
+    };
+    var srcMax = ga4Data.sources[0].sessions || 1;
+    var srcRows = ga4Data.sources.slice(0, 6).map(function(c){
+      var pct = ga4Data.source_total > 0 ? Math.round(c.sessions / ga4Data.source_total * 1000) / 10 : 0;
+      var w = Math.round(c.sessions / srcMax * 100);
+      var color = SRC_COLORS[c.channel] || '#94a3b8';
+      return '<div class="rp-src-row">'
+           +   '<div class="rp-src-dot" style="background:' + color + '"></div>'
+           +   '<div class="rp-src-nm">' + esc(c.channel) + '</div>'
+           +   '<div class="rp-src-v">' + c.sessions.toLocaleString() + ' sessions</div>'
+           +   '<div class="rp-src-bar-wrap"><div class="rp-src-bar" style="width:' + w + '%;background:' + color + '"></div></div>'
+           +   '<div class="rp-src-pct">' + pct + '%</div>'
+           + '</div>';
+    }).join('');
+    sourceHTML = ''
+      + '<div class="rp-card">'
+      +   '<div class="rp-card-h"><span class="rp-card-ti">🌊 流入元分析</span></div>'
+      +   '<div class="rp-src-list">' + srcRows + '</div>'
+      + '</div>';
+  }
+
+  // ── 7) 戦略インサイト (3 枚) ──
+  // 簡易ルールで「強み / 課題 / 機会」を抽出
+  var insights3 = _buildStrategicInsights(site, ga4Data, allArts, weekly);
+  var stratHTML = '';
+  if(insights3.length > 0){
+    stratHTML = ''
+      + '<div class="rp-card">'
+      +   '<div class="rp-card-h"><span class="rp-card-ti">🔥 戦略インサイト</span></div>'
+      +   '<div class="rp-strat-grid">'
+      +   insights3.map(function(it){
+          return '<div class="rp-strat-card ' + it.cls + '">'
+               +   '<div class="rp-strat-ic">' + it.icon + '</div>'
+               +   '<div class="rp-strat-ti">' + esc(it.title) + '</div>'
+               +   '<div class="rp-strat-tx">' + it.body + '</div>'
                + '</div>';
         }).join('')
+      +   '</div>'
       + '</div>';
   }
 
-  // ── 4) 今週納品物 (= AI がやったこと、部門タグ付き) ──
-  var thisWeekTs = Date.now() - 7 * 86400000;
-  var weekArts = allArts.filter(function(a){
-    var ts = Date.parse(a.created_at || 0) || 0;
-    return ts > thisWeekTs;
-  }).slice(0, 6);
-  var weekArtsHTML = '';
-  if(weekArts.length > 0){
-    weekArtsHTML = ''
-      + '<div class="sd-rp-section">'
-      +   '<div class="sd-rp-section-h">'
-      +     '<span class="sd-rp-section-ti">📦 今週 AI チームが届けた納品物</span>'
-      +     '<span class="sd-rp-section-n">' + weekArts.length + ' 件</span>'
-      +   '</div>'
-      +   '<div class="sd-rp-arts">'
-      +   weekArts.map(function(a){
-          var dt = '';
-          try { dt = new Date(a.created_at).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric'}); } catch(e){}
-          var openUrl = _artUrl(a);
-          var attr = _attributeArt(a, site.org);
-          var deptTag = attr
-            ? '<span class="sd-rp-art-dept" style="--ag-c:' + attr.dept.color + '">' + attr.dept.icon + ' ' + esc(attr.dept.name) + '</span>'
-            : '';
-          return '<div class="sd-rp-art">'
-               +   '<div class="sd-rp-art-ic">📄</div>'
-               +   '<div class="sd-rp-art-bd">'
-               +     '<div class="sd-rp-art-ti">' + esc(_artDisplayTitle(a)) + '</div>'
-               +     '<div class="sd-rp-art-meta">' + dt + (a.version ? ' ・ Ver.' + a.version : '') + ' ' + deptTag + '</div>'
-               +   '</div>'
-               +   (openUrl
-                     ? '<a class="sd-rp-art-open" href="' + esc(openUrl) + '" target="_blank" rel="noopener">↗</a>'
-                     : '<span class="sd-rp-art-open" style="opacity:.4;cursor:default">…</span>')
+  // ── 8) 今日の優先アクション (3 件) ──
+  var top3Actions = (quickActions || []).slice(0, 3);
+  var actionsHTML = '';
+  if(top3Actions.length > 0){
+    actionsHTML = ''
+      + '<div class="rp-card">'
+      +   '<div class="rp-card-h"><span class="rp-card-ti">✅ 今日の優先アクション</span></div>'
+      +   '<div class="rp-act-grid">'
+      +   top3Actions.map(function(a, i){
+          var clsRank = ['c-1','c-2','c-3'][i] || '';
+          return '<div class="rp-act-card ' + clsRank + '" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(a.prompt).replace(/'/g, '&#39;') + ')">'
+               +   '<div class="rp-act-num">' + (i + 1) + '</div>'
+               +   '<div class="rp-act-ti">' + a.icon + ' ' + esc(a.label) + '</div>'
+               +   '<div class="rp-act-tx">' + esc(String(a.prompt).slice(0, 110)) + (a.prompt.length > 110 ? '…' : '') + '</div>'
                + '</div>';
         }).join('')
       +   '</div>'
       + '</div>';
   }
 
-  // ── 4b) 🏢 部門別の今週 (= どの部門が動いているか色分けで一目) ──
-  var deptBreakdownHTML = '';
+  // ── 9) AI 組織活動 (控えめに) ──
+  var deptCompactHTML = '';
   if(site.org && site.org.departments){
     var contribs = _orgContributionBreakdown(site);
-    // 今週の貢献度で sort + top メンバー表示
     contribs.sort(function(a, b){ return b.week - a.week; });
     var totalWeek = contribs.reduce(function(s, c){ return s + c.week; }, 0);
-    deptBreakdownHTML = ''
-      + '<div class="sd-rp-section">'
-      +   '<div class="sd-rp-section-h">'
-      +     '<span class="sd-rp-section-ti">🏢 部門別の今週の動き</span>'
-      +     '<span class="sd-rp-section-n">' + totalWeek + ' 件</span>'
-      +   '</div>'
-      +   '<div class="sd-rp-dept-grid">'
-      +   contribs.map(function(c){
-          var pct = totalWeek > 0 ? Math.round(c.week / totalWeek * 100) : 0;
-          var memberCount = (c.dept.teams || []).reduce(function(s, t){ return s + (t.members || []).length; }, 0);
-          return '<div class="sd-rp-dept-card" style="--ag-c:' + c.dept.color + '" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(c.dept.name + 'に依頼: ').replace(/'/g, '&#39;') + ')" title="この部門に直接依頼">'
-               +   '<div class="sd-rp-dept-h">'
-               +     '<div class="sd-rp-dept-ic">' + c.dept.icon + '</div>'
-               +     '<div class="sd-rp-dept-meta">'
-               +       '<div class="sd-rp-dept-nm">' + esc(c.dept.name) + '</div>'
-               +       '<div class="sd-rp-dept-sub">' + memberCount + ' 名</div>'
-               +     '</div>'
-               +     '<div class="sd-rp-dept-n">' + c.week + '</div>'
-               +   '</div>'
-               +   '<div class="sd-rp-dept-bar"><div class="sd-rp-dept-bar-fill" style="width:' + pct + '%"></div></div>'
-               +   '<div class="sd-rp-dept-foot">'
-               +     (c.top_member ? '🌟 ' + esc(c.top_member) : '<span style="opacity:.5">活動なし</span>')
-               +   '</div>'
-               + '</div>';
-        }).join('')
-      +   '</div>'
-      + '</div>';
+    if(totalWeek > 0){
+      var topCard = contribs.slice(0, 3).map(function(c){
+        return '<div class="rp-dept-mini" style="--ag-c:' + c.dept.color + '">'
+             +   '<span class="rp-dept-mini-ic">' + c.dept.icon + '</span>'
+             +   '<span class="rp-dept-mini-nm">' + esc(c.dept.name) + '</span>'
+             +   '<span class="rp-dept-mini-n">' + c.week + ' 件</span>'
+             + '</div>';
+      }).join('');
+      deptCompactHTML = ''
+        + '<div class="rp-card">'
+        +   '<div class="rp-card-h">'
+        +     '<span class="rp-card-ti">🤖 AI 組織の今週活動</span>'
+        +     '<span class="rp-card-sub">' + totalWeek + ' 件納品</span>'
+        +   '</div>'
+        +   '<div class="rp-dept-mini-row">' + topCard + '</div>'
+        + '</div>';
+    }
   }
 
-  // ── 5) 今日の予定 (= 次の自動実行) ──
-  var nextHTML = '';
-  if(next){
-    nextHTML = ''
-      + '<div class="sd-rp-next">'
-      +   '<div class="sd-rp-next-ic">⏰</div>'
-      +   '<div class="sd-rp-next-bd">'
-      +     '<div class="sd-rp-next-l">次の自動実行</div>'
-      +     '<div class="sd-rp-next-r">' + esc(next.name) + '</div>'
-      +   '</div>'
-      +   '<div class="sd-rp-next-when">' + esc(next.label) + '</div>'
-      +   '<div class="sd-rp-next-pulse"></div>'
-      + '</div>';
-  }
-
-  // ── 6) 過去 7 日のハイライト ──
-  var lastWeekTs = Date.now() - 14 * 86400000;
-  var lastWeekArts = allArts.filter(function(a){
-    var ts = Date.parse(a.created_at || 0) || 0;
-    return ts > lastWeekTs && ts <= thisWeekTs;
-  });
-  var highlightsHTML = ''
-    + '<div class="sd-rp-highlights">'
-    +   '<div class="sd-rp-section-h">'
-    +     '<span class="sd-rp-section-ti">📅 過去 7 日のハイライト</span>'
+  // ── 10) フッター ──
+  var nowFmt = new Date().toLocaleString('ja-JP');
+  var footerHTML = ''
+    + '<div class="rp-footer">'
+    +   '<div class="rp-footer-brand">MY AI Agent — 戦略責任者</div>'
+    +   '<div class="rp-footer-meta">'
+    +     (ga4Connected && ga4Data && ga4Data.property_id ? 'GA4 p' + esc(ga4Data.property_id) + ' ・ ' : '')
+    +     '生成日時: ' + esc(nowFmt)
+    +     (next ? ' ・ 次回レポート: ' + esc(next.label) : '')
     +   '</div>'
-    +   '<div class="sd-rp-hi-grid">'
-    +     '<div class="sd-rp-hi"><div class="sd-rp-hi-v">' + weekly.artifacts + '</div><div class="sd-rp-hi-l">今週納品</div></div>'
-    +     '<div class="sd-rp-hi"><div class="sd-rp-hi-v">' + lastWeekArts.length + '</div><div class="sd-rp-hi-l">先週納品</div></div>'
-    +     '<div class="sd-rp-hi"><div class="sd-rp-hi-v">' + allArts.length + '</div><div class="sd-rp-hi-l">累計</div></div>'
-    +     '<div class="sd-rp-hi ' + (weekly.delta > 0 ? 'up' : weekly.delta < 0 ? 'down' : 'flat') + '">'
-    +       '<div class="sd-rp-hi-v">' + (weekly.delta > 0 ? '+' : '') + weekly.delta + '</div>'
-    +       '<div class="sd-rp-hi-l">先週比</div>'
-    +     '</div>'
-    +   '</div>'
+    +   '<div class="rp-footer-host">' + esc(hostname) + '</div>'
     + '</div>';
 
-  // ── 最近のアクティビティ feed (= AI がいつ何を動かしたか、簡易表示) ──
-  var feedHTML = '';
-  if(events && events.length > 0){
-    feedHTML = ''
-      + '<div class="sd-rp-section">'
-      +   '<div class="sd-rp-section-h">'
-      +     '<span class="sd-rp-section-ti">⚡ 直近のアクティビティ</span>'
-      +     '<span class="sd-rp-section-n">' + events.length + ' 件</span>'
-      +   '</div>'
-      +   '<div class="sd-rp-feed">'
-      +   events.slice(0, 6).map(function(e){
-          return '<div class="sd-rp-feed-item">'
-               +   '<div class="sd-rp-feed-ic">' + e.icon + '</div>'
-               +   '<div class="sd-rp-feed-bd">'
-               +     '<div class="sd-rp-feed-lbl">' + esc(e.label) + '</div>'
-               +     '<div class="sd-rp-feed-ts">' + esc(_formatRel(e.ts)) + '</div>'
-               +   '</div>'
-               + '</div>';
-        }).join('')
-      +   '</div>'
-      + '</div>';
-  }
+  // 全体を rp-report wrapper で囲む (= dark theme スコープ)
+  return '<div class="rp-report">'
+    + heroHTML
+    + kpiHTML
+    + trendHTML
+    + countryHTML
+    + pagesHTML
+    + sourceHTML
+    + stratHTML
+    + actionsHTML
+    + deptCompactHTML
+    + footerHTML
+    + '</div>';
+}
 
-  return headlineHTML
-    + ga4StripHTML
-    + todayHTML
-    + alertHTML
-    + highlightsHTML
-    + deptBreakdownHTML
-    + (nextHTML ? '<div class="sd-rp-row">' + nextHTML + '</div>' : '')
-    + weekArtsHTML
-    + feedHTML;
+// ── 戦略インサイト (3 枚) を簡易ルールで組み立てる ──
+function _buildStrategicInsights(site, ga4Data, allArts, weekly){
+  var out = [];
+  if(ga4Data){
+    // 1) トラフィック動向
+    var dPct = ga4Data.delta_pv_pct;
+    if(dPct !== null){
+      if(dPct > 5){
+        out.push({
+          cls: 'c-good', icon: '📈', title: 'トラフィック拡大継続',
+          body: '直近 7 日の PV は <b>+' + dPct + '%</b> (' + ga4Data.prev_7d.pv.toLocaleString() + '→' + ga4Data.last_7d.pv.toLocaleString() + 'PV) で改善中。このペースが続けば近期内に上位推移が見込めます。'
+        });
+      } else if(dPct < -5){
+        out.push({
+          cls: 'c-bad', icon: '⚠️', title: 'トラフィック低下を検知',
+          body: '直近 7 日の PV は <b>' + dPct + '%</b> (' + ga4Data.prev_7d.pv.toLocaleString() + '→' + ga4Data.last_7d.pv.toLocaleString() + 'PV)。原因 (検索順位低下 / SNS停止 / 季節要因 等) を特定する必要があります。'
+        });
+      } else {
+        out.push({
+          cls: 'c-warn', icon: '📊', title: 'トラフィックは横ばい',
+          body: '直近 7 日の PV は <b>' + (dPct >= 0 ? '+' : '') + dPct + '%</b> でほぼ変動なし。次の伸びを生むために新しい施策の投入が必要です。'
+        });
+      }
+    }
+    // 2) ページ別の鍵
+    if(Array.isArray(ga4Data.pages) && ga4Data.pages.length > 0){
+      var bestEngage = ga4Data.pages.slice().sort(function(a, b){
+        // 滞在時間長く & 直帰率低い = 良
+        return (b.dwell - a.dwell) + (a.bounce - b.bounce) * 60;
+      })[0];
+      if(bestEngage){
+        out.push({
+          cls: 'c-good', icon: '🎯', title: esc(bestEngage.path) + ' の高エンゲージメントが最重要シグナル',
+          body: esc(bestEngage.path) + ' は滞在 ' + (function(s){var m=Math.floor(s/60),ss=Math.floor(s-m*60);return m+':'+(ss<10?'0':'')+ss;})(bestEngage.dwell) + ' / 直帰率 ' + Math.round(bestEngage.bounce*1000)/10 + '% と優秀。このページへの流入を増やす + CTA 強化で転換率の更なる向上が見込めます。'
+        });
+      }
+    }
+    // 3) 国別 / 流入元
+    if(Array.isArray(ga4Data.countries) && ga4Data.countries.length > 1){
+      var nonJp = ga4Data.countries.filter(function(c){ return c.country !== 'Japan'; });
+      var top2 = nonJp.slice(0, 2);
+      if(top2.length >= 1 && top2[0].users > 30){
+        var label = top2.map(function(c){ return c.country + '(' + c.users + '人)'; }).join('・');
+        out.push({
+          cls: 'c-info', icon: '🌍', title: '海外拡大の好機: ' + top2.map(function(c){return c.country.slice(0,2);}).join('・') + ' ユーザーの集中',
+          body: label + ' からの流入が顕著。英語コンテンツの拡充と SNS の英語版強化により、グローバルなユーザー獲得のフライホイールを回せる兆候。'
+        });
+      }
+    }
+  }
+  // ga4 がない or 足りない場合は activity ベースで埋める
+  while(out.length < 3){
+    if(allArts && allArts.length === 0){
+      out.push({
+        cls: 'c-warn', icon: '🚀', title: 'まずは最初の依頼を',
+        body: 'チャットで「集客プランを作って」と話しかけると、AI チームが動き始めます。3 件ほど依頼を投入すると、結果が見え始めます。'
+      });
+    } else if(weekly && weekly.delta > 0){
+      out.push({
+        cls: 'c-good', icon: '🤖', title: 'AI 組織の生産性が向上',
+        body: '今週は先週より <b>+' + weekly.delta + ' 件</b> 多く納品。このペースを維持できれば、月内に多角的な施策展開が完成します。'
+      });
+    } else {
+      out.push({
+        cls: 'c-info', icon: '💡', title: '次の伸びを生む打ち手を仕込む',
+        body: 'チャットで「次の打ち手を提案して」と依頼すると、現状をふまえた具体的な施策を 3 案返します。'
+      });
+    }
+    if(out.length >= 3) break;
+  }
+  return out.slice(0, 3);
 }
 
 // ─── Tab 3: ⚡ アクション (= 今後の動き) ───────────────────────────

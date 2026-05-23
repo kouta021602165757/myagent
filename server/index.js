@@ -16771,48 +16771,123 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 200, { ok: true, connected: true, snapshot: cached, stale: false });
     }
 
-    // Fetch fresh — 過去 30 日の day-by-day pageviews / sessions / users
+    // Fetch fresh — 4 つの GA4 query を並列で叩く:
+    // 1) 日別の主要 metric 30 日 (PV / sessions / users / bounce / engagement)
+    // 2) 国別 上位 5 国 (過去 7 日)
+    // 3) ページ別 上位 5 ページ (過去 7 日)
+    // 4) 流入元別 (過去 7 日)
     try {
-      const r = await executeGa4QueryTool(user, ag, {
-        metrics: ['screenPageViews', 'sessions', 'totalUsers'],
-        dimensions: ['date'],
-        start_date: '30daysAgo',
-        end_date: 'yesterday',
-        limit: 100,
-      });
-      if(r && r.ok){
-        // rows = [{ dimensions: ['20260423'], metrics: ['1234','56','78'] }, ...]
-        const series = (r.rows || []).map(row => ({
+      const [rTimeSeries, rCountries, rPages, rSources] = await Promise.all([
+        executeGa4QueryTool(user, ag, {
+          metrics: ['screenPageViews', 'sessions', 'totalUsers', 'bounceRate', 'averageSessionDuration'],
+          dimensions: ['date'],
+          start_date: '30daysAgo',
+          end_date: 'yesterday',
+          limit: 100,
+        }),
+        executeGa4QueryTool(user, ag, {
+          metrics: ['totalUsers'],
+          dimensions: ['country'],
+          start_date: '7daysAgo',
+          end_date: 'yesterday',
+          limit: 8,
+        }),
+        executeGa4QueryTool(user, ag, {
+          metrics: ['screenPageViews', 'averageSessionDuration', 'bounceRate'],
+          dimensions: ['pagePath'],
+          start_date: '7daysAgo',
+          end_date: 'yesterday',
+          limit: 8,
+        }),
+        executeGa4QueryTool(user, ag, {
+          metrics: ['sessions'],
+          dimensions: ['sessionDefaultChannelGroup'],
+          start_date: '7daysAgo',
+          end_date: 'yesterday',
+          limit: 10,
+        }),
+      ]);
+
+      if(rTimeSeries && rTimeSeries.ok){
+        // 日別 series
+        const series = (rTimeSeries.rows || []).map(row => ({
           date: row.dimensions && row.dimensions[0],
           pv: parseInt((row.metrics && row.metrics[0]) || 0, 10),
           sessions: parseInt((row.metrics && row.metrics[1]) || 0, 10),
           users: parseInt((row.metrics && row.metrics[2]) || 0, 10),
+          bounce: parseFloat((row.metrics && row.metrics[3]) || 0),
+          dwell: parseFloat((row.metrics && row.metrics[4]) || 0),
         })).sort((a,b) => String(a.date).localeCompare(String(b.date)));
         const sum = series.reduce((acc,s) => {
           acc.pv += s.pv; acc.sessions += s.sessions; acc.users += s.users; return acc;
         }, { pv:0, sessions:0, users:0 });
         const last7 = series.slice(-7).reduce((acc,s) => {
-          acc.pv += s.pv; acc.sessions += s.sessions; return acc;
-        }, { pv:0, sessions:0 });
+          acc.pv += s.pv; acc.sessions += s.sessions; acc.users += s.users;
+          acc.bounce_sum += s.bounce * s.sessions; acc.dwell_sum += s.dwell * s.sessions;
+          return acc;
+        }, { pv:0, sessions:0, users:0, bounce_sum:0, dwell_sum:0 });
         const prev7 = series.slice(-14, -7).reduce((acc,s) => {
-          acc.pv += s.pv; acc.sessions += s.sessions; return acc;
-        }, { pv:0, sessions:0 });
+          acc.pv += s.pv; acc.sessions += s.sessions; acc.users += s.users;
+          acc.bounce_sum += s.bounce * s.sessions; acc.dwell_sum += s.dwell * s.sessions;
+          return acc;
+        }, { pv:0, sessions:0, users:0, bounce_sum:0, dwell_sum:0 });
+        const yest = series[series.length - 1] || null;
+        const dayBefore = series[series.length - 2] || null;
+        // 加重平均で bounce / dwell を出す
+        const last7BounceAvg = last7.sessions > 0 ? last7.bounce_sum / last7.sessions : 0;
+        const prev7BounceAvg = prev7.sessions > 0 ? prev7.bounce_sum / prev7.sessions : 0;
+        const last7DwellAvg = last7.sessions > 0 ? last7.dwell_sum / last7.sessions : 0;
+        const prev7DwellAvg = prev7.sessions > 0 ? prev7.dwell_sum / prev7.sessions : 0;
+
+        // 国別
+        const countries = (rCountries && rCountries.rows ? rCountries.rows : []).map(row => ({
+          country: row.dimensions && row.dimensions[0],
+          users: parseInt((row.metrics && row.metrics[0]) || 0, 10),
+        })).filter(c => c.country).slice(0, 5);
+        const countryTotal = countries.reduce((s, c) => s + c.users, 0);
+
+        // ページ別
+        const pages = (rPages && rPages.rows ? rPages.rows : []).map(row => ({
+          path: row.dimensions && row.dimensions[0],
+          pv: parseInt((row.metrics && row.metrics[0]) || 0, 10),
+          dwell: parseFloat((row.metrics && row.metrics[1]) || 0),
+          bounce: parseFloat((row.metrics && row.metrics[2]) || 0),
+        })).filter(p => p.path).slice(0, 5);
+
+        // 流入元別 (チャネルグループ)
+        const sources = (rSources && rSources.rows ? rSources.rows : []).map(row => ({
+          channel: row.dimensions && row.dimensions[0],
+          sessions: parseInt((row.metrics && row.metrics[0]) || 0, 10),
+        })).filter(s => s.channel);
+        const sourceTotal = sources.reduce((s, c) => s + c.sessions, 0);
+
         ag.ga4_snapshot = {
           fetched_at: new Date().toISOString(),
-          property_id: r.property_id,
-          series,                              // 過去 30 日
+          property_id: rTimeSeries.property_id,
+          series,
           total_30d: sum,
           last_7d: last7,
           prev_7d: prev7,
+          yesterday: yest,
+          day_before: dayBefore,
           delta_pv_pct: prev7.pv > 0 ? Math.round((last7.pv - prev7.pv) / prev7.pv * 100) : null,
+          bounce_7d: last7BounceAvg,
+          dwell_7d_sec: last7DwellAvg,
+          bounce_delta_pt: last7BounceAvg && prev7BounceAvg ? Math.round((last7BounceAvg - prev7BounceAvg) * 1000) / 10 : null,
+          dwell_delta_sec: Math.round(last7DwellAvg - prev7DwellAvg),
+          countries,
+          country_total: countryTotal,
+          pages,
+          sources,
+          source_total: sourceTotal,
         };
         try { await DB.save(user); } catch(e){ console.warn('[ga4-snapshot] save failed:', e.message); }
         return jres(res, 200, { ok: true, connected: true, snapshot: ag.ga4_snapshot, stale: false });
       } else {
         return jres(res, 200, {
           ok: false, connected: true, snapshot: cached,
-          error: (r && r.error) || 'ga4_query_failed',
-          detail: r && r.detail,
+          error: (rTimeSeries && rTimeSeries.error) || 'ga4_query_failed',
+          detail: rTimeSeries && rTimeSeries.detail,
         });
       }
     } catch(e){

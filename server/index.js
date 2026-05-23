@@ -9274,18 +9274,48 @@ const SNS_TOOLS = [
       required: ['title','content'],
     },
   },
-  // ── WordPress ──
+  // ── WordPress: 記事を新規公開 ──
   {
     name: 'publish_wordpress',
-    description: '⚠️ 事前にユーザーが WordPress 管理画面 ({site}/wp-admin) にブラウザでログイン済みであること。\nWordPress サイトに記事を公開 or 下書き保存します。Block (Gutenberg) と Classic editor の両方に対応。デフォルトは下書き (= ユーザー確認推奨)。\n\nユーザーがまだ WordPress を接続していない場合は 「接続 tab で WordPress を接続してください」 と案内すること。',
+    description: '⚠️ 事前にユーザーが WordPress 管理画面 ({site}/wp-admin) にブラウザでログイン済みであること。\n\nWordPress サイトに記事 (投稿 or 固定ページ) を新規公開、 下書き保存、 または 予約投稿します。\nWordPress REST API 経由 (= Block / Classic editor どちらでも動く) で、 カテゴリ / タグ / slug / 抜粋 / アイキャッチ / 予約日時 まで 1 回の API call で setup します。\n\nデフォルト status は draft (= ユーザー確認推奨)。 ユーザーがまだ WordPress を接続していない場合は 「接続 tab で WordPress を接続してください」 と案内すること。',
     input_schema: {
       type: 'object',
       properties: {
         title: { type: 'string', description: '記事タイトル (1-200 字)' },
-        content: { type: 'string', description: '本文 (HTML or プレーンテキスト、改行で段落)' },
-        status: { type: 'string', enum: ['draft','publish'], description: 'default: draft' },
+        content: { type: 'string', description: '本文 (HTML 推奨、 段落は <p>...</p>。 markdown は WP 側で展開されない)' },
+        status: { type: 'string', enum: ['draft','publish'], description: 'default: draft (= 下書き保存)' },
+        post_type: { type: 'string', enum: ['post','page'], description: 'default: post (= 通常投稿)。 page = 固定ページ' },
+        categories: { type: 'array', items: { type: 'string' }, description: '(任意) カテゴリ名の配列。 存在しなければ自動で作成される。 post_type=post のみ有効' },
+        tags: { type: 'array', items: { type: 'string' }, description: '(任意) タグ名の配列。 存在しなければ自動で作成される' },
+        slug: { type: 'string', description: '(任意) パーマリンク末尾の URL slug (= 英数字 + ハイフン推奨)' },
+        excerpt: { type: 'string', description: '(任意) 抜粋 / メタディスクリプション' },
+        scheduled_at: { type: 'string', description: '(任意) 予約公開日時 ISO 8601 (例: "2026-06-15T10:00:00")。 status=publish と組み合わせると 「予約投稿」 になる' },
+        featured_image_url: { type: 'string', description: '(任意) アイキャッチ画像 URL。 自動でメディアライブラリに upload + 設定する' },
       },
       required: ['title','content'],
+    },
+  },
+  // ── WordPress: 既存記事を編集 ──
+  {
+    name: 'edit_wordpress',
+    description: '⚠️ 事前にユーザーが WordPress 管理画面にログイン済みであること。\n\n既存の WordPress 記事 (投稿 or 固定ページ) を編集します。 post_id 直接指定 か、 公開ページの URL (post_url) で記事を特定。 渡したフィールドのみ上書きされる (= 例えば content だけ渡せば title はそのまま)。\n\n用途: 古い記事のリライト、 typo 修正、 タグ追加、 アイキャッチ差し替え、 予約日変更、 下書き化 など。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        post_id: { type: 'number', description: '(post_id か post_url のどちらか必須) 記事 ID' },
+        post_url: { type: 'string', description: '(post_id か post_url のどちらか必須) 公開ページの URL — slug or ?p=ID から自動で post_id を解決' },
+        post_type: { type: 'string', enum: ['post','page'], description: 'default: post' },
+        title: { type: 'string', description: '(任意) 新しいタイトル' },
+        content: { type: 'string', description: '(任意) 新しい本文 (HTML)' },
+        status: { type: 'string', enum: ['draft','publish','pending','private'], description: '(任意) 公開状態を変更' },
+        slug: { type: 'string', description: '(任意) URL slug を変更' },
+        excerpt: { type: 'string', description: '(任意) 抜粋を変更' },
+        categories: { type: 'array', items: { type: 'string' }, description: '(任意) カテゴリ — 配列で完全に置換 (= 既存は外れる)' },
+        tags: { type: 'array', items: { type: 'string' }, description: '(任意) タグ — 配列で完全に置換' },
+        scheduled_at: { type: 'string', description: '(任意) 予約日時 ISO 8601。 未来日なら自動で status=future に' },
+        featured_image_url: { type: 'string', description: '(任意) アイキャッチ画像 URL を差し替え' },
+      },
+      required: [],
     },
   },
   // ── Shopify ──
@@ -9935,118 +9965,430 @@ async function executePublishNoteTool(user, input){
   };
 }
 
+// ── WordPress 共通 helpers ──
+// 接続済 user から admin URL を取得 (= site_url + /wp-admin を組み立て)
+function _wpGetAdminUrl(user){
+  const conn = user && user.sns_connections && user.sns_connections.wordpress;
+  if(!conn || !conn.connected) return null;
+  return (conn.profile && conn.profile.admin_url)
+    || (conn.profile && conn.profile.site_url ? conn.profile.site_url.replace(/\/$/, '') + '/wp-admin' : null);
+}
+
+// 画像 URL → data URL (= REST API media upload 用)
+async function _wpFetchImageAsDataUrl(imageUrl){
+  if(!imageUrl) return null;
+  if(imageUrl.startsWith('data:')){
+    return { dataUrl: imageUrl, filename: 'featured.jpg' };
+  }
+  try {
+    const res = await fetch(imageUrl);
+    if(!res.ok) throw new Error('image fetch ' + res.status);
+    const buf = Buffer.from(await res.arrayBuffer());
+    const mimeType = res.headers.get('content-type') || 'image/jpeg';
+    const extMatch = imageUrl.match(/\.(jpg|jpeg|png|gif|webp)(?:\?|$)/i);
+    const filename = 'featured.' + (extMatch ? extMatch[1].toLowerCase() : 'jpg');
+    return {
+      dataUrl: 'data:' + mimeType + ';base64,' + buf.toString('base64'),
+      filename,
+    };
+  } catch(e){
+    return { error: 'image_fetch_failed', detail: e.message };
+  }
+}
+
+// 拡張で wp-admin に行って REST API 経由で記事を CRUD する eval script
+// fields: { title, content, status, slug, excerpt, categories, tags, scheduled_at, featured_data_url, featured_filename, post_type, post_id }
+// op: 'create' | 'update'
+function _wpBuildRestEvalScript(op, fields){
+  const safe = JSON.stringify(fields);
+  return `
+    const fields = ${safe};
+    const op = ${JSON.stringify(op)};
+    const nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || '';
+    if(!nonce){
+      return { error: 'no_nonce', detail: 'wp-admin の REST API nonce が取得できません。 管理者としてログインし直してください。' };
+    }
+
+    async function resolveTerms(taxRest, names){
+      if(!Array.isArray(names) || !names.length) return [];
+      const ids = [];
+      for(const name of names){
+        const trimmed = String(name||'').trim();
+        if(!trimmed) continue;
+        try {
+          let res = await fetch('/wp-json/wp/v2/' + taxRest + '?search=' + encodeURIComponent(trimmed) + '&per_page=20', {
+            headers: { 'X-WP-Nonce': nonce },
+            credentials: 'same-origin',
+          });
+          let arr = await res.json();
+          let match = Array.isArray(arr) ? arr.find(t => t.name === trimmed) : null;
+          if(match){ ids.push(match.id); continue; }
+          res = await fetch('/wp-json/wp/v2/' + taxRest, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+            credentials: 'same-origin',
+            body: JSON.stringify({ name: trimmed })
+          });
+          let created = await res.json();
+          if(created && created.id) ids.push(created.id);
+        } catch(e){
+          // skip the failing term but continue
+        }
+      }
+      return ids;
+    }
+
+    async function uploadMedia(dataUrl, filename){
+      const m = String(dataUrl||'').match(/^data:([^;]+);base64,(.*)$/);
+      if(!m) return null;
+      try {
+        const mime = m[1];
+        const b64 = m[2];
+        const bytes = atob(b64);
+        const arr = new Uint8Array(bytes.length);
+        for(let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+        const blob = new Blob([arr], { type: mime });
+        const fd = new FormData();
+        fd.append('file', blob, filename || 'featured.jpg');
+        const res = await fetch('/wp-json/wp/v2/media', {
+          method: 'POST',
+          headers: { 'X-WP-Nonce': nonce },
+          credentials: 'same-origin',
+          body: fd,
+        });
+        const j = await res.json();
+        return (j && j.id) ? j.id : null;
+      } catch(e){ return null; }
+    }
+
+    // Resolve taxonomies (= name → ID、 既存があれば再利用、 なければ作成)
+    const catIds = await resolveTerms('categories', fields.categories || []);
+    const tagIds = await resolveTerms('tags', fields.tags || []);
+
+    // Featured image (= data URL → media ID)
+    let featuredId = null;
+    if(fields.featured_data_url){
+      featuredId = await uploadMedia(fields.featured_data_url, fields.featured_filename);
+    }
+
+    // Build request body (only include defined fields)
+    const body = {};
+    if(typeof fields.title === 'string')   body.title = fields.title;
+    if(typeof fields.content === 'string') body.content = fields.content;
+    if(typeof fields.slug === 'string' && fields.slug) body.slug = fields.slug;
+    if(typeof fields.excerpt === 'string' && fields.excerpt) body.excerpt = fields.excerpt;
+    if(catIds.length) body.categories = catIds;
+    if(tagIds.length) body.tags = tagIds;
+    if(featuredId)    body.featured_media = featuredId;
+
+    // Status + scheduled date
+    if(fields.scheduled_at && new Date(fields.scheduled_at) > new Date()){
+      body.status = 'future';
+      body.date = fields.scheduled_at;
+    } else if(fields.status === 'publish'){
+      body.status = 'publish';
+    } else if(fields.status === 'draft'){
+      body.status = 'draft';
+    }
+
+    const postType = fields.post_type === 'page' ? 'pages' : 'posts';
+    let endpoint, method;
+    if(op === 'create'){
+      endpoint = '/wp-json/wp/v2/' + postType;
+      method = 'POST';
+    } else {
+      if(!fields.post_id) return { error: 'post_id_required' };
+      endpoint = '/wp-json/wp/v2/' + postType + '/' + fields.post_id;
+      method = 'POST';  // WP REST API uses POST for both create and update
+    }
+
+    try {
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+      const j = await res.json();
+      if(!res.ok){
+        return { error: 'wp_api_error', status: res.status, detail: (j && (j.message || j.code)) || 'unknown' };
+      }
+      return {
+        ok: true,
+        id: j.id,
+        link: j.link,
+        status: j.status,
+        date: j.date,
+        slug: j.slug,
+        type: j.type,
+      };
+    } catch(e){
+      return { error: 'wp_api_fetch_failed', detail: String(e && e.message || e) };
+    }
+  `;
+}
+
+// post_url (公開ページの URL) から ID を解決
+function _wpBuildPostIdLookupScript(postUrl){
+  return `
+    const url = ${JSON.stringify(postUrl)};
+    const nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || '';
+    if(!nonce) return { error: 'no_nonce' };
+    try {
+      // 1) ?p=ID 形式
+      const m1 = url.match(/[?&]p=(\\d+)/);
+      if(m1) return { ok: true, id: parseInt(m1[1], 10), post_type: 'post' };
+      // 2) ?page_id=ID 形式
+      const m2 = url.match(/[?&]page_id=(\\d+)/);
+      if(m2) return { ok: true, id: parseInt(m2[1], 10), post_type: 'page' };
+      // 3) pretty permalink → slug 抽出 → REST API で検索 (post + page 両方試す)
+      const u = new URL(url);
+      const parts = u.pathname.split('/').filter(Boolean);
+      const slug = parts[parts.length - 1];
+      if(!slug) return { error: 'slug_not_extracted' };
+      for(const tp of ['posts','pages']){
+        const r = await fetch('/wp-json/wp/v2/' + tp + '?slug=' + encodeURIComponent(slug), {
+          headers: { 'X-WP-Nonce': nonce }, credentials: 'same-origin'
+        });
+        const arr = await r.json();
+        if(Array.isArray(arr) && arr.length){
+          return { ok: true, id: arr[0].id, post_type: tp === 'pages' ? 'page' : 'post' };
+        }
+      }
+      return { error: 'post_not_found', detail: 'slug=' + slug + ' で記事が見つかりません' };
+    } catch(e){
+      return { error: 'lookup_failed', detail: String(e && e.message || e) };
+    }
+  `;
+}
+
 // ── WordPress 公開 ──
-// 拡張で {site}/wp-admin/post-new.php を開いて Block (Gutenberg) / Classic 両対応で記事公開。
-// 認証情報は保存せず、 ユーザーのログイン済みブラウザ session を使う (= 他 SNS と同じ pattern)。
+// REST API を ext_eval で呼ぶ pattern。 wp-admin に行って window.wpApiSettings.nonce を取得し、
+// /wp-json/wp/v2/posts に POST。 categories / tags / featured_media / slug / excerpt /
+// scheduled date / page / featured_image を 1 回の API call で setup。
+// REST API が無効な site (= 旧 WP or 一部セキュリティ plugin) では DOM fallback に降りる。
 async function executePublishWordPressTool(user, input){
   const title = String((input && input.title) || '').trim();
   const content = String((input && input.content) || '').trim();
-  const status = (input && input.status === 'publish') ? 'publish' : 'draft';
+  const rawStatus = String((input && input.status) || 'draft');
+  const status = rawStatus === 'publish' ? 'publish' : 'draft';
+  const post_type = (input && input.post_type === 'page') ? 'page' : 'post';
+  const categories = Array.isArray(input && input.categories) ? input.categories.filter(Boolean) : [];
+  const tags = Array.isArray(input && input.tags) ? input.tags.filter(Boolean) : [];
+  const slug = String((input && input.slug) || '').trim();
+  const excerpt = String((input && input.excerpt) || '').trim();
+  const scheduled_at = String((input && input.scheduled_at) || '').trim();  // ISO 8601
+  const featured_image_url = String((input && input.featured_image_url) || '').trim();
+
   if(!title || !content) return { error: 'title_and_content_required' };
   if(!user.extension_device_token) return { error: 'extension_not_paired' };
-  const conn = user.sns_connections && user.sns_connections.wordpress;
-  if(!conn || !conn.connected){
-    return { error: 'not_connected', detail: 'WordPress サイトを先に接続してください (接続 tab)。' };
-  }
-  const adminUrl = (conn.profile && conn.profile.admin_url) || (conn.profile && conn.profile.site_url ? conn.profile.site_url + '/wp-admin' : null);
-  if(!adminUrl) return { error: 'admin_url_missing', detail: 'WordPress admin URL が保存されていません。 再接続してください。' };
+  const adminUrl = _wpGetAdminUrl(user);
+  if(!adminUrl) return { error: 'not_connected', detail: 'WordPress サイトを先に接続してください (接続 tab)。' };
 
-  // 1) post-new.php を開く
-  let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl.replace(/\/$/, '') + '/post-new.php' });
+  // 1) wp-admin Dashboard に行って nonce を取得 (post-new ではなく Dashboard の方が軽い)
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
-  await _sleep(4000);  // wp-admin + editor 初期 load
+  await _sleep(3500);
 
-  // 2) ログイン check (= 未ログインなら login form へ redirect される)
+  // 2) ログイン check
   r = await executeExtensionTool(user, 'ext_read_page', {});
   const currentUrl = String((r && r.url) || '');
   if(/wp-login\.php/.test(currentUrl)){
     return { error: 'not_logged_in', detail: 'WordPress 管理画面にログインしてください: ' + adminUrl };
   }
 
-  // 3) タイトル入力 — Block editor (Gutenberg) を先に試す
+  // 3) Featured image は server で fetch → data URL に変換
+  let featured_data_url = null;
+  let featured_filename = null;
+  if(featured_image_url){
+    const fimg = await _wpFetchImageAsDataUrl(featured_image_url);
+    if(fimg && fimg.error){
+      return { error: 'featured_image_failed', detail: fimg.detail };
+    }
+    if(fimg){ featured_data_url = fimg.dataUrl; featured_filename = fimg.filename; }
+  }
+
+  // 4) REST API 経由で create (= ext_eval で実行)
+  const evalScript = _wpBuildRestEvalScript('create', {
+    title, content, status,
+    slug, excerpt, categories, tags,
+    scheduled_at, post_type,
+    featured_data_url, featured_filename,
+  });
+  const restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+
+  // 5) REST 失敗 → DOM fallback (= 基本 title + content + publish/draft のみ)
+  if(!restResult || restResult.error){
+    if(restResult && restResult.error === 'no_nonce'){
+      return { error: 'no_admin_access', detail: 'wp-admin にアクセスできない or 管理者ロールがありません。' };
+    }
+    console.warn('[wp] REST API failed, falling back to DOM:', restResult && restResult.error);
+    return await _wpPublishViaDom(user, adminUrl, { title, content, status, post_type });
+  }
+
+  return {
+    ok: true,
+    platform: 'wordpress',
+    url: restResult.link || '',
+    post_id: restResult.id,
+    status: restResult.status,
+    scheduled_date: restResult.date,
+    post_type,
+    via: 'rest_api',
+    instructions: 'ユーザーに「✅ WordPress に' + (
+      restResult.status === 'future' ? '予約投稿しました (' + restResult.date + ')' :
+      restResult.status === 'publish' ? '公開しました' : '下書き保存しました'
+    ) + '」と短く報告してください。',
+  };
+}
+
+// ── DOM fallback: REST API が使えない site 用の旧来 implementation ──
+// title + content + publish/draft のみサポート (= 拡張機能の selector ベース)
+async function _wpPublishViaDom(user, adminUrl, opts){
+  const { title, content, status, post_type } = opts;
+  const editorPath = post_type === 'page' ? '/post-new.php?post_type=page' : '/post-new.php';
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl.replace(/\/$/, '') + editorPath });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(4000);
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(r && /wp-login\.php/.test(String(r.url||''))){
+    return { error: 'not_logged_in' };
+  }
+
   r = await executeExtensionTool(user, 'ext_type', {
     selector: '.editor-post-title__input, h1.editor-post-title',
     text: title,
   });
   let editorMode = 'block';
   if(r && r.error){
-    // Classic editor fallback
     r = await executeExtensionTool(user, 'ext_type', { selector: '#title', text: title });
-    if(r && r.error) return { error: 'title_type_failed', detail: 'WordPress エディタが見つかりません: ' + r.error };
+    if(r && r.error) return { error: 'title_type_failed', detail: r.error };
     editorMode = 'classic';
   }
   await _sleep(800);
 
-  // 4) 本文入力
   if(editorMode === 'block'){
-    // Block editor: 「文章を入力、または / でブロックを選択」 paragraph block を click → type
     r = await executeExtensionTool(user, 'ext_click', { target: '.block-editor-default-block-appender__content' });
+    await _sleep(500);
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '.block-editor-rich-text__editable[contenteditable="true"]',
+      text: content,
+    });
     if(r && r.error){
-      // 既に block があれば直接 type を試す
-      r = await executeExtensionTool(user, 'ext_type', {
-        selector: '.block-editor-rich-text__editable[contenteditable="true"]',
-        text: content,
-      });
-    } else {
-      await _sleep(500);
-      r = await executeExtensionTool(user, 'ext_type', {
-        selector: '.block-editor-rich-text__editable[contenteditable="true"]',
-        text: content,
-      });
-    }
-    if(r && r.error){
-      // 最後の fallback: 任意の contenteditable
       r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"]', text: content });
-      if(r && r.error) return { error: 'content_type_failed', detail: 'WordPress 本文エリアが見つかりません: ' + r.error };
+      if(r && r.error) return { error: 'content_type_failed', detail: r.error };
     }
   } else {
-    // Classic editor: テキスト mode の textarea#content か Visual mode の iframe#content_ifr
     r = await executeExtensionTool(user, 'ext_type', { selector: '#content', text: content });
-    if(r && r.error) return { error: 'content_type_failed', detail: 'WordPress 本文エリアが見つかりません: ' + r.error };
+    if(r && r.error) return { error: 'content_type_failed', detail: r.error };
   }
   await _sleep(1200);
 
-  // 5) 公開 or 下書き保存
   if(status === 'publish'){
     if(editorMode === 'block'){
-      // Block: 「公開」 button → 「公開」 確認 dialog
       r = await executeExtensionTool(user, 'ext_click', { target: '.editor-post-publish-button__button' });
-      if(r && r.error){
-        r = await executeExtensionTool(user, 'ext_click', { target: '公開' });
-      }
+      if(r && r.error) r = await executeExtensionTool(user, 'ext_click', { target: '公開' });
       await _sleep(1500);
-      // Pre-publish panel が出るので 「公開」 confirm を押す
       r = await executeExtensionTool(user, 'ext_click', { target: '.editor-post-publish-button' });
-      if(r && r.error){
-        // 既に直接公開された可能性 — ignore
-      }
     } else {
       r = await executeExtensionTool(user, 'ext_click', { target: '#publish' });
       if(r && r.error) return { error: 'publish_click_failed', detail: r.error };
     }
   } else {
-    // 下書き保存
     if(editorMode === 'block'){
       r = await executeExtensionTool(user, 'ext_click', { target: '.editor-post-save-draft' });
-      if(r && r.error){
-        r = await executeExtensionTool(user, 'ext_click', { target: '下書き保存' });
-      }
+      if(r && r.error) r = await executeExtensionTool(user, 'ext_click', { target: '下書き保存' });
     } else {
       r = await executeExtensionTool(user, 'ext_click', { target: '#save-post' });
-      if(r && r.error){
-        r = await executeExtensionTool(user, 'ext_click', { target: '下書きとして保存' });
-      }
     }
   }
   await _sleep(3000);
   r = await executeExtensionTool(user, 'ext_read_page', {});
-
   return {
     ok: true, platform: 'wordpress',
     url: (r && r.url) || '',
-    status,
-    editor: editorMode,
-    instructions: 'ユーザーに「✅ WordPress に' + (status === 'publish' ? '公開しました' : '下書き保存しました') + '」と短く報告してください。',
+    status, editor: editorMode, via: 'dom_fallback',
+    instructions: 'ユーザーに「✅ WordPress に' + (status === 'publish' ? '公開しました' : '下書き保存しました') + ' (基本機能のみ)」と短く報告してください。',
+  };
+}
+
+// ── WordPress 記事編集 ──
+// post_id 直接指定 or post_url から ID 解決して PATCH。 update したい field だけ渡せば OK。
+async function executeEditWordPressTool(user, input){
+  const post_id = input && input.post_id ? parseInt(input.post_id, 10) : null;
+  const post_url = String((input && input.post_url) || '').trim();
+  if(!post_id && !post_url) return { error: 'post_id_or_url_required', detail: 'post_id または post_url のどちらかが必須です。' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  const adminUrl = _wpGetAdminUrl(user);
+  if(!adminUrl) return { error: 'not_connected', detail: 'WordPress サイトを先に接続してください。' };
+
+  // 1) wp-admin で nonce 確保
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(3500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(r && /wp-login\.php/.test(String(r.url||''))){
+    return { error: 'not_logged_in', detail: 'WordPress 管理画面にログインしてください: ' + adminUrl };
+  }
+
+  // 2) post_id を解決 (= 与えられていれば skip)
+  let resolvedId = post_id;
+  let resolvedType = (input && input.post_type === 'page') ? 'page' : 'post';
+  if(!resolvedId && post_url){
+    const lookupResult = await executeExtensionTool(user, 'ext_eval', { code: _wpBuildPostIdLookupScript(post_url) });
+    if(!lookupResult || lookupResult.error){
+      return { error: 'lookup_failed', detail: (lookupResult && lookupResult.detail) || 'post_id を取得できません' };
+    }
+    resolvedId = lookupResult.id;
+    resolvedType = lookupResult.post_type || 'post';
+  }
+
+  // 3) Featured image (= 任意)
+  let featured_data_url = null;
+  let featured_filename = null;
+  const featured_image_url = String((input && input.featured_image_url) || '').trim();
+  if(featured_image_url){
+    const fimg = await _wpFetchImageAsDataUrl(featured_image_url);
+    if(fimg && fimg.error) return { error: 'featured_image_failed', detail: fimg.detail };
+    if(fimg){ featured_data_url = fimg.dataUrl; featured_filename = fimg.filename; }
+  }
+
+  // 4) Update via REST API
+  const updateFields = {
+    post_id: resolvedId,
+    post_type: resolvedType,
+  };
+  if(input && typeof input.title === 'string')        updateFields.title = input.title;
+  if(input && typeof input.content === 'string')      updateFields.content = input.content;
+  if(input && typeof input.slug === 'string')         updateFields.slug = input.slug;
+  if(input && typeof input.excerpt === 'string')      updateFields.excerpt = input.excerpt;
+  if(input && Array.isArray(input.categories))        updateFields.categories = input.categories;
+  if(input && Array.isArray(input.tags))              updateFields.tags = input.tags;
+  if(input && typeof input.status === 'string')       updateFields.status = input.status;
+  if(input && typeof input.scheduled_at === 'string') updateFields.scheduled_at = input.scheduled_at;
+  if(featured_data_url){
+    updateFields.featured_data_url = featured_data_url;
+    updateFields.featured_filename = featured_filename;
+  }
+
+  const evalScript = _wpBuildRestEvalScript('update', updateFields);
+  const restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+  if(!restResult || restResult.error){
+    if(restResult && restResult.error === 'no_nonce') return { error: 'no_admin_access' };
+    return { error: 'update_failed', detail: (restResult && restResult.detail) || 'REST API 更新に失敗しました' };
+  }
+
+  return {
+    ok: true,
+    platform: 'wordpress',
+    url: restResult.link || '',
+    post_id: restResult.id,
+    status: restResult.status,
+    post_type: resolvedType,
+    action: 'edit',
+    via: 'rest_api',
+    instructions: 'ユーザーに「✅ WordPress 記事 (' + (resolvedType === 'page' ? '固定ページ' : '投稿') + ' #' + restResult.id + ') を更新しました」 と報告してください。',
   };
 }
 
@@ -10171,11 +10513,13 @@ async function executeSnsTool(user, name, input, agent){
   else if(name === 'post_to_facebook') r = await executePostToFacebookTool(user, input);
   else if(name === 'publish_note')     r = await executePublishNoteTool(user, input);
   else if(name === 'publish_wordpress') r = await executePublishWordPressTool(user, input);
+  else if(name === 'edit_wordpress')    r = await executeEditWordPressTool(user, input);
   else if(name === 'create_shopify_product') r = await executeCreateShopifyProductTool(user, input);
   else return { error: 'unknown_sns_tool: ' + name };
 
-  // 成功時のみ history 記録 (verify_x_login は post じゃないので除外)
-  if(agent && r && r.ok && r.platform && name !== 'verify_x_login'){
+  // 成功時のみ history 記録 (verify_x_login や edit_wordpress (= 更新) は post じゃないので除外)
+  const EXCLUDE_FROM_HISTORY = new Set(['verify_x_login', 'edit_wordpress']);
+  if(agent && r && r.ok && r.platform && !EXCLUDE_FROM_HISTORY.has(name)){
     _recordSnsPost(agent, r.platform, {
       url: r.url,
       text: (input && (input.text || input.title)) || '',

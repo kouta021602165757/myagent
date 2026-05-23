@@ -7038,6 +7038,66 @@ function _ideogramAspect(w, h){
 }
 
 // ── helpers shared by media utility tools ────────────────────
+// ── サイト内容を取得して agent にキャッシュ (= AI 生成 prompt のコンテキスト用) ──
+// onboarding/site と同じ軽量 HTTP fetch ロジック。24h 以内のキャッシュがあれば再利用。
+// 戻り値: { title, content } (content は plain text 4000 字程度)
+async function _fetchSitePreview(agent){
+  if(!agent || !agent.site_url) return { title: '', content: '' };
+  // キャッシュ check (24h)
+  const cached = agent.site_preview;
+  if(cached && cached.fetched_at && (Date.now() - Date.parse(cached.fetched_at)) < 24 * 3600 * 1000){
+    return { title: cached.title || '', content: cached.content || '' };
+  }
+  let title = agent.site_title || '';
+  let content = '';
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const fres = await fetch(agent.site_url, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MY-AI-Agent-Strategy/1.0)' },
+      redirect: 'follow',
+    }).catch(e => { clearTimeout(timer); throw e; });
+    clearTimeout(timer);
+    if(fres && fres.ok){
+      const html = await fres.text();
+      const titleM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if(titleM) title = String(titleM[1]).replace(/\s+/g, ' ').trim().slice(0, 200);
+      // meta description も抜く (= ペルソナ生成に有用)
+      const descM = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+      const description = descM ? String(descM[1]).slice(0, 300) : '';
+      // h1, h2 を抜く (= サイトの「見出し」 = key message)
+      const h1s = Array.from(html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi))
+        .map(m => String(m[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+        .filter(s => s.length > 0 && s.length < 200)
+        .slice(0, 5);
+      const h2s = Array.from(html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi))
+        .map(m => String(m[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+        .filter(s => s.length > 0 && s.length < 200)
+        .slice(0, 8);
+      const body = String(html)
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<!--[\s\S]*?-->/g, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&[a-z#0-9]+;/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 3000);
+      content = [
+        description && '【meta description】 ' + description,
+        h1s.length && '【h1】 ' + h1s.join(' / '),
+        h2s.length && '【h2】 ' + h2s.join(' / '),
+        body && '【body excerpt】 ' + body,
+      ].filter(Boolean).join('\n');
+      agent.site_preview = { title, content, fetched_at: new Date().toISOString() };
+    }
+  } catch(e){
+    console.warn('[site-preview] fetch failed:', agent.site_url, e.message);
+  }
+  return { title, content };
+}
+
 function _safeName(s, fallback){
   const x = String(s || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   return x || fallback || 'file';
@@ -16765,16 +16825,31 @@ async function handleAPI(req,res,pathname,method,ip){
       ? 'PV ' + (kpi.pv || '未設定') + ' / CVR ' + (kpi.cvr || '未設定') + '% / 月間リード ' + (kpi.leads || '未設定')
       : '(KPI 未設定 — 一般的な成長を目標)';
 
+    // サイト内容を実際に fetch (= persona / 競合の精度が劇的に上がる)
+    let siteContext = '';
+    try {
+      const preview = await _fetchSitePreview(ag);
+      if(preview && preview.content){
+        siteContext = '【サイト実コンテンツ】\n' + (preview.title ? 'タイトル: ' + preview.title + '\n' : '') + preview.content;
+      }
+    } catch(e){ console.warn('[strategy-gen] preview failed:', e.message); }
+
     const prompt = `あなたは集客マーケティングのストラテジストです。サイト「${ag.site_url || ag.name}」(${ag.site_vertical || 'general'}) の戦略を以下 3 種類の JSON で出力してください。
+
+${siteContext}
 
 【現状】 ${baseline}
 【目標】 ${target}
 
 【出力ルール】
-- persona: 1 名の典型的なターゲット顧客像 (実在しないが具体的な人物像として)
-- competitors: 3 社の主要競合 (実在 / 推測)
-- kpi_6mo: 月 1 から月 6 まで、現状 → 目標へ段階的に到達する月次 KPI
-- 数値はベースライン (${baseline}) から目標 (${target}) へ logical に逆算
+- 上記の【サイト実コンテンツ】を必ず読み取って、それを根拠に persona / 競合を抽出してください
+  (= 抽象論ではなく、このサイトが提供している実際の価値・キーワードに基づいて具体化する)
+- persona: 1 名の典型的なターゲット顧客像 (実在しないが具体的な人物像として)。
+  サイトの内容から「誰に向けて書かれているか」を読み取って persona を組み立てる。
+- competitors: 3 社の主要競合 (実在 / 推測)。サイトのキーワードや業界から実在しそうな競合を挙げる。
+  ジェネリックな架空名ではなく、業界の実在企業名で。
+- kpi_6mo: 月 1 から月 6 まで、現状 → 目標へ段階的に到達する月次 KPI。
+  数値はベースライン (${baseline}) から目標 (${target}) へ logical に逆算。
 
 出力フォーマット (JSON のみ、コメントや説明文・markdown は不要):
 {
@@ -16883,7 +16958,18 @@ async function handleAPI(req,res,pathname,method,ip){
       ? '主 KPI: PV ' + (kpi.pv || '未設定') + ' / CVR ' + (kpi.cvr || '未設定') + ' / リード ' + (kpi.leads || '未設定')
       : 'KPI 未設定 — 一般的な集客成長を目標';
 
+    // サイト内容も注入 (= 「このサイト特有のタスク」を出させるため)
+    let siteContextR = '';
+    try {
+      const preview = await _fetchSitePreview(ag);
+      if(preview && preview.content){
+        siteContextR = '【サイト実コンテンツ】\n' + (preview.title ? 'タイトル: ' + preview.title + '\n' : '') + preview.content;
+      }
+    } catch(e){ console.warn('[roadmap-gen] preview failed:', e.message); }
+
     const prompt = `あなたは集客マーケティングのストラテジストです。以下の情報から、サイト「` + (ag.site_url || ag.name) + `」(${ag.site_vertical || 'general'}) の今後 12 週間の実行ロードマップを JSON で出力してください。
+
+${siteContextR}
 
 【現状】
 ${baseline}

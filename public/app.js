@@ -4527,8 +4527,15 @@ function _renderTabStrategy(site, allArts){
     }).join('');
     kpiSheetHTML = ''
       + '<div class="st-card">'
-      +   '<div class="st-card-h"><span class="st-card-ti">📊 6 ヶ月 KPI シート</span><span class="st-card-sub">' + strategy.kpi_6mo.length + ' ヶ月の段階目標</span></div>'
+      +   '<div class="st-card-h">'
+      +     '<span class="st-card-ti">📊 6 ヶ月 KPI シート</span>'
+      +     '<span class="st-card-sub">' + strategy.kpi_6mo.length + ' ヶ月の段階目標</span>'
+      +   '</div>'
       +   '<div class="st-kpi-sheet">' + rows + '</div>'
+      +   '<div class="st-card-actions">'
+      +     '<button class="st-act-btn" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'tasks\')" title="タスク管理 tab で具体的な実行プランを見る">✅ この目標達成の実行プランを見る →</button>'
+      +     '<button class="st-act-btn st-act-secondary" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'この 6 ヶ月の KPI 目標を達成するため、月別の最重要施策をもう一段詳しく解説してください。\')">💬 詳しく聞く</button>'
+      +   '</div>'
       + '</div>';
   }
 
@@ -4540,13 +4547,14 @@ function _renderTabStrategy(site, allArts){
       if(!Array.isArray(arr) || !arr.length) return '<li style="opacity:.5">—</li>';
       return arr.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
     }
+    var personaName = p.name || 'ペルソナ';
     personaHTML = ''
       + '<div class="st-card st-persona">'
       +   '<div class="st-card-h"><span class="st-card-ti">👤 ターゲットペルソナ</span></div>'
       +   '<div class="st-persona-h">'
       +     '<div class="st-persona-av">👤</div>'
       +     '<div class="st-persona-id">'
-      +       '<div class="st-persona-nm">' + esc(p.name || 'ペルソナ') + '</div>'
+      +       '<div class="st-persona-nm">' + esc(personaName) + '</div>'
       +       '<div class="st-persona-sub">' + esc(p.age || '') + (p.age && p.occupation ? ' ・ ' : '') + esc(p.occupation || '') + '</div>'
       +     '</div>'
       +   '</div>'
@@ -4554,6 +4562,10 @@ function _renderTabStrategy(site, allArts){
       +     '<div class="st-persona-box st-p-pain"><div class="st-persona-lbl">💢 痛みポイント</div><ul class="st-persona-list">' + _bullets(p.painpoints) + '</ul></div>'
       +     '<div class="st-persona-box st-p-mot"><div class="st-persona-lbl">💪 購買動機</div><ul class="st-persona-list">' + _bullets(p.motivations) + '</ul></div>'
       +     '<div class="st-persona-box st-p-trig"><div class="st-persona-lbl">⚡ 行動のキッカケ</div><ul class="st-persona-list">' + _bullets(p.buying_triggers) + '</ul></div>'
+      +   '</div>'
+      +   '<div class="st-card-actions">'
+      +     '<button class="st-act-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify('「' + personaName + '」 のペルソナをもっと詳しく分析してください。日常の悩み、情報収集の方法、購買決定のプロセス、競合と比較した時の私たちの強みを含めて。').replace(/'/g, '&#39;') + ')">💬 もっと深く分析</button>'
+      +     '<button class="st-act-btn st-act-secondary" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このペルソナに刺さるブログ記事のテーマを 5 個提案してください。\')">📝 このペルソナ向け記事案</button>'
       +   '</div>'
       + '</div>';
   }
@@ -4566,20 +4578,27 @@ function _renderTabStrategy(site, allArts){
       var color = COMP_COLORS[i % COMP_COLORS.length];
       var strBullets = (Array.isArray(c.strengths) ? c.strengths : []).map(function(s){ return '<li>' + esc(s) + '</li>'; }).join('');
       var wkBullets = (Array.isArray(c.weaknesses) ? c.weaknesses : []).map(function(w){ return '<li>' + esc(w) + '</li>'; }).join('');
+      var compName = c.name || '?';
+      var compAsk = '「' + compName + '」 について競合分析をもっと詳しく行ってください。サービス内容・価格帯・SEO 状況・SNS フォロワー数・最近の動き、そして私たちが取れる差別化アクションを 3 つ。';
       return '<div class="st-comp-card" style="--ag-c:' + color + '">'
            +   '<div class="st-comp-h">'
-           +     '<div class="st-comp-nm">' + esc(c.name || '?') + '</div>'
-           +     (c.url ? '<a class="st-comp-url" href="' + esc(c.url) + '" target="_blank" rel="noopener">↗</a>' : '')
+           +     '<div class="st-comp-nm">' + esc(compName) + '</div>'
+           +     (c.url ? '<a class="st-comp-url" href="' + esc(c.url) + '" target="_blank" rel="noopener" title="サイトを開く">↗</a>' : '')
            +   '</div>'
            +   '<div class="st-comp-section"><div class="st-comp-lbl">💪 強み</div><ul class="st-comp-list st-comp-list-good">' + strBullets + '</ul></div>'
            +   '<div class="st-comp-section"><div class="st-comp-lbl">⚠️ 弱み</div><ul class="st-comp-list st-comp-list-bad">' + wkBullets + '</ul></div>'
            +   '<div class="st-comp-diff"><b>差別化:</b> ' + esc(c.differentiator || '') + '</div>'
+           +   '<button class="st-comp-deep" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(compAsk).replace(/'/g, '&#39;') + ')" title="チームに深掘り調査を依頼">💬 もっと調査</button>'
            + '</div>';
     }).join('');
     competitorHTML = ''
       + '<div class="st-card">'
       +   '<div class="st-card-h"><span class="st-card-ti">🔍 競合分析</span><span class="st-card-sub">主要 ' + strategy.competitors.length + ' 社</span></div>'
       +   '<div class="st-comp-grid">' + compCards + '</div>'
+      +   '<div class="st-card-actions">'
+      +     '<button class="st-act-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'今の競合分析を踏まえて、私たちのサイトが取るべき差別化戦略を 3 つ、優先度順に提案してください。\')">💬 差別化戦略を提案</button>'
+      +     '<button class="st-act-btn st-act-secondary" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'他に注目すべき競合がいないか、業界を改めてリサーチしてください。\')">🔍 他の競合も探す</button>'
+      +   '</div>'
       + '</div>';
   }
 

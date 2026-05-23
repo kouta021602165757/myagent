@@ -3295,6 +3295,47 @@ input,textarea{font-family:var(--sans);}
 }
 .st-comp-diff b{color:var(--ag-c, #fb923c); font-weight:800}
 
+/* セクション末尾の action buttons (= 「もっと深く」「次へ」系) */
+.st-card-actions{
+  display:flex; gap:8px; flex-wrap:wrap;
+  padding-top:14px;
+  margin-top:14px;
+  border-top:1px dashed var(--wire);
+}
+.st-act-btn{
+  background:linear-gradient(135deg, #60a5fa, #2563eb);
+  color:#fff; border:0;
+  padding:9px 16px; border-radius:10px;
+  font-family:inherit; font-size:12px; font-weight:800;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(37,99,235,.22);
+  transition:transform .15s, box-shadow .15s, filter .15s;
+}
+.st-act-btn:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(37,99,235,.32); filter:brightness(1.05)}
+.st-act-secondary{
+  background:#fff; color:#2563eb;
+  border:1px solid #2563eb;
+  box-shadow:none;
+}
+.st-act-secondary:hover{background:#eff6ff; box-shadow:none}
+
+/* 競合 card 内の「もっと調査」 mini-button */
+.st-comp-deep{
+  margin-top:10px;
+  background:transparent; color:var(--ag-c, #fb923c);
+  border:1px dashed color-mix(in srgb, var(--ag-c, #fb923c) 36%, transparent);
+  padding:6px 12px; border-radius:8px;
+  font-family:inherit; font-size:11px; font-weight:800;
+  cursor:pointer;
+  width:100%;
+  transition:background .15s, border-color .15s;
+}
+.st-comp-deep:hover{
+  background:color-mix(in srgb, var(--ag-c, #fb923c) 8%, transparent);
+  border-color:var(--ag-c, #fb923c);
+  border-style:solid;
+}
+
 /* Strategy artifact row */
 .st-art-row{
   display:flex; align-items:center; gap:14px;

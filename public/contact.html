@@ -7,7 +7,7 @@
 <meta name="description" content="MY AI AGENT へのお問い合わせフォーム。サポート・機能要望・出店相談など。">
 <style>
 :root{
-  --peach:#fb923c;--peach-dark:#ea580c;--cream:#fdf8f3;--cream2:#faf3eb;
+  --peach:#c0ff5c;--peach-dark:#a3e635;--cream:#fdf8f3;--cream2:#faf3eb;
   --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;--wire:rgba(180,120,80,.18);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -23,19 +23,19 @@ input,textarea,select{
   width:100%;padding:11px 14px;border:1px solid rgba(180,120,80,.25);border-radius:11px;
   background:#fff;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;
 }
-input:focus,textarea:focus,select:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.1);}
+input:focus,textarea:focus,select:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(192,255,92,.1);}
 textarea{min-height:160px;line-height:1.7;resize:vertical;}
 .hint{font-size:11.5px;color:var(--text3);font-weight:600;margin-top:5px;}
 .btn{
-  display:block;width:100%;padding:14px;background:var(--peach);color:#fff;
+  display:block;width:100%;padding:14px;background:var(--peach);color:#0a0a0e;
   border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;
   font-family:inherit;transition:all .14s;margin-top:8px;
 }
-.btn:hover{background:var(--peach-dark);transform:translateY(-1px);box-shadow:0 8px 18px rgba(251,146,60,.3);}
+.btn:hover{background:var(--peach-dark);transform:translateY(-1px);box-shadow:0 8px 18px rgba(192,255,92,.3);}
 .btn:disabled{opacity:.6;cursor:wait;transform:none;box-shadow:none;}
 .success{
   text-align:center;padding:40px 24px;background:linear-gradient(135deg,#fff7ed,#ffedd5);
-  border:1px solid rgba(251,146,60,.25);border-radius:16px;
+  border:1px solid rgba(192,255,92,.25);border-radius:16px;
 }
 .success .ic{font-size:48px;margin-bottom:12px;}
 .success h2{font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px;}
@@ -104,7 +104,7 @@ textarea{min-height:160px;line-height:1.7;resize:vertical;}
     <div class="ic">📩</div>
     <h2>送信しました</h2>
     <p>3 営業日以内にメールでご返信いたします。<br>しばらくお待ちください。</p>
-    <a href="/" style="display:inline-block;margin-top:20px;padding:10px 22px;background:var(--peach-dark);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px">← トップに戻る</a>
+    <a href="/" style="display:inline-block;margin-top:20px;padding:10px 22px;background:var(--peach-dark);color:#0a0a0e;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px">← トップに戻る</a>
   </div>
 
   <div class="alt-channels">

@@ -2404,7 +2404,7 @@ function showSheetsOnboardingBanner(){
   var banner = document.createElement('div');
   banner.id = 'sheets-onboarding-banner';
   banner.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:180;max-width:340px;'
-    + 'background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.4);'
+    + 'background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(192,255,92,.4);'
     + 'border-radius:14px;padding:16px 18px 14px;box-shadow:0 12px 32px rgba(180,100,40,.18);'
     + 'font-size:13px;color:var(--text);';
   var dismissJS = "localStorage.setItem('hint:sheets-v1','1');document.getElementById('sheets-onboarding-banner').remove()";
@@ -2417,7 +2417,7 @@ function showSheetsOnboardingBanner(){
           + 'AI に自分のスプレッドシートを直接読み書きさせられます。エージェント編集 → 📊 から接続できます。'
         + '</div>'
         + '<div style="margin-top:10px;display:flex;gap:8px">'
-          + '<button onclick="' + dismissJS + ';openEditAgent(activeId)" style="background:var(--peach);color:#fff;border:0;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">設定する</button>'
+          + '<button onclick="' + dismissJS + ';openEditAgent(activeId)" style="background:var(--peach);color:#0a0a0e;border:0;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">設定する</button>'
           + '<button onclick="' + dismissJS + '" style="background:transparent;color:var(--text3);border:0;padding:7px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">後で</button>'
         + '</div>'
       + '</div>'
@@ -2473,7 +2473,7 @@ function _showUpgradeToast(err){
   t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1a0a00;color:#fff;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;z-index:99999;box-shadow:0 14px 40px rgba(0,0,0,.32);max-width:520px;font-family:inherit;font-size:13px';
   t.innerHTML = '<div style="font-size:22px;flex-shrink:0">🔒</div>'
     + '<div style="flex:1;min-width:0;line-height:1.55">'+esc(err.message||'')+'</div>'
-    + '<button id="_upgToastBtn" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">'+planLabel+' へ →</button>';
+    + '<button id="_upgToastBtn" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">'+planLabel+' へ →</button>';
   document.body.appendChild(t);
   var btn = t.querySelector('#_upgToastBtn');
   var dismiss = function(){ if(t.parentNode) t.parentNode.removeChild(t); };
@@ -2794,7 +2794,7 @@ function updatePlanBadge(){
     business: L('Business プラン','Business plan'),
   };
   badge.textContent = labels[plan] || labels.free;
-  badge.style.color = plan==='pro'?'#ea580c':plan==='business'?'#9333ea':'var(--text3)';
+  badge.style.color = plan==='pro'?'#a3e635':plan==='business'?'#9333ea':'var(--text3)';
 }
 
 function updateBalance(){
@@ -3025,7 +3025,7 @@ function _pickSearch(i){
         el.scrollIntoView({behavior:'smooth', block:'center'});
         el.style.transition='background .8s';
         const orig = el.style.background;
-        el.style.background = 'rgba(251,146,60,.18)';
+        el.style.background = 'rgba(192,255,92,.18)';
         setTimeout(() => { el.style.background = orig; }, 1200);
       }
     }, 300);
@@ -3268,7 +3268,7 @@ window._openTasksPopout = function(anchor, agentId){
     inner += tasks.slice(0,8).map(function(t){
       var run = (t.status === 'progress' || t.status === 'started')
         ? '<span style="background:#fef3c7;color:#a16207;border:1px solid #fde047;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">⏳</span>'
-        : '<button onclick="_runHomeTask(\''+esc(agentId)+'\',\''+esc(t.id)+'\');document.getElementById(\'tasksPopout\').remove()" style="background:var(--peach);color:#fff;border:0;border-radius:6px;padding:4px 10px;font-weight:800;font-size:10.5px;cursor:pointer;font-family:inherit">▶</button>';
+        : '<button onclick="_runHomeTask(\''+esc(agentId)+'\',\''+esc(t.id)+'\');document.getElementById(\'tasksPopout\').remove()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:6px;padding:4px 10px;font-weight:800;font-size:10.5px;cursor:pointer;font-family:inherit">▶</button>';
       return '<div style="display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border-radius:8px;cursor:default" onmouseover="this.style.background=\'var(--cream)\'" onmouseout="this.style.background=\'transparent\'">'
         + '<div onclick="_markHomeTaskDone(\''+esc(agentId)+'\',\''+esc(t.id)+'\',event)" style="width:16px;height:16px;border-radius:5px;border:2px solid var(--wire2);flex-shrink:0;cursor:pointer;margin-top:2px" title="完了"></div>'
         + '<div style="flex:1;min-width:0;font-size:12.5px;font-weight:700;line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+esc(t.title||'')+'</div>'
@@ -4414,13 +4414,13 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       +   '<svg class="sd-bigchart-svg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" preserveAspectRatio="none">'
       +     '<defs>'
       +       '<linearGradient id="ga4Grad' + site.id.slice(-6) + '" x1="0" y1="0" x2="0" y2="1">'
-      +         '<stop offset="0%" stop-color="#fb923c" stop-opacity=".4" />'
-      +         '<stop offset="100%" stop-color="#fb923c" stop-opacity="0" />'
+      +         '<stop offset="0%" stop-color="#c0ff5c" stop-opacity=".4" />'
+      +         '<stop offset="100%" stop-color="#c0ff5c" stop-opacity="0" />'
       +       '</linearGradient>'
       +     '</defs>'
       +     '<path d="' + areaD + '" fill="url(#ga4Grad' + site.id.slice(-6) + ')" />'
-      +     '<path d="' + pathD + '" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />'
-      +     '<circle cx="' + lastX + '" cy="' + lastY + '" r="5" fill="#ea580c" stroke="#fff" stroke-width="2" />'
+      +     '<path d="' + pathD + '" fill="none" stroke="#a3e635" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />'
+      +     '<circle cx="' + lastX + '" cy="' + lastY + '" r="5" fill="#a3e635" stroke="#fff" stroke-width="2" />'
       +   '</svg>'
       +   '<div class="sd-bigchart-axis">'
       +     '<span>30 日前</span><span style="flex:1"></span><span>昨日</span>'
@@ -4599,7 +4599,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
           + '</div>');
   var ga4ModuleHTML = ''
     + '<div class="nm-mod ' + (hasGa4Data ? 'nm-mod-on' : 'nm-mod-off') + '">'
-    +   _moduleHeader('📊', 'Google Analytics 4', hasGa4Data, '#fb923c',
+    +   _moduleHeader('📊', 'Google Analytics 4', hasGa4Data, '#c0ff5c',
                      hasGa4Data ? '🔄 更新' : '接続 →',
                      hasGa4Data
                        ? '_fetchGa4Snapshot(\'' + esc(site.id) + '\', { force:true })'
@@ -4999,7 +4999,7 @@ function _renderTabStrategy(site, allArts){
   // 競合分析
   var competitorHTML = '';
   if(strategy.competitors && strategy.competitors.length > 0){
-    var COMP_COLORS = ['#fb923c', '#3b82f6', '#a855f7', '#22c55e', '#ec4899'];
+    var COMP_COLORS = ['#c0ff5c', '#3b82f6', '#a855f7', '#22c55e', '#ec4899'];
     var compCards = strategy.competitors.map(function(c, i){
       var color = COMP_COLORS[i % COMP_COLORS.length];
       var strBullets = (Array.isArray(c.strengths) ? c.strengths : []).map(function(s){ return '<li>' + esc(s) + '</li>'; }).join('');
@@ -5244,7 +5244,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
       'India':'インド', 'China':'中国', 'Hong Kong':'香港', 'Thailand':'タイ', 'Indonesia':'インドネシア',
       'Philippines':'フィリピン', 'Vietnam':'ベトナム', 'Malaysia':'マレーシア', 'Brazil':'ブラジル', 'Mexico':'メキシコ',
     };
-    var COLORS = ['#fb923c','#a855f7','#3b82f6','#22c55e','#ec4899'];
+    var COLORS = ['#c0ff5c','#a855f7','#3b82f6','#22c55e','#ec4899'];
     var totalUsers = ga4Data.country_total || 1;
     var countryMax = ga4Data.countries[0].users || 1;
     var crows = ga4Data.countries.map(function(c, i){
@@ -5310,7 +5310,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
   var sourceHTML = '';
   if(hasGa4Data && Array.isArray(ga4Data.sources) && ga4Data.sources.length > 0){
     var SRC_COLORS = {
-      'Direct':'#fb923c', 'Organic Search':'#22c55e',
+      'Direct':'#c0ff5c', 'Organic Search':'#22c55e',
       'Organic Social':'#a855f7', 'Referral':'#3b82f6',
       'Email':'#ec4899', 'Paid Search':'#06b6d4', 'Paid Social':'#f59e0b',
       '(Other)':'#64748b', 'Unassigned':'#64748b',
@@ -5847,7 +5847,7 @@ function _renderTabAgents(site){
         + '</div>';
     }
     org = { departments: [{
-      id: 'd_legacy', name: 'AI チーム', icon: '🤖', color: '#fb923c',
+      id: 'd_legacy', name: 'AI チーム', icon: '🤖', color: '#c0ff5c',
       teams: [{ id: 't_legacy', name: 'メンバー', members: legacyMembers.map(function(m, i){
         return { id: 'm_legacy_' + i, name: m.name, role: m.role, focus: m.focus };
       })}]
@@ -6174,7 +6174,7 @@ function _renderTabConnections(site){
           status: 'soon',
         })
     +   _toolCardClickable({
-          icon: '🔍', name: '競合記事分析', color: '#fb923c',
+          icon: '🔍', name: '競合記事分析', color: '#c0ff5c',
           desc: '上位 10 記事の見出し / 文字数 / 構造を一括抽出。AI ライターが「勝てる記事」を設計する根拠データ。',
           status: 'soon',
         })
@@ -6705,13 +6705,13 @@ function _showOneClickStep(kind, siteId){
     + '<div class="xp-card" style="max-width:440px">'
     +   '<button class="xp-close" onclick="_closeOneClickStep()">×</button>'
     +   '<div class="xp-h">'
-    +     '<div class="xp-h-tag" style="background:#fb923c"><span class="xp-h-ic">🚀</span> 1 クリック投稿セットアップ</div>'
+    +     '<div class="xp-h-tag" style="background:#c0ff5c"><span class="xp-h-ic">🚀</span> 1 クリック投稿セットアップ</div>'
     +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">' + title + '</div>'
     +     '<div style="font-size:13px;color:var(--text2);line-height:1.65;font-weight:600">' + body + '</div>'
     +   '</div>'
     +   '<div class="xp-actions">'
     +     '<button class="xp-cancel" onclick="_closeOneClickStep()">後で</button>'
-    +     '<button class="xp-post" style="background:#fb923c" onclick="' + primaryAction + '">' + primaryLbl + '</button>'
+    +     '<button class="xp-post" style="background:#c0ff5c" onclick="' + primaryAction + '">' + primaryLbl + '</button>'
     +   '</div>'
     + '</div>'
     + '</div>';
@@ -7544,7 +7544,7 @@ async function openAgent(id){
   const isTeam = !!(ag.is_team && Array.isArray(ag.team_member_agent_ids));
   const teamCount = isTeam ? ag.team_member_agent_ids.length : 0;
   if(isTeam){
-    topPills += '<span class="pill" style="background:rgba(251,146,60,.14);color:var(--peach-dark);border-color:rgba(251,146,60,.3)">🎯 '+L('チーム','Team')+' · '+teamCount+' AI</span>';
+    topPills += '<span class="pill" style="background:rgba(192,255,92,.14);color:var(--peach-dark);border-color:rgba(192,255,92,.3)">🎯 '+L('チーム','Team')+' · '+teamCount+' AI</span>';
   } else if(isGroup){
     topPills += '<span class="pill" style="background:rgba(99,102,241,.12);color:#4f46e5;border-color:rgba(99,102,241,.3)">🤝 '+memberCount+'</span>';
   } else if(ag.chrome_enabled){
@@ -7614,7 +7614,7 @@ async function openAgent(id){
                    'gemini-flash':{lbl:'⚡ Fast',title:'Claude Haiku 4.5'},
                    'gemini-pro':  {lbl:'🎯 Smart',title:'Claude Sonnet 4.6'}};
   var _mInfo = _modelMap[ag.model] || _modelMap['auto'];
-  var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit">'+_mInfo.lbl+'</button>');
+  var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(192,255,92,.08);border:1px solid rgba(192,255,92,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit">'+_mInfo.lbl+'</button>');
   // Agent-intelligence indicators — KPI count + active task count. Clicking
   // opens the unified Agent Profile panel. Group chats hide these.
   // Tasks pill is separated out so it's always discoverable as a primary
@@ -8503,7 +8503,7 @@ function renderMsgs(ag, forceScrollBottom){
   var _activeNudge = (Array.isArray(ag.proactive_nudges) ? ag.proactive_nudges : []).find(function(n){return n && !n.dismissed && !n.acted;});
   var _nudgeHTML = '';
   if(_activeNudge){
-    var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(251,146,60,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+    var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
     _nudgeHTML = '<div class="nudge-card" style="margin:14px auto;max-width:760px;background:'+accent.soft+';border:1px solid '+accent.color+';border-radius:14px;padding:14px 18px;font-size:13px;line-height:1.65;animation:fadeUp .35s ease">'
       + '<div style="display:flex;align-items:flex-start;gap:11px">'
       +   '<div style="width:30px;height:30px;border-radius:9px;background:'+accent.grad+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">💡</div>'
@@ -8535,7 +8535,7 @@ function renderMsgs(ag, forceScrollBottom){
       threadMeta[p].repliers[key] = {
         role: m.role,
         avatar: m.user_avatar || (m.role==='user' ? (m.user_name||'?').charAt(0).toUpperCase() : (ag.avatar||'🤖')),
-        bg: m.role === 'user' ? '#1f1f1f' : 'linear-gradient(135deg,#fda85e,#ea580c)',
+        bg: m.role === 'user' ? '#1f1f1f' : 'linear-gradient(135deg,#fda85e,#a3e635)',
       };
     }
     // Extract artifacts (URLs produced by tools) for the main-view pills.
@@ -8580,7 +8580,7 @@ function renderMsgs(ag, forceScrollBottom){
       // Rolling-summary message: folded card with "全履歴を見る" trigger.
       var sumCount = m._summary_count || 0;
       var preview = (m.content||'').slice(0, 220);
-      return '<div class="sum-row" style="margin:14px auto;max-width:760px;background:linear-gradient(135deg,#fff7ee,#fed7aa22);border:1px dashed rgba(251,146,60,.4);border-radius:13px;padding:12px 16px;font-size:12.5px;color:var(--text2);line-height:1.65">'
+      return '<div class="sum-row" style="margin:14px auto;max-width:760px;background:linear-gradient(135deg,#fff7ee,#fed7aa22);border:1px dashed rgba(192,255,92,.4);border-radius:13px;padding:12px 16px;font-size:12.5px;color:var(--text2);line-height:1.65">'
         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:800;color:var(--peach-dark)">'
         +   '📋 '+L('これまでの経緯','Conversation so far')
         +   '<span style="font-weight:600;color:var(--text3);font-size:11px">· '+sumCount+L(' 件を折りたたみ',' turns folded')+'</span>'
@@ -9162,7 +9162,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   if(huddleMember){
     const _teamLbl = esc(ag && ag.name || '');
     const _roundN  = huddleMember.huddle_round;
-    const _chipBg  = agentAccent ? agentAccent.soft : 'rgba(251,146,60,.12)';
+    const _chipBg  = agentAccent ? agentAccent.soft : 'rgba(192,255,92,.12)';
     const _chipCol = agentAccent ? agentAccent.color : 'var(--peach-dark)';
     huddleChipHTML = '<span class="m-huddle-chip" style="background:'+_chipBg+';color:'+_chipCol+'"'
       + ' title="'+L('チーム '+(ag&&ag.name||'')+' のメンバー','Team '+(ag&&ag.name||'')+' member')+'">'
@@ -9171,7 +9171,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       + (isStreaming ? ' · <span class="hud-now">'+L('発言中','speaking')+'</span>' : '')
       + '</span>';
   } else if(huddleSummary){
-    huddleChipHTML = '<span class="m-huddle-chip" style="background:rgba(251,146,60,.12);color:var(--peach-dark)">'
+    huddleChipHTML = '<span class="m-huddle-chip" style="background:rgba(192,255,92,.12);color:var(--peach-dark)">'
       + '📋 '+esc(ag && ag.name || '') + ' · ' + L('議論まとめ','summary')
       + '</span>';
   }
@@ -9418,7 +9418,7 @@ async function _showJoinWelcomeBanner(agId){
     card.id = 'joinWelcomeCard';
     card.style.cssText = 'margin:14px auto;max-width:760px;background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:14px;padding:16px 20px;font-size:13.5px;line-height:1.7;animation:fadeUp .35s ease;position:relative';
     card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:11px">'
-      + '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">👋</div>'
+      + '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">👋</div>'
       + '<div style="flex:1;min-width:0">'
       +   '<div style="font-size:11px;font-weight:800;color:#7c2d12;letter-spacing:.04em;margin-bottom:4px;text-transform:uppercase">ホストからのウェルカムメッセージ</div>'
       +   '<div style="color:var(--text);white-space:pre-wrap">'+esc(welcome)+'</div>'
@@ -9828,7 +9828,7 @@ function _jumpToMsg(idx){
     el.scrollIntoView({behavior:'smooth', block:'center'});
     el.style.transition='background .8s';
     const orig = el.style.background;
-    el.style.background = 'rgba(251,146,60,.18)';
+    el.style.background = 'rgba(192,255,92,.18)';
     setTimeout(() => { el.style.background = orig; }, 1200);
   }
 }
@@ -10062,7 +10062,7 @@ function editMsgStart(btn){
     '<textarea class="m-edit-ta" rows="3" style="width:100%;min-height:64px;max-height:240px;padding:9px 11px;border:1px solid var(--peach);border-radius:10px;font-family:inherit;font-size:14.5px;line-height:1.5;background:var(--card,#fff);color:var(--text);resize:vertical">'+esc(current)+'</textarea>'+
     '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">'+
       '<button class="m-act" onclick="editMsgCancel(this)" style="background:none">'+(isJa?'キャンセル':'Cancel')+'</button>'+
-      '<button class="m-act primary" onclick="editMsgSave(this)" style="background:var(--peach);color:#fff;border:0">'+(isJa?'保存して再送信':'Save & resend')+'</button>'+
+      '<button class="m-act primary" onclick="editMsgSave(this)" style="background:var(--peach);color:#0a0a0e;border:0">'+(isJa?'保存して再送信':'Save & resend')+'</button>'+
     '</div>';
   var ta=bodyEl.querySelector('textarea'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
 }
@@ -10471,7 +10471,7 @@ async function openChatShareModal(){
       '</select>'+
       '<div id="csResult" style="display:none;margin-bottom:14px">'+
         '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'公開リンク':'Public link')+'</label>'+
-        '<div style="display:flex;gap:6px"><input id="csUrlIn" readonly style="flex:1;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:12.5px;font-family:inherit"><button onclick="copyChatShareUrl()" style="padding:9px 12px;background:var(--peach);color:#fff;border:0;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
+        '<div style="display:flex;gap:6px"><input id="csUrlIn" readonly style="flex:1;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:12.5px;font-family:inherit"><button onclick="copyChatShareUrl()" style="padding:9px 12px;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
         '<div id="csTweet" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>'+
       '</div>'+
       '<button id="csCreate" onclick="createChatShare()" style="width:100%;padding:11px;background:var(--text);color:#fff;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'公開リンクを作成':'Create public link')+'</button>'+
@@ -11488,8 +11488,8 @@ var _ARTIFACT_LIB_CSS = [
   '.al-row-meta{font-size:10.5px;color:var(--text3,#a8a29e);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}',
   '.al-open{width:36px;height:33px;border-radius:8px;border:1px solid var(--wire2,#e1dacb);background:var(--cream,#faf6f0);cursor:pointer;flex-shrink:0;font-size:13px}',
   '.al-hist-toggle{height:33px;padding:0 9px;border-radius:8px;border:1px solid var(--wire2,#e1dacb);background:var(--cream,#faf6f0);cursor:pointer;flex-shrink:0;font-size:11px;font-weight:800;color:var(--text2,#57534e)}',
-  '.al-hist-toggle.on{background:var(--peach,#fb923c);color:#fff;border-color:transparent}',
-  '.al-hist{display:none;margin:6px 0 2px 10px;padding:3px 0 3px 11px;border-left:2px solid var(--peach,#fb923c)}',
+  '.al-hist-toggle.on{background:var(--peach,#c0ff5c);color:#0a0a0e;border-color:transparent}',
+  '.al-hist{display:none;margin:6px 0 2px 10px;padding:3px 0 3px 11px;border-left:2px solid var(--peach,#c0ff5c)}',
   '.al-hist-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 4px;border-bottom:1px dashed var(--wire2,#e1dacb)}',
   '.al-hist-row:last-child{border-bottom:0}',
   '.al-hist-info{font-size:11px;color:var(--text2,#57534e);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
@@ -11497,10 +11497,10 @@ var _ARTIFACT_LIB_CSS = [
   '.al-hist-op{font-family:ui-monospace,monospace;color:var(--text3,#a8a29e)}',
   '.al-hist-at{color:var(--text3,#a8a29e)}',
   '.al-hist-btn2{flex-shrink:0;padding:6px 10px;border-radius:7px;border:1px solid var(--wire2,#e1dacb);background:var(--card,#fff);color:var(--text2,#57534e);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}',
-  '.al-hist-btn2:hover{background:var(--peach,#fb923c);color:#fff;border-color:transparent}',
+  '.al-hist-btn2:hover{background:var(--peach,#c0ff5c);color:#0a0a0e;border-color:transparent}',
   '.al-hist-acts{display:flex;gap:6px;flex-shrink:0}',
   '.al-hist-note{font-size:10px;color:var(--text3,#a8a29e);padding:3px 4px 7px;line-height:1.5}',
-  '.al-edit{padding:8px 11px;border-radius:8px;border:1px solid rgba(251,146,60,.34);background:rgba(251,146,60,.12);color:var(--peach-dark,#ea580c);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:inherit}',
+  '.al-edit{padding:8px 11px;border-radius:8px;border:1px solid rgba(192,255,92,.34);background:rgba(192,255,92,.12);color:var(--peach-dark,#a3e635);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:inherit}',
   '.al-empty{text-align:center;padding:36px 20px;color:var(--text3,#a8a29e);font-size:13px;line-height:1.75}',
 ].join('');
 function _closeArtifactLibrary(){ var d=document.getElementById('artifactLibrary'); if(d) d.remove(); }
@@ -12837,7 +12837,7 @@ function _renderStreamingBody(text, toolLog, thinking){
     if(thinking){
       // Visible indicator between iterations so the bubble doesn't look frozen
       // while the next callAIWithTools API call (non-streaming) is running.
-      html += '<div style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:6px 12px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.25);border-radius:99px;font-size:11.5px;font-weight:700;color:var(--peach-dark);font-family:inherit"><span class="tool-pill-spin"></span>'
+      html += '<div style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:6px 12px;background:rgba(192,255,92,.08);border:1px solid rgba(192,255,92,.25);border-radius:99px;font-size:11.5px;font-weight:700;color:var(--peach-dark);font-family:inherit"><span class="tool-pill-spin"></span>'
            + (isJa?'次のステップを考えています…':'Thinking about next step…')
            + '</div>';
     } else {
@@ -13079,11 +13079,11 @@ async function openAutomationsGallery(){
     grid.innerHTML = r.templates.map(function(t){
       var hints = (t.suggested_integrations||[]).map(function(k){ return '<span style="background:#fdf1e3;color:#9a3412;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px">'+(k==='slack'?'📣 Slack':k==='discord'?'💬 Discord':k)+'</span>'; }).join(' ');
       var schedPill = t.has_schedule ? '<span style="background:rgba(245,158,11,.15);color:#b45309;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px">⏰ '+esc(t.schedule_summary||'scheduled')+'</span>' : '';
-      return '<div style="display:flex;flex-direction:column;gap:10px;padding:16px;background:#fff;border:1px solid var(--wire2);border-radius:12px;transition:transform .12s ease,box-shadow .12s ease" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 12px 28px rgba(251,146,60,.18)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
+      return '<div style="display:flex;flex-direction:column;gap:10px;padding:16px;background:#fff;border:1px solid var(--wire2);border-radius:12px;transition:transform .12s ease,box-shadow .12s ease" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 12px 28px rgba(192,255,92,.18)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
         '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:20px">'+esc(t.icon||'⚙️')+'</div><div style="font-weight:800;font-size:13.5px;line-height:1.3">'+esc(t.title)+'</div></div>'+
         '<div style="font-size:11.5px;color:var(--text2);line-height:1.55;min-height:48px">'+esc(t.description||'')+'</div>'+
         ((schedPill||hints)?'<div style="display:flex;flex-wrap:wrap;gap:5px">'+schedPill+' '+hints+'</div>':'')+
-        '<button onclick="_installTemplate(\''+esc(t.id)+'\',this)" style="background:var(--peach);color:#fff;border:0;border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🚀 '+(isJa?'導入する':'Install')+'</button>'+
+        '<button onclick="_installTemplate(\''+esc(t.id)+'\',this)" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🚀 '+(isJa?'導入する':'Install')+'</button>'+
       '</div>';
     }).join('');
   }catch(e){
@@ -13231,14 +13231,14 @@ async function openTeamGallery(){
     if(!items.length){ grid.innerHTML = '<div style="color:var(--text3)">'+L('テンプレートがありません','No templates available')+'</div>'; return; }
     grid.innerHTML = items.map(function(t){
       var priceTag = (t.price_jpy>0)
-        ? '<span style="display:inline-block;background:rgba(251,146,60,.12);color:var(--peach-dark);font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em">💼 PAID ¥'+t.price_jpy.toLocaleString()+'</span>'
+        ? '<span style="display:inline-block;background:rgba(192,255,92,.12);color:var(--peach-dark);font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em">💼 PAID ¥'+t.price_jpy.toLocaleString()+'</span>'
         : '<span style="display:inline-block;background:rgba(16,185,129,.16);color:#047857;font-size:9.5px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:.06em">🎁 FREE</span>';
       var avHtml = (t.agents_preview||[]).slice(0,5).map(function(a){
         return '<div style="width:24px;height:24px;border-radius:6px;background:var(--cream2);border:1px solid var(--wire2);display:inline-flex;align-items:center;justify-content:center;font-size:13px;margin-right:-2px">'+esc(a.avatar||'🤖')+'</div>';
       }).join('');
       var btn = (t.price_jpy>0)
         ? '<button disabled style="width:100%;background:var(--cream2);color:var(--text3);padding:10px;border:1px solid var(--wire2);border-radius:9px;font-size:12.5px;font-weight:800;cursor:not-allowed">Marketplace 経由で購入</button>'
-        : '<button onclick="event.stopPropagation();activateTeam(\''+esc(t.id)+'\',\''+esc(t.name)+'\',\''+esc(t.cover_emoji)+'\')" style="width:100%;background:var(--peach);color:#fff;padding:10px;border:0;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)">▶ 起動 (無料)</button>';
+        : '<button onclick="event.stopPropagation();activateTeam(\''+esc(t.id)+'\',\''+esc(t.name)+'\',\''+esc(t.cover_emoji)+'\')" style="width:100%;background:var(--peach);color:#0a0a0e;padding:10px;border:0;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)">▶ 起動 (無料)</button>';
       return ''
         + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .14s" onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'\';this.style.transform=\'\'">'
         + '<div style="height:64px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:30px">'+esc(t.cover_emoji||'🎯')+'</div>'
@@ -13450,7 +13450,7 @@ function openTeamMembersPanel(teamId){
         +   '<div style="flex:1;min-width:0">'
         +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap">'
         +       '<div style="font-size:14px;font-weight:900;letter-spacing:-.005em">'+esc(m.name||'')+'</div>'
-        +       '<span style="font-size:9.5px;font-weight:800;background:rgba(251,146,60,.12);color:var(--peach-dark);padding:1px 7px;border-radius:99px;letter-spacing:.04em">@'+esc((m.name||'').replace(/\s+/g,''))+'</span>'
+        +       '<span style="font-size:9.5px;font-weight:800;background:rgba(192,255,92,.12);color:var(--peach-dark);padding:1px 7px;border-radius:99px;letter-spacing:.04em">@'+esc((m.name||'').replace(/\s+/g,''))+'</span>'
         +       '<span style="font-size:9.5px;font-weight:700;color:var(--text3)">·</span>'
         +       '<span style="font-size:9.5px;font-weight:700;color:var(--text3)">'+esc(modelLabel)+'</span>'
         +     '</div>'
@@ -13458,7 +13458,7 @@ function openTeamMembersPanel(teamId){
         +     '<div>'+skillsTxt+'</div>'
         +   '</div>'
         +   '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">'
-        +     '<button onclick="closeTeamMembersPanel();openEditAgent(\''+esc(m.id)+'\')" title="'+L('編集','Edit')+'" style="background:var(--peach);color:#fff;border:0;border-radius:9px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 9px rgba(251,146,60,.25)">✏️ '+L('編集','Edit')+'</button>'
+        +     '<button onclick="closeTeamMembersPanel();openEditAgent(\''+esc(m.id)+'\')" title="'+L('編集','Edit')+'" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 9px rgba(192,255,92,.25)">✏️ '+L('編集','Edit')+'</button>'
         +     rmBtn
         +   '</div>'
         + '</div>';
@@ -14246,7 +14246,7 @@ function _renderMarket_legacy_v2(){
     });
     var creators = Object.values(byCreator).sort(function(a,b){return b.count - a.count;}).slice(0, 6);
     if(creators.length){
-      var palette = ['#fb923c→#ea580c','#3b82f6→#1d4ed8','#ec4899→#be185d','#10b981→#047857','#8b5cf6→#6d28d9','#f59e0b→#d97706'];
+      var palette = ['#c0ff5c→#a3e635','#3b82f6→#1d4ed8','#ec4899→#be185d','#10b981→#047857','#8b5cf6→#6d28d9','#f59e0b→#d97706'];
       creatorsEl.innerHTML = ''
         + '<div class="storev2-section-h"><h2>'+L('トップクリエイター','Top creators')+'</h2></div>'
         + '<div class="storev2-creators">'
@@ -14409,7 +14409,7 @@ function _renderListingDetail(d){
   var purchasedHere = (me && me.purchases || []).some(function(p){return p.listing_id===d.listing_id;});
   var priceDisplay = priceJpy > 0
     ? (purchasedHere
-        ? '<div style="font-size:13px;font-weight:800;color:var(--peach-dark);background:rgba(251,146,60,.1);border:1px solid var(--peach);padding:6px 12px;border-radius:8px;display:inline-block">✓ 購入済 (¥'+priceJpy.toLocaleString()+')</div>'
+        ? '<div style="font-size:13px;font-weight:800;color:var(--peach-dark);background:rgba(192,255,92,.1);border:1px solid var(--peach);padding:6px 12px;border-radius:8px;display:inline-block">✓ 購入済 (¥'+priceJpy.toLocaleString()+')</div>'
         : '<div style="font-size:22px;font-weight:900;color:var(--text);font-feature-settings:\'tnum\';margin-bottom:2px">¥'+priceJpy.toLocaleString()+'</div><div style="font-size:10.5px;color:var(--text3);font-weight:600">買い切り</div>')
     : '<div style="font-size:13px;font-weight:800;color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);padding:6px 12px;border-radius:8px;display:inline-block">🎁 無料</div>';
   return ''
@@ -15572,9 +15572,9 @@ function _renderIntgCatalog(r){
   if(!document.getElementById('intgChipStyles')){
     var st = document.createElement('style'); st.id = 'intgChipStyles';
     st.textContent = '.intg-chip{background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}'
-      + '.intg-chip.on{background:var(--peach);color:#fff;border-color:var(--peach)}'
+      + '.intg-chip.on{background:var(--peach);color:#0a0a0e;border-color:var(--peach)}'
       + '.intg-card{background:#fff;border:1px solid var(--wire);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;transition:all .15s}'
-      + '.intg-card:hover{border-color:var(--peach);transform:translateY(-1px);box-shadow:0 8px 22px rgba(251,146,60,.06)}'
+      + '.intg-card:hover{border-color:var(--peach);transform:translateY(-1px);box-shadow:0 8px 22px rgba(192,255,92,.06)}'
       + '.intg-card.dimmed{opacity:.45}';
     document.head.appendChild(st);
   }
@@ -15592,7 +15592,7 @@ function _intgCardHtml(s){
         : '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--cream2);color:var(--text3);border:1px solid var(--wire2)">未接続</span>');
   var btn = st.connected
     ? '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto">管理</button>'
-    : '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:auto">接続</button>';
+    : '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:auto">接続</button>';
   var acc = st.account ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:1px">@'+esc(st.account)+'</div>') : '';
   var pri = s.priority ? '<span title="推奨セット" style="font-size:9.5px;color:var(--peach-dark);font-weight:900;margin-left:4px">⭐</span>' : '';
   return ''
@@ -15667,7 +15667,7 @@ function _intgOpen(id){
       +   '<div style="font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:8px">＋ チャンネルを追加</div>'
       +   '<input id="slackAddName" placeholder="名前 (例: #sales / 営業 / general)" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
       +   '<input id="slackAddUrl" type="url" placeholder="https://hooks.slack.com/services/..." style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
-      +   '<button onclick="_slackChAdd()" style="width:100%;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このチャンネルを追加</button>'
+      +   '<button onclick="_slackChAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このチャンネルを追加</button>'
       + '</div>'
       + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'wp_multi'){
@@ -15688,7 +15688,7 @@ function _intgOpen(id){
       +   '<input id="wpAddUrl" type="url" placeholder="https://example.com" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:6px">'
       +   '<input id="wpAddUser" placeholder="WordPress ユーザー名" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
       +   '<input id="wpAddPw" type="password" placeholder="Application Password" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
-      +   '<button onclick="_wpSiteAdd()" style="width:100%;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このサイトを追加</button>'
+      +   '<button onclick="_wpSiteAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このサイトを追加</button>'
       + '</div>'
       + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'zapier_multi'){
@@ -15752,7 +15752,7 @@ function _intgOpen(id){
       +   '<input id="zapierAddName" placeholder="名前 (例: X に投稿 / Slack 通知 / Sheets に追記)" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
       +   '<input id="zapierAddUrl" type="url" placeholder="https://hooks.zapier.com/hooks/catch/.../..." style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:6px">'
       +   '<input id="zapierAddHint" placeholder="(任意) AI へのヒント。例: ツイート本文を text フィールドで渡す" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:inherit;margin-bottom:8px">'
-      +   '<button onclick="_zapierAdd()" style="width:100%;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ この Zap を追加</button>'
+      +   '<button onclick="_zapierAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ この Zap を追加</button>'
       + '</div>'
       + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'oauth' && s.has_backend){
@@ -15781,8 +15781,8 @@ function _intgOpen(id){
       +   '次の画面で '+esc(s.name)+' の認可ページに移動します。承認すると自動でこのアプリに戻ります。トークンはあなたの端末経由ではなく、サーバー間で直接交換されます。'
       + '</div>'
       + (st.connected
-        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
-        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
   } else if(s.id === 'buffer' && !s.has_backend){
     // Buffer-specific setup walkthrough — when admin hasn't set
     // BUFFER_OAUTH_CLIENT_ID/SECRET yet, give a clear step-by-step.
@@ -15800,7 +15800,7 @@ function _intgOpen(id){
       +       '<b>App Name:</b> <span style="font-family:ui-monospace,monospace">MY AI Agent</span><br>'
       +       '<b>Description:</b> <span style="font-family:ui-monospace,monospace">AI-powered SNS posting</span><br>'
       +       '<b>Website URL:</b> <span style="font-family:ui-monospace,monospace">https://myaiagents.agency</span><br>'
-      +       '<b>Callback URL:</b> <span style="font-family:ui-monospace,monospace;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--wire2)">https://myaiagents.agency/api/auth/buffer/callback</span> <button onclick="navigator.clipboard.writeText(\'https://myaiagents.agency/api/auth/buffer/callback\');showToast(\'✓ コピーしました\',\'ok\')" style="background:var(--peach);color:#fff;border:0;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">📋 コピー</button>'
+      +       '<b>Callback URL:</b> <span style="font-family:ui-monospace,monospace;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--wire2)">https://myaiagents.agency/api/auth/buffer/callback</span> <button onclick="navigator.clipboard.writeText(\'https://myaiagents.agency/api/auth/buffer/callback\');showToast(\'✓ コピーしました\',\'ok\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">📋 コピー</button>'
       +     '</div>'
       +   '</li>'
       +   '<li style="margin-bottom:10px">作成後の <b>Client ID</b> と <b>Client Secret</b> をコピー (Secret は 1 度しか見られない! 注意)</li>'
@@ -15823,7 +15823,7 @@ function _intgOpen(id){
       + '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#9a3412">'
       +   '<b style="color:#7c2d12">⚡ Buffer 登録なしで今すぐ投稿したい?</b><br>'
       +   '<b>share_to_sns</b> ツールなら **設定ゼロ** で X / Threads / LinkedIn / FB / Reddit / Bluesky 等に投稿できます (intent URL ボタンが出るので 1 タップで投稿)。'
-      +   '<button onclick="_intgClose()" style="display:block;margin-top:10px;background:var(--peach);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">了解 (チャットで「X に投稿して」と言うだけで OK)</button>'
+      +   '<button onclick="_intgClose()" style="display:block;margin-top:10px;background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">了解 (チャットで「X に投稿して」と言うだけで OK)</button>'
       + '</div>';
   } else if(s.flow === 'oauth' && !s.has_backend){
     body =
@@ -15837,7 +15837,7 @@ function _intgOpen(id){
       + '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#9a3412">'
       +   '<b style="color:#7c2d12">⚡ 今すぐ使いたいなら Zapier 経由がおすすめ</b><br>'
       +   esc(s.name) + ' は <b>Zapier</b> 経由で今すぐ接続できます。Zapier 側で OAuth するので、こちらの開発者登録は不要。'
-      +   '<button onclick="_intgClose();setTimeout(function(){_intgOpen(\'zapier\')},150)" style="display:block;margin-top:10px;background:var(--peach);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">⚡ Zapier カードを開く →</button>'
+      +   '<button onclick="_intgClose();setTimeout(function(){_intgOpen(\'zapier\')},150)" style="display:block;margin-top:10px;background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">⚡ Zapier カードを開く →</button>'
       + '</div>';
   } else {
     var fields = s.fields || [];
@@ -15855,8 +15855,8 @@ function _intgOpen(id){
       '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'+esc(s.desc||'')+'</div>'
       + body
       + (st.connected
-        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">再接続</button></div>'
-        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔌 接続</button></div>');
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">再接続</button></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔌 接続</button></div>');
   }
 
   ov.innerHTML =
@@ -15890,7 +15890,7 @@ function _zapTplCard(emoji, name, appSlug, hint){
   if(appSlug === 'buffer'){
     return '<button onclick="_intgClose();setTimeout(function(){_intgOpen(\'buffer\')},150)" '
       + 'style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 11px;text-align:left;color:inherit;font-family:inherit;display:flex;flex-direction:column;gap:3px;transition:all .15s;cursor:pointer" '
-      + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 16px rgba(251,146,60,.1)\'" '
+      + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 16px rgba(192,255,92,.1)\'" '
       + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'"'
       + '>'
       + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px;line-height:1">'+esc(emoji)+'</span><span style="font-size:11.5px;font-weight:800;color:var(--text);line-height:1.2">'+esc(name)+'</span></div>'
@@ -15900,7 +15900,7 @@ function _zapTplCard(emoji, name, appSlug, hint){
   var url = 'https://zapier.com/apps/webhook/integrations/' + appSlug;
   return '<a href="'+esc(url)+'" target="_blank" rel="noopener" '
     + 'style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 11px;text-decoration:none;color:inherit;font-family:inherit;display:flex;flex-direction:column;gap:3px;transition:all .15s;cursor:pointer" '
-    + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 16px rgba(251,146,60,.1)\'" '
+    + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 16px rgba(192,255,92,.1)\'" '
     + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'"'
     + '>'
     + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px;line-height:1">'+esc(emoji)+'</span><span style="font-size:11.5px;font-weight:800;color:var(--text);line-height:1.2">'+esc(name)+'</span></div>'
@@ -15987,7 +15987,7 @@ async function _slackChLoadList(){
         + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
         +   '<div style="width:30px;height:30px;border-radius:7px;background:#4a154b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">💬</div>'
         +   '<div style="flex:1;min-width:0">'
-        +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.name)+(w.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(251,146,60,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
+        +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.name)+(w.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(192,255,92,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
         +     '<div style="font-size:9.5px;color:var(--text3);margin-top:1px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.url_preview||'')+'</div>'
         +   '</div>'
         +   (w.is_default ? '' : '<button onclick="_slackChDefault(\''+esc(w.id)+'\')" title="既定にする" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
@@ -16041,7 +16041,7 @@ async function _wpSitesLoadList(){
         + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
         +   '<div style="width:30px;height:30px;border-radius:7px;background:#21759b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">W</div>'
         +   '<div style="flex:1;min-width:0">'
-        +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+(s.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(251,146,60,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
+        +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+(s.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(192,255,92,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
         +     '<div style="font-size:10px;color:var(--text3);margin-top:1px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.siteUrl)+' · @'+esc(s.username||'')+'</div>'
         +   '</div>'
         +   (s.is_default ? '' : '<button onclick="_wpSiteDefault(\''+esc(s.id)+'\')" title="既定にする" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
@@ -16449,7 +16449,7 @@ function _schedOpenForm(){
         '<option value="chat">'+(isJa?'チャットに追加':'Append to chat')+'</option>'+
         '<option value="email">'+(isJa?'メールで受け取る':'Email me')+'</option>'+
       '</select>'+
-      '<button onclick="_schedSave()" style="width:100%;padding:11px;background:var(--peach);color:#fff;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'追加':'Add')+'</button>'+
+      '<button onclick="_schedSave()" style="width:100%;padding:11px;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'追加':'Add')+'</button>'+
     '</div>';
   ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
@@ -17309,7 +17309,7 @@ function _renderNotesPanel(){
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">📝 '+L('メモ','Notes')+'</div>'
     +    sharedBadge
     +    '<div id="notesSavedFlag" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
-    +    '<button onclick="_notesCreate()" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('新規','New')+'</button>'
+    +    '<button onclick="_notesCreate()" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('新規','New')+'</button>'
     +    '<button onclick="_notesClose()" style="background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
     +  '</div>'
     +  '<div style="flex:1;display:flex;min-height:0">'
@@ -17338,7 +17338,7 @@ function _notesRenderEditor(){
     + '<div style="padding:8px 16px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;background:var(--cream)">'
     +   '<div id="notesCharCount" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
     +   '<button onclick="_notesDelete()" style="margin-left:auto;background:#fff;border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 '+L('削除','Delete')+'</button>'
-    +   '<button onclick="_notesSaveExplicit()" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:6px 16px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">💾 '+L('保存','Save')+'</button>'
+    +   '<button onclick="_notesSaveExplicit()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:6px 16px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">💾 '+L('保存','Save')+'</button>'
     + '</div>';
   // Hydrate fields
   var ti = document.getElementById('notesTitle');
@@ -17509,7 +17509,7 @@ function _notesClose(){
 async function openAgentProfile(agId){
   var ag = (agents||[]).find(function(a){return a.id===agId;});
   if(!ag) return;
-  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(251,146,60,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
   // Pull live profile + evolution data in parallel
   var data, evo;
   try {
@@ -17532,7 +17532,7 @@ function _renderAgentProfile(){
   var ag = (agents||[]).find(function(a){return a.id===st.agId;});
   if(!ag) return;
   var d = st.data || {};
-  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(251,146,60,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
   var memCount = (d.memories||[]).length;
   var kpiCount = (d.kpis||[]).length;
   var pbCount  = (d.playbook||[]).length;
@@ -17599,18 +17599,18 @@ async function _agProfReload(){
 
 function _agProfMemories(items){
   var sorted = (items||[]).slice().sort(function(a,b){ return (b.pinned?1:0)-(a.pinned?1:0) || (new Date(b.created_at||0)-new Date(a.created_at||0)); });
-  var addBtn = '<div style="margin-bottom:14px"><input id="agProfNewMem" placeholder="'+L('AI に憶えてもらう事実 (例: ターゲットは SaaS スタートアップ)','Fact for AI to remember (e.g. target = SaaS startups)')+'" style="width:100%;padding:10px 13px;border:1px solid var(--wire2);border-radius:9px;font-family:inherit;font-size:13px;box-sizing:border-box" onkeydown="if(event.key===\'Enter\'){_agProfAddMem(event)}"><div style="text-align:right;margin-top:6px"><button onclick="_agProfAddMem()" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div></div>';
+  var addBtn = '<div style="margin-bottom:14px"><input id="agProfNewMem" placeholder="'+L('AI に憶えてもらう事実 (例: ターゲットは SaaS スタートアップ)','Fact for AI to remember (e.g. target = SaaS startups)')+'" style="width:100%;padding:10px 13px;border:1px solid var(--wire2);border-radius:9px;font-family:inherit;font-size:13px;box-sizing:border-box" onkeydown="if(event.key===\'Enter\'){_agProfAddMem(event)}"><div style="text-align:right;margin-top:6px"><button onclick="_agProfAddMem()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div></div>';
   if(!sorted.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px">'+L('まだ記憶はありません。会話するほど自動で蓄積されます。','No memories yet. They build up automatically as you chat.')+'</div>';
   return addBtn + sorted.map(function(m){
     var pinIcon = m.pinned ? '📌' : '📍';
-    var srcBadge = m.source === 'auto' ? '<span style="font-size:9px;font-weight:700;color:var(--text3);background:var(--cream2);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('AUTO','AUTO')+'</span>' : '<span style="font-size:9px;font-weight:700;color:var(--peach-dark);background:rgba(251,146,60,.12);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('手動','MANUAL')+'</span>';
+    var srcBadge = m.source === 'auto' ? '<span style="font-size:9px;font-weight:700;color:var(--text3);background:var(--cream2);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('AUTO','AUTO')+'</span>' : '<span style="font-size:9px;font-weight:700;color:var(--peach-dark);background:rgba(192,255,92,.12);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('手動','MANUAL')+'</span>';
     return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">'
       + '<div style="flex:1;min-width:0">'
       +   '<div style="margin-bottom:3px">'+srcBadge+'<span style="font-size:9.5px;color:var(--text3)">'+esc((m.created_at||'').slice(0,10))+'</span></div>'
       +   '<div style="font-size:13px;color:var(--text);line-height:1.55;white-space:pre-wrap">'+esc(m.text||'')+'</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:4px">'
-      +   '<button onclick="_agProfPinMem(\''+esc(m.id)+'\','+(!m.pinned)+')" title="'+(m.pinned?L('固定解除','Unpin'):L('固定','Pin'))+'" style="background:'+(m.pinned?'rgba(251,146,60,.12)':'#fff')+';border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:13px;font-family:inherit">'+pinIcon+'</button>'
+      +   '<button onclick="_agProfPinMem(\''+esc(m.id)+'\','+(!m.pinned)+')" title="'+(m.pinned?L('固定解除','Unpin'):L('固定','Pin'))+'" style="background:'+(m.pinned?'rgba(192,255,92,.12)':'#fff')+';border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:13px;font-family:inherit">'+pinIcon+'</button>'
       +   '<button onclick="_agProfDelMem(\''+esc(m.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:11px;color:var(--rose);font-family:inherit">🗑</button>'
       + '</div>'
       + '</div>';
@@ -17646,7 +17646,7 @@ function _agProfKpis(items){
     + '<input id="agpKpiTgt"  placeholder="'+L('目標','Target')+'" type="number" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
     + '<input id="agpKpiUnit" placeholder="'+L('単位 (円,%)','Unit')+'" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
     + '</div>'
-    + '<div style="text-align:right;margin-top:8px"><button onclick="_agProfAddKpi()" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div>'
+    + '<div style="text-align:right;margin-top:8px"><button onclick="_agProfAddKpi()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div>'
     + '</div>';
   if(!items.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('まだ KPI はありません。','No KPIs yet.')+'</div>';
   return addBtn + items.map(function(k){
@@ -17659,7 +17659,7 @@ function _agProfKpis(items){
       +     '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('現在','Now')+': <b style="color:var(--text)">'+esc(String(k.current!=null?k.current:'?'))+'</b> / '+L('目標','Target')+': '+esc(String(k.target!=null?k.target:'?'))+(k.unit?' '+esc(k.unit):'')+(pct!=null?' · '+pct+'%':'')+'</div>'
       +   '</div>'
       +   '<input type="number" placeholder="'+L('現在値を更新','Update value')+'" id="agpKpiUpd_'+esc(k.id)+'" style="padding:7px 10px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px;width:120px" onkeydown="if(event.key===\'Enter\'){_agProfKpiUpdate(\''+esc(k.id)+'\')}">'
-      +   '<button onclick="_agProfKpiUpdate(\''+esc(k.id)+'\')" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">'+L('更新','Save')+'</button>'
+      +   '<button onclick="_agProfKpiUpdate(\''+esc(k.id)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">'+L('更新','Save')+'</button>'
       +   '<button onclick="_agProfKpiDel(\''+esc(k.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
       + '</div>'
       + bar
@@ -17715,7 +17715,7 @@ async function _agProfPbDel(pid){
 function _agProfTasks(items){
   var addBtn = '<div style="background:#fff;border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;gap:6px">'
     + '<input id="agpTaskTitle" placeholder="'+L('新規案件 (例: LP 改善 v2)','New task (e.g. LP rev v2)')+'" style="flex:1;padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px" onkeydown="if(event.key===\'Enter\'){_agProfAddTask()}">'
-    + '<button onclick="_agProfAddTask()" style="background:var(--peach);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button>'
+    + '<button onclick="_agProfAddTask()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button>'
     + '</div>';
   if(!items.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('進行中の案件はありません。','No tasks in progress.')+'</div>';
   return addBtn + items.map(function(t){
@@ -17764,7 +17764,7 @@ async function _agProfTaskDel(tid){
 function _agProfRoutines(items){
   var st = window._agProfile;
   var ag = (agents||[]).find(function(a){return a.id===st.agId;});
-  var hint = '<div style="background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.25);border-radius:10px;padding:11px 15px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.55">💡 '+L('自律ルーチンは「メニュー → スケジュール」から追加します。このエージェントが定期的に行う仕事一覧です。','Routines are added from "Menu → Schedules". This shows the recurring jobs assigned to this agent.')+'</div>';
+  var hint = '<div style="background:rgba(192,255,92,.06);border:1px solid rgba(192,255,92,.25);border-radius:10px;padding:11px 15px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.55">💡 '+L('自律ルーチンは「メニュー → スケジュール」から追加します。このエージェントが定期的に行う仕事一覧です。','Routines are added from "Menu → Schedules". This shows the recurring jobs assigned to this agent.')+'</div>';
   if(!items.length) return hint + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('まだルーチンはありません。','No routines yet.')+'</div>';
   return hint + items.map(function(s){
     return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:9px">'
@@ -17936,7 +17936,7 @@ function _toggleQuickModel(agId){
   menu.innerHTML = opts.map(function(o){
     var disabled = !planAllows(o.v);
     var sel = (current === o.v);
-    var bg = sel ? 'rgba(251,146,60,.10)' : '#fff';
+    var bg = sel ? 'rgba(192,255,92,.10)' : '#fff';
     var bd = sel ? '1px solid var(--peach)' : '1px solid transparent';
     return '<button onclick="event.stopPropagation(); _quickPickModel(\''+esc(agId)+'\',\''+o.v+'\')"'
       + (disabled ? ' disabled' : '')
@@ -18695,7 +18695,7 @@ function _prefBool(key, def){ var v=_prefGet(key,null); return v===null?!!def:(v
 
 function _avatarColor(seed){
   // Deterministic color from email/userId, picked to fit the cream palette
-  var palette=['linear-gradient(135deg,#fb923c,#ea580c)','linear-gradient(135deg,#10b981,#059669)','linear-gradient(135deg,#3b82f6,#2563eb)','linear-gradient(135deg,#8b5cf6,#7c3aed)','linear-gradient(135deg,#ec4899,#db2777)','linear-gradient(135deg,#f59e0b,#d97706)'];
+  var palette=['linear-gradient(135deg,#c0ff5c,#a3e635)','linear-gradient(135deg,#10b981,#059669)','linear-gradient(135deg,#3b82f6,#2563eb)','linear-gradient(135deg,#8b5cf6,#7c3aed)','linear-gradient(135deg,#ec4899,#db2777)','linear-gradient(135deg,#f59e0b,#d97706)'];
   var s=String(seed||''); var n=0; for(var i=0;i<s.length;i++) n=(n+s.charCodeAt(i))%palette.length;
   return palette[n];
 }
@@ -19095,8 +19095,8 @@ async function openCreatorProfile(handle){
       ? '<span class="mc-verified" style="width:18px;height:18px;font-size:11px;margin-left:6px" title="検証済みクリエイター">✓</span>'
       : '';
     body.innerHTML = ''
-      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.2);border-radius:14px;margin-bottom:18px">'
-        + '<div style="width:54px;height:54px;border-radius:14px;background:var(--peach);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900">'+esc((c.handle||'@?').charAt(1).toUpperCase())+'</div>'
+      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(192,255,92,.2);border-radius:14px;margin-bottom:18px">'
+        + '<div style="width:54px;height:54px;border-radius:14px;background:var(--peach);color:#0a0a0e;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900">'+esc((c.handle||'@?').charAt(1).toUpperCase())+'</div>'
         + '<div style="flex:1;min-width:0">'
           + '<div style="font-size:18px;font-weight:900;color:var(--text);display:flex;align-items:center">'+esc(c.handle||'')+verifiedSpan+'</div>'
           + (c.name ? '<div style="font-size:12.5px;color:var(--text2);font-weight:600;margin-top:2px">'+esc(c.name)+'</div>' : '')
@@ -19157,10 +19157,10 @@ function _renderEarningsChart(daily){
   var firstDate = daily[0]?.date || '';
   return '<div style="position:relative">'
     + '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="width:100%;height:140px;display:block">'
-    + '<defs><linearGradient id="ceaG1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb923c" stop-opacity=".35"/><stop offset="100%" stop-color="#fb923c" stop-opacity="0"/></linearGradient></defs>'
+    + '<defs><linearGradient id="ceaG1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c0ff5c" stop-opacity=".35"/><stop offset="100%" stop-color="#c0ff5c" stop-opacity="0"/></linearGradient></defs>'
     + '<path d="'+area+'" fill="url(#ceaG1)"/>'
-    + '<path d="'+line+'" fill="none" stroke="#fb923c" stroke-width="2"/>'
-    + '<circle cx="'+pts[lastIdx][0].toFixed(1)+'" cy="'+pts[lastIdx][1].toFixed(1)+'" r="3.5" fill="#ea580c"/>'
+    + '<path d="'+line+'" fill="none" stroke="#c0ff5c" stroke-width="2"/>'
+    + '<circle cx="'+pts[lastIdx][0].toFixed(1)+'" cy="'+pts[lastIdx][1].toFixed(1)+'" r="3.5" fill="#a3e635"/>'
     + '</svg>'
     + '<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);font-weight:600;margin-top:4px"><span>'+firstDate.slice(5)+'</span><span>過去30日 ・ 最大 ¥'+Math.round(max).toLocaleString()+'</span><span>'+lastDate.slice(5)+'</span></div>'
   + '</div>';

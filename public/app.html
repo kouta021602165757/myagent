@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1779553676548">
+<link rel="stylesheet" href="/app.css?v=1779554306089">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -38,9 +38,9 @@
       <a class="sb-logo" href="/" style="text-decoration:none;color:var(--text)">
   <div style="display:flex;align-items:center;gap:7px">
     <div style="display:flex;gap:2px;align-items:flex-end">
-      <div style="width:4px;height:18px;background:#fb923c;border-radius:2px;"></div>
-      <div style="width:4px;height:12px;background:#fb923c;border-radius:2px;opacity:.65;"></div>
-      <div style="width:4px;height:7px;background:#fb923c;border-radius:2px;opacity:.35;"></div>
+      <div style="width:4px;height:18px;background:#c0ff5c;border-radius:2px;"></div>
+      <div style="width:4px;height:12px;background:#c0ff5c;border-radius:2px;opacity:.65;"></div>
+      <div style="width:4px;height:7px;background:#c0ff5c;border-radius:2px;opacity:.35;"></div>
     </div>
     <span style="font-size:13px;font-weight:700;letter-spacing:.06em;">MY AI AGENT</span>
   </div>
@@ -68,12 +68,12 @@
            Row 1 = identity, Row 2 = action buttons. ───────────────── -->
       <div style="position:relative;padding:0">
         <!-- Row 1: user identity (avatar + name + plan + dropdown arrow) -->
-        <button onclick="toggleUserPopup(event)" title="アカウント切替" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:transparent;border:1px solid transparent;cursor:pointer;font-family:inherit;text-align:left;border-radius:10px;transition:background .15s,border-color .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(251,146,60,.07)';this.style.borderColor='rgba(180,120,80,.18)'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'">
+        <button onclick="toggleUserPopup(event)" title="アカウント切替" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:transparent;border:1px solid transparent;cursor:pointer;font-family:inherit;text-align:left;border-radius:10px;transition:background .15s,border-color .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.07)';this.style.borderColor='rgba(180,120,80,.18)'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'">
           <div class="user-av" id="userAv" style="width:34px;height:34px;border-radius:10px;flex-shrink:0;font-size:14px"></div>
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
             <div style="display:flex;align-items:center;gap:5px;min-width:0">
               <span id="userName" style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;line-height:1.2"></span>
-              <span id="userFounderBadge" style="display:none;flex-shrink:0;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;letter-spacing:.02em;line-height:1;box-shadow:0 2px 5px rgba(234,88,12,.32)" title=""></span>
+              <span id="userFounderBadge" style="display:none;flex-shrink:0;background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;letter-spacing:.02em;line-height:1;box-shadow:0 2px 5px rgba(163,230,53,.32)" title=""></span>
             </div>
             <div id="userPlanBadge" style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.01em;line-height:1.2">Free</div>
           </div>
@@ -81,12 +81,12 @@
         </button>
         <!-- Row 2: action buttons — 🔌 連携 (full-width with badge) + ⚙ 設定 -->
         <div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">
-          <button onclick="openIntegrationsTab()" title="連携サービス" style="flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;height:34px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:9px;cursor:pointer;color:var(--text2);padding:0 10px;font-family:inherit;font-size:12px;font-weight:700;transition:all .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(251,146,60,.06)';this.style.borderColor='var(--peach)';this.style.color='var(--peach-dark)'" onmouseout="this.style.background='#fff';this.style.borderColor='rgba(180,120,80,.2)';this.style.color='var(--text2)'">
+          <button onclick="openIntegrationsTab()" title="連携サービス" style="flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;height:34px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:9px;cursor:pointer;color:var(--text2);padding:0 10px;font-family:inherit;font-size:12px;font-weight:700;transition:all .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.06)';this.style.borderColor='var(--peach)';this.style.color='var(--peach-dark)'" onmouseout="this.style.background='#fff';this.style.borderColor='rgba(180,120,80,.2)';this.style.color='var(--text2)'">
             <span style="font-size:14px;line-height:1">🔌</span>
             <span style="letter-spacing:.02em">連携</span>
-            <span id="sbConnectBadge" style="font-size:10px;font-weight:800;color:var(--peach-dark);letter-spacing:.02em;background:rgba(251,146,60,.12);padding:2px 6px;border-radius:99px;line-height:1;flex-shrink:0"></span>
+            <span id="sbConnectBadge" style="font-size:10px;font-weight:800;color:var(--peach-dark);letter-spacing:.02em;background:rgba(192,255,92,.12);padding:2px 6px;border-radius:99px;line-height:1;flex-shrink:0"></span>
           </button>
-          <button onclick="openSettings()" title="設定" style="width:34px;height:34px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--text2);transition:all .15s" onmouseover="this.style.background='rgba(251,146,60,.06)';this.style.borderColor='var(--peach)';this.style.color='var(--peach-dark)'" onmouseout="this.style.background='#fff';this.style.borderColor='rgba(180,120,80,.2)';this.style.color='var(--text2)'">
+          <button onclick="openSettings()" title="設定" style="width:34px;height:34px;background:#fff;border:1px solid rgba(180,120,80,.2);border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--text2);transition:all .15s" onmouseover="this.style.background='rgba(192,255,92,.06)';this.style.borderColor='var(--peach)';this.style.color='var(--peach-dark)'" onmouseout="this.style.background='#fff';this.style.borderColor='rgba(180,120,80,.2)';this.style.color='var(--text2)'">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
@@ -125,13 +125,13 @@
 
           <!-- Inline hint when user types about posting/sending and the active
                agent doesn't have Browser Extension paired/enabled. -->
-          <div id="extHintBanner" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.32);border-radius:11px;padding:10px 13px;margin-bottom:8px;display:none;align-items:center;gap:10px;font-size:12.5px;color:var(--text-muted)">
+          <div id="extHintBanner" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.32);border-radius:11px;padding:10px 13px;margin-bottom:8px;display:none;align-items:center;gap:10px;font-size:12.5px;color:var(--text-muted)">
             <span style="font-size:18px;flex-shrink:0">💡</span>
             <div style="flex:1;min-width:0;line-height:1.5">
               <b style="color:var(--peach-dark)" id="extHintTitle">Posting needs Browser Extension</b><br>
               <span id="extHintBody">Enable it to let this AI post to X / Slack / Gmail with your logged-in browser.</span>
             </div>
-            <button type="button" id="extHintBtn" onclick="_extHintAction()" style="background:var(--peach);color:#fff;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">Enable →</button>
+            <button type="button" id="extHintBtn" onclick="_extHintAction()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">Enable →</button>
             <button type="button" onclick="document.getElementById('extHintBanner').style.display='none'" style="background:transparent;border:0;color:var(--text-subtle);font-size:18px;cursor:pointer;line-height:1;padding:0 4px" aria-label="Dismiss">×</button>
           </div>
 
@@ -214,7 +214,7 @@
         <div id="agentModeNew">
           <div class="step-h" data-i18n="agentNewH">ゼロから作る</div>
           <div class="step-s" data-i18n="agentNewS">アイコン・名前・スキル・性格を 1 つずつ自分で決めて、専属の AI を組み立てます。</div>
-          <div style="background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:13px;padding:18px;margin-bottom:14px">
+          <div style="background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.28);border-radius:13px;padding:18px;margin-bottom:14px">
             <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
               <div style="font-size:42px;line-height:1">🤖</div>
               <div style="flex:1;min-width:0">
@@ -389,7 +389,7 @@
         </div>
         <div style="display:flex;gap:8px;margin-top:18px">
           <button onclick="closeTeamGallery()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
-          <button id="newTeamSubmit" onclick="submitGenerateTeam()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:12px;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)" data-i18n="teamGallerySubmit">✨ Let AI design your team</button>
+          <button id="newTeamSubmit" onclick="submitGenerateTeam()" style="flex:1;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:12px;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)" data-i18n="teamGallerySubmit">✨ Let AI design your team</button>
         </div>
         <div style="font-size:10.5px;color:var(--text3);margin-top:10px;line-height:1.6" data-i18n="teamGalleryFootnote">
           Takes ~15–30s. 4–10 agents are generated for your goal and the team launches right after.
@@ -446,19 +446,19 @@
       <div id="teamEditMsg" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
       <div style="display:flex;gap:8px;margin-top:14px">
         <button onclick="closeTeamEdit()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
-        <button id="teamEditSaveBtn" onclick="saveTeamEdit()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)" data-i18n="teamEditSave">💾 Save</button>
+        <button id="teamEditSaveBtn" onclick="saveTeamEdit()" style="flex:1;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)" data-i18n="teamEditSave">💾 Save</button>
       </div>
 
       <!-- Store listing CTA -->
       <div style="margin-top:22px;padding-top:16px;border-top:1px dashed var(--wire2)">
-        <div style="display:flex;align-items:flex-start;gap:12px;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:12px;padding:14px 14px">
+        <div style="display:flex;align-items:flex-start;gap:12px;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.28);border-radius:12px;padding:14px 14px">
           <div style="font-size:24px;line-height:1.2">🏪</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:900;color:var(--peach-dark);margin-bottom:3px" data-i18n="teamStoreH">List on Agent Store</div>
             <div id="teamStoreSubText" style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:9px">
               List the whole team on the Store so others can <b>clone it into their account in one click</b>. You earn 70% of the one-time price + 10% of usage.
             </div>
-            <button id="teamListBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.5);color:var(--peach-dark);border-radius:9px;padding:8px 14px;font-size:11.5px;font-weight:800;cursor:pointer">+ Open listing form</button>
+            <button id="teamListBtn" type="button" style="background:#fff;border:1px solid rgba(192,255,92,.5);color:var(--peach-dark);border-radius:9px;padding:8px 14px;font-size:11.5px;font-weight:800;cursor:pointer">+ Open listing form</button>
           </div>
         </div>
       </div>
@@ -485,18 +485,18 @@
       <div id="teamMembersIntro" style="font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:10px" data-i18n="teamMembersIntro">
         These are the AI agents in this team. Mention any of them with <b>@name</b>. Click ✏️ on a row to edit persona, skills, or model.
       </div>
-      <div id="teamMembersGoalRow" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(251,146,60,.28);border-radius:11px;padding:11px 13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px">
+      <div id="teamMembersGoalRow" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.28);border-radius:11px;padding:11px 13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
           <div style="font-size:10.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px" data-i18n="teamMembersGoalH">Team goal</div>
           <div id="teamMembersGoalText" style="font-size:12.5px;color:var(--text);line-height:1.65;white-space:pre-wrap"></div>
         </div>
-        <button id="teamMembersGoalEditBtn" type="button" style="background:#fff;border:1px solid rgba(251,146,60,.32);color:var(--peach-dark);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0" data-i18n="teamMembersGoalEdit">✏️ Edit</button>
+        <button id="teamMembersGoalEditBtn" type="button" style="background:#fff;border:1px solid rgba(192,255,92,.32);color:var(--peach-dark);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0" data-i18n="teamMembersGoalEdit">✏️ Edit</button>
       </div>
       <div id="teamMembersList" style="display:flex;flex-direction:column;gap:10px"></div>
 
       <!-- Add member affordance (host only) -->
       <div id="teamMembersAddRow" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
-        <button id="teamMembersAddBtn" type="button" onclick="openAddTeamMember()" style="width:100%;background:#fff;border:2px dashed rgba(251,146,60,.42);color:var(--peach-dark);border-radius:11px;padding:14px;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:-.005em;transition:all .14s"><span data-i18n="teamMembersAddBtn">+ Add member</span> <span id="teamMembersCapHint" style="font-weight:600;color:var(--text-subtle);font-size:11px;margin-left:6px">(0/10)</span></button>
+        <button id="teamMembersAddBtn" type="button" onclick="openAddTeamMember()" style="width:100%;background:#fff;border:2px dashed rgba(192,255,92,.42);color:var(--peach-dark);border-radius:11px;padding:14px;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:-.005em;transition:all .14s"><span data-i18n="teamMembersAddBtn">+ Add member</span> <span id="teamMembersCapHint" style="font-weight:600;color:var(--text-subtle);font-size:11px;margin-left:6px">(0/10)</span></button>
       </div>
     </div>
   </div>
@@ -519,7 +519,7 @@
       <div id="addMemErr" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
       <div style="display:flex;gap:8px;margin-top:14px">
         <button onclick="closeAddTeamMember()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
-        <button id="addMemSubmitBtn" onclick="submitAddTeamMember()" style="flex:1;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(251,146,60,.32)" data-i18n="addMemSubmit">✨ Let AI generate</button>
+        <button id="addMemSubmitBtn" onclick="submitAddTeamMember()" style="flex:1;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)" data-i18n="addMemSubmit">✨ Let AI generate</button>
       </div>
     </div>
   </div>
@@ -631,7 +631,7 @@
       </div>
       <div style="margin-bottom:12px">
         <div style="font-size:11px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">公開 URL</div>
-        <div style="display:flex;gap:6px"><input id="shareUrl" readonly style="flex:1;padding:10px 13px;border:1px solid var(--wire3);border-radius:8px;background:#fff;font-size:12.5px;font-family:'SF Mono',Menlo,monospace;color:var(--text);"><button onclick="_copyShareUrl()" style="padding:10px 16px;background:var(--peach);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit">コピー</button></div>
+        <div style="display:flex;gap:6px"><input id="shareUrl" readonly style="flex:1;padding:10px 13px;border:1px solid var(--wire3);border-radius:8px;background:#fff;font-size:12.5px;font-family:'SF Mono',Menlo,monospace;color:var(--text);"><button onclick="_copyShareUrl()" style="padding:10px 16px;background:var(--peach);color:#0a0a0e;border:none;border-radius:8px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit">コピー</button></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px">
         <a id="shareTw" target="_blank" rel="noopener" class="share-btn" style="flex:1;text-align:center;padding:11px;background:#0f1419;color:#fff;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none;min-width:120px">𝕏 で投稿</a>
@@ -848,9 +848,9 @@
               <div id="sHandleStatus" style="font-size:11.5px;color:var(--text3);margin-top:4px"></div>
             </div>
             <!-- Founder 100 share row — only shown if user has a seat. -->
-            <div id="sFounderShare" class="fld" style="display:none;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(251,146,60,.32);border-radius:12px;padding:14px;margin-top:6px">
+            <div id="sFounderShare" class="fld" style="display:none;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(192,255,92,.32);border-radius:12px;padding:14px;margin-top:6px">
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <span style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:13px;font-weight:900;padding:5px 13px;border-radius:999px;box-shadow:0 4px 12px rgba(234,88,12,.3)">★ <span id="sFounderSeatTxt"></span></span>
+                <span style="background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;font-size:13px;font-weight:900;padding:5px 13px;border-radius:999px;box-shadow:0 4px 12px rgba(163,230,53,.3)">★ <span id="sFounderSeatTxt"></span></span>
                 <span style="font-size:13px;font-weight:700;color:var(--peach-dark)">Founder 100 — first 100 creators</span>
               </div>
               <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">あなたは MY AI AGENT の <b>最初の 100 人のクリエイター</b> です。プロフィールには永久にバッジが付き、BUSINESS プランが 1 ヶ月無料に。社会的証明として SNS でシェアしましょう。</div>
@@ -1220,7 +1220,7 @@
           <!-- Inject minimal scoped CSS once -->
           <style>
             .mem-chip{background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}
-            .mem-chip.on{background:var(--peach);color:#fff;border-color:var(--peach)}
+            .mem-chip.on{background:var(--peach);color:#0a0a0e;border-color:var(--peach)}
             .mem-row{background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;transition:all .15s}
             .mem-row.dis{opacity:.5}
             .mem-row .mem-src{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--peach-dark);background:var(--cream2);padding:2px 7px;border-radius:99px;white-space:nowrap;flex-shrink:0}
@@ -1399,7 +1399,7 @@
     display:inline-flex;align-items:center;gap:5px;transition:.12s;font-family:inherit;
   }
   .ea-mpill:hover{border-color:var(--peach-dark);color:var(--peach-dark)}
-  .ea-mpill.on{background:var(--peach);color:#fff;border-color:var(--peach-dark);box-shadow:0 2px 6px rgba(251,146,60,.25)}
+  .ea-mpill.on{background:var(--peach);color:#0a0a0e;border-color:var(--peach-dark);box-shadow:0 2px 6px rgba(192,255,92,.25)}
   /* Hide compatibility-only fields (kept so saveEditAgent works) */
   #editPurposeRow{display:none !important}
 </style>
@@ -1407,7 +1407,7 @@
   <!-- Compact header -->
   <div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;border-bottom:1px solid rgba(180,120,80,.12)">
     <div style="position:relative">
-      <div id="editAgAvatar" style="font-size:22px;width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,#fed7aa);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer" onclick="document.getElementById('avFileEdit').click()"></div>
+      <div id="editAgAvatar" style="font-size:22px;width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,rgba(192,255,92,.30));overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer" onclick="document.getElementById('avFileEdit').click()"></div>
       <div style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;background:#fff;border:1px solid var(--wire2);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;pointer-events:none">📸</div>
       <input type="file" id="avFileEdit" accept="image/*" style="display:none" onchange="onAvatarUpload(event,'edit')">
     </div>
@@ -1423,7 +1423,7 @@
     <!-- 名前 -->
     <div>
       <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">名前</label>
-      <input id="editName" type="text" placeholder="例：Sales AI" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(251,146,60,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''">
+      <input id="editName" type="text" placeholder="例：Sales AI" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(192,255,92,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''">
     </div>
 
     <!-- 採用目的: 後方互換のため hidden で保持 -->
@@ -1434,7 +1434,7 @@
     <!-- 業務内容 (主要フィールド) -->
     <div>
       <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">何をする AI?</label>
-      <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信整理、面談日程の調整" rows="5" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.62;min-height:100px;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(251,146,60,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''"></textarea>
+      <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信整理、面談日程の調整" rows="5" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.62;min-height:100px;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(192,255,92,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''"></textarea>
     </div>
 
     <!-- AI モデル (ピル一行) -->
@@ -1582,7 +1582,7 @@
   <!-- Sticky footer: 保存 -->
   <div style="padding:12px 18px;border-top:1px solid var(--wire);background:#fff;display:flex;gap:8px">
     <button onclick="closeEditAgent()" style="flex:1;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">キャンセル</button>
-    <button onclick="saveEditAgent()" style="flex:2;background:var(--peach);color:#fff;border:0;border-radius:9px;padding:11px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(251,146,60,.25)">保存</button>
+    <button onclick="saveEditAgent()" style="flex:2;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:11px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(192,255,92,.25)">保存</button>
   </div>
 </div>
 
@@ -1735,8 +1735,8 @@
 
 /* Pinned messages banner — shown below chat header */
 .pinned-wrap{
-  background:linear-gradient(180deg,rgba(251,146,60,.06),rgba(251,146,60,.02));
-  border-bottom:.5px solid rgba(251,146,60,.18);padding:6px 14px;display:flex;flex-direction:column;gap:3px;
+  background:linear-gradient(180deg,rgba(192,255,92,.06),rgba(192,255,92,.02));
+  border-bottom:.5px solid rgba(192,255,92,.18);padding:6px 14px;display:flex;flex-direction:column;gap:3px;
 }
 .pinned-item{
   display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:7px;
@@ -1803,18 +1803,18 @@
   border:0;background:transparent;width:100%;text-align:left;font-family:inherit;
   margin-bottom:2px;
 }
-.search-result:hover, .search-result.sel{background:rgba(251,146,60,.08);}
-.search-result.sel{background:rgba(251,146,60,.14);}
+.search-result:hover, .search-result.sel{background:rgba(192,255,92,.08);}
+.search-result.sel{background:rgba(192,255,92,.14);}
 .search-result .sr-h{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3);margin-bottom:2px;}
 .search-result .sr-icon{
   width:18px;height:18px;border-radius:5px;display:flex;align-items:center;
-  justify-content:center;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;font-size:11px;flex-shrink:0;
+  justify-content:center;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#0a0a0e;font-size:11px;flex-shrink:0;
 }
 .search-result .sr-agent{font-weight:700;color:var(--text);}
 .search-result .sr-when{margin-left:auto;font-size:10px;}
 .search-result .sr-body{font-size:12.5px;color:var(--text);line-height:1.5;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.search-result .sr-body mark{background:rgba(251,146,60,.3);color:var(--peach-dark);font-weight:700;border-radius:2px;padding:0 1px;}
+.search-result .sr-body mark{background:rgba(192,255,92,.3);color:var(--peach-dark);font-weight:700;border-radius:2px;padding:0 1px;}
 </style>
 
 <!-- ══ GROUP SETTINGS MODAL ══════════════════════════════════ -->
@@ -1963,7 +1963,7 @@
   flex:1;padding:8px 11px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;
   color:var(--text);font-family:inherit;background:#fff;outline:0;
 }
-.grpset-input:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(251,146,60,.15);}
+.grpset-input:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(192,255,92,.15);}
 .grpset-input:disabled{background:var(--bg-100);color:var(--text3);cursor:not-allowed;}
 .grpset-btn{
   padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
@@ -1990,7 +1990,7 @@
   transition:transform .12s, border-color .12s, background .12s;
 }
 .grpset-amount:hover{background:var(--peach-soft);border-color:var(--peach);transform:translateY(-1px);}
-.grpset-amount.selected{background:var(--peach);color:#fff;border-color:var(--peach);}
+.grpset-amount.selected{background:var(--peach);color:#0a0a0e;border-color:var(--peach);}
 
 /* Reactions */
 .m-reactions{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;padding:0 4px;}
@@ -2006,8 +2006,8 @@
   cursor:pointer;font-family:inherit;letter-spacing:-.005em;
   transition:transform .12s, background .12s, border-color .12s;
 }
-.reaction:hover{transform:translateY(-1px);background:rgba(251,146,60,.06);border-color:rgba(251,146,60,.3);}
-.reaction.mine{background:rgba(251,146,60,.12);border-color:rgba(251,146,60,.3);color:var(--peach-dark);}
+.reaction:hover{transform:translateY(-1px);background:rgba(192,255,92,.06);border-color:rgba(192,255,92,.3);}
+.reaction.mine{background:rgba(192,255,92,.12);border-color:rgba(192,255,92,.3);color:var(--peach-dark);}
 .reaction.add{
   padding:2px 8px;background:transparent;color:var(--text3);font-size:11px;font-weight:700;
 }
@@ -2044,7 +2044,7 @@
 .m-read .m-read-n{
   font-size:9.5px;font-weight:700;margin-left:1px;
   padding:1px 5px;border-radius:8px;
-  background:rgba(251,146,60,.12);color:var(--peach-dark);
+  background:rgba(192,255,92,.12);color:var(--peach-dark);
 }
 </style>
 
@@ -2081,7 +2081,7 @@
 }
 .mention.ai{
   display:inline-flex;align-items:center;
-  background:rgba(251,146,60,.14);color:var(--peach-dark);
+  background:rgba(192,255,92,.14);color:var(--peach-dark);
   padding:0 5px;border-radius:4px;font-weight:700;
 }
 .m.u.other .m-av{box-shadow:0 2px 5px rgba(9,9,11,.12);}
@@ -2136,7 +2136,7 @@
             <button id="grpShareSms" class="btn-back" style="font-size:11px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">📱</span>SMS</button>
           </div>
 
-          <div style="background:rgba(251,146,60,.06);border:.5px solid rgba(251,146,60,.18);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--peach-dark);line-height:1.5;margin-bottom:5px">
+          <div style="background:rgba(192,255,92,.06);border:.5px solid rgba(192,255,92,.18);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--peach-dark);line-height:1.5;margin-bottom:5px">
             <div style="display:flex;justify-content:space-between"><span>有効期限</span><span id="grpInviteExp" style="font-weight:700"></span></div>
             <div style="display:flex;justify-content:space-between;margin-top:3px"><span>最大人数</span><span id="grpInviteMax" style="font-weight:700"></span></div>
           </div>
@@ -2151,7 +2151,7 @@
                 <option value="admin">管理者 (権限変更可)</option>
                 <option value="reader">閲覧専用 (送信不可)</option>
               </select>
-              <button onclick="_saveInviteConfig()" style="margin-left:auto;background:var(--peach);color:#fff;border:0;border-radius:6px;padding:5px 11px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">保存</button>
+              <button onclick="_saveInviteConfig()" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:6px;padding:5px 11px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">保存</button>
             </div>
           </div>
           <div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-top:8px">
@@ -2171,8 +2171,8 @@
   font-family:inherit;text-align:left;width:100%;
   transition:transform .12s, border-color .12s;
 }
-.grp-pick:hover{transform:translateY(-1px);border-color:var(--peach);background:rgba(251,146,60,.04);}
-.grp-pick-av{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff}
+.grp-pick:hover{transform:translateY(-1px);border-color:var(--peach);background:rgba(192,255,92,.04);}
+.grp-pick-av{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#0a0a0e}
 .grp-pick-body{flex:1;min-width:0;}
 .grp-pick-nm{font-size:12.5px;font-weight:700;color:var(--text);}
 .grp-pick-d{font-size:10.5px;color:var(--text3);margin-top:1px;}
@@ -2200,7 +2200,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1779553676548"></script>
+<script defer src="/app.js?v=1779554306089"></script>
 
 <script>
 (function(){
@@ -2266,7 +2266,7 @@
         サービス改善・利用状況の分析・ログイン状態維持のため Cookie とローカルストレージを使用します。詳細は <a href="/privacy.html" target="_blank" style="color:var(--peach-dark);font-weight:700">プライバシーポリシー</a> をご覧ください。
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-        <button onclick="_cookieDecide('all')" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">すべて許可</button>
+        <button onclick="_cookieDecide('all')" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">すべて許可</button>
         <button onclick="_cookieDecide('essential')" style="background:transparent;color:var(--text2);border:.5px solid var(--wire2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">必須のみ</button>
       </div>
     </div>

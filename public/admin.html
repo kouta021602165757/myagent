@@ -198,7 +198,7 @@ function renderLogin(prefilledEmail){
     + '<input id="loginEmail" type="email" autocomplete="email" value="' + esc(prefilledEmail||'') + '" style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit;outline:none;margin-bottom:12px" onkeydown="if(event.key===\'Enter\')document.getElementById(\'loginPwd\').focus()">'
     + '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin-bottom:5px">パスワード</label>'
     + '<input id="loginPwd" type="password" autocomplete="current-password" style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit;outline:none;margin-bottom:18px" onkeydown="if(event.key===\'Enter\')doLogin()">'
-    + '<button onclick="doLogin()" style="width:100%;background:var(--peach);color:#fff;border:0;padding:12px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit">ログイン</button>'
+    + '<button onclick="doLogin()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;padding:12px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit">ログイン</button>'
     + '<div style="margin-top:18px;display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">'
     +   '<a href="/auth.html" style="color:var(--text3);text-decoration:underline">通常のログイン画面 →</a>'
     +   '<a href="/app.html" style="color:var(--text3);text-decoration:underline">アプリに戻る</a>'

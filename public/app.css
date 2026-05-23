@@ -7546,3 +7546,187 @@ body{color:#f0f0f8;}
 /* KaTeX-rendered math should inherit the chat text color */
 .m .katex { font-size: 1.02em; }
 .m .katex-display { margin: .55em 0; overflow-x: auto; overflow-y: hidden; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ── 🌑 DARK THEME UNIFORM OVERRIDE — 2026-05-24 ──
+   サイドバー以外の post-login UI を強制的に dark + lime に揃える。
+   legacy cream/peach 色が深く食い込んでるので、 ! important で勝つ。
+   サイドバー (.sb-*) は除外して既存スタイル維持。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* === Body / 全体背景 === */
+body{ background:#0a0a0e !important; color:#fafafa !important; }
+.app-shell, .main-pane, .home-pane, .right-pane, .center-pane,
+.dash-pane, .site-pane, .site-dash, .chat-pane{
+  background:#0a0a0e !important;
+}
+
+/* === サイト dashboard の主要 surface — 全てが 1 ヶ所からの dark gradient === */
+.sd-head-rich,
+.sd-head:not(.sd-head-rich),
+.sd-tabs-pdca .sd-tabs-grp,
+.sd-tabs,
+.sd-stat-card,
+.sd-org-dept,
+.sd-org-dept-card,
+.sd-dept-rank-card,
+.sd-art-card,
+.sd-activity-footer,
+.sd-empty,
+.sd-task-card,
+.sd-team-card,
+.sd-mem,
+.sd-kpi-card,
+.sd-kpi-row,
+.sd-data-preview,
+.sd-data-item,
+.sd-bigchart,
+.sd-sub-card,
+.sd-hero-kpi,
+.sd-hero-empty,
+.sd-insights,
+.sd-insight,
+.sd-ga4-banner{
+  background:linear-gradient(180deg, #13131a 0%, #18181f 100%) !important;
+  border-color:rgba(255,255,255,.06) !important;
+  color:#fafafa !important;
+  box-shadow:0 4px 18px rgba(0,0,0,.40) !important;
+}
+
+/* === Tab body / module card 系 (= 各 PDCA tab の中身) === */
+.nm-mod, .rp-card, .rp-hero,
+.st-head, .st-section, .st-card,
+.tk-week, .tk-task,
+.cn-card, .cn-card-tool,
+.qc, .hm-task-card, .hm-ce, .hm-dc, .hm-cta,
+.del, .acm-sum, .ac-card,
+.oc-card{
+  background:linear-gradient(180deg, #13131a 0%, #18181f 100%) !important;
+  border:1px solid rgba(255,255,255,.06) !important;
+  color:#fafafa !important;
+  box-shadow:0 4px 14px rgba(0,0,0,.35) !important;
+}
+
+/* === Inner cards / inputs / pills === */
+.sd-vt-tag, .sd-progress, .sd-art-meta, .sd-progress-meta,
+.nm-mod-h, .nm-mod-body,
+.rp-section, .rp-kpi,
+.tk-task-card,
+.cn-card-l, .cn-card-meta,
+.dash-kpi, .dash-art, .dash-site,
+.deli-card, .deli-head{
+  background:rgba(255,255,255,.02) !important;
+  border-color:rgba(255,255,255,.06) !important;
+  color:#fafafa !important;
+}
+
+/* === Text colors — 強制で light text === */
+.sd-url, .sd-url a,
+.sd-head-meta, .sd-summary,
+.sd-tab-lbl, .sd-tab-sub,
+.nm-mod-nm, .nm-mod-body p,
+.st-head-ti, .st-head-sub,
+.tk-task-tx,
+.cn-card-nm, .cn-card-de,
+.qt-name, .qt-role,
+.hm-task-ti, .hm-task-sub,
+.dash-site-meta b,
+.dash-art-ti{
+  color:#fafafa !important;
+}
+.sd-summary, .nm-mod-body, .st-head-sub, .cn-card-de,
+.qt-role, .hm-task-sub, .dash-site-meta,
+.sd-tab-sub{
+  color:#a1a1aa !important;
+}
+
+/* === Input / textarea / select / button surfaces === */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="url"], input[type="search"],
+textarea, select{
+  background:rgba(255,255,255,.04) !important;
+  color:#fafafa !important;
+  border-color:rgba(255,255,255,.10) !important;
+}
+input::placeholder, textarea::placeholder{ color:#71717a !important; }
+input:focus, textarea:focus, select:focus{
+  border-color:#c0ff5c !important;
+  outline-color:#c0ff5c !important;
+  box-shadow:0 0 0 3px rgba(192,255,92,.15) !important;
+}
+
+/* === Lime buttons: text must be black for contrast === */
+.sd-chat-cta-rich,
+.sd-chat-cta,
+.sd-kpi-edit,
+.sd-tab.sd-tab-numbers.on,
+button[class*="primary"]{
+  color:#0a0a0e !important;
+}
+
+/* === A/C/P/D PDCA badges — visible on dark === */
+.sd-tab-pdca{
+  background:rgba(255,255,255,.08) !important;
+  color:#a1a1aa !important;
+}
+.sd-tab.on .sd-tab-pdca{
+  background:rgba(0,0,0,.30) !important;
+  color:#fff !important;
+}
+
+/* === Inactive PDCA tab text === */
+.sd-tab:not(.on){
+  color:#a1a1aa !important;
+}
+.sd-tab:not(.on):hover{
+  background:rgba(255,255,255,.04) !important;
+  color:#fafafa !important;
+}
+
+/* === Hide-friendly: 各 light-card-like dummy surfaces を全部 dark に強制 === */
+[class*="-card"]:not(.qt-card):not(.demo-art):not(.qt-card-feature):not(.dash-mock-art):not(.oc-anim-art):not(.platform-card):not(.platform-card-hl){
+  background-color:transparent;
+}
+[class*="-card"]:not(.qt-card):not(.demo-art):not(.qt-card-feature):not(.dash-mock-art):not(.oc-anim-art):not(.platform-card):not(.platform-card-hl):not(.cn-card-on):not(.cn-card-off):not(.nm-mod-on):not(.nm-mod-off){
+  background:linear-gradient(180deg, #13131a, #18181f) !important;
+}
+
+/* === Modal / overlay 透過 === */
+.overlay, .modal, [class*="modal"], [class*="overlay"]{
+  /* dark backdrop が透けない */
+}
+.wizard-modal, .modal-card,
+.modal-content, .pm-card, .pm-content,
+.confirm-card, .toast-card,
+[class$="-modal"]{
+  background:#13131a !important;
+  border:1px solid rgba(255,255,255,.08) !important;
+  color:#fafafa !important;
+  box-shadow:0 30px 80px rgba(0,0,0,.60) !important;
+}
+
+/* === Chart / KPI text alignment for dark === */
+.sd-kpi-val, .sd-hero-val,
+.dash-kpi-val, .dash-mock-kpi-val{
+  color:#fafafa !important;
+}
+
+/* === Subtle text 救済 === */
+.text-muted, .text-subtle, .sd-art-meta, .sd-progress-meta,
+.cn-card-extra, .sd-kpi-lbl, .nm-mod-status{
+  color:#71717a !important;
+}
+
+/* === Borders sweep === */
+.sd-tabs-grp, .nm-mod, .rp-card, .st-card,
+[class*="-card"]:not(.qt-card):not(.demo-art){
+  border-color:rgba(255,255,255,.06) !important;
+}
+
+/* === Hover state — light glow → lime subtle === */
+.cn-card:hover, .nm-mod:hover, .st-card:hover, .oc-card:hover,
+.sd-art-card:hover, .sd-org-dept:hover{
+  border-color:rgba(192,255,92,.28) !important;
+  box-shadow:0 12px 32px rgba(0,0,0,.50), 0 0 18px rgba(192,255,92,.12) !important;
+}

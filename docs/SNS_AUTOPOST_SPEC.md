@@ -332,10 +332,26 @@ EXT_PUSH_SECRET=<拡張 ↔ server 認証用>  # 既存
 
 ---
 
-## 16. 残るオープンクエスチョン
+## 16. 確定したスコープ
 
-1. **拡張のクロスブラウザ対応**: V1 は Chrome のみ? Edge / Firefox / Safari は後で?
-2. **ログイン切れ検知**: SNS にログインしてないと投稿失敗 → 拡張が事前検知して、ダッシュボードに「再ログインしてください」表示は V1 で入れるか?
-3. **複数アカウント**: V1 は 1 platform = 1 アカウントだが、 V2 で「個人 + 会社」みたいに複数登録できるようにするか?
-4. **投稿前プレビュー**: V1 では confirm モーダルにテキストだけ表示? それとも actual の X 投稿に近い preview (画像 + アバター付き) を作るか?
-5. **DOM テスト の自動化**: 各 platform で月 1 で自動テストを CI で回す仕組みを V1 で入れるか?
+| Q | 回答 |
+|---|---|
+| クロスブラウザ | ❌ Chrome のみ |
+| ログイン切れ事前検知 | ✅ V1 で入れる |
+| 複数アカウント | V2 で対応 |
+| 投稿前プレビュー | ✅ actual に近い preview (画像 + アバター + 名前) |
+| DOM 自動テスト CI | V1 は X 1 platform のみなので manual テストで OK |
+
+## 17. V1 スコープ確定 (= X のみ)
+
+LinkedIn / Threads は V2 に後送り。 V1 は **X 投稿だけ** を完全に動かす。
+
+### V1 で実装するもの (= 6 週 → 縮小して 2-3 週想定)
+1. **既存 ext_* primitives を使った post_to_x tool 実装** (server side)
+2. **post_to_x_thread tool** (= 複数 Tweet 連続投稿)
+3. **verify_x_login endpoint** (= ダッシュボードから「接続確認」)
+4. **SNS 接続管理 UI** (= 設定 tab に X カード追加)
+5. **拡張未インストール / ログイン切れ事前検知 + 通知 UI**
+6. **投稿 confirm モーダル** with actual に近い preview (avatar + name + text + image)
+7. **buildSystem に X 投稿制約 prompt 注入** (= 280 字 / スレッド 25 まで等)
+8. **投稿後の AI チャット reply** (= 「✅ 投稿完了 + URL」を AI が報告)

@@ -3256,7 +3256,7 @@ window._openTasksPopout = function(anchor, agentId){
   var pop = document.createElement('div');
   pop.id = 'tasksPopout';
   pop.setAttribute('data-agent', agentId);
-  pop.style.cssText = 'position:fixed;top:'+(rect.bottom + 6)+'px;left:'+rect.left+'px;background:#fff;border:1px solid var(--wire);border-radius:11px;padding:8px;width:320px;max-height:60vh;overflow-y:auto;box-shadow:0 14px 36px rgba(0,0,0,.14);z-index:9990;font-family:inherit';
+  pop.style.cssText = 'position:fixed;top:'+(rect.bottom + 6)+'px;left:'+rect.left+'px;background:var(--cream);border:1px solid var(--wire);border-radius:11px;padding:8px;width:320px;max-height:60vh;overflow-y:auto;box-shadow:0 14px 36px rgba(0,0,0,.14);z-index:9990;font-family:inherit';
   var inner = '<div style="padding:8px 10px 10px;font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:8px">'
     + '<span style="color:var(--peach-dark)">' + esc(ag.name||'AI') + '</span>'
     + ' のタスク'
@@ -7629,7 +7629,7 @@ async function openAgent(id){
     var taskLabel = taskN > 0 ? ('📋 タスク '+taskN) : '📋 タスク';
     var taskStyle = taskN > 0
       ? 'font-size:10.5px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.24);padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em'
-      : 'font-size:10px;font-weight:700;color:var(--text3);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.7';
+      : 'font-size:10px;font-weight:700;color:var(--text3);background:var(--cream);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.7';
     tasksPill = '<button onclick="event.stopPropagation(); _openTasksPopout(this, \''+ag.id+'\')" title="'+L('このエージェントのタスク一覧','Tasks for this agent')+'" style="'+taskStyle+'">'+taskLabel+'</button>';
   }
   // Intel pill — KPIs / memories only (tasks moved out above).
@@ -7641,7 +7641,7 @@ async function openAgent(id){
       var parts = [];
       if(kpiN)  parts.push('🎯 '+kpiN);
       if(memN)  parts.push('🧠 '+memN);
-      intelPill = '<button onclick="event.stopPropagation(); openAgentProfile(\''+ag.id+'\')" title="'+L('AI が憶えてる事 / 目標','What this AI remembers / goals')+'" style="font-size:10px;font-weight:700;color:var(--text2);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit">'+parts.join(' · ')+'</button>';
+      intelPill = '<button onclick="event.stopPropagation(); openAgentProfile(\''+ag.id+'\')" title="'+L('AI が憶えてる事 / 目標','What this AI remembers / goals')+'" style="font-size:10px;font-weight:700;color:var(--text2);background:var(--cream);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit">'+parts.join(' · ')+'</button>';
     }
   }
   // Site agent はホスト名 = 「fukuyama-note.com」みたいな表示で、
@@ -8514,7 +8514,7 @@ function renderMsgs(ag, forceScrollBottom){
       +     '<div style="color:var(--text);white-space:pre-wrap">'+esc(_activeNudge.text||'')+'</div>'
       +     '<div style="display:flex;gap:8px;margin-top:10px">'
       +       '<button onclick="_actOnNudge(\''+esc(ag.id)+'\',\''+esc(_activeNudge.id)+'\')" style="background:'+accent.color+';color:#fff;border:0;border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'+L('話を聞く','Tell me more')+' →</button>'
-      +       '<button onclick="_dismissNudge(\''+esc(ag.id)+'\',\''+esc(_activeNudge.id)+'\')" style="background:#fff;color:var(--text3);border:1px solid var(--wire2);border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+L('あとで','Later')+'</button>'
+      +       '<button onclick="_dismissNudge(\''+esc(ag.id)+'\',\''+esc(_activeNudge.id)+'\')" style="background:var(--cream);color:var(--text3);border:1px solid var(--wire2);border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'+L('あとで','Later')+'</button>'
       +     '</div>'
       +   '</div>'
       + '</div>'
@@ -8586,7 +8586,7 @@ function renderMsgs(ag, forceScrollBottom){
         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:800;color:var(--peach-dark)">'
         +   '📋 '+L('これまでの経緯','Conversation so far')
         +   '<span style="font-weight:600;color:var(--text3);font-size:11px">· '+sumCount+L(' 件を折りたたみ',' turns folded')+'</span>'
-        +   '<button onclick="_openHistoryArchive(\''+esc(ag.id)+'\')" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">'+L('全履歴を見る','See full archive')+'</button>'
+        +   '<button onclick="_openHistoryArchive(\''+esc(ag.id)+'\')" style="margin-left:auto;background:var(--cream);border:1px solid var(--wire2);border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">'+L('全履歴を見る','See full archive')+'</button>'
         + '</div>'
         + '<div style="white-space:pre-wrap">'+esc(preview)+((m.content||'').length>220?'…':'')+'</div>'
         + '</div>';
@@ -9118,7 +9118,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     if(Array.isArray(_tmeta.artifacts) && _tmeta.artifacts.length){
       _artifactsHtml = _tmeta.artifacts.slice(0, 5).map(function(a){
         return '<a href="'+esc(a.url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" '
-          + 'style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:2px 8px 2px 6px;font-size:11.5px;font-weight:700;color:var(--text);text-decoration:none;margin-left:4px;transition:all .12s" '
+          + 'style="display:inline-flex;align-items:center;gap:4px;background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:2px 8px 2px 6px;font-size:11.5px;font-weight:700;color:var(--text);text-decoration:none;margin-left:4px;transition:all .12s" '
           + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.color=\'var(--peach-dark)\'" '
           + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.color=\'var(--text)\'">'
           + '<span>'+esc(a.icon)+'</span><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.label)+'</span>'
@@ -9352,7 +9352,7 @@ async function openMemberPanel(agId){
       : curRole === 'reader' ? 'var(--text3)'
       : 'var(--text2)';
     const roleControl = (isHost && !isMe && curRole !== 'host')
-      ? '<select onchange="_changeMemberRole(\''+esc(agId)+'\',\''+esc(m.user_id)+'\',this.value)" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:3px 6px;font-size:11px;font-weight:700;color:'+roleColor+';font-family:inherit;margin-right:6px;cursor:pointer">'
+      ? '<select onchange="_changeMemberRole(\''+esc(agId)+'\',\''+esc(m.user_id)+'\',this.value)" style="background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:3px 6px;font-size:11px;font-weight:700;color:'+roleColor+';font-family:inherit;margin-right:6px;cursor:pointer">'
         +   '<option value="admin"'+(curRole==='admin'?' selected':'')+'>管理者</option>'
         +   '<option value="contributor"'+(curRole==='contributor'||curRole==='member'?' selected':'')+'>メンバー</option>'
         +   '<option value="reader"'+(curRole==='reader'?' selected':'')+'>閲覧専用</option>'
@@ -9962,7 +9962,7 @@ async function _toggleStickerPicker(ev){
   if(stickers.length === 0){ showToast(L('スタンプなし','No stickers'),'ng'); return; }
   var picker = document.createElement('div');
   picker.id = 'stickerPicker';
-  picker.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--wire2);border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:9990;font-family:inherit;display:flex;gap:4px;flex-wrap:wrap;max-width:280px';
+  picker.style.cssText = 'position:fixed;background:var(--cream);border:1px solid var(--wire2);border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:9990;font-family:inherit;display:flex;gap:4px;flex-wrap:wrap;max-width:280px';
   picker.innerHTML = stickers.map(function(s){
     return '<button onclick="event.stopPropagation();_insertSticker(\''+esc(s).replace(/\\/g,'\\\\').replace(/\'/g,"\\'")+'\')" style="background:transparent;border:0;border-radius:8px;padding:6px 8px;font-size:24px;cursor:pointer;line-height:1;transition:transform .1s" onmouseover="this.style.transform=\'scale(1.25)\'" onmouseout="this.style.transform=\'scale(1)\'">'+s+'</button>';
   }).join('') + '<button onclick="event.stopPropagation();_regenStickers(\''+esc(ag.id)+'\')" style="background:var(--cream2);border:0;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit">'+L('🔄 再生成','🔄 Reroll')+'</button>';
@@ -10503,7 +10503,7 @@ async function createChatShare(){
       var tweetText=encodeURIComponent((isJa?'Claude をベースに作った MY AI Agent との会話、共有しました 👇':'Sharing a conversation with my AI agent on MY AI AGENT 👇'));
       document.getElementById('csTweet').innerHTML=
         '<a target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text='+tweetText+'&url='+enc+'" style="background:#000;color:#fff;padding:7px 11px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none">𝕏 '+(isJa?'X でツイート':'Tweet')+'</a>'+
-        '<a href="mailto:?subject='+tweetText+'&body='+enc+'" style="background:#f4f4f5;color:#27272a;padding:7px 11px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none">✉️ '+(isJa?'メール':'Email')+'</a>';
+        '<a href="mailto:?subject='+tweetText+'&body='+enc+'" style="background:var(--cream2);color:var(--text);padding:7px 11px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none">✉️ '+(isJa?'メール':'Email')+'</a>';
     }
     btn.style.display='none';
     showToast(isJa?'公開リンクを作成しました':'Public link created','ok');
@@ -10563,7 +10563,7 @@ async function _fetchFollowupSuggestions(ag){
     row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 4px;max-width:780px;margin:0 auto;';
     row.innerHTML = s.map(function(text){
       var t = String(text||'').slice(0,90);
-      return '<button onclick="useFollowupChip(this)" data-text="'+esc(t).replace(/"/g,'&quot;')+'" style="background:#fff;border:1px solid var(--wire2);border-radius:18px;padding:7px 13px;font-size:12.5px;color:var(--text2);cursor:pointer;font-family:inherit;line-height:1.3;transition:all .12s ease" onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--text2)\';this.style.borderColor=\'var(--wire2)\'">'+esc(t)+'</button>';
+      return '<button onclick="useFollowupChip(this)" data-text="'+esc(t).replace(/"/g,'&quot;')+'" style="background:var(--cream);border:1px solid var(--wire2);border-radius:18px;padding:7px 13px;font-size:12.5px;color:var(--text2);cursor:pointer;font-family:inherit;line-height:1.3;transition:all .12s ease" onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--text2)\';this.style.borderColor=\'var(--wire2)\'">'+esc(t)+'</button>';
     }).join('');
     inner.appendChild(row);
     _scrollMsgsToEnd();
@@ -13081,7 +13081,7 @@ async function openAutomationsGallery(){
     grid.innerHTML = r.templates.map(function(t){
       var hints = (t.suggested_integrations||[]).map(function(k){ return '<span style="background:rgba(192,255,92,.06);color:#c0ff5c;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px">'+(k==='slack'?'📣 Slack':k==='discord'?'💬 Discord':k)+'</span>'; }).join(' ');
       var schedPill = t.has_schedule ? '<span style="background:rgba(245,158,11,.15);color:#b45309;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px">⏰ '+esc(t.schedule_summary||'scheduled')+'</span>' : '';
-      return '<div style="display:flex;flex-direction:column;gap:10px;padding:16px;background:#fff;border:1px solid var(--wire2);border-radius:12px;transition:transform .12s ease,box-shadow .12s ease" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 12px 28px rgba(192,255,92,.18)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
+      return '<div style="display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--cream);border:1px solid var(--wire2);border-radius:12px;transition:transform .12s ease,box-shadow .12s ease" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 12px 28px rgba(192,255,92,.18)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
         '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,rgba(192,255,92,.05),rgba(192,255,92,.10));display:flex;align-items:center;justify-content:center;font-size:20px">'+esc(t.icon||'⚙️')+'</div><div style="font-weight:800;font-size:13.5px;line-height:1.3">'+esc(t.title)+'</div></div>'+
         '<div style="font-size:11.5px;color:var(--text2);line-height:1.55;min-height:48px">'+esc(t.description||'')+'</div>'+
         ((schedPill||hints)?'<div style="display:flex;flex-wrap:wrap;gap:5px">'+schedPill+' '+hints+'</div>':'')+
@@ -13242,7 +13242,7 @@ async function openTeamGallery(){
         ? '<button disabled style="width:100%;background:var(--cream2);color:var(--text3);padding:10px;border:1px solid var(--wire2);border-radius:9px;font-size:12.5px;font-weight:800;cursor:not-allowed">Marketplace 経由で購入</button>'
         : '<button onclick="event.stopPropagation();activateTeam(\''+esc(t.id)+'\',\''+esc(t.name)+'\',\''+esc(t.cover_emoji)+'\')" style="width:100%;background:var(--peach);color:#0a0a0e;padding:10px;border:0;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)">▶ 起動 (無料)</button>';
       return ''
-        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .14s" onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'\';this.style.transform=\'\'">'
+        + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .14s" onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'\';this.style.transform=\'\'">'
         + '<div style="height:64px;border-radius:10px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16));display:flex;align-items:center;justify-content:center;font-size:30px">'+esc(t.cover_emoji||'🎯')+'</div>'
         + '<div>'+priceTag+'</div>'
         + '<div style="font-size:14px;font-weight:900;letter-spacing:-.005em">'+esc(t.name)+'</div>'
@@ -13444,10 +13444,10 @@ function openTeamMembersPanel(teamId){
       // Remove button only for hosts AND when team has > 1 member (server enforces this too)
       var canRemove = isTeamHost && members.length > 1;
       var rmBtn = canRemove
-        ? '<button onclick="removeTeamMember(\''+esc(team.id)+'\',\''+esc(m.id)+'\',\''+esc((m.name||'').replace(/\\|\x27/g,"\\$&"))+'\')" title="'+L('チームから外す','Remove from team')+'" style="background:#fff;color:var(--rose);border:1px solid var(--wire2);border-radius:9px;padding:8px 10px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0">🗑</button>'
+        ? '<button onclick="removeTeamMember(\''+esc(team.id)+'\',\''+esc(m.id)+'\',\''+esc((m.name||'').replace(/\\|\x27/g,"\\$&"))+'\')" title="'+L('チームから外す','Remove from team')+'" style="background:var(--cream);color:var(--rose);border:1px solid var(--wire2);border-radius:9px;padding:8px 10px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0">🗑</button>'
         : '';
       return ''
-        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:13px;padding:14px 14px 12px;display:flex;gap:12px;align-items:flex-start">'
+        + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:13px;padding:14px 14px 12px;display:flex;gap:12px;align-items:flex-start">'
         +   '<div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+_avHTML(m.avatar||'🤖')+'</div>'
         +   '<div style="flex:1;min-width:0">'
         +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap">'
@@ -14993,8 +14993,8 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
     if(agentEnabled){
       if(connected){
         desc.innerHTML = isJa
-          ? '<span style="color:#3730a3;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
-          : '<span style="color:#3730a3;font-weight:700">✓ Active · Online</span> — AI can drive this browser';
+          ? '<span style="color:#a78bfa;font-weight:700">✓ 有効・オンライン</span> — AI があなたのブラウザを操作できます'
+          : '<span style="color:#a78bfa;font-weight:700">✓ Active · Online</span> — AI can drive this browser';
       } else if(!_isExtCapable()){
         // Mobile / non-Chrome: extension can't run here. Make that explicit
         // and reassure them it'll auto-recover when they hit the desktop.
@@ -15006,8 +15006,8 @@ function _renderExtensionStatus(swId, descId, accountRowId, deviceIdEl, btnId, a
         // polling. Almost certainly uninstalled or disabled — give the user a
         // direct path to fix it instead of "waiting…" forever.
         desc.innerHTML = isJa
-          ? '<span style="color:var(--peach-dark);font-weight:700">⚠ 拡張機能が見つかりません</span> — アンインストール / 無効化されている可能性があります。<a href="' + EXT_STORE_URL + '" target="_blank" style="color:#3730a3;font-weight:700;text-decoration:underline">Chrome に再追加</a>'
-          : '<span style="color:var(--peach-dark);font-weight:700">⚠ Extension not found</span> — It may have been uninstalled or disabled. <a href="' + EXT_STORE_URL + '" target="_blank" style="color:#3730a3;font-weight:700;text-decoration:underline">Add to Chrome again</a>';
+          ? '<span style="color:var(--peach-dark);font-weight:700">⚠ 拡張機能が見つかりません</span> — アンインストール / 無効化されている可能性があります。<a href="' + EXT_STORE_URL + '" target="_blank" style="color:#a78bfa;font-weight:700;text-decoration:underline">Chrome に再追加</a>'
+          : '<span style="color:var(--peach-dark);font-weight:700">⚠ Extension not found</span> — It may have been uninstalled or disabled. <a href="' + EXT_STORE_URL + '" target="_blank" style="color:#a78bfa;font-weight:700;text-decoration:underline">Add to Chrome again</a>';
       } else {
         desc.innerHTML = isJa
           ? '<span style="color:var(--peach-dark);font-weight:700">⚠ オフライン</span> — Chrome の起動を待っています。再接続できたら自動で復旧します。'
@@ -15430,7 +15430,7 @@ async function _kbLoadList(){
     }
     listEl.innerHTML = docs.map(function(d){
       var kb = Math.max(1, Math.round(d.length/1024));
-      return '<div data-kb-doc="'+esc(d.id)+'" style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:#fff;border:1px solid rgba(16,185,129,.18);border-radius:8px">'+
+      return '<div data-kb-doc="'+esc(d.id)+'" style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--cream);border:1px solid rgba(16,185,129,.18);border-radius:8px">'+
         '<div style="width:24px;height:24px;border-radius:5px;background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">DOC</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(d.name||'doc')+'</div>'+
         '<div style="font-size:10.5px;color:var(--text3)">'+kb+'KB · '+(d.chunks||0)+(isJa?' チャンク':' chunks')+'</div></div>'+
@@ -15540,7 +15540,7 @@ function _renderIntgCatalog(r){
   // Header strip: counts + filter
   var pctNum = total ? Math.round(connected/total*100) : 0;
   var head =
-    '<div style="background:#fff;border:1px solid var(--wire);border-radius:12px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+    '<div style="background:var(--cream);border:1px solid var(--wire);border-radius:12px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
     + '<div style="display:flex;gap:14px">'
     +   '<div><div style="font-size:18px;font-weight:900;color:var(--peach-dark)">'+connected+'</div><div style="font-size:10.5px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px">接続済</div></div>'
     +   '<div><div style="font-size:18px;font-weight:900;color:var(--text)">'+(total-connected)+'</div><div style="font-size:10.5px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px">利用可能</div></div>'
@@ -15573,9 +15573,9 @@ function _renderIntgCatalog(r){
   // Inject chip styles (lightweight, scoped)
   if(!document.getElementById('intgChipStyles')){
     var st = document.createElement('style'); st.id = 'intgChipStyles';
-    st.textContent = '.intg-chip{background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}'
+    st.textContent = '.intg-chip{background:var(--cream);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}'
       + '.intg-chip.on{background:var(--peach);color:#0a0a0e;border-color:var(--peach)}'
-      + '.intg-card{background:#fff;border:1px solid var(--wire);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;transition:all .15s}'
+      + '.intg-card{background:var(--cream);border:1px solid var(--wire);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;transition:all .15s}'
       + '.intg-card:hover{border-color:var(--peach);transform:translateY(-1px);box-shadow:0 8px 22px rgba(192,255,92,.06)}'
       + '.intg-card.dimmed{opacity:.45}';
     document.head.appendChild(st);
@@ -15593,7 +15593,7 @@ function _intgCardHtml(s){
         ? '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d">🔧 準備中</span>'
         : '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--cream2);color:var(--text3);border:1px solid var(--wire2)">未接続</span>');
   var btn = st.connected
-    ? '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto">管理</button>'
+    ? '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto">管理</button>'
     : '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:auto">接続</button>';
   var acc = st.account ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:1px">@'+esc(st.account)+'</div>') : '';
   var pri = s.priority ? '<span title="推奨セット" style="font-size:9.5px;color:var(--peach-dark);font-weight:900;margin-left:4px">⭐</span>' : '';
@@ -15671,7 +15671,7 @@ function _intgOpen(id){
       +   '<input id="slackAddUrl" type="url" placeholder="https://hooks.slack.com/services/..." style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
       +   '<button onclick="_slackChAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このチャンネルを追加</button>'
       + '</div>'
-      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
+      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'wp_multi'){
     // WordPress multi-site
     body =
@@ -15692,7 +15692,7 @@ function _intgOpen(id){
       +   '<input id="wpAddPw" type="password" placeholder="Application Password" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
       +   '<button onclick="_wpSiteAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このサイトを追加</button>'
       + '</div>'
-      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
+      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'zapier_multi'){
     // Zapier: multi-webhook. Render a list of registered Zaps + an add form.
     // List is fetched async after the modal is mounted.
@@ -15756,7 +15756,7 @@ function _intgOpen(id){
       +   '<input id="zapierAddHint" placeholder="(任意) AI へのヒント。例: ツイート本文を text フィールドで渡す" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:inherit;margin-bottom:8px">'
       +   '<button onclick="_zapierAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ この Zap を追加</button>'
       + '</div>'
-      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
+      + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'oauth' && s.has_backend){
     // 1-click OAuth — single big button that top-level-redirects to /api/auth/:provider/start.
     // We pass the JWT as ?token=... because top-level nav can't set Authorization headers.
@@ -15783,8 +15783,8 @@ function _intgOpen(id){
       +   '次の画面で '+esc(s.name)+' の認可ページに移動します。承認すると自動でこのアプリに戻ります。トークンはあなたの端末経由ではなく、サーバー間で直接交換されます。'
       + '</div>'
       + (st.connected
-        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
-        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:var(--cream);color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
   } else if(s.id === 'buffer' && !s.has_backend){
     // Buffer-specific setup walkthrough — when admin hasn't set
     // BUFFER_OAUTH_CLIENT_ID/SECRET yet, give a clear step-by-step.
@@ -15802,7 +15802,7 @@ function _intgOpen(id){
       +       '<b>App Name:</b> <span style="font-family:ui-monospace,monospace">MY AI Agent</span><br>'
       +       '<b>Description:</b> <span style="font-family:ui-monospace,monospace">AI-powered SNS posting</span><br>'
       +       '<b>Website URL:</b> <span style="font-family:ui-monospace,monospace">https://myaiagents.agency</span><br>'
-      +       '<b>Callback URL:</b> <span style="font-family:ui-monospace,monospace;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--wire2)">https://myaiagents.agency/api/auth/buffer/callback</span> <button onclick="navigator.clipboard.writeText(\'https://myaiagents.agency/api/auth/buffer/callback\');showToast(\'✓ コピーしました\',\'ok\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">📋 コピー</button>'
+      +       '<b>Callback URL:</b> <span style="font-family:ui-monospace,monospace;background:var(--cream);padding:2px 6px;border-radius:4px;border:1px solid var(--wire2)">https://myaiagents.agency/api/auth/buffer/callback</span> <button onclick="navigator.clipboard.writeText(\'https://myaiagents.agency/api/auth/buffer/callback\');showToast(\'✓ コピーしました\',\'ok\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">📋 コピー</button>'
       +     '</div>'
       +   '</li>'
       +   '<li style="margin-bottom:10px">作成後の <b>Client ID</b> と <b>Client Secret</b> をコピー (Secret は 1 度しか見られない! 注意)</li>'
@@ -15857,12 +15857,12 @@ function _intgOpen(id){
       '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'+esc(s.desc||'')+'</div>'
       + body
       + (st.connected
-        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">再接続</button></div>'
-        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔌 接続</button></div>');
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:var(--cream);color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">再接続</button></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔌 接続</button></div>');
   }
 
   ov.innerHTML =
-    '<div style="background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+    '<div style="background:var(--cream);border-radius:14px;max-width:520px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
     +   '<div style="padding:16px 20px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:11px">'
     +     '<div style="width:38px;height:38px;border-radius:9px;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:22px">'+esc(s.logo||'🔌')+'</div>'
     +     '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:900;color:var(--text)">'+esc(s.name)+'</div><div style="font-size:11px;color:var(--text3);margin-top:1px">'+esc(INTG_GROUP_LABEL[s.group]||'')+'</div></div>'
@@ -15891,7 +15891,7 @@ function _zapTplCard(emoji, name, appSlug, hint){
   // card instead so they hit the clean 7-step setup we wrote.
   if(appSlug === 'buffer'){
     return '<button onclick="_intgClose();setTimeout(function(){_intgOpen(\'buffer\')},150)" '
-      + 'style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 11px;text-align:left;color:inherit;font-family:inherit;display:flex;flex-direction:column;gap:3px;transition:all .15s;cursor:pointer" '
+      + 'style="background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:10px 11px;text-align:left;color:inherit;font-family:inherit;display:flex;flex-direction:column;gap:3px;transition:all .15s;cursor:pointer" '
       + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 16px rgba(192,255,92,.1)\'" '
       + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'"'
       + '>'
@@ -15901,7 +15901,7 @@ function _zapTplCard(emoji, name, appSlug, hint){
   }
   var url = 'https://zapier.com/apps/webhook/integrations/' + appSlug;
   return '<a href="'+esc(url)+'" target="_blank" rel="noopener" '
-    + 'style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 11px;text-decoration:none;color:inherit;font-family:inherit;display:flex;flex-direction:column;gap:3px;transition:all .15s;cursor:pointer" '
+    + 'style="background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:10px 11px;text-decoration:none;color:inherit;font-family:inherit;display:flex;flex-direction:column;gap:3px;transition:all .15s;cursor:pointer" '
     + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 16px rgba(192,255,92,.1)\'" '
     + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'"'
     + '>'
@@ -15924,14 +15924,14 @@ async function _zapierLoadList(){
     }
     listEl.innerHTML = hooks.map(function(w){
       return ''
-        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
+        + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
         +   '<div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#ff4a00,#ff8a00);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">⚡</div>'
         +   '<div style="flex:1;min-width:0">'
         +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.name)+'</div>'
         +     (w.hint ? '<div style="font-size:10.5px;color:var(--text2);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.hint)+'</div>' : '')
         +     '<div style="font-size:9.5px;color:var(--text3);margin-top:2px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.url_preview||'')+'</div>'
         +   '</div>'
-        +   '<button onclick="_zapierDelete(\''+esc(w.id)+'\')" title="削除" style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
+        +   '<button onclick="_zapierDelete(\''+esc(w.id)+'\')" title="削除" style="background:var(--cream);border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
         + '</div>';
     }).join('');
   } catch(e){
@@ -15986,14 +15986,14 @@ async function _slackChLoadList(){
     if(!ws.length){ listEl.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:12px;background:var(--cream);border-radius:8px;text-align:center">まだチャンネル未登録。下のフォームから追加してください。</div>'; return; }
     listEl.innerHTML = ws.map(function(w){
       return ''
-        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
+        + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
         +   '<div style="width:30px;height:30px;border-radius:7px;background:#4a154b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">💬</div>'
         +   '<div style="flex:1;min-width:0">'
         +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.name)+(w.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(192,255,92,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
         +     '<div style="font-size:9.5px;color:var(--text3);margin-top:1px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(w.url_preview||'')+'</div>'
         +   '</div>'
-        +   (w.is_default ? '' : '<button onclick="_slackChDefault(\''+esc(w.id)+'\')" title="既定にする" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
-        +   '<button onclick="_slackChDelete(\''+esc(w.id)+'\')" title="削除" style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
+        +   (w.is_default ? '' : '<button onclick="_slackChDefault(\''+esc(w.id)+'\')" title="既定にする" style="background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
+        +   '<button onclick="_slackChDelete(\''+esc(w.id)+'\')" title="削除" style="background:var(--cream);border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
         + '</div>';
     }).join('');
   } catch(e){
@@ -16040,14 +16040,14 @@ async function _wpSitesLoadList(){
     if(!sites.length){ listEl.innerHTML = '<div style="font-size:11.5px;color:var(--text3);padding:12px;background:var(--cream);border-radius:8px;text-align:center">まだサイト未登録。下のフォームから追加してください。</div>'; return; }
     listEl.innerHTML = sites.map(function(s){
       return ''
-        + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
+        + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
         +   '<div style="width:30px;height:30px;border-radius:7px;background:#21759b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">W</div>'
         +   '<div style="flex:1;min-width:0">'
         +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+(s.is_default?' <span style="font-size:9.5px;color:var(--peach-dark);font-weight:900;background:rgba(192,255,92,.12);padding:1px 6px;border-radius:99px;margin-left:4px">★ 既定</span>':'')+'</div>'
         +     '<div style="font-size:10px;color:var(--text3);margin-top:1px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.siteUrl)+' · @'+esc(s.username||'')+'</div>'
         +   '</div>'
-        +   (s.is_default ? '' : '<button onclick="_wpSiteDefault(\''+esc(s.id)+'\')" title="既定にする" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
-        +   '<button onclick="_wpSiteDelete(\''+esc(s.id)+'\')" title="削除" style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
+        +   (s.is_default ? '' : '<button onclick="_wpSiteDefault(\''+esc(s.id)+'\')" title="既定にする" style="background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0">既定にする</button>')
+        +   '<button onclick="_wpSiteDelete(\''+esc(s.id)+'\')" title="削除" style="background:var(--cream);border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0">🗑</button>'
         + '</div>';
     }).join('');
   } catch(e){
@@ -16164,7 +16164,7 @@ async function _mcpLoadList(){
         : (s.tools_count != null
             ? '<span style="color:#16a34a;font-size:10.5px;font-weight:700">✓ ' + s.tools_count + ' tools</span>'
             : '<span style="color:var(--text3);font-size:10.5px">読込中…</span>');
-      return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
+      return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:9px">'
         +    '<div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0">🔌</div>'
         +    '<div style="flex:1;min-width:0">'
         +      '<div style="font-size:13px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.name) + (s.enabled === false ? ' <span style="font-size:9.5px;color:var(--text3);font-weight:600">(OFF)</span>' : '') + '</div>'
@@ -16172,9 +16172,9 @@ async function _mcpLoadList(){
         +      '<div style="margin-top:3px">' + status + '</div>'
         +    '</div>'
         +    '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'
-        +      '<button onclick="_mcpRefreshServer(\'' + esc(s.id) + '\')" title="ツール一覧を再取得" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit">🔄</button>'
-        +      '<button onclick="_mcpToggleServer(\'' + esc(s.id) + '\')" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:' + (s.enabled === false ? 'var(--text3)' : 'var(--peach-dark)') + ';font-family:inherit">' + (s.enabled === false ? 'OFF' : 'ON') + '</button>'
-        +      '<button onclick="_mcpDeleteServer(\'' + esc(s.id) + '\')" style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:#dc2626;font-family:inherit">🗑</button>'
+        +      '<button onclick="_mcpRefreshServer(\'' + esc(s.id) + '\')" title="ツール一覧を再取得" style="background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:var(--text2);font-family:inherit">🔄</button>'
+        +      '<button onclick="_mcpToggleServer(\'' + esc(s.id) + '\')" style="background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:' + (s.enabled === false ? 'var(--text3)' : 'var(--peach-dark)') + ';font-family:inherit">' + (s.enabled === false ? 'OFF' : 'ON') + '</button>'
+        +      '<button onclick="_mcpDeleteServer(\'' + esc(s.id) + '\')" style="background:var(--cream);border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:10.5px;cursor:pointer;color:#dc2626;font-family:inherit">🗑</button>'
         +    '</div>'
         +  '</div>';
     }).join('');
@@ -16328,7 +16328,7 @@ async function _whLoad(){
     if(r.enabled && r.url){
       statusEl.innerHTML =
         '<div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'URL':'Endpoint')+'</div>'+
-        '<div style="display:flex;gap:4px"><input id="whUrlIn" readonly value="'+esc(r.url)+'" style="flex:1;padding:7px 9px;border:1px solid rgba(14,165,233,.3);border-radius:6px;font-size:11.5px;font-family:ui-monospace,monospace;background:#fff;color:var(--text)"><button onclick="_whCopy()" style="padding:7px 10px;background:#0ea5e9;color:#fff;border:0;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
+        '<div style="display:flex;gap:4px"><input id="whUrlIn" readonly value="'+esc(r.url)+'" style="flex:1;padding:7px 9px;border:1px solid rgba(14,165,233,.3);border-radius:6px;font-size:11.5px;font-family:ui-monospace,monospace;background:var(--cream);color:var(--text)"><button onclick="_whCopy()" style="padding:7px 10px;background:#0ea5e9;color:#fff;border:0;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
         '<pre style="margin-top:8px;background:#0f1216;color:#e5e7eb;padding:8px 10px;border-radius:6px;font-size:10.5px;line-height:1.5;overflow-x:auto">curl -X POST '+esc(r.url)+' \\\n  -H "Content-Type: application/json" \\\n  -d \'{"message":"Hello agent"}\'</pre>';
       btn.textContent = isJa?'Webhook を無効化':'Disable webhook';
       btn.style.background = '#fff';
@@ -16388,7 +16388,7 @@ async function _schedLoadList(){
       var next = s.next_run ? new Date(s.next_run).toLocaleString() : '—';
       var deliver = s.deliver==='email' ? '✉️' : '💬';
       var ena = s.enabled !== false;
-      return '<div style="padding:8px 10px;background:#fff;border:1px solid rgba(245,158,11,.2);border-radius:8px">'+
+      return '<div style="padding:8px 10px;background:var(--cream);border:1px solid rgba(245,158,11,.2);border-radius:8px">'+
         '<div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:12px;color:var(--text)">'+deliver+' '+esc(s.label||time)+'</span>'+
         '<button onclick="_schedRunNow(\''+esc(s.id)+'\')" style="margin-left:auto;background:rgba(245,158,11,.12);color:#b45309;border:1px solid rgba(245,158,11,.4);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="'+(isJa?'今すぐ実行':'Run now')+'">▶ '+(isJa?'実行':'Run')+'</button>'+
         '<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" '+(ena?'checked':'')+' onchange="_schedToggle(\''+esc(s.id)+'\',this.checked)"> '+(isJa?'ON':'On')+'</label>'+
@@ -17306,13 +17306,13 @@ function _renderNotesPanel(){
         ? '<span title="'+L('この AI とのチャットだけに紐づく自分用メモ','Private to this 1:1 chat')+'" style="font-size:10px;font-weight:800;color:var(--text3);background:var(--cream2);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;letter-spacing:.02em">🔒 '+L('DM 専用','Private')+'</span>'
         : '');
   ov.innerHTML =
-    '<div style="background:#fff;border-radius:16px;max-width:1400px;width:100%;max-height:94vh;height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+    '<div style="background:var(--cream);border-radius:16px;max-width:1400px;width:100%;max-height:94vh;height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
     +  '<div style="padding:14px 18px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">📝 '+L('メモ','Notes')+'</div>'
     +    sharedBadge
     +    '<div id="notesSavedFlag" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
     +    '<button onclick="_notesCreate()" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('新規','New')+'</button>'
-    +    '<button onclick="_notesClose()" style="background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
+    +    '<button onclick="_notesClose()" style="background:var(--cream);border:1px solid var(--wire2);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
     +  '</div>'
     +  '<div style="flex:1;display:flex;min-height:0">'
     +    '<aside style="width:280px;border-right:1px solid var(--wire);background:var(--cream);overflow-y:auto;padding:8px">'+listHTML+'</aside>'
@@ -17339,7 +17339,7 @@ function _notesRenderEditor(){
     + '<textarea id="notesBody" placeholder="'+L('ここに自由に書く…','Write anything…')+'" style="flex:1;background:transparent;border:0;padding:18px 28px;font-size:15.5px;line-height:1.75;font-family:inherit;color:var(--text);outline:none;resize:none"></textarea>'
     + '<div style="padding:8px 16px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;background:var(--cream)">'
     +   '<div id="notesCharCount" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
-    +   '<button onclick="_notesDelete()" style="margin-left:auto;background:#fff;border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 '+L('削除','Delete')+'</button>'
+    +   '<button onclick="_notesDelete()" style="margin-left:auto;background:var(--cream);border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 '+L('削除','Delete')+'</button>'
     +   '<button onclick="_notesSaveExplicit()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:6px 16px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">💾 '+L('保存','Save')+'</button>'
     + '</div>';
   // Hydrate fields
@@ -17566,14 +17566,14 @@ function _renderAgentProfile(){
   ov.id = 'agProfileOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit';
   ov.innerHTML =
-    '<div style="background:#fff;border-radius:16px;max-width:860px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+    '<div style="background:var(--cream);border-radius:16px;max-width:860px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
     +  '<div style="padding:16px 20px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:12px">'
     +    '<div style="width:38px;height:38px;border-radius:11px;background:'+accent.grad+';display:flex;align-items:center;justify-content:center;font-size:18px">'+_avHTML(ag.avatar||'🤖')+'</div>'
     +    '<div style="flex:1;min-width:0">'
     +      '<div style="font-size:15px;font-weight:900;color:var(--text)">'+esc(ag.name||'AI')+' '+L('のプロフィール',' profile')+'</div>'
     +      '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('AI が憶えて働いてる情報', 'What this AI remembers and works on')+'</div>'
     +    '</div>'
-    +    '<button onclick="document.getElementById(\'agProfileOverlay\').remove()" style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
+    +    '<button onclick="document.getElementById(\'agProfileOverlay\').remove()" style="background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
     +  '</div>'
     +  '<div style="display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--wire2)">'+tabHTML+'</div>'
     +  '<div style="padding:18px 22px;overflow-y:auto;flex:1;background:#fdfcfa">'+pane+'</div>'
@@ -17606,14 +17606,14 @@ function _agProfMemories(items){
   return addBtn + sorted.map(function(m){
     var pinIcon = m.pinned ? '📌' : '📍';
     var srcBadge = m.source === 'auto' ? '<span style="font-size:9px;font-weight:700;color:var(--text3);background:var(--cream2);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('AUTO','AUTO')+'</span>' : '<span style="font-size:9px;font-weight:700;color:var(--peach-dark);background:rgba(192,255,92,.12);padding:2px 6px;border-radius:4px;margin-right:6px">'+L('手動','MANUAL')+'</span>';
-    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">'
+    return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">'
       + '<div style="flex:1;min-width:0">'
       +   '<div style="margin-bottom:3px">'+srcBadge+'<span style="font-size:9.5px;color:var(--text3)">'+esc((m.created_at||'').slice(0,10))+'</span></div>'
       +   '<div style="font-size:13px;color:var(--text);line-height:1.55;white-space:pre-wrap">'+esc(m.text||'')+'</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:4px">'
       +   '<button onclick="_agProfPinMem(\''+esc(m.id)+'\','+(!m.pinned)+')" title="'+(m.pinned?L('固定解除','Unpin'):L('固定','Pin'))+'" style="background:'+(m.pinned?'rgba(192,255,92,.12)':'#fff')+';border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:13px;font-family:inherit">'+pinIcon+'</button>'
-      +   '<button onclick="_agProfDelMem(\''+esc(m.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:11px;color:var(--rose);font-family:inherit">🗑</button>'
+      +   '<button onclick="_agProfDelMem(\''+esc(m.id)+'\')" style="background:var(--cream);border:1px solid var(--wire2);border-radius:7px;padding:4px 7px;cursor:pointer;font-size:11px;color:var(--rose);font-family:inherit">🗑</button>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -17640,7 +17640,7 @@ async function _agProfDelMem(mid){
 }
 
 function _agProfKpis(items){
-  var addBtn = '<div style="background:#fff;border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px">'
+  var addBtn = '<div style="background:var(--cream);border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px">'
     + '<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px">'+L('+ 新規 KPI','+ New KPI')+'</div>'
     + '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px">'
     + '<input id="agpKpiName" placeholder="'+L('指標名 (例: 月商)','KPI name (e.g. MRR)')+'" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
@@ -17654,7 +17654,7 @@ function _agProfKpis(items){
   return addBtn + items.map(function(k){
     var pct = (k.target && k.current != null) ? Math.max(0, Math.min(100, Math.round((k.current / k.target) * 100))) : null;
     var bar = pct != null ? '<div style="background:var(--cream2);border-radius:99px;height:6px;overflow:hidden;margin-top:6px"><div style="background:linear-gradient(90deg,var(--peach),var(--peach-dark));height:100%;width:'+pct+'%;border-radius:99px;transition:width .3s"></div></div>' : '';
-    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:10px">'
+    return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:10px">'
       + '<div style="display:flex;align-items:center;gap:12px">'
       +   '<div style="flex:1;min-width:0">'
       +     '<div style="font-size:13px;font-weight:800;color:var(--text)">'+esc(k.name||'')+'</div>'
@@ -17662,7 +17662,7 @@ function _agProfKpis(items){
       +   '</div>'
       +   '<input type="number" placeholder="'+L('現在値を更新','Update value')+'" id="agpKpiUpd_'+esc(k.id)+'" style="padding:7px 10px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px;width:120px" onkeydown="if(event.key===\'Enter\'){_agProfKpiUpdate(\''+esc(k.id)+'\')}">'
       +   '<button onclick="_agProfKpiUpdate(\''+esc(k.id)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">'+L('更新','Save')+'</button>'
-      +   '<button onclick="_agProfKpiDel(\''+esc(k.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
+      +   '<button onclick="_agProfKpiDel(\''+esc(k.id)+'\')" style="background:var(--cream);border:1px solid var(--wire2);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
       + '</div>'
       + bar
       + '</div>';
@@ -17696,11 +17696,11 @@ function _agProfPlaybook(items){
   if(!items.length) return '<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px">'+L('まだプレイブックなし。AI が成功したパターンが自動で蓄積されます。','No playbook yet. Successful patterns will be saved here automatically.')+'</div>';
   var sorted = items.slice().sort(function(a,b){ return (b.success_count||0)-(a.success_count||0); });
   return sorted.map(function(p){
-    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:10px">'
+    return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:10px">'
       + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
       +   '<span style="font-size:9.5px;font-weight:800;background:rgba(34,197,94,.12);color:#15803d;padding:2px 7px;border-radius:4px">✓ '+L('成功','SUCCESS')+' ×'+(p.success_count||1)+'</span>'
       +   '<span style="font-size:9.5px;color:var(--text3)">'+esc((p.created_at||'').slice(0,10))+'</span>'
-      +   '<button onclick="_agProfPbDel(\''+esc(p.id)+'\')" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:3px 7px;font-size:10px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
+      +   '<button onclick="_agProfPbDel(\''+esc(p.id)+'\')" style="margin-left:auto;background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:3px 7px;font-size:10px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
       + '</div>'
       + '<div style="font-size:11px;color:var(--text3);margin-bottom:4px"><b>'+L('状況','When')+':</b> '+esc(p.context||'')+'</div>'
       + '<div style="font-size:13px;color:var(--text);line-height:1.55"><b>'+L('うまくいったやり方','What worked')+':</b> '+esc(p.pattern||'')+'</div>'
@@ -17715,7 +17715,7 @@ async function _agProfPbDel(pid){
 }
 
 function _agProfTasks(items){
-  var addBtn = '<div style="background:#fff;border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;gap:6px">'
+  var addBtn = '<div style="background:var(--cream);border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;gap:6px">'
     + '<input id="agpTaskTitle" placeholder="'+L('新規案件 (例: LP 改善 v2)','New task (e.g. LP rev v2)')+'" style="flex:1;padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px" onkeydown="if(event.key===\'Enter\'){_agProfAddTask()}">'
     + '<button onclick="_agProfAddTask()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button>'
     + '</div>';
@@ -17729,7 +17729,7 @@ function _agProfTasks(items){
       +   '<div style="flex:1;min-width:0;font-size:13px;font-weight:'+(isDone?'600':'700')+';color:var(--text);text-decoration:'+(isDone?'line-through':'none')+'">'+esc(t.title||'')+'</div>'
       +   '<input type="number" min="0" max="100" value="'+pct+'" onchange="_agProfTaskPct(\''+esc(t.id)+'\',this.value)" style="width:60px;padding:5px 8px;border:1px solid var(--wire2);border-radius:6px;font-family:inherit;font-size:11px">'
       +   '<span style="font-size:10px;color:var(--text3)">%</span>'
-      +   '<button onclick="_agProfTaskDel(\''+esc(t.id)+'\')" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:4px 7px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
+      +   '<button onclick="_agProfTaskDel(\''+esc(t.id)+'\')" style="background:var(--cream);border:1px solid var(--wire2);border-radius:6px;padding:4px 7px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
       + '</div>'
       + (t.notes ? '<div style="font-size:11px;color:var(--text3);margin-top:5px;padding-left:24px">'+esc(t.notes)+'</div>' : '')
       + '<div style="margin-top:6px;background:var(--cream2);border-radius:99px;height:4px;overflow:hidden"><div style="background:'+(isDone?'#22c55e':'var(--peach)')+';height:100%;width:'+pct+'%"></div></div>'
@@ -17769,7 +17769,7 @@ function _agProfRoutines(items){
   var hint = '<div style="background:rgba(192,255,92,.06);border:1px solid rgba(192,255,92,.25);border-radius:10px;padding:11px 15px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.55">💡 '+L('自律ルーチンは「メニュー → スケジュール」から追加します。このエージェントが定期的に行う仕事一覧です。','Routines are added from "Menu → Schedules". This shows the recurring jobs assigned to this agent.')+'</div>';
   if(!items.length) return hint + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('まだルーチンはありません。','No routines yet.')+'</div>';
   return hint + items.map(function(s){
-    return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:9px">'
+    return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:11px;padding:13px 16px;margin-bottom:9px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">⏰ '+esc(s.name||s.prompt||'Routine')+'</div>'
       + '<div style="font-size:11px;color:var(--text3);font-family:\'SF Mono\',Menlo,monospace">'+esc(s.cron||'')+' · '+esc(s.timezone||'UTC')+'</div>'
       + (s.last_run_at?'<div style="font-size:10.5px;color:var(--text3);margin-top:3px">'+L('最終実行','Last run')+': '+esc(s.last_run_at)+'</div>':'')
@@ -17788,9 +17788,9 @@ function _agProfEvolution(d){
 
   // Stats strip
   var stats = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;font-size:12.5px">'
-    + '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:var(--peach-dark)">'+total+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">総ツール使用</div></div>'
-    + '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:#10b981">'+mastered.length+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">習得スキル</div></div>'
-    + '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:#7c3aed">'+history.length+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">マイルストーン</div></div>'
+    + '<div style="background:var(--cream);border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:var(--peach-dark)">'+total+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">総ツール使用</div></div>'
+    + '<div style="background:var(--cream);border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:#10b981">'+mastered.length+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">習得スキル</div></div>'
+    + '<div style="background:var(--cream);border:1px solid var(--wire);border-radius:10px;padding:10px 14px;min-width:100px"><div style="font-size:20px;font-weight:900;color:#7c3aed">'+history.length+'</div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:2px">マイルストーン</div></div>'
     + '</div>';
 
   if(!total && !mastered.length){
@@ -17821,7 +17821,7 @@ function _agProfEvolution(d){
           var d = h.date ? new Date(h.date) : null;
           var when = d ? (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') : '';
           var tierEmoji = h.tier === '達人' ? '🌳' : h.tier === '習熟' ? '🌿' : '🌱';
-          return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:10px">'
+          return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:10px">'
             + '<span style="font-size:14px;flex-shrink:0">'+tierEmoji+'</span>'
             + '<div style="flex:1;min-width:0;font-size:12px"><b>'+esc(h.skill_label)+'</b> を '+esc(h.tier)+' (' + h.count + ' 回)</div>'
             + '<div style="font-size:10.5px;color:var(--text3);font-family:ui-monospace,monospace;flex-shrink:0">'+esc(when)+'</div>'
@@ -17893,11 +17893,11 @@ async function _openHistoryArchive(agId){
     overlay.id = 'historyArchiveOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit';
     overlay.innerHTML =
-      '<div style="background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+      '<div style="background:var(--cream);border-radius:16px;max-width:760px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
       +  '<div style="padding:14px 18px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:10px">'
       +    '<div style="font-size:14px;font-weight:800;color:var(--text)">📋 '+L('折りたたまれた会話履歴','Folded chat archive')+'</div>'
       +    '<div style="font-size:11px;color:var(--text3);font-weight:700">· '+items.length+L(' 件','')+'</div>'
-      +    '<button onclick="document.getElementById(\'historyArchiveOverlay\').remove()" style="margin-left:auto;background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
+      +    '<button onclick="document.getElementById(\'historyArchiveOverlay\').remove()" style="margin-left:auto;background:var(--cream);border:1px solid var(--wire2);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
       +  '</div>'
       +  '<div style="padding:8px 22px;overflow-y:auto;flex:1">'+body+'</div>'
       + '</div>';
@@ -17934,7 +17934,7 @@ function _toggleQuickModel(agId){
   ];
   var menu = document.createElement('div');
   menu.id = 'quickModelMenu';
-  menu.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--wire2);border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;min-width:220px;z-index:9999;font-family:inherit';
+  menu.style.cssText = 'position:fixed;background:var(--cream);border:1px solid var(--wire2);border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;min-width:220px;z-index:9999;font-family:inherit';
   menu.innerHTML = opts.map(function(o){
     var disabled = !planAllows(o.v);
     var sel = (current === o.v);
@@ -19053,7 +19053,7 @@ function openReportListing(listingId, listingTitle){
   document.getElementById('reportTarget').textContent = listingTitle || '';
   var box = document.getElementById('reportReasons');
   box.innerHTML = REPORT_REASONS.map(function(r){
-    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--wire3);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text);background:#fff"><input type="radio" name="reportReason" value="'+r.id+'" style="margin:0">'+esc(r.label)+'</label>';
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--wire3);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text);background:var(--cream) ><input type="radio" name="reportReason" value="'+r.id+'" style="margin:0">'+esc(r.label)+'</label>';
   }).join('');
   document.getElementById('reportDetail').value = '';
   document.getElementById('reportOverlay').classList.add('open');

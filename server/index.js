@@ -9230,6 +9230,50 @@ const SNS_TOOLS = [
     description: 'ユーザーが拡張経由で X (x.com) にログイン済みかを確認。プロフィール情報 (username) も取得。\n投稿前 / 接続状態確認に使う。エラー時は user に「拡張をインストール + X にログインしてください」と促す。',
     input_schema: { type: 'object', properties: {} },
   },
+  // ── LinkedIn ──
+  {
+    name: 'post_to_linkedin',
+    description: '⚠️ ユーザーが事前に拡張で LinkedIn にログイン済みであること。\nLinkedIn に投稿します。3000 字以内、 1300 字超は「もっと見る」になるため Hook (3 行以内) で続きを読ませる構造で。\nB2B トーン、 改行多め、 数字 + 具体例 を含めると伸びます。',
+    input_schema: {
+      type: 'object',
+      properties: { text: { type: 'string', description: '投稿本文 (1-3000 字)' } },
+      required: ['text'],
+    },
+  },
+  // ── Threads ──
+  {
+    name: 'post_to_threads',
+    description: '⚠️ ユーザーが事前に拡張で Threads にログイン済みであること。\nThreads (threads.com) に投稿します。500 字以内。 X と相互配信向け、 絵文字多め OK。',
+    input_schema: {
+      type: 'object',
+      properties: { text: { type: 'string', description: '投稿本文 (1-500 字)' } },
+      required: ['text'],
+    },
+  },
+  // ── Facebook Page ──
+  {
+    name: 'post_to_facebook',
+    description: '⚠️ ユーザーが事前に拡張で Facebook にログイン済みであること。\nFacebook Page に投稿します。文字数制限はほぼ無制限 (= 63000 字)。 地域店舗 / 企業ページ向け、 リンクを含むと埋め込みカードが綺麗。',
+    input_schema: {
+      type: 'object',
+      properties: { text: { type: 'string', description: '投稿本文' } },
+      required: ['text'],
+    },
+  },
+  // ── note ──
+  {
+    name: 'publish_note',
+    description: '⚠️ ユーザーが事前に拡張で note.com にログイン済みであること。\nnote に記事を公開 or 下書き保存します。タイトル + 本文。デフォルトは下書き (= ユーザー確認推奨)。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '記事タイトル (1-100 字)' },
+        content: { type: 'string', description: '本文 (markdown 可、 改行で段落)' },
+        status: { type: 'string', enum: ['draft','publish'], description: 'default: draft' },
+      },
+      required: ['title','content'],
+    },
+  },
 ];
 const SNS_TOOL_NAMES = new Set(SNS_TOOLS.map(t => t.name));
 
@@ -9396,11 +9440,275 @@ async function executePostToXThreadTool(user, input){
   };
 }
 
+// ── 各 platform の URL パターン定義 (= URL paste 接続の中核) ──
+// 各 entry: { regex, build_url(handle), build_profile(handle) } の 3 つ。
+// regex は URL から識別子 (handle / id / shop name 等) を 1 group で抽出。
+const SNS_PLATFORM_DEFS = {
+  x: {
+    regex: /(?:https?:\/\/)?(?:www\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})/i,
+    handle_only: /^@?([A-Za-z0-9_]{1,15})$/,
+    build: h => ({ username: '@' + h, url: 'https://x.com/' + h }),
+  },
+  linkedin: {
+    regex: /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in|company)\/([A-Za-z0-9_-]+)/i,
+    handle_only: /^@?([A-Za-z0-9_-]{2,100})$/,
+    build: h => ({ username: '@' + h, url: 'https://www.linkedin.com/in/' + h }),
+  },
+  threads: {
+    regex: /(?:https?:\/\/)?(?:www\.)?threads\.(?:com|net)\/@?([A-Za-z0-9_.]+)/i,
+    handle_only: /^@?([A-Za-z0-9_.]{1,30})$/,
+    build: h => ({ username: '@' + h, url: 'https://www.threads.com/@' + h }),
+  },
+  instagram: {
+    regex: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([A-Za-z0-9_.]+)/i,
+    handle_only: /^@?([A-Za-z0-9_.]{1,30})$/,
+    build: h => ({ username: '@' + h, url: 'https://www.instagram.com/' + h }),
+  },
+  facebook: {
+    regex: /(?:https?:\/\/)?(?:www\.)?facebook\.com\/([A-Za-z0-9._-]+)/i,
+    handle_only: /^@?([A-Za-z0-9._-]{2,100})$/,
+    build: h => ({ page_id: h, page_name: h, url: 'https://www.facebook.com/' + h }),
+  },
+  tiktok: {
+    regex: /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([A-Za-z0-9_.]+)/i,
+    handle_only: /^@?([A-Za-z0-9_.]{1,30})$/,
+    build: h => ({ username: '@' + h, url: 'https://www.tiktok.com/@' + h }),
+  },
+  youtube: {
+    // @handle 形式 or channel/UC... 形式
+    regex: /(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:@|channel\/)([A-Za-z0-9_-]+)/i,
+    handle_only: /^@?([A-Za-z0-9_-]{2,100})$/,
+    build: h => ({ channel_id: h, channel_name: h, url: 'https://www.youtube.com/' + (h.startsWith('UC') ? 'channel/' : '@') + h }),
+  },
+  note: {
+    regex: /(?:https?:\/\/)?(?:www\.)?note\.com\/([A-Za-z0-9_]+)/i,
+    handle_only: /^@?([A-Za-z0-9_]{2,30})$/,
+    build: h => ({ username: h, url: 'https://note.com/' + h }),
+  },
+  wordpress: {
+    // WordPress: site URL 自体 (= yoursite.com or yoursite.com/wp-admin)
+    regex: /(?:https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?:\/wp-admin)?/i,
+    handle_only: null,
+    build: domain => ({
+      site_name: domain,
+      site_url: 'https://' + domain,
+      admin_url: 'https://' + domain + '/wp-admin',
+    }),
+  },
+  shopify: {
+    // myshop.myshopify.com 形式 or admin URL
+    regex: /(?:https?:\/\/)?([a-z0-9-]+)\.myshopify\.com/i,
+    handle_only: /^([a-z0-9-]{2,60})$/,
+    build: shop => ({
+      shop_name: shop,
+      shop_domain: shop + '.myshopify.com',
+      admin_url: 'https://' + shop + '.myshopify.com/admin',
+    }),
+  },
+  base: {
+    // admin.thebase.in or shop.thebase.in
+    regex: /(?:https?:\/\/)?(?:admin\.thebase\.in|([a-z0-9-]+)\.thebase\.in)/i,
+    handle_only: /^([a-z0-9-]{2,60})$/,
+    build: shop => ({
+      shop_name: shop || 'BASE Store',
+      admin_url: 'https://admin.thebase.in/',
+    }),
+  },
+};
+
+// raw (= URL or handle) から profile を抽出する共通 helper
+function _snsExtractProfile(platform, body){
+  const def = SNS_PLATFORM_DEFS[platform];
+  if(!def) return { error: 'unknown_platform' };
+  const raw = String((body && (body.url || body.handle)) || '').trim();
+  if(!raw) return { error: 'url_or_handle_required' };
+  let h = null;
+  const m1 = raw.match(def.regex);
+  if(m1) h = m1[1] || m1[2];  // YouTube に group 2 がある場合に備える
+  else if(def.handle_only){
+    const m2 = raw.match(def.handle_only);
+    if(m2) h = m2[1];
+  }
+  if(!h) return { error: 'invalid_format', detail: platform + ' の URL or handle 形式が不正です' };
+  return { profile: def.build(h) };
+}
+
+// ── LinkedIn 投稿 ──
+async function executePostToLinkedInTool(user, input){
+  const text = String((input && input.text) || '').trim();
+  if(!text) return { error: 'text_required' };
+  if(text.length > 3000) return { error: 'too_long', detail: 'LinkedIn は 3000 字まで。今: ' + text.length };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://www.linkedin.com/feed/?shareActive=true' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(3000);
+  // Textarea: contenteditable で aria-label に "post" を含む要素
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: 'div.ql-editor[contenteditable="true"]',
+    text: text,
+  });
+  if(r && r.error){
+    // フォールバック: 別 selector
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '[contenteditable="true"][role="textbox"]',
+      text: text,
+    });
+    if(r && r.error) return { error: 'type_failed', detail: r.error };
+  }
+  await _sleep(1500);
+  // 投稿ボタン: "投稿する" or "Post" text
+  r = await executeExtensionTool(user, 'ext_click', { target: '投稿する' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Post' });
+    if(r && r.error) return { error: 'post_click_failed', detail: r.error };
+  }
+  await _sleep(2500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  return {
+    ok: true, platform: 'linkedin',
+    url: (r && r.url) || '',
+    instructions: 'ユーザーに「✅ LinkedIn に投稿しました」と短く報告してください。',
+  };
+}
+
+// ── Threads 投稿 ──
+async function executePostToThreadsTool(user, input){
+  const text = String((input && input.text) || '').trim();
+  if(!text) return { error: 'text_required' };
+  if(text.length > 500) return { error: 'too_long', detail: 'Threads は 500 字まで。今: ' + text.length };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  // Threads は home から compose ボタンを押す pattern
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://www.threads.com/' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(2500);
+  // 「新規スレッド」 button をクリック
+  r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="新規スレッド"]' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="New thread"]' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: '投稿を開始' });
+      if(r && r.error) return { error: 'compose_open_failed', detail: r.error };
+    }
+  }
+  await _sleep(1500);
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '[contenteditable="true"]',
+    text: text,
+  });
+  if(r && r.error) return { error: 'type_failed', detail: r.error };
+  await _sleep(1000);
+  r = await executeExtensionTool(user, 'ext_click', { target: '投稿する' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Post' });
+    if(r && r.error) return { error: 'post_click_failed', detail: r.error };
+  }
+  await _sleep(2500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  return {
+    ok: true, platform: 'threads',
+    url: (r && r.url) || '',
+    instructions: 'ユーザーに「✅ Threads に投稿しました」と短く報告してください。',
+  };
+}
+
+// ── Facebook Page 投稿 ──
+async function executePostToFacebookTool(user, input){
+  const text = String((input && input.text) || '').trim();
+  if(!text) return { error: 'text_required' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  const fbConn = user.sns_connections && user.sns_connections.facebook;
+  const pageUrl = (fbConn && fbConn.profile && fbConn.profile.url) || 'https://www.facebook.com/';
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: pageUrl });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(3000);
+  // 「投稿を作成」 button
+  r = await executeExtensionTool(user, 'ext_click', { target: '投稿を作成' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Create post' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: '近況を入力' });
+      if(r && r.error) return { error: 'compose_open_failed', detail: r.error };
+    }
+  }
+  await _sleep(1500);
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '[contenteditable="true"][role="textbox"]',
+    text: text,
+  });
+  if(r && r.error) return { error: 'type_failed', detail: r.error };
+  await _sleep(1000);
+  r = await executeExtensionTool(user, 'ext_click', { target: '投稿' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Post' });
+    if(r && r.error) return { error: 'post_click_failed', detail: r.error };
+  }
+  await _sleep(2500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  return {
+    ok: true, platform: 'facebook',
+    url: (r && r.url) || '',
+    instructions: 'ユーザーに「✅ Facebook Page に投稿しました」と短く報告してください。',
+  };
+}
+
+// ── note 公開 ──
+async function executePublishNoteTool(user, input){
+  const title = String((input && input.title) || '').trim();
+  const content = String((input && input.content) || '').trim();
+  const status = (input && input.status === 'publish') ? 'publish' : 'draft';
+  if(!title || !content) return { error: 'title_and_content_required' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://note.com/notes/new' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await _sleep(3500);
+  // タイトル input
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '[placeholder*="記事タイトル"]',
+    text: title,
+  });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_type', { selector: 'input[name="title"]', text: title });
+    if(r && r.error) return { error: 'title_type_failed', detail: r.error };
+  }
+  await _sleep(800);
+  // 本文 — note の editor は ProseMirror
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '.ProseMirror[contenteditable="true"]',
+    text: content,
+  });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"]', text: content });
+    if(r && r.error) return { error: 'content_type_failed', detail: r.error };
+  }
+  await _sleep(1200);
+  // 公開 or 下書き
+  if(status === 'publish'){
+    r = await executeExtensionTool(user, 'ext_click', { target: '公開設定' });
+    await _sleep(1000);
+    r = await executeExtensionTool(user, 'ext_click', { target: '投稿する' });
+  } else {
+    // 下書き保存は通常 auto-save される。明示的に保存 button があれば押す。
+    r = await executeExtensionTool(user, 'ext_click', { target: '下書き保存' });
+  }
+  await _sleep(2500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  return {
+    ok: true, platform: 'note',
+    url: (r && r.url) || '',
+    status,
+    instructions: 'ユーザーに「✅ note に' + (status === 'publish' ? '公開しました' : '下書き保存しました') + '」と短く報告してください。',
+  };
+}
+
 // ── 汎用 dispatch ──
 async function executeSnsTool(user, name, input){
-  if(name === 'verify_x_login') return executeVerifyXLoginTool(user);
-  if(name === 'post_to_x')      return executePostToXTool(user, input);
-  if(name === 'post_to_x_thread') return executePostToXThreadTool(user, input);
+  if(name === 'verify_x_login')       return executeVerifyXLoginTool(user);
+  if(name === 'post_to_x')            return executePostToXTool(user, input);
+  if(name === 'post_to_x_thread')     return executePostToXThreadTool(user, input);
+  if(name === 'post_to_linkedin')     return executePostToLinkedInTool(user, input);
+  if(name === 'post_to_threads')      return executePostToThreadsTool(user, input);
+  if(name === 'post_to_facebook')     return executePostToFacebookTool(user, input);
+  if(name === 'publish_note')         return executePublishNoteTool(user, input);
   return { error: 'unknown_sns_tool: ' + name };
 }
 
@@ -17318,51 +17626,47 @@ async function handleAPI(req,res,pathname,method,ip){
   // POST /api/sns/post/x           → 拡張経由で投稿 (= confirm モーダル後の実行)
   if(pathname === '/api/sns/status' && method === 'GET'){
     const conn = user.sns_connections || {};
-    return jres(res, 200, {
+    const PLATFORMS = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base'];
+    const out = {
       ok: true,
       extension_paired: !!user.extension_device_token,
-      x: conn.x ? { connected: !!conn.x.connected, profile: conn.x.profile || null, last_verified_at: conn.x.last_verified_at } : { connected: false },
+    };
+    PLATFORMS.forEach(p => {
+      out[p] = conn[p]
+        ? { connected: !!conn[p].connected, profile: conn[p].profile || null, last_verified_at: conn[p].last_verified_at || conn[p].connected_at }
+        : { connected: false };
     });
+    return jres(res, 200, out);
   }
   if(pathname === '/api/sns/verify/x' && method === 'POST'){
     const r = await executeVerifyXLoginTool(user);
     return jres(res, r.ok ? 200 : 400, r);
   }
-  // POST /api/sns/connect/x — URL を貼り付けるだけで接続 (= UX 最短)
-  // body: { url: 'https://x.com/yourhandle' } or { handle: '@yourhandle' }
-  // 注: ここでは X login state は確認しない。実投稿時に拡張で確認 + mismatch なら warning。
-  if(pathname === '/api/sns/connect/x' && method === 'POST'){
-    const body = await readBody(req);
-    const raw = String((body && (body.url || body.handle)) || '').trim();
-    if(!raw) return jres(res, 400, { error: 'url_or_handle_required' });
-    // 抽出: handle のみ (= @ 取り除き、 path 部分も)
-    let handle = '';
-    const urlMatch = raw.match(/(?:https?:\/\/)?(?:www\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})/i);
-    if(urlMatch) handle = urlMatch[1];
-    else {
-      const handleMatch = raw.match(/^@?([A-Za-z0-9_]{1,15})$/);
-      if(handleMatch) handle = handleMatch[1];
-    }
-    if(!handle) return jres(res, 400, { error: 'invalid_format', detail: '「https://x.com/yourhandle」 or 「@yourhandle」 の形式で入力してください' });
+  // ── POST /api/sns/connect/<platform> — URL paste で全 11 platform を接続 ──
+  // body: { url } or { handle }
+  // 各 platform の handle / id / url を抽出して user.sns_connections.<platform> に保存。
+  const snsConnectMatch = pathname.match(/^\/api\/sns\/connect\/([a-z]+)$/);
+  if(snsConnectMatch && method === 'POST'){
+    const platform = snsConnectMatch[1];
+    const meta = _snsExtractProfile(platform, await readBody(req));
+    if(meta.error) return jres(res, 400, meta);
     user.sns_connections = user.sns_connections || {};
-    user.sns_connections.x = {
+    user.sns_connections[platform] = {
       connected: true,
-      profile: { username: '@' + handle, url: 'https://x.com/' + handle },
+      profile: meta.profile,
       method: 'manual_url',
       connected_at: new Date().toISOString(),
     };
-    try { await DB.save(user); } catch(e){ console.warn('[sns-connect-x] save failed:', e.message); }
-    console.log('[sns-connect-x] connected @' + handle + ' for', user.email);
-    return jres(res, 200, {
-      ok: true,
-      platform: 'x',
-      profile: { username: '@' + handle, url: 'https://x.com/' + handle },
-    });
+    try { await DB.save(user); } catch(e){ console.warn('[sns-connect] save failed:', e.message); }
+    console.log('[sns-connect]', platform, JSON.stringify(meta.profile).slice(0,120), 'for', user.email);
+    return jres(res, 200, { ok: true, platform, profile: meta.profile });
   }
-  // POST /api/sns/disconnect/x — 切断
-  if(pathname === '/api/sns/disconnect/x' && method === 'POST'){
-    if(user.sns_connections && user.sns_connections.x){
-      delete user.sns_connections.x;
+  // ── POST /api/sns/disconnect/<platform> — 全 platform 共通 ──
+  const snsDisconnectMatch = pathname.match(/^\/api\/sns\/disconnect\/([a-z]+)$/);
+  if(snsDisconnectMatch && method === 'POST'){
+    const platform = snsDisconnectMatch[1];
+    if(user.sns_connections && user.sns_connections[platform]){
+      delete user.sns_connections[platform];
       try { await DB.save(user); } catch(_){}
     }
     return jres(res, 200, { ok: true });

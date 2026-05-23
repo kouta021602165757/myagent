@@ -5698,9 +5698,16 @@ function _renderTabConnections(site){
   var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
   var googleConnected = !!(me && me.google_oauth && me.google_oauth.refresh_token);
   var extPaired = !!(me && me.extension_device_token);
-  var xConn = snsCache && snsCache.x;
-  var xConnected = !!(xConn && xConn.connected);
-  var xHandle = (xConn && xConn.profile && xConn.profile.username) || '';
+
+  // 各 platform の接続状態を取得 (= snsCache から)
+  function _getConn(platform){
+    var c = snsCache && snsCache[platform];
+    return {
+      connected: !!(c && c.connected),
+      profile: c && c.profile,
+      handle: c && c.profile && (c.profile.username || c.profile.page_name || c.profile.channel_name || c.profile.shop_name || c.profile.site_name) || '',
+    };
+  }
 
   // 単一 integration card の HTML 生成 helper
   function _connCard(opts){
@@ -5764,51 +5771,35 @@ function _renderTabConnections(site){
         })
     + '</div>';
 
+  // URL paste で接続できる platform の汎用 card builder
+  function _urlPasteCard(platform, name, icon, color, desc){
+    var c = _getConn(platform);
+    return _connCard({
+      icon: icon, name: name, color: color,
+      desc: desc + (c.handle ? ' ・ 接続: ' + esc(c.handle) : ''),
+      status: c.connected ? 'on' : 'off',
+      onConnect: "_openSnsConnectModal('" + platform + "','" + esc(site.id) + "')",
+      onDisconnect: "_snsDisconnect('" + platform + "','" + esc(site.id) + "', this)",
+    });
+  }
+
   // ── 2. 🐦 SNS 投稿 (= 拡張経由) ──
   var snsHTML = _section('🐦 SNS 投稿', 'AI 組織が直接投稿。拡張経由 + あなたのブラウザのログイン状態を使用。')
     + '<div class="cn-grid">'
-    +   _connCard({
-          icon: '𝕏', name: 'X (Twitter)', color: '#000',
-          desc: 'AI が単独 Tweet / 連投スレッドを 1 クリックで投稿。' + (xHandle ? 'アカウント: ' + esc(xHandle) : ''),
-          status: xConnected ? 'on' : 'off',
-          onConnect: "_openXConnectModal('" + esc(site.id) + "')",
-          onDisconnect: "_snsDisconnectX('" + esc(site.id) + "', this)",
-        })
-    +   _connCard({
-          icon: '💼', name: 'LinkedIn', color: '#0a66c2',
-          desc: 'B2B 個人投稿 / 記事公開。プロフ最適化 + 投稿戦略を AI が担当。',
-          status: 'soon',
-        })
-    +   _connCard({
-          icon: '🧵', name: 'Threads', color: '#000',
-          desc: '500 字までの投稿 + 画像 / 動画。X と相互配信可能。',
-          status: 'soon',
-        })
-    +   _connCard({
-          icon: '📸', name: 'Instagram', color: '#e1306c',
-          desc: 'Feed / Reels / Story。EC・店舗・個人ブランドの主戦場。',
-          status: 'soon',
-        })
-    +   _connCard({
-          icon: '📘', name: 'Facebook Page', color: '#1877f2',
-          desc: '企業ページ投稿。地域店舗 / B2B で重要。',
-          status: 'soon',
-        })
+    +   _urlPasteCard('x', 'X (Twitter)', '𝕏', '#000', 'AI が単独 Tweet / 連投スレッドを 1 クリックで投稿。')
+    +   _urlPasteCard('linkedin', 'LinkedIn', '💼', '#0a66c2', 'B2B 個人投稿 / 記事公開。プロフ最適化 + 投稿戦略を AI が担当。')
+    +   _urlPasteCard('threads', 'Threads', '🧵', '#000', '500 字までの投稿 + 画像 / 動画。X と相互配信可能。')
+    +   _urlPasteCard('facebook', 'Facebook Page', '📘', '#1877f2', '企業ページ投稿。地域店舗 / B2B で重要。')
+    +   _urlPasteCard('instagram', 'Instagram', '📸', '#e1306c', 'Feed / Reels / Story。EC・店舗・個人ブランドの主戦場。')
+    +   _urlPasteCard('tiktok', 'TikTok', '🎵', '#000', '動画投稿。Z 世代訴求 / リーチ拡大。')
+    +   _urlPasteCard('youtube', 'YouTube', '📹', '#ff0000', 'コミュニティ投稿 / Shorts。チャンネル運営者向け。')
     + '</div>';
 
   // ── 3. 📝 コンテンツ公開 ──
   var contentHTML = _section('📝 コンテンツ公開', 'AI が書いた記事をそのまま公開へ')
     + '<div class="cn-grid">'
-    +   _connCard({
-          icon: '📝', name: 'WordPress', color: '#21759b',
-          desc: 'AI 生成記事を WP の下書き / 公開へ自動投稿。SEO ライター部門と直結。',
-          status: 'soon',
-        })
-    +   _connCard({
-          icon: '📓', name: 'note', color: '#41c9b4',
-          desc: 'note への記事投稿。日本市場のメディア / 個人ブランドで強力。',
-          status: 'soon',
-        })
+    +   _urlPasteCard('wordpress', 'WordPress', '📝', '#21759b', 'AI 生成記事を WP の下書き / 公開へ自動投稿。SEO ライター部門と直結。')
+    +   _urlPasteCard('note', 'note', '📓', '#41c9b4', 'note への記事投稿。日本市場のメディア / 個人ブランドで強力。')
     + '</div>';
 
   // ── 4. 🛒 EC / コマース (= EC vertical 向け) ──
@@ -5816,16 +5807,8 @@ function _renderTabConnections(site){
   if(site.site_vertical === 'ec' || site.site_vertical === 'store' || (site.site_url && /shopify|base|stores|ec-cube/i.test(site.site_url))){
     ecHTML = _section('🛒 EC / コマース', '商品最適化 + 売上分析の基盤')
       + '<div class="cn-grid">'
-      +   _connCard({
-            icon: '🛒', name: 'Shopify', color: '#95bf47',
-            desc: '商品ページ自動最適化 / 在庫連動 / 売上 KPI。EC 部門の中核。',
-            status: 'soon',
-          })
-      +   _connCard({
-            icon: '🛍', name: 'BASE', color: '#0099ff',
-            desc: '日本の EC プラットフォーム。商品ページ / 配送 / 売上連動。',
-            status: 'soon',
-          })
+      +   _urlPasteCard('shopify', 'Shopify', '🛒', '#95bf47', '商品ページ自動最適化 / 在庫連動 / 売上 KPI。EC 部門の中核。')
+      +   _urlPasteCard('base', 'BASE', '🛍', '#0099ff', '日本の EC プラットフォーム。商品ページ / 配送 / 売上連動。')
       + '</div>';
   }
 
@@ -5973,43 +5956,64 @@ async function _snsConnectX(siteId, btnEl){
 }
 
 // 新: URL 貼り付けで即接続 (= primary 方式)
-function _openXConnectModal(siteId){
+// ── 全 SNS platform 共通の connect / disconnect helpers ──
+// 各 platform 用に「URL paste 接続」 modal + disconnect button が動く。
+
+// platform 別の表示メタデータ
+var SNS_PLATFORM_META = {
+  x:         { name: 'X (Twitter)', icon: '𝕏', accent: '#000',     placeholder: 'https://x.com/yourhandle',          hint: '<code>@yourhandle</code> でも OK' },
+  linkedin:  { name: 'LinkedIn',    icon: '💼', accent: '#0a66c2', placeholder: 'https://www.linkedin.com/in/yourname', hint: '<code>linkedin.com/in/yourname</code> 形式' },
+  threads:   { name: 'Threads',     icon: '🧵', accent: '#000',     placeholder: 'https://www.threads.com/@yourname',   hint: '<code>@yourname</code> でも OK' },
+  instagram: { name: 'Instagram',   icon: '📸', accent: '#e1306c', placeholder: 'https://www.instagram.com/yourname',  hint: '<code>@yourname</code> でも OK' },
+  facebook:  { name: 'Facebook',    icon: '📘', accent: '#1877f2', placeholder: 'https://www.facebook.com/yourpage',   hint: 'Page URL を貼ってください' },
+  tiktok:    { name: 'TikTok',      icon: '🎵', accent: '#000',     placeholder: 'https://www.tiktok.com/@yourname',    hint: '<code>@yourname</code> でも OK' },
+  youtube:   { name: 'YouTube',     icon: '📹', accent: '#ff0000', placeholder: 'https://www.youtube.com/@yourchannel', hint: 'チャンネル URL を貼ってください' },
+  note:      { name: 'note',        icon: '📓', accent: '#41c9b4', placeholder: 'https://note.com/yourname',           hint: 'note プロフィール URL' },
+  wordpress: { name: 'WordPress',   icon: '📝', accent: '#21759b', placeholder: 'https://yoursite.com',                hint: 'サイトの URL を貼ってください' },
+  shopify:   { name: 'Shopify',     icon: '🛒', accent: '#95bf47', placeholder: 'https://yourshop.myshopify.com',       hint: '<code>yourshop.myshopify.com</code> 形式' },
+  base:      { name: 'BASE',        icon: '🛍', accent: '#0099ff', placeholder: 'https://admin.thebase.in/',          hint: 'BASE admin URL' },
+};
+
+// 汎用 connect modal
+function _openSnsConnectModal(platform, siteId){
   if(!siteId){
     siteId = (typeof activeId !== 'undefined' && activeId) || null;
     if(!siteId) return;
   }
-  var existing = document.getElementById('xConnectModal');
+  var meta = SNS_PLATFORM_META[platform];
+  if(!meta){ console.warn('[sns-connect] unknown platform:', platform); return; }
+  var existing = document.getElementById('snsConnectModal');
   if(existing) existing.remove();
-  var html = '<div id="xConnectModal" class="xp-overlay" onclick="if(event.target===this)_closeXConnectModal()">'
+  var html = '<div id="snsConnectModal" class="xp-overlay" onclick="if(event.target===this)_closeSnsConnectModal()">'
     + '<div class="xp-card" style="max-width:480px">'
-    +   '<button class="xp-close" onclick="_closeXConnectModal()">×</button>'
+    +   '<button class="xp-close" onclick="_closeSnsConnectModal()">×</button>'
     +   '<div class="xp-h">'
-    +     '<div class="xp-h-tag"><span class="xp-h-ic">𝕏</span> X アカウントを接続</div>'
-    +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">あなたの X プロフィール URL を貼ってください</div>'
+    +     '<div class="xp-h-tag" style="background:' + meta.accent + '"><span class="xp-h-ic">' + meta.icon + '</span> ' + esc(meta.name) + ' に接続</div>'
+    +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">あなたの ' + esc(meta.name) + ' URL を貼ってください</div>'
     +     '<div style="font-size:12.5px;color:var(--text2);line-height:1.65;font-weight:600">'
     +       'これだけで接続完了。<b>パスワードは一切要りません</b>。<br>'
-    +       '実際の投稿時は、Chrome 拡張 + あなたのブラウザのログイン状態を使います。'
+    +       '実際の操作時は、Chrome 拡張 + あなたのブラウザのログイン状態を使います。'
     +     '</div>'
     +   '</div>'
     +   '<div style="padding:0 24px 14px">'
-    +     '<input id="xConnectInput" type="text" class="xp-input" placeholder="https://x.com/yourhandle" autocomplete="off" />'
-    +     '<div class="xp-hint">💡 URL の代わりに <code>@yourhandle</code> でも OK</div>'
+    +     '<input id="snsConnectInput" type="text" class="xp-input" placeholder="' + esc(meta.placeholder) + '" autocomplete="off" />'
+    +     '<div class="xp-hint">💡 ' + meta.hint + '</div>'
     +   '</div>'
     +   '<div class="xp-actions">'
-    +     '<button class="xp-cancel" onclick="_closeXConnectModal()">キャンセル</button>'
-    +     '<button class="xp-post" onclick="_submitXConnect(\'' + esc(siteId) + '\', this)">接続する</button>'
+    +     '<button class="xp-cancel" onclick="_closeSnsConnectModal()">キャンセル</button>'
+    +     '<button class="xp-post" style="background:' + meta.accent + '" onclick="_submitSnsConnect(\'' + platform + '\',\'' + esc(siteId) + '\', this)">接続する</button>'
     +   '</div>'
     + '</div>'
     + '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
-  setTimeout(function(){ var i = document.getElementById('xConnectInput'); if(i) i.focus(); }, 80);
+  setTimeout(function(){ var i = document.getElementById('snsConnectInput'); if(i) i.focus(); }, 80);
 }
-function _closeXConnectModal(){
-  var m = document.getElementById('xConnectModal');
+function _closeSnsConnectModal(){
+  var m = document.getElementById('snsConnectModal');
   if(m) m.remove();
 }
-async function _submitXConnect(siteId, btnEl){
-  var inp = document.getElementById('xConnectInput');
+async function _submitSnsConnect(platform, siteId, btnEl){
+  var inp = document.getElementById('snsConnectInput');
   if(!inp) return;
   var raw = String(inp.value || '').trim();
   if(!raw){
@@ -6019,12 +6023,14 @@ async function _submitXConnect(siteId, btnEl){
   }
   if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '⏳ 接続中...'; }
   try {
-    var r = await api('POST', '/api/sns/connect/x', { url: raw });
+    var r = await api('POST', '/api/sns/connect/' + platform, { url: raw });
     if(r && r.ok){
-      _closeXConnectModal();
-      showToast('✅ X 接続完了' + (r.profile && r.profile.username ? ' (' + r.profile.username + ')' : ''), 'ok');
+      _closeSnsConnectModal();
+      var label = SNS_PLATFORM_META[platform] && SNS_PLATFORM_META[platform].name || platform;
+      var nm = r.profile && (r.profile.username || r.profile.page_name || r.profile.channel_name || r.profile.shop_name || r.profile.site_name);
+      showToast('✅ ' + label + ' 接続完了' + (nm ? ' (' + nm + ')' : ''), 'ok');
       window._snsStatusCache[siteId] = window._snsStatusCache[siteId] || {};
-      window._snsStatusCache[siteId].x = { connected: true, profile: r.profile || null, last_verified_at: new Date().toISOString() };
+      window._snsStatusCache[siteId][platform] = { connected: true, profile: r.profile || null, last_verified_at: new Date().toISOString() };
       try { renderHomeDashboard(); } catch(_){}
     } else {
       var detail = (r && r.detail) || (r && r.error) || '接続失敗';
@@ -6036,14 +6042,14 @@ async function _submitXConnect(siteId, btnEl){
     if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '接続する'; }
   }
 }
-async function _snsDisconnectX(siteId, btnEl){
-  if(!confirm('X 接続を解除しますか?')) return;
+async function _snsDisconnect(platform, siteId, btnEl){
+  if(!confirm((SNS_PLATFORM_META[platform] && SNS_PLATFORM_META[platform].name || platform) + ' 接続を解除しますか?')) return;
   if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '...'; }
   try {
-    await api('POST', '/api/sns/disconnect/x');
-    showToast('X 接続を解除しました', 'ok');
-    if(window._snsStatusCache && window._snsStatusCache[siteId] && window._snsStatusCache[siteId].x){
-      window._snsStatusCache[siteId].x = { connected: false };
+    await api('POST', '/api/sns/disconnect/' + platform);
+    showToast('接続を解除しました', 'ok');
+    if(window._snsStatusCache && window._snsStatusCache[siteId] && window._snsStatusCache[siteId][platform]){
+      window._snsStatusCache[siteId][platform] = { connected: false };
     }
     try { renderHomeDashboard(); } catch(_){}
   } catch(e){
@@ -6051,6 +6057,12 @@ async function _snsDisconnectX(siteId, btnEl){
     if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '切断'; }
   }
 }
+
+// ── 互換 alias (= 既存 X 専用関数を維持) ──
+function _openXConnectModal(siteId){ return _openSnsConnectModal('x', siteId); }
+function _closeXConnectModal(){ return _closeSnsConnectModal(); }
+async function _submitXConnect(siteId, btnEl){ return _submitSnsConnect('x', siteId, btnEl); }
+async function _snsDisconnectX(siteId, btnEl){ return _snsDisconnect('x', siteId, btnEl); }
 
 // ─── 🚀 1-CLICK X 投稿フロー (= onboarding 動線で chain) ───────────
 // クリック 1 つで: 拡張 check → X login 確認 → preview modal → 投稿、を auto-chain。

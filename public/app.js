@@ -4111,7 +4111,7 @@ function _renderSiteDashboardHTML(site){
   var activeTab = 'report';
   try {
     var saved = localStorage.getItem('sd_tab_' + site.id);
-    if(['report','numbers','strategy','tasks','agents','settings'].indexOf(saved) >= 0){
+    if(['report','numbers','strategy','tasks','agents','connections','settings'].indexOf(saved) >= 0){
       activeTab = saved;
     } else if(saved === 'actions'){
       activeTab = 'report';
@@ -4169,6 +4169,9 @@ function _renderSiteDashboardHTML(site){
     +     '<button class="sd-tab sd-tab-agents' + (activeTab === 'agents' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'agents\')">'
     +       '<span class="sd-tab-ic">🏢</span><span class="sd-tab-lbl">組織図</span><span class="sd-tab-sub">AI チーム</span>'
     +     '</button>'
+    +     '<button class="sd-tab sd-tab-connect' + (activeTab === 'connections' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'connections\')">'
+    +       '<span class="sd-tab-ic">🔌</span><span class="sd-tab-lbl">接続</span><span class="sd-tab-sub">外部サービス</span>'
+    +     '</button>'
     +     '<button class="sd-tab sd-tab-settings' + (activeTab === 'settings' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'settings\')">'
     +       '<span class="sd-tab-ic">⚙</span><span class="sd-tab-lbl">設定</span><span class="sd-tab-sub">共有 / 編集</span>'
     +     '</button>'
@@ -4189,6 +4192,8 @@ function _renderSiteDashboardHTML(site){
           ? _renderTabTasks(site)
         : activeTab === 'agents'
           ? _renderTabAgents(site)
+        : activeTab === 'connections'
+          ? _renderTabConnections(site)
         : activeTab === 'settings'
           ? _renderTabSettings(site)
         : _renderTabReport(site, _siteActivityFeed(site), _siteNextSchedule(site),
@@ -5681,6 +5686,179 @@ function _showAgentMemberDetail(siteId, idx){
 // ユーザーリクエスト: 💬 会話共有 / ⚙ 設定 / ↻ 新規依頼 の 3 つだけ。
 // KPI 編集 / スケジュール / 連携 / 削除は別ルート (ダッシュボード内の他 tab
 // or サイドバー) で提供するので、ここはシンプルに保つ。
+// ═══════════════════════════════════════════════════════════════════
+// ── Tab: 🔌 接続 (= 外部サービスの接続管理) ──
+// 「今のコンセプト = AI マーケ組織が結果を出す」に必要な接続だけを surface。
+// 5 カテゴリ: 分析 / SNS / コンテンツ公開 / EC / フォーム
+// 各 integration card は icon + name + 接続状態 + アクション button。
+// ═══════════════════════════════════════════════════════════════════
+function _renderTabConnections(site){
+  var snsCache = (window._snsStatusCache && window._snsStatusCache[site.id]) || null;
+  if(!snsCache){ setTimeout(function(){ _fetchSnsStatus(site.id); }, 100); }
+  var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
+  var googleConnected = !!(me && me.google_oauth && me.google_oauth.refresh_token);
+  var extPaired = !!(me && me.extension_device_token);
+  var xConn = snsCache && snsCache.x;
+  var xConnected = !!(xConn && xConn.connected);
+  var xHandle = (xConn && xConn.profile && xConn.profile.username) || '';
+
+  // 単一 integration card の HTML 生成 helper
+  function _connCard(opts){
+    // opts: { icon, name, desc, color, status: 'on'|'off'|'soon', meta?, onConnect?, onDisconnect? }
+    var statusLbl = opts.status === 'on' ? '🟢 接続済'
+                  : opts.status === 'soon' ? '⏳ 近日対応'
+                  : '🔘 未接続';
+    var statusCls = opts.status === 'on' ? 'on' : opts.status === 'soon' ? 'soon' : 'off';
+    var actionBtn = '';
+    if(opts.status === 'on' && opts.onDisconnect){
+      actionBtn = '<button class="cn-btn cn-btn-secondary" onclick="' + opts.onDisconnect + '">切断</button>';
+    } else if(opts.status === 'off' && opts.onConnect){
+      actionBtn = '<button class="cn-btn cn-btn-primary" onclick="' + opts.onConnect + '">接続する →</button>';
+    } else if(opts.status === 'soon'){
+      actionBtn = '<button class="cn-btn cn-btn-soon" disabled>近日</button>';
+    }
+    return '<div class="cn-card cn-card-' + statusCls + '" style="--cn-c:' + opts.color + '">'
+         +   '<div class="cn-card-l">'
+         +     '<div class="cn-card-ic" style="background:' + opts.color + '15;color:' + opts.color + '">' + opts.icon + '</div>'
+         +     '<div class="cn-card-meta">'
+         +       '<div class="cn-card-nm">' + esc(opts.name) + ' <span class="cn-status cn-status-' + statusCls + '">' + statusLbl + '</span></div>'
+         +       '<div class="cn-card-de">' + esc(opts.desc) + '</div>'
+         +       (opts.meta ? '<div class="cn-card-extra">' + opts.meta + '</div>' : '')
+         +     '</div>'
+         +   '</div>'
+         +   '<div class="cn-card-r">' + actionBtn + '</div>'
+         + '</div>';
+  }
+
+  // セクション header
+  function _section(title, desc){
+    return '<div class="cn-sec-h">'
+         + '<div class="cn-sec-ti">' + title + '</div>'
+         + (desc ? '<div class="cn-sec-de">' + esc(desc) + '</div>' : '')
+         + '</div>';
+  }
+
+  // 拡張未インストール時の global warning
+  var extWarn = !extPaired
+    ? '<div class="cn-ext-warn">⚠️ <b>Chrome 拡張</b>が未インストールです。 SNS 投稿・コンテンツ公開には拡張が必要。<a href="/setup-extension.html" target="_blank">📥 インストール (30 秒)</a></div>'
+    : '<div class="cn-ext-ok">✅ Chrome 拡張 接続済 ・ パスワード共有不要で SNS / コンテンツに投稿できます</div>';
+
+  // ── 1. 📊 分析・データ ──
+  var analyticsHTML = _section('📊 分析・データ', '数字一覧 tab を生かすための基盤データ')
+    + '<div class="cn-grid">'
+    +   _connCard({
+          icon: '📊', name: 'Google Analytics 4', color: '#f59e0b',
+          desc: 'PV / セッション / 流入経路 / CVR / ユーザー属性。数字 tab + 毎朝レポートの根拠データ。',
+          status: ga4Connected ? 'on' : 'off',
+          onConnect: "openIntegrationsTab && openIntegrationsTab('ga4')",
+        })
+    +   _connCard({
+          icon: '🔍', name: 'Google Search Console', color: '#3b82f6',
+          desc: '検索キーワード / 表示回数 / 平均順位 / CTR。AEO・SEO 課が施策に直結。',
+          status: googleConnected ? 'off' : 'soon',  // Google OAuth 済でも SC は別 scope
+        })
+    +   _connCard({
+          icon: '💳', name: 'Stripe', color: '#635bff',
+          desc: '売上 / MRR / 解約率 / LTV。SaaS / EC 向けに収益 KPI を可視化。',
+          status: 'soon',
+        })
+    + '</div>';
+
+  // ── 2. 🐦 SNS 投稿 (= 拡張経由) ──
+  var snsHTML = _section('🐦 SNS 投稿', 'AI 組織が直接投稿。拡張経由 + あなたのブラウザのログイン状態を使用。')
+    + '<div class="cn-grid">'
+    +   _connCard({
+          icon: '𝕏', name: 'X (Twitter)', color: '#000',
+          desc: 'AI が単独 Tweet / 連投スレッドを 1 クリックで投稿。' + (xHandle ? 'アカウント: ' + esc(xHandle) : ''),
+          status: xConnected ? 'on' : 'off',
+          onConnect: "_openXConnectModal('" + esc(site.id) + "')",
+          onDisconnect: "_snsDisconnectX('" + esc(site.id) + "', this)",
+        })
+    +   _connCard({
+          icon: '💼', name: 'LinkedIn', color: '#0a66c2',
+          desc: 'B2B 個人投稿 / 記事公開。プロフ最適化 + 投稿戦略を AI が担当。',
+          status: 'soon',
+        })
+    +   _connCard({
+          icon: '🧵', name: 'Threads', color: '#000',
+          desc: '500 字までの投稿 + 画像 / 動画。X と相互配信可能。',
+          status: 'soon',
+        })
+    +   _connCard({
+          icon: '📸', name: 'Instagram', color: '#e1306c',
+          desc: 'Feed / Reels / Story。EC・店舗・個人ブランドの主戦場。',
+          status: 'soon',
+        })
+    +   _connCard({
+          icon: '📘', name: 'Facebook Page', color: '#1877f2',
+          desc: '企業ページ投稿。地域店舗 / B2B で重要。',
+          status: 'soon',
+        })
+    + '</div>';
+
+  // ── 3. 📝 コンテンツ公開 ──
+  var contentHTML = _section('📝 コンテンツ公開', 'AI が書いた記事をそのまま公開へ')
+    + '<div class="cn-grid">'
+    +   _connCard({
+          icon: '📝', name: 'WordPress', color: '#21759b',
+          desc: 'AI 生成記事を WP の下書き / 公開へ自動投稿。SEO ライター部門と直結。',
+          status: 'soon',
+        })
+    +   _connCard({
+          icon: '📓', name: 'note', color: '#41c9b4',
+          desc: 'note への記事投稿。日本市場のメディア / 個人ブランドで強力。',
+          status: 'soon',
+        })
+    + '</div>';
+
+  // ── 4. 🛒 EC / コマース (= EC vertical 向け) ──
+  var ecHTML = '';
+  if(site.site_vertical === 'ec' || site.site_vertical === 'store' || (site.site_url && /shopify|base|stores|ec-cube/i.test(site.site_url))){
+    ecHTML = _section('🛒 EC / コマース', '商品最適化 + 売上分析の基盤')
+      + '<div class="cn-grid">'
+      +   _connCard({
+            icon: '🛒', name: 'Shopify', color: '#95bf47',
+            desc: '商品ページ自動最適化 / 在庫連動 / 売上 KPI。EC 部門の中核。',
+            status: 'soon',
+          })
+      +   _connCard({
+            icon: '🛍', name: 'BASE', color: '#0099ff',
+            desc: '日本の EC プラットフォーム。商品ページ / 配送 / 売上連動。',
+            status: 'soon',
+          })
+      + '</div>';
+  }
+
+  // ── 5. 📋 フォーム / 問い合わせ ──
+  var formHTML = _section('📋 フォーム / 問い合わせ', 'HP の問い合わせ数を直接 KPI に。')
+    + '<div class="cn-grid">'
+    +   _connCard({
+          icon: '📋', name: 'Typeform', color: '#262627',
+          desc: '問い合わせフォームの送信件数 / コンバージョン率を KPI に反映。',
+          status: 'soon',
+        })
+    +   _connCard({
+          icon: '📋', name: 'Google Forms', color: '#673ab7',
+          desc: 'Google Forms 経由の問い合わせ件数を毎朝レポートに反映。',
+          status: 'soon',
+        })
+    + '</div>';
+
+  return '<div class="cn-page">'
+    + '<div class="cn-hero">'
+    +   '<div class="cn-hero-tag"><span class="sd-rp-dot"></span>外部サービスとの接続</div>'
+    +   '<div class="cn-hero-ti">AI 組織が「読める / 投稿できる」サービスを増やす</div>'
+    +   '<div class="cn-hero-sub">接続したサービスから自動でデータが流れ込み、AI 組織のアウトプットの精度が上がります。<b>パスワード共有不要</b>。</div>'
+    + '</div>'
+    + extWarn
+    + analyticsHTML
+    + snsHTML
+    + contentHTML
+    + ecHTML
+    + formHTML
+    + '</div>';
+}
+
 function _renderTabSettings(site){
   function _row(icon, color, title, desc, btnLbl, onClick){
     return ''

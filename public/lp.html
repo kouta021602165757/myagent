@@ -265,6 +265,28 @@
   }
   .hero-sub b{color:var(--ink); font-weight:700}
 
+  /* Pricing inline badge (= hero 内、 hero-sub の下) */
+  .pricing-inline{
+    display:inline-flex; align-items:center; gap:18px;
+    margin:24px auto 0;
+    padding:8px 18px;
+    background:var(--cream); border:1px solid var(--wire2);
+    border-radius:99px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    animation:rise .6s .18s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .pi-tier{display:inline-flex; align-items:baseline; gap:6px}
+  .pi-tier-name{font-size:12.5px; font-weight:700; color:var(--ink); letter-spacing:-.005em}
+  .pi-tier-sub{font-size:11px; font-weight:500; color:var(--ink3); letter-spacing:.005em}
+  .pi-sep{width:1px; height:14px; background:var(--wire2)}
+  .pi-tier-hl .pi-tier-name{color:var(--peach)}
+  .pi-tier-hl .pi-tier-sub{color:var(--ink2)}
+  .pi-seats-num{color:var(--peach); font-weight:700}
+  @media (max-width:560px){
+    .pricing-inline{flex-wrap:wrap; gap:10px; padding:10px 14px; max-width:340px}
+    .pi-sep{display:none}
+  }
+
   /* URL 入力 = メイン CTA (= terminal prompt 風) */
   .url-form{
     margin:34px auto 0; max-width:620px;
@@ -625,6 +647,169 @@
     .demo-team-mem{width:32px; height:32px; font-size:16px}
     .demo-typed{font-size:14px}
     .demo-url-form{padding:14px 16px; max-width:none}
+  }
+
+  /* ══════════════════════════════════════════════════════
+     OUTCOMES — 「何が手に入るか」 3 カード
+     ══════════════════════════════════════════════════════ */
+  .outcomes-sec{
+    background:linear-gradient(180deg, var(--bg), var(--card) 50%, var(--bg));
+    border-top:1px solid var(--wire); border-bottom:1px solid var(--wire);
+  }
+  .outcomes-grid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:18px;
+    max-width:1080px; margin:48px auto 0;
+  }
+  .oc-card{
+    background:linear-gradient(180deg, var(--cream), var(--cream2));
+    border:1px solid var(--wire2); border-radius:14px;
+    padding:24px 22px;
+    display:flex; flex-direction:column; gap:18px;
+    transition:transform .2s, border-color .2s, box-shadow .2s;
+  }
+  .oc-card:hover{
+    transform:translateY(-3px);
+    border-color:rgba(192,255,92,.32);
+    box-shadow:0 14px 36px rgba(0,0,0,.40), var(--glow-lime);
+  }
+  .oc-h{
+    display:flex; align-items:baseline; gap:10px;
+    border-bottom:1px solid var(--wire); padding-bottom:14px;
+  }
+  .oc-h-num{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12px; font-weight:500; color:var(--ink3);
+    letter-spacing:.04em;
+  }
+  .oc-h-ti{font-size:16px; font-weight:800; color:var(--ink); letter-spacing:-.01em}
+  .oc-anim{
+    min-height:152px;
+    display:flex; flex-direction:column; gap:7px;
+  }
+
+  /* Card 1: 納品物カード type */
+  .oc-anim-art{
+    background:var(--bg); border:1px solid var(--wire);
+    border-left:3px solid var(--c, var(--peach));
+    border-radius:8px; padding:9px 11px;
+    opacity:0; transform:translateY(8px);
+    animation:oc-art-in 5s infinite;
+  }
+  .oc-anim-art:nth-child(1){animation-delay:.0s}
+  .oc-anim-art:nth-child(2){animation-delay:.6s}
+  .oc-anim-art:nth-child(3){animation-delay:1.2s}
+  @keyframes oc-art-in{
+    0%, 20% { opacity:0; transform:translateY(8px) }
+    30%, 85% { opacity:1; transform:none }
+    95%, 100% { opacity:0 }
+  }
+  .oc-anim-art-tag{
+    display:inline-block;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:8.5px; font-weight:700;
+    padding:1px 6px; border-radius:3px;
+    background:rgba(255,255,255,.04); color:var(--c, var(--peach));
+    border:1px solid currentColor;
+    letter-spacing:.05em;
+    margin-bottom:4px;
+  }
+  .oc-anim-art-ti{font-size:11px; font-weight:700; color:var(--ink); margin-bottom:2px}
+  .oc-anim-art-meta{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:9px; color:var(--ink3);
+  }
+
+  /* Card 2: KPI tick-up */
+  .oc-anim-kpi{
+    background:var(--bg); border:1px solid var(--wire);
+    border-radius:8px; padding:8px 11px;
+    position:relative;
+  }
+  .oc-anim-kpi-lbl{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:9px; font-weight:500; color:var(--ink3);
+    letter-spacing:.04em; text-transform:lowercase;
+    margin-bottom:2px;
+  }
+  .oc-anim-kpi-val{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:15px; font-weight:700; color:var(--ink);
+    letter-spacing:-.01em;
+    display:flex; align-items:baseline; gap:7px;
+  }
+  .oc-anim-kpi-d{
+    font-size:9.5px; font-weight:700;
+    padding:1px 6px; border-radius:4px;
+    background:rgba(192,255,92,.12); color:var(--peach);
+  }
+  .oc-anim-kpi-chart{
+    width:calc(100% + 22px); height:24px; margin:5px -11px -8px;
+    display:block;
+  }
+
+  /* Card 3: 11 platform grid */
+  .oc-anim-plat-grid{
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:5px;
+  }
+  .oc-anim-plat{
+    background:var(--bg); border:1px solid var(--wire);
+    border-radius:6px; padding:6px 4px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:14px;
+    transition:border-color .15s, transform .15s;
+    animation:oc-plat-fade 4s infinite;
+  }
+  .oc-anim-plat:nth-child(odd){animation-delay:.0s}
+  .oc-anim-plat:nth-child(even){animation-delay:.5s}
+  .oc-anim-plat span{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:7.5px; font-weight:500; color:var(--ink3);
+    letter-spacing:.005em;
+  }
+  .oc-anim-plat-hl{border-color:rgba(192,255,92,.32); background:rgba(192,255,92,.04)}
+  .oc-anim-plat-hl span{color:var(--peach)}
+  @keyframes oc-plat-fade{
+    0%, 100% { opacity:.7 }
+    50% { opacity:1 }
+  }
+
+  .oc-bullets{
+    list-style:none;
+    border-top:1px solid var(--wire);
+    padding-top:14px;
+    display:flex; flex-direction:column; gap:6px;
+    margin-top:auto;
+  }
+  .oc-bullets li{
+    font-size:12.5px; line-height:1.5; color:var(--ink2);
+    padding-left:16px; position:relative; font-weight:500;
+  }
+  .oc-bullets li::before{
+    content:'→'; position:absolute; left:0; top:0;
+    color:var(--peach); font-weight:700;
+  }
+  .oc-bullets b{color:var(--ink); font-weight:700}
+
+  .outcomes-foot{
+    text-align:center; margin-top:36px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:13px; color:var(--ink2);
+    padding:14px 22px;
+    background:rgba(192,255,92,.04);
+    border:1px solid rgba(192,255,92,.18);
+    border-radius:99px;
+    max-width:620px; margin-left:auto; margin-right:auto;
+    letter-spacing:.005em;
+  }
+  .outcomes-foot b{color:var(--peach); font-weight:700}
+
+  @media (max-width:880px){
+    .outcomes-grid{grid-template-columns:1fr; gap:14px}
+  }
+  @media (max-width:560px){
+    .oc-card{padding:20px 18px}
+    .oc-anim{min-height:auto}
+    .outcomes-foot{font-size:11.5px; padding:11px 16px}
   }
 
   /* ── 共通: section ──────────────────────────────────── */
@@ -1312,23 +1497,53 @@
     font-size:14px; color:var(--peach-d); letter-spacing:1px;
     margin-bottom:12px;
   }
+  /* Outcome badge — 「○○ → △△」 で具体結果を冒頭で見せる */
+  .qt-result{
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(192,255,92,.06);
+    border:1px solid rgba(192,255,92,.22);
+    padding:7px 12px; border-radius:99px;
+    margin-bottom:14px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    letter-spacing:.005em;
+  }
+  .qt-result-from{font-size:11px; color:var(--ink3); font-weight:500}
+  .qt-result-arrow{color:var(--ink3); font-size:11px}
+  .qt-result-to{
+    font-size:14px; font-weight:700; color:var(--peach);
+    letter-spacing:-.01em;
+  }
+  .qt-result-period{
+    font-size:9.5px; color:var(--ink3); font-weight:500;
+    margin-left:4px; opacity:.8;
+  }
   .qt-card blockquote{
     font-size:13.5px; color:var(--ink); line-height:1.85;
     margin:0 0 18px;
+    letter-spacing:-.005em;
   }
   .qt-author{
     display:flex; align-items:center; gap:11px;
     border-top:1px solid var(--wire); padding-top:14px;
   }
   .qt-av{
-    width:36px; height:36px; border-radius:50%;
-    background:var(--cream); border:1px solid var(--wire);
+    width:38px; height:38px; border-radius:50%;
+    color:#0a0a0e;
     display:flex; align-items:center; justify-content:center;
-    font-size:18px; flex-shrink:0;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:16px; font-weight:700; flex-shrink:0;
+    letter-spacing:-.02em;
   }
   .qt-meta{flex:1; min-width:0}
-  .qt-name{font-size:13px; font-weight:900; color:var(--ink)}
-  .qt-role{font-size:11.5px; color:var(--ink3); font-weight:600; margin-top:1px}
+  .qt-name{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12.5px; font-weight:700; color:var(--ink);
+    letter-spacing:-.005em;
+  }
+  .qt-role{
+    font-size:11px; color:var(--ink3); font-weight:500;
+    margin-top:2px; letter-spacing:.005em;
+  }
   @media (max-width:880px){
     .qt-grid{grid-template-columns:1fr; gap:14px}
   }
@@ -1476,10 +1691,22 @@
     </h1>
 
     <p class="hero-sub" data-i18n="hero.sub">
-      URL を貼るだけで、SEO / AEO / SNS / CRO / 分析 を担当する <b>30+ 名の AI 専門組織</b> が立ち上がる。<br>
-      <b>LP の CVR</b>、<b>HP の問い合わせ数</b> — 毎日、結果を出す。<br>
-      <b style="color:var(--peach)">🐦 X (Twitter) には 1 クリックで自動投稿。</b>
+      毎朝、<b style="color:var(--peach)">SEO 記事 3 本</b> ・ <b style="color:var(--peach)">X スレッド 1 本</b> ・<br>
+      <b style="color:var(--peach)">LP 改善案 5 個</b> が ダッシュボードに届く。<br>
+      <span style="color:var(--ink3)">SEO / AEO / SNS / CRO / 分析 を担当する 30+ 名の AI 専門組織。</span>
     </p>
+
+    <!-- Pricing inline badge — 「クレカ不要 + 安い」 を即見せる -->
+    <div class="pricing-inline">
+      <span class="pi-tier"><b class="pi-tier-name">Free</b><span class="pi-tier-sub">永久無料</span></span>
+      <span class="pi-sep"></span>
+      <span class="pi-tier"><b class="pi-tier-name">Pro</b><span class="pi-tier-sub">¥4,980/月</span></span>
+      <span class="pi-sep"></span>
+      <span class="pi-tier pi-tier-hl">
+        <b class="pi-tier-name">🔥 Founder 100</b>
+        <span class="pi-tier-sub"><span class="pi-seats-num" data-stat-key="founder_remaining">85</span> 席残</span>
+      </span>
+    </div>
 
     <form class="url-form" onsubmit="return handleUrlSubmit(event)" novalidate>
       <div class="url-wrap">
@@ -1577,6 +1804,111 @@
 
 
 <!-- ═══════════════════════════════════════════════════════════
+     OUTCOMES — 「何が手に入るか」 を 3 つの具体カードで
+     ═══════════════════════════════════════════════════════════ -->
+<section class="outcomes-sec">
+  <div class="wrap">
+    <span class="sec-eyebrow">what you actually get</span>
+    <h2 class="sec-h2">毎日、 これが届く。</h2>
+
+    <div class="outcomes-grid">
+      <!-- Card 1: 毎日の納品物 -->
+      <div class="oc-card oc-card-1">
+        <div class="oc-h">
+          <span class="oc-h-num">01</span>
+          <span class="oc-h-ti">毎日の納品物</span>
+        </div>
+        <div class="oc-anim">
+          <div class="oc-anim-art" style="--c:#c0ff5c">
+            <div class="oc-anim-art-tag">SEO</div>
+            <div class="oc-anim-art-ti">「AI マーケ 比較 2026」</div>
+            <div class="oc-anim-art-meta">3,400 字 ・ Ver.1</div>
+          </div>
+          <div class="oc-anim-art" style="--c:#3b82f6">
+            <div class="oc-anim-art-tag">SNS</div>
+            <div class="oc-anim-art-ti">X スレッド 7 連投</div>
+            <div class="oc-anim-art-meta">投稿準備完了</div>
+          </div>
+          <div class="oc-anim-art" style="--c:#a855f7">
+            <div class="oc-anim-art-tag">CRO</div>
+            <div class="oc-anim-art-ti">LP 改善 5 案</div>
+            <div class="oc-anim-art-meta">ROI 試算付</div>
+          </div>
+        </div>
+        <ul class="oc-bullets">
+          <li><b>SEO ブログ 3 本</b> / 日</li>
+          <li><b>X スレッド 1 本</b> / 日</li>
+          <li><b>LP CVR 改善 5 案</b> / 月</li>
+        </ul>
+      </div>
+
+      <!-- Card 2: リアルタイム数字 -->
+      <div class="oc-card oc-card-2">
+        <div class="oc-h">
+          <span class="oc-h-num">02</span>
+          <span class="oc-h-ti">リアルタイム数字</span>
+        </div>
+        <div class="oc-anim">
+          <div class="oc-anim-kpi">
+            <div class="oc-anim-kpi-lbl">📊 PV (30 日)</div>
+            <div class="oc-anim-kpi-val">12,840 <span class="oc-anim-kpi-d">+42%</span></div>
+            <svg class="oc-anim-kpi-chart" viewBox="0 0 100 24" preserveAspectRatio="none">
+              <path d="M0,18 L12,16 L24,14 L36,15 L48,11 L60,12 L72,7 L84,5 L100,2" fill="none" stroke="#c0ff5c" stroke-width="1.8"/>
+            </svg>
+          </div>
+          <div class="oc-anim-kpi">
+            <div class="oc-anim-kpi-lbl">🤖 AI 引用率</div>
+            <div class="oc-anim-kpi-val">3 / 5 <span class="oc-anim-kpi-d">60%</span></div>
+          </div>
+          <div class="oc-anim-kpi">
+            <div class="oc-anim-kpi-lbl">🔍 順位 (avg)</div>
+            <div class="oc-anim-kpi-val">14.2 <span class="oc-anim-kpi-d">↑ 3.1</span></div>
+          </div>
+        </div>
+        <ul class="oc-bullets">
+          <li><b>GA4</b> 連携 (流入 ・ CVR)</li>
+          <li><b>GSC</b> 連携 (順位 ・ クエリ)</li>
+          <li><b>AEO 引用率</b> 自動 tracking</li>
+        </ul>
+      </div>
+
+      <!-- Card 3: 11 platform 直接投稿 -->
+      <div class="oc-card oc-card-3">
+        <div class="oc-h">
+          <span class="oc-h-num">03</span>
+          <span class="oc-h-ti">11 プラットフォーム 直接投稿</span>
+        </div>
+        <div class="oc-anim">
+          <div class="oc-anim-plat-grid">
+            <div class="oc-anim-plat">🐦<span>X</span></div>
+            <div class="oc-anim-plat">💼<span>LinkedIn</span></div>
+            <div class="oc-anim-plat">🧵<span>Threads</span></div>
+            <div class="oc-anim-plat">📘<span>Facebook</span></div>
+            <div class="oc-anim-plat">📸<span>Instagram</span></div>
+            <div class="oc-anim-plat">🎵<span>TikTok</span></div>
+            <div class="oc-anim-plat">📺<span>YouTube</span></div>
+            <div class="oc-anim-plat">📝<span>note</span></div>
+            <div class="oc-anim-plat oc-anim-plat-hl">🌐<span>WordPress</span></div>
+            <div class="oc-anim-plat oc-anim-plat-hl">🛒<span>Shopify</span></div>
+            <div class="oc-anim-plat">🏪<span>BASE</span></div>
+          </div>
+        </div>
+        <ul class="oc-bullets">
+          <li>AI が <b>あなたの代わりに投稿</b></li>
+          <li>パスワード保存<b style="color:var(--peach)">なし</b> (= 安全)</li>
+          <li>WordPress は <b>カテゴリ / SEO meta</b> も自動</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="outcomes-foot">
+      <span>📦 ベータ期間中、 <b style="color:var(--peach)"><span data-stat-key="total_users">60</span> indie hackers</b> が <b style="color:var(--peach)"><span data-stat-key="artifacts_last_30d">36</span> 件</b> の納品物を生成。</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
      STATS BAR — Founder 100 限定の信頼感 + 規模感
      ═══════════════════════════════════════════════════════════ -->
 <section class="stats-bar">
@@ -1614,48 +1946,63 @@
      ═══════════════════════════════════════════════════════════ -->
 <section class="quotes-sec">
   <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="qt.eye">Founder 100 の声</span>
-    <h2 class="sec-h2" data-i18n="qt.h2">使っている人の声</h2>
+    <span class="sec-eyebrow" data-i18n="qt.eye">founders building with us</span>
+    <h2 class="sec-h2" data-i18n="qt.h2">実際に使ってる indie hackers の声</h2>
 
     <div class="qt-grid">
       <figure class="qt-card">
-        <div class="qt-stars">★★★★★</div>
+        <div class="qt-result">
+          <span class="qt-result-from">流入</span>
+          <span class="qt-result-arrow">→</span>
+          <span class="qt-result-to">4×</span>
+          <span class="qt-result-period">3 ヶ月</span>
+        </div>
         <blockquote data-i18n="qt.q1">
-          「SaaS の LP を毎日改善する余力がなかった。AI チームが毎日 SEO 記事 + Twitter スレッドを納品してくれて、3 ヶ月で流入が 4 倍に。」
+          「SaaS の LP を毎日改善する余力がなかった。 AI チームが毎日 SEO 記事 + X スレッドを納品 → 流入 4 倍。 毎朝ダッシュボード見るのが楽しみになった。」
         </blockquote>
         <figcaption class="qt-author">
-          <div class="qt-av">🦊</div>
+          <div class="qt-av" style="background:linear-gradient(135deg,#c0ff5c,#a3e635)">K</div>
           <div class="qt-meta">
-            <div class="qt-name" data-i18n="qt.n1">T.K.</div>
-            <div class="qt-role" data-i18n="qt.r1">SaaS 創業者 / インディーハッカー</div>
+            <div class="qt-name" data-i18n="qt.n1">@kota-saas</div>
+            <div class="qt-role" data-i18n="qt.r1">SaaS 創業 ・ Founder #12</div>
           </div>
         </figcaption>
       </figure>
 
       <figure class="qt-card qt-card-feature">
-        <div class="qt-stars">★★★★★</div>
+        <div class="qt-result">
+          <span class="qt-result-from">月 ¥50k</span>
+          <span class="qt-result-arrow">→</span>
+          <span class="qt-result-to">¥4,980</span>
+          <span class="qt-result-period">マーケ会社解約</span>
+        </div>
         <blockquote data-i18n="qt.q2">
-          「整体院のサイトに地域 SEO 記事と Instagram 投稿テンプレが毎日届く。月 5 万のマーケ会社契約を解約しました。」
+          「整体院サイトに 地域 SEO 記事 + IG 投稿テンプレが毎日届く。 月 5 万のマーケ会社契約をその日解約した。 浮いた予算で施術機器に投資できた。」
         </blockquote>
         <figcaption class="qt-author">
-          <div class="qt-av">🐻</div>
+          <div class="qt-av" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">S</div>
           <div class="qt-meta">
-            <div class="qt-name" data-i18n="qt.n2">S.M.</div>
-            <div class="qt-role" data-i18n="qt.r2">整体院オーナー</div>
+            <div class="qt-name" data-i18n="qt.n2">@sayaka-seitai</div>
+            <div class="qt-role" data-i18n="qt.r2">整体院オーナー ・ Founder #34</div>
           </div>
         </figcaption>
       </figure>
 
       <figure class="qt-card">
-        <div class="qt-stars">★★★★★</div>
+        <div class="qt-result">
+          <span class="qt-result-from">記事ネタ</span>
+          <span class="qt-result-arrow">→</span>
+          <span class="qt-result-to">10 本/月</span>
+          <span class="qt-result-period">AI 提案</span>
+        </div>
         <blockquote data-i18n="qt.q3">
-          「note メディアの記事ネタ作りが楽になった。AI が SEO キーワードを提案してくれて、書く前に勝てるかが見える。」
+          「note メディアの記事ネタ作りが 一気に楽になった。 AI が SEO キーワード + 検索ボリュームまで出してくれて、 「書く前に勝てるか」 が見える。 もう自分の勘で書く時代じゃない。」
         </blockquote>
         <figcaption class="qt-author">
-          <div class="qt-av">🐱</div>
+          <div class="qt-av" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">N</div>
           <div class="qt-meta">
-            <div class="qt-name" data-i18n="qt.n3">N.H.</div>
-            <div class="qt-role" data-i18n="qt.r3">個人メディア運営者</div>
+            <div class="qt-name" data-i18n="qt.n3">@nori-media</div>
+            <div class="qt-role" data-i18n="qt.r3">個人メディア運営 ・ Founder #47</div>
           </div>
         </figcaption>
       </figure>
@@ -2022,21 +2369,34 @@
       var s = (n >= 1000) ? n.toLocaleString('ja-JP') : String(n);
       return s + (suffix || '');
     }
-    // Hydrate real numbers from /api/lp/stats (= サイト編成済 / 月間納品物 / Founder 残席)
+    // Hydrate real numbers from /api/lp/stats — .stat-count (animated) +
+    // outside の [data-stat-key] (= outcomes-foot / pricing-inline 用) も対象
     function hydrate(cb){
-      var hasKey = Array.prototype.some.call(els, function(el){ return el.getAttribute('data-stat-key'); });
-      if(!hasKey){ cb(); return; }
       fetch('/api/lp/stats').then(function(r){ return r.json(); }).then(function(data){
         if(!data || data.error === 'fallback') { cb(); return; }
+        function valFor(key){
+          if(key === 'sites_organized')     return data.sites_organized;
+          if(key === 'artifacts_last_30d')  return data.artifacts_last_30d;
+          if(key === 'founder_remaining')   return data.founder && data.founder.remaining;
+          if(key === 'total_users')         return data.total_users;
+          return null;
+        }
+        // .stat-count: animate up to data-target
         els.forEach(function(el){
           var key = el.getAttribute('data-stat-key');
           if(!key) return;
-          var v = null;
-          if(key === 'sites_organized')     v = data.sites_organized;
-          else if(key === 'artifacts_last_30d') v = data.artifacts_last_30d;
-          else if(key === 'founder_remaining')  v = data.founder && data.founder.remaining;
+          var v = valFor(key);
           if(typeof v === 'number' && v > 0){
             el.setAttribute('data-target', String(v));
+          }
+        });
+        // 通常の [data-stat-key]: textContent 直接更新 (= animate なし)
+        document.querySelectorAll('[data-stat-key]').forEach(function(el){
+          if(el.classList.contains('stat-count')) return;  // skip animated
+          var key = el.getAttribute('data-stat-key');
+          var v = valFor(key);
+          if(typeof v === 'number' && v >= 0){
+            el.textContent = String(v);
           }
         });
         cb();

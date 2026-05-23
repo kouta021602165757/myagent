@@ -5723,9 +5723,9 @@ function _renderTabSettings(site){
             : 'Chrome 拡張で x.com にログインしてから「接続」を押してください')
     +       '</div>'
     +     '</div>'
-    +     '<button class="sd-set-btn" onclick="_snsConnectX(\'' + esc(site.id) + '\', this)">'
-    +       (xConnected ? '🔄 再確認' : '🔗 接続する') + ' →'
-    +     '</button>'
+    +     (xConnected
+        ? '<button class="sd-set-btn" onclick="_snsDisconnectX(\'' + esc(site.id) + '\', this)">切断</button>'
+        : '<button class="sd-set-btn" onclick="_openXConnectModal(\'' + esc(site.id) + '\')">🔗 接続する →</button>')
     +   '</div>'
     +   '<div class="sd-sns-soon">'
     +     '<div class="sd-sns-soon-label">近日対応:</div>'
@@ -5773,13 +5773,13 @@ async function _fetchSnsStatus(siteId){
   }
 }
 
+// 旧: 拡張で確認する flow (= V2 で「拡張で再確認」 option として残す可能性)
 async function _snsConnectX(siteId, btnEl){
   if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🔄 確認中... (~5s)'; }
   try {
     var r = await api('POST', '/api/sns/verify/x');
     if(r && r.ok){
       showToast('✅ X 接続確認完了' + (r.profile && r.profile.username ? ' (' + r.profile.username + ')' : ''), 'ok');
-      // cache 更新
       window._snsStatusCache[siteId] = window._snsStatusCache[siteId] || {};
       window._snsStatusCache[siteId].x = { connected: true, profile: r.profile || null, last_verified_at: new Date().toISOString() };
       try { renderHomeDashboard(); } catch(_){}
@@ -5791,6 +5791,86 @@ async function _snsConnectX(siteId, btnEl){
   } catch(e){
     showToast((e && e.message) || 'ネットワークエラー', 'ng');
     if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🔗 接続する →'; }
+  }
+}
+
+// 新: URL 貼り付けで即接続 (= primary 方式)
+function _openXConnectModal(siteId){
+  if(!siteId){
+    siteId = (typeof activeId !== 'undefined' && activeId) || null;
+    if(!siteId) return;
+  }
+  var existing = document.getElementById('xConnectModal');
+  if(existing) existing.remove();
+  var html = '<div id="xConnectModal" class="xp-overlay" onclick="if(event.target===this)_closeXConnectModal()">'
+    + '<div class="xp-card" style="max-width:480px">'
+    +   '<button class="xp-close" onclick="_closeXConnectModal()">×</button>'
+    +   '<div class="xp-h">'
+    +     '<div class="xp-h-tag"><span class="xp-h-ic">𝕏</span> X アカウントを接続</div>'
+    +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">あなたの X プロフィール URL を貼ってください</div>'
+    +     '<div style="font-size:12.5px;color:var(--text2);line-height:1.65;font-weight:600">'
+    +       'これだけで接続完了。<b>パスワードは一切要りません</b>。<br>'
+    +       '実際の投稿時は、Chrome 拡張 + あなたのブラウザのログイン状態を使います。'
+    +     '</div>'
+    +   '</div>'
+    +   '<div style="padding:0 24px 14px">'
+    +     '<input id="xConnectInput" type="text" class="xp-input" placeholder="https://x.com/yourhandle" autocomplete="off" />'
+    +     '<div class="xp-hint">💡 URL の代わりに <code>@yourhandle</code> でも OK</div>'
+    +   '</div>'
+    +   '<div class="xp-actions">'
+    +     '<button class="xp-cancel" onclick="_closeXConnectModal()">キャンセル</button>'
+    +     '<button class="xp-post" onclick="_submitXConnect(\'' + esc(siteId) + '\', this)">接続する</button>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  setTimeout(function(){ var i = document.getElementById('xConnectInput'); if(i) i.focus(); }, 80);
+}
+function _closeXConnectModal(){
+  var m = document.getElementById('xConnectModal');
+  if(m) m.remove();
+}
+async function _submitXConnect(siteId, btnEl){
+  var inp = document.getElementById('xConnectInput');
+  if(!inp) return;
+  var raw = String(inp.value || '').trim();
+  if(!raw){
+    inp.style.borderColor = '#dc2626';
+    setTimeout(function(){ inp.style.borderColor = ''; }, 1500);
+    return;
+  }
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '⏳ 接続中...'; }
+  try {
+    var r = await api('POST', '/api/sns/connect/x', { url: raw });
+    if(r && r.ok){
+      _closeXConnectModal();
+      showToast('✅ X 接続完了' + (r.profile && r.profile.username ? ' (' + r.profile.username + ')' : ''), 'ok');
+      window._snsStatusCache[siteId] = window._snsStatusCache[siteId] || {};
+      window._snsStatusCache[siteId].x = { connected: true, profile: r.profile || null, last_verified_at: new Date().toISOString() };
+      try { renderHomeDashboard(); } catch(_){}
+    } else {
+      var detail = (r && r.detail) || (r && r.error) || '接続失敗';
+      showToast('⚠️ ' + detail, 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '接続する'; }
+    }
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '接続する'; }
+  }
+}
+async function _snsDisconnectX(siteId, btnEl){
+  if(!confirm('X 接続を解除しますか?')) return;
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '...'; }
+  try {
+    await api('POST', '/api/sns/disconnect/x');
+    showToast('X 接続を解除しました', 'ok');
+    if(window._snsStatusCache && window._snsStatusCache[siteId] && window._snsStatusCache[siteId].x){
+      window._snsStatusCache[siteId].x = { connected: false };
+    }
+    try { renderHomeDashboard(); } catch(_){}
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '切断'; }
   }
 }
 
@@ -5877,10 +5957,10 @@ function _showOneClickStep(kind, siteId){
     primaryLbl = '📥 Chrome 拡張をインストール';
     primaryAction = "window.open('/setup-extension.html', '_blank')";
   } else if(kind === 'connect_needed'){
-    title = '🐦 X に接続しましょう';
-    body = 'Chrome で <b>x.com にログイン</b> してから「接続」 を押してください。';
-    primaryLbl = '🔗 X に接続';
-    primaryAction = "_oneClickConnectX('" + esc(siteId) + "', this)";
+    title = '🐦 X アカウントを接続';
+    body = 'あなたの X プロフィール URL を貼るだけ (例: <code>https://x.com/yourname</code>)。<br>パスワード共有不要。';
+    primaryLbl = '🔗 URL で接続';
+    primaryAction = "_closeOneClickStep();_openXConnectModal('" + esc(siteId) + "')";
   } else {
     return;
   }

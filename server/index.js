@@ -17328,6 +17328,45 @@ async function handleAPI(req,res,pathname,method,ip){
     const r = await executeVerifyXLoginTool(user);
     return jres(res, r.ok ? 200 : 400, r);
   }
+  // POST /api/sns/connect/x — URL を貼り付けるだけで接続 (= UX 最短)
+  // body: { url: 'https://x.com/yourhandle' } or { handle: '@yourhandle' }
+  // 注: ここでは X login state は確認しない。実投稿時に拡張で確認 + mismatch なら warning。
+  if(pathname === '/api/sns/connect/x' && method === 'POST'){
+    const body = await readBody(req);
+    const raw = String((body && (body.url || body.handle)) || '').trim();
+    if(!raw) return jres(res, 400, { error: 'url_or_handle_required' });
+    // 抽出: handle のみ (= @ 取り除き、 path 部分も)
+    let handle = '';
+    const urlMatch = raw.match(/(?:https?:\/\/)?(?:www\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})/i);
+    if(urlMatch) handle = urlMatch[1];
+    else {
+      const handleMatch = raw.match(/^@?([A-Za-z0-9_]{1,15})$/);
+      if(handleMatch) handle = handleMatch[1];
+    }
+    if(!handle) return jres(res, 400, { error: 'invalid_format', detail: '「https://x.com/yourhandle」 or 「@yourhandle」 の形式で入力してください' });
+    user.sns_connections = user.sns_connections || {};
+    user.sns_connections.x = {
+      connected: true,
+      profile: { username: '@' + handle, url: 'https://x.com/' + handle },
+      method: 'manual_url',
+      connected_at: new Date().toISOString(),
+    };
+    try { await DB.save(user); } catch(e){ console.warn('[sns-connect-x] save failed:', e.message); }
+    console.log('[sns-connect-x] connected @' + handle + ' for', user.email);
+    return jres(res, 200, {
+      ok: true,
+      platform: 'x',
+      profile: { username: '@' + handle, url: 'https://x.com/' + handle },
+    });
+  }
+  // POST /api/sns/disconnect/x — 切断
+  if(pathname === '/api/sns/disconnect/x' && method === 'POST'){
+    if(user.sns_connections && user.sns_connections.x){
+      delete user.sns_connections.x;
+      try { await DB.save(user); } catch(_){}
+    }
+    return jres(res, 200, { ok: true });
+  }
   if(pathname === '/api/sns/post/x' && method === 'POST'){
     const body = await readBody(req);
     const text = String(body && body.text || '').trim();

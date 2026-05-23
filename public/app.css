@@ -3903,6 +3903,40 @@ input,textarea{font-family:var(--sans);}
   background:linear-gradient(135deg, color-mix(in srgb, var(--cn-c, #fb923c) 6%, #fff), #fff);
   border-left-style:solid;
 }
+.cn-card.cn-card-tool.cn-card-on:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+/* AEO 検索モニター modal — 履歴 list */
+.aeo-history{
+  padding:14px 24px 22px;
+  border-top:1px solid rgba(0,0,0,.06);
+}
+.aeo-history-h{
+  font-size:11px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-bottom:9px;
+}
+.aeo-empty{
+  font-size:11.5px; color:var(--text3); font-weight:600;
+  background:var(--cream); padding:14px 16px; border-radius:10px;
+  text-align:center;
+}
+.aeo-runs{display:flex; flex-direction:column; gap:7px}
+.aeo-run{
+  background:var(--cream); border:1px solid var(--wire);
+  border-radius:9px; padding:10px 13px;
+}
+.aeo-run-h{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.aeo-run-q{font-size:12.5px; font-weight:800; color:var(--text); letter-spacing:-.005em; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.aeo-mention{
+  font-size:10px; font-weight:800;
+  padding:2px 8px; border-radius:99px;
+  letter-spacing:.02em; flex-shrink:0;
+}
+.aeo-mention.on{background:rgba(22,163,74,.12); color:#16a34a; border:1px solid rgba(22,163,74,.24)}
+.aeo-mention.off{background:rgba(0,0,0,.04); color:var(--text3); border:1px solid var(--wire2)}
+.aeo-run-meta{font-size:10.5px; color:var(--text3); font-weight:700; margin-top:4px; letter-spacing:.02em}
 .cn-card-de{
   font-size:11px; font-weight:600; color:var(--text2);
   line-height:1.5; margin-top:3px;

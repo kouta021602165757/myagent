@@ -5831,34 +5831,56 @@ function _renderTabConnections(site){
          +   '</div>'
          + '</div>';
   }
+  // 「内蔵ツール」 = MY AI Agent 自社開発。 V1 で動くのは AI 検索モニターのみ、
+  //  他は近日扱い (= 嘘ラベル避け)。
+  // Tool card は click 可能なものは onClick を持つ。
+  function _toolCardClickable(opts){
+    var statusLbl = opts.status === 'on' ? '🟢 利用可能' : '⏳ 近日対応';
+    var statusCls = opts.status === 'on' ? 'on' : 'soon';
+    var clickAttr = opts.onClick ? ' onclick="' + opts.onClick + '" style="cursor:pointer;--cn-c:' + opts.color + '"' : ' style="--cn-c:' + opts.color + '"';
+    var actionBtn = opts.status === 'on' && opts.onClick
+      ? '<button class="cn-btn cn-btn-primary" onclick="event.stopPropagation();' + opts.onClick + '">使う →</button>'
+      : '<button class="cn-btn cn-btn-soon" disabled>近日</button>';
+    return '<div class="cn-card cn-card-tool cn-card-' + statusCls + '"' + clickAttr + '>'
+         +   '<div class="cn-card-l">'
+         +     '<div class="cn-card-ic" style="background:' + opts.color + '15;color:' + opts.color + '">' + opts.icon + '</div>'
+         +     '<div class="cn-card-meta">'
+         +       '<div class="cn-card-nm">' + esc(opts.name) + ' <span class="cn-status cn-status-' + statusCls + '">' + statusLbl + '</span></div>'
+         +       '<div class="cn-card-de">' + esc(opts.desc) + '</div>'
+         +     '</div>'
+         +   '</div>'
+         +   '<div class="cn-card-r">' + actionBtn + '</div>'
+         + '</div>';
+  }
   var internalToolsHTML = _section('🤖 MY AI Agent 内蔵ツール', '外部接続不要 ・ AI 組織が直接使う自社開発ツール')
     + '<div class="cn-grid">'
-    +   _toolCard({
+    +   _toolCardClickable({
           icon: '🤖', name: 'AI 検索モニター', color: '#9333ea',
-          desc: 'ChatGPT / Perplexity / Claude / Gemini で自社 / 業界 KW が引用されているか週次でチェック。引用元 URL を tracking。',
-          status: 'soon',
+          desc: 'Perplexity で自社 / 業界 KW が引用されているかチェック。 拡張で問い合わせ → 引用 URL を tracking。',
+          status: 'on',
+          onClick: '_openAeoMonitorModal(\'' + esc(site.id) + '\')',
         })
-    +   _toolCard({
+    +   _toolCardClickable({
           icon: '📈', name: '検索順位チェッカー', color: '#0ea5e9',
           desc: '主要キーワードの Google 検索順位を毎日測定。順位推移を「数字一覧」 tab + 毎朝レポートに反映。',
           status: 'soon',
         })
-    +   _toolCard({
+    +   _toolCardClickable({
           icon: '🔍', name: '競合記事分析', color: '#fb923c',
           desc: '上位 10 記事の見出し / 文字数 / 構造を一括抽出。AI ライターが「勝てる記事」を設計する根拠データ。',
-          status: 'beta',
+          status: 'soon',
         })
-    +   _toolCard({
+    +   _toolCardClickable({
           icon: '🎨', name: 'アイキャッチ画像生成', color: '#ec4899',
           desc: '記事に合った OGP / SNS 用画像を AI 生成。テキスト + ビジュアルが揃った完成品を納品。',
-          status: 'on',
+          status: 'soon',
         })
-    +   _toolCard({
+    +   _toolCardClickable({
           icon: '📧', name: 'メルマガ送信', color: '#22c55e',
           desc: 'リスト管理 + AI 生成本文 + 配信を完結。月 3000 通まで無料 (Resend 経由)。',
-          status: 'beta',
+          status: 'soon',
         })
-    +   _toolCard({
+    +   _toolCardClickable({
           icon: '⚡', name: 'Core Web Vitals モニター', color: '#f59e0b',
           desc: 'LCP / CLS / INP / 読込速度を毎日測定。CRO 部門が改善案を即提案。',
           status: 'soon',
@@ -6109,6 +6131,118 @@ async function _snsDisconnect(platform, siteId, btnEl){
   } catch(e){
     showToast((e && e.message) || 'ネットワークエラー', 'ng');
     if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '切断'; }
+  }
+}
+
+// ─── AEO 検索モニター modal (= 内蔵ツール) ─────────────────────
+// Perplexity に query を投げて、 自社引用結果を表示。 過去 runs も履歴で出す。
+function _openAeoMonitorModal(siteId){
+  if(!siteId) siteId = activeId;
+  if(!siteId) return;
+  var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+  if(!site) return;
+  var hostname = _siteHostname(site);
+  var vertical = _verticalLabel(site.site_vertical || 'other');
+  var runs = (site.aeo_monitor && site.aeo_monitor.runs) || [];
+  // デフォルト query (= サイト vertical + おすすめ系)
+  var defaultQuery = (site.site_vertical === 'saas' ? 'おすすめの SaaS ' + (site.site_title || '') : '')
+                  || (site.site_vertical === 'ec'   ? site.site_title + ' レビュー' : '')
+                  || (site.site_vertical === 'blog' ? 'おすすめの ' + (site.site_title || '') + ' 関連記事' : '')
+                  || ('おすすめ ' + (site.site_title || hostname));
+
+  var existing = document.getElementById('aeoModal');
+  if(existing) existing.remove();
+
+  var runsList = runs.length === 0
+    ? '<div class="aeo-empty">まだ実行履歴がありません。 上のフォームから query を投げてください。</div>'
+    : '<div class="aeo-runs">'
+      + runs.slice(0, 10).map(function(r){
+          var dt = '';
+          try { dt = new Date(r.ts).toLocaleString('ja-JP'); } catch(_){}
+          var mention = r.mentioned
+            ? '<span class="aeo-mention on">✅ 自社引用あり (' + (r.matched_urls && r.matched_urls.length || 0) + ' URL)</span>'
+            : '<span class="aeo-mention off">❌ 自社引用なし</span>';
+          return '<div class="aeo-run">'
+               +   '<div class="aeo-run-h">'
+               +     '<span class="aeo-run-q">「' + esc(r.query) + '」</span>'
+               +     mention
+               +   '</div>'
+               +   '<div class="aeo-run-meta">' + esc(dt) + ' ・ ' + (r.cited_urls || []).length + ' URL 引用 ・ ' + esc(r.platform || 'perplexity') + '</div>'
+               + '</div>';
+        }).join('')
+      + '</div>';
+
+  var html = '<div id="aeoModal" class="xp-overlay" onclick="if(event.target===this)_closeAeoMonitorModal()">'
+    + '<div class="xp-card" style="max-width:640px">'
+    +   '<button class="xp-close" onclick="_closeAeoMonitorModal()">×</button>'
+    +   '<div class="xp-h">'
+    +     '<div class="xp-h-tag" style="background:#9333ea"><span class="xp-h-ic">🤖</span> AI 検索モニター</div>'
+    +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">Perplexity でこの query → 自社引用 check</div>'
+    +     '<div style="font-size:12.5px;color:var(--text2);line-height:1.65;font-weight:600">'
+    +       '拡張で Perplexity.ai を背景で開いて回答を取得。 引用 URL に自社 (<b>' + esc(hostname) + '</b>) が含まれるか自動判定します。'
+    +     '</div>'
+    +   '</div>'
+    +   '<div style="padding:0 24px 14px">'
+    +     '<input id="aeoQueryInput" type="text" class="xp-input" placeholder="例: おすすめの SaaS / Best blog about X" value="' + esc(defaultQuery) + '" />'
+    +     '<div class="xp-hint">💡 ユーザーが AI に聞きそうな実用クエリで試してください</div>'
+    +   '</div>'
+    +   '<div class="xp-actions">'
+    +     '<button class="xp-cancel" onclick="_closeAeoMonitorModal()">閉じる</button>'
+    +     '<button class="xp-post" style="background:#9333ea" onclick="_runAeoMonitor(\'' + esc(siteId) + '\', this)">🤖 Perplexity で検索 (~15s)</button>'
+    +   '</div>'
+    +   '<div class="aeo-history" id="aeoHistory">'
+    +     '<div class="aeo-history-h">過去の検索履歴</div>'
+    +     runsList
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  setTimeout(function(){ var i = document.getElementById('aeoQueryInput'); if(i) i.focus(); }, 80);
+}
+function _closeAeoMonitorModal(){
+  var m = document.getElementById('aeoModal');
+  if(m) m.remove();
+}
+async function _runAeoMonitor(siteId, btnEl){
+  var inp = document.getElementById('aeoQueryInput');
+  if(!inp) return;
+  var query = String(inp.value || '').trim();
+  if(!query){
+    inp.style.borderColor = '#dc2626';
+    setTimeout(function(){ inp.style.borderColor = ''; }, 1500);
+    return;
+  }
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🔄 Perplexity 実行中... (~15s)'; }
+  try {
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/aeo-monitor/run', { query });
+    if(r && r.ok){
+      var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+      if(site){
+        site.aeo_monitor = site.aeo_monitor || { runs: [] };
+        site.aeo_monitor.runs = site.aeo_monitor.runs || [];
+        site.aeo_monitor.runs.unshift({
+          ts: new Date().toISOString(),
+          query, platform: r.platform,
+          mentioned: !!r.mentioned,
+          cited_urls: r.cited_urls || [],
+          matched_urls: r.matched_urls || [],
+          answer_excerpt: r.answer_excerpt || '',
+        });
+      }
+      var msg = r.mentioned
+        ? '✅ 自社引用あり (' + (r.matched_urls || []).length + ' URL)'
+        : '❌ 自社引用なし (' + (r.cited_urls || []).length + ' URL が引用)';
+      showToast(msg, r.mentioned ? 'ok' : 'ng');
+      // modal を re-open して履歴更新
+      _closeAeoMonitorModal();
+      setTimeout(function(){ _openAeoMonitorModal(siteId); }, 200);
+    } else {
+      showToast((r && r.detail) || (r && r.error) || '実行失敗', 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 Perplexity で検索 (~15s)'; }
+    }
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 Perplexity で検索 (~15s)'; }
   }
 }
 

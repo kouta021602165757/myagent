@@ -9277,6 +9277,99 @@ const SNS_TOOLS = [
 ];
 const SNS_TOOL_NAMES = new Set(SNS_TOOLS.map(t => t.name));
 
+// ══════════════════════════════════════════════════════════════
+// ── AEO / AI 検索モニター ツール (= 自社内蔵ツール) ──
+// ChatGPT / Perplexity / Claude / Gemini に query を投げて自社引用を tracking。
+// V1 は Perplexity のみ (= login 不要、 citation explicit で抽出しやすい)。
+// ══════════════════════════════════════════════════════════════
+const AEO_TOOLS = [
+  {
+    name: 'ai_search_monitor',
+    description: 'AI 検索エンジン (Perplexity 等) に query を投げて、 自社サイトが回答に引用されているかチェック。AEO 部門の主力ツール。 query 例: 「Best SaaS for X」 「○○ おすすめ」 など、 実際にユーザーが AI に聞きそうな質問。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '検索クエリ (1-200 字)' },
+        site_url: { type: 'string', description: '(任意) 自社サイト URL — マッチ判定に使う' },
+      },
+      required: ['query'],
+    },
+  },
+];
+const AEO_TOOL_NAMES = new Set(AEO_TOOLS.map(t => t.name));
+
+// Perplexity に query → answer + citations を抽出
+async function _queryPerplexity(user, query){
+  const url = 'https://www.perplexity.ai/search?q=' + encodeURIComponent(query);
+  let r = await executeExtensionTool(user, 'ext_open_url', { url });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+
+  // Perplexity は streaming で回答 → 10s ほど待つ
+  await _sleep(10000);
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(r && r.error) return { error: 'read_failed', detail: r.error };
+
+  const pageText = String((r && r.text) || '');
+  const pageUrl = String((r && r.url) || '');
+
+  // URL 抽出 (= 回答内の引用 + サイドバー Sources)
+  // perplexity.ai 自身を除外 + dedupe
+  const urlPattern = /https?:\/\/[^\s)<>"'\]]+/g;
+  const allUrls = (pageText.match(urlPattern) || []).filter(u => !u.includes('perplexity.ai'));
+  const uniqueUrls = Array.from(new Set(allUrls)).slice(0, 30);
+
+  // 回答テキスト (= ページ前半部分が回答本文。Sources / Related questions は除外)
+  // 簡易: 「Sources」 文字列までを answer として extract
+  const sourcesIdx = pageText.indexOf('Sources');
+  const answerText = (sourcesIdx > 100 ? pageText.slice(0, sourcesIdx) : pageText).slice(0, 2000);
+
+  return {
+    ok: true,
+    platform: 'perplexity',
+    query,
+    perplexity_url: pageUrl,
+    answer_excerpt: answerText.trim(),
+    cited_urls: uniqueUrls,
+    fetched_at: new Date().toISOString(),
+  };
+}
+
+async function executeAiSearchMonitorTool(user, input){
+  const query = String((input && input.query) || '').trim();
+  if(!query) return { error: 'query_required' };
+  if(query.length > 200) return { error: 'query_too_long' };
+  if(!user.extension_device_token){
+    return { error: 'extension_not_paired', detail: 'AI 検索モニターには Chrome 拡張が必要です。' };
+  }
+
+  const r = await _queryPerplexity(user, query);
+  if(r && r.error) return r;
+
+  // self_site 判定 (= input.site_url や user.agents の site_url とマッチするか)
+  const candidateSites = [];
+  if(input && input.site_url) candidateSites.push(String(input.site_url));
+  (user.agents || []).forEach(a => { if(a && a.site_url) candidateSites.push(a.site_url); });
+  const ownDomains = candidateSites.map(u => {
+    try { return new URL(u).hostname.replace(/^www\./, ''); }
+    catch(_){ return u.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]; }
+  }).filter(Boolean);
+
+  const matchedUrls = r.cited_urls.filter(u => {
+    return ownDomains.some(d => d && u.toLowerCase().includes(d.toLowerCase()));
+  });
+  const mentioned = matchedUrls.length > 0;
+
+  return Object.assign(r, {
+    own_domains: ownDomains,
+    mentioned,
+    matched_urls: matchedUrls,
+    instructions: mentioned
+      ? 'ユーザーに「✅ Perplexity で『' + query + '』 → 自社が引用されました (' + matchedUrls.length + ' 件)」と報告。'
+      : 'ユーザーに「❌ Perplexity で『' + query + '』 → 自社は引用されませんでした。 上位 ' + r.cited_urls.length + ' URL が引用されています」 と報告。 改善提案も添える。',
+  });
+}
+
 // 小さい sleep helper
 function _sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -12860,6 +12953,7 @@ async function _runOneSchedule(user, agent, sched){
             result = await _mcpCallTool(route.server, route.toolName, block.input || {});
           }
           else if(block.name && SNS_TOOL_NAMES.has(block.name)) result = await executeSnsTool(user, block.name, block.input||{});
+          else if(block.name && AEO_TOOL_NAMES.has(block.name)) result = await executeAiSearchMonitorTool(user, block.input||{});
           else result = { error: 'tool_unavailable_in_schedule: ' + block.name };
         } catch(toolErr){
           result = { error: (toolErr && toolErr.message) || String(toolErr) };
@@ -17685,6 +17779,42 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 400, { error: 'text_or_tweets_required' });
   }
 
+  // ── AI 検索モニター (= AEO tracking) ──
+  // POST /api/agents/:id/aeo-monitor/run { query } → Perplexity に問い合わせ + 結果保存
+  // GET  /api/agents/:id/aeo-monitor      → 過去 runs を返す
+  const aeoRunMatch = pathname.match(/^\/api\/agents\/([^/]+)\/aeo-monitor\/run$/);
+  if(aeoRunMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === aeoRunMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req);
+    const query = String((body && body.query) || '').trim();
+    if(!query) return jres(res, 400, { error: 'query_required' });
+    const r = await executeAiSearchMonitorTool(user, { query, site_url: ag.site_url });
+    if(r && !r.error){
+      ag.aeo_monitor = ag.aeo_monitor || { runs: [] };
+      ag.aeo_monitor.runs = Array.isArray(ag.aeo_monitor.runs) ? ag.aeo_monitor.runs : [];
+      // history cap (= 直近 50 件)
+      ag.aeo_monitor.runs.unshift({
+        ts: new Date().toISOString(),
+        query,
+        platform: r.platform,
+        mentioned: !!r.mentioned,
+        cited_urls: r.cited_urls || [],
+        matched_urls: r.matched_urls || [],
+        answer_excerpt: r.answer_excerpt || '',
+      });
+      ag.aeo_monitor.runs = ag.aeo_monitor.runs.slice(0, 50);
+      try { await DB.save(user); } catch(_){}
+    }
+    return jres(res, r && r.error ? 400 : 200, r);
+  }
+  const aeoGetMatch = pathname.match(/^\/api\/agents\/([^/]+)\/aeo-monitor$/);
+  if(aeoGetMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === aeoGetMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    return jres(res, 200, { ok: true, aeo_monitor: ag.aeo_monitor || { runs: [] } });
+  }
+
   // ── Site KPI save ──────────────────────────────────────
   // サイトの目標数値 (月間 PV / CVR / 月間リード数) を保存。
   // GA4 接続時の達成度評価や毎朝レポートの参照に使う。
@@ -21400,6 +21530,8 @@ ${orgSummary || '(汎用チーム)'}
       ...(extensionActive ? EXTENSION_TOOLS : []),
       // SNS 投稿ツール (= 拡張経由 / site agent のみ提供)
       ...(extensionActive && agent.site_url ? SNS_TOOLS : []),
+      // AEO 検索モニター (= AI 検索エンジン引用 tracking)
+      ...(extensionActive && agent.site_url ? AEO_TOOLS : []),
       ...(imageGenActive ? IMAGE_TOOLS : []),
       ...(videoGenActive ? VIDEO_TOOLS : []),
       ...(mediaUtilActive ? _mediaTools : []),
@@ -22067,6 +22199,8 @@ ${orgSummary || '(汎用チーム)'}
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(block.name && SNS_TOOL_NAMES.has(block.name)){
               result = await executeSnsTool(payerUser, block.name, block.input||{});
+            } else if(block.name && AEO_TOOL_NAMES.has(block.name)){
+              result = await executeAiSearchMonitorTool(payerUser, block.input||{});
             } else if(session){
               result = await executeBrowserTool(session, block.name, block.input||{}, { sheetsConnected, sheetsActive });
             } else {

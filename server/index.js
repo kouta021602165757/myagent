@@ -9690,6 +9690,7 @@ const SNS_PLATFORM_DEFS = {
     handle_only: null,
     build: domain => ({
       site_name: domain,
+      url: 'https://' + domain,
       site_url: 'https://' + domain,
       admin_url: 'https://' + domain + '/wp-admin',
     }),
@@ -9701,17 +9702,23 @@ const SNS_PLATFORM_DEFS = {
     build: shop => ({
       shop_name: shop,
       shop_domain: shop + '.myshopify.com',
+      url: 'https://' + shop + '.myshopify.com',
       admin_url: 'https://' + shop + '.myshopify.com/admin',
     }),
   },
   base: {
-    // admin.thebase.in or shop.thebase.in
-    regex: /(?:https?:\/\/)?(?:admin\.thebase\.in|([a-z0-9-]+)\.thebase\.in)/i,
+    // admin.thebase.in (BASE Store の admin) or shop.thebase.in (= 公開ショップ)
+    // 「admin」 はあなたのショップを示さないので、その場合は shop_name = null
+    regex: /(?:https?:\/\/)?(admin|[a-z0-9-]+)\.thebase\.in/i,
     handle_only: /^([a-z0-9-]{2,60})$/,
-    build: shop => ({
-      shop_name: shop || 'BASE Store',
-      admin_url: 'https://admin.thebase.in/',
-    }),
+    build: shop => {
+      const isAdmin = shop === 'admin';
+      return {
+        shop_name: isAdmin ? 'BASE Store' : shop,
+        url: isAdmin ? 'https://admin.thebase.in/' : 'https://' + shop + '.thebase.in/',
+        admin_url: 'https://admin.thebase.in/',
+      };
+    },
   },
 };
 

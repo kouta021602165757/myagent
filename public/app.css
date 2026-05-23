@@ -3756,6 +3756,43 @@ input,textarea{font-family:var(--sans);}
   .tk-task-del{opacity:1}
 }
 
+/* ── 1-click X 投稿 CTA (= チャット内の大型ボタン) ── */
+.x1click-cta{
+  display:inline-flex; align-items:center; gap:8px;
+  background:linear-gradient(135deg, #000, #1d1d1d);
+  color:#fff; border:0;
+  padding:13px 22px; border-radius:99px;
+  font-family:inherit; font-size:14px; font-weight:800;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.28);
+  transition:transform .15s, box-shadow .15s, filter .15s;
+  margin:8px 0;
+}
+.x1click-cta:hover:not(:disabled){
+  transform:translateY(-1px);
+  box-shadow:0 10px 24px rgba(0,0,0,.4);
+  filter:brightness(1.15);
+}
+.x1click-cta:disabled{opacity:.7; cursor:wait}
+
+/* 拡張インストール CTA */
+.extinstall-cta{
+  display:inline-flex; align-items:center; gap:7px;
+  background:linear-gradient(135deg, #fb923c, #ea580c);
+  color:#fff;
+  text-decoration:none;
+  padding:11px 20px; border-radius:99px;
+  font-size:13px; font-weight:800;
+  box-shadow:0 4px 14px rgba(234,88,12,.28);
+  transition:transform .15s, box-shadow .15s;
+  margin:8px 0;
+}
+.extinstall-cta:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 20px rgba(234,88,12,.4);
+  color:#fff;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    ── SNS 接続 UI (= 設定 tab 内の専用カード) ──
    X (V1) + 近日対応 SNS の表示。

@@ -2555,6 +2555,34 @@ function _addNextStepCTA(ag){
   if(ag.history.some(function(m){ return m && m.via_next_step_cta; })) return;
   var vertical = ag.site_vertical || 'other';
   var hostname = _siteHostname(ag);
+
+  // ── 🚀 1-CLICK X 投稿カード (= 最優先 CTA、 next-3 の上に出す) ──
+  // X 系の納品物があれば「1 クリックで投稿」を promote。
+  // クリック → 拡張 + X 接続 + preview modal を auto-chain。
+  var xArt = null;
+  if(typeof me !== 'undefined' && me && Array.isArray(me.artifacts)){
+    xArt = me.artifacts.find(function(a){
+      if(!a || a.chat_id !== ag.id) return false;
+      var t = String(a.title || a.filename || '').toLowerCase();
+      return /twitter|スレッド|thread|tweet|\bx[\s_-]/i.test(t);
+    });
+  }
+  var xCardMsg = {
+    id: 'a_xcard_' + Date.now(),
+    role: 'assistant',
+    time: now(),
+    via_kickoff: true,
+    via_x_test_card: true,
+    site_id: ag.id,
+    x_test_artifact: xArt ? { title: xArt.title, filename: xArt.filename } : null,
+    content: '🚀 **AI が作った X スレッドをテスト投稿してみよう**\n\n'
+           + (xArt
+             ? '生成済: **' + (xArt.title || 'X スレッド') + '** をワンクリックで X に投稿できます。\n\n'
+             : '「' + hostname + '」の魅力を伝える X スレッドを生成 → 投稿します。\n\n')
+           + '✅ 拡張インストール → ✅ X ログイン確認 → ✅ プレビュー → ✅ 投稿、 全部 **1 ボタン** で chain。\n\n'
+           + '<x1click:' + ag.id + '>',
+  };
+  ag.history.push(xCardMsg);
   // vertical 別の最初の依頼テンプレ (= 効果が見えやすい 3 つ)
   var NEXT_STEPS = {
     saas: [
@@ -2631,6 +2659,26 @@ async function _kickoffOnboardingChat(agentId){
   };
   ag.history = (ag.history||[]).concat([welcomeMsg]);
   renderMsgs(ag, true);
+
+  // 1b) 拡張インストール誘導 (= 5 分の待ち時間を活用)。既にインストール済なら出さない。
+  setTimeout(function(){
+    var extPaired = (me && me.extension_device_token);
+    if(extPaired) return;  // 既に paired なら skip
+    var extMsg = {
+      id: 'a_ext_install_' + Date.now(),
+      role: 'assistant',
+      time: now(),
+      via_kickoff: true,
+      via_ext_install: true,
+      content: '🔌 **AI が SNS 投稿できるようにしましょう**\n\n'
+             + 'Chrome 拡張をインストールすると、AI が **X / LinkedIn / Threads** に直接投稿できるようになります。\n\n'
+             + '🔒 **パスワード共有不要** — あなたのブラウザのログイン状態を使う安全な方式。\n'
+             + '⚡ **30 秒で完了** — インストールして戻ってくるだけ。\n\n'
+             + '[📥 Chrome 拡張をインストール](/setup-extension.html)',
+    };
+    ag.history.push(extMsg);
+    renderMsgs(ag);
+  }, 2500);
 
   // 2) 進捗パネル用の "live" メッセージ (アップデートしていく)
   var liveMsgId = 'a_live_' + Date.now();
@@ -5746,6 +5794,135 @@ async function _snsConnectX(siteId, btnEl){
   }
 }
 
+// ─── 🚀 1-CLICK X 投稿フロー (= onboarding 動線で chain) ───────────
+// クリック 1 つで: 拡張 check → X login 確認 → preview modal → 投稿、を auto-chain。
+// 各 step で問題があれば該当 modal を出して止まる (= 進捗を失わない)。
+async function _oneClickXPost(siteId, btnEl){
+  if(!siteId){
+    // ボタンから siteId が来てなければ activeId を代用
+    siteId = (typeof activeId !== 'undefined' && activeId) || null;
+    if(!siteId){ showToast('サイトが見つかりません', 'ng'); return; }
+  }
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '⏳ 確認中...'; }
+
+  // Step 1: 拡張 paired チェック
+  var extPaired = !!(me && me.extension_device_token);
+  if(!extPaired){
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🚀 1 クリックで X に投稿する'; }
+    _showOneClickStep('extension_missing', siteId);
+    return;
+  }
+
+  // Step 2: X 接続状態確認 (= /api/sns/status)
+  try {
+    var status = await api('GET', '/api/sns/status');
+    var xConnected = !!(status && status.x && status.x.connected);
+    if(!xConnected){
+      // 接続未済 → connect modal を出して、成功したら再度この flow を resume
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🚀 1 クリックで X に投稿する'; }
+      _showOneClickStep('connect_needed', siteId);
+      return;
+    }
+  } catch(e){
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🚀 1 クリックで X に投稿する'; }
+    showToast('接続確認に失敗', 'ng');
+    return;
+  }
+
+  // Step 3: 投稿コンテンツを取得 (= 既存の X 関連 artifact があれば中身、なければ AI に生成依頼)
+  var xArt = null;
+  if(typeof me !== 'undefined' && me && Array.isArray(me.artifacts)){
+    xArt = me.artifacts.find(function(a){
+      if(!a || a.chat_id !== siteId) return false;
+      var t = String(a.title || a.filename || '').toLowerCase();
+      return /twitter|スレッド|thread|tweet|\bx[\s_-]/i.test(t);
+    });
+  }
+  // まだ X artifact ない場合: AI に生成依頼を chat に投げる
+  if(!xArt){
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🚀 1 クリックで X に投稿する'; }
+    showToast('まず AI に X スレッドを依頼してください (例:「X スレッドを 1 本作って」)', 'ok');
+    // 自動で prompt をチャットに pre-fill して送信
+    openSite(siteId);
+    setTimeout(function(){
+      var ta = document.getElementById('ci');
+      if(ta){
+        ta.value = 'このサイトの魅力を伝える X (Twitter) スレッドを 1 本作って。Hook → 価値 → 行動喚起 の構造で 5-7 ツイート。各 220-260 字、絵文字控えめ、ハッシュタグ 2-3 個まで。';
+        try { exTA(ta); } catch(_){}
+        // 自動送信はしない (= ユーザーが内容確認できる)
+        ta.focus();
+      }
+    }, 300);
+    return;
+  }
+
+  // Step 4: 既存 artifact の内容を抽出して confirm modal を出す
+  // 簡易: title をベースに 1 tweet として preview を出す (= 実用上は AI 生成テキストを取り込むべき)
+  // V1 では artifact のメタ情報だけ使い、AI に generated text を tweets payload に変換させる pattern を推奨
+  if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🚀 1 クリックで X に投稿する'; }
+  openXPostConfirmModal({
+    site_id: siteId,
+    text: '✨ ' + (xArt.title || 'X スレッド') + '\n\n' + ((typeof window !== 'undefined' && window.location && window.location.origin) || '') + '/generated/' + xArt.filename,
+  });
+}
+
+// 1-click flow の各 step で問題があった時に出すミニ modal
+function _showOneClickStep(kind, siteId){
+  var existing = document.getElementById('oneClickStepModal');
+  if(existing) existing.remove();
+  var title, body, primaryLbl, primaryAction;
+  if(kind === 'extension_missing'){
+    title = '🔌 拡張をインストールしてください';
+    body = 'AI が X に直接投稿するには Chrome 拡張が必要です。<br>(30 秒で完了。パスワード共有不要)';
+    primaryLbl = '📥 Chrome 拡張をインストール';
+    primaryAction = "window.open('/setup-extension.html', '_blank')";
+  } else if(kind === 'connect_needed'){
+    title = '🐦 X に接続しましょう';
+    body = 'Chrome で <b>x.com にログイン</b> してから「接続」 を押してください。';
+    primaryLbl = '🔗 X に接続';
+    primaryAction = "_oneClickConnectX('" + esc(siteId) + "', this)";
+  } else {
+    return;
+  }
+  var html = '<div id="oneClickStepModal" class="xp-overlay" onclick="if(event.target===this)_closeOneClickStep()">'
+    + '<div class="xp-card" style="max-width:440px">'
+    +   '<button class="xp-close" onclick="_closeOneClickStep()">×</button>'
+    +   '<div class="xp-h">'
+    +     '<div class="xp-h-tag" style="background:#fb923c"><span class="xp-h-ic">🚀</span> 1 クリック投稿セットアップ</div>'
+    +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">' + title + '</div>'
+    +     '<div style="font-size:13px;color:var(--text2);line-height:1.65;font-weight:600">' + body + '</div>'
+    +   '</div>'
+    +   '<div class="xp-actions">'
+    +     '<button class="xp-cancel" onclick="_closeOneClickStep()">後で</button>'
+    +     '<button class="xp-post" style="background:#fb923c" onclick="' + primaryAction + '">' + primaryLbl + '</button>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function _closeOneClickStep(){
+  var m = document.getElementById('oneClickStepModal');
+  if(m) m.remove();
+}
+// modal 内 connect button → 接続成功したら自動で再 1-click flow
+async function _oneClickConnectX(siteId, btnEl){
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '⏳ 接続中...'; }
+  try {
+    var r = await api('POST', '/api/sns/verify/x');
+    if(r && r.ok){
+      _closeOneClickStep();
+      showToast('✅ X 接続完了。投稿に進みます', 'ok');
+      setTimeout(function(){ _oneClickXPost(siteId); }, 600);
+    } else {
+      showToast((r && r.detail) || '接続失敗 — x.com にログインしてから再試行', 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🔗 X に接続'; }
+    }
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🔗 X に接続'; }
+  }
+}
+
 // ─── X 投稿 confirm モーダル (actual-like preview) ────────────────
 // AI が generate した投稿テキストをユーザーが確認してから実投稿する。
 // 引数: { text, tweets[]?, site_id }
@@ -7028,6 +7205,13 @@ function _md(src, ctx){
   html=html.replace(/<br>(<div class="md-task)/g,'$1');
   html=html.replace(/(<\/div>)<br>(<div class="md-task)/g,'$1$2');
   html=html.replace(/ ?NCBTN0 ?/g, '<button class="newchat-cta" onclick="openNewAgent()">🆕 '+(isJa?'新しいチャットで作る':'Create in a new chat')+'</button>');
+  // <x1click:SITE_ID> — 1 クリックで X テスト投稿フロー (= 拡張 check → 接続 → preview → 投稿)
+  html=html.replace(/&lt;x1click:([a-z0-9_]+)&gt;/gi, function(_, sid){
+    return '<button class="x1click-cta" onclick="_oneClickXPost(\''+sid+'\', this)">🚀 1 クリックで X に投稿する</button>';
+  });
+  // <extinstall> — 拡張インストール CTA (= /setup-extension.html へ)
+  html=html.replace(/&lt;extinstall&gt;/gi,
+    '<a class="extinstall-cta" href="/setup-extension.html" target="_blank" rel="noopener">📥 Chrome 拡張をインストール (30 秒)</a>');
   // Restore delegate cards LAST (after all other markdown) so the surrounding
   // <br> noise is already cleaned up. _stepDone is in scope from the auto-check
   // logic above and drives the "first N steps automatically ticked" behavior.

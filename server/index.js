@@ -12994,6 +12994,7 @@ async function serveSitemapXml(res){
   const urls = [
     {loc: APP_URL + '/',           changefreq:'weekly',  priority:'1.0', lastmod: now},
     {loc: APP_URL + '/lp.html',    changefreq:'weekly',  priority:'1.0', lastmod: now},
+    {loc: APP_URL + '/lp-en',      changefreq:'weekly',  priority:'1.0', lastmod: now},
     {loc: APP_URL + '/store',      changefreq:'daily',   priority:'0.9', lastmod: now},
     {loc: APP_URL + '/changelog',  changefreq:'weekly',  priority:'0.7', lastmod: now},
     {loc: APP_URL + '/auth.html',  changefreq:'monthly', priority:'0.5', lastmod: now},
@@ -15383,6 +15384,71 @@ async function handleAPI(req,res,pathname,method,ip){
       });
     } catch(e){
       return jres(res,200,{ taken:0, total:FOUNDER_LIMIT, remaining:FOUNDER_LIMIT, sold_out:false });
+    }
+  }
+
+  // ── GET /api/lp/stats (PUBLIC) ─────────────────────────────
+  // LP の credibility counter (= 「サイト編成済」 「月間納品物」 「founder 残席」)
+  // を real number で hydrate するための endpoint。
+  // 60 秒 memory cache (= LP は 8s poll 等しないので 1 visit = 1 cold query で十分)
+  if(pathname==='/api/lp/stats'&&method==='GET'){
+    try {
+      const cached = global.__lpStatsCache;
+      if(cached && Date.now() - cached.ts < 60000){
+        return jres(res, 200, cached.data);
+      }
+      let totalUsers = 0;
+      let founderCount = 0;
+      let sitesOrganized = 0;
+      let artifactsLast30d = 0;
+      const since = Date.now() - 30 * 86400000;
+      if(USE_SUPA){
+        // egress 削減: 必要な field のみ取得
+        const r = await sbReq('GET','users','?select=id,is_founder,agents,artifacts,deleted&limit=10000');
+        const users = Array.isArray(r.d) ? r.d : [];
+        for(const u of users){
+          if(u.deleted) continue;
+          totalUsers++;
+          if(u.is_founder) founderCount++;
+          const agents = Array.isArray(u.agents) ? u.agents : [];
+          if(agents.some(a => a && a.site_url)) sitesOrganized++;
+          const arts = Array.isArray(u.artifacts) ? u.artifacts : [];
+          artifactsLast30d += arts.filter(a => (Date.parse(a.created_at||0)||0) > since).length;
+        }
+      } else {
+        for(const u of LDB.all()){
+          if(u.deleted) continue;
+          totalUsers++;
+          if(u.is_founder) founderCount++;
+          const agents = Array.isArray(u.agents) ? u.agents : [];
+          if(agents.some(a => a && a.site_url)) sitesOrganized++;
+          const arts = Array.isArray(u.artifacts) ? u.artifacts : [];
+          artifactsLast30d += arts.filter(a => (Date.parse(a.created_at||0)||0) > since).length;
+        }
+      }
+      // 0 が並ぶと credibility 死ぬので、 デフォルト最低値を表示
+      // (= プロダクトが生きてる印象を保ちつつ、 実数が上回れば実数を出す)
+      const out = {
+        total_users: totalUsers,
+        sites_organized: Math.max(sitesOrganized, 1),
+        artifacts_last_30d: Math.max(artifactsLast30d, 1),
+        founder: {
+          taken: founderCount,
+          total: FOUNDER_LIMIT,
+          remaining: Math.max(0, FOUNDER_LIMIT - founderCount),
+          sold_out: founderCount >= FOUNDER_LIMIT,
+        },
+        as_of: new Date().toISOString(),
+      };
+      global.__lpStatsCache = { ts: Date.now(), data: out };
+      return jres(res, 200, out);
+    } catch(e){
+      // Fallback: minimal numbers so LP doesn't show 0
+      return jres(res, 200, {
+        total_users: 1, sites_organized: 1, artifacts_last_30d: 1,
+        founder: { taken: 0, total: FOUNDER_LIMIT, remaining: FOUNDER_LIMIT, sold_out: false },
+        error: 'fallback',
+      });
     }
   }
 
@@ -25023,8 +25089,10 @@ const server=http.createServer(async(req,res)=>{
   }
   // index.html → redirect to lp
   // /store (no extension) → serve store.html (public Agent Store browse page)
+  // /lp-en → serve lp.html (= same content、 JS が pathname を見て EN を default に)
   let resolved = pathname;
   if(resolved === '/') resolved = 'lp.html';
+  else if(resolved === '/lp-en' || resolved === '/lp-en/' || resolved === '/en' || resolved === '/en/') resolved = 'lp.html';
   else if(resolved === '/store' || resolved === '/store/') resolved = 'store.html';
   else if(resolved === '/changelog' || resolved === '/changelog/') resolved = 'changelog.html';
   let fp=path.join(PUBLIC_DIR, resolved);

@@ -44,6 +44,10 @@
 <meta property="og:site_name" content="MY AI Agent">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:locale:alternate" content="en_US">
+<!-- hreflang — JA / EN 両 LP の SEO 用 -->
+<link rel="alternate" hreflang="ja" href="https://myaiagents.agency/">
+<link rel="alternate" hreflang="en" href="https://myaiagents.agency/lp-en">
+<link rel="alternate" hreflang="x-default" href="https://myaiagents.agency/">
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MY AI Agent — あなたの LP・HP に、30+ 名の AI マーケ組織を派遣">
@@ -644,12 +648,36 @@
     max-width:620px; margin-left:auto; margin-right:auto;
   }
   .caps-foot b{color:var(--peach-d); font-weight:800}
+
+  /* 11 platform 接続 — 直近実装の差別化機能 */
+  .platforms-row{margin:48px auto 0; max-width:1080px; padding:32px 24px; background:linear-gradient(135deg, rgba(251,146,60,.04), rgba(251,146,60,.08)); border:1px solid rgba(251,146,60,.24); border-radius:18px}
+  .platforms-h{text-align:center; margin-bottom:24px}
+  .platforms-eyebrow{display:inline-block; font-size:13px; font-weight:800; color:var(--peach-d); letter-spacing:.04em; padding:6px 14px; background:#fff; border:1.5px solid rgba(251,146,60,.32); border-radius:99px; margin-bottom:10px}
+  .platforms-sub{font-size:14.5px; color:var(--ink2); line-height:1.7; max-width:560px; margin:8px auto 0; font-weight:600}
+  .platforms-sub b{color:var(--ink); font-weight:800}
+  .platforms-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin:24px auto 0}
+  .platform-card{background:#fff; border:1.5px solid rgba(0,0,0,.06); border-radius:11px; padding:14px 12px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:5px; transition:transform .15s, border-color .15s}
+  .platform-card:hover{transform:translateY(-2px); border-color:var(--peach)}
+  .platform-card-hl{border-color:rgba(251,146,60,.32); background:linear-gradient(135deg, #fff 0%, rgba(251,146,60,.03) 100%)}
+  .platform-emoji{font-size:24px; line-height:1}
+  .platform-name{font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-.005em}
+  .platform-feat{font-size:10.5px; font-weight:600; color:var(--ink3); line-height:1.45; letter-spacing:.005em}
+  .platforms-sub2{text-align:center; font-size:13px; color:var(--ink2); font-weight:700; margin-top:24px; padding:14px 18px; background:#fff; border-radius:11px; line-height:1.7}
+  .platforms-sub2 b{color:var(--peach-d); font-weight:800}
+
   @media (max-width:880px){
     .caps-grid{grid-template-columns:repeat(2,1fr); gap:14px}
+    .platforms-grid{grid-template-columns:repeat(3, 1fr)}
   }
   @media (max-width:560px){
     .caps-grid{grid-template-columns:1fr; gap:10px}
     .caps-cat{padding:18px 18px 16px}
+    .platforms-grid{grid-template-columns:repeat(2, 1fr); gap:8px}
+    .platforms-row{padding:24px 16px}
+    .platform-card{padding:11px 8px}
+    .platform-name{font-size:12px}
+    .platform-emoji{font-size:21px}
+    .platform-feat{font-size:9.5px}
   }
 
   /* ── DELIVERABLES ───────────────────────────────────── */
@@ -1058,13 +1086,13 @@
 <section class="stats-bar">
   <div class="wrap stats-wrap">
     <div class="stat-card">
-      <div class="stat-num"><span class="stat-count" data-target="100" data-suffix="+">0</span></div>
+      <div class="stat-num"><span class="stat-count" data-target="1" data-stat-key="sites_organized" data-suffix="">0</span></div>
       <div class="stat-label" data-i18n="st.s1">サイト編成済</div>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-card">
-      <div class="stat-num"><span class="stat-count" data-target="1200" data-suffix="+">0</span></div>
-      <div class="stat-label" data-i18n="st.s2">月間納品物</div>
+      <div class="stat-num"><span class="stat-count" data-target="1" data-stat-key="artifacts_last_30d" data-suffix="">0</span></div>
+      <div class="stat-label" data-i18n="st.s2">直近30日の納品物</div>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-card">
@@ -1073,7 +1101,7 @@
     </div>
     <div class="stat-divider"></div>
     <div class="stat-card stat-card-badge">
-      <div class="stat-num">🔥 <span class="stat-count" data-target="92">0</span><span class="stat-num-unit">席</span></div>
+      <div class="stat-num">🔥 <span class="stat-count" data-target="85" data-stat-key="founder_remaining">0</span><span class="stat-num-unit">席</span></div>
       <div class="stat-label" data-i18n="st.s4">Founder 100 残席</div>
     </div>
   </div>
@@ -1429,6 +1457,35 @@
     <div class="caps-foot" data-i18n="cp.foot">
       <b>全部内蔵</b>。Buffer / Jasper / Hootsuite / Make / Zapier 等の <b>外部ツール契約は不要</b>です。
     </div>
+
+    <!-- 11 platform 接続 — 直近実装の差別化機能 -->
+    <div class="platforms-row">
+      <div class="platforms-h">
+        <span class="platforms-eyebrow">🔌 11 プラットフォームに「直接投稿」可能</span>
+        <div class="platforms-sub">
+          AI が記事を書いて、 AI が <b>あなたの代わりに各プラットフォームへ投稿</b>。
+          認証情報は保存せず、 ユーザーのログイン済みブラウザで安全に。
+        </div>
+      </div>
+      <div class="platforms-grid">
+        <div class="platform-card"><span class="platform-emoji">🐦</span><span class="platform-name">X (Twitter)</span><span class="platform-feat">投稿 ・ スレッド連投</span></div>
+        <div class="platform-card"><span class="platform-emoji">💼</span><span class="platform-name">LinkedIn</span><span class="platform-feat">プロフェッショナル投稿</span></div>
+        <div class="platform-card"><span class="platform-emoji">🧵</span><span class="platform-name">Threads</span><span class="platform-feat">カジュアル投稿</span></div>
+        <div class="platform-card"><span class="platform-emoji">📘</span><span class="platform-name">Facebook</span><span class="platform-feat">Page 投稿</span></div>
+        <div class="platform-card"><span class="platform-emoji">📸</span><span class="platform-name">Instagram</span><span class="platform-feat">画像 + caption</span></div>
+        <div class="platform-card"><span class="platform-emoji">🎵</span><span class="platform-name">TikTok</span><span class="platform-feat">Photo Mode</span></div>
+        <div class="platform-card"><span class="platform-emoji">📺</span><span class="platform-name">YouTube</span><span class="platform-feat">Community 投稿</span></div>
+        <div class="platform-card"><span class="platform-emoji">📝</span><span class="platform-name">note</span><span class="platform-feat">記事公開 + 編集</span></div>
+        <div class="platform-card platform-card-hl"><span class="platform-emoji">🌐</span><span class="platform-name">WordPress</span><span class="platform-feat">記事 ・ 固定ページ ・ <br>カテゴリ ・ アイキャッチ ・<br>予約投稿 ・ SEO meta</span></div>
+        <div class="platform-card platform-card-hl"><span class="platform-emoji">🛒</span><span class="platform-name">Shopify</span><span class="platform-feat">商品作成 ・ 編集</span></div>
+        <div class="platform-card"><span class="platform-emoji">🏪</span><span class="platform-name">BASE</span><span class="platform-feat">接続情報保存</span></div>
+      </div>
+      <div class="platforms-sub2">
+        + 🤖 <b>AI 検索モニター</b> (Perplexity / ChatGPT / Gemini) ・
+        🔍 <b>Search Console</b> (= 検索流入 ・ 順位分析) ・
+        📊 <b>GA4 流入解析</b> 内蔵
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1725,9 +1782,11 @@
       <details class="fq">
         <summary data-i18n="fq.q1">本当に集客できるんですか?</summary>
         <div class="fq-bd" data-i18n="fq.a1">
-          結果は保証しません。が、毎日継続して 5 種類の集客施策が AI から届きます。
-          「何やればいいか」が消えて、「実行するだけ」になる。これが価値です。
-          SEO 流入は 2-3 ヶ月で動き始めるのが標準。SNS は翌日から効果が見えます。
+          ✅ 毎日 5 種類の集客施策が AI から自動で届きます — 「何やればいいか」が消えて、
+          「実行するだけ」になる。 SNS は翌日から、 SEO 流入は 2-3 ヶ月で動き始めるのが標準。
+          <br><br>
+          💡 <b>無料プランで全機能を試せます</b> — クレカ登録なし、 解約はワンクリック。
+          AI が出した納品物の品質を実際に見てから判断してください。
         </div>
       </details>
 
@@ -1863,7 +1922,7 @@
     "vt.portfolio": "Portfolios",
 
     "st.s1": "Sites onboarded",
-    "st.s2": "Monthly deliverables",
+    "st.s2": "Deliverables (last 30d)",
     "st.s3": "To first deliverable",
     "st.s4": "Founder 100 left",
 
@@ -1999,7 +2058,7 @@
     "fq.eye": "FAQ",
     "fq.h2": "Common questions",
     "fq.q1": "Will it really get me traffic?",
-    "fq.a1": "We don't guarantee results. But every day you receive multiple growth actions from the AI. The ‘what do I do?' question disappears, leaving only ‘execute'. SEO traffic typically moves in 2-3 months. Social effects show next day.",
+    "fq.a1": "✅ Every day you receive 5 types of growth actions from the AI — the 'what do I do?' question disappears, leaving only 'execute'. Social effects show next day, SEO traffic typically starts moving in 2-3 months.<br><br>💡 <b>Free plan unlocks every feature</b> — no credit card, one-click cancellation. See the AI's actual output quality before committing.",
     "fq.q2": "Are integrations truly optional?",
     "fq.a2": "All outputs land as artifacts on your dashboard. Copy them into WordPress / X / Instagram manually. If you connect tools, the AI can post directly — but it's never required.",
     "fq.q3": "How is this different from ChatGPT or Claude?",
@@ -2047,8 +2106,22 @@
     });
   }
   _applyI18nAttrs();
-  // 言語復元
-  try{ var stored = localStorage.getItem('lpLang'); if(stored === 'en') setLang('en'); }catch(e){}
+  // 言語復元: 優先順位 = URL (= /lp-en) > localStorage > browser language
+  try {
+    var path = window.location.pathname || '';
+    var forcedEn = /\/lp-en\b|\/en\/?$/i.test(path);
+    var stored = localStorage.getItem('lpLang');
+    var browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+    var browserPrefersEn = browserLang && !browserLang.startsWith('ja');
+    if(forcedEn){
+      setLang('en');
+    } else if(stored === 'en'){
+      setLang('en');
+    } else if(!stored && browserPrefersEn){
+      // 初回訪問で 非日本語ブラウザ → English デフォルト
+      setLang('en');
+    }
+  } catch(e){}
 
   // ── URL submit ────────────────────────────────────────
   function handleUrlSubmit(ev){
@@ -2094,6 +2167,9 @@
 
   // ── Animated counter (stat-count) ───────────────────
   // data-target="100" data-suffix="+" → 0 → 100+ にアニメーション
+  // data-stat-key="sites_organized" がある element は /api/lp/stats から
+  // 取得した実数で data-target を上書きしてから animate する (= 嘘の placeholder
+  // を消して credibility を出すための hydration)
   (function(){
     var els = document.querySelectorAll('.stat-count');
     if(!els.length) return;
@@ -2101,6 +2177,26 @@
       // 1000 区切りでカンマ
       var s = (n >= 1000) ? n.toLocaleString('ja-JP') : String(n);
       return s + (suffix || '');
+    }
+    // Hydrate real numbers from /api/lp/stats (= サイト編成済 / 月間納品物 / Founder 残席)
+    function hydrate(cb){
+      var hasKey = Array.prototype.some.call(els, function(el){ return el.getAttribute('data-stat-key'); });
+      if(!hasKey){ cb(); return; }
+      fetch('/api/lp/stats').then(function(r){ return r.json(); }).then(function(data){
+        if(!data || data.error === 'fallback') { cb(); return; }
+        els.forEach(function(el){
+          var key = el.getAttribute('data-stat-key');
+          if(!key) return;
+          var v = null;
+          if(key === 'sites_organized')     v = data.sites_organized;
+          else if(key === 'artifacts_last_30d') v = data.artifacts_last_30d;
+          else if(key === 'founder_remaining')  v = data.founder && data.founder.remaining;
+          if(typeof v === 'number' && v > 0){
+            el.setAttribute('data-target', String(v));
+          }
+        });
+        cb();
+      }).catch(function(){ cb(); });
     }
     function animate(el){
       var target = parseInt(el.getAttribute('data-target') || '0', 10);
@@ -2118,17 +2214,19 @@
       }
       requestAnimationFrame(step);
     }
-    if(!('IntersectionObserver' in window)){
-      // フォールバック: 即時表示
-      els.forEach(function(el){ el.textContent = fmt(parseInt(el.getAttribute('data-target')||'0',10), el.getAttribute('data-suffix')||''); });
-      return;
-    }
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting){ animate(e.target); io.unobserve(e.target); }
-      });
-    }, { threshold: 0.5 });
-    els.forEach(function(el){ io.observe(el); });
+    hydrate(function(){
+      if(!('IntersectionObserver' in window)){
+        // フォールバック: 即時表示
+        els.forEach(function(el){ el.textContent = fmt(parseInt(el.getAttribute('data-target')||'0',10), el.getAttribute('data-suffix')||''); });
+        return;
+      }
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ animate(e.target); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.5 });
+      els.forEach(function(el){ io.observe(el); });
+    });
   })();
 
   // ── Scroll-trigger reveal animation ──────────────────

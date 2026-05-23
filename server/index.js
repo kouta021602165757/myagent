@@ -9975,15 +9975,25 @@ function _wpGetAdminUrl(user){
 }
 
 // 画像 URL → data URL (= REST API media upload 用)
+// 8MB を上限 (= SSE message size + base64 33% 膨張 を考慮)
+const _WP_FEATURED_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 async function _wpFetchImageAsDataUrl(imageUrl){
   if(!imageUrl) return null;
   if(imageUrl.startsWith('data:')){
+    // data URL 直接渡しの場合: ざっくり size check (= base64 string length × 0.75 ≈ bytes)
+    const approxBytes = (imageUrl.length - imageUrl.indexOf(',') - 1) * 0.75;
+    if(approxBytes > _WP_FEATURED_IMAGE_MAX_BYTES){
+      return { error: 'image_too_large', detail: 'アイキャッチ画像が 8MB を超えています。 小さい画像を使ってください。' };
+    }
     return { dataUrl: imageUrl, filename: 'featured.jpg' };
   }
   try {
     const res = await fetch(imageUrl);
     if(!res.ok) throw new Error('image fetch ' + res.status);
     const buf = Buffer.from(await res.arrayBuffer());
+    if(buf.length > _WP_FEATURED_IMAGE_MAX_BYTES){
+      return { error: 'image_too_large', detail: 'アイキャッチ画像が 8MB を超えています (' + Math.round(buf.length/1024/1024) + 'MB)。 圧縮するか、 小さい画像 URL を指定してください。' };
+    }
     const mimeType = res.headers.get('content-type') || 'image/jpeg';
     const extMatch = imageUrl.match(/\.(jpg|jpeg|png|gif|webp)(?:\?|$)/i);
     const filename = 'featured.' + (extMatch ? extMatch[1].toLowerCase() : 'jpg');
@@ -10061,9 +10071,13 @@ function _wpBuildRestEvalScript(op, fields){
       } catch(e){ return null; }
     }
 
+    const postType = fields.post_type === 'page' ? 'pages' : 'posts';
+    const isPage = postType === 'pages';
+
     // Resolve taxonomies (= name → ID、 既存があれば再利用、 なければ作成)
-    const catIds = await resolveTerms('categories', fields.categories || []);
-    const tagIds = await resolveTerms('tags', fields.tags || []);
+    // page は category/tag taxonomy を持たないので skip (= API エラー防止)
+    const catIds = (isPage || !Array.isArray(fields.categories)) ? null : await resolveTerms('categories', fields.categories);
+    const tagIds = (isPage || !Array.isArray(fields.tags))       ? null : await resolveTerms('tags', fields.tags);
 
     // Featured image (= data URL → media ID)
     let featuredId = null;
@@ -10072,26 +10086,28 @@ function _wpBuildRestEvalScript(op, fields){
     }
 
     // Build request body (only include defined fields)
+    // 「field が undefined = 省略 = 既存値保持」 「field が 空配列 / 空文字 = 明示的に clear」
+    // を区別するため、 typeof チェックで provided かどうか判定
     const body = {};
     if(typeof fields.title === 'string')   body.title = fields.title;
     if(typeof fields.content === 'string') body.content = fields.content;
-    if(typeof fields.slug === 'string' && fields.slug) body.slug = fields.slug;
-    if(typeof fields.excerpt === 'string' && fields.excerpt) body.excerpt = fields.excerpt;
-    if(catIds.length) body.categories = catIds;
-    if(tagIds.length) body.tags = tagIds;
-    if(featuredId)    body.featured_media = featuredId;
+    if(typeof fields.slug === 'string')    body.slug = fields.slug;
+    if(typeof fields.excerpt === 'string') body.excerpt = fields.excerpt;
+    // categories / tags は array で provided なら送信 (= 空配列なら clear)
+    if(Array.isArray(catIds)) body.categories = catIds;
+    if(Array.isArray(tagIds)) body.tags = tagIds;
+    if(featuredId)            body.featured_media = featuredId;
 
     // Status + scheduled date
+    // scheduled_at が未来 → 自動で future status
+    // 明示的 status (= publish / draft / pending / private) はそのまま通す
+    const VALID_STATUSES = ['publish','draft','pending','private','future'];
     if(fields.scheduled_at && new Date(fields.scheduled_at) > new Date()){
       body.status = 'future';
       body.date = fields.scheduled_at;
-    } else if(fields.status === 'publish'){
-      body.status = 'publish';
-    } else if(fields.status === 'draft'){
-      body.status = 'draft';
+    } else if(typeof fields.status === 'string' && VALID_STATUSES.indexOf(fields.status) >= 0){
+      body.status = fields.status;
     }
-
-    const postType = fields.post_type === 'page' ? 'pages' : 'posts';
     let endpoint, method;
     if(op === 'create'){
       endpoint = '/wp-json/wp/v2/' + postType;
@@ -10146,8 +10162,9 @@ function _wpBuildPostIdLookupScript(postUrl){
       const parts = u.pathname.split('/').filter(Boolean);
       const slug = parts[parts.length - 1];
       if(!slug) return { error: 'slug_not_extracted' };
+      // status=any で drafts / private posts も検索対象に (= admin nonce 必須)
       for(const tp of ['posts','pages']){
-        const r = await fetch('/wp-json/wp/v2/' + tp + '?slug=' + encodeURIComponent(slug), {
+        const r = await fetch('/wp-json/wp/v2/' + tp + '?slug=' + encodeURIComponent(slug) + '&status=any', {
           headers: { 'X-WP-Nonce': nonce }, credentials: 'same-origin'
         });
         const arr = await r.json();
@@ -10155,7 +10172,7 @@ function _wpBuildPostIdLookupScript(postUrl){
           return { ok: true, id: arr[0].id, post_type: tp === 'pages' ? 'page' : 'post' };
         }
       }
-      return { error: 'post_not_found', detail: 'slug=' + slug + ' で記事が見つかりません' };
+      return { error: 'post_not_found', detail: 'slug=' + slug + ' で記事が見つかりません (draft 含む)' };
     } catch(e){
       return { error: 'lookup_failed', detail: String(e && e.message || e) };
     }
@@ -10188,7 +10205,9 @@ async function executePublishWordPressTool(user, input){
   // 1) wp-admin Dashboard に行って nonce を取得 (post-new ではなく Dashboard の方が軽い)
   let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
-  await _sleep(3500);
+  // ext_wait_for で wpadminbar 出現を待つ (= 固定 sleep より確実)
+  // Plugin 多い site でも nonce が設定されるまで待てる。 出現しない (= login 画面 or タイムアウト) なら次の check で検出
+  await executeExtensionTool(user, 'ext_wait_for', { selector: '#wpadminbar', timeout_ms: 12000 });
 
   // 2) ログイン check
   r = await executeExtensionTool(user, 'ext_read_page', {});
@@ -10323,10 +10342,10 @@ async function executeEditWordPressTool(user, input){
   const adminUrl = _wpGetAdminUrl(user);
   if(!adminUrl) return { error: 'not_connected', detail: 'WordPress サイトを先に接続してください。' };
 
-  // 1) wp-admin で nonce 確保
+  // 1) wp-admin で nonce 確保 — wpadminbar 出現を待つ
   let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
-  await _sleep(3500);
+  await executeExtensionTool(user, 'ext_wait_for', { selector: '#wpadminbar', timeout_ms: 12000 });
   r = await executeExtensionTool(user, 'ext_read_page', {});
   if(r && /wp-login\.php/.test(String(r.url||''))){
     return { error: 'not_logged_in', detail: 'WordPress 管理画面にログインしてください: ' + adminUrl };

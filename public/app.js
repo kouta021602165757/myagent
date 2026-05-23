@@ -7186,7 +7186,9 @@ function _homeNewUserHTML(nameStr){
     + '<div class="hm-cta-row">'
     +   '<button class="hm-cta-primary" onclick="openNewAgent()">🤖 '+esc(L('最初の AI を雇う','Hire your first AI'))+'</button>'
     +   '<button class="hm-cta-sub" onclick="openTemplate()">📋 '+esc(L('テンプレートから選ぶ','Browse templates'))+'</button>'
+    /* Store hidden 2026-05-24 — 一旦非表示
     +   '<button class="hm-cta-sub" onclick="openAgentStore()">🏪 '+esc(L('Agent Store を見る','Visit Agent Store'))+'</button>'
+    */
     + '</div>';
 }
 

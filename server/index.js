@@ -12995,7 +12995,7 @@ async function serveSitemapXml(res){
     {loc: APP_URL + '/',           changefreq:'weekly',  priority:'1.0', lastmod: now},
     {loc: APP_URL + '/lp.html',    changefreq:'weekly',  priority:'1.0', lastmod: now},
     {loc: APP_URL + '/lp-en',      changefreq:'weekly',  priority:'1.0', lastmod: now},
-    {loc: APP_URL + '/store',      changefreq:'daily',   priority:'0.9', lastmod: now},
+    // /store hidden 2026-05-24 (一旦非表示)
     {loc: APP_URL + '/changelog',  changefreq:'weekly',  priority:'0.7', lastmod: now},
     {loc: APP_URL + '/auth.html',  changefreq:'monthly', priority:'0.5', lastmod: now},
     {loc: APP_URL + '/terms.html', changefreq:'yearly',  priority:'0.3', lastmod: now},
@@ -25093,7 +25093,11 @@ const server=http.createServer(async(req,res)=>{
   let resolved = pathname;
   if(resolved === '/') resolved = 'lp.html';
   else if(resolved === '/lp-en' || resolved === '/lp-en/' || resolved === '/en' || resolved === '/en/') resolved = 'lp.html';
-  else if(resolved === '/store' || resolved === '/store/') resolved = 'store.html';
+  // /store hidden 2026-05-24 (一旦非表示) — redirect to home
+  else if(resolved === '/store' || resolved === '/store/' || resolved === '/store.html'){
+    res.writeHead(302, { Location: '/' });
+    return res.end();
+  }
   else if(resolved === '/changelog' || resolved === '/changelog/') resolved = 'changelog.html';
   let fp=path.join(PUBLIC_DIR, resolved);
   if(!fp.startsWith(PUBLIC_DIR)){res.writeHead(403);return res.end();}

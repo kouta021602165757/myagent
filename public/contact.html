@@ -7,8 +7,8 @@
 <meta name="description" content="MY AI AGENT へのお問い合わせフォーム。サポート・機能要望・出店相談など。">
 <style>
 :root{
-  --peach:#c0ff5c;--peach-dark:#a3e635;--cream:#fdf8f3;--cream2:#faf3eb;
-  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;--wire:rgba(180,120,80,.18);
+  --peach:#c0ff5c;--peach-dark:#a3e635;--cream:#13131a;--cream2:#18181f;
+  --text:#fafafa;--text2:#a1a1aa;--text3:#71717a;--wire:rgba(180,120,80,.18);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Hiragino Sans','Noto Sans JP','Helvetica Neue',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;line-height:1.7;}
@@ -21,7 +21,7 @@ label{display:block;font-size:12px;font-weight:800;color:var(--text2);margin-bot
 label .req{color:#dc2626;font-weight:800;margin-left:3px;}
 input,textarea,select{
   width:100%;padding:11px 14px;border:1px solid rgba(180,120,80,.25);border-radius:11px;
-  background:#fff;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;
+  background:var(--bg-card,#18181f);font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;
 }
 input:focus,textarea:focus,select:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(192,255,92,.1);}
 textarea{min-height:160px;line-height:1.7;resize:vertical;}

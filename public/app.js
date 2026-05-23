@@ -2404,7 +2404,7 @@ function showSheetsOnboardingBanner(){
   var banner = document.createElement('div');
   banner.id = 'sheets-onboarding-banner';
   banner.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:180;max-width:340px;'
-    + 'background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(192,255,92,.4);'
+    + 'background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.4);'
     + 'border-radius:14px;padding:16px 18px 14px;box-shadow:0 12px 32px rgba(180,100,40,.18);'
     + 'font-size:13px;color:var(--text);';
   var dismissJS = "localStorage.setItem('hint:sheets-v1','1');document.getElementById('sheets-onboarding-banner').remove()";
@@ -7626,7 +7626,7 @@ async function openAgent(id){
   if(!ag._is_joined_group){
     var taskLabel = taskN > 0 ? ('📋 タスク '+taskN) : '📋 タスク';
     var taskStyle = taskN > 0
-      ? 'font-size:10.5px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid #fed7aa;padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em'
+      ? 'font-size:10.5px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.24);padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em'
       : 'font-size:10px;font-weight:700;color:var(--text3);background:#fff;border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.7';
     tasksPill = '<button onclick="event.stopPropagation(); _openTasksPopout(this, \''+ag.id+'\')" title="'+L('このエージェントのタスク一覧','Tasks for this agent')+'" style="'+taskStyle+'">'+taskLabel+'</button>';
   }
@@ -8503,7 +8503,7 @@ function renderMsgs(ag, forceScrollBottom){
   var _activeNudge = (Array.isArray(ag.proactive_nudges) ? ag.proactive_nudges : []).find(function(n){return n && !n.dismissed && !n.acted;});
   var _nudgeHTML = '';
   if(_activeNudge){
-    var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+    var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16))' };
     _nudgeHTML = '<div class="nudge-card" style="margin:14px auto;max-width:760px;background:'+accent.soft+';border:1px solid '+accent.color+';border-radius:14px;padding:14px 18px;font-size:13px;line-height:1.65;animation:fadeUp .35s ease">'
       + '<div style="display:flex;align-items:flex-start;gap:11px">'
       +   '<div style="width:30px;height:30px;border-radius:9px;background:'+accent.grad+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">💡</div>'
@@ -8580,7 +8580,7 @@ function renderMsgs(ag, forceScrollBottom){
       // Rolling-summary message: folded card with "全履歴を見る" trigger.
       var sumCount = m._summary_count || 0;
       var preview = (m.content||'').slice(0, 220);
-      return '<div class="sum-row" style="margin:14px auto;max-width:760px;background:linear-gradient(135deg,#fff7ee,#fed7aa22);border:1px dashed rgba(192,255,92,.4);border-radius:13px;padding:12px 16px;font-size:12.5px;color:var(--text2);line-height:1.65">'
+      return '<div class="sum-row" style="margin:14px auto;max-width:760px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px dashed rgba(192,255,92,.4);border-radius:13px;padding:12px 16px;font-size:12.5px;color:var(--text2);line-height:1.65">'
         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:800;color:var(--peach-dark)">'
         +   '📋 '+L('これまでの経緯','Conversation so far')
         +   '<span style="font-weight:600;color:var(--text3);font-size:11px">· '+sumCount+L(' 件を折りたたみ',' turns folded')+'</span>'
@@ -9021,7 +9021,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // the user immediately understands the bubble was cut by their own action
   // (vs. an error). The Continue button under it explains the recovery path.
   if(!isU && raw && raw.was_stopped && bodyMarkup){
-    bodyMarkup += '<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:#fff7ee;border:1px solid #fed7aa;color:var(--peach-dark);padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.01em">⏸ '+(isJa?'ここで停止しました':'Stopped here')+'</div>';
+    bodyMarkup += '<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(192,255,92,.06);border:1px solid rgba(192,255,92,.24);color:var(--peach-dark);padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.01em">⏸ '+(isJa?'ここで停止しました':'Stopped here')+'</div>';
   }
   // Streaming placeholder: show the live "生成中…" indicator INSIDE the .m-body
   // so the bubble has a visible body even before any text arrives. Without
@@ -9416,11 +9416,11 @@ async function _showJoinWelcomeBanner(agId){
     if(existing) existing.remove();
     var card = document.createElement('div');
     card.id = 'joinWelcomeCard';
-    card.style.cssText = 'margin:14px auto;max-width:760px;background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:14px;padding:16px 20px;font-size:13.5px;line-height:1.7;animation:fadeUp .35s ease;position:relative';
+    card.style.cssText = 'margin:14px auto;max-width:760px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.24);border-radius:14px;padding:16px 20px;font-size:13.5px;line-height:1.7;animation:fadeUp .35s ease;position:relative';
     card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:11px">'
       + '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">👋</div>'
       + '<div style="flex:1;min-width:0">'
-      +   '<div style="font-size:11px;font-weight:800;color:#7c2d12;letter-spacing:.04em;margin-bottom:4px;text-transform:uppercase">ホストからのウェルカムメッセージ</div>'
+      +   '<div style="font-size:11px;font-weight:800;color:#c0ff5c;letter-spacing:.04em;margin-bottom:4px;text-transform:uppercase">ホストからのウェルカムメッセージ</div>'
       +   '<div style="color:var(--text);white-space:pre-wrap">'+esc(welcome)+'</div>'
       + '</div>'
       + '<button onclick="this.closest(\'#joinWelcomeCard\').remove();localStorage.setItem(\''+esc(seenKey)+'\',\'1\');" style="background:transparent;border:0;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:4px;flex-shrink:0">×</button>'
@@ -13077,10 +13077,10 @@ async function openAutomationsGallery(){
       return;
     }
     grid.innerHTML = r.templates.map(function(t){
-      var hints = (t.suggested_integrations||[]).map(function(k){ return '<span style="background:#fdf1e3;color:#9a3412;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px">'+(k==='slack'?'📣 Slack':k==='discord'?'💬 Discord':k)+'</span>'; }).join(' ');
+      var hints = (t.suggested_integrations||[]).map(function(k){ return '<span style="background:rgba(192,255,92,.06);color:#c0ff5c;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px">'+(k==='slack'?'📣 Slack':k==='discord'?'💬 Discord':k)+'</span>'; }).join(' ');
       var schedPill = t.has_schedule ? '<span style="background:rgba(245,158,11,.15);color:#b45309;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px">⏰ '+esc(t.schedule_summary||'scheduled')+'</span>' : '';
       return '<div style="display:flex;flex-direction:column;gap:10px;padding:16px;background:#fff;border:1px solid var(--wire2);border-radius:12px;transition:transform .12s ease,box-shadow .12s ease" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 12px 28px rgba(192,255,92,.18)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
-        '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#fff3e6,#ffe5cc);display:flex;align-items:center;justify-content:center;font-size:20px">'+esc(t.icon||'⚙️')+'</div><div style="font-weight:800;font-size:13.5px;line-height:1.3">'+esc(t.title)+'</div></div>'+
+        '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,rgba(192,255,92,.05),rgba(192,255,92,.10));display:flex;align-items:center;justify-content:center;font-size:20px">'+esc(t.icon||'⚙️')+'</div><div style="font-weight:800;font-size:13.5px;line-height:1.3">'+esc(t.title)+'</div></div>'+
         '<div style="font-size:11.5px;color:var(--text2);line-height:1.55;min-height:48px">'+esc(t.description||'')+'</div>'+
         ((schedPill||hints)?'<div style="display:flex;flex-wrap:wrap;gap:5px">'+schedPill+' '+hints+'</div>':'')+
         '<button onclick="_installTemplate(\''+esc(t.id)+'\',this)" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🚀 '+(isJa?'導入する':'Install')+'</button>'+
@@ -13241,7 +13241,7 @@ async function openTeamGallery(){
         : '<button onclick="event.stopPropagation();activateTeam(\''+esc(t.id)+'\',\''+esc(t.name)+'\',\''+esc(t.cover_emoji)+'\')" style="width:100%;background:var(--peach);color:#0a0a0e;padding:10px;border:0;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)">▶ 起動 (無料)</button>';
       return ''
         + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .14s" onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'\';this.style.transform=\'\'">'
-        + '<div style="height:64px;border-radius:10px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:30px">'+esc(t.cover_emoji||'🎯')+'</div>'
+        + '<div style="height:64px;border-radius:10px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16));display:flex;align-items:center;justify-content:center;font-size:30px">'+esc(t.cover_emoji||'🎯')+'</div>'
         + '<div>'+priceTag+'</div>'
         + '<div style="font-size:14px;font-weight:900;letter-spacing:-.005em">'+esc(t.name)+'</div>'
         + '<div style="font-size:11.5px;color:var(--text2);line-height:1.55;flex:1">'+esc(t.description||'')+'</div>'
@@ -13446,7 +13446,7 @@ function openTeamMembersPanel(teamId){
         : '';
       return ''
         + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:13px;padding:14px 14px 12px;display:flex;gap:12px;align-items:flex-start">'
-        +   '<div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#fff7ee,#fed7aa);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+_avHTML(m.avatar||'🤖')+'</div>'
+        +   '<div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+_avHTML(m.avatar||'🤖')+'</div>'
         +   '<div style="flex:1;min-width:0">'
         +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap">'
         +       '<div style="font-size:14px;font-weight:900;letter-spacing:-.005em">'+esc(m.name||'')+'</div>'
@@ -13823,9 +13823,9 @@ function _storev2RenderCard(m, opts){
       sales:    'linear-gradient(135deg,#dbeafe,#3b82f6);color:#fff',
       marketing:'linear-gradient(135deg,#fce7f3,#ec4899);color:#fff',
       research: 'linear-gradient(135deg,#ede9fe,#8b5cf6);color:#fff',
-      writing:  'linear-gradient(135deg,#fff7ee,#fed7aa)',
+      writing:  'linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16))',
       ops:      'linear-gradient(135deg,#d1fae5,#10b981);color:#fff',
-      other:    'linear-gradient(135deg,#fff7ee,#fed7aa)',
+      other:    'linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16))',
     };
     coverStyle = ' style="background:'+(grads[cat]||grads.other)+'"';
   }
@@ -15729,8 +15729,8 @@ function _intgOpen(id){
       +   _zapTplCard('🗂️', 'Airtable', 'airtable', 'DB に行追加')
       +   _zapTplCard('🚀', 'HubSpot CRM', 'hubspot', 'リード自動追加')
       + '</div>'
-      + '<div style="background:#fff7ee;border:1px solid #fed7aa;border-radius:9px;padding:11px 13px;font-size:11.5px;color:#9a3412;line-height:1.55;margin-bottom:14px">'
-      +   '<b style="color:#7c2d12">🐦 X / Threads / IG はなぜ Buffer 経由?</b><br>'
+      + '<div style="background:rgba(192,255,92,.06);border:1px solid rgba(192,255,92,.24);border-radius:9px;padding:11px 13px;font-size:11.5px;color:#c0ff5c;line-height:1.55;margin-bottom:14px">'
+      +   '<b style="color:#c0ff5c">🐦 X / Threads / IG はなぜ Buffer 経由?</b><br>'
       +   '<span style="font-size:11px">X は 2023 年 8 月に Zapier 直接連携を廃止 (API 有料化の影響)。Threads / Instagram も Meta が API 制限中。<b>Buffer</b> は X / Threads / IG / FB / LinkedIn / Pinterest / TikTok と直接契約済なので、Buffer 無料登録 → MY AI Agent → Buffer → 各 SNS の経路で動きます。<a href="https://buffer.com/" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Buffer 無料登録 →</a> (3 SNS / 10 投稿先まで無料)</span>'
       + '</div>'
       + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;padding-left:6px;border-left:2px solid var(--wire2)">クリックすると Zapier の準備済みテンプレート一覧が新タブで開きます。Zap を公開後、画面に出る Catch Hook URL を ↓ 下のフォームに貼り付けてください。</div>'
@@ -15787,9 +15787,9 @@ function _intgOpen(id){
     // Buffer-specific setup walkthrough — when admin hasn't set
     // BUFFER_OAUTH_CLIENT_ID/SECRET yet, give a clear step-by-step.
     body =
-      '<div style="background:#fff7ee;border:1px solid #fed7aa;border-radius:10px;padding:13px 15px;font-size:12.5px;line-height:1.65;color:#7c2d12;margin-bottom:14px">'
-      +   '<b style="color:#7c2d12;font-size:13.5px">📦 Buffer とは?</b><br>'
-      +   '<span style="color:#9a3412">1 アカウントで X / Threads / Instagram / LinkedIn / FB / Pinterest / TikTok の 7 SNS に投稿可能なハブサービス。<b>無料プラン</b>で 3 SNS / 10 投稿先まで使えます。Buffer に AI から投稿させたいので、まず Buffer 側で「アプリ」を作ってその鍵をこのアプリに渡す必要があります。</span>'
+      '<div style="background:rgba(192,255,92,.06);border:1px solid rgba(192,255,92,.24);border-radius:10px;padding:13px 15px;font-size:12.5px;line-height:1.65;color:#c0ff5c;margin-bottom:14px">'
+      +   '<b style="color:#c0ff5c;font-size:13.5px">📦 Buffer とは?</b><br>'
+      +   '<span style="color:#c0ff5c">1 アカウントで X / Threads / Instagram / LinkedIn / FB / Pinterest / TikTok の 7 SNS に投稿可能なハブサービス。<b>無料プラン</b>で 3 SNS / 10 投稿先まで使えます。Buffer に AI から投稿させたいので、まず Buffer 側で「アプリ」を作ってその鍵をこのアプリに渡す必要があります。</span>'
       + '</div>'
       + '<div style="font-size:12.5px;font-weight:900;color:var(--text);margin:14px 0 8px;letter-spacing:.02em">🛠 接続手順 (所要 5-10 分)</div>'
       + '<ol style="font-size:12.5px;color:var(--text);line-height:1.75;padding-left:24px;margin:0 0 14px">'
@@ -15820,8 +15820,8 @@ function _intgOpen(id){
       +   '・ <a href="https://buffer.com/developers/api" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Buffer API ドキュメント →</a>'
       + '</div>'
       // ── 代替案: 設定なしで使いたい人向け ──
-      + '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#9a3412">'
-      +   '<b style="color:#7c2d12">⚡ Buffer 登録なしで今すぐ投稿したい?</b><br>'
+      + '<div style="background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.24);border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#c0ff5c">'
+      +   '<b style="color:#c0ff5c">⚡ Buffer 登録なしで今すぐ投稿したい?</b><br>'
       +   '<b>share_to_sns</b> ツールなら **設定ゼロ** で X / Threads / LinkedIn / FB / Reddit / Bluesky 等に投稿できます (intent URL ボタンが出るので 1 タップで投稿)。'
       +   '<button onclick="_intgClose()" style="display:block;margin-top:10px;background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">了解 (チャットで「X に投稿して」と言うだけで OK)</button>'
       + '</div>';
@@ -15834,8 +15834,8 @@ function _intgOpen(id){
       + '</div>'
       // Pragmatic alternative: Zapier covers basically all of these services
       // already. Point users to it so they don't bounce off waiting for OAuth.
-      + '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#9a3412">'
-      +   '<b style="color:#7c2d12">⚡ 今すぐ使いたいなら Zapier 経由がおすすめ</b><br>'
+      + '<div style="background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.24);border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#c0ff5c">'
+      +   '<b style="color:#c0ff5c">⚡ 今すぐ使いたいなら Zapier 経由がおすすめ</b><br>'
       +   esc(s.name) + ' は <b>Zapier</b> 経由で今すぐ接続できます。Zapier 側で OAuth するので、こちらの開発者登録は不要。'
       +   '<button onclick="_intgClose();setTimeout(function(){_intgOpen(\'zapier\')},150)" style="display:block;margin-top:10px;background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">⚡ Zapier カードを開く →</button>'
       + '</div>';
@@ -17509,7 +17509,7 @@ function _notesClose(){
 async function openAgentProfile(agId){
   var ag = (agents||[]).find(function(a){return a.id===agId;});
   if(!ag) return;
-  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16))' };
   // Pull live profile + evolution data in parallel
   var data, evo;
   try {
@@ -17532,7 +17532,7 @@ function _renderAgentProfile(){
   var ag = (agents||[]).find(function(a){return a.id===st.agId;});
   if(!ag) return;
   var d = st.data || {};
-  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,#fff7ee,#fed7aa)' };
+  var accent = _agentAccent(ag) || { color:'var(--peach-dark)', soft:'rgba(192,255,92,.08)', grad:'linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16))' };
   var memCount = (d.memories||[]).length;
   var kpiCount = (d.kpis||[]).length;
   var pbCount  = (d.playbook||[]).length;
@@ -17777,7 +17777,7 @@ function _agProfRoutines(items){
 
 // 🌱 Evolution log — shows total tool uses, mastered skills, and milestone history.
 function _agProfEvolution(d){
-  var hint = '<div style="background:linear-gradient(135deg,#fff7ee,#ffe4c4);border:1px solid #fed7aa;border-radius:10px;padding:12px 15px;margin-bottom:14px;font-size:12.5px;color:#7c2d12;line-height:1.6">'
+  var hint = '<div style="background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.24);border-radius:10px;padding:12px 15px;margin-bottom:14px;font-size:12.5px;color:#c0ff5c;line-height:1.6">'
     + '<b>🌱 進化システム</b> — このエージェントがツールを使うたびに経験値が貯まり、 <b>1 回 = 入門</b>、<b>5 回 = 習熟</b>、<b>20 回 = 達人</b> のマイルストーンを達成します。使うほど "あなた専属の AI" に進化していきます。'
     + '</div>';
   var total = d.total_uses || 0;
@@ -17801,8 +17801,8 @@ function _agProfEvolution(d){
     ? '<div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px">🎓 習得済スキル</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:18px">'
       + mastered.map(function(s){
-          var tierBg = s.tier === '達人' ? 'linear-gradient(135deg,#fff7ee,#fed7aa)' : s.tier === '習熟' ? '#ecfdf5' : '#fff';
-          var tierColor = s.tier === '達人' ? '#7c2d12' : s.tier === '習熟' ? '#065f46' : 'var(--text2)';
+          var tierBg = s.tier === '達人' ? 'linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16))' : s.tier === '習熟' ? '#ecfdf5' : '#fff';
+          var tierColor = s.tier === '達人' ? '#c0ff5c' : s.tier === '習熟' ? '#065f46' : 'var(--text2)';
           var tierEmoji = s.tier === '達人' ? '🌳' : s.tier === '習熟' ? '🌿' : '🌱';
           return '<div style="background:'+tierBg+';border:1px solid var(--wire2);border-radius:10px;padding:10px 12px">'
             + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px">'+tierEmoji+'</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:'+tierColor+'">'+esc(s.label)+'</div><div style="font-size:10px;color:var(--text3);margin-top:1px">'+esc(s.tier)+' · '+s.last_count+' 回使用</div></div></div>'
@@ -18577,7 +18577,7 @@ function _mentionRender(){
     if(it.isAll){
       av = '<div class="mr-av" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:13px">🤝</div>';
     } else if(it.isTeamAI){
-      av = '<div class="mr-av" style="background:linear-gradient(135deg,#fff7ee,#fed7aa);font-size:14px">'+esc(it.avatar||'🤖')+'</div>';
+      av = '<div class="mr-av" style="background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16));font-size:14px">'+esc(it.avatar||'🤖')+'</div>';
     } else if(it.isAI){
       av = '<div class="mr-av">🤖</div>';
     } else {
@@ -19095,7 +19095,7 @@ async function openCreatorProfile(handle){
       ? '<span class="mc-verified" style="width:18px;height:18px;font-size:11px;margin-left:6px" title="検証済みクリエイター">✓</span>'
       : '';
     body.innerHTML = ''
-      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(192,255,92,.2);border-radius:14px;margin-bottom:18px">'
+      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.2);border-radius:14px;margin-bottom:18px">'
         + '<div style="width:54px;height:54px;border-radius:14px;background:var(--peach);color:#0a0a0e;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900">'+esc((c.handle||'@?').charAt(1).toUpperCase())+'</div>'
         + '<div style="flex:1;min-width:0">'
           + '<div style="font-size:18px;font-weight:900;color:var(--text);display:flex;align-items:center">'+esc(c.handle||'')+verifiedSpan+'</div>'

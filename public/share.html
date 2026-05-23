@@ -6,10 +6,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{
-  --cream:#fdf8f3; --cream2:#faf3eb; --cream3:#f5ebe0; --cream4:#ede0d4;
+  --cream:#13131a; --cream2:#18181f; --cream3:#1d1d26; --cream4:#ede0d4;
   --wire:rgba(180,120,80,.1); --wire2:rgba(180,120,80,.2); --wire3:rgba(180,120,80,.3);
-  --peach:#fb923c; --peach-dark:#ea580c;
-  --text:#2d1a0e; --text2:#6b4226; --text3:#9a6a4a;
+  --peach:#c0ff5c; --peach-dark:#a3e635;
+  --text:#fafafa; --text2:#a1a1aa; --text3:#71717a;
   --green:#10b981; --rose:#ef4444; --blue:#3b82f6;
   --sans:'Inter','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',sans-serif;
 }
@@ -20,16 +20,16 @@ html,body{font-family:var(--sans);background:var(--cream);color:var(--text);min-
 
 .brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;text-decoration:none;color:var(--text);}
 .brand .bars{display:flex;gap:3px;align-items:flex-end;}
-.brand .bar{width:4px;background:#fb923c;border-radius:2px;}
+.brand .bar{width:4px;background:#c0ff5c;border-radius:2px;}
 .brand .bar1{height:18px;}.brand .bar2{height:12px;opacity:.65;}.brand .bar3{height:7px;opacity:.35;}
 .brand-name{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--text);}
 
 .lang-toggle{margin-bottom:20px;font-size:11px;color:var(--text3);}
-.lang-toggle a{color:var(--peach-dark);text-decoration:none;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid var(--wire2);background:#fff;}
+.lang-toggle a{color:var(--peach-dark);text-decoration:none;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid var(--wire2);background:var(--bg-card,#18181f);}
 .lang-toggle a:hover{background:var(--cream3);}
 
 .card{
-  width:100%;max-width:560px;background:#fff;border:1px solid var(--wire2);border-radius:20px;
+  width:100%;max-width:560px;background:var(--bg-card,#18181f);border:1px solid var(--wire2);border-radius:20px;
   padding:32px 28px 28px;box-shadow:0 12px 30px rgba(0,0,0,.08);text-align:center;
 }
 
@@ -47,7 +47,7 @@ html,body{font-family:var(--sans);background:var(--cream);color:var(--text);min-
 .owner a{color:inherit;text-decoration:underline;text-underline-offset:2px;}
 .founder-badge{
   display:inline-flex;align-items:center;gap:3px;
-  background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;
+  background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;
   font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;
   letter-spacing:.02em;margin:0 0 18px;box-shadow:0 4px 12px rgba(234,88,12,.3);
   vertical-align:1px;

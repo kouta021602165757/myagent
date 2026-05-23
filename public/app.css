@@ -3757,6 +3757,180 @@ input,textarea{font-family:var(--sans);}
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   ── SNS 接続 UI (= 設定 tab 内の専用カード) ──
+   X (V1) + 近日対応 SNS の表示。
+   ══════════════════════════════════════════════════════════════════ */
+.sd-sns-warn{
+  background:#fff7ed; border:1px solid #fb923c;
+  color:#9a3412; font-size:12.5px; font-weight:600;
+  padding:10px 14px; border-radius:9px; margin-bottom:12px;
+  line-height:1.55;
+}
+.sd-sns-warn a{color:#ea580c; font-weight:800; text-decoration:underline}
+
+.sd-sns-row{
+  display:flex; align-items:center; gap:14px;
+  background:var(--cream);
+  border:1px solid var(--wire);
+  border-left:3px solid var(--row-c, #000);
+  border-radius:10px;
+  padding:12px 14px;
+}
+.sd-sns-ic-x{
+  width:44px; height:44px; border-radius:12px;
+  background:#000; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:900; line-height:1;
+  flex-shrink:0;
+}
+.sd-sns-badge{
+  display:inline-block;
+  font-size:9.5px; font-weight:800;
+  padding:2px 8px; border-radius:99px;
+  margin-left:6px;
+  letter-spacing:.04em;
+}
+.sd-sns-badge.on{background:rgba(22,163,74,.14); color:#16a34a; border:1px solid rgba(22,163,74,.28)}
+.sd-sns-badge.off{background:rgba(0,0,0,.04); color:var(--text3); border:1px solid var(--wire2)}
+
+.sd-sns-soon{
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  margin-top:10px; padding:9px 12px;
+  background:rgba(0,0,0,.02); border-radius:8px;
+  font-size:11px; font-weight:700; color:var(--text3);
+}
+.sd-sns-soon-label{font-size:10px; color:var(--text3); margin-right:4px}
+.sd-sns-soon span{
+  padding:3px 9px; background:#fff; border:1px solid var(--wire2);
+  border-radius:99px; font-size:10.5px; color:var(--text2); font-weight:700;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ── X 投稿 confirm モーダル (actual-like preview) ──
+   実際の X 投稿に近い見た目で確認させる。
+   ══════════════════════════════════════════════════════════════════ */
+.xp-overlay{
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,.65);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px; overflow-y:auto;
+  animation:xp-fade .2s ease-out;
+}
+@keyframes xp-fade{from{opacity:0}to{opacity:1}}
+.xp-card{
+  background:#fff; border-radius:16px;
+  max-width:560px; width:100%; max-height:90vh; overflow-y:auto;
+  position:relative;
+  box-shadow:0 20px 50px rgba(0,0,0,.4);
+  animation:xp-slide .25s ease-out;
+}
+@keyframes xp-slide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.xp-close{
+  position:absolute; top:14px; right:14px;
+  width:32px; height:32px; border-radius:50%;
+  background:rgba(0,0,0,.06); border:0;
+  font-size:22px; line-height:1; color:var(--text3);
+  cursor:pointer;
+  z-index:2;
+  transition:background .15s;
+}
+.xp-close:hover{background:rgba(0,0,0,.12); color:var(--text)}
+
+.xp-h{padding:22px 24px 14px}
+.xp-h-tag{
+  display:inline-flex; align-items:center; gap:7px;
+  font-size:11px; font-weight:800;
+  background:#000; color:#fff;
+  padding:5px 12px; border-radius:99px;
+  letter-spacing:.04em;
+  margin-bottom:10px;
+}
+.xp-h-ic{font-size:14px; font-weight:900}
+.xp-h-sub{font-size:13px; color:var(--text2); font-weight:600}
+
+/* Tweet preview (= 実際の X 投稿風) */
+.xp-preview{
+  background:#fff;
+  border-top:1px solid rgba(0,0,0,.08);
+  border-bottom:1px solid rgba(0,0,0,.08);
+  margin:0 0 14px;
+}
+.xp-tweet{
+  display:flex; gap:12px;
+  padding:14px 20px;
+  border-bottom:1px solid rgba(0,0,0,.06);
+  position:relative;
+}
+.xp-tweet:last-child{border-bottom:0}
+.xp-tw-l{position:relative; flex-shrink:0}
+.xp-tw-av{
+  width:44px; height:44px; border-radius:50%;
+  background:linear-gradient(135deg, #1d9bf0, #0084d4);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:18px; font-weight:900;
+  overflow:hidden;
+}
+.xp-tw-av img{width:100%; height:100%; object-fit:cover}
+.xp-tw-line{
+  position:absolute; left:50%; top:50px; bottom:-14px;
+  width:2px; background:rgba(0,0,0,.1); transform:translateX(-50%);
+}
+.xp-tw-r{flex:1; min-width:0}
+.xp-tw-h{display:flex; align-items:center; gap:6px; margin-bottom:3px}
+.xp-tw-nm{font-size:14.5px; font-weight:800; color:#0f1419; letter-spacing:-.005em}
+.xp-tw-uh{font-size:14px; color:#536471; font-weight:600}
+.xp-tw-tx{
+  font-size:14.5px; line-height:1.55; color:#0f1419;
+  word-break:break-word; white-space:pre-wrap;
+}
+.xp-tw-foot{
+  display:flex; gap:30px; margin-top:10px;
+  font-size:12px; color:#536471; font-weight:600;
+}
+
+.xp-meta{
+  padding:0 24px 14px;
+  display:flex; gap:14px; flex-wrap:wrap;
+  font-size:11.5px; color:var(--text2); font-weight:700;
+}
+.xp-meta b{color:var(--text); font-weight:800}
+
+.xp-actions{
+  display:flex; gap:10px; padding:16px 24px 22px;
+  border-top:1px solid rgba(0,0,0,.06);
+}
+.xp-cancel{
+  flex:1;
+  background:#fff; border:1px solid var(--wire2); color:var(--text2);
+  padding:11px 18px; border-radius:99px;
+  font-family:inherit; font-size:13.5px; font-weight:800;
+  cursor:pointer;
+  transition:background .15s, border-color .15s;
+}
+.xp-cancel:hover{background:var(--cream); border-color:var(--wire3)}
+.xp-post{
+  flex:2;
+  background:#000; color:#fff; border:0;
+  padding:11px 18px; border-radius:99px;
+  font-family:inherit; font-size:13.5px; font-weight:800;
+  cursor:pointer;
+  transition:background .15s, transform .12s;
+}
+.xp-post:hover:not(:disabled){background:#1d1d1d; transform:translateY(-1px)}
+.xp-post:disabled{opacity:.7; cursor:wait}
+
+@media (max-width:560px){
+  .xp-card{max-width:none; border-radius:14px}
+  .xp-h{padding:18px 18px 10px}
+  .xp-preview{margin-bottom:10px}
+  .xp-tweet{padding:12px 16px}
+  .xp-tw-av{width:38px; height:38px; font-size:15px}
+  .xp-tw-nm, .xp-tw-tx{font-size:13.5px}
+  .xp-tw-foot{gap:18px; font-size:11px}
+  .xp-actions{padding:14px 18px 18px}
+}
+
+/* ══════════════════════════════════════════════════════════════════
    ── Tab 5: ⚙ 設定 (= 共有 / 会話共有 / メモ / 編集 / 新規 / KPI 等) ──
    各行は左色アクセント + アイコン + タイトル + 説明 + アクション button。
    グループに分けて視認性を上げる: 共有 / 運用 / チーム-連携 / 危険ゾーン。

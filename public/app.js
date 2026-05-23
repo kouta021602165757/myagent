@@ -5649,7 +5649,47 @@ function _renderTabSettings(site){
       + '</div>';
   }
 
-  return '<div class="sd-set-group">'
+  // SNS 接続状態を local cache から取り出し (= mount 時に fetch する)
+  var snsCache = (window._snsStatusCache && window._snsStatusCache[site.id]) || null;
+  if(!snsCache){
+    // バックグラウンドで fetch (= 初回 / stale 時)
+    setTimeout(function(){ _fetchSnsStatus(site.id); }, 100);
+  }
+  var x = snsCache && snsCache.x;
+  var extPaired = snsCache && snsCache.extension_paired;
+  var xConnected = !!(x && x.connected);
+
+  // SNS 接続カード (X)
+  var snsBlock = ''
+    + '<div class="sd-set-group">'
+    +   '<div class="sd-set-group-h">📱 SNS 接続 — AI が直接投稿</div>'
+    +   (!extPaired
+        ? '<div class="sd-sns-warn">⚠️ <b>Chrome 拡張が未インストール</b>です。<a href="/setup-extension.html" target="_blank">拡張をインストール</a>後に SNS 接続できます。</div>'
+        : '')
+    +   '<div class="sd-sns-row" style="--row-c:#000">'
+    +     '<div class="sd-sns-ic-x">𝕏</div>'
+    +     '<div class="sd-set-bd">'
+    +       '<div class="sd-set-ti">X (Twitter)'
+    +         (xConnected ? ' <span class="sd-sns-badge on">🟢 接続済</span>' : ' <span class="sd-sns-badge off">未接続</span>')
+    +       '</div>'
+    +       '<div class="sd-set-de">'
+    +         (xConnected && x.profile && x.profile.username
+            ? 'アカウント: <b>' + esc(x.profile.username) + '</b> ・ AI チームが投稿を担当できます'
+            : 'Chrome 拡張で x.com にログインしてから「接続」を押してください')
+    +       '</div>'
+    +     '</div>'
+    +     '<button class="sd-set-btn" onclick="_snsConnectX(\'' + esc(site.id) + '\', this)">'
+    +       (xConnected ? '🔄 再確認' : '🔗 接続する') + ' →'
+    +     '</button>'
+    +   '</div>'
+    +   '<div class="sd-sns-soon">'
+    +     '<div class="sd-sns-soon-label">近日対応:</div>'
+    +     '<span>💼 LinkedIn</span><span>🧵 Threads</span><span>📸 Instagram</span><span>📘 Facebook</span><span>📌 Pinterest</span><span>🎵 TikTok</span>'
+    +   '</div>'
+    + '</div>';
+
+  return snsBlock
+    + '<div class="sd-set-group">'
     +   '<div class="sd-set-group-h">⚙ サイト設定</div>'
     +   _row('💬', '#3b82f6', 'この会話を公開リンクで共有',
             'チャットの履歴を read-only の URL として人に渡せる。',
@@ -5664,6 +5704,147 @@ function _renderTabSettings(site){
             '新規依頼',
             "openSite('" + esc(site.id) + "');setTimeout(newChat,150)")
     + '</div>';
+}
+
+// ─── SNS 接続管理 helpers ────────────────────────────────
+window._snsStatusCache = window._snsStatusCache || {};
+async function _fetchSnsStatus(siteId){
+  if(window._snsStatusFetching && window._snsStatusFetching[siteId]) return;
+  window._snsStatusFetching = window._snsStatusFetching || {};
+  window._snsStatusFetching[siteId] = true;
+  try {
+    var r = await api('GET', '/api/sns/status');
+    if(r && r.ok){
+      window._snsStatusCache[siteId] = {
+        extension_paired: !!r.extension_paired,
+        x: r.x || { connected: false },
+      };
+      try { renderHomeDashboard(); } catch(_){}
+    }
+  } catch(e){
+    console.warn('[sns-status] fetch failed:', e && e.message);
+  } finally {
+    window._snsStatusFetching[siteId] = false;
+  }
+}
+
+async function _snsConnectX(siteId, btnEl){
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🔄 確認中... (~5s)'; }
+  try {
+    var r = await api('POST', '/api/sns/verify/x');
+    if(r && r.ok){
+      showToast('✅ X 接続確認完了' + (r.profile && r.profile.username ? ' (' + r.profile.username + ')' : ''), 'ok');
+      // cache 更新
+      window._snsStatusCache[siteId] = window._snsStatusCache[siteId] || {};
+      window._snsStatusCache[siteId].x = { connected: true, profile: r.profile || null, last_verified_at: new Date().toISOString() };
+      try { renderHomeDashboard(); } catch(_){}
+    } else {
+      var detail = (r && r.detail) || (r && r.error) || '接続確認に失敗';
+      showToast('⚠️ ' + detail, 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🔗 接続する →'; }
+    }
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🔗 接続する →'; }
+  }
+}
+
+// ─── X 投稿 confirm モーダル (actual-like preview) ────────────────
+// AI が generate した投稿テキストをユーザーが確認してから実投稿する。
+// 引数: { text, tweets[]?, site_id }
+// 「投稿」ボタン → POST /api/sns/post/x → 結果 toast。
+function openXPostConfirmModal(opts){
+  var existing = document.getElementById('xPostConfirm');
+  if(existing) existing.remove();
+  var siteId = opts.site_id || activeId;
+  var snsCache = (window._snsStatusCache && window._snsStatusCache[siteId]) || {};
+  var profile = (snsCache.x && snsCache.x.profile) || {};
+  var username = profile.username || '@user';
+  var displayName = username.replace(/^@/, '');
+  var avatarUrl = profile.avatar_url || ''; // (= 未取得なら placeholder)
+
+  var isThread = Array.isArray(opts.tweets) && opts.tweets.length >= 2;
+  var tweets = isThread ? opts.tweets : [opts.text || ''];
+
+  var tweetsHTML = tweets.map(function(t, i){
+    var isLast = (i === tweets.length - 1);
+    return '<div class="xp-tweet' + (isThread ? ' xp-thread' : '') + '">'
+         +   '<div class="xp-tw-l">'
+         +     '<div class="xp-tw-av">' + (avatarUrl ? '<img src="' + esc(avatarUrl) + '">' : displayName.charAt(0).toUpperCase()) + '</div>'
+         +     (isThread && !isLast ? '<div class="xp-tw-line"></div>' : '')
+         +   '</div>'
+         +   '<div class="xp-tw-r">'
+         +     '<div class="xp-tw-h">'
+         +       '<span class="xp-tw-nm">' + esc(displayName) + '</span>'
+         +       '<span class="xp-tw-uh">' + esc(username) + ' · 今</span>'
+         +     '</div>'
+         +     '<div class="xp-tw-tx">' + esc(t).replace(/\n/g, '<br>') + '</div>'
+         +     '<div class="xp-tw-foot">'
+         +       '<span>💬 —</span><span>🔁 —</span><span>♥ —</span><span>📊 —</span>'
+         +     '</div>'
+         +   '</div>'
+         + '</div>';
+  }).join('');
+
+  var html = '<div id="xPostConfirm" class="xp-overlay" onclick="if(event.target===this)closeXPostConfirmModal()">'
+    + '<div class="xp-card">'
+    +   '<button class="xp-close" onclick="closeXPostConfirmModal()" aria-label="閉じる">×</button>'
+    +   '<div class="xp-h">'
+    +     '<div class="xp-h-tag"><span class="xp-h-ic">𝕏</span> 投稿前の確認</div>'
+    +     '<div class="xp-h-sub">この内容で X に' + (isThread ? ' ' + tweets.length + ' 連投スレッドを' : '') + '投稿します</div>'
+    +   '</div>'
+    +   '<div class="xp-preview">' + tweetsHTML + '</div>'
+    +   '<div class="xp-meta">'
+    +     '<div>📊 文字数: ' + tweets.map(function(t){return t.length;}).join(' / ') + '</div>'
+    +     '<div>👤 投稿先: <b>' + esc(username) + '</b></div>'
+    +   '</div>'
+    +   '<div class="xp-actions">'
+    +     '<button class="xp-cancel" onclick="closeXPostConfirmModal()">キャンセル</button>'
+    +     '<button class="xp-post" onclick="_submitXPost(\'' + esc(siteId) + '\', ' + (isThread ? 'true' : 'false') + ', this)">' + (isThread ? '🚀 ' + tweets.length + ' 連投投稿' : '🚀 投稿する') + '</button>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  // payload を modal element に格納 (= submit 時に使う)
+  var el = document.getElementById('xPostConfirm');
+  if(el){
+    el._xpPayload = isThread ? { tweets: tweets } : { text: tweets[0] };
+  }
+}
+function closeXPostConfirmModal(){
+  var m = document.getElementById('xPostConfirm');
+  if(m) m.remove();
+}
+async function _submitXPost(siteId, isThread, btnEl){
+  var el = document.getElementById('xPostConfirm');
+  if(!el || !el._xpPayload) return;
+  var payload = el._xpPayload;
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🔄 投稿中... (~10s)'; }
+  try {
+    var r = await api('POST', '/api/sns/post/x', payload);
+    if(r && r.ok){
+      closeXPostConfirmModal();
+      showToast('✅ X に投稿しました' + (r.url ? ' → ' + r.url : ''), 'ok');
+      // チャットに reply 追加
+      var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
+      if(ag){
+        ag.history = ag.history || [];
+        ag.history.push({
+          id: 'a_xpost_' + Date.now(),
+          role: 'assistant',
+          time: now(),
+          content: '✅ X に投稿しました' + (r.url ? '\n\n' + r.url : ''),
+        });
+        try { renderMsgs(ag); } catch(_){}
+      }
+    } else {
+      showToast('⚠️ 投稿失敗: ' + ((r && r.detail) || (r && r.error) || 'unknown'), 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = isThread ? '🚀 スレッド投稿' : '🚀 投稿する'; }
+    }
+  } catch(e){
+    showToast((e && e.message) || 'ネットワークエラー', 'ng');
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = isThread ? '🚀 スレッド投稿' : '🚀 投稿する'; }
+  }
 }
 
 // 削除確認 — 簡易 confirm。ユーザーが OK したら本当に消す。

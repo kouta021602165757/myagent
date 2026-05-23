@@ -9191,6 +9191,219 @@ async function executeExtensionTool(user, name, input){
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+// ── SNS 投稿ツール (V1: X のみ) ──
+// API を一切使わず、Chrome 拡張で DOM 自動化して投稿する。
+// 既存の executeExtensionTool を sequence で呼んでオーケストレーション。
+// ══════════════════════════════════════════════════════════════
+const SNS_TOOLS = [
+  {
+    name: 'post_to_x',
+    description: '⚠️ ユーザーが事前に拡張で X (Twitter) にログイン済みである必要あり。\nX (Twitter / x.com) に Tweet を投稿します。280 字以内必須。改行 OK。\n投稿後、Tweet URL を返します。失敗時はエラー詳細を返します。\nリンクは末尾に置くと埋め込みカードがきれいに出ます。\nハッシュタグは 2-3 個に抑えるとリーチが伸びます。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: '投稿本文 (1-280 字)' },
+      },
+      required: ['text'],
+    },
+  },
+  {
+    name: 'post_to_x_thread',
+    description: '⚠️ ユーザーが事前に拡張で X にログイン済みであること。\nX に複数 Tweet を連続投稿 (= スレッド) します。\n各 Tweet は 280 字以内、最大 25 連投。\nHook → Build → Twist → CTA の構造、各 Tweet 220-260 字、絵文字控えめ、数字 + 具体例 を含めると伸びます。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tweets: {
+          type: 'array',
+          description: 'Tweet の配列。順番に投稿される (= 後の Tweet ほど下にぶら下がる)',
+          items: { type: 'string', description: '1 Tweet の本文 (1-280 字)' },
+          minItems: 2,
+          maxItems: 25,
+        },
+      },
+      required: ['tweets'],
+    },
+  },
+  {
+    name: 'verify_x_login',
+    description: 'ユーザーが拡張経由で X (x.com) にログイン済みかを確認。プロフィール情報 (username) も取得。\n投稿前 / 接続状態確認に使う。エラー時は user に「拡張をインストール + X にログインしてください」と促す。',
+    input_schema: { type: 'object', properties: {} },
+  },
+];
+const SNS_TOOL_NAMES = new Set(SNS_TOOLS.map(t => t.name));
+
+// 小さい sleep helper
+function _sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ── 共通: 拡張に X.com を開く + テキスト入力までの flow ──
+async function _xOpenComposeAndType(user, text){
+  // 1) X compose URL を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://x.com/compose/post' });
+  if(r && r.error) return { error: 'open_failed: ' + r.error };
+
+  // 2) DOM 安定待ち (= modal が表示されるまで)
+  await _sleep(2500);
+
+  // 3) textarea にテキスト入力
+  // X の compose textarea セレクタ: [data-testid="tweetTextarea_0"]
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '[data-testid="tweetTextarea_0"]',
+    text: text,
+  });
+  if(r && r.error) return { error: 'type_failed: ' + r.error };
+  return { ok: true };
+}
+
+// ── verify_x_login: X.com を開いて username 取得 ──
+async function executeVerifyXLoginTool(user){
+  if(!user.extension_device_token){
+    return { error: 'extension_not_paired', detail: 'MY AI Agent ブラウザ拡張を先にインストールしてください。' };
+  }
+  // 1) X.com を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://x.com/home' });
+  if(r && r.error) return { ok: false, error: 'open_failed', detail: r.error };
+
+  await _sleep(2000);
+
+  // 2) ext_read_page で現在の URL とページ内容を確認
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(r && r.error) return { ok: false, error: 'read_failed', detail: r.error };
+  const pageInfo = r || {};
+  const currentUrl = String(pageInfo.url || '');
+  const pageText = String(pageInfo.text || '').slice(0, 2000);
+
+  // 3) ログインしてれば URL は x.com/home のはず
+  //    未ログインなら login / i/flow/login にリダイレクト
+  if(/\/login|\/i\/flow\/login|^https:\/\/(www\.)?x\.com\/?$/.test(currentUrl) && !currentUrl.includes('/home')){
+    return { ok: false, error: 'not_logged_in', detail: 'X にログインしてください。x.com を開いてログインしてから再試行。' };
+  }
+  // home に到達してれば logged-in 扱い
+  // username 抽出: "/i/" を含むホーム URL より、AppTabBar の Profile link を探す
+  // ページテキストから "@username" を最大限ヒューリスティックに抽出
+  const handleMatch = pageText.match(/@([A-Za-z0-9_]{2,15})/);
+  const username = handleMatch ? '@' + handleMatch[1] : null;
+  // user.sns_connections.x に状態を保存
+  user.sns_connections = user.sns_connections || {};
+  user.sns_connections.x = {
+    connected: true,
+    profile: { username: username || '(取得不可)' },
+    last_verified_at: new Date().toISOString(),
+  };
+  try { await DB.save(user); } catch(_){}
+  return {
+    ok: true,
+    platform: 'x',
+    profile: { username },
+    instructions: 'ユーザーに「✅ X (' + (username || 'logged-in') + ') に接続できました」と伝えてください。',
+  };
+}
+
+// ── post_to_x: 単独 Tweet 投稿 ──
+async function executePostToXTool(user, input){
+  const text = String((input && input.text) || '').trim();
+  if(!text) return { error: 'text_required' };
+  if(text.length > 280) return { error: 'too_long', detail: 'X は 280 字まで。今: ' + text.length + ' 字' };
+  if(!user.extension_device_token){
+    return { error: 'extension_not_paired', detail: 'MY AI Agent ブラウザ拡張を先にインストールしてください。' };
+  }
+
+  // 1) compose 開いてテキスト入力
+  let r = await _xOpenComposeAndType(user, text);
+  if(r && r.error) return r;
+
+  // 2) 投稿ボタンをクリック
+  // セレクタ: [data-testid="tweetButton"] / "Post" テキスト
+  r = await executeExtensionTool(user, 'ext_click', { target: '[data-testid="tweetButton"]' });
+  if(r && r.error){
+    // フォールバック: テキスト で探す
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Post' });
+    if(r && r.error) return { error: 'post_click_failed', detail: r.error };
+  }
+
+  // 3) 投稿完了待ち (= toast or URL 変化)
+  await _sleep(3000);
+
+  // 4) URL 取得 (= compose 後、Tweet 詳細 URL に redirect されるはず)
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const tweetUrl = (r && r.url) || '';
+
+  return {
+    ok: true,
+    platform: 'x',
+    url: tweetUrl,
+    posted_text: text,
+    instructions: 'ユーザーに「✅ X に投稿しました ' + (tweetUrl ? '→ ' + tweetUrl : '') + '」と短く報告してください。',
+  };
+}
+
+// ── post_to_x_thread: スレッド連投 ──
+// X の compose modal では「+」 button (= 次の Tweet を追加) を使って 1 つの
+// 「post スレッド」として送れる。各 Tweet textarea のセレクタは index で変わる:
+//   [data-testid="tweetTextarea_0"], _1, _2, ...
+async function executePostToXThreadTool(user, input){
+  const tweets = Array.isArray(input && input.tweets) ? input.tweets.map(t => String(t || '').trim()).filter(Boolean) : [];
+  if(tweets.length < 2) return { error: 'need_at_least_2' };
+  if(tweets.length > 25) return { error: 'too_many', detail: '最大 25 連投' };
+  for(let i = 0; i < tweets.length; i++){
+    if(tweets[i].length > 280) return { error: 'tweet_too_long', detail: '#' + (i+1) + ' が 280 字超過 (' + tweets[i].length + ' 字)' };
+  }
+  if(!user.extension_device_token){
+    return { error: 'extension_not_paired', detail: 'MY AI Agent ブラウザ拡張を先にインストールしてください。' };
+  }
+
+  // 1) compose を開いて 1 個目を入力
+  let r = await _xOpenComposeAndType(user, tweets[0]);
+  if(r && r.error) return r;
+
+  // 2) Tweet 2 以降: 「+」ボタンを押して新しい textarea を追加 → 入力
+  for(let i = 1; i < tweets.length; i++){
+    // 「Add post」ボタン: [data-testid="addButton"]
+    r = await executeExtensionTool(user, 'ext_click', { target: '[data-testid="addButton"]' });
+    if(r && r.error){
+      // フォールバック: aria-label で探す
+      r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label="Add post"]' });
+      if(r && r.error) return { error: 'add_button_failed', detail: 'Tweet ' + (i+1) + ' の追加ボタンが見つからない: ' + r.error };
+    }
+    await _sleep(800);
+    // 新しい textarea に入力 (index は i)
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '[data-testid="tweetTextarea_' + i + '"]',
+      text: tweets[i],
+    });
+    if(r && r.error) return { error: 'type_failed', detail: 'Tweet ' + (i+1) + ': ' + r.error };
+  }
+
+  // 3) "Post all" ボタンをクリック
+  r = await executeExtensionTool(user, 'ext_click', { target: '[data-testid="tweetButton"]' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Post all' });
+    if(r && r.error) return { error: 'post_click_failed', detail: r.error };
+  }
+
+  await _sleep(4000);
+
+  // 4) URL 取得
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const threadUrl = (r && r.url) || '';
+
+  return {
+    ok: true,
+    platform: 'x',
+    url: threadUrl,
+    tweet_count: tweets.length,
+    instructions: 'ユーザーに「✅ X に ' + tweets.length + ' 連投スレッドを投稿しました ' + (threadUrl ? '→ ' + threadUrl : '') + '」と短く報告してください。',
+  };
+}
+
+// ── 汎用 dispatch ──
+async function executeSnsTool(user, name, input){
+  if(name === 'verify_x_login') return executeVerifyXLoginTool(user);
+  if(name === 'post_to_x')      return executePostToXTool(user, input);
+  if(name === 'post_to_x_thread') return executePostToXThreadTool(user, input);
+  return { error: 'unknown_sns_tool: ' + name };
+}
+
 // ── Google Sheets API tools (require user.google_oauth set) ──
 const SHEETS_TOOLS = [
   {
@@ -12338,6 +12551,7 @@ async function _runOneSchedule(user, agent, sched){
             const route = _mcpRouting.get(block.name);
             result = await _mcpCallTool(route.server, route.toolName, block.input || {});
           }
+          else if(block.name && SNS_TOOL_NAMES.has(block.name)) result = await executeSnsTool(user, block.name, block.input||{});
           else result = { error: 'tool_unavailable_in_schedule: ' + block.name };
         } catch(toolErr){
           result = { error: (toolErr && toolErr.message) || String(toolErr) };
@@ -12828,6 +13042,20 @@ ${sheetsActive ? '（注: Google スプレッドシートは sheets_read/write �
 5. **「接続が必要です」とユーザーを足止めしない**:
    - 「○○ を接続してから再度ご依頼ください」を絶対に言わない
    - 必ず artifact で何かしらの価値を届けて、connect chip は任意の補助
+
+6. **X (Twitter) 投稿の SNS ツール — \`post_to_x\` / \`post_to_x_thread\` / \`verify_x_login\`**:
+   - ユーザーが「X に投稿して」と明示的に頼んだ場合のみ実行
+   - 投稿前に必ず確認: 「この内容で X に投稿しますか? (はい / 編集 / キャンセル)」と本人確認を取る
+   - 接続未確認なら最初に \`verify_x_login\` で確認、ログイン切れなら案内 (= 「Chrome 拡張で x.com にログインしてください」)
+   - 投稿成功時の reply: 「✅ X に投稿しました → URL」 を 1 行
+   - 失敗時: 拡張未接続 / 未ログイン / 文字数オーバー の原因を ユーザーに分かりやすく伝える
+
+【X 投稿の文章ルール】
+- 1 Tweet 280 字以内 (絵文字・URL も字数に含む)
+- スレッドなら 2-25 Tweet、各 220-260 字に抑えると読みやすい
+- 構造: Hook → Build → Twist → CTA (Hook は最初 1 ツイート目で続きを読ませる仕掛け)
+- 絵文字は控えめ、ハッシュタグは 2-3 個まで、数字 + 具体例 を含む
+- リンクは末尾に置くと埋め込みカードが綺麗に出る
 ` : '';
 
   // Zapier list — only when SNS / content category is active (the typical
@@ -17084,6 +17312,36 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
+  // ── SNS 接続確認 / 投稿 endpoint (= V1 は X のみ) ──
+  // GET  /api/sns/status          → 現在の接続状態を返す
+  // POST /api/sns/verify/x         → 拡張経由で x.com を開いてログイン確認
+  // POST /api/sns/post/x           → 拡張経由で投稿 (= confirm モーダル後の実行)
+  if(pathname === '/api/sns/status' && method === 'GET'){
+    const conn = user.sns_connections || {};
+    return jres(res, 200, {
+      ok: true,
+      extension_paired: !!user.extension_device_token,
+      x: conn.x ? { connected: !!conn.x.connected, profile: conn.x.profile || null, last_verified_at: conn.x.last_verified_at } : { connected: false },
+    });
+  }
+  if(pathname === '/api/sns/verify/x' && method === 'POST'){
+    const r = await executeVerifyXLoginTool(user);
+    return jres(res, r.ok ? 200 : 400, r);
+  }
+  if(pathname === '/api/sns/post/x' && method === 'POST'){
+    const body = await readBody(req);
+    const text = String(body && body.text || '').trim();
+    const tweets = Array.isArray(body && body.tweets) ? body.tweets : null;
+    if(tweets && tweets.length >= 2){
+      const r = await executePostToXThreadTool(user, { tweets });
+      return jres(res, r.ok ? 200 : 400, r);
+    } else if(text){
+      const r = await executePostToXTool(user, { text });
+      return jres(res, r.ok ? 200 : 400, r);
+    }
+    return jres(res, 400, { error: 'text_or_tweets_required' });
+  }
+
   // ── Site KPI save ──────────────────────────────────────
   // サイトの目標数値 (月間 PV / CVR / 月間リード数) を保存。
   // GA4 接続時の達成度評価や毎朝レポートの参照に使う。
@@ -20797,6 +21055,8 @@ ${orgSummary || '(汎用チーム)'}
       ...(agent.chrome_enabled ? WEB_TOOLS : []),
       ...(sheetsActive ? SHEETS_TOOLS : []),
       ...(extensionActive ? EXTENSION_TOOLS : []),
+      // SNS 投稿ツール (= 拡張経由 / site agent のみ提供)
+      ...(extensionActive && agent.site_url ? SNS_TOOLS : []),
       ...(imageGenActive ? IMAGE_TOOLS : []),
       ...(videoGenActive ? VIDEO_TOOLS : []),
       ...(mediaUtilActive ? _mediaTools : []),
@@ -21462,6 +21722,8 @@ ${orgSummary || '(汎用チーム)'}
               result = await _mcpCallTool(route.server, route.toolName, block.input || {});
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
+            } else if(block.name && SNS_TOOL_NAMES.has(block.name)){
+              result = await executeSnsTool(payerUser, block.name, block.input||{});
             } else if(session){
               result = await executeBrowserTool(session, block.name, block.input||{}, { sheetsConnected, sheetsActive });
             } else {

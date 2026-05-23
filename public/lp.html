@@ -171,6 +171,104 @@
     box-shadow:var(--glow-lime);
   }
 
+  /* ══════════════════════════════════════════════════════
+     LIVE ACTIVITY TICKER (= hero 内、 上部に scroll)
+     ══════════════════════════════════════════════════════ */
+  .live-ticker{
+    position:relative;
+    margin:0 auto 32px; max-width:920px;
+    display:flex; align-items:center; gap:14px;
+    padding:9px 14px;
+    background:rgba(255,255,255,.02);
+    border:1px solid var(--wire);
+    border-radius:99px;
+    overflow:hidden;
+    animation:rise .6s 0s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .live-ticker-pill{
+    flex-shrink:0;
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:9.5px; font-weight:700; color:var(--peach);
+    background:rgba(192,255,92,.08);
+    border:1px solid rgba(192,255,92,.28);
+    padding:4px 10px; border-radius:99px;
+    letter-spacing:.06em;
+  }
+  .live-ticker-dot{
+    width:5px; height:5px; border-radius:50%; background:var(--peach);
+    box-shadow:0 0 8px var(--peach);
+    animation:pulse-live 1.4s ease-in-out infinite;
+  }
+  .live-ticker-track{
+    display:flex; align-items:center; gap:24px;
+    flex:1; min-width:0;
+    animation:ticker-scroll 38s linear infinite;
+    white-space:nowrap;
+    mask-image:linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  }
+  @keyframes ticker-scroll{
+    from{transform:translateX(0)}
+    to{transform:translateX(-50%)}
+  }
+  .lt-item{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; color:var(--ink2); font-weight:500;
+    letter-spacing:.005em;
+    flex-shrink:0;
+  }
+  .lt-time{color:var(--ink3); font-size:10px}
+  .lt-handle{color:var(--peach); font-weight:600}
+  .lt-item b{color:var(--ink); font-weight:600}
+  .lt-sep{width:3px; height:3px; border-radius:50%; background:var(--wire2); flex-shrink:0}
+  @media (max-width:560px){
+    .live-ticker{margin-bottom:22px; padding:7px 10px; gap:10px}
+    .live-ticker-pill{font-size:8.5px; padding:3px 8px}
+    .lt-item{font-size:10px}
+  }
+
+  /* ══════════════════════════════════════════════════════
+     GRAIN NOISE TEXTURE — body 全域に subtle film grain
+     ══════════════════════════════════════════════════════ */
+  body::after{
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9, 0 0 0 0 0.9, 0 0 0 0 0.9, 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:.025; mix-blend-mode:overlay;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     MAGNETIC GLOW CTA — マウス追従 lime glow
+     (= JS から --mx / --my を更新)
+     ══════════════════════════════════════════════════════ */
+  .url-go, .nav-cta{
+    position:relative; overflow:hidden;
+  }
+  .url-go::before, .nav-cta::before{
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(circle 80px at var(--mx, 50%) var(--my, 50%),
+      rgba(255,255,255,.35), transparent 70%);
+    opacity:0; transition:opacity .2s;
+    pointer-events:none;
+  }
+  .url-go:hover::before, .nav-cta:hover::before{ opacity:1 }
+
+  /* ══════════════════════════════════════════════════════
+     TYPED H1 — cursor 点滅 + 言葉が打鍵される
+     ══════════════════════════════════════════════════════ */
+  .hero h1 .typed-cursor{
+    display:inline-block; width:.06em; height:1em;
+    background:var(--peach); margin-left:.04em;
+    vertical-align:-.05em;
+    box-shadow:0 0 12px var(--peach);
+    animation:h1-caret 1s steps(1) infinite;
+  }
+  @keyframes h1-caret{
+    0%, 50% { opacity:1 }
+    51%, 100% { opacity:0 }
+  }
+
   /* ── HERO (= dark + lime accent + 'terminal' atmosphere) ──── */
   .hero{
     text-align:center; padding:clamp(72px,13vh,128px) 0 clamp(64px,10vh,96px);
@@ -1576,26 +1674,82 @@
     padding:0 22px 20px; font-size:13.5px; color:var(--ink2); line-height:1.85;
   }
 
-  /* ── FINAL CTA ──────────────────────────────────────── */
+  /* ── FINAL CTA (= 画面 80% 使う巨大 hero) ────────────── */
   .final{
-    background:linear-gradient(180deg, var(--peach-soft), var(--cream));
+    position:relative;
+    background:var(--bg);
     border-top:1px solid var(--wire); text-align:center;
-    padding:clamp(60px,9vh,90px) 0;
+    padding:clamp(96px,16vh,180px) 0;
+    min-height:80vh;
+    display:flex; align-items:center;
+    overflow:hidden;
   }
+  /* lime glow flood — 画面下から這い上がる */
+  .final::before{
+    content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 100%, rgba(192,255,92,.18), transparent 60%),
+      radial-gradient(ellipse 40% 30% at 30% 50%, rgba(167,139,250,.10), transparent 70%);
+  }
+  /* dot grid pattern */
+  .final::after{
+    content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background-image:radial-gradient(circle, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size:32px 32px;
+    mask-image:radial-gradient(ellipse 70% 60% at 50% 50%, #000 30%, transparent 80%);
+    -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 50%, #000 30%, transparent 80%);
+  }
+  .final > .wrap{position:relative; z-index:1; width:100%}
   .final h2{
-    font-size:clamp(26px,3.8vw,42px); font-weight:900; line-height:1.2; letter-spacing:-.025em;
-    max-width:680px; margin:0 auto;
+    font-size:clamp(40px,7vw,84px); font-weight:900; line-height:1.04;
+    letter-spacing:-.04em;
+    max-width:920px; margin:0 auto;
+    color:var(--ink);
+  }
+  .final h2 .pop{
+    background:linear-gradient(135deg, var(--peach), var(--violet));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    position:relative;
+  }
+  .final h2 .pop::after{
+    content:''; position:absolute; inset:-12px; z-index:-1;
+    background:radial-gradient(ellipse 60% 80% at 50% 50%, rgba(192,255,92,.24), transparent 70%);
+    filter:blur(32px);
   }
   .final-sub{
-    font-size:clamp(14px,1.6vw,16px); color:var(--ink2);
-    margin:18px auto 0; max-width:520px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:clamp(13px,1.4vw,15px); color:var(--ink2); font-weight:500;
+    margin:28px auto 0; max-width:520px;
+    letter-spacing:.005em; line-height:1.7;
   }
-  .final-form{margin-top:30px}
+  .final-form{margin-top:38px}
   .final-vt{
-    margin-top:24px; font-size:11.5px; color:var(--ink3);
-    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
+    margin-top:32px; font-size:11.5px; color:var(--ink3);
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    display:flex; gap:18px; justify-content:center; flex-wrap:wrap;
+    letter-spacing:.005em;
   }
-  .final-vt b{color:var(--peach-d); font-weight:800}
+  .final-vt b{color:var(--peach); font-weight:700}
+  /* Founder seats reminder badge */
+  .final-seats{
+    display:inline-flex; align-items:center; gap:8px;
+    margin-bottom:28px;
+    padding:8px 16px;
+    background:rgba(192,255,92,.08);
+    border:1px solid rgba(192,255,92,.28);
+    border-radius:99px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12px; font-weight:600; color:var(--peach);
+    letter-spacing:.02em;
+  }
+  .final-seats-dot{
+    width:6px; height:6px; border-radius:50%; background:var(--peach);
+    box-shadow:0 0 8px var(--peach);
+    animation:pulse-live 1.6s ease-in-out infinite;
+  }
+  @media (max-width:560px){
+    .final{padding:80px 0; min-height:auto}
+  }
 
   /* ── FOOTER (= rich version) ────────────────────────── */
   footer{
@@ -1645,12 +1799,17 @@
     .foot-bottom{flex-direction:column; align-items:flex-start; gap:18px}
   }
 
-  /* ── 共通: scroll trigger animation (上に出てくる)  ──── */
+  /* ── 共通: scroll trigger animation (= scale + Y + blur 複合)  ──── */
   .reveal{
-    opacity:0; transform:translateY(28px);
-    transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1);
+    opacity:0;
+    transform:translateY(36px) scale(.96);
+    filter:blur(4px);
+    transition:
+      opacity .8s cubic-bezier(.2,.7,.2,1),
+      transform .8s cubic-bezier(.2,.7,.2,1),
+      filter .6s cubic-bezier(.2,.7,.2,1);
   }
-  .reveal.on{opacity:1; transform:none}
+  .reveal.on{opacity:1; transform:none; filter:none}
 
   /* ── Selection color (= ブランド感) ────────────────── */
   ::selection{background:rgba(192,255,92,.32); color:var(--ink)}
@@ -1684,6 +1843,37 @@
     <div class="hero-tag">
       <span class="hero-tag-dot"></span>
       <span data-i18n="hero.tag">Webサイトに AI マーケチームを派遣</span>
+    </div>
+
+    <!-- LIVE ACTIVITY TICKER — 製品が「今動いてる」感を上部に出す -->
+    <div class="live-ticker" aria-hidden="true">
+      <div class="live-ticker-pill"><span class="live-ticker-dot"></span>LIVE</div>
+      <div class="live-ticker-track">
+        <div class="lt-item"><span class="lt-time">just now</span><span class="lt-handle">@kota-saas</span>generated <b>「AI マーケ 比較 2026」</b> for yoursaas.io</div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">12s ago</span><span class="lt-handle">@nori-media</span>posted X thread <b>7 連投</b></div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">38s ago</span><span class="lt-handle">@sayaka-seitai</span>published article to <b>WordPress</b></div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">1m ago</span><span class="lt-handle">@tomo-ec</span>created <b>3 Shopify products</b></div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">2m ago</span><span class="lt-handle">@yuki-blog</span>got <b>cited by ChatGPT</b> (3/5 queries)</div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">3m ago</span><span class="lt-handle">@ai-builder</span>generated <b>LP CVR 改善 5 案</b></div>
+        <div class="lt-sep"></div>
+        <!-- duplicate for seamless infinite loop -->
+        <div class="lt-item"><span class="lt-time">just now</span><span class="lt-handle">@kota-saas</span>generated <b>「AI マーケ 比較 2026」</b> for yoursaas.io</div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">12s ago</span><span class="lt-handle">@nori-media</span>posted X thread <b>7 連投</b></div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">38s ago</span><span class="lt-handle">@sayaka-seitai</span>published article to <b>WordPress</b></div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">1m ago</span><span class="lt-handle">@tomo-ec</span>created <b>3 Shopify products</b></div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">2m ago</span><span class="lt-handle">@yuki-blog</span>got <b>cited by ChatGPT</b> (3/5 queries)</div>
+        <div class="lt-sep"></div>
+        <div class="lt-item"><span class="lt-time">3m ago</span><span class="lt-handle">@ai-builder</span>generated <b>LP CVR 改善 5 案</b></div>
+      </div>
     </div>
 
     <h1 data-i18n="hero.h1">
@@ -2015,14 +2205,19 @@
      ═══════════════════════════════════════════════════════════ -->
 <section class="final">
   <div class="wrap">
-    <h2 data-i18n="fn.h2">あなたの LP・HP に、<br>30+ 名の AI 組織を。</h2>
+    <div class="final-seats">
+      <span class="final-seats-dot"></span>
+      Founder 100 — <span class="pi-seats-num" data-stat-key="founder_remaining">85</span> 席残
+    </div>
+    <h2 data-i18n="fn.h2">
+      URL を貼って、<br><span class="pop">今すぐ始める。</span>
+    </h2>
     <p class="final-sub" data-i18n="fn.sub">
-      URL を貼った瞬間に AI マーケ組織が立ち上がる。5 分以内に最初の納品物がスタート。
+      最初の納品物が 2 分で届く。 クレカ不要、 ワンクリック解約。
     </p>
 
     <form class="url-form final-form" onsubmit="return handleUrlSubmit(event)" novalidate>
       <div class="url-wrap">
-        <span class="url-icon">🌐</span>
         <input type="url" id="urlInputFinal" class="url-input"
                placeholder="https://yoursite.com"
                autocomplete="off" spellcheck="false"
@@ -2035,7 +2230,7 @@
     </form>
 
     <p class="final-vt" data-i18n="fn.vt">
-      <b>無料で始める</b> ・ クレカ不要 ・ ツール接続不要
+      <b>Free</b> permanently · <b>Pro</b> ¥4,980/mo · no credit card
     </p>
   </div>
 </section>
@@ -2354,6 +2549,100 @@
     };
     apply();
     window.addEventListener('scroll', apply, { passive:true });
+  })();
+
+  // ── Typed h1 — hero h1 を 1 回タイプする ─────────────
+  // 「URL を貼るだけ。30+ 名の AI チームが、 あなたのサイトを 毎日伸ばす。」
+  // 各 line を順に reveal + 末尾に caret 点滅
+  (function(){
+    var h1 = document.querySelector('.hero h1');
+    if(!h1) return;
+    // Skip if reduced motion preferred
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // 元 HTML を 保持 → 一度クリアして、 char by char で復元する
+    var originalHTML = h1.innerHTML;
+    // パースして text + tag を順に取り出す簡易処理
+    var parts = [];
+    var i = 0;
+    while(i < originalHTML.length){
+      if(originalHTML[i] === '<'){
+        var end = originalHTML.indexOf('>', i);
+        if(end < 0) break;
+        parts.push({ type:'tag', content:originalHTML.slice(i, end+1) });
+        i = end + 1;
+      } else {
+        // 文字 1 つずつ
+        parts.push({ type:'char', content:originalHTML[i] });
+        i++;
+      }
+    }
+    h1.innerHTML = '';
+    h1.style.minHeight = h1.getBoundingClientRect().height + 'px';
+    var caret = document.createElement('span');
+    caret.className = 'typed-cursor';
+    h1.appendChild(caret);
+    var idx = 0;
+    function tick(){
+      if(idx >= parts.length){
+        // 完了後、 caret は残して点滅 (= CSS animation)
+        return;
+      }
+      var p = parts[idx++];
+      if(p.type === 'tag'){
+        caret.insertAdjacentHTML('beforebegin', p.content);
+        setTimeout(tick, 5);  // tag は瞬間
+      } else {
+        caret.insertAdjacentText('beforebegin', p.content);
+        // 文字ごとの遅延: 改行や記号は早く、 通常文字はリズミカルに
+        var delay = /[\s、。]/.test(p.content) ? 40 : 28;
+        setTimeout(tick, delay);
+      }
+    }
+    // 100ms 待ってから開始 (= 初期表示の rise アニメと被らないように)
+    setTimeout(tick, 250);
+  })();
+
+  // ── Magnetic glow CTA — マウス位置を CSS var に流す ─────
+  (function(){
+    var ctas = document.querySelectorAll('.url-go, .nav-cta');
+    if(!ctas.length) return;
+    ctas.forEach(function(el){
+      el.addEventListener('mousemove', function(e){
+        var r = el.getBoundingClientRect();
+        el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+        el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+      });
+    });
+  })();
+
+  // ── Parallax hero orbs — マウスに hero-orb が緩く追従 ───
+  (function(){
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return; // touch 端末はスキップ
+    var hero = document.querySelector('.hero');
+    if(!hero) return;
+    var orbs = hero.querySelectorAll('.hero-orb');
+    if(!orbs.length) return;
+    var rafId = null;
+    var targetX = 0, targetY = 0;
+    var currentX = 0, currentY = 0;
+    function update(){
+      currentX += (targetX - currentX) * 0.08;
+      currentY += (targetY - currentY) * 0.08;
+      orbs.forEach(function(orb, i){
+        var depth = (i + 1) * 12;  // orb ごとに視差差
+        orb.style.transform = 'translate(' + (currentX * depth) + 'px, ' + (currentY * depth) + 'px)';
+      });
+      if(Math.abs(targetX - currentX) > .01 || Math.abs(targetY - currentY) > .01){
+        rafId = requestAnimationFrame(update);
+      } else { rafId = null; }
+    }
+    hero.addEventListener('mousemove', function(e){
+      var r = hero.getBoundingClientRect();
+      targetX = ((e.clientX - r.left) / r.width - 0.5);
+      targetY = ((e.clientY - r.top) / r.height - 0.5);
+      if(!rafId) rafId = requestAnimationFrame(update);
+    });
   })();
 
   // ── Animated counter (stat-count) ───────────────────

@@ -3499,34 +3499,35 @@ window._promptAiToPost = function(siteId, platform, platformName){
   }, 200);
 };
 // 1 クリックで chat に prompt 送信 (= activation の next-step CTA で使用)
-// base64 で encode された prompt を decode → chat input prefill → auto-send
+// base64 で encode された prompt を decode → chat input prefill → sendMsg() を直接呼ぶ
 window._quickSendPrompt = function(b64, btnEl){
   if(btnEl){ btnEl.disabled = true; btnEl.style.opacity = '0.6'; }
   try {
     var prompt = decodeURIComponent(escape(atob(b64)));
     var ci = document.getElementById('ci');
-    if(!ci){ console.warn('[quickSendPrompt] chat input not found'); return; }
+    if(!ci){
+      if(typeof showToast === 'function') showToast('チャット欄が見つかりません', 'ng');
+      if(btnEl){ btnEl.disabled = false; btnEl.style.opacity = ''; }
+      return;
+    }
     ci.value = prompt;
     ci.focus();
     ci.dispatchEvent(new Event('input', { bubbles: true }));
-    // 「送信」 を trigger — form submit or send button click
-    var form = ci.closest && ci.closest('form');
-    if(form){
-      // 通常 form だと submit イベント、 chat の場合は別途 submit handler が登録されてる
-      var sendBtn = document.querySelector('button[type="submit"][form="' + (form.id||'') + '"]')
-                 || form.querySelector('button[type="submit"]')
-                 || document.querySelector('#sendBtn, [data-send-btn], .send-btn');
-      if(sendBtn){ sendBtn.click(); }
-      else {
-        // Enter キーを発火 (= chat input が keydown Enter を listen している場合)
+    // sendMsg() が global で公開されている — codebase の chat 送信エントリポイント
+    if(typeof sendMsg === 'function'){
+      try { sendMsg(); }
+      catch(e){
+        console.warn('[quickSendPrompt] sendMsg failed:', e && e.message);
+        // fallback: Enter キー
         ci.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
       }
     } else {
-      // form なし — 直接 Enter で送信
+      // sendMsg が見えない場合は Enter キー fallback
       ci.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
     }
   } catch(e){
     console.warn('[quickSendPrompt] failed:', e && e.message);
+    if(typeof showToast === 'function') showToast('送信失敗: ' + (e.message || e), 'ng');
     if(btnEl){ btnEl.disabled = false; btnEl.style.opacity = ''; }
   }
 };

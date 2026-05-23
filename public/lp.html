@@ -340,10 +340,19 @@
     animation:pulse 2s ease-in-out infinite;
   }
   .hero h1{
-    font-size:clamp(40px,7.4vw,80px); font-weight:900;
-    letter-spacing:-.04em; line-height:1.06;
+    font-size:clamp(36px,6.4vw,72px); font-weight:900;
+    letter-spacing:-.04em; line-height:1.08;
     color:var(--ink);
     animation:rise .7s .06s cubic-bezier(.2,.7,.2,1) both;
+    text-wrap:balance;
+  }
+  /* 各行を block + nowrap で 1 行内ブレイクを防止 */
+  .hero h1 .hl-line{
+    display:block; white-space:nowrap;
+  }
+  @media (max-width:560px){
+    .hero h1{font-size:clamp(28px,8.5vw,44px)}
+    .hero h1 .hl-line{white-space:normal}
   }
   .hero h1 .pop{
     background:linear-gradient(135deg,var(--peach),var(--peach-d) 60%,var(--violet));
@@ -751,7 +760,81 @@
     margin:4px 0;
   }
 
-  /* ── Step 05 用 mail card ─────────────────────────────── */
+  /* ── Step 05 用 自動実行 (cron / scheduled tasks) ──────── */
+  .cron-card{
+    background:var(--cream2);
+    border:1px solid var(--wire);
+    border-radius:10px; overflow:hidden;
+    max-width:560px;
+  }
+  .cron-h{
+    display:flex; align-items:center; gap:10px;
+    padding:11px 14px;
+    background:linear-gradient(180deg, rgba(192,255,92,.06), rgba(192,255,92,.02));
+    border-bottom:1px solid var(--wire);
+  }
+  .cron-h-ic{font-size:16px; line-height:1}
+  .cron-h-ti{
+    font-size:12.5px; font-weight:700; color:var(--ink);
+    letter-spacing:-.005em; flex:1; min-width:0;
+  }
+  .cron-h-cron{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10px; color:var(--ink3);
+    background:var(--bg);
+    border:1px solid var(--wire);
+    padding:2px 7px; border-radius:4px;
+    letter-spacing:.005em;
+  }
+  .cron-tasks{
+    padding:6px 0;
+  }
+  .cron-task{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 14px;
+    border-bottom:1px dashed var(--wire);
+    opacity:0; transform:translateX(-6px);
+    animation:cron-task-in .4s forwards;
+  }
+  .cron-task:last-child{border-bottom:0}
+  .demo-step.active .cron-task:nth-child(1){animation-delay:.1s}
+  .demo-step.active .cron-task:nth-child(2){animation-delay:.4s}
+  .demo-step.active .cron-task:nth-child(3){animation-delay:.7s}
+  .demo-step.active .cron-task:nth-child(4){animation-delay:1.0s}
+  .demo-step.active .cron-task:nth-child(5){animation-delay:1.3s}
+  @keyframes cron-task-in{ to{ opacity:1; transform:none } }
+  .cron-task-time{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10.5px; font-weight:600; color:var(--ink3);
+    flex-shrink:0; width:40px;
+    letter-spacing:.005em;
+  }
+  .cron-task.done .cron-task-time{color:var(--peach)}
+  .cron-task-tx{
+    flex:1; min-width:0;
+    font-size:11.5px; color:var(--ink2); font-weight:500;
+    line-height:1.5; letter-spacing:.005em;
+  }
+  .cron-task-tx b{color:var(--ink); font-weight:700}
+  .cron-task.done .cron-task-tx{color:var(--ink)}
+  .cron-task-st{
+    flex-shrink:0; width:18px; text-align:center;
+    font-size:13px; font-weight:700;
+  }
+  .cron-task.done .cron-task-st{color:#22c55e}
+  .cron-task.running{background:rgba(192,255,92,.04)}
+  .cron-spinner{
+    display:inline-block;
+    width:11px; height:11px; border-radius:50%;
+    border:1.5px solid rgba(192,255,92,.20);
+    border-top-color:var(--peach);
+    animation:cron-spin .8s linear infinite;
+    vertical-align:-1px;
+  }
+  @keyframes cron-spin{ to{ transform:rotate(360deg) } }
+  .demo-step-foot b{color:var(--ink); font-weight:700}
+
+  /* ── Step 06 用 mail card ─────────────────────────────── */
   .mail-card{
     background:var(--cream2); border:1px solid var(--wire);
     border-radius:10px; overflow:hidden;
@@ -2048,9 +2131,7 @@
       </div>
     </div>
 
-    <h1 data-i18n="hero.h1">
-      URL を貼るだけ。<br><span class="pop">30+ 名の AI チーム</span>が<br>あなたのサイトを毎日伸ばす。
-    </h1>
+    <h1 data-i18n="hero.h1"><span class="hl-line">URL を貼るだけ。</span><span class="hl-line"><span class="pop">30+ 名の AI チーム</span>が</span><span class="hl-line">サイトを毎日伸ばす。</span></h1>
 
     <form class="url-form" onsubmit="return handleUrlSubmit(event)" novalidate>
       <div class="url-wrap">
@@ -2097,14 +2178,15 @@
          動く製品 DEMO — URL貼る → AI 編成中 → 納品物が出る を loop
          ═══════════════════════════════════════════════════════ -->
     <div class="demo-wrap" id="demoWrap">
-      <!-- Step navigator (= 6 step を上部に並べる) -->
+      <!-- Step navigator (= 7 step を上部に並べる) -->
       <div class="demo-nav">
         <button class="demo-nav-btn active" data-step="1"><span class="dn-num">01</span><span class="dn-lbl">URL を入力</span></button>
         <button class="demo-nav-btn" data-step="2"><span class="dn-num">02</span><span class="dn-lbl">AI チーム組成</span></button>
         <button class="demo-nav-btn" data-step="3"><span class="dn-num">03</span><span class="dn-lbl">ダッシュボード</span></button>
         <button class="demo-nav-btn" data-step="4"><span class="dn-num">04</span><span class="dn-lbl">チャット依頼</span></button>
-        <button class="demo-nav-btn" data-step="5"><span class="dn-num">05</span><span class="dn-lbl">毎日データ確認</span></button>
-        <button class="demo-nav-btn" data-step="6"><span class="dn-num">06</span><span class="dn-lbl">数字が伸びる</span></button>
+        <button class="demo-nav-btn" data-step="5"><span class="dn-num">05</span><span class="dn-lbl">自動実行</span></button>
+        <button class="demo-nav-btn" data-step="6"><span class="dn-num">06</span><span class="dn-lbl">毎日データ確認</span></button>
+        <button class="demo-nav-btn" data-step="7"><span class="dn-num">07</span><span class="dn-lbl">数字が伸びる</span></button>
         <div class="demo-nav-progress"><div class="demo-nav-progress-bar"></div></div>
       </div>
 
@@ -2206,10 +2288,53 @@
             </div>
           </div>
 
-          <!-- ═══ STEP 05: 毎日データ確認 ═══ -->
+          <!-- ═══ STEP 05: 自動実行 (= scheduling / autopilot) ═══ -->
           <div class="demo-step" data-step="5">
             <div class="demo-step-head">
               <span class="dst-tag">STEP 05</span>
+              <span class="dst-ti">自動実行 — あなたが寝てる間に進む</span>
+            </div>
+            <div class="cron-card">
+              <div class="cron-h">
+                <span class="cron-h-ic">⏰</span>
+                <span class="cron-h-ti">毎朝のルーティン</span>
+                <span class="cron-h-cron">cron: 0 6 * * *</span>
+              </div>
+              <div class="cron-tasks">
+                <div class="cron-task done">
+                  <span class="cron-task-time">06:00</span>
+                  <span class="cron-task-tx">SEO 記事 <b>3 本</b> を生成 (= create_artifact × 3)</span>
+                  <span class="cron-task-st">✓</span>
+                </div>
+                <div class="cron-task done">
+                  <span class="cron-task-time">06:15</span>
+                  <span class="cron-task-tx">X スレッド <b>1 本</b> を予約投稿 (= post_to_x_thread)</span>
+                  <span class="cron-task-st">✓</span>
+                </div>
+                <div class="cron-task done">
+                  <span class="cron-task-time">07:00</span>
+                  <span class="cron-task-tx">WordPress に <b>記事 1 本</b> 公開 (= publish_wordpress)</span>
+                  <span class="cron-task-st">✓</span>
+                </div>
+                <div class="cron-task done">
+                  <span class="cron-task-time">07:30</span>
+                  <span class="cron-task-tx">AI 検索モニター <b>5 query</b> (= Perplexity / ChatGPT / Gemini)</span>
+                  <span class="cron-task-st">✓</span>
+                </div>
+                <div class="cron-task running">
+                  <span class="cron-task-time">08:00</span>
+                  <span class="cron-task-tx">毎朝レポートを Email 配信 (= send_email)</span>
+                  <span class="cron-task-st"><span class="cron-spinner"></span></span>
+                </div>
+              </div>
+            </div>
+            <div class="demo-step-foot">→ <b style="color:var(--peach)">4 タスク 完了</b> / 1 タスク 実行中 ・ あなたは <b>寝てる間に</b>進む</div>
+          </div>
+
+          <!-- ═══ STEP 06: 毎日データ確認 ═══ -->
+          <div class="demo-step" data-step="6">
+            <div class="demo-step-head">
+              <span class="dst-tag">STEP 06</span>
               <span class="dst-ti">毎朝レポートが届く</span>
             </div>
             <div class="mail-card">
@@ -2228,10 +2353,10 @@
             </div>
           </div>
 
-          <!-- ═══ STEP 06: 数字が伸びて結果がでる ═══ -->
-          <div class="demo-step" data-step="6">
+          <!-- ═══ STEP 07: 数字が伸びて結果がでる ═══ -->
+          <div class="demo-step" data-step="7">
             <div class="demo-step-head">
-              <span class="dst-tag">STEP 06</span>
+              <span class="dst-tag">STEP 07</span>
               <span class="dst-ti">3 ヶ月で結果が出る</span>
             </div>
             <div class="result-big">
@@ -2563,7 +2688,7 @@
     "nav.login": "Log in",
     "nav.cta": "Sign up free",
     "hero.tag": "Deploy an AI marketing team to your website",
-    "hero.h1": "Just paste your URL.<br>A <span class='pop'>30+ AI team</span><br>grows your site, every day.",
+    "hero.h1": "<span class='hl-line'>Just paste your URL.</span><span class='hl-line'>A <span class='pop'>30+ AI team</span></span><span class='hl-line'>grows your site, every day.</span>",
     "hero.sub": "Just drop your URL. A <b>30+ person AI specialist org</b> (SEO / AEO / Social / CRO / Analytics) spins up instantly.<br>Grow <b>landing-page CVR</b> or <b>website inquiries</b> — every day.<br><b style=\"color:var(--peach)\">🐦 1-click auto-post to X.</b>",
     "hero.url.placeholder": "https://yoursite.com",
     "hero.url.btn": "Dispatch the team",
@@ -2887,12 +3012,13 @@
     var paused = false;
     // step number → browser URL を変える (= 「画面が遷移してる」 感)
     var URLS = [
-      'myaiagents.agency',                 // step 1 — landing
-      'myaiagents.agency/onboarding',      // step 2
-      'myaiagents.agency/app',             // step 3
-      'myaiagents.agency/app/chat',        // step 4
-      'mail.google.com',                   // step 5
-      'myaiagents.agency/app/dashboard',   // step 6
+      'myaiagents.agency',                  // 1 — landing
+      'myaiagents.agency/onboarding',       // 2
+      'myaiagents.agency/app',              // 3
+      'myaiagents.agency/app/chat',         // 4
+      'myaiagents.agency/app/scheduled',    // 5 — 自動実行
+      'mail.google.com',                    // 6
+      'myaiagents.agency/app/dashboard',    // 7
     ];
     function setStep(n){
       idx = ((n % steps.length) + steps.length) % steps.length;

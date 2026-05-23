@@ -3495,6 +3495,19 @@ window._promptAiToPost = function(siteId, platform, platformName){
     showToast('💬 チャット欄に prompt を入力しました — 送信すると AI が投稿します', 'ok');
   }, 200);
 };
+// 数字 tab の GSC card から AI に検索流入を聞く CTA
+window._promptAiGscQuery = function(siteId){
+  var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+  if(!site){ return; }
+  var hostname = (function(){ try{ return new URL(site.site_url).hostname.replace(/^www\./,''); } catch(_){ return site.name||''; } })();
+  var prompt = '私のサイト「' + hostname + '」(' + site.site_url + ') の直近 28 日の検索流入を Google Search Console で確認してください。\n\n手順:\n1. gsc_list_sites で自分が確認できるサイトを listing\n2. gsc_set_default でこのサイト (= ' + site.site_url + ') を default に設定\n3. gsc_query で TOP クエリ (= clicks 多い順 10 件) を取得\n\n結果を表で出して、 改善余地のあるクエリ (= impressions 多いのに position 5-15) を 3 つピックアップしてください。';
+  try { if(typeof openAgent === 'function') openAgent(siteId); } catch(_){}
+  setTimeout(function(){
+    var ci = document.getElementById('ci');
+    if(ci){ ci.value = prompt; ci.focus(); ci.dispatchEvent(new Event('input', { bubbles: true })); }
+    showToast('🔍 チャット欄に GSC 分析 prompt を入力 — 送信すると AI が検索流入を分析します', 'ok');
+  }, 200);
+};
 // 「3 時間前」 / 「2 日前」 などの相対時間 (= 数字 tab の SNS card で使用)
 function _fmtRelTime(iso){
   if(!iso) return '';
@@ -4558,15 +4571,26 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     +   '<div class="nm-mod-body">' + ga4ModBody + '</div>'
     + '</div>';
 
-  // ── Module 2: Search Console (近日) ──
+  // ── Module 2: Search Console (Google OAuth で連携、 AI 経由でクエリ) ──
+  var googleConnected = !!(me && me.google_oauth && me.google_oauth.refresh_token);
+  var hasGscScope = googleConnected && /webmasters/.test(String((me && me.google_oauth && me.google_oauth.scope) || ''));
   var scModuleHTML = ''
-    + '<div class="nm-mod nm-mod-off">'
-    +   _moduleHeader('🔍', 'Google Search Console', false, '#3b82f6', null, null)
+    + '<div class="nm-mod ' + (hasGscScope ? 'nm-mod-on' : 'nm-mod-off') + '">'
+    +   _moduleHeader('🔍', 'Google Search Console', hasGscScope, '#3b82f6',
+                     hasGscScope ? '🔎 検索流入を分析' : '接続 →',
+                     hasGscScope
+                       ? '_promptAiGscQuery(\'' + esc(site.id) + '\')'
+                       : '_switchDashTab(\'' + esc(site.id) + '\',\'connections\')')
     +   '<div class="nm-mod-body">'
-    +     '<div class="nm-mod-locked">'
-    +       '<div class="nm-mod-locked-tx">検索キーワード / 表示回数 / 平均順位 / CTR — どのクエリで何位なのか、競合 SEO の動きも追えます。</div>'
-    +       '<div class="nm-mod-locked-soon">⏳ Phase 4 で対応予定</div>'
-    +     '</div>'
+    +     (hasGscScope
+        ? '<div class="nm-mod-locked" style="border-style:solid; background:linear-gradient(135deg, #fff 0%, rgba(59,130,246,.04) 100%); border-color:rgba(59,130,246,.2)">'
+          + '<div class="nm-mod-locked-tx">📡 GSC は接続済 (= webmasters.readonly scope)。 AI に「直近 28 日の検索クエリ TOP 10」 と聞くと gsc_query が走り、 ここに live data が出ます。</div>'
+          + '<button class="nm-mod-locked-btn" onclick="_promptAiGscQuery(\'' + esc(site.id) + '\')">🔎 AI に検索流入を聞く →</button>'
+          + '</div>'
+        : '<div class="nm-mod-locked">'
+          + '<div class="nm-mod-locked-tx">検索キーワード / 表示回数 / 平均順位 / CTR — どのクエリで何位なのか、 競合 SEO の動きも追えます。</div>'
+          + '<button class="nm-mod-locked-btn" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'connections\')">🔌 Google 連携 (Search Console scope 付き) →</button>'
+          + '</div>')
     +   '</div>'
     + '</div>';
 

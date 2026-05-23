@@ -3017,6 +3017,8 @@ const _TOOL_TO_SKILL = {
   web_extract: { id:'research', label:'🔎 Web 抽出' },
   ga4_query: { id:'analytics', label:'📈 GA4 分析' },
   ga4_list_properties: { id:'analytics', label:'📈 GA4 探索' },
+  gsc_query: { id:'analytics', label:'🔍 検索流入分析' },
+  gsc_list_sites: { id:'analytics', label:'🔍 GSC サイト一覧' },
   drive_search_files: { id:'docs', label:'📁 Drive 検索' },
   drive_list_folders: { id:'docs', label:'📁 Drive 探索' },
   sheets_read: { id:'sheets', label:'📊 Sheets 読取' },
@@ -3999,6 +4001,9 @@ const _TOOL_INTENT_MAP = Object.freeze({
   ga4_list_properties: 'analytics',
   ga4_query: 'analytics',
   ga4_set_default: 'analytics',
+  gsc_list_sites: 'analytics',
+  gsc_query: 'analytics',
+  gsc_set_default: 'analytics',
   // docs (Drive)
   drive_list_folders: 'docs',
   drive_search_files: 'docs',
@@ -5791,6 +5796,50 @@ twitter / threads / linkedin / facebook / reddit / mastodon / bluesky / line / t
         scope:{type:'string',enum:['user','agent'],description:'保存先。user = ユーザー全体のデフォルト / agent = このエージェントだけ。デフォルト user'},
       },
       required:['property_id'],
+    },
+  },
+  // ── Google Search Console (SEO 流入分析) tools ────────────────
+  {
+    name:'gsc_list_sites',
+    description:'ユーザーがアクセス権を持つ Google Search Console のサイト一覧を取得する。「どのサイト使う?」と聞きたい場面、または gsc_set_default の前に呼ぶ。要 Google OAuth (webmasters.readonly scope)。',
+    input_schema:{ type:'object', properties:{} },
+  },
+  {
+    name:'gsc_query',
+    description:`Google Search Console の検索アナリティクスを実行する。デフォルトは過去 28 日 / クエリ別の clicks / impressions / CTR / 平均順位。
+
+【サイト解決順】
+1. このエージェントの gsc_site_url (個別設定)
+2. ユーザーのデフォルト gsc_site_url
+3. なければ site_url 引数で明示
+
+未指定でどれもなければ gsc_list_sites を呼んでユーザーに聞いてください。
+
+【dimensions】 query / page / country / device / searchAppearance / date — 何も指定しなければ ['query'] (= クエリ別ランキング)
+【metrics は固定】 clicks / impressions / ctr / position (= GSC 仕様)`,
+    input_schema:{
+      type:'object',
+      properties:{
+        site_url:{type:'string',description:'(任意) 明示する場合の sc-domain:example.com or https://example.com/'},
+        dimensions:{type:'array',items:{type:'string'},description:'(任意) ディメンション一覧 (デフォルト ["query"])。 例: ["page"], ["query","page"], ["date"]'},
+        start_date:{type:'string',description:'(任意) 開始日 YYYY-MM-DD。 デフォルト 28 日前'},
+        end_date:{type:'string',description:'(任意) 終了日 YYYY-MM-DD。 デフォルト 昨日'},
+        row_limit:{type:'number',description:'(任意) 最大行数 (デフォルト 100、 最大 1000)'},
+        filter_query:{type:'string',description:'(任意) クエリ文字列フィルター (= contains マッチ)'},
+        filter_page:{type:'string',description:'(任意) URL フィルター (= contains マッチ)'},
+      },
+    },
+  },
+  {
+    name:'gsc_set_default',
+    description:'GSC のデフォルトサイトを保存する。scope=user で全体 / scope=agent で **このエージェントだけ** に適用。',
+    input_schema:{
+      type:'object',
+      properties:{
+        site_url:{type:'string',description:'sc-domain:example.com or https://example.com/ 形式'},
+        scope:{type:'string',enum:['user','agent'],description:'保存先 (デフォルト user)'},
+      },
+      required:['site_url'],
     },
   },
   // ── Drive (file/folder) tools ───────────────────────────────
@@ -8912,6 +8961,106 @@ async function executeGa4QueryTool(user, agent, input){
   }
 }
 
+// ── GSC executors (= Google Search Console) ───────────────────
+async function executeGscListSitesTool(user){
+  if(!user.google_oauth || !user.google_oauth.refresh_token){
+    return { error: 'google_not_connected', detail: 'Google を OAuth で連携してください (Search Console scope 必要)。' };
+  }
+  try {
+    const sites = await gscListSites(user);
+    return {
+      ok: true,
+      count: sites.length,
+      sites: sites.map(s => ({ site_url: s.siteUrl, permission_level: s.permissionLevel })),
+      instructions: sites.length === 0
+        ? 'ユーザーには「GSC で確認できるサイトがありません。 search.google.com/search-console で先にサイト所有権を確認してください」と案内。'
+        : 'AI に: "✓ '+sites.length+' サイト見つかりました。 ユーザーに分析対象を選んでもらってください。" ',
+    };
+  } catch(e){
+    return { error: 'gsc_list_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
+async function executeGscQueryTool(user, agent, input){
+  // Resolve site_url from input → agent → user
+  let siteUrl = (input && input.site_url) ? String(input.site_url).trim() : null;
+  if(!siteUrl){
+    if(agent && agent.gsc_site_url) siteUrl = agent.gsc_site_url;
+    else if(user.integrations && user.integrations.google && user.integrations.google.gsc_site_url){
+      siteUrl = user.integrations.google.gsc_site_url;
+    }
+  }
+  if(!siteUrl){
+    return { error: 'no_site_set', instructions: 'まず gsc_list_sites を呼んでユーザーに使うサイトを選んでもらってください。 選択後は gsc_set_default で保存し、 それから再度クエリしてください。' };
+  }
+  try {
+    // Date defaults: 28 日前 → 昨日
+    const endDate = (input && input.end_date) || (function(){
+      const d = new Date(); d.setDate(d.getDate() - 1);
+      return d.toISOString().slice(0, 10);
+    })();
+    const startDate = (input && input.start_date) || (function(){
+      const d = new Date(); d.setDate(d.getDate() - 28);
+      return d.toISOString().slice(0, 10);
+    })();
+    const dimensions = (input && Array.isArray(input.dimensions) && input.dimensions.length)
+      ? input.dimensions : ['query'];
+    const rowLimit = Math.min(1000, Math.max(1, Number((input && input.row_limit) || 100)));
+    // Build filter
+    const filters = [];
+    if(input && input.filter_query){
+      filters.push({ dimension: 'query', operator: 'contains', expression: String(input.filter_query) });
+    }
+    if(input && input.filter_page){
+      filters.push({ dimension: 'page', operator: 'contains', expression: String(input.filter_page) });
+    }
+    const body = {
+      startDate, endDate, dimensions, rowLimit,
+      ...(filters.length ? { dimensionFilterGroups: [{ groupType: 'and', filters }] } : {}),
+    };
+    const r = await gscSearchAnalyticsQuery(user, siteUrl, body);
+    return {
+      ok: true,
+      site_url: siteUrl,
+      date_range: { start: startDate, end: endDate },
+      dimensions,
+      row_count: (r.rows || []).length,
+      rows: (r.rows || []).slice(0, 200).map(row => ({
+        keys: row.keys || [],
+        clicks: row.clicks || 0,
+        impressions: row.impressions || 0,
+        ctr: Math.round(((row.ctr || 0) * 10000)) / 100,  // パーセント表示
+        position: Math.round(((row.position || 0) * 100)) / 100,
+      })),
+      totals: (r.rows || []).reduce((acc, row) => ({
+        clicks: acc.clicks + (row.clicks || 0),
+        impressions: acc.impressions + (row.impressions || 0),
+      }), { clicks: 0, impressions: 0 }),
+    };
+  } catch(e){
+    return { error: 'gsc_query_failed', detail: (e.message||'').slice(0,300) };
+  }
+}
+
+async function executeGscSetDefaultTool(user, agent, input){
+  const site = String((input && input.site_url) || '').trim();
+  if(!site) return { error: 'site_url required' };
+  const scope = (input && input.scope === 'agent') ? 'agent' : 'user';
+  if(scope === 'agent'){
+    if(!agent) return { error: 'agent context missing' };
+    agent.gsc_site_url = site;
+  } else {
+    user.integrations = user.integrations || {};
+    user.integrations.google = user.integrations.google || {};
+    user.integrations.google.gsc_site_url = site;
+  }
+  await DB.save(user);
+  return {
+    ok: true, scope, site_url: site,
+    instructions: 'AI への通知: "✓ '+(scope==='agent'?'このエージェント用に':'デフォルトとして')+' GSC サイト '+site+' を保存しました。 以降の質問では自動でこのサイトを使います"',
+  };
+}
+
 async function executeGa4SetDefaultTool(user, agent, input){
   const pid = String((input && input.property_id) || '').replace('properties/','').trim();
   if(!pid) return { error: 'property_id required' };
@@ -11834,6 +11983,23 @@ async function ga4RunReport(user, propertyId, opts){
   return r.d;
 }
 
+// ── Google Search Console API helpers ─────────────────────────
+async function gscListSites(user){
+  const token = await getValidGoogleAccessToken(user);
+  const r = await httpsReq('GET', 'searchconsole.googleapis.com', '/webmasters/v3/sites',
+    { 'Authorization':'Bearer '+token }, null);
+  if(r.s !== 200) throw new Error('GSC sites list failed: '+JSON.stringify(r.d).slice(0,200));
+  return (r.d && r.d.siteEntry) || [];
+}
+async function gscSearchAnalyticsQuery(user, siteUrl, body){
+  const token = await getValidGoogleAccessToken(user);
+  const path = '/webmasters/v3/sites/' + encodeURIComponent(siteUrl) + '/searchAnalytics/query';
+  const r = await httpsReq('POST', 'searchconsole.googleapis.com', path,
+    { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' }, body);
+  if(r.s !== 200) throw new Error('GSC query failed: '+JSON.stringify(r.d).slice(0,300));
+  return r.d;
+}
+
 // ── Drive API helpers ───────────────────────────────────────
 async function driveListFolders(user, opts){
   const token = await getValidGoogleAccessToken(user);
@@ -14395,6 +14561,9 @@ async function _runOneSchedule(user, agent, sched){
           else if(block.name === 'ga4_list_properties') result = await executeGa4ListPropertiesTool(user);
           else if(block.name === 'ga4_query')           result = await executeGa4QueryTool(user, agent, block.input||{});
           else if(block.name === 'ga4_set_default')     result = await executeGa4SetDefaultTool(user, agent, block.input||{});
+          else if(block.name === 'gsc_list_sites')      result = await executeGscListSitesTool(user);
+          else if(block.name === 'gsc_query')           result = await executeGscQueryTool(user, agent, block.input||{});
+          else if(block.name === 'gsc_set_default')     result = await executeGscSetDefaultTool(user, agent, block.input||{});
           else if(block.name === 'drive_list_folders')  result = await executeDriveListFoldersTool(user);
           else if(block.name === 'drive_search_files')  result = await executeDriveSearchFilesTool(user, agent, block.input||{});
           else if(block.name === 'drive_set_default_folder') result = await executeDriveSetDefaultFolderTool(user, agent, block.input||{});
@@ -23623,6 +23792,12 @@ ${orgSummary || '(汎用チーム)'}
               result = await executeGa4QueryTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'ga4_set_default'){
               result = await executeGa4SetDefaultTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'gsc_list_sites'){
+              result = await executeGscListSitesTool(payerUser);
+            } else if(block.name === 'gsc_query'){
+              result = await executeGscQueryTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'gsc_set_default'){
+              result = await executeGscSetDefaultTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'drive_list_folders'){
               result = await executeDriveListFoldersTool(payerUser);
             } else if(block.name === 'drive_search_files'){

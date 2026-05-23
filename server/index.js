@@ -9285,11 +9285,12 @@ const SNS_TOOL_NAMES = new Set(SNS_TOOLS.map(t => t.name));
 const AEO_TOOLS = [
   {
     name: 'ai_search_monitor',
-    description: 'AI 検索エンジン (Perplexity 等) に query を投げて、 自社サイトが回答に引用されているかチェック。AEO 部門の主力ツール。 query 例: 「Best SaaS for X」 「○○ おすすめ」 など、 実際にユーザーが AI に聞きそうな質問。',
+    description: 'AI 検索エンジン (Perplexity / ChatGPT / Gemini) に query を投げて、 自社サイトが回答に引用されているかチェック。AEO 部門の主力ツール。 query 例: 「Best SaaS for X」 「○○ おすすめ」 など、 実際にユーザーが AI に聞きそうな質問。\n\nplatform 推奨: 引用が明示的な Perplexity が最も精度高い。 ChatGPT / Gemini はユーザーがログイン済みのブラウザが必要。',
     input_schema: {
       type: 'object',
       properties: {
         query: { type: 'string', description: '検索クエリ (1-200 字)' },
+        platform: { type: 'string', enum: ['perplexity','chatgpt','gemini'], description: 'default: perplexity' },
         site_url: { type: 'string', description: '(任意) 自社サイト URL — マッチ判定に使う' },
       },
       required: ['query'],
@@ -9298,39 +9299,140 @@ const AEO_TOOLS = [
 ];
 const AEO_TOOL_NAMES = new Set(AEO_TOOLS.map(t => t.name));
 
+// 共通 URL 抽出 + 自社ドメイン除外
+function _extractUrlsFromText(text, excludeDomains){
+  const pattern = /https?:\/\/[^\s)<>"'\]]+/g;
+  const all = (text.match(pattern) || []).filter(u => !excludeDomains.some(d => u.includes(d)));
+  return Array.from(new Set(all)).slice(0, 30);
+}
+
 // Perplexity に query → answer + citations を抽出
 async function _queryPerplexity(user, query){
   const url = 'https://www.perplexity.ai/search?q=' + encodeURIComponent(query);
   let r = await executeExtensionTool(user, 'ext_open_url', { url });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
 
-  // Perplexity は streaming で回答 → 10s ほど待つ
-  await _sleep(10000);
+  await _sleep(10000);  // Perplexity は streaming 回答
 
   r = await executeExtensionTool(user, 'ext_read_page', {});
   if(r && r.error) return { error: 'read_failed', detail: r.error };
 
   const pageText = String((r && r.text) || '');
-  const pageUrl = String((r && r.url) || '');
-
-  // URL 抽出 (= 回答内の引用 + サイドバー Sources)
-  // perplexity.ai 自身を除外 + dedupe
-  const urlPattern = /https?:\/\/[^\s)<>"'\]]+/g;
-  const allUrls = (pageText.match(urlPattern) || []).filter(u => !u.includes('perplexity.ai'));
-  const uniqueUrls = Array.from(new Set(allUrls)).slice(0, 30);
-
-  // 回答テキスト (= ページ前半部分が回答本文。Sources / Related questions は除外)
-  // 簡易: 「Sources」 文字列までを answer として extract
   const sourcesIdx = pageText.indexOf('Sources');
   const answerText = (sourcesIdx > 100 ? pageText.slice(0, sourcesIdx) : pageText).slice(0, 2000);
 
   return {
-    ok: true,
-    platform: 'perplexity',
+    ok: true, platform: 'perplexity',
     query,
-    perplexity_url: pageUrl,
+    perplexity_url: String((r && r.url) || ''),
     answer_excerpt: answerText.trim(),
-    cited_urls: uniqueUrls,
+    cited_urls: _extractUrlsFromText(pageText, ['perplexity.ai']),
+    fetched_at: new Date().toISOString(),
+  };
+}
+
+// ChatGPT に query → 回答抽出 (= 拡張で chatgpt.com を操作、 ユーザーログイン必要)
+async function _queryChatGPT(user, query){
+  // ?q= URL でクエリ事前入力 → submit 自動 or 手動 fallback
+  const url = 'https://chatgpt.com/?q=' + encodeURIComponent(query);
+  let r = await executeExtensionTool(user, 'ext_open_url', { url });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+
+  await _sleep(4000);  // login redirect + 初期 load
+
+  // 念のため textarea を確認 → URL の ?q= で auto-fill されてなければ手動入力
+  // textarea の selector は変化するので複数 fallback
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const pageInfo = r || {};
+  const currentUrl = String(pageInfo.url || '');
+  if(/\/auth\/login|\/login/.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'ChatGPT にログインしてください (chatgpt.com)。' };
+  }
+
+  // ?q= で 自動 submit されてなければ手動で type + Enter
+  // 検知: ページに query が含まれていれば submit 済 と判定
+  const alreadyAsked = pageInfo.text && pageInfo.text.indexOf(query) >= 0;
+  if(!alreadyAsked){
+    // textarea / contenteditable / prompt-textarea の 3 fallback
+    r = await executeExtensionTool(user, 'ext_type', { selector: '#prompt-textarea', text: query });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"][data-virtualkeyboard]', text: query });
+    }
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_type', { selector: 'textarea[placeholder*="Message"]', text: query });
+    }
+    if(r && r.error) return { error: 'type_failed', detail: 'ChatGPT の入力欄が見つかりません: ' + r.error };
+    await _sleep(800);
+    r = await executeExtensionTool(user, 'ext_press_key', { key: 'Enter' });
+    if(r && r.error) return { error: 'submit_failed', detail: r.error };
+  }
+
+  // 回答待ち (ChatGPT は streaming で長い)
+  await _sleep(22000);
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(r && r.error) return { error: 'read_failed', detail: r.error };
+  const pageText = String((r && r.text) || '');
+
+  return {
+    ok: true, platform: 'chatgpt',
+    query,
+    chatgpt_url: String((r && r.url) || ''),
+    answer_excerpt: pageText.slice(0, 2000),
+    cited_urls: _extractUrlsFromText(pageText, ['chatgpt.com', 'openai.com']),
+    fetched_at: new Date().toISOString(),
+  };
+}
+
+// Gemini に query → 回答抽出 (= 拡張で gemini.google.com を操作)
+async function _queryGemini(user, query){
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://gemini.google.com/' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+
+  await _sleep(4000);
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const pageInfo = r || {};
+  const currentUrl = String(pageInfo.url || '');
+  if(/accounts\.google\.com/.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'Gemini (Google) にログインしてください。' };
+  }
+
+  // Gemini の入力欄 (= Quill / contenteditable)
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '.ql-editor[contenteditable="true"]',
+    text: query,
+  });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"][role="textbox"]', text: query });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_type', { selector: 'rich-textarea [contenteditable="true"]', text: query });
+    }
+  }
+  if(r && r.error) return { error: 'type_failed', detail: 'Gemini の入力欄が見つかりません: ' + r.error };
+
+  await _sleep(800);
+  // 送信ボタン or Enter
+  r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="送信"]' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="Send"]' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_press_key', { key: 'Enter' });
+    }
+  }
+
+  await _sleep(20000);  // Gemini も streaming
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(r && r.error) return { error: 'read_failed', detail: r.error };
+  const pageText = String((r && r.text) || '');
+
+  return {
+    ok: true, platform: 'gemini',
+    query,
+    gemini_url: String((r && r.url) || ''),
+    answer_excerpt: pageText.slice(0, 2000),
+    cited_urls: _extractUrlsFromText(pageText, ['google.com', 'gstatic.com']),
     fetched_at: new Date().toISOString(),
   };
 }
@@ -9342,8 +9444,12 @@ async function executeAiSearchMonitorTool(user, input){
   if(!user.extension_device_token){
     return { error: 'extension_not_paired', detail: 'AI 検索モニターには Chrome 拡張が必要です。' };
   }
-
-  const r = await _queryPerplexity(user, query);
+  const platform = String((input && input.platform) || 'perplexity').toLowerCase();
+  let r;
+  if(platform === 'perplexity')     r = await _queryPerplexity(user, query);
+  else if(platform === 'chatgpt')   r = await _queryChatGPT(user, query);
+  else if(platform === 'gemini')    r = await _queryGemini(user, query);
+  else return { error: 'unknown_platform', detail: 'platform は perplexity / chatgpt / gemini のいずれか' };
   if(r && r.error) return r;
 
   // self_site 判定 (= input.site_url や user.agents の site_url とマッチするか)

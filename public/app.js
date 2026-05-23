@@ -6135,7 +6135,12 @@ async function _snsDisconnect(platform, siteId, btnEl){
 }
 
 // ─── AEO 検索モニター modal (= 内蔵ツール) ─────────────────────
-// Perplexity に query を投げて、 自社引用結果を表示。 過去 runs も履歴で出す。
+// Perplexity / ChatGPT / Gemini に query を投げて、 自社引用結果を表示。 過去 runs も履歴で出す。
+var AEO_PLATFORM_META = {
+  perplexity: { label: 'Perplexity', emoji: '🔍', tone: '#9333ea', hint: '引用が明示・ログイン不要・最も安定 (推奨)', dur: '~15s' },
+  chatgpt:    { label: 'ChatGPT',    emoji: '💬', tone: '#10a37f', hint: '要 chatgpt.com ログイン・回答待ち長め',         dur: '~25s' },
+  gemini:     { label: 'Gemini',     emoji: '✨', tone: '#4285f4', hint: '要 Google ログイン・引用は文章内のみ',          dur: '~25s' },
+};
 function _openAeoMonitorModal(siteId){
   if(!siteId) siteId = activeId;
   if(!siteId) return;
@@ -6162,33 +6167,50 @@ function _openAeoMonitorModal(siteId){
           var mention = r.mentioned
             ? '<span class="aeo-mention on">✅ 自社引用あり (' + (r.matched_urls && r.matched_urls.length || 0) + ' URL)</span>'
             : '<span class="aeo-mention off">❌ 自社引用なし</span>';
+          var plat = String(r.platform || 'perplexity').toLowerCase();
+          var pm = AEO_PLATFORM_META[plat] || AEO_PLATFORM_META.perplexity;
           return '<div class="aeo-run">'
                +   '<div class="aeo-run-h">'
                +     '<span class="aeo-run-q">「' + esc(r.query) + '」</span>'
                +     mention
                +   '</div>'
-               +   '<div class="aeo-run-meta">' + esc(dt) + ' ・ ' + (r.cited_urls || []).length + ' URL 引用 ・ ' + esc(r.platform || 'perplexity') + '</div>'
+               +   '<div class="aeo-run-meta">' + esc(dt) + ' ・ ' + (r.cited_urls || []).length + ' URL 引用 ・ ' + pm.emoji + ' ' + esc(pm.label) + '</div>'
                + '</div>';
         }).join('')
       + '</div>';
+
+  // platform tabs (Perplexity / ChatGPT / Gemini)
+  var platforms = ['perplexity','chatgpt','gemini'];
+  var platformTabs = '<div class="aeo-plat-row">'
+    + platforms.map(function(p){
+        var m = AEO_PLATFORM_META[p];
+        var active = p === 'perplexity' ? ' aeo-plat-on' : '';
+        return '<button class="aeo-plat' + active + '" data-platform="' + p + '" onclick="_aeoSelectPlatform(\'' + p + '\')" style="--aeo-tone:' + m.tone + '">'
+             +   '<span class="aeo-plat-emoji">' + m.emoji + '</span>'
+             +   '<span class="aeo-plat-label">' + esc(m.label) + '</span>'
+             + '</button>';
+      }).join('')
+    + '</div>'
+    + '<div class="aeo-plat-hint" id="aeoPlatHint">💡 ' + AEO_PLATFORM_META.perplexity.hint + '</div>';
 
   var html = '<div id="aeoModal" class="xp-overlay" onclick="if(event.target===this)_closeAeoMonitorModal()">'
     + '<div class="xp-card" style="max-width:640px">'
     +   '<button class="xp-close" onclick="_closeAeoMonitorModal()">×</button>'
     +   '<div class="xp-h">'
     +     '<div class="xp-h-tag" style="background:#9333ea"><span class="xp-h-ic">🤖</span> AI 検索モニター</div>'
-    +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">Perplexity でこの query → 自社引用 check</div>'
+    +     '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin:8px 0 8px">AI 検索エンジンで この query → 自社引用 check</div>'
     +     '<div style="font-size:12.5px;color:var(--text2);line-height:1.65;font-weight:600">'
-    +       '拡張で Perplexity.ai を背景で開いて回答を取得。 引用 URL に自社 (<b>' + esc(hostname) + '</b>) が含まれるか自動判定します。'
+    +       '拡張で AI 検索を背景で開いて回答を取得。 引用 URL に自社 (<b>' + esc(hostname) + '</b>) が含まれるか自動判定します。'
     +     '</div>'
     +   '</div>'
     +   '<div style="padding:0 24px 14px">'
+    +     platformTabs
     +     '<input id="aeoQueryInput" type="text" class="xp-input" placeholder="例: おすすめの SaaS / Best blog about X" value="' + esc(defaultQuery) + '" />'
     +     '<div class="xp-hint">💡 ユーザーが AI に聞きそうな実用クエリで試してください</div>'
     +   '</div>'
     +   '<div class="xp-actions">'
     +     '<button class="xp-cancel" onclick="_closeAeoMonitorModal()">閉じる</button>'
-    +     '<button class="xp-post" style="background:#9333ea" onclick="_runAeoMonitor(\'' + esc(siteId) + '\', this)">🤖 Perplexity で検索 (~15s)</button>'
+    +     '<button id="aeoRunBtn" class="xp-post" style="background:#9333ea" onclick="_runAeoMonitor(\'' + esc(siteId) + '\', this)">🔍 Perplexity で検索 (~15s)</button>'
     +   '</div>'
     +   '<div class="aeo-history" id="aeoHistory">'
     +     '<div class="aeo-history-h">過去の検索履歴</div>'
@@ -6197,7 +6219,30 @@ function _openAeoMonitorModal(siteId){
     + '</div>'
     + '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
+  // selector state は modal の data 属性で持つ
+  var m = document.getElementById('aeoModal');
+  if(m) m.setAttribute('data-platform', 'perplexity');
   setTimeout(function(){ var i = document.getElementById('aeoQueryInput'); if(i) i.focus(); }, 80);
+}
+function _aeoSelectPlatform(platform){
+  var modal = document.getElementById('aeoModal');
+  if(!modal) return;
+  var meta = AEO_PLATFORM_META[platform] || AEO_PLATFORM_META.perplexity;
+  modal.setAttribute('data-platform', platform);
+  // tab active 切替
+  var tabs = modal.querySelectorAll('.aeo-plat');
+  for(var i=0;i<tabs.length;i++){
+    var t = tabs[i];
+    if(t.getAttribute('data-platform') === platform){ t.classList.add('aeo-plat-on'); }
+    else { t.classList.remove('aeo-plat-on'); }
+  }
+  var hint = document.getElementById('aeoPlatHint');
+  if(hint) hint.innerHTML = '💡 ' + esc(meta.hint);
+  var btn = document.getElementById('aeoRunBtn');
+  if(btn){
+    btn.style.background = meta.tone;
+    btn.innerHTML = meta.emoji + ' ' + esc(meta.label) + ' で検索 (' + meta.dur + ')';
+  }
 }
 function _closeAeoMonitorModal(){
   var m = document.getElementById('aeoModal');
@@ -6212,9 +6257,13 @@ async function _runAeoMonitor(siteId, btnEl){
     setTimeout(function(){ inp.style.borderColor = ''; }, 1500);
     return;
   }
-  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🔄 Perplexity 実行中... (~15s)'; }
+  var modal = document.getElementById('aeoModal');
+  var platform = (modal && modal.getAttribute('data-platform')) || 'perplexity';
+  var meta = AEO_PLATFORM_META[platform] || AEO_PLATFORM_META.perplexity;
+  var labelHTML = meta.emoji + ' ' + esc(meta.label) + ' で検索 (' + meta.dur + ')';
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '🔄 ' + esc(meta.label) + ' 実行中... (' + meta.dur + ')'; }
   try {
-    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/aeo-monitor/run', { query });
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/aeo-monitor/run', { query, platform });
     if(r && r.ok){
       var site = (agents || []).find(function(a){ return a && a.id === siteId; });
       if(site){
@@ -6222,7 +6271,7 @@ async function _runAeoMonitor(siteId, btnEl){
         site.aeo_monitor.runs = site.aeo_monitor.runs || [];
         site.aeo_monitor.runs.unshift({
           ts: new Date().toISOString(),
-          query, platform: r.platform,
+          query, platform: r.platform || platform,
           mentioned: !!r.mentioned,
           cited_urls: r.cited_urls || [],
           matched_urls: r.matched_urls || [],
@@ -6230,19 +6279,19 @@ async function _runAeoMonitor(siteId, btnEl){
         });
       }
       var msg = r.mentioned
-        ? '✅ 自社引用あり (' + (r.matched_urls || []).length + ' URL)'
-        : '❌ 自社引用なし (' + (r.cited_urls || []).length + ' URL が引用)';
+        ? '✅ 自社引用あり (' + (r.matched_urls || []).length + ' URL) — ' + meta.label
+        : '❌ 自社引用なし (' + (r.cited_urls || []).length + ' URL が引用) — ' + meta.label;
       showToast(msg, r.mentioned ? 'ok' : 'ng');
       // modal を re-open して履歴更新
       _closeAeoMonitorModal();
       setTimeout(function(){ _openAeoMonitorModal(siteId); }, 200);
     } else {
       showToast((r && r.detail) || (r && r.error) || '実行失敗', 'ng');
-      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 Perplexity で検索 (~15s)'; }
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = labelHTML; }
     }
   } catch(e){
     showToast((e && e.message) || 'ネットワークエラー', 'ng');
-    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = '🤖 Perplexity で検索 (~15s)'; }
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = labelHTML; }
   }
 }
 

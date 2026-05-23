@@ -9899,16 +9899,42 @@ async function executePublishNoteTool(user, input){
   };
 }
 
+// ── 投稿成功時に agent.sns_history[platform] に記録 (= 数字 tab で集計) ──
+function _recordSnsPost(agent, platform, info){
+  if(!agent || !platform) return;
+  agent.sns_history = agent.sns_history || {};
+  agent.sns_history[platform] = Array.isArray(agent.sns_history[platform]) ? agent.sns_history[platform] : [];
+  agent.sns_history[platform].unshift({
+    ts: new Date().toISOString(),
+    url: String(info.url || ''),
+    text: String(info.text || '').slice(0, 280),
+    tool: String(info.tool || ''),
+  });
+  // 直近 100 件まで保持
+  agent.sns_history[platform] = agent.sns_history[platform].slice(0, 100);
+}
+
 // ── 汎用 dispatch ──
-async function executeSnsTool(user, name, input){
-  if(name === 'verify_x_login')       return executeVerifyXLoginTool(user);
-  if(name === 'post_to_x')            return executePostToXTool(user, input);
-  if(name === 'post_to_x_thread')     return executePostToXThreadTool(user, input);
-  if(name === 'post_to_linkedin')     return executePostToLinkedInTool(user, input);
-  if(name === 'post_to_threads')      return executePostToThreadsTool(user, input);
-  if(name === 'post_to_facebook')     return executePostToFacebookTool(user, input);
-  if(name === 'publish_note')         return executePublishNoteTool(user, input);
-  return { error: 'unknown_sns_tool: ' + name };
+async function executeSnsTool(user, name, input, agent){
+  let r;
+  if(name === 'verify_x_login')       r = await executeVerifyXLoginTool(user);
+  else if(name === 'post_to_x')       r = await executePostToXTool(user, input);
+  else if(name === 'post_to_x_thread') r = await executePostToXThreadTool(user, input);
+  else if(name === 'post_to_linkedin') r = await executePostToLinkedInTool(user, input);
+  else if(name === 'post_to_threads')  r = await executePostToThreadsTool(user, input);
+  else if(name === 'post_to_facebook') r = await executePostToFacebookTool(user, input);
+  else if(name === 'publish_note')     r = await executePublishNoteTool(user, input);
+  else return { error: 'unknown_sns_tool: ' + name };
+
+  // 成功時のみ history 記録 (verify_x_login は post じゃないので除外)
+  if(agent && r && r.ok && r.platform && name !== 'verify_x_login'){
+    _recordSnsPost(agent, r.platform, {
+      url: r.url,
+      text: (input && (input.text || input.title)) || '',
+      tool: name,
+    });
+  }
+  return r;
 }
 
 // ── Google Sheets API tools (require user.google_oauth set) ──
@@ -13058,7 +13084,7 @@ async function _runOneSchedule(user, agent, sched){
             const route = _mcpRouting.get(block.name);
             result = await _mcpCallTool(route.server, route.toolName, block.input || {});
           }
-          else if(block.name && SNS_TOOL_NAMES.has(block.name)) result = await executeSnsTool(user, block.name, block.input||{});
+          else if(block.name && SNS_TOOL_NAMES.has(block.name)) result = await executeSnsTool(user, block.name, block.input||{}, agent);
           else if(block.name && AEO_TOOL_NAMES.has(block.name)) result = await executeAiSearchMonitorTool(user, block.input||{});
           else result = { error: 'tool_unavailable_in_schedule: ' + block.name };
         } catch(toolErr){
@@ -22304,7 +22330,7 @@ ${orgSummary || '(汎用チーム)'}
             } else if(block.name && block.name.startsWith('ext_')){
               result = await executeExtensionTool(user, block.name, block.input||{});
             } else if(block.name && SNS_TOOL_NAMES.has(block.name)){
-              result = await executeSnsTool(payerUser, block.name, block.input||{});
+              result = await executeSnsTool(payerUser, block.name, block.input||{}, agent);
             } else if(block.name && AEO_TOOL_NAMES.has(block.name)){
               result = await executeAiSearchMonitorTool(payerUser, block.input||{});
             } else if(session){

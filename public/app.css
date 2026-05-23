@@ -3503,6 +3503,148 @@ input,textarea{font-family:var(--sans);}
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   ── 数字 tab: AEO / SNS / Content-EC card grid ──
+   各 platform を per-card で「接続済 → 数字 / 未接続 → CTA」に flip
+   ══════════════════════════════════════════════════════════════════ */
+.nu-sub-row{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
+  gap:10px; margin-bottom:14px;
+}
+.nu-sub-card{
+  background:#fff; border:1px solid var(--wire);
+  border-radius:11px; padding:12px 14px;
+}
+.nu-sub-card.primary{
+  background:linear-gradient(135deg, rgba(147,51,234,.06), rgba(147,51,234,.02));
+  border-color:rgba(147,51,234,.24);
+}
+.nu-sub-lbl{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-bottom:5px;
+}
+.nu-sub-val{
+  font-size:26px; font-weight:900; color:var(--text);
+  letter-spacing:-.02em; line-height:1.05;
+}
+.nu-sub-val-unit{
+  font-size:13px; font-weight:800; color:var(--text2);
+  margin-left:3px; letter-spacing:0;
+}
+.nu-sub-sub{
+  font-size:11px; font-weight:700; color:var(--text3);
+  margin-top:4px; letter-spacing:.005em;
+}
+.nu-aeo-last{
+  margin-top:12px; padding:10px 13px;
+  background:var(--cream); border-radius:9px;
+  border:1px solid var(--wire);
+}
+.nu-aeo-last-h{
+  font-size:10px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-bottom:4px;
+}
+.nu-aeo-last-q{
+  font-size:12.5px; font-weight:700; color:var(--text);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.nu-aeo-on{
+  font-size:10px; font-weight:800;
+  background:rgba(22,163,74,.12); color:#16a34a;
+  border:1px solid rgba(22,163,74,.24);
+  padding:2px 8px; border-radius:99px; letter-spacing:.02em;
+}
+.nu-aeo-off{
+  font-size:10px; font-weight:800;
+  background:rgba(0,0,0,.04); color:var(--text3);
+  border:1px solid var(--wire2);
+  padding:2px 8px; border-radius:99px; letter-spacing:.02em;
+}
+/* SNS / Content-EC per-platform card grid */
+.nu-sns-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+  gap:10px;
+}
+.nu-sns-card{
+  background:#fff; border:1.5px solid var(--wire);
+  border-radius:11px; padding:13px 14px;
+  display:flex; flex-direction:column; gap:8px;
+  transition:transform .15s, border-color .15s;
+}
+.nu-sns-card.on{
+  border-color:rgba(34,197,94,.28);
+  background:linear-gradient(135deg, #fff 0%, rgba(34,197,94,.025) 100%);
+}
+.nu-sns-card.on:hover{transform:translateY(-1px); border-color:var(--nu-c, #16a34a)}
+.nu-sns-card.off{background:var(--cream); border-style:dashed}
+.nu-sns-h{display:flex; align-items:center; gap:7px}
+.nu-sns-emoji{font-size:18px; line-height:1}
+.nu-sns-name{
+  flex:1; min-width:0;
+  font-size:12.5px; font-weight:800; color:var(--text);
+  letter-spacing:-.005em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.nu-sns-badge{
+  font-size:9.5px; font-weight:800;
+  padding:2px 7px; border-radius:99px;
+  letter-spacing:.04em; flex-shrink:0;
+}
+.nu-sns-badge.on{
+  background:rgba(22,163,74,.12); color:#16a34a;
+  border:1px solid rgba(22,163,74,.24);
+}
+.nu-sns-badge.off{
+  background:rgba(0,0,0,.04); color:var(--text3);
+  border:1px solid var(--wire2);
+}
+.nu-sns-handle{
+  font-size:11px; font-weight:700; color:var(--text2);
+  letter-spacing:-.005em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.nu-sns-stats{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  padding:8px 0;
+  border-top:1px solid var(--wire); border-bottom:1px solid var(--wire);
+}
+.nu-sns-stat{text-align:center}
+.nu-sns-stat-v{
+  font-size:15px; font-weight:900; color:var(--text);
+  letter-spacing:-.01em; line-height:1.1;
+}
+.nu-sns-stat-l{
+  font-size:9.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase; margin-top:2px;
+}
+.nu-sns-actions{display:flex; justify-content:flex-end}
+.nu-sns-link{
+  font-size:10.5px; font-weight:800; color:var(--text2);
+  text-decoration:none; letter-spacing:.005em;
+  padding:3px 0;
+}
+.nu-sns-link:hover{color:var(--text); text-decoration:underline}
+.nu-sns-locked-tx{
+  font-size:11px; font-weight:600; color:var(--text3);
+  line-height:1.5;
+}
+.nu-sns-connect-btn{
+  background:#fff; color:var(--text);
+  border:1px solid var(--wire2);
+  padding:7px 12px; border-radius:8px;
+  font-family:inherit; font-size:11.5px; font-weight:800;
+  cursor:pointer; letter-spacing:-.005em;
+  transition:all .15s; align-self:flex-start;
+}
+.nu-sns-connect-btn:hover{background:var(--peach, #fb923c); color:#fff; border-color:var(--peach-dark, #ea580c)}
+@media (max-width:560px){
+  .nu-sns-grid{grid-template-columns:repeat(2, 1fr); gap:8px}
+  .nu-sns-card{padding:10px 11px}
+  .nu-sns-stat-v{font-size:13px}
+  .nu-sns-emoji{font-size:16px}
+  .nu-sns-name{font-size:11.5px}
+  .nu-sub-val{font-size:22px}
+}
+
+/* ══════════════════════════════════════════════════════════════════
    ── Tab 4 (D): ✅ タスク管理 — 12 週ロードマップ ──
    生成前 = empty state with CTA
    生成後 = 進捗バー + Week 別 accordion + チェックボックス

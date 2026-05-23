@@ -3467,6 +3467,18 @@ function _siteHostname(site){
   try { return new URL(site.site_url).hostname.replace(/^www\./, ''); }
   catch(e){ return site.name || ''; }
 }
+// 「3 時間前」 / 「2 日前」 などの相対時間 (= 数字 tab の SNS card で使用)
+function _fmtRelTime(iso){
+  if(!iso) return '';
+  var ts = Date.parse(iso);
+  if(!ts) return '';
+  var diff = Date.now() - ts;
+  if(diff < 60000) return 'たった今';
+  if(diff < 3600000) return Math.floor(diff / 60000) + ' 分前';
+  if(diff < 86400000) return Math.floor(diff / 3600000) + ' 時間前';
+  if(diff < 30 * 86400000) return Math.floor(diff / 86400000) + ' 日前';
+  return Math.floor(diff / (30 * 86400000)) + ' ヶ月前';
+}
 function _siteTodayArtifacts(siteId){
   if(!siteId || typeof me === 'undefined' || !me) return [];
   var arts = Array.isArray(me.artifacts) ? me.artifacts : [];
@@ -4230,6 +4242,9 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   // KPI 未設定 → BIG CTA で「ここで設定すると数字が出る」
   // KPI 設定済 + GA4 未接続 → 目標値だけ表示 + GA4 接続 CTA
   // KPI 設定済 + GA4 接続済 → 実測値 + 達成率 + trend chart
+  // SNS / Content / EC card のために 接続状態を lazy fetch
+  var _snsC = window._snsStatusCache && window._snsStatusCache[site.id];
+  if(!_snsC){ setTimeout(function(){ _fetchSnsStatus(site.id); }, 100); }
   var hasKpi = !!(kpi.pv || kpi.cvr || kpi.leads);
   // GA4 snapshot (= バックグラウンド fetch 結果)
   var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
@@ -4551,25 +4566,193 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     +   '</div>'
     + '</div>';
 
-  // ── Module 5: SNS (近日) ──
+  // ── Module 5: AI 検索モニター (内蔵 — 接続不要) ──
+  // = AEO 部門の主力 KPI: 「自社が AI 引用された率」
+  var aeoRuns = (site.aeo_monitor && site.aeo_monitor.runs) || [];
+  var aeoRuns7d = (function(){
+    var since = Date.now() - 7 * 86400000;
+    return aeoRuns.filter(function(r){ return Date.parse(r.ts||0) > since; });
+  })();
+  var aeoMentioned7d = aeoRuns7d.filter(function(r){ return r.mentioned; }).length;
+  var aeoCitedRate = aeoRuns7d.length > 0 ? Math.round(aeoMentioned7d / aeoRuns7d.length * 100) : 0;
+  var aeoLast = aeoRuns[0] || null;
+  var aeoHasData = aeoRuns.length > 0;
+  var aeoModBody = aeoHasData
+    ? '<div class="nu-sub-row">'
+      +   '<div class="nu-sub-card primary">'
+      +     '<div class="nu-sub-lbl">📊 引用率 (直近 7 日)</div>'
+      +     '<div class="nu-sub-val">' + aeoCitedRate + '<span class="nu-sub-val-unit">%</span></div>'
+      +     '<div class="nu-sub-sub">' + aeoMentioned7d + ' / ' + aeoRuns7d.length + ' query で 引用</div>'
+      +   '</div>'
+      +   '<div class="nu-sub-card">'
+      +     '<div class="nu-sub-lbl">🔍 累計 query</div>'
+      +     '<div class="nu-sub-val">' + aeoRuns.length + '</div>'
+      +     '<div class="nu-sub-sub">直近: ' + (aeoLast ? esc((aeoLast.platform || 'perplexity').toUpperCase()) : '—') + '</div>'
+      +   '</div>'
+      +   '<div class="nu-sub-card">'
+      +     '<div class="nu-sub-lbl">🌐 自社引用 URL</div>'
+      +     '<div class="nu-sub-val">' + aeoRuns.reduce(function(s, r){ return s + ((r.matched_urls||[]).length); }, 0) + '</div>'
+      +     '<div class="nu-sub-sub">累計マッチ件数</div>'
+      +   '</div>'
+      + '</div>'
+      + (aeoLast
+          ? '<div class="nu-aeo-last">'
+            +   '<div class="nu-aeo-last-h">直近の query</div>'
+            +   '<div class="nu-aeo-last-q">「' + esc(aeoLast.query || '') + '」 ' + (aeoLast.mentioned ? '<span class="nu-aeo-on">✅ 引用あり</span>' : '<span class="nu-aeo-off">❌ 引用なし</span>') + '</div>'
+            + '</div>'
+          : '')
+    : '<div class="nm-mod-locked">'
+      + '<div class="nm-mod-locked-tx">AI 検索エンジン (Perplexity / ChatGPT / Gemini) で「あなたのサイトが回答に引用されるか」をチェック。 拡張は無料、 接続作業なしで使えます。</div>'
+      + '<button class="nm-mod-locked-btn" onclick="_openAeoMonitorModal(\'' + esc(site.id) + '\')">🤖 1 つ目の query を試す →</button>'
+      + '</div>';
+  var aeoModuleHTML = ''
+    + '<div class="nm-mod ' + (aeoHasData ? 'nm-mod-on' : 'nm-mod-off') + '">'
+    +   _moduleHeader('🤖', 'AI 検索モニター (内蔵)', aeoHasData, '#9333ea',
+                     aeoHasData ? '🔍 新規 query' : '試す →',
+                     '_openAeoMonitorModal(\'' + esc(site.id) + '\')')
+    +   '<div class="nm-mod-body">' + aeoModBody + '</div>'
+    + '</div>';
+
+  // ── Module 6: SNS 投稿数 (per-platform — 接続 + 投稿数) ──
+  // user.sns_connections と site.sns_history を組み合わせて、 7 platform の card grid
+  var snsStatus = (window._snsStatusCache && window._snsStatusCache[site.id]) || {};
+  var snsHist = site.sns_history || {};
+  var SNS_PLATFORMS_FOR_NUMBERS = [
+    { key: 'x',         name: 'X (Twitter)', emoji: '🐦', color: '#000000' },
+    { key: 'linkedin',  name: 'LinkedIn',    emoji: '💼', color: '#0a66c2' },
+    { key: 'threads',   name: 'Threads',     emoji: '🧵', color: '#000000' },
+    { key: 'facebook',  name: 'Facebook',    emoji: '📘', color: '#1877f2' },
+    { key: 'instagram', name: 'Instagram',   emoji: '📸', color: '#e1306c' },
+    { key: 'tiktok',    name: 'TikTok',      emoji: '🎵', color: '#000000' },
+    { key: 'youtube',   name: 'YouTube',     emoji: '📺', color: '#ff0000' },
+  ];
+  var snsAnyConnected = SNS_PLATFORMS_FOR_NUMBERS.some(function(p){ return snsStatus[p.key] && snsStatus[p.key].connected; });
+  var snsTotalPosts = SNS_PLATFORMS_FOR_NUMBERS.reduce(function(s, p){
+    return s + ((snsHist[p.key] || []).length);
+  }, 0);
+  var snsPostsLast7d = SNS_PLATFORMS_FOR_NUMBERS.reduce(function(s, p){
+    var since = Date.now() - 7 * 86400000;
+    return s + ((snsHist[p.key] || []).filter(function(h){ return Date.parse(h.ts||0) > since; }).length);
+  }, 0);
+  var snsCardsHTML = SNS_PLATFORMS_FOR_NUMBERS.map(function(p){
+    var st = snsStatus[p.key] || { connected: false };
+    var hist = snsHist[p.key] || [];
+    var lastPost = hist[0];
+    var lastPostAt = lastPost ? _fmtRelTime(lastPost.ts) : null;
+    if(st.connected){
+      var profUrl = (st.profile && st.profile.url) || '';
+      var handle = (st.profile && (st.profile.handle || st.profile.username || st.profile.name)) || '';
+      return '<div class="nu-sns-card on" style="--nu-c:' + p.color + '">'
+           +   '<div class="nu-sns-h">'
+           +     '<span class="nu-sns-emoji">' + p.emoji + '</span>'
+           +     '<span class="nu-sns-name">' + esc(p.name) + '</span>'
+           +     '<span class="nu-sns-badge on">接続済</span>'
+           +   '</div>'
+           +   (handle ? '<div class="nu-sns-handle">' + esc(handle) + '</div>' : '')
+           +   '<div class="nu-sns-stats">'
+           +     '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + hist.length + '</div><div class="nu-sns-stat-l">累計投稿</div></div>'
+           +     '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + (lastPostAt || '—') + '</div><div class="nu-sns-stat-l">直近</div></div>'
+           +   '</div>'
+           +   '<div class="nu-sns-actions">'
+           +     (profUrl ? '<a href="' + esc(profUrl) + '" target="_blank" rel="noopener" class="nu-sns-link">プロフィール ↗</a>' : '')
+           +   '</div>'
+           + '</div>';
+    } else {
+      return '<div class="nu-sns-card off">'
+           +   '<div class="nu-sns-h">'
+           +     '<span class="nu-sns-emoji" style="opacity:.5">' + p.emoji + '</span>'
+           +     '<span class="nu-sns-name" style="opacity:.7">' + esc(p.name) + '</span>'
+           +     '<span class="nu-sns-badge off">未接続</span>'
+           +   '</div>'
+           +   '<div class="nu-sns-locked-tx">接続すると 投稿数 ・ 最終投稿 が表示</div>'
+           +   '<button class="nu-sns-connect-btn" onclick="_openSnsConnectModal(\'' + p.key + '\',\'' + esc(site.id) + '\')">接続 →</button>'
+           + '</div>';
+    }
+  }).join('');
   var snsModuleHTML = ''
-    + '<div class="nm-mod nm-mod-off">'
-    +   _moduleHeader('📱', 'SNS Analytics', false, '#ec4899', null, null)
+    + '<div class="nm-mod ' + (snsAnyConnected ? 'nm-mod-on' : 'nm-mod-off') + '">'
+    +   _moduleHeader('🐦', 'SNS 投稿アクティビティ (7 platform)', snsAnyConnected, '#ec4899',
+                     '接続管理 →',
+                     '_switchDashTab(\'' + esc(site.id) + '\',\'connections\')')
     +   '<div class="nm-mod-body">'
-    +     '<div class="nm-mod-locked">'
-    +       '<div class="nm-mod-locked-tx">X / Instagram / LinkedIn — フォロワー / インプレッション / エンゲージメント / 投稿パフォーマンス。</div>'
-    +       '<div class="nm-mod-locked-soon">⏳ Phase 4 で対応予定</div>'
-    +     '</div>'
+    +     (snsAnyConnected
+        ? '<div class="nu-sub-row">'
+          +   '<div class="nu-sub-card primary">'
+          +     '<div class="nu-sub-lbl">📈 直近 7 日の投稿</div>'
+          +     '<div class="nu-sub-val">' + snsPostsLast7d + '<span class="nu-sub-val-unit">件</span></div>'
+          +     '<div class="nu-sub-sub">累計 ' + snsTotalPosts + ' 件 ・ 全 platform 横断</div>'
+          +   '</div>'
+          + '</div>'
+        : '')
+    +     '<div class="nu-sns-grid">' + snsCardsHTML + '</div>'
+    +   '</div>'
+    + '</div>';
+
+  // ── Module 7: コンテンツ・EC (note / WordPress / Shopify / BASE) ──
+  var CONTENT_EC_PLATFORMS = [
+    { key: 'note',      name: 'note',      emoji: '📝', color: '#41c9b4', kind: 'content' },
+    { key: 'wordpress', name: 'WordPress', emoji: '🌐', color: '#21759b', kind: 'content' },
+    { key: 'shopify',   name: 'Shopify',   emoji: '🛒', color: '#7ab55c', kind: 'ec' },
+    { key: 'base',      name: 'BASE',      emoji: '🏪', color: '#ff7e2d', kind: 'ec' },
+  ];
+  var ceAnyConnected = CONTENT_EC_PLATFORMS.some(function(p){ return snsStatus[p.key] && snsStatus[p.key].connected; });
+  var ceCardsHTML = CONTENT_EC_PLATFORMS.map(function(p){
+    var st = snsStatus[p.key] || { connected: false };
+    var hist = snsHist[p.key] || [];
+    var lastPost = hist[0];
+    var lastPostAt = lastPost ? _fmtRelTime(lastPost.ts) : null;
+    if(st.connected){
+      var profUrl = (st.profile && st.profile.url) || '';
+      var handle = (st.profile && (st.profile.handle || st.profile.username || st.profile.name)) || '';
+      var statRight = p.kind === 'content'
+        ? { v: hist.length, l: '公開記事' }
+        : { v: handle ? esc(handle.slice(0, 16)) : '—', l: 'ショップ名' };
+      return '<div class="nu-sns-card on" style="--nu-c:' + p.color + '">'
+           +   '<div class="nu-sns-h">'
+           +     '<span class="nu-sns-emoji">' + p.emoji + '</span>'
+           +     '<span class="nu-sns-name">' + esc(p.name) + '</span>'
+           +     '<span class="nu-sns-badge on">接続済</span>'
+           +   '</div>'
+           +   (handle ? '<div class="nu-sns-handle">' + esc(handle) + '</div>' : '')
+           +   '<div class="nu-sns-stats">'
+           +     '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + statRight.v + '</div><div class="nu-sns-stat-l">' + statRight.l + '</div></div>'
+           +     '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + (lastPostAt || '—') + '</div><div class="nu-sns-stat-l">直近</div></div>'
+           +   '</div>'
+           +   '<div class="nu-sns-actions">'
+           +     (profUrl ? '<a href="' + esc(profUrl) + '" target="_blank" rel="noopener" class="nu-sns-link">' + (p.kind === 'ec' ? 'ショップ' : 'プロフィール') + ' ↗</a>' : '')
+           +   '</div>'
+           + '</div>';
+    } else {
+      return '<div class="nu-sns-card off">'
+           +   '<div class="nu-sns-h">'
+           +     '<span class="nu-sns-emoji" style="opacity:.5">' + p.emoji + '</span>'
+           +     '<span class="nu-sns-name" style="opacity:.7">' + esc(p.name) + '</span>'
+           +     '<span class="nu-sns-badge off">未接続</span>'
+           +   '</div>'
+           +   '<div class="nu-sns-locked-tx">' + (p.kind === 'content' ? '接続すると 公開記事数 が表示' : '接続すると ショップ URL を保存') + '</div>'
+           +   '<button class="nu-sns-connect-btn" onclick="_openSnsConnectModal(\'' + p.key + '\',\'' + esc(site.id) + '\')">接続 →</button>'
+           + '</div>';
+    }
+  }).join('');
+  var contentEcModuleHTML = ''
+    + '<div class="nm-mod ' + (ceAnyConnected ? 'nm-mod-on' : 'nm-mod-off') + '">'
+    +   _moduleHeader('📰', 'コンテンツ / EC (note / WP / Shopify / BASE)', ceAnyConnected, '#0ea5e9',
+                     '接続管理 →',
+                     '_switchDashTab(\'' + esc(site.id) + '\',\'connections\')')
+    +   '<div class="nm-mod-body">'
+    +     '<div class="nu-sns-grid">' + ceCardsHTML + '</div>'
     +   '</div>'
     + '</div>';
 
   return heroHTML
     + insightsHTML
     + ga4ModuleHTML
+    + aeoModuleHTML
+    + snsModuleHTML
+    + contentEcModuleHTML
     + scModuleHTML
     + stripeModuleHTML
     + formModuleHTML
-    + snsModuleHTML
     + deptRankHTML
     + activityHTML;
 }
@@ -5990,6 +6173,7 @@ function _renderTabSettings(site){
 
 // ─── SNS 接続管理 helpers ────────────────────────────────
 window._snsStatusCache = window._snsStatusCache || {};
+var _SNS_ALL_PLATFORMS = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base'];
 async function _fetchSnsStatus(siteId){
   if(window._snsStatusFetching && window._snsStatusFetching[siteId]) return;
   window._snsStatusFetching = window._snsStatusFetching || {};
@@ -5997,10 +6181,11 @@ async function _fetchSnsStatus(siteId){
   try {
     var r = await api('GET', '/api/sns/status');
     if(r && r.ok){
-      window._snsStatusCache[siteId] = {
-        extension_paired: !!r.extension_paired,
-        x: r.x || { connected: false },
-      };
+      var cache = { extension_paired: !!r.extension_paired };
+      _SNS_ALL_PLATFORMS.forEach(function(p){
+        cache[p] = r[p] || { connected: false };
+      });
+      window._snsStatusCache[siteId] = cache;
       try { renderHomeDashboard(); } catch(_){}
     }
   } catch(e){

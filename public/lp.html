@@ -501,6 +501,20 @@
     margin-left:14px; font-family:'Outfit', sans-serif;
     font-size:11.5px; color:var(--ink3); letter-spacing:.02em;
   }
+  .dash-mock-live{
+    margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+    font-size:10.5px; font-weight:800; color:#16a34a;
+    background:rgba(22,163,74,.10); padding:3px 10px; border-radius:99px;
+    letter-spacing:.02em;
+  }
+  .dash-mock-live-dot{
+    width:6px; height:6px; border-radius:50%; background:#16a34a;
+    animation:pulse-live 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-live{
+    0%, 100%{opacity:1; box-shadow:0 0 0 0 rgba(22,163,74,.5)}
+    50%{opacity:.5; box-shadow:0 0 0 5px rgba(22,163,74,0)}
+  }
   .dash-mock-body{padding:22px 26px 26px; background:var(--bg)}
   .dash-mock-site{
     display:flex; align-items:center; gap:13px;
@@ -523,6 +537,38 @@
     font-size:12px; font-weight:800;
     box-shadow:0 4px 10px rgba(234,88,12,.20);
   }
+  /* KPI strip — 「数字が動いてる」 印象 */
+  .dash-mock-kpi-row{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px;
+  }
+  .dash-mock-kpi{
+    background:#fff; border:1px solid var(--wire);
+    border-radius:10px; padding:12px 14px;
+    position:relative; overflow:hidden;
+  }
+  .dash-mock-kpi-lbl{
+    font-size:10px; font-weight:800; color:var(--ink3);
+    letter-spacing:.04em; text-transform:uppercase; margin-bottom:4px;
+  }
+  .dash-mock-kpi-val{
+    font-size:19px; font-weight:900; color:var(--ink);
+    letter-spacing:-.015em; line-height:1.1;
+    display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;
+  }
+  .dash-mock-kpi-delta{
+    font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:5px;
+    letter-spacing:.01em;
+  }
+  .dash-mock-kpi-delta.up{background:rgba(22,163,74,.12); color:#16a34a}
+  .dash-mock-kpi-chart{
+    width:calc(100% + 28px); height:30px; margin:7px -14px -12px;
+    display:block;
+  }
+  .dash-mock-kpi-foot{
+    font-size:9.5px; color:var(--ink3); font-weight:700;
+    line-height:1.45; margin-top:4px; letter-spacing:.005em;
+  }
+
   .dash-mock-row{
     display:grid; grid-template-columns:1.4fr 1fr; gap:12px; margin-bottom:12px;
   }
@@ -544,34 +590,61 @@
   }
   @keyframes bar-grow{from{width:0%}}
   .dash-mock-meta{font-size:10.5px; color:var(--ink3); font-weight:700}
-  .dash-mock-team{display:flex; flex-direction:column; gap:5px}
+  .dash-mock-steps{
+    display:flex; flex-direction:column; gap:4px; margin-top:10px;
+    padding-top:10px; border-top:1px dashed var(--wire);
+  }
+  .dash-mock-step{
+    font-size:10.5px; font-weight:700; color:var(--ink3);
+    letter-spacing:.005em;
+  }
+  .dash-mock-step.done{color:#16a34a}
+  .dash-mock-team{display:flex; flex-direction:column; gap:6px}
   .dash-mock-mem{
-    display:flex; align-items:center; gap:7px;
+    display:flex; align-items:center; gap:8px;
     font-size:11.5px; font-weight:700; color:var(--ink);
   }
-  .dash-mock-mem span{
-    width:20px; height:20px; border-radius:5px;
-    background:var(--peach-soft);
+  .dash-mock-mem-ic{
+    width:24px; height:24px; border-radius:7px;
     display:inline-flex; align-items:center; justify-content:center;
-    font-size:11px;
+    font-size:12px; flex-shrink:0;
+    box-shadow:0 2px 4px rgba(0,0,0,.06);
+  }
+  .dash-mock-mem-name{flex:1; min-width:0}
+  .dash-mock-mem-cnt{
+    font-size:10.5px; color:var(--ink3); font-weight:800;
+    background:var(--cream); padding:2px 7px; border-radius:99px;
+    letter-spacing:.01em;
   }
   .dash-mock-arts{margin-bottom:0}
   .dash-mock-art-grid{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:8px;
   }
   .dash-mock-art{
-    background:var(--cream); border:1px solid var(--wire);
-    border-radius:8px; padding:11px 12px;
+    background:linear-gradient(135deg, #fff 0%, var(--cream) 100%);
+    border:1px solid var(--wire);
+    border-left:3px solid var(--art-c, var(--peach));
+    border-radius:9px; padding:11px 12px;
+    position:relative;
   }
-  .dash-mock-art-ti{font-size:11.5px; font-weight:800; margin-bottom:3px}
-  .dash-mock-art-meta{font-size:9.5px; color:var(--ink3); font-weight:700; margin-bottom:5px}
-  .dash-mock-art-link{font-size:10.5px; color:var(--peach-d); font-weight:800}
+  .dash-mock-art-tag{
+    display:inline-block;
+    font-size:9px; font-weight:900; padding:2px 7px; border-radius:4px;
+    letter-spacing:.05em; text-transform:uppercase;
+    margin-bottom:5px;
+  }
+  .dash-mock-art-ti{font-size:12px; font-weight:800; margin-bottom:4px; line-height:1.35; color:var(--ink)}
+  .dash-mock-art-meta{font-size:9.5px; color:var(--ink3); font-weight:700; margin-bottom:6px}
+  .dash-mock-art-link{font-size:10.5px; color:var(--peach-d); font-weight:800; letter-spacing:.005em}
   @media (max-width:760px){
     .dash-mock{transform:none}
     .dash-mock:hover{transform:translateY(-3px)}
     .dash-mock-row{grid-template-columns:1fr; gap:10px}
+    .dash-mock-kpi-row{grid-template-columns:1fr 1fr; gap:8px}
+    .dash-mock-kpi:nth-child(3){grid-column:1 / -1}
     .dash-mock-art-grid{grid-template-columns:1fr; gap:6px}
     .dash-mock-cta{display:none}
+    .dash-mock-live{font-size:9.5px; padding:2px 8px}
   }
 
   /* ── CAPABILITIES — 100+ 機能を内蔵 ────────────────── */
@@ -709,40 +782,101 @@
     .del{padding:16px}
   }
 
-  /* ── VERTICAL DEEP DIVE ─────────────────────────────── */
-  .v-grid{
-    display:grid; grid-template-columns:repeat(2,1fr); gap:18px;
-    margin:48px auto 0; max-width:960px;
+  /* ── VERTICAL DEEP DIVE — 横一列スクロール + リッチカード ─── */
+  .v-strip-wrap{
+    margin:48px auto 0; max-width:1180px;
+    position:relative;
   }
-  .v-card{
-    background:var(--card); border:1px solid var(--wire);
-    border-radius:16px; padding:24px 26px;
+  .v-strip{
+    display:grid; grid-auto-flow:column; grid-auto-columns:280px;
+    gap:14px; padding:8px 14px 24px;
+    overflow-x:auto; scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin; scrollbar-color:var(--wire2) transparent;
+    /* edge fade で 「もっとある」 アフォーダンス */
+    mask-image:linear-gradient(90deg, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
+  }
+  .v-strip::-webkit-scrollbar{height:6px}
+  .v-strip::-webkit-scrollbar-thumb{background:var(--wire2); border-radius:99px}
+  .v-card-h{
+    scroll-snap-align:start;
+    background:#fff; border:1px solid var(--wire);
+    border-radius:14px; padding:0;
+    overflow:hidden;
+    box-shadow:0 2px 6px rgba(70,40,20,.04);
     transition:transform .18s, border-color .18s, box-shadow .18s;
+    display:flex; flex-direction:column;
   }
-  .v-card:hover{transform:translateY(-2px); border-color:rgba(251,146,60,.34); box-shadow:var(--shadow-md)}
-  .v-card.feature{
-    grid-column:span 2;
-    background:linear-gradient(135deg,var(--peach-soft),#fff);
-    border-color:rgba(251,146,60,.22);
+  .v-card-h:hover{
+    transform:translateY(-3px);
+    border-color:var(--vc, var(--peach));
+    box-shadow:0 14px 32px rgba(70,40,20,.10);
   }
-  .v-head{
-    display:flex; align-items:center; gap:10px;
-    font-size:17px; font-weight:900; margin-bottom:14px; letter-spacing:-.01em;
+  .v-card-h-top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px 12px;
+    background:linear-gradient(135deg, var(--vc, #fb923c), var(--vc2, #ea580c));
+    color:#fff;
   }
-  .v-head-ic{font-size:22px}
-  .v-list{list-style:none; display:flex; flex-direction:column; gap:9px}
-  .v-list li{
-    display:flex; align-items:flex-start; gap:9px;
-    font-size:13.5px; color:var(--ink2); line-height:1.55;
+  .v-card-h-ic{font-size:30px; line-height:1; filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))}
+  .v-card-h-num{
+    font-size:11.5px; font-weight:900; letter-spacing:.01em;
+    padding:5px 10px; border-radius:99px;
+    background:rgba(255,255,255,.22); backdrop-filter:blur(4px);
+    color:#fff; white-space:nowrap;
   }
-  .v-list li::before{
-    content:'→'; color:var(--peach-d); font-weight:800;
-    flex-shrink:0; line-height:1.5;
+  .v-card-h-ti{
+    font-size:15px; font-weight:900; letter-spacing:-.01em;
+    color:var(--ink); padding:14px 18px 2px; line-height:1.3;
   }
+  .v-card-h-sub{
+    font-size:11px; font-weight:800;
+    color:var(--vc2, var(--peach-d));
+    padding:0 18px 12px; letter-spacing:.01em;
+  }
+  .v-card-h-bul{
+    list-style:none; padding:6px 18px 14px;
+    display:flex; flex-direction:column; gap:7px;
+    border-top:1px dashed var(--wire);
+    margin-top:auto;
+  }
+  .v-card-h-bul li{
+    font-size:11.5px; line-height:1.5; color:var(--ink2);
+    padding-left:14px; position:relative; font-weight:600;
+  }
+  .v-card-h-bul li::before{
+    content:'→'; position:absolute; left:0; top:0;
+    color:var(--vc2, var(--peach-d)); font-weight:800;
+  }
+  .v-card-h-foot{
+    font-size:10.5px; font-weight:700; color:var(--ink3);
+    padding:10px 18px; background:var(--cream);
+    border-top:1px solid var(--wire);
+    letter-spacing:.005em; line-height:1.5;
+  }
+  /* スクロール矢印 (= 「→ 次がある」 シグナル) */
+  .v-strip-arr{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:40px; height:40px; border-radius:50%;
+    background:#fff; border:1.5px solid var(--wire2);
+    font-size:22px; font-weight:800; color:var(--ink);
+    box-shadow:0 4px 12px rgba(0,0,0,.10);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all .15s;
+    z-index:2;
+  }
+  .v-strip-arr:hover{
+    background:var(--peach); color:#fff; border-color:var(--peach-d);
+    transform:translateY(-50%) scale(1.08);
+  }
+  .v-strip-arr-l{left:-6px}
+  .v-strip-arr-r{right:-6px}
   @media (max-width:780px){
-    .v-grid{grid-template-columns:1fr; gap:12px}
-    .v-card.feature{grid-column:span 1}
-    .v-card{padding:20px 22px}
+    .v-strip{grid-auto-columns:84%; gap:10px; padding:8px 16px 20px}
+    .v-strip-arr{display:none}
+    .v-card-h-top{padding:14px 16px 10px}
+    .v-card-h-ti{font-size:14.5px}
   }
 
   /* ── COMPARISON TABLE ──────────────────────────────── */
@@ -1211,6 +1345,7 @@
         <span class="dash-mock-dot d-y"></span>
         <span class="dash-mock-dot d-g"></span>
         <span class="dash-mock-url">myaiagents.agency/app</span>
+        <span class="dash-mock-live"><span class="dash-mock-live-dot"></span>稼働中</span>
       </div>
       <div class="dash-mock-body">
         <!-- サイトヘッダー -->
@@ -1218,49 +1353,82 @@
           <div class="dash-mock-site-ic">🚀</div>
           <div class="dash-mock-site-meta">
             <div class="dash-mock-site-url">yoursaas.io</div>
-            <div class="dash-mock-site-sum">SaaS / Product LP ・ 今日 3 件納品</div>
+            <div class="dash-mock-site-sum">SaaS / Product LP ・ 今日 3 件納品 ・ <b style="color:#16a34a">+ 42% PV (7 日)</b></div>
           </div>
           <div class="dash-mock-cta">💬 AI チームに依頼</div>
+        </div>
+
+        <!-- KPI ストリップ (= 「数字が動いてる」 印象) -->
+        <div class="dash-mock-kpi-row">
+          <div class="dash-mock-kpi">
+            <div class="dash-mock-kpi-lbl">📊 直近 30 日 PV</div>
+            <div class="dash-mock-kpi-val">12,840 <span class="dash-mock-kpi-delta up">+42%</span></div>
+            <svg class="dash-mock-kpi-chart" viewBox="0 0 100 30" preserveAspectRatio="none">
+              <defs><linearGradient id="kg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb923c" stop-opacity=".4"/><stop offset="100%" stop-color="#fb923c" stop-opacity="0"/></linearGradient></defs>
+              <path d="M0,22 L12,20 L24,17 L36,18 L48,14 L60,15 L72,10 L84,8 L100,4 L100,30 L0,30 Z" fill="url(#kg1)"/>
+              <path d="M0,22 L12,20 L24,17 L36,18 L48,14 L60,15 L72,10 L84,8 L100,4" fill="none" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="dash-mock-kpi">
+            <div class="dash-mock-kpi-lbl">🤖 AI 引用率</div>
+            <div class="dash-mock-kpi-val">3 / 5 <span class="dash-mock-kpi-delta up">60%</span></div>
+            <div class="dash-mock-kpi-foot">Perplexity / ChatGPT で 直近 5 query 中 3 件 引用</div>
+          </div>
+          <div class="dash-mock-kpi">
+            <div class="dash-mock-kpi-lbl">🔍 検索順位 (avg)</div>
+            <div class="dash-mock-kpi-val">14.2 <span class="dash-mock-kpi-delta up">↑ 3.1</span></div>
+            <div class="dash-mock-kpi-foot">12 keywords ・ TOP10 入り 4 件</div>
+          </div>
         </div>
 
         <!-- 2 カード行 -->
         <div class="dash-mock-row">
           <div class="dash-mock-card">
-            <div class="dash-mock-h">📋 進行中のタスク</div>
+            <div class="dash-mock-h">📋 進行中のタスク <span class="dash-mock-h-sub">残り 2 日</span></div>
             <div class="dash-mock-task">サイトの集客を成長させる</div>
             <div class="dash-mock-bar-wrap"><div class="dash-mock-bar-fill" style="width:60%"></div></div>
             <div class="dash-mock-meta">3 / 5 完了 (60%)</div>
+            <div class="dash-mock-steps">
+              <div class="dash-mock-step done">✓ SEO ブログ記事を 3 本</div>
+              <div class="dash-mock-step done">✓ Twitter スレッドを 1 本</div>
+              <div class="dash-mock-step done">✓ LP 改善案を 5 個</div>
+              <div class="dash-mock-step">○ 競合 3 社の Pricing 監視</div>
+              <div class="dash-mock-step">○ 月次レポート 生成</div>
+            </div>
           </div>
           <div class="dash-mock-card">
             <div class="dash-mock-h">🏢 AI マーケ組織 <span class="dash-mock-h-sub">5 部門 38 名</span></div>
             <div class="dash-mock-team">
-              <div class="dash-mock-mem"><span>🎯</span> 集客部門 (18)</div>
-              <div class="dash-mock-mem"><span>🔍</span> リサーチ部 (6)</div>
-              <div class="dash-mock-mem"><span>📊</span> 分析部 (5)</div>
-              <div class="dash-mock-mem"><span>🎨</span> コンテンツ部 (8)</div>
-              <div class="dash-mock-mem"><span>📈</span> CRO 部 (6)</div>
+              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff">🎯</span><span class="dash-mock-mem-name">集客部門</span><span class="dash-mock-mem-cnt">18</span></div>
+              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff">🔍</span><span class="dash-mock-mem-name">リサーチ部</span><span class="dash-mock-mem-cnt">6</span></div>
+              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#22c55e,#15803d);color:#fff">📊</span><span class="dash-mock-mem-name">分析部</span><span class="dash-mock-mem-cnt">5</span></div>
+              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#a855f7,#7e22ce);color:#fff">🎨</span><span class="dash-mock-mem-name">コンテンツ部</span><span class="dash-mock-mem-cnt">8</span></div>
+              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#ec4899,#be185d);color:#fff">📈</span><span class="dash-mock-mem-name">CRO 部</span><span class="dash-mock-mem-cnt">6</span></div>
             </div>
           </div>
         </div>
 
-        <!-- 納品物 -->
+        <!-- 納品物 (= 各 card に色付き type badge) -->
         <div class="dash-mock-card dash-mock-arts">
-          <div class="dash-mock-h">📦 納品物 <span class="dash-mock-h-sub">5 件</span></div>
+          <div class="dash-mock-h">📦 今週の納品物 <span class="dash-mock-h-sub">5 件</span></div>
           <div class="dash-mock-art-grid">
-            <div class="dash-mock-art">
-              <div class="dash-mock-art-ti">SEO ブログ記事</div>
-              <div class="dash-mock-art-meta">5/22 ・ Ver.1</div>
-              <div class="dash-mock-art-link">↗ 開く</div>
+            <div class="dash-mock-art" style="--art-c:#fb923c">
+              <div class="dash-mock-art-tag" style="background:rgba(251,146,60,.12);color:#ea580c">SEO</div>
+              <div class="dash-mock-art-ti">「AI マーケ 比較 2026」 完全ガイド</div>
+              <div class="dash-mock-art-meta">5/22 ・ 3,400 字 ・ Ver.1</div>
+              <div class="dash-mock-art-link">↗ 開く ・ 📄 編集</div>
             </div>
-            <div class="dash-mock-art">
-              <div class="dash-mock-art-ti">Twitter スレッド</div>
-              <div class="dash-mock-art-meta">5/22 ・ Ver.1</div>
-              <div class="dash-mock-art-link">↗ 開く</div>
+            <div class="dash-mock-art" style="--art-c:#3b82f6">
+              <div class="dash-mock-art-tag" style="background:rgba(59,130,246,.12);color:#1d4ed8">SNS</div>
+              <div class="dash-mock-art-ti">X スレッド 7 連投 (痛み → 解決)</div>
+              <div class="dash-mock-art-meta">5/22 ・ 7 tweets ・ Ver.1</div>
+              <div class="dash-mock-art-link">↗ 開く ・ 🐦 投稿</div>
             </div>
-            <div class="dash-mock-art">
-              <div class="dash-mock-art-ti">LP 改善案</div>
-              <div class="dash-mock-art-meta">5/22 ・ Ver.1</div>
-              <div class="dash-mock-art-link">↗ 開く</div>
+            <div class="dash-mock-art" style="--art-c:#a855f7">
+              <div class="dash-mock-art-tag" style="background:rgba(168,85,247,.12);color:#7e22ce">CRO</div>
+              <div class="dash-mock-art-ti">LP CVR 改善案 (A/B 5 案 + 仮説)</div>
+              <div class="dash-mock-art-meta">5/22 ・ 5 案 ・ Ver.1</div>
+              <div class="dash-mock-art-link">↗ 開く ・ 📊 ROI 試算</div>
             </div>
           </div>
         </div>
@@ -1558,84 +1726,102 @@
       URL を入れた瞬間、AI がサイト種類を判定 → 最適な <b>部門 + 専門家</b> の組み合わせで組織を編成します。
     </p>
 
-    <div class="v-grid">
-      <div class="v-card feature">
-        <div class="v-head">
-          <span class="v-head-ic">🚀</span>
-          <span data-i18n="vd.saash">SaaS / プロダクト LP</span>
+    <!-- 横一列スクロールの 6 card row — desktop 4 visible / mobile 1.2 visible swipe -->
+    <div class="v-strip-wrap">
+      <div class="v-strip" id="vStrip">
+        <div class="v-card-h" style="--vc:#fb923c; --vc2:#ea580c">
+          <div class="v-card-h-top">
+            <span class="v-card-h-ic">🚀</span>
+            <span class="v-card-h-num">+ 42% CVR</span>
+          </div>
+          <div class="v-card-h-ti" data-i18n="vd.saash">SaaS / プロダクト LP</div>
+          <div class="v-card-h-sub">SEO + 🤖 AEO + 🐦 Indie growth</div>
+          <ul class="v-card-h-bul">
+            <li data-i18n="vd.saas1">SEO + AEO で 検索 / ChatGPT 経由の流入確保</li>
+            <li data-i18n="vd.saas2">Twitter / IndieHackers でコミュニティ拡散</li>
+            <li data-i18n="vd.saas3">LP の CVR 改善案を 月次レポート</li>
+          </ul>
+          <div class="v-card-h-foot">📦 SEO 記事 / X スレッド / CVR 改善案 を毎週</div>
         </div>
-        <ul class="v-list">
-          <li data-i18n="vd.saas1">SEO + AEO で検索 / ChatGPT 経由の流入確保</li>
-          <li data-i18n="vd.saas2">Twitter / IndieHackers でコミュニティに拡散</li>
-          <li data-i18n="vd.saas3">LP の CVR 改善案を月次でレポート</li>
-          <li data-i18n="vd.saas4">競合の Pricing / 機能差別化を監視</li>
-        </ul>
-      </div>
 
-      <div class="v-card feature">
-        <div class="v-head">
-          <span class="v-head-ic">🏢</span>
-          <span data-i18n="vd.corph">企業 HP / コーポレートサイト</span>
+        <div class="v-card-h" style="--vc:#3b82f6; --vc2:#1d4ed8">
+          <div class="v-card-h-top">
+            <span class="v-card-h-ic">🏢</span>
+            <span class="v-card-h-num">問い合わせ ×3</span>
+          </div>
+          <div class="v-card-h-ti" data-i18n="vd.corph">企業 HP / コーポレートサイト</div>
+          <div class="v-card-h-sub">SEO + 業界権威構築 (AEO)</div>
+          <ul class="v-card-h-bul">
+            <li data-i18n="vd.corp1"><b>問い合わせ数</b>を増やす導線設計</li>
+            <li data-i18n="vd.corp2">事業内容・実績ページの SEO 強化</li>
+            <li data-i18n="vd.corp3">採用・PR を兼ねたコンテンツ提案</li>
+          </ul>
+          <div class="v-card-h-foot">📦 業界記事 / 実績ページ強化案 / 採用 PR を毎週</div>
         </div>
-        <ul class="v-list">
-          <li data-i18n="vd.corp1"><b>問い合わせ数</b>を増やす導線設計</li>
-          <li data-i18n="vd.corp2">事業内容・実績ページの SEO 強化</li>
-          <li data-i18n="vd.corp3">採用・PR を兼ねたコンテンツ提案</li>
-          <li data-i18n="vd.corp4">業界キーワードでの権威構築 (AEO)</li>
-        </ul>
-      </div>
 
-      <div class="v-card">
-        <div class="v-head">
-          <span class="v-head-ic">🛒</span>
-          <span data-i18n="vd.ech">EC ストア</span>
+        <div class="v-card-h" style="--vc:#22c55e; --vc2:#15803d">
+          <div class="v-card-h-top">
+            <span class="v-card-h-ic">🛒</span>
+            <span class="v-card-h-num">売上 + 38%</span>
+          </div>
+          <div class="v-card-h-ti" data-i18n="vd.ech">EC ストア</div>
+          <div class="v-card-h-sub">商品 SEO + Instagram + Shopify</div>
+          <ul class="v-card-h-bul">
+            <li data-i18n="vd.ec1">商品ページの SEO 最適化案</li>
+            <li data-i18n="vd.ec2">Instagram 用クリエイティブ生成</li>
+            <li data-i18n="vd.ec3">レビュー誘導フローのテンプレ</li>
+          </ul>
+          <div class="v-card-h-foot">📦 商品コピー / IG 投稿 / レビュー DM を毎週</div>
         </div>
-        <ul class="v-list">
-          <li data-i18n="vd.ec1">商品ページの SEO 最適化案</li>
-          <li data-i18n="vd.ec2">Instagram 用クリエイティブ生成</li>
-          <li data-i18n="vd.ec3">レビュー誘導フローのテンプレ</li>
-          <li data-i18n="vd.ec4">Google Shopping 最適化提案</li>
-        </ul>
-      </div>
 
-      <div class="v-card">
-        <div class="v-head">
-          <span class="v-head-ic">🏪</span>
-          <span data-i18n="vd.storeh">店舗・サロン</span>
+        <div class="v-card-h" style="--vc:#a855f7; --vc2:#7e22ce">
+          <div class="v-card-h-top">
+            <span class="v-card-h-ic">🏪</span>
+            <span class="v-card-h-num">来店 + 2.4x</span>
+          </div>
+          <div class="v-card-h-ti" data-i18n="vd.storeh">店舗・サロン</div>
+          <div class="v-card-h-sub">地域 SEO + Google ビジネス</div>
+          <ul class="v-card-h-bul">
+            <li data-i18n="vd.store1">Google ビジネスプロフィール最適化</li>
+            <li data-i18n="vd.store2">地域 SEO で「地域名 + 業種」 狙い</li>
+            <li data-i18n="vd.store3">Instagram 投稿の地域訴求テンプレ</li>
+          </ul>
+          <div class="v-card-h-foot">📦 GBP 投稿 / IG 地域訴求 / 口コミ返信 を毎週</div>
         </div>
-        <ul class="v-list">
-          <li data-i18n="vd.store1">Google ビジネスプロフィール最適化案</li>
-          <li data-i18n="vd.store2">地域 SEO で「地域名 + 業種」狙い</li>
-          <li data-i18n="vd.store3">Instagram 投稿の地域訴求テンプレ</li>
-          <li data-i18n="vd.store4">口コミへの返信テンプレ集</li>
-        </ul>
-      </div>
 
-      <div class="v-card">
-        <div class="v-head">
-          <span class="v-head-ic">✍️</span>
-          <span data-i18n="vd.blogh">ブログ・メディア</span>
+        <div class="v-card-h" style="--vc:#ec4899; --vc2:#be185d">
+          <div class="v-card-h-top">
+            <span class="v-card-h-ic">✍️</span>
+            <span class="v-card-h-num">PV × 5</span>
+          </div>
+          <div class="v-card-h-ti" data-i18n="vd.blogh">ブログ・メディア</div>
+          <div class="v-card-h-sub">SEO 量産 + メルマガ展開</div>
+          <ul class="v-card-h-bul">
+            <li data-i18n="vd.blog1">SEO キーワード調査 + 記事ネタ 10 本/月</li>
+            <li data-i18n="vd.blog2">X スレッドへの自動展開</li>
+            <li data-i18n="vd.blog3">メルマガフォーマットへの転用</li>
+          </ul>
+          <div class="v-card-h-foot">📦 記事 / X スレッド / メルマガ を毎週</div>
         </div>
-        <ul class="v-list">
-          <li data-i18n="vd.blog1">SEO キーワード調査 + 記事ネタ 10 本/月</li>
-          <li data-i18n="vd.blog2">Twitter スレッドへの自動展開</li>
-          <li data-i18n="vd.blog3">メルマガフォーマットへの転用</li>
-          <li data-i18n="vd.blog4">読者層を深掘りする分析</li>
-        </ul>
-      </div>
 
-      <div class="v-card">
-        <div class="v-head">
-          <span class="v-head-ic">💼</span>
-          <span data-i18n="vd.portfh">ポートフォリオ</span>
+        <div class="v-card-h" style="--vc:#0ea5e9; --vc2:#0369a1">
+          <div class="v-card-h-top">
+            <span class="v-card-h-ic">💼</span>
+            <span class="v-card-h-num">受注 + 3 件</span>
+          </div>
+          <div class="v-card-h-ti" data-i18n="vd.portfh">ポートフォリオ</div>
+          <div class="v-card-h-sub">LinkedIn + 営業メール</div>
+          <ul class="v-card-h-bul">
+            <li data-i18n="vd.portf1">LinkedIn 投稿戦略 (週次)</li>
+            <li data-i18n="vd.portf2">営業メール・DM テンプレ</li>
+            <li data-i18n="vd.portf3">ケーススタディの展開支援</li>
+          </ul>
+          <div class="v-card-h-foot">📦 LinkedIn 投稿 / 営業メール 3 種 を毎週</div>
         </div>
-        <ul class="v-list">
-          <li data-i18n="vd.portf1">LinkedIn 投稿戦略</li>
-          <li data-i18n="vd.portf2">営業メール・DM テンプレ</li>
-          <li data-i18n="vd.portf3">ケーススタディの展開支援</li>
-          <li data-i18n="vd.portf4">受注につながる導線設計</li>
-        </ul>
       </div>
+      <!-- スクロールヒント (= 「もっと見える」 アフォーダンス) -->
+      <button class="v-strip-arr v-strip-arr-l" onclick="document.getElementById('vStrip').scrollBy({left:-360,behavior:'smooth'})" aria-label="前へ">‹</button>
+      <button class="v-strip-arr v-strip-arr-r" onclick="document.getElementById('vStrip').scrollBy({left:360,behavior:'smooth'})" aria-label="次へ">›</button>
     </div>
   </div>
 </section>
@@ -2235,7 +2421,7 @@
   (function(){
     var targets = [
       '.sec-h2', '.sec-sub', '.pain', '.step', '.del',
-      '.v-card', '.dash-mock', '.stat-card', '.problem-out',
+      '.v-card-h', '.dash-mock', '.stat-card', '.problem-out',
       'details.fq', '.final h2', '.final-sub', '.final-form',
       '.cmp-table-wrap', '.qt-card', '.caps-cat', '.caps-hero-num', '.caps-foot',
     ];

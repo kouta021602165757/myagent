@@ -19491,14 +19491,15 @@ function _applyTheme(name){
   }
 }
 // Apply on initial load + watch system preference for 'auto' mode
+// 2026-05-24: dark + lime brand に統一したため、 default を 'dark' に変更
 (function _initThemeOnLoad(){
   try {
-    const saved = (typeof localStorage !== 'undefined' && localStorage.getItem('pref:theme')) || 'light';
+    const saved = (typeof localStorage !== 'undefined' && localStorage.getItem('pref:theme')) || 'dark';
     _applyTheme(saved);
     if(window.matchMedia){
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
       const handler = () => {
-        const cur = (typeof localStorage !== 'undefined' && localStorage.getItem('pref:theme')) || 'light';
+        const cur = (typeof localStorage !== 'undefined' && localStorage.getItem('pref:theme')) || 'dark';
         if(cur === 'auto') _applyTheme('auto');
       };
       if(mq.addEventListener) mq.addEventListener('change', handler);

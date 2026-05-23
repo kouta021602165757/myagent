@@ -363,7 +363,29 @@
   }
   .hero-sub b{color:var(--ink); font-weight:700}
 
-  /* Pricing inline badge (= hero 内、 hero-sub の下) */
+  /* hero-foot — URL form の下に小さく 「何が届く + 価格」 を 1 行で */
+  .hero-foot{
+    margin:22px auto 0; max-width:760px;
+    animation:rise .6s .30s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .hero-sub-mini{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11.5px; color:var(--ink3); font-weight:500;
+    line-height:1.85;
+    letter-spacing:.005em;
+    text-align:center;
+  }
+  .hero-sub-mini b{color:var(--peach); font-weight:600}
+  .hero-sub-mini-sep{margin:0 8px; opacity:.5; color:var(--ink3)}
+  .hero-sub-mini-tier{display:inline-flex; align-items:baseline; gap:5px}
+  .hero-sub-mini-tier b{color:var(--ink2); font-weight:700}
+  .hero-sub-mini-hl b{color:var(--peach); font-weight:700}
+  @media (max-width:560px){
+    .hero-sub-mini{font-size:10.5px; line-height:1.95}
+    .hero-sub-mini-sep{margin:0 4px}
+  }
+
+  /* Pricing inline badge — 廃止 (= hero-foot に統合済)、 final 内では使用 */
   .pricing-inline{
     display:inline-flex; align-items:center; gap:18px;
     margin:24px auto 0;
@@ -2030,27 +2052,8 @@
       URL を貼るだけ。<br><span class="pop">30+ 名の AI チーム</span>が<br>あなたのサイトを毎日伸ばす。
     </h1>
 
-    <p class="hero-sub" data-i18n="hero.sub">
-      毎朝、<b style="color:var(--peach)">SEO 記事 3 本</b> ・ <b style="color:var(--peach)">X スレッド 1 本</b> ・<br>
-      <b style="color:var(--peach)">LP 改善案 5 個</b> が ダッシュボードに届く。<br>
-      <span style="color:var(--ink3)">SEO / AEO / SNS / CRO / 分析 を担当する 30+ 名の AI 専門組織。</span>
-    </p>
-
-    <!-- Pricing inline badge — 「クレカ不要 + 安い」 を即見せる -->
-    <div class="pricing-inline">
-      <span class="pi-tier"><b class="pi-tier-name">Free</b><span class="pi-tier-sub">永久無料</span></span>
-      <span class="pi-sep"></span>
-      <span class="pi-tier"><b class="pi-tier-name">Pro</b><span class="pi-tier-sub">¥4,980/月</span></span>
-      <span class="pi-sep"></span>
-      <span class="pi-tier pi-tier-hl">
-        <b class="pi-tier-name">🔥 Founder 100</b>
-        <span class="pi-tier-sub"><span class="pi-seats-num" data-stat-key="founder_remaining">85</span> 席残</span>
-      </span>
-    </div>
-
     <form class="url-form" onsubmit="return handleUrlSubmit(event)" novalidate>
       <div class="url-wrap">
-        <span class="url-icon">🌐</span>
         <input type="url" id="urlInput" class="url-input"
                placeholder="https://yoursite.com"
                autocomplete="off" spellcheck="false"
@@ -2067,6 +2070,19 @@
         <span><span class="ck">🔒</span> <span data-i18n="hero.note.4">X 投稿はパスワード共有不要</span></span>
       </p>
     </form>
+
+    <!-- 価格 + 約束: URL form の下に小さく退避 (= URL 入力をブロックしない) -->
+    <div class="hero-foot">
+      <p class="hero-sub-mini" data-i18n="hero.sub">
+        毎朝 <b>SEO 記事 3 本</b> ・ <b>X スレッド 1 本</b> ・ <b>LP 改善案 5 個</b> が届く
+        <span class="hero-sub-mini-sep">·</span>
+        <span class="hero-sub-mini-tier"><b>Free</b> 永久無料</span>
+        <span class="hero-sub-mini-sep">·</span>
+        <span class="hero-sub-mini-tier"><b>Pro</b> ¥4,980/月</span>
+        <span class="hero-sub-mini-sep">·</span>
+        <span class="hero-sub-mini-tier hero-sub-mini-hl"><b>🔥 Founder 100</b> <span data-stat-key="founder_remaining">85</span> 席残</span>
+      </p>
+    </div>
 
     <div class="verticals">
       <div class="vt"><span class="vt-ic">🚀</span><span data-i18n="vt.saas">SaaS / プロダクト LP</span></div>

@@ -9330,6 +9330,10 @@ const SNS_TOOLS = [
         excerpt: { type: 'string', description: '(任意) 抜粋 / メタディスクリプション' },
         scheduled_at: { type: 'string', description: '(任意) 予約公開日時 ISO 8601 (例: "2026-06-15T10:00:00")。 status=publish と組み合わせると 「予約投稿」 になる' },
         featured_image_url: { type: 'string', description: '(任意) アイキャッチ画像 URL。 自動でメディアライブラリに upload + 設定する' },
+        seo_title:       { type: 'string', description: '(任意) SEO タイトル — Yoast / Rank Math 両対応 (= 両 plugin の meta を同時に送信)' },
+        seo_description: { type: 'string', description: '(任意) SEO メタディスクリプション (= 検索結果に出る説明文)' },
+        focus_keyword:   { type: 'string', description: '(任意) フォーカスキーワード (= Yoast / Rank Math の 「target keyword」)' },
+        seo_noindex:     { type: 'boolean', description: '(任意) true で 検索エンジン非公開 (noindex)' },
       },
       required: ['title','content'],
     },
@@ -9354,6 +9358,10 @@ const SNS_TOOLS = [
         scheduled_at: { type: 'string', description: '(任意) 予約日時 ISO 8601。 未来日なら自動で status=future に' },
         featured_image_url: { type: 'string', description: '(任意) アイキャッチ画像 URL を差し替え' },
         clear_featured_image: { type: 'boolean', description: '(任意) true にするとアイキャッチ画像を外す (= 「画像を変更しない」とは別)' },
+        seo_title:       { type: 'string', description: '(任意) SEO タイトルを変更 (Yoast / Rank Math)' },
+        seo_description: { type: 'string', description: '(任意) SEO メタディスクリプションを変更' },
+        focus_keyword:   { type: 'string', description: '(任意) フォーカスキーワードを変更' },
+        seo_noindex:     { type: 'boolean', description: '(任意) 検索エンジン非公開 (noindex) の切替' },
       },
       required: [],
     },
@@ -10617,6 +10625,30 @@ function _wpBuildRestEvalScript(op, fields){
     if(featuredId)                          body.featured_media = featuredId;
     else if(fields.clear_featured_image)    body.featured_media = 0;
 
+    // ── SEO meta (= Yoast / Rank Math 両対応) ──
+    // 両 plugin の meta key を同時に送信。 plugin がないと WP は ignore するので safe。
+    // どちらか or 両方インストールされていれば適切に反映される。
+    const meta = {};
+    if(typeof fields.seo_title === 'string'){
+      meta.yoast_wpseo_title       = fields.seo_title;
+      meta.rank_math_title         = fields.seo_title;
+    }
+    if(typeof fields.seo_description === 'string'){
+      meta.yoast_wpseo_metadesc    = fields.seo_description;
+      meta.rank_math_description   = fields.seo_description;
+    }
+    if(typeof fields.focus_keyword === 'string'){
+      meta.yoast_wpseo_focuskw     = fields.focus_keyword;
+      meta.rank_math_focus_keyword = fields.focus_keyword;
+    }
+    if(typeof fields.seo_noindex === 'boolean'){
+      // Yoast: 2 = noindex, 0 = use default
+      meta.yoast_wpseo_meta_robots_noindex = fields.seo_noindex ? '2' : '0';
+      // Rank Math: comma-separated robot directives
+      meta.rank_math_robots = fields.seo_noindex ? ['noindex','nofollow'] : ['index','follow'];
+    }
+    if(Object.keys(meta).length) body.meta = meta;
+
     // Status + scheduled date
     // scheduled_at が未来 → 自動で future status
     // 明示的 status (= publish / draft / pending / private) はそのまま通す
@@ -10747,11 +10779,19 @@ async function executePublishWordPressTool(user, input){
   }
 
   // 4) REST API 経由で create (= ext_eval で実行)
+  const seo_title = String((input && input.seo_title) || '').trim();
+  const seo_description = String((input && input.seo_description) || '').trim();
+  const focus_keyword = String((input && input.focus_keyword) || '').trim();
+  const seo_noindex = (input && typeof input.seo_noindex === 'boolean') ? input.seo_noindex : null;
   const evalScript = _wpBuildRestEvalScript('create', {
     title, content, status,
     slug, excerpt, categories, tags,
     scheduled_at, post_type,
     featured_data_url, featured_filename,
+    seo_title: seo_title || undefined,
+    seo_description: seo_description || undefined,
+    focus_keyword: focus_keyword || undefined,
+    seo_noindex: seo_noindex,
   });
   let restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
 
@@ -10914,6 +10954,10 @@ async function executeEditWordPressTool(user, input){
   if(input && Array.isArray(input.tags))              updateFields.tags = input.tags;
   if(input && typeof input.status === 'string')       updateFields.status = input.status;
   if(input && typeof input.scheduled_at === 'string') updateFields.scheduled_at = input.scheduled_at;
+  if(input && typeof input.seo_title === 'string')         updateFields.seo_title = input.seo_title;
+  if(input && typeof input.seo_description === 'string')   updateFields.seo_description = input.seo_description;
+  if(input && typeof input.focus_keyword === 'string')     updateFields.focus_keyword = input.focus_keyword;
+  if(input && typeof input.seo_noindex === 'boolean')      updateFields.seo_noindex = input.seo_noindex;
   if(featured_data_url){
     updateFields.featured_data_url = featured_data_url;
     updateFields.featured_filename = featured_filename;

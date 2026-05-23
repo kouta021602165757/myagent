@@ -538,28 +538,264 @@
     animation:pulse-live 1.8s ease-in-out infinite;
   }
 
-  /* body container — 3 phase が overlap して loop */
+  /* ── 6-Step Navigator (= 上部の step indicator) ───────── */
+  .demo-nav{
+    display:flex; gap:4px; padding:0 4px 14px;
+    overflow-x:auto;
+    scrollbar-width:none;
+    position:relative;
+  }
+  .demo-nav::-webkit-scrollbar{display:none}
+  .demo-nav-btn{
+    flex:1; min-width:120px;
+    display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+    background:transparent; border:0;
+    padding:10px 12px 14px;
+    border-bottom:2px solid var(--wire);
+    cursor:pointer; transition:border-color .25s, color .15s;
+    text-align:left;
+  }
+  .demo-nav-btn.active{ border-bottom-color:var(--peach) }
+  .demo-nav-btn:hover .dn-lbl{color:var(--ink)}
+  .dn-num{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10.5px; font-weight:700; color:var(--ink3);
+    letter-spacing:.06em;
+  }
+  .demo-nav-btn.active .dn-num{ color:var(--peach) }
+  .dn-lbl{
+    font-size:12.5px; font-weight:700; color:var(--ink2);
+    letter-spacing:-.005em; transition:color .15s;
+  }
+  .demo-nav-btn.active .dn-lbl{ color:var(--ink) }
+  @media (max-width:760px){
+    .demo-nav{gap:0}
+    .demo-nav-btn{min-width:110px; padding:8px 10px 11px}
+    .dn-lbl{font-size:11.5px}
+  }
+
+  /* body container — 6 step が 切り替わる */
   .demo-body{
-    position:relative; padding:40px 32px;
+    position:relative; padding:32px 30px;
     min-height:380px;
   }
-  .demo-phase{
-    position:absolute; inset:40px 32px;
-    opacity:0;
-    animation:demo-fade 12s infinite;
+  .demo-step{
+    position:absolute; inset:32px 30px;
+    opacity:0; pointer-events:none;
+    transform:translateY(8px);
+    transition:opacity .4s, transform .4s;
   }
-  .demo-phase-1{animation-delay:0s}
-  .demo-phase-2{animation-delay:-9s}    /* 3 秒目から始まる相当 */
-  .demo-phase-3{animation-delay:-6s}    /* 6 秒目から始まる相当 */
-  @keyframes demo-fade{
-    0%, 2% { opacity:0; transform:translateY(8px) }
-    5%, 22% { opacity:1; transform:none }
-    25%, 100% { opacity:0; transform:translateY(-8px) }
+  .demo-step.active{
+    opacity:1; pointer-events:auto; transform:none;
+  }
+  .demo-step-head{
+    display:flex; align-items:center; gap:11px;
+    margin-bottom:22px;
+    padding-bottom:14px;
+    border-bottom:1px dashed var(--wire);
+  }
+  .dst-tag{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10.5px; font-weight:700; color:var(--peach);
+    background:rgba(192,255,92,.08);
+    border:1px solid rgba(192,255,92,.28);
+    padding:4px 10px; border-radius:99px;
+    letter-spacing:.06em;
+  }
+  .dst-ti{
+    font-size:14px; font-weight:800; color:var(--ink);
+    letter-spacing:-.01em;
+  }
+  .demo-step-foot{
+    margin-top:18px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; color:var(--ink3);
+    letter-spacing:.005em;
   }
   .demo-label{
     font-family:'JetBrains Mono', ui-monospace, monospace;
     font-size:11px; color:var(--ink3); margin-bottom:18px;
     letter-spacing:.04em;
+  }
+
+  /* ── Step 02 用 log行 (= terminal-style) ─────────── */
+  .demo-log{
+    display:flex; flex-direction:column; gap:5px;
+    margin-bottom:18px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11.5px; color:var(--ink2);
+    letter-spacing:.005em;
+  }
+  .dlog{ opacity:0; transform:translateX(-6px); animation:dlog-in .45s forwards }
+  .demo-step.active .dlog:nth-child(1){ animation-delay:.1s }
+  .demo-step.active .dlog:nth-child(2){ animation-delay:.5s }
+  .demo-step.active .dlog:nth-child(3){ animation-delay:.9s }
+  .demo-step.active .dlog:nth-child(4){ animation-delay:1.3s }
+  .dlog-done{ color:#22c55e; font-weight:700 }
+  .dlog b{color:var(--ink); font-weight:700}
+  @keyframes dlog-in{
+    to{opacity:1; transform:none}
+  }
+
+  /* ── Step 03 用 dashboard preview ─────────────────────── */
+  .dash-site{
+    display:flex; align-items:center; gap:12px;
+    background:var(--cream2); border:1px solid var(--wire);
+    border-radius:10px; padding:11px 14px;
+    margin-bottom:12px;
+  }
+  .dash-site-ic{
+    width:36px; height:36px; border-radius:8px;
+    background:var(--cream); display:flex; align-items:center; justify-content:center;
+    font-size:20px; flex-shrink:0;
+  }
+  .dash-site-meta{font-size:11.5px; color:var(--ink2); line-height:1.55}
+  .dash-site-meta b{font-size:13px; color:var(--ink); font-weight:800}
+  .dash-kpis{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+    margin-bottom:12px;
+  }
+  .dash-kpi{
+    background:var(--cream2); border:1px solid var(--wire);
+    border-radius:9px; padding:9px 11px;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .dk-lbl{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:9.5px; font-weight:500; color:var(--ink3);
+    letter-spacing:.04em; text-transform:lowercase;
+  }
+  .dk-val{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:16px; font-weight:700; color:var(--ink);
+    letter-spacing:-.01em;
+  }
+  .dk-delta{
+    font-size:10px; font-weight:700; color:var(--peach);
+    background:rgba(192,255,92,.08); padding:1px 6px; border-radius:4px;
+    align-self:flex-start;
+  }
+  .dash-arts{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
+  }
+  .dash-art{
+    background:var(--cream2); border:1px solid var(--wire);
+    border-left:3px solid var(--c, var(--peach));
+    border-radius:8px; padding:9px 11px;
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .da-tag{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:8.5px; font-weight:700; color:var(--c, var(--peach));
+    padding:1px 6px; border:1px solid currentColor; border-radius:4px;
+    align-self:flex-start; letter-spacing:.05em;
+  }
+  .da-ti{font-size:11px; font-weight:700; color:var(--ink); line-height:1.35}
+
+  /* ── Step 04 用 chat preview ──────────────────────────── */
+  .chat-thread{
+    display:flex; flex-direction:column; gap:10px;
+    max-width:480px;
+  }
+  .chat-msg{display:flex}
+  .chat-msg-user{justify-content:flex-end}
+  .chat-msg-user .chat-bubble{
+    background:var(--peach); color:#0a0a0e;
+    border-bottom-right-radius:4px;
+    font-weight:600;
+  }
+  .chat-msg-ai .chat-bubble{
+    background:var(--cream2); border:1px solid var(--wire); color:var(--ink2);
+    border-bottom-left-radius:4px;
+  }
+  .chat-bubble{
+    max-width:75%;
+    font-size:12px; line-height:1.65; padding:9px 13px;
+    border-radius:12px;
+    opacity:0; transform:translateY(6px);
+    animation:chat-in .35s forwards;
+    letter-spacing:.005em;
+  }
+  .demo-step.active .chat-msg-user .chat-bubble{ animation-delay:.15s }
+  .demo-step.active .chat-msg-ai .chat-bubble{ animation-delay:.6s }
+  @keyframes chat-in{ to{opacity:1; transform:none} }
+  .chat-tool{
+    display:block;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10.5px; color:var(--peach);
+    background:rgba(192,255,92,.05);
+    border:1px solid rgba(192,255,92,.18);
+    padding:3px 7px; border-radius:5px;
+    margin:4px 0;
+  }
+
+  /* ── Step 05 用 mail card ─────────────────────────────── */
+  .mail-card{
+    background:var(--cream2); border:1px solid var(--wire);
+    border-radius:10px; overflow:hidden;
+    max-width:520px;
+  }
+  .mail-h{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px;
+    border-bottom:1px solid var(--wire);
+    background:rgba(255,255,255,.02);
+  }
+  .mail-from{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10.5px; color:var(--ink3); letter-spacing:.005em;
+  }
+  .mail-time{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10px; color:var(--ink3);
+  }
+  .mail-subj{
+    padding:11px 14px 6px;
+    font-size:13px; font-weight:800; color:var(--ink);
+    letter-spacing:-.005em;
+  }
+  .mail-body{padding:0 14px 14px}
+  .mail-row{
+    font-size:11.5px; color:var(--ink2); line-height:1.7;
+    padding:3px 0;
+  }
+  .mail-row b{color:var(--ink); font-weight:700}
+
+  /* ── Step 06 用 huge result ───────────────────────────── */
+  .result-big{
+    background:linear-gradient(180deg, var(--cream2), var(--cream));
+    border:1px solid rgba(192,255,92,.18);
+    border-radius:12px; padding:18px 20px 0;
+    margin-bottom:14px; position:relative; overflow:hidden;
+  }
+  .result-big-val{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:32px; font-weight:700; color:var(--ink);
+    letter-spacing:-.02em; line-height:1;
+  }
+  .result-big-unit{font-size:13px; font-weight:500; color:var(--ink3); margin-left:6px}
+  .result-big-delta{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11.5px; color:var(--ink2); margin-top:5px;
+    letter-spacing:.005em;
+  }
+  .result-chart{
+    width:calc(100% + 40px); height:60px; margin:8px -20px 0;
+    display:block;
+  }
+  .result-tags{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  }
+  .result-tag{
+    background:var(--cream2); border:1px solid var(--wire);
+    border-radius:8px; padding:8px 11px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; color:var(--ink2); text-align:center;
+    letter-spacing:.005em;
+  }
+  .result-tag b{
+    display:block; font-size:15px; font-weight:700;
+    color:var(--peach); margin-bottom:2px;
   }
 
   /* Phase 1: URL タイプ */
@@ -583,28 +819,24 @@
   }
   .demo-typed-text{
     overflow:hidden; white-space:nowrap; display:inline-block;
-    animation:demo-type 12s infinite;
+    width:0;
   }
   .demo-typed-text::after{ content:'https://yoursaas.io' }
+  .demo-step.active .demo-typed-text{ animation:demo-type 1.6s .2s forwards }
   @keyframes demo-type{
-    0% { width:0 }
-    16%, 25% { width:18ch }  /* 0-3s 中で打ち終わる */
-    26%, 100% { width:18ch }
+    from { width:0 }
+    to { width:18ch }
   }
   .demo-caret{
     color:var(--peach);
-    animation:demo-caret 1s step-end infinite, demo-caret-hide 12s infinite;
+    animation:demo-caret 1s step-end infinite;
   }
   @keyframes demo-caret{
     0%, 50% { opacity:1 }
     51%, 100% { opacity:0 }
   }
-  @keyframes demo-caret-hide{
-    0%, 25% { display:inline }
-    26%, 100% { opacity:0 }
-  }
 
-  /* Phase 2: AI 編成 */
+  /* Step 02: AI 編成 progress bar */
   .demo-progress{
     width:100%; height:5px; background:var(--cream2);
     border-radius:99px; overflow:hidden;
@@ -614,40 +846,15 @@
     height:100%; background:linear-gradient(90deg, var(--peach), var(--violet));
     width:0%;
     box-shadow:0 0 8px var(--peach);
-    animation:demo-progress 12s infinite;
   }
+  .demo-step.active .demo-progress-bar{ animation:demo-progress 1.4s .1s forwards }
   @keyframes demo-progress{
-    0%, 25% { width:0% }
-    50% { width:100% }
-    51%, 100% { width:100% }
-  }
-  .demo-status{
-    display:flex; align-items:center; gap:10px;
-    font-family:'JetBrains Mono', ui-monospace, monospace;
-    font-size:12.5px; color:var(--ink2); margin-bottom:18px;
-  }
-  .demo-dot-loader{
-    width:7px; height:7px; border-radius:50%; background:var(--peach);
-    animation:pulse 1.2s ease-in-out infinite;
-  }
-  .demo-status-tx{
-    animation:demo-status-text 12s infinite;
-  }
-  .demo-status-tx::after{ content:''; animation:demo-status-content 12s infinite; }
-  @keyframes demo-status-text{
-    0% { opacity:0 }
-    25% { opacity:0 }
-    27%, 45% { opacity:1 }
-  }
-  /* status の中身が変わる */
-  @keyframes demo-status-content{
-    0%, 28% { content:'Reading site...' }
-    29%, 36% { content:'Detecting vertical: SaaS LP' }
-    37%, 44% { content:'Forming team: 5 departments, 38 members' }
-    45%, 100% { content:'Generating deliverables...' }
+    from { width:0% }
+    to { width:100% }
   }
   .demo-team{
     display:flex; gap:10px; flex-wrap:wrap;
+    margin-top:18px;
   }
   .demo-team-mem{
     width:36px; height:36px; border-radius:9px;
@@ -656,95 +863,38 @@
     display:flex; align-items:center; justify-content:center;
     font-size:18px;
     opacity:0; transform:scale(.6);
-    animation:demo-mem-in 12s infinite;
   }
+  .demo-step.active .demo-team-mem{ animation:demo-mem-in .4s forwards }
   .demo-team-mem-more{
     background:var(--cream2); color:var(--ink2);
     font-family:'JetBrains Mono', ui-monospace, monospace;
     font-size:13px; font-weight:700;
     border:1px solid var(--wire2);
   }
-  .demo-team-mem:nth-child(1){animation-delay:.0s}
-  .demo-team-mem:nth-child(2){animation-delay:.2s}
-  .demo-team-mem:nth-child(3){animation-delay:.4s}
-  .demo-team-mem:nth-child(4){animation-delay:.6s}
-  .demo-team-mem:nth-child(5){animation-delay:.8s}
-  .demo-team-mem:nth-child(6){animation-delay:1.0s}
+  .demo-team-mem:nth-child(1){animation-delay:1.2s}
+  .demo-team-mem:nth-child(2){animation-delay:1.35s}
+  .demo-team-mem:nth-child(3){animation-delay:1.5s}
+  .demo-team-mem:nth-child(4){animation-delay:1.65s}
+  .demo-team-mem:nth-child(5){animation-delay:1.8s}
+  .demo-team-mem:nth-child(6){animation-delay:1.95s}
   @keyframes demo-mem-in{
-    0%, 33% { opacity:0; transform:scale(.6) }
-    38%, 45% { opacity:1; transform:scale(1) }
-    47%, 100% { opacity:0; transform:scale(.95) }
-  }
-
-  /* Phase 3: 納品物 6 件 */
-  .demo-arts{
-    display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;
-    margin-bottom:18px;
-  }
-  .demo-art{
-    background:var(--cream2);
-    border:1px solid var(--wire);
-    border-left:3px solid var(--c, var(--peach));
-    border-radius:9px;
-    padding:10px 12px;
-    opacity:0; transform:translateY(12px);
-    animation:demo-art-in 12s infinite;
-  }
-  .demo-arts .demo-art:nth-child(1){animation-delay:.0s}
-  .demo-arts .demo-art:nth-child(2){animation-delay:.15s}
-  .demo-arts .demo-art:nth-child(3){animation-delay:.30s}
-  .demo-arts .demo-art:nth-child(4){animation-delay:.45s}
-  .demo-arts .demo-art:nth-child(5){animation-delay:.60s}
-  .demo-arts .demo-art:nth-child(6){animation-delay:.75s}
-  @keyframes demo-art-in{
-    0%, 50% { opacity:0; transform:translateY(12px) }
-    58%, 92% { opacity:1; transform:none }
-    95%, 100% { opacity:0; transform:translateY(-6px) }
-  }
-  .demo-art-tag{
-    display:inline-block;
-    font-family:'JetBrains Mono', ui-monospace, monospace;
-    font-size:9px; font-weight:600;
-    padding:2px 6px; border-radius:4px;
-    background:rgba(255,255,255,.05); color:var(--c, var(--peach));
-    border:1px solid currentColor;
-    letter-spacing:.05em;
-    margin-bottom:5px;
-  }
-  .demo-art-ti{
-    font-size:11.5px; font-weight:700; color:var(--ink);
-    margin-bottom:3px; line-height:1.35;
-  }
-  .demo-art-meta{
-    font-family:'JetBrains Mono', ui-monospace, monospace;
-    font-size:9px; color:var(--ink3); letter-spacing:.005em;
-  }
-  .demo-done{
-    text-align:center;
-    font-family:'JetBrains Mono', ui-monospace, monospace;
-    font-size:12.5px; color:var(--ink2); font-weight:500;
-    padding:12px 14px;
-    background:rgba(192,255,92,.04);
-    border:1px solid rgba(192,255,92,.18);
-    border-radius:9px;
-    opacity:0;
-    animation:demo-done-in 12s infinite;
-  }
-  @keyframes demo-done-in{
-    0%, 70% { opacity:0; transform:translateY(8px) }
-    78%, 92% { opacity:1; transform:none }
-    95%, 100% { opacity:0 }
+    to { opacity:1; transform:scale(1) }
   }
 
   @media (max-width:760px){
     .demo{transform:none}
     .demo:hover{transform:translateY(-3px)}
-    .demo-body{padding:24px 16px; min-height:340px}
-    .demo-phase{inset:24px 16px}
-    .demo-arts{grid-template-columns:1fr 1fr; gap:8px}
+    .demo-body{padding:24px 16px; min-height:420px}
+    .demo-step{inset:24px 16px}
     .demo-team-mem{width:32px; height:32px; font-size:16px}
     .demo-typed{font-size:14px}
     .demo-url-form{padding:14px 16px; max-width:none}
+    .dash-kpis{grid-template-columns:1fr 1fr 1fr; gap:6px}
+    .dash-arts{grid-template-columns:1fr; gap:6px}
+    .result-big-val{font-size:24px}
+    .result-tags{grid-template-columns:1fr 1fr 1fr; gap:6px}
+    .result-tag{font-size:10px; padding:7px 8px}
+    .result-tag b{font-size:13px}
   }
 
   /* ══════════════════════════════════════════════════════
@@ -1877,7 +2027,7 @@
     </div>
 
     <h1 data-i18n="hero.h1">
-      URL を貼るだけ。<br><span class="pop">30+ 名の AI チーム</span>が、<br>あなたのサイトを 毎日伸ばす。
+      URL を貼るだけ。<br><span class="pop">30+ 名の AI チーム</span>が<br>あなたのサイトを毎日伸ばす。
     </h1>
 
     <p class="hero-sub" data-i18n="hero.sub">
@@ -1930,36 +2080,57 @@
     <!-- ═══════════════════════════════════════════════════════
          動く製品 DEMO — URL貼る → AI 編成中 → 納品物が出る を loop
          ═══════════════════════════════════════════════════════ -->
-    <div class="demo-wrap">
+    <div class="demo-wrap" id="demoWrap">
+      <!-- Step navigator (= 6 step を上部に並べる) -->
+      <div class="demo-nav">
+        <button class="demo-nav-btn active" data-step="1"><span class="dn-num">01</span><span class="dn-lbl">URL を入力</span></button>
+        <button class="demo-nav-btn" data-step="2"><span class="dn-num">02</span><span class="dn-lbl">AI チーム組成</span></button>
+        <button class="demo-nav-btn" data-step="3"><span class="dn-num">03</span><span class="dn-lbl">ダッシュボード</span></button>
+        <button class="demo-nav-btn" data-step="4"><span class="dn-num">04</span><span class="dn-lbl">チャット依頼</span></button>
+        <button class="demo-nav-btn" data-step="5"><span class="dn-num">05</span><span class="dn-lbl">毎日データ確認</span></button>
+        <button class="demo-nav-btn" data-step="6"><span class="dn-num">06</span><span class="dn-lbl">数字が伸びる</span></button>
+        <div class="demo-nav-progress"><div class="demo-nav-progress-bar"></div></div>
+      </div>
+
       <div class="demo">
         <!-- ブラウザバー -->
         <div class="demo-bar">
           <span class="demo-dot demo-dot-r"></span>
           <span class="demo-dot demo-dot-y"></span>
           <span class="demo-dot demo-dot-g"></span>
-          <span class="demo-url">myaiagents.agency/app</span>
+          <span class="demo-url" id="demoUrl">myaiagents.agency/app</span>
           <span class="demo-live"><span class="demo-live-dot"></span>live</span>
         </div>
-        <!-- body -->
+        <!-- body — 6 step を切り替え -->
         <div class="demo-body">
-          <!-- Phase 1: URL タイプ -->
-          <div class="demo-phase demo-phase-1">
-            <div class="demo-label">// paste your url</div>
+
+          <!-- ═══ STEP 01: URL を入力 ═══ -->
+          <div class="demo-step active" data-step="1">
+            <div class="demo-step-head">
+              <span class="dst-tag">STEP 01</span>
+              <span class="dst-ti">URL を貼って Enter</span>
+            </div>
             <div class="demo-url-form">
               <span class="demo-prompt">&gt;</span>
               <span class="demo-typed"><span class="demo-typed-text"></span><span class="demo-caret">|</span></span>
             </div>
+            <div class="demo-step-foot">クレカ不要 ・ サインアップ 10 秒</div>
           </div>
 
-          <!-- Phase 2: AI チーム編成中 -->
-          <div class="demo-phase demo-phase-2">
-            <div class="demo-label">// assembling team</div>
+          <!-- ═══ STEP 02: AI チームを組成 ═══ -->
+          <div class="demo-step" data-step="2">
+            <div class="demo-step-head">
+              <span class="dst-tag">STEP 02</span>
+              <span class="dst-ti">AI が サイトを読んでチームを組成</span>
+            </div>
             <div class="demo-progress">
               <div class="demo-progress-bar"></div>
             </div>
-            <div class="demo-status">
-              <span class="demo-dot-loader"></span>
-              <span class="demo-status-tx">Reading site...</span>
+            <div class="demo-log">
+              <div class="dlog">📖 Reading <b>yoursaas.io</b>...</div>
+              <div class="dlog">🎯 Detected vertical: <b>SaaS / Product LP</b></div>
+              <div class="dlog">🏢 Forming team: <b>5 部門 38 名</b></div>
+              <div class="dlog dlog-done">✓ Ready in <b>52s</b></div>
             </div>
             <div class="demo-team">
               <div class="demo-team-mem" style="--c:#fb923c">🎯</div>
@@ -1971,19 +2142,103 @@
             </div>
           </div>
 
-          <!-- Phase 3: 納品物がドロップイン -->
-          <div class="demo-phase demo-phase-3">
-            <div class="demo-label">// deliverables ready</div>
-            <div class="demo-arts">
-              <div class="demo-art" style="--c:#c0ff5c"><div class="demo-art-tag">SEO</div><div class="demo-art-ti">「AI マーケ 比較 2026」</div><div class="demo-art-meta">3,400 字 ・ Ver.1</div></div>
-              <div class="demo-art" style="--c:#3b82f6"><div class="demo-art-tag">SNS</div><div class="demo-art-ti">X スレッド 7 連投</div><div class="demo-art-meta">投稿準備完了</div></div>
-              <div class="demo-art" style="--c:#a855f7"><div class="demo-art-tag">CRO</div><div class="demo-art-ti">LP CVR 改善 5 案</div><div class="demo-art-meta">ROI 試算付</div></div>
-              <div class="demo-art" style="--c:#ec4899"><div class="demo-art-tag">AEO</div><div class="demo-art-ti">ChatGPT 引用率 監視</div><div class="demo-art-meta">5 query 設定</div></div>
-              <div class="demo-art" style="--c:#22c55e"><div class="demo-art-tag">RESEARCH</div><div class="demo-art-ti">競合 3 社 機能比較</div><div class="demo-art-meta">週次更新</div></div>
-              <div class="demo-art" style="--c:#fb923c"><div class="demo-art-tag">EMAIL</div><div class="demo-art-ti">問い合わせ 自動返信</div><div class="demo-art-meta">3 種類テンプレ</div></div>
+          <!-- ═══ STEP 03: ダッシュボード ═══ -->
+          <div class="demo-step" data-step="3">
+            <div class="demo-step-head">
+              <span class="dst-tag">STEP 03</span>
+              <span class="dst-ti">ダッシュボードに 数字 + 納品物 が並ぶ</span>
             </div>
-            <div class="demo-done">✓ <span style="color:var(--peach)">6 件納品完了</span> ・ 1m 47s</div>
+            <div class="dash-site">
+              <span class="dash-site-ic">🚀</span>
+              <span class="dash-site-meta">
+                <b>yoursaas.io</b><br>
+                <span>SaaS / Product LP ・ 今日 3 件納品 ・ <b style="color:#16a34a">+42% PV (7d)</b></span>
+              </span>
+            </div>
+            <div class="dash-kpis">
+              <div class="dash-kpi"><span class="dk-lbl">PV (30d)</span><span class="dk-val">12,840</span><span class="dk-delta">+42%</span></div>
+              <div class="dash-kpi"><span class="dk-lbl">AI 引用率</span><span class="dk-val">3/5</span><span class="dk-delta">60%</span></div>
+              <div class="dash-kpi"><span class="dk-lbl">順位 avg</span><span class="dk-val">14.2</span><span class="dk-delta">↑3.1</span></div>
+            </div>
+            <div class="dash-arts">
+              <div class="dash-art" style="--c:#c0ff5c"><span class="da-tag">SEO</span><span class="da-ti">「AI マーケ 比較 2026」</span></div>
+              <div class="dash-art" style="--c:#3b82f6"><span class="da-tag">SNS</span><span class="da-ti">X スレッド 7 連投</span></div>
+              <div class="dash-art" style="--c:#a855f7"><span class="da-tag">CRO</span><span class="da-ti">LP 改善 5 案</span></div>
+            </div>
           </div>
+
+          <!-- ═══ STEP 04: チャットで仕事依頼 ═══ -->
+          <div class="demo-step" data-step="4">
+            <div class="demo-step-head">
+              <span class="dst-tag">STEP 04</span>
+              <span class="dst-ti">チャットで AI に直接依頼</span>
+            </div>
+            <div class="chat-thread">
+              <div class="chat-msg chat-msg-user">
+                <div class="chat-bubble">来週分の X スレッドを 3 本作って、 月曜 9:00 に予約投稿して。</div>
+              </div>
+              <div class="chat-msg chat-msg-ai">
+                <div class="chat-bubble">
+                  ✍️ 3 本の X スレッドを作成中...<br>
+                  <span class="chat-tool">🔧 create_artifact (X スレッド #1)</span>
+                  <span class="chat-tool">🔧 create_artifact (X スレッド #2)</span>
+                  <span class="chat-tool">🔧 create_artifact (X スレッド #3)</span>
+                  <span class="chat-tool">🐦 post_to_x_thread (× 3 予約)</span>
+                  ✅ 完了。 月曜 9:00 / 火曜 9:00 / 水曜 9:00 に投稿予定。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ STEP 05: 毎日データ確認 ═══ -->
+          <div class="demo-step" data-step="5">
+            <div class="demo-step-head">
+              <span class="dst-tag">STEP 05</span>
+              <span class="dst-ti">毎朝レポートが届く</span>
+            </div>
+            <div class="mail-card">
+              <div class="mail-h">
+                <span class="mail-from">🤖 MY AI Agent &lt;noreply&gt;</span>
+                <span class="mail-time">06:00 AM</span>
+              </div>
+              <div class="mail-subj">📊 毎朝レポート — yoursaas.io ・ 2026/05/24</div>
+              <div class="mail-body">
+                <div class="mail-row"><b>昨日の PV:</b> 463 <span style="color:#16a34a">+23%</span></div>
+                <div class="mail-row"><b>新規記事:</b> 「AI マーケ 比較 2026」 が公開済 ・ 124 PV</div>
+                <div class="mail-row"><b>X 投稿:</b> スレッド 1 本 ・ 8 インプレッション/分</div>
+                <div class="mail-row"><b>AI 引用:</b> Perplexity で 引用検知 (= 1 件)</div>
+                <div class="mail-row"><b>今日の予定:</b> SEO 記事 3 本 + CVR 改善 提案 1 件</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ STEP 06: 数字が伸びて結果がでる ═══ -->
+          <div class="demo-step" data-step="6">
+            <div class="demo-step-head">
+              <span class="dst-tag">STEP 06</span>
+              <span class="dst-ti">3 ヶ月で結果が出る</span>
+            </div>
+            <div class="result-big">
+              <div class="result-big-val">12,840 <span class="result-big-unit">PV / 月</span></div>
+              <div class="result-big-delta">+42% vs 先月 ・ <span style="color:var(--peach)">3 ヶ月で 4×</span></div>
+              <svg class="result-chart" viewBox="0 0 280 80" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="rgrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#c0ff5c" stop-opacity=".5"/>
+                    <stop offset="100%" stop-color="#c0ff5c" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,70 L20,68 L40,65 L60,62 L80,55 L100,52 L120,42 L140,38 L160,30 L180,22 L200,15 L220,10 L240,8 L260,5 L280,2 L280,80 L0,80 Z" fill="url(#rgrad)"/>
+                <path d="M0,70 L20,68 L40,65 L60,62 L80,55 L100,52 L120,42 L140,38 L160,30 L180,22 L200,15 L220,10 L240,8 L260,5 L280,2" fill="none" stroke="#c0ff5c" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="result-tags">
+              <div class="result-tag"><b>+340</b> 検索流入/週</div>
+              <div class="result-tag"><b>3/5</b> ChatGPT 引用</div>
+              <div class="result-tag"><b>+12</b> 問い合わせ/月</div>
+            </div>
+          </div>
+
         </div>
       </div>
       <!-- 装飾 glow -->
@@ -2600,6 +2855,60 @@
     }
     // 100ms 待ってから開始 (= 初期表示の rise アニメと被らないように)
     setTimeout(tick, 250);
+  })();
+
+  // ── 6-step walkthrough demo cycler ──────────────────
+  // step 自動切替 (4 秒)、 click でジャンプ、 hover で一時停止
+  (function(){
+    var wrap = document.getElementById('demoWrap');
+    if(!wrap) return;
+    var nav = wrap.querySelectorAll('.demo-nav-btn');
+    var steps = wrap.querySelectorAll('.demo-step');
+    var urlBox = document.getElementById('demoUrl');
+    if(!nav.length || !steps.length) return;
+    var idx = 0;
+    var timer = null;
+    var paused = false;
+    // step number → browser URL を変える (= 「画面が遷移してる」 感)
+    var URLS = [
+      'myaiagents.agency',                 // step 1 — landing
+      'myaiagents.agency/onboarding',      // step 2
+      'myaiagents.agency/app',             // step 3
+      'myaiagents.agency/app/chat',        // step 4
+      'mail.google.com',                   // step 5
+      'myaiagents.agency/app/dashboard',   // step 6
+    ];
+    function setStep(n){
+      idx = ((n % steps.length) + steps.length) % steps.length;
+      nav.forEach(function(b, i){ b.classList.toggle('active', i === idx); });
+      steps.forEach(function(s, i){
+        s.classList.toggle('active', i === idx);
+      });
+      if(urlBox) urlBox.textContent = URLS[idx] || URLS[0];
+    }
+    function tick(){ if(!paused) setStep(idx + 1); }
+    function start(){
+      stop();
+      timer = setInterval(tick, 4500);
+    }
+    function stop(){ if(timer){ clearInterval(timer); timer = null; } }
+    // Click で jump
+    nav.forEach(function(b, i){
+      b.addEventListener('click', function(){
+        paused = true; setStep(i);
+        // 8 秒後に auto-cycle 再開
+        setTimeout(function(){ paused = false; }, 8000);
+      });
+    });
+    // Hover で pause
+    wrap.addEventListener('mouseenter', function(){ paused = true; });
+    wrap.addEventListener('mouseleave', function(){ paused = false; });
+    // Visibility 変化で省エネ (= タブ非表示時は停止)
+    document.addEventListener('visibilitychange', function(){
+      if(document.hidden) stop(); else start();
+    });
+    setStep(0);
+    start();
   })();
 
   // ── Magnetic glow CTA — マウス位置を CSS var に流す ─────

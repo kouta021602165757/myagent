@@ -5812,6 +5812,59 @@ function _renderTabConnections(site){
       + '</div>';
   }
 
+  // ── 5b. 🤖 MY AI Agent 内蔵ツール (= 外部接続不要、 自社開発) ──
+  // 「結果を出す」 ために MY AI Agent が直接提供するツール群。
+  // 一部は既存機能の再利用 (= web_fetch / image gen / Resend) で即動作可能。
+  function _toolCard(opts){
+    // opts: { icon, name, desc, color, status: 'on'|'soon', meta? }
+    var statusLbl = opts.status === 'on' ? '🟢 利用可能'
+                  : opts.status === 'beta' ? '🧪 ベータ'
+                  : '⏳ 近日対応';
+    var statusCls = opts.status === 'on' ? 'on' : opts.status === 'beta' ? 'beta' : 'soon';
+    return '<div class="cn-card cn-card-tool cn-card-' + statusCls + '" style="--cn-c:' + opts.color + '">'
+         +   '<div class="cn-card-l">'
+         +     '<div class="cn-card-ic" style="background:' + opts.color + '15;color:' + opts.color + '">' + opts.icon + '</div>'
+         +     '<div class="cn-card-meta">'
+         +       '<div class="cn-card-nm">' + esc(opts.name) + ' <span class="cn-status cn-status-' + statusCls + '">' + statusLbl + '</span></div>'
+         +       '<div class="cn-card-de">' + esc(opts.desc) + '</div>'
+         +     '</div>'
+         +   '</div>'
+         + '</div>';
+  }
+  var internalToolsHTML = _section('🤖 MY AI Agent 内蔵ツール', '外部接続不要 ・ AI 組織が直接使う自社開発ツール')
+    + '<div class="cn-grid">'
+    +   _toolCard({
+          icon: '🤖', name: 'AI 検索モニター', color: '#9333ea',
+          desc: 'ChatGPT / Perplexity / Claude / Gemini で自社 / 業界 KW が引用されているか週次でチェック。引用元 URL を tracking。',
+          status: 'soon',
+        })
+    +   _toolCard({
+          icon: '📈', name: '検索順位チェッカー', color: '#0ea5e9',
+          desc: '主要キーワードの Google 検索順位を毎日測定。順位推移を「数字一覧」 tab + 毎朝レポートに反映。',
+          status: 'soon',
+        })
+    +   _toolCard({
+          icon: '🔍', name: '競合記事分析', color: '#fb923c',
+          desc: '上位 10 記事の見出し / 文字数 / 構造を一括抽出。AI ライターが「勝てる記事」を設計する根拠データ。',
+          status: 'beta',
+        })
+    +   _toolCard({
+          icon: '🎨', name: 'アイキャッチ画像生成', color: '#ec4899',
+          desc: '記事に合った OGP / SNS 用画像を AI 生成。テキスト + ビジュアルが揃った完成品を納品。',
+          status: 'on',
+        })
+    +   _toolCard({
+          icon: '📧', name: 'メルマガ送信', color: '#22c55e',
+          desc: 'リスト管理 + AI 生成本文 + 配信を完結。月 3000 通まで無料 (Resend 経由)。',
+          status: 'beta',
+        })
+    +   _toolCard({
+          icon: '⚡', name: 'Core Web Vitals モニター', color: '#f59e0b',
+          desc: 'LCP / CLS / INP / 読込速度を毎日測定。CRO 部門が改善案を即提案。',
+          status: 'soon',
+        })
+    + '</div>';
+
   // ── 5. 📋 フォーム / 問い合わせ ──
   var formHTML = _section('📋 フォーム / 問い合わせ', 'HP の問い合わせ数を直接 KPI に。')
     + '<div class="cn-grid">'
@@ -5829,7 +5882,7 @@ function _renderTabConnections(site){
 
   return '<div class="cn-page">'
     + '<div class="cn-hero">'
-    +   '<div class="cn-hero-tag"><span class="sd-rp-dot"></span>外部サービスとの接続</div>'
+    +   '<div class="cn-hero-tag"><span class="sd-rp-dot"></span>外部サービスとの接続 + 内蔵ツール</div>'
     +   '<div class="cn-hero-ti">AI 組織が「読める / 投稿できる」サービスを増やす</div>'
     +   '<div class="cn-hero-sub">接続したサービスから自動でデータが流れ込み、AI 組織のアウトプットの精度が上がります。<b>パスワード共有不要</b>。</div>'
     + '</div>'
@@ -5839,6 +5892,7 @@ function _renderTabConnections(site){
     + contentHTML
     + ecHTML
     + formHTML
+    + internalToolsHTML
     + '</div>';
 }
 

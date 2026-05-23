@@ -3892,6 +3892,17 @@ input,textarea{font-family:var(--sans);}
 .cn-status.cn-status-on{background:rgba(22,163,74,.12); color:#16a34a; border:1px solid rgba(22,163,74,.24)}
 .cn-status.cn-status-off{background:rgba(0,0,0,.04); color:var(--text3); border:1px solid var(--wire2)}
 .cn-status.cn-status-soon{background:rgba(99,102,241,.1); color:#6366f1; border:1px solid rgba(99,102,241,.22)}
+.cn-status.cn-status-beta{background:rgba(251,146,60,.12); color:#ea580c; border:1px solid rgba(251,146,60,.28)}
+
+/* 内蔵ツール card は薄い grad background で差別化 */
+.cn-card.cn-card-tool{
+  background:linear-gradient(135deg, #fafafd 0%, #fff 100%);
+  border-left-style:dashed;
+}
+.cn-card.cn-card-tool.cn-card-on{
+  background:linear-gradient(135deg, color-mix(in srgb, var(--cn-c, #fb923c) 6%, #fff), #fff);
+  border-left-style:solid;
+}
 .cn-card-de{
   font-size:11px; font-weight:600; color:var(--text2);
   line-height:1.5; margin-top:3px;

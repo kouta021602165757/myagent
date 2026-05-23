@@ -4651,9 +4651,9 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     { key: 'linkedin',  name: 'LinkedIn',    emoji: '💼', color: '#0a66c2', hasPostTool: true },
     { key: 'threads',   name: 'Threads',     emoji: '🧵', color: '#000000', hasPostTool: true },
     { key: 'facebook',  name: 'Facebook',    emoji: '📘', color: '#1877f2', hasPostTool: true },
-    { key: 'instagram', name: 'Instagram',   emoji: '📸', color: '#e1306c', hasPostTool: false },
-    { key: 'tiktok',    name: 'TikTok',      emoji: '🎵', color: '#000000', hasPostTool: false },
-    { key: 'youtube',   name: 'YouTube',     emoji: '📺', color: '#ff0000', hasPostTool: false },
+    { key: 'instagram', name: 'Instagram',   emoji: '📸', color: '#e1306c', hasPostTool: true },
+    { key: 'tiktok',    name: 'TikTok',      emoji: '🎵', color: '#000000', hasPostTool: true },
+    { key: 'youtube',   name: 'YouTube',     emoji: '📺', color: '#ff0000', hasPostTool: true },
   ];
   function _profileHandle(profile){
     if(!profile) return '';

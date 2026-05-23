@@ -9260,6 +9260,45 @@ const SNS_TOOLS = [
       required: ['text'],
     },
   },
+  // ── Instagram (= 画像必須) ──
+  {
+    name: 'post_to_instagram',
+    description: '⚠️ 事前にユーザーが Instagram にブラウザでログイン済みであること (= desktop web)。\n\nInstagram に画像 + caption を投稿します。 画像は必須 (= image_url で URL 指定、 拡張で fetch して upload)。 8MB cap。 caption は 2200 字まで。\n\n画像 URL は generate_image / edit_image の結果をそのまま渡せます。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        image_url: { type: 'string', description: '投稿する画像 URL (必須、 8MB 以下)' },
+        caption: { type: 'string', description: 'キャプション (任意、 2200 字まで、 ハッシュタグ可)' },
+      },
+      required: ['image_url'],
+    },
+  },
+  // ── TikTok (= Photo Mode、 動画非対応) ──
+  {
+    name: 'post_to_tiktok',
+    description: '⚠️ 事前にユーザーが TikTok にブラウザでログイン済みであること。\n\nTikTok に画像 (Photo Mode) + caption を投稿します。 動画 upload は SSE 帯域制約のため非対応。 ✅ 画像必須 (= 8MB cap)、 caption 2200 字まで。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        image_url: { type: 'string', description: '投稿する画像 URL (必須、 8MB 以下)' },
+        caption: { type: 'string', description: 'キャプション (任意)' },
+      },
+      required: ['image_url'],
+    },
+  },
+  // ── YouTube Community 投稿 (= 500+ subscribers 必須) ──
+  {
+    name: 'post_to_youtube_community',
+    description: '⚠️ 事前にユーザーが YouTube Studio にブラウザでログイン済みであり、 チャンネルが 500+ subscribers (= Community Tab 解放条件) を満たしていること。\n\nYouTube Community Tab にテキスト投稿 + 任意で画像を投稿します。 動画 upload は非対応 (= テキスト + 画像のみ)。 text 2000 字まで。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: '本文 (1-2000 字)' },
+        image_url: { type: 'string', description: '(任意) 添付画像 URL (8MB 以下)' },
+      },
+      required: ['text'],
+    },
+  },
   // ── note ──
   {
     name: 'publish_note',
@@ -9399,19 +9438,31 @@ function _extractUrlsFromText(text, excludeDomains){
 }
 
 // Perplexity に query → answer + citations を抽出
+// 改善: streaming 完了を 「Sources」 / 「ソース」 出現で検知 (= 固定 10s sleep より速い + 確実)
 async function _queryPerplexity(user, query){
   const url = 'https://www.perplexity.ai/search?q=' + encodeURIComponent(query);
   let r = await executeExtensionTool(user, 'ext_open_url', { url });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
 
-  await _sleep(10000);  // Perplexity は streaming 回答
+  // Sources セクション出現で streaming 完了と判定 (timeout 20s)
+  await executeExtensionTool(user, 'ext_wait_for', {
+    text: 'Sources',
+    timeout_ms: 20000,
+  });
+  await _sleep(1500);  // citations のレンダリング完了を待つ buffer
 
   r = await executeExtensionTool(user, 'ext_read_page', {});
   if(r && r.error) return { error: 'read_failed', detail: r.error };
 
   const pageText = String((r && r.text) || '');
-  const sourcesIdx = pageText.indexOf('Sources');
-  const answerText = (sourcesIdx > 100 ? pageText.slice(0, sourcesIdx) : pageText).slice(0, 2000);
+  // 「Sources」 または 「ソース」 (日本語 UI 用) でセクション分割
+  const sourcesIdx = (() => {
+    const a = pageText.indexOf('Sources');
+    const b = pageText.indexOf('ソース');
+    if(a > 100 && b > 100) return Math.min(a, b);
+    return a > 100 ? a : (b > 100 ? b : -1);
+  })();
+  const answerText = (sourcesIdx > 0 ? pageText.slice(0, sourcesIdx) : pageText).slice(0, 2000);
 
   return {
     ok: true, platform: 'perplexity',
@@ -9424,43 +9475,57 @@ async function _queryPerplexity(user, query){
 }
 
 // ChatGPT に query → 回答抽出 (= 拡張で chatgpt.com を操作、 ユーザーログイン必要)
+// 改善: streaming 完了を 「Stop generating」 button 消失で検知
 async function _queryChatGPT(user, query){
   // ?q= URL でクエリ事前入力 → submit 自動 or 手動 fallback
   const url = 'https://chatgpt.com/?q=' + encodeURIComponent(query);
   let r = await executeExtensionTool(user, 'ext_open_url', { url });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
 
-  await _sleep(4000);  // login redirect + 初期 load
+  // composer (= 入力欄) 出現を待つ
+  await executeExtensionTool(user, 'ext_wait_for', {
+    selector: '#prompt-textarea, [contenteditable="true"][id="prompt-textarea"], textarea[placeholder*="Message" i]',
+    timeout_ms: 12000,
+  });
 
   // 念のため textarea を確認 → URL の ?q= で auto-fill されてなければ手動入力
-  // textarea の selector は変化するので複数 fallback
   r = await executeExtensionTool(user, 'ext_read_page', {});
   const pageInfo = r || {};
   const currentUrl = String(pageInfo.url || '');
-  if(/\/auth\/login|\/login/.test(currentUrl)){
+  if(/\/auth\/login|\/login|chatgpt\.com\/auth\//i.test(currentUrl)){
     return { error: 'not_logged_in', detail: 'ChatGPT にログインしてください (chatgpt.com)。' };
   }
 
   // ?q= で 自動 submit されてなければ手動で type + Enter
-  // 検知: ページに query が含まれていれば submit 済 と判定
   const alreadyAsked = pageInfo.text && pageInfo.text.indexOf(query) >= 0;
   if(!alreadyAsked){
-    // textarea / contenteditable / prompt-textarea の 3 fallback
-    r = await executeExtensionTool(user, 'ext_type', { selector: '#prompt-textarea', text: query });
-    if(r && r.error){
-      r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"][data-virtualkeyboard]', text: query });
+    // 2026 ChatGPT: #prompt-textarea は contenteditable div
+    const SELECTORS = [
+      '#prompt-textarea',
+      '[contenteditable="true"][id="prompt-textarea"]',
+      '[contenteditable="true"][data-virtualkeyboard]',
+      'textarea[placeholder*="Message" i]',
+      'div[contenteditable="true"]',
+    ];
+    let typed = false;
+    for(const sel of SELECTORS){
+      r = await executeExtensionTool(user, 'ext_type', { selector: sel, text: query });
+      if(!r || !r.error){ typed = true; break; }
     }
-    if(r && r.error){
-      r = await executeExtensionTool(user, 'ext_type', { selector: 'textarea[placeholder*="Message"]', text: query });
-    }
-    if(r && r.error) return { error: 'type_failed', detail: 'ChatGPT の入力欄が見つかりません: ' + r.error };
+    if(!typed) return { error: 'type_failed', detail: 'ChatGPT の入力欄が見つかりません: ' + (r && r.error) };
     await _sleep(800);
-    r = await executeExtensionTool(user, 'ext_press_key', { key: 'Enter' });
-    if(r && r.error) return { error: 'submit_failed', detail: r.error };
+    // Send button or Enter
+    r = await executeExtensionTool(user, 'ext_click', { target: '[data-testid="send-button"]' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_press_key', { key: 'Enter' });
+      if(r && r.error) return { error: 'submit_failed', detail: r.error };
+    }
   }
 
-  // 回答待ち (ChatGPT は streaming で長い)
-  await _sleep(22000);
+  // Streaming 完了検知: 「Stop generating」 button が消えるまで poll
+  // Stop button が存在する間は streaming 中、 消えたら完了
+  await _sleep(3000);  // 最低 streaming 開始を待つ
+  await _waitForStreamingDone(user, '[data-testid="stop-button"], [aria-label*="Stop generating"], [aria-label*="生成を停止"]', 30000);
 
   r = await executeExtensionTool(user, 'ext_read_page', {});
   if(r && r.error) return { error: 'read_failed', detail: r.error };
@@ -9476,44 +9541,73 @@ async function _queryChatGPT(user, query){
   };
 }
 
+// Streaming 完了検知 helper: 指定 selector の element が消えるまで poll
+async function _waitForStreamingDone(user, stopButtonSelector, maxWaitMs){
+  const start = Date.now();
+  let lastSeen = Date.now();
+  while(Date.now() - start < maxWaitMs){
+    const check = await executeExtensionTool(user, 'ext_eval', {
+      code: `return document.querySelector(${JSON.stringify(stopButtonSelector)}) ? 'streaming' : 'done';`,
+    });
+    if(check && check === 'done'){
+      // 念のため 2 秒安定したら終了
+      if(Date.now() - lastSeen > 2000) return;
+    } else {
+      lastSeen = Date.now();
+    }
+    await _sleep(1500);
+  }
+}
+
 // Gemini に query → 回答抽出 (= 拡張で gemini.google.com を操作)
+// 改善: Quill editor の selector + ストリーミング完了検知
 async function _queryGemini(user, query){
-  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://gemini.google.com/' });
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://gemini.google.com/app' });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
 
-  await _sleep(4000);
+  // 入力欄出現を待つ
+  await executeExtensionTool(user, 'ext_wait_for', {
+    selector: '.ql-editor[contenteditable="true"], [contenteditable="true"][role="textbox"], rich-textarea [contenteditable="true"]',
+    timeout_ms: 12000,
+  });
 
   r = await executeExtensionTool(user, 'ext_read_page', {});
   const pageInfo = r || {};
   const currentUrl = String(pageInfo.url || '');
-  if(/accounts\.google\.com/.test(currentUrl)){
-    return { error: 'not_logged_in', detail: 'Gemini (Google) にログインしてください。' };
+  if(/accounts\.google\.com|\/signin\//i.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'Gemini (Google) にログインしてください: gemini.google.com' };
   }
 
-  // Gemini の入力欄 (= Quill / contenteditable)
-  r = await executeExtensionTool(user, 'ext_type', {
-    selector: '.ql-editor[contenteditable="true"]',
-    text: query,
-  });
-  if(r && r.error){
-    r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"][role="textbox"]', text: query });
-    if(r && r.error){
-      r = await executeExtensionTool(user, 'ext_type', { selector: 'rich-textarea [contenteditable="true"]', text: query });
-    }
+  // 入力 — selector 3 段 fallback
+  const SELECTORS = [
+    '.ql-editor[contenteditable="true"]',
+    '[contenteditable="true"][role="textbox"]',
+    'rich-textarea [contenteditable="true"]',
+    '[contenteditable="true"]',
+  ];
+  let typed = false;
+  for(const sel of SELECTORS){
+    r = await executeExtensionTool(user, 'ext_type', { selector: sel, text: query });
+    if(!r || !r.error){ typed = true; break; }
   }
-  if(r && r.error) return { error: 'type_failed', detail: 'Gemini の入力欄が見つかりません: ' + r.error };
+  if(!typed) return { error: 'type_failed', detail: 'Gemini の入力欄が見つかりません: ' + (r && r.error) };
 
   await _sleep(800);
-  // 送信ボタン or Enter
+  // 送信 button — aria-label 多言語対応 + class fallback
   r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="送信"]' });
   if(r && r.error){
-    r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="Send"]' });
+    r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="Send" i]' });
     if(r && r.error){
-      r = await executeExtensionTool(user, 'ext_press_key', { key: 'Enter' });
+      r = await executeExtensionTool(user, 'ext_click', { target: 'button.send-button' });
+      if(r && r.error){
+        r = await executeExtensionTool(user, 'ext_press_key', { key: 'Enter' });
+      }
     }
   }
 
-  await _sleep(20000);  // Gemini も streaming
+  // Streaming 完了検知 (= Gemini の停止ボタン or response-loader 消失)
+  await _sleep(3000);
+  await _waitForStreamingDone(user, '[aria-label*="応答の生成を停止"], [aria-label*="Stop response" i], .response-loading-indicator, .stop-button', 30000);
 
   r = await executeExtensionTool(user, 'ext_read_page', {});
   if(r && r.error) return { error: 'read_failed', detail: r.error };
@@ -9946,6 +10040,293 @@ async function executePostToFacebookTool(user, input){
     ok: true, platform: 'facebook',
     url: (r && r.url) || '',
     instructions: 'ユーザーに「✅ Facebook Page に投稿しました」と短く報告してください。',
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── 画像投稿系 (Instagram / TikTok / YouTube Community) ──
+// 全 platform で image_url 必須 (= 拡張で fetch → data URL → ext_upload_file)
+// SSE message size 上限のため 8MB cap
+// ══════════════════════════════════════════════════════════════
+
+// 共通: 画像 URL → data URL (8MB cap、 file input upload 用)
+async function _socialFetchImageDataUrl(imageUrl){
+  if(!imageUrl) return { error: 'image_url_required' };
+  if(imageUrl.startsWith('data:')){
+    const approxBytes = (imageUrl.length - imageUrl.indexOf(',') - 1) * 0.75;
+    if(approxBytes > _WP_FEATURED_IMAGE_MAX_BYTES) return { error: 'image_too_large' };
+    return { dataUrl: imageUrl, filename: 'post.jpg' };
+  }
+  try {
+    const res = await fetch(imageUrl);
+    if(!res.ok) throw new Error('image fetch ' + res.status);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if(buf.length > _WP_FEATURED_IMAGE_MAX_BYTES){
+      return { error: 'image_too_large', detail: '画像が 8MB を超えています (' + Math.round(buf.length/1024/1024) + 'MB)。 圧縮してください。' };
+    }
+    const mimeType = res.headers.get('content-type') || 'image/jpeg';
+    const extMatch = imageUrl.match(/\.(jpg|jpeg|png|gif|webp)(?:\?|$)/i);
+    const filename = 'post.' + (extMatch ? extMatch[1].toLowerCase() : 'jpg');
+    return {
+      dataUrl: 'data:' + mimeType + ';base64,' + buf.toString('base64'),
+      filename,
+    };
+  } catch(e){
+    return { error: 'image_fetch_failed', detail: e.message };
+  }
+}
+
+// ── Instagram 投稿 (= 画像 + caption) ──
+// Desktop web (instagram.com) からの投稿。 モバイル feature parity は 2022 から。
+async function executePostToInstagramTool(user, input){
+  const caption = String((input && input.caption) || '').trim();
+  const imageUrl = String((input && input.image_url) || '').trim();
+  if(!imageUrl) return { error: 'image_url_required', detail: 'Instagram は画像必須です。 generate_image / edit_image で生成した URL を渡してください。' };
+  if(caption.length > 2200) return { error: 'caption_too_long', detail: 'Instagram は 2200 字まで。 今: ' + caption.length };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+
+  const img = await _socialFetchImageDataUrl(imageUrl);
+  if(img && img.error) return img;
+
+  // 1) instagram.com を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://www.instagram.com/' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await executeExtensionTool(user, 'ext_wait_for', { selector: 'nav, [role="navigation"]', timeout_ms: 12000 });
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(/accounts\/login/.test(String((r && r.url) || ''))){
+    return { error: 'not_logged_in', detail: 'Instagram にログインしてください: https://www.instagram.com/' };
+  }
+
+  // 2) 「新規投稿」 button を click (= + アイコン)
+  r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label="新規投稿"]' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: '[aria-label="New post"]' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: '作成' });
+      if(r && r.error){
+        r = await executeExtensionTool(user, 'ext_click', { target: 'Create' });
+        if(r && r.error) return { error: 'compose_open_failed', detail: 'Instagram の作成 button が見つかりません。 UI が変わった可能性。' };
+      }
+    }
+  }
+  await _sleep(1500);
+  // dropdown が出る場合は 「投稿」 を選ぶ
+  await executeExtensionTool(user, 'ext_click', { target: '投稿' });
+  await _sleep(1500);
+
+  // 3) ファイル input を探して upload
+  r = await executeExtensionTool(user, 'ext_upload_file', {
+    selector: 'input[type="file"][accept*="image"]',
+    data_url: img.dataUrl,
+    filename: img.filename,
+  });
+  if(r && r.error){
+    // selector 失敗時は generic input fallback
+    r = await executeExtensionTool(user, 'ext_upload_file', {
+      selector: 'input[type="file"]',
+      data_url: img.dataUrl,
+      filename: img.filename,
+    });
+    if(r && r.error) return { error: 'image_upload_failed', detail: 'Instagram への画像 upload が失敗: ' + r.error };
+  }
+  await _sleep(2500);
+
+  // 4) 「次へ」 を 2 回 (= crop / filter 画面を skip して caption 画面へ)
+  for(let i = 0; i < 2; i++){
+    r = await executeExtensionTool(user, 'ext_click', { target: '次へ' });
+    if(r && r.error) await executeExtensionTool(user, 'ext_click', { target: 'Next' });
+    await _sleep(1500);
+  }
+
+  // 5) caption 入力 (= textarea or contenteditable)
+  if(caption){
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: 'textarea[aria-label*="キャプション"], textarea[aria-label*="caption" i], div[aria-label*="キャプション"][contenteditable="true"], div[aria-label*="caption" i][contenteditable="true"]',
+      text: caption,
+    });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_type', { selector: 'textarea', text: caption });
+      if(r && r.error) console.warn('[instagram] caption type failed:', r.error);
+    }
+    await _sleep(800);
+  }
+
+  // 6) 「シェア」
+  r = await executeExtensionTool(user, 'ext_click', { target: 'シェア' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Share' });
+    if(r && r.error) return { error: 'share_click_failed', detail: r.error };
+  }
+  await _sleep(4500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+
+  return {
+    ok: true, platform: 'instagram',
+    url: (r && r.url) || 'https://www.instagram.com/',
+    instructions: 'ユーザーに「✅ Instagram に投稿しました」と短く報告してください。',
+  };
+}
+
+// ── TikTok 投稿 (= 画像 Photo Mode、 動画は SSE 帯域制約で非対応) ──
+async function executePostToTikTokTool(user, input){
+  const caption = String((input && input.caption) || '').trim();
+  const imageUrl = String((input && input.image_url) || '').trim();
+  if(!imageUrl){
+    return { error: 'image_url_required', detail: 'TikTok 投稿は画像 (Photo Mode) のみ対応。 動画 upload は SSE 帯域制約で未対応。' };
+  }
+  if(caption.length > 2200) return { error: 'caption_too_long', detail: 'TikTok caption は 2200 字まで' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+
+  const img = await _socialFetchImageDataUrl(imageUrl);
+  if(img && img.error) return img;
+
+  // 1) TikTok Studio / Upload を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://www.tiktok.com/upload?lang=ja-JP' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await executeExtensionTool(user, 'ext_wait_for', { selector: 'input[type="file"], [data-e2e="upload-btn"]', timeout_ms: 15000 });
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  if(/login|signup|webcast\.tiktok\.com\/login/.test(String((r && r.url) || ''))){
+    return { error: 'not_logged_in', detail: 'TikTok にログインしてください: https://www.tiktok.com/login' };
+  }
+
+  // 2) 画像 upload
+  r = await executeExtensionTool(user, 'ext_upload_file', {
+    selector: 'input[type="file"][accept*="image"]',
+    data_url: img.dataUrl,
+    filename: img.filename,
+  });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_upload_file', {
+      selector: 'input[type="file"]',
+      data_url: img.dataUrl,
+      filename: img.filename,
+    });
+    if(r && r.error) return { error: 'image_upload_failed', detail: r.error };
+  }
+  await _sleep(4000);  // TikTok は upload 後の preview 生成が遅い
+
+  // 3) caption 入力
+  if(caption){
+    r = await executeExtensionTool(user, 'ext_type', {
+      selector: '[data-e2e="caption-input"], [contenteditable="true"]',
+      text: caption,
+    });
+    if(r && r.error) console.warn('[tiktok] caption type failed:', r.error);
+    await _sleep(800);
+  }
+
+  // 4) 投稿
+  r = await executeExtensionTool(user, 'ext_click', { target: '[data-e2e="post-btn"]' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: '投稿' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: 'Post' });
+      if(r && r.error) return { error: 'post_click_failed', detail: r.error };
+    }
+  }
+  await _sleep(4500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+
+  return {
+    ok: true, platform: 'tiktok',
+    url: (r && r.url) || 'https://www.tiktok.com/',
+    instructions: 'ユーザーに「✅ TikTok に投稿しました (Photo Mode)」と短く報告してください。',
+  };
+}
+
+// ── YouTube Community 投稿 (= text + 任意 image。 動画は非対応) ──
+// 500 subscribers 以上のチャンネルのみ Community Tab が有効。
+async function executePostToYouTubeCommunityTool(user, input){
+  const text = String((input && input.text) || '').trim();
+  const imageUrl = String((input && input.image_url) || '').trim();
+  if(!text) return { error: 'text_required', detail: 'YouTube Community 投稿は本文必須です。' };
+  if(text.length > 2000) return { error: 'text_too_long', detail: 'YouTube Community は 2000 字まで' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+
+  // 画像は任意
+  let img = null;
+  if(imageUrl){
+    img = await _socialFetchImageDataUrl(imageUrl);
+    if(img && img.error) return img;
+  }
+
+  // 1) YouTube Studio Community を開く
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: 'https://studio.youtube.com/channel/UC/community' });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await executeExtensionTool(user, 'ext_wait_for', { selector: '#post-creation, ytcp-app, [aria-label*="Community"]', timeout_ms: 15000 });
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const currentUrl = String((r && r.url) || '');
+  if(/accounts\.google\.com/.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'YouTube Studio にログインしてください: https://studio.youtube.com' };
+  }
+  if(/error_403|not_eligible|not-eligible/i.test(currentUrl)){
+    return { error: 'not_eligible', detail: 'このチャンネルは Community Tab 対象外です (500+ subscribers 必要)。' };
+  }
+
+  // 2) 「投稿を作成」 / 「+」 button を click
+  r = await executeExtensionTool(user, 'ext_click', { target: '投稿を作成' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: 'Create post' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: '#create-post-button' });
+      if(r && r.error){
+        // すでに開いている可能性 — skip
+      }
+    }
+  }
+  await _sleep(1500);
+
+  // 3) 本文入力
+  r = await executeExtensionTool(user, 'ext_type', {
+    selector: '#textbox[contenteditable="true"], [aria-label*="Say something"], [aria-label*="本文"]',
+    text,
+  });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_type', { selector: '[contenteditable="true"]', text });
+    if(r && r.error) return { error: 'text_type_failed', detail: r.error };
+  }
+  await _sleep(800);
+
+  // 4) 画像があれば upload
+  if(img && img.dataUrl){
+    // Image button を click → file input を開く
+    await executeExtensionTool(user, 'ext_click', { target: '[aria-label*="画像を追加"], [aria-label*="Add image"]' });
+    await _sleep(800);
+    r = await executeExtensionTool(user, 'ext_upload_file', {
+      selector: 'input[type="file"][accept*="image"]',
+      data_url: img.dataUrl,
+      filename: img.filename,
+    });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_upload_file', {
+        selector: 'input[type="file"]',
+        data_url: img.dataUrl,
+        filename: img.filename,
+      });
+      if(r && r.error) console.warn('[youtube] image upload failed:', r.error);
+    }
+    await _sleep(3000);
+  }
+
+  // 5) 「投稿」
+  r = await executeExtensionTool(user, 'ext_click', { target: '#post-button, [aria-label*="投稿" i]' });
+  if(r && r.error){
+    r = await executeExtensionTool(user, 'ext_click', { target: '投稿' });
+    if(r && r.error){
+      r = await executeExtensionTool(user, 'ext_click', { target: 'Post' });
+      if(r && r.error) return { error: 'post_click_failed', detail: r.error };
+    }
+  }
+  await _sleep(3500);
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+
+  return {
+    ok: true, platform: 'youtube',
+    url: (r && r.url) || 'https://studio.youtube.com/',
+    instructions: 'ユーザーに「✅ YouTube Community に投稿しました」と短く報告してください。',
   };
 }
 
@@ -10818,6 +11199,9 @@ async function executeSnsTool(user, name, input, agent){
   else if(name === 'post_to_linkedin') r = await executePostToLinkedInTool(user, input);
   else if(name === 'post_to_threads')  r = await executePostToThreadsTool(user, input);
   else if(name === 'post_to_facebook') r = await executePostToFacebookTool(user, input);
+  else if(name === 'post_to_instagram') r = await executePostToInstagramTool(user, input);
+  else if(name === 'post_to_tiktok')    r = await executePostToTikTokTool(user, input);
+  else if(name === 'post_to_youtube_community') r = await executePostToYouTubeCommunityTool(user, input);
   else if(name === 'publish_note')     r = await executePublishNoteTool(user, input);
   else if(name === 'publish_wordpress') r = await executePublishWordPressTool(user, input);
   else if(name === 'edit_wordpress')    r = await executeEditWordPressTool(user, input);

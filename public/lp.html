@@ -356,6 +356,277 @@
     .vt{padding:6px 11px; font-size:11.5px}
   }
 
+  /* ══════════════════════════════════════════════════════
+     動く製品 DEMO — 12 秒で 1 サイクル loop
+     Phase 1 (0-3s): URL タイプ
+     Phase 2 (3-6s): AI 編成 + progress
+     Phase 3 (6-12s): 納品物 6 件 stagger-in + done
+     ══════════════════════════════════════════════════════ */
+  .demo-wrap{
+    position:relative; margin:56px auto 0; max-width:940px;
+    animation:rise .8s .42s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .demo-glow{
+    position:absolute; inset:-40px;
+    background:radial-gradient(ellipse 60% 40% at 50% 50%, rgba(192,255,92,.18), transparent 70%);
+    filter:blur(60px); z-index:-1; pointer-events:none;
+    animation:demo-glow-pulse 6s ease-in-out infinite;
+  }
+  @keyframes demo-glow-pulse{
+    0%,100%{opacity:.6}
+    50%{opacity:1}
+  }
+  .demo{
+    background:linear-gradient(180deg, var(--card), var(--cream));
+    border:1px solid var(--wire2);
+    border-radius:16px; overflow:hidden;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,.50),
+      0 1px 0 rgba(255,255,255,.04) inset;
+    transform:perspective(1800px) rotateX(2deg);
+    transition:transform .4s cubic-bezier(.2,.7,.2,1);
+  }
+  .demo:hover{transform:perspective(1800px) rotateX(0deg) translateY(-3px)}
+
+  /* ブラウザバー */
+  .demo-bar{
+    display:flex; align-items:center; gap:8px;
+    padding:11px 16px;
+    background:rgba(0,0,0,.30);
+    border-bottom:1px solid var(--wire);
+  }
+  .demo-dot{width:11px; height:11px; border-radius:50%}
+  .demo-dot-r{background:#fb6962}
+  .demo-dot-y{background:#fbc15c}
+  .demo-dot-g{background:#65d378}
+  .demo-url{
+    margin-left:14px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; color:var(--ink3); letter-spacing:.02em;
+  }
+  .demo-live{
+    margin-left:auto;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10px; font-weight:500; color:var(--peach);
+    background:rgba(192,255,92,.08); padding:3px 9px; border-radius:99px;
+    display:inline-flex; align-items:center; gap:6px;
+    letter-spacing:.04em;
+  }
+  .demo-live-dot{
+    width:6px; height:6px; border-radius:50%; background:var(--peach);
+    box-shadow:0 0 8px var(--peach);
+    animation:pulse-live 1.8s ease-in-out infinite;
+  }
+
+  /* body container — 3 phase が overlap して loop */
+  .demo-body{
+    position:relative; padding:40px 32px;
+    min-height:380px;
+  }
+  .demo-phase{
+    position:absolute; inset:40px 32px;
+    opacity:0;
+    animation:demo-fade 12s infinite;
+  }
+  .demo-phase-1{animation-delay:0s}
+  .demo-phase-2{animation-delay:-9s}    /* 3 秒目から始まる相当 */
+  .demo-phase-3{animation-delay:-6s}    /* 6 秒目から始まる相当 */
+  @keyframes demo-fade{
+    0%, 2% { opacity:0; transform:translateY(8px) }
+    5%, 22% { opacity:1; transform:none }
+    25%, 100% { opacity:0; transform:translateY(-8px) }
+  }
+  .demo-label{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; color:var(--ink3); margin-bottom:18px;
+    letter-spacing:.04em;
+  }
+
+  /* Phase 1: URL タイプ */
+  .demo-url-form{
+    display:flex; align-items:center; gap:12px;
+    padding:18px 22px;
+    background:var(--cream2);
+    border:1px solid var(--wire2);
+    border-radius:12px;
+    max-width:520px;
+  }
+  .demo-prompt{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    color:var(--peach); font-weight:700; font-size:20px;
+    opacity:.8;
+  }
+  .demo-typed{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:16px; color:var(--ink);
+    display:flex; align-items:center;
+  }
+  .demo-typed-text{
+    overflow:hidden; white-space:nowrap; display:inline-block;
+    animation:demo-type 12s infinite;
+  }
+  .demo-typed-text::after{ content:'https://yoursaas.io' }
+  @keyframes demo-type{
+    0% { width:0 }
+    16%, 25% { width:18ch }  /* 0-3s 中で打ち終わる */
+    26%, 100% { width:18ch }
+  }
+  .demo-caret{
+    color:var(--peach);
+    animation:demo-caret 1s step-end infinite, demo-caret-hide 12s infinite;
+  }
+  @keyframes demo-caret{
+    0%, 50% { opacity:1 }
+    51%, 100% { opacity:0 }
+  }
+  @keyframes demo-caret-hide{
+    0%, 25% { display:inline }
+    26%, 100% { opacity:0 }
+  }
+
+  /* Phase 2: AI 編成 */
+  .demo-progress{
+    width:100%; height:5px; background:var(--cream2);
+    border-radius:99px; overflow:hidden;
+    margin-bottom:18px;
+  }
+  .demo-progress-bar{
+    height:100%; background:linear-gradient(90deg, var(--peach), var(--violet));
+    width:0%;
+    box-shadow:0 0 8px var(--peach);
+    animation:demo-progress 12s infinite;
+  }
+  @keyframes demo-progress{
+    0%, 25% { width:0% }
+    50% { width:100% }
+    51%, 100% { width:100% }
+  }
+  .demo-status{
+    display:flex; align-items:center; gap:10px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12.5px; color:var(--ink2); margin-bottom:18px;
+  }
+  .demo-dot-loader{
+    width:7px; height:7px; border-radius:50%; background:var(--peach);
+    animation:pulse 1.2s ease-in-out infinite;
+  }
+  .demo-status-tx{
+    animation:demo-status-text 12s infinite;
+  }
+  .demo-status-tx::after{ content:''; animation:demo-status-content 12s infinite; }
+  @keyframes demo-status-text{
+    0% { opacity:0 }
+    25% { opacity:0 }
+    27%, 45% { opacity:1 }
+  }
+  /* status の中身が変わる */
+  @keyframes demo-status-content{
+    0%, 28% { content:'Reading site...' }
+    29%, 36% { content:'Detecting vertical: SaaS LP' }
+    37%, 44% { content:'Forming team: 5 departments, 38 members' }
+    45%, 100% { content:'Generating deliverables...' }
+  }
+  .demo-team{
+    display:flex; gap:10px; flex-wrap:wrap;
+  }
+  .demo-team-mem{
+    width:36px; height:36px; border-radius:9px;
+    background:var(--c, var(--peach));
+    color:#0a0a0e;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+    opacity:0; transform:scale(.6);
+    animation:demo-mem-in 12s infinite;
+  }
+  .demo-team-mem-more{
+    background:var(--cream2); color:var(--ink2);
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:13px; font-weight:700;
+    border:1px solid var(--wire2);
+  }
+  .demo-team-mem:nth-child(1){animation-delay:.0s}
+  .demo-team-mem:nth-child(2){animation-delay:.2s}
+  .demo-team-mem:nth-child(3){animation-delay:.4s}
+  .demo-team-mem:nth-child(4){animation-delay:.6s}
+  .demo-team-mem:nth-child(5){animation-delay:.8s}
+  .demo-team-mem:nth-child(6){animation-delay:1.0s}
+  @keyframes demo-mem-in{
+    0%, 33% { opacity:0; transform:scale(.6) }
+    38%, 45% { opacity:1; transform:scale(1) }
+    47%, 100% { opacity:0; transform:scale(.95) }
+  }
+
+  /* Phase 3: 納品物 6 件 */
+  .demo-arts{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;
+    margin-bottom:18px;
+  }
+  .demo-art{
+    background:var(--cream2);
+    border:1px solid var(--wire);
+    border-left:3px solid var(--c, var(--peach));
+    border-radius:9px;
+    padding:10px 12px;
+    opacity:0; transform:translateY(12px);
+    animation:demo-art-in 12s infinite;
+  }
+  .demo-arts .demo-art:nth-child(1){animation-delay:.0s}
+  .demo-arts .demo-art:nth-child(2){animation-delay:.15s}
+  .demo-arts .demo-art:nth-child(3){animation-delay:.30s}
+  .demo-arts .demo-art:nth-child(4){animation-delay:.45s}
+  .demo-arts .demo-art:nth-child(5){animation-delay:.60s}
+  .demo-arts .demo-art:nth-child(6){animation-delay:.75s}
+  @keyframes demo-art-in{
+    0%, 50% { opacity:0; transform:translateY(12px) }
+    58%, 92% { opacity:1; transform:none }
+    95%, 100% { opacity:0; transform:translateY(-6px) }
+  }
+  .demo-art-tag{
+    display:inline-block;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:9px; font-weight:600;
+    padding:2px 6px; border-radius:4px;
+    background:rgba(255,255,255,.05); color:var(--c, var(--peach));
+    border:1px solid currentColor;
+    letter-spacing:.05em;
+    margin-bottom:5px;
+  }
+  .demo-art-ti{
+    font-size:11.5px; font-weight:700; color:var(--ink);
+    margin-bottom:3px; line-height:1.35;
+  }
+  .demo-art-meta{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:9px; color:var(--ink3); letter-spacing:.005em;
+  }
+  .demo-done{
+    text-align:center;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12.5px; color:var(--ink2); font-weight:500;
+    padding:12px 14px;
+    background:rgba(192,255,92,.04);
+    border:1px solid rgba(192,255,92,.18);
+    border-radius:9px;
+    opacity:0;
+    animation:demo-done-in 12s infinite;
+  }
+  @keyframes demo-done-in{
+    0%, 70% { opacity:0; transform:translateY(8px) }
+    78%, 92% { opacity:1; transform:none }
+    95%, 100% { opacity:0 }
+  }
+
+  @media (max-width:760px){
+    .demo{transform:none}
+    .demo:hover{transform:translateY(-3px)}
+    .demo-body{padding:24px 16px; min-height:340px}
+    .demo-phase{inset:24px 16px}
+    .demo-arts{grid-template-columns:1fr 1fr; gap:8px}
+    .demo-team-mem{width:32px; height:32px; font-size:16px}
+    .demo-typed{font-size:14px}
+    .demo-url-form{padding:14px 16px; max-width:none}
+  }
+
   /* ── 共通: section ──────────────────────────────────── */
   section{padding:clamp(56px,9vh,96px) 0; position:relative}
   .sec-eyebrow{
@@ -1238,42 +1509,72 @@
       <div class="vt"><span class="vt-ic">✍️</span><span data-i18n="vt.blog">ブログ・メディア</span></div>
       <div class="vt"><span class="vt-ic">💼</span><span data-i18n="vt.portfolio">ポートフォリオ</span></div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         動く製品 DEMO — URL貼る → AI 編成中 → 納品物が出る を loop
+         ═══════════════════════════════════════════════════════ -->
+    <div class="demo-wrap">
+      <div class="demo">
+        <!-- ブラウザバー -->
+        <div class="demo-bar">
+          <span class="demo-dot demo-dot-r"></span>
+          <span class="demo-dot demo-dot-y"></span>
+          <span class="demo-dot demo-dot-g"></span>
+          <span class="demo-url">myaiagents.agency/app</span>
+          <span class="demo-live"><span class="demo-live-dot"></span>live</span>
+        </div>
+        <!-- body -->
+        <div class="demo-body">
+          <!-- Phase 1: URL タイプ -->
+          <div class="demo-phase demo-phase-1">
+            <div class="demo-label">// paste your url</div>
+            <div class="demo-url-form">
+              <span class="demo-prompt">&gt;</span>
+              <span class="demo-typed"><span class="demo-typed-text"></span><span class="demo-caret">|</span></span>
+            </div>
+          </div>
+
+          <!-- Phase 2: AI チーム編成中 -->
+          <div class="demo-phase demo-phase-2">
+            <div class="demo-label">// assembling team</div>
+            <div class="demo-progress">
+              <div class="demo-progress-bar"></div>
+            </div>
+            <div class="demo-status">
+              <span class="demo-dot-loader"></span>
+              <span class="demo-status-tx">Reading site...</span>
+            </div>
+            <div class="demo-team">
+              <div class="demo-team-mem" style="--c:#fb923c">🎯</div>
+              <div class="demo-team-mem" style="--c:#3b82f6">🔍</div>
+              <div class="demo-team-mem" style="--c:#22c55e">📊</div>
+              <div class="demo-team-mem" style="--c:#a855f7">🎨</div>
+              <div class="demo-team-mem" style="--c:#ec4899">📈</div>
+              <div class="demo-team-mem demo-team-mem-more">+33</div>
+            </div>
+          </div>
+
+          <!-- Phase 3: 納品物がドロップイン -->
+          <div class="demo-phase demo-phase-3">
+            <div class="demo-label">// deliverables ready</div>
+            <div class="demo-arts">
+              <div class="demo-art" style="--c:#c0ff5c"><div class="demo-art-tag">SEO</div><div class="demo-art-ti">「AI マーケ 比較 2026」</div><div class="demo-art-meta">3,400 字 ・ Ver.1</div></div>
+              <div class="demo-art" style="--c:#3b82f6"><div class="demo-art-tag">SNS</div><div class="demo-art-ti">X スレッド 7 連投</div><div class="demo-art-meta">投稿準備完了</div></div>
+              <div class="demo-art" style="--c:#a855f7"><div class="demo-art-tag">CRO</div><div class="demo-art-ti">LP CVR 改善 5 案</div><div class="demo-art-meta">ROI 試算付</div></div>
+              <div class="demo-art" style="--c:#ec4899"><div class="demo-art-tag">AEO</div><div class="demo-art-ti">ChatGPT 引用率 監視</div><div class="demo-art-meta">5 query 設定</div></div>
+              <div class="demo-art" style="--c:#22c55e"><div class="demo-art-tag">RESEARCH</div><div class="demo-art-ti">競合 3 社 機能比較</div><div class="demo-art-meta">週次更新</div></div>
+              <div class="demo-art" style="--c:#fb923c"><div class="demo-art-tag">EMAIL</div><div class="demo-art-ti">問い合わせ 自動返信</div><div class="demo-art-meta">3 種類テンプレ</div></div>
+            </div>
+            <div class="demo-done">✓ <span style="color:var(--peach)">6 件納品完了</span> ・ 1m 47s</div>
+          </div>
+        </div>
+      </div>
+      <!-- 装飾 glow -->
+      <div class="demo-glow"></div>
+    </div>
   </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════════════
-     MARQUEE — 対応サイト種別を連続スクロール
-     ═══════════════════════════════════════════════════════════ -->
-<section class="marquee" aria-hidden="true">
-  <div class="marquee-track">
-    <!-- 1 周分 (12 個) -->
-    <div class="marquee-item"><span>🚀</span><span>SaaS / Product LP</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>🏢</span><span>企業 HP / コーポレートサイト</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>🛒</span><span>EC ストア</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>🏪</span><span>店舗・サロン</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>✍️</span><span>ブログ・メディア</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>💼</span><span>ポートフォリオ</span></div>
-    <div class="marquee-item-sep"></div>
-    <!-- 2 周分 (重複) でシームレスループ -->
-    <div class="marquee-item"><span>🚀</span><span>SaaS / Product LP</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>🏢</span><span>企業 HP / コーポレートサイト</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>🛒</span><span>EC ストア</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>🏪</span><span>店舗・サロン</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>✍️</span><span>ブログ・メディア</span></div>
-    <div class="marquee-item-sep"></div>
-    <div class="marquee-item"><span>💼</span><span>ポートフォリオ</span></div>
-    <div class="marquee-item-sep"></div>
-  </div>
-</section>
 
 <!-- ═══════════════════════════════════════════════════════════
      STATS BAR — Founder 100 限定の信頼感 + 規模感
@@ -1302,666 +1603,11 @@
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════
-     PROBLEM
-     ═══════════════════════════════════════════════════════════ -->
-<section class="problem">
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="pr.eye">なぜ AI マーケ組織が要るのか</span>
-    <h2 class="sec-h2" data-i18n="pr.h2">LP・HP を作って、その後どうしてますか?</h2>
 
-    <div class="pain-grid">
-      <div class="pain">
-        <span class="pain-em">😩</span>
-        <span class="pain-tx" data-i18n="pr.p1">LP / HP 作ったのに、流入もコンバージョンも増えない</span>
-      </div>
-      <div class="pain">
-        <span class="pain-em">💸</span>
-        <span class="pain-tx" data-i18n="pr.p2">マーケ会社に月 30 万 ~ 100 万も払えない</span>
-      </div>
-      <div class="pain">
-        <span class="pain-em">🤯</span>
-        <span class="pain-tx" data-i18n="pr.p3">SEO / SNS / 広告、何から手をつければいいか分からない</span>
-      </div>
-      <div class="pain">
-        <span class="pain-em">📉</span>
-        <span class="pain-tx" data-i18n="pr.p4">GA / Search Console 見ても、次に何やればいいか不明</span>
-      </div>
-    </div>
 
-    <p class="problem-out" data-i18n="pr.out">
-      → これ全部、<b>30+ 名の AI マーケ組織</b>に任せられます。
-    </p>
-  </div>
-</section>
 
-<!-- ═══════════════════════════════════════════════════════════
-     HOW IT WORKS
-     ═══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="hw.eye">仕組み</span>
-    <h2 class="sec-h2" data-i18n="hw.h2">5 ステップで動き始める</h2>
 
-    <div class="how-grid">
-      <div class="step">
-        <div class="step-num">01</div>
-        <h3 data-i18n="hw.s1h">URL を貼る</h3>
-        <p data-i18n="hw.s1p">
-          サイトの URL をフォームに入れる。会員登録は URL 入力後の 1 画面で完了。
-        </p>
-        <div class="step-time" data-i18n="hw.s1t">⏱ 10 秒</div>
-      </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <h3 data-i18n="hw.s2h">AI マーケ組織が編成</h3>
-        <p data-i18n="hw.s2p">
-          サイトを診断 → <b>5 部門 30+ 名</b> の AI 専門組織を自動編成。SEO / AEO / X / 競合分析 / CRO 等、1 人ずつ手法に特化したスペシャリスト。
-        </p>
-        <div class="step-time" data-i18n="hw.s2t">⏱ 50 秒</div>
-      </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <h3 data-i18n="hw.s3h">現状分析</h3>
-        <p data-i18n="hw.s3p">
-          サイト診断・競合動向・改善ポイントをレポート。<b>GA4 を接続するとさらに深く分析</b>できます。
-        </p>
-        <div class="step-time" data-i18n="hw.s3t">⏱ 2 分</div>
-      </div>
-      <div class="step">
-        <div class="step-num">04</div>
-        <h3 data-i18n="hw.s4h">戦略 + KPI 設定</h3>
-        <p data-i18n="hw.s4p">
-          AI が <b>コンテンツマーケ戦略</b> + <b>CVR 改善設計</b> を提案。目標 PV / CVR / リード数を設定。
-        </p>
-        <div class="step-time" data-i18n="hw.s4t">⏱ 5 分</div>
-      </div>
-      <div class="step">
-        <div class="step-num">05</div>
-        <h3 data-i18n="hw.s5h">毎日のレポーティング</h3>
-        <p data-i18n="hw.s5p">
-          毎朝 KPI 数字 + AI レポートが届く。納品物・進捗・次のアクションが一目で見える。
-        </p>
-        <div class="step-time" data-i18n="hw.s5t">⏱ 毎日 9 時</div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- ═══════════════════════════════════════════════════════════
-     DASHBOARD PREVIEW — 「60 秒後にあなたが見る画面」
-     ═══════════════════════════════════════════════════════════ -->
-<section class="dash-preview-sec">
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="dp.eye">数分後の画面</span>
-    <h2 class="sec-h2" data-i18n="dp.h2">これがあなたが見るダッシュボードです</h2>
-    <p class="sec-sub" data-i18n="dp.sub">
-      URL を貼ってから AI チームが編成され、5 分以内に 6 つの納品物が並んだ状態でスタートします。
-    </p>
-
-    <div class="dash-mock">
-      <!-- ブラウザ風フレーム -->
-      <div class="dash-mock-bar">
-        <span class="dash-mock-dot d-r"></span>
-        <span class="dash-mock-dot d-y"></span>
-        <span class="dash-mock-dot d-g"></span>
-        <span class="dash-mock-url">myaiagents.agency/app</span>
-        <span class="dash-mock-live"><span class="dash-mock-live-dot"></span>稼働中</span>
-      </div>
-      <div class="dash-mock-body">
-        <!-- サイトヘッダー -->
-        <div class="dash-mock-site">
-          <div class="dash-mock-site-ic">🚀</div>
-          <div class="dash-mock-site-meta">
-            <div class="dash-mock-site-url">yoursaas.io</div>
-            <div class="dash-mock-site-sum">SaaS / Product LP ・ 今日 3 件納品 ・ <b style="color:#16a34a">+ 42% PV (7 日)</b></div>
-          </div>
-          <div class="dash-mock-cta">💬 AI チームに依頼</div>
-        </div>
-
-        <!-- KPI ストリップ (= 「数字が動いてる」 印象) -->
-        <div class="dash-mock-kpi-row">
-          <div class="dash-mock-kpi">
-            <div class="dash-mock-kpi-lbl">📊 直近 30 日 PV</div>
-            <div class="dash-mock-kpi-val">12,840 <span class="dash-mock-kpi-delta up">+42%</span></div>
-            <svg class="dash-mock-kpi-chart" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <defs><linearGradient id="kg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb923c" stop-opacity=".4"/><stop offset="100%" stop-color="#fb923c" stop-opacity="0"/></linearGradient></defs>
-              <path d="M0,22 L12,20 L24,17 L36,18 L48,14 L60,15 L72,10 L84,8 L100,4 L100,30 L0,30 Z" fill="url(#kg1)"/>
-              <path d="M0,22 L12,20 L24,17 L36,18 L48,14 L60,15 L72,10 L84,8 L100,4" fill="none" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <div class="dash-mock-kpi">
-            <div class="dash-mock-kpi-lbl">🤖 AI 引用率</div>
-            <div class="dash-mock-kpi-val">3 / 5 <span class="dash-mock-kpi-delta up">60%</span></div>
-            <div class="dash-mock-kpi-foot">Perplexity / ChatGPT で 直近 5 query 中 3 件 引用</div>
-          </div>
-          <div class="dash-mock-kpi">
-            <div class="dash-mock-kpi-lbl">🔍 検索順位 (avg)</div>
-            <div class="dash-mock-kpi-val">14.2 <span class="dash-mock-kpi-delta up">↑ 3.1</span></div>
-            <div class="dash-mock-kpi-foot">12 keywords ・ TOP10 入り 4 件</div>
-          </div>
-        </div>
-
-        <!-- 2 カード行 -->
-        <div class="dash-mock-row">
-          <div class="dash-mock-card">
-            <div class="dash-mock-h">📋 進行中のタスク <span class="dash-mock-h-sub">残り 2 日</span></div>
-            <div class="dash-mock-task">サイトの集客を成長させる</div>
-            <div class="dash-mock-bar-wrap"><div class="dash-mock-bar-fill" style="width:60%"></div></div>
-            <div class="dash-mock-meta">3 / 5 完了 (60%)</div>
-            <div class="dash-mock-steps">
-              <div class="dash-mock-step done">✓ SEO ブログ記事を 3 本</div>
-              <div class="dash-mock-step done">✓ Twitter スレッドを 1 本</div>
-              <div class="dash-mock-step done">✓ LP 改善案を 5 個</div>
-              <div class="dash-mock-step">○ 競合 3 社の Pricing 監視</div>
-              <div class="dash-mock-step">○ 月次レポート 生成</div>
-            </div>
-          </div>
-          <div class="dash-mock-card">
-            <div class="dash-mock-h">🏢 AI マーケ組織 <span class="dash-mock-h-sub">5 部門 38 名</span></div>
-            <div class="dash-mock-team">
-              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff">🎯</span><span class="dash-mock-mem-name">集客部門</span><span class="dash-mock-mem-cnt">18</span></div>
-              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff">🔍</span><span class="dash-mock-mem-name">リサーチ部</span><span class="dash-mock-mem-cnt">6</span></div>
-              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#22c55e,#15803d);color:#fff">📊</span><span class="dash-mock-mem-name">分析部</span><span class="dash-mock-mem-cnt">5</span></div>
-              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#a855f7,#7e22ce);color:#fff">🎨</span><span class="dash-mock-mem-name">コンテンツ部</span><span class="dash-mock-mem-cnt">8</span></div>
-              <div class="dash-mock-mem"><span class="dash-mock-mem-ic" style="background:linear-gradient(135deg,#ec4899,#be185d);color:#fff">📈</span><span class="dash-mock-mem-name">CRO 部</span><span class="dash-mock-mem-cnt">6</span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 納品物 (= 各 card に色付き type badge) -->
-        <div class="dash-mock-card dash-mock-arts">
-          <div class="dash-mock-h">📦 今週の納品物 <span class="dash-mock-h-sub">5 件</span></div>
-          <div class="dash-mock-art-grid">
-            <div class="dash-mock-art" style="--art-c:#fb923c">
-              <div class="dash-mock-art-tag" style="background:rgba(192,255,92,.12);color:var(--peach)">SEO</div>
-              <div class="dash-mock-art-ti">「AI マーケ 比較 2026」 完全ガイド</div>
-              <div class="dash-mock-art-meta">5/22 ・ 3,400 字 ・ Ver.1</div>
-              <div class="dash-mock-art-link">↗ 開く ・ 📄 編集</div>
-            </div>
-            <div class="dash-mock-art" style="--art-c:#3b82f6">
-              <div class="dash-mock-art-tag" style="background:rgba(59,130,246,.12);color:#1d4ed8">SNS</div>
-              <div class="dash-mock-art-ti">X スレッド 7 連投 (痛み → 解決)</div>
-              <div class="dash-mock-art-meta">5/22 ・ 7 tweets ・ Ver.1</div>
-              <div class="dash-mock-art-link">↗ 開く ・ 🐦 投稿</div>
-            </div>
-            <div class="dash-mock-art" style="--art-c:#a855f7">
-              <div class="dash-mock-art-tag" style="background:rgba(168,85,247,.12);color:#7e22ce">CRO</div>
-              <div class="dash-mock-art-ti">LP CVR 改善案 (A/B 5 案 + 仮説)</div>
-              <div class="dash-mock-art-meta">5/22 ・ 5 案 ・ Ver.1</div>
-              <div class="dash-mock-art-link">↗ 開く ・ 📊 ROI 試算</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════
-     CAPABILITIES — 100+ 機能を内蔵
-     ═══════════════════════════════════════════════════════════ -->
-<section class="caps-sec">
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="cp.eye">100+ 機能を内蔵</span>
-    <h2 class="sec-h2" data-i18n="cp.h2">外部ツール連携は要りません</h2>
-    <p class="sec-sub" data-i18n="cp.sub">
-      SNS 投稿・分析・コンテンツ生成・自動化 — 全部 MY AI Agent の中で完結。<br>
-      Buffer も Jasper も Hootsuite も不要です。
-    </p>
-
-    <div class="caps-hero-num">
-      <div class="caps-num-big">100<span style="font-size:.5em">+</span></div>
-      <div class="caps-num-lbl" data-i18n="cp.numlbl">内蔵機能</div>
-    </div>
-
-    <div class="caps-grid">
-      <!-- コンテンツ -->
-      <div class="caps-cat">
-        <div class="caps-cat-h">
-          <span class="caps-cat-h-ic">📝</span>
-          <span data-i18n="cp.c1">コンテンツ生成</span>
-          <span class="caps-cat-h-cnt">22</span>
-        </div>
-        <div class="caps-chips">
-          <span class="caps-chip">SEO ブログ記事</span>
-          <span class="caps-chip">記事ネタ提案</span>
-          <span class="caps-chip">見出し最適化</span>
-          <span class="caps-chip">Twitter スレッド</span>
-          <span class="caps-chip">X 投稿</span>
-          <span class="caps-chip">LinkedIn 投稿</span>
-          <span class="caps-chip">Instagram キャプション</span>
-          <span class="caps-chip">メルマガ</span>
-          <span class="caps-chip">営業メール</span>
-          <span class="caps-chip">件名 A/B</span>
-          <span class="caps-chip">LP コピー</span>
-          <span class="caps-chip">CTA 改善</span>
-          <span class="caps-chip">フォーム文言</span>
-          <span class="caps-chip">FAQ 生成</span>
-          <span class="caps-chip">ホワイトペーパー</span>
-          <span class="caps-chip">提案書</span>
-          <span class="caps-chip">ケーススタディ</span>
-          <span class="caps-chip">議事録</span>
-          <span class="caps-chip">プレスリリース</span>
-          <span class="caps-chip">商品説明文</span>
-          <span class="caps-chip">レビュー返信</span>
-          <span class="caps-chip">FAQ 回答</span>
-        </div>
-      </div>
-
-      <!-- 分析・データ -->
-      <div class="caps-cat">
-        <div class="caps-cat-h">
-          <span class="caps-cat-h-ic">📊</span>
-          <span data-i18n="cp.c2">分析・データ</span>
-          <span class="caps-cat-h-cnt">18</span>
-        </div>
-        <div class="caps-chips">
-          <span class="caps-chip">GA4 流入解析</span>
-          <span class="caps-chip">競合分析</span>
-          <span class="caps-chip">SEO 競合監視</span>
-          <span class="caps-chip">キーワード調査</span>
-          <span class="caps-chip">検索意図分析</span>
-          <span class="caps-chip">CVR 分析</span>
-          <span class="caps-chip">カート放棄</span>
-          <span class="caps-chip">A/B テスト案</span>
-          <span class="caps-chip">統計検定</span>
-          <span class="caps-chip">コホート分析</span>
-          <span class="caps-chip">KPI ダッシュボード</span>
-          <span class="caps-chip">レポート生成</span>
-          <span class="caps-chip">ユーザー行動</span>
-          <span class="caps-chip">ヒートマップ予測</span>
-          <span class="caps-chip">バックリンク調査</span>
-          <span class="caps-chip">技術 SEO 監査</span>
-          <span class="caps-chip">PageSpeed 分析</span>
-          <span class="caps-chip">Schema 検査</span>
-        </div>
-      </div>
-
-      <!-- ビジュアル -->
-      <div class="caps-cat">
-        <div class="caps-cat-h">
-          <span class="caps-cat-h-ic">🎨</span>
-          <span data-i18n="cp.c3">ビジュアル</span>
-          <span class="caps-cat-h-cnt">14</span>
-        </div>
-        <div class="caps-chips">
-          <span class="caps-chip">AI 画像生成</span>
-          <span class="caps-chip">画像編集</span>
-          <span class="caps-chip">動画生成</span>
-          <span class="caps-chip">音声生成</span>
-          <span class="caps-chip">グラフ・チャート</span>
-          <span class="caps-chip">図解</span>
-          <span class="caps-chip">PDF 生成</span>
-          <span class="caps-chip">QR コード</span>
-          <span class="caps-chip">インフォグラフィック</span>
-          <span class="caps-chip">バナー</span>
-          <span class="caps-chip">OG 画像</span>
-          <span class="caps-chip">ファビコン</span>
-          <span class="caps-chip">ロゴ案</span>
-          <span class="caps-chip">サムネ生成</span>
-        </div>
-      </div>
-
-      <!-- Web 操作 -->
-      <div class="caps-cat">
-        <div class="caps-cat-h">
-          <span class="caps-cat-h-ic">🌐</span>
-          <span data-i18n="cp.c4">Web 操作</span>
-          <span class="caps-cat-h-cnt">12</span>
-        </div>
-        <div class="caps-chips">
-          <span class="caps-chip">スクレイピング</span>
-          <span class="caps-chip">スクリーンショット</span>
-          <span class="caps-chip">ブラウザ自動操作</span>
-          <span class="caps-chip">フォーム送信</span>
-          <span class="caps-chip">ログイン操作</span>
-          <span class="caps-chip">マルチページ巡回</span>
-          <span class="caps-chip">DOM 取得</span>
-          <span class="caps-chip">競合監視</span>
-          <span class="caps-chip">価格監視</span>
-          <span class="caps-chip">ニュース監視</span>
-          <span class="caps-chip">RSS 取得</span>
-          <span class="caps-chip">サイトマップ生成</span>
-        </div>
-      </div>
-
-      <!-- 配信・通知 -->
-      <div class="caps-cat">
-        <div class="caps-cat-h">
-          <span class="caps-cat-h-ic">📧</span>
-          <span data-i18n="cp.c5">配信・通知</span>
-          <span class="caps-cat-h-cnt">14</span>
-        </div>
-        <div class="caps-chips">
-          <span class="caps-chip">メール送信</span>
-          <span class="caps-chip">SNS 即時投稿</span>
-          <span class="caps-chip">SNS 予約投稿</span>
-          <span class="caps-chip">Slack 通知</span>
-          <span class="caps-chip">Discord 投稿</span>
-          <span class="caps-chip">Buffer 連携</span>
-          <span class="caps-chip">LINE Bot</span>
-          <span class="caps-chip">メルマガ配信</span>
-          <span class="caps-chip">記事拡散</span>
-          <span class="caps-chip">WordPress 公開</span>
-          <span class="caps-chip">Google Drive 保存</span>
-          <span class="caps-chip">Sheets 書込</span>
-          <span class="caps-chip">通知ルール</span>
-          <span class="caps-chip">Webhook 送信</span>
-        </div>
-      </div>
-
-      <!-- 自動化 -->
-      <div class="caps-cat">
-        <div class="caps-cat-h">
-          <span class="caps-cat-h-ic">🛠</span>
-          <span data-i18n="cp.c6">自動化・統合</span>
-          <span class="caps-cat-h-cnt">20</span>
-        </div>
-        <div class="caps-chips">
-          <span class="caps-chip">スケジュール実行</span>
-          <span class="caps-chip">定期レポート</span>
-          <span class="caps-chip">イベントトリガー</span>
-          <span class="caps-chip">ワークフロー</span>
-          <span class="caps-chip">Zapier 連携</span>
-          <span class="caps-chip">MCP プラグイン</span>
-          <span class="caps-chip">GitHub 操作</span>
-          <span class="caps-chip">Issue 起票</span>
-          <span class="caps-chip">PR 作成</span>
-          <span class="caps-chip">タスク管理</span>
-          <span class="caps-chip">プロジェクト管理</span>
-          <span class="caps-chip">カレンダー</span>
-          <span class="caps-chip">Chrome 拡張</span>
-          <span class="caps-chip">CRM 連動</span>
-          <span class="caps-chip">ファイル変換</span>
-          <span class="caps-chip">音声書き起こし</span>
-          <span class="caps-chip">OCR</span>
-          <span class="caps-chip">翻訳</span>
-          <span class="caps-chip">バッチ処理</span>
-          <span class="caps-chip">API 呼び出し</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="caps-foot" data-i18n="cp.foot">
-      <b>全部内蔵</b>。Buffer / Jasper / Hootsuite / Make / Zapier 等の <b>外部ツール契約は不要</b>です。
-    </div>
-
-    <!-- 11 platform 接続 — 直近実装の差別化機能 -->
-    <div class="platforms-row">
-      <div class="platforms-h">
-        <span class="platforms-eyebrow">🔌 11 プラットフォームに「直接投稿」可能</span>
-        <div class="platforms-sub">
-          AI が記事を書いて、 AI が <b>あなたの代わりに各プラットフォームへ投稿</b>。
-          認証情報は保存せず、 ユーザーのログイン済みブラウザで安全に。
-        </div>
-      </div>
-      <div class="platforms-grid">
-        <div class="platform-card"><span class="platform-emoji">🐦</span><span class="platform-name">X (Twitter)</span><span class="platform-feat">投稿 ・ スレッド連投</span></div>
-        <div class="platform-card"><span class="platform-emoji">💼</span><span class="platform-name">LinkedIn</span><span class="platform-feat">プロフェッショナル投稿</span></div>
-        <div class="platform-card"><span class="platform-emoji">🧵</span><span class="platform-name">Threads</span><span class="platform-feat">カジュアル投稿</span></div>
-        <div class="platform-card"><span class="platform-emoji">📘</span><span class="platform-name">Facebook</span><span class="platform-feat">Page 投稿</span></div>
-        <div class="platform-card"><span class="platform-emoji">📸</span><span class="platform-name">Instagram</span><span class="platform-feat">画像 + caption</span></div>
-        <div class="platform-card"><span class="platform-emoji">🎵</span><span class="platform-name">TikTok</span><span class="platform-feat">Photo Mode</span></div>
-        <div class="platform-card"><span class="platform-emoji">📺</span><span class="platform-name">YouTube</span><span class="platform-feat">Community 投稿</span></div>
-        <div class="platform-card"><span class="platform-emoji">📝</span><span class="platform-name">note</span><span class="platform-feat">記事公開 + 編集</span></div>
-        <div class="platform-card platform-card-hl"><span class="platform-emoji">🌐</span><span class="platform-name">WordPress</span><span class="platform-feat">記事 ・ 固定ページ ・ <br>カテゴリ ・ アイキャッチ ・<br>予約投稿 ・ SEO meta</span></div>
-        <div class="platform-card platform-card-hl"><span class="platform-emoji">🛒</span><span class="platform-name">Shopify</span><span class="platform-feat">商品作成 ・ 編集</span></div>
-        <div class="platform-card"><span class="platform-emoji">🏪</span><span class="platform-name">BASE</span><span class="platform-feat">接続情報保存</span></div>
-      </div>
-      <div class="platforms-sub2">
-        + 🤖 <b>AI 検索モニター</b> (Perplexity / ChatGPT / Gemini) ・
-        🔍 <b>Search Console</b> (= 検索流入 ・ 順位分析) ・
-        📊 <b>GA4 流入解析</b> 内蔵
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════
-     DELIVERABLES
-     ═══════════════════════════════════════════════════════════ -->
-<section class="deliverables">
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="dl.eye">納品物</span>
-    <h2 class="sec-h2" data-i18n="dl.h2">AI チームが毎週届けるもの</h2>
-    <p class="sec-sub" data-i18n="dl.sub">
-      実際の成果物を、毎週コンスタントに。期待値が見えるから、続けやすい。
-    </p>
-
-    <div class="del-grid">
-      <div class="del">
-        <div class="del-ic">📝</div>
-        <div class="del-bd">
-          <h4 data-i18n="dl.d1h">SEO ブログ記事</h4>
-          <p data-i18n="dl.d1p">検索流入を狙う記事を週 3 本。すぐ公開できる完成品。</p>
-        </div>
-      </div>
-      <div class="del">
-        <div class="del-ic">📱</div>
-        <div class="del-bd">
-          <h4 data-i18n="dl.d2h">SNS 投稿テンプレ</h4>
-          <p data-i18n="dl.d2p">Twitter / Instagram 用の投稿を毎日。コピペで投稿可能。</p>
-        </div>
-      </div>
-      <div class="del">
-        <div class="del-ic">🎯</div>
-        <div class="del-bd">
-          <h4 data-i18n="dl.d3h">LP 改善案</h4>
-          <p data-i18n="dl.d3p">コンバージョンを上げる改善ポイントを月 5 件、優先度付き。</p>
-        </div>
-      </div>
-      <div class="del">
-        <div class="del-ic">🔍</div>
-        <div class="del-bd">
-          <h4 data-i18n="dl.d4h">競合分析</h4>
-          <p data-i18n="dl.d4p">同業他社の動きを週次でレポート。差別化のヒント付き。</p>
-        </div>
-      </div>
-      <div class="del">
-        <div class="del-ic">📧</div>
-        <div class="del-bd">
-          <h4 data-i18n="dl.d5h">メルマガ・営業文</h4>
-          <p data-i18n="dl.d5p">リード獲得用の文面ドラフトを週 1。送信するだけ。</p>
-        </div>
-      </div>
-      <div class="del">
-        <div class="del-ic">📊</div>
-        <div class="del-bd">
-          <h4 data-i18n="dl.d6h">流入レポート</h4>
-          <p data-i18n="dl.d6p">どこから来てるか、何が効いてるかを週次でまとめ。</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════
-     VERTICAL DEEP DIVE
-     ═══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="vd.eye">サイト種類別の対応</span>
-    <h2 class="sec-h2" data-i18n="vd.h2">LP・HP・EC・店舗 ・ どんなサイトでも組織化</h2>
-    <p class="sec-sub" data-i18n="vd.sub">
-      URL を入れた瞬間、AI がサイト種類を判定 → 最適な <b>部門 + 専門家</b> の組み合わせで組織を編成します。
-    </p>
-
-    <!-- 横一列スクロールの 6 card row — desktop 4 visible / mobile 1.2 visible swipe -->
-    <div class="v-strip-wrap">
-      <div class="v-strip" id="vStrip">
-        <div class="v-card-h" style="--vc:#fb923c; --vc2:#ea580c">
-          <div class="v-card-h-top">
-            <span class="v-card-h-ic">🚀</span>
-            <span class="v-card-h-num">+ 42% CVR</span>
-          </div>
-          <div class="v-card-h-ti" data-i18n="vd.saash">SaaS / プロダクト LP</div>
-          <div class="v-card-h-sub">SEO + 🤖 AEO + 🐦 Indie growth</div>
-          <ul class="v-card-h-bul">
-            <li data-i18n="vd.saas1">SEO + AEO で 検索 / ChatGPT 経由の流入確保</li>
-            <li data-i18n="vd.saas2">Twitter / IndieHackers でコミュニティ拡散</li>
-            <li data-i18n="vd.saas3">LP の CVR 改善案を 月次レポート</li>
-          </ul>
-          <div class="v-card-h-foot">📦 SEO 記事 / X スレッド / CVR 改善案 を毎週</div>
-        </div>
-
-        <div class="v-card-h" style="--vc:#3b82f6; --vc2:#1d4ed8">
-          <div class="v-card-h-top">
-            <span class="v-card-h-ic">🏢</span>
-            <span class="v-card-h-num">問い合わせ ×3</span>
-          </div>
-          <div class="v-card-h-ti" data-i18n="vd.corph">企業 HP / コーポレートサイト</div>
-          <div class="v-card-h-sub">SEO + 業界権威構築 (AEO)</div>
-          <ul class="v-card-h-bul">
-            <li data-i18n="vd.corp1"><b>問い合わせ数</b>を増やす導線設計</li>
-            <li data-i18n="vd.corp2">事業内容・実績ページの SEO 強化</li>
-            <li data-i18n="vd.corp3">採用・PR を兼ねたコンテンツ提案</li>
-          </ul>
-          <div class="v-card-h-foot">📦 業界記事 / 実績ページ強化案 / 採用 PR を毎週</div>
-        </div>
-
-        <div class="v-card-h" style="--vc:#22c55e; --vc2:#15803d">
-          <div class="v-card-h-top">
-            <span class="v-card-h-ic">🛒</span>
-            <span class="v-card-h-num">売上 + 38%</span>
-          </div>
-          <div class="v-card-h-ti" data-i18n="vd.ech">EC ストア</div>
-          <div class="v-card-h-sub">商品 SEO + Instagram + Shopify</div>
-          <ul class="v-card-h-bul">
-            <li data-i18n="vd.ec1">商品ページの SEO 最適化案</li>
-            <li data-i18n="vd.ec2">Instagram 用クリエイティブ生成</li>
-            <li data-i18n="vd.ec3">レビュー誘導フローのテンプレ</li>
-          </ul>
-          <div class="v-card-h-foot">📦 商品コピー / IG 投稿 / レビュー DM を毎週</div>
-        </div>
-
-        <div class="v-card-h" style="--vc:#a855f7; --vc2:#7e22ce">
-          <div class="v-card-h-top">
-            <span class="v-card-h-ic">🏪</span>
-            <span class="v-card-h-num">来店 + 2.4x</span>
-          </div>
-          <div class="v-card-h-ti" data-i18n="vd.storeh">店舗・サロン</div>
-          <div class="v-card-h-sub">地域 SEO + Google ビジネス</div>
-          <ul class="v-card-h-bul">
-            <li data-i18n="vd.store1">Google ビジネスプロフィール最適化</li>
-            <li data-i18n="vd.store2">地域 SEO で「地域名 + 業種」 狙い</li>
-            <li data-i18n="vd.store3">Instagram 投稿の地域訴求テンプレ</li>
-          </ul>
-          <div class="v-card-h-foot">📦 GBP 投稿 / IG 地域訴求 / 口コミ返信 を毎週</div>
-        </div>
-
-        <div class="v-card-h" style="--vc:#ec4899; --vc2:#be185d">
-          <div class="v-card-h-top">
-            <span class="v-card-h-ic">✍️</span>
-            <span class="v-card-h-num">PV × 5</span>
-          </div>
-          <div class="v-card-h-ti" data-i18n="vd.blogh">ブログ・メディア</div>
-          <div class="v-card-h-sub">SEO 量産 + メルマガ展開</div>
-          <ul class="v-card-h-bul">
-            <li data-i18n="vd.blog1">SEO キーワード調査 + 記事ネタ 10 本/月</li>
-            <li data-i18n="vd.blog2">X スレッドへの自動展開</li>
-            <li data-i18n="vd.blog3">メルマガフォーマットへの転用</li>
-          </ul>
-          <div class="v-card-h-foot">📦 記事 / X スレッド / メルマガ を毎週</div>
-        </div>
-
-        <div class="v-card-h" style="--vc:#0ea5e9; --vc2:#0369a1">
-          <div class="v-card-h-top">
-            <span class="v-card-h-ic">💼</span>
-            <span class="v-card-h-num">受注 + 3 件</span>
-          </div>
-          <div class="v-card-h-ti" data-i18n="vd.portfh">ポートフォリオ</div>
-          <div class="v-card-h-sub">LinkedIn + 営業メール</div>
-          <ul class="v-card-h-bul">
-            <li data-i18n="vd.portf1">LinkedIn 投稿戦略 (週次)</li>
-            <li data-i18n="vd.portf2">営業メール・DM テンプレ</li>
-            <li data-i18n="vd.portf3">ケーススタディの展開支援</li>
-          </ul>
-          <div class="v-card-h-foot">📦 LinkedIn 投稿 / 営業メール 3 種 を毎週</div>
-        </div>
-      </div>
-      <!-- スクロールヒント (= 「もっと見える」 アフォーダンス) -->
-      <button class="v-strip-arr v-strip-arr-l" onclick="document.getElementById('vStrip').scrollBy({left:-360,behavior:'smooth'})" aria-label="前へ">‹</button>
-      <button class="v-strip-arr v-strip-arr-r" onclick="document.getElementById('vStrip').scrollBy({left:360,behavior:'smooth'})" aria-label="次へ">›</button>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════
-     COMPARISON — 他の選択肢と何が違うか
-     ═══════════════════════════════════════════════════════════ -->
-<section class="compare-sec">
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="cmp.eye">他との違い</span>
-    <h2 class="sec-h2" data-i18n="cmp.h2">なぜ AI マーケ組織を選ぶのか</h2>
-    <p class="sec-sub" data-i18n="cmp.sub">
-      ChatGPT / Jasper / フリーランスマーケター。それぞれの強みと、30+ 名の AI 組織が選ばれる理由。
-    </p>
-
-    <div class="cmp-table-wrap">
-      <table class="cmp-table">
-        <thead>
-          <tr>
-            <th class="cmp-th-feat" data-i18n="cmp.col0">機能</th>
-            <th class="cmp-th-us">
-              <div class="cmp-th-brand">
-                <span class="logo-mini"><span class="bars"><i></i><i></i><i></i></span></span>
-                <span data-i18n="cmp.col1">MY AI Agent</span>
-              </div>
-            </th>
-            <th data-i18n="cmp.col2">ChatGPT / Claude</th>
-            <th data-i18n="cmp.col3">Jasper / Copy.ai</th>
-            <th data-i18n="cmp.col4">フリーランス</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td data-i18n="cmp.r1">URL 入れるだけで開始</td>
-            <td class="us"><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-no">—</span></td>
-            <td><span class="cmp-no">—</span></td>
-            <td><span class="cmp-no">—</span></td>
-          </tr>
-          <tr>
-            <td data-i18n="cmp.r2">AI 専門組織を自動編成 (30+ 名 / 5 部門)</td>
-            <td class="us"><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-no">—</span></td>
-            <td><span class="cmp-no">—</span></td>
-            <td><span class="cmp-meh">人による</span></td>
-          </tr>
-          <tr>
-            <td data-i18n="cmp.r3">毎日の納品物 (記事 / SNS / 改善案)</td>
-            <td class="us"><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-meh">手動指示</span></td>
-            <td><span class="cmp-meh">手動指示</span></td>
-            <td><span class="cmp-yes">✓</span></td>
-          </tr>
-          <tr>
-            <td data-i18n="cmp.r4">ツール接続不要</td>
-            <td class="us"><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-no">—</span></td>
-          </tr>
-          <tr>
-            <td data-i18n="cmp.r5">日本語ネイティブ対応</td>
-            <td class="us"><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-yes">✓</span></td>
-            <td><span class="cmp-meh">弱い</span></td>
-            <td><span class="cmp-yes">✓</span></td>
-          </tr>
-          <tr>
-            <td data-i18n="cmp.r6">月額</td>
-            <td class="us"><span class="cmp-price cmp-good" data-i18n="cmp.r6-us">¥4,980</span></td>
-            <td><span class="cmp-price" data-i18n="cmp.r6-c">$20</span></td>
-            <td><span class="cmp-price" data-i18n="cmp.r6-j">$49+</span></td>
-            <td><span class="cmp-price cmp-bad" data-i18n="cmp.r6-f">¥300,000+</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
 
 <!-- ═══════════════════════════════════════════════════════════
      TESTIMONIALS — Founder 100 の声
@@ -2013,55 +1659,6 @@
           </div>
         </figcaption>
       </figure>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════
-     FAQ
-     ═══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="wrap">
-    <span class="sec-eyebrow" data-i18n="fq.eye">よくある質問</span>
-    <h2 class="sec-h2" data-i18n="fq.h2">気になること、ありませんか?</h2>
-
-    <div class="faq-list">
-      <details class="fq">
-        <summary data-i18n="fq.q1">本当に集客できるんですか?</summary>
-        <div class="fq-bd" data-i18n="fq.a1">
-          ✅ 毎日 5 種類の集客施策が AI から自動で届きます — 「何やればいいか」が消えて、
-          「実行するだけ」になる。 SNS は翌日から、 SEO 流入は 2-3 ヶ月で動き始めるのが標準。
-          <br><br>
-          💡 <b>無料プランで全機能を試せます</b> — クレカ登録なし、 解約はワンクリック。
-          AI が出した納品物の品質を実際に見てから判断してください。
-        </div>
-      </details>
-
-      <details class="fq">
-        <summary data-i18n="fq.q2">ツール接続は本当に不要?</summary>
-        <div class="fq-bd" data-i18n="fq.a2">
-          全アウトプットはダッシュボードに artifact として届くので、コピペで自分の
-          WordPress / X / Instagram に貼るだけで動きます。本気でやるなら接続して
-          全自動化もできますが、まったく必須ではありません。
-        </div>
-      </details>
-
-      <details class="fq">
-        <summary data-i18n="fq.q3">ChatGPT や Claude を使うのと何が違うんですか?</summary>
-        <div class="fq-bd" data-i18n="fq.a3">
-          ChatGPT は「都度プロンプトを書く」、こちらは「URL を入れたら毎日勝手に動く」。
-          1 体の AI と話すのではなく、サイトに常駐するチームが毎日働きます。
-          「考える時間」を 0 にするのが狙いです。
-        </div>
-      </details>
-
-      <details class="fq">
-        <summary data-i18n="fq.q4">解約はかんたん?</summary>
-        <div class="fq-bd" data-i18n="fq.a4">
-          いつでもダッシュボードから 1 クリックで解約できます。お試し期間中の解約なら、
-          課金は一切発生しません。
-        </div>
-      </details>
     </div>
   </div>
 </section>

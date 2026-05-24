@@ -19815,10 +19815,24 @@ ${siteContext}
           messages: [{ role: 'user', content: prompt }],
         });
       if(apiResp.s < 200 || apiResp.s >= 300){
-        const detail = JSON.stringify(apiResp.d).slice(0, 400);
-        console.warn('[strategy-gen] anthropic error:', apiResp.s, detail);
-        return jres(res, 500, { error: 'generation_failed',
-          detail: 'AI 生成に失敗 (HTTP ' + apiResp.s + '): ' + detail });
+        const apiMsg = (apiResp.d && apiResp.d.error && apiResp.d.error.message) || '';
+        const apiType = (apiResp.d && apiResp.d.error && apiResp.d.error.type) || '';
+        console.warn('[strategy-gen] anthropic error:', apiResp.s, apiType, apiMsg);
+        // semantic 別に user-friendly message を返す
+        let userDetail;
+        if(/credit balance is too low/i.test(apiMsg)){
+          userDetail = '⚠️ サービス側の AI クレジット残高が不足しています。 開発者に連絡してください (Anthropic billing top-up が必要)。';
+        } else if(/rate limit/i.test(apiMsg) || apiResp.s === 429){
+          userDetail = 'AI 過負荷中です。 30 秒待ってからもう一度お試しください。';
+        } else if(apiResp.s === 401 || /invalid api key/i.test(apiMsg)){
+          userDetail = '⚠️ AI 認証エラー。 開発者に連絡してください。';
+        } else if(apiResp.s === 529 || /overloaded/i.test(apiMsg)){
+          userDetail = 'AI が一時的に過負荷です (529)。 1 分待って再試行してください。';
+        } else {
+          userDetail = 'AI 生成に失敗しました (HTTP ' + apiResp.s + ')。 ' + (apiMsg || '不明').slice(0, 200);
+        }
+        return jres(res, 502, { error: 'generation_failed', detail: userDetail,
+          anthropic_status: apiResp.s, anthropic_type: apiType });
       }
       const raw = (apiResp.d && apiResp.d.content && apiResp.d.content[0] && apiResp.d.content[0].text) || '';
       let parsed = null;
@@ -19931,8 +19945,23 @@ ${orgSummary || '(汎用チーム)'}
           messages: [{ role: 'user', content: prompt }],
         });
       if(apiResp.s < 200 || apiResp.s >= 300){
-        console.warn('[roadmap-gen] anthropic error:', apiResp.s, JSON.stringify(apiResp.d).slice(0, 300));
-        return jres(res, 500, { error: 'generation_failed', detail: 'AI 生成に失敗しました。少し待って再試行してください。' });
+        const apiMsg = (apiResp.d && apiResp.d.error && apiResp.d.error.message) || '';
+        const apiType = (apiResp.d && apiResp.d.error && apiResp.d.error.type) || '';
+        console.warn('[roadmap-gen] anthropic error:', apiResp.s, apiType, apiMsg);
+        let userDetail;
+        if(/credit balance is too low/i.test(apiMsg)){
+          userDetail = '⚠️ サービス側の AI クレジット残高が不足しています。 開発者に連絡してください (Anthropic billing top-up が必要)。';
+        } else if(/rate limit/i.test(apiMsg) || apiResp.s === 429){
+          userDetail = 'AI 過負荷中です。 30 秒待ってからもう一度お試しください。';
+        } else if(apiResp.s === 401){
+          userDetail = '⚠️ AI 認証エラー。 開発者に連絡してください。';
+        } else if(apiResp.s === 529 || /overloaded/i.test(apiMsg)){
+          userDetail = 'AI が一時的に過負荷です (529)。 1 分待って再試行してください。';
+        } else {
+          userDetail = 'AI 生成に失敗しました (HTTP ' + apiResp.s + ')。 ' + (apiMsg || '不明').slice(0, 200);
+        }
+        return jres(res, 502, { error: 'generation_failed', detail: userDetail,
+          anthropic_status: apiResp.s, anthropic_type: apiType });
       }
       const raw = (apiResp.d && apiResp.d.content && apiResp.d.content[0] && apiResp.d.content[0].text) || '';
       // JSON 抽出 (```json ... ``` フェンスや余計な文章があっても OK)

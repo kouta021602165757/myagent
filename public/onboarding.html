@@ -251,7 +251,7 @@
   <!-- エラー時 -->
   <div class="err" id="err">
     <div id="errMsg">エラーが発生しました。</div>
-    <a class="err-cta" href="/app.html">アプリへ進む</a>
+    <a class="err-cta" href="/app">アプリへ進む</a>
   </div>
 </div>
 
@@ -264,7 +264,7 @@
 
   if(!agentId || !token){
     // 不正な遷移 — アプリへ
-    location.replace('/app.html');
+    location.replace('/app');
   }
 
   // ── UI ヘルパ ────────────────────────────────────────────
@@ -404,7 +404,7 @@
       showResult(
         '✓ ' + ok + ' / ' + tot + ' 個の納品物が完成',
         'あなたのサイト用 AI チームが動き始めました。ダッシュボードで内容を確認できます。',
-        '/app.html?onboarded=1&agent_id=' + encodeURIComponent(agentId)
+        '/app?onboarded=1&agent_id=' + encodeURIComponent(agentId)
       );
     }
     else if(ev === 'error' && data){

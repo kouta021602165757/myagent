@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <script>
+// Logged-in user が / に直接来たら /app へ自動遷移 (= bookmark /, return to app)
+// query/hash あれば LP 表示のまま (= LP CTA からの flow を壊さない)
+(function(){
+  try{
+    if(location.search || location.hash) return;
+    var t = localStorage.getItem('token');
+    if(t && t.length > 20){ location.replace('/app'); }
+  }catch(e){}
+})();
 // Legacy redirect: /?listing=ls_xxx → /l/ls_xxx
 (function(){
   try{

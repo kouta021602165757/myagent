@@ -2243,8 +2243,8 @@ async function _notifyMentionsByEmail(host, agent, opts){
       // Opt-out: per-user setting, default ON.
       if(recipient.mention_email_pref === 'off') continue;
       const subj = '🔔 ' + senderName + ' さんがあなたをメンションしました — ' + groupName;
-      const settingsUrl = appUrl + '/app.html#settings/notif';
-      const chatUrl = appUrl + '/app.html?agent=' + encodeURIComponent(groupId);
+      const settingsUrl = appUrl + '/app#settings/notif';
+      const chatUrl = appUrl + '/app?agent=' + encodeURIComponent(groupId);
       const html = '<div style="font-family:system-ui,-apple-system,Segoe UI,Hiragino Sans,Noto Sans JP,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#27272a">'
         + '<div style="font-size:13px;color:#71717a;margin-bottom:6px">🔔 ' + _xmlEscape(groupName) + '</div>'
         + '<div style="font-size:17px;font-weight:800;margin-bottom:14px;color:#18181b">'
@@ -2328,7 +2328,7 @@ async function _sendWelcomeMail(user, agent){
   // 組織サイズ + 部門数
   const orgN = _orgMemberCount(agent.org) || (agent.team_members || []).length || 5;
   const deptN = (agent.org && agent.org.departments) ? agent.org.departments.length : 5;
-  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app.html?agent_id=' + encodeURIComponent(agent.id);
+  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app?agent_id=' + encodeURIComponent(agent.id);
   const memberPills = agent.org && agent.org.departments
     ? agent.org.departments.slice(0, 5).map(d => {
         const n = (d.teams || []).reduce((s, t) => s + (t.members || []).length, 0);
@@ -2461,7 +2461,7 @@ function _buildMorningReportHTML(user, agent, finalReply, sched, isJa){
       + '</tr></table>';
   }
 
-  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app.html?agent_id=' + encodeURIComponent(agent.id);
+  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app?agent_id=' + encodeURIComponent(agent.id);
   const ga4Cta = !ga4Connected
     ? '<div style="background:#fff7ed;border:1px dashed #fb923c;border-radius:11px;padding:14px 18px;margin:18px 0;font-size:12.5px;color:#9a3412;line-height:1.55">'
       + '📊 <b>Google Analytics を接続</b>すると、毎朝この場所に PV / 流入 / CVR の実数値とグラフが入ります。'
@@ -13320,7 +13320,7 @@ async function joinGroup(){
       return;
     }
     if(r.ok && d && d.ok){
-      location.href = '/app.html?openAgent=' + encodeURIComponent(d.agent_id || '') + '&joined=1';
+      location.href = '/app?openAgent=' + encodeURIComponent(d.agent_id || '') + '&joined=1';
       return;
     }
     // 401 with "ユーザーが見つかりません" → stale token from a failed signup.
@@ -14008,7 +14008,7 @@ a{color:inherit;}
 <nav class="lp-nav">
   <a href="/" class="lp-brand">🍑 MY AI AGENT</a>
   <div class="lp-nav-r">
-    <a href="/app.html">${t.navMarket}</a>
+    <a href="/app">${t.navMarket}</a>
     <a href="${t.langSwitchHref}">${t.langSwitch}</a>
     <a href="/auth.html?next=/l/${listingId}" class="lp-cta">${t.navSignup}</a>
   </div>
@@ -14881,7 +14881,7 @@ async function _sendInactivityMail(user, agent){
   const subj = isJa
     ? `👋 AI チームが ${hostname} で待っています`
     : `👋 Your AI team for ${hostname} is waiting`;
-  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app.html?agent_id=' + encodeURIComponent(agent.id);
+  const dashUrl = (APP_URL || 'https://myaiagents.agency') + '/app?agent_id=' + encodeURIComponent(agent.id);
   // 最初の納品物があれば preview として 1 件出す
   const arts = Array.isArray(user.artifacts) ? user.artifacts.filter(a => a && a.chat_id === agent.id) : [];
   const previewArt = arts[0];
@@ -15789,7 +15789,7 @@ async function handleAPI(req,res,pathname,method,ip){
   // much wider scope set covering all 6 Google services in the catalog.
   if(pathname === '/api/auth/google-intg/start' && method === 'GET'){
     if(!GOOGLE_ID || !GOOGLE_SEC){
-      res.writeHead(302,{Location:'/app.html?intg=google&error=not_configured'});
+      res.writeHead(302,{Location:'/app?intg=google&error=not_configured'});
       res.end(); return;
     }
     const qs = new url.URL(req.url, APP_URL).searchParams;
@@ -15799,7 +15799,7 @@ async function handleAPI(req,res,pathname,method,ip){
     let uid = '';
     try { const p = JWT.verify(jwt); uid = p && p.userId; } catch(e){}
     if(!uid){
-      res.writeHead(302,{Location:'/auth.html?next=/app.html'});
+      res.writeHead(302,{Location:'/auth.html?next=/app'});
       res.end(); return;
     }
     const state = JWT.sign({ userId: uid, kind: 'g_intg_oauth', exp: Math.floor(Date.now()/1000) + 600 });
@@ -15816,17 +15816,17 @@ async function handleAPI(req,res,pathname,method,ip){
     const oauthErr = qs.get('error');
     if(oauthErr){
       console.error('[Google Integration OAuth] error:', oauthErr);
-      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason='+encodeURIComponent(oauthErr) });
+      res.writeHead(302, { Location:'/app?intg=google&status=err&reason='+encodeURIComponent(oauthErr) });
       res.end(); return;
     }
     if(!code || !stateRaw){
-      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason=no_code' });
+      res.writeHead(302, { Location:'/app?intg=google&status=err&reason=no_code' });
       res.end(); return;
     }
     let payload = null;
     try { payload = JWT.verify(stateRaw); } catch(e){}
     if(!payload || payload.kind !== 'g_intg_oauth' || !payload.userId){
-      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason=bad_state' });
+      res.writeHead(302, { Location:'/app?intg=google&status=err&reason=bad_state' });
       res.end(); return;
     }
     try {
@@ -15840,7 +15840,7 @@ async function handleAPI(req,res,pathname,method,ip){
       let user = null;
       try { user = await DB.findBy('id', payload.userId); } catch(e){}
       if(!user){
-        res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason=user_not_found' });
+        res.writeHead(302, { Location:'/app?intg=google&status=err&reason=user_not_found' });
         res.end(); return;
       }
       user.integrations = user.integrations || {};
@@ -15867,14 +15867,14 @@ async function handleAPI(req,res,pathname,method,ip){
       };
       user.google_sheets_connected = true;
       await DB.save(user);
-      res.writeHead(302, { Location:'/app.html?intg=google&status=ok&email='+encodeURIComponent((gUser&&gUser.email)||'') });
+      res.writeHead(302, { Location:'/app?intg=google&status=ok&email='+encodeURIComponent((gUser&&gUser.email)||'') });
       res.end();
     } catch(e){
       console.error('[Google Integration OAuth] callback failed:', e.message);
       const reason = (e.message||'').includes('no_access_token') ? 'no_token'
         : (e.message||'').includes('exchange') ? 'token_exchange_failed'
         : 'unknown';
-      res.writeHead(302, { Location:'/app.html?intg=google&status=err&reason='+reason });
+      res.writeHead(302, { Location:'/app?intg=google&status=err&reason='+reason });
       res.end();
     }
     return;
@@ -15886,7 +15886,7 @@ async function handleAPI(req,res,pathname,method,ip){
   // a short-lived state JWT, and redirects to GitHub's authorize page.
   if(pathname==='/api/auth/github/start' && method==='GET'){
     if(!GITHUB_OAUTH_ID || !GITHUB_OAUTH_SEC){
-      res.writeHead(302,{Location:'/app.html?intg=github&error=not_configured'});
+      res.writeHead(302,{Location:'/app?intg=github&error=not_configured'});
       res.end(); return;
     }
     // Accept JWT from either Authorization header (fetch) OR ?token= (top-level nav).
@@ -15897,7 +15897,7 @@ async function handleAPI(req,res,pathname,method,ip){
     let uid = '';
     try { const p = JWT.verify(jwt); uid = p && p.userId; } catch(e){}
     if(!uid){
-      res.writeHead(302,{Location:'/auth.html?next=/app.html'});
+      res.writeHead(302,{Location:'/auth.html?next=/app'});
       res.end(); return;
     }
     // State JWT — 10 minute TTL is plenty for an OAuth round-trip.
@@ -15919,17 +15919,17 @@ async function handleAPI(req,res,pathname,method,ip){
     const oauthErr = qs.get('error');
     if(oauthErr){
       console.error('[GitHub OAuth] returned error:', oauthErr);
-      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason='+encodeURIComponent(oauthErr) });
+      res.writeHead(302, { Location:'/app?intg=github&status=err&reason='+encodeURIComponent(oauthErr) });
       res.end(); return;
     }
     if(!code || !stateRaw){
-      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason=no_code' });
+      res.writeHead(302, { Location:'/app?intg=github&status=err&reason=no_code' });
       res.end(); return;
     }
     let payload = null;
     try { payload = JWT.verify(stateRaw); } catch(e){}
     if(!payload || payload.kind !== 'gh_oauth' || !payload.userId){
-      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason=bad_state' });
+      res.writeHead(302, { Location:'/app?intg=github&status=err&reason=bad_state' });
       res.end(); return;
     }
     try {
@@ -15942,7 +15942,7 @@ async function handleAPI(req,res,pathname,method,ip){
       let user = null;
       try { user = await DB.findBy('id', payload.userId); } catch(e){}
       if(!user){
-        res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason=user_not_found' });
+        res.writeHead(302, { Location:'/app?intg=github&status=err&reason=user_not_found' });
         res.end(); return;
       }
       user.integrations = user.integrations || {};
@@ -15961,14 +15961,14 @@ async function handleAPI(req,res,pathname,method,ip){
       user.github_pat = accessToken;
       user.github_login = ghUser.login || '';
       await DB.save(user);
-      res.writeHead(302, { Location:'/app.html?intg=github&status=ok&login='+encodeURIComponent(ghUser.login||'') });
+      res.writeHead(302, { Location:'/app?intg=github&status=ok&login='+encodeURIComponent(ghUser.login||'') });
       res.end();
     } catch(e){
       console.error('[GitHub OAuth] callback failed:', e.message);
       const reason = (e.message||'').includes('no_access_token') ? 'no_token'
         : (e.message||'').includes('exchange') ? 'token_exchange_failed'
         : 'unknown';
-      res.writeHead(302, { Location:'/app.html?intg=github&status=err&reason='+reason });
+      res.writeHead(302, { Location:'/app?intg=github&status=err&reason='+reason });
       res.end();
     }
     return;
@@ -15977,14 +15977,14 @@ async function handleAPI(req,res,pathname,method,ip){
   // ── Buffer OAuth (account-linking) ─────────────────────────
   if(pathname === '/api/auth/buffer/start' && method === 'GET'){
     if(!BUFFER_OAUTH_ID || !BUFFER_OAUTH_SEC){
-      res.writeHead(302, { Location: '/app.html?intg=buffer&error=not_configured' });
+      res.writeHead(302, { Location: '/app?intg=buffer&error=not_configured' });
       res.end(); return;
     }
     const qs = new url.URL(req.url, APP_URL).searchParams;
     const jwt = qs.get('token') || (req.headers.authorization||'').replace(/^Bearer\s+/i,'');
     let uid = '';
     try { uid = JWT.verify(jwt).userId; } catch(e){}
-    if(!uid){ res.writeHead(302, { Location:'/auth.html?next=/app.html' }); res.end(); return; }
+    if(!uid){ res.writeHead(302, { Location:'/auth.html?next=/app' }); res.end(); return; }
     const state = JWT.sign({ userId: uid, kind:'buffer_oauth', exp: Math.floor(Date.now()/1000) + 600 });
     res.writeHead(302, { Location: bufferAuthURL(state) });
     res.end(); return;
@@ -15994,13 +15994,13 @@ async function handleAPI(req,res,pathname,method,ip){
     const code = qs.get('code');
     const stateRaw = qs.get('state');
     if(qs.get('error') || !code || !stateRaw){
-      res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason='+encodeURIComponent(qs.get('error')||'no_code') });
+      res.writeHead(302, { Location:'/app?intg=buffer&status=err&reason='+encodeURIComponent(qs.get('error')||'no_code') });
       res.end(); return;
     }
     let payload = null;
     try { payload = JWT.verify(stateRaw); } catch(e){}
     if(!payload || payload.kind !== 'buffer_oauth' || !payload.userId){
-      res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason=bad_state' });
+      res.writeHead(302, { Location:'/app?intg=buffer&status=err&reason=bad_state' });
       res.end(); return;
     }
     try {
@@ -16008,7 +16008,7 @@ async function handleAPI(req,res,pathname,method,ip){
       if(!tok || !tok.access_token) throw new Error('no_access_token');
       let u = null;
       try { u = await DB.findBy('id', payload.userId); } catch(e){}
-      if(!u){ res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason=user_not_found' }); res.end(); return; }
+      if(!u){ res.writeHead(302, { Location:'/app?intg=buffer&status=err&reason=user_not_found' }); res.end(); return; }
       // Quick profile fetch for nicer UI display
       let profileCount = 0;
       try { const profiles = await bufferListProfiles(tok.access_token); profileCount = profiles.length; } catch(e){}
@@ -16021,11 +16021,11 @@ async function handleAPI(req,res,pathname,method,ip){
         flow: 'oauth',
       };
       await DB.save(u);
-      res.writeHead(302, { Location:'/app.html?intg=buffer&status=ok&profiles='+profileCount });
+      res.writeHead(302, { Location:'/app?intg=buffer&status=ok&profiles='+profileCount });
       res.end();
     } catch(e){
       console.error('[Buffer OAuth] callback failed:', e.message);
-      res.writeHead(302, { Location:'/app.html?intg=buffer&status=err&reason='+encodeURIComponent('exchange_failed') });
+      res.writeHead(302, { Location:'/app?intg=buffer&status=err&reason='+encodeURIComponent('exchange_failed') });
       res.end();
     }
     return;
@@ -16037,7 +16037,7 @@ async function handleAPI(req,res,pathname,method,ip){
   // then 302s the user to x.com/i/oauth2/authorize.
   if(pathname === '/api/auth/x/start' && method === 'GET'){
     if(!X_OAUTH_ID || !X_OAUTH_SEC){
-      res.writeHead(302, { Location:'/app.html?intg=twitter&error=not_configured' });
+      res.writeHead(302, { Location:'/app?intg=twitter&error=not_configured' });
       res.end(); return;
     }
     const qs = new url.URL(req.url, APP_URL).searchParams;
@@ -16047,7 +16047,7 @@ async function handleAPI(req,res,pathname,method,ip){
     let uid = '';
     try { const p = JWT.verify(jwt); uid = p && p.userId; } catch(e){}
     if(!uid){
-      res.writeHead(302, { Location:'/auth.html?next=/app.html' });
+      res.writeHead(302, { Location:'/auth.html?next=/app' });
       res.end(); return;
     }
     const verifier = _xGenVerifier();
@@ -16069,17 +16069,17 @@ async function handleAPI(req,res,pathname,method,ip){
     const oauthErr = qs.get('error');
     if(oauthErr){
       console.error('[X OAuth] returned error:', oauthErr);
-      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason='+encodeURIComponent(oauthErr) });
+      res.writeHead(302, { Location:'/app?intg=twitter&status=err&reason='+encodeURIComponent(oauthErr) });
       res.end(); return;
     }
     if(!code || !stateRaw){
-      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason=no_code' });
+      res.writeHead(302, { Location:'/app?intg=twitter&status=err&reason=no_code' });
       res.end(); return;
     }
     let payload = null;
     try { payload = JWT.verify(stateRaw); } catch(e){}
     if(!payload || payload.kind !== 'x_oauth' || !payload.userId || !payload.v){
-      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason=bad_state' });
+      res.writeHead(302, { Location:'/app?intg=twitter&status=err&reason=bad_state' });
       res.end(); return;
     }
     try {
@@ -16090,7 +16090,7 @@ async function handleAPI(req,res,pathname,method,ip){
       let user = null;
       try { user = await DB.findBy('id', payload.userId); } catch(e){}
       if(!user){
-        res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason=user_not_found' });
+        res.writeHead(302, { Location:'/app?intg=twitter&status=err&reason=user_not_found' });
         res.end(); return;
       }
       user.integrations = user.integrations || {};
@@ -16108,14 +16108,14 @@ async function handleAPI(req,res,pathname,method,ip){
         flow: 'oauth',
       };
       await DB.save(user);
-      res.writeHead(302, { Location:'/app.html?intg=twitter&status=ok&login='+encodeURIComponent(xUser && xUser.username || '') });
+      res.writeHead(302, { Location:'/app?intg=twitter&status=ok&login='+encodeURIComponent(xUser && xUser.username || '') });
       res.end();
     } catch(e){
       console.error('[X OAuth] callback failed:', e.message);
       const reason = (e.message||'').includes('no_access_token') ? 'no_token'
         : (e.message||'').includes('exchange') ? 'token_exchange_failed'
         : 'unknown';
-      res.writeHead(302, { Location:'/app.html?intg=twitter&status=err&reason='+reason });
+      res.writeHead(302, { Location:'/app?intg=twitter&status=err&reason='+reason });
       res.end();
     }
     return;
@@ -16188,7 +16188,7 @@ async function handleAPI(req,res,pathname,method,ip){
       recordLogin(user, req, 'google');
       try{ await DB.save(user); }catch(e){}
       const token=JWT.sign({userId:user.id,email:user.email});
-      res.writeHead(302,{Location:`/app.html?token=${token}`});res.end();
+      res.writeHead(302,{Location:`/app?token=${token}`});res.end();
     }catch(e){
       console.error('[Google OAuth] callback failed:', e.message);
       var reason = (e.message||'').includes('not_configured') ? 'not_configured'
@@ -16211,7 +16211,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const state=qs.get('state'); // user's JWT
     const oauthErr=qs.get('error');
     if(oauthErr || !code || !state){
-      res.writeHead(302,{Location:'/app.html?google_sheets=error&reason='+encodeURIComponent(oauthErr||'no_code')});
+      res.writeHead(302,{Location:'/app?google_sheets=error&reason='+encodeURIComponent(oauthErr||'no_code')});
       res.end();return;
     }
     try{
@@ -16235,10 +16235,10 @@ async function handleAPI(req,res,pathname,method,ip){
         email: (gUser && gUser.email) || '',
       };
       await DB.save(user);
-      res.writeHead(302,{Location:'/app.html?google_sheets=connected'});res.end();
+      res.writeHead(302,{Location:'/app?google_sheets=connected'});res.end();
     }catch(e){
       console.error('[Sheets OAuth] callback failed:', e.message);
-      res.writeHead(302,{Location:'/app.html?google_sheets=error&reason='+encodeURIComponent((e.message||'unknown').slice(0,80))});
+      res.writeHead(302,{Location:'/app?google_sheets=error&reason='+encodeURIComponent((e.message||'unknown').slice(0,80))});
       res.end();
     }
     return;
@@ -16251,7 +16251,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const user=await DB.findBy('verify_token',token);
     if(!user){res.writeHead(302,{Location:'/auth.html?error=invalid_token'});res.end();return;}
     user.verified=true;user.verify_token=null;await DB.save(user);
-    res.writeHead(302,{Location:'/app.html?verified=1'});res.end();return;
+    res.writeHead(302,{Location:'/app?verified=1'});res.end();return;
   }
 
   // ── POST /api/auth/resend-verify ──────────────────────────
@@ -17675,7 +17675,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const integrationHints = (t.suggestedIntegrations||[]).map(kind => ({
       kind,
       configured: !!wAlreadySet[kind],
-      setup_url: '/app.html#/settings/integrations',
+      setup_url: '/app#/settings/integrations',
     }));
     return jres(res,201,{
       agent: { id:agent.id, name:agent.name, avatar:agent.avatar, skills:agent.skills, from_template:t.id },
@@ -18832,7 +18832,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ANTHROPIC) return jres(res,500,{error: lang==='ja' ? 'AI が設定されていません' : 'AI is not configured'});
     if((user.agents||[]).length >= 994) return jres(res,400,{error: lang==='ja' ? 'エージェントは最大 1000 個までです' : 'Up to 1000 agents'});
 
-    // Valid skill IDs (mirrors public/app.html SKILLS list).
+    // Valid skill IDs (mirrors public/app SKILLS list).
     const VALID_SKILLS = ['writing','research','coding','marketing','planning','analysis','translate','support','idea','teaching','ceo','coo','secretary','designer','sns','other'];
 
     // Output language is driven by the user's app preference (?lang / saved
@@ -21731,7 +21731,7 @@ ${orgSummary || '(汎用チーム)'}
       const seat = t.founder_seat_no || '?';
       const trial = (t.business_trial_until||'').slice(0,10);
       const handle = t.handle || '';
-      const profileUrl = handle ? (APP_URL + '/u/' + handle) : (APP_URL + '/app.html');
+      const profileUrl = handle ? (APP_URL + '/u/' + handle) : (APP_URL + '/app');
       const isJa = /[ぁ-んァ-ヶー一-龠]/.test((t.name||'') + (t.email||''));
       const subj = isJa
         ? `🎉 あなたは Founder #${seat} に認定されました — MY AI AGENT`
@@ -21757,7 +21757,7 @@ ${orgSummary || '(汎用チーム)'}
   </div>
   <p style="font-size:14px;color:#52525b;margin:0 0 14px"><b>次のステップ:</b></p>
   <ol style="font-size:14px;color:#52525b;margin:0 0 18px;padding-left:18px">
-    <li style="margin-bottom:6px">アプリで <a href="${APP_URL}/app.html" style="color:#ea580c">設定 → アカウント</a> を開き、<b>公開ハンドル (/u/...)</b> を 30 秒で登録</li>
+    <li style="margin-bottom:6px">アプリで <a href="${APP_URL}/app" style="color:#ea580c">設定 → アカウント</a> を開き、<b>公開ハンドル (/u/...)</b> を 30 秒で登録</li>
     <li style="margin-bottom:6px">Founder バッジを SNS でシェアして仲間に教える (ボタン下記)</li>
     <li>新しく追加された <a href="${APP_URL}/changelog" style="color:#ea580c">Automations / KB / Schedule / Webhook</a> を試す</li>
   </ol>
@@ -21783,7 +21783,7 @@ ${orgSummary || '(汎用チーム)'}
   </div>
   <p style="font-size:14px;color:#52525b;margin:0 0 14px"><b>Next steps:</b></p>
   <ol style="font-size:14px;color:#52525b;margin:0 0 18px;padding-left:18px">
-    <li style="margin-bottom:6px">Open <a href="${APP_URL}/app.html" style="color:#ea580c">Settings → Account</a> and claim your <b>@handle</b> (takes 30 seconds)</li>
+    <li style="margin-bottom:6px">Open <a href="${APP_URL}/app" style="color:#ea580c">Settings → Account</a> and claim your <b>@handle</b> (takes 30 seconds)</li>
     <li style="margin-bottom:6px">Tweet your badge — let your network know (button below)</li>
     <li>Try the new <a href="${APP_URL}/changelog" style="color:#ea580c">Automations / Knowledge Base / Schedule / Webhook</a> features</li>
   </ol>
@@ -22185,8 +22185,8 @@ ${orgSummary || '(汎用チーム)'}
       }
       const link = await stripeConnectOnboardingLink(
         acctId,
-        APP_URL + '/app.html?payout=onboarded',
-        APP_URL + '/app.html?payout=refresh',
+        APP_URL + '/app?payout=onboarded',
+        APP_URL + '/app?payout=refresh',
       );
       return jres(res,200,{url: link.url, account_id: acctId});
     }catch(e){
@@ -25306,18 +25306,20 @@ const server=http.createServer(async(req,res)=>{
       'User-agent: Slackbot-LinkExpanding\nAllow: /\nDisallow: /api/\n\n' +
       'User-agent: Slackbot\nAllow: /\nDisallow: /api/\n\n' +
       'User-agent: Discordbot\nAllow: /\nDisallow: /api/\n\n' +
-      // Default crawlers: keep the /app.html restriction (it's a SPA shell
+      // Default crawlers: keep the /app restriction (it's a SPA shell
       // with no SEO value) but allow /auth.html (signup landing has OG now).
-      'User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app.html\n\n' +
+      'User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app\n\n' +
       'Sitemap: ' + APP_URL + '/sitemap.xml\n'
     );
   }
   // index.html → redirect to lp
   // /store (no extension) → serve store.html (public Agent Store browse page)
   // /lp-en → serve lp.html (= same content、 JS が pathname を見て EN を default に)
+  // /app, /dashboard (no .html) → app.html (= clean URL post-login)
   let resolved = pathname;
   if(resolved === '/') resolved = 'lp.html';
   else if(resolved === '/lp-en' || resolved === '/lp-en/' || resolved === '/en' || resolved === '/en/') resolved = 'lp.html';
+  else if(resolved === '/app' || resolved === '/app/' || resolved === '/dashboard' || resolved === '/dashboard/') resolved = 'app.html';
   // /store hidden 2026-05-24 (一旦非表示) — redirect to home
   else if(resolved === '/store' || resolved === '/store/' || resolved === '/store.html'){
     res.writeHead(302, { Location: '/' });

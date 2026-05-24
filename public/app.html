@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1779590602997">
+<link rel="stylesheet" href="/app.css?v=1779591042753">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -47,6 +47,11 @@
 </a>
     </div>
     <!-- Home button は廃止 (= ロゴクリックで /lp.html、サイトクリックで site dashboard) -->
+    <!-- 「新しいサイトを追加」 を最上位に固定 (= primary CTA) -->
+    <button class="ag-add-site sb-add-site-top" onclick="openAddSiteModal()" style="margin:10px 12px 6px">
+      <span class="ag-add-ic">+</span>
+      <span class="ag-add-tx">新しいサイトを追加</span>
+    </button>
     <button class="sb-search-btn" onclick="openSearch()" title="Search (⌘K)">
       <span style="font-size:12px">🔍</span>
       <span style="flex:1;text-align:left;color:var(--text3)" data-i18n="navSearch">検索</span>
@@ -64,11 +69,11 @@
         <button class="charge-btn" onclick="openCharge()">+ Add Credits</button>
       </div>
       <!-- ── User area (footer) ─────────────────────────────────────
-           NOTE: NOT using .sb-user class so we can do a 2-row layout.
-           Row 1 = identity, Row 2 = action buttons. ───────────────── -->
-      <div style="position:relative;padding:0">
-        <!-- Row 1: user identity (avatar + name + plan + dropdown arrow) -->
-        <button onclick="toggleUserPopup(event)" title="アカウント切替" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:transparent;border:1px solid transparent;cursor:pointer;font-family:inherit;text-align:left;border-radius:10px;transition:background .15s,border-color .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.07)';this.style.borderColor='rgba(180,120,80,.18)'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'">
+           2026-05-24: account-switcher popup を廃止。 名前は表示のみ、
+           設定 / ログアウト は ⚙ から settings modal の中で完結。 ─── -->
+      <div style="padding:0">
+        <!-- Row 1: user identity (avatar + name + plan badge) — non-interactive -->
+        <div style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;box-sizing:border-box">
           <div class="user-av" id="userAv" style="width:34px;height:34px;border-radius:10px;flex-shrink:0;font-size:14px"></div>
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
             <div style="display:flex;align-items:center;gap:5px;min-width:0">
@@ -77,16 +82,14 @@
             </div>
             <div id="userPlanBadge" style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.01em;line-height:1.2">Free</div>
           </div>
-          <span style="font-size:10px;color:var(--text3);flex-shrink:0;line-height:1">▾</span>
-        </button>
-        <!-- Row 2: ⚙ 設定 (連携 button は 2026-05-24 削除、 アクセスは設定 tab 内から) -->
+        </div>
+        <!-- Row 2: ⚙ 設定 (clean — no overlay popup blocking it) -->
         <div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">
-          <button onclick="openSettings()" title="設定" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:34px;background:#fafafa;border:1px solid #e5e5e7;border-radius:9px;cursor:pointer;color:#525252;padding:0 14px;font-family:inherit;font-size:12.5px;font-weight:700;transition:all .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.12)';this.style.borderColor='#a3e635';this.style.color='#1a1a1a'" onmouseout="this.style.background='#fafafa';this.style.borderColor='#e5e5e7';this.style.color='#525252'">
+          <button type="button" onclick="openSettings()" title="設定" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:34px;background:#fafafa;border:1px solid #e5e5e7;border-radius:9px;cursor:pointer;color:#525252;padding:0 14px;font-family:inherit;font-size:12.5px;font-weight:700;transition:all .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.12)';this.style.borderColor='#a3e635';this.style.color='#1a1a1a'" onmouseout="this.style.background='#fafafa';this.style.borderColor='#e5e5e7';this.style.color='#525252'">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             <span style="letter-spacing:.02em">設定</span>
           </button>
         </div>
-        <div class="user-popup" id="userPopup" onclick="event.stopPropagation()"></div>
       </div>
     </div>
   </aside>
@@ -2200,7 +2203,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1779590602997"></script>
+<script defer src="/app.js?v=1779591042753"></script>
 
 <script>
 (function(){

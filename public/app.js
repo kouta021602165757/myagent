@@ -7206,11 +7206,7 @@ function renderAgList(){
 
   var html = '';
 
-  // 1) 「+ サイトを追加」 CTA
-  html += '<button class="ag-add-site" onclick="openAddSiteModal()">'
-       +    '<span class="ag-add-ic">+</span>'
-       +    '<span class="ag-add-tx">新しいサイトを追加</span>'
-       +  '</button>';
+  // 1) 「+ サイトを追加」 CTA は app.html 側 (sidebar 最上部) に移動済み — ここでは描画しない
 
   // 2) サイト一覧 (= AI チーム)
   if(sites.length > 0){

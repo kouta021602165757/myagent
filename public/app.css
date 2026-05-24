@@ -1,18 +1,18 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  /* ライトクリーム×ピーチオレンジ */
-  --ink:#fdf8f3;--ink2:#faf3eb;--ink3:#f5ebe0;--ink4:#ede0d4;--ink5:#e3d5c8;
-  --wire:rgba(255,255,255,.06);--wire2:rgba(255,255,255,.12);--wire3:rgba(255,255,255,.20);
-  --snow:#2d1a0e;--mist:#8c6a52;--fog:#b89880;
+  /* Light gray + lime (Linear / Notion 系) — 2026-05-24 dark から flip */
+  --ink:#f5f5f7;--ink2:#fafafa;--ink3:#f0f0f3;--ink4:#e8e8eb;--ink5:#dededf;
+  --wire:rgba(9,9,11,.06);--wire2:rgba(9,9,11,.10);--wire3:rgba(9,9,11,.16);
+  --snow:#1a1a1a;--mist:#525252;--fog:#71717a;
   --volt:#c0ff5c;--volt-dim:rgba(192,255,92,.12);--volt-glow:rgba(192,255,92,.3);
-  --cyan:#f97316;--rose:#ef4444;--rose-dim:rgba(239,68,68,.1);--amber:#f59e0b;
+  --cyan:#c0ff5c;--rose:#ef4444;--rose-dim:rgba(239,68,68,.1);--amber:#f59e0b;
   --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;--mono:'DM Mono',monospace;
   --sb:240px;
-  /* 追加カラー */
-  --peach:#c0ff5c;--peach-light:rgba(192,255,92,.30);--peach-dark:#a3e635;
-  --cream:#fdf8f3;--cream2:#faf3eb;--cream3:#f5ebe0;
+  /* 互換 alias (legacy CSS が peach / cream を参照しているため残す) */
+  --peach:#c0ff5c;--peach-light:rgba(192,255,92,.18);--peach-dark:#a3e635;
+  --cream:#f5f5f7;--cream2:#fafafa;--cream3:#f0f0f3;
   --card:#ffffff;
-  --text:#2d1a0e;--text2:#6b4226;--text3:#9a6a4a;
+  --text:#1a1a1a;--text2:#525252;--text3:#71717a;
   --bg-50:#fafafa;--bg-100:#f4f4f5;--bg-200:#e4e4e7;
   --line:rgba(9,9,11,.06);--line-strong:rgba(9,9,11,.1);
 }
@@ -198,7 +198,7 @@ input,textarea{font-family:var(--sans);}
 .logomark{
   width:30px;height:30px;border-radius:8px;
   background:var(--peach);display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-size:17px;color:var(--ink);
+  font-family:var(--display);font-size:17px;color:#0a0a0e;
   box-shadow:0 0 14px var(--volt-glow);
 }
 .logotext{font-family:var(--display);font-size:15px;letter-spacing:.06em;}
@@ -7549,20 +7549,20 @@ body{color:#f0f0f8;}
 
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ── 🌑 DARK THEME UNIFORM OVERRIDE — 2026-05-24 ──
-   サイドバー以外の post-login UI を強制的に dark + lime に揃える。
-   legacy cream/peach 色が深く食い込んでるので、 ! important で勝つ。
+   ── ☀ LIGHT GRAY THEME UNIFORM OVERRIDE — 2026-05-24 ──
+   作業画面は long-session で目疲れするため light gray + lime accent に統一。
+   Linear / Notion 風: base #f5f5f7、 card #ffffff、 lime は CTA のみ。
    サイドバー (.sb-*) は除外して既存スタイル維持。
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* === Body / 全体背景 === */
-body{ background:#0a0a0e !important; color:#fafafa !important; }
+body{ background:#f5f5f7 !important; color:#1a1a1a !important; }
 .app-shell, .main-pane, .home-pane, .right-pane, .center-pane,
 .dash-pane, .site-pane, .site-dash, .chat-pane{
-  background:#0a0a0e !important;
+  background:#f5f5f7 !important;
 }
 
-/* === サイト dashboard の主要 surface — 全てが 1 ヶ所からの dark gradient === */
+/* === サイト dashboard の主要 surface — 白カード + 微妙な影 === */
 .sd-head-rich,
 .sd-head:not(.sd-head-rich),
 .sd-tabs-pdca .sd-tabs-grp,
@@ -7588,10 +7588,10 @@ body{ background:#0a0a0e !important; color:#fafafa !important; }
 .sd-insights,
 .sd-insight,
 .sd-ga4-banner{
-  background:linear-gradient(180deg, #13131a 0%, #18181f 100%) !important;
-  border-color:rgba(255,255,255,.06) !important;
-  color:#fafafa !important;
-  box-shadow:0 4px 18px rgba(0,0,0,.40) !important;
+  background:#ffffff !important;
+  border-color:#e5e5e7 !important;
+  color:#1a1a1a !important;
+  box-shadow:0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03) !important;
 }
 
 /* === Tab body / module card 系 (= 各 PDCA tab の中身) === */
@@ -7602,10 +7602,10 @@ body{ background:#0a0a0e !important; color:#fafafa !important; }
 .qc, .hm-task-card, .hm-ce, .hm-dc, .hm-cta,
 .del, .acm-sum, .ac-card,
 .oc-card{
-  background:linear-gradient(180deg, #13131a 0%, #18181f 100%) !important;
-  border:1px solid rgba(255,255,255,.06) !important;
-  color:#fafafa !important;
-  box-shadow:0 4px 14px rgba(0,0,0,.35) !important;
+  background:#ffffff !important;
+  border:1px solid #e5e5e7 !important;
+  color:#1a1a1a !important;
+  box-shadow:0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03) !important;
 }
 
 /* === Inner cards / inputs / pills === */
@@ -7616,12 +7616,12 @@ body{ background:#0a0a0e !important; color:#fafafa !important; }
 .cn-card-l, .cn-card-meta,
 .dash-kpi, .dash-art, .dash-site,
 .deli-card, .deli-head{
-  background:rgba(255,255,255,.02) !important;
-  border-color:rgba(255,255,255,.06) !important;
-  color:#fafafa !important;
+  background:#fafafa !important;
+  border-color:#e5e5e7 !important;
+  color:#1a1a1a !important;
 }
 
-/* === Text colors — 強制で light text === */
+/* === Text colors — 強制で dark text === */
 .sd-url, .sd-url a,
 .sd-head-meta, .sd-summary,
 .sd-tab-lbl, .sd-tab-sub,
@@ -7633,30 +7633,30 @@ body{ background:#0a0a0e !important; color:#fafafa !important; }
 .hm-task-ti, .hm-task-sub,
 .dash-site-meta b,
 .dash-art-ti{
-  color:#fafafa !important;
+  color:#1a1a1a !important;
 }
 .sd-summary, .nm-mod-body, .st-head-sub, .cn-card-de,
 .qt-role, .hm-task-sub, .dash-site-meta,
 .sd-tab-sub{
-  color:#a1a1aa !important;
+  color:#525252 !important;
 }
 
 /* === Input / textarea / select / button surfaces === */
 input[type="text"], input[type="email"], input[type="password"],
 input[type="number"], input[type="url"], input[type="search"],
 textarea, select{
-  background:rgba(255,255,255,.04) !important;
-  color:#fafafa !important;
-  border-color:rgba(255,255,255,.10) !important;
+  background:#ffffff !important;
+  color:#1a1a1a !important;
+  border-color:#e5e5e7 !important;
 }
-input::placeholder, textarea::placeholder{ color:#71717a !important; }
+input::placeholder, textarea::placeholder{ color:#a1a1aa !important; }
 input:focus, textarea:focus, select:focus{
-  border-color:#c0ff5c !important;
-  outline-color:#c0ff5c !important;
-  box-shadow:0 0 0 3px rgba(192,255,92,.15) !important;
+  border-color:#a3e635 !important;
+  outline-color:#a3e635 !important;
+  box-shadow:0 0 0 3px rgba(192,255,92,.20) !important;
 }
 
-/* === Lime buttons: text must be black for contrast === */
+/* === Lime buttons: text must be black for contrast (light でも同じ) === */
 .sd-chat-cta-rich,
 .sd-chat-cta,
 .sd-kpi-edit,
@@ -7665,54 +7665,48 @@ button[class*="primary"]{
   color:#0a0a0e !important;
 }
 
-/* === A/C/P/D PDCA badges — visible on dark === */
+/* === A/C/P/D PDCA badges — visible on light === */
 .sd-tab-pdca{
-  background:rgba(255,255,255,.08) !important;
-  color:#a1a1aa !important;
+  background:#f0f0f3 !important;
+  color:#525252 !important;
 }
 .sd-tab.on .sd-tab-pdca{
-  background:rgba(0,0,0,.30) !important;
+  background:rgba(0,0,0,.20) !important;
   color:#fff !important;
 }
 
 /* === Inactive PDCA tab text === */
 .sd-tab:not(.on){
-  color:#a1a1aa !important;
+  color:#525252 !important;
 }
 .sd-tab:not(.on):hover{
-  background:rgba(255,255,255,.04) !important;
-  color:#fafafa !important;
+  background:#f0f0f3 !important;
+  color:#1a1a1a !important;
 }
 
-/* === Hide-friendly: 各 light-card-like dummy surfaces を全部 dark に強制 === */
-[class*="-card"]:not(.qt-card):not(.demo-art):not(.qt-card-feature):not(.dash-mock-art):not(.oc-anim-art):not(.platform-card):not(.platform-card-hl){
-  background-color:transparent;
-}
+/* === Hide-friendly: 各 dummy surfaces を白に揃える === */
 [class*="-card"]:not(.qt-card):not(.demo-art):not(.qt-card-feature):not(.dash-mock-art):not(.oc-anim-art):not(.platform-card):not(.platform-card-hl):not(.cn-card-on):not(.cn-card-off):not(.nm-mod-on):not(.nm-mod-off){
-  background:linear-gradient(180deg, #13131a, #18181f) !important;
+  background:#ffffff !important;
 }
 
-/* === Modal / overlay 透過 === */
-.overlay, .modal, [class*="modal"], [class*="overlay"]{
-  /* dark backdrop が透けない */
-}
+/* === Modal / overlay === */
 .wizard-modal, .modal-card,
 .modal-content, .pm-card, .pm-content,
 .confirm-card, .toast-card,
 [class$="-modal"]{
-  background:#13131a !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-  color:#fafafa !important;
-  box-shadow:0 30px 80px rgba(0,0,0,.60) !important;
+  background:#ffffff !important;
+  border:1px solid #e5e5e7 !important;
+  color:#1a1a1a !important;
+  box-shadow:0 20px 60px rgba(0,0,0,.15), 0 4px 12px rgba(0,0,0,.06) !important;
 }
 
-/* === Chart / KPI text alignment for dark === */
+/* === Chart / KPI text alignment for light === */
 .sd-kpi-val, .sd-hero-val,
 .dash-kpi-val, .dash-mock-kpi-val{
-  color:#fafafa !important;
+  color:#1a1a1a !important;
 }
 
-/* === Subtle text 救済 === */
+/* === Subtle text === */
 .text-muted, .text-subtle, .sd-art-meta, .sd-progress-meta,
 .cn-card-extra, .sd-kpi-lbl, .nm-mod-status{
   color:#71717a !important;
@@ -7721,23 +7715,23 @@ button[class*="primary"]{
 /* === Borders sweep === */
 .sd-tabs-grp, .nm-mod, .rp-card, .st-card,
 [class*="-card"]:not(.qt-card):not(.demo-art){
-  border-color:rgba(255,255,255,.06) !important;
+  border-color:#e5e5e7 !important;
 }
 
-/* === Hover state — light glow → lime subtle === */
+/* === Hover state — lime subtle glow on light === */
 .cn-card:hover, .nm-mod:hover, .st-card:hover, .oc-card:hover,
 .sd-art-card:hover, .sd-org-dept:hover{
-  border-color:rgba(192,255,92,.28) !important;
-  box-shadow:0 12px 32px rgba(0,0,0,.50), 0 0 18px rgba(192,255,92,.12) !important;
+  border-color:rgba(163,230,53,.55) !important;
+  box-shadow:0 4px 16px rgba(0,0,0,.06), 0 0 18px rgba(192,255,92,.18) !important;
 }
 
-/* === Sidebar 以外の main / empty も 純黒 に揃える (= sidebar との境界をなくす) === */
+/* === main / empty も light gray に揃える (= sidebar との境界をなくす) === */
 main.main, .main, .empty, #emptyWrap, #homeBody{
-  background:#0a0a0e !important;
-  color:#fafafa !important;
+  background:#f5f5f7 !important;
+  color:#1a1a1a !important;
 }
 
-/* === Desktop で hamburger を絶対隠す (= screenshot に出てた 灰色 bar の犯人) === */
+/* === Desktop で hamburger を絶対隠す === */
 @media(min-width:701px){
   .mobile-hamburger-empty,
   .mobile-hamburger,
@@ -7746,6 +7740,6 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   }
 }
 
-/* === chat-top や header の 空要素 が灰色 bar 化するのを防ぐ === */
+/* === chat-top の空要素 が灰色 bar 化するのを防ぐ === */
 .chat-top:empty{ display:none !important; }
 .chat-top{ background:transparent !important; }

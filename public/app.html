@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1779590071085">
+<link rel="stylesheet" href="/app.css?v=1779590602997">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -81,7 +81,7 @@
         </button>
         <!-- Row 2: ⚙ 設定 (連携 button は 2026-05-24 削除、 アクセスは設定 tab 内から) -->
         <div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">
-          <button onclick="openSettings()" title="設定" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:34px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:9px;cursor:pointer;color:#a1a1aa;padding:0 14px;font-family:inherit;font-size:12.5px;font-weight:700;transition:all .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.06)';this.style.borderColor='#c0ff5c';this.style.color='#c0ff5c'" onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.borderColor='rgba(255,255,255,.10)';this.style.color='#a1a1aa'">
+          <button onclick="openSettings()" title="設定" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:34px;background:#fafafa;border:1px solid #e5e5e7;border-radius:9px;cursor:pointer;color:#525252;padding:0 14px;font-family:inherit;font-size:12.5px;font-weight:700;transition:all .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.12)';this.style.borderColor='#a3e635';this.style.color='#1a1a1a'" onmouseout="this.style.background='#fafafa';this.style.borderColor='#e5e5e7';this.style.color='#525252'">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             <span style="letter-spacing:.02em">設定</span>
           </button>
@@ -2200,7 +2200,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1779590071085"></script>
+<script defer src="/app.js?v=1779590602997"></script>
 
 <script>
 (function(){

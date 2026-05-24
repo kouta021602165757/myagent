@@ -2606,61 +2606,172 @@ function goSiteDashboard(tab){
 }
 
 // ── Chat header toolbar: 7 icon-only buttons → on-demand panels ──
-// 旧 "📊 ダッシュボード" 1 ボタンを廃止して機能ごとに直接アクセス可能に。
-// Phase 1: 既存のダッシュボードタブを backend として再利用 (= goSiteDashboard
-// で対応 tab を pre-select)。Phase 2 でそれぞれを独立 modal にリファクタ予定。
-window.openNumbersPanel = function(siteId){ goSiteDashboard('numbers'); };
-window.openStrategyPanel = function(siteId){ goSiteDashboard('strategy'); };
-window.openTasksPanel = function(siteId){ goSiteDashboard('tasks'); };
-window.openConnectionsPanel = function(siteId){ goSiteDashboard('connections'); };
-window.openSiteSettingsPanel = function(siteId){ goSiteDashboard('settings'); };
+// Phase 2: 既存ダッシュボードページを廃止し、各機能を独立 modal として表示。
+// 既存の _renderTabXxx 関数を modal の中にそのまま描画 (=ロジック再利用)。
 
-// 毎日分析 — 新規機能。Phase 1: AI が GA4 データ + 今日のタスク状況を元に
-// Haiku で短い解釈を生成 → note (type='daily') に保存。modal 表示。
-window.openDailyAnalysisPanel = async function(siteId){
-  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
-  if(!ag){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
-  // 既存 overlay 削除
-  var ex = document.getElementById('dailyAnaOverlay');
+// 数字分析 / GA4 表示に必要な kpiHTML / ga4Banner を生成 (renderHomeDashboard
+// から複製したロジックを 1 ヶ所に集約)。
+function _buildKpiHTML(site){
+  var kpi = site.kpi || {};
+  return ''
+    + '<div class="sd-kpi-row">'
+    +   '<div class="sd-kpi-card">'
+    +     '<div class="sd-kpi-lbl">月間 PV 目標</div>'
+    +     '<div class="sd-kpi-val">' + (kpi.pv ? Number(kpi.pv).toLocaleString() : '<span class="sd-kpi-empty">—</span>') + '</div>'
+    +   '</div>'
+    +   '<div class="sd-kpi-card">'
+    +     '<div class="sd-kpi-lbl">目標 CVR</div>'
+    +     '<div class="sd-kpi-val">' + (kpi.cvr ? kpi.cvr + '<span class="sd-kpi-unit">%</span>' : '<span class="sd-kpi-empty">—</span>') + '</div>'
+    +   '</div>'
+    +   '<div class="sd-kpi-card">'
+    +     '<div class="sd-kpi-lbl">月間リード目標</div>'
+    +     '<div class="sd-kpi-val">' + (kpi.leads ? Number(kpi.leads).toLocaleString() : '<span class="sd-kpi-empty">—</span>') + '</div>'
+    +   '</div>'
+    +   '<button class="sd-kpi-edit" onclick="openKpiModal(\'' + esc(site.id) + '\')">'
+    +     '✏️ ' + (kpi.pv || kpi.cvr || kpi.leads ? '編集' : '設定する')
+    +   '</button>'
+    + '</div>';
+}
+function _buildGa4Status(site){
+  var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
+  var ga4Connected = !!(ga4Snap && ga4Snap.connected)
+    || !!(me && me.google_oauth && me.google_oauth.refresh_token)
+    || !!(me && me.integrations && me.integrations.google && me.integrations.google.refresh_token);
+  var ga4NeedPicker = ga4Connected
+    && ga4Snap && !ga4Snap.snapshot
+    && (ga4Snap.error === 'no_property_set' || (ga4Snap.property_options && ga4Snap.property_options.length));
+  var ga4Banner = '';
+  if(!ga4Connected){
+    ga4Banner = '<div class="sd-ga4-banner">'
+      + '<div class="sd-ga4-ic">📊</div>'
+      + '<div class="sd-ga4-bd">'
+      +   '<div class="sd-ga4-h">より深く分析するには Google Analytics を接続</div>'
+      +   '<div class="sd-ga4-sub">流入数 / CVR / 滞在時間が AI の分析に反映されます</div>'
+      + '</div>'
+      + '<button class="sd-ga4-cta" onclick="openConnectionsPanel(\'' + esc(site.id) + '\')">接続する →</button>'
+      + '</div>';
+  } else if(ga4NeedPicker){
+    ga4Banner = '<div class="sd-ga4-banner sd-ga4-banner-pick">'
+      + '<div class="sd-ga4-ic">📊</div>'
+      + '<div class="sd-ga4-bd">'
+      +   '<div class="sd-ga4-h">あと 1 ステップ — GA4 プロパティを選んでください</div>'
+      +   '<div class="sd-ga4-sub">接続済みですが、 どのプロパティの数字を表示するか選んでもらう必要があります</div>'
+      + '</div>'
+      + '<button class="sd-ga4-cta" onclick="openGa4PropertyPicker(\'' + esc(site.id) + '\')">プロパティを選ぶ →</button>'
+      + '</div>';
+  }
+  return { ga4Connected: ga4Connected, ga4Banner: ga4Banner };
+}
+
+// Generic modal renderer — wraps any _renderTabXxx output in a full-page overlay
+function _openSiteTabModal(siteId, tabKey){
+  var site = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!site){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
+  var title = '', content = '';
+  if(tabKey === 'numbers'){
+    title = '📊 ' + L('数字分析','Numbers');
+    var kpiHTML = _buildKpiHTML(site);
+    var ga4 = _buildGa4Status(site);
+    content = _renderTabNumbers(site, site.kpi || {}, ga4.ga4Connected, kpiHTML, ga4.ga4Banner,
+      _siteAllArtifacts(site.id), _siteDailySeries(site),
+      _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site));
+    try { _fetchGa4Snapshot(site.id); } catch(_){}
+  } else if(tabKey === 'strategy'){
+    title = '🎯 ' + L('戦略・KPI','Strategy & KPI');
+    content = _renderTabStrategy(site, _siteAllArtifacts(site.id));
+  } else if(tabKey === 'tasks'){
+    title = '📋 ' + L('タスク一覧','Tasks');
+    content = _renderTabTasks(site);
+  } else if(tabKey === 'connections'){
+    title = '🔌 ' + L('接続','Connections');
+    content = _renderTabConnections(site);
+  } else if(tabKey === 'settings'){
+    title = '⚙️ ' + L('設定','Settings');
+    content = _renderTabSettings(site);
+  } else {
+    showToast(L('不明なパネル','Unknown panel'),'ng');
+    return;
+  }
+  // Remove any existing site-tab overlay
+  var ex = document.getElementById('siteTabOverlay');
   if(ex) ex.remove();
   var ov = document.createElement('div');
-  ov.id = 'dailyAnaOverlay';
+  ov.id = 'siteTabOverlay';
+  ov.setAttribute('data-tab', tabKey);
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.55);z-index:9990;display:flex;align-items:center;justify-content:center;padding:14px;font-family:inherit';
+  ov.innerHTML =
+    '<div style="background:var(--cream);border-radius:16px;max-width:1200px;width:100%;max-height:94vh;height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden">'
+    +  '<div style="padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream);flex-shrink:0">'
+    +    '<div style="font-size:15px;font-weight:900;color:var(--text)">' + esc(title) + '</div>'
+    +    '<div style="font-size:11px;color:var(--text3);font-weight:700">' + esc(_siteHostname(site)) + '</div>'
+    +    '<button onclick="document.getElementById(\'siteTabOverlay\').remove()" style="margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px;border-radius:8px" title="閉じる">×</button>'
+    +  '</div>'
+    +  '<div class="sd-tab-body" style="flex:1;overflow-y:auto;padding:18px 22px;background:var(--cream)">' + content + '</div>'
+    + '</div>';
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  // ESC to close
+  var escHandler = function(e){
+    if(e.key === 'Escape'){
+      ov.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+  document.body.appendChild(ov);
+}
+
+window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
+window.openStrategyPanel      = function(siteId){ _openSiteTabModal(siteId, 'strategy'); };
+window.openTasksPanel         = function(siteId){ _openSiteTabModal(siteId, 'tasks'); };
+window.openConnectionsPanel   = function(siteId){ _openSiteTabModal(siteId, 'connections'); };
+window.openSiteSettingsPanel  = function(siteId){ _openSiteTabModal(siteId, 'settings'); };
+
+// 日次グロースレポート — Phase 1: AI が GA4 + タスク + 直近活動を元に
+// グロース観点で 5 セクション固定 Markdown レポートを生成 → 既存 auto-paging
+// で note (type='daily') に保存。modal 表示。
+window.openDailyGrowthReportPanel = async function(siteId){
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
+  var ex = document.getElementById('dailyGrowthOverlay');
+  if(ex) ex.remove();
+  var ov = document.createElement('div');
+  ov.id = 'dailyGrowthOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:14px;font-family:inherit';
   ov.innerHTML =
     '<div style="background:var(--cream);border-radius:16px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
     +  '<div style="padding:16px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px">'
     +    '<div style="font-size:24px">📰</div>'
     +    '<div style="flex:1">'
-    +      '<div style="font-size:15px;font-weight:900;color:var(--text)">'+L('毎日分析','Daily analysis')+'</div>'
-    +      '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('AI が GA4 + タスク状況から今日の解釈を書く','AI commentary on today\'s metrics + task progress')+'</div>'
+    +      '<div style="font-size:15px;font-weight:900;color:var(--text)">'+L('日次グロースレポート','Daily growth report')+'</div>'
+    +      '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('数字 + 効いた施策 + 詰まった箇所 + 明日のアクション','Numbers + what worked + bottlenecks + tomorrow\'s actions')+'</div>'
     +    '</div>'
-    +    '<button onclick="document.getElementById(\'dailyAnaOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px">×</button>'
+    +    '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px">×</button>'
     +  '</div>'
-    +  '<div id="dailyAnaBody" style="flex:1;overflow-y:auto;padding:22px">'
+    +  '<div id="dailyGrowthBody" style="flex:1;overflow-y:auto;padding:22px">'
     +    '<div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">'
-    +      L('「+ 今日の分析を生成」を押すと、AI がチームの今日の活動 + GA4 数字 + 今週のタスク進捗をまとめて 1 件の分析メモにします。生成された分析は 📒 メモ帳の「daily」種別として残ります。','Click "Generate today\'s analysis" — AI will summarize today\'s activity, GA4 numbers, and task progress into a single note. Saved as type=daily in 📒 Notebook.')
+    +      L('「+ 今日のレポートを生成」を押すと、AI が GA4 数字 + 今週のタスク進捗 + 直近 24h の活動を元に 5 セクション固定のグロースレポートを書きます。📒 メモ帳に daily 種別として保存されます。','Click "Generate today\'s report" — AI writes a 5-section growth report from GA4 + task progress + 24h activity. Saved as type=daily in 📒 Notebook.')
     +    '</div>'
-    +    '<button onclick="_runDailyAnalysis(\''+esc(siteId)+'\')" id="dailyAnaGenBtn" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('今日の分析を生成','Generate today\'s analysis')+'</button>'
+    +    '<button onclick="_runDailyGrowthReport(\''+esc(siteId)+'\')" id="dailyGrowthGenBtn" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('今日のレポートを生成','Generate today\'s report')+'</button>'
     +    '<div style="margin-top:22px;border-top:1px solid var(--wire);padding-top:18px">'
-    +      '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去の毎日分析','Past daily analyses')+'</div>'
-    +      '<div id="dailyAnaList" style="font-size:12.5px;color:var(--text3)">'+L('まだありません','None yet')+'</div>'
+    +      '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去のグロースレポート','Past growth reports')+'</div>'
+    +      '<div id="dailyGrowthList" style="font-size:12.5px;color:var(--text3)">'+L('まだありません','None yet')+'</div>'
     +    '</div>'
     +  '</div>'
     + '</div>';
   ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
-  // Hydrate the past list (notes with type='daily')
+  // Hydrate past list (notes with type='daily')
   try {
     var r = await api('GET', '/api/me/notes');
     var dailies = (r && r.notes || []).filter(function(n){return n.type === 'daily' && (!n.agent_id || n.agent_id === siteId);});
-    var box = document.getElementById('dailyAnaList');
+    var box = document.getElementById('dailyGrowthList');
     if(box){
       if(!dailies.length){
         box.innerHTML = '<span style="color:var(--text3)">'+L('まだありません','None yet')+'</span>';
       } else {
         box.innerHTML = dailies.slice(0, 10).map(function(n){
           var when = (n.updated_at||'').slice(5,10).replace('-','/');
-          return '<div onclick="document.getElementById(\'dailyAnaOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(n.id)+'\')" style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;background:var(--cream);border:1px solid var(--wire2);margin-bottom:6px" onmouseover="this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.borderColor=\'var(--wire2)\'">'
+          return '<div onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(n.id)+'\')" style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;background:var(--cream);border:1px solid var(--wire2);margin-bottom:6px" onmouseover="this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.borderColor=\'var(--wire2)\'">'
             + '<span style="font-size:14px">📰</span>'
             + '<span style="flex:1;font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n.title || '無題')+'</span>'
             + '<span style="font-size:10.5px;color:var(--text3);font-weight:600">'+esc(when)+'</span>'
@@ -2671,20 +2782,30 @@ window.openDailyAnalysisPanel = async function(siteId){
   } catch(_){}
 };
 
-// 毎日分析を AI 実行 — chat に 「今日の分析をして、メモ帳に保存して。」 を送って
-// 既存 AI / tool / note pipeline を再利用する。新しい server endpoint を追加せず
-// に Phase 1 を成立させるための単純化策。
-window._runDailyAnalysis = function(siteId){
+// グロース観点で 5 セクション固定 prompt を composer に投入して自動送信。
+// AI prompt: 数字サマリー / 効いた施策 / 詰まった箇所 / 明日のアクション / 中期トレンド
+window._runDailyGrowthReport = function(siteId){
   var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
   if(!ag){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
-  // overlay を閉じてチャット画面に戻す → composer に prompt をセット → 自動送信
-  var ov = document.getElementById('dailyAnaOverlay');
+  var ov = document.getElementById('dailyGrowthOverlay');
   if(ov) ov.remove();
   if(activeId !== siteId){ openAgent(siteId); }
   setTimeout(function(){
     var ci = document.getElementById('ci');
     if(!ci) return;
-    ci.value = '【毎日分析】今日の GA4 数字 + 今週の進捗 + 直近 24 時間で AI チームがやったことを 1 ページの分析メモにまとめて。後で見返せるように Markdown で 4-6 セクション、必ず最後に「明日やるべき 3 つ」を提案して。';
+    ci.value = '【日次グロースレポート】今日のサイトの状態を 5 セクション固定でレポートして。\n\n'
+      + '必須構造 (Markdown / 順序厳守 / 推測ではなく実データに基づく):\n\n'
+      + '## 1. 📊 数字のサマリー\n'
+      + 'GA4 から PV / セッション / CVR / リード数を取得し、前日比・前週比を必ず明記 (なければ「データなし」)。\n\n'
+      + '## 2. 🟢 効いた施策\n'
+      + '直近 24-72h で AI チームがやったこと + 数字に出た良い動きを 2-3 件、因果が読み取れる形で。\n\n'
+      + '## 3. 🔴 詰まった箇所\n'
+      + 'CVR 下落 / 直帰率上昇 / リード単価増 / 失速チャネル等のボトルネック 1-3 件。仮説まで踏み込む。\n\n'
+      + '## 4. 🎯 明日のグロースアクション\n'
+      + '優先度順 top 3。各 1 行で「誰が何を、どこに対して、何を目指して」。曖昧 NG。\n\n'
+      + '## 5. 📈 中期トレンド\n'
+      + '週次の方向感を 1-2 行で。\n\n'
+      + 'タイトルは「日次グロースレポート YYYY-MM-DD」 でメモ帳に保存。';
     try { exTA(ci); } catch(_){}
     try { if(typeof sendMsg === 'function') sendMsg(); } catch(_){}
   }, 200);
@@ -3467,11 +3588,11 @@ window._renderTaskStrip = function(){
       + '</div>';
   }).join('');
   var moreHTML = rest > 0
-    ? '<button onclick="goSiteDashboard(\'tasks\')" style="background:transparent;border:0;font-size:11px;font-weight:800;color:var(--peach-dark);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px" '
+    ? '<button onclick="openTasksPanel(activeId)" style="background:transparent;border:0;font-size:11px;font-weight:800;color:var(--peach-dark);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px" '
       + 'onmouseover="this.style.background=\'var(--peach-soft)\'" '
       + 'onmouseout="this.style.background=\'transparent\'">'
       + L('他 '+rest+' 件 ', 'View ' + rest + ' more ') + '→</button>'
-    : '<button onclick="goSiteDashboard(\'tasks\')" style="background:transparent;border:0;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px">'
+    : '<button onclick="openTasksPanel(activeId)" style="background:transparent;border:0;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px">'
       + L('全件表示','View all') + ' →</button>';
   el.style.display = 'block';
   el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px 8px;flex-wrap:wrap;border-top:1px solid var(--wire);background:var(--cream)';
@@ -8614,9 +8735,9 @@ async function openAgent(id){
     if(_isSiteAgent(ag)){
       // ── サイト用 7 ボタンツールバー (icon-only + tooltip) ──
       // ダッシュボード page を廃止して、機能ごとに on-demand modal を開く設計。
-      // 順序: 毎日分析 / 数字分析 / 戦略KPI / タスク / 接続 / メモ帳 / 設定
+      // 順序: 日次グロースレポート / 数字分析 / 戦略KPI / タスク / 接続 / メモ帳 / 設定
       var _siteId = esc(ag.id);
-      actsHTML += '<button class="ct-act ct-tool" onclick="openDailyAnalysisPanel(\''+_siteId+'\')" title="'+L('毎日分析 — AI が毎朝書く解釈・所見','Daily analysis — AI commentary')+'">📰</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openDailyGrowthReportPanel(\''+_siteId+'\')" title="'+L('日次グロースレポート — 数字 + 効いた施策 + 明日のアクション','Daily growth report — numbers + wins + tomorrow\'s actions')+'">📰</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 の生データ・KPI','Numbers — GA4 metrics / KPI')+'">📊</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('戦略・KPI — ペルソナ・競合・6ヶ月目標','Strategy / KPI')+'">🎯</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('タスク一覧 — 8 週ロードマップ + 進捗','Tasks — 8-week roadmap')+'">📋</button>';
@@ -18561,9 +18682,10 @@ function _renderNotesPanel(){
   // Type icon mapping — distinguish AI-generated note kinds from manual memos
   var _noteTypeIcon = function(n){
     if(!n) return '📒';
-    if(!n.auto_generated) return '📒';     // 手動メモ
+    if(!n.auto_generated && n.type !== 'daily') return '📒';     // 手動メモ
     switch(n.type){
-      case 'article':  return '📰';
+      case 'daily':    return '📰';   // 日次グロースレポート
+      case 'article':  return '📝';
       case 'sns_post': return '🐦';
       case 'analysis': return '📊';
       case 'pdf':      return '📄';

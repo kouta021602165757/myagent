@@ -8296,7 +8296,11 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
   } else {
     const len = reply.length;
     const headerMatches = reply.match(/^#{1,3}\s+\S/gm) || [];
-    if(len >= 1500 && headerMatches.length >= 2){
+    // 日次グロースレポート は最優先で detect (= analysis より特化型)
+    if(/日次グロースレポート|Daily growth report|グロースレポート/i.test(reply.slice(0, 400)) && len >= 800){
+      type = 'daily';
+      title = '日次グロースレポート ' + new Date().toISOString().slice(0, 10);
+    } else if(len >= 1500 && headerMatches.length >= 2){
       type = 'analysis';
       const firstHeader = reply.match(/^#{1,3}\s+(.+)$/m);
       title = firstHeader ? firstHeader[1].slice(0, 80) : reply.slice(0, 40);

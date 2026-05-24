@@ -3706,6 +3706,9 @@ function _fetchGa4Snapshot(siteId, opts){
       window._ga4Snapshots[siteId] = {
         connected: !!(r && r.connected),
         snapshot: r && r.snapshot,
+        // ↓ user の OAuth は通ってるが property 未選択 → picker 案内用
+        error: r && r.error,
+        property_options: r && r.property_options,
         _localFetchedMs: Date.now(),
       };
       window._ga4FetchInFlight[siteId] = false;
@@ -3714,6 +3717,93 @@ function _fetchGa4Snapshot(siteId, opts){
     .catch(function(e){
       console.warn('[ga4-snapshot] fetch failed:', e && e.message);
       window._ga4FetchInFlight[siteId] = false;
+    });
+}
+
+// GA4 プロパティ picker — 「アナリティクス接続したのに数字出ない」 を解消する。
+// 接続 OAuth は通ってるが ga4_property_id 未設定の時に呼ばれる。
+function openGa4PropertyPicker(siteId){
+  if(!siteId) siteId = (typeof activeId !== 'undefined' && activeId) || null;
+  if(!siteId){ showToast('サイトを選んでから操作してください','ng'); return; }
+  var snap = (window._ga4Snapshots && window._ga4Snapshots[siteId]) || {};
+  var props = snap.property_options;
+  var renderModal = function(propsList){
+    var rows = (propsList || []).map(function(p){
+      var name = esc(p.display_name || p.name || ('property ' + p.property_id));
+      var acc = esc(p.account_name || '');
+      var pid = esc(p.property_id);
+      return '<button class="ga4pp-row" onclick="_ga4PickProperty(\''+esc(siteId)+'\',\''+pid+'\')">'
+        +   '<div class="ga4pp-row-ic">📊</div>'
+        +   '<div class="ga4pp-row-bd">'
+        +     '<div class="ga4pp-row-nm">'+name+'</div>'
+        +     '<div class="ga4pp-row-sub">'+(acc?acc+' · ':'')+'property '+pid+'</div>'
+        +   '</div>'
+        +   '<span class="ga4pp-row-arrow">→</span>'
+        + '</button>';
+    }).join('');
+    if(!rows){
+      rows = '<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px;line-height:1.7">'
+        + 'GA4 プロパティが見つかりません。<br>'
+        + '<a href="https://analytics.google.com/" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">GA4 サイト</a> で連携アカウントにアクセス権を付与してください。'
+        + '</div>';
+    }
+    var html =
+      '<div class="overlay ga4pp-overlay open" onclick="if(event.target===this)_closeGa4PropertyPicker()">'
+      + '<div class="ga4pp-modal">'
+      +   '<div class="ga4pp-hd">'
+      +     '<div>'
+      +       '<div class="ga4pp-ti">GA4 プロパティを選ぶ</div>'
+      +       '<div class="ga4pp-sub">どのプロパティの数字を表示しますか?</div>'
+      +     '</div>'
+      +     '<button class="ga4pp-x" onclick="_closeGa4PropertyPicker()" aria-label="close">×</button>'
+      +   '</div>'
+      +   '<div class="ga4pp-list">' + rows + '</div>'
+      + '</div>'
+      + '</div>';
+    var prev = document.getElementById('ga4PickerHost');
+    if(prev) prev.remove();
+    var host = document.createElement('div');
+    host.id = 'ga4PickerHost';
+    host.innerHTML = html;
+    document.body.appendChild(host);
+  };
+  if(props && props.length){
+    renderModal(props);
+    return;
+  }
+  // No cached list — fetch fresh
+  renderModal(null);
+  var listEl = document.querySelector('#ga4PickerHost .ga4pp-list');
+  if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px">読み込み中…</div>';
+  api('GET', '/api/me/ga4/properties').then(function(r){
+    if(!r || !r.ok){
+      if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-size:13px">'+esc((r && r.detail) || 'GA4 プロパティの取得に失敗しました')+'</div>';
+      return;
+    }
+    renderModal(r.properties || []);
+  }).catch(function(e){
+    if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-size:13px">'+esc(e.message||'failed')+'</div>';
+  });
+}
+function _closeGa4PropertyPicker(){
+  var host = document.getElementById('ga4PickerHost');
+  if(host) host.remove();
+}
+function _ga4PickProperty(siteId, propertyId){
+  if(!siteId || !propertyId) return;
+  var listEl = document.querySelector('#ga4PickerHost .ga4pp-list');
+  if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px">保存して数字を取得しています…</div>';
+  api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/ga4/property', { property_id: propertyId })
+    .then(function(r){
+      if(!r || !r.ok) throw new Error((r && r.error) || 'set property failed');
+      _closeGa4PropertyPicker();
+      showToast('GA4 プロパティを保存しました。数字を取得中…','ok');
+      // Clear cache to force refetch
+      if(window._ga4Snapshots) delete window._ga4Snapshots[siteId];
+      _fetchGa4Snapshot(siteId, { force: true });
+    })
+    .catch(function(e){
+      if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-size:13px">'+esc(e.message||'failed')+'</div>';
     });
 }
 
@@ -4180,8 +4270,16 @@ function _renderSiteDashboardHTML(site){
     +   '</button>'
     + '</div>';
 
-  // ── GA4 接続バナー (まだ接続してない場合) ──
-  var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
+  // ── GA4 接続バナー (まだ接続してない場合 / 接続したけど property 未選択) ──
+  // OAuth 状態は user.google_oauth.refresh_token / integrations.google.refresh_token
+  // のどちらでも検知。 snapshot fetch 後は ga4Snap.connected も真の source。
+  var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
+  var ga4Connected = !!(ga4Snap && ga4Snap.connected)
+    || !!(me && me.google_oauth && me.google_oauth.refresh_token)
+    || !!(me && me.integrations && me.integrations.google && me.integrations.google.refresh_token);
+  var ga4NeedPicker = ga4Connected
+    && ga4Snap && !ga4Snap.snapshot
+    && (ga4Snap.error === 'no_property_set' || (ga4Snap.property_options && ga4Snap.property_options.length));
   var ga4Banner = '';
   if(!ga4Connected){
     ga4Banner = '<div class="sd-ga4-banner">'
@@ -4191,6 +4289,15 @@ function _renderSiteDashboardHTML(site){
       +   '<div class="sd-ga4-sub">流入数 / CVR / 滞在時間が AI の分析に反映されます</div>'
       + '</div>'
       + '<button class="sd-ga4-cta" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">接続する →</button>'
+      + '</div>';
+  } else if(ga4NeedPicker){
+    ga4Banner = '<div class="sd-ga4-banner sd-ga4-banner-pick">'
+      + '<div class="sd-ga4-ic">📊</div>'
+      + '<div class="sd-ga4-bd">'
+      +   '<div class="sd-ga4-h">あと 1 ステップ — GA4 プロパティを選んでください</div>'
+      +   '<div class="sd-ga4-sub">接続済みですが、 どのプロパティの数字を表示するか選んでもらう必要があります</div>'
+      + '</div>'
+      + '<button class="sd-ga4-cta" onclick="openGa4PropertyPicker(\'' + esc(site.id) + '\')">プロパティを選ぶ →</button>'
       + '</div>';
   }
 

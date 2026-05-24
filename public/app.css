@@ -796,10 +796,61 @@ input,textarea{font-family:var(--sans);}
   transition:transform .15s, box-shadow .15s, filter .15s;
 }
 .sd-ga4-cta:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(163,230,53,.30); filter:brightness(1.05)}
+.sd-ga4-banner-pick{
+  border-style:solid; border-color:#a3e635;
+  background:linear-gradient(135deg,#f7ffe9,#ffffff);
+}
 @media (max-width:560px){
   .sd-ga4-banner{flex-direction:column; align-items:flex-start; gap:10px}
   .sd-ga4-cta{width:100%; text-align:center}
 }
+
+/* ── GA4 property picker modal ────────────────────────── */
+.ga4pp-overlay{
+  position:fixed; inset:0; z-index:10000;
+  background:rgba(20,20,25,.55); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+}
+.ga4pp-modal{
+  width:100%; max-width:480px; background:#ffffff; border-radius:18px;
+  border:1px solid #e5e5e7;
+  box-shadow:0 30px 80px rgba(0,0,0,.18);
+  overflow:hidden; display:flex; flex-direction:column;
+  max-height:calc(100vh - 48px);
+}
+.ga4pp-hd{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  padding:20px 22px 14px; border-bottom:1px solid #f0f0f3;
+}
+.ga4pp-ti{font-size:16px; font-weight:900; color:#1a1a1a; letter-spacing:-.01em;}
+.ga4pp-sub{font-size:12px; color:#525252; margin-top:3px; line-height:1.55;}
+.ga4pp-x{
+  width:30px; height:30px; border-radius:8px; border:1px solid #e5e5e7;
+  background:#fafafa; color:#525252; font-size:18px; line-height:1; cursor:pointer;
+  flex-shrink:0; display:flex; align-items:center; justify-content:center;
+}
+.ga4pp-x:hover{background:#f0f0f3; color:#1a1a1a;}
+.ga4pp-list{
+  padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:4px;
+}
+.ga4pp-row{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:12px 14px; border-radius:11px; border:1px solid transparent;
+  background:transparent; cursor:pointer; text-align:left;
+  font-family:inherit; transition:all .14s;
+}
+.ga4pp-row:hover{background:#f7ffe9; border-color:#a3e635;}
+.ga4pp-row-ic{
+  width:36px; height:36px; border-radius:9px;
+  background:linear-gradient(135deg,#c0ff5c,#a3e635);
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
+.ga4pp-row-bd{flex:1; min-width:0;}
+.ga4pp-row-nm{font-size:13.5px; font-weight:800; color:#1a1a1a; line-height:1.3;}
+.ga4pp-row-sub{font-size:11px; color:#71717a; font-weight:600; margin-top:2px;}
+.ga4pp-row-arrow{font-size:14px; color:#a1a1aa; flex-shrink:0;}
+.ga4pp-row:hover .ga4pp-row-arrow{color:#0a0a0e;}
 
 /* ── KPI モーダル ─────────────────────────────────────────── */
 .kpi-card .kpi-form{display:flex; flex-direction:column; gap:13px; margin-bottom:6px}

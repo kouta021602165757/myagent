@@ -20022,6 +20022,42 @@ ${orgSummary || '(汎用チーム)'}
     return jres(res, 200, { ok: true, task: target.task });
   }
 
+  // ── GA4 property picker (= chat に頼まずに UI から選ぶ) ──
+  //   GET  /api/me/ga4/properties           → list all properties user can access
+  //   POST /api/agents/:id/ga4/property     → body { property_id } で agent に保存
+  if(pathname === '/api/me/ga4/properties' && method === 'GET'){
+    if(!user.google_oauth || !user.google_oauth.refresh_token){
+      return jres(res, 400, { ok:false, error:'google_not_connected',
+        detail:'まず Google アカウントを連携してください (設定 → 連携)。' });
+    }
+    try {
+      const props = await ga4ListProperties(user);
+      return jres(res, 200, { ok:true, count: props.length, properties: props });
+    } catch(e){
+      console.warn('[ga4-properties] list failed:', e.message);
+      return jres(res, 500, { ok:false, error:'list_failed', detail: (e.message||'').slice(0,200) });
+    }
+  }
+  const ga4SetPropMatch = pathname.match(/^\/api\/agents\/([^/]+)\/ga4\/property$/);
+  if(ga4SetPropMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === ga4SetPropMatch[1]);
+    if(!ag) return jres(res, 404, { error:'agent not found' });
+    const body = await readBody(req);
+    const pid = String((body && body.property_id) || '').replace('properties/','').trim();
+    if(!pid) return jres(res, 400, { error:'property_id required' });
+    ag.ga4_property_id = pid;
+    // Also set as user-level default if not yet set (= sane default for next site)
+    user.integrations = user.integrations || {};
+    user.integrations.google = user.integrations.google || {};
+    if(!user.integrations.google.ga4_property_id){
+      user.integrations.google.ga4_property_id = pid;
+    }
+    // Invalidate cache so next dashboard load fetches fresh
+    ag.ga4_snapshot = null;
+    try { await DB.save(user); } catch(e){ console.warn('[ga4-set-prop] save failed:', e.message); }
+    return jres(res, 200, { ok:true, property_id: pid, scope:'agent' });
+  }
+
   // ── GA4 snapshot (= dashboard 用キャッシュ + 強制 refresh) ──
   // ダッシュボードが mount 時に毎回 GA4 API を叩くと遅い + quota 食う。
   // agent.ga4_snapshot にキャッシュして、1 時間以上古ければ refresh する設計。
@@ -20049,6 +20085,54 @@ ${orgSummary || '(汎用チーム)'}
 
     if(!isRefresh && cached && cacheAgeMs < STALE_MS){
       return jres(res, 200, { ok: true, connected: true, snapshot: cached, stale: false });
+    }
+
+    // ── Auto-pick property if none configured ─────────────
+    // ユーザーが OAuth 連携しただけで property を選択していない場合、
+    //   - 1 個しかなければ自動選択
+    //   - 複数あるなら site_url とドメイン match するものを優先
+    // それでも決まらなければ 「property_options」 と共に 200 を返して
+    // フロントの picker で選んでもらう。
+    const resolvedPid = _resolveServiceTarget(ag, user, 'ga4');
+    if(!resolvedPid){
+      try {
+        const props = await ga4ListProperties(user);
+        if(props.length === 0){
+          return jres(res, 200, { ok:false, connected:true, snapshot:null,
+            error:'no_ga4_properties',
+            detail:'この Google アカウントに GA4 プロパティが見つかりません。 GA4 サイトでアクセス権を確認してください。' });
+        }
+        let pick = null;
+        if(props.length === 1){
+          pick = props[0];
+        } else if(ag.site_url){
+          // Try domain match (= site_url の hostname と property の display_name)
+          try {
+            const host = new URL(ag.site_url).hostname.replace(/^www\./,'').toLowerCase();
+            pick = props.find(p => String(p.display_name||'').toLowerCase().includes(host))
+                || props.find(p => host.includes(String(p.display_name||'').toLowerCase().replace(/[^a-z0-9.-]/g,'')));
+          } catch(_){}
+        }
+        if(pick){
+          ag.ga4_property_id = pick.property_id;
+          user.integrations = user.integrations || {};
+          user.integrations.google = user.integrations.google || {};
+          if(!user.integrations.google.ga4_property_id){
+            user.integrations.google.ga4_property_id = pick.property_id;
+          }
+          try { await DB.save(user); } catch(e){ console.warn('[ga4-auto-pick] save failed:', e.message); }
+          // continue below with query
+        } else {
+          // Multiple properties, no match → return options for picker
+          return jres(res, 200, { ok:false, connected:true, snapshot:null,
+            error:'no_property_set', property_options: props,
+            detail:'GA4 プロパティを選択してください。' });
+        }
+      } catch(e){
+        console.warn('[ga4-auto-pick] list failed:', e.message);
+        return jres(res, 200, { ok:false, connected:true, snapshot:null,
+          error:'list_failed', detail:(e.message||'').slice(0,200) });
+      }
     }
 
     // Fetch fresh — 4 つの GA4 query を並列で叩く:

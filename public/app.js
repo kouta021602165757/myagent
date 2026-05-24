@@ -8408,8 +8408,8 @@ async function openAgent(id){
     // 他のアクション (🔗 共有 / 💬 会話共有 / ↻ 新規 / 📝 メモ / ⚙ 設定) は
     // ダッシュボード内のアクションパネルに集約 — chat header をスッキリ。
     if(_isSiteAgent(ag)){
+      actsHTML += '<button class="ct-act notes-btn" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('ノート (AI が作った成果物 ・ 手動メモを一覧編集)','Notes (AI artifacts & manual memos)')+'">📒</button>';
       actsHTML += '<button class="ct-act dashboard-btn" onclick="goSiteDashboard()" title="'+L('ダッシュボード (KPI ・ 納品物 ・ 進捗)','Dashboard')+'">📊 ダッシュボード</button>';
-      actsHTML += '<button class="ct-act notes-btn" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('ノート (AI が作った成果物 ・ 手動メモを一覧編集)','Notes (AI artifacts & manual memos)')+'">📒 ノート</button>';
     } else {
       actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
       actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';

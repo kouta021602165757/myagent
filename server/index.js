@@ -19954,13 +19954,30 @@ ${siteContext}
 }`;
 
     try {
-      const apiResp = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-        {
+      // 90s timeout + 1 retry on timeout (= roadmap / strategy は構造化 JSON で長め)
+      async function _callWithRetry(label){
+        const opts = { timeout: 90000 };
+        const payload = {
           model: 'claude-sonnet-4-6',
           max_tokens: 6000,
           messages: [{ role: 'user', content: prompt }],
-        });
+        };
+        try {
+          return await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+            { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+            payload, opts);
+        } catch(e){
+          const msg = String((e && e.message) || '');
+          if(/timeout/i.test(msg)){
+            console.warn('['+label+'] timeout, retrying once…');
+            return await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+              { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+              payload, opts);
+          }
+          throw e;
+        }
+      }
+      const apiResp = await _callWithRetry('strategy-gen');
       if(apiResp.s < 200 || apiResp.s >= 300){
         const apiMsg = (apiResp.d && apiResp.d.error && apiResp.d.error.message) || '';
         const apiType = (apiResp.d && apiResp.d.error && apiResp.d.error.type) || '';
@@ -20084,13 +20101,29 @@ ${orgSummary || '(汎用チーム)'}
 }`;
 
     try {
-      const apiResp = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-        {
+      // 90s timeout + 1 retry on timeout (= 12 週 × 5-8 タスクで重い JSON)
+      async function _callRoadmap(){
+        const opts = { timeout: 90000 };
+        const payload = {
           model: 'claude-sonnet-4-6',
           max_tokens: 8000,
           messages: [{ role: 'user', content: prompt }],
-        });
+        };
+        try {
+          return await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+            { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+            payload, opts);
+        } catch(e){
+          if(/timeout/i.test(String((e && e.message) || ''))){
+            console.warn('[roadmap-gen] timeout, retrying once…');
+            return await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+              { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+              payload, opts);
+          }
+          throw e;
+        }
+      }
+      const apiResp = await _callRoadmap();
       if(apiResp.s < 200 || apiResp.s >= 300){
         const apiMsg = (apiResp.d && apiResp.d.error && apiResp.d.error.message) || '';
         const apiType = (apiResp.d && apiResp.d.error && apiResp.d.error.type) || '';

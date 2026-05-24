@@ -4086,9 +4086,17 @@ async function _autoSetupSiteFromGa4(siteId, opts){
       }
       var sp = speakerFields(speakerKeywords);
       var msg = { role:'assistant', content: text, time: now(), system_action: true };
+      // thread parent があれば子 msg として thread drawer に流す
+      if(window._currentChainParent && window._currentChainAg === ag){
+        msg.thread_parent_id = window._currentChainParent;
+      }
       Object.assign(msg, sp);
       ag.history.push(msg);
       try { renderMsgs(ag, true); } catch(_){}
+      // thread drawer も再描画 (= 即時に新 msg が drawer に出る)
+      try {
+        if(typeof _renderThreadDrawer === 'function' && window._activeThreadParent) _renderThreadDrawer();
+      } catch(_){}
       // server 永続化 (= リロード後も AI 部員発言が会話履歴に残る)
       try { _persistChatMsg(ag.id, msg); } catch(_){}
     }
@@ -4171,6 +4179,8 @@ async function _autoSetupSiteFromGa4(siteId, opts){
         if(ag.id === activeId) renderMsgs(ag, true);
       }
     } catch(_){}
+    // chain 終了 → thread parent context を clear (= 次の chain は別 thread)
+    try { window._currentChainParent = null; window._currentChainAg = null; } catch(_){}
   }
 }
 
@@ -4353,20 +4363,31 @@ function _invokeChatAction(aid){
 // 「AI が動いてる感」 を演出)、 そして実処理を fire。
 function _triggerChatAction(ag, userText, assistantText, runFn){
   if(!ag || !ag.history) ag.history = [];
+  // 2026-05-25 thread-first: chain の進捗 msg を thread drawer に集約。
+  // user msg + 最初の AI ack msg を main chat に。 ack msg に id を振って
+  // thread parent にする → 後続 chain msg は thread_parent_id 付きで drawer 行き。
+  var parentId = 'tp_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   var uMsg = { role:'user',      content: userText,      time: now() };
-  var aMsg = { role:'assistant', content: assistantText, time: now(), system_action: true };
+  var aMsg = { role:'assistant', content: assistantText, time: now(), system_action: true, id: parentId };
   ag.history.push(uMsg);
   ag.history.push(aMsg);
+  window._currentChainParent = parentId;  // 後続の chatMsg がこれを使う
+  window._currentChainAg = ag;
   try { renderMsgs(ag, true); } catch(_){}
-  try { _renderChatActionCards(ag); } catch(_){}  // 状況変化したかも → 再評価
-  // ── 永続化 — リロード後も synthetic msg を残すため server に append ──
+  try { _renderChatActionCards(ag); } catch(_){}
+  // server 永続化
   try {
     api('POST', '/api/agents/'+encodeURIComponent(ag.id)+'/history/append', { msgs: [uMsg, aMsg] })
       .catch(function(e){ console.warn('[trigger-action] history persist failed', e && e.message); });
   } catch(_){}
-  // 実処理発火
+  // 実処理発火 + thread drawer を auto-open (= 「AI が thread で動いてる」 UX)
   if(typeof runFn === 'function'){
     try { runFn(); } catch(e){ console.warn('[trigger-action] runFn failed', e); }
+    try {
+      setTimeout(function(){
+        if(typeof _openThread === 'function') _openThread(parentId);
+      }, 300);  // delay = chain の最初の chatMsg が history に積まれるのを待つ
+    } catch(_){}
   }
 }
 

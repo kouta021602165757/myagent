@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1779636500907">
+<link rel="stylesheet" href="/app.css?v=1779637072000">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -793,7 +793,7 @@
         <!-- Store hidden 2026-05-24 — 一旦非表示
         <button class="snav-item" data-tab="creator" onclick="switchStab(this,'s-creator')"><span class="snav-ic">🏪</span><span data-i18n="sNavCreator">クリエイター</span><span class="snav-badge" data-i18n="sBadgeNew">NEW</span></button>
         -->
-        <button class="snav-item" data-tab="integrations" onclick="switchStab(this,'s-integrations');_loadIntegrations()"><span class="snav-ic">🔌</span><span>Integrations</span></button>
+        <!-- Integrations tab hidden 2026-05-25 — per-site 接続 tab で代替 -->
         <button class="snav-item" data-tab="memory" onclick="switchStab(this,'s-memory');_loadMemoryAll()"><span class="snav-ic">🧠</span><span>記憶</span></button>
         <button class="snav-item" data-tab="data" onclick="switchStab(this,'s-data')"><span class="snav-ic">📦</span><span data-i18n="sNavData">データ</span></button>
 
@@ -1164,35 +1164,7 @@
           </section>
         </div>
 
-        <!-- 🔌 Integrations -->
-        <div id="s-integrations" class="snav-pane" style="display:none">
-          <h3 class="spane-h">🔌 連携サービス</h3>
-          <div class="spane-sub">50 個のサービスを 1 クリックで AI に接続。OAuth / API キー / MCP を統一 UI で。</div>
-
-          <!-- Catalog renders here. _loadIntegrations() hits /api/me/integrations/catalog -->
-          <div id="intgCatalog" style="margin-top:14px"></div>
-
-          <!-- Advanced: custom MCP servers / Webhooks (preserved from old UI) -->
-          <details style="margin-top:24px;background:#f9f8f5;border:1px solid var(--wire);border-radius:11px;padding:14px 16px">
-            <summary style="cursor:pointer;font-size:13px;font-weight:900;color:var(--text);list-style:none">🔧 上級者向け — カスタム MCP サーバー</summary>
-            <div style="margin-top:10px;font-size:12px;color:var(--text2);line-height:1.6">
-              カタログにないサービスも MCP プロトコル経由で追加できます。Anthropic 公式 MCP サーバー・自作サーバー・社内 API などを直接登録。<br>
-              <span style="color:var(--text3);font-size:11px">主要サーバー: <a href="https://mcp.zapier.com" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">Zapier MCP</a> · <a href="https://github.com/modelcontextprotocol/servers" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">公式サーバー一覧</a></span>
-            </div>
-            <div id="mcpServersList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;margin-bottom:12px"></div>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button type="button" onclick="_mcpPresetZapier()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🚀 Zapier MCP</button>
-                <button type="button" onclick="_mcpPresetGitHub()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">🐙 GitHub Official</button>
-                <button type="button" onclick="_mcpPresetNotion()" style="background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit">📝 Notion</button>
-              </div>
-              <input id="mcpAddName" placeholder="名前 (例: Zapier)" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:inherit">
-              <input id="mcpAddUrl"  placeholder="https://mcp.example.com/sse" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12.5px;font-family:ui-monospace,monospace">
-              <input id="mcpAddAuth" type="password" placeholder="Authorization ヘッダ (任意, 例: Bearer xxxxx)" autocomplete="off" style="padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-size:12px;font-family:ui-monospace,monospace">
-              <button type="button" onclick="_mcpAddServer()" class="btn-primary" style="padding:9px;font-size:12.5px">+ 接続して試す</button>
-            </div>
-          </details>
-        </div>
+        <!-- 🔌 Integrations panel removed 2026-05-25 — per-site 接続 tab で代替 -->
 
         <!-- 🧠 記憶 — unified "what AI remembers about you" page -->
         <div id="s-memory" class="snav-pane" style="display:none">
@@ -2207,7 +2179,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1779636500907"></script>
+<script defer src="/app.js?v=1779637072000"></script>
 
 <script>
 (function(){

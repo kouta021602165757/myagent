@@ -8938,9 +8938,51 @@ function renderMsgs(ag, forceScrollBottom){
   el.innerHTML='<div class="msgs-inner" id="msgsInner"></div>';
   const inner=document.getElementById('msgsInner');
   if(!ag.history||!ag.history.length){
-    // Fresh agent: a bare "talk to me about anything" greeting is the #1
-    // onboarding drop-off — users create an agent then never send a message.
-    // Show concrete one-click starter prompts so they actually begin.
+    // Fresh chat — site agent なら「AI チーム全員ショーケース」 を出す
+    // (= 「こんな agents いっぱい作られたの？」 という驚き演出。 funnel 18→9 対策)
+    var teamShowcase = '';
+    if(_isSiteAgent(ag) && ag.org && Array.isArray(ag.org.departments) && ag.org.departments.length > 0){
+      var totalMems = 0;
+      ag.org.departments.forEach(function(d){
+        (d.teams || []).forEach(function(t){ totalMems += (t.members || []).length; });
+      });
+      var deptCnt = ag.org.departments.length;
+      var hostnameShort = (function(){
+        try { return new URL(ag.site_url || ('https://' + (ag.name || ''))).hostname.replace(/^www\./,''); }
+        catch(_){ return ag.name || 'あなたのサイト'; }
+      })();
+      var deptsHTML = ag.org.departments.map(function(d, di){
+        var members = [];
+        (d.teams || []).forEach(function(t){ (t.members || []).forEach(function(m){ members.push(m); }); });
+        var memChips = members.map(function(m, mi){
+          var initial = (m.name || '?').slice(0, 2);
+          return '<div class="ts-mem" style="animation-delay:' + (di * 80 + mi * 30) + 'ms" title="' + esc(m.name || '') + ' — ' + esc(m.focus || m.role || '') + '">'
+            + '<span class="ts-mem-av">' + esc(initial) + '</span>'
+            + '<span class="ts-mem-nm">' + esc(m.name || '') + '</span>'
+            + '</div>';
+        }).join('');
+        var deptColor = d.color || '#a3e635';
+        return '<div class="ts-dept" style="--ts-c:' + deptColor + '">'
+          + '<div class="ts-dept-h">'
+          +   '<span class="ts-dept-ic">' + (d.icon || '🏢') + '</span>'
+          +   '<span class="ts-dept-nm">' + esc(d.name || '') + '</span>'
+          +   '<span class="ts-dept-cnt">' + members.length + ' 名</span>'
+          + '</div>'
+          + '<div class="ts-mem-list">' + memChips + '</div>'
+          + '</div>';
+      }).join('');
+      teamShowcase = '<div class="ts-wrap">'
+        + '<div class="ts-hero">'
+        +   '<div class="ts-hero-badge">🎉 AI CHIEF OF STAFF</div>'
+        +   '<div class="ts-hero-h">' + esc(hostnameShort) + ' 用の AI チーム<br><b>' + totalMems + ' 名</b> が稼働中</div>'
+        +   '<div class="ts-hero-sub">' + deptCnt + ' 部門 × ' + totalMems + ' 名の専門家。 あなたの代わりに 24/7 で集客 / 分析 / 制作を担当します。</div>'
+        + '</div>'
+        + '<div class="ts-depts">' + deptsHTML + '</div>'
+        + '<div class="ts-foot">↓ <b>下のチャットで仕事を依頼してください</b>。 何から始めるかは AI が提案してくれます ↓</div>'
+        + '</div>';
+    }
+
+    // Starter chips (= 旧 fallback、 site agent 以外で使う)
     var _starters = (Array.isArray(ag.skills)?ag.skills:[]).flatMap(function(s){ return (typeof CHIPS!=='undefined' && CHIPS[s]) || []; });
     if(_starters.length < 3){
       _starters = _starters.concat(isJa
@@ -8953,9 +8995,16 @@ function renderMsgs(ag, forceScrollBottom){
     }).join('');
     var _greet = 'はじめまして！'+esc(ag.name)+'です 👋\n\n'
       + (isJa?'下のボタンから、気軽に始めてみてください。':'Pick one below to get started.');
-    inner.innerHTML = _renderMsg('assistant',ag,_greet,now(),null,-1,null)
-      + '<div class="starter-wrap"><div class="starter-label">💡 '+(isJa?'こう始めてみましょう':'Try starting with')+'</div>'
-      + '<div class="starter-list">'+_startersHtml+'</div></div>';
+
+    if(teamShowcase){
+      // Site agent: showcase 主役、 greeting + chip は控えめ
+      inner.innerHTML = teamShowcase;
+    } else {
+      // Legacy agent: 旧フォーマット
+      inner.innerHTML = _renderMsg('assistant',ag,_greet,now(),null,-1,null)
+        + '<div class="starter-wrap"><div class="starter-label">💡 '+(isJa?'こう始めてみましょう':'Try starting with')+'</div>'
+        + '<div class="starter-list">'+_startersHtml+'</div></div>';
+    }
     el.scrollTop = el.scrollHeight;
     window._chatJustOpened = false;
     _updateScrollFAB();

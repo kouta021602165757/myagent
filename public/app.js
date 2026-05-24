@@ -7096,6 +7096,14 @@ function _renderTabSettings(site){
             '別件の新規スレッドを開く (履歴は残る)。',
             '新規依頼',
             "openSite('" + esc(site.id) + "');setTimeout(newChat,150)")
+    + '</div>'
+    // ── 危険ゾーン: サイト (= AI チーム) を削除 ──
+    + '<div class="sd-set-group sd-set-danger">'
+    +   '<div class="sd-set-group-h">⚠️ 危険ゾーン</div>'
+    +   _row('🗑', '#dc2626', 'このサイトを削除',
+            '会話履歴 / 納品物 / 戦略 / KPI / ロードマップ / 接続設定すべて消えます。 元に戻せません。',
+            '削除する',
+            "_confirmDeleteSite('" + esc(site.id) + "')")
     + '</div>';
 }
 

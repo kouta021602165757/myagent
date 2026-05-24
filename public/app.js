@@ -2605,6 +2605,91 @@ function goSiteDashboard(tab){
   if(el) el.scrollTop = 0;
 }
 
+// ── Chat header toolbar: 7 icon-only buttons → on-demand panels ──
+// 旧 "📊 ダッシュボード" 1 ボタンを廃止して機能ごとに直接アクセス可能に。
+// Phase 1: 既存のダッシュボードタブを backend として再利用 (= goSiteDashboard
+// で対応 tab を pre-select)。Phase 2 でそれぞれを独立 modal にリファクタ予定。
+window.openNumbersPanel = function(siteId){ goSiteDashboard('numbers'); };
+window.openStrategyPanel = function(siteId){ goSiteDashboard('strategy'); };
+window.openTasksPanel = function(siteId){ goSiteDashboard('tasks'); };
+window.openConnectionsPanel = function(siteId){ goSiteDashboard('connections'); };
+window.openSiteSettingsPanel = function(siteId){ goSiteDashboard('settings'); };
+
+// 毎日分析 — 新規機能。Phase 1: AI が GA4 データ + 今日のタスク状況を元に
+// Haiku で短い解釈を生成 → note (type='daily') に保存。modal 表示。
+window.openDailyAnalysisPanel = async function(siteId){
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
+  // 既存 overlay 削除
+  var ex = document.getElementById('dailyAnaOverlay');
+  if(ex) ex.remove();
+  var ov = document.createElement('div');
+  ov.id = 'dailyAnaOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:14px;font-family:inherit';
+  ov.innerHTML =
+    '<div style="background:var(--cream);border-radius:16px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18)">'
+    +  '<div style="padding:16px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px">'
+    +    '<div style="font-size:24px">📰</div>'
+    +    '<div style="flex:1">'
+    +      '<div style="font-size:15px;font-weight:900;color:var(--text)">'+L('毎日分析','Daily analysis')+'</div>'
+    +      '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('AI が GA4 + タスク状況から今日の解釈を書く','AI commentary on today\'s metrics + task progress')+'</div>'
+    +    '</div>'
+    +    '<button onclick="document.getElementById(\'dailyAnaOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px">×</button>'
+    +  '</div>'
+    +  '<div id="dailyAnaBody" style="flex:1;overflow-y:auto;padding:22px">'
+    +    '<div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">'
+    +      L('「+ 今日の分析を生成」を押すと、AI がチームの今日の活動 + GA4 数字 + 今週のタスク進捗をまとめて 1 件の分析メモにします。生成された分析は 📒 メモ帳の「daily」種別として残ります。','Click "Generate today\'s analysis" — AI will summarize today\'s activity, GA4 numbers, and task progress into a single note. Saved as type=daily in 📒 Notebook.')
+    +    '</div>'
+    +    '<button onclick="_runDailyAnalysis(\''+esc(siteId)+'\')" id="dailyAnaGenBtn" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('今日の分析を生成','Generate today\'s analysis')+'</button>'
+    +    '<div style="margin-top:22px;border-top:1px solid var(--wire);padding-top:18px">'
+    +      '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去の毎日分析','Past daily analyses')+'</div>'
+    +      '<div id="dailyAnaList" style="font-size:12.5px;color:var(--text3)">'+L('まだありません','None yet')+'</div>'
+    +    '</div>'
+    +  '</div>'
+    + '</div>';
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  // Hydrate the past list (notes with type='daily')
+  try {
+    var r = await api('GET', '/api/me/notes');
+    var dailies = (r && r.notes || []).filter(function(n){return n.type === 'daily' && (!n.agent_id || n.agent_id === siteId);});
+    var box = document.getElementById('dailyAnaList');
+    if(box){
+      if(!dailies.length){
+        box.innerHTML = '<span style="color:var(--text3)">'+L('まだありません','None yet')+'</span>';
+      } else {
+        box.innerHTML = dailies.slice(0, 10).map(function(n){
+          var when = (n.updated_at||'').slice(5,10).replace('-','/');
+          return '<div onclick="document.getElementById(\'dailyAnaOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(n.id)+'\')" style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;background:var(--cream);border:1px solid var(--wire2);margin-bottom:6px" onmouseover="this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.borderColor=\'var(--wire2)\'">'
+            + '<span style="font-size:14px">📰</span>'
+            + '<span style="flex:1;font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n.title || '無題')+'</span>'
+            + '<span style="font-size:10.5px;color:var(--text3);font-weight:600">'+esc(when)+'</span>'
+            + '</div>';
+        }).join('');
+      }
+    }
+  } catch(_){}
+};
+
+// 毎日分析を AI 実行 — chat に 「今日の分析をして、メモ帳に保存して。」 を送って
+// 既存 AI / tool / note pipeline を再利用する。新しい server endpoint を追加せず
+// に Phase 1 を成立させるための単純化策。
+window._runDailyAnalysis = function(siteId){
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
+  // overlay を閉じてチャット画面に戻す → composer に prompt をセット → 自動送信
+  var ov = document.getElementById('dailyAnaOverlay');
+  if(ov) ov.remove();
+  if(activeId !== siteId){ openAgent(siteId); }
+  setTimeout(function(){
+    var ci = document.getElementById('ci');
+    if(!ci) return;
+    ci.value = '【毎日分析】今日の GA4 数字 + 今週の進捗 + 直近 24 時間で AI チームがやったことを 1 ページの分析メモにまとめて。後で見返せるように Markdown で 4-6 セクション、必ず最後に「明日やるべき 3 つ」を提案して。';
+    try { exTA(ci); } catch(_){}
+    try { if(typeof sendMsg === 'function') sendMsg(); } catch(_){}
+  }, 200);
+};
+
 /* ── Onboarding kickoff: signup 直後にチャット画面で artifact 生成を live 表示 ──
    /api/onboarding/site で agent を作った直後、auth.html が /app.html?agent_id=X&kickoff=1
    に redirect する。ここでチャットを開いた後、SSE で 6 artifact 並列生成の進捗を
@@ -8527,8 +8612,17 @@ async function openAgent(id){
     // 他のアクション (🔗 共有 / 💬 会話共有 / ↻ 新規 / 📝 メモ / ⚙ 設定) は
     // ダッシュボード内のアクションパネルに集約 — chat header をスッキリ。
     if(_isSiteAgent(ag)){
-      actsHTML += '<button class="ct-act notes-btn" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('ノート (AI が作った成果物 ・ 手動メモを一覧編集)','Notes (AI artifacts & manual memos)')+'">📒</button>';
-      actsHTML += '<button class="ct-act dashboard-btn" onclick="goSiteDashboard()" title="'+L('ダッシュボード (KPI ・ 納品物 ・ 進捗)','Dashboard')+'">📊 ダッシュボード</button>';
+      // ── サイト用 7 ボタンツールバー (icon-only + tooltip) ──
+      // ダッシュボード page を廃止して、機能ごとに on-demand modal を開く設計。
+      // 順序: 毎日分析 / 数字分析 / 戦略KPI / タスク / 接続 / メモ帳 / 設定
+      var _siteId = esc(ag.id);
+      actsHTML += '<button class="ct-act ct-tool" onclick="openDailyAnalysisPanel(\''+_siteId+'\')" title="'+L('毎日分析 — AI が毎朝書く解釈・所見','Daily analysis — AI commentary')+'">📰</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 の生データ・KPI','Numbers — GA4 metrics / KPI')+'">📊</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('戦略・KPI — ペルソナ・競合・6ヶ月目標','Strategy / KPI')+'">🎯</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('タスク一覧 — 8 週ロードマップ + 進捗','Tasks — 8-week roadmap')+'">📋</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openConnectionsPanel(\''+_siteId+'\')" title="'+L('接続 — GA4 / SNS / OAuth','Connections')+'">🔌</button>';
+      actsHTML += '<button class="ct-act ct-tool notes-btn" onclick="openNotesPanel(\''+_siteId+'\')" title="'+L('メモ帳 — AI 成果物 + 手動メモ','Notebook — AI artifacts + manual memos')+'">📒</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openSiteSettingsPanel(\''+_siteId+'\')" title="'+L('設定 — サイト名 / 削除','Settings — site config')+'">⚙️</button>';
     } else {
       actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
       actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';

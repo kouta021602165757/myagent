@@ -5461,6 +5461,11 @@ input,textarea{font-family:var(--sans);}
   transition:all .14s;font-family:inherit;
 }
 .ct-act:hover{background:var(--cream3);color:var(--text);border-color:rgba(192,255,92,.3);}
+/* Icon-only toolbar buttons (7 site action icons replacing the old dashboard btn) */
+.ct-act.ct-tool{font-size:16px;}
+.ct-act.ct-tool:hover{transform:translateY(-1px);}
+.ct-act.ct-tool.notes-btn{background:var(--peach-soft);border-color:rgba(192,255,92,.32);color:var(--peach-dark);}
+.ct-act.ct-tool.notes-btn:hover{background:rgba(192,255,92,.18);}
 .ct-act.primary{background:rgba(192,255,92,.1);color:var(--peach-dark);border-color:rgba(192,255,92,.25);}
 .ct-act.primary:hover{background:rgba(192,255,92,.18);}
 /* 「📊 ダッシュボード」 ボタン — site agent のチャット上部、最も目立つ位置 */

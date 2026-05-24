@@ -3797,14 +3797,96 @@ function _ga4PickProperty(siteId, propertyId){
     .then(function(r){
       if(!r || !r.ok) throw new Error((r && r.error) || 'set property failed');
       _closeGa4PropertyPicker();
-      showToast('GA4 プロパティを保存しました。数字を取得中…','ok');
+      showToast('GA4 プロパティを保存しました。 数字 → 戦略 → KPI → ロードマップ を自動生成します…','ok');
       // Clear cache to force refetch
       if(window._ga4Snapshots) delete window._ga4Snapshots[siteId];
       _fetchGa4Snapshot(siteId, { force: true });
+      // Full auto-setup chain (snapshot → strategy → KPI → roadmap)
+      _autoSetupSiteFromGa4(siteId);
     })
     .catch(function(e){
       if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-size:13px">'+esc(e.message||'failed')+'</div>';
     });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 自動セットアップチェーン (GA4 接続後の 1 click 全自動)
+//   1) 戦略 (persona + competitors + kpi_6mo) を Sonnet 生成
+//   2) kpi_6mo[0] を site.kpi に自動セット
+//   3) ロードマップ (12 週 × 5-8 tasks) を Sonnet 生成
+//   4) 各 step で toast + dashboard 再描画
+// 既に生成済みの step はスキップ (force:true 指定時は再生成)
+// ═══════════════════════════════════════════════════════════════════
+async function _autoSetupSiteFromGa4(siteId, opts){
+  if(!siteId) return;
+  opts = opts || {};
+  var force = !!opts.force;
+  // 二重実行ガード
+  window._autoSetupInFlight = window._autoSetupInFlight || {};
+  if(window._autoSetupInFlight[siteId]){
+    showToast('セットアップ既に実行中です','ok'); return;
+  }
+  window._autoSetupInFlight[siteId] = true;
+  // 現在の site agent
+  var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
+  if(!ag){ window._autoSetupInFlight[siteId] = false; return; }
+
+  function setStep(idx, label){
+    try { showToast('('+idx+'/3) '+label, 'ok'); } catch(_){}
+  }
+  function reload(){
+    try { renderHomeDashboard(); } catch(_){}
+  }
+
+  try {
+    // ── Step 1: 戦略生成 ──
+    if(force || !ag.strategy){
+      setStep(1, '🤖 戦略を作成中… (約 30 秒)');
+      var sR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/strategy/generate');
+      if(sR && sR.strategy){
+        ag.strategy = sR.strategy;
+        reload();
+      } else if(sR && sR.error){
+        throw new Error('戦略生成: ' + (sR.detail || sR.error));
+      }
+    }
+
+    // ── Step 2: KPI 自動セット (= strategy.kpi_6mo[0] = 月 1 の数値) ──
+    var kp = ag.strategy && Array.isArray(ag.strategy.kpi_6mo) && ag.strategy.kpi_6mo[0];
+    if(kp && (force || !ag.kpi || (!ag.kpi.pv && !ag.kpi.cvr && !ag.kpi.leads))){
+      setStep(2, '🎯 KPI 目標を保存中…');
+      var kR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/kpi', {
+        pv: parseInt(kp.pv, 10) || 0,
+        cvr: parseFloat(kp.cvr) || 0,
+        leads: parseInt(kp.leads, 10) || 0,
+      });
+      if(kR && kR.kpi){
+        ag.kpi = kR.kpi;
+        reload();
+      }
+    }
+
+    // ── Step 3: ロードマップ生成 ──
+    var hasRoadmap = ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0;
+    if(force || !hasRoadmap){
+      setStep(3, '🗺 12 週間のロードマップを作成中… (約 30 秒)');
+      var rR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/roadmap/generate');
+      if(rR && rR.roadmap){
+        ag.roadmap = rR.roadmap;
+        reload();
+      } else if(rR && rR.error){
+        throw new Error('ロードマップ生成: ' + (rR.detail || rR.error));
+      }
+    }
+
+    showToast('✓ セットアップ完了! 戦略・KPI・ロードマップが揃いました','ok');
+    reload();
+  } catch(e){
+    console.warn('[autosetup] failed:', e);
+    showToast('セットアップ失敗: ' + (e.message || 'unknown'), 'ng');
+  } finally {
+    window._autoSetupInFlight[siteId] = false;
+  }
 }
 
 /* Home dashboard — サイトベースに完全リライト。
@@ -5010,21 +5092,17 @@ function _renderTabStrategy(site, allArts){
     return ''
       + '<div class="st-empty">'
       +   '<div class="st-empty-ic">🎯</div>'
-      +   '<div class="st-empty-ti">AI に「6 ヶ月戦略」を作らせる</div>'
+      +   '<div class="st-empty-ti">🪄 AI に全部一気に作らせる</div>'
       +   '<div class="st-empty-tx">'
-      +     'AI がサイトを分析して、以下を自動で作成します:<br>'
+      +     'AI がサイトを分析して、以下を <b>一気通貫</b> で自動生成します:<br>'
       +     '・<b>ターゲットペルソナ</b> — 年齢層 / 痛みポイント / 購買動機<br>'
       +     '・<b>競合分析</b> — 3 社の強み・弱み・差別化ポイント<br>'
-      +     '・<b>6 ヶ月 KPI シート</b> — 月別の数値目標 + マイルストーン'
+      +     '・<b>6 ヶ月 KPI シート</b> — 月別の数値目標 + マイルストーン<br>'
+      +     '・<b>月 1 KPI を自動セット</b> (= 上記の最初の月)<br>'
+      +     '・<b>12 週間ロードマップ</b> — 各週 5-8 タスクを AI 部門に自動割り振り'
       +   '</div>'
-      +   (hasKpi
-          ? '<button class="st-empty-cta" onclick="_generateStrategy(\'' + esc(site.id) + '\', this)">🤖 戦略を生成する <span class="arrow">→</span></button>'
-          : '<div class="st-empty-warn">⚠️ まず KPI 目標を設定すると、より精度の高い戦略が立てられます</div>'
-            + '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'
-            + '<button class="st-empty-cta st-empty-cta-secondary" onclick="openKpiModal(\'' + esc(site.id) + '\')">🎯 KPI を先に設定</button>'
-            + '<button class="st-empty-cta" onclick="_generateStrategy(\'' + esc(site.id) + '\', this)">スキップして生成</button>'
-            + '</div>')
-      +   '<div class="st-empty-note">生成には約 30-60 秒かかります。途中で閉じても OK です。</div>'
+      +   '<button class="st-empty-cta" onclick="_autoSetupSiteFromGa4(\'' + esc(site.id) + '\')">🚀 自動でフルセットアップ <span class="arrow">→</span></button>'
+      +   '<div class="st-empty-note">所要時間: 約 60-90 秒。 戦略のみ作るなら <a href="#" onclick="event.preventDefault();_generateStrategy(\'' + esc(site.id) + '\', null)" style="color:var(--peach-dark);font-weight:700">こちら</a></div>'
       + '</div>';
   }
 

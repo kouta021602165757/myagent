@@ -14768,7 +14768,7 @@ async function _runOneSchedule(user, agent, sched){
       { role:'assistant', content: finalReply, time: ts, cost_jpy: cost.jpy, scheduled:true,
         tool_log: toolLog.length ? toolLog : undefined },
     ];
-    if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+    if(agent.history.length > 500) agent.history = agent.history.slice(-500);
     user.balance_jpy = Math.round(((user.balance_jpy||0) - cost.jpy) * 1000) / 1000;
 
     // Auto-deliver email — skip if the AI already called send_email itself
@@ -16618,7 +16618,7 @@ async function handleAPI(req,res,pathname,method,ip){
         { role:'user', content: message, time: ts, via:'inbound_email', from: from, subject: subject },
         { role:'assistant', content: reply, time: ts, cost_jpy: cost.jpy, via:'inbound_email' },
       ];
-      if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+      if(agent.history.length > 500) agent.history = agent.history.slice(-500);
       owner.balance_jpy = Math.round(((owner.balance_jpy||0) - cost.jpy)*1000)/1000;
       try { await DB.save(owner); } catch(e){ console.warn('[inbound] save failed:', e.message); }
       let email_back = false;
@@ -20884,13 +20884,13 @@ ${orgSummary || '(汎用チーム)'}
       my_role: ((ag.members||[]).find(m => m && m.user_id === user.id) || {}).role || (isCallerHost ? 'host' : 'contributor'),
       // Pending join requests — host-only
       pending_requests: isCallerHost ? (ag.pending_requests||[]) : [],
-      // Full chat history (last 200 entries) so members see prior conversation.
+      // Full chat history (last 500 entries) so members see prior conversation.
       name: ag.name,
       avatar: ag.avatar,
       skills: ag.skills || [],
       persona: ag.persona || '',
       ai_auto_respond: ag.ai_auto_respond,  // undefined → use size heuristic
-      history: (ag.history || []).slice(-200),
+      history: (ag.history || []).slice(-500),
     });
   }
 
@@ -21034,7 +21034,7 @@ ${orgSummary || '(汎用チーム)'}
         time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
         content: pending.name + ' さんが参加しました',
       }];
-      if(ag.history.length > 200) ag.history = ag.history.slice(-200);
+      if(ag.history.length > 500) ag.history = ag.history.slice(-500);
       await DB.save(user);
       // Add membership on the approved user's record
       const approvedUser = await DB.findBy('id', pending.user_id);
@@ -21245,7 +21245,7 @@ ${orgSummary || '(汎用チーム)'}
       time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
       content: ((user.name||'メンバー') + ' さんがグループに ¥' + amount.toLocaleString() + ' 送金しました'),
     });
-    if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+    if(agent.history.length > 500) agent.history = agent.history.slice(-500);
 
     user.billing_history = user.billing_history || [];
     user.billing_history.push({date:new Date().toISOString(),type:'contribute_out',agentId:agent.id,agentName:agent.name,host_user_id:host.id,amount_jpy:amount});
@@ -21829,7 +21829,7 @@ ${orgSummary || '(汎用チーム)'}
       time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
       content: ((user.name||'メンバー') + ' さんが参加しました'),
     }];
-    if(found.agent.history.length > 200) found.agent.history = found.agent.history.slice(-200);
+    if(found.agent.history.length > 500) found.agent.history = found.agent.history.slice(-500);
     await DB.save(found.host);
 
     // Add membership entry on the joining user's record (unless they ARE the host)
@@ -23421,7 +23421,7 @@ ${orgSummary || '(汎用チーム)'}
         user_name: speakerName,
         user_avatar: speakerInitial,
       }];
-      if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+      if(agent.history.length > 500) agent.history = agent.history.slice(-500);
       const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
       if(ai>=0) payerUser.agents[ai] = agent;
       await DB.save(payerUser);
@@ -23595,7 +23595,7 @@ ${orgSummary || '(汎用チーム)'}
           cost_usd: cost.usd, cost_jpy: cost.jpy, mode: 'huddle',
         });
         if(payerUser.billing_history.length>1000) payerUser.billing_history = payerUser.billing_history.slice(-1000);
-        if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+        if(agent.history.length > 500) agent.history = agent.history.slice(-500);
         const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
         if(ai>=0) payerUser.agents[ai] = agent;
         await DB.save(payerUser);
@@ -23830,7 +23830,7 @@ ${orgSummary || '(汎用チーム)'}
             { id:_newUid, role:'user', content:message, time:ts },
             { id:_newAid, role:'assistant', content:reply, time:ts, cost_jpy:cost.jpy, plan_mode:true, thread_parent_id:_newUid }
           ];
-          if(agent.history.length>200) agent.history = agent.history.slice(-200);
+          if(agent.history.length>500) agent.history = agent.history.slice(-500);
           payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
           payerUser.usage_count = (payerUser.usage_count||0) + 1;
           payerUser.billing_history = payerUser.billing_history || [];
@@ -23949,7 +23949,7 @@ ${orgSummary || '(汎用チーム)'}
             _userMsgEntry,
             {id:_newAid,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent}];
         }
-        if(agent.history.length>200) agent.history = agent.history.slice(-200);
+        if(agent.history.length>500) agent.history = agent.history.slice(-500);
         _awardAgentXp(agent);  // Phase 1: level/XP progression
         payerUser.balance_jpy = Math.round(((payerUser.balance_jpy||0) - cost.jpy)*1000)/1000;
         payerUser.usage_count = (payerUser.usage_count||0) + 1;
@@ -24749,7 +24749,7 @@ ${orgSummary || '(汎用チーム)'}
         _userMsgEntry2,
         {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent2}];
     }
-    if(agent.history.length>200)agent.history=agent.history.slice(-200);
+    if(agent.history.length>500)agent.history=agent.history.slice(-500);
     // ── current_task の進捗を更新 ────────────────────────────────
     // 1) reply 本文の「✅ ステップN 完了」マーカーで明示済み step を done に
     // 2) 加えて、このターンで mutating tool (create_artifact / edit_artifact /
@@ -25517,7 +25517,7 @@ const server=http.createServer(async(req,res)=>{
           { role:'user', content: message, time: ts, via:'webhook' },
           { role:'assistant', content: reply, time: ts, cost_jpy: cost.jpy, via:'webhook' },
         ];
-        if(agent.history.length > 200) agent.history = agent.history.slice(-200);
+        if(agent.history.length > 500) agent.history = agent.history.slice(-500);
         owner.balance_jpy = Math.round(((owner.balance_jpy||0) - cost.jpy)*1000)/1000;
         // Record billing with via:'webhook' so the daily-cap counter above can
         // see it on the next request.

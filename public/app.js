@@ -8343,6 +8343,9 @@ async function openAgent(id){
   } catch(e){}
   document.querySelectorAll('.ag-item').forEach(el=>el.classList.remove('on'));
   document.getElementById('ai-'+id)?.classList.add('on');
+  // Site sidebar (`.ag-site`) uses `.active`, not `.on` — refresh that too so
+  // the selected pill matches `activeId` after a site switch.
+  try { renderAgList(); } catch(_){}
 
   // Start/stop live polling: only groups need it (DMs are single-user).
   if(ag.is_group){

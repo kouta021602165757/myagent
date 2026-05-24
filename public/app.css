@@ -3886,6 +3886,72 @@ input,textarea{font-family:var(--sans);}
   letter-spacing:-.005em;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+
+/* 接続先の verify-able 表示 (= どこに繋がってるか visible) */
+.nu-sns-prof{
+  display:flex; flex-direction:column; gap:4px;
+  padding:8px 10px; margin:0 0 8px;
+  background:rgba(0,0,0,.025);
+  border:1px solid #e5e5e7; border-radius:9px;
+}
+.nu-sns-prof-handle{
+  font-size:12px; font-weight:800; color:#1a1a1a;
+  letter-spacing:-.005em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.nu-sns-prof-url{
+  font-family:'SF Mono','JetBrains Mono',monospace;
+  font-size:10.5px; color:#525252;
+  text-decoration:none;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.nu-sns-prof-url:hover{color:#0a0a0e; text-decoration:underline}
+
+.nu-sns-scope{
+  display:inline-block;
+  font-size:9.5px; font-weight:800;
+  padding:2px 7px; border-radius:99px;
+  letter-spacing:.02em;
+  margin-top:2px; width:fit-content;
+}
+.nu-sns-scope-site{
+  background:rgba(163,230,53,.18); color:#65a30d;
+  border:1px solid rgba(163,230,53,.45);
+}
+.nu-sns-scope-user{
+  background:#fef3c7; color:#92400e;
+  border:1px solid #fbbf24;
+}
+.nu-sns-card-fallback{ border-style:dashed; }
+
+.nu-sns-change, .nu-sns-disconnect{
+  flex:1; font-size:11px; font-weight:700;
+  padding:6px 10px; border-radius:8px; cursor:pointer;
+  font-family:inherit; transition:all .14s;
+}
+.nu-sns-change{
+  background:#ffffff; color:#525252;
+  border:1px solid #e5e5e7;
+}
+.nu-sns-change:hover{
+  background:rgba(192,255,92,.10);
+  border-color:#a3e635; color:#1a1a1a;
+}
+.nu-sns-disconnect{
+  background:#ffffff; color:#dc2626;
+  border:1px solid #fecaca; flex:0 0 auto;
+}
+.nu-sns-disconnect:hover{
+  background:#fee2e2; border-color:#fca5a5;
+}
+.nu-sns-actions{ display:flex; gap:6px; margin-top:8px; }
+.nu-sns-actions .nu-sns-link{
+  flex:1; font-size:11px; font-weight:700;
+  padding:6px 10px; border-radius:8px;
+  background:#ffffff; color:#525252;
+  border:1px solid #e5e5e7;
+  text-decoration:none; text-align:center;
+}
 .nu-sns-stats{
   display:grid; grid-template-columns:1fr 1fr; gap:8px;
   padding:8px 0;

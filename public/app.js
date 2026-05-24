@@ -5436,6 +5436,20 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       var profUrl = _profileUrl(st.profile);
       var handle = _profileHandle(st.profile);
       var hasZeroPosts = p.hasPostTool && hist.length === 0;
+      // 接続先がどこか visible に表示 (= user フィードバック「接続先が見えない」 対応)
+      // - handle (@username / page_name etc.)
+      // - URL (clickable to verify)
+      // - scope badge: 「このサイト用」 vs 「全 site 共通 (fallback)」
+      var isFallback = !!st.fallback_from_user;
+      var scopeBadge = isFallback
+        ? '<span class="nu-sns-scope nu-sns-scope-user" title="このサイト個別ではなく user 全体の接続を使ってます。 サイト専用にしたい場合は変更してください">⚠ user 共通</span>'
+        : '<span class="nu-sns-scope nu-sns-scope-site" title="このサイト専用の接続です">✓ このサイト専用</span>';
+      var profileBox = ''
+        + '<div class="nu-sns-prof">'
+        +   (handle ? '<div class="nu-sns-prof-handle">' + esc(handle) + '</div>' : '')
+        +   (profUrl ? '<a href="' + esc(profUrl) + '" target="_blank" rel="noopener" class="nu-sns-prof-url" title="開いて確認">🔗 ' + esc(profUrl.replace(/^https?:\/\//,'').slice(0,60)) + '</a>' : '')
+        +   scopeBadge
+        + '</div>';
       var statsHTML = p.hasPostTool
         ? '<div class="nu-sns-stats">'
           + '<div class="nu-sns-stat"><div class="nu-sns-stat-v">' + hist.length + '</div><div class="nu-sns-stat-l">累計投稿</div></div>'
@@ -5446,17 +5460,18 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
       var zeroCtaHTML = hasZeroPosts
         ? '<button class="nu-sns-zero-cta" onclick="_promptAiToPost(\'' + esc(site.id) + '\',\'' + p.key + '\',' + JSON.stringify(p.name) + ')">✨ AI に最初の投稿を任せる →</button>'
         : '';
-      return '<div class="nu-sns-card on' + (hasZeroPosts ? ' nu-sns-card-zero' : '') + '" style="--nu-c:' + p.color + '">'
+      return '<div class="nu-sns-card on' + (hasZeroPosts ? ' nu-sns-card-zero' : '') + (isFallback ? ' nu-sns-card-fallback' : '') + '" style="--nu-c:' + p.color + '">'
            +   '<div class="nu-sns-h">'
            +     '<span class="nu-sns-emoji">' + p.emoji + '</span>'
            +     '<span class="nu-sns-name">' + esc(p.name) + '</span>'
            +     '<span class="nu-sns-badge on">接続済</span>'
            +   '</div>'
-           +   (handle ? '<div class="nu-sns-handle">' + esc(handle) + '</div>' : '')
+           +   profileBox
            +   statsHTML
            +   zeroCtaHTML
            +   '<div class="nu-sns-actions">'
-           +     (profUrl ? '<a href="' + esc(profUrl) + '" target="_blank" rel="noopener" class="nu-sns-link">プロフィール ↗</a>' : '')
+           +     '<button class="nu-sns-change" onclick="_openSnsConnectModal(\'' + p.key + '\',\'' + esc(site.id) + '\')" title="別のアカウントに接続し直す">✏️ ' + (isFallback ? 'このサイト専用に設定' : '変更') + '</button>'
+           +     '<button class="nu-sns-disconnect" onclick="_snsDisconnect(\'' + p.key + '\',\'' + esc(site.id) + '\',this)" title="切断">切断</button>'
            +   '</div>'
            + '</div>';
     } else {

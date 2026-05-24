@@ -1218,18 +1218,17 @@ input,textarea{font-family:var(--sans);}
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   ── Tab 1 v2: 📰 日次グロースレポート (Dark Theme) ──
+   ── Tab 1 v2: 📰 日次グロースレポート (Light Gray Theme) ──
    GA4 数字 + AI 戦略インサイト + 優先アクションを一画面に。
-   Dark navy 背景 + orange/colorful accent。
+   2026-05-24: app が light gray に flip したため palette も light に。
    ══════════════════════════════════════════════════════════════════ */
 .rp-report{
-  /* Dark theme — LP と統一 */
   --rp-bg:transparent;
-  --rp-card:#13131a;
-  --rp-card-2:#18181f;
-  --rp-line:rgba(255,255,255,.08);
-  --rp-text:#fafafa;
-  --rp-text2:#a1a1aa;
+  --rp-card:#ffffff;
+  --rp-card-2:#fafafa;
+  --rp-line:#e5e5e7;
+  --rp-text:#1a1a1a;
+  --rp-text2:#525252;
   --rp-text3:#71717a;
   --rp-orange:#c0ff5c;
   --rp-orange-dark:#a3e635;
@@ -1281,7 +1280,7 @@ input,textarea{font-family:var(--sans);}
   border:1px solid var(--rp-line);
   border-radius:14px;
   padding:18px 20px;
-  box-shadow:0 2px 8px rgba(0,0,0,.22);
+  box-shadow:0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
 }
 .rp-card-h{
   display:flex; align-items:center; gap:10px;
@@ -1312,7 +1311,8 @@ input,textarea{font-family:var(--sans);}
   box-shadow:0 4px 14px rgba(163,230,53,.06);
 }
 .rp-card-cta:hover{
-  background:linear-gradient(135deg, var(--rp-card-2), #1a213c);
+  background:linear-gradient(135deg, #ffffff, #f5f5f7);
+  border-color:var(--rp-orange-dark);
   transform:translateY(-1px);
 }
 .rp-cta-ic{
@@ -1326,7 +1326,7 @@ input,textarea{font-family:var(--sans);}
 .rp-cta-ti{font-size:14px; font-weight:900; color:var(--rp-text); margin-bottom:3px}
 .rp-cta-de{font-size:11.5px; font-weight:600; color:var(--rp-text2); line-height:1.55}
 .rp-cta-btn{
-  background:var(--rp-orange); color:#fff; border-radius:10px;
+  background:var(--rp-orange); color:#0a0a0e; border-radius:10px;
   padding:8px 14px; font-size:12px; font-weight:800;
   flex-shrink:0;
 }

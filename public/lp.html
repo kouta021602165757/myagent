@@ -370,21 +370,65 @@ img{max-width:100%;display:block;}
 .sc-step.pending{opacity:.55;}
 .sc-step.pending .sc-step-n{background:var(--line);color:var(--ink3);}
 
-/* ── Live activity log (3 lines, scrolling) ─── */
+/* ── Live activity log = 実プロダクトの chat 風 message stack ─── */
 .sc-log{
-  margin-top:14px;border:1px solid var(--line);background:#fff;
-  border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11px;
-  color:var(--ink2);min-height:78px;
+  margin-top:14px;border:1px solid var(--line);background:#fafaf7;
+  border-radius:14px;padding:14px 16px;
+  min-height:220px;max-height:240px;overflow:hidden;
+  position:relative;
 }
-.sc-log-line{
-  display:flex;align-items:flex-start;gap:8px;
-  padding:5px 0;line-height:1.5;
-  animation:scLogIn .4s ease both;
+.sc-log::after{
+  /* top の古い msg を fade out させる gradient mask */
+  content:'';position:absolute;left:0;right:0;top:0;height:30px;
+  background:linear-gradient(180deg, #fafaf7 0%, transparent 100%);
+  pointer-events:none;z-index:1;
 }
-.sc-log-line .ts{color:var(--teal);font-weight:700;flex-shrink:0;}
-.sc-log-line .ic{font-size:13px;flex-shrink:0;width:18px;text-align:center;}
-.sc-log-line .tx{color:var(--ink2);}
-@keyframes scLogIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.sc-log-inner{display:flex;flex-direction:column;gap:12px;}
+.sc-msg{
+  display:flex;align-items:flex-start;gap:11px;
+  animation:scMsgIn .45s cubic-bezier(.16,1,.3,1) both;
+}
+.sc-msg-av{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;border:1px solid var(--line);
+}
+.sc-msg-av.teal{background:var(--teal-soft);}
+.sc-msg-av.lime{background:var(--lime-soft);}
+.sc-msg-av.gold{background:var(--gold-soft);}
+.sc-msg-av.pink{background:#fce7f3;}
+.sc-msg-av.blue{background:#dbeafe;}
+.sc-msg-av.user{background:#e5e3da;color:var(--ink);font-size:13px;font-weight:800;}
+.sc-msg-body{flex:1;min-width:0;}
+.sc-msg-head{
+  display:flex;align-items:baseline;gap:8px;margin-bottom:3px;
+}
+.sc-msg-name{font-size:12px;font-weight:800;color:var(--ink);letter-spacing:-.005em;}
+.sc-msg-time{font-family:var(--mono);font-size:10px;color:var(--ink4);font-weight:600;}
+.sc-msg-bubble{
+  font-size:13px;color:var(--ink2);line-height:1.55;
+  background:#fff;border:1px solid var(--line);border-radius:11px;
+  padding:8px 12px;
+}
+.sc-msg.user .sc-msg-bubble{
+  background:var(--lime-soft);border-color:rgba(163,230,53,.45);
+  color:var(--ink);
+}
+.sc-msg-bubble b{font-weight:700;color:var(--ink);}
+
+/* tool log / artifact card style (= 実プロダクトの tlog 風) */
+.sc-tlog{
+  margin-top:6px;display:inline-flex;align-items:center;gap:7px;
+  background:#fff;border:1px solid var(--line);border-radius:9px;
+  padding:5px 10px;font-size:11px;color:var(--ink3);font-weight:600;
+}
+.sc-tlog-ic{font-size:13px;}
+.sc-tlog .ok{color:var(--teal);font-weight:700;}
+
+@keyframes scMsgIn{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
 
 /* ── SECTION COMMON ───────────────────────────────── */
 .sec{padding:110px 0;position:relative;}
@@ -731,12 +775,10 @@ img{max-width:100%;display:block;}
           </div>
         </div>
 
-        <!-- Live activity log (cycling messages) -->
+        <!-- Live chat — 実プロダクトの chat 画面と同じ msg stack -->
         <div class="sc-log" id="scLog">
-          <div class="sc-log-line">
-            <span class="ts">14:32</span>
-            <span class="ic">📊</span>
-            <span class="tx">GA4 アナリスト: 直近 7 日 PV +18%、 主因は SEO 記事 "AI 時代の DTC 戦略"</span>
+          <div class="sc-log-inner" id="scLogInner">
+            <!-- JS で sc-msg を inject、 step 進行と同期して chat msg が積み上がる -->
           </div>
         </div>
       </div>
@@ -1145,45 +1187,92 @@ function _dispatchTeam(ev, source){
   }).catch(function(){});
 })();
 
-// ── Live pipeline cycle (showcase) ────────────────
-// 6 steps を 2.5 秒間隔で 「active が進む」 様子をエンドレスに表示。
-// done → active → pending のクラス を rotate して 「いま step N をやってる」 感を演出。
+// ── Live pipeline cycle + chat-style msg feed (showcase) ───────
+// 6 steps を 2.5 秒間隔で進行 + 同期で実プロダクトの chat 画面と同じ msg を inject。
+// new msg は下から fade-in、 3 件 visible したら 古い msg が gradient で fade out。
 (function(){
   var pipe = document.getElementById('scPipe');
-  var log  = document.getElementById('scLog');
+  var inner = document.getElementById('scLogInner');
   if(!pipe) return;
   var steps = pipe.querySelectorAll('.sc-step');
   if(!steps.length) return;
-  // step 別の log msg (= active step に対応した 「いま AI 何やってる」 メッセージ)
-  var LOG_MSGS = [
-    { ic:'📥', tx:'URL を read → 業種判定 → ペルソナ抽出 中…' },
-    { ic:'👥', tx:'AI チーム 18 名を編成。 リサーチ / 分析 / コンテンツ 3 部門。' },
-    { ic:'📊', tx:'GA4 アナリスト: 直近 7 日 PV +18%、 主因は SEO 記事 "AI 時代の DTC 戦略"' },
-    { ic:'💬', tx:'ユーザー: 「SEO 記事 3 本書いて、 WordPress に下書き保存して」' },
-    { ic:'✍', tx:'SEO ライター: 派生記事 3 本 ドラフト中。 14 分後に WordPress 公開予定。' },
-    { ic:'📰', tx:'PM: 本日 ✅ 記事 3 本下書き / ✅ X 投稿 2 本 / ⚠ 競合 X が新キャンペーン' },
+
+  // 各 step に対応した chat msg (= 実プロダクトの assistant msg / user msg を模擬)
+  var CHAT = [
+    {
+      role:'assistant', av:'teal', avIc:'🔍', name:'リサーチャー',
+      body:'URL を read → 業種判定 → ペルソナ抽出 中…',
+      tool:{ ic:'🌐', tx:'web_fetch', status:'✓' },
+    },
+    {
+      role:'assistant', av:'blue', avIc:'👥', name:'PM',
+      body:'<b>AI チーム 18 名</b> を編成しました。 リサーチ / 分析 / コンテンツ 3 部門。',
+    },
+    {
+      role:'assistant', av:'lime', avIc:'📊', name:'GA4 アナリスト',
+      body:'直近 7 日 PV <b>+18%</b>。 主因は SEO 記事 「AI 時代の DTC 戦略」 (Organic +427 sessions)。',
+      tool:{ ic:'📈', tx:'ga4_query', status:'✓' },
+    },
+    {
+      role:'user', av:'user', avIc:'K', name:'kota',
+      body:'SEO 記事 3 本書いて、 WordPress に下書き保存して。',
+    },
+    {
+      role:'assistant', av:'pink', avIc:'✍', name:'SEO ライター',
+      body:'了解。 派生記事 <b>3 本</b> ドラフト中。 14 分後に WordPress 下書き保存予定。',
+      tool:{ ic:'📝', tx:'publish_wordpress', status:'実行中…' },
+    },
+    {
+      role:'assistant', av:'gold', avIc:'📋', name:'PM',
+      body:'本日 <b>✅ 記事 3 本下書き</b> / ✅ X 投稿 2 本 / ⚠ 競合 X が新キャンペーン開始。',
+    },
   ];
+
   function fmtTime(){
     var d = new Date();
     return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
   }
+
+  function renderMsg(m, t){
+    var toolHTML = m.tool
+      ? '<div class="sc-tlog"><span class="sc-tlog-ic">' + m.tool.ic + '</span>'
+        + m.tool.tx + ' <span class="ok">' + m.tool.status + '</span></div>'
+      : '';
+    return '<div class="sc-msg ' + (m.role === 'user' ? 'user' : '') + '">'
+      + '<div class="sc-msg-av ' + m.av + '">' + m.avIc + '</div>'
+      + '<div class="sc-msg-body">'
+      +   '<div class="sc-msg-head">'
+      +     '<span class="sc-msg-name">' + m.name + '</span>'
+      +     '<span class="sc-msg-time">' + t + '</span>'
+      +   '</div>'
+      +   '<div class="sc-msg-bubble">' + m.body + '</div>'
+      +   toolHTML
+      + '</div>'
+      + '</div>';
+  }
+
   var idx = 0;
+  // 最初は 1 つだけ表示、 1 cycle 進むごとに 1 件追加、 4 件 stack したら最古を pop
+  var stack = [];
+
   function tick(){
+    // pipeline state 更新
     steps.forEach(function(s, i){
       s.classList.remove('done','active','pending');
       if(i < idx) s.classList.add('done');
       else if(i === idx) s.classList.add('active');
       else s.classList.add('pending');
     });
-    if(log){
-      var m = LOG_MSGS[idx];
-      log.innerHTML = '<div class="sc-log-line">'
-        + '<span class="ts">' + fmtTime() + '</span>'
-        + '<span class="ic">' + m.ic + '</span>'
-        + '<span class="tx">' + m.tx + '</span>'
-        + '</div>';
+    // chat msg を stack に push
+    if(inner){
+      var m = CHAT[idx];
+      stack.push({ m: m, t: fmtTime() });
+      if(stack.length > 3) stack.shift();  // 3 件まで保持
+      inner.innerHTML = stack.map(function(x){ return renderMsg(x.m, x.t); }).join('');
     }
     idx = (idx + 1) % steps.length;
+    // idx が 0 に戻ったら stack も clear (= 1 サイクル終了で chat reset)
+    if(idx === 0) stack = [];
   }
   tick();
   setInterval(tick, 2500);

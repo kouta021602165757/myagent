@@ -15486,14 +15486,14 @@ ${motiv ? `- 購買動機: ${motiv}` : ''}
       if(lk.sessions) bits.push(`直近 7 日セッション: ${lk.sessions.toLocaleString()}`);
       if(bits.length) parts.push(`【現状と目標 (= 数字で語ってください)】\n- ${bits.join('\n- ')}`);
     }
-    // 4) 今週のロードマップ (= 12 週分の中で「現在の週」)
+    // 4) 今週のロードマップ (= 8 週分の中で「現在の週」)
     if(agent && agent.roadmap && Array.isArray(agent.roadmap.weeks) && agent.roadmap.weeks.length){
       // generated_at + 経過週数 で current week を決める
       let currentWeekN = 1;
       try {
         const gen = Date.parse(agent.roadmap.generated_at || agent.created_at || Date.now());
         const weeksElapsed = Math.floor((Date.now() - gen) / (7 * 86400000));
-        currentWeekN = Math.min(12, Math.max(1, weeksElapsed + 1));
+        currentWeekN = Math.min(8, Math.max(1, weeksElapsed + 1));
       } catch(_){}
       const cw = agent.roadmap.weeks.find(w => w.n === currentWeekN) || agent.roadmap.weeks[0];
       if(cw && Array.isArray(cw.tasks) && cw.tasks.length){
@@ -15503,7 +15503,7 @@ ${motiv ? `- 購買動機: ${motiv}` : ''}
           (t.done ? '✓' : '☐') + ' ' + (t.text || '').slice(0,100) +
           (t.owner ? ` (担当: ${t.owner})` : '')
         ).join('\n');
-        parts.push(`【今週 (Week ${currentWeekN}/12) のロードマップ — ${cw.theme || ''}】
+        parts.push(`【今週 (Week ${currentWeekN}/8) のロードマップ — ${cw.theme || ''}】
 進捗: ${done.length}/${cw.tasks.length} 完了 / 残 ${remaining.length} 件
 ${taskLines}
 
@@ -20070,7 +20070,7 @@ ${siteContext}
       }
     } catch(e){ console.warn('[roadmap-gen] preview failed:', e.message); }
 
-    const prompt = `あなたは集客マーケティングのストラテジストです。以下の情報から、サイト「` + (ag.site_url || ag.name) + `」(${ag.site_vertical || 'general'}) の今後 12 週間の実行ロードマップを JSON で出力してください。
+    const prompt = `あなたは集客マーケティングのストラテジストです。以下の情報から、サイト「` + (ag.site_url || ag.name) + `」(${ag.site_vertical || 'general'}) の今後 8 週間の実行ロードマップを JSON で出力してください。
 
 ${siteContextR}
 
@@ -20082,8 +20082,8 @@ ${kpiGoal}
 ${orgSummary || '(汎用チーム)'}
 
 【出力ルール】
-- 12 週分 (Week 1-12) を出力
-- 各 Week は 5-8 個のタスク
+- 8 週分 (Week 1-8) を出力
+- 各 Week は 4-6 個のタスク
 - 各タスクは 1 文 (40-80 文字) で具体的に
 - 各タスクに dept_id (部門の id を上記から選ぶ) と owner (担当メンバー名)
 - Week ごとに theme (= その週のフォーカス、10 字程度)
@@ -20101,12 +20101,13 @@ ${orgSummary || '(汎用チーム)'}
 }`;
 
     try {
-      // 90s timeout + 1 retry on timeout (= 12 週 × 5-8 タスクで重い JSON)
+      // Haiku に変更 (= 3-5× 高速、 8 週分 + 4-6 タスクで生成軽量化)
+      // timeout 90s + 1 retry
       async function _callRoadmap(){
         const opts = { timeout: 90000 };
         const payload = {
-          model: 'claude-sonnet-4-6',
-          max_tokens: 8000,
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 5000,
           messages: [{ role: 'user', content: prompt }],
         };
         try {
@@ -20157,7 +20158,7 @@ ${orgSummary || '(汎用チーム)'}
       }
       // 既存の custom_tasks は維持
       const existingCustom = (ag.roadmap && Array.isArray(ag.roadmap.custom_tasks)) ? ag.roadmap.custom_tasks : [];
-      const weeks = parsed.weeks.slice(0, 12).map((w, i) => ({
+      const weeks = parsed.weeks.slice(0, 8).map((w, i) => ({
         n: w.n || (i + 1),
         theme: String(w.theme || '').slice(0, 50),
         tasks: (Array.isArray(w.tasks) ? w.tasks : []).slice(0, 10).map(t => ({

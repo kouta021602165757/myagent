@@ -4016,7 +4016,7 @@ function _ga4PickProperty(siteId, propertyId){
 // 自動セットアップチェーン (GA4 接続後の 1 click 全自動)
 //   1) 戦略 (persona + competitors + kpi_6mo) を Sonnet 生成
 //   2) kpi_6mo[0] を site.kpi に自動セット
-//   3) ロードマップ (12 週 × 5-8 tasks) を Sonnet 生成
+//   3) ロードマップ (8 週 × 4-6 tasks) を Sonnet 生成
 //   4) 各 step で toast + dashboard 再描画
 // 既に生成済みの step はスキップ (force:true 指定時は再生成)
 // ═══════════════════════════════════════════════════════════════════
@@ -4135,7 +4135,7 @@ async function _autoSetupSiteFromGa4(siteId, opts){
       });
       if(kR && kR.kpi){
         ag.kpi = kR.kpi;
-        chatMsg('✅ **KPI セット完了**\n\n月 1 目標を保存しました:\n・PV: **' + (kR.kpi.pv || 0).toLocaleString() + '**\n・CVR: **' + (kR.kpi.cvr || 0) + '%**\n・リード: **' + (kR.kpi.leads || 0) + '**\n\n最後に、 これを 12 週間に分解してロードマップを作ります。 PM にバトン渡します →',
+        chatMsg('✅ **KPI セット完了**\n\n月 1 目標を保存しました:\n・PV: **' + (kR.kpi.pv || 0).toLocaleString() + '**\n・CVR: **' + (kR.kpi.cvr || 0) + '%**\n・リード: **' + (kR.kpi.leads || 0) + '**\n\n最後に、 これを 8 週間に分解してロードマップを作ります。 PM にバトン渡します →',
           ['funnel','ファネル','kpi','ga4_analyst','アナリスト']);
         reload();
       }
@@ -4144,7 +4144,7 @@ async function _autoSetupSiteFromGa4(siteId, opts){
     // ── Step 3: ロードマップ生成 (= PM / ロードマップ設計) ──
     var hasRoadmap = ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0;
     if(force || !hasRoadmap){
-      setStep(3, '12 週間のロードマップを作成 → タスクを各部門に振り分け中…',
+      setStep(3, '8 週間のロードマップを作成 → タスクを各部門に振り分け中…',
         ['pm','planner','roadmap','プロジェクト']);
       var rR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/roadmap/generate');
       if(rR && rR.roadmap){
@@ -4249,7 +4249,7 @@ window._CHAT_ACTIONS = [
     id: 'autosetup',
     icon: '🚀',
     label: '戦略・KPI・ロードマップを一気に作る',
-    sub: 'GA4 数字から AI が ペルソナ・競合・KPI・12 週ロードマップを 60-90 秒で',
+    sub: 'GA4 数字から AI が ペルソナ・競合・KPI・8 週ロードマップを 60-90 秒で',
     accent: '#a3e635',
     when: function(ag){
       if(!_isSiteAgent(ag)) return false;
@@ -4262,7 +4262,7 @@ window._CHAT_ACTIONS = [
     },
     onClick: function(ag){
       _triggerChatAction(ag, '戦略・KPI・ロードマップを一気に作って',
-        '了解！ GA4 の数字を元に、 ペルソナ → 競合 → 6 ヶ月 KPI → 12 週ロードマップ を順番に作っていきます 🚀\n\n(所要時間: 約 60-90 秒)',
+        '了解！ GA4 の数字を元に、 ペルソナ → 競合 → 6 ヶ月 KPI → 8 週ロードマップ を順番に作っていきます 🚀\n\n(所要時間: 約 60-90 秒)',
         function(){ _autoSetupSiteFromGa4(ag.id, { streamToChat: true }); });
     },
   },
@@ -5638,7 +5638,7 @@ function _renderTabStrategy(site, allArts){
       +     '・<b>競合分析</b> — 3 社の強み・弱み・差別化ポイント<br>'
       +     '・<b>6 ヶ月 KPI シート</b> — 月別の数値目標 + マイルストーン<br>'
       +     '・<b>月 1 KPI を自動セット</b> (= 上記の最初の月)<br>'
-      +     '・<b>12 週間ロードマップ</b> — 各週 5-8 タスクを AI 部門に自動割り振り'
+      +     '・<b>8 週間ロードマップ</b> — 各週 4-6 タスクを AI 部門に自動割り振り'
       +   '</div>'
       +   '<button class="st-empty-cta" onclick="_autoSetupSiteFromGa4(\'' + esc(site.id) + '\')">🚀 自動でフルセットアップ <span class="arrow">→</span></button>'
       +   '<div class="st-empty-note">所要時間: 約 60-90 秒。 戦略のみ作るなら <a href="#" onclick="event.preventDefault();_generateStrategy(\'' + esc(site.id) + '\', null)" style="color:var(--peach-dark);font-weight:700">こちら</a></div>'
@@ -6458,7 +6458,7 @@ function _renderTabTasks(site){
     return ''
       + '<div class="tk-empty">'
       +   '<div class="tk-empty-ic">✅</div>'
-      +   '<div class="tk-empty-ti">12 週間の実行ロードマップを AI に作らせる</div>'
+      +   '<div class="tk-empty-ti">8 週間の実行ロードマップを AI に作らせる</div>'
       +   '<div class="tk-empty-tx">KPI と組織情報から、各部門が <b>毎週やるべきこと</b> を AI が具体的にリストアップします。<br>'
       +     'AI 生成タスク (60-80 件) + 自分で追加するタスクを混ぜて管理できます。</div>'
       +   (hasKpi
@@ -6496,7 +6496,7 @@ function _renderTabTasks(site){
   var headerHTML = ''
     + '<div class="tk-head">'
     +   '<div class="tk-head-l">'
-    +     '<div class="tk-head-tag"><span class="sd-rp-dot"></span>12 週間の実行ロードマップ</div>'
+    +     '<div class="tk-head-tag"><span class="sd-rp-dot"></span>8 週間の実行ロードマップ</div>'
     +     '<div class="tk-head-ti">' + doneTasks + ' / ' + totalTasks + ' タスク完了 <span class="tk-head-pct">' + progressPct + '%</span></div>'
     +     '<div class="tk-head-sub">生成: ' + esc(generatedFmt) + ' ・ 今週: <b>Week ' + currentWeek + '</b></div>'
     +   '</div>'
@@ -7098,46 +7098,8 @@ function _renderTabSettings(site){
       + '</div>';
   }
 
-  // SNS 接続状態を local cache から取り出し (= mount 時に fetch する)
-  var snsCache = (window._snsStatusCache && window._snsStatusCache[site.id]) || null;
-  if(!snsCache){
-    // バックグラウンドで fetch (= 初回 / stale 時)
-    setTimeout(function(){ _fetchSnsStatus(site.id); }, 100);
-  }
-  var x = snsCache && snsCache.x;
-  var extPaired = snsCache && snsCache.extension_paired;
-  var xConnected = !!(x && x.connected);
-
-  // SNS 接続カード (X)
-  var snsBlock = ''
-    + '<div class="sd-set-group">'
-    +   '<div class="sd-set-group-h">📱 SNS 接続 — AI が直接投稿</div>'
-    +   (!extPaired
-        ? '<div class="sd-sns-warn">⚠️ <b>Chrome 拡張が未インストール</b>です。<a href="/setup-extension.html" target="_blank">拡張をインストール</a>後に SNS 接続できます。</div>'
-        : '')
-    +   '<div class="sd-sns-row" style="--row-c:#000">'
-    +     '<div class="sd-sns-ic-x">𝕏</div>'
-    +     '<div class="sd-set-bd">'
-    +       '<div class="sd-set-ti">X (Twitter)'
-    +         (xConnected ? ' <span class="sd-sns-badge on">🟢 接続済</span>' : ' <span class="sd-sns-badge off">未接続</span>')
-    +       '</div>'
-    +       '<div class="sd-set-de">'
-    +         (xConnected && x.profile && x.profile.username
-            ? 'アカウント: <b>' + esc(x.profile.username) + '</b> ・ AI チームが投稿を担当できます'
-            : 'Chrome 拡張で x.com にログインしてから「接続」を押してください')
-    +       '</div>'
-    +     '</div>'
-    +     (xConnected
-        ? '<button class="sd-set-btn" onclick="_snsDisconnectX(\'' + esc(site.id) + '\', this)">切断</button>'
-        : '<button class="sd-set-btn" onclick="_openXConnectModal(\'' + esc(site.id) + '\')">🔗 接続する →</button>')
-    +   '</div>'
-    +   '<div class="sd-sns-soon">'
-    +     '<div class="sd-sns-soon-label">近日対応:</div>'
-    +     '<span>💼 LinkedIn</span><span>🧵 Threads</span><span>📸 Instagram</span><span>📘 Facebook</span><span>📌 Pinterest</span><span>🎵 TikTok</span>'
-    +   '</div>'
-    + '</div>';
-
-  return snsBlock
+  // 2026-05-25 SNS 接続 block 削除 (= 「接続」 tab と重複していた)
+  return ''
     + '<div class="sd-set-group">'
     +   '<div class="sd-set-group-h">⚙ サイト設定</div>'
     +   _row('💬', '#3b82f6', 'この会話を公開リンクで共有',

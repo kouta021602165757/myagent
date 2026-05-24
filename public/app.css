@@ -805,6 +805,50 @@ input,textarea{font-family:var(--sans);}
   .sd-ga4-cta{width:100%; text-align:center}
 }
 
+/* ── 「昨日 AI チームがやったこと」 hero (= ダッシュボード 朝の新聞) ── */
+.ya-wrap{
+  margin-bottom:16px; padding:18px 20px;
+  background:linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+  border:1px solid #e5e5e7; border-left:4px solid var(--ya-c, #a3e635);
+  border-radius:14px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04), 0 6px 18px rgba(0,0,0,.04);
+}
+.ya-eye{
+  font-family:'JetBrains Mono','SF Mono',monospace;
+  font-size:10px; font-weight:800; color:#737373;
+  letter-spacing:.14em; text-transform:uppercase;
+  margin-bottom:6px;
+}
+.ya-h{
+  font-size:20px; font-weight:900; color:#1a1a1a;
+  letter-spacing:-.01em; line-height:1.25;
+  margin-bottom:4px;
+}
+.ya-sub{
+  font-size:13px; color:#525252; font-weight:500;
+  line-height:1.5;
+}
+.ya-list{
+  display:flex; flex-wrap:wrap; gap:8px;
+  margin-top:14px; padding-top:14px;
+  border-top:1px solid #f0f0f3;
+}
+.ya-art{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:99px;
+  background:#fafafa; border:1px solid #e5e5e7;
+  font-size:11.5px; color:#1a1a1a; font-weight:700;
+  text-decoration:none;
+  transition:all .14s;
+}
+.ya-art:hover{
+  background:#f7ffe9; border-color:var(--ya-c, #a3e635);
+  transform:translateY(-1px);
+  box-shadow:0 2px 8px rgba(163,230,53,.16);
+}
+.ya-art-ic{font-size:13px;}
+.ya-art-ti{line-height:1.3;}
+
 /* ── Dashboard tab progressive disclosure (= 中身ない tab に🔒) ── */
 .sd-tab.sd-tab-locked{
   opacity:.55;

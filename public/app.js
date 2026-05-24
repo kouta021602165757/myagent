@@ -5614,6 +5614,74 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
   var yest = new Date(Date.now() - 86400000);
   var yestFmt = yest.toLocaleDateString('ja-JP', { month:'numeric', day:'numeric', weekday:'short' });
 
+  // ── 0) 「昨日 AI チームがやったこと」 hero (= 朝の新聞 1 面) ──
+  // 過去 24h の納品 artifact + SNS 投稿数 を 「やったこと list」 として可視化。
+  // 数字より先に「具体的成果」 を見せる = AI 雇ってる感を強化。
+  var yestActHTML = (function(){
+    var dayAgo = Date.now() - 86400000;
+    var recentArts = (allArts || []).filter(function(a){
+      return a && a.created_at && Date.parse(a.created_at) >= dayAgo;
+    });
+    var snsCache = (window._snsStatusCache && window._snsStatusCache[site.id]) || null;
+    var recentPostsCount = 0;
+    if(snsCache){
+      Object.keys(snsCache).forEach(function(k){
+        var st = snsCache[k];
+        if(st && Array.isArray(st.recent_posts)){
+          recentPostsCount += st.recent_posts.filter(function(p){
+            return p && p.time && Date.parse(p.time) >= dayAgo;
+          }).length;
+        }
+      });
+    }
+    var totalActions = recentArts.length + recentPostsCount;
+    var artThumbs = recentArts.slice(0, 6).map(function(a){
+      var t = _artDisplayTitle(a);
+      var ic = '📄';
+      var nm = String(a.title || a.filename || '').toLowerCase();
+      if(/article|blog|記事/.test(nm)) ic = '📝';
+      else if(/image|png|jpg|jpeg|svg|画像/.test(nm)) ic = '🖼';
+      else if(/video|mp4|動画/.test(nm)) ic = '🎬';
+      else if(/post|x|twitter|sns|投稿/.test(nm)) ic = '📱';
+      else if(/strategy|戦略/.test(nm)) ic = '🎯';
+      else if(/roadmap|ロードマップ/.test(nm)) ic = '🗺';
+      return '<a class="ya-art" href="' + esc(_artUrl(a)) + '" target="_blank" rel="noopener" title="' + esc(t) + '">'
+        + '<span class="ya-art-ic">' + ic + '</span>'
+        + '<span class="ya-art-ti">' + esc(t.slice(0, 28)) + (t.length > 28 ? '…' : '') + '</span>'
+        + '</a>';
+    }).join('');
+    var headline, subline, accent;
+    if(totalActions === 0){
+      headline = '昨日は静かな 1 日でした';
+      subline = '「今週の記事を 1 本書いて」 と チャットで頼んでみましょう';
+      accent = '#a1a1aa';
+    } else if(totalActions === 1){
+      headline = '✓ 昨日 1 件の納品';
+      subline = 'AI チームが小さな一歩を進めました';
+      accent = '#a3e635';
+    } else {
+      headline = '✨ 昨日 ' + totalActions + ' 件の成果';
+      subline = 'AI チーム ' + (function(){
+        var n = 0;
+        if(site.org && Array.isArray(site.org.departments)){
+          site.org.departments.forEach(function(d){
+            (d.teams || []).forEach(function(t){ n += (t.members || []).length; });
+          });
+        }
+        return n || '組';
+      })() + ' 名が休まず動き続けています';
+      accent = '#a3e635';
+    }
+    return '<div class="ya-wrap" style="--ya-c:' + accent + '">'
+      + '<div class="ya-head">'
+      +   '<div class="ya-eye">📰 昨日の AI チーム活動 (' + esc(yestFmt) + ')</div>'
+      +   '<div class="ya-h">' + headline + '</div>'
+      +   '<div class="ya-sub">' + esc(subline) + '</div>'
+      + '</div>'
+      + (recentArts.length ? '<div class="ya-list">' + artThumbs + '</div>' : '')
+      + '</div>';
+  })();
+
   // ── 1) ヒーロー ──
   var heroHTML = ''
     + '<div class="rp-hero">'
@@ -5933,6 +6001,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
 
   // 全体を rp-report wrapper で囲む (= dark theme スコープ)
   return '<div class="rp-report">'
+    + yestActHTML   // ← 「昨日 AI チームがやったこと」 hero (= 朝の新聞 1 面)
     + heroHTML
     + kpiHTML
     + trendHTML

@@ -1,4 +1,66 @@
 var API=location.origin;
+
+// ── Global error surfacer (= 「ボタン押しても反応しない」 を可視化) ──
+// あらゆる handler が silently throw して click が無反応 に見える病を撃退。
+// toast が出れば原因が分かる。 toast が出なくても console.error で残る。
+(function _installGlobalErrorToast(){
+  function _safeToast(msg){
+    try { if(typeof showToast === 'function') showToast(msg, 'ng', 6000); else console.error(msg); }
+    catch(_){ console.error(msg); }
+  }
+  window.addEventListener('error', function(ev){
+    var m = (ev && ev.error && ev.error.message) || (ev && ev.message) || 'unknown error';
+    var src = (ev && ev.filename) ? ' @ ' + String(ev.filename).split('/').pop() + ':' + ev.lineno : '';
+    _safeToast('⚠ JS error: ' + String(m).slice(0,160) + src);
+  });
+  window.addEventListener('unhandledrejection', function(ev){
+    var m = (ev && ev.reason && (ev.reason.message || String(ev.reason))) || 'unknown rejection';
+    _safeToast('⚠ Promise rejection: ' + String(m).slice(0,160));
+  });
+})();
+
+// ── Click delegation safety net (= inline onclick が動かない病への保険) ──
+// sidebar の Add Credits / 設定 / + 新サイト追加 / 検索 を document level の
+// click delegation で「再 bind」 する。 inline onclick が何らかの理由 (CSP /
+// 別ライブラリの hijack / 子要素が click を吸う) で動かなくても、 ここで動く。
+// 動いたら inline onclick との二重発火を防ぐため preventDefault は呼ばない。
+(function _installSidebarClickSafetyNet(){
+  function _click(action){
+    try {
+      if(action === 'openCharge' && typeof openCharge === 'function') return openCharge();
+      if(action === 'openSettings' && typeof openSettings === 'function') return openSettings();
+      if(action === 'openSearch' && typeof openSearch === 'function') return openSearch();
+      if(action === 'openAddSiteModal' && typeof openAddSiteModal === 'function') return openAddSiteModal();
+    } catch(e){
+      console.error('[sidebar-safety]', action, e);
+      try { showToast('Error in ' + action + ': ' + (e.message||'unknown'), 'ng', 6000); } catch(_){}
+    }
+  }
+  document.addEventListener('click', function(ev){
+    var target = ev.target;
+    if(!target || !target.closest) return;
+    var btn = target.closest('button, a');
+    if(!btn) return;
+    // Only delegate clicks within the sidebar (.sb)
+    if(!btn.closest('.sb')) return;
+    var oc = btn.getAttribute('onclick') || '';
+    // inline onclick が動いたら modal/overlay は既に開いてる。 ここは「inline が
+    // 沈黙した場合の保険」 として動くので、 idempotent operation のみ呼ぶ。
+    if(oc.indexOf('openCharge') >= 0){
+      var co = document.getElementById('chargeOverlay');
+      if(co && !co.classList.contains('open')) _click('openCharge');
+    } else if(oc.indexOf('openSettings') >= 0){
+      var sm = document.getElementById('settingsModal');
+      if(sm && sm.classList.contains('gone')) _click('openSettings');
+    } else if(oc.indexOf('openSearch') >= 0){
+      var sr = document.getElementById('searchModal') || document.getElementById('searchOverlay');
+      if(!sr || sr.classList.contains('gone') || !sr.classList.contains('open')) _click('openSearch');
+    } else if(oc.indexOf('openAddSiteModal') >= 0){
+      // No idempotent check; just run (= add site modal は double 呼びでも 1 個しか出ない)
+      _click('openAddSiteModal');
+    }
+  }, false);  // bubble phase — inline onclick が先に動いた場合は idempotent guard で no-op
+})();
 var AVATARS=['🤖','🦊','🐸','🐙','🦋','🐬','🦄','🐧','🦁','🐲','⭐','🌈','🦅','🐯','🦝','🐻','🧙','🤠','🥷','👾','👑','🧚','🐼','🦜'];
 var SKILLS=[
   {id:'writing',  icon:'✍️',name:L('ライティング','Writing'),       desc:L('メール・記事・提案書','Emails, articles, proposals')},
@@ -18401,15 +18463,23 @@ var _bsPaygCents=699;
 var _bsTabActive='monthly';
 
 function openCharge(){
+  try { _openChargeImpl(); }
+  catch(e){
+    console.error('[openCharge]', e);
+    try { showToast('課金画面を開けない: ' + (e.message||'unknown'), 'ng', 6000); } catch(_){}
+  }
+}
+function _openChargeImpl(){
   _bsTabActive='monthly';
   _bsSelectedPlan=null;
   _bsPaygCents=699;
-  bsBack();
-  bsTab('monthly');
-  bsRenderCurplan();
-  // Initialize PAYG button label too (also highlights default card)
-  bsPickPayg(699);
-  document.getElementById('chargeOverlay').classList.add('open');
+  try { bsBack(); } catch(e){ console.warn('[bsBack]', e); }
+  try { bsTab('monthly'); } catch(e){ console.warn('[bsTab]', e); }
+  try { bsRenderCurplan(); } catch(e){ console.warn('[bsRenderCurplan]', e); }
+  try { bsPickPayg(699); } catch(e){ console.warn('[bsPickPayg]', e); }
+  const overlay = document.getElementById('chargeOverlay');
+  if(!overlay){ throw new Error('chargeOverlay element not found'); }
+  overlay.classList.add('open');
 }
 function closeCharge(){ document.getElementById('chargeOverlay').classList.remove('open'); }
 
@@ -18906,7 +18976,15 @@ function _avatarColor(seed){
 function _avatarLetter(name,email){ return ((name||email||'?').trim().charAt(0)||'?').toUpperCase(); }
 
 function openSettings(){
+  try { _openSettingsImpl(); }
+  catch(e){
+    console.error('[openSettings]', e);
+    try { showToast('設定を開けない: ' + (e.message||'unknown'), 'ng', 6000); } catch(_){}
+  }
+}
+function _openSettingsImpl(){
   const modal = document.getElementById('settingsModal');
+  if(!modal){ throw new Error('settingsModal element not found'); }
   modal.classList.remove('gone');
   // Reset to first tab on each open
   document.querySelectorAll('.snav-item').forEach(b=>b.classList.remove('active'));

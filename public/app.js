@@ -9076,6 +9076,13 @@ function _renderDelegateCard(inner, stepDone, taskId){
   while((mm = taskRe.exec(inner))){
     var done = (mm[1] === 'x' || mm[1] === 'X');
     var txt  = mm[2];
+    // Extract owner annotation: "  — 📋 PM さん" at the end of the line
+    var owner = '';
+    var om = txt.match(/\s+—\s+([^—`]+?)\s*$/);
+    if(om){
+      owner = om[1].trim();
+      txt = txt.slice(0, om.index).trim();
+    }
     // Extract tool annotation (in backticks at end OR " → tool")
     var tool = '';
     var tm = txt.match(/`([a-zA-Z0-9_]+)`\s*$/) || txt.match(/[→→]\s*([a-zA-Z0-9_]+)\s*$/);
@@ -9083,7 +9090,7 @@ function _renderDelegateCard(inner, stepDone, taskId){
       tool = tm[1];
       txt = txt.slice(0, tm.index).trim();
     }
-    tasks.push({ done: done, text: txt, tool: tool });
+    tasks.push({ done: done, text: txt, tool: tool, owner: owner });
   }
   // ── 履歴全体から step 完了マーカーを集計 ────────────────────
   // <delegate> カードは最初のターン (1 message) で出る。
@@ -9205,9 +9212,13 @@ function _renderDelegateCard(inner, stepDone, taskId){
         ? '<span class="deli-box on">✓</span>'
         : (nextUndone ? '<span class="deli-box now"></span>' : '<span class="deli-box"></span>');
       var toolChip = t.tool ? '<span class="deli-tool">' + esc(t.tool) + '</span>' : '';
+      // Assignee chip — shows which team member is responsible for this step
+      var ownerChip = t.owner
+        ? '<span class="deli-owner" style="display:inline-flex;align-items:center;gap:3px;background:rgba(192,255,92,.12);border:1px solid rgba(192,255,92,.32);color:var(--peach-dark);font-size:10px;font-weight:800;padding:1px 8px;border-radius:99px;margin-left:6px;letter-spacing:.02em">' + esc(t.owner) + '</span>'
+        : '';
       return '<div class="deli-task ' + cls + '">'
            +   box
-           +   '<span class="deli-tx">' + esc(t.text) + toolChip + '</span>'
+           +   '<span class="deli-tx">' + esc(t.text) + toolChip + ownerChip + '</span>'
            + '</div>';
     }).join('');
     rows += '<div class="deli-row">'
@@ -18453,15 +18464,43 @@ function _renderNotesPanel(){
   var ov = document.createElement('div');
   ov.id = 'notesOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:9990;display:flex;align-items:center;justify-content:center;padding:14px;font-family:inherit';
+  // Type icon mapping — distinguish AI-generated note kinds from manual memos
+  var _noteTypeIcon = function(n){
+    if(!n) return '📒';
+    if(!n.auto_generated) return '📒';     // 手動メモ
+    switch(n.type){
+      case 'article':  return '📰';
+      case 'sns_post': return '🐦';
+      case 'analysis': return '📊';
+      case 'pdf':      return '📄';
+      case 'artifact': return '🎨';
+      case 'manual':   return '✍️';
+      default:         return '🤖';
+    }
+  };
   var listHTML = st.notes.length
     ? st.notes.map(function(n){
         var sel = n.id === st.activeId;
         var when = (n.updated_at || '').slice(5, 16).replace('T',' ');
         var title = n.title || (n.snippet ? n.snippet.slice(0, 30) : (isJa?'(無題)':'(Untitled)'));
+        var icon = _noteTypeIcon(n);
+        var verBadge = (n.version_count && n.version_count > 1)
+          ? '<span style="font-size:9px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.4);padding:1px 6px;border-radius:99px;margin-left:4px">v'+n.version_count+'</span>'
+          : '';
+        var attBadge = (n.attachment_count && n.attachment_count > 0)
+          ? '<span style="font-size:9px;color:var(--text3);margin-left:4px">📎'+n.attachment_count+'</span>'
+          : '';
+        var artBadge = n.has_artifact
+          ? '<span title="'+L('HTML / PDF プレビューあり','Has preview')+'" style="font-size:9px;color:var(--text3);margin-left:3px">🔗</span>'
+          : '';
         return '<div onclick="_notesSelect(\''+esc(n.id)+'\')" style="padding:11px 13px;border-radius:9px;cursor:pointer;background:'+(sel?'var(--peach-soft)':'transparent')+';margin-bottom:2px;border-left:3px solid '+(sel?'var(--peach)':'transparent')+'">'
-          + '<div style="font-size:12.5px;font-weight:'+(sel?'800':'700')+';color:'+(sel?'var(--peach-dark)':'var(--text)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(title)+'</div>'
-          + '<div style="font-size:10.5px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n.snippet||'')+'</div>'
-          + '<div style="font-size:9.5px;color:var(--text3);margin-top:3px;font-weight:600;letter-spacing:.02em">'+esc(when)+'</div>'
+          + '<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:'+(sel?'800':'700')+';color:'+(sel?'var(--peach-dark)':'var(--text)')+'">'
+          +   '<span style="font-size:14px;flex-shrink:0">'+icon+'</span>'
+          +   '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(title)+'</span>'
+          +   verBadge + attBadge + artBadge
+          + '</div>'
+          + '<div style="font-size:10.5px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:20px">'+esc(n.snippet||'')+'</div>'
+          + '<div style="font-size:9.5px;color:var(--text3);margin-top:3px;font-weight:600;letter-spacing:.02em;padding-left:20px">'+esc(when)+'</div>'
           + '</div>';
       }).join('')
     : '<div style="text-align:center;padding:30px 12px;font-size:12px;color:var(--text3)">'+L('まだメモがありません','No notes yet')+'</div>';
@@ -18499,19 +18538,87 @@ function _notesRenderEditor(){
   }
   var note = (st.notes || []).find(function(n){return n.id === st.activeId;});
   if(!note){ wrap.innerHTML = ''; return; }
+  // ── Version dropdown (only if this note has version history) ──
+  var versions = Array.isArray(note.versions) ? note.versions : [];
+  var versionBarHTML = '';
+  if(versions.length > 1){
+    var curV = (st.viewVersion != null) ? st.viewVersion : versions[versions.length-1].v;
+    versionBarHTML = '<div style="padding:9px 18px 9px 28px;border-bottom:1px solid var(--wire);background:linear-gradient(180deg,rgba(192,255,92,.05),transparent);display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
+      + '<span style="font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.04em">📚 ' + L('バージョン','Versions') + '</span>'
+      + versions.slice().reverse().map(function(v){
+          var sel = v.v === curV;
+          var when = (v.created_at||'').slice(5,16).replace('T',' ');
+          return '<button onclick="_notesPickVersion(\''+esc(note.id)+'\','+v.v+')" '
+            + 'style="background:' + (sel?'var(--peach)':'var(--cream)') + ';'
+            + 'color:' + (sel?'#0a0a0e':'var(--text)') + ';'
+            + 'border:1px solid ' + (sel?'var(--peach)':'var(--wire2)') + ';'
+            + 'border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:'+(sel?'800':'700')+';cursor:pointer;font-family:inherit" '
+            + 'title="' + esc(v.summary||'') + ' (' + when + ')">v' + v.v + '</button>';
+        }).join('')
+      + '<span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:600">' + L('最大 3 版保存','Keeps last 3') + '</span>'
+      + '</div>';
+  }
+  // ── Artifact preview (HTML / PDF / image) ──
+  var artifactBarHTML = '';
+  if(note.artifact_url){
+    artifactBarHTML = '<div style="padding:9px 18px;border-bottom:1px solid var(--wire);background:var(--cream);display:flex;align-items:center;gap:9px">'
+      + '<span style="font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.04em">🔗 ' + L('プレビュー','Preview') + '</span>'
+      + '<a href="'+esc(note.artifact_url)+'" target="_blank" rel="noopener" '
+      + 'style="font-size:11.5px;font-weight:700;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.4);padding:4px 11px;border-radius:99px;text-decoration:none;display:inline-flex;align-items:center;gap:5px" '
+      + 'onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#0a0a0e\'" '
+      + 'onmouseout="this.style.background=\'var(--peach-soft)\';this.style.color=\'var(--peach-dark)\'">'
+      + '<span>' + esc(String(note.artifact_url).split('/').pop().slice(0, 38)) + '</span>'
+      + '<span>↗</span></a>'
+      + '</div>';
+  }
+  // ── Attachments grid (images / videos / audio) ──
+  var attachmentsHTML = '';
+  if(Array.isArray(note.attachments) && note.attachments.length){
+    attachmentsHTML = '<div style="padding:10px 28px 14px;border-top:1px solid var(--wire);background:var(--cream2)">'
+      + '<div style="font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.04em;margin-bottom:7px">📎 ' + L('添付','Attachments') + ' (' + note.attachments.length + ')</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
+      + note.attachments.map(function(a){
+          if(!a || !a.url) return '';
+          if(a.kind === 'image'){
+            return '<a href="'+esc(a.url)+'" target="_blank" rel="noopener" '
+              + 'style="display:block;width:88px;height:88px;border-radius:9px;overflow:hidden;border:1px solid var(--wire2);position:relative" '
+              + 'title="'+esc(a.label||'image')+'">'
+              + '<img src="'+esc(a.url)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
+              + '</a>';
+          }
+          var icon = a.kind === 'video' ? '🎬' : a.kind === 'audio' ? '🎵' : '📄';
+          return '<a href="'+esc(a.url)+'" target="_blank" rel="noopener" '
+            + 'style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:88px;height:88px;border-radius:9px;border:1px solid var(--wire2);background:var(--cream);text-decoration:none;color:var(--text);gap:4px" '
+            + 'title="'+esc(a.label||a.kind)+'">'
+            + '<span style="font-size:24px">'+icon+'</span>'
+            + '<span style="font-size:9.5px;font-weight:700;color:var(--text3);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px">'+esc((a.label||a.kind||'').slice(0,16))+'</span>'
+            + '</a>';
+        }).join('')
+      + '</div></div>';
+  }
   wrap.innerHTML =
-    '<input id="notesTitle" placeholder="'+L('タイトル','Title')+'" style="background:transparent;border:0;border-bottom:1px solid var(--wire);padding:16px 28px;font-size:20px;font-weight:800;font-family:inherit;color:var(--text);outline:none">'
+    versionBarHTML
+    + artifactBarHTML
+    + '<input id="notesTitle" placeholder="'+L('タイトル','Title')+'" style="background:transparent;border:0;border-bottom:1px solid var(--wire);padding:16px 28px;font-size:20px;font-weight:800;font-family:inherit;color:var(--text);outline:none">'
     + '<textarea id="notesBody" placeholder="'+L('ここに自由に書く…','Write anything…')+'" style="flex:1;background:transparent;border:0;padding:18px 28px;font-size:15.5px;line-height:1.75;font-family:inherit;color:var(--text);outline:none;resize:none"></textarea>'
+    + attachmentsHTML
     + '<div style="padding:8px 16px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;background:var(--cream)">'
     +   '<div id="notesCharCount" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
     +   '<button onclick="_notesDelete()" style="margin-left:auto;background:var(--cream);border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 '+L('削除','Delete')+'</button>'
     +   '<button onclick="_notesSaveExplicit()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:6px 16px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">💾 '+L('保存','Save')+'</button>'
     + '</div>';
-  // Hydrate fields
+  // Hydrate fields — when viewing a non-latest version, show that version's
+  // content (read-only feel; editing it auto-saves to top-level note, not
+  // back to the historical version).
   var ti = document.getElementById('notesTitle');
   var bo = document.getElementById('notesBody');
+  var displayedContent = note.content || '';
+  if(st.viewVersion != null && versions.length){
+    var pickV = versions.find(function(v){return v.v === st.viewVersion;});
+    if(pickV) displayedContent = pickV.content || '';
+  }
   ti.value = note.title || '';
-  bo.value = note.content || '';
+  bo.value = displayedContent;
   _notesUpdateCharCount();
   // Wire auto-save
   ti.addEventListener('input', _notesOnEdit);
@@ -18631,6 +18738,8 @@ async function _notesSelect(id){
   // Save current before switching
   if(window._notesState.dirty){ await _notesSaveNow(); }
   window._notesState.activeId = id;
+  // Reset view-version pointer — newly selected note starts on latest
+  window._notesState.viewVersion = null;
   // CRITICAL: fetch full content. GET /notes (list) only returns snippet to
   // keep the payload tiny — if we don't fetch the body here, the editor
   // shows EMPTY for previously-saved notes, making users think their content
@@ -18642,6 +18751,11 @@ async function _notesSelect(id){
       if(i >= 0){
         window._notesState.notes[i].content = r.note.content || '';
         window._notesState.notes[i].title = r.note.title || window._notesState.notes[i].title;
+        // Bring in version + artifact + attachment data for the editor
+        window._notesState.notes[i].versions = r.note.versions || [];
+        window._notesState.notes[i].artifact_url = r.note.artifact_url || null;
+        window._notesState.notes[i].attachments = r.note.attachments || [];
+        window._notesState.notes[i].type = r.note.type || window._notesState.notes[i].type;
       }
     }
   } catch(e){
@@ -18649,6 +18763,13 @@ async function _notesSelect(id){
   }
   _renderNotesPanel();
 }
+
+// Switch the editor to a specific historical version (read-only preview)
+window._notesPickVersion = function(noteId, vNumber){
+  if(window._notesState.activeId !== noteId){ window._notesState.activeId = noteId; }
+  window._notesState.viewVersion = vNumber;
+  _renderNotesPanel();
+};
 
 async function _notesDelete(){
   var st = window._notesState;

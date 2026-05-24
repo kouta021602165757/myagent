@@ -3754,6 +3754,29 @@ async function _understandTask(message, sse, agent){
     prevSummary += '\n\n## 停止中のタスク (resume 判定の参考 — ユーザーが「あれ再開」等と言ったときに該当しそうなもの)\n'
                 + pausedList.map((t, i) => '- [' + i + '] 「' + String(t.requested || '').slice(0, 100) + '」').join('\n');
   }
+  // Team roster — each step picks an owner from this list (= 担当者表示)
+  let rosterText = '';
+  const _roster = [];
+  if(agent && agent.org && Array.isArray(agent.org.departments)){
+    agent.org.departments.forEach(d => {
+      (d.teams || []).forEach(t => {
+        (t.members || []).forEach(m => {
+          if(!m || !m.id) return;
+          _roster.push({
+            id: m.id,
+            name: m.name || '',
+            role: m.role || '',
+            focus: m.focus || '',
+            dept_icon: d.icon || '',
+          });
+        });
+      });
+    });
+  }
+  if(_roster.length){
+    rosterText = '\n\n## チーム名簿 (step ごとに最適な member_id を 1 人選んで owner_id にセット)\n'
+      + _roster.slice(0, 24).map((r, i) => `- ${r.id} | ${r.name} (${r.role}) — ${r.focus}`).join('\n');
+  }
   const planSys =
 `あなたは「ユーザーの依頼を理解して、現在の任された仕事 (current_task) を作成する」専任の理解エージェントです。
 
@@ -3781,6 +3804,7 @@ async function _understandTask(message, sse, agent){
 - 1-6 個。簡潔な動詞 (例: 「現在の HTML を確認」「カード化を適用」)
 - 1 step に対応する tool 名を tool フィールドに (不明なら null)
 - 利用可能 tool 例: read_artifact, edit_artifact, create_artifact, web_search, web_fetch, web_screenshot, generate_image, generate_pdf, generate_chart, sheets_read, sheets_write, send_email, notify_slack
+- **担当者: チーム名簿が下記にあれば、各 step に最適な member_id を owner_id にセットする (誰がやるか明確化)**
 
 ## needs_task 判定
 - 純粋な質問 (「これいくら?」「何ができる?」) → false
@@ -3794,12 +3818,12 @@ JSON のみ。前置きや \`\`\` も禁止。
   "needs_task": boolean,
   "scope": "new" | "correction" | "resume",
   "requested": "ユーザー依頼の 1-2 文要約 (100 字以内)",
-  "steps": [{"n":1,"text":"...(40 字以内)","tool":"tool_name か null"}],
+  "steps": [{"n":1,"text":"...(40 字以内)","tool":"tool_name か null","owner_id":"m_xxx か null"}],
   "estimate_minutes": 1-10,
   "resume_index": 0  // scope=resume のときのみ。停止中タスクリストの番号
 }
 
-needs_task が false なら scope は "new"、steps は []、estimate_minutes は 1 で良い。`;
+needs_task が false なら scope は "new"、steps は []、estimate_minutes は 1 で良い。` + rosterText;
   try {
     const _budgetTimer = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('planner_timeout')), BUDGET_MS));
@@ -3877,12 +3901,27 @@ needs_task が false なら scope は "new"、steps は []、estimate_minutes �
     const steps = Array.isArray(plan.steps) ? plan.steps : [];
     if(steps.length < 1) return null;
     const _newId = _genTaskId();
-    const _builtSteps = steps.slice(0, 8).map((s, i) => ({
-      n: i + 1,
-      text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
-      tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
-      done: false,
-    }));
+    const _builtSteps = steps.slice(0, 8).map((s, i) => {
+      // Resolve owner_id → also stash member name + dept icon for the chip UI
+      let owner_id = null, owner_name = null, owner_avatar = null;
+      if(s && s.owner_id && _roster.length){
+        const pick = _roster.find(r => r.id === s.owner_id);
+        if(pick){
+          owner_id = pick.id;
+          owner_name = (pick.dept_icon ? pick.dept_icon + ' ' : '') + pick.name;
+          owner_avatar = pick.dept_icon || '👤';
+        }
+      }
+      return {
+        n: i + 1,
+        text: String((s && s.text) || '').replace(/[\r\n]+/g, ' ').slice(0, 60),
+        tool: (s && s.tool && /^[a-zA-Z0-9_]+$/.test(s.tool)) ? s.tool : null,
+        done: false,
+        owner_id: owner_id,
+        owner_name: owner_name,
+        owner_avatar: owner_avatar,
+      };
+    });
     let nextTask;
     if(scope === 'correction' && prevTask){
       // 訂正: 直前 current_task の requested を corrected_from に退避して上書き
@@ -3933,7 +3972,8 @@ needs_task が false なら scope は "new"、steps は []、estimate_minutes �
       const stepsMd = nextTask.steps.map((s, i) => {
         const tool = s.tool ? (' `' + s.tool + '`') : '';
         const check = s.done ? 'x' : ' ';
-        return '- [' + check + '] ' + (i + 1) + '. ' + s.text + tool;
+        const owner = s.owner_name ? ('  — ' + s.owner_name) : '';
+        return '- [' + check + '] ' + (i + 1) + '. ' + s.text + tool + owner;
       }).join('\n');
       const card = '<delegate id="' + nextTask.id + '">\n'
         + '**任されたこと:** ' + nextTask.requested + '\n\n'
@@ -8223,16 +8263,28 @@ function _stampArtifactVersions(text, ownerUser){
 // ──────────────────────────────────────────────────────────────────
 // Auto-page hook: when the AI produces something page-worthy (= a deliverable
 // you'd want to revisit / edit, not a chat reply), drop it into user.notes so
-// it surfaces in the 📒 ノート panel. Strong signal = tool calls that publish
-// pages. Weak signal = long markdown reply with multiple headers (= analysis /
-// strategy memo) or SNS-draft pattern. Returns the created note or null.
-function _maybeAutoCreateNote(user, agent, reply, toolLog){
+// it surfaces in the 📒 ノート panel. With versioning: 1 thread → 1 note, and
+// each new page-worthy reply inside the thread bumps version (cap 3, FIFO).
+//
+// Shape after this refactor:
+//   note = {
+//     id, thread_id, type, title, content,         ← latest version (mirror)
+//     artifact_url?, attachments?: [{url, kind}],  ← latest version (mirror)
+//     versions: [{ v, content, artifact_url, attachments, summary, ai_msg_id, created_at }],
+//     agent_id, auto_generated, created_at, updated_at
+//   }
+function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsgId){
   if(!user || !agent || !reply || typeof reply !== 'string') return null;
   if(reply.length < 200) return null;
   const tl = Array.isArray(toolLog) ? toolLog : [];
-  // Strong signal — these tools always produce a deliverable worth surfacing.
+  // Strong signal — these tools produce a primary deliverable URL.
   const pageProducingTools = new Set([
     'wordpress_publish', 'create_artifact', 'edit_artifact', 'generate_pdf',
+  ]);
+  // Media tools — outputs go into attachments[], not the primary artifact_url
+  const mediaTools = new Set([
+    'generate_image', 'edit_image', 'generate_video', 'generate_audio',
+    'generate_chart', 'generate_diagram', 'generate_qr',
   ]);
   const matched = tl.find(t => t && t.ok !== false && pageProducingTools.has(t.name));
   let type = null, title = null;
@@ -8254,14 +8306,74 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog){
     }
   }
   if(!type) return null;
+  // Collect supplementary media (images/videos/audio) for attachments[]
+  const attachments = [];
+  tl.forEach(t => {
+    if(!t || t.ok === false) return;
+    if(mediaTools.has(t.name) && t.url){
+      attachments.push({
+        url: t.url,
+        kind: t.name.startsWith('generate_video') ? 'video'
+            : t.name.startsWith('generate_audio') ? 'audio'
+            : 'image',
+        label: t.title || t.name,
+      });
+    }
+  });
+  const artifact_url = (matched && matched.url) ? matched.url : null;
   user.notes = Array.isArray(user.notes) ? user.notes : [];
   if(user.notes.length >= 1000) return null;
   const now = new Date().toISOString();
+  // Version summary — 60-char one-liner describing what THIS version added
+  const summary = (matched ? (matched.title || matched.name)
+                  : (title || reply.split('\n').find(s => s.trim()) || '')).slice(0, 60);
+
+  // Find existing note by thread_id (= 1 thread → 1 note)
+  let existing = null;
+  if(threadParentId){
+    existing = user.notes.find(n => n && n.thread_id === threadParentId);
+  }
+  if(existing){
+    // Append a new version; cap to last 3 (drop oldest if needed)
+    existing.versions = Array.isArray(existing.versions) ? existing.versions : [];
+    const nextV = (existing.versions.length ? existing.versions[existing.versions.length-1].v : 0) + 1;
+    existing.versions.push({
+      v: nextV,
+      content: reply.slice(0, 100000),
+      artifact_url: artifact_url,
+      attachments: attachments,
+      summary: summary,
+      ai_msg_id: aiMsgId || null,
+      created_at: now,
+    });
+    if(existing.versions.length > 3) existing.versions = existing.versions.slice(-3);
+    // Mirror the top-level note fields to the latest version (= "current" view)
+    existing.title = (title || existing.title || '無題').slice(0, 200);
+    existing.content = reply.slice(0, 100000);
+    existing.artifact_url = artifact_url;
+    existing.attachments = attachments;
+    existing.type = type;
+    existing.updated_at = now;
+    return existing;
+  }
+  // First version — create a fresh note bound to this thread
   const note = {
     id: 'note_' + crypto.randomBytes(5).toString('hex'),
+    thread_id: threadParentId || null,
     title: (title || (type === 'article' ? '記事' : type === 'sns_post' ? 'SNS 投稿' : 'AI ノート')).slice(0, 200),
     content: reply.slice(0, 100000),
     type: type,
+    artifact_url: artifact_url,
+    attachments: attachments,
+    versions: [{
+      v: 1,
+      content: reply.slice(0, 100000),
+      artifact_url: artifact_url,
+      attachments: attachments,
+      summary: summary,
+      ai_msg_id: aiMsgId || null,
+      created_at: now,
+    }],
     agent_id: agent.id,
     auto_generated: true,
     created_at: now,
@@ -17982,9 +18094,21 @@ async function handleAPI(req,res,pathname,method,ip){
       agent_id: n.agent_id || null,
       type: n.type || null,
       auto_generated: !!n.auto_generated,
+      thread_id: n.thread_id || null,
+      version_count: Array.isArray(n.versions) ? n.versions.length : 1,
+      has_artifact: !!n.artifact_url,
+      attachment_count: Array.isArray(n.attachments) ? n.attachments.length : 0,
     }));
     notes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
     return jres(res, 200, { notes });
+  }
+  // GET /api/me/notes/by-thread/:threadId → 1 note resolution from a thread
+  const _noteByThreadM = pathname.match(/^\/api\/me\/notes\/by-thread\/([a-zA-Z0-9_-]+)$/);
+  if(_noteByThreadM && method === 'GET'){
+    const tid = _noteByThreadM[1];
+    const found = (user.notes || []).find(n => n && n.thread_id === tid);
+    if(!found) return jres(res, 404, { error: 'no note for this thread' });
+    return jres(res, 200, { note: found });
   }
   if(pathname === '/api/me/notes' && method === 'POST'){
     const b = await readBody(req);
@@ -24904,16 +25028,24 @@ ${orgSummary || '(汎用チーム)'}
     }
     if(agent.history.length>500)agent.history=agent.history.slice(-500);
     // ── Auto-page hook: 成果物 (記事 / SNS / 分析) を user.notes に格納 ──
+    // 1 スレッド = 1 ノート。同じ thread_parent_id の追加成果物は version 追記。
     try {
-      const _autoNote = _maybeAutoCreateNote(payerUser, agent, reply, toolLog);
+      const _lastA0 = agent.history[agent.history.length - 1];
+      const _threadParentId = (_lastA0 && _lastA0.thread_parent_id) || null;
+      const _aiMsgId = (_lastA0 && _lastA0.id) || null;
+      const _autoNote = _maybeAutoCreateNote(payerUser, agent, reply, toolLog, _threadParentId, _aiMsgId);
       if(_autoNote){
-        const _lastA = agent.history[agent.history.length - 1];
-        if(_lastA && _lastA.role === 'assistant'){
-          _lastA.note_id    = _autoNote.id;
-          _lastA.note_title = _autoNote.title;
-          _lastA.note_type  = _autoNote.type;
+        if(_lastA0 && _lastA0.role === 'assistant'){
+          _lastA0.note_id    = _autoNote.id;
+          _lastA0.note_title = _autoNote.title;
+          _lastA0.note_type  = _autoNote.type;
         }
-        if(sse) sse('note_created', { id: _autoNote.id, title: _autoNote.title, type: _autoNote.type });
+        if(sse) sse('note_created', {
+          id: _autoNote.id,
+          title: _autoNote.title,
+          type: _autoNote.type,
+          version_count: Array.isArray(_autoNote.versions) ? _autoNote.versions.length : 1,
+        });
       }
     } catch(e){ console.warn('[autoNote] failed:', e && e.message); }
     // ── current_task の進捗を更新 ────────────────────────────────

@@ -3566,8 +3566,7 @@ function _renderHomeTasks(){
 window._runHomeTask = function(agentId, taskId){
   var ag = (agents||[]).find(function(a){return a.id===agentId;});
   if(!ag) return;
-  // Look across all 3 task sources (open / roadmap-week / custom). Earlier
-  // version only checked open_tasks so roadmap chips silently failed.
+  // Look across all 3 task sources (open / roadmap-week / custom).
   var t = (ag.open_tasks||[]).find(function(x){return x && x.id===taskId;});
   var label = t && t.title;
   if(!t && ag.roadmap){
@@ -3583,14 +3582,15 @@ window._runHomeTask = function(agentId, taskId){
   }
   if(!t) return;
   openAgent(agentId);
+  // Compose + auto-send. The wait is just to let the chat view mount.
   setTimeout(function(){
     var ci = document.getElementById('ci') || document.getElementById('msgInput');
-    if(ci){
-      ci.value = '【タスク実行】「' + (label||'') + '」を今すぐ進めて。';
-      ci.focus();
-      try { exTA(ci); } catch(e){}
-    }
-  }, 200);
+    if(!ci) return;
+    ci.value = '【タスク実行】「' + (label||'') + '」を今すぐ進めて。';
+    try { exTA(ci); } catch(e){}
+    // Auto-submit so the user doesn't have to press Enter / Send again.
+    try { if(typeof sendMsg === 'function') sendMsg(); } catch(e){ console.warn('[runTask] auto-send failed:', e && e.message); }
+  }, 220);
 };
 window._markHomeTaskDone = async function(agentId, taskId, ev){
   if(ev) ev.stopPropagation();

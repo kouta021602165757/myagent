@@ -4681,25 +4681,38 @@ function _renderSiteDashboardHTML(site){
     //   P: 戦略・KPI                   — Plan
     //   D: タスク管理                  — Do
     //   + 組織図 / 設定
-    + '<div class="sd-tabs sd-tabs-pdca">'
-    +   '<div class="sd-tabs-grp sd-tabs-grp-pdca" data-grp-lbl="🔁 PDCAサイクル">'
-    +     '<button class="sd-tab sd-tab-report' + (activeTab === 'report' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'report\')">'
-    +       '<span class="sd-tab-pdca">A</span>'
-    +       '<span class="sd-tab-ic">🔁</span><span class="sd-tab-lbl">毎日分析</span><span class="sd-tab-sub">改善 / 報告</span>'
-    +     '</button>'
-    +     '<button class="sd-tab sd-tab-numbers' + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
-    +       '<span class="sd-tab-pdca">C</span>'
-    +       '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字一覧</span><span class="sd-tab-sub">数字を常に確認</span>'
-    +     '</button>'
-    +     '<button class="sd-tab sd-tab-strategy' + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
-    +       '<span class="sd-tab-pdca">P</span>'
-    +       '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略・KPI</span><span class="sd-tab-sub">計画を立てる</span>'
-    +     '</button>'
-    +     '<button class="sd-tab sd-tab-tasks' + (activeTab === 'tasks' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'tasks\')">'
-    +       '<span class="sd-tab-pdca">D</span>'
-    +       '<span class="sd-tab-ic">✅</span><span class="sd-tab-lbl">タスク管理</span><span class="sd-tab-sub">部門別に実行</span>'
-    +     '</button>'
-    +   '</div>'
+    + (function(){
+        // 段階的 UI 開放 — 中身がない tab に「未開放」 marker を付ける (= シンプル化)
+        var ga4Snap0 = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
+        var hasGa4Data0 = !!(ga4Snap0 && ga4Snap0.snapshot && ga4Snap0.snapshot.series && ga4Snap0.snapshot.series.length > 0);
+        var hasStrategy0 = !!(site.strategy && site.strategy.persona);
+        var hasRoadmap0 = !!(site.roadmap && Array.isArray(site.roadmap.weeks) && site.roadmap.weeks.length > 0);
+        var lockCls = function(cond){ return cond ? '' : ' sd-tab-locked'; };
+        var lockBadge = function(cond, msg){ return cond ? '' : '<span class="sd-tab-lock" title="' + esc(msg) + '">🔒</span>'; };
+        return ''
+          + '<div class="sd-tabs sd-tabs-pdca">'
+          +   '<div class="sd-tabs-grp sd-tabs-grp-pdca" data-grp-lbl="🔁 PDCAサイクル">'
+          +     '<button class="sd-tab sd-tab-report' + (activeTab === 'report' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'report\')">'
+          +       '<span class="sd-tab-pdca">A</span>'
+          +       '<span class="sd-tab-ic">🔁</span><span class="sd-tab-lbl">毎日分析</span><span class="sd-tab-sub">改善 / 報告</span>'
+          +     '</button>'
+          +     '<button class="sd-tab sd-tab-numbers' + lockCls(hasGa4Data0) + (activeTab === 'numbers' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'numbers\')">'
+          +       '<span class="sd-tab-pdca">C</span>'
+          +       '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字一覧</span><span class="sd-tab-sub">' + (hasGa4Data0 ? '数字を常に確認' : 'GA4 接続待ち') + '</span>'
+          +       lockBadge(hasGa4Data0, 'まず GA4 を接続して数字を取得')
+          +     '</button>'
+          +     '<button class="sd-tab sd-tab-strategy' + lockCls(hasStrategy0) + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
+          +       '<span class="sd-tab-pdca">P</span>'
+          +       '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略・KPI</span><span class="sd-tab-sub">' + (hasStrategy0 ? '計画を立てる' : '戦略未生成') + '</span>'
+          +       lockBadge(hasStrategy0, 'まず AI に戦略を作らせる')
+          +     '</button>'
+          +     '<button class="sd-tab sd-tab-tasks' + lockCls(hasRoadmap0) + (activeTab === 'tasks' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'tasks\')">'
+          +       '<span class="sd-tab-pdca">D</span>'
+          +       '<span class="sd-tab-ic">✅</span><span class="sd-tab-lbl">タスク管理</span><span class="sd-tab-sub">' + (hasRoadmap0 ? '部門別に実行' : 'ロードマップ未生成') + '</span>'
+          +       lockBadge(hasRoadmap0, 'まずロードマップを生成')
+          +     '</button>'
+          +   '</div>';
+    })()
     +   '<div class="sd-tabs-grp sd-tabs-grp-other">'
     +     '<button class="sd-tab sd-tab-agents' + (activeTab === 'agents' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'agents\')">'
     +       '<span class="sd-tab-ic">🏢</span><span class="sd-tab-lbl">組織図</span><span class="sd-tab-sub">AI チーム</span>'

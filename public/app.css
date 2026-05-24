@@ -805,6 +805,26 @@ input,textarea{font-family:var(--sans);}
   .sd-ga4-cta{width:100%; text-align:center}
 }
 
+/* ── Dashboard tab progressive disclosure (= 中身ない tab に🔒) ── */
+.sd-tab.sd-tab-locked{
+  opacity:.55;
+  position:relative;
+}
+.sd-tab.sd-tab-locked .sd-tab-lock{
+  position:absolute; top:6px; right:8px;
+  font-size:11px; line-height:1; opacity:.7;
+}
+.sd-tab.sd-tab-locked .sd-tab-sub{
+  color:#a1a1aa !important;
+  font-style:italic;
+}
+.sd-tab.sd-tab-locked:hover{
+  opacity:.75;
+}
+.sd-tab.sd-tab-locked.on{
+  opacity:1;  /* クリックされたら full opacity に */
+}
+
 /* ══════════════════════════════════════════════════════════
    ── Team Showcase (= 「AI チーム ◯◯ 名が稼働中」 hero) ──
    chat の empty state で「こんな agents いっぱい？！」 を演出。

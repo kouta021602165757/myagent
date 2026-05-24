@@ -8254,17 +8254,23 @@ async function openAgent(id){
   // Quick chips persist throughout the conversation (clickable shortcuts)
   const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);
   // Site agent (= org 持ち) なら @mention chip も先頭に追加 (= 部門指名依頼の UX hint)
+  // ※ 過去 inline style (color-mix) + !important CSS の組み合わせで chip が
+  //   一切 styling されない不具合があったため、 inline style を全廃して
+  //   CSS class のみに統一。
   var mentionChips = '';
   if(_isSiteAgent(ag) && ag.org && Array.isArray(ag.org.departments) && ag.org.departments.length > 0){
     var topDepts = ag.org.departments.slice(0, 3);
-    mentionChips = '<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;margin-right:4px">@部門指名:</span>'
+    mentionChips = '<span>@部門指名</span>'
       + topDepts.map(function(d){
           var nm = String(d.name||'').replace(/\s+/g, '');
-          return '<button class="chip chip-mention" onclick="_insertMention(\''+ esc(nm) +'\')" style="background:color-mix(in srgb, ' + d.color + ' 10%, #fff); border-color:color-mix(in srgb, ' + d.color + ' 30%, transparent); color:' + d.color + '">' + d.icon + ' @' + esc(nm) + '</button>';
+          return '<button class="chip chip-mention" onclick="_insertMention(\''+ esc(nm) +'\')">' + d.icon + ' @' + esc(nm) + '</button>';
         }).join('');
   }
-  var chipsHtml = (mentionChips ? mentionChips + '<span class="chip-sep" style="display:inline-block;width:1px;height:14px;background:var(--wire2);margin:0 4px;vertical-align:middle"></span>' : '')
-                + (allChips.length ? '<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-right:4px">'+(isJa?'クイック:':'Quick:')+'</span>' + allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('') : '');
+  var chipsHtml = mentionChips
+                + (allChips.length
+                    ? '<span>' + (isJa?'クイック':'Quick') + '</span>'
+                      + allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('')
+                    : '');
   document.getElementById('chips').innerHTML=chipsHtml;
   // ── Context-aware action cards (= AI が状況検知して出す CTA) ──
   try { _renderChatActionCards(ag); } catch(e){ console.warn('[chat-actions]', e); }

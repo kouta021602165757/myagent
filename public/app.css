@@ -8001,3 +8001,56 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
 /* === chat-top の空要素 が灰色 bar 化するのを防ぐ === */
 .chat-top:empty{ display:none !important; }
 .chat-top{ background:transparent !important; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   2026-05-24 FINAL: composer chips が plain text 化する問題への 最終 hammer。
+   何度 fix しても screenshot で plain text 表示。 原因不明 (CSS は deploy
+   済み)。 最末尾で 物量で殴る。 全要素を 必ず button として render させる。
+   ════════════════════════════════════════════════════════════════════════ */
+#chips{
+  display:flex !important; align-items:center !important; flex-wrap:wrap !important;
+  gap:6px !important; margin:8px 0 10px !important; padding:0 !important;
+}
+#chips > .chip,
+#chips > button.chip{
+  display:inline-flex !important; align-items:center !important;
+  padding:6px 12px !important;
+  background:#ffffff !important;
+  border:1px solid #d4d4d8 !important;
+  border-radius:999px !important;
+  font-size:12px !important; font-weight:600 !important;
+  color:#1a1a1a !important;
+  cursor:pointer !important;
+  white-space:nowrap !important;
+  font-family:inherit !important;
+  line-height:1.4 !important;
+  margin:0 !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04) !important;
+}
+#chips > button.chip:hover{
+  background:#f7ffe9 !important;
+  border-color:#a3e635 !important;
+  color:#0a0a0e !important;
+}
+#chips > span{
+  display:inline-flex !important; align-items:center !important;
+  font-size:10.5px !important; font-weight:800 !important;
+  color:#525252 !important; letter-spacing:.04em !important;
+}
+#chips > .chip.chip-mention{
+  font-weight:800 !important;
+}
+
+/* foot-hint も同様に kbd が page bg と同色で消える → 強制可視化 */
+.foot-hint{
+  display:flex !important; align-items:center !important; justify-content:center !important;
+  flex-wrap:wrap !important; gap:14px !important; margin-top:8px !important;
+  font-size:11px !important; color:#737373 !important;
+}
+.foot-hint kbd{
+  display:inline-block !important;
+  background:#ffffff !important; border:1px solid #d4d4d8 !important;
+  padding:1px 6px !important; border-radius:5px !important;
+  font-family:'JetBrains Mono','SF Mono',Menlo,monospace !important;
+  font-size:10px !important; color:#1a1a1a !important; font-weight:600 !important;
+}

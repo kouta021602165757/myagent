@@ -805,6 +805,44 @@ input,textarea{font-family:var(--sans);}
   .sd-ga4-cta{width:100%; text-align:center}
 }
 
+/* ── Chat-level contextual action cards ────────────────────── */
+/* 「AI からの提案」 として composer の上に出る。 click で chat に msg
+   注入 + 実処理発火。 「メインはチャット」 思想の入口。 */
+.chat-actions{
+  display:flex; flex-direction:column; gap:6px;
+  padding:8px 0 4px;
+}
+.chat-actions .ca-label{
+  font-size:10.5px; font-weight:800; color:var(--text3);
+  letter-spacing:.04em; text-transform:uppercase;
+  padding:0 4px;
+}
+.chat-actions .ca-card{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 13px; border-radius:13px;
+  background:linear-gradient(135deg,#f7ffe9,#ffffff);
+  border:1.5px solid var(--ca-accent, #a3e635);
+  cursor:pointer; font-family:inherit; text-align:left;
+  transition:transform .12s, box-shadow .15s, background .14s;
+  box-shadow:0 2px 8px rgba(163,230,53,.10);
+}
+.chat-actions .ca-card:hover{
+  transform:translateY(-1px);
+  background:linear-gradient(135deg,#eaffce,#ffffff);
+  box-shadow:0 6px 16px rgba(163,230,53,.20);
+}
+.chat-actions .ca-ic{
+  width:38px; height:38px; border-radius:11px;
+  background:#ffffff; border:1px solid #e5e5e7;
+  display:flex; align-items:center; justify-content:center;
+  font-size:19px; flex-shrink:0;
+}
+.chat-actions .ca-bd{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;}
+.chat-actions .ca-ti{font-size:13.5px; font-weight:800; color:#1a1a1a; line-height:1.3;}
+.chat-actions .ca-sub{font-size:11.5px; color:#525252; font-weight:600; line-height:1.45;}
+.chat-actions .ca-arrow{font-size:16px; color:#525252; flex-shrink:0; transition:transform .15s;}
+.chat-actions .ca-card:hover .ca-arrow{transform:translateX(3px); color:#1a1a1a;}
+
 /* ── GA4 property picker modal ────────────────────────── */
 .ga4pp-overlay{
   position:fixed; inset:0; z-index:10000;

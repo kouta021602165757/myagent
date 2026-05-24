@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1779597392493">
+<link rel="stylesheet" href="/app.css?v=1779598033711">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -120,6 +120,10 @@
 
       <div class="chat-foot">
         <div class="chat-foot-inner">
+          <!-- Context-aware action cards (= AI が状況検知して 出す CTA。 例:
+               GA4 接続済 + 戦略未生成 → 「戦略・KPI・ロードマップを一気に作る」)。
+               JS が _renderChatActionCards() で innerHTML を populate する。 -->
+          <div class="chat-actions" id="chatActions" style="display:none"></div>
           <div class="chips" id="chips"></div>
 
           <!-- Inline hint when user types about posting/sending and the active
@@ -2203,7 +2207,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1779597392493"></script>
+<script defer src="/app.js?v=1779598033711"></script>
 
 <script>
 (function(){

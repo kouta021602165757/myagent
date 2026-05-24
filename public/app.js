@@ -3775,6 +3775,11 @@ function _fetchGa4Snapshot(siteId, opts){
       };
       window._ga4FetchInFlight[siteId] = false;
       try { renderHomeDashboard(); } catch(_){}
+      // chat action cards も再評価 (= GA4 snapshot 到着で 「戦略作る」 が出るかも)
+      try {
+        var _ag = (agents || []).find(function(a){ return a && a.id === siteId; });
+        if(_ag && _ag.id === activeId) _renderChatActionCards(_ag);
+      } catch(_){}
     })
     .catch(function(e){
       console.warn('[ga4-snapshot] fetch failed:', e && e.message);
@@ -3949,6 +3954,94 @@ async function _autoSetupSiteFromGa4(siteId, opts){
   } finally {
     window._autoSetupInFlight[siteId] = false;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Chat 内 contextual action cards (= AI が状況検知して出す CTA)
+// 「メインはチャットで仕事を依頼する形」 思想の入口。
+// 例: GA4 接続済 + 戦略未生成 → 「🚀 戦略・KPI・ロードマップを一気に作る」
+//
+// 各 action card は { id, icon, label, sub, accent, when(ag), onClick(ag) }
+// when() が true なら表示。 onClick() で chat にユーザー msg として注入 +
+// 実処理を発火。 「AI が動いてる感」 のため synthetic assistant msg も追加。
+// ═══════════════════════════════════════════════════════════════════
+window._CHAT_ACTIONS = [
+  {
+    id: 'autosetup',
+    icon: '🚀',
+    label: '戦略・KPI・ロードマップを一気に作る',
+    sub: 'GA4 数字から AI が ペルソナ・競合・KPI・12 週ロードマップを 60-90 秒で',
+    accent: '#a3e635',
+    when: function(ag){
+      if(!_isSiteAgent(ag)) return false;
+      // GA4 snapshot にデータがある
+      var snap = (window._ga4Snapshots && window._ga4Snapshots[ag.id]) || null;
+      var hasGa4 = !!(snap && snap.snapshot && snap.snapshot.series && snap.snapshot.series.length > 0);
+      if(!hasGa4) return false;
+      // 戦略 or ロードマップが未生成
+      var hasStrategy = !!(ag.strategy && ag.strategy.persona);
+      var hasRoadmap = !!(ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0);
+      return !hasStrategy || !hasRoadmap;
+    },
+    onClick: function(ag){
+      _triggerChatAction(ag, '戦略・KPI・ロードマップを一気に作って',
+        '了解！ GA4 の数字を元に、 ペルソナ → 競合 → 6 ヶ月 KPI → 12 週ロードマップ を順番に作っていきます 🚀 (約 60-90 秒)',
+        function(){ _autoSetupSiteFromGa4(ag.id); });
+    },
+  },
+];
+
+function _renderChatActionCards(ag){
+  var host = document.getElementById('chatActions');
+  if(!host) return;
+  if(!ag){ host.style.display = 'none'; host.innerHTML = ''; return; }
+  var applicable = (window._CHAT_ACTIONS || []).filter(function(a){
+    try { return a.when(ag); } catch(_){ return false; }
+  });
+  if(!applicable.length){
+    host.style.display = 'none';
+    host.innerHTML = '';
+    return;
+  }
+  host.style.display = '';
+  host.innerHTML = '<div class="ca-label">💡 ' + (isJa?'AI からの提案':'Suggested next step') + '</div>'
+    + applicable.map(function(a){
+        return '<button class="ca-card" data-action="' + esc(a.id) + '" style="--ca-accent:' + a.accent + '">'
+          + '<span class="ca-ic">' + a.icon + '</span>'
+          + '<span class="ca-bd">'
+          +   '<span class="ca-ti">' + esc(a.label) + '</span>'
+          +   '<span class="ca-sub">' + esc(a.sub) + '</span>'
+          + '</span>'
+          + '<span class="ca-arrow">→</span>'
+          + '</button>';
+      }).join('');
+  // Bind click
+  host.querySelectorAll('.ca-card').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var aid = btn.getAttribute('data-action');
+      var def = (window._CHAT_ACTIONS || []).find(function(a){ return a.id === aid; });
+      if(def && typeof def.onClick === 'function'){
+        try { def.onClick(ag); } catch(e){ console.warn('[chat-action]', aid, e); }
+      }
+    });
+  });
+}
+
+// chat に user msg + assistant msg を直接 inject (= LLM round-trip なしで
+// 「AI が動いてる感」 を演出)、 そして実処理を fire。
+function _triggerChatAction(ag, userText, assistantText, runFn){
+  if(!ag || !ag.history) ag.history = [];
+  ag.history.push({ role:'user',      content: userText,      time: now() });
+  ag.history.push({ role:'assistant', content: assistantText, time: now(), system_action: true });
+  try { renderMsgs(ag, true); } catch(_){}
+  try { _renderChatActionCards(ag); } catch(_){}  // 状況変化したかも → 再評価
+  // 実処理発火
+  if(typeof runFn === 'function'){
+    try { runFn(); } catch(e){ console.warn('[trigger-action] runFn failed', e); }
+  }
+  // TODO: 永続化 — 現状 reload で synthetic msgs は消える。 ただし auto-setup
+  // の実 effect (strategy / kpi / roadmap) は server に保存されるので機能上は OK。
+  // 後で PATCH /api/agents/:id { history } で sync すべし。
 }
 
 /* Home dashboard — サイトベースに完全リライト。
@@ -7946,6 +8039,8 @@ async function openAgent(id){
   var chipsHtml = (mentionChips ? mentionChips + '<span class="chip-sep" style="display:inline-block;width:1px;height:14px;background:var(--wire2);margin:0 4px;vertical-align:middle"></span>' : '')
                 + (allChips.length ? '<span style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-right:4px">'+(isJa?'クイック:':'Quick:')+'</span>' + allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('') : '');
   document.getElementById('chips').innerHTML=chipsHtml;
+  // ── Context-aware action cards (= AI が状況検知して出す CTA) ──
+  try { _renderChatActionCards(ag); } catch(e){ console.warn('[chat-actions]', e); }
   renderMsgs(ag);
   // Wire scroll listener so the FAB toggles on scroll
   var msgsEl=document.getElementById('msgs');

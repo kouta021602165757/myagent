@@ -15432,6 +15432,70 @@ ${topMatched.map(x => `■ ${x.name} (${x.role}):\n  ${x.specialty}`).join('\n\n
     }
   } catch(_){}
 
+  // ── 戦略 + KPI + 今週ロードマップ コンテキスト注入 ────────
+  // dashboard と chat の連携強化 (= 「ちゃんと記憶してる AI と仕事してる感」)。
+  // agent.strategy.persona / competitors / kpi_6mo + agent.kpi + agent.roadmap.weeks[currentWeek]
+  // + agent.ga4_snapshot.last_7d を毎ターン system prompt に inject。
+  let siteContextNote = '';
+  try {
+    const parts = [];
+    // 1) Strategy persona
+    if(agent && agent.strategy && agent.strategy.persona){
+      const p = agent.strategy.persona;
+      const pains = Array.isArray(p.painpoints) ? p.painpoints.slice(0,3).join(' / ') : '';
+      const motiv = Array.isArray(p.motivations) ? p.motivations.slice(0,3).join(' / ') : '';
+      parts.push(`【ターゲットペルソナ】
+- ${p.name || '(無名)'} (${p.age || '?'}) ${p.occupation || ''}
+${pains ? `- 痛みポイント: ${pains}` : ''}
+${motiv ? `- 購買動機: ${motiv}` : ''}
+発言・提案・記事内容は 上記の人物が読んで価値を感じる ものに揃えてください。`);
+    }
+    // 2) Strategy competitors
+    if(agent && agent.strategy && Array.isArray(agent.strategy.competitors) && agent.strategy.competitors.length){
+      const comps = agent.strategy.competitors.slice(0, 3).map(c =>
+        `- ${c.name || '?'}${c.differentiator ? ` (差別化: ${c.differentiator})` : ''}`
+      ).join('\n');
+      parts.push(`【主要競合 3 社】\n${comps}\n差別化ポイントを意識して、 競合と被らない切り口で提案してください。`);
+    }
+    // 3) Current KPI target + GA4 baseline
+    if(agent && (agent.kpi || (agent.ga4_snapshot && agent.ga4_snapshot.last_7d))){
+      const kpi = agent.kpi || {};
+      const lk = (agent.ga4_snapshot && agent.ga4_snapshot.last_7d) || {};
+      const bits = [];
+      if(kpi.pv) bits.push(`月間 PV 目標: ${kpi.pv.toLocaleString()}`);
+      if(kpi.cvr) bits.push(`CVR 目標: ${kpi.cvr}%`);
+      if(kpi.leads) bits.push(`月間リード目標: ${kpi.leads}`);
+      if(lk.pv) bits.push(`直近 7 日 PV: ${lk.pv.toLocaleString()}`);
+      if(lk.sessions) bits.push(`直近 7 日セッション: ${lk.sessions.toLocaleString()}`);
+      if(bits.length) parts.push(`【現状と目標 (= 数字で語ってください)】\n- ${bits.join('\n- ')}`);
+    }
+    // 4) 今週のロードマップ (= 12 週分の中で「現在の週」)
+    if(agent && agent.roadmap && Array.isArray(agent.roadmap.weeks) && agent.roadmap.weeks.length){
+      // generated_at + 経過週数 で current week を決める
+      let currentWeekN = 1;
+      try {
+        const gen = Date.parse(agent.roadmap.generated_at || agent.created_at || Date.now());
+        const weeksElapsed = Math.floor((Date.now() - gen) / (7 * 86400000));
+        currentWeekN = Math.min(12, Math.max(1, weeksElapsed + 1));
+      } catch(_){}
+      const cw = agent.roadmap.weeks.find(w => w.n === currentWeekN) || agent.roadmap.weeks[0];
+      if(cw && Array.isArray(cw.tasks) && cw.tasks.length){
+        const remaining = cw.tasks.filter(t => !t.done);
+        const done = cw.tasks.filter(t => t.done);
+        const taskLines = cw.tasks.slice(0, 8).map(t =>
+          (t.done ? '✓' : '☐') + ' ' + (t.text || '').slice(0,100) +
+          (t.owner ? ` (担当: ${t.owner})` : '')
+        ).join('\n');
+        parts.push(`【今週 (Week ${currentWeekN}/12) のロードマップ — ${cw.theme || ''}】
+進捗: ${done.length}/${cw.tasks.length} 完了 / 残 ${remaining.length} 件
+${taskLines}
+
+ユーザーから依頼があったら、 上記の今週分タスクを 優先して取り組んでください。 「今週何やる？」と聞かれたら 残タスクを 番号付きで提示してください。`);
+      }
+    }
+    if(parts.length) siteContextNote = '\n\n──────────────────────────────\n【🎯 サイト現状コンテキスト — 毎ターン参照してください】\n\n' + parts.join('\n\n');
+  } catch(e){ console.warn('[buildSystem] siteContextNote build failed', e.message); }
+
   return`${deliveryRules}
 ${stallNudge}${siteAgentNote}${planModeNote}${integrationsHint}${zapierNote}
 
@@ -15439,7 +15503,7 @@ ${stallNudge}${siteAgentNote}${planModeNote}${integrationsHint}${zapierNote}
 
 あなたは「${agent.name}」というAIエージェントです。
 得意スキル：${(agent.skills||[]).map(s=>SKILL_MAP[s]||s).join(' / ')}
-${agent.persona?`性格・指示：${agent.persona}`:''}${mentionAddendum}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}${agentCtx}
+${agent.persona?`性格・指示：${agent.persona}`:''}${siteContextNote}${mentionAddendum}${teamNote}${extensionNote}${sheetsNote}${chromeNote}${groupNote}${memoriesNote}${kbNote}${agentCtx}
 ユーザーの専属スタッフとして、プロフェッショナルかつ親しみやすく対応してください。返答は実用的で簡潔にし、必要に応じてMarkdownを使ってください。`;
 }
 
@@ -19708,6 +19772,41 @@ async function handleAPI(req,res,pathname,method,ip){
   // ── Site KPI save ──────────────────────────────────────
   // サイトの目標数値 (月間 PV / CVR / 月間リード数) を保存。
   // GA4 接続時の達成度評価や毎朝レポートの参照に使う。
+  // ── POST /api/agents/:id/history/append ────────────────
+  // Chat の synthetic msg (= action card click や auto-setup chain progress)
+  // を agent.history に append + DB save。 リロード後も会話が消えないように。
+  //   Body: { msgs: [{ role:'user'|'assistant', content, time, ...meta }] }
+  const histAppendMatch = pathname.match(/^\/api\/agents\/([^/]+)\/history\/append$/);
+  if(histAppendMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === histAppendMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req);
+    const msgs = Array.isArray(body && body.msgs) ? body.msgs : [];
+    if(!msgs.length) return jres(res, 400, { error: 'no msgs' });
+    if(!Array.isArray(ag.history)) ag.history = [];
+    // Sanitize each msg — only allow safe fields
+    const cleaned = msgs.slice(0, 20).map(m => {
+      const out = {
+        role: (m && (m.role === 'user' || m.role === 'assistant')) ? m.role : 'assistant',
+        content: String((m && m.content) || '').slice(0, 50000),
+        time: (m && m.time) ? m.time : Date.now(),
+      };
+      // optional speaker identity (= huddle_member fields for dept-named msgs)
+      if(m && m.huddle_member_id) out.huddle_member_id = String(m.huddle_member_id).slice(0,100);
+      if(m && m.huddle_member_name) out.huddle_member_name = String(m.huddle_member_name).slice(0,100);
+      if(m && m.huddle_member_avatar) out.huddle_member_avatar = String(m.huddle_member_avatar).slice(0,40);
+      if(m && m.system_action) out.system_action = true;
+      return out;
+    });
+    cleaned.forEach(m => ag.history.push(m));
+    ag.last_at = new Date().toISOString();
+    try { await DB.save(user); } catch(e){
+      console.warn('[history-append] save failed:', e.message);
+      return jres(res, 500, { error: '保存に失敗' });
+    }
+    return jres(res, 200, { ok: true, appended: cleaned.length });
+  }
+
   //   POST /api/agents/:id/kpi { pv, cvr, leads }
   const kpiMatch = pathname.match(/^\/api\/agents\/([^/]+)\/kpi$/);
   if(kpiMatch && method === 'POST'){
@@ -20059,6 +20158,7 @@ ${orgSummary || '(汎用チーム)'}
     }
     // PATCH
     const body = await readBody(req);
+    const wasDone = !!target.task.done;
     if(body && typeof body.done === 'boolean'){
       target.task.done = body.done;
       if(body.done) target.task.completed_at = new Date().toISOString();
@@ -20067,8 +20167,65 @@ ${orgSummary || '(汎用チーム)'}
     if(body && typeof body.text === 'string' && body.text.trim()){
       target.task.text = body.text.trim().slice(0, 200);
     }
+    // ── Reactive AI: タスク done になった瞬間に AI 部員から「お疲れ + 次は…」 ──
+    let reactiveMsg = null;
+    if(body && body.done === true && !wasDone){
+      const week = target.in_week;
+      const remaining = week
+        ? (week.tasks || []).filter(t => t && !t.done)
+        : [];
+      const doneCount = week
+        ? (week.tasks || []).filter(t => t && t.done).length
+        : 0;
+      const totalCount = week ? (week.tasks || []).length : 0;
+      const completedTaskText = String(target.task.text || 'タスク').slice(0, 60);
+      let body_text;
+      if(remaining.length === 0 && week){
+        body_text = `✨ お疲れさまです！ 「${completedTaskText}」 完了で **Week ${week.n}/12 の全タスク (${totalCount}件) クリア** です 🎉\n\n次は Week ${week.n + 1} に進みましょう。 ダッシュボード → タスク管理 で確認できます。 もしくはこの場で「Week ${week.n+1} の次のタスクをやって」 と頼んでください。`;
+      } else if(remaining.length > 0 && week){
+        const nextTask = remaining[0];
+        body_text = `✓ 「${completedTaskText}」 完了 (Week ${week.n}: ${doneCount}/${totalCount} 進捗)。\n\n次の優先タスクは:\n**「${String(nextTask.text || '').slice(0, 100)}」**${nextTask.owner ? ` (担当: ${nextTask.owner})` : ''}\n\nこのタスクに取りかかりますか？ 「やって」 と返事すれば私が進めます。`;
+      } else {
+        body_text = `✓ 「${completedTaskText}」 完了。 お疲れさまです！`;
+      }
+      // PM agent (or any) を speaker に
+      const pmMember = _findOrgMemberByKeywords(ag, ['pm','planner','project','manager']);
+      reactiveMsg = {
+        role: 'assistant',
+        content: body_text,
+        time: Date.now(),
+        system_action: true,
+      };
+      if(pmMember){
+        const dept = pmMember.dept || {};
+        reactiveMsg.huddle_member_id = pmMember.member.id || 'm_pm';
+        reactiveMsg.huddle_member_name = (dept.icon || '📋') + ' ' + (pmMember.member.name || 'PM');
+        reactiveMsg.huddle_member_avatar = dept.icon || '📋';
+      }
+      if(!Array.isArray(ag.history)) ag.history = [];
+      ag.history.push(reactiveMsg);
+      ag.last_at = new Date().toISOString();
+    }
     try { await DB.save(user); } catch(_){}
-    return jres(res, 200, { ok: true, task: target.task });
+    return jres(res, 200, { ok: true, task: target.task, reactive_msg: reactiveMsg });
+  }
+
+  // helper: agent.org から keyword に match する member を探す
+  function _findOrgMemberByKeywords(agent, keywords){
+    if(!agent || !agent.org || !Array.isArray(agent.org.departments)) return null;
+    const all = [];
+    agent.org.departments.forEach(d => {
+      (d.teams || []).forEach(t => {
+        (t.members || []).forEach(m => all.push({ member: m, dept: d }));
+      });
+    });
+    if(!all.length) return null;
+    if(!keywords || !keywords.length) return all[0];
+    const lowered = keywords.map(k => String(k).toLowerCase());
+    return all.find(x => {
+      const hay = String((x.member.role || '') + ' ' + (x.member.name || '') + ' ' + (x.member.focus || '')).toLowerCase();
+      return lowered.some(k => hay.indexOf(k) >= 0);
+    }) || all[0];
   }
 
   // ── GA4 property picker (= chat に頼まずに UI から選ぶ) ──

@@ -4031,6 +4031,8 @@ async function _autoSetupSiteFromGa4(siteId, opts){
       Object.assign(msg, sp);
       ag.history.push(msg);
       try { renderMsgs(ag, true); } catch(_){}
+      // server 永続化 (= リロード後も AI 部員発言が会話履歴に残る)
+      try { _persistChatMsg(ag.id, msg); } catch(_){}
     }
   }
   function reload(){
@@ -4288,17 +4290,30 @@ function _invokeChatAction(aid){
 // 「AI が動いてる感」 を演出)、 そして実処理を fire。
 function _triggerChatAction(ag, userText, assistantText, runFn){
   if(!ag || !ag.history) ag.history = [];
-  ag.history.push({ role:'user',      content: userText,      time: now() });
-  ag.history.push({ role:'assistant', content: assistantText, time: now(), system_action: true });
+  var uMsg = { role:'user',      content: userText,      time: now() };
+  var aMsg = { role:'assistant', content: assistantText, time: now(), system_action: true };
+  ag.history.push(uMsg);
+  ag.history.push(aMsg);
   try { renderMsgs(ag, true); } catch(_){}
   try { _renderChatActionCards(ag); } catch(_){}  // 状況変化したかも → 再評価
+  // ── 永続化 — リロード後も synthetic msg を残すため server に append ──
+  try {
+    api('POST', '/api/agents/'+encodeURIComponent(ag.id)+'/history/append', { msgs: [uMsg, aMsg] })
+      .catch(function(e){ console.warn('[trigger-action] history persist failed', e && e.message); });
+  } catch(_){}
   // 実処理発火
   if(typeof runFn === 'function'){
     try { runFn(); } catch(e){ console.warn('[trigger-action] runFn failed', e); }
   }
-  // TODO: 永続化 — 現状 reload で synthetic msgs は消える。 ただし auto-setup
-  // の実 effect (strategy / kpi / roadmap) は server に保存されるので機能上は OK。
-  // 後で PATCH /api/agents/:id { history } で sync すべし。
+}
+
+// chain progress msg (= auto-setup 中の AI 部員発言) を server 保存
+function _persistChatMsg(agId, msg){
+  if(!agId || !msg) return;
+  try {
+    api('POST', '/api/agents/'+encodeURIComponent(agId)+'/history/append', { msgs: [msg] })
+      .catch(function(e){ console.warn('[chat-persist] failed', e && e.message); });
+  } catch(_){}
 }
 
 /* Home dashboard — サイトベースに完全リライト。
@@ -6467,7 +6482,7 @@ async function _generateRoadmap(siteId, btnEl){
 
 async function _toggleTask(siteId, taskId, checked){
   try {
-    await api('PATCH', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks/' + encodeURIComponent(taskId),
+    var resp = await api('PATCH', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks/' + encodeURIComponent(taskId),
       { done: !!checked });
     // local state を最小更新 (= rerender なしで完了マーク反映)
     var site = (agents || []).find(function(a){ return a && a.id === siteId; });
@@ -6483,6 +6498,17 @@ async function _toggleTask(siteId, taskId, checked){
       if(ct) found = ct;
     }
     if(found){ found.done = checked; }
+    // ── Reactive AI msg (= PM 部員から「お疲れ + 次は…」 が chat に流れる) ──
+    if(resp && resp.reactive_msg){
+      if(!Array.isArray(site.history)) site.history = [];
+      site.history.push(resp.reactive_msg);
+      site.last_at = new Date().toISOString();
+      // chat が表示中なら msgs 更新 + dashboard 更新も
+      if(site.id === activeId){
+        try { renderMsgs(site, true); } catch(_){}
+      }
+      try { showToast('✓ タスク完了 — AI からのコメントが chat に届きました', 'ok', 4000); } catch(_){}
+    }
     // 進捗バー更新のため再描画
     try { renderHomeDashboard(); } catch(_){}
   } catch(e){

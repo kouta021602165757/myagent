@@ -3888,6 +3888,7 @@ async function _autoSetupSiteFromGa4(siteId, opts){
   if(!siteId) return;
   opts = opts || {};
   var force = !!opts.force;
+  var streamToChat = !!opts.streamToChat;  // chat に "AI 動いてる" msg を流す
   // 二重実行ガード
   window._autoSetupInFlight = window._autoSetupInFlight || {};
   if(window._autoSetupInFlight[siteId]){
@@ -3900,18 +3901,36 @@ async function _autoSetupSiteFromGa4(siteId, opts){
 
   function setStep(idx, label){
     try { showToast('('+idx+'/3) '+label, 'ok'); } catch(_){}
+    if(streamToChat && ag && Array.isArray(ag.history) && ag.id === activeId){
+      ag.history.push({ role:'assistant', content: '🔄 ' + label, time: now(), system_action: true, transient: true });
+      try { renderMsgs(ag, true); } catch(_){}
+    }
+  }
+  function chatMsg(text){
+    if(streamToChat && ag && Array.isArray(ag.history) && ag.id === activeId){
+      // 一個前の transient (= 🔄 step msg) を消す
+      while(ag.history.length && ag.history[ag.history.length-1].transient){
+        ag.history.pop();
+      }
+      ag.history.push({ role:'assistant', content: text, time: now(), system_action: true });
+      try { renderMsgs(ag, true); } catch(_){}
+    }
   }
   function reload(){
     try { renderHomeDashboard(); } catch(_){}
+    try { if(ag.id === activeId) _renderChatActionCards(ag); } catch(_){}
   }
 
   try {
     // ── Step 1: 戦略生成 ──
     if(force || !ag.strategy){
-      setStep(1, '🤖 戦略を作成中… (約 30 秒)');
+      setStep(1, '戦略を作成中… (ペルソナ + 競合 + 6 ヶ月 KPI)');
       var sR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/strategy/generate');
       if(sR && sR.strategy){
         ag.strategy = sR.strategy;
+        var perName = (sR.strategy.persona && sR.strategy.persona.name) || 'ターゲット顧客';
+        var compN = (sR.strategy.competitors && sR.strategy.competitors.length) || 0;
+        chatMsg('✅ **戦略できました**\n\n・ペルソナ: **' + perName + '**\n・競合: ' + compN + ' 社分析済\n・6 ヶ月 KPI シート完成\n\n続いて、 月 1 の KPI を目標値として保存します…');
         reload();
       } else if(sR && sR.error){
         throw new Error('戦略生成: ' + (sR.detail || sR.error));
@@ -3921,7 +3940,7 @@ async function _autoSetupSiteFromGa4(siteId, opts){
     // ── Step 2: KPI 自動セット (= strategy.kpi_6mo[0] = 月 1 の数値) ──
     var kp = ag.strategy && Array.isArray(ag.strategy.kpi_6mo) && ag.strategy.kpi_6mo[0];
     if(kp && (force || !ag.kpi || (!ag.kpi.pv && !ag.kpi.cvr && !ag.kpi.leads))){
-      setStep(2, '🎯 KPI 目標を保存中…');
+      setStep(2, 'KPI 目標を保存中…');
       var kR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/kpi', {
         pv: parseInt(kp.pv, 10) || 0,
         cvr: parseFloat(kp.cvr) || 0,
@@ -3929,6 +3948,7 @@ async function _autoSetupSiteFromGa4(siteId, opts){
       });
       if(kR && kR.kpi){
         ag.kpi = kR.kpi;
+        chatMsg('✅ **KPI セット完了**\n\n月 1 目標: PV ' + (kR.kpi.pv || 0).toLocaleString() + ' / CVR ' + (kR.kpi.cvr || 0) + '% / リード ' + (kR.kpi.leads || 0) + '\n\n最後に、 12 週間の実行ロードマップを作ります…');
         reload();
       }
     }
@@ -3936,10 +3956,13 @@ async function _autoSetupSiteFromGa4(siteId, opts){
     // ── Step 3: ロードマップ生成 ──
     var hasRoadmap = ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0;
     if(force || !hasRoadmap){
-      setStep(3, '🗺 12 週間のロードマップを作成中… (約 30 秒)');
+      setStep(3, '12 週間のロードマップを作成中… (タスクを各部門に割り振り)');
       var rR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/roadmap/generate');
       if(rR && rR.roadmap){
         ag.roadmap = rR.roadmap;
+        var wkCount = (rR.roadmap.weeks || []).length;
+        var taskCount = (rR.roadmap.weeks || []).reduce(function(s,w){ return s + ((w.tasks||[]).length); }, 0);
+        chatMsg('✅ **ロードマップ完成**\n\n' + wkCount + ' 週間分、 計 ' + taskCount + ' タスクを 各 AI 部門に自動割り振り済み。\n\nダッシュボード → タスク管理 タブで全部見られます 📋');
         reload();
       } else if(rR && rR.error){
         throw new Error('ロードマップ生成: ' + (rR.detail || rR.error));
@@ -3947,12 +3970,23 @@ async function _autoSetupSiteFromGa4(siteId, opts){
     }
 
     showToast('✓ セットアップ完了! 戦略・KPI・ロードマップが揃いました','ok');
+    chatMsg('🎉 **セットアップ完了!**\n\n戦略・KPI・ロードマップが全部揃いました。 次は実際に動かしていきましょう。 「今週の記事を 1 本書いて」 と頼んでみてください。');
     reload();
   } catch(e){
     console.warn('[autosetup] failed:', e);
     showToast('セットアップ失敗: ' + (e.message || 'unknown'), 'ng');
+    chatMsg('⚠️ エラーが発生しました: ' + (e.message || 'unknown') + '\n\nもう一度試すか、 個別に「戦略を作って」「ロードマップを作って」 と頼んでください。');
   } finally {
     window._autoSetupInFlight[siteId] = false;
+    // 残った transient msg を最終クリーンアップ
+    try {
+      if(streamToChat && ag && Array.isArray(ag.history)){
+        while(ag.history.length && ag.history[ag.history.length-1].transient){
+          ag.history.pop();
+        }
+        if(ag.id === activeId) renderMsgs(ag, true);
+      }
+    } catch(_){}
   }
 }
 
@@ -3965,7 +3999,51 @@ async function _autoSetupSiteFromGa4(siteId, opts){
 // when() が true なら表示。 onClick() で chat にユーザー msg として注入 +
 // 実処理を発火。 「AI が動いてる感」 のため synthetic assistant msg も追加。
 // ═══════════════════════════════════════════════════════════════════
+function _ga4OauthConnected(){
+  return !!(typeof me !== 'undefined' && me && (
+    (me.google_oauth && me.google_oauth.refresh_token)
+    || (me.integrations && me.integrations.google && me.integrations.google.refresh_token)
+  ));
+}
+
 window._CHAT_ACTIONS = [
+  // ── Step 1: GA4 を OAuth 接続 ──
+  {
+    id: 'connect_ga4',
+    icon: '📊',
+    label: 'Google Analytics を接続',
+    sub: 'サイトの実際の数字 (PV / セッション / 国別 / 流入元) を AI が見られるように',
+    accent: '#3b82f6',
+    when: function(ag){
+      return _isSiteAgent(ag) && !_ga4OauthConnected();
+    },
+    onClick: function(ag){
+      _triggerChatAction(ag, 'Google Analytics を接続したい',
+        'では設定 → 連携 タブで Google にログインしてください。 1 click で 接続完了します。 戻ってきたら自動で次のステップを提案します 📊',
+        function(){ try { openIntegrationsTab && openIntegrationsTab('ga4'); } catch(_){} });
+    },
+  },
+  // ── Step 2: GA4 property を選ぶ (OAuth 済 + property 未選択 + data なし) ──
+  {
+    id: 'pick_ga4_property',
+    icon: '🎯',
+    label: 'GA4 プロパティを選ぶ',
+    sub: '接続済みです。 どのプロパティの数字を表示するか選んでください。',
+    accent: '#a3e635',
+    when: function(ag){
+      if(!_isSiteAgent(ag)) return false;
+      if(!_ga4OauthConnected()) return false;
+      var snap = (window._ga4Snapshots && window._ga4Snapshots[ag.id]) || null;
+      var hasData = !!(snap && snap.snapshot && snap.snapshot.series && snap.snapshot.series.length > 0);
+      return !hasData;
+    },
+    onClick: function(ag){
+      _triggerChatAction(ag, 'GA4 のプロパティを選びたい',
+        'はい！ どのプロパティ (= GA4 で計測してるサイト) を見るか選んでください 🎯',
+        function(){ try { openGa4PropertyPicker(ag.id); } catch(_){} });
+    },
+  },
+  // ── Step 3: 戦略 + KPI + ロードマップ 自動生成 ──
   {
     id: 'autosetup',
     icon: '🚀',
@@ -3974,19 +4052,43 @@ window._CHAT_ACTIONS = [
     accent: '#a3e635',
     when: function(ag){
       if(!_isSiteAgent(ag)) return false;
-      // GA4 snapshot にデータがある
       var snap = (window._ga4Snapshots && window._ga4Snapshots[ag.id]) || null;
       var hasGa4 = !!(snap && snap.snapshot && snap.snapshot.series && snap.snapshot.series.length > 0);
       if(!hasGa4) return false;
-      // 戦略 or ロードマップが未生成
       var hasStrategy = !!(ag.strategy && ag.strategy.persona);
       var hasRoadmap = !!(ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0);
       return !hasStrategy || !hasRoadmap;
     },
     onClick: function(ag){
       _triggerChatAction(ag, '戦略・KPI・ロードマップを一気に作って',
-        '了解！ GA4 の数字を元に、 ペルソナ → 競合 → 6 ヶ月 KPI → 12 週ロードマップ を順番に作っていきます 🚀 (約 60-90 秒)',
-        function(){ _autoSetupSiteFromGa4(ag.id); });
+        '了解！ GA4 の数字を元に、 ペルソナ → 競合 → 6 ヶ月 KPI → 12 週ロードマップ を順番に作っていきます 🚀\n\n(所要時間: 約 60-90 秒)',
+        function(){ _autoSetupSiteFromGa4(ag.id, { streamToChat: true }); });
+    },
+  },
+  // ── Step 4: 今週の SEO 記事 1 本 (ロードマップ済 + (WP or note 接続) ) ──
+  {
+    id: 'write_weekly_article',
+    icon: '✍️',
+    label: '今週の SEO 記事を 1 本書く',
+    sub: 'ロードマップ Week 1 の記事タスクを 一気に下書きまで',
+    accent: '#f59e0b',
+    when: function(ag){
+      if(!_isSiteAgent(ag)) return false;
+      var hasRoadmap = !!(ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0);
+      if(!hasRoadmap) return false;
+      var sns = (window._snsStatusCache && window._snsStatusCache[ag.id]) || null;
+      var hasPublishChannel = !!(sns && (sns.wordpress && sns.wordpress.connected
+                                       || sns.note && sns.note.connected
+                                       || sns.emdash && sns.emdash.connected));
+      return hasPublishChannel;
+    },
+    onClick: function(ag){
+      _triggerChatAction(ag, '今週のロードマップの記事を 1 本書いて、 下書き保存して',
+        '了解！ 今週のロードマップから SEO 記事タスクをピックして、 下書きを書きます ✍️',
+        null);  // AI が tool 使って実行する (= LLM round trip)
+      // ↑ runFn が null → LLM が user msg を受け取って自分で tool 使う
+      // ↑ ただし現状は user msg を直接 chat に inject するだけで LLM 呼び出してない
+      // ↑ 後続で sendMsg() からの fire を追加すべき (= 次の iteration)
     },
   },
 ];

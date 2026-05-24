@@ -8253,25 +8253,57 @@ async function openAgent(id){
 
   // Quick chips persist throughout the conversation (clickable shortcuts)
   const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);
-  // Site agent (= org 持ち) なら @mention chip も先頭に追加 (= 部門指名依頼の UX hint)
-  // ※ 過去 inline style (color-mix) + !important CSS の組み合わせで chip が
-  //   一切 styling されない不具合があったため、 inline style を全廃して
-  //   CSS class のみに統一。
-  var mentionChips = '';
-  if(_isSiteAgent(ag) && ag.org && Array.isArray(ag.org.departments) && ag.org.departments.length > 0){
-    var topDepts = ag.org.departments.slice(0, 3);
-    mentionChips = '<span>@部門指名</span>'
-      + topDepts.map(function(d){
-          var nm = String(d.name||'').replace(/\s+/g, '');
-          return '<button class="chip chip-mention" onclick="_insertMention(\''+ esc(nm) +'\')">' + d.icon + ' @' + esc(nm) + '</button>';
-        }).join('');
+  // chips を JS で直接 inline-style 付きで render する (= CSS override 病への
+  // nuclear option)。 inline style は specificity が CSS rule より高く、 また
+  // !important なしの inline style と !important つき CSS が衝突する場合、
+  // !important つき CSS が勝つが、 inline style に !important も付ければ最強。
+  var chipsEl = document.getElementById('chips');
+  if(chipsEl){
+    chipsEl.innerHTML = '';
+    // 親 container の style を直接設定 (= .chips CSS class に依存しない)
+    // !important で inline style に最強の優先度を付ける (= CSS !important も超える)
+    chipsEl.setAttribute('style', 'display:flex !important;align-items:center !important;flex-wrap:wrap !important;gap:6px !important;margin:8px 0 10px !important;padding:0 !important;');
+    var _chipLabelStyle = 'display:inline-flex !important;align-items:center !important;font-size:10.5px !important;font-weight:800 !important;color:#525252 !important;letter-spacing:.04em !important;margin-right:2px !important;';
+    var _chipBtnStyle = 'display:inline-flex !important;align-items:center !important;padding:6px 12px !important;background:#ffffff !important;border:1px solid #d4d4d8 !important;border-radius:999px !important;font-size:12px !important;font-weight:700 !important;color:#1a1a1a !important;cursor:pointer !important;white-space:nowrap !important;font-family:inherit !important;line-height:1.4 !important;margin:0 !important;box-shadow:0 1px 2px rgba(0,0,0,.04) !important;';
+    function _addLabel(txt){
+      var s = document.createElement('span');
+      s.textContent = txt;
+      s.setAttribute('style', _chipLabelStyle);
+      chipsEl.appendChild(s);
+    }
+    function _addChip(text, onClick, extraStyle){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = text;
+      b.setAttribute('style', _chipBtnStyle + (extraStyle || ''));
+      b.addEventListener('click', onClick);
+      b.addEventListener('mouseover', function(){
+        b.style.setProperty('background', '#f7ffe9', 'important');
+        b.style.setProperty('border-color', '#a3e635', 'important');
+      });
+      b.addEventListener('mouseout', function(){
+        b.style.setProperty('background', '#ffffff', 'important');
+        b.style.setProperty('border-color', '#d4d4d8', 'important');
+      });
+      chipsEl.appendChild(b);
+    }
+    // @部門指名 chips (site agent only)
+    if(_isSiteAgent(ag) && ag.org && Array.isArray(ag.org.departments) && ag.org.departments.length > 0){
+      _addLabel('@部門指名');
+      ag.org.departments.slice(0, 3).forEach(function(d){
+        var nm = String(d.name||'').replace(/\s+/g, '');
+        var label = (d.icon || '🏢') + ' @' + nm;
+        _addChip(label, function(){ try { _insertMention(nm); } catch(e){ console.warn(e); } });
+      });
+    }
+    // クイック chips
+    if(allChips.length){
+      _addLabel(isJa ? 'クイック' : 'Quick');
+      allChips.forEach(function(c){
+        _addChip(c, function(){ try { useChip(c); } catch(e){ console.warn(e); } });
+      });
+    }
   }
-  var chipsHtml = mentionChips
-                + (allChips.length
-                    ? '<span>' + (isJa?'クイック':'Quick') + '</span>'
-                      + allChips.map(c=>`<button class="chip" onclick="useChip('${esc(c)}')">${c}</button>`).join('')
-                    : '');
-  document.getElementById('chips').innerHTML=chipsHtml;
   // ── Context-aware action cards (= AI が状況検知して出す CTA) ──
   try { _renderChatActionCards(ag); } catch(e){ console.warn('[chat-actions]', e); }
   renderMsgs(ag);

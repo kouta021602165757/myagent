@@ -9533,7 +9533,9 @@ var _TOOL_META = {
 
 function _renderToolLog(log){
   if(!log || !log.length) return '';
-  var head = '<div class="tlog-head">🌐 '+(isJa?'ブラウザ操作':'Browser activity')+' <span class="tlog-count">'+log.length+(isJa?' ステップ':' step'+(log.length>1?'s':''))+'</span> <span class="tlog-toggle">▾</span></div>';
+  // Slack-style thread feel: main chat はクリーンに、 詳細は collapsed by default
+  // summary は \"💬 AI の作業履歴 N 件 (クリックで展開)\" で thread 風に
+  var head = '<div class="tlog-head">💬 '+(isJa?'AI の作業履歴':'Agent activity')+' <span class="tlog-count">'+log.length+(isJa?' 件':' step'+(log.length>1?'s':''))+'</span> <span class="tlog-toggle" style="margin-left:auto;opacity:.7;font-size:11px">▸ '+(isJa?'クリックで展開':'click to expand')+'</span></div>';
   var rows = log.map(function(step){
     var meta = _TOOL_META[step.name] || {icon:'⚙️', label:function(){return step.name;}};
     var label = meta.label(step.input||{});
@@ -9557,7 +9559,13 @@ function _renderToolLog(log){
     }
     return '<div class="tlog-step '+statusClass+'"><div class="tlog-row"><span class="tlog-ic">'+meta.icon+'</span><span class="tlog-lbl">'+esc(label)+'</span><span class="tlog-st">'+statusIcon+'</span></div>'+detail+'</div>';
   }).join('');
-  return '<details class="tlog" open><summary>'+head+'</summary><div class="tlog-body">'+rows+'</div></details>';
+  // open by default → closed by default (= main chat 静か、 click で展開)
+  // 例外: ストリーミング中 (= step が増えてる最中) は open のままにして 「動いてる感」 を出す
+  // 判定ヒューリスティック: 最新 step が直近 10 秒以内なら streaming 中とみなす
+  var lastStep = log[log.length-1];
+  var isLive = lastStep && lastStep.at && (Date.now() - Date.parse(lastStep.at)) < 10000;
+  var openAttr = isLive ? ' open' : '';
+  return '<details class="tlog"' + openAttr + '><summary>'+head+'</summary><div class="tlog-body">'+rows+'</div></details>';
 }
 
 /* Collect URL-bearing tool steps (web_search, web_fetch, browse_url,

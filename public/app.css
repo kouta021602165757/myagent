@@ -1,6 +1,9 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
   /* Light gray + lime (Linear / Notion 系) — 2026-05-24 dark から flip */
+  /* IMPORTANT: --cream は legacy CSS で「card 背景」 として広く使われる (chip
+     / starter-chip / composer / wizard 等)。 page bg と同じ色にすると全て
+     invisible になる ので --cream = 白 / page bg = --ink で別色に保つ。 */
   --ink:#f5f5f7;--ink2:#fafafa;--ink3:#f0f0f3;--ink4:#e8e8eb;--ink5:#dededf;
   --wire:rgba(9,9,11,.06);--wire2:rgba(9,9,11,.10);--wire3:rgba(9,9,11,.16);
   --snow:#1a1a1a;--mist:#525252;--fog:#71717a;
@@ -8,9 +11,8 @@
   --cyan:#c0ff5c;--rose:#ef4444;--rose-dim:rgba(239,68,68,.1);--amber:#f59e0b;
   --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;--mono:'DM Mono',monospace;
   --sb:240px;
-  /* 互換 alias (legacy CSS が peach / cream を参照しているため残す) */
   --peach:#c0ff5c;--peach-light:rgba(192,255,92,.18);--peach-dark:#a3e635;
-  --cream:#f5f5f7;--cream2:#fafafa;--cream3:#f0f0f3;
+  --cream:#ffffff;--cream2:#fafafa;--cream3:#f5f5f7;
   --card:#ffffff;
   --text:#1a1a1a;--text2:#525252;--text3:#71717a;
   --bg-50:#fafafa;--bg-100:#f4f4f5;--bg-200:#e4e4e7;
@@ -7506,32 +7508,32 @@ body{color:#f0f0f8;}
 .chat-top{background:var(--cream2) !important;border-bottom:1px solid var(--wire2) !important;}
 .ct-name{color:var(--text) !important;font-size:16px;font-weight:700;}
 .pill{background:rgba(192,255,92,.12) !important;color:var(--peach-dark) !important;border:1px solid rgba(192,255,92,.25) !important;}
-.msgs{background:var(--cream) !important;}
+.msgs{background:#f5f5f7 !important;}
 .mbub{color:var(--text) !important;line-height:1.75;font-size:14px;}
-.msg.u .mbub{background:rgba(192,255,92,.1) !important;border:1px solid rgba(192,255,92,.2) !important;color:var(--text) !important;}
-.msg.a .mbub{background:var(--cream) !important;border:1px solid rgba(255,255,255,.12) !important;color:var(--text) !important;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.msg.u .mbub{background:rgba(192,255,92,.18) !important;border:1px solid rgba(163,230,53,.45) !important;color:var(--text) !important;}
+.msg.a .mbub{background:#ffffff !important;border:1px solid #e5e5e7 !important;color:var(--text) !important;box-shadow:0 1px 3px rgba(0,0,0,.04);}
 .mtime{color:var(--text3) !important;font-size:11px;}
 .mav{background:rgba(192,255,92,.15) !important;border-radius:50% !important;}
-.chat-foot{background:var(--cream2) !important;border-top:1px solid var(--wire2) !important;}
-.in-box{background:var(--cream) !important;border:1px solid rgba(255,255,255,.16) !important;border-radius:16px !important;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.chat-foot{background:#fafafa !important;border-top:1px solid #e5e5e7 !important;}
+.in-box{background:#ffffff !important;border:1px solid #e5e5e7 !important;border-radius:16px !important;box-shadow:0 1px 3px rgba(0,0,0,.04);}
 #ci{color:var(--text) !important;}
 #ci::placeholder{color:var(--text3) !important;opacity:.6;}
 .snd{background:var(--peach) !important;color:#0a0a0e !important;}
-.chip{color:var(--text2) !important;background:rgba(192,255,92,.08) !important;border:1px solid rgba(192,255,92,.2) !important;border-radius:20px !important;}
-.chip:hover{background:rgba(192,255,92,.15) !important;}
+.chip{color:var(--text2) !important;background:#ffffff !important;border:1px solid #e5e5e7 !important;border-radius:20px !important;}
+.chip:hover{background:rgba(192,255,92,.10) !important;border-color:rgba(163,230,53,.55) !important;color:#0a0a0e !important;}
 .sb-new{background:rgba(192,255,92,.1) !important;border:1px solid rgba(192,255,92,.25) !important;color:var(--peach-dark) !important;}
 .sb-new:hover{background:rgba(192,255,92,.18) !important;}
 .stab-btn{color:var(--text3) !important;border-bottom:2px solid transparent !important;background:none !important;}
 .stab-btn:hover{color:var(--text) !important;}
 .active-stab{color:var(--peach-dark) !important;border-bottom-color:var(--peach) !important;}
-.logout-btn{color:var(--text3) !important;background:rgba(255,255,255,.06) !important;border:1px solid rgba(255,255,255,.12) !important;}
+.logout-btn{color:var(--text2) !important;background:#fafafa !important;border:1px solid #e5e5e7 !important;}
 .empty{color:var(--text) !important;}
-.wizard-modal{background:var(--cream) !important;border:1px solid var(--wire2) !important;box-shadow:0 20px 60px rgba(0,0,0,.15) !important;}
-.wiz-top{background:var(--cream2) !important;border-bottom:1px solid var(--wire2) !important;}
+.wizard-modal{background:#ffffff !important;border:1px solid #e5e5e7 !important;box-shadow:0 20px 60px rgba(0,0,0,.12) !important;}
+.wiz-top{background:#fafafa !important;border-bottom:1px solid #e5e5e7 !important;}
 .wiz-title{color:var(--text) !important;}
 .btn-volt{background:var(--peach) !important;color:#0a0a0e !important;}
 .btn-volt:hover{background:var(--peach-dark) !important;}
-.plan-c{background:var(--cream2) !important;border:2px solid rgba(255,255,255,.16) !important;cursor:pointer;transition:all .15s;}
+.plan-c{background:#ffffff !important;border:2px solid #e5e5e7 !important;cursor:pointer;transition:all .15s;}
 .plan-c:hover{border-color:rgba(192,255,92,.4) !important;background:rgba(192,255,92,.04) !important;}
 .plan-c.sel{border-color:#c0ff5c !important;background:rgba(192,255,92,.08) !important;box-shadow:0 0 0 3px rgba(192,255,92,.15) !important;}
 .plan-c.sel .pl-pr{color:#a3e635 !important;font-weight:800 !important;}

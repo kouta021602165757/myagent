@@ -5232,7 +5232,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
     +   '<div class="rp-hero-meta">'
     +     '<span class="rp-hero-date">📅 ' + esc(todayFmt) + '</span>'
     +     (ga4Connected && ga4Data && ga4Data.property_id
-        ? '<span class="rp-hero-prop">GA4 | p' + esc(ga4Data.property_id) + '</span>'
+        ? '<span class="rp-hero-prop" onclick="openGa4PropertyPicker(\'' + esc(site.id) + '\')" title="プロパティを変更" style="cursor:pointer">GA4 | p' + esc(ga4Data.property_id) + ' <span style="opacity:.7;font-size:9px">▼</span></span>'
         : '<span class="rp-hero-prop rp-hero-prop-off">GA4 未接続</span>')
     +   '</div>'
     + '</div>';
@@ -5284,16 +5284,35 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
       +   '</div>'
       + '</div>';
   } else {
-    // GA4 未接続 — 大型 CTA
-    kpiHTML = ''
-      + '<div class="rp-card rp-card-cta" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">'
-      +   '<div class="rp-cta-ic">📊</div>'
-      +   '<div class="rp-cta-bd">'
-      +     '<div class="rp-cta-ti">Google Analytics を接続して数字を解放</div>'
-      +     '<div class="rp-cta-de">PV / セッション / 直帰率 / 滞在時間 / 国別 / ページ別 / 流入元 — 実数値を毎朝この場所に。</div>'
-      +   '</div>'
-      +   '<div class="rp-cta-btn">接続する →</div>'
-      + '</div>';
+    // GA4 未接続 or property 未選択 or データ 0 件 — 状態に応じて CTA を切替
+    var rpOauthConnected = ga4Connected
+      || !!(me && me.google_oauth && me.google_oauth.refresh_token)
+      || !!(me && me.integrations && me.integrations.google && me.integrations.google.refresh_token);
+    var rpNeedPicker = rpOauthConnected
+      && ga4Snap && (ga4Snap.error === 'no_property_set'
+        || (ga4Snap.property_options && ga4Snap.property_options.length)
+        || (ga4Data && (!ga4Data.series || ga4Data.series.length === 0)));
+    if(rpNeedPicker){
+      kpiHTML = ''
+        + '<div class="rp-card rp-card-cta" onclick="openGa4PropertyPicker(\'' + esc(site.id) + '\')">'
+        +   '<div class="rp-cta-ic">📊</div>'
+        +   '<div class="rp-cta-bd">'
+        +     '<div class="rp-cta-ti">あと 1 ステップ — GA4 プロパティを選んでください</div>'
+        +     '<div class="rp-cta-de">' + (esc(_siteHostname(site) || '') ? 'このサイト (' + esc(_siteHostname(site)) + ') の数字を見るために、 GA4 のどのプロパティを使うか選んでください。' : '接続済みですが property 未選択です。') + '</div>'
+        +   '</div>'
+        +   '<div class="rp-cta-btn">プロパティを選ぶ →</div>'
+        + '</div>';
+    } else {
+      kpiHTML = ''
+        + '<div class="rp-card rp-card-cta" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">'
+        +   '<div class="rp-cta-ic">📊</div>'
+        +   '<div class="rp-cta-bd">'
+        +     '<div class="rp-cta-ti">Google Analytics を接続して数字を解放</div>'
+        +     '<div class="rp-cta-de">PV / セッション / 直帰率 / 滞在時間 / 国別 / ページ別 / 流入元 — 実数値を毎朝この場所に。</div>'
+        +   '</div>'
+        +   '<div class="rp-cta-btn">接続する →</div>'
+        + '</div>';
+    }
   }
 
   // ── 3) 過去 7 日トレンド (棒グラフ + AI コメント) ──

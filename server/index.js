@@ -20087,14 +20087,14 @@ ${orgSummary || '(汎用チーム)'}
       return jres(res, 200, { ok: true, connected: true, snapshot: cached, stale: false });
     }
 
-    // ── Auto-pick property if none configured ─────────────
-    // ユーザーが OAuth 連携しただけで property を選択していない場合、
+    // ── Auto-pick property if THIS AGENT has none configured ─────
+    // 重要: user-level default に fallback しない (= site ごとに正しい property
+    // を持たせる)。 fallback すると別 site の property を使って 0 件データ
+    // で snapshot 保存されてしまう (= 2026-05-24 の bug)。
     //   - 1 個しかなければ自動選択
-    //   - 複数あるなら site_url とドメイン match するものを優先
-    // それでも決まらなければ 「property_options」 と共に 200 を返して
-    // フロントの picker で選んでもらう。
-    const resolvedPid = _resolveServiceTarget(ag, user, 'ga4');
-    if(!resolvedPid){
+    //   - 複数あるなら site_url のドメインと display_name で match
+    //   - それでも決まらなければ picker を起動するため property_options 返却
+    if(!ag.ga4_property_id){
       try {
         const props = await ga4ListProperties(user);
         if(props.length === 0){
@@ -20106,24 +20106,25 @@ ${orgSummary || '(汎用チーム)'}
         if(props.length === 1){
           pick = props[0];
         } else if(ag.site_url){
-          // Try domain match (= site_url の hostname と property の display_name)
           try {
             const host = new URL(ag.site_url).hostname.replace(/^www\./,'').toLowerCase();
-            pick = props.find(p => String(p.display_name||'').toLowerCase().includes(host))
-                || props.find(p => host.includes(String(p.display_name||'').toLowerCase().replace(/[^a-z0-9.-]/g,'')));
+            // 「fukuyama-note.com」 → 「fukuyama-note」「fukuyama」「fukuyamanote」
+            // と複数 token に分解して match (= GA4 property 名は TLD 省略しがち)
+            const hostNoTld = host.replace(/\.[a-z]{2,}(\.[a-z]{2})?$/,'');
+            const hostParts = hostNoTld.split(/[.-]/).filter(p => p.length >= 3);
+            const tokens = [host, hostNoTld, hostNoTld.replace(/-/g,''), ...hostParts];
+            pick = props.find(p => {
+              const dn = String(p.display_name||'').toLowerCase();
+              return tokens.some(t => t && dn.includes(t));
+            });
           } catch(_){}
         }
         if(pick){
           ag.ga4_property_id = pick.property_id;
-          user.integrations = user.integrations || {};
-          user.integrations.google = user.integrations.google || {};
-          if(!user.integrations.google.ga4_property_id){
-            user.integrations.google.ga4_property_id = pick.property_id;
-          }
           try { await DB.save(user); } catch(e){ console.warn('[ga4-auto-pick] save failed:', e.message); }
           // continue below with query
         } else {
-          // Multiple properties, no match → return options for picker
+          // 複数 + 一致なし → picker 起動
           return jres(res, 200, { ok:false, connected:true, snapshot:null,
             error:'no_property_set', property_options: props,
             detail:'GA4 プロパティを選択してください。' });

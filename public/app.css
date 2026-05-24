@@ -234,7 +234,7 @@ input,textarea{font-family:var(--sans);}
   color:var(--volt);font-size:12px;font-weight:700;
   transition:all .2s;
 }
-.sb-new:hover{background:var(--peach);color:var(--ink);border-color:var(--volt);box-shadow:0 0 16px var(--volt-glow);}
+.sb-new:hover{background:var(--peach);color:#0a0a0e;border-color:var(--volt);box-shadow:0 0 16px var(--volt-glow);}
 .sb-new-tpl{background:transparent;color:var(--text2);border:1px solid var(--wire2);}
 .sb-new-tpl:hover{background:rgba(192,255,92,.08);color:var(--peach-dark);border-color:rgba(192,255,92,.3);box-shadow:none;}
 
@@ -452,8 +452,8 @@ input,textarea{font-family:var(--sans);}
 .balance-val.warn{color:var(--amber);}
 .balance-sub{font-size:10px;color:var(--fog);}
 .charge-btn{
-  width:100%;padding:7px;border-radius:8px;font-size:12px;font-weight:700;
-  background:var(--peach);color:var(--ink);
+  width:100%;padding:7px;border-radius:8px;font-size:12px;font-weight:800;
+  background:var(--peach);color:#0a0a0e;
   box-shadow:0 0 10px var(--volt-glow);margin-top:8px;
 }
 .charge-btn:hover{box-shadow:0 0 18px var(--volt-glow);}

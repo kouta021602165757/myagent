@@ -19815,8 +19815,10 @@ ${siteContext}
           messages: [{ role: 'user', content: prompt }],
         });
       if(apiResp.s < 200 || apiResp.s >= 300){
-        console.warn('[strategy-gen] anthropic error:', apiResp.s, JSON.stringify(apiResp.d).slice(0, 300));
-        return jres(res, 500, { error: 'generation_failed', detail: 'AI 生成に失敗しました。少し待って再試行してください。' });
+        const detail = JSON.stringify(apiResp.d).slice(0, 400);
+        console.warn('[strategy-gen] anthropic error:', apiResp.s, detail);
+        return jres(res, 500, { error: 'generation_failed',
+          detail: 'AI 生成に失敗 (HTTP ' + apiResp.s + '): ' + detail });
       }
       const raw = (apiResp.d && apiResp.d.content && apiResp.d.content[0] && apiResp.d.content[0].text) || '';
       let parsed = null;

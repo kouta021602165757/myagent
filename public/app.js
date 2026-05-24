@@ -19374,45 +19374,8 @@ function logoutAllAccounts(){
   location.href='auth.html';
 }
 
-/* ── Sidebar quick switcher popup ─────────────────────────────── */
-function toggleUserPopup(e){
-  if(e) e.stopPropagation();
-  var el=document.getElementById('userPopup');
-  if(!el) return;
-  if(el.classList.contains('open')){ el.classList.remove('open'); return; }
-  renderUserPopup();
-  el.classList.add('open');
-  // close on outside click
-  setTimeout(function(){
-    document.addEventListener('click', _userPopupClose, {once:true});
-  },10);
-}
-function _userPopupClose(){ var el=document.getElementById('userPopup'); if(el) el.classList.remove('open'); }
-function renderUserPopup(){
-  var el=document.getElementById('userPopup');
-  if(!el) return;
-  var list=_acctsList();
-  if(me && token && !list.find(function(a){return a.user_id===me.id;})){
-    _recordCurrentAccount();
-    list=_acctsList();
-  }
-  var curId=_activeAcctId();
-  var rows=list.map(function(a){
-    var isCur=a.user_id===curId;
-    var letter=_avatarLetter(a.name,a.email);
-    return '<button class="user-popup-row'+(isCur?' current':'')+'" '+(isCur?'':'onclick="switchAccount(\''+a.user_id+'\')"')+'>'+
-      '<div class="av" style="background:'+_avatarColor(a.email||a.user_id)+'">'+letter+'</div>'+
-      '<div class="meta"><div class="nm">'+esc(a.name||a.email||'')+'</div><div class="em">'+esc(a.email||'')+'</div></div>'+
-      (isCur?'<span class="dot">●</span>':'')+
-    '</button>';
-  }).join('');
-  el.innerHTML =
-    '<div class="user-popup-section">'+(isJa?'アカウント':'Accounts')+'</div>'+
-    rows+
-    '<div class="user-popup-divider"></div>'+
-    '<button class="user-popup-row action" onclick="addAnotherAccount()"><span class="ic">＋</span><span>'+(isJa?'別のアカウントを追加':'Add another account')+'</span></button>'+
-    '<button class="user-popup-row action danger" onclick="logoutCurrent()"><span class="ic">↪</span><span>'+(isJa?'ログアウト':'Sign out')+'</span></button>';
-}
+/* ── Sidebar quick switcher popup (2026-05-24 廃止) — switchAccount /
+   addAnotherAccount / logoutCurrent は settings modal から直接呼ばれる ── */
 function logoutCurrent(){
   if(!confirm(isJa?'現在のアカウントからログアウトしますか？':'Sign out of the current account?')) return;
   var list=_acctsList();

@@ -34,16 +34,16 @@
 :root{
   --peach:#c0ff5c; --peach-dark:#a3e635;
   --peach-soft:rgba(192,255,92,.08); --peach-light:rgba(192,255,92,.16);
-  --bg:#0a0a0e; --bg-warm:#13131a; --bg-card:#18181f 
-  --text:#fafafa; --text-muted:#a1a1aa; --text-subtle:#71717a;
-  --line:rgba(255,255,255,.06); --line-strong:rgba(255,255,255,.14);
+  --bg:#f5f5f7; --bg-warm:#fafafa; --bg-card:#ffffff;
+  --text:#1a1a1a; --text-muted:#525252; --text-subtle:#737373;
+  --line:rgba(9,9,11,.06); --line-strong:rgba(9,9,11,.14);
   --green:#10b981; --rose:#ef4444; --amber:#f59e0b;
   --sans:'Noto Sans JP','Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',sans-serif;
   --display:'Bebas Neue','Hiragino Mincho ProN',serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{
-  background:radial-gradient(circle at 50% 0%, var(--peach-light) 0%, var(--bg) 50%);
+  background:radial-gradient(circle at 50% 0%, rgba(192,255,92,.18) 0%, var(--bg) 55%);
   color:var(--text);font-family:var(--sans);min-height:100vh;
   -webkit-font-smoothing:antialiased;line-height:1.65;
 }
@@ -82,7 +82,7 @@ button{cursor:pointer;font-family:inherit;}
 .card{
   width:100%;max-width:440px;background:var(--bg-card);border-radius:20px;
   padding:36px 32px 28px;border:1px solid var(--line);
-  box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04) inset;
+  box-shadow:0 4px 16px rgba(0,0,0,.06), 0 20px 50px rgba(0,0,0,.08);
   position:relative;z-index:1;
 }
 
@@ -187,8 +187,8 @@ button{cursor:pointer;font-family:inherit;}
 .btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
 
 .spinner{
-  display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);
-  border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;
+  display:inline-block;width:14px;height:14px;border:2px solid rgba(10,10,14,.25);
+  border-top-color:#0a0a0e;border-radius:50%;animation:sp .8s linear infinite;
 }
 @keyframes sp{to{transform:rotate(360deg);}}
 
@@ -214,9 +214,9 @@ button{cursor:pointer;font-family:inherit;}
 .trust-pill{
   display:inline-flex;align-items:center;gap:6px;
   padding:7px 13px;border-radius:999px;
-  background:rgba(255,255,255,.7);border:1px solid var(--line);
+  background:#ffffff;border:1px solid var(--line);
   font-size:12px;font-weight:700;color:var(--text-muted);
-  backdrop-filter:blur(10px);
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
 }
 .trust-pill .check{
   width:16px;height:16px;border-radius:50%;
@@ -426,14 +426,14 @@ function showFounderModal(user){
     "First 100 only → " + (location.origin || 'https://myaiagents.agency')
   );
   var html = `
-    <div id="founderOverlay" style="position:fixed;inset:0;background:rgba(10,10,12,.78);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(6px);">
-      <div style="max-width:480px;width:100%;background:var(--bg-card,#18181f);border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);font-family:-apple-system,'Hiragino Sans',sans-serif;">
+    <div id="founderOverlay" style="position:fixed;inset:0;background:rgba(20,20,25,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(6px);">
+      <div style="max-width:480px;width:100%;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.18);font-family:-apple-system,'Hiragino Sans',sans-serif;">
         <div style="background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;padding:32px 28px;text-align:center;">
           <div style="font-family:'Bebas Neue',serif;font-size:14px;letter-spacing:.18em;opacity:.85;">★ FOUNDER ${seat} / 100</div>
           <div style="font-family:'Bebas Neue',serif;font-size:46px;line-height:1.05;margin-top:6px;letter-spacing:-.01em;">You're a Founder.</div>
         </div>
-        <div style="padding:26px 28px 12px;color:#fafafa;">
-          <div style="font-size:14.5px;line-height:1.65;color:#a1a1aa;margin-bottom:18px;">
+        <div style="padding:26px 28px 12px;color:#1a1a1a;">
+          <div style="font-size:14.5px;line-height:1.65;color:#525252;margin-bottom:18px;">
             Welcome to MY AI Agent. Your account just unlocked:
           </div>
           <ul style="list-style:none;padding:0;margin:0 0 22px;font-size:14px;line-height:1.85;">
@@ -441,14 +441,14 @@ function showFounderModal(user){
             <li>✅ <b>Founder badge</b> on your profile, forever</li>
             <li>✅ <b>0% Agent Store fees</b>, forever (keep 100% of sales)</li>
           </ul>
-          <a href="https://twitter.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener" style="display:block;background:#1da1f2;color:#fff;text-decoration:none;padding:13px 16px;border-radius:11px;font-weight:700;text-align:center;margin-bottom:10px;font-size:14.5px;">
+          <a href="https://twitter.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener" style="display:block;background:#000000;color:#ffffff;text-decoration:none;padding:13px 16px;border-radius:11px;font-weight:700;text-align:center;margin-bottom:10px;font-size:14.5px;">
             𝕏 &nbsp;Share that you're Founder #${seat}
           </a>
           <button onclick="document.getElementById('founderOverlay').remove();window.location.href='app.html';" style="display:block;width:100%;background:#c0ff5c;color:#0a0a0e;border:0;padding:13px 16px;border-radius:11px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14.5px;">
             Open my AI team →
           </button>
         </div>
-        <div style="padding:12px 28px 22px;text-align:center;font-size:11.5px;color:#71717a;font-family:'DM Mono',monospace;letter-spacing:.04em;">
+        <div style="padding:12px 28px 22px;text-align:center;font-size:11.5px;color:#737373;font-family:'DM Mono',monospace;letter-spacing:.04em;">
           Trial ends ${new Date(user.business_trial_until || Date.now()+30*86400000).toLocaleDateString()}.
         </div>
       </div>

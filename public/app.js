@@ -8409,6 +8409,7 @@ async function openAgent(id){
     // ダッシュボード内のアクションパネルに集約 — chat header をスッキリ。
     if(_isSiteAgent(ag)){
       actsHTML += '<button class="ct-act dashboard-btn" onclick="goSiteDashboard()" title="'+L('ダッシュボード (KPI ・ 納品物 ・ 進捗)','Dashboard')+'">📊 ダッシュボード</button>';
+      actsHTML += '<button class="ct-act notes-btn" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('ノート (AI が作った成果物 ・ 手動メモを一覧編集)','Notes (AI artifacts & manual memos)')+'">📒 ノート</button>';
     } else {
       actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
       actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
@@ -10063,6 +10064,31 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       + _artifactsHtml
       + '</div>';
   }
+  // Auto-page indicator — if this AI message produced a deliverable note
+  // (server set note_id/note_title via _maybeAutoCreateNote), surface a
+  // prominent pill that opens the 📒 ノート panel with that note selected.
+  var notePillHTML = '';
+  if(!isU && raw && raw.note_id && raw.note_title){
+    var _typeIcon = raw.note_type === 'article' ? '📰'
+                  : raw.note_type === 'sns_post' ? '🐦'
+                  : raw.note_type === 'analysis' ? '📊'
+                  : raw.note_type === 'pdf' ? '📄'
+                  : '📒';
+    var _typeLbl  = raw.note_type === 'article' ? L('記事','Article')
+                  : raw.note_type === 'sns_post' ? L('SNS 草稿','SNS draft')
+                  : raw.note_type === 'analysis' ? L('分析','Analysis')
+                  : raw.note_type === 'pdf' ? 'PDF'
+                  : L('ノート','Note');
+    notePillHTML = '<div class="note-pill" onclick="openNotesPanel(\''+esc(ag.id||'')+'\',\''+esc(raw.note_id)+'\')" '
+      + 'style="display:inline-flex;align-items:center;gap:8px;margin-top:9px;background:linear-gradient(135deg,rgba(192,255,92,.10),rgba(192,255,92,.16));border:1px solid rgba(192,255,92,.45);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;max-width:fit-content" '
+      + 'onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 10px rgba(192,255,92,.18)\'" '
+      + 'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+      + '<span style="font-size:14px">'+_typeIcon+'</span>'
+      + '<span style="font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--peach-dark);text-transform:uppercase">'+esc(_typeLbl)+'</span>'
+      + '<span style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(raw.note_title)+'</span>'
+      + '<span style="font-size:10.5px;color:var(--text3);font-weight:600">→ '+L('開く','Open')+'</span>'
+      + '</div>';
+  }
   // Slack-style hover toolbar (top-right of each message). Shown only on
   // hover via CSS. Contains the 6 most-used quick actions; full action set
   // lives in the existing .m-acts row below the message.
@@ -10072,9 +10098,15 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     var hbThreadBtn = (hbThreadId && !_renderingInThread)
       ? '<button class="hb-b hb-thread" onclick="_openThread(\''+esc(hbThreadId)+'\')" title="'+L('スレッドで返信','Reply in thread')+'">💬</button>'
       : '';
+    // Manual page conversion — only show on AI messages that don't already
+    // have an auto-paged note. Lets the user salvage any reply into 📒 ノート.
+    var hbPageBtn = (!isU && !(raw && raw.note_id) && hbThreadId)
+      ? '<button class="hb-b hb-pageify" onclick="_pageifyMsg(\''+esc(ag.id||'')+'\',\''+esc(hbThreadId)+'\')" title="'+L('このメッセージをノートにする','Save this as a note')+'">📝</button>'
+      : '';
     hoverBarHTML = '<div class="hover-bar">'
       + (isGroup ? '<button class="hb-b" onclick="_openReactionPicker(this.closest(\'.m\').querySelector(\'.reaction.add\'), event)" title="'+L('リアクションを追加','Add reaction')+'">😀</button>' : '')
       + hbThreadBtn
+      + hbPageBtn
       + '<button class="hb-b" onclick="_addMsgToTasks(this)" title="'+L('タスクに追加','Add to tasks')+'">✓</button>'
       + '<button class="hb-b" onclick="copyMsgText(this.closest(\'.m\').querySelector(\'.m-body\'))" title="'+L('コピー','Copy')+'">📋</button>'
       + (raw && raw.pinned ? '<button class="hb-b hb-on" onclick="togglePin(this.closest(\'.m\').querySelector(\'.pin\'))" title="'+L('ピン留めを解除','Unpin')+'">📌</button>' : '<button class="hb-b" onclick="togglePin(this.closest(\'.m\').querySelector(\'.pin\'))" title="'+L('ピン留め','Pin')+'">📌</button>')
@@ -10124,6 +10156,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       (renderBody?'<div class="m-body">'+(bodyMarkup||'')+artifactCards+citesHtml+'</div>':'')+
       approvalHTML+
       reactionsHTML+
+      notePillHTML+
       threadIndicatorHTML+
       (inlineActs?'<div class="m-inline-actions">'+inlineActs+'</div>':'')+
       (actsToShow?'<div class="m-acts">'+actsToShow+'</div>':'')+
@@ -13505,6 +13538,22 @@ async function _sendMsgStream(ag, text, imgs, texts){
         // Server-detected "promise without delivery" — surfaces a warning
         // chip + "▶ 実行する" button on the bubble. See _pwGoAhead.
         if(obj.promise_unfulfilled){ ag.history[streamIdx].promise_unfulfilled = obj.promise_unfulfilled; }
+        // PM dispatcher: server selected the team member to attribute this
+        // reply to. Apply huddle_member identity so the bubble shows the
+        // right speaker (avatar / name / accent color).
+        if(obj.huddle_member_id){
+          ag.history[streamIdx].huddle_member_id = obj.huddle_member_id;
+          ag.history[streamIdx].huddle_member_name = obj.huddle_member_name;
+          ag.history[streamIdx].huddle_member_avatar = obj.huddle_member_avatar;
+        }
+        // Auto-page: server may have attached a note_id earlier via the
+        // 'note_created' event; ensure it survives the final done re-render.
+        if(window._lastStreamNote && window._lastStreamNote.streamIdx === streamIdx){
+          ag.history[streamIdx].note_id    = window._lastStreamNote.id;
+          ag.history[streamIdx].note_title = window._lastStreamNote.title;
+          ag.history[streamIdx].note_type  = window._lastStreamNote.type;
+          window._lastStreamNote = null;
+        }
         if(obj.balance_jpy !== undefined) me.balance_jpy = obj.balance_jpy;
         me.usage_count = (me.usage_count||0) + 1;
         updateBalance();
@@ -13515,6 +13564,10 @@ async function _sendMsgStream(ag, text, imgs, texts){
         renderMsgs(ag);
         if(window._activeThreadParent){ try { _renderThreadDrawer(); } catch(e){} }
         _refreshArtifactsIfNeeded(ag.history[streamIdx] && ag.history[streamIdx].tool_log, ag);
+      } else if(evType === 'note_created'){
+        // Server auto-paged this reply into user.notes — stash the pointer so
+        // the 'done' handler can attach it to the assistant bubble.
+        window._lastStreamNote = { streamIdx: streamIdx, id: obj.id, title: obj.title, type: obj.type };
       } else if(evType === 'error'){
         errorMsg = obj.message || 'エラー';
         _stopThink();
@@ -18179,23 +18232,84 @@ function _notesBase(){
   return st.agentId ? ('/api/agents/' + st.agentId + '/notes') : '/api/me/notes';
 }
 
-async function openNotesPanel(agentId){
-  window._notesState.agentId = agentId || null;
+// Manual page-conversion — take any AI message and persist it as a note. Used
+// by the hover-bar 📝 button for replies that auto-paging didn't catch.
+async function _pageifyMsg(agentId, msgId){
+  var ag = (agents||[]).find(function(a){return a && a.id === agentId;});
+  if(!ag){ showToast(L('対象のチャットが見つかりません','Chat not found'),'ng'); return; }
+  var msg = (ag.history||[]).find(function(m){return m && m.id === msgId;});
+  if(!msg){ showToast(L('対象のメッセージが見つかりません','Message not found'),'ng'); return; }
+  if(msg.note_id){ openNotesPanel(agentId, msg.note_id); return; }
+  var content = String(msg.content || '');
+  if(!content.trim()){ showToast(L('空のメッセージはノート化できません','Cannot pageify empty message'),'ng'); return; }
+  // Title extraction: first markdown header, else first non-blank line, else first 40 chars
+  var firstH = content.match(/^#{1,3}\s+(.+)$/m);
+  var firstLine = content.split('\n').find(function(s){return s.trim().length > 0;}) || '';
+  var title = (firstH ? firstH[1] : firstLine).trim().slice(0, 80) || (L('メモ','Memo') + ' ' + new Date().toISOString().slice(0,10));
+  try {
+    var r = await api('POST', '/api/me/notes', {
+      title: title,
+      content: content,
+      type: 'manual',
+      agent_id: agentId,
+    });
+    if(r && r.note){
+      // Patch the in-memory message so the 📄 pill shows up immediately
+      msg.note_id    = r.note.id;
+      msg.note_title = r.note.title;
+      msg.note_type  = 'manual';
+      try { renderMsgs(ag); } catch(_){}
+      showToast(L('ノートに保存しました','Saved as note'),'ok');
+      // Auto-open the notes panel with the new note selected
+      setTimeout(function(){ openNotesPanel(agentId, r.note.id); }, 200);
+    }
+  } catch(e){
+    showToast((e && e.message) || L('ノート作成に失敗','Failed to create note'),'ng');
+  }
+}
+
+async function openNotesPanel(agentId, selectedNoteId){
+  // Agent-scoped notes endpoint requires server support — for site-level notes
+  // we use the user-scoped endpoint (/api/me/notes) which is what 📒 ノート
+  // button in the chat header should use. The chat header may pass agentId as
+  // a hint, but for sites we route to user-scoped so AI-auto-paged notes show.
+  // Detect: site agents use user-scoped; legacy DMs/groups keep agent-scoped.
+  var _siteMode = false;
+  try {
+    var _ag = (agents||[]).find(function(a){return a && a.id === agentId;});
+    if(_ag && (typeof _isSiteAgent === 'function' ? _isSiteAgent(_ag) : _ag.site_url)){
+      _siteMode = true;
+    }
+  } catch(_){}
+  window._notesState.agentId = _siteMode ? null : (agentId || null);
   window._notesState.shared = false;
-  console.log('[notes] open — agentId=', agentId, 'base=', _notesBase());
+  window._notesState._siteHint = _siteMode ? agentId : null;  // for filter
+  console.log('[notes] open — agentId=', agentId, 'siteMode=', _siteMode, 'base=', _notesBase());
   // Hydrate notes list, then render
   try {
     var r = await api('GET', _notesBase());
     console.log('[notes] list response — count=', (r && r.notes||[]).length);
-    window._notesState.notes = (r && r.notes) || [];
+    var allNotes = (r && r.notes) || [];
+    // In site mode, narrow to notes tagged with this agent_id (auto-paged) +
+    // untagged user-manual notes so legacy memos remain accessible.
+    if(_siteMode && agentId){
+      window._notesState.notes = allNotes.filter(function(n){
+        return !n.agent_id || n.agent_id === agentId;
+      });
+    } else {
+      window._notesState.notes = allNotes;
+    }
     window._notesState.shared = !!(r && r.shared);
   } catch(e){
     console.error('[notes] list failed:', e);
     showToast((e.message||'メモ一覧の読込失敗'),'ng');
     window._notesState.notes = [];
   }
-  // Pick the most-recent note (already sorted server-side) or null
-  window._notesState.activeId = (window._notesState.notes[0] || {}).id || null;
+  // If caller passed a specific note id (= came from 📄 pill click), select it.
+  // Otherwise pick the most-recent.
+  var _wantId = selectedNoteId || null;
+  var _wantNote = _wantId ? window._notesState.notes.find(function(n){return n.id === _wantId;}) : null;
+  window._notesState.activeId = (_wantNote && _wantNote.id) || (window._notesState.notes[0] || {}).id || null;
   // Fetch full content for the auto-selected note so the editor isn't blank
   if(window._notesState.activeId){
     try {

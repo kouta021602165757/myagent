@@ -8221,6 +8221,113 @@ function _stampArtifactVersions(text, ownerUser){
 //
 //   Returns: { detected: boolean, phrases: string[] }
 // ──────────────────────────────────────────────────────────────────
+// Auto-page hook: when the AI produces something page-worthy (= a deliverable
+// you'd want to revisit / edit, not a chat reply), drop it into user.notes so
+// it surfaces in the 📒 ノート panel. Strong signal = tool calls that publish
+// pages. Weak signal = long markdown reply with multiple headers (= analysis /
+// strategy memo) or SNS-draft pattern. Returns the created note or null.
+function _maybeAutoCreateNote(user, agent, reply, toolLog){
+  if(!user || !agent || !reply || typeof reply !== 'string') return null;
+  if(reply.length < 200) return null;
+  const tl = Array.isArray(toolLog) ? toolLog : [];
+  // Strong signal — these tools always produce a deliverable worth surfacing.
+  const pageProducingTools = new Set([
+    'wordpress_publish', 'create_artifact', 'edit_artifact', 'generate_pdf',
+  ]);
+  const matched = tl.find(t => t && t.ok !== false && pageProducingTools.has(t.name));
+  let type = null, title = null;
+  if(matched){
+    type = matched.name === 'wordpress_publish' ? 'article'
+         : matched.name === 'generate_pdf' ? 'pdf'
+         : 'artifact';
+    title = matched.title || matched.name;
+  } else {
+    const len = reply.length;
+    const headerMatches = reply.match(/^#{1,3}\s+\S/gm) || [];
+    if(len >= 1500 && headerMatches.length >= 2){
+      type = 'analysis';
+      const firstHeader = reply.match(/^#{1,3}\s+(.+)$/m);
+      title = firstHeader ? firstHeader[1].slice(0, 80) : reply.slice(0, 40);
+    } else if(/(?:^|\n)\s*(?:🐦|Twitter|X 投稿|SNS 投稿|X post|tweet|投稿案 ?\d|案 ?\d ?[:：])/im.test(reply) && len >= 300){
+      type = 'sns_post';
+      title = 'SNS 草稿 ' + new Date().toISOString().slice(0, 10);
+    }
+  }
+  if(!type) return null;
+  user.notes = Array.isArray(user.notes) ? user.notes : [];
+  if(user.notes.length >= 1000) return null;
+  const now = new Date().toISOString();
+  const note = {
+    id: 'note_' + crypto.randomBytes(5).toString('hex'),
+    title: (title || (type === 'article' ? '記事' : type === 'sns_post' ? 'SNS 投稿' : 'AI ノート')).slice(0, 200),
+    content: reply.slice(0, 100000),
+    type: type,
+    agent_id: agent.id,
+    auto_generated: true,
+    created_at: now,
+    updated_at: now,
+  };
+  user.notes.push(note);
+  return note;
+}
+
+// PM dispatcher: classify the user's message and pick the right team member
+// to handle it. Returns {member_id, member_name, member_avatar, dept_id} or null.
+// Uses Haiku (cheap + fast). Fails silently if anything goes wrong — caller
+// should treat null as "no dispatch, use default speaker".
+async function _pmDispatchToMember(agent, userText){
+  if(!agent || !agent.org || !Array.isArray(agent.org.departments)) return null;
+  const text = String(userText || '').trim();
+  if(text.length < 4) return null;
+  if(!ANTHROPIC) return null;
+  // Collect all members with their roles/focus so the PM can route
+  const roster = [];
+  agent.org.departments.forEach(d => {
+    (d.teams || []).forEach(t => {
+      (t.members || []).forEach(m => {
+        roster.push({
+          member_id: m.id,
+          name: m.name || '',
+          role: m.role || '',
+          focus: m.focus || '',
+          dept_id: d.id || '',
+          dept_name: d.name || '',
+          dept_icon: d.icon || '',
+        });
+      });
+    });
+  });
+  if(!roster.length) return null;
+  // Cap roster size in prompt to keep latency low. Most teams have ≤ 20 members.
+  const rosterForPrompt = roster.slice(0, 24).map((r,i) =>
+    `${i+1}. id=${r.member_id} / ${r.name} (${r.role}) — ${r.focus}`
+  ).join('\n');
+  const prompt = `あなたはマーケティングチームの PM (プロジェクトマネージャー) です。\nユーザーから来た依頼を読み、最も適した担当メンバーを 1 人だけ選んでください。\n\n## ユーザーの依頼\n${text.slice(0, 600)}\n\n## チーム名簿\n${rosterForPrompt}\n\n## 出力\n以下の JSON のみ出力 (説明やマークダウン禁止):\n{ "member_id": "<上記 id のいずれか>", "reason": "<30 字以内の理由>" }`;
+  try {
+    const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
+      {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+      { model:'claude-haiku-4-5-20251001', max_tokens: 120, messages:[{role:'user', content: prompt}] },
+      { timeout: 12000 });
+    if(r.s !== 200) return null;
+    let raw = (r.d && r.d.content || []).filter(b => b.type==='text').map(b => b.text).join('').trim();
+    raw = raw.replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    const parsed = JSON.parse(raw);
+    if(!parsed || !parsed.member_id) return null;
+    const pick = roster.find(m => m.member_id === parsed.member_id);
+    if(!pick) return null;
+    return {
+      member_id: pick.member_id,
+      member_name: (pick.dept_icon ? pick.dept_icon + ' ' : '') + pick.name,
+      member_avatar: pick.dept_icon || '👤',
+      dept_id: pick.dept_id,
+      reason: String(parsed.reason || '').slice(0, 60),
+    };
+  } catch(e){
+    console.warn('[pm-dispatch] failed:', e && e.message);
+    return null;
+  }
+}
+
 function _detectPromiseWithoutDelivery(reply, toolLog){
   const text = String(reply || '');
   if(text.length < 10) return { detected:false, phrases:[] };
@@ -15488,13 +15595,18 @@ ${motiv ? `- 購買動機: ${motiv}` : ''}
     }
     // 4) 今週のロードマップ (= 8 週分の中で「現在の週」)
     if(agent && agent.roadmap && Array.isArray(agent.roadmap.weeks) && agent.roadmap.weeks.length){
-      // generated_at + 経過週数 で current week を決める
+      // 「current_week」が roadmap に明示されていればそちらを優先 (= タスク完了で進む)
+      // 無ければ generated_at からの経過週数で算出 (= 時間経過で進む) のフォールバック
       let currentWeekN = 1;
-      try {
-        const gen = Date.parse(agent.roadmap.generated_at || agent.created_at || Date.now());
-        const weeksElapsed = Math.floor((Date.now() - gen) / (7 * 86400000));
-        currentWeekN = Math.min(8, Math.max(1, weeksElapsed + 1));
-      } catch(_){}
+      if(typeof agent.roadmap.current_week === 'number' && agent.roadmap.current_week > 0){
+        currentWeekN = Math.min(agent.roadmap.weeks.length, agent.roadmap.current_week);
+      } else {
+        try {
+          const gen = Date.parse(agent.roadmap.generated_at || agent.created_at || Date.now());
+          const weeksElapsed = Math.floor((Date.now() - gen) / (7 * 86400000));
+          currentWeekN = Math.min(8, Math.max(1, weeksElapsed + 1));
+        } catch(_){}
+      }
       const cw = agent.roadmap.weeks.find(w => w.n === currentWeekN) || agent.roadmap.weeks[0];
       if(cw && Array.isArray(cw.tasks) && cw.tasks.length){
         const remaining = cw.tasks.filter(t => !t.done);
@@ -17867,6 +17979,9 @@ async function handleAPI(req,res,pathname,method,ip){
       title: n.title || '',
       snippet: String(n.content||'').slice(0, 120).replace(/\n+/g, ' '),
       updated_at: n.updated_at || n.created_at,
+      agent_id: n.agent_id || null,
+      type: n.type || null,
+      auto_generated: !!n.auto_generated,
     }));
     notes.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
     return jres(res, 200, { notes });
@@ -17874,12 +17989,14 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pathname === '/api/me/notes' && method === 'POST'){
     const b = await readBody(req);
     user.notes = Array.isArray(user.notes) ? user.notes : [];
-    if(user.notes.length >= 200) return jres(res, 400, { error: 'too many notes (max 200)' });
+    if(user.notes.length >= 1000) return jres(res, 400, { error: 'too many notes (max 1000)' });
     const now = new Date().toISOString();
     const note = {
       id: 'note_' + crypto.randomBytes(5).toString('hex'),
       title: String((b && b.title) || '').slice(0, 200),
       content: String((b && b.content) || '').slice(0, 100000),
+      type: (b && typeof b.type === 'string') ? b.type.slice(0, 32) : 'manual',
+      agent_id: (b && typeof b.agent_id === 'string') ? b.agent_id.slice(0, 64) : null,
       created_at: now,
       updated_at: now,
     };
@@ -17950,7 +18067,7 @@ async function handleAPI(req,res,pathname,method,ip){
       });
     }
     if(method === 'POST'){
-      if(ag.notes.length >= 200) return jres(res,400,{error:'too many notes (max 200)'});
+      if(ag.notes.length >= 1000) return jres(res,400,{error:'too many notes (max 1000)'});
       const b = await readBody(req);
       const now = new Date().toISOString();
       const note = {
@@ -20176,6 +20293,7 @@ ${orgSummary || '(汎用チーム)'}
         kpi_snapshot: { ...kpi },
         ga4_baseline: ga4.last_7d || null,
         weeks,
+        current_week: 1,  // ← タスク全 done で次週へ進む focus pointer
         custom_tasks: existingCustom,
       };
       try { await DB.save(user); } catch(e){ console.warn('[roadmap-gen] save failed:', e.message); }
@@ -20288,8 +20406,22 @@ ${orgSummary || '(汎用チーム)'}
       ag.history.push(reactiveMsg);
       ag.last_at = new Date().toISOString();
     }
+    // ── Week auto-advance: 全タスク done で current_week を次へ進める ──
+    let weekAdvancedTo = null;
+    if(body && body.done === true && target.in_week && ag.roadmap){
+      const wk = target.in_week;
+      const allDone = (wk.tasks || []).length > 0 && (wk.tasks || []).every(t => t && t.done);
+      const cw = (typeof ag.roadmap.current_week === 'number' && ag.roadmap.current_week > 0)
+                 ? ag.roadmap.current_week : 1;
+      if(allDone && wk.n === cw && wk.n < (ag.roadmap.weeks || []).length){
+        ag.roadmap.current_week = wk.n + 1;
+        ag.roadmap.last_advanced_at = new Date().toISOString();
+        weekAdvancedTo = ag.roadmap.current_week;
+        console.log('[roadmap] week auto-advanced agent=' + ag.id + ' ' + wk.n + ' → ' + ag.roadmap.current_week);
+      }
+    }
     try { await DB.save(user); } catch(_){}
-    return jres(res, 200, { ok: true, task: target.task, reactive_msg: reactiveMsg });
+    return jres(res, 200, { ok: true, task: target.task, reactive_msg: reactiveMsg, week_advanced_to: weekAdvancedTo });
   }
 
   // helper: agent.org から keyword に match する member を探す
@@ -23156,6 +23288,15 @@ ${orgSummary || '(汎用チーム)'}
     const regenerate=!!body.regenerate;
     const message=body.message||'';
     const images=body.images||[];
+    // ── PM dispatch: チームの中から最適な member を 1 人 Haiku で選んで speaker に
+    // (失敗 / non-team / 空 msg / regenerate なら null — その場合は通常の挙動)
+    let _pmPick = null;
+    if(!regenerate && agent && agent.org && Array.isArray(agent.org.departments) && message){
+      try {
+        _pmPick = await _pmDispatchToMember(agent, message);
+        if(_pmPick) console.log('[pm-dispatch] picked', _pmPick.member_id, _pmPick.member_name, '— ', _pmPick.reason);
+      } catch(e){ console.warn('[pm-dispatch] err:', e && e.message); }
+    }
     // Edit-target directive — set when the user pressed "このサイトを編集" on an
     // artifact card. Grounds the AI on the EXACT file (no guessing among
     // similar artifacts) WITHOUT polluting the stored/displayed user message.
@@ -24743,13 +24884,38 @@ ${orgSummary || '(汎用チーム)'}
           }
         }
       }
-      agent.history=[...(agent.history||[]),{id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_regenParentSrv}];
+      const _aiEntryR = {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_regenParentSrv};
+      if(_pmPick){
+        _aiEntryR.huddle_member_id = _pmPick.member_id;
+        _aiEntryR.huddle_member_name = _pmPick.member_name;
+        _aiEntryR.huddle_member_avatar = _pmPick.member_avatar;
+      }
+      agent.history=[...(agent.history||[]),_aiEntryR];
     } else {
+      const _aiEntryN = {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent2};
+      if(_pmPick){
+        _aiEntryN.huddle_member_id = _pmPick.member_id;
+        _aiEntryN.huddle_member_name = _pmPick.member_name;
+        _aiEntryN.huddle_member_avatar = _pmPick.member_avatar;
+      }
       agent.history=[...(agent.history||[]),
         _userMsgEntry2,
-        {id:_newAid2,role:'assistant',content:reply,time:ts,cost_jpy:cost.jpy,thread_parent_id:_aiThreadParent2}];
+        _aiEntryN];
     }
     if(agent.history.length>500)agent.history=agent.history.slice(-500);
+    // ── Auto-page hook: 成果物 (記事 / SNS / 分析) を user.notes に格納 ──
+    try {
+      const _autoNote = _maybeAutoCreateNote(payerUser, agent, reply, toolLog);
+      if(_autoNote){
+        const _lastA = agent.history[agent.history.length - 1];
+        if(_lastA && _lastA.role === 'assistant'){
+          _lastA.note_id    = _autoNote.id;
+          _lastA.note_title = _autoNote.title;
+          _lastA.note_type  = _autoNote.type;
+        }
+        if(sse) sse('note_created', { id: _autoNote.id, title: _autoNote.title, type: _autoNote.type });
+      }
+    } catch(e){ console.warn('[autoNote] failed:', e && e.message); }
     // ── current_task の進捗を更新 ────────────────────────────────
     // 1) reply 本文の「✅ ステップN 完了」マーカーで明示済み step を done に
     // 2) 加えて、このターンで mutating tool (create_artifact / edit_artifact /
@@ -24873,12 +25039,24 @@ ${orgSummary || '(汎用チーム)'}
       }
       // Emit the (possibly already-streamed) reply once at the end so the client
       // can finalize the bubble. delta events were sent inside the loop.
-      sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog, stop_reason: _stopReason, truncated: _truncated, promise_unfulfilled: _promise.detected ? _promise.phrases : null });
+      const _doneEvt = { reply, balance_jpy: payerUser.balance_jpy, cost: { jpy: cost.jpy, usd: cost.usd }, tool_log: toolLog, stop_reason: _stopReason, truncated: _truncated, promise_unfulfilled: _promise.detected ? _promise.phrases : null };
+      if(_pmPick){
+        _doneEvt.huddle_member_id = _pmPick.member_id;
+        _doneEvt.huddle_member_name = _pmPick.member_name;
+        _doneEvt.huddle_member_avatar = _pmPick.member_avatar;
+      }
+      sse('done', _doneEvt);
       if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; }
       res.end();
       return;
     }
-    return jres(res,200,{reply,balance_jpy:payerUser.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null});
+    const _jresEvt = {reply,balance_jpy:payerUser.balance_jpy,cost:{jpy:cost.jpy,usd:cost.usd},tool_log:toolLog||null};
+    if(_pmPick){
+      _jresEvt.huddle_member_id = _pmPick.member_id;
+      _jresEvt.huddle_member_name = _pmPick.member_name;
+      _jresEvt.huddle_member_avatar = _pmPick.member_avatar;
+    }
+    return jres(res,200,_jresEvt);
   }
 
 

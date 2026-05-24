@@ -8054,3 +8054,68 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   font-family:'JetBrains Mono','SF Mono',Menlo,monospace !important;
   font-size:10px !important; color:#1a1a1a !important; font-weight:600 !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   2026-05-24 FINAL2: composer 全体 (textarea wrap / tool buttons / send) も
+   同じ override 病。 高 specificity (parent + child) + !important で殴る。
+   ════════════════════════════════════════════════════════════════════════ */
+.chat-foot-inner .composer{
+  background:#ffffff !important;
+  border:1.5px solid #d4d4d8 !important;
+  border-radius:18px !important;
+  padding:14px 16px 8px !important;
+  box-shadow:0 1px 3px rgba(0,0,0,.04) !important;
+  position:relative !important;
+}
+.chat-foot-inner .composer:focus-within{
+  border-color:#a3e635 !important;
+  box-shadow:0 0 0 3px rgba(192,255,92,.16), 0 1px 3px rgba(0,0,0,.04) !important;
+}
+.chat-foot-inner .composer textarea#ci{
+  width:100% !important; min-height:24px !important; max-height:200px !important;
+  background:transparent !important; border:0 !important; outline:0 !important;
+  resize:none !important;
+  font-family:inherit !important; font-size:14.5px !important;
+  color:#1a1a1a !important; line-height:1.55 !important;
+  padding:0 !important;
+}
+.chat-foot-inner .composer textarea#ci::placeholder{
+  color:#a1a1aa !important;
+}
+.chat-foot-inner .composer-tools{
+  display:flex !important; align-items:center !important; gap:6px !important;
+  border-top:1px solid #f0f0f3 !important;
+  padding-top:8px !important; margin-top:6px !important;
+}
+.chat-foot-inner .composer-tools .tool-btn{
+  display:inline-flex !important; align-items:center !important; gap:5px !important;
+  background:transparent !important;
+  border:1px solid transparent !important;
+  color:#525252 !important;
+  padding:6px 10px !important; border-radius:9px !important;
+  font-size:13px !important; font-family:inherit !important; font-weight:600 !important;
+  cursor:pointer !important;
+  transition:all .14s !important;
+}
+.chat-foot-inner .composer-tools .tool-btn:hover{
+  background:#f0f0f3 !important; color:#1a1a1a !important;
+}
+.chat-foot-inner .composer-tools .tool-spacer{
+  flex:1 !important;
+}
+.chat-foot-inner .composer-tools .send-btn{
+  width:36px !important; height:36px !important; border-radius:10px !important;
+  background:#c0ff5c !important; color:#0a0a0e !important; border:0 !important;
+  display:inline-flex !important; align-items:center !important; justify-content:center !important;
+  cursor:pointer !important; flex-shrink:0 !important;
+  transition:all .14s !important;
+  padding:0 !important;
+}
+.chat-foot-inner .composer-tools .send-btn:hover{
+  background:#a3e635 !important;
+  transform:translateY(-1px) !important;
+  box-shadow:0 4px 10px rgba(163,230,53,.30) !important;
+}
+.chat-foot-inner .composer-tools .send-btn svg{
+  width:16px !important; height:16px !important;
+}

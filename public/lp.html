@@ -109,33 +109,83 @@ img{max-width:100%;display:block;}
 .wrap{max-width:1240px;margin:0 auto;padding:0 24px;}
 .wrap-narrow{max-width:880px;margin:0 auto;padding:0 24px;}
 
-/* ── NAV ─────────────────────────────────────────────── */
+/* ── NAV (OpenCrew-style floating pill) ───────────────── */
 .nav{
-  position:sticky;top:0;z-index:50;
-  background:rgba(250,250,247,.85);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);
+  position:fixed;top:18px;left:0;right:0;z-index:50;
+  padding:0 24px;pointer-events:none;
 }
-.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1240px;margin:0 auto;}
-.nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);}
+.nav-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  max-width:1100px;margin:0 auto;
+  background:#ffffff;
+  border-radius:99px;
+  padding:8px 8px 8px 22px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04), 0 14px 36px rgba(13,79,74,.10);
+  border:1px solid var(--line);
+  pointer-events:auto;
+  backdrop-filter:blur(12px);
+  background:rgba(255,255,255,.92);
+}
+.nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);flex-shrink:0;}
 .nav-logo .bars{display:flex;gap:3px;align-items:flex-end;}
 .nav-logo .bars div{width:5px;background:var(--ink);border-radius:2px;}
-.nav-logo .bars div:nth-child(1){height:22px;}
-.nav-logo .bars div:nth-child(2){height:15px;opacity:.65;}
-.nav-logo .bars div:nth-child(3){height:8px;opacity:.35;}
-.nav-logo-tx{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.04em;}
-.nav-actions{display:flex;align-items:center;gap:18px;}
-.nav-link{font-size:14px;font-weight:500;color:var(--ink2);transition:color .15s;}
-.nav-link:hover{color:var(--ink);}
-.nav-cta{
-  background:var(--ink);color:#fff;
-  padding:9px 18px;border-radius:99px;
-  font-size:13.5px;font-weight:600;
-  transition:transform .15s, box-shadow .15s;
+.nav-logo .bars div:nth-child(1){height:20px;}
+.nav-logo .bars div:nth-child(2){height:13px;opacity:.65;}
+.nav-logo .bars div:nth-child(3){height:7px;opacity:.35;}
+.nav-logo-tx{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.02em;}
+.nav-badge{
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  color:var(--ink3);background:var(--bg-cool);
+  padding:3px 8px;border-radius:99px;
+  border:1px solid var(--line);
+  letter-spacing:.06em;margin-left:6px;
 }
-.nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.18);}
+.nav-center{
+  display:flex;align-items:center;gap:28px;
+  flex:1;justify-content:center;
+}
+.nav-link{
+  font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--ink3);
+  letter-spacing:.12em;text-transform:uppercase;transition:color .15s;
+}
+.nav-link:hover, .nav-link.active{color:var(--ink);}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.nav-clock{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:11.5px;font-weight:600;
+  color:var(--ink2);letter-spacing:.04em;
+  padding:7px 14px;border-radius:99px;
+  border:1px solid var(--line);background:#fff;
+}
+.nav-clock::before{
+  content:'';width:7px;height:7px;border-radius:50%;background:#10b981;
+  animation:pulse 2s ease infinite;
+}
+.nav-cta{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--teal);color:#fff;
+  padding:11px 20px 11px 12px;border-radius:99px;
+  font-size:13.5px;font-weight:600;
+  transition:transform .15s, box-shadow .15s, background .15s;
+}
+.nav-cta::before{
+  content:'';width:24px;height:24px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, #1a6b66, #0d4f4a 50%, #062624);
+  flex-shrink:0;
+  box-shadow:inset -2px -2px 4px rgba(0,0,0,.3), inset 2px 2px 4px rgba(255,255,255,.15);
+}
+.nav-cta:hover{background:#0a3f3a;transform:translateY(-1px);box-shadow:0 8px 24px rgba(13,79,74,.30);}
+@media(max-width:760px){
+  .nav{top:10px;padding:0 12px;}
+  .nav-inner{padding:6px 6px 6px 16px;border-radius:99px;}
+  .nav-center{display:none;}
+  .nav-clock{display:none;}
+  .nav-badge{display:none;}
+  .nav-cta{padding:10px 16px 10px 10px;font-size:12.5px;}
+}
 
 /* ── HERO ────────────────────────────────────────────── */
-.hero{padding:90px 0 60px;text-align:center;position:relative;overflow:hidden;}
+.hero{padding:130px 0 60px;text-align:center;position:relative;overflow:hidden;}
 .hero::before{
   /* subtle radial gradient backdrop */
   content:'';position:absolute;inset:-200px -200px auto -200px;height:600px;z-index:0;
@@ -277,9 +327,10 @@ img{max-width:100%;display:block;}
   background:var(--gold);transform:rotate(-2deg);
 }
 
-/* ── BUILD / RUN / LEARN (numbered 01/02/03) ─────── */
-.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:50px;}
-@media(max-width:880px){.how-grid{grid-template-columns:1fr;gap:24px;}}
+/* ── HOW IT WORKS (6 steps, 3×2 grid) ─────── */
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:50px;}
+@media(max-width:880px){.how-grid{grid-template-columns:1fr;gap:16px;}}
+@media(min-width:881px) and (max-width:1100px){.how-grid{grid-template-columns:repeat(2,1fr);}}
 .how-card{
   background:#fff;border:1px solid var(--line);border-radius:14px;
   padding:32px 28px;position:relative;
@@ -481,17 +532,22 @@ img{max-width:100%;display:block;}
 
 <body>
 
-<!-- ═══════════════════════════════════════════════════════ NAV ─── -->
+<!-- ═══════════════════════════════════════════════════════ NAV (floating pill) ─── -->
 <header class="nav">
   <div class="nav-inner">
     <a class="nav-logo" href="/">
       <div class="bars"><div></div><div></div><div></div></div>
       <span class="nav-logo-tx">MY AI AGENT</span>
+      <span class="nav-badge">BETA</span>
     </a>
-    <div class="nav-actions">
-      <a class="nav-link" href="#how" data-i18n="nav.how">仕組み</a>
-      <a class="nav-link" href="#metrics" data-i18n="nav.numbers">数字</a>
-      <a class="nav-link" href="/auth.html" data-i18n="nav.login">ログイン</a>
+    <nav class="nav-center">
+      <a class="nav-link active" href="/" data-i18n="nav.home">HOME</a>
+      <a class="nav-link" href="#how" data-i18n="nav.how">HOW IT WORKS</a>
+      <a class="nav-link" href="#metrics" data-i18n="nav.numbers">NUMBERS</a>
+      <a class="nav-link" href="/auth.html" data-i18n="nav.login">LOG IN</a>
+    </nav>
+    <div class="nav-right">
+      <span class="nav-clock" id="navClock">--:--</span>
       <a class="nav-cta" href="/auth.html?tab=signup" data-i18n="nav.cta">無料で始める →</a>
     </div>
   </div>
@@ -596,49 +652,77 @@ img{max-width:100%;display:block;}
   <div class="wrap">
     <span class="sec-eye reveal" data-i18n="how.eye">How it works</span>
     <h2 class="sec-h2 reveal">
-      <span data-i18n="how.h2a">3 ステップで、</span><br>
+      <span data-i18n="how.h2a">6 ステップで、</span><br>
       <span class="serif" data-i18n="how.h2b">AI チームが動き出す。</span>
     </h2>
     <p class="sec-sub reveal" data-i18n="how.sub">
-      URL を貼ったらサイト分析 → AI チーム編成 → 自動運用 まで、 <b>あなたの操作は 1 回</b>。
+      URL を貼ってから自動運用 → 毎日レポートまで。 <b>あなたが手を動かすのは 4 つだけ</b>。
     </p>
     <div class="how-grid">
       <div class="how-card reveal">
-        <span class="how-num">01 — Hire</span>
-        <h3 class="how-h3" data-i18n="how1.h">雇用する</h3>
-        <p class="how-tx" data-i18n="how1.tx">
-          URL を 1 つ貼るだけ。 <b>30 秒</b> で AI がサイト内容を read、 業種を判定、
-          18 名超の専門家チームを編成。 設定なし。
+        <span class="how-num">01 — Paste</span>
+        <h3 class="how-h3">URL を貼る</h3>
+        <p class="how-tx">
+          サイトの URL を 1 つ コピペ。 <b>30 秒</b> で AI がサイト内容を read、 業種・ターゲット・競合を判定。
         </p>
         <div class="how-tags">
-          <span class="how-tag">30 秒で組成</span>
+          <span class="how-tag">30 秒</span>
           <span class="how-tag">設定 0</span>
-          <span class="how-tag">業種自動判定</span>
         </div>
       </div>
       <div class="how-card reveal">
-        <span class="how-num">02 — Run</span>
-        <h3 class="how-h3" data-i18n="how2.h">運用する</h3>
-        <p class="how-tx" data-i18n="how2.tx">
-          24 時間 365 日 で SEO 記事 / X スレッド / 競合分析 / CVR 改善案 を AI が生成・投稿。
-          <b>WordPress / X / Instagram / Shopify 等 12 platform</b> に直接公開。
+        <span class="how-num">02 — Hire</span>
+        <h3 class="how-h3">Agent チーム雇用</h3>
+        <p class="how-tx">
+          サイトに合わせて <b>18 名超の AI 専門家</b> が自動編成。 リサーチ / 分析 / コンテンツ / SNS の各部門が組成。
+        </p>
+        <div class="how-tags">
+          <span class="how-tag">業種別 preset</span>
+          <span class="how-tag">3 部門以上</span>
+        </div>
+      </div>
+      <div class="how-card reveal">
+        <span class="how-num">03 — Diagnose</span>
+        <h3 class="how-h3">現状分析</h3>
+        <p class="how-tx">
+          GA4 接続 → 直近 30 日の <b>PV / セッション / 流入元 / ファネル漏れ</b> を AI が読み込んで現状把握。
+        </p>
+        <div class="how-tags">
+          <span class="how-tag">GA4 連動</span>
+          <span class="how-tag">5 分で診断</span>
+        </div>
+      </div>
+      <div class="how-card reveal">
+        <span class="how-num">04 — Brief</span>
+        <h3 class="how-h3">仕事を指示</h3>
+        <p class="how-tx">
+          チャットで <b>「SEO 記事 3 本書いて」 「競合と差別化する戦略立てて」</b> と頼むだけ。 ペルソナ / 競合は AI が記憶してる。
+        </p>
+        <div class="how-tags">
+          <span class="how-tag">日本語 OK</span>
+          <span class="how-tag">記憶あり</span>
+        </div>
+      </div>
+      <div class="how-card reveal">
+        <span class="how-num">05 — Run</span>
+        <h3 class="how-h3">Agent が自動運用</h3>
+        <p class="how-tx">
+          記事 / SNS 投稿 / 競合監視 / KPI 分析 を <b>24 時間 365 日</b>。
+          WordPress / X / Instagram / Shopify 等 <b>12 platform</b> に直接公開。
         </p>
         <div class="how-tags">
           <span class="how-tag">365 日 稼働</span>
           <span class="how-tag">12 platform</span>
-          <span class="how-tag">直接投稿</span>
         </div>
       </div>
       <div class="how-card reveal">
-        <span class="how-num">03 — Learn</span>
-        <h3 class="how-h3" data-i18n="how3.h">改善する</h3>
-        <p class="how-tx" data-i18n="how3.tx">
-          GA4 / Search Console を毎朝分析。 KPI ロードマップ (12 週分) を AI が更新、
-          <b>「次やるべき 1 つ」</b> を毎日提案。 PDCA が止まらない。
+        <span class="how-num">06 — Report</span>
+        <h3 class="how-h3">毎日レポート & 改善</h3>
+        <p class="how-tx">
+          毎朝 <b>「昨日やったこと + 今日やる 1 つ」</b> がダッシュボードに届く。 KPI 進捗を見ながら PDCA が回り続ける。
         </p>
         <div class="how-tags">
-          <span class="how-tag">GA4 連動</span>
-          <span class="how-tag">毎週 PDCA</span>
+          <span class="how-tag">毎朝届く</span>
           <span class="how-tag">12 週ロードマップ</span>
         </div>
       </div>
@@ -949,6 +1033,22 @@ function _dispatchTeam(ev, source){
     }, { threshold: 0.5 });
     document.querySelectorAll('.stat-count').forEach(function(el){ io.observe(el); });
   }).catch(function(){});
+})();
+
+// ── Live clock in nav (OpenCrew-style) ─────────────
+(function(){
+  var el = document.getElementById('navClock');
+  if(!el) return;
+  function tick(){
+    var d = new Date();
+    var h = d.getHours();
+    var m = d.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12 || 12;
+    el.textContent = h12 + ':' + (m < 10 ? '0' + m : m) + ' ' + ampm;
+  }
+  tick();
+  setInterval(tick, 30 * 1000);  // update every 30s
 })();
 
 // ── Reveal on scroll ──────────────────────────────

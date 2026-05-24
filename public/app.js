@@ -2567,21 +2567,31 @@ function renderAll(){
   // Lazy: hydrate integrations catalog so the sidebar 🔌 badge shows
   // immediately. Doesn't block render — runs in the background.
   setTimeout(function(){ try { _loadIntegrations(); } catch(e){} }, 300);
-  // "Open last chat on startup" preference (default off → land on home dashboard).
-  const openLast = _prefBool('behav_open_last', false);
-  if(openLast && agents.length>0){
-    openAgent(activeId&&agents.find(a=>a.id===activeId)?activeId:agents[0].id);
+  // Phase 2 (= chat-centric): ダッシュボード page を landing にせず、
+  // サイトを 1 つでも持っているなら必ず top site のチャットを auto-open する。
+  // 0 サイトのユーザーだけ goHome() (= onboarding / 新規サイト追加画面) を見せる。
+  if(agents.length > 0){
+    var _tgt = (activeId && agents.find(function(a){return a.id===activeId;})) ? activeId : agents[0].id;
+    openAgent(_tgt);
   } else {
     goHome();
   }
 }
 
-/** Show the home dashboard (close any active chat, render kinds row). */
+/** Phase 2: ダッシュボード page を廃止。
+ *  goHome は「サイトがあれば top site のチャットへ、無ければ onboarding 表示」 だけ。
+ *  これでロード時 / ロゴクリック / 退出後 など全経路でチャット中心 UX が貫かれる。 */
 function goHome(){
+  // サイトがあるなら強制的に top site のチャットを開く (= ダッシュボードは出さない)
+  if(Array.isArray(agents) && agents.length > 0){
+    var _tgt = (activeId && agents.find(function(a){return a.id===activeId;})) ? activeId : agents[0].id;
+    try { openAgent(_tgt); } catch(_){}
+    return;
+  }
+  // 0 サイトのユーザーのみ onboarding (= emptyWrap で「+ 新規サイト追加」 を見せる)
   activeId = null;
   document.getElementById('emptyWrap').style.display='';
   document.getElementById('chatWrap').style.display='none';
-  // Clear sidebar selection
   try{ document.querySelectorAll('.ag-item').forEach(el=>el.classList.remove('on')); }catch(e){}
   try{ renderHomeDashboard(); }catch(e){}
   if(typeof _stopGroupPoll === 'function') _stopGroupPoll();

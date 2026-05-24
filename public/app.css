@@ -875,7 +875,7 @@ input,textarea{font-family:var(--sans);}
    funnel 18→9 対策の core piece。 シンプル + 結果重視。
    ══════════════════════════════════════════════════════════ */
 .ts-wrap{
-  max-width:860px; margin:18px auto 24px; padding:0 20px;
+  max-width:1200px; margin:18px auto 24px; padding:0 20px;
   animation:tsFadeIn .4s ease both;
 }
 @keyframes tsFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -902,7 +902,7 @@ input,textarea{font-family:var(--sans);}
   max-width:520px; margin:0 auto;
 }
 .ts-depts{
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
   gap:12px; margin-bottom:22px;
 }
 .ts-dept{

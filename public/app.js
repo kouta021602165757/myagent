@@ -4806,6 +4806,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   var CONTENT_EC_PLATFORMS = [
     { key: 'note',      name: 'note',      emoji: '📝', color: '#41c9b4', kind: 'content', hasPostTool: true  },
     { key: 'wordpress', name: 'WordPress', emoji: '🌐', color: '#21759b', kind: 'content', hasPostTool: true  },
+    { key: 'emdash',    name: 'EmDash',    emoji: '⚡', color: '#f6821f', kind: 'content', hasPostTool: true  },
     { key: 'shopify',   name: 'Shopify',   emoji: '🛒', color: '#7ab55c', kind: 'ec',      hasPostTool: true  },
     { key: 'base',      name: 'BASE',      emoji: '🏪', color: '#ff7e2d', kind: 'ec',      hasPostTool: false },
   ];
@@ -6356,6 +6357,7 @@ var SNS_PLATFORM_META = {
   youtube:   { name: 'YouTube',     icon: '📹', accent: '#ff0000', placeholder: 'https://www.youtube.com/@yourchannel', hint: 'チャンネル URL を貼ってください' },
   note:      { name: 'note',        icon: '📓', accent: '#41c9b4', placeholder: 'https://note.com/yourname',           hint: 'note プロフィール URL' },
   wordpress: { name: 'WordPress',   icon: '📝', accent: '#21759b', placeholder: 'https://yoursite.com',                hint: 'サイトの URL を貼ってください' },
+  emdash:    { name: 'EmDash',      icon: '⚡', accent: '#f6821f', placeholder: 'https://yoursite.emdash.app',          hint: 'メディアサイト持ってない人向け · Cloudflare の AI-native CMS' },
   shopify:   { name: 'Shopify',     icon: '🛒', accent: '#95bf47', placeholder: 'https://yourshop.myshopify.com',       hint: '<code>yourshop.myshopify.com</code> 形式' },
   base:      { name: 'BASE',        icon: '🛍', accent: '#0099ff', placeholder: 'https://admin.thebase.in/',          hint: 'BASE admin URL' },
 };

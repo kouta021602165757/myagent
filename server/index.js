@@ -9561,6 +9561,23 @@ const SNS_TOOLS = [
       required: ['post_url'],
     },
   },
+  // ── EmDash: 記事公開 (= Cloudflare の AI-native CMS、 2026 リリース、 WordPress 後継) ──
+  {
+    name: 'publish_emdash',
+    description: '⚠️ 事前にユーザーが EmDash 管理画面 (= {site}/admin) にブラウザでログイン済みであること。\n\nCloudflare EmDash サイトに記事を公開 / 下書き保存します。 EmDash は WordPress の後継として 2026 年にリリースされた AI-native CMS (Astro + Cloudflare Workers)。 メディアサイトを持っていないユーザーにも 推奨できる publish 先。\n\nコンテンツは structured JSON で扱われるので、 AI が直接生成しやすい。 publish_wordpress と同じ感覚で使えます。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '記事タイトル (1-200 字)' },
+        content: { type: 'string', description: '本文 (markdown 推奨、 EmDash で自動 render)' },
+        status: { type: 'string', enum: ['draft','publish'], description: 'default: draft' },
+        slug: { type: 'string', description: '(任意) URL slug' },
+        excerpt: { type: 'string', description: '(任意) 抜粋' },
+        tags: { type: 'array', items: { type: 'string' }, description: '(任意) タグ名の配列' },
+      },
+      required: ['title','content'],
+    },
+  },
 ];
 const SNS_TOOL_NAMES = new Set(SNS_TOOLS.map(t => t.name));
 
@@ -10061,6 +10078,21 @@ const SNS_PLATFORM_DEFS = {
         admin_url: 'https://admin.thebase.in/',
       };
     },
+  },
+  emdash: {
+    // Cloudflare EmDash — 2026 リリースの AI-native CMS (WordPress 後継)。
+    // Deploy 先は Workers / Pages / Netlify / Vercel どれでも可、 ユーザーは
+    // サブドメイン or カスタムドメインで運用。 URL paste で接続。
+    // 公開 URL or admin URL のどちらでも受け付ける。
+    regex: /(?:https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?:\/admin)?/i,
+    handle_only: null,
+    build: domain => ({
+      site_name: domain,
+      url: 'https://' + domain,
+      site_url: 'https://' + domain,
+      admin_url: 'https://' + domain + '/admin',
+      cms: 'emdash',
+    }),
   },
 };
 
@@ -10627,6 +10659,95 @@ async function executeEditNoteTool(user, input){
     note_id: noteId,
     action: 'edit',
     instructions: 'ユーザーに「✅ note 記事を更新しました」と短く報告してください。',
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── EmDash (Cloudflare の AI-native CMS) — 記事公開 ──
+// EmDash は REST API ベース (/api/v1/posts) で、 admin nonce を `__emdash_session`
+// cookie + window.emdashApi.token から取得する設計 (2026 spec)。
+// 拡張で admin URL に行って ext_eval から fetch する。
+// API spec が beta なので、 fallback として DOM 操作 (= admin の 新規記事フォーム
+// を埋めて publish click) も用意。
+// ══════════════════════════════════════════════════════════════
+async function executePublishEmDashTool(user, input){
+  const title = String((input && input.title) || '').trim();
+  const content = String((input && input.content) || '').trim();
+  const status = (input && input.status === 'publish') ? 'publish' : 'draft';
+  const slug = String((input && input.slug) || '').trim();
+  const excerpt = String((input && input.excerpt) || '').trim();
+  const tags = Array.isArray(input && input.tags) ? input.tags.filter(Boolean) : [];
+
+  if(!title || !content) return { error: 'title_and_content_required' };
+  if(!user.extension_device_token) return { error: 'extension_not_paired' };
+  const conn = user.sns_connections && user.sns_connections.emdash;
+  if(!conn || !conn.connected){
+    return { error: 'not_connected', detail: 'EmDash サイトを先に接続してください (接続 tab)。' };
+  }
+  const adminUrl = (conn.profile && conn.profile.admin_url)
+    || (conn.profile && conn.profile.site_url ? conn.profile.site_url.replace(/\/$/, '') + '/admin' : null);
+  if(!adminUrl) return { error: 'admin_url_missing', detail: 'EmDash admin URL が保存されていません。 再接続してください。' };
+
+  // 1) admin に行って session + API token を取得
+  let r = await executeExtensionTool(user, 'ext_open_url', { url: adminUrl });
+  if(r && r.error) return { error: 'open_failed', detail: r.error };
+  await executeExtensionTool(user, 'ext_wait_for', { selector: '[data-emdash-app], main, #app, body', timeout_ms: 12000 });
+
+  r = await executeExtensionTool(user, 'ext_read_page', {});
+  const currentUrl = String((r && r.url) || '');
+  if(/\/login|\/signin/.test(currentUrl)){
+    return { error: 'not_logged_in', detail: 'EmDash 管理画面にログインしてください: ' + adminUrl };
+  }
+
+  // 2) REST API 経由 で publish
+  // EmDash の API spec は beta。 想定: POST /api/v1/posts with body { title, content, status, slug, excerpt, tags }
+  // 認証は window.emdashApi.token か session cookie (= credentials:'same-origin')
+  const evalScript = `
+    const body = ${JSON.stringify({ title, content, status, slug, excerpt, tags })};
+    try {
+      // EmDash API token を探す (= window.emdashApi.token / meta tag / cookie)
+      let token = '';
+      if(typeof window.emdashApi !== 'undefined' && window.emdashApi.token){
+        token = window.emdashApi.token;
+      } else {
+        const meta = document.querySelector('meta[name="emdash-api-token"]');
+        if(meta) token = meta.getAttribute('content') || '';
+      }
+      const headers = { 'Content-Type': 'application/json' };
+      if(token) headers['Authorization'] = 'Bearer ' + token;
+
+      const res = await fetch('/api/v1/posts', {
+        method: 'POST',
+        headers,
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+      const j = await res.json().catch(() => null);
+      if(!res.ok){
+        return { error: 'emdash_api_error', status: res.status, detail: (j && (j.message || j.error)) || ('status: ' + res.status) };
+      }
+      return { ok: true, id: j && (j.id || j._id), link: j && (j.url || j.permalink), status: j && j.status };
+    } catch(e){
+      return { error: 'emdash_fetch_failed', detail: String(e && e.message || e) };
+    }
+  `;
+  const restResult = await executeExtensionTool(user, 'ext_eval', { code: evalScript });
+
+  if(!restResult || restResult.error){
+    return {
+      error: 'publish_failed',
+      detail: (restResult && restResult.detail) || 'EmDash API 公開失敗。 admin にログインしてるか / API token が露出してるか確認してください。',
+      hint: 'EmDash の API spec は beta。 動かない場合は admin で手動公開してください。',
+    };
+  }
+
+  return {
+    ok: true,
+    platform: 'emdash',
+    url: restResult.link || adminUrl,
+    post_id: restResult.id,
+    status: restResult.status || status,
+    instructions: 'ユーザーに「✅ EmDash に' + (status === 'publish' ? '公開しました' : '下書き保存しました') + '」と短く報告してください。',
   };
 }
 
@@ -11398,6 +11519,7 @@ async function executeSnsTool(user, name, input, agent){
   else if(name === 'publish_wordpress') r = await executePublishWordPressTool(user, input);
   else if(name === 'edit_wordpress')    r = await executeEditWordPressTool(user, input);
   else if(name === 'edit_note')         r = await executeEditNoteTool(user, input);
+  else if(name === 'publish_emdash')    r = await executePublishEmDashTool(user, input);
   else if(name === 'create_shopify_product') r = await executeCreateShopifyProductTool(user, input);
   else if(name === 'edit_shopify_product')   r = await executeEditShopifyProductTool(user, input);
   else return { error: 'unknown_sns_tool: ' + name };
@@ -19470,7 +19592,7 @@ async function handleAPI(req,res,pathname,method,ip){
   // POST /api/sns/post/x           → 拡張経由で投稿 (= confirm モーダル後の実行)
   if(pathname === '/api/sns/status' && method === 'GET'){
     const conn = user.sns_connections || {};
-    const PLATFORMS = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base'];
+    const PLATFORMS = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base','emdash'];
     const out = {
       ok: true,
       extension_paired: !!user.extension_device_token,

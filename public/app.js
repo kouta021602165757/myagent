@@ -2591,9 +2591,14 @@ function goHome(){
 // activeId は維持したまま (= サイドバーで site が selected な状態)、
 // メイン pane を chat → home dashboard に切替。サイトの dashboard が
 // その site の情報で render される (= renderHomeDashboard が activeId を見る)。
-function goSiteDashboard(){
+function goSiteDashboard(tab){
   document.getElementById('emptyWrap').style.display='';
   document.getElementById('chatWrap').style.display='none';
+  // Preset the target tab (= which dashboard sub-tab to land on) before
+  // renderHomeDashboard reads sd_tab_<siteId> from localStorage.
+  if(tab && activeId){
+    try { localStorage.setItem('sd_tab_' + activeId, tab); } catch(_){}
+  }
   try { renderHomeDashboard(); } catch(e){}
   // スクロールを上に
   var el = document.getElementById('emptyWrap');
@@ -3301,6 +3306,96 @@ async function fetchJoinedGroups(){
   }catch(e){ _joinedGroups = []; }
 }
 
+/* Aggregate "tasks I should see right now" from all 3 sources:
+ *   1) roadmap.current_week (= the focused week's incomplete tasks)
+ *   2) ag.open_tasks (= ad-hoc tasks from hover-bar "✓ タスクに")
+ *   3) roadmap.custom_tasks (= manually-added roadmap tasks, no week)
+ * Returns a flat list of {id, title, source, week, status, done} so the
+ * popup + pill + composer strip all show the same numbers / items. */
+function _aggregatedSiteTasks(ag){
+  if(!ag) return [];
+  var out = [];
+  // 1) Current-week roadmap tasks (incomplete only — done ones drop off)
+  if(ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length){
+    var cw = (typeof ag.roadmap.current_week === 'number' && ag.roadmap.current_week > 0)
+             ? ag.roadmap.current_week : 1;
+    var wk = ag.roadmap.weeks.find(function(w){return w && w.n === cw;}) || ag.roadmap.weeks[0];
+    if(wk && Array.isArray(wk.tasks)){
+      wk.tasks.forEach(function(t){
+        if(!t || t.done) return;
+        out.push({ id: t.id, title: t.text || '', source: 'roadmap', week: wk.n, owner: t.owner||'', done:false });
+      });
+    }
+  }
+  // 2) open_tasks (hover-bar created or AI-extracted short-term tasks)
+  (ag.open_tasks || []).forEach(function(t){
+    if(!t || t.status === 'done') return;
+    out.push({ id: t.id, title: t.title || '', source: 'open', status: t.status || 'started', done:false });
+  });
+  // 3) custom_tasks (manual additions to roadmap)
+  if(ag.roadmap && Array.isArray(ag.roadmap.custom_tasks)){
+    ag.roadmap.custom_tasks.forEach(function(t){
+      if(!t || t.done) return;
+      out.push({ id: t.id, title: t.text || '', source: 'custom', done:false });
+    });
+  }
+  return out;
+}
+
+/* Inline task strip above the composer — shows the top 3 incomplete tasks
+ * for the active site so users see "what's next" without opening any panel.
+ * "他 N 件 →" opens the popout for the full list. Hidden when not a site
+ * agent or 0 tasks. Called from openAgent + after task mutations. */
+window._renderTaskStrip = function(){
+  var el = document.getElementById('taskStrip');
+  if(!el) return;
+  var ag = (agents||[]).find(function(a){return a && a.id === activeId;});
+  if(!ag || (typeof _isSiteAgent === 'function' && !_isSiteAgent(ag))){
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  var all = _aggregatedSiteTasks(ag);
+  if(!all.length){
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  // current week label (= focused week for users to anchor on)
+  var weekLbl = '';
+  if(ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length){
+    var cw = (typeof ag.roadmap.current_week === 'number' && ag.roadmap.current_week > 0)
+             ? ag.roadmap.current_week : 1;
+    weekLbl = 'Week ' + cw + '/' + ag.roadmap.weeks.length;
+  }
+  var top = all.slice(0, 3);
+  var rest = all.length - top.length;
+  var chipsHTML = top.map(function(t){
+    var safeTitle = String(t.title||'').slice(0,60);
+    return '<div class="task-chip" onclick="_runHomeTask(\''+esc(ag.id)+'\',\''+esc(t.id)+'\')" '
+      + 'style="display:inline-flex;align-items:center;gap:7px;background:var(--cream);border:1px solid var(--wire2);border-radius:99px;padding:5px 11px 5px 8px;font-size:11.5px;font-weight:700;color:var(--text);cursor:pointer;transition:all .12s;max-width:280px" '
+      + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.background=\'var(--peach-soft)\'" '
+      + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.background=\'var(--cream)\'">'
+      + '<span onclick="event.stopPropagation();_markHomeTaskDone(\''+esc(ag.id)+'\',\''+esc(t.id)+'\',event)" '
+      +   'style="width:13px;height:13px;border-radius:4px;border:1.5px solid var(--wire2);flex-shrink:0;cursor:pointer" title="'+L('完了','Done')+'"></span>'
+      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(safeTitle)+'</span>'
+      + '</div>';
+  }).join('');
+  var moreHTML = rest > 0
+    ? '<button onclick="goSiteDashboard(\'tasks\')" style="background:transparent;border:0;font-size:11px;font-weight:800;color:var(--peach-dark);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px" '
+      + 'onmouseover="this.style.background=\'var(--peach-soft)\'" '
+      + 'onmouseout="this.style.background=\'transparent\'">'
+      + L('他 '+rest+' 件 ', 'View ' + rest + ' more ') + '→</button>'
+    : '<button onclick="goSiteDashboard(\'tasks\')" style="background:transparent;border:0;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px">'
+      + L('全件表示','View all') + ' →</button>';
+  el.style.display = 'block';
+  el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px 8px;flex-wrap:wrap;border-top:1px solid var(--wire);background:var(--cream)';
+  el.innerHTML =
+      '<div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">📋 ' + (weekLbl || L('タスク','Tasks')) + '</div>'
+    + chipsHTML
+    + moreHTML;
+};
+
 /* Per-agent tasks popout (案 B mini) — clicked from the "📋 タスク N" pill
  * in the chat header. Floats below the pill, lists this agent's tasks
  * with ▶ run buttons. Click outside closes. */
@@ -3314,7 +3409,8 @@ window._openTasksPopout = function(anchor, agentId){
   }
   var ag = (agents||[]).find(function(a){return a.id===agentId;});
   if(!ag) return;
-  var tasks = (ag.open_tasks||[]).filter(function(t){return t && t.status!=='done';});
+  // Aggregate from all 3 sources — roadmap (current week) + open_tasks + custom
+  var tasks = _aggregatedSiteTasks(ag);
   var rect = anchor.getBoundingClientRect();
   var pop = document.createElement('div');
   pop.id = 'tasksPopout';
@@ -3470,15 +3566,27 @@ function _renderHomeTasks(){
 window._runHomeTask = function(agentId, taskId){
   var ag = (agents||[]).find(function(a){return a.id===agentId;});
   if(!ag) return;
+  // Look across all 3 task sources (open / roadmap-week / custom). Earlier
+  // version only checked open_tasks so roadmap chips silently failed.
   var t = (ag.open_tasks||[]).find(function(x){return x && x.id===taskId;});
+  var label = t && t.title;
+  if(!t && ag.roadmap){
+    (ag.roadmap.weeks||[]).forEach(function(w){
+      if(t) return;
+      var f = (w.tasks||[]).find(function(x){return x && x.id===taskId;});
+      if(f){ t = f; label = f.text; }
+    });
+    if(!t){
+      var c = (ag.roadmap.custom_tasks||[]).find(function(x){return x && x.id===taskId;});
+      if(c){ t = c; label = c.text; }
+    }
+  }
   if(!t) return;
-  // Switch to that agent's chat and pre-fill the run prompt. The user
-  // confirms (Enter / Send) — explicit so we don't run anything sneaky.
   openAgent(agentId);
   setTimeout(function(){
     var ci = document.getElementById('ci') || document.getElementById('msgInput');
     if(ci){
-      ci.value = '【タスク実行】「' + (t.title||'') + '」を今すぐ進めて。';
+      ci.value = '【タスク実行】「' + (label||'') + '」を今すぐ進めて。';
       ci.focus();
       try { exTA(ci); } catch(e){}
     }
@@ -3486,14 +3594,22 @@ window._runHomeTask = function(agentId, taskId){
 };
 window._markHomeTaskDone = async function(agentId, taskId, ev){
   if(ev) ev.stopPropagation();
+  var ag = (agents||[]).find(function(a){return a.id===agentId;});
+  if(!ag) return;
+  // Dispatch by source: open_tasks use /api/agents/:id/tasks endpoint;
+  // roadmap & custom tasks use /api/agents/:id/roadmap/tasks/:taskId.
+  var inOpen = (ag.open_tasks||[]).some(function(x){return x && x.id===taskId;});
   try {
-    await api('PATCH', '/api/agents/'+agentId+'/tasks/'+taskId, { status: 'done' });
-    var ag = (agents||[]).find(function(a){return a.id===agentId;});
-    if(ag && Array.isArray(ag.open_tasks)){
+    if(inOpen){
+      await api('PATCH', '/api/agents/'+agentId+'/tasks/'+taskId, { status: 'done' });
       var t = ag.open_tasks.find(function(x){return x && x.id===taskId;});
       if(t) t.status = 'done';
+    } else {
+      // roadmap path — _toggleTask handles local state + reactive msg
+      await _toggleTask(agentId, taskId, true);
     }
-    _renderHomeTasks();
+    try { _renderHomeTasks(); } catch(_){}
+    try { _renderTaskStrip(); } catch(_){}
     showToast('✓ 完了にしました','ok');
   } catch(e){
     showToast((e.message||'失敗'),'ng');
@@ -6610,6 +6726,7 @@ async function _toggleTask(siteId, taskId, checked){
     }
     // 進捗バー更新のため再描画
     try { renderHomeDashboard(); } catch(_){}
+    try { _renderTaskStrip(); } catch(_){}
   } catch(e){
     showToast('更新に失敗', 'ng');
   }
@@ -8346,6 +8463,8 @@ async function openAgent(id){
   // Site sidebar (`.ag-site`) uses `.active`, not `.on` — refresh that too so
   // the selected pill matches `activeId` after a site switch.
   try { renderAgList(); } catch(_){}
+  // Inline task strip above composer (top 3 incomplete tasks for this site)
+  try { _renderTaskStrip(); } catch(_){}
 
   // Start/stop live polling: only groups need it (DMs are single-user).
   if(ag.is_group){
@@ -8455,7 +8574,8 @@ async function openAgent(id){
   // action — clicking it pops out this agent's tasks with a 1-click
   // "▶ 実行" path. Even at 0 tasks we show a faint hint so users know
   // there's a task surface they can use.
-  var taskN = Array.isArray(ag.open_tasks) ? ag.open_tasks.filter(function(t){return t && t.status!=='done';}).length : 0;
+  // Count tasks from all 3 sources (roadmap current week + open + custom)
+  var taskN = (typeof _aggregatedSiteTasks === 'function' ? _aggregatedSiteTasks(ag).length : 0);
   var tasksPill = '';
   if(!ag._is_joined_group){
     var taskLabel = taskN > 0 ? ('📋 タスク '+taskN) : '📋 タスク';
@@ -13564,6 +13684,9 @@ async function _sendMsgStream(ag, text, imgs, texts){
         renderMsgs(ag);
         if(window._activeThreadParent){ try { _renderThreadDrawer(); } catch(e){} }
         _refreshArtifactsIfNeeded(ag.history[streamIdx] && ag.history[streamIdx].tool_log, ag);
+        // Tasks may have flipped done via current_task progress hook — refresh
+        // the inline task strip so it stays in sync without page reload.
+        try { _renderTaskStrip(); } catch(_){}
       } else if(evType === 'note_created'){
         // Server auto-paged this reply into user.notes — stash the pointer so
         // the 'done' handler can attach it to the assistant bubble.

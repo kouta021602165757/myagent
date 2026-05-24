@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1779640968000">
+<link rel="stylesheet" href="/app.css?v=1779641397000">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -137,6 +137,10 @@
             <button type="button" id="extHintBtn" onclick="_extHintAction()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">Enable →</button>
             <button type="button" onclick="document.getElementById('extHintBanner').style.display='none'" style="background:transparent;border:0;color:var(--text-subtle);font-size:18px;cursor:pointer;line-height:1;padding:0 4px" aria-label="Dismiss">×</button>
           </div>
+
+          <!-- Inline task strip — shows top 3 incomplete tasks for the current
+               site above the composer; "他 N 件 →" link opens the full list. -->
+          <div id="taskStrip" style="display:none"></div>
 
           <!-- Claude-style composer -->
           <div class="composer" style="position:relative">
@@ -2179,7 +2183,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1779640968000"></script>
+<script defer src="/app.js?v=1779641397000"></script>
 
 <script>
 (function(){

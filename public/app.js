@@ -3899,20 +3899,57 @@ async function _autoSetupSiteFromGa4(siteId, opts){
   var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
   if(!ag){ window._autoSetupInFlight[siteId] = false; return; }
 
-  function setStep(idx, label){
+  // Org の中から、 引数の keyword (= role 含む) に最もマッチする member を探す。
+  // なければ org の最初のメンバー、 それも無ければ null。
+  function findMember(keywords){
+    if(!ag || !ag.org || !Array.isArray(ag.org.departments)) return null;
+    var all = [];
+    ag.org.departments.forEach(function(d){
+      (d.teams || []).forEach(function(t){
+        (t.members || []).forEach(function(m){
+          all.push({ member: m, dept: d });
+        });
+      });
+    });
+    if(all.length === 0) return null;
+    if(!keywords || !keywords.length) return all[0];
+    var lowered = keywords.map(function(k){ return String(k).toLowerCase(); });
+    var hit = all.find(function(x){
+      var hay = String((x.member.role || '') + ' ' + (x.member.name || '') + ' ' + (x.member.focus || '')).toLowerCase();
+      return lowered.some(function(k){ return hay.indexOf(k) >= 0; });
+    });
+    return hit || all[0];
+  }
+  function speakerFields(keywords){
+    var hit = findMember(keywords);
+    if(!hit) return {};
+    var d = hit.dept || {};
+    return {
+      huddle_member_id: hit.member.id || ('m_' + (hit.member.name || 'x')),
+      huddle_member_name: (d.icon || '🤖') + ' ' + (hit.member.name || ''),
+      huddle_member_avatar: d.icon || '🤖',
+    };
+  }
+  function setStep(idx, label, speakerKeywords){
     try { showToast('('+idx+'/3) '+label, 'ok'); } catch(_){}
     if(streamToChat && ag && Array.isArray(ag.history) && ag.id === activeId){
-      ag.history.push({ role:'assistant', content: '🔄 ' + label, time: now(), system_action: true, transient: true });
+      var sp = speakerFields(speakerKeywords);
+      var msg = { role:'assistant', content: '🔄 ' + label, time: now(), system_action: true, transient: true };
+      Object.assign(msg, sp);
+      ag.history.push(msg);
       try { renderMsgs(ag, true); } catch(_){}
     }
   }
-  function chatMsg(text){
+  function chatMsg(text, speakerKeywords){
     if(streamToChat && ag && Array.isArray(ag.history) && ag.id === activeId){
       // 一個前の transient (= 🔄 step msg) を消す
       while(ag.history.length && ag.history[ag.history.length-1].transient){
         ag.history.pop();
       }
-      ag.history.push({ role:'assistant', content: text, time: now(), system_action: true });
+      var sp = speakerFields(speakerKeywords);
+      var msg = { role:'assistant', content: text, time: now(), system_action: true };
+      Object.assign(msg, sp);
+      ag.history.push(msg);
       try { renderMsgs(ag, true); } catch(_){}
     }
   }
@@ -3922,25 +3959,27 @@ async function _autoSetupSiteFromGa4(siteId, opts){
   }
 
   try {
-    // ── Step 1: 戦略生成 ──
+    // ── Step 1: 戦略生成 (= ペルソナ研究員 / 競合分析官) ──
     if(force || !ag.strategy){
-      setStep(1, '戦略を作成中… (ペルソナ + 競合 + 6 ヶ月 KPI)');
+      setStep(1, 'サイト content を read → ペルソナ抽出 → 競合分析 → 6 ヶ月 KPI シート組み立て中…',
+        ['persona','ペルソナ','strategy','戦略']);
       var sR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/strategy/generate');
       if(sR && sR.strategy){
         ag.strategy = sR.strategy;
         var perName = (sR.strategy.persona && sR.strategy.persona.name) || 'ターゲット顧客';
         var compN = (sR.strategy.competitors && sR.strategy.competitors.length) || 0;
-        chatMsg('✅ **戦略できました**\n\n・ペルソナ: **' + perName + '**\n・競合: ' + compN + ' 社分析済\n・6 ヶ月 KPI シート完成\n\n続いて、 月 1 の KPI を目標値として保存します…');
+        chatMsg('✅ **戦略まとまりました**\n\n・ペルソナ: **' + perName + '**\n・競合: ' + compN + ' 社を分析済\n・6 ヶ月 KPI シート完成\n\n次は KPI 目標を保存します。 ファネル分析官にバトン渡します →',
+          ['persona','ペルソナ','strategy','戦略']);
         reload();
       } else if(sR && sR.error){
         throw new Error('戦略生成: ' + (sR.detail || sR.error));
       }
     }
 
-    // ── Step 2: KPI 自動セット (= strategy.kpi_6mo[0] = 月 1 の数値) ──
+    // ── Step 2: KPI 自動セット (= ファネル分析官 / KPI 設計者) ──
     var kp = ag.strategy && Array.isArray(ag.strategy.kpi_6mo) && ag.strategy.kpi_6mo[0];
     if(kp && (force || !ag.kpi || (!ag.kpi.pv && !ag.kpi.cvr && !ag.kpi.leads))){
-      setStep(2, 'KPI 目標を保存中…');
+      setStep(2, '月 1 KPI 目標を保存中…', ['funnel','ファネル','kpi','ga4_analyst','アナリスト']);
       var kR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/kpi', {
         pv: parseInt(kp.pv, 10) || 0,
         cvr: parseFloat(kp.cvr) || 0,
@@ -3948,21 +3987,24 @@ async function _autoSetupSiteFromGa4(siteId, opts){
       });
       if(kR && kR.kpi){
         ag.kpi = kR.kpi;
-        chatMsg('✅ **KPI セット完了**\n\n月 1 目標: PV ' + (kR.kpi.pv || 0).toLocaleString() + ' / CVR ' + (kR.kpi.cvr || 0) + '% / リード ' + (kR.kpi.leads || 0) + '\n\n最後に、 12 週間の実行ロードマップを作ります…');
+        chatMsg('✅ **KPI セット完了**\n\n月 1 目標を保存しました:\n・PV: **' + (kR.kpi.pv || 0).toLocaleString() + '**\n・CVR: **' + (kR.kpi.cvr || 0) + '%**\n・リード: **' + (kR.kpi.leads || 0) + '**\n\n最後に、 これを 12 週間に分解してロードマップを作ります。 PM にバトン渡します →',
+          ['funnel','ファネル','kpi','ga4_analyst','アナリスト']);
         reload();
       }
     }
 
-    // ── Step 3: ロードマップ生成 ──
+    // ── Step 3: ロードマップ生成 (= PM / ロードマップ設計) ──
     var hasRoadmap = ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0;
     if(force || !hasRoadmap){
-      setStep(3, '12 週間のロードマップを作成中… (タスクを各部門に割り振り)');
+      setStep(3, '12 週間のロードマップを作成 → タスクを各部門に振り分け中…',
+        ['pm','planner','roadmap','プロジェクト']);
       var rR = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/roadmap/generate');
       if(rR && rR.roadmap){
         ag.roadmap = rR.roadmap;
         var wkCount = (rR.roadmap.weeks || []).length;
         var taskCount = (rR.roadmap.weeks || []).reduce(function(s,w){ return s + ((w.tasks||[]).length); }, 0);
-        chatMsg('✅ **ロードマップ完成**\n\n' + wkCount + ' 週間分、 計 ' + taskCount + ' タスクを 各 AI 部門に自動割り振り済み。\n\nダッシュボード → タスク管理 タブで全部見られます 📋');
+        chatMsg('✅ **ロードマップ完成**\n\n' + wkCount + ' 週間分、 計 **' + taskCount + ' タスク** を 各 AI 部門に自動割り振り済み。\n\n📋 ダッシュボード → タスク管理 で全部見られます',
+          ['pm','planner','roadmap','プロジェクト']);
         reload();
       } else if(rR && rR.error){
         throw new Error('ロードマップ生成: ' + (rR.detail || rR.error));
@@ -3970,7 +4012,8 @@ async function _autoSetupSiteFromGa4(siteId, opts){
     }
 
     showToast('✓ セットアップ完了! 戦略・KPI・ロードマップが揃いました','ok');
-    chatMsg('🎉 **セットアップ完了!**\n\n戦略・KPI・ロードマップが全部揃いました。 次は実際に動かしていきましょう。 「今週の記事を 1 本書いて」 と頼んでみてください。');
+    chatMsg('🎉 **セットアップ完了!**\n\n戦略・KPI・ロードマップが全部揃いました。 次は実際に動かしていきましょう。 「今週の記事を 1 本書いて」 と頼んでみてください。',
+      ['ceo','chief','president','manager']);
     reload();
   } catch(e){
     console.warn('[autosetup] failed:', e);

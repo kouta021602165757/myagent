@@ -265,30 +265,126 @@ img{max-width:100%;display:block;}
   background:#fff;border:1px solid var(--line);padding:5px 14px;border-radius:6px;
   max-width:380px;margin:0 auto;
 }
-.showcase-body{padding:32px 36px 36px;background:linear-gradient(180deg,#fafaf7 0%,#fff 60%);}
+.showcase-body{padding:28px 32px 32px;background:linear-gradient(180deg,#fafaf7 0%,#fff 60%);}
 .sc-hero{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:24px;flex-wrap:wrap;}
 .sc-site{display:flex;align-items:center;gap:14px;}
-.sc-site-ic{width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,#10b981,#0d4f4a);display:flex;align-items:center;justify-content:center;font-size:24px;}
+.sc-site-ic{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#10b981,#0d4f4a);display:flex;align-items:center;justify-content:center;font-size:22px;}
 .sc-site-meta{display:flex;flex-direction:column;}
-.sc-site-name{font-size:16px;font-weight:700;color:var(--ink);}
+.sc-site-name{font-size:15.5px;font-weight:700;color:var(--ink);letter-spacing:-.005em;}
 .sc-site-tag{font-size:12px;color:var(--ink3);font-weight:500;display:inline-flex;align-items:center;gap:6px;margin-top:2px;}
-.sc-site-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:#10b981;animation:pulse 2s ease infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
-.sc-cta{
-  background:var(--lime);color:var(--ink);padding:10px 18px;border-radius:10px;
-  font-size:13px;font-weight:700;border:0;cursor:default;
-  box-shadow:0 4px 10px rgba(192,255,92,.30);
+.sc-site-tag::before{content:'';width:7px;height:7px;border-radius:50%;background:#10b981;animation:pulse 1.6s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+.sc-live{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;font-weight:600;
+  color:var(--teal);background:var(--teal-soft);
+  padding:7px 14px;border-radius:99px;
+  border:1px solid rgba(13,79,74,.15);
+  letter-spacing:.04em;
 }
-.sc-team-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
-.sc-dept{
-  background:#fff;border:1px solid var(--line);border-left:3px solid var(--teal);
-  border-radius:10px;padding:13px 15px;
+.sc-live-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--teal);
+  animation:pulse 1.6s ease infinite;
 }
-.sc-dept-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid #f3f1ea;}
-.sc-dept-h .cnt{margin-left:auto;font-size:10px;color:var(--teal);background:var(--teal-soft);padding:2px 7px;border-radius:99px;font-weight:600;}
-.sc-mems{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink2);}
-.sc-mem{display:flex;align-items:center;gap:7px;padding:4px 0;}
-.sc-mem::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--lime-dark);flex-shrink:0;}
+
+/* ── 6-step live pipeline ──────────────────── */
+.sc-pipe{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:0;
+  background:#fafaf7;border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;
+  padding:0;
+}
+@media(max-width:880px){.sc-pipe{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:520px){.sc-pipe{grid-template-columns:repeat(2,1fr);}}
+.sc-step{
+  position:relative;padding:18px 14px 16px;
+  border-right:1px solid var(--line);background:#fff;
+  transition:background .35s ease, transform .35s cubic-bezier(.16,1,.3,1);
+  text-align:left;
+  overflow:hidden;
+}
+.sc-step:last-child{border-right:0;}
+@media(max-width:880px){
+  .sc-step:nth-child(3n){border-right:0;}
+  .sc-step:nth-child(-n+3){border-bottom:1px solid var(--line);}
+}
+@media(max-width:520px){
+  .sc-step{border-right:0;border-bottom:1px solid var(--line);}
+  .sc-step:nth-child(odd){border-right:1px solid var(--line);}
+  .sc-step:last-child{border-bottom:0;}
+}
+.sc-step-n{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--line);color:var(--ink3);
+  font-family:var(--mono);font-size:10.5px;font-weight:700;
+  margin-bottom:10px;letter-spacing:-.02em;
+  transition:background .35s, color .35s, box-shadow .35s;
+}
+.sc-step-ti{
+  font-family:var(--display);font-size:12.5px;font-weight:700;
+  color:var(--ink);letter-spacing:-.01em;margin-bottom:4px;line-height:1.25;
+}
+.sc-step-sub{
+  font-family:var(--mono);font-size:9.5px;font-weight:600;
+  color:var(--ink4);letter-spacing:.08em;text-transform:uppercase;
+}
+
+/* step state: done */
+.sc-step.done .sc-step-n{
+  background:var(--teal);color:#fff;
+}
+.sc-step.done .sc-step-n::before{
+  content:'✓';font-size:11px;
+}
+.sc-step.done .sc-step-n-num{display:none;}
+.sc-step.done{background:#fff;}
+
+/* step state: active (= pulsing) */
+.sc-step.active{
+  background:linear-gradient(180deg, #fff 0%, var(--lime-soft) 100%);
+}
+.sc-step.active .sc-step-n{
+  background:var(--lime);color:var(--ink);
+  box-shadow:0 0 0 6px rgba(192,255,92,.20);
+  animation:scStepPulse 1.4s ease infinite;
+}
+.sc-step.active .sc-step-sub{color:var(--lime-dark);}
+@keyframes scStepPulse{
+  0%,100%{box-shadow:0 0 0 6px rgba(192,255,92,.20);}
+  50%{box-shadow:0 0 0 10px rgba(192,255,92,.06);}
+}
+/* moving progress bar at bottom of active step */
+.sc-step.active::after{
+  content:'';position:absolute;left:0;bottom:0;right:0;height:2px;
+  background:var(--lime-dark);
+  animation:scProgress 2.5s linear infinite;
+  transform-origin:left;
+}
+@keyframes scProgress{
+  0%{transform:scaleX(0);}
+  100%{transform:scaleX(1);}
+}
+
+/* step state: pending */
+.sc-step.pending{opacity:.55;}
+.sc-step.pending .sc-step-n{background:var(--line);color:var(--ink3);}
+
+/* ── Live activity log (3 lines, scrolling) ─── */
+.sc-log{
+  margin-top:14px;border:1px solid var(--line);background:#fff;
+  border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11px;
+  color:var(--ink2);min-height:78px;
+}
+.sc-log-line{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:5px 0;line-height:1.5;
+  animation:scLogIn .4s ease both;
+}
+.sc-log-line .ts{color:var(--teal);font-weight:700;flex-shrink:0;}
+.sc-log-line .ic{font-size:13px;flex-shrink:0;width:18px;text-align:center;}
+.sc-log-line .tx{color:var(--ink2);}
+@keyframes scLogIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
 /* ── SECTION COMMON ───────────────────────────────── */
 .sec{padding:110px 0;position:relative;}
@@ -598,35 +694,49 @@ img{max-width:100%;display:block;}
               <span class="sc-site-tag">チーム 18 名が稼働中</span>
             </div>
           </div>
-          <button class="sc-cta">📊 ダッシュボードを見る →</button>
+          <span class="sc-live"><span class="sc-live-dot"></span>LIVE · WORKING</span>
         </div>
-        <div class="sc-team-row">
-          <div class="sc-dept">
-            <div class="sc-dept-h">🔍 リサーチ部門 <span class="cnt">6 名</span></div>
-            <div class="sc-mems">
-              <div class="sc-mem">競合トラッカー</div>
-              <div class="sc-mem">SWOT 分析官</div>
-              <div class="sc-mem">ペルソナ研究員</div>
-              <div class="sc-mem">トレンド検出</div>
-            </div>
+
+        <!-- 6-step live pipeline (auto-cycling) -->
+        <div class="sc-pipe" id="scPipe">
+          <div class="sc-step" data-step="1">
+            <div class="sc-step-n"><span class="sc-step-n-num">01</span></div>
+            <div class="sc-step-ti">URL を貼る</div>
+            <div class="sc-step-sub">Paste</div>
           </div>
-          <div class="sc-dept">
-            <div class="sc-dept-h">📊 分析部門 <span class="cnt">6 名</span></div>
-            <div class="sc-mems">
-              <div class="sc-mem">GA4 アナリスト</div>
-              <div class="sc-mem">Search Console</div>
-              <div class="sc-mem">ファネル分析官</div>
-              <div class="sc-mem">異常検知</div>
-            </div>
+          <div class="sc-step" data-step="2">
+            <div class="sc-step-n"><span class="sc-step-n-num">02</span></div>
+            <div class="sc-step-ti">Agent 雇用</div>
+            <div class="sc-step-sub">Hire</div>
           </div>
-          <div class="sc-dept">
-            <div class="sc-dept-h">✍ コンテンツ部門 <span class="cnt">6 名</span></div>
-            <div class="sc-mems">
-              <div class="sc-mem">SEO ライター</div>
-              <div class="sc-mem">X / SNS マネージャー</div>
-              <div class="sc-mem">編集者</div>
-              <div class="sc-mem">CRO コピーライター</div>
-            </div>
+          <div class="sc-step" data-step="3">
+            <div class="sc-step-n"><span class="sc-step-n-num">03</span></div>
+            <div class="sc-step-ti">現状分析</div>
+            <div class="sc-step-sub">Diagnose</div>
+          </div>
+          <div class="sc-step" data-step="4">
+            <div class="sc-step-n"><span class="sc-step-n-num">04</span></div>
+            <div class="sc-step-ti">仕事を指示</div>
+            <div class="sc-step-sub">Brief</div>
+          </div>
+          <div class="sc-step" data-step="5">
+            <div class="sc-step-n"><span class="sc-step-n-num">05</span></div>
+            <div class="sc-step-ti">自動運用</div>
+            <div class="sc-step-sub">Run</div>
+          </div>
+          <div class="sc-step" data-step="6">
+            <div class="sc-step-n"><span class="sc-step-n-num">06</span></div>
+            <div class="sc-step-ti">レポート</div>
+            <div class="sc-step-sub">Report</div>
+          </div>
+        </div>
+
+        <!-- Live activity log (cycling messages) -->
+        <div class="sc-log" id="scLog">
+          <div class="sc-log-line">
+            <span class="ts">14:32</span>
+            <span class="ic">📊</span>
+            <span class="tx">GA4 アナリスト: 直近 7 日 PV +18%、 主因は SEO 記事 "AI 時代の DTC 戦略"</span>
           </div>
         </div>
       </div>
@@ -1033,6 +1143,50 @@ function _dispatchTeam(ev, source){
     }, { threshold: 0.5 });
     document.querySelectorAll('.stat-count').forEach(function(el){ io.observe(el); });
   }).catch(function(){});
+})();
+
+// ── Live pipeline cycle (showcase) ────────────────
+// 6 steps を 2.5 秒間隔で 「active が進む」 様子をエンドレスに表示。
+// done → active → pending のクラス を rotate して 「いま step N をやってる」 感を演出。
+(function(){
+  var pipe = document.getElementById('scPipe');
+  var log  = document.getElementById('scLog');
+  if(!pipe) return;
+  var steps = pipe.querySelectorAll('.sc-step');
+  if(!steps.length) return;
+  // step 別の log msg (= active step に対応した 「いま AI 何やってる」 メッセージ)
+  var LOG_MSGS = [
+    { ic:'📥', tx:'URL を read → 業種判定 → ペルソナ抽出 中…' },
+    { ic:'👥', tx:'AI チーム 18 名を編成。 リサーチ / 分析 / コンテンツ 3 部門。' },
+    { ic:'📊', tx:'GA4 アナリスト: 直近 7 日 PV +18%、 主因は SEO 記事 "AI 時代の DTC 戦略"' },
+    { ic:'💬', tx:'ユーザー: 「SEO 記事 3 本書いて、 WordPress に下書き保存して」' },
+    { ic:'✍', tx:'SEO ライター: 派生記事 3 本 ドラフト中。 14 分後に WordPress 公開予定。' },
+    { ic:'📰', tx:'PM: 本日 ✅ 記事 3 本下書き / ✅ X 投稿 2 本 / ⚠ 競合 X が新キャンペーン' },
+  ];
+  function fmtTime(){
+    var d = new Date();
+    return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+  }
+  var idx = 0;
+  function tick(){
+    steps.forEach(function(s, i){
+      s.classList.remove('done','active','pending');
+      if(i < idx) s.classList.add('done');
+      else if(i === idx) s.classList.add('active');
+      else s.classList.add('pending');
+    });
+    if(log){
+      var m = LOG_MSGS[idx];
+      log.innerHTML = '<div class="sc-log-line">'
+        + '<span class="ts">' + fmtTime() + '</span>'
+        + '<span class="ic">' + m.ic + '</span>'
+        + '<span class="tx">' + m.tx + '</span>'
+        + '</div>';
+    }
+    idx = (idx + 1) % steps.length;
+  }
+  tick();
+  setInterval(tick, 2500);
 })();
 
 // ── Live clock in nav (OpenCrew-style) ─────────────

@@ -3753,6 +3753,55 @@ function _orgContributionBreakdown(site){
 // キャッシュは window._ga4Snapshots[siteId] = { snapshot, fetched_at, connected }
 // 取得完了したら renderHomeDashboard を呼び直す (= chart 自動描画)
 window._ga4Snapshots = window._ga4Snapshots || {};
+// ── Global loading indicator (= 読み込み中 visible pill) ──
+// 長い処理 (GA4 snapshot / 戦略生成 / ロードマップ生成) が走ってる間、
+// 画面 top-center に 「🔄 …中」 pill を出す。 「読み込んでるなら read 中と
+// 出して」 ユーザー苦情への対応。 同時に複数 task 起きても stack で表示。
+window._loadingTasks = window._loadingTasks || new Map();
+function _setLoading(taskId, label){
+  if(!taskId) return;
+  window._loadingTasks.set(taskId, label || '読み込み中…');
+  _renderLoadingPill();
+}
+function _clearLoading(taskId){
+  if(!taskId) return;
+  window._loadingTasks.delete(taskId);
+  _renderLoadingPill();
+}
+function _renderLoadingPill(){
+  var existing = document.getElementById('globalLoadingPill');
+  var tasks = Array.from(window._loadingTasks.values());
+  if(tasks.length === 0){
+    if(existing) existing.remove();
+    return;
+  }
+  var html = tasks.map(function(label, i){
+    return '<div class="lp-row">'
+      + '<span class="lp-spin"></span>'
+      + '<span class="lp-tx">' + esc(label) + '</span>'
+      + '</div>';
+  }).join('');
+  if(!existing){
+    var div = document.createElement('div');
+    div.id = 'globalLoadingPill';
+    div.setAttribute('style', 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99998;background:#0a0a0e;color:#fff;border-radius:99px;padding:8px 16px 8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;box-shadow:0 6px 22px rgba(0,0,0,.30);display:flex;flex-direction:column;gap:4px;pointer-events:none;max-width:80vw;');
+    document.body.appendChild(div);
+    existing = div;
+  }
+  existing.innerHTML = html;
+}
+// CSS for spinner
+(function _injectLoadingPillStyles(){
+  if(document.getElementById('lpStyles')) return;
+  var s = document.createElement('style');
+  s.id = 'lpStyles';
+  s.textContent = '#globalLoadingPill .lp-row{display:flex;align-items:center;gap:8px;}'
+    + '#globalLoadingPill .lp-spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#c0ff5c;border-radius:50%;animation:lpSpin .8s linear infinite;flex-shrink:0;}'
+    + '#globalLoadingPill .lp-tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+    + '@keyframes lpSpin{to{transform:rotate(360deg);}}';
+  document.head.appendChild(s);
+})();
+
 function _fetchGa4Snapshot(siteId, opts){
   if(!siteId) return;
   var force = opts && opts.force;
@@ -3764,6 +3813,8 @@ function _fetchGa4Snapshot(siteId, opts){
   window._ga4FetchInFlight[siteId] = true;
   var method = force ? 'POST' : 'GET';
   var path = '/api/agents/' + encodeURIComponent(siteId) + '/ga4' + (force ? '/refresh' : '');
+  // visible loading pill
+  _setLoading('ga4-'+siteId, force ? 'GA4 数字を再取得中…' : 'GA4 数字を読み込み中…');
   api(method, path)
     .then(function(r){
       window._ga4Snapshots[siteId] = {
@@ -3775,6 +3826,7 @@ function _fetchGa4Snapshot(siteId, opts){
         _localFetchedMs: Date.now(),
       };
       window._ga4FetchInFlight[siteId] = false;
+      _clearLoading('ga4-'+siteId);
       try { renderHomeDashboard(); } catch(_){}
       // chat action cards も再評価 (= GA4 snapshot 到着で 「戦略作る」 が出るかも)
       try {
@@ -3785,6 +3837,7 @@ function _fetchGa4Snapshot(siteId, opts){
     .catch(function(e){
       console.warn('[ga4-snapshot] fetch failed:', e && e.message);
       window._ga4FetchInFlight[siteId] = false;
+      _clearLoading('ga4-'+siteId);
     });
 }
 
@@ -3884,14 +3937,17 @@ function openGa4PropertyPicker(siteId){
   // No cached list — fetch fresh
   renderModal(null);
   var listEl = document.querySelector('#ga4PickerHost .ga4pp-list');
-  if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px">読み込み中…</div>';
+  if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px"><span style="display:inline-block;width:14px;height:14px;border:2px solid #e5e5e7;border-top-color:#a3e635;border-radius:50%;animation:lpSpin .8s linear infinite;margin-right:8px;vertical-align:-3px"></span>GA4 プロパティを取得しています (10-20 秒)…</div>';
+  _setLoading('ga4-props', 'GA4 プロパティ一覧を取得中…');
   api('GET', '/api/me/ga4/properties').then(function(r){
+    _clearLoading('ga4-props');
     if(!r || !r.ok){
       if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-size:13px">'+esc((r && r.detail) || 'GA4 プロパティの取得に失敗しました')+'</div>';
       return;
     }
     renderModal(r.properties || []);
   }).catch(function(e){
+    _clearLoading('ga4-props');
     if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-size:13px">'+esc(e.message||'failed')+'</div>';
   });
 }
@@ -4012,6 +4068,8 @@ async function _autoSetupSiteFromGa4(siteId, opts){
   }
   function setStep(idx, label, speakerKeywords){
     try { showToast('('+idx+'/3) '+label, 'ok'); } catch(_){}
+    // visible top-center loading pill
+    try { _setLoading('autosetup-'+siteId, '('+idx+'/3) ' + label); } catch(_){}
     if(streamToChat && ag && Array.isArray(ag.history) && ag.id === activeId){
       var sp = speakerFields(speakerKeywords);
       var msg = { role:'assistant', content: '🔄 ' + label, time: now(), system_action: true, transient: true };
@@ -4103,6 +4161,7 @@ async function _autoSetupSiteFromGa4(siteId, opts){
     chatMsg('⚠️ エラーが発生しました: ' + (e.message || 'unknown') + '\n\nもう一度試すか、 個別に「戦略を作って」「ロードマップを作って」 と頼んでください。');
   } finally {
     window._autoSetupInFlight[siteId] = false;
+    try { _clearLoading('autosetup-'+siteId); } catch(_){}
     // 残った transient msg を最終クリーンアップ
     try {
       if(streamToChat && ag && Array.isArray(ag.history)){
@@ -4152,22 +4211,26 @@ window._CHAT_ACTIONS = [
     },
   },
   // ── Step 2: GA4 property を選ぶ (OAuth 済 + property 未選択 + data なし) ──
+  // 「接続済みなのに数字 0」 = 別サイトの GA4 property を選んでる可能性高。
+  // 文言は「接続して」 ではなく 「このサイトの property を選び直して」 で明確に。
   {
     id: 'pick_ga4_property',
     icon: '🎯',
-    label: 'GA4 プロパティを選ぶ',
-    sub: '接続済みです。 どのプロパティの数字を表示するか選んでください。',
-    accent: '#a3e635',
+    label: 'このサイトの GA4 プロパティを選び直す',
+    sub: 'Google 接続は OK ですが、 このサイトの数字 (PV / セッション) がまだ取得できていません。 正しい GA4 プロパティを選ぶ必要があります。',
+    accent: '#f59e0b',  // amber = 注意 (= 接続済 OK だけど ちょい問題)
     when: function(ag){
       if(!_isSiteAgent(ag)) return false;
       if(!_ga4OauthConnected()) return false;
+      // GA4 snapshot がまだ来てないだけかも → 「読み込み中」 のうちは card 出さない
       var snap = (window._ga4Snapshots && window._ga4Snapshots[ag.id]) || null;
-      var hasData = !!(snap && snap.snapshot && snap.snapshot.series && snap.snapshot.series.length > 0);
+      if(!snap) return false;  // = まだ fetch 中
+      var hasData = !!(snap.snapshot && snap.snapshot.series && snap.snapshot.series.length > 0);
       return !hasData;
     },
     onClick: function(ag){
-      _triggerChatAction(ag, 'GA4 のプロパティを選びたい',
-        'はい！ どのプロパティ (= GA4 で計測してるサイト) を見るか選んでください 🎯',
+      _triggerChatAction(ag, 'GA4 のプロパティを選び直したい',
+        'はい！ ピッカーを開きます。 「✓ このサイトに一致」 マーク付きのプロパティを選んでください 🎯',
         function(){ openGa4PropertyPicker(ag.id); });
     },
   },

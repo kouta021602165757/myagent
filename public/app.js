@@ -2188,10 +2188,11 @@ function _enableRuntimeTranslator(){
   // Wrap showToast / confirm / alert to translate first arg
   var origToast = window.showToast;
   if(typeof origToast === 'function'){
-    window.showToast = function(msg, kind){
+    window.showToast = function(msg, kind, duration){
+      // ↑ duration を forward しないと error toast が default 時間で消えて見落とす
       var trimmed = String(msg||'').trim();
       if(_JA2EN[trimmed]) msg = _JA2EN[trimmed];
-      return origToast.call(this, msg, kind);
+      return origToast.call(this, msg, kind, duration);
     };
   }
   var origConfirm = window.confirm;
@@ -3917,9 +3918,10 @@ function _ga4PickProperty(siteId, propertyId){
           if(window._ga4Snapshots){
             window._ga4Snapshots[siteId] = { connected: true, snapshot: snap, _localFetchedMs: Date.now() };
           }
-          try { renderHomeDashboard(); } catch(_){}
+          try { renderHomeDashboard(); } catch(e){ console.warn('[picker-save] renderHomeDashboard failed', e); }
           // auto-setup chain は picker からの選択時のみ trigger
-          try { _autoSetupSiteFromGa4(siteId, { streamToChat: true }); } catch(_){}
+          try { _autoSetupSiteFromGa4(siteId, { streamToChat: true }); }
+          catch(e){ console.error('[autosetup]', e); showToast('自動セットアップ起動失敗: ' + (e.message||'unknown'), 'ng', 8000); }
         } else {
           // 0 件データ → property mismatch 警告
           var listEl2 = document.querySelector('#ga4PickerHost .ga4pp-list');

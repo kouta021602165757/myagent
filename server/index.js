@@ -9858,7 +9858,7 @@ async function _xOpenComposeAndType(user, text){
 }
 
 // ── verify_x_login: X.com を開いて username 取得 ──
-async function executeVerifyXLoginTool(user){
+async function executeVerifyXLoginTool(user, agent){
   if(!user.extension_device_token){
     return { error: 'extension_not_paired', detail: 'MY AI Agent ブラウザ拡張を先にインストールしてください。' };
   }
@@ -9885,13 +9885,19 @@ async function executeVerifyXLoginTool(user){
   // ページテキストから "@username" を最大限ヒューリスティックに抽出
   const handleMatch = pageText.match(/@([A-Za-z0-9_]{2,15})/);
   const username = handleMatch ? '@' + handleMatch[1] : null;
-  // user.sns_connections.x に状態を保存
-  user.sns_connections = user.sns_connections || {};
-  user.sns_connections.x = {
+  // per-site が望ましいので agent 渡されてたら agent.sns_connections.x に保存
+  const conn = {
     connected: true,
     profile: { username: username || '(取得不可)' },
     last_verified_at: new Date().toISOString(),
   };
+  if(agent){
+    agent.sns_connections = agent.sns_connections || {};
+    agent.sns_connections.x = conn;
+  } else {
+    user.sns_connections = user.sns_connections || {};
+    user.sns_connections.x = conn;
+  }
   try { await DB.save(user); } catch(_){}
   return {
     ok: true,
@@ -9902,7 +9908,7 @@ async function executeVerifyXLoginTool(user){
 }
 
 // ── post_to_x: 単独 Tweet 投稿 ──
-async function executePostToXTool(user, input){
+async function executePostToXTool(user, input, agent){
   const text = String((input && input.text) || '').trim();
   if(!text) return { error: 'text_required' };
   if(text.length > 280) return { error: 'too_long', detail: 'X は 280 字まで。今: ' + text.length + ' 字' };
@@ -9943,7 +9949,7 @@ async function executePostToXTool(user, input){
 // X の compose modal では「+」 button (= 次の Tweet を追加) を使って 1 つの
 // 「post スレッド」として送れる。各 Tweet textarea のセレクタは index で変わる:
 //   [data-testid="tweetTextarea_0"], _1, _2, ...
-async function executePostToXThreadTool(user, input){
+async function executePostToXThreadTool(user, input, agent){
   const tweets = Array.isArray(input && input.tweets) ? input.tweets.map(t => String(t || '').trim()).filter(Boolean) : [];
   if(tweets.length < 2) return { error: 'need_at_least_2' };
   if(tweets.length > 25) return { error: 'too_many', detail: '最大 25 連投' };
@@ -10096,6 +10102,15 @@ const SNS_PLATFORM_DEFS = {
   },
 };
 
+// 2026-05-24 per-site connections: agent.sns_connections.<platform> を最優先、
+// fallback で user.sns_connections.<platform>。 publish tool 内で全部これ経由に。
+function _snsConn(user, agent, platform){
+  if(agent && agent.sns_connections && agent.sns_connections[platform]){
+    return agent.sns_connections[platform];
+  }
+  return (user && user.sns_connections && user.sns_connections[platform]) || null;
+}
+
 // raw (= URL or handle) から profile を抽出する共通 helper
 function _snsExtractProfile(platform, body){
   const def = SNS_PLATFORM_DEFS[platform];
@@ -10114,7 +10129,7 @@ function _snsExtractProfile(platform, body){
 }
 
 // ── LinkedIn 投稿 ──
-async function executePostToLinkedInTool(user, input){
+async function executePostToLinkedInTool(user, input, agent){
   const text = String((input && input.text) || '').trim();
   if(!text) return { error: 'text_required' };
   if(text.length > 3000) return { error: 'too_long', detail: 'LinkedIn は 3000 字まで。今: ' + text.length };
@@ -10152,7 +10167,7 @@ async function executePostToLinkedInTool(user, input){
 }
 
 // ── Threads 投稿 ──
-async function executePostToThreadsTool(user, input){
+async function executePostToThreadsTool(user, input, agent){
   const text = String((input && input.text) || '').trim();
   if(!text) return { error: 'text_required' };
   if(text.length > 500) return { error: 'too_long', detail: 'Threads は 500 字まで。今: ' + text.length };
@@ -10192,11 +10207,11 @@ async function executePostToThreadsTool(user, input){
 }
 
 // ── Facebook Page 投稿 ──
-async function executePostToFacebookTool(user, input){
+async function executePostToFacebookTool(user, input, agent){
   const text = String((input && input.text) || '').trim();
   if(!text) return { error: 'text_required' };
   if(!user.extension_device_token) return { error: 'extension_not_paired' };
-  const fbConn = user.sns_connections && user.sns_connections.facebook;
+  const fbConn = _snsConn(user, agent, 'facebook');
   const pageUrl = (fbConn && fbConn.profile && fbConn.profile.url) || 'https://www.facebook.com/';
   let r = await executeExtensionTool(user, 'ext_open_url', { url: pageUrl });
   if(r && r.error) return { error: 'open_failed', detail: r.error };
@@ -10266,7 +10281,7 @@ async function _socialFetchImageDataUrl(imageUrl){
 
 // ── Instagram 投稿 (= 画像 + caption) ──
 // Desktop web (instagram.com) からの投稿。 モバイル feature parity は 2022 から。
-async function executePostToInstagramTool(user, input){
+async function executePostToInstagramTool(user, input, agent){
   const caption = String((input && input.caption) || '').trim();
   const imageUrl = String((input && input.image_url) || '').trim();
   if(!imageUrl) return { error: 'image_url_required', detail: 'Instagram は画像必須です。 generate_image / edit_image で生成した URL を渡してください。' };
@@ -10357,7 +10372,7 @@ async function executePostToInstagramTool(user, input){
 }
 
 // ── TikTok 投稿 (= 画像 Photo Mode、 動画は SSE 帯域制約で非対応) ──
-async function executePostToTikTokTool(user, input){
+async function executePostToTikTokTool(user, input, agent){
   const caption = String((input && input.caption) || '').trim();
   const imageUrl = String((input && input.image_url) || '').trim();
   if(!imageUrl){
@@ -10426,7 +10441,7 @@ async function executePostToTikTokTool(user, input){
 
 // ── YouTube Community 投稿 (= text + 任意 image。 動画は非対応) ──
 // 500 subscribers 以上のチャンネルのみ Community Tab が有効。
-async function executePostToYouTubeCommunityTool(user, input){
+async function executePostToYouTubeCommunityTool(user, input, agent){
   const text = String((input && input.text) || '').trim();
   const imageUrl = String((input && input.image_url) || '').trim();
   if(!text) return { error: 'text_required', detail: 'YouTube Community 投稿は本文必須です。' };
@@ -10519,7 +10534,7 @@ async function executePostToYouTubeCommunityTool(user, input){
 }
 
 // ── note 公開 ──
-async function executePublishNoteTool(user, input){
+async function executePublishNoteTool(user, input, agent){
   const title = String((input && input.title) || '').trim();
   const content = String((input && input.content) || '').trim();
   const status = (input && input.status === 'publish') ? 'publish' : 'draft';
@@ -10569,7 +10584,7 @@ async function executePublishNoteTool(user, input){
 
 // ── note 記事編集 ──
 // note の編集 URL は `note.com/notes/<note_id>/edit`。 public URL `note.com/<user>/n/<note_id>` から ID 抽出。
-async function executeEditNoteTool(user, input){
+async function executeEditNoteTool(user, input, agent){
   const post_url = String((input && input.post_url) || '').trim();
   const newTitle = String((input && input.title) || '');
   const newContent = String((input && input.content) || '');
@@ -10670,7 +10685,7 @@ async function executeEditNoteTool(user, input){
 // API spec が beta なので、 fallback として DOM 操作 (= admin の 新規記事フォーム
 // を埋めて publish click) も用意。
 // ══════════════════════════════════════════════════════════════
-async function executePublishEmDashTool(user, input){
+async function executePublishEmDashTool(user, input, agent){
   const title = String((input && input.title) || '').trim();
   const content = String((input && input.content) || '').trim();
   const status = (input && input.status === 'publish') ? 'publish' : 'draft';
@@ -10680,7 +10695,7 @@ async function executePublishEmDashTool(user, input){
 
   if(!title || !content) return { error: 'title_and_content_required' };
   if(!user.extension_device_token) return { error: 'extension_not_paired' };
-  const conn = user.sns_connections && user.sns_connections.emdash;
+  const conn = _snsConn(user, agent, 'emdash');
   if(!conn || !conn.connected){
     return { error: 'not_connected', detail: 'EmDash サイトを先に接続してください (接続 tab)。' };
   }
@@ -10762,7 +10777,7 @@ function _wpIsNonceExpired(result){
 }
 // 接続済 user から admin URL を取得 (= site_url + /wp-admin を組み立て)
 function _wpGetAdminUrl(user){
-  const conn = user && user.sns_connections && user.sns_connections.wordpress;
+  const conn = _snsConn(user, agent, 'wordpress');
   if(!conn || !conn.connected) return null;
   return (conn.profile && conn.profile.admin_url)
     || (conn.profile && conn.profile.site_url ? conn.profile.site_url.replace(/\/$/, '') + '/wp-admin' : null);
@@ -11004,7 +11019,7 @@ function _wpBuildPostIdLookupScript(postUrl){
 // /wp-json/wp/v2/posts に POST。 categories / tags / featured_media / slug / excerpt /
 // scheduled date / page / featured_image を 1 回の API call で setup。
 // REST API が無効な site (= 旧 WP or 一部セキュリティ plugin) では DOM fallback に降りる。
-async function executePublishWordPressTool(user, input){
+async function executePublishWordPressTool(user, input, agent){
   const title = String((input && input.title) || '').trim();
   const content = String((input && input.content) || '').trim();
   const rawStatus = String((input && input.status) || 'draft');
@@ -11170,7 +11185,7 @@ async function _wpPublishViaDom(user, adminUrl, opts){
 
 // ── WordPress 記事編集 ──
 // post_id 直接指定 or post_url から ID 解決して PATCH。 update したい field だけ渡せば OK。
-async function executeEditWordPressTool(user, input){
+async function executeEditWordPressTool(user, input, agent){
   const post_id = input && input.post_id ? parseInt(input.post_id, 10) : null;
   const post_url = String((input && input.post_url) || '').trim();
   if(!post_id && !post_url) return { error: 'post_id_or_url_required', detail: 'post_id または post_url のどちらかが必須です。' };
@@ -11266,14 +11281,14 @@ async function executeEditWordPressTool(user, input){
 // ── Shopify 商品作成 ──
 // 拡張で {shop}.myshopify.com/admin/products/new を開いて React SPA に商品を入力。
 // Shopify Admin は重い SPA なので wait は長めに。
-async function executeCreateShopifyProductTool(user, input){
+async function executeCreateShopifyProductTool(user, input, agent){
   const title = String((input && input.title) || '').trim();
   const description = String((input && input.description) || '').trim();
   const price = String((input && input.price) || '').trim();
   const status = (input && input.status === 'active') ? 'active' : 'draft';
   if(!title) return { error: 'title_required' };
   if(!user.extension_device_token) return { error: 'extension_not_paired' };
-  const conn = user.sns_connections && user.sns_connections.shopify;
+  const conn = _snsConn(user, agent, "shopify");
   if(!conn || !conn.connected){
     return { error: 'not_connected', detail: 'Shopify ショップを先に接続してください (接続 tab)。' };
   }
@@ -11393,7 +11408,7 @@ async function _shopifyClickSave(user){
 
 // ── Shopify 商品編集 ──
 // 既存商品の編集。 product_id 直接 or product_url (= 公開ページ URL or admin URL) から ID 抽出。
-async function executeEditShopifyProductTool(user, input){
+async function executeEditShopifyProductTool(user, input, agent){
   const product_id = input && input.product_id ? String(input.product_id).trim() : null;
   const product_url = String((input && input.product_url) || '').trim();
   const updateTitle = String((input && input.title) || '');
@@ -11405,7 +11420,7 @@ async function executeEditShopifyProductTool(user, input){
     return { error: 'no_update_fields', detail: 'title / description / price / status のいずれかを指定してください。' };
   }
   if(!user.extension_device_token) return { error: 'extension_not_paired' };
-  const conn = user.sns_connections && user.sns_connections.shopify;
+  const conn = _snsConn(user, agent, "shopify");
   if(!conn || !conn.connected) return { error: 'not_connected' };
   const adminUrl = (conn.profile && conn.profile.admin_url) || null;
   if(!adminUrl) return { error: 'admin_url_missing' };
@@ -11506,22 +11521,24 @@ function _recordSnsPost(agent, platform, info){
 // ── 汎用 dispatch ──
 async function executeSnsTool(user, name, input, agent){
   let r;
-  if(name === 'verify_x_login')       r = await executeVerifyXLoginTool(user);
-  else if(name === 'post_to_x')       r = await executePostToXTool(user, input);
-  else if(name === 'post_to_x_thread') r = await executePostToXThreadTool(user, input);
-  else if(name === 'post_to_linkedin') r = await executePostToLinkedInTool(user, input);
-  else if(name === 'post_to_threads')  r = await executePostToThreadsTool(user, input);
-  else if(name === 'post_to_facebook') r = await executePostToFacebookTool(user, input);
-  else if(name === 'post_to_instagram') r = await executePostToInstagramTool(user, input);
-  else if(name === 'post_to_tiktok')    r = await executePostToTikTokTool(user, input);
-  else if(name === 'post_to_youtube_community') r = await executePostToYouTubeCommunityTool(user, input);
-  else if(name === 'publish_note')     r = await executePublishNoteTool(user, input);
-  else if(name === 'publish_wordpress') r = await executePublishWordPressTool(user, input);
-  else if(name === 'edit_wordpress')    r = await executeEditWordPressTool(user, input);
-  else if(name === 'edit_note')         r = await executeEditNoteTool(user, input);
-  else if(name === 'publish_emdash')    r = await executePublishEmDashTool(user, input);
-  else if(name === 'create_shopify_product') r = await executeCreateShopifyProductTool(user, input);
-  else if(name === 'edit_shopify_product')   r = await executeEditShopifyProductTool(user, input);
+  if(name === 'verify_x_login')       r = await executeVerifyXLoginTool(user, agent);
+  else if(name === 'post_to_x')       r = await executePostToXTool(user, input, agent);
+  else if(name === 'post_to_x_thread') r = await executePostToXThreadTool(user, input, agent);
+  else if(name === 'post_to_linkedin') r = await executePostToLinkedInTool(user, input, agent);
+  else if(name === 'post_to_threads')  r = await executePostToThreadsTool(user, input, agent);
+  // 2026-05-24: per-site sns_connections に refactor — agent を渡せば
+  // agent.sns_connections.<platform> を優先、 fallback で user.sns_connections。
+  else if(name === 'post_to_facebook') r = await executePostToFacebookTool(user, input, agent);
+  else if(name === 'post_to_instagram') r = await executePostToInstagramTool(user, input, agent);
+  else if(name === 'post_to_tiktok')    r = await executePostToTikTokTool(user, input, agent);
+  else if(name === 'post_to_youtube_community') r = await executePostToYouTubeCommunityTool(user, input, agent);
+  else if(name === 'publish_note')     r = await executePublishNoteTool(user, input, agent);
+  else if(name === 'publish_wordpress') r = await executePublishWordPressTool(user, input, agent);
+  else if(name === 'edit_wordpress')    r = await executeEditWordPressTool(user, input, agent);
+  else if(name === 'edit_note')         r = await executeEditNoteTool(user, input, agent);
+  else if(name === 'publish_emdash')    r = await executePublishEmDashTool(user, input, agent);
+  else if(name === 'create_shopify_product') r = await executeCreateShopifyProductTool(user, input, agent);
+  else if(name === 'edit_shopify_product')   r = await executeEditShopifyProductTool(user, input, agent);
   else return { error: 'unknown_sns_tool: ' + name };
 
   // 成功時のみ history 記録 (verify_x_login や edit_* (= 更新) は new post じゃないので除外)
@@ -19668,20 +19685,36 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res,200,{ok:true});
   }
 
-  // ── SNS 接続確認 / 投稿 endpoint (= V1 は X のみ) ──
-  // GET  /api/sns/status          → 現在の接続状態を返す
-  // POST /api/sns/verify/x         → 拡張経由で x.com を開いてログイン確認
-  // POST /api/sns/post/x           → 拡張経由で投稿 (= confirm モーダル後の実行)
+  // ── SNS 接続確認 / 投稿 endpoint (= V2: per-site connections) ──
+  // 2026-05-24: 「サイト毎に別の X / WordPress / Shopify を繋ぎたい」 という当然
+  // の要求に対応。 storage を user.sns_connections.<platform> から
+  // agent.sns_connections.<platform> に shift。 backward compat: user level が
+  // あれば fallback で読む (= 既存接続を消さない)。
+  //
+  // GET  /api/sns/status?site_id=xxx  → 当該 site の接続状態 (site なしなら user level)
+  // POST /api/sns/connect/<platform>  body: { site_id, url|handle }
+  // POST /api/sns/disconnect/<platform>  body: { site_id }
+  //
+  const PLATFORMS_LIST = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base','emdash'];
+
   if(pathname === '/api/sns/status' && method === 'GET'){
-    const conn = user.sns_connections || {};
-    const PLATFORMS = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base','emdash'];
+    const urlObj = new URL(req.url, 'https://x');
+    const siteId = urlObj.searchParams.get('site_id') || '';
+    const site = siteId ? (user.agents || []).find(a => a && a.id === siteId) : null;
     const out = {
       ok: true,
       extension_paired: !!user.extension_device_token,
+      scope: site ? 'site' : 'user',
+      site_id: siteId || null,
     };
-    PLATFORMS.forEach(p => {
-      out[p] = conn[p]
-        ? { connected: !!conn[p].connected, profile: conn[p].profile || null, last_verified_at: conn[p].last_verified_at || conn[p].connected_at }
+    const userConn = user.sns_connections || {};
+    const siteConn = (site && site.sns_connections) || {};
+    PLATFORMS_LIST.forEach(p => {
+      // site level priority, fallback to user level (= migration window)
+      const c = siteConn[p] || userConn[p];
+      const fallback = !siteConn[p] && !!userConn[p];
+      out[p] = c
+        ? { connected: !!c.connected, profile: c.profile || null, last_verified_at: c.last_verified_at || c.connected_at, fallback_from_user: fallback }
         : { connected: false };
     });
     return jres(res, 200, out);
@@ -19690,34 +19723,49 @@ async function handleAPI(req,res,pathname,method,ip){
     const r = await executeVerifyXLoginTool(user);
     return jres(res, r.ok ? 200 : 400, r);
   }
-  // ── POST /api/sns/connect/<platform> — URL paste で全 11 platform を接続 ──
-  // body: { url } or { handle }
-  // 各 platform の handle / id / url を抽出して user.sns_connections.<platform> に保存。
+  // ── POST /api/sns/connect/<platform> — URL paste で全 12 platform を接続 ──
+  // body: { site_id, url } or { site_id, handle }
   const snsConnectMatch = pathname.match(/^\/api\/sns\/connect\/([a-z]+)$/);
   if(snsConnectMatch && method === 'POST'){
     const platform = snsConnectMatch[1];
-    const meta = _snsExtractProfile(platform, await readBody(req));
+    const body = await readBody(req);
+    const siteId = (body && body.site_id) || '';
+    const site = siteId ? (user.agents || []).find(a => a && a.id === siteId) : null;
+    const meta = _snsExtractProfile(platform, body);
     if(meta.error) return jres(res, 400, meta);
-    user.sns_connections = user.sns_connections || {};
-    user.sns_connections[platform] = {
+    const conn = {
       connected: true,
       profile: meta.profile,
       method: 'manual_url',
       connected_at: new Date().toISOString(),
     };
+    if(site){
+      site.sns_connections = site.sns_connections || {};
+      site.sns_connections[platform] = conn;
+    } else {
+      // 後方互換: site_id なし → user level に保存 (= 旧 client 動作維持)
+      user.sns_connections = user.sns_connections || {};
+      user.sns_connections[platform] = conn;
+    }
     try { await DB.save(user); } catch(e){ console.warn('[sns-connect] save failed:', e.message); }
-    console.log('[sns-connect]', platform, JSON.stringify(meta.profile).slice(0,120), 'for', user.email);
-    return jres(res, 200, { ok: true, platform, profile: meta.profile });
+    console.log('[sns-connect]', platform, 'scope=' + (site ? 'site:'+site.name : 'user'), JSON.stringify(meta.profile).slice(0,120));
+    return jres(res, 200, { ok: true, platform, profile: meta.profile, scope: site ? 'site' : 'user' });
   }
   // ── POST /api/sns/disconnect/<platform> — 全 platform 共通 ──
   const snsDisconnectMatch = pathname.match(/^\/api\/sns\/disconnect\/([a-z]+)$/);
   if(snsDisconnectMatch && method === 'POST'){
     const platform = snsDisconnectMatch[1];
-    if(user.sns_connections && user.sns_connections[platform]){
+    const body = await readBody(req);
+    const siteId = (body && body.site_id) || '';
+    const site = siteId ? (user.agents || []).find(a => a && a.id === siteId) : null;
+    if(site && site.sns_connections && site.sns_connections[platform]){
+      delete site.sns_connections[platform];
+      try { await DB.save(user); } catch(_){}
+    } else if(!site && user.sns_connections && user.sns_connections[platform]){
       delete user.sns_connections[platform];
       try { await DB.save(user); } catch(_){}
     }
-    return jres(res, 200, { ok: true });
+    return jres(res, 200, { ok: true, scope: site ? 'site' : 'user' });
   }
   if(pathname === '/api/sns/post/x' && method === 'POST'){
     const body = await readBody(req);

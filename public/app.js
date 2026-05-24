@@ -7092,7 +7092,8 @@ async function _fetchSnsStatus(siteId){
   window._snsStatusFetching = window._snsStatusFetching || {};
   window._snsStatusFetching[siteId] = true;
   try {
-    var r = await api('GET', '/api/sns/status');
+    // per-site: site_id を query に付ける (= 各 site で別 SNS 接続を持てる)
+    var r = await api('GET', '/api/sns/status?site_id=' + encodeURIComponent(siteId || ''));
     if(r && r.ok){
       var cache = { extension_paired: !!r.extension_paired };
       _SNS_ALL_PLATFORMS.forEach(function(p){
@@ -7198,7 +7199,8 @@ async function _submitSnsConnect(platform, siteId, btnEl){
   }
   if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '⏳ 接続中...'; }
   try {
-    var r = await api('POST', '/api/sns/connect/' + platform, { url: raw });
+    // per-site: site_id を送信 (= 各 site で別 SNS 接続を保存)
+    var r = await api('POST', '/api/sns/connect/' + platform, { url: raw, site_id: siteId });
     if(r && r.ok){
       _closeSnsConnectModal();
       var label = SNS_PLATFORM_META[platform] && SNS_PLATFORM_META[platform].name || platform;
@@ -7221,7 +7223,7 @@ async function _snsDisconnect(platform, siteId, btnEl){
   if(!confirm((SNS_PLATFORM_META[platform] && SNS_PLATFORM_META[platform].name || platform) + ' 接続を解除しますか?')) return;
   if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '...'; }
   try {
-    await api('POST', '/api/sns/disconnect/' + platform);
+    await api('POST', '/api/sns/disconnect/' + platform, { site_id: siteId });
     showToast('接続を解除しました', 'ok');
     if(window._snsStatusCache && window._snsStatusCache[siteId] && window._snsStatusCache[siteId][platform]){
       window._snsStatusCache[siteId][platform] = { connected: false };
@@ -7421,7 +7423,7 @@ async function _oneClickXPost(siteId, btnEl){
 
   // Step 2: X 接続状態確認 (= /api/sns/status)
   try {
-    var status = await api('GET', '/api/sns/status');
+    var status = await api('GET', '/api/sns/status?site_id=' + encodeURIComponent(siteId || ''));
     var xConnected = !!(status && status.x && status.x.connected);
     if(!xConnected){
       // 接続未済 → connect modal を出して、成功したら再度この flow を resume

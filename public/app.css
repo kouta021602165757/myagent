@@ -7730,3 +7730,22 @@ button[class*="primary"]{
   border-color:rgba(192,255,92,.28) !important;
   box-shadow:0 12px 32px rgba(0,0,0,.50), 0 0 18px rgba(192,255,92,.12) !important;
 }
+
+/* === Sidebar 以外の main / empty も 純黒 に揃える (= sidebar との境界をなくす) === */
+main.main, .main, .empty, #emptyWrap, #homeBody{
+  background:#0a0a0e !important;
+  color:#fafafa !important;
+}
+
+/* === Desktop で hamburger を絶対隠す (= screenshot に出てた 灰色 bar の犯人) === */
+@media(min-width:701px){
+  .mobile-hamburger-empty,
+  .mobile-hamburger,
+  .sb-backdrop{
+    display:none !important;
+  }
+}
+
+/* === chat-top や header の 空要素 が灰色 bar 化するのを防ぐ === */
+.chat-top:empty{ display:none !important; }
+.chat-top{ background:transparent !important; }

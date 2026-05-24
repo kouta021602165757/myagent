@@ -6806,8 +6806,16 @@ function _showAgentMemberDetail(siteId, idx){
 function _renderTabConnections(site){
   var snsCache = (window._snsStatusCache && window._snsStatusCache[site.id]) || null;
   if(!snsCache){ setTimeout(function(){ _fetchSnsStatus(site.id); }, 100); }
-  var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
-  var googleConnected = !!(me && me.google_oauth && me.google_oauth.refresh_token);
+  // Google OAuth は user.google_oauth.refresh_token または user.integrations.google.refresh_token の
+  // どちらかに refresh_token があれば「接続済」。 さらに per-site の GA4 property_id を見る。
+  var googleOauthConnected = !!(me && (
+    (me.google_oauth && me.google_oauth.refresh_token)
+    || (me.integrations && me.integrations.google && me.integrations.google.refresh_token)
+  ));
+  var ga4PropertyId = site && site.ga4_property_id;
+  // GA4 接続済 = OAuth done AND property selected (= site にひもづいた property がある)
+  var ga4Connected = googleOauthConnected && !!ga4PropertyId;
+  var googleConnected = googleOauthConnected;
   var extPaired = !!(me && me.extension_device_token);
 
   // 各 platform の接続状態を取得 (= snsCache から)
@@ -6862,13 +6870,40 @@ function _renderTabConnections(site){
     : '<div class="cn-ext-ok">✅ Chrome 拡張 接続済 ・ パスワード共有不要で SNS / コンテンツに投稿できます</div>';
 
   // ── 1. 📊 分析・データ ──
+  // GA4 card は 3 状態:
+  //   (a) OAuth + property 両方 OK → 接続済 + property ID 表示 + 変更 link
+  //   (b) OAuth done だが property 未選択 → 「プロパティを選ぶ」
+  //   (c) OAuth 未接続 → 「接続する」
+  var ga4Meta = '';
+  var ga4Status = 'off';
+  var ga4ConnectAction = "openIntegrationsTab && openIntegrationsTab('ga4')";
+  var ga4DisconnectAction = '';
+  if(ga4Connected){
+    ga4Status = 'on';
+    // 接続済: アカウント email + property ID + 変更 link
+    var gEmail = (me && me.integrations && me.integrations.google && me.integrations.google.email)
+              || (me && me.google_oauth && me.google_oauth.email) || '';
+    ga4Meta = '<span style="display:inline-flex;align-items:center;gap:5px;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#525252;font-weight:600">'
+      +   '🔗 <b style="color:#1a1a1a">Property: ' + esc(ga4PropertyId) + '</b>'
+      +   (gEmail ? ' · ' + esc(gEmail) : '')
+      + '</span>'
+      + ' <button onclick="openGa4PropertyPicker(\'' + esc(site.id) + '\')" style="margin-left:8px;background:transparent;border:0;color:#0d4f4a;font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;font-family:inherit">プロパティを変更</button>';
+    ga4DisconnectAction = "openGa4PropertyPicker('" + esc(site.id) + "')";  // 「切断」 = 別 property に変更 (= 完全切断は user 設定で)
+  } else if(googleOauthConnected){
+    // OAuth done だが property 未選択
+    ga4Status = 'off';
+    ga4Meta = '<span style="font-size:11px;color:#b45309;font-weight:700">⚠ プロパティ未選択 — クリックで選んでください</span>';
+    ga4ConnectAction = "openGa4PropertyPicker('" + esc(site.id) + "')";
+  }
   var analyticsHTML = _section('📊 分析・データ', '数字一覧 tab を生かすための基盤データ')
     + '<div class="cn-grid">'
     +   _connCard({
           icon: '📊', name: 'Google Analytics 4', color: '#f59e0b',
           desc: 'PV / セッション / 流入経路 / CVR / ユーザー属性。数字 tab + 毎朝レポートの根拠データ。',
-          status: ga4Connected ? 'on' : 'off',
-          onConnect: "openIntegrationsTab && openIntegrationsTab('ga4')",
+          status: ga4Status,
+          meta: ga4Meta,
+          onConnect: ga4ConnectAction,
+          onDisconnect: ga4DisconnectAction,
         })
     +   _connCard({
           icon: '🔍', name: 'Google Search Console', color: '#3b82f6',

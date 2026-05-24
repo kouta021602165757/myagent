@@ -12080,6 +12080,24 @@ async function ga4ListProperties(user){
       }
     }
   }
+  // 3) Fetch dataStreams for each property (parallel) → 「どの URL を計測してる
+  //    GA4 か」 を picker に表示できる。 これがないとユーザーが同名の別 property
+  //    を選んで 0 件データで戻ってきて 「紐付けできない」 と苦情になる (2026-05-24
+  //    fukuyama-note.com / 538706554 ケース)。 失敗しても URL なしで返すだけ。
+  await Promise.all(out.map(async p => {
+    try {
+      const sR = await httpsReq('GET', 'analyticsadmin.googleapis.com',
+        '/v1beta/properties/' + p.property_id + '/dataStreams',
+        { 'Authorization':'Bearer '+token }, null);
+      if(sR.s === 200 && sR.d && Array.isArray(sR.d.dataStreams)){
+        // 一番上の WEB ストリーム の defaultUri を採用 (= 通常 1 個)
+        const web = sR.d.dataStreams.find(s => s.type === 'WEB_DATA_STREAM' && s.webStreamData);
+        if(web && web.webStreamData && web.webStreamData.defaultUri){
+          p.website_url = web.webStreamData.defaultUri;
+        }
+      }
+    } catch(_){ /* silent — URL が取れなくても picker は使える */ }
+  }));
   return out;
 }
 

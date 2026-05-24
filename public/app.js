@@ -3794,16 +3794,41 @@ function openGa4PropertyPicker(siteId){
   if(!siteId){ showToast('サイトを選んでから操作してください','ng'); return; }
   var snap = (window._ga4Snapshots && window._ga4Snapshots[siteId]) || {};
   var props = snap.property_options;
+  // この site の hostname を取得 (= picker でドメインマッチをハイライトする用)
+  var siteHost = '';
+  try {
+    var siteAg = (agents || []).find(function(a){ return a && a.id === siteId; });
+    if(siteAg && siteAg.site_url){
+      siteHost = new URL(siteAg.site_url).hostname.replace(/^www\./,'').toLowerCase();
+    }
+  } catch(_){}
   var renderModal = function(propsList){
-    var rows = (propsList || []).map(function(p){
+    // 同じ site URL を計測してる property を最上位に sort (= 「これだ！」 が分かる)
+    var sorted = (propsList || []).slice().sort(function(a, b){
+      var am = _ga4PropMatchesHost(a, siteHost) ? 1 : 0;
+      var bm = _ga4PropMatchesHost(b, siteHost) ? 1 : 0;
+      return bm - am;
+    });
+    var rows = sorted.map(function(p){
       var name = esc(p.display_name || p.name || ('property ' + p.property_id));
       var acc = esc(p.account_name || '');
       var pid = esc(p.property_id);
-      return '<button class="ga4pp-row" onclick="_ga4PickProperty(\''+esc(siteId)+'\',\''+pid+'\')">'
+      var url = (p.website_url || '').replace(/\/$/,'');
+      var urlHost = '';
+      try { if(url) urlHost = new URL(url).hostname.replace(/^www\./,''); } catch(_){}
+      var isMatch = _ga4PropMatchesHost(p, siteHost);
+      var matchBadge = isMatch
+        ? '<span class="ga4pp-match">✓ このサイトに一致</span>'
+        : '';
+      return '<button class="ga4pp-row' + (isMatch ? ' ga4pp-row-match' : '') + '" onclick="_ga4PickProperty(\''+esc(siteId)+'\',\''+pid+'\')">'
         +   '<div class="ga4pp-row-ic">📊</div>'
         +   '<div class="ga4pp-row-bd">'
-        +     '<div class="ga4pp-row-nm">'+name+'</div>'
-        +     '<div class="ga4pp-row-sub">'+(acc?acc+' · ':'')+'property '+pid+'</div>'
+        +     '<div class="ga4pp-row-nm">' + name + matchBadge + '</div>'
+        +     '<div class="ga4pp-row-sub">'
+        +       (urlHost ? '🌐 ' + esc(urlHost) + ' · ' : '')
+        +       (acc ? acc + ' · ' : '')
+        +       'property ' + pid
+        +     '</div>'
         +   '</div>'
         +   '<span class="ga4pp-row-arrow">→</span>'
         + '</button>';
@@ -3814,13 +3839,16 @@ function openGa4PropertyPicker(siteId){
         + '<a href="https://analytics.google.com/" target="_blank" rel="noopener" style="color:var(--peach-dark);font-weight:700">GA4 サイト</a> で連携アカウントにアクセス権を付与してください。'
         + '</div>';
     }
+    var subText = siteHost
+      ? 'サイト <b>' + esc(siteHost) + '</b> の数字を取得する GA4 プロパティを選んでください'
+      : 'どのプロパティの数字を表示しますか?';
     var html =
       '<div class="overlay ga4pp-overlay open" onclick="if(event.target===this)_closeGa4PropertyPicker()">'
       + '<div class="ga4pp-modal">'
       +   '<div class="ga4pp-hd">'
       +     '<div>'
       +       '<div class="ga4pp-ti">GA4 プロパティを選ぶ</div>'
-      +       '<div class="ga4pp-sub">どのプロパティの数字を表示しますか?</div>'
+      +       '<div class="ga4pp-sub">' + subText + '</div>'
       +     '</div>'
       +     '<button class="ga4pp-x" onclick="_closeGa4PropertyPicker()" aria-label="close">×</button>'
       +   '</div>'
@@ -3834,6 +3862,20 @@ function openGa4PropertyPicker(siteId){
     host.innerHTML = html;
     document.body.appendChild(host);
   };
+
+  // property の website_url / display_name と siteHost をゆるく match 判定
+  function _ga4PropMatchesHost(prop, host){
+    if(!host) return false;
+    var url = (prop.website_url || '').toLowerCase();
+    var dn = (prop.display_name || '').toLowerCase();
+    if(url.indexOf(host) >= 0) return true;
+    if(dn.indexOf(host) >= 0) return true;
+    // hostname の short form (= TLD なし、 hyphen 分解後) で match
+    var hostBare = host.replace(/\.[a-z]{2,}(\.[a-z]{2})?$/,'');
+    if(hostBare && (url.indexOf(hostBare) >= 0 || dn.indexOf(hostBare) >= 0)) return true;
+    return false;
+  }
+  window._ga4PropMatchesHost = _ga4PropMatchesHost;
   if(props && props.length){
     renderModal(props);
     return;
@@ -3863,13 +3905,49 @@ function _ga4PickProperty(siteId, propertyId){
   api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/ga4/property', { property_id: propertyId })
     .then(function(r){
       if(!r || !r.ok) throw new Error((r && r.error) || 'set property failed');
-      _closeGa4PropertyPicker();
-      showToast('GA4 プロパティを保存しました。 数字 → 戦略 → KPI → ロードマップ を自動生成します…','ok');
-      // Clear cache to force refetch
-      if(window._ga4Snapshots) delete window._ga4Snapshots[siteId];
-      _fetchGa4Snapshot(siteId, { force: true });
-      // Full auto-setup chain (snapshot → strategy → KPI → roadmap)
-      _autoSetupSiteFromGa4(siteId);
+      // 数字取得 (force refresh) → snapshot が 0 件なら 「違う property?」 と再提示
+      var refreshP = api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/ga4/refresh').catch(function(){ return null; });
+      refreshP.then(function(refreshR){
+        var snap = refreshR && refreshR.snapshot;
+        var hasData = !!(snap && snap.series && snap.series.length > 0
+          && snap.total_30d && (snap.total_30d.pv > 0 || snap.total_30d.sessions > 0 || snap.total_30d.users > 0));
+        if(hasData){
+          _closeGa4PropertyPicker();
+          showToast('✓ 数字取得完了 (直近 30 日 PV: ' + (snap.total_30d.pv || 0).toLocaleString() + ')', 'ok');
+          if(window._ga4Snapshots){
+            window._ga4Snapshots[siteId] = { connected: true, snapshot: snap, _localFetchedMs: Date.now() };
+          }
+          try { renderHomeDashboard(); } catch(_){}
+          // auto-setup chain は picker からの選択時のみ trigger
+          try { _autoSetupSiteFromGa4(siteId, { streamToChat: true }); } catch(_){}
+        } else {
+          // 0 件データ → property mismatch 警告
+          var listEl2 = document.querySelector('#ga4PickerHost .ga4pp-list');
+          if(listEl2){
+            listEl2.insertAdjacentHTML('afterbegin',
+              '<div class="ga4pp-warn">'
+              + '<div class="ga4pp-warn-ic">⚠️</div>'
+              + '<div class="ga4pp-warn-bd">'
+              +   '<div class="ga4pp-warn-ti">選んだプロパティに直近 30 日のデータがありませんでした</div>'
+              +   '<div class="ga4pp-warn-tx">別のサイトの GA4 を選んでいる可能性が高いです。 上の <b>✓ このサイトに一致</b> マーク付きのプロパティを選び直してください。</div>'
+              + '</div>'
+              + '</div>');
+            // remove the spinner placeholder
+            var spinner = listEl2.querySelector('div[style*="読み込み"]');
+            if(spinner) spinner.remove();
+            // re-render the list below
+            var snap2 = (window._ga4Snapshots && window._ga4Snapshots[siteId]) || {};
+            // trigger re-render via opening picker again (= preserve cached props)
+            // by re-invoking openGa4PropertyPicker
+          }
+          showToast('⚠️ そのプロパティは 0 データでした。 別のを選んでください。', 'ng', 6000);
+          // re-open picker (will reuse the original props list)
+          setTimeout(function(){
+            openGa4PropertyPicker(siteId);
+          }, 100);
+        }
+      });
+      // ↑ refreshP の中で has-data 判定 → close + auto-setup or 警告 → re-open picker
     })
     .catch(function(e){
       if(listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-size:13px">'+esc(e.message||'failed')+'</div>';

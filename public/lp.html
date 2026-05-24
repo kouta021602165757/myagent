@@ -287,82 +287,195 @@ img{max-width:100%;display:block;}
 }
 .sc-live-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.6s ease infinite;}
 
-/* ── Dashboard grid (4 KPI tiles + chart + deliverables) ─── */
-.sc-dash{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px;}
-@media(max-width:760px){.sc-dash{grid-template-columns:1fr;}}
+/* ── Scene container (= step ごとに切り替わる mockup zone) ─── */
+.sc-stage{
+  position:relative;min-height:260px;margin-bottom:14px;
+}
+.sc-scene{
+  display:none;animation:scSceneIn .45s cubic-bezier(.16,1,.3,1) both;
+}
+.sc-scene.on{display:block;}
+@keyframes scSceneIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
-/* KPI tile grid */
-.sc-kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+/* ── Scene 1: URL を貼る ────────────────── */
+.sc-paste{
+  background:#fff;border:1px solid var(--line);border-radius:14px;
+  padding:36px 32px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:260px;
+}
+.sc-paste-lbl{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink3);
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;
+}
+.sc-paste-input{
+  display:flex;align-items:center;gap:10px;width:100%;max-width:500px;
+  background:#fafaf7;border:1.5px solid var(--lime-dark);
+  border-radius:99px;padding:10px 8px 10px 18px;
+  box-shadow:0 0 0 4px rgba(192,255,92,.18);
+}
+.sc-paste-input .fav{font-size:18px;}
+.sc-paste-input .url-tx{
+  flex:1;text-align:left;
+  font-family:var(--mono);font-size:14px;color:var(--ink);font-weight:500;
+  overflow:hidden;
+}
+.sc-paste-input .url-tx::after{
+  content:'';display:inline-block;width:2px;height:16px;background:var(--ink);
+  margin-left:2px;vertical-align:-3px;animation:scBlink .9s steps(2) infinite;
+}
+@keyframes scBlink{0%,50%{opacity:1;}50.01%,100%{opacity:0;}}
+.sc-paste-btn{
+  background:var(--ink);color:#fff;border-radius:99px;
+  padding:10px 18px;font-size:13px;font-weight:700;
+}
+.sc-paste-hint{
+  font-size:13px;color:var(--ink2);margin-top:18px;font-weight:500;
+}
+.sc-paste-hint .ok{color:var(--teal);font-weight:700;}
+.sc-paste-progress{
+  margin-top:12px;width:200px;height:3px;background:var(--line);border-radius:99px;overflow:hidden;
+}
+.sc-paste-progress::after{
+  content:'';display:block;height:100%;width:100%;
+  background:linear-gradient(90deg,var(--lime-dark),var(--teal));
+  animation:scProgress2 2s linear infinite;transform-origin:left;
+}
+@keyframes scProgress2{0%{transform:scaleX(0);}100%{transform:scaleX(1);}}
+
+/* ── Scene 2: Agent 雇用 (18 名 grid) ────── */
+.sc-hire{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;
+}
+.sc-hire-h{
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--mono);font-size:10.5px;font-weight:700;
+  color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;
+}
+.sc-hire-h .cnt{
+  font-family:var(--display);font-size:14px;color:var(--ink);letter-spacing:0;
+}
+.sc-hire-h .cnt b{color:var(--lime-dark);font-size:18px;}
+.sc-hire-grid{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:8px;
+}
+@media(max-width:760px){.sc-hire-grid{grid-template-columns:repeat(3,1fr);}}
+.sc-hire-mem{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:10px 6px;background:#fafaf7;border:1px solid var(--line);border-radius:10px;
+  text-align:center;
+  opacity:0;animation:scHireIn .35s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes scHireIn{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+.sc-hire-av{
+  width:30px;height:30px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;background:#fff;border:1px solid var(--line);
+}
+.sc-hire-nm{
+  font-size:10px;font-weight:700;color:var(--ink);line-height:1.2;
+  letter-spacing:-.005em;
+}
+
+/* ── Scene 3: KPI (= 旧 sc-dash の中身) ──── */
+.sc-kpi-wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+@media(max-width:760px){.sc-kpi-wrap{grid-template-columns:repeat(2,1fr);}}
 .sc-kpi{
   background:#fff;border:1px solid var(--line);border-radius:12px;
-  padding:14px 14px 12px;
-  position:relative;
+  padding:14px 14px 12px;position:relative;
 }
-.sc-kpi-lbl{
-  font-family:var(--mono);font-size:9.5px;font-weight:700;
-  color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;
-}
-.sc-kpi-v{
-  font-family:var(--display);font-size:26px;font-weight:700;
-  color:var(--ink);line-height:1;letter-spacing:-.02em;
-}
-.sc-kpi-d{
-  display:inline-flex;align-items:center;gap:3px;
-  font-family:var(--mono);font-size:11px;font-weight:700;
-  margin-top:4px;
-}
+.sc-kpi-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.sc-kpi-v{font-family:var(--display);font-size:26px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:-.02em;}
+.sc-kpi-d{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:11px;font-weight:700;margin-top:4px;}
 .sc-kpi-d.up{color:#10b981;}
 .sc-kpi-d.down{color:#dc2626;}
 .sc-spark{margin-top:8px;height:24px;display:block;}
-
-/* Sparkline path animates draw */
-.sc-spark path{
-  fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
-  stroke-dasharray:300;stroke-dashoffset:300;
-  animation:scDraw 1.8s cubic-bezier(.16,1,.3,1) .2s forwards;
-}
-.sc-spark .sp-area{fill:var(--lime-soft);stroke:none;opacity:0;animation:scFade .8s ease 1.4s forwards;}
+.sc-spark path{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:300;stroke-dashoffset:300;}
+.sc-scene.on .sc-spark path{animation:scDraw 1.8s cubic-bezier(.16,1,.3,1) .2s forwards;}
+.sc-scene.on .sc-spark .sp-area{animation:scFade .8s ease 1.4s forwards;}
+.sc-spark .sp-area{fill:var(--lime-soft);stroke:none;opacity:0;}
 @keyframes scDraw{to{stroke-dashoffset:0;}}
 @keyframes scFade{to{opacity:1;}}
 
-/* Deliverables panel */
-.sc-deli{
-  background:#fff;border:1px solid var(--line);border-radius:12px;
-  padding:14px 16px;
-  display:flex;flex-direction:column;
+/* ── Scene 4 / 5: Chat ─────────────────── */
+.sc-chat{
+  background:#fff;border:1px solid var(--line);border-radius:14px;
+  padding:16px 18px;min-height:240px;
+  display:flex;flex-direction:column;gap:12px;
 }
-.sc-deli-h{
-  font-family:var(--mono);font-size:9.5px;font-weight:700;
-  color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;
+.sc-chat-msg{display:flex;align-items:flex-start;gap:11px;animation:scMsgIn .45s cubic-bezier(.16,1,.3,1) both;}
+.sc-chat-av{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  border:1px solid var(--line);background:#fafaf7;
+}
+.sc-chat-av.user{background:#e5e3da;color:var(--ink);font-size:13px;font-weight:800;}
+.sc-chat-av.lime{background:var(--lime-soft);}
+.sc-chat-av.teal{background:var(--teal-soft);}
+.sc-chat-av.pink{background:#fce7f3;}
+.sc-chat-bd{flex:1;min-width:0;}
+.sc-chat-head{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;}
+.sc-chat-name{font-size:12px;font-weight:800;color:var(--ink);letter-spacing:-.005em;}
+.sc-chat-time{font-family:var(--mono);font-size:10px;color:var(--ink4);font-weight:600;}
+.sc-chat-bubble{font-size:13px;color:var(--ink2);line-height:1.55;background:#fafaf7;border:1px solid var(--line);border-radius:11px;padding:8px 12px;}
+.sc-chat-msg.user .sc-chat-bubble{background:var(--lime-soft);border-color:rgba(163,230,53,.45);color:var(--ink);}
+.sc-chat-bubble b{font-weight:700;color:var(--ink);}
+.sc-tlog{margin-top:6px;display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:5px 10px;font-size:11px;color:var(--ink3);font-weight:600;}
+.sc-tlog .ok{color:var(--teal);font-weight:700;}
+.sc-chat-typing{
+  display:inline-flex;gap:4px;padding:9px 12px;background:#fafaf7;border:1px solid var(--line);border-radius:11px;
+}
+.sc-chat-typing span{
+  width:6px;height:6px;border-radius:50%;background:var(--ink3);
+  animation:scTypeBounce 1.2s ease-in-out infinite;
+}
+.sc-chat-typing span:nth-child(2){animation-delay:.15s;}
+.sc-chat-typing span:nth-child(3){animation-delay:.3s;}
+@keyframes scTypeBounce{0%,80%,100%{transform:translateY(0);opacity:.4;}40%{transform:translateY(-4px);opacity:1;}}
+.sc-chat-input{
+  margin-top:auto;display:flex;gap:8px;align-items:center;
+  background:#fafaf7;border:1.5px solid var(--line);border-radius:14px;padding:8px 8px 8px 14px;
+}
+.sc-chat-input-tx{
+  flex:1;font-size:13px;color:var(--ink);font-weight:500;
+}
+.sc-chat-input-tx::after{
+  content:'';display:inline-block;width:2px;height:14px;background:var(--ink);
+  vertical-align:-3px;margin-left:2px;animation:scBlink .9s steps(2) infinite;
+}
+.sc-chat-send{
+  background:var(--ink);color:#fff;width:32px;height:32px;border-radius:9px;
+  display:inline-flex;align-items:center;justify-content:center;font-size:14px;
+}
+
+/* ── Scene 6: Report (morning summary) ────── */
+.sc-report{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;
+}
+.sc-report-h{
   display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line);
 }
-.sc-deli-h .cnt{
-  font-family:var(--display);font-size:11px;color:var(--teal);
-  background:var(--teal-soft);padding:2px 8px;border-radius:99px;letter-spacing:0;
+.sc-report-h-l{display:flex;flex-direction:column;}
+.sc-report-eye{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;}
+.sc-report-h-ti{font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);letter-spacing:-.01em;margin-top:3px;}
+.sc-report-date{font-family:var(--mono);font-size:11px;color:var(--ink3);font-weight:600;background:#fafaf7;padding:5px 10px;border-radius:99px;border:1px solid var(--line);}
+.sc-report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+@media(max-width:760px){.sc-report-grid{grid-template-columns:1fr;}}
+.sc-report-cell{
+  background:#fafaf7;border:1px solid var(--line);border-radius:10px;
+  padding:11px 13px;
 }
-.sc-deli-list{display:flex;flex-direction:column;gap:8px;flex:1;}
-.sc-deli-item{
-  display:flex;align-items:flex-start;gap:10px;
-  padding:8px 10px;border:1px solid var(--line);border-radius:9px;
-  background:#fafaf7;
-  animation:scMsgIn .5s cubic-bezier(.16,1,.3,1) both;
-  transition:border-color .25s;
+.sc-report-cell-lbl{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
+.sc-report-cell-v{font-family:var(--display);font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1;}
+.sc-report-cell-sub{font-family:var(--mono);font-size:10px;color:var(--teal);font-weight:700;margin-top:4px;}
+.sc-report-foot{
+  margin-top:12px;display:flex;align-items:flex-start;gap:9px;
+  padding:10px 12px;background:var(--lime-soft);border:1px solid rgba(163,230,53,.4);border-radius:10px;
+  font-size:12px;color:var(--ink);line-height:1.55;
 }
-.sc-deli-item.new{border-color:var(--lime-dark);background:var(--lime-soft);}
-.sc-deli-ic{
-  width:30px;height:30px;border-radius:8px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;background:#fff;border:1px solid var(--line);
-}
-.sc-deli-bd{flex:1;min-width:0;}
-.sc-deli-ti{
-  font-size:12px;font-weight:700;color:var(--ink);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.005em;
-}
-.sc-deli-meta{
-  font-family:var(--mono);font-size:10px;color:var(--ink3);font-weight:600;margin-top:2px;
-}
-.sc-deli-meta .ok{color:var(--teal);font-weight:700;}
+.sc-report-foot .ic{font-size:15px;flex-shrink:0;}
+.sc-report-foot b{font-weight:700;}
 
 /* ── 6-step live pipeline (= 旧 sc-pipe) ─── */
 .sc-pipe{
@@ -755,57 +868,174 @@ img{max-width:100%;display:block;}
           <div class="sc-step" data-step="6"><div class="sc-step-n"><span class="sc-step-n-num">06</span></div><div class="sc-step-ti">レポート</div><div class="sc-step-sub">Report</div></div>
         </div>
 
-        <!-- Dashboard grid: 4 KPI tiles + deliverables -->
-        <div class="sc-dash">
-          <div class="sc-kpi-grid">
-            <div class="sc-kpi">
-              <div class="sc-kpi-lbl">📈 PV (30日)</div>
-              <div class="sc-kpi-v" data-count="1406">0</div>
-              <div class="sc-kpi-d up">↗ +18.4%</div>
-              <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                <path class="sp-area" d="M0,24 L0,20 L7,18 L14,16 L21,14 L28,15 L35,12 L42,10 L49,11 L56,8 L63,6 L70,7 L77,5 L84,4 L91,3 L100,2 L100,24 Z"/>
-                <path stroke="#a3e635" d="M0,20 L7,18 L14,16 L21,14 L28,15 L35,12 L42,10 L49,11 L56,8 L63,6 L70,7 L77,5 L84,4 L91,3 L100,2"/>
-              </svg>
-            </div>
-            <div class="sc-kpi">
-              <div class="sc-kpi-lbl">👥 ユーザー</div>
-              <div class="sc-kpi-v" data-count="427">0</div>
-              <div class="sc-kpi-d up">↗ +12.7%</div>
-              <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                <path class="sp-area" d="M0,24 L0,21 L10,20 L20,17 L30,18 L40,14 L50,12 L60,13 L70,10 L80,9 L90,6 L100,5 L100,24 Z"/>
-                <path stroke="#0d4f4a" d="M0,21 L10,20 L20,17 L30,18 L40,14 L50,12 L60,13 L70,10 L80,9 L90,6 L100,5"/>
-              </svg>
-            </div>
-            <div class="sc-kpi">
-              <div class="sc-kpi-lbl">🎯 セッション</div>
-              <div class="sc-kpi-v" data-count="567">0</div>
-              <div class="sc-kpi-d up">↗ +8.2%</div>
-              <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                <path class="sp-area" d="M0,24 L0,18 L11,16 L22,15 L33,13 L44,14 L55,11 L66,10 L77,9 L88,7 L100,8 L100,24 Z"/>
-                <path stroke="#3b82f6" d="M0,18 L11,16 L22,15 L33,13 L44,14 L55,11 L66,10 L77,9 L88,7 L100,8"/>
-              </svg>
-            </div>
-            <div class="sc-kpi">
-              <div class="sc-kpi-lbl">💰 直帰率</div>
-              <div class="sc-kpi-v" data-count="33" data-suffix="%">0%</div>
-              <div class="sc-kpi-d up">↗ -4.8pt</div>
-              <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                <path class="sp-area" d="M0,24 L0,8 L12,9 L24,12 L36,14 L48,13 L60,15 L72,16 L84,18 L100,17 L100,24 Z"/>
-                <path stroke="#f59e0b" d="M0,8 L12,9 L24,12 L36,14 L48,13 L60,15 L72,16 L84,18 L100,17"/>
-              </svg>
+        <!-- ═══════ Step-synced scene zone (= step に応じて 6 つの mockup を swap) ═══════ -->
+        <div class="sc-stage" id="scStage">
+
+          <!-- Scene 1: URL を貼る -->
+          <div class="sc-scene sc-scene-paste" data-scene="1">
+            <div class="sc-paste">
+              <div class="sc-paste-lbl">▸ STEP 01 — Paste your URL</div>
+              <div class="sc-paste-input">
+                <span class="fav">🌿</span>
+                <span class="url-tx">https://glow-botanicals.co</span>
+                <span class="sc-paste-btn">→</span>
+              </div>
+              <div class="sc-paste-hint">📥 サイト 23 ページ + 競合 3 社 を read 中… <span class="ok">業種: DTC 化粧品</span></div>
+              <div class="sc-paste-progress"></div>
             </div>
           </div>
 
-          <!-- Deliverables list -->
-          <div class="sc-deli">
-            <div class="sc-deli-h">
-              <span>📦 今週の納品物</span>
-              <span class="cnt" id="scDeliCount">0 件</span>
-            </div>
-            <div class="sc-deli-list" id="scDeliList">
-              <!-- JS populates -->
+          <!-- Scene 2: Agent 雇用 (= 18 名 grid) -->
+          <div class="sc-scene sc-scene-hire" data-scene="2">
+            <div class="sc-hire">
+              <div class="sc-hire-h">
+                <span>▸ STEP 02 — AI 専門家 18 名を雇用しました</span>
+                <span class="cnt"><b>18</b> 名 / 3 部門</span>
+              </div>
+              <div class="sc-hire-grid">
+                <div class="sc-hire-mem" style="animation-delay:0ms"><div class="sc-hire-av">📋</div><div class="sc-hire-nm">PM</div></div>
+                <div class="sc-hire-mem" style="animation-delay:30ms"><div class="sc-hire-av">🔍</div><div class="sc-hire-nm">競合トラッカー</div></div>
+                <div class="sc-hire-mem" style="animation-delay:60ms"><div class="sc-hire-av">🎯</div><div class="sc-hire-nm">SWOT 分析官</div></div>
+                <div class="sc-hire-mem" style="animation-delay:90ms"><div class="sc-hire-av">💰</div><div class="sc-hire-nm">価格戦略</div></div>
+                <div class="sc-hire-mem" style="animation-delay:120ms"><div class="sc-hire-av">📈</div><div class="sc-hire-nm">トレンド検出</div></div>
+                <div class="sc-hire-mem" style="animation-delay:150ms"><div class="sc-hire-av">👤</div><div class="sc-hire-nm">ペルソナ研究員</div></div>
+                <div class="sc-hire-mem" style="animation-delay:180ms"><div class="sc-hire-av">📊</div><div class="sc-hire-nm">GA4 アナリスト</div></div>
+                <div class="sc-hire-mem" style="animation-delay:210ms"><div class="sc-hire-av">🔎</div><div class="sc-hire-nm">Search Console</div></div>
+                <div class="sc-hire-mem" style="animation-delay:240ms"><div class="sc-hire-av">⚠</div><div class="sc-hire-nm">異常検知</div></div>
+                <div class="sc-hire-mem" style="animation-delay:270ms"><div class="sc-hire-av">🪟</div><div class="sc-hire-nm">ファネル分析官</div></div>
+                <div class="sc-hire-mem" style="animation-delay:300ms"><div class="sc-hire-av">🧪</div><div class="sc-hire-nm">コホート分析</div></div>
+                <div class="sc-hire-mem" style="animation-delay:330ms"><div class="sc-hire-av">🌐</div><div class="sc-hire-nm">アトリビューション</div></div>
+                <div class="sc-hire-mem" style="animation-delay:360ms"><div class="sc-hire-av">✍</div><div class="sc-hire-nm">SEO ライター</div></div>
+                <div class="sc-hire-mem" style="animation-delay:390ms"><div class="sc-hire-av">🐦</div><div class="sc-hire-nm">X / SNS</div></div>
+                <div class="sc-hire-mem" style="animation-delay:420ms"><div class="sc-hire-av">✂</div><div class="sc-hire-nm">編集者</div></div>
+                <div class="sc-hire-mem" style="animation-delay:450ms"><div class="sc-hire-av">💌</div><div class="sc-hire-nm">CRO コピー</div></div>
+                <div class="sc-hire-mem" style="animation-delay:480ms"><div class="sc-hire-av">📸</div><div class="sc-hire-nm">ビジュアル</div></div>
+                <div class="sc-hire-mem" style="animation-delay:510ms"><div class="sc-hire-av">📰</div><div class="sc-hire-nm">編集長</div></div>
+              </div>
             </div>
           </div>
+
+          <!-- Scene 3: 現状分析 (= KPI 数字一覧) -->
+          <div class="sc-scene sc-scene-diagnose" data-scene="3">
+            <div class="sc-kpi-wrap">
+              <div class="sc-kpi">
+                <div class="sc-kpi-lbl">📈 PV (30日)</div>
+                <div class="sc-kpi-v" data-count="1406">0</div>
+                <div class="sc-kpi-d up">↗ +18.4%</div>
+                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
+                  <path class="sp-area" d="M0,24 L0,20 L7,18 L14,16 L21,14 L28,15 L35,12 L42,10 L49,11 L56,8 L63,6 L70,7 L77,5 L84,4 L91,3 L100,2 L100,24 Z"/>
+                  <path stroke="#a3e635" d="M0,20 L7,18 L14,16 L21,14 L28,15 L35,12 L42,10 L49,11 L56,8 L63,6 L70,7 L77,5 L84,4 L91,3 L100,2"/>
+                </svg>
+              </div>
+              <div class="sc-kpi">
+                <div class="sc-kpi-lbl">👥 ユーザー</div>
+                <div class="sc-kpi-v" data-count="427">0</div>
+                <div class="sc-kpi-d up">↗ +12.7%</div>
+                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
+                  <path class="sp-area" d="M0,24 L0,21 L10,20 L20,17 L30,18 L40,14 L50,12 L60,13 L70,10 L80,9 L90,6 L100,5 L100,24 Z"/>
+                  <path stroke="#0d4f4a" d="M0,21 L10,20 L20,17 L30,18 L40,14 L50,12 L60,13 L70,10 L80,9 L90,6 L100,5"/>
+                </svg>
+              </div>
+              <div class="sc-kpi">
+                <div class="sc-kpi-lbl">🎯 セッション</div>
+                <div class="sc-kpi-v" data-count="567">0</div>
+                <div class="sc-kpi-d up">↗ +8.2%</div>
+                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
+                  <path class="sp-area" d="M0,24 L0,18 L11,16 L22,15 L33,13 L44,14 L55,11 L66,10 L77,9 L88,7 L100,8 L100,24 Z"/>
+                  <path stroke="#3b82f6" d="M0,18 L11,16 L22,15 L33,13 L44,14 L55,11 L66,10 L77,9 L88,7 L100,8"/>
+                </svg>
+              </div>
+              <div class="sc-kpi">
+                <div class="sc-kpi-lbl">💰 直帰率</div>
+                <div class="sc-kpi-v" data-count="33" data-suffix="%">0%</div>
+                <div class="sc-kpi-d up">↗ -4.8pt</div>
+                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
+                  <path class="sp-area" d="M0,24 L0,8 L12,9 L24,12 L36,14 L48,13 L60,15 L72,16 L84,18 L100,17 L100,24 Z"/>
+                  <path stroke="#f59e0b" d="M0,8 L12,9 L24,12 L36,14 L48,13 L60,15 L72,16 L84,18 L100,17"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scene 4: 仕事を指示 (= chat で user が typing) -->
+          <div class="sc-scene sc-scene-brief" data-scene="4">
+            <div class="sc-chat">
+              <div class="sc-chat-msg">
+                <div class="sc-chat-av lime">📋</div>
+                <div class="sc-chat-bd">
+                  <div class="sc-chat-head"><span class="sc-chat-name">PM</span> <span class="sc-chat-time">23:32</span></div>
+                  <div class="sc-chat-bubble">分析完了です。 <b>記事 / SNS / 競合対策</b> どれから着手しますか？</div>
+                </div>
+              </div>
+              <div class="sc-chat-input">
+                <span class="sc-chat-input-tx">SEO 記事 3 本書いて、 WordPress に下書き保存して</span>
+                <span class="sc-chat-send">↗</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scene 5: 自動運用 (= chat で AI が tool 使って動く) -->
+          <div class="sc-scene sc-scene-run" data-scene="5">
+            <div class="sc-chat">
+              <div class="sc-chat-msg user">
+                <div class="sc-chat-av user">K</div>
+                <div class="sc-chat-bd">
+                  <div class="sc-chat-head"><span class="sc-chat-name">kota</span> <span class="sc-chat-time">23:32</span></div>
+                  <div class="sc-chat-bubble">SEO 記事 3 本書いて、 WordPress に下書き保存して</div>
+                </div>
+              </div>
+              <div class="sc-chat-msg">
+                <div class="sc-chat-av pink">✍</div>
+                <div class="sc-chat-bd">
+                  <div class="sc-chat-head"><span class="sc-chat-name">SEO ライター</span> <span class="sc-chat-time">23:33</span></div>
+                  <div class="sc-chat-bubble">了解。 派生記事 <b>3 本</b> ドラフト中 → 14 分後に WordPress 下書き保存予定。</div>
+                  <div class="sc-tlog"><span>📝</span> publish_wordpress <span class="ok">実行中…</span></div>
+                </div>
+              </div>
+              <div class="sc-chat-msg">
+                <div class="sc-chat-av teal">🐦</div>
+                <div class="sc-chat-bd">
+                  <div class="sc-chat-head"><span class="sc-chat-name">X / SNS</span> <span class="sc-chat-time">23:33</span></div>
+                  <div class="sc-chat-typing"><span></span><span></span><span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scene 6: レポート (= morning summary) -->
+          <div class="sc-scene sc-scene-report" data-scene="6">
+            <div class="sc-report">
+              <div class="sc-report-h">
+                <div class="sc-report-h-l">
+                  <span class="sc-report-eye">📰 朝のレポート</span>
+                  <span class="sc-report-h-ti">昨日 AI チームがやったこと</span>
+                </div>
+                <span class="sc-report-date">5/24 (土)</span>
+              </div>
+              <div class="sc-report-grid">
+                <div class="sc-report-cell">
+                  <div class="sc-report-cell-lbl">📝 記事</div>
+                  <div class="sc-report-cell-v">3 本</div>
+                  <div class="sc-report-cell-sub">WordPress 下書き ✓</div>
+                </div>
+                <div class="sc-report-cell">
+                  <div class="sc-report-cell-lbl">🐦 SNS</div>
+                  <div class="sc-report-cell-v">6 件</div>
+                  <div class="sc-report-cell-sub">X 公開 ✓</div>
+                </div>
+                <div class="sc-report-cell">
+                  <div class="sc-report-cell-lbl">🔍 競合</div>
+                  <div class="sc-report-cell-v">1 件</div>
+                  <div class="sc-report-cell-sub">新キャンペーン検知</div>
+                </div>
+              </div>
+              <div class="sc-report-foot">
+                <span class="ic">💡</span>
+                <span><b>今日の優先 1 つ:</b> 競合 X の新キャンペーンに対抗投稿を 2 本 起案 → 13:00 公開推奨。</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- AI activity ticker (1-liner, OS-level status) -->
@@ -1185,50 +1415,31 @@ function _dispatchTeam(ev, source){
   }).catch(function(){});
 })();
 
-// ── Showcase dashboard mockup: KPI count-up + deliverables + ticker + pipeline ──
-// 「実プロダクトを使ってる感」 を最大化。 6 step 進行と同期して:
-//   - KPI value が 0 → target に count-up animation (Day 1 → Day 90 感)
-//   - 納品物リストに新 artifact が積み上がる
-//   - bottom ticker (dark OS-level status bar) が今やってる作業を 1 行で実況
+// ── Showcase: 6 scene swap synced with pipeline + ticker ─────
+// step 進行 (= 2.5 秒毎) に同期して、 .sc-stage 内の 6 scene を切替表示。
+// + bottom ticker (dark) が今やってる作業を 1 行で実況。
+// + Scene 3 (= KPI) 表示時に KPI 数字 count-up animation 再生。
 (function(){
   var pipe = document.getElementById('scPipe');
-  var deliList = document.getElementById('scDeliList');
-  var deliCount = document.getElementById('scDeliCount');
+  var stage = document.getElementById('scStage');
   var tickerTx = document.getElementById('scTickerTx');
   var tickerTime = document.getElementById('scTickerTime');
-  if(!pipe) return;
+  if(!pipe || !stage) return;
   var steps = pipe.querySelectorAll('.sc-step');
-  if(!steps.length) return;
+  var scenes = stage.querySelectorAll('.sc-scene');
+  if(!steps.length || !scenes.length) return;
 
-  // 各 step に紐づく ticker msg + 納品物 を定義
-  var STEPS_DATA = [
-    {
-      ticker: 'リサーチャーが <b>サイト 23 ページ + 競合 3 社</b> を読み込み中…',
-      deli: null,
-    },
-    {
-      ticker: 'PM が <b>AI チーム 18 名</b> を 3 部門に編成中…',
-      deli: null,
-    },
-    {
-      ticker: 'GA4 アナリストが <b>直近 30 日のファネル漏れ</b> を分析中…',
-      deli: { ic:'📊', ti:'GA4 現状分析レポート', meta:'PV +18% · ファネル 3 箇所漏れ', tool:'ga4_query', new:true },
-    },
-    {
-      ticker: 'コピーライターが <b>ペルソナ「田中さん」向け</b> に文章を設計中…',
-      deli: { ic:'🎯', ti:'戦略・KPI シート (6 ヶ月)', meta:'ペルソナ + 競合 + 月次 KPI', tool:'strategy_gen', new:true },
-    },
-    {
-      ticker: 'SEO ライターが <b>「AI 時代の DTC 戦略」</b> 派生記事 3 本 を執筆中…',
-      deli: { ic:'📝', ti:'SEO 記事: AI 時代の DTC ブランディング', meta:'1,287 字 · WordPress 下書き保存', tool:'publish_wordpress', new:true },
-    },
-    {
-      ticker: 'PM が <b>明朝レポート</b> を生成 → 今日の優先タスクを 3 つ提案中…',
-      deli: { ic:'🐦', ti:'X スレッド: DTC 差別化 5 つの方法', meta:'6 ツイート · post_to_x ✓', tool:'post_to_x', new:true },
-    },
+  // 各 step に対応した ticker msg
+  var TICKERS = [
+    'リサーチャーが <b>サイト 23 ページ + 競合 3 社</b> を読み込み中…',
+    'PM が <b>AI チーム 18 名</b> を 3 部門に編成中…',
+    'GA4 アナリストが <b>直近 30 日のファネル漏れ</b> を分析中…',
+    'ユーザーが <b>SEO 記事 3 本</b> を AI に依頼中…',
+    'SEO ライター + X / SNS が <b>ドラフト + 起案</b> を並行実行中…',
+    'PM が <b>朝のレポート</b> を生成 → 今日の優先タスク 3 つを提案中…',
   ];
 
-  // KPI count-up (= 1 回だけ、 viewport in 時)
+  // KPI count-up (Scene 3 表示時に毎回再生)
   function animateCount(el){
     if(el._done) return;
     var target = parseInt(el.getAttribute('data-count') || '0', 10);
@@ -1246,34 +1457,12 @@ function _dispatchTeam(ev, source){
     }
     requestAnimationFrame(step);
   }
-  // count-up on intersect
-  (function(){
-    var kpis = document.querySelectorAll('.sc-kpi-v[data-count]');
-    if(!('IntersectionObserver' in window)){ kpis.forEach(animateCount); return; }
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){ if(e.isIntersecting){ animateCount(e.target); io.unobserve(e.target); } });
-    }, { threshold: 0.4 });
-    kpis.forEach(function(el){ io.observe(el); });
-  })();
-
   function fmtTime(){
     var d = new Date();
     return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
   }
 
-  function renderDeli(item){
-    return '<div class="sc-deli-item' + (item.new ? ' new' : '') + '">'
-      + '<div class="sc-deli-ic">' + item.ic + '</div>'
-      + '<div class="sc-deli-bd">'
-      +   '<div class="sc-deli-ti">' + item.ti + '</div>'
-      +   '<div class="sc-deli-meta">' + item.meta + ' <span class="ok">✓</span></div>'
-      + '</div>'
-      + '</div>';
-  }
-
   var idx = 0;
-  var deliveries = [];  // 累積した納品物
-
   function tick(){
     // pipeline state
     steps.forEach(function(s, i){
@@ -1282,23 +1471,20 @@ function _dispatchTeam(ev, source){
       else if(i === idx) s.classList.add('active');
       else s.classList.add('pending');
     });
-    var data = STEPS_DATA[idx];
+    // scene swap
+    scenes.forEach(function(sc, i){
+      if(i === idx) sc.classList.add('on');
+      else sc.classList.remove('on');
+    });
     // ticker
-    if(tickerTx) tickerTx.innerHTML = data.ticker;
+    if(tickerTx) tickerTx.innerHTML = TICKERS[idx] || '';
     if(tickerTime) tickerTime.textContent = fmtTime();
-    // deliverable
-    if(data.deli && deliList){
-      // mark previous as not-new
-      deliveries.forEach(function(d){ d.new = false; });
-      deliveries.push(Object.assign({}, data.deli));
-      if(deliveries.length > 3) deliveries.shift();
-      deliList.innerHTML = deliveries.map(renderDeli).join('');
-      if(deliCount) deliCount.textContent = deliveries.length + ' 件';
-    } else if(idx === 0 && deliList){
-      // cycle reset: clear deliveries
-      deliveries = [];
-      deliList.innerHTML = '<div class="sc-deli-item" style="opacity:.5;border-style:dashed"><div class="sc-deli-ic" style="background:transparent">⏳</div><div class="sc-deli-bd"><div class="sc-deli-ti" style="color:var(--ink3)">まだ納品物はありません</div><div class="sc-deli-meta">セットアップ中…</div></div></div>';
-      if(deliCount) deliCount.textContent = '0 件';
+    // Scene 3 (KPI) 表示時に count-up を再生
+    if(idx === 2 && scenes[2]){
+      scenes[2].querySelectorAll('.sc-kpi-v[data-count]').forEach(function(el){
+        el._done = false;
+        animateCount(el);
+      });
     }
     idx = (idx + 1) % steps.length;
   }

@@ -1,10 +1,11 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  /* Light gray + lime (Linear / Notion 系) — 2026-05-24 dark から flip */
+  /* Warm cream + lime + teal (LP に合わせて 2026-05-24 LP リブランド) */
   /* IMPORTANT: --cream は legacy CSS で「card 背景」 として広く使われる (chip
      / starter-chip / composer / wizard 等)。 page bg と同じ色にすると全て
      invisible になる ので --cream = 白 / page bg = --ink で別色に保つ。 */
-  --ink:#f5f5f7;--ink2:#fafafa;--ink3:#f0f0f3;--ink4:#e8e8eb;--ink5:#dededf;
+  --ink:#fafaf7;--ink2:#fafafa;--ink3:#f5f5f1;--ink4:#e8e6df;--ink5:#dededf;
+  --teal:#0d4f4a;--teal-soft:#e8f1f0;
   --wire:rgba(9,9,11,.06);--wire2:rgba(9,9,11,.10);--wire3:rgba(9,9,11,.16);
   --snow:#1a1a1a;--mist:#525252;--fog:#71717a;
   --volt:#c0ff5c;--volt-dim:rgba(192,255,92,.12);--volt-glow:rgba(192,255,92,.3);
@@ -12,7 +13,7 @@
   --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;--mono:'DM Mono',monospace;
   --sb:240px;
   --peach:#c0ff5c;--peach-light:rgba(192,255,92,.18);--peach-dark:#a3e635;
-  --cream:#ffffff;--cream2:#fafafa;--cream3:#f5f5f7;
+  --cream:#ffffff;--cream2:#fafafa;--cream3:#fafaf7;
   --card:#ffffff;
   --text:#1a1a1a;--text2:#525252;--text3:#71717a;
   --bg-50:#fafafa;--bg-100:#f4f4f5;--bg-200:#e4e4e7;
@@ -7860,7 +7861,7 @@ body{color:#f0f0f8;}
 .chat-top{background:var(--cream2) !important;border-bottom:1px solid var(--wire2) !important;}
 .ct-name{color:var(--text) !important;font-size:16px;font-weight:700;}
 .pill{background:rgba(192,255,92,.12) !important;color:var(--peach-dark) !important;border:1px solid rgba(192,255,92,.25) !important;}
-.msgs{background:#f5f5f7 !important;}
+.msgs{background:#fafaf7 !important;}
 .mbub{color:var(--text) !important;line-height:1.75;font-size:14px;}
 .msg.u .mbub{background:rgba(192,255,92,.18) !important;border:1px solid rgba(163,230,53,.45) !important;color:var(--text) !important;}
 .msg.a .mbub{background:#ffffff !important;border:1px solid #e5e5e7 !important;color:var(--text) !important;box-shadow:0 1px 3px rgba(0,0,0,.04);}
@@ -7910,10 +7911,10 @@ body{color:#f0f0f8;}
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* === Body / 全体背景 === */
-body{ background:#f5f5f7 !important; color:#1a1a1a !important; }
+body{ background:#fafaf7 !important; color:#1a1a1a !important; }
 .app-shell, .main-pane, .home-pane, .right-pane, .center-pane,
 .dash-pane, .site-pane, .site-dash, .chat-pane{
-  background:#f5f5f7 !important;
+  background:#fafaf7 !important;
 }
 
 /* === サイト dashboard の主要 surface — 白カード + 微妙な影 === */
@@ -8108,7 +8109,7 @@ button[class*="primary"]{
 
 /* === main / empty も light gray に揃える (= sidebar との境界をなくす) === */
 main.main, .main, .empty, #emptyWrap, #homeBody{
-  background:#f5f5f7 !important;
+  background:#fafaf7 !important;
   color:#1a1a1a !important;
 }
 

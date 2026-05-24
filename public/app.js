@@ -4141,7 +4141,10 @@ window._CHAT_ACTIONS = [
     onClick: function(ag){
       _triggerChatAction(ag, 'Google Analytics を接続したい',
         'では設定 → 連携 タブで Google にログインしてください。 1 click で 接続完了します。 戻ってきたら自動で次のステップを提案します 📊',
-        function(){ try { openIntegrationsTab && openIntegrationsTab('ga4'); } catch(_){} });
+        function(){
+          if(typeof openIntegrationsTab === 'function') openIntegrationsTab('ga4');
+          else showToast('integrations tab を開けません — 設定 → 連携 から手動で開いてください', 'ng');
+        });
     },
   },
   // ── Step 2: GA4 property を選ぶ (OAuth 済 + property 未選択 + data なし) ──
@@ -4161,7 +4164,7 @@ window._CHAT_ACTIONS = [
     onClick: function(ag){
       _triggerChatAction(ag, 'GA4 のプロパティを選びたい',
         'はい！ どのプロパティ (= GA4 で計測してるサイト) を見るか選んでください 🎯',
-        function(){ try { openGa4PropertyPicker(ag.id); } catch(_){} });
+        function(){ openGa4PropertyPicker(ag.id); });
     },
   },
   // ── Step 3: 戦略 + KPI + ロードマップ 自動生成 ──
@@ -4227,9 +4230,14 @@ function _renderChatActionCards(ag){
     return;
   }
   host.style.display = '';
+  // ag を window scope に置いて inline onclick から触れるように (= addEventListener
+  // が何らかの理由で動かない場合の保険)
+  window._chatActionCurrentAg = ag;
   host.innerHTML = '<div class="ca-label">💡 ' + (isJa?'AI からの提案':'Suggested next step') + '</div>'
     + applicable.map(function(a){
-        return '<button class="ca-card" data-action="' + esc(a.id) + '" style="--ca-accent:' + a.accent + '">'
+        return '<button class="ca-card" data-action="' + esc(a.id) + '"'
+          + ' onclick="_invokeChatAction(\'' + esc(a.id) + '\')"'
+          + ' style="--ca-accent:' + a.accent + '">'
           + '<span class="ca-ic">' + a.icon + '</span>'
           + '<span class="ca-bd">'
           +   '<span class="ca-ti">' + esc(a.label) + '</span>'
@@ -4238,16 +4246,40 @@ function _renderChatActionCards(ag){
           + '<span class="ca-arrow">→</span>'
           + '</button>';
       }).join('');
-  // Bind click
+  // addEventListener も保険として bind (= inline onclick が動かない環境の予防線)
   host.querySelectorAll('.ca-card').forEach(function(btn){
     btn.addEventListener('click', function(){
-      var aid = btn.getAttribute('data-action');
-      var def = (window._CHAT_ACTIONS || []).find(function(a){ return a.id === aid; });
-      if(def && typeof def.onClick === 'function'){
-        try { def.onClick(ag); } catch(e){ console.warn('[chat-action]', aid, e); }
-      }
+      _invokeChatAction(btn.getAttribute('data-action'));
     });
   });
+}
+
+// 共通 invoke (= inline onclick + addEventListener どちらからも呼べる)
+// エラーが出たら必ず toast で可視化 (= silent fail を防ぐ)
+function _invokeChatAction(aid){
+  if(!aid) return;
+  var def = (window._CHAT_ACTIONS || []).find(function(a){ return a.id === aid; });
+  if(!def){
+    showToast('action 未定義: ' + aid, 'ng');
+    return;
+  }
+  var ag = window._chatActionCurrentAg
+        || (typeof activeId !== 'undefined' && (agents || []).find(function(a){ return a && a.id === activeId; }))
+        || null;
+  if(!ag){
+    showToast('agent 未取得 — chat を開き直してください', 'ng');
+    return;
+  }
+  if(typeof def.onClick !== 'function'){
+    showToast('action handler 不正: ' + aid, 'ng');
+    return;
+  }
+  try {
+    def.onClick(ag);
+  } catch(e){
+    console.error('[chat-action]', aid, e);
+    showToast('action 失敗 [' + aid + ']: ' + (e.message || 'unknown'), 'ng', 8000);
+  }
 }
 
 // chat に user msg + assistant msg を直接 inject (= LLM round-trip なしで

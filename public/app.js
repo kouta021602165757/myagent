@@ -2695,6 +2695,9 @@ function _openSiteTabModal(siteId, tabKey){
   } else if(tabKey === 'connections'){
     title = '🔌 ' + L('接続','Connections');
     content = _renderTabConnections(site);
+  } else if(tabKey === 'agents'){
+    title = '🏢 ' + L('エージェント一覧','Agents');
+    content = _renderTabAgents(site);
   } else if(tabKey === 'settings'){
     title = '⚙️ ' + L('設定','Settings');
     content = _renderTabSettings(site);
@@ -2733,6 +2736,7 @@ function _openSiteTabModal(siteId, tabKey){
 window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
 window.openStrategyPanel      = function(siteId){ _openSiteTabModal(siteId, 'strategy'); };
 window.openTasksPanel         = function(siteId){ _openSiteTabModal(siteId, 'tasks'); };
+window.openAgentsPanel        = function(siteId){ _openSiteTabModal(siteId, 'agents'); };
 window.openConnectionsPanel   = function(siteId){ _openSiteTabModal(siteId, 'connections'); };
 window.openSiteSettingsPanel  = function(siteId){ _openSiteTabModal(siteId, 'settings'); };
 
@@ -2758,28 +2762,64 @@ window.openDailyGrowthReportPanel = async function(siteId){
     +    '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px">×</button>'
     +  '</div>'
     +  '<div id="dailyGrowthBody" style="flex:1;overflow-y:auto;padding:22px">'
-    +    '<div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">'
-    +      L('「+ 今日のレポートを生成」を押すと、AI が GA4 数字 + 今週のタスク進捗 + 直近 24h の活動を元に 5 セクション固定のグロースレポートを書きます。📒 メモ帳に daily 種別として保存されます。','Click "Generate today\'s report" — AI writes a 5-section growth report from GA4 + task progress + 24h activity. Saved as type=daily in 📒 Notebook.')
+    +    '<div id="dailyGrowthLatest"></div>'
+    +    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">'
+    +      '<button onclick="_runDailyGrowthReport(\''+esc(siteId)+'\')" id="dailyGrowthGenBtn" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('新しいレポートを生成','Generate new report')+'</button>'
+    +      '<span style="font-size:11px;color:var(--text3);font-weight:600">'+L('AI が GA4 数字 + 進捗 + 24h 活動を元に 5 セクションで書きます','5-section report from GA4 + progress + 24h activity')+'</span>'
     +    '</div>'
-    +    '<button onclick="_runDailyGrowthReport(\''+esc(siteId)+'\')" id="dailyGrowthGenBtn" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('今日のレポートを生成','Generate today\'s report')+'</button>'
     +    '<div style="margin-top:22px;border-top:1px solid var(--wire);padding-top:18px">'
-    +      '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去のグロースレポート','Past growth reports')+'</div>'
+    +      '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去のレポート','Past reports')+'</div>'
     +      '<div id="dailyGrowthList" style="font-size:12.5px;color:var(--text3)">'+L('まだありません','None yet')+'</div>'
     +    '</div>'
     +  '</div>'
     + '</div>';
   ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
-  // Hydrate past list (notes with type='daily')
+  // Hydrate: fetch all daily notes, show latest inline + past list
   try {
     var r = await api('GET', '/api/me/notes');
     var dailies = (r && r.notes || []).filter(function(n){return n.type === 'daily' && (!n.agent_id || n.agent_id === siteId);});
-    var box = document.getElementById('dailyGrowthList');
-    if(box){
-      if(!dailies.length){
-        box.innerHTML = '<span style="color:var(--text3)">'+L('まだありません','None yet')+'</span>';
+    var latestBox = document.getElementById('dailyGrowthLatest');
+    var listBox = document.getElementById('dailyGrowthList');
+    if(dailies.length){
+      // Fetch the full content of the latest one so we can render it inline
+      var latest = dailies[0];
+      try {
+        var rOne = await api('GET', '/api/me/notes/' + latest.id);
+        if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
+      } catch(_){}
+      var lwhen = (latest.updated_at||'').slice(0,10);
+      var bodyMd = String(latest.content||'').slice(0, 8000);
+      // Use markdown renderer if available; fallback to <pre>
+      var rendered = '';
+      try { rendered = (typeof _md === 'function') ? _md(bodyMd) : ('<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7">'+esc(bodyMd)+'</pre>'); }
+      catch(_){ rendered = '<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7">'+esc(bodyMd)+'</pre>'; }
+      if(latestBox){
+        latestBox.innerHTML = ''
+          + '<div style="background:var(--cream);border:1px solid rgba(192,255,92,.4);border-left:4px solid var(--peach);border-radius:11px;padding:16px 20px;margin-bottom:20px">'
+          +   '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+          +     '<span style="font-size:10px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.4);padding:2px 9px;border-radius:99px;letter-spacing:.04em">'+L('最新','LATEST')+'</span>'
+          +     '<span style="font-size:13px;font-weight:800;color:var(--text)">'+esc(latest.title||'')+'</span>'
+          +     '<span style="margin-left:auto;font-size:10.5px;color:var(--text3);font-weight:600">'+esc(lwhen)+'</span>'
+          +   '</div>'
+          +   '<div class="md-body" style="font-size:13px;line-height:1.7;color:var(--text)">' + rendered + '</div>'
+          +   '<div style="margin-top:10px;display:flex;gap:8px">'
+          +     '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
+          +       'style="background:var(--cream);border:1px solid var(--wire2);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button>'
+          +   '</div>'
+          + '</div>';
+      }
+    } else if(latestBox){
+      latestBox.innerHTML = '<div style="background:var(--cream);border:1px dashed var(--wire2);border-radius:11px;padding:24px;text-align:center;color:var(--text3);font-size:13px;margin-bottom:20px">'
+        + '<div style="font-size:32px;margin-bottom:8px;opacity:.6">📰</div>'
+        + L('まだレポートはありません。下のボタンで最初のレポートを生成しましょう。','No reports yet. Click below to generate your first.')
+        + '</div>';
+    }
+    if(listBox){
+      if(dailies.length <= 1){
+        listBox.innerHTML = '<span style="color:var(--text3)">'+L('過去レポートはまだありません','No past reports yet')+'</span>';
       } else {
-        box.innerHTML = dailies.slice(0, 10).map(function(n){
+        listBox.innerHTML = dailies.slice(1, 11).map(function(n){
           var when = (n.updated_at||'').slice(5,10).replace('-','/');
           return '<div onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(n.id)+'\')" style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;background:var(--cream);border:1px solid var(--wire2);margin-bottom:6px" onmouseover="this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.borderColor=\'var(--wire2)\'">'
             + '<span style="font-size:14px">📰</span>'
@@ -4735,6 +4775,81 @@ function _persistChatMsg(agId, msg){
 /* Home dashboard — サイトベースに完全リライト。
  * - サイト 0 件 → 「URL を貼って AI チームを派遣」エントリーポイント
  * - サイトあり → アクティブなサイトの集客ダッシュボード */
+// ── Module-level site helpers (= renderHomeDashboard 内のネスト helper を
+// 外からも呼べるよう lift。modal 経由で _renderTabNumbers を呼ぶ際に必須) ──
+function _siteWeeklyStats(site){
+  var now = Date.now();
+  var SINCE_THIS = now - 7 * 86400000;
+  var SINCE_LAST = now - 14 * 86400000;
+  var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
+    ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
+  var thisWeek = arts.filter(function(a){ return (Date.parse(a.created_at||0)||0) > SINCE_THIS; });
+  var lastWeek = arts.filter(function(a){ var ts=Date.parse(a.created_at||0)||0; return ts > SINCE_LAST && ts <= SINCE_THIS; });
+  return { artifacts: thisWeek.length, lastWeek: lastWeek.length, delta: thisWeek.length - lastWeek.length };
+}
+function _siteDailySeries(site){
+  var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
+    ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
+  var DAYS = 14;
+  var bins = new Array(DAYS).fill(0);
+  var todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  for(var i = 0; i < arts.length; i++){
+    var ts = Date.parse(arts[i].created_at || 0) || 0;
+    if(!ts) continue;
+    var diff = Math.floor((todayStart.getTime() - new Date(new Date(ts).setHours(0,0,0,0)).getTime()) / 86400000);
+    if(diff >= 0 && diff < DAYS) bins[DAYS - 1 - diff]++;
+  }
+  return bins;
+}
+function _siteChannelBreakdown(site){
+  var arts = (typeof me !== 'undefined' && me && Array.isArray(me.artifacts))
+    ? me.artifacts.filter(function(a){ return a && a.chat_id === site.id; }) : [];
+  var groups = { 'コンテンツ': 0, 'SNS': 0, '分析': 0, '戦略': 0, 'メール': 0, 'その他': 0 };
+  var GROUP_KW = [
+    ['SNS', /twitter|instagram|x\.com|linkedin|sns|reddit/i],
+    ['メール', /メール|mail|newsletter|メルマガ|email/i],
+    ['分析', /分析|診断|レポート|report|analysis|kpi/i],
+    ['戦略', /戦略|strategy/i],
+    ['コンテンツ', /記事|ブログ|blog|seo|content/i],
+  ];
+  for(var i = 0; i < arts.length; i++){
+    var title = String(arts[i].title || arts[i].filename || '').toLowerCase();
+    var matched = false;
+    for(var j = 0; j < GROUP_KW.length; j++){
+      if(GROUP_KW[j][1].test(title)){ groups[GROUP_KW[j][0]]++; matched = true; break; }
+    }
+    if(!matched) groups['その他']++;
+  }
+  return groups;
+}
+function _siteInsights(site){
+  var weekly = _siteWeeklyStats(site);
+  var arts = _siteAllArtifacts(site.id);
+  var insights = [];
+  if(arts.length === 0){
+    insights.push({ icon: '💡', text: '最初のメッセージを AI チームに送って、依頼を始めましょう。' });
+  } else {
+    if(weekly.delta > 0){
+      insights.push({ icon: '📈', text: '今週は先週より <b>+' + weekly.delta + '</b> 件多く納品されました。' });
+    } else if(weekly.delta < 0){
+      insights.push({ icon: '⚠️', text: '今週は先週より ' + Math.abs(weekly.delta) + ' 件少なめ。' });
+    } else if(weekly.artifacts > 0){
+      insights.push({ icon: '👌', text: '今週も <b>' + weekly.artifacts + '</b> 件納品。安定運用中。' });
+    }
+    if(arts.length >= 10){
+      insights.push({ icon: '🎯', text: '納品累計 <b>' + arts.length + '</b> 件。' });
+    }
+  }
+  if(!site.kpi || (!site.kpi.pv && !site.kpi.cvr && !site.kpi.leads)){
+    insights.push({ icon: '🎯', text: '<b>KPI 未設定</b>。月間目標を入れると AI が達成度を毎朝レポート。' });
+  }
+  var ga4Connected = !!(me && me.integrations && me.integrations.ga4 && me.integrations.ga4.refresh_token);
+  if(!ga4Connected){
+    insights.push({ icon: '📊', text: '<b>GA4 未接続</b>。接続すると流入数・CVR で深く分析できます。' });
+  }
+  return insights.slice(0, 4);
+}
+
 function renderHomeDashboard(){
   var body = document.getElementById('homeBody');
   if(!body) return;
@@ -8743,14 +8858,15 @@ async function openAgent(id){
     // 他のアクション (🔗 共有 / 💬 会話共有 / ↻ 新規 / 📝 メモ / ⚙ 設定) は
     // ダッシュボード内のアクションパネルに集約 — chat header をスッキリ。
     if(_isSiteAgent(ag)){
-      // ── サイト用 7 ボタンツールバー (icon-only + tooltip) ──
+      // ── サイト用 8 ボタンツールバー (icon-only + tooltip) ──
       // ダッシュボード page を廃止して、機能ごとに on-demand modal を開く設計。
-      // 順序: 日次グロースレポート / 数字分析 / 戦略KPI / タスク / 接続 / メモ帳 / 設定
+      // 順序: 日次レポ / 数字 / 戦略 / タスク / 組織 / 接続 / メモ帳 / 設定
       var _siteId = esc(ag.id);
       actsHTML += '<button class="ct-act ct-tool" onclick="openDailyGrowthReportPanel(\''+_siteId+'\')" title="'+L('日次グロースレポート — 数字 + 効いた施策 + 明日のアクション','Daily growth report — numbers + wins + tomorrow\'s actions')+'">📰</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 の生データ・KPI','Numbers — GA4 metrics / KPI')+'">📊</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('戦略・KPI — ペルソナ・競合・6ヶ月目標','Strategy / KPI')+'">🎯</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('タスク一覧 — 8 週ロードマップ + 進捗','Tasks — 8-week roadmap')+'">📋</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openAgentsPanel(\''+_siteId+'\')" title="'+L('エージェント一覧 — AI チームの組織図','Agents — AI team org chart')+'">🏢</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openConnectionsPanel(\''+_siteId+'\')" title="'+L('接続 — GA4 / SNS / OAuth','Connections')+'">🔌</button>';
       actsHTML += '<button class="ct-act ct-tool notes-btn" onclick="openNotesPanel(\''+_siteId+'\')" title="'+L('メモ帳 — AI 成果物 + 手動メモ','Notebook — AI artifacts + manual memos')+'">📒</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openSiteSettingsPanel(\''+_siteId+'\')" title="'+L('設定 — サイト名 / 削除','Settings — site config')+'">⚙️</button>';

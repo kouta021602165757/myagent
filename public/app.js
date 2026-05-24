@@ -4120,9 +4120,9 @@ window._CHAT_ACTIONS = [
       var hasRoadmap = !!(ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0);
       if(!hasRoadmap) return false;
       var sns = (window._snsStatusCache && window._snsStatusCache[ag.id]) || null;
+      // EmDash は publish tool が beta 待ち (= hasPostTool:false) なので除外
       var hasPublishChannel = !!(sns && (sns.wordpress && sns.wordpress.connected
-                                       || sns.note && sns.note.connected
-                                       || sns.emdash && sns.emdash.connected));
+                                       || sns.note && sns.note.connected));
       return hasPublishChannel;
     },
     onClick: function(ag){
@@ -5308,7 +5308,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   var CONTENT_EC_PLATFORMS = [
     { key: 'note',      name: 'note',      emoji: '📝', color: '#41c9b4', kind: 'content', hasPostTool: true  },
     { key: 'wordpress', name: 'WordPress', emoji: '🌐', color: '#21759b', kind: 'content', hasPostTool: true  },
-    { key: 'emdash',    name: 'EmDash',    emoji: '⚡', color: '#f6821f', kind: 'content', hasPostTool: true  },
+    { key: 'emdash',    name: 'EmDash',    emoji: '⚡', color: '#f6821f', kind: 'content', hasPostTool: false /* 2026-05: Cloudflare EmDash の公開 API spec 待ち。 接続情報のみ保存可。 */ },
     { key: 'shopify',   name: 'Shopify',   emoji: '🛒', color: '#7ab55c', kind: 'ec',      hasPostTool: true  },
     { key: 'base',      name: 'BASE',      emoji: '🏪', color: '#ff7e2d', kind: 'ec',      hasPostTool: false },
   ];
@@ -6885,7 +6885,7 @@ function _renderTabSettings(site){
 
 // ─── SNS 接続管理 helpers ────────────────────────────────
 window._snsStatusCache = window._snsStatusCache || {};
-var _SNS_ALL_PLATFORMS = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base'];
+var _SNS_ALL_PLATFORMS = ['x','linkedin','threads','instagram','facebook','tiktok','youtube','note','wordpress','shopify','base','emdash'];
 async function _fetchSnsStatus(siteId){
   if(window._snsStatusFetching && window._snsStatusFetching[siteId]) return;
   window._snsStatusFetching = window._snsStatusFetching || {};

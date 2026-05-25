@@ -2948,6 +2948,41 @@ function _dgrRenderNumbersSection(ag, snap, ga4Connected){
   var organicSearchExists = sources.some(function(s){ return /organic search/i.test(s.channel||''); });
   var footnote = !organicSearchExists ? '<div style="margin-top:10px;font-size:11px;color:var(--text3)">※ Organic Search = 0 ('+L('SEO 流入なし','no SEO traffic')+')</div>' : '';
 
+  // ── 異常検知 → 「AI に対策を任せる」 inline chip ──
+  // 数字を見ながら次のアクションを即取れるよう、 問題のある metric に対して
+  // 1 クリックで AI に対策依頼できる button を表示。 composer に prompt 自動投入。
+  var anomalyChips = [];
+  function _anomalyChip(label, prompt){
+    var enc = encodeURIComponent(prompt);
+    anomalyChips.push('<button onclick="_dgrAskAI(\''+esc(siteId)+'\',\''+enc+'\')" '
+      + 'style="background:rgba(192,255,92,.14);color:var(--peach-dark);border:1px solid rgba(192,255,92,.4);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .12s" '
+      + 'onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#0a0a0e\'" '
+      + 'onmouseout="this.style.background=\'rgba(192,255,92,.14)\';this.style.color=\'var(--peach-dark)\'">'
+      + '🤖 '+esc(label)+'</button>');
+  }
+  if(bouncePct != null && bouncePct > 60){
+    _anomalyChip('直帰率 '+Math.round(bouncePct)+'% を改善する施策を 3 つ提案',
+      '直近の直帰率が '+Math.round(bouncePct)+'% と高すぎます。 GA4 のチャネル別データを確認して、 LP ヘッド改稿 / CTA 配置 / コンテンツ整合性の観点で具体的な改善施策を 3 つ提案してください。');
+  }
+  if(snap.delta_pv_pct != null && snap.delta_pv_pct < -10){
+    _anomalyChip('PV '+snap.delta_pv_pct+'% 下落の原因を調査',
+      'PV が前週比 '+snap.delta_pv_pct+'% 下落しています。 GA4 のチャネル別 / ページ別データを取得して、 どこから流入が減ったか特定し、 回復策を提案してください。');
+  }
+  if(!organicSearchExists || (sources.find(function(s){return /organic search/i.test(s.channel||'');}) || {}).sessions === 0){
+    _anomalyChip('SEO 流入ゼロ — Search Console 接続 + SEO 戦略',
+      'Organic Search 流入が 0 件です。 まず Search Console 接続状況を確認し、 次に上位 5 個の SEO 課題と 30 日で効果が出るキーワード戦略を提案してください。');
+  }
+  if(cvrGoal > 0 && (!ga4Connected || true)){
+    _anomalyChip('CVR を測れていない — Goal 設定 + 計測',
+      'GA4 で コンバージョン (CVR) を測れていません。 「無料登録クリック」 「お問い合わせフォーム送信」 のイベント設定方法を 3 ステップで案内し、 そのあと CVR を上げるための LP 改善案を 3 つ提案してください。');
+  }
+  var anomalyHTML = anomalyChips.length
+    ? '<div style="margin-top:18px;padding:14px 16px;background:#fef9e7;border:1px solid #fde68a;border-radius:11px">'
+      + '<div style="font-size:11px;font-weight:800;color:#92400e;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">⚡ '+L('AI に対策を任せる','Let AI handle this')+'</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap">'+anomalyChips.join('')+'</div>'
+      + '</div>'
+    : '';
+
   return ''
     + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:24px;margin-bottom:14px">'
     +   '<div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:18px">📊 1. '+L('数字のサマリー','Numbers')+'</div>'
@@ -2966,8 +3001,27 @@ function _dgrRenderNumbersSection(ag, snap, ga4Connected){
         + footnote
         + '</div>'
       ) : '')
+    +   anomalyHTML
     + '</div>';
 }
+
+// 数字パネル → AI 対策依頼 chip click ハンドラ
+window._dgrAskAI = function(siteId, encodedPrompt){
+  var prompt = '';
+  try { prompt = decodeURIComponent(encodedPrompt); } catch(_){ return; }
+  if(!prompt) return;
+  // panel を閉じてチャットに戻る
+  var ex1 = document.getElementById('siteTabOverlay');
+  if(ex1) ex1.remove();
+  if(activeId !== siteId){ openAgent(siteId); }
+  setTimeout(function(){
+    var ci = document.getElementById('ci');
+    if(!ci) return;
+    ci.value = prompt;
+    try { exTA(ci); } catch(_){}
+    try { if(typeof sendMsg === 'function') sendMsg(); } catch(_){}
+  }, 200);
+};
 
 // 4 metric card helper
 function _dgrMetricCard(label, valueHTML, delta1, delta2){
@@ -10414,6 +10468,111 @@ var _TOOL_META = {
   ext_click:      { icon:'👆', label: function(inp){ return (isJa?'クリック: ':'Click: ')+(inp&&inp.selector?inp.selector:''); } },
 };
 
+// AI 返信から「次の優先タスク」 を検出して「▶ そのままやる」 button を生成。
+// 検出パターン (順序を保ちつつ柔軟):
+//  - 「次の優先タスク[は|:]」+ 直後の「XXX」 (鉤括弧 / **太字** / 行)
+//  - 「次にやるべき」 / 「次のステップ:」
+//  - 「Next task:」 / 「Up next:」
+// マッチした title を click で「【タスク実行】「title」 を今すぐ進めて。」 として送る。
+function _renderNextTaskCTA(content, ag){
+  if(!ag || !ag.id) return '';
+  var siteId = ag.id;
+  var text = String(content || '');
+  // パターン 1: 「次の優先タスク[は|:]」直後の「XXX」 や 「**XXX**」
+  var title = '';
+  var re1 = /(?:次の優先タスク|次のタスク|次にやるべき|次のステップ|Next\s*task|Up\s*next)\s*[はは:：]?\s*\n*[*「『\s]*([^\n*「」『』]{6,120}?)[*」』」\s]*(?:\n|$)/i;
+  var m1 = text.match(re1);
+  if(m1 && m1[1]) title = m1[1].trim();
+  // パターン 2: 「やって」 と返事すれば 系のフォロー誘導があるが title 不明
+  // → 直前の「」 でくくられた task らしき部分を取る
+  if(!title){
+    var re2 = /[「『]([^「『」』\n]{6,120})[」』]\s*(?:を|に)?\s*[^」』\n]{0,40}(?:取りかかります|進めます|やります|始めます)/;
+    var m2 = text.match(re2);
+    if(m2 && m2[1]) title = m2[1].trim();
+  }
+  if(!title) return '';
+  // markdown noise 除去
+  title = title.replace(/^\*+|\*+$/g, '').replace(/^[「『]|[」』]$/g, '').trim();
+  if(title.length < 6 || title.length > 120) return '';
+  var encodedTitle = encodeURIComponent(title);
+  return '<div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    + '<span style="font-size:11px;color:var(--text3);font-weight:600">'+L('提案された次のタスク:','Suggested next:')+'</span>'
+    + '<button onclick="_dgrChainExecute(\''+esc(siteId)+'\',\''+encodedTitle+'\')" '
+    +   'style="background:var(--peach);color:#0a0a0e;border:0;border-radius:99px;padding:7px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;display:inline-flex;align-items:center;gap:6px;transition:transform .12s" '
+    +   'onmouseover="this.style.transform=\'translateY(-1px)\'" '
+    +   'onmouseout="this.style.transform=\'\'">'
+    +   '▶ '+L('そのままやる','Run this')+'</button>'
+    + '</div>';
+}
+
+// 連鎖実行: composer に prompt 投入 + 自動送信。
+window._dgrChainExecute = function(siteId, encodedTitle){
+  var title = '';
+  try { title = decodeURIComponent(encodedTitle); } catch(_){ return; }
+  if(!title) return;
+  if(activeId !== siteId){ openAgent(siteId); }
+  setTimeout(function(){
+    var ci = document.getElementById('ci');
+    if(!ci) return;
+    ci.value = '【タスク実行】「' + title + '」を今すぐ進めて。';
+    try { exTA(ci); } catch(_){}
+    try { if(typeof sendMsg === 'function') sendMsg(); } catch(_){}
+  }, 150);
+};
+
+// Recoverable failure → action chip mapping. tool_log の error string を
+// 見て、 ユーザーが 1 クリックで解決できる連携系の不足を chip 化する。
+function _renderRecoveryChips(toolLog, ag){
+  if(!Array.isArray(toolLog) || !toolLog.length) return '';
+  var seen = {};  // de-dup by recovery type
+  var chips = [];
+  var siteId = ag && ag.id ? esc(ag.id) : '';
+  toolLog.forEach(function(t){
+    if(!t || t.ok !== false) return;
+    var err = String(t.error || '').toLowerCase();
+    if(!err) return;
+    var label = '', action = '';
+    if(/google_not_connected|gsc_list_failed|webmasters/.test(err)){
+      if(seen.google) return;
+      seen.google = true;
+      label = '🔌 Google を再連携 (GA4 / Search Console)';
+      action = 'openConnectionsPanel(\''+siteId+'\')';
+    } else if(/ga4_not_connected|no_property_set/.test(err)){
+      if(seen.ga4) return;
+      seen.ga4 = true;
+      label = '📊 GA4 プロパティを選ぶ';
+      action = 'openGa4PropertyPicker(\''+siteId+'\')';
+    } else if(/wordpress_not_configured|wp_http_401|wp_publish_failed/.test(err)){
+      if(seen.wp) return;
+      seen.wp = true;
+      label = '🔌 WordPress を接続';
+      action = 'openConnectionsPanel(\''+siteId+'\')';
+    } else if(/slack_not_configured|slack_no_webhook/.test(err)){
+      if(seen.slack) return;
+      seen.slack = true;
+      label = '🔌 Slack を接続';
+      action = 'openConnectionsPanel(\''+siteId+'\')';
+    } else if(/(extension|chrome).*(not_installed|unavailable|disabled)/.test(err)){
+      if(seen.ext) return;
+      seen.ext = true;
+      label = '🌐 Browser 拡張を有効化';
+      action = '_extHintAction && _extHintAction()';
+    }
+    if(label && action){
+      chips.push('<button onclick="'+action+'" '
+        + 'style="background:rgba(192,255,92,.14);color:var(--peach-dark);border:1px solid rgba(192,255,92,.4);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .12s" '
+        + 'onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#0a0a0e\'" '
+        + 'onmouseout="this.style.background=\'rgba(192,255,92,.14)\';this.style.color=\'var(--peach-dark)\'">'
+        + esc(label) + '</button>');
+    }
+  });
+  if(!chips.length) return '';
+  return '<div style="margin-top:10px;padding:10px 12px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    + '<span style="font-size:11px;color:#92400e;font-weight:800;letter-spacing:.04em">⚠ '+L('対応が必要','Action needed')+'</span>'
+    + chips.join('')
+    + '</div>';
+}
+
 function _renderToolLog(log){
   if(!log || !log.length) return '';
   // Slack-style thread feel: main chat はクリーンに、 詳細は collapsed by default
@@ -10637,6 +10796,16 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   let body = content ? _md(content, { isStreaming, editingFnames: _editingFnames }) : '';
   if(cites.length) body = _linkInlineCitations(body, cites);
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
+  // ── Failure recovery chips ──────────────────────────────────────────
+  // tool_log の中にリカバリ可能な error があれば、 1 クリックで連携 panel
+  // に飛べる chip を message 末尾に追加。 「GSC が無い → AI が止まる →
+  // 何をすればいいか分からない」 を解消。
+  const recoveryHtml = (!isU && tool_log) ? _renderRecoveryChips(tool_log, ag) : '';
+  // ── Chain-execution suggestion chip ─────────────────────────────────
+  // AI 返信に「次の優先タスクは: 「XXX」」 系のパターンがあれば、
+  // 「▶ そのままやる」 button を message 下に表示。 ユーザーは「やって」
+  // とタイプする摩擦が消える。
+  const nextTaskHtml = (!isU && !isStreaming && content) ? _renderNextTaskCTA(content, ag) : '';
   // ── Completion summary badge ─────────────────────────────────────────
   // Surface a one-line "what just happened" chip at the top of the bubble —
   // number of tools used + new/edited artifacts + elapsed wall time. Lets
@@ -10990,6 +11159,8 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       summaryHTML+
       promiseWarnHTML+
       (renderBody?'<div class="m-body">'+(bodyMarkup||'')+artifactCards+citesHtml+'</div>':'')+
+      recoveryHtml+
+      nextTaskHtml+
       approvalHTML+
       reactionsHTML+
       notePillHTML+

@@ -9400,22 +9400,9 @@ async function openAgent(id){
       });
       chipsEl.appendChild(b);
     }
-    // @部門指名 chips (site agent only)
-    if(_isSiteAgent(ag) && ag.org && Array.isArray(ag.org.departments) && ag.org.departments.length > 0){
-      _addLabel('@部門指名');
-      ag.org.departments.slice(0, 3).forEach(function(d){
-        var nm = String(d.name||'').replace(/\s+/g, '');
-        var label = (d.icon || '🏢') + ' @' + nm;
-        _addChip(label, function(){ try { _insertMention(nm); } catch(e){ console.warn(e); } });
-      });
-    }
-    // クイック chips
-    if(allChips.length){
-      _addLabel(isJa ? 'クイック' : 'Quick');
-      allChips.forEach(function(c){
-        _addChip(c, function(){ try { useChip(c); } catch(e){ console.warn(e); } });
-      });
-    }
+    // @部門指名 / クイック chips 廃止 (2026-05-25): composer 上の混雑を回避。
+    // @ メンション は composer に「@」 タイプで候補が出るので chip 不要。
+    // クイック templates も「タスク strip」 で代替可能 (= タスク chip で同等)。
   }
   // ── Context-aware action cards (= AI が状況検知して出す CTA) ──
   try { _renderChatActionCards(ag); } catch(e){ console.warn('[chat-actions]', e); }

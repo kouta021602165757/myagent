@@ -3697,6 +3697,10 @@ function _autoPickModel(message, agent){
 // ──────────────────────────────────────────────────────────────────
 function _shouldRunPlanner(message){
   const raw = String(message || '').trim();
+  // 明示的 marker — 「【タスク実行】」「【日次グロースレポート】」 等が
+  // 含まれていれば、 他の短さ判定を skip して必ず planner を fire させる。
+  // (= タスク strip / レポート modal 起源のボタン click は必ず delegate card を出す)
+  if(/【タスク実行】|【日次グロースレポート】|【グロースレポート】|【\s*\w*\s*実行\s*】/i.test(raw)) return true;
   // 継続メッセージ (ボタンクリック起源など) — 短すぎて新規 plan には弱い、
   // 既存のフローに任せる
   if(/^(続き|つづき|next|▶|やって|お願い|それで|OK|どうぞ)/i.test(raw)) return false;
@@ -8435,9 +8439,18 @@ async function _pmDispatchToMember(agent, userText){
   if(!ANTHROPIC) return null;
   // Collect all members with their roles/focus so the PM can route
   const roster = [];
+  // PM (= dispatcher 自身) は member 候補から除外。 PM が PM を選ぶと
+  // 「PM が PM に振った」 という意味不明な見え方になるため、 specialist
+  // のみを候補にする。
+  const isPmMember = (m) => {
+    const hay = String((m.role||'') + ' ' + (m.name||'') + ' ' + (m.id||'')).toLowerCase();
+    return /\bpm\b|プロジェクトマネージャー|プロマネ|project\s*manager|planner/i.test(hay);
+  };
   agent.org.departments.forEach(d => {
     (d.teams || []).forEach(t => {
       (t.members || []).forEach(m => {
+        if(!m || !m.id) return;
+        if(isPmMember(m)) return;  // PM 除外
         roster.push({
           member_id: m.id,
           name: m.name || '',
@@ -8455,7 +8468,7 @@ async function _pmDispatchToMember(agent, userText){
   const rosterForPrompt = roster.slice(0, 24).map((r,i) =>
     `${i+1}. id=${r.member_id} / ${r.name} (${r.role}) — ${r.focus}`
   ).join('\n');
-  const prompt = `あなたはマーケティングチームの PM (プロジェクトマネージャー) です。\nユーザーから来た依頼を読み、最も適した担当メンバーを 1 人だけ選んでください。\n\n## ユーザーの依頼\n${text.slice(0, 600)}\n\n## チーム名簿\n${rosterForPrompt}\n\n## 出力\n以下の JSON のみ出力 (説明やマークダウン禁止):\n{ "member_id": "<上記 id のいずれか>", "reason": "<30 字以内の理由>" }`;
+  const prompt = `あなたはマーケティングチームの PM (プロジェクトマネージャー) です。\nユーザーから来た依頼を読み、 名簿の中から **specialist を 1 人だけ** 選んでください。\nPM (= あなた自身) は名簿に含めていません — 必ず specialist を選ぶこと。\n\n## ユーザーの依頼\n${text.slice(0, 600)}\n\n## チーム名簿 (specialist のみ)\n${rosterForPrompt}\n\n## 出力\n以下の JSON のみ出力 (説明やマークダウン禁止):\n{ "member_id": "<上記 id のいずれか>", "reason": "<30 字以内の理由>" }`;
   try {
     const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
       {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
@@ -15647,6 +15660,14 @@ ${list.slice(0, 20).map(w => `- "${(w.name||'').replace(/"/g,'')}"`+(w.hint?` �
 
 - title は短く artifact 名と同じか日本語タイトル。
 - ファイル名が分からなければ read_artifact で取得してから出す (やり直しでなく確実な一手)。
+
+🚨 【返信の冒頭スタイル — 必ず守る】
+- ✓ / ✅ で返信を始めない。 ユーザーが「タスク完了した」 と誤解する。
+- 完了マークが必要なときは「✅ ステップ N 完了」 のフォーマットだけ使う (これは task 進捗 tracker が拾う公式マーカー)。
+- 返信は具体的な結果から始める。 例:
+  ❌ 「✓「GA4 設定確認...」 結果: ...」
+  ✅ 「GA4 は正常設定済みです。 ただし Search Console が未接続で SEO 流入が見えません。」
+- 部分失敗があれば「○○ は OK、 ××× は要対応 (理由)」 と明示。 隠さない。
 `;
   // ── @mention 検出: agent.org 内の部門 / メンバーを user message から拾う ──
   // 拾ったら ROLE_SPECIALTIES の専門 prompt を prepend して、その役割の AI

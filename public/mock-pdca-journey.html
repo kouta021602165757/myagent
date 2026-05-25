@@ -419,6 +419,22 @@
   .msg .head .nm { font-weight: 800; font-size: 13px; }
   .msg .head .tm { font-size: 11px; color: var(--muted); }
   .msg .txt { font-size: 14px; line-height: 1.55; }
+  .msg-cta {
+    margin-top: 10px;
+    background: var(--teal);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(13, 79, 74, 0.2);
+    transition: all 0.15s;
+  }
+  .msg-cta:hover {
+    background: var(--teal-2);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(13, 79, 74, 0.28);
+  }
   .msg .thread-link {
     margin-top: 6px;
     display: flex; align-items: center; gap: 8px;
@@ -930,7 +946,7 @@
     <span class="badge" id="pdcaPill">PHASE 1</span>
     <span class="progress" id="progressLabel">1 / 10</span>
     <button class="arrow" id="prevBtn" onclick="event.stopPropagation(); goStep(Math.max(1, curStep - 1));">←</button>
-    <button class="arrow" id="nextBtn" onclick="event.stopPropagation(); goStep(Math.min(10, curStep + 1));">→</button>
+    <button class="arrow" id="nextBtn" onclick="event.stopPropagation(); goStep(Math.min(8, curStep + 1));">→</button>
     <span class="toggle">▾</span>
   </div>
   <div class="scene-info">
@@ -943,11 +959,9 @@
     <button class="stepbtn" data-step="3"><span class="num">3</span> チャット開始</button>
     <button class="stepbtn" data-step="4"><span class="num">4</span> 現状分析</button>
     <button class="stepbtn" data-step="5"><span class="num">5</span> 計画</button>
-    <button class="stepbtn" data-step="6"><span class="num">6</span> 実行</button>
+    <button class="stepbtn" data-step="6"><span class="num">6</span> タスク抽出 & 実行</button>
     <button class="stepbtn" data-step="7"><span class="num">7</span> 検証 (日次)</button>
     <button class="stepbtn" data-step="8"><span class="num">8</span> 検証 (全体)</button>
-    <button class="stepbtn" data-step="9"><span class="num">9</span> 改善</button>
-    <button class="stepbtn" data-step="10"><span class="num">10</span> ループ</button>
   </div>
 </div>
 
@@ -1177,7 +1191,7 @@ const STEPS = {
   3: {
     pdca: 'PHASE 1 · オンボ',
     title: 'チャット画面が開く',
-    desc: '— PM から最初の挨拶。ここが以後の「ホーム」',
+    desc: '— PM から挨拶 → まず Google Analytics を接続',
     scene: 'sceneApp',
     messages: 'greet',
     panel: null,
@@ -1187,7 +1201,7 @@ const STEPS = {
   4: {
     pdca: 'C · 現状分析（初回）',
     title: '初回監査レポート（📰）',
-    desc: '— GA4 / GSC を取得して AI が「今ここ」を要約',
+    desc: '— GA4 接続完了 → AI が「今ここ」を要約',
     scene: 'sceneApp',
     messages: 'audit',
     panel: 'audit',
@@ -1205,9 +1219,9 @@ const STEPS = {
     taskCount: 3
   },
   6: {
-    pdca: 'D · 実行',
-    title: '📋 タスク + 🏢 チーム + 💬 チャット',
-    desc: '— タスク自動生成、チームにアサイン、ユーザーは chat で指示',
+    pdca: 'D · タスク抽出 & 実行',
+    title: '📋 タスク抽出 & 実行',
+    desc: '— 計画からタスク自動生成、チームにアサイン、chat で進捗',
     scene: 'sceneApp',
     messages: 'exec',
     panel: 'tasks',
@@ -1233,26 +1247,6 @@ const STEPS = {
     panel: 'numbers',
     activeTool: 'num',
     taskCount: 8
-  },
-  9: {
-    pdca: 'A · 改善',
-    title: '📒 メモ帳で学習を蓄積',
-    desc: '— 勝ちパターン / 失敗 / 次の打ち手をストック',
-    scene: 'sceneApp',
-    messages: 'memo',
-    panel: 'memo',
-    activeTool: 'memo',
-    taskCount: 8
-  },
-  10: {
-    pdca: 'PHASE 3 · ループ',
-    title: '🔁 翌日：C→A が回り続ける',
-    desc: '— 朝の通知から再び始まる。P に戻る分岐もあり',
-    scene: 'sceneApp',
-    messages: 'loop',
-    panel: 'daily',
-    activeTool: 'news',
-    taskCount: 12
   }
 };
 
@@ -1260,7 +1254,7 @@ const STEPS = {
 const MSG_TEMPLATES = {
   greet: [
     { who:'bot', name:'fukuyama-note.com', tm:'09:00', txt:'こんにちは、PM の佐藤です 👔<br>fukuyama-note.com の運用を担当します。まず現状を把握させてください。'},
-    { who:'bot', name:'fukuyama-note.com', tm:'09:00', txt:'Google Analytics と Search Console を接続できますか？接続後すぐ初回監査レポートをお出しします。', threadCount: 1 }
+    { who:'bot', name:'fukuyama-note.com', tm:'09:00', txt:'最初に <strong>Google Analytics</strong> を接続させてください。あなたのサイトの今の数字を取得して、すぐ初回監査レポートをお出しします 📊', cta: { label: '📊 Google Analytics を接続', onclick: 'goStep(4)' } }
   ],
   audit: [
     { who:'user', name:'あなた', tm:'09:05', txt:'GA4 接続したよ'},
@@ -1510,6 +1504,7 @@ function renderMsgs(key) {
           <span class="tm">${m.tm}</span>
         </div>
         <div class="txt">${m.txt}</div>
+        ${m.cta ? `<button class="msg-cta" onclick="${m.cta.onclick}">${m.cta.label}</button>` : ''}
         ${m.threadCount ? `<div class="thread-link"><span class="link">📓 ${m.threadCount} 件の返信</span><span>· 最終返信 ${m.tm}</span></div>` : ''}
       </div>
     </div>
@@ -1553,7 +1548,7 @@ function goStep(n) {
   document.getElementById('pdcaPill').textContent = meta.pdca;
   document.getElementById('sceneTitle').textContent = meta.title;
   document.getElementById('sceneDesc').textContent = meta.desc;
-  document.getElementById('progressLabel').textContent = `${n} / 10`;
+  document.getElementById('progressLabel').textContent = `${n} / 8`;
 
   // update step buttons
   document.querySelectorAll('.stepbtn').forEach(b => {
@@ -1582,7 +1577,7 @@ function goStep(n) {
 
   // disable arrows
   document.getElementById('prevBtn').disabled = (n === 1);
-  document.getElementById('nextBtn').disabled = (n === 10);
+  document.getElementById('nextBtn').disabled = (n === 8);
 
   // scroll msgs to bottom
   setTimeout(() => {
@@ -1599,7 +1594,7 @@ document.getElementById('nextBtn').addEventListener('click', () => goStep(Math.m
 
 // keyboard navigation
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight') goStep(Math.min(10, curStep + 1));
+  if (e.key === 'ArrowRight') goStep(Math.min(8, curStep + 1));
   if (e.key === 'ArrowLeft') goStep(Math.max(1, curStep - 1));
 });
 

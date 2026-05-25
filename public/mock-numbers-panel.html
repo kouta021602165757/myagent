@@ -2,93 +2,83 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>📊 数字分析 — 改善モック (全 10 案統合)</title>
+<title>📊 数字分析 — 改善モック (全体ダッシュボード版)</title>
 <style>
   :root {
     --cream:#ffffff; --cream2:#fafafa; --cream3:#fafaf7;
-    --ink:#fafaf7;
     --text:#1a1a1a; --text2:#525252; --text3:#71717a;
     --wire:rgba(9,9,11,.06); --wire2:rgba(9,9,11,.10);
     --peach:#c0ff5c; --peach-dark:#a3e635;
-    --peach-soft:#f7ffe9; --peach-soft-2:#edfcc8;
+    --peach-soft:#f7ffe9;
     --teal:#0d4f4a; --teal-soft:#e8f1f0;
-    --red:#dc2626; --red-soft:#fee2e2;
-    --green:#16a34a; --green-soft:#dcfce7;
-    --yellow:#d97706; --yellow-soft:#fef3c7;
+    --red:#dc2626; --yellow:#d97706; --green:#16a34a;
   }
   *{box-sizing:border-box}
-  body{margin:0;padding:0;background:rgba(10,10,12,.4);font-family:system-ui,-apple-system,sans-serif;color:var(--text);line-height:1.6;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px}
-
-  /* Modal */
+  body{margin:0;padding:24px;background:rgba(10,10,12,.4);font-family:system-ui,sans-serif;color:var(--text);line-height:1.6;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
   .modal{background:var(--cream3);border-radius:16px;max-width:1200px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column}
   .modal-head{padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream)}
-  .modal-head-title{font-size:15px;font-weight:900}
+  .modal-head-ic{font-size:22px}
+  .modal-head-title{font-weight:900;font-size:15px}
   .modal-head-sub{font-size:11px;color:var(--text3);font-weight:700}
-  .modal-close{margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px;border-radius:8px}
+  .modal-close{margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px}
   .modal-body{padding:18px 22px 32px;overflow-y:auto;max-height:calc(100vh - 48px)}
 
-  /* 6: AI Commentary */
-  .ai-commentary{background:var(--cream);border-left:4px solid var(--peach);border-radius:11px;padding:14px 18px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start}
-  .ai-commentary-ic{font-size:24px;flex-shrink:0}
-  .ai-commentary-bd{flex:1}
-  .ai-commentary-lbl{font-size:10px;font-weight:800;color:var(--peach-dark);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
-  .ai-commentary-tx{font-size:13.5px;line-height:1.65;color:var(--text)}
-  .ai-commentary-tx b{color:var(--text);font-weight:800}
+  /* Period selector */
+  .period-bar{display:flex;align-items:center;gap:8px;margin-bottom:18px;padding:10px 14px;background:#fff;border:1px solid var(--wire2);border-radius:11px}
+  .period-bar-lbl{font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-right:6px}
+  .period-btn{background:transparent;border:1px solid var(--wire2);color:var(--text2);font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:99px;cursor:pointer;font-family:inherit}
+  .period-btn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
 
-  /* 2: Anomaly banner */
-  .anomaly-banner{background:#fef9e7;border:1px solid #fde68a;border-radius:11px;padding:14px 18px;margin-bottom:14px}
-  .anomaly-banner-h{font-size:11px;font-weight:800;color:#92400e;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-  .anomaly-banner-list{display:flex;flex-direction:column;gap:8px}
-  .anomaly-row{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fff;border:1px solid #fde68a;border-radius:8px}
-  .anomaly-row .dot{font-size:14px;flex-shrink:0}
-  .anomaly-row .tx{flex:1;font-size:12.5px;font-weight:700;color:var(--text)}
-  .anomaly-row .actions{display:flex;gap:6px;flex-shrink:0}
-  .anomaly-row .btn{background:var(--teal);color:#fff;border:0;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
+  /* 異常検知バナー (両方で使う共通要素) */
+  .anomaly-banner{background:#fef9e7;border:1px solid #fde68a;border-radius:11px;padding:14px 18px;margin-bottom:18px}
+  .anomaly-banner-h{font-size:11px;font-weight:800;color:#92400e;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+  .anomaly-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border:1px solid #fde68a;border-radius:8px;margin-bottom:6px}
+  .anomaly-row .dot{font-size:13px;flex-shrink:0}
+  .anomaly-row .tx{flex:1;font-size:12.5px;font-weight:700}
+  .anomaly-row .btn{background:var(--teal);color:#fff;border:0;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
   .anomaly-row .btn.alt{background:#fff;color:var(--teal);border:1px solid var(--teal)}
 
-  /* Section labels */
+  /* Section label */
   .sec-lbl{font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--wire)}
 
-  /* 1+4+5: Main KPI HERO */
-  .hero{background:linear-gradient(135deg,#fff,var(--cream2));border:1.5px solid var(--peach);border-radius:14px;padding:22px 26px;margin-bottom:14px;position:relative;overflow:hidden}
+  /* HERO 主 KPI */
+  .hero{background:linear-gradient(135deg,#fff,var(--cream2));border:1.5px solid var(--peach);border-radius:14px;padding:22px 26px;margin-bottom:14px}
   .hero-tag{display:inline-block;font-size:9.5px;font-weight:800;background:var(--peach-soft);color:var(--peach-dark);padding:3px 10px;border-radius:99px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
   .hero-val-row{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
-  .hero-val{font-family:'Outfit','Bebas Neue',system-ui;font-size:48px;font-weight:900;line-height:1;color:var(--text)}
+  .hero-val{font-family:'Outfit',system-ui;font-size:48px;font-weight:900;line-height:1}
   .hero-goal{font-size:18px;font-weight:700;color:var(--text3)}
   .hero-progress{margin:14px 0 12px}
   .hero-progress-bar{height:10px;background:var(--cream3);border-radius:99px;overflow:hidden;margin-bottom:6px}
-  .hero-progress-bar > div{height:100%;background:linear-gradient(90deg,var(--peach-dark),var(--peach));border-radius:99px;transition:width .6s ease}
+  .hero-progress-bar > div{height:100%;background:linear-gradient(90deg,var(--peach-dark),var(--peach));border-radius:99px}
   .hero-progress-tx{font-size:11.5px;color:var(--text2);font-weight:700;display:flex;justify-content:space-between}
   .hero-forecast{padding:11px 14px;background:#fef9e7;border:1px solid #fde68a;border-radius:9px;margin:10px 0;font-size:12px;line-height:1.6;color:#92400e}
   .hero-forecast b{font-weight:900;color:#7c2d12}
   .hero-cta{background:var(--teal);color:#fff;border:0;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
 
-  /* 1+5: Sub KPI cards (4 横並び with 「対策」 button) */
+  /* サブ KPI 4 カード */
   .sub-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
   .sub-card{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
   .sub-card.warn{border-color:#fde68a;background:linear-gradient(180deg,#fff,#fffaeb)}
   .sub-card.danger{border-color:#fecaca;background:linear-gradient(180deg,#fff,#fef2f2)}
-  .sub-lbl{font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:5px}
-  .sub-val{font-size:28px;font-weight:900;line-height:1;color:var(--text);margin:2px 0 4px}
+  .sub-lbl{font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase}
+  .sub-val{font-size:28px;font-weight:900;line-height:1;margin:2px 0 4px}
   .sub-val.danger{color:var(--red)}
   .sub-val.warn{color:var(--yellow)}
   .sub-delta{font-size:11.5px;font-weight:700}
   .sub-delta.up{color:var(--green)}
   .sub-delta.down{color:var(--red)}
-  .sub-delta.flat{color:var(--text3)}
   .sub-foot{font-size:10.5px;color:var(--text3);font-weight:600}
-  .sub-action{background:transparent;border:1px solid var(--teal);color:var(--teal);border-radius:7px;padding:5px 10px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:7px;display:inline-flex;align-items:center;gap:5px;align-self:flex-start;transition:all .12s}
+  .sub-action{background:transparent;border:1px solid var(--teal);color:var(--teal);border-radius:7px;padding:5px 10px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:7px;align-self:flex-start}
   .sub-action:hover{background:var(--teal);color:#fff}
 
-  /* 3: Tab navigation */
+  /* Deep dive tabs */
   .deep-tabs{display:flex;gap:4px;border-bottom:1px solid var(--wire);margin-bottom:12px}
-  .deep-tab{background:transparent;border:0;color:var(--text3);font-size:12.5px;font-weight:700;padding:9px 14px;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;transition:all .12s}
+  .deep-tab{background:transparent;border:0;color:var(--text3);font-size:12.5px;font-weight:700;padding:9px 14px;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
   .deep-tab.on{color:var(--teal);border-bottom-color:var(--teal)}
-  .deep-tab:hover{color:var(--text)}
 
-  /* Channel breakdown */
+  /* Channel */
   .ch-row{display:grid;grid-template-columns:1fr 2fr auto auto;align-items:center;gap:14px;padding:10px 4px;border-bottom:1px solid var(--wire);font-size:13px}
-  .ch-row.head{font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--wire2)}
+  .ch-row.head{font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase}
   .ch-name{display:flex;align-items:center;gap:8px}
   .ch-dot{width:8px;height:8px;border-radius:50%}
   .ch-bar{height:8px;background:var(--cream3);border-radius:99px;overflow:hidden}
@@ -96,84 +86,76 @@
   .ch-val{text-align:right;font-weight:700;min-width:50px}
   .ch-pct{font-size:11.5px;color:var(--text3);text-align:right;min-width:42px}
 
-  /* 7: Chart */
+  /* Chart */
   .chart-wrap{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:16px;margin-top:14px;margin-bottom:14px}
   .chart-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
   .chart-ti{font-size:13px;font-weight:800}
   .chart-sub{font-size:11px;color:var(--text3);font-weight:600;margin-left:auto}
   .chart-svg{display:block;width:100%;height:160px}
-  .chart-tip{position:absolute;background:#1a1a1a;color:#fff;font-size:10.5px;padding:4px 9px;border-radius:6px;pointer-events:none;font-family:ui-monospace,monospace;font-weight:700;white-space:nowrap}
 
-  /* 8: All site comparison */
+  /* All site comparison */
   .sites-comp{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px}
   .sites-row{display:grid;grid-template-columns:200px 1fr 80px;align-items:center;gap:14px;padding:8px 0;border-bottom:1px solid var(--wire)}
   .sites-row:last-child{border-bottom:0}
-  .sites-name{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .sites-name .ic{font-size:14px}
+  .sites-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sites-name.you{color:var(--teal);font-weight:900}
   .sites-bar{height:10px;background:var(--cream3);border-radius:99px;overflow:hidden}
   .sites-bar > div{height:100%;background:linear-gradient(90deg,var(--peach-dark),var(--teal));border-radius:99px}
   .sites-bar > div.you{background:linear-gradient(90deg,#a3e635,#0d4f4a)}
   .sites-val{text-align:right;font-weight:800;font-size:13.5px}
 
-  /* Mock label */
-  .mock-tag{display:inline-block;background:#0d4f4a;color:#fff;font-size:10px;font-weight:800;padding:4px 11px;border-radius:99px;margin-bottom:18px;letter-spacing:.05em;text-transform:uppercase}
+  .mock-tag{display:inline-block;background:#0d4f4a;color:#fff;font-size:10px;font-weight:800;padding:4px 11px;border-radius:99px;letter-spacing:.05em;text-transform:uppercase}
+
+  .note-link{display:block;padding:10px 14px;background:var(--peach-soft);border:1px solid var(--peach);border-radius:9px;font-size:12px;color:var(--text);font-weight:700;text-align:center;text-decoration:none}
 </style>
 </head>
 <body>
 
 <div class="modal">
   <div class="modal-head">
-    <span class="mock-tag" style="margin:0">📊 数字分析 改善モック</span>
-    <span class="modal-head-sub">myaiagents.agency</span>
+    <span class="modal-head-ic">📊</span>
+    <div>
+      <div class="modal-head-title">数字分析</div>
+      <div class="modal-head-sub">全体ダッシュボード ・ myaiagents.agency</div>
+    </div>
+    <span class="mock-tag" style="margin-left:auto">数字分析 改善モック (v2)</span>
     <button class="modal-close">×</button>
   </div>
   <div class="modal-body">
 
-    <!-- 6: AI Commentary -->
-    <div class="ai-commentary">
-      <div class="ai-commentary-ic">🤖</div>
-      <div class="ai-commentary-bd">
-        <div class="ai-commentary-lbl">AI の所見 (今週)</div>
-        <div class="ai-commentary-tx">
-          PV は週次 <b>+7%</b> 微増、 ただし <b>CVR Goal 未測定</b> が継続中。
-          Referral 主導の波型構造で、 <b>Organic Search ゼロ</b> が中長期成長の最大ボトルネック。
-          直帰率 <b>93.8%</b> は要改善 — Direct 流入が全員 1 ページで離脱している。
-        </div>
-      </div>
+    <!-- Period selector -->
+    <div class="period-bar">
+      <span class="period-bar-lbl">📅 期間</span>
+      <button class="period-btn">直近 7 日</button>
+      <button class="period-btn on">直近 30 日</button>
+      <button class="period-btn">今月</button>
+      <button class="period-btn">全期間</button>
+      <span style="margin-left:auto;font-size:11px;color:var(--text3);font-weight:600">日報は <a href="/mock-daily-report.html" style="color:var(--teal);font-weight:800">📰 日次グロースレポート</a> で</span>
     </div>
 
-    <!-- 2: Anomaly banner -->
+    <!-- 異常検知バナー -->
     <div class="anomaly-banner">
       <div class="anomaly-banner-h">⚠ 今すぐ対応が必要 (3 件)</div>
-      <div class="anomaly-banner-list">
-        <div class="anomaly-row">
-          <span class="dot">🔴</span>
-          <span class="tx">直帰率 93.8% (目標 60% 未満)</span>
-          <div class="actions">
-            <button class="btn alt">📋 タスク追加</button>
-            <button class="btn">🤖 AI に対策依頼</button>
-          </div>
-        </div>
-        <div class="anomaly-row">
-          <span class="dot">🔴</span>
-          <span class="tx">CVR 0% (Goal 未測定 — GA4 で計測されていない)</span>
-          <div class="actions">
-            <button class="btn">🎯 Goal を設定</button>
-          </div>
-        </div>
-        <div class="anomaly-row">
-          <span class="dot">🟡</span>
-          <span class="tx">Organic Search 0 件 (SEO 流入なし)</span>
-          <div class="actions">
-            <button class="btn alt">📋 タスク追加</button>
-            <button class="btn">🤖 SEO 戦略を依頼</button>
-          </div>
-        </div>
+      <div class="anomaly-row">
+        <span class="dot">🔴</span>
+        <span class="tx">直帰率 93.8% (目標 60% 未満) — 30 日平均</span>
+        <button class="btn alt">📋 タスク追加</button>
+        <button class="btn">🤖 対策依頼</button>
+      </div>
+      <div class="anomaly-row">
+        <span class="dot">🔴</span>
+        <span class="tx">CVR 0% (Goal 未測定 — GA4 で計測されていない)</span>
+        <button class="btn">🎯 Goal 設定</button>
+      </div>
+      <div class="anomaly-row">
+        <span class="dot">🟡</span>
+        <span class="tx">Organic Search 0 件 (SEO 流入なし、 30 日累計)</span>
+        <button class="btn alt">📋 タスク追加</button>
+        <button class="btn">🤖 SEO 戦略</button>
       </div>
     </div>
 
-    <!-- 1+4: Main HERO with progress + forecast -->
+    <!-- HERO: 月間目標との距離 -->
     <div class="sec-lbl">🎯 主 KPI ・ 月間目標との距離</div>
     <div class="hero">
       <span class="hero-tag">月間 PV (累計 30 日)</span>
@@ -190,45 +172,45 @@
       </div>
       <div class="hero-forecast">
         ⚠ <b>このペースでは月末 4,200 PV</b> (目標未達 -58%)。
-        残り 21 日で <b>1 日 405 PV</b> 必要 — 現在の 1 日平均 50 PV から <b>+8 倍</b> の流入が必要です。
+        残り 21 日で <b>1 日 405 PV</b> 必要 — 現在 1 日平均 50 PV から <b>+8 倍</b> の流入が必要です。
       </div>
-      <button class="hero-cta">🤖 AI に「集客を強化する戦略」 を依頼</button>
+      <button class="hero-cta">🤖 AI に「集客戦略」 を依頼</button>
     </div>
 
-    <!-- 1+5: Sub KPI 4 cards (各カードに対策 button) -->
-    <div class="sec-lbl">📈 サブ KPI ・ 異常はカード上で対応</div>
+    <!-- サブ KPI 4 カード (30 日累計、 対策 button 付き) -->
+    <div class="sec-lbl">📈 サブ KPI (30 日累計 / 異常はカード上で対応)</div>
     <div class="sub-grid">
       <div class="sub-card">
-        <div class="sub-lbl">PV (昨日)</div>
-        <div class="sub-val">77</div>
-        <div class="sub-delta up">↑ +1% (76→77)</div>
-        <div class="sub-foot">前週 5/17: 83 PV</div>
-        <button class="sub-action">🤖 流入を伸ばす案</button>
+        <div class="sub-lbl">月累計 PV</div>
+        <div class="sub-val">1,483</div>
+        <div class="sub-delta down">▼ -54% (前月: 3,226)</div>
+        <div class="sub-foot">日平均 49 PV</div>
+        <button class="sub-action">🤖 PV 増加策</button>
       </div>
       <div class="sub-card">
-        <div class="sub-lbl">セッション (昨日)</div>
-        <div class="sub-val">17</div>
-        <div class="sub-delta down">▼ -19% (21→17)</div>
-        <div class="sub-foot">前週比 ほぼ横ばい</div>
-        <button class="sub-action">🤖 セッション増加策</button>
+        <div class="sub-lbl">月累計セッション</div>
+        <div class="sub-val">584</div>
+        <div class="sub-delta down">▼ -41% (前月: 992)</div>
+        <div class="sub-foot">日平均 19 セッション</div>
+        <button class="sub-action">🤖 流入改善</button>
       </div>
       <div class="sub-card warn">
-        <div class="sub-lbl">⚠ 直帰率 (7 日平均)</div>
+        <div class="sub-lbl">⚠ 直帰率 (30 日平均)</div>
         <div class="sub-val warn">93.8%</div>
-        <div class="sub-delta down">▲ +9.2pt 悪化</div>
+        <div class="sub-delta down">▲ +12pt 悪化</div>
         <div class="sub-foot">目標 60% 未満</div>
-        <button class="sub-action">🤖 直帰率を改善</button>
+        <button class="sub-action">🤖 直帰率改善</button>
       </div>
       <div class="sub-card danger">
-        <div class="sub-lbl">🔴 CVR / リード</div>
+        <div class="sub-lbl">🔴 CVR / リード (累計)</div>
         <div class="sub-val danger">0%</div>
-        <div class="sub-delta flat">Goal 未測定</div>
-        <div class="sub-foot">目標 CVR 2% / 200 件/月</div>
-        <button class="sub-action">🎯 GA4 Goal を設定</button>
+        <div class="sub-delta flat" style="color:var(--text3)">Goal 未測定</div>
+        <div class="sub-foot">目標 CVR 2% / 200 件 月</div>
+        <button class="sub-action">🎯 GA4 Goal 設定</button>
       </div>
     </div>
 
-    <!-- 3: Deep dive tabs -->
+    <!-- Deep dive tabs -->
     <div class="sec-lbl">🔍 詳細ブレイクダウン</div>
     <div class="deep-tabs">
       <button class="deep-tab on">🌐 チャネル別</button>
@@ -236,44 +218,35 @@
       <button class="deep-tab">🔍 GSC キーワード</button>
       <button class="deep-tab">🌍 国 / 地域</button>
     </div>
-
-    <!-- Channel content (tab active) -->
     <div>
       <div class="ch-row head">
-        <div>チャネル</div>
-        <div></div>
-        <div class="ch-val">セッション</div>
-        <div class="ch-pct">%</div>
+        <div>チャネル</div><div></div><div class="ch-val">セッション</div><div class="ch-pct">%</div>
       </div>
       <div class="ch-row">
         <div class="ch-name"><span class="ch-dot" style="background:#6366f1"></span><b>Direct</b></div>
         <div class="ch-bar"><div style="width:100%;background:linear-gradient(90deg,#6366f180,#6366f1)"></div></div>
-        <div class="ch-val">98</div>
-        <div class="ch-pct">60%</div>
+        <div class="ch-val">98</div><div class="ch-pct">60%</div>
       </div>
       <div class="ch-row">
         <div class="ch-name"><span class="ch-dot" style="background:#f97316"></span>Referral</div>
         <div class="ch-bar"><div style="width:52%;background:linear-gradient(90deg,#f9731680,#f97316)"></div></div>
-        <div class="ch-val">51</div>
-        <div class="ch-pct">31%</div>
+        <div class="ch-val">51</div><div class="ch-pct">31%</div>
       </div>
       <div class="ch-row">
         <div class="ch-name"><span class="ch-dot" style="background:#9ca3af"></span>Unassigned</div>
         <div class="ch-bar"><div style="width:7%;background:linear-gradient(90deg,#9ca3af80,#9ca3af)"></div></div>
-        <div class="ch-val">7</div>
-        <div class="ch-pct">4%</div>
+        <div class="ch-val">7</div><div class="ch-pct">4%</div>
       </div>
       <div class="ch-row">
         <div class="ch-name"><span class="ch-dot" style="background:#10b981"></span>Organic Social</div>
         <div class="ch-bar"><div style="width:1%;background:linear-gradient(90deg,#10b98180,#10b981)"></div></div>
-        <div class="ch-val">1</div>
-        <div class="ch-pct">1%</div>
+        <div class="ch-val">1</div><div class="ch-pct">1%</div>
       </div>
       <div style="margin-top:10px;font-size:11px;color:var(--red);font-weight:600">⚠ Organic Search = 0 (SEO 流入なし)</div>
     </div>
 
-    <!-- 7: Chart with hover + anomaly marker -->
-    <div class="chart-wrap" style="position:relative;margin-top:18px">
+    <!-- 30 日 chart + 急落マーカー -->
+    <div class="chart-wrap" style="position:relative">
       <div class="chart-h">
         <div class="chart-ti">📈 30 日 PV 推移</div>
         <div class="chart-sub">日平均 49 PV ・ 急落日: 5/14 ⚠</div>
@@ -288,34 +261,31 @@
         <path d="M 0,140 L 30,90 L 60,60 L 90,100 L 120,80 L 150,120 L 180,40 L 210,70 L 240,30 L 270,55 L 300,90 L 330,110 L 360,75 L 390,50 L 420,65 L 450,40 L 480,85 L 510,90 L 540,70 L 570,55 L 600,120 L 630,100 L 660,85 L 690,75 L 720,60 L 720,160 L 0,160 Z" fill="url(#grad1)"/>
         <path d="M 0,140 L 30,90 L 60,60 L 90,100 L 120,80 L 150,120 L 180,40 L 210,70 L 240,30 L 270,55 L 300,90 L 330,110 L 360,75 L 390,50 L 420,65 L 450,40 L 480,85 L 510,90 L 540,70 L 570,55 L 600,120 L 630,100 L 660,85 L 690,75 L 720,60" fill="none" stroke="#a3e635" stroke-width="2.5"/>
         <circle cx="600" cy="120" r="6" fill="#dc2626" stroke="#fff" stroke-width="2"/>
-        <text x="600" y="108" text-anchor="middle" font-size="11" font-weight="800" fill="#dc2626">⚠</text>
-        <circle cx="720" cy="60" r="5" fill="#a3e635" stroke="#fff" stroke-width="2"/>
       </svg>
-      <div class="chart-tip" style="top:55px;left:540px;transform:translateX(-50%)">5/14<br>PV 28 ↓-65%</div>
     </div>
 
-    <!-- 8: All site comparison -->
+    <!-- 全 site 比較 -->
     <div class="sec-lbl">🏆 全 site 比較 (今月 PV)</div>
     <div class="sites-comp">
       <div class="sites-row">
-        <div class="sites-name"><span class="ic">🛠</span> finance.protocol.ooo</div>
+        <div class="sites-name">🛠 finance.protocol.ooo</div>
         <div class="sites-bar"><div style="width:78%"></div></div>
         <div class="sites-val">1,890</div>
       </div>
       <div class="sites-row">
-        <div class="sites-name you"><span class="ic">🛠</span> myaiagents.agency <span style="font-size:9px;font-weight:800;color:var(--teal);background:var(--teal-soft);padding:1px 6px;border-radius:99px;margin-left:6px">YOU</span></div>
+        <div class="sites-name you">🛠 myaiagents.agency <span style="font-size:9px;background:var(--teal-soft);color:var(--teal);padding:1px 6px;border-radius:99px;margin-left:6px">YOU</span></div>
         <div class="sites-bar"><div class="you" style="width:62%"></div></div>
         <div class="sites-val">1,483</div>
       </div>
       <div class="sites-row">
-        <div class="sites-name"><span class="ic">🛠</span> fukuyama-note.com</div>
+        <div class="sites-name">🛠 fukuyama-note.com</div>
         <div class="sites-bar"><div style="width:3.5%"></div></div>
         <div class="sites-val">84</div>
       </div>
     </div>
 
-    <!-- 9: Goal-based view (= 逆算 panel) -->
-    <div class="sec-lbl">🎯 目標達成シミュレーション (= 逆算)</div>
+    <!-- 目標達成シミュレーション -->
+    <div class="sec-lbl">🎯 目標達成シミュレーション (逆算)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="sub-card">
         <div class="sub-lbl">月間 PV 10,000</div>
@@ -327,25 +297,21 @@
         <div class="sub-lbl">月間リード 200 件</div>
         <div class="sub-val">0%</div>
         <div class="sub-delta down">残 200 件</div>
-        <div class="sub-foot">Goal 未測定 → まず GA4 で計測開始</div>
+        <div class="sub-foot">Goal 未測定 → GA4 で計測開始</div>
       </div>
       <div class="sub-card">
         <div class="sub-lbl">CVR 2.0%</div>
         <div class="sub-val">0.0%</div>
-        <div class="sub-delta flat">未測定</div>
-        <div class="sub-foot">フォーム / クリックを GA4 Event 登録</div>
+        <div class="sub-delta flat" style="color:var(--text3)">未測定</div>
+        <div class="sub-foot">フォーム / クリックを Event 登録</div>
       </div>
     </div>
 
-    <!-- 10: AI チーム に直接 task 化 (最下部の big CTA) -->
-    <div style="margin-top:22px;padding:18px 20px;background:linear-gradient(135deg,var(--teal),#0a3f3a);border-radius:12px;color:#fff">
-      <div style="font-size:13.5px;font-weight:800;margin-bottom:6px">🤖 AI チームに今週の改善を一気に任せる</div>
-      <div style="font-size:12px;opacity:.85;line-height:1.6;margin-bottom:12px">
-        上記の異常 3 件 (直帰率 / CVR Goal / SEO ゼロ) を、 そのまま今週のタスクリストに追加し、
-        AI チームに対策実行を依頼します。 1 クリックで全部スタート。
-      </div>
-      <button style="background:#fff;color:var(--teal);border:0;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">▶ 3 件をタスク化 + AI チームに任せる</button>
-    </div>
+    <!-- 日報へのリンク -->
+    <div class="sec-lbl">📰 日次の振り返り</div>
+    <a href="/mock-daily-report.html" class="note-link">
+      📰 「昨日何があったか + 明日のアクション」 は 日次グロースレポート で →
+    </a>
 
   </div>
 </div>

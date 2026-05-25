@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>📰 日次グロースレポート — モック (日報専用)</title>
+<style>
+  :root {
+    --cream:#ffffff; --cream2:#fafafa; --cream3:#fafaf7;
+    --text:#1a1a1a; --text2:#525252; --text3:#71717a;
+    --wire:rgba(9,9,11,.06); --wire2:rgba(9,9,11,.10);
+    --peach:#c0ff5c; --peach-dark:#a3e635;
+    --peach-soft:#f7ffe9;
+    --teal:#0d4f4a; --teal-soft:#e8f1f0;
+    --red:#dc2626; --yellow:#d97706; --green:#16a34a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:rgba(10,10,12,.4);font-family:system-ui,sans-serif;color:var(--text);line-height:1.65;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
+  .modal{background:var(--cream3);border-radius:16px;max-width:1000px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column}
+  .modal-head{padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream)}
+  .modal-head-ic{font-size:22px}
+  .modal-head-title{font-weight:900;font-size:15px}
+  .modal-head-sub{font-size:11px;color:var(--text3);font-weight:700}
+  .modal-close{margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px}
+  .modal-body{padding:18px 22px 32px;overflow-y:auto;max-height:calc(100vh - 48px)}
+
+  /* 日付 hero */
+  .date-hero{background:linear-gradient(135deg,var(--teal),#0a3f3a);color:#fff;border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+  .date-hero-ic{font-size:34px}
+  .date-hero-meta{flex:1}
+  .date-hero-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.8;margin-bottom:3px}
+  .date-hero-d{font-family:'Outfit',system-ui;font-size:26px;font-weight:900;line-height:1.1}
+  .date-hero-sub{font-size:12px;opacity:.85;margin-top:5px}
+  .date-hero-prev{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+
+  /* AI commentary (昨日 1 日について) */
+  .ai-commentary{background:var(--cream);border-left:4px solid var(--peach);border-radius:11px;padding:14px 18px;margin-bottom:18px;display:flex;gap:12px}
+  .ai-commentary-ic{font-size:24px;flex-shrink:0}
+  .ai-commentary-bd{flex:1}
+  .ai-commentary-lbl{font-size:10px;font-weight:800;color:var(--peach-dark);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+  .ai-commentary-tx{font-size:13.5px;line-height:1.65}
+  .ai-commentary-tx b{font-weight:800}
+
+  /* 昨日数字カード (= 日報専用) */
+  .yest-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+  .yest-card{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 16px}
+  .yest-card.warn{border-color:#fde68a;background:linear-gradient(180deg,#fff,#fffaeb)}
+  .yest-card.danger{border-color:#fecaca;background:linear-gradient(180deg,#fff,#fef2f2)}
+  .yest-lbl{font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+  .yest-val{font-size:30px;font-weight:900;line-height:1;margin-bottom:6px}
+  .yest-val.danger{color:var(--red)}
+  .yest-val.warn{color:var(--yellow)}
+  .yest-delta{font-size:11.5px;line-height:1.5}
+  .yest-delta .up{color:var(--green);font-weight:700}
+  .yest-delta .down{color:var(--red);font-weight:700}
+  .yest-delta .flat{color:var(--text3);font-weight:600}
+
+  /* セクション */
+  .sec{background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:18px 22px;margin-bottom:14px}
+  .sec-h{font-size:14.5px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .sec-h-ic{font-size:18px}
+  .sec-body{font-size:13.5px;line-height:1.75;color:var(--text)}
+  .sec-body ul{margin:8px 0;padding-left:20px}
+  .sec-body li{margin-bottom:5px}
+  .sec-body b{font-weight:800}
+
+  /* セクション 4 (明日のアクション) アイテム + タスク化 button */
+  .action-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:flex-start;padding:11px 14px;background:var(--cream3);border:1px solid var(--wire);border-radius:9px;margin-bottom:8px}
+  .action-pri{font-size:14px}
+  .action-tx{font-size:13px;font-weight:700;color:var(--text)}
+  .action-tx-sub{font-size:11.5px;color:var(--text2);font-weight:500;margin-top:3px}
+  .action-btn{background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+
+  /* 7 日 chart */
+  .chart-wrap{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:16px;margin-bottom:14px}
+  .chart-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .chart-ti{font-size:13px;font-weight:800}
+  .chart-sub{font-size:11px;color:var(--text3);font-weight:600;margin-left:auto}
+  .bar-row{display:grid;grid-template-columns:90px 1fr 60px;align-items:center;gap:12px;padding:6px 0;font-size:12px}
+  .bar-day{color:var(--text3);font-weight:600}
+  .bar-day.today{color:var(--teal);font-weight:800}
+  .bar-track{height:9px;background:var(--cream3);border-radius:99px;overflow:hidden}
+  .bar-track > div{height:100%;background:linear-gradient(90deg,#fb923c,#f97316);border-radius:99px}
+  .bar-track > div.today{background:linear-gradient(90deg,#a3e635,#0d4f4a)}
+  .bar-val{text-align:right;font-weight:800}
+
+  /* 最下部 big CTA */
+  .big-cta{margin-top:18px;padding:18px 22px;background:linear-gradient(135deg,var(--teal),#0a3f3a);border-radius:12px;color:#fff}
+  .big-cta-h{font-size:13.5px;font-weight:800;margin-bottom:6px}
+  .big-cta-sub{font-size:12px;opacity:.85;line-height:1.6;margin-bottom:12px}
+  .big-cta-btn{background:#fff;color:var(--teal);border:0;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+
+  .mock-tag{display:inline-block;background:#0d4f4a;color:#fff;font-size:10px;font-weight:800;padding:4px 11px;border-radius:99px;letter-spacing:.05em;text-transform:uppercase}
+
+  .panel-link{display:block;padding:10px 14px;background:var(--peach-soft);border:1px solid var(--peach);border-radius:9px;font-size:12px;color:var(--text);font-weight:700;text-align:center;text-decoration:none;margin-top:14px}
+</style>
+</head>
+<body>
+
+<div class="modal">
+  <div class="modal-head">
+    <span class="modal-head-ic">📰</span>
+    <div>
+      <div class="modal-head-title">日次グロースレポート</div>
+      <div class="modal-head-sub">昨日の振り返り + 明日のアクション ・ myaiagents.agency</div>
+    </div>
+    <span class="mock-tag" style="margin-left:auto">日次レポ モック (v1)</span>
+    <button class="modal-close">×</button>
+  </div>
+  <div class="modal-body">
+
+    <!-- 日付 hero -->
+    <div class="date-hero">
+      <span class="date-hero-ic">📅</span>
+      <div class="date-hero-meta">
+        <div class="date-hero-lbl">本日のレポート</div>
+        <div class="date-hero-d">2026-05-25 (月)</div>
+        <div class="date-hero-sub">昨日 (5/24 日) の振り返り ・ 直近 7 日のトレンド ・ 明日 (5/26 火) の計画</div>
+      </div>
+      <button class="date-hero-prev">◀ 前日のレポート</button>
+    </div>
+
+    <!-- AI 所見 (= 昨日 1 日について) -->
+    <div class="ai-commentary">
+      <div class="ai-commentary-ic">🤖</div>
+      <div class="ai-commentary-bd">
+        <div class="ai-commentary-lbl">昨日の振り返り (= AI の所見)</div>
+        <div class="ai-commentary-tx">
+          昨日 (5/24 日) は <b>PV 77 (前日比 +1%)</b> ・ <b>セッション 17 (-19%)</b>。
+          土日に Referral 経由でリバウンドした流れが終息、 月曜は通常モードに戻りつつあります。
+          <b>直帰率 47%</b> は前週同曜日 (38%) よりやや悪化、 Direct 流入が短時間で離脱した影響。
+          特筆すべき施策ヒット / 失敗イベントはなし。
+        </div>
+      </div>
+    </div>
+
+    <!-- 昨日数字 4 カード -->
+    <div class="yest-grid">
+      <div class="yest-card">
+        <div class="yest-lbl">PV (5/24)</div>
+        <div class="yest-val">77</div>
+        <div class="yest-delta">
+          <div><span class="up">↑ +1%</span> 前日 (76)</div>
+          <div><span class="down">▼ -7%</span> 前週同曜日 (83)</div>
+        </div>
+      </div>
+      <div class="yest-card">
+        <div class="yest-lbl">セッション (5/24)</div>
+        <div class="yest-val">17</div>
+        <div class="yest-delta">
+          <div><span class="down">▼ -19%</span> 前日 (21)</div>
+          <div><span class="flat">→ 横ばい</span> 前週同曜日 (18)</div>
+        </div>
+      </div>
+      <div class="yest-card warn">
+        <div class="yest-lbl">⚠ 直帰率 (5/24)</div>
+        <div class="yest-val warn">47.1%</div>
+        <div class="yest-delta">
+          <div><span class="down">▲ +14pt</span> 前日 (33%)</div>
+          <div><span class="down">▲ +9pt</span> 前週 (38%)</div>
+        </div>
+      </div>
+      <div class="yest-card danger">
+        <div class="yest-lbl">🔴 リード獲得 (5/24)</div>
+        <div class="yest-val danger">0</div>
+        <div class="yest-delta">
+          <div><span class="flat">Goal 未測定</span></div>
+          <div style="font-size:10.5px;color:var(--text3);font-weight:600;margin-top:4px">CVR を計測できていません</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- セクション 2: 効いた施策 -->
+    <div class="sec">
+      <div class="sec-h"><span class="sec-h-ic">🟢</span> 効いた施策 (直近 24-72h)</div>
+      <div class="sec-body">
+        <ul>
+          <li><b>Referral 流入の継続:</b> 土曜の Referral ピーク (98 セッション) が日曜にも残り、 週末 2 日で全 site セッションの 31% に貢献。 5/23 のニュースレター掲載が起点と推定。</li>
+          <li><b>Direct 流入の安定:</b> Direct セッションは前週同曜日比 ほぼ横ばい (98 vs 102) で、 ブランド認知層は維持。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- セクション 3: 詰まった箇所 -->
+    <div class="sec">
+      <div class="sec-h"><span class="sec-h-ic">🔴</span> 詰まった箇所</div>
+      <div class="sec-body">
+        <ul>
+          <li><b>直帰率 47% (前日比 +14pt 悪化):</b> 月曜の流入は Direct 中心だが、 ヘッドコピーと意図がずれている可能性。 → LP FV テキストの A/B 検証が必要。</li>
+          <li><b>Organic Search ゼロ:</b> SEO 流入が継続的にゼロ。 Search Console は接続済だが、 indexed 状態 / クエリ抽出が未確認。</li>
+          <li><b>CVR 計測不能:</b> GA4 で「無料登録クリック」 が Event 登録されておらず、 リード獲得 = 0 件で計測されている。 実際の登録は別途追わないと数字に出ない。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- セクション 4: 明日のグロースアクション (タスク化 button 付き) -->
+    <div class="sec">
+      <div class="sec-h"><span class="sec-h-ic">🎯</span> 明日 (5/26) のグロースアクション</div>
+      <div class="sec-body">
+        <div class="action-item">
+          <span class="action-pri">🔴</span>
+          <div>
+            <div class="action-tx">A → GA4 Goal 設定 (CVR 計測解禁)</div>
+            <div class="action-tx-sub">所要 30 分 ・ 担当 📊 アナリスト ・ 計測なき施策判断は砂上の城</div>
+          </div>
+          <button class="action-btn">+ タスクに追加</button>
+        </div>
+        <div class="action-item">
+          <span class="action-pri">🟠</span>
+          <div>
+            <div class="action-tx">B → LP Hero コピー改稿 (直帰率 47% → 35%)</div>
+            <div class="action-tx-sub">所要 60 分 ・ 担当 ✍️ ライター ・ Direct 98 セッションが全員 1 ページで離脱</div>
+          </div>
+          <button class="action-btn">+ タスクに追加</button>
+        </div>
+        <div class="action-item">
+          <span class="action-pri">🟡</span>
+          <div>
+            <div class="action-tx">C → Referral 流入元を特定 (上位 3 ソース)</div>
+            <div class="action-tx-sub">所要 90 分 ・ 担当 📊 アナリスト ・ 唯一「効いてる」 チャネルを倍増させる</div>
+          </div>
+          <button class="action-btn">+ タスクに追加</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- セクション 5: 中期トレンド (7 日 chart で可視化) -->
+    <div class="sec">
+      <div class="sec-h"><span class="sec-h-ic">📈</span> 中期トレンド (直近 7 日)</div>
+      <div class="chart-wrap" style="margin:0 0 12px">
+        <div class="chart-h">
+          <div class="chart-ti">📊 過去 7 日の日次 PV</div>
+          <div class="chart-sub">日平均 54 PV ・ 週末ピーク型</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-day">5/18 (月)</div>
+          <div class="bar-track"><div style="width:100%"></div></div>
+          <div class="bar-val">83 PV</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-day">5/19 (火)</div>
+          <div class="bar-track"><div style="width:36%"></div></div>
+          <div class="bar-val">30 PV</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-day">5/20 (水)</div>
+          <div class="bar-track"><div style="width:40%"></div></div>
+          <div class="bar-val">33 PV</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-day">5/21 (木)</div>
+          <div class="bar-track"><div style="width:46%"></div></div>
+          <div class="bar-val">38 PV</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-day">5/22 (金)</div>
+          <div class="bar-track"><div style="width:49%"></div></div>
+          <div class="bar-val">41 PV</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-day">5/23 (土)</div>
+          <div class="bar-track"><div style="width:92%"></div></div>
+          <div class="bar-val">76 PV</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-day today">5/24 (日) 昨日</div>
+          <div class="bar-track"><div class="today" style="width:93%"></div></div>
+          <div class="bar-val">77 PV</div>
+        </div>
+      </div>
+      <div class="sec-body">
+        週初 (月) <b>83 PV</b> をピークに 火〜木は低迷、 週末 (土日) に Referral 起点でリバウンド。
+        <b>Referral 依存の波型パターン</b> が継続しており、 持続的成長のためには <b>Organic Search</b>
+        チャネルの立ち上げが不可欠。 SEO コンテンツへの投資を <b>Week 2</b> から開始しないと
+        月間 10,000 PV 目標達成は厳しい。
+      </div>
+    </div>
+
+    <!-- 大 CTA: 明日のアクション 3 件をまとめてタスク化 -->
+    <div class="big-cta">
+      <div class="big-cta-h">🤖 明日のアクション 3 件を一気にタスク化</div>
+      <div class="big-cta-sub">
+        上の A / B / C を、 そのまま今週のタスクリストに追加します。 担当 (アナリスト / ライター 等) も
+        AI が自動アサイン。 「やって」 と返事した瞬間に AI チームが着手します。
+      </div>
+      <button class="big-cta-btn">▶ 3 件をタスク化して AI チームに任せる</button>
+    </div>
+
+    <!-- 数字分析へのリンク -->
+    <a href="/mock-numbers-panel.html" class="panel-link">
+      📊 「全体の数字 + 月間目標との距離」 は 数字分析 で →
+    </a>
+
+  </div>
+</div>
+
+</body>
+</html>

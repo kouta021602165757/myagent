@@ -10793,7 +10793,19 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
                  && ['edit_artifact','create_artifact','replace_text'].indexOf(t.name) >= 0)
         .map(t => t.filename))
     : null;
-  let body = content ? _md(content, { isStreaming, editingFnames: _editingFnames }) : '';
+  // Option B: note_id がある AI msg は、 markdown 本文に書かれた artifact 参照
+  // (`[title](/generated/artifact-*.html)` や `![alt](...)`) を **plain link** に
+  // 置換してから _md に渡す。 これで _renderArtifactCard が呼ばれず、 大きい
+  // artifact カードがレンダリングされない (= ノートピル 1 つに集約)。
+  let _contentForRender = content;
+  if(!isU && raw && raw.note_id && typeof content === 'string'){
+    _contentForRender = content
+      // ![alt](/generated/artifact-*.html...) → 削除 (画像形式は完全に消す)
+      .replace(/!\[[^\]]*\]\([^)]*\/generated\/artifact-[a-zA-Z0-9_-]+\.html[^)]*\)/g, '')
+      // [text](/generated/artifact-*.html...) → text のみ残す (card 化阻止)
+      .replace(/\[([^\]]+)\]\(\/generated\/artifact-[a-zA-Z0-9_-]+\.html[^)]*\)/g, '$1');
+  }
+  let body = _contentForRender ? _md(_contentForRender, { isStreaming, editingFnames: _editingFnames }) : '';
   if(cites.length) body = _linkInlineCitations(body, cites);
   const tlogHtml = (!isU && tool_log) ? _renderToolLog(tool_log) : '';
   // ── Failure recovery chips ──────────────────────────────────────────
@@ -10876,9 +10888,14 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   // 試行錯誤が早い、というユーザー判断。差し替え変数だけ残す (下流参照)。
   const approvalHTML = '';
   const citesHtml = cites.length ? _renderCitations(cites) : '';
-  // Artifact cards for any /generated/artifact-*.html the AI touched via a
-  // tool (ext_open_url etc.) but didn't write as a [title](url) link itself.
-  const artifactCards = !isU ? _artifactCardsFromToolLog(tool_log, content, { isStreaming, editingFnames: _editingFnames }) : '';
+  // Option B: note_id がある AI msg は artifact card を出さない。
+  // 同じ成果物が「artifact カード + ノートピル」 の 2 ヶ所に出る重複を解消、
+  // ノートピル 1 つに集約 → click でメモ帳 modal が開く設計。
+  // tool_log 由来カードも note_id があれば抑制 (= 同じ artifact が note に紐づく)。
+  const _hasNoteId = !!(raw && raw.note_id);
+  const artifactCards = (!isU && !_hasNoteId)
+    ? _artifactCardsFromToolLog(tool_log, content, { isStreaming, editingFnames: _editingFnames })
+    : '';
   // Edit-failure banner — surface a failed create_artifact / edit_artifact
   // so the user sees what happened even when the AI's reply text says it
   // succeeded ("修正します！" but the tool actually returned error).
@@ -11084,14 +11101,20 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
                   : raw.note_type === 'analysis' ? L('分析','Analysis')
                   : raw.note_type === 'pdf' ? 'PDF'
                   : L('ノート','Note');
+    // モック (mock-option-b.html) と合わせて: full-width + 濃い lime グラデ + shadow
+    // メタ行 (種別ラベル / 「HTML プレビュー付き」) を上に置いて目立たせる
+    var _hasPreview = !!(raw.note_preview_url || /\/generated\/artifact-/.test(String(raw.content||'')));
+    var _previewLabel = _hasPreview ? ' ・ HTML プレビュー付き' : '';
     notePillHTML = '<div class="note-pill" onclick="openNotesPanel(\''+esc(ag.id||'')+'\',\''+esc(raw.note_id)+'\')" '
-      + 'style="display:inline-flex;align-items:center;gap:8px;margin-top:9px;background:linear-gradient(135deg,rgba(192,255,92,.10),rgba(192,255,92,.16));border:1px solid rgba(192,255,92,.45);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;max-width:fit-content" '
-      + 'onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 10px rgba(192,255,92,.18)\'" '
-      + 'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
-      + '<span style="font-size:14px">'+_typeIcon+'</span>'
-      + '<span style="font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--peach-dark);text-transform:uppercase">'+esc(_typeLbl)+'</span>'
-      + '<span style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(raw.note_title)+'</span>'
-      + '<span style="font-size:10.5px;color:var(--text3);font-weight:600">→ '+L('開く','Open')+'</span>'
+      + 'style="display:flex;align-items:center;gap:14px;margin-top:14px;background:linear-gradient(135deg,rgba(192,255,92,.32),rgba(192,255,92,.48));border:1.5px solid rgba(192,255,92,.85);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;width:100%;box-shadow:0 2px 6px rgba(192,255,92,.18)" '
+      + 'onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 14px rgba(192,255,92,.28)\'" '
+      + 'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(192,255,92,.18)\'">'
+      + '<span style="font-size:22px;flex-shrink:0">'+_typeIcon+'</span>'
+      + '<div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">'
+      +   '<span style="font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--peach-dark);text-transform:uppercase">'+_typeIcon+' '+esc(_typeLbl)+esc(_previewLabel)+'</span>'
+      +   '<span style="font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(raw.note_title)+'</span>'
+      + '</div>'
+      + '<span style="font-size:11.5px;color:var(--text2);font-weight:700;flex-shrink:0">'+L('開く','Open')+' →</span>'
       + '</div>';
   }
   // Slack-style hover toolbar (top-right of each message). Shown only on
@@ -19464,17 +19487,21 @@ function _notesRenderEditor(){
       + '<span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:600">' + L('最大 3 版保存','Keeps last 3') + '</span>'
       + '</div>';
   }
-  // ── Artifact preview (HTML / PDF / image) ──
+  // ── Artifact preview (HTML / PDF / image) ── iframe で default 展開 (Option B) ──
+  // メモ帳を開いた瞬間に HTML preview が見える状態 (= 「ノート = 成果物」 の集約)。
+  // モック (mock-option-b.html) と同じ視覚言語: 上部 header + iframe (60vh) + open link
   var artifactBarHTML = '';
   if(note.artifact_url){
-    artifactBarHTML = '<div style="padding:9px 18px;border-bottom:1px solid var(--wire);background:var(--cream);display:flex;align-items:center;gap:9px">'
-      + '<span style="font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.04em">🔗 ' + L('プレビュー','Preview') + '</span>'
-      + '<a href="'+esc(note.artifact_url)+'" target="_blank" rel="noopener" '
-      + 'style="font-size:11.5px;font-weight:700;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.4);padding:4px 11px;border-radius:99px;text-decoration:none;display:inline-flex;align-items:center;gap:5px" '
-      + 'onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#0a0a0e\'" '
-      + 'onmouseout="this.style.background=\'var(--peach-soft)\';this.style.color=\'var(--peach-dark)\'">'
-      + '<span>' + esc(String(note.artifact_url).split('/').pop().slice(0, 38)) + '</span>'
-      + '<span>↗</span></a>'
+    var _artFn = String(note.artifact_url).split('/').pop();
+    artifactBarHTML = '<div style="margin:14px 24px;border:1px solid var(--wire);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.04)">'
+      +   '<div style="padding:10px 16px;background:var(--cream3);border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:10px">'
+      +     '<span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">🔗 ' + L('HTML プレビュー','HTML Preview') + '</span>'
+      +     '<span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--text3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(_artFn) + '</span>'
+      +     '<a href="'+esc(note.artifact_url)+'" target="_blank" rel="noopener" '
+      +       'style="font-size:10.5px;font-weight:800;color:var(--peach-dark);text-decoration:none">' + L('新しいタブで開く','Open in new tab') + ' ↗</a>'
+      +   '</div>'
+      +   '<iframe src="'+esc(note.artifact_url)+'" loading="lazy" sandbox="allow-scripts allow-same-origin" '
+      +     'style="display:block;width:100%;height:60vh;min-height:480px;border:0;background:#fff"></iframe>'
       + '</div>';
   }
   // ── Attachments grid (images / videos / audio) ──

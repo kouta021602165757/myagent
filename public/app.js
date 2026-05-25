@@ -2794,36 +2794,50 @@ window.openDailyGrowthReportPanel = async function(siteId){
     var latestBox = document.getElementById('dailyGrowthLatest');
     var listBox = document.getElementById('dailyGrowthList');
     // ── Find the latest "report-like" artifact (HTML) for this site ──
-    // ノートが無くても artifact が存在すれば優先して iframe で embed する。
-    // メールで送られている report は create_artifact で HTML が生成されており
-    // user.artifacts に入っているはず。
-    var siteArts = (typeof _siteAllArtifacts === 'function') ? _siteAllArtifacts(siteId) : [];
-    var reportKw = /(report|レポート|dashboard|ダッシュボード|analysis|分析|funnel|ファネル|growth|グロース|kpi|daily|日次)/i;
-    var latestReportArt = siteArts.find(function(a){
-      var hay = (a.title||'') + ' ' + (a.filename||'');
-      return reportKw.test(hay);
-    }) || siteArts[0];  // どれもマッチしなければ最新 artifact を fallback
-    var artUrl = latestReportArt ? (typeof _artUrl === 'function' ? _artUrl(latestReportArt) : latestReportArt.url) : '';
+    // 検出は 2 段階:
+    //  1. ノートの content から /generated/artifact-*.html URL を直接抽出 (最優先)
+    //     (= AI が note 本文に markdown link で書いている artifact を確実に捉える)
+    //  2. me.artifacts の中から report-like なものを fallback で選択
+    var artUrl = '';
+    var latestReportArt = null;
+    // (1) まずノートを fetch して content から URL 抜き取り
+    var latest = dailies[0] || null;
+    if(latest){
+      try {
+        var rOne = await api('GET', '/api/me/notes/' + latest.id);
+        if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
+      } catch(_){}
+      var contentToScan = String(latest.content||'') + ' ' + String(latest.artifact_url||'');
+      var urlMatch = contentToScan.match(/\/generated\/artifact-[a-zA-Z0-9_-]+\.html(?:\?v=\d+)?/);
+      if(urlMatch){
+        artUrl = urlMatch[0];
+      }
+    }
+    // (2) ノートに URL 無ければ me.artifacts から拾う
+    if(!artUrl){
+      var siteArts = (typeof _siteAllArtifacts === 'function') ? _siteAllArtifacts(siteId) : [];
+      var reportKw = /(report|レポート|dashboard|ダッシュボード|analysis|分析|funnel|ファネル|growth|グロース|kpi|daily|日次)/i;
+      latestReportArt = siteArts.find(function(a){
+        var hay = (a.title||'') + ' ' + (a.filename||'');
+        return reportKw.test(hay);
+      }) || siteArts[0];
+      if(latestReportArt){
+        artUrl = (typeof _artUrl === 'function' ? _artUrl(latestReportArt) : latestReportArt.url) || '';
+      }
+    }
 
     if(dailies.length || artUrl){
-      // ノートの最新版を取得 (= 補足テキスト用)
-      var latest = dailies[0] || null;
-      if(latest){
-        try {
-          var rOne = await api('GET', '/api/me/notes/' + latest.id);
-          if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
-        } catch(_){}
-      }
       var displayTitle = (latest && latest.title)
         || (latestReportArt && (typeof _artDisplayTitle === 'function' ? _artDisplayTitle(latestReportArt) : (latestReportArt.title||'レポート')))
         || L('日次グロースレポート','Daily growth report');
       var lwhen = (latest && latest.updated_at) ? latest.updated_at.slice(0,10)
                 : (latestReportArt && latestReportArt.created_at ? latestReportArt.created_at.slice(0,10) : '');
-      // iframe で artifact HTML を embed (= ユーザー要望: メールに来る report の中身を panel に表示)
+      // iframe で artifact HTML を embed (= メイン表示, dominant view)
+      // ユーザー要望: メールに来る report の中身を panel を開いた瞬間にそのまま見せる。
       var iframeHTML = '';
       if(artUrl){
-        iframeHTML = '<div style="margin-top:12px;border:1px solid var(--wire);border-radius:10px;overflow:hidden;background:#fff">'
-          + '<iframe src="'+esc(artUrl)+'" style="display:block;width:100%;height:560px;border:0" '
+        iframeHTML = '<div style="margin:14px 0 4px;border:1px solid var(--wire);border-radius:10px;overflow:hidden;background:#fff">'
+          + '<iframe src="'+esc(artUrl)+'" style="display:block;width:100%;height:70vh;min-height:520px;border:0" '
           +   'sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe>'
           + '<div style="padding:8px 12px;background:var(--cream);border-top:1px solid var(--wire);display:flex;align-items:center;gap:10px">'
           +   '<span style="font-size:10.5px;color:var(--text3);font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 '+esc(String(artUrl).split('/').pop())+'</span>'

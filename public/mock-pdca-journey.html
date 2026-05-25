@@ -445,70 +445,86 @@
     color: var(--teal); font-weight: 700; display: flex; align-items: center; gap: 4px;
   }
 
-  /* EMBEDDED DEMO CONTROLLER (replaces AI suggestion in journey) */
+  /* EMBEDDED DEMO CONTROLLER (slim hint at top of chat) */
   .demo-embedded {
-    margin: 0 20px 12px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--teal), var(--teal-2));
-    color: #fff;
-    padding: 12px 16px;
-    display: flex; align-items: center; gap: 14px;
-    box-shadow: 0 4px 16px rgba(13, 79, 74, 0.18);
+    margin: 0 20px 10px;
+    border-radius: 10px;
+    background: #fafaf7;
+    border: 1px dashed var(--line);
+    color: var(--muted);
+    padding: 6px 12px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px;
   }
   .demo-embedded .de-icon {
-    width: 40px; height: 40px;
-    background: var(--lime);
+    font-size: 12px;
     color: var(--teal-2);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
     flex-shrink: 0;
   }
-  .demo-embedded .de-meta { flex: 1; min-width: 0; }
-  .demo-embedded .de-step {
-    font-size: 11px;
-    opacity: 0.85;
-    display: flex; gap: 8px; align-items: center;
-    margin-bottom: 3px;
+  .demo-embedded .de-meta {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 8px;
+    overflow: hidden;
   }
   .demo-embedded .de-pdca {
-    background: var(--lime); color: var(--teal-2);
-    padding: 1px 7px; border-radius: 4px;
-    font-weight: 800; font-size: 10px;
-    letter-spacing: 0.04em;
+    background: var(--lime-soft); color: var(--teal-2);
+    padding: 1px 6px; border-radius: 4px;
+    font-weight: 700; font-size: 10px;
+    flex-shrink: 0;
   }
-  .demo-embedded .de-progress { font-weight: 700; }
-  .demo-embedded .de-title { font-weight: 800; font-size: 14px; }
-  .demo-embedded .de-desc {
-    font-size: 11px;
-    opacity: 0.8;
-    margin-top: 1px;
+  .demo-embedded .de-title {
+    font-weight: 700; color: var(--text); font-size: 11px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .demo-embedded .de-desc {
+    font-size: 10px;
+    opacity: 0.7;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .de-progress { display: none; } /* hide step counter for less step-y feel */
   .demo-embedded .de-controls {
-    display: flex; gap: 6px;
+    display: flex; gap: 4px;
     flex-shrink: 0;
   }
   .demo-embedded .de-arrow {
-    width: 36px; height: 36px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 8px;
-    color: #fff;
-    font-size: 14px;
+    width: 24px; height: 24px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--text);
+    font-size: 11px;
     font-weight: 700;
   }
-  .demo-embedded .de-arrow:hover:not(:disabled) { background: rgba(255,255,255,0.25); }
-  .demo-embedded .de-arrow.primary { background: var(--lime); color: var(--teal-2); }
-  .demo-embedded .de-arrow.primary:hover:not(:disabled) { background: #d4ff7a; }
+  .demo-embedded .de-arrow:hover:not(:disabled) { background: var(--lime-soft); }
+  .demo-embedded .de-arrow.primary { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .demo-embedded .de-arrow.primary:hover:not(:disabled) { background: var(--teal-2); }
   .demo-embedded .de-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
   .demo-embedded .de-expand {
-    background: rgba(255,255,255,0.15);
-    color: #fff;
-    padding: 8px 10px;
-    border-radius: 8px;
-    font-size: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 10px;
   }
-  .demo-embedded .de-expand:hover { background: rgba(255,255,255,0.25); }
+  .demo-embedded .de-expand:hover { background: var(--lime-soft); }
+
+  /* AUTO-ADVANCE INDICATOR */
+  .auto-advance-bar {
+    margin: 6px 20px 0;
+    height: 3px;
+    background: var(--line-soft);
+    border-radius: 999px;
+    overflow: hidden;
+    display: none;
+  }
+  .auto-advance-bar.active { display: block; }
+  .auto-advance-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--lime), var(--teal));
+    width: 0%;
+    transition: width linear;
+  }
 
   /* STEPS MODAL */
   .steps-modal {
@@ -1366,8 +1382,12 @@
               <div class="av">🔭</div><div class="nm">大塚 競合</div><div class="rl">競合分析</div>
             </div>
           </div>
-          <div style="margin-top: 32px;">
+          <div style="margin-top: 32px; display:flex; flex-direction:column; align-items:center; gap:12px;">
             <button class="cta" style="background: var(--teal); color: #fff; padding: 14px 32px; border-radius: 12px; font-weight: 800;" onclick="goStep(3)">チームが揃った →</button>
+            <div style="font-size:11px; color:var(--muted);">⏳ 自動で次へ進みます...</div>
+            <div style="width:240px; height:4px; background:var(--line-soft); border-radius:999px; overflow:hidden;">
+              <div id="scene2AutoFill" style="height:100%; background:linear-gradient(90deg, var(--lime), var(--teal)); width:0%;"></div>
+            </div>
           </div>
         </div>
       </main>
@@ -1439,23 +1459,21 @@
           <!-- populated by JS -->
         </div>
 
-        <!-- EMBEDDED DEMO CONTROLLER (replaces AI suggestion in journey mode) -->
+        <!-- EMBEDDED DEMO CONTROLLER (slim hint) -->
         <div class="demo-embedded" id="demoEmbedded">
-          <div class="de-icon">🎬</div>
+          <span class="de-icon">🎬</span>
           <div class="de-meta">
-            <div class="de-step">
-              <span class="de-pdca" id="demoEmbPdca">PHASE 1 · オンボ</span>
-              <span class="de-progress" id="demoEmbProgress">Step 3 / 8</span>
-            </div>
-            <div class="de-title" id="demoEmbTitle">チャット画面が開く</div>
-            <div class="de-desc" id="demoEmbDesc">PM から挨拶 → まず Google Analytics を接続</div>
+            <span class="de-pdca" id="demoEmbPdca">PHASE 1 · オンボ</span>
+            <span class="de-title" id="demoEmbTitle">GA4 紐づけ</span>
+            <span class="de-desc" id="demoEmbDesc">PM から挨拶 → GA4 接続 → 自動で初回監査へ</span>
           </div>
           <div class="de-controls">
             <button class="de-arrow" id="demoEmbPrev" onclick="goStep(Math.max(1, curStep - 1))">←</button>
             <button class="de-arrow primary" id="demoEmbNext" onclick="goStep(Math.min(8, curStep + 1))">→</button>
-            <button class="de-expand" onclick="toggleStepsModal()">📋</button>
+            <button class="de-expand" onclick="toggleStepsModal()">全て</button>
           </div>
         </div>
+        <div class="auto-advance-bar" id="autoBar"><div class="fill" id="autoBarFill"></div></div>
 
         <!-- COMPOSER -->
         <div class="composer-wrap">
@@ -1994,6 +2012,29 @@ const PANELS = {
 
 // ============ STATE / CONTROL ============
 let curStep = 1;
+let autoAdvanceTimer = null;
+
+const AUTO_ADVANCE = {
+  2: { to: 3, delay: 3000 } // After team forms, auto-open chat
+};
+
+function scheduleAutoAdvance(n) {
+  if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+  const scene2Fill = document.getElementById('scene2AutoFill');
+  if (scene2Fill) { scene2Fill.style.transition = 'none'; scene2Fill.style.width = '0%'; }
+
+  const cfg = AUTO_ADVANCE[n];
+  if (!cfg) return;
+
+  // Show scene2 progress bar if applicable
+  if (n === 2 && scene2Fill) {
+    setTimeout(() => {
+      scene2Fill.style.transition = `width ${cfg.delay}ms linear`;
+      scene2Fill.style.width = '100%';
+    }, 50);
+  }
+  autoAdvanceTimer = setTimeout(() => { goStep(cfg.to); }, cfg.delay);
+}
 
 function renderMsgs(key) {
   const msgs = document.getElementById('msgs');
@@ -2084,12 +2125,11 @@ function goStep(n) {
     const sbCount = document.getElementById('sbCount');
     if (sbCount) sbCount.textContent = meta.taskCount + ' 件';
 
-    // populate embedded demo controller (replaces AI suggestion)
+    // populate embedded demo controller
     const demoEmb = document.getElementById('demoEmbedded');
     if (demoEmb) {
       demoEmb.style.display = 'flex';
       document.getElementById('demoEmbPdca').textContent = meta.pdca;
-      document.getElementById('demoEmbProgress').textContent = `Step ${n} / 8`;
       document.getElementById('demoEmbTitle').textContent = meta.title;
       document.getElementById('demoEmbDesc').textContent = meta.desc;
       document.getElementById('demoEmbPrev').disabled = (n === 1);
@@ -2109,6 +2149,9 @@ function goStep(n) {
     const m = document.getElementById('msgs');
     if (m) m.scrollTop = m.scrollHeight;
   }, 50);
+
+  // schedule auto-advance if configured for this step
+  scheduleAutoAdvance(n);
 }
 
 document.querySelectorAll('.stepbtn').forEach(b => {

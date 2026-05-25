@@ -655,6 +655,173 @@
   .tm-card .rl { font-size: 10px; color: var(--muted); }
   .tm-card.pm { border-color: var(--lime); background: var(--lime-soft); }
 
+  .industry-banner {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 18px;
+    max-width: 480px;
+    width: 100%;
+  }
+  .industry-banner .ib-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .industry-banner .ib-lbl { color: var(--muted); font-weight: 600; }
+  .industry-banner .ib-val { font-weight: 700; }
+  .industry-banner .ib-highlight {
+    background: var(--lime-soft);
+    color: var(--teal-2);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+
+  /* COMPETITOR (audit panel section) */
+  .compet-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: #fafaf7;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .compet-row .dom { font-weight: 700; flex-shrink: 0; min-width: 140px; }
+  .compet-row .kws { color: var(--muted); flex: 1; font-size: 11px; }
+  .compet-row .gap {
+    background: #fef2f2; color: #dc2626;
+    padding: 2px 8px; border-radius: 5px;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .compet-gap-kw {
+    display: inline-block;
+    background: #fef2f2; color: #dc2626;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 3px 4px 0 0;
+  }
+
+  /* CONCRETE ACTION (plan panel) */
+  .action-row {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .action-row .day {
+    background: var(--teal); color: #fff;
+    padding: 4px 8px; border-radius: 6px;
+    font-size: 10px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .action-row .desc { font-size: 13px; line-height: 1.5; flex: 1; }
+  .action-row .impact {
+    color: var(--teal-2);
+    font-weight: 700;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  /* ARTIFACT CARD (tasks panel - 成果物) */
+  .deliv-section {
+    margin-top: 24px;
+    background: var(--lime-soft);
+    border: 1px solid var(--lime-soft-2);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .deliv-section .dt-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px;
+  }
+  .deliv-section .dt-title {
+    font-weight: 800; font-size: 14px;
+    color: var(--teal-2);
+  }
+  .deliv-section .dt-count {
+    background: var(--teal); color: var(--lime);
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+  }
+  .artifact-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .artifact-card .ac-top {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .artifact-card .ac-ic {
+    width: 32px; height: 32px;
+    background: var(--lime-soft);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .artifact-card .ac-meta { flex: 1; min-width: 0; }
+  .artifact-card .ac-title { font-weight: 700; font-size: 13px; }
+  .artifact-card .ac-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .artifact-card .ac-status {
+    background: var(--lime-soft); color: var(--teal-2);
+    padding: 3px 8px; border-radius: 5px;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .artifact-card .ac-actions {
+    display: flex; gap: 6px;
+    margin-top: 8px;
+  }
+  .artifact-card .ac-btn {
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .artifact-card .ac-btn.primary {
+    background: var(--teal); color: #fff; border-color: var(--teal);
+  }
+  .artifact-card .ac-btn:hover { background: #f3f4f6; }
+  .artifact-card .ac-btn.primary:hover { background: var(--teal-2); }
+
+  /* AI EXECUTED (daily panel) */
+  .ai-exec-item {
+    background: #fff;
+    border: 1px solid var(--lime-soft-2);
+    border-left: 3px solid var(--lime);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px;
+  }
+  .ai-exec-item .check {
+    width: 18px; height: 18px;
+    background: var(--teal); color: var(--lime);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .ai-exec-item .impact-pill {
+    margin-left: auto;
+    background: var(--lime-soft); color: var(--teal-2);
+    padding: 2px 8px; border-radius: 5px;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
   /* ============================
      PANEL OVERLAY (4-9)
      ============================ */
@@ -959,7 +1126,7 @@
     <button class="stepbtn" data-step="3"><span class="num">3</span> チャット開始</button>
     <button class="stepbtn" data-step="4"><span class="num">4</span> 現状分析</button>
     <button class="stepbtn" data-step="5"><span class="num">5</span> 計画</button>
-    <button class="stepbtn" data-step="6"><span class="num">6</span> タスク抽出 & 実行</button>
+    <button class="stepbtn" data-step="6"><span class="num">6</span> タスク / 実行</button>
     <button class="stepbtn" data-step="7"><span class="num">7</span> 検証 (日次)</button>
     <button class="stepbtn" data-step="8"><span class="num">8</span> 検証 (全体)</button>
   </div>
@@ -1037,24 +1204,38 @@
 
       <main class="main">
         <div class="forming">
-          <h2>🤖 AI チームを組成中…</h2>
-          <p class="lead">サイトの内容を解析して、ぴったりのメンバーを選んでます</p>
+          <div class="industry-banner">
+            <div class="ib-row">
+              <span class="ib-lbl">🔍 サイト解析</span>
+              <span class="ib-val">fukuyama-note.com</span>
+            </div>
+            <div class="ib-row">
+              <span class="ib-lbl">📌 業種判定</span>
+              <span class="ib-val ib-highlight">ローカルメディア（観光・移住・グルメ）</span>
+            </div>
+            <div class="ib-row">
+              <span class="ib-lbl">📊 規模</span>
+              <span class="ib-val">中規模ブログ（記事数 〜100）</span>
+            </div>
+          </div>
+          <h2 style="margin-top:24px;">🤖 業種に特化したチームを組成中…</h2>
+          <p class="lead">業種別の勝ちパターン KB を持ったメンバーを選定</p>
           <div class="progress"><div class="bar"></div></div>
           <div class="team-grid">
             <div class="tm-card pm">
               <div class="av">👔</div><div class="nm">佐藤 健</div><div class="rl">PM</div>
             </div>
             <div class="tm-card">
-              <div class="av">🔍</div><div class="nm">田中 SEO</div><div class="rl">SEO 専門</div>
+              <div class="av">🔍</div><div class="nm">田中 SEO</div><div class="rl">ローカル SEO</div>
             </div>
             <div class="tm-card">
-              <div class="av">✍️</div><div class="nm">鈴木 ライト</div><div class="rl">コンテンツ</div>
+              <div class="av">✍️</div><div class="nm">鈴木 ライト</div><div class="rl">地域記事</div>
             </div>
             <div class="tm-card">
-              <div class="av">📱</div><div class="nm">山田 SNS</div><div class="rl">SNS 運用</div>
+              <div class="av">📱</div><div class="nm">山田 SNS</div><div class="rl">観光系 SNS</div>
             </div>
             <div class="tm-card">
-              <div class="av">📊</div><div class="nm">高橋 解析</div><div class="rl">アナリスト</div>
+              <div class="av">🔭</div><div class="nm">大塚 競合</div><div class="rl">競合分析</div>
             </div>
           </div>
           <div style="margin-top: 32px;">
@@ -1219,9 +1400,9 @@ const STEPS = {
     taskCount: 3
   },
   6: {
-    pdca: 'D · タスク抽出 & 実行',
-    title: '📋 タスク抽出 & 実行',
-    desc: '— 計画からタスク自動生成、チームにアサイン、chat で進捗',
+    pdca: 'D · タスク / 実行',
+    title: '📋 タスク + 成果物（AI 完成品）',
+    desc: '— タスク自動生成 → AI が記事下書き / SNS 投稿を完成 → 承認で公開',
     scene: 'sceneApp',
     messages: 'exec',
     panel: 'tasks',
@@ -1267,9 +1448,10 @@ const MSG_TEMPLATES = {
   ],
   exec: [
     { who:'user', name:'あなた', tm:'09:30', txt:'OK 進めて'},
-    { who:'bot', name:'fukuyama-note.com', tm:'09:31', txt:'タスクを 8 件生成しました 📋 メンバーへの割り振りも完了。SEO の田中さんから順次着手します。', threadCount: 3 },
-    { who:'user', name:'あなた', tm:'10:15', txt:'1 個目の記事どう？'},
-    { who:'bot', name:'fukuyama-note.com', tm:'10:16', txt:'田中が下書き完了しました ✍️ レビューお願いします。', threadCount: 1 }
+    { who:'bot', name:'fukuyama-note.com', tm:'09:31', txt:'タスクを 8 件生成 📋 並行して AI で記事下書き・SNS 投稿の作成も開始します。', threadCount: 3 },
+    { who:'bot', name:'fukuyama-note.com', tm:'14:20', txt:'✅ 鈴木が記事下書き完成「初心者向け福山観光ガイド」3,200 字。WordPress 下書きに保存しました。<br>✅ 山田が X 投稿 3 本作成完了。20:00 投稿で予約済み。<br>右の 📋 パネル → 成果物セクションで確認 → 公開ボタンで反映できます。', threadCount: 2 },
+    { who:'user', name:'あなた', tm:'15:00', txt:'記事プレビュー見たい'},
+    { who:'bot', name:'fukuyama-note.com', tm:'15:00', txt:'📋 パネル下部の「📦 AI が完成させた成果物」から「プレビュー」をクリックしてください 👀', threadCount: 1 }
   ],
   daily: [
     { who:'bot', name:'fukuyama-note.com', tm:'08:00', txt:'🌅 おはようございます！昨日のレポートをお届けします（📰 パネル参照）<br>昨日のセッション 156（▲ +12%）。「SEO 初心者ガイド」が当たってます 🎉', threadCount: 1 }
@@ -1312,8 +1494,43 @@ const PANELS = {
       <div class="audit-insight">
         <strong>💡 AI 所感：</strong>SEO が機能している良型サイト。ただし SNS 流入が 3% と未開拓なので、ここを伸ばすのが一番ラク。既存記事のリライトで Organic 維持しつつ、X 運用を始めるのが ROI 高い。
       </div>
-      <div class="audit-insight">
-        <strong>🎯 提案：</strong>3 ヶ月で月間 3,000 セッションを目標に、SEO（既存資産強化）と SNS（新規流入）の 2 軸戦略を組みましょう。
+
+      <h4 style="font-size:13px; font-weight:800; margin: 20px 0 8px; display:flex; align-items:center; gap:6px;">
+        <span>🔭 競合分析</span>
+        <span style="font-size:10px; color:var(--muted); font-weight:600;">— 業種特化 KB + Search Console 推定</span>
+      </h4>
+
+      <div class="compet-row">
+        <span class="dom">tomonoura-info.com</span>
+        <span class="kws">「鞆の浦 観光」「鞆の浦 グルメ」「福山 観光 子連れ」で上位</span>
+        <span class="gap">35 KW</span>
+      </div>
+      <div class="compet-row">
+        <span class="dom">hiroshima-trip.jp</span>
+        <span class="kws">「広島 観光 1 泊」「福山 ランチ」で SERP 上位</span>
+        <span class="gap">22 KW</span>
+      </div>
+      <div class="compet-row">
+        <span class="dom">migrate-fukuyama.com</span>
+        <span class="kws">「福山 移住 子育て」「福山 住みやすさ」で寡占</span>
+        <span class="gap">18 KW</span>
+      </div>
+
+      <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:14px; margin-top:12px;">
+        <div style="font-size:13px; font-weight:800; color:#991b1b; margin-bottom:6px;">⚠️ あなたが未対応のキーワード（競合が当ててる玉）</div>
+        <div>
+          <span class="compet-gap-kw">福山 観光 子連れ</span>
+          <span class="compet-gap-kw">鞆の浦 グルメ</span>
+          <span class="compet-gap-kw">福山 ランチ</span>
+          <span class="compet-gap-kw">福山 移住 子育て</span>
+          <span class="compet-gap-kw">福山 住みやすさ</span>
+          <span class="compet-gap-kw">+ 27 件</span>
+        </div>
+        <div style="font-size:11px; color:#7f1d1d; margin-top:8px;">月間検索数合計 約 <strong>18,400</strong>。3 ヶ月で半分カバーすれば流入 +9,200/月 の可能性。</div>
+      </div>
+
+      <div class="audit-insight" style="margin-top:14px;">
+        <strong>🎯 提案：</strong>3 ヶ月で月間 3,000 セッションを目標に、SEO（既存資産強化）・競合キーワード捕捉・SNS の 3 軸戦略を組みましょう。
       </div>
       <button class="daily-cta" onclick="goStep(5)">この監査をもとに計画を立てる →</button>
     </div>
@@ -1339,18 +1556,53 @@ const PANELS = {
       </div>
       <div class="plan-roadmap">
         <h4>8 週ロードマップ</h4>
-        <div class="road-item"><div class="wk">Week 1-2</div><div class="desc">技術 SEO 整備（タイトル / メタ / モバイル対応 / Core Web Vitals）</div></div>
-        <div class="road-item"><div class="wk">Week 3-4</div><div class="desc">既存記事リライト 10 本 + 新規記事 4 本</div></div>
-        <div class="road-item"><div class="wk">Week 5-6</div><div class="desc">SNS 立ち上げ（X 運用開始、ブランドガイド作成）</div></div>
+        <div class="road-item"><div class="wk">Week 1-2</div><div class="desc">技術 SEO 整備 + 競合未対応キーワード 5 件記事化</div></div>
+        <div class="road-item"><div class="wk">Week 3-4</div><div class="desc">既存記事リライト 10 本 + 新規記事 4 本（地域グルメ・観光中心）</div></div>
+        <div class="road-item"><div class="wk">Week 5-6</div><div class="desc">SNS 立ち上げ（X 運用開始、観光系ハッシュタグ最適化）</div></div>
         <div class="road-item"><div class="wk">Week 7-8</div><div class="desc">勝ちパターン横展開 + 内部リンク強化</div></div>
       </div>
+
+      <h4 style="font-size:13px; font-weight:800; margin: 22px 0 10px; display:flex; align-items:center; gap:6px;">
+        <span>⚡ 今週の具体アクション</span>
+        <span style="font-size:10px; color:var(--muted); font-weight:600;">— 抽象 KPI ではなく明日できること</span>
+      </h4>
+
+      <div class="action-row">
+        <span class="day">明日</span>
+        <div>
+          <div class="desc">「鞆の浦 観光」記事に H2 を 5 個追加し、内部リンクを既存 3 記事から張る</div>
+          <div class="impact">📈 推定インパクト: CTR +2.1pt / 月間セッション +180</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <span class="day">明後日</span>
+        <div>
+          <div class="desc">競合 tomonoura-info が当ててる「福山 観光 子連れ」記事を新規執筆（3,000 字想定）</div>
+          <div class="impact">📈 推定インパクト: 月間検索 4,800 → 想定流入 +480/月</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <span class="day">今週</span>
+        <div>
+          <div class="desc">既存 5 記事のタイトル最適化（業種特化テンプレ「○○の始め方」「初心者向け○○」適用）</div>
+          <div class="impact">📈 推定インパクト: CTR 平均 +1.8pt / 月間セッション +220</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <span class="day">今週</span>
+        <div>
+          <div class="desc">X アカウント立ち上げ + 観光系ハッシュタグで投稿開始（週 3 本）</div>
+          <div class="impact">📈 推定インパクト: SNS 流入 3% → 8% / 月間 +180</div>
+        </div>
+      </div>
+
       <button class="daily-cta" onclick="goStep(6)">この計画でタスクに展開 →</button>
     </div>
   `,
   tasks: `
     <div class="panel-head">
       <span class="ic">📋</span>
-      <span class="ttl">タスク</span>
+      <span class="ttl">タスク / 実行</span>
       <span class="sub">Week 1 / 8</span>
       <button class="close" onclick="closePanel()">✕</button>
     </div>
@@ -1359,14 +1611,84 @@ const PANELS = {
         <h4>🔥 今日のタスク</h4>
         <div class="task-row done"><div class="ck"></div><div class="txt">サイト構造の整理（カテゴリ統合）</div><div class="assignee">🔍 田中</div></div>
         <div class="task-row"><div class="ck"></div><div class="txt">タイトル・メタディスクリプション最適化</div><div class="assignee">🔍 田中</div></div>
-        <div class="task-row"><div class="ck"></div><div class="txt">「初心者向け SEO ガイド」記事下書き</div><div class="assignee">✍️ 鈴木</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">「初心者向け福山観光ガイド」記事執筆</div><div class="assignee">✍️ 鈴木</div></div>
         <h4>📆 今週</h4>
-        <div class="task-row"><div class="ck"></div><div class="txt">モバイル応答性チェック・Core Web Vitals</div><div class="assignee">🔍 田中</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">競合「鞆の浦観光」未対応キーワード対策</div><div class="assignee">🔭 大塚</div></div>
         <div class="task-row"><div class="ck"></div><div class="txt">既存記事 5 本のリライト</div><div class="assignee">✍️ 鈴木</div></div>
-        <div class="task-row"><div class="ck"></div><div class="txt">X アカウント立ち上げ準備（プロフィール / ブランドガイド）</div><div class="assignee">📱 山田</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">X 投稿 3 本（観光・グルメ系）</div><div class="assignee">📱 山田</div></div>
         <h4>🔜 来週以降</h4>
         <div class="task-row"><div class="ck"></div><div class="txt">7 カテゴリのキーワード調査</div><div class="assignee">🔍 田中</div></div>
         <div class="task-row"><div class="ck"></div><div class="txt">月次振り返り会（自動レポート生成）</div><div class="assignee">📊 高橋</div></div>
+      </div>
+
+      <div class="deliv-section">
+        <div class="dt-head">
+          <span style="font-size:18px;">📦</span>
+          <span class="dt-title">AI が完成させた成果物</span>
+          <span class="dt-count">承認待ち 4</span>
+        </div>
+        <p style="font-size:11px; color:var(--muted); margin-bottom:10px;">あなたは中身を確認して「公開する」を押すだけ。AI が WordPress / X に直接反映します。</p>
+
+        <div class="artifact-card">
+          <div class="ac-top">
+            <div class="ac-ic">📝</div>
+            <div class="ac-meta">
+              <div class="ac-title">記事下書き：「初心者向け福山観光ガイド」</div>
+              <div class="ac-sub">3,200 文字 / 内部リンク 6 本 / 画像 4 枚提案済み</div>
+            </div>
+            <div class="ac-status">WP 下書き保存済</div>
+          </div>
+          <div class="ac-actions">
+            <button class="ac-btn">プレビュー</button>
+            <button class="ac-btn">編集</button>
+            <button class="ac-btn primary">公開する</button>
+          </div>
+        </div>
+
+        <div class="artifact-card">
+          <div class="ac-top">
+            <div class="ac-ic">📱</div>
+            <div class="ac-meta">
+              <div class="ac-title">X 投稿 3 本（今週）</div>
+              <div class="ac-sub">20:00 投稿予約 / ハッシュタグ・画像付き</div>
+            </div>
+            <div class="ac-status">予約済</div>
+          </div>
+          <div class="ac-actions">
+            <button class="ac-btn">3 本を確認</button>
+            <button class="ac-btn primary">承認して送信</button>
+          </div>
+        </div>
+
+        <div class="artifact-card">
+          <div class="ac-top">
+            <div class="ac-ic">🔗</div>
+            <div class="ac-meta">
+              <div class="ac-title">内部リンク追加：5 箇所</div>
+              <div class="ac-sub">既存記事から新記事への導線 / SEO 強化目的</div>
+            </div>
+            <div class="ac-status">差分確認待ち</div>
+          </div>
+          <div class="ac-actions">
+            <button class="ac-btn">差分を見る</button>
+            <button class="ac-btn primary">5 件すべて適用</button>
+          </div>
+        </div>
+
+        <div class="artifact-card">
+          <div class="ac-top">
+            <div class="ac-ic">📋</div>
+            <div class="ac-meta">
+              <div class="ac-title">タイトル・メタ最適化提案：10 記事分</div>
+              <div class="ac-sub">CTR 予測 +1.8pt 〜 +3.2pt / 競合上位タイトル分析済み</div>
+            </div>
+            <div class="ac-status">差分確認待ち</div>
+          </div>
+          <div class="ac-actions">
+            <button class="ac-btn">10 件をレビュー</button>
+            <button class="ac-btn primary">一括適用</button>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -1396,21 +1718,29 @@ const PANELS = {
         <div class="daily-cell"><div class="lbl">直帰</div><div class="v">58%</div></div>
       </div>
       <div class="daily-section">
+        <h4>⚡ 昨日 AI が実行したこと</h4>
+        <div class="ai-exec-item"><div class="check">✓</div><div>記事 1 本公開：「初心者向け福山観光ガイド」</div><div class="impact-pill">流入 +52</div></div>
+        <div class="ai-exec-item"><div class="check">✓</div><div>X 投稿 3 本送信（20:00, 21:30, 22:00）</div><div class="impact-pill">流入 +18</div></div>
+        <div class="ai-exec-item"><div class="check">✓</div><div>内部リンク 5 箇所追加（既存 → 新記事）</div><div class="impact-pill">CTR +1.2pt</div></div>
+        <div class="ai-exec-item"><div class="check">✓</div><div>5 記事のタイトル・メタ最適化を反映</div><div class="impact-pill">CTR +1.8pt</div></div>
+      </div>
+      <div class="daily-section">
         <h4>✅ 昨日効いた施策</h4>
-        <div class="item">📈 「SEO 初心者ガイド」記事公開 → 流入の 42% を新記事が獲得</div>
-        <div class="item">🔍 タイトル最適化 5 記事 → CTR が平均 +1.8 pt</div>
+        <div class="item">📈 新記事「初心者向け福山観光ガイド」が流入の 33% を獲得（競合未対応 KW を捕捉）</div>
+        <div class="item">🔍 タイトル最適化で CTR 平均 +1.8 pt（業種特化テンプレが効いた）</div>
       </div>
       <div class="daily-section">
         <h4>⚠️ 詰まったポイント</h4>
-        <div class="item">📱 X 投稿の朝 7 時帯は反応薄（インプレッション 120）</div>
+        <div class="item">📱 X 投稿の 20:00 帯はまだリーチ弱い（フォロワー基盤の問題、3 週は継続テスト）</div>
+        <div class="item">🔭 競合「migrate-fukuyama」が新記事追加 — 「福山 移住 補助金」キーワードで先行された</div>
       </div>
       <div class="daily-section">
-        <h4>🎯 明日のアクション</h4>
-        <div class="item">1. 「SEO ガイド」と同フォーマットで別記事を量産</div>
-        <div class="item">2. X 投稿を 20 時帯に変更してテスト</div>
-        <div class="item">3. CTR が上がった 5 記事の内部リンクを強化</div>
+        <h4>🎯 明日のアクション（AI 提案）</h4>
+        <div class="item">1. 「福山 移住 補助金」記事の対抗執筆（鈴木が下書き準備済 → 成果物で確認）</div>
+        <div class="item">2. 当たった「初心者向け○○」テンプレで類似記事 2 本を量産</div>
+        <div class="item">3. 流入が増えた 3 記事へ更なる内部リンク強化</div>
       </div>
-      <button class="daily-cta">明日のアクション 3 件をタスク化</button>
+      <button class="daily-cta">明日のアクション 3 件をタスク化 + AI に下書き作成依頼</button>
     </div>
   `,
   numbers: `

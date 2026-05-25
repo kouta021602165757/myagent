@@ -457,11 +457,12 @@ input,textarea{font-family:var(--sans);}
 .balance-val.warn{color:var(--amber);}
 .balance-sub{font-size:10px;color:var(--fog);}
 .charge-btn{
-  width:100%;padding:7px;border-radius:8px;font-size:12px;font-weight:800;
-  background:var(--peach);color:#0a0a0e;
-  box-shadow:0 0 10px var(--volt-glow);margin-top:8px;
+  width:100%;padding:8px;border-radius:8px;font-size:12px;font-weight:700;
+  background:var(--teal);color:#fff;
+  box-shadow:0 4px 10px rgba(13,79,74,.20);margin-top:8px;
+  transition:transform .12s, box-shadow .12s, background .12s;
 }
-.charge-btn:hover{box-shadow:0 0 18px var(--volt-glow);}
+.charge-btn:hover{background:#0a3f3a;transform:translateY(-1px);box-shadow:0 8px 18px rgba(13,79,74,.30);}
 
 .sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:var(--ink3);}
 .user-av{
@@ -4994,17 +4995,17 @@ input,textarea{font-family:var(--sans);}
   .ass-add{min-height:140px}
 }
 
-/* ── サイドバー: サイト一覧 + add-site CTA ───────────────────── */
+/* ── サイドバー: サイト一覧 + add-site CTA (LP nav-cta と統一 = teal) ──── */
 .ag-add-site{
   display:flex; align-items:center; gap:8px;
-  background:linear-gradient(135deg,var(--peach,#c0ff5c),var(--peach-dark,#a3e635));
-  color:#0a0a0e; border:0; width:calc(100% - 16px); margin:8px;
+  background:var(--teal); color:#fff;
+  border:0; width:calc(100% - 16px); margin:8px;
   padding:11px 14px; border-radius:10px;
-  font-family:inherit; font-size:13px; font-weight:800;
-  cursor:pointer; box-shadow:0 4px 10px rgba(163,230,53,.20);
-  transition:transform .12s, box-shadow .12s, filter .12s;
+  font-family:inherit; font-size:13px; font-weight:700;
+  cursor:pointer; box-shadow:0 4px 10px rgba(13,79,74,.20);
+  transition:transform .12s, box-shadow .12s, background .12s;
 }
-.ag-add-site:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(163,230,53,.30); filter:brightness(1.05)}
+.ag-add-site:hover{background:#0a3f3a; transform:translateY(-1px); box-shadow:0 8px 18px rgba(13,79,74,.30)}
 .ag-add-ic{font-size:18px; font-weight:900}
 
 /* ── サイドバー: 「📋 すべてのサイトを見る」 (= Agent 一覧 entry) ── */

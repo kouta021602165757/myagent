@@ -4061,6 +4061,120 @@ input,textarea{font-family:var(--sans);}
    生成後 = 進捗バー + Week 別 accordion + チェックボックス
    ══════════════════════════════════════════════════════════════════ */
 
+/* Tabs (= 今日のタスク / AI 成果物) */
+.tk-tabs{
+  display:flex; gap:4px;
+  margin-bottom:16px;
+  border-bottom:1px solid var(--line, #e5e7eb);
+}
+.tk-tab{
+  padding:10px 14px;
+  font-size:13px; font-weight:700;
+  color:var(--muted, #6b7280);
+  border-bottom:3px solid transparent;
+  margin-bottom:-1px;
+  display:flex; align-items:center; gap:6px;
+  background:transparent;
+  border-left:none; border-top:none; border-right:none;
+  cursor:pointer;
+  transition:all .15s;
+}
+.tk-tab:hover{ color:var(--text, #1a1a1a); }
+.tk-tab.active{
+  color:#0a3d39;
+  border-bottom-color:#0d4f4a;
+}
+.tk-tab .tt-count{
+  background:#f3f4f6;
+  color:var(--text, #1a1a1a);
+  padding:1px 7px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:800;
+}
+.tk-tab.active .tt-count{
+  background:#f7ffe9;
+  color:#0a3d39;
+}
+.tk-tab .tt-count-hot{
+  background:#c0ff5c;
+  color:#0a3d39;
+}
+.tk-tab-body{ display:none; }
+.tk-tab-body.active{ display:block; }
+
+/* Artifact cards (成果物) */
+.artifact-card{
+  background:#fff;
+  border:1px solid var(--line, #e5e7eb);
+  border-radius:10px;
+  padding:12px 14px;
+  margin-bottom:8px;
+}
+.artifact-card .ac-top{
+  display:flex; align-items:flex-start; gap:10px;
+  margin-bottom:6px;
+}
+.artifact-card .ac-ic{
+  width:32px; height:32px;
+  background:#f7ffe9;
+  border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px;
+  flex-shrink:0;
+}
+.artifact-card .ac-meta{ flex:1; min-width:0; }
+.artifact-card .ac-title{
+  font-weight:700; font-size:13px;
+  color:#1a1a1a;
+  line-height:1.4;
+}
+.artifact-card .ac-sub{
+  font-size:11px; color:#6b7280;
+  margin-top:2px;
+}
+.artifact-card .ac-snippet{
+  font-size:12px; color:#374151;
+  margin-top:6px;
+  line-height:1.5;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.artifact-card .ac-status{
+  background:#f7ffe9; color:#0a3d39;
+  padding:3px 8px; border-radius:5px;
+  font-size:10px; font-weight:700;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.artifact-card .ac-status.published{
+  background:#dcfce7; color:#166534;
+}
+.artifact-card .ac-actions{
+  display:flex; gap:6px;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+.artifact-card .ac-btn{
+  padding:6px 12px;
+  border-radius:7px;
+  font-size:11px;
+  font-weight:700;
+  border:1px solid var(--line, #e5e7eb);
+  background:#fff;
+  color:#1a1a1a;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-block;
+}
+.artifact-card .ac-btn:hover{ background:#f3f4f6; }
+.artifact-card .ac-btn.primary{
+  background:#0d4f4a; color:#fff; border-color:#0d4f4a;
+}
+.artifact-card .ac-btn.primary:hover{ background:#0a3d39; }
+
 /* Empty state (= ロードマップ未生成) */
 .tk-empty{
   background:linear-gradient(135deg, #fff 0%, #f0fdf4 100%);

@@ -2717,6 +2717,10 @@ function _openSiteTabModal(siteId, tabKey){
     title = '📋 ' + L('タスク一覧','Tasks');
     try { content = _renderTabTasks(site); }
     catch(err){ console.error('[tasks-panel] render failed:', err); content = _dgrErrCard(err); }
+    // 成果物カウントを background で更新 (パネル open 時に badge 反映)
+    setTimeout(function(){
+      try { if(typeof _loadSiteArtifacts === 'function') _loadSiteArtifacts(site.id); } catch(_){}
+    }, 100);
   } else if(tabKey === 'connections'){
     title = '🔌 ' + L('接続','Connections');
     try { content = _renderTabConnections(site); }
@@ -7421,8 +7425,195 @@ function _renderTabTasks(site){
          + '</details>';
   }).join('');
 
-  return headerHTML
-    + '<div class="tk-weeks">' + weeksHTML + '</div>';
+  var tasksContent = headerHTML + '<div class="tk-weeks">' + weeksHTML + '</div>';
+
+  // ── タブ: 今日のタスク / AI 成果物 ──
+  var artifactCount = _countSiteArtifacts(site);
+  var artifactCountClass = artifactCount > 0 ? 'tt-count tt-count-hot' : 'tt-count';
+
+  return ''
+    + '<div class="tk-tabs">'
+    +   '<button class="tk-tab active" onclick="_switchTaskTab(this, \'tk-tab-tasks\')">'
+    +     '<span>📋 今日のタスク</span>'
+    +     '<span class="tt-count">' + totalTasks + '</span>'
+    +   '</button>'
+    +   '<button class="tk-tab" onclick="_switchTaskTab(this, \'tk-tab-deliv\')">'
+    +     '<span>📦 AI 成果物</span>'
+    +     '<span class="' + artifactCountClass + '">' + artifactCount + '</span>'
+    +   '</button>'
+    + '</div>'
+    + '<div class="tk-tab-body active" id="tk-tab-tasks">' + tasksContent + '</div>'
+    + '<div class="tk-tab-body" id="tk-tab-deliv">' + _renderArtifactsTab(site) + '</div>';
+}
+
+// 成果物カウント (Phase A-2 で実装) — 今は 0
+function _countSiteArtifacts(site){
+  try {
+    if(window._cachedNotesForSite && Array.isArray(window._cachedNotesForSite[site.id])){
+      return window._cachedNotesForSite[site.id].filter(function(n){
+        return n && ['article', 'sns_post', 'analysis'].indexOf(n.type) >= 0;
+      }).length;
+    }
+  } catch(e){}
+  return 0;
+}
+
+// 成果物タブの中身
+function _renderArtifactsTab(site){
+  return ''
+    + '<div style="font-size:12px; color:#0a3d39; margin-bottom:14px; background:#f7ffe9; padding:10px 14px; border-radius:10px;">'
+    +   '💡 AI が作った記事下書き・SNS 投稿・分析メモなどがここに並びます。中身を確認して「公開する」を押すだけ。'
+    + '</div>'
+    + '<div id="tk-deliv-list" data-site-id="' + esc(site.id) + '">'
+    +   '<div style="text-align:center; padding:40px 20px; color:#9ca3af;">'
+    +     '<div class="loading-dots">読み込み中...</div>'
+    +   '</div>'
+    + '</div>';
+}
+
+// タスクパネルのタブ切替
+function _switchTaskTab(btn, targetId){
+  var tabs = document.querySelectorAll('.tk-tabs .tk-tab');
+  tabs.forEach(function(t){ t.classList.remove('active'); });
+  btn.classList.add('active');
+  var bodies = document.querySelectorAll('.tk-tab-body');
+  bodies.forEach(function(b){ b.classList.remove('active'); });
+  var el = document.getElementById(targetId);
+  if(el) el.classList.add('active');
+
+  // 成果物タブに切り替えたら notes を読み込む
+  if(targetId === 'tk-tab-deliv'){
+    var listEl = document.getElementById('tk-deliv-list');
+    var siteId = listEl && listEl.dataset.siteId;
+    if(siteId) _loadSiteArtifacts(siteId);
+  }
+}
+
+// 成果物 (= user.notes の article/article_draft/sns_post/analysis) を fetch して描画
+async function _loadSiteArtifacts(siteId){
+  var listEl = document.getElementById('tk-deliv-list');
+  if(!listEl) return;
+  try {
+    var r = await api('GET', '/api/me/notes');
+    var notes = (r && r.notes) || [];
+    var artifacts = notes.filter(function(n){
+      if(!n || n.agent_id !== siteId) return false;
+      return ['article', 'article_draft', 'sns_post', 'analysis'].indexOf(n.type) >= 0;
+    });
+    // 新しい順
+    artifacts.sort(function(a, b){
+      return (Date.parse(b.updated_at || b.created_at || 0) || 0)
+           - (Date.parse(a.updated_at || a.created_at || 0) || 0);
+    });
+
+    // cache for count badge
+    window._cachedNotesForSite = window._cachedNotesForSite || {};
+    window._cachedNotesForSite[siteId] = artifacts;
+    _updateArtifactCountBadge(artifacts.length);
+
+    if(artifacts.length === 0){
+      listEl.innerHTML = ''
+        + '<div style="text-align:center; padding:40px 20px; color:#9ca3af;">'
+        +   '<div style="font-size:32px; margin-bottom:8px;">📦</div>'
+        +   '<div style="font-size:14px; font-weight:700; margin-bottom:4px; color:#1a1a1a;">まだ成果物がありません</div>'
+        +   '<div style="font-size:12px;">AI が記事下書きや SNS 投稿を作ると、ここに並びます。</div>'
+        + '</div>';
+      return;
+    }
+
+    listEl.innerHTML = artifacts.map(_renderArtifactCard).join('');
+  } catch(e){
+    listEl.innerHTML = '<div style="color:#dc2626; padding:20px;">読み込みに失敗しました</div>';
+  }
+}
+
+// カウントバッジ更新
+function _updateArtifactCountBadge(count){
+  var hot = count > 0 ? ' tt-count-hot' : '';
+  var tabs = document.querySelectorAll('.tk-tabs .tk-tab');
+  if(tabs.length < 2) return;
+  var span = tabs[1].querySelector('.tt-count');
+  if(span){
+    span.textContent = count;
+    span.className = 'tt-count' + hot;
+  }
+}
+
+// 成果物カードのレンダリング
+function _renderArtifactCard(note){
+  var typeMap = {
+    article:       { ic: '📝', label: '記事' },
+    article_draft: { ic: '📝', label: '記事下書き' },
+    sns_post:      { ic: '📱', label: 'SNS 投稿' },
+    analysis:      { ic: '📊', label: '分析' }
+  };
+  var m = typeMap[note.type] || { ic: '📄', label: note.type || 'その他' };
+  var title = note.title || '(タイトルなし)';
+  var dt = '';
+  try { dt = new Date(note.updated_at || note.created_at).toLocaleDateString('ja-JP'); } catch(e){}
+  var sub = m.label + (dt ? ' · ' + dt : '') + (note.version_count > 1 ? ' · v' + note.version_count : '');
+  var snippet = (note.snippet || '').slice(0, 90);
+
+  // ステータス
+  var statusBadge = '';
+  if(note.has_artifact){
+    statusBadge = '<span class="ac-status published">✓ 公開済み</span>';
+  } else if(note.type === 'article_draft'){
+    statusBadge = '<span class="ac-status">下書き保存済</span>';
+  } else if(note.type === 'sns_post'){
+    statusBadge = '<span class="ac-status">投稿準備済</span>';
+  } else {
+    statusBadge = '<span class="ac-status">確認待ち</span>';
+  }
+
+  // アクションボタン
+  var actions = '';
+  if(note.has_artifact){
+    actions = ''
+      + '<button class="ac-btn primary" onclick="_openArtifactDetail(\'' + esc(note.id) + '\')">公開ページを見る ↗</button>';
+  } else {
+    actions = ''
+      + '<button class="ac-btn" onclick="_openArtifactDetail(\'' + esc(note.id) + '\')">プレビュー</button>'
+      + (note.type === 'article_draft'
+          ? '<button class="ac-btn primary" onclick="_publishArtifact(\'' + esc(note.id) + '\')">公開する</button>'
+          : '<button class="ac-btn primary" onclick="_openArtifactDetail(\'' + esc(note.id) + '\')">編集</button>');
+  }
+
+  return ''
+    + '<div class="artifact-card" data-note-id="' + esc(note.id) + '">'
+    +   '<div class="ac-top">'
+    +     '<div class="ac-ic">' + m.ic + '</div>'
+    +     '<div class="ac-meta">'
+    +       '<div class="ac-title">' + esc(title) + '</div>'
+    +       '<div class="ac-sub">' + esc(sub) + '</div>'
+    +       (snippet ? '<div class="ac-snippet">' + esc(snippet) + (note.snippet && note.snippet.length > 90 ? '…' : '') + '</div>' : '')
+    +     '</div>'
+    +     statusBadge
+    +   '</div>'
+    +   '<div class="ac-actions">' + actions + '</div>'
+    + '</div>';
+}
+
+// 成果物詳細を開く (既存の openNotesPanel を再利用)
+function _openArtifactDetail(noteId){
+  try {
+    var listEl = document.getElementById('tk-deliv-list');
+    var siteId = listEl && listEl.dataset.siteId;
+    if(!siteId){
+      var act = (typeof activeId !== 'undefined') ? activeId : null;
+      if(act) siteId = act;
+    }
+    if(siteId && typeof openNotesPanel === 'function'){
+      openNotesPanel(siteId, noteId);
+      return;
+    }
+  } catch(e){}
+  showToast('詳細表示に失敗', 'ng');
+}
+
+// 公開ボタン (Phase C-2 で WordPress 連携実装)
+async function _publishArtifact(noteId){
+  showToast('公開機能は Phase C で実装予定 — 今は「中身を見る」で確認できます', 'ng');
 }
 
 // ─── Roadmap actions (frontend) ───────────────────────────────────

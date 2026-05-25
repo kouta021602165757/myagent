@@ -1,0 +1,1739 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strategy v3 Mock — MY AI Agent</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --sidebar-bg: #faf8f3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --muted-2: #9ca3af;
+    --line: #e5e7eb;
+    --line-soft: #f0f0eb;
+    --teal: #0d4f4a;
+    --teal-2: #0a3d39;
+    --lime: #c0ff5c;
+    --lime-soft: #f7ffe9;
+    --lime-soft-2: #edfcc8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  a { color: var(--teal); text-decoration: none; }
+
+  /* ===== DEMO CONTROLLER (bottom-left floating) ===== */
+  .demo-ctrl {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+    z-index: 200;
+    overflow: hidden;
+    width: 300px;
+  }
+  .demo-ctrl.collapsed { width: auto; }
+  .demo-ctrl-bar {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+  }
+  .demo-ctrl-bar .badge {
+    background: var(--lime); color: var(--teal-2);
+    padding: 2px 7px; border-radius: 4px;
+    font-size: 9px; font-weight: 800;
+  }
+  .demo-ctrl-bar .progress { font-size: 11px; font-weight: 700; flex: 1; }
+  .demo-ctrl-bar .arrow {
+    width: 26px; height: 26px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 6px;
+    color: #fff; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .demo-ctrl-bar .arrow:hover:not(:disabled) { background: rgba(255,255,255,0.28); }
+  .demo-ctrl-bar .arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+  .demo-ctrl-bar .toggle {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+  .demo-ctrl-body {
+    padding: 10px;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .demo-ctrl.collapsed .demo-ctrl-body { display: none; }
+  .demo-ctrl-body .stepbtn {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-size: 12px;
+    text-align: left;
+    background: transparent;
+    margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600;
+  }
+  .demo-ctrl-body .stepbtn:hover { background: var(--lime-soft); }
+  .demo-ctrl-body .stepbtn.active { background: var(--teal); color: #fff; }
+  .demo-ctrl-body .stepbtn .num {
+    width: 22px; height: 22px;
+    background: #f3f4f6;
+    border-radius: 5px;
+    font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .demo-ctrl-body .stepbtn.active .num { background: var(--lime); color: var(--teal-2); }
+
+  /* ===== APP LAYOUT ===== */
+  .app {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    background: var(--bg);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sb-logo {
+    padding: 16px 18px 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sb-logo .bars { display: flex; gap: 2px; align-items: flex-end; }
+  .sb-logo .bars span { width: 3px; background: var(--text); border-radius: 1px; }
+  .sb-logo .bars span:nth-child(1) { height: 8px; }
+  .sb-logo .bars span:nth-child(2) { height: 14px; }
+  .sb-logo .bars span:nth-child(3) { height: 11px; }
+  .sb-logo .bars span:nth-child(4) { height: 16px; }
+  .sb-logo .name { font-weight: 800; font-size: 13px; }
+  .sb-add {
+    margin: 4px 10px 10px;
+    background: var(--teal); color: #fff;
+    padding: 9px 12px; border-radius: 9px;
+    font-size: 12px; font-weight: 700;
+    text-align: left;
+  }
+  .sb-search {
+    margin: 0 10px 12px;
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 9px; padding: 6px 10px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted);
+  }
+  .sb-section { padding: 6px 14px; font-size: 11px; color: var(--muted); font-weight: 700; }
+  .sb-sites { padding: 0 8px; flex: 1; overflow-y: auto; }
+  .sb-site {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 9px;
+    margin-bottom: 2px; cursor: pointer;
+  }
+  .sb-site.active { background: var(--lime-soft-2); }
+  .sb-site .icn {
+    width: 26px; height: 26px;
+    background: var(--lime-soft); border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .sb-site .meta { flex: 1; min-width: 0; }
+  .sb-site .nm {
+    font-size: 12px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sb-site .sub { font-size: 10px; color: var(--muted); }
+  .sb-bottom {
+    border-top: 1px solid var(--line-soft);
+    padding: 10px 10px 12px;
+  }
+  .sb-credits {
+    width: 100%;
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 9px; padding: 8px;
+    font-size: 12px; font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .sb-user { display: flex; align-items: center; gap: 8px; padding: 4px 6px; }
+  .sb-user .av {
+    width: 30px; height: 30px;
+    background: var(--text); color: #fff;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800;
+  }
+  .sb-user .uname { font-size: 13px; font-weight: 700; }
+  .sb-user .plan { font-size: 10px; color: var(--muted); }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ===== HERO CARD (always-visible cumulative metrics) ===== */
+  .hero-card {
+    margin: 12px 18px 8px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 18px;
+    box-shadow: 0 6px 20px rgba(13, 79, 74, 0.18);
+  }
+  .hero-card .hc-title {
+    font-size: 11px;
+    opacity: 0.7;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .hero-card .hc-cell { text-align: left; flex: 0 0 auto; }
+  .hero-card .hc-cell .lbl {
+    font-size: 10px;
+    opacity: 0.75;
+    margin-bottom: 2px;
+  }
+  .hero-card .hc-cell .val {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .hero-card .hc-cell .delta {
+    font-size: 10px;
+    color: var(--lime);
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .hero-card .hc-divider {
+    width: 1px;
+    height: 36px;
+    background: rgba(255,255,255,0.18);
+  }
+  .hero-card .hc-action {
+    margin-left: auto;
+    display: flex; gap: 6px;
+    flex-shrink: 0;
+  }
+  .hero-card .hc-btn {
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .hero-card .hc-btn.share {
+    background: var(--lime);
+    color: var(--teal-2);
+  }
+  .hero-card .hc-btn:hover { opacity: 0.9; }
+
+  /* CHAT HEADER */
+  .chat-header {
+    padding: 10px 18px 8px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center;
+    background: var(--bg);
+  }
+  .ch-left { flex: 1; display: flex; gap: 10px; align-items: center; }
+  .ch-icn {
+    width: 38px; height: 38px;
+    background: var(--lime-soft);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .ch-name {
+    font-size: 15px; font-weight: 800;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ch-name::before {
+    content: ''; width: 7px; height: 7px;
+    background: #22c55e; border-radius: 50%;
+    display: inline-block;
+  }
+  .ch-pills { display: flex; gap: 4px; margin-top: 3px; }
+  .ch-pill {
+    background: var(--lime-soft);
+    color: var(--teal-2);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .ch-right { display: flex; gap: 4px; }
+  .ch-tool {
+    width: 34px; height: 34px;
+    background: #f7f7f4;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ch-tool:hover { background: var(--lime-soft); border-color: var(--lime-soft-2); }
+  .ch-tool.active { background: var(--lime-soft-2); border-color: var(--lime); }
+
+  /* TASK STRIP */
+  .task-strip {
+    padding: 7px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; gap: 6px; overflow-x: auto;
+    background: var(--bg);
+    align-items: center;
+  }
+  .ts-week {
+    background: var(--lime-soft); color: var(--teal-2);
+    padding: 4px 9px; border-radius: 6px;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .ts-task {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 9px;
+    font-size: 10px;
+    display: flex; align-items: center; gap: 5px;
+    flex-shrink: 0;
+    max-width: 260px;
+  }
+  .ts-task .ck {
+    width: 11px; height: 11px;
+    border: 1.5px solid var(--line);
+    border-radius: 2px;
+  }
+  .ts-task.done .ck { background: var(--teal); border-color: var(--teal); }
+  .ts-task .txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ts-more { color: var(--teal); font-size: 10px; font-weight: 700; flex-shrink: 0; }
+
+  /* MESSAGES */
+  .msgs { flex: 1; overflow-y: auto; padding: 16px 18px; }
+  .msg { display: flex; gap: 10px; margin-bottom: 16px; }
+  .msg .av {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: var(--text); color: #fff;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .msg.bot .av { background: var(--lime-soft); color: var(--text); }
+  .msg .body { flex: 1; min-width: 0; }
+  .msg .head { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
+  .msg .head .nm { font-weight: 800; font-size: 12px; }
+  .msg .head .tm { font-size: 10px; color: var(--muted); }
+  .msg .txt { font-size: 13px; line-height: 1.55; }
+  .msg-cta {
+    margin-top: 8px;
+    background: var(--teal); color: #fff;
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 4px 12px rgba(13, 79, 74, 0.2);
+  }
+
+  /* COMPOSER */
+  .composer-wrap { padding: 10px 18px 14px; background: var(--bg); border-top: 1px solid var(--line-soft); }
+  .composer { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .composer-input { font-size: 13px; color: var(--muted); min-height: 20px; padding: 3px 0; }
+  .composer-tools { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+  .composer-tools .chip {
+    background: #f7f7f4;
+    padding: 3px 8px; border-radius: 5px;
+    font-size: 11px; font-weight: 600;
+  }
+  .composer-tools .send {
+    margin-left: auto;
+    width: 32px; height: 32px;
+    background: var(--teal); color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* PANEL OVERLAY */
+  .panel-overlay {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 72%;
+    background: #fff;
+    border-left: 1px solid var(--line);
+    overflow-y: auto;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.06);
+    z-index: 10;
+    display: none;
+  }
+  .panel-overlay.open { display: block; }
+  .panel-head {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center;
+    background: #fff;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .panel-head .ic { font-size: 20px; margin-right: 9px; }
+  .panel-head .ttl { font-weight: 800; font-size: 15px; }
+  .panel-head .sub { font-size: 11px; color: var(--muted); margin-left: 6px; }
+  .panel-head .close {
+    margin-left: auto;
+    width: 28px; height: 28px;
+    background: #f3f4f6; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .panel-body { padding: 18px 22px; }
+
+  /* ===== SCENE-SPECIFIC ===== */
+  .scene { display: none; flex: 1; flex-direction: column; }
+  .scene.active { display: flex; }
+
+  /* SCENE 1: URL INPUT */
+  .empty-main {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    padding: 30px;
+  }
+  .add-card {
+    max-width: 460px;
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  }
+  .add-card .emoji { font-size: 44px; margin-bottom: 10px; }
+  .add-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .add-card p { color: var(--muted); margin-bottom: 20px; font-size: 12px; }
+  .add-card .input {
+    width: 100%;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    text-align: left;
+    background: var(--lime-soft);
+    border-color: var(--lime);
+    color: var(--teal-2);
+    font-weight: 600;
+  }
+  .add-card .cta {
+    width: 100%;
+    background: var(--teal); color: #fff;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px; font-weight: 800;
+  }
+
+  /* SCENE 2: SITE DETECTION + 30-DAY PLAN */
+  .detection-main {
+    flex: 1; overflow-y: auto;
+    padding: 40px 32px;
+  }
+  .det-wrap { max-width: 720px; margin: 0 auto; }
+  .det-h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; text-align: center; }
+  .det-sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; text-align: center; }
+  .det-result {
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border-radius: 18px;
+    padding: 28px;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .det-result .pattern-ic { font-size: 44px; margin-bottom: 8px; }
+  .det-result .pattern-name {
+    font-size: 22px; font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .det-result .pattern-conf {
+    background: var(--lime); color: var(--teal-2);
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 800;
+    display: inline-block;
+  }
+  .det-reason {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px;
+    margin-bottom: 14px;
+  }
+  .det-reason h4 { font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 8px; }
+  .det-reason .row {
+    display: flex; justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+  .det-reason .row .lbl { color: var(--muted); }
+  .det-reason .row .val { font-weight: 700; }
+  .det-30day {
+    background: var(--lime-soft);
+    border: 1px solid var(--lime-soft-2);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .det-30day h3 {
+    font-size: 14px; font-weight: 800;
+    color: var(--teal-2);
+    margin-bottom: 12px;
+  }
+  .det-30day .week-row {
+    display: flex; gap: 10px;
+    background: #fff; border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .det-30day .wk-num {
+    background: var(--teal); color: #fff;
+    padding: 3px 7px; border-radius: 5px;
+    font-size: 10px; font-weight: 700;
+    height: fit-content;
+    flex-shrink: 0;
+  }
+  .det-30day .wk-desc { flex: 1; }
+  .det-cta {
+    width: 100%;
+    background: var(--teal); color: #fff;
+    padding: 14px; border-radius: 12px;
+    font-weight: 800; font-size: 14px;
+  }
+
+  /* SCENE 3: 4-ACCOUNT CONNECTION */
+  .conn-main {
+    flex: 1; overflow-y: auto;
+    padding: 40px 32px;
+  }
+  .conn-wrap { max-width: 680px; margin: 0 auto; }
+  .conn-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .conn-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .conn-card.connected {
+    background: var(--lime-soft);
+    border-color: var(--lime);
+  }
+  .conn-card .ic {
+    width: 44px; height: 44px;
+    background: var(--lime-soft);
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .conn-card.connected .ic { background: var(--lime); }
+  .conn-card .meta { flex: 1; min-width: 0; }
+  .conn-card .nm {
+    font-weight: 800; font-size: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .conn-card .req {
+    background: #fee2e2; color: #b91c1c;
+    padding: 1px 6px; border-radius: 4px;
+    font-size: 9px; font-weight: 800;
+  }
+  .conn-card .opt {
+    background: #f3f4f6; color: var(--muted);
+    padding: 1px 6px; border-radius: 4px;
+    font-size: 9px; font-weight: 700;
+  }
+  .conn-card .desc {
+    font-size: 11px; color: var(--muted);
+    margin-top: 3px;
+  }
+  .conn-card .actions {
+    display: flex; gap: 6px;
+    flex-shrink: 0;
+  }
+  .conn-card .btn {
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 11px; font-weight: 700;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .conn-card .btn.primary {
+    background: var(--teal); color: #fff; border-color: var(--teal);
+  }
+  .conn-card .btn.ghost {
+    background: transparent;
+    color: var(--teal-2);
+  }
+  .conn-card .status {
+    background: var(--teal); color: var(--lime);
+    padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .conn-summary {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .conn-summary .check {
+    width: 22px; height: 22px;
+    background: var(--lime); color: var(--teal-2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+  }
+
+  /* TUTORIAL OVERLAY */
+  .tut-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 300;
+    padding: 20px;
+  }
+  .tut-overlay.open { display: flex; }
+  .tut-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    width: 520px;
+    max-width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .tut-content h3 {
+    font-size: 17px; font-weight: 800;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tut-content .tut-close {
+    margin-left: auto;
+    background: #f3f4f6; border-radius: 6px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .tut-content .tut-sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .tut-step {
+    display: flex; gap: 12px;
+    padding: 10px 12px;
+    background: #fafaf7;
+    border-radius: 9px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .tut-step .num {
+    width: 24px; height: 24px;
+    background: var(--lime-soft); color: var(--teal-2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .tut-step a {
+    color: var(--teal); font-weight: 700;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .tut-content .tut-cta {
+    width: 100%;
+    background: var(--teal); color: #fff;
+    padding: 12px; border-radius: 10px;
+    font-weight: 800; font-size: 13px;
+    margin-top: 14px;
+  }
+
+  /* ===== STRATEGY PANEL: 3-CHANNEL ===== */
+  .ch-3-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .ch-3-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px;
+  }
+  .ch-3-card.x { border-top: 4px solid #000; }
+  .ch-3-card.threads { border-top: 4px solid #000; }
+  .ch-3-card.media { border-top: 4px solid var(--teal); }
+  .ch-3-card h4 {
+    font-size: 13px; font-weight: 800;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ch-3-card .stat {
+    display: flex; justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--line);
+    font-size: 11px;
+  }
+  .ch-3-card .stat:last-child { border-bottom: none; }
+  .ch-3-card .stat .l { color: var(--muted); }
+  .ch-3-card .stat .v { font-weight: 700; }
+  .ch-3-card .ai-task {
+    background: var(--lime-soft);
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--teal-2);
+    font-weight: 600;
+  }
+
+  /* ===== TASKS PANEL TABS ===== */
+  .task-tabs {
+    display: flex; gap: 4px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .task-tab {
+    padding: 10px 14px;
+    font-size: 12px; font-weight: 700;
+    color: var(--muted);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .task-tab.active { color: var(--teal-2); border-bottom-color: var(--teal); }
+  .task-tab .tt-count {
+    background: #f3f4f6;
+    padding: 1px 6px; border-radius: 999px;
+    font-size: 10px; font-weight: 800;
+  }
+  .task-tab.active .tt-count { background: var(--lime-soft); color: var(--teal-2); }
+  .task-tab .tt-count-hot { background: var(--lime); color: var(--teal-2); }
+  .task-tab-body { display: none; }
+  .task-tab-body.active { display: block; }
+
+  .task-row {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 9px; padding: 10px 12px;
+    margin-bottom: 5px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+  }
+  .task-row .ck {
+    width: 16px; height: 16px;
+    border: 2px solid var(--line); border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .task-row.done .ck {
+    background: var(--teal); border-color: var(--teal);
+    color: var(--lime);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+  .task-row.done .ck::after { content: '✓'; }
+  .task-row.done .txt { text-decoration: line-through; color: var(--muted); }
+  .task-row .txt { flex: 1; }
+  .task-row .ch-tag {
+    padding: 2px 7px; border-radius: 4px;
+    font-size: 9px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .ch-tag.x { background: #000; color: #fff; }
+  .ch-tag.threads { background: #1a1a1a; color: #fff; }
+  .ch-tag.wp { background: var(--lime-soft); color: var(--teal-2); }
+
+  .artifact-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 11px 13px;
+    margin-bottom: 7px;
+  }
+  .artifact-card .ac-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+  .artifact-card .ac-ic {
+    width: 32px; height: 32px;
+    background: var(--lime-soft);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .artifact-card .ac-meta { flex: 1; min-width: 0; }
+  .artifact-card .ac-title { font-weight: 700; font-size: 12px; line-height: 1.4; }
+  .artifact-card .ac-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .artifact-card .ac-status {
+    background: var(--lime-soft); color: var(--teal-2);
+    padding: 2px 7px; border-radius: 5px;
+    font-size: 9px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .artifact-card .ac-actions { display: flex; gap: 5px; margin-top: 6px; }
+  .artifact-card .ac-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 10px; font-weight: 700;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .artifact-card .ac-btn.primary {
+    background: var(--teal); color: #fff; border-color: var(--teal);
+  }
+
+  /* ===== SHARE CARD (Scene 8) ===== */
+  .share-main { flex: 1; padding: 32px; overflow-y: auto; display: flex; align-items: center; justify-content: center; }
+  .share-wrap { max-width: 560px; width: 100%; text-align: center; }
+  .share-h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .share-sub { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  .share-card-img {
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border-radius: 18px;
+    padding: 36px 32px;
+    text-align: left;
+    box-shadow: 0 20px 60px rgba(13, 79, 74, 0.3);
+    margin-bottom: 18px;
+  }
+  .share-card-img .month {
+    background: var(--lime); color: var(--teal-2);
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 800;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+  .share-card-img h3 {
+    font-size: 22px; font-weight: 800;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .share-card-img .by {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-bottom: 20px;
+  }
+  .share-card-img .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .share-card-img .stat-cell {
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .share-card-img .stat-cell .lbl {
+    font-size: 10px;
+    opacity: 0.7;
+  }
+  .share-card-img .stat-cell .val {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 2px 0;
+  }
+  .share-card-img .stat-cell .delta {
+    font-size: 11px;
+    color: var(--lime);
+    font-weight: 700;
+  }
+  .share-card-img .footer {
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding-top: 14px;
+    font-size: 11px;
+    opacity: 0.7;
+    text-align: center;
+  }
+  .share-buttons {
+    display: flex; gap: 10px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+  .share-btn {
+    background: var(--text); color: #fff;
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .share-btn.lime {
+    background: var(--lime); color: var(--teal-2);
+  }
+
+  /* ===== MISC ===== */
+  .loading-dots::after {
+    content: '...';
+    display: inline-block;
+    animation: dots 1.4s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; }
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; }
+    .hero-card { flex-wrap: wrap; }
+    .ch-3-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- FLOATING DEMO CONTROLLER -->
+<div class="demo-ctrl" id="demoCtrl">
+  <div class="demo-ctrl-bar" onclick="toggleDemoCtrl(event)">
+    <span class="badge" id="dcBadge">PHASE 1</span>
+    <span class="progress" id="dcProgress">1 / 8</span>
+    <button class="arrow" id="prevBtn" onclick="event.stopPropagation(); goStep(Math.max(1, curStep-1));">←</button>
+    <button class="arrow" id="nextBtn" onclick="event.stopPropagation(); goStep(Math.min(8, curStep+1));">→</button>
+    <span class="toggle">▾</span>
+  </div>
+  <div class="demo-ctrl-body" id="stepList">
+    <button class="stepbtn active" data-step="1"><span class="num">1</span> URL 入力</button>
+    <button class="stepbtn" data-step="2"><span class="num">2</span> サイト解析・判定</button>
+    <button class="stepbtn" data-step="3"><span class="num">3</span> アカウント接続</button>
+    <button class="stepbtn" data-step="4"><span class="num">4</span> チーム + 30 日プラン</button>
+    <button class="stepbtn" data-step="5"><span class="num">5</span> メイン chat (HERO + tasks)</button>
+    <button class="stepbtn" data-step="6"><span class="num">6</span> 戦略パネル (3 チャネル)</button>
+    <button class="stepbtn" data-step="7"><span class="num">7</span> 日次レポ (即効指標)</button>
+    <button class="stepbtn" data-step="8"><span class="num">8</span> 月次シェアカード</button>
+  </div>
+</div>
+
+<!-- TUTORIAL OVERLAY -->
+<div class="tut-overlay" id="tutOverlay" onclick="if(event.target.id==='tutOverlay') closeTut()">
+  <div class="tut-content" id="tutContent">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- APP CONTAINER -->
+<div class="app">
+
+  <!-- ===== SCENE 1: URL INPUT ===== -->
+  <div class="scene active" id="scene1">
+    <aside class="sidebar">
+      <div class="sb-logo">
+        <div class="bars"><span></span><span></span><span></span><span></span></div>
+        <div class="name">MY AI AGENT</div>
+      </div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-search"><span>🔍</span> 検索</div>
+      <div class="sb-section">あなたのサイト (0)</div>
+      <div style="padding: 16px; text-align: center; color: var(--muted-2); font-size: 11px;">まだサイトがありません</div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom">
+        <button class="sb-credits">＋ Add Credits</button>
+        <div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="empty-main">
+        <div class="add-card">
+          <div class="emoji">🚀</div>
+          <h2>あなたの Web サイトを追加</h2>
+          <p>URL を入れるだけで AI チームが組成され、X / Threads / WordPress を毎日運用</p>
+          <input class="input" value="https://fukuyama-note.com" readonly>
+          <button class="cta" onclick="goStep(2)">サイト追加 →</button>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 10px;">入力は 30 秒、その後はチームが勝手に動きます</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== SCENE 2: SITE DETECTION + 30-DAY PLAN ===== -->
+  <div class="scene" id="scene2">
+    <aside class="sidebar">
+      <div class="sb-logo"><div class="bars"><span></span><span></span><span></span><span></span></div><div class="name">MY AI AGENT</div></div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-section">あなたのサイト (1)</div>
+      <div class="sb-sites">
+        <div class="sb-site active">
+          <div class="icn">⏳</div>
+          <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">解析中…</div></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
+    </aside>
+    <main class="main">
+      <div class="detection-main">
+        <div class="det-wrap">
+          <h1 class="det-h1">🔍 サイトを解析しました</h1>
+          <p class="det-sub">AI がサイト構造とコンテンツを分析、最適な戦略パターンを判定</p>
+
+          <div class="det-result">
+            <div class="pattern-ic">📰</div>
+            <div class="pattern-name">メディア型</div>
+            <div class="pattern-conf">判定確度 92%</div>
+          </div>
+
+          <div class="det-reason">
+            <h4>判定根拠</h4>
+            <div class="row"><span class="lbl">記事数</span><span class="val">87 本</span></div>
+            <div class="row"><span class="lbl">カテゴリ</span><span class="val">7 個 (観光 / 移住 / グルメ / 子育て / 仕事 / イベント / 文化)</span></div>
+            <div class="row"><span class="lbl">CMS 検出</span><span class="val">WordPress 6.4</span></div>
+            <div class="row"><span class="lbl">業種 (サブ)</span><span class="val">ローカルメディア (観光・移住)</span></div>
+          </div>
+
+          <div class="det-30day">
+            <h3>📅 30 日プラン (メディア型 × ローカル)</h3>
+            <div class="week-row">
+              <span class="wk-num">Week 1</span>
+              <div class="wk-desc">既存記事 5 本 rewrite + タイトル最適化 / X 立ち上げ + 日 3 投稿 + Threads 開始</div>
+            </div>
+            <div class="week-row">
+              <span class="wk-num">Week 2</span>
+              <div class="wk-desc">新規記事 4 本執筆 (競合未対応 KW) / X 投稿継続 + リプライ展開</div>
+            </div>
+            <div class="week-row">
+              <span class="wk-num">Week 3</span>
+              <div class="wk-desc">内部リンク強化 (15 箇所) / X フォロワー目標達成判定 / 中効指標確認</div>
+            </div>
+            <div class="week-row">
+              <span class="wk-num">Week 4</span>
+              <div class="wk-desc">月次レポ生成 / Phase 2 計画 / シェア可能な成果カード作成</div>
+            </div>
+          </div>
+
+          <button class="det-cta" onclick="goStep(3)">この戦略で進める → 次は接続設定</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== SCENE 3: 4-ACCOUNT CONNECTION ===== -->
+  <div class="scene" id="scene3">
+    <aside class="sidebar">
+      <div class="sb-logo"><div class="bars"><span></span><span></span><span></span><span></span></div><div class="name">MY AI AGENT</div></div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-section">あなたのサイト (1)</div>
+      <div class="sb-sites">
+        <div class="sb-site active">
+          <div class="icn">📰</div>
+          <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">接続待ち</div></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
+    </aside>
+    <main class="main">
+      <div class="conn-main">
+        <div class="conn-wrap">
+          <h1 class="det-h1">🔌 必要なアカウントを接続</h1>
+          <p class="det-sub">AI が代わりに投稿・公開するため、3 つの主要アカウントが必要です</p>
+
+          <div class="conn-summary">
+            <span class="check">!</span>
+            <div>
+              <strong>持ってないアカウントは作るところからガイドします。</strong>
+              <span style="color:var(--muted); display:block; margin-top:2px;">3〜5 分で 3 つとも準備できます。</span>
+            </div>
+          </div>
+
+          <div class="conn-grid">
+            <!-- X (Required) -->
+            <div class="conn-card connected">
+              <div class="ic">📱</div>
+              <div class="meta">
+                <div class="nm">X (Twitter) <span class="req">必須</span></div>
+                <div class="desc">AI が毎日 3-5 投稿 + リプライを自動運用</div>
+              </div>
+              <div class="status">✓ 接続済</div>
+            </div>
+
+            <!-- Threads (Required, not connected) -->
+            <div class="conn-card">
+              <div class="ic">🧵</div>
+              <div class="meta">
+                <div class="nm">Threads (Meta) <span class="req">必須</span></div>
+                <div class="desc">X 投稿を Threads 向けに自動変換して投稿</div>
+              </div>
+              <div class="actions">
+                <button class="btn ghost" onclick="openTut('threads')">作り方</button>
+                <button class="btn primary">接続する</button>
+              </div>
+            </div>
+
+            <!-- WordPress (Required, not connected) -->
+            <div class="conn-card">
+              <div class="ic">📝</div>
+              <div class="meta">
+                <div class="nm">WordPress <span class="req">必須</span></div>
+                <div class="desc">AI が記事下書きを WP に自動保存、ワンクリックで公開</div>
+              </div>
+              <div class="actions">
+                <button class="btn ghost" onclick="openTut('wp')">作り方</button>
+                <button class="btn primary">接続する</button>
+              </div>
+            </div>
+
+            <!-- GA4 (Recommended) -->
+            <div class="conn-card connected">
+              <div class="ic">📊</div>
+              <div class="meta">
+                <div class="nm">Google Analytics 4 <span class="opt">推奨</span></div>
+                <div class="desc">流入数 / CTR / 検索順位を自動計測 (なくても運用可能)</div>
+              </div>
+              <div class="status">✓ 接続済</div>
+            </div>
+          </div>
+
+          <div style="background:#fff8e1; border:1px solid #fde68a; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#92400e;">
+            <strong>⚠️ 接続完了まで AI は動けません。</strong> 残り 2 つ (Threads / WordPress) を準備してください。
+          </div>
+
+          <button class="det-cta" onclick="goStep(4)" style="opacity: 0.5;">残り 2 つの接続が必要 (デモ用に進む)</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== SCENE 4: TEAM + 30 DAY PLAN ===== -->
+  <div class="scene" id="scene4">
+    <aside class="sidebar">
+      <div class="sb-logo"><div class="bars"><span></span><span></span><span></span><span></span></div><div class="name">MY AI AGENT</div></div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-section">あなたのサイト (1)</div>
+      <div class="sb-sites">
+        <div class="sb-site active">
+          <div class="icn">📰</div>
+          <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">準備完了</div></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
+    </aside>
+    <main class="main">
+      <div class="detection-main">
+        <div class="det-wrap">
+          <h1 class="det-h1">🤖 AI チーム組成完了</h1>
+          <p class="det-sub">メディア型 × ローカル特化 のメンバーが揃いました</p>
+
+          <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; margin-bottom:20px;">
+            <div style="background:var(--lime-soft); border:1px solid var(--lime); border-radius:12px; padding:14px 8px; text-align:center;">
+              <div style="font-size:24px;">👔</div>
+              <div style="font-weight:800; font-size:11px; margin-top:6px;">佐藤 健</div>
+              <div style="font-size:9px; color:var(--muted);">PM</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 8px; text-align:center;">
+              <div style="font-size:24px;">📱</div>
+              <div style="font-weight:800; font-size:11px; margin-top:6px;">山田 SNS</div>
+              <div style="font-size:9px; color:var(--muted);">X / Threads</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 8px; text-align:center;">
+              <div style="font-size:24px;">✍️</div>
+              <div style="font-weight:800; font-size:11px; margin-top:6px;">鈴木 ライト</div>
+              <div style="font-size:9px; color:var(--muted);">地域記事</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 8px; text-align:center;">
+              <div style="font-size:24px;">🔍</div>
+              <div style="font-weight:800; font-size:11px; margin-top:6px;">田中 SEO</div>
+              <div style="font-size:9px; color:var(--muted);">ローカル SEO</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 8px; text-align:center;">
+              <div style="font-size:24px;">🔭</div>
+              <div style="font-weight:800; font-size:11px; margin-top:6px;">大塚 競合</div>
+              <div style="font-size:9px; color:var(--muted);">競合分析</div>
+            </div>
+          </div>
+
+          <button class="det-cta" onclick="goStep(5)">チャットを開始 →</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== SCENE 5: MAIN CHAT (HERO + tasks) ===== -->
+  <div class="scene" id="scene5">
+    <aside class="sidebar">
+      <div class="sb-logo"><div class="bars"><span></span><span></span><span></span><span></span></div><div class="name">MY AI AGENT</div></div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-section">あなたのサイト (1)</div>
+      <div class="sb-sites">
+        <div class="sb-site active">
+          <div class="icn">📰</div>
+          <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">運用中・累計 23 件</div></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
+    </aside>
+    <main class="main">
+      <!-- HERO CARD (常駐) -->
+      <div class="hero-card">
+        <div>
+          <div class="hc-title">🤖 AI チームの累計実績</div>
+        </div>
+        <div class="hc-cell">
+          <div class="lbl">📝 公開記事</div>
+          <div class="val">12 本</div>
+          <div class="delta">▲ 今月 +4</div>
+        </div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell">
+          <div class="lbl">📱 X フォロワー</div>
+          <div class="val">+312</div>
+          <div class="delta">▲ 今週 +28</div>
+        </div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell">
+          <div class="lbl">🧵 Threads フォロワー</div>
+          <div class="val">+148</div>
+          <div class="delta">▲ 今週 +14</div>
+        </div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell">
+          <div class="lbl">⚡ AI 稼働</div>
+          <div class="val">87h</div>
+          <div class="delta">≒ ¥260k 節約</div>
+        </div>
+        <div class="hc-action">
+          <button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button>
+        </div>
+      </div>
+
+      <!-- CHAT HEADER -->
+      <div class="chat-header">
+        <div class="ch-left">
+          <div class="ch-icn">📰</div>
+          <div>
+            <div class="ch-name">fukuyama-note.com</div>
+            <div class="ch-pills">
+              <span class="ch-pill">📰 メディア型</span>
+              <span class="ch-pill">📋 タスク 8</span>
+              <span class="ch-pill">🔌 X / Threads / WP</span>
+            </div>
+          </div>
+        </div>
+        <div class="ch-right">
+          <button class="ch-tool">📰</button>
+          <button class="ch-tool">📊</button>
+          <button class="ch-tool" onclick="goStep(6)" title="戦略">🎯</button>
+          <button class="ch-tool active" title="タスク">📋</button>
+          <button class="ch-tool">🏢</button>
+          <button class="ch-tool">🔌</button>
+          <button class="ch-tool">📒</button>
+          <button class="ch-tool">⚙️</button>
+        </div>
+      </div>
+
+      <!-- TASK STRIP -->
+      <div class="task-strip">
+        <span class="ts-week">📋 WEEK 2/4</span>
+        <span class="ts-task"><span class="ck"></span><span class="txt">「鞆の浦観光」記事執筆</span></span>
+        <span class="ts-task"><span class="ck"></span><span class="txt">X 投稿 3 本 (今日)</span></span>
+        <span class="ts-task done"><span class="ck"></span><span class="txt">Threads 投稿 (完了)</span></span>
+        <span class="ts-more">他 5 件 →</span>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="msgs">
+        <div class="msg bot">
+          <div class="av">📰</div>
+          <div class="body">
+            <div class="head"><span class="nm">fukuyama-note.com</span><span class="tm">朝 8:00</span></div>
+            <div class="txt">🌅 おはようございます！昨日の動きをまとめました <br>
+              📱 X 投稿 3 本 → +12 フォロワー / 1,200 imp<br>
+              🧵 Threads 2 本 → +5 フォロワー / 450 imp<br>
+              📝 「初心者向け福山観光ガイド」記事公開 → 流入 +52
+            </div>
+          </div>
+        </div>
+        <div class="msg bot">
+          <div class="av">📰</div>
+          <div class="body">
+            <div class="head"><span class="nm">fukuyama-note.com</span><span class="tm">朝 8:01</span></div>
+            <div class="txt">📋 今日のタスク 5 件と AI が完成させた成果物 3 件があります。確認してください。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPOSER -->
+      <div class="composer-wrap">
+        <div class="composer">
+          <div class="composer-input">何をお願いしますか？</div>
+          <div class="composer-tools">
+            <span class="chip">📎</span><span class="chip">🌐 Chrome</span>
+            <button class="send">→</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TASKS PANEL OPEN -->
+      <div class="panel-overlay open">
+        <div class="panel-head">
+          <span class="ic">📋</span>
+          <span class="ttl">タスク / 実行</span>
+          <span class="sub">Week 2 / 4</span>
+          <button class="close" onclick="alert('閉じる動作はモック')">✕</button>
+        </div>
+        <div class="panel-body">
+          <div class="task-tabs">
+            <button class="task-tab active" onclick="_swT(this,'tt-a')">
+              <span>📋 今日のタスク</span>
+              <span class="tt-count">8</span>
+            </button>
+            <button class="task-tab" onclick="_swT(this,'tt-b')">
+              <span>📦 AI 成果物</span>
+              <span class="tt-count tt-count-hot">3</span>
+            </button>
+          </div>
+          <div class="task-tab-body active" id="tt-a">
+            <h4 style="font-size:12px; font-weight:800; color:var(--muted); margin:10px 0 6px;">🔥 今日</h4>
+            <div class="task-row done"><div class="ck"></div><div class="txt">Threads 投稿 3 本 (朝 9:00 / 12:00 / 19:00)</div><span class="ch-tag threads">Threads</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">「鞆の浦 観光 子連れ」記事執筆 (3,000 字)</div><span class="ch-tag wp">WP</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">X 投稿 3 本 (今週の食べ歩き紹介)</div><span class="ch-tag x">X</span></div>
+            <h4 style="font-size:12px; font-weight:800; color:var(--muted); margin:14px 0 6px;">📆 今週</h4>
+            <div class="task-row"><div class="ck"></div><div class="txt">既存記事 5 本のタイトル最適化</div><span class="ch-tag wp">WP</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">競合「鞆の浦観光」未対応 KW 5 個分対策</div><span class="ch-tag wp">WP</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">X インフルエンサーへのリプライ 5 件</div><span class="ch-tag x">X</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">Threads コミュニティ機能で関連 thread 参加</div><span class="ch-tag threads">Threads</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">内部リンク 5 箇所追加</div><span class="ch-tag wp">WP</span></div>
+          </div>
+          <div class="task-tab-body" id="tt-b">
+            <div style="font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--lime-soft); padding:9px 12px; border-radius:8px;">
+              💡 AI が <strong>すでに完成</strong> させた成果物。承認するだけ。
+            </div>
+            <div class="artifact-card">
+              <div class="ac-top">
+                <div class="ac-ic">📝</div>
+                <div class="ac-meta">
+                  <div class="ac-title">記事下書き：「初心者向け鞆の浦観光ガイド」</div>
+                  <div class="ac-sub">3,200 字 / 内部リンク 6 / 画像 4</div>
+                </div>
+                <div class="ac-status">WP 保存済</div>
+              </div>
+              <div class="ac-actions">
+                <button class="ac-btn">プレビュー</button>
+                <button class="ac-btn primary">公開する</button>
+              </div>
+            </div>
+            <div class="artifact-card">
+              <div class="ac-top">
+                <div class="ac-ic">📱</div>
+                <div class="ac-meta">
+                  <div class="ac-title">X 投稿 3 本 (今日 9/12/19 時)</div>
+                  <div class="ac-sub">ハッシュタグ + 画像付き</div>
+                </div>
+                <div class="ac-status">予約済</div>
+              </div>
+              <div class="ac-actions">
+                <button class="ac-btn">3 本確認</button>
+                <button class="ac-btn primary">承認して投稿</button>
+              </div>
+            </div>
+            <div class="artifact-card">
+              <div class="ac-top">
+                <div class="ac-ic">🧵</div>
+                <div class="ac-meta">
+                  <div class="ac-title">Threads 投稿 2 本 (X からの自動変換)</div>
+                  <div class="ac-sub">テキストのみ / 観光ハッシュタグ</div>
+                </div>
+                <div class="ac-status">予約済</div>
+              </div>
+              <div class="ac-actions">
+                <button class="ac-btn">確認</button>
+                <button class="ac-btn primary">承認</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== SCENE 6: STRATEGY PANEL (3-channel) ===== -->
+  <div class="scene" id="scene6">
+    <aside class="sidebar">
+      <div class="sb-logo"><div class="bars"><span></span><span></span><span></span><span></span></div><div class="name">MY AI AGENT</div></div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-section">あなたのサイト (1)</div>
+      <div class="sb-sites">
+        <div class="sb-site active">
+          <div class="icn">📰</div>
+          <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">運用中</div></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
+    </aside>
+    <main class="main">
+      <div class="hero-card">
+        <div><div class="hc-title">🤖 AI チームの累計実績</div></div>
+        <div class="hc-cell"><div class="lbl">📝 公開記事</div><div class="val">12 本</div><div class="delta">▲ 今月 +4</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">📱 X フォロワー</div><div class="val">+312</div><div class="delta">▲ 今週 +28</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">🧵 Threads フォロワー</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
+        <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button></div>
+      </div>
+      <div class="chat-header">
+        <div class="ch-left">
+          <div class="ch-icn">📰</div>
+          <div><div class="ch-name">fukuyama-note.com</div><div class="ch-pills"><span class="ch-pill">📰 メディア型</span></div></div>
+        </div>
+        <div class="ch-right">
+          <button class="ch-tool">📰</button><button class="ch-tool">📊</button>
+          <button class="ch-tool active">🎯</button><button class="ch-tool" onclick="goStep(5)">📋</button>
+          <button class="ch-tool">🏢</button><button class="ch-tool">🔌</button>
+          <button class="ch-tool">📒</button><button class="ch-tool">⚙️</button>
+        </div>
+      </div>
+      <div class="msgs" style="padding-bottom:0;"></div>
+      <div class="panel-overlay open" style="width:100%;">
+        <div class="panel-head">
+          <span class="ic">🎯</span>
+          <span class="ttl">戦略・KPI</span>
+          <span class="sub">3 チャネル軸</span>
+        </div>
+        <div class="panel-body">
+          <div style="background: var(--lime-soft); border: 1px solid var(--lime-soft-2); border-radius: 12px; padding: 16px; margin-bottom: 18px;">
+            <div style="font-size: 11px; color: var(--muted); font-weight: 700;">🎯 メイン目標</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--teal-2); margin-top: 4px;">90 日でメディア型としての PMF 達成</div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 6px;">SNS フォロワー +1500 / 記事 +24 本 / 流入 +800/月</div>
+          </div>
+
+          <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 10px;">📍 3 チャネル別の今週目標 + AI タスク</h4>
+
+          <div class="ch-3-grid">
+            <div class="ch-3-card x">
+              <h4>📱 X (Twitter)</h4>
+              <div class="stat"><span class="l">今週投稿</span><span class="v">21 本 / 21</span></div>
+              <div class="stat"><span class="l">今週フォロワー</span><span class="v">+28 (目標 +30)</span></div>
+              <div class="stat"><span class="l">エンゲージ率</span><span class="v">3.2% (▲ +0.4)</span></div>
+              <div class="ai-task">🤖 AI が毎日: 3 投稿 / 5 リプ / トレンド監視</div>
+            </div>
+            <div class="ch-3-card threads">
+              <h4>🧵 Threads</h4>
+              <div class="stat"><span class="l">今週投稿</span><span class="v">14 本 / 14</span></div>
+              <div class="stat"><span class="l">今週フォロワー</span><span class="v">+14 (目標 +15)</span></div>
+              <div class="stat"><span class="l">エンゲージ率</span><span class="v">5.1% (▲ +0.8)</span></div>
+              <div class="ai-task">🤖 AI が毎日: X 投稿を Threads 向け変換 + 投稿</div>
+            </div>
+            <div class="ch-3-card media">
+              <h4>📰 メディア (WordPress)</h4>
+              <div class="stat"><span class="l">今週公開</span><span class="v">2 本 / 2</span></div>
+              <div class="stat"><span class="l">内部リンク追加</span><span class="v">5 箇所</span></div>
+              <div class="stat"><span class="l">タイトル最適化</span><span class="v">8 本</span></div>
+              <div class="ai-task">🤖 AI が深夜: 記事下書き / 内部リンク差分 / タイトル提案</div>
+            </div>
+          </div>
+
+          <h4 style="font-size: 13px; font-weight: 800; margin: 22px 0 10px;">⚡ 今週の具体アクション (推定インパクト付き)</h4>
+          <div style="background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 6px;">
+            <div style="display: flex; gap: 10px;">
+              <span style="background: var(--teal); color: #fff; padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 800;">明日</span>
+              <div>
+                <div style="font-size: 13px;">「鞆の浦観光」記事に H2 を 5 個追加 + 内部リンク 3 本</div>
+                <div style="font-size: 11px; color: var(--teal-2); font-weight: 700; margin-top: 2px;">📈 CTR +2.1pt / 推定流入 +180/月</div>
+              </div>
+            </div>
+          </div>
+          <div style="background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 6px;">
+            <div style="display: flex; gap: 10px;">
+              <span style="background: var(--teal); color: #fff; padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 800;">今週</span>
+              <div>
+                <div style="font-size: 13px;">競合「tomonoura-info」が当ててる「福山 観光 子連れ」記事を新規執筆</div>
+                <div style="font-size: 11px; color: var(--teal-2); font-weight: 700; margin-top: 2px;">📈 月間検索 4,800 → 推定流入 +480/月</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== SCENE 7: DAILY REPORT ===== -->
+  <div class="scene" id="scene7">
+    <aside class="sidebar">
+      <div class="sb-logo"><div class="bars"><span></span><span></span><span></span><span></span></div><div class="name">MY AI AGENT</div></div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-section">あなたのサイト (1)</div>
+      <div class="sb-sites">
+        <div class="sb-site active">
+          <div class="icn">📰</div>
+          <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">運用中</div></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
+    </aside>
+    <main class="main">
+      <div class="hero-card">
+        <div><div class="hc-title">🤖 AI チームの累計実績</div></div>
+        <div class="hc-cell"><div class="lbl">📝 公開記事</div><div class="val">12 本</div><div class="delta">▲ 今月 +4</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">📱 X フォロワー</div><div class="val">+312</div><div class="delta">▲ 今週 +28</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">🧵 Threads フォロワー</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
+        <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button></div>
+      </div>
+      <div class="chat-header">
+        <div class="ch-left">
+          <div class="ch-icn">📰</div>
+          <div><div class="ch-name">fukuyama-note.com</div><div class="ch-pills"><span class="ch-pill">📰 メディア型</span></div></div>
+        </div>
+        <div class="ch-right">
+          <button class="ch-tool active">📰</button><button class="ch-tool">📊</button>
+          <button class="ch-tool" onclick="goStep(6)">🎯</button><button class="ch-tool" onclick="goStep(5)">📋</button>
+          <button class="ch-tool">🏢</button><button class="ch-tool">🔌</button>
+          <button class="ch-tool">📒</button><button class="ch-tool">⚙️</button>
+        </div>
+      </div>
+      <div class="msgs" style="padding-bottom:0;"></div>
+      <div class="panel-overlay open" style="width:100%;">
+        <div class="panel-head">
+          <span class="ic">📰</span>
+          <span class="ttl">日次グロースレポート</span>
+          <span class="sub">2026-05-25 (昨日)</span>
+        </div>
+        <div class="panel-body">
+          <!-- 即効指標 HERO -->
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:18px;">
+            <div style="background: linear-gradient(135deg, #000, #1a1a1a); color: #fff; border-radius: 12px; padding: 14px;">
+              <div style="font-size: 11px; opacity: 0.7;">📱 X</div>
+              <div style="font-size: 22px; font-weight: 800;">+12</div>
+              <div style="font-size: 11px; color: var(--lime);">フォロワー / インプ 1,200</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #1a1a1a, #333); color: #fff; border-radius: 12px; padding: 14px;">
+              <div style="font-size: 11px; opacity: 0.7;">🧵 Threads</div>
+              <div style="font-size: 22px; font-weight: 800;">+5</div>
+              <div style="font-size: 11px; color: var(--lime);">フォロワー / インプ 450</div>
+            </div>
+            <div style="background: linear-gradient(135deg, var(--teal), var(--teal-2)); color: #fff; border-radius: 12px; padding: 14px;">
+              <div style="font-size: 11px; opacity: 0.7;">📝 メディア</div>
+              <div style="font-size: 22px; font-weight: 800;">1 本</div>
+              <div style="font-size: 11px; color: var(--lime);">公開 / 流入 +52</div>
+            </div>
+          </div>
+
+          <!-- AI 実行履歴 -->
+          <h4 style="font-size:13px; font-weight:800; margin-bottom:10px;">⚡ 昨日 AI が実行したこと</h4>
+          <div style="background:#fff; border:1px solid var(--lime-soft-2); border-left:3px solid var(--lime); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:5px; display:flex; align-items:center; gap:10px; font-size:12px;">
+            <div style="width:18px; height:18px; background:var(--teal); color:var(--lime); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;">✓</div>
+            <div>記事 1 本公開:「初心者向け鞆の浦観光ガイド」</div>
+            <div style="margin-left:auto; background:var(--lime-soft); color:var(--teal-2); padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700;">流入 +52</div>
+          </div>
+          <div style="background:#fff; border:1px solid var(--lime-soft-2); border-left:3px solid var(--lime); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:5px; display:flex; align-items:center; gap:10px; font-size:12px;">
+            <div style="width:18px; height:18px; background:var(--teal); color:var(--lime); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;">✓</div>
+            <div>X 投稿 3 本送信 (9:00 / 12:00 / 19:00)</div>
+            <div style="margin-left:auto; background:var(--lime-soft); color:var(--teal-2); padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700;">+12 フォロワー</div>
+          </div>
+          <div style="background:#fff; border:1px solid var(--lime-soft-2); border-left:3px solid var(--lime); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:5px; display:flex; align-items:center; gap:10px; font-size:12px;">
+            <div style="width:18px; height:18px; background:var(--teal); color:var(--lime); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;">✓</div>
+            <div>Threads 投稿 2 本 (X からの自動変換版)</div>
+            <div style="margin-left:auto; background:var(--lime-soft); color:var(--teal-2); padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700;">+5 フォロワー</div>
+          </div>
+          <div style="background:#fff; border:1px solid var(--lime-soft-2); border-left:3px solid var(--lime); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:5px; display:flex; align-items:center; gap:10px; font-size:12px;">
+            <div style="width:18px; height:18px; background:var(--teal); color:var(--lime); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;">✓</div>
+            <div>内部リンク 5 箇所追加 (既存→新記事)</div>
+            <div style="margin-left:auto; background:var(--lime-soft); color:var(--teal-2); padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700;">CTR +1.2pt</div>
+          </div>
+
+          <!-- 明日のアクション -->
+          <h4 style="font-size:13px; font-weight:800; margin:20px 0 10px;">🎯 明日のアクション (AI 提案)</h4>
+          <div style="background:#fafaf7; border-radius:8px; padding:9px 12px; margin-bottom:5px; font-size:12px;">1. 競合「migrate-fukuyama」の新記事「福山 移住 補助金」に対抗執筆 (鈴木 が下書き準備中)</div>
+          <div style="background:#fafaf7; border-radius:8px; padding:9px 12px; margin-bottom:5px; font-size:12px;">2. 「初心者向け○○」テンプレで類似記事 2 本を量産</div>
+          <div style="background:#fafaf7; border-radius:8px; padding:9px 12px; margin-bottom:5px; font-size:12px;">3. 流入が増えた 3 記事へ内部リンク強化</div>
+
+          <button class="det-cta" style="margin-top:14px;">明日のアクション 3 件をタスク化 + AI に下書き作成依頼</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== SCENE 8: SHAREABLE MONTHLY CARD ===== -->
+  <div class="scene" id="scene8">
+    <aside class="sidebar">
+      <div class="sb-logo"><div class="bars"><span></span><span></span><span></span><span></span></div><div class="name">MY AI AGENT</div></div>
+      <button class="sb-add">＋ 新しいサイトを追加</button>
+      <div class="sb-section">あなたのサイト (1)</div>
+      <div class="sb-sites">
+        <div class="sb-site active">
+          <div class="icn">📰</div>
+          <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">運用中</div></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
+    </aside>
+    <main class="main">
+      <div class="share-main">
+        <div class="share-wrap">
+          <h2 class="share-h2">🎉 月次成果カードができました</h2>
+          <p class="share-sub">SNS でシェアして自分の AI チームの成果を見せよう</p>
+
+          <div class="share-card-img">
+            <div class="month">📅 2026 年 5 月</div>
+            <h3>AI チームが動いた 30 日</h3>
+            <div class="by">fukuyama-note.com / by @kota</div>
+            <div class="stats">
+              <div class="stat-cell">
+                <div class="lbl">📝 公開した記事</div>
+                <div class="val">12 本</div>
+                <div class="delta">▲ 先月比 +4</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">📱 X フォロワー増</div>
+                <div class="val">+312</div>
+                <div class="delta">▲ +15.4%</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">🧵 Threads</div>
+                <div class="val">+148</div>
+                <div class="delta">▲ 新規開始</div>
+              </div>
+              <div class="stat-cell">
+                <div class="lbl">📊 オーガニック流入</div>
+                <div class="val">+35%</div>
+                <div class="delta">1,240 → 1,672</div>
+              </div>
+            </div>
+            <div class="footer">⚡ AI が 87 時間相当の作業を実施 · myaiagents.agency</div>
+          </div>
+
+          <div class="share-buttons">
+            <button class="share-btn">🐦 X でシェア</button>
+            <button class="share-btn">🧵 Threads でシェア</button>
+            <button class="share-btn lime">📥 画像 DL</button>
+          </div>
+
+          <div style="margin-top: 24px; padding: 14px; background: #f7ffe9; border-radius: 10px; font-size: 12px; color: var(--teal-2);">
+            💡 この成果カードは <strong>毎月自動生成</strong> されます。<br>シェアした人の流入から、新規ユーザーが入ってくる仕組みです (= プロダクトの acquisition loop)。
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<script>
+const STEPS = {
+  1: { phase: 'PHASE 1 · オンボ' },
+  2: { phase: 'PHASE 1 · オンボ' },
+  3: { phase: 'PHASE 1 · オンボ' },
+  4: { phase: 'PHASE 1 · オンボ' },
+  5: { phase: 'D · 運用' },
+  6: { phase: 'P · 戦略' },
+  7: { phase: 'C · 検証' },
+  8: { phase: 'A · 共有' }
+};
+
+let curStep = 1;
+
+function toggleDemoCtrl(e){
+  if(e.target.closest('.arrow')) return;
+  document.getElementById('demoCtrl').classList.toggle('collapsed');
+}
+
+function goStep(n){
+  curStep = n;
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('scene' + n);
+  if(el) el.classList.add('active');
+
+  document.querySelectorAll('.demo-ctrl-body .stepbtn').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.step) === n);
+  });
+
+  const meta = STEPS[n] || {};
+  document.getElementById('dcBadge').textContent = meta.phase || '';
+  document.getElementById('dcProgress').textContent = `${n} / 8`;
+  document.getElementById('prevBtn').disabled = (n === 1);
+  document.getElementById('nextBtn').disabled = (n === 8);
+}
+
+document.querySelectorAll('.demo-ctrl-body .stepbtn').forEach(b => {
+  b.addEventListener('click', () => goStep(Number(b.dataset.step)));
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'ArrowRight') goStep(Math.min(8, curStep + 1));
+  if(e.key === 'ArrowLeft') goStep(Math.max(1, curStep - 1));
+});
+
+function _swT(btn, target){
+  document.querySelectorAll('.task-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.task-tab-body').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById(target);
+  if(el) el.classList.add('active');
+}
+
+const TUTORIALS = {
+  threads: {
+    title: '🧵 Threads アカウントの作り方',
+    sub: 'Instagram のアカウントがあれば 60 秒で完了します',
+    steps: [
+      { n: 1, t: 'Threads アプリをダウンロード (App Store / Google Play)', link: 'https://threads.net' },
+      { n: 2, t: 'Instagram でログイン or 新規アカウント作成' },
+      { n: 3, t: 'プロフィール設定 (名前 / 自己紹介 / 写真)' },
+      { n: 4, t: 'このページに戻って「接続する」ボタンを押す' }
+    ]
+  },
+  wp: {
+    title: '📝 WordPress の立ち上げ方',
+    sub: '初心者向け: 約 30 分で完了。月額 ¥500-1000 (ホスティング)',
+    steps: [
+      { n: 1, t: 'レンタルサーバーを契約 (推奨: xserver / ConoHa WING)', link: 'https://www.xserver.ne.jp' },
+      { n: 2, t: 'ドメインを取得 (.com or .jp、年 ¥1000-3000)' },
+      { n: 3, t: 'WordPress を 1-click インストール (xserver は標準機能)' },
+      { n: 4, t: 'テーマを選択 (推奨: Cocoon / SWELL)' },
+      { n: 5, t: 'Application Password を発行して MY AI Agent に貼り付け' }
+    ]
+  }
+};
+
+function openTut(key){
+  const t = TUTORIALS[key];
+  if(!t) return;
+  const c = document.getElementById('tutContent');
+  c.innerHTML = `
+    <h3>${t.title} <button class="tut-close" onclick="closeTut()">✕</button></h3>
+    <div class="tut-sub">${t.sub}</div>
+    ${t.steps.map(s => `
+      <div class="tut-step">
+        <div class="num">${s.n}</div>
+        <div>
+          ${s.t}
+          ${s.link ? `<br><a href="${s.link}" target="_blank">${s.link} ↗</a>` : ''}
+        </div>
+      </div>
+    `).join('')}
+    <button class="tut-cta" onclick="closeTut()">了解、進める</button>
+  `;
+  document.getElementById('tutOverlay').classList.add('open');
+}
+function closeTut(){
+  document.getElementById('tutOverlay').classList.remove('open');
+}
+
+goStep(1);
+</script>
+</body>
+</html>

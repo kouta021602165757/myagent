@@ -264,6 +264,78 @@
       </svg>
     </div>
 
+    <!-- 🔍 GSC: どの URL / クエリで流入してるか (専用 prominent セクション) -->
+    <div class="sec-lbl">🔍 Search Console ・ どの URL / クエリから流入してるか</div>
+    <div style="background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:18px 22px;margin-bottom:14px">
+      <!-- summary 行 -->
+      <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;border-bottom:1px solid var(--wire);margin-bottom:14px;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;color:var(--green);background:#dcfce7;border:1px solid #86efac;padding:3px 9px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase">✓ 接続済</span>
+        <span style="font-size:11.5px;color:var(--text3);font-weight:700">直近 28 日 (GSC 標準)</span>
+        <span style="margin-left:auto;display:flex;gap:14px;font-size:12.5px">
+          <span><b style="font-size:16px;color:var(--text)">68</b> <span style="color:var(--text3);font-size:11px;font-weight:600">clicks</span></span>
+          <span><b style="font-size:16px;color:var(--text)">1,142</b> <span style="color:var(--text3);font-size:11px;font-weight:600">impressions</span></span>
+          <span><b style="font-size:16px;color:var(--text)">5.9%</b> <span style="color:var(--text3);font-size:11px;font-weight:600">CTR</span></span>
+          <span><b style="font-size:16px;color:var(--text)">17.2</b> <span style="color:var(--text3);font-size:11px;font-weight:600">平均順位</span></span>
+        </span>
+      </div>
+      <!-- GSC tab (URL 別 / クエリ別) -->
+      <div style="display:flex;gap:4px;margin-bottom:12px">
+        <button style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">📄 URL 別 TOP 10</button>
+        <button style="background:transparent;color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🔎 クエリ別 TOP 10</button>
+      </div>
+      <!-- URL 別 table -->
+      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:8px 4px;border-bottom:1px solid var(--wire2);font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">
+        <div>URL</div>
+        <div style="text-align:right">Clicks</div>
+        <div style="text-align:right">Impressions</div>
+        <div style="text-align:right">CTR</div>
+        <div style="text-align:right">平均順位</div>
+      </div>
+      <!-- URL rows -->
+      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/</a></div>
+        <div style="text-align:right;font-weight:800">28</div>
+        <div style="text-align:right;font-weight:600">412</div>
+        <div style="text-align:right;color:var(--green);font-weight:700">6.8%</div>
+        <div style="text-align:right;color:var(--text2);font-weight:600">14.3</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/tools/agent-builder</a></div>
+        <div style="text-align:right;font-weight:800">15</div>
+        <div style="text-align:right;font-weight:600">287</div>
+        <div style="text-align:right;color:var(--text);font-weight:700">5.2%</div>
+        <div style="text-align:right;color:var(--yellow);font-weight:700">18.7</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/blog/2026-saas-growth-stack</a></div>
+        <div style="text-align:right;font-weight:800">12</div>
+        <div style="text-align:right;font-weight:600">198</div>
+        <div style="text-align:right;color:var(--green);font-weight:700">6.1%</div>
+        <div style="text-align:right;color:var(--text2);font-weight:600">16.2</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/pricing</a></div>
+        <div style="text-align:right;font-weight:800">8</div>
+        <div style="text-align:right;font-weight:600">156</div>
+        <div style="text-align:right;color:var(--text);font-weight:700">5.1%</div>
+        <div style="text-align:right;color:var(--red);font-weight:700">22.4</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/case-study/indie-founder</a></div>
+        <div style="text-align:right;font-weight:800">5</div>
+        <div style="text-align:right;font-weight:600">89</div>
+        <div style="text-align:right;color:var(--text);font-weight:700">5.6%</div>
+        <div style="text-align:right;color:var(--yellow);font-weight:700">19.8</div>
+      </div>
+      <!-- AI 対策 chip -->
+      <div style="margin-top:14px;padding:12px 14px;background:var(--peach-soft);border:1px solid var(--peach);border-radius:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:800;color:var(--text2)">💡 AI に依頼:</span>
+        <button style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🤖 上位 URL を伸ばす SEO 施策</button>
+        <button style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🤖 平均順位 14 位以下を改善</button>
+        <button style="background:#fff;color:var(--teal);border:1px solid var(--teal);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🤖 機会キーワードを抽出</button>
+      </div>
+    </div>
+
     <!-- 全 site 比較 -->
     <div class="sec-lbl">🏆 全 site 比較 (今月 PV)</div>
     <div class="sites-comp">

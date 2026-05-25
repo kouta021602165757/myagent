@@ -82,14 +82,14 @@
   .art-card-buttons button.on { background: var(--peach); border-color: var(--peach); }
   .art-card-buttons button.go { background: var(--peach); border-color: var(--peach); margin-left: auto; }
 
-  /* Note pill — option B */
+  /* Note pill — option B (横幅いっぱい / テキストの下に block 配置) */
   .note-pill {
-    display: inline-flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 12px;
     background: linear-gradient(135deg,rgba(192,255,92,.10),rgba(192,255,92,.18));
     border: 1px solid rgba(192,255,92,.45); border-radius: 11px;
-    padding: 11px 16px; margin-top: 12px;
+    padding: 12px 16px; margin-top: 14px;
     font-size: 13px; font-weight: 700; cursor: pointer;
-    transition: all .15s;
+    transition: all .15s; width: 100%;
   }
   .note-pill:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(192,255,92,.2); }
   .note-pill-ic { font-size: 18px; }

@@ -2679,6 +2679,15 @@ function _buildGa4Status(site){
   return { ga4Connected: ga4Connected, ga4Banner: ga4Banner };
 }
 
+// Generic error card for failed tab renders
+function _dgrErrCard(err){
+  return '<div style="padding:24px;background:#fff7ed;border:1px solid #fed7aa;border-radius:11px;color:#9a3412">'
+    + '<div style="font-weight:800;margin-bottom:8px">⚠️ パネルの描画でエラー</div>'
+    + '<div style="font-size:12px;color:#7c2d12;font-family:ui-monospace,monospace;white-space:pre-wrap">'+esc(String(err && err.message || err))+'</div>'
+    + '<div style="font-size:11px;color:#9a3412;margin-top:8px">DevTools (F12) Console でスタックトレースを確認できます</div>'
+    + '</div>';
+}
+
 // Generic modal renderer — wraps any _renderTabXxx output in a full-page overlay
 function _openSiteTabModal(siteId, tabKey){
   var site = (agents||[]).find(function(a){return a && a.id === siteId;});
@@ -2686,27 +2695,40 @@ function _openSiteTabModal(siteId, tabKey){
   var title = '', content = '';
   if(tabKey === 'numbers'){
     title = '📊 ' + L('数字分析','Numbers');
-    var kpiHTML = _buildKpiHTML(site);
-    var ga4 = _buildGa4Status(site);
-    content = _renderTabNumbers(site, site.kpi || {}, ga4.ga4Connected, kpiHTML, ga4.ga4Banner,
-      _siteAllArtifacts(site.id), _siteDailySeries(site),
-      _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site));
-    try { _fetchGa4Snapshot(site.id); } catch(_){}
+    try {
+      var kpiHTML = _buildKpiHTML(site);
+      var ga4 = _buildGa4Status(site);
+      content = _renderTabNumbers(site, site.kpi || {}, ga4.ga4Connected, kpiHTML, ga4.ga4Banner,
+        _siteAllArtifacts(site.id), _siteDailySeries(site),
+        _siteWeeklyStats(site), _siteChannelBreakdown(site), _siteInsights(site));
+      try { _fetchGa4Snapshot(site.id); } catch(_){}
+    } catch(err){
+      console.error('[numbers-panel] render failed:', err);
+      content = '<div style="padding:24px;background:#fff7ed;border:1px solid #fed7aa;border-radius:11px;color:#9a3412">'
+        + '<div style="font-weight:800;margin-bottom:8px">⚠️ '+L('数字分析の描画でエラー','Render error')+'</div>'
+        + '<div style="font-size:12px;color:#7c2d12;font-family:ui-monospace,monospace;white-space:pre-wrap">'+esc(String(err && err.message || err))+'</div>'
+        + '</div>';
+    }
   } else if(tabKey === 'strategy'){
     title = '🎯 ' + L('戦略・KPI','Strategy & KPI');
-    content = _renderTabStrategy(site, _siteAllArtifacts(site.id));
+    try { content = _renderTabStrategy(site, _siteAllArtifacts(site.id)); }
+    catch(err){ console.error('[strategy-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'tasks'){
     title = '📋 ' + L('タスク一覧','Tasks');
-    content = _renderTabTasks(site);
+    try { content = _renderTabTasks(site); }
+    catch(err){ console.error('[tasks-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'connections'){
     title = '🔌 ' + L('接続','Connections');
-    content = _renderTabConnections(site);
+    try { content = _renderTabConnections(site); }
+    catch(err){ console.error('[connections-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'agents'){
     title = '🏢 ' + L('エージェント一覧','Agents');
-    content = _renderTabAgents(site);
+    try { content = _renderTabAgents(site); }
+    catch(err){ console.error('[agents-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'settings'){
     title = '⚙️ ' + L('設定','Settings');
-    content = _renderTabSettings(site);
+    try { content = _renderTabSettings(site); }
+    catch(err){ console.error('[settings-panel] render failed:', err); content = _dgrErrCard(err); }
   } else {
     showToast(L('不明なパネル','Unknown panel'),'ng');
     return;

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Option B モック — ノート中心 UX</title>
+<style>
+  :root {
+    --cream: #ffffff;
+    --cream2: #fafafa;
+    --cream3: #fafaf7;
+    --ink: #fafaf7;
+    --text: #1a1a1a;
+    --text2: #525252;
+    --text3: #71717a;
+    --wire: rgba(9,9,11,.06);
+    --wire2: rgba(9,9,11,.10);
+    --peach: #c0ff5c;
+    --peach-soft: rgba(192,255,92,.14);
+    --peach-dark: #a3e635;
+    --teal: #0d4f4a;
+  }
+  *{box-sizing:border-box}
+  body {
+    margin: 0;
+    padding: 28px;
+    background: var(--ink);
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  h1 {
+    font-size: 22px; font-weight: 900; margin: 0 0 6px;
+  }
+  .sub { color: var(--text3); font-size: 13px; margin-bottom: 28px; }
+  .scene {
+    background: var(--cream); border: 1px solid var(--wire2);
+    border-radius: 16px; padding: 22px; margin-bottom: 24px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.04);
+  }
+  .scene-label {
+    display: inline-block; background: var(--peach-soft);
+    color: var(--peach-dark); font-size: 11px; font-weight: 900;
+    padding: 4px 11px; border-radius: 99px; letter-spacing: .05em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .scene-label.bad { background:#fef3c7; color:#92400e; }
+  .scene-label.good { background:var(--peach-soft); color:var(--peach-dark); }
+  .scene h3 { font-size: 16px; margin: 0 0 14px; font-weight: 800; }
+
+  /* Chat bubble */
+  .chat { background: var(--cream3); border-radius: 12px; padding: 18px; }
+  .msg { margin-bottom: 16px; }
+  .msg-meta { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .msg-avatar {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg,#fda85e,#a3e635);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .msg-avatar.k { background: #1f1f1f; color: white; font-weight: 700; font-size: 14px; }
+  .msg-name { font-weight: 800; font-size: 13.5px; }
+  .msg-time { color: var(--text3); font-size: 11.5px; }
+  .msg-body { padding-left: 40px; font-size: 13.5px; line-height: 1.7; }
+
+  /* Bad: old artifact card */
+  .art-card {
+    background: white; border: 1px solid var(--wire2);
+    border-radius: 11px; padding: 14px 18px; margin-top: 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .art-card-ic { font-size: 28px; }
+  .art-card-meta { flex: 1; }
+  .art-card-title { font-weight: 800; font-size: 14px; }
+  .art-card-fn { font-size: 11.5px; color: var(--text3); font-family: ui-monospace,monospace; }
+  .art-card-buttons { display: flex; gap: 6px; margin-top: 9px; }
+  .art-card-buttons button {
+    background: var(--cream3); border:1px solid var(--wire2);
+    border-radius: 7px; padding: 5px 10px; font-size: 11px;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .art-card-buttons button.on { background: var(--peach); border-color: var(--peach); }
+  .art-card-buttons button.go { background: var(--peach); border-color: var(--peach); margin-left: auto; }
+
+  /* Note pill — option B */
+  .note-pill {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg,rgba(192,255,92,.10),rgba(192,255,92,.18));
+    border: 1px solid rgba(192,255,92,.45); border-radius: 11px;
+    padding: 11px 16px; margin-top: 12px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all .15s;
+  }
+  .note-pill:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(192,255,92,.2); }
+  .note-pill-ic { font-size: 18px; }
+  .note-pill-meta { display: flex; flex-direction: column; }
+  .note-pill-type { font-size: 9.5px; color: var(--peach-dark); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+  .note-pill-title { font-weight: 800; }
+  .note-pill-sub { font-size: 11px; color: var(--text3); font-weight: 600; }
+  .note-pill-arrow { margin-left: auto; color: var(--text3); }
+
+  /* Notebook modal */
+  .note-modal {
+    background: var(--cream3); border-radius: 16px;
+    border: 1px solid var(--wire2);
+    box-shadow: 0 24px 48px rgba(0,0,0,.12);
+    overflow: hidden;
+  }
+  .note-modal-head {
+    padding: 14px 22px; border-bottom: 1px solid var(--wire);
+    background: var(--cream); display: flex; align-items: center; gap: 12px;
+  }
+  .note-modal-head-ic { font-size: 22px; }
+  .note-modal-head-title { font-weight: 900; font-size: 15px; }
+  .note-modal-head-sub { font-size: 11px; color: var(--text3); }
+  .note-modal-head .versions { margin-left: auto; display: flex; gap: 5px; }
+  .note-modal-head .ver-btn {
+    background: var(--cream3); border: 1px solid var(--wire2);
+    border-radius: 99px; padding: 3px 11px; font-size: 10.5px;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .note-modal-head .ver-btn.current { background: var(--peach); border-color: var(--peach); font-weight: 800; }
+
+  .note-modal-body { padding: 18px 22px; }
+
+  .preview-pane {
+    background: white; border: 1px solid var(--wire);
+    border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+  }
+  .preview-head {
+    padding: 10px 16px; background: var(--cream3);
+    border-bottom: 1px solid var(--wire); display: flex;
+    align-items: center; gap: 10px;
+  }
+  .preview-head-label {
+    font-size: 10px; color: var(--text3); font-weight: 800;
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .preview-head-fn {
+    font-family: ui-monospace,monospace; font-size: 11px;
+    color: var(--text3); flex: 1;
+  }
+  .preview-head-open {
+    color: var(--peach-dark); font-size: 10.5px; font-weight: 800;
+    text-decoration: none;
+  }
+  .preview-body {
+    padding: 22px;
+    background: linear-gradient(180deg, #fff 0%, #fafaf7 100%);
+    font-family: system-ui, sans-serif;
+  }
+  .preview-h-tag {
+    display: inline-block; background: var(--teal);
+    color: white; font-size: 10px; font-weight: 800;
+    padding: 4px 11px; border-radius: 99px;
+    letter-spacing: .08em; margin-bottom: 12px;
+  }
+  .preview-h-title { font-size: 28px; font-weight: 900; margin: 0; line-height: 1.2; }
+  .preview-h-sub { color: var(--text3); font-size: 12px; margin: 4px 0 22px; }
+  .funnel-row {
+    display: grid; grid-template-columns: 130px 1fr 80px 90px;
+    align-items: center; gap: 12px; padding: 9px 0;
+    border-bottom: 1px solid var(--wire);
+    font-size: 13px;
+  }
+  .funnel-row.head {
+    font-size: 10px; color: var(--text3); font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 1px solid var(--wire2);
+  }
+  .funnel-bar {
+    height: 7px; background: var(--cream3); border-radius: 99px; overflow: hidden;
+  }
+  .funnel-bar > div {
+    height: 100%; background: linear-gradient(90deg, var(--peach-dark), var(--teal));
+    border-radius: 99px;
+  }
+  .delta-bad { color: #dc2626; font-weight: 800; }
+  .delta-ok { color: #16a34a; font-weight: 700; }
+  .p1-tag {
+    background: #fee2e2; color: #991b1b; font-size: 9.5px;
+    font-weight: 800; padding: 2px 8px; border-radius: 99px;
+    margin-left: 6px; letter-spacing: .04em;
+  }
+
+  .text-pane {
+    background: white; border: 1px solid var(--wire);
+    border-radius: 12px; padding: 16px 20px;
+  }
+  .text-pane-label {
+    font-size: 10px; color: var(--text3); font-weight: 800;
+    letter-spacing: .04em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .text-pane-content {
+    font-size: 13.5px; line-height: 1.75; color: var(--text); white-space: pre-wrap;
+  }
+
+  .note-modal-actions {
+    display: flex; gap: 8px; margin-top: 14px;
+    padding-top: 14px; border-top: 1px solid var(--wire);
+  }
+  .note-modal-actions button {
+    background: var(--cream); border: 1px solid var(--wire2);
+    border-radius: 8px; padding: 7px 14px; font-size: 12px;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .note-modal-actions .save { background: var(--peach); border-color: var(--peach); font-weight: 800; }
+  .note-modal-actions .del { color: #dc2626; border-color: #fecaca; }
+
+  .arrow {
+    text-align: center; font-size: 24px; color: var(--peach-dark);
+    margin: 6px 0;
+  }
+  .legend {
+    margin-top: 32px; padding: 18px 22px; background: white;
+    border: 1px solid var(--wire2); border-radius: 12px;
+  }
+  .legend h3 { font-size: 14px; margin: 0 0 10px; }
+  .legend table { width: 100%; font-size: 12.5px; border-collapse: collapse; }
+  .legend th, .legend td { text-align: left; padding: 8px 4px; border-bottom: 1px solid var(--wire); }
+  .legend th { font-size: 11px; color: var(--text3); font-weight: 700; }
+  .legend td.good { color: #16a34a; font-weight: 700; }
+  .legend td.bad { color: #dc2626; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Option B モック — ノート中心 UX</h1>
+  <div class="sub">artifact カードを廃止して、 すべての成果物を 📒 ノートに集約。 ノート 1 件 = 成果物 1 件 (HTML プレビュー + テキスト + 履歴)。</div>
+
+  <!-- BEFORE -->
+  <div class="scene">
+    <span class="scene-label bad">⚠️ Before (現状 — 散らかってる)</span>
+    <h3>チャット画面</h3>
+    <div class="chat">
+      <div class="msg">
+        <div class="msg-meta">
+          <div class="msg-avatar k">K</div>
+          <span class="msg-name">あなた</span>
+          <span class="msg-time">04:13</span>
+        </div>
+        <div class="msg-body">【タスク実行】「ファネル漏れ箇所を特定...」 を今すぐ進めて。</div>
+      </div>
+      <div class="msg">
+        <div class="msg-meta">
+          <div class="msg-avatar">🛠</div>
+          <span class="msg-name">myaiagents.agency</span>
+          <span class="msg-time">04:13</span>
+        </div>
+        <div class="msg-body">
+          162 人来ても CTA を押すのは 16 人。 ここが P1 です。
+          <div class="art-card">
+            <div class="art-card-ic">🌐</div>
+            <div class="art-card-meta">
+              <div class="art-card-title">funnel-analysis-dashboard <span style="font-size:10px;background:var(--peach-soft);color:var(--peach-dark);padding:2px 7px;border-radius:99px;margin-left:6px">Ver.5</span></div>
+              <div class="art-card-fn">artifact-funnel-analysis-dashboard-cdff7aa6d6.html</div>
+              <div class="art-card-buttons">
+                <button>✏️ 修正</button>
+                <button class="on">📌 固定中</button>
+                <button>📋 コピー</button>
+                <button>📄 コード</button>
+                <button class="go">🔗 開く ↗</button>
+              </div>
+            </div>
+          </div>
+          <div class="note-pill" style="margin-top:10px;background:var(--cream3);border-color:var(--wire2);opacity:.85">
+            <span class="note-pill-ic">📒</span>
+            <div class="note-pill-meta">
+              <span class="note-pill-title" style="font-size:12px">funnel-analysis-dashboard</span>
+            </div>
+            <span class="note-pill-arrow">→</span>
+          </div>
+          <p style="margin-top:14px; font-size:12px; color:#dc2626; font-weight:700">↑ 同じ成果物が「artifact カード」と「ノートピル」 の 2 ヶ所に出ている。 ユーザー: 「どっち押せばいいの？」</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- AFTER -->
+  <div class="scene">
+    <span class="scene-label good">✅ After (Option B — ノート 1 ヶ所に集約)</span>
+    <h3>チャット画面</h3>
+    <div class="chat">
+      <div class="msg">
+        <div class="msg-meta">
+          <div class="msg-avatar k">K</div>
+          <span class="msg-name">あなた</span>
+          <span class="msg-time">04:13</span>
+        </div>
+        <div class="msg-body">【タスク実行】「ファネル漏れ箇所を特定...」 を今すぐ進めて。</div>
+      </div>
+      <div class="msg">
+        <div class="msg-meta">
+          <div class="msg-avatar">🛠</div>
+          <span class="msg-name">myaiagents.agency</span>
+          <span class="msg-time">04:13</span>
+        </div>
+        <div class="msg-body">
+          162 人来ても CTA を押すのは 16 人。 <span class="p1-tag">P1</span><br>
+          今日の最優先アクション:<br>
+          A → GA4 Goal 設定<br>
+          B → LP FV コピー改稿<br>
+          C → SEO 記事キーワード確定
+          <div class="note-pill" onclick="document.getElementById('mod').scrollIntoView({behavior:'smooth'})">
+            <span class="note-pill-ic">📄</span>
+            <div class="note-pill-meta">
+              <span class="note-pill-type">📊 分析レポート ・ HTML プレビュー付き</span>
+              <span class="note-pill-title">funnel-analysis-dashboard</span>
+              <span class="note-pill-sub">v5 / 5 件 ・ 2026-05-25</span>
+            </div>
+            <span class="note-pill-arrow">開く →</span>
+          </div>
+          <p style="margin-top:14px; font-size:12px; color:var(--peach-dark); font-weight:700">↑ ノートピル 1 つだけ。 click でメモ帳に展開 ↓</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow">↓ クリックすると…</div>
+
+  <!-- NOTEBOOK MODAL -->
+  <div id="mod" class="scene">
+    <span class="scene-label good">📒 メモ帳 (ノート modal)</span>
+    <div class="note-modal">
+      <div class="note-modal-head">
+        <span class="note-modal-head-ic">📄</span>
+        <div>
+          <div class="note-modal-head-title">funnel-analysis-dashboard</div>
+          <div class="note-modal-head-sub">myaiagents.agency ・ 2026-05-25 ・ AI 自動生成</div>
+        </div>
+        <div class="versions">
+          <button class="ver-btn">v1</button>
+          <button class="ver-btn">v2</button>
+          <button class="ver-btn">v3</button>
+          <button class="ver-btn">v4</button>
+          <button class="ver-btn current">v5</button>
+        </div>
+      </div>
+      <div class="note-modal-body">
+        <!-- preview pane -->
+        <div class="preview-pane">
+          <div class="preview-head">
+            <span class="preview-head-label">🔗 HTML プレビュー</span>
+            <span class="preview-head-fn">artifact-funnel-analysis-dashboard-cdff7aa6d6.html?v=5</span>
+            <a href="#" class="preview-head-open">新しいタブで開く ↗</a>
+          </div>
+          <div class="preview-body">
+            <span class="preview-h-tag">MY AI AGENT ・ FUNNEL ANALYSIS</span>
+            <h1 class="preview-h-title">直近 30 日のファネル</h1>
+            <div class="preview-h-sub">myaiagents.agency ・ GA4 実データ ・ 2026-04-26 〜 2026-05-25</div>
+            <div class="funnel-row head">
+              <div>ステップ</div><div>進捗</div><div style="text-align:right">数</div><div style="text-align:right">前 stage 比</div>
+            </div>
+            <div class="funnel-row">
+              <div>セッション流入</div>
+              <div class="funnel-bar"><div style="width:100%"></div></div>
+              <div style="text-align:right;font-weight:800">162</div>
+              <div style="text-align:right;color:var(--text3)">基準</div>
+            </div>
+            <div class="funnel-row">
+              <div>LP 閲覧</div>
+              <div class="funnel-bar"><div style="width:80%"></div></div>
+              <div style="text-align:right;font-weight:800">130</div>
+              <div class="delta-bad" style="text-align:right">−20%</div>
+            </div>
+            <div class="funnel-row" style="background:#fef3c7;margin:0 -22px;padding:9px 22px">
+              <div>CTA クリック <span class="p1-tag">P1 最大漏れ</span></div>
+              <div class="funnel-bar"><div style="width:12%"></div></div>
+              <div style="text-align:right;font-weight:900;color:#dc2626">16</div>
+              <div class="delta-bad" style="text-align:right">−88%</div>
+            </div>
+            <div class="funnel-row">
+              <div>フォーム到達</div>
+              <div class="funnel-bar"><div style="width:6%"></div></div>
+              <div style="text-align:right;font-weight:800">5</div>
+              <div class="delta-bad" style="text-align:right">−69%</div>
+            </div>
+            <div class="funnel-row">
+              <div>リード獲得</div>
+              <div class="funnel-bar"><div style="width:2%"></div></div>
+              <div style="text-align:right;font-weight:800">0</div>
+              <div class="delta-bad" style="text-align:right">計測不可</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- editable text pane -->
+        <div class="text-pane">
+          <div class="text-pane-label">✍️ テキスト本文 (編集可能)</div>
+          <div class="text-pane-content"># ファネル分析 2026-05-25
+
+162 人来ても **CTA を押すのは 16 人**。 ここが P1 です。
+
+## 今日の最優先アクション (このまま「A」「B」「C」で指示できます)
+
+- **A → GA4 Goal 設定** — CVR をゼロから計測可能にする
+- **B → LP FV コピー改稿** — 「週 10 時間の作業をゼロに」 で CTA クリック率を上げる
+- **C → SEO 記事キーワード確定** — Search Console の Top 10 クエリを今すぐ抽出</div>
+        </div>
+
+        <div class="note-modal-actions">
+          <button>🤖 AI に編集を依頼</button>
+          <button>🔄 新バージョンとして再生成</button>
+          <button class="del" style="margin-left:auto">🗑 削除</button>
+          <button class="save">💾 保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGEND / DIFF TABLE -->
+  <div class="legend">
+    <h3>📋 何が変わるか</h3>
+    <table>
+      <tr><th>項目</th><th>Before (今)</th><th>After (Option B)</th></tr>
+      <tr>
+        <td>チャット内に出るもの</td>
+        <td class="bad">artifact カード + ノートピル の 2 個</td>
+        <td class="good">ノートピル 1 個だけ</td>
+      </tr>
+      <tr>
+        <td>成果物の場所</td>
+        <td class="bad">artifact 専用 + ノートに別エントリ</td>
+        <td class="good">ノート 1 件に集約 (HTML + テキスト + 履歴)</td>
+      </tr>
+      <tr>
+        <td>HTML プレビュー</td>
+        <td class="bad">新タブで別画面に飛ぶ</td>
+        <td class="good">メモ帳 内で iframe 即表示</td>
+      </tr>
+      <tr>
+        <td>編集</td>
+        <td class="bad">artifact カードの「✏️ 修正」 で AI 依頼</td>
+        <td class="good">メモ帳 で markdown 直接編集 / AI 編集も可</td>
+      </tr>
+      <tr>
+        <td>履歴 (バージョン)</td>
+        <td class="bad">Ver.5 みたいな数字だけ</td>
+        <td class="good">v1〜v5 切替 button + 各版閲覧</td>
+      </tr>
+      <tr>
+        <td>ユーザーの mental model</td>
+        <td class="bad">「artifact と note、 どっち？」</td>
+        <td class="good">「ノート = 成果物」 シンプル</td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

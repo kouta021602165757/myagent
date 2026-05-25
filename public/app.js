@@ -2837,6 +2837,13 @@ window.openDailyGrowthReportPanel = async function(siteId){
 window._runDailyGrowthReport = function(siteId){
   var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
   if(!ag){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
+  // 連打ガード: 5 秒以内の連続クリックは無視 (= 同じ依頼が複数飛ぶのを防ぐ)
+  var nowMs = Date.now();
+  if(window._lastDailyReportSent && (nowMs - window._lastDailyReportSent) < 5000){
+    showToast(L('レポート生成中です…少しお待ちください','Generating report — please wait'),'info');
+    return;
+  }
+  window._lastDailyReportSent = nowMs;
   var ov = document.getElementById('dailyGrowthOverlay');
   if(ov) ov.remove();
   if(activeId !== siteId){ openAgent(siteId); }

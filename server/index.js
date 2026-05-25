@@ -8332,9 +8332,19 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
   const summary = (matched ? (matched.title || matched.name)
                   : (title || reply.split('\n').find(s => s.trim()) || '')).slice(0, 60);
 
-  // Find existing note by thread_id (= 1 thread → 1 note)
+  // Find existing note. Daily growth reports dedupe by date + agent (同日 +
+  // 同サイトは 1 ノート、version 追記)。他は thread_id ベース (= 1 thread →
+  // 1 note)。これで「+ 新しいレポートを生成」 を 1 日に何度押しても 1 件に集約される。
   let existing = null;
-  if(threadParentId){
+  if(type === 'daily'){
+    const todayStr = now.slice(0, 10); // YYYY-MM-DD
+    existing = user.notes.find(n =>
+      n && n.type === 'daily'
+      && n.agent_id === agent.id
+      && String(n.created_at||'').slice(0,10) === todayStr
+    );
+  }
+  if(!existing && threadParentId){
     existing = user.notes.find(n => n && n.thread_id === threadParentId);
   }
   if(existing){

@@ -8412,7 +8412,7 @@ function _showOneClickStep(kind, siteId){
     +   '</div>'
     +   '<div class="xp-actions">'
     +     '<button class="xp-cancel" onclick="_closeOneClickStep()">後で</button>'
-    +     '<button class="xp-post" style="background:#c0ff5c" onclick="' + primaryAction + '">' + primaryLbl + '</button>'
+    +     '<button class="xp-post" style="background:var(--teal);color:#fff" onclick="' + primaryAction + '">' + primaryLbl + '</button>'
     +   '</div>'
     + '</div>'
     + '</div>';
@@ -19473,9 +19473,9 @@ function _notesRenderEditor(){
           var sel = v.v === curV;
           var when = (v.created_at||'').slice(5,16).replace('T',' ');
           return '<button onclick="_notesPickVersion(\''+esc(note.id)+'\','+v.v+')" '
-            + 'style="background:' + (sel?'var(--peach)':'var(--cream)') + ';'
-            + 'color:' + (sel?'#0a0a0e':'var(--text)') + ';'
-            + 'border:1px solid ' + (sel?'var(--peach)':'var(--wire2)') + ';'
+            + 'style="background:' + (sel?'var(--teal)':'var(--cream)') + ';'
+            + 'color:' + (sel?'#fff':'var(--text)') + ';'
+            + 'border:1px solid ' + (sel?'var(--teal)':'var(--wire2)') + ';'
             + 'border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:'+(sel?'800':'700')+';cursor:pointer;font-family:inherit" '
             + 'title="' + esc(v.summary||'') + ' (' + when + ')">v' + v.v + '</button>';
         }).join('')

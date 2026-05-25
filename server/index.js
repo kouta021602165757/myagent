@@ -9201,6 +9201,14 @@ async function executeGa4QueryTool(user, agent, input){
     const r = _resolveServiceTarget(agent, user, 'ga4');
     if(r) propertyId = String(r.id).replace('properties/','');
   }
+  // B: property 未設定なら lazy auto-pick (ドメイン一致で 1 件絞れたら自動保存)
+  // これで AI が GA4 触る瞬間に裏で property が決まる → ユーザーは picker を見ない
+  if(!propertyId && agent && agent.site_url){
+    try {
+      const picked = await _autoPickGa4Property(user, agent);
+      if(picked) propertyId = String(picked.property_id).replace('properties/','');
+    } catch(e){ console.warn('[ga4-autopick-lazy]', e && e.message); }
+  }
   if(!propertyId){
     return { error: 'no_property_set', instructions: 'まず ga4_list_properties を呼んでユーザーに使うプロパティを選んでもらってください。選択後は ga4_set_default で保存し、それから再度クエリしてください。' };
   }
@@ -12394,6 +12402,52 @@ async function ga4ListProperties(user){
 // Run a GA4 Data API report. Defaults to last 7 days, pageviews + users +
 // sessions across the top dates. AI can override metrics / dimensions /
 // dateRanges via input.
+// ── Auto-pick GA4 property by domain match ──────────────────────────
+// 「Google OAuth 済 + site_url あり + ga4_property_id 未設定」 のとき、
+// プロパティ一覧を fetch して site のホスト名と一致するものを 1 件だけ自動選択。
+// 1 件に絞れない (0 件 / 複数件) 場合は何もしない (= picker UI で選んでもらう)。
+// ユーザーは「GA4 接続したら数字すぐ見える」 体験になる。
+async function _autoPickGa4Property(user, agent, opts){
+  if(!user || !agent) return null;
+  if(agent.ga4_property_id) return null;  // 既に選ばれていれば何もしない
+  if(!agent.site_url) return null;
+  const oauthOk = !!(user.google_oauth && user.google_oauth.refresh_token);
+  if(!oauthOk) return null;
+  // hostname を URL から抽出
+  let host = '';
+  try { host = new URL(agent.site_url).hostname.replace(/^www\./i,'').toLowerCase(); }
+  catch(_){ return null; }
+  if(!host) return null;
+  let props = [];
+  try { props = await ga4ListProperties(user); }
+  catch(e){ console.warn('[ga4-autopick] list failed:', e && e.message); return null; }
+  if(!Array.isArray(props) || !props.length) return null;
+  // 「fukuyama-note.com」 → 「fukuyama-note」「fukuyama」「fukuyamanote」 等
+  // 複数 token に分解 (GA4 property 名は TLD 省略しがち / token 部分一致が現実)
+  const hostNoTld = host.replace(/\.[a-z]{2,}(\.[a-z]{2})?$/,'');
+  const hostParts = hostNoTld.split(/[.-]/).filter(p => p.length >= 3);
+  const tokens = [host, hostNoTld, hostNoTld.replace(/-/g,''), ...hostParts].filter(Boolean);
+  const matches = props.filter(p => {
+    const url = String(p.website_url || '').toLowerCase();
+    const dn  = String(p.display_name || '').toLowerCase();
+    return tokens.some(t => t && (url.indexOf(t) >= 0 || dn.indexOf(t) >= 0));
+  });
+  // プロパティ 1 つだけ → 即決 (どんなドメインでも)
+  // 複数あって 1 件 hit → それを採用
+  // 複数あって 複数 hit / 0 hit → ambiguous なので picker に任せる
+  let picked = null;
+  if(props.length === 1) picked = props[0];
+  else if(matches.length === 1) picked = matches[0];
+  if(!picked){
+    console.log('[ga4-autopick] agent='+agent.id+' host='+host+' total='+props.length+' matched='+matches.length+' (skip)');
+    return null;
+  }
+  agent.ga4_property_id = picked.property_id;
+  try { await DB.save(user); } catch(e){ console.warn('[ga4-autopick] save failed:', e && e.message); }
+  console.log('[ga4-autopick] agent='+agent.id+' host='+host+' → property '+picked.property_id+' ('+picked.display_name+')');
+  return picked;
+}
+
 async function ga4RunReport(user, propertyId, opts){
   if(!propertyId) throw new Error('property_id required');
   const token = await getValidGoogleAccessToken(user);
@@ -16602,6 +16656,15 @@ async function handleAPI(req,res,pathname,method,ip){
         email: (gUser && gUser.email) || '',
       };
       await DB.save(user);
+      // ── A: OAuth 完了直後、全 site の GA4 property を自動 pick ──
+      // ユーザーが「Google 接続したのにプロパティ選択させられる」 摩擦を解消。
+      // 失敗しても OAuth 完了は変えないので fire-and-forget。
+      try {
+        const _siteAgents = (user.agents || []).filter(a => a && a.site_url && !a.ga4_property_id);
+        for(const _ag of _siteAgents){
+          try { await _autoPickGa4Property(user, _ag); } catch(e){ console.warn('[ga4-autopick-callback]', e && e.message); }
+        }
+      } catch(e){ console.warn('[ga4-autopick-callback-batch]', e && e.message); }
       res.writeHead(302,{Location:'/app?google_sheets=connected'});res.end();
     }catch(e){
       console.error('[Sheets OAuth] callback failed:', e.message);
@@ -17656,6 +17719,9 @@ async function handleAPI(req,res,pathname,method,ip){
       console.warn('[onboarding/site] save failed:', e.message);
       return jres(res, 500, { error: '保存に失敗しました。少し待ってから再試行してください。' });
     }
+    // ── A: サイト作成直後、 Google が連携済なら GA4 property を自動 pick ──
+    // ユーザー作業を 1 ステップ減らす (= 「プロパティを選んでください」 不要)
+    try { await _autoPickGa4Property(user, agent); } catch(e){ console.warn('[ga4-autopick-site]', e && e.message); }
     console.log('[onboarding/site] created agent', agent.id, 'for', siteUrl, '→', vertical);
 
     // ── アクティベーション施策: signup 即時メール (fire-and-forget) ──

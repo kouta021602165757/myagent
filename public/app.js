@@ -2960,7 +2960,7 @@ function _dgrRenderNumbersSection(ag, snap, ga4Connected){
   function _anomalyChip(label, prompt){
     var enc = encodeURIComponent(prompt);
     anomalyChips.push('<button onclick="_dgrAskAI(\''+esc(siteId)+'\',\''+enc+'\')" '
-      + 'style="background:rgba(192,255,92,.14);color:var(--peach-dark);border:1px solid rgba(192,255,92,.4);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .12s" '
+      + 'style="background:var(--peach-soft);color:var(--peach-dark);border:1px solid var(--peach);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .12s" '
       + 'onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#0a0a0e\'" '
       + 'onmouseout="this.style.background=\'rgba(192,255,92,.14)\';this.style.color=\'var(--peach-dark)\'">'
       + '🤖 '+esc(label)+'</button>');
@@ -10373,7 +10373,7 @@ function renderMsgs(ag, forceScrollBottom){
         var pmName = esc(m.pm_member_name || '担当');
         var pmReason = m.pm_reason ? esc(m.pm_reason) : '';
         return '<div class="pm-dispatch-row" style="display:flex;justify-content:center;margin:10px 0">'
-          + '<div style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(192,255,92,.08),rgba(192,255,92,.14));border:1px solid rgba(192,255,92,.35);border-radius:99px;padding:6px 14px;font-size:11.5px;font-weight:700;color:var(--text2);font-family:inherit;max-width:80%">'
+          + '<div style="display:inline-flex;align-items:center;gap:8px;background:var(--peach-soft);border:1px solid var(--peach);border-radius:99px;padding:6px 14px;font-size:11.5px;font-weight:700;color:var(--text2);font-family:inherit;max-width:80%">'
           +   '<span style="font-size:13px">📋</span>'
           +   '<span style="font-weight:800;color:var(--peach-dark);letter-spacing:.02em">PM</span>'
           +   '<span style="opacity:.6">→</span>'
@@ -10555,7 +10555,7 @@ function _renderRecoveryChips(toolLog, ag){
     }
     if(label && action){
       chips.push('<button onclick="'+action+'" '
-        + 'style="background:rgba(192,255,92,.14);color:var(--peach-dark);border:1px solid rgba(192,255,92,.4);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .12s" '
+        + 'style="background:var(--peach-soft);color:var(--peach-dark);border:1px solid var(--peach);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;transition:all .12s" '
         + 'onmouseover="this.style.background=\'var(--peach)\';this.style.color=\'#0a0a0e\'" '
         + 'onmouseout="this.style.background=\'rgba(192,255,92,.14)\';this.style.color=\'var(--peach-dark)\'">'
         + esc(label) + '</button>');
@@ -11101,9 +11101,9 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     var _hasPreview = !!(raw.note_preview_url || /\/generated\/artifact-/.test(String(raw.content||'')));
     var _previewLabel = _hasPreview ? ' ・ HTML プレビュー付き' : '';
     notePillHTML = '<div class="note-pill" onclick="openNotesPanel(\''+esc(ag.id||'')+'\',\''+esc(raw.note_id)+'\')" '
-      + 'style="display:flex;align-items:center;gap:14px;margin-top:14px;background:linear-gradient(135deg,rgba(192,255,92,.32),rgba(192,255,92,.48));border:1.5px solid rgba(192,255,92,.85);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;width:100%;box-shadow:0 2px 6px rgba(192,255,92,.18)" '
-      + 'onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 14px rgba(192,255,92,.28)\'" '
-      + 'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(192,255,92,.18)\'">'
+      + 'style="display:flex;align-items:center;gap:14px;margin-top:14px;background:var(--peach-soft);border:1.5px solid var(--peach);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;width:100%;box-shadow:0 2px 6px rgba(163,230,53,.15)" '
+      + 'onmouseover="this.style.background=\'var(--peach-soft-2)\';this.style.borderColor=\'var(--peach-dark)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 14px rgba(163,230,53,.25)\'" '
+      + 'onmouseout="this.style.background=\'var(--peach-soft)\';this.style.borderColor=\'var(--peach)\';this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(163,230,53,.15)\'">'
       + '<span style="font-size:22px;flex-shrink:0">'+_typeIcon+'</span>'
       + '<div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">'
       +   '<span style="font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--peach-dark);text-transform:uppercase">'+_typeIcon+' '+esc(_typeLbl)+esc(_previewLabel)+'</span>'

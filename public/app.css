@@ -13,6 +13,8 @@
   --sans:'Noto Sans JP',sans-serif;--display:'Bebas Neue',sans-serif;--mono:'DM Mono',monospace;
   --sb:240px;
   --peach:#c0ff5c;--peach-light:rgba(192,255,92,.18);--peach-dark:#a3e635;
+  --peach-soft:#f7ffe9;     /* LP の lime-soft と統一 (= 透過 lime ではなくベタ薄 lime) */
+  --peach-soft-2:#edfcc8;   /* もう少し濃いソリッド lime (chip hover 等) */
   --cream:#ffffff;--cream2:#fafafa;--cream3:#fafaf7;
   --card:#ffffff;
   --text:#1a1a1a;--text2:#525252;--text3:#71717a;

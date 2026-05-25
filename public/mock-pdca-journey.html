@@ -3,675 +3,1558 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PDCA Journey Mock — MY AI Agent</title>
+<title>UX Journey Mock — MY AI Agent</title>
 <style>
   :root {
+    --bg: #fafaf7;
+    --sidebar-bg: #faf8f3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --muted-2: #9ca3af;
+    --line: #e5e7eb;
+    --line-soft: #f0f0eb;
     --teal: #0d4f4a;
     --teal-2: #0a3d39;
     --lime: #c0ff5c;
     --lime-soft: #f7ffe9;
     --lime-soft-2: #edfcc8;
-    --bg: #fafaf7;
-    --text: #1a1a1a;
-    --muted: #6b7280;
-    --line: #e5e7eb;
-    --card: #ffffff;
+    --user-msg-bg: #1a1a1a;
+    --pill-bg: #f3f4f6;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
   body {
-    margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Segoe UI", system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-  }
-  .container { max-width: 1100px; margin: 0 auto; padding: 48px 24px 120px; }
-  .hero {
-    background: linear-gradient(135deg, var(--teal) 0%, var(--teal-2) 100%);
-    color: #fff;
-    padding: 56px 40px;
-    border-radius: 24px;
-    margin-bottom: 64px;
-    position: relative;
     overflow: hidden;
   }
-  .hero::before {
-    content: '';
-    position: absolute; right: -80px; top: -80px;
-    width: 280px; height: 280px;
-    background: var(--lime);
-    border-radius: 50%;
-    opacity: 0.15;
+  button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  a { color: var(--teal); text-decoration: none; }
+
+  /* ====================================
+     TOP STEP NAVIGATOR
+     ==================================== */
+  .step-nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    z-index: 100;
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02);
   }
-  .hero h1 { margin: 0 0 12px; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; }
-  .hero p { margin: 0; opacity: 0.85; font-size: 16px; max-width: 640px; }
-  .hero .badge {
-    display: inline-block;
-    background: var(--lime);
-    color: var(--teal-2);
-    padding: 4px 12px;
+  .step-nav .title { font-weight: 800; font-size: 13px; color: var(--teal-2); margin-right: 8px; white-space: nowrap; }
+  .step-nav .steps { display: flex; gap: 4px; overflow-x: auto; flex: 1; }
+  .step-nav .stepbtn {
+    padding: 6px 10px;
     border-radius: 999px;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    border: 1px solid transparent;
+    background: #f7f7f4;
+    font-weight: 600;
+    transition: all 0.15s ease;
+  }
+  .step-nav .stepbtn:hover { background: var(--lime-soft); color: var(--teal-2); }
+  .step-nav .stepbtn.active {
+    background: var(--teal);
+    color: #fff;
+  }
+  .step-nav .nav-arrows { display: flex; gap: 4px; }
+  .step-nav .arrow {
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--teal);
+    color: #fff;
     font-size: 12px;
     font-weight: 700;
-    margin-bottom: 16px;
+  }
+  .step-nav .arrow.ghost { background: #f3f4f6; color: var(--text); }
+  .step-nav .arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ====================================
+     SCENE NARRATION BAR
+     ==================================== */
+  .narration {
+    position: fixed; top: 52px; left: 0; right: 0;
+    background: var(--lime-soft);
+    border-bottom: 1px solid var(--lime-soft-2);
+    padding: 8px 20px;
+    font-size: 12px;
+    color: var(--teal-2);
+    z-index: 99;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .narration .pdca-pill {
+    background: var(--teal);
+    color: var(--lime);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
     letter-spacing: 0.05em;
   }
+  .narration .scene-title { font-weight: 800; }
 
-  /* Phase header */
-  .phase {
-    display: flex; align-items: center; gap: 16px;
-    margin: 64px 0 24px;
+  /* ====================================
+     APP LAYOUT
+     ==================================== */
+  .app {
+    position: fixed;
+    top: 92px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    background: var(--bg);
   }
-  .phase-tag {
-    background: var(--text); color: #fff;
-    padding: 6px 14px; border-radius: 999px;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  }
-  .phase h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
-  .phase-sub { color: var(--muted); font-size: 14px; }
 
-  /* Step card */
-  .step {
-    background: var(--card);
+  /* SIDEBAR */
+  .sidebar {
+    width: 280px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sb-logo {
+    padding: 18px 20px 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sb-logo .bars {
+    display: flex; gap: 2px; align-items: flex-end;
+  }
+  .sb-logo .bars span {
+    width: 3px; background: var(--text); border-radius: 1px;
+  }
+  .sb-logo .bars span:nth-child(1) { height: 8px; }
+  .sb-logo .bars span:nth-child(2) { height: 14px; }
+  .sb-logo .bars span:nth-child(3) { height: 11px; }
+  .sb-logo .bars span:nth-child(4) { height: 16px; }
+  .sb-logo .name { font-weight: 800; font-size: 13px; letter-spacing: 0.02em; }
+
+  .sb-add {
+    margin: 4px 12px 12px;
+    background: var(--teal);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+    justify-content: flex-start;
+  }
+  .sb-add:hover { background: var(--teal-2); }
+
+  .sb-search {
+    margin: 0 12px 14px;
+    background: #fff;
     border: 1px solid var(--line);
-    border-radius: 20px;
-    padding: 28px;
-    margin-bottom: 20px;
-    display: grid;
-    grid-template-columns: 64px 1fr 1.2fr;
-    gap: 28px;
-    align-items: start;
+    border-radius: 10px;
+    padding: 7px 10px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
   }
-  .step-num {
-    width: 56px; height: 56px;
-    border-radius: 14px;
+  .sb-search .kbd {
+    background: #f3f4f6; border-radius: 4px;
+    padding: 1px 6px; font-size: 10px;
+    margin-left: auto;
+  }
+
+  .sb-section {
+    padding: 8px 16px 4px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .sb-sites { padding: 0 8px; flex: 1; overflow-y: auto; }
+  .sb-site {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 2px;
+    cursor: pointer;
+  }
+  .sb-site:hover { background: rgba(0,0,0,0.03); }
+  .sb-site.active { background: var(--lime-soft-2); }
+  .sb-site .icn {
+    width: 28px; height: 28px;
+    border-radius: 8px;
     background: var(--lime-soft);
-    color: var(--teal-2);
-    font-size: 24px; font-weight: 800;
     display: flex; align-items: center; justify-content: center;
-    border: 2px solid var(--lime-soft-2);
+    font-size: 14px;
+    flex-shrink: 0;
   }
-  .step.is-loop .step-num { background: var(--teal); color: var(--lime); border-color: var(--teal-2); }
-  .step-text h3 { margin: 0 0 8px; font-size: 18px; font-weight: 800; }
-  .step-text p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
-  .step-text .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tag {
+  .sb-site .meta { flex: 1; min-width: 0; }
+  .sb-site .nm {
+    font-size: 12px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sb-site .sub { font-size: 10px; color: var(--muted); }
+
+  .sb-past {
+    padding: 6px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  .sb-bottom {
+    border-top: 1px solid var(--line-soft);
+    padding: 10px 12px 12px;
+  }
+  .sb-credits {
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .sb-user {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 6px;
+  }
+  .sb-user .av {
+    width: 32px; height: 32px;
+    background: var(--text); color: #fff;
+    border-radius: 8px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .sb-user .uname { font-size: 13px; font-weight: 700; }
+  .sb-user .plan { font-size: 10px; color: var(--muted); }
+  .sb-user .star {
+    background: var(--lime-soft); color: var(--teal-2);
+    padding: 1px 5px; border-radius: 4px;
+    font-size: 9px; font-weight: 700;
+    margin-left: 4px;
+  }
+  .sb-settings {
+    padding: 8px 12px 0;
+    font-size: 12px; color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    min-width: 0;
+    position: relative;
+  }
+
+  /* CHAT HEADER */
+  .chat-header {
+    padding: 14px 20px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: flex-start;
+    background: var(--bg);
+  }
+  .ch-left { flex: 1; display: flex; gap: 10px; }
+  .ch-icn {
+    width: 44px; height: 44px;
+    background: var(--lime-soft);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .ch-meta .ch-name {
+    font-size: 16px; font-weight: 800;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ch-meta .ch-name::before {
+    content: ''; width: 8px; height: 8px;
+    background: #22c55e; border-radius: 50%;
+    display: inline-block;
+  }
+  .ch-meta .ch-pills {
+    display: flex; gap: 6px; margin-top: 4px;
+  }
+  .ch-pill {
     background: var(--lime-soft);
     color: var(--teal-2);
-    padding: 3px 10px;
+    padding: 3px 8px;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
+    display: flex; align-items: center; gap: 3px;
   }
-  .tag.muted { background: #f3f4f6; color: var(--muted); }
+  .ch-right { display: flex; gap: 4px; align-items: center; }
+  .ch-tool {
+    width: 36px; height: 36px;
+    background: #f7f7f4;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ch-tool:hover { background: var(--lime-soft); border-color: var(--lime-soft-2); }
+  .ch-tool.active { background: var(--lime-soft-2); border-color: var(--lime); }
 
-  /* Mini UI preview */
-  .preview {
-    background: #f5f5f1;
+  /* TASK STRIP */
+  .task-strip {
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; gap: 8px; overflow-x: auto;
+    background: var(--bg);
+    align-items: center;
+  }
+  .ts-week {
+    background: var(--lime-soft);
+    color: var(--teal-2);
+    padding: 5px 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .ts-task {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-size: 11px;
+    display: flex; align-items: center; gap: 6px;
+    flex-shrink: 0;
+    max-width: 280px;
+    overflow: hidden;
+  }
+  .ts-task .ck {
+    width: 13px; height: 13px;
+    border: 1.5px solid var(--line);
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .ts-task.done .ck { background: var(--teal); border-color: var(--teal); }
+  .ts-task.done span { text-decoration: line-through; color: var(--muted); }
+  .ts-task .txt {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ts-more { color: var(--teal); font-size: 11px; font-weight: 700; flex-shrink: 0; }
+
+  /* MESSAGES */
+  .msgs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .msg {
+    display: flex; gap: 12px;
+    margin-bottom: 18px;
+  }
+  .msg .av {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: var(--text); color: #fff;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .msg.bot .av {
+    background: var(--lime-soft);
+    color: var(--text);
+  }
+  .msg .body { flex: 1; min-width: 0; }
+  .msg .head {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .msg .head .nm { font-weight: 800; font-size: 13px; }
+  .msg .head .tm { font-size: 11px; color: var(--muted); }
+  .msg .txt { font-size: 14px; line-height: 1.55; }
+  .msg .thread-link {
+    margin-top: 6px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .msg .thread-link .link {
+    color: var(--teal); font-weight: 700; display: flex; align-items: center; gap: 4px;
+  }
+
+  /* AI SUGGESTION */
+  .ai-sugg {
+    margin: 0 20px 12px;
     border: 1px solid var(--line);
     border-radius: 12px;
-    padding: 14px;
-    font-size: 12px;
-    min-height: 120px;
-  }
-  .preview-title {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    margin-bottom: 8px;
-    font-weight: 700;
-  }
-
-  /* URL input mock */
-  .mock-urlbar {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: 10px; padding: 12px 14px;
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px;
-  }
-  .mock-urlbar .url { color: var(--muted); flex: 1; }
-  .mock-urlbar .btn {
-    background: var(--teal); color: #fff;
-    padding: 6px 14px; border-radius: 8px;
-    font-size: 11px; font-weight: 700;
-  }
-
-  /* team formation */
-  .mock-team {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
-  .mock-team .member {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: 8px; padding: 8px 6px; text-align: center;
-    font-size: 10px;
-  }
-  .mock-team .member .av {
-    width: 24px; height: 24px;
-    background: var(--lime-soft); border-radius: 50%;
-    margin: 0 auto 4px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px;
-  }
-  .mock-team .member .nm { font-weight: 700; }
-  .mock-team .member .rl { color: var(--muted); font-size: 9px; }
-
-  /* chat preview */
-  .mock-chat {
     background: #fff;
-    border-radius: 10px;
-    padding: 10px;
-    border: 1px solid var(--line);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
   }
-  .mock-chat .toolbar {
-    display: flex; gap: 4px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 8px; margin-bottom: 8px;
-    overflow-x: auto;
-  }
-  .mock-chat .toolbar .ico {
-    background: #f7f7f4;
-    border-radius: 6px;
-    padding: 4px 6px;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-  .mock-chat .toolbar .ico.active {
-    background: var(--lime-soft); color: var(--teal-2);
-  }
-  .mock-chat .bubble {
-    background: var(--lime-soft);
-    border-radius: 10px;
-    padding: 8px 10px;
-    margin-bottom: 6px;
-    font-size: 11px;
-    line-height: 1.5;
-  }
-  .mock-chat .bubble.user {
-    background: var(--teal); color: #fff;
-    margin-left: 30%;
-  }
-  .mock-chat .composer {
-    background: #f7f7f4;
-    border-radius: 8px;
-    padding: 6px 8px;
-    margin-top: 6px;
-    display: flex; gap: 6px;
+  .ai-sugg .lbl {
     font-size: 11px;
     color: var(--muted);
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 4px;
   }
-  .mock-chat .composer .send {
-    background: var(--teal); color: #fff;
-    padding: 2px 8px; border-radius: 6px;
-    font-size: 10px; font-weight: 700; margin-left: auto;
-  }
-
-  /* audit card */
-  .mock-audit {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: 10px; padding: 10px;
-  }
-  .mock-audit .row {
-    display: flex; justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px dashed var(--line);
-    font-size: 11px;
-  }
-  .mock-audit .row:last-child { border-bottom: none; }
-  .mock-audit .row .lbl { color: var(--muted); }
-  .mock-audit .row .val { font-weight: 700; color: var(--teal-2); }
-
-  /* plan card */
-  .mock-plan {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: 10px; padding: 10px;
-  }
-  .mock-plan .goal {
+  .ai-sugg .av {
+    width: 40px; height: 40px;
     background: var(--lime-soft);
-    border-radius: 6px; padding: 6px 8px;
-    margin-bottom: 6px;
-    font-size: 11px; font-weight: 700;
-  }
-  .mock-plan .kpi {
-    display: flex; gap: 6px; font-size: 10px;
-  }
-  .mock-plan .kpi-item {
-    flex: 1; background: #f7f7f4;
-    border-radius: 6px; padding: 6px;
-    text-align: center;
-  }
-  .mock-plan .kpi-item .v { font-weight: 800; font-size: 13px; color: var(--teal-2); }
-
-  /* task list */
-  .mock-tasks .row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 8px;
-    background: #fff; border: 1px solid var(--line);
-    border-radius: 8px; margin-bottom: 4px;
-    font-size: 11px;
-  }
-  .mock-tasks .row .ck { width: 14px; height: 14px; border: 1.5px solid var(--line); border-radius: 4px; }
-  .mock-tasks .row.done .ck { background: var(--teal); border-color: var(--teal); }
-  .mock-tasks .row .av {
-    width: 18px; height: 18px;
-    background: var(--lime-soft); border-radius: 50%;
-    font-size: 10px;
+    border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-  }
-
-  /* check (verification) split */
-  .mock-check {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-  .mock-check .panel {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: 8px; padding: 8px;
-  }
-  .mock-check .panel .ttl { font-size: 10px; font-weight: 700; margin-bottom: 4px; }
-  .mock-check .panel .num { font-size: 18px; font-weight: 800; color: var(--teal-2); }
-  .mock-check .panel .delta { font-size: 10px; color: #16a34a; }
-  .mock-check .panel .bars {
-    display: flex; gap: 2px; align-items: flex-end;
-    height: 30px; margin-top: 6px;
-  }
-  .mock-check .panel .bar {
-    flex: 1; background: var(--lime); border-radius: 2px 2px 0 0;
-  }
-
-  /* memo (notebook) */
-  .mock-memo {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: 10px; padding: 10px;
-  }
-  .mock-memo .note {
-    border-left: 3px solid var(--lime);
-    padding: 4px 8px; margin-bottom: 6px;
-    background: var(--lime-soft);
-    border-radius: 0 6px 6px 0;
-    font-size: 11px;
-  }
-  .mock-memo .note .dt { color: var(--muted); font-size: 9px; }
-  .mock-memo .branch-cta {
-    background: var(--teal); color: #fff;
-    text-align: center; padding: 6px;
-    border-radius: 6px;
-    font-size: 10px; font-weight: 700;
-    margin-top: 8px;
-  }
-
-  /* Flow connector */
-  .connector {
-    text-align: center;
-    color: var(--muted);
     font-size: 20px;
-    margin: 8px 0;
+    flex-shrink: 0;
+  }
+  .ai-sugg .text { flex: 1; }
+  .ai-sugg .title { font-weight: 800; font-size: 13px; }
+  .ai-sugg .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .ai-sugg .go {
+    width: 32px; height: 32px;
+    background: var(--teal);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
   }
 
-  /* Loop section */
-  .loop-section {
-    background: linear-gradient(135deg, var(--lime-soft) 0%, #fff 100%);
-    border: 2px dashed var(--teal);
-    border-radius: 24px;
-    padding: 40px;
-    margin: 64px 0 0;
-    position: relative;
+  /* COMPOSER */
+  .composer-wrap {
+    padding: 10px 20px 14px;
+    background: var(--bg);
+    border-top: 1px solid var(--line-soft);
   }
-  .loop-section h2 {
-    margin: 0 0 8px;
-    font-size: 22px;
-    font-weight: 800;
-  }
-  .loop-section .lead {
-    color: var(--muted);
-    margin: 0 0 24px;
-  }
-  .loop-viz {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  .loop-card {
+  .composer {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 14px;
-    padding: 18px;
+    padding: 12px 14px;
   }
-  .loop-card h4 {
-    margin: 0 0 6px;
+  .composer-input {
     font-size: 14px;
-    font-weight: 800;
-    display: flex; align-items: center; gap: 8px;
+    color: var(--muted);
+    min-height: 22px;
+    padding: 4px 0;
   }
-  .loop-card h4 .ic { font-size: 20px; }
-  .loop-card p { margin: 0; color: var(--muted); font-size: 12px; }
-
-  .loop-arrows {
-    display: flex; justify-content: center;
-    gap: 24px; margin: 24px 0;
-    font-size: 24px; color: var(--teal);
+  .composer-tools {
+    display: flex; align-items: center; gap: 4px;
+    margin-top: 8px;
   }
-  .loop-arrows span { display: inline-block; }
-
-  .branch-note {
-    background: #fff8e1;
-    border-left: 4px solid #f59e0b;
-    border-radius: 0 10px 10px 0;
-    padding: 12px 16px;
-    margin-top: 24px;
-    font-size: 13px;
+  .composer-tools .ico {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+    font-size: 14px;
+    border-radius: 6px;
   }
-  .branch-note strong { color: #92400e; }
+  .composer-tools .ico:hover { background: #f7f7f4; }
+  .composer-tools .chip {
+    background: #f7f7f4;
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .composer-tools .send {
+    margin-left: auto;
+    width: 38px; height: 38px;
+    background: var(--teal);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .composer-foot {
+    margin-top: 6px;
+    display: flex; gap: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+  .composer-foot .kbd {
+    background: #f3f4f6; border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px; font-weight: 700;
+    margin: 0 2px;
+  }
 
-  /* PDCA summary table */
-  .summary {
-    margin-top: 64px;
-    background: var(--card);
+  /* ============================
+     STEP-SPECIFIC: URL INPUT (1)
+     ============================ */
+  .empty-main {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    padding: 40px;
+  }
+  .add-card {
+    max-width: 480px;
+    width: 100%;
+    background: #fff;
     border: 1px solid var(--line);
     border-radius: 20px;
-    padding: 32px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.04);
   }
-  .summary h2 { margin: 0 0 16px; font-size: 20px; }
-  .summary table {
+  .add-card .emoji { font-size: 48px; margin-bottom: 12px; }
+  .add-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .add-card p { color: var(--muted); margin-bottom: 24px; font-size: 13px; }
+  .add-card .input {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  .summary th, .summary td {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--line);
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 15px;
+    margin-bottom: 14px;
     text-align: left;
-    vertical-align: top;
   }
-  .summary th {
+  .add-card .input.filled {
+    border-color: var(--lime);
     background: var(--lime-soft);
     color: var(--teal-2);
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 0.04em;
+    font-weight: 600;
   }
-  .summary tr:last-child td { border-bottom: none; }
+  .add-card .cta {
+    width: 100%;
+    background: var(--teal);
+    color: #fff;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .add-card .cta:hover { background: var(--teal-2); }
+  .add-card .hint {
+    font-size: 11px; color: var(--muted);
+    margin-top: 12px;
+  }
 
-  @media (max-width: 720px) {
-    .step { grid-template-columns: 1fr; gap: 16px; }
-    .step-num { width: 44px; height: 44px; font-size: 18px; }
-    .loop-viz { grid-template-columns: 1fr; }
-    .hero { padding: 36px 24px; }
-    .hero h1 { font-size: 24px; }
+  /* ============================
+     STEP 2: TEAM FORMING
+     ============================ */
+  .forming {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    padding: 40px;
+  }
+  .forming h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .forming .lead { color: var(--muted); margin-bottom: 32px; font-size: 13px; }
+  .forming .progress {
+    width: 320px; height: 6px;
+    background: #f0f0eb;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .forming .progress .bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--lime), var(--teal));
+    width: 70%;
+    border-radius: 999px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    max-width: 600px;
+    width: 100%;
+  }
+  .tm-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 8px;
+    text-align: center;
+    opacity: 0;
+    animation: pop 0.4s ease forwards;
+  }
+  .tm-card:nth-child(1) { animation-delay: 0.1s; }
+  .tm-card:nth-child(2) { animation-delay: 0.3s; }
+  .tm-card:nth-child(3) { animation-delay: 0.5s; }
+  .tm-card:nth-child(4) { animation-delay: 0.7s; }
+  .tm-card:nth-child(5) { animation-delay: 0.9s; }
+  @keyframes pop { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .tm-card .av {
+    width: 44px; height: 44px;
+    background: var(--lime-soft);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    margin: 0 auto 8px;
+  }
+  .tm-card .nm { font-weight: 800; font-size: 12px; }
+  .tm-card .rl { font-size: 10px; color: var(--muted); }
+  .tm-card.pm { border-color: var(--lime); background: var(--lime-soft); }
+
+  /* ============================
+     PANEL OVERLAY (4-9)
+     ============================ */
+  .panel-overlay {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 70%;
+    background: #fff;
+    border-left: 1px solid var(--line);
+    overflow-y: auto;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.06);
+    z-index: 10;
+  }
+  .panel-head {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center;
+    background: #fff;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .panel-head .ic { font-size: 22px; margin-right: 10px; }
+  .panel-head .ttl { font-weight: 800; font-size: 15px; }
+  .panel-head .sub { font-size: 11px; color: var(--muted); margin-left: 6px; }
+  .panel-head .close {
+    margin-left: auto;
+    width: 28px; height: 28px;
+    background: #f3f4f6; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .panel-body { padding: 20px 24px; }
+
+  /* PANEL: 監査 (4) */
+  .audit-hero {
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .audit-hero h3 { font-size: 14px; margin-bottom: 4px; opacity: 0.85; }
+  .audit-hero .big { font-size: 28px; font-weight: 800; }
+  .audit-hero .small { font-size: 11px; opacity: 0.7; }
+  .audit-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .audit-cell {
+    background: #fafaf7;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .audit-cell .lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .audit-cell .val { font-size: 20px; font-weight: 800; }
+  .audit-cell .delta { font-size: 11px; color: #16a34a; }
+  .audit-insight {
+    background: var(--lime-soft);
+    border-left: 3px solid var(--lime);
+    padding: 12px 14px;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .audit-insight strong { color: var(--teal-2); }
+
+  /* PANEL: 計画 (5) */
+  .plan-goal {
+    background: var(--lime-soft);
+    border: 1px solid var(--lime-soft-2);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .plan-goal .lbl { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .plan-goal .main-goal {
+    font-size: 22px; font-weight: 800;
+    color: var(--teal-2);
+    margin-top: 4px;
+  }
+  .plan-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .plan-kpi {
+    background: #fafaf7;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+  .plan-kpi .lbl { font-size: 11px; color: var(--muted); }
+  .plan-kpi .v { font-size: 22px; font-weight: 800; color: var(--teal-2); margin: 4px 0; }
+  .plan-roadmap { margin-top: 24px; }
+  .plan-roadmap h4 { font-size: 13px; font-weight: 800; margin-bottom: 12px; }
+  .road-item {
+    display: flex; gap: 12px; margin-bottom: 10px;
+    padding: 12px;
+    background: #fafaf7;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .road-item .wk {
+    background: var(--teal); color: #fff;
+    padding: 4px 8px; border-radius: 6px;
+    font-size: 11px; font-weight: 700;
+    height: fit-content;
+    flex-shrink: 0;
+  }
+  .road-item .desc { font-size: 13px; }
+
+  /* PANEL: タスク (6) */
+  .tasks-grouped { }
+  .tasks-grouped h4 {
+    font-size: 12px; color: var(--muted);
+    font-weight: 700; margin: 14px 0 8px;
+  }
+  .task-row {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .task-row .ck {
+    width: 18px; height: 18px;
+    border: 2px solid var(--line); border-radius: 5px;
+    flex-shrink: 0;
+  }
+  .task-row.done .ck {
+    background: var(--teal); border-color: var(--teal);
+    color: var(--lime);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .task-row.done .ck::after { content: '✓'; }
+  .task-row.done .txt { text-decoration: line-through; color: var(--muted); }
+  .task-row .txt { flex: 1; font-size: 13px; }
+  .task-row .assignee {
+    background: var(--lime-soft); color: var(--teal-2);
+    padding: 2px 8px; border-radius: 5px;
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* PANEL: 日次 (7) */
+  .daily-date {
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .daily-date .dt { font-size: 14px; opacity: 0.8; }
+  .daily-date .num { font-size: 26px; font-weight: 800; margin-top: 4px; }
+  .daily-date .delta { font-size: 12px; opacity: 0.9; }
+  .daily-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-bottom: 20px;
+  }
+  .daily-cell {
+    background: #fafaf7;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .daily-cell .lbl { font-size: 10px; color: var(--muted); }
+  .daily-cell .v { font-size: 16px; font-weight: 800; }
+  .daily-section { margin-bottom: 16px; }
+  .daily-section h4 {
+    font-size: 13px; font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--teal-2);
+  }
+  .daily-section .item {
+    padding: 8px 12px;
+    background: #fafaf7; border-radius: 8px;
+    margin-bottom: 4px; font-size: 12px;
+  }
+  .daily-cta {
+    width: 100%;
+    background: var(--teal); color: #fff;
+    padding: 14px; border-radius: 12px;
+    font-weight: 800; font-size: 13px;
+    margin-top: 10px;
+  }
+
+  /* PANEL: 数字分析 (8) */
+  .num-tabs {
+    display: flex; gap: 4px; margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .num-tab {
+    padding: 8px 14px;
+    font-size: 12px; font-weight: 700;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .num-tab.active { color: var(--teal-2); border-bottom-color: var(--teal); }
+  .num-chart {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px; margin-bottom: 16px;
+  }
+  .num-chart-bars {
+    display: flex; gap: 4px; height: 140px; align-items: flex-end;
+  }
+  .num-chart-bars .b {
+    flex: 1;
+    background: linear-gradient(180deg, var(--lime), var(--teal));
+    border-radius: 4px 4px 0 0;
+    position: relative;
+  }
+  .num-chart-x {
+    display: flex; gap: 4px;
+    font-size: 10px; color: var(--muted);
+    margin-top: 6px;
+  }
+  .num-chart-x span { flex: 1; text-align: center; }
+  .num-channel { margin-top: 8px; }
+  .num-ch-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px 60px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 12px;
+  }
+  .num-ch-row .bar-wrap {
+    height: 8px; background: #f0f0eb; border-radius: 4px;
+    overflow: hidden;
+  }
+  .num-ch-row .bar-fill {
+    height: 100%; background: var(--lime);
+    border-radius: 4px;
+  }
+  .num-ch-row .num { font-weight: 700; text-align: right; }
+  .num-ch-row .pct { color: var(--muted); text-align: right; }
+
+  /* PANEL: メモ (9) */
+  .memo-list { margin-top: 8px; }
+  .memo-item {
+    background: var(--lime-soft);
+    border-left: 4px solid var(--lime);
+    border-radius: 0 12px 12px 0;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+  .memo-item.warn {
+    background: #fff8e1;
+    border-left-color: #f59e0b;
+  }
+  .memo-item .dt { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .memo-item .body { font-size: 13px; line-height: 1.55; margin-top: 4px; }
+  .memo-pback {
+    background: var(--teal);
+    color: #fff;
+    padding: 14px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 13px;
+    margin-top: 14px;
+  }
+
+  /* GENERIC scene wrapper */
+  .scene { display: none; flex: 1; flex-direction: column; }
+  .scene.active { display: flex; }
+
+  /* RESPONSIVE - allow horizontal scroll for narrow screens */
+  @media (max-width: 1000px) {
+    .panel-overlay { width: 85%; }
+    .audit-row, .plan-kpis, .daily-grid { grid-template-columns: 1fr 1fr; }
+    .daily-grid { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="badge">UX JOURNEY MOCK</div>
-    <h1>MY AI Agent — ユーザー体験フロー</h1>
-    <p>URL を入れてからチームが組成され、PDCA サイクルが自走するまでの 1〜10 ステップ。初回だけ「現状分析」を挟み、以降は C→A をループする設計。</p>
+<!-- STEP NAVIGATOR -->
+<nav class="step-nav">
+  <span class="title">🎬 PDCA JOURNEY</span>
+  <div class="steps" id="stepBtns">
+    <button class="stepbtn active" data-step="1">1. URL 入力</button>
+    <button class="stepbtn" data-step="2">2. チーム組成</button>
+    <button class="stepbtn" data-step="3">3. チャット開始</button>
+    <button class="stepbtn" data-step="4">4. 現状分析</button>
+    <button class="stepbtn" data-step="5">5. 計画</button>
+    <button class="stepbtn" data-step="6">6. 実行</button>
+    <button class="stepbtn" data-step="7">7. 検証 (日次)</button>
+    <button class="stepbtn" data-step="8">8. 検証 (全体)</button>
+    <button class="stepbtn" data-step="9">9. 改善</button>
+    <button class="stepbtn" data-step="10">10. ループ</button>
   </div>
-
-  <!-- PHASE 1: ONBOARDING -->
-  <div class="phase">
-    <span class="phase-tag">PHASE 1 — 初回オンボーディング</span>
-    <span class="phase-sub">所要 30 秒</span>
+  <div class="nav-arrows">
+    <button class="arrow ghost" id="prevBtn">← 前</button>
+    <button class="arrow" id="nextBtn">次 →</button>
   </div>
+</nav>
 
-  <div class="step">
-    <div class="step-num">1</div>
-    <div class="step-text">
-      <h3>ユーザーが URL を入力</h3>
-      <p>LP の「Add your site」から自分の Web サイトの URL を貼り付ける。ログイン or サインアップ後、最初の 1 アクション。</p>
-      <div class="tags"><span class="tag">LP</span><span class="tag">add-site</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">画面プレビュー</div>
-      <div class="mock-urlbar">
-        <span>🌐</span>
-        <span class="url">https://example.com</span>
-        <span class="btn">サイト追加</span>
-      </div>
-    </div>
-  </div>
+<!-- NARRATION -->
+<div class="narration">
+  <span class="pdca-pill" id="pdcaPill">PHASE 1</span>
+  <span class="scene-title" id="sceneTitle">URL を入力してサイトを追加</span>
+  <span class="scene-desc" id="sceneDesc" style="color: var(--muted);">— LP の「新しいサイトを追加」から URL を貼り付けるだけ</span>
+</div>
 
-  <div class="connector">↓</div>
+<!-- APP CONTAINER -->
+<div class="app">
 
-  <div class="step">
-    <div class="step-num">2</div>
-    <div class="step-text">
-      <h3>AI が Agent チームを自動組成</h3>
-      <p>URL を解析してドメインを判定 → 業界に合った 4〜6 名のメンバー（PM, SEO, コンテンツ, SNS, 解析…）を自動配置。ユーザーは何も選ばない。</p>
-      <div class="tags"><span class="tag">auto</span><span class="tag">PM dispatcher</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">画面プレビュー</div>
-      <div class="mock-team">
-        <div class="member"><div class="av">👔</div><div class="nm">佐藤</div><div class="rl">PM</div></div>
-        <div class="member"><div class="av">🔍</div><div class="nm">田中</div><div class="rl">SEO</div></div>
-        <div class="member"><div class="av">✍️</div><div class="nm">鈴木</div><div class="rl">コンテンツ</div></div>
-        <div class="member"><div class="av">📱</div><div class="nm">山田</div><div class="rl">SNS</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="connector">↓</div>
-
-  <div class="step">
-    <div class="step-num">3</div>
-    <div class="step-text">
-      <h3>チャットが開く</h3>
-      <p>サイト専用のチャット画面に遷移。上部に 8 ボタンツールバー、composer、タスクストリップ。これが以後の「ホーム」になる。</p>
-      <div class="tags"><span class="tag">main UI</span><span class="tag">8 buttons</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">画面プレビュー</div>
-      <div class="mock-chat">
-        <div class="toolbar">
-          <span class="ico active">📰</span>
-          <span class="ico">📊</span>
-          <span class="ico">🎯</span>
-          <span class="ico">📋</span>
-          <span class="ico">🏢</span>
-          <span class="ico">🔌</span>
-          <span class="ico">📒</span>
-          <span class="ico">⚙️</span>
+  <!-- ========== SCENE 1: URL INPUT ========== -->
+  <div class="scene active" id="scene1">
+    <div style="display:flex; flex:1;">
+      <!-- Sidebar (empty state - no sites) -->
+      <aside class="sidebar">
+        <div class="sb-logo">
+          <div class="bars"><span></span><span></span><span></span><span></span></div>
+          <div class="name">MY AI AGENT</div>
         </div>
-        <div class="bubble">こんにちは、PM の佐藤です。example.com の運用を担当します。</div>
-        <div class="composer"><span>メッセージ…</span><span class="send">送信</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PHASE 2: FIRST CYCLE -->
-  <div class="phase">
-    <span class="phase-tag">PHASE 2 — 初回 PDCA サイクル</span>
-    <span class="phase-sub">初回のみ「現状分析」を挟む</span>
-  </div>
-
-  <div class="step">
-    <div class="step-num">4</div>
-    <div class="step-text">
-      <h3>現状分析（初回のみ）</h3>
-      <p>GA4 / GSC を自動接続して直近 28 日のデータを取得 → AI が「現状はどんなサイトか / 強みと弱み / どこに伸びしろがあるか」を要約。ここが計画の土台。</p>
-      <div class="tags"><span class="tag">GA4 auto-pick</span><span class="tag">GSC</span><span class="tag">AI audit</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">📰 初回監査レポート</div>
-      <div class="mock-audit">
-        <div class="row"><span class="lbl">月間流入</span><span class="val">1,240 セッション</span></div>
-        <div class="row"><span class="lbl">主流入チャネル</span><span class="val">Organic Search 62%</span></div>
-        <div class="row"><span class="lbl">伸びしろ</span><span class="val">SNS 流入が 3%</span></div>
-        <div class="row"><span class="lbl">AI 推奨</span><span class="val">SNS 強化 + 既存記事の更新</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="connector">↓</div>
-
-  <div class="step">
-    <div class="step-num">5</div>
-    <div class="step-text">
-      <h3>計画 (P) — 🎯 戦略・KPI</h3>
-      <p>現状分析を踏まえて AI が「目標トラフィック」「3 ヶ月ロードマップ」「週次 KPI」を提案 → ユーザーは確認/微調整して承認。</p>
-      <div class="tags"><span class="tag">🎯 戦略・KPI</span><span class="tag">auto-setup chain</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">🎯 戦略パネル</div>
-      <div class="mock-plan">
-        <div class="goal">🎯 3 ヶ月で月間 3,000 セッション</div>
-        <div class="kpi">
-          <div class="kpi-item"><div>週次セッション</div><div class="v">+15%</div></div>
-          <div class="kpi-item"><div>新規記事</div><div class="v">2 本/週</div></div>
-          <div class="kpi-item"><div>SNS 投稿</div><div class="v">3 本/週</div></div>
+        <button class="sb-add">＋ 新しいサイトを追加</button>
+        <div class="sb-search">
+          <span>🔍</span> 検索
+          <span class="kbd">⌘K</span>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="connector">↓</div>
-
-  <div class="step">
-    <div class="step-num">6</div>
-    <div class="step-text">
-      <h3>実行 (D) — 📋 タスク + 🏢 チーム + 💬 チャット</h3>
-      <p>計画から自動でタスクが生成され、適切なメンバーにアサイン。ユーザーはチャットで「進捗どう？」「これやって」と指示するだけ。3 つで 1 セット。</p>
-      <div class="tags"><span class="tag">📋 タスク</span><span class="tag">🏢 チーム</span><span class="tag">💬 chat</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">📋 タスクリスト + 💬 chat</div>
-      <div class="mock-tasks">
-        <div class="row done"><span class="ck">✓</span><span class="av">✍️</span><span>記事執筆：初心者向け SEO ガイド</span></div>
-        <div class="row"><span class="ck"></span><span class="av">📱</span><span>X 投稿 3 本：今週の発信プラン</span></div>
-        <div class="row"><span class="ck"></span><span class="av">🔍</span><span>既存記事 5 本のリライト</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="connector">↓</div>
-
-  <div class="step">
-    <div class="step-num">7</div>
-    <div class="step-text">
-      <h3>検証 (C) — 📰 日次 + 📊 全体</h3>
-      <p>毎朝 8:00 自動で 📰 日次レポートが届く（昨日の流入・効いた施策・詰まり）。📊 数字分析では全期間のトレンドと URL/クエリ別を確認。</p>
-      <div class="tags"><span class="tag">📰 日次（昨日）</span><span class="tag">📊 全体トレンド</span><span class="tag">毎朝 push</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">📰 日次 / 📊 全体</div>
-      <div class="mock-check">
-        <div class="panel">
-          <div class="ttl">📰 昨日</div>
-          <div class="num">156</div>
-          <div class="delta">▲ +12%</div>
+        <div class="sb-section"><span>あなたのサイト</span><span>0</span></div>
+        <div style="padding: 20px 16px; font-size: 11px; color: var(--muted-2); text-align: center;">まだサイトがありません</div>
+        <div style="flex: 1;"></div>
+        <div class="sb-bottom">
+          <button class="sb-credits">＋ Add Credits</button>
+          <div class="sb-user">
+            <div class="av">K</div>
+            <div><div class="uname">kota <span class="star">★ #2</span></div><div class="plan">Business プラン</div></div>
+          </div>
+          <div class="sb-settings">⚙️ 設定</div>
         </div>
-        <div class="panel">
-          <div class="ttl">📊 直近 7 日</div>
-          <div class="num">1,082</div>
-          <div class="bars">
-            <div class="bar" style="height:30%"></div>
-            <div class="bar" style="height:40%"></div>
-            <div class="bar" style="height:55%"></div>
-            <div class="bar" style="height:50%"></div>
-            <div class="bar" style="height:70%"></div>
-            <div class="bar" style="height:65%"></div>
-            <div class="bar" style="height:85%"></div>
+      </aside>
+
+      <!-- Empty main with add-site card -->
+      <main class="main">
+        <div class="empty-main">
+          <div class="add-card">
+            <div class="emoji">🚀</div>
+            <h2>あなたの Web サイトを追加</h2>
+            <p>URL を入れるだけで AI チームが組成され、流入アップを自走で支援します</p>
+            <input class="input filled" value="https://fukuyama-note.com" readonly>
+            <button class="cta" onclick="goStep(2)">サイト追加 →</button>
+            <div class="hint">入力は 30 秒、その後はチームが勝手に動きます</div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   </div>
 
-  <div class="connector">↓</div>
-
-  <div class="step">
-    <div class="step-num">8</div>
-    <div class="step-text">
-      <h3>改善 (A) — 📒 メモ帳</h3>
-      <p>検証で見えた学びを 📒 メモ帳に蓄積（成功パターン / 失敗 / 次の打ち手）。ここから次のタスクが自動生成される。方針丸ごと変えたい場合は「🎯 戦略を見直す」で P に戻れる。</p>
-      <div class="tags"><span class="tag">📒 メモ帳</span><span class="tag">学習蓄積</span><span class="tag">P 戻り分岐</span></div>
-    </div>
-    <div class="preview">
-      <div class="preview-title">📒 メモ帳</div>
-      <div class="mock-memo">
-        <div class="note">
-          <div class="dt">05-24</div>
-          ✅ 「SEO 初心者ガイド」が CTR 4.2% で当たり。同フォーマットで横展開する。
+  <!-- ========== SCENE 2: TEAM FORMING ========== -->
+  <div class="scene" id="scene2">
+    <div style="display:flex; flex:1;">
+      <aside class="sidebar">
+        <div class="sb-logo">
+          <div class="bars"><span></span><span></span><span></span><span></span></div>
+          <div class="name">MY AI AGENT</div>
         </div>
-        <div class="note">
-          <div class="dt">05-23</div>
-          ⚠️ X 投稿の朝 7 時帯は反応薄。20 時に変更してテスト。
+        <button class="sb-add">＋ 新しいサイトを追加</button>
+        <div class="sb-search"><span>🔍</span> 検索<span class="kbd">⌘K</span></div>
+        <div class="sb-section"><span>あなたのサイト</span><span>1</span></div>
+        <div class="sb-sites">
+          <div class="sb-site active">
+            <div class="icn">⏳</div>
+            <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">準備中…</div></div>
+          </div>
         </div>
-        <div class="branch-cta">🎯 戦略を見直す（P に戻る）</div>
-      </div>
+        <div class="sb-bottom">
+          <button class="sb-credits">＋ Add Credits</button>
+          <div class="sb-user"><div class="av">K</div><div><div class="uname">kota <span class="star">★ #2</span></div><div class="plan">Business プラン</div></div></div>
+          <div class="sb-settings">⚙️ 設定</div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="forming">
+          <h2>🤖 AI チームを組成中…</h2>
+          <p class="lead">サイトの内容を解析して、ぴったりのメンバーを選んでます</p>
+          <div class="progress"><div class="bar"></div></div>
+          <div class="team-grid">
+            <div class="tm-card pm">
+              <div class="av">👔</div><div class="nm">佐藤 健</div><div class="rl">PM</div>
+            </div>
+            <div class="tm-card">
+              <div class="av">🔍</div><div class="nm">田中 SEO</div><div class="rl">SEO 専門</div>
+            </div>
+            <div class="tm-card">
+              <div class="av">✍️</div><div class="nm">鈴木 ライト</div><div class="rl">コンテンツ</div>
+            </div>
+            <div class="tm-card">
+              <div class="av">📱</div><div class="nm">山田 SNS</div><div class="rl">SNS 運用</div>
+            </div>
+            <div class="tm-card">
+              <div class="av">📊</div><div class="nm">高橋 解析</div><div class="rl">アナリスト</div>
+            </div>
+          </div>
+          <div style="margin-top: 32px;">
+            <button class="cta" style="background: var(--teal); color: #fff; padding: 14px 32px; border-radius: 12px; font-weight: 800;" onclick="goStep(3)">チームが揃った →</button>
+          </div>
+        </div>
+      </main>
     </div>
   </div>
 
-  <!-- LOOP -->
-  <div class="loop-section">
-    <h2>🔁 PHASE 3 — 以降は C→A のループ</h2>
-    <p class="lead">2 周目以降は「現状分析」「計画」を飛ばして、検証と改善だけが回る。毎日勝手に進む状態。</p>
+  <!-- ========== SCENE 3-10: USES THE FULL APP LAYOUT WITH SIDEBAR ========== -->
+  <div class="scene" id="sceneApp">
+    <div style="display:flex; flex:1;">
+      <aside class="sidebar">
+        <div class="sb-logo">
+          <div class="bars"><span></span><span></span><span></span><span></span></div>
+          <div class="name">MY AI AGENT</div>
+        </div>
+        <button class="sb-add">＋ 新しいサイトを追加</button>
+        <div class="sb-search"><span>🔍</span> 検索<span class="kbd">⌘K</span></div>
+        <div class="sb-section"><span>あなたのサイト</span><span>1</span></div>
+        <div class="sb-sites">
+          <div class="sb-site active">
+            <div class="icn">📓</div>
+            <div class="meta"><div class="nm">fukuyama-note.com</div><div class="sub">今日 <span id="sbCount">1</span> 件</div></div>
+          </div>
+        </div>
+        <div class="sb-past">▸ 過去のエージェント <span>13</span></div>
+        <div style="flex: 1;"></div>
+        <div class="sb-bottom">
+          <button class="sb-credits">＋ Add Credits</button>
+          <div class="sb-user"><div class="av">K</div><div><div class="uname">kota <span class="star">★ #2</span></div><div class="plan">Business プラン</div></div></div>
+          <div class="sb-settings">⚙️ 設定</div>
+        </div>
+      </aside>
 
-    <div class="loop-viz">
-      <div class="loop-card">
-        <h4><span class="ic">📰📊</span> 9. 検証（日次 + 全体）</h4>
-        <p>毎朝 8:00 に AI が前日の動きをレポート。週次で全体トレンドを再確認。</p>
-      </div>
-      <div class="loop-card">
-        <h4><span class="ic">📒</span> 10. 改善</h4>
-        <p>学びをメモ → 次タスク自動生成 → 実行（D）が再び動く。</p>
-      </div>
+      <main class="main">
+        <!-- CHAT HEADER -->
+        <div class="chat-header">
+          <div class="ch-left">
+            <div class="ch-icn">📓</div>
+            <div class="ch-meta">
+              <div class="ch-name">fukuyama-note.com</div>
+              <div class="ch-pills">
+                <span class="ch-pill">🎯 Smart</span>
+                <span class="ch-pill">📋 タスク <span id="taskCount">8</span></span>
+              </div>
+            </div>
+          </div>
+          <div class="ch-right">
+            <button class="ch-tool" data-tool="news" title="日次レポ" onclick="openPanel('audit')">📰</button>
+            <button class="ch-tool" data-tool="num" title="数字分析" onclick="openPanel('numbers')">📊</button>
+            <button class="ch-tool" data-tool="plan" title="戦略・KPI" onclick="openPanel('plan')">🎯</button>
+            <button class="ch-tool" data-tool="task" title="タスク" onclick="openPanel('tasks')">📋</button>
+            <button class="ch-tool" data-tool="team" title="チーム">🏢</button>
+            <button class="ch-tool" data-tool="conn" title="接続">🔌</button>
+            <button class="ch-tool" data-tool="memo" title="メモ帳" onclick="openPanel('memo')">📒</button>
+            <button class="ch-tool" data-tool="set" title="設定">⚙️</button>
+          </div>
+        </div>
+
+        <!-- TASK STRIP -->
+        <div class="task-strip">
+          <span class="ts-week">📋 WEEK 1/8</span>
+          <span class="ts-task"><span class="ck"></span><span class="txt">タイトル・メタディスクリプション最適化</span></span>
+          <span class="ts-task"><span class="ck"></span><span class="txt">7 カテゴリのキーワード調査</span></span>
+          <span class="ts-task"><span class="ck"></span><span class="txt">モバイル応答性・Core Web Vitals</span></span>
+          <span class="ts-more">他 5 件 →</span>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="msgs" id="msgs">
+          <!-- populated by JS -->
+        </div>
+
+        <!-- AI SUGGESTION -->
+        <div class="ai-sugg" id="aiSugg">
+          <div class="av">📓</div>
+          <div class="text">
+            <div class="lbl">💡 AI からの提案</div>
+            <div class="title">今週の SEO 記事を 1 本書く</div>
+            <div class="sub">ロードマップ Week 1 の記事タスクを 一気に下書きまで</div>
+          </div>
+          <button class="go">→</button>
+        </div>
+
+        <!-- COMPOSER -->
+        <div class="composer-wrap">
+          <div class="composer">
+            <div class="composer-input">何をお願いしますか？（Shift+Enter で改行）</div>
+            <div class="composer-tools">
+              <span class="ico">📎</span><span class="ico">🔗</span><span class="ico">🎤</span><span class="ico">＜＞</span><span class="ico">📁</span>
+              <span class="chip">🌐 Chrome</span>
+              <span class="chip">🦊 Huddle</span>
+              <span class="ico">🙂</span>
+              <button class="send">→</button>
+            </div>
+            <div class="composer-foot">
+              <span><span class="kbd">↵</span> 送信</span>
+              <span><span class="kbd">Shift</span>+<span class="kbd">↵</span> 改行</span>
+              <span><span class="kbd">/search</span> Web 検索</span>
+              <span><span class="kbd">/image</span> 画像生成</span>
+              <span><span class="kbd">/remember</span> 記憶</span>
+              <span><span class="kbd">⌘</span>+<span class="kbd">K</span> 新規会話</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL OVERLAY (shown on 4-9) -->
+        <div class="panel-overlay" id="panel" style="display:none;">
+          <div id="panelContent"></div>
+        </div>
+      </main>
     </div>
-
-    <div class="loop-arrows">
-      <span>↓</span><span>↻</span><span>↓</span>
-    </div>
-
-    <div class="loop-viz">
-      <div class="loop-card">
-        <h4><span class="ic">📰📊</span> 11. 検証</h4>
-        <p>……</p>
-      </div>
-      <div class="loop-card">
-        <h4><span class="ic">📒</span> 12. 改善</h4>
-        <p>……</p>
-      </div>
-    </div>
-
-    <div class="branch-note">
-      <strong>⚠️ 分岐：</strong> 改善で「これ以上小手先じゃ無理」と判定された場合は、A → P に戻して戦略丸ごと作り直し。例：3 ヶ月走っても流入伸びない / 業界の地殻変動 / ユーザー自身のビジネス転換。
-    </div>
-  </div>
-
-  <!-- SUMMARY TABLE -->
-  <div class="summary">
-    <h2>📋 ステップ × UI マッピング一覧</h2>
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 60px;">#</th>
-          <th>ステップ</th>
-          <th>PDCA</th>
-          <th>使う UI</th>
-          <th>頻度</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>1</td><td>URL 入力</td><td>—</td><td>LP / add-site</td><td>1 回</td></tr>
-        <tr><td>2</td><td>チーム組成</td><td>—</td><td>auto（裏側）</td><td>1 回</td></tr>
-        <tr><td>3</td><td>チャット開始</td><td>—</td><td>main chat</td><td>1 回</td></tr>
-        <tr><td>4</td><td>現状分析</td><td>(C 相当)</td><td>📰 初回監査</td><td>1 回</td></tr>
-        <tr><td>5</td><td>計画</td><td>P</td><td>🎯 戦略・KPI</td><td>初回 + 必要時</td></tr>
-        <tr><td>6</td><td>実行</td><td>D</td><td>📋 + 🏢 + 💬</td><td>常時</td></tr>
-        <tr><td>7</td><td>検証</td><td>C</td><td>📰 日次 + 📊 全体</td><td>毎日 + 週次</td></tr>
-        <tr><td>8</td><td>改善</td><td>A</td><td>📒 メモ帳</td><td>都度</td></tr>
-        <tr><td>9-10</td><td>ループ（C→A）</td><td>C / A</td><td>📰 📊 📒</td><td>毎日</td></tr>
-      </tbody>
-    </table>
   </div>
 
 </div>
+
+<script>
+// ============ STEP DATA ============
+const STEPS = {
+  1: {
+    pdca: 'PHASE 1 · オンボ',
+    title: 'URL を入力してサイトを追加',
+    desc: '— LP の「新しいサイトを追加」から URL を貼るだけ',
+    scene: 'scene1'
+  },
+  2: {
+    pdca: 'PHASE 1 · オンボ',
+    title: 'AI チームが自動組成される',
+    desc: '— ドメイン解析 → 業界に合った 4〜6 名のメンバーが揃う',
+    scene: 'scene2'
+  },
+  3: {
+    pdca: 'PHASE 1 · オンボ',
+    title: 'チャット画面が開く',
+    desc: '— PM から最初の挨拶。ここが以後の「ホーム」',
+    scene: 'sceneApp',
+    messages: 'greet',
+    panel: null,
+    activeTool: null,
+    taskCount: 0
+  },
+  4: {
+    pdca: 'C · 現状分析（初回）',
+    title: '初回監査レポート（📰）',
+    desc: '— GA4 / GSC を取得して AI が「今ここ」を要約',
+    scene: 'sceneApp',
+    messages: 'audit',
+    panel: 'audit',
+    activeTool: 'news',
+    taskCount: 0
+  },
+  5: {
+    pdca: 'P · 計画',
+    title: '🎯 戦略・KPI が立ち上がる',
+    desc: '— 目標と週次 KPI、8 週ロードマップを AI が提案',
+    scene: 'sceneApp',
+    messages: 'plan',
+    panel: 'plan',
+    activeTool: 'plan',
+    taskCount: 3
+  },
+  6: {
+    pdca: 'D · 実行',
+    title: '📋 タスク + 🏢 チーム + 💬 チャット',
+    desc: '— タスク自動生成、チームにアサイン、ユーザーは chat で指示',
+    scene: 'sceneApp',
+    messages: 'exec',
+    panel: 'tasks',
+    activeTool: 'task',
+    taskCount: 8
+  },
+  7: {
+    pdca: 'C · 検証（日次）',
+    title: '📰 日次グロースレポート（昨日）',
+    desc: '— 毎朝 8:00 自動配信。昨日の流入と効いた施策',
+    scene: 'sceneApp',
+    messages: 'daily',
+    panel: 'daily',
+    activeTool: 'news',
+    taskCount: 8
+  },
+  8: {
+    pdca: 'C · 検証（全体）',
+    title: '📊 数字分析（全期間トレンド）',
+    desc: '— 全期間の動き、URL/クエリ別、サイト横断比較',
+    scene: 'sceneApp',
+    messages: 'numbers',
+    panel: 'numbers',
+    activeTool: 'num',
+    taskCount: 8
+  },
+  9: {
+    pdca: 'A · 改善',
+    title: '📒 メモ帳で学習を蓄積',
+    desc: '— 勝ちパターン / 失敗 / 次の打ち手をストック',
+    scene: 'sceneApp',
+    messages: 'memo',
+    panel: 'memo',
+    activeTool: 'memo',
+    taskCount: 8
+  },
+  10: {
+    pdca: 'PHASE 3 · ループ',
+    title: '🔁 翌日：C→A が回り続ける',
+    desc: '— 朝の通知から再び始まる。P に戻る分岐もあり',
+    scene: 'sceneApp',
+    messages: 'loop',
+    panel: 'daily',
+    activeTool: 'news',
+    taskCount: 12
+  }
+};
+
+// ============ MESSAGE TEMPLATES ============
+const MSG_TEMPLATES = {
+  greet: [
+    { who:'bot', name:'fukuyama-note.com', tm:'09:00', txt:'こんにちは、PM の佐藤です 👔<br>fukuyama-note.com の運用を担当します。まず現状を把握させてください。'},
+    { who:'bot', name:'fukuyama-note.com', tm:'09:00', txt:'Google Analytics と Search Console を接続できますか？接続後すぐ初回監査レポートをお出しします。', threadCount: 1 }
+  ],
+  audit: [
+    { who:'user', name:'あなた', tm:'09:05', txt:'GA4 接続したよ'},
+    { who:'bot', name:'fukuyama-note.com', tm:'09:06', txt:'ありがとうございます ✨ 直近 28 日のデータを取得して初回監査をまとめました 👉 右の 📰 パネルで確認できます。', threadCount: 2 }
+  ],
+  plan: [
+    { who:'user', name:'あなた', tm:'09:10', txt:'監査見た。計画立てて'},
+    { who:'bot', name:'fukuyama-note.com', tm:'09:11', txt:'承知しました 🎯<br>3 ヶ月で月間 3,000 セッションを目標に、週次 KPI と 8 週ロードマップを 🎯 パネルにまとめました。', threadCount: 4 },
+    { who:'bot', name:'fukuyama-note.com', tm:'09:12', txt:'承認いただければタスクに展開します。' }
+  ],
+  exec: [
+    { who:'user', name:'あなた', tm:'09:30', txt:'OK 進めて'},
+    { who:'bot', name:'fukuyama-note.com', tm:'09:31', txt:'タスクを 8 件生成しました 📋 メンバーへの割り振りも完了。SEO の田中さんから順次着手します。', threadCount: 3 },
+    { who:'user', name:'あなた', tm:'10:15', txt:'1 個目の記事どう？'},
+    { who:'bot', name:'fukuyama-note.com', tm:'10:16', txt:'田中が下書き完了しました ✍️ レビューお願いします。', threadCount: 1 }
+  ],
+  daily: [
+    { who:'bot', name:'fukuyama-note.com', tm:'08:00', txt:'🌅 おはようございます！昨日のレポートをお届けします（📰 パネル参照）<br>昨日のセッション 156（▲ +12%）。「SEO 初心者ガイド」が当たってます 🎉', threadCount: 1 }
+  ],
+  numbers: [
+    { who:'user', name:'あなた', tm:'10:00', txt:'全体トレンド見せて'},
+    { who:'bot', name:'fukuyama-note.com', tm:'10:00', txt:'はい 📊 全期間のトレンドと URL / クエリ別、サイト横断比較を 📊 パネルに表示しました。', threadCount: 2 }
+  ],
+  memo: [
+    { who:'user', name:'あなた', tm:'18:00', txt:'今日の学び残しといて'},
+    { who:'bot', name:'fukuyama-note.com', tm:'18:00', txt:'📒 メモ帳に追加しました。明日のタスクにも反映済みです。', threadCount: 1 }
+  ],
+  loop: [
+    { who:'bot', name:'fukuyama-note.com', tm:'08:00', txt:'🌅 おはようございます！3 日目のレポートです<br>昨日のセッション 198（▲ +27%）、累計 +35% で順調 ✨', threadCount: 1 },
+    { who:'bot', name:'fukuyama-note.com', tm:'08:01', txt:'昨日の学びから今日のタスクを 4 件追加しました 📋' }
+  ]
+};
+
+// ============ PANEL TEMPLATES ============
+const PANELS = {
+  audit: `
+    <div class="panel-head">
+      <span class="ic">📰</span>
+      <span class="ttl">初回監査レポート</span>
+      <span class="sub">直近 28 日のデータより</span>
+      <button class="close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="audit-hero">
+        <h3>月間セッション</h3>
+        <div class="big">1,240</div>
+        <div class="small">前月比 ▲ +8% / Organic 中心の流入構造</div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-cell"><div class="lbl">Organic Search</div><div class="val">62%</div><div class="delta">▲ +5%</div></div>
+        <div class="audit-cell"><div class="lbl">Direct</div><div class="val">18%</div><div class="delta">▼ -2%</div></div>
+        <div class="audit-cell"><div class="lbl">Referral</div><div class="val">12%</div><div class="delta">▲ +1%</div></div>
+        <div class="audit-cell"><div class="lbl">SNS（伸びしろ）</div><div class="val">3%</div><div class="delta" style="color:#dc2626">▼ 改善余地大</div></div>
+      </div>
+      <div class="audit-insight">
+        <strong>💡 AI 所感：</strong>SEO が機能している良型サイト。ただし SNS 流入が 3% と未開拓なので、ここを伸ばすのが一番ラク。既存記事のリライトで Organic 維持しつつ、X 運用を始めるのが ROI 高い。
+      </div>
+      <div class="audit-insight">
+        <strong>🎯 提案：</strong>3 ヶ月で月間 3,000 セッションを目標に、SEO（既存資産強化）と SNS（新規流入）の 2 軸戦略を組みましょう。
+      </div>
+      <button class="daily-cta" onclick="goStep(5)">この監査をもとに計画を立てる →</button>
+    </div>
+  `,
+  plan: `
+    <div class="panel-head">
+      <span class="ic">🎯</span>
+      <span class="ttl">戦略・KPI</span>
+      <span class="sub">8 週ロードマップ</span>
+      <button class="close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="plan-goal">
+        <div class="lbl">🎯 メイン目標</div>
+        <div class="main-goal">3 ヶ月で月間 3,000 セッション</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">現在 1,240 → 目標 3,000（× 2.4 倍）</div>
+      </div>
+      <h4 style="font-size:13px; font-weight:800; margin-bottom:10px;">週次 KPI</h4>
+      <div class="plan-kpis">
+        <div class="plan-kpi"><div class="lbl">週次セッション</div><div class="v">+15%</div><div style="font-size:10px; color:var(--muted);">複利的に伸びる</div></div>
+        <div class="plan-kpi"><div class="lbl">新規記事</div><div class="v">2 本/週</div><div style="font-size:10px; color:var(--muted);">SEO 起点</div></div>
+        <div class="plan-kpi"><div class="lbl">SNS 投稿</div><div class="v">3 本/週</div><div style="font-size:10px; color:var(--muted);">X + Threads</div></div>
+      </div>
+      <div class="plan-roadmap">
+        <h4>8 週ロードマップ</h4>
+        <div class="road-item"><div class="wk">Week 1-2</div><div class="desc">技術 SEO 整備（タイトル / メタ / モバイル対応 / Core Web Vitals）</div></div>
+        <div class="road-item"><div class="wk">Week 3-4</div><div class="desc">既存記事リライト 10 本 + 新規記事 4 本</div></div>
+        <div class="road-item"><div class="wk">Week 5-6</div><div class="desc">SNS 立ち上げ（X 運用開始、ブランドガイド作成）</div></div>
+        <div class="road-item"><div class="wk">Week 7-8</div><div class="desc">勝ちパターン横展開 + 内部リンク強化</div></div>
+      </div>
+      <button class="daily-cta" onclick="goStep(6)">この計画でタスクに展開 →</button>
+    </div>
+  `,
+  tasks: `
+    <div class="panel-head">
+      <span class="ic">📋</span>
+      <span class="ttl">タスク</span>
+      <span class="sub">Week 1 / 8</span>
+      <button class="close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="tasks-grouped">
+        <h4>🔥 今日のタスク</h4>
+        <div class="task-row done"><div class="ck"></div><div class="txt">サイト構造の整理（カテゴリ統合）</div><div class="assignee">🔍 田中</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">タイトル・メタディスクリプション最適化</div><div class="assignee">🔍 田中</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">「初心者向け SEO ガイド」記事下書き</div><div class="assignee">✍️ 鈴木</div></div>
+        <h4>📆 今週</h4>
+        <div class="task-row"><div class="ck"></div><div class="txt">モバイル応答性チェック・Core Web Vitals</div><div class="assignee">🔍 田中</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">既存記事 5 本のリライト</div><div class="assignee">✍️ 鈴木</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">X アカウント立ち上げ準備（プロフィール / ブランドガイド）</div><div class="assignee">📱 山田</div></div>
+        <h4>🔜 来週以降</h4>
+        <div class="task-row"><div class="ck"></div><div class="txt">7 カテゴリのキーワード調査</div><div class="assignee">🔍 田中</div></div>
+        <div class="task-row"><div class="ck"></div><div class="txt">月次振り返り会（自動レポート生成）</div><div class="assignee">📊 高橋</div></div>
+      </div>
+    </div>
+  `,
+  daily: `
+    <div class="panel-head">
+      <span class="ic">📰</span>
+      <span class="ttl">日次グロースレポート</span>
+      <span class="sub">2026-05-24（昨日）</span>
+      <button class="close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="daily-date">
+        <div>
+          <div class="dt">昨日のセッション</div>
+          <div class="num">156</div>
+          <div class="delta">▲ +12% (前日比) / ▲ +28% (週平均)</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px; opacity:0.7;">前日 →</div>
+          <button style="background:rgba(255,255,255,0.2); color:#fff; padding:6px 12px; border-radius:6px; font-size:11px; margin-top:4px;">日付切替</button>
+        </div>
+      </div>
+      <div class="daily-grid">
+        <div class="daily-cell"><div class="lbl">PV</div><div class="v">312</div></div>
+        <div class="daily-cell"><div class="lbl">ユーザー</div><div class="v">142</div></div>
+        <div class="daily-cell"><div class="lbl">滞在 (秒)</div><div class="v">128</div></div>
+        <div class="daily-cell"><div class="lbl">直帰</div><div class="v">58%</div></div>
+      </div>
+      <div class="daily-section">
+        <h4>✅ 昨日効いた施策</h4>
+        <div class="item">📈 「SEO 初心者ガイド」記事公開 → 流入の 42% を新記事が獲得</div>
+        <div class="item">🔍 タイトル最適化 5 記事 → CTR が平均 +1.8 pt</div>
+      </div>
+      <div class="daily-section">
+        <h4>⚠️ 詰まったポイント</h4>
+        <div class="item">📱 X 投稿の朝 7 時帯は反応薄（インプレッション 120）</div>
+      </div>
+      <div class="daily-section">
+        <h4>🎯 明日のアクション</h4>
+        <div class="item">1. 「SEO ガイド」と同フォーマットで別記事を量産</div>
+        <div class="item">2. X 投稿を 20 時帯に変更してテスト</div>
+        <div class="item">3. CTR が上がった 5 記事の内部リンクを強化</div>
+      </div>
+      <button class="daily-cta">明日のアクション 3 件をタスク化</button>
+    </div>
+  `,
+  numbers: `
+    <div class="panel-head">
+      <span class="ic">📊</span>
+      <span class="ttl">数字分析</span>
+      <span class="sub">全期間トレンド</span>
+      <button class="close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="num-tabs">
+        <div class="num-tab active">全体トレンド</div>
+        <div class="num-tab">URL 別 (GSC)</div>
+        <div class="num-tab">クエリ別 (GSC)</div>
+        <div class="num-tab">サイト比較</div>
+      </div>
+      <div class="audit-row" style="margin-bottom:16px;">
+        <div class="audit-cell"><div class="lbl">28 日セッション</div><div class="val">1,240</div><div class="delta">▲ +8%</div></div>
+        <div class="audit-cell"><div class="lbl">28 日ユーザー</div><div class="val">892</div><div class="delta">▲ +12%</div></div>
+        <div class="audit-cell"><div class="lbl">平均滞在 (秒)</div><div class="val">142</div><div class="delta">▲ +6 秒</div></div>
+        <div class="audit-cell"><div class="lbl">直帰率</div><div class="val">54%</div><div class="delta" style="color:#16a34a">▼ -3pt</div></div>
+      </div>
+      <div class="num-chart">
+        <div style="font-size:12px; font-weight:700; margin-bottom:12px;">日次セッション推移（28 日）</div>
+        <div class="num-chart-bars">
+          <div class="b" style="height:30%"></div><div class="b" style="height:35%"></div><div class="b" style="height:25%"></div><div class="b" style="height:40%"></div><div class="b" style="height:45%"></div><div class="b" style="height:42%"></div><div class="b" style="height:38%"></div>
+          <div class="b" style="height:48%"></div><div class="b" style="height:52%"></div><div class="b" style="height:45%"></div><div class="b" style="height:55%"></div><div class="b" style="height:58%"></div><div class="b" style="height:50%"></div><div class="b" style="height:62%"></div>
+          <div class="b" style="height:60%"></div><div class="b" style="height:68%"></div><div class="b" style="height:65%"></div><div class="b" style="height:72%"></div><div class="b" style="height:70%"></div><div class="b" style="height:75%"></div><div class="b" style="height:72%"></div>
+          <div class="b" style="height:78%"></div><div class="b" style="height:82%"></div><div class="b" style="height:78%"></div><div class="b" style="height:85%"></div><div class="b" style="height:90%"></div><div class="b" style="height:88%"></div><div class="b" style="height:95%"></div>
+        </div>
+        <div class="num-chart-x">
+          <span>-28d</span><span></span><span></span><span>-21d</span><span></span><span></span><span></span><span>-14d</span><span></span><span></span><span></span><span>-7d</span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span>今日</span>
+        </div>
+      </div>
+      <div style="margin-top:20px;">
+        <h4 style="font-size:13px; font-weight:800; margin-bottom:10px;">チャネル別構成</h4>
+        <div class="num-channel">
+          <div class="num-ch-row"><div>Organic</div><div class="bar-wrap"><div class="bar-fill" style="width:62%; background: var(--teal);"></div></div><div class="num">768</div><div class="pct">62%</div></div>
+          <div class="num-ch-row"><div>Direct</div><div class="bar-wrap"><div class="bar-fill" style="width:18%;"></div></div><div class="num">223</div><div class="pct">18%</div></div>
+          <div class="num-ch-row"><div>Referral</div><div class="bar-wrap"><div class="bar-fill" style="width:12%;"></div></div><div class="num">149</div><div class="pct">12%</div></div>
+          <div class="num-ch-row"><div>SNS</div><div class="bar-wrap"><div class="bar-fill" style="width:3%; background:#dc2626;"></div></div><div class="num">37</div><div class="pct">3%</div></div>
+          <div class="num-ch-row"><div>Email</div><div class="bar-wrap"><div class="bar-fill" style="width:5%;"></div></div><div class="num">63</div><div class="pct">5%</div></div>
+        </div>
+      </div>
+      <button class="daily-cta" style="margin-top:20px;" onclick="goStep(5)">この数字で目標を見直す →</button>
+    </div>
+  `,
+  memo: `
+    <div class="panel-head">
+      <span class="ic">📒</span>
+      <span class="ttl">メモ帳</span>
+      <span class="sub">学習ログ</span>
+      <button class="close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="memo-list">
+        <div class="memo-item">
+          <div class="dt">2026-05-24 ✅ 勝ちパターン</div>
+          <div class="body">「初心者向け SEO ガイド」が CTR 4.2% で当たり。同フォーマット（章立て + チェックリスト + 図解）で横展開する。<br><br>横展開候補：「初心者向け Web 解析」「初心者向け SNS 運用」</div>
+        </div>
+        <div class="memo-item warn">
+          <div class="dt">2026-05-23 ⚠️ 学び</div>
+          <div class="body">X 投稿の朝 7 時帯は反応薄（インプレッション 120）。20 時に変更してテスト中。<br><br>仮説：B2C 寄りユーザーは通勤後にスマホで見る。</div>
+        </div>
+        <div class="memo-item">
+          <div class="dt">2026-05-22 💡 観察</div>
+          <div class="body">タイトル最適化した 5 記事の CTR が平均 +1.8 pt 上昇。<br>パターン：「初心者向け○○」「○○の始め方」が強い。</div>
+        </div>
+        <div class="memo-item warn">
+          <div class="dt">2026-05-21 🔄 ピボット候補</div>
+          <div class="body">移住系コンテンツの反応が想定より薄い。<br>「観光・グルメ寄りに重心を寄せる」べきか検討。</div>
+        </div>
+      </div>
+      <button class="memo-pback" onclick="goStep(5)">🎯 戦略を見直す（P に戻る）</button>
+    </div>
+  `
+};
+
+// ============ STATE / CONTROL ============
+let curStep = 1;
+
+function renderMsgs(key) {
+  const msgs = document.getElementById('msgs');
+  if (!msgs || !MSG_TEMPLATES[key]) return;
+  msgs.innerHTML = MSG_TEMPLATES[key].map(m => `
+    <div class="msg ${m.who === 'bot' ? 'bot' : ''}">
+      <div class="av">${m.who === 'bot' ? '📓' : 'K'}</div>
+      <div class="body">
+        <div class="head">
+          <span class="nm">${m.name}</span>
+          <span class="tm">${m.tm}</span>
+        </div>
+        <div class="txt">${m.txt}</div>
+        ${m.threadCount ? `<div class="thread-link"><span class="link">📓 ${m.threadCount} 件の返信</span><span>· 最終返信 ${m.tm}</span></div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openPanel(key) {
+  const panel = document.getElementById('panel');
+  const content = document.getElementById('panelContent');
+  if (!panel || !content || !PANELS[key]) return;
+  content.innerHTML = PANELS[key];
+  panel.style.display = 'block';
+  // highlight active tool
+  document.querySelectorAll('.ch-tool').forEach(b => b.classList.remove('active'));
+  const map = { audit: 'news', plan: 'plan', tasks: 'task', daily: 'news', numbers: 'num', memo: 'memo' };
+  const tool = map[key];
+  if (tool) {
+    const el = document.querySelector(`.ch-tool[data-tool="${tool}"]`);
+    if (el) el.classList.add('active');
+  }
+}
+
+function closePanel() {
+  const panel = document.getElementById('panel');
+  if (panel) panel.style.display = 'none';
+  document.querySelectorAll('.ch-tool').forEach(b => b.classList.remove('active'));
+}
+
+function goStep(n) {
+  curStep = n;
+  const meta = STEPS[n];
+  if (!meta) return;
+
+  // update narration
+  document.getElementById('pdcaPill').textContent = meta.pdca;
+  document.getElementById('sceneTitle').textContent = meta.title;
+  document.getElementById('sceneDesc').textContent = meta.desc;
+
+  // update step buttons
+  document.querySelectorAll('.stepbtn').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.step) === n);
+  });
+
+  // switch scene
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  document.getElementById(meta.scene).classList.add('active');
+
+  // app scene specifics
+  if (meta.scene === 'sceneApp') {
+    if (meta.messages) renderMsgs(meta.messages);
+    const taskCount = document.getElementById('taskCount');
+    if (taskCount) taskCount.textContent = meta.taskCount;
+    const sbCount = document.getElementById('sbCount');
+    if (sbCount) sbCount.textContent = meta.taskCount + ' 件';
+
+    // hide AI suggestion in certain scenes for clarity
+    const aiSugg = document.getElementById('aiSugg');
+    if (aiSugg) aiSugg.style.display = (n === 3 || n === 6) ? 'flex' : 'none';
+
+    if (meta.panel) openPanel(meta.panel);
+    else closePanel();
+  }
+
+  // disable arrows
+  document.getElementById('prevBtn').disabled = (n === 1);
+  document.getElementById('nextBtn').disabled = (n === 10);
+
+  // scroll msgs to bottom
+  setTimeout(() => {
+    const m = document.getElementById('msgs');
+    if (m) m.scrollTop = m.scrollHeight;
+  }, 50);
+}
+
+document.querySelectorAll('.stepbtn').forEach(b => {
+  b.addEventListener('click', () => goStep(Number(b.dataset.step)));
+});
+document.getElementById('prevBtn').addEventListener('click', () => goStep(Math.max(1, curStep - 1)));
+document.getElementById('nextBtn').addEventListener('click', () => goStep(Math.min(10, curStep + 1)));
+
+// keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') goStep(Math.min(10, curStep + 1));
+  if (e.key === 'ArrowLeft') goStep(Math.max(1, curStep - 1));
+});
+
+// init
+goStep(1);
+</script>
 </body>
 </html>

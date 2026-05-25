@@ -8273,9 +8273,14 @@ function _stampArtifactVersions(text, ownerUser){
 //     versions: [{ v, content, artifact_url, attachments, summary, ai_msg_id, created_at }],
 //     agent_id, auto_generated, created_at, updated_at
 //   }
-function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsgId){
+function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsgId, userMsgText){
   if(!user || !agent || !reply || typeof reply !== 'string') return null;
-  if(reply.length < 200) return null;
+  // ユーザーが「【日次グロースレポート】」 marker で依頼した場合、 AI 返信が
+  // 短くても (エラーメッセージ含め) 強制的に daily note として保存する。
+  // これで「生成失敗 → ノートに残らず行方不明」 を防ぐ。
+  const userHint = String(userMsgText || '');
+  const isExplicitDailyRequest = /【日次グロースレポート】|【日次レポート】|【グロースレポート】/.test(userHint);
+  if(reply.length < 200 && !isExplicitDailyRequest) return null;
   const tl = Array.isArray(toolLog) ? toolLog : [];
   // Strong signal — these tools produce a primary deliverable URL.
   const pageProducingTools = new Set([
@@ -8288,7 +8293,11 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
   ]);
   const matched = tl.find(t => t && t.ok !== false && pageProducingTools.has(t.name));
   let type = null, title = null;
-  if(matched){
+  // ユーザー指示が明示的に「日次グロースレポート」 なら最優先で daily 扱い
+  if(isExplicitDailyRequest){
+    type = 'daily';
+    title = '日次グロースレポート ' + new Date().toISOString().slice(0, 10);
+  } else if(matched){
     type = matched.name === 'wordpress_publish' ? 'article'
          : matched.name === 'generate_pdf' ? 'pdf'
          : 'artifact';
@@ -25073,7 +25082,7 @@ ${orgSummary || '(汎用チーム)'}
       const _lastA0 = agent.history[agent.history.length - 1];
       const _threadParentId = (_lastA0 && _lastA0.thread_parent_id) || null;
       const _aiMsgId = (_lastA0 && _lastA0.id) || null;
-      const _autoNote = _maybeAutoCreateNote(payerUser, agent, reply, toolLog, _threadParentId, _aiMsgId);
+      const _autoNote = _maybeAutoCreateNote(payerUser, agent, reply, toolLog, _threadParentId, _aiMsgId, message);
       if(_autoNote){
         if(_lastA0 && _lastA0.role === 'assistant'){
           _lastA0.note_id    = _autoNote.id;

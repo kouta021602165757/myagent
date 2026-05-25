@@ -2802,7 +2802,8 @@ window.openDailyGrowthReportPanel = async function(siteId){
 
   // ── Sections 2-5: parse AI markdown content (空ならプレースホルダ + 再生成促し) ──
   // ノートが無いケースでも 4 つのカードを枠だけ表示する (= 何をすべきか分かる)
-  var sectionsHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId);
+  // section 5 は GA4 series データから native バーチャート描画も付与
+  var sectionsHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId, snap);
 
   // ── Past reports list ──
   var pastListHTML = '';
@@ -2951,7 +2952,7 @@ function _dgrMetricCard(label, valueHTML, delta1, delta2){
 }
 
 // ── Sections 2-5 を AI markdown content からパース + 再生成 placeholder + section 4 タスク追加 UI ──
-function _dgrRenderMarkdownSections(content, siteId){
+function _dgrRenderMarkdownSections(content, siteId, snap){
   var SECTIONS = [
     { n: 2, icon: '🟢', title: '効いた施策', altTitles: ['効いた', 'うまく', '成功', 'wins', 'what worked'],
       emptyHint: '直近 24-72h で AI チームが何をしたか + 数字に出た良い動きを記載' },
@@ -3003,6 +3004,7 @@ function _dgrRenderMarkdownSections(content, siteId){
     var body = _extractSection(s.n, s.altTitles || []);
     var renderedBody = '';
     var actionsHTML = '';
+    var trendChartHTML = '';
     if(body){
       try { renderedBody = (typeof _md === 'function') ? _md(body) : '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
       catch(_){ renderedBody = '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
@@ -3026,9 +3028,14 @@ function _dgrRenderMarkdownSections(content, siteId){
         + '<br><span style="font-size:11px">'+L('期待される内容: ','Expected: ')+esc(s.emptyHint)+'</span>'
         + '</div>';
     }
+    // セクション 5 だけは GA4 series から native バーチャートを上に置く
+    if(s.n === 5 && snap && Array.isArray(snap.series) && snap.series.length){
+      trendChartHTML = _dgrRenderTrendBars(snap.series);
+    }
     return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:20px 24px;margin-bottom:14px">'
       + '<div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px">'+s.icon+' '+s.n+'. '+esc(s.title)+'</div>'
-      + '<div class="md-body" style="font-size:13.5px;line-height:1.7;color:var(--text)">'+renderedBody+'</div>'
+      + trendChartHTML
+      + '<div class="md-body" style="font-size:13.5px;line-height:1.7;color:var(--text)' + (trendChartHTML ? ';margin-top:14px;padding:14px 16px;background:var(--cream3);border-left:3px solid var(--peach);border-radius:8px' : '') + '">'+renderedBody+'</div>'
       + actionsHTML
       + '</div>';
   }).join('');
@@ -3047,6 +3054,47 @@ function _dgrRenderMarkdownSections(content, siteId){
       + '</div>';
   }
   return cards;
+}
+
+// 中期トレンド: 過去 7 日の日次 PV を horizontal bar chart で描画
+// (画像参考: 5/18 (月) ━━━━━━━━━━━ 83 PV のような行)
+function _dgrRenderTrendBars(series){
+  if(!Array.isArray(series) || !series.length) return '';
+  var last7 = series.slice(-7);
+  var maxPv = Math.max.apply(null, last7.map(function(s){return s.pv || 0;}));
+  if(maxPv <= 0) maxPv = 1;
+  var WEEKDAY_JA = ['日','月','火','水','木','金','土'];
+  var rows = last7.map(function(s){
+    var pv = s.pv || 0;
+    var pct = Math.max(2, Math.round(pv / maxPv * 100));
+    // date format: 2026-05-18 → 5/18 (月)
+    var label = String(s.date || '');
+    var dispLabel = label;
+    try {
+      // GA4 date format: YYYYMMDD or YYYY-MM-DD
+      var clean = label.replace(/-/g, '');
+      if(clean.length === 8){
+        var y = parseInt(clean.slice(0,4),10);
+        var m = parseInt(clean.slice(4,6),10);
+        var d = parseInt(clean.slice(6,8),10);
+        var dt = new Date(y, m-1, d);
+        if(!isNaN(dt.getTime())){
+          dispLabel = m + '/' + d + ' (' + WEEKDAY_JA[dt.getDay()] + ')';
+        }
+      }
+    } catch(_){}
+    return '<div style="display:grid;grid-template-columns:88px 1fr 70px;align-items:center;gap:14px;padding:7px 0">'
+      + '<div style="font-size:11.5px;color:var(--text3);font-weight:600">'+esc(dispLabel)+'</div>'
+      + '<div style="height:10px;background:var(--cream3);border-radius:99px;overflow:hidden;position:relative">'
+      +   '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#fb923c,#f97316);border-radius:99px"></div>'
+      + '</div>'
+      + '<div style="font-size:12.5px;font-weight:800;color:var(--text);text-align:right">'+pv.toLocaleString()+' PV</div>'
+      + '</div>';
+  }).join('');
+  return '<div style="margin-bottom:14px">'
+    + '<div style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px">📊 '+L('過去 7 日の日次 PV','Past 7 days · daily PV')+'</div>'
+    + rows
+    + '</div>';
 }
 
 // セクション 4 のアクションを agent.open_tasks に push して composer strip に表示

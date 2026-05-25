@@ -36,77 +36,121 @@
   a { color: var(--teal); text-decoration: none; }
 
   /* ====================================
-     TOP STEP NAVIGATOR
+     FLOATING DEMO CONTROLLER (bottom-right)
      ==================================== */
-  .step-nav {
-    position: fixed; top: 0; left: 0; right: 0;
+  .demo-ctrl {
+    position: fixed;
+    bottom: 20px; right: 20px;
     background: #fff;
-    border-bottom: 1px solid var(--line);
-    z-index: 100;
-    padding: 10px 16px;
-    display: flex; align-items: center; gap: 12px;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04);
+    z-index: 200;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    width: 320px;
   }
-  .step-nav .title { font-weight: 800; font-size: 13px; color: var(--teal-2); margin-right: 8px; white-space: nowrap; }
-  .step-nav .steps { display: flex; gap: 4px; overflow-x: auto; flex: 1; }
-  .step-nav .stepbtn {
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    color: var(--muted);
-    white-space: nowrap;
-    border: 1px solid transparent;
-    background: #f7f7f4;
-    font-weight: 600;
-    transition: all 0.15s ease;
+  .demo-ctrl.collapsed {
+    width: auto;
   }
-  .step-nav .stepbtn:hover { background: var(--lime-soft); color: var(--teal-2); }
-  .step-nav .stepbtn.active {
-    background: var(--teal);
-    color: #fff;
-  }
-  .step-nav .nav-arrows { display: flex; gap: 4px; }
-  .step-nav .arrow {
-    padding: 6px 12px;
-    border-radius: 8px;
-    background: var(--teal);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-  }
-  .step-nav .arrow.ghost { background: #f3f4f6; color: var(--text); }
-  .step-nav .arrow:disabled { opacity: 0.3; cursor: not-allowed; }
-
-  /* ====================================
-     SCENE NARRATION BAR
-     ==================================== */
-  .narration {
-    position: fixed; top: 52px; left: 0; right: 0;
-    background: var(--lime-soft);
-    border-bottom: 1px solid var(--lime-soft-2);
-    padding: 8px 20px;
-    font-size: 12px;
-    color: var(--teal-2);
-    z-index: 99;
+  .demo-ctrl-bar {
+    padding: 10px 14px;
     display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    cursor: pointer;
   }
-  .narration .pdca-pill {
-    background: var(--teal);
-    color: var(--lime);
+  .demo-ctrl-bar .badge {
+    background: var(--lime);
+    color: var(--teal-2);
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 5px;
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
-  .narration .scene-title { font-weight: 800; }
+  .demo-ctrl-bar .progress {
+    font-size: 12px;
+    font-weight: 700;
+    flex: 1;
+  }
+  .demo-ctrl-bar .arrow {
+    width: 28px; height: 28px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    color: #fff;
+  }
+  .demo-ctrl-bar .arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+  .demo-ctrl-bar .arrow:hover:not(:disabled) { background: rgba(255,255,255,0.25); }
+  .demo-ctrl-bar .toggle {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    margin-left: 4px;
+    transition: transform 0.2s;
+  }
+  .demo-ctrl.collapsed .toggle { transform: rotate(180deg); }
+  .demo-ctrl-body {
+    padding: 12px 14px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    max-height: 420px;
+    overflow-y: auto;
+  }
+  .demo-ctrl.collapsed .demo-ctrl-body,
+  .demo-ctrl.collapsed .scene-info { display: none; }
+  .scene-info {
+    padding: 10px 14px;
+    background: var(--lime-soft);
+    border-bottom: 1px solid var(--lime-soft-2);
+  }
+  .scene-info .scene-title {
+    font-weight: 800; font-size: 13px;
+    color: var(--teal-2);
+  }
+  .scene-info .scene-desc {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .demo-ctrl-body .stepbtn {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text);
+    text-align: left;
+    background: transparent;
+    font-weight: 600;
+    margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .demo-ctrl-body .stepbtn:hover { background: var(--lime-soft); }
+  .demo-ctrl-body .stepbtn.active {
+    background: var(--teal);
+    color: #fff;
+  }
+  .demo-ctrl-body .stepbtn .num {
+    width: 22px; height: 22px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .demo-ctrl-body .stepbtn.active .num {
+    background: var(--lime);
+    color: var(--teal-2);
+  }
 
   /* ====================================
      APP LAYOUT
      ==================================== */
   .app {
     position: fixed;
-    top: 92px; left: 0; right: 0; bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     display: flex;
     background: var(--bg);
   }
@@ -880,32 +924,31 @@
 </head>
 <body>
 
-<!-- STEP NAVIGATOR -->
-<nav class="step-nav">
-  <span class="title">🎬 PDCA JOURNEY</span>
-  <div class="steps" id="stepBtns">
-    <button class="stepbtn active" data-step="1">1. URL 入力</button>
-    <button class="stepbtn" data-step="2">2. チーム組成</button>
-    <button class="stepbtn" data-step="3">3. チャット開始</button>
-    <button class="stepbtn" data-step="4">4. 現状分析</button>
-    <button class="stepbtn" data-step="5">5. 計画</button>
-    <button class="stepbtn" data-step="6">6. 実行</button>
-    <button class="stepbtn" data-step="7">7. 検証 (日次)</button>
-    <button class="stepbtn" data-step="8">8. 検証 (全体)</button>
-    <button class="stepbtn" data-step="9">9. 改善</button>
-    <button class="stepbtn" data-step="10">10. ループ</button>
+<!-- FLOATING DEMO CONTROLLER (bottom-right) -->
+<div class="demo-ctrl" id="demoCtrl">
+  <div class="demo-ctrl-bar" onclick="toggleDemoCtrl(event)">
+    <span class="badge" id="pdcaPill">PHASE 1</span>
+    <span class="progress" id="progressLabel">1 / 10</span>
+    <button class="arrow" id="prevBtn" onclick="event.stopPropagation(); goStep(Math.max(1, curStep - 1));">←</button>
+    <button class="arrow" id="nextBtn" onclick="event.stopPropagation(); goStep(Math.min(10, curStep + 1));">→</button>
+    <span class="toggle">▾</span>
   </div>
-  <div class="nav-arrows">
-    <button class="arrow ghost" id="prevBtn">← 前</button>
-    <button class="arrow" id="nextBtn">次 →</button>
+  <div class="scene-info">
+    <div class="scene-title" id="sceneTitle">URL を入力してサイトを追加</div>
+    <div class="scene-desc" id="sceneDesc">LP の「新しいサイトを追加」から URL を貼り付けるだけ</div>
   </div>
-</nav>
-
-<!-- NARRATION -->
-<div class="narration">
-  <span class="pdca-pill" id="pdcaPill">PHASE 1</span>
-  <span class="scene-title" id="sceneTitle">URL を入力してサイトを追加</span>
-  <span class="scene-desc" id="sceneDesc" style="color: var(--muted);">— LP の「新しいサイトを追加」から URL を貼り付けるだけ</span>
+  <div class="demo-ctrl-body" id="stepBtns">
+    <button class="stepbtn active" data-step="1"><span class="num">1</span> URL 入力</button>
+    <button class="stepbtn" data-step="2"><span class="num">2</span> チーム組成</button>
+    <button class="stepbtn" data-step="3"><span class="num">3</span> チャット開始</button>
+    <button class="stepbtn" data-step="4"><span class="num">4</span> 現状分析</button>
+    <button class="stepbtn" data-step="5"><span class="num">5</span> 計画</button>
+    <button class="stepbtn" data-step="6"><span class="num">6</span> 実行</button>
+    <button class="stepbtn" data-step="7"><span class="num">7</span> 検証 (日次)</button>
+    <button class="stepbtn" data-step="8"><span class="num">8</span> 検証 (全体)</button>
+    <button class="stepbtn" data-step="9"><span class="num">9</span> 改善</button>
+    <button class="stepbtn" data-step="10"><span class="num">10</span> ループ</button>
+  </div>
 </div>
 
 <!-- APP CONTAINER -->
@@ -1495,6 +1538,12 @@ function closePanel() {
   document.querySelectorAll('.ch-tool').forEach(b => b.classList.remove('active'));
 }
 
+function toggleDemoCtrl(e) {
+  // only toggle when clicking the bar itself, not buttons
+  if (e.target.closest('.arrow')) return;
+  document.getElementById('demoCtrl').classList.toggle('collapsed');
+}
+
 function goStep(n) {
   curStep = n;
   const meta = STEPS[n];
@@ -1504,6 +1553,7 @@ function goStep(n) {
   document.getElementById('pdcaPill').textContent = meta.pdca;
   document.getElementById('sceneTitle').textContent = meta.title;
   document.getElementById('sceneDesc').textContent = meta.desc;
+  document.getElementById('progressLabel').textContent = `${n} / 10`;
 
   // update step buttons
   document.querySelectorAll('.stepbtn').forEach(b => {

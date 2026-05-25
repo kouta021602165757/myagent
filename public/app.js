@@ -2568,10 +2568,14 @@ function renderAll(){
   // immediately. Doesn't block render — runs in the background.
   setTimeout(function(){ try { _loadIntegrations(); } catch(e){} }, 300);
   // Phase 2 (= chat-centric): ダッシュボード page を landing にせず、
-  // サイトを 1 つでも持っているなら必ず top site のチャットを auto-open する。
-  // 0 サイトのユーザーだけ goHome() (= onboarding / 新規サイト追加画面) を見せる。
-  if(agents.length > 0){
-    var _tgt = (activeId && agents.find(function(a){return a.id===activeId;})) ? activeId : agents[0].id;
+  // 「あなたのサイト」 セクションの top (= site_url を持つ最新更新サイト) を
+  // 必ず auto-open する。 legacy agent (= site_url 無し) は無視する。
+  // site が 0 件 + legacy のみのユーザーは onboarding (goHome) を見せる。
+  var siteAgents = (agents||[]).filter(function(a){ return _isSiteAgent(a); });
+  if(siteAgents.length > 0){
+    // activeId が既に site agent ならそれを優先、 そうでなければ top site
+    var _active = (activeId && siteAgents.find(function(a){return a.id===activeId;}));
+    var _tgt = _active ? activeId : siteAgents[0].id;
     openAgent(_tgt);
   } else {
     goHome();
@@ -2579,12 +2583,14 @@ function renderAll(){
 }
 
 /** Phase 2: ダッシュボード page を廃止。
- *  goHome は「サイトがあれば top site のチャットへ、無ければ onboarding 表示」 だけ。
- *  これでロード時 / ロゴクリック / 退出後 など全経路でチャット中心 UX が貫かれる。 */
+ *  goHome は「site agent があれば top site のチャットへ、無ければ onboarding 表示」 だけ。
+ *  legacy agent (= site_url 無し) は無視する。 これでロゴクリック等が必ず
+ *  「あなたのサイト」 セクションの top site に向かう。 */
 function goHome(){
-  // サイトがあるなら強制的に top site のチャットを開く (= ダッシュボードは出さない)
-  if(Array.isArray(agents) && agents.length > 0){
-    var _tgt = (activeId && agents.find(function(a){return a.id===activeId;})) ? activeId : agents[0].id;
+  var siteAgents = (agents||[]).filter(function(a){ return typeof _isSiteAgent === 'function' && _isSiteAgent(a); });
+  if(siteAgents.length > 0){
+    var _active = (activeId && siteAgents.find(function(a){return a.id===activeId;}));
+    var _tgt = _active ? activeId : siteAgents[0].id;
     try { openAgent(_tgt); } catch(_){}
     return;
   }

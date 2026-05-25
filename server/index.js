@@ -20661,7 +20661,7 @@ ${orgSummary || '(汎用チーム)'}
     const cacheAgeMs = cached && cached.fetched_at
       ? (Date.now() - Date.parse(cached.fetched_at))
       : Infinity;
-    const STALE_MS = 60 * 60 * 1000;  // 1 時間で stale
+    const STALE_MS = 12 * 60 * 60 * 1000;  // 12 時間で stale (= 日次レポート用には十分新鮮)
 
     if(!isRefresh && cached && cacheAgeMs < STALE_MS){
       return jres(res, 200, { ok: true, connected: true, snapshot: cached, stale: false });

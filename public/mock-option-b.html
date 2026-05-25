@@ -82,6 +82,68 @@
   .art-card-buttons button.on { background: var(--peach); border-color: var(--peach); }
   .art-card-buttons button.go { background: var(--peach); border-color: var(--peach); margin-left: auto; }
 
+  /* PM dispatch card */
+  .pm-dispatch {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg,rgba(192,255,92,.18),rgba(192,255,92,.32));
+    border: 1px solid rgba(192,255,92,.55); border-radius: 99px;
+    padding: 6px 14px; font-size: 11.5px; font-weight: 700;
+    color: var(--text); margin: 10px 0 12px;
+  }
+  .pm-dispatch-pm { color: var(--peach-dark); font-weight: 900; letter-spacing: .02em; }
+  .pm-dispatch-arrow { opacity: .6; }
+  .pm-dispatch-name { color: var(--text); font-weight: 800; }
+  .pm-dispatch-reason { opacity: .7; font-weight: 600; }
+
+  /* Delegate card (任されたこと / 進め方) */
+  .deli {
+    background: white; border: 1px solid var(--wire2);
+    border-left: 3px solid var(--peach); border-radius: 11px;
+    padding: 14px 18px; margin: 10px 0;
+  }
+  .deli-h { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .deli-h-ic { font-size: 16px; }
+  .deli-h-lbl {
+    font-size: 10px; color: var(--text3); font-weight: 800;
+    letter-spacing: .05em; text-transform: uppercase;
+  }
+  .deli-req { font-size: 14px; font-weight: 800; margin-bottom: 12px; }
+  .deli-divider { border-top: 1px dashed var(--wire2); margin: 10px -2px; }
+  .deli-plan-lbl { font-size: 10px; color: var(--text3); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 6px; }
+  .deli-task {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    font-size: 13px;
+  }
+  .deli-task.done .deli-tx { color: var(--text2); text-decoration: line-through; opacity: .65; }
+  .deli-task.now .deli-tx { font-weight: 800; }
+  .deli-box {
+    width: 16px; height: 16px; border-radius: 5px;
+    border: 2px solid var(--wire2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+  }
+  .deli-box.on { background: var(--peach); border-color: var(--peach); color: #0a0a0e; }
+  .deli-box.now {
+    background: white; border-color: var(--peach-dark); border-width: 2.5px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(163,230,53,.4)} 50%{box-shadow:0 0 0 5px rgba(163,230,53,0)} }
+  .deli-tx { flex: 1; }
+  .deli-owner {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: rgba(192,255,92,.18); border: 1px solid rgba(192,255,92,.45);
+    color: var(--peach-dark); font-size: 10px; font-weight: 800;
+    padding: 2px 8px; border-radius: 99px; margin-left: 4px;
+    letter-spacing: .02em;
+  }
+  .deli-progress {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text3); font-weight: 700;
+    margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--wire2);
+  }
+  .deli-progress-bar { flex: 1; height: 5px; background: var(--cream3); border-radius: 99px; overflow: hidden; }
+  .deli-progress-bar > div { height: 100%; background: linear-gradient(90deg,var(--peach-dark),var(--peach)); border-radius: 99px; }
+
   /* Note pill — option B (横幅いっぱい / テキストの下に block 配置 / 色濃く) */
   .note-pill {
     display: flex; align-items: center; gap: 12px;
@@ -295,11 +357,54 @@
       </div>
       <div class="msg">
         <div class="msg-meta">
-          <div class="msg-avatar">🛠</div>
-          <span class="msg-name">myaiagents.agency</span>
+          <div class="msg-avatar">📊</div>
+          <span class="msg-name">GA4 アナリスト</span>
           <span class="msg-time">04:13</span>
         </div>
         <div class="msg-body">
+          <!-- PM dispatch card -->
+          <div class="pm-dispatch">
+            <span>📋</span>
+            <span class="pm-dispatch-pm">PM</span>
+            <span class="pm-dispatch-arrow">→</span>
+            <span class="pm-dispatch-name">📊 GA4 アナリスト</span>
+            <span class="pm-dispatch-reason">・ ファネル分析が専門</span>
+          </div>
+          <!-- Delegate card (任されたこと / 進め方) -->
+          <div class="deli">
+            <div class="deli-h">
+              <span class="deli-h-ic">🎯</span>
+              <span class="deli-h-lbl">任されたこと</span>
+            </div>
+            <div class="deli-req">ファネル漏れ箇所を特定 + 可視化ダッシュボード</div>
+            <div class="deli-divider"></div>
+            <div class="deli-plan-lbl">進め方</div>
+            <div class="deli-task done">
+              <span class="deli-box on">✓</span>
+              <span class="deli-tx">GA4 から先月のセッション数を取得</span>
+              <span class="deli-owner">📊 GA4 アナリスト</span>
+            </div>
+            <div class="deli-task done">
+              <span class="deli-box on">✓</span>
+              <span class="deli-tx">LP閲覧 → CTA → リード の funnel 計算</span>
+              <span class="deli-owner">📊 GA4 アナリスト</span>
+            </div>
+            <div class="deli-task done">
+              <span class="deli-box on">✓</span>
+              <span class="deli-tx">ダッシュボード HTML を生成</span>
+              <span class="deli-owner">🎨 デザイナー</span>
+            </div>
+            <div class="deli-task now">
+              <span class="deli-box now"></span>
+              <span class="deli-tx">レポート Note を作成</span>
+              <span class="deli-owner">✍️ ライター</span>
+            </div>
+            <div class="deli-progress">
+              <span>進行中</span>
+              <div class="deli-progress-bar"><div style="width:75%"></div></div>
+              <span>3 / 4 完了</span>
+            </div>
+          </div>
           162 人来ても CTA を押すのは 16 人。 <span class="p1-tag">P1</span><br>
           今日の最優先アクション:<br>
           A → GA4 Goal 設定<br>

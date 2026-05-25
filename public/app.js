@@ -2931,18 +2931,23 @@ function _dgrRenderNumbersSection(ag, snap, ga4Connected){
     (cvrGoal || leadsGoal) ? (L('目標 ','target ')+(cvrGoal||0)+'% / '+_fmt(leadsGoal||0)+L('件','')) : L('Goal 未設定','Goal not set')
   );
 
-  // Channel breakdown table
+  // Channel breakdown table (server の sources は {channel, sessions} のみ提供。
+  // pv / users は per-channel で取得していないので table も 2 列構成に絞る)
   var sources = Array.isArray(snap.sources) ? snap.sources.slice(0, 6) : [];
   var sourceTotal = snap.source_total || 0;
   var channelDotColors = { 'Referral':'#f97316', 'Direct':'#6366f1', 'Unassigned':'#9ca3af', 'Organic Social':'#10b981', 'Organic Search':'#16a34a', 'Paid Search':'#0d4f4a', 'Email':'#a855f7' };
+  var maxSess = sources.length ? Math.max.apply(null, sources.map(function(x){return x.sessions||0;})) : 0;
   var channelRows = sources.map(function(s){
     var dotColor = channelDotColors[s.channel] || '#71717a';
-    var isLargest = s.sessions === Math.max.apply(null, sources.map(function(x){return x.sessions;}));
-    return '<div style="display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire)">'
+    var sess = s.sessions || 0;
+    var isLargest = sess === maxSess && maxSess > 0;
+    var pct = sourceTotal > 0 ? Math.round(sess / sourceTotal * 100) : 0;
+    var barWidth = maxSess > 0 ? Math.round(sess / maxSess * 100) : 0;
+    return '<div style="display:grid;grid-template-columns:1fr 2fr auto auto;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire)">'
       + '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);font-weight:'+(isLargest?'800':'700')+'"><span style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0"></span>'+esc(s.channel||'')+'</div>'
-      + '<div style="font-size:13px;color:var(--text);font-weight:'+(isLargest?'800':'600')+';min-width:40px;text-align:right">'+_fmt(s.pv)+'</div>'
-      + '<div style="font-size:13px;color:var(--text);font-weight:600;min-width:40px;text-align:right">'+_fmt(s.sessions)+'</div>'
-      + '<div style="font-size:13px;color:var(--text2);font-weight:600;min-width:40px;text-align:right">—</div>'
+      + '<div style="height:8px;background:var(--cream3);border-radius:99px;overflow:hidden"><div style="height:100%;width:'+barWidth+'%;background:linear-gradient(90deg,'+dotColor+'66,'+dotColor+');border-radius:99px"></div></div>'
+      + '<div style="font-size:13px;color:var(--text);font-weight:'+(isLargest?'800':'700')+';min-width:50px;text-align:right">'+_fmt(sess)+'</div>'
+      + '<div style="font-size:11.5px;color:var(--text3);font-weight:600;min-width:42px;text-align:right">'+pct+'%</div>'
       + '</div>';
   }).join('');
   var organicSearchExists = sources.some(function(s){ return /organic search/i.test(s.channel||''); });
@@ -2991,11 +2996,12 @@ function _dgrRenderNumbersSection(ag, snap, ga4Connected){
     +   '</div>'
     +   (channelRows ? (
           '<div style="margin-top:10px">'
-        + '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:14px;padding:8px 4px;border-bottom:1px solid var(--wire2);font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">'
+        + '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">🌐 '+L('チャネル別 セッション (直近 30 日)','Sessions by channel (30d)')+'</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 2fr auto auto;gap:14px;padding:8px 4px;border-bottom:1px solid var(--wire2);font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">'
         +   '<div>'+L('チャネル','Channel')+'</div>'
-        +   '<div style="text-align:right;min-width:40px">PV</div>'
-        +   '<div style="text-align:right;min-width:40px">'+L('セッション','Sessions')+'</div>'
-        +   '<div style="text-align:right;min-width:40px">'+L('ユーザー','Users')+'</div>'
+        +   '<div></div>'
+        +   '<div style="text-align:right;min-width:50px">'+L('セッション','Sessions')+'</div>'
+        +   '<div style="text-align:right;min-width:42px">%</div>'
         + '</div>'
         + channelRows
         + footnote

@@ -2800,15 +2800,9 @@ window.openDailyGrowthReportPanel = async function(siteId){
   // ── Section 1: 数字のサマリー (native from GA4) ──
   var section1HTML = _dgrRenderNumbersSection(ag, snap, ga4Connected);
 
-  // ── Sections 2-5: parse AI markdown content ──
-  var sectionsHTML = '';
-  if(latest && latest.content){
-    sectionsHTML = _dgrRenderMarkdownSections(latest.content);
-  } else {
-    sectionsHTML = '<div style="background:var(--cream);border:1px dashed var(--wire2);border-radius:11px;padding:20px;text-align:center;color:var(--text3);font-size:12.5px;margin-top:14px">'
-      + L('「+ 再生成」 を押すと AI が 2-5 のセクションを書きます (効いた施策 / 詰まった箇所 / 明日のアクション / 中期トレンド)。','Click "+ Regenerate" — AI writes sections 2-5 (wins / bottlenecks / actions / trend)')
-      + '</div>';
-  }
+  // ── Sections 2-5: parse AI markdown content (空ならプレースホルダ + 再生成促し) ──
+  // ノートが無いケースでも 4 つのカードを枠だけ表示する (= 何をすべきか分かる)
+  var sectionsHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId);
 
   // ── Past reports list ──
   var pastListHTML = '';
@@ -2956,35 +2950,99 @@ function _dgrMetricCard(label, valueHTML, delta1, delta2){
     + '</div>';
 }
 
-// ── Sections 2-5 を AI markdown content からパース ──
-// content から "## 2. ..." "## 3. ..." 等を見つけ出して各セクションをカード化
-function _dgrRenderMarkdownSections(content){
-  if(!content || typeof content !== 'string') return '';
+// ── Sections 2-5 を AI markdown content からパース + 再生成 placeholder + section 4 タスク追加 UI ──
+function _dgrRenderMarkdownSections(content, siteId){
   var SECTIONS = [
-    { n: 2, icon: '🟢', title: '効いた施策' },
-    { n: 3, icon: '🔴', title: '詰まった箇所' },
-    { n: 4, icon: '🎯', title: '明日のグロースアクション' },
-    { n: 5, icon: '📈', title: '中期トレンド' },
+    { n: 2, icon: '🟢', title: '効いた施策', emptyHint: '直近 24-72h で AI チームが何をしたか + 数字に出た良い動きを記載' },
+    { n: 3, icon: '🔴', title: '詰まった箇所', emptyHint: 'CVR 下落 / 直帰率上昇 / 失速チャネル等のボトルネック' },
+    { n: 4, icon: '🎯', title: '明日のグロースアクション', emptyHint: '優先度順 top 3 の具体的アクション' },
+    { n: 5, icon: '📈', title: '中期トレンド', emptyHint: '週次の方向感' },
   ];
-  // section header pattern: "## 2. XXX" or "## 🟢 2. XXX" etc.
+  // section header pattern: "## 2. XXX" or "## 🟢 2. XXX" or "## 2 XXX" 等
   function _extractSection(n){
-    var re = new RegExp('##\\s*(?:[^\\s]+\\s+)?' + n + '[\\.。]\\s*[^\\n]*\\n([\\s\\S]*?)(?=##\\s*(?:[^\\s]+\\s+)?\\d+[\\.。]|$)', 'i');
-    var m = content.match(re);
+    var safeContent = String(content||'');
+    // 番号 + . / 。 / ` ` (space) いずれでも区切る、 emoji prefix も許容
+    var re = new RegExp('##\\s*(?:[^\\s0-9]+\\s*)?' + n + '\\s*[\\.。\\s][^\\n]*\\n([\\s\\S]*?)(?=##\\s*(?:[^\\s0-9]+\\s*)?\\d+\\s*[\\.。\\s]|$)', 'i');
+    var m = safeContent.match(re);
     return m ? m[1].trim() : '';
+  }
+  // section 4 の本文から箇条書きアクションを抽出 (- xxx / 1. xxx 等)
+  function _extractActions(body){
+    if(!body) return [];
+    var lines = body.split('\n');
+    var items = [];
+    lines.forEach(function(ln){
+      var m = ln.match(/^\s*(?:[-*]|\d+[\.\)])\s+(.+?)\s*$/);
+      if(m){
+        var t = m[1].replace(/\*+/g,'').trim();
+        if(t.length > 3 && t.length < 200) items.push(t);
+      }
+    });
+    return items;
   }
   var cards = SECTIONS.map(function(s){
     var body = _extractSection(s.n);
-    if(!body) return '';
-    var rendered = '';
-    try { rendered = (typeof _md === 'function') ? _md(body) : '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
-    catch(_){ rendered = '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
+    var renderedBody = '';
+    var actionsHTML = '';
+    if(body){
+      try { renderedBody = (typeof _md === 'function') ? _md(body) : '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
+      catch(_){ renderedBody = '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
+      // セクション 4 だけは「タスク一覧に追加」 ボタンを add
+      if(s.n === 4 && siteId){
+        var actions = _extractActions(body);
+        if(actions.length){
+          var encoded = encodeURIComponent(JSON.stringify(actions));
+          actionsHTML = '<div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+            + '<span style="font-size:11px;color:var(--text3);font-weight:600">'+L('上記アクションを','Add above as')+'</span>'
+            + '<button onclick="_dgrAddActionsToTasks(\''+esc(siteId)+'\',\''+encoded+'\')" '
+            +   'style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'
+            +   '📋 '+actions.length+L(' 件 今日のタスクに追加',' items → today\'s tasks')+'</button>'
+            + '</div>';
+        }
+      }
+    } else {
+      // 空セクション: 再生成促し
+      renderedBody = '<div style="font-size:12px;color:var(--text3);font-style:italic;line-height:1.6">'
+        + L('（このセクションはまだ生成されていません）','(not generated yet)')
+        + '<br><span style="font-size:11px">'+L('期待される内容: ','Expected: ')+esc(s.emptyHint)+'</span>'
+        + '</div>';
+    }
     return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:20px 24px;margin-bottom:14px">'
       + '<div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px">'+s.icon+' '+s.n+'. '+esc(s.title)+'</div>'
-      + '<div class="md-body" style="font-size:13.5px;line-height:1.7;color:var(--text)">'+rendered+'</div>'
+      + '<div class="md-body" style="font-size:13.5px;line-height:1.7;color:var(--text)">'+renderedBody+'</div>'
+      + actionsHTML
       + '</div>';
   }).join('');
   return cards;
 }
+
+// セクション 4 のアクションを agent.open_tasks に push して composer strip に表示
+window._dgrAddActionsToTasks = async function(siteId, encodedActions){
+  var actions = [];
+  try { actions = JSON.parse(decodeURIComponent(encodedActions)); } catch(_){ return; }
+  if(!Array.isArray(actions) || !actions.length) return;
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag) return;
+  var added = 0;
+  for(var i = 0; i < actions.length; i++){
+    var title = String(actions[i]||'').slice(0, 200);
+    if(!title) continue;
+    try {
+      await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/tasks', { title: title });
+      // 楽観更新
+      ag.open_tasks = Array.isArray(ag.open_tasks) ? ag.open_tasks : [];
+      ag.open_tasks.push({
+        id: 'tsk_local_' + Math.random().toString(36).slice(2,8),
+        title: title, status: 'started', progress_pct: 0,
+        started_at: new Date().toISOString(), last_touched_at: new Date().toISOString(),
+      });
+      added++;
+    } catch(e){ console.warn('[dgr→tasks] add failed:', e && e.message); }
+  }
+  showToast(L('✓ '+added+' 件のタスクを追加しました','✓ '+added+' tasks added'), 'ok');
+  try { _renderTaskStrip(); } catch(_){}
+  try { renderAgList(); } catch(_){}
+};
 
 // グロース観点で 5 セクション固定 prompt を composer に投入して自動送信。
 // AI prompt: 数字サマリー / 効いた施策 / 詰まった箇所 / 明日のアクション / 中期トレンド

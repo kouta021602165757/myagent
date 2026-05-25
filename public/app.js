@@ -2775,10 +2775,22 @@ window.openDailyGrowthReportPanel = async function(siteId){
     + '</div>';
   ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
-  // Hydrate: fetch all daily notes, show latest inline + past list
+  // Hydrate: fetch all daily notes, show latest inline + past list.
+  // フィルタは緩く: type='daily' + 過去に analysis として保存された
+  // 「グロースレポート」 タイトルのものも拾う (= マーカー判定が
+  // 厳しくて daily に分類されなかった既存ノートも 1 ヶ所に集約)。
   try {
     var r = await api('GET', '/api/me/notes');
-    var dailies = (r && r.notes || []).filter(function(n){return n.type === 'daily' && (!n.agent_id || n.agent_id === siteId);});
+    var dailies = (r && r.notes || []).filter(function(n){
+      if(!n) return false;
+      var agentMatch = (!n.agent_id || n.agent_id === siteId);
+      if(!agentMatch) return false;
+      if(n.type === 'daily') return true;
+      // legacy: type が analysis でもタイトル / snippet に「グロースレポート」 を含めば拾う
+      var hay = ((n.title||'') + ' ' + (n.snippet||'')).toLowerCase();
+      if(/グロースレポート|growth report|日次/i.test(hay)) return true;
+      return false;
+    });
     var latestBox = document.getElementById('dailyGrowthLatest');
     var listBox = document.getElementById('dailyGrowthList');
     if(dailies.length){

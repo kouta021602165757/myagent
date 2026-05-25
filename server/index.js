@@ -8296,8 +8296,21 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
   } else {
     const len = reply.length;
     const headerMatches = reply.match(/^#{1,3}\s+\S/gm) || [];
-    // 日次グロースレポート は最優先で detect (= analysis より特化型)
-    if(/日次グロースレポート|Daily growth report|グロースレポート/i.test(reply.slice(0, 400)) && len >= 800){
+    // 日次グロースレポート は最優先で detect (= analysis より特化型)。
+    // タイトル文字列以外にも、 prompt で固定したセクションマーカー
+    // (「📊 数字のサマリー」 「🟢 効いた施策」 「🎯 明日のグロースアクション」 等)
+    // が複数ヒットすればグロースレポート扱い。 AI が exact 文字列を冒頭に
+    // 書き忘れても拾えるよう冗長に判定。
+    const dailyMarkers = [
+      /数字のサマリー/, /効いた施策/, /詰まった箇所/, /明日のグロースアクション/,
+      /中期トレンド/, /前日比.+前週比/,
+    ];
+    const dailyMarkerHits = dailyMarkers.reduce((n,re) => n + (re.test(reply) ? 1 : 0), 0);
+    if(/日次グロースレポート|Daily growth report|グロースレポート/i.test(reply.slice(0, 600)) && len >= 600){
+      type = 'daily';
+      title = '日次グロースレポート ' + new Date().toISOString().slice(0, 10);
+    } else if(dailyMarkerHits >= 3 && len >= 600){
+      // セクションマーカーで判定 (= AI が「日次〜」と冒頭に書き忘れても救う)
       type = 'daily';
       title = '日次グロースレポート ' + new Date().toISOString().slice(0, 10);
     } else if(len >= 1500 && headerMatches.length >= 2){

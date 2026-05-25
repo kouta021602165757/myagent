@@ -2953,18 +2953,37 @@ function _dgrMetricCard(label, valueHTML, delta1, delta2){
 // ── Sections 2-5 を AI markdown content からパース + 再生成 placeholder + section 4 タスク追加 UI ──
 function _dgrRenderMarkdownSections(content, siteId){
   var SECTIONS = [
-    { n: 2, icon: '🟢', title: '効いた施策', emptyHint: '直近 24-72h で AI チームが何をしたか + 数字に出た良い動きを記載' },
-    { n: 3, icon: '🔴', title: '詰まった箇所', emptyHint: 'CVR 下落 / 直帰率上昇 / 失速チャネル等のボトルネック' },
-    { n: 4, icon: '🎯', title: '明日のグロースアクション', emptyHint: '優先度順 top 3 の具体的アクション' },
-    { n: 5, icon: '📈', title: '中期トレンド', emptyHint: '週次の方向感' },
+    { n: 2, icon: '🟢', title: '効いた施策', altTitles: ['効いた', 'うまく', '成功', 'wins', 'what worked'],
+      emptyHint: '直近 24-72h で AI チームが何をしたか + 数字に出た良い動きを記載' },
+    { n: 3, icon: '🔴', title: '詰まった箇所', altTitles: ['詰まった', 'ボトルネック', 'blockers', 'bottleneck', '課題'],
+      emptyHint: 'CVR 下落 / 直帰率上昇 / 失速チャネル等のボトルネック' },
+    { n: 4, icon: '🎯', title: '明日のグロースアクション', altTitles: ['明日のアクション', 'グロースアクション', 'アクション', 'next actions', 'action items', '明日の'],
+      emptyHint: '優先度順 top 3 の具体的アクション' },
+    { n: 5, icon: '📈', title: '中期トレンド', altTitles: ['トレンド', '方向感', '中期', 'trend', '推移'],
+      emptyHint: '週次の方向感' },
   ];
-  // section header pattern: "## 2. XXX" or "## 🟢 2. XXX" or "## 2 XXX" 等
-  function _extractSection(n){
-    var safeContent = String(content||'');
-    // 番号 + . / 。 / ` ` (space) いずれでも区切る、 emoji prefix も許容
-    var re = new RegExp('##\\s*(?:[^\\s0-9]+\\s*)?' + n + '\\s*[\\.。\\s][^\\n]*\\n([\\s\\S]*?)(?=##\\s*(?:[^\\s0-9]+\\s*)?\\d+\\s*[\\.。\\s]|$)', 'i');
-    var m = safeContent.match(re);
-    return m ? m[1].trim() : '';
+  var safeContent = String(content||'');
+  // section header pattern を 3 段階で試す:
+  //   (1) 「## N. ...」 番号付き ## ヘッダ
+  //   (2) 「## XXX」 タイトル文字列マッチ
+  //   (3) 「**N. ...**」 bold で書かれたケース
+  function _extractSection(n, altTitles){
+    // (1) 番号付き ## ヘッダ
+    var re1 = new RegExp('##\\s*(?:[^\\s0-9]+\\s*)?' + n + '\\s*[\\.。\\s][^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|\\n\\*\\*\\d|$)', 'i');
+    var m = safeContent.match(re1);
+    if(m && m[1].trim()) return m[1].trim();
+    // (2) タイトル文字列で ## ヘッダを探す
+    for(var i = 0; i < altTitles.length; i++){
+      var t = altTitles[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      var re2 = new RegExp('##[^\\n]*' + t + '[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|$)', 'i');
+      var m2 = safeContent.match(re2);
+      if(m2 && m2[1].trim()) return m2[1].trim();
+    }
+    // (3) 「**N. ...**」 bold pattern
+    var re3 = new RegExp('\\*\\*\\s*' + n + '\\s*[\\.。][^*\\n]*\\*\\*([\\s\\S]*?)(?=\\*\\*\\s*\\d|##|$)', 'i');
+    var m3 = safeContent.match(re3);
+    if(m3 && m3[1].trim()) return m3[1].trim();
+    return '';
   }
   // section 4 の本文から箇条書きアクションを抽出 (- xxx / 1. xxx 等)
   function _extractActions(body){
@@ -2981,7 +3000,7 @@ function _dgrRenderMarkdownSections(content, siteId){
     return items;
   }
   var cards = SECTIONS.map(function(s){
-    var body = _extractSection(s.n);
+    var body = _extractSection(s.n, s.altTitles || []);
     var renderedBody = '';
     var actionsHTML = '';
     if(body){
@@ -3013,6 +3032,20 @@ function _dgrRenderMarkdownSections(content, siteId){
       + actionsHTML
       + '</div>';
   }).join('');
+
+  // ── Fallback: 4 セクションが 1 つもパースできなかったが content があれば
+  // 「未分類本文」 として全文表示する。 AI の出力フォーマットが想定外で
+  // regex が空振りしても、 ユーザーには本文が見える状態を保つ。
+  var parsedAny = SECTIONS.some(function(s){ return !!_extractSection(s.n, s.altTitles || []); });
+  if(!parsedAny && safeContent.trim().length > 50){
+    var rawRendered = '';
+    try { rawRendered = (typeof _md === 'function') ? _md(safeContent.slice(0, 8000)) : '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(safeContent.slice(0,8000))+'</pre>'; }
+    catch(_){ rawRendered = '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(safeContent.slice(0,8000))+'</pre>'; }
+    cards += '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:11px;padding:16px 20px;margin-bottom:14px">'
+      + '<div style="font-size:11px;font-weight:800;color:#9a3412;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px">⚠️ '+L('未分類本文 (regex がセクションを認識できませんでした)','Unparsed body (regex could not detect sections)')+'</div>'
+      + '<div class="md-body" style="font-size:13px;line-height:1.7;color:var(--text)">' + rawRendered + '</div>'
+      + '</div>';
+  }
   return cards;
 }
 

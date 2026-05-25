@@ -2480,7 +2480,7 @@ function showSheetsOnboardingBanner(){
           + 'AI に自分のスプレッドシートを直接読み書きさせられます。エージェント編集 → 📊 から接続できます。'
         + '</div>'
         + '<div style="margin-top:10px;display:flex;gap:8px">'
-          + '<button onclick="' + dismissJS + ';openEditAgent(activeId)" style="background:var(--peach);color:#0a0a0e;border:0;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">設定する</button>'
+          + '<button onclick="' + dismissJS + ';openEditAgent(activeId)" style="background:var(--teal);color:#fff;border:0;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">設定する</button>'
           + '<button onclick="' + dismissJS + '" style="background:transparent;color:var(--text3);border:0;padding:7px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">後で</button>'
         + '</div>'
       + '</div>'
@@ -2536,7 +2536,7 @@ function _showUpgradeToast(err){
   t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1a0a00;color:#fff;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;z-index:99999;box-shadow:0 14px 40px rgba(0,0,0,.32);max-width:520px;font-family:inherit;font-size:13px';
   t.innerHTML = '<div style="font-size:22px;flex-shrink:0">🔒</div>'
     + '<div style="flex:1;min-width:0;line-height:1.55">'+esc(err.message||'')+'</div>'
-    + '<button id="_upgToastBtn" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">'+planLabel+' へ →</button>';
+    + '<button id="_upgToastBtn" style="background:var(--teal);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">'+planLabel+' へ →</button>';
   document.body.appendChild(t);
   var btn = t.querySelector('#_upgToastBtn');
   var dismiss = function(){ if(t.parentNode) t.parentNode.removeChild(t); };
@@ -2787,7 +2787,7 @@ window.openDailyGrowthReportPanel = async function(siteId){
     +      '<div style="font-size:15px;font-weight:900;color:var(--text)">'+L('日次グロースレポート','Daily growth report')+'</div>'
     +      '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+esc(_siteHostname(ag))+'</div>'
     +    '</div>'
-    +    '<button onclick="_runDailyGrowthReport(\''+esc(siteId)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('再生成','Regenerate')+'</button>'
+    +    '<button onclick="_runDailyGrowthReport(\''+esc(siteId)+'\')" style="background:var(--teal);color:#fff;border:0;border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('再生成','Regenerate')+'</button>'
     +    '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px">×</button>'
     +  '</div>';
   ov.innerHTML =
@@ -2868,7 +2868,7 @@ function _dgrRenderNumbersSection(ag, snap, ga4Connected){
     return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:12px;padding:22px;margin-bottom:14px">'
       + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">📊 1. '+L('数字のサマリー','Numbers')+'</div>'
       + '<div style="font-size:12.5px;color:var(--text3);margin-bottom:14px">'+L('GA4 が未接続です。接続すると実数値が表示されます。','GA4 not connected.')+'</div>'
-      + '<button onclick="openConnectionsPanel(\''+esc(siteId)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('GA4 を接続する','Connect GA4')+'</button>'
+      + '<button onclick="openConnectionsPanel(\''+esc(siteId)+'\')" style="background:var(--teal);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('GA4 を接続する','Connect GA4')+'</button>'
       + '</div>';
   }
   if(!snap){
@@ -3126,7 +3126,7 @@ function _dgrRenderMarkdownSections(content, siteId, snap){
           actionsHTML = '<div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
             + '<span style="font-size:11px;color:var(--text3);font-weight:600">'+L('上記アクションを','Add above as')+'</span>'
             + '<button onclick="_dgrAddActionsToTasks(\''+esc(siteId)+'\',\''+encoded+'\')" '
-            +   'style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'
+            +   'style="background:var(--teal);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'
             +   '📋 '+actions.length+L(' 件 今日のタスクに追加',' items → today\'s tasks')+'</button>'
             + '</div>';
         }
@@ -4102,7 +4102,7 @@ window._openTasksPopout = function(anchor, agentId){
     inner += tasks.slice(0,8).map(function(t){
       var run = (t.status === 'progress' || t.status === 'started')
         ? '<span style="background:#fef3c7;color:#a16207;border:1px solid #fde047;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">⏳</span>'
-        : '<button onclick="_runHomeTask(\''+esc(agentId)+'\',\''+esc(t.id)+'\');document.getElementById(\'tasksPopout\').remove()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:6px;padding:4px 10px;font-weight:800;font-size:10.5px;cursor:pointer;font-family:inherit">▶</button>';
+        : '<button onclick="_runHomeTask(\''+esc(agentId)+'\',\''+esc(t.id)+'\');document.getElementById(\'tasksPopout\').remove()" style="background:var(--teal);color:#fff;border:0;border-radius:6px;padding:4px 10px;font-weight:800;font-size:10.5px;cursor:pointer;font-family:inherit">▶</button>';
       return '<div style="display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border-radius:8px;cursor:default" onmouseover="this.style.background=\'var(--cream)\'" onmouseout="this.style.background=\'transparent\'">'
         + '<div onclick="_markHomeTaskDone(\''+esc(agentId)+'\',\''+esc(t.id)+'\',event)" style="width:16px;height:16px;border-radius:5px;border:2px solid var(--wire2);flex-shrink:0;cursor:pointer;margin-top:2px" title="完了"></div>'
         + '<div style="flex:1;min-width:0;font-size:12.5px;font-weight:700;line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+esc(t.title||'')+'</div>'
@@ -10493,7 +10493,7 @@ function _renderNextTaskCTA(content, ag){
   return '<div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
     + '<span style="font-size:11px;color:var(--text3);font-weight:600">'+L('提案された次のタスク:','Suggested next:')+'</span>'
     + '<button onclick="_dgrChainExecute(\''+esc(siteId)+'\',\''+encodedTitle+'\')" '
-    +   'style="background:var(--peach);color:#0a0a0e;border:0;border-radius:99px;padding:7px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;display:inline-flex;align-items:center;gap:6px;transition:transform .12s" '
+    +   'style="background:var(--teal);color:#fff;border:0;border-radius:99px;padding:7px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;display:inline-flex;align-items:center;gap:6px;transition:transform .12s" '
     +   'onmouseover="this.style.transform=\'translateY(-1px)\'" '
     +   'onmouseout="this.style.transform=\'\'">'
     +   '▶ '+L('そのままやる','Run this')+'</button>'
@@ -12050,7 +12050,7 @@ function editMsgStart(btn){
     '<textarea class="m-edit-ta" rows="3" style="width:100%;min-height:64px;max-height:240px;padding:9px 11px;border:1px solid var(--peach);border-radius:10px;font-family:inherit;font-size:14.5px;line-height:1.5;background:var(--card,#fff);color:var(--text);resize:vertical">'+esc(current)+'</textarea>'+
     '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">'+
       '<button class="m-act" onclick="editMsgCancel(this)" style="background:none">'+(isJa?'キャンセル':'Cancel')+'</button>'+
-      '<button class="m-act primary" onclick="editMsgSave(this)" style="background:var(--peach);color:#0a0a0e;border:0">'+(isJa?'保存して再送信':'Save & resend')+'</button>'+
+      '<button class="m-act primary" onclick="editMsgSave(this)" style="background:var(--teal);color:#fff;border:0">'+(isJa?'保存して再送信':'Save & resend')+'</button>'+
     '</div>';
   var ta=bodyEl.querySelector('textarea'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
 }
@@ -12459,7 +12459,7 @@ async function openChatShareModal(){
       '</select>'+
       '<div id="csResult" style="display:none;margin-bottom:14px">'+
         '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">'+(isJa?'公開リンク':'Public link')+'</label>'+
-        '<div style="display:flex;gap:6px"><input id="csUrlIn" readonly style="flex:1;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:12.5px;font-family:inherit"><button onclick="copyChatShareUrl()" style="padding:9px 12px;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
+        '<div style="display:flex;gap:6px"><input id="csUrlIn" readonly style="flex:1;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:12.5px;font-family:inherit"><button onclick="copyChatShareUrl()" style="padding:9px 12px;background:var(--teal);color:#fff;border:0;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">📋</button></div>'+
         '<div id="csTweet" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>'+
       '</div>'+
       '<button id="csCreate" onclick="createChatShare()" style="width:100%;padding:11px;background:var(--text);color:#fff;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'公開リンクを作成':'Create public link')+'</button>'+
@@ -15123,7 +15123,7 @@ async function openAutomationsGallery(){
         '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,rgba(192,255,92,.05),rgba(192,255,92,.10));display:flex;align-items:center;justify-content:center;font-size:20px">'+esc(t.icon||'⚙️')+'</div><div style="font-weight:800;font-size:13.5px;line-height:1.3">'+esc(t.title)+'</div></div>'+
         '<div style="font-size:11.5px;color:var(--text2);line-height:1.55;min-height:48px">'+esc(t.description||'')+'</div>'+
         ((schedPill||hints)?'<div style="display:flex;flex-wrap:wrap;gap:5px">'+schedPill+' '+hints+'</div>':'')+
-        '<button onclick="_installTemplate(\''+esc(t.id)+'\',this)" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🚀 '+(isJa?'導入する':'Install')+'</button>'+
+        '<button onclick="_installTemplate(\''+esc(t.id)+'\',this)" style="background:var(--teal);color:#fff;border:0;border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🚀 '+(isJa?'導入する':'Install')+'</button>'+
       '</div>';
     }).join('');
   }catch(e){
@@ -15278,7 +15278,7 @@ async function openTeamGallery(){
       }).join('');
       var btn = (t.price_jpy>0)
         ? '<button disabled style="width:100%;background:var(--cream2);color:var(--text3);padding:10px;border:1px solid var(--wire2);border-radius:9px;font-size:12.5px;font-weight:800;cursor:not-allowed">Marketplace 経由で購入</button>'
-        : '<button onclick="event.stopPropagation();activateTeam(\''+esc(t.id)+'\',\''+esc(t.name)+'\',\''+esc(t.cover_emoji)+'\')" style="width:100%;background:var(--peach);color:#0a0a0e;padding:10px;border:0;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)">▶ 起動 (無料)</button>';
+        : '<button onclick="event.stopPropagation();activateTeam(\''+esc(t.id)+'\',\''+esc(t.name)+'\',\''+esc(t.cover_emoji)+'\')" style="width:100%;background:var(--teal);color:#fff;padding:10px;border:0;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)">▶ 起動 (無料)</button>';
       return ''
         + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .14s" onmouseover="this.style.borderColor=\'var(--peach)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'\';this.style.transform=\'\'">'
         + '<div style="height:64px;border-radius:10px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.16));display:flex;align-items:center;justify-content:center;font-size:30px">'+esc(t.cover_emoji||'🎯')+'</div>'
@@ -15498,7 +15498,7 @@ function openTeamMembersPanel(teamId){
         +     '<div>'+skillsTxt+'</div>'
         +   '</div>'
         +   '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">'
-        +     '<button onclick="closeTeamMembersPanel();openEditAgent(\''+esc(m.id)+'\')" title="'+L('編集','Edit')+'" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 9px rgba(192,255,92,.25)">✏️ '+L('編集','Edit')+'</button>'
+        +     '<button onclick="closeTeamMembersPanel();openEditAgent(\''+esc(m.id)+'\')" title="'+L('編集','Edit')+'" style="background:var(--teal);color:#fff;border:0;border-radius:9px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 9px rgba(192,255,92,.25)">✏️ '+L('編集','Edit')+'</button>'
         +     rmBtn
         +   '</div>'
         + '</div>';
@@ -17612,7 +17612,7 @@ function _renderIntgCatalog(r){
   if(!document.getElementById('intgChipStyles')){
     var st = document.createElement('style'); st.id = 'intgChipStyles';
     st.textContent = '.intg-chip{background:var(--cream);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}'
-      + '.intg-chip.on{background:var(--peach);color:#0a0a0e;border-color:var(--peach)}'
+      + '.intg-chip.on{background:var(--teal);color:#fff;border-color:var(--peach)}'
       + '.intg-card{background:var(--cream);border:1px solid var(--wire);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;transition:all .15s}'
       + '.intg-card:hover{border-color:var(--peach);transform:translateY(-1px);box-shadow:0 8px 22px rgba(192,255,92,.06)}'
       + '.intg-card.dimmed{opacity:.45}';
@@ -17632,7 +17632,7 @@ function _intgCardHtml(s){
         : '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--cream2);color:var(--text3);border:1px solid var(--wire2)">未接続</span>');
   var btn = st.connected
     ? '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto">管理</button>'
-    : '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:auto">接続</button>';
+    : '<button onclick="_intgOpen(\''+esc(s.id)+'\')" style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:auto">接続</button>';
   var acc = st.account ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:1px">@'+esc(st.account)+'</div>') : '';
   var pri = s.priority ? '<span title="推奨セット" style="font-size:9.5px;color:var(--peach-dark);font-weight:900;margin-left:4px">⭐</span>' : '';
   return ''
@@ -17707,7 +17707,7 @@ function _intgOpen(id){
       +   '<div style="font-size:11.5px;font-weight:800;color:var(--text);margin-bottom:8px">＋ チャンネルを追加</div>'
       +   '<input id="slackAddName" placeholder="名前 (例: #sales / 営業 / general)" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
       +   '<input id="slackAddUrl" type="url" placeholder="https://hooks.slack.com/services/..." style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
-      +   '<button onclick="_slackChAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このチャンネルを追加</button>'
+      +   '<button onclick="_slackChAdd()" style="width:100%;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このチャンネルを追加</button>'
       + '</div>'
       + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'wp_multi'){
@@ -17728,7 +17728,7 @@ function _intgOpen(id){
       +   '<input id="wpAddUrl" type="url" placeholder="https://example.com" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:6px">'
       +   '<input id="wpAddUser" placeholder="WordPress ユーザー名" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
       +   '<input id="wpAddPw" type="password" placeholder="Application Password" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:8px">'
-      +   '<button onclick="_wpSiteAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このサイトを追加</button>'
+      +   '<button onclick="_wpSiteAdd()" style="width:100%;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ このサイトを追加</button>'
       + '</div>'
       + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'zapier_multi'){
@@ -17792,7 +17792,7 @@ function _intgOpen(id){
       +   '<input id="zapierAddName" placeholder="名前 (例: X に投稿 / Slack 通知 / Sheets に追記)" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px;font-family:inherit;margin-bottom:6px">'
       +   '<input id="zapierAddUrl" type="url" placeholder="https://hooks.zapier.com/hooks/catch/.../..." style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:ui-monospace,monospace;margin-bottom:6px">'
       +   '<input id="zapierAddHint" placeholder="(任意) AI へのヒント。例: ツイート本文を text フィールドで渡す" style="width:100%;padding:9px 11px;border:1px solid var(--wire2);border-radius:8px;font-size:12px;font-family:inherit;margin-bottom:8px">'
-      +   '<button onclick="_zapierAdd()" style="width:100%;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ この Zap を追加</button>'
+      +   '<button onclick="_zapierAdd()" style="width:100%;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">＋ この Zap を追加</button>'
       + '</div>'
       + '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="margin-left:auto;background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button></div>';
   } else if(s.flow === 'oauth' && s.has_backend){
@@ -17821,8 +17821,8 @@ function _intgOpen(id){
       +   '次の画面で '+esc(s.name)+' の認可ページに移動します。承認すると自動でこのアプリに戻ります。トークンはあなたの端末経由ではなく、サーバー間で直接交換されます。'
       + '</div>'
       + (st.connected
-        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:var(--cream);color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
-        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:var(--cream);color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔄 再接続</a></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><a href="'+esc(fullStart)+'" style="margin-left:auto;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">🔌 '+esc(s.name)+' で接続 →</a></div>');
   } else if(s.id === 'buffer' && !s.has_backend){
     // Buffer-specific setup walkthrough — when admin hasn't set
     // BUFFER_OAUTH_CLIENT_ID/SECRET yet, give a clear step-by-step.
@@ -17840,7 +17840,7 @@ function _intgOpen(id){
       +       '<b>App Name:</b> <span style="font-family:ui-monospace,monospace">MY AI Agent</span><br>'
       +       '<b>Description:</b> <span style="font-family:ui-monospace,monospace">AI-powered SNS posting</span><br>'
       +       '<b>Website URL:</b> <span style="font-family:ui-monospace,monospace">https://myaiagents.agency</span><br>'
-      +       '<b>Callback URL:</b> <span style="font-family:ui-monospace,monospace;background:var(--cream);padding:2px 6px;border-radius:4px;border:1px solid var(--wire2)">https://myaiagents.agency/api/auth/buffer/callback</span> <button onclick="navigator.clipboard.writeText(\'https://myaiagents.agency/api/auth/buffer/callback\');showToast(\'✓ コピーしました\',\'ok\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">📋 コピー</button>'
+      +       '<b>Callback URL:</b> <span style="font-family:ui-monospace,monospace;background:var(--cream);padding:2px 6px;border-radius:4px;border:1px solid var(--wire2)">https://myaiagents.agency/api/auth/buffer/callback</span> <button onclick="navigator.clipboard.writeText(\'https://myaiagents.agency/api/auth/buffer/callback\');showToast(\'✓ コピーしました\',\'ok\')" style="background:var(--teal);color:#fff;border:0;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">📋 コピー</button>'
       +     '</div>'
       +   '</li>'
       +   '<li style="margin-bottom:10px">作成後の <b>Client ID</b> と <b>Client Secret</b> をコピー (Secret は 1 度しか見られない! 注意)</li>'
@@ -17863,7 +17863,7 @@ function _intgOpen(id){
       + '<div style="background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.24);border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#c0ff5c">'
       +   '<b style="color:#c0ff5c">⚡ Buffer 登録なしで今すぐ投稿したい?</b><br>'
       +   '<b>share_to_sns</b> ツールなら **設定ゼロ** で X / Threads / LinkedIn / FB / Reddit / Bluesky 等に投稿できます (intent URL ボタンが出るので 1 タップで投稿)。'
-      +   '<button onclick="_intgClose()" style="display:block;margin-top:10px;background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">了解 (チャットで「X に投稿して」と言うだけで OK)</button>'
+      +   '<button onclick="_intgClose()" style="display:block;margin-top:10px;background:var(--teal);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">了解 (チャットで「X に投稿して」と言うだけで OK)</button>'
       + '</div>';
   } else if(s.flow === 'oauth' && !s.has_backend){
     body =
@@ -17877,7 +17877,7 @@ function _intgOpen(id){
       + '<div style="background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.24);border-radius:9px;padding:12px;font-size:12.5px;line-height:1.6;color:#c0ff5c">'
       +   '<b style="color:#c0ff5c">⚡ 今すぐ使いたいなら Zapier 経由がおすすめ</b><br>'
       +   esc(s.name) + ' は <b>Zapier</b> 経由で今すぐ接続できます。Zapier 側で OAuth するので、こちらの開発者登録は不要。'
-      +   '<button onclick="_intgClose();setTimeout(function(){_intgOpen(\'zapier\')},150)" style="display:block;margin-top:10px;background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">⚡ Zapier カードを開く →</button>'
+      +   '<button onclick="_intgClose();setTimeout(function(){_intgOpen(\'zapier\')},150)" style="display:block;margin-top:10px;background:var(--teal);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">⚡ Zapier カードを開く →</button>'
       + '</div>';
   } else {
     var fields = s.fields || [];
@@ -17895,8 +17895,8 @@ function _intgOpen(id){
       '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px">'+esc(s.desc||'')+'</div>'
       + body
       + (st.connected
-        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:var(--cream);color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">再接続</button></div>'
-        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔌 接続</button></div>');
+        ? '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgDisconnect(\''+esc(s.id)+'\')" style="background:var(--cream);color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 接続を解除</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">再接続</button></div>'
+        : '<div style="display:flex;gap:6px;margin-top:14px"><button onclick="_intgClose()" style="background:var(--cream);color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button><button onclick="_intgSave(\''+esc(s.id)+'\')" style="margin-left:auto;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:9px 22px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔌 接続</button></div>');
   }
 
   ov.innerHTML =
@@ -18489,7 +18489,7 @@ function _schedOpenForm(){
         '<option value="chat">'+(isJa?'チャットに追加':'Append to chat')+'</option>'+
         '<option value="email">'+(isJa?'メールで受け取る':'Email me')+'</option>'+
       '</select>'+
-      '<button onclick="_schedSave()" style="width:100%;padding:11px;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'追加':'Add')+'</button>'+
+      '<button onclick="_schedSave()" style="width:100%;padding:11px;background:var(--teal);color:#fff;border:0;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit">'+(isJa?'追加':'Add')+'</button>'+
     '</div>';
   ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
@@ -19439,7 +19439,7 @@ function _renderNotesPanel(){
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">📝 '+L('メモ','Notes')+'</div>'
     +    sharedBadge
     +    '<div id="notesSavedFlag" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
-    +    '<button onclick="_notesCreate()" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('新規','New')+'</button>'
+    +    '<button onclick="_notesCreate()" style="margin-left:auto;background:var(--teal);color:#fff;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('新規','New')+'</button>'
     +    '<button onclick="_notesClose()" style="background:var(--cream);border:1px solid var(--wire2);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+L('閉じる','Close')+'</button>'
     +  '</div>'
     +  '<div style="flex:1;display:flex;min-height:0">'
@@ -19533,7 +19533,7 @@ function _notesRenderEditor(){
     + '<div style="padding:8px 16px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;background:var(--cream)">'
     +   '<div id="notesCharCount" style="font-size:10.5px;color:var(--text3);font-weight:700"></div>'
     +   '<button onclick="_notesDelete()" style="margin-left:auto;background:var(--cream);border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 '+L('削除','Delete')+'</button>'
-    +   '<button onclick="_notesSaveExplicit()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:6px 16px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">💾 '+L('保存','Save')+'</button>'
+    +   '<button onclick="_notesSaveExplicit()" style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 16px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">💾 '+L('保存','Save')+'</button>'
     + '</div>';
   // Hydrate fields — when viewing a non-latest version, show that version's
   // content (read-only feel; editing it auto-saves to top-level note, not
@@ -19815,7 +19815,7 @@ async function _agProfReload(){
 
 function _agProfMemories(items){
   var sorted = (items||[]).slice().sort(function(a,b){ return (b.pinned?1:0)-(a.pinned?1:0) || (new Date(b.created_at||0)-new Date(a.created_at||0)); });
-  var addBtn = '<div style="margin-bottom:14px"><input id="agProfNewMem" placeholder="'+L('AI に憶えてもらう事実 (例: ターゲットは SaaS スタートアップ)','Fact for AI to remember (e.g. target = SaaS startups)')+'" style="width:100%;padding:10px 13px;border:1px solid var(--wire2);border-radius:9px;font-family:inherit;font-size:13px;box-sizing:border-box" onkeydown="if(event.key===\'Enter\'){_agProfAddMem(event)}"><div style="text-align:right;margin-top:6px"><button onclick="_agProfAddMem()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div></div>';
+  var addBtn = '<div style="margin-bottom:14px"><input id="agProfNewMem" placeholder="'+L('AI に憶えてもらう事実 (例: ターゲットは SaaS スタートアップ)','Fact for AI to remember (e.g. target = SaaS startups)')+'" style="width:100%;padding:10px 13px;border:1px solid var(--wire2);border-radius:9px;font-family:inherit;font-size:13px;box-sizing:border-box" onkeydown="if(event.key===\'Enter\'){_agProfAddMem(event)}"><div style="text-align:right;margin-top:6px"><button onclick="_agProfAddMem()" style="background:var(--teal);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div></div>';
   if(!sorted.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px">'+L('まだ記憶はありません。会話するほど自動で蓄積されます。','No memories yet. They build up automatically as you chat.')+'</div>';
   return addBtn + sorted.map(function(m){
     var pinIcon = m.pinned ? '📌' : '📍';
@@ -19862,7 +19862,7 @@ function _agProfKpis(items){
     + '<input id="agpKpiTgt"  placeholder="'+L('目標','Target')+'" type="number" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
     + '<input id="agpKpiUnit" placeholder="'+L('単位 (円,%)','Unit')+'" style="padding:8px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px">'
     + '</div>'
-    + '<div style="text-align:right;margin-top:8px"><button onclick="_agProfAddKpi()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div>'
+    + '<div style="text-align:right;margin-top:8px"><button onclick="_agProfAddKpi()" style="background:var(--teal);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button></div>'
     + '</div>';
   if(!items.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('まだ KPI はありません。','No KPIs yet.')+'</div>';
   return addBtn + items.map(function(k){
@@ -19875,7 +19875,7 @@ function _agProfKpis(items){
       +     '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+L('現在','Now')+': <b style="color:var(--text)">'+esc(String(k.current!=null?k.current:'?'))+'</b> / '+L('目標','Target')+': '+esc(String(k.target!=null?k.target:'?'))+(k.unit?' '+esc(k.unit):'')+(pct!=null?' · '+pct+'%':'')+'</div>'
       +   '</div>'
       +   '<input type="number" placeholder="'+L('現在値を更新','Update value')+'" id="agpKpiUpd_'+esc(k.id)+'" style="padding:7px 10px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px;width:120px" onkeydown="if(event.key===\'Enter\'){_agProfKpiUpdate(\''+esc(k.id)+'\')}">'
-      +   '<button onclick="_agProfKpiUpdate(\''+esc(k.id)+'\')" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">'+L('更新','Save')+'</button>'
+      +   '<button onclick="_agProfKpiUpdate(\''+esc(k.id)+'\')" style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">'+L('更新','Save')+'</button>'
       +   '<button onclick="_agProfKpiDel(\''+esc(k.id)+'\')" style="background:var(--cream);border:1px solid var(--wire2);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--rose);cursor:pointer;font-family:inherit">🗑</button>'
       + '</div>'
       + bar
@@ -19931,7 +19931,7 @@ async function _agProfPbDel(pid){
 function _agProfTasks(items){
   var addBtn = '<div style="background:var(--cream);border:1px dashed var(--wire2);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;gap:6px">'
     + '<input id="agpTaskTitle" placeholder="'+L('新規案件 (例: LP 改善 v2)','New task (e.g. LP rev v2)')+'" style="flex:1;padding:8px 11px;border:1px solid var(--wire2);border-radius:7px;font-family:inherit;font-size:12px" onkeydown="if(event.key===\'Enter\'){_agProfAddTask()}">'
-    + '<button onclick="_agProfAddTask()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button>'
+    + '<button onclick="_agProfAddTask()" style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('+ 追加','+ Add')+'</button>'
     + '</div>';
   if(!items.length) return addBtn + '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">'+L('進行中の案件はありません。','No tasks in progress.')+'</div>';
   return addBtn + items.map(function(t){
@@ -21328,7 +21328,7 @@ async function openCreatorProfile(handle){
       : '';
     body.innerHTML = ''
       + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,rgba(192,255,92,.06),rgba(192,255,92,.10));border:1px solid rgba(192,255,92,.2);border-radius:14px;margin-bottom:18px">'
-        + '<div style="width:54px;height:54px;border-radius:14px;background:var(--peach);color:#0a0a0e;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900">'+esc((c.handle||'@?').charAt(1).toUpperCase())+'</div>'
+        + '<div style="width:54px;height:54px;border-radius:14px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900">'+esc((c.handle||'@?').charAt(1).toUpperCase())+'</div>'
         + '<div style="flex:1;min-width:0">'
           + '<div style="font-size:18px;font-weight:900;color:var(--text);display:flex;align-items:center">'+esc(c.handle||'')+verifiedSpan+'</div>'
           + (c.name ? '<div style="font-size:12.5px;color:var(--text2);font-weight:600;margin-top:2px">'+esc(c.name)+'</div>' : '')

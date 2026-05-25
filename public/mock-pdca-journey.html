@@ -445,39 +445,123 @@
     color: var(--teal); font-weight: 700; display: flex; align-items: center; gap: 4px;
   }
 
-  /* AI SUGGESTION */
-  .ai-sugg {
+  /* EMBEDDED DEMO CONTROLLER (replaces AI suggestion in journey) */
+  .demo-embedded {
     margin: 0 20px 12px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: #fff;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
     padding: 12px 16px;
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 4px 16px rgba(13, 79, 74, 0.18);
   }
-  .ai-sugg .lbl {
-    font-size: 11px;
-    color: var(--muted);
-    margin-bottom: 4px;
-    display: flex; align-items: center; gap: 4px;
-  }
-  .ai-sugg .av {
+  .demo-embedded .de-icon {
     width: 40px; height: 40px;
-    background: var(--lime-soft);
+    background: var(--lime);
+    color: var(--teal-2);
     border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
+    font-size: 18px;
     flex-shrink: 0;
   }
-  .ai-sugg .text { flex: 1; }
-  .ai-sugg .title { font-weight: 800; font-size: 13px; }
-  .ai-sugg .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .ai-sugg .go {
-    width: 32px; height: 32px;
-    background: var(--teal);
+  .demo-embedded .de-meta { flex: 1; min-width: 0; }
+  .demo-embedded .de-step {
+    font-size: 11px;
+    opacity: 0.85;
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 3px;
+  }
+  .demo-embedded .de-pdca {
+    background: var(--lime); color: var(--teal-2);
+    padding: 1px 7px; border-radius: 4px;
+    font-weight: 800; font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+  .demo-embedded .de-progress { font-weight: 700; }
+  .demo-embedded .de-title { font-weight: 800; font-size: 14px; }
+  .demo-embedded .de-desc {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .demo-embedded .de-controls {
+    display: flex; gap: 6px;
+    flex-shrink: 0;
+  }
+  .demo-embedded .de-arrow {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
     color: #fff;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
     font-size: 14px;
+    font-weight: 700;
+  }
+  .demo-embedded .de-arrow:hover:not(:disabled) { background: rgba(255,255,255,0.25); }
+  .demo-embedded .de-arrow.primary { background: var(--lime); color: var(--teal-2); }
+  .demo-embedded .de-arrow.primary:hover:not(:disabled) { background: #d4ff7a; }
+  .demo-embedded .de-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+  .demo-embedded .de-expand {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .demo-embedded .de-expand:hover { background: rgba(255,255,255,0.25); }
+
+  /* STEPS MODAL */
+  .steps-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 400;
+    padding: 20px;
+  }
+  .steps-modal.open { display: flex; }
+  .steps-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    width: 380px;
+    max-width: 100%;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+  }
+  .steps-modal-content h3 {
+    margin: 0 0 14px;
+    font-size: 16px;
+    font-weight: 800;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .steps-modal-content .smc-close {
+    margin-left: auto;
+    width: 28px; height: 28px;
+    background: #f3f4f6; border-radius: 6px;
+    font-size: 14px;
+  }
+  .steps-modal-content .stepbtn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px; font-weight: 700;
+    background: transparent; color: var(--text);
+    text-align: left;
+    margin-bottom: 2px;
+  }
+  .steps-modal-content .stepbtn:hover { background: var(--lime-soft); }
+  .steps-modal-content .stepbtn.active { background: var(--teal); color: #fff; }
+  .steps-modal-content .stepbtn .num {
+    width: 24px; height: 24px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 12px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .steps-modal-content .stepbtn.active .num {
+    background: var(--lime); color: var(--teal-2);
   }
 
   /* COMPOSER */
@@ -1355,15 +1439,22 @@
           <!-- populated by JS -->
         </div>
 
-        <!-- AI SUGGESTION -->
-        <div class="ai-sugg" id="aiSugg">
-          <div class="av">📓</div>
-          <div class="text">
-            <div class="lbl">💡 AI からの提案</div>
-            <div class="title">今週の SEO 記事を 1 本書く</div>
-            <div class="sub">ロードマップ Week 1 の記事タスクを 一気に下書きまで</div>
+        <!-- EMBEDDED DEMO CONTROLLER (replaces AI suggestion in journey mode) -->
+        <div class="demo-embedded" id="demoEmbedded">
+          <div class="de-icon">🎬</div>
+          <div class="de-meta">
+            <div class="de-step">
+              <span class="de-pdca" id="demoEmbPdca">PHASE 1 · オンボ</span>
+              <span class="de-progress" id="demoEmbProgress">Step 3 / 8</span>
+            </div>
+            <div class="de-title" id="demoEmbTitle">チャット画面が開く</div>
+            <div class="de-desc" id="demoEmbDesc">PM から挨拶 → まず Google Analytics を接続</div>
           </div>
-          <button class="go">→</button>
+          <div class="de-controls">
+            <button class="de-arrow" id="demoEmbPrev" onclick="goStep(Math.max(1, curStep - 1))">←</button>
+            <button class="de-arrow primary" id="demoEmbNext" onclick="goStep(Math.min(8, curStep + 1))">→</button>
+            <button class="de-expand" onclick="toggleStepsModal()">📋</button>
+          </div>
         </div>
 
         <!-- COMPOSER -->
@@ -1398,7 +1489,35 @@
 
 </div>
 
+<!-- STEPS MODAL (opens from embedded controller 📋 button) -->
+<div class="steps-modal" id="stepsModal" onclick="if(event.target.id==='stepsModal') toggleStepsModal()">
+  <div class="steps-modal-content">
+    <h3>
+      🎬 全 8 ステップ
+      <button class="smc-close" onclick="toggleStepsModal()">✕</button>
+    </h3>
+    <button class="stepbtn" data-mstep="1" onclick="goStep(1); toggleStepsModal()"><span class="num">1</span> URL 入力</button>
+    <button class="stepbtn" data-mstep="2" onclick="goStep(2); toggleStepsModal()"><span class="num">2</span> チーム組成</button>
+    <button class="stepbtn" data-mstep="3" onclick="goStep(3); toggleStepsModal()"><span class="num">3</span> チャット開始</button>
+    <button class="stepbtn" data-mstep="4" onclick="goStep(4); toggleStepsModal()"><span class="num">4</span> 現状分析</button>
+    <button class="stepbtn" data-mstep="5" onclick="goStep(5); toggleStepsModal()"><span class="num">5</span> 計画</button>
+    <button class="stepbtn" data-mstep="6" onclick="goStep(6); toggleStepsModal()"><span class="num">6</span> タスク / 実行</button>
+    <button class="stepbtn" data-mstep="7" onclick="goStep(7); toggleStepsModal()"><span class="num">7</span> 検証 (日次)</button>
+    <button class="stepbtn" data-mstep="8" onclick="goStep(8); toggleStepsModal()"><span class="num">8</span> 検証 (全体)</button>
+  </div>
+</div>
+
 <script>
+function toggleStepsModal() {
+  const m = document.getElementById('stepsModal');
+  if (!m) return;
+  m.classList.toggle('open');
+  // mark active step
+  document.querySelectorAll('.steps-modal-content .stepbtn').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.mstep) === curStep);
+  });
+}
+
 // ============ STEP DATA ============
 const STEPS = {
   1: {
@@ -1951,6 +2070,12 @@ function goStep(n) {
   document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
   document.getElementById(meta.scene).classList.add('active');
 
+  // toggle floating vs embedded controller based on scene
+  const floatCtrl = document.getElementById('demoCtrl');
+  if (floatCtrl) {
+    floatCtrl.style.display = (meta.scene === 'sceneApp') ? 'none' : 'block';
+  }
+
   // app scene specifics
   if (meta.scene === 'sceneApp') {
     if (meta.messages) renderMsgs(meta.messages);
@@ -1959,9 +2084,17 @@ function goStep(n) {
     const sbCount = document.getElementById('sbCount');
     if (sbCount) sbCount.textContent = meta.taskCount + ' 件';
 
-    // hide AI suggestion in certain scenes for clarity
-    const aiSugg = document.getElementById('aiSugg');
-    if (aiSugg) aiSugg.style.display = (n === 3 || n === 6) ? 'flex' : 'none';
+    // populate embedded demo controller (replaces AI suggestion)
+    const demoEmb = document.getElementById('demoEmbedded');
+    if (demoEmb) {
+      demoEmb.style.display = 'flex';
+      document.getElementById('demoEmbPdca').textContent = meta.pdca;
+      document.getElementById('demoEmbProgress').textContent = `Step ${n} / 8`;
+      document.getElementById('demoEmbTitle').textContent = meta.title;
+      document.getElementById('demoEmbDesc').textContent = meta.desc;
+      document.getElementById('demoEmbPrev').disabled = (n === 1);
+      document.getElementById('demoEmbNext').disabled = (n === 8);
+    }
 
     if (meta.panel) openPanel(meta.panel);
     else closePanel();

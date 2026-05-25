@@ -24304,6 +24304,19 @@ ${orgSummary || '(汎用チーム)'}
       sseKeepalive = setInterval(()=>{ try{ res.write(': keepalive\n\n'); }catch(e){} }, 15000);
       // Stop pinging when client disconnects.
       req.on('close', ()=>{ if(sseKeepalive){ clearInterval(sseKeepalive); sseKeepalive=null; } });
+      // PM dispatch visibility — emit a card RIGHT NOW so user sees
+      // 「PM → @<member>」 bubble before the actual reply starts streaming.
+      // This is the "team working together" UX the user asked for.
+      if(_pmPick){
+        try {
+          sse('pm_dispatch', {
+            member_id: _pmPick.member_id,
+            member_name: _pmPick.member_name,
+            member_avatar: _pmPick.member_avatar,
+            reason: _pmPick.reason || '',
+          });
+        } catch(_){}
+      }
     }
     // Task Understanding — Haiku が「ユーザーの今のメッセージだけ」を見て
     // 任された仕事を理解し、agent.current_task に保存する。チャット履歴を

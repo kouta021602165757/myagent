@@ -4268,8 +4268,10 @@ function openGa4PropertyPicker(siteId){
     var subText = siteHost
       ? 'サイト <b>' + esc(siteHost) + '</b> の数字を取得する GA4 プロパティを選んでください'
       : 'どのプロパティの数字を表示しますか?';
+    // z-index 9995 で 接続 modal (9990) の上に出す。 旧 .overlay は 999 で
+    // 隠れていたため「プロパティを変更」 が無反応に見える bug。
     var html =
-      '<div class="overlay ga4pp-overlay open" onclick="if(event.target===this)_closeGa4PropertyPicker()">'
+      '<div class="overlay ga4pp-overlay open" style="z-index:9995" onclick="if(event.target===this)_closeGa4PropertyPicker()">'
       + '<div class="ga4pp-modal">'
       +   '<div class="ga4pp-hd">'
       +     '<div>'
@@ -8876,7 +8878,6 @@ async function openAgent(id){
       actsHTML += '<button class="ct-act" onclick="newChat()" title="'+(isJa?'新規会話':'New chat')+'">↻</button>';
       actsHTML += '<button class="ct-act" onclick="openNotesPanel(\''+ag.id+'\')" title="'+L('メモ (この AI とのチャット専用)','Notes (private to this chat)')+'">📝</button>';
       if(!ag._is_joined_group){
-        actsHTML += '<button class="ct-act" onclick="openAgentProfile(\''+ag.id+'\')" title="'+L('AIプロフィール (記憶 / 目標 / プレイブック / タスク)','Agent profile (memory / goals / playbook / tasks)')+'">🧠</button>';
         actsHTML += '<button class="ct-act" onclick="openEditAgent(\''+ag.id+'\')" title="エージェントを編集">⚙</button>';
       }
     }
@@ -8925,18 +8926,10 @@ async function openAgent(id){
       : 'font-size:10px;font-weight:700;color:var(--text3);background:var(--cream);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.7';
     tasksPill = '<button onclick="event.stopPropagation(); _openTasksPopout(this, \''+ag.id+'\')" title="'+L('このエージェントのタスク一覧','Tasks for this agent')+'" style="'+taskStyle+'">'+taskLabel+'</button>';
   }
-  // Intel pill — KPIs / memories only (tasks moved out above).
+  // Intel pill 廃止 (2026-05-25): site agent のプロフィール icon 🧠 を
+  // ユーザー要請で削除。記憶 / KPI は 戦略・KPI modal で見られるので不要。
+  // legacy DM の 🧠 ボタン (line 8879) も同時撤去。
   var intelPill = '';
-  if(!isGroup && !ag._is_joined_group){
-    var kpiN  = Array.isArray(ag.kpis) ? ag.kpis.length : 0;
-    var memN  = Array.isArray(ag.memories) ? ag.memories.length : 0;
-    if(kpiN + memN > 0){
-      var parts = [];
-      if(kpiN)  parts.push('🎯 '+kpiN);
-      if(memN)  parts.push('🧠 '+memN);
-      intelPill = '<button onclick="event.stopPropagation(); openAgentProfile(\''+ag.id+'\')" title="'+L('AI が憶えてる事 / 目標','What this AI remembers / goals')+'" style="font-size:10px;font-weight:700;color:var(--text2);background:var(--cream);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit">'+parts.join(' · ')+'</button>';
-    }
-  }
   // Site agent はホスト名 = 「fukuyama-note.com」みたいな表示で、
   // ここをクリックして profile を開く挙動は不要 (= プロフィールボタン削除指示)。
   // 旧 generic agent / group は引き続き Agent カード (= level / xp / 成果率) を開ける。
@@ -9969,6 +9962,20 @@ function renderMsgs(ag, forceScrollBottom){
     // on mobile they show inline so the user always sees the AI reply.
     if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';
     if(m.role === 'system'){
+      // PM dispatch — 専用カード (= 「PM が振った」 が分かりやすい)
+      if(m.pm_dispatch){
+        var pmName = esc(m.pm_member_name || '担当');
+        var pmReason = m.pm_reason ? esc(m.pm_reason) : '';
+        return '<div class="pm-dispatch-row" style="display:flex;justify-content:center;margin:10px 0">'
+          + '<div style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(192,255,92,.08),rgba(192,255,92,.14));border:1px solid rgba(192,255,92,.35);border-radius:99px;padding:6px 14px;font-size:11.5px;font-weight:700;color:var(--text2);font-family:inherit;max-width:80%">'
+          +   '<span style="font-size:13px">📋</span>'
+          +   '<span style="font-weight:800;color:var(--peach-dark);letter-spacing:.02em">PM</span>'
+          +   '<span style="opacity:.6">→</span>'
+          +   '<span style="font-weight:800;color:var(--text)">'+pmName+'</span>'
+          +   (pmReason ? '<span style="opacity:.7;font-weight:600">・ '+pmReason+'</span>' : '')
+          + '</div>'
+          + '</div>';
+      }
       return '<div class="sys-row"><span class="sys-pill">✨ '+esc(m.content||'')+'</span></div>';
     }
     if(m && m._summary){
@@ -14043,6 +14050,29 @@ async function _sendMsgStream(ag, text, imgs, texts){
         // Server auto-paged this reply into user.notes — stash the pointer so
         // the 'done' handler can attach it to the assistant bubble.
         window._lastStreamNote = { streamIdx: streamIdx, id: obj.id, title: obj.title, type: obj.type };
+      } else if(evType === 'pm_dispatch'){
+        // PM picked a member to handle this turn — surface as a small bubble
+        // BEFORE the streaming placeholder so the user feels「PM → @member」.
+        // Insert just before the streaming placeholder (streamIdx is the
+        // assistant bubble waiting for its content).
+        var pmCard = {
+          role: 'system',
+          time: now(),
+          system_action: true,
+          pm_dispatch: true,
+          pm_member_id: obj.member_id,
+          pm_member_name: obj.member_name,
+          pm_member_avatar: obj.member_avatar,
+          pm_reason: obj.reason || '',
+          content: '📋 PM → ' + (obj.member_name||'担当') + (obj.reason ? ' に振りました: ' + obj.reason : ' に振りました'),
+        };
+        if(ag.history[streamIdx] && ag.history[streamIdx].streaming){
+          ag.history.splice(streamIdx, 0, pmCard);
+          streamIdx++;  // streaming bubble shifted by 1
+        } else {
+          ag.history.push(pmCard);
+        }
+        try { renderMsgs(ag); } catch(_){}
       } else if(evType === 'error'){
         errorMsg = obj.message || 'エラー';
         _stopThink();

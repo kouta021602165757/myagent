@@ -8359,12 +8359,17 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
   // 1 note)。これで「+ 新しいレポートを生成」 を 1 日に何度押しても 1 件に集約される。
   let existing = null;
   if(type === 'daily'){
-    const todayStr = now.slice(0, 10); // YYYY-MM-DD
-    existing = user.notes.find(n =>
-      n && n.type === 'daily'
-      && n.agent_id === agent.id
-      && String(n.created_at||'').slice(0,10) === todayStr
-    );
+    // 同日 dedupe は server 標準時刻 (JST: Asia/Tokyo) で判定。
+    // UTC の YYYY-MM-DD だと JST の 9:00 を境に日が変わってしまい、
+    // 同じ日に 2 件のレポートが作られる bug の原因になる。
+    const _jstToday = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    existing = user.notes.find(n => {
+      if(!n || n.type !== 'daily' || n.agent_id !== agent.id) return false;
+      const _nCreated = String(n.created_at || '');
+      if(!_nCreated) return false;
+      const _nJstDay = new Date(Date.parse(_nCreated) + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      return _nJstDay === _jstToday;
+    });
   }
   if(!existing && threadParentId){
     existing = user.notes.find(n => n && n.thread_id === threadParentId);

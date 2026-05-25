@@ -14427,6 +14427,11 @@ async function _sendMsgStream(ag, text, imgs, texts){
         if(ag.history[streamIdx] && ag.history[streamIdx].streaming){
           ag.history.splice(streamIdx, 0, pmCard);
           streamIdx++;  // streaming bubble shifted by 1
+          // window._lastStreamNote (note_created event 由来) も index 同期
+          // しないと「done で note_id を間違った msg に書く」 race が起きる
+          if(window._lastStreamNote && typeof window._lastStreamNote.streamIdx === 'number'){
+            window._lastStreamNote.streamIdx++;
+          }
         } else {
           ag.history.push(pmCard);
         }

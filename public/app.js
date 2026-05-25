@@ -14123,7 +14123,8 @@ async function _sendMsgStream(ag, text, imgs, texts){
     }
   }
   ag.history.push({role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent});
-  const streamIdx = ag.history.length - 1;
+  // let (not const) — pm_dispatch handler insert before streaming bubble shifts the index
+  let streamIdx = ag.history.length - 1;
   _turnStatusStart();
   // 画面幅ガードは廃止 — モバイルでも drawer を開く (= AI 返信は必ず thread 内)。
   // モバイルでは drawer がフルスクリーンに広がる CSS 設定があるはず (確認要)。

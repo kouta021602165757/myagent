@@ -4055,8 +4055,10 @@ window._renderTaskStrip = function(){
       + L('他 '+rest+' 件 ', 'View ' + rest + ' more ') + '→</button>'
     : '<button onclick="openTasksPanel(activeId)" style="background:transparent;border:0;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px">'
       + L('全件表示','View all') + ' →</button>';
-  el.style.display = 'block';
-  el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px 8px;flex-wrap:wrap;border-top:1px solid var(--wire);background:var(--cream)';
+  // sticky at top of chat — スクロールしても常に見える「今週の指示」 状態。
+  // チャット msgs エリアの上端に固定、 cream BG + 下 border でセクション境界明示。
+  el.style.display = 'flex';
+  el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 22px;flex-wrap:wrap;background:var(--cream);border-bottom:1px solid var(--wire);position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.02)';
   el.innerHTML =
       '<div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">📋 ' + (weekLbl || L('タスク','Tasks')) + '</div>'
     + chipsHTML

@@ -2922,7 +2922,19 @@ window._runDailyGrowthReport = function(siteId){
       + '優先度順 top 3。各 1 行で「誰が何を、どこに対して、何を目指して」。曖昧 NG。\n\n'
       + '## 5. 📈 中期トレンド\n'
       + '週次の方向感を 1-2 行で。\n\n'
-      + 'タイトルは「日次グロースレポート YYYY-MM-DD」 でメモ帳に保存。';
+      + 'タイトルは「日次グロースレポート YYYY-MM-DD」 でメモ帳に保存。\n\n'
+      + '## HTML dashboard を生成する場合の配色 (アプリ本体と統一すること)\n'
+      + 'create_artifact で dashboard HTML を生成する場合、必ず下記の配色とフォントで作る:\n'
+      + '- 背景 (body): #fafaf7 (warm cream)\n'
+      + '- カード面: #ffffff / border: 1px solid rgba(9,9,11,.06) / border-radius: 12px\n'
+      + '- 文字 (主): #1a1a1a\n'
+      + '- 文字 (補助/ラベル): #71717a\n'
+      + '- 主アクセント (見出し / 強調): #c0ff5c (lime)\n'
+      + '- 副アクセント (セクションタイトル / KPI ラベル): #0d4f4a (dark teal)\n'
+      + '- 増加 (上昇トレンド): #16a34a (緑)\n'
+      + '- 減少 (下落トレンド): #dc2626 (赤)\n'
+      + '- フォント: system-ui, -apple-system, sans-serif\n'
+      + '- 黒背景 (#000 / #0a0a0e 等) は絶対に使わない。 アプリと色を揃える。';
     try { exTA(ci); } catch(_){}
     try { if(typeof sendMsg === 'function') sendMsg(); } catch(_){}
   }, 200);

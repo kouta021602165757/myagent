@@ -1251,7 +1251,7 @@
   <div class="demo-ctrl-body" id="stepBtns">
     <button class="stepbtn active" data-step="1"><span class="num">1</span> URL 入力</button>
     <button class="stepbtn" data-step="2"><span class="num">2</span> チーム組成</button>
-    <button class="stepbtn" data-step="3"><span class="num">3</span> チャット開始</button>
+    <button class="stepbtn" data-step="3"><span class="num">3</span> GA4 紐づけ</button>
     <button class="stepbtn" data-step="4"><span class="num">4</span> 現状分析</button>
     <button class="stepbtn" data-step="5"><span class="num">5</span> 計画</button>
     <button class="stepbtn" data-step="6"><span class="num">6</span> タスク / 実行</button>
@@ -1498,7 +1498,7 @@
     </h3>
     <button class="stepbtn" data-mstep="1" onclick="goStep(1); toggleStepsModal()"><span class="num">1</span> URL 入力</button>
     <button class="stepbtn" data-mstep="2" onclick="goStep(2); toggleStepsModal()"><span class="num">2</span> チーム組成</button>
-    <button class="stepbtn" data-mstep="3" onclick="goStep(3); toggleStepsModal()"><span class="num">3</span> チャット開始</button>
+    <button class="stepbtn" data-mstep="3" onclick="goStep(3); toggleStepsModal()"><span class="num">3</span> GA4 紐づけ</button>
     <button class="stepbtn" data-mstep="4" onclick="goStep(4); toggleStepsModal()"><span class="num">4</span> 現状分析</button>
     <button class="stepbtn" data-mstep="5" onclick="goStep(5); toggleStepsModal()"><span class="num">5</span> 計画</button>
     <button class="stepbtn" data-mstep="6" onclick="goStep(6); toggleStepsModal()"><span class="num">6</span> タスク / 実行</button>
@@ -1534,8 +1534,8 @@ const STEPS = {
   },
   3: {
     pdca: 'PHASE 1 · オンボ',
-    title: 'チャット画面が開く',
-    desc: '— PM から挨拶 → まず Google Analytics を接続',
+    title: 'Google Analytics を紐づける',
+    desc: '— PM が「最初に GA4 を接続させて」と依頼 → 接続 → 自動で初回監査へ',
     scene: 'sceneApp',
     messages: 'greet',
     panel: null,

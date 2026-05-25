@@ -622,9 +622,9 @@ input,textarea{font-family:var(--sans);}
 }
 .hm-empty-cta{
   display:inline-flex; align-items:center; gap:8px;
-  background:linear-gradient(135deg,var(--peach,#c0ff5c),var(--peach-dark,#a3e635));
-  color:#0a0a0e; border:0; padding:14px 26px; border-radius:12px;
-  font-family:inherit; font-size:15px; font-weight:800;
+  background:var(--teal);
+  color:#fff; border:0; padding:14px 26px; border-radius:12px;
+  font-family:inherit; font-size:15px; font-weight:700;
   cursor:pointer; box-shadow:0 6px 18px rgba(163,230,53,.22);
   transition:transform .15s, box-shadow .15s, filter .15s;
 }
@@ -698,12 +698,12 @@ input,textarea{font-family:var(--sans);}
   display:flex; align-items:center; gap:6px;
 }
 
-/* 「💬 チャットに戻る」 CTA — グラデーション + 横並び icon + label + arrow */
+/* 「💬 チャットに戻る」 CTA — teal solid (LP nav-cta と統一) */
 .sd-chat-cta-rich{
   position:relative; z-index:1;
-  background:linear-gradient(135deg,var(--peach,#c0ff5c),var(--peach-dark,#a3e635));
-  color:#0a0a0e; border:0; padding:13px 20px; border-radius:12px;
-  font-family:inherit; font-size:14px; font-weight:800;
+  background:var(--teal);
+  color:#fff; border:0; padding:13px 20px; border-radius:12px;
+  font-family:inherit; font-size:14px; font-weight:700;
   cursor:pointer; flex-shrink:0;
   box-shadow:0 6px 18px rgba(163,230,53,.28), inset 0 1px 0 rgba(255,255,255,.18);
   transition:transform .15s, box-shadow .15s, filter .15s;
@@ -2460,8 +2460,8 @@ input,textarea{font-family:var(--sans);}
   max-width:520px; margin:0 auto 22px;
 }
 .sd-hero-empty-cta{
-  background:linear-gradient(135deg, var(--peach,#c0ff5c), var(--peach-dark,#a3e635));
-  color:#0a0a0e; border:0; padding:13px 26px; border-radius:12px;
+  background:var(--teal);
+  color:#fff; border:0; padding:13px 26px; border-radius:12px;
   font-family:inherit; font-size:14px; font-weight:800;
   cursor:pointer;
   box-shadow:0 6px 18px rgba(163,230,53,.28);
@@ -2803,8 +2803,8 @@ input,textarea{font-family:var(--sans);}
 .sd-strat-open{
   display:inline-block; align-self:flex-start;
   margin-top:4px; padding:8px 14px;
-  background:linear-gradient(135deg,var(--peach,#c0ff5c),var(--peach-dark,#a3e635));
-  color:#0a0a0e; text-decoration:none;
+  background:var(--teal);
+  color:#fff; text-decoration:none;
   font-size:12.5px; font-weight:800;
   border-radius:9px;
   box-shadow:0 4px 12px rgba(163,230,53,.18);
@@ -3979,8 +3979,8 @@ input,textarea{font-family:var(--sans);}
   border-color:rgba(192,255,92,.32);
 }
 .nu-sns-zero-cta{
-  background:linear-gradient(135deg, var(--peach,#c0ff5c), var(--peach-dark,#a3e635));
-  color:#0a0a0e; border:0;
+  background:var(--teal);
+  color:#fff; border:0;
   padding:8px 10px; border-radius:8px;
   font-family:inherit; font-size:11px; font-weight:800;
   cursor:pointer; letter-spacing:-.005em; line-height:1.35;
@@ -4335,8 +4335,8 @@ input,textarea{font-family:var(--sans);}
 /* 拡張インストール CTA */
 .extinstall-cta{
   display:inline-flex; align-items:center; gap:7px;
-  background:linear-gradient(135deg, #c0ff5c, #a3e635);
-  color:#0a0a0e;
+  background:var(--teal);
+  color:#fff;
   text-decoration:none;
   padding:11px 20px; border-radius:99px;
   font-size:13px; font-weight:800;
@@ -4536,8 +4536,8 @@ input,textarea{font-family:var(--sans);}
   transition:background .15s, border-color .15s, color .15s;
 }
 .cn-btn-primary{
-  background:linear-gradient(135deg, #c0ff5c, #a3e635); color:#0a0a0e;
-  border-color:#a3e635;
+  background:var(--teal); color:#fff;
+  border-color:var(--teal);
   box-shadow:0 4px 10px rgba(163,230,53,.22);
 }
 .cn-btn-primary:hover{filter:brightness(1.08); transform:translateY(-1px)}
@@ -5140,8 +5140,8 @@ input,textarea{font-family:var(--sans);}
 }
 .add-site-input:focus{border-color:var(--peach,#c0ff5c)}
 .add-site-go{
-  background:linear-gradient(135deg,var(--peach,#c0ff5c),var(--peach-dark,#a3e635));
-  color:#0a0a0e; border:0; padding:0 20px; border-radius:10px;
+  background:var(--teal);
+  color:#fff; border:0; padding:0 20px; border-radius:10px;
   font-family:inherit; font-size:13.5px; font-weight:800;
   cursor:pointer; box-shadow:0 4px 12px rgba(163,230,53,.22);
   white-space:nowrap;

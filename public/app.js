@@ -2957,16 +2957,38 @@ function _dgrMetricCard(label, valueHTML, delta1, delta2){
     + '</div>';
 }
 
+// AI が markdown 本文に書いてしまう artifact link / メタ文 / 重複コンテンツ
+// を panel 表示用に strip (= サイドカードや進捗ナレーションを消す)
+function _dgrCleanContent(raw){
+  if(!raw) return '';
+  var s = String(raw);
+  // 1) artifact link / image 形式を削除 → これが あった場合 _md が card 化する
+  s = s.replace(/!?\[[^\]]*\]\([^)]*\/generated\/artifact-[a-zA-Z0-9_-]+\.html[^)]*\)/g, '');
+  // 2) bare /generated/artifact-*.html URL を削除
+  s = s.replace(/https?:\/\/[^\s)]*\/generated\/artifact-[a-zA-Z0-9_-]+\.html[^\s)]*/g, '');
+  s = s.replace(/\/generated\/artifact-[a-zA-Z0-9_-]+\.html[^\s)]*/g, '');
+  // 3) メタ文 (進捗ナレーション) を削除
+  var META_RE = /^[^\n]*(?:データ取得完了|データを取得し|レポートを生成|メモ帳に保存|ダッシュボードに追記|完了しました|✅ ?GA4|✅ ?日次グロースレポート)[^\n]*\n?/gm;
+  s = s.replace(META_RE, '');
+  // 4) 連続改行を整理
+  s = s.replace(/\n{3,}/g, '\n\n').trim();
+  return s;
+}
+
 // ── Sections 2-5 を AI markdown content からパース + 再生成 placeholder + section 4 タスク追加 UI ──
 function _dgrRenderMarkdownSections(content, siteId, snap){
+  // 描画前にコンテンツを clean (artifact link / メタ文を除去)
+  content = _dgrCleanContent(content);
   var SECTIONS = [
-    { n: 2, icon: '🟢', title: '効いた施策', altTitles: ['効いた', 'うまく', '成功', 'wins', 'what worked'],
+    { n: 2, icon: '🟢', title: '効いた施策', altTitles: ['効いた', 'うまく', '成功', 'wins', 'what worked', 'Wins'],
       emptyHint: '直近 24-72h で AI チームが何をしたか + 数字に出た良い動きを記載' },
-    { n: 3, icon: '🔴', title: '詰まった箇所', altTitles: ['詰まった', 'ボトルネック', 'blockers', 'bottleneck', '課題'],
+    { n: 3, icon: '🔴', title: '詰まった箇所', altTitles: ['詰まった', 'ボトルネック', 'blockers', 'bottleneck', '課題', 'Blockers'],
       emptyHint: 'CVR 下落 / 直帰率上昇 / 失速チャネル等のボトルネック' },
-    { n: 4, icon: '🎯', title: '明日のグロースアクション', altTitles: ['明日のアクション', 'グロースアクション', 'アクション', 'next actions', 'action items', '明日の'],
+    { n: 4, icon: '🎯', title: '明日のグロースアクション',
+      altTitles: ['明日のアクション', 'グロースアクション', '最優先アクション', '今日の最優先アクション', '優先アクション', 'アクション', 'next actions', 'action items', '明日の', '今日のアクション', '今日やる', 'タスク', 'TODO', 'Actions'],
       emptyHint: '優先度順 top 3 の具体的アクション' },
-    { n: 5, icon: '📈', title: '中期トレンド', altTitles: ['トレンド', '方向感', '中期', 'trend', '推移'],
+    { n: 5, icon: '📈', title: '中期トレンド',
+      altTitles: ['トレンド', '方向感', '中期', 'trend', '推移', '週次', 'Trend'],
       emptyHint: '週次の方向感' },
   ];
   var safeContent = String(content||'');

@@ -2793,32 +2793,66 @@ window.openDailyGrowthReportPanel = async function(siteId){
     });
     var latestBox = document.getElementById('dailyGrowthLatest');
     var listBox = document.getElementById('dailyGrowthList');
-    if(dailies.length){
-      // Fetch the full content of the latest one so we can render it inline
-      var latest = dailies[0];
-      try {
-        var rOne = await api('GET', '/api/me/notes/' + latest.id);
-        if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
-      } catch(_){}
-      var lwhen = (latest.updated_at||'').slice(0,10);
-      var bodyMd = String(latest.content||'').slice(0, 8000);
-      // Use markdown renderer if available; fallback to <pre>
+    // ── Find the latest "report-like" artifact (HTML) for this site ──
+    // ノートが無くても artifact が存在すれば優先して iframe で embed する。
+    // メールで送られている report は create_artifact で HTML が生成されており
+    // user.artifacts に入っているはず。
+    var siteArts = (typeof _siteAllArtifacts === 'function') ? _siteAllArtifacts(siteId) : [];
+    var reportKw = /(report|レポート|dashboard|ダッシュボード|analysis|分析|funnel|ファネル|growth|グロース|kpi|daily|日次)/i;
+    var latestReportArt = siteArts.find(function(a){
+      var hay = (a.title||'') + ' ' + (a.filename||'');
+      return reportKw.test(hay);
+    }) || siteArts[0];  // どれもマッチしなければ最新 artifact を fallback
+    var artUrl = latestReportArt ? (typeof _artUrl === 'function' ? _artUrl(latestReportArt) : latestReportArt.url) : '';
+
+    if(dailies.length || artUrl){
+      // ノートの最新版を取得 (= 補足テキスト用)
+      var latest = dailies[0] || null;
+      if(latest){
+        try {
+          var rOne = await api('GET', '/api/me/notes/' + latest.id);
+          if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
+        } catch(_){}
+      }
+      var displayTitle = (latest && latest.title)
+        || (latestReportArt && (typeof _artDisplayTitle === 'function' ? _artDisplayTitle(latestReportArt) : (latestReportArt.title||'レポート')))
+        || L('日次グロースレポート','Daily growth report');
+      var lwhen = (latest && latest.updated_at) ? latest.updated_at.slice(0,10)
+                : (latestReportArt && latestReportArt.created_at ? latestReportArt.created_at.slice(0,10) : '');
+      // iframe で artifact HTML を embed (= ユーザー要望: メールに来る report の中身を panel に表示)
+      var iframeHTML = '';
+      if(artUrl){
+        iframeHTML = '<div style="margin-top:12px;border:1px solid var(--wire);border-radius:10px;overflow:hidden;background:#fff">'
+          + '<iframe src="'+esc(artUrl)+'" style="display:block;width:100%;height:560px;border:0" '
+          +   'sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe>'
+          + '<div style="padding:8px 12px;background:var(--cream);border-top:1px solid var(--wire);display:flex;align-items:center;gap:10px">'
+          +   '<span style="font-size:10.5px;color:var(--text3);font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 '+esc(String(artUrl).split('/').pop())+'</span>'
+          +   '<a href="'+esc(artUrl)+'" target="_blank" rel="noopener" style="font-size:10.5px;font-weight:800;color:var(--peach-dark);text-decoration:none">'+L('新しいタブで開く','Open in new tab')+' ↗</a>'
+          + '</div>'
+          + '</div>';
+      }
+      // テキスト本文 (ノートがあれば markdown を表示)
       var rendered = '';
-      try { rendered = (typeof _md === 'function') ? _md(bodyMd) : ('<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7">'+esc(bodyMd)+'</pre>'); }
-      catch(_){ rendered = '<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7">'+esc(bodyMd)+'</pre>'; }
+      if(latest){
+        var bodyMd = String(latest.content||'').slice(0, 8000);
+        try { rendered = (typeof _md === 'function') ? _md(bodyMd) : ('<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7">'+esc(bodyMd)+'</pre>'); }
+        catch(_){ rendered = '<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7">'+esc(bodyMd)+'</pre>'; }
+      }
+      var noteEditBtn = latest
+        ? '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
+            + 'style="background:var(--cream);border:1px solid var(--wire2);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button>'
+        : '';
       if(latestBox){
         latestBox.innerHTML = ''
           + '<div style="background:var(--cream);border:1px solid rgba(192,255,92,.4);border-left:4px solid var(--peach);border-radius:11px;padding:16px 20px;margin-bottom:20px">'
           +   '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
           +     '<span style="font-size:10px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.4);padding:2px 9px;border-radius:99px;letter-spacing:.04em">'+L('最新','LATEST')+'</span>'
-          +     '<span style="font-size:13px;font-weight:800;color:var(--text)">'+esc(latest.title||'')+'</span>'
-          +     '<span style="margin-left:auto;font-size:10.5px;color:var(--text3);font-weight:600">'+esc(lwhen)+'</span>'
+          +     '<span style="font-size:13px;font-weight:800;color:var(--text)">'+esc(displayTitle)+'</span>'
+          +     (lwhen ? '<span style="margin-left:auto;font-size:10.5px;color:var(--text3);font-weight:600">'+esc(lwhen)+'</span>' : '')
           +   '</div>'
-          +   '<div class="md-body" style="font-size:13px;line-height:1.7;color:var(--text)">' + rendered + '</div>'
-          +   '<div style="margin-top:10px;display:flex;gap:8px">'
-          +     '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
-          +       'style="background:var(--cream);border:1px solid var(--wire2);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button>'
-          +   '</div>'
+          +   iframeHTML
+          +   (rendered ? '<div class="md-body" style="font-size:13px;line-height:1.7;color:var(--text);margin-top:14px">' + rendered + '</div>' : '')
+          +   (noteEditBtn ? '<div style="margin-top:10px;display:flex;gap:8px">' + noteEditBtn + '</div>' : '')
           + '</div>';
       }
     } else if(latestBox){

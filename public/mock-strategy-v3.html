@@ -33,20 +33,22 @@
   button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
   a { color: var(--teal); text-decoration: none; }
 
-  /* ===== DEMO CONTROLLER (top horizontal bar) ===== */
+  /* ===== DEMO CONTROLLER (inline below HERO) ===== */
   .demo-ctrl {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 200;
+    position: relative;
+    margin: 0 18px 10px;
     background: linear-gradient(135deg, var(--teal), var(--teal-2));
     color: #fff;
+    border-radius: 10px;
+    z-index: 100;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    flex-shrink: 0;
   }
   .demo-ctrl-bar {
-    padding: 8px 16px;
+    padding: 6px 14px;
     display: flex; align-items: center; gap: 10px;
     cursor: pointer;
-    height: 44px;
+    height: 38px;
   }
   .demo-ctrl-bar .badge {
     background: var(--lime); color: var(--teal-2);
@@ -114,7 +116,7 @@
   /* ===== APP LAYOUT ===== */
   .app {
     position: fixed;
-    top: 44px; left: 0; right: 0; bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     display: flex;
     background: var(--bg);
   }
@@ -1907,6 +1909,26 @@ function toggleDemoCtrl(e){
   document.getElementById('demoCtrl').classList.toggle('collapsed');
 }
 
+function placeController(){
+  const ctrl = document.getElementById('demoCtrl');
+  const activeScene = document.querySelector('.scene.active');
+  if(!ctrl || !activeScene) return;
+  const main = activeScene.querySelector('main.main');
+  if(!main) return;
+  const hero = main.querySelector(':scope > .hero-card');
+  if(hero){
+    // Insert right AFTER hero-card
+    if(hero.nextSibling !== ctrl){
+      main.insertBefore(ctrl, hero.nextSibling);
+    }
+  } else {
+    // No hero-card, insert at top of main
+    if(main.firstChild !== ctrl){
+      main.insertBefore(ctrl, main.firstChild);
+    }
+  }
+}
+
 function goStep(n){
   curStep = n;
   document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
@@ -1923,6 +1945,8 @@ function goStep(n){
   document.getElementById('dcLabel').textContent = '🎬 ' + (meta.name || '');
   document.getElementById('prevBtn').disabled = (n === 1);
   document.getElementById('nextBtn').disabled = (n === 8);
+
+  placeController();
 }
 
 document.querySelectorAll('.demo-ctrl-body .stepbtn').forEach(b => {

@@ -8125,6 +8125,87 @@ function _showAgentMemberDetail(siteId, idx){
 // 5 カテゴリ: 分析 / SNS / コンテンツ公開 / EC / フォーム
 // 各 integration card は icon + name + 接続状態 + アクション button。
 // ═══════════════════════════════════════════════════════════════════
+// アカウント作り方ガイド (= Threads / WordPress 等の未保有ユーザー向け)
+function _showAccountGuide(platform){
+  var GUIDES = {
+    threads: {
+      title: '🧵 Threads アカウントの作り方',
+      sub: 'Instagram アカウントがあれば 60 秒で作成可能',
+      steps: [
+        { t: 'Threads アプリをダウンロード', link: 'https://threads.net', linkLabel: 'threads.net' },
+        { t: 'Instagram でログイン (or 新規 IG アカウント作成)' },
+        { t: 'プロフィールを設定 (名前 / 自己紹介 / アイコン)' },
+        { t: 'このアプリに戻って 「接続する」 を押す' },
+      ],
+    },
+    wordpress: {
+      title: '📝 WordPress サイトの立ち上げ方',
+      sub: '所要 30 分 / 月額 ¥500-1000 (ホスティング代)',
+      steps: [
+        { t: 'レンタルサーバーを契約 (推奨: xserver / ConoHa WING)', link: 'https://www.xserver.ne.jp', linkLabel: 'xserver.ne.jp' },
+        { t: 'ドメインを取得 (.com or .jp、 年 ¥1000-3000)' },
+        { t: 'WordPress を 1-click インストール (xserver は標準機能)' },
+        { t: 'テーマ選択 (推奨: Cocoon / SWELL)' },
+        { t: 'Application Password を発行 (WordPress 管理画面 → ユーザー → プロフィール)' },
+        { t: '接続フォームに URL / ユーザー名 / Application Password を貼る' },
+      ],
+    },
+    x: {
+      title: '📱 X (Twitter) アカウントの作り方',
+      sub: '所要 5 分',
+      steps: [
+        { t: 'X 公式サイトを開く', link: 'https://x.com', linkLabel: 'x.com' },
+        { t: '「アカウント作成」 → 名前 / 電話番号 or メール / 生年月日' },
+        { t: 'プロフィール設定 (アイコン / ヘッダー / 自己紹介)' },
+        { t: 'このアプリに戻って 「接続する」 を押す' },
+      ],
+    },
+    ga4: {
+      title: '📊 Google Analytics 4 の接続方法',
+      sub: 'すでにサイトに GA4 を設置済みの場合、 OAuth で接続するだけ',
+      steps: [
+        { t: '「接続する」 ボタン → Google アカウントでログイン' },
+        { t: '権限を許可 (Read-only)' },
+        { t: '計測中のプロパティを選択 (推測候補が自動表示されます)' },
+        { t: '未設置の場合は GA4 公式手順を参照', link: 'https://support.google.com/analytics/answer/9304153', linkLabel: 'Google サポート' },
+      ],
+    },
+  };
+  var g = GUIDES[platform];
+  if(!g){ showToast('ガイド未対応: ' + platform, 'ng'); return; }
+  var ex = document.getElementById('acctGuideOverlay');
+  if(ex) ex.remove();
+  var ov = document.createElement('div');
+  ov.id = 'acctGuideOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.innerHTML =
+    '<div style="background:var(--cream);border-radius:14px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,.2)">'
+    +  '<div style="padding:18px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:10px">'
+    +    '<div style="flex:1">'
+    +      '<div style="font-size:16px;font-weight:900">' + esc(g.title) + '</div>'
+    +      '<div style="font-size:12px;color:var(--text3);margin-top:2px">' + esc(g.sub) + '</div>'
+    +    '</div>'
+    +    '<button onclick="document.getElementById(\'acctGuideOverlay\').remove()" style="background:#f3f4f6;border:0;border-radius:6px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>'
+    +  '</div>'
+    +  '<div style="flex:1;overflow-y:auto;padding:18px 22px">'
+    +    g.steps.map(function(s, i){
+        return '<div style="display:flex;gap:12px;padding:10px 12px;background:#fafaf7;border-radius:9px;margin-bottom:6px;font-size:13px">'
+          + '<div style="width:24px;height:24px;background:#f7ffe9;color:#0a3d39;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">' + (i+1) + '</div>'
+          + '<div style="flex:1">' + esc(s.t)
+          + (s.link ? '<br><a href="' + esc(s.link) + '" target="_blank" rel="noopener" style="color:var(--teal);font-weight:700;display:inline-block;margin-top:4px;font-size:12px">' + esc(s.linkLabel || s.link) + ' ↗</a>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('')
+    +  '</div>'
+    +  '<div style="padding:12px 22px 18px;border-top:1px solid var(--wire)">'
+    +    '<button onclick="document.getElementById(\'acctGuideOverlay\').remove()" style="width:100%;background:var(--teal);color:#fff;border:0;border-radius:10px;padding:12px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">了解、接続に進む</button>'
+    +  '</div>'
+    + '</div>';
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+window._showAccountGuide = _showAccountGuide;
+
 function _renderTabConnections(site){
   var snsCache = (window._snsStatusCache && window._snsStatusCache[site.id]) || null;
   if(!snsCache){ setTimeout(function(){ _fetchSnsStatus(site.id); }, 100); }
@@ -8161,7 +8242,10 @@ function _renderTabConnections(site){
     if(opts.status === 'on' && opts.onDisconnect){
       actionBtn = '<button class="cn-btn cn-btn-secondary" onclick="' + opts.onDisconnect + '">切断</button>';
     } else if(opts.status === 'off' && opts.onConnect){
-      actionBtn = '<button class="cn-btn cn-btn-primary" onclick="' + opts.onConnect + '">接続する →</button>';
+      var guideBtn = opts.guideKey
+        ? '<button class="cn-btn cn-btn-secondary" onclick="_showAccountGuide(\'' + esc(opts.guideKey) + '\')" style="margin-right:6px">作り方</button>'
+        : '';
+      actionBtn = guideBtn + '<button class="cn-btn cn-btn-primary" onclick="' + opts.onConnect + '">接続する →</button>';
     } else if(opts.status === 'soon'){
       actionBtn = '<button class="cn-btn cn-btn-soon" disabled>近日</button>';
     }
@@ -8226,6 +8310,7 @@ function _renderTabConnections(site){
           meta: ga4Meta,
           onConnect: ga4ConnectAction,
           onDisconnect: ga4DisconnectAction,
+          guideKey: 'ga4',
         })
     +   _connCard({
           icon: '🔍', name: 'Google Search Console', color: '#3b82f6',
@@ -8242,12 +8327,17 @@ function _renderTabConnections(site){
   // URL paste で接続できる platform の汎用 card builder
   function _urlPasteCard(platform, name, icon, color, desc){
     var c = _getConn(platform);
+    var guideKey = (platform === 'x') ? 'x'
+                 : (platform === 'threads') ? 'threads'
+                 : (platform === 'wordpress') ? 'wordpress'
+                 : null;
     return _connCard({
       icon: icon, name: name, color: color,
       desc: desc + (c.handle ? ' ・ 接続: ' + esc(c.handle) : ''),
       status: c.connected ? 'on' : 'off',
       onConnect: "_openSnsConnectModal('" + platform + "','" + esc(site.id) + "')",
       onDisconnect: "_snsDisconnect('" + platform + "','" + esc(site.id) + "', this)",
+      guideKey: guideKey,
     });
   }
 

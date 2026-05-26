@@ -1,392 +1,572 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>📊 数字分析 — 改善モック (全体ダッシュボード版)</title>
+<meta charset="utf-8">
+<title>数字分析パネル モック — MY AI Agent</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   :root {
-    --cream:#ffffff; --cream2:#fafafa; --cream3:#fafaf7;
-    --text:#1a1a1a; --text2:#525252; --text3:#71717a;
-    --wire:rgba(9,9,11,.06); --wire2:rgba(9,9,11,.10);
-    --peach:#c0ff5c; --peach-dark:#a3e635;
-    --peach-soft:#f7ffe9;
-    --teal:#0d4f4a; --teal-soft:#e8f1f0;
-    --red:#dc2626; --yellow:#d97706; --green:#16a34a;
+    --bg: #fafaf7;
+    --cream: #fefdf9;
+    --teal: #0d4f4a;
+    --teal-2: #0a3d39;
+    --lime: #c0ff5c;
+    --lime-soft: #f7ffe9;
+    --lime-soft-2: #edfcc8;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --line: #e5e7eb;
   }
-  *{box-sizing:border-box}
-  body{margin:0;padding:24px;background:rgba(10,10,12,.4);font-family:system-ui,sans-serif;color:var(--text);line-height:1.6;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
-  .modal{background:var(--cream3);border-radius:16px;max-width:1200px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column}
-  .modal-head{padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream)}
-  .modal-head-ic{font-size:22px}
-  .modal-head-title{font-weight:900;font-size:15px}
-  .modal-head-sub{font-size:11px;color:var(--text3);font-weight:700}
-  .modal-close{margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px}
-  .modal-body{padding:18px 22px 32px;overflow-y:auto;max-height:calc(100vh - 48px)}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.55;
+    padding: 40px 20px;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  }
+  .head {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 12px;
+    background: var(--cream);
+  }
+  .head .ic { font-size: 22px; }
+  .head .ttl { font-weight: 800; font-size: 15px; }
+  .head .sub { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .head .close {
+    margin-left: auto;
+    width: 28px; height: 28px;
+    background: #f3f4f6; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    border: 0;
+  }
+  .body { padding: 22px; }
 
-  /* Period selector */
-  .period-bar{display:flex;align-items:center;gap:8px;margin-bottom:18px;padding:10px 14px;background:#fff;border:1px solid var(--wire2);border-radius:11px}
-  .period-bar-lbl{font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-right:6px}
-  .period-btn{background:transparent;border:1px solid var(--wire2);color:var(--text2);font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:99px;cursor:pointer;font-family:inherit}
-  .period-btn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .hero {
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .hero .lbl {
+    font-size: 11px;
+    opacity: 0.75;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .hero .h1 {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .hero .h1 .goal {
+    font-size: 14px;
+    opacity: 0.7;
+    font-weight: 600;
+  }
+  .hero .ach {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px;
+  }
+  .hero .ach-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .hero .ach-fill {
+    height: 100%;
+    background: var(--lime);
+    border-radius: 999px;
+  }
+  .hero .ach-pct {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--lime);
+  }
+  .hero .ach-detail {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
 
-  /* 異常検知バナー (両方で使う共通要素) */
-  .anomaly-banner{background:#fef9e7;border:1px solid #fde68a;border-radius:11px;padding:14px 18px;margin-bottom:18px}
-  .anomaly-banner-h{font-size:11px;font-weight:800;color:#92400e;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
-  .anomaly-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border:1px solid #fde68a;border-radius:8px;margin-bottom:6px}
-  .anomaly-row .dot{font-size:13px;flex-shrink:0}
-  .anomaly-row .tx{flex:1;font-size:12.5px;font-weight:700}
-  .anomaly-row .btn{background:var(--teal);color:#fff;border:0;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
-  .anomaly-row .btn.alt{background:#fff;color:var(--teal);border:1px solid var(--teal)}
+  .grid4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .gc {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .gc .gc-lbl {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  .gc .gc-val {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .gc .gc-delta {
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .gc .gc-delta.up { color: #16a34a; }
+  .gc .gc-delta.dn { color: #dc2626; }
+  .gc .gc-trend {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 24px;
+    margin-top: 8px;
+  }
+  .gc .gc-trend .b {
+    flex: 1;
+    background: var(--lime);
+    border-radius: 2px 2px 0 0;
+    min-height: 2px;
+    opacity: 0.7;
+  }
+  .gc .gc-trend .b:last-child {
+    background: var(--teal);
+    opacity: 1;
+  }
 
-  /* Section label */
-  .sec-lbl{font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--wire)}
+  .section-h {
+    font-size: 13px; font-weight: 800;
+    margin: 6px 0 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section-h .sub {
+    font-size: 11px; color: var(--muted);
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .ch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .ch {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .ch.x      { border-top: 4px solid #000; }
+  .ch.thr    { border-top: 4px solid #525252; }
+  .ch.media  { border-top: 4px solid var(--teal); }
+  .ch .ch-nm {
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .ch .ch-val {
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .ch .ch-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .ch .ch-tasks {
+    margin-top: 10px;
+    background: var(--lime-soft);
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 10px;
+    color: var(--teal-2);
+    font-weight: 600;
+  }
 
-  /* HERO 主 KPI */
-  .hero{background:linear-gradient(135deg,#fff,var(--cream2));border:1.5px solid var(--peach);border-radius:14px;padding:22px 26px;margin-bottom:14px}
-  .hero-tag{display:inline-block;font-size:9.5px;font-weight:800;background:var(--peach-soft);color:var(--peach-dark);padding:3px 10px;border-radius:99px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
-  .hero-val-row{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
-  .hero-val{font-family:'Outfit',system-ui;font-size:48px;font-weight:900;line-height:1}
-  .hero-goal{font-size:18px;font-weight:700;color:var(--text3)}
-  .hero-progress{margin:14px 0 12px}
-  .hero-progress-bar{height:10px;background:var(--cream3);border-radius:99px;overflow:hidden;margin-bottom:6px}
-  .hero-progress-bar > div{height:100%;background:linear-gradient(90deg,var(--peach-dark),var(--peach));border-radius:99px}
-  .hero-progress-tx{font-size:11.5px;color:var(--text2);font-weight:700;display:flex;justify-content:space-between}
-  .hero-forecast{padding:11px 14px;background:#fef9e7;border:1px solid #fde68a;border-radius:9px;margin:10px 0;font-size:12px;line-height:1.6;color:#92400e}
-  .hero-forecast b{font-weight:900;color:#7c2d12}
-  .hero-cta{background:var(--teal);color:#fff;border:0;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
+  .chart {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .chart h4 {
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .chart h4 .legend {
+    margin-left: auto;
+    display: flex; gap: 12px;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .chart h4 .legend .dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 4px;
+    vertical-align: 0;
+  }
+  .chart-canvas {
+    display: flex; align-items: flex-end;
+    gap: 10px;
+    height: 140px;
+    padding: 0 4px;
+  }
+  .chart-bar {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .chart-bar .bar {
+    width: 100%;
+    background: var(--lime);
+    border-radius: 4px 4px 0 0;
+    min-height: 4px;
+    position: relative;
+  }
+  .chart-bar .bar.today {
+    background: var(--teal);
+  }
+  .chart-bar .bar:hover::after {
+    content: attr(data-val);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: #fff;
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    margin-bottom: 4px;
+  }
+  .chart-bar .x {
+    font-size: 9px;
+    color: var(--muted);
+  }
+  .chart-bar .x.today {
+    font-weight: 800; color: var(--teal-2);
+  }
 
-  /* サブ KPI 4 カード */
-  .sub-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
-  .sub-card{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
-  .sub-card.warn{border-color:#fde68a;background:linear-gradient(180deg,#fff,#fffaeb)}
-  .sub-card.danger{border-color:#fecaca;background:linear-gradient(180deg,#fff,#fef2f2)}
-  .sub-lbl{font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase}
-  .sub-val{font-size:28px;font-weight:900;line-height:1;margin:2px 0 4px}
-  .sub-val.danger{color:var(--red)}
-  .sub-val.warn{color:var(--yellow)}
-  .sub-delta{font-size:11.5px;font-weight:700}
-  .sub-delta.up{color:var(--green)}
-  .sub-delta.down{color:var(--red)}
-  .sub-foot{font-size:10.5px;color:var(--text3);font-weight:600}
-  .sub-action{background:transparent;border:1px solid var(--teal);color:var(--teal);border-radius:7px;padding:5px 10px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:7px;align-self:flex-start}
-  .sub-action:hover{background:var(--teal);color:#fff}
+  .contrib {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .contrib h4 {
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .contrib h4 .sub {
+    font-size: 10px; color: var(--muted);
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+  }
+  .row:first-of-type { border-top: none; }
+  .row .medal {
+    width: 22px; height: 22px;
+    background: #f3f4f6;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .row.first .medal { background: #fef3c7; }
+  .row.second .medal { background: #f1f5f9; }
+  .row.third .medal { background: #fef2e8; }
+  .row .ic {
+    width: 28px; height: 28px;
+    background: var(--lime-soft);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .row .nm {
+    flex: 1;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .row .nm .sub {
+    font-size: 11px; color: var(--muted);
+    font-weight: 600;
+    display: block;
+    margin-top: 1px;
+  }
+  .row .pgw {
+    flex: 0 0 110px;
+    height: 6px;
+    background: #f3f4f6;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .row .pgw .pgf {
+    height: 100%;
+    background: var(--teal);
+    border-radius: 999px;
+  }
+  .row .cnt {
+    font-size: 14px;
+    font-weight: 800;
+    flex: 0 0 60px;
+    text-align: right;
+  }
 
-  /* Deep dive tabs */
-  .deep-tabs{display:flex;gap:4px;border-bottom:1px solid var(--wire);margin-bottom:12px}
-  .deep-tab{background:transparent;border:0;color:var(--text3);font-size:12.5px;font-weight:700;padding:9px 14px;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
-  .deep-tab.on{color:var(--teal);border-bottom-color:var(--teal)}
-
-  /* Channel */
-  .ch-row{display:grid;grid-template-columns:1fr 2fr auto auto;align-items:center;gap:14px;padding:10px 4px;border-bottom:1px solid var(--wire);font-size:13px}
-  .ch-row.head{font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase}
-  .ch-name{display:flex;align-items:center;gap:8px}
-  .ch-dot{width:8px;height:8px;border-radius:50%}
-  .ch-bar{height:8px;background:var(--cream3);border-radius:99px;overflow:hidden}
-  .ch-bar > div{height:100%;border-radius:99px}
-  .ch-val{text-align:right;font-weight:700;min-width:50px}
-  .ch-pct{font-size:11.5px;color:var(--text3);text-align:right;min-width:42px}
-
-  /* Chart */
-  .chart-wrap{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:16px;margin-top:14px;margin-bottom:14px}
-  .chart-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-  .chart-ti{font-size:13px;font-weight:800}
-  .chart-sub{font-size:11px;color:var(--text3);font-weight:600;margin-left:auto}
-  .chart-svg{display:block;width:100%;height:160px}
-
-  /* All site comparison */
-  .sites-comp{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px}
-  .sites-row{display:grid;grid-template-columns:200px 1fr 80px;align-items:center;gap:14px;padding:8px 0;border-bottom:1px solid var(--wire)}
-  .sites-row:last-child{border-bottom:0}
-  .sites-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .sites-name.you{color:var(--teal);font-weight:900}
-  .sites-bar{height:10px;background:var(--cream3);border-radius:99px;overflow:hidden}
-  .sites-bar > div{height:100%;background:linear-gradient(90deg,var(--peach-dark),var(--teal));border-radius:99px}
-  .sites-bar > div.you{background:linear-gradient(90deg,#a3e635,#0d4f4a)}
-  .sites-val{text-align:right;font-weight:800;font-size:13.5px}
-
-  .mock-tag{display:inline-block;background:#0d4f4a;color:#fff;font-size:10px;font-weight:800;padding:4px 11px;border-radius:99px;letter-spacing:.05em;text-transform:uppercase}
-
-  .note-link{display:block;padding:10px 14px;background:var(--peach-soft);border:1px solid var(--peach);border-radius:9px;font-size:12px;color:var(--text);font-weight:700;text-align:center;text-decoration:none}
+  .toggle {
+    display: flex; align-items: center; gap: 4px;
+    margin-bottom: 18px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+  }
+  .toggle button {
+    background: transparent; border: 0;
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .toggle button.active {
+    background: var(--teal);
+    color: #fff;
+  }
 </style>
 </head>
 <body>
-
-<div class="modal">
-  <div class="modal-head">
-    <span class="modal-head-ic">📊</span>
+<div class="wrap">
+  <div class="head">
+    <span class="ic">📊</span>
     <div>
-      <div class="modal-head-title">数字分析</div>
-      <div class="modal-head-sub">全体ダッシュボード ・ myaiagents.agency</div>
+      <div class="ttl">数字分析</div>
+      <div class="sub">fukuyama-note.com</div>
     </div>
-    <span class="mock-tag" style="margin-left:auto">数字分析 改善モック (v2)</span>
-    <button class="modal-close">×</button>
+    <button class="close">✕</button>
   </div>
-  <div class="modal-body">
 
-    <!-- Period selector -->
-    <div class="period-bar">
-      <span class="period-bar-lbl">📅 期間</span>
-      <button class="period-btn">直近 7 日</button>
-      <button class="period-btn on">直近 30 日</button>
-      <button class="period-btn">今月</button>
-      <button class="period-btn">全期間</button>
-      <span style="margin-left:auto;font-size:11px;color:var(--text3);font-weight:600">日報は <a href="/mock-daily-report.html" style="color:var(--teal);font-weight:800">📰 日次グロースレポート</a> で</span>
+  <div class="body">
+    <div class="toggle">
+      <button>昨日</button>
+      <button class="active">直近 7 日</button>
+      <button>直近 30 日</button>
+      <button>今月</button>
     </div>
 
-    <!-- 異常検知バナー -->
-    <div class="anomaly-banner">
-      <div class="anomaly-banner-h">⚠ 今すぐ対応が必要 (3 件)</div>
-      <div class="anomaly-row">
-        <span class="dot">🔴</span>
-        <span class="tx">直帰率 93.8% (目標 60% 未満) — 30 日平均</span>
-        <button class="btn alt">📋 タスク追加</button>
-        <button class="btn">🤖 対策依頼</button>
-      </div>
-      <div class="anomaly-row">
-        <span class="dot">🔴</span>
-        <span class="tx">CVR 0% (Goal 未測定 — GA4 で計測されていない)</span>
-        <button class="btn">🎯 Goal 設定</button>
-      </div>
-      <div class="anomaly-row">
-        <span class="dot">🟡</span>
-        <span class="tx">Organic Search 0 件 (SEO 流入なし、 30 日累計)</span>
-        <button class="btn alt">📋 タスク追加</button>
-        <button class="btn">🤖 SEO 戦略</button>
-      </div>
-    </div>
-
-    <!-- HERO: 月間目標との距離 -->
-    <div class="sec-lbl">🎯 主 KPI ・ 月間目標との距離</div>
     <div class="hero">
-      <span class="hero-tag">月間 PV (累計 30 日)</span>
-      <div class="hero-val-row">
-        <span class="hero-val">1,483</span>
-        <span class="hero-goal">/ 10,000 PV</span>
+      <div class="lbl">📍 今月の KPI 達成度 (月間 PV)</div>
+      <div class="h1">2,156 <span class="goal">/ 5,000 PV 目標</span></div>
+      <div class="ach">
+        <div class="ach-bar"><div class="ach-fill" style="width:43%"></div></div>
+        <div class="ach-pct">43%</div>
       </div>
-      <div class="hero-progress">
-        <div class="hero-progress-bar"><div style="width:14.8%"></div></div>
-        <div class="hero-progress-tx">
-          <span>達成率 <b>14.8%</b></span>
-          <span>残り <b>8,517 PV</b></span>
+      <div class="ach-detail">▲ 先週比 +18% / 月末まで残り 12 日 (達成ペース: 102%)</div>
+    </div>
+
+    <div class="grid4">
+      <div class="gc">
+        <div class="gc-lbl">📊 PV</div>
+        <div class="gc-val">468</div>
+        <div class="gc-delta up">▲ +12% 先週比</div>
+        <div class="gc-trend">
+          <div class="b" style="height:30%"></div>
+          <div class="b" style="height:42%"></div>
+          <div class="b" style="height:38%"></div>
+          <div class="b" style="height:55%"></div>
+          <div class="b" style="height:48%"></div>
+          <div class="b" style="height:65%"></div>
+          <div class="b" style="height:80%"></div>
         </div>
       </div>
-      <div class="hero-forecast">
-        ⚠ <b>このペースでは月末 4,200 PV</b> (目標未達 -58%)。
-        残り 21 日で <b>1 日 405 PV</b> 必要 — 現在 1 日平均 50 PV から <b>+8 倍</b> の流入が必要です。
+      <div class="gc">
+        <div class="gc-lbl">👥 ユーザー</div>
+        <div class="gc-val">312</div>
+        <div class="gc-delta up">▲ +8% 先週比</div>
+        <div class="gc-trend">
+          <div class="b" style="height:35%"></div>
+          <div class="b" style="height:40%"></div>
+          <div class="b" style="height:45%"></div>
+          <div class="b" style="height:50%"></div>
+          <div class="b" style="height:55%"></div>
+          <div class="b" style="height:60%"></div>
+          <div class="b" style="height:72%"></div>
+        </div>
       </div>
-      <button class="hero-cta">🤖 AI に「集客戦略」 を依頼</button>
+      <div class="gc">
+        <div class="gc-lbl">⏱️ 平均滞在</div>
+        <div class="gc-val">2:18</div>
+        <div class="gc-delta up">▲ +8 秒</div>
+        <div class="gc-trend">
+          <div class="b" style="height:50%"></div>
+          <div class="b" style="height:48%"></div>
+          <div class="b" style="height:55%"></div>
+          <div class="b" style="height:52%"></div>
+          <div class="b" style="height:58%"></div>
+          <div class="b" style="height:62%"></div>
+          <div class="b" style="height:68%"></div>
+        </div>
+      </div>
+      <div class="gc">
+        <div class="gc-lbl">📉 直帰率</div>
+        <div class="gc-val">42%</div>
+        <div class="gc-delta up">▼ -3pt (改善)</div>
+        <div class="gc-trend">
+          <div class="b" style="height:65%"></div>
+          <div class="b" style="height:60%"></div>
+          <div class="b" style="height:58%"></div>
+          <div class="b" style="height:52%"></div>
+          <div class="b" style="height:48%"></div>
+          <div class="b" style="height:45%"></div>
+          <div class="b" style="height:42%"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- サブ KPI 4 カード (30 日累計、 対策 button 付き) -->
-    <div class="sec-lbl">📈 サブ KPI (30 日累計 / 異常はカード上で対応)</div>
-    <div class="sub-grid">
-      <div class="sub-card">
-        <div class="sub-lbl">月累計 PV</div>
-        <div class="sub-val">1,483</div>
-        <div class="sub-delta down">▼ -54% (前月: 3,226)</div>
-        <div class="sub-foot">日平均 49 PV</div>
-        <button class="sub-action">🤖 PV 増加策</button>
-      </div>
-      <div class="sub-card">
-        <div class="sub-lbl">月累計セッション</div>
-        <div class="sub-val">584</div>
-        <div class="sub-delta down">▼ -41% (前月: 992)</div>
-        <div class="sub-foot">日平均 19 セッション</div>
-        <button class="sub-action">🤖 流入改善</button>
-      </div>
-      <div class="sub-card warn">
-        <div class="sub-lbl">⚠ 直帰率 (30 日平均)</div>
-        <div class="sub-val warn">93.8%</div>
-        <div class="sub-delta down">▲ +12pt 悪化</div>
-        <div class="sub-foot">目標 60% 未満</div>
-        <button class="sub-action">🤖 直帰率改善</button>
-      </div>
-      <div class="sub-card danger">
-        <div class="sub-lbl">🔴 CVR / リード (累計)</div>
-        <div class="sub-val danger">0%</div>
-        <div class="sub-delta flat" style="color:var(--text3)">Goal 未測定</div>
-        <div class="sub-foot">目標 CVR 2% / 200 件 月</div>
-        <button class="sub-action">🎯 GA4 Goal 設定</button>
-      </div>
-    </div>
-
-    <!-- Deep dive tabs -->
-    <div class="sec-lbl">🔍 詳細ブレイクダウン</div>
-    <div class="deep-tabs">
-      <button class="deep-tab on">🌐 チャネル別</button>
-      <button class="deep-tab">📄 ページ別 TOP 10</button>
-      <button class="deep-tab">🔍 GSC キーワード</button>
-      <button class="deep-tab">🌍 国 / 地域</button>
-    </div>
-    <div>
-      <div class="ch-row head">
-        <div>チャネル</div><div></div><div class="ch-val">セッション</div><div class="ch-pct">%</div>
-      </div>
-      <div class="ch-row">
-        <div class="ch-name"><span class="ch-dot" style="background:#6366f1"></span><b>Direct</b></div>
-        <div class="ch-bar"><div style="width:100%;background:linear-gradient(90deg,#6366f180,#6366f1)"></div></div>
-        <div class="ch-val">98</div><div class="ch-pct">60%</div>
-      </div>
-      <div class="ch-row">
-        <div class="ch-name"><span class="ch-dot" style="background:#f97316"></span>Referral</div>
-        <div class="ch-bar"><div style="width:52%;background:linear-gradient(90deg,#f9731680,#f97316)"></div></div>
-        <div class="ch-val">51</div><div class="ch-pct">31%</div>
-      </div>
-      <div class="ch-row">
-        <div class="ch-name"><span class="ch-dot" style="background:#9ca3af"></span>Unassigned</div>
-        <div class="ch-bar"><div style="width:7%;background:linear-gradient(90deg,#9ca3af80,#9ca3af)"></div></div>
-        <div class="ch-val">7</div><div class="ch-pct">4%</div>
-      </div>
-      <div class="ch-row">
-        <div class="ch-name"><span class="ch-dot" style="background:#10b981"></span>Organic Social</div>
-        <div class="ch-bar"><div style="width:1%;background:linear-gradient(90deg,#10b98180,#10b981)"></div></div>
-        <div class="ch-val">1</div><div class="ch-pct">1%</div>
-      </div>
-      <div style="margin-top:10px;font-size:11px;color:var(--red);font-weight:600">⚠ Organic Search = 0 (SEO 流入なし)</div>
-    </div>
-
-    <!-- 30 日 chart + 急落マーカー -->
-    <div class="chart-wrap" style="position:relative">
-      <div class="chart-h">
-        <div class="chart-ti">📈 30 日 PV 推移</div>
-        <div class="chart-sub">日平均 49 PV ・ 急落日: 5/14 ⚠</div>
-      </div>
-      <svg class="chart-svg" viewBox="0 0 720 160" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#c0ff5c" stop-opacity=".5" />
-            <stop offset="100%" stop-color="#c0ff5c" stop-opacity="0" />
-          </linearGradient>
-        </defs>
-        <path d="M 0,140 L 30,90 L 60,60 L 90,100 L 120,80 L 150,120 L 180,40 L 210,70 L 240,30 L 270,55 L 300,90 L 330,110 L 360,75 L 390,50 L 420,65 L 450,40 L 480,85 L 510,90 L 540,70 L 570,55 L 600,120 L 630,100 L 660,85 L 690,75 L 720,60 L 720,160 L 0,160 Z" fill="url(#grad1)"/>
-        <path d="M 0,140 L 30,90 L 60,60 L 90,100 L 120,80 L 150,120 L 180,40 L 210,70 L 240,30 L 270,55 L 300,90 L 330,110 L 360,75 L 390,50 L 420,65 L 450,40 L 480,85 L 510,90 L 540,70 L 570,55 L 600,120 L 630,100 L 660,85 L 690,75 L 720,60" fill="none" stroke="#a3e635" stroke-width="2.5"/>
-        <circle cx="600" cy="120" r="6" fill="#dc2626" stroke="#fff" stroke-width="2"/>
-      </svg>
-    </div>
-
-    <!-- 🔍 GSC: どの URL / クエリで流入してるか (専用 prominent セクション) -->
-    <div class="sec-lbl">🔍 Search Console ・ どの URL / クエリから流入してるか</div>
-    <div style="background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:18px 22px;margin-bottom:14px">
-      <!-- summary 行 -->
-      <div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;border-bottom:1px solid var(--wire);margin-bottom:14px;flex-wrap:wrap">
-        <span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;color:var(--green);background:#dcfce7;border:1px solid #86efac;padding:3px 9px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase">✓ 接続済</span>
-        <span style="font-size:11.5px;color:var(--text3);font-weight:700">直近 28 日 (GSC 標準)</span>
-        <span style="margin-left:auto;display:flex;gap:14px;font-size:12.5px">
-          <span><b style="font-size:16px;color:var(--text)">68</b> <span style="color:var(--text3);font-size:11px;font-weight:600">clicks</span></span>
-          <span><b style="font-size:16px;color:var(--text)">1,142</b> <span style="color:var(--text3);font-size:11px;font-weight:600">impressions</span></span>
-          <span><b style="font-size:16px;color:var(--text)">5.9%</b> <span style="color:var(--text3);font-size:11px;font-weight:600">CTR</span></span>
-          <span><b style="font-size:16px;color:var(--text)">17.2</b> <span style="color:var(--text3);font-size:11px;font-weight:600">平均順位</span></span>
+    <div class="chart">
+      <h4>
+        📈 直近 7 日のセッション推移
+        <span class="legend">
+          <span><span class="dot" style="background:var(--lime)"></span>過去 6 日</span>
+          <span><span class="dot" style="background:var(--teal)"></span>今日</span>
         </span>
-      </div>
-      <!-- GSC tab (URL 別 / クエリ別) -->
-      <div style="display:flex;gap:4px;margin-bottom:12px">
-        <button style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">📄 URL 別 TOP 10</button>
-        <button style="background:transparent;color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🔎 クエリ別 TOP 10</button>
-      </div>
-      <!-- URL 別 table -->
-      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:8px 4px;border-bottom:1px solid var(--wire2);font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">
-        <div>URL</div>
-        <div style="text-align:right">Clicks</div>
-        <div style="text-align:right">Impressions</div>
-        <div style="text-align:right">CTR</div>
-        <div style="text-align:right">平均順位</div>
-      </div>
-      <!-- URL rows -->
-      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
-        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/</a></div>
-        <div style="text-align:right;font-weight:800">28</div>
-        <div style="text-align:right;font-weight:600">412</div>
-        <div style="text-align:right;color:var(--green);font-weight:700">6.8%</div>
-        <div style="text-align:right;color:var(--text2);font-weight:600">14.3</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
-        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/tools/agent-builder</a></div>
-        <div style="text-align:right;font-weight:800">15</div>
-        <div style="text-align:right;font-weight:600">287</div>
-        <div style="text-align:right;color:var(--text);font-weight:700">5.2%</div>
-        <div style="text-align:right;color:var(--yellow);font-weight:700">18.7</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
-        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/blog/2026-saas-growth-stack</a></div>
-        <div style="text-align:right;font-weight:800">12</div>
-        <div style="text-align:right;font-weight:600">198</div>
-        <div style="text-align:right;color:var(--green);font-weight:700">6.1%</div>
-        <div style="text-align:right;color:var(--text2);font-weight:600">16.2</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
-        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/pricing</a></div>
-        <div style="text-align:right;font-weight:800">8</div>
-        <div style="text-align:right;font-weight:600">156</div>
-        <div style="text-align:right;color:var(--text);font-weight:700">5.1%</div>
-        <div style="text-align:right;color:var(--red);font-weight:700">22.4</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 60px 70px 50px 60px;gap:14px;padding:11px 4px;border-bottom:1px solid var(--wire);font-size:13px">
-        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="#" style="color:var(--teal);font-weight:800;text-decoration:none">/case-study/indie-founder</a></div>
-        <div style="text-align:right;font-weight:800">5</div>
-        <div style="text-align:right;font-weight:600">89</div>
-        <div style="text-align:right;color:var(--text);font-weight:700">5.6%</div>
-        <div style="text-align:right;color:var(--yellow);font-weight:700">19.8</div>
-      </div>
-      <!-- AI 対策 chip -->
-      <div style="margin-top:14px;padding:12px 14px;background:var(--peach-soft);border:1px solid var(--peach);border-radius:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span style="font-size:11px;font-weight:800;color:var(--text2)">💡 AI に依頼:</span>
-        <button style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🤖 上位 URL を伸ばす SEO 施策</button>
-        <button style="background:var(--teal);color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🤖 平均順位 14 位以下を改善</button>
-        <button style="background:#fff;color:var(--teal);border:1px solid var(--teal);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🤖 機会キーワードを抽出</button>
+      </h4>
+      <div class="chart-canvas">
+        <div class="chart-bar">
+          <div class="bar" style="height:30%" data-val="42 セッション"></div>
+          <div class="x">月</div>
+        </div>
+        <div class="chart-bar">
+          <div class="bar" style="height:42%" data-val="58 セッション"></div>
+          <div class="x">火</div>
+        </div>
+        <div class="chart-bar">
+          <div class="bar" style="height:38%" data-val="52 セッション"></div>
+          <div class="x">水</div>
+        </div>
+        <div class="chart-bar">
+          <div class="bar" style="height:55%" data-val="76 セッション"></div>
+          <div class="x">木</div>
+        </div>
+        <div class="chart-bar">
+          <div class="bar" style="height:48%" data-val="68 セッション"></div>
+          <div class="x">金</div>
+        </div>
+        <div class="chart-bar">
+          <div class="bar" style="height:65%" data-val="91 セッション"></div>
+          <div class="x">土</div>
+        </div>
+        <div class="chart-bar">
+          <div class="bar today" style="height:80%" data-val="112 セッション"></div>
+          <div class="x today">日 (今日)</div>
+        </div>
       </div>
     </div>
 
-    <!-- 全 site 比較 -->
-    <div class="sec-lbl">🏆 全 site 比較 (今月 PV)</div>
-    <div class="sites-comp">
-      <div class="sites-row">
-        <div class="sites-name">🛠 finance.protocol.ooo</div>
-        <div class="sites-bar"><div style="width:78%"></div></div>
-        <div class="sites-val">1,890</div>
+    <div class="section-h">📍 チャネル別の動き (7 日)<span class="sub">流入元別の貢献度</span></div>
+    <div class="ch-grid">
+      <div class="ch x">
+        <div class="ch-nm">📱 X (Twitter)</div>
+        <div class="ch-val">+82</div>
+        <div class="ch-sub">フォロワー / インプ 8,200</div>
+        <div class="ch-tasks">🤖 AI: 21 投稿 / 18 リプ</div>
       </div>
-      <div class="sites-row">
-        <div class="sites-name you">🛠 myaiagents.agency <span style="font-size:9px;background:var(--teal-soft);color:var(--teal);padding:1px 6px;border-radius:99px;margin-left:6px">YOU</span></div>
-        <div class="sites-bar"><div class="you" style="width:62%"></div></div>
-        <div class="sites-val">1,483</div>
+      <div class="ch thr">
+        <div class="ch-nm">🧵 Threads</div>
+        <div class="ch-val">+38</div>
+        <div class="ch-sub">フォロワー / インプ 3,150</div>
+        <div class="ch-tasks">🤖 AI: 14 投稿</div>
       </div>
-      <div class="sites-row">
-        <div class="sites-name">🛠 fukuyama-note.com</div>
-        <div class="sites-bar"><div style="width:3.5%"></div></div>
-        <div class="sites-val">84</div>
-      </div>
-    </div>
-
-    <!-- 目標達成シミュレーション -->
-    <div class="sec-lbl">🎯 目標達成シミュレーション (逆算)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="sub-card">
-        <div class="sub-lbl">月間 PV 10,000</div>
-        <div class="sub-val">14.8%</div>
-        <div class="sub-delta down">残 8,517 PV</div>
-        <div class="sub-foot">月末予測 4,200 PV ・ 必要日次 405 PV</div>
-      </div>
-      <div class="sub-card">
-        <div class="sub-lbl">月間リード 200 件</div>
-        <div class="sub-val">0%</div>
-        <div class="sub-delta down">残 200 件</div>
-        <div class="sub-foot">Goal 未測定 → GA4 で計測開始</div>
-      </div>
-      <div class="sub-card">
-        <div class="sub-lbl">CVR 2.0%</div>
-        <div class="sub-val">0.0%</div>
-        <div class="sub-delta flat" style="color:var(--text3)">未測定</div>
-        <div class="sub-foot">フォーム / クリックを Event 登録</div>
+      <div class="ch media">
+        <div class="ch-nm">📰 メディア</div>
+        <div class="ch-val">3 本</div>
+        <div class="ch-sub">公開 / 流入 +180</div>
+        <div class="ch-tasks">🤖 AI: 5 下書き / 2 公開</div>
       </div>
     </div>
 
-    <!-- 日報へのリンク -->
-    <div class="sec-lbl">📰 日次の振り返り</div>
-    <a href="/mock-daily-report.html" class="note-link">
-      📰 「昨日何があったか + 明日のアクション」 は 日次グロースレポート で →
-    </a>
+    <div class="contrib">
+      <h4>🏆 AI 部門別の貢献度<span class="sub">月間納品で集計</span></h4>
+      <div class="row first">
+        <div class="medal">🥇</div>
+        <div class="ic">📰</div>
+        <div class="nm">
+          コンテンツ部門
+          <span class="sub">スレッド職人 ・ ライター ・ SEO</span>
+        </div>
+        <div class="pgw"><div class="pgf" style="width:100%"></div></div>
+        <div class="cnt">12 件</div>
+      </div>
+      <div class="row second">
+        <div class="medal">🥈</div>
+        <div class="ic">📱</div>
+        <div class="nm">
+          SNS 部門
+          <span class="sub">X 担当 ・ Threads 担当</span>
+        </div>
+        <div class="pgw"><div class="pgf" style="width:75%"></div></div>
+        <div class="cnt">9 件</div>
+      </div>
+      <div class="row third">
+        <div class="medal">🥉</div>
+        <div class="ic">📊</div>
+        <div class="nm">
+          分析部門
+          <span class="sub">GA4 アナリスト ・ 競合監視</span>
+        </div>
+        <div class="pgw"><div class="pgf" style="width:42%"></div></div>
+        <div class="cnt">5 件</div>
+      </div>
+      <div class="row">
+        <div class="medal" style="font-size:10px;color:var(--muted)">4</div>
+        <div class="ic">🎯</div>
+        <div class="nm">
+          戦略部門
+          <span class="sub">PM ・ ストラテジスト</span>
+        </div>
+        <div class="pgw"><div class="pgf" style="width:25%"></div></div>
+        <div class="cnt">3 件</div>
+      </div>
+    </div>
 
   </div>
 </div>
-
 </body>
 </html>

@@ -2743,9 +2743,16 @@ function _openSiteTabModal(siteId, tabKey){
   var ov = document.createElement('div');
   ov.id = 'siteTabOverlay';
   ov.setAttribute('data-tab', tabKey);
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.55);z-index:9990;display:flex;align-items:center;justify-content:center;padding:14px;font-family:inherit';
+  // Split layout: 右側に panel sidebar、 左の chat は引き続き interactive
+  // Mobile (< 720px) は full-width に fallback
+  var isMobile = window.innerWidth < 720;
+  if(isMobile){
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.55);z-index:9990;display:flex;align-items:stretch;justify-content:flex-end;font-family:inherit';
+  } else {
+    ov.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(55%, 720px);min-width:460px;z-index:9990;display:flex;font-family:inherit;animation:sidePanelSlide .25s cubic-bezier(.34,1.56,.64,1)';
+  }
   ov.innerHTML =
-    '<div style="background:var(--cream);border-radius:16px;max-width:1200px;width:100%;max-height:94vh;height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden">'
+    '<div style="background:var(--cream);' + (isMobile ? 'width:100%;border-radius:16px 0 0 16px;' : 'flex:1;') + 'display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(0,0,0,.10);border-left:1px solid var(--wire);overflow:hidden">'
     +  '<div style="padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream);flex-shrink:0">'
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">' + esc(title) + '</div>'
     +    '<div style="font-size:11px;color:var(--text3);font-weight:700">' + esc(_siteHostname(site)) + '</div>'
@@ -2753,7 +2760,9 @@ function _openSiteTabModal(siteId, tabKey){
     +  '</div>'
     +  '<div class="sd-tab-body" style="flex:1;overflow-y:auto;padding:18px 22px;background:var(--cream)">' + content + '</div>'
     + '</div>';
-  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  if(isMobile){
+    ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  }
   // ESC to close
   var escHandler = function(e){
     if(e.key === 'Escape'){
@@ -2783,7 +2792,13 @@ window.openDailyGrowthReportPanel = async function(siteId){
   if(ex) ex.remove();
   var ov = document.createElement('div');
   ov.id = 'dailyGrowthOverlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.45);z-index:9990;display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;font-family:inherit;overflow-y:auto';
+  // Split layout: 右側に panel、 左の chat は引き続き使える
+  var isMobileDgr = window.innerWidth < 720;
+  if(isMobileDgr){
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.45);z-index:9990;display:flex;align-items:stretch;justify-content:flex-end;font-family:inherit';
+  } else {
+    ov.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(55%, 720px);min-width:460px;z-index:9990;display:flex;font-family:inherit;animation:sidePanelSlide .25s cubic-bezier(.34,1.56,.64,1)';
+  }
   var headerHTML =
        '<div style="padding:16px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream);position:sticky;top:0;z-index:2">'
     +    '<div style="font-size:24px">📰</div>'
@@ -2795,13 +2810,15 @@ window.openDailyGrowthReportPanel = async function(siteId){
     +    '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px">×</button>'
     +  '</div>';
   ov.innerHTML =
-    '<div style="background:var(--cream3);border-radius:16px;max-width:1100px;width:100%;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.18);min-height:300px">'
+    '<div style="background:var(--cream3);' + (isMobileDgr ? 'width:100%;border-radius:16px 0 0 16px;' : 'flex:1;') + 'display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(0,0,0,.10);border-left:1px solid var(--wire);overflow:hidden">'
     +  headerHTML
-    +  '<div id="dailyGrowthBody" style="padding:18px 22px 28px">'
+    +  '<div id="dailyGrowthBody" style="flex:1;overflow-y:auto;padding:18px 22px 28px">'
     +    '<div id="dgrLoading" style="text-align:center;padding:48px;color:var(--text3);font-size:13px"><span style="display:inline-block;width:16px;height:16px;border:2px solid var(--wire2);border-top-color:var(--peach-dark);border-radius:50%;animation:lpSpin .8s linear infinite;margin-right:10px;vertical-align:-3px"></span>'+L('読み込み中…','Loading…')+'</div>'
     +  '</div>'
     + '</div>';
-  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  if(isMobileDgr){
+    ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  }
   document.body.appendChild(ov);
 
   // ── Data fetch: GA4 snapshot + latest daily note (parallel) ──
@@ -7320,12 +7337,26 @@ function _renderHeroCard(ag){
   // site agent じゃないなら非表示
   if(!_isSiteAgent(ag)) { el.style.display = 'none'; return; }
 
-  // 各セル のデータ収集 (利用可能なら実値、なければ プレースホルダ)
-  var stats = ag.stats || {};
-  var ga = stats.ga4 || {}; // expected: { monthly_pv, monthly_users, delta_pv_pct, delta_users_pct }
-  var sns = stats.sns || {}; // expected: { x_followers, threads_followers, x_delta_week, threads_delta_week }
+  // GA4 月間データ — ag.ga4_snapshot.total_30d から取得
+  var snap = ag.ga4_snapshot || {};
+  var mo30 = snap.total_30d || {};
+  var deltaPct = (typeof snap.delta_pv_pct === 'number') ? snap.delta_pv_pct : null;
 
-  // 公開記事カウント (= user.notes from cache or site artifacts)
+  function _fmt(n){
+    if(n == null || isNaN(n)) return '—';
+    if(n >= 10000) return (n/1000).toFixed(1) + 'k';
+    return String(Math.round(n));
+  }
+  function _delta(pct){
+    if(pct == null) return '';
+    var sign = pct >= 0 ? '▲ +' : '▼ ';
+    return sign + pct + '%';
+  }
+
+  var pvVal = (mo30.pv != null) ? _fmt(mo30.pv) : '—';
+  var userVal = (mo30.users != null) ? _fmt(mo30.users) : '—';
+
+  // 公開記事カウント (= user.notes from cache)
   var articleCount = 0;
   try {
     if(window._cachedNotesForSite && window._cachedNotesForSite[ag.id]){
@@ -7334,6 +7365,12 @@ function _renderHeroCard(ag){
       }).length;
     }
   } catch(e){}
+
+  // SNS データ (= 接続済み連携から取得、 未連携なら 「未連携」)
+  var x = (ag.sns_connections && ag.sns_connections.x) || {};
+  var threads = (ag.sns_connections && ag.sns_connections.threads) || {};
+  var xConnected = !!(x && (x.connected || x.username));
+  var threadsConnected = !!(threads && (threads.connected || threads.username));
 
   function _cell(lbl, val, delta){
     return '<div class="hc-cell">'
@@ -7345,15 +7382,15 @@ function _renderHeroCard(ag){
 
   el.innerHTML = ''
     + '<div class="hc-title">🤖 AI チーム<br>累計実績</div>'
-    + _cell('📊 月間 PV', (ga.monthly_pv != null ? String(ga.monthly_pv) : '—'), ga.delta_pv_pct ? ('▲ ' + ga.delta_pv_pct + '%') : '')
+    + _cell('📊 月間 PV', pvVal, _delta(deltaPct))
     + '<div class="hc-divider"></div>'
-    + _cell('👥 月間ユーザー', (ga.monthly_users != null ? String(ga.monthly_users) : '—'), ga.delta_users_pct ? ('▲ ' + ga.delta_users_pct + '%') : '')
+    + _cell('👥 月間ユーザー', userVal, '')
     + '<div class="hc-divider"></div>'
     + _cell('📝 公開記事', articleCount + ' 本', '')
     + '<div class="hc-divider"></div>'
-    + _cell('📱 X フォロワー', (sns.x_followers != null ? '+' + sns.x_followers : '—'), sns.x_delta_week ? ('▲ 今週 +' + sns.x_delta_week) : '')
+    + _cell('📱 X', xConnected ? (x.followers != null ? _fmt(x.followers) : '0') : '未連携', '')
     + '<div class="hc-divider"></div>'
-    + _cell('🧵 Threads', (sns.threads_followers != null ? '+' + sns.threads_followers : '—'), sns.threads_delta_week ? ('▲ 今週 +' + sns.threads_delta_week) : '');
+    + _cell('🧵 Threads', threadsConnected ? (threads.followers != null ? _fmt(threads.followers) : '0') : '未連携', '');
 
   el.style.display = 'flex';
 }

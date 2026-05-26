@@ -6055,49 +6055,37 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   var ga4Data = ga4Snap && ga4Snap.snapshot;
   var hasGa4Data = !!(ga4Data && ga4Data.series && ga4Data.series.length > 0);
 
-  // ── HERO: 主 KPI (PV) を巨大表示 ──
+  // ── HERO: 主 KPI (PV) を mock 通りの teal solid 背景で表示 ──
   var heroHTML = '';
   if(hasKpi && kpi.pv){
-    // GA4 接続済 + データ取得済 → 実 PV 表示。それ以外は目標値 or プレースホルダ。
-    var _heroValTx;
-    var _heroFootTx;
-    var _heroSubBadge = '';
-    if(hasGa4Data){
-      var actualPv = ga4Data.total_30d.pv;
-      var goalPv = Number(kpi.pv);
-      var achievedPct = Math.round(actualPv / goalPv * 100);
-      var deltaPct = ga4Data.delta_pv_pct;
-      _heroValTx = actualPv.toLocaleString();
-      _heroFootTx = '直近 30 日の累計 PV。目標 <b>' + goalPv.toLocaleString() + ' PV/月</b> に対して <b>' + achievedPct + '%</b> 達成中。';
-      if(deltaPct !== null && deltaPct !== undefined){
-        var deltaCls = deltaPct > 0 ? 'sd-trend-up' : deltaPct < 0 ? 'sd-trend-down' : '';
-        var deltaSign = deltaPct > 0 ? '+' : '';
-        _heroSubBadge = '<div class="sd-hero-delta"><span class="' + deltaCls + '">' + deltaSign + deltaPct + '%</span> vs 先週 (直近 7 日)</div>';
-      }
-    } else if(ga4Connected){
-      _heroValTx = '<span style="opacity:.5">読込中…</span>';
-      _heroFootTx = 'GA4 接続済 — データを取得中。少し待ってください。';
-    } else {
-      _heroValTx = Number(kpi.pv).toLocaleString();
-      _heroFootTx = '<b>GA4 を接続</b>すると、ここに実数値・先月比・月末予測がリアルタイムで表示されます。';
-    }
-    var _heroGa4Btn = ga4Connected
-      ? ''
-      : '<button class="sd-hero-cta sd-hero-cta-primary" onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')">📊 GA4 を接続 →</button>';
+    var goalPv = Number(kpi.pv);
+    var actualPv = hasGa4Data ? (ga4Data.total_30d.pv || 0) : null;
+    var achievedPct = (actualPv != null && goalPv > 0) ? Math.round(actualPv / goalPv * 100) : null;
+    var deltaPct = hasGa4Data ? ga4Data.delta_pv_pct : null;
+    var valDisplay = (actualPv != null)
+      ? actualPv.toLocaleString()
+      : (ga4Connected ? '読込中…' : goalPv.toLocaleString());
+    var pctText = (achievedPct != null) ? (achievedPct + '%') : '—';
+    var barWidth = (achievedPct != null) ? Math.min(100, achievedPct) : 0;
+    var deltaText = (deltaPct != null && !isNaN(deltaPct))
+      ? ((deltaPct > 0 ? '▲ +' : deltaPct < 0 ? '▼ ' : '') + deltaPct + '% vs 先週')
+      : (ga4Connected ? '' : 'GA4 を接続すると実数値が出ます');
     heroHTML = ''
-      + '<div class="sd-hero-kpi">'
-      +   '<div class="sd-hero-tag"><span class="sd-rp-dot"></span>今月のメイン KPI ・ 月間 PV</div>'
-      +   '<div class="sd-hero-row">'
-      +     '<div class="sd-hero-main">'
-      +       '<div class="sd-hero-lbl">' + (hasGa4Data ? '直近 30 日の累計 PV (実測)' : ga4Connected ? '今月の累計 PV' : '目標 PV') + '</div>'
-      +       '<div class="sd-hero-val">' + _heroValTx + '<span class="sd-hero-unit">PV</span></div>'
-      +       _heroSubBadge
-      +       '<div class="sd-hero-foot">' + _heroFootTx + '</div>'
+      + '<div style="background:linear-gradient(135deg, #0d4f4a, #0a3d39);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:14px;position:relative">'
+      +   '<div style="font-size:11px;opacity:.75;font-weight:700;letter-spacing:.04em;margin-bottom:4px">📍 今月の KPI 達成度 (月間 PV)</div>'
+      +   '<div style="font-size:28px;font-weight:800;line-height:1.1;margin-bottom:6px">'
+      +     esc(valDisplay) + ' <span style="font-size:14px;opacity:.7;font-weight:600"> / ' + goalPv.toLocaleString() + ' PV 目標</span>'
+      +   '</div>'
+      +   '<div style="display:flex;align-items:center;gap:10px;margin-top:12px">'
+      +     '<div style="flex:1;height:8px;background:rgba(255,255,255,.18);border-radius:999px;overflow:hidden">'
+      +       '<div style="height:100%;background:#c0ff5c;border-radius:999px;width:' + barWidth + '%"></div>'
       +     '</div>'
-      +     '<div class="sd-hero-side">'
-      +       '<button class="sd-hero-cta" onclick="openKpiModal(\'' + esc(site.id) + '\')">🎯 KPI を編集</button>'
-      +       _heroGa4Btn
-      +     '</div>'
+      +     '<div style="font-size:16px;font-weight:800;color:#c0ff5c">' + pctText + '</div>'
+      +   '</div>'
+      +   '<div style="font-size:11px;opacity:.85;margin-top:6px">' + esc(deltaText) + '</div>'
+      +   '<div style="position:absolute;top:18px;right:22px;display:flex;gap:6px">'
+      +     '<button onclick="openKpiModal(\'' + esc(site.id) + '\')" style="background:rgba(255,255,255,.15);color:#fff;border:0;padding:5px 11px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🎯 KPI 編集</button>'
+      +     (ga4Connected ? '' : '<button onclick="openIntegrationsTab && openIntegrationsTab(\'ga4\')" style="background:#c0ff5c;color:#0a3d39;border:0;padding:5px 11px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">📊 GA4 接続 →</button>')
       +   '</div>'
       + '</div>';
   } else {

@@ -1057,27 +1057,37 @@
           <div class="conn-summary">
             <span class="check">!</span>
             <div>
-              <strong>持ってないアカウントは作るところからガイドします。</strong>
-              <span style="color:var(--muted); display:block; margin-top:2px;">3〜5 分で 3 つとも準備できます。</span>
+              <strong>最低 GA4 接続で AI 運用開始できます。</strong>
+              <span style="color:var(--muted); display:block; margin-top:2px;">X / Threads / WordPress は後から追加 OK。持ってないアカウントは作るところからガイド。</span>
             </div>
           </div>
 
           <div class="conn-grid">
-            <!-- X (Required) -->
+            <!-- GA4 (REQUIRED, top priority) -->
+            <div class="conn-card connected">
+              <div class="ic">📊</div>
+              <div class="meta">
+                <div class="nm">Google Analytics 4 <span class="req">必須</span></div>
+                <div class="desc"><strong>流入数・ユーザー数の計測基盤。これがないと AI は動けません</strong></div>
+              </div>
+              <div class="status">✓ 接続済</div>
+            </div>
+
+            <!-- X (Recommended) -->
             <div class="conn-card connected">
               <div class="ic">📱</div>
               <div class="meta">
-                <div class="nm">X (Twitter) <span class="req">必須</span></div>
+                <div class="nm">X (Twitter) <span class="opt">推奨</span></div>
                 <div class="desc">AI が毎日 3-5 投稿 + リプライを自動運用</div>
               </div>
               <div class="status">✓ 接続済</div>
             </div>
 
-            <!-- Threads (Required, not connected) -->
+            <!-- Threads (Recommended, not connected) -->
             <div class="conn-card">
               <div class="ic">🧵</div>
               <div class="meta">
-                <div class="nm">Threads (Meta) <span class="req">必須</span></div>
+                <div class="nm">Threads (Meta) <span class="opt">推奨</span></div>
                 <div class="desc">X 投稿を Threads 向けに自動変換して投稿</div>
               </div>
               <div class="actions">
@@ -1086,11 +1096,11 @@
               </div>
             </div>
 
-            <!-- WordPress (Required, not connected) -->
+            <!-- WordPress (Recommended, not connected) -->
             <div class="conn-card">
               <div class="ic">📝</div>
               <div class="meta">
-                <div class="nm">WordPress <span class="req">必須</span></div>
+                <div class="nm">WordPress <span class="opt">推奨</span></div>
                 <div class="desc">AI が記事下書きを WP に自動保存、ワンクリックで公開</div>
               </div>
               <div class="actions">
@@ -1098,23 +1108,13 @@
                 <button class="btn primary">接続する</button>
               </div>
             </div>
-
-            <!-- GA4 (Recommended) -->
-            <div class="conn-card connected">
-              <div class="ic">📊</div>
-              <div class="meta">
-                <div class="nm">Google Analytics 4 <span class="opt">推奨</span></div>
-                <div class="desc">流入数 / CTR / 検索順位を自動計測 (なくても運用可能)</div>
-              </div>
-              <div class="status">✓ 接続済</div>
-            </div>
           </div>
 
-          <div style="background:#fff8e1; border:1px solid #fde68a; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#92400e;">
-            <strong>⚠️ 接続完了まで AI は動けません。</strong> 残り 2 つ (Threads / WordPress) を準備してください。
+          <div style="background:#f7ffe9; border:1px solid #edfcc8; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#0a3d39;">
+            <strong>✅ GA4 が接続済みなので、すぐに運用開始できます。</strong> 残り Threads / WordPress は後から追加可能です。
           </div>
 
-          <button class="det-cta" onclick="goStep(4)" style="opacity: 0.5;">残り 2 つの接続が必要 (デモ用に進む)</button>
+          <button class="det-cta" onclick="goStep(4)">GA4 接続済み → 次へ進む</button>
         </div>
       </div>
     </main>
@@ -1525,7 +1525,47 @@
           <span class="sub">2026-05-25 (昨日)</span>
         </div>
         <div class="panel-body">
-          <!-- 即効指標 HERO -->
+          <!-- 📊 GA4 メイン指標 (source of truth) -->
+          <div style="background: linear-gradient(135deg, #ea4335, #c5221f); color: #fff; border-radius: 14px; padding: 18px; margin-bottom: 14px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; opacity:0.9; margin-bottom:10px;">
+              <span style="font-size: 16px;">📊</span>
+              <strong>Google Analytics 4 (昨日)</strong>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;">
+              <div>
+                <div style="font-size:10px; opacity:0.7;">セッション</div>
+                <div style="font-size:22px; font-weight:800;">156</div>
+                <div style="font-size:10px; opacity:0.85;">▲ +12% 前日比</div>
+              </div>
+              <div>
+                <div style="font-size:10px; opacity:0.7;">ユーザー</div>
+                <div style="font-size:22px; font-weight:800;">142</div>
+                <div style="font-size:10px; opacity:0.85;">▲ +18 / 新規 89</div>
+              </div>
+              <div>
+                <div style="font-size:10px; opacity:0.7;">PV</div>
+                <div style="font-size:22px; font-weight:800;">312</div>
+                <div style="font-size:10px; opacity:0.85;">/ 平均 2.0 PV</div>
+              </div>
+              <div>
+                <div style="font-size:10px; opacity:0.7;">直帰率</div>
+                <div style="font-size:22px; font-weight:800;">58%</div>
+                <div style="font-size:10px; opacity:0.85;">▼ -2pt</div>
+              </div>
+            </div>
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.18);">
+              <div style="font-size:10px; opacity:0.7; margin-bottom:6px;">流入チャネル別</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:11px;">
+                <span style="background:rgba(255,255,255,0.18); padding:3px 8px; border-radius:5px;">🔍 Organic 96 (62%)</span>
+                <span style="background:rgba(255,255,255,0.18); padding:3px 8px; border-radius:5px;">📱 Social 28 (18%)</span>
+                <span style="background:rgba(255,255,255,0.18); padding:3px 8px; border-radius:5px;">↗ Direct 22 (14%)</span>
+                <span style="background:rgba(255,255,255,0.18); padding:3px 8px; border-radius:5px;">🔗 Referral 10 (6%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3 チャネル別 即効指標 -->
+          <h4 style="font-size:12px; font-weight:800; margin-bottom:10px; color:var(--muted);">📍 3 チャネル別の動き</h4>
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:18px;">
             <div style="background: linear-gradient(135deg, #000, #1a1a1a); color: #fff; border-radius: 12px; padding: 14px;">
               <div style="font-size: 11px; opacity: 0.7;">📱 X</div>
@@ -1605,6 +1645,29 @@
             <div class="month">📅 2026 年 5 月</div>
             <h3>AI チームが動いた 30 日</h3>
             <div class="by">fukuyama-note.com / by @kota</div>
+
+            <!-- GA4 メインスタット (大きく、最初に) -->
+            <div style="background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;">
+              <div style="font-size: 10px; opacity: 0.7; margin-bottom: 4px;">📊 Google Analytics 4</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <div>
+                  <div style="font-size:9px; opacity:0.7;">月間セッション</div>
+                  <div style="font-size: 18px; font-weight: 800;">1,672</div>
+                  <div style="font-size: 10px; color: var(--lime);">▲ +35% (1,240 → 1,672)</div>
+                </div>
+                <div>
+                  <div style="font-size:9px; opacity:0.7;">月間ユーザー</div>
+                  <div style="font-size: 18px; font-weight: 800;">1,289</div>
+                  <div style="font-size: 10px; color: var(--lime);">▲ +28%</div>
+                </div>
+                <div>
+                  <div style="font-size:9px; opacity:0.7;">月間 PV</div>
+                  <div style="font-size: 18px; font-weight: 800;">3,420</div>
+                  <div style="font-size: 10px; color: var(--lime);">▲ +42%</div>
+                </div>
+              </div>
+            </div>
+
             <div class="stats">
               <div class="stat-cell">
                 <div class="lbl">📝 公開した記事</div>
@@ -1622,9 +1685,9 @@
                 <div class="delta">▲ 新規開始</div>
               </div>
               <div class="stat-cell">
-                <div class="lbl">📊 オーガニック流入</div>
-                <div class="val">+35%</div>
-                <div class="delta">1,240 → 1,672</div>
+                <div class="lbl">🔍 Organic 流入</div>
+                <div class="val">+42%</div>
+                <div class="delta">770 → 1,094 / 月</div>
               </div>
             </div>
             <div class="footer">⚡ AI が 87 時間相当の作業を実施 · myaiagents.agency</div>

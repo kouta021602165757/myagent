@@ -8307,8 +8307,9 @@ function _renderTabConnections(site){
       actionBtn = '<button class="cn-btn cn-btn-secondary" onclick="' + opts.onDisconnect + '">切断</button>';
     } else if(opts.status === 'off' && opts.onConnect){
       var guideBtn = opts.guideKey
-        ? '<button class="cn-btn cn-btn-secondary" onclick="_showAccountGuide(\'' + esc(opts.guideKey) + '\')" style="margin-right:6px">作り方</button>'
+        ? '<button class="cn-btn cn-btn-secondary" onclick="_showAccountGuide(\'' + esc(opts.guideKey) + '\')">作り方</button>'
         : '';
+      // 作り方 → 接続する の縦並び (.cn-card-r が flex column)
       actionBtn = guideBtn + '<button class="cn-btn cn-btn-primary" onclick="' + opts.onConnect + '">接続する →</button>';
     } else if(opts.status === 'soon'){
       actionBtn = '<button class="cn-btn cn-btn-soon" disabled>近日</button>';

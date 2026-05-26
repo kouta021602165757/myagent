@@ -373,15 +373,23 @@
     font-size: 14px;
   }
 
+  /* CHAT WRAPPER (relative container for panel-overlay) */
+  .chat-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   /* PANEL OVERLAY */
   .panel-overlay {
     position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 72%;
+    top: 0; right: 0; bottom: 0; left: 0;
     background: #fff;
-    border-left: 1px solid var(--line);
     overflow-y: auto;
-    box-shadow: -8px 0 32px rgba(0,0,0,0.06);
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
     z-index: 10;
     display: none;
   }
@@ -1216,6 +1224,7 @@
         </div>
       </div>
 
+      <div class="chat-wrap">
       <!-- CHAT HEADER -->
       <div class="chat-header">
         <div class="ch-left">
@@ -1363,6 +1372,7 @@
           </div>
         </div>
       </div>
+      </div><!-- /.chat-wrap -->
     </main>
   </div>
 
@@ -1391,6 +1401,7 @@
         <div class="hc-cell"><div class="lbl">🧵 Threads フォロワー</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
         <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button></div>
       </div>
+      <div class="chat-wrap">
       <div class="chat-header">
         <div class="ch-left">
           <div class="ch-icn">📰</div>
@@ -1464,6 +1475,7 @@
           </div>
         </div>
       </div>
+      </div><!-- /.chat-wrap -->
     </main>
   </div>
 
@@ -1492,6 +1504,7 @@
         <div class="hc-cell"><div class="lbl">🧵 Threads フォロワー</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
         <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button></div>
       </div>
+      <div class="chat-wrap">
       <div class="chat-header">
         <div class="ch-left">
           <div class="ch-icn">📰</div>
@@ -1563,6 +1576,7 @@
           <button class="det-cta" style="margin-top:14px;">明日のアクション 3 件をタスク化 + AI に下書き作成依頼</button>
         </div>
       </div>
+      </div><!-- /.chat-wrap -->
     </main>
   </div>
 

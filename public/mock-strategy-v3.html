@@ -353,6 +353,71 @@
     font-size: 12px; font-weight: 700;
     box-shadow: 0 4px 12px rgba(13, 79, 74, 0.2);
   }
+  /* Thread reply indicator (Slack-style) */
+  .msg .thread-link {
+    margin-top: 6px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 8px;
+    font-size: 11px; color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .msg .thread-link:hover { background: var(--lime-soft); }
+  .msg .thread-link .link {
+    color: var(--teal); font-weight: 700;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .msg .thread-link .av-mini {
+    width: 16px; height: 16px; border-radius: 4px;
+    background: var(--lime-soft); color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* AI Suggestion card (above composer) */
+  .ai-sugg {
+    margin: 0 18px 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .ai-sugg .av {
+    width: 36px; height: 36px;
+    background: var(--lime-soft);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .ai-sugg .text { flex: 1; }
+  .ai-sugg .lbl { font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+  .ai-sugg .title { font-weight: 800; font-size: 12px; }
+  .ai-sugg .sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .ai-sugg .go {
+    width: 28px; height: 28px;
+    background: var(--teal); color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Composer foot helpers */
+  .composer-foot {
+    margin-top: 5px;
+    display: flex; gap: 10px;
+    font-size: 10px; color: var(--muted);
+    padding: 0 4px;
+    flex-wrap: wrap;
+  }
+  .composer-foot .kbd {
+    background: #f3f4f6; border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 9px; font-weight: 700;
+    margin: 0 2px;
+  }
 
   /* COMPOSER */
   .composer-wrap { padding: 10px 18px 14px; background: var(--bg); border-top: 1px solid var(--line-soft); }
@@ -1259,30 +1324,86 @@
         <span class="ts-more">他 5 件 →</span>
       </div>
 
-      <!-- MESSAGES -->
+      <!-- MESSAGES (production chat style with thread replies) -->
       <div class="msgs">
         <div class="msg bot">
           <div class="av">📰</div>
           <div class="body">
             <div class="head"><span class="nm">fukuyama-note.com</span><span class="tm">朝 8:00</span></div>
-            <div class="txt">🌅 おはようございます！昨日の動きをまとめました <br>
+            <div class="txt">🌅 おはようございます！昨日の動きをまとめました<br>
               📱 X 投稿 3 本 → +12 フォロワー / 1,200 imp<br>
               🧵 Threads 2 本 → +5 フォロワー / 450 imp<br>
               📝 「初心者向け福山観光ガイド」記事公開 → 流入 +52
             </div>
+            <div class="thread-link" onclick="alert('スレッドを開く動作はモック')">
+              <span class="av-mini">📰</span>
+              <span class="link">📓 2 件の返信</span>
+              <span>· 最終返信 朝 8:01</span>
+            </div>
           </div>
         </div>
+
+        <div class="msg">
+          <div class="av">K</div>
+          <div class="body">
+            <div class="head"><span class="nm">あなた</span><span class="tm">9:15</span></div>
+            <div class="txt">【タスク実行】「鞆の浦 観光 子連れ」記事を今すぐ進めて</div>
+            <div class="thread-link" onclick="alert('スレッドを開く動作はモック')">
+              <span class="av-mini">📰</span>
+              <span class="link">📓 3 件の返信</span>
+              <span>· 最終返信 9:18</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="av">K</div>
+          <div class="body">
+            <div class="head"><span class="nm">あなた</span><span class="tm">10:30</span></div>
+            <div class="txt">X の今週のテーマは、福山の隠れた食堂特集にしよう</div>
+            <div class="thread-link" onclick="alert('スレッドを開く動作はモック')">
+              <span class="av-mini">📰</span>
+              <span class="link">📓 1 件の返信</span>
+              <span>· 最終返信 10:31</span>
+            </div>
+          </div>
+        </div>
+
         <div class="msg bot">
           <div class="av">📰</div>
           <div class="body">
-            <div class="head"><span class="nm">fukuyama-note.com</span><span class="tm">朝 8:01</span></div>
-            <div class="txt">📋 今日のタスク 5 件と AI が完成させた成果物 3 件があります。確認してください。</div>
+            <div class="head"><span class="nm">fukuyama-note.com</span><span class="tm">11:42</span></div>
+            <div class="txt">✅ 鈴木が記事下書きを完成させました<br>📝 「鞆の浦観光 子連れ完全ガイド」3,200 字 / 内部リンク 6 / 画像 4 → WP 下書き保存済</div>
+            <div class="thread-link" onclick="alert('スレッドを開く動作はモック')">
+              <span class="av-mini">✍️</span>
+              <span class="link">📓 1 件の返信 (鈴木より)</span>
+              <span>· 最終返信 11:43</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="av">K</div>
+          <div class="body">
+            <div class="head"><span class="nm">あなた</span><span class="tm">12:05</span></div>
+            <div class="txt">いい感じ！プレビューで内容確認したら公開して</div>
           </div>
         </div>
       </div>
 
-      <!-- TASKS PANEL OPEN -->
-      <div class="panel-overlay open">
+      <!-- AI Suggestion -->
+      <div class="ai-sugg">
+        <div class="av">📰</div>
+        <div class="text">
+          <div class="lbl">💡 AI からの提案</div>
+          <div class="title">📋 タスク一覧を開いて成果物 3 件を確認</div>
+          <div class="sub">記事下書き + X 投稿 3 本 + Threads 2 本が承認待ち</div>
+        </div>
+        <button class="go">→</button>
+      </div>
+
+      <!-- TASKS PANEL (closed by default, accessed via 📋 toolbar) -->
+      <div class="panel-overlay" style="display:none;">
         <div class="panel-head">
           <span class="ic">📋</span>
           <span class="ttl">タスク / 実行</span>
@@ -1362,13 +1483,28 @@
         </div>
       </div>
       </div><!-- /.chat-wrap -->
-      <!-- COMPOSER (always visible at bottom) -->
+      <!-- COMPOSER (full production-style) -->
       <div class="composer-wrap">
         <div class="composer">
-          <div class="composer-input">何をお願いしますか？</div>
+          <div class="composer-input">何をお願いしますか？（Shift+Enter で改行）</div>
           <div class="composer-tools">
-            <span class="chip">📎</span><span class="chip">🌐 Chrome</span>
+            <span class="chip">📎</span>
+            <span class="chip">🔗</span>
+            <span class="chip">🎤</span>
+            <span class="chip">&lt;/&gt;</span>
+            <span class="chip">📁</span>
+            <span class="chip">🌐 Chrome</span>
+            <span class="chip">🦊 Huddle</span>
+            <span class="chip">🙂</span>
             <button class="send">→</button>
+          </div>
+          <div class="composer-foot">
+            <span><span class="kbd">↵</span> 送信</span>
+            <span><span class="kbd">Shift</span>+<span class="kbd">↵</span> 改行</span>
+            <span><span class="kbd">/search</span> Web 検索</span>
+            <span><span class="kbd">/image</span> 画像生成</span>
+            <span><span class="kbd">/remember</span> 記憶</span>
+            <span><span class="kbd">⌘</span>+<span class="kbd">K</span> 新規会話</span>
           </div>
         </div>
       </div>

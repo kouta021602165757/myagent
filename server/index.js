@@ -20250,6 +20250,159 @@ async function handleAPI(req,res,pathname,method,ip){
   //   kpi_6mo: [{ month, label, pv, sessions, leads, cvr, milestone }],
   // }
   //
+  // POST /api/agents/:id/artifact/generate-draft — AI が WP 記事下書きを生成
+  //  Body: { topic: string, word_count?: number (default 3000) }
+  //  Result: { ok: true, note_id, title, content }
+  //  Saves to user.notes[] as type='article_draft' for later WP publish.
+  const draftGenMatch = pathname.match(/^\/api\/agents\/([^/]+)\/artifact\/generate-draft$/);
+  if(draftGenMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === draftGenMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req).catch(() => ({}));
+    const topic = String((body && (body.topic || body.title)) || '').trim();
+    if(!topic) return jres(res, 400, { error: 'topic required' });
+    const targetWords = Math.min(5000, Math.max(800, Number((body && body.word_count) || 3000)));
+
+    // サイトコンテキスト (= AI に既存サイトの文体・専門性を参照させる)
+    let siteContext = '';
+    try {
+      const preview = await _fetchSitePreview(ag);
+      if(preview && preview.content){
+        siteContext = '\n【既存サイトの内容 (= トーン・専門性参考)】\n' + String(preview.content).slice(0, 2000);
+      }
+    } catch(e){ /* ignore */ }
+
+    const prompt = `あなたはこのサイトのプロのコンテンツライターです。以下のテーマで記事の下書きを Markdown 形式で書いてください。
+
+【サイト】${ag.site_url || ag.name} (${ag.site_vertical || 'general'})
+【記事テーマ】${topic}
+【目標字数】${targetWords} 字 (±10% 許容)${siteContext}
+
+【書き方ルール】
+- 冒頭に H1 タイトル (検索意図キーワードを含む)
+- H2 / H3 で適切に章立て (3-6 個の H2)
+- 結論を冒頭でわかりやすく
+- 具体例・データ・体験談を盛り込む
+- 同義語・関連語を散りばめて SEO に強い構成に
+- 読者が「次に何をすべきか」を最後の段落で明示
+
+完成度の高い、そのまま WordPress に貼れる下書きを Markdown で出力してください。`;
+
+    let reply = '';
+    try {
+      reply = await callAI([{role:'user', content: prompt}], '', 'sonnet', ag);
+    } catch(e){
+      console.error('[draft-gen] AI failed:', e.message);
+      return jres(res, 500, { error: 'AI generation failed: ' + (e.message || String(e)) });
+    }
+    if(!reply || reply.length < 400){
+      return jres(res, 500, { error: 'AI returned empty or too short' });
+    }
+
+    // 記事タイトルを reply の H1 から抽出 (なければ topic を使う)
+    let articleTitle = topic;
+    const h1Match = reply.match(/^#\s+(.+)$/m);
+    if(h1Match) articleTitle = h1Match[1].trim().slice(0, 200);
+
+    user.notes = Array.isArray(user.notes) ? user.notes : [];
+    if(user.notes.length >= 1000) return jres(res, 400, { error: 'note limit reached' });
+    const now = new Date().toISOString();
+    const noteId = 'note_' + crypto.randomBytes(5).toString('hex');
+    const note = {
+      id: noteId,
+      agent_id: ag.id,
+      title: articleTitle,
+      content: reply.slice(0, 100000),
+      type: 'article_draft',
+      auto_generated: true,
+      created_at: now,
+      updated_at: now,
+    };
+    user.notes.push(note);
+
+    try { await DB.save(user); } catch(e){
+      console.warn('[draft-gen] save failed:', e.message);
+      return jres(res, 500, { error: 'persistence failed' });
+    }
+
+    console.log('[draft-gen] ok user=' + user.id + ' agent=' + ag.id + ' topic=' + topic.slice(0, 60) + ' length=' + reply.length);
+    return jres(res, 200, { ok: true, note_id: noteId, title: articleTitle, content: reply });
+  }
+
+  // POST /api/agents/:id/artifact/publish-note — note を WP に公開
+  //  Body: { note_id: string, status?: 'publish'|'draft' (default 'draft') }
+  //  Calls executeWordPressPublishTool with the note's content (markdown → HTML).
+  //  Updates note.artifact_url + note.has_artifact on success.
+  const publishNoteMatch = pathname.match(/^\/api\/agents\/([^/]+)\/artifact\/publish-note$/);
+  if(publishNoteMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === publishNoteMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req).catch(() => ({}));
+    const noteId = String((body && body.note_id) || '').trim();
+    if(!noteId) return jres(res, 400, { error: 'note_id required' });
+    const status = ['publish','draft','private'].indexOf(String((body && body.status) || 'draft')) >= 0
+      ? String((body && body.status) || 'draft') : 'draft';
+
+    user.notes = Array.isArray(user.notes) ? user.notes : [];
+    const note = user.notes.find(n => n && n.id === noteId);
+    if(!note) return jres(res, 404, { error: 'note not found' });
+
+    // Markdown → HTML (基本変換)
+    const mdToHtml = (md) => {
+      let html = String(md || '');
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+      // Lists
+      html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/((?:<li>.*?<\/li>\n?)+)/gs, '<ul>$1</ul>');
+      // Paragraphs
+      const blocks = html.split(/\n{2,}/);
+      return blocks.map(b => {
+        b = b.trim();
+        if(!b) return '';
+        if(/^<(h[1-6]|ul|ol|li|p|blockquote|pre|hr|table|img)/i.test(b)) return b;
+        return '<p>' + b.replace(/\n/g, '<br>') + '</p>';
+      }).filter(Boolean).join('\n\n');
+    };
+
+    // タイトルから先頭の # を除去 (= article body 内に重複させない)
+    let articleTitle = String(note.title || 'Untitled').trim();
+    let bodyContent = String(note.content || '');
+    bodyContent = bodyContent.replace(/^#\s+.+\n/, '');
+    const htmlContent = mdToHtml(bodyContent);
+
+    const result = await executeWordPressPublishTool(user, ag, {
+      title: articleTitle,
+      html_content: htmlContent,
+      status,
+    });
+
+    if(result.error){
+      console.error('[publish-note] WP failed:', result.error);
+      return jres(res, 500, { error: result.error, detail: result.detail });
+    }
+
+    // Note を更新
+    note.artifact_url = result.post_url || result.url || null;
+    note.has_artifact = true;
+    note.type = 'article'; // draft → article に昇格
+    note.published_at = new Date().toISOString();
+    note.updated_at = note.published_at;
+    note.wp_site = result.site_name;
+    note.wp_post_id = result.post_id;
+
+    try { await DB.save(user); } catch(e){
+      console.warn('[publish-note] save failed:', e.message);
+    }
+
+    console.log('[publish-note] ok user=' + user.id + ' agent=' + ag.id + ' note=' + noteId + ' post=' + result.post_url);
+    return jres(res, 200, { ok: true, note_id: noteId, post_url: result.post_url, site_name: result.site_name });
+  }
+
   // POST /api/agents/:id/strategy/generate — Sonnet で全部一気に生成
   const strategyGenMatch = pathname.match(/^\/api\/agents\/([^/]+)\/strategy\/generate$/);
   if(strategyGenMatch && method === 'POST'){

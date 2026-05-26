@@ -7510,6 +7510,10 @@ function _renderArtifactsTab(site){
     + '<div style="font-size:12px; color:#0a3d39; margin-bottom:14px; background:#f7ffe9; padding:10px 14px; border-radius:10px;">'
     +   '💡 AI が作った記事下書き・SNS 投稿・分析メモなどがここに並びます。中身を確認して「公開する」を押すだけ。'
     + '</div>'
+    + '<button onclick="_generateArticleDraft(\'' + esc(site.id) + '\')" '
+    +   'style="display:block;width:100%;background:linear-gradient(135deg, #0d4f4a, #0a3d39);color:#fff;border:none;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:800;margin-bottom:14px;cursor:pointer;box-shadow:0 4px 14px rgba(13, 79, 74, 0.18);">'
+    +   '🤖 AI に新しい記事を書かせる'
+    + '</button>'
     + '<div id="tk-deliv-list" data-site-id="' + esc(site.id) + '">'
     +   '<div style="text-align:center; padding:40px 20px; color:#9ca3af;">'
     +     '<div class="loading-dots">読み込み中...</div>'
@@ -7657,9 +7661,57 @@ function _openArtifactDetail(noteId){
   showToast('詳細表示に失敗', 'ng');
 }
 
-// 公開ボタン (Phase C-2 で WordPress 連携実装)
+// 公開ボタン → WordPress に公開
 async function _publishArtifact(noteId){
-  showToast('公開機能は Phase C で実装予定 — 今は「中身を見る」で確認できます', 'ng');
+  if(!confirm('この記事を WordPress に公開しますか？ (status: draft / 後で WP 管理画面から手動で公開)')) return;
+  var listEl = document.getElementById('tk-deliv-list');
+  var siteId = listEl && listEl.dataset.siteId;
+  if(!siteId){
+    siteId = (typeof activeId !== 'undefined') ? activeId : null;
+  }
+  if(!siteId){
+    showToast('サイトが特定できません', 'ng');
+    return;
+  }
+  showToast('🤖 WordPress に公開中...', 'ok', 8000);
+  try {
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/artifact/publish-note',
+      { note_id: noteId, status: 'draft' });
+    if(r && r.ok){
+      showToast('✅ WordPress に下書き保存しました', 'ok', 6000);
+      // 成果物タブを再読み込み
+      try { _loadSiteArtifacts(siteId); } catch(_){}
+    } else {
+      showToast((r && (r.detail || r.error)) || '公開に失敗しました', 'ng', 8000);
+    }
+  } catch(e){
+    showToast('エラー: ' + (e.message || 'unknown'), 'ng', 8000);
+  }
+}
+
+// AI に記事下書きを書かせる
+async function _generateArticleDraft(siteId){
+  var topic = prompt('記事のテーマを入力してください (例: 初心者向け鞆の浦観光ガイド):');
+  if(!topic || !topic.trim()) return;
+  topic = topic.trim();
+  showToast('🤖 AI が記事を執筆中 (約 30-60 秒)...', 'ok', 60000);
+  try {
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/artifact/generate-draft',
+      { topic: topic, word_count: 3000 });
+    if(r && r.ok){
+      showToast('✅ 記事下書き完成: ' + (r.title || topic).slice(0, 50), 'ok', 8000);
+      // 成果物タブに切替して表示
+      try {
+        var deTab = document.querySelector('.tk-tab:nth-child(2)');
+        if(deTab) deTab.click();
+        _loadSiteArtifacts(siteId);
+      } catch(_){}
+    } else {
+      showToast((r && (r.error || 'AI 生成失敗')), 'ng', 8000);
+    }
+  } catch(e){
+    showToast('エラー: ' + (e.message || 'unknown'), 'ng', 8000);
+  }
 }
 
 // ─── Roadmap actions (frontend) ───────────────────────────────────

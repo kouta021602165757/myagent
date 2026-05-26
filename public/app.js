@@ -2878,9 +2878,71 @@ window.openDailyGrowthReportPanel = async function(siteId){
       ? '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
         + 'style="background:transparent;border:1px solid var(--wire2);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button></div>'
       : '';
-    bodyEl.innerHTML = noteEditBtnTop + section1HTML + sectionsHTML + pastListHTML;
+    var threeChAndAiHTML = _dgrRender3ChannelAndAiLog(ag, snap, notesResp);
+    bodyEl.innerHTML = noteEditBtnTop + section1HTML + threeChAndAiHTML + sectionsHTML + pastListHTML;
   }
 };
+
+// ── 3 チャネル別の動き + AI 実行履歴 (= 即効指標 layer) ──
+function _dgrRender3ChannelAndAiLog(ag, snap, notesResp){
+  // 3 channels (X / Threads / Media)
+  var sources = (snap && Array.isArray(snap.sources)) ? snap.sources : [];
+  function _findSource(re){
+    var found = sources.find(function(s){ return s && re.test(String(s.channel || '')); });
+    return found ? (found.sessions || 0) : null;
+  }
+  var organicSess = _findSource(/Organic/i);
+  var socialSess = _findSource(/Social/i);
+  var directSess = _findSource(/Direct/i);
+  var referralSess = _findSource(/Referral/i);
+
+  function _ch(border, ic, name, val, label){
+    return '<div style="background:linear-gradient(135deg, ' + border + ', ' + border + ');color:#fff;border-radius:12px;padding:14px;flex:1;min-width:0">'
+      + '<div style="font-size:11px;opacity:0.7;margin-bottom:4px">' + ic + ' ' + esc(name) + '</div>'
+      + '<div style="font-size:20px;font-weight:800">' + (val != null ? esc(String(val)) : '—') + '</div>'
+      + '<div style="font-size:11px;opacity:0.85;color:#c0ff5c;margin-top:2px">' + esc(label || '') + '</div>'
+      + '</div>';
+  }
+
+  var channelHTML = ''
+    + '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:12px;padding:18px;margin-bottom:14px">'
+    +   '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px">📍 3 チャネル別の動き (7 日)</div>'
+    +   '<div style="display:flex;gap:10px;flex-wrap:wrap">'
+    +     _ch('#000', '📱', 'Social (X/Threads 等)', socialSess, 'セッション')
+    +     _ch('#0d4f4a', '🔍', 'Organic (メディア)', organicSess, 'セッション')
+    +     _ch('#525252', '↗', 'Direct', directSess, 'セッション')
+    +   '</div>'
+    + '</div>';
+
+  // AI 実行履歴 (= 直近 24h 内に生成された notes、 type=article_draft / article / sns_post)
+  var notes = (notesResp && Array.isArray(notesResp.notes)) ? notesResp.notes : [];
+  var since = Date.now() - 24 * 3600 * 1000;
+  var recentAi = notes.filter(function(n){
+    if(!n || n.agent_id !== ag.id) return false;
+    if(!n.auto_generated) return false;
+    var ts = Date.parse(n.updated_at || n.created_at || 0) || 0;
+    if(ts < since) return false;
+    return ['article','article_draft','sns_post','analysis'].indexOf(n.type) >= 0;
+  }).slice(0, 5);
+
+  var aiLogHTML = '';
+  if(recentAi.length > 0){
+    aiLogHTML = '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:12px;padding:18px;margin-bottom:14px">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px">⚡ AI が実行したこと (直近 24 時間)</div>'
+      + recentAi.map(function(n){
+          var icon = n.type === 'sns_post' ? '📱' : (n.type === 'analysis' ? '📊' : '📝');
+          var statusLabel = n.has_artifact ? '✓ 公開済み' : (n.nightly_generated ? '🌙 深夜生成' : '下書き保存');
+          return '<div style="background:#fff;border:1px solid var(--wire2);border-left:3px solid #c0ff5c;border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;font-size:12px">'
+            + '<div style="font-size:14px">' + icon + '</div>'
+            + '<div style="flex:1;font-weight:700">' + esc((n.title || '').slice(0, 60)) + '</div>'
+            + '<div style="background:#f7ffe9;color:#0a3d39;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;flex-shrink:0">' + esc(statusLabel) + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  return channelHTML + aiLogHTML;
+}
 
 // ── Section 1 (数字のサマリー) を GA4 snapshot から native 描画 ──
 function _dgrRenderNumbersSection(ag, snap, ga4Connected){
@@ -6507,6 +6569,50 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
 // 未生成なら大型「戦略を生成する」 CTA。
 // 既存の戦略 artifact があれば下部に表示。
 // ═══════════════════════════════════════════════════════════════════
+// 3 チャネル別 (X / Threads / WordPress) の今週 ステータス & AI 動作カード
+function _render3ChannelSection(site){
+  var rm = site.roadmap || null;
+  var weekTasks = [];
+  if(rm && Array.isArray(rm.weeks)){
+    var generatedMs = Date.parse(rm.generated_at || 0) || Date.now();
+    var weeksElapsed = Math.floor((Date.now() - generatedMs) / (7 * 86400000));
+    var curWeek = Math.min(rm.weeks.length, Math.max(1, weeksElapsed + 1));
+    var curW = rm.weeks[curWeek - 1];
+    if(curW && Array.isArray(curW.tasks)) weekTasks = curW.tasks;
+  }
+  function _channelTasks(re){
+    return weekTasks.filter(function(t){ return t && re.test(t.text || ''); });
+  }
+  var xTasks = _channelTasks(/X |X投稿|Twitter|x[\s_]?post/i);
+  var threadsTasks = _channelTasks(/Threads|スレッズ/i);
+  var mediaTasks = _channelTasks(/記事|ブログ|執筆|rewrite|タイトル|内部リンク|H2|H3|コンテンツ/i);
+
+  function _doneStat(arr){
+    var done = arr.filter(function(t){ return t.done; }).length;
+    return done + ' / ' + arr.length;
+  }
+  function _card(border, ic, name, tasks, aiNote){
+    var doneRatio = tasks.length > 0 ? Math.round(tasks.filter(function(t){return t.done}).length / tasks.length * 100) : 0;
+    return '<div style="background:#fff;border:1px solid var(--wire);border-top:4px solid ' + border + ';border-radius:12px;padding:14px">'
+      + '<div style="font-size:13px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:6px">' + ic + ' ' + esc(name) + '</div>'
+      + '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--wire);font-size:11px"><span style="color:var(--text3)">今週タスク</span><span style="font-weight:700">' + tasks.length + ' 件</span></div>'
+      + '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--wire);font-size:11px"><span style="color:var(--text3)">進捗</span><span style="font-weight:700">' + _doneStat(tasks) + ' (' + doneRatio + '%)</span></div>'
+      + '<div style="background:#f7ffe9;padding:6px 8px;border-radius:6px;margin-top:8px;font-size:10px;color:#0a3d39;font-weight:600">' + esc(aiNote) + '</div>'
+      + '</div>';
+  }
+
+  return ''
+    + '<div style="margin:0 0 20px;padding:14px;background:linear-gradient(135deg, #f7ffe9, #fff);border:1px solid var(--wire);border-radius:12px">'
+    +   '<div style="font-size:13px;font-weight:800;color:#0a3d39;margin-bottom:6px">📍 3 チャネル別の今週目標 + AI タスク</div>'
+    +   '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">X / Threads / メディア の 3 チャネルで AI が毎日動きます</div>'
+    +   '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px">'
+    +     _card('#000', '📱', 'X (Twitter)', xTasks, '🤖 AI が毎日: 3 投稿 + リプ + トレンド監視')
+    +     _card('#1a1a1a', '🧵', 'Threads', threadsTasks, '🤖 AI が毎日: X 投稿を Threads 向け変換 + 投稿')
+    +     _card('#0d4f4a', '📰', 'メディア (WordPress)', mediaTasks, '🤖 AI が深夜: 記事下書き / 内部リンク差分 / タイトル提案')
+    +   '</div>'
+    + '</div>';
+}
+
 function _renderTabStrategy(site, allArts){
   var v = site.site_vertical || 'other';
   var label = _verticalLabel(v);
@@ -6662,7 +6768,7 @@ function _renderTabStrategy(site, allArts){
       + '</div>';
   }
 
-  return headerHTML + kpiSheetHTML + personaHTML + competitorHTML + artHTML;
+  return headerHTML + _render3ChannelSection(site) + kpiSheetHTML + personaHTML + competitorHTML + artHTML;
 }
 
 // ─── Strategy 生成 action ─────────────────────────────────────

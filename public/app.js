@@ -9770,9 +9770,9 @@ async function openAgent(id){
   // Site type pill (site agent のみ) — 3 パターン分類 (media / ec / lp-hp)
   if(_isSiteAgent(ag)){
     var stMap = {
-      media: { lbl: '📰 メディア型', bg: 'rgba(13,79,74,.12)', fg: '#0d4f4a' },
-      ec:    { lbl: '🛒 EC 型',     bg: 'rgba(236,72,153,.12)', fg: '#db2777' },
-      'lp-hp': { lbl: '💼 LP/HP 型', bg: 'rgba(99,102,241,.12)', fg: '#4f46e5' },
+      media: { lbl: '📰 メディア型', bg: '#0d4f4a', fg: '#fff' },
+      ec:    { lbl: '🛒 EC 型',     bg: '#db2777', fg: '#fff' },
+      'lp-hp': { lbl: '💼 LP/HP 型', bg: '#4f46e5', fg: '#fff' },
     };
     var st = ag.site_type
       || (ag.site_vertical === 'blog' ? 'media' : ag.site_vertical === 'ec' ? 'ec' : 'lp-hp');
@@ -9781,7 +9781,8 @@ async function openAgent(id){
       // .pill class has !important — use !important in inline style to override
       var stylePill = 'background:' + info.bg + ' !important;'
         + 'color:' + info.fg + ' !important;'
-        + 'border:1px solid ' + info.fg + '40 !important;';
+        + 'border:1px solid ' + info.bg + ' !important;'
+        + 'font-weight:700 !important;';
       topPills += '<span class="pill" style="' + stylePill + '">' + info.lbl + '</span>';
     }
   }

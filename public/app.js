@@ -8007,6 +8007,36 @@ async function _publishArtifact(noteId){
 }
 
 // AI に記事下書きを書かせる
+// メモから記事化 — メモ内容を topic として記事生成 endpoint に渡す
+async function _articalizeNote(siteId, noteId){
+  if(!siteId || !noteId) { showToast('siteId / noteId 不足', 'ng'); return; }
+  // 既存メモを fetch して タイトル + 内容 を取得
+  showToast('🤖 メモを読んで記事を執筆中 (約 60 秒)...', 'ok', 90000);
+  try {
+    var noteResp = await api('GET', '/api/me/notes/' + encodeURIComponent(noteId));
+    var note = noteResp && noteResp.note;
+    if(!note) { showToast('メモが見つかりません', 'ng'); return; }
+    // メモタイトル + 内容 から topic を構築 (最大 2000 字)
+    var topic = (note.title || '').trim()
+      + (note.title && note.content ? ' — ' : '')
+      + String(note.content || '').slice(0, 1800);
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/artifact/generate-draft',
+      { topic: topic, word_count: 3000 });
+    if(r && r.ok){
+      showToast('✅ 記事下書き完成: ' + (r.title || '').slice(0, 50) + ' / 📋 タスクの成果物タブで確認', 'ok', 10000);
+      // 既存メモ panel は閉じる、 タスクパネル開く
+      var ov = document.getElementById('notesOverlay');
+      if(ov) ov.remove();
+      try { openTasksPanel(siteId); } catch(_){}
+    } else {
+      showToast((r && (r.error || '記事化失敗')), 'ng', 8000);
+    }
+  } catch(e){
+    showToast('エラー: ' + (e.message || 'unknown'), 'ng', 8000);
+  }
+}
+window._articalizeNote = _articalizeNote;
+
 async function _generateArticleDraft(siteId){
   var topic = prompt('記事のテーマを入力してください (例: 初心者向け鞆の浦観光ガイド):');
   if(!topic || !topic.trim()) return;
@@ -20209,21 +20239,33 @@ function _notesRenderEditor(){
       + '<span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:600">' + L('最大 3 版保存','Keeps last 3') + '</span>'
       + '</div>';
   }
-  // ── Artifact preview (HTML / PDF / image) ── iframe で default 展開 (Option B) ──
-  // メモ帳を開いた瞬間に HTML preview が見える状態 (= 「ノート = 成果物」 の集約)。
-  // モック (mock-option-b.html) と同じ視覚言語: 上部 header + iframe (60vh) + open link
+  // ── HTML 成果物: iframe 廃止 → 「開く」 ボタンだけのコンパクト表示 ──
+  // ユーザー要請 (2026-05-27): iframe 重くて memo の読書体験を妨害してた
   var artifactBarHTML = '';
   if(note.artifact_url){
     var _artFn = String(note.artifact_url).split('/').pop();
-    artifactBarHTML = '<div style="margin:14px 24px;border:1px solid var(--wire);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.04)">'
-      +   '<div style="padding:10px 16px;background:var(--cream3);border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:10px">'
-      +     '<span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">🔗 ' + L('HTML プレビュー','HTML Preview') + '</span>'
-      +     '<span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--text3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(_artFn) + '</span>'
-      +     '<a href="'+esc(note.artifact_url)+'" target="_blank" rel="noopener" '
-      +       'style="font-size:10.5px;font-weight:800;color:var(--peach-dark);text-decoration:none">' + L('新しいタブで開く','Open in new tab') + ' ↗</a>'
+    artifactBarHTML = '<div style="margin:14px 24px;border:1px solid var(--wire);border-radius:12px;padding:12px 14px;background:#fff;display:flex;align-items:center;gap:12px">'
+      +   '<div style="width:36px;height:36px;background:var(--peach-soft);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🌐</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:12px;font-weight:800">' + L('HTML 成果物','HTML Artifact') + '</div>'
+      +     '<div style="font-size:10px;color:var(--text3);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">' + esc(_artFn) + '</div>'
       +   '</div>'
-      +   '<iframe src="'+esc(note.artifact_url)+'" loading="lazy" sandbox="allow-scripts allow-same-origin" '
-      +     'style="display:block;width:100%;height:60vh;min-height:480px;border:0;background:#fff"></iframe>'
+      +   '<a href="'+esc(note.artifact_url)+'" target="_blank" rel="noopener" '
+      +     'style="background:var(--teal);color:#fff;border-radius:7px;padding:8px 14px;font-size:11px;font-weight:800;text-decoration:none;font-family:inherit;flex-shrink:0;display:inline-block">🔗 ' + L('新しいタブで開く','Open in new tab') + ' →</a>'
+      + '</div>';
+  }
+
+  // ── 記事化アクション (= このメモから記事下書きを AI に作らせる) ──
+  var articleActionHTML = '';
+  if(_siteMode && st._siteHint){
+    articleActionHTML = '<div style="margin:14px 24px;background:linear-gradient(135deg, #f7ffe9, #fff);border:1px solid #c0ff5c;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
+      +   '<div style="font-size:22px;flex-shrink:0">📝</div>'
+      +   '<div style="flex:1">'
+      +     '<div style="font-size:12px;font-weight:800;color:#0a3d39">このメモから記事化</div>'
+      +     '<div style="font-size:10.5px;color:var(--text3);margin-top:1px">AI が 3,000 字下書きを生成 → 📋 タスクの成果物タブに追加 (約 60 秒)</div>'
+      +   '</div>'
+      +   '<button onclick="_articalizeNote(\''+esc(st._siteHint)+'\',\''+esc(note.id)+'\')" '
+      +     'style="background:#0d4f4a;color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">🚀 記事化する →</button>'
       + '</div>';
   }
   // ── Attachments grid (images / videos / audio) ──
@@ -20254,6 +20296,7 @@ function _notesRenderEditor(){
   wrap.innerHTML =
     versionBarHTML
     + artifactBarHTML
+    + articleActionHTML
     + '<input id="notesTitle" placeholder="'+L('タイトル','Title')+'" style="background:transparent;border:0;border-bottom:1px solid var(--wire);padding:16px 28px;font-size:20px;font-weight:800;font-family:inherit;color:var(--text);outline:none">'
     + '<textarea id="notesBody" placeholder="'+L('ここに自由に書く…','Write anything…')+'" style="flex:1;background:transparent;border:0;padding:18px 28px;font-size:15.5px;line-height:1.75;font-family:inherit;color:var(--text);outline:none;resize:none"></textarea>'
     + attachmentsHTML

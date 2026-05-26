@@ -6613,16 +6613,126 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     +   '</div>'
     + '</div>';
 
-  return heroHTML
-    + insightsHTML
+  // ===== Mock 準拠の新レイアウト (= 7 日チャート + 4 cell grid + 3 channel + GSC + dept) =====
+  // 期間トグル (UI のみ、 default 7d)
+  var periodToggleHTML = ''
+    + '<div class="sd-mock-toggle">'
+    +   '<button class="sd-mock-tg" data-period="1">昨日</button>'
+    +   '<button class="sd-mock-tg active" data-period="7">直近 7 日</button>'
+    +   '<button class="sd-mock-tg" data-period="30">直近 30 日</button>'
+    + '</div>';
+
+  // 4-cell GA4 grid (PV / users / 滞在 / 直帰率) — 各々に mini trend
+  var grid4HTML = '';
+  if(hasGa4Data){
+    var s7 = ga4Data.series.slice(-7);
+    var s7Pv = s7.reduce(function(a,d){ return a + (d.pv||0); }, 0);
+    var s7User = s7.reduce(function(a,d){ return a + (d.users||0); }, 0);
+    var s7Sess = s7.reduce(function(a,d){ return a + (d.sessions||0); }, 0);
+    var s7BounceAvg = s7Sess > 0 ? s7.reduce(function(a,d){ return a + (d.bounce * d.sessions || 0); }, 0) / s7Sess : 0;
+    var s7DwellAvg = s7Sess > 0 ? s7.reduce(function(a,d){ return a + (d.dwell * d.sessions || 0); }, 0) / s7Sess : 0;
+    var prev7 = ga4Data.series.slice(-14, -7);
+    var prev7Pv = prev7.reduce(function(a,d){ return a + (d.pv||0); }, 0);
+    var prev7User = prev7.reduce(function(a,d){ return a + (d.users||0); }, 0);
+    var pvDelta = prev7Pv > 0 ? Math.round((s7Pv - prev7Pv) / prev7Pv * 100) : null;
+    var userDelta = prev7User > 0 ? Math.round((s7User - prev7User) / prev7User * 100) : null;
+    var maxPv = Math.max.apply(null, s7.map(function(d){ return d.pv; })) || 1;
+    var maxUser = Math.max.apply(null, s7.map(function(d){ return d.users; })) || 1;
+    function _trendBars(arr, max){
+      return arr.map(function(d, i){
+        var h = Math.max(8, Math.round(d / max * 100));
+        var cls = i === arr.length - 1 ? ' sd-trend-bar-today' : '';
+        return '<div class="sd-trend-bar' + cls + '" style="height:' + h + '%"></div>';
+      }).join('');
+    }
+    function _gridCell(lbl, val, delta, trend){
+      var deltaCls = delta && delta > 0 ? 'up' : delta && delta < 0 ? 'dn' : 'flat';
+      var deltaSign = delta == null ? '' : (delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '');
+      var deltaText = delta == null ? '' : (deltaSign + delta + '% 先週比');
+      return '<div class="sd-grid-cell">'
+        + '<div class="sd-grid-lbl">' + lbl + '</div>'
+        + '<div class="sd-grid-val">' + val + '</div>'
+        + (deltaText ? '<div class="sd-grid-delta sd-grid-delta-' + deltaCls + '">' + deltaText + '</div>' : '')
+        + (trend ? '<div class="sd-grid-trend">' + trend + '</div>' : '')
+        + '</div>';
+    }
+    var dwellMin = Math.floor(s7DwellAvg / 60), dwellSec = Math.round(s7DwellAvg % 60);
+    var dwellStr = dwellMin + ':' + (dwellSec < 10 ? '0' : '') + dwellSec;
+    grid4HTML = '<div class="sd-grid-4">'
+      + _gridCell('📊 PV', s7Pv.toLocaleString(), pvDelta, _trendBars(s7.map(function(d){return d.pv}), maxPv))
+      + _gridCell('👥 ユーザー', s7User.toLocaleString(), userDelta, _trendBars(s7.map(function(d){return d.users}), maxUser))
+      + _gridCell('⏱ 平均滞在', dwellStr, null, '')
+      + _gridCell('📉 直帰率', (Math.round(s7BounceAvg * 1000)/10) + '%', null, '')
+      + '</div>';
+  }
+
+  // 7-day session chart (native bars)
+  var weekChartHTML = '';
+  if(hasGa4Data){
+    var ws = ga4Data.series.slice(-7);
+    var maxSess = Math.max.apply(null, ws.map(function(d){ return d.sessions; })) || 1;
+    var dayLabels = ['月','火','水','木','金','土','日'];
+    var bars = ws.map(function(d, i){
+      var dt = new Date(d.date);
+      var dow = isNaN(dt.getTime()) ? '' : dayLabels[dt.getDay() === 0 ? 6 : dt.getDay() - 1];
+      var h = Math.max(8, Math.round(d.sessions / maxSess * 100));
+      var isToday = i === ws.length - 1;
+      return '<div class="sd-wkbar">'
+        + '<div class="sd-wkbar-bar' + (isToday ? ' today' : '') + '" style="height:' + h + '%" data-val="' + d.sessions + ' セッション"></div>'
+        + '<div class="sd-wkbar-x' + (isToday ? ' today' : '') + '">' + dow + (isToday ? ' (今日)' : '') + '</div>'
+        + '</div>';
+    }).join('');
+    weekChartHTML = '<div class="sd-wkchart">'
+      + '<h4>📈 直近 7 日のセッション推移<span class="sd-wkchart-meta">合計 ' + ga4Data.series.slice(-7).reduce(function(a,d){return a + (d.sessions||0)}, 0) + ' セッション</span></h4>'
+      + '<div class="sd-wkchart-canvas">' + bars + '</div>'
+      + '</div>';
+  }
+
+  // 3-channel section (X / Threads / Media) — メディア = Organic Search、 SNS = X+Threads ベース
+  var sources = (hasGa4Data && Array.isArray(ga4Data.sources)) ? ga4Data.sources : [];
+  function _findSrc(re){
+    var f = sources.find(function(s){ return s && re.test(String(s.channel || '')); });
+    return f ? (f.sessions || 0) : 0;
+  }
+  var orgSess = _findSrc(/Organic/i);
+  var socialSess = _findSrc(/Social/i);
+  var directSess = _findSrc(/Direct/i);
+  var threeChannelHTML = ''
+    + '<div class="sd-3ch-hd">📍 チャネル別の動き (7 日)<span class="sd-3ch-meta">流入元別の貢献度</span></div>'
+    + '<div class="sd-3ch-grid">'
+    +   '<div class="sd-3ch-card" style="border-top-color:#000">'
+    +     '<div class="sd-3ch-nm">📱 Social</div>'
+    +     '<div class="sd-3ch-val">' + socialSess + '</div>'
+    +     '<div class="sd-3ch-sub">セッション (X / Threads 等)</div>'
+    +     '<div class="sd-3ch-task">🤖 AI が毎日: X / Threads 投稿</div>'
+    +   '</div>'
+    +   '<div class="sd-3ch-card" style="border-top-color:var(--teal)">'
+    +     '<div class="sd-3ch-nm">🔍 Organic (メディア)</div>'
+    +     '<div class="sd-3ch-val">' + orgSess + '</div>'
+    +     '<div class="sd-3ch-sub">セッション (検索流入)</div>'
+    +     '<div class="sd-3ch-task">🤖 AI が深夜: 記事下書き / 内部リンク</div>'
+    +   '</div>'
+    +   '<div class="sd-3ch-card" style="border-top-color:#525252">'
+    +     '<div class="sd-3ch-nm">↗ Direct</div>'
+    +     '<div class="sd-3ch-val">' + directSess + '</div>'
+    +     '<div class="sd-3ch-sub">セッション</div>'
+    +     '<div class="sd-3ch-task">ブックマーク / URL 直接</div>'
+    +   '</div>'
+    + '</div>';
+
+  return periodToggleHTML
+    + heroHTML
+    + (grid4HTML ? grid4HTML : insightsHTML)
+    + weekChartHTML
+    + scModuleHTML
+    + threeChannelHTML
+    + deptRankHTML
     + ga4ModuleHTML
     + aeoModuleHTML
     + snsModuleHTML
     + contentEcModuleHTML
-    + scModuleHTML
     + stripeModuleHTML
     + formModuleHTML
-    + deptRankHTML
     + activityHTML;
 }
 

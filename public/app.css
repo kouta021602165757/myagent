@@ -4067,6 +4067,176 @@ input,textarea{font-family:var(--sans);}
   to   { transform: translateX(0); opacity: 1; }
 }
 
+/* ===== 数字分析 mock スタイル ===== */
+.sd-mock-toggle{
+  display:flex; gap:4px;
+  margin-bottom:14px;
+  background:#fff;
+  border:1px solid var(--wire);
+  border-radius:10px;
+  padding:4px;
+  width:fit-content;
+}
+.sd-mock-tg{
+  background:transparent; border:0;
+  padding:5px 14px;
+  font-size:11px; font-weight:700;
+  color:var(--text3);
+  border-radius:7px;
+  cursor:pointer;
+  font-family:inherit;
+}
+.sd-mock-tg.active{
+  background:#0d4f4a; color:#fff;
+}
+
+.sd-grid-4{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:10px;
+  margin-bottom:14px;
+}
+.sd-grid-cell{
+  background:#fff;
+  border:1px solid var(--wire);
+  border-radius:12px;
+  padding:14px 16px;
+}
+.sd-grid-lbl{
+  font-size:11px; color:var(--text3);
+  margin-bottom:4px;
+  font-weight:700;
+}
+.sd-grid-val{
+  font-size:22px; font-weight:800;
+  line-height:1.1;
+}
+.sd-grid-delta{
+  font-size:11px; font-weight:700;
+  margin-top:4px;
+}
+.sd-grid-delta-up{ color:#16a34a; }
+.sd-grid-delta-dn{ color:#dc2626; }
+.sd-grid-trend{
+  display:flex; gap:2px;
+  align-items:flex-end;
+  height:24px;
+  margin-top:8px;
+}
+.sd-trend-bar{
+  flex:1; min-height:2px;
+  background:#c0ff5c;
+  border-radius:2px 2px 0 0;
+  opacity:0.7;
+}
+.sd-trend-bar-today{
+  background:#0d4f4a;
+  opacity:1;
+}
+
+.sd-wkchart{
+  background:#fff;
+  border:1px solid var(--wire);
+  border-radius:12px;
+  padding:16px 18px;
+  margin-bottom:14px;
+}
+.sd-wkchart h4{
+  font-size:13px; font-weight:800;
+  margin:0 0 14px;
+  display:flex; align-items:center; gap:6px;
+}
+.sd-wkchart-meta{
+  margin-left:auto;
+  font-size:11px; color:var(--text3);
+  font-weight:600;
+}
+.sd-wkchart-canvas{
+  display:flex; gap:10px;
+  align-items:flex-end;
+  height:140px;
+  padding:0 4px;
+}
+.sd-wkbar{
+  flex:1;
+  display:flex; flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.sd-wkbar-bar{
+  width:100%;
+  background:#c0ff5c;
+  border-radius:4px 4px 0 0;
+  min-height:4px;
+  position:relative;
+}
+.sd-wkbar-bar.today{
+  background:#0d4f4a;
+}
+.sd-wkbar-bar:hover::after{
+  content:attr(data-val);
+  position:absolute;
+  bottom:100%; left:50%;
+  transform:translateX(-50%);
+  background:#1a1a1a; color:#fff;
+  padding:3px 7px;
+  border-radius:4px;
+  font-size:10px;
+  white-space:nowrap;
+  margin-bottom:4px;
+}
+.sd-wkbar-x{ font-size:9px; color:var(--text3); }
+.sd-wkbar-x.today{ font-weight:800; color:#0a3d39; }
+
+.sd-3ch-hd{
+  font-size:13px; font-weight:800;
+  margin:6px 0 10px;
+  display:flex; align-items:center; gap:6px;
+}
+.sd-3ch-meta{
+  margin-left:auto;
+  font-size:11px; color:var(--text3);
+  font-weight:600;
+}
+.sd-3ch-grid{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
+  margin-bottom:14px;
+}
+.sd-3ch-card{
+  background:#fff;
+  border:1px solid var(--wire);
+  border-top:4px solid #0d4f4a;
+  border-radius:12px;
+  padding:14px 16px;
+}
+.sd-3ch-nm{
+  font-size:12px; font-weight:800;
+  margin-bottom:8px;
+}
+.sd-3ch-val{
+  font-size:20px; font-weight:800;
+}
+.sd-3ch-sub{
+  font-size:11px; color:var(--text3);
+  margin-top:3px;
+}
+.sd-3ch-task{
+  margin-top:10px;
+  background:#f7ffe9;
+  padding:5px 8px;
+  border-radius:5px;
+  font-size:10px;
+  color:#0a3d39;
+  font-weight:600;
+}
+
+@media (max-width: 720px){
+  .sd-grid-4{ grid-template-columns:repeat(2, 1fr); }
+  .sd-3ch-grid{ grid-template-columns:1fr; }
+}
+
 /* HERO カード (= AI チームの累計実績、 chat 上部に常駐) — v3 force-apply */
 .hero-card,
 #heroCard.hero-card{

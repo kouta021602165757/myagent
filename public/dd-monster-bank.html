@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>社債投資DDレポート ステップ1 - モンスターバンク株式会社</title>
+<style>
+  :root {
+    --c-bg: #f7f8fa;
+    --c-surface: #ffffff;
+    --c-border: #e5e7eb;
+    --c-text: #1f2937;
+    --c-text-sub: #6b7280;
+    --c-primary: #2563eb;
+    --c-primary-dark: #1e40af;
+    --c-pos: #059669;
+    --c-pos-bg: #ecfdf5;
+    --c-warn: #d97706;
+    --c-warn-bg: #fffbeb;
+    --c-neg: #dc2626;
+    --c-neg-bg: #fef2f2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: var(--c-bg);
+    color: var(--c-text);
+    line-height: 1.75;
+    font-size: 15px;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: #fff;
+    padding: 40px 32px;
+    border-radius: 16px;
+    margin-bottom: 32px;
+  }
+  header.hero .tag {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+  header.hero h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  header.hero .sub {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 14px;
+  }
+  header.hero .meta {
+    margin-top: 16px;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+  section {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+  }
+  section h2 {
+    margin: 0 0 20px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--c-text);
+    border-left: 4px solid var(--c-primary);
+    padding-left: 12px;
+    line-height: 1.4;
+  }
+  section h3 {
+    margin: 24px 0 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c-primary-dark);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border-bottom: 1px solid var(--c-border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f9fafb;
+    font-weight: 600;
+    width: 28%;
+    color: var(--c-text-sub);
+  }
+  .table-impl th { width: auto; background: #f3f4f6; color: var(--c-text); }
+  .table-impl td:nth-child(3), .table-impl td:nth-child(4) { white-space: nowrap; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  ul li { margin-bottom: 6px; }
+  .pill-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; margin: 8px 0; }
+  .pill-list li {
+    background: #eff6ff;
+    color: var(--c-primary-dark);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+  .note-pos, .note-warn, .note-neg {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    border-left: 4px solid;
+  }
+  .note-pos { background: var(--c-pos-bg); border-color: var(--c-pos); }
+  .note-warn { background: var(--c-warn-bg); border-color: var(--c-warn); }
+  .note-neg { background: var(--c-neg-bg); border-color: var(--c-neg); }
+  .note-pos h3, .note-warn h3, .note-neg h3 { margin-top: 0; }
+  .note-pos h3 { color: var(--c-pos); }
+  .note-warn h3 { color: var(--c-warn); }
+  .note-neg h3 { color: var(--c-neg); }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) {
+    .grid2 { grid-template-columns: 1fr; }
+    section { padding: 20px; }
+    header.hero { padding: 28px 20px; }
+    header.hero h1 { font-size: 22px; }
+    th { width: 35%; }
+  }
+  .stepnav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  .step {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 13px;
+    border: 1px solid var(--c-border);
+    background: #fff;
+    color: var(--c-text-sub);
+  }
+  .step.active {
+    background: var(--c-primary);
+    color: #fff;
+    border-color: var(--c-primary);
+    font-weight: 600;
+  }
+  .step .num { display: block; font-weight: 700; font-size: 16px; }
+  footer {
+    text-align: center;
+    color: var(--c-text-sub);
+    font-size: 12px;
+    margin-top: 32px;
+    line-height: 1.8;
+  }
+  .disclaimer {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #92400e;
+    margin-top: 24px;
+  }
+  a { color: var(--c-primary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="tag">DUE DILIGENCE REPORT</span>
+    <h1>社債投資DDレポート<br>モンスターバンク株式会社</h1>
+    <p class="sub">投資判断のための事前調査 / ステップ1: 会社概要</p>
+    <div class="meta">作成日: 2026-05-26 ／ 出典: 会社案内PDF・公式サイト (monster-bank.jp)</div>
+    <div class="stepnav">
+      <div class="step active"><span class="num">STEP 1</span>会社概要</div>
+      <div class="step"><span class="num">STEP 2</span>財務計画</div>
+      <div class="step"><span class="num">STEP 3</span>口座情報</div>
+      <div class="step"><span class="num">STEP 4</span>総合判断</div>
+    </div>
+  </header>
+
+  <section>
+    <h2>1. 基本情報</h2>
+    <table>
+      <tr><th>社名</th><td>モンスターバンク株式会社</td></tr>
+      <tr><th>設立</th><td>2025年7月（設立から約10ヶ月）</td></tr>
+      <tr><th>資本金</th><td>¥39,000,000（2026年4月現在）</td></tr>
+      <tr><th>所在地</th><td>東京都港区六本木7-7-7 8F</td></tr>
+      <tr><th>役員</th><td>鳥羽和真、八木拓真</td></tr>
+      <tr><th>顧問</th><td>長田氏（元・三菱UFJ銀行／2026年4月時点）</td></tr>
+      <tr><th>公式サイト</th><td><a href="https://monster-bank.jp/" target="_blank" rel="noopener">https://monster-bank.jp/</a></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>2. 事業内容・サービス</h2>
+    <p><strong>スローガン:</strong>「ビジネスというギャンブルに、確信ある挑戦を！」「試着の概念をビジネスに」</p>
+
+    <h3>主要事業（4本柱）</h3>
+    <ul>
+      <li>PoCプラットフォーム <strong>Proofly（プルーフリー）</strong> の運営・開発 ＝ 主力プロダクト</li>
+      <li>効果検証・概念実証コンサルティング</li>
+      <li>新規事業開発コンサルティング</li>
+      <li>AI搭載デジタルサイネージの開発・販売</li>
+    </ul>
+
+    <h3>Prooflyのコアフロー（3ステップ）</h3>
+    <ul>
+      <li><strong>① 仮説定義</strong>（Hypothesis Design）— 何をミキワメたいか、どこまでやれば判断できるか</li>
+      <li><strong>② 小さく実行</strong>（Execute Small Test）— 最小単位でテスト、必要に応じBPO代行</li>
+      <li><strong>③ 判断材料化</strong>（Create Decision Package）— 結果をレポート化、続ける/広げる/止めるの判断</li>
+    </ul>
+
+    <h3>料金体系（月額サブスク）</h3>
+    <table>
+      <tr><th>ベーシック</th><td>¥0/月 — プロジェクト作成、チャット、マーケット、PJT管理</td></tr>
+      <tr><th>プロフェッショナル</th><td>¥200,000〜/月（人気No.1）— 経営分析、検証レポート、ウォレット、EMOサポート、月次経営支援</td></tr>
+      <tr><th>オンリーワン</th><td>要見積もり（大規模向け）— ベンダーサポート、MVP作成、常駐型支援</td></tr>
+    </table>
+
+    <h3>拡張サービス</h3>
+    <ul>
+      <li><strong>ファイナンス支援:</strong> 財務可視化 → 銀行融資 / エクイティ / M&A の調達先紹介（紹介フィー無料、サブスクのみで収益化）</li>
+      <li><strong>債権回収サービス:</strong> 日テレ債権回収（日テレ債権保証グループ）と提携、債権買取で早期現金化</li>
+      <li><strong>債権流動化:</strong> 年間一括契約を月額分割に変換、PROTOCOL社・保証会社と連携</li>
+      <li><strong>債権保証:</strong> 未払い時に債権保証会社が補填</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. 導入実績</h2>
+
+    <h3>主要事例（資料記載）</h3>
+    <table class="table-impl">
+      <thead>
+        <tr><th>顧客</th><th>内容</th><th>投資額</th><th>開始</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>大手自動車メーカー</td><td>営業チャネル検証（アポ率3%↑／月40アポ増）</td><td>¥650,000/月</td><td>2026.02〜</td></tr>
+        <tr><td>大手通信会社（従業員5万名）</td><td>会員制動画サイト拡販（12.5万件獲得）</td><td>¥500,000/月</td><td>2025.09〜</td></tr>
+        <tr><td>大手小売（売上550億）</td><td>解約防止CS/CX整備（解約2→6ヶ月）</td><td>¥350,000/月</td><td>2025.08〜</td></tr>
+      </tbody>
+    </table>
+
+    <h3>ロゴ掲載企業</h3>
+    <ul class="pill-list">
+      <li>NTTドコモ</li><li>山田養蜂場</li><li>常磐興産</li><li>東武動物公園</li>
+      <li>Peers</li><li>CRH JPN</li><li>85.5 SEASIDE FM</li><li>OPTEMO</li>
+      <li>XLab</li><li>Cut Factory</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. 体制・信頼性</h2>
+    <ul>
+      <li>5段階の信頼TIER構成: ①PoCプラットフォーム運営 ②現場推進経験 ③アドバイザー/金融連携 ④進行中・完了事例 ⑤セキュリティ/運用体制</li>
+      <li>「各専門領域のスペシャリスト集団」と自称</li>
+      <li>顧問に元三菱UFJ銀行・長田氏（2026年4月就任）</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. DD観点での所感（社債投資判断に向けて）</h2>
+
+    <div class="note-pos">
+      <h3>✓ ポジティブ要素</h3>
+      <ul>
+        <li>設立わずか10ヶ月で資本金3,900万円、大手企業（ドコモ・自動車メーカー等）の名前が並ぶ</li>
+        <li>単発コンサルではなく月額35〜65万円の継続課金モデル — ストック収益化を狙える設計</li>
+        <li>ファイナンス／債権保証／債権買取まで横展開し、エコシステム化を志向</li>
+        <li>顧問に元メガバンク行員 — 金融機関とのリレーション確保が見える</li>
+      </ul>
+    </div>
+
+    <div class="note-warn">
+      <h3>⚠ 要確認の論点（ステップ2以降で深掘り）</h3>
+      <ol>
+        <li><strong>設立2025年7月の若い会社</strong> — 社債（負債）投資の場合、返済原資の継続性が最大論点</li>
+        <li><strong>営業資料の精度</strong> — 大手通信・小売の「課題」欄が動画配信会員拡大の文言コピペ（PDF p.8-9）。資料品質に違和感</li>
+        <li><strong>社名「モンスターバンク」</strong> — 銀行業ではないのに「バンク」を使用。誤認誘発リスクなど法務確認の余地</li>
+        <li><strong>役員2名のみ</strong> — 鳥羽氏・八木氏の経歴、過去事業、株主構成が未開示</li>
+        <li><strong>ロゴ掲載企業の取引深度</strong> — Proofly実利用先か、過去接点先か、紹介者経由かの区別不明（ドコモ等は要裏取り）</li>
+        <li><strong>債権回収/保証ビジネス</strong> — 貸金業/債権管理回収業の許認可要否を要確認</li>
+        <li><strong>社債の条件</strong> — 利回り・償還期間・担保・保証の有無が判断の核心 → ステップ2で確認</li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. 次のステップ</h2>
+    <ul>
+      <li><strong>ステップ2:</strong> 財務計画ファイルの確認 — 売上計画、調達済資金、ランウェイ、社債条件、返済原資の妥当性</li>
+      <li><strong>ステップ3:</strong> 口座情報の確認 — 資金管理体制、振込先の正当性、社名一致確認</li>
+      <li><strong>ステップ4:</strong> 上記を統合した最終判断（GO / NO-GO）</li>
+    </ul>
+  </section>
+
+  <div class="disclaimer">
+    <strong>注意:</strong> 本レポートは投資判断のための事前情報整理を目的としており、投資推奨ではありません。記載内容は提供資料・公開情報に基づいており、最終判断にあたっては監査済財務諸表・登記簿・代表者面談など追加検証を推奨します。
+  </div>
+
+  <footer>
+    Due Diligence Report by Takeuchi Kouta<br>
+    Generated 2026-05-26
+  </footer>
+
+</div>
+</body>
+</html>

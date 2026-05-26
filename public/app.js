@@ -7312,6 +7312,52 @@ function _renderTabActions(site, events, next, quickActions, weekly, progressHTM
 // 細かいタスクが並ぶ。AI 生成タスク + ユーザー追加タスクの両方を扱う。
 // チェック / 削除 / 手動追加 すべて inline で OK。
 // ═══════════════════════════════════════════════════════════════════
+// HERO カード — chat header 直下に常駐 (site agent のみ)
+// 表示: 月間 PV / 月間ユーザー / 公開記事 / X フォロワー / Threads フォロワー
+function _renderHeroCard(ag){
+  var el = document.getElementById('heroCard');
+  if(!el) return;
+  // site agent じゃないなら非表示
+  if(!_isSiteAgent(ag)) { el.style.display = 'none'; return; }
+
+  // 各セル のデータ収集 (利用可能なら実値、なければ プレースホルダ)
+  var stats = ag.stats || {};
+  var ga = stats.ga4 || {}; // expected: { monthly_pv, monthly_users, delta_pv_pct, delta_users_pct }
+  var sns = stats.sns || {}; // expected: { x_followers, threads_followers, x_delta_week, threads_delta_week }
+
+  // 公開記事カウント (= user.notes from cache or site artifacts)
+  var articleCount = 0;
+  try {
+    if(window._cachedNotesForSite && window._cachedNotesForSite[ag.id]){
+      articleCount = window._cachedNotesForSite[ag.id].filter(function(n){
+        return n && (n.type === 'article' || n.has_artifact);
+      }).length;
+    }
+  } catch(e){}
+
+  function _cell(lbl, val, delta){
+    return '<div class="hc-cell">'
+      +   '<div class="lbl">' + esc(lbl) + '</div>'
+      +   '<div class="val">' + esc(val) + '</div>'
+      +   (delta ? '<div class="delta">' + esc(delta) + '</div>' : '')
+      + '</div>';
+  }
+
+  el.innerHTML = ''
+    + '<div class="hc-title">🤖 AI チーム<br>累計実績</div>'
+    + _cell('📊 月間 PV', (ga.monthly_pv != null ? String(ga.monthly_pv) : '—'), ga.delta_pv_pct ? ('▲ ' + ga.delta_pv_pct + '%') : '')
+    + '<div class="hc-divider"></div>'
+    + _cell('👥 月間ユーザー', (ga.monthly_users != null ? String(ga.monthly_users) : '—'), ga.delta_users_pct ? ('▲ ' + ga.delta_users_pct + '%') : '')
+    + '<div class="hc-divider"></div>'
+    + _cell('📝 公開記事', articleCount + ' 本', '')
+    + '<div class="hc-divider"></div>'
+    + _cell('📱 X フォロワー', (sns.x_followers != null ? '+' + sns.x_followers : '—'), sns.x_delta_week ? ('▲ 今週 +' + sns.x_delta_week) : '')
+    + '<div class="hc-divider"></div>'
+    + _cell('🧵 Threads', (sns.threads_followers != null ? '+' + sns.threads_followers : '—'), sns.threads_delta_week ? ('▲ 今週 +' + sns.threads_delta_week) : '');
+
+  el.style.display = 'flex';
+}
+
 function _renderTabTasks(site){
   var roadmap = site.roadmap || null;
   var hasRoadmap = !!(roadmap && Array.isArray(roadmap.weeks) && roadmap.weeks.length > 0);
@@ -9562,6 +9608,9 @@ async function openAgent(id){
   var sc=document.getElementById('shareCard'); if(sc) sc.style.display='none';
   // Reflect Chrome tool button state in composer
   _updateChromeTool(ag);
+
+  // HERO カード (site agent のみ、 GA4 + SNS + 記事 累計)
+  try { _renderHeroCard(ag); } catch(e){ console.warn('[hero-card] render failed:', e); }
 
   // Quick chips persist throughout the conversation (clickable shortcuts)
   const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);

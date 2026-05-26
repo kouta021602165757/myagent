@@ -17740,6 +17740,7 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 200, {
         agent: existing,
         vertical: existing.site_vertical,
+        site_type: existing.site_type || ((existing.site_vertical === 'blog') ? 'media' : (existing.site_vertical === 'ec') ? 'ec' : 'lp-hp'),
         already_exists: true,
         team: _teamPresetFor(existing.site_vertical),
       });
@@ -17828,7 +17829,13 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     }
 
-    // 3) TEAM_PRESETS から preset を取得して agent 作成
+    // 3) サイトタイプ判定 (= 3 パターン: media / ec / lp-hp) — vertical からマップ
+    // user-facing 戦略テンプレ用。 詳細な業種は vertical で残す。
+    const siteType = (vertical === 'blog') ? 'media'
+                   : (vertical === 'ec') ? 'ec'
+                   : 'lp-hp';  // saas / store / portfolio / other → 全部 lp-hp に集約
+
+    // 4) TEAM_PRESETS から preset を取得して agent 作成
     const preset = _teamPresetFor(vertical);
     const hostname = (() => { try { return new URL(siteUrl).hostname.replace(/^www\./, ''); } catch(e){ return siteUrl; }})();
     const siteName = pageTitle || hostname;
@@ -17842,6 +17849,7 @@ async function handleAPI(req,res,pathname,method,ip){
       name: hostname.slice(0, 40),
       site_url: siteUrl,
       site_vertical: vertical,
+      site_type: siteType,  // 3 パターン分類 (media / ec / lp-hp) — 戦略テンプレの骨格決定用
       site_title: pageTitle.slice(0, 200),
       org: orgCopy,            // 新: 部門→チーム→メンバー の階層
       team_members: flatMembers,  // 旧: 各部門長 5 名のフラット (= 後方互換)
@@ -17915,6 +17923,7 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 201, {
       agent,
       vertical,
+      site_type: siteType,
       team: preset,
       site_url: siteUrl,
       site_title: pageTitle,

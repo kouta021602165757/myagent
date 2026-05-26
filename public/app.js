@@ -9767,6 +9767,20 @@ async function openAgent(id){
   //   - DMs with Web tool ON: 🌐 Web
   //   - Otherwise: nothing (cleaner)
   var topPills = '';
+  // Site type pill (site agent のみ) — 3 パターン分類 (media / ec / lp-hp)
+  if(_isSiteAgent(ag)){
+    var stMap = {
+      media: { lbl: '📰 メディア型', bg: 'rgba(13,79,74,.12)', fg: '#0d4f4a' },
+      ec:    { lbl: '🛒 EC 型',     bg: 'rgba(236,72,153,.12)', fg: '#db2777' },
+      'lp-hp': { lbl: '💼 LP/HP 型', bg: 'rgba(99,102,241,.12)', fg: '#4f46e5' },
+    };
+    var st = ag.site_type
+      || (ag.site_vertical === 'blog' ? 'media' : ag.site_vertical === 'ec' ? 'ec' : 'lp-hp');
+    var info = stMap[st];
+    if(info){
+      topPills += '<span class="pill" style="background:' + info.bg + ';color:' + info.fg + ';border-color:' + info.fg + '33">' + info.lbl + '</span>';
+    }
+  }
   const isTeam = !!(ag.is_team && Array.isArray(ag.team_member_agent_ids));
   const teamCount = isTeam ? ag.team_member_agent_ids.length : 0;
   if(isTeam){

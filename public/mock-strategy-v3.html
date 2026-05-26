@@ -1027,7 +1027,7 @@
     <button class="stepbtn" data-step="5"><span class="num">5</span> メイン chat (HERO + tasks)</button>
     <button class="stepbtn" data-step="6"><span class="num">6</span> 戦略パネル (3 チャネル)</button>
     <button class="stepbtn" data-step="7"><span class="num">7</span> 日次レポ (即効指標)</button>
-    <button class="stepbtn" data-step="8"><span class="num">8</span> 月次シェアカード</button>
+    <button class="stepbtn" data-step="8"><span class="num">8</span> タスクパネル (📋)</button>
   </div>
 </div>
 
@@ -1342,14 +1342,14 @@
           </div>
         </div>
         <div class="ch-right">
-          <button class="ch-tool">📰</button>
-          <button class="ch-tool">📊</button>
+          <button class="ch-tool" onclick="goStep(7)" title="日次レポ">📰</button>
+          <button class="ch-tool" title="数字分析">📊</button>
           <button class="ch-tool" onclick="goStep(6)" title="戦略">🎯</button>
-          <button class="ch-tool active" title="タスク">📋</button>
-          <button class="ch-tool">🏢</button>
-          <button class="ch-tool">🔌</button>
-          <button class="ch-tool">📒</button>
-          <button class="ch-tool">⚙️</button>
+          <button class="ch-tool" onclick="goStep(8)" title="タスク">📋</button>
+          <button class="ch-tool" title="チーム">🏢</button>
+          <button class="ch-tool" onclick="goStep(3)" title="接続">🔌</button>
+          <button class="ch-tool" title="メモ帳">📒</button>
+          <button class="ch-tool" title="設定">⚙️</button>
         </div>
       </div>
 
@@ -1585,7 +1585,7 @@
         </div>
         <div class="ch-right">
           <button class="ch-tool">📰</button><button class="ch-tool">📊</button>
-          <button class="ch-tool active">🎯</button><button class="ch-tool" onclick="goStep(5)">📋</button>
+          <button class="ch-tool active">🎯</button><button class="ch-tool" onclick="goStep(8)">📋</button>
           <button class="ch-tool">🏢</button><button class="ch-tool">🔌</button>
           <button class="ch-tool">📒</button><button class="ch-tool">⚙️</button>
         </div>
@@ -1731,7 +1731,7 @@
         </div>
         <div class="ch-right">
           <button class="ch-tool active">📰</button><button class="ch-tool">📊</button>
-          <button class="ch-tool" onclick="goStep(6)">🎯</button><button class="ch-tool" onclick="goStep(5)">📋</button>
+          <button class="ch-tool" onclick="goStep(6)">🎯</button><button class="ch-tool" onclick="goStep(8)">📋</button>
           <button class="ch-tool">🏢</button><button class="ch-tool">🔌</button>
           <button class="ch-tool">📒</button><button class="ch-tool">⚙️</button>
         </div>
@@ -1891,71 +1891,152 @@
       <div class="sb-bottom"><div class="sb-user"><div class="av">K</div><div><div class="uname">kota</div><div class="plan">Business</div></div></div></div>
     </aside>
     <main class="main">
-      <div class="share-main">
-        <div class="share-wrap">
-          <h2 class="share-h2">🎉 月次成果カードができました</h2>
-          <p class="share-sub">SNS でシェアして自分の AI チームの成果を見せよう</p>
-
-          <div class="share-card-img">
-            <div class="month">📅 2026 年 5 月</div>
-            <h3>AI チームが動いた 30 日</h3>
-            <div class="by">fukuyama-note.com / by @kota</div>
-
-            <!-- GA4 メインスタット (大きく、最初に) -->
-            <div style="background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;">
-              <div style="font-size: 10px; opacity: 0.7; margin-bottom: 4px;">📊 Google Analytics 4</div>
-              <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                <div>
-                  <div style="font-size:9px; opacity:0.7;">月間セッション</div>
-                  <div style="font-size: 18px; font-weight: 800;">1,672</div>
-                  <div style="font-size: 10px; color: var(--lime);">▲ +35% (1,240 → 1,672)</div>
+      <div class="hero-card">
+        <div><div class="hc-title">🤖 AI チームの累計実績</div></div>
+        <div class="hc-cell"><div class="lbl">📊 月間 PV</div><div class="val">3,420</div><div class="delta">▲ +42%</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">👥 月間ユーザー</div><div class="val">1,289</div><div class="delta">▲ +28%</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">📝 公開記事</div><div class="val">12 本</div><div class="delta">▲ 今月 +4</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">📱 X フォロワー</div><div class="val">+312</div><div class="delta">▲ 今週 +28</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">🧵 Threads</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
+      </div>
+      <div class="chat-wrap">
+      <div class="chat-header">
+        <div class="ch-left">
+          <div class="ch-icn">📰</div>
+          <div><div class="ch-name">fukuyama-note.com</div><div class="ch-pills"><span class="ch-pill">📰 メディア型</span><span class="ch-pill">📋 タスク 8</span></div></div>
+        </div>
+        <div class="ch-right">
+          <button class="ch-tool">📰</button><button class="ch-tool">📊</button>
+          <button class="ch-tool" onclick="goStep(6)">🎯</button><button class="ch-tool active">📋</button>
+          <button class="ch-tool">🏢</button><button class="ch-tool">🔌</button>
+          <button class="ch-tool">📒</button><button class="ch-tool">⚙️</button>
+        </div>
+      </div>
+      <div class="task-strip">
+        <span class="ts-week">📋 WEEK 2/4</span>
+        <span class="ts-task done"><span class="ck"></span><span class="txt">Threads 投稿 3 本</span></span>
+        <span class="ts-task"><span class="ck"></span><span class="txt">「鞆の浦」記事執筆</span></span>
+        <span class="ts-task"><span class="ck"></span><span class="txt">X 投稿 3 本</span></span>
+        <span class="ts-more">他 5 件 →</span>
+      </div>
+      <div class="chat-body">
+      <div class="msgs">
+        <div class="msg bot">
+          <div class="av">📰</div>
+          <div class="body">
+            <div class="head"><span class="nm">fukuyama-note.com</span><span class="tm">朝 8:00</span></div>
+            <div class="txt">📋 今日のタスク 8 件 / AI が完成させた成果物 3 件があります。右の panel で確認してください。</div>
+            <div class="thread-link"><span class="av-mini">📰</span><span class="link">📓 1 件の返信</span></div>
+          </div>
+        </div>
+        <div class="msg">
+          <div class="av">K</div>
+          <div class="body">
+            <div class="head"><span class="nm">あなた</span><span class="tm">9:12</span></div>
+            <div class="txt">成果物の鞆の浦記事、プレビューして OK なら公開して</div>
+          </div>
+        </div>
+        <div class="msg bot">
+          <div class="av">📰</div>
+          <div class="body">
+            <div class="head"><span class="nm">fukuyama-note.com</span><span class="tm">9:13</span></div>
+            <div class="txt">了解、プレビュー → 公開しました ✅ WordPress に反映済み、X / Threads でも共有予約しました</div>
+            <div class="thread-link"><span class="av-mini">✍️</span><span class="link">📓 2 件の返信</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-side open">
+        <div class="panel-head">
+          <span class="ic">📋</span>
+          <span class="ttl">タスク / 実行</span>
+          <span class="sub">Week 2 / 4</span>
+          <button class="close" onclick="goStep(5)" title="戻る">✕</button>
+        </div>
+        <div class="panel-body">
+          <div class="task-tabs">
+            <button class="task-tab active" onclick="_swT(this,'tt8-a')">
+              <span>📋 今日のタスク</span>
+              <span class="tt-count">8</span>
+            </button>
+            <button class="task-tab" onclick="_swT(this,'tt8-b')">
+              <span>📦 AI 成果物</span>
+              <span class="tt-count tt-count-hot">3</span>
+            </button>
+          </div>
+          <div class="task-tab-body active" id="tt8-a">
+            <h4 style="font-size:12px; font-weight:800; color:var(--muted); margin:10px 0 6px;">🔥 今日</h4>
+            <div class="task-row done"><div class="ck"></div><div class="txt">Threads 投稿 3 本 (朝 9:00 / 12:00 / 19:00)</div><span class="ch-tag threads">Threads</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">「鞆の浦 観光 子連れ」記事執筆 (3,000 字)</div><span class="ch-tag wp">WP</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">X 投稿 3 本 (今週の食べ歩き紹介)</div><span class="ch-tag x">X</span></div>
+            <h4 style="font-size:12px; font-weight:800; color:var(--muted); margin:14px 0 6px;">📆 今週</h4>
+            <div class="task-row"><div class="ck"></div><div class="txt">既存記事 5 本のタイトル最適化</div><span class="ch-tag wp">WP</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">競合「鞆の浦観光」未対応 KW 5 個分対策</div><span class="ch-tag wp">WP</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">X インフルエンサーへのリプライ 5 件</div><span class="ch-tag x">X</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">Threads コミュニティで関連 thread 参加</div><span class="ch-tag threads">Threads</span></div>
+            <div class="task-row"><div class="ck"></div><div class="txt">内部リンク 5 箇所追加</div><span class="ch-tag wp">WP</span></div>
+          </div>
+          <div class="task-tab-body" id="tt8-b">
+            <div style="font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--lime-soft); padding:9px 12px; border-radius:8px;">
+              💡 AI が <strong>すでに完成</strong> させた成果物。承認するだけ。
+            </div>
+            <div class="artifact-card">
+              <div class="ac-top">
+                <div class="ac-ic">📝</div>
+                <div class="ac-meta">
+                  <div class="ac-title">記事下書き：「初心者向け鞆の浦観光ガイド」</div>
+                  <div class="ac-sub">3,200 字 / 内部リンク 6 / 画像 4</div>
                 </div>
-                <div>
-                  <div style="font-size:9px; opacity:0.7;">月間ユーザー</div>
-                  <div style="font-size: 18px; font-weight: 800;">1,289</div>
-                  <div style="font-size: 10px; color: var(--lime);">▲ +28%</div>
-                </div>
-                <div>
-                  <div style="font-size:9px; opacity:0.7;">月間 PV</div>
-                  <div style="font-size: 18px; font-weight: 800;">3,420</div>
-                  <div style="font-size: 10px; color: var(--lime);">▲ +42%</div>
-                </div>
+                <div class="ac-status">WP 保存済</div>
+              </div>
+              <div class="ac-actions">
+                <button class="ac-btn">プレビュー</button>
+                <button class="ac-btn primary">公開する</button>
               </div>
             </div>
-
-            <div class="stats">
-              <div class="stat-cell">
-                <div class="lbl">📝 公開した記事</div>
-                <div class="val">12 本</div>
-                <div class="delta">▲ 先月比 +4</div>
+            <div class="artifact-card">
+              <div class="ac-top">
+                <div class="ac-ic">📱</div>
+                <div class="ac-meta">
+                  <div class="ac-title">X 投稿 3 本 (今日 9/12/19 時)</div>
+                  <div class="ac-sub">ハッシュタグ + 画像付き</div>
+                </div>
+                <div class="ac-status">予約済</div>
               </div>
-              <div class="stat-cell">
-                <div class="lbl">📱 X フォロワー増</div>
-                <div class="val">+312</div>
-                <div class="delta">▲ +15.4%</div>
-              </div>
-              <div class="stat-cell">
-                <div class="lbl">🧵 Threads</div>
-                <div class="val">+148</div>
-                <div class="delta">▲ 新規開始</div>
-              </div>
-              <div class="stat-cell">
-                <div class="lbl">🔍 Organic 流入</div>
-                <div class="val">+42%</div>
-                <div class="delta">770 → 1,094 / 月</div>
+              <div class="ac-actions">
+                <button class="ac-btn">3 本確認</button>
+                <button class="ac-btn primary">承認して投稿</button>
               </div>
             </div>
-            <div class="footer">⚡ AI が 87 時間相当の作業を実施 · myaiagents.agency</div>
+            <div class="artifact-card">
+              <div class="ac-top">
+                <div class="ac-ic">🧵</div>
+                <div class="ac-meta">
+                  <div class="ac-title">Threads 投稿 2 本 (X からの自動変換)</div>
+                  <div class="ac-sub">テキストのみ / 観光ハッシュタグ</div>
+                </div>
+                <div class="ac-status">予約済</div>
+              </div>
+              <div class="ac-actions">
+                <button class="ac-btn">確認</button>
+                <button class="ac-btn primary">承認</button>
+              </div>
+            </div>
           </div>
-
-          <div class="share-buttons">
-            <button class="share-btn">🐦 X でシェア</button>
-            <button class="share-btn">🧵 Threads でシェア</button>
-            <button class="share-btn lime">📥 画像 DL</button>
-          </div>
-
-          <div style="margin-top: 24px; padding: 14px; background: #f7ffe9; border-radius: 10px; font-size: 12px; color: var(--teal-2);">
-            💡 この成果カードは <strong>毎月自動生成</strong> されます。<br>シェアした人の流入から、新規ユーザーが入ってくる仕組みです (= プロダクトの acquisition loop)。
+        </div>
+      </div><!-- /.panel-side -->
+      </div><!-- /.chat-body -->
+      </div><!-- /.chat-wrap -->
+      <!-- COMPOSER (always visible at bottom) -->
+      <div class="composer-wrap">
+        <div class="composer">
+          <div class="composer-input">何をお願いしますか？</div>
+          <div class="composer-tools">
+            <span class="chip">📎</span><span class="chip">🌐 Chrome</span>
+            <button class="send">→</button>
           </div>
         </div>
       </div>
@@ -1973,7 +2054,7 @@ const STEPS = {
   5: { phase: 'D · 運用', name: 'メイン chat (HERO + tasks)' },
   6: { phase: 'P · 戦略', name: '戦略パネル (3 チャネル)' },
   7: { phase: 'C · 検証', name: '日次レポ (即効指標)' },
-  8: { phase: 'A · 共有', name: '月次シェアカード' }
+  8: { phase: 'D · 運用', name: 'タスクパネル (📋)' }
 };
 
 let curStep = 1;

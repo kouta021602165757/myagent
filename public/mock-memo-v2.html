@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>メモ帳 v2 モック — MY AI Agent</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg: #fafaf7;
+    --cream: #fefdf9;
+    --teal: #0d4f4a;
+    --teal-2: #0a3d39;
+    --lime: #c0ff5c;
+    --lime-soft: #f7ffe9;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.55;
+    padding: 24px 20px;
+  }
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    height: calc(100vh - 48px);
+  }
+  .head {
+    grid-column: 1 / -1;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .head .ic { font-size: 22px; }
+  .head .ttl { font-weight: 800; font-size: 15px; }
+  .head .sub { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .head .close {
+    margin-left: auto;
+    width: 28px; height: 28px;
+    background: #f3f4f6; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    cursor: pointer; border: 0;
+  }
+
+  /* ===== LEFT: NOTE LIST ===== */
+  .left {
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .ai-am {
+    margin: 12px 14px 0;
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border-radius: 10px;
+    padding: 11px 13px;
+    cursor: pointer;
+  }
+  .ai-am .h { font-size: 11px; opacity: 0.8; font-weight: 700; margin-bottom: 3px; display:flex; align-items:center; gap:5px; }
+  .ai-am .t { font-size: 12px; font-weight: 700; line-height: 1.4; }
+  .ai-am .x { font-size: 10px; opacity: 0.85; margin-top: 5px; color: var(--lime); }
+
+  .search-row {
+    padding: 10px 14px;
+    display: flex; gap: 6px;
+  }
+  .search-row input {
+    flex: 1;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .search-row input:focus { outline: 1.5px solid var(--teal); }
+  .search-row .new-btn {
+    background: var(--teal);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .type-tabs {
+    display: flex; gap: 4px; overflow-x: auto;
+    padding: 6px 12px 0;
+  }
+  .type-tab {
+    background: transparent; border: 0;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+  }
+  .type-tab:hover { background: #f3f4f6; }
+  .type-tab.active {
+    background: var(--lime-soft);
+    color: var(--teal-2);
+  }
+  .type-tab .cnt {
+    background: #fff;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 9px;
+    margin-left: 3px;
+  }
+  .type-tab.active .cnt {
+    background: var(--lime);
+  }
+
+  .note-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 8px 16px;
+  }
+  .group-h {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 10px 8px 4px;
+  }
+  .note {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .note:hover { border-color: var(--teal); }
+  .note.active {
+    background: var(--lime-soft);
+    border-color: var(--lime);
+  }
+  .note .nt-h {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .note .nt-ic { font-size: 14px; flex-shrink: 0; }
+  .note .nt-ti {
+    font-weight: 700; font-size: 12px;
+    flex: 1; overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .note .nt-pin { font-size: 10px; opacity: 0.6; flex-shrink: 0; }
+  .note .nt-sum {
+    font-size: 11px; color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .note .nt-ft {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .note .nt-ai-tag {
+    background: var(--lime-soft);
+    color: var(--teal-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 9px;
+  }
+  .note .nt-status-published {
+    background: #dcfce7;
+    color: #166534;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 9px;
+  }
+
+  /* ===== RIGHT: NOTE DETAIL ===== */
+  .right {
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .detail-h {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .detail-h .d-ic {
+    width: 32px; height: 32px;
+    background: var(--lime-soft);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .detail-h .d-meta { flex: 1; }
+  .detail-h .d-ti { font-weight: 800; font-size: 14px; }
+  .detail-h .d-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .detail-h .d-actions { display: flex; gap: 5px; }
+  .detail-h .d-btn {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .detail-h .d-btn.primary {
+    background: var(--teal);
+    color: #fff;
+    border-color: var(--teal);
+  }
+
+  .detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 22px;
+  }
+
+  /* 1-click chain bar */
+  .chain-bar {
+    background: linear-gradient(135deg, var(--lime-soft), #fff);
+    border: 1px solid var(--lime);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+  }
+  .chain-bar .h {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--teal-2);
+    margin-bottom: 8px;
+  }
+  .chain-bar .desc {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .chain-buttons {
+    display: flex; gap: 6px;
+    flex-wrap: wrap;
+  }
+  .chain-btn {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    font-family: inherit;
+    flex: 1;
+    min-width: 130px;
+    justify-content: center;
+  }
+  .chain-btn:hover {
+    border-color: var(--teal);
+    background: var(--lime-soft);
+  }
+  .chain-btn.all {
+    background: var(--teal);
+    color: #fff;
+    border-color: var(--teal);
+    flex-basis: 100%;
+    margin-top: 6px;
+  }
+
+  /* HTML artifact iframe */
+  .html-artifact {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .html-artifact .ha-h {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px;
+    background: #fafaf7;
+  }
+  .html-artifact .ha-ti {
+    font-size: 12px; font-weight: 800;
+    flex: 1;
+  }
+  .html-artifact .ha-url {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 360px;
+  }
+  .html-artifact .ha-actions {
+    display: flex; gap: 4px;
+  }
+  .html-artifact .ha-btn {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .html-artifact iframe {
+    width: 100%;
+    height: 480px;
+    border: 0;
+    display: block;
+  }
+
+  /* Markdown content */
+  .markdown {
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .markdown h1, .markdown h2, .markdown h3 {
+    margin: 16px 0 8px;
+    font-weight: 800;
+  }
+  .markdown h1 { font-size: 20px; }
+  .markdown h2 { font-size: 17px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .markdown h3 { font-size: 15px; }
+  .markdown p { margin-bottom: 10px; }
+  .markdown ul, .markdown ol { margin: 8px 0 12px 18px; }
+  .markdown li { margin-bottom: 4px; }
+  .markdown strong { color: var(--teal-2); font-weight: 700; }
+  .markdown code {
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 90%;
+  }
+
+  /* Related notes sidebar */
+  .related {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 18px;
+  }
+  .related h4 {
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: var(--muted);
+  }
+  .rel-item {
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .rel-item:first-of-type { border-top: 0; }
+  .rel-item .ic { font-size: 13px; }
+  .rel-item .ti {
+    font-size: 12px;
+    font-weight: 700;
+    flex: 1;
+  }
+  .rel-item .age { font-size: 10px; color: var(--muted); }
+
+  /* Tags */
+  .tags {
+    display: flex; gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .tag {
+    background: var(--lime-soft);
+    color: var(--teal-2);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <span class="ic">📒</span>
+    <div>
+      <div class="ttl">メモ帳</div>
+      <div class="sub">fukuyama-note.com ・ 87 件</div>
+    </div>
+    <button class="close">✕</button>
+  </div>
+
+  <!-- ===== LEFT PANE ===== -->
+  <div class="left">
+    <!-- AI 朝会 -->
+    <div class="ai-am">
+      <div class="h">🌅 AI 朝会</div>
+      <div class="t">昨日のメモから「鞆の浦観光記事」が最重要 (子連れ需要を確認)</div>
+      <div class="x">📋 タスク化する →</div>
+    </div>
+
+    <div class="search-row">
+      <input type="text" placeholder="🔍 メモを検索 (⌘K)" />
+      <button class="new-btn">＋</button>
+    </div>
+
+    <div class="type-tabs">
+      <button class="type-tab active">全て<span class="cnt">87</span></button>
+      <button class="type-tab">💡 アイデア<span class="cnt">12</span></button>
+      <button class="type-tab">👀 競合<span class="cnt">8</span></button>
+      <button class="type-tab">📝 記事<span class="cnt">23</span></button>
+      <button class="type-tab">📱 SNS<span class="cnt">31</span></button>
+      <button class="type-tab">💬 顧客の声<span class="cnt">9</span></button>
+      <button class="type-tab">🎯 学び<span class="cnt">4</span></button>
+    </div>
+
+    <div class="note-list">
+      <div class="group-h">📌 ピン留め</div>
+
+      <div class="note active">
+        <div class="nt-h">
+          <span class="nt-ic">📝</span>
+          <span class="nt-ti">factoring-persona-definition.html</span>
+          <span class="nt-pin">📌</span>
+        </div>
+        <div class="nt-sum">資金繰り改善型ファクタリングのターゲットペルソナ詳細分析。 法人代表 45-55 歳、 月商 1,000 万…</div>
+        <div class="nt-ft">
+          <span class="nt-ai-tag">🤖 AI 生成</span>
+          <span>2025-05-26 09:42</span>
+        </div>
+      </div>
+
+      <div class="group-h">今日</div>
+
+      <div class="note">
+        <div class="nt-h">
+          <span class="nt-ic">👀</span>
+          <span class="nt-ti">競合「tomonoura-info」が新記事公開</span>
+        </div>
+        <div class="nt-sum">「鞆の浦 グルメ 子連れ」記事を 5/27 朝公開。 写真 12 枚、 H2 6 個、 内部リンク 8 本…</div>
+        <div class="nt-ft">
+          <span class="nt-ai-tag">🤖 AI 監視</span>
+          <span>08:30</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <div class="nt-h">
+          <span class="nt-ic">💬</span>
+          <span class="nt-ti">顧客の声: 「移住前の補助金情報がわかりづらい」</span>
+        </div>
+        <div class="nt-sum">お問い合わせフォーム経由。 田中様 (40 代女性、 関東在住)。 「補助金の手続き順序を 1 ページで…」</div>
+        <div class="nt-ft">
+          <span class="nt-ai-tag">📥 自動取得</span>
+          <span>07:15</span>
+        </div>
+      </div>
+
+      <div class="group-h">昨日</div>
+
+      <div class="note">
+        <div class="nt-h">
+          <span class="nt-ic">📝</span>
+          <span class="nt-ti">記事下書き: 「初心者向け鞆の浦観光ガイド」</span>
+        </div>
+        <div class="nt-sum">3,200 字、 H2 5 個、 内部リンク 6 本。 子連れ向け詳細セクション付き。 WP 下書き保存済…</div>
+        <div class="nt-ft">
+          <span class="nt-status-published">✓ 公開済み</span>
+          <span>昨日</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <div class="nt-h">
+          <span class="nt-ic">💡</span>
+          <span class="nt-ti">アイデア: 福山の隠れ家カフェ巡り企画</span>
+        </div>
+        <div class="nt-sum">30 代女性 SNS 映え + 駐車場あり、 5 軒くらいでまとめる。 X インフルエンサーと連携可能性…</div>
+        <div class="nt-ft">
+          <span>🖊 手動</span>
+          <span>昨日</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <div class="nt-h">
+          <span class="nt-ic">📱</span>
+          <span class="nt-ti">X 投稿 3 本 (今週の食べ歩き)</span>
+        </div>
+        <div class="nt-sum">ハッシュタグ #福山グルメ #ご当地ランチ 付き、 画像 3 枚...</div>
+        <div class="nt-ft">
+          <span class="nt-status-published">✓ 投稿済み</span>
+          <span>昨日</span>
+        </div>
+      </div>
+
+      <div class="group-h">今週</div>
+
+      <div class="note">
+        <div class="nt-h">
+          <span class="nt-ic">🎯</span>
+          <span class="nt-ti">学び: 子連れ向け H2 5 個追加で CTR +2.1pt</span>
+        </div>
+        <div class="nt-sum">先週リライトした「○○公園」記事で実証。 同フォーマットを他記事にも横展開する</div>
+        <div class="nt-ft">
+          <span>🖊 手動</span>
+          <span>5/24</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RIGHT PANE: NOTE DETAIL ===== -->
+  <div class="right">
+    <div class="detail-h">
+      <div class="d-ic">📝</div>
+      <div class="d-meta">
+        <div class="d-ti">factoring-persona-definition.html</div>
+        <div class="d-sub">🤖 AI 生成 · 2026-05-26 09:42 · 3,420 字</div>
+      </div>
+      <div class="d-actions">
+        <button class="d-btn">📌</button>
+        <button class="d-btn">編集</button>
+        <button class="d-btn primary">📝 記事化</button>
+      </div>
+    </div>
+
+    <div class="detail-body">
+      <div class="tags">
+        <span class="tag">#ファクタリング</span>
+        <span class="tag">#ペルソナ</span>
+        <span class="tag">#中小企業</span>
+        <span class="tag">#資金繰り</span>
+      </div>
+
+      <!-- 1-click chain bar -->
+      <div class="chain-bar">
+        <div class="h">⚡ このメモから生成</div>
+        <div class="desc">クリック 1 つで WP 記事 + X 投稿 + Threads 投稿 を同時生成</div>
+        <div class="chain-buttons">
+          <button class="chain-btn">📝 WP 記事</button>
+          <button class="chain-btn">📱 X 投稿</button>
+          <button class="chain-btn">🧵 Threads</button>
+          <button class="chain-btn all">⚡ 3 チャネル一括生成 →</button>
+        </div>
+      </div>
+
+      <!-- HTML artifact iframe (★ バグ fix の主要部分) -->
+      <div class="html-artifact">
+        <div class="ha-h">
+          <span style="font-size:14px">🌐</span>
+          <div class="ha-ti">HTML プレビュー (iframe)</div>
+          <div class="ha-url">/generated/artifact-factoring-persona-definition-78f20cc22e.html</div>
+          <div class="ha-actions">
+            <button class="ha-btn">🔗 新しいタブ</button>
+            <button class="ha-btn">⬇ DL</button>
+          </div>
+        </div>
+        <iframe src="about:blank" sandbox style="background:linear-gradient(135deg, #fafaf7, #fff); display:flex; align-items:center; justify-content:center;"></iframe>
+      </div>
+
+      <!-- Markdown content -->
+      <div class="markdown">
+        <h2>ターゲットペルソナ詳細</h2>
+        <p><strong>基本属性</strong>: 法人代表 45-55 歳、 月商 1,000 万〜5,000 万円。 製造業 / 卸売業 / 建設業が中心。</p>
+        <h3>主な痛みポイント</h3>
+        <ul>
+          <li>取引先からの入金サイト 60-90 日と長く、 仕入れ・人件費の支払いとの時差で資金繰りに苦戦</li>
+          <li>銀行融資は審査時間が長く、 緊急時に間に合わない</li>
+          <li>ファクタリング業者の比較がつかない、 手数料の不透明性</li>
+        </ul>
+        <h3>購買動機</h3>
+        <ul>
+          <li>「経営者に時間を返したい」 — 経理に毎月時間を取られている</li>
+          <li>仕入れタイミングを逃したくない</li>
+        </ul>
+      </div>
+
+      <!-- Related notes -->
+      <div class="related">
+        <h4>🔗 関連メモ (AI 推薦)</h4>
+        <div class="rel-item">
+          <div class="ic">👀</div>
+          <div class="ti">競合「factoring-pro.jp」のペルソナ訴求</div>
+          <div class="age">5/24</div>
+        </div>
+        <div class="rel-item">
+          <div class="ic">💬</div>
+          <div class="ti">顧客の声: 「入金まで何日か知りたい」</div>
+          <div class="age">5/23</div>
+        </div>
+        <div class="rel-item">
+          <div class="ic">💡</div>
+          <div class="ti">アイデア: 製造業特化 LP</div>
+          <div class="age">5/20</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

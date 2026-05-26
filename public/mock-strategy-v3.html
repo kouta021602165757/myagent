@@ -33,32 +33,34 @@
   button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
   a { color: var(--teal); text-decoration: none; }
 
-  /* ===== DEMO CONTROLLER (bottom-left floating) ===== */
+  /* ===== DEMO CONTROLLER (top horizontal bar) ===== */
   .demo-ctrl {
     position: fixed;
-    bottom: 20px; left: 20px;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+    top: 0; left: 0; right: 0;
     z-index: 200;
-    overflow: hidden;
-    width: 300px;
-  }
-  .demo-ctrl.collapsed { width: auto; }
-  .demo-ctrl-bar {
-    padding: 10px 14px;
     background: linear-gradient(135deg, var(--teal), var(--teal-2));
     color: #fff;
-    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .demo-ctrl-bar {
+    padding: 8px 16px;
+    display: flex; align-items: center; gap: 10px;
     cursor: pointer;
+    height: 44px;
   }
   .demo-ctrl-bar .badge {
     background: var(--lime); color: var(--teal-2);
     padding: 2px 7px; border-radius: 4px;
     font-size: 9px; font-weight: 800;
   }
-  .demo-ctrl-bar .progress { font-size: 11px; font-weight: 700; flex: 1; }
+  .demo-ctrl-bar .progress { font-size: 11px; font-weight: 700; }
+  .demo-ctrl-bar .label-mid {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.85;
+    font-weight: 600;
+  }
   .demo-ctrl-bar .arrow {
     width: 26px; height: 26px;
     background: rgba(255,255,255,0.18);
@@ -74,9 +76,16 @@
     font-size: 10px;
   }
   .demo-ctrl-body {
-    padding: 10px;
+    position: absolute;
+    top: 100%; right: 16px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px;
+    width: 280px;
     max-height: 360px;
     overflow-y: auto;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.18);
   }
   .demo-ctrl.collapsed .demo-ctrl-body { display: none; }
   .demo-ctrl-body .stepbtn {
@@ -105,7 +114,7 @@
   /* ===== APP LAYOUT ===== */
   .app {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 44px; left: 0; right: 0; bottom: 0;
     display: flex;
     background: var(--bg);
   }
@@ -976,10 +985,11 @@
 <body>
 
 <!-- FLOATING DEMO CONTROLLER -->
-<div class="demo-ctrl" id="demoCtrl">
+<div class="demo-ctrl collapsed" id="demoCtrl">
   <div class="demo-ctrl-bar" onclick="toggleDemoCtrl(event)">
     <span class="badge" id="dcBadge">PHASE 1</span>
     <span class="progress" id="dcProgress">1 / 8</span>
+    <span class="label-mid" id="dcLabel">🎬 デモナビ — クリックで全 8 ステップ表示</span>
     <button class="arrow" id="prevBtn" onclick="event.stopPropagation(); goStep(Math.max(1, curStep-1));">←</button>
     <button class="arrow" id="nextBtn" onclick="event.stopPropagation(); goStep(Math.min(8, curStep+1));">→</button>
     <span class="toggle">▾</span>
@@ -1262,6 +1272,18 @@
           <div class="hc-title">🤖 AI チームの累計実績</div>
         </div>
         <div class="hc-cell">
+          <div class="lbl">📊 月間 PV</div>
+          <div class="val">3,420</div>
+          <div class="delta">▲ +42%</div>
+        </div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell">
+          <div class="lbl">👥 月間ユーザー</div>
+          <div class="val">1,289</div>
+          <div class="delta">▲ +28%</div>
+        </div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell">
           <div class="lbl">📝 公開記事</div>
           <div class="val">12 本</div>
           <div class="delta">▲ 今月 +4</div>
@@ -1274,18 +1296,12 @@
         </div>
         <div class="hc-divider"></div>
         <div class="hc-cell">
-          <div class="lbl">🧵 Threads フォロワー</div>
+          <div class="lbl">🧵 Threads</div>
           <div class="val">+148</div>
           <div class="delta">▲ 今週 +14</div>
         </div>
-        <div class="hc-divider"></div>
-        <div class="hc-cell">
-          <div class="lbl">⚡ AI 稼働</div>
-          <div class="val">87h</div>
-          <div class="delta">≒ ¥260k 節約</div>
-        </div>
         <div class="hc-action">
-          <button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button>
+          <button class="hc-btn share" onclick="goStep(8)">📊 詳細</button>
         </div>
       </div>
 
@@ -1529,12 +1545,16 @@
     <main class="main">
       <div class="hero-card">
         <div><div class="hc-title">🤖 AI チームの累計実績</div></div>
+        <div class="hc-cell"><div class="lbl">📊 月間 PV</div><div class="val">3,420</div><div class="delta">▲ +42%</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">👥 月間ユーザー</div><div class="val">1,289</div><div class="delta">▲ +28%</div></div>
+        <div class="hc-divider"></div>
         <div class="hc-cell"><div class="lbl">📝 公開記事</div><div class="val">12 本</div><div class="delta">▲ 今月 +4</div></div>
         <div class="hc-divider"></div>
         <div class="hc-cell"><div class="lbl">📱 X フォロワー</div><div class="val">+312</div><div class="delta">▲ 今週 +28</div></div>
         <div class="hc-divider"></div>
-        <div class="hc-cell"><div class="lbl">🧵 Threads フォロワー</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
-        <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button></div>
+        <div class="hc-cell"><div class="lbl">🧵 Threads</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
+        <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">📊 詳細</button></div>
       </div>
       <div class="chat-wrap">
       <div class="chat-header">
@@ -1642,12 +1662,16 @@
     <main class="main">
       <div class="hero-card">
         <div><div class="hc-title">🤖 AI チームの累計実績</div></div>
+        <div class="hc-cell"><div class="lbl">📊 月間 PV</div><div class="val">3,420</div><div class="delta">▲ +42%</div></div>
+        <div class="hc-divider"></div>
+        <div class="hc-cell"><div class="lbl">👥 月間ユーザー</div><div class="val">1,289</div><div class="delta">▲ +28%</div></div>
+        <div class="hc-divider"></div>
         <div class="hc-cell"><div class="lbl">📝 公開記事</div><div class="val">12 本</div><div class="delta">▲ 今月 +4</div></div>
         <div class="hc-divider"></div>
         <div class="hc-cell"><div class="lbl">📱 X フォロワー</div><div class="val">+312</div><div class="delta">▲ 今週 +28</div></div>
         <div class="hc-divider"></div>
-        <div class="hc-cell"><div class="lbl">🧵 Threads フォロワー</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
-        <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">🐦 シェア</button></div>
+        <div class="hc-cell"><div class="lbl">🧵 Threads</div><div class="val">+148</div><div class="delta">▲ 今週 +14</div></div>
+        <div class="hc-action"><button class="hc-btn share" onclick="goStep(8)">📊 詳細</button></div>
       </div>
       <div class="chat-wrap">
       <div class="chat-header">
@@ -1866,14 +1890,14 @@
 
 <script>
 const STEPS = {
-  1: { phase: 'PHASE 1 · オンボ' },
-  2: { phase: 'PHASE 1 · オンボ' },
-  3: { phase: 'PHASE 1 · オンボ' },
-  4: { phase: 'PHASE 1 · オンボ' },
-  5: { phase: 'D · 運用' },
-  6: { phase: 'P · 戦略' },
-  7: { phase: 'C · 検証' },
-  8: { phase: 'A · 共有' }
+  1: { phase: 'PHASE 1 · オンボ', name: 'URL 入力' },
+  2: { phase: 'PHASE 1 · オンボ', name: 'サイト解析・判定' },
+  3: { phase: 'PHASE 1 · オンボ', name: 'アカウント接続' },
+  4: { phase: 'PHASE 1 · オンボ', name: 'チーム + 30 日プラン' },
+  5: { phase: 'D · 運用', name: 'メイン chat (HERO + tasks)' },
+  6: { phase: 'P · 戦略', name: '戦略パネル (3 チャネル)' },
+  7: { phase: 'C · 検証', name: '日次レポ (即効指標)' },
+  8: { phase: 'A · 共有', name: '月次シェアカード' }
 };
 
 let curStep = 1;
@@ -1896,6 +1920,7 @@ function goStep(n){
   const meta = STEPS[n] || {};
   document.getElementById('dcBadge').textContent = meta.phase || '';
   document.getElementById('dcProgress').textContent = `${n} / 8`;
+  document.getElementById('dcLabel').textContent = '🎬 ' + (meta.name || '');
   document.getElementById('prevBtn').disabled = (n === 1);
   document.getElementById('nextBtn').disabled = (n === 8);
 }

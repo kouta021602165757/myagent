@@ -9778,7 +9778,11 @@ async function openAgent(id){
       || (ag.site_vertical === 'blog' ? 'media' : ag.site_vertical === 'ec' ? 'ec' : 'lp-hp');
     var info = stMap[st];
     if(info){
-      topPills += '<span class="pill" style="background:' + info.bg + ';color:' + info.fg + ';border-color:' + info.fg + '33">' + info.lbl + '</span>';
+      // .pill class has !important — use !important in inline style to override
+      var stylePill = 'background:' + info.bg + ' !important;'
+        + 'color:' + info.fg + ' !important;'
+        + 'border:1px solid ' + info.fg + '40 !important;';
+      topPills += '<span class="pill" style="' + stylePill + '">' + info.lbl + '</span>';
     }
   }
   const isTeam = !!(ag.is_team && Array.isArray(ag.team_member_agent_ids));

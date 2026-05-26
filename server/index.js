@@ -20439,6 +20439,51 @@ async function handleAPI(req,res,pathname,method,ip){
   //   kpi_6mo: [{ month, label, pv, sessions, leads, cvr, milestone }],
   // }
   //
+  // GET /api/agents/:id/gsc-snapshot — Google Search Console データ一括取得
+  //  Returns: { connected, overall: {clicks, impressions, ctr, position}, top_queries[], top_pages[] }
+  const gscSnapMatch = pathname.match(/^\/api\/agents\/([^/]+)\/gsc-snapshot$/);
+  if(gscSnapMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === gscSnapMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+
+    const googleConnected = !!(user.google_oauth && user.google_oauth.refresh_token);
+    const hasGscScope = googleConnected && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''));
+    if(!hasGscScope){
+      return jres(res, 200, { connected: false });
+    }
+
+    try {
+      const [overall, qRes, pRes] = await Promise.all([
+        executeGscQueryTool(user, ag, { dimensions: [], row_limit: 1 }),
+        executeGscQueryTool(user, ag, { dimensions: ['query'], row_limit: 5 }),
+        executeGscQueryTool(user, ag, { dimensions: ['page'], row_limit: 5 }),
+      ]);
+      // Aggregate overall (no dimension → row gives totals)
+      let aggregated = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
+      if(overall && overall.ok && Array.isArray(overall.rows) && overall.rows.length > 0){
+        const r0 = overall.rows[0];
+        aggregated = {
+          clicks: r0.clicks || 0,
+          impressions: r0.impressions || 0,
+          ctr: r0.ctr || 0,
+          position: r0.position || 0,
+        };
+      }
+      const topQueries = (qRes && qRes.ok && Array.isArray(qRes.rows)) ? qRes.rows.slice(0, 5) : [];
+      const topPages = (pRes && pRes.ok && Array.isArray(pRes.rows)) ? pRes.rows.slice(0, 5) : [];
+      return jres(res, 200, {
+        connected: true,
+        overall: aggregated,
+        top_queries: topQueries,
+        top_pages: topPages,
+        fetched_at: new Date().toISOString(),
+      });
+    } catch(e){
+      console.warn('[gsc-snapshot] failed:', e.message);
+      return jres(res, 500, { error: e.message });
+    }
+  }
+
   // POST /api/agents/:id/artifact/generate-draft — AI が WP 記事下書きを生成
   //  Body: { topic: string, word_count?: number (default 3000) }
   //  Result: { ok: true, note_id, title, content }

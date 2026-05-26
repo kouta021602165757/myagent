@@ -5978,6 +5978,69 @@ function _formatRel(ts){
    ══════════════════════════════════════════════════════════════════ */
 
 // ─── Tab 1: 📊 数字 (= 現状の推移) ────────────────────────────────
+// GSC スナップショットを取得して数字パネルに描画
+async function _fetchGscSnapshot(siteId){
+  var el = document.getElementById('gscSnap-' + siteId);
+  if(!el) return;
+  try {
+    var r = await api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/gsc-snapshot');
+    if(!r || !r.connected){
+      el.innerHTML = '<div style="padding:18px;color:var(--muted);font-size:12px;text-align:center">GSC 接続を確認してください</div>';
+      return;
+    }
+    var o = r.overall || {};
+    var q = r.top_queries || [];
+    var p = r.top_pages || [];
+    function _shortUrl(u){
+      try { var url = new URL(u); return url.pathname || '/'; } catch(e){ return String(u).slice(0, 60); }
+    }
+    function _row(rank, label, stat){
+      return '<li style="padding:8px 10px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;font-size:12px">'
+        + '<span style="width:18px;height:18px;background:var(--peach-soft);color:var(--peach-dark);border-radius:4px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + rank + '</span>'
+        + '<span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(label) + '</span>'
+        + '<span style="font-size:10px;color:var(--muted);font-weight:700;flex-shrink:0">' + stat + '</span>'
+        + '</li>';
+    }
+    var queriesHTML = q.length ? q.map(function(r, i){
+      return _row(i+1, (r.keys && r.keys[0]) || '?',
+        '<span style="color:var(--peach-dark);font-weight:800">' + r.clicks + '</span> / ' + r.impressions + ' / ' + r.position + ' 位');
+    }).join('') : '<li style="padding:16px;color:var(--muted);font-size:11px;text-align:center;border-top:1px solid var(--wire)">データなし</li>';
+    var pagesHTML = p.length ? p.map(function(r, i){
+      return _row(i+1, _shortUrl((r.keys && r.keys[0]) || '?'),
+        '<span style="color:var(--peach-dark);font-weight:800">' + r.clicks + '</span> click');
+    }).join('') : '<li style="padding:16px;color:var(--muted);font-size:11px;text-align:center;border-top:1px solid var(--wire)">データなし</li>';
+    el.innerHTML = ''
+      + '<div style="padding:16px 18px">'
+      +   '<div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;margin-bottom:14px">'
+      +     _gscCell('🖱 検索クリック', o.clicks, '7 日合計')
+      +     _gscCell('👁 表示回数', o.impressions, '7 日合計')
+      +     _gscCell('📈 平均 CTR', (o.ctr != null ? (Math.round(o.ctr * 100) / 100) + '%' : '—'), '加重平均')
+      +     _gscCell('📍 平均掲載順位', (o.position != null ? (Math.round(o.position * 10) / 10) : '—'), '加重平均')
+      +   '</div>'
+      +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+      +     '<div>'
+      +       '<div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px">🔥 上位検索クエリ Top 5</div>'
+      +       '<ul style="list-style:none;background:#fafaf7;border-radius:8px;overflow:hidden;padding:0;margin:0">' + queriesHTML + '</ul>'
+      +     '</div>'
+      +     '<div>'
+      +       '<div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px">📄 流入上位 URL Top 5</div>'
+      +       '<ul style="list-style:none;background:#fafaf7;border-radius:8px;overflow:hidden;padding:0;margin:0">' + pagesHTML + '</ul>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>';
+  } catch(e){
+    el.innerHTML = '<div style="padding:18px;color:#dc2626;font-size:12px;text-align:center">GSC データ取得に失敗: ' + esc(e.message || 'unknown') + '</div>';
+  }
+}
+function _gscCell(lbl, val, sub){
+  var v = (val == null || val === '') ? '—' : (typeof val === 'number' ? val.toLocaleString() : val);
+  return '<div style="background:#f8fafc;border:1px solid var(--wire);border-radius:10px;padding:11px 13px">'
+    + '<div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px">' + lbl + '</div>'
+    + '<div style="font-size:18px;font-weight:800;line-height:1.1">' + v + '</div>'
+    + '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + sub + '</div>'
+    + '</div>';
+}
+
 function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts, series, weekly, breakdown, insights){
   // ── 数字一覧 = ビジネスの結果 (= 納品物カウントは脚注に格下げ) ──
   // KPI 未設定 → BIG CTA で「ここで設定すると数字が出る」
@@ -6271,22 +6334,23 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     +   '<div class="nm-mod-body">' + ga4ModBody + '</div>'
     + '</div>';
 
-  // ── Module 2: Search Console (Google OAuth で連携、 AI 経由でクエリ) ──
+  // ── Module 2: Search Console (Google OAuth で連携、 直接 fetch で live data 表示) ──
   var googleConnected = !!(me && me.google_oauth && me.google_oauth.refresh_token);
   var hasGscScope = googleConnected && /webmasters/.test(String((me && me.google_oauth && me.google_oauth.scope) || ''));
+  // GSC データを背景で取りに行く (= 接続済の場合)
+  if(hasGscScope){
+    setTimeout(function(){ _fetchGscSnapshot(site.id); }, 200);
+  }
   var scModuleHTML = ''
     + '<div class="nm-mod ' + (hasGscScope ? 'nm-mod-on' : 'nm-mod-off') + '">'
     +   _moduleHeader('🔍', 'Google Search Console', hasGscScope, '#3b82f6',
-                     hasGscScope ? '🔎 検索流入を分析' : '接続 →',
+                     hasGscScope ? '🔎 詳細分析' : '接続 →',
                      hasGscScope
                        ? '_promptAiGscQuery(\'' + esc(site.id) + '\')'
                        : '_switchDashTab(\'' + esc(site.id) + '\',\'connections\')')
     +   '<div class="nm-mod-body">'
     +     (hasGscScope
-        ? '<div class="nm-mod-locked" style="border-style:solid; background:linear-gradient(135deg, #fff 0%, rgba(59,130,246,.04) 100%); border-color:rgba(59,130,246,.2)">'
-          + '<div class="nm-mod-locked-tx">📡 GSC は接続済 (= webmasters.readonly scope)。 AI に「直近 28 日の検索クエリ TOP 10」 と聞くと gsc_query が走り、 ここに live data が出ます。</div>'
-          + '<button class="nm-mod-locked-btn" onclick="_promptAiGscQuery(\'' + esc(site.id) + '\')">🔎 AI に検索流入を聞く →</button>'
-          + '</div>'
+        ? '<div id="gscSnap-' + esc(site.id) + '" style="padding:16px 18px;font-size:12px;color:var(--muted);text-align:center"><span style="display:inline-block;width:16px;height:16px;border:2px solid var(--wire2);border-top-color:#3b82f6;border-radius:50%;animation:lpSpin .8s linear infinite;vertical-align:-3px;margin-right:8px"></span>GSC データを取得中…</div>'
         : '<div class="nm-mod-locked">'
           + '<div class="nm-mod-locked-tx">検索キーワード / 表示回数 / 平均順位 / CTR — どのクエリで何位なのか、 競合 SEO の動きも追えます。</div>'
           + '<button class="nm-mod-locked-btn" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'connections\')">🔌 Google 連携 (Search Console scope 付き) →</button>'

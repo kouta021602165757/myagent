@@ -290,52 +290,78 @@
     margin-top: 6px;
   }
 
-  /* HTML artifact iframe */
-  .html-artifact {
+  /* HTML 成果物: 開くボタンだけ (iframe 廃止) */
+  .html-link {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 18px;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px;
   }
-  .html-artifact .ha-h {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--line);
-    display: flex; align-items: center; gap: 8px;
-    background: #fafaf7;
+  .html-link .hl-l {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    min-width: 0;
   }
-  .html-artifact .ha-ti {
-    font-size: 12px; font-weight: 800;
-    flex: 1;
+  .html-link .hl-ic {
+    width: 36px; height: 36px;
+    background: var(--lime-soft);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
   }
-  .html-artifact .ha-url {
+  .html-link .hl-meta { min-width: 0; }
+  .html-link .hl-ti { font-size: 12px; font-weight: 800; }
+  .html-link .hl-url {
     font-size: 10px;
     color: var(--muted);
     font-family: ui-monospace, monospace;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 360px;
+    max-width: 320px;
+    margin-top: 1px;
   }
-  .html-artifact .ha-actions {
-    display: flex; gap: 4px;
-  }
-  .html-artifact .ha-btn {
+  .html-link .hl-r { display: flex; gap: 6px; flex-shrink: 0; }
+  .html-link .hl-btn {
     background: #fff;
     border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-size: 10px;
+    border-radius: 7px;
+    padding: 7px 11px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
   }
-  .html-artifact iframe {
-    width: 100%;
-    height: 480px;
-    border: 0;
-    display: block;
+  .html-link .hl-btn.primary {
+    background: var(--teal);
+    color: #fff;
+    border-color: var(--teal);
   }
+
+  /* 記事化アクションバー */
+  .action-bar {
+    margin-bottom: 18px;
+  }
+  .action-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--teal), var(--teal-2));
+    color: #fff;
+    border: 0;
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .action-btn .ic { font-size: 24px; flex-shrink: 0; }
+  .action-btn .bd { flex: 1; }
+  .action-btn .t { font-size: 14px; font-weight: 800; }
+  .action-btn .s { font-size: 11px; opacity: 0.85; margin-top: 1px; }
+  .action-btn .ar { font-size: 18px; flex-shrink: 0; }
+  .action-btn:hover { filter: brightness(1.05); }
 
   /* Markdown content */
   .markdown {
@@ -559,30 +585,31 @@
         <span class="tag">#資金繰り</span>
       </div>
 
-      <!-- 1-click chain bar -->
-      <div class="chain-bar">
-        <div class="h">⚡ このメモから生成</div>
-        <div class="desc">クリック 1 つで WP 記事 + X 投稿 + Threads 投稿 を同時生成</div>
-        <div class="chain-buttons">
-          <button class="chain-btn">📝 WP 記事</button>
-          <button class="chain-btn">📱 X 投稿</button>
-          <button class="chain-btn">🧵 Threads</button>
-          <button class="chain-btn all">⚡ 3 チャネル一括生成 →</button>
+      <!-- HTML artifact: 開くボタンだけ (iframe 廃止) -->
+      <div class="html-link">
+        <div class="hl-l">
+          <div class="hl-ic">🌐</div>
+          <div class="hl-meta">
+            <div class="hl-ti">HTML 成果物</div>
+            <div class="hl-url">/generated/artifact-factoring-persona-definition-78f20cc22e.html</div>
+          </div>
+        </div>
+        <div class="hl-r">
+          <button class="hl-btn">⬇ DL</button>
+          <button class="hl-btn primary">🔗 新しいタブで開く →</button>
         </div>
       </div>
 
-      <!-- HTML artifact iframe (★ バグ fix の主要部分) -->
-      <div class="html-artifact">
-        <div class="ha-h">
-          <span style="font-size:14px">🌐</span>
-          <div class="ha-ti">HTML プレビュー (iframe)</div>
-          <div class="ha-url">/generated/artifact-factoring-persona-definition-78f20cc22e.html</div>
-          <div class="ha-actions">
-            <button class="ha-btn">🔗 新しいタブ</button>
-            <button class="ha-btn">⬇ DL</button>
+      <!-- 記事化アクション (タスクへ送る) -->
+      <div class="action-bar">
+        <button class="action-btn primary">
+          <span class="ic">📝</span>
+          <div class="bd">
+            <div class="t">このメモを記事化</div>
+            <div class="s">タスクに送って AI が下書き作成 (約 60 秒)</div>
           </div>
-        </div>
-        <iframe src="about:blank" sandbox style="background:linear-gradient(135deg, #fafaf7, #fff); display:flex; align-items:center; justify-content:center;"></iframe>
+          <span class="ar">→</span>
+        </button>
       </div>
 
       <!-- Markdown content -->

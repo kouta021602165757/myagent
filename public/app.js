@@ -6614,24 +6614,30 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     + '</div>';
 
   // ===== Mock 準拠の新レイアウト (= 7 日チャート + 4 cell grid + 3 channel + GSC + dept) =====
-  // 期間トグル (UI のみ、 default 7d)
+  // 期間トグル (current period = window._numbersPeriod, default 7)
+  var curPeriod = (window._numbersPeriod === 1 || window._numbersPeriod === 30) ? window._numbersPeriod : 7;
+  function _periodBtn(p, label){
+    return '<button class="sd-mock-tg' + (curPeriod === p ? ' active' : '') + '" onclick="_setNumbersPeriod(' + p + ',\'' + esc(site.id) + '\')">' + label + '</button>';
+  }
   var periodToggleHTML = ''
     + '<div class="sd-mock-toggle">'
-    +   '<button class="sd-mock-tg" data-period="1">昨日</button>'
-    +   '<button class="sd-mock-tg active" data-period="7">直近 7 日</button>'
-    +   '<button class="sd-mock-tg" data-period="30">直近 30 日</button>'
+    +   _periodBtn(1, '昨日')
+    +   _periodBtn(7, '直近 7 日')
+    +   _periodBtn(30, '直近 30 日')
     + '</div>';
 
   // 4-cell GA4 grid (PV / users / 滞在 / 直帰率) — 各々に mini trend
+  // 期間に応じて series をスライス (= 1日 / 7日 / 30日)
   var grid4HTML = '';
   if(hasGa4Data){
-    var s7 = ga4Data.series.slice(-7);
+    var sliceN = curPeriod;  // 1 / 7 / 30
+    var s7 = ga4Data.series.slice(-sliceN);
     var s7Pv = s7.reduce(function(a,d){ return a + (d.pv||0); }, 0);
     var s7User = s7.reduce(function(a,d){ return a + (d.users||0); }, 0);
     var s7Sess = s7.reduce(function(a,d){ return a + (d.sessions||0); }, 0);
     var s7BounceAvg = s7Sess > 0 ? s7.reduce(function(a,d){ return a + (d.bounce * d.sessions || 0); }, 0) / s7Sess : 0;
     var s7DwellAvg = s7Sess > 0 ? s7.reduce(function(a,d){ return a + (d.dwell * d.sessions || 0); }, 0) / s7Sess : 0;
-    var prev7 = ga4Data.series.slice(-14, -7);
+    var prev7 = ga4Data.series.slice(-sliceN * 2, -sliceN);
     var prev7Pv = prev7.reduce(function(a,d){ return a + (d.pv||0); }, 0);
     var prev7User = prev7.reduce(function(a,d){ return a + (d.users||0); }, 0);
     var pvDelta = prev7Pv > 0 ? Math.round((s7Pv - prev7Pv) / prev7Pv * 100) : null;
@@ -6720,6 +6726,9 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     +   '</div>'
     + '</div>';
 
+  // mock 準拠: 期間 toggle → HERO → 4-cell → 7d chart → GSC → 3-channel → 部門 → 活動量
+  // 旧モジュール (ga4ModuleHTML / snsModuleHTML / contentEcModuleHTML / stripeModuleHTML /
+  //   formModuleHTML / aeoModuleHTML) は新 layout で重複するため返り値から除外。
   return periodToggleHTML
     + heroHTML
     + (grid4HTML ? grid4HTML : insightsHTML)
@@ -6727,14 +6736,17 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     + scModuleHTML
     + threeChannelHTML
     + deptRankHTML
-    + ga4ModuleHTML
-    + aeoModuleHTML
-    + snsModuleHTML
-    + contentEcModuleHTML
-    + stripeModuleHTML
-    + formModuleHTML
     + activityHTML;
 }
+
+// 数字分析パネルの期間切替 (1=昨日, 7=7 日, 30=30 日)
+window._setNumbersPeriod = function(period, siteId){
+  window._numbersPeriod = period;
+  // パネルを再描画 (= 同じ siteId / tab で再オープン)
+  if(siteId && typeof _openSiteTabModal === 'function'){
+    _openSiteTabModal(siteId, 'numbers');
+  }
+};
 
 // ─── Tab 2: 🎯 戦略 (= 設計図) ────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════

@@ -15147,6 +15147,186 @@ async function _runOneSchedule(user, agent, sched){
 }
 let _scheduleTimer = null;
 let _lastInactivityCheck = 0;
+// ── Nightly draft generator: 22:00-06:00 JST、 各 site agent に対し 1 記事/夜 を AI が生成 ──
+// "AI が深夜に動いて、 朝起きたら成果物が並んでる" の体験を作る。
+let _nightlyTimer = null;
+function _startNightlyDraftGenerator(){
+  if(_nightlyTimer) return;
+  // 30 分ごとに JST hour チェック。 22:00-06:00 (JST) なら稼働。
+  const TICK_MS = 30 * 60 * 1000;
+  _nightlyTimer = setInterval(async () => {
+    try {
+      const now = new Date();
+      const jstMs = now.getTime() + (now.getTimezoneOffset() + 9 * 60) * 60 * 1000;
+      const jst = new Date(jstMs);
+      const jstHour = jst.getUTCHours();
+      // JST 22-23 or 0-5 のみ稼働
+      if(jstHour >= 6 && jstHour < 22) return;
+
+      // 「今夜」 のキー = JST で 18:00 切り (深夜 → 朝の連続を 1 夜と扱う)
+      const nightDate = jstHour < 18
+        ? new Date(jstMs - 24 * 3600 * 1000)
+        : jst;
+      const nightKey = nightDate.toISOString().slice(0, 10) + '-night';
+
+      const users = USE_SUPA
+        ? (await sbReq('GET','users','?select=*&limit=2000')).d || []
+        : LDB.all();
+
+      let generatedCount = 0;
+      for(const u of users){
+        if(!u || !Array.isArray(u.agents)) continue;
+        let changed = false;
+        for(const ag of u.agents){
+          if(!ag || !ag.site_url) continue; // site agent のみ
+          if(ag._nightly_run_key === nightKey) continue; // 今夜は既に実行済み
+
+          // ロードマップから未着手タスク (current week 優先) を 1 件取得
+          const task = _pickNightlyDraftTask(ag);
+          if(!task) {
+            ag._nightly_run_key = nightKey; // タスクなしでもキーを set (再度 try しない)
+            ag._nightly_skipped = 'no_task';
+            changed = true;
+            continue;
+          }
+
+          // タスクから記事テーマを生成
+          const topic = _topicFromTask(task);
+          if(!topic) continue;
+
+          // 既に同テーマで生成済みかチェック (重複防止)
+          const existing = (u.notes || []).find(n =>
+            n && n.agent_id === ag.id && n.type === 'article_draft'
+            && (n.title || '').toLowerCase().includes(topic.toLowerCase().slice(0, 20))
+          );
+          if(existing){
+            ag._nightly_run_key = nightKey;
+            ag._nightly_skipped = 'duplicate';
+            changed = true;
+            continue;
+          }
+
+          // 生成
+          try {
+            await _generateNightlyDraft(u, ag, topic);
+            ag._nightly_run_key = nightKey;
+            ag._nightly_last_at = new Date().toISOString();
+            ag._nightly_skipped = null;
+            changed = true;
+            generatedCount++;
+            console.log('[nightly-draft] generated user=' + u.id + ' agent=' + ag.id + ' topic=' + topic.slice(0, 60));
+          } catch(e){
+            console.warn('[nightly-draft] gen failed user=' + u.id + ' agent=' + ag.id + ':', e.message);
+          }
+
+          // 1 user につき 1 agent だけ生成 (rate limit & 公平性)
+          break;
+        }
+        if(changed){
+          try { await DB.save(u); }
+          catch(e){ console.warn('[nightly-draft] save failed:', e.message); }
+        }
+        // API rate-limit 考慮で 1 秒スリープ
+        if(changed) await new Promise(r => setTimeout(r, 1000));
+      }
+      if(generatedCount > 0){
+        console.log('[nightly-draft] tick complete, generated=' + generatedCount);
+      }
+    } catch(e){
+      console.warn('[nightly-draft] tick failed:', e.message);
+    }
+  }, TICK_MS);
+  console.log('[nightly-draft] generator started (30 min tick, JST 22:00-06:00 active)');
+}
+
+// ロードマップから今夜生成する記事用タスクを 1 件 pick
+function _pickNightlyDraftTask(ag){
+  const rm = ag.roadmap;
+  if(!rm || !Array.isArray(rm.weeks)) return null;
+  // 現在週 (= ロードマップ生成からの経過週、 max 8)
+  const generatedMs = Date.parse(rm.generated_at || 0) || Date.now();
+  const weeksElapsed = Math.floor((Date.now() - generatedMs) / (7 * 86400000));
+  const curWeek = Math.min(rm.weeks.length, Math.max(1, weeksElapsed + 1));
+  // 今週 → 来週 → ... の順で探す
+  for(let wIdx = curWeek - 1; wIdx < Math.min(rm.weeks.length, curWeek + 2); wIdx++){
+    const w = rm.weeks[wIdx];
+    if(!w || !Array.isArray(w.tasks)) continue;
+    // 記事関連のタスクを優先 (= "記事", "執筆", "ライティング", "rewrite", "title" 等を含む)
+    const articleTask = w.tasks.find(t =>
+      t && !t.done && /記事|執筆|ライティング|rewrite|タイトル|H2|内部リンク|コンテンツ|ブログ/i.test(t.text || '')
+    );
+    if(articleTask) return articleTask;
+    // 任意の未完了タスクで fallback
+    const anyTask = w.tasks.find(t => t && !t.done);
+    if(anyTask) return anyTask;
+  }
+  return null;
+}
+
+// タスク文からテーマ文字列を生成
+function _topicFromTask(task){
+  if(!task || typeof task.text !== 'string') return null;
+  let topic = task.text.trim();
+  // 「○○の記事を書く」 → 「○○」 のような変換
+  topic = topic.replace(/^[「【\[]/, '').replace(/[」】\]]$/, '');
+  topic = topic.replace(/(?:について)?(?:の)?(記事|ブログ)を?(書く|執筆|作る|まとめる).*$/, '');
+  topic = topic.replace(/^(?:記事|ブログ)[:：]?\s*/, '');
+  if(topic.length < 5) topic = task.text.trim();
+  return topic.slice(0, 120);
+}
+
+// 1 件の夜間ドラフト生成 (= /artifact/generate-draft endpoint と同じロジック、 直接呼び出し版)
+async function _generateNightlyDraft(user, ag, topic){
+  // サイトコンテキスト
+  let siteContext = '';
+  try {
+    const preview = await _fetchSitePreview(ag);
+    if(preview && preview.content){
+      siteContext = '\n【既存サイトの内容 (= トーン参考)】\n' + String(preview.content).slice(0, 1500);
+    }
+  } catch(e){ /* ignore */ }
+
+  const prompt = `あなたはこのサイトのプロのコンテンツライターです。以下のテーマで記事の下書きを Markdown 形式で書いてください。
+
+【サイト】${ag.site_url || ag.name} (${ag.site_vertical || 'general'})
+【記事テーマ】${topic}
+【目標字数】2,500 字 (±10% 許容)${siteContext}
+
+【書き方ルール】
+- 冒頭に H1 タイトル (検索意図キーワード含む)
+- H2 / H3 で適切に章立て (3-5 個の H2)
+- 結論を冒頭でわかりやすく
+- 具体例・データ・体験談を盛り込む
+- SEO に強い構成 (同義語散布、関連語、見出しに KW)
+- 最後の段落で読者が「次に何をすべきか」を明示
+
+完成度の高い、 そのまま WordPress に貼れる下書きを出力してください。`;
+
+  const reply = await callAI([{role:'user', content: prompt}], '', 'sonnet', ag);
+  if(!reply || reply.length < 400) throw new Error('AI returned empty/short');
+
+  let articleTitle = topic;
+  const h1Match = reply.match(/^#\s+(.+)$/m);
+  if(h1Match) articleTitle = h1Match[1].trim().slice(0, 200);
+
+  user.notes = Array.isArray(user.notes) ? user.notes : [];
+  if(user.notes.length >= 1000) throw new Error('note limit reached');
+  const noteId = 'note_' + crypto.randomBytes(5).toString('hex');
+  const now = new Date().toISOString();
+  user.notes.push({
+    id: noteId,
+    agent_id: ag.id,
+    title: articleTitle,
+    content: reply.slice(0, 100000),
+    type: 'article_draft',
+    auto_generated: true,
+    nightly_generated: true,
+    created_at: now,
+    updated_at: now,
+  });
+  return { ok: true, note_id: noteId, title: articleTitle };
+}
+
 function _startAgentScheduler(){
   if(_scheduleTimer) return;
   _scheduleTimer = setInterval(async () => {
@@ -26374,6 +26554,8 @@ if(require.main === module){
   // Disabled in tests (LDB_PATH set => test mode).
   if(!process.env.LDB_PATH){
     _startAgentScheduler();
+    // Nightly AI draft generator: 22:00-06:00 JST, AI writes article drafts while user sleeps.
+    _startNightlyDraftGenerator();
     // ── 一回限りの migration: 既存ユーザーの「毎朝レポート」 schedule を
     //    deliver:chat → deliver:email に切替 + hour 9→7 に前倒し。
     //    新規ユーザーは onboarding 時点で email になっているので不要。

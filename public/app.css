@@ -4724,9 +4724,10 @@ input,textarea{font-family:var(--sans);}
   cursor:pointer;
   transition:background .15s, border-color .15s, color .15s;
 }
-.cn-btn-primary{
-  background:var(--teal); color:#fff;
-  border-color:var(--teal);
+.cn-btn-primary,
+.cn-btn.cn-btn-primary{
+  background:var(--teal) !important; color:#fff !important;
+  border-color:var(--teal) !important;
   box-shadow:0 4px 10px rgba(163,230,53,.22);
 }
 .cn-btn-primary:hover{filter:brightness(1.08); transform:translateY(-1px)}

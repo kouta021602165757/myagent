@@ -9869,7 +9869,12 @@ async function openAgent(id){
                    'gemini-flash':{lbl:'⚡ Fast',title:'Claude Haiku 4.5'},
                    'gemini-pro':  {lbl:'🎯 Smart',title:'Claude Sonnet 4.6'}};
   var _mInfo = _modelMap[ag.model] || _modelMap['auto'];
-  var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(192,255,92,.08);border:1px solid rgba(192,255,92,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit">'+_mInfo.lbl+'</button>');
+  // Site agent はメディア型 pill とトーン揃えて teal solid (= 全 pill 一貫したデザイン)
+  var _isSiteAg = _isSiteAgent(ag);
+  var _modelPillStyle = _isSiteAg
+    ? 'font-size:10px;font-weight:800;color:#fff;background:#0d4f4a;border:1px solid #0d4f4a;padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit'
+    : 'font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(192,255,92,.08);border:1px solid rgba(192,255,92,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit';
+  var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="'+_modelPillStyle+'">'+_mInfo.lbl+'</button>');
   // Agent-intelligence indicators — KPI count + active task count. Clicking
   // opens the unified Agent Profile panel. Group chats hide these.
   // Tasks pill is separated out so it's always discoverable as a primary
@@ -9881,9 +9886,12 @@ async function openAgent(id){
   var tasksPill = '';
   if(!ag._is_joined_group){
     var taskLabel = taskN > 0 ? ('📋 タスク '+taskN) : '📋 タスク';
-    var taskStyle = taskN > 0
-      ? 'font-size:10.5px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.24);padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em'
-      : 'font-size:10px;font-weight:700;color:var(--text3);background:var(--cream);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.7';
+    // Site agent はメディア型 pill とトーン揃えて teal solid
+    var taskStyle = _isSiteAg
+      ? 'font-size:10.5px;font-weight:800;color:#fff;background:#0d4f4a;border:1px solid #0d4f4a;padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em'
+      : (taskN > 0
+          ? 'font-size:10.5px;font-weight:800;color:var(--peach-dark);background:var(--peach-soft);border:1px solid rgba(192,255,92,.24);padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em'
+          : 'font-size:10px;font-weight:700;color:var(--text3);background:var(--cream);border:1px solid var(--wire2);padding:3px 9px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.7');
     tasksPill = '<button onclick="event.stopPropagation(); _openTasksPopout(this, \''+ag.id+'\')" title="'+L('このエージェントのタスク一覧','Tasks for this agent')+'" style="'+taskStyle+'">'+taskLabel+'</button>';
   }
   // Intel pill 廃止 (2026-05-25): site agent のプロフィール icon 🧠 を

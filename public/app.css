@@ -4067,7 +4067,7 @@ input,textarea{font-family:var(--sans);}
   to   { transform: translateX(0); opacity: 1; }
 }
 
-/* HERO カード (= AI チームの累計実績、 chat 上部に常駐) */
+/* HERO カード (= AI チームの累計実績、 chat 上部に常駐) — v2 */
 .hero-card{
   margin: 10px 18px 6px;
   background: linear-gradient(135deg, #0d4f4a, #0a3d39);

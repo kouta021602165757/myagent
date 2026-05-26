@@ -4067,16 +4067,24 @@ input,textarea{font-family:var(--sans);}
   to   { transform: translateX(0); opacity: 1; }
 }
 
-/* HERO カード (= AI チームの累計実績、 chat 上部に常駐) — v2 */
-.hero-card{
-  margin: 10px 18px 6px;
-  background: linear-gradient(135deg, #0d4f4a, #0a3d39);
-  color: #fff;
-  border-radius: 12px;
-  padding: 10px 16px;
-  display: flex; align-items: center; gap: 14px;
-  box-shadow: 0 4px 14px rgba(13, 79, 74, 0.16);
+/* HERO カード (= AI チームの累計実績、 chat 上部に常駐) — v3 force-apply */
+.hero-card,
+#heroCard.hero-card{
+  margin: 10px 18px 6px !important;
+  background: linear-gradient(135deg, #0d4f4a, #0a3d39) !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  align-items: center !important;
+  gap: 14px !important;
+  box-shadow: 0 4px 14px rgba(13, 79, 74, 0.16) !important;
 }
+#heroCard.hero-card[style*="display:none"]{ display:none !important; }
+#heroCard.hero-card:not([style*="display:none"]){ display: flex !important; }
+#heroCard.hero-card .hc-cell .lbl,
+#heroCard.hero-card .hc-cell .val,
+#heroCard.hero-card .hc-cell .delta,
+#heroCard.hero-card .hc-title{ color:#fff !important; }
 .hero-card .hc-title{
   font-size: 10px;
   opacity: 0.7;

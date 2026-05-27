@@ -3400,6 +3400,23 @@ window._runDailyGrowthReport = function(siteId){
   var ov = document.getElementById('dailyGrowthOverlay');
   if(ov) ov.remove();
   if(activeId !== siteId){ openAgent(siteId); }
+  // chat に「📊 アナリスト 鈴木が動き始めた」発言を即出す (= 進捗 visibility)
+  setTimeout(function(){
+    try {
+      if(ag && Array.isArray(ag.history) && ag.id === activeId){
+        var analystMsg = {
+          role:'assistant',
+          content: '📊 **アナリスト 鈴木** が動き始めました…\n\nGA4 から直近 7-14 日の数字 (PV / セッション / 直帰率 / チャネル別) を fetch して、 効いた施策 / 詰まった箇所 / 明日のアクション / 中期トレンド の 4 セクションを書きます。',
+          time: now(), system_action: true, transient: false,
+          huddle_member_name: '📊 アナリスト 鈴木',
+          huddle_member_avatar: '📊',
+        };
+        ag.history.push(analystMsg);
+        try { renderMsgs(ag, true); } catch(_){}
+        try { _persistChatMsg(ag.id, analystMsg); } catch(_){}
+      }
+    } catch(_){}
+  }, 100);
   setTimeout(function(){
     var ci = document.getElementById('ci');
     if(!ci) return;
@@ -6065,6 +6082,23 @@ window._runExecutionPlan = function(siteId){
     if(ov) ov.remove();
   } catch(_){}
   if(activeId !== siteId){ openAgent(siteId); }
+  // chat に「📋 PM 部員が動き始めた」発言を即出して 動いてる感を演出
+  setTimeout(function(){
+    try {
+      if(ag && Array.isArray(ag.history) && ag.id === activeId){
+        var pmMsg = {
+          role:'assistant',
+          content: '📋 **PM 田中** が動き始めました…\n\n6 ヶ月 KPI 目標を読み込んで、月別の具体施策・部門割り当て・工数を 1 枚の HTML レポートにまとめます。 所要時間 30-60 秒。',
+          time: now(), system_action: true, transient: false,
+          huddle_member_name: '📋 PM 田中',
+          huddle_member_avatar: '📋',
+        };
+        ag.history.push(pmMsg);
+        try { renderMsgs(ag, true); } catch(_){}
+        try { _persistChatMsg(ag.id, pmMsg); } catch(_){}
+      }
+    } catch(_){}
+  }, 100);
   setTimeout(function(){
     var ci = document.getElementById('ci');
     if(!ci) return;

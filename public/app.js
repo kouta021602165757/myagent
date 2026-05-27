@@ -2493,7 +2493,25 @@ function showSheetsOnboardingBanner(){
 async function api(method,path,body){
   const opts={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
   if(body)opts.body=JSON.stringify(body);
-  const res=await fetch(API+path,opts);
+  // 30 秒 timeout (= サーバー側が応答しない場合に永遠に hang するのを防ぐ)。
+  // SSE streams や大きな file upload はここを通らない (raw fetch を使う) ので
+  // 30 秒で十分な保護になる。
+  const _ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+  if(_ctl){
+    opts.signal = _ctl.signal;
+    var _to = setTimeout(function(){ try { _ctl.abort(); } catch(_){} }, 30000);
+  }
+  let res;
+  try {
+    res = await fetch(API+path,opts);
+  } catch(e){
+    if(_ctl && _ctl.signal && _ctl.signal.aborted){
+      throw new Error(isJa?'通信タイムアウト（30秒）。サーバーが応答しません。少し待ってからリトライしてください。':'Request timed out (30s). Server not responding. Please retry.');
+    }
+    throw e;
+  } finally {
+    if(_to) clearTimeout(_to);
+  }
   const ct=(res.headers.get('content-type')||'').toLowerCase();
   // Server may return an HTML error page (Render edge 502/504, gateway timeout, etc.)
   if(!ct.includes('application/json')){
@@ -2822,64 +2840,90 @@ window.openDailyGrowthReportPanel = async function(siteId){
   document.body.appendChild(ov);
 
   // ── Data fetch: GA4 snapshot + latest daily note (parallel) ──
-  var ga4Promise = api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/ga4').catch(function(){ return null; });
-  var notesPromise = api('GET', '/api/me/notes').catch(function(){ return null; });
-  var resp = await Promise.all([ga4Promise, notesPromise]);
-  var ga4Resp = resp[0];
-  var notesResp = resp[1];
-
-  var snap = (ga4Resp && ga4Resp.snapshot) || null;
-  var ga4Connected = !!(ga4Resp && ga4Resp.connected);
-
-  var dailies = (notesResp && notesResp.notes || []).filter(function(n){
-    if(!n) return false;
-    if(n.agent_id && n.agent_id !== siteId) return false;
-    if(n.type === 'daily') return true;
-    var hay = ((n.title||'') + ' ' + (n.snippet||'')).toLowerCase();
-    return /グロースレポート|growth report|日次/i.test(hay);
-  });
-  var latest = dailies[0] || null;
-  if(latest){
-    try {
-      var rOne = await api('GET', '/api/me/notes/' + latest.id);
-      if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
-    } catch(_){}
+  // api() に timeout が無く、 サーバー応答無しだと fetch が永遠に hang する。
+  // 12 秒で諦めて null として扱い、 「読み込み中…」 のまま固まるのを防ぐ。
+  function _withTimeout(p, ms){
+    return Promise.race([
+      p,
+      new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, ms); })
+    ]);
   }
+  try {
+    var ga4Promise = _withTimeout(
+      api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/ga4').catch(function(){ return null; }),
+      12000
+    );
+    var notesPromise = _withTimeout(
+      api('GET', '/api/me/notes').catch(function(){ return null; }),
+      12000
+    );
+    var resp = await Promise.all([ga4Promise, notesPromise]);
+    var ga4Resp = resp[0];
+    var notesResp = resp[1];
 
-  // ── Section 1: 数字のサマリー (native from GA4) ──
-  var section1HTML = _dgrRenderNumbersSection(ag, snap, ga4Connected);
+    var snap = (ga4Resp && ga4Resp.snapshot) || null;
+    var ga4Connected = !!(ga4Resp && ga4Resp.connected);
 
-  // ── Sections 2-5: parse AI markdown content (空ならプレースホルダ + 再生成促し) ──
-  // ノートが無いケースでも 4 つのカードを枠だけ表示する (= 何をすべきか分かる)
-  // section 5 は GA4 series データから native バーチャート描画も付与
-  var sectionsHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId, snap);
+    var dailies = (notesResp && notesResp.notes || []).filter(function(n){
+      if(!n) return false;
+      if(n.agent_id && n.agent_id !== siteId) return false;
+      if(n.type === 'daily') return true;
+      var hay = ((n.title||'') + ' ' + (n.snippet||'')).toLowerCase();
+      return /グロースレポート|growth report|日次/i.test(hay);
+    });
+    var latest = dailies[0] || null;
+    if(latest){
+      try {
+        var rOne = await _withTimeout(api('GET', '/api/me/notes/' + latest.id), 8000);
+        if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
+      } catch(_){}
+    }
 
-  // ── Past reports list ──
-  var pastListHTML = '';
-  if(dailies.length > 1){
-    pastListHTML = '<div style="margin-top:28px;border-top:1px solid var(--wire);padding-top:16px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去のレポート','Past reports')+'</div>'
-      + dailies.slice(1, 11).map(function(n){
-          var when = (n.updated_at||'').slice(5,10).replace('-','/');
-          return '<div onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(n.id)+'\')" '
-            + 'style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;background:var(--cream);border:1px solid var(--wire2);margin-bottom:6px" '
-            + 'onmouseover="this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.borderColor=\'var(--wire2)\'">'
-            + '<span style="font-size:14px">📰</span>'
-            + '<span style="flex:1;font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n.title || '無題')+'</span>'
-            + '<span style="font-size:10.5px;color:var(--text3);font-weight:600">'+esc(when)+'</span>'
-            + '</div>';
-        }).join('')
-      + '</div>';
-  }
+    // ── Section 1: 数字のサマリー (native from GA4) ──
+    var section1HTML = _dgrRenderNumbersSection(ag, snap, ga4Connected);
 
-  var bodyEl = document.getElementById('dailyGrowthBody');
-  if(bodyEl){
-    var noteEditBtnTop = latest
-      ? '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
-        + 'style="background:transparent;border:1px solid var(--wire2);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button></div>'
-      : '';
-    var threeChAndAiHTML = _dgrRender3ChannelAndAiLog(ag, snap, notesResp);
-    bodyEl.innerHTML = noteEditBtnTop + section1HTML + threeChAndAiHTML + sectionsHTML + pastListHTML;
+    // ── Sections 2-5: parse AI markdown content (空ならプレースホルダ + 再生成促し) ──
+    var sectionsHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId, snap);
+
+    // ── Past reports list ──
+    var pastListHTML = '';
+    if(dailies.length > 1){
+      pastListHTML = '<div style="margin-top:28px;border-top:1px solid var(--wire);padding-top:16px">'
+        + '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去のレポート','Past reports')+'</div>'
+        + dailies.slice(1, 11).map(function(n){
+            var when = (n.updated_at||'').slice(5,10).replace('-','/');
+            return '<div onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(n.id)+'\')" '
+              + 'style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;background:var(--cream);border:1px solid var(--wire2);margin-bottom:6px" '
+              + 'onmouseover="this.style.borderColor=\'var(--peach)\'" onmouseout="this.style.borderColor=\'var(--wire2)\'">'
+              + '<span style="font-size:14px">📰</span>'
+              + '<span style="flex:1;font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n.title || '無題')+'</span>'
+              + '<span style="font-size:10.5px;color:var(--text3);font-weight:600">'+esc(when)+'</span>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }
+
+    var bodyEl = document.getElementById('dailyGrowthBody');
+    if(bodyEl){
+      var noteEditBtnTop = latest
+        ? '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
+          + 'style="background:transparent;border:1px solid var(--wire2);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button></div>'
+        : '';
+      var threeChAndAiHTML = _dgrRender3ChannelAndAiLog(ag, snap, notesResp);
+      bodyEl.innerHTML = noteEditBtnTop + section1HTML + threeChAndAiHTML + sectionsHTML + pastListHTML;
+    }
+  } catch(err){
+    console.error('[daily-growth-report] render failed:', err);
+    var bodyEl2 = document.getElementById('dailyGrowthBody');
+    if(bodyEl2){
+      bodyEl2.innerHTML = '<div style="text-align:center;padding:48px 24px;color:var(--text2)">'
+        + '<div style="font-size:36px;margin-bottom:12px">⚠️</div>'
+        + '<div style="font-size:14px;font-weight:800;margin-bottom:8px">レポートの読み込みに失敗しました</div>'
+        + '<div style="font-size:12px;color:var(--text3);margin-bottom:20px">' + esc(String((err && err.message) || 'unknown')) + '</div>'
+        + '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove(); openDailyGrowthReportPanel(\''+esc(siteId)+'\')" '
+        + 'style="background:var(--teal);color:#fff;border:0;border-radius:9px;padding:10px 20px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">再試行</button>'
+        + '</div>';
+    }
   }
 };
 

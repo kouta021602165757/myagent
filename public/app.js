@@ -8152,6 +8152,77 @@ function _renderHeroCard(ag){
 }
 
 // 今週の累計指標 (記事 / SNS / PV 変化) を 1 行で表示。
+// D. 朝の自動レポート msg。 site agent の chat を開いた時、 今日初回なら
+// 「🌅 おはようございます。 昨日の動き + 今日のおすすめ」 を chat に push。
+// 1 日 1 回まで。 localStorage で persist。
+function _maybePushMorningBrief(ag){
+  if(!ag || !_isSiteAgent(ag)) return;
+  // 履歴空 (= 初回 chat 開き) はスキップ — empty state の big CTA で十分
+  if(!Array.isArray(ag.history) || ag.history.length === 0) return;
+  var todayKey = 'mya_morning_brief_' + ag.id + '_' + new Date().toISOString().slice(0,10);
+  try { if(localStorage.getItem(todayKey)) return; } catch(_){}
+
+  // データ収集 — 昨日の動き (= 直近 24h の artifacts) + GA4 PV 変化
+  var since24 = Date.now() - 24 * 3600 * 1000;
+  var notesAll = (window._cachedNotesForSite && window._cachedNotesForSite[ag.id]) || [];
+  var recent = notesAll.filter(function(n){
+    if(!n) return false;
+    var ts = Date.parse(n.updated_at || n.created_at || 0) || 0;
+    if(ts < since24) return false;
+    return ['article','article_draft','sns_post','analysis'].indexOf(n.type) >= 0;
+  });
+  var snap = (window._ga4Snapshots && window._ga4Snapshots[ag.id]) || null;
+  var pvDelta = (snap && snap.snapshot && typeof snap.snapshot.delta_pv_pct === 'number')
+    ? snap.snapshot.delta_pv_pct : null;
+
+  // 何も無かったら出さない (= データなしに「動きました」 と言うのは嘘)
+  if(recent.length === 0 && pvDelta == null) return;
+
+  // 今日のおすすめアクション (= chat-actions の最優先 1 件を逆算)
+  var todayAction = '';
+  try {
+    var applic = (window._CHAT_ACTIONS || []).filter(function(a){
+      try { return a.when(ag); } catch(_){ return false; }
+    });
+    if(applic.length){
+      todayAction = '\n\n**今日のおすすめ:** ' + applic[0].icon + ' ' + applic[0].label;
+    }
+  } catch(_){}
+
+  var lines = ['🌅 **おはようございます**', ''];
+  if(recent.length > 0){
+    lines.push('**昨日 24h で AI チームが届けたもの:**');
+    var byType = { article: 0, article_draft: 0, sns_post: 0, analysis: 0 };
+    recent.forEach(function(n){ if(byType[n.type] != null) byType[n.type]++; });
+    if(byType.article + byType.article_draft > 0) lines.push('- ✍️ 記事 ' + (byType.article + byType.article_draft) + ' 本');
+    if(byType.sns_post > 0) lines.push('- 📱 SNS 投稿 ' + byType.sns_post + ' 件');
+    if(byType.analysis > 0) lines.push('- 📊 分析 ' + byType.analysis + ' 件');
+    lines.push('');
+  }
+  if(pvDelta != null){
+    var arrow = pvDelta >= 0 ? '▲' : '▼';
+    var sign = pvDelta >= 0 ? '+' : '';
+    lines.push('**昨日の PV 変化:** ' + arrow + ' ' + sign + pvDelta + '%');
+    lines.push('');
+  }
+  lines.push('上の 📊 stats bar をクリックすると詳細を一覧できます。');
+  if(todayAction) lines.push(todayAction);
+
+  var briefMsg = {
+    role: 'assistant',
+    content: lines.join('\n'),
+    time: now(),
+    system_action: true,
+    huddle_member_id: 'sys_morning_brief',
+    huddle_member_name: '🌅 朝のレポート',
+    huddle_member_avatar: '🌅',
+  };
+  ag.history.push(briefMsg);
+  try { renderMsgs(ag, true); } catch(_){}
+  try { _persistChatMsg(ag.id, briefMsg); } catch(_){}
+  try { localStorage.setItem(todayKey, '1'); } catch(_){}
+}
+
 // stats bar の expand toggle (window scope で onclick から呼べる)
 window._toggleWeeklyStatsExpand = function(){
   window._weeklyStatsExpanded = !window._weeklyStatsExpanded;
@@ -10777,6 +10848,11 @@ async function openAgent(id){
 
   // HERO カード (site agent のみ、 GA4 + SNS + 記事 累計)
   try { _renderHeroCard(ag); } catch(e){ console.warn('[hero-card] render failed:', e); }
+
+  // D. 朝の自動レポート msg — 1 日 1 回、 site agent の chat を開いた時に
+  // 「🌅 おはようございます」 のサマリ msg を chat に push する。
+  // localStorage で 「今日もう出したか」 を judge。
+  try { _maybePushMorningBrief(ag); } catch(e){ console.warn('[morning-brief]', e); }
 
   // Quick chips persist throughout the conversation (clickable shortcuts)
   const allChips=ag.skills.flatMap(s=>(CHIPS[s]||[]).slice(0,2)).slice(0,5);

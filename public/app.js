@@ -4995,6 +4995,91 @@ window._runAutoSetupFromPanel = function(siteId){
   }, 200);
 };
 
+// ── ユーザー msg → 担当エージェント (= ag.org の中の member) を判定 ──────
+// site agent の org.departments[].teams[].members から、 ユーザーの依頼
+// keyword に最もマッチする 1 人を選ぶ。 マッチしなければ PM / コーディネ
+// ーター fallback。 _renderMsg は huddle_member_id があれば その avatar +
+// name で bubble を render する。 これで「誰が担当か」 が一目で分かる UX。
+function _pickAgentForRequest(ag, text){
+  if(!ag || !ag.org || !Array.isArray(ag.org.departments)) return null;
+  var all = [];
+  ag.org.departments.forEach(function(d){
+    (d.teams || []).forEach(function(t){
+      (t.members || []).forEach(function(m){
+        all.push({ member: m, team: t, dept: d });
+      });
+    });
+  });
+  if(!all.length) return null;
+  var T = String(text || '').toLowerCase();
+
+  // category -> (keywords in text) + (member.role / focus に含まれる pattern)
+  var CATS = [
+    { kw: /記事|書い|執筆|長文|コンテンツ|article|blog|post|listicle|how[- ]?to/i,
+      pat: /writer|longform|listicle|howto|content|opinion/i, verb: '執筆中' },
+    { kw: /SEO|キーワード|検索|keyword|google[- ]?search/i,
+      pat: /seo|kw|search_intent|tech_seo|schema/i, verb: 'リサーチ中' },
+    { kw: /数字|分析|分析して|GA4|PV|セッション|流入|CVR|レポート|データ|analyze|analytic/i,
+      pat: /analy|ga4|ga_|funnel|metric|data/i, verb: '分析中' },
+    { kw: /戦略|ペルソナ|persona|strategy|KPI(?!.*目標)|6 ?ヶ月/i,
+      pat: /strategy|persona|kpi_strat|kpi_design|positioning/i, verb: '組み立て中' },
+    { kw: /X\b|twitter|ツイート|スレッド|thread/i,
+      pat: /twitter|thread_writer|quote_amplify|x_/i, verb: '投稿準備中' },
+    { kw: /threads/i,
+      pat: /threads/i, verb: '投稿準備中' },
+    { kw: /SNS|投稿|社交|posting/i,
+      pat: /sns|community|social|twitter|instagram/i, verb: '投稿準備中' },
+    { kw: /メルマガ|newsletter|メール|email配信/i,
+      pat: /newsletter|email|subscriber/i, verb: '原稿執筆中' },
+    { kw: /競合|competitor|リサーチ|research|調査/i,
+      pat: /research|competitor|trend/i, verb: '調査中' },
+    { kw: /アフィリエイト|affiliate|マネタイズ|広告|monetize|adsense/i,
+      pat: /affiliate|adsense|monetiz|ads/i, verb: '最適化中' },
+    { kw: /CVR|改善|CRO|LP|ランディング/i,
+      pat: /cro|conversion|funnel|lp/i, verb: '改善中' },
+    { kw: /ロードマップ|タスク|計画|スケジュール|roadmap|task|plan/i,
+      pat: /pm|planner|roadmap|coordinator/i, verb: '組み立て中' },
+  ];
+
+  function _find(cat){
+    var lst = all.filter(function(x){
+      var hay = ((x.member.role || '') + ' ' + (x.member.name || '') + ' ' + (x.member.focus || '')).toLowerCase();
+      return cat.pat.test(hay);
+    });
+    return lst.length ? lst[0] : null;
+  }
+
+  for(var i = 0; i < CATS.length; i++){
+    if(CATS[i].kw.test(T)){
+      var hit = _find(CATS[i]);
+      if(hit){
+        return {
+          member_id: hit.member.id || ('m_' + (hit.member.name || 'x')),
+          member_name: (hit.dept.icon || '🤖') + ' ' + (hit.member.name || ''),
+          member_avatar: hit.dept.icon || '🤖',
+          dept_name: hit.dept.name || '',
+          role: hit.member.role || '',
+          verb: CATS[i].verb,
+        };
+      }
+    }
+  }
+
+  // fallback: PM 風 / coordinator 風 を探す
+  var pm = all.find(function(x){
+    var hay = ((x.member.role || '') + ' ' + (x.member.name || '') + ' ' + (x.member.focus || '')).toLowerCase();
+    return /pm|planner|coordinat|chief|manager|プロジェクト/i.test(hay);
+  }) || all[0];
+  return {
+    member_id: pm.member.id || ('m_' + (pm.member.name || 'x')),
+    member_name: (pm.dept.icon || '📋') + ' ' + (pm.member.name || ''),
+    member_avatar: pm.dept.icon || '📋',
+    dept_name: pm.dept.name || '',
+    role: pm.member.role || '',
+    verb: '取り組み中',
+  };
+}
+
 async function _autoSetupSiteFromGa4(siteId, opts){
   if(!siteId) return;
   opts = opts || {};
@@ -12087,14 +12172,24 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   if(!isU && raw && raw.was_stopped && bodyMarkup){
     bodyMarkup += '<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(192,255,92,.06);border:1px solid rgba(192,255,92,.24);color:var(--peach-dark);padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.01em">⏸ '+(isJa?'ここで停止しました':'Stopped here')+'</div>';
   }
-  // Streaming placeholder: show the live "生成中…" indicator INSIDE the .m-body
-  // so the bubble has a visible body even before any text arrives. Without
-  // this, an empty assistant entry rendered as just header+actions and the
-  // _sendMsgStream patch path failed to find .m-body to write deltas into.
-  // (isStreaming declared earlier — see the summaryHTML block above.)
+  // Streaming placeholder: show the live indicator INSIDE the .m-body so the
+  // bubble has a visible body even before any text arrives. Without this, an
+  // empty assistant entry renders as just header+actions and _sendMsgStream
+  // fails to find .m-body to write deltas into.
+  // 担当者 (= raw.huddle_member_*) と verb (= raw.assigned_verb) があれば、
+  // 「✍️ 鈴木が執筆中… (Ns)」 形式で表示。 経過時間は data-start を見て
+  // start_gen_timers() が毎秒更新する。
   if(!isU && isStreaming && !bodyMarkup){
-    bodyMarkup = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">'
-      + (isJa?'生成中…':'Generating…') + '</div></div>';
+    var _genVerb = (raw && raw.assigned_verb) ? raw.assigned_verb : (isJa ? '取り組み中' : 'working');
+    var _genWho  = (raw && raw.huddle_member_name) ? esc(raw.huddle_member_name) + ' が' : '';
+    var _genDept = (raw && raw.assigned_dept) ? ' <span style="font-size:10px;opacity:.7">('+esc(raw.assigned_dept)+')</span>' : '';
+    var _genStart = (raw && raw.time) ? Date.parse(raw.time) || Date.now() : Date.now();
+    bodyMarkup = '<div class="gen-indicator">'
+      + '<div class="gen-logo"></div>'
+      + '<div class="gen-text">' + _genWho + (isJa ? esc(_genVerb) + '…' : esc(_genVerb) + '…') + _genDept
+      +   ' <span class="gen-elapsed" data-start="' + _genStart + '">0s</span>'
+      + '</div>'
+      + '</div>';
   }
   // While streaming, hide the action buttons (they only make sense once the
   // message is finalized).
@@ -15192,6 +15287,26 @@ async function sendMsg(){
 // button while streaming) can abort the in-flight fetch.
 var _chatStreamCtrl = null;
 
+// gen-indicator の経過時間 (Ns) を 1 秒ごとに更新する global ticker。
+// 該当要素 (.gen-elapsed[data-start]) が DOM に居る間だけ動く。 軽い。
+(function _startGenElapsedTicker(){
+  if(window._genElapsedTickerStarted) return;
+  window._genElapsedTickerStarted = true;
+  setInterval(function(){
+    try {
+      var els = document.querySelectorAll('.gen-elapsed[data-start]');
+      if(!els.length) return;
+      var nowMs = Date.now();
+      els.forEach(function(el){
+        var start = parseInt(el.getAttribute('data-start') || '0', 10);
+        if(!start) return;
+        var sec = Math.max(0, Math.floor((nowMs - start) / 1000));
+        el.textContent = sec + 's';
+      });
+    } catch(_){}
+  }, 1000);
+})();
+
 function _setChatStreaming(on){
   // Track streaming agents in a set so the sidebar shows a dot next to any
   // agent currently receiving a stream — in EITHER main chat OR a thread (or
@@ -15474,7 +15589,27 @@ async function _sendMsgStream(ag, text, imgs, texts){
       }
     }
   }
-  ag.history.push({role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent});
+  // ── 「誰が担当か」を chat に明示する (site agent 限定) ──
+  // user msg の text から最も合う member を選んで、 streaming placeholder の
+  // huddle_member_* に乗せる。 _renderMsg はこれを見て bubble の avatar/name
+  // を担当者用に切り替える + gen-indicator に「✍️ 鈴木が執筆中…」を出す。
+  let _pickedMember = null;
+  try {
+    if(_isSiteAgent(ag)){
+      _pickedMember = _pickAgentForRequest(ag, text || '');
+    }
+  } catch(_){}
+  var _streamBubble = {
+    role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent,
+  };
+  if(_pickedMember){
+    _streamBubble.huddle_member_id = _pickedMember.member_id;
+    _streamBubble.huddle_member_name = _pickedMember.member_name;
+    _streamBubble.huddle_member_avatar = _pickedMember.member_avatar;
+    _streamBubble.assigned_verb = _pickedMember.verb;  // gen-indicator が読む
+    _streamBubble.assigned_dept = _pickedMember.dept_name;
+  }
+  ag.history.push(_streamBubble);
   // let (not const) — pm_dispatch handler insert before streaming bubble shifts the index
   let streamIdx = ag.history.length - 1;
   _turnStatusStart();

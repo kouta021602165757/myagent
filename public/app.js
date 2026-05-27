@@ -8152,23 +8152,40 @@ function _renderHeroCard(ag){
 }
 
 // 今週の累計指標 (記事 / SNS / PV 変化) を 1 行で表示。
+// stats bar の expand toggle (window scope で onclick から呼べる)
+window._toggleWeeklyStatsExpand = function(){
+  window._weeklyStatsExpanded = !window._weeklyStatsExpanded;
+  try {
+    var ag = (agents||[]).find(function(a){return a && a.id === activeId;});
+    if(ag) _renderWeeklyStatsBar(ag);
+  } catch(_){}
+};
+
 // 「成果出てる」 体感を毎日積み上げる retention 装置。
 function _renderWeeklyStatsBar(ag){
   var el = document.getElementById('weeklyStatsBar');
   if(!el) return;
   if(!_isSiteAgent(ag)){ el.style.display = 'none'; el.innerHTML = ''; return; }
 
-  // 今週生成された artifacts/notes 数
+  // 今週生成された artifacts/notes
   var since = Date.now() - 7 * 86400000;
   var notesAll = (window._cachedNotesForSite && window._cachedNotesForSite[ag.id]) || [];
+  var recentArtifacts = [];  // 詳細展開用 (= F: 直近の成果 card)
   var articlesThis = 0;
   var snsThis = 0;
+  var analysisThis = 0;
   notesAll.forEach(function(n){
     if(!n) return;
     var ts = Date.parse(n.updated_at || n.created_at || 0) || 0;
     if(ts < since) return;
-    if(n.type === 'article' || n.type === 'article_draft') articlesThis++;
-    else if(n.type === 'sns_post') snsThis++;
+    if(n.type === 'article' || n.type === 'article_draft'){ articlesThis++; recentArtifacts.push(n); }
+    else if(n.type === 'sns_post'){ snsThis++; recentArtifacts.push(n); }
+    else if(n.type === 'analysis'){ analysisThis++; recentArtifacts.push(n); }
+  });
+  // 新しい順
+  recentArtifacts.sort(function(a, b){
+    return (Date.parse(b.updated_at || b.created_at || 0) || 0)
+         - (Date.parse(a.updated_at || a.created_at || 0) || 0);
   });
 
   // PV 変化 (GA4 snapshot から)
@@ -8178,7 +8195,7 @@ function _renderWeeklyStatsBar(ag){
     : (ag.ga4_snapshot && typeof ag.ga4_snapshot.delta_pv_pct === 'number' ? ag.ga4_snapshot.delta_pv_pct : null);
 
   // 何も無いときは hide
-  if(articlesThis === 0 && snsThis === 0 && deltaPct == null){
+  if(articlesThis === 0 && snsThis === 0 && analysisThis === 0 && deltaPct == null){
     el.style.display = 'none'; el.innerHTML = '';
     return;
   }
@@ -8186,13 +8203,43 @@ function _renderWeeklyStatsBar(ag){
   var parts = ['📊 今週:'];
   if(articlesThis > 0) parts.push('<b>記事 ' + articlesThis + ' 本</b>');
   if(snsThis > 0) parts.push('<b>SNS 投稿 ' + snsThis + ' 件</b>');
+  if(analysisThis > 0) parts.push('<b>分析 ' + analysisThis + ' 件</b>');
   if(deltaPct != null){
     var arrow = deltaPct >= 0 ? '▲' : '▼';
     var sign = deltaPct >= 0 ? '+' : '';
     parts.push('<b style="color:' + (deltaPct >= 0 ? '#16a34a' : '#dc2626') + '">PV ' + arrow + ' ' + sign + deltaPct + '%</b>');
   }
 
-  el.innerHTML = parts.join(' · ');
+  // F: クリックで展開可能 — 直近 7 日に AI チームが作った成果物リスト
+  var artifactsExpanded = !!window._weeklyStatsExpanded;
+  var caret = artifactsExpanded ? '▲' : '▼';
+  var summaryLine = '<div style="cursor:pointer" onclick="_toggleWeeklyStatsExpand()">'
+    + parts.join(' · ')
+    + ' <span style="margin-left:8px;font-size:10px;opacity:0.7">' + caret + ' クリックで詳細</span>'
+    + '</div>';
+  var detailHTML = '';
+  if(artifactsExpanded && recentArtifacts.length > 0){
+    detailHTML = '<div class="weekly-stats-detail">'
+      + '<div class="ws-d-h">▼ 直近 7 日で AI チームが届けたもの (' + recentArtifacts.length + ' 件)</div>'
+      + recentArtifacts.slice(0, 10).map(function(n){
+          var ic = (n.type === 'sns_post') ? '📱' : (n.type === 'analysis') ? '📊' : '✍️';
+          var typeLabel = (n.type === 'sns_post') ? 'SNS 投稿' : (n.type === 'analysis') ? '分析' : (n.has_artifact ? '記事 (公開済)' : '記事 (下書き)');
+          var when = '';
+          try {
+            var d = new Date(n.updated_at || n.created_at);
+            when = (d.getMonth()+1) + '/' + d.getDate();
+          } catch(_){}
+          var noteId = esc(n.id || '');
+          var openFn = 'openNotesPanel(\'' + esc(ag.id) + '\',\'' + noteId + '\')';
+          return '<div class="ws-d-item" onclick="' + openFn + '">'
+            + '<span class="ws-d-ic">' + ic + '</span>'
+            + '<span class="ws-d-ti">' + esc((n.title || '無題').slice(0, 60)) + '</span>'
+            + '<span class="ws-d-meta">' + typeLabel + ' · ' + when + '</span>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+  el.innerHTML = summaryLine + detailHTML;
   el.style.display = 'block';
 }
 

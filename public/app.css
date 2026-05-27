@@ -4352,8 +4352,17 @@ input,textarea{font-family:var(--sans);}
   flex-shrink: 0;
 }
 @media (max-width: 720px){
-  .hero-card{ flex-wrap: wrap; gap: 10px; padding: 8px 12px; }
+  .hero-card{
+    flex-wrap: wrap; gap: 8px 14px; padding: 8px 12px;
+    margin: 6px 12px 4px !important;
+  }
   .hero-card .hc-divider{ display: none; }
+  /* HERO title は wrap した時 1 行で full width に */
+  .hero-card .hc-title{ max-width: none !important; width: 100%; }
+  /* セルは 3 つ並ぶ程度に圧縮 */
+  .hero-card .hc-cell .lbl{ font-size: 9px !important; }
+  .hero-card .hc-cell .val{ font-size: 14px !important; }
+  .hero-card .hc-cell .delta{ font-size: 9px !important; }
 }
 
 /* ── Weekly stats bar — 今週の動き 1 行 (HERO 直下) ── */
@@ -5921,9 +5930,12 @@ input,textarea{font-family:var(--sans);}
   .chat-top{padding:8px 12px;gap:9px;}
   .ct-icon{width:32px;height:32px;border-radius:9px;font-size:15px;}
   .ct-name{font-size:13.5px;gap:6px;}
-  .ct-pills{gap:4px;}
+  .ct-pills{gap:4px;flex-wrap:wrap;}
   .pill{font-size:9px;padding:1px 6px;}
-  .ct-act{width:30px;height:30px;border-radius:8px;font-size:12.5px;}
+  /* 8 toolbar button が画面幅をはみ出すので、 横スクロール可能に */
+  .ct-actions{overflow-x:auto;max-width:60%;scrollbar-width:none;}
+  .ct-actions::-webkit-scrollbar{display:none;}
+  .ct-act{width:30px;height:30px;border-radius:8px;font-size:12.5px;flex-shrink:0;}
   .msgs{padding:12px 12px 18px;}
   .msgs-inner{gap:8px;padding:0;}
   .m-av{width:20px;height:20px;font-size:10px;}

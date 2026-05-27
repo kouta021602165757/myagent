@@ -7897,6 +7897,54 @@ function _renderHeroCard(ag){
     + _cell('🧵 Threads', threadsConnected ? (threads.followers != null ? _fmt(threads.followers) : '0') : '未連携', '');
 
   el.style.display = 'flex';
+
+  // ── Weekly stats bar — HERO の下に「今週の動き」 1 行サマリ ──
+  try { _renderWeeklyStatsBar(ag); } catch(e){ console.warn('[weekly-stats]', e); }
+}
+
+// 今週の累計指標 (記事 / SNS / PV 変化) を 1 行で表示。
+// 「成果出てる」 体感を毎日積み上げる retention 装置。
+function _renderWeeklyStatsBar(ag){
+  var el = document.getElementById('weeklyStatsBar');
+  if(!el) return;
+  if(!_isSiteAgent(ag)){ el.style.display = 'none'; el.innerHTML = ''; return; }
+
+  // 今週生成された artifacts/notes 数
+  var since = Date.now() - 7 * 86400000;
+  var notesAll = (window._cachedNotesForSite && window._cachedNotesForSite[ag.id]) || [];
+  var articlesThis = 0;
+  var snsThis = 0;
+  notesAll.forEach(function(n){
+    if(!n) return;
+    var ts = Date.parse(n.updated_at || n.created_at || 0) || 0;
+    if(ts < since) return;
+    if(n.type === 'article' || n.type === 'article_draft') articlesThis++;
+    else if(n.type === 'sns_post') snsThis++;
+  });
+
+  // PV 変化 (GA4 snapshot から)
+  var snap = (window._ga4Snapshots && window._ga4Snapshots[ag.id]) || null;
+  var deltaPct = (snap && snap.snapshot && typeof snap.snapshot.delta_pv_pct === 'number')
+    ? snap.snapshot.delta_pv_pct
+    : (ag.ga4_snapshot && typeof ag.ga4_snapshot.delta_pv_pct === 'number' ? ag.ga4_snapshot.delta_pv_pct : null);
+
+  // 何も無いときは hide
+  if(articlesThis === 0 && snsThis === 0 && deltaPct == null){
+    el.style.display = 'none'; el.innerHTML = '';
+    return;
+  }
+
+  var parts = ['📊 今週:'];
+  if(articlesThis > 0) parts.push('<b>記事 ' + articlesThis + ' 本</b>');
+  if(snsThis > 0) parts.push('<b>SNS 投稿 ' + snsThis + ' 件</b>');
+  if(deltaPct != null){
+    var arrow = deltaPct >= 0 ? '▲' : '▼';
+    var sign = deltaPct >= 0 ? '+' : '';
+    parts.push('<b style="color:' + (deltaPct >= 0 ? '#16a34a' : '#dc2626') + '">PV ' + arrow + ' ' + sign + deltaPct + '%</b>');
+  }
+
+  el.innerHTML = parts.join(' · ');
+  el.style.display = 'block';
 }
 
 function _renderTabTasks(site){

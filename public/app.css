@@ -4356,6 +4356,24 @@ input,textarea{font-family:var(--sans);}
   .hero-card .hc-divider{ display: none; }
 }
 
+/* ── Weekly stats bar — 今週の動き 1 行 (HERO 直下) ── */
+.weekly-stats-bar{
+  margin: 4px 18px 8px;
+  padding: 6px 14px;
+  background: var(--lime-soft, #f7ffe9);
+  border: 1px solid var(--lime-soft-2, #edfcc8);
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--teal-2, #0a3d39);
+  letter-spacing: .02em;
+  line-height: 1.7;
+}
+.weekly-stats-bar b{ font-weight: 800; }
+@media (max-width: 560px){
+  .weekly-stats-bar{ margin: 4px 12px 6px; padding: 5px 10px; font-size: 11px; }
+}
+
 /* ── Task strip (= chat 上部、 今週のタスク chips) — mock-strategy-v3 と同じ class 体系 ──
    display は inline style で制御 (= hide のとき style="display:none" を効かせるため !important なし) */
 .task-strip{

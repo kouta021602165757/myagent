@@ -6177,7 +6177,7 @@ window._runSingleTask = function(siteId, taskId){
   if(!window._taskSelectionSet) window._taskSelectionSet = new Set();
   window._taskSelectionSet.clear();
   window._taskSelectionSet.add(taskId);
-  // batch mode 状態は触らない (= 元の選択モードに戻す)
+  try { showToast(L('🤖 担当 AI に依頼しました — チャットで進行を確認できます','Sent to AI — see chat for progress'),'ok',3500); } catch(_){}
   _runTaskBatch(siteId);
 };
 
@@ -6283,9 +6283,18 @@ window._runTaskBatch = async function(siteId){
     var ci = document.getElementById('ci');
     if(!ci) break;
     // タスクタイトル + prompt を composer に置く
-    var taskPrompt = '【タスク ' + (i+1) + '/' + tasks.length + '】 ' + (t.title || t.text || '無題');
-    if(t.prompt) taskPrompt += '\n\n' + t.prompt;
-    else taskPrompt += '\n\nこのタスクを実行してください。 必要に応じて create_artifact tool を使って成果物として保存してください。';
+    // ユーザー指摘: 「完了」 と言うだけで実際の作業せずに次タスクの相談を始める
+    // バグがあった → prompt を厳格化。 必ず tool 使って成果物を作る、 質問・確認・
+    // 「やって と返事すれば」 等の delegation は禁止 と明示。
+    var taskPrompt = '【自動実行タスク ' + (i+1) + '/' + tasks.length + '】\n\n'
+      + '**タスク:** ' + (t.title || t.text || '無題') + '\n\n'
+      + '## 厳守事項 (全て守らないとシステム不整合)\n'
+      + '1. **必ず create_artifact tool を呼んで成果物 (HTML / レポート) を作成してください。** 単に「完了」 や「やります」 と言って終わるのは禁止。\n'
+      + '2. 「やって と返事すれば私が進めます」 「進めますか?」 等の **ユーザーへの確認・依頼は絶対に書かない**。 ユーザーは既に承認済み (= ▶ 実行 button を押した)。\n'
+      + '3. 次タスクの提案や「次の優先タスク」 の言及は禁止。 このタスクだけに集中。\n'
+      + '4. 完了報告は artifact 保存後に **短く** 1 段落で。 「✓ 〇〇 を保存しました」 のみ。\n\n';
+    if(t.prompt) taskPrompt += '## このタスクの具体的内容\n' + t.prompt + '\n\n';
+    taskPrompt += 'では、 create_artifact tool で実際に作業してください。';
     ci.value = taskPrompt;
     try { exTA(ci); } catch(_){}
     // sendMsg を呼ぶ — user msg として push されて自動的に thread parent になる
@@ -8416,7 +8425,7 @@ function _renderTabTasks(site){
     // ▶ 実行 button — このタスク 1 件を AI に実行させる (= 担当部員 + 成果物保存)
     // batch mode 時は隠す (= まとめて実行ボタンと混乱避ける)
     var runBtn = (!batchModeOn && !t.done)
-      ? '<button class="tk-task-run" onclick="_runSingleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\')" title="このタスクを AI に実行させる">▶ 実行</button>'
+      ? '<button class="tk-task-run" onclick="_runSingleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\')" title="担当 AI に依頼 — 成果物が出来るまで自動実行">▶ AI に依頼</button>'
       : '';
     return '<div class="tk-task' + (t.done ? ' done' : '') + (batchModeOn ? ' batch-mode' : '') + '" data-task-id="' + esc(t.id) + '">'
          +   leftCb

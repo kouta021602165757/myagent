@@ -8038,26 +8038,29 @@ async function _articalizeNote(siteId, noteId){
 window._articalizeNote = _articalizeNote;
 
 async function _generateArticleDraft(siteId){
-  var topic = prompt('記事のテーマを入力してください (例: 初心者向け鞆の浦観光ガイド):');
+  var topic = prompt('記事のテーマを入力してください\n例:\n・鞆の浦 子連れ観光\n・福山 移住 補助金 2026\n・○○ おすすめ ランキング');
   if(!topic || !topic.trim()) return;
   topic = topic.trim();
-  showToast('🤖 AI が記事を執筆中 (約 30-60 秒)...', 'ok', 60000);
+  showToast('🌟 AI が my-best.com 級記事を執筆中 (約 90 秒)... 比較表 + FAQ + ランキング含む', 'ok', 120000);
   try {
-    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/artifact/generate-draft',
-      { topic: topic, word_count: 3000 });
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/artifact/generate-showcase',
+      { topic: topic, item_count: 10 });
     if(r && r.ok){
-      showToast('✅ 記事下書き完成: ' + (r.title || topic).slice(0, 50), 'ok', 8000);
-      // 成果物タブに切替して表示
+      showToast('✅ 記事完成: ' + (r.title || topic).slice(0, 60), 'ok', 10000);
+      // 新しいタブで artifact を開く
+      if(r.artifact_url){
+        try { window.open(r.artifact_url, '_blank'); } catch(_){}
+      }
       try {
         var deTab = document.querySelector('.tk-tab:nth-child(2)');
         if(deTab) deTab.click();
         _loadSiteArtifacts(siteId);
       } catch(_){}
     } else {
-      showToast((r && (r.error || 'AI 生成失敗')), 'ng', 8000);
+      showToast((r && (r.error || 'AI 生成失敗')), 'ng', 10000);
     }
   } catch(e){
-    showToast('エラー: ' + (e.message || 'unknown'), 'ng', 8000);
+    showToast('エラー: ' + (e.message || 'unknown'), 'ng', 10000);
   }
 }
 

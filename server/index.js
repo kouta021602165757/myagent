@@ -7272,6 +7272,171 @@ function _ideogramAspect(w, h){
 // ── サイト内容を取得して agent にキャッシュ (= AI 生成 prompt のコンテキスト用) ──
 // onboarding/site と同じ軽量 HTTP fetch ロジック。24h 以内のキャッシュがあれば再利用。
 // 戻り値: { title, content } (content は plain text 4000 字程度)
+// my-best.com 級ランキング記事を JSON → HTML レンダリング
+// 入力: article (= AI が生成した構造化 JSON)、 agent (= サイト情報)
+// 出力: 完全な HTML 文字列 (/generated/article-*.html に書き出し用)
+function _renderShowcaseHTML(article, agent){
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escMd(s){
+    // **bold** → <strong>
+    return esc(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  }
+  function rankBadge(rank){
+    let cls = 'rN';
+    if(rank === 1) cls = '';
+    else if(rank === 2) cls = 'r2';
+    else if(rank === 3) cls = 'r3';
+    return '<div class="rank-badge ' + cls + '">' + rank + '<span class="sub">位</span></div>';
+  }
+  const a = article || {};
+  const auth = a.author || {};
+  const items = Array.isArray(a.items) ? a.items : [];
+  const criteria = Array.isArray(a.criteria) ? a.criteria : [];
+  const compTable = a.comparison_table || { columns: [], rows: [] };
+  const faqs = Array.isArray(a.faq) ? a.faq : [];
+  const related = Array.isArray(a.related_articles) ? a.related_articles : [];
+  const hostname = agent && agent.site_url ? new URL(agent.site_url).hostname.replace(/^www\./, '') : (agent && agent.name) || 'mysite.com';
+
+  // Item card rendering — top 3 detailed, 4+ brief
+  function renderItem(item){
+    const isTopThree = item.rank <= 3;
+    const tagsHtml = (item.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('');
+    if(!isTopThree){
+      return '<div class="rank-card">'
+        + '<div class="rc-head">'
+        +   rankBadge(item.rank)
+        +   '<div class="rc-meta">'
+        +     '<div class="name">' + esc(item.name) + '</div>'
+        +     '<div class="tags">' + tagsHtml + '</div>'
+        +   '</div>'
+        +   '<div class="rc-overall"><div class="score">' + esc(item.overall) + '</div><div class="stars">' + esc(item.stars || '★★★★') + '</div></div>'
+        + '</div>'
+        + '<div class="rc-body">'
+        +   (item.lead_paragraphs || []).map(p => '<p>' + escMd(p) + '</p>').join('')
+        + '</div>'
+      + '</div>';
+    }
+    // Top 3 detailed
+    const scoresHtml = (item.scores || []).map(s => {
+      const pct = Math.min(100, Math.max(0, (s.value / 5) * 100));
+      const v = s.value > 0 ? Number(s.value).toFixed(1) : '—';
+      return '<div class="rate-row"><span class="lbl">' + esc(s.label) + '</span><div class="bar"><div class="fill" style="width:' + pct + '%"></div></div><span class="val">' + esc(v) + '</span></div>';
+    }).join('');
+    const prosHtml = (item.pros || []).map(p => '<li>' + esc(p) + '</li>').join('');
+    const consHtml = (item.cons || []).map(c => '<li>' + esc(c) + '</li>').join('');
+    const specHtml = item.spec ? Object.keys(item.spec).map(k => '<div class="row"><div class="l">' + esc(k) + '</div><div class="r">' + esc(item.spec[k]) + '</div></div>').join('') : '';
+    return '<div class="rank-card">'
+      + '<div class="rc-head">'
+      +   rankBadge(item.rank)
+      +   '<div class="rc-meta">'
+      +     '<div class="name">' + esc(item.name) + '</div>'
+      +     '<div class="tags">' + tagsHtml + '</div>'
+      +   '</div>'
+      +   '<div class="rc-overall"><div class="score">' + esc(item.overall) + '<span class="score-max">/5</span></div><div class="stars">' + esc(item.stars || '★★★★★') + '</div><div class="lbl">総合評価</div></div>'
+      + '</div>'
+      + '<div class="rc-img ' + esc(item.hero_class || '') + '">'
+      +   '<div class="badge-top">📍 ' + esc(item.tags && item.tags[0] || 'おすすめ') + '</div>'
+      +   '<div class="img-caption">' + esc(item.hero_caption || '') + '</div>'
+      + '</div>'
+      + '<div class="rc-photos">'
+      +   '<div class="ph">📷 全景</div><div class="ph">📷 詳細</div><div class="ph">📷 体験</div><div class="ph">📷 周辺</div>'
+      + '</div>'
+      + '<div class="rc-body">'
+      +   (item.lead_paragraphs || []).map(p => '<p>' + escMd(p) + '</p>').join('')
+      +   (scoresHtml ? '<div class="rate-grid">' + scoresHtml + '</div>' : '')
+      +   (prosHtml || consHtml ? '<div class="pc-grid">'
+            + (prosHtml ? '<div class="pc-card pros"><h4>👍 ここが良い</h4><ul>' + prosHtml + '</ul></div>' : '')
+            + (consHtml ? '<div class="pc-card cons"><h4>⚠ 気になる点</h4><ul>' + consHtml + '</ul></div>' : '')
+          + '</div>' : '')
+      +   (specHtml ? '<div class="spec-table">' + specHtml + '</div>' : '')
+      + '</div>'
+    + '</div>';
+  }
+
+  // CSS は showcase-tomonoura-kids.html のコピー (= 同じ見た目)
+  const css = `*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Segoe UI",system-ui,sans-serif;background:#fafaf7;color:#1a1a1a;font-size:15px;line-height:1.8;-webkit-font-smoothing:antialiased}.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 22px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}.topbar .brand{font-weight:900;font-size:18px;color:#0d4f4a;display:flex;align-items:center;gap:8px}.topbar .brand .ic{background:#c0ff5c;padding:4px 8px;border-radius:6px;font-size:14px;color:#0a3d39}.wrap{max-width:880px;margin:0 auto;padding:0 18px 80px}.breadcrumb{font-size:11.5px;color:#6b7280;padding:16px 0 12px}.breadcrumb a{color:#0d4f4a;text-decoration:none}.hero{margin-bottom:28px}.hero .cat{display:inline-block;background:#f7ffe9;color:#0a3d39;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:800;letter-spacing:.04em;margin-bottom:10px}.hero h1{font-size:32px;line-height:1.4;font-weight:900;margin-bottom:16px}.hero .meta{display:flex;align-items:center;gap:12px;font-size:12px;color:#6b7280;padding:12px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;margin-bottom:18px}.hero .meta .author{display:flex;align-items:center;gap:8px}.hero .meta .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}.hero .meta .au-name{font-weight:700;color:#1a1a1a}.hero .meta .au-role{font-size:10.5px;color:#6b7280}.hero .meta .updated{margin-left:auto;background:#fff;border:1px solid #e5e7eb;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700}.hero-img{width:100%;height:380px;background:linear-gradient(135deg,#0d4f4a 0%,#14b8a6 50%,#f59e0b 100%);border-radius:12px;position:relative;overflow:hidden;margin-bottom:22px}.hero-img::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 0%,rgba(0,0,0,.4) 100%)}.hero-img .badge{position:absolute;top:16px;left:16px;background:#d97706;color:#fff;padding:5px 12px;border-radius:5px;font-weight:800;font-size:12px}.hero-img .title-overlay{position:absolute;bottom:24px;left:24px;right:24px;color:#fff;font-size:22px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.5)}.intro{background:linear-gradient(135deg,#f7ffe9,#fff);border:1px solid #c0ff5c;border-radius:12px;padding:22px 26px;margin-bottom:32px;line-height:1.85}.intro strong{color:#0a3d39}h2{font-size:24px;font-weight:900;margin-top:48px;margin-bottom:16px;padding:14px 18px;background:linear-gradient(90deg,#0d4f4a,#0a3d39);color:#fff;border-radius:8px;line-height:1.5}h2 .num{display:inline-block;background:#c0ff5c;color:#0a3d39;padding:2px 8px;border-radius:5px;font-size:13px;margin-right:10px;vertical-align:2px}h3{font-size:19px;font-weight:800;margin-top:28px;margin-bottom:12px;color:#0a3d39;padding-left:14px;border-left:4px solid #c0ff5c}p{margin-bottom:14px}.criteria{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:22px 24px;margin-bottom:28px}.criteria h3{margin:0 0 14px;padding-left:0;border-left:0;font-size:17px;color:#1a1a1a}.crit-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.crit-item{display:flex;gap:12px;padding:12px 14px;background:#fafaf7;border-radius:9px}.crit-item .ic{width:36px;height:36px;background:#f7ffe9;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}.crit-item .ti{font-weight:800;font-size:13px}.crit-item .de{font-size:12px;color:#6b7280;margin-top:2px;line-height:1.55}.rank-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:28px;box-shadow:0 4px 16px rgba(0,0,0,.04)}.rank-card .rc-head{padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,#fafaf7,#fff)}.rank-badge{flex-shrink:0;width:60px;height:60px;background:linear-gradient(135deg,#d97706,#ea580c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;box-shadow:0 4px 12px rgba(217,119,6,.3)}.rank-badge.r2{background:linear-gradient(135deg,#94a3b8,#64748b);box-shadow:0 4px 12px rgba(100,116,139,.3)}.rank-badge.r3{background:linear-gradient(135deg,#b45309,#92400e);box-shadow:0 4px 12px rgba(146,64,14,.3)}.rank-badge.rN{background:linear-gradient(135deg,#0d4f4a,#0a3d39);width:50px;height:50px;font-size:22px}.rank-badge .sub{font-size:9px;font-weight:700;letter-spacing:.04em;display:block;margin-top:-2px}.rc-meta{flex:1}.rc-meta .name{font-size:22px;font-weight:900;line-height:1.3;margin-bottom:4px}.rc-meta .tags{display:flex;gap:6px;flex-wrap:wrap}.rc-meta .tag{background:#f7ffe9;color:#0a3d39;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}.rc-overall{flex-shrink:0;text-align:center;padding-left:14px;border-left:1px solid #e5e7eb}.rc-overall .score{font-size:32px;font-weight:900;color:#d97706;line-height:1}.rc-overall .score-max{font-size:14px;color:#6b7280;font-weight:600}.rc-overall .stars{font-size:11px;color:#d97706;margin-top:4px}.rc-overall .lbl{font-size:9.5px;color:#6b7280;margin-top:2px}.rc-img{height:280px;background:linear-gradient(135deg,#fef3c7,#fde68a);position:relative;overflow:hidden}.rc-img.bg-cafe{background:linear-gradient(135deg,#fee2e2,#fecaca)}.rc-img.bg-history{background:linear-gradient(135deg,#ddd6fe,#c4b5fd)}.rc-img.bg-temple{background:linear-gradient(135deg,#fef3c7,#fde68a)}.rc-img.bg-sea{background:linear-gradient(135deg,#cffafe,#67e8f9)}.rc-img .badge-top{position:absolute;top:12px;left:12px;background:#d97706;color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:800}.rc-img .img-caption{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.6));color:#fff;padding:16px 18px 14px;font-size:12px;font-weight:600}.rc-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px;background:#fafaf7}.rc-photos .ph{height:70px;background:linear-gradient(135deg,#f3f4f6,#e5e7eb);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b7280;font-weight:600}.rc-body{padding:22px 24px}.rc-body p{font-size:14px;line-height:1.85;margin-bottom:12px}.rc-body p strong{color:#0a3d39}.rate-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 22px;background:#fafaf7;border-radius:9px;padding:14px 18px;margin-bottom:16px}.rate-row{display:flex;align-items:center;gap:10px;font-size:12px}.rate-row .lbl{flex:0 0 80px;font-weight:700;color:#4b5563}.rate-row .bar{flex:1;height:6px;background:#e5e7eb;border-radius:999px;overflow:hidden}.rate-row .bar .fill{height:100%;background:linear-gradient(90deg,#d97706,#ea580c);border-radius:999px}.rate-row .val{flex:0 0 30px;text-align:right;font-weight:800;color:#d97706;font-size:13px}.pc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.pc-card{background:#fafaf7;border-radius:9px;padding:14px 16px}.pc-card.pros{border-left:4px solid #16a34a}.pc-card.cons{border-left:4px solid #dc2626}.pc-card h4{font-size:13px;font-weight:800;margin-bottom:8px}.pc-card.pros h4{color:#16a34a}.pc-card.cons h4{color:#dc2626}.pc-card ul{list-style:none;padding:0}.pc-card li{font-size:12.5px;padding:3px 0;padding-left:16px;position:relative;line-height:1.6}.pc-card.pros li::before{content:'✓';position:absolute;left:0;color:#16a34a;font-weight:800}.pc-card.cons li::before{content:'!';position:absolute;left:0;color:#dc2626;font-weight:800}.spec-table{background:#fff;border:1px solid #e5e7eb;border-radius:9px;overflow:hidden;margin-top:14px}.spec-table .row{display:grid;grid-template-columns:100px 1fr;border-top:1px solid #e5e7eb}.spec-table .row:first-child{border-top:0}.spec-table .row .l{padding:10px 14px;background:#fafaf7;font-weight:700;font-size:12px;color:#4b5563}.spec-table .row .r{padding:10px 14px;font-size:12.5px}.comp-wrap{overflow-x:auto;margin:18px 0 28px;border-radius:9px;border:1px solid #e5e7eb}table.comparison{width:100%;border-collapse:collapse;background:#fff;font-size:12px}table.comparison thead{background:#0a3d39;color:#fff}table.comparison th{padding:10px 12px;text-align:center;font-weight:700;font-size:11.5px;border-right:1px solid rgba(255,255,255,.15);white-space:nowrap}table.comparison th:first-child{text-align:left;min-width:130px}table.comparison td{padding:10px 12px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:center;font-size:12px}table.comparison td:first-child{text-align:left;font-weight:700;background:#fafaf7}.faq-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px;overflow:hidden}.faq-card details summary{padding:14px 18px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px}.faq-card details summary::-webkit-details-marker{display:none}.faq-card details summary::before{content:'Q';background:#0d4f4a;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}.faq-card details[open] summary::before{background:#ea580c}.faq-card details .ans{padding:0 18px 16px 54px;font-size:13.5px;line-height:1.85;color:#4b5563}.author-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:22px 24px;margin:32px 0;display:flex;gap:18px;align-items:flex-start}.author-card .av-large{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;flex-shrink:0}.author-card .au-bd .name{font-size:17px;font-weight:800;margin-bottom:4px}.author-card .au-bd .role{font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:700}.author-card .au-bd .desc{font-size:13px;line-height:1.7}.author-card .au-bd .credentials{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.author-card .au-bd .cred{background:#f7ffe9;color:#0a3d39;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}.related-h{font-size:20px;font-weight:900;margin:40px 0 16px}.related{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}.rel-card{background:#fff;border:1px solid #e5e7eb;border-radius:9px;overflow:hidden}.rel-card .rel-img{height:110px;background:linear-gradient(135deg,#f3f4f6,#e5e7eb)}.rel-card .rel-bd{padding:12px 14px}.rel-card .rel-ti{font-size:13px;font-weight:800;line-height:1.5;margin-bottom:6px}.rel-card .rel-sub{font-size:11px;color:#6b7280}@media(max-width:720px){.hero h1{font-size:24px}.hero-img{height:240px}.rc-head{flex-wrap:wrap}.crit-grid,.pc-grid,.rate-grid,.related{grid-template-columns:1fr}h2{font-size:19px}.rc-meta .name{font-size:18px}}`;
+
+  const updated = new Date().toISOString().slice(0, 10).replace(/-/g, '年').replace(/年(\d+)年/, '年$1月') + '日 更新';
+  const updateStr = (() => {
+    const d = new Date();
+    return d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 更新';
+  })();
+
+  const compTableHtml = compTable.columns && compTable.rows
+    ? '<div class="comp-wrap"><table class="comparison"><thead><tr>'
+      + compTable.columns.map(c => '<th>' + esc(c) + '</th>').join('')
+      + '</tr></thead><tbody>'
+      + (compTable.rows || []).map(r => '<tr>' + r.map((cell, i) => i === 0
+          ? '<td>' + esc(cell) + '</td>'
+          : '<td>' + esc(cell) + '</td>').join('') + '</tr>').join('')
+      + '</tbody></table></div>'
+    : '';
+
+  return `<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(a.title)}</title>
+<meta name="description" content="${esc(a.meta_description)}">
+<style>${css}</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="ic">📰</span> ${esc(hostname)}</div>
+</div>
+<div class="wrap">
+  <div class="breadcrumb"><a href="/">ホーム</a> › <a href="#">${esc(a.category || '記事')}</a> › <span>${esc(a.title.slice(0, 30))}</span></div>
+  <div class="hero">
+    <div class="cat">📍 ${esc(a.category || '')}</div>
+    <h1>${esc(a.title)}</h1>
+    <div class="meta">
+      <div class="author">
+        <div class="av">${esc(auth.avatar_letter || 'M')}</div>
+        <div><div class="au-name">${esc(auth.name || '編集部')}</div><div class="au-role">${esc(auth.role || '')}</div></div>
+      </div>
+      <div class="updated">📅 ${updateStr}</div>
+    </div>
+    <div class="hero-img">
+      <div class="badge">⭐ 編集部 おすすめ</div>
+      <div class="title-overlay">${esc(a.hero_subtitle || '')}</div>
+    </div>
+  </div>
+  <div class="intro">${(a.intro_paragraphs || []).map(p => '<p>' + escMd(p) + '</p>').join('')}</div>
+  <div class="criteria">
+    <h3>🎯 編集部の選び方 — ${criteria.length} つの評価軸</h3>
+    <div class="crit-grid">
+      ${criteria.map(c => '<div class="crit-item"><div class="ic">' + esc(c.icon || '✅') + '</div><div><div class="ti">' + esc(c.title) + '</div><div class="de">' + esc(c.desc) + '</div></div></div>').join('')}
+    </div>
+  </div>
+  <h2><span class="num">★</span>比較表</h2>
+  ${compTableHtml}
+  ${items.map(it => '<h2><span class="num">No.' + it.rank + '</span>' + esc(it.name) + '</h2>' + renderItem(it)).join('')}
+  <h2><span class="num">FAQ</span>よくある質問</h2>
+  ${faqs.map((f, i) => '<div class="faq-card"><details' + (i === 0 ? ' open' : '') + '><summary>' + esc(f.q) + '</summary><div class="ans">' + escMd(f.a) + '</div></details></div>').join('')}
+  <h2><span class="num">✍</span>この記事を書いた人</h2>
+  <div class="author-card">
+    <div class="av-large">${esc(auth.avatar_letter || 'M')}</div>
+    <div class="au-bd">
+      <div class="name">${esc(auth.name || '編集部')}</div>
+      <div class="role">${esc(auth.role || '')}</div>
+      <div class="desc">${esc(auth.description || (hostname + ' 編集部。 ローカル情報・ガイドを専門に執筆。'))}</div>
+      <div class="credentials">${(auth.credentials || []).map(c => '<span class="cred">' + esc(c) + '</span>').join('')}</div>
+    </div>
+  </div>
+  <div class="related-h">📚 あわせて読みたい</div>
+  <div class="related">
+    ${related.slice(0, 3).map(r => '<div class="rel-card"><div class="rel-img"></div><div class="rel-bd"><div class="rel-ti">' + esc(r.title) + '</div><div class="rel-sub">' + esc(r.date || '') + ' ・ ' + esc(r.category || '') + '</div></div></div>').join('')}
+  </div>
+</div>
+</body>
+</html>`;
+}
+
 async function _fetchSitePreview(agent){
   if(!agent || !agent.site_url) return { title: '', content: '' };
   // キャッシュ check (24h)
@@ -20482,6 +20647,186 @@ async function handleAPI(req,res,pathname,method,ip){
       console.warn('[gsc-snapshot] failed:', e.message);
       return jres(res, 500, { error: e.message });
     }
+  }
+
+  // POST /api/agents/:id/artifact/generate-showcase — AI が my-best.com 級 ランキング記事を生成
+  //  JSON 構造化 出力 → HTML テンプレートに流し込み → /generated/ に保存
+  //  Body: { topic: string, item_count?: number (default 10), word_target?: number }
+  //  Result: { ok, note_id, artifact_url, title }
+  const showcaseGenMatch = pathname.match(/^\/api\/agents\/([^/]+)\/artifact\/generate-showcase$/);
+  if(showcaseGenMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === showcaseGenMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req).catch(() => ({}));
+    const topic = String((body && (body.topic || body.title)) || '').trim();
+    if(!topic) return jres(res, 400, { error: 'topic required' });
+    const itemCount = Math.min(15, Math.max(5, Number((body && body.item_count) || 10)));
+
+    let siteContext = '';
+    try {
+      const preview = await _fetchSitePreview(ag);
+      if(preview && preview.content){
+        siteContext = '\n【既存サイトの内容 (= トーン参考)】\n' + String(preview.content).slice(0, 1500);
+      }
+    } catch(e){}
+
+    const prompt = `あなたはこのサイトのプロのコンテンツライター + SEO 専門家です。
+my-best.com レベルの「ランキング比較記事」 を JSON 形式で出力してください。
+
+【サイト】${ag.site_url || ag.name} (${ag.site_vertical || 'general'})
+【テーマ】${topic}
+【ランキング項目数】${itemCount} 個${siteContext}
+
+【出力 JSON スキーマ (厳密に従ってください)】
+{
+  "title": "60 字以内、 SEO 観点で検索意図キーワードを含む",
+  "meta_description": "120 字、 検索結果でクリックしたくなる魅力的な要約",
+  "category": "観光 / グルメ / 移住 / イベント / ライフ など",
+  "slug": "url-friendly-slug-{topic}",
+  "hero_subtitle": "ヒーロー画像下の小キャプション (例: 鞆の浦の風景 - 常夜灯と瀬戸内海)",
+  "author": {
+    "name": "編集部の架空ライター名 (実在しない、 漢字 + ひらがな)",
+    "role": "編集部 / ○○在住 N 年",
+    "avatar_letter": "1 文字 (Mなど)",
+    "credentials": ["📷 N 回現地取材", "👶 2 児の母", "🏠 ○○在住 N 年", "📰 編集部"]
+  },
+  "intro_paragraphs": [
+    "問いかけ + 体験談 (12 回通った地元民等の具体的数字含む) で 200 字",
+    "記事の構成説明 + 何が得られるか で 200 字"
+  ],
+  "criteria": [
+    {"icon": "🚼", "title": "① 評価軸 1", "desc": "20-30 字の説明"},
+    {"icon": "🚻", "title": "② 評価軸 2", "desc": "..."},
+    {"icon": "🍴", "title": "③ 評価軸 3", "desc": "..."},
+    {"icon": "🛡", "title": "④ 評価軸 4", "desc": "..."},
+    {"icon": "🎉", "title": "⑤ 評価軸 5", "desc": "..."},
+    {"icon": "⏱", "title": "⑥ 滞在時間", "desc": "..."}
+  ],
+  "items": [
+    {
+      "rank": 1,
+      "name": "1 位の項目名 (商品名 / スポット名 / サービス名)",
+      "tags": ["📸 タグ1", "🚼 タグ2", "🎉 タグ3", "⏱ タグ4"],
+      "overall": 4.9,
+      "stars": "★★★★★",
+      "hero_class": "bg-cafe (or bg-history / bg-temple / bg-sea / 任意の bg class)",
+      "hero_caption": "ヒーロー画像下のキャプション",
+      "lead_paragraphs": [
+        "強調マークアップ (**bold**) を含む紹介文 1 段落",
+        "もう 1 段落、 体験談 + 具体数字"
+      ],
+      "scores": [
+        {"label": "評価軸 1", "value": 5.0},
+        {"label": "評価軸 2", "value": 4.8},
+        {"label": "評価軸 3", "value": 3.0},
+        {"label": "評価軸 4", "value": 5.0},
+        {"label": "評価軸 5", "value": 5.0},
+        {"label": "評価軸 6", "value": 5.0}
+      ],
+      "pros": ["良い点 1", "良い点 2", "良い点 3", "良い点 4"],
+      "cons": ["気になる点 1", "気になる点 2", "気になる点 3"],
+      "spec": {
+        "住所": "...",
+        "駐車場 / アクセス": "...",
+        "営業時間": "...",
+        "料金": "...",
+        "所要時間": "...",
+        "問合せ": "..."
+      }
+    }
+    // ← items は 1 位〜${itemCount} 位まで。 1-3 位は上記の詳細フォーマット、
+    //    4 位以降は lead_paragraphs を 1 段落、 scores / pros / cons / spec を省略可能。
+  ],
+  "comparison_table": {
+    "columns": ["スポット", "総合", "🚼 ベビーカー", "🚻 トイレ", "🍴 食事", "🛡 安全", "🎉 楽しさ", "滞在", "料金"],
+    "rows": [
+      ["1 位の名前", "4.9", "◎", "◎", "△", "◎", "◎", "30 分", "無料"],
+      ["..."]
+    ]
+  },
+  "faq": [
+    {"q": "...", "a": "..."},
+    {"q": "...", "a": "..."}
+    // 7-10 個
+  ],
+  "related_articles": [
+    {"title": "関連記事 1", "date": "2026-05-20", "category": "観光"},
+    {"title": "関連記事 2", "date": "...", "category": "..."},
+    {"title": "関連記事 3", "date": "...", "category": "..."}
+  ]
+}
+
+【書き方の注意】
+- E-E-A-T 担保: 「12 回通った」 「3 歳と 6 歳の母」 等 具体的な体験談を入れる
+- pros / cons は 各 3-5 個、 具体的・実用的に
+- spec は読者がすぐ行けるレベルの実用情報
+- 比較表の ◎○△× は実際の評価と合わせる
+- 関連記事のタイトルは 「テーマ ○○」 や 「△△ 完全ガイド」 等、 内部リンクで使えるもの
+- 文章は 「です・ます」 体、 読みやすく
+- JSON 以外の前置き・後置きは一切書かない (parse 可能な JSON のみ)
+
+JSON のみを出力してください。`;
+
+    let reply = '';
+    try {
+      reply = await callAI([{role:'user', content: prompt}], '', 'sonnet', ag);
+    } catch(e){
+      return jres(res, 500, { error: 'AI failed: ' + (e.message || String(e)) });
+    }
+
+    // Extract JSON from reply (handle code fences if any)
+    let articleJson = null;
+    try {
+      let jsonStr = String(reply || '').trim();
+      // strip markdown code fences
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+      // find first { ... last }
+      const firstBrace = jsonStr.indexOf('{');
+      const lastBrace = jsonStr.lastIndexOf('}');
+      if(firstBrace >= 0 && lastBrace > firstBrace){
+        jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+      }
+      articleJson = JSON.parse(jsonStr);
+    } catch(e){
+      console.error('[showcase-gen] JSON parse failed:', e.message, 'reply head:', String(reply).slice(0, 300));
+      return jres(res, 500, { error: 'AI returned invalid JSON: ' + e.message });
+    }
+    if(!articleJson || !articleJson.title || !Array.isArray(articleJson.items)){
+      return jres(res, 500, { error: 'AI response missing required fields' });
+    }
+
+    // Render HTML using template
+    const slug = String(articleJson.slug || topic).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'article-' + Date.now();
+    const fileBase = 'article-' + slug + '-' + crypto.randomBytes(4).toString('hex') + '.html';
+    const html = _renderShowcaseHTML(articleJson, ag);
+    const filePath = path.join(GENERATED_DIR, fileBase);
+    try {
+      if(!fs.existsSync(GENERATED_DIR)) fs.mkdirSync(GENERATED_DIR, { recursive: true });
+      fs.writeFileSync(filePath, html, 'utf8');
+    } catch(e){
+      console.error('[showcase-gen] file write failed:', e.message);
+      return jres(res, 500, { error: 'failed to save article HTML' });
+    }
+    const artifactUrl = '/generated/' + fileBase;
+
+    // Save note
+    user.notes = Array.isArray(user.notes) ? user.notes : [];
+    const noteId = 'note_' + crypto.randomBytes(5).toString('hex');
+    const now = new Date().toISOString();
+    user.notes.push({
+      id: noteId,
+      agent_id: ag.id,
+      title: articleJson.title,
+      content: JSON.stringify(articleJson, null, 2).slice(0, 100000),  // structured data
+      type: 'article',
+      auto_generated: true,
+      artifact_url: artifactUrl,
+      created_at: now,
+      updated_at: now,
+    });
+    try { await DB.save(user); } catch(e){ console.warn('[showcase-gen] save failed:', e.message); }
+    console.log('[showcase-gen] ok user=' + user.id + ' agent=' + ag.id + ' artifact=' + artifactUrl);
+    return jres(res, 200, { ok: true, note_id: noteId, artifact_url: artifactUrl, title: articleJson.title });
   }
 
   // POST /api/agents/:id/artifact/generate-draft — AI が WP 記事下書きを生成

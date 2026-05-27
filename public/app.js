@@ -3409,6 +3409,7 @@ window._runDailyGrowthReport = function(siteId){
           role:'assistant',
           content: '📊 **GA4 アナリスト** が動き始めました…\n\nGA4 から直近 7-14 日の数字 (PV / セッション / 直帰率 / チャネル別) を fetch して、 効いた施策 / 詰まった箇所 / 明日のアクション / 中期トレンド の 4 セクションを書きます。',
           time: now(), system_action: true, transient: false,
+          huddle_member_id: 'sys_ga4_analyst',
           huddle_member_name: '📊 GA4 アナリスト',
           huddle_member_avatar: '📊',
         };
@@ -6257,6 +6258,7 @@ window._runTaskBatch = async function(siteId){
     content: overviewContent,
     time: now(),
     system_action: true,
+    huddle_member_id: 'sys_batch_pm',
     huddle_member_name: '📋 PM (バッチ実行)',
     huddle_member_avatar: '📋',
   };
@@ -6303,6 +6305,7 @@ window._runTaskBatch = async function(siteId){
       + '各タスクの作業内容は上のメッセージ (各スレッド) で確認できます。 成果物が保存されたタスクはメモ帳 + AI 成果物リストにも反映されています。',
     time: now(),
     system_action: true,
+    huddle_member_id: 'sys_batch_pm',
     huddle_member_name: '📋 PM (バッチ実行)',
     huddle_member_avatar: '📋',
   };
@@ -6330,6 +6333,7 @@ window._pushChatErrorRecovery = function(siteId, opts){
       time: now(),
       system_action: true,
       transient: false,
+      huddle_member_id: 'sys_error',
       huddle_member_name: '⚠️ システム',
       huddle_member_avatar: '⚠️',
     };
@@ -6368,6 +6372,7 @@ window._runExecutionPlan = function(siteId){
           role:'assistant',
           content: '📋 **PM (ロードマップ設計)** が動き始めました…\n\n6 ヶ月 KPI 目標を読み込んで、月別の具体施策・部門割り当て・工数を 1 枚の HTML レポートにまとめます。 所要時間 30-60 秒。',
           time: now(), system_action: true, transient: false,
+          huddle_member_id: 'sys_pm_roadmap',
           huddle_member_name: '📋 PM (ロードマップ設計)',
           huddle_member_avatar: '📋',
         };
@@ -12364,7 +12369,10 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     var _genVerb = (raw && raw.assigned_verb) ? raw.assigned_verb : (isJa ? '取り組み中' : 'working');
     var _genWho  = (raw && raw.huddle_member_name) ? esc(raw.huddle_member_name) + ' が' : '';
     var _genDept = (raw && raw.assigned_dept) ? ' <span style="font-size:10px;opacity:.7">('+esc(raw.assigned_dept)+')</span>' : '';
-    var _genStart = (raw && raw.time) ? Date.parse(raw.time) || Date.now() : Date.now();
+    // raw.time は "12:34" 形式 (Date.parse 不可) なので、 専用の gen_started_ms
+    // を読む。 無ければフォールバック (= 1 回目だけ Date.now、 ticker が以降は
+    // この data-start を再利用するので timer の連続性は保たれる)。
+    var _genStart = (raw && typeof raw.gen_started_ms === 'number') ? raw.gen_started_ms : Date.now();
     bodyMarkup = '<div class="gen-indicator">'
       + '<div class="gen-logo"></div>'
       + '<div class="gen-text">' + _genWho + (isJa ? esc(_genVerb) + '…' : esc(_genVerb) + '…') + _genDept
@@ -15782,6 +15790,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
   } catch(_){}
   var _streamBubble = {
     role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent,
+    gen_started_ms: Date.now(),  // gen-indicator の経過時間 timer がこれを読む
   };
   if(_pickedMember){
     _streamBubble.huddle_member_id = _pickedMember.member_id;

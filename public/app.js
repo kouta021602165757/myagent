@@ -2763,6 +2763,7 @@ function _openSiteTabModal(siteId, tabKey){
   var ov = document.createElement('div');
   ov.id = 'siteTabOverlay';
   ov.setAttribute('data-tab', tabKey);
+  ov.setAttribute('data-site-id', siteId);
   // Split layout: 右側に panel sidebar、 左の chat は引き続き interactive
   // Mobile (< 720px) は full-width に fallback
   var isMobile = window.innerWidth < 720;
@@ -6153,6 +6154,163 @@ function _switchDashTab(siteId, tab){
   try { renderAgList(); } catch(_){}
 }
 
+// ── 複数タスクを順次実行 (= 各タスクが独立 thread を持つ) ──
+// ユーザー要望: タスク 1 → スレッド、 タスク 2 → スレッド、 みたいに
+// 各タスクごとにスレッドができる形。
+//
+// 実装: 各タスクを top-level user msg として sendMsg で送る。 sendMsg
+// は user msg を top-level として push し、 後続の assistant streaming
+// bubble の thread_parent_id にその user msg ID を入れる仕組みがある
+// (line 15466 周辺の _autoParent ロジック)。 つまり「user msg = thread
+// parent」 = 各タスクが自動的に独立 thread になる。
+//
+// 1 タスクの stream 完了 (= _chatStreamCtrl が null に戻る) を polling で
+// 待ってから次タスクへ。 最大 5 件まで (= rate limit リスク回避)。
+window._taskSelectionMode = false;
+window._taskSelectionSet = (typeof Set === 'function') ? new Set() : null;
+
+window._toggleTaskSelectionMode = function(){
+  window._taskSelectionMode = !window._taskSelectionMode;
+  if(!window._taskSelectionMode && window._taskSelectionSet){
+    window._taskSelectionSet.clear();
+  }
+  // tasks panel を再描画 (= modal の中身を rebuild)
+  try {
+    var ov = document.getElementById('siteTabOverlay');
+    if(ov){
+      var siteId = ov.getAttribute('data-site-id');
+      if(siteId && typeof _openSiteTabModal === 'function'){
+        _openSiteTabModal(siteId, 'tasks');
+      }
+    }
+  } catch(_){}
+};
+
+window._toggleTaskInSelection = function(taskId, checked){
+  if(!window._taskSelectionSet) return;
+  if(checked) window._taskSelectionSet.add(taskId);
+  else window._taskSelectionSet.delete(taskId);
+  // 下部の「N 件実行」 button の数字を更新
+  try {
+    var bar = document.getElementById('batchRunBar');
+    var btnLabel = document.getElementById('batchRunLabel');
+    if(bar && btnLabel){
+      var n = window._taskSelectionSet.size;
+      if(n > 0){
+        bar.style.display = 'flex';
+        btnLabel.textContent = '▶ ' + n + ' 件をまとめて実行';
+      } else {
+        bar.style.display = 'none';
+      }
+    }
+  } catch(_){}
+};
+
+window._runTaskBatch = async function(siteId){
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag){ showToast('サイトが見つかりません','ng'); return; }
+  if(!window._taskSelectionSet || window._taskSelectionSet.size === 0){
+    showToast('タスクを 1 件以上選択してください','ng'); return;
+  }
+  // タスク詳細解決 — roadmap 全週 + custom + open_tasks から ID 一致を探す
+  var selectedIds = Array.from(window._taskSelectionSet);
+  var allTasks = [];
+  if(ag.roadmap && Array.isArray(ag.roadmap.weeks)){
+    ag.roadmap.weeks.forEach(function(w){
+      (w.tasks || []).forEach(function(t){
+        allTasks.push({ id: t.id, title: t.text || '', week: w.n, dept_id: t.dept_id, owner: t.owner });
+      });
+    });
+    (ag.roadmap.custom_tasks || []).forEach(function(t){
+      allTasks.push({ id: t.id, title: t.text || '', week: t.due_week || 1, dept_id: t.dept_id, owner: t.owner });
+    });
+  }
+  (ag.open_tasks || []).forEach(function(t){
+    allTasks.push({ id: t.id, title: t.title || '', source: 'open' });
+  });
+  var tasks = allTasks.filter(function(t){ return selectedIds.indexOf(t.id) >= 0; });
+  if(!tasks.length){ showToast('選択タスクが見つかりません','ng'); return; }
+  // 5 件 cap (= rate limit + UX 上の現実性)
+  if(tasks.length > 5){
+    showToast('1 回の実行は 5 件までです。 5 件に絞って再実行してください。','ng');
+    return;
+  }
+
+  // 選択をリセット + mode 解除
+  window._taskSelectionSet.clear();
+  window._taskSelectionMode = false;
+
+  // panel を閉じて chat に戻る
+  try {
+    var ov = document.getElementById('siteTabOverlay');
+    if(ov) ov.remove();
+  } catch(_){}
+  if(activeId !== siteId) openAgent(siteId);
+
+  // overview msg を push
+  await new Promise(function(r){ setTimeout(r, 250); });
+  var overviewContent = '📋 **' + tasks.length + ' 件のタスクを順次実行します**\n\n'
+    + tasks.map(function(t, i){ return (i+1) + '. ' + (t.title || t.text || ''); }).join('\n')
+    + '\n\n各タスクは別スレッドで実行されます。 上にスクロールしてタスクメッセージをクリックすると、 該当のスレッドで AI 部員の作業が見られます。';
+  var overviewMsg = {
+    role: 'assistant',
+    content: overviewContent,
+    time: now(),
+    system_action: true,
+    huddle_member_name: '📋 PM (バッチ実行)',
+    huddle_member_avatar: '📋',
+  };
+  ag.history.push(overviewMsg);
+  try { renderMsgs(ag, true); } catch(_){}
+  try { _persistChatMsg(ag.id, overviewMsg); } catch(_){}
+
+  // タスクを順次実行
+  for(var i = 0; i < tasks.length; i++){
+    var t = tasks[i];
+    var ci = document.getElementById('ci');
+    if(!ci) break;
+    // タスクタイトル + prompt を composer に置く
+    var taskPrompt = '【タスク ' + (i+1) + '/' + tasks.length + '】 ' + (t.title || t.text || '無題');
+    if(t.prompt) taskPrompt += '\n\n' + t.prompt;
+    else taskPrompt += '\n\nこのタスクを実行してください。 必要に応じて create_artifact tool を使って成果物として保存してください。';
+    ci.value = taskPrompt;
+    try { exTA(ci); } catch(_){}
+    // sendMsg を呼ぶ — user msg として push されて自動的に thread parent になる
+    try { sendMsg(); } catch(e){ console.warn('[batch] sendMsg failed:', e); }
+
+    // stream 完了 (= _chatStreamCtrl が null) まで polling 待ち
+    await new Promise(function(resolve){
+      var poll = setInterval(function(){
+        if(!_chatStreamCtrl){
+          clearInterval(poll);
+          resolve();
+        }
+      }, 500);
+      // safety timeout: 5 分/タスク
+      setTimeout(function(){
+        try { clearInterval(poll); } catch(_){}
+        resolve();
+      }, 300000);
+    });
+    // 次タスクへ進む前に小休止 (= rate limit 余裕)
+    await new Promise(function(r){ setTimeout(r, 500); });
+  }
+
+  // 完了 summary
+  var summaryMsg = {
+    role: 'assistant',
+    content: '✅ **' + tasks.length + ' 件のタスクをすべて実行しました**\n\n'
+      + '各タスクの作業内容は上のメッセージ (各スレッド) で確認できます。 成果物が保存されたタスクはメモ帳 + AI 成果物リストにも反映されています。',
+    time: now(),
+    system_action: true,
+    huddle_member_name: '📋 PM (バッチ実行)',
+    huddle_member_avatar: '📋',
+  };
+  ag.history.push(summaryMsg);
+  try { renderMsgs(ag, true); } catch(_){}
+  try { _persistChatMsg(ag.id, summaryMsg); } catch(_){}
+};
+
 // エラー時に chat に「⚠️ こうコケた」 msg を残す共通 helper。
 // toast だけだと消えて気づかないので、 chat に永続化する。
 // retryAction は文字列 (= 失敗したアクション名)。 ユーザーが同じボタンを
@@ -8082,9 +8240,12 @@ function _renderTabTasks(site){
     currentWeek = Math.min(12, Math.max(1, weeksElapsed + 1));
   }
 
-  // ── ヘッダー (= 進捗バー + 再生成 button) ──
+  // ── ヘッダー (= 進捗バー + 再生成 button + まとめて実行 toggle) ──
   var generatedFmt = '';
   try { generatedFmt = new Date(roadmap.generated_at).toLocaleDateString('ja-JP'); } catch(e){}
+  var batchModeOn = !!window._taskSelectionMode;
+  var batchModeBtnLabel = batchModeOn ? '✕ 選択モード解除' : '📦 まとめて実行モード';
+  var batchModeBtnCls = batchModeOn ? 'tk-head-batch on' : 'tk-head-batch';
   var headerHTML = ''
     + '<div class="tk-head">'
     +   '<div class="tk-head-l">'
@@ -8092,9 +8253,13 @@ function _renderTabTasks(site){
     +     '<div class="tk-head-ti">' + doneTasks + ' / ' + totalTasks + ' タスク完了 <span class="tk-head-pct">' + progressPct + '%</span></div>'
     +     '<div class="tk-head-sub">生成: ' + esc(generatedFmt) + ' ・ 今週: <b>Week ' + currentWeek + '</b></div>'
     +   '</div>'
+    +   '<button class="' + batchModeBtnCls + '" onclick="_toggleTaskSelectionMode()" title="複数タスクを選んでまとめて AI に実行させる">' + batchModeBtnLabel + '</button>'
     +   '<button class="tk-head-regen" onclick="if(confirm(\'既存タスクを上書きして再生成しますか? (手動追加タスクは保持されます)\'))_generateRoadmap(\'' + esc(site.id) + '\',this)" title="再生成 (既存 AI タスクは上書き、手動タスクは残る)">🔄 再生成</button>'
     + '</div>'
-    + '<div class="tk-prog"><div class="tk-prog-fill" style="width:' + progressPct + '%"></div></div>';
+    + '<div class="tk-prog"><div class="tk-prog-fill" style="width:' + progressPct + '%"></div></div>'
+    + (batchModeOn
+        ? '<div class="tk-batch-hint">📦 タスクを選んでください (5 件まで)。 選択したタスクが各スレッドで順次実行されます。</div>'
+        : '');
 
   // ── Week 別 accordion ──
   function _renderTaskRow(t, weekNum){
@@ -8104,8 +8269,18 @@ function _renderTabTasks(site){
       : '';
     var ownerTag = t.owner ? '<span class="tk-task-owner">👤 ' + esc(t.owner) + '</span>' : '';
     var customBadge = !t.ai ? '<span class="tk-task-custom">+ 手動追加</span>' : '';
-    return '<div class="tk-task' + (t.done ? ' done' : '') + '" data-task-id="' + esc(t.id) + '">'
-         +   '<input type="checkbox" class="tk-task-cb" ' + (t.done ? 'checked' : '') + ' onchange="_toggleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\',this.checked)" />'
+    // batch mode 時: done checkbox の代わりに「実行選択」 checkbox を出す
+    var leftCb;
+    if(batchModeOn){
+      var isSel = !!(window._taskSelectionSet && window._taskSelectionSet.has(t.id));
+      leftCb = '<input type="checkbox" class="tk-task-cb tk-task-cb-select" ' + (isSel ? 'checked' : '')
+        + ' onchange="_toggleTaskInSelection(\'' + esc(t.id) + '\', this.checked)" title="実行するタスクとして選択" />';
+    } else {
+      leftCb = '<input type="checkbox" class="tk-task-cb" ' + (t.done ? 'checked' : '')
+        + ' onchange="_toggleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\',this.checked)" />';
+    }
+    return '<div class="tk-task' + (t.done ? ' done' : '') + (batchModeOn ? ' batch-mode' : '') + '" data-task-id="' + esc(t.id) + '">'
+         +   leftCb
          +   '<div class="tk-task-bd">'
          +     '<div class="tk-task-tx">' + esc(t.text) + '</div>'
          +     '<div class="tk-task-meta">' + deptTag + ownerTag + customBadge + '</div>'
@@ -8145,7 +8320,13 @@ function _renderTabTasks(site){
          + '</details>';
   }).join('');
 
-  var tasksContent = headerHTML + '<div class="tk-weeks">' + weeksHTML + '</div>';
+  // batch mode 時のみ表示: 選択 N 件をまとめて実行する floating bar
+  var batchRunBarHTML = batchModeOn
+    ? '<div id="batchRunBar" class="tk-batch-bar" style="display:' + ((window._taskSelectionSet && window._taskSelectionSet.size > 0) ? 'flex' : 'none') + '">'
+      + '<button class="tk-batch-go" onclick="_runTaskBatch(\'' + esc(site.id) + '\')"><span id="batchRunLabel">▶ ' + ((window._taskSelectionSet && window._taskSelectionSet.size) || 0) + ' 件をまとめて実行</span></button>'
+      + '</div>'
+    : '';
+  var tasksContent = headerHTML + '<div class="tk-weeks">' + weeksHTML + '</div>' + batchRunBarHTML;
 
   // ── タブ: 今日のタスク / AI 成果物 ──
   var artifactCount = _countSiteArtifacts(site);

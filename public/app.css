@@ -4659,6 +4659,64 @@ input,textarea{font-family:var(--sans);}
   background:#f0fdf4; border-color:#059669; color:#059669;
 }
 
+/* ── まとめて実行モード toggle + 選択 hint + 下部 floating bar ── */
+.tk-head-batch{
+  background:var(--cream); border:1px solid var(--wire2);
+  color:var(--text2);
+  padding:9px 14px; border-radius:10px;
+  font-family:inherit; font-size:12px; font-weight:800;
+  cursor:pointer;
+  margin-right:6px;
+  transition:background .15s, color .15s, border-color .15s;
+  flex-shrink:0;
+}
+.tk-head-batch:hover{ background:#f7ffe9; border-color:#0d4f4a; color:#0d4f4a; }
+.tk-head-batch.on{
+  background:#0d4f4a; color:#fff; border-color:#0d4f4a;
+}
+.tk-head-batch.on:hover{ background:#0a3d39; border-color:#0a3d39; color:#fff; }
+
+.tk-batch-hint{
+  background:#f7ffe9; border:1px dashed #c0ff5c;
+  color:#0a3d39; font-size:12px; font-weight:700;
+  padding:10px 14px; border-radius:9px;
+  margin-bottom:14px;
+  letter-spacing:.02em;
+}
+
+/* 選択 mode 時の task 行 — 背景にうっすら highlight */
+.tk-task.batch-mode{ background:#fafdf3; }
+.tk-task.batch-mode .tk-task-cb-select:checked + .tk-task-bd{ font-weight:800; }
+.tk-task-cb-select{
+  width:18px;height:18px; flex-shrink:0;
+  cursor:pointer; accent-color:#0d4f4a;
+}
+
+/* Floating bottom bar — 選択した N 件を実行 */
+.tk-batch-bar{
+  position:sticky; bottom:0; left:0; right:0;
+  background:linear-gradient(180deg, transparent, var(--cream3) 30%);
+  padding:14px 0 18px;
+  display:flex; justify-content:center;
+  z-index:5;
+  animation:tkBatchBarRise .25s cubic-bezier(.2,.7,.2,1);
+}
+@keyframes tkBatchBarRise{ from{transform:translateY(20px);opacity:0;} to{transform:translateY(0);opacity:1;} }
+.tk-batch-go{
+  background:linear-gradient(135deg,#0d4f4a,#0a3d39);
+  color:#fff; border:0; border-radius:11px;
+  padding:14px 28px; font-size:14px; font-weight:900;
+  cursor:pointer; font-family:inherit;
+  box-shadow:0 8px 22px rgba(13,79,74,.32);
+  transition:transform .15s, box-shadow .15s, filter .15s;
+  letter-spacing:.02em;
+}
+.tk-batch-go:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(13,79,74,.42);
+  filter:brightness(1.06);
+}
+
 /* 全体プログレスバー */
 .tk-prog{
   height:8px; background:rgba(5,150,105,.08); border-radius:99px;

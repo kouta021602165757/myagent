@@ -4898,6 +4898,24 @@ input,textarea{font-family:var(--sans);}
 .tk-task:hover .tk-task-del{opacity:1}
 .tk-task-del:hover{background:rgba(220,38,38,.1); color:#dc2626}
 
+/* ▶ 実行 button — このタスクを AI に実行させる */
+.tk-task-run{
+  background:#0d4f4a; color:#fff; border:0;
+  padding:5px 11px; border-radius:7px;
+  font-family:inherit; font-size:11px; font-weight:800;
+  cursor:pointer;
+  letter-spacing:.02em;
+  flex-shrink:0;
+  transition:background .15s, transform .15s, box-shadow .15s;
+  box-shadow:0 2px 6px rgba(13,79,74,.18);
+}
+.tk-task-run:hover{
+  background:#0a3d39;
+  transform:translateY(-1px);
+  box-shadow:0 4px 10px rgba(13,79,74,.28);
+}
+.tk-task.done .tk-task-run{ display:none; }
+
 .tk-week-add{
   background:var(--cream); border:1px dashed var(--wire2);
   color:var(--text3);

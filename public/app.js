@@ -6171,6 +6171,16 @@ function _switchDashTab(siteId, tab){
 window._taskSelectionMode = false;
 window._taskSelectionSet = (typeof Set === 'function') ? new Set() : null;
 
+// 単一タスクを 1 件だけ AI に実行させる (= タスクパネル各行の「▶ 実行」 button)。
+// 内部的には batch runner と同じ flow — selection に 1 件入れて _runTaskBatch を呼ぶ。
+window._runSingleTask = function(siteId, taskId){
+  if(!window._taskSelectionSet) window._taskSelectionSet = new Set();
+  window._taskSelectionSet.clear();
+  window._taskSelectionSet.add(taskId);
+  // batch mode 状態は触らない (= 元の選択モードに戻す)
+  _runTaskBatch(siteId);
+};
+
 window._toggleTaskSelectionMode = function(){
   window._taskSelectionMode = !window._taskSelectionMode;
   if(!window._taskSelectionMode && window._taskSelectionSet){
@@ -8403,12 +8413,18 @@ function _renderTabTasks(site){
       leftCb = '<input type="checkbox" class="tk-task-cb" ' + (t.done ? 'checked' : '')
         + ' onchange="_toggleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\',this.checked)" />';
     }
+    // ▶ 実行 button — このタスク 1 件を AI に実行させる (= 担当部員 + 成果物保存)
+    // batch mode 時は隠す (= まとめて実行ボタンと混乱避ける)
+    var runBtn = (!batchModeOn && !t.done)
+      ? '<button class="tk-task-run" onclick="_runSingleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\')" title="このタスクを AI に実行させる">▶ 実行</button>'
+      : '';
     return '<div class="tk-task' + (t.done ? ' done' : '') + (batchModeOn ? ' batch-mode' : '') + '" data-task-id="' + esc(t.id) + '">'
          +   leftCb
          +   '<div class="tk-task-bd">'
          +     '<div class="tk-task-tx">' + esc(t.text) + '</div>'
          +     '<div class="tk-task-meta">' + deptTag + ownerTag + customBadge + '</div>'
          +   '</div>'
+         +   runBtn
          +   '<button class="tk-task-del" onclick="_deleteTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\')" title="削除">×</button>'
          + '</div>';
   }
@@ -16000,8 +16016,11 @@ async function _sendMsgStream(ag, text, imgs, texts){
   _turnStatusStart();
   // 画面幅ガードは廃止 — モバイルでも drawer を開く (= AI 返信は必ず thread 内)。
   // モバイルでは drawer がフルスクリーンに広がる CSS 設定があるはず (確認要)。
+  // ユーザー要望: 「AI 返信は必ずスレッドにしてね」 — drawer open 失敗時にも
+  // _activeThreadParent を強制セットして、 _findLiveBubble の判定を確実に通す。
   if(_autoParent){
-    try { _openThread(_autoParent); } catch(e){}
+    window._activeThreadParent = _autoParent;  // 先にフラグだけ立てる (確実)
+    try { _openThread(_autoParent); } catch(e){ console.warn('[thread] open failed:', e); }
   }
   // Always re-render main so the user message + (live) thread pill appear.
   renderMsgs(ag);
@@ -16172,6 +16191,24 @@ async function _sendMsgStream(ag, text, imgs, texts){
                 chat_id: ag.id,
                 created_at: new Date().toISOString(),
               });
+            }
+          } catch(_){}
+          // ユーザー要望: 成果物が完成したら **メモ帳 panel を auto-open** して
+          // 中身が即見える形に。 site agent + create_artifact の場合のみ。
+          // create は新規 / edit は既存だが、 どちらも見たいケースなので両方で開く。
+          try {
+            if(_isSiteAgent(ag)){
+              // notes panel が既に開いてれば skip (= 連続 tool 呼び出しで毎回再 open しない)
+              var _ovExist = document.getElementById('siteTabOverlay');
+              var _alreadyNotes = _ovExist && _ovExist.getAttribute('data-tab') === 'notes';
+              if(!_alreadyNotes){
+                // 少し delay して開く (= UI が安定してから / chat msg が drawer に
+                // 入るのを邪魔しない)。 panel は split layout で右側に出るので
+                // chat 左で thread が見れる。
+                setTimeout(function(){
+                  try { openNotesPanel(ag.id); } catch(_){}
+                }, 800);
+              }
             }
           } catch(_){}
         }

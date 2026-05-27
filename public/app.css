@@ -965,6 +965,56 @@ input,textarea{font-family:var(--sans);}
 .ts-foot b{color:#1a1a1a;}
 @keyframes tsFootBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 
+/* Big primary CTA — chat empty state の中央。状態に応じて 1 個だけ表示。
+   mock-strategy-v3 のテーマ (teal + lime accent) で目を引く設計。 */
+.ts-big-cta{
+  display:flex; align-items:center; gap:14px;
+  width:100%; max-width:680px; margin:18px auto;
+  padding:18px 22px;
+  background:linear-gradient(135deg, #0d4f4a, #0a3d39);
+  color:#fff; border:0; border-radius:14px;
+  cursor:pointer; font-family:inherit;
+  box-shadow:0 8px 22px rgba(13,79,74,.22);
+  transition:transform .15s, box-shadow .15s, filter .15s;
+  animation:tsBigPulse 2.4s ease-in-out infinite;
+}
+.ts-big-cta:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(13,79,74,.32);
+  filter:brightness(1.06);
+}
+.ts-big-ic{
+  width:50px; height:50px; flex-shrink:0;
+  background:#c0ff5c; color:#0a3d39;
+  border-radius:12px; font-size:24px;
+  display:flex; align-items:center; justify-content:center;
+}
+.ts-big-bd{ flex:1; min-width:0; text-align:left; }
+.ts-big-ti{
+  display:block;
+  font-size:17px; font-weight:900; letter-spacing:-.01em;
+  margin-bottom:3px; white-space:normal;
+}
+.ts-big-sub{
+  display:block;
+  font-size:12px; opacity:.78; font-weight:600;
+}
+.ts-big-arrow{
+  font-size:22px; flex-shrink:0; opacity:.8;
+  transition:transform .2s;
+}
+.ts-big-cta:hover .ts-big-arrow{ transform:translateX(4px); opacity:1; }
+@keyframes tsBigPulse{
+  0%,100%{ box-shadow:0 8px 22px rgba(13,79,74,.22); }
+  50%{ box-shadow:0 8px 28px rgba(192,255,92,.36), 0 8px 22px rgba(13,79,74,.22); }
+}
+@media(max-width:560px){
+  .ts-big-cta{ padding:14px 16px; gap:10px; margin:14px auto; }
+  .ts-big-ic{ width:42px; height:42px; font-size:20px; border-radius:10px; }
+  .ts-big-ti{ font-size:15px; }
+  .ts-big-sub{ font-size:11px; }
+}
+
 @media(max-width:560px){
   .ts-hero{padding:22px 14px 18px;}
   .ts-hero-h{font-size:18px;}

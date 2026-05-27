@@ -11223,14 +11223,43 @@ function renderMsgs(ag, forceScrollBottom){
           + '<div class="ts-mem-list">' + memChips + '</div>'
           + '</div>';
       }).join('');
+      // ── 状態に応じた big primary CTA — 「次に何をやるべきか」 を 1 ボタンで明示 ──
+      var bigCta = '';
+      try {
+        var _ga4Conn = _ga4OauthConnected();
+        var _hasStrategy = !!(ag.strategy && ag.strategy.persona);
+        var _hasRoadmap = !!(ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0);
+        var _snsC = (window._snsStatusCache && window._snsStatusCache[ag.id]) || null;
+        var _hasPubCh = !!(_snsC && ((_snsC.wordpress && _snsC.wordpress.connected) || (_snsC.note && _snsC.note.connected)));
+        var ctaSpec = null;
+        if(!_ga4Conn){
+          ctaSpec = { ic:'📊', label:'Google Analytics を 1 分で接続', sub:'AI に数字を読ませる第一歩', onClick: '_invokeChatAction(\'connect_ga4\')' };
+        } else if(!_hasStrategy || !_hasRoadmap){
+          ctaSpec = { ic:'🚀', label:'戦略・KPI・ロードマップを自動セットアップ', sub:'60-90 秒で AI が全部組み立てる', onClick: '_invokeChatAction(\'autosetup\')' };
+        } else if(_hasPubCh){
+          ctaSpec = { ic:'✍️', label:'今週の SEO 記事を 1 本書かせる', sub:'ロードマップ Week 1 のタスクを即実行', onClick: '_invokeChatAction(\'write_weekly_article\')' };
+        } else {
+          ctaSpec = { ic:'📒', label:'WordPress を接続して記事公開できる状態にする', sub:'AI が生成した記事を自動で下書き保存', onClick: '_switchToPanel(\''+esc(ag.id)+'\',\'connections\')' };
+        }
+        bigCta = '<button class="ts-big-cta" onclick="'+ctaSpec.onClick+'">'
+          + '<span class="ts-big-ic">'+ctaSpec.ic+'</span>'
+          + '<span class="ts-big-bd">'
+          +   '<span class="ts-big-ti">'+esc(ctaSpec.label)+'</span>'
+          +   '<span class="ts-big-sub">'+esc(ctaSpec.sub)+'</span>'
+          + '</span>'
+          + '<span class="ts-big-arrow">→</span>'
+          + '</button>';
+      } catch(_){}
+
       teamShowcase = '<div class="ts-wrap">'
         + '<div class="ts-hero">'
         +   '<div class="ts-hero-badge">🎉 AI CHIEF OF STAFF</div>'
         +   '<div class="ts-hero-h">' + esc(hostnameShort) + ' 用の AI チーム<br><b>' + totalMems + ' 名</b> が稼働中</div>'
         +   '<div class="ts-hero-sub">' + deptCnt + ' 部門 × ' + totalMems + ' 名の専門家。 あなたの代わりに 24/7 で集客 / 分析 / 制作を担当します。</div>'
         + '</div>'
+        + bigCta
         + '<div class="ts-depts">' + deptsHTML + '</div>'
-        + '<div class="ts-foot">↓ <b>下のチャットで仕事を依頼してください</b>。 何から始めるかは AI が提案してくれます ↓</div>'
+        + '<div class="ts-foot">あるいは、下のチャットで直接仕事を依頼することもできます ↓</div>'
         + '</div>';
     }
 

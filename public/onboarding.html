@@ -231,6 +231,14 @@
     display: flex; justify-content: center; flex-wrap: wrap;
     gap: 10px;
   }
+  .team-sub {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--teal-2);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
   .team-mem {
     width: 44px; height: 44px;
     border-radius: 50%;
@@ -364,6 +372,7 @@
             <div class="team-mem">📱</div>
             <div class="team-mem">🎯</div>
           </div>
+          <div class="team-sub" id="teamSub">5 人のリーダー + 約 30 名の専門家チーム</div>
         </div>
 
         <!-- PROGRESS STEPS -->
@@ -381,13 +390,6 @@
             <div class="step-bd">
               <div class="step-text">AI チームを編成中</div>
               <div class="step-meta">あなたのサイトに合う専門家を 5 人選出</div>
-            </div>
-          </div>
-          <div class="step" data-step="artifacts">
-            <div class="step-icon">3</div>
-            <div class="step-bd">
-              <div class="step-text">最初の納品物を作成中</div>
-              <div class="step-meta" id="artifactsProgress">記事 / SNS / 改善案 / 競合分析 / メルマガ</div>
             </div>
           </div>
         </div>
@@ -536,7 +538,7 @@
       // h1 を「解析完了」風に
       document.getElementById('h1Dots').style.display = 'none';
       document.querySelector('.det-h1').firstChild.textContent = '🔍 サイトを解析しました ';
-      document.getElementById('h1Sub').textContent = 'AI チームを編成して、最初の納品物を作成しています';
+      document.getElementById('h1Sub').textContent = 'AI チームの編成が完了。ダッシュボードへ進めます';
 
       // チーム編成アバターを更新
       if(Array.isArray(team.members)){
@@ -557,41 +559,37 @@
         }
       }
 
-      // step 1 → 2 へ
+      // step 1 → 2 へ。チーム編成完了で CTA を即出す (artifact 生成は裏で継続)
       setStepDone('connecting');
       setStepActive('team');
       setTimeout(function(){
         setStepDone('team');
-        setStepActive('artifacts');
+        // チーム編成完了 → HERO を done 状態にしてダッシュボードへの導線を出す
+        var hero = document.getElementById('hero');
+        if(hero) hero.classList.add('done');
+        document.getElementById('patternSub').textContent =
+          '✓ AI チームの編成が完了 — 初期コンテンツは裏で生成中';
+        showResult(
+          '/app?onboarded=1&agent_id=' + encodeURIComponent(agentId),
+          'ダッシュボードへ進む'
+        );
       }, 500);
     }
     else if(ev === 'artifact_started' && data){
-      if(data.total) updateArtifactsMeta((data.n - 1), data.total);
+      // artifact の生成は裏で続くが、 UI には出さない (= 「最初の納品物」 step 廃止)
     }
     else if(ev === 'artifact_done' && data){
-      if(data.total) updateArtifactsMeta(data.n, data.total);
-      var team = document.getElementById('team');
-      if(team && data.n){
-        var members = team.querySelectorAll('.team-mem');
-        var idx = (data.n - 1) % members.length;
-        members.forEach(function(m, i){ m.classList.toggle('active', i === idx); });
-      }
+      // 静かに完了。 各 artifact 1 件完成のたびに HERO sub を更新したいなら
+      // ここで data.n / data.total を反映可能。 今は CTA を早出ししているので無音。
     }
     else if(ev === 'done' && data){
-      setStepDone('artifacts');
-      var hero = document.getElementById('hero');
-      if(hero) hero.classList.add('done');
-      var team = document.getElementById('team');
-      if(team) team.querySelectorAll('.team-mem').forEach(function(m){ m.classList.remove('active'); });
-
+      // すべての納品物が完成。 HERO sub を「N 件完成」 に最終更新するだけ。
+      // (CTA は既に start event 時点で出している)
       var ok = data.ok || 0, tot = data.total || 0;
-      document.getElementById('patternSub').textContent =
-        '✓ ' + ok + ' / ' + tot + ' 個の納品物が完成しました';
-
-      showResult(
-        '/app?onboarded=1&agent_id=' + encodeURIComponent(agentId),
-        'ダッシュボードで確認する'
-      );
+      if(tot > 0){
+        document.getElementById('patternSub').textContent =
+          '✓ ' + ok + ' / ' + tot + ' 個の初期コンテンツが完成';
+      }
     }
     else if(ev === 'error' && data){
       showError(data.message || 'エラーが発生しました');

@@ -15830,10 +15830,40 @@ async function _sendMsgStream(ag, text, imgs, texts){
   // user msg の text から最も合う member を選んで、 streaming placeholder の
   // huddle_member_* に乗せる。 _renderMsg はこれを見て bubble の avatar/name
   // を担当者用に切り替える + gen-indicator に「✍️ 長文記事ライターが執筆中…」を出す。
+  // E. @部員名 mention: text 先頭に @xxx がある場合、 該当部員を強制 pin
   let _pickedMember = null;
   try {
     if(_isSiteAgent(ag)){
-      _pickedMember = _pickAgentForRequest(ag, text || '');
+      // mention parse: 「@部員名 ...」 / 「@部員名さん ...」
+      var _mentionMatch = String(text || '').match(/^\s*@([^\s@]+?)(?:さん)?\s+/);
+      if(_mentionMatch && ag.org && Array.isArray(ag.org.departments)){
+        var _mentionKw = _mentionMatch[1].toLowerCase();
+        var _allMems = [];
+        ag.org.departments.forEach(function(d){
+          (d.teams || []).forEach(function(t){
+            (t.members || []).forEach(function(m){ _allMems.push({ member: m, dept: d }); });
+          });
+        });
+        // role / name / focus に部分一致する member を探す
+        var _hit = _allMems.find(function(x){
+          var hay = ((x.member.role||'')+' '+(x.member.name||'')+' '+(x.member.focus||'')+' '+(x.dept.name||'')).toLowerCase();
+          return hay.indexOf(_mentionKw) >= 0;
+        });
+        if(_hit){
+          _pickedMember = {
+            member_id: _hit.member.id || ('m_' + (_hit.member.name || 'x')),
+            member_name: (_hit.dept.icon || '🤖') + ' ' + (_hit.member.name || ''),
+            member_avatar: _hit.dept.icon || '🤖',
+            dept_name: _hit.dept.name || '',
+            role: _hit.member.role || '',
+            verb: '対応中',
+          };
+        }
+      }
+      // mention が無い or 該当者見つからない → keyword auto-pick fallback
+      if(!_pickedMember){
+        _pickedMember = _pickAgentForRequest(ag, text || '');
+      }
     }
   } catch(_){}
 

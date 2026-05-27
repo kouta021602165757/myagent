@@ -6044,6 +6044,54 @@ function _switchDashTab(siteId, tab){
   try { renderAgList(); } catch(_){}
 }
 
+// 戦略 panel の「✅ この目標達成の実行プランを見る」ボタンの動作。
+// chat に「実行プラン作って成果物として保存して」と送信、 AI が
+// create_artifact tool で HTML レポートを生成 → メモ帳 + AI 成果物
+// に自動で乗る (artifact 化された note は has_artifact:true で
+// 両方のリストに表示される)。
+window._runExecutionPlan = function(siteId){
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
+  // 連打ガード
+  var nowMs = Date.now();
+  if(window._lastExecPlanSent && (nowMs - window._lastExecPlanSent) < 5000){
+    showToast(L('実行プランを生成中です…少しお待ちください','Generating execution plan — please wait'),'info');
+    return;
+  }
+  window._lastExecPlanSent = nowMs;
+  // strategy panel を閉じる
+  try {
+    var ov = document.getElementById('siteTabOverlay');
+    if(ov) ov.remove();
+  } catch(_){}
+  if(activeId !== siteId){ openAgent(siteId); }
+  setTimeout(function(){
+    var ci = document.getElementById('ci');
+    if(!ci) return;
+    // 戦略 + KPI から実行プランを 1 つの HTML artifact として作らせる。
+    // create_artifact tool を呼ぶよう明示的に指示。 結果は メモ帳 +
+    // AI 成果物 リストに自動で出る (has_artifact:true)。
+    var kpi6 = (ag.strategy && Array.isArray(ag.strategy.kpi_6mo)) ? ag.strategy.kpi_6mo : [];
+    var kpiCtx = '';
+    if(kpi6.length){
+      kpiCtx = '\n\n【6 ヶ月 KPI 目標】\n' + kpi6.map(function(k, i){
+        return '・月 ' + (i+1) + ': PV ' + (k.pv||'—') + ' / CVR ' + (k.cvr||'—') + '% / リード ' + (k.leads||'—');
+      }).join('\n');
+    }
+    ci.value = '【目標達成の実行プラン作成】\n\n'
+      + 'うちのサイトの 6 ヶ月 KPI 目標を達成するための、具体的な実行プランを作ってください。'
+      + kpiCtx
+      + '\n\n## あなたの仕事\n'
+      + '1. **create_artifact ツールで HTML レポートを作る** — 月別 (1〜6 ヶ月) の主要施策・必要工数・部門割り当て・依存関係を体系的にまとめる。\n'
+      + '2. 1 セクションごとに見出し + 表 + チェックリスト + KPI ターゲットを入れる。 デザインは teal/lime テーマで読みやすく。\n'
+      + '3. 各月のセクションには「今すぐ着手する 3 タスク」「来月までに完了」「翌々月以降の準備」を明示。\n'
+      + '4. artifact 保存後、 chat に「✓ 実行プランをメモ帳に保存しました」と short reply で報告。長文は artifact 側に書く。\n\n'
+      + '保存タイトル: 「6 ヶ月実行プラン YYYY-MM-DD」 (YYYY-MM-DD は今日の日付)。';
+    try { exTA(ci); } catch(_){}
+    try { if(typeof sendMsg === 'function') sendMsg(); } catch(_){}
+  }, 200);
+};
+
 // Modal 内 (= siteTabOverlay) から別の panel に切り替えるための helper。
 // 現 modal を閉じて、 対応する開く関数を呼ぶ。 _switchDashTab は home
 // dashboard tab 切替用なので modal context では効かない (= 何も起きない
@@ -6960,7 +7008,7 @@ function _renderTabStrategy(site, allArts){
       +   '</div>'
       +   '<div class="st-kpi-sheet">' + rows + '</div>'
       +   '<div class="st-card-actions">'
-      +     '<button class="st-act-btn" onclick="_switchToPanel(\'' + esc(site.id) + '\',\'tasks\')" title="タスクパネルで具体的な実行プランを見る">✅ この目標達成の実行プランを見る →</button>'
+      +     '<button class="st-act-btn" onclick="_runExecutionPlan(\'' + esc(site.id) + '\')" title="AI が実行プランを HTML レポートとして生成 → メモ帳と AI 成果物に保存">✅ この目標達成の実行プランを作る →</button>'
       +     '<button class="st-act-btn st-act-secondary" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'この 6 ヶ月の KPI 目標を達成するため、月別の最重要施策をもう一段詳しく解説してください。\')">💬 詳しく聞く</button>'
       +   '</div>'
       + '</div>';

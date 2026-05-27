@@ -7437,6 +7437,47 @@ function _renderShowcaseHTML(article, agent){
 </html>`;
 }
 
+// sitemap.xml から既存記事のタイトルを取得 (= 重複回避 + 内部リンク用 + トーン把握)
+async function _fetchSiteExistingArticles(siteUrl){
+  if(!siteUrl) return [];
+  try {
+    const base = siteUrl.replace(/\/$/, '');
+    const sitemapUrl = base + '/sitemap.xml';
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch(sitemapUrl, { signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0 MY-AI-Agent' } }).catch(() => null);
+    clearTimeout(timer);
+    if(!r || !r.ok) return [];
+    const xml = await r.text();
+    // 最初 30 URL くらいを extract
+    const urls = Array.from(xml.matchAll(/<loc>([^<]+)<\/loc>/g)).map(m => m[1]).slice(0, 30);
+    if(urls.length === 0) return [];
+    // 各 URL の HTML title を 並列取得 (max 10、 timeout 短め)
+    const targetUrls = urls.filter(u => u !== siteUrl && u !== base && u !== base + '/').slice(0, 10);
+    const titlePromises = targetUrls.map(async (u) => {
+      try {
+        const c = new AbortController();
+        const t = setTimeout(() => c.abort(), 3000);
+        const res = await fetch(u, { signal: c.signal, headers: { 'User-Agent': 'Mozilla/5.0 MY-AI-Agent' } }).catch(() => null);
+        clearTimeout(t);
+        if(!res || !res.ok) return null;
+        const html = await res.text();
+        const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        if(m){
+          const t = String(m[1]).replace(/\s+/g, ' ').trim().slice(0, 120);
+          if(t) return { url: u, title: t };
+        }
+      } catch(e){}
+      return null;
+    });
+    const results = (await Promise.all(titlePromises)).filter(Boolean);
+    return results;
+  } catch(e){
+    console.warn('[sitemap-fetch] failed:', e.message);
+    return [];
+  }
+}
+
 async function _fetchSitePreview(agent){
   if(!agent || !agent.site_url) return { title: '', content: '' };
   // キャッシュ check (24h)
@@ -20662,20 +20703,43 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!topic) return jres(res, 400, { error: 'topic required' });
     const itemCount = Math.min(15, Math.max(5, Number((body && body.item_count) || 10)));
 
+    // サイト深堀り: homepage の内容 + sitemap からの既存記事タイトル
     let siteContext = '';
+    let existingArticles = [];
+    let hostname = '';
     try {
-      const preview = await _fetchSitePreview(ag);
+      hostname = new URL(ag.site_url).hostname.replace(/^www\./, '');
+    } catch(e){ hostname = ag.site_url || ''; }
+    try {
+      const [preview, articles] = await Promise.all([
+        _fetchSitePreview(ag),
+        _fetchSiteExistingArticles(ag.site_url),
+      ]);
       if(preview && preview.content){
-        siteContext = '\n【既存サイトの内容 (= トーン参考)】\n' + String(preview.content).slice(0, 1500);
+        siteContext = '\n【サイトトップページの内容 (= ドメイン / 専門領域 / トーンを掴むため)】\n'
+          + String(preview.content).slice(0, 3000);
+      }
+      existingArticles = articles || [];
+      if(existingArticles.length > 0){
+        siteContext += '\n\n【このサイトで既に公開されている記事 (= 重複回避 + 内部リンク参考)】\n'
+          + existingArticles.slice(0, 10).map(a => '- ' + a.title).join('\n');
       }
     } catch(e){}
 
-    const prompt = `あなたはこのサイトのプロのコンテンツライター + SEO 専門家です。
+    const prompt = `あなたは「${hostname}」のサイト専属のプロのコンテンツライター + SEO 専門家です。
 my-best.com レベルの「ランキング比較記事」 を JSON 形式で出力してください。
 
-【サイト】${ag.site_url || ag.name} (${ag.site_vertical || 'general'})
+【重要: このサイトのドメイン / 専門性 / 読者層に必ず合わせる】
+- サイト URL: ${ag.site_url}
+- ホスト名: ${hostname}
+- 業種カテゴリ: ${ag.site_vertical || 'general'}
+- 上記サイトの内容を熟読して、 そのサイトの読者にとって価値のある記事を書く
+- サイトのトーン (です・ます調 / 親しみやすい / 専門的 など) に合わせる
+- 著者名は架空でよいが、 「${hostname} 編集部」 と明示する
+
 【テーマ】${topic}
-【ランキング項目数】${itemCount} 個${siteContext}
+【ランキング項目数】${itemCount} 個
+${siteContext}
 
 【出力 JSON スキーマ (厳密に従ってください)】
 {
@@ -20757,11 +20821,12 @@ my-best.com レベルの「ランキング比較記事」 を JSON 形式で出�
 }
 
 【書き方の注意】
-- E-E-A-T 担保: 「12 回通った」 「3 歳と 6 歳の母」 等 具体的な体験談を入れる
+- E-E-A-T 担保: ${hostname} の専門領域に合わせて具体的な体験談を入れる
 - pros / cons は 各 3-5 個、 具体的・実用的に
 - spec は読者がすぐ行けるレベルの実用情報
 - 比較表の ◎○△× は実際の評価と合わせる
-- 関連記事のタイトルは 「テーマ ○○」 や 「△△ 完全ガイド」 等、 内部リンクで使えるもの
+- **関連記事は、 上記「このサイトで既に公開されている記事」リストから 3 つ選ぶ** (= 本物の内部リンク。 なければ 「テーマ ○○ 完全ガイド」 等 仮タイトル)
+- **著者は ${hostname} 編集部所属の架空人物** (この記事を書く人の専門性を打ち出す)
 - 文章は 「です・ます」 体、 読みやすく
 - JSON 以外の前置き・後置きは一切書かない (parse 可能な JSON のみ)
 

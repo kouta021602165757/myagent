@@ -5141,7 +5141,14 @@ async function _autoSetupSiteFromGa4(siteId, opts){
   } catch(e){
     console.warn('[autosetup] failed:', e);
     showToast('セットアップ失敗: ' + (e.message || 'unknown'), 'ng');
-    chatMsg('⚠️ エラーが発生しました: ' + (e.message || 'unknown') + '\n\nもう一度試すか、 個別に「戦略を作って」「ロードマップを作って」 と頼んでください。');
+    // chat に詳細 error msg を残す (toast だと消えて気づかない)
+    try {
+      _pushChatErrorRecovery(siteId, {
+        title: '自動セットアップが失敗しました',
+        detail: e.message || 'unknown',
+        retryHint: '「🚀 戦略・KPI・ロードマップを自動セットアップ」ボタンをもう一度押すと再試行できます。 部分的に成功している (= 戦略だけは出来た) 場合は、 残りだけ個別に「ロードマップを作って」と頼んでください。',
+      });
+    } catch(_){}
   } finally {
     window._autoSetupInFlight[siteId] = false;
     try { _clearLoading('autosetup-'+siteId); } catch(_){}
@@ -6060,6 +6067,34 @@ function _switchDashTab(siteId, tab){
   try { renderHomeDashboard(); } catch(_){}
   try { renderAgList(); } catch(_){}
 }
+
+// エラー時に chat に「⚠️ こうコケた」 msg を残す共通 helper。
+// toast だけだと消えて気づかないので、 chat に永続化する。
+// retryAction は文字列 (= 失敗したアクション名)。 ユーザーが同じボタンを
+// もう一度押せばリトライ可能、 という案内を含む。
+window._pushChatErrorRecovery = function(siteId, opts){
+  try {
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(!ag || !Array.isArray(ag.history)) return;
+    var title = (opts && opts.title) || 'エラーが発生しました';
+    var detail = (opts && opts.detail) || '';
+    var retryHint = (opts && opts.retryHint) || 'もう一度同じボタンを押すと再試行できます。';
+    var msg = {
+      role:'assistant',
+      content: '⚠️ **' + title + '**'
+        + (detail ? '\n\n' + detail : '')
+        + '\n\n💡 ' + retryHint + ' / もし続くようなら、 下のチャットで「さっきのエラー、 原因と対処を教えて」 と聞いてください。',
+      time: now(),
+      system_action: true,
+      transient: false,
+      huddle_member_name: '⚠️ システム',
+      huddle_member_avatar: '⚠️',
+    };
+    ag.history.push(msg);
+    try { renderMsgs(ag, true); } catch(_){}
+    try { _persistChatMsg(ag.id, msg); } catch(_){}
+  } catch(e){ console.warn('[err-recovery] push failed:', e && e.message); }
+};
 
 // 戦略 panel の「✅ この目標達成の実行プランを見る」ボタンの動作。
 // chat に「実行プラン作って成果物として保存して」と送信、 AI が

@@ -2493,22 +2493,23 @@ function showSheetsOnboardingBanner(){
 async function api(method,path,body){
   const opts={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
   if(body)opts.body=JSON.stringify(body);
-  // 120 秒 timeout (= サーバー側が応答しない場合に永遠に hang するのを防ぐ)。
-  // 戦略生成 / ロードマップ生成 / 記事生成等の LLM 呼び出しは 30-90 秒かかる
-  // ことがあるので、 client 側 timeout は安全マージン取って 120 秒に。
-  // SSE streams や大きな file upload はここを通らない (raw fetch を使う) ので
-  // 120 秒で十分な保護になる。
+  // 240 秒 timeout (= サーバー側が応答しない場合に永遠に hang するのを防ぐ)。
+  // LLM 呼び出し (記事生成 / 戦略生成 / ロードマップ生成 等) は Anthropic 単発
+  // 180 秒 + retry 1 回 = 最大 360 秒だが、 typical は 30-90 秒。 client 側は
+  // 240 秒 (= 4 分) を safety margin とする。 これより長く返ってこないなら
+  // 多分本当に詰まってる。 SSE streams や file upload はここを通らない
+  // (raw fetch を使う) ので 240 秒で十分な保護になる。
   const _ctl = (typeof AbortController === 'function') ? new AbortController() : null;
   if(_ctl){
     opts.signal = _ctl.signal;
-    var _to = setTimeout(function(){ try { _ctl.abort(); } catch(_){} }, 120000);
+    var _to = setTimeout(function(){ try { _ctl.abort(); } catch(_){} }, 240000);
   }
   let res;
   try {
     res = await fetch(API+path,opts);
   } catch(e){
     if(_ctl && _ctl.signal && _ctl.signal.aborted){
-      throw new Error(isJa?'通信タイムアウト（2分）。サーバーが応答しません。少し待ってからリトライしてください。':'Request timed out (2min). Server not responding. Please retry.');
+      throw new Error(isJa?'通信タイムアウト（4分）。サーバーが応答しません。少し待ってからリトライしてください。':'Request timed out (4min). Server not responding. Please retry.');
     }
     throw e;
   } finally {
@@ -15788,6 +15789,47 @@ async function _sendMsgStream(ag, text, imgs, texts){
       _pickedMember = _pickAgentForRequest(ag, text || '');
     }
   } catch(_){}
+
+  // ── 部員間の「打ち合わせ」 演出 (= ユーザー要望 A: 組織感を出す) ──
+  // user msg と streaming bubble の間に、 PM → 担当 の 2 段の transient msg
+  // を挟む。 これで「組織で動いてる」 感が劇的に上がる。
+  // (transient: true なので renderMsgs スクラブ対象ではないが、 履歴サマリの
+  //  ときに圧縮される。 視覚的には CSS animation-delay で順に fade-in。)
+  if(_pickedMember && _isSiteAgent(ag)){
+    try {
+      // PM 風メンバーを探す (= ロードマップ系の調整役)
+      var _pmHit = null;
+      if(ag.org && Array.isArray(ag.org.departments)){
+        for(var _di = 0; _di < ag.org.departments.length && !_pmHit; _di++){
+          var _d = ag.org.departments[_di];
+          (_d.teams || []).forEach(function(_t){
+            (_t.members || []).forEach(function(_m){
+              if(_pmHit) return;
+              var _hay = ((_m.role||'')+' '+(_m.name||'')+' '+(_m.focus||'')).toLowerCase();
+              if(/pm|planner|coordinat|chief|manager|プロジェクト/.test(_hay)){
+                _pmHit = { member: _m, dept: _d };
+              }
+            });
+          });
+        }
+      }
+      // PM が picked member と同じならスキップ (= 自分自分の対話になるので)
+      if(_pmHit && _pmHit.member.id !== _pickedMember.member_id){
+        var _pmIntro = {
+          role: 'assistant',
+          content: '了解しました。 ' + _pickedMember.member_name + ' に依頼します。',
+          time: now(),
+          system_action: true,
+          transient: true,
+          huddle_member_id: _pmHit.member.id || 'pm_intro',
+          huddle_member_name: (_pmHit.dept.icon || '📋') + ' ' + (_pmHit.member.name || 'PM'),
+          huddle_member_avatar: _pmHit.dept.icon || '📋',
+        };
+        ag.history.push(_pmIntro);
+        // (ack msg は streaming bubble と同じ member で連続するので冗長 → 省略)
+      }
+    } catch(_){}
+  }
   var _streamBubble = {
     role:'assistant', content:'', time:now(), streaming:true, thread_parent_id: _autoParent,
     gen_started_ms: Date.now(),  // gen-indicator の経過時間 timer がこれを読む

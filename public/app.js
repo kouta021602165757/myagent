@@ -2493,20 +2493,22 @@ function showSheetsOnboardingBanner(){
 async function api(method,path,body){
   const opts={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
   if(body)opts.body=JSON.stringify(body);
-  // 30 秒 timeout (= サーバー側が応答しない場合に永遠に hang するのを防ぐ)。
+  // 120 秒 timeout (= サーバー側が応答しない場合に永遠に hang するのを防ぐ)。
+  // 戦略生成 / ロードマップ生成 / 記事生成等の LLM 呼び出しは 30-90 秒かかる
+  // ことがあるので、 client 側 timeout は安全マージン取って 120 秒に。
   // SSE streams や大きな file upload はここを通らない (raw fetch を使う) ので
-  // 30 秒で十分な保護になる。
+  // 120 秒で十分な保護になる。
   const _ctl = (typeof AbortController === 'function') ? new AbortController() : null;
   if(_ctl){
     opts.signal = _ctl.signal;
-    var _to = setTimeout(function(){ try { _ctl.abort(); } catch(_){} }, 30000);
+    var _to = setTimeout(function(){ try { _ctl.abort(); } catch(_){} }, 120000);
   }
   let res;
   try {
     res = await fetch(API+path,opts);
   } catch(e){
     if(_ctl && _ctl.signal && _ctl.signal.aborted){
-      throw new Error(isJa?'通信タイムアウト（30秒）。サーバーが応答しません。少し待ってからリトライしてください。':'Request timed out (30s). Server not responding. Please retry.');
+      throw new Error(isJa?'通信タイムアウト（2分）。サーバーが応答しません。少し待ってからリトライしてください。':'Request timed out (2min). Server not responding. Please retry.');
     }
     throw e;
   } finally {
@@ -4954,6 +4956,28 @@ function _ga4PickProperty(siteId, propertyId){
 //   4) 各 step で toast + dashboard 再描画
 // 既に生成済みの step はスキップ (force:true 指定時は再生成)
 // ═══════════════════════════════════════════════════════════════════
+// Strategy panel の「自動でフルセットアップ」 ボタンから呼ぶラッパー。
+// panel を閉じて chat に戻す + AI 部員の発言を chat に stream する設定で
+// _autoSetupSiteFromGa4 を呼ぶ。 ユーザーが「button 押したのに何も起きない」
+// と感じないようにするための UX 改善。
+window._runAutoSetupFromPanel = function(siteId){
+  // strategy panel を閉じる (= siteTabOverlay)
+  try {
+    var ov = document.getElementById('siteTabOverlay');
+    if(ov) ov.remove();
+  } catch(_){}
+  // active site が違うなら switch (= chat に切り替え)
+  try {
+    if(typeof activeId !== 'undefined' && activeId !== siteId && typeof openAgent === 'function'){
+      openAgent(siteId);
+    }
+  } catch(_){}
+  // chat に AI 部員発言を stream + 完了 toast
+  setTimeout(function(){
+    _autoSetupSiteFromGa4(siteId, { streamToChat: true });
+  }, 200);
+};
+
 async function _autoSetupSiteFromGa4(siteId, opts){
   if(!siteId) return;
   opts = opts || {};
@@ -6867,7 +6891,7 @@ function _renderTabStrategy(site, allArts){
       +     '・<b>月 1 KPI を自動セット</b> (= 上記の最初の月)<br>'
       +     '・<b>8 週間ロードマップ</b> — 各週 4-6 タスクを AI 部門に自動割り振り'
       +   '</div>'
-      +   '<button class="st-empty-cta" onclick="_autoSetupSiteFromGa4(\'' + esc(site.id) + '\')">🚀 自動でフルセットアップ <span class="arrow">→</span></button>'
+      +   '<button class="st-empty-cta" onclick="_runAutoSetupFromPanel(\'' + esc(site.id) + '\')">🚀 自動でフルセットアップ <span class="arrow">→</span></button>'
       +   '<div class="st-empty-note">所要時間: 約 60-90 秒。 戦略のみ作るなら <a href="#" onclick="event.preventDefault();_generateStrategy(\'' + esc(site.id) + '\', null)" style="color:var(--peach-dark);font-weight:700">こちら</a></div>'
       + '</div>';
   }

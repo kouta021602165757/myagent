@@ -16410,6 +16410,35 @@ async function _sendMsgStream(ag, text, imgs, texts){
 }
 
 // Renders the streaming bubble: tool log (if any) + the markdown text + cursor.
+// tool input から「何やってるか」 がわかる短い詳細を抜く (= ユーザー要望 B: 透明性)
+function _toolInputDetail(name, input){
+  if(!input || typeof input !== 'object') return '';
+  function _short(s, n){ s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; }
+  switch(name){
+    case 'web_search':         return input.query ? '「' + _short(input.query, 40) + '」' : '';
+    case 'web_fetch':
+    case 'web_read_markdown':
+    case 'web_screenshot':
+    case 'web_extract':        return input.url ? _short(input.url, 50) : '';
+    case 'create_artifact':    return input.title || input.filename ? _short(input.title || input.filename, 40) : '';
+    case 'edit_artifact':
+    case 'read_artifact':      return input.filename ? _short(input.filename, 50) : '';
+    case 'generate_image':
+    case 'edit_image':
+    case 'generate_video':     return input.prompt ? '「' + _short(input.prompt, 40) + '」' : '';
+    case 'send_email':         return input.subject ? '件名: ' + _short(input.subject, 30) : (input.to ? 'to: ' + _short(input.to, 30) : '');
+    case 'notify_slack':
+    case 'notify_discord':     return input.text ? '「' + _short(input.text, 40) + '」' : (input.channel ? '#' + input.channel : '');
+    case 'sheets_read':
+    case 'sheets_write':
+    case 'sheets_append':      return input.range ? input.range : (input.sheet_name ? input.sheet_name : '');
+    case 'create_calendar_event': return input.summary ? _short(input.summary, 30) : '';
+    case 'ga4_query':          return input.metrics ? input.metrics : (input.dimension ? input.dimension : '');
+    case 'gsc_query':          return input.dimensions ? input.dimensions : '';
+    default:                   return '';
+  }
+}
+
 function _friendlyToolLabel(name){
   // Map raw tool name → human-friendly Japanese / English label with emoji.
   // Falls back to a cleaned-up version of the name when no entry matches.
@@ -16490,16 +16519,21 @@ function _toolDoneLabel(name){
 function _renderStreamingBody(text, toolLog, thinking){
   let html = '';
   if(toolLog && toolLog.length){
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+    html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">';
     for(const t of toolLog){
       const isPending = t._pending;
       const failed = t.ok === false;
       const cls = isPending ? 'tool-pill run' : (failed ? 'tool-pill err' : 'tool-pill ok');
-      const label = isPending
+      const baseLabel = isPending
         ? _friendlyToolLabel(t.name)
         : (failed ? '✗ '+(_toolDoneLabel(t.name)) : '✓ '+(_toolDoneLabel(t.name)));
+      // tool input から重要 field を抽出して詳細表示 (= 透明性向上)
+      const detail = _toolInputDetail(t.name, t.input);
       const icon = isPending ? '<span class="tool-pill-spin"></span>' : '';
-      html += '<span class="'+cls+'">'+icon+esc(label)+'</span>';
+      html += '<span class="'+cls+'" style="display:flex;align-items:center;gap:8px;padding:6px 12px;line-height:1.4">'
+        + icon + '<span><b>' + esc(baseLabel) + '</b>'
+        + (detail ? '<span style="opacity:.75;font-size:11px;margin-left:6px">' + esc(detail) + '</span>' : '')
+        + '</span></span>';
     }
     html += '</div>';
   }

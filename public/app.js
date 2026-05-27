@@ -16126,6 +16126,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
         ag.history[streamIdx].tool_log = ag.history[streamIdx].tool_log || [];
         ag.history[streamIdx].tool_log.push({
           name: obj.name, input: obj.input || {}, ok: null, _pending: true,
+          _started_ms: Date.now(),  // C: stage 経過時間を表示するために記録
         });
         // Tool call means AI emitted a tool_use block — no longer "thinking
         // about next step", it's running a tool now.
@@ -16137,7 +16138,9 @@ async function _sendMsgStream(ag, text, imgs, texts){
         const log = ag.history[streamIdx].tool_log || [];
         for(let k=log.length-1; k>=0; k--){
           if(log[k]._pending && log[k].name === obj.name){
-            log[k] = { ...obj, _pending: false };
+            // C: 完了時に elapsed を保存 (= pill に「8.2s」 を出すため)
+            const elapsedMs = log[k]._started_ms ? (Date.now() - log[k]._started_ms) : 0;
+            log[k] = { ...obj, _pending: false, _elapsed_ms: elapsedMs };
             break;
           }
         }
@@ -16529,10 +16532,17 @@ function _renderStreamingBody(text, toolLog, thinking){
         : (failed ? '✗ '+(_toolDoneLabel(t.name)) : '✓ '+(_toolDoneLabel(t.name)));
       // tool input から重要 field を抽出して詳細表示 (= 透明性向上)
       const detail = _toolInputDetail(t.name, t.input);
+      // C: 完了時は elapsed 秒数を表示 (= 「✓ artifact 作成 (8.2s)」)
+      let elapsedLabel = '';
+      if(!isPending && t._elapsed_ms){
+        const sec = (t._elapsed_ms / 1000).toFixed(1);
+        elapsedLabel = '<span style="opacity:.6;font-size:10.5px;margin-left:6px;font-family:\'SF Mono\',Menlo,monospace">' + sec + 's</span>';
+      }
       const icon = isPending ? '<span class="tool-pill-spin"></span>' : '';
       html += '<span class="'+cls+'" style="display:flex;align-items:center;gap:8px;padding:6px 12px;line-height:1.4">'
         + icon + '<span><b>' + esc(baseLabel) + '</b>'
         + (detail ? '<span style="opacity:.75;font-size:11px;margin-left:6px">' + esc(detail) + '</span>' : '')
+        + elapsedLabel
         + '</span></span>';
     }
     html += '</div>';

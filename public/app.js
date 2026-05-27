@@ -8734,6 +8734,14 @@ async function _fetchSnsStatus(siteId){
       });
       window._snsStatusCache[siteId] = cache;
       try { renderHomeDashboard(); } catch(_){}
+      // chat 中で同じ site なら chat-top の 🔌 接続 pill を更新する。
+      // (= 「接続する」CTA から「X · Threads · WP」表示への切り替え)
+      try {
+        if(typeof activeId !== 'undefined' && activeId === siteId && typeof openAgent === 'function'){
+          var _w = document.getElementById('chatWrap');
+          if(_w && _w.style.display !== 'none') openAgent(siteId);
+        }
+      } catch(_){}
     }
   } catch(e){
     console.warn('[sns-status] fetch failed:', e && e.message);
@@ -10103,8 +10111,13 @@ async function openAgent(id){
   // 🔌 接続 pill (site agent のみ) — X / Threads / WordPress の接続状態。
   // mock-strategy-v3 では「🔌 X / Threads / WP」のテキスト表示なので、
   // 接続済みのものだけを並べる。 ゼロ件のときは「🔌 接続する」 CTA に。
+  // cache miss なら lazy fetch を kick (= 完了時に _fetchSnsStatus が
+  // openAgent を再呼び出ししてくれる)。
   var connPill = '';
   if(_isSiteAg){
+    if(!window._snsStatusCache || !window._snsStatusCache[ag.id]){
+      setTimeout(function(){ try { _fetchSnsStatus(ag.id); } catch(_){} }, 100);
+    }
     var _snsCache = (window._snsStatusCache && window._snsStatusCache[ag.id]) || {};
     var _connNames = [];
     if(_snsCache.x && _snsCache.x.connected) _connNames.push('X');

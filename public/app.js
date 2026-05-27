@@ -9270,29 +9270,44 @@ async function _submitXPost(siteId, isThread, btnEl){
 }
 
 // 削除確認 — 簡易 confirm。ユーザーが OK したら本当に消す。
-function _confirmDeleteSite(siteId){
-  if(!siteId) return;
+async function _confirmDeleteSite(siteId){
+  console.log('[_confirmDeleteSite] called with siteId =', siteId);
+  if(!siteId){ showToast('siteId 不明', 'ng'); return; }
   var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
-  if(!ag) return;
-  var host = _siteHostname(ag);
-  if(!confirm('「' + host + '」の AI チームを削除します。\n会話履歴 / 納品物 / スケジュール もすべて消えます。\n本当に削除しますか?')) return;
-  // 既存の deleteAgent (もしあれば) を呼ぶ — UI 側のリスト除外まで含む。
-  if(typeof deleteAgent === 'function'){
-    try { deleteAgent(siteId); return; } catch(e){ console.warn('[delete-site] deleteAgent failed:', e); }
+  if(!ag){ showToast('サイトが見つかりません', 'ng'); return; }
+  var host = (typeof _siteHostname === 'function') ? _siteHostname(ag) : (ag.site_url || ag.name);
+  if(!confirm('「' + host + '」の AI チームを削除します。\n会話履歴 / 納品物 / スケジュール もすべて消えます。\n本当に削除しますか?')) {
+    console.log('[_confirmDeleteSite] cancelled');
+    return;
   }
-  // フォールバック: API 直叩き
-  api('DELETE', '/api/agents/' + encodeURIComponent(siteId))
-    .then(function(){
-      agents = (agents || []).filter(function(a){ return a && a.id !== siteId; });
-      activeId = null;
-      try { renderHomeDashboard(); } catch(_){}
-      try { renderAgList(); } catch(_){}
-      showToast && showToast('削除しました', 'ok');
-    })
-    .catch(function(e){
-      showToast && showToast((e && e.message) || '削除に失敗しました', 'ng');
-    });
+  // API 直叩き (= deleteAgent() は window._editAgentId 依存で引数を無視するので使わない)
+  try {
+    console.log('[_confirmDeleteSite] DELETE /api/agents/' + siteId);
+    var r = await api('DELETE', '/api/agents/' + encodeURIComponent(siteId));
+    console.log('[_confirmDeleteSite] response:', r);
+    agents = (agents || []).filter(function(a){ return a && a.id !== siteId; });
+    if(activeId === siteId) activeId = null;
+    // 設定パネル overlay を閉じる
+    var ov = document.getElementById('siteTabOverlay');
+    if(ov) ov.remove();
+    // ホーム or 別 site に切替
+    if(agents.length > 0){
+      try { openAgent(agents[0].id); } catch(_){}
+    } else {
+      var emptyW = document.getElementById('emptyWrap');
+      var chatW = document.getElementById('chatWrap');
+      if(emptyW) emptyW.style.display = '';
+      if(chatW) chatW.style.display = 'none';
+    }
+    try { renderHomeDashboard(); } catch(_){}
+    try { renderAgList(); } catch(_){}
+    showToast('✅ 削除しました', 'ok', 4000);
+  } catch(e){
+    console.error('[_confirmDeleteSite] error:', e);
+    showToast((e && e.message) || '削除に失敗しました', 'ng', 5000);
+  }
 }
+window._confirmDeleteSite = _confirmDeleteSite;
 
 // Quick Action のハンドラ — チャットに飛んで prompt を pre-fill して送信
 function _quickAskAI(siteId, prompt){

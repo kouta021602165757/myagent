@@ -6044,6 +6044,31 @@ function _switchDashTab(siteId, tab){
   try { renderAgList(); } catch(_){}
 }
 
+// Modal 内 (= siteTabOverlay) から別の panel に切り替えるための helper。
+// 現 modal を閉じて、 対応する開く関数を呼ぶ。 _switchDashTab は home
+// dashboard tab 切替用なので modal context では効かない (= 何も起きない
+// バグになる)。 modal から呼ぶときは必ずこちらを使う。
+window._switchToPanel = function(siteId, tab){
+  try {
+    var ov = document.getElementById('siteTabOverlay');
+    if(ov) ov.remove();
+  } catch(_){}
+  var open = {
+    numbers:     window.openNumbersPanel,
+    strategy:    window.openStrategyPanel,
+    tasks:       window.openTasksPanel,
+    agents:      window.openAgentsPanel,
+    connections: window.openConnectionsPanel,
+    settings:    window.openSiteSettingsPanel,
+  }[tab];
+  if(typeof open === 'function'){
+    try { open(siteId); } catch(e){ console.warn('[_switchToPanel] open failed:', e && e.message); }
+  } else {
+    // fallback: home dashboard tab 切替
+    try { _switchDashTab(siteId, tab); } catch(_){}
+  }
+};
+
 // 「3 分前」「2 時間前」みたいな相対時刻フォーマット (module 共有)
 function _formatRel(ts){
   var diff = Math.max(0, Date.now() - ts);
@@ -6417,13 +6442,13 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
                      hasGscScope ? '🔎 詳細分析' : '接続 →',
                      hasGscScope
                        ? '_promptAiGscQuery(\'' + esc(site.id) + '\')'
-                       : '_switchDashTab(\'' + esc(site.id) + '\',\'connections\')')
+                       : '_switchToPanel(\'' + esc(site.id) + '\',\'connections\')')
     +   '<div class="nm-mod-body">'
     +     (hasGscScope
         ? '<div id="gscSnap-' + esc(site.id) + '" style="padding:16px 18px;font-size:12px;color:var(--muted);text-align:center"><span style="display:inline-block;width:16px;height:16px;border:2px solid var(--wire2);border-top-color:#3b82f6;border-radius:50%;animation:lpSpin .8s linear infinite;vertical-align:-3px;margin-right:8px"></span>GSC データを取得中…</div>'
         : '<div class="nm-mod-locked">'
           + '<div class="nm-mod-locked-tx">検索キーワード / 表示回数 / 平均順位 / CTR — どのクエリで何位なのか、 競合 SEO の動きも追えます。</div>'
-          + '<button class="nm-mod-locked-btn" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'connections\')">🔌 Google 連携 (Search Console scope 付き) →</button>'
+          + '<button class="nm-mod-locked-btn" onclick="_switchToPanel(\'' + esc(site.id) + '\',\'connections\')">🔌 Google 連携 (Search Console scope 付き) →</button>'
           + '</div>')
     +   '</div>'
     + '</div>';
@@ -6599,7 +6624,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     + '<div class="nm-mod ' + (snsAnyConnected ? 'nm-mod-on' : 'nm-mod-off') + '">'
     +   _moduleHeader('🐦', 'SNS 投稿アクティビティ (7 platform)', snsAnyConnected, '#ec4899',
                      '接続管理 →',
-                     '_switchDashTab(\'' + esc(site.id) + '\',\'connections\')')
+                     '_switchToPanel(\'' + esc(site.id) + '\',\'connections\')')
     +   '<div class="nm-mod-body">'
     +     (snsAnyConnected
         ? '<div class="nu-sub-row">'
@@ -6677,7 +6702,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     + '<div class="nm-mod ' + (ceAnyConnected ? 'nm-mod-on' : 'nm-mod-off') + '">'
     +   _moduleHeader('📰', 'コンテンツ / EC (note / WP / Shopify / BASE)', ceAnyConnected, '#0ea5e9',
                      '接続管理 →',
-                     '_switchDashTab(\'' + esc(site.id) + '\',\'connections\')')
+                     '_switchToPanel(\'' + esc(site.id) + '\',\'connections\')')
     +   '<div class="nm-mod-body">'
     +     '<div class="nu-sns-grid">' + ceCardsHTML + '</div>'
     +   '</div>'
@@ -6935,7 +6960,7 @@ function _renderTabStrategy(site, allArts){
       +   '</div>'
       +   '<div class="st-kpi-sheet">' + rows + '</div>'
       +   '<div class="st-card-actions">'
-      +     '<button class="st-act-btn" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'tasks\')" title="タスク管理 tab で具体的な実行プランを見る">✅ この目標達成の実行プランを見る →</button>'
+      +     '<button class="st-act-btn" onclick="_switchToPanel(\'' + esc(site.id) + '\',\'tasks\')" title="タスクパネルで具体的な実行プランを見る">✅ この目標達成の実行プランを見る →</button>'
       +     '<button class="st-act-btn st-act-secondary" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'この 6 ヶ月の KPI 目標を達成するため、月別の最重要施策をもう一段詳しく解説してください。\')">💬 詳しく聞く</button>'
       +   '</div>'
       + '</div>';
@@ -7781,7 +7806,7 @@ function _renderTabTasks(site){
       +   (hasKpi
           ? '<button class="tk-empty-cta" onclick="_generateRoadmap(\'' + esc(site.id) + '\', this)">🤖 ロードマップを生成する <span class="arrow">→</span></button>'
           : '<div class="tk-empty-warn">⚠️ まず「戦略・KPI」 tab で KPI を設定してください</div>'
-            + '<button class="tk-empty-cta" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">🎯 戦略・KPI へ移動 <span class="arrow">→</span></button>')
+            + '<button class="tk-empty-cta" onclick="_switchToPanel(\'' + esc(site.id) + '\',\'strategy\')">🎯 戦略・KPI へ移動 <span class="arrow">→</span></button>')
       +   '<div class="tk-empty-note">生成には約 30-60 秒かかります。途中で閉じても OK です。</div>'
       + '</div>';
   }

@@ -2827,11 +2827,29 @@ window.openDailyGrowthReportPanel = async function(siteId){
     +    '<button onclick="_runDailyGrowthReport(\''+esc(siteId)+'\')" style="background:var(--teal);color:#fff;border:0;border-radius:9px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">+ '+L('再生成','Regenerate')+'</button>'
     +    '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px">×</button>'
     +  '</div>';
+  // ── Phase 1: キャッシュ済データで即時描画 ──
+  // 「読み込み中」 を見せずに、 すぐに使える状態で開く。
+  // ga4 cache (window._ga4Snapshots) は site を開いた時点で背景 fetch されている
+  // ことが多いので、 だいたい hit する。 notes は cache 無いので空の sections だけ
+  // まず出して、 並行 fetch で後埋め。
+  var _ga4Cache = (window._ga4Snapshots && window._ga4Snapshots[siteId]) || null;
+  var initSnap = (_ga4Cache && _ga4Cache.snapshot) || null;
+  var initConnected = !!(_ga4Cache && _ga4Cache.connected);
+
+  var initSection1 = _dgrRenderNumbersSection(ag, initSnap, initConnected);
+  var initThreeCh  = _dgrRender3ChannelAndAiLog(ag, initSnap, null);
+  // sections 2-5 は notes が必要 → スケルトン (markdown 関数に空 content を渡す)
+  var initSections = _dgrRenderMarkdownSections('', siteId, initSnap);
+
   ov.innerHTML =
     '<div style="background:var(--cream3);' + (isMobileDgr ? 'width:100%;border-radius:16px 0 0 16px;' : 'flex:1;') + 'display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(0,0,0,.10);border-left:1px solid var(--wire);overflow:hidden">'
     +  headerHTML
     +  '<div id="dailyGrowthBody" style="flex:1;overflow-y:auto;padding:18px 22px 28px">'
-    +    '<div id="dgrLoading" style="text-align:center;padding:48px;color:var(--text3);font-size:13px"><span style="display:inline-block;width:16px;height:16px;border:2px solid var(--wire2);border-top-color:var(--peach-dark);border-radius:50%;animation:lpSpin .8s linear infinite;margin-right:10px;vertical-align:-3px"></span>'+L('読み込み中…','Loading…')+'</div>'
+    +    '<div id="dgrEditTop"></div>'
+    +    '<div id="dgrSection1">' + initSection1 + '</div>'
+    +    '<div id="dgrThreeCh">' + initThreeCh + '</div>'
+    +    '<div id="dgrSections">' + initSections + '</div>'
+    +    '<div id="dgrPastList"></div>'
     +  '</div>'
     + '</div>';
   if(isMobileDgr){
@@ -2839,30 +2857,44 @@ window.openDailyGrowthReportPanel = async function(siteId){
   }
   document.body.appendChild(ov);
 
-  // ── Data fetch: GA4 snapshot + latest daily note (parallel) ──
-  // api() に timeout が無く、 サーバー応答無しだと fetch が永遠に hang する。
-  // 12 秒で諦めて null として扱い、 「読み込み中…」 のまま固まるのを防ぐ。
+  // ── Phase 2: 並行 fetch で最新データに差し替える ──
   function _withTimeout(p, ms){
     return Promise.race([
       p,
       new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, ms); })
     ]);
   }
+  // GA4 は cache 新しければ skip、 古い or 未取得なら fetch。
+  var ga4NeedsFetch = !_ga4Cache || (
+    _ga4Cache._localFetchedMs
+      ? (Date.now() - _ga4Cache._localFetchedMs > 5 * 60 * 1000)  // 5 分以上経過
+      : true
+  );
+  var ga4Promise = ga4NeedsFetch
+    ? _withTimeout(api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/ga4').catch(function(){ return null; }), 12000)
+    : Promise.resolve({ snapshot: initSnap, connected: initConnected });
+  var notesPromise = _withTimeout(api('GET', '/api/me/notes').catch(function(){ return null; }), 12000);
+
   try {
-    var ga4Promise = _withTimeout(
-      api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/ga4').catch(function(){ return null; }),
-      12000
-    );
-    var notesPromise = _withTimeout(
-      api('GET', '/api/me/notes').catch(function(){ return null; }),
-      12000
-    );
+    // GA4 が先に届いたら section 1 + 3-channel を即更新 (notes 待たない)
+    ga4Promise.then(function(ga4Resp){
+      if(!ga4Resp) return;
+      var snap = ga4Resp.snapshot || null;
+      var connected = !!ga4Resp.connected;
+      var s1 = document.getElementById('dgrSection1');
+      var s3 = document.getElementById('dgrThreeCh');
+      if(s1) s1.innerHTML = _dgrRenderNumbersSection(ag, snap, connected);
+      // 3-channel は notes 結果も使うので、 ここでは GA4 部分のみ反映
+      if(s3) s3.innerHTML = _dgrRender3ChannelAndAiLog(ag, snap, null);
+    }).catch(function(_){});
+
+    // notes が届いたら sections 2-5 + past list を埋める (3-channel の aiLog も再描画)
     var resp = await Promise.all([ga4Promise, notesPromise]);
     var ga4Resp = resp[0];
     var notesResp = resp[1];
 
-    var snap = (ga4Resp && ga4Resp.snapshot) || null;
-    var ga4Connected = !!(ga4Resp && ga4Resp.connected);
+    var snap = (ga4Resp && ga4Resp.snapshot) || initSnap;
+    var ga4Connected = !!((ga4Resp && ga4Resp.connected) || initConnected);
 
     var dailies = (notesResp && notesResp.notes || []).filter(function(n){
       if(!n) return false;
@@ -2872,23 +2904,30 @@ window.openDailyGrowthReportPanel = async function(siteId){
       return /グロースレポート|growth report|日次/i.test(hay);
     });
     var latest = dailies[0] || null;
+    // 最新 daily note の full content fetch (snippet は 120 字なので section parse 不可)。
+    // 4 秒 timeout — 失敗時は snippet のままで進める。
     if(latest){
       try {
-        var rOne = await _withTimeout(api('GET', '/api/me/notes/' + latest.id), 8000);
+        var rOne = await _withTimeout(api('GET', '/api/me/notes/' + latest.id), 4000);
         if(rOne && rOne.note){ latest = Object.assign(latest, rOne.note); }
       } catch(_){}
     }
 
-    // ── Section 1: 数字のサマリー (native from GA4) ──
-    var section1HTML = _dgrRenderNumbersSection(ag, snap, ga4Connected);
-
-    // ── Sections 2-5: parse AI markdown content (空ならプレースホルダ + 再生成促し) ──
-    var sectionsHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId, snap);
-
-    // ── Past reports list ──
-    var pastListHTML = '';
-    if(dailies.length > 1){
-      pastListHTML = '<div style="margin-top:28px;border-top:1px solid var(--wire);padding-top:16px">'
+    // ── 描画更新 ──
+    var s1f = document.getElementById('dgrSection1');
+    var s3f = document.getElementById('dgrThreeCh');
+    var ssf = document.getElementById('dgrSections');
+    var spf = document.getElementById('dgrPastList');
+    var etf = document.getElementById('dgrEditTop');
+    if(s1f) s1f.innerHTML = _dgrRenderNumbersSection(ag, snap, ga4Connected);
+    if(s3f) s3f.innerHTML = _dgrRender3ChannelAndAiLog(ag, snap, notesResp);
+    if(ssf) ssf.innerHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId, snap);
+    if(etf && latest){
+      etf.innerHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
+        + 'style="background:transparent;border:1px solid var(--wire2);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button></div>';
+    }
+    if(spf && dailies.length > 1){
+      spf.innerHTML = '<div style="margin-top:28px;border-top:1px solid var(--wire);padding-top:16px">'
         + '<div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📚 '+L('過去のレポート','Past reports')+'</div>'
         + dailies.slice(1, 11).map(function(n){
             var when = (n.updated_at||'').slice(5,10).replace('-','/');
@@ -2902,28 +2941,10 @@ window.openDailyGrowthReportPanel = async function(siteId){
           }).join('')
         + '</div>';
     }
-
-    var bodyEl = document.getElementById('dailyGrowthBody');
-    if(bodyEl){
-      var noteEditBtnTop = latest
-        ? '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
-          + 'style="background:transparent;border:1px solid var(--wire2);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">📒 '+L('メモ帳で編集','Edit in notebook')+'</button></div>'
-        : '';
-      var threeChAndAiHTML = _dgrRender3ChannelAndAiLog(ag, snap, notesResp);
-      bodyEl.innerHTML = noteEditBtnTop + section1HTML + threeChAndAiHTML + sectionsHTML + pastListHTML;
-    }
   } catch(err){
-    console.error('[daily-growth-report] render failed:', err);
-    var bodyEl2 = document.getElementById('dailyGrowthBody');
-    if(bodyEl2){
-      bodyEl2.innerHTML = '<div style="text-align:center;padding:48px 24px;color:var(--text2)">'
-        + '<div style="font-size:36px;margin-bottom:12px">⚠️</div>'
-        + '<div style="font-size:14px;font-weight:800;margin-bottom:8px">レポートの読み込みに失敗しました</div>'
-        + '<div style="font-size:12px;color:var(--text3);margin-bottom:20px">' + esc(String((err && err.message) || 'unknown')) + '</div>'
-        + '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove(); openDailyGrowthReportPanel(\''+esc(siteId)+'\')" '
-        + 'style="background:var(--teal);color:#fff;border:0;border-radius:9px;padding:10px 20px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">再試行</button>'
-        + '</div>';
-    }
+    console.error('[daily-growth-report] update failed:', err);
+    // Phase 1 で既に skeleton + cache データは表示済みなので、 完全な error UI には
+    // しない。 ただし console に出して開発者に通知。
   }
 };
 

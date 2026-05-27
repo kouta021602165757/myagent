@@ -4306,6 +4306,84 @@ input,textarea{font-family:var(--sans);}
   .hero-card .hc-divider{ display: none; }
 }
 
+/* ── Task strip (= chat 上部、 今週のタスク chips) — mock-strategy-v3 と同じ class 体系 ──
+   display は inline style で制御 (= hide のとき style="display:none" を効かせるため !important なし) */
+.task-strip{
+  padding: 7px 18px;
+  border-bottom: 1px solid var(--line-soft, #f0f0eb);
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  background: var(--bg, #fafaf7);
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(0,0,0,.02);
+}
+.task-strip .ts-week{
+  background: var(--lime-soft, #f7ffe9);
+  color: var(--teal-2, #0a3d39);
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.task-strip .ts-task{
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text, #1a1a1a);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  max-width: 260px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.task-strip .ts-task:hover{
+  border-color: var(--teal, #0d4f4a);
+  background: var(--lime-soft, #f7ffe9);
+}
+.task-strip .ts-task .ck{
+  width: 11px; height: 11px;
+  border: 1.5px solid var(--line, #e5e7eb);
+  border-radius: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.task-strip .ts-task .ck:hover{ border-color: var(--teal, #0d4f4a); }
+.task-strip .ts-task.done .ck{
+  background: var(--teal, #0d4f4a);
+  border-color: var(--teal, #0d4f4a);
+}
+.task-strip .ts-task.done .txt{ text-decoration: line-through; opacity: .6; }
+.task-strip .ts-task .txt{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-strip .ts-more{
+  background: transparent;
+  border: 0;
+  color: var(--teal, #0d4f4a);
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: inherit;
+}
+.task-strip .ts-more:hover{ background: var(--lime-soft, #f7ffe9); }
+
 /* Tabs (= 今日のタスク / AI 成果物) */
 .tk-tabs{
   display:flex; gap:4px;

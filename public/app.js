@@ -4126,30 +4126,23 @@ window._renderTaskStrip = function(){
   }
   var top = all.slice(0, 3);
   var rest = all.length - top.length;
+  // mock-strategy-v3 SCENE 5 と同じ class 体系 (.task-strip / .ts-week / .ts-task)。
+  // CSS は app.css 側で一括管理。
   var chipsHTML = top.map(function(t){
     var safeTitle = String(t.title||'').slice(0,60);
-    return '<div class="task-chip" onclick="_runHomeTask(\''+esc(ag.id)+'\',\''+esc(t.id)+'\')" '
-      + 'style="display:inline-flex;align-items:center;gap:7px;background:var(--cream);border:1px solid var(--wire2);border-radius:99px;padding:5px 11px 5px 8px;font-size:11.5px;font-weight:700;color:var(--text);cursor:pointer;transition:all .12s;max-width:280px" '
-      + 'onmouseover="this.style.borderColor=\'var(--peach)\';this.style.background=\'var(--peach-soft)\'" '
-      + 'onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.background=\'var(--cream)\'">'
-      + '<span onclick="event.stopPropagation();_markHomeTaskDone(\''+esc(ag.id)+'\',\''+esc(t.id)+'\',event)" '
-      +   'style="width:13px;height:13px;border-radius:4px;border:1.5px solid var(--wire2);flex-shrink:0;cursor:pointer" title="'+L('完了','Done')+'"></span>'
-      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(safeTitle)+'</span>'
+    var doneCls = t.done ? ' done' : '';
+    return '<div class="ts-task'+doneCls+'" onclick="_runHomeTask(\''+esc(ag.id)+'\',\''+esc(t.id)+'\')">'
+      + '<span class="ck" onclick="event.stopPropagation();_markHomeTaskDone(\''+esc(ag.id)+'\',\''+esc(t.id)+'\',event)" title="'+L('完了','Done')+'"></span>'
+      + '<span class="txt">'+esc(safeTitle)+'</span>'
       + '</div>';
   }).join('');
   var moreHTML = rest > 0
-    ? '<button onclick="openTasksPanel(activeId)" style="background:transparent;border:0;font-size:11px;font-weight:800;color:var(--peach-dark);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px" '
-      + 'onmouseover="this.style.background=\'var(--peach-soft)\'" '
-      + 'onmouseout="this.style.background=\'transparent\'">'
-      + L('他 '+rest+' 件 ', 'View ' + rest + ' more ') + '→</button>'
-    : '<button onclick="openTasksPanel(activeId)" style="background:transparent;border:0;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px">'
-      + L('全件表示','View all') + ' →</button>';
-  // sticky at top of chat — スクロールしても常に見える「今週の指示」 状態。
-  // チャット msgs エリアの上端に固定、 cream BG + 下 border でセクション境界明示。
-  el.style.display = 'flex';
-  el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 22px;flex-wrap:wrap;background:var(--cream);border-bottom:1px solid var(--wire);position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.02)';
+    ? '<button class="ts-more" onclick="openTasksPanel(activeId)">'+L('他 '+rest+' 件 ', 'View ' + rest + ' more ') + '→</button>'
+    : '<button class="ts-more" onclick="openTasksPanel(activeId)">'+L('全件表示','View all') + ' →</button>';
+  el.className = 'task-strip';
+  el.style.cssText = '';  // CSS クラスで管理、 inline style は使わない
   el.innerHTML =
-      '<div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">📋 ' + (weekLbl || L('タスク','Tasks')) + '</div>'
+      '<span class="ts-week">📋 ' + (weekLbl || L('タスク','Tasks')) + '</span>'
     + chipsHTML
     + moreHTML;
 };
@@ -9697,7 +9690,12 @@ function _renderSiteItem(site){
   var ic = _verticalIcon(v);
   var hostname = _siteHostname(site);
   var todayN = _siteTodayArtifacts(site.id).length;
-  var summary = todayN > 0 ? '今日 ' + todayN + ' 件' : 'チーム稼働中';
+  // mock-strategy-v3 SCENE 5 のサイドバーは「運用中・累計 N 件」表示。
+  // 今日生成があれば「今日 N」、なければ累計 (= 全 artifact 数) を出す。
+  var allN = _siteAllArtifacts(site.id).length;
+  var summary = todayN > 0
+    ? ('今日 ' + todayN + ' 件')
+    : (allN > 0 ? ('運用中・累計 ' + allN + ' 件') : 'チーム稼働中');
   var isActive = (activeId === site.id);
   // AI が今このサイトで動いているか (= streaming 中)
   var isLive = !!(window._streamingAgents && window._streamingAgents.has(site.id))
@@ -10078,8 +10076,9 @@ async function openAgent(id){
   var ctxLbl = ctxTok >= 1000 ? (ctxTok/1000).toFixed(1)+'k' : String(ctxTok);
   // Context usage pill — desktop only, and only meaningful when filling up.
   // Hidden on phones (saves header space) and hidden when usage < 25% on
-  // desktop (less noise for new chats).
-  var ctxPill = (ctxPct >= 25)
+  // desktop (less noise for new chats). Site agent では mock の clean 3-pill 規約
+  // に従って非表示 (= ユーザーには関係ない情報なので表示しない)。
+  var ctxPill = (ctxPct >= 25 && !_isSiteAgent(ag))
     ? '<span class="ct-ctx hide-on-mobile" title="'+(isJa?'コンテキスト使用量 (推定)':'Context window used (approx)')+'" style="font-size:10px;font-weight:700;color:'+ctxColor+';background:var(--cream2);border:1px solid var(--wire2);padding:3px 8px;border-radius:99px;letter-spacing:.02em;font-family:\'SF Mono\',Menlo,monospace">'+ctxLbl+' / 200k</span>'
     : '';
   // Quick model picker pill — click to switch between Fast / Smart / Best
@@ -10097,7 +10096,28 @@ async function openAgent(id){
   var _modelPillStyle = _isSiteAg
     ? 'font-size:10px;font-weight:800;color:#fff;background:#0d4f4a;border:1px solid #0d4f4a;padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit'
     : 'font-size:10px;font-weight:800;color:var(--peach-dark);background:rgba(192,255,92,.08);border:1px solid rgba(192,255,92,.3);padding:3px 9px;border-radius:99px;letter-spacing:.02em;cursor:pointer;font-family:inherit';
-  var modelPill = isGroup ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="'+_modelPillStyle+'">'+_mInfo.lbl+'</button>');
+  // mock-strategy-v3 SCENE 5 の chat-header は「📰 サイトタイプ / 📋 タスク N /
+  // 🔌 接続」 の 3 pill のみ。 site agent では model pill を出さずクリーンに揃える。
+  var modelPill = (isGroup || _isSiteAg) ? '' : ('<button class="ct-model" onclick="event.stopPropagation(); _toggleQuickModel(\''+ag.id+'\')" title="'+esc(_mInfo.title)+'" style="'+_modelPillStyle+'">'+_mInfo.lbl+'</button>');
+
+  // 🔌 接続 pill (site agent のみ) — X / Threads / WordPress の接続状態。
+  // mock-strategy-v3 では「🔌 X / Threads / WP」のテキスト表示なので、
+  // 接続済みのものだけを並べる。 ゼロ件のときは「🔌 接続する」 CTA に。
+  var connPill = '';
+  if(_isSiteAg){
+    var _snsCache = (window._snsStatusCache && window._snsStatusCache[ag.id]) || {};
+    var _connNames = [];
+    if(_snsCache.x && _snsCache.x.connected) _connNames.push('X');
+    if(_snsCache.threads && _snsCache.threads.connected) _connNames.push('Threads');
+    if(_snsCache.wordpress && _snsCache.wordpress.connected) _connNames.push('WP');
+    var _connStyle = 'font-size:10.5px;font-weight:800;color:#fff;background:#0d4f4a;border:1px solid #0d4f4a;padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;letter-spacing:.02em';
+    var _connOffStyle = 'font-size:10.5px;font-weight:700;color:var(--text3);background:var(--cream);border:1px solid var(--wire2);padding:3px 10px;border-radius:99px;cursor:pointer;font-family:inherit;opacity:.85';
+    var _connLabel = _connNames.length
+      ? ('🔌 ' + _connNames.join(' · '))
+      : '🔌 接続する';
+    var _connStyleUse = _connNames.length ? _connStyle : _connOffStyle;
+    connPill = '<button onclick="event.stopPropagation(); openConnectionsPanel(\''+ag.id+'\')" title="'+L('X / Threads / WordPress の接続','Connections')+'" style="'+_connStyleUse+'">'+_connLabel+'</button>';
+  }
   // Agent-intelligence indicators — KPI count + active task count. Clicking
   // opens the unified Agent Profile panel. Group chats hide these.
   // Tasks pill is separated out so it's always discoverable as a primary
@@ -10136,7 +10156,7 @@ async function openAgent(id){
     '<div class="ct-icon" '+_iconAttrs+'>'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
       '<div class="ct-name" '+_nameAttrs+'><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
-      '<div class="ct-pills">'+topPills+' '+modelPill+' '+tasksPill+' '+intelPill+' '+ctxPill+'</div>'+
+      '<div class="ct-pills">'+topPills+' '+modelPill+' '+tasksPill+' '+connPill+' '+intelPill+' '+ctxPill+'</div>'+
     '</div>'+
     '<div class="ct-actions">'+ actsHTML +'</div>';
   // Hide share card whenever agent changes

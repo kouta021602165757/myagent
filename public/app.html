@@ -105,10 +105,12 @@
     <!-- Mobile sidebar backdrop -->
     <div class="sb-backdrop" id="sbBackdrop" onclick="_toggleMobileSidebar(false)"></div>
     <div class="chat" id="chatWrap" style="display:none">
-      <div class="chat-top" id="chatTop"></div>
-
-      <!-- HERO card: AI チームの累計実績 (PV / ユーザー / 記事 / SNS) -->
+      <!-- HERO card: AI チームの累計実績 (PV / ユーザー / 記事 / SNS)
+           mock-strategy-v3 SCENE 5 に合わせて chat-top の「上」に配置。
+           常に画面上端に見えるよう順序を入れ替え。 -->
       <div id="heroCard" class="hero-card" style="display:none"></div>
+
+      <div class="chat-top" id="chatTop"></div>
 
       <!-- Pinned messages banner (just below chat header) -->
       <div id="pinnedWrap" class="pinned-wrap" style="display:none"></div>

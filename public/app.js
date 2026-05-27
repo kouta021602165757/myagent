@@ -20473,17 +20473,34 @@ window._notesPickVersion = function(noteId, vNumber){
 };
 
 async function _notesDelete(){
+  console.log('[_notesDelete] called');
   var st = window._notesState;
-  if(!st.activeId) return;
-  if(!confirm(isJa?'このメモを削除?':'Delete this note?')) return;
+  if(!st || !st.activeId) {
+    console.warn('[_notesDelete] no active note');
+    showToast('削除対象が選択されていません', 'ng');
+    return;
+  }
+  console.log('[_notesDelete] activeId =', st.activeId);
+  if(!confirm(isJa?'このメモを削除?':'Delete this note?')) {
+    console.log('[_notesDelete] user cancelled');
+    return;
+  }
   try {
-    await api('DELETE', _notesBase() + '/' + st.activeId);
+    var url = _notesBase() + '/' + st.activeId;
+    console.log('[_notesDelete] DELETE', url);
+    var r = await api('DELETE', url);
+    console.log('[_notesDelete] response:', r);
     st.notes = st.notes.filter(function(n){return n.id !== st.activeId;});
     st.activeId = (st.notes[0] || {}).id || null;
     st.dirty = false;
+    showToast('✅ 削除しました', 'ok', 3000);
     _renderNotesPanel();
-  } catch(e){ showToast((e.message||(isJa?'失敗':'Failed')),'ng'); }
+  } catch(e){
+    console.error('[_notesDelete] error:', e);
+    showToast((e.message||(isJa?'削除失敗':'Failed')),'ng', 5000);
+  }
 }
+window._notesDelete = _notesDelete;
 
 function _notesClose(){
   if(window._notesState.dirty) _notesSaveNow();

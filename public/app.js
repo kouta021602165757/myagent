@@ -2858,6 +2858,7 @@ window.openDailyGrowthReportPanel = async function(siteId){
     +  '<div id="dailyGrowthBody" style="flex:1;overflow-y:auto;padding:18px 22px 28px">'
     +    '<div id="dgrEditTop"></div>'
     +    '<div id="dgrSection1">' + initSection1 + '</div>'
+    +    '<div id="dgrGscArticles"></div>'  // GSC「昨日の記事別流入」 (Phase 2 で埋める)
     +    '<div id="dgrThreeCh">' + initThreeCh + '</div>'
     +    '<div id="dgrSections">' + initSections + '</div>'
     +    '<div id="dgrPastList"></div>'
@@ -2885,6 +2886,11 @@ window.openDailyGrowthReportPanel = async function(siteId){
     ? _withTimeout(api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/ga4').catch(function(){ return null; }), 12000)
     : Promise.resolve({ snapshot: initSnap, connected: initConnected });
   var notesPromise = _withTimeout(api('GET', '/api/me/notes').catch(function(){ return null; }), 12000);
+  // GSC 昨日の記事別流入 (= ユーザー要望)。 親 try/catch でカバーされてるので失敗無音 OK
+  var gscYesterdayPromise = _withTimeout(
+    api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/gsc-snapshot?period=yesterday').catch(function(){ return null; }),
+    8000
+  );
 
   try {
     // GA4 が先に届いたら section 1 + 3-channel を即更新 (notes 待たない)
@@ -2944,6 +2950,15 @@ window.openDailyGrowthReportPanel = async function(siteId){
     var etf = document.getElementById('dgrEditTop');
     if(s1f) s1f.innerHTML = _dgrRenderNumbersSection(ag, snap, ga4Connected);
     if(s3f) s3f.innerHTML = _dgrRender3ChannelAndAiLog(ag, snap, notesResp);
+    // GSC yesterday 記事別流入 — 別 promise なので独立して着弾を待つ
+    try {
+      var _gscBox = document.getElementById('dgrGscArticles');
+      if(_gscBox){
+        gscYesterdayPromise.then(function(gscResp){
+          if(_gscBox) _gscBox.innerHTML = _dgrRenderGscSection(siteId, gscResp);
+        }).catch(function(_){});
+      }
+    } catch(_){}
     if(ssf) ssf.innerHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId, snap);
     if(etf && latest){
       etf.innerHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
@@ -2970,6 +2985,58 @@ window.openDailyGrowthReportPanel = async function(siteId){
     // しない。 ただし console に出して開発者に通知。
   }
 };
+
+// GSC「昨日の記事別流入」 セクション render (= ユーザー要望)
+// gscResp = /api/agents/:id/gsc-snapshot?period=yesterday の結果
+function _dgrRenderGscSection(siteId, gscResp){
+  if(!gscResp || !gscResp.connected){
+    // 未接続 / scope なし → connect CTA
+    return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:12px;padding:18px 22px;margin-bottom:14px">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">🔍 '+L('昨日の記事別 検索流入 (GSC)','Yesterday’s page traffic')+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">'+L('Search Console を接続すると、 昨日どの記事に何人検索流入したかが見えます。','Connect Search Console to see yesterday’s search traffic by page.')+'</div>'
+      + '<button onclick="openConnectionsPanel(\''+esc(siteId)+'\')" style="background:#3b82f6;color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('🔌 Google Search Console を接続','Connect GSC')+'</button>'
+      + '</div>';
+  }
+  // server error (= property/site 未設定 or scope 不足)
+  if(gscResp.error){
+    return '<div style="background:var(--cream);border:1px solid #f59e0b;border-radius:12px;padding:18px 22px;margin-bottom:14px">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">🔍 '+L('昨日の記事別 検索流入 (GSC)','GSC')+'</div>'
+      + '<div style="font-size:12px;color:#92400e">'+L('GSC データ取得失敗: ','GSC failed: ')+esc(String(gscResp.detail || gscResp.error).slice(0,200))+'</div>'
+      + '</div>';
+  }
+  var pages = (gscResp.top_pages || []);
+  var overall = gscResp.overall || {};
+  var dr = gscResp.date_range || {};
+  function _shortPath(u){
+    try { var url = new URL(u); return url.pathname || '/'; } catch(e){ return String(u).slice(0, 60); }
+  }
+  // 過去 7 日比較ボタンなどは将来追加
+  var rows = pages.length
+    ? pages.slice(0, 10).map(function(r, i){
+        var url = (r.keys && r.keys[0]) || '';
+        var path = _shortPath(url);
+        return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--wire);text-decoration:none;color:inherit;transition:background .12s" onmouseover="this.style.background=\'var(--cream2)\'" onmouseout="this.style.background=\'transparent\'">'
+          + '<span style="width:22px;height:22px;background:#dbeafe;color:#1e40af;border-radius:6px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</span>'
+          + '<span style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(path)+'</span>'
+          + '<span style="font-size:11px;color:#1e40af;font-weight:800;flex-shrink:0">'+(r.clicks || 0)+' clicks</span>'
+          + '<span style="font-size:10px;color:var(--text3);flex-shrink:0">'+(r.impressions || 0)+' 表示 / '+ (r.position != null ? (Math.round(r.position*10)/10) : '-')+'位</span>'
+          + '</a>';
+      }).join('')
+    : '<div style="padding:18px;text-align:center;font-size:11.5px;color:var(--text3);border-top:1px solid var(--wire)">'+L('昨日の検索流入データなし (GSC はデータ反映に 1-3 日かかります)','No data yet. GSC delays 1-3 days.')+'</div>';
+  return '<div style="background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:0;margin-bottom:14px;overflow:hidden">'
+    + '<div style="padding:14px 18px;background:linear-gradient(135deg,#1e3a8a,#1e40af);color:#fff;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    +   '<div style="flex:1;min-width:0">'
+    +     '<div style="font-size:13px;font-weight:800">🔍 '+L('昨日の記事別 検索流入 (GSC)','Yesterday: Page-level search traffic')+'</div>'
+    +     '<div style="font-size:10.5px;opacity:.8;margin-top:2px">'+esc(dr.start || '')+' '+L('時点 / Google 検索からの流入','via Google Search')+'</div>'
+    +   '</div>'
+    +   '<div style="display:flex;gap:10px;flex-shrink:0">'
+    +     '<div style="background:rgba(255,255,255,.18);padding:5px 11px;border-radius:7px;font-size:11px;font-weight:700"><b style="font-size:14px;font-weight:900">'+(overall.clicks || 0)+'</b> '+L('合計クリック','clicks')+'</div>'
+    +     '<div style="background:rgba(255,255,255,.18);padding:5px 11px;border-radius:7px;font-size:11px;font-weight:700"><b style="font-size:14px;font-weight:900">'+(overall.impressions || 0)+'</b> '+L('表示','imp')+'</div>'
+    +   '</div>'
+    + '</div>'
+    + rows
+    + '</div>';
+}
 
 // ── 3 チャネル別の動き + AI 実行履歴 (= 即効指標 layer) ──
 function _dgrRender3ChannelAndAiLog(ag, snap, notesResp){
@@ -6507,13 +6574,27 @@ function _formatRel(ts){
 
 // ─── Tab 1: 📊 数字 (= 現状の推移) ────────────────────────────────
 // GSC スナップショットを取得して数字パネルに描画
+// GSC snapshot fetch + render — period toggle 対応 (= ユーザー要望:
+// 昨日 / 7d / 30d で記事別流入が見える)
+window._gscPeriodBySite = window._gscPeriodBySite || {};
+window._setGscPeriod = function(siteId, period){
+  window._gscPeriodBySite[siteId] = period;
+  _fetchGscSnapshot(siteId);
+};
 async function _fetchGscSnapshot(siteId){
   var el = document.getElementById('gscSnap-' + siteId);
   if(!el) return;
+  var period = window._gscPeriodBySite[siteId] || '7d';
+  var periodLabel = { yesterday: '昨日', '7d': '直近 7 日', '30d': '直近 30 日' }[period] || '直近 7 日';
+  el.innerHTML = '<div style="padding:18px;color:var(--muted);font-size:12px;text-align:center"><span style="display:inline-block;width:14px;height:14px;border:2px solid var(--wire2);border-top-color:#3b82f6;border-radius:50%;animation:lpSpin .8s linear infinite;vertical-align:-3px;margin-right:8px"></span>'+esc(periodLabel)+' の GSC データを取得中…</div>';
   try {
-    var r = await api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/gsc-snapshot');
+    var r = await api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/gsc-snapshot?period=' + encodeURIComponent(period));
     if(!r || !r.connected){
       el.innerHTML = '<div style="padding:18px;color:var(--muted);font-size:12px;text-align:center">GSC 接続を確認してください</div>';
+      return;
+    }
+    if(r.error){
+      el.innerHTML = '<div style="padding:18px;color:#92400e;font-size:12px;text-align:center;background:#fff7ed;border-radius:9px;margin:12px 18px">GSC 取得失敗: '+esc(String(r.detail || r.error).slice(0,150))+'</div>';
       return;
     }
     var o = r.overall || {};
@@ -6522,39 +6603,52 @@ async function _fetchGscSnapshot(siteId){
     function _shortUrl(u){
       try { var url = new URL(u); return url.pathname || '/'; } catch(e){ return String(u).slice(0, 60); }
     }
-    function _row(rank, label, stat){
-      return '<li style="padding:8px 10px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;font-size:12px">'
-        + '<span style="width:18px;height:18px;background:var(--peach-soft);color:var(--peach-dark);border-radius:4px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + rank + '</span>'
-        + '<span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(label) + '</span>'
-        + '<span style="font-size:10px;color:var(--muted);font-weight:700;flex-shrink:0">' + stat + '</span>'
-        + '</li>';
+    // Period toggle buttons
+    function _pBtn(pkey, label){
+      var active = period === pkey;
+      return '<button onclick="_setGscPeriod(\''+esc(siteId)+'\',\''+pkey+'\')" '
+        + 'style="background:'+(active?'#3b82f6':'transparent')+';color:'+(active?'#fff':'var(--text2)')+';border:1px solid '+(active?'#3b82f6':'var(--wire2)')+';border-radius:7px;padding:5px 12px;font-size:11px;font-weight:'+(active?'800':'700')+';cursor:pointer;font-family:inherit">'+label+'</button>';
     }
-    var queriesHTML = q.length ? q.map(function(r, i){
-      return _row(i+1, (r.keys && r.keys[0]) || '?',
-        '<span style="color:var(--peach-dark);font-weight:800">' + r.clicks + '</span> / ' + r.impressions + ' / ' + r.position + ' 位');
-    }).join('') : '<li style="padding:16px;color:var(--muted);font-size:11px;text-align:center;border-top:1px solid var(--wire)">データなし</li>';
-    var pagesHTML = p.length ? p.map(function(r, i){
-      return _row(i+1, _shortUrl((r.keys && r.keys[0]) || '?'),
-        '<span style="color:var(--peach-dark);font-weight:800">' + r.clicks + '</span> click');
-    }).join('') : '<li style="padding:16px;color:var(--muted);font-size:11px;text-align:center;border-top:1px solid var(--wire)">データなし</li>';
+    var toggleBar = '<div style="display:flex;gap:6px;padding:12px 18px 8px;border-bottom:1px solid var(--wire)">'
+      + _pBtn('yesterday', '昨日') + _pBtn('7d', '直近 7 日') + _pBtn('30d', '直近 30 日')
+      + '<span style="flex:1"></span>'
+      + (r.date_range ? '<span style="font-size:10.5px;color:var(--text3);font-weight:600;align-self:center">'+esc(r.date_range.start || '')+(r.date_range.start !== r.date_range.end ? ' 〜 '+esc(r.date_range.end || '') : '')+'</span>' : '')
+      + '</div>';
+    // article-level traffic (== top_pages) を大きめに表示
+    var articlesHTML = p.length
+      ? p.slice(0, 10).map(function(row, i){
+          var url = (row.keys && row.keys[0]) || '';
+          var path = _shortUrl(url);
+          return '<a href="'+esc(url)+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--wire);text-decoration:none;color:inherit;transition:background .12s" onmouseover="this.style.background=\'var(--cream2)\'" onmouseout="this.style.background=\'transparent\'">'
+            + '<span style="width:22px;height:22px;background:#dbeafe;color:#1e40af;border-radius:6px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</span>'
+            + '<span style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(path)+'</span>'
+            + '<span style="font-size:11.5px;color:#1e40af;font-weight:800;flex-shrink:0">'+(row.clicks || 0)+' clicks</span>'
+            + '<span style="font-size:10.5px;color:var(--text3);flex-shrink:0">'+(row.impressions || 0)+' 表示 / '+(row.position != null ? (Math.round(row.position*10)/10) : '-')+'位</span>'
+            + '</a>';
+        }).join('')
+      : '<div style="padding:18px;text-align:center;color:var(--text3);font-size:11.5px;border-top:1px solid var(--wire)">'+esc(periodLabel)+' は流入データ無し (GSC はデータ反映に 1-3 日かかります)</div>';
+    var queriesHTML = q.length
+      ? q.slice(0, 5).map(function(row, i){
+          return '<li style="padding:8px 10px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;font-size:11.5px">'
+            + '<span style="width:18px;height:18px;background:var(--peach-soft);color:var(--peach-dark);border-radius:4px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</span>'
+            + '<span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((row.keys && row.keys[0]) || '?')+'</span>'
+            + '<span style="font-size:10px;color:var(--muted);font-weight:700;flex-shrink:0"><b style="color:var(--peach-dark)">'+row.clicks+'</b> click / '+row.impressions+' 表示 / '+row.position+'位</span>'
+            + '</li>';
+        }).join('')
+      : '<li style="padding:14px;color:var(--muted);font-size:11px;text-align:center;border-top:1px solid var(--wire)">データなし</li>';
     el.innerHTML = ''
-      + '<div style="padding:16px 18px">'
+      + toggleBar
+      + '<div style="padding:14px 18px">'
       +   '<div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;margin-bottom:14px">'
-      +     _gscCell('🖱 検索クリック', o.clicks, '7 日合計')
-      +     _gscCell('👁 表示回数', o.impressions, '7 日合計')
+      +     _gscCell('🖱 検索クリック', o.clicks, periodLabel)
+      +     _gscCell('👁 表示回数', o.impressions, periodLabel)
       +     _gscCell('📈 平均 CTR', (o.ctr != null ? (Math.round(o.ctr * 100) / 100) + '%' : '—'), '加重平均')
       +     _gscCell('📍 平均掲載順位', (o.position != null ? (Math.round(o.position * 10) / 10) : '—'), '加重平均')
       +   '</div>'
-      +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
-      +     '<div>'
-      +       '<div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px">🔥 上位検索クエリ Top 5</div>'
-      +       '<ul style="list-style:none;background:#fafaf7;border-radius:8px;overflow:hidden;padding:0;margin:0">' + queriesHTML + '</ul>'
-      +     '</div>'
-      +     '<div>'
-      +       '<div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px">📄 流入上位 URL Top 5</div>'
-      +       '<ul style="list-style:none;background:#fafaf7;border-radius:8px;overflow:hidden;padding:0;margin:0">' + pagesHTML + '</ul>'
-      +     '</div>'
-      +   '</div>'
+      +   '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px">📄 '+esc(periodLabel)+' の記事別検索流入 Top 10</div>'
+      +   '<div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;overflow:hidden;margin-bottom:14px">' + articlesHTML + '</div>'
+      +   '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px">🔥 検索クエリ Top 5</div>'
+      +   '<ul style="list-style:none;background:#fafaf7;border-radius:8px;overflow:hidden;padding:0;margin:0">' + queriesHTML + '</ul>'
       + '</div>';
   } catch(e){
     el.innerHTML = '<div style="padding:18px;color:#dc2626;font-size:12px;text-align:center">GSC データ取得に失敗: ' + esc(e.message || 'unknown') + '</div>';

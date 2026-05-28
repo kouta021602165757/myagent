@@ -20646,7 +20646,8 @@ async function handleAPI(req,res,pathname,method,ip){
   // }
   //
   // GET /api/agents/:id/gsc-snapshot — Google Search Console データ一括取得
-  //  Returns: { connected, overall: {clicks, impressions, ctr, position}, top_queries[], top_pages[] }
+  //  Query: ?period=yesterday|7d|28d (default 7d)
+  //  Returns: { connected, period, date_range, overall, top_queries[], top_pages[] }
   const gscSnapMatch = pathname.match(/^\/api\/agents\/([^/]+)\/gsc-snapshot$/);
   if(gscSnapMatch && method === 'GET'){
     const ag = (user.agents || []).find(a => a && a.id === gscSnapMatch[1]);
@@ -20658,13 +20659,38 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 200, { connected: false });
     }
 
+    // period から date range 計算 (= yesterday / 7d / 28d)
+    // GSC は当日データは入らないので endDate は常に「昨日」、 startDate を調整
+    const qs = url.parse(req.url, true).query || {};
+    const period = String(qs.period || '7d').toLowerCase();
+    const _dayStr = (offsetDays) => {
+      const d = new Date(); d.setDate(d.getDate() - offsetDays);
+      return d.toISOString().slice(0, 10);
+    };
+    let startDate, endDate;
+    if(period === 'yesterday' || period === '1d'){
+      startDate = endDate = _dayStr(1);
+    } else if(period === '30d' || period === '28d'){
+      startDate = _dayStr(28);
+      endDate = _dayStr(1);
+    } else {
+      // default 7d
+      startDate = _dayStr(7);
+      endDate = _dayStr(1);
+    }
+    const queryOpts = { start_date: startDate, end_date: endDate };
+
     try {
       const [overall, qRes, pRes] = await Promise.all([
-        executeGscQueryTool(user, ag, { dimensions: [], row_limit: 1 }),
-        executeGscQueryTool(user, ag, { dimensions: ['query'], row_limit: 5 }),
-        executeGscQueryTool(user, ag, { dimensions: ['page'], row_limit: 5 }),
+        executeGscQueryTool(user, ag, { ...queryOpts, dimensions: [], row_limit: 1 }),
+        executeGscQueryTool(user, ag, { ...queryOpts, dimensions: ['query'], row_limit: 10 }),
+        executeGscQueryTool(user, ag, { ...queryOpts, dimensions: ['page'], row_limit: 15 }),
       ]);
-      // Aggregate overall (no dimension → row gives totals)
+      // executeGscQueryTool が error を返すケース (= property 未設定 等)
+      if(overall && overall.error){
+        return jres(res, 200, { connected: true, error: overall.error, detail: overall.detail || overall.instructions });
+      }
+      // Aggregate overall
       let aggregated = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
       if(overall && overall.ok && Array.isArray(overall.rows) && overall.rows.length > 0){
         const r0 = overall.rows[0];
@@ -20675,10 +20701,12 @@ async function handleAPI(req,res,pathname,method,ip){
           position: r0.position || 0,
         };
       }
-      const topQueries = (qRes && qRes.ok && Array.isArray(qRes.rows)) ? qRes.rows.slice(0, 5) : [];
-      const topPages = (pRes && pRes.ok && Array.isArray(pRes.rows)) ? pRes.rows.slice(0, 5) : [];
+      const topQueries = (qRes && qRes.ok && Array.isArray(qRes.rows)) ? qRes.rows.slice(0, 10) : [];
+      const topPages = (pRes && pRes.ok && Array.isArray(pRes.rows)) ? pRes.rows.slice(0, 15) : [];
       return jres(res, 200, {
         connected: true,
+        period,
+        date_range: { start: startDate, end: endDate },
         overall: aggregated,
         top_queries: topQueries,
         top_pages: topPages,

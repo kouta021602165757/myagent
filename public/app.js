@@ -2892,6 +2892,18 @@ window.openDailyGrowthReportPanel = async function(siteId){
       if(!ga4Resp) return;
       var snap = ga4Resp.snapshot || null;
       var connected = !!ga4Resp.connected;
+      // _ga4Snapshots cache を更新 (= property 未選択 等の status を
+      // _dgrRenderNumbersSection が読めるように)
+      try {
+        window._ga4Snapshots = window._ga4Snapshots || {};
+        window._ga4Snapshots[siteId] = {
+          connected: connected,
+          snapshot: snap,
+          error: ga4Resp.error,
+          property_options: ga4Resp.property_options,
+          _localFetchedMs: Date.now(),
+        };
+      } catch(_){}
       var s1 = document.getElementById('dgrSection1');
       var s3 = document.getElementById('dgrThreeCh');
       if(s1) s1.innerHTML = _dgrRenderNumbersSection(ag, snap, connected);
@@ -3023,17 +3035,34 @@ function _dgrRender3ChannelAndAiLog(ag, snap, notesResp){
 // ── Section 1 (数字のサマリー) を GA4 snapshot から native 描画 ──
 function _dgrRenderNumbersSection(ag, snap, ga4Connected){
   var siteId = ag.id;
-  if(!ga4Connected){
+  // ユーザー指摘:「接続してるのに、数字が反映されない」 — Google OAuth 済みだが
+  // (a) このサイト用の GA4 property が未選択、 (b) snapshot fetch がまだ完了
+  // していない、 のどちらか。 「未接続」 表記は誤解を生むので、 OAuth レベルで
+  // 接続済みかどうか別判定して 3 段階の状態表示にする。
+  var oauthOk = (typeof _ga4OauthConnected === 'function') && _ga4OauthConnected();
+  var ga4SnapCache = (window._ga4Snapshots && window._ga4Snapshots[siteId]) || null;
+  // server error: property 未選択 → ピッカーを開く CTA
+  if(oauthOk && ga4SnapCache && (ga4SnapCache.error === 'no_property_set' || (ga4SnapCache.property_options && ga4SnapCache.property_options.length))){
+    return '<div style="background:var(--cream);border:1px solid #f59e0b;border-radius:12px;padding:22px;margin-bottom:14px">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">📊 1. '+L('数字のサマリー','Numbers')+'</div>'
+      + '<div style="font-size:12.5px;color:var(--text2);margin-bottom:14px">'+L('Google 接続は完了していますが、 このサイトの GA4 プロパティが選ばれていません。','Google connected but GA4 property not picked yet.')+'</div>'
+      + '<button onclick="openGa4PropertyPicker(\''+esc(siteId)+'\')" style="background:#f59e0b;color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('プロパティを選ぶ →','Pick property →')+'</button>'
+      + '</div>';
+  }
+  // OAuth 未接続 → 接続 CTA
+  if(!ga4Connected && !oauthOk){
     return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:12px;padding:22px;margin-bottom:14px">'
       + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">📊 1. '+L('数字のサマリー','Numbers')+'</div>'
       + '<div style="font-size:12.5px;color:var(--text3);margin-bottom:14px">'+L('GA4 が未接続です。接続すると実数値が表示されます。','GA4 not connected.')+'</div>'
       + '<button onclick="openConnectionsPanel(\''+esc(siteId)+'\')" style="background:var(--teal);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+L('GA4 を接続する','Connect GA4')+'</button>'
       + '</div>';
   }
+  // OAuth 済 + snap 未取得 → 「取得中」 を明確に
   if(!snap){
     return '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:12px;padding:22px;margin-bottom:14px">'
       + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">📊 1. '+L('数字のサマリー','Numbers')+'</div>'
-      + '<div style="font-size:12.5px;color:var(--text3)">'+L('GA4 データを取得中…','Fetching GA4…')+'</div>'
+      + '<div style="font-size:12.5px;color:var(--text3);display:flex;align-items:center;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:2px solid var(--wire2);border-top-color:var(--teal);border-radius:50%;animation:lpSpin .8s linear infinite"></span>'+L('Google から数字を取得中…','Fetching GA4…')+'</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:8px">'+L('初回は 10-30 秒かかることがあります。','First load takes 10-30s.')+'</div>'
       + '</div>';
   }
   var kpi = ag.kpi || {};

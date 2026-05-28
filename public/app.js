@@ -2678,9 +2678,7 @@ function _buildKpiHTML(site){
 }
 function _buildGa4Status(site){
   var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
-  var ga4Connected = !!(ga4Snap && ga4Snap.connected)
-    || !!(me && me.google_oauth && me.google_oauth.refresh_token)
-    || !!(me && me.integrations && me.integrations.google && me.integrations.google.refresh_token);
+  var ga4Connected = !!(ga4Snap && ga4Snap.connected) || _googleConnected();
   var ga4NeedPicker = ga4Connected
     && ga4Snap && !ga4Snap.snapshot
     && (ga4Snap.error === 'no_property_set' || (ga4Snap.property_options && ga4Snap.property_options.length));
@@ -4584,6 +4582,35 @@ var _MEMBER_ICONS = {
   pm:'📋', researcher:'🔍', writer:'✍️', operator:'🛠',
 };
 function _isSiteAgent(a){ return !!(a && a.site_url); }
+
+// ── Google OAuth helpers (= 二重保存パスの暗黙的差異による bug を防ぐ) ──
+// refresh_token と scope は 2 つの場所のどちらかに保存される:
+//   - me.google_oauth.*          (legacy storage path)
+//   - me.integrations.google.*   (new integration storage path)
+// 全ての callers はこの helper 経由でアクセスして、 パス漏れによる
+// 「片方の場所だけ見て false 判定」 bug を恒久的に防ぐ。
+function _googleConnected(){
+  return !!(typeof me !== 'undefined' && me && (
+    (me.google_oauth && me.google_oauth.refresh_token)
+    || (me.integrations && me.integrations.google && me.integrations.google.refresh_token)
+  ));
+}
+function _googleScope(){
+  if(typeof me === 'undefined' || !me) return '';
+  return String(
+    (me.google_oauth && me.google_oauth.scope)
+    || (me.integrations && me.integrations.google && me.integrations.google.scope)
+    || ''
+  );
+}
+function _googleHasScope(re){
+  return _googleConnected() && re.test(_googleScope());
+}
+function _gscSiteUrlFor(site){
+  return (site && site.gsc_site_url)
+    || (typeof me !== 'undefined' && me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
+    || '';
+}
 function _verticalIcon(v){ return _VERTICAL_ICONS[v] || '🌐'; }
 function _verticalLabel(v){ return _VERTICAL_LABELS[v] || (v || ''); }
 function _siteHostname(site){
@@ -5488,12 +5515,8 @@ async function _autoSetupSiteFromGa4(siteId, opts){
 // when() が true なら表示。 onClick() で chat にユーザー msg として注入 +
 // 実処理を発火。 「AI が動いてる感」 のため synthetic assistant msg も追加。
 // ═══════════════════════════════════════════════════════════════════
-function _ga4OauthConnected(){
-  return !!(typeof me !== 'undefined' && me && (
-    (me.google_oauth && me.google_oauth.refresh_token)
-    || (me.integrations && me.integrations.google && me.integrations.google.refresh_token)
-  ));
-}
+// alias for backward compat — same as _googleConnected (consolidated)
+function _ga4OauthConnected(){ return _googleConnected(); }
 
 window._CHAT_ACTIONS = [
   // ── Step 1: GA4 を OAuth 接続 ──
@@ -6237,9 +6260,7 @@ function _renderSiteDashboardHTML(site){
   // OAuth 状態は user.google_oauth.refresh_token / integrations.google.refresh_token
   // のどちらでも検知。 snapshot fetch 後は ga4Snap.connected も真の source。
   var ga4Snap = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
-  var ga4Connected = !!(ga4Snap && ga4Snap.connected)
-    || !!(me && me.google_oauth && me.google_oauth.refresh_token)
-    || !!(me && me.integrations && me.integrations.google && me.integrations.google.refresh_token);
+  var ga4Connected = !!(ga4Snap && ga4Snap.connected) || _googleConnected();
   var ga4NeedPicker = ga4Connected
     && ga4Snap && !ga4Snap.snapshot
     && (ga4Snap.error === 'no_property_set' || (ga4Snap.property_options && ga4Snap.property_options.length));
@@ -7067,27 +7088,15 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     + '</div>';
 
   // ── Module 2: Search Console (Google OAuth で連携、 直接 fetch で live data 表示) ──
-  // OAuth は 2 つの場所のどちらかに格納される (= 新旧パス両対応)
-  var googleConnected = !!(me && (
-    (me.google_oauth && me.google_oauth.refresh_token)
-    || (me.integrations && me.integrations.google && me.integrations.google.refresh_token)
-  ));
-  // scope も 2 つの場所をチェック (= 新旧パス両対応)
-  var _gscScopeStr = String(
-    (me && me.google_oauth && me.google_oauth.scope)
-    || (me && me.integrations && me.integrations.google && me.integrations.google.scope)
-    || ''
-  );
-  var hasGscScope = googleConnected && /webmasters/.test(_gscScopeStr);
+  var googleConnected = _googleConnected();
+  var hasGscScope = _googleHasScope(/webmasters/);
   // GSC データを背景で取りに行く (= 接続済の場合)
   if(hasGscScope){
     setTimeout(function(){ _fetchGscSnapshot(site.id); }, 200);
   }
   // GSC モジュール: 3 状態 — (a) scope あり + site 設定済 = data 取得、
   // (b) scope あり + site 未選択 = ピッカー直リンク、 (c) scope 不足 = 連携 CTA
-  var gscSiteUrlForMod = (site && site.gsc_site_url)
-    || (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
-    || '';
+  var gscSiteUrlForMod = _gscSiteUrlFor(site);
   var scModuleHTML = ''
     + '<div class="nm-mod ' + (hasGscScope && gscSiteUrlForMod ? 'nm-mod-on' : 'nm-mod-off') + '" style="margin-top:16px">'
     +   _moduleHeader('🔍', 'Google Search Console', hasGscScope && gscSiteUrlForMod, '#3b82f6',
@@ -7906,9 +7915,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
       + '</div>';
   } else {
     // GA4 未接続 or property 未選択 or データ 0 件 — 状態に応じて CTA を切替
-    var rpOauthConnected = ga4Connected
-      || !!(me && me.google_oauth && me.google_oauth.refresh_token)
-      || !!(me && me.integrations && me.integrations.google && me.integrations.google.refresh_token);
+    var rpOauthConnected = ga4Connected || _googleConnected();
     var rpNeedPicker = rpOauthConnected
       && ga4Snap && (ga4Snap.error === 'no_property_set'
         || (ga4Snap.property_options && ga4Snap.property_options.length)
@@ -9418,12 +9425,8 @@ window._showAccountGuide = _showAccountGuide;
 function _renderTabConnections(site){
   var snsCache = (window._snsStatusCache && window._snsStatusCache[site.id]) || null;
   if(!snsCache){ setTimeout(function(){ _fetchSnsStatus(site.id); }, 100); }
-  // Google OAuth は user.google_oauth.refresh_token または user.integrations.google.refresh_token の
-  // どちらかに refresh_token があれば「接続済」。 さらに per-site の GA4 property_id を見る。
-  var googleOauthConnected = !!(me && (
-    (me.google_oauth && me.google_oauth.refresh_token)
-    || (me.integrations && me.integrations.google && me.integrations.google.refresh_token)
-  ));
+  // Google OAuth 接続済判定 (= 二重保存パスを helper で吸収)
+  var googleOauthConnected = _googleConnected();
   var ga4PropertyId = site && site.ga4_property_id;
   // GA4 接続済 = OAuth done AND property selected (= site にひもづいた property がある)
   var ga4Connected = googleOauthConnected && !!ga4PropertyId;
@@ -9523,19 +9526,10 @@ function _renderTabConnections(site){
           guideKey: 'ga4',
         })
     +   (function(){
-          var _scope = '';
-          try {
-            _scope = String((me && me.google_oauth && me.google_oauth.scope) || (me && me.integrations && me.integrations.google && me.integrations.google.scope) || '');
-          } catch(_){}
-          var hasGscScope = !!googleConnected && /webmasters/.test(_scope);
+          var hasGscScope = _googleHasScope(/webmasters/);
           var gscStatus, gscMeta, gscConnect, gscDisconnect;
           if(hasGscScope){
-            var gscSiteUrl = '';
-            try {
-              gscSiteUrl = (site && site.gsc_site_url)
-                        || (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
-                        || '';
-            } catch(_){}
+            var gscSiteUrl = _gscSiteUrlFor(site);
             if(gscSiteUrl){
               gscStatus = 'on';
               gscMeta = '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#525252;font-weight:600">🔗 <b style="color:#1a1a1a">'+esc(gscSiteUrl)+'</b></span>'

@@ -7073,20 +7073,36 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   if(hasGscScope){
     setTimeout(function(){ _fetchGscSnapshot(site.id); }, 200);
   }
+  // GSC モジュール: 3 状態 — (a) scope あり + site 設定済 = data 取得、
+  // (b) scope あり + site 未選択 = ピッカー直リンク、 (c) scope 不足 = 連携 CTA
+  var gscSiteUrlForMod = (site && site.gsc_site_url)
+    || (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
+    || '';
+  if(hasGscScope && gscSiteUrlForMod){
+    // 通常 case: data fetch
+  }
   var scModuleHTML = ''
-    + '<div class="nm-mod ' + (hasGscScope ? 'nm-mod-on' : 'nm-mod-off') + '">'
-    +   _moduleHeader('🔍', 'Google Search Console', hasGscScope, '#3b82f6',
-                     hasGscScope ? '🔎 詳細分析' : '接続 →',
-                     hasGscScope
+    + '<div class="nm-mod ' + (hasGscScope && gscSiteUrlForMod ? 'nm-mod-on' : 'nm-mod-off') + '" style="margin-top:16px">'
+    +   _moduleHeader('🔍', 'Google Search Console', hasGscScope && gscSiteUrlForMod, '#3b82f6',
+                     (hasGscScope && gscSiteUrlForMod) ? '🔎 詳細分析' : (hasGscScope ? 'サイトを選ぶ →' : '接続 →'),
+                     (hasGscScope && gscSiteUrlForMod)
                        ? '_promptAiGscQuery(\'' + esc(site.id) + '\')'
-                       : '_switchToPanel(\'' + esc(site.id) + '\',\'connections\')')
+                       : (hasGscScope
+                         ? 'openGscSitePicker(\'' + esc(site.id) + '\')'
+                         : '_switchToPanel(\'' + esc(site.id) + '\',\'connections\')'))
     +   '<div class="nm-mod-body">'
-    +     (hasGscScope
+    +     ((hasGscScope && gscSiteUrlForMod)
         ? '<div id="gscSnap-' + esc(site.id) + '" style="padding:16px 18px;font-size:12px;color:var(--muted);text-align:center"><span style="display:inline-block;width:16px;height:16px;border:2px solid var(--wire2);border-top-color:#3b82f6;border-radius:50%;animation:lpSpin .8s linear infinite;vertical-align:-3px;margin-right:8px"></span>GSC データを取得中…</div>'
-        : '<div class="nm-mod-locked">'
-          + '<div class="nm-mod-locked-tx">検索キーワード / 表示回数 / 平均順位 / CTR — どのクエリで何位なのか、 競合 SEO の動きも追えます。</div>'
-          + '<button class="nm-mod-locked-btn" onclick="_switchToPanel(\'' + esc(site.id) + '\',\'connections\')">🔌 Google 連携 (Search Console scope 付き) →</button>'
-          + '</div>')
+        : (hasGscScope
+          ? '<div class="nm-mod-locked" style="padding:18px 22px;text-align:center;background:#fff7ed;border-top:1px solid #fed7aa">'
+            + '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">⚠ どの GSC サイトを使うか選んでください</div>'
+            + '<div class="nm-mod-locked-tx" style="margin-bottom:14px">サイト選択後、 昨日 / 直近 7 日 / 直近 30 日 の **記事別検索流入** が見られます。</div>'
+            + '<button onclick="openGscSitePicker(\'' + esc(site.id) + '\')" style="background:#3b82f6;color:#fff;border:0;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🔍 GSC サイトを選ぶ →</button>'
+            + '</div>'
+          : '<div class="nm-mod-locked" style="padding:22px;text-align:center">'
+            + '<div class="nm-mod-locked-tx" style="margin-bottom:14px">検索キーワード / 表示回数 / 平均順位 / CTR + **昨日の記事別検索流入** が見られます。</div>'
+            + '<button class="nm-mod-locked-btn" onclick="_switchToPanel(\'' + esc(site.id) + '\',\'connections\')" style="background:#3b82f6;color:#fff;border:0;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🔌 Google を接続 (GSC scope 付き) →</button>'
+            + '</div>'))
     +   '</div>'
     + '</div>';
 

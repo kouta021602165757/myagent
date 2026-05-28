@@ -2855,6 +2855,7 @@ window.openDailyGrowthReportPanel = async function(siteId){
     +  headerHTML
     +  '<div id="dailyGrowthBody" style="flex:1;overflow-y:auto;padding:18px 22px 28px">'
     +    '<div id="dgrEditTop"></div>'
+    +    '<div id="dgrWins"></div>'
     +    '<div id="dgrSection1">' + initSection1 + '</div>'
     +    '<div id="dgrGscArticles"></div>'  // GSC「昨日の記事別流入」 (Phase 2 で埋める)
     +    '<div id="dgrThreeCh">' + initThreeCh + '</div>'
@@ -2948,6 +2949,11 @@ window.openDailyGrowthReportPanel = async function(siteId){
     var etf = document.getElementById('dgrEditTop');
     if(s1f) s1f.innerHTML = _dgrRenderNumbersSection(ag, snap, ga4Connected);
     if(s3f) s3f.innerHTML = _dgrRender3ChannelAndAiLog(ag, snap, notesResp);
+    // A: 「🏆 昨日の win Top 3」 highlight (= 喜び体験 + retention)
+    try {
+      var wf = document.getElementById('dgrWins');
+      if(wf) wf.innerHTML = _dgrRenderWins(ag, snap, notesResp);
+    } catch(_){}
     // GSC yesterday 記事別流入 — 別 promise なので独立して着弾を待つ
     try {
       var _gscBox = document.getElementById('dgrGscArticles');
@@ -3371,16 +3377,31 @@ function _dgrRenderMarkdownSections(content, siteId, snap){
     if(body){
       try { renderedBody = (typeof _md === 'function') ? _md(body) : '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
       catch(_){ renderedBody = '<pre style="white-space:pre-wrap;font-family:inherit">'+esc(body)+'</pre>'; }
-      // セクション 4 だけは「タスク一覧に追加」 ボタンを add
+      // セクション 4 (= 明日のグロースアクション):
+      // 各アクションに ▶ AI に依頼 button + 全部まとめて タスク追加 button
       if(s.n === 4 && siteId){
         var actions = _extractActions(body);
         if(actions.length){
+          // 各アクションを ▶ button 付きの行に置換
+          var actionCardsHTML = actions.map(function(a, i){
+            var enc = encodeURIComponent(a);
+            return '<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--cream3);border:1px solid var(--wire);border-radius:9px;margin-bottom:6px;transition:border-color .15s" onmouseover="this.style.borderColor=\'#0d4f4a\'" onmouseout="this.style.borderColor=\'var(--wire)\'">'
+              + '<span style="width:20px;height:20px;background:#0d4f4a;color:#fff;border-radius:50%;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</span>'
+              + '<span style="flex:1;font-size:13px;font-weight:700;color:var(--text);line-height:1.5">'+esc(a)+'</span>'
+              + '<button onclick="_dgrRunAction(\''+esc(siteId)+'\',\''+enc+'\')" title="このアクションを AI に実行させる" style="background:#0d4f4a;color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em;flex-shrink:0;box-shadow:0 2px 6px rgba(13,79,74,.18)">▶ AI に依頼</button>'
+              + '</div>';
+          }).join('');
+          // 既存のアクション行は body 内に存在するので、 renderedBody から箇条書きを消して
+          // 代わりに actionCardsHTML を使うのが理想だが、 simplest: body の下に追加表示。
+          renderedBody = '<div style="margin-bottom:10px">' + actionCardsHTML + '</div>'
+            + '<details style="margin-top:8px"><summary style="font-size:11px;color:var(--text3);cursor:pointer">原文を表示</summary>'
+            + '<div style="margin-top:8px;padding:10px 12px;background:var(--cream);border-radius:7px">' + renderedBody + '</div>'
+            + '</details>';
           var encoded = encodeURIComponent(JSON.stringify(actions));
           actionsHTML = '<div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-            + '<span style="font-size:11px;color:var(--text3);font-weight:600">'+L('上記アクションを','Add above as')+'</span>'
             + '<button onclick="_dgrAddActionsToTasks(\''+esc(siteId)+'\',\''+encoded+'\')" '
-            +   'style="background:var(--teal);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">'
-            +   '📋 '+actions.length+L(' 件 今日のタスクに追加',' items → today\'s tasks')+'</button>'
+            +   'style="background:transparent;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:7px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">'
+            +   '📋 '+actions.length+L(' 件すべてタスクに追加',' Add all to tasks')+'</button>'
             + '</div>';
         }
       }
@@ -6717,6 +6738,163 @@ function _formatRel(ts){
 
 // ─── Tab 1: 📊 数字 (= 現状の推移) ────────────────────────────────
 // GSC スナップショットを取得して数字パネルに描画
+// B: 「明日のアクション」 1 件を AI に実行させる (= 日次レポ section 4 の ▶ button)
+window._dgrRunAction = function(siteId, encodedAction){
+  var action = '';
+  try { action = decodeURIComponent(encodedAction); } catch(_){ return; }
+  if(!action) return;
+  // 連打ガード
+  var nowMs = Date.now();
+  if(window._lastDgrActionSent && (nowMs - window._lastDgrActionSent) < 3000){
+    showToast('実行依頼中…','info'); return;
+  }
+  window._lastDgrActionSent = nowMs;
+  // panel 閉じる + chat に切替
+  try {
+    var ov = document.getElementById('dailyGrowthOverlay');
+    if(ov) ov.remove();
+  } catch(_){}
+  if(activeId !== siteId){ openAgent(siteId); }
+  setTimeout(function(){
+    var ci = document.getElementById('ci');
+    if(!ci) return;
+    ci.value = '【明日のグロースアクション】\n\n'
+      + '**実行内容:** ' + action + '\n\n'
+      + '## 厳守事項\n'
+      + '1. 必ず create_artifact tool を呼んで成果物を作成してください (= 単に「やります」 と返すのは NG)\n'
+      + '2. ユーザーへの確認・「やって と返事すれば」 等は禁止 — 既に承認済み\n'
+      + '3. 完了報告は短く 1 段落で。 詳細は artifact 側へ\n\n'
+      + 'では、 create_artifact tool で実際に作業してください。';
+    try { exTA(ci); } catch(_){}
+    try { if(typeof sendMsg === 'function') sendMsg(); } catch(_){}
+  }, 200);
+};
+
+// A: 「🏆 昨日の win Top 3」 ハイライト
+// 数字 + AI 生成物から自動で win を見つける。 retention 装置。
+function _dgrRenderWins(ag, snap, notesResp){
+  var wins = [];
+  // win 1: PV 上昇 (= 前日比 or 先週比)
+  if(snap){
+    var yest = snap.yesterday, prev = snap.day_before;
+    if(yest && prev && prev.pv > 0){
+      var deltaPct = Math.round((yest.pv - prev.pv) / prev.pv * 100);
+      if(deltaPct >= 10){
+        wins.push({ icon: '📈', text: '昨日の PV が前日比 <b>+' + deltaPct + '%</b> (= ' + prev.pv + ' → ' + yest.pv + ')', kind: 'pv' });
+      }
+    }
+    if(typeof snap.delta_pv_pct === 'number' && snap.delta_pv_pct >= 10){
+      wins.push({ icon: '🚀', text: '先週比 PV <b>▲ +' + snap.delta_pv_pct + '%</b> — トレンド上向き', kind: 'trend' });
+    }
+    // win 2: top page in last 7d
+    if(Array.isArray(snap.pages) && snap.pages.length > 0){
+      var top = snap.pages[0];
+      if(top && top.pv >= 5){
+        var path = top.path || '';
+        var shortPath = path.length > 40 ? path.slice(0, 40) + '…' : path;
+        wins.push({ icon: '🏆', text: '今週の Top 記事: <b>' + esc(shortPath) + '</b> (' + (top.pv || 0) + ' PV)', kind: 'top_page' });
+      }
+    }
+    // win 3: bounce rate improved
+    if(typeof snap.bounce_delta_pt === 'number' && snap.bounce_delta_pt < -5){
+      wins.push({ icon: '💯', text: '直帰率が <b>' + Math.abs(snap.bounce_delta_pt).toFixed(1) + ' pt 改善</b> — 記事の質 ↑', kind: 'bounce' });
+    }
+  }
+  // win 4: AI が yesterday に作った成果物
+  var notes = (notesResp && Array.isArray(notesResp.notes)) ? notesResp.notes : [];
+  var since24 = Date.now() - 24 * 3600 * 1000;
+  var recentAi = notes.filter(function(n){
+    if(!n || n.agent_id !== ag.id) return false;
+    if(!n.auto_generated) return false;
+    var ts = Date.parse(n.updated_at || n.created_at || 0) || 0;
+    return ts >= since24 && ['article','article_draft','sns_post','analysis'].indexOf(n.type) >= 0;
+  });
+  if(recentAi.length > 0){
+    var byType = { article: 0, article_draft: 0, sns_post: 0, analysis: 0 };
+    recentAi.forEach(function(n){ if(byType[n.type] != null) byType[n.type]++; });
+    var parts = [];
+    if(byType.article + byType.article_draft > 0) parts.push('✍️ 記事 ' + (byType.article + byType.article_draft) + ' 本');
+    if(byType.sns_post > 0) parts.push('📱 SNS 投稿 ' + byType.sns_post + ' 件');
+    if(byType.analysis > 0) parts.push('📊 分析 ' + byType.analysis + ' 件');
+    if(parts.length){
+      wins.push({ icon: '🛠', text: '昨日 AI チームが届けた: <b>' + parts.join(' / ') + '</b>', kind: 'ai_output' });
+    }
+  }
+  // 上位 3 件に絞る
+  wins = wins.slice(0, 3);
+  // 何も無いなら hide (= 「win なし」 を強調しない)
+  if(wins.length === 0) return '';
+  return '<div style="background:linear-gradient(135deg, #f7ffe9 0%, #fff 100%);border:1px solid #c0ff5c;border-radius:14px;padding:18px 22px;margin-bottom:14px;box-shadow:0 4px 14px rgba(192,255,92,.18)">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:22px">🏆</span>'
+    + '<div><div style="font-size:14px;font-weight:900;color:#0a3d39">昨日の win Top ' + wins.length + '</div>'
+    + '<div style="font-size:10.5px;color:var(--text3)">数字 + AI 成果物から自動 highlight</div></div>'
+    + '</div>'
+    + wins.map(function(w, i){
+        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:'+(i===0?'none':'1px solid rgba(192,255,92,.3)')+';font-size:13px;line-height:1.6">'
+          + '<span style="font-size:18px;flex-shrink:0">'+w.icon+'</span>'
+          + '<div style="flex:1;color:var(--text)">'+w.text+'</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+// F: GSC「あと一歩」 3 カテゴリ分類 — 30 日 query を取得して分析
+async function _fetchGscInsights(siteId){
+  var el = document.getElementById('gscInsights-' + siteId);
+  if(!el) return;
+  el.innerHTML = '';  // 一旦クリア
+  try {
+    var r = await api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/gsc-snapshot?period=30d');
+    if(!r || !r.connected || !Array.isArray(r.top_queries) || r.top_queries.length === 0) return;
+    // 30 日 = top_queries は 10 件しか返ってこないので、 同 endpoint で row_limit を増やすには別 fetch 必要。
+    // ここでは Top 10 で分類 (= 限定的だがそれでも価値ある)
+    var rows = r.top_queries;
+    // 3 カテゴリ:
+    // 🔥 CTR 改善余地 = impressions >= 50 && CTR < 1%
+    // 🚀 順位押し上げ余地 = position 5-15
+    // 💎 隠れ宝 = position 1-3 && clicks > 0
+    var ctrLow = rows.filter(function(q){
+      var imp = q.impressions || 0, ctr = q.ctr || 0;
+      return imp >= 50 && ctr < 1;
+    }).slice(0, 3);
+    var almostTop = rows.filter(function(q){
+      var pos = q.position || 0;
+      return pos >= 5 && pos <= 15;
+    }).slice(0, 3);
+    var hidden = rows.filter(function(q){
+      var pos = q.position || 0, clicks = q.clicks || 0;
+      return pos >= 1 && pos <= 3 && clicks > 0;
+    }).slice(0, 3);
+    function _renderCard(icon, title, hint, items, accent){
+      var rowsHTML = items.length
+        ? items.map(function(q){
+            var kw = (q.keys && q.keys[0]) || '?';
+            return '<li style="padding:6px 0;border-top:1px solid var(--wire);display:flex;align-items:center;gap:8px;font-size:11.5px">'
+              + '<span style="flex:1;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(kw)+'</span>'
+              + '<span style="font-size:10px;color:var(--text3);flex-shrink:0;font-family:\'SF Mono\',Menlo,monospace">'+(q.clicks||0)+'click / '+(q.impressions||0)+'imp / '+(q.position||0)+'位 / '+(q.ctr||0).toFixed(1)+'%</span>'
+              + '</li>';
+          }).join('')
+        : '<li style="padding:14px;text-align:center;color:var(--text3);font-size:11px;border-top:1px solid var(--wire)">該当データなし</li>';
+      return '<div style="background:#fff;border:1px solid '+accent+';border-radius:11px;padding:14px;border-top:3px solid '+accent+'">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:18px">'+icon+'</span><div style="font-size:13px;font-weight:800;color:var(--text)">'+title+'</div></div>'
+        + '<div style="font-size:10.5px;color:var(--text3);margin-bottom:6px">'+hint+'</div>'
+        + '<ul style="list-style:none;padding:0;margin:0">'+rowsHTML+'</ul>'
+        + '</div>';
+    }
+    el.innerHTML = '<div style="background:var(--cream);border:1px solid var(--wire2);border-radius:12px;padding:18px">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">🎯 GSC 「あと一歩」 改善余地 (30 日)</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px">クエリを 3 カテゴリで分類。 即対応で順位 / CTR が上がる候補。</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px">'
+      +   _renderCard('🔥', 'CTR 改善余地', 'impressions 多いのに CTR < 1% (= タイトル悪い)', ctrLow, '#dc2626')
+      +   _renderCard('🚀', '順位押し上げ', '順位 5-15 位 (= もう一押しで 1 ページ目)', almostTop, '#f59e0b')
+      +   _renderCard('💎', '隠れた宝', '順位 1-3 位 + clicks 出てる (= 横展開すべきテーマ)', hidden, '#0d4f4a')
+      + '</div>'
+      + '</div>';
+  } catch(e){
+    // 失敗時は空のまま (= silent)
+  }
+}
+
 // GSC snapshot fetch + render — period toggle 対応 (= ユーザー要望:
 // 昨日 / 7d / 30d で記事別流入が見える)
 window._gscPeriodBySite = window._gscPeriodBySite || {};
@@ -7490,14 +7668,93 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     +   '</div>'
     + '</div>';
 
+  // D: 記事別 PV ランキング (= 30 日 Top 10、 GA4 ベース)
+  var ga4Snap2 = (window._ga4Snapshots && window._ga4Snapshots[site.id]) || null;
+  var pagesMonth = (ga4Snap2 && ga4Snap2.snapshot && Array.isArray(ga4Snap2.snapshot.pages_month))
+    ? ga4Snap2.snapshot.pages_month : [];
+  var articleRankHTML = '';
+  if(pagesMonth.length > 0){
+    function _shortPath(u){
+      var s = String(u || '');
+      try { var url = new URL(s.startsWith('/') ? 'https://x.com'+s : s); return url.pathname || '/'; } catch(e){ return s.length > 60 ? s.slice(0,60)+'…' : s; }
+    }
+    function _fmtDwell(sec){ if(!sec) return '—'; var m = Math.floor(sec/60), s = Math.round(sec%60); return (m > 0 ? m+'m ' : '')+s+'s'; }
+    articleRankHTML = '<div style="background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:18px;margin-top:16px">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px">📄 今月の Top 10 記事 (PV 順)</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">GA4 30 日 / 全流入で最も読まれてる記事 — 「どれが当たってるか」 一目</div>'
+      + '<div style="display:flex;flex-direction:column">'
+      + pagesMonth.slice(0, 10).map(function(p, i){
+          var bouncePct = Math.round((p.bounce || 0) * 100);
+          var bounceColor = bouncePct > 70 ? '#dc2626' : bouncePct > 50 ? '#d97706' : '#16a34a';
+          return '<a href="https://' + esc(site.site_url ? new URL(site.site_url).hostname : 'site') + esc(p.path) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-top:1px solid var(--wire);text-decoration:none;color:inherit;transition:background .12s" onmouseover="this.style.background=\'var(--cream2)\'" onmouseout="this.style.background=\'transparent\'">'
+            + '<span style="width:24px;height:24px;background:'+(i<3?'#fef3c7':'#f3f4f6')+';color:'+(i<3?'#92400e':'#525252')+';border-radius:6px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</span>'
+            + '<span style="flex:1;min-width:0;font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(_shortPath(p.path))+'</span>'
+            + '<span style="font-size:12px;color:var(--teal);font-weight:800;flex-shrink:0">'+(p.pv || 0).toLocaleString()+' PV</span>'
+            + '<span style="font-size:10.5px;color:var(--text3);flex-shrink:0;font-family:\'SF Mono\',Menlo,monospace">滞在 '+_fmtDwell(p.dwell)+'</span>'
+            + '<span style="font-size:10.5px;color:'+bounceColor+';font-weight:700;flex-shrink:0;font-family:\'SF Mono\',Menlo,monospace">直帰 '+bouncePct+'%</span>'
+            + '</a>';
+        }).join('')
+      + '</div>'
+      + '</div>';
+  }
+
+  // G: デバイス + 国別 breakdown (30 日)
+  var devices2 = (ga4Snap2 && ga4Snap2.snapshot && Array.isArray(ga4Snap2.snapshot.devices))
+    ? ga4Snap2.snapshot.devices : [];
+  var countries2 = (ga4Snap2 && ga4Snap2.snapshot && Array.isArray(ga4Snap2.snapshot.countries))
+    ? ga4Snap2.snapshot.countries : [];
+  var deviceCountryHTML = '';
+  if(devices2.length > 0 || countries2.length > 0){
+    var devTotal = devices2.reduce(function(s,d){return s + (d.users||0);}, 0);
+    var devIcons = { mobile: '📱', desktop: '💻', tablet: '📱', smart_tv: '📺' };
+    var devNames = { mobile: 'スマホ', desktop: 'PC', tablet: 'タブレット', smart_tv: 'TV' };
+    var devHTML = devices2.map(function(d){
+      var pct = devTotal > 0 ? Math.round((d.users||0) / devTotal * 100) : 0;
+      return '<div style="background:var(--cream);padding:11px 14px;border-radius:9px;flex:1;min-width:120px">'
+        + '<div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:2px">'+(devIcons[d.device]||'❓')+' '+(devNames[d.device]||esc(d.device))+'</div>'
+        + '<div style="font-size:18px;font-weight:900;color:var(--text)">'+pct+'%</div>'
+        + '<div style="font-size:10.5px;color:var(--text3)">'+(d.users||0).toLocaleString()+' ユーザー</div>'
+        + '</div>';
+    }).join('');
+    var ctryHTML = countries2.slice(0, 5).map(function(c, i){
+      var flag = { 'Japan':'🇯🇵', 'United States':'🇺🇸', 'China':'🇨🇳', 'South Korea':'🇰🇷', 'Taiwan':'🇹🇼', 'United Kingdom':'🇬🇧', 'Germany':'🇩🇪', 'France':'🇫🇷', 'Hong Kong':'🇭🇰', 'Singapore':'🇸🇬', 'Australia':'🇦🇺', 'India':'🇮🇳', 'Thailand':'🇹🇭', 'Vietnam':'🇻🇳' }[c.country] || '🌐';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:'+(i===0?'none':'1px solid var(--wire)')+';font-size:12px">'
+        + '<span style="font-size:16px">'+flag+'</span>'
+        + '<span style="flex:1;font-weight:700">'+esc(c.country)+'</span>'
+        + '<span style="font-weight:800;color:var(--teal)">'+(c.users||0).toLocaleString()+' ユーザー</span>'
+        + '</div>';
+    }).join('');
+    deviceCountryHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">'
+      + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:16px">'
+      +   '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">📱 デバイス別 (30 日)</div>'
+      +   '<div style="display:flex;gap:8px;flex-wrap:wrap">' + (devHTML || '<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px">データなし</div>') + '</div>'
+      + '</div>'
+      + '<div style="background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:16px">'
+      +   '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">🌐 国別 Top 5 (30 日)</div>'
+      +   '<div>' + (ctryHTML || '<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px">データなし</div>') + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  // F: GSC 「あと一歩」 3 カテゴリ分類 (= 改善余地ピックアップ)
+  var gscCacheForF = (window._gscFullByPeriod && window._gscFullByPeriod[site.id]) || null;
+  var gscInsightsHTML = '';
+  if(hasGscScope) {
+    // GSC のクエリ詳細を別 fetch で取得 (= 全クエリで分類するため)
+    setTimeout(function(){ _fetchGscInsights(site.id); }, 250);
+    gscInsightsHTML = '<div id="gscInsights-'+esc(site.id)+'" style="margin-top:16px"></div>';
+  }
+
   // mock 準拠: 期間 toggle → HERO → 4-cell → 7d chart → GSC → 3-channel → 部門 → 活動量
-  // 旧モジュール (ga4ModuleHTML / snsModuleHTML / contentEcModuleHTML / stripeModuleHTML /
-  //   formModuleHTML / aeoModuleHTML) は新 layout で重複するため返り値から除外。
+  // + D (記事別 PV) + F (GSC insights) + G (デバイス/国別)
   return periodToggleHTML
     + heroHTML
     + (grid4HTML ? grid4HTML : insightsHTML)
     + weekChartHTML
+    + articleRankHTML       // D
+    + deviceCountryHTML     // G
     + scModuleHTML
+    + gscInsightsHTML       // F (= scModuleHTML の直下、 GSC 関連まとめて)
     + threeChannelHTML
     + deptRankHTML
     + activityHTML;

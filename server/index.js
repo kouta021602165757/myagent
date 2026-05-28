@@ -21705,7 +21705,7 @@ ${orgSummary || '(汎用チーム)'}
     // 3) ページ別 上位 5 ページ (過去 7 日)
     // 4) 流入元別 (過去 7 日)
     try {
-      const [rTimeSeries, rCountries, rPages, rSources] = await Promise.all([
+      const [rTimeSeries, rCountries, rPages, rSources, rDevices, rPagesMonth] = await Promise.all([
         executeGa4QueryTool(user, ag, {
           metrics: ['screenPageViews', 'sessions', 'totalUsers', 'bounceRate', 'averageSessionDuration'],
           dimensions: ['date'],
@@ -21714,23 +21714,39 @@ ${orgSummary || '(汎用チーム)'}
           limit: 100,
         }),
         executeGa4QueryTool(user, ag, {
-          metrics: ['totalUsers'],
+          metrics: ['totalUsers', 'sessions'],
           dimensions: ['country'],
-          start_date: '7daysAgo',
+          start_date: '30daysAgo',
           end_date: 'yesterday',
-          limit: 8,
+          limit: 10,
         }),
         executeGa4QueryTool(user, ag, {
           metrics: ['screenPageViews', 'averageSessionDuration', 'bounceRate'],
           dimensions: ['pagePath'],
           start_date: '7daysAgo',
           end_date: 'yesterday',
-          limit: 8,
+          limit: 15,
         }),
         executeGa4QueryTool(user, ag, {
           metrics: ['sessions'],
           dimensions: ['sessionDefaultChannelGroup'],
           start_date: '7daysAgo',
+          end_date: 'yesterday',
+          limit: 10,
+        }),
+        // G: デバイス別 breakdown (30d)
+        executeGa4QueryTool(user, ag, {
+          metrics: ['totalUsers', 'sessions'],
+          dimensions: ['deviceCategory'],
+          start_date: '30daysAgo',
+          end_date: 'yesterday',
+          limit: 5,
+        }),
+        // D: 30 日の Top 10 記事 (PV 順)
+        executeGa4QueryTool(user, ag, {
+          metrics: ['screenPageViews', 'averageSessionDuration', 'bounceRate'],
+          dimensions: ['pagePath'],
+          start_date: '30daysAgo',
           end_date: 'yesterday',
           limit: 10,
         }),
@@ -21767,20 +21783,37 @@ ${orgSummary || '(汎用チーム)'}
         const last7DwellAvg = last7.sessions > 0 ? last7.dwell_sum / last7.sessions : 0;
         const prev7DwellAvg = prev7.sessions > 0 ? prev7.dwell_sum / prev7.sessions : 0;
 
-        // 国別
+        // 国別 (30 日, users + sessions, top 10)
         const countries = (rCountries && rCountries.rows ? rCountries.rows : []).map(row => ({
           country: row.dimensions && row.dimensions[0],
           users: parseInt((row.metrics && row.metrics[0]) || 0, 10),
-        })).filter(c => c.country).slice(0, 5);
+          sessions: parseInt((row.metrics && row.metrics[1]) || 0, 10),
+        })).filter(c => c.country).slice(0, 10);
         const countryTotal = countries.reduce((s, c) => s + c.users, 0);
 
-        // ページ別
+        // デバイス別 (30 日)
+        const devices = (rDevices && rDevices.rows ? rDevices.rows : []).map(row => ({
+          device: row.dimensions && row.dimensions[0],
+          users: parseInt((row.metrics && row.metrics[0]) || 0, 10),
+          sessions: parseInt((row.metrics && row.metrics[1]) || 0, 10),
+        })).filter(d => d.device);
+        const deviceTotal = devices.reduce((s, d) => s + d.users, 0);
+
+        // ページ別 (7 日, top 15)
         const pages = (rPages && rPages.rows ? rPages.rows : []).map(row => ({
           path: row.dimensions && row.dimensions[0],
           pv: parseInt((row.metrics && row.metrics[0]) || 0, 10),
           dwell: parseFloat((row.metrics && row.metrics[1]) || 0),
           bounce: parseFloat((row.metrics && row.metrics[2]) || 0),
-        })).filter(p => p.path).slice(0, 5);
+        })).filter(p => p.path).slice(0, 15);
+
+        // ページ別 (30 日, Top 10) — D: 記事別 PV ランキング 用
+        const pagesMonth = (rPagesMonth && rPagesMonth.rows ? rPagesMonth.rows : []).map(row => ({
+          path: row.dimensions && row.dimensions[0],
+          pv: parseInt((row.metrics && row.metrics[0]) || 0, 10),
+          dwell: parseFloat((row.metrics && row.metrics[1]) || 0),
+          bounce: parseFloat((row.metrics && row.metrics[2]) || 0),
+        })).filter(p => p.path).slice(0, 10);
 
         // 流入元別 (チャネルグループ)
         const sources = (rSources && rSources.rows ? rSources.rows : []).map(row => ({
@@ -21805,7 +21838,10 @@ ${orgSummary || '(汎用チーム)'}
           dwell_delta_sec: Math.round(last7DwellAvg - prev7DwellAvg),
           countries,
           country_total: countryTotal,
+          devices,
+          device_total: deviceTotal,
           pages,
+          pages_month: pagesMonth,  // D: 記事別 PV ランキング (30 日)
           sources,
           source_total: sourceTotal,
         };

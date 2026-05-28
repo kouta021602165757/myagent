@@ -9409,24 +9409,47 @@ async function _deleteTask(siteId, taskId){
 async function _addCustomTask(siteId, weekNum, btnEl){
   var text = prompt('Week ' + weekNum + ' に追加するタスクを入力:');
   if(!text || !text.trim()) return;
-  if(btnEl){ btnEl.disabled = true; btnEl.textContent = '追加中…'; }
-  try {
-    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks',
-      { text: text.trim(), week: weekNum });
-    if(r && r.ok && r.task){
-      var site = (agents || []).find(function(a){ return a && a.id === siteId; });
-      if(site){
-        site.roadmap = site.roadmap || { weeks: [], custom_tasks: [] };
-        site.roadmap.custom_tasks = site.roadmap.custom_tasks || [];
-        site.roadmap.custom_tasks.push(r.task);
-      }
-      showToast('✓ タスク追加', 'ok');
-      try { renderHomeDashboard(); } catch(_){}
-    }
-  } catch(e){
-    showToast('追加に失敗', 'ng');
-    if(btnEl){ btnEl.disabled = false; btnEl.textContent = '+ Week ' + weekNum + ' にタスク追加'; }
+  // 楽観的更新: UI に即追加 → 裏で API → 失敗時 rollback
+  var trimmed = text.trim();
+  var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+  var tempId = 'tmp_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  var tempTask = { id: tempId, text: trimmed, due_week: weekNum, done: false, custom: true, _pending: true };
+  if(site){
+    site.roadmap = site.roadmap || { weeks: [], custom_tasks: [] };
+    site.roadmap.custom_tasks = site.roadmap.custom_tasks || [];
+    site.roadmap.custom_tasks.push(tempTask);
   }
+  showToast('✓ タスク追加', 'ok');
+  // 即時 panel 再描画 (= ユーザーに新タスクが見える)
+  try {
+    var ov = document.getElementById('siteTabOverlay');
+    if(ov && ov.getAttribute('data-tab') === 'tasks' && typeof _openSiteTabModal === 'function'){
+      _openSiteTabModal(siteId, 'tasks');
+    }
+  } catch(_){}
+  try { renderHomeDashboard(); } catch(_){}
+  // 裏で server save
+  api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks', { text: trimmed, week: weekNum })
+    .then(function(r){
+      if(r && r.ok && r.task && site && site.roadmap){
+        // tempId を実 id に差し替え
+        var idx = site.roadmap.custom_tasks.findIndex(function(t){ return t.id === tempId; });
+        if(idx >= 0) site.roadmap.custom_tasks[idx] = r.task;
+      }
+    })
+    .catch(function(e){
+      // rollback
+      if(site && site.roadmap){
+        site.roadmap.custom_tasks = site.roadmap.custom_tasks.filter(function(t){ return t.id !== tempId; });
+      }
+      try {
+        var ov = document.getElementById('siteTabOverlay');
+        if(ov && ov.getAttribute('data-tab') === 'tasks' && typeof _openSiteTabModal === 'function'){
+          _openSiteTabModal(siteId, 'tasks');
+        }
+      } catch(_){}
+      showToast('追加失敗 — 元に戻しました: ' + ((e && e.message) || 'unknown'), 'ng', 6000);
+    });
 }
 
 function _renderTabAgents(site){
@@ -17725,29 +17748,27 @@ async function saveTeamEdit(){
   var goal  = (document.getElementById('teamEditGoal').value||'').trim();
   var msgEl = document.getElementById('teamEditMsg');
   if(!name){ msgEl.textContent = L('チーム名を入力してください','Enter a team name'); return; }
-  var btn = document.getElementById('teamEditSaveBtn');
-  btn.disabled = true; btn.style.opacity='.7'; btn.textContent = L('保存中…','Saving…');
-  try {
-    var r = await api('PATCH','/api/agents/'+team.id, { name: name, avatar: emoji, team_goal: goal });
-    // Update local copy so the chat header / list reflect the change immediately
-    if(r && r.agent){
-      Object.assign(team, r.agent);
-    } else {
-      team.name = name; team.avatar = emoji; team.team_goal = goal;
-    }
-    showToast(L('保存しました','Saved'),'ok');
-    closeTeamEdit();
-    renderAgList();
-    if(activeId === team.id){
-      // Re-render chat header and home dashboard so name/emoji refresh
-      try { openAgent(team.id); } catch(e){}
-    }
-  } catch(e){
-    msgEl.textContent = (e.message || L('保存に失敗しました','Save failed'));
-    showToast((e.message||L('保存に失敗しました','Save failed')),'ng');
-  } finally {
-    btn.disabled = false; btn.style.opacity='1'; btn.textContent = '💾 ' + L('保存','Save');
+  // 楽観的更新: UI 即時、 API 裏で
+  var prev = { name: team.name, avatar: team.avatar, team_goal: team.team_goal };
+  team.name = name; team.avatar = emoji; team.team_goal = goal;
+  showToast(L('✓ 保存しました','Saved'),'ok');
+  closeTeamEdit();
+  renderAgList();
+  if(activeId === team.id){
+    try { openAgent(team.id); } catch(e){}
   }
+  // 裏で server save
+  api('PATCH','/api/agents/'+team.id, { name: name, avatar: emoji, team_goal: goal })
+    .then(function(r){
+      if(r && r.agent) Object.assign(team, r.agent);
+    })
+    .catch(function(e){
+      // rollback
+      team.name = prev.name; team.avatar = prev.avatar; team.team_goal = prev.team_goal;
+      try { renderAgList(); } catch(_){}
+      if(activeId === team.id){ try { openAgent(team.id); } catch(_){} }
+      showToast('保存失敗 — 元に戻しました: ' + ((e && e.message) || 'unknown'), 'ng', 6000);
+    });
 }
 
 /* ── Team members panel (list + edit AI agents in a Team) ─── */

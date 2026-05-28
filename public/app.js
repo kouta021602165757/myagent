@@ -2288,7 +2288,13 @@ document.addEventListener('DOMContentLoaded',async()=>{
   token=localStorage.getItem('token');
   if(!token){ location.href='auth.html'; return; }
   try{
-    const meData=await api('GET','/api/me');
+    // 並列 fetch: /api/me と /api/agents を同時に発行 (= sequential 待ち削減)。
+    // どちらも独立。 meData が必要なのは admin check + render なので await は両方の
+    // 完了後でいい。 200-400ms 短縮。
+    const [meData, raResp] = await Promise.all([
+      api('GET','/api/me'),
+      api('GET','/api/agents').catch(function(e){ return { agents: [], _err: e }; }),
+    ]);
     if(!meData||meData.error){ localStorage.removeItem('token'); location.href='auth.html'; return; }
     me=meData.user||meData;
     if(!me.favorites) me.favorites = [];
@@ -2369,7 +2375,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
         }
       }
     }catch(e){}
-    const ra=await api('GET','/api/agents');
+    // 既に並列で fetch 済 — 再 fetch は不要
+    const ra = raResp || { agents: [] };
     agents=ra.agents||[];
     // Fetch joined groups (where I'm an invitee, hosted by others)
     try { await fetchJoinedGroups(); } catch(e){ console.warn('[groups] fetch failed:', e.message); }

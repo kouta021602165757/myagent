@@ -7067,8 +7067,18 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
     + '</div>';
 
   // ── Module 2: Search Console (Google OAuth で連携、 直接 fetch で live data 表示) ──
-  var googleConnected = !!(me && me.google_oauth && me.google_oauth.refresh_token);
-  var hasGscScope = googleConnected && /webmasters/.test(String((me && me.google_oauth && me.google_oauth.scope) || ''));
+  // OAuth は 2 つの場所のどちらかに格納される (= 新旧パス両対応)
+  var googleConnected = !!(me && (
+    (me.google_oauth && me.google_oauth.refresh_token)
+    || (me.integrations && me.integrations.google && me.integrations.google.refresh_token)
+  ));
+  // scope も 2 つの場所をチェック (= 新旧パス両対応)
+  var _gscScopeStr = String(
+    (me && me.google_oauth && me.google_oauth.scope)
+    || (me && me.integrations && me.integrations.google && me.integrations.google.scope)
+    || ''
+  );
+  var hasGscScope = googleConnected && /webmasters/.test(_gscScopeStr);
   // GSC データを背景で取りに行く (= 接続済の場合)
   if(hasGscScope){
     setTimeout(function(){ _fetchGscSnapshot(site.id); }, 200);
@@ -7078,16 +7088,6 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   var gscSiteUrlForMod = (site && site.gsc_site_url)
     || (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
     || '';
-  // DEBUG (一時的): GSC モジュールが出ない bug 調査用。 console に状態出力。
-  try {
-    console.log('[GSC-mod-debug]', {
-      site_id: site && site.id,
-      googleConnected: googleConnected,
-      hasGscScope: hasGscScope,
-      gscSiteUrlForMod: gscSiteUrlForMod,
-      scope_str: (me && me.google_oauth && me.google_oauth.scope || '').slice(0, 100),
-    });
-  } catch(_){}
   var scModuleHTML = ''
     + '<div class="nm-mod ' + (hasGscScope && gscSiteUrlForMod ? 'nm-mod-on' : 'nm-mod-off') + '" style="margin-top:16px">'
     +   _moduleHeader('🔍', 'Google Search Console', hasGscScope && gscSiteUrlForMod, '#3b82f6',

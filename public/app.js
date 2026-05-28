@@ -7078,9 +7078,16 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
   var gscSiteUrlForMod = (site && site.gsc_site_url)
     || (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
     || '';
-  if(hasGscScope && gscSiteUrlForMod){
-    // 通常 case: data fetch
-  }
+  // DEBUG (一時的): GSC モジュールが出ない bug 調査用。 console に状態出力。
+  try {
+    console.log('[GSC-mod-debug]', {
+      site_id: site && site.id,
+      googleConnected: googleConnected,
+      hasGscScope: hasGscScope,
+      gscSiteUrlForMod: gscSiteUrlForMod,
+      scope_str: (me && me.google_oauth && me.google_oauth.scope || '').slice(0, 100),
+    });
+  } catch(_){}
   var scModuleHTML = ''
     + '<div class="nm-mod ' + (hasGscScope && gscSiteUrlForMod ? 'nm-mod-on' : 'nm-mod-off') + '" style="margin-top:16px">'
     +   _moduleHeader('🔍', 'Google Search Console', hasGscScope && gscSiteUrlForMod, '#3b82f6',

@@ -9379,25 +9379,30 @@ function _renderTabConnections(site){
         })
     +   (function(){
           // GSC = Google OAuth の webmasters.readonly scope に紐づく。
-          // 3 状態: (a) scope あり = 接続済 / (b) Google 接続済だが scope 古い = 再認証 /
-          // (c) Google 未接続 = OAuth 開始
-          var hasGscScope = googleConnected && /webmasters/.test(String((me && me.google_oauth && me.google_oauth.scope) || ''));
+          // Defensive: 何が起きても必ず action button (接続 or 切断) を出す。
+          var _scope = '';
+          try {
+            _scope = String((me && me.google_oauth && me.google_oauth.scope) || (me && me.integrations && me.integrations.google && me.integrations.google.scope) || '');
+          } catch(_){}
+          var hasGscScope = !!googleConnected && /webmasters/.test(_scope);
           var gscStatus, gscMeta, gscConnect, gscDisconnect;
           if(hasGscScope){
             gscStatus = 'on';
-            var gscSiteUrl = (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
-                          || (site && site.gsc_site_url) || '';
+            var gscSiteUrl = '';
+            try {
+              gscSiteUrl = (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
+                        || (site && site.gsc_site_url) || '';
+            } catch(_){}
             gscMeta = gscSiteUrl
               ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#525252;font-weight:600">🔗 <b style="color:#1a1a1a">'+esc(gscSiteUrl)+'</b></span>'
               : '<span style="font-size:11px;color:#b45309;font-weight:700">⚠ GSC サイトを 1 つ選んでください (chat で「GSC のサイトを listing して」 と言う)</span>';
-            gscDisconnect = "openIntegrationsTab && openIntegrationsTab('ga4')";  // = Google 切断と同じ panel
-          } else if(googleConnected){
-            // Google 接続済だが webmasters scope 無し → 再 OAuth が必要
-            gscStatus = 'off';
-            gscMeta = '<span style="font-size:11px;color:#b45309;font-weight:700">⚠ 旧 OAuth (Search Console scope 不足)。 再接続が必要です</span>';
-            gscConnect = "openIntegrationsTab && openIntegrationsTab('ga4')";
+            gscDisconnect = "openIntegrationsTab && openIntegrationsTab('ga4')";
           } else {
+            // Google 未接続 or scope 不足 — どちらも 「接続する」 button を出す
             gscStatus = 'off';
+            if(googleConnected){
+              gscMeta = '<span style="font-size:11px;color:#b45309;font-weight:700">⚠ 旧 OAuth (Search Console scope 不足)。 「接続する」 で再認証してください</span>';
+            }
             gscConnect = "openIntegrationsTab && openIntegrationsTab('ga4')";
           }
           return _connCard({

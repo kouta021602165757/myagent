@@ -8412,23 +8412,30 @@ function _renderTabTasks(site){
       : '';
     var ownerTag = t.owner ? '<span class="tk-task-owner">👤 ' + esc(t.owner) + '</span>' : '';
     var customBadge = !t.ai ? '<span class="tk-task-custom">+ 手動追加</span>' : '';
-    // batch mode 時: done checkbox の代わりに「実行選択」 checkbox を出す
-    var leftCb;
+    // 左側のアイコン:
+    //   - batch mode: 「実行選択」 checkbox (= 複数選択)
+    //   - 通常: 状態アイコン (= 完了済みなら ✓、 未完了なら dept icon or ⏳)
+    //     ※ done checkbox は廃止。 ユーザー指摘「タスクのボタン押したら AI が
+    //        実行する」 が期待挙動 → 「手動で done マーク」 という独立アクション
+    //        を消して、 row の左は status indicator として読み専用に。
+    var leftSide;
     if(batchModeOn){
       var isSel = !!(window._taskSelectionSet && window._taskSelectionSet.has(t.id));
-      leftCb = '<input type="checkbox" class="tk-task-cb tk-task-cb-select" ' + (isSel ? 'checked' : '')
+      leftSide = '<input type="checkbox" class="tk-task-cb tk-task-cb-select" ' + (isSel ? 'checked' : '')
         + ' onchange="_toggleTaskInSelection(\'' + esc(t.id) + '\', this.checked)" title="実行するタスクとして選択" />';
+    } else if(t.done){
+      leftSide = '<span class="tk-task-status done" title="完了済み">✓</span>';
     } else {
-      leftCb = '<input type="checkbox" class="tk-task-cb" ' + (t.done ? 'checked' : '')
-        + ' onchange="_toggleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\',this.checked)" />';
+      var statusIcon = (dept && dept.icon) ? dept.icon : '⏳';
+      leftSide = '<span class="tk-task-status pending" title="未着手 — ▶ AI に依頼 で実行できます">' + statusIcon + '</span>';
     }
-    // ▶ 実行 button — このタスク 1 件を AI に実行させる (= 担当部員 + 成果物保存)
+    // ▶ AI に依頼 button — このタスク 1 件を AI に実行させる (= 担当部員 + 成果物保存)
     // batch mode 時は隠す (= まとめて実行ボタンと混乱避ける)
     var runBtn = (!batchModeOn && !t.done)
       ? '<button class="tk-task-run" onclick="_runSingleTask(\'' + esc(site.id) + '\',\'' + esc(t.id) + '\')" title="担当 AI に依頼 — 成果物が出来るまで自動実行">▶ AI に依頼</button>'
       : '';
     return '<div class="tk-task' + (t.done ? ' done' : '') + (batchModeOn ? ' batch-mode' : '') + '" data-task-id="' + esc(t.id) + '">'
-         +   leftCb
+         +   leftSide
          +   '<div class="tk-task-bd">'
          +     '<div class="tk-task-tx">' + esc(t.text) + '</div>'
          +     '<div class="tk-task-meta">' + deptTag + ownerTag + customBadge + '</div>'

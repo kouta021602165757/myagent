@@ -21429,13 +21429,16 @@ ${orgSummary || '(汎用チーム)'}
       const totalCount = week ? (week.tasks || []).length : 0;
       const completedTaskText = String(target.task.text || 'タスク').slice(0, 60);
       let body_text;
+      // ユーザー指摘: 旧 msg は「やって と返事すれば私が進めます」 と聞いてしまい、
+      // ユーザーが「実行されると思って done check 押したのに何も始まらない」 と
+      // 混乱する原因に。 reactive_msg は **記録 + 短い祝福のみ** にして、 次の
+      // 実行は ▶ AI に依頼 button に誘導 (= AI への依頼ルートを 1 つに統一)。
       if(remaining.length === 0 && week){
-        body_text = `✨ お疲れさまです！ 「${completedTaskText}」 完了で **Week ${week.n}/12 の全タスク (${totalCount}件) クリア** です 🎉\n\n次は Week ${week.n + 1} に進みましょう。 ダッシュボード → タスク管理 で確認できます。 もしくはこの場で「Week ${week.n+1} の次のタスクをやって」 と頼んでください。`;
+        body_text = `✨ **Week ${week.n}/12 完了!** 全 ${totalCount} タスクをクリアしました 🎉\n\n次の Week のタスクは ▶ AI に依頼 ボタンから順次実行できます。`;
       } else if(remaining.length > 0 && week){
-        const nextTask = remaining[0];
-        body_text = `✓ 「${completedTaskText}」 完了 (Week ${week.n}: ${doneCount}/${totalCount} 進捗)。\n\n次の優先タスクは:\n**「${String(nextTask.text || '').slice(0, 100)}」**${nextTask.owner ? ` (担当: ${nextTask.owner})` : ''}\n\nこのタスクに取りかかりますか？ 「やって」 と返事すれば私が進めます。`;
+        body_text = `✓ 「${completedTaskText}」 完了 (Week ${week.n}: ${doneCount}/${totalCount})。`;
       } else {
-        body_text = `✓ 「${completedTaskText}」 完了。 お疲れさまです！`;
+        body_text = `✓ 「${completedTaskText}」 完了。 お疲れさまです!`;
       }
       // PM agent (or any) を speaker に
       const pmMember = _findOrgMemberByKeywords(ag, ['pm','planner','project','manager']);

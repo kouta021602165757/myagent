@@ -8812,18 +8812,51 @@ async function _toggleTask(siteId, taskId, checked){
 
 async function _deleteTask(siteId, taskId){
   if(!confirm('このタスクを削除しますか?')) return;
+  // 楽観的削除 — UI から即時に消す。 server save は裏で。
+  // 失敗時のみ rollback + toast。 これで「削除に時間かかる」 体感を解消。
+  var site = (agents || []).find(function(a){ return a && a.id === siteId; });
+  var _backup = null;
+  if(site && site.roadmap){
+    // backup for rollback
+    _backup = {
+      weeks: (site.roadmap.weeks || []).map(function(w){
+        return { n: w.n, tasks: (w.tasks || []).slice() };
+      }),
+      custom_tasks: (site.roadmap.custom_tasks || []).slice(),
+    };
+    (site.roadmap.weeks || []).forEach(function(w){
+      w.tasks = (w.tasks || []).filter(function(t){ return t.id !== taskId; });
+    });
+    site.roadmap.custom_tasks = (site.roadmap.custom_tasks || []).filter(function(t){ return t.id !== taskId; });
+    // 即時に panel + dashboard を更新
+    try {
+      var ov = document.getElementById('siteTabOverlay');
+      if(ov && ov.getAttribute('data-tab') === 'tasks' && typeof _openSiteTabModal === 'function'){
+        _openSiteTabModal(siteId, 'tasks');
+      }
+    } catch(_){}
+    try { renderHomeDashboard(); } catch(_){}
+    try { _renderTaskStrip(); } catch(_){}
+  }
   try {
     await api('DELETE', '/api/agents/' + encodeURIComponent(siteId) + '/roadmap/tasks/' + encodeURIComponent(taskId));
-    var site = (agents || []).find(function(a){ return a && a.id === siteId; });
-    if(site && site.roadmap){
-      (site.roadmap.weeks || []).forEach(function(w){
-        w.tasks = (w.tasks || []).filter(function(t){ return t.id !== taskId; });
-      });
-      site.roadmap.custom_tasks = (site.roadmap.custom_tasks || []).filter(function(t){ return t.id !== taskId; });
-    }
-    try { renderHomeDashboard(); } catch(_){}
   } catch(e){
-    showToast('削除に失敗', 'ng');
+    // rollback
+    if(site && site.roadmap && _backup){
+      _backup.weeks.forEach(function(bw){
+        var w = (site.roadmap.weeks || []).find(function(x){return x.n === bw.n;});
+        if(w) w.tasks = bw.tasks;
+      });
+      site.roadmap.custom_tasks = _backup.custom_tasks;
+      try {
+        var ov2 = document.getElementById('siteTabOverlay');
+        if(ov2 && ov2.getAttribute('data-tab') === 'tasks' && typeof _openSiteTabModal === 'function'){
+          _openSiteTabModal(siteId, 'tasks');
+        }
+      } catch(_){}
+    }
+    showToast('削除に失敗 — 元に戻しました: ' + (e && e.message || ''), 'ng');
+    return;
   }
 }
 

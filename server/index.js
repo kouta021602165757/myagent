@@ -20645,6 +20645,46 @@ async function handleAPI(req,res,pathname,method,ip){
   //   kpi_6mo: [{ month, label, pv, sessions, leads, cvr, milestone }],
   // }
   //
+  // ── GSC サイト一覧 + 選択 endpoint (= UI ピッカー用) ──
+  //   GET  /api/agents/:id/gsc/sites    → { sites: [{siteUrl, permissionLevel}] }
+  //   POST /api/agents/:id/gsc/site     → body { site_url } で agent.gsc_site_url に保存
+  const gscSitesListMatch = pathname.match(/^\/api\/agents\/([^/]+)\/gsc\/sites$/);
+  if(gscSitesListMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === gscSitesListMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const googleConnected = !!(user.google_oauth && user.google_oauth.refresh_token);
+    const hasGscScope = googleConnected && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''));
+    if(!hasGscScope){
+      return jres(res, 200, { ok: false, connected: false, sites: [], detail: 'Google OAuth に Search Console scope がありません。 Google を再接続してください。' });
+    }
+    try {
+      const entries = await gscListSites(user);
+      // 「サイト所有権 verified」 のみ filter (= GSC でデータ取れる権限)
+      const sites = entries
+        .filter(s => s && s.siteUrl && /^(siteOwner|siteFullUser|siteRestrictedUser)$/i.test(s.permissionLevel || ''))
+        .map(s => ({ site_url: s.siteUrl, permission: s.permissionLevel }));
+      return jres(res, 200, { ok: true, connected: true, sites,
+        current: ag.gsc_site_url || (user.integrations && user.integrations.google && user.integrations.google.gsc_site_url) || null });
+    } catch(e){
+      return jres(res, 200, { ok: false, connected: true, sites: [], detail: (e.message||'').slice(0,300) });
+    }
+  }
+  const gscSiteSetMatch = pathname.match(/^\/api\/agents\/([^/]+)\/gsc\/site$/);
+  if(gscSiteSetMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === gscSiteSetMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req);
+    const siteUrl = String(body && body.site_url || '').trim();
+    if(!siteUrl) return jres(res, 400, { error: 'site_url required' });
+    ag.gsc_site_url = siteUrl;
+    // user-level default にも保存 (= 他 agent への fallback)
+    if(!user.integrations) user.integrations = {};
+    if(!user.integrations.google) user.integrations.google = {};
+    user.integrations.google.gsc_site_url = siteUrl;
+    try { await DB.save(user); } catch(e){ console.warn('[gsc-site-set] save failed:', e.message); }
+    return jres(res, 200, { ok: true, gsc_site_url: siteUrl });
+  }
+
   // GET /api/agents/:id/gsc-snapshot — Google Search Console データ一括取得
   //  Query: ?period=yesterday|7d|28d (default 7d)
   //  Returns: { connected, period, date_range, overall, top_queries[], top_pages[] }

@@ -4900,6 +4900,104 @@ function _fetchGa4Snapshot(siteId, opts){
 
 // GA4 プロパティ picker — 「アナリティクス接続したのに数字出ない」 を解消する。
 // 接続 OAuth は通ってるが ga4_property_id 未設定の時に呼ばれる。
+// GSC サイト picker — GSC の所有サイトを listing して選ばせる modal
+window.openGscSitePicker = async function(siteId){
+  if(!siteId) siteId = (typeof activeId !== 'undefined' && activeId) || null;
+  if(!siteId){ showToast('サイトを選んでから操作してください','ng'); return; }
+  var ex = document.getElementById('gscSitePickerOverlay');
+  if(ex) ex.remove();
+  var ov = document.createElement('div');
+  ov.id = 'gscSitePickerOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.32)">'
+    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+    +   '<div style="font-size:22px">🔍</div>'
+    +   '<div style="flex:1"><div style="font-size:16px;font-weight:900">Search Console のサイトを選ぶ</div>'
+    +   '<div style="font-size:12px;color:var(--text3);margin-top:2px">このサイト (= '+esc(siteId)+') で使う GSC プロパティを選択</div></div>'
+    +   '<button onclick="document.getElementById(\'gscSitePickerOverlay\').remove()" style="background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer">×</button>'
+    + '</div>'
+    + '<div id="gscPickerBody" style="font-size:12px"><div style="text-align:center;padding:28px;color:var(--text3)"><span style="display:inline-block;width:16px;height:16px;border:2px solid var(--wire2);border-top-color:#3b82f6;border-radius:50%;animation:lpSpin .8s linear infinite;vertical-align:-3px;margin-right:8px"></span>GSC サイト一覧を取得中…</div></div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  try {
+    var r = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/gsc/sites');
+    var body = document.getElementById('gscPickerBody');
+    if(!body) return;
+    if(!r || !r.ok || !Array.isArray(r.sites) || r.sites.length === 0){
+      body.innerHTML = '<div style="padding:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;color:#92400e;font-size:12.5px">'
+        + (r && r.detail ? esc(r.detail) : 'GSC サイトが見つかりません。 search.google.com/search-console でサイト所有権を確認してください。')
+        + '</div>';
+      return;
+    }
+    var current = r.current || '';
+    // 推奨マッチ: site.site_url のホスト名と GSC site_url の host が一致 → ⭐
+    var siteHost = '';
+    try {
+      var ag = (agents||[]).find(function(a){return a && a.id===siteId;});
+      if(ag && ag.site_url) siteHost = new URL(ag.site_url).hostname.replace(/^www\./,'').toLowerCase();
+    } catch(_){}
+    var rows = r.sites.map(function(s){
+      var u = s.site_url || '';
+      var isCurrent = u === current;
+      var matchScore = 0;
+      try {
+        // sc-domain:fukuyama-note.com or https://fukuyama-note.com/
+        var matchHost = u.replace(/^sc-domain:/,'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/$/,'').toLowerCase();
+        if(siteHost && matchHost.includes(siteHost)) matchScore = 1;
+      } catch(_){}
+      return '<button onclick="_setGscSite(\''+esc(siteId)+'\',\''+esc(u).replace(/\'/g,'&#39;')+'\')" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 14px;border:1px solid '+(isCurrent ? '#0d4f4a' : 'var(--wire2)')+';background:'+(isCurrent ? '#f7ffe9' : '#fff')+';border-radius:9px;margin-bottom:8px;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s" onmouseover="this.style.borderColor=\'#0d4f4a\'" onmouseout="this.style.borderColor=\''+(isCurrent ? '#0d4f4a' : 'var(--wire2)')+'\'">'
+        + '<span style="font-size:18px">'+(u.startsWith('sc-domain:') ? '🌐' : '🔗')+'</span>'
+        + '<span style="flex:1;min-width:0">'
+        +   '<div style="font-weight:700;font-size:13px;color:var(--text);word-break:break-all">'+esc(u)+'</div>'
+        +   '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">'+(matchScore ? '⭐ このサイトに一致' : '')+(s.permission ? ' '+esc(s.permission) : '')+'</div>'
+        + '</span>'
+        + (isCurrent ? '<span style="background:#0d4f4a;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:5px">現在</span>' : '')
+        + '</button>';
+    }).join('');
+    body.innerHTML = '<div style="font-size:11.5px;color:var(--text3);margin-bottom:10px">'+r.sites.length+' 件のサイトが見つかりました。 1 つ選んでください:</div>' + rows;
+  } catch(e){
+    var b2 = document.getElementById('gscPickerBody');
+    if(b2) b2.innerHTML = '<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;color:#991b1b;font-size:12.5px">取得失敗: '+esc(e && e.message || 'unknown')+'</div>';
+  }
+};
+window._setGscSite = async function(siteId, siteUrl){
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/gsc/site', { site_url: siteUrl });
+    if(r && r.ok){
+      // me + site state を更新
+      try {
+        var ag = (agents||[]).find(function(a){return a && a.id===siteId;});
+        if(ag) ag.gsc_site_url = siteUrl;
+        if(me && me.integrations && me.integrations.google) me.integrations.google.gsc_site_url = siteUrl;
+        else if(me){
+          me.integrations = me.integrations || {};
+          me.integrations.google = me.integrations.google || {};
+          me.integrations.google.gsc_site_url = siteUrl;
+        }
+      } catch(_){}
+      showToast('✓ GSC サイトを保存しました','ok');
+      var ov = document.getElementById('gscSitePickerOverlay');
+      if(ov) ov.remove();
+      // connections panel が開いてれば再描画
+      try {
+        var p = document.getElementById('siteTabOverlay');
+        if(p && p.getAttribute('data-tab')==='connections' && typeof _openSiteTabModal==='function'){
+          _openSiteTabModal(siteId, 'connections');
+        }
+      } catch(_){}
+      // GSC snapshot cache を invalidate (= 次の panel open で新サイトのデータ fetch)
+      try {
+        delete window._ga4Snapshots[siteId];  // unrelated, no need
+      } catch(_){}
+    } else {
+      showToast('保存失敗: ' + ((r && r.error) || 'unknown'), 'ng');
+    }
+  } catch(e){
+    showToast('保存失敗: ' + (e && e.message || 'unknown'), 'ng');
+  }
+};
+
 function openGa4PropertyPicker(siteId){
   if(!siteId) siteId = (typeof activeId !== 'undefined' && activeId) || null;
   if(!siteId){ showToast('サイトを選んでから操作してください','ng'); return; }
@@ -9378,8 +9476,6 @@ function _renderTabConnections(site){
           guideKey: 'ga4',
         })
     +   (function(){
-          // GSC = Google OAuth の webmasters.readonly scope に紐づく。
-          // Defensive: 何が起きても必ず action button (接続 or 切断) を出す。
           var _scope = '';
           try {
             _scope = String((me && me.google_oauth && me.google_oauth.scope) || (me && me.integrations && me.integrations.google && me.integrations.google.scope) || '');
@@ -9387,18 +9483,24 @@ function _renderTabConnections(site){
           var hasGscScope = !!googleConnected && /webmasters/.test(_scope);
           var gscStatus, gscMeta, gscConnect, gscDisconnect;
           if(hasGscScope){
-            gscStatus = 'on';
             var gscSiteUrl = '';
             try {
-              gscSiteUrl = (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
-                        || (site && site.gsc_site_url) || '';
+              gscSiteUrl = (site && site.gsc_site_url)
+                        || (me && me.integrations && me.integrations.google && me.integrations.google.gsc_site_url)
+                        || '';
             } catch(_){}
-            gscMeta = gscSiteUrl
-              ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#525252;font-weight:600">🔗 <b style="color:#1a1a1a">'+esc(gscSiteUrl)+'</b></span>'
-              : '<span style="font-size:11px;color:#b45309;font-weight:700">⚠ GSC サイトを 1 つ選んでください (chat で「GSC のサイトを listing して」 と言う)</span>';
-            gscDisconnect = "openIntegrationsTab && openIntegrationsTab('ga4')";
+            if(gscSiteUrl){
+              gscStatus = 'on';
+              gscMeta = '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#525252;font-weight:600">🔗 <b style="color:#1a1a1a">'+esc(gscSiteUrl)+'</b></span>'
+                + ' <button onclick="openGscSitePicker(\''+esc(site.id)+'\')" style="margin-left:8px;background:transparent;border:0;color:#0d4f4a;font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;font-family:inherit">サイトを変更</button>';
+              gscDisconnect = "openIntegrationsTab && openIntegrationsTab('ga4')";
+            } else {
+              // OAuth 済 + scope OK だが GSC サイト未選択 → 専用ピッカー button
+              gscStatus = 'off';
+              gscMeta = '<span style="font-size:11px;color:#b45309;font-weight:700">⚠ どの GSC サイトを使うか選択してください</span>';
+              gscConnect = "openGscSitePicker('"+esc(site.id)+"')";
+            }
           } else {
-            // Google 未接続 or scope 不足 — どちらも 「接続する」 button を出す
             gscStatus = 'off';
             if(googleConnected){
               gscMeta = '<span style="font-size:11px;color:#b45309;font-weight:700">⚠ 旧 OAuth (Search Console scope 不足)。 「接続する」 で再認証してください</span>';

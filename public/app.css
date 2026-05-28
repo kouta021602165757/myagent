@@ -7523,7 +7523,7 @@ html[data-theme="dark"] .m-huddle-chip .hud-now{background:rgba(0,0,0,.25)}
   background-size:200% 100%;
   animation:genShimmer 2.4s ease-in-out infinite;
   border:1px solid rgba(192,255,92,.2);
-  font-size:13px;color:var(--peach-dark);font-weight:700;
+  font-size:13px;color:#0a3d39;font-weight:800;
 }
 .gen-indicator .gen-logo{
   width:22px;height:22px;border-radius:50%;
@@ -7538,20 +7538,18 @@ html[data-theme="dark"] .m-huddle-chip .hud-now{background:rgba(0,0,0,.25)}
   animation:genSpin 2s linear infinite;
 }
 .gen-indicator .gen-text{
-  background:linear-gradient(90deg, var(--peach-dark), var(--peach), var(--peach-dark));
-  background-size:200% 100%;
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  animation:genShimmer 2.4s ease-in-out infinite;
+  color: #0a3d39;
+  font-weight: 800;
+  letter-spacing: .01em;
 }
 /* elapsed counter は gradient text の中にあると見えなくなるので explicit color。
    mono font で数字がブレないように。 */
 .gen-indicator .gen-elapsed{
-  -webkit-text-fill-color: var(--text3);
-  color: var(--text3);
+  color: #0d4f4a;
   font-family: 'SF Mono', Menlo, monospace;
   font-size: 11px;
   font-weight: 700;
-  opacity: 0.85;
+  opacity: 0.7;
   margin-left: 4px;
 }
 @keyframes genBreathe{

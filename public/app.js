@@ -4925,8 +4925,25 @@ window.openGscSitePicker = async function(siteId){
     var body = document.getElementById('gscPickerBody');
     if(!body) return;
     if(!r || !r.ok || !Array.isArray(r.sites) || r.sites.length === 0){
-      body.innerHTML = '<div style="padding:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;color:#92400e;font-size:12.5px">'
-        + (r && r.detail ? esc(r.detail) : 'GSC サイトが見つかりません。 search.google.com/search-console でサイト所有権を確認してください。')
+      var detail = (r && r.detail) || 'GSC サイトが見つかりません。 search.google.com/search-console でサイト所有権を確認してください。';
+      var ctaHTML = '';
+      // service_setup_incomplete = 開発者側の設定不足。 ユーザーは何もできないので
+      // support contact CTA + 緑のステータス調 (= 障害じゃない、 一時的な準備中)
+      if(r && r.error === 'service_setup_incomplete'){
+        ctaHTML = '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'
+          + '<a href="mailto:support@myaiagents.agency?subject=Search Console%20%E9%80%A3%E6%90%BA%E3%81%8C%E5%8B%95%E3%81%8B%E3%81%AA%E3%81%84&body=Search%20Console%20%E3%81%AE%E6%8E%A5%E7%B6%9A%E3%81%A7%E3%80%8C%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E5%81%B4%E8%A8%AD%E5%AE%9A%E5%89%8D%E3%80%8D%E3%81%AE%E3%82%A8%E3%83%A9%E3%83%BC%E3%81%8C%E5%87%BA%E3%81%BE%E3%81%99%E3%80%82%0A%0A%E3%82%A2%E3%82%AB%E3%82%A6%E3%83%B3%E3%83%88: " style="background:#0d4f4a;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:800;text-decoration:none;font-family:inherit">📧 サポートに連絡</a>'
+          + '<button onclick="document.getElementById(\'gscSitePickerOverlay\').remove();" style="background:transparent;color:var(--text2);border:1px solid var(--wire2);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button>'
+          + '</div>';
+      } else if(r && r.error === 'oauth_expired'){
+        ctaHTML = '<div style="margin-top:14px"><button onclick="document.getElementById(\'gscSitePickerOverlay\').remove(); openIntegrationsTab && openIntegrationsTab(\'ga4\');" style="background:#0d4f4a;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔌 Google を再接続</button></div>';
+      } else if(r && r.error === 'no_gsc_access'){
+        ctaHTML = '<div style="margin-top:14px"><a href="https://search.google.com/search-console" target="_blank" rel="noopener" style="background:#0d4f4a;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:800;text-decoration:none;font-family:inherit">🔍 Search Console を開く</a></div>';
+      } else {
+        ctaHTML = '<div style="margin-top:14px"><button onclick="openGscSitePicker(\''+esc(siteId)+'\')" style="background:#0d4f4a;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔄 再試行</button></div>';
+      }
+      body.innerHTML = '<div style="padding:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;color:#92400e;font-size:12.5px;line-height:1.6">'
+        + esc(detail)
+        + ctaHTML
         + '</div>';
       return;
     }

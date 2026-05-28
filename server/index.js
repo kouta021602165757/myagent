@@ -20666,7 +20666,26 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 200, { ok: true, connected: true, sites,
         current: ag.gsc_site_url || (user.integrations && user.integrations.google && user.integrations.google.gsc_site_url) || null });
     } catch(e){
-      return jres(res, 200, { ok: false, connected: true, sites: [], detail: (e.message||'').slice(0,300) });
+      // 技術エラーを user-friendly に変換 — 「API 未有効」 や「permission denied」 等の
+      // 内部情報 (project ID / GCP URL) を user に見せない
+      const raw = String(e.message || '');
+      let detail;
+      let errCode;
+      if(/api has not been used|has not been enabled|sErviceusage\.disabled|is disabled/i.test(raw)){
+        errCode = 'service_setup_incomplete';
+        detail = '⚠️ サービス側で Search Console 連携の設定がまだ完了していません。 サポートへお問い合わせください (= 通常 1 営業日で解決)。 ご不便おかけして申し訳ありません。';
+      } else if(/permission denied|forbidden|access.*denied|403/i.test(raw)){
+        errCode = 'no_gsc_access';
+        detail = '⚠️ お使いの Google アカウントには Search Console へのアクセス権がありません。 search.google.com/search-console でサイト所有権を確認してください。';
+      } else if(/invalid.*credentials|invalid_grant|unauthorized|401/i.test(raw)){
+        errCode = 'oauth_expired';
+        detail = '⚠️ Google 認証の有効期限が切れています。 接続 panel から Google を再接続してください。';
+      } else {
+        errCode = 'gsc_list_failed';
+        detail = '⚠️ GSC サイト一覧の取得に失敗しました。 少し待ってから再試行してください。';
+      }
+      console.warn('[gsc/sites] failed:', raw.slice(0,300));
+      return jres(res, 200, { ok: false, connected: true, sites: [], error: errCode, detail });
     }
   }
   const gscSiteSetMatch = pathname.match(/^\/api\/agents\/([^/]+)\/gsc\/site$/);

@@ -4916,6 +4916,7 @@ input,textarea{font-family:var(--sans);}
 .tk-task-status.pending{
   background:#fafdf3; color:var(--text2);
 }
+/* cache buster nudge — タッチして mtime を更新 (force fresh fetch) */
 
 /* ▶ 実行 button — このタスクを AI に実行させる */
 .tk-task-run{

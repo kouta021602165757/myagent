@@ -10729,21 +10729,21 @@ async function _submitKpi(ev, siteId){
   var pv = parseInt(document.getElementById('kpiPv').value || '0', 10) || 0;
   var cvr = parseFloat(document.getElementById('kpiCvr').value || '0') || 0;
   var leads = parseInt(document.getElementById('kpiLeads').value || '0', 10) || 0;
-  var btn = ev.target.querySelector('button[type="submit"]');
-  if(btn){ btn.disabled = true; btn.innerHTML = '保存中…'; }
-  try {
-    var r = await api('POST', '/api/agents/' + siteId + '/kpi', { pv: pv, cvr: cvr, leads: leads });
-    if(r && r.ok){
-      var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
-      if(ag) ag.kpi = { pv: pv, cvr: cvr, leads: leads };
-      closeKpiModal();
-      showToast('KPI を保存しました', 'ok');
+  // 楽観的更新: UI 即時 → API 裏で。 失敗時のみ rollback + toast。
+  var ag = (agents || []).find(function(a){ return a && a.id === siteId; });
+  var prevKpi = ag && ag.kpi ? { pv: ag.kpi.pv, cvr: ag.kpi.cvr, leads: ag.kpi.leads } : null;
+  if(ag) ag.kpi = { pv: pv, cvr: cvr, leads: leads };
+  closeKpiModal();
+  showToast('✓ KPI を保存しました', 'ok');
+  try { renderHomeDashboard(); } catch(_){}
+  // 裏で server save
+  api('POST', '/api/agents/' + siteId + '/kpi', { pv: pv, cvr: cvr, leads: leads })
+    .catch(function(e){
+      // rollback
+      if(ag) ag.kpi = prevKpi;
       try { renderHomeDashboard(); } catch(_){}
-    }
-  } catch(e){
-    showToast((e && e.message) || 'エラー', 'ng');
-    if(btn){ btn.disabled = false; btn.innerHTML = '保存 <span class="arrow">→</span>'; }
-  }
+      showToast('KPI 保存失敗 — 元に戻しました: ' + ((e && e.message) || 'unknown'), 'ng', 6000);
+    });
   return false;
 }
 

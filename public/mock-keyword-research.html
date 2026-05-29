@@ -2088,7 +2088,7 @@
     if(!pane) return;
     var hero = pane.querySelector('.selected-hero-kw');
     if(hero) hero.textContent = '「' + kw + '」';
-    _setSeoDetailEmptyState('AI チームが「' + kw + '」を分析中… (約 30 秒)');
+    _setSeoDetailEmptyState('AI チームが「' + kw + '」を分析中… (約 5-10 秒)');
   }
   function _setSeoDetailEmptyState(msg){
     var pane = document.querySelector('.tab-pane[data-tab="seo"]');
@@ -2166,7 +2166,7 @@
     if(!pane) return;
     var hero = pane.querySelector('.selected-hero-kw');
     if(hero) hero.textContent = '「' + kw + '」';
-    _setAeoDetailEmptyState('AI チームが「' + kw + '」の AEO 戦略を分析中… (約 30 秒)');
+    _setAeoDetailEmptyState('AI チームが「' + kw + '」の AEO 戦略を分析中… (約 5-10 秒)');
   }
   function _setAeoDetailEmptyState(msg){
     var pane = document.querySelector('.tab-pane[data-tab="aeo"]');

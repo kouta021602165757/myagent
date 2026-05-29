@@ -21045,13 +21045,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const qs = url.parse(req.url, true).query || {};
     const kw = String(qs.kw || '').trim().slice(0, 100);
     if(!kw) return jres(res, 400, { error: 'kw required' });
-    const TTL = 24 * 3600 * 1000;
-    ag.serp_analysis = ag.serp_analysis || {};
-    const cKey = kw.slice(0, 50);
-    if(!qs.refresh && ag.serp_analysis[cKey] && ag.serp_analysis[cKey].fetched_at &&
-       (Date.now() - Date.parse(ag.serp_analysis[cKey].fetched_at)) < TTL){
-      return jres(res, 200, Object.assign({}, ag.serp_analysis[cKey], { cached: true }));
-    }
+    // 注: agent JSONB cache 廃止 (= fat JSONB → Supabase timeout 解消)
 
     // 1) SERP 取得 (Brave → DDG → 失敗で空配列フォールバック)
     let serp = [];
@@ -21132,7 +21126,8 @@ async function handleAPI(req,res,pathname,method,ip){
         '  ]',
         '}'
       ].join('\n');
-      const info = _resolveModelInfo('sonnet');
+      // Haiku で十分 (= h2 クラスタリング + 頻出語抽出は機械的タスク)
+      const info = _resolveModelInfo('haiku');
       try {
         if(info.provider === 'gemini'){
           const r = await _callGemini([{role:'user', content: prompt}], '', info);
@@ -21144,8 +21139,8 @@ async function handleAPI(req,res,pathname,method,ip){
         } else if(ANTHROPIC){
           const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
             { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-            { model: info.modelId, max_tokens: 2000, messages:[{ role:'user', content: prompt }] },
-            { timeout: 30000 });
+            { model: info.modelId, max_tokens: 1500, messages:[{ role:'user', content: prompt }] },
+            { timeout: 25000 });
           if(r.s === 200){
             const txt = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
             const m = txt.match(/\{[\s\S]*\}/);
@@ -21183,15 +21178,7 @@ async function handleAPI(req,res,pathname,method,ip){
         dr_estimate: Math.max(20, 80 - (5 + idx) * 8),
       }))),
     };
-    // LRU: 3 件
-    const keys = Object.keys(ag.serp_analysis);
-    if(keys.length >= 3){
-      const oldest = keys.map(k => ({ k, t: Date.parse(ag.serp_analysis[k].fetched_at || 0) }))
-        .sort((a,b) => a.t - b.t)[0];
-      if(oldest) delete ag.serp_analysis[oldest.k];
-    }
-    ag.serp_analysis[cKey] = out;
-    try { await DB.save(user); } catch(e){ console.warn('[serp] save failed:', e.message); }
+    // agent JSONB に保存しない (= fat JSONB → Supabase timeout 解消)
     return jres(res, 200, out);
   }
 
@@ -21205,13 +21192,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const qs = url.parse(req.url, true).query || {};
     const kw = String(qs.kw || '').trim().slice(0, 100);
     if(!kw) return jres(res, 400, { error: 'kw required' });
-    const TTL = 7 * 24 * 3600 * 1000;
-    ag.trends = ag.trends || {};
-    const cKey = kw.slice(0, 50);
-    if(!qs.refresh && ag.trends[cKey] && ag.trends[cKey].fetched_at &&
-       (Date.now() - Date.parse(ag.trends[cKey].fetched_at)) < TTL){
-      return jres(res, 200, Object.assign({}, ag.trends[cKey], { cached: true }));
-    }
+    // 注: agent JSONB cache 廃止 (= fat JSONB → Supabase timeout 解消)
     const prompt = [
       'キーワード「' + kw + '」について、日本における Google Trends の過去 12 ヶ月の検索関心度を推定してください。',
       '季節性 (繁忙期/閑散期) を考慮し、12 ヶ月のうち peak 月とその relative 値 (0-100) を含めること。',
@@ -21229,7 +21210,8 @@ async function handleAPI(req,res,pathname,method,ip){
       '  ]',
       '}'
     ].join('\n');
-    const info = _resolveModelInfo('sonnet');
+    // Haiku (= 推定タスクなので Sonnet 不要、3x 速い)
+    const info = _resolveModelInfo('haiku');
     let parsed = null;
     let rawText = '';
     try {
@@ -21239,8 +21221,8 @@ async function handleAPI(req,res,pathname,method,ip){
       } else if(ANTHROPIC){
         const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-          { model: info.modelId, max_tokens: 2000, messages:[{ role:'user', content: prompt }] },
-          { timeout: 30000 });
+          { model: info.modelId, max_tokens: 1200, messages:[{ role:'user', content: prompt }] },
+          { timeout: 20000 });
         if(r.s !== 200) return jres(res, 502, { error: 'claude_failed' });
         rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       } else {
@@ -21260,15 +21242,7 @@ async function handleAPI(req,res,pathname,method,ip){
       rising: (parsed.rising || []).slice(0, 6),
       note: 'AI 推定値 (Google Trends 公式 API 非利用)',
     };
-    // LRU 3 件
-    const keys = Object.keys(ag.trends);
-    if(keys.length >= 3){
-      const oldest = keys.map(k => ({ k, t: Date.parse(ag.trends[k].fetched_at || 0) }))
-        .sort((a,b) => a.t - b.t)[0];
-      if(oldest) delete ag.trends[oldest.k];
-    }
-    ag.trends[cKey] = out;
-    try { await DB.save(user); } catch(e){ console.warn('[trends] save failed:', e.message); }
+    // agent JSONB に保存しない (= fat JSONB → Supabase timeout 解消)
     return jres(res, 200, out);
   }
 
@@ -21305,31 +21279,23 @@ async function handleAPI(req,res,pathname,method,ip){
     const mode = (String(qs.mode || 'seo').toLowerCase() === 'aeo') ? 'aeo' : 'seo';
     if(!kw) return jres(res, 400, { error: 'kw required' });
 
-    // キャッシュ
-    const TTL = 24 * 3600 * 1000;
-    ag.keyword_detail = ag.keyword_detail || {};
-    const cacheKey = mode + ':' + kw.slice(0, 50);
-    const cached = ag.keyword_detail[cacheKey];
-    if(!qs.refresh && cached && cached.fetched_at &&
-       (Date.now() - Date.parse(cached.fetched_at)) < TTL){
-      return jres(res, 200, Object.assign({}, cached, { cached: true }));
-    }
+    // 注: agent JSONB へのキャッシュ廃止 (= fat JSONB → Supabase 保存タイムアウト解消)
+    // Claude 呼び出しは Haiku で 5-10s、Anthropic 側 prompt cache (5min) でカバー
 
-    // 並列 fetch: サジェスト + サイトプレビュー
-    let suggest = [], related = [], sitePreview = null;
+    // 並列 fetch: サジェスト + サイトプレビュー (L1 のみで高速化、L2 再帰は廃止)
+    let suggest = [], sitePreview = null;
     try {
       const [sg, sp] = await Promise.all([
         _googleSuggest(kw, 'ja'),
         _fetchSitePreview(ag),
       ]);
-      suggest = sg.slice(0, 21);  // 一緒に検索される (top 21)
+      suggest = sg.slice(0, 21);
       sitePreview = sp;
-      // 周辺語は再帰サジェスト 2 階層から
-      const rec = await _googleSuggestRecursive(kw, 'ja');
-      related = rec.slice(0, 60);
     } catch(e){
       console.warn('[kw-detail] suggest failed:', e.message);
     }
+    // related は L1 の延長 (= サジェストの 5-21 番目) で代替 (= 再帰廃止で 5s 節約)
+    const related = suggest.slice(5);
 
     // Claude プロンプト: モード別 (SEO は title 5、AEO は Q&A title 5 + PAA + schema)
     let hostname = '';
@@ -21399,7 +21365,8 @@ async function handleAPI(req,res,pathname,method,ip){
       ].join('\n');
     }
 
-    const info = _resolveModelInfo('sonnet');
+    // Haiku に切り替え (= Sonnet 比 2-3x 速い)、max_tokens 圧縮 (3500 → 1500)
+    const info = _resolveModelInfo('haiku');
     let rawText = '';
     let parsed = null;
     try {
@@ -21409,8 +21376,8 @@ async function handleAPI(req,res,pathname,method,ip){
       } else if(ANTHROPIC){
         const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-          { model: info.modelId, max_tokens: 3500, messages:[{ role:'user', content: prompt }] },
-          { timeout: 45000 });
+          { model: info.modelId, max_tokens: 1500, messages:[{ role:'user', content: prompt }] },
+          { timeout: 30000 });
         if(r.s !== 200) return jres(res, 502, { error: 'claude_failed', status: r.s, detail: String(JSON.stringify(r.d)).slice(0, 300) });
         rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       } else {
@@ -21432,20 +21399,11 @@ async function handleAPI(req,res,pathname,method,ip){
       related,
       signals: parsed.signals || {},
       titles: (parsed.titles || []).slice(0, 5),
-      paa: (parsed.paa || []).slice(0, 8),                           // AEO only
-      citation_checklist: (parsed.citation_checklist || []).slice(0, 7), // AEO only
-      schema_jsonld: parsed.schema_jsonld || null,                   // AEO only
+      paa: (parsed.paa || []).slice(0, 8),
+      citation_checklist: (parsed.citation_checklist || []).slice(0, 7),
+      schema_jsonld: parsed.schema_jsonld || null,
     };
-    // LRU: 直近 8 件のみ保持
-    const keys = Object.keys(ag.keyword_detail);
-    if(keys.length >= 8){
-      // fetched_at で sort して古い 1 件削除
-      const oldest = keys.map(k => ({ k, t: Date.parse(ag.keyword_detail[k].fetched_at || 0) }))
-        .sort((a,b) => a.t - b.t)[0];
-      if(oldest) delete ag.keyword_detail[oldest.k];
-    }
-    ag.keyword_detail[cacheKey] = out;
-    try { await DB.save(user); } catch(e){ console.warn('[kw-detail] save failed:', e.message); }
+    // agent JSONB に保存しない (= fat JSONB → Supabase timeout 解消)
     return jres(res, 200, out);
   }
 

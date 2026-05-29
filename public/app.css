@@ -8905,3 +8905,12 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   width:16px !important; height:16px !important;
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   🔍 キーワード調査パネル — iframe full-bleed (mock-keyword-research.html)
+   PHASE-0: パディング上書き、iframe が枠いっぱいに広がるように
+   ────────────────────────────────────────────────────────────────── */
+#siteTabOverlay[data-tab="keyword"] .sd-tab-body{
+  padding:0 !important;
+  overflow:hidden !important;
+}
+

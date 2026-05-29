@@ -2759,6 +2759,11 @@ function _openSiteTabModal(siteId, tabKey){
     title = '⚙️ ' + L('設定','Settings');
     try { content = _renderTabSettings(site); }
     catch(err){ console.error('[settings-panel] render failed:', err); content = _dgrErrCard(err); }
+  } else if(tabKey === 'keyword'){
+    title = '🔍 ' + L('キーワード調査','Keyword research');
+    // PHASE-0: 既存のデザインモック (mock-keyword-research.html) を iframe で表示。
+    // Phase 1 で iframe → ネイティブレンダリング + AI 候補生成に置き換える。
+    content = '<iframe src="/mock-keyword-research.html?embed=1" style="display:block;width:100%;height:100%;border:0;background:var(--cream)" loading="eager"></iframe>';
   } else {
     showToast(L('不明なパネル','Unknown panel'),'ng');
     return;
@@ -2802,6 +2807,7 @@ function _openSiteTabModal(siteId, tabKey){
 }
 
 window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
+window.openKeywordPanel       = function(siteId){ _openSiteTabModal(siteId, 'keyword'); };
 window.openStrategyPanel      = function(siteId){ _openSiteTabModal(siteId, 'strategy'); };
 window.openTasksPanel         = function(siteId){ _openSiteTabModal(siteId, 'tasks'); };
 window.openAgentsPanel        = function(siteId){ _openSiteTabModal(siteId, 'agents'); };
@@ -6707,6 +6713,7 @@ window._switchToPanel = function(siteId, tab){
   } catch(_){}
   var open = {
     numbers:     window.openNumbersPanel,
+    keyword:     window.openKeywordPanel,
     strategy:    window.openStrategyPanel,
     tasks:       window.openTasksPanel,
     agents:      window.openAgentsPanel,
@@ -11374,6 +11381,7 @@ async function openAgent(id){
       var _siteId = esc(ag.id);
       actsHTML += '<button class="ct-act ct-tool" onclick="openDailyGrowthReportPanel(\''+_siteId+'\')" title="'+L('日次グロースレポート — 数字 + 効いた施策 + 明日のアクション','Daily growth report — numbers + wins + tomorrow\'s actions')+'">📰</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 の生データ・KPI','Numbers — GA4 metrics / KPI')+'">📊</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('キーワード調査 — SEO / AEO で狙うキーワードを設計','Keyword research — SEO / AEO targeting')+'">🔍</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('戦略・KPI — ペルソナ・競合・6ヶ月目標','Strategy / KPI')+'">🎯</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('タスク一覧 — 8 週ロードマップ + 進捗','Tasks — 8-week roadmap')+'">📋</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openAgentsPanel(\''+_siteId+'\')" title="'+L('エージェント一覧 — AI チームの組織図','Agents — AI team org chart')+'">🏢</button>';

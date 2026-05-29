@@ -17,6 +17,14 @@
   *{box-sizing:border-box}
   body{margin:0;padding:24px;background:rgba(10,10,12,.4);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:var(--text);line-height:1.65;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
 
+  /* === Embed mode (= ?embed=1 で iframe 内表示時) ===
+       実アプリのパネルが既に modal フレームを提供するので、
+       ここでは body 余白と .modal-head を消して中身だけ見せる */
+  body[data-embed="1"]{padding:0;background:var(--cream3);display:block;min-height:auto}
+  body[data-embed="1"] .modal{background:transparent;border-radius:0;box-shadow:none;max-width:none;width:100%}
+  body[data-embed="1"] .modal-head{display:none}
+  body[data-embed="1"] .modal-body{padding:18px 22px 32px;max-height:none;overflow:visible}
+
   /* === モーダル枠 === */
   .modal{background:var(--cream3);border-radius:16px;max-width:1000px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column}
   .modal-head{padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream)}
@@ -1688,6 +1696,12 @@
 </div>
 
 <script>
+  // === Embed mode detection (?embed=1) ===
+  // 実アプリのパネル内で iframe 表示される時はヘッダ等を消す
+  if(new URLSearchParams(location.search).get('embed') === '1'){
+    document.body.setAttribute('data-embed', '1');
+  }
+
   // === タブ切替 ===
   document.querySelectorAll('.tab-btn').forEach(function(btn){
     btn.addEventListener('click', function(){

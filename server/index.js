@@ -829,15 +829,19 @@ function safe(u){
   // was interrupted (Render deploy, browser close, network blip). Without
   // this, the bubble renders as "🍑 生成中…" forever after reload.
   if(Array.isArray(s.agents)){
+    // /api/me の payload 削減 (= リロード高速化):
+    // agent.history が 100+ メッセージあると user row が MB 級になる。
+    // 各 agent の history を直近 SAFE_HISTORY_LIMIT 件に絞り、 古いものは
+    // /api/agents/:id/history?offset=N で lazy load させる。
+    const SAFE_HISTORY_LIMIT = 30;
     for(const ag of s.agents){
       if(!ag) continue;
-      // Attach computed agent-state snapshots so the client doesn't
-      // re-implement the logic (Phase 1/2/4 of the agent state model).
       ag.progress = _agentProgress(ag);
       ag.trust = _agentTrust(ag);
       ag.outcomes = _agentOutcomes(ag);
       ag.digest = _agentDigest(ag, u);
       if(!Array.isArray(ag.history)) continue;
+      // streaming flag scrub (= 中断レンダー防止)
       for(const m of ag.history){
         if(m && m.streaming){
           m.streaming = false;
@@ -847,6 +851,13 @@ function safe(u){
             m.was_stopped = true;
           }
         }
+      }
+      // history truncate (= last N messages のみ送る)
+      const totalLen = ag.history.length;
+      if(totalLen > SAFE_HISTORY_LIMIT){
+        ag.history_total_count = totalLen;
+        ag.history_truncated = true;
+        ag.history = ag.history.slice(-SAFE_HISTORY_LIMIT);
       }
     }
   }
@@ -19704,6 +19715,30 @@ async function handleAPI(req,res,pathname,method,ip){
     else                     n.acted     = true;
     await DB.save(user);
     return jres(res,200,{ok:true});
+  }
+
+  // ── GET /api/agents/:id/history?before_idx=N&limit=50 ──────
+  //  /api/me で history は直近 30 件にトリムされているため、 古いメッセージは
+  //  ここから取得。 ag.history は最古→最新の順なので before_idx より前の slice を返す。
+  const _histLazyMatch = pathname.match(/^\/api\/agents\/([^/]+)\/history$/);
+  if(_histLazyMatch && method === 'GET'){
+    const ag = (user.agents||[]).find(a => a && a.id === _histLazyMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const qs2 = url.parse(req.url, true).query || {};
+    const all = Array.isArray(ag.history) ? ag.history : [];
+    const total = all.length;
+    const limit = Math.min(200, Math.max(1, parseInt(qs2.limit, 10) || 50));
+    // before_idx 指定なし → 末尾 limit 件 (= /api/me と同じ)
+    let beforeIdx = parseInt(qs2.before_idx, 10);
+    if(isNaN(beforeIdx) || beforeIdx < 0 || beforeIdx > total) beforeIdx = total;
+    const startIdx = Math.max(0, beforeIdx - limit);
+    return jres(res, 200, {
+      total,
+      start_idx: startIdx,
+      end_idx: beforeIdx,
+      items: all.slice(startIdx, beforeIdx),
+      has_more: startIdx > 0,
+    });
   }
 
   // ── GET /api/agents/:id/history_archive ────────────────────

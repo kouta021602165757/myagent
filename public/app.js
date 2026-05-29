@@ -4765,6 +4765,41 @@ window._promptAiToPost = function(siteId, platform, platformName){
 };
 // 1 クリックで chat に prompt 送信 (= activation の next-step CTA で使用)
 // base64 で encode された prompt を decode → chat input prefill → sendMsg() を直接呼ぶ
+// 過去メッセージの lazy load (= /api/me で trimmed されてる場合のみ表示される banner から)
+window._loadOlderHistory = async function(agId, btnEl){
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = '読み込み中…'; }
+  try {
+    var ag = (agents||[]).find(function(a){ return a && a.id === agId; });
+    if(!ag) return;
+    var beforeIdx = (typeof ag.history_total_count === 'number')
+      ? (ag.history_total_count - (ag.history||[]).length)
+      : 0;
+    if(beforeIdx <= 0){
+      // already at top
+      var bn = document.getElementById('olderHistBanner-'+agId);
+      if(bn) bn.remove();
+      return;
+    }
+    var r = await api('GET', '/api/agents/' + encodeURIComponent(agId) + '/history?before_idx=' + beforeIdx + '&limit=50');
+    if(!r || !Array.isArray(r.items)){ if(btnEl){ btnEl.disabled=false; btnEl.textContent='📜 再試行'; } return; }
+    // 既存 history の前に prepend
+    ag.history = r.items.concat(ag.history || []);
+    // banner を更新 (残件数 or 完全に消す)
+    var remaining = r.start_idx;
+    if(remaining <= 0){
+      ag.history_truncated = false;
+      ag.history_total_count = ag.history.length;
+    } else {
+      ag.history_total_count = r.total;
+    }
+    // 再描画
+    if(typeof openAgent === 'function') openAgent(agId);
+  } catch(e){
+    console.warn('[loadOlderHistory] failed:', e && e.message);
+    if(btnEl){ btnEl.disabled = false; btnEl.textContent = '📜 再試行 (' + (e.message || 'error').slice(0,20) + ')'; }
+  }
+};
+
 window._quickSendPrompt = function(b64, btnEl){
   if(btnEl){ btnEl.disabled = true; btnEl.style.opacity = '0.6'; }
   try {
@@ -12638,7 +12673,21 @@ function renderMsgs(ag, forceScrollBottom){
   // ChatGPT-style flow on mobile. The "💬 N 件の返信" pill still shows on
   // both for consistency.
   var _wideEnoughForDrawer = (typeof window !== 'undefined' && window.innerWidth >= 900);
-  inner.innerHTML = _nudgeHTML + ag.history.map(function(m,i){
+  // 履歴がサーバ側でトリムされた場合の「過去メッセージを読み込む」 banner
+  // (= /api/me の payload 削減で末尾 30 件のみ送られてくるため。 残りは
+  // /api/agents/:id/history?before_idx=N で lazy load)
+  var _olderHistBanner = '';
+  if(ag.history_truncated && typeof ag.history_total_count === 'number'){
+    var _olderCount = ag.history_total_count - (ag.history || []).length;
+    if(_olderCount > 0){
+      _olderHistBanner = '<div id="olderHistBanner-' + esc(ag.id) + '" style="text-align:center;padding:14px 10px;background:var(--cream3);border:1px dashed var(--wire2);border-radius:9px;margin-bottom:12px">'
+        + '<button onclick="_loadOlderHistory(\'' + esc(ag.id) + '\', this)" style="background:#fff;border:1px solid var(--wire2);padding:8px 16px;border-radius:7px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:inherit;transition:.15s">'
+        + '📜 過去 ' + _olderCount + ' 件のメッセージを読み込む'
+        + '</button>'
+        + '</div>';
+    }
+  }
+  inner.innerHTML = _nudgeHTML + _olderHistBanner + ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline ONLY on desktop;
     // on mobile they show inline so the user always sees the AI reply.
     if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';

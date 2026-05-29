@@ -20847,13 +20847,34 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     const qs = url.parse(req.url, true).query || {};
     const TTL_MS = 6 * 3600 * 1000;
+    const KW_SCHEMA_VERSION = 2;  // 1→2: ドメイン照合チェック追加で過去キャッシュ無効化 (2026-05-29)
     const cached = ag.keyword_suggestions;
-    if(!qs.refresh && cached && cached.fetched_at &&
+    if(!qs.refresh && cached && cached.fetched_at && cached.schema_version === KW_SCHEMA_VERSION &&
        (Date.now() - Date.parse(cached.fetched_at)) < TTL_MS){
       return jres(res, 200, Object.assign({}, cached, { cached: true }));
     }
+    // GSC 接続判定: OAuth + scope + ドメイン照合の 3 段チェック
+    // ドメイン照合が必要な理由: agent.gsc_site_url が user-default にフォールバックしたり、
+    // 過去の誤マッピングで他サイトの GSC が紐づいてるケースがあるため、ホスト名一致を必須にする。
+    const _agHost = (() => {
+      try { return new URL(ag.site_url).hostname.replace(/^www\./, ''); }
+      catch(_){ return ''; }
+    })();
+    const _resolvedGscUrl = ag.gsc_site_url
+      || (user.integrations && user.integrations.google && user.integrations.google.gsc_site_url)
+      || '';
+    const _gscHost = (() => {
+      if(!_resolvedGscUrl) return '';
+      const m = String(_resolvedGscUrl).match(/^sc-domain:(.+)$|^https?:\/\/([^/]+)/);
+      return ((m && (m[1] || m[2])) || '').replace(/^www\./, '');
+    })();
+    const _gscDomainMatches = !!(_agHost && _gscHost && _agHost === _gscHost);
     const hasGsc = !!(user.google_oauth && user.google_oauth.refresh_token
-                      && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || '')));
+                      && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''))
+                      && _gscDomainMatches);
+    if(!_gscDomainMatches && _resolvedGscUrl){
+      console.warn('[kw-sug] GSC domain mismatch: agent.site_url=' + _agHost + ' vs gsc=' + _gscHost + ' → 推測モード');
+    }
     let gscData = null;
     let sitePreview = null;
     let articles = [];
@@ -20911,6 +20932,7 @@ async function handleAPI(req,res,pathname,method,ip){
     let hostname = '';
     try { hostname = new URL(ag.site_url).hostname.replace(/^www\./, ''); } catch(_){}
     const out = {
+      schema_version: KW_SCHEMA_VERSION,
       mode: (hasGsc && gscData && gscData.ok && Array.isArray(gscData.rows) && gscData.rows.length > 0) ? 'gsc' : 'inferred',
       fetched_at: new Date().toISOString(),
       site_hostname: hostname,

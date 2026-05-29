@@ -21442,16 +21442,17 @@ async function handleAPI(req,res,pathname,method,ip){
   // GET /api/agents/:id/site-type
   //   サイト URL を fetch して HTML を解析、サイトタイプ判定
   //   wordpress / shopify / base / studio / wix / webflow / cms-other / lp
-  //   キャッシュ: agent.site_type に 7 日
+  //   キャッシュ: agent.detected_site_type に 7 日
+  //   注意: agent.site_type は既存機能 (media/ec/lp-hp バッジ) のフィールドなので触らない。
   const siteTypeMatch = pathname.match(/^\/api\/agents\/([^/]+)\/site-type$/);
   if(siteTypeMatch && method === 'GET'){
     const ag = (user.agents || []).find(a => a && a.id === siteTypeMatch[1]);
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     const qs = url.parse(req.url, true).query || {};
     const TTL = 7 * 24 * 3600 * 1000;
-    if(!qs.refresh && ag.site_type && ag.site_type.fetched_at &&
-       (Date.now() - Date.parse(ag.site_type.fetched_at)) < TTL){
-      return jres(res, 200, Object.assign({}, ag.site_type, { cached: true }));
+    if(!qs.refresh && ag.detected_site_type && ag.detected_site_type.fetched_at &&
+       (Date.now() - Date.parse(ag.detected_site_type.fetched_at)) < TTL){
+      return jres(res, 200, Object.assign({}, ag.detected_site_type, { cached: true }));
     }
     if(!ag.site_url) return jres(res, 200, { type: 'unknown', confidence: 'low', signals: [] });
     let html = '';
@@ -21538,7 +21539,7 @@ async function handleAPI(req,res,pathname,method,ip){
       signals,
       fetched_at: new Date().toISOString(),
     };
-    ag.site_type = out;
+    ag.detected_site_type = out;
     try { await DB.save(user); } catch(e){ console.warn('[site-type] save failed:', e.message); }
     return jres(res, 200, out);
   }

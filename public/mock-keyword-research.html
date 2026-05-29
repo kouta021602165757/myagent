@@ -1826,25 +1826,56 @@
     window.addEventListener('message', function(e){
       if(e.origin !== location.origin) return;
       if(!e.data || typeof e.data !== 'object') return;
-      if(e.data.type === 'kw-suggestions' && e.data.data){
-        _renderDynamicCandidates(e.data.data);
-        // AEO 候補も同じ payload に含まれているので AEO タブも描画
-        if(Array.isArray(e.data.data.aeo_candidates)) _renderDynamicAeoCandidates(e.data.data);
-      } else if(e.data.type === 'kw-sitetype' && e.data.data){
-        _renderSiteType(e.data.data);
-      } else if(e.data.type === 'kw-error'){
+      var d = e.data;
+      if(d.type === 'kw-suggestions' && d.data){
+        _renderDynamicCandidates(d.data);
+        if(Array.isArray(d.data.aeo_candidates)) _renderDynamicAeoCandidates(d.data);
+      } else if(d.type === 'kw-sitetype' && d.data){
+        _renderSiteType(d.data);
+      } else if(d.type === 'kw-detail' && d.data){
+        if(d.data.mode === 'aeo') _renderAeoDetail(d.data);
+        else _renderSeoDetail(d.data);
+      } else if(d.type === 'kw-detail-error'){
+        _showDetailError(d.message);
+      } else if(d.type === 'kw-error'){
         grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
-          + '⚠️ 候補生成に失敗しました (' + _esc(e.data.message || 'unknown') + ')'
+          + '⚠️ 候補生成に失敗しました (' + _esc(d.message || 'unknown') + ')'
           + '</div>';
       }
     });
 
-    // 候補カードクリック → STATE 2 へスクロール (event delegation = 動的描画後も効く)
+    // AEO タブの候補グリッドにもクリックハンドラを設定 (event delegation で動的描画後も効く)
+    var aeoGrid = document.querySelector('.tab-pane[data-tab="aeo"] .cands');
+    if(aeoGrid && !aeoGrid._kwClickBound){
+      aeoGrid._kwClickBound = true;
+      aeoGrid.addEventListener('click', function(e){
+        var cand = e.target.closest('.cand');
+        if(!cand) return;
+        var kwEl = cand.querySelector('.cand-kw');
+        if(!kwEl) return;
+        var kw = kwEl.textContent.trim();
+        _showAeoDetailLoading(kw);
+        var divider = document.querySelector('.tab-pane[data-tab="aeo"] .divider');
+        if(divider) divider.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        try {
+          window.parent.postMessage({ type: 'kw-detail-request', siteId: _siteId, kw: kw, mode: 'aeo' }, location.origin);
+        } catch(_){}
+      });
+    }
+
+    // 候補カードクリック → STATE 2 動的 fetch + 描画 + スクロール
     grid.addEventListener('click', function(e){
       var cand = e.target.closest('.cand');
       if(!cand) return;
+      var kwEl = cand.querySelector('.cand-kw');
+      if(!kwEl) return;
+      var kw = kwEl.textContent.trim();
+      _showSeoDetailLoading(kw);
       var divider = document.querySelector('.tab-pane[data-tab="seo"] .divider');
       if(divider) divider.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try {
+        window.parent.postMessage({ type: 'kw-detail-request', siteId: _siteId, kw: kw, mode: 'seo' }, location.origin);
+      } catch(_){}
     });
 
     // 親に ready 通知 → 親が fetch して postMessage で返してくれる
@@ -1989,6 +2020,183 @@
         +   '<div class="cand-reason">' + _esc(c.reason) + '</div>'
         + '</div>';
     }).join('');
+  }
+
+  // ─── SEO STATE 2 (クリック後の詳細) ─────────────────────────
+  function _showSeoDetailLoading(kw){
+    var pane = document.querySelector('.tab-pane[data-tab="seo"]');
+    if(!pane) return;
+    var hero = pane.querySelector('.selected-hero-kw');
+    if(hero) hero.textContent = '「' + kw + '」';
+    _setSeoDetailEmptyState('AI チームが「' + kw + '」を分析中… (約 30 秒)');
+  }
+  function _setSeoDetailEmptyState(msg){
+    var pane = document.querySelector('.tab-pane[data-tab="seo"]');
+    if(!pane) return;
+    // 周辺語 chips, タイトル list を loading 状態に
+    var allChips = pane.querySelectorAll('.sec .chips');
+    allChips.forEach(function(el){
+      el.innerHTML = '<div style="color:#71717a;font-size:11.5px;font-weight:600;padding:6px 0">' + _esc(msg) + '</div>';
+    });
+    var titles = pane.querySelector('.titles');
+    if(titles){
+      titles.innerHTML = '<div style="text-align:center;padding:30px;color:#71717a;font-size:12px">' + _esc(msg) + '</div>';
+    }
+  }
+  function _renderSeoDetail(d){
+    var pane = document.querySelector('.tab-pane[data-tab="seo"]');
+    if(!pane) return;
+    // 1) 選択キーワード hero
+    var hero = pane.querySelector('.selected-hero-kw');
+    if(hero) hero.textContent = '「' + (d.keyword || '') + '」';
+    // 2) 詳細シグナルパネル (4 boxes)
+    var s = d.signals || {};
+    var sigBoxes = pane.querySelectorAll('.signals-panel .sig-box');
+    var sigData = [
+      { label: 'トレンド (6 ヶ月)', val: s.trend || '—', sub: '関心の推移' },
+      { label: '競合強度', val: s.competition || '中', sub: '上位 10 サイトの強さ' },
+      { label: 'サジェスト網羅度', val: (d.suggest || []).length + ' 語', sub: '関連クエリの広がり' },
+      { label: '狙い目スコア', val: s.score || 'B', sub: 'AI 総合判定' }
+    ];
+    sigBoxes.forEach(function(box, i){
+      if(!sigData[i]) return;
+      var v = box.querySelector('.sig-box-v');
+      if(v) v.textContent = sigData[i].val;
+      var sub = box.querySelector('.sig-box-sub');
+      if(sub) sub.textContent = sigData[i].sub;
+    });
+    // 3) 一緒に検索される (Google サジェスト)
+    var chipsBlocks = pane.querySelectorAll('.sec .chips');
+    if(chipsBlocks[0]){
+      chipsBlocks[0].innerHTML = (d.suggest || []).slice(0, 21).map(function(s, i){
+        var cls = (i < 2) ? 'chip strong' : 'chip';
+        return '<span class="' + cls + '">' + _esc(s) + '</span>';
+      }).join('') || '<span style="color:#71717a;font-size:11.5px">サジェスト取得失敗</span>';
+    }
+    // 4) 周辺語・連想語 (再帰サジェスト)
+    if(chipsBlocks[1]){
+      chipsBlocks[1].innerHTML = (d.related || []).slice(0, 25).map(function(s){
+        return '<span class="chip">' + _esc(s) + '</span>';
+      }).join('') || '<span style="color:#71717a;font-size:11.5px">周辺語なし</span>';
+    }
+    // 5) 推奨タイトル × 5
+    var titlesEl = pane.querySelector('.titles');
+    if(titlesEl){
+      var rows = ['①','②','③','④','⑤'];
+      titlesEl.innerHTML = (d.titles || []).slice(0, 5).map(function(t, i){
+        return '<div class="title-row">'
+          + '<div class="title-rank">' + (rows[i] || ('#' + (i+1))) + '</div>'
+          + '<div>'
+          +   '<div class="title-tx">' + _esc(t.title) + '</div>'
+          +   '<div class="title-meta">📚 約 ' + _esc(t.chars_target || 12000) + ' 字 · h2 案 ' + _esc(t.h2_count || 9) + ' つ · ' + _esc(t.reason || '') + '</div>'
+          + '</div>'
+          + '<button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>'
+          + '</div>';
+      }).join('');
+    }
+    // 周辺語サブテキスト 件数更新
+    var subEls = pane.querySelectorAll('.sec-h-sub');
+    if(subEls[0]) subEls[0].textContent = 'Google サジェスト · ' + (d.suggest || []).length + ' 件';
+    if(subEls[1]) subEls[1].textContent = '再帰サジェスト 2 階層 · ' + (d.related || []).length + ' 語';
+  }
+
+  // ─── AEO STATE 2 (クリック後の詳細) ─────────────────────────
+  function _showAeoDetailLoading(kw){
+    var pane = document.querySelector('.tab-pane[data-tab="aeo"]');
+    if(!pane) return;
+    var hero = pane.querySelector('.selected-hero-kw');
+    if(hero) hero.textContent = '「' + kw + '」';
+    _setAeoDetailEmptyState('AI チームが「' + kw + '」の AEO 戦略を分析中… (約 30 秒)');
+  }
+  function _setAeoDetailEmptyState(msg){
+    var pane = document.querySelector('.tab-pane[data-tab="aeo"]');
+    if(!pane) return;
+    var allChips = pane.querySelectorAll('.sec .chips');
+    allChips.forEach(function(el){
+      el.innerHTML = '<div style="color:#71717a;font-size:11.5px;font-weight:600;padding:6px 0">' + _esc(msg) + '</div>';
+    });
+    var titles = pane.querySelector('.titles');
+    if(titles){
+      titles.innerHTML = '<div style="text-align:center;padding:30px;color:#71717a;font-size:12px">' + _esc(msg) + '</div>';
+    }
+  }
+  function _renderAeoDetail(d){
+    var pane = document.querySelector('.tab-pane[data-tab="aeo"]');
+    if(!pane) return;
+    // 1) 選択キーワード hero
+    var hero = pane.querySelector('.selected-hero-kw');
+    if(hero) hero.textContent = '「' + (d.keyword || '') + '」';
+    // 2) 詳細シグナルパネル (4 boxes)
+    var s = d.signals || {};
+    var sigBoxes = pane.querySelectorAll('.signals-panel .sig-box');
+    var sigData = [
+      { label: 'AI Overview 出現状況', val: s.ai_overview || '—', sub: 'Google AI 回答に表示されるか' },
+      { label: '現在の引用元サイト', val: (s.sources_count != null ? s.sources_count : '—') + ' サイト', sub: '構造化で割り込み可能' },
+      { label: '関連 PAA 質問数', val: (s.paa_count != null ? s.paa_count : '—') + ' 問', sub: '派生質問の数' },
+      { label: '引用獲得スコア', val: s.score || 'B', sub: 'AI 総合判定' }
+    ];
+    sigBoxes.forEach(function(box, i){
+      if(!sigData[i]) return;
+      var v = box.querySelector('.sig-box-v');
+      if(v) v.textContent = sigData[i].val;
+      var sub = box.querySelector('.sig-box-sub');
+      if(sub) sub.textContent = sigData[i].sub;
+    });
+    // 3) 関連 PAA
+    var chipsBlocks = pane.querySelectorAll('.sec .chips');
+    if(chipsBlocks[0]){
+      chipsBlocks[0].innerHTML = (d.paa || []).slice(0, 8).map(function(q, i){
+        var cls = (i < 2) ? 'chip strong' : 'chip';
+        return '<span class="' + cls + '" style="background:#f3e8ff;border-color:#c4b5fd;color:#5b21b6">' + _esc(q) + '</span>';
+      }).join('') || '<span style="color:#71717a;font-size:11.5px">PAA データなし</span>';
+    }
+    // 4) 引用される記事の特徴チェックリスト
+    var h2map = pane.querySelector('.h2map');
+    if(h2map){
+      h2map.innerHTML = (d.citation_checklist || []).map(function(it){
+        var pct = it.total ? Math.round(it.count / it.total * 100) : 0;
+        return '<div class="h2map-row">'
+          + '<div class="h2map-tx"><b>' + _esc(it.item) + '</b></div>'
+          + '<div class="h2map-bar"><div class="h2map-bar-fill" style="width:' + pct + '%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>'
+          + '<div class="h2map-cnt">' + _esc(it.count) + '/' + _esc(it.total) + '</div>'
+          + '</div>';
+      }).join('');
+    }
+    // 5) 推奨タイトル × 5 (Q&A 構成)
+    var titlesEl = pane.querySelector('.titles');
+    if(titlesEl){
+      var rows = ['①','②','③','④','⑤'];
+      titlesEl.innerHTML = (d.titles || []).slice(0, 5).map(function(t, i){
+        return '<div class="title-row">'
+          + '<div class="title-rank">' + (rows[i] || ('#' + (i+1))) + '</div>'
+          + '<div>'
+          +   '<div class="title-tx">' + _esc(t.title) + '</div>'
+          +   '<div class="title-meta">📚 約 ' + _esc(t.chars_target || 12000) + ' 字 · h2 案 ' + _esc(t.h2_count || 9) + ' つ' + (t.faq_count ? ' + FAQ schema ' + _esc(t.faq_count) + ' 問' : '') + ' · ' + _esc(t.reason || '') + '</div>'
+          + '</div>'
+          + '<button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>'
+          + '</div>';
+      }).join('');
+    }
+    // 6) schema.org マークアップ プレビュー
+    if(d.schema_jsonld){
+      var schemaBlock = pane.querySelector('[style*="background:#0f172a"]');
+      if(schemaBlock){
+        var jsonText = JSON.stringify(d.schema_jsonld, null, 2);
+        schemaBlock.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+          + '<span style="color:#94a3b8;font-size:10.5px">// 「' + _esc(d.keyword) + '」用に自動生成された FAQ schema</span>'
+          + '<button onclick="navigator.clipboard.writeText(this.parentNode.nextElementSibling.textContent)" style="background:#1e293b;color:#a5f3fc;border:1px solid #334155;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">📋 コピー</button>'
+          + '</div>'
+          + '<pre style="margin:0;font-family:Menlo,Monaco,monospace;font-size:11px;line-height:1.55;white-space:pre-wrap;word-break:break-word">' + _esc(jsonText) + '</pre>';
+      }
+    }
+  }
+
+  function _showDetailError(msg){
+    // SEO/AEO どちらの STATE 2 でも対応 (= 両 タブの hero に表示)
+    var heroes = document.querySelectorAll('.selected-hero-kw');
+    heroes.forEach(function(h){
+      h.innerHTML = '<span style="color:#dc2626;font-size:14px">⚠️ ' + _esc(msg) + '</span>';
+    });
   }
 
   // サイトタイプ判定 → 該当 site-cap banner だけ表示、他は隠す

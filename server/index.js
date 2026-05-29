@@ -7535,6 +7535,46 @@ async function _fetchSitePreview(agent){
   return { title, content };
 }
 
+// 🔍 Google サジェスト — 公式 endpoint (認証不要、無料、レート制限ほぼなし)
+//   結果: ['キーワード', ['sub1','sub2',...]]
+async function _googleSuggest(kw, hl){
+  if(!kw) return [];
+  try {
+    const path = '/complete/search?client=firefox&hl=' + encodeURIComponent(hl || 'ja') + '&q=' + encodeURIComponent(kw);
+    const ctrl = new AbortController();
+    const tm = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch('https://suggestqueries.google.com' + path, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 MY-AI-Agent' },
+    }).catch(() => null);
+    clearTimeout(tm);
+    if(!r || !r.ok) return [];
+    const txt = await r.text();
+    // JSON 配列 ["keyword", ["sub1","sub2",...]]
+    const arr = JSON.parse(txt);
+    return Array.isArray(arr) && Array.isArray(arr[1]) ? arr[1] : [];
+  } catch(e){
+    console.warn('[suggest] failed:', kw, e.message);
+    return [];
+  }
+}
+
+// 再帰サジェスト 2 階層 (= 周辺語拡張)
+async function _googleSuggestRecursive(kw, hl){
+  const l1 = await _googleSuggest(kw, hl);
+  if(l1.length === 0) return [];
+  // 上位 5 サブクエリで L2 を並列取得 (最大 25 件)
+  const seedQueries = l1.slice(0, 5);
+  const l2Promises = seedQueries.map(q => _googleSuggest(q, hl));
+  const l2Results = await Promise.all(l2Promises);
+  const all = new Set();
+  l1.forEach(s => all.add(s));
+  l2Results.forEach(arr => arr.forEach(s => all.add(s)));
+  // 元キーワードは除外
+  all.delete(kw);
+  return Array.from(all);
+}
+
 // 🔍 キーワード調査 — Claude に渡すプロンプトを組み立てる
 // site メタ + 既存記事 + (あれば) GSC データを 5 つの戦略タイプにマッピング
 function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
@@ -20981,6 +21021,162 @@ async function handleAPI(req,res,pathname,method,ip){
     };
     ag.keyword_suggestions = out;
     try { await DB.save(user); } catch(e){ console.warn('[kw-sug] save failed:', e.message); }
+    return jres(res, 200, out);
+  }
+
+  // GET /api/agents/:id/keyword-detail?kw=XXX&mode=seo|aeo
+  //   選択キーワードの詳細: サジェスト + 周辺語 + 推奨タイトル × 5 + シグナル + (AEO) PAA + schema
+  //   キャッシュ: agent.keyword_detail[mode + ':' + kw] に 24 時間
+  const kwDetailMatch = pathname.match(/^\/api\/agents\/([^/]+)\/keyword-detail$/);
+  if(kwDetailMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === kwDetailMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const qs = url.parse(req.url, true).query || {};
+    const kw = String(qs.kw || '').trim().slice(0, 100);
+    const mode = (String(qs.mode || 'seo').toLowerCase() === 'aeo') ? 'aeo' : 'seo';
+    if(!kw) return jres(res, 400, { error: 'kw required' });
+
+    // キャッシュ
+    const TTL = 24 * 3600 * 1000;
+    ag.keyword_detail = ag.keyword_detail || {};
+    const cacheKey = mode + ':' + kw.slice(0, 50);
+    const cached = ag.keyword_detail[cacheKey];
+    if(!qs.refresh && cached && cached.fetched_at &&
+       (Date.now() - Date.parse(cached.fetched_at)) < TTL){
+      return jres(res, 200, Object.assign({}, cached, { cached: true }));
+    }
+
+    // 並列 fetch: サジェスト + サイトプレビュー
+    let suggest = [], related = [], sitePreview = null;
+    try {
+      const [sg, sp] = await Promise.all([
+        _googleSuggest(kw, 'ja'),
+        _fetchSitePreview(ag),
+      ]);
+      suggest = sg.slice(0, 21);  // 一緒に検索される (top 21)
+      sitePreview = sp;
+      // 周辺語は再帰サジェスト 2 階層から
+      const rec = await _googleSuggestRecursive(kw, 'ja');
+      related = rec.slice(0, 60);
+    } catch(e){
+      console.warn('[kw-detail] suggest failed:', e.message);
+    }
+
+    // Claude プロンプト: モード別 (SEO は title 5、AEO は Q&A title 5 + PAA + schema)
+    let hostname = '';
+    try { hostname = new URL(ag.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+    const persona = String(ag.persona || '').slice(0, 400);
+    const meta = String((sitePreview && sitePreview.content) || '').slice(0, 1200);
+    const sgList = suggest.slice(0, 15).map(s => '・' + s).join('\n');
+    const relList = related.slice(0, 20).map(s => '・' + s).join('\n');
+
+    let prompt;
+    if(mode === 'seo'){
+      prompt = [
+        'あなたは SEO 戦略家。サイト「' + hostname + '」が「' + kw + '」というキーワードで上位を取る記事を企画します。',
+        '',
+        '【ペルソナ】 ' + (persona || '(未設定)'),
+        '【サイト内容】 ' + meta,
+        '【一緒に検索されるキーワード】',
+        sgList || '(なし)',
+        '【周辺語】',
+        relList || '(なし)',
+        '',
+        '【出力】 JSON のみ (コードフェンス禁止):',
+        '{',
+        '  "signals": { "trend": "+18%"|"—", "competition": "緩"|"中"|"激", "suggest_count": ' + suggest.length + ', "score": "S"|"A"|"B"|"C" },',
+        '  "titles": [',
+        '    { "rank": 1, "title": "(具体タイトル、1万字以上の記事を想定)", "chars_target": 12000, "h2_count": 9, "reason": "なぜ刺さるか 1 文" }',
+        '    // x5',
+        '  ]',
+        '}'
+      ].join('\n');
+    } else {
+      prompt = [
+        'あなたは AEO (Answer Engine Optimization) 専門家。サイト「' + hostname + '」が「' + kw + '」という質問で',
+        'AI 検索 (ChatGPT/Perplexity/Google AI Overviews) に引用される記事を作ります。',
+        '',
+        '【ペルソナ】 ' + (persona || '(未設定)'),
+        '【サイト内容】 ' + meta,
+        '【一緒に検索される質問形式キーワード】',
+        sgList || '(なし)',
+        '',
+        '【出力】 JSON のみ (コードフェンス禁止):',
+        '{',
+        '  "signals": { "ai_overview": "あり"|"なし", "sources_count": 5, "paa_count": 8, "score": "S"|"A"|"B"|"C" },',
+        '  "paa": [ /* 関連 PAA 質問 8 件、Q 形式 */ ],',
+        '  "citation_checklist": [',
+        '    { "item": "結論を冒頭に書く", "count": 5, "total": 5 },',
+        '    { "item": "具体的な数値・年月日を明記", "count": 5, "total": 5 },',
+        '    { "item": "FAQ / Q&A 構造で書かれている", "count": 3, "total": 5 },',
+        '    { "item": "出典・参照リンクが明記されている", "count": 4, "total": 5 },',
+        '    { "item": "著者情報 (Author / 監修者) が明示", "count": 3, "total": 5 },',
+        '    { "item": "schema.org FAQPage / HowTo 実装", "count": 1, "total": 5 },',
+        '    { "item": "最新性 (更新日が 6 ヶ月以内)", "count": 3, "total": 5 }',
+        '  ],',
+        '  "titles": [',
+        '    { "rank": 1, "title": "(Q&A 構成、結論先出し、1万字以上)", "chars_target": 13000, "h2_count": 9, "faq_count": 12, "reason": "なぜ AI 引用されやすいか" }',
+        '    // x5',
+        '  ],',
+        '  "schema_jsonld": {',
+        '    "@context": "https://schema.org",',
+        '    "@type": "FAQPage",',
+        '    "mainEntity": [',
+        '      { "@type": "Question", "name": "(質問)", "acceptedAnswer": { "@type": "Answer", "text": "(60-120字の回答)" } }',
+        '      // 8 件',
+        '    ]',
+        '  }',
+        '}'
+      ].join('\n');
+    }
+
+    const info = _resolveModelInfo('sonnet');
+    let rawText = '';
+    let parsed = null;
+    try {
+      if(info.provider === 'gemini'){
+        const r = await _callGemini([{role:'user', content: prompt}], '', info);
+        rawText = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+      } else if(ANTHROPIC){
+        const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+          { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+          { model: info.modelId, max_tokens: 3500, messages:[{ role:'user', content: prompt }] },
+          { timeout: 45000 });
+        if(r.s !== 200) return jres(res, 502, { error: 'claude_failed', status: r.s, detail: String(JSON.stringify(r.d)).slice(0, 300) });
+        rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      } else {
+        return jres(res, 500, { error: 'no AI provider configured' });
+      }
+      const jsonM = rawText.match(/\{[\s\S]*"titles"[\s\S]*\}/);
+      parsed = JSON.parse(jsonM ? jsonM[0] : rawText);
+    } catch(e){
+      console.warn('[kw-detail] parse failed:', e.message);
+      return jres(res, 502, { error: 'parse_failed', message: e.message, raw: rawText.slice(0, 300) });
+    }
+
+    const out = {
+      schema_version: 1,
+      mode,
+      keyword: kw,
+      fetched_at: new Date().toISOString(),
+      suggest,
+      related,
+      signals: parsed.signals || {},
+      titles: (parsed.titles || []).slice(0, 5),
+      paa: (parsed.paa || []).slice(0, 8),                           // AEO only
+      citation_checklist: (parsed.citation_checklist || []).slice(0, 7), // AEO only
+      schema_jsonld: parsed.schema_jsonld || null,                   // AEO only
+    };
+    // LRU: 直近 8 件のみ保持
+    const keys = Object.keys(ag.keyword_detail);
+    if(keys.length >= 8){
+      // fetched_at で sort して古い 1 件削除
+      const oldest = keys.map(k => ({ k, t: Date.parse(ag.keyword_detail[k].fetched_at || 0) }))
+        .sort((a,b) => a.t - b.t)[0];
+      if(oldest) delete ag.keyword_detail[oldest.k];
+    }
+    ag.keyword_detail[cacheKey] = out;
+    try { await DB.save(user); } catch(e){ console.warn('[kw-detail] save failed:', e.message); }
     return jres(res, 200, out);
   }
 

@@ -523,7 +523,7 @@
         <div class="manual-body">
           <div class="manual-input">
             <input type="text" placeholder="調べたいキーワードを入力">
-            <button>調査</button>
+            <button onclick="return _kwManualInputStub()">調査</button>
           </div>
         </div>
       </div>
@@ -1356,7 +1356,7 @@
           <div class="manual-body">
             <div class="manual-input">
               <input type="text" placeholder="調べたい質問を入力">
-              <button style="background:#6d28d9">調査</button>
+              <button style="background:#6d28d9" onclick="return _kwManualInputStub()">調査</button>
             </div>
           </div>
         </div>
@@ -1729,9 +1729,17 @@
         _renderDynamicCandidates(e.data.data);
       } else if(e.data.type === 'kw-error'){
         grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
-          + '⚠️ 候補生成に失敗しました (' + (e.data.message || 'unknown') + ')'
+          + '⚠️ 候補生成に失敗しました (' + _esc(e.data.message || 'unknown') + ')'
           + '</div>';
       }
+    });
+
+    // 候補カードクリック → STATE 2 へスクロール (event delegation = 動的描画後も効く)
+    grid.addEventListener('click', function(e){
+      var cand = e.target.closest('.cand');
+      if(!cand) return;
+      var divider = document.querySelector('.tab-pane[data-tab="seo"] .divider');
+      if(divider) divider.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     // 親に ready 通知 → 親が fetch して postMessage で返してくれる
@@ -1739,18 +1747,51 @@
       window.parent.postMessage({ type: 'kw-iframe-ready', siteId: siteId }, location.origin);
     } catch(_){}
 
-    // 60 秒タイムアウト fallback (= 親が応答しなかった時)
+    // 90 秒タイムアウト fallback (= 親が応答しなかった時、Claude cold start で 60s だと
+    // 厳しいケースがあるため余裕を持たせる)
     setTimeout(function(){
       if(grid.querySelector('.cand')) return; // 既に描画済
       grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
-        + '⚠️ タイムアウト (60 秒) — 親アプリから応答がありません。リロードしてください。'
+        + '⚠️ タイムアウト (90 秒) — 親アプリから応答がありません。リロードしてください。'
         + '</div>';
-    }, 60000);
+    }, 90000);
   }
+
+  // 「🔄 再生成」 — 親に kw-refresh ポストして強制 re-fetch
+  function _doRefresh(){
+    if(!_siteId) return false;
+    var grid = document.getElementById('kwCands');
+    if(grid){
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 20px;text-align:center;color:#71717a;font-size:13px;font-weight:600">'
+        + '<div style="font-size:32px;margin-bottom:8px">🤖</div>'
+        + 'AI チームが再生成中… (約 20-40 秒)'
+        + '</div>';
+    }
+    try {
+      window.parent.postMessage({ type: 'kw-refresh', siteId: _siteId }, location.origin);
+    } catch(_){}
+    return false;
+  }
+  window._doRefresh = _doRefresh;
+
+  // 手動入力 button (SEO / AEO 両方) — Phase 2 で実装予定の stub
+  function _kwManualInputStub(){
+    alert('🚧 手動キーワード調査は次の Phase で実装予定です。\n現状は AI が自動抽出した候補をご利用ください。');
+    return false;
+  }
+  window._kwManualInputStub = _kwManualInputStub;
 
   function _renderDynamicCandidates(d){
     var grid = document.getElementById('kwCands');
     if(!grid) return;
+    // データ guard — candidates が無い / 空 / 非配列 のときは empty state
+    var arr = (d && Array.isArray(d.candidates)) ? d.candidates : [];
+    if(arr.length === 0){
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#92400e;font-size:12px;background:#fffbeb;border-radius:9px">'
+        + '⚠️ 候補が 0 件でした。サイトの設定 (ペルソナ・サイト URL) を見直すか、🔄 再生成 をお試しください。'
+        + '</div>';
+      return;
+    }
     // モードバッジ (GSC 接続 vs 推測)
     var heroLbl = document.querySelector('.kw-hero-lbl');
     if(heroLbl){
@@ -1764,21 +1805,22 @@
       var heroTi = document.querySelector('.kw-hero-ti');
       if(heroTi) heroTi.textContent = d.site_hostname + ' で狙うべきキーワードはこちら';
     }
-    // 最終更新時刻
+    // 最終更新時刻 + 🔄 再生成 (postMessage で親に通知)
     var subEl = document.querySelector('.sec-h .sec-h-sub');
     if(subEl && d.fetched_at){
       var dt = new Date(d.fetched_at);
       var rel = _kwRelTime(dt);
-      subEl.innerHTML = '最終更新: ' + rel + ' · <a href="?embed=1&site=' + encodeURIComponent(_siteId) + '&refresh=1" style="color:#0d4f4a;text-decoration:none;font-weight:800" onclick="location.search=\'?embed=1&site=' + encodeURIComponent(_siteId) + '&refresh=1\';return false">🔄 再生成</a>';
+      subEl.innerHTML = '最終更新: ' + _esc(rel) + ' · <a href="#" style="color:#0d4f4a;text-decoration:none;font-weight:800" onclick="return _doRefresh()">🔄 再生成</a>';
     }
     // 候補カード再描画
     var ranks = ['🥇 #1','🥈 #2','🥉 #3','#4','#5','#6'];
-    grid.innerHTML = d.candidates.map(function(c, i){
+    grid.innerHTML = arr.map(function(c, i){
+      c = c || {};
       var topCls = (i === 0) ? ' top' : '';
       var sig = c.signals || {};
       return '<div class="cand' + topCls + '">'
         +   '<div class="cand-rank">' + (ranks[i] || ('#' + (i+1))) + '</div>'
-        +   '<div class="cand-kw">' + _esc(c.keyword || '') + '</div>'
+        +   '<div class="cand-kw">' + _esc(c.keyword) + '</div>'
         +   '<div class="cand-meta">'
         +     '<span class="cand-chip">' + _esc(c.type || '推測') + '</span>'
         +   '</div>'
@@ -1787,7 +1829,7 @@
         +     '<div class="sig"><span class="sig-ic">🥊</span><div class="sig-val warn">' + _esc(sig.competition || '中') + '</div><div class="sig-lbl">競合強度</div></div>'
         +     '<div class="sig"><span class="sig-ic">🎯</span><div class="sig-val">' + _esc(sig.intent || '情報') + '</div><div class="sig-lbl">意図</div></div>'
         +   '</div>'
-        +   '<div class="cand-reason">' + _esc(c.reason || '') + '</div>'
+        +   '<div class="cand-reason">' + _esc(c.reason) + '</div>'
         + '</div>';
     }).join('');
 
@@ -1808,7 +1850,9 @@
     }
   }
 
+  // null/undefined-safe HTML escape
   function _esc(s){
+    if(s == null) return '';
     return String(s).replace(/[&<>"']/g, function(c){
       return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
     });

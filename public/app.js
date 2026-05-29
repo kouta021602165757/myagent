@@ -2763,16 +2763,18 @@ function _openSiteTabModal(siteId, tabKey){
     title = '🔍 ' + L('キーワード調査','Keyword research');
     // PHASE-1A: mock を iframe で表示。iframe は別 document で JWT token を持たないので、
     // 親 (この window) が api() で /api/agents/:id/keyword-suggestions を fetch して
-    // postMessage で iframe にデータを送る。iframe からは ready signal を受信。
+    // postMessage で iframe にデータを送る。iframe からは ready signal + refresh signal を受信。
     content = '<iframe id="kwIframe" src="/mock-keyword-research.html?embed=1&site=' + encodeURIComponent(site.id) + '" '
             + 'style="display:block;width:100%;height:100%;border:0;background:var(--cream)" loading="eager"></iframe>';
-    // iframe ready 受信 → fetch → 結果を postMessage で送り返す
+    // 既存セッションのリスナを掃除 (= 再 open 時のリーク防止)
+    if(window._kwActiveSession){
+      try { window.removeEventListener('message', window._kwActiveSession.handler); } catch(_){}
+      window._kwActiveSession = null;
+    }
     var _kwSiteId = site.id;
-    var _kwHandler = function(e){
-      if(e.origin !== location.origin) return;
-      if(!e.data || e.data.type !== 'kw-iframe-ready' || e.data.siteId !== _kwSiteId) return;
-      window.removeEventListener('message', _kwHandler);
-      api('GET', '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-suggestions')
+    var _kwFetch = function(refresh){
+      var path = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-suggestions' + (refresh ? '?refresh=1' : '');
+      return api('GET', path)
         .then(function(d){
           var ifr = document.getElementById('kwIframe');
           if(ifr && ifr.contentWindow){
@@ -2787,7 +2789,16 @@ function _openSiteTabModal(siteId, tabKey){
           }
         });
     };
+    var _kwHandler = function(e){
+      if(e.origin !== location.origin) return;
+      if(!e.data) return;
+      // 別 site / 古い session のメッセージは無視
+      if(e.data.siteId !== _kwSiteId) return;
+      if(e.data.type === 'kw-iframe-ready') _kwFetch(false);
+      else if(e.data.type === 'kw-refresh') _kwFetch(true);
+    };
     window.addEventListener('message', _kwHandler);
+    window._kwActiveSession = { siteId: _kwSiteId, handler: _kwHandler };
   } else {
     showToast(L('不明なパネル','Unknown panel'),'ng');
     return;

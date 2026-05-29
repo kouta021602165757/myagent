@@ -2718,6 +2718,33 @@ function _dgrErrCard(err){
 function _openSiteTabModal(siteId, tabKey){
   var site = (agents||[]).find(function(a){return a && a.id === siteId;});
   if(!site){ showToast(L('サイトが見つかりません','Site not found'),'ng'); return; }
+
+  // ── キーワード調査パネルのキャッシュ復元 ──
+  // keyword tab は同じ site で再 open すると iframe + AI 候補状態をまるごと再利用
+  // (= 「読み込み中…」を毎回見せない、即時表示)。 close 時は remove せず hide した cache 版を
+  // 別 ID で stash しておき、 再 open でそれを show するだけ。
+  if(tabKey === 'keyword'){
+    var kwCachedId = 'kwOverlayCache_' + siteId;
+    var kwCached = document.getElementById(kwCachedId);
+    if(kwCached){
+      // 現 visible overlay を片付ける (= numbers 等を開いてた場合)
+      var curOv0 = document.getElementById('siteTabOverlay');
+      if(curOv0){
+        if(curOv0.getAttribute('data-tab') === 'keyword' && curOv0.getAttribute('data-site-id') !== siteId){
+          // 別 site の keyword overlay → 同じく stash
+          curOv0.id = 'kwOverlayCache_' + curOv0.getAttribute('data-site-id');
+          curOv0.style.display = 'none';
+        } else {
+          curOv0.remove();
+        }
+      }
+      // 復元 → 即時表示
+      kwCached.id = 'siteTabOverlay';
+      kwCached.style.display = 'flex';
+      return;
+    }
+  }
+
   var title = '', content = '';
   if(tabKey === 'numbers'){
     title = '📊 ' + L('数字分析','Numbers');
@@ -2766,10 +2793,11 @@ function _openSiteTabModal(siteId, tabKey){
     // postMessage で iframe にデータを送る。iframe からは ready signal + refresh signal を受信。
     content = '<iframe id="kwIframe" src="/mock-keyword-research.html?embed=1&site=' + encodeURIComponent(site.id) + '" '
             + 'style="display:block;width:100%;height:100%;border:0;background:var(--cream)" loading="eager"></iframe>';
-    // 既存セッションのリスナを掃除 (= 再 open 時のリーク防止)
-    if(window._kwActiveSession){
-      try { window.removeEventListener('message', window._kwActiveSession.handler); } catch(_){}
-      window._kwActiveSession = null;
+    // Per-site listener tracking (= cached overlay 復元時に listener が消えないように)
+    // 同じ site の重複だけ掃除、 他 site の listener は別 overlay の cache 用に残す
+    window._kwSessions = window._kwSessions || {};
+    if(window._kwSessions[site.id]){
+      try { window.removeEventListener('message', window._kwSessions[site.id]); } catch(_){}
     }
     var _kwSiteId = site.id;
     // 汎用 fetch ヘルパー (= endpoint path → iframe に postMessage で型付き応答)
@@ -2827,19 +2855,17 @@ function _openSiteTabModal(siteId, tabKey){
       else if(t === 'kw-trends-request')   _kwFetchTrends(e.data.kw);
       else if(t === 'kw-pdca-request')     _kwFetchPdca();
       else if(t === 'kw-open-gsc-connect'){
-        // 🔌 推測モード CTA から「接続パネル」を開く
-        var ov0 = document.getElementById('siteTabOverlay');
-        if(ov0) ov0.remove();
+        // 🔌 推測モード CTA から「接続パネル」を開く (= keyword overlay は stash で次回復元)
+        if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
         setTimeout(function(){
           try { if(typeof openConnectionsPanel === 'function') openConnectionsPanel(_kwSiteId); } catch(_){}
         }, 80);
       }
       else if(t === 'kw-send-chat'){
-        // 🤖 AI チームに依頼 — iframe (= keyword panel) を閉じて、chat にプロンプト送信
+        // 🤖 AI チームに依頼 — keyword overlay を stash して chat にプロンプト送信
         var prompt = String(e.data.prompt || '');
         if(!prompt){ try { showToast('プロンプトが空です','ng'); } catch(_){} return; }
-        var ov = document.getElementById('siteTabOverlay');
-        if(ov) ov.remove();
+        if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
         // chat 欄 (#ci) は keyword panel が閉じてからフォーカス可能になる
         setTimeout(function(){
           try {
@@ -2854,14 +2880,23 @@ function _openSiteTabModal(siteId, tabKey){
       }
     };
     window.addEventListener('message', _kwHandler);
-    window._kwActiveSession = { siteId: _kwSiteId, handler: _kwHandler };
+    window._kwSessions[_kwSiteId] = _kwHandler;
   } else {
     showToast(L('不明なパネル','Unknown panel'),'ng');
     return;
   }
-  // Remove any existing site-tab overlay
+  // Remove any existing site-tab overlay (keyword なら stash で次回復元)
   var ex = document.getElementById('siteTabOverlay');
-  if(ex) ex.remove();
+  if(ex){
+    if(ex.getAttribute('data-tab') === 'keyword'){
+      // keyword overlay は他 site / 他 tab に切替時も stash しておく (次回 open で復元)
+      var stashSid = ex.getAttribute('data-site-id');
+      ex.id = 'kwOverlayCache_' + stashSid;
+      ex.style.display = 'none';
+    } else {
+      ex.remove();
+    }
+  }
   var ov = document.createElement('div');
   ov.id = 'siteTabOverlay';
   ov.setAttribute('data-tab', tabKey);
@@ -2879,23 +2914,36 @@ function _openSiteTabModal(siteId, tabKey){
     +  '<div style="padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream);flex-shrink:0">'
     +    '<div style="font-size:15px;font-weight:900;color:var(--text)">' + esc(title) + '</div>'
     +    '<div style="font-size:11px;color:var(--text3);font-weight:700">' + esc(_siteHostname(site)) + '</div>'
-    +    '<button onclick="document.getElementById(\'siteTabOverlay\').remove()" style="margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px;border-radius:8px" title="閉じる">×</button>'
+    +    '<button onclick="_closeSiteTabModal()" style="margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px;border-radius:8px" title="閉じる">×</button>'
     +  '</div>'
     +  '<div class="sd-tab-body" style="flex:1;overflow-y:auto;padding:18px 22px;background:var(--cream)">' + content + '</div>'
     + '</div>';
   if(isMobile){
-    ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+    ov.addEventListener('click', function(e){ if(e.target === ov) _closeSiteTabModal(); });
   }
   // ESC to close
   var escHandler = function(e){
     if(e.key === 'Escape'){
-      ov.remove();
+      _closeSiteTabModal();
       document.removeEventListener('keydown', escHandler);
     }
   };
   document.addEventListener('keydown', escHandler);
   document.body.appendChild(ov);
 }
+
+// Generic close: keyword tab は stash (= 次回 open 即時)、他 tab は remove (= clean)
+window._closeSiteTabModal = function(){
+  var ov = document.getElementById('siteTabOverlay');
+  if(!ov) return;
+  if(ov.getAttribute('data-tab') === 'keyword'){
+    var sid = ov.getAttribute('data-site-id');
+    ov.id = 'kwOverlayCache_' + sid;
+    ov.style.display = 'none';
+  } else {
+    ov.remove();
+  }
+};
 
 window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
 window.openKeywordPanel       = function(siteId){ _openSiteTabModal(siteId, 'keyword'); };

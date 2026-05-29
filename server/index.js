@@ -26686,8 +26686,12 @@ function serveStatic(res,fp){
   // etc) that the chat embeds via <iframe>. Default SEC has X-Frame-Options:
   // DENY which makes "myaiagents.agency で接続が拒否されました" appear in
   // the iframe. Allow same-origin framing for these paths only.
+  // Also allow SAMEORIGIN for public/mock-*.html — these are design mocks
+  // that the app embeds in panels (e.g. 🔍 キーワード調査 → mock-keyword-research.html).
   const isGenerated = fp.startsWith(GENERATED_DIR);
-  const headerSEC = isGenerated
+  const isEmbeddableMock = fp.startsWith(PUBLIC_DIR) && path.basename(fp).startsWith('mock-');
+  const allowFraming = isGenerated || isEmbeddableMock;
+  const headerSEC = allowFraming
     ? { 'X-Content-Type-Options': SEC['X-Content-Type-Options'],
         'X-Frame-Options': 'SAMEORIGIN',
         'Referrer-Policy': SEC['Referrer-Policy'] }

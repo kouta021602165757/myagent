@@ -1865,11 +1865,19 @@
     var grid = document.querySelector('.tab-pane[data-tab="seo"] .cands');
     if(!grid) return;
     grid.id = 'kwCands';
-    // ローディング表示
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 20px;text-align:center;color:#71717a;font-size:13px;font-weight:600">'
-      + '<div style="font-size:32px;margin-bottom:8px">🤖</div>'
-      + 'AI チームがこのサイト用のキーワード候補を生成中… (約 20-40 秒)'
+    // 初期 subtle ローディング (= キャッシュヒットで即解消、生成中の警告は出さない)
+    grid.innerHTML = '<div id="kwLoadingShort" style="grid-column:1/-1;padding:30px 20px;text-align:center;color:#9ca3af;font-size:12px;font-weight:600">'
+      + '<div style="display:inline-block;width:18px;height:18px;border:2px solid #e5e7eb;border-top-color:#0d4f4a;border-radius:50%;animation:lpSpin .8s linear infinite;vertical-align:-4px;margin-right:8px"></div>'
+      + '読み込み中…'
       + '</div>';
+    // 3 秒経ってもデータ来てなければ「生成中」警告を追加表示 (= キャッシュ miss = 新規生成中)
+    setTimeout(function(){
+      var sh = document.getElementById('kwLoadingShort');
+      if(!sh) return; // 既に renderDynamicCandidates 実行済
+      sh.innerHTML = '<div style="font-size:32px;margin-bottom:8px">🤖</div>'
+        + '<div style="font-size:13px;color:#71717a">AI チームがこのサイト用のキーワード候補を生成中…</div>'
+        + '<div style="font-size:11px;color:#9ca3af;margin-top:4px">(初回 / キャッシュ失効時のみ、約 15-25 秒)</div>';
+    }, 3000);
 
     // postMessage listener (= 親からデータ受け取り)
     window.addEventListener('message', function(e){
@@ -2149,13 +2157,16 @@
         + '</div>';
       return;
     }
-    // モードバッジ (GSC 接続 vs 推測)
+    // モードバッジ (GSC 接続 vs 推測) + キャッシュバッジ
     var heroLbl = document.querySelector('.kw-hero-lbl');
     if(heroLbl){
-      var badge = (d.mode === 'gsc')
+      var modeBadge = (d.mode === 'gsc')
         ? '<span style="display:inline-block;background:#dcfce7;color:#166534;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em;margin-left:8px">✅ GSC データ駆動 (高精度)</span>'
         : '<span style="display:inline-block;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em;margin-left:8px">⚠️ 推測モード · GSC 接続で精度↑</span>';
-      heroLbl.innerHTML = 'AI チームからの提案' + badge;
+      var cacheBadge = d.cached
+        ? '<span style="display:inline-block;background:rgba(255,255,255,.18);color:#fff;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em;margin-left:6px" title="サーバー側キャッシュから即時表示 (= 課金なし、新規生成は 🔄 再生成 から)">⚡ キャッシュ</span>'
+        : '';
+      heroLbl.innerHTML = 'AI チームからの提案' + modeBadge + cacheBadge;
     }
     // hero タイトルに site hostname も
     if(d.site_hostname){

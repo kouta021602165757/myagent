@@ -2761,10 +2761,33 @@ function _openSiteTabModal(siteId, tabKey){
     catch(err){ console.error('[settings-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'keyword'){
     title = '🔍 ' + L('キーワード調査','Keyword research');
-    // PHASE-1A: mock を iframe で表示 + site ID 経由で /api/agents/:id/keyword-suggestions を fetch。
-    // GSC 接続あれば実データ駆動、なければ推測モードで候補生成。
-    content = '<iframe src="/mock-keyword-research.html?embed=1&site=' + encodeURIComponent(site.id) + '" '
+    // PHASE-1A: mock を iframe で表示。iframe は別 document で JWT token を持たないので、
+    // 親 (この window) が api() で /api/agents/:id/keyword-suggestions を fetch して
+    // postMessage で iframe にデータを送る。iframe からは ready signal を受信。
+    content = '<iframe id="kwIframe" src="/mock-keyword-research.html?embed=1&site=' + encodeURIComponent(site.id) + '" '
             + 'style="display:block;width:100%;height:100%;border:0;background:var(--cream)" loading="eager"></iframe>';
+    // iframe ready 受信 → fetch → 結果を postMessage で送り返す
+    var _kwSiteId = site.id;
+    var _kwHandler = function(e){
+      if(e.origin !== location.origin) return;
+      if(!e.data || e.data.type !== 'kw-iframe-ready' || e.data.siteId !== _kwSiteId) return;
+      window.removeEventListener('message', _kwHandler);
+      api('GET', '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-suggestions')
+        .then(function(d){
+          var ifr = document.getElementById('kwIframe');
+          if(ifr && ifr.contentWindow){
+            ifr.contentWindow.postMessage({ type: 'kw-suggestions', data: d }, location.origin);
+          }
+        })
+        .catch(function(err){
+          console.warn('[keyword-panel] fetch failed:', err && err.message);
+          var ifr = document.getElementById('kwIframe');
+          if(ifr && ifr.contentWindow){
+            ifr.contentWindow.postMessage({ type: 'kw-error', message: String(err && err.message || err) }, location.origin);
+          }
+        });
+    };
+    window.addEventListener('message', _kwHandler);
   } else {
     showToast(L('不明なパネル','Unknown panel'),'ng');
     return;

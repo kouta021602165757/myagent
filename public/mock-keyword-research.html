@@ -522,7 +522,7 @@
         <div class="manual-toggle">自分でキーワードを入力する</div>
         <div class="manual-body">
           <div class="manual-input">
-            <input type="text" placeholder="例: 中小企業 採用">
+            <input type="text" placeholder="調べたいキーワードを入力">
             <button>調査</button>
           </div>
         </div>
@@ -1355,7 +1355,7 @@
           <div class="manual-toggle">自分で質問を入力する</div>
           <div class="manual-body">
             <div class="manual-input">
-              <input type="text" placeholder="例: 中小企業の採用助成金はいくら">
+              <input type="text" placeholder="調べたい質問を入力">
               <button style="background:#6d28d9">調査</button>
             </div>
           </div>
@@ -1703,8 +1703,9 @@
     document.body.setAttribute('data-embed', '1');
   }
 
-  // === 動的キーワード候補 fetch (?site=ID) ===
-  // site ID があれば実 API を呼んで、静的サンプル候補を上書きする
+  // === 動的キーワード候補 (?site=ID) ===
+  // site ID があれば「動的モード」: 親 (app.js) に ready 通知 → postMessage でデータ受信
+  // iframe は同一オリジンだが JWT token を持たないので、親が api() で fetch して送る方式
   var _siteId = _params.get('site');
   if(_siteId){
     _initDynamicCandidates(_siteId);
@@ -1720,24 +1721,31 @@
       + 'AI チームがこのサイト用のキーワード候補を生成中… (約 20-40 秒)'
       + '</div>';
 
-    fetch('/api/agents/' + encodeURIComponent(siteId) + '/keyword-suggestions',
-          { credentials: 'same-origin' })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if(!d || !Array.isArray(d.candidates) || d.candidates.length === 0){
-          grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
-            + '⚠️ 候補生成に失敗しました (' + ((d && d.error) || 'no candidates') + ')'
-            + '</div>';
-          return;
-        }
-        _renderDynamicCandidates(d);
-      })
-      .catch(function(e){
-        console.warn('[kw-sug] fetch failed:', e);
+    // postMessage listener (= 親からデータ受け取り)
+    window.addEventListener('message', function(e){
+      if(e.origin !== location.origin) return;
+      if(!e.data || typeof e.data !== 'object') return;
+      if(e.data.type === 'kw-suggestions' && e.data.data){
+        _renderDynamicCandidates(e.data.data);
+      } else if(e.data.type === 'kw-error'){
         grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
-          + '⚠️ ネットワークエラー — リロードして再試行してください'
+          + '⚠️ 候補生成に失敗しました (' + (e.data.message || 'unknown') + ')'
           + '</div>';
-      });
+      }
+    });
+
+    // 親に ready 通知 → 親が fetch して postMessage で返してくれる
+    try {
+      window.parent.postMessage({ type: 'kw-iframe-ready', siteId: siteId }, location.origin);
+    } catch(_){}
+
+    // 60 秒タイムアウト fallback (= 親が応答しなかった時)
+    setTimeout(function(){
+      if(grid.querySelector('.cand')) return; // 既に描画済
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
+        + '⚠️ タイムアウト (60 秒) — 親アプリから応答がありません。リロードしてください。'
+        + '</div>';
+    }, 60000);
   }
 
   function _renderDynamicCandidates(d){

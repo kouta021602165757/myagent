@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>🔍 キーワード調査 — モック</title>
+<style>
+  :root {
+    --cream:#ffffff; --cream2:#fafafa; --cream3:#fafaf7;
+    --text:#1a1a1a; --text2:#525252; --text3:#71717a;
+    --wire:rgba(9,9,11,.06); --wire2:rgba(9,9,11,.10);
+    --peach:#c0ff5c; --peach-dark:#a3e635;
+    --peach-soft:#f7ffe9;
+    --teal:#0d4f4a; --teal-deep:#0a3d39; --teal-soft:#e8f1f0;
+    --red:#dc2626; --yellow:#d97706; --green:#16a34a;
+    --blue:#2563eb; --blue-soft:#eff6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:rgba(10,10,12,.4);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:var(--text);line-height:1.65;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
+
+  /* === モーダル枠 === */
+  .modal{background:var(--cream3);border-radius:16px;max-width:1000px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column}
+  .modal-head{padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream)}
+  .modal-head-ic{font-size:22px}
+  .modal-head-title{font-weight:900;font-size:15px}
+  .modal-head-sub{font-size:11px;color:var(--text3);font-weight:700}
+  .modal-close{margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px}
+  .modal-body{padding:18px 22px 32px;overflow-y:auto;max-height:calc(100vh - 48px)}
+
+  /* === タブ (SEO / AEO 切替) === */
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#fff;border:1px solid var(--wire2);border-radius:12px;padding:5px;margin-bottom:18px;box-shadow:0 2px 6px rgba(0,0,0,.03)}
+  .tab-btn{background:transparent;border:0;padding:11px 14px;border-radius:9px;font-size:13.5px;font-weight:800;color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:.18s;text-align:left}
+  .tab-btn.active{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;box-shadow:0 4px 14px rgba(13,79,74,.28)}
+  .tab-btn:not(.active):hover{background:var(--cream3);color:var(--text)}
+  .tab-btn-ic{font-size:20px;line-height:1}
+  .tab-btn-tx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+  .tab-btn-tx .top{font-size:13.5px;font-weight:900}
+  .tab-btn-tx .bot{font-size:10.5px;font-weight:700;opacity:.7;margin-top:1px}
+  .tab-btn.active .tab-btn-tx .bot{opacity:.85}
+  .tab-pane{display:none}
+  .tab-pane.active{display:block}
+
+  /* === AEO 専用カラー === */
+  .aeo-accent{--accent:#6d28d9;--accent-deep:#4c1d95;--accent-soft:#f3e8ff;--accent-mid:#a78bfa}
+
+  /* === サイトタイプ診断バナー === */
+  .site-cap{background:#fff;border:2px solid var(--wire2);border-radius:14px;padding:16px 20px;margin-bottom:12px;position:relative}
+  .site-cap.ok{border-color:#86efac;background:linear-gradient(180deg,#fff,#f0fdf4)}
+  .site-cap.warn{border-color:#fcd34d;background:linear-gradient(180deg,#fff,#fffbeb)}
+  .site-cap.info{border-color:#93c5fd;background:linear-gradient(180deg,#fff,#eff6ff)}
+  .site-cap.gray{border-color:#cbd5e1;background:linear-gradient(180deg,#fff,#f8fafc)}
+  .site-cap-h{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+  .site-cap-ic{font-size:24px;line-height:1}
+  .site-cap-ti{font-weight:900;font-size:14.5px;line-height:1.2}
+  .site-cap-url{font-size:11px;color:var(--text3);font-weight:600;margin-top:2px}
+  .site-cap-badge{margin-left:auto;font-size:10px;font-weight:800;padding:4px 9px;border-radius:5px;background:var(--cream3);color:var(--text3);letter-spacing:.04em;white-space:nowrap}
+  .site-cap-badge.ok{background:#dcfce7;color:#166534}
+  .site-cap-badge.warn{background:#fef3c7;color:#92400e}
+  .site-cap-badge.info{background:#dbeafe;color:#1e40af}
+  .site-cap-body{font-size:12.5px;color:var(--text);line-height:1.6;margin-bottom:10px}
+  .site-cap-features{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;font-size:12px}
+  .site-cap-feat{display:flex;align-items:center;gap:6px;color:var(--text2);font-weight:600}
+  .site-cap-feat .yes{color:#16a34a;font-weight:900;font-size:13px}
+  .site-cap-feat .no{color:#dc2626;font-weight:900;font-size:13px}
+  .site-cap-feat .partial{color:#f59e0b;font-weight:900;font-size:13px}
+  .site-cap-cta{background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;border:0;padding:13px 18px;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:10px;margin-top:12px;width:100%;justify-content:center;box-shadow:0 4px 14px rgba(13,79,74,.25);transition:.15s}
+  .site-cap-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,79,74,.3)}
+  .site-cap-cta-sub{font-size:11px;font-weight:700;opacity:.85}
+  .site-cap-cta-arr{font-size:18px}
+  .site-cap-alt{margin-top:14px;padding-top:12px;border-top:1px dashed var(--wire2);font-size:11.5px;color:var(--text2);line-height:1.55}
+  .site-cap-alt b{color:var(--text)}
+  .site-cap-alt-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:6px}
+
+  /* === HERO (= 「任せる」AI 提案 hero) === */
+  .kw-hero{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px;position:relative}
+  .kw-hero-ic{font-size:30px;position:absolute;top:18px;right:24px;opacity:.4}
+  .kw-hero-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.8;font-weight:700;margin-bottom:6px}
+  .kw-hero-ti{font-size:19px;font-weight:900;line-height:1.3;margin-bottom:8px}
+  .kw-hero-sub{font-size:12.5px;opacity:.85;line-height:1.55}
+  .kw-hero-sub b{color:var(--peach);font-weight:800}
+
+  /* === セクション === */
+  .sec{background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:18px 22px;margin-bottom:14px}
+  .sec-h{font-size:14px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .sec-h-ic{font-size:18px}
+  .sec-h-sub{font-size:11px;color:var(--text3);font-weight:600;margin-left:auto}
+
+  /* === AI 推奨候補グリッド === */
+  .cands{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+  .cand{background:#fff;border:1.5px solid var(--wire2);border-radius:11px;padding:13px 15px;cursor:pointer;transition:.15s;position:relative}
+  .cand:hover{border-color:var(--teal);box-shadow:0 4px 12px rgba(13,79,74,.10);transform:translateY(-1px)}
+  .cand.top{border-color:var(--peach-dark);background:linear-gradient(180deg,#fff,var(--peach-soft))}
+  .cand-rank{position:absolute;top:10px;right:12px;font-size:14px;font-weight:900;color:var(--text3)}
+  .cand.top .cand-rank{color:var(--peach-dark)}
+  .cand-kw{font-size:14.5px;font-weight:800;color:var(--text);margin-bottom:7px;padding-right:30px}
+  .cand-meta{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
+  .cand-chip{font-size:10px;font-weight:700;padding:2.5px 7px;border-radius:5px;background:var(--teal-soft);color:var(--teal)}
+  .cand-chip.trend{background:#ecfdf5;color:#047857}
+  .cand-chip.gap{background:#fef3c7;color:#92400e}
+
+  /* === 相対シグナル行 (絶対ボリューム代替) === */
+  .cand-signals{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px;background:var(--cream3);border-radius:7px;margin-bottom:9px}
+  .sig{text-align:center;line-height:1.1}
+  .sig-ic{font-size:13px;margin-bottom:2px;display:block}
+  .sig-val{font-size:11.5px;font-weight:800;color:var(--text)}
+  .sig-val.up{color:var(--green)}
+  .sig-val.down{color:var(--red)}
+  .sig-val.warn{color:var(--yellow)}
+  .sig-lbl{font-size:8.5px;color:var(--text3);font-weight:700;margin-top:1px;letter-spacing:.02em}
+
+  .cand-reason{font-size:11.5px;color:var(--text2);line-height:1.55}
+  .cand-reason b{color:var(--text);font-weight:700}
+
+  /* === 手動入力 (折り畳み) === */
+  .manual{margin-top:12px;background:var(--cream3);border:1px dashed var(--wire2);border-radius:10px;padding:11px 14px}
+  .manual-toggle{font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+  .manual-toggle::before{content:"▶";font-size:9px;transition:.15s}
+  .manual.open .manual-toggle::before{transform:rotate(90deg)}
+  .manual-body{display:none;margin-top:10px}
+  .manual.open .manual-body{display:block}
+  .manual-input{display:flex;gap:8px}
+  .manual-input input{flex:1;padding:9px 12px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:inherit}
+  .manual-input button{background:var(--teal);color:#fff;border:0;padding:0 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+
+  /* === 区切り (クリック後の状態へ) === */
+  .divider{text-align:center;margin:28px 0 22px;position:relative}
+  .divider::before{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:var(--wire2)}
+  .divider-tx{display:inline-block;background:var(--cream3);padding:0 14px;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.05em;position:relative}
+
+  /* === 選択キーワード hero (= 調査結果 view) === */
+  .selected-hero{background:#fff;border:2px solid var(--peach-dark);border-radius:13px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+  .selected-hero-ic{font-size:24px}
+  .selected-hero-kw{font-size:18px;font-weight:900;flex:1}
+  .selected-hero-back{font-size:11.5px;font-weight:700;color:var(--text2);background:var(--cream3);border:1px solid var(--wire2);padding:6px 12px;border-radius:7px;cursor:pointer;font-family:inherit}
+
+  /* === 詳細シグナルパネル (選択後) — 2×2 グリッド === */
+  .signals-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+  .signals-panel .sig-box{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px;text-align:left}
+  .sig-box-h{display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:11.5px;color:var(--text3);font-weight:700;letter-spacing:.02em;white-space:nowrap}
+  .sig-box-h-ic{font-size:15px}
+  .sig-box-v{font-size:28px;font-weight:900;line-height:1;margin-bottom:6px}
+  .sig-box-v.up{color:var(--green)}
+  .sig-box-v.warn{color:var(--yellow)}
+  .sig-box-sub{font-size:12px;color:var(--text2);font-weight:600;line-height:1.5}
+  .sig-box-trend-mini{margin-top:8px;height:30px;width:100%}
+
+  /* === 周辺語チップ === */
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{background:var(--cream3);border:1px solid var(--wire2);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;transition:.12s}
+  .chip:hover{background:var(--teal-soft);border-color:var(--teal);color:var(--teal)}
+  .chip.strong{background:var(--peach-soft);border-color:var(--peach-dark);font-weight:700}
+
+  /* === 推奨タイトル === */
+  .titles{display:flex;flex-direction:column;gap:9px}
+  .title-row{background:#fff;border:1.5px solid var(--wire2);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;transition:.15s}
+  .title-row:hover{border-color:var(--teal)}
+  .title-rank{font-size:12px;font-weight:900;color:var(--text3);width:24px;text-align:center}
+  .title-tx{font-size:13.5px;font-weight:700;line-height:1.45}
+  .title-meta{font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:600}
+  .title-cta{background:var(--teal);color:#fff;border:0;padding:8px 14px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:5px}
+  .title-cta:hover{background:var(--teal-deep)}
+  .title-cta .arrow{font-size:13px}
+
+  /* === Phase ラベル === */
+  .phase-lbl{display:inline-block;background:#f1f5f9;color:#475569;font-size:9.5px;font-weight:800;letter-spacing:.06em;padding:2.5px 8px;border-radius:4px;margin-bottom:10px;text-transform:uppercase}
+  .phase-lbl.p2{background:#e0e7ff;color:#3730a3}
+  .phase-lbl.p3{background:#fce7f3;color:#9d174d}
+
+  /* === Phase 2: 上位サイト解析 === */
+  .top-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .top-stat{background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;text-align:center}
+  .top-stat-ic{font-size:18px;margin-bottom:3px}
+  .top-stat-v{font-size:22px;font-weight:900;line-height:1.1}
+  .top-stat-lbl{font-size:10px;color:var(--text3);font-weight:700;margin-top:3px}
+  .top-stat-sub{font-size:10px;color:var(--green);font-weight:700;margin-top:3px}
+
+  /* 共通 h2 構成 ヒートマップ */
+  .h2map{display:flex;flex-direction:column;gap:5px}
+  .h2map-row{display:grid;grid-template-columns:1fr 80px 38px;align-items:center;gap:10px;padding:7px 11px;background:var(--cream3);border-radius:7px;font-size:12.5px}
+  .h2map-tx{font-weight:600;color:var(--text)}
+  .h2map-tx b{font-weight:800;color:var(--teal-deep)}
+  .h2map-bar{height:6px;background:var(--wire);border-radius:99px;overflow:hidden;position:relative}
+  .h2map-bar-fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--peach-dark),var(--peach));border-radius:99px}
+  .h2map-cnt{font-size:11px;font-weight:800;color:var(--text2);text-align:right}
+
+  /* 頻出語 タグクラウド */
+  .word-cloud{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+  .word{padding:4px 9px;border-radius:6px;font-weight:700;background:var(--teal-soft);color:var(--teal);cursor:default}
+  .word.s1{font-size:17px;background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff}
+  .word.s2{font-size:14px;background:var(--teal-soft);color:var(--teal-deep)}
+  .word.s3{font-size:12px}
+  .word.s4{font-size:11px;opacity:.75}
+
+  /* 上位 10 サイト テーブル */
+  .topsites{display:flex;flex-direction:column;gap:5px}
+  .topsite{display:grid;grid-template-columns:24px 1fr 70px 50px 50px;gap:10px;align-items:center;padding:9px 11px;background:#fff;border:1px solid var(--wire2);border-radius:8px;font-size:11.5px}
+  .topsite-rank{font-weight:900;color:var(--text3);text-align:center}
+  .topsite-rank.gold{color:#ca8a04}
+  .topsite-ti{font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .topsite-ti .url{font-weight:500;color:var(--text3);font-size:10.5px;display:block;margin-top:1px}
+  .topsite-meta{font-weight:700;color:var(--text2);text-align:right}
+  .topsite-meta.lg{color:var(--text);font-weight:800}
+
+  /* === Phase 3: Trends + Journey === */
+  .trend-chart{background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 16px;margin-bottom:12px}
+  .trend-chart-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .trend-chart-ti{font-size:13px;font-weight:800}
+  .trend-chart-meta{font-size:11px;color:var(--text3);font-weight:600;margin-left:auto}
+  .trend-chart-svg{width:100%;height:140px;display:block}
+  .trend-chart-axis{display:flex;justify-content:space-between;font-size:9.5px;color:var(--text3);font-weight:600;margin-top:5px;letter-spacing:.04em}
+  .trend-insight{display:flex;gap:8px;background:var(--peach-soft);border-left:3px solid var(--peach-dark);border-radius:6px;padding:8px 12px;font-size:11.5px;color:var(--text);font-weight:600;margin-top:10px;line-height:1.5}
+  .trend-insight b{color:var(--teal-deep);font-weight:800}
+
+  /* 関連急上昇 */
+  .rising{display:flex;flex-direction:column;gap:6px}
+  .rising-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:8px 12px;background:#fff;border:1px solid var(--wire2);border-radius:8px;font-size:12.5px}
+  .rising-kw{font-weight:700}
+  .rising-delta{font-size:11px;font-weight:800;color:var(--green);background:#ecfdf5;padding:3px 8px;border-radius:5px}
+  .rising-delta.hot{background:#fef2f2;color:var(--red)}
+
+  /* PDCA Journey ステップ統合 — 4×2 grid */
+  .journey{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px}
+  .journey-step{text-align:center;padding:11px 8px;border-radius:8px;font-weight:700;line-height:1.35;position:relative}
+  .journey-step.done{background:var(--peach-soft);color:var(--teal-deep)}
+  .journey-step.now{background:var(--teal);color:#fff;box-shadow:0 4px 12px rgba(13,79,74,.28)}
+  .journey-step.todo{background:var(--cream3);color:var(--text3)}
+  .journey-step-num{font-size:9.5px;font-weight:800;opacity:.75;margin-bottom:4px;letter-spacing:.05em}
+  .journey-step-ti{font-size:12.5px;font-weight:800}
+  .journey-step-st{font-size:10px;margin-top:4px;opacity:.85;font-weight:700}
+
+  /* セクション ヘッダーの アクセントカラー */
+  .sec-phase2{border-color:#c7d2fe}
+  .sec-phase2 .sec-h-ic{color:#3730a3}
+  .sec-phase3{border-color:#fbcfe8}
+  .sec-phase3 .sec-h-ic{color:#9d174d}
+
+  /* === Note (UI 設計メモ用、本番では削除) === */
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:11.5px;color:#92400e;line-height:1.6;margin-bottom:18px}
+  .note b{font-weight:800}
+</style>
+</head>
+<body>
+<div class="modal">
+
+  <!-- ── モーダル ヘッダー ── -->
+  <div class="modal-head">
+    <div class="modal-head-ic">🔍</div>
+    <div>
+      <div class="modal-head-title">キーワード調査</div>
+      <div class="modal-head-sub">サイト: example-recruit.jp</div>
+    </div>
+    <button class="modal-close">×</button>
+  </div>
+
+  <div class="modal-body">
+
+    <div class="note">
+      <b>📝 モック</b> — 上タブ <b>🔍 SEO 対策</b> / <b>🤖 AEO 対策</b> で切替。タブ内は STATE 1 (候補一覧) + STATE 2 (詳細結果) + Phase 2/3。
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- タブ UI                                                       -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="seo">
+        <span class="tab-btn-ic">🔍</span>
+        <span class="tab-btn-tx">
+          <span class="top">SEO 対策</span>
+          <span class="bot">Google 検索で上位を取る</span>
+        </span>
+      </button>
+      <button class="tab-btn" data-tab="aeo">
+        <span class="tab-btn-ic">🤖</span>
+        <span class="tab-btn-tx">
+          <span class="top">AEO 対策</span>
+          <span class="bot">AI 検索に引用される</span>
+        </span>
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- 🔍 SEO タブ — STATE 1: パネル を開いた直後 (AI が候補を自動抽出) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="tab-pane active" data-tab="seo">
+
+    <!-- HERO -->
+    <div class="kw-hero">
+      <div class="kw-hero-ic">🤖</div>
+      <div class="kw-hero-lbl">AI チームからの提案</div>
+      <div class="kw-hero-ti">今このサイトで狙うべきキーワードはこちら</div>
+      <div class="kw-hero-sub">
+        <b>ペルソナ</b>、<b>競合分析</b>、<b>既存記事</b>、<b>GSC 実クエリ</b>から AI が 6 候補を抽出しました。各候補には「なぜこれを推すか」の理由付きです。
+      </div>
+    </div>
+
+    <!-- AI 候補グリッド -->
+    <div class="sec">
+      <div class="sec-h">
+        <span class="sec-h-ic">✨</span> AI 推奨キーワード候補
+        <span class="sec-h-sub">最終更新: 9 分前 · 🔄</span>
+      </div>
+
+      <div class="cands">
+
+        <!-- 1 位 -->
+        <div class="cand top">
+          <div class="cand-rank">🥇 #1</div>
+          <div class="cand-kw">中小企業 採用 助成金</div>
+          <div class="cand-meta">
+            <span class="cand-chip">ペルソナ一致</span>
+            <span class="cand-chip gap">未着手</span>
+          </div>
+          <div class="cand-signals">
+            <div class="sig">
+              <span class="sig-ic">📈</span>
+              <div class="sig-val up">+18%</div>
+              <div class="sig-lbl">トレンド</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🥊</span>
+              <div class="sig-val warn">中</div>
+              <div class="sig-lbl">競合強度</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">✨</span>
+              <div class="sig-val">21</div>
+              <div class="sig-lbl">サジェスト</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🏢</span>
+              <div class="sig-val">3/10</div>
+              <div class="sig-lbl">大手率</div>
+            </div>
+          </div>
+          <div class="cand-reason">
+            <b>ペルソナ「中小企業の人事担当者」</b>の関心領域 ど真ん中。競合 3 社中 1 社のみが記事化、まだ書く余地あり。
+          </div>
+        </div>
+
+        <!-- 2 位 -->
+        <div class="cand">
+          <div class="cand-rank">🥈 #2</div>
+          <div class="cand-kw">採用難 解決策</div>
+          <div class="cand-meta">
+            <span class="cand-chip">競合参照</span>
+            <span class="cand-chip gap">未着手</span>
+          </div>
+          <div class="cand-signals">
+            <div class="sig">
+              <span class="sig-ic">📈</span>
+              <div class="sig-val up">+34%</div>
+              <div class="sig-lbl">トレンド</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🥊</span>
+              <div class="sig-val warn">中</div>
+              <div class="sig-lbl">競合強度</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">✨</span>
+              <div class="sig-val">15</div>
+              <div class="sig-lbl">サジェスト</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🏢</span>
+              <div class="sig-val">4/10</div>
+              <div class="sig-lbl">大手率</div>
+            </div>
+          </div>
+          <div class="cand-reason">
+            競合 <b>A 社</b>がこのキーワードで 3 位表示。直近 6 ヶ月で関心が急上昇中。
+          </div>
+        </div>
+
+        <!-- 3 位 -->
+        <div class="cand">
+          <div class="cand-rank">🥉 #3</div>
+          <div class="cand-kw">中小企業 求人 コツ</div>
+          <div class="cand-meta">
+            <span class="cand-chip">GSC 実クエリ</span>
+          </div>
+          <div class="cand-signals">
+            <div class="sig">
+              <span class="sig-ic">📈</span>
+              <div class="sig-val">+4%</div>
+              <div class="sig-lbl">トレンド</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🥊</span>
+              <div class="sig-val up">緩</div>
+              <div class="sig-lbl">競合強度</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">✨</span>
+              <div class="sig-val">9</div>
+              <div class="sig-lbl">サジェスト</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🏢</span>
+              <div class="sig-val up">1/10</div>
+              <div class="sig-lbl">大手率</div>
+            </div>
+          </div>
+          <div class="cand-reason">
+            GSC で <b>表示 320 / クリック 4 / 平均 18 位</b>。既に少しヒットあり、強化記事で押し上げ可能。
+          </div>
+        </div>
+
+        <!-- 4 位 -->
+        <div class="cand">
+          <div class="cand-rank">#4</div>
+          <div class="cand-kw">採用代行 比較</div>
+          <div class="cand-meta">
+            <span class="cand-chip gap">未着手</span>
+          </div>
+          <div class="cand-signals">
+            <div class="sig">
+              <span class="sig-ic">📈</span>
+              <div class="sig-val up">+12%</div>
+              <div class="sig-lbl">トレンド</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🥊</span>
+              <div class="sig-val down">激</div>
+              <div class="sig-lbl">競合強度</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">✨</span>
+              <div class="sig-val">28</div>
+              <div class="sig-lbl">サジェスト</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🏢</span>
+              <div class="sig-val down">8/10</div>
+              <div class="sig-lbl">大手率</div>
+            </div>
+          </div>
+          <div class="cand-reason">
+            商用意図高。<b>CV に近い</b>キーワードのため 1 流入の価値大、ただし大手だらけで激戦。
+          </div>
+        </div>
+
+        <!-- 5 位 -->
+        <div class="cand">
+          <div class="cand-rank">#5</div>
+          <div class="cand-kw">人事 業務効率化 ツール</div>
+          <div class="cand-meta">
+            <span class="cand-chip">ペルソナ一致</span>
+          </div>
+          <div class="cand-signals">
+            <div class="sig">
+              <span class="sig-ic">📈</span>
+              <div class="sig-val up">+22%</div>
+              <div class="sig-lbl">トレンド</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🥊</span>
+              <div class="sig-val warn">中</div>
+              <div class="sig-lbl">競合強度</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">✨</span>
+              <div class="sig-val">17</div>
+              <div class="sig-lbl">サジェスト</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🏢</span>
+              <div class="sig-val">5/10</div>
+              <div class="sig-lbl">大手率</div>
+            </div>
+          </div>
+          <div class="cand-reason">
+            ペルソナの関心の<b>周辺領域</b>。直接 CV に繋がらないが認知獲得用に有効。
+          </div>
+        </div>
+
+        <!-- 6 位 -->
+        <div class="cand">
+          <div class="cand-rank">#6</div>
+          <div class="cand-kw">中小企業 福利厚生 事例</div>
+          <div class="cand-meta">
+            <span class="cand-chip">競合参照</span>
+          </div>
+          <div class="cand-signals">
+            <div class="sig">
+              <span class="sig-ic">📈</span>
+              <div class="sig-val">+6%</div>
+              <div class="sig-lbl">トレンド</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🥊</span>
+              <div class="sig-val up">緩</div>
+              <div class="sig-lbl">競合強度</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">✨</span>
+              <div class="sig-val">12</div>
+              <div class="sig-lbl">サジェスト</div>
+            </div>
+            <div class="sig">
+              <span class="sig-ic">🏢</span>
+              <div class="sig-val up">2/10</div>
+              <div class="sig-lbl">大手率</div>
+            </div>
+          </div>
+          <div class="cand-reason">
+            競合 <b>B 社</b>が主力で扱う領域。大手が少なく、上位獲得しやすい狙い目。
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 手動入力 (折り畳み・控えめ) -->
+      <div class="manual open">
+        <div class="manual-toggle">自分でキーワードを入力する</div>
+        <div class="manual-body">
+          <div class="manual-input">
+            <input type="text" placeholder="例: 中小企業 採用">
+            <button>調査</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STATE 2: 候補クリック後 (調査結果)                            -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <div class="divider">
+      <span class="divider-tx">↓ 候補をクリック後の画面 ↓</span>
+    </div>
+
+    <!-- 選択キーワード hero -->
+    <div class="selected-hero">
+      <div class="selected-hero-ic">🎯</div>
+      <div class="selected-hero-kw">「中小企業 採用 助成金」</div>
+      <button class="selected-hero-back">← 候補に戻る</button>
+    </div>
+
+    <!-- 詳細シグナルパネル -->
+    <div class="signals-panel">
+      <div class="sig-box">
+        <div class="sig-box-h"><span class="sig-box-h-ic">📈</span>トレンド (6 ヶ月)</div>
+        <div class="sig-box-v up">+18%</div>
+        <div class="sig-box-sub">関心が安定して伸びている</div>
+        <svg class="sig-box-trend-mini" viewBox="0 0 120 30" preserveAspectRatio="none">
+          <path d="M0,22 L20,20 L40,18 L60,15 L80,12 L100,9 L120,7" fill="none" stroke="#16a34a" stroke-width="1.8"/>
+        </svg>
+      </div>
+
+      <div class="sig-box">
+        <div class="sig-box-h"><span class="sig-box-h-ic">🥊</span>競合強度</div>
+        <div class="sig-box-v warn">中</div>
+        <div class="sig-box-sub">上位 10 サイト中 3 サイトが大手 (それ以外は中小メディア)</div>
+      </div>
+
+      <div class="sig-box">
+        <div class="sig-box-h"><span class="sig-box-h-ic">✨</span>サジェスト網羅度</div>
+        <div class="sig-box-v">21 <span style="font-size:11px;color:var(--text3);font-weight:600">語</span></div>
+        <div class="sig-box-sub">関連クエリが多く、深掘り余地あり</div>
+      </div>
+
+      <div class="sig-box">
+        <div class="sig-box-h"><span class="sig-box-h-ic">🎯</span>狙い目スコア</div>
+        <div class="sig-box-v up">A</div>
+        <div class="sig-box-sub">トレンド↑ × 競合 中 × 未着手 = 最優先で狙うべき</div>
+      </div>
+    </div>
+
+    <!-- シグナル解説 (= ユーザー教育) -->
+    <div style="background:var(--blue-soft);border:1px solid #dbeafe;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#1e40af;line-height:1.6">
+      💡 <b>絶対検索数の代わりに「相対シグナル」で判断します</b> — 月間検索数より、<b>トレンドの方向 × 競合の弱さ</b> の方が「実際に流入が来るか」の予測精度が高いとされてます。
+    </div>
+
+    <!-- 周辺語 / サジェスト -->
+    <div class="sec">
+      <div class="sec-h">
+        <span class="sec-h-ic">🔗</span> 一緒に検索されるキーワード
+        <span class="sec-h-sub">Google サジェスト · 21 件</span>
+      </div>
+      <div class="chips">
+        <span class="chip strong">中小企業 採用 助成金 2026</span>
+        <span class="chip strong">中小企業 採用 助成金 申請方法</span>
+        <span class="chip">中小企業 採用 助成金 厚生労働省</span>
+        <span class="chip">中小企業 採用 助成金 一覧</span>
+        <span class="chip">中小企業 採用 助成金 金額</span>
+        <span class="chip">中小企業 採用 助成金 条件</span>
+        <span class="chip">中小企業 採用 助成金 トライアル</span>
+        <span class="chip">中小企業 採用 助成金 若者</span>
+        <span class="chip">中小企業 採用 助成金 シニア</span>
+        <span class="chip">中小企業 採用 助成金 計算</span>
+        <span class="chip">中小企業 採用 助成金 期限</span>
+        <span class="chip">中小企業 採用 助成金 落ちた</span>
+      </div>
+    </div>
+
+    <!-- 周辺語 / 連想語 -->
+    <div class="sec">
+      <div class="sec-h">
+        <span class="sec-h-ic">💡</span> 周辺語・連想語
+        <span class="sec-h-sub">再帰サジェスト 2 階層 · 47 語</span>
+      </div>
+      <div class="chips">
+        <span class="chip">人材確保</span>
+        <span class="chip">求人募集</span>
+        <span class="chip">採用難</span>
+        <span class="chip">離職率</span>
+        <span class="chip">定着率</span>
+        <span class="chip">人件費</span>
+        <span class="chip">人手不足</span>
+        <span class="chip">採用代行</span>
+        <span class="chip">人材紹介</span>
+        <span class="chip">スカウト</span>
+        <span class="chip">転職市場</span>
+        <span class="chip">採用ブランディング</span>
+        <span class="chip">福利厚生</span>
+        <span class="chip">働き方改革</span>
+        <span class="chip">求人広告</span>
+      </div>
+    </div>
+
+    <!-- 🎯 推奨タイトル (= MVP 本丸) -->
+    <div class="sec" style="border-color:var(--peach-dark);background:linear-gradient(180deg,#fff,#fcfff5)">
+      <div class="sec-h">
+        <span class="sec-h-ic">🎯</span> AI が提案する記事タイトル
+        <span class="sec-h-sub">サジェスト + 周辺語を反映 · 常に 5 案 ⟳ 自動補充</span>
+      </div>
+
+      <!-- 動作説明バナー -->
+      <div style="display:flex;align-items:center;gap:8px;background:var(--teal-soft);border:1px solid #b6dcd7;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11.5px;color:var(--teal-deep);font-weight:600;line-height:1.5">
+        <span style="font-size:15px">🤖</span>
+        <span>どれかを選ぶと <b>AI チームがチャット画面で作成</b> (進捗ストリーミング)。<b style="color:var(--green)">⟳ 1 本完成ごとに新候補が自動補充</b> され、常に 5 案を維持。</span>
+      </div>
+
+      <!-- 1 万字以上の宣言バナー -->
+      <div style="background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:12px">
+        <span style="font-size:20px">📚</span>
+        <div style="line-height:1.4">
+          <b style="font-size:13px">どのタイトルでも 1 万字以上の長文記事を自動生成</b>
+          <div style="opacity:.85;font-size:11px;margin-top:1px">上位サイトの平均 8,200 字を上回る情報量で SEO 上位を狙う設計</div>
+        </div>
+      </div>
+
+      <!-- 🤖 まず 1 本 AI チームに依頼 → チャット進行 -->
+      <div style="background:#fff;border:2px dashed var(--peach-dark);border-radius:11px;padding:13px 16px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:18px">🤖</span>
+          <div style="font-weight:900;font-size:13px;color:var(--text)">はじめての方はこちら — AI チームに最初の 1 本を任せる</div>
+          <span style="margin-left:auto;font-size:9.5px;font-weight:800;background:var(--peach-soft);color:var(--teal-deep);padding:3px 8px;border-radius:5px;letter-spacing:.04em">RECOMMENDED</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">
+          候補 ① のタイトルで <b>最高品質の本記事 (1 万字以上 + SEO 全対策)</b> を AI チームが今すぐ作成。<b>チャット画面で進捗を見ながら</b>完成 → 品質を確認してから残り 4 本に進められます。
+        </div>
+        <button style="background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
+          🤖 AI チームに作成を依頼する
+          <span style="font-size:11px;font-weight:700;opacity:.85">→ チャット画面で進行 (約 3-5 分)</span>
+          <span style="font-size:14px">→</span>
+        </button>
+      </div>
+
+      <div class="titles">
+        <div class="title-row">
+          <div class="title-rank">①</div>
+          <div>
+            <div class="title-tx">【2026 年最新】中小企業が使える採用助成金 8 種 — 申請条件・金額・期限・成功事例を完全網羅</div>
+            <div class="title-meta">📚 約 13,500 字 · h2 案 9 つ · 想定読了 17 分</div>
+          </div>
+          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+        </div>
+
+        <div class="title-row">
+          <div class="title-rank">②</div>
+          <div>
+            <div class="title-tx">なぜ中小企業の採用助成金は申請されないのか — 9 割が見落とす申請のコツと審査通過の全プロセス</div>
+            <div class="title-meta">📚 約 11,800 字 · h2 案 8 つ · 想定読了 15 分</div>
+          </div>
+          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+        </div>
+
+        <div class="title-row">
+          <div class="title-rank">③</div>
+          <div>
+            <div class="title-tx">採用助成金が「落ちた」中小企業の共通点 — 審査担当が教えるリベンジ申請術と再申請完全ガイド</div>
+            <div class="title-meta">📚 約 10,600 字 · h2 案 7 つ · 想定読了 13 分</div>
+          </div>
+          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+        </div>
+
+        <div class="title-row">
+          <div class="title-rank">④</div>
+          <div>
+            <div class="title-tx">トライアル雇用助成金 vs キャリアアップ助成金 — 中小企業はどちらを選ぶべきか徹底比較</div>
+            <div class="title-meta">📚 約 12,400 字 · h2 案 8 つ · 想定読了 16 分</div>
+          </div>
+          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+        </div>
+
+        <div class="title-row">
+          <div class="title-rank">⑤</div>
+          <div>
+            <div class="title-tx">中小企業の社長が今すぐ知るべき採用助成金カレンダー — 12 ヶ月で計画する申請スケジュール</div>
+            <div class="title-meta">📚 約 11,200 字 · h2 案 7 つ · 想定読了 14 分</div>
+          </div>
+          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+        </div>
+
+        <!-- ⟳ 自動補充プレースホルダ -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;padding:14px 16px;background:repeating-linear-gradient(135deg,var(--cream3),var(--cream3) 8px,#fff 8px,#fff 16px);border:1px dashed var(--wire2);border-radius:9px;font-size:11.5px;color:var(--text3);font-weight:700;line-height:1.5">
+          <span style="font-size:16px;color:var(--peach-dark)">⟳</span>
+          <span><b style="color:var(--text2)">次の候補 (⑥) は AI が常時準備中</b> — 1 本完成すると自動でここに追加されて常に 5 案を維持</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PHASE 2: 上位 10 サイト解析                                   -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <div class="divider">
+      <span class="divider-tx">↓ PHASE 2 で追加される機能 ↓</span>
+    </div>
+
+    <span class="phase-lbl p2">Phase 2</span>
+
+    <!-- サマリー 3 指標 -->
+    <div class="sec sec-phase2">
+      <div class="sec-h">
+        <span class="sec-h-ic">📊</span> 上位 10 サイトの記事スペック
+        <span class="sec-h-sub">スクレイピング + kuromoji 解析</span>
+      </div>
+
+      <div class="top-stats-row">
+        <div class="top-stat">
+          <div class="top-stat-ic">📝</div>
+          <div class="top-stat-v">8,200<span style="font-size:11px;color:var(--text3);font-weight:600">字</span></div>
+          <div class="top-stat-lbl">上位 10 サイトの平均文字数</div>
+          <div class="top-stat-sub">→ 1 万字以上で勝負</div>
+        </div>
+        <div class="top-stat">
+          <div class="top-stat-ic">🏗</div>
+          <div class="top-stat-v">7.3<span style="font-size:11px;color:var(--text3);font-weight:600">個</span></div>
+          <div class="top-stat-lbl">平均 h2 (大見出し) 数</div>
+          <div class="top-stat-sub">→ 8 個以上を推奨</div>
+        </div>
+        <div class="top-stat">
+          <div class="top-stat-ic">🖼</div>
+          <div class="top-stat-v">5.1<span style="font-size:11px;color:var(--text3);font-weight:600">枚</span></div>
+          <div class="top-stat-lbl">平均画像数</div>
+          <div class="top-stat-sub">→ 6 枚以上を推奨</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 共通 h2 構成 (= 記事に必ず入れるべき) -->
+    <div class="sec sec-phase2">
+      <div class="sec-h">
+        <span class="sec-h-ic">🏗</span> 上位サイトに共通する見出し構成
+        <span class="sec-h-sub">この骨組みで書けば 7 割勝ち</span>
+      </div>
+
+      <div class="h2map">
+        <div class="h2map-row">
+          <div class="h2map-tx"><b>中小企業が使える採用助成金一覧</b></div>
+          <div class="h2map-bar"><div class="h2map-bar-fill" style="width:100%"></div></div>
+          <div class="h2map-cnt">10/10</div>
+        </div>
+        <div class="h2map-row">
+          <div class="h2map-tx"><b>助成金の申請条件</b></div>
+          <div class="h2map-bar"><div class="h2map-bar-fill" style="width:90%"></div></div>
+          <div class="h2map-cnt">9/10</div>
+        </div>
+        <div class="h2map-row">
+          <div class="h2map-tx"><b>申請手順とスケジュール</b></div>
+          <div class="h2map-bar"><div class="h2map-bar-fill" style="width:80%"></div></div>
+          <div class="h2map-cnt">8/10</div>
+        </div>
+        <div class="h2map-row">
+          <div class="h2map-tx">助成金額と支給タイミング</div>
+          <div class="h2map-bar"><div class="h2map-bar-fill" style="width:70%"></div></div>
+          <div class="h2map-cnt">7/10</div>
+        </div>
+        <div class="h2map-row">
+          <div class="h2map-tx">よくある質問・FAQ</div>
+          <div class="h2map-bar"><div class="h2map-bar-fill" style="width:60%"></div></div>
+          <div class="h2map-cnt">6/10</div>
+        </div>
+        <div class="h2map-row">
+          <div class="h2map-tx">注意点・落とし穴</div>
+          <div class="h2map-bar"><div class="h2map-bar-fill" style="width:40%"></div></div>
+          <div class="h2map-cnt">4/10</div>
+        </div>
+        <div class="h2map-row">
+          <div class="h2map-tx">活用事例・成功事例</div>
+          <div class="h2map-bar"><div class="h2map-bar-fill" style="width:30%"></div></div>
+          <div class="h2map-cnt">3/10</div>
+        </div>
+      </div>
+
+      <div style="background:#fffbeb;border-left:3px solid #fbbf24;border-radius:6px;padding:9px 12px;margin-top:11px;font-size:11.5px;color:#92400e;line-height:1.55">
+        💡 <b>上位 6 つの見出しは必須</b>、下 2 つ (注意点・事例) を厚く書くと差別化できる。 — AI が自動で骨組みに組み込みます
+      </div>
+    </div>
+
+    <!-- 頻出語 (= 記事に絶対入れたい単語) -->
+    <div class="sec sec-phase2">
+      <div class="sec-h">
+        <span class="sec-h-ic">🔤</span> 上位サイトの頻出語 TOP 30
+        <span class="sec-h-sub">kuromoji 形態素解析</span>
+      </div>
+
+      <div class="word-cloud">
+        <span class="word s1">助成金</span>
+        <span class="word s1">中小企業</span>
+        <span class="word s1">採用</span>
+        <span class="word s2">申請</span>
+        <span class="word s2">条件</span>
+        <span class="word s2">厚生労働省</span>
+        <span class="word s2">支給</span>
+        <span class="word s2">事業主</span>
+        <span class="word s3">トライアル雇用</span>
+        <span class="word s3">キャリアアップ</span>
+        <span class="word s3">特定求職者</span>
+        <span class="word s3">人材確保</span>
+        <span class="word s3">対象労働者</span>
+        <span class="word s3">受給</span>
+        <span class="word s3">支給額</span>
+        <span class="word s3">事業計画</span>
+        <span class="word s4">助成対象</span>
+        <span class="word s4">雇用保険</span>
+        <span class="word s4">ハローワーク</span>
+        <span class="word s4">期限</span>
+        <span class="word s4">審査</span>
+        <span class="word s4">就職</span>
+        <span class="word s4">人手不足</span>
+        <span class="word s4">採用活動</span>
+        <span class="word s4">非正規</span>
+        <span class="word s4">正社員化</span>
+        <span class="word s4">職場定着</span>
+        <span class="word s4">育成</span>
+        <span class="word s4">給付金</span>
+        <span class="word s4">添付書類</span>
+      </div>
+
+      <div style="background:var(--peach-soft);border-left:3px solid var(--peach-dark);border-radius:6px;padding:9px 12px;margin-top:12px;font-size:11.5px;color:var(--text);line-height:1.55">
+        💡 大きい語ほど上位サイトで頻出。<b>「助成金」「中小企業」「採用」「申請」「条件」</b>は本文中に高頻度で自然に含める必要あり (AI が自動考慮)
+      </div>
+    </div>
+
+    <!-- 上位 10 サイトリスト -->
+    <div class="sec sec-phase2">
+      <div class="sec-h">
+        <span class="sec-h-ic">📑</span> 「中小企業 採用 助成金」 検索上位 10 サイト
+        <span class="sec-h-sub">2026-05-29 取得</span>
+      </div>
+
+      <div class="topsites">
+        <div class="topsite" style="display:grid;grid-template-columns:24px 1fr 70px 50px 50px;gap:10px;font-size:9.5px;color:var(--text3);font-weight:700;background:transparent;border:0;padding:2px 11px">
+          <div></div><div>サイト</div><div style="text-align:right">文字数</div><div style="text-align:right">h2</div><div style="text-align:right">DR</div>
+        </div>
+
+        <div class="topsite">
+          <div class="topsite-rank gold">1</div>
+          <div class="topsite-ti">中小企業の採用助成金完全ガイド｜厚労省認定 7 種類<span class="url">jinji-pro.example.jp</span></div>
+          <div class="topsite-meta lg">9,420 字</div>
+          <div class="topsite-meta">9</div>
+          <div class="topsite-meta">72</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank gold">2</div>
+          <div class="topsite-ti">採用助成金とは？申請から受給まで完全解説<span class="url">recruit-news.example.com</span></div>
+          <div class="topsite-meta lg">8,810 字</div>
+          <div class="topsite-meta">8</div>
+          <div class="topsite-meta">68</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank gold">3</div>
+          <div class="topsite-ti">【2026 最新】中小企業向け採用助成金一覧と申請のコツ<span class="url">hr-times.example.co.jp</span></div>
+          <div class="topsite-meta lg">10,250 字</div>
+          <div class="topsite-meta">10</div>
+          <div class="topsite-meta">61</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank">4</div>
+          <div class="topsite-ti">中小企業が活用できる人材確保助成金まとめ<span class="url">smb-hr.example.jp</span></div>
+          <div class="topsite-meta lg">7,640 字</div>
+          <div class="topsite-meta">7</div>
+          <div class="topsite-meta">54</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank">5</div>
+          <div class="topsite-ti">採用助成金の申請方法と注意点<span class="url">jobsearch-lab.example.com</span></div>
+          <div class="topsite-meta lg">8,120 字</div>
+          <div class="topsite-meta">7</div>
+          <div class="topsite-meta">49</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank">6</div>
+          <div class="topsite-ti">トライアル雇用助成金とキャリアアップ助成金の違い<span class="url">corp-koyo.example.jp</span></div>
+          <div class="topsite-meta lg">6,890 字</div>
+          <div class="topsite-meta">6</div>
+          <div class="topsite-meta">47</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank">7</div>
+          <div class="topsite-ti">中小企業の経営者が知るべき採用助成金 5 選<div class="url">keiei-keyword.example.com</div></div>
+          <div class="topsite-meta lg">7,950 字</div>
+          <div class="topsite-meta">7</div>
+          <div class="topsite-meta">42</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank">8</div>
+          <div class="topsite-ti">助成金で採用コストを下げる方法<span class="url">cost-cut.example.co.jp</span></div>
+          <div class="topsite-meta lg">7,210 字</div>
+          <div class="topsite-meta">6</div>
+          <div class="topsite-meta">38</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank">9</div>
+          <div class="topsite-ti">人事担当者必見！中小企業の採用助成金活用術<span class="url">jinjitanto.example.jp</span></div>
+          <div class="topsite-meta lg">8,560 字</div>
+          <div class="topsite-meta">8</div>
+          <div class="topsite-meta">36</div>
+        </div>
+        <div class="topsite">
+          <div class="topsite-rank">10</div>
+          <div class="topsite-ti">採用助成金の落とし穴 — 申請前に知っておきたいこと<span class="url">careeer-pit.example.com</span></div>
+          <div class="topsite-meta lg">7,180 字</div>
+          <div class="topsite-meta">6</div>
+          <div class="topsite-meta">32</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PHASE 3: Google Trends + PDCA Journey 統合                   -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <div class="divider">
+      <span class="divider-tx">↓ PHASE 3 で追加される機能 ↓</span>
+    </div>
+
+    <span class="phase-lbl p3">Phase 3</span>
+
+    <!-- 12 ヶ月トレンドグラフ -->
+    <div class="sec sec-phase3">
+      <div class="sec-h">
+        <span class="sec-h-ic">📈</span> Google Trends — 過去 12 ヶ月
+        <span class="sec-h-sub">相対値 (0-100)</span>
+      </div>
+
+      <div class="trend-chart">
+        <div class="trend-chart-h">
+          <div class="trend-chart-ti">「中小企業 採用 助成金」 検索関心の推移</div>
+          <div class="trend-chart-meta">ピーク: 4 月 (新卒採用前)</div>
+        </div>
+        <svg class="trend-chart-svg" viewBox="0 0 720 140" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#c0ff5c" stop-opacity=".5"/>
+              <stop offset="100%" stop-color="#c0ff5c" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- グリッド線 -->
+          <line x1="0" y1="35" x2="720" y2="35" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="0" y1="70" x2="720" y2="70" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="0" y1="105" x2="720" y2="105" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
+          <!-- 12 ヶ月の波 (4 月にピーク) -->
+          <path d="M 0,90 L 60,85 L 120,75 L 180,55 L 240,30 L 300,45 L 360,65 L 420,80 L 480,95 L 540,100 L 600,85 L 660,70 L 720,60"
+                fill="none" stroke="#a3e635" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 0,90 L 60,85 L 120,75 L 180,55 L 240,30 L 300,45 L 360,65 L 420,80 L 480,95 L 540,100 L 600,85 L 660,70 L 720,60 L 720,140 L 0,140 Z"
+                fill="url(#trendGrad)"/>
+          <!-- ピーク dot -->
+          <circle cx="240" cy="30" r="5" fill="#a3e635" stroke="#fff" stroke-width="2"/>
+          <text x="248" y="22" font-size="10" font-weight="800" fill="#0a3d39">▲ ピーク (100)</text>
+        </svg>
+        <div class="trend-chart-axis">
+          <span>6 月</span><span>8 月</span><span>10 月</span><span>12 月</span><span>2 月</span><span>4 月</span><span>今月</span>
+        </div>
+
+        <div class="trend-insight">
+          ⏰ <div><b>新卒採用シーズン直前 (2-3 月)</b> に検索が急増。<b>1-2 月公開</b>を狙うと最大の流入が期待できる — AI が記事公開スケジュールに反映します</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 関連急上昇クエリ -->
+    <div class="sec sec-phase3">
+      <div class="sec-h">
+        <span class="sec-h-ic">🚀</span> 関連急上昇キーワード
+        <span class="sec-h-sub">Google Trends · Related queries</span>
+      </div>
+
+      <div class="rising">
+        <div class="rising-row">
+          <div class="rising-kw">採用助成金 オンライン申請</div>
+          <div class="rising-delta hot">+340%</div>
+        </div>
+        <div class="rising-row">
+          <div class="rising-kw">中途採用 助成金 中小企業</div>
+          <div class="rising-delta hot">+220%</div>
+        </div>
+        <div class="rising-row">
+          <div class="rising-kw">採用助成金 2026 改正</div>
+          <div class="rising-delta hot">+180%</div>
+        </div>
+        <div class="rising-row">
+          <div class="rising-kw">IT 人材 採用助成金</div>
+          <div class="rising-delta">+95%</div>
+        </div>
+        <div class="rising-row">
+          <div class="rising-kw">外国人 採用助成金 中小企業</div>
+          <div class="rising-delta">+72%</div>
+        </div>
+        <div class="rising-row">
+          <div class="rising-kw">採用助成金 シニア 60 歳以上</div>
+          <div class="rising-delta">+48%</div>
+        </div>
+      </div>
+
+      <div style="background:#fce7f3;border-left:3px solid #ec4899;border-radius:6px;padding:9px 12px;margin-top:11px;font-size:11.5px;color:#831843;line-height:1.55">
+        🔥 <b>急上昇キーワードは "次の市場"</b>。記事内で先回りして言及しておくと、トレンド到来時に上位を取れる
+      </div>
+    </div>
+
+    <!-- PDCA Journey 統合 -->
+    <div class="sec sec-phase3">
+      <div class="sec-h">
+        <span class="sec-h-ic">🛤</span> PDCA Journey との接続
+        <span class="sec-h-sub">8 ステップに統合</span>
+      </div>
+
+      <div class="journey">
+        <div class="journey-step done">
+          <div class="journey-step-num">STEP 1</div>
+          <div class="journey-step-ti">サイト診断</div>
+          <div class="journey-step-st">✅ 完了</div>
+        </div>
+        <div class="journey-step done">
+          <div class="journey-step-num">STEP 2</div>
+          <div class="journey-step-ti">ペルソナ</div>
+          <div class="journey-step-st">✅ 完了</div>
+        </div>
+        <div class="journey-step done">
+          <div class="journey-step-num">STEP 3</div>
+          <div class="journey-step-ti">競合分析</div>
+          <div class="journey-step-st">✅ 完了</div>
+        </div>
+        <div class="journey-step now">
+          <div class="journey-step-num">STEP 4</div>
+          <div class="journey-step-ti">キーワード調査</div>
+          <div class="journey-step-st">🔵 今ここ</div>
+        </div>
+        <div class="journey-step todo">
+          <div class="journey-step-num">STEP 5</div>
+          <div class="journey-step-ti">記事生成</div>
+          <div class="journey-step-st">⏳ 次</div>
+        </div>
+        <div class="journey-step todo">
+          <div class="journey-step-num">STEP 6</div>
+          <div class="journey-step-ti">公開</div>
+          <div class="journey-step-st">⏳</div>
+        </div>
+        <div class="journey-step todo">
+          <div class="journey-step-num">STEP 7</div>
+          <div class="journey-step-ti">流入計測</div>
+          <div class="journey-step-st">⏳</div>
+        </div>
+        <div class="journey-step todo">
+          <div class="journey-step-num">STEP 8</div>
+          <div class="journey-step-ti">改善</div>
+          <div class="journey-step-st">⏳</div>
+        </div>
+      </div>
+
+      <div style="background:var(--teal-soft);border-left:3px solid var(--teal);border-radius:6px;padding:9px 12px;margin-top:11px;font-size:11.5px;color:var(--teal-deep);line-height:1.55">
+        🛤 キーワード調査結果は <b>Step 5 (記事生成)</b> に自動連携。ペルソナ・競合分析・調査キーワードを 1 本の流れで PDCA 化
+      </div>
+    </div>
+
+    </div>
+    <!-- ═════ /SEO タブ ═════ -->
+
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- 🤖 AEO タブ                                                  -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="tab-pane aeo-accent" data-tab="aeo">
+
+      <!-- HERO (紫系) -->
+      <div class="kw-hero" style="background:linear-gradient(135deg,#6d28d9,#4c1d95)">
+        <div class="kw-hero-ic">🤖</div>
+        <div class="kw-hero-lbl">AEO 対策モード — Answer Engine Optimization</div>
+        <div class="kw-hero-ti">AI 検索に引用されるための「質問」と「構造」をご提案</div>
+        <div class="kw-hero-sub">
+          <b>ChatGPT Search</b>・<b>Perplexity</b>・<b>Google AI Overviews</b> が答える時代。<b style="color:#ddd6fe">質問形式クエリ + 構造化回答</b>で AI に引用される記事を作ります。
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- サイトタイプ診断バナー (= 3 パターン並列表示・モック用)       -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <div style="background:#fef3c7;border:1px dashed #fbbf24;border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#78350f">
+        <b>📝 モック</b> — 以下はサイトタイプ別 3 パターンを並列表示。実装時は登録 URL を自動判定 (or ユーザー選択) して 1 枚だけ表示。
+      </div>
+
+      <!-- パターン A: WordPress -->
+      <div class="site-cap ok">
+        <div class="site-cap-h">
+          <span class="site-cap-ic">✅</span>
+          <div>
+            <div class="site-cap-ti">サイトタイプ: WordPress</div>
+            <div class="site-cap-url">example-recruit.jp · 自動検出 (wp-content/ 検出)</div>
+          </div>
+          <span class="site-cap-badge ok">全機能 OK</span>
+        </div>
+        <div class="site-cap-body">
+          全 AEO 対策が <b>全自動デプロイ可能</b>。記事生成・公開から構造化データまで何もしなくて OK です。
+        </div>
+        <div class="site-cap-features">
+          <div class="site-cap-feat"><span class="yes">✓</span>Q&A 記事の自動公開</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>FAQ schema 自動追加</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>HowTo schema 自動追加</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>robots.txt 自動更新</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>llms.txt 自動設置</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>著者情報 自動挿入</div>
+        </div>
+      </div>
+
+      <!-- パターン B: EC サイト (Shopify / BASE / STORES 等) -->
+      <div class="site-cap info">
+        <div class="site-cap-h">
+          <span class="site-cap-ic">🛒</span>
+          <div>
+            <div class="site-cap-ti">サイトタイプ: EC サイト (Shopify)</div>
+            <div class="site-cap-url">my-shop.com · 自動検出 (Shopify meta タグ + cdn.shopify.com 検出)</div>
+          </div>
+          <span class="site-cap-badge info">商品 + 記事 OK</span>
+        </div>
+        <div class="site-cap-body">
+          EC は <b>商品ページ自体が AI 引用対象</b>。商品 schema + レビュー + 比較記事の三本柱で <b>「〇〇 おすすめ」「〇〇 比較」系</b>の AI 推薦獲得を狙います。
+        </div>
+        <div class="site-cap-features">
+          <div class="site-cap-feat"><span class="yes">✓</span>Product schema 全商品自動</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>Review schema 自動 (★評価)</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>商品比較記事 自動生成</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>商品 FAQ schema 自動</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>Organization schema</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>HowTo (使い方記事) 自動</div>
+        </div>
+
+        <div class="site-cap-alt">
+          <b>EC 特有の AEO 強化ポイント</b> (AI が EC を引用する時の評価軸)
+          <div class="site-cap-alt-row">
+            <span class="site-cap-feat">📦 商品ページ一括最適化 (全 SKU)</span>
+            <span class="site-cap-feat">⭐ レビューを引用素材に構造化</span>
+            <span class="site-cap-feat">📊 「A vs B」比較記事 自動生成</span>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--text3)">
+            <b style="color:var(--text2)">対応プラットフォーム</b>:
+            Shopify (全自動) ·
+            BASE / STORES / カラーミー (半自動・記事 + schema 自動、設定系手動) ·
+            ECCube / Magento (Webhook 連携で全自動化可)
+          </div>
+        </div>
+      </div>
+
+      <!-- パターン C: LP (サブブログ推奨) -->
+      <div class="site-cap warn">
+        <div class="site-cap-h">
+          <span class="site-cap-ic">⚠️</span>
+          <div>
+            <div class="site-cap-ti">サイトタイプ: LP (Studio で構築)</div>
+            <div class="site-cap-url">my-service.com · 自動検出 (Studio meta タグ検出)</div>
+          </div>
+          <span class="site-cap-badge warn">記事追加 不可</span>
+        </div>
+        <div class="site-cap-body">
+          LP 単体では <b>記事量産による AEO 集客ができません</b>。<b>サブブログを別途立てて両輪運用</b>するのが最も効果的です。
+        </div>
+
+        <!-- BIG CTA: サブブログ立てる (案 1 = 当方サブドメインで 1-Click) -->
+        <button class="site-cap-cta">
+          🚀 ブログを 1-Click で立ち上げる
+          <span class="site-cap-cta-sub">→ blog-yourname.myagent.com (お試し・無料)</span>
+          <span class="site-cap-cta-arr">→</span>
+        </button>
+        <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5">
+          ⓘ 本格運用時は <b style="color:var(--text2)">blog.my-service.com</b> (自分のドメイン) に移行可能 — DNS 設定 5 分
+        </div>
+
+        <div class="site-cap-alt">
+          <b>または LP 単体強化のみ</b> (記事は書けないが基礎 AEO だけ実施)
+          <div class="site-cap-alt-row">
+            <span class="site-cap-feat"><span class="yes">✓</span>Service schema 生成 (手動貼付)</span>
+            <span class="site-cap-feat"><span class="yes">✓</span>llms.txt コード提供</span>
+            <span class="site-cap-feat"><span class="yes">✓</span>robots.txt 雛形提供</span>
+            <span class="site-cap-feat"><span class="no">×</span>記事量産</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- パターン D: その他 CMS (Studio/Wix/Webflow 等) -->
+      <div class="site-cap gray">
+        <div class="site-cap-h">
+          <span class="site-cap-ic">⚙️</span>
+          <div>
+            <div class="site-cap-ti">サイトタイプ: その他 CMS (Studio / Wix / Webflow)</div>
+            <div class="site-cap-url">brand-site.com · 自動検出 (記事ページ複数あり)</div>
+          </div>
+          <span class="site-cap-badge">半自動</span>
+        </div>
+        <div class="site-cap-body">
+          API 制約のある CMS。<b>記事 HTML + 構造化データを生成</b> → ユーザーがコピペで貼り付け。
+        </div>
+        <div class="site-cap-features">
+          <div class="site-cap-feat"><span class="yes">✓</span>記事 HTML ダウンロード</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>FAQ schema コード生成</div>
+          <div class="site-cap-feat"><span class="yes">✓</span>HowTo schema コード生成</div>
+          <div class="site-cap-feat"><span class="partial">△</span>robots.txt は手動設置</div>
+          <div class="site-cap-feat"><span class="partial">△</span>llms.txt は手動設置</div>
+          <div class="site-cap-feat"><span class="partial">△</span>Webhook 連携で全自動化 (近日)</div>
+        </div>
+      </div>
+
+      <!-- ═══════ STATE 1: 質問形式 候補 ═══════ -->
+      <div class="sec">
+        <div class="sec-h">
+          <span class="sec-h-ic">❓</span> AI に拾われやすい質問形式キーワード
+          <span class="sec-h-sub">PAA + サジェスト変形 · 6 候補</span>
+        </div>
+
+        <div class="cands">
+
+          <!-- 1 位 -->
+          <div class="cand top" style="border-color:#a78bfa;background:linear-gradient(180deg,#fff,#f3e8ff)">
+            <div class="cand-rank" style="color:#7c3aed">🥇 #1</div>
+            <div class="cand-kw">中小企業の採用助成金とは？</div>
+            <div class="cand-meta">
+              <span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">PAA 出現</span>
+              <span class="cand-chip gap">未着手</span>
+            </div>
+            <div class="cand-signals">
+              <div class="sig"><span class="sig-ic">🤖</span><div class="sig-val up">あり</div><div class="sig-lbl">AI Overview</div></div>
+              <div class="sig"><span class="sig-ic">📚</span><div class="sig-val">5</div><div class="sig-lbl">引用元数</div></div>
+              <div class="sig"><span class="sig-ic">❓</span><div class="sig-val">8</div><div class="sig-lbl">関連PAA</div></div>
+              <div class="sig"><span class="sig-ic">🎯</span><div class="sig-val warn">B</div><div class="sig-lbl">獲得余地</div></div>
+            </div>
+            <div class="cand-reason">
+              <b>定義型クエリ</b>は AI が必ず答える領域。現在 5 サイトが引用中だが <b>Q&A 構造が薄く</b> 入れ替え可能。
+            </div>
+          </div>
+
+          <!-- 2 位 -->
+          <div class="cand">
+            <div class="cand-rank">🥈 #2</div>
+            <div class="cand-kw">採用助成金はいくらもらえる？</div>
+            <div class="cand-meta">
+              <span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">PAA 出現</span>
+              <span class="cand-chip gap">未着手</span>
+            </div>
+            <div class="cand-signals">
+              <div class="sig"><span class="sig-ic">🤖</span><div class="sig-val up">あり</div><div class="sig-lbl">AI Overview</div></div>
+              <div class="sig"><span class="sig-ic">📚</span><div class="sig-val">3</div><div class="sig-lbl">引用元数</div></div>
+              <div class="sig"><span class="sig-ic">❓</span><div class="sig-val">6</div><div class="sig-lbl">関連PAA</div></div>
+              <div class="sig"><span class="sig-ic">🎯</span><div class="sig-val up">A</div><div class="sig-lbl">獲得余地</div></div>
+            </div>
+            <div class="cand-reason">
+              <b>金額系</b>は数値の明記が引用条件。引用元 3 サイトのみ = <b>狙い目</b>。
+            </div>
+          </div>
+
+          <!-- 3 位 -->
+          <div class="cand">
+            <div class="cand-rank">🥉 #3</div>
+            <div class="cand-kw">採用助成金の申請方法は？</div>
+            <div class="cand-meta">
+              <span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">HowTo 候補</span>
+            </div>
+            <div class="cand-signals">
+              <div class="sig"><span class="sig-ic">🤖</span><div class="sig-val up">あり</div><div class="sig-lbl">AI Overview</div></div>
+              <div class="sig"><span class="sig-ic">📚</span><div class="sig-val">7</div><div class="sig-lbl">引用元数</div></div>
+              <div class="sig"><span class="sig-ic">❓</span><div class="sig-val">12</div><div class="sig-lbl">関連PAA</div></div>
+              <div class="sig"><span class="sig-ic">🎯</span><div class="sig-val warn">B</div><div class="sig-lbl">獲得余地</div></div>
+            </div>
+            <div class="cand-reason">
+              <b>手順系</b>は <b>HowTo schema</b> が効く領域。番号付きリストで構造化すれば AI が拾いやすい。
+            </div>
+          </div>
+
+          <!-- 4 位 -->
+          <div class="cand">
+            <div class="cand-rank">#4</div>
+            <div class="cand-kw">助成金と補助金の違いは？</div>
+            <div class="cand-meta">
+              <span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">比較系</span>
+            </div>
+            <div class="cand-signals">
+              <div class="sig"><span class="sig-ic">🤖</span><div class="sig-val up">あり</div><div class="sig-lbl">AI Overview</div></div>
+              <div class="sig"><span class="sig-ic">📚</span><div class="sig-val">4</div><div class="sig-lbl">引用元数</div></div>
+              <div class="sig"><span class="sig-ic">❓</span><div class="sig-val">5</div><div class="sig-lbl">関連PAA</div></div>
+              <div class="sig"><span class="sig-ic">🎯</span><div class="sig-val up">A</div><div class="sig-lbl">獲得余地</div></div>
+            </div>
+            <div class="cand-reason">
+              <b>比較系</b>は表形式で書くと AI が要約しやすい。引用獲得難度低。
+            </div>
+          </div>
+
+          <!-- 5 位 -->
+          <div class="cand">
+            <div class="cand-rank">#5</div>
+            <div class="cand-kw">採用助成金は誰が対象？</div>
+            <div class="cand-meta">
+              <span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">PAA 出現</span>
+            </div>
+            <div class="cand-signals">
+              <div class="sig"><span class="sig-ic">🤖</span><div class="sig-val">なし</div><div class="sig-lbl">AI Overview</div></div>
+              <div class="sig"><span class="sig-ic">📚</span><div class="sig-val">0</div><div class="sig-lbl">引用元数</div></div>
+              <div class="sig"><span class="sig-ic">❓</span><div class="sig-val">4</div><div class="sig-lbl">関連PAA</div></div>
+              <div class="sig"><span class="sig-ic">🎯</span><div class="sig-val up">A</div><div class="sig-lbl">獲得余地</div></div>
+            </div>
+            <div class="cand-reason">
+              現状 AI Overview <b>未生成</b> = 競合ゼロ。早めに記事化すれば AI が将来生成する時に <b>第一候補</b>になる可能性大。
+            </div>
+          </div>
+
+          <!-- 6 位 -->
+          <div class="cand">
+            <div class="cand-rank">#6</div>
+            <div class="cand-kw">採用助成金 2026 改正で何が変わった？</div>
+            <div class="cand-meta">
+              <span class="cand-chip trend">↑ 急上昇</span>
+            </div>
+            <div class="cand-signals">
+              <div class="sig"><span class="sig-ic">🤖</span><div class="sig-val">なし</div><div class="sig-lbl">AI Overview</div></div>
+              <div class="sig"><span class="sig-ic">📚</span><div class="sig-val">1</div><div class="sig-lbl">引用元数</div></div>
+              <div class="sig"><span class="sig-ic">❓</span><div class="sig-val">3</div><div class="sig-lbl">関連PAA</div></div>
+              <div class="sig"><span class="sig-ic">🎯</span><div class="sig-val up">A+</div><div class="sig-lbl">獲得余地</div></div>
+            </div>
+            <div class="cand-reason">
+              <b>新規トレンド</b>かつ競合ほぼゼロ。今書けば AEO 流入を独占できる典型例。
+            </div>
+          </div>
+
+        </div>
+
+        <div class="manual">
+          <div class="manual-toggle">自分で質問を入力する</div>
+          <div class="manual-body">
+            <div class="manual-input">
+              <input type="text" placeholder="例: 中小企業の採用助成金はいくら">
+              <button style="background:#6d28d9">調査</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ═══════ STATE 2: 選択質問の詳細 ═══════ -->
+      <div class="divider">
+        <span class="divider-tx">↓ 質問をクリック後の画面 ↓</span>
+      </div>
+
+      <div class="selected-hero" style="border-color:#a78bfa">
+        <div class="selected-hero-ic">🎯</div>
+        <div class="selected-hero-kw">「中小企業の採用助成金とは？」</div>
+        <button class="selected-hero-back">← 候補に戻る</button>
+      </div>
+
+      <!-- AEO シグナルパネル -->
+      <div class="signals-panel">
+        <div class="sig-box" style="border-color:#e9d5ff">
+          <div class="sig-box-h"><span class="sig-box-h-ic">🤖</span>AI Overview 出現状況</div>
+          <div class="sig-box-v up">あり</div>
+          <div class="sig-box-sub">Google で検索すると AI 回答が表示される (= AI による要約あり)</div>
+        </div>
+
+        <div class="sig-box" style="border-color:#e9d5ff">
+          <div class="sig-box-h"><span class="sig-box-h-ic">📚</span>現在の引用元サイト</div>
+          <div class="sig-box-v">5 <span style="font-size:11px;color:var(--text3);font-weight:600">サイト</span></div>
+          <div class="sig-box-sub">うち FAQ schema 有: 1 サイト / Q&A 構造あり: 2 サイト — <b>構造化で割り込み可能</b></div>
+        </div>
+
+        <div class="sig-box" style="border-color:#e9d5ff">
+          <div class="sig-box-h"><span class="sig-box-h-ic">❓</span>関連 PAA 質問数</div>
+          <div class="sig-box-v">8 <span style="font-size:11px;color:var(--text3);font-weight:600">問</span></div>
+          <div class="sig-box-sub">「他の人はこちらも質問」に出現する派生質問数</div>
+        </div>
+
+        <div class="sig-box" style="border-color:#e9d5ff">
+          <div class="sig-box-h"><span class="sig-box-h-ic">🎯</span>引用獲得スコア</div>
+          <div class="sig-box-v warn">B</div>
+          <div class="sig-box-sub">引用元の Q&A 構造が薄い = 構造化記事で <b>割り込み可能</b></div>
+        </div>
+      </div>
+
+      <div style="background:#f3e8ff;border:1px solid #e9d5ff;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#5b21b6;line-height:1.6">
+        💡 <b>AEO は「キーワード」より「質問」が単位</b> — AI は <b>明確な問いに対する明確な答え</b>を引用します。Q&A 構造 + 数値 + 出典がカギ。
+      </div>
+
+      <!-- 関連 PAA -->
+      <div class="sec">
+        <div class="sec-h">
+          <span class="sec-h-ic">📋</span> 関連 PAA — Google「他の人はこちらも質問」
+          <span class="sec-h-sub">記事内で答えるべき派生質問 · 8 件</span>
+        </div>
+        <div class="chips">
+          <span class="chip strong" style="background:#f3e8ff;border-color:#c4b5fd;color:#5b21b6">中小企業の採用助成金は誰でも申請できますか？</span>
+          <span class="chip strong" style="background:#f3e8ff;border-color:#c4b5fd;color:#5b21b6">採用助成金はいつ支給されますか？</span>
+          <span class="chip">助成金と補助金の違いは何ですか？</span>
+          <span class="chip">不採用になった場合でも助成金は出ますか？</span>
+          <span class="chip">助成金の申請に必要な書類は？</span>
+          <span class="chip">採用助成金の支給額の計算方法は？</span>
+          <span class="chip">採用助成金が落ちる理由は？</span>
+          <span class="chip">採用助成金は何年もらえますか？</span>
+        </div>
+      </div>
+
+      <!-- 引用される記事の特徴チェックリスト -->
+      <div class="sec">
+        <div class="sec-h">
+          <span class="sec-h-ic">🏗</span> AI に引用される記事の特徴
+          <span class="sec-h-sub">引用元 5 サイトを解析</span>
+        </div>
+
+        <div class="h2map">
+          <div class="h2map-row">
+            <div class="h2map-tx"><b>結論を冒頭に書く (= 1 段落で答え)</b></div>
+            <div class="h2map-bar"><div class="h2map-bar-fill" style="width:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <div class="h2map-cnt">5/5</div>
+          </div>
+          <div class="h2map-row">
+            <div class="h2map-tx"><b>具体的な数値・年月日を明記</b></div>
+            <div class="h2map-bar"><div class="h2map-bar-fill" style="width:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <div class="h2map-cnt">5/5</div>
+          </div>
+          <div class="h2map-row">
+            <div class="h2map-tx"><b>FAQ / Q&A 構造で書かれている</b></div>
+            <div class="h2map-bar"><div class="h2map-bar-fill" style="width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <div class="h2map-cnt">3/5</div>
+          </div>
+          <div class="h2map-row">
+            <div class="h2map-tx">出典・参照リンクが明記されている</div>
+            <div class="h2map-bar"><div class="h2map-bar-fill" style="width:80%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <div class="h2map-cnt">4/5</div>
+          </div>
+          <div class="h2map-row">
+            <div class="h2map-tx">著者情報 (Author / 監修者) が明示</div>
+            <div class="h2map-bar"><div class="h2map-bar-fill" style="width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <div class="h2map-cnt">3/5</div>
+          </div>
+          <div class="h2map-row">
+            <div class="h2map-tx">schema.org FAQPage / HowTo 実装</div>
+            <div class="h2map-bar"><div class="h2map-bar-fill" style="width:20%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <div class="h2map-cnt">1/5</div>
+          </div>
+          <div class="h2map-row">
+            <div class="h2map-tx">最新性 (更新日が 6 ヶ月以内)</div>
+            <div class="h2map-bar"><div class="h2map-bar-fill" style="width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <div class="h2map-cnt">3/5</div>
+          </div>
+        </div>
+
+        <div style="background:#f3e8ff;border-left:3px solid #7c3aed;border-radius:6px;padding:9px 12px;margin-top:11px;font-size:11.5px;color:#5b21b6;line-height:1.55">
+          💡 <b>schema.org 実装は 1/5 のみ</b> = ここを実装するだけで AI 引用獲得率が大幅に上がる狙い目
+        </div>
+      </div>
+
+      <!-- 推奨タイトル (AEO 版) -->
+      <div class="sec" style="border-color:#a78bfa;background:linear-gradient(180deg,#fff,#faf5ff)">
+        <div class="sec-h">
+          <span class="sec-h-ic">🎯</span> AI に引用される記事タイトル (AEO 最適化)
+          <span class="sec-h-sub">Q&A 構成 + 結論先出し · 常に 5 案 ⟳ 自動補充</span>
+        </div>
+
+        <!-- 動作説明バナー -->
+        <div style="display:flex;align-items:center;gap:8px;background:#f3e8ff;border:1px solid #d8b4fe;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11.5px;color:#5b21b6;font-weight:600;line-height:1.5">
+          <span style="font-size:15px">🤖</span>
+          <span>どれかを選ぶと <b>AI チームがチャット画面で作成</b> (進捗ストリーミング)。<b style="color:var(--green)">⟳ 1 本完成ごとに新候補が自動補充</b> され、常に 5 案を維持。</span>
+        </div>
+
+        <div style="background:linear-gradient(135deg,#6d28d9,#4c1d95);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:12px">
+          <span style="font-size:20px">📚</span>
+          <div style="line-height:1.4">
+            <b style="font-size:13px">1 万字以上の長文 + FAQ schema + 結論先出し で自動生成</b>
+            <div style="opacity:.85;font-size:11px;margin-top:1px">AI が引用しやすい構造を最初から組み込んで出力</div>
+          </div>
+        </div>
+
+        <!-- 🤖 まず 1 本 AI チームに依頼 → チャット進行 (AEO 版) -->
+        <div style="background:#fff;border:2px dashed #a78bfa;border-radius:11px;padding:13px 16px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:18px">🤖</span>
+            <div style="font-weight:900;font-size:13px;color:var(--text)">はじめての方はこちら — AI チームに最初の 1 本を任せる</div>
+            <span style="margin-left:auto;font-size:9.5px;font-weight:800;background:#f3e8ff;color:#5b21b6;padding:3px 8px;border-radius:5px;letter-spacing:.04em">RECOMMENDED</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">
+            候補 ① のタイトルで <b>最高品質の AEO 記事 (1 万字以上 + FAQ schema 12 問 + 結論先出し)</b> を AI チームが今すぐ作成。<b>チャット画面で進捗を見ながら</b>完成 → 品質を確認してから残り 4 本に進められます。
+          </div>
+          <button style="background:#6d28d9;color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
+            🤖 AI チームに作成を依頼する
+            <span style="font-size:11px;font-weight:700;opacity:.85">→ チャット画面で進行 (約 3-5 分)</span>
+            <span style="font-size:14px">→</span>
+          </button>
+        </div>
+
+        <div class="titles">
+          <div class="title-row">
+            <div class="title-rank">①</div>
+            <div>
+              <div class="title-tx">中小企業の採用助成金とは？— 2026 年最新 8 種類・申請条件・金額・受給までの流れを Q&A 形式で完全解説</div>
+              <div class="title-meta">📚 約 13,200 字 · h2 案 9 つ + FAQ schema 12 問 · 想定読了 17 分</div>
+            </div>
+            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          </div>
+          <div class="title-row">
+            <div class="title-rank">②</div>
+            <div>
+              <div class="title-tx">【結論先出し】中小企業が使える採用助成金 — 8 種類・金額・申請条件を表で比較</div>
+              <div class="title-meta">📚 約 11,400 字 · h2 案 8 つ + 比較表 3 種 · 想定読了 14 分</div>
+            </div>
+            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          </div>
+          <div class="title-row">
+            <div class="title-rank">③</div>
+            <div>
+              <div class="title-tx">採用助成金の申請方法を 7 ステップで解説 — 必要書類・期限・審査ポイント完全ガイド</div>
+              <div class="title-meta">📚 約 10,800 字 · h2 案 7 つ + HowTo schema · 想定読了 14 分</div>
+            </div>
+            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          </div>
+          <div class="title-row">
+            <div class="title-rank">④</div>
+            <div>
+              <div class="title-tx">採用助成金は誰が対象？— 中小企業の定義から労働者条件まで Q&A 20 問で答える</div>
+              <div class="title-meta">📚 約 12,100 字 · h2 案 8 つ + FAQ schema 20 問 · 想定読了 15 分</div>
+            </div>
+            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          </div>
+          <div class="title-row">
+            <div class="title-rank">⑤</div>
+            <div>
+              <div class="title-tx">採用助成金 2026 年改正で何が変わった？— 新旧比較表 + 中小企業への影響を社労士監修で解説</div>
+              <div class="title-meta">📚 約 11,600 字 · h2 案 7 つ + 監修者明記 · 想定読了 15 分</div>
+            </div>
+            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          </div>
+
+          <!-- ⟳ 自動補充プレースホルダ (AEO 版) -->
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;padding:14px 16px;background:repeating-linear-gradient(135deg,#faf5ff,#faf5ff 8px,#fff 8px,#fff 16px);border:1px dashed #d8b4fe;border-radius:9px;font-size:11.5px;color:var(--text3);font-weight:700;line-height:1.5">
+            <span style="font-size:16px;color:#7c3aed">⟳</span>
+            <span><b style="color:var(--text2)">次の AEO 候補 (⑥) は AI が常時準備中</b> — 1 本完成すると自動でここに追加されて常に 5 案を維持</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ═══════ PHASE 2 (AEO): AI Overview 引用元解析 ═══════ -->
+      <div class="divider">
+        <span class="divider-tx">↓ PHASE 2 で追加される機能 ↓</span>
+      </div>
+
+      <span class="phase-lbl p2">Phase 2</span>
+
+      <div class="sec sec-phase2">
+        <div class="sec-h">
+          <span class="sec-h-ic">🔍</span> Google AI Overview 引用元 解析
+          <span class="sec-h-sub">スクレイピング + 構造解析</span>
+        </div>
+
+        <div class="topsites">
+          <div class="topsite" style="display:grid;grid-template-columns:24px 1fr 50px 50px 50px;gap:10px;font-size:9.5px;color:var(--text3);font-weight:700;background:transparent;border:0;padding:2px 11px">
+            <div></div><div>引用元サイト</div><div style="text-align:right">FAQ schema</div><div style="text-align:right">Q&A 構造</div><div style="text-align:right">出典</div>
+          </div>
+
+          <div class="topsite" style="border-color:#e9d5ff">
+            <div class="topsite-rank gold">①</div>
+            <div class="topsite-ti">厚生労働省 助成金検索<span class="url">mhlw.go.jp</span></div>
+            <div class="topsite-meta lg" style="color:#16a34a">✓</div>
+            <div class="topsite-meta lg" style="color:#16a34a">✓</div>
+            <div class="topsite-meta lg" style="color:#16a34a">✓</div>
+          </div>
+          <div class="topsite" style="border-color:#e9d5ff">
+            <div class="topsite-rank gold">②</div>
+            <div class="topsite-ti">中小企業庁 採用支援ページ<span class="url">chusho.meti.go.jp</span></div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+            <div class="topsite-meta lg" style="color:#16a34a">✓</div>
+            <div class="topsite-meta lg" style="color:#16a34a">✓</div>
+          </div>
+          <div class="topsite" style="border-color:#e9d5ff">
+            <div class="topsite-rank gold">③</div>
+            <div class="topsite-ti">採用助成金完全ガイド (jinji-pro)<span class="url">jinji-pro.example.jp</span></div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+            <div class="topsite-meta lg" style="color:#16a34a">✓</div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+          </div>
+          <div class="topsite" style="border-color:#e9d5ff">
+            <div class="topsite-rank">④</div>
+            <div class="topsite-ti">人事専門メディア HR-Times<span class="url">hr-times.example.co.jp</span></div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+            <div class="topsite-meta lg" style="color:#16a34a">✓</div>
+          </div>
+          <div class="topsite" style="border-color:#e9d5ff">
+            <div class="topsite-rank">⑤</div>
+            <div class="topsite-ti">SMB-HR コラム<span class="url">smb-hr.example.jp</span></div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+            <div class="topsite-meta lg" style="color:#dc2626">×</div>
+          </div>
+        </div>
+
+        <div style="background:#f3e8ff;border-left:3px solid #7c3aed;border-radius:6px;padding:9px 12px;margin-top:11px;font-size:11.5px;color:#5b21b6;line-height:1.55">
+          💡 引用元 5 サイト中 <b>FAQ schema を実装してるのは 1 サイトのみ</b>。schema 実装 + Q&A 構造で <b>2-3 位の引用獲得</b>が現実的に狙える
+        </div>
+      </div>
+
+
+      <!-- ═══════ PHASE 3 (AEO): schema.org 自動生成 + Journey ═══════ -->
+      <div class="divider">
+        <span class="divider-tx">↓ PHASE 3 で追加される機能 ↓</span>
+      </div>
+
+      <span class="phase-lbl p3">Phase 3</span>
+
+      <div class="sec sec-phase3">
+        <div class="sec-h">
+          <span class="sec-h-ic">📐</span> schema.org マークアップ 自動生成
+          <span class="sec-h-sub">FAQPage / HowTo / Article schema</span>
+        </div>
+
+        <div style="background:#0f172a;color:#a5f3fc;border-radius:10px;padding:14px 16px;font-family:Menlo,Monaco,monospace;font-size:11px;line-height:1.6;overflow-x:auto;white-space:pre">
+<span style="color:#94a3b8">// 記事生成と同時に自動出力される schema</span>
+<span style="color:#fde68a">&lt;script type="application/ld+json"&gt;</span>
+{
+  "@context": "https://schema.org",
+  "@type": <span style="color:#fbcfe8">"FAQPage"</span>,
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": <span style="color:#bbf7d0">"中小企業の採用助成金とは？"</span>,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": <span style="color:#bbf7d0">"中小企業が新たに従業員を雇用する際に..."</span>
+      }
+    },
+    {
+      "@type": "Question",
+      "name": <span style="color:#bbf7d0">"誰が申請できる？"</span>,
+      "acceptedAnswer": { ... }
+    },
+    <span style="color:#94a3b8">// + 18 件の Q&A schema を自動生成</span>
+  ]
+}
+<span style="color:#fde68a">&lt;/script&gt;</span></div>
+
+        <div style="background:#fce7f3;border-left:3px solid #ec4899;border-radius:6px;padding:9px 12px;margin-top:11px;font-size:11.5px;color:#831843;line-height:1.55">
+          📐 FAQPage + HowTo schema を <b>記事公開時に自動挿入</b>。Google の構造化データテストも通過済みコードを出力
+        </div>
+      </div>
+
+      <!-- PDCA Journey 統合 (AEO 版) -->
+      <div class="sec sec-phase3">
+        <div class="sec-h">
+          <span class="sec-h-ic">🛤</span> PDCA Journey との接続 (AEO 経路)
+          <span class="sec-h-sub">SEO と並走する 8 ステップ</span>
+        </div>
+
+        <div class="journey">
+          <div class="journey-step done"><div class="journey-step-num">STEP 1</div><div class="journey-step-ti">サイト診断</div><div class="journey-step-st">✅ 完了</div></div>
+          <div class="journey-step done"><div class="journey-step-num">STEP 2</div><div class="journey-step-ti">ペルソナ</div><div class="journey-step-st">✅ 完了</div></div>
+          <div class="journey-step done"><div class="journey-step-num">STEP 3</div><div class="journey-step-ti">競合分析</div><div class="journey-step-st">✅ 完了</div></div>
+          <div class="journey-step now" style="background:linear-gradient(135deg,#7c3aed,#4c1d95);box-shadow:0 4px 12px rgba(124,58,237,.28)"><div class="journey-step-num">STEP 4</div><div class="journey-step-ti">AEO 質問調査</div><div class="journey-step-st">🤖 今ここ</div></div>
+          <div class="journey-step todo"><div class="journey-step-num">STEP 5</div><div class="journey-step-ti">Q&A 記事生成</div><div class="journey-step-st">⏳ 次</div></div>
+          <div class="journey-step todo"><div class="journey-step-num">STEP 6</div><div class="journey-step-ti">schema 公開</div><div class="journey-step-st">⏳</div></div>
+          <div class="journey-step todo"><div class="journey-step-num">STEP 7</div><div class="journey-step-ti">引用獲得計測</div><div class="journey-step-st">⏳</div></div>
+          <div class="journey-step todo"><div class="journey-step-num">STEP 8</div><div class="journey-step-ti">改善</div><div class="journey-step-st">⏳</div></div>
+        </div>
+
+        <div style="background:#f3e8ff;border-left:3px solid #7c3aed;border-radius:6px;padding:9px 12px;margin-top:11px;font-size:11.5px;color:#5b21b6;line-height:1.55">
+          🛤 AEO 経路は SEO と並走。<b>Step 7 で「AI 検索からの流入」と「AI Overview 引用獲得数」</b>を計測 — Google Search Console と Perplexity Analytics を統合
+        </div>
+      </div>
+
+    </div>
+    <!-- ═════ /AEO タブ ═════ -->
+
+  </div>
+</div>
+
+<script>
+  // === タブ切替 ===
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = this.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+      this.classList.add('active');
+      var pane = document.querySelector('.tab-pane[data-tab="' + target + '"]');
+      if(pane) pane.classList.add('active');
+      var body = document.querySelector('.modal-body');
+      if(body) body.scrollTop = 0;
+    });
+  });
+
+  // === 手動入力 折り畳みトグル (両タブ対応) ===
+  document.querySelectorAll('.manual-toggle').forEach(function(t){
+    t.addEventListener('click', function(){
+      this.parentElement.classList.toggle('open');
+    });
+  });
+
+  // === 候補クリック → 「クリック後」の区切りまでスクロール ===
+  document.querySelectorAll('.cand').forEach(function(c){
+    c.addEventListener('click', function(){
+      // 自分が属する tab-pane 内の最初の divider にスクロール
+      var pane = c.closest('.tab-pane');
+      if(!pane) return;
+      var divider = pane.querySelector('.divider');
+      if(divider) divider.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+</script>
+</body>
+</html>

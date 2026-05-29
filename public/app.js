@@ -2826,6 +2826,14 @@ function _openSiteTabModal(siteId, tabKey){
       else if(t === 'kw-serp-request')     _kwFetchSerp(e.data.kw);
       else if(t === 'kw-trends-request')   _kwFetchTrends(e.data.kw);
       else if(t === 'kw-pdca-request')     _kwFetchPdca();
+      else if(t === 'kw-open-gsc-connect'){
+        // 🔌 推測モード CTA から「接続パネル」を開く
+        var ov0 = document.getElementById('siteTabOverlay');
+        if(ov0) ov0.remove();
+        setTimeout(function(){
+          try { if(typeof openConnectionsPanel === 'function') openConnectionsPanel(_kwSiteId); } catch(_){}
+        }, 80);
+      }
       else if(t === 'kw-send-chat'){
         // 🤖 AI チームに依頼 — iframe (= keyword panel) を閉じて、chat にプロンプト送信
         var prompt = String(e.data.prompt || '');

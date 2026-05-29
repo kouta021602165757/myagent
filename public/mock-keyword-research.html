@@ -620,7 +620,7 @@
         <div class="manual-body">
           <div class="manual-input">
             <input type="text" placeholder="調べたいキーワードを入力">
-            <button onclick="return _kwManualInputStub()">調査</button>
+            <button onclick="return _kwManualInputSearch(this)">調査</button>
           </div>
         </div>
       </div>
@@ -1453,7 +1453,7 @@
           <div class="manual-body">
             <div class="manual-input">
               <input type="text" placeholder="調べたい質問を入力">
-              <button style="background:#6d28d9" onclick="return _kwManualInputStub()">調査</button>
+              <button style="background:#6d28d9" onclick="return _kwManualInputSearch(this)">調査</button>
             </div>
           </div>
         </div>
@@ -1970,20 +1970,97 @@
   }
   window._doRefresh = _doRefresh;
 
-  // 手動入力 button (SEO / AEO 両方) — Phase 2 で実装予定の stub
-  function _kwManualInputStub(){
-    alert('🚧 手動キーワード調査は次の Phase で実装予定です。\n現状は AI が自動抽出した候補をご利用ください。');
+  // 手動入力「調査」 button: 入力されたキーワードで STATE 2 / SERP / Trends を fetch
+  function _kwManualInputSearch(btn){
+    var input = btn.parentElement.querySelector('input');
+    if(!input) return false;
+    var kw = String(input.value || '').trim();
+    if(!kw){ input.focus(); return false; }
+    var pane = btn.closest('.tab-pane');
+    var mode = (pane && pane.dataset.tab) || 'seo';
+    if(!_siteId){ alert('動的モード (site 接続) 必須です。'); return false; }
+    if(mode === 'aeo') _showAeoDetailLoading(kw); else _showSeoDetailLoading(kw);
+    if(mode === 'seo'){
+      _showSerpLoading();
+      _showTrendsLoading();
+    }
+    var divider = pane && pane.querySelector('.divider');
+    if(divider) divider.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+      window.parent.postMessage({ type: 'kw-detail-request', siteId: _siteId, kw: kw, mode: mode }, location.origin);
+      if(mode === 'seo'){
+        window.parent.postMessage({ type: 'kw-serp-request',   siteId: _siteId, kw: kw }, location.origin);
+        window.parent.postMessage({ type: 'kw-trends-request', siteId: _siteId, kw: kw }, location.origin);
+      }
+    } catch(_){}
     return false;
   }
-  window._kwManualInputStub = _kwManualInputStub;
+  window._kwManualInputSearch = _kwManualInputSearch;
+  // 後方互換 (= 旧名で呼ばれてる場合の保険)
+  window._kwManualInputStub = function(){ alert('🚧 候補がロードされてから利用可能です。'); return false; };
 
   // 🤖 AI チームに依頼ボタン (= テンプレ CTA + 各タイトルの依頼ボタン共通ハンドラ)
   // event delegation で動的描画後のボタンも捕捉
   document.body.addEventListener('click', function(e){
+    // 1) AI チーム依頼系 CTA
     var btn = e.target.closest('.title-cta, .kw-template-cta');
-    if(!btn) return;
-    e.preventDefault();
-    _kwHandleRequestArticle(btn);
+    if(btn){ e.preventDefault(); _kwHandleRequestArticle(btn); return; }
+    // 2) chip / 急上昇行 → そのキーワードで再検索
+    var chip = e.target.closest('.chip, .rising-row');
+    if(chip && _siteId){
+      var text = '';
+      if(chip.classList.contains('rising-row')){
+        var rk = chip.querySelector('.rising-kw');
+        if(rk) text = rk.textContent.trim();
+      } else {
+        text = chip.textContent.trim();
+      }
+      if(text){
+        var pane = chip.closest('.tab-pane');
+        var mode = (pane && pane.dataset.tab) || 'seo';
+        if(mode === 'aeo') _showAeoDetailLoading(text); else _showSeoDetailLoading(text);
+        if(mode === 'seo'){ _showSerpLoading(); _showTrendsLoading(); }
+        var divider = pane && pane.querySelector('.divider');
+        if(divider) divider.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        try {
+          window.parent.postMessage({ type: 'kw-detail-request', siteId: _siteId, kw: text, mode: mode }, location.origin);
+          if(mode === 'seo'){
+            window.parent.postMessage({ type: 'kw-serp-request',   siteId: _siteId, kw: text }, location.origin);
+            window.parent.postMessage({ type: 'kw-trends-request', siteId: _siteId, kw: text }, location.origin);
+          }
+        } catch(_){}
+      }
+      return;
+    }
+    // 3) 「← 候補に戻る」 — STATE 2 を placeholder に戻す + 候補までスクロール
+    var back = e.target.closest('.selected-hero-back');
+    if(back){
+      e.preventDefault();
+      _clearStaticStateOnDynamicMode();
+      var topGrid = document.querySelector('.tab-pane.active .cands, .tab-pane[data-tab="seo"] .cands');
+      if(topGrid) topGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    // 4) 上位サイトリスト 行 → URL を新タブで開く
+    var topsite = e.target.closest('.topsite');
+    if(topsite){
+      var urlEl = topsite.querySelector('.url');
+      if(urlEl){
+        var host = urlEl.textContent.trim();
+        if(host && host.indexOf(' ') < 0){
+          var openUrl = /^https?:/.test(host) ? host : ('https://' + host);
+          try { window.open(openUrl, '_blank', 'noopener'); } catch(_){}
+        }
+      }
+      return;
+    }
+    // 5) 🔌 GSC 接続 CTA — 親の接続パネルを開く
+    var gscCta = e.target.closest('#kwGscCta button, #kwGscCta a');
+    if(gscCta){
+      e.preventDefault();
+      try { window.parent.postMessage({ type: 'kw-open-gsc-connect', siteId: _siteId }, location.origin); } catch(_){}
+      return;
+    }
   });
 
   function _kwHandleRequestArticle(btn){
@@ -2032,6 +2109,34 @@
     }
   }
   window._kwHandleRequestArticle = _kwHandleRequestArticle;
+
+  // schema.org JSON-LD コピー (= toast feedback 付)
+  window._kwCopySchema = function(btn){
+    try {
+      var pre = btn.parentNode.nextElementSibling;
+      if(!pre) return false;
+      var txt = pre.textContent || '';
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){
+          var prev = btn.textContent;
+          btn.textContent = '✓ コピー済';
+          btn.style.background = '#15803d';
+          setTimeout(function(){ btn.textContent = prev; btn.style.background = '#1e293b'; }, 1800);
+        }).catch(function(e){
+          alert('コピー失敗: ' + (e.message || 'unknown') + ' (HTTPS 必須)');
+        });
+      } else {
+        // fallback: textarea + execCommand
+        var ta = document.createElement('textarea');
+        ta.value = txt;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); btn.textContent = '✓ コピー済'; } catch(_){}
+        document.body.removeChild(ta);
+      }
+    } catch(e){ alert('コピー失敗: ' + (e.message || e)); }
+    return false;
+  };
 
   function _renderDynamicCandidates(d){
     var grid = document.getElementById('kwCands');
@@ -2091,12 +2196,13 @@
       if(heroEl && !document.getElementById('kwGscCta')){
         var cta = document.createElement('div');
         cta.id = 'kwGscCta';
-        cta.style.cssText = 'background:#fffbeb;border:1.5px dashed #fbbf24;border-radius:12px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px';
+        cta.style.cssText = 'background:#fffbeb;border:1.5px dashed #fbbf24;border-radius:12px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
         cta.innerHTML = '<span style="font-size:22px">🔌</span>'
-          + '<div style="flex:1;font-size:12px;line-height:1.55;color:#78350f">'
+          + '<div style="flex:1;min-width:200px;font-size:12px;line-height:1.55;color:#78350f">'
           +   '<b style="font-size:13px;color:#78350f">Google Search Console を接続するとさらに精度↑</b><br>'
           +   '実検索クエリ + 順位データから 5 つの戦略タイプ (伸びしろ / 機会損失 / 強み拡張 / ゾンビ / CV 直前) で候補を出せます。'
-          + '</div>';
+          + '</div>'
+          + '<button style="background:#0d4f4a;color:#fff;border:0;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">🔌 接続パネルを開く</button>';
         heroEl.parentNode.insertBefore(cta, heroEl.nextSibling);
       }
     }
@@ -2300,7 +2406,7 @@
         var jsonText = JSON.stringify(d.schema_jsonld, null, 2);
         schemaBlock.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
           + '<span style="color:#94a3b8;font-size:10.5px">// 「' + _esc(d.keyword) + '」用に自動生成された FAQ schema</span>'
-          + '<button onclick="navigator.clipboard.writeText(this.parentNode.nextElementSibling.textContent)" style="background:#1e293b;color:#a5f3fc;border:1px solid #334155;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">📋 コピー</button>'
+          + '<button onclick="_kwCopySchema(this)" style="background:#1e293b;color:#a5f3fc;border:1px solid #334155;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">📋 コピー</button>'
           + '</div>'
           + '<pre style="margin:0;font-family:Menlo,Monaco,monospace;font-size:11px;line-height:1.55;white-space:pre-wrap;word-break:break-word">' + _esc(jsonText) + '</pre>';
       }

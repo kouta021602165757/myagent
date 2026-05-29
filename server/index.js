@@ -9525,6 +9525,7 @@ async function executeGscListSitesTool(user){
 async function executeGscQueryTool(user, agent, input){
   // Resolve site_url from input → agent → user
   let siteUrl = (input && input.site_url) ? String(input.site_url).trim() : null;
+  const isExplicit = !!siteUrl;
   if(!siteUrl){
     if(agent && agent.gsc_site_url) siteUrl = agent.gsc_site_url;
     else if(user.integrations && user.integrations.google && user.integrations.google.gsc_site_url){
@@ -9533,6 +9534,32 @@ async function executeGscQueryTool(user, agent, input){
   }
   if(!siteUrl){
     return { error: 'no_site_set', instructions: 'まず gsc_list_sites を呼んでユーザーに使うサイトを選んでもらってください。 選択後は gsc_set_default で保存し、 それから再度クエリしてください。' };
+  }
+  // ─── ドメイン照合チェック (誤マッピング防御) ────────────────────────
+  // agent.site_url のホストと、解決済 gsc_site_url のホストが一致しなければ拒否。
+  // 過去の bug / user-default fallback で他サイトの GSC が紐づいているケースが
+  // あるため、site agent には正確に「そのドメインの GSC」しか引かせない。
+  // input.site_url 経由で明示指定された場合は caller の選択を尊重 (= スキップ)。
+  if(!isExplicit && agent && agent.site_url){
+    const _agHost = (() => {
+      try { return new URL(agent.site_url).hostname.replace(/^www\./, ''); }
+      catch(_){ return ''; }
+    })();
+    const _gscHost = (() => {
+      const m = String(siteUrl).match(/^sc-domain:(.+)$|^https?:\/\/([^/]+)/);
+      return ((m && (m[1] || m[2])) || '').replace(/^www\./, '');
+    })();
+    if(_agHost && _gscHost && _agHost !== _gscHost){
+      console.warn('[gsc] domain mismatch: agent.site_url=' + _agHost + ' vs gsc_site_url=' + _gscHost + ' (agent ' + (agent.id||'?') + ')');
+      return {
+        error: 'gsc_domain_mismatch',
+        expected_host: _agHost,
+        current_gsc_host: _gscHost,
+        current_gsc_site_url: siteUrl,
+        detail: '対象サイト「' + _agHost + '」と GSC 接続先「' + _gscHost + '」のドメインが一致しません。接続パネル → Search Console から「' + _agHost + '」の正しいプロパティを選び直してください。',
+        instructions: '対象サイトのホスト名と GSC プロパティのホスト名が異なります。 接続パネルで再設定が必要です。 ' + _gscHost + ' ではなく ' + _agHost + ' のプロパティを選択してください。'
+      };
+    }
   }
   try {
     // Date defaults: 28 日前 → 昨日

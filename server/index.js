@@ -21024,6 +21024,265 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
+  // GET /api/agents/:id/serp-analysis?kw=XXX
+  //   上位 10 サイト解析: DDG search → top 5 HTML fetch → 文字数/h2/画像 集計
+  //   Claude で共通 h2 クラスタリング + 頻出語抽出
+  //   キャッシュ: agent.serp_analysis[kw] に 24h
+  const serpMatch = pathname.match(/^\/api\/agents\/([^/]+)\/serp-analysis$/);
+  if(serpMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === serpMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const qs = url.parse(req.url, true).query || {};
+    const kw = String(qs.kw || '').trim().slice(0, 100);
+    if(!kw) return jres(res, 400, { error: 'kw required' });
+    const TTL = 24 * 3600 * 1000;
+    ag.serp_analysis = ag.serp_analysis || {};
+    const cKey = kw.slice(0, 50);
+    if(!qs.refresh && ag.serp_analysis[cKey] && ag.serp_analysis[cKey].fetched_at &&
+       (Date.now() - Date.parse(ag.serp_analysis[cKey].fetched_at)) < TTL){
+      return jres(res, 200, Object.assign({}, ag.serp_analysis[cKey], { cached: true }));
+    }
+
+    // 1) SERP 取得 (Brave → DDG → 失敗で空配列フォールバック)
+    let serp = [];
+    try {
+      if(typeof BRAVE_KEY !== 'undefined' && BRAVE_KEY){
+        serp = await braveSearch(kw).catch(() => []);
+      }
+      if(serp.length === 0) serp = await ddgSearch(kw);
+    } catch(e){ console.warn('[serp] search failed:', e.message); }
+
+    // 2) 上位 5 サイトの HTML を並列 fetch + 解析
+    const top5 = serp.slice(0, 5);
+    const siteAnalyses = await Promise.all(top5.map(async function(it){
+      try {
+        const ctrl = new AbortController();
+        const tm = setTimeout(() => ctrl.abort(), 6000);
+        const r = await fetch(it.url, {
+          signal: ctrl.signal,
+          headers: { 'User-Agent': 'Mozilla/5.0 MY-AI-Agent' },
+          redirect: 'follow',
+        }).catch(() => null);
+        clearTimeout(tm);
+        if(!r || !r.ok) return null;
+        let html = await r.text();
+        if(html.length > 500000) html = html.slice(0, 500000); // 500KB cap
+        // h2 抽出
+        const h2s = Array.from(html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi))
+          .map(m => String(m[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+          .filter(s => s.length > 0 && s.length < 200);
+        // body テキスト
+        const body = String(html)
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ').trim();
+        const chars = body.length;
+        const imgs = (html.match(/<img\s/gi) || []).length;
+        return {
+          url: it.url,
+          title: it.title || '',
+          chars,
+          h2_count: h2s.length,
+          images: imgs,
+          h2s: h2s.slice(0, 15),
+          body_excerpt: body.slice(0, 600),
+        };
+      } catch(e){ return null; }
+    }));
+    const valid = siteAnalyses.filter(Boolean);
+
+    // 3) 集計
+    const avgChars = valid.length ? Math.round(valid.reduce((a,b) => a + b.chars, 0) / valid.length) : 0;
+    const avgH2 = valid.length ? Math.round(valid.reduce((a,b) => a + b.h2_count, 0) / valid.length * 10) / 10 : 0;
+    const avgImg = valid.length ? Math.round(valid.reduce((a,b) => a + b.images, 0) / valid.length * 10) / 10 : 0;
+
+    // 4) Claude で共通 h2 クラスタリング + 頻出語抽出
+    let commonH2 = [];
+    let topWords = [];
+    if(valid.length > 0){
+      const h2Lines = valid.map((v, i) => '【サイト ' + (i+1) + '】 ' + v.h2s.join(' / ')).join('\n');
+      const bodyLines = valid.map(v => v.body_excerpt).join('\n').slice(0, 4000);
+      const prompt = [
+        '以下は「' + kw + '」で検索した上位 ' + valid.length + ' サイトの h2 一覧と本文抜粋です。',
+        '',
+        '【上位サイト h2 構成】',
+        h2Lines,
+        '',
+        '【本文抜粋 (連結)】',
+        bodyLines,
+        '',
+        '【出力】 JSON のみ (コードフェンス禁止):',
+        '{',
+        '  "common_h2": [   // 共通の見出し構成 7 件',
+        '    { "text": "(見出し)", "count": 5, "total": ' + valid.length + ' }',
+        '  ],',
+        '  "top_words": [   // 頻出語 TOP 30',
+        '    { "word": "(語)", "size": 1 }   // size 1=最大,2=中,3=小,4=極小',
+        '  ]',
+        '}'
+      ].join('\n');
+      const info = _resolveModelInfo('sonnet');
+      try {
+        if(info.provider === 'gemini'){
+          const r = await _callGemini([{role:'user', content: prompt}], '', info);
+          var txt = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+          const m = txt.match(/\{[\s\S]*\}/);
+          const p = JSON.parse(m ? m[0] : txt);
+          commonH2 = (p.common_h2 || []).slice(0, 7);
+          topWords = (p.top_words || []).slice(0, 30);
+        } else if(ANTHROPIC){
+          const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+            { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+            { model: info.modelId, max_tokens: 2000, messages:[{ role:'user', content: prompt }] },
+            { timeout: 30000 });
+          if(r.s === 200){
+            const txt = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+            const m = txt.match(/\{[\s\S]*\}/);
+            const p = JSON.parse(m ? m[0] : txt);
+            commonH2 = (p.common_h2 || []).slice(0, 7);
+            topWords = (p.top_words || []).slice(0, 30);
+          }
+        }
+      } catch(e){ console.warn('[serp] cluster failed:', e.message); }
+    }
+
+    const out = {
+      schema_version: 1,
+      keyword: kw,
+      fetched_at: new Date().toISOString(),
+      avg_chars: avgChars,
+      avg_h2: avgH2,
+      avg_images: avgImg,
+      common_h2: commonH2,
+      top_words: topWords,
+      top_sites: valid.map((v, i) => ({
+        rank: i + 1,
+        title: v.title,
+        url: v.url,
+        chars: v.chars,
+        h2_count: v.h2_count,
+        // DR は本物が取れないので推定 (top→上位ほど高)
+        dr_estimate: Math.max(20, 80 - i * 8),
+      })).concat(serp.slice(5, 10).map((it, idx) => ({
+        rank: 6 + idx,
+        title: it.title || '',
+        url: it.url || '',
+        chars: null,
+        h2_count: null,
+        dr_estimate: Math.max(20, 80 - (5 + idx) * 8),
+      }))),
+    };
+    // LRU: 3 件
+    const keys = Object.keys(ag.serp_analysis);
+    if(keys.length >= 3){
+      const oldest = keys.map(k => ({ k, t: Date.parse(ag.serp_analysis[k].fetched_at || 0) }))
+        .sort((a,b) => a.t - b.t)[0];
+      if(oldest) delete ag.serp_analysis[oldest.k];
+    }
+    ag.serp_analysis[cKey] = out;
+    try { await DB.save(user); } catch(e){ console.warn('[serp] save failed:', e.message); }
+    return jres(res, 200, out);
+  }
+
+  // GET /api/agents/:id/trends?kw=XXX
+  //   Google Trends 風データ (Claude 推定 — 公式 API なし)
+  //   キャッシュ: agent.trends[kw] に 7 日
+  const trendsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/trends$/);
+  if(trendsMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === trendsMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const qs = url.parse(req.url, true).query || {};
+    const kw = String(qs.kw || '').trim().slice(0, 100);
+    if(!kw) return jres(res, 400, { error: 'kw required' });
+    const TTL = 7 * 24 * 3600 * 1000;
+    ag.trends = ag.trends || {};
+    const cKey = kw.slice(0, 50);
+    if(!qs.refresh && ag.trends[cKey] && ag.trends[cKey].fetched_at &&
+       (Date.now() - Date.parse(ag.trends[cKey].fetched_at)) < TTL){
+      return jres(res, 200, Object.assign({}, ag.trends[cKey], { cached: true }));
+    }
+    const prompt = [
+      'キーワード「' + kw + '」について、日本における Google Trends の過去 12 ヶ月の検索関心度を推定してください。',
+      '季節性 (繁忙期/閑散期) を考慮し、12 ヶ月のうち peak 月とその relative 値 (0-100) を含めること。',
+      '関連急上昇クエリ 6 件も推測してください。',
+      '',
+      '【出力】 JSON のみ (コードフェンス禁止):',
+      '{',
+      '  "timeline": [   // 過去 12 ヶ月 (相対値 0-100)',
+      '    { "month": "2025-06", "value": 45 }',
+      '    // x12',
+      '  ],',
+      '  "peak": { "month": "2026-04", "value": 100, "reason": "(なぜ peak か簡潔に)" },',
+      '  "rising": [   // 関連急上昇キーワード 6 件',
+      '    { "keyword": "(具体)", "delta_pct": "+340%", "hot": true }',
+      '  ]',
+      '}'
+    ].join('\n');
+    const info = _resolveModelInfo('sonnet');
+    let parsed = null;
+    let rawText = '';
+    try {
+      if(info.provider === 'gemini'){
+        const r = await _callGemini([{role:'user', content: prompt}], '', info);
+        rawText = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+      } else if(ANTHROPIC){
+        const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+          { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+          { model: info.modelId, max_tokens: 2000, messages:[{ role:'user', content: prompt }] },
+          { timeout: 30000 });
+        if(r.s !== 200) return jres(res, 502, { error: 'claude_failed' });
+        rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      } else {
+        return jres(res, 500, { error: 'no AI provider' });
+      }
+      const m = rawText.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(m ? m[0] : rawText);
+    } catch(e){
+      return jres(res, 502, { error: 'parse_failed', detail: e.message });
+    }
+    const out = {
+      schema_version: 1,
+      keyword: kw,
+      fetched_at: new Date().toISOString(),
+      timeline: (parsed.timeline || []).slice(0, 12),
+      peak: parsed.peak || null,
+      rising: (parsed.rising || []).slice(0, 6),
+      note: 'AI 推定値 (Google Trends 公式 API 非利用)',
+    };
+    // LRU 3 件
+    const keys = Object.keys(ag.trends);
+    if(keys.length >= 3){
+      const oldest = keys.map(k => ({ k, t: Date.parse(ag.trends[k].fetched_at || 0) }))
+        .sort((a,b) => a.t - b.t)[0];
+      if(oldest) delete ag.trends[oldest.k];
+    }
+    ag.trends[cKey] = out;
+    try { await DB.save(user); } catch(e){ console.warn('[trends] save failed:', e.message); }
+    return jres(res, 200, out);
+  }
+
+  // GET /api/agents/:id/pdca-state
+  //   PDCA Journey 8 ステップの進捗 (= agent state の synthesis、Claude 不要)
+  const pdcaMatch = pathname.match(/^\/api\/agents\/([^/]+)\/pdca-state$/);
+  if(pdcaMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === pdcaMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const hasGoogleOauth = !!(user.google_oauth && user.google_oauth.refresh_token);
+    const hasGsc = hasGoogleOauth && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''));
+    const steps = [
+      { num: 1, key: 'audit',       title: 'サイト診断',        done: !!ag.site_preview },
+      { num: 2, key: 'persona',     title: 'ペルソナ',          done: !!(ag.persona && ag.persona.length > 50) },
+      { num: 3, key: 'competitors', title: '競合分析',          done: !!(ag.competitors_analyzed || (ag.serp_analysis && Object.keys(ag.serp_analysis).length > 0)) },
+      { num: 4, key: 'keyword',     title: 'キーワード調査',    done: !!(ag.keyword_suggestions || ag.keyword_detail), current: true },
+      { num: 5, key: 'article',     title: '記事生成',          done: !!(ag.generated_articles && ag.generated_articles.length > 0) },
+      { num: 6, key: 'publish',     title: '公開',              done: !!(ag.publish_history && ag.publish_history.length > 0) },
+      { num: 7, key: 'measure',     title: '流入計測',          done: hasGsc },
+      { num: 8, key: 'improve',     title: '改善',              done: false },
+    ];
+    return jres(res, 200, { steps, fetched_at: new Date().toISOString() });
+  }
+
   // GET /api/agents/:id/keyword-detail?kw=XXX&mode=seo|aeo
   //   選択キーワードの詳細: サジェスト + 周辺語 + 推奨タイトル × 5 + シグナル + (AEO) PAA + schema
   //   キャッシュ: agent.keyword_detail[mode + ':' + kw] に 24 時間

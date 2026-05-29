@@ -1806,9 +1806,10 @@
   var _siteId = _params.get('site');
   if(_siteId){
     _initDynamicCandidates(_siteId);
-    // サイトタイプ検出を並列で取得 → site-cap banner 出し分け
+    // サイトタイプ検出 + PDCA Journey を並列 fetch (= 軽量、即時表示)
     try {
       window.parent.postMessage({ type: 'kw-sitetype-request', siteId: _siteId }, location.origin);
+      window.parent.postMessage({ type: 'kw-pdca-request',   siteId: _siteId }, location.origin);
     } catch(_){}
   }
 
@@ -1837,6 +1838,12 @@
         else _renderSeoDetail(d.data);
       } else if(d.type === 'kw-detail-error'){
         _showDetailError(d.message);
+      } else if(d.type === 'kw-serp' && d.data){
+        _renderSerp(d.data);
+      } else if(d.type === 'kw-trends' && d.data){
+        _renderTrends(d.data);
+      } else if(d.type === 'kw-pdca' && d.data){
+        _renderPdca(d.data);
       } else if(d.type === 'kw-error'){
         grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
           + '⚠️ 候補生成に失敗しました (' + _esc(d.message || 'unknown') + ')'
@@ -1863,7 +1870,7 @@
       });
     }
 
-    // 候補カードクリック → STATE 2 動的 fetch + 描画 + スクロール
+    // 候補カードクリック → STATE 2 + SERP + Trends を並列 fetch + 描画 + スクロール
     grid.addEventListener('click', function(e){
       var cand = e.target.closest('.cand');
       if(!cand) return;
@@ -1871,10 +1878,15 @@
       if(!kwEl) return;
       var kw = kwEl.textContent.trim();
       _showSeoDetailLoading(kw);
+      _showSerpLoading();
+      _showTrendsLoading();
       var divider = document.querySelector('.tab-pane[data-tab="seo"] .divider');
       if(divider) divider.scrollIntoView({ behavior: 'smooth', block: 'start' });
       try {
         window.parent.postMessage({ type: 'kw-detail-request', siteId: _siteId, kw: kw, mode: 'seo' }, location.origin);
+        window.parent.postMessage({ type: 'kw-serp-request',   siteId: _siteId, kw: kw }, location.origin);
+        window.parent.postMessage({ type: 'kw-trends-request', siteId: _siteId, kw: kw }, location.origin);
+        window.parent.postMessage({ type: 'kw-pdca-request',   siteId: _siteId }, location.origin);
       } catch(_){}
     });
 
@@ -2192,10 +2204,154 @@
   }
 
   function _showDetailError(msg){
-    // SEO/AEO どちらの STATE 2 でも対応 (= 両 タブの hero に表示)
     var heroes = document.querySelectorAll('.selected-hero-kw');
     heroes.forEach(function(h){
       h.innerHTML = '<span style="color:#dc2626;font-size:14px">⚠️ ' + _esc(msg) + '</span>';
+    });
+  }
+
+  // ─── Phase 2: 上位サイト解析 ──────────────────────────────
+  function _showSerpLoading(){
+    var statsEls = document.querySelectorAll('.tab-pane[data-tab="seo"] .top-stat-v');
+    statsEls.forEach(function(el){ el.textContent = '…'; });
+    var h2map = document.querySelector('.tab-pane[data-tab="seo"] .h2map');
+    if(h2map) h2map.innerHTML = '<div style="text-align:center;padding:20px;color:#71717a;font-size:11.5px">分析中…</div>';
+    var wc = document.querySelector('.tab-pane[data-tab="seo"] .word-cloud');
+    if(wc) wc.innerHTML = '<div style="color:#71717a;font-size:11.5px">分析中…</div>';
+  }
+  function _renderSerp(d){
+    var pane = document.querySelector('.tab-pane[data-tab="seo"]');
+    if(!pane) return;
+    // 3 統計値
+    var stats = pane.querySelectorAll('.top-stat');
+    if(stats[0]){
+      stats[0].querySelector('.top-stat-v').innerHTML = (d.avg_chars || 0).toLocaleString() + '<span style="font-size:11px;color:var(--text3);font-weight:600">字</span>';
+    }
+    if(stats[1]){
+      stats[1].querySelector('.top-stat-v').innerHTML = (d.avg_h2 || 0) + '<span style="font-size:11px;color:var(--text3);font-weight:600">個</span>';
+    }
+    if(stats[2]){
+      stats[2].querySelector('.top-stat-v').innerHTML = (d.avg_images || 0) + '<span style="font-size:11px;color:var(--text3);font-weight:600">枚</span>';
+    }
+    // 共通 h2 ヒートマップ
+    var h2map = pane.querySelector('.h2map');
+    if(h2map){
+      h2map.innerHTML = (d.common_h2 || []).map(function(h){
+        var pct = h.total ? Math.round(h.count / h.total * 100) : 0;
+        return '<div class="h2map-row">'
+          + '<div class="h2map-tx"><b>' + _esc(h.text) + '</b></div>'
+          + '<div class="h2map-bar"><div class="h2map-bar-fill" style="width:' + pct + '%"></div></div>'
+          + '<div class="h2map-cnt">' + _esc(h.count) + '/' + _esc(h.total) + '</div>'
+          + '</div>';
+      }).join('') || '<div style="color:#71717a;padding:10px">データなし</div>';
+    }
+    // 頻出語タグクラウド
+    var wc = pane.querySelector('.word-cloud');
+    if(wc){
+      wc.innerHTML = (d.top_words || []).map(function(w){
+        var sz = w.size || 3;
+        return '<span class="word s' + sz + '">' + _esc(w.word) + '</span>';
+      }).join('') || '<div style="color:#71717a">データなし</div>';
+    }
+    // 上位 10 サイト
+    var topsites = pane.querySelector('.topsites');
+    if(topsites){
+      var header = '<div class="topsite" style="display:grid;grid-template-columns:24px 1fr 70px 50px 50px;gap:10px;font-size:9.5px;color:var(--text3);font-weight:700;background:transparent;border:0;padding:2px 11px">'
+        + '<div></div><div>サイト</div><div style="text-align:right">文字数</div><div style="text-align:right">h2</div><div style="text-align:right">DR</div></div>';
+      topsites.innerHTML = header + (d.top_sites || []).map(function(s){
+        var goldCls = s.rank <= 3 ? ' gold' : '';
+        var charsTxt = s.chars != null ? s.chars.toLocaleString() + ' 字' : '—';
+        var h2Txt = s.h2_count != null ? s.h2_count : '—';
+        var drTxt = s.dr_estimate || '—';
+        return '<div class="topsite">'
+          + '<div class="topsite-rank' + goldCls + '">' + s.rank + '</div>'
+          + '<div class="topsite-ti">' + _esc(s.title) + '<span class="url">' + _esc((s.url || '').replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</span></div>'
+          + '<div class="topsite-meta lg">' + _esc(charsTxt) + '</div>'
+          + '<div class="topsite-meta">' + _esc(h2Txt) + '</div>'
+          + '<div class="topsite-meta">' + _esc(drTxt) + '</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+
+  // ─── Phase 3: Google Trends 推定 ──────────────────────────────
+  function _showTrendsLoading(){
+    var pane = document.querySelector('.tab-pane[data-tab="seo"]');
+    if(!pane) return;
+    var rising = pane.querySelector('.rising');
+    if(rising) rising.innerHTML = '<div style="color:#71717a;font-size:11.5px;padding:10px">トレンド推定中…</div>';
+  }
+  function _renderTrends(d){
+    var pane = document.querySelector('.tab-pane[data-tab="seo"]');
+    if(!pane) return;
+    // SVG 折れ線を再描画
+    var svg = pane.querySelector('.trend-chart-svg');
+    if(svg && Array.isArray(d.timeline) && d.timeline.length > 0){
+      var pts = d.timeline;
+      var w = 720, h = 140;
+      var stepX = w / Math.max(1, pts.length - 1);
+      var maxV = Math.max.apply(null, pts.map(function(p){ return p.value || 0; })) || 100;
+      var coords = pts.map(function(p, i){
+        var x = i * stepX;
+        var y = h - 20 - ((p.value || 0) / maxV * (h - 40));
+        return [x, y];
+      });
+      var pathD = 'M ' + coords.map(function(c){ return c[0] + ',' + c[1]; }).join(' L ');
+      var areaD = 'M 0,' + (h - 20) + ' L ' + coords.map(function(c){ return c[0] + ',' + c[1]; }).join(' L ') + ' L ' + w + ',' + (h - 20) + ' Z';
+      var peakIdx = pts.findIndex(function(p){ return p === d.peak || (d.peak && p.month === d.peak.month); });
+      if(peakIdx < 0){
+        peakIdx = pts.reduce(function(maxI, p, i, a){ return (a[i].value > a[maxI].value) ? i : maxI; }, 0);
+      }
+      var peakX = coords[peakIdx][0], peakY = coords[peakIdx][1];
+      svg.innerHTML = '<defs><linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">'
+        + '<stop offset="0%" stop-color="#c0ff5c" stop-opacity=".5"/>'
+        + '<stop offset="100%" stop-color="#c0ff5c" stop-opacity="0"/>'
+        + '</linearGradient></defs>'
+        + '<line x1="0" y1="35" x2="720" y2="35" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>'
+        + '<line x1="0" y1="70" x2="720" y2="70" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>'
+        + '<line x1="0" y1="105" x2="720" y2="105" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>'
+        + '<path d="' + areaD + '" fill="url(#trendGrad)"/>'
+        + '<path d="' + pathD + '" fill="none" stroke="#a3e635" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+        + '<circle cx="' + peakX + '" cy="' + peakY + '" r="5" fill="#a3e635" stroke="#fff" stroke-width="2"/>'
+        + '<text x="' + (peakX + 8) + '" y="' + (peakY - 8) + '" font-size="10" font-weight="800" fill="#0a3d39">▲ peak</text>';
+    }
+    // peak メタ
+    var meta = pane.querySelector('.trend-chart-meta');
+    if(meta && d.peak){
+      meta.textContent = 'ピーク: ' + (d.peak.month || '') + ' (' + (d.peak.reason || '') + ')';
+    }
+    // 関連急上昇
+    var rising = pane.querySelector('.rising');
+    if(rising){
+      rising.innerHTML = (d.rising || []).map(function(r){
+        var hotCls = r.hot ? ' hot' : '';
+        return '<div class="rising-row">'
+          + '<div class="rising-kw">' + _esc(r.keyword) + '</div>'
+          + '<div class="rising-delta' + hotCls + '">' + _esc(r.delta_pct || '+') + '</div>'
+          + '</div>';
+      }).join('') || '<div style="color:#71717a;padding:10px">データなし</div>';
+    }
+  }
+
+  // ─── PDCA Journey 統合 ────────────────────────────────────────
+  function _renderPdca(d){
+    var journeys = document.querySelectorAll('.journey');
+    if(!journeys || journeys.length === 0) return;
+    journeys.forEach(function(jrn){
+      // 既存 .journey-step 要素 (8 個) を data の done/current で書き換え
+      var steps = jrn.querySelectorAll('.journey-step');
+      (d.steps || []).forEach(function(s, i){
+        if(!steps[i]) return;
+        var cls = s.done ? 'done' : (s.current ? 'now' : 'todo');
+        // 既存 class 維持 (= AEO 紫テーマ等の inline style は残す)
+        steps[i].className = 'journey-step ' + cls;
+        var titleEl = steps[i].querySelector('.journey-step-ti');
+        if(titleEl && s.title) titleEl.textContent = s.title;
+        var stEl = steps[i].querySelector('.journey-step-st');
+        if(stEl){
+          stEl.textContent = s.done ? '✅ 完了' : (s.current ? '🔵 今ここ' : '⏳');
+        }
+      });
     });
   }
 

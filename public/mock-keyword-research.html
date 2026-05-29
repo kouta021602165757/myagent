@@ -953,8 +953,8 @@
     <!-- 上位 10 サイトリスト -->
     <div class="sec sec-phase2">
       <div class="sec-h">
-        <span class="sec-h-ic">📑</span> 「中小企業 採用 助成金」 検索上位 10 サイト
-        <span class="sec-h-sub">2026-05-29 取得</span>
+        <span class="sec-h-ic">📑</span> <span id="kwSerpTitle">検索上位 10 サイト</span>
+        <span class="sec-h-sub" id="kwSerpTitleSub">未取得</span>
       </div>
 
       <div class="topsites">
@@ -1055,7 +1055,7 @@
 
       <div class="trend-chart">
         <div class="trend-chart-h">
-          <div class="trend-chart-ti">「中小企業 採用 助成金」 検索関心の推移</div>
+          <div class="trend-chart-ti" id="kwTrendTitle">検索関心の推移</div>
           <div class="trend-chart-meta">ピーク: 4 月 (新卒採用前)</div>
         </div>
         <svg class="trend-chart-svg" viewBox="0 0 720 140" preserveAspectRatio="none">
@@ -2270,6 +2270,13 @@
   function _renderSerp(d){
     var pane = document.querySelector('.tab-pane[data-tab="seo"]');
     if(!pane) return;
+    // セクション title を実際のキーワードに更新
+    var titleEl = document.getElementById('kwSerpTitle');
+    if(titleEl && d.keyword) titleEl.textContent = '「' + d.keyword + '」 検索上位 10 サイト';
+    var subEl = document.getElementById('kwSerpTitleSub');
+    if(subEl && d.fetched_at){
+      try { subEl.textContent = new Date(d.fetched_at).toLocaleDateString('ja-JP') + ' 取得'; } catch(_){}
+    }
     // 3 統計値
     var stats = pane.querySelectorAll('.top-stat');
     if(stats[0]){
@@ -2284,22 +2291,34 @@
     // 共通 h2 ヒートマップ
     var h2map = pane.querySelector('.h2map');
     if(h2map){
-      h2map.innerHTML = (d.common_h2 || []).map(function(h){
+      var h2html = (d.common_h2 || []).map(function(h){
         var pct = h.total ? Math.round(h.count / h.total * 100) : 0;
         return '<div class="h2map-row">'
           + '<div class="h2map-tx"><b>' + _esc(h.text) + '</b></div>'
           + '<div class="h2map-bar"><div class="h2map-bar-fill" style="width:' + pct + '%"></div></div>'
           + '<div class="h2map-cnt">' + _esc(h.count) + '/' + _esc(h.total) + '</div>'
           + '</div>';
-      }).join('') || '<div style="color:#71717a;padding:10px">データなし</div>';
+      }).join('');
+      if(h2html){
+        h2map.innerHTML = h2html;
+      } else {
+        // diagnostics を見せる
+        var dx = d.diagnostics || {};
+        var diagMsg = '⚠️ 上位サイトの h2 が取得できませんでした。';
+        if(dx.serp_count === 0) diagMsg += ' 検索結果が 0 件 (= キーワードが英語/専門用語すぎる可能性)。';
+        else if(dx.top5_ok === 0) diagMsg += ' 上位 ' + dx.top5_attempted + ' サイト全て fetch 失敗 (= robots/CSP/gzip ブロック等)。';
+        else diagMsg += ' AI が共通 h2 を抽出できませんでした。';
+        h2map.innerHTML = '<div style="color:#92400e;background:#fffbeb;border-radius:7px;padding:12px;font-size:11.5px;line-height:1.55">' + _esc(diagMsg) + '</div>';
+      }
     }
     // 頻出語タグクラウド
     var wc = pane.querySelector('.word-cloud');
     if(wc){
-      wc.innerHTML = (d.top_words || []).map(function(w){
+      var wcHtml = (d.top_words || []).map(function(w){
         var sz = w.size || 3;
         return '<span class="word s' + sz + '">' + _esc(w.word) + '</span>';
-      }).join('') || '<div style="color:#71717a">データなし</div>';
+      }).join('');
+      wc.innerHTML = wcHtml || '<div style="color:#92400e;font-size:11.5px">⚠️ 頻出語が取得できませんでした (上位サイト解析失敗)。</div>';
     }
     // 上位 10 サイト
     var topsites = pane.querySelector('.topsites');
@@ -2332,6 +2351,9 @@
   function _renderTrends(d){
     var pane = document.querySelector('.tab-pane[data-tab="seo"]');
     if(!pane) return;
+    // チャートタイトル を実キーワードに更新
+    var titleEl = document.getElementById('kwTrendTitle');
+    if(titleEl && d.keyword) titleEl.textContent = '「' + d.keyword + '」 検索関心の推移';
     // SVG 折れ線を再描画
     var svg = pane.querySelector('.trend-chart-svg');
     if(svg && Array.isArray(d.timeline) && d.timeline.length > 0){

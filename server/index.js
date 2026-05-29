@@ -21057,25 +21057,32 @@ async function handleAPI(req,res,pathname,method,ip){
     } catch(e){ console.warn('[serp] search failed:', e.message); }
 
     // 2) 上位 5 サイトの HTML を並列 fetch + 解析
+    //    本物のブラウザを模した UA + Accept ヘッダで gzip/robots ブロック回避
     const top5 = serp.slice(0, 5);
+    const fetchStats = { attempted: top5.length, ok: 0, errors: [] };
     const siteAnalyses = await Promise.all(top5.map(async function(it){
       try {
         const ctrl = new AbortController();
-        const tm = setTimeout(() => ctrl.abort(), 6000);
+        const tm = setTimeout(() => ctrl.abort(), 7000);
         const r = await fetch(it.url, {
           signal: ctrl.signal,
-          headers: { 'User-Agent': 'Mozilla/5.0 MY-AI-Agent' },
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ja,en;q=0.9',
+          },
           redirect: 'follow',
-        }).catch(() => null);
+        }).catch(e => { fetchStats.errors.push((it.url||'').slice(0,50) + ': ' + (e.message||'').slice(0,40)); return null; });
         clearTimeout(tm);
-        if(!r || !r.ok) return null;
+        if(!r || !r.ok){
+          if(r) fetchStats.errors.push((it.url||'').slice(0,50) + ': HTTP ' + r.status);
+          return null;
+        }
         let html = await r.text();
-        if(html.length > 500000) html = html.slice(0, 500000); // 500KB cap
-        // h2 抽出
+        if(html.length > 500000) html = html.slice(0, 500000);
         const h2s = Array.from(html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi))
           .map(m => String(m[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
           .filter(s => s.length > 0 && s.length < 200);
-        // body テキスト
         const body = String(html)
           .replace(/<script[\s\S]*?<\/script>/gi, ' ')
           .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -21083,6 +21090,7 @@ async function handleAPI(req,res,pathname,method,ip){
           .replace(/\s+/g, ' ').trim();
         const chars = body.length;
         const imgs = (html.match(/<img\s/gi) || []).length;
+        fetchStats.ok++;
         return {
           url: it.url,
           title: it.title || '',
@@ -21092,9 +21100,15 @@ async function handleAPI(req,res,pathname,method,ip){
           h2s: h2s.slice(0, 15),
           body_excerpt: body.slice(0, 600),
         };
-      } catch(e){ return null; }
+      } catch(e){
+        fetchStats.errors.push((it.url||'').slice(0,50) + ': ' + (e.message||'').slice(0,40));
+        return null;
+      }
     }));
     const valid = siteAnalyses.filter(Boolean);
+    if(valid.length === 0){
+      console.warn('[serp-analysis] no top sites fetched for kw=' + kw + ' serp_count=' + serp.length + ' errors=' + JSON.stringify(fetchStats.errors).slice(0,300));
+    }
 
     // 3) 集計
     const avgChars = valid.length ? Math.round(valid.reduce((a,b) => a + b.chars, 0) / valid.length) : 0;
@@ -21161,6 +21175,7 @@ async function handleAPI(req,res,pathname,method,ip){
       avg_images: avgImg,
       common_h2: commonH2,
       top_words: topWords,
+      diagnostics: { serp_count: serp.length, top5_attempted: fetchStats.attempted, top5_ok: fetchStats.ok, errors: fetchStats.errors.slice(0, 5) },
       top_sites: valid.map((v, i) => ({
         rank: i + 1,
         title: v.title,

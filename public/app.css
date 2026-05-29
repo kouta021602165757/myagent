@@ -8914,3 +8914,11 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   overflow:hidden !important;
 }
 
+/* iOS safe-area: スマホで modal が full-screen の時、ノッチ/Home インジケータを避ける */
+@media (max-width:720px){
+  #siteTabOverlay[data-tab="keyword"]{
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+}
+

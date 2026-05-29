@@ -7575,9 +7575,13 @@ function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
     'GSC が無い場合は 1/2/4 は省略し、サイト内容とペルソナから 3/5/推測タイプで提案。',
     'サイト URL とペルソナを必ず尊重し、関係ないジャンルのキーワードは絶対に提案しない (例: 地域メディアなのに「採用助成金」を出さない)。',
     '',
+    '加えて AEO (Answer Engine Optimization) 用の質問形式キーワード候補 6 件 も同時に生成すること。',
+    'AEO 候補は「〜とは?」「〜はいくら?」「〜の方法は?」など Q 形式で、ChatGPT/Perplexity/Google AI Overviews に',
+    '引用されることを狙う。type は「PAA出現」「HowTo候補」「比較系」「定義系」「急上昇」のいずれか。',
+    '',
     '【出力】 必ず JSON だけを返す。コードフェンス・前置き・解説は禁止。',
     '{',
-    '  "candidates": [',
+    '  "candidates": [   // SEO 用 6 件',
     '    {',
     '      "rank": 1,',
     '      "keyword": "(具体キーワード)",',
@@ -7585,7 +7589,16 @@ function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
     '      "reason": "なぜ推すか 1-2 文 (= GSC 表示 320/順位 18 等の数字込み)",',
     '      "signals": { "trend": "+18%" | "—", "competition": "緩"|"中"|"激", "intent": "情報"|"比較"|"購入" }',
     '    }',
-    '  ] // 6 件',
+    '  ],',
+    '  "aeo_candidates": [   // AEO 用 6 件',
+    '    {',
+    '      "rank": 1,',
+    '      "keyword": "(具体質問、Q 形式)",',
+    '      "type": "PAA出現" | "HowTo候補" | "比較系" | "定義系" | "急上昇" | "推測",',
+    '      "reason": "なぜ AI が引用しやすいか 1-2 文",',
+    '      "signals": { "ai_overview": "あり"|"なし", "sources_count": 5, "paa_count": 8, "score": "S"|"A"|"B"|"C" }',
+    '    }',
+    '  ]',
     '}'
   ].join('\n');
 }
@@ -20874,7 +20887,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     const qs = url.parse(req.url, true).query || {};
     const TTL_MS = 6 * 3600 * 1000;
-    const KW_SCHEMA_VERSION = 2;  // 1→2: ドメイン照合チェック追加で過去キャッシュ無効化 (2026-05-29)
+    const KW_SCHEMA_VERSION = 3;  // 2→3: AEO 候補も同時生成 (2026-05-29)
     const cached = ag.keyword_suggestions;
     if(!qs.refresh && cached && cached.fetched_at && cached.schema_version === KW_SCHEMA_VERSION &&
        (Date.now() - Date.parse(cached.fetched_at)) < TTL_MS){
@@ -20963,10 +20976,115 @@ async function handleAPI(req,res,pathname,method,ip){
       mode: (hasGsc && gscData && gscData.ok && Array.isArray(gscData.rows) && gscData.rows.length > 0) ? 'gsc' : 'inferred',
       fetched_at: new Date().toISOString(),
       site_hostname: hostname,
-      candidates: (parsed.candidates || []).slice(0, 6),
+      candidates: (parsed.candidates || []).slice(0, 6),       // SEO (= 後方互換)
+      aeo_candidates: (parsed.aeo_candidates || []).slice(0, 6), // AEO 新規
     };
     ag.keyword_suggestions = out;
     try { await DB.save(user); } catch(e){ console.warn('[kw-sug] save failed:', e.message); }
+    return jres(res, 200, out);
+  }
+
+  // GET /api/agents/:id/site-type
+  //   サイト URL を fetch して HTML を解析、サイトタイプ判定
+  //   wordpress / shopify / base / studio / wix / webflow / cms-other / lp
+  //   キャッシュ: agent.site_type に 7 日
+  const siteTypeMatch = pathname.match(/^\/api\/agents\/([^/]+)\/site-type$/);
+  if(siteTypeMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === siteTypeMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const qs = url.parse(req.url, true).query || {};
+    const TTL = 7 * 24 * 3600 * 1000;
+    if(!qs.refresh && ag.site_type && ag.site_type.fetched_at &&
+       (Date.now() - Date.parse(ag.site_type.fetched_at)) < TTL){
+      return jres(res, 200, Object.assign({}, ag.site_type, { cached: true }));
+    }
+    if(!ag.site_url) return jres(res, 200, { type: 'unknown', confidence: 'low', signals: [] });
+    let html = '';
+    try {
+      const ctrl = new AbortController();
+      const tm = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(ag.site_url, {
+        signal: ctrl.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MY-AI-Agent/1.0)' },
+        redirect: 'follow',
+      }).catch(e => { clearTimeout(tm); throw e; });
+      clearTimeout(tm);
+      if(r && r.ok) html = await r.text();
+    } catch(e){
+      console.warn('[site-type] fetch failed:', e.message);
+    }
+    const signals = [];
+    let type = 'unknown';
+    let conf = 'low';
+    // WordPress
+    if(/wp-content\//.test(html) || /<meta[^>]+generator[^>]+WordPress/i.test(html)){
+      type = 'wordpress'; conf = 'high'; signals.push('wp-content/ or generator=WordPress');
+    }
+    // Shopify
+    else if(/cdn\.shopify\.com/.test(html) || /Shopify\.theme/.test(html) || /Shopify\.shop/.test(html)){
+      type = 'shopify'; conf = 'high'; signals.push('cdn.shopify.com / Shopify.theme');
+    }
+    // BASE
+    else if(/static\.thebase\.in/.test(html) || /thebase\.in/.test(html)){
+      type = 'base'; conf = 'high'; signals.push('thebase.in detected');
+    }
+    // STORES
+    else if(/stores\.jp/.test(html) || /stores-static/.test(html)){
+      type = 'stores'; conf = 'high'; signals.push('stores.jp detected');
+    }
+    // Studio
+    else if(/studio\.design/.test(html) || /<meta[^>]+studio/i.test(html)){
+      type = 'studio'; conf = 'high'; signals.push('studio.design');
+    }
+    // Wix
+    else if(/wix\.com/.test(html) || /_wixCIDX/.test(html) || /wix-code/.test(html)){
+      type = 'wix'; conf = 'high'; signals.push('wix.com');
+    }
+    // Webflow
+    else if(/webflow\.com/.test(html) || /data-wf-page/.test(html)){
+      type = 'webflow'; conf = 'high'; signals.push('webflow.com / data-wf-page');
+    }
+    // ペライチ
+    else if(/peraichi\.com/.test(html)){
+      type = 'peraichi'; conf = 'high'; signals.push('peraichi.com');
+    }
+    else {
+      // sitemap で記事数を見て LP vs CMS 判定
+      try {
+        const smCtrl = new AbortController();
+        const smTm = setTimeout(() => smCtrl.abort(), 4000);
+        const smRes = await fetch(ag.site_url.replace(/\/$/, '') + '/sitemap.xml', {
+          signal: smCtrl.signal,
+          headers: { 'User-Agent': 'Mozilla/5.0 MY-AI-Agent' },
+        }).catch(() => null);
+        clearTimeout(smTm);
+        if(smRes && smRes.ok){
+          const xml = await smRes.text();
+          const urlCount = (xml.match(/<loc>/g) || []).length;
+          if(urlCount > 5){
+            type = 'cms-other'; conf = 'medium'; signals.push('sitemap.xml has ' + urlCount + ' URLs');
+          } else {
+            type = 'lp'; conf = 'medium'; signals.push('few URLs in sitemap (' + urlCount + ')');
+          }
+        } else {
+          type = 'lp'; conf = 'low'; signals.push('no sitemap');
+        }
+      } catch(e){
+        type = 'lp'; conf = 'low'; signals.push('sitemap fetch failed');
+      }
+    }
+    // EC をまとめて 'ec' に正規化 (= UI 側で同じ banner 出す)
+    const ecTypes = ['shopify','base','stores'];
+    const uiType = ecTypes.indexOf(type) >= 0 ? 'ec' : (type === 'studio' || type === 'wix' || type === 'webflow' || type === 'peraichi' || type === 'cms-other' ? 'cms-other' : type);
+    const out = {
+      type: uiType,
+      sub_type: type,  // 詳細 (= shopify / base / studio 等)
+      confidence: conf,
+      signals,
+      fetched_at: new Date().toISOString(),
+    };
+    ag.site_type = out;
+    try { await DB.save(user); } catch(e){ console.warn('[site-type] save failed:', e.message); }
     return jres(res, 200, out);
   }
 

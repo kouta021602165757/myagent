@@ -2772,30 +2772,60 @@ function _openSiteTabModal(siteId, tabKey){
       window._kwActiveSession = null;
     }
     var _kwSiteId = site.id;
-    var _kwFetch = function(refresh){
-      var path = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-suggestions' + (refresh ? '?refresh=1' : '');
+    // 汎用 fetch ヘルパー (= endpoint path → iframe に postMessage で型付き応答)
+    var _kwApiFetch = function(path, responseType, errorType){
       return api('GET', path)
         .then(function(d){
           var ifr = document.getElementById('kwIframe');
           if(ifr && ifr.contentWindow){
-            ifr.contentWindow.postMessage({ type: 'kw-suggestions', data: d }, location.origin);
+            ifr.contentWindow.postMessage({ type: responseType, data: d }, location.origin);
           }
         })
         .catch(function(err){
-          console.warn('[keyword-panel] fetch failed:', err && err.message);
+          console.warn('[keyword-panel] ' + path + ' failed:', err && err.message);
           var ifr = document.getElementById('kwIframe');
           if(ifr && ifr.contentWindow){
-            ifr.contentWindow.postMessage({ type: 'kw-error', message: String(err && err.message || err) }, location.origin);
+            ifr.contentWindow.postMessage({ type: errorType, message: String(err && err.message || err) }, location.origin);
           }
         });
+    };
+    var _kwFetch = function(refresh){
+      var p = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-suggestions' + (refresh ? '?refresh=1' : '');
+      return _kwApiFetch(p, 'kw-suggestions', 'kw-error');
+    };
+    var _kwFetchSiteType = function(){
+      var p = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/site-type';
+      return _kwApiFetch(p, 'kw-sitetype', 'kw-sitetype-error');
+    };
+    var _kwFetchDetail = function(kw, mode){
+      var p = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-detail?mode=' + encodeURIComponent(mode||'seo') + '&kw=' + encodeURIComponent(kw);
+      return _kwApiFetch(p, 'kw-detail', 'kw-detail-error');
+    };
+    var _kwFetchSerp = function(kw){
+      var p = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/serp-analysis?kw=' + encodeURIComponent(kw);
+      return _kwApiFetch(p, 'kw-serp', 'kw-serp-error');
+    };
+    var _kwFetchTrends = function(kw){
+      var p = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/trends?kw=' + encodeURIComponent(kw);
+      return _kwApiFetch(p, 'kw-trends', 'kw-trends-error');
+    };
+    var _kwFetchPdca = function(){
+      var p = '/api/agents/' + encodeURIComponent(_kwSiteId) + '/pdca-state';
+      return _kwApiFetch(p, 'kw-pdca', 'kw-pdca-error');
     };
     var _kwHandler = function(e){
       if(e.origin !== location.origin) return;
       if(!e.data) return;
       // 別 site / 古い session のメッセージは無視
       if(e.data.siteId !== _kwSiteId) return;
-      if(e.data.type === 'kw-iframe-ready') _kwFetch(false);
-      else if(e.data.type === 'kw-refresh') _kwFetch(true);
+      var t = e.data.type;
+      if(t === 'kw-iframe-ready')        _kwFetch(false);
+      else if(t === 'kw-refresh')        _kwFetch(true);
+      else if(t === 'kw-sitetype-request') _kwFetchSiteType();
+      else if(t === 'kw-detail-request')   _kwFetchDetail(e.data.kw, e.data.mode);
+      else if(t === 'kw-serp-request')     _kwFetchSerp(e.data.kw);
+      else if(t === 'kw-trends-request')   _kwFetchTrends(e.data.kw);
+      else if(t === 'kw-pdca-request')     _kwFetchPdca();
     };
     window.addEventListener('message', _kwHandler);
     window._kwActiveSession = { siteId: _kwSiteId, handler: _kwHandler };

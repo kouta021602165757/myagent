@@ -1806,6 +1806,10 @@
   var _siteId = _params.get('site');
   if(_siteId){
     _initDynamicCandidates(_siteId);
+    // サイトタイプ検出を並列で取得 → site-cap banner 出し分け
+    try {
+      window.parent.postMessage({ type: 'kw-sitetype-request', siteId: _siteId }, location.origin);
+    } catch(_){}
   }
 
   function _initDynamicCandidates(siteId){
@@ -1824,6 +1828,10 @@
       if(!e.data || typeof e.data !== 'object') return;
       if(e.data.type === 'kw-suggestions' && e.data.data){
         _renderDynamicCandidates(e.data.data);
+        // AEO 候補も同じ payload に含まれているので AEO タブも描画
+        if(Array.isArray(e.data.data.aeo_candidates)) _renderDynamicAeoCandidates(e.data.data);
+      } else if(e.data.type === 'kw-sitetype' && e.data.data){
+        _renderSiteType(e.data.data);
       } else if(e.data.type === 'kw-error'){
         grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
           + '⚠️ 候補生成に失敗しました (' + _esc(e.data.message || 'unknown') + ')'
@@ -1944,6 +1952,74 @@
           + '</div>';
         heroEl.parentNode.insertBefore(cta, heroEl.nextSibling);
       }
+    }
+  }
+
+  // AEO 候補グリッド描画 (= SEO とパラレル、紫テーマ)
+  function _renderDynamicAeoCandidates(d){
+    var grid = document.querySelector('.tab-pane[data-tab="aeo"] .cands');
+    if(!grid) return;
+    grid.id = 'kwAeoCands';
+    var arr = (d && Array.isArray(d.aeo_candidates)) ? d.aeo_candidates : [];
+    if(arr.length === 0){
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#92400e;font-size:12px;background:#fffbeb;border-radius:9px">'
+        + '⚠️ AEO 候補が 0 件でした。'
+        + '</div>';
+      return;
+    }
+    var ranks = ['🥇 #1','🥈 #2','🥉 #3','#4','#5','#6'];
+    grid.innerHTML = arr.map(function(c, i){
+      c = c || {};
+      var topCls = (i === 0) ? ' top' : '';
+      var topStyle = (i === 0) ? ' style="border-color:#a78bfa;background:linear-gradient(180deg,#fff,#f3e8ff)"' : '';
+      var rankColor = (i === 0) ? ' style="color:#7c3aed"' : '';
+      var sig = c.signals || {};
+      return '<div class="cand' + topCls + '"' + topStyle + '>'
+        +   '<div class="cand-rank"' + rankColor + '>' + (ranks[i] || ('#' + (i+1))) + '</div>'
+        +   '<div class="cand-kw">' + _esc(c.keyword) + '</div>'
+        +   '<div class="cand-meta">'
+        +     '<span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">' + _esc(c.type || '推測') + '</span>'
+        +   '</div>'
+        +   '<div class="cand-signals">'
+        +     '<div class="sig"><span class="sig-ic">🤖</span><div class="sig-val up">' + _esc(sig.ai_overview || '—') + '</div><div class="sig-lbl">AI Overview</div></div>'
+        +     '<div class="sig"><span class="sig-ic">📚</span><div class="sig-val">' + _esc(sig.sources_count != null ? sig.sources_count : '—') + '</div><div class="sig-lbl">引用元数</div></div>'
+        +     '<div class="sig"><span class="sig-ic">❓</span><div class="sig-val">' + _esc(sig.paa_count != null ? sig.paa_count : '—') + '</div><div class="sig-lbl">関連 PAA</div></div>'
+        +     '<div class="sig"><span class="sig-ic">🎯</span><div class="sig-val warn">' + _esc(sig.score || '—') + '</div><div class="sig-lbl">獲得余地</div></div>'
+        +   '</div>'
+        +   '<div class="cand-reason">' + _esc(c.reason) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // サイトタイプ判定 → 該当 site-cap banner だけ表示、他は隠す
+  function _renderSiteType(d){
+    var caps = document.querySelectorAll('.aeo-accent .site-cap');
+    if(!caps || caps.length === 0) return;
+    var matchType = d.type;  // wordpress / ec / lp / cms-other / unknown
+    // 各 site-cap に data-type 相当を付与しないと判定不可なので、順序で判定:
+    //   既存 mock の順序は WordPress / EC / LP / その他 CMS
+    var typeOrder = ['wordpress','ec','lp','cms-other'];
+    var matchIdx = typeOrder.indexOf(matchType);
+    if(matchIdx < 0){
+      // unknown 等 — 全部表示 (= フォールバック)
+      return;
+    }
+    caps.forEach(function(el, i){
+      if(i === matchIdx){
+        el.style.display = '';
+      } else {
+        el.style.display = 'none';
+      }
+    });
+    // 上部の「モック」 yellow banner も隠す
+    var noteEl = document.querySelector('.aeo-accent > div[style*="モック"]');
+    // 候補生成中... を「自動検出された」表記に変更
+    var bannerNote = document.querySelector('.aeo-accent .kw-hero + div[style*="fef3c7"][style*="dashed"]');
+    if(bannerNote){
+      bannerNote.innerHTML = '<b>🤖 サイトタイプ自動検出</b> — ' + _esc(d.sub_type || d.type) + ' を検出しました (信頼度: ' + _esc(d.confidence) + ')。該当する対策パターンのみ表示しています。';
+      bannerNote.style.background = '#dcfce7';
+      bannerNote.style.borderColor = '#86efac';
+      bannerNote.style.color = '#166534';
     }
   }
 

@@ -20851,10 +20851,20 @@ async function handleAPI(req,res,pathname,method,ip){
     const ag = (user.agents || []).find(a => a && a.id === gscSnapMatch[1]);
     if(!ag) return jres(res, 404, { error: 'agent not found' });
 
-    const googleConnected = !!(user.google_oauth && user.google_oauth.refresh_token);
-    const hasGscScope = googleConnected && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''));
+    // refresh_token + scope は user.google_oauth と user.integrations.google の両方に
+    // 保存され得るため、どちらかにあれば OK 扱い (= 過去の OAuth フロー違いで偏在)
+    const oauth1 = user.google_oauth || {};
+    const oauth2 = (user.integrations && user.integrations.google) || {};
+    const refreshToken = oauth1.refresh_token || oauth2.refresh_token || '';
+    const scope = String(oauth1.scope || oauth2.scope || '');
+    const googleConnected = !!refreshToken;
+    const hasGscScope = googleConnected && /webmasters/.test(scope);
     if(!hasGscScope){
-      return jres(res, 200, { connected: false });
+      console.warn('[gsc-snapshot] not connected: agent=' + ag.id +
+        ' refresh_token=' + (refreshToken ? 'yes' : 'no') +
+        ' scope_has_webmasters=' + /webmasters/.test(scope) +
+        ' scope_len=' + scope.length);
+      return jres(res, 200, { connected: false, debug_no_refresh: !refreshToken, debug_no_scope: !/webmasters/.test(scope) });
     }
 
     // period から date range 計算 (= yesterday / 7d / 28d)

@@ -1806,11 +1806,59 @@
   var _siteId = _params.get('site');
   if(_siteId){
     _initDynamicCandidates(_siteId);
+    // 動的モード = 静的サンプルコンテンツ ("中小企業 採用 助成金" 等) をクリアし、
+    // 「候補をクリックしてください」placeholder にする (両タブ)
+    _clearStaticStateOnDynamicMode();
     // サイトタイプ検出 + PDCA Journey を並列 fetch (= 軽量、即時表示)
     try {
       window.parent.postMessage({ type: 'kw-sitetype-request', siteId: _siteId }, location.origin);
       window.parent.postMessage({ type: 'kw-pdca-request',   siteId: _siteId }, location.origin);
     } catch(_){}
+  }
+
+  // 動的モード init: STATE 2 + Phase 2/3 の静的サンプルを消して空状態に
+  function _clearStaticStateOnDynamicMode(){
+    ['seo','aeo'].forEach(function(tab){
+      var pane = document.querySelector('.tab-pane[data-tab="' + tab + '"]');
+      if(!pane) return;
+      // 選択キーワード hero を「候補未選択」状態に
+      var hero = pane.querySelector('.selected-hero-kw');
+      if(hero) hero.innerHTML = '<span style="color:#9ca3af;font-weight:600;font-size:14px">👆 上の候補をクリックしてください</span>';
+      // シグナルパネル 4 boxes を "—" に
+      pane.querySelectorAll('.signals-panel .sig-box-v').forEach(function(el){ el.textContent = '—'; });
+      pane.querySelectorAll('.signals-panel .sig-box-sub').forEach(function(el){ el.textContent = 'クリック後に表示'; });
+      // チップ blocks (サジェスト / 周辺語 / PAA) を placeholder に
+      pane.querySelectorAll('.sec .chips').forEach(function(el){
+        el.innerHTML = '<div style="color:#9ca3af;font-size:11.5px;font-weight:600;padding:8px 0">候補クリックで表示されます</div>';
+      });
+      // 推奨タイトル × 5 を placeholder に
+      var titles = pane.querySelector('.titles');
+      if(titles){
+        titles.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#9ca3af;font-size:12.5px;font-weight:600">'
+          + '<div style="font-size:28px;margin-bottom:8px;opacity:.4">📝</div>'
+          + '候補をクリックすると、そのキーワードに最適化された記事タイトルが 5 つ生成されます'
+          + '</div>';
+      }
+    });
+    // Phase 2 上位サイト解析・h2map・wordcloud・topsites も placeholder
+    var phase2Statss = document.querySelectorAll('.tab-pane[data-tab="seo"] .top-stat-v');
+    phase2Statss.forEach(function(el){ el.textContent = '—'; });
+    var h2map = document.querySelector('.tab-pane[data-tab="seo"] .h2map');
+    if(h2map) h2map.innerHTML = '<div style="color:#9ca3af;padding:16px;font-size:11.5px;text-align:center">候補クリックで上位 10 サイト解析</div>';
+    var wc = document.querySelector('.tab-pane[data-tab="seo"] .word-cloud');
+    if(wc) wc.innerHTML = '<div style="color:#9ca3af;font-size:11.5px">候補クリックで頻出語解析</div>';
+    var topsites = document.querySelector('.tab-pane[data-tab="seo"] .topsites');
+    if(topsites) topsites.innerHTML = '<div style="color:#9ca3af;padding:16px;font-size:11.5px;text-align:center">候補クリックで上位 10 サイトを解析</div>';
+    // Trends グラフ + 急上昇
+    var rising = document.querySelector('.tab-pane[data-tab="seo"] .rising');
+    if(rising) rising.innerHTML = '<div style="color:#9ca3af;padding:14px;font-size:11.5px;text-align:center">候補クリックでトレンド分析</div>';
+    var trendSvg = document.querySelector('.trend-chart-svg');
+    if(trendSvg) trendSvg.innerHTML = '<text x="360" y="75" text-anchor="middle" font-size="11" fill="#9ca3af">候補クリックでトレンド表示</text>';
+    // schema preview (AEO)
+    var schemaBlock = document.querySelector('.tab-pane[data-tab="aeo"] [style*="background:#0f172a"]');
+    if(schemaBlock){
+      schemaBlock.innerHTML = '<div style="color:#94a3b8;font-size:11px;text-align:center;padding:14px">候補クリックで FAQ schema を自動生成</div>';
+    }
   }
 
   function _initDynamicCandidates(siteId){

@@ -755,9 +755,9 @@
         <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">
           候補 ① のタイトルで <b>最高品質の本記事 (1 万字以上 + SEO 全対策)</b> を AI チームが今すぐ作成。<b>チャット画面で進捗を見ながら</b>完成 → 品質を確認してから残り 4 本に進められます。
         </div>
-        <button style="background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
+        <button class="kw-template-cta" data-mode="seo" style="background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
           🤖 AI チームに作成を依頼する
-          <span style="font-size:11px;font-weight:700;opacity:.85">→ チャット画面で進行 (約 3-5 分)</span>
+          <span style="font-size:11px;font-weight:700;opacity:.85">→ チャットで開始 (即座)</span>
           <span style="font-size:14px">→</span>
         </button>
       </div>
@@ -1601,9 +1601,9 @@
           <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">
             候補 ① のタイトルで <b>最高品質の AEO 記事 (1 万字以上 + FAQ schema 12 問 + 結論先出し)</b> を AI チームが今すぐ作成。<b>チャット画面で進捗を見ながら</b>完成 → 品質を確認してから残り 4 本に進められます。
           </div>
-          <button style="background:#6d28d9;color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
+          <button class="kw-template-cta" data-mode="aeo" style="background:#6d28d9;color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
             🤖 AI チームに作成を依頼する
-            <span style="font-size:11px;font-weight:700;opacity:.85">→ チャット画面で進行 (約 3-5 分)</span>
+            <span style="font-size:11px;font-weight:700;opacity:.85">→ チャットで開始 (即座)</span>
             <span style="font-size:14px">→</span>
           </button>
         </div>
@@ -1976,6 +1976,62 @@
     return false;
   }
   window._kwManualInputStub = _kwManualInputStub;
+
+  // 🤖 AI チームに依頼ボタン (= テンプレ CTA + 各タイトルの依頼ボタン共通ハンドラ)
+  // event delegation で動的描画後のボタンも捕捉
+  document.body.addEventListener('click', function(e){
+    var btn = e.target.closest('.title-cta, .kw-template-cta');
+    if(!btn) return;
+    e.preventDefault();
+    _kwHandleRequestArticle(btn);
+  });
+
+  function _kwHandleRequestArticle(btn){
+    var pane = btn.closest('.tab-pane');
+    var mode = (pane && pane.dataset.tab) || 'seo';
+    var titleText = '';
+    var row = btn.closest('.title-row');
+    if(row){
+      // 5 推奨タイトルの 1 つから
+      var tx = row.querySelector('.title-tx');
+      if(tx) titleText = tx.textContent.trim();
+    } else if(btn.classList.contains('kw-template-cta')){
+      // テンプレ CTA — 候補 #1 のキーワードを使う
+      var firstCand = pane && pane.querySelector('.cands .cand');
+      if(firstCand){
+        var kwEl = firstCand.querySelector('.cand-kw');
+        if(kwEl) titleText = kwEl.textContent.trim();
+      }
+    }
+    if(!titleText){
+      alert('タイトルが取得できませんでした。候補がまだ読み込み中の可能性があります。');
+      return;
+    }
+    // chat 用プロンプト
+    var prompt;
+    if(mode === 'aeo'){
+      prompt = '「' + titleText + '」というタイトルで AEO 最適化記事を作成してください。\n\n'
+        + '【要件】\n'
+        + '・1 万字以上の長文\n'
+        + '・結論先出し (= 各 h2 の冒頭 1-2 文で答えを明示)\n'
+        + '・FAQ schema 12 問付き (Q&A 形式の構造)\n'
+        + '・AI 検索 (ChatGPT/Perplexity/Google AI Overviews) で引用されやすい構成';
+    } else {
+      prompt = '「' + titleText + '」というタイトルで SEO 記事を作成してください。\n\n'
+        + '【要件】\n'
+        + '・1 万字以上の長文\n'
+        + '・上位サイトの平均文字数を上回る情報量\n'
+        + '・h2 9 つ以上で網羅性を担保\n'
+        + '・結論先出し + 具体例・数値を豊富に';
+    }
+    // 親に postMessage → app.js が _quickSendPrompt() で chat 送信
+    try {
+      window.parent.postMessage({ type: 'kw-send-chat', siteId: _siteId, prompt: prompt }, location.origin);
+    } catch(_){
+      alert('チャット送信に失敗しました。');
+    }
+  }
+  window._kwHandleRequestArticle = _kwHandleRequestArticle;
 
   function _renderDynamicCandidates(d){
     var grid = document.getElementById('kwCands');

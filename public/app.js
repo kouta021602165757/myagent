@@ -2826,6 +2826,24 @@ function _openSiteTabModal(siteId, tabKey){
       else if(t === 'kw-serp-request')     _kwFetchSerp(e.data.kw);
       else if(t === 'kw-trends-request')   _kwFetchTrends(e.data.kw);
       else if(t === 'kw-pdca-request')     _kwFetchPdca();
+      else if(t === 'kw-send-chat'){
+        // 🤖 AI チームに依頼 — iframe (= keyword panel) を閉じて、chat にプロンプト送信
+        var prompt = String(e.data.prompt || '');
+        if(!prompt){ try { showToast('プロンプトが空です','ng'); } catch(_){} return; }
+        var ov = document.getElementById('siteTabOverlay');
+        if(ov) ov.remove();
+        // chat 欄 (#ci) は keyword panel が閉じてからフォーカス可能になる
+        setTimeout(function(){
+          try {
+            var b64 = btoa(unescape(encodeURIComponent(prompt)));
+            if(typeof _quickSendPrompt === 'function') _quickSendPrompt(b64);
+            else { showToast('chat 送信機構が見つかりません','ng'); }
+          } catch(err){
+            console.warn('[kw-send-chat] failed:', err && err.message);
+            try { showToast('送信失敗: ' + (err && err.message || 'unknown'), 'ng'); } catch(_){}
+          }
+        }, 80);
+      }
     };
     window.addEventListener('message', _kwHandler);
     window._kwActiveSession = { siteId: _kwSiteId, handler: _kwHandler };

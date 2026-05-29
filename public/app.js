@@ -5104,41 +5104,56 @@ window.openGscSitePicker = async function(siteId){
     if(b2) b2.innerHTML = '<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;color:#991b1b;font-size:12.5px">取得失敗: '+esc(e && e.message || 'unknown')+'</div>';
   }
 };
-window._setGscSite = async function(siteId, siteUrl){
+window._setGscSite = function(siteId, siteUrl){
+  // === 楽観的更新 (= a60e856 KPI 保存と同じパターン、「保存中…」体感ゼロ) ===
+  // 1) ローカル state を即時更新
+  var prevAgSiteUrl = null;
+  var prevUserSiteUrl = null;
   try {
-    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/gsc/site', { site_url: siteUrl });
-    if(r && r.ok){
-      // me + site state を更新
-      try {
-        var ag = (agents||[]).find(function(a){return a && a.id===siteId;});
-        if(ag) ag.gsc_site_url = siteUrl;
-        if(me && me.integrations && me.integrations.google) me.integrations.google.gsc_site_url = siteUrl;
-        else if(me){
-          me.integrations = me.integrations || {};
-          me.integrations.google = me.integrations.google || {};
-          me.integrations.google.gsc_site_url = siteUrl;
-        }
-      } catch(_){}
-      showToast('✓ GSC サイトを保存しました','ok');
-      var ov = document.getElementById('gscSitePickerOverlay');
-      if(ov) ov.remove();
-      // connections panel が開いてれば再描画
-      try {
-        var p = document.getElementById('siteTabOverlay');
-        if(p && p.getAttribute('data-tab')==='connections' && typeof _openSiteTabModal==='function'){
-          _openSiteTabModal(siteId, 'connections');
-        }
-      } catch(_){}
-      // GSC snapshot cache を invalidate (= 次の panel open で新サイトのデータ fetch)
-      try {
-        delete window._ga4Snapshots[siteId];  // unrelated, no need
-      } catch(_){}
-    } else {
-      showToast('保存失敗: ' + ((r && r.error) || 'unknown'), 'ng');
+    var ag = (agents||[]).find(function(a){return a && a.id===siteId;});
+    if(ag){ prevAgSiteUrl = ag.gsc_site_url || null; ag.gsc_site_url = siteUrl; }
+    if(me){
+      me.integrations = me.integrations || {};
+      me.integrations.google = me.integrations.google || {};
+      prevUserSiteUrl = me.integrations.google.gsc_site_url || null;
+      me.integrations.google.gsc_site_url = siteUrl;
     }
-  } catch(e){
-    showToast('保存失敗: ' + (e && e.message || 'unknown'), 'ng');
-  }
+  } catch(_){}
+  // 2) UI を即時更新 (toast + modal close + 接続パネル再描画)
+  showToast('✓ GSC サイトを保存しました','ok');
+  var ov = document.getElementById('gscSitePickerOverlay');
+  if(ov) ov.remove();
+  try {
+    var p = document.getElementById('siteTabOverlay');
+    if(p && p.getAttribute('data-tab')==='connections' && typeof _openSiteTabModal==='function'){
+      _openSiteTabModal(siteId, 'connections');
+    }
+  } catch(_){}
+  // 3) サーバ保存は裏で実行 (失敗時のみ revert + エラー表示)
+  api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/gsc/site', { site_url: siteUrl })
+    .then(function(r){
+      if(!r || !r.ok){
+        // revert
+        try {
+          var ag2 = (agents||[]).find(function(a){return a && a.id===siteId;});
+          if(ag2) ag2.gsc_site_url = prevAgSiteUrl;
+          if(me && me.integrations && me.integrations.google){
+            me.integrations.google.gsc_site_url = prevUserSiteUrl;
+          }
+        } catch(_){}
+        showToast('保存失敗 (元に戻しました): ' + ((r && r.error) || 'unknown'), 'ng');
+      }
+    })
+    .catch(function(e){
+      try {
+        var ag2 = (agents||[]).find(function(a){return a && a.id===siteId;});
+        if(ag2) ag2.gsc_site_url = prevAgSiteUrl;
+        if(me && me.integrations && me.integrations.google){
+          me.integrations.google.gsc_site_url = prevUserSiteUrl;
+        }
+      } catch(_){}
+      showToast('保存失敗 (元に戻しました): ' + (e && e.message || 'unknown'), 'ng');
+    });
 };
 
 function openGa4PropertyPicker(siteId){

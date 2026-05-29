@@ -9486,7 +9486,7 @@ SiteGuard WP Plugin が入ってる場合は「XMLRPC 防御」「WAF チュー�
 
 // ── GA4 executors ───────────────────────────────────────────
 async function executeGa4ListPropertiesTool(user){
-  if(!user.google_oauth || !user.google_oauth.refresh_token){
+  if(!_hasGoogleRefreshToken(user)){
     return { error: 'google_not_connected', detail: 'Google を OAuth で連携してください (Gmail / Drive / Calendar / GA4 6-in-1)。' };
   }
   try {
@@ -9557,7 +9557,7 @@ async function executeGa4QueryTool(user, agent, input){
 
 // ── GSC executors (= Google Search Console) ───────────────────
 async function executeGscListSitesTool(user){
-  if(!user.google_oauth || !user.google_oauth.refresh_token){
+  if(!_hasGoogleRefreshToken(user)){
     return { error: 'google_not_connected', detail: 'Google を OAuth で連携してください (Search Console scope 必要)。' };
   }
   try {
@@ -9703,7 +9703,7 @@ async function executeGa4SetDefaultTool(user, agent, input){
 
 // ── Drive executors ─────────────────────────────────────────
 async function executeDriveListFoldersTool(user){
-  if(!user.google_oauth || !user.google_oauth.refresh_token){
+  if(!_hasGoogleRefreshToken(user)){
     return { error: 'google_not_connected', detail: 'Google を OAuth で連携してください。' };
   }
   try {
@@ -12362,7 +12362,7 @@ function _hexToRgbFloat(hex){
 
 async function executeCalendarTool(user, input){
   try {
-    if(!user.google_oauth || !user.google_oauth.refresh_token){
+    if(!_hasGoogleRefreshToken(user)){
       return { error: 'google_not_connected', detail: '設定 → Integrations → Google を再連携してください。' };
     }
     const access = await getValidGoogleAccessToken(user);
@@ -12669,20 +12669,42 @@ async function googleRefreshAccessToken(refreshToken){
   if(r.s!==200)throw new Error('Sheets token refresh failed: '+JSON.stringify(r.d).slice(0,200));
   return r.d; // {access_token, expires_in, ...} (no new refresh_token)
 }
+// ── Google OAuth helpers (= user.google_oauth と user.integrations.google の dual-path) ──
+// 過去の OAuth フロー違いで token / scope が両 path に偏在し得るため、 一律 helper 経由で参照。
+// (78fcfd3 で接続フロー本体は統合済だが、 reader 側はまだ legacy path 単独参照が残っていた)
+function _getGoogleRefreshToken(user){
+  return (user && user.google_oauth && user.google_oauth.refresh_token)
+      || (user && user.integrations && user.integrations.google && user.integrations.google.refresh_token)
+      || '';
+}
+function _getGoogleScope(user){
+  return String((user && user.google_oauth && user.google_oauth.scope)
+      || (user && user.integrations && user.integrations.google && user.integrations.google.scope)
+      || '');
+}
+function _hasGoogleRefreshToken(user){ return !!_getGoogleRefreshToken(user); }
+function _hasGscScope(user){ return /webmasters/.test(_getGoogleScope(user)); }
+function _hasGa4Scope(user){ return /analytics/.test(_getGoogleScope(user)); }
+
 // Returns a non-expired access_token, refreshing if needed. Mutates user.google_oauth + persists.
 async function getValidGoogleAccessToken(user){
-  const o=user.google_oauth;
-  if(!o||!o.refresh_token) throw new Error('Google Sheets not connected');
-  const now=Date.now();
-  const skew=60_000; // refresh 1 min before expiry
+  // dual-path: refresh_token は google_oauth 又は integrations.google のどちらか
+  const refreshToken = _getGoogleRefreshToken(user);
+  if(!refreshToken) throw new Error('Google Sheets not connected');
+  // canonical な write target は user.google_oauth (= 既存契約維持)
+  user.google_oauth = user.google_oauth || {};
+  if(!user.google_oauth.refresh_token) user.google_oauth.refresh_token = refreshToken;
+  const o = user.google_oauth;
+  const now = Date.now();
+  const skew = 60_000;
   if(o.access_token && o.expires_at && o.expires_at - skew > now) return o.access_token;
-  const fresh=await googleRefreshAccessToken(o.refresh_token);
-  user.google_oauth={
+  const fresh = await googleRefreshAccessToken(refreshToken);
+  user.google_oauth = {
     ...o,
-    access_token:fresh.access_token,
-    expires_at:Date.now()+(fresh.expires_in||3600)*1000,
+    access_token: fresh.access_token,
+    expires_at: Date.now() + (fresh.expires_in || 3600) * 1000,
   };
-  try{ await DB.save(user); }catch(e){ console.warn('[sheets] failed to persist refreshed token:', e.message); }
+  try { await DB.save(user); } catch(e){ console.warn('[sheets] failed to persist refreshed token:', e.message); }
   return user.google_oauth.access_token;
 }
 
@@ -12752,7 +12774,7 @@ async function _autoPickGa4Property(user, agent, opts){
   if(!user || !agent) return null;
   if(agent.ga4_property_id) return null;  // 既に選ばれていれば何もしない
   if(!agent.site_url) return null;
-  const oauthOk = !!(user.google_oauth && user.google_oauth.refresh_token);
+  const oauthOk = _hasGoogleRefreshToken(user);
   if(!oauthOk) return null;
   // hostname を URL から抽出
   let host = '';
@@ -20787,9 +20809,7 @@ async function handleAPI(req,res,pathname,method,ip){
   if(gscSitesListMatch && method === 'GET'){
     const ag = (user.agents || []).find(a => a && a.id === gscSitesListMatch[1]);
     if(!ag) return jres(res, 404, { error: 'agent not found' });
-    const googleConnected = !!(user.google_oauth && user.google_oauth.refresh_token);
-    const hasGscScope = googleConnected && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''));
-    if(!hasGscScope){
+    if(!_hasGoogleRefreshToken(user) || !_hasGscScope(user)){
       return jres(res, 200, { ok: false, connected: false, sites: [], detail: 'Google OAuth に Search Console scope がありません。 Google を再接続してください。' });
     }
     try {
@@ -20851,20 +20871,12 @@ async function handleAPI(req,res,pathname,method,ip){
     const ag = (user.agents || []).find(a => a && a.id === gscSnapMatch[1]);
     if(!ag) return jres(res, 404, { error: 'agent not found' });
 
-    // refresh_token + scope は user.google_oauth と user.integrations.google の両方に
-    // 保存され得るため、どちらかにあれば OK 扱い (= 過去の OAuth フロー違いで偏在)
-    const oauth1 = user.google_oauth || {};
-    const oauth2 = (user.integrations && user.integrations.google) || {};
-    const refreshToken = oauth1.refresh_token || oauth2.refresh_token || '';
-    const scope = String(oauth1.scope || oauth2.scope || '');
-    const googleConnected = !!refreshToken;
-    const hasGscScope = googleConnected && /webmasters/.test(scope);
-    if(!hasGscScope){
+    // dual-path helper 経由 (= google_oauth 又は integrations.google)
+    if(!_hasGoogleRefreshToken(user) || !_hasGscScope(user)){
       console.warn('[gsc-snapshot] not connected: agent=' + ag.id +
-        ' refresh_token=' + (refreshToken ? 'yes' : 'no') +
-        ' scope_has_webmasters=' + /webmasters/.test(scope) +
-        ' scope_len=' + scope.length);
-      return jres(res, 200, { connected: false, debug_no_refresh: !refreshToken, debug_no_scope: !/webmasters/.test(scope) });
+        ' refresh_token=' + (_hasGoogleRefreshToken(user) ? 'yes' : 'no') +
+        ' scope_has_webmasters=' + _hasGscScope(user));
+      return jres(res, 200, { connected: false, debug_no_refresh: !_hasGoogleRefreshToken(user), debug_no_scope: !_hasGscScope(user) });
     }
 
     // period から date range 計算 (= yesterday / 7d / 28d)
@@ -20959,9 +20971,7 @@ async function handleAPI(req,res,pathname,method,ip){
       return ((m && (m[1] || m[2])) || '').replace(/^www\./, '');
     })();
     const _gscDomainMatches = !!(_agHost && _gscHost && _agHost === _gscHost);
-    const hasGsc = !!(user.google_oauth && user.google_oauth.refresh_token
-                      && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''))
-                      && _gscDomainMatches);
+    const hasGsc = _hasGoogleRefreshToken(user) && _hasGscScope(user) && _gscDomainMatches;
     if(!_gscDomainMatches && _resolvedGscUrl){
       console.warn('[kw-sug] GSC domain mismatch: agent.site_url=' + _agHost + ' vs gsc=' + _gscHost + ' → 推測モード');
     }
@@ -21267,8 +21277,7 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pdcaMatch && method === 'GET'){
     const ag = (user.agents || []).find(a => a && a.id === pdcaMatch[1]);
     if(!ag) return jres(res, 404, { error: 'agent not found' });
-    const hasGoogleOauth = !!(user.google_oauth && user.google_oauth.refresh_token);
-    const hasGsc = hasGoogleOauth && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || ''));
+    const hasGsc = _hasGoogleRefreshToken(user) && _hasGscScope(user);
     const steps = [
       { num: 1, key: 'audit',       title: 'サイト診断',        done: !!ag.site_preview },
       { num: 2, key: 'persona',     title: 'ペルソナ',          done: !!(ag.persona && ag.persona.length > 50) },
@@ -22335,7 +22344,7 @@ ${orgSummary || '(汎用チーム)'}
   //   GET  /api/me/ga4/properties           → list all properties user can access
   //   POST /api/agents/:id/ga4/property     → body { property_id } で agent に保存
   if(pathname === '/api/me/ga4/properties' && method === 'GET'){
-    if(!user.google_oauth || !user.google_oauth.refresh_token){
+    if(!_hasGoogleRefreshToken(user)){
       return jres(res, 400, { ok:false, error:'google_not_connected',
         detail:'まず Google アカウントを連携してください (設定 → 連携)。' });
     }
@@ -22377,7 +22386,7 @@ ${orgSummary || '(汎用チーム)'}
     const ag = (user.agents || []).find(a => a && a.id === ga4Match[1]);
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     const isRefresh = ga4Match[2] === 'refresh' || method === 'POST';
-    const ga4Connected = !!(user.google_oauth && user.google_oauth.refresh_token);
+    const ga4Connected = _hasGoogleRefreshToken(user);
     if(!ga4Connected){
       return jres(res, 200, {
         ok: true,

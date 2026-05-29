@@ -1698,8 +1698,119 @@
 <script>
   // === Embed mode detection (?embed=1) ===
   // 実アプリのパネル内で iframe 表示される時はヘッダ等を消す
-  if(new URLSearchParams(location.search).get('embed') === '1'){
+  var _params = new URLSearchParams(location.search);
+  if(_params.get('embed') === '1'){
     document.body.setAttribute('data-embed', '1');
+  }
+
+  // === 動的キーワード候補 fetch (?site=ID) ===
+  // site ID があれば実 API を呼んで、静的サンプル候補を上書きする
+  var _siteId = _params.get('site');
+  if(_siteId){
+    _initDynamicCandidates(_siteId);
+  }
+
+  function _initDynamicCandidates(siteId){
+    var grid = document.querySelector('.tab-pane[data-tab="seo"] .cands');
+    if(!grid) return;
+    grid.id = 'kwCands';
+    // ローディング表示
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 20px;text-align:center;color:#71717a;font-size:13px;font-weight:600">'
+      + '<div style="font-size:32px;margin-bottom:8px">🤖</div>'
+      + 'AI チームがこのサイト用のキーワード候補を生成中… (約 20-40 秒)'
+      + '</div>';
+
+    fetch('/api/agents/' + encodeURIComponent(siteId) + '/keyword-suggestions',
+          { credentials: 'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || !Array.isArray(d.candidates) || d.candidates.length === 0){
+          grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
+            + '⚠️ 候補生成に失敗しました (' + ((d && d.error) || 'no candidates') + ')'
+            + '</div>';
+          return;
+        }
+        _renderDynamicCandidates(d);
+      })
+      .catch(function(e){
+        console.warn('[kw-sug] fetch failed:', e);
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:#dc2626;font-size:12px">'
+          + '⚠️ ネットワークエラー — リロードして再試行してください'
+          + '</div>';
+      });
+  }
+
+  function _renderDynamicCandidates(d){
+    var grid = document.getElementById('kwCands');
+    if(!grid) return;
+    // モードバッジ (GSC 接続 vs 推測)
+    var heroLbl = document.querySelector('.kw-hero-lbl');
+    if(heroLbl){
+      var badge = (d.mode === 'gsc')
+        ? '<span style="display:inline-block;background:#dcfce7;color:#166534;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em;margin-left:8px">✅ GSC データ駆動 (高精度)</span>'
+        : '<span style="display:inline-block;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.04em;margin-left:8px">⚠️ 推測モード · GSC 接続で精度↑</span>';
+      heroLbl.innerHTML = 'AI チームからの提案' + badge;
+    }
+    // hero タイトルに site hostname も
+    if(d.site_hostname){
+      var heroTi = document.querySelector('.kw-hero-ti');
+      if(heroTi) heroTi.textContent = d.site_hostname + ' で狙うべきキーワードはこちら';
+    }
+    // 最終更新時刻
+    var subEl = document.querySelector('.sec-h .sec-h-sub');
+    if(subEl && d.fetched_at){
+      var dt = new Date(d.fetched_at);
+      var rel = _kwRelTime(dt);
+      subEl.innerHTML = '最終更新: ' + rel + ' · <a href="?embed=1&site=' + encodeURIComponent(_siteId) + '&refresh=1" style="color:#0d4f4a;text-decoration:none;font-weight:800" onclick="location.search=\'?embed=1&site=' + encodeURIComponent(_siteId) + '&refresh=1\';return false">🔄 再生成</a>';
+    }
+    // 候補カード再描画
+    var ranks = ['🥇 #1','🥈 #2','🥉 #3','#4','#5','#6'];
+    grid.innerHTML = d.candidates.map(function(c, i){
+      var topCls = (i === 0) ? ' top' : '';
+      var sig = c.signals || {};
+      return '<div class="cand' + topCls + '">'
+        +   '<div class="cand-rank">' + (ranks[i] || ('#' + (i+1))) + '</div>'
+        +   '<div class="cand-kw">' + _esc(c.keyword || '') + '</div>'
+        +   '<div class="cand-meta">'
+        +     '<span class="cand-chip">' + _esc(c.type || '推測') + '</span>'
+        +   '</div>'
+        +   '<div class="cand-signals">'
+        +     '<div class="sig"><span class="sig-ic">📈</span><div class="sig-val up">' + _esc(sig.trend || '—') + '</div><div class="sig-lbl">トレンド</div></div>'
+        +     '<div class="sig"><span class="sig-ic">🥊</span><div class="sig-val warn">' + _esc(sig.competition || '中') + '</div><div class="sig-lbl">競合強度</div></div>'
+        +     '<div class="sig"><span class="sig-ic">🎯</span><div class="sig-val">' + _esc(sig.intent || '情報') + '</div><div class="sig-lbl">意図</div></div>'
+        +   '</div>'
+        +   '<div class="cand-reason">' + _esc(c.reason || '') + '</div>'
+        + '</div>';
+    }).join('');
+
+    // 推測モードの時は GSC 接続 CTA を hero の下に挿入
+    if(d.mode === 'inferred'){
+      var heroEl = document.querySelector('.tab-pane[data-tab="seo"] .kw-hero');
+      if(heroEl && !document.getElementById('kwGscCta')){
+        var cta = document.createElement('div');
+        cta.id = 'kwGscCta';
+        cta.style.cssText = 'background:#fffbeb;border:1.5px dashed #fbbf24;border-radius:12px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px';
+        cta.innerHTML = '<span style="font-size:22px">🔌</span>'
+          + '<div style="flex:1;font-size:12px;line-height:1.55;color:#78350f">'
+          +   '<b style="font-size:13px;color:#78350f">Google Search Console を接続するとさらに精度↑</b><br>'
+          +   '実検索クエリ + 順位データから 5 つの戦略タイプ (伸びしろ / 機会損失 / 強み拡張 / ゾンビ / CV 直前) で候補を出せます。'
+          + '</div>';
+        heroEl.parentNode.insertBefore(cta, heroEl.nextSibling);
+      }
+    }
+  }
+
+  function _esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+  function _kwRelTime(d){
+    var diff = Math.max(0, Date.now() - d.getTime());
+    if(diff < 60000) return 'たった今';
+    if(diff < 3600000) return Math.floor(diff/60000) + ' 分前';
+    if(diff < 86400000) return Math.floor(diff/3600000) + ' 時間前';
+    return Math.floor(diff/86400000) + ' 日前';
   }
 
   // === タブ切替 ===

@@ -7535,6 +7535,61 @@ async function _fetchSitePreview(agent){
   return { title, content };
 }
 
+// 🔍 キーワード調査 — Claude に渡すプロンプトを組み立てる
+// site メタ + 既存記事 + (あれば) GSC データを 5 つの戦略タイプにマッピング
+function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
+  let hostname = '';
+  try { hostname = new URL(ag.site_url).hostname.replace(/^www\./,''); } catch(_){ hostname = ag.site_url || ''; }
+  const persona = String(ag.persona||'').slice(0, 600);
+  const meta = String((sitePreview && sitePreview.content) || '').slice(0, 2000);
+  const arts = (articles||[]).slice(0, 10).map(a => '- ' + a.title).join('\n');
+  let gscBlock = '【GSC データ】 接続なし (推測モード)';
+  if(gscData && gscData.ok && Array.isArray(gscData.rows) && gscData.rows.length > 0){
+    const rows = gscData.rows.slice(0, 80).map(r => {
+      const kw  = (r.keys && r.keys[0]) || '';
+      const clk = r.clicks || 0;
+      const imp = r.impressions || 0;
+      const pos = (typeof r.position === 'number') ? r.position.toFixed(1) : '-';
+      return kw + '\tclicks=' + clk + '\timp=' + imp + '\tpos=' + pos;
+    }).join('\n');
+    gscBlock = '【GSC 過去 28 日 クエリ別 (top 80)】\n' + rows;
+  }
+  return [
+    'あなたは SEO 戦略家です。以下サイトの「今狙うべきキーワード候補 6 つ」を JSON で返してください。',
+    '',
+    '【サイト】 ' + hostname,
+    '【ペルソナ / 強み】 ' + (persona || '(未設定)'),
+    '【サイト内容 (title/h1/h2/抜粋)】',
+    meta || '(取得失敗)',
+    '【既存記事タイトル】',
+    arts || '(なし)',
+    gscBlock,
+    '',
+    '【5 つの戦略タイプから候補を組み立てる】',
+    '1. 伸びしろ: GSC 表示多 + 順位 11-30 位 + クリック少 (= 一押しで 1 桁順位狙える)',
+    '2. 機会損失: GSC で表示されてるが該当する自社ページ無し',
+    '3. 強み拡張: 既に 1-3 位のクエリの周辺語 / ロングテール',
+    '4. ゾンビ: 既存記事タイトルにあるが GSC に出てこない (= 書いてるが PV 0)',
+    '5. CV 直前: 購入 / 問い合わせ意図の強いキーワード',
+    '',
+    'GSC が無い場合は 1/2/4 は省略し、サイト内容とペルソナから 3/5/推測タイプで提案。',
+    'サイト URL とペルソナを必ず尊重し、関係ないジャンルのキーワードは絶対に提案しない (例: 地域メディアなのに「採用助成金」を出さない)。',
+    '',
+    '【出力】 必ず JSON だけを返す。コードフェンス・前置き・解説は禁止。',
+    '{',
+    '  "candidates": [',
+    '    {',
+    '      "rank": 1,',
+    '      "keyword": "(具体キーワード)",',
+    '      "type": "伸びしろ" | "機会損失" | "強み拡張" | "ゾンビ" | "CV直前" | "推測",',
+    '      "reason": "なぜ推すか 1-2 文 (= GSC 表示 320/順位 18 等の数字込み)",',
+    '      "signals": { "trend": "+18%" | "—", "competition": "緩"|"中"|"激", "intent": "情報"|"比較"|"購入" }',
+    '    }',
+    '  ] // 6 件',
+    '}'
+  ].join('\n');
+}
+
 function _safeName(s, fallback){
   const x = String(s || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   return x || fallback || 'file';
@@ -20779,6 +20834,91 @@ async function handleAPI(req,res,pathname,method,ip){
       console.warn('[gsc-snapshot] failed:', e.message);
       return jres(res, 500, { error: e.message });
     }
+  }
+
+  // GET /api/agents/:id/keyword-suggestions?refresh=1
+  //   AI が site 文脈から「狙うべきキーワード候補 6 件」を生成
+  //   GSC 接続あり: 5 つの戦略タイプ (伸びしろ/機会損失/強み拡張/ゾンビ/CV直前) で実データ駆動
+  //   GSC 未接続:   サイト URL + ペルソナから推測
+  //   キャッシュ: agent.keyword_suggestions に 6h
+  const kwSugMatch = pathname.match(/^\/api\/agents\/([^/]+)\/keyword-suggestions$/);
+  if(kwSugMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === kwSugMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const qs = url.parse(req.url, true).query || {};
+    const TTL_MS = 6 * 3600 * 1000;
+    const cached = ag.keyword_suggestions;
+    if(!qs.refresh && cached && cached.fetched_at &&
+       (Date.now() - Date.parse(cached.fetched_at)) < TTL_MS){
+      return jres(res, 200, Object.assign({}, cached, { cached: true }));
+    }
+    const hasGsc = !!(user.google_oauth && user.google_oauth.refresh_token
+                      && /webmasters/.test(String((user.google_oauth && user.google_oauth.scope) || '')));
+    let gscData = null;
+    let sitePreview = null;
+    let articles = [];
+    if(hasGsc){
+      try {
+        const _dayStr = (offsetDays) => {
+          const d = new Date(); d.setDate(d.getDate() - offsetDays);
+          return d.toISOString().slice(0, 10);
+        };
+        gscData = await executeGscQueryTool(user, ag, {
+          start_date: _dayStr(28),
+          end_date: _dayStr(1),
+          dimensions: ['query'],
+          row_limit: 200,
+        });
+      } catch(e){ console.warn('[kw-sug] gsc failed:', e.message); }
+    }
+    try {
+      const [sp, arts] = await Promise.all([
+        _fetchSitePreview(ag),
+        _fetchSiteExistingArticles(ag.site_url),
+      ]);
+      sitePreview = sp;
+      articles = arts;
+    } catch(e){ console.warn('[kw-sug] site preview failed:', e.message); }
+
+    const prompt = _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData });
+    const info = _resolveModelInfo('sonnet');
+    let rawText = '';
+    let parsed = null;
+    try {
+      if(info.provider === 'gemini'){
+        const r = await _callGemini([{role:'user', content: prompt}], '', info);
+        rawText = (r && r.content && r.content[0] && r.content[0].text || '').trim();
+      } else if(ANTHROPIC){
+        const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
+          {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+          { model: info.modelId, max_tokens: 3000, messages:[{role:'user', content: prompt}] },
+          { timeout: 45000 });
+        if(r.s !== 200){
+          console.warn('[kw-sug] claude non-200:', r.s);
+          return jres(res, 502, { error: 'claude_failed', status: r.s, detail: String(JSON.stringify(r.d)).slice(0, 300) });
+        }
+        rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      } else {
+        return jres(res, 500, { error: 'no AI provider configured' });
+      }
+      const jsonM = rawText.match(/\{[\s\S]*"candidates"[\s\S]*\}/);
+      parsed = JSON.parse(jsonM ? jsonM[0] : rawText);
+    } catch(e){
+      console.warn('[kw-sug] parse failed:', e.message, 'raw=', rawText.slice(0, 200));
+      return jres(res, 502, { error: 'parse_failed', message: e.message, raw: rawText.slice(0, 500) });
+    }
+
+    let hostname = '';
+    try { hostname = new URL(ag.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+    const out = {
+      mode: (hasGsc && gscData && gscData.ok && Array.isArray(gscData.rows) && gscData.rows.length > 0) ? 'gsc' : 'inferred',
+      fetched_at: new Date().toISOString(),
+      site_hostname: hostname,
+      candidates: (parsed.candidates || []).slice(0, 6),
+    };
+    ag.keyword_suggestions = out;
+    try { await DB.save(user); } catch(e){ console.warn('[kw-sug] save failed:', e.message); }
+    return jres(res, 200, out);
   }
 
   // POST /api/agents/:id/artifact/generate-showcase — AI が my-best.com 級 ランキング記事を生成

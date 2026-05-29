@@ -2761,9 +2761,10 @@ function _openSiteTabModal(siteId, tabKey){
     catch(err){ console.error('[settings-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'keyword'){
     title = '🔍 ' + L('キーワード調査','Keyword research');
-    // PHASE-0: 既存のデザインモック (mock-keyword-research.html) を iframe で表示。
-    // Phase 1 で iframe → ネイティブレンダリング + AI 候補生成に置き換える。
-    content = '<iframe src="/mock-keyword-research.html?embed=1" style="display:block;width:100%;height:100%;border:0;background:var(--cream)" loading="eager"></iframe>';
+    // PHASE-1A: mock を iframe で表示 + site ID 経由で /api/agents/:id/keyword-suggestions を fetch。
+    // GSC 接続あれば実データ駆動、なければ推測モードで候補生成。
+    content = '<iframe src="/mock-keyword-research.html?embed=1&site=' + encodeURIComponent(site.id) + '" '
+            + 'style="display:block;width:100%;height:100%;border:0;background:var(--cream)" loading="eager"></iframe>';
   } else {
     showToast(L('不明なパネル','Unknown panel'),'ng');
     return;

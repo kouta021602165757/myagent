@@ -10227,7 +10227,8 @@ function _renderTabMedia(site){
     // === Dashboard mode (= 運用中) ===
     var media = site.media;
     var posts = site.media_posts_idx || [];
-    var publicUrl = 'https://' + esc(media.domain || (media.slug + '.myaiagents.agency'));
+    var mediaHost = media.domain || 'myaiagents.agency';
+    var publicUrl = 'https://' + esc(mediaHost) + '/media/' + esc(media.slug);
     return ''
       + '<div style="background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:14px;position:relative">'
       +   '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">'
@@ -10261,7 +10262,7 @@ function _renderTabMedia(site){
             + posts.slice(0, 10).map(function(p){
                 return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--cream3);border-radius:7px;font-size:11.5px">'
                   + '<span style="color:var(--text)">📝</span>'
-                  + '<a href="https://'+esc(media.domain)+'/media/'+esc(media.slug)+'/'+esc(p.slug)+'" target="_blank" rel="noopener" style="color:var(--teal-deep);text-decoration:none;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.title||'(無題)')+'</a>'
+                  + '<a href="https://'+esc(mediaHost)+'/media/'+esc(media.slug)+'/'+esc(p.slug)+'" target="_blank" rel="noopener" style="color:var(--teal-deep);text-decoration:none;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.title||'(無題)')+'</a>'
                   + '<span style="color:var(--text3);font-size:10px">'+esc((p.published_at||'').slice(0,10))+'</span>'
                   + '</div>';
               }).join('')
@@ -10547,7 +10548,7 @@ window._mediaWizPickTemplate = function(key){
 };
 
 function _mediaWizStep4HTML(media){
-  var publicUrl = 'https://' + esc(media.domain || (media.slug + '.myaiagents.agency'));
+  var publicUrl = 'https://' + esc(media.domain || 'myaiagents.agency') + '/media/' + esc(media.slug);
   return ''
     + '<div style="background:linear-gradient(135deg,#fff,var(--peach-soft));border:2px solid var(--peach-dark);border-radius:13px;padding:30px 24px;text-align:center;margin-bottom:18px">'
     +   '<div style="font-size:50px;margin-bottom:6px">🎉</div>'

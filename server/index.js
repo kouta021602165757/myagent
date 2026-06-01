@@ -21577,7 +21577,10 @@ async function handleAPI(req,res,pathname,method,ip){
       lp_url,
       logo_url,
       categories,
-      domain: finalSlug + '.myaiagents.agency',
+      // path-based public route (= myaiagents.agency/media/:slug)
+      // 将来カスタムドメイン対応する時に subdomain or 完全独自ホストに切替
+      domain: 'myaiagents.agency',
+      public_path: '/media/' + finalSlug,
       created_at: new Date().toISOString(),
       status: 'live',
     };
@@ -21656,7 +21659,7 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, {
       ok: true,
       post: postMeta,
-      public_url: 'https://' + ag.media.domain + '/media/' + ag.media.slug + '/' + postSlug,
+      public_url: 'https://' + (ag.media.domain || 'myaiagents.agency') + '/media/' + ag.media.slug + '/' + postSlug,
     });
   }
 

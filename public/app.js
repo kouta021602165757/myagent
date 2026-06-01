@@ -10245,17 +10245,27 @@ function _renderTabMedia(site){
       +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">CV</div><div style="font-size:17px;font-weight:900">—</div></div>'
       +   '</div>'
       + '</div>'
+      + '<div style="display:flex;gap:8px;margin-bottom:14px">'
+      +   '<button onclick="_mediaGenArticleFlow(\''+esc(site.id)+'\')" style="flex:1;background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">✨ 新しい記事を AI に書かせる</button>'
+      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="flex:1;background:#fff;border:1px solid var(--wire2);color:var(--text);padding:11px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 キーワード調査から</button>'
+      + '</div>'
       + (posts.length === 0
           ? '<div style="background:#fff;border:1.5px dashed var(--peach-dark);border-radius:11px;padding:24px;text-align:center;margin-bottom:14px">'
             + '<div style="font-size:36px;margin-bottom:8px">📝</div>'
             + '<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:6px">最初の記事を AI チームに書かせよう</div>'
-            + '<div style="font-size:11.5px;color:var(--text2);margin-bottom:14px;line-height:1.55">キーワード調査 (= 🔍) から候補を選んで、 AI チームに記事作成を依頼してください。 自動で公開され、 LP に集客が始まります。</div>'
-            + '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査から始める →</button>'
+            + '<div style="font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.55">「✨ 新しい記事を AI に書かせる」 で、 キーワードを 1 つ指定するだけ。 5,000 文字以上の記事 + AI 画像が自動で公開されます。</div>'
             + '</div>'
-          : '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px;font-size:12px;color:var(--text2)">'
-            + '<b>公開済記事 ' + posts.length + ' 本</b><br>'
-            + '(= Phase A.6 で記事一覧 + ステータスを表示)'
-            + '</div>')
+          : '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px;font-size:12px;margin-bottom:14px">'
+            + '<b style="color:var(--text);font-size:12.5px">公開済記事 ' + posts.length + ' 本</b>'
+            + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">'
+            + posts.slice(0, 10).map(function(p){
+                return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--cream3);border-radius:7px;font-size:11.5px">'
+                  + '<span style="color:var(--text)">📝</span>'
+                  + '<a href="https://'+esc(media.domain)+'/media/'+esc(media.slug)+'/'+esc(p.slug)+'" target="_blank" rel="noopener" style="color:var(--teal-deep);text-decoration:none;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.title||'(無題)')+'</a>'
+                  + '<span style="color:var(--text3);font-size:10px">'+esc((p.published_at||'').slice(0,10))+'</span>'
+                  + '</div>';
+              }).join('')
+            + '</div></div>')
       + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55">'
       +   '<b style="color:var(--text2)">📂 カテゴリ</b>: '
       +   ((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')
@@ -10496,6 +10506,37 @@ function _mediaWizStep3HTML(currentTemplate){
     +   '<button onclick="_mediaWizGoStep(4)" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">✨ ブログを作成 →</button>'
     + '</div>';
 }
+
+// メディアダッシュボードから「✨ 新しい記事」 を生成 — モーダル内 prompt 入力
+window._mediaGenArticleFlow = async function(siteId){
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag || !ag.media) return;
+  var keyword = prompt('どんなキーワードで記事を書く?\n例: 「中小企業 採用 助成金」 「DTC 始め方」 など', '');
+  if(!keyword || !keyword.trim()) return;
+  keyword = keyword.trim();
+  // ローディング表示
+  var holder = document.querySelector('.sd-modal-body');
+  if(holder){
+    var loader = document.createElement('div');
+    loader.id = 'mediaArtLoader';
+    loader.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:30px 36px;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:99999;text-align:center;font-family:inherit;max-width:340px';
+    loader.innerHTML = '<div style="font-size:36px;margin-bottom:10px">✨</div><div style="font-size:14px;font-weight:900;margin-bottom:6px">AI が記事を執筆中…</div><div style="font-size:11.5px;color:var(--text3);line-height:1.55">5,000 文字以上の記事 + Hero 画像を生成中。<br>1〜2 分かかります。</div>';
+    document.body.appendChild(loader);
+  }
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', { keyword: keyword, target_chars: 5000 });
+    // local state 反映
+    if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+    ag.media_posts_idx.unshift(r.post);
+    var l = document.getElementById('mediaArtLoader'); if(l) l.remove();
+    showToast('✅ 記事「'+(r.post.title||'').slice(0,30)+'…」を公開しました','ok');
+    // 再 render
+    window.openMediaPanel(siteId);
+  } catch(e){
+    var le = document.getElementById('mediaArtLoader'); if(le) le.remove();
+    showToast('記事生成失敗: '+(e.message||'unknown'),'ng');
+  }
+};
 
 window._mediaWizPickTemplate = function(key){
   if(!window._mediaWiz) return;

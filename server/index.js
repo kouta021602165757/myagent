@@ -15273,6 +15273,190 @@ async function _findUserByMediaSlug(slug){
   return null;
 }
 
+// ──────────────────────────────────────────────────────────────────
+// 📝 メディア機能 — 記事生成 (Claude Sonnet) + Hero 画像 (= 既存 image provider)
+// ──────────────────────────────────────────────────────────────────
+async function _mediaGenerateArticle(agent, params){
+  const keyword = String(params.keyword || params.title || '').trim();
+  if(!keyword) throw new Error('keyword required');
+  const targetChars = Math.max(2000, Math.min(15000, parseInt(params.target_chars,10) || 5000));
+  const mediaName = (agent.media && agent.media.name) || (agent.name || 'Blog');
+  const persona = (agent.audience || agent.persona || '中小企業の経営者・担当者').slice(0, 200);
+  const lpUrl = (agent.media && agent.media.lp_url) || agent.site_url || '';
+  const categories = ((agent.media && agent.media.categories) || []).map(c => c.name).join(', ');
+
+  const prompt = ''
+    + '以下のキーワードについて、 SEO とユーザ価値を両立する記事を 1 本書いてください。\n\n'
+    + '【キーワード】' + keyword + '\n'
+    + '【ターゲット読者】' + persona + '\n'
+    + '【メディア名】' + mediaName + '\n'
+    + (categories ? '【既存カテゴリ】' + categories + '\n' : '')
+    + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
+    + '\n【記事の要件】\n'
+    + '- 文字数: 約 ' + targetChars + ' 文字\n'
+    + '- 必ず読者の検索意図に答える内容にする\n'
+    + '- 体験談的・実用的・データ的どれかの切り口を入れる\n'
+    + '- 見出しは H2 → H3 で 6-8 個構造化\n'
+    + '- 読者が次にすべき行動を最後に提示する\n'
+    + '\n【出力フォーマット】 必ず以下の JSON だけを返す。 説明・前置き禁止:\n'
+    + '{\n'
+    + '  "title": "60 文字以内、 キーワード含む、 click したくなる",\n'
+    + '  "excerpt": "120 文字以内、 記事の core value を要約",\n'
+    + '  "category_name": "上記カテゴリから 1 つ、 無ければ新規 1 単語",\n'
+    + '  "body_html": "<h2>...</h2><p>...</p><h2>...</h2>... の連続。 HTML 整形済み"\n'
+    + '}\n';
+
+  if(!CLAUDE_KEY) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
+  const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    {
+      model: 'claude-sonnet-4-6',
+      max_tokens: 12000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+  if(r.s >= 400){
+    const err = _claudeErrorMessage(r);
+    throw new Error(err);
+  }
+  const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+  // JSON extract
+  const m = txt.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('parse_failed: no JSON in response');
+  let parsed;
+  try { parsed = JSON.parse(m[0]); } catch(e){ throw new Error('parse_failed: ' + e.message); }
+  if(!parsed.title || !parsed.body_html) throw new Error('parse_failed: missing fields');
+  return {
+    title: String(parsed.title).slice(0, 120),
+    excerpt: String(parsed.excerpt || '').slice(0, 240),
+    category_name: String(parsed.category_name || '').slice(0, 30),
+    body_html: String(parsed.body_html),
+  };
+}
+
+async function _mediaGenerateHeroImage(title, template){
+  // 既存の generateImage() を Replicate 経由で利用。 失敗時は null を返してフォールバック (= グラデ).
+  if(!process.env.REPLICATE_API_TOKEN) return null;
+  try {
+    const styleHint = template === 'tech' ? ', dark mode, technical diagram style'
+      : template === 'newsletter' ? ', soft pastel illustration'
+      : template === 'magazine' ? ', editorial photography'
+      : template === 'friendly' ? ', warm cozy illustration'
+      : ', clean modern minimalist';
+    const prompt = 'editorial hero image for blog article: ' + String(title).slice(0, 100) + styleHint + ', no text, no logo, no watermark';
+    const r = await generateImage(prompt, { width: 1280, height: 720 });
+    const u = (r && r.urls && r.urls[0]) || null;
+    return u;
+  } catch(e){
+    console.warn('[media-img] failed:', e.message);
+    return null;
+  }
+}
+
+// 個別記事 SSR
+function _mediaRenderMinimalPost(media, post, body_html){
+  const name = _mediaEsc(media.name || 'Blog');
+  const brand = _mediaEsc(media.brand_color || '#0d4f4a');
+  const lpUrl = _mediaEsc(media.lp_url || '');
+  const title = _mediaEsc(post.title || '');
+  const excerpt = _mediaEsc(post.excerpt || '');
+  const hero = post.hero_image_url
+    ? '<img src="' + _mediaEsc(post.hero_image_url) + '" alt="" style="width:100%;height:auto;max-height:480px;object-fit:cover;border-radius:14px">'
+    : '<div style="width:100%;height:300px;background:linear-gradient(135deg,' + brand + ',#0a3d39);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;font-weight:900;padding:30px;text-align:center">' + title + '</div>';
+  const logoImg = media.logo_url
+    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover">'
+    : '<div style="width:32px;height:32px;border-radius:6px;background:' + brand + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
+
+  // 5 CTA configurations (= UTM tracking, Phase A.7 で稼働)
+  // 1: header, 2: hero-bottom, 3: inline-mid, 4: end-card, 5: footer-banner
+  const cta = (medium, label, style) => lpUrl
+    ? '<a href="' + lpUrl + '?utm_source=media&utm_medium=' + medium + '&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug) + '" target="_blank" rel="noopener" style="' + style + '">' + label + '</a>'
+    : '';
+
+  const headerCTA = cta('header', 'サービスを見る →', 'background:' + brand + ';color:#fff;padding:8px 14px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700');
+
+  const inlineCTA = cta('inline_mid', '👉 ' + name + ' のサービスを見る', 'display:block;background:' + brand + ';color:#fff;padding:14px 20px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;text-align:center;margin:28px 0');
+
+  const endCard = lpUrl ? `
+    <div style="background:linear-gradient(135deg,${brand},#0a3d39);color:#fff;border-radius:14px;padding:30px 28px;margin-top:36px;text-align:center">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.7;text-transform:uppercase;margin-bottom:6px">この記事を読んだあなたに</div>
+      <h3 style="font-size:22px;font-weight:900;margin:0 0 10px">${name} を試してみる</h3>
+      <p style="font-size:13px;opacity:.85;margin:0 0 18px;line-height:1.6">今すぐサイトをチェックしてみてください</p>
+      ${cta('end_card', '🔗 公式サイトへ →', 'display:inline-block;background:#fff;color:' + brand + ';padding:11px 22px;border-radius:9px;text-decoration:none;font-size:13px;font-weight:800')}
+    </div>` : '';
+
+  const footerBanner = lpUrl ? `
+    <div style="background:${brand};color:#fff;padding:16px 0;text-align:center;font-size:13px;font-weight:700">
+      ${cta('footer_banner', '✨ ' + name + ' で課題を解決する →', 'color:#fff;text-decoration:underline;font-weight:800')}
+    </div>` : '';
+
+  return `<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} | ${name}</title>
+<meta name="description" content="${excerpt}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${excerpt}">
+${post.hero_image_url ? '<meta property="og:image" content="' + _mediaEsc(post.hero_image_url) + '">' : ''}
+<meta property="og:type" content="article">
+<style>
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;color:#1a1a1a;background:#fafafa;line-height:1.8;font-size:16px}
+  a{color:${brand}}
+  .ct{max-width:780px;margin:0 auto;padding:0 24px}
+  header.site{background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 0;position:sticky;top:0;z-index:10}
+  header.site .row{display:flex;align-items:center;gap:12px;max-width:1100px;margin:0 auto;padding:0 24px}
+  header.site .brand{display:flex;align-items:center;gap:9px;font-weight:900;font-size:15px;color:#111;text-decoration:none}
+  header.site .nav{margin-left:auto}
+  article.post{padding:30px 0 50px}
+  article.post .meta{font-size:11.5px;color:#9ca3af;letter-spacing:.04em;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+  article.post h1{font-size:34px;font-weight:900;line-height:1.35;margin:0 0 16px;letter-spacing:-.01em;color:#111}
+  article.post .excerpt{font-size:16px;color:#4b5563;margin:0 0 28px;line-height:1.7}
+  article.post .hero{margin:0 0 32px}
+  article.post .body h2{font-size:24px;font-weight:900;margin:42px 0 14px;color:#111;line-height:1.4;letter-spacing:-.005em}
+  article.post .body h3{font-size:19px;font-weight:800;margin:30px 0 10px;color:#1a1a1a}
+  article.post .body p{margin:0 0 18px;color:#1a1a1a}
+  article.post .body ul, article.post .body ol{margin:0 0 18px;padding-left:24px}
+  article.post .body li{margin-bottom:6px}
+  article.post .body blockquote{margin:24px 0;padding:12px 20px;border-left:3px solid ${brand};background:#f8f8f6;color:#374151;font-style:italic}
+  article.post .body code{background:#f5f5f5;padding:1px 6px;border-radius:4px;font-size:14px;font-family:'SF Mono',Menlo,monospace}
+  article.post .body pre{background:#1e293b;color:#e2e8f0;padding:18px 20px;border-radius:9px;overflow-x:auto;font-size:13.5px;line-height:1.6}
+  article.post .body strong{color:#0a0a0a}
+  footer.site{background:#fff;border-top:1px solid #e5e7eb;padding:24px 0;text-align:center;color:#9ca3af;font-size:12px}
+  footer.site a{color:#6b7280;text-decoration:none;font-weight:600}
+  @media (max-width:640px){
+    article.post h1{font-size:24px}article.post{padding:20px 0 40px}
+  }
+</style>
+</head><body>
+
+<header class="site"><div class="row">
+  <a href="/media/${_mediaEsc(media.slug)}" class="brand">${logoImg}<span>${name}</span></a>
+  <div class="nav">${headerCTA}</div>
+</div></header>
+
+<article class="post">
+  <div class="ct">
+    <div class="meta">${_mediaEsc(post.category_name || '')} · ${_mediaEsc((post.published_at||'').slice(0,10))}</div>
+    <h1>${title}</h1>
+    ${excerpt ? '<p class="excerpt">' + excerpt + '</p>' : ''}
+    <div class="hero">${hero}</div>
+    <div class="body">
+      ${body_html}
+      ${inlineCTA}
+      ${endCard}
+    </div>
+  </div>
+</article>
+
+${footerBanner}
+
+<footer class="site"><div class="ct">
+  <a href="/media/${_mediaEsc(media.slug)}">← ${name} 記事一覧</a> · Powered by <a href="https://myaiagents.agency" target="_blank" rel="noopener">MY AI Agent</a>
+</div></footer>
+</body></html>`;
+}
+
 // HTML escape helper for SSR template
 function _mediaEsc(s){
   return String(s == null ? '' : s)
@@ -18391,6 +18575,39 @@ async function handleAPI(req,res,pathname,method,ip){
   // ──────────────────────────────────────────────────────────
   // 📝 メディア機能 — 公開ページ (= /media/:slug, /media/:slug/:postSlug)
   // ──────────────────────────────────────────────────────────
+  // 個別記事 (= /media/:slug/:postSlug)
+  const mediaPostMatch = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
+  if(mediaPostMatch && method === 'GET'){
+    const slug = mediaPostMatch[1];
+    const postSlug = mediaPostMatch[2];
+    try {
+      const found = await _findUserByMediaSlug(slug);
+      if(!found){
+        res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1></body></html>');
+      }
+      const { user, agent } = found;
+      const postMeta = (agent.media_posts_idx || []).find(p => p && p.slug === postSlug && p.status !== 'draft');
+      if(!postMeta){
+        res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1><p><a href="/media/'+_mediaEsc(slug)+'" style="color:#0d4f4a">記事一覧へ</a></p></body></html>');
+      }
+      const fullMap = user.media_posts_full || {};
+      const body_html = (fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '<p>記事本文を読み込めませんでした。</p>';
+      const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html);
+      res.writeHead(200, {
+        'Content-Type': 'text/html;charset=utf-8',
+        'Cache-Control': 'public, max-age=300',
+        'X-Frame-Options': 'SAMEORIGIN',
+      });
+      return res.end(html);
+    } catch(e){
+      console.warn('[media-post] failed:', e.message);
+      res.writeHead(500, { 'Content-Type': 'text/html;charset=utf-8' });
+      return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>500</h1></body></html>');
+    }
+  }
+
   // 認証不要、 SSR で軽量 HTML を返す。
   const mediaPubMatch = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/?$/);
   if(mediaPubMatch && method === 'GET'){
@@ -21382,6 +21599,64 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, {
       media: ag.media,
       posts_idx: ag.media_posts_idx || [],
+    });
+  }
+
+  //   POST /api/agents/:id/media/articles/generate — AI 記事生成 + 画像生成
+  //   body: { keyword, title?, category_id?, sub_id?, target_chars? }
+  const mediaArtMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/generate$/);
+  if(mediaArtMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaArtMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created yet' });
+    const body = await readBody(req).catch(() => ({}));
+    const keyword = String((body && body.keyword) || (body && body.title) || '').trim();
+    if(!keyword) return jres(res, 400, { error: 'keyword required' });
+
+    let article;
+    try {
+      article = await _mediaGenerateArticle(ag, body);
+    } catch(e){
+      console.warn('[media-art] generation failed:', e.message);
+      return jres(res, 500, { error: 'generation_failed', detail: e.message });
+    }
+
+    const heroUrl = await _mediaGenerateHeroImage(article.title, ag.media.template).catch(() => null);
+    const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
+    const postSlug = _mediaPostSlug(article.title, existingSlugs);
+    const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
+    const now = new Date().toISOString();
+
+    const postMeta = {
+      id: postId,
+      slug: postSlug,
+      title: article.title,
+      excerpt: article.excerpt,
+      category_name: article.category_name || '',
+      hero_image_url: heroUrl,
+      status: 'published',
+      published_at: now,
+      keyword,
+    };
+    if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+    ag.media_posts_idx.unshift(postMeta);
+    // body_html は別カラム
+    if(!user.media_posts_full) user.media_posts_full = {};
+    user.media_posts_full[postId] = {
+      body_html: article.body_html,
+      saved_at: now,
+    };
+
+    try { await DB.save(user); } catch(e){
+      console.warn('[media-art] save failed:', e.message);
+      return jres(res, 500, { error: 'save_failed', detail: e.message });
+    }
+    // 公開ページキャッシュ flush
+    _mediaSlugCacheClear(ag.media.slug);
+    return jres(res, 200, {
+      ok: true,
+      post: postMeta,
+      public_url: 'https://' + ag.media.domain + '/media/' + ag.media.slug + '/' + postSlug,
     });
   }
 

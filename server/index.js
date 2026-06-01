@@ -829,20 +829,21 @@ function safe(u){
   // was interrupted (Render deploy, browser close, network blip). Without
   // this, the bubble renders as "🍑 生成中…" forever after reload.
   if(Array.isArray(s.agents)){
-    // /api/me の payload 削減 (= リロード高速化):
-    // agent.history が 100+ メッセージあると user row が MB 級になる。
-    // 各 agent の history を直近 SAFE_HISTORY_LIMIT 件に絞り、 古いものは
-    // /api/agents/:id/history?offset=N で lazy load させる。
+    // 重要: user 本体 を mutate してはいけない (= _maybeGenerateNudgeForUser 等の
+    // async DB.save が走ると、 trimmed history が永続化されてしまう)。
+    // よって agents を shallow copy + history のみ別配列に置き換え。
     const SAFE_HISTORY_LIMIT = 30;
-    for(const ag of s.agents){
-      if(!ag) continue;
-      ag.progress = _agentProgress(ag);
-      ag.trust = _agentTrust(ag);
-      ag.outcomes = _agentOutcomes(ag);
-      ag.digest = _agentDigest(ag, u);
-      if(!Array.isArray(ag.history)) continue;
-      // streaming flag scrub (= 中断レンダー防止)
-      for(const m of ag.history){
+    s.agents = s.agents.map(function(origAg){
+      if(!origAg) return origAg;
+      const ag = Object.assign({}, origAg); // shallow copy → mutation 隔離
+      ag.progress = _agentProgress(origAg);
+      ag.trust = _agentTrust(origAg);
+      ag.outcomes = _agentOutcomes(origAg);
+      ag.digest = _agentDigest(origAg, u);
+      if(!Array.isArray(origAg.history)) return ag;
+      // 1) streaming flag scrub — 中断 render 防止のため意図的に永続化したい
+      //    (origAg.history を直接 mutate = orig.user に反映 OK)
+      for(const m of origAg.history){
         if(m && m.streaming){
           m.streaming = false;
           m.truncated = true;
@@ -852,14 +853,17 @@ function safe(u){
           }
         }
       }
-      // history truncate (= last N messages のみ送る)
-      const totalLen = ag.history.length;
+      // 2) history トリム — 返信用のみで、 origAg.history は無傷に保つ
+      const totalLen = origAg.history.length;
       if(totalLen > SAFE_HISTORY_LIMIT){
         ag.history_total_count = totalLen;
         ag.history_truncated = true;
-        ag.history = ag.history.slice(-SAFE_HISTORY_LIMIT);
+        ag.history = origAg.history.slice(-SAFE_HISTORY_LIMIT);
+      } else {
+        ag.history = origAg.history; // same ref OK (= 短いなら全件返す)
       }
-    }
+      return ag;
+    });
   }
   // Strip the heavy `html` body from artifacts in the chat-load payload — the
   // client renders artifacts by URL, never from this field. Each artifact's

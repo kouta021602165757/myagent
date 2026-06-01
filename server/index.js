@@ -18624,72 +18624,9 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
-  // ──────────────────────────────────────────────────────────
-  // 📝 メディア機能 — 公開ページ (= /media/:slug, /media/:slug/:postSlug)
-  // ──────────────────────────────────────────────────────────
-  // 個別記事 (= /media/:slug/:postSlug)
-  const mediaPostMatch = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
-  if(mediaPostMatch && method === 'GET'){
-    const slug = mediaPostMatch[1];
-    const postSlug = mediaPostMatch[2];
-    try {
-      const found = await _findUserByMediaSlug(slug, { includePosts: true });
-      if(!found){
-        res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
-        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1></body></html>');
-      }
-      const { user, agent } = found;
-      const postMeta = (agent.media_posts_idx || []).find(p => p && p.slug === postSlug && p.status !== 'draft');
-      if(!postMeta){
-        res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
-        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1><p><a href="/media/'+_mediaEsc(slug)+'" style="color:#0d4f4a">記事一覧へ</a></p></body></html>');
-      }
-      const fullMap = user.media_posts_full || {};
-      // 防御的に再 sanitize (= 古いデータが unescaped で保存されていた場合)
-      const body_html = _sanitizeArticleHtml((fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '<p>記事本文を読み込めませんでした。</p>');
-      const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html);
-      res.writeHead(200, {
-        'Content-Type': 'text/html;charset=utf-8',
-        'Cache-Control': 'public, max-age=300',
-        'X-Frame-Options': 'SAMEORIGIN',
-        // script-src 'none' で AI 由来の inline JS を完全ブロック (= XSS 多層防御)
-        'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
-      });
-      return res.end(html);
-    } catch(e){
-      console.warn('[media-post] failed:', e.message);
-      res.writeHead(500, { 'Content-Type': 'text/html;charset=utf-8' });
-      return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>500</h1></body></html>');
-    }
-  }
-
-  // 認証不要、 SSR で軽量 HTML を返す。
-  const mediaPubMatch = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/?$/);
-  if(mediaPubMatch && method === 'GET'){
-    const slug = mediaPubMatch[1];
-    try {
-      // 一覧ページは body_html 不要 → includePosts: false で egress 半減
-      const found = await _findUserByMediaSlug(slug, { includePosts: false });
-      if(!found){
-        res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
-        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1 style="font-size:24px">404 — メディアが見つかりません</h1><p>URL をご確認ください。</p><p><a href="https://myaiagents.agency" style="color:#0d4f4a">myaiagents.agency へ</a></p></body></html>');
-      }
-      const { agent } = found;
-      const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
-      const html = _mediaRenderMinimalIndex(agent.media, posts);
-      res.writeHead(200, {
-        'Content-Type': 'text/html;charset=utf-8',
-        'Cache-Control': 'public, max-age=300',
-        'X-Frame-Options': 'SAMEORIGIN',
-        'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
-      });
-      return res.end(html);
-    } catch(e){
-      console.warn('[media-public] failed:', e.message);
-      res.writeHead(500, { 'Content-Type': 'text/html;charset=utf-8' });
-      return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>500 — エラー</h1><p>少し時間を置いて再度お試しください。</p></body></html>');
-    }
-  }
+  // NOTE: /media/:slug, /media/:slug/:postSlug の公開ルートは
+  // main HTTP handler (createServer) 側で処理。 ここ (handleAPI) は
+  // /api/ prefix 限定なので、 /media/... は到達しない。
 
   // ── Auth required below ────────────────────────────────────
   const claims=getAuth(req);
@@ -28511,6 +28448,71 @@ const server=http.createServer(async(req,res)=>{
   const aRoute=pathname.match(/^\/a\/([a-z0-9-]+)\/?$/);
   if(aRoute){
     return serveAgentSharePage(res, aRoute[1]);
+  }
+
+  // /media/:slug/:postSlug → 個別記事 SSR (= 認証不要)
+  const mediaPostRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
+  if(mediaPostRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaPostRoute[1];
+      const postSlug = mediaPostRoute[2];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: true });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+          return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1></body></html>');
+        }
+        const { user, agent } = found;
+        const postMeta = (agent.media_posts_idx || []).find(p => p && p.slug === postSlug && p.status !== 'draft');
+        if(!postMeta){
+          res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+          return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1><p><a href="/media/'+_mediaEsc(slug)+'" style="color:#0d4f4a">記事一覧へ</a></p></body></html>');
+        }
+        const fullMap = user.media_posts_full || {};
+        const body_html = _sanitizeArticleHtml((fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '<p>記事本文を読み込めませんでした。</p>');
+        const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html);
+        res.writeHead(200, {
+          'Content-Type': 'text/html;charset=utf-8',
+          'Cache-Control': 'public, max-age=300',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
+        });
+        return res.end(html);
+      } catch(e){
+        console.warn('[media-post] failed:', e.message);
+        res.writeHead(500, { 'Content-Type': 'text/html;charset=utf-8' });
+        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>500</h1></body></html>');
+      }
+    })();
+  }
+
+  // /media/:slug → メディア記事一覧 SSR (= 認証不要)
+  const mediaIndexRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/?$/);
+  if(mediaIndexRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaIndexRoute[1];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+          return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1 style="font-size:24px">404 — メディアが見つかりません</h1><p>URL をご確認ください。</p><p><a href="https://myaiagents.agency" style="color:#0d4f4a">myaiagents.agency へ</a></p></body></html>');
+        }
+        const { agent } = found;
+        const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+        const html = _mediaRenderMinimalIndex(agent.media, posts);
+        res.writeHead(200, {
+          'Content-Type': 'text/html;charset=utf-8',
+          'Cache-Control': 'public, max-age=300',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
+        });
+        return res.end(html);
+      } catch(e){
+        console.warn('[media-public] failed:', e.message);
+        res.writeHead(500, { 'Content-Type': 'text/html;charset=utf-8' });
+        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>500 — エラー</h1></body></html>');
+      }
+    })();
   }
 
   // /c/:share_id → public read-only conversation snapshot

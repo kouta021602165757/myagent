@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>📝 メディア 1-Click 起動 — モック</title>
+<style>
+  :root {
+    --cream:#ffffff; --cream2:#fafafa; --cream3:#fafaf7;
+    --text:#1a1a1a; --text2:#525252; --text3:#71717a;
+    --wire:rgba(9,9,11,.06); --wire2:rgba(9,9,11,.10);
+    --peach:#c0ff5c; --peach-dark:#a3e635;
+    --peach-soft:#f7ffe9;
+    --teal:#0d4f4a; --teal-deep:#0a3d39; --teal-soft:#e8f1f0;
+    --red:#dc2626; --yellow:#d97706; --green:#16a34a;
+    --blue:#2563eb; --blue-soft:#eff6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:rgba(10,10,12,.4);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:var(--text);line-height:1.65;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
+
+  /* === モーダル枠 === */
+  .modal{background:var(--cream3);border-radius:16px;max-width:1000px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column}
+  .modal-head{padding:13px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream)}
+  .modal-head-ic{font-size:22px}
+  .modal-head-title{font-weight:900;font-size:15px}
+  .modal-head-sub{font-size:11px;color:var(--text3);font-weight:700}
+  .modal-close{margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:22px;cursor:pointer;padding:4px 10px}
+  .modal-body{padding:18px 22px 32px;overflow-y:auto;max-height:calc(100vh - 48px)}
+
+  /* === HERO (= 「任せる」AI 提案 hero) === */
+  .kw-hero{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px;position:relative}
+  .kw-hero-ic{font-size:30px;position:absolute;top:18px;right:24px;opacity:.4}
+  .kw-hero-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.8;font-weight:700;margin-bottom:6px}
+  .kw-hero-ti{font-size:19px;font-weight:900;line-height:1.3;margin-bottom:8px}
+  .kw-hero-sub{font-size:12.5px;opacity:.85;line-height:1.55}
+  .kw-hero-sub b{color:var(--peach);font-weight:800}
+
+  .sec{background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:18px 22px;margin-bottom:14px}
+  .sec-h{font-size:14px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .sec-h-ic{font-size:18px}
+  .sec-h-sub{font-size:11px;color:var(--text3);font-weight:600;margin-left:auto}
+
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:11.5px;color:#92400e;line-height:1.6;margin-bottom:18px}
+  .note b{font-weight:800}
+
+  /* === State 1: empty + Big CTA === */
+  .empty-hero{background:linear-gradient(135deg,#fff,var(--peach-soft));border:2px dashed var(--peach-dark);border-radius:14px;padding:40px 30px;text-align:center;margin-bottom:18px}
+  .empty-ic{font-size:54px;margin-bottom:10px}
+  .empty-ti{font-size:21px;font-weight:900;color:var(--text);margin-bottom:8px}
+  .empty-tx{font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:16px;max-width:580px;margin-left:auto;margin-right:auto}
+  .empty-tx b{color:var(--text)}
+  .empty-cta{display:inline-flex;align-items:center;gap:10px;background:var(--teal);color:#fff;border:0;padding:14px 26px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 6px 16px rgba(13,79,74,.28);transition:.15s}
+  .empty-cta:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(13,79,74,.34)}
+  .empty-foot{margin-top:14px;display:flex;justify-content:center;gap:18px;font-size:10.5px;color:var(--text3);font-weight:600}
+  .empty-foot b{color:var(--text2)}
+
+  /* === Wizard === */
+  .wiz{background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:0;margin-bottom:18px;overflow:hidden}
+  .wiz-h{background:var(--teal);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:10px}
+  .wiz-h-ic{font-size:18px}
+  .wiz-h-ti{font-weight:900;font-size:14px}
+  .wiz-h-sub{margin-left:auto;font-size:11px;font-weight:700;opacity:.85}
+
+  /* Wizard step nav */
+  .wiz-steps{display:flex;background:var(--cream3);border-bottom:1px solid var(--wire2);padding:11px 22px;gap:6px}
+  .wiz-st{flex:1;padding:7px 8px;text-align:center;font-size:10.5px;font-weight:700;color:var(--text3);background:#fff;border:1px solid var(--wire2);border-radius:7px;line-height:1.25}
+  .wiz-st.done{background:var(--peach-soft);color:var(--teal-deep);border-color:var(--peach-dark)}
+  .wiz-st.now{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 3px 10px rgba(13,79,74,.22)}
+  .wiz-st-num{font-size:9.5px;font-weight:800;opacity:.7;letter-spacing:.04em}
+  .wiz-st-ti{font-size:11.5px;font-weight:800;margin-top:2px}
+
+  .wiz-body{padding:24px 26px;background:var(--cream)}
+  .wiz-pretitle{font-size:10px;letter-spacing:.06em;font-weight:800;color:var(--teal-deep);text-transform:uppercase;margin-bottom:6px}
+  .wiz-h2{font-size:18px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.35}
+  .wiz-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px}
+
+  /* Wizard form */
+  .wiz-row{margin-bottom:14px}
+  .wiz-lbl{font-size:11px;font-weight:800;color:var(--text);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+  .wiz-lbl-hint{font-size:10px;font-weight:600;color:var(--text3);margin-left:auto}
+  .wiz-input{width:100%;padding:10px 12px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:#fff}
+  .wiz-input:focus{outline:0;border-color:var(--teal)}
+  .wiz-input-hint{font-size:10.5px;color:var(--text3);margin-top:5px;line-height:1.5}
+
+  /* Wizard preview of domain */
+  .wiz-domain{display:flex;align-items:center;background:var(--cream3);border:1px solid var(--wire2);border-radius:9px;overflow:hidden}
+  .wiz-domain-input{flex:1;border:0;background:transparent;padding:11px 12px;font-size:13.5px;font-family:'SF Mono',Menlo,monospace;font-weight:800;color:var(--teal-deep);outline:0}
+  .wiz-domain-suffix{padding:11px 14px;background:#fff;border-left:1px solid var(--wire2);font-size:12.5px;font-family:'SF Mono',Menlo,monospace;color:var(--text2);font-weight:700}
+
+  /* AI 推奨トピック cards (Step 2) */
+  .topic-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px}
+  .topic-pill{padding:9px 11px;background:#fff;border:1.5px solid var(--wire2);border-radius:9px;font-size:11.5px;font-weight:700;color:var(--text);cursor:pointer;transition:.15s;line-height:1.4}
+  .topic-pill:hover{border-color:var(--teal);transform:translateY(-1px)}
+  .topic-pill.selected{background:var(--peach-soft);border-color:var(--peach-dark);border-width:2px}
+  .topic-pill-sub{font-size:10px;color:var(--text3);font-weight:600;margin-top:2px}
+
+  /* テーマ選択 (Step 3) */
+  .theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+  .theme-card{background:#fff;border:2px solid var(--wire2);border-radius:11px;padding:0;cursor:pointer;transition:.15s;overflow:hidden}
+  .theme-card:hover{transform:translateY(-2px);border-color:var(--teal);box-shadow:0 6px 16px rgba(0,0,0,.08)}
+  .theme-card.selected{border-color:var(--peach-dark);box-shadow:0 0 0 3px var(--peach-soft)}
+  .theme-thumb{height:100px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:34px;border-bottom:1px solid var(--wire2)}
+  .theme-thumb.t-minimal{background:linear-gradient(135deg,#fff,#f8fafc)}
+  .theme-thumb.t-magazine{background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff}
+  .theme-thumb.t-blog{background:linear-gradient(135deg,#fef3c7,#fde68a)}
+  .theme-thumb.t-tech{background:linear-gradient(135deg,#1e293b,#0f172a);color:#a5f3fc}
+  .theme-thumb.t-newsletter{background:linear-gradient(135deg,#f3e8ff,#e9d5ff)}
+  .theme-meta{padding:9px 11px}
+  .theme-name{font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px}
+  .theme-tag{font-size:10px;color:var(--text3);font-weight:600}
+
+  /* Step 4 完成 */
+  .done-block{background:linear-gradient(135deg,#fff,var(--peach-soft));border:2px solid var(--peach-dark);border-radius:13px;padding:24px;text-align:center}
+  .done-ic{font-size:46px;margin-bottom:6px}
+  .done-ti{font-size:18px;font-weight:900;color:var(--teal-deep);margin-bottom:6px}
+  .done-tx{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6}
+  .done-url{display:inline-flex;align-items:center;background:#fff;border:1.5px solid var(--teal);border-radius:9px;padding:10px 14px;font-size:13px;font-family:'SF Mono',Menlo,monospace;font-weight:800;color:var(--teal-deep);margin-bottom:14px;gap:8px}
+  .done-url-copy{margin-left:6px;background:var(--teal);color:#fff;border:0;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit}
+  .done-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .done-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s}
+  .done-btn.primary{background:var(--teal);color:#fff;border:0}
+  .done-btn.primary:hover{transform:translateY(-1px)}
+  .done-btn.secondary{background:#fff;color:var(--text);border:1px solid var(--wire2)}
+
+  /* Wizard footer */
+  .wiz-foot{padding:14px 22px;border-top:1px solid var(--wire);display:flex;align-items:center;gap:10px;background:var(--cream3)}
+  .wiz-foot-info{flex:1;font-size:11px;color:var(--text3);font-weight:600}
+  .wiz-back{background:#fff;border:1px solid var(--wire2);color:var(--text);padding:9px 15px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .wiz-next{background:var(--teal);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px}
+
+  /* === State 3: 運用中ダッシュボード === */
+  .live-hero{background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:14px;position:relative}
+  .live-hero-row{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+  .live-hero-ic{font-size:30px;flex-shrink:0}
+  .live-hero-meta{flex:1;min-width:0}
+  .live-hero-name{font-size:18px;font-weight:900;line-height:1.2}
+  .live-hero-url{font-size:11px;font-family:'SF Mono',Menlo,monospace;opacity:.8;margin-top:3px}
+  .live-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);padding:5px 10px;border-radius:99px;font-size:10.5px;font-weight:800}
+  .live-dot{width:6px;height:6px;background:var(--peach);border-radius:50%;animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .live-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .live-stat{background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px}
+  .live-stat-lbl{font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px}
+  .live-stat-v{font-size:17px;font-weight:900;line-height:1.1}
+  .live-stat-sub{font-size:10px;opacity:.75;margin-top:2px}
+
+  /* 公開済記事 list */
+  .post-list{display:flex;flex-direction:column;gap:6px}
+  .post-row{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:11px;padding:11px 13px;background:#fff;border:1px solid var(--wire2);border-radius:9px;transition:.15s}
+  .post-row:hover{border-color:var(--teal);transform:translateX(2px)}
+  .post-rank{font-size:11px;font-weight:800;color:var(--text3);width:22px;text-align:center}
+  .post-meta{min-width:0}
+  .post-ti{font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35}
+  .post-sub{font-size:10px;color:var(--text3);font-weight:600;margin-top:2px;display:flex;gap:7px;flex-wrap:wrap}
+  .post-pv{font-size:11.5px;font-weight:800;color:var(--text);font-family:'SF Mono',Menlo,monospace}
+  .post-pv-sub{font-size:9px;color:var(--text3);font-weight:600;text-align:right}
+  .post-status{font-size:9.5px;font-weight:800;padding:3px 7px;border-radius:5px}
+  .post-status.live{background:#dcfce7;color:#166534}
+  .post-status.draft{background:#fef3c7;color:#92400e}
+  .post-status.queue{background:#dbeafe;color:#1e40af}
+
+  /* 公開予定 queue */
+  .queue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .queue-card{background:#fff;border:1.5px dashed var(--wire2);border-radius:10px;padding:13px 14px}
+  .queue-when{font-size:9.5px;font-weight:800;color:var(--text3);letter-spacing:.04em;margin-bottom:5px;text-transform:uppercase}
+  .queue-ti{font-size:12.5px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:5px}
+  .queue-tags{display:flex;gap:5px;flex-wrap:wrap}
+  .queue-tag{font-size:9.5px;background:var(--cream3);color:var(--text2);padding:2px 7px;border-radius:5px;font-weight:700}
+
+  /* CTA カード */
+  .cta-card{background:linear-gradient(135deg,var(--peach-soft),#fff);border:2px solid var(--peach-dark);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px}
+  .cta-card-ic{font-size:26px}
+  .cta-card-bd{flex:1;line-height:1.55}
+  .cta-card-ti{font-size:13px;font-weight:900;color:var(--text)}
+  .cta-card-sub{font-size:11px;color:var(--text2);margin-top:2px}
+  .cta-card-btn{background:var(--teal);color:#fff;border:0;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+
+  /* === State 4: 公開された記事ページ (= 訪問者視点) === */
+  .visitor-frame{background:#fff;border:1px solid var(--wire2);border-radius:13px;padding:0;overflow:hidden;margin-bottom:14px}
+  .visitor-bar{background:var(--cream3);padding:8px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--wire2);font-size:10.5px}
+  .visitor-dots{display:flex;gap:4px}
+  .visitor-dots span{width:9px;height:9px;background:#ccc;border-radius:50%}
+  .visitor-url{flex:1;background:#fff;padding:5px 11px;border-radius:5px;font-family:'SF Mono',Menlo,monospace;font-size:10.5px;color:var(--text2)}
+  .visitor-body{padding:32px 28px;background:#fff;line-height:1.75}
+  .visitor-blog-h{font-size:11px;font-weight:800;color:var(--teal);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+  .visitor-art-ti{font-size:24px;font-weight:900;color:var(--text);line-height:1.35;margin-bottom:12px;letter-spacing:-.01em}
+  .visitor-art-meta{font-size:11px;color:var(--text3);font-weight:600;display:flex;gap:10px;margin-bottom:18px;border-bottom:1px solid var(--wire);padding-bottom:14px}
+  .visitor-toc{background:var(--cream3);border-radius:9px;padding:13px 16px;margin-bottom:18px}
+  .visitor-toc-h{font-size:10.5px;font-weight:800;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+  .visitor-toc-l{font-size:11.5px;color:var(--text);line-height:1.85}
+  .visitor-art-body{font-size:13.5px;color:var(--text);margin-bottom:16px}
+  .visitor-art-body p{margin:0 0 11px}
+  .visitor-art-h2{font-size:17px;font-weight:900;color:var(--text);margin:22px 0 10px;letter-spacing:-.01em}
+  .visitor-lp-cta{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:13px;padding:22px 24px;margin:22px 0;text-align:center;position:relative}
+  .visitor-lp-cta-ti{font-size:15px;font-weight:900;margin-bottom:7px}
+  .visitor-lp-cta-tx{font-size:11.5px;opacity:.88;margin-bottom:13px;line-height:1.55}
+  .visitor-lp-cta-btn{display:inline-block;background:var(--peach);color:var(--teal-deep);padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:900;text-decoration:none}
+  .visitor-foot{font-size:10.5px;color:var(--text3);text-align:center;padding-top:18px;border-top:1px solid var(--wire);margin-top:18px}
+
+  /* state divider */
+  .divider{text-align:center;margin:30px 0 22px;position:relative}
+  .divider::before{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:var(--wire2)}
+  .divider-tx{display:inline-block;background:var(--cream3);padding:0 14px;font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.06em;position:relative;text-transform:uppercase}
+  .state-tag{display:inline-block;font-size:9.5px;font-weight:800;background:var(--teal-soft);color:var(--teal-deep);padding:3px 8px;border-radius:5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+
+  @media (max-width:560px){
+    body{padding:8px}
+    .modal-body{padding:14px 14px 28px}
+    .live-stats{grid-template-columns:repeat(2,1fr)}
+    .wiz-steps{flex-wrap:wrap;gap:5px;padding:9px 14px}
+    .wiz-st{font-size:9.5px;padding:6px 5px}
+    .post-row{grid-template-columns:auto 1fr auto;font-size:11px}
+    .post-pv-sub,.post-status{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="modal">
+
+  <div class="modal-head">
+    <div class="modal-head-ic">📝</div>
+    <div>
+      <div class="modal-head-title">メディア</div>
+      <div class="modal-head-sub">my-service.com (= LP) のブログを 1-Click で立ち上げ・運用</div>
+    </div>
+    <button class="modal-close">×</button>
+  </div>
+
+  <div class="modal-body">
+
+    <div class="note">
+      <b>📝 モック</b> — 「メディアを持ってない LP オーナー」 が AI チームに集客を任せる流れを<br>
+      4 つの状態 (① 未作成 → ② Wizard → ③ 完成 / 運用中 → ④ 訪問者視点の記事ページ) で並列表示。
+    </div>
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <!-- State 1: 未作成 (= empty state)                              -->
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <span class="state-tag">State 1 — 未作成</span>
+
+    <div class="empty-hero">
+      <div class="empty-ic">📰</div>
+      <div class="empty-ti">あなたの LP に "集客ブログ" を 1-Click で。</div>
+      <div class="empty-tx">
+        <b>my-service.com</b> 用のブログを AI チームが立ち上げ、 毎日キーワード調査 → 記事執筆 → 公開 → 改善まで全自動で運用します。<br>
+        <b>あなたが手を動かすのは 0。</b> 立ち上げ時間は <b>約 60 秒</b>。
+      </div>
+      <button class="empty-cta">🚀 ブログを立ち上げる <span style="font-size:18px">→</span></button>
+      <div class="empty-foot">
+        <span>✓ <b>設定 0 ステップ</b></span>
+        <span>·</span>
+        <span>✓ <b>ドメイン / SSL / DB</b> 自動</span>
+        <span>·</span>
+        <span>✓ <b>解約 1 click</b></span>
+      </div>
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <!-- State 2: Wizard (4 steps)                                  -->
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <div class="divider">
+      <span class="divider-tx">↓ ボタンクリック後の Wizard ↓</span>
+    </div>
+
+    <span class="state-tag">State 2 — Wizard (Step 1/4)</span>
+
+    <div class="wiz">
+      <div class="wiz-h">
+        <span class="wiz-h-ic">🚀</span>
+        <span class="wiz-h-ti">ブログを立ち上げる</span>
+        <span class="wiz-h-sub">所要時間 約 60 秒</span>
+      </div>
+      <div class="wiz-steps">
+        <div class="wiz-st now"><div class="wiz-st-num">STEP 1</div><div class="wiz-st-ti">基本情報</div></div>
+        <div class="wiz-st"><div class="wiz-st-num">STEP 2</div><div class="wiz-st-ti">テーマ確認</div></div>
+        <div class="wiz-st"><div class="wiz-st-num">STEP 3</div><div class="wiz-st-ti">デザイン</div></div>
+        <div class="wiz-st"><div class="wiz-st-num">STEP 4</div><div class="wiz-st-ti">完成</div></div>
+      </div>
+      <div class="wiz-body">
+        <div class="wiz-pretitle">Step 1 / 4 — 基本情報</div>
+        <div class="wiz-h2">ブログの名前と URL を決める</div>
+        <div class="wiz-desc">
+          AI がすでに <b>my-service.com</b> を解析して、 おすすめのブログ名と URL を提案してます。 そのまま使えますし、 編集も OK。
+        </div>
+
+        <div class="wiz-row">
+          <div class="wiz-lbl">ブログ名 <span class="wiz-lbl-hint">AI 推奨</span></div>
+          <input type="text" class="wiz-input" value="my-service Blog — お役立ち情報">
+          <div class="wiz-input-hint">記事一覧ページの hero / OG / SEO title に使われます</div>
+        </div>
+
+        <div class="wiz-row">
+          <div class="wiz-lbl">ブログ URL <span class="wiz-lbl-hint">どこに公開するか</span></div>
+          <div class="wiz-domain">
+            <input type="text" class="wiz-domain-input" value="my-service">
+            <div class="wiz-domain-suffix">.myaiagents.agency</div>
+          </div>
+          <div class="wiz-input-hint">
+            ✓ 即時公開 (DNS 不要) · 月 5,000 PV まで無料<br>
+            ⓘ 後から <b>blog.my-service.com</b> (= 自分のドメイン) に移行可能 (DNS 設定 5 分)
+          </div>
+        </div>
+
+        <div class="wiz-row">
+          <div class="wiz-lbl">公開先 LP <span class="wiz-lbl-hint">記事から導線を引く先</span></div>
+          <input type="text" class="wiz-input" value="https://my-service.com" disabled style="background:var(--cream3);color:var(--text2)">
+          <div class="wiz-input-hint">記事内 CTA は自動で この LP に誘導されます (= CV 計測込み)</div>
+        </div>
+      </div>
+      <div class="wiz-foot">
+        <div class="wiz-foot-info">いつでも変更できます。 立ち上げ後の管理画面から再設定可能。</div>
+        <button class="wiz-back" disabled style="opacity:.4">← 戻る</button>
+        <button class="wiz-next">次へ <span style="font-size:14px">→</span></button>
+      </div>
+    </div>
+
+    <!-- Step 2 preview -->
+    <span class="state-tag">State 2 — Wizard (Step 2/4)</span>
+
+    <div class="wiz">
+      <div class="wiz-h">
+        <span class="wiz-h-ic">🚀</span>
+        <span class="wiz-h-ti">ブログを立ち上げる</span>
+        <span class="wiz-h-sub">所要時間 約 60 秒</span>
+      </div>
+      <div class="wiz-steps">
+        <div class="wiz-st done"><div class="wiz-st-num">STEP 1</div><div class="wiz-st-ti">基本情報</div></div>
+        <div class="wiz-st now"><div class="wiz-st-num">STEP 2</div><div class="wiz-st-ti">テーマ確認</div></div>
+        <div class="wiz-st"><div class="wiz-st-num">STEP 3</div><div class="wiz-st-ti">デザイン</div></div>
+        <div class="wiz-st"><div class="wiz-st-num">STEP 4</div><div class="wiz-st-ti">完成</div></div>
+      </div>
+      <div class="wiz-body">
+        <div class="wiz-pretitle">Step 2 / 4 — 何のブログにする?</div>
+        <div class="wiz-h2">AI が my-service.com を読んで提案するテーマ</div>
+        <div class="wiz-desc">
+          ペルソナ・競合・サービス内容から、 集客に効くテーマを 5 案抽出しました。 <b>1 つ以上選んでください</b>。 後から追加 / 削除も OK。
+        </div>
+
+        <div class="topic-grid">
+          <div class="topic-pill selected">
+            ✓ 中小企業の DX 入門
+            <div class="topic-pill-sub">月間検索 1,200 / 競合 中</div>
+          </div>
+          <div class="topic-pill selected">
+            ✓ 業務効率化ツール 比較
+            <div class="topic-pill-sub">月間検索 980 / 競合 緩</div>
+          </div>
+          <div class="topic-pill selected">
+            ✓ SaaS 導入事例
+            <div class="topic-pill-sub">月間検索 540 / 競合 緩</div>
+          </div>
+          <div class="topic-pill">
+            勤怠管理の基礎知識
+            <div class="topic-pill-sub">月間検索 2,100 / 競合 激</div>
+          </div>
+          <div class="topic-pill">
+            人事 業務効率化
+            <div class="topic-pill-sub">月間検索 720 / 競合 中</div>
+          </div>
+        </div>
+
+        <div style="background:var(--blue-soft);border:1px solid #c7d2fe;border-radius:9px;padding:11px 14px;margin-top:16px;font-size:11.5px;color:#1e40af;line-height:1.6">
+          💡 <b>選んだテーマで毎週 3-7 本ペース</b>で記事が公開されます (= 月 12-30 本)。 後から増減可能。
+        </div>
+      </div>
+      <div class="wiz-foot">
+        <div class="wiz-foot-info">3 / 5 テーマ選択中</div>
+        <button class="wiz-back">← 戻る</button>
+        <button class="wiz-next">次へ <span style="font-size:14px">→</span></button>
+      </div>
+    </div>
+
+    <!-- Step 3 preview -->
+    <span class="state-tag">State 2 — Wizard (Step 3/4)</span>
+
+    <div class="wiz">
+      <div class="wiz-h">
+        <span class="wiz-h-ic">🚀</span>
+        <span class="wiz-h-ti">ブログを立ち上げる</span>
+        <span class="wiz-h-sub">所要時間 約 60 秒</span>
+      </div>
+      <div class="wiz-steps">
+        <div class="wiz-st done"><div class="wiz-st-num">STEP 1</div><div class="wiz-st-ti">基本情報</div></div>
+        <div class="wiz-st done"><div class="wiz-st-num">STEP 2</div><div class="wiz-st-ti">テーマ確認</div></div>
+        <div class="wiz-st now"><div class="wiz-st-num">STEP 3</div><div class="wiz-st-ti">デザイン</div></div>
+        <div class="wiz-st"><div class="wiz-st-num">STEP 4</div><div class="wiz-st-ti">完成</div></div>
+      </div>
+      <div class="wiz-body">
+        <div class="wiz-pretitle">Step 3 / 4 — 見た目を選ぶ</div>
+        <div class="wiz-h2">デザインテンプレートを 1 つ</div>
+        <div class="wiz-desc">
+          LP のブランドカラーを自動取り込みしてカスタマイズします。 <b>後からいつでも変更可能</b>。
+        </div>
+
+        <div class="theme-grid">
+          <div class="theme-card selected">
+            <div class="theme-thumb t-minimal">🌿</div>
+            <div class="theme-meta"><div class="theme-name">Minimal</div><div class="theme-tag">SaaS / 個人事業向け</div></div>
+          </div>
+          <div class="theme-card">
+            <div class="theme-thumb t-magazine">📰</div>
+            <div class="theme-meta"><div class="theme-name">Magazine</div><div class="theme-tag">メディア / 雑誌風</div></div>
+          </div>
+          <div class="theme-card">
+            <div class="theme-thumb t-blog">✍️</div>
+            <div class="theme-meta"><div class="theme-name">Friendly Blog</div><div class="theme-tag">DTC / EC / 個人</div></div>
+          </div>
+          <div class="theme-card">
+            <div class="theme-thumb t-tech">⚙</div>
+            <div class="theme-meta"><div class="theme-name">Tech Docs</div><div class="theme-tag">SaaS / 技術ブログ</div></div>
+          </div>
+          <div class="theme-card">
+            <div class="theme-thumb t-newsletter">💌</div>
+            <div class="theme-meta"><div class="theme-name">Newsletter</div><div class="theme-tag">コーチング / 士業</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-foot">
+        <div class="wiz-foot-info">Minimal 選択中。 ロゴ / 配色 / フォントは 後で詳細編集可能</div>
+        <button class="wiz-back">← 戻る</button>
+        <button class="wiz-next">✨ ブログを作成 <span style="font-size:14px">→</span></button>
+      </div>
+    </div>
+
+    <!-- Step 4 完成 -->
+    <span class="state-tag">State 2 — Wizard (Step 4/4) · 完成</span>
+
+    <div class="wiz">
+      <div class="wiz-h">
+        <span class="wiz-h-ic">🎉</span>
+        <span class="wiz-h-ti">ブログが完成しました</span>
+        <span class="wiz-h-sub">セットアップ完了</span>
+      </div>
+      <div class="wiz-steps">
+        <div class="wiz-st done"><div class="wiz-st-num">STEP 1</div><div class="wiz-st-ti">基本情報</div></div>
+        <div class="wiz-st done"><div class="wiz-st-num">STEP 2</div><div class="wiz-st-ti">テーマ確認</div></div>
+        <div class="wiz-st done"><div class="wiz-st-num">STEP 3</div><div class="wiz-st-ti">デザイン</div></div>
+        <div class="wiz-st now"><div class="wiz-st-num">STEP 4</div><div class="wiz-st-ti">完成</div></div>
+      </div>
+      <div class="wiz-body">
+        <div class="done-block">
+          <div class="done-ic">🎉</div>
+          <div class="done-ti">my-service Blog が立ち上がりました!</div>
+          <div class="done-tx">
+            DNS / サーバ / DB / SSL すべて自動セットアップ完了。<br>
+            このあと <b>AI チームが 30 分以内に最初の 1 記事を執筆</b>します。
+          </div>
+          <div class="done-url">
+            🌐 https://my-service.myaiagents.agency
+            <button class="done-url-copy">📋 コピー</button>
+          </div>
+          <div class="done-actions">
+            <button class="done-btn primary">📝 メディア管理画面へ →</button>
+            <button class="done-btn secondary">🔗 ブログを見る</button>
+          </div>
+        </div>
+
+        <div style="background:var(--cream3);border-radius:9px;padding:13px 16px;margin-top:18px;font-size:11.5px;color:var(--text2);line-height:1.6">
+          <b style="color:var(--text)">📅 これから自動で起きること:</b><br>
+          ・<b>0-30 分後</b>: AI チームが最初の記事を執筆 → ブログに公開<br>
+          ・<b>1 日後</b>: 2 本目 + GSC / GA4 自動連携<br>
+          ・<b>7 日後</b>: 7 本公開済 + 順位レポート初回到着<br>
+          ・<b>30 日後</b>: 月 12-30 本ペース定着 + LP CV 計測結果
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <!-- State 3: 運用中ダッシュボード                                -->
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <div class="divider">
+      <span class="divider-tx">↓ 立ち上げ後の管理画面 (= 運用中 / 60 日経過) ↓</span>
+    </div>
+
+    <span class="state-tag">State 3 — 運用中 (60 日経過)</span>
+
+    <div class="live-hero">
+      <div class="live-hero-row">
+        <div class="live-hero-ic">🌿</div>
+        <div class="live-hero-meta">
+          <div class="live-hero-name">my-service Blog</div>
+          <div class="live-hero-url">https://my-service.myaiagents.agency · LP: my-service.com</div>
+        </div>
+        <span class="live-pill"><span class="live-dot"></span>AI 自律運用中</span>
+      </div>
+      <div class="live-stats">
+        <div class="live-stat">
+          <div class="live-stat-lbl">公開済記事</div>
+          <div class="live-stat-v">42 <span style="font-size:11px;font-weight:700;opacity:.7">本</span></div>
+          <div class="live-stat-sub">▲ 今週 +5</div>
+        </div>
+        <div class="live-stat">
+          <div class="live-stat-lbl">月間 PV</div>
+          <div class="live-stat-v">3,840</div>
+          <div class="live-stat-sub">▲ +180% vs 先月</div>
+        </div>
+        <div class="live-stat">
+          <div class="live-stat-lbl">LP へ送客</div>
+          <div class="live-stat-v">214 <span style="font-size:11px;font-weight:700;opacity:.7">クリック</span></div>
+          <div class="live-stat-sub">CVR 5.6%</div>
+        </div>
+        <div class="live-stat">
+          <div class="live-stat-lbl">CV (LP 経由)</div>
+          <div class="live-stat-v">12 <span style="font-size:11px;font-weight:700;opacity:.7">件</span></div>
+          <div class="live-stat-sub">▲ +9 vs 先月</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-card">
+      <div class="cta-card-ic">🤖</div>
+      <div class="cta-card-bd">
+        <div class="cta-card-ti">AI チームが次に書く記事</div>
+        <div class="cta-card-sub">「中小企業の DX 入門 — 失敗しない 3 つのステップ」 を執筆中。 完成予定 <b>30 分後</b>。 自動公開されます。</div>
+      </div>
+      <button class="cta-card-btn">👁 プレビュー</button>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">
+        <span class="sec-h-ic">📝</span> 公開済記事 (= 直近)
+        <span class="sec-h-sub">42 本中 直近 8 件表示</span>
+      </div>
+
+      <div class="post-list">
+        <div class="post-row">
+          <div class="post-rank">#42</div>
+          <div class="post-meta">
+            <div class="post-ti">中小企業の DX 入門 — 失敗しない 3 つのステップ</div>
+            <div class="post-sub"><span>📅 30 分後 公開予定</span><span>· 12,400 字</span><span>· FAQ schema</span></div>
+          </div>
+          <div><div class="post-pv">—</div><div class="post-pv-sub">未公開</div></div>
+          <div><span class="post-status queue">予定</span></div>
+          <div style="font-size:14px;color:var(--text3)">›</div>
+        </div>
+        <div class="post-row">
+          <div class="post-rank">#41</div>
+          <div class="post-meta">
+            <div class="post-ti">業務効率化ツール 12 選 — 中小企業向け 2026 最新版</div>
+            <div class="post-sub"><span>📅 昨日 23:48</span><span>· 13,200 字</span><span>· 順位 8 位</span></div>
+          </div>
+          <div><div class="post-pv">86</div><div class="post-pv-sub">PV / 日</div></div>
+          <div><span class="post-status live">公開中</span></div>
+          <div style="font-size:14px;color:var(--text3)">›</div>
+        </div>
+        <div class="post-row">
+          <div class="post-rank">#40</div>
+          <div class="post-meta">
+            <div class="post-ti">SaaS 導入事例 — 製造業 A 社の業務時間 60% 削減ストーリー</div>
+            <div class="post-sub"><span>📅 2 日前</span><span>· 11,800 字</span><span>· 🚀 LP CV 3 件 経由</span></div>
+          </div>
+          <div><div class="post-pv">142</div><div class="post-pv-sub">PV / 日</div></div>
+          <div><span class="post-status live">公開中</span></div>
+          <div style="font-size:14px;color:var(--text3)">›</div>
+        </div>
+        <div class="post-row">
+          <div class="post-rank">#39</div>
+          <div class="post-meta">
+            <div class="post-ti">勤怠管理 SaaS の選び方 — 50 名以下の会社向け 5 つの条件</div>
+            <div class="post-sub"><span>📅 3 日前</span><span>· 10,600 字</span><span>· 順位 14 位 (↑3)</span></div>
+          </div>
+          <div><div class="post-pv">58</div><div class="post-pv-sub">PV / 日</div></div>
+          <div><span class="post-status live">公開中</span></div>
+          <div style="font-size:14px;color:var(--text3)">›</div>
+        </div>
+        <div class="post-row">
+          <div class="post-rank">#38</div>
+          <div class="post-meta">
+            <div class="post-ti">DX とは? — 中小企業の経営者が今日から始める 7 つの実例</div>
+            <div class="post-sub"><span>📅 4 日前</span><span>· 12,100 字</span><span>· 順位 6 位</span></div>
+          </div>
+          <div><div class="post-pv">198</div><div class="post-pv-sub">PV / 日</div></div>
+          <div><span class="post-status live">公開中</span></div>
+          <div style="font-size:14px;color:var(--text3)">›</div>
+        </div>
+        <div class="post-row" style="opacity:.7">
+          <div class="post-rank">#37</div>
+          <div class="post-meta">
+            <div class="post-ti">人事 業務効率化 — Excel 管理を卒業する 3 つのタイミング</div>
+            <div class="post-sub"><span>📅 5 日前</span><span>· 11,400 字</span><span>· 改善 AI: リライト推奨</span></div>
+          </div>
+          <div><div class="post-pv">22</div><div class="post-pv-sub">PV / 日</div></div>
+          <div><span class="post-status draft">改善中</span></div>
+          <div style="font-size:14px;color:var(--text3)">›</div>
+        </div>
+      </div>
+
+      <button style="background:transparent;border:1px solid var(--wire2);width:100%;padding:9px;border-radius:8px;font-size:11.5px;font-weight:700;color:var(--text2);margin-top:10px;cursor:pointer;font-family:inherit">📂 全 42 本を見る</button>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">
+        <span class="sec-h-ic">📅</span> 公開予定 (= AI が自動で書く)
+        <span class="sec-h-sub">直近 7 日 / 自律生成キュー</span>
+      </div>
+      <div class="queue-grid">
+        <div class="queue-card">
+          <div class="queue-when">⏰ 30 分後</div>
+          <div class="queue-ti">中小企業の DX 入門 — 失敗しない 3 つのステップ</div>
+          <div class="queue-tags">
+            <span class="queue-tag">DX 入門</span>
+            <span class="queue-tag">伸びしろ</span>
+          </div>
+        </div>
+        <div class="queue-card">
+          <div class="queue-when">📅 明日 09:00</div>
+          <div class="queue-ti">業務効率化ツール 価格比較 — 月額 5,000 円台で選べる 8 製品</div>
+          <div class="queue-tags">
+            <span class="queue-tag">価格比較</span>
+            <span class="queue-tag">CV 直前</span>
+          </div>
+        </div>
+        <div class="queue-card">
+          <div class="queue-when">📅 明後日 09:00</div>
+          <div class="queue-ti">SaaS 導入事例 — 不動産業 B 社の DM 業務 80% 自動化</div>
+          <div class="queue-tags">
+            <span class="queue-tag">導入事例</span>
+            <span class="queue-tag">強み拡張</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-card" style="background:linear-gradient(135deg,#fffbeb,#fff);border-color:#fbbf24">
+      <div class="cta-card-ic">🔧</div>
+      <div class="cta-card-bd">
+        <div class="cta-card-ti">改善 AI から 提案 3 件</div>
+        <div class="cta-card-sub">記事 #37・#28・#19 は PV 低下傾向。 <b>リライト or 統合 で改善余地大</b>。 提案内容を確認・承認できます。</div>
+      </div>
+      <button class="cta-card-btn" style="background:#d97706">🔧 提案を見る (3)</button>
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <!-- State 4: 公開された記事ページ (= 訪問者視点)                  -->
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <div class="divider">
+      <span class="divider-tx">↓ 公開された記事 (= 訪問者から見たブログ) ↓</span>
+    </div>
+
+    <span class="state-tag">State 4 — 公開記事ページ (訪問者視点)</span>
+
+    <div class="visitor-frame">
+      <div class="visitor-bar">
+        <div class="visitor-dots"><span></span><span></span><span></span></div>
+        <div class="visitor-url">my-service.myaiagents.agency/dx-nyumon-3-steps</div>
+      </div>
+      <div class="visitor-body">
+        <div class="visitor-blog-h">📰 my-service Blog · DX</div>
+        <div class="visitor-art-ti">中小企業の DX 入門 — 失敗しない 3 つのステップ</div>
+        <div class="visitor-art-meta">
+          <span>📅 2026-06-01 公開</span>
+          <span>·</span>
+          <span>👤 監修: my-service 編集部</span>
+          <span>·</span>
+          <span>⏱ 読了 17 分</span>
+        </div>
+
+        <div class="visitor-toc">
+          <div class="visitor-toc-h">📚 目次</div>
+          <div class="visitor-toc-l">
+            1. DX とは? 中小企業の文脈で正しく理解する<br>
+            2. 失敗しない 3 つのステップ<br>
+            3. 業種別の進め方 (製造業 / 小売 / サービス業)<br>
+            4. よくある失敗 5 パターン<br>
+            5. ツール選定の判断軸<br>
+            6. まとめ + 次のアクション
+          </div>
+        </div>
+
+        <div class="visitor-art-body">
+          <p><b>結論から言うと、 中小企業の DX は「① ボトルネック特定 → ② ツール選定 → ③ 業務フロー再設計」の 3 ステップ で進めると失敗しません。</b></p>
+          <p>多くの中小企業は「DX = システム導入」と捉えてしまい、 結局使われずに終わるケースが 7 割以上あります…</p>
+        </div>
+
+        <div class="visitor-art-h2">1. DX とは? 中小企業の文脈で正しく理解する</div>
+        <div class="visitor-art-body">
+          <p>経済産業省の定義では…</p>
+        </div>
+
+        <!-- LP CTA inside article -->
+        <div class="visitor-lp-cta">
+          <div class="visitor-lp-cta-ti">🎯 自社の DX を 30 分で診断</div>
+          <div class="visitor-lp-cta-tx">my-service なら、 ボトルネック特定 → 最適ツール提案まで AI が自動で。<br>無料相談 受付中。</div>
+          <a href="#" class="visitor-lp-cta-btn">→ 詳しく見る (my-service.com)</a>
+        </div>
+
+        <div class="visitor-art-h2">2. 失敗しない 3 つのステップ</div>
+        <div class="visitor-art-body">
+          <p>...</p>
+        </div>
+
+        <div class="visitor-foot">
+          📰 my-service Blog · この記事は <b>MY AI Agent</b> が執筆・公開・改善しています<br>
+          関連記事 · お問い合わせ · プライバシー
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Wizard step navigation demo (= モック内で next/back 動作風)
+  // 実装時は SPA で 1 state ずつ表示。 ここでは全 state を縦に並べて見せる。
+</script>
+</body>
+</html>

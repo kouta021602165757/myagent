@@ -167,6 +167,10 @@
   .title-cta{background:var(--teal);color:#fff;border:0;padding:8px 14px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:5px}
   .title-cta:hover{background:var(--teal-deep)}
   .title-cta .arrow{font-size:13px}
+  /* 2 ボタンレイアウト: 🚀 公開 (主) + 💬 相談 (補) */
+  .title-actions{display:flex;gap:5px;align-items:center}
+  .title-chat{background:#fff;color:var(--text2);border:1px solid var(--wire2);width:32px;height:32px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0;transition:.15s}
+  .title-chat:hover{background:var(--cream3);border-color:var(--text3)}
 
   /* === Phase ラベル === */
   .phase-lbl{display:inline-block;background:#f1f5f9;color:#475569;font-size:9.5px;font-weight:800;letter-spacing:.06em;padding:2.5px 8px;border-radius:4px;margin-bottom:10px;text-transform:uppercase}
@@ -753,13 +757,17 @@
           <span style="margin-left:auto;font-size:9.5px;font-weight:800;background:var(--peach-soft);color:var(--teal-deep);padding:3px 8px;border-radius:5px;letter-spacing:.04em">RECOMMENDED</span>
         </div>
         <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">
-          候補 ① のタイトルで <b>最高品質の本記事 (1 万字以上 + SEO 全対策)</b> を AI チームが今すぐ作成。<b>チャット画面で進捗を見ながら</b>完成 → 品質を確認してから残り 4 本に進められます。
+          候補 ① のタイトルで <b>SEO 記事を生成し、 メディアに自動公開</b>。 約 1 〜 2 分で完了します。
         </div>
-        <button class="kw-template-cta" data-mode="seo" style="background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
-          🤖 AI チームに作成を依頼する
-          <span style="font-size:11px;font-weight:700;opacity:.85">→ チャットで開始 (即座)</span>
-          <span style="font-size:14px">→</span>
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="kw-template-cta" data-mode="seo" style="flex:1;min-width:220px;background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;justify-content:center;line-height:1.3">
+            🚀 候補 ① をメディアに公開
+            <span style="font-size:14px">→</span>
+          </button>
+          <button class="kw-template-chat" data-mode="seo" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);padding:11px 14px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;line-height:1.3" title="AEO 細かい要件をチャットで指示したい時はこちら">
+            💬 チャットで相談
+          </button>
+        </div>
       </div>
 
       <div class="titles">
@@ -769,7 +777,7 @@
             <div class="title-tx">【2026 年最新】中小企業が使える採用助成金 8 種 — 申請条件・金額・期限・成功事例を完全網羅</div>
             <div class="title-meta">📚 約 13,500 字 · h2 案 9 つ · 想定読了 17 分</div>
           </div>
-          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          <div class="title-actions"><button class="title-cta">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
         </div>
 
         <div class="title-row">
@@ -778,7 +786,7 @@
             <div class="title-tx">なぜ中小企業の採用助成金は申請されないのか — 9 割が見落とす申請のコツと審査通過の全プロセス</div>
             <div class="title-meta">📚 約 11,800 字 · h2 案 8 つ · 想定読了 15 分</div>
           </div>
-          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          <div class="title-actions"><button class="title-cta">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
         </div>
 
         <div class="title-row">
@@ -787,7 +795,7 @@
             <div class="title-tx">採用助成金が「落ちた」中小企業の共通点 — 審査担当が教えるリベンジ申請術と再申請完全ガイド</div>
             <div class="title-meta">📚 約 10,600 字 · h2 案 7 つ · 想定読了 13 分</div>
           </div>
-          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          <div class="title-actions"><button class="title-cta">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
         </div>
 
         <div class="title-row">
@@ -796,7 +804,7 @@
             <div class="title-tx">トライアル雇用助成金 vs キャリアアップ助成金 — 中小企業はどちらを選ぶべきか徹底比較</div>
             <div class="title-meta">📚 約 12,400 字 · h2 案 8 つ · 想定読了 16 分</div>
           </div>
-          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          <div class="title-actions"><button class="title-cta">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
         </div>
 
         <div class="title-row">
@@ -805,7 +813,7 @@
             <div class="title-tx">中小企業の社長が今すぐ知るべき採用助成金カレンダー — 12 ヶ月で計画する申請スケジュール</div>
             <div class="title-meta">📚 約 11,200 字 · h2 案 7 つ · 想定読了 14 分</div>
           </div>
-          <button class="title-cta">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+          <div class="title-actions"><button class="title-cta">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
         </div>
 
         <!-- ⟳ 自動補充プレースホルダ -->
@@ -1599,13 +1607,17 @@
             <span style="margin-left:auto;font-size:9.5px;font-weight:800;background:#f3e8ff;color:#5b21b6;padding:3px 8px;border-radius:5px;letter-spacing:.04em">RECOMMENDED</span>
           </div>
           <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">
-            候補 ① のタイトルで <b>最高品質の AEO 記事 (1 万字以上 + FAQ schema 12 問 + 結論先出し)</b> を AI チームが今すぐ作成。<b>チャット画面で進捗を見ながら</b>完成 → 品質を確認してから残り 4 本に進められます。
+            候補 ① のタイトルで <b>AEO 記事を生成し、 メディアに自動公開</b>。 約 1 〜 2 分で完了します。
           </div>
-          <button class="kw-template-cta" data-mode="aeo" style="background:#6d28d9;color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;line-height:1.3">
-            🤖 AI チームに作成を依頼する
-            <span style="font-size:11px;font-weight:700;opacity:.85">→ チャットで開始 (即座)</span>
-            <span style="font-size:14px">→</span>
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="kw-template-cta" data-mode="aeo" style="flex:1;min-width:220px;background:#6d28d9;color:#fff;border:0;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;justify-content:center;line-height:1.3">
+              🚀 候補 ① をメディアに公開
+              <span style="font-size:14px">→</span>
+            </button>
+            <button class="kw-template-chat" data-mode="aeo" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);padding:11px 14px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;line-height:1.3" title="FAQ schema や引用構造を細かく指示したい時はこちら">
+              💬 チャットで相談
+            </button>
+          </div>
         </div>
 
         <div class="titles">
@@ -1615,7 +1627,7 @@
               <div class="title-tx">中小企業の採用助成金とは？— 2026 年最新 8 種類・申請条件・金額・受給までの流れを Q&A 形式で完全解説</div>
               <div class="title-meta">📚 約 13,200 字 · h2 案 9 つ + FAQ schema 12 問 · 想定読了 17 分</div>
             </div>
-            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+            <div class="title-actions"><button class="title-cta" style="background:#6d28d9">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
           </div>
           <div class="title-row">
             <div class="title-rank">②</div>
@@ -1623,7 +1635,7 @@
               <div class="title-tx">【結論先出し】中小企業が使える採用助成金 — 8 種類・金額・申請条件を表で比較</div>
               <div class="title-meta">📚 約 11,400 字 · h2 案 8 つ + 比較表 3 種 · 想定読了 14 分</div>
             </div>
-            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+            <div class="title-actions"><button class="title-cta" style="background:#6d28d9">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
           </div>
           <div class="title-row">
             <div class="title-rank">③</div>
@@ -1631,7 +1643,7 @@
               <div class="title-tx">採用助成金の申請方法を 7 ステップで解説 — 必要書類・期限・審査ポイント完全ガイド</div>
               <div class="title-meta">📚 約 10,800 字 · h2 案 7 つ + HowTo schema · 想定読了 14 分</div>
             </div>
-            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+            <div class="title-actions"><button class="title-cta" style="background:#6d28d9">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
           </div>
           <div class="title-row">
             <div class="title-rank">④</div>
@@ -1639,7 +1651,7 @@
               <div class="title-tx">採用助成金は誰が対象？— 中小企業の定義から労働者条件まで Q&A 20 問で答える</div>
               <div class="title-meta">📚 約 12,100 字 · h2 案 8 つ + FAQ schema 20 問 · 想定読了 15 分</div>
             </div>
-            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+            <div class="title-actions"><button class="title-cta" style="background:#6d28d9">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
           </div>
           <div class="title-row">
             <div class="title-rank">⑤</div>
@@ -1647,7 +1659,7 @@
               <div class="title-tx">採用助成金 2026 年改正で何が変わった？— 新旧比較表 + 中小企業への影響を社労士監修で解説</div>
               <div class="title-meta">📚 約 11,600 字 · h2 案 7 つ + 監修者明記 · 想定読了 15 分</div>
             </div>
-            <button class="title-cta" style="background:#6d28d9">🤖 AI チームに依頼 <span class="arrow">→</span></button>
+            <div class="title-actions"><button class="title-cta" style="background:#6d28d9">🚀 メディアに公開 <span class="arrow">→</span></button><button class="title-chat" title="チャットで相談 (= AEO カスタム要件など)">💬</button></div>
           </div>
 
           <!-- ⟳ 自動補充プレースホルダ (AEO 版) -->
@@ -2010,9 +2022,12 @@
   // 🤖 AI チームに依頼ボタン (= テンプレ CTA + 各タイトルの依頼ボタン共通ハンドラ)
   // event delegation で動的描画後のボタンも捕捉
   document.body.addEventListener('click', function(e){
-    // 1) AI チーム依頼系 CTA
-    var btn = e.target.closest('.title-cta, .kw-template-cta');
-    if(btn){ e.preventDefault(); _kwHandleRequestArticle(btn); return; }
+    // 1a) 主 CTA = メディアに公開 (= kw-publish-media へ)
+    var pubBtn = e.target.closest('.title-cta, .kw-template-cta');
+    if(pubBtn){ e.preventDefault(); _kwHandleRequestArticle(pubBtn, 'publish'); return; }
+    // 1b) 補 CTA = チャットで相談 (= 旧 kw-send-chat 経路、 AEO 細かい要件用)
+    var chatBtn = e.target.closest('.title-chat, .kw-template-chat');
+    if(chatBtn){ e.preventDefault(); _kwHandleRequestArticle(chatBtn, 'chat'); return; }
     // 2) chip / 急上昇行 → そのキーワードで再検索
     var chip = e.target.closest('.chip, .rising-row');
     if(chip && _siteId){
@@ -2071,17 +2086,19 @@
     }
   });
 
-  function _kwHandleRequestArticle(btn){
+  function _kwHandleRequestArticle(btn, action){
+    // action: 'publish' = メディアに公開 (= primary)、 'chat' = チャットで相談 (= secondary)
+    action = action || 'publish';
+    // .title-chat / .kw-template-chat は .title-row の中の別の場所にあるので、
+    // tab-pane + (title-row or template) を共通の取り方に
     var pane = btn.closest('.tab-pane');
     var mode = (pane && pane.dataset.tab) || 'seo';
     var titleText = '';
     var row = btn.closest('.title-row');
     if(row){
-      // 5 推奨タイトルの 1 つから
       var tx = row.querySelector('.title-tx');
       if(tx) titleText = tx.textContent.trim();
-    } else if(btn.classList.contains('kw-template-cta')){
-      // テンプレ CTA — 候補 #1 のキーワードを使う
+    } else if(btn.classList.contains('kw-template-cta') || btn.classList.contains('kw-template-chat')){
       var firstCand = pane && pane.querySelector('.cands .cand');
       if(firstCand){
         var kwEl = firstCand.querySelector('.cand-kw');
@@ -2092,7 +2109,22 @@
       alert('タイトルが取得できませんでした。候補がまだ読み込み中の可能性があります。');
       return;
     }
-    // chat 用プロンプト
+    if(action === 'publish'){
+      // 🚀 メディアに公開: 親 (app.js) が /api/.../media/articles/generate を呼ぶ
+      try {
+        window.parent.postMessage({
+          type: 'kw-publish-media',
+          siteId: _siteId,
+          title: titleText,
+          keyword: titleText, // タイトル ≒ ターゲットキーワードとして使う
+          mode: mode,
+        }, location.origin);
+      } catch(_){
+        alert('メディア公開リクエストに失敗しました。');
+      }
+      return;
+    }
+    // 💬 チャットで相談: 旧 kw-send-chat
     var prompt;
     if(mode === 'aeo'){
       prompt = '「' + titleText + '」というタイトルで AEO 最適化記事を作成してください。\n\n'
@@ -2109,7 +2141,6 @@
         + '・h2 9 つ以上で網羅性を担保\n'
         + '・結論先出し + 具体例・数値を豊富に';
     }
-    // 親に postMessage → app.js が _quickSendPrompt() で chat 送信
     try {
       window.parent.postMessage({ type: 'kw-send-chat', siteId: _siteId, prompt: prompt }, location.origin);
     } catch(_){

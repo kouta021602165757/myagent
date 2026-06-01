@@ -2897,6 +2897,21 @@ function _openSiteTabModal(siteId, tabKey){
           }
         }, 80);
       }
+      else if(t === 'kw-publish-media'){
+        // 🚀 KW → メディアに直接公開 — /media/articles/generate を呼んで自動公開
+        // メディア未作成なら 60 秒 short-Wizard を提示してから生成へ
+        var kwTitle = String(e.data.title || e.data.keyword || '');
+        var kwMode = String(e.data.mode || 'seo');
+        if(!kwTitle){ try { showToast('タイトルが空です','ng'); } catch(_){} return; }
+        if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
+        setTimeout(function(){
+          try { _kwPublishToMedia(_kwSiteId, kwTitle, kwMode); }
+          catch(err){
+            console.warn('[kw-publish-media] failed:', err && err.message);
+            try { showToast('公開失敗: ' + (err && err.message || 'unknown'), 'ng'); } catch(_){}
+          }
+        }, 80);
+      }
     };
     window.addEventListener('message', _kwHandler);
     window._kwSessions[_kwSiteId] = _kwHandler;
@@ -10246,15 +10261,15 @@ function _renderTabMedia(site){
       +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">CV</div><div style="font-size:17px;font-weight:900">—</div></div>'
       +   '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:8px;margin-bottom:14px">'
-      +   '<button onclick="_mediaGenArticleFlow(\''+esc(site.id)+'\')" style="flex:1;background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">✨ 新しい記事を AI に書かせる</button>'
-      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="flex:1;background:#fff;border:1px solid var(--wire2);color:var(--text);padding:11px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 キーワード調査から</button>'
+      + '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
+      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="flex:1;min-width:220px;background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査でネタを探す</button>'
+      +   '<button onclick="_mediaGenArticleFlow(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:11px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✨ キーワードを直接入力</button>'
       + '</div>'
       + (posts.length === 0
           ? '<div style="background:#fff;border:1.5px dashed var(--peach-dark);border-radius:11px;padding:24px;text-align:center;margin-bottom:14px">'
             + '<div style="font-size:36px;margin-bottom:8px">📝</div>'
             + '<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:6px">最初の記事を AI チームに書かせよう</div>'
-            + '<div style="font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.55">「✨ 新しい記事を AI に書かせる」 で、 キーワードを 1 つ指定するだけ。 5,000 文字以上の記事 + AI 画像が自動で公開されます。</div>'
+            + '<div style="font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.55"><b>🔍 キーワード調査でネタを探す</b> がおすすめ。 AI が貴社サイト向けに 10〜20 個の SEO 候補を生成 → 1 クリックで記事化 + 公開できます。</div>'
             + '</div>'
           : '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px;font-size:12px;margin-bottom:14px">'
             + '<b style="color:var(--text);font-size:12.5px">公開済記事 ' + posts.length + ' 本</b>'
@@ -10521,6 +10536,145 @@ function _mediaWizStep3HTML(currentTemplate){
     +   '<button onclick="_mediaWizGoStep(4)" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">✨ ブログを作成 →</button>'
     + '</div>';
 }
+
+// 🚀 キーワード調査 → メディアに公開 (= 直接ルート)
+// メディア未作成なら 60 秒 short-Wizard (名前 + slug のみ) で先に作る
+window._kwPublishToMedia = async function(siteId, title, mode){
+  if(!siteId || !title) return;
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag){ showToast('サイトが見つかりません','ng'); return; }
+  // メディア未作成 → 60 秒 short-Wizard モーダル
+  if(!ag.media || !ag.media.id){
+    var siteHostname = '';
+    try { siteHostname = new URL(ag.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+    var defSlug = siteHostname.split('.')[0] || (ag.name || 'media').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,20);
+    var defName = (ag.name || siteHostname || 'My Blog') + ' Blog';
+    if(document.getElementById('mediaQuickOverlay')) return; // 多重起動防止
+    var ov = document.createElement('div');
+    ov.id = 'mediaQuickOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+    ov.innerHTML = ''
+      + '<div id="mediaQuickCard" style="background:#fff;border-radius:14px;padding:26px 28px;max-width:460px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
+      +   '<div style="font-size:11px;color:var(--teal-deep);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">🚀 メディアに公開する前に</div>'
+      +   '<div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.4">ブログをまだ立ち上げてないので、 60 秒で作ります</div>'
+      +   '<div style="font-size:11.5px;color:var(--text3);margin-bottom:16px;line-height:1.6">これだけ入力すれば、 すぐに記事を公開できます。 カテゴリ・テンプレート・ロゴは default で OK (= 後から変更可)。</div>'
+      +   '<div style="margin-bottom:12px">'
+      +     '<div style="font-size:11px;font-weight:800;margin-bottom:5px">ブログ名</div>'
+      +     '<input id="mqName" type="text" value="'+esc(defName)+'" style="width:100%;padding:11px 13px;border:1.5px solid var(--wire2);border-radius:8px;font-size:13.5px;font-family:inherit;outline:0">'
+      +   '</div>'
+      +   '<div style="margin-bottom:18px">'
+      +     '<div style="font-size:11px;font-weight:800;margin-bottom:5px">ブログ URL</div>'
+      +     '<div style="display:flex;align-items:center;background:var(--cream3);border:1.5px solid var(--wire2);border-radius:8px;overflow:hidden">'
+      +       '<span style="padding:11px 8px;font-size:12px;font-family:\'SF Mono\',Menlo,monospace;color:var(--text3)">myaiagents.agency/media/</span>'
+      +       '<input id="mqSlug" type="text" value="'+esc(defSlug)+'" style="flex:1;border:0;background:transparent;padding:11px 6px;font-size:13px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);outline:0">'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="background:var(--peach-soft);border-radius:8px;padding:10px 13px;margin-bottom:18px;font-size:11.5px;color:var(--text2);line-height:1.55">'
+      +     '✨ 立ち上げ後、 続けて <b>「'+esc(title)+'」</b> を AI が記事化して自動公開します。'
+      +   '</div>'
+      +   '<div style="display:flex;justify-content:flex-end;gap:10px">'
+      +     '<button onclick="_kwQuickClose()" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button>'
+      +     '<button onclick="_kwQuickSubmit(\''+esc(siteId)+'\',\''+esc(title.replace(/'/g,"\\'"))+'\',\''+esc(mode)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">立ち上げて公開 →</button>'
+      +   '</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+    setTimeout(function(){
+      var inp = document.getElementById('mqName');
+      if(inp){ inp.focus(); inp.select(); }
+    }, 30);
+    return;
+  }
+  // メディア作成済 → 即座に記事生成へ
+  _kwInvokeArticleGen(siteId, title, mode);
+};
+
+window._kwQuickClose = function(){
+  var ov = document.getElementById('mediaQuickOverlay');
+  if(ov) ov.remove();
+};
+
+window._kwQuickSubmit = async function(siteId, title, mode){
+  var name = (document.getElementById('mqName')||{}).value || '';
+  var slug = (document.getElementById('mqSlug')||{}).value || '';
+  name = name.trim(); slug = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-');
+  if(!name || !slug){ showToast('ブログ名と URL を入力してください','ng'); return; }
+  var card = document.getElementById('mediaQuickCard');
+  if(card){
+    card.innerHTML = '<div style="text-align:center;padding:30px 10px">'
+      + '<div style="font-size:38px;margin-bottom:8px">⚙️</div>'
+      + '<div style="font-size:14px;font-weight:900;color:var(--text)">ブログを立ち上げ中…</div>'
+      + '</div>';
+  }
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/create', {
+      slug: slug, name: name, template: 'minimal', brand_color: '#0d4f4a',
+      lp_url: ((agents||[]).find(function(a){return a&&a.id===siteId;})||{}).site_url || '',
+      categories: [],
+    });
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(ag) ag.media = r.media;
+    _kwQuickClose();
+    // 続けて記事生成
+    _kwInvokeArticleGen(siteId, title, mode);
+  } catch(e){
+    if(card){
+      card.innerHTML = '<div style="text-align:center;padding:18px 10px">'
+        + '<div style="font-size:32px;margin-bottom:8px">⚠️</div>'
+        + '<div style="font-size:13.5px;font-weight:800;color:#9a3412;margin-bottom:8px">ブログ立ち上げ失敗</div>'
+        + '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:16px">'+esc(e.message||'unknown')+'</div>'
+        + '<button onclick="_kwQuickClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 20px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button>'
+        + '</div>';
+    }
+  }
+};
+
+// 共通: 記事生成 + 公開モーダル (= _mediaGenArticleFlow と loader UI 共有)
+window._kwInvokeArticleGen = async function(siteId, title, mode){
+  if(document.getElementById('mediaArtOverlay')) return; // 多重起動防止
+  var ov = document.createElement('div');
+  ov.id = 'mediaArtOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.innerHTML = ''
+    + '<div id="mediaArtCard" style="background:#fff;border-radius:14px;padding:26px 28px;max-width:440px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
+    +   '<div style="text-align:center;padding:20px 10px">'
+    +     '<div style="font-size:42px;margin-bottom:10px">✨</div>'
+    +     '<div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:8px">AI チームが記事を執筆中</div>'
+    +     '<div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-bottom:14px">「' + esc(title) + '」 で '+(mode==='aeo'?'AEO 記事':'SEO 記事')+' を生成中。<br>1〜2 分かかります。</div>'
+    +     '<div style="background:var(--cream3);border-radius:7px;height:6px;overflow:hidden;position:relative"><div style="background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:30%;animation:mediaArtPulse 2s infinite ease-in-out"></div></div>'
+    +     '<style>@keyframes mediaArtPulse{0%{width:15%;margin-left:0}50%{width:75%;margin-left:25%}100%{width:15%;margin-left:85%}}</style>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', {
+      keyword: title, target_chars: 5000, mode: mode,
+    });
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(ag){
+      if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+      ag.media_posts_idx.unshift(r.post);
+    }
+    _mediaArtClose();
+    showToast('✅ 「'+(r.post.title||'').slice(0,30)+'…」を公開しました','ok');
+    // メディアダッシュボードを開いて確認できるようにする
+    window.openMediaPanel(siteId);
+  } catch(e){
+    var msg = (e && e.message) || 'unknown';
+    if(/credit/i.test(msg))      msg = 'AI クレジットが不足しています。 設定 → 課金 で追加してください。';
+    else if(/timeout/i.test(msg)) msg = 'タイムアウトしました。 もう一度お試しください。';
+    else if(/rate/i.test(msg))   msg = 'リクエスト過多です。 少し時間を置いてください。';
+    var card = document.getElementById('mediaArtCard');
+    if(card){
+      card.innerHTML = ''
+        + '<div style="text-align:center;padding:12px 4px">'
+        +   '<div style="font-size:34px;margin-bottom:8px">⚠️</div>'
+        +   '<div style="font-size:14px;font-weight:900;color:#9a3412;margin-bottom:8px">記事生成に失敗</div>'
+        +   '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:18px">' + esc(msg) + '</div>'
+        +   '<button onclick="_mediaArtClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button>'
+        + '</div>';
+    }
+  }
+};
 
 // メディアダッシュボードから「✨ 新しい記事」 を生成 — inline modal で kw 入力 → loader → 結果
 window._mediaGenArticleFlow = function(siteId){

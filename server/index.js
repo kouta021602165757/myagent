@@ -7692,6 +7692,179 @@ function _safeName(s, fallback){
   return x || fallback || 'file';
 }
 
+// ══════════════════════════════════════════════════════════════════
+// 📝 メディア機能 (Phase A) helpers
+// ══════════════════════════════════════════════════════════════════
+// 設計: project_media_design_strategy.md / project_media_as_funnel.md /
+//       project_master_pitch_copy.md
+// ───────────────────────────────────────────────────────────────────
+
+// 「予約済 slug」 (= ユーザに使わせない、 internal route 衝突回避)
+const MEDIA_RESERVED_SLUGS = new Set([
+  'api','app','auth','admin','blog','media','assets','static','public',
+  'sitemap','robots','setup','share','generated','docs','lp','dashboard',
+  'login','logout','signup','register','www','mail','smtp','ftp',
+]);
+
+// メディア slug 生成 — 半角英数 + ハイフン、 1-40 文字
+function _mediaSlugify(s){
+  const base = String(s || '').toLowerCase()
+    .replace(/[　-〿＀-￯]/g, '-')  // 全角記号 → ハイフン
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/--+/g, '-')
+    .slice(0, 40);
+  return base || ('media-' + crypto.randomBytes(3).toString('hex'));
+}
+
+// グローバル slug 重複チェック (= 全 user の agent.media.slug を見て重複なら -N を付ける)
+// ※ 本 helper は Wizard 完了時 1 回しか呼ばれない (= cost 許容)。 Supabase に
+// 数千レコードある状況でも問題ない (= SELECT 1 カラム の lightweight)。
+async function _mediaUniqueSlug(base){
+  let slug = _mediaSlugify(base);
+  if(MEDIA_RESERVED_SLUGS.has(slug)) slug = slug + '-blog';
+  // Supabase で agents JSONB の slug を探すのは難しいので、 全 lean fetch して
+  // メモリで探す。 N≤数千 想定で OK。
+  try {
+    const r = await sbReq('GET', 'users', '?select=agents&limit=10000');
+    if(r.s !== 200) return slug;  // fail-open
+    const usedSlugs = new Set();
+    (r.d || []).forEach(u => {
+      (u.agents || []).forEach(a => {
+        const s = a && a.media && a.media.slug;
+        if(s) usedSlugs.add(String(s).toLowerCase());
+      });
+    });
+    if(!usedSlugs.has(slug)) return slug;
+    // 重複あり → -2, -3 ... を試す
+    for(let i = 2; i <= 99; i++){
+      const cand = (slug.slice(0, 36)) + '-' + i;
+      if(!usedSlugs.has(cand)) return cand;
+    }
+    // 99 まで重複なら hash
+    return _mediaSlugify(slug.slice(0, 30)) + '-' + crypto.randomBytes(3).toString('hex');
+  } catch(e){
+    console.warn('[media-slug] lookup failed:', e.message);
+    return slug;
+  }
+}
+
+// post slug 生成 (= per-media、 重複は同 media 内で確認)
+function _mediaPostSlug(title, existingSlugs){
+  let s = _mediaSlugify(title);
+  if(!s) s = 'post-' + crypto.randomBytes(3).toString('hex');
+  const set = new Set((existingSlugs || []).map(x => String(x).toLowerCase()));
+  if(!set.has(s)) return s;
+  for(let i = 2; i <= 99; i++){
+    const cand = s.slice(0, 36) + '-' + i;
+    if(!set.has(cand)) return cand;
+  }
+  return s + '-' + crypto.randomBytes(3).toString('hex');
+}
+
+// ロゴ自動抽出 — 7 段階フォールバック
+// project_media_design_strategy.md 準拠
+async function _mediaExtractLogo(siteUrl){
+  if(!siteUrl) return { logo_url: null, source: 'none', candidates: [] };
+  const base = (function(){
+    try { const u = new URL(siteUrl); return u.protocol + '//' + u.host; }
+    catch(_){ return siteUrl.replace(/\/$/, ''); }
+  })();
+  const candidates = [];
+  let html = '';
+  try {
+    const ctrl = new AbortController();
+    const tm = setTimeout(() => ctrl.abort(), 8000);
+    const fres = await fetch(base, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MY-AI-Agent-Media/1.0)' },
+      redirect: 'follow',
+    }).catch(() => null);
+    clearTimeout(tm);
+    if(fres && fres.ok) html = await fres.text();
+  } catch(e){ console.warn('[media-logo] fetch failed:', e.message); }
+
+  // 1) apple-touch-icon (高解像度、 通常 180×180)
+  const appleM = html.match(/<link[^>]+rel=["']apple-touch-icon(?:-precomposed)?["'][^>]+href=["']([^"']+)["']/i);
+  if(appleM){ candidates.push({ source: 'apple-touch-icon', url: _resolveAbsUrl(appleM[1], base) }); }
+
+  // 2) <link rel="icon" sizes="..."> 最大サイズを優先
+  const iconRe = /<link[^>]+rel=["'](?:icon|shortcut icon)["'][^>]*>/gi;
+  const iconMatches = html.match(iconRe) || [];
+  let bestIcon = null;
+  let bestIconSize = 0;
+  iconMatches.forEach(tag => {
+    const hrefM = tag.match(/href=["']([^"']+)["']/i);
+    if(!hrefM) return;
+    const sizeM = tag.match(/sizes=["']([^"']+)["']/i);
+    const size = sizeM ? parseInt(sizeM[1].split('x')[0], 10) || 0 : 16;
+    if(size > bestIconSize){ bestIconSize = size; bestIcon = hrefM[1]; }
+  });
+  if(bestIcon){ candidates.push({ source: 'link-icon-' + bestIconSize, url: _resolveAbsUrl(bestIcon, base) }); }
+
+  // 3) /favicon.ico fallback
+  candidates.push({ source: 'favicon.ico', url: base + '/favicon.ico' });
+
+  // 4) og:image (高解像度、 通常 1200×630)
+  const ogM = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+  if(ogM){ candidates.push({ source: 'og:image', url: _resolveAbsUrl(ogM[1], base) }); }
+
+  // 5) msapplication-TileImage (Windows tile)
+  const tileM = html.match(/<meta[^>]+name=["']msapplication-TileImage["'][^>]+content=["']([^"']+)["']/i);
+  if(tileM){ candidates.push({ source: 'msapplication-tile', url: _resolveAbsUrl(tileM[1], base) }); }
+
+  // 6) <img class*="logo"> or alt 内に「ロゴ」「logo」 (= heuristic)
+  const imgLogoRe = /<img\s+[^>]*(?:class=["'][^"']*logo[^"']*["']|alt=["'][^"']*(?:ロゴ|logo)[^"']*["'])[^>]*>/gi;
+  const imgMatches = html.match(imgLogoRe) || [];
+  if(imgMatches.length){
+    const hrefM = imgMatches[0].match(/src=["']([^"']+)["']/i);
+    if(hrefM){ candidates.push({ source: 'img-class-logo', url: _resolveAbsUrl(hrefM[1], base) }); }
+  }
+
+  // 優先順位通りに HEAD で存在確認 → 最初の OK を返す
+  let picked = null;
+  for(const c of candidates){
+    if(!c.url) continue;
+    try {
+      const ctrl = new AbortController();
+      const tm = setTimeout(() => ctrl.abort(), 3500);
+      const r = await fetch(c.url, { method: 'HEAD', signal: ctrl.signal }).catch(() => null);
+      clearTimeout(tm);
+      if(r && r.ok){
+        const ct = String(r.headers.get('content-type') || '').toLowerCase();
+        if(/image|svg/.test(ct)){ picked = c; break; }
+      }
+    } catch(_){}
+  }
+
+  // 7) フォールバック: サイト名 1 文字を gradient pill (data: URL)
+  if(!picked){
+    let initial = '';
+    try { initial = (new URL(base).hostname.replace(/^www\./, '')[0] || 'M').toUpperCase(); }
+    catch(_){ initial = 'M'; }
+    const fallbackSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0d4f4a"/><stop offset="100%" stop-color="#0a3d39"/></linearGradient></defs><rect width="120" height="120" rx="22" fill="url(#g)"/><text x="60" y="78" font-family="system-ui" font-size="62" font-weight="900" fill="#c0ff5c" text-anchor="middle">' + initial + '</text></svg>';
+    const dataUrl = 'data:image/svg+xml;base64,' + Buffer.from(fallbackSvg).toString('base64');
+    picked = { source: 'fallback-gradient-svg', url: dataUrl };
+  }
+
+  return { logo_url: picked.url, source: picked.source, candidates };
+}
+
+// 相対 URL → 絶対 URL 解決 (= //cdn.example.com や /path や https://... 全部対応)
+function _resolveAbsUrl(href, baseUrl){
+  if(!href) return null;
+  href = String(href).trim();
+  if(/^https?:\/\//i.test(href)) return href;
+  if(href.startsWith('//')) return 'https:' + href;
+  if(href.startsWith('data:')) return href;
+  try {
+    const u = new URL(href, baseUrl);
+    return u.href;
+  } catch(_){
+    return href.startsWith('/') ? (baseUrl + href) : (baseUrl + '/' + href);
+  }
+}
+
 // ── 1) generate_audio — standalone TTS mp3 ───────────────────
 async function executeAudioTool(input){
   const text  = String(input && input.text || '').trim();

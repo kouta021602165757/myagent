@@ -132,6 +132,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS mention_email_pref    text;
 NOTIFY pgrst, 'reload schema';
 
 -- ──────────────────────────────────────────────────────────────────
+-- メディア機能 (= Phase A、 2026-06-01) — agent.media は agent JSONB 内、
+-- ただし記事本文 (= body_html) は size が大きいので別 column に分離。
+-- USER_COLS_LEAN には含めず、 GET /media/:slug 等の SSR でのみ SELECT。
+-- ──────────────────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS media_posts_full jsonb DEFAULT '{}'::jsonb;
+
+-- ──────────────────────────────────────────────────────────────────
 -- (OPTIONAL) 既存ユーザーを retroactively Founder 100 に登録するバックフィル
 -- ──────────────────────────────────────────────────────────────────
 -- Founder 100 機構を後付けした関係で、既存のサインアップ済みユーザーには

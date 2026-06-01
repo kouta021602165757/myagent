@@ -2786,6 +2786,10 @@ function _openSiteTabModal(siteId, tabKey){
     title = '⚙️ ' + L('設定','Settings');
     try { content = _renderTabSettings(site); }
     catch(err){ console.error('[settings-panel] render failed:', err); content = _dgrErrCard(err); }
+  } else if(tabKey === 'media'){
+    title = '📝 ' + L('メディア','Media');
+    try { content = _renderTabMedia(site); }
+    catch(err){ console.error('[media-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'keyword'){
     title = '🔍 ' + L('キーワード調査','Keyword research');
     // PHASE-1A: mock を iframe で表示。iframe は別 document で JWT token を持たないので、
@@ -2967,13 +2971,8 @@ window._closeSiteTabModal = function(){
 
 window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
 window.openKeywordPanel       = function(siteId){ _openSiteTabModal(siteId, 'keyword'); };
-// 📝 メディア (Phase A.2): 暫定的に mock-media-launch.html を別タブで起動。
-// A.4 で本物の Wizard / Dashboard モーダルに置き換える。
-window.openMediaPanel         = function(siteId){
-  // siteId を Wizard 側に渡せるよう URL 引数化 (= 後で繋ぐ準備)
-  var url = '/mock-media-launch.html' + (siteId ? '?site=' + encodeURIComponent(siteId) : '');
-  window.open(url, '_blank', 'noopener');
-};
+// 📝 メディア (Phase A.4): in-app Wizard / Dashboard modal を開く
+window.openMediaPanel         = function(siteId){ _openSiteTabModal(siteId, 'media'); };
 window.openStrategyPanel      = function(siteId){ _openSiteTabModal(siteId, 'strategy'); };
 window.openTasksPanel         = function(siteId){ _openSiteTabModal(siteId, 'tasks'); };
 window.openAgentsPanel        = function(siteId){ _openSiteTabModal(siteId, 'agents'); };
@@ -10216,6 +10215,317 @@ function _renderTabConnections(site){
     + ecHTML
     + formHTML
     + internalToolsHTML
+    + '</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// 📝 メディア機能 (Phase A.4) — Wizard / Dashboard モーダル
+// ══════════════════════════════════════════════════════════════════
+function _renderTabMedia(site){
+  var hasMedia = !!(site && site.media && site.media.id);
+  if(hasMedia){
+    // === Dashboard mode (= 運用中) ===
+    var media = site.media;
+    var posts = site.media_posts_idx || [];
+    var publicUrl = 'https://' + esc(media.domain || (media.slug + '.myaiagents.agency'));
+    return ''
+      + '<div style="background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:14px;position:relative">'
+      +   '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">'
+      +     '<div style="font-size:30px">'+(media.logo_url ? '<img src="'+esc(media.logo_url)+'" alt="" style="width:42px;height:42px;border-radius:9px;object-fit:cover">' : '📝')+'</div>'
+      +     '<div style="flex:1;min-width:0">'
+      +       '<div style="font-size:18px;font-weight:900;line-height:1.2">'+esc(media.name)+'</div>'
+      +       '<div style="font-size:11px;font-family:\'SF Mono\',Menlo,monospace;opacity:.8;margin-top:3px">'+publicUrl+'</div>'
+      +     '</div>'
+      +     '<a href="'+publicUrl+'" target="_blank" rel="noopener" style="background:rgba(255,255,255,.15);color:#fff;text-decoration:none;padding:7px 14px;border-radius:7px;font-size:11.5px;font-weight:800">🔗 公開ページ →</a>'
+      +   '</div>'
+      +   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
+      +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">公開済記事</div><div style="font-size:17px;font-weight:900">'+posts.length+' <span style="font-size:11px;opacity:.7">本</span></div></div>'
+      +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">月間 PV</div><div style="font-size:17px;font-weight:900">—</div></div>'
+      +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">LP 送客</div><div style="font-size:17px;font-weight:900">—</div></div>'
+      +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">CV</div><div style="font-size:17px;font-weight:900">—</div></div>'
+      +   '</div>'
+      + '</div>'
+      + (posts.length === 0
+          ? '<div style="background:#fff;border:1.5px dashed var(--peach-dark);border-radius:11px;padding:24px;text-align:center;margin-bottom:14px">'
+            + '<div style="font-size:36px;margin-bottom:8px">📝</div>'
+            + '<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:6px">最初の記事を AI チームに書かせよう</div>'
+            + '<div style="font-size:11.5px;color:var(--text2);margin-bottom:14px;line-height:1.55">キーワード調査 (= 🔍) から候補を選んで、 AI チームに記事作成を依頼してください。 自動で公開され、 LP に集客が始まります。</div>'
+            + '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査から始める →</button>'
+            + '</div>'
+          : '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px;font-size:12px;color:var(--text2)">'
+            + '<b>公開済記事 ' + posts.length + ' 本</b><br>'
+            + '(= Phase A.6 で記事一覧 + ステータスを表示)'
+            + '</div>')
+      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55">'
+      +   '<b style="color:var(--text2)">📂 カテゴリ</b>: '
+      +   ((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')
+      + '</div>';
+  }
+
+  // === Wizard mode (= 未作成) ===
+  // 4 step: 基本情報 → カテゴリ → デザイン → 完成
+  var siteHostname = '';
+  try { siteHostname = new URL(site.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+  var defaultSlug = siteHostname.split('.')[0] || (site.name || 'media').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 20);
+  var defaultName = (site.name || siteHostname || 'My Blog') + ' Blog';
+
+  // initial state into window._mediaWiz for cross-step access
+  setTimeout(function(){
+    window._mediaWiz = {
+      siteId: site.id,
+      siteUrl: site.site_url,
+      step: 1,
+      slug: defaultSlug,
+      name: defaultName,
+      logo_url: null,
+      logo_source: null,
+      categories: null,
+      template: 'minimal',
+      brand_color: '#0d4f4a',
+    };
+    // 自動で logo 抽出を即座に開始
+    _mediaWizFetchLogo();
+  }, 50);
+
+  return ''
+    + '<div id="mediaWizRoot">'
+    +   _mediaWizStepHeader(1)
+    +   _mediaWizStep1HTML(defaultSlug, defaultName, siteHostname)
+    + '</div>';
+}
+
+function _mediaWizStepHeader(currentStep){
+  var steps = [
+    { num: 1, ti: '基本情報' },
+    { num: 2, ti: 'カテゴリ' },
+    { num: 3, ti: 'デザイン' },
+    { num: 4, ti: '完成' },
+  ];
+  return '<div style="display:flex;gap:6px;background:var(--cream3);border-radius:9px;padding:9px;margin-bottom:18px">'
+    + steps.map(function(s){
+        var cls = s.num < currentStep ? 'done' : (s.num === currentStep ? 'now' : '');
+        var bg = cls === 'now' ? 'var(--teal)' : (cls === 'done' ? 'var(--peach-soft)' : '#fff');
+        var fg = cls === 'now' ? '#fff' : (cls === 'done' ? 'var(--teal-deep)' : 'var(--text3)');
+        var brd = cls === 'now' ? 'var(--teal)' : (cls === 'done' ? 'var(--peach-dark)' : 'var(--wire2)');
+        return '<div style="flex:1;text-align:center;padding:7px 6px;border-radius:7px;background:'+bg+';color:'+fg+';border:1px solid '+brd+';line-height:1.3">'
+          + '<div style="font-size:9.5px;font-weight:800;opacity:.7;letter-spacing:.04em">STEP '+s.num+'</div>'
+          + '<div style="font-size:11.5px;font-weight:800;margin-top:1px">'+s.ti+'</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+function _mediaWizStep1HTML(defSlug, defName, hostname){
+  return ''
+    + '<div style="font-size:10px;color:var(--teal-deep);letter-spacing:.06em;font-weight:800;text-transform:uppercase;margin-bottom:6px">Step 1 / 4 — 基本情報</div>'
+    + '<div style="font-size:18px;font-weight:900;margin-bottom:8px;line-height:1.35">ブログの名前と URL を決める</div>'
+    + '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px">AI がすでに <b>'+esc(hostname || '(URL 未設定)')+'</b> を解析して、 おすすめのブログ名と URL を提案してます。 編集 OK。</div>'
+
+    + '<div style="margin-bottom:14px">'
+    +   '<div style="font-size:11px;font-weight:800;margin-bottom:5px">ブログ名 <span style="font-size:10px;font-weight:600;color:var(--text3);margin-left:auto;float:right">AI 推奨</span></div>'
+    +   '<input id="mwName" type="text" value="'+esc(defName)+'" style="width:100%;padding:10px 12px;border:1px solid var(--wire2);border-radius:8px;font-size:13px;font-family:inherit">'
+    +   '<div style="font-size:10.5px;color:var(--text3);margin-top:5px">記事一覧ページの hero / OG / SEO title に使われます</div>'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px">'
+    +   '<div style="font-size:11px;font-weight:800;margin-bottom:5px">ブログ URL <span style="font-size:10px;font-weight:600;color:var(--text3);margin-left:auto;float:right">どこに公開するか</span></div>'
+    +   '<div style="display:flex;align-items:center;background:var(--cream3);border:1px solid var(--wire2);border-radius:9px;overflow:hidden">'
+    +     '<input id="mwSlug" type="text" value="'+esc(defSlug)+'" style="flex:1;border:0;background:transparent;padding:11px 12px;font-size:13.5px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);outline:0">'
+    +     '<div style="padding:11px 14px;background:#fff;border-left:1px solid var(--wire2);font-size:12.5px;font-family:\'SF Mono\',Menlo,monospace;color:var(--text2);font-weight:700">.myaiagents.agency</div>'
+    +   '</div>'
+    +   '<div style="font-size:10.5px;color:var(--text3);margin-top:5px;line-height:1.55">✓ 即時公開 (DNS 不要) ✓ 月 ¥0 〜 ✓ 後からカスタムドメイン移行可</div>'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px">'
+    +   '<div style="font-size:11px;font-weight:800;margin-bottom:5px">ロゴ <span style="font-size:10px;font-weight:600;color:var(--text3);margin-left:auto;float:right">LP から自動抽出</span></div>'
+    +   '<div id="mwLogoBox" style="display:flex;align-items:center;gap:12px;background:var(--cream3);border:1px solid var(--wire2);border-radius:9px;padding:12px 14px">'
+    +     '<div style="width:42px;height:42px;background:linear-gradient(135deg,#cbd5e1,#94a3b8);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900">⏳</div>'
+    +     '<div style="flex:1;font-size:11.5px;line-height:1.6;color:var(--text2)">LP からロゴを抽出中…</div>'
+    +   '</div>'
+    + '</div>'
+
+    + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:14px;border-top:1px solid var(--wire)">'
+    +   '<button onclick="_mediaWizGoStep(2)" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">次へ →</button>'
+    + '</div>';
+}
+
+// Logo 自動抽出 — Step 1 自動実行
+window._mediaWizFetchLogo = async function(){
+  if(!window._mediaWiz) return;
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(window._mediaWiz.siteId)+'/media/logo', { site_url: window._mediaWiz.siteUrl });
+    window._mediaWiz.logo_url = r.logo_url;
+    window._mediaWiz.logo_source = r.source;
+    var box = document.getElementById('mwLogoBox');
+    if(box){
+      box.innerHTML = '<img src="'+esc(r.logo_url)+'" alt="" style="width:42px;height:42px;border-radius:9px;object-fit:cover;background:#fff;border:1px solid var(--wire2)">'
+        + '<div style="flex:1;font-size:11.5px;line-height:1.6;color:var(--text2)">'
+        +   '<b style="color:var(--text)">'+esc(window._mediaWiz.siteUrl||'')+'</b> から <code style="background:#fff;padding:1px 5px;border-radius:3px;font-size:10.5px">'+esc(r.source)+'</code> で抽出<br>'
+        +   '<span style="color:var(--text3)">候補 '+(r.candidates||[]).length+' 件から最適なものを選択</span>'
+        + '</div>';
+    }
+  } catch(e){
+    var box2 = document.getElementById('mwLogoBox');
+    if(box2) box2.innerHTML = '<div style="color:var(--text3);font-size:11.5px">ロゴ抽出失敗: '+esc(e.message||'unknown')+'。 後で差し替え可能。</div>';
+  }
+};
+
+// Step 遷移
+window._mediaWizGoStep = async function(targetStep){
+  if(!window._mediaWiz) return;
+  // Step 1 → 2: 入力を保存
+  if(window._mediaWiz.step === 1 && targetStep === 2){
+    var nameEl = document.getElementById('mwName');
+    var slugEl = document.getElementById('mwSlug');
+    if(nameEl) window._mediaWiz.name = nameEl.value.trim();
+    if(slugEl) window._mediaWiz.slug = slugEl.value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-');
+    if(!window._mediaWiz.name || !window._mediaWiz.slug){
+      showToast('ブログ名と URL を入力してください','ng');
+      return;
+    }
+  }
+  // Step 2 → 3: カテゴリ確定
+  if(window._mediaWiz.step === 2 && targetStep === 3){
+    // current state already in window._mediaWiz.categories from edits
+  }
+  // Step 3 → 4: メディア作成 (= 完成)
+  if(window._mediaWiz.step === 3 && targetStep === 4){
+    var root = document.getElementById('mediaWizRoot');
+    if(root) root.innerHTML = _mediaWizStepHeader(4) + '<div style="text-align:center;padding:60px 20px"><div style="font-size:50px;margin-bottom:12px">✨</div><div style="font-size:16px;font-weight:800;margin-bottom:6px">ブログを作成中…</div><div style="font-size:12px;color:var(--text3)">DNS / SSL / 構成を自動セットアップ</div></div>';
+    try {
+      var r = await api('POST', '/api/agents/'+encodeURIComponent(window._mediaWiz.siteId)+'/media/create', {
+        slug: window._mediaWiz.slug,
+        name: window._mediaWiz.name,
+        template: window._mediaWiz.template,
+        brand_color: window._mediaWiz.brand_color,
+        lp_url: window._mediaWiz.siteUrl,
+        logo_url: window._mediaWiz.logo_url,
+        categories: window._mediaWiz.categories || [],
+      });
+      // local state 更新 — agents に反映
+      try {
+        var ag = (agents||[]).find(function(a){return a && a.id === window._mediaWiz.siteId;});
+        if(ag){ ag.media = r.media; ag.media_posts_idx = []; }
+      } catch(_){}
+      window._mediaWiz.step = 4;
+      window._mediaWiz.media = r.media;
+      var root2 = document.getElementById('mediaWizRoot');
+      if(root2) root2.innerHTML = _mediaWizStepHeader(4) + _mediaWizStep4HTML(r.media);
+    } catch(e){
+      var rootE = document.getElementById('mediaWizRoot');
+      if(rootE) rootE.innerHTML = _mediaWizStepHeader(3)
+        + '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:11px;padding:18px;color:#9a3412;font-size:12.5px;line-height:1.6">'
+        + '<b>⚠️ メディア作成失敗</b><br>'+esc(e.message || 'unknown')
+        + '<br><br><button onclick="_mediaWizGoStep(3)" style="background:var(--teal);color:#fff;border:0;padding:8px 14px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer">← 戻る</button>'
+        + '</div>';
+    }
+    return;
+  }
+
+  // 遷移実行
+  window._mediaWiz.step = targetStep;
+  var root3 = document.getElementById('mediaWizRoot');
+  if(!root3) return;
+  if(targetStep === 1) root3.innerHTML = _mediaWizStepHeader(1) + _mediaWizStep1HTML(window._mediaWiz.slug, window._mediaWiz.name, '');
+  else if(targetStep === 2){
+    root3.innerHTML = _mediaWizStepHeader(2) + '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12.5px"><div style="font-size:38px;margin-bottom:10px">🤖</div>AI がカテゴリ構造を提案中… (約 5 秒)</div>';
+    try {
+      var rc = await api('POST', '/api/agents/'+encodeURIComponent(window._mediaWiz.siteId)+'/media/categories/suggest', {});
+      window._mediaWiz.categories = rc.categories || [];
+      root3.innerHTML = _mediaWizStepHeader(2) + _mediaWizStep2HTML(rc.categories || [], rc.fallback);
+    } catch(e){
+      window._mediaWiz.categories = [{name:'ノウハウ',slug:'know-how',subs:[{name:'基礎',slug:'basics'}]}];
+      root3.innerHTML = _mediaWizStepHeader(2) + _mediaWizStep2HTML(window._mediaWiz.categories, true);
+    }
+  }
+  else if(targetStep === 3) root3.innerHTML = _mediaWizStepHeader(3) + _mediaWizStep3HTML(window._mediaWiz.template);
+};
+
+function _mediaWizStep2HTML(categories, isFallback){
+  var html = ''
+    + '<div style="font-size:10px;color:var(--teal-deep);letter-spacing:.06em;font-weight:800;text-transform:uppercase;margin-bottom:6px">Step 2 / 4 — カテゴリ階層</div>'
+    + '<div style="font-size:18px;font-weight:900;margin-bottom:8px;line-height:1.35">'+(isFallback?'デフォルトカテゴリ':'AI 推奨')+'のカテゴリ階層</div>'
+    + '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">'+(isFallback?'カスタマイズ可能。 後からも変更 OK。':'ペルソナ + サイト解析から構造を生成。 編集・追加・削除も自由。')+'</div>'
+    + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:11px;padding:14px 16px;font-family:\'SF Mono\',Menlo,monospace;font-size:12px;line-height:1.85">'
+    + '<div style="font-weight:900;color:var(--teal-deep);padding-bottom:8px;border-bottom:1px dashed var(--wire2);margin-bottom:8px"><span style="font-family:system-ui">🌐</span> <b>'+esc(window._mediaWiz.name)+' (トップ)</b></div>';
+  categories.forEach(function(c, i){
+    var prefix = (i === categories.length - 1) ? '└' : '├';
+    html += '<div style="margin-bottom:6px"><div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-family:system-ui">'+prefix+'</span><span style="font-family:system-ui;font-size:14px">📁</span><b style="color:var(--text);font-family:system-ui">'+esc(c.name)+'</b><span style="font-family:system-ui;font-size:10px;color:var(--text3);margin-left:auto">'+(c.subs||[]).length+' サブ</span></div>'
+      + '<div style="padding-left:28px;font-size:11.5px;color:var(--text2)">'
+      + (c.subs||[]).map(function(s, j){
+          var lastSub = (j === (c.subs||[]).length - 1);
+          var subPrefix = (i === categories.length - 1) ? '   ' : '│  ';
+          return subPrefix + (lastSub ? '└' : '├') + ' ' + esc(s.name||s);
+        }).join('<br>')
+      + '</div></div>';
+  });
+  html += '</div>'
+    + '<div style="background:var(--blue-soft);border:1px solid #c7d2fe;border-radius:9px;padding:10px 13px;margin-top:12px;font-size:11px;color:#1e40af;line-height:1.55">💡 SEO 内部リンク効果 + ユーザ回遊改善 のため大カテゴリ 3-5 が目安。 編集機能は Phase A.7 で実装予定 — 今は AI 提案そのままで進めます。</div>'
+    + '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--wire)">'
+    +   '<button onclick="_mediaWizGoStep(1)" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">← 戻る</button>'
+    +   '<button onclick="_mediaWizGoStep(3)" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">次へ →</button>'
+    + '</div>';
+  return html;
+}
+
+function _mediaWizStep3HTML(currentTemplate){
+  var templates = [
+    { key: 'minimal',    icon: '🌿', name: 'Minimal',       tag: 'SaaS / 個人事業向け',    bg: 'linear-gradient(135deg,#fff,#fafafa)', fg: '#1a1a1a' },
+    { key: 'magazine',   icon: '📰', name: 'Magazine',      tag: 'メディア / 雑誌風',     bg: 'linear-gradient(135deg,#fafaf7,#e7e5e4)', fg: '#1a1a1a' },
+    { key: 'friendly',   icon: '✍️', name: 'Friendly Blog', tag: 'DTC / EC / 個人',        bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', fg: '#78350f' },
+    { key: 'tech',       icon: '⚙', name: 'Tech Docs',      tag: 'SaaS / 技術ブログ',     bg: 'linear-gradient(135deg,#1e293b,#0f172a)', fg: '#a5f3fc' },
+    { key: 'newsletter', icon: '💌', name: 'Newsletter',    tag: 'コーチング / 士業',     bg: 'linear-gradient(135deg,#f3e8ff,#e9d5ff)', fg: '#5b21b6' },
+  ];
+  var cardsHTML = templates.map(function(t){
+    var selected = (t.key === currentTemplate);
+    return '<div onclick="_mediaWizPickTemplate(\''+t.key+'\')" style="cursor:pointer;background:#fff;border:'+(selected?'3':'2')+'px solid '+(selected?'var(--peach-dark)':'var(--wire2)')+';border-radius:11px;padding:0;transition:.15s;'+(selected?'box-shadow:0 0 0 3px var(--peach-soft)':'')+'">'
+      + '<div style="height:100px;background:'+t.bg+';color:'+t.fg+';display:flex;align-items:center;justify-content:center;font-size:34px;border-bottom:1px solid var(--wire2)">'+t.icon+'</div>'
+      + '<div style="padding:9px 11px">'
+      +   '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px">'+t.name+'</div>'
+      +   '<div style="font-size:10px;color:var(--text3);font-weight:600">'+t.tag+'</div>'
+      + '</div></div>';
+  }).join('');
+  return ''
+    + '<div style="font-size:10px;color:var(--teal-deep);letter-spacing:.06em;font-weight:800;text-transform:uppercase;margin-bottom:6px">Step 3 / 4 — デザイン</div>'
+    + '<div style="font-size:18px;font-weight:900;margin-bottom:8px;line-height:1.35">テンプレートを 1 つ選ぶ</div>'
+    + '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">各記事の <b>Hero 画像は AI が自動生成</b> (= テンプレに合わせた style)。 後からテンプレ変更も可。</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">'+cardsHTML+'</div>'
+    + '<div style="background:var(--blue-soft);border:1px solid #c7d2fe;border-radius:9px;padding:10px 13px;margin-top:14px;font-size:11px;color:#1e40af;line-height:1.55">💡 詳細プレビューは <a href="/mock-media-launch.html" target="_blank" style="color:#1e40af;font-weight:700">こちら</a> でご確認ください。</div>'
+    + '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--wire)">'
+    +   '<button onclick="_mediaWizGoStep(2)" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">← 戻る</button>'
+    +   '<button onclick="_mediaWizGoStep(4)" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">✨ ブログを作成 →</button>'
+    + '</div>';
+}
+
+window._mediaWizPickTemplate = function(key){
+  if(!window._mediaWiz) return;
+  window._mediaWiz.template = key;
+  // Re-render Step 3 to update selection
+  var root = document.getElementById('mediaWizRoot');
+  if(root) root.innerHTML = _mediaWizStepHeader(3) + _mediaWizStep3HTML(key);
+};
+
+function _mediaWizStep4HTML(media){
+  var publicUrl = 'https://' + esc(media.domain || (media.slug + '.myaiagents.agency'));
+  return ''
+    + '<div style="background:linear-gradient(135deg,#fff,var(--peach-soft));border:2px solid var(--peach-dark);border-radius:13px;padding:30px 24px;text-align:center;margin-bottom:18px">'
+    +   '<div style="font-size:50px;margin-bottom:6px">🎉</div>'
+    +   '<div style="font-size:19px;font-weight:900;color:var(--teal-deep);margin-bottom:6px">'+esc(media.name)+' が立ち上がりました!</div>'
+    +   '<div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">DNS / SSL / 構成すべて自動セットアップ完了。<br>このあと <b>キーワード調査から最初の記事を作成</b>できます。</div>'
+    +   '<div style="display:inline-flex;align-items:center;background:#fff;border:1.5px solid var(--teal);border-radius:9px;padding:10px 14px;font-size:13px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);margin-bottom:14px;gap:8px">'
+    +     '🌐 '+publicUrl
+    +   '</div><br>'
+    +   '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+    +     '<a href="'+publicUrl+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:var(--teal);color:#fff;text-decoration:none;border-radius:8px;font-size:12px;font-weight:800">🔗 ブログを見る</a>'
+    +     '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査へ</button>'
+    +     '<button onclick="window.openMediaPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">📊 管理画面へ</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:13px 16px;font-size:11.5px;color:var(--text2);line-height:1.6">'
+    +   '<b style="color:var(--text)">📅 これから自動で起きること:</b><br>'
+    +   '・<b>キーワード調査</b>: 🔍 ボタンから候補生成 → 1-Click で記事生成<br>'
+    +   '・<b>記事公開</b>: 公開ページにすぐ反映 (= 上の URL で確認可)<br>'
+    +   '・<b>LP 集客</b>: 各記事に LP CTA を 5 配置で自動挿入 (= Phase A.7 で稼働)'
     + '</div>';
 }
 

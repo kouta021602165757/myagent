@@ -7550,6 +7550,35 @@ async function _fetchSitePreview(agent){
   return { title, content };
 }
 
+// 🔍 Anthropic API エラーを user-friendly な日本語メッセージに変換
+//    生 JSON dump をそのまま返すと「invalid_request_error / credit balance...」が
+//    UI に表示されてしまうので、 type / message を見て翻訳する。
+function _claudeErrorMessage(r){
+  try {
+    const d = r && r.d;
+    const errType = d && d.error && d.error.type;
+    const errMsg = d && d.error && d.error.message || '';
+    if(/credit balance is too low|credit_balance/i.test(errMsg) || errType === 'invalid_request_error' && /credit/i.test(errMsg)){
+      return { error: 'credit_low', user_message: 'AI クレジット残高が不足しています。Anthropic コンソール (console.anthropic.com) でクレジットを追加してください。' };
+    }
+    if(errType === 'rate_limit_error' || /rate.?limit/i.test(errMsg)){
+      return { error: 'rate_limit', user_message: 'AI API のレート制限に達しました。 1 分待って再試行してください。' };
+    }
+    if(errType === 'overloaded_error' || /overloaded/i.test(errMsg)){
+      return { error: 'overloaded', user_message: 'AI サーバが混雑しています。 30 秒待って再試行してください。' };
+    }
+    if(errType === 'authentication_error' || /api.?key/i.test(errMsg)){
+      return { error: 'auth_error', user_message: 'AI API 認証エラー (運営者にお問い合わせください)。' };
+    }
+    if(r && r.s >= 500){
+      return { error: 'server_error', user_message: 'AI サーバ側エラー (' + r.s + ')。 しばらく待って再試行してください。' };
+    }
+    return { error: 'claude_failed', user_message: 'AI 生成に失敗しました: ' + (errMsg || ('HTTP ' + (r && r.s))).slice(0, 120) };
+  } catch(e){
+    return { error: 'claude_failed', user_message: 'AI 生成に失敗しました。' };
+  }
+}
+
 // 🔍 Google サジェスト — 公式 endpoint (認証不要、無料、レート制限ほぼなし)
 //   結果: ['キーワード', ['sub1','sub2',...]]
 async function _googleSuggest(kw, hl){
@@ -21055,11 +21084,12 @@ async function handleAPI(req,res,pathname,method,ip){
           { timeout: 45000 });
         if(r.s !== 200){
           console.warn('[kw-sug] claude non-200:', r.s);
-          return jres(res, 502, { error: 'claude_failed', status: r.s, detail: String(JSON.stringify(r.d)).slice(0, 300) });
+          const ce = _claudeErrorMessage(r);
+          return jres(res, 502, { error: ce.error, detail: ce.user_message, status: r.s });
         }
         rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       } else {
-        return jres(res, 500, { error: 'no AI provider configured' });
+        return jres(res, 500, { error: 'no_ai_provider', detail: 'AI provider が設定されていません。 ANTHROPIC_API_KEY をご確認ください。' });
       }
       const jsonM = rawText.match(/\{[\s\S]*"candidates"[\s\S]*\}/);
       parsed = JSON.parse(jsonM ? jsonM[0] : rawText);
@@ -21287,10 +21317,13 @@ async function handleAPI(req,res,pathname,method,ip){
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
           { model: info.modelId, max_tokens: 1200, messages:[{ role:'user', content: prompt }] },
           { timeout: 20000 });
-        if(r.s !== 200) return jres(res, 502, { error: 'claude_failed' });
+        if(r.s !== 200){
+          const ce = _claudeErrorMessage(r);
+          return jres(res, 502, { error: ce.error, detail: ce.user_message });
+        }
         rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       } else {
-        return jres(res, 500, { error: 'no AI provider' });
+        return jres(res, 500, { error: 'no_ai_provider', detail: 'AI provider が設定されていません。' });
       }
       const m = rawText.match(/\{[\s\S]*\}/);
       parsed = JSON.parse(m ? m[0] : rawText);
@@ -21441,10 +21474,13 @@ async function handleAPI(req,res,pathname,method,ip){
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
           { model: info.modelId, max_tokens: 1500, messages:[{ role:'user', content: prompt }] },
           { timeout: 30000 });
-        if(r.s !== 200) return jres(res, 502, { error: 'claude_failed', status: r.s, detail: String(JSON.stringify(r.d)).slice(0, 300) });
+        if(r.s !== 200){
+          const ce = _claudeErrorMessage(r);
+          return jres(res, 502, { error: ce.error, detail: ce.user_message, status: r.s });
+        }
         rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       } else {
-        return jres(res, 500, { error: 'no AI provider configured' });
+        return jres(res, 500, { error: 'no_ai_provider', detail: 'AI provider が設定されていません。' });
       }
       const jsonM = rawText.match(/\{[\s\S]*"titles"[\s\S]*\}/);
       parsed = JSON.parse(jsonM ? jsonM[0] : rawText);

@@ -290,6 +290,19 @@
         </div>
 
         <div class="wiz-row">
+          <div class="wiz-lbl">ロゴ <span class="wiz-lbl-hint">LP から自動抽出</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--cream3);border:1px solid var(--wire2);border-radius:9px;padding:12px 14px">
+            <div style="width:42px;height:42px;background:linear-gradient(135deg,#34d399,#10b981);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.08);flex-shrink:0">M</div>
+            <div style="flex:1;font-size:11.5px;line-height:1.6;color:var(--text2)">
+              <b style="color:var(--text)">my-service.com</b> の <code style="background:#fff;padding:1px 5px;border-radius:3px;font-size:10.5px">apple-touch-icon</code> から自動取得しました。<br>
+              <span style="color:var(--text3)">他候補: favicon.ico / og:image / 自社サイトの &lt;img class="logo"&gt;</span>
+            </div>
+            <button style="background:#fff;border:1px solid var(--wire2);padding:6px 11px;border-radius:6px;font-size:10.5px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit;white-space:nowrap">📤 別の画像</button>
+          </div>
+          <div class="wiz-input-hint">クリックで画像差し替え可。 PNG / SVG 推奨、 サイズ 256×256 以上</div>
+        </div>
+
+        <div class="wiz-row">
           <div class="wiz-lbl">ブログ URL <span class="wiz-lbl-hint">どこに公開するか</span></div>
           <div class="wiz-domain">
             <input type="text" class="wiz-domain-input" value="my-service">
@@ -435,7 +448,7 @@
         <div class="wiz-pretitle">Step 3 / 4 — 見た目を選ぶ</div>
         <div class="wiz-h2">デザインテンプレートを 1 つ</div>
         <div class="wiz-desc">
-          LP のブランドカラーを自動取り込みしてカスタマイズします。 <b>後からいつでも変更可能</b>。
+          LP のブランドカラーを自動取り込みしてカスタマイズします。 各記事の <b>Hero 画像はテンプレ style に合わせて AI が生成</b> (= DALL-E 3 / Imagen 4)、 図解・比較表は <b>AI が SVG で自動生成</b>。 stock 写真を使わないので <b>一意性 + ブランド統一感</b> が出ます。 <b>後からいつでもテンプレ変更可能</b>。
         </div>
 
         <div class="theme-grid">
@@ -471,10 +484,10 @@
 
           <!-- Minimal (= Stripe / Linear 級) -->
           <div class="theme-preview" data-preview="minimal" style="background:#ffffff;border:1px solid var(--wire2);border-radius:10px;overflow:hidden;font-family:-apple-system,'SF Pro Display','Helvetica Neue',system-ui;color:#0a0a0a;box-shadow:0 1px 3px rgba(0,0,0,.04)">
-            <!-- ヘッダー: 細い 1px ライン、 generous spacing -->
+            <!-- ヘッダー: 細い 1px ライン、 generous spacing — ロゴは LP URL から自動抽出 -->
             <div style="padding:14px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e5e5">
-              <div style="display:flex;align-items:center;gap:8px">
-                <div style="width:22px;height:22px;background:#0a0a0a;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900">M</div>
+              <div style="display:flex;align-items:center;gap:8px" title="🔗 my-service.com から favicon / og:image / apple-touch-icon を自動抽出">
+                <div style="width:24px;height:24px;background:linear-gradient(135deg,#34d399,#10b981);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:900;box-shadow:0 1px 2px rgba(0,0,0,.06)">M</div>
                 <div style="font-weight:700;font-size:13px;letter-spacing:-.01em">my-service</div>
               </div>
               <div style="display:flex;gap:22px;font-size:11.5px;font-weight:500;color:#525252">
@@ -484,9 +497,16 @@
               <div style="font-size:11.5px;color:#525252;font-weight:500">my-service.com →</div>
             </div>
 
-            <!-- Hero: ヘッドライン -->
-            <div style="padding:56px 30px 32px;border-bottom:1px solid #e5e5e5">
-              <div style="font-size:10px;color:#737373;letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;font-weight:600">DX · DX 入門</div>
+            <!-- Hero: 大きな画像エリア + ヘッドライン -->
+            <div style="padding:36px 30px 32px;border-bottom:1px solid #e5e5e5">
+              <!-- Hero image (= AI が Unsplash から自動取得 + 構成イメージ生成) -->
+              <div style="width:100%;height:240px;background:linear-gradient(135deg,#1f2937 0%,#0f172a 60%,#1e3a8a 100%);border-radius:10px;margin-bottom:20px;position:relative;overflow:hidden">
+                <!-- abstract overlay -->
+                <div style="position:absolute;inset:0;background:radial-gradient(circle at 78% 30%,rgba(96,165,250,.45) 0%,transparent 50%),radial-gradient(circle at 22% 75%,rgba(167,139,250,.35) 0%,transparent 60%)"></div>
+                <!-- AI labels showing source -->
+                <div style="position:absolute;left:18px;bottom:14px;font-size:9.5px;color:rgba(255,255,255,.65);font-weight:500;letter-spacing:.04em;font-family:-apple-system,sans-serif">🎨 AI 生成 · Minimal style</div>
+              </div>
+              <div style="font-size:10px;color:#737373;letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;font-weight:600">DX · DX 入門</div>
               <div style="font-size:32px;font-weight:600;color:#0a0a0a;line-height:1.15;letter-spacing:-.025em;max-width:680px;margin-bottom:14px">中小企業の DX 入門 —<br>失敗しない 3 つのステップ</div>
               <div style="font-size:13.5px;color:#525252;max-width:580px;line-height:1.65;margin-bottom:14px">経済産業省の定義から、 実際の現場で機能する 3 ステップまで。 製造業・小売・サービス業の事例とよくある失敗 5 パターンも収録。</div>
               <div style="font-size:11px;color:#737373;display:flex;gap:14px;align-items:center;font-weight:500">
@@ -498,25 +518,31 @@
               </div>
             </div>
 
-            <!-- 記事一覧 — 細いカード -->
-            <div style="padding:32px 30px;display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
+            <!-- 記事一覧 — thumbnail 付きカード -->
+            <div style="padding:32px 30px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
               <a href="#" style="text-decoration:none;color:#0a0a0a;display:block">
-                <div style="font-size:10px;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">業務効率化</div>
-                <div style="font-size:14.5px;font-weight:600;color:#0a0a0a;line-height:1.35;letter-spacing:-.005em;margin-bottom:8px">業務効率化ツール 12 選 — 月額 5,000 円で選ぶ</div>
-                <div style="font-size:11px;color:#737373;line-height:1.6">Slack・Notion・Asana など実務で使えるツールだけを厳選…</div>
-                <div style="font-size:10.5px;color:#a3a3a3;margin-top:10px;font-weight:500">15 分 · 86 PV/日</div>
+                <div style="width:100%;height:140px;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);border-radius:7px;margin-bottom:12px;position:relative;overflow:hidden">
+                  <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 70%,rgba(255,255,255,.3) 0%,transparent 60%)"></div>
+                </div>
+                <div style="font-size:10px;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-weight:600">業務効率化</div>
+                <div style="font-size:14.5px;font-weight:600;color:#0a0a0a;line-height:1.35;letter-spacing:-.005em;margin-bottom:6px">業務効率化ツール 12 選 — 月額 5,000 円で選ぶ</div>
+                <div style="font-size:10.5px;color:#a3a3a3;font-weight:500">15 分 · 86 PV/日</div>
               </a>
               <a href="#" style="text-decoration:none;color:#0a0a0a;display:block">
-                <div style="font-size:10px;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">SaaS 選び方</div>
-                <div style="font-size:14.5px;font-weight:600;color:#0a0a0a;line-height:1.35;letter-spacing:-.005em;margin-bottom:8px">勤怠管理 SaaS の選び方 — 50 名以下向け 5 条件</div>
-                <div style="font-size:11px;color:#737373;line-height:1.6">人事担当者が見るべき機能・料金・サポートの判断軸…</div>
-                <div style="font-size:10.5px;color:#a3a3a3;margin-top:10px;font-weight:500">12 分 · 58 PV/日</div>
+                <div style="width:100%;height:140px;background:linear-gradient(135deg,#60a5fa 0%,#3b82f6 100%);border-radius:7px;margin-bottom:12px;position:relative;overflow:hidden">
+                  <div style="position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,rgba(255,255,255,.25) 0%,transparent 55%)"></div>
+                </div>
+                <div style="font-size:10px;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-weight:600">SaaS 選び方</div>
+                <div style="font-size:14.5px;font-weight:600;color:#0a0a0a;line-height:1.35;letter-spacing:-.005em;margin-bottom:6px">勤怠管理 SaaS の選び方 — 50 名以下向け 5 条件</div>
+                <div style="font-size:10.5px;color:#a3a3a3;font-weight:500">12 分 · 58 PV/日</div>
               </a>
               <a href="#" style="text-decoration:none;color:#0a0a0a;display:block">
-                <div style="font-size:10px;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">DX</div>
-                <div style="font-size:14.5px;font-weight:600;color:#0a0a0a;line-height:1.35;letter-spacing:-.005em;margin-bottom:8px">DX とは? 中小企業の経営者が始める 7 つの実例</div>
-                <div style="font-size:11px;color:#737373;line-height:1.6">「IT 化との違い」 「組織変革のレベル」 まで丁寧に解説…</div>
-                <div style="font-size:10.5px;color:#a3a3a3;margin-top:10px;font-weight:500">18 分 · 198 PV/日</div>
+                <div style="width:100%;height:140px;background:linear-gradient(135deg,#34d399 0%,#10b981 100%);border-radius:7px;margin-bottom:12px;position:relative;overflow:hidden">
+                  <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.2) 0%,transparent 60%)"></div>
+                </div>
+                <div style="font-size:10px;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-weight:600">DX</div>
+                <div style="font-size:14.5px;font-weight:600;color:#0a0a0a;line-height:1.35;letter-spacing:-.005em;margin-bottom:6px">DX とは? 中小企業の経営者が始める 7 つの実例</div>
+                <div style="font-size:10.5px;color:#a3a3a3;font-weight:500">18 分 · 198 PV/日</div>
               </a>
             </div>
 
@@ -545,10 +571,14 @@
               <span style="font-size:11px;font-weight:600;color:#525252;letter-spacing:.04em;text-transform:uppercase">アーカイブ</span>
             </div>
 
-            <!-- Featured: 2-column editorial -->
+            <!-- Featured: 2-column editorial w/ hero image -->
             <div style="padding:32px;display:grid;grid-template-columns:1.8fr 1fr;gap:32px;background:#fafaf7">
-              <!-- 左: メイン記事 -->
+              <!-- 左: メイン記事 + 大きなエディトリアル画像 -->
               <article>
+                <div style="width:100%;height:240px;background:linear-gradient(135deg,#374151 0%,#1f2937 50%,#4b5563 100%);border-radius:2px;margin-bottom:18px;position:relative;overflow:hidden">
+                  <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 60%,rgba(220,38,38,.18) 0%,transparent 55%)"></div>
+                  <div style="position:absolute;left:16px;bottom:11px;font-size:9px;color:rgba(255,255,255,.6);font-family:'Helvetica Neue',sans-serif;letter-spacing:.06em">🎨 AI 生成 · Editorial style</div>
+                </div>
                 <div style="font-size:10px;color:#9a0e0e;letter-spacing:.18em;font-family:'Helvetica Neue',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:10px">特集 · DX 入門</div>
                 <div style="font-size:32px;font-weight:700;color:#1a1a1a;line-height:1.25;letter-spacing:-.015em;margin-bottom:14px;font-family:'Hiragino Mincho ProN',serif">中小企業の DX 入門 — 失敗しない 3 つのステップ</div>
                 <div style="font-size:13.5px;color:#404040;line-height:1.85;margin-bottom:14px;font-family:'Hiragino Mincho ProN',serif;letter-spacing:.01em">経済産業省の定義から、 実際の現場で機能する 3 ステップまで。 製造業・小売・サービス業の事例と、 7 割が陥る「DX = システム導入」 という勘違いを正面から扱う。</div>
@@ -600,7 +630,13 @@
 
               <!-- タイトル + サブ -->
               <h1 style="font-size:34px;font-weight:700;color:#0a0a0a;line-height:1.2;letter-spacing:-.022em;margin:0 0 14px;font-family:Charter,Georgia,serif">中小企業の DX 入門 — 失敗しない 3 つのステップ</h1>
-              <p style="font-size:18px;color:#525252;font-weight:400;font-style:italic;line-height:1.5;margin:0 0 28px;font-family:Charter,Georgia,serif;letter-spacing:-.005em">経済産業省の定義から、 現場で機能する 3 ステップ、 7 割が陥る勘違いまで。</p>
+              <p style="font-size:18px;color:#525252;font-weight:400;font-style:italic;line-height:1.5;margin:0 0 24px;font-family:Charter,Georgia,serif;letter-spacing:-.005em">経済産業省の定義から、 現場で機能する 3 ステップ、 7 割が陥る勘違いまで。</p>
+
+              <!-- Hero image (= illustrated / warm tone) -->
+              <div style="width:100%;height:260px;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 40%,#fbbf24 100%);border-radius:8px;margin:0 0 28px;position:relative;overflow:hidden">
+                <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 70% 40%,rgba(217,119,6,.25) 0%,transparent 60%),radial-gradient(circle at 25% 75%,rgba(180,83,9,.15) 0%,transparent 55%)"></div>
+                <div style="position:absolute;left:18px;bottom:12px;font-size:10px;color:rgba(28,25,23,.5);font-family:-apple-system,sans-serif;font-weight:500">🎨 AI 生成 · Friendly Blog style</div>
+              </div>
 
               <!-- 本文 with drop cap -->
               <div style="font-size:18px;line-height:1.78;color:#191919;font-family:Charter,Georgia,serif">

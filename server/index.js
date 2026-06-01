@@ -7865,6 +7865,73 @@ function _resolveAbsUrl(href, baseUrl){
   }
 }
 
+// AI カテゴリ提案 — Haiku で 3-5 大カテゴリ × 各 2-4 サブ を JSON 出力
+async function _aiSuggestCategories(agent){
+  // Default fallback (= Claude credit_low 等で 失敗した時)
+  const FALLBACK = [
+    { name: 'ノウハウ', subs: ['基礎知識','実践テクニック','事例'] },
+    { name: '業界トレンド', subs: ['最新ニュース','調査レポート','予測'] },
+    { name: '製品 / サービス', subs: ['機能紹介','使い方','活用例'] },
+  ];
+  if(!ANTHROPIC) return { categories: FALLBACK, fallback: true };
+
+  let hostname = '', persona = '', preview = '';
+  try { hostname = new URL(agent.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+  persona = String(agent.persona || '').slice(0, 400);
+  try {
+    const sp = await _fetchSitePreview(agent);
+    preview = String((sp && sp.content) || '').slice(0, 1200);
+  } catch(_){}
+
+  const prompt = [
+    'あなたは集客ブログ運営のエキスパート。 LP「' + hostname + '」 に客を送るブログのカテゴリ階層を設計してください。',
+    '',
+    '【サイト】 ' + hostname,
+    '【ペルソナ】 ' + (persona || '(未設定)'),
+    '【サイト内容】 ' + (preview || '(取得失敗)'),
+    '',
+    '【ルール】',
+    '・大カテゴリは 3〜5 個',
+    '・各大カテゴリに サブカテゴリ 2〜4 個',
+    '・SEO 内部リンク効率 + ユーザ回遊性 + 検索ボリューム を考慮',
+    '・カテゴリ名は短く 5-10 字程度',
+    '',
+    '【出力】 JSON のみ (コードフェンス禁止):',
+    '{',
+    '  "categories": [',
+    '    { "name": "(大カテゴリ名)", "subs": ["サブ1","サブ2","サブ3"] }',
+    '  ]',
+    '}'
+  ].join('\n');
+
+  const info = _resolveModelInfo('haiku');
+  try {
+    const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+      { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+      { model: info.modelId, max_tokens: 1200, messages:[{ role:'user', content: prompt }] },
+      { timeout: 25000 });
+    if(r.s !== 200){
+      const ce = _claudeErrorMessage(r);
+      return { categories: FALLBACK, fallback: true, error: ce.user_message };
+    }
+    const rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const m = rawText.match(/\{[\s\S]*"categories"[\s\S]*\}/);
+    const parsed = JSON.parse(m ? m[0] : rawText);
+    const arr = (parsed.categories || []).slice(0, 5).map(c => ({
+      name: String(c.name || '').slice(0, 30),
+      slug: _mediaSlugify(c.name || ''),
+      subs: (c.subs || []).slice(0, 4).map(s => ({
+        name: String(s).slice(0, 30),
+        slug: _mediaSlugify(s),
+      })).filter(s => s.name && s.slug),
+    })).filter(c => c.name && c.slug);
+    return arr.length ? { categories: arr } : { categories: FALLBACK, fallback: true };
+  } catch(e){
+    console.warn('[media-cat] AI failed:', e.message);
+    return { categories: FALLBACK, fallback: true, error: e.message };
+  }
+}
+
 // ── 1) generate_audio — standalone TTS mp3 ───────────────────
 async function executeAudioTool(input){
   const text  = String(input && input.text || '').trim();
@@ -21032,6 +21099,115 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 500, { error: '保存に失敗' });
     }
     return jres(res, 200, { ok: true, kpi: ag.kpi });
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // 📝 メディア機能 (Phase A) — Wizard backend endpoints
+  // ════════════════════════════════════════════════════════════════
+
+  //   POST /api/agents/:id/media/logo — LP URL からロゴ自動抽出
+  const mediaLogoMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/logo$/);
+  if(mediaLogoMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaLogoMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req).catch(() => ({}));
+    const siteUrl = String((body && body.site_url) || ag.site_url || '').trim();
+    if(!siteUrl) return jres(res, 400, { error: 'site_url required' });
+    try {
+      const result = await _mediaExtractLogo(siteUrl);
+      return jres(res, 200, result);
+    } catch(e){
+      console.warn('[media-logo] failed:', e.message);
+      return jres(res, 500, { error: 'logo_extract_failed', detail: e.message });
+    }
+  }
+
+  //   POST /api/agents/:id/media/categories/suggest — AI カテゴリ階層提案
+  //   キャッシュ: agent.media_cat_cache に 7d
+  const mediaCatMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/categories\/suggest$/);
+  if(mediaCatMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaCatMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req).catch(() => ({}));
+    const TTL = 7 * 24 * 3600 * 1000;
+    if(!body.refresh && ag.media_cat_cache && ag.media_cat_cache.fetched_at &&
+       (Date.now() - Date.parse(ag.media_cat_cache.fetched_at)) < TTL){
+      return jres(res, 200, Object.assign({}, ag.media_cat_cache, { cached: true }));
+    }
+    const result = await _aiSuggestCategories(ag);
+    const out = Object.assign({}, result, { fetched_at: new Date().toISOString() });
+    ag.media_cat_cache = out;
+    try { await DB.save(user); } catch(e){ console.warn('[media-cat] save failed:', e.message); }
+    return jres(res, 200, out);
+  }
+
+  //   POST /api/agents/:id/media/create — Wizard 完了時、 メディアを agent に保存
+  //   Body: { slug, name, template, brand_color, lp_url, categories[], logo_url }
+  const mediaCreateMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/create$/);
+  if(mediaCreateMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaCreateMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(ag.media && ag.media.id){
+      return jres(res, 409, { error: 'media_already_exists', media: ag.media });
+    }
+    const body = await readBody(req).catch(() => ({}));
+    const nameInput = String((body && body.name) || (ag.name || 'Blog') + ' Blog').trim().slice(0, 60);
+    const slugInput = String((body && body.slug) || ag.name || '').trim();
+    const template = ['minimal','magazine','friendly','tech','newsletter'].indexOf(String(body && body.template)) >= 0
+      ? String(body.template) : 'minimal';
+    const brand_color = /^#[0-9a-fA-F]{6}$/.test(String(body && body.brand_color || ''))
+      ? String(body.brand_color) : '#0d4f4a';
+    const lp_url = String((body && body.lp_url) || ag.site_url || '').trim();
+    const logo_url = String((body && body.logo_url) || '').trim() || null;
+
+    // カテゴリ (= 入力 or default)
+    const categoriesIn = Array.isArray(body && body.categories) ? body.categories : [];
+    const categories = categoriesIn.slice(0, 5).map(c => ({
+      id: 'cat_' + crypto.randomBytes(4).toString('hex'),
+      name: String((c && c.name) || '').slice(0, 30),
+      slug: _mediaSlugify((c && c.name) || ''),
+      subs: (Array.isArray(c && c.subs) ? c.subs : []).slice(0, 4).map(s => ({
+        id: 'sub_' + crypto.randomBytes(4).toString('hex'),
+        name: String((s && s.name) || s || '').slice(0, 30),
+        slug: _mediaSlugify((s && s.name) || s || ''),
+      })).filter(s => s.name && s.slug),
+    })).filter(c => c.name && c.slug);
+
+    // グローバル一意 slug
+    const finalSlug = await _mediaUniqueSlug(slugInput || nameInput);
+
+    const media = {
+      id: 'mda_' + crypto.randomBytes(6).toString('hex'),
+      slug: finalSlug,
+      name: nameInput,
+      template,
+      brand_color,
+      lp_url,
+      logo_url,
+      categories,
+      domain: finalSlug + '.myaiagents.agency',
+      created_at: new Date().toISOString(),
+      status: 'live',
+    };
+    ag.media = media;
+    ag.media_posts_idx = [];
+    try { await DB.save(user); } catch(e){
+      console.warn('[media-create] save failed:', e.message);
+      return jres(res, 500, { error: 'save_failed', detail: e.message });
+    }
+    return jres(res, 200, { ok: true, media });
+  }
+
+  //   GET /api/agents/:id/media — メディア情報 + 記事 idx を取得 (= ダッシュボード用)
+  const mediaGetMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media$/);
+  if(mediaGetMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaGetMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 200, { media: null });
+    return jres(res, 200, {
+      media: ag.media,
+      posts_idx: ag.media_posts_idx || [],
+    });
   }
 
   // ── Strategy (= ペルソナ + 競合 + 6ヶ月 KPI シート、Sonnet で 1 回生成) ──

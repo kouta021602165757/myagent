@@ -2967,6 +2967,13 @@ window._closeSiteTabModal = function(){
 
 window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
 window.openKeywordPanel       = function(siteId){ _openSiteTabModal(siteId, 'keyword'); };
+// 📝 メディア (Phase A.2): 暫定的に mock-media-launch.html を別タブで起動。
+// A.4 で本物の Wizard / Dashboard モーダルに置き換える。
+window.openMediaPanel         = function(siteId){
+  // siteId を Wizard 側に渡せるよう URL 引数化 (= 後で繋ぐ準備)
+  var url = '/mock-media-launch.html' + (siteId ? '?site=' + encodeURIComponent(siteId) : '');
+  window.open(url, '_blank', 'noopener');
+};
 window.openStrategyPanel      = function(siteId){ _openSiteTabModal(siteId, 'strategy'); };
 window.openTasksPanel         = function(siteId){ _openSiteTabModal(siteId, 'tasks'); };
 window.openAgentsPanel        = function(siteId){ _openSiteTabModal(siteId, 'agents'); };
@@ -11549,6 +11556,11 @@ async function openAgent(id){
         + 'font-weight:700 !important;';
       topPills += '<span class="pill" style="' + stylePill + '">' + info.lbl + '</span>';
     }
+    // 📝 メディア pill (Phase A) — 作成済時のみ「N 本」 を表示
+    if(ag.media && ag.media.id){
+      var _mCnt = (ag.media_posts_idx || []).length;
+      topPills += '<span class="pill ct-media-pill" onclick="openMediaPanel(\''+esc(ag.id)+'\')" title="'+L('メディア管理画面を開く','Open media dashboard')+'">📝 '+L('メディア','Media')+' '+_mCnt+' '+(isJa?'本':'posts')+'</span>';
+    }
   }
   const isTeam = !!(ag.is_team && Array.isArray(ag.team_member_agent_ids));
   const teamCount = isTeam ? ag.team_member_agent_ids.length : 0;
@@ -11591,6 +11603,9 @@ async function openAgent(id){
       actsHTML += '<button class="ct-act ct-tool" onclick="openDailyGrowthReportPanel(\''+_siteId+'\')" title="'+L('日次グロースレポート — 数字 + 効いた施策 + 明日のアクション','Daily growth report — numbers + wins + tomorrow\'s actions')+'">📰</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 の生データ・KPI','Numbers — GA4 metrics / KPI')+'">📊</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('キーワード調査 — SEO / AEO で狙うキーワードを設計','Keyword research — SEO / AEO targeting')+'">🔍</button>';
+      // 📝 メディア (Phase A) — 未作成サイトは NEW badge、 作成済は border 強調
+      var _hasMedia = !!(ag.media && ag.media.id);
+      actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('メディア — 集客ブログを立ち上げ・運用','Media — AI blog for traffic')+'">📝</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('戦略・KPI — ペルソナ・競合・6ヶ月目標','Strategy / KPI')+'">🎯</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('タスク一覧 — 8 週ロードマップ + 進捗','Tasks — 8-week roadmap')+'">📋</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openAgentsPanel(\''+_siteId+'\')" title="'+L('エージェント一覧 — AI チームの組織図','Agents — AI team org chart')+'">🏢</button>';
@@ -12755,7 +12770,36 @@ function renderMsgs(ag, forceScrollBottom){
         + '</div>';
     }
   }
-  inner.innerHTML = _nudgeHTML + _olderHistBanner + ag.history.map(function(m,i){
+  // 📝 メディア hero / link bar (Phase A.2) — site agent の chat top にのみ表示
+  // - 未作成: hero (= 「集客ブログを立ち上げよう」 + マスター copy 5 動詞 + 60 秒 trust)
+  // - 作成済: 小さい link bar (= 数字一目 + ダッシュボードへ)
+  var _mediaIntroBanner = '';
+  if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag)){
+    var _mediaExists = !!(ag.media && ag.media.id);
+    if(!_mediaExists){
+      _mediaIntroBanner = '<div class="media-hero-card">'
+        +   '<div class="media-hero-card-eyebrow">🚀 RECOMMENDED · LP に集客チームを 24h 配備</div>'
+        +   '<div class="media-hero-card-h">集客ブログを立ち上げよう。</div>'
+        +   '<div class="media-hero-card-tx"><b>ブログ立ち上げ・キーワード調査・記事執筆・公開・改善</b> すべて 30 名超の AI チームが自動で。 LP の URL は登録済、 設定は <b>60 秒</b>。</div>'
+        +   '<div class="media-hero-card-cta-row">'
+        +     '<button class="media-hero-card-btn" onclick="openMediaPanel(\''+esc(ag.id)+'\')">🚀 ブログを立ち上げる <span style="font-size:18px">→</span></button>'
+        +     '<div class="media-hero-card-trust"><span>✓ 60 秒で完成</span><span>✓ 月 ¥0 〜</span><span>✓ 解約 1 click</span></div>'
+        +   '</div>'
+        + '</div>';
+    } else {
+      var _mPostsCount = (ag.media_posts_idx || []).length;
+      var _mDomain = (ag.media && ag.media.domain) || ((ag.media && ag.media.slug) ? (ag.media.slug + '.myaiagents.agency') : '');
+      _mediaIntroBanner = '<div class="media-link-bar">'
+        +   '<div class="media-link-bar-ic">📝</div>'
+        +   '<div class="media-link-bar-bd">'
+        +     '<div class="media-link-bar-ti">'+esc((ag.media && ag.media.name) || (ag.name + ' Blog'))+' · 運用中</div>'
+        +     '<div class="media-link-bar-sub">'+_mPostsCount+' 本公開 · '+esc(_mDomain)+'</div>'
+        +   '</div>'
+        +   '<button class="media-link-bar-btn" onclick="openMediaPanel(\''+esc(ag.id)+'\')">ダッシュボードへ →</button>'
+        + '</div>';
+    }
+  }
+  inner.innerHTML = _nudgeHTML + _mediaIntroBanner + _olderHistBanner + ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline ONLY on desktop;
     // on mobile they show inline so the user always sees the AI reply.
     if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';

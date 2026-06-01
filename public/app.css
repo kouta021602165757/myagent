@@ -8922,3 +8922,167 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   }
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   📝 メディア機能 (Phase A) — ツールバー button + hero + link bar
+   設計: mock-media-entrypoints.html / mock-media-launch.html
+   ────────────────────────────────────────────────────────────────── */
+
+/* 📝 toolbar button (= 既存 .ct-tool を継承) */
+.ct-act.ct-media-tool{
+  position:relative;
+}
+.ct-act.ct-media-tool.new-media{
+  /* 未作成サイト: peach 縁取り + NEW badge */
+  border-color:#a3e635 !important;
+  background:linear-gradient(135deg,#f7ffe9,#fff) !important;
+}
+.ct-act.ct-media-tool.new-media::after{
+  content:'NEW';
+  position:absolute;
+  top:-5px;
+  right:-6px;
+  background:#dc2626;
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.04em;
+  padding:1px 4px;
+  border-radius:99px;
+  border:1.5px solid #fff;
+  line-height:1.15;
+  pointer-events:none;
+}
+.ct-act.ct-media-tool.has-media{
+  /* 作成済: peach-dark border キープ、 NEW badge なし */
+  border-color:#a3e635 !important;
+}
+
+/* 📝 メディア hero (= 未作成サイトの chat top に表示) */
+.media-hero-card{
+  background:linear-gradient(135deg,#0d4f4a,#0a3d39);
+  color:#fff;
+  border-radius:14px;
+  padding:24px 28px;
+  margin:0 0 16px;
+  position:relative;
+  overflow:hidden;
+}
+.media-hero-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 85% 25%,rgba(192,255,92,.18) 0%,transparent 50%),radial-gradient(circle at 10% 80%,rgba(192,255,92,.08) 0%,transparent 55%);
+  pointer-events:none;
+}
+.media-hero-card-eyebrow{
+  font-size:10px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  opacity:.85;
+  font-weight:800;
+  margin-bottom:8px;
+  position:relative;
+}
+.media-hero-card-h{
+  font-size:22px;
+  font-weight:900;
+  line-height:1.3;
+  margin-bottom:8px;
+  position:relative;
+  letter-spacing:-.005em;
+}
+.media-hero-card-tx{
+  font-size:12.5px;
+  opacity:.88;
+  line-height:1.65;
+  max-width:540px;
+  margin-bottom:16px;
+  position:relative;
+}
+.media-hero-card-tx b{
+  color:#c0ff5c;
+  font-weight:800;
+}
+.media-hero-card-cta-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  position:relative;
+}
+.media-hero-card-btn{
+  background:#c0ff5c;
+  color:#0a3d39;
+  border:0;
+  padding:12px 22px;
+  border-radius:9px;
+  font-size:13px;
+  font-weight:900;
+  cursor:pointer;
+  font-family:inherit;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);
+  transition:.15s;
+}
+.media-hero-card-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 18px rgba(0,0,0,.22);
+}
+.media-hero-card-trust{
+  display:flex;
+  gap:12px;
+  font-size:10.5px;
+  opacity:.8;
+  font-weight:600;
+  flex-wrap:wrap;
+}
+
+/* 📝 メディア link bar (= 作成済サイトの chat top に表示) */
+.media-link-bar{
+  background:var(--cream3,#fafaf7);
+  border:1px solid var(--wire2,rgba(9,9,11,.10));
+  border-radius:10px;
+  padding:10px 14px;
+  margin:0 0 16px;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  font-size:12px;
+}
+.media-link-bar-ic{font-size:18px}
+.media-link-bar-bd{flex:1;line-height:1.45;min-width:0}
+.media-link-bar-ti{font-weight:800;color:var(--text,#1a1a1a)}
+.media-link-bar-sub{font-size:10.5px;color:var(--text3,#71717a);font-weight:600;margin-top:1px}
+.media-link-bar-btn{
+  background:#0d4f4a;
+  color:#fff;
+  border:0;
+  padding:7px 13px;
+  border-radius:7px;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+  font-family:inherit;
+  text-decoration:none;
+  white-space:nowrap;
+}
+
+/* 📝 メディア header pill (= サイト header に「N 本」 表示) */
+.ct-pill.ct-media-pill{
+  background:#dcfce7 !important;
+  color:#166534 !important;
+  border:1px solid #86efac !important;
+  font-weight:800;
+  cursor:pointer;
+}
+
+/* Mobile */
+@media (max-width:560px){
+  .media-hero-card{padding:18px 20px}
+  .media-hero-card-h{font-size:18px}
+  .media-hero-card-tx{font-size:11.5px}
+  .media-hero-card-trust{font-size:10px}
+}
+

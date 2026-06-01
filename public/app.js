@@ -10273,6 +10273,22 @@ function _renderTabMedia(site){
       + '</div>';
   }
 
+  // === メディア型サイトには Wizard を出さない (= 既にメディアあり) ===
+  if(site.site_type === 'media' || site.site_vertical === 'blog' || site.site_vertical === 'news'){
+    return '<div style="background:var(--cream3);border:1.5px dashed var(--peach-dark);border-radius:13px;padding:32px 28px;text-align:center">'
+      + '<div style="font-size:42px;margin-bottom:10px">📰</div>'
+      + '<div style="font-size:16px;font-weight:900;color:var(--text);margin-bottom:8px">このサイトはすでにメディアです</div>'
+      + '<div style="font-size:12.5px;color:var(--text2);line-height:1.7;max-width:480px;margin:0 auto 16px">'
+      +   '別途メディアを立ち上げる必要はありません。<br>'
+      +   '既存メディアの<b>キーワード調査・記事ネタ提案・改善施策</b>は、 上部の 🔍 や 🎯 ボタンからご利用いただけます。'
+      + '</div>'
+      + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査へ</button>'
+      +   '<button onclick="_closeSiteTabModal(); openStrategyPanel(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🎯 戦略・KPI へ</button>'
+      + '</div>'
+      + '</div>';
+  }
+
   // === Wizard mode (= 未作成) ===
   // 4 step: 基本情報 → カテゴリ → デザイン → 完成
   var siteHostname = '';
@@ -10280,23 +10296,21 @@ function _renderTabMedia(site){
   var defaultSlug = siteHostname.split('.')[0] || (site.name || 'media').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 20);
   var defaultName = (site.name || siteHostname || 'My Blog') + ' Blog';
 
-  // initial state into window._mediaWiz for cross-step access
-  setTimeout(function(){
-    window._mediaWiz = {
-      siteId: site.id,
-      siteUrl: site.site_url,
-      step: 1,
-      slug: defaultSlug,
-      name: defaultName,
-      logo_url: null,
-      logo_source: null,
-      categories: null,
-      template: 'minimal',
-      brand_color: '#0d4f4a',
-    };
-    // 自動で logo 抽出を即座に開始
-    _mediaWizFetchLogo();
-  }, 50);
+  // initial state を同期初期化 (= setTimeout race を回避)
+  window._mediaWiz = {
+    siteId: site.id,
+    siteUrl: site.site_url,
+    step: 1,
+    slug: defaultSlug,
+    name: defaultName,
+    logo_url: null,
+    logo_source: null,
+    categories: null,
+    template: 'minimal',
+    brand_color: '#0d4f4a',
+  };
+  // 自動 logo 抽出は DOM mount 後に走らせる
+  setTimeout(function(){ if(window._mediaWiz && window._mediaWiz.step === 1) _mediaWizFetchLogo(); }, 40);
 
   return ''
     + '<div id="mediaWizRoot">'
@@ -10508,34 +10522,93 @@ function _mediaWizStep3HTML(currentTemplate){
     + '</div>';
 }
 
-// メディアダッシュボードから「✨ 新しい記事」 を生成 — モーダル内 prompt 入力
-window._mediaGenArticleFlow = async function(siteId){
+// メディアダッシュボードから「✨ 新しい記事」 を生成 — inline modal で kw 入力 → loader → 結果
+window._mediaGenArticleFlow = function(siteId){
   var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
   if(!ag || !ag.media) return;
-  var keyword = prompt('どんなキーワードで記事を書く?\n例: 「中小企業 採用 助成金」 「DTC 始め方」 など', '');
-  if(!keyword || !keyword.trim()) return;
-  keyword = keyword.trim();
-  // ローディング表示
-  var holder = document.querySelector('.sd-modal-body');
-  if(holder){
-    var loader = document.createElement('div');
-    loader.id = 'mediaArtLoader';
-    loader.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:30px 36px;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:99999;text-align:center;font-family:inherit;max-width:340px';
-    loader.innerHTML = '<div style="font-size:36px;margin-bottom:10px">✨</div><div style="font-size:14px;font-weight:900;margin-bottom:6px">AI が記事を執筆中…</div><div style="font-size:11.5px;color:var(--text3);line-height:1.55">5,000 文字以上の記事 + Hero 画像を生成中。<br>1〜2 分かかります。</div>';
-    document.body.appendChild(loader);
+  // 既に走ってるなら何もしない (= 多重起動防止)
+  if(document.getElementById('mediaArtOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'mediaArtOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.innerHTML = ''
+    + '<div id="mediaArtCard" style="background:#fff;border-radius:14px;padding:26px 28px;max-width:440px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
+    +   '<div style="font-size:11px;color:var(--teal-deep);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">✨ AI に記事を書かせる</div>'
+    +   '<div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.4">どんなキーワードで記事を書きますか?</div>'
+    +   '<div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.6">例: 「中小企業 採用 助成金」 「DTC 始め方」 「Webflow 比較」 など。<br>5,000 文字 + Hero 画像が自動で生成 + 公開されます (= 1〜2 分)。</div>'
+    +   '<input id="mediaArtKw" type="text" placeholder="キーワードを入力" style="width:100%;padding:11px 13px;border:1.5px solid var(--wire2);border-radius:9px;font-size:13.5px;font-family:inherit;outline:0;margin-bottom:6px">'
+    +   '<div style="font-size:10.5px;color:var(--text3);margin-bottom:18px">⚙ 文字数: 約 5,000 字 / モデル: Claude Sonnet</div>'
+    +   '<div style="display:flex;justify-content:flex-end;gap:10px">'
+    +     '<button onclick="_mediaArtClose()" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button>'
+    +     '<button id="mediaArtGo" onclick="_mediaArtSubmit(\''+esc(siteId)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">記事を書かせる →</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){
+    var inp = document.getElementById('mediaArtKw');
+    if(inp){
+      inp.focus();
+      inp.addEventListener('keydown', function(e){
+        if(e.key === 'Enter') _mediaArtSubmit(siteId);
+        if(e.key === 'Escape') _mediaArtClose();
+      });
+    }
+  }, 30);
+};
+
+window._mediaArtClose = function(){
+  var ov = document.getElementById('mediaArtOverlay');
+  if(ov) ov.remove();
+  window._mediaArtBusy = false;
+};
+
+window._mediaArtSubmit = async function(siteId){
+  if(window._mediaArtBusy) return;
+  var inp = document.getElementById('mediaArtKw');
+  var keyword = inp ? inp.value.trim() : '';
+  if(!keyword){
+    if(inp){ inp.style.borderColor = '#dc2626'; inp.focus(); }
+    return;
+  }
+  window._mediaArtBusy = true;
+  // overlay 内をローダーに置換
+  var card = document.getElementById('mediaArtCard');
+  if(card){
+    card.innerHTML = ''
+      + '<div style="text-align:center;padding:20px 10px">'
+      +   '<div style="font-size:42px;margin-bottom:10px">✨</div>'
+      +   '<div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:8px">AI チームが記事を執筆中</div>'
+      +   '<div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-bottom:14px">「' + esc(keyword) + '」 で 5,000 文字 + Hero 画像を生成中。<br>1〜2 分かかります。 このまま待つか、 別タブで作業してください。</div>'
+      +   '<div style="background:var(--cream3);border-radius:7px;height:6px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:30%;animation:mediaArtPulse 2s infinite ease-in-out"></div></div>'
+      +   '<style>@keyframes mediaArtPulse{0%{width:15%;margin-left:0}50%{width:75%;margin-left:25%}100%{width:15%;margin-left:85%}}</style>'
+      + '</div>';
   }
   try {
     var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', { keyword: keyword, target_chars: 5000 });
-    // local state 反映
-    if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
-    ag.media_posts_idx.unshift(r.post);
-    var l = document.getElementById('mediaArtLoader'); if(l) l.remove();
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(ag){
+      if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+      ag.media_posts_idx.unshift(r.post);
+    }
+    _mediaArtClose();
     showToast('✅ 記事「'+(r.post.title||'').slice(0,30)+'…」を公開しました','ok');
-    // 再 render
     window.openMediaPanel(siteId);
   } catch(e){
-    var le = document.getElementById('mediaArtLoader'); if(le) le.remove();
-    showToast('記事生成失敗: '+(e.message||'unknown'),'ng');
+    var msg = (e && e.message) || 'unknown';
+    // friendly error
+    if(/credit/i.test(msg))      msg = 'AI クレジットが不足しています。 設定 → 課金 で追加してください。';
+    else if(/timeout/i.test(msg)) msg = 'タイムアウトしました。 もう一度お試しください。';
+    else if(/rate/i.test(msg))   msg = 'リクエスト過多です。 少し時間を置いてください。';
+    if(card){
+      card.innerHTML = ''
+        + '<div style="text-align:center;padding:12px 4px">'
+        +   '<div style="font-size:34px;margin-bottom:8px">⚠️</div>'
+        +   '<div style="font-size:14px;font-weight:900;color:#9a3412;margin-bottom:8px">記事生成に失敗</div>'
+        +   '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:18px">' + esc(msg) + '</div>'
+        +   '<button onclick="_mediaArtClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button>'
+        + '</div>';
+    }
+    window._mediaArtBusy = false;
   }
 };
 
@@ -11956,8 +12029,12 @@ async function openAgent(id){
       actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 の生データ・KPI','Numbers — GA4 metrics / KPI')+'">📊</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('キーワード調査 — SEO / AEO で狙うキーワードを設計','Keyword research — SEO / AEO targeting')+'">🔍</button>';
       // 📝 メディア (Phase A) — 未作成サイトは NEW badge、 作成済は border 強調
+      // メディア型サイト (= 既にブログ/ニュース) には不表示 — 既にメディアあり
       var _hasMedia = !!(ag.media && ag.media.id);
-      actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('メディア — 集客ブログを立ち上げ・運用','Media — AI blog for traffic')+'">📝</button>';
+      var _isMediaSite = (ag.site_type === 'media' || ag.site_vertical === 'blog' || ag.site_vertical === 'news');
+      if(!_isMediaSite){
+        actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('メディア — 集客ブログを立ち上げ・運用','Media — AI blog for traffic')+'">📝</button>';
+      }
       actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('戦略・KPI — ペルソナ・競合・6ヶ月目標','Strategy / KPI')+'">🎯</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('タスク一覧 — 8 週ロードマップ + 進捗','Tasks — 8-week roadmap')+'">📋</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openAgentsPanel(\''+_siteId+'\')" title="'+L('エージェント一覧 — AI チームの組織図','Agents — AI team org chart')+'">🏢</button>';
@@ -13126,7 +13203,8 @@ function renderMsgs(ag, forceScrollBottom){
   // - 未作成: hero (= 「集客ブログを立ち上げよう」 + マスター copy 5 動詞 + 60 秒 trust)
   // - 作成済: 小さい link bar (= 数字一目 + ダッシュボードへ)
   var _mediaIntroBanner = '';
-  if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag)){
+  var _isMediaSiteVert = (ag.site_type === 'media' || ag.site_vertical === 'blog' || ag.site_vertical === 'news');
+  if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && !_isMediaSiteVert){
     var _mediaExists = !!(ag.media && ag.media.id);
     if(!_mediaExists){
       _mediaIntroBanner = '<div class="media-hero-card">'

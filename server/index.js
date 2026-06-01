@@ -15221,24 +15221,35 @@ function recomputeRatings(m){
 // ──────────────────────────────────────────────────────────────────
 // 📝 メディア機能 — slug → {user, agent} 検索 (公開ページ /media/:slug 用)
 // ──────────────────────────────────────────────────────────────────
-// 5 分の in-memory cache。 publish/unpublish 時に手動で クリアできる。
-const _mediaSlugCache = new Map(); // slug -> { user_id, agent_id, expires_at }
-const _MEDIA_SLUG_TTL = 5 * 60 * 1000;
+// 30 分の in-memory cache + 60s negative cache (= 存在しない slug への DDoS 対策)
+const _mediaSlugCache = new Map(); // slug -> { user_id, agent_id, expires_at, missing? }
+const _MEDIA_SLUG_TTL = 30 * 60 * 1000;
+const _MEDIA_SLUG_NEG_TTL = 60 * 1000;
 function _mediaSlugCacheClear(slug){
   if(slug) _mediaSlugCache.delete(slug);
   else _mediaSlugCache.clear();
 }
-async function _findUserByMediaSlug(slug){
+// opts.includePosts: 個別記事 SSR で body_html が必要な時のみ true。
+//   false (= 一覧ページ) なら full row fetch を skip して egress を半減。
+async function _findUserByMediaSlug(slug, opts){
   if(!slug) return null;
+  const includePosts = !!(opts && opts.includePosts);
   const cached = _mediaSlugCache.get(slug);
   if(cached && cached.expires_at > Date.now()){
+    if(cached.missing) return null; // negative cache
     try {
-      const u = await DB.findBy('id', cached.user_id);
-      if(u){
-        const ag = (u.agents||[]).find(a => a && a.id === cached.agent_id);
-        if(ag && ag.media && ag.media.slug === slug){
-          return { user: u, agent: ag };
+      // includePosts=true の時のみ full row fetch (= media_posts_full のため)
+      if(includePosts){
+        const u = await DB.findBy('id', cached.user_id);
+        if(u){
+          const ag = (u.agents||[]).find(a => a && a.id === cached.agent_id);
+          if(ag && ag.media && ag.media.slug === slug){
+            return { user: u, agent: ag };
+          }
         }
+      } else if(cached.agent){
+        // 一覧ページ: cache の lean agent をそのまま返す
+        return { user: { id: cached.user_id }, agent: cached.agent };
       }
     } catch(_){}
     _mediaSlugCache.delete(slug); // stale
@@ -15259,8 +15270,10 @@ async function _findUserByMediaSlug(slug){
           _mediaSlugCache.set(slug, {
             user_id: u.id,
             agent_id: ag.id,
+            agent: ag, // lean (一覧用)
             expires_at: Date.now() + _MEDIA_SLUG_TTL,
           });
+          if(!includePosts) return { user: { id: u.id }, agent: ag };
           // 完全な user を取得 (LEAN だと media_posts_full が無い)
           const fullU = await DB.findBy('id', u.id);
           if(!fullU) return null;
@@ -15269,8 +15282,47 @@ async function _findUserByMediaSlug(slug){
         }
       }
     }
+    // 見つからない → negative cache に 60s
+    _mediaSlugCache.set(slug, {
+      missing: true,
+      expires_at: Date.now() + _MEDIA_SLUG_NEG_TTL,
+    });
   } catch(e){ console.warn('[media-slug-lookup] failed:', e.message); }
   return null;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 📝 セキュリティ helper
+// ──────────────────────────────────────────────────────────────────
+// AI 生成 HTML から script/iframe/event handler/javascript: を全削除
+function _sanitizeArticleHtml(html){
+  if(!html) return '';
+  let out = String(html);
+  // 危険タグ + 内容を削除
+  out = out.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  out = out.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+  out = out.replace(/<(iframe|object|embed|link|meta|form|input|button|svg)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
+  out = out.replace(/<(iframe|object|embed|link|meta|form|input|button|svg)\b[^>]*\/?>/gi, '');
+  // on* イベントハンドラ削除
+  out = out.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '');
+  out = out.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '');
+  out = out.replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, '');
+  // javascript: / data: スキームを丸ごと無効化 (= protocol を壊す)
+  out = out.replace(/javascript\s*:/gi, 'js-blocked:');
+  // <a href> 等の data: は image インライン以外用途が無いので無効化
+  out = out.replace(/(href|action|formaction)\s*=\s*(["']?)\s*data\s*:/gi, '$1=$2#');
+  // srcdoc は iframe で使うが既にタグ削除済み、念のため
+  out = out.replace(/\ssrcdoc\s*=/gi, ' data-srcdoc-removed=');
+  return out;
+}
+
+// http:// / https:// のみ許可
+function _isHttpUrl(s){
+  if(!s) return false;
+  try {
+    const u = new URL(String(s));
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch(_) { return false; }
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -15329,7 +15381,7 @@ async function _mediaGenerateArticle(agent, params){
     title: String(parsed.title).slice(0, 120),
     excerpt: String(parsed.excerpt || '').slice(0, 240),
     category_name: String(parsed.category_name || '').slice(0, 30),
-    body_html: String(parsed.body_html),
+    body_html: _sanitizeArticleHtml(String(parsed.body_html)),
   };
 }
 
@@ -18581,7 +18633,7 @@ async function handleAPI(req,res,pathname,method,ip){
     const slug = mediaPostMatch[1];
     const postSlug = mediaPostMatch[2];
     try {
-      const found = await _findUserByMediaSlug(slug);
+      const found = await _findUserByMediaSlug(slug, { includePosts: true });
       if(!found){
         res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
         return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1></body></html>');
@@ -18593,12 +18645,15 @@ async function handleAPI(req,res,pathname,method,ip){
         return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1>404 — 記事が見つかりません</h1><p><a href="/media/'+_mediaEsc(slug)+'" style="color:#0d4f4a">記事一覧へ</a></p></body></html>');
       }
       const fullMap = user.media_posts_full || {};
-      const body_html = (fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '<p>記事本文を読み込めませんでした。</p>';
+      // 防御的に再 sanitize (= 古いデータが unescaped で保存されていた場合)
+      const body_html = _sanitizeArticleHtml((fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '<p>記事本文を読み込めませんでした。</p>');
       const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html);
       res.writeHead(200, {
         'Content-Type': 'text/html;charset=utf-8',
         'Cache-Control': 'public, max-age=300',
         'X-Frame-Options': 'SAMEORIGIN',
+        // script-src 'none' で AI 由来の inline JS を完全ブロック (= XSS 多層防御)
+        'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
       });
       return res.end(html);
     } catch(e){
@@ -18613,7 +18668,8 @@ async function handleAPI(req,res,pathname,method,ip){
   if(mediaPubMatch && method === 'GET'){
     const slug = mediaPubMatch[1];
     try {
-      const found = await _findUserByMediaSlug(slug);
+      // 一覧ページは body_html 不要 → includePosts: false で egress 半減
+      const found = await _findUserByMediaSlug(slug, { includePosts: false });
       if(!found){
         res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
         return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1 style="font-size:24px">404 — メディアが見つかりません</h1><p>URL をご確認ください。</p><p><a href="https://myaiagents.agency" style="color:#0d4f4a">myaiagents.agency へ</a></p></body></html>');
@@ -18625,6 +18681,7 @@ async function handleAPI(req,res,pathname,method,ip){
         'Content-Type': 'text/html;charset=utf-8',
         'Cache-Control': 'public, max-age=300',
         'X-Frame-Options': 'SAMEORIGIN',
+        'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
       });
       return res.end(html);
     } catch(e){
@@ -21504,9 +21561,13 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     const body = await readBody(req).catch(() => ({}));
     const siteUrl = String((body && body.site_url) || ag.site_url || '').trim();
-    if(!siteUrl) return jres(res, 400, { error: 'site_url required' });
+    if(!_isHttpUrl(siteUrl)) return jres(res, 400, { error: 'invalid_url', detail: 'http(s):// URL required' });
     try {
       const result = await _mediaExtractLogo(siteUrl);
+      // 抽出結果 logo_url も再 validation (= AI 生成 SVG inline 以外は http(s) であるべき)
+      if(result && result.logo_url && !/^https?:|^data:image\//i.test(result.logo_url)){
+        result.logo_url = null;
+      }
       return jres(res, 200, result);
     } catch(e){
       console.warn('[media-logo] failed:', e.message);
@@ -21549,8 +21610,10 @@ async function handleAPI(req,res,pathname,method,ip){
       ? String(body.template) : 'minimal';
     const brand_color = /^#[0-9a-fA-F]{6}$/.test(String(body && body.brand_color || ''))
       ? String(body.brand_color) : '#0d4f4a';
-    const lp_url = String((body && body.lp_url) || ag.site_url || '').trim();
-    const logo_url = String((body && body.logo_url) || '').trim() || null;
+    const lp_url_raw = String((body && body.lp_url) || ag.site_url || '').trim();
+    const lp_url = _isHttpUrl(lp_url_raw) ? lp_url_raw : '';
+    const logo_url_raw = String((body && body.logo_url) || '').trim();
+    const logo_url = _isHttpUrl(logo_url_raw) ? logo_url_raw : null;
 
     // カテゴリ (= 入力 or default)
     const categoriesIn = Array.isArray(body && body.categories) ? body.categories : [];

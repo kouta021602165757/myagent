@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>📝 メディア機能 入口モック</title>
+<style>
+  :root {
+    --cream:#ffffff; --cream2:#fafafa; --cream3:#fafaf7;
+    --text:#1a1a1a; --text2:#525252; --text3:#71717a;
+    --wire:rgba(9,9,11,.06); --wire2:rgba(9,9,11,.10);
+    --peach:#c0ff5c; --peach-dark:#a3e635;
+    --peach-soft:#f7ffe9;
+    --teal:#0d4f4a; --teal-deep:#0a3d39; --teal-soft:#e8f1f0;
+    --blue:#2563eb; --blue-soft:#eff6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:rgba(10,10,12,.4);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:var(--text);line-height:1.65;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
+
+  .modal{background:var(--cream3);border-radius:16px;max-width:1100px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column}
+  .modal-head{padding:14px 22px;border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px;background:var(--cream)}
+  .modal-head-ic{font-size:22px}
+  .modal-head-title{font-weight:900;font-size:15px}
+  .modal-head-sub{font-size:11px;color:var(--text3);font-weight:700}
+  .modal-body{padding:20px 22px 36px;overflow-y:auto;max-height:calc(100vh - 60px)}
+
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:13px 16px;font-size:11.5px;color:#92400e;line-height:1.6;margin-bottom:22px}
+  .note b{font-weight:800}
+
+  .state-tag{display:inline-block;font-size:9.5px;font-weight:800;background:var(--teal-soft);color:var(--teal-deep);padding:3px 8px;border-radius:5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+
+  .divider{text-align:center;margin:30px 0 22px;position:relative}
+  .divider::before{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:var(--wire2)}
+  .divider-tx{display:inline-block;background:var(--cream3);padding:0 14px;font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.06em;position:relative;text-transform:uppercase}
+
+  /* === 実 app frame 風 === */
+  .app-frame{background:#fff;border:1px solid var(--wire2);border-radius:12px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+  .app-bar{background:var(--cream3);padding:9px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--wire2);font-size:10.5px;color:var(--text3)}
+  .app-dots{display:flex;gap:4px}
+  .app-dots span{width:9px;height:9px;background:#ccc;border-radius:50%}
+  .app-url{flex:1;background:#fff;padding:5px 11px;border-radius:5px;font-family:'SF Mono',Menlo,monospace;font-size:10px;color:var(--text2)}
+
+  /* === Site agent header (= chat top area) === */
+  .agent-hdr{padding:18px 24px 14px;background:#fff;border-bottom:1px solid var(--wire2)}
+  .agent-row{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+  .agent-ic{width:48px;height:48px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+  .agent-meta{flex:1;min-width:0}
+  .agent-name{display:flex;align-items:center;gap:7px;font-size:18px;font-weight:800;color:var(--text);line-height:1.2}
+  .agent-name::before{content:"";width:7px;height:7px;background:#16a34a;border-radius:50%}
+  .agent-pills{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+  .pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--cream3);color:var(--text2);border:1px solid var(--wire2)}
+  .pill.media{background:#0d4f4a;color:#fff;border-color:#0d4f4a}
+  .pill.web{background:#e8f1f0;color:var(--teal-deep);border-color:#cfe0de}
+  .pill.task{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}
+  .pill.connect{background:#fefce8;color:#854d0e;border-color:#fde68a;cursor:pointer}
+
+  /* === Toolbar (= existing pattern + 📝 added) === */
+  .toolbar{display:flex;gap:6px;padding:11px 24px 13px;background:#fff;border-bottom:1px solid var(--wire2);align-items:center;flex-wrap:wrap}
+  .tb-btn{position:relative;background:var(--cream3);border:1px solid var(--wire2);width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;transition:.15s;font-family:inherit}
+  .tb-btn:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,.08);border-color:var(--teal)}
+  .tb-btn.media-btn{background:linear-gradient(135deg,var(--peach-soft),#fff);border-color:var(--peach-dark);border-width:1.5px}
+  .tb-btn .new-badge{position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:8.5px;font-weight:900;padding:1px 5px;border-radius:99px;letter-spacing:.05em;border:2px solid #fff}
+  .tb-tip{font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+
+  /* === Media hero (= state A、 メディア未作成時) === */
+  .media-hero{margin:18px 24px;background:linear-gradient(135deg,var(--teal),var(--teal-deep));border-radius:14px;padding:28px 30px;color:#fff;position:relative;overflow:hidden}
+  .media-hero-bg{position:absolute;inset:0;background:radial-gradient(circle at 85% 25%,rgba(192,255,92,.15) 0%,transparent 50%),radial-gradient(circle at 10% 80%,rgba(192,255,92,.08) 0%,transparent 55%);pointer-events:none}
+  .media-hero-tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.85;font-weight:800;margin-bottom:9px;position:relative}
+  .media-hero-h{font-size:24px;font-weight:900;line-height:1.3;margin-bottom:9px;position:relative;letter-spacing:-.005em}
+  .media-hero-tx{font-size:13px;opacity:.88;line-height:1.65;max-width:540px;margin-bottom:18px;position:relative}
+  .media-hero-tx b{color:var(--peach);font-weight:800}
+  .media-hero-cta-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:relative}
+  .media-hero-btn{background:var(--peach);color:var(--teal-deep);border:0;padding:13px 24px;border-radius:9px;font-size:13.5px;font-weight:900;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);transition:.15s}
+  .media-hero-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.22)}
+  .media-hero-trust{display:flex;gap:14px;font-size:11px;opacity:.8;font-weight:600}
+
+  /* === Body area (= 模擬 chat / dashboard) === */
+  .agent-body{padding:20px 24px;background:#fff}
+  .stat-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+  .stat-tile{background:var(--cream3);border:1px solid var(--wire2);border-radius:8px;padding:9px 11px}
+  .stat-tile-l{font-size:9.5px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .stat-tile-v{font-size:15px;font-weight:900;color:var(--text);margin-top:2px;line-height:1.1}
+  .stat-tile-v small{font-size:10px;font-weight:700;color:var(--text3);margin-left:2px}
+
+  .placeholder-body{padding:30px 0;text-align:center;color:var(--text3);font-size:12px;line-height:1.7}
+  .placeholder-body b{color:var(--text2)}
+
+  /* === Media exists state (= state B 用): hero 縮小 link === */
+  .media-link{margin:14px 24px 0;background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:11px;font-size:12px}
+  .media-link-ic{font-size:18px}
+  .media-link-bd{flex:1;line-height:1.45}
+  .media-link-ti{font-weight:800;color:var(--text)}
+  .media-link-sub{font-size:10.5px;color:var(--text3);font-weight:600;margin-top:1px}
+  .media-link-btn{background:var(--teal);color:#fff;border:0;padding:7px 13px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;text-decoration:none}
+
+  /* annotation label */
+  .anno{display:flex;align-items:flex-start;gap:8px;margin:8px 0;padding:8px 12px;background:#fffbeb;border-left:3px solid #fbbf24;border-radius:6px;font-size:11px;color:#78350f;line-height:1.55}
+  .anno-num{background:#dc2626;color:#fff;border-radius:99px;width:18px;height:18px;font-size:10px;font-weight:900;text-align:center;line-height:18px;flex-shrink:0;margin-top:1px}
+
+  .legend{background:var(--cream);border:1px solid var(--wire2);border-radius:11px;padding:15px 18px;margin-bottom:20px}
+  .legend-h{font-size:12px;font-weight:900;color:var(--text);margin-bottom:9px}
+  .legend-l{font-size:11.5px;color:var(--text2);line-height:1.85}
+  .legend-l b{color:var(--text)}
+
+  @media (max-width:560px){
+    body{padding:8px}
+    .modal-body{padding:14px 14px 28px}
+    .stat-strip{grid-template-columns:repeat(3,1fr)}
+    .toolbar{padding:9px 14px}
+    .tb-btn{width:34px;height:34px;font-size:16px}
+  }
+</style>
+</head>
+<body>
+<div class="modal">
+
+  <div class="modal-head">
+    <div class="modal-head-ic">📝</div>
+    <div>
+      <div class="modal-head-title">メディア機能 入口モック</div>
+      <div class="modal-head-sub">B + C 採用: ツールバー 📝 + 各サイトの hero (= メディア 0 件のみ表示)</div>
+    </div>
+  </div>
+
+  <div class="modal-body">
+
+    <div class="note">
+      <b>📝 設計確定</b> (2026-06-01) — 入口は<br>
+      <b>B</b>: 各 site agent ツールバーに 📝 メディア (= 🔍 KW と 🎯 戦略 の間)<br>
+      <b>C</b>: 各 site agent の chat top に「集客ブログを立ち上げよう」 hero (= メディア未作成時のみ表示、 作成済は小さい link に縮小)<br>
+      <b>1 LP = 1 メディア</b> (= 各 site agent から個別に作成、 グローバル選択無)
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <!-- State 1: メディア未作成サイト — hero 表示 + 📝 NEW badge       -->
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <span class="state-tag">State 1 — メディア未作成サイト (= 新規 / 0 件)</span>
+
+    <div class="app-frame">
+      <div class="app-bar">
+        <div class="app-dots"><span></span><span></span><span></span></div>
+        <div class="app-url">myaiagents.agency/app</div>
+      </div>
+
+      <!-- Site agent header (= 既存 UI 維持) -->
+      <div class="agent-hdr">
+        <div class="agent-row">
+          <div class="agent-ic">🌐</div>
+          <div class="agent-meta">
+            <div class="agent-name">my-service.com</div>
+            <div class="agent-pills">
+              <span class="pill media">💼 LP/HP 型</span>
+              <span class="pill web">🌐 Web</span>
+              <span class="pill task">📋 タスク 5</span>
+              <span class="pill connect">🔌 接続する</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar — 📝 を 🔍 と 🎯 の間に挿入 -->
+      <div class="toolbar">
+        <button class="tb-btn" title="日次グロースレポート">📰</button>
+        <button class="tb-btn" title="数字分析">📊</button>
+        <button class="tb-btn" title="キーワード調査">🔍</button>
+        <!-- 🆕 新ボタン: メディア -->
+        <button class="tb-btn media-btn" title="メディア — 集客ブログを立ち上げ・運用" onclick="window.open('/mock-media-launch.html', '_blank')">
+          📝
+          <span class="new-badge">NEW</span>
+        </button>
+        <button class="tb-btn" title="戦略 / KPI">🎯</button>
+        <button class="tb-btn" title="タスク">📋</button>
+        <button class="tb-btn" title="エージェント一覧">🏢</button>
+        <button class="tb-btn" title="接続">🔌</button>
+        <button class="tb-btn" title="メモ">📒</button>
+        <button class="tb-btn" title="設定">⚙️</button>
+      </div>
+
+      <!-- 🆕 NEW: メディア hero (= C) — メディア未作成時のみ表示 -->
+      <div class="media-hero">
+        <div class="media-hero-bg"></div>
+        <div class="media-hero-tag">🚀 RECOMMENDED · あなたの LP に集客チームを 24h 配備</div>
+        <div class="media-hero-h">集客ブログを立ち上げよう。</div>
+        <div class="media-hero-tx">
+          <b>ブログ立ち上げ・キーワード調査・記事執筆・公開・改善</b> すべて 30 名超の AI チームが自動で。 LP の URL は既に登録済、 設定は <b>60 秒</b>。
+        </div>
+        <div class="media-hero-cta-row">
+          <button class="media-hero-btn" onclick="window.open('/mock-media-launch.html', '_blank')">
+            🚀 ブログを立ち上げる
+            <span style="font-size:18px">→</span>
+          </button>
+          <div class="media-hero-trust">
+            <span>✓ 60 秒で完成</span>
+            <span>✓ 月 ¥0 〜</span>
+            <span>✓ 解約 1 click</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 既存の chat / dashboard 部分 (= 簡略表示) -->
+      <div class="agent-body">
+        <div class="stat-strip">
+          <div class="stat-tile">
+            <div class="stat-tile-l">AI チーム</div>
+            <div class="stat-tile-v">30+ <small>名</small></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">月間 PV</div>
+            <div class="stat-tile-v">73</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">月間ユーザー</div>
+            <div class="stat-tile-v">67</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">公開記事</div>
+            <div class="stat-tile-v">0 <small>本</small></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">X / Threads</div>
+            <div class="stat-tile-v" style="font-size:11px;color:var(--text3);font-weight:700">未連携</div>
+          </div>
+        </div>
+        <div class="placeholder-body">
+          ⋯ <b>(既存の chat / 日次レポートエリア — そのまま)</b> ⋯
+        </div>
+      </div>
+    </div>
+
+    <div class="anno">
+      <span class="anno-num">1</span>
+      <div><b>B (ツールバー 📝)</b>: 既存 9 ボタン中、 🔍 KW と 🎯 戦略 の間に挿入。 NEW badge + peach 縁取りで「新機能」 と分かる。 メディア未作成時は **立ち上げ Wizard** へ。</div>
+    </div>
+    <div class="anno">
+      <span class="anno-num">2</span>
+      <div><b>C (集客ブログ hero)</b>: ツールバー直下、 chat / 数字パネルの上 に teal solid box。 「マーケ担当を雇う前に AI チームを雇おう」 のマスター copy に沿って <b>5 動詞</b> を hero 内に列挙。 LP URL は既に登録済なので <b>60 秒</b> で完成 を強調。</div>
+    </div>
+    <div class="anno">
+      <span class="anno-num">3</span>
+      <div><b>クリック動作</b>: 📝 ボタン or hero CTA → <a href="/mock-media-launch.html" target="_blank" style="color:var(--teal);font-weight:700">mock-media-launch.html</a> へ (= Wizard 4 step → 完成 → ダッシュボード)</div>
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <!-- State 2: メディア作成済サイト — hero 引っ込む + 📝 がダッシュボード起動 -->
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <div class="divider">
+      <span class="divider-tx">↓ メディア作成後の同じ画面 (= 状態 B) ↓</span>
+    </div>
+
+    <span class="state-tag">State 2 — メディア作成済サイト (= 運用中)</span>
+
+    <div class="app-frame">
+      <div class="app-bar">
+        <div class="app-dots"><span></span><span></span><span></span></div>
+        <div class="app-url">myaiagents.agency/app</div>
+      </div>
+
+      <div class="agent-hdr">
+        <div class="agent-row">
+          <div class="agent-ic">🌐</div>
+          <div class="agent-meta">
+            <div class="agent-name">my-service.com</div>
+            <div class="agent-pills">
+              <span class="pill media">💼 LP/HP 型</span>
+              <span class="pill web">🌐 Web</span>
+              <span class="pill task">📋 タスク 5</span>
+              <span class="pill" style="background:#dcfce7;color:#166534;border-color:#86efac">📝 メディア 42 本</span>
+              <span class="pill connect">🔌 接続済</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="tb-btn" title="日次グロースレポート">📰</button>
+        <button class="tb-btn" title="数字分析">📊</button>
+        <button class="tb-btn" title="キーワード調査">🔍</button>
+        <!-- メディア作成済 → NEW badge なし、 通常 button -->
+        <button class="tb-btn" title="メディア — 運用中ダッシュボード" onclick="window.open('/mock-media-launch.html#dashboard', '_blank')" style="border-color:var(--peach-dark)">📝</button>
+        <button class="tb-btn" title="戦略 / KPI">🎯</button>
+        <button class="tb-btn" title="タスク">📋</button>
+        <button class="tb-btn" title="エージェント一覧">🏢</button>
+        <button class="tb-btn" title="接続">🔌</button>
+        <button class="tb-btn" title="メモ">📒</button>
+        <button class="tb-btn" title="設定">⚙️</button>
+      </div>
+
+      <!-- hero は引っ込み、 小さな link に変わる -->
+      <div class="media-link">
+        <div class="media-link-ic">📝</div>
+        <div class="media-link-bd">
+          <div class="media-link-ti">my-service Blog · 運用中</div>
+          <div class="media-link-sub">42 本公開 · 月間 PV 3,840 · LP 送客 214 · CV 12 件</div>
+        </div>
+        <a href="/mock-media-launch.html" target="_blank" class="media-link-btn">ダッシュボードへ →</a>
+      </div>
+
+      <div class="agent-body">
+        <div class="stat-strip">
+          <div class="stat-tile">
+            <div class="stat-tile-l">AI チーム</div>
+            <div class="stat-tile-v">30+ <small>名</small></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">月間 PV</div>
+            <div class="stat-tile-v">3,913</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">月間ユーザー</div>
+            <div class="stat-tile-v">3,210</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">公開記事</div>
+            <div class="stat-tile-v">42 <small>本</small></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-l">LP CV</div>
+            <div class="stat-tile-v" style="color:var(--teal-deep)">12 <small>件</small></div>
+          </div>
+        </div>
+        <div class="placeholder-body">
+          ⋯ <b>(既存の chat / 日次レポートエリア — そのまま)</b> ⋯
+        </div>
+      </div>
+    </div>
+
+    <div class="anno">
+      <span class="anno-num">4</span>
+      <div><b>hero の引っ込み</b>: メディア作成済 → 大きな teal hero は消え、 「📝 my-service Blog · 運用中」 の小さな link bar に変わる。 数字 (= 42 本 / 3,840 PV / 12 CV) を一目で見せる。</div>
+    </div>
+    <div class="anno">
+      <span class="anno-num">5</span>
+      <div><b>📝 ボタンの挙動切替</b>: NEW badge 消え、 peach-dark border 維持 (= ユーザの主力機能と認知)。 押すと <b>運用中ダッシュボード</b> (= mock-media-launch.html State 3) へ直接遷移。</div>
+    </div>
+    <div class="anno">
+      <span class="anno-num">6</span>
+      <div><b>サイト header pill</b>: 「📝 メディア 42 本」 を緑 pill で追加 → site agent カード一覧でも一目でメディア持ってるか分かる。</div>
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <!-- Legend                                                       -->
+    <!-- ═════════════════════════════════════════════════════════ -->
+    <div class="divider">
+      <span class="divider-tx">↓ 仕様サマリー ↓</span>
+    </div>
+
+    <div class="legend">
+      <div class="legend-h">📝 メディア機能 入口設計 (= 最終確定)</div>
+      <div class="legend-l">
+        <b>B</b>: 各 site agent ツールバーに 📝 メディア (= 🔍 KW と 🎯 戦略 の間)<br>
+        ├ <b>未作成サイト</b>: NEW badge 付、 押下 → 立ち上げ Wizard (= mock-media-launch.html)<br>
+        └ <b>作成済サイト</b>: NEW badge なし、 押下 → 運用中ダッシュボード (= mock-media-launch.html State 3)<br>
+        <br>
+        <b>C</b>: 各 site agent の chat top に「集客ブログを立ち上げよう」 hero<br>
+        ├ <b>未作成サイト</b>: teal solid hero (= マスター copy 5 動詞 + 60 秒で完成 trust)<br>
+        └ <b>作成済サイト</b>: 小さい link bar (= 42 本 / 3,840 PV / 12 CV を一目見せ)<br>
+        <br>
+        <b>関係</b>: 1 LP = 1 メディア (= site agent ごとに独立、 グローバル選択なし)<br>
+        <b>サイト header pill</b>: 作成済の時「📝 メディア N 本」 を緑 pill で追加 → サイト一覧でも一目で分かる
+      </div>
+    </div>
+
+    <div class="note" style="background:var(--peach-soft);border-color:var(--peach-dark);color:var(--teal-deep)">
+      <b>🚀 次の Phase A 実装ステップ</b>:<br>
+      1. DB スキーマ (= medias / media_posts / cta_clicks)<br>
+      2. Wizard endpoint (= POST /api/agents/:id/media/create)<br>
+      3. LP URL からロゴ自動抽出 (= 7 段階フォールバック)<br>
+      4. AI 画像生成 endpoint (= DALL-E 3 / Imagen 4)<br>
+      5. 5 CTA 自動配置 + UTM 付与<br>
+      6. 公開ルート (= {slug}.myaiagents.agency or /media/{slug}/{post})<br>
+      7. app.js に 📝 ボタン + hero / link bar を追加 (= 上のモック通り)
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

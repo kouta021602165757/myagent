@@ -315,7 +315,7 @@
     </div>
 
     <!-- Step 2 preview -->
-    <span class="state-tag">State 2 — Wizard (Step 2/4)</span>
+    <span class="state-tag">State 2 — Wizard (Step 2/4) · カテゴリ設定</span>
 
     <div class="wiz">
       <div class="wiz-h">
@@ -325,46 +325,92 @@
       </div>
       <div class="wiz-steps">
         <div class="wiz-st done"><div class="wiz-st-num">STEP 1</div><div class="wiz-st-ti">基本情報</div></div>
-        <div class="wiz-st now"><div class="wiz-st-num">STEP 2</div><div class="wiz-st-ti">テーマ確認</div></div>
+        <div class="wiz-st now"><div class="wiz-st-num">STEP 2</div><div class="wiz-st-ti">カテゴリ</div></div>
         <div class="wiz-st"><div class="wiz-st-num">STEP 3</div><div class="wiz-st-ti">デザイン</div></div>
         <div class="wiz-st"><div class="wiz-st-num">STEP 4</div><div class="wiz-st-ti">完成</div></div>
       </div>
       <div class="wiz-body">
-        <div class="wiz-pretitle">Step 2 / 4 — 何のブログにする?</div>
-        <div class="wiz-h2">AI が my-service.com を読んで提案するテーマ</div>
+        <div class="wiz-pretitle">Step 2 / 4 — ブログの「目次構造」 を決める</div>
+        <div class="wiz-h2">AI 提案のカテゴリ階層 (大カテゴリ / サブカテゴリ)</div>
         <div class="wiz-desc">
-          ペルソナ・競合・サービス内容から、 集客に効くテーマを 5 案抽出しました。 <b>1 つ以上選んでください</b>。 後から追加 / 削除も OK。
+          my-service.com を解析して、 集客に効くカテゴリ構造を提案しました。 <b>編集・追加・削除</b> はこの画面で OK。 後からも変更可能。
         </div>
 
-        <div class="topic-grid">
-          <div class="topic-pill selected">
-            ✓ 中小企業の DX 入門
-            <div class="topic-pill-sub">月間検索 1,200 / 競合 中</div>
+        <!-- カテゴリツリー -->
+        <div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:11px;padding:14px 16px;font-family:'SF Mono',Menlo,monospace;font-size:12px;line-height:2;color:var(--text)">
+          <div style="font-weight:900;color:var(--teal-deep);padding-bottom:8px;border-bottom:1px dashed var(--wire2);margin-bottom:8px">
+            <span style="font-family:system-ui">🌐</span> <b>my-service Blog (トップ)</b>
           </div>
-          <div class="topic-pill selected">
-            ✓ 業務効率化ツール 比較
-            <div class="topic-pill-sub">月間検索 980 / 競合 緩</div>
+
+          <!-- 大カテゴリ 1 -->
+          <div style="margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+              <span style="font-family:system-ui">├</span>
+              <span style="font-family:system-ui;font-size:14px">📁</span>
+              <input type="text" value="DX" style="flex:1;border:0;background:transparent;font:inherit;font-weight:800;color:var(--text);outline:0;padding:2px 6px;border-radius:5px">
+              <span style="font-size:10px;color:var(--text3);font-family:system-ui">3 サブ</span>
+              <button style="background:#fff;border:1px solid var(--wire2);font-size:10px;padding:3px 7px;border-radius:5px;cursor:pointer;font-family:system-ui;color:var(--text2)">+ サブ追加</button>
+              <button style="background:transparent;border:0;font-size:13px;color:var(--text3);cursor:pointer">🗑</button>
+            </div>
+            <div style="padding-left:28px;font-size:11.5px;color:var(--text2)">
+              <div>│  ├ DX 入門</div>
+              <div>│  ├ DX ツール</div>
+              <div>│  └ DX 導入事例</div>
+            </div>
           </div>
-          <div class="topic-pill selected">
-            ✓ SaaS 導入事例
-            <div class="topic-pill-sub">月間検索 540 / 競合 緩</div>
+
+          <!-- 大カテゴリ 2 -->
+          <div style="margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+              <span style="font-family:system-ui">├</span>
+              <span style="font-family:system-ui;font-size:14px">📁</span>
+              <input type="text" value="業務効率化" style="flex:1;border:0;background:transparent;font:inherit;font-weight:800;color:var(--text);outline:0;padding:2px 6px;border-radius:5px">
+              <span style="font-size:10px;color:var(--text3);font-family:system-ui">3 サブ</span>
+              <button style="background:#fff;border:1px solid var(--wire2);font-size:10px;padding:3px 7px;border-radius:5px;cursor:pointer;font-family:system-ui;color:var(--text2)">+ サブ追加</button>
+              <button style="background:transparent;border:0;font-size:13px;color:var(--text3);cursor:pointer">🗑</button>
+            </div>
+            <div style="padding-left:28px;font-size:11.5px;color:var(--text2)">
+              <div>│  ├ 勤怠管理</div>
+              <div>│  ├ 経費精算</div>
+              <div>│  └ タスク管理</div>
+            </div>
           </div>
-          <div class="topic-pill">
-            勤怠管理の基礎知識
-            <div class="topic-pill-sub">月間検索 2,100 / 競合 激</div>
+
+          <!-- 大カテゴリ 3 -->
+          <div style="margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+              <span style="font-family:system-ui">├</span>
+              <span style="font-family:system-ui;font-size:14px">📁</span>
+              <input type="text" value="SaaS 選び方" style="flex:1;border:0;background:transparent;font:inherit;font-weight:800;color:var(--text);outline:0;padding:2px 6px;border-radius:5px">
+              <span style="font-size:10px;color:var(--text3);font-family:system-ui">2 サブ</span>
+              <button style="background:#fff;border:1px solid var(--wire2);font-size:10px;padding:3px 7px;border-radius:5px;cursor:pointer;font-family:system-ui;color:var(--text2)">+ サブ追加</button>
+              <button style="background:transparent;border:0;font-size:13px;color:var(--text3);cursor:pointer">🗑</button>
+            </div>
+            <div style="padding-left:28px;font-size:11.5px;color:var(--text2)">
+              <div>│  ├ 比較記事</div>
+              <div>│  └ 価格比較</div>
+            </div>
           </div>
-          <div class="topic-pill">
-            人事 業務効率化
-            <div class="topic-pill-sub">月間検索 720 / 競合 中</div>
+
+          <!-- 大カテゴリ追加ボタン -->
+          <div style="padding:10px 0 4px;font-family:system-ui">
+            <button style="background:transparent;border:1px dashed var(--wire2);color:var(--text3);padding:7px 12px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">
+              <span style="font-family:system-ui">└</span> + 大カテゴリを追加
+            </button>
           </div>
         </div>
 
-        <div style="background:var(--blue-soft);border:1px solid #c7d2fe;border-radius:9px;padding:11px 14px;margin-top:16px;font-size:11.5px;color:#1e40af;line-height:1.6">
-          💡 <b>選んだテーマで毎週 3-7 本ペース</b>で記事が公開されます (= 月 12-30 本)。 後から増減可能。
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button style="flex:1;background:#fff;border:1px solid var(--wire2);padding:9px 12px;border-radius:8px;font-size:11.5px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">🔄 AI に別案を再提案させる</button>
+          <button style="flex:1;background:#fff;border:1px solid var(--wire2);padding:9px 12px;border-radius:8px;font-size:11.5px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">📂 カテゴリ無しで進める (= フラット構造)</button>
+        </div>
+
+        <div style="background:var(--blue-soft);border:1px solid #c7d2fe;border-radius:9px;padding:11px 14px;margin-top:14px;font-size:11.5px;color:#1e40af;line-height:1.6">
+          💡 <b>カテゴリの目安</b>: 大 3-5 個 / 各 2-4 サブ。 SEO 内部リンク + ユーザの回遊が改善され、 ブログ全体の順位が上がりやすくなります。
         </div>
       </div>
       <div class="wiz-foot">
-        <div class="wiz-foot-info">3 / 5 テーマ選択中</div>
+        <div class="wiz-foot-info">3 大カテゴリ · 8 サブカテゴリ</div>
         <button class="wiz-back">← 戻る</button>
         <button class="wiz-next">次へ <span style="font-size:14px">→</span></button>
       </div>
@@ -512,9 +558,54 @@
       <div class="cta-card-ic">🤖</div>
       <div class="cta-card-bd">
         <div class="cta-card-ti">AI チームが次に書く記事</div>
-        <div class="cta-card-sub">「中小企業の DX 入門 — 失敗しない 3 つのステップ」 を執筆中。 完成予定 <b>30 分後</b>。 自動公開されます。</div>
+        <div class="cta-card-sub"><b>DX › DX 入門</b> カテゴリで 「中小企業の DX 入門 — 失敗しない 3 つのステップ」 を執筆中。 完成予定 <b>30 分後</b>。 自動公開されます。</div>
       </div>
       <button class="cta-card-btn">👁 プレビュー</button>
+    </div>
+
+    <!-- カテゴリ別記事数 -->
+    <div class="sec">
+      <div class="sec-h">
+        <span class="sec-h-ic">📂</span> カテゴリ別 記事数
+        <span class="sec-h-sub">42 本 / 3 大カテゴリ · 8 サブ</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:13px 14px">
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">
+            <span style="font-size:16px">📁</span>
+            <b style="font-size:13px">DX</b>
+            <span style="font-size:11px;color:var(--text3);margin-left:auto"><b style="color:var(--text);font-size:14px">18</b> 本</span>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.7">
+            ├ DX 入門 (7) ▲ 4 位平均<br>
+            ├ DX ツール (6) ▲ 9 位平均<br>
+            └ DX 導入事例 (5) ▲ 12 位平均
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:13px 14px">
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">
+            <span style="font-size:16px">📁</span>
+            <b style="font-size:13px">業務効率化</b>
+            <span style="font-size:11px;color:var(--text3);margin-left:auto"><b style="color:var(--text);font-size:14px">15</b> 本</span>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.7">
+            ├ 勤怠管理 (5) ▲ 14 位平均<br>
+            ├ 経費精算 (5) ▲ 18 位平均<br>
+            └ タスク管理 (5) ▲ 11 位平均
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:13px 14px">
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">
+            <span style="font-size:16px">📁</span>
+            <b style="font-size:13px">SaaS 選び方</b>
+            <span style="font-size:11px;color:var(--text3);margin-left:auto"><b style="color:var(--text);font-size:14px">9</b> 本</span>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.7">
+            ├ 比較記事 (5) ▲ 8 位平均<br>
+            └ 価格比較 (4) ▲ 6 位平均
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="sec">
@@ -538,7 +629,7 @@
           <div class="post-rank">#41</div>
           <div class="post-meta">
             <div class="post-ti">業務効率化ツール 12 選 — 中小企業向け 2026 最新版</div>
-            <div class="post-sub"><span>📅 昨日 23:48</span><span>· 13,200 字</span><span>· 順位 8 位</span></div>
+            <div class="post-sub"><span>📂 SaaS 選び方 › 比較記事</span><span>· 📅 昨日 23:48</span><span>· 13,200 字</span><span>· 順位 8 位</span></div>
           </div>
           <div><div class="post-pv">86</div><div class="post-pv-sub">PV / 日</div></div>
           <div><span class="post-status live">公開中</span></div>
@@ -548,7 +639,7 @@
           <div class="post-rank">#40</div>
           <div class="post-meta">
             <div class="post-ti">SaaS 導入事例 — 製造業 A 社の業務時間 60% 削減ストーリー</div>
-            <div class="post-sub"><span>📅 2 日前</span><span>· 11,800 字</span><span>· 🚀 LP CV 3 件 経由</span></div>
+            <div class="post-sub"><span>📂 DX › DX 導入事例</span><span>· 📅 2 日前</span><span>· 11,800 字</span><span>· 🚀 LP CV 3 件</span></div>
           </div>
           <div><div class="post-pv">142</div><div class="post-pv-sub">PV / 日</div></div>
           <div><span class="post-status live">公開中</span></div>
@@ -558,7 +649,7 @@
           <div class="post-rank">#39</div>
           <div class="post-meta">
             <div class="post-ti">勤怠管理 SaaS の選び方 — 50 名以下の会社向け 5 つの条件</div>
-            <div class="post-sub"><span>📅 3 日前</span><span>· 10,600 字</span><span>· 順位 14 位 (↑3)</span></div>
+            <div class="post-sub"><span>📂 業務効率化 › 勤怠管理</span><span>· 📅 3 日前</span><span>· 10,600 字</span><span>· 順位 14 位 (↑3)</span></div>
           </div>
           <div><div class="post-pv">58</div><div class="post-pv-sub">PV / 日</div></div>
           <div><span class="post-status live">公開中</span></div>
@@ -568,7 +659,7 @@
           <div class="post-rank">#38</div>
           <div class="post-meta">
             <div class="post-ti">DX とは? — 中小企業の経営者が今日から始める 7 つの実例</div>
-            <div class="post-sub"><span>📅 4 日前</span><span>· 12,100 字</span><span>· 順位 6 位</span></div>
+            <div class="post-sub"><span>📂 DX › DX 入門</span><span>· 📅 4 日前</span><span>· 12,100 字</span><span>· 順位 6 位</span></div>
           </div>
           <div><div class="post-pv">198</div><div class="post-pv-sub">PV / 日</div></div>
           <div><span class="post-status live">公開中</span></div>
@@ -578,7 +669,7 @@
           <div class="post-rank">#37</div>
           <div class="post-meta">
             <div class="post-ti">人事 業務効率化 — Excel 管理を卒業する 3 つのタイミング</div>
-            <div class="post-sub"><span>📅 5 日前</span><span>· 11,400 字</span><span>· 改善 AI: リライト推奨</span></div>
+            <div class="post-sub"><span>📂 業務効率化 › タスク管理</span><span>· 📅 5 日前</span><span>· 11,400 字</span><span>· 改善 AI: リライト推奨</span></div>
           </div>
           <div><div class="post-pv">22</div><div class="post-pv-sub">PV / 日</div></div>
           <div><span class="post-status draft">改善中</span></div>
@@ -644,10 +735,33 @@
     <div class="visitor-frame">
       <div class="visitor-bar">
         <div class="visitor-dots"><span></span><span></span><span></span></div>
-        <div class="visitor-url">my-service.myaiagents.agency/dx-nyumon-3-steps</div>
+        <div class="visitor-url">my-service.myaiagents.agency/dx/dx-nyumon/3-steps</div>
       </div>
+
+      <!-- ブログのカテゴリナビ (= ヘッダー) -->
+      <div style="background:#fff;border-bottom:1px solid var(--wire2);padding:11px 28px;display:flex;align-items:center;gap:18px;font-size:12.5px;flex-wrap:wrap">
+        <div style="font-weight:900;color:var(--teal-deep);font-size:14px">🌿 my-service Blog</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-weight:700">
+          <a href="#" style="color:var(--text);text-decoration:none;padding:4px 0;border-bottom:2px solid var(--teal-deep)">DX</a>
+          <a href="#" style="color:var(--text2);text-decoration:none;padding:4px 0">業務効率化</a>
+          <a href="#" style="color:var(--text2);text-decoration:none;padding:4px 0">SaaS 選び方</a>
+        </div>
+        <a href="#" style="margin-left:auto;background:var(--teal);color:#fff;text-decoration:none;padding:7px 14px;border-radius:7px;font-size:11.5px;font-weight:800">my-service.com →</a>
+      </div>
+
       <div class="visitor-body">
-        <div class="visitor-blog-h">📰 my-service Blog · DX</div>
+        <!-- パンくず -->
+        <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-weight:600">
+          <a href="#" style="color:var(--text3);text-decoration:none">トップ</a>
+          <span style="color:var(--wire2);margin:0 6px">›</span>
+          <a href="#" style="color:var(--text3);text-decoration:none">DX</a>
+          <span style="color:var(--wire2);margin:0 6px">›</span>
+          <a href="#" style="color:var(--text3);text-decoration:none">DX 入門</a>
+          <span style="color:var(--wire2);margin:0 6px">›</span>
+          <span style="color:var(--text2)">中小企業の DX 入門...</span>
+        </div>
+
+        <div class="visitor-blog-h">📁 DX › DX 入門</div>
         <div class="visitor-art-ti">中小企業の DX 入門 — 失敗しない 3 つのステップ</div>
         <div class="visitor-art-meta">
           <span>📅 2026-06-01 公開</span>
@@ -691,9 +805,28 @@
           <p>...</p>
         </div>
 
+        <!-- 同カテゴリの関連記事 (= 内部リンク強化) -->
+        <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--wire)">
+          <div style="font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">📁 DX › DX 入門 の関連記事</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+            <a href="#" style="background:var(--cream3);border:1px solid var(--wire2);border-radius:9px;padding:11px 13px;text-decoration:none;display:block">
+              <div style="font-size:12.5px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:4px">DX とは? — 中小企業の経営者が今日から始める 7 つの実例</div>
+              <div style="font-size:10px;color:var(--text3);font-weight:600">⏱ 15 分 · 👁 198 PV/日</div>
+            </a>
+            <a href="#" style="background:var(--cream3);border:1px solid var(--wire2);border-radius:9px;padding:11px 13px;text-decoration:none;display:block">
+              <div style="font-size:12.5px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:4px">DX 推進担当者の年収相場 — 採用と外注、 どちらが安い?</div>
+              <div style="font-size:10px;color:var(--text3);font-weight:600">⏱ 12 分 · 👁 64 PV/日</div>
+            </a>
+            <a href="#" style="background:var(--cream3);border:1px solid var(--wire2);border-radius:9px;padding:11px 13px;text-decoration:none;display:block">
+              <div style="font-size:12.5px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:4px">DX 推進、 経営者が最初にやる 3 つの判断</div>
+              <div style="font-size:10px;color:var(--text3);font-weight:600">⏱ 18 分 · 👁 112 PV/日</div>
+            </a>
+          </div>
+        </div>
+
         <div class="visitor-foot">
           📰 my-service Blog · この記事は <b>MY AI Agent</b> が執筆・公開・改善しています<br>
-          関連記事 · お問い合わせ · プライバシー
+          トップ · DX · 業務効率化 · SaaS 選び方 · お問い合わせ · プライバシー
         </div>
       </div>
     </div>

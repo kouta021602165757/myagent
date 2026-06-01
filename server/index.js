@@ -15218,6 +15218,152 @@ function recomputeRatings(m){
   m.rating_count = reviews.length;
   m.rating_avg = Math.round((sum/reviews.length)*10)/10;
 }
+// ──────────────────────────────────────────────────────────────────
+// 📝 メディア機能 — slug → {user, agent} 検索 (公開ページ /media/:slug 用)
+// ──────────────────────────────────────────────────────────────────
+// 5 分の in-memory cache。 publish/unpublish 時に手動で クリアできる。
+const _mediaSlugCache = new Map(); // slug -> { user_id, agent_id, expires_at }
+const _MEDIA_SLUG_TTL = 5 * 60 * 1000;
+function _mediaSlugCacheClear(slug){
+  if(slug) _mediaSlugCache.delete(slug);
+  else _mediaSlugCache.clear();
+}
+async function _findUserByMediaSlug(slug){
+  if(!slug) return null;
+  const cached = _mediaSlugCache.get(slug);
+  if(cached && cached.expires_at > Date.now()){
+    try {
+      const u = await DB.findBy('id', cached.user_id);
+      if(u){
+        const ag = (u.agents||[]).find(a => a && a.id === cached.agent_id);
+        if(ag && ag.media && ag.media.slug === slug){
+          return { user: u, agent: ag };
+        }
+      }
+    } catch(_){}
+    _mediaSlugCache.delete(slug); // stale
+  }
+  // 全 users スキャン
+  try {
+    let users = [];
+    if(USE_SUPA){
+      // agents 列は LEAN にあるはず — agent.media.slug で match
+      const r = await sbReq('GET','users','?select=id,agents&limit=500');
+      users = Array.isArray(r.d) ? r.d : [];
+    } else {
+      users = LDB.data || [];
+    }
+    for(const u of users){
+      for(const ag of (u.agents||[])){
+        if(ag && ag.media && ag.media.slug === slug){
+          _mediaSlugCache.set(slug, {
+            user_id: u.id,
+            agent_id: ag.id,
+            expires_at: Date.now() + _MEDIA_SLUG_TTL,
+          });
+          // 完全な user を取得 (LEAN だと media_posts_full が無い)
+          const fullU = await DB.findBy('id', u.id);
+          if(!fullU) return null;
+          const fullAg = (fullU.agents||[]).find(a => a && a.id === ag.id);
+          return fullAg ? { user: fullU, agent: fullAg } : null;
+        }
+      }
+    }
+  } catch(e){ console.warn('[media-slug-lookup] failed:', e.message); }
+  return null;
+}
+
+// HTML escape helper for SSR template
+function _mediaEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Minimal テンプレート HTML (= SSR、 軽量、 SEO-safe)
+function _mediaRenderMinimalIndex(media, posts){
+  const name = _mediaEsc(media.name || 'Blog');
+  const brand = _mediaEsc(media.brand_color || '#0d4f4a');
+  const publicUrl = 'https://' + _mediaEsc(media.domain || (media.slug + '.myaiagents.agency'));
+  const lpUrl = _mediaEsc(media.lp_url || '');
+  const logoImg = media.logo_url
+    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:36px;height:36px;border-radius:7px;object-fit:cover">'
+    : '<div style="width:36px;height:36px;border-radius:7px;background:' + brand + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
+  const categoriesHTML = (media.categories || []).map(c =>
+    '<a href="#cat-' + _mediaEsc(c.slug) + '" style="color:#374151;text-decoration:none;padding:6px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-weight:600;background:#fff">' + _mediaEsc(c.name) + '</a>'
+  ).join('\n      ');
+
+  const postsHTML = (posts && posts.length) ? posts.map(p => `
+    <article style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+      ${p.hero_image_url ? '<img src="' + _mediaEsc(p.hero_image_url) + '" alt="" style="width:100%;height:180px;object-fit:cover">' : '<div style="height:180px;background:linear-gradient(135deg,' + brand + ',#0a3d39)"></div>'}
+      <div style="padding:18px 20px;flex:1;display:flex;flex-direction:column">
+        ${p.category_name ? '<div style="font-size:11px;font-weight:700;color:' + brand + ';letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">' + _mediaEsc(p.category_name) + '</div>' : ''}
+        <h2 style="font-size:17px;font-weight:800;color:#111;margin:0 0 8px;line-height:1.4"><a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(p.slug)}" style="color:#111;text-decoration:none">${_mediaEsc(p.title)}</a></h2>
+        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 12px;flex:1">${_mediaEsc((p.excerpt||'').slice(0, 120))}</p>
+        <div style="font-size:11px;color:#9ca3af;margin-top:auto">${_mediaEsc((p.published_at||'').slice(0,10))}</div>
+      </div>
+    </article>`).join('') : `
+    <div style="grid-column:1/-1;background:#fff;border:1.5px dashed #e5e7eb;border-radius:12px;padding:60px 30px;text-align:center;color:#9ca3af">
+      <div style="font-size:48px;margin-bottom:12px">📝</div>
+      <div style="font-size:14px;font-weight:600;color:#6b7280">記事準備中</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:6px">AI チームが最初の記事を執筆中です。 もう少しお待ちください。</div>
+    </div>`;
+
+  return `<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${name}</title>
+<meta name="description" content="${name} - ${lpUrl}">
+<meta property="og:title" content="${name}">
+<meta property="og:url" content="${publicUrl}">
+<meta property="og:type" content="website">
+<style>
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;color:#111;background:#fafafa;line-height:1.6}
+  a{color:inherit}
+  .ct{max-width:1100px;margin:0 auto;padding:0 24px}
+  header.site{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 0;position:sticky;top:0;z-index:10}
+  header.site .row{display:flex;align-items:center;gap:14px}
+  header.site .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px;color:#111;text-decoration:none}
+  header.site .nav{margin-left:auto;display:flex;gap:6px;align-items:center}
+  header.site .cta{background:${brand};color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700}
+  .hero{padding:60px 0 50px;text-align:center}
+  .hero h1{font-size:36px;font-weight:900;margin:0 0 14px;color:#111;letter-spacing:-.01em}
+  .hero p{font-size:15px;color:#6b7280;margin:0;max-width:560px;margin:0 auto}
+  .cats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:32px 0 14px;padding:0 24px}
+  .posts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;padding:30px 0 60px}
+  footer.site{background:#fff;border-top:1px solid #e5e7eb;padding:24px 0;text-align:center;color:#9ca3af;font-size:12px;margin-top:40px}
+  footer.site a{color:#6b7280;text-decoration:none;font-weight:600}
+  @media (max-width:640px){
+    .hero{padding:40px 0 30px}.hero h1{font-size:26px}
+  }
+</style>
+</head><body>
+<header class="site"><div class="ct row">
+  <a href="/media/${_mediaEsc(media.slug)}" class="brand">${logoImg}<span>${name}</span></a>
+  <div class="nav">
+    ${lpUrl ? '<a href="' + lpUrl + '?utm_source=media&utm_medium=header&utm_campaign=media_to_lp" class="cta" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
+  </div>
+</div></header>
+
+<main>
+  <section class="hero ct">
+    <h1>${name}</h1>
+    <p>AI チームが運営する、 ${name} のオウンドメディア</p>
+  </section>
+  ${categoriesHTML ? '<div class="cats">' + categoriesHTML + '</div>' : ''}
+  <section class="ct">
+    <div class="posts">${postsHTML}</div>
+  </section>
+</main>
+
+<footer class="site"><div class="ct">
+  Powered by <a href="https://myaiagents.agency" target="_blank" rel="noopener">MY AI Agent</a>
+</div></footer>
+</body></html>`;
+}
+
 /** Scan all users and return live + public listings.
  *  Skip listings missing price_jpy (legacy data created before pricing existed) —
  *  creator must explicitly set a price (¥0 OK) to appear in the store.
@@ -18240,6 +18386,35 @@ async function handleAPI(req,res,pathname,method,ip){
       sort,
       favorites,
     });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 📝 メディア機能 — 公開ページ (= /media/:slug, /media/:slug/:postSlug)
+  // ──────────────────────────────────────────────────────────
+  // 認証不要、 SSR で軽量 HTML を返す。
+  const mediaPubMatch = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/?$/);
+  if(mediaPubMatch && method === 'GET'){
+    const slug = mediaPubMatch[1];
+    try {
+      const found = await _findUserByMediaSlug(slug);
+      if(!found){
+        res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+        return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center;color:#6b7280"><h1 style="font-size:24px">404 — メディアが見つかりません</h1><p>URL をご確認ください。</p><p><a href="https://myaiagents.agency" style="color:#0d4f4a">myaiagents.agency へ</a></p></body></html>');
+      }
+      const { agent } = found;
+      const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+      const html = _mediaRenderMinimalIndex(agent.media, posts);
+      res.writeHead(200, {
+        'Content-Type': 'text/html;charset=utf-8',
+        'Cache-Control': 'public, max-age=300',
+        'X-Frame-Options': 'SAMEORIGIN',
+      });
+      return res.end(html);
+    } catch(e){
+      console.warn('[media-public] failed:', e.message);
+      res.writeHead(500, { 'Content-Type': 'text/html;charset=utf-8' });
+      return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>500 — エラー</h1><p>少し時間を置いて再度お試しください。</p></body></html>');
+    }
   }
 
   // ── Auth required below ────────────────────────────────────

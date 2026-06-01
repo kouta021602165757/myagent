@@ -27556,9 +27556,16 @@ function serveStatic(res,fp){
     }else{
       const h={'Content-Type':mime,...headerSEC};
       if(ext==='.html'){
-        h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';
-        const needGA  = !isGenerated && (GA_ID || (process.env.SENTRY_DSN || '').trim());
-        const needStamp = !isGenerated && /\/app\.(css|js)\?v=/.test(data.toString('utf8'));
+        // 設計モック (public/mock-*.html) は更新頻度が低く iframe で頻繁に読み込まれる
+        // ので、 短い public cache を許可 (= 同 session 内の再 open を高速化)。
+        // 本物の app HTML は依然 no-cache で deploy 直反映 (= cache-busting 不要)。
+        if(isEmbeddableMock){
+          h['Cache-Control']='public,max-age=300,must-revalidate';
+        } else {
+          h['Cache-Control']='no-cache, no-store, must-revalidate';h['Pragma']='no-cache';h['Expires']='0';
+        }
+        const needGA  = !isGenerated && !isEmbeddableMock && (GA_ID || (process.env.SENTRY_DSN || '').trim());
+        const needStamp = !isGenerated && !isEmbeddableMock && /\/app\.(css|js)\?v=/.test(data.toString('utf8'));
         let text = (needGA || needStamp) ? data.toString('utf8') : null;
         if(needGA) text = _injectGA(text);
         if(needStamp) text = _stampAssetVersions(text);

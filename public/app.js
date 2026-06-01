@@ -2800,21 +2800,26 @@ function _openSiteTabModal(siteId, tabKey){
       try { window.removeEventListener('message', window._kwSessions[site.id]); } catch(_){}
     }
     var _kwSiteId = site.id;
-    // 汎用 fetch ヘルパー (= endpoint path → iframe に postMessage で型付き応答)
+    // queue: iframe ready 前に届いた API レスポンスを溜める (= 並列 fetch のため)
+    var _kwIframeReady = false;
+    var _kwQueue = [];
+    var _kwPostOrQueue = function(msg){
+      if(_kwIframeReady){
+        var ifr = document.getElementById('kwIframe');
+        if(ifr && ifr.contentWindow){
+          ifr.contentWindow.postMessage(msg, location.origin);
+        }
+      } else {
+        _kwQueue.push(msg);
+      }
+    };
+    // 汎用 fetch ヘルパー (= queue 経由で型付き応答)
     var _kwApiFetch = function(path, responseType, errorType){
       return api('GET', path)
-        .then(function(d){
-          var ifr = document.getElementById('kwIframe');
-          if(ifr && ifr.contentWindow){
-            ifr.contentWindow.postMessage({ type: responseType, data: d }, location.origin);
-          }
-        })
+        .then(function(d){ _kwPostOrQueue({ type: responseType, data: d }); })
         .catch(function(err){
           console.warn('[keyword-panel] ' + path + ' failed:', err && err.message);
-          var ifr = document.getElementById('kwIframe');
-          if(ifr && ifr.contentWindow){
-            ifr.contentWindow.postMessage({ type: errorType, message: String(err && err.message || err) }, location.origin);
-          }
+          _kwPostOrQueue({ type: errorType, message: String(err && err.message || err) });
         });
     };
     var _kwFetch = function(refresh){
@@ -2847,13 +2852,23 @@ function _openSiteTabModal(siteId, tabKey){
       // 別 site / 古い session のメッセージは無視
       if(e.data.siteId !== _kwSiteId) return;
       var t = e.data.type;
-      if(t === 'kw-iframe-ready')        _kwFetch(false);
+      if(t === 'kw-iframe-ready'){
+        // iframe 準備完了 → 並列 fetch で先に届いていた API レスポンスを flush
+        _kwIframeReady = true;
+        var ifr = document.getElementById('kwIframe');
+        if(ifr && ifr.contentWindow){
+          _kwQueue.forEach(function(m){ ifr.contentWindow.postMessage(m, location.origin); });
+        }
+        _kwQueue = [];
+        return;
+      }
       else if(t === 'kw-refresh')        _kwFetch(true);
-      else if(t === 'kw-sitetype-request') _kwFetchSiteType();
+      // sitetype + pdca は親が eager fetch 済 (= iframe 側 request は冪等)
+      else if(t === 'kw-sitetype-request') { /* eager already fired */ }
       else if(t === 'kw-detail-request')   _kwFetchDetail(e.data.kw, e.data.mode);
       else if(t === 'kw-serp-request')     _kwFetchSerp(e.data.kw);
       else if(t === 'kw-trends-request')   _kwFetchTrends(e.data.kw);
-      else if(t === 'kw-pdca-request')     _kwFetchPdca();
+      else if(t === 'kw-pdca-request')     { /* eager already fired */ }
       else if(t === 'kw-open-gsc-connect'){
         // 🔌 推測モード CTA から「接続パネル」を開く (= keyword overlay は stash で次回復元)
         if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
@@ -2881,6 +2896,11 @@ function _openSiteTabModal(siteId, tabKey){
     };
     window.addEventListener('message', _kwHandler);
     window._kwSessions[_kwSiteId] = _kwHandler;
+    // ── EAGER FETCH (= iframe ロード待たずに API 並列発火、~300-500ms 短縮) ──
+    // queue 経由で送るので、 iframe ready 前に応答届けば自動的に flush される
+    _kwFetch(false);
+    _kwFetchSiteType();
+    _kwFetchPdca();
   } else {
     showToast(L('不明なパネル','Unknown panel'),'ng');
     return;

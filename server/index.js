@@ -23982,17 +23982,24 @@ async function handleAPI(req,res,pathname,method,ip){
   //   AI が site 文脈から「狙うべきキーワード候補 6 件」を生成
   //   GSC 接続あり: 5 つの戦略タイプ (伸びしろ/機会損失/強み拡張/ゾンビ/CV直前) で実データ駆動
   //   GSC 未接続:   サイト URL + ペルソナから推測
-  //   キャッシュ: agent.keyword_suggestions に 6h
+  //   キャッシュ: agent.keyword_suggestions に 永続 (= ?refresh=1 でのみ再生成)
+  //     - hostname 変更 / schema 変更 / 明示 refresh の時のみ regen
+  //     - 「毎回生成される」 問題の fix (2026-06-02 ユーザ要望)
   const kwSugMatch = pathname.match(/^\/api\/agents\/([^/]+)\/keyword-suggestions$/);
   if(kwSugMatch && method === 'GET'){
     const ag = (user.agents || []).find(a => a && a.id === kwSugMatch[1]);
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     const qs = url.parse(req.url, true).query || {};
-    const TTL_MS = 6 * 3600 * 1000;
     const KW_SCHEMA_VERSION = 4;  // 3→4: 勝率スコア / 想定 PV / 即効性追加 (2026-06-02)
     const cached = ag.keyword_suggestions;
-    if(!qs.refresh && cached && cached.fetched_at && cached.schema_version === KW_SCHEMA_VERSION &&
-       (Date.now() - Date.parse(cached.fetched_at)) < TTL_MS){
+    // 現在の site URL の hostname (= cache invalidate 判定用)
+    let curHost = '';
+    try { curHost = new URL(ag.site_url || '').hostname.replace(/^www\./, ''); } catch(_){}
+    const cacheValid = !qs.refresh
+      && cached && cached.fetched_at
+      && cached.schema_version === KW_SCHEMA_VERSION
+      && (!curHost || !cached.site_hostname || cached.site_hostname === curHost);
+    if(cacheValid){
       return jres(res, 200, Object.assign({}, cached, { cached: true }));
     }
     // GSC 接続判定: OAuth + scope + ドメイン照合の 3 段チェック

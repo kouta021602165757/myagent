@@ -10670,6 +10670,44 @@ window._skipOnboarding = function(){
 // 📝 メディア機能 (Phase A.4) — Wizard / Dashboard モーダル
 // ══════════════════════════════════════════════════════════════════
 
+// 🚀 GA4 Realtime: 「今 N 人読んでます」 を 30s ごと自動 update
+//    Dashboard 開いてる間だけ poll、 閉じたら止まる
+window._mediaRtTimer = null;
+window._fetchMediaRealtime = async function(siteId){
+  if(!siteId) return;
+  try {
+    var r = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media/realtime');
+    var box = document.getElementById('mediaRtBanner');
+    if(!box) return;
+    if(!r || !r.has_realtime){
+      // GA4 未接続なら非表示
+      box.style.display = 'none';
+      return;
+    }
+    box.style.display = 'flex';
+    var mediaActive = r.media_active_users || 0;
+    var iconEl = box.querySelector('.rt-ic');
+    var valEl = box.querySelector('.rt-val');
+    var subEl = box.querySelector('.rt-sub');
+    if(valEl) valEl.textContent = mediaActive;
+    if(subEl){
+      if(mediaActive === 0) subEl.textContent = '今 メディアを読んでる人はいません';
+      else if(mediaActive < 3) subEl.textContent = '人が このメディアを読んでます (=過去 30 分)';
+      else subEl.textContent = '人がこのメディアを読んでます! 🎉 (=過去 30 分)';
+    }
+    if(iconEl){ iconEl.textContent = mediaActive > 0 ? '🟢' : '⚪'; }
+  } catch(_){}
+};
+window._startMediaRealtimePoll = function(siteId){
+  if(window._mediaRtTimer) clearInterval(window._mediaRtTimer);
+  window._fetchMediaRealtime(siteId);
+  window._mediaRtTimer = setInterval(function(){
+    var stillOpen = document.querySelector('.sd-modal-body #mediaRtBanner');
+    if(!stillOpen){ clearInterval(window._mediaRtTimer); window._mediaRtTimer = null; return; }
+    window._fetchMediaRealtime(siteId);
+  }, 30000);
+};
+
 // GA4/GSC 実数値 stats を Dashboard モーダル開いた後に非同期 fetch
 window._fetchMediaStats = async function(siteId){
   if(!siteId) return;
@@ -10748,11 +10786,19 @@ function _renderTabMedia(site){
     var posts = site.media_posts_idx || [];
     var mediaHost = media.domain || 'myaiagents.agency';
     var publicUrl = 'https://' + esc(mediaHost) + '/media/' + esc(media.slug);
-    // GA4/GSC stats を非同期 fetch + DOM 更新 (= 月間 PV / 検索クリック / 平均順位 / 弱記事)
+    // GA4/GSC stats + Realtime を非同期 fetch
     setTimeout(function(){
       _fetchMediaStats(site.id);
+      _startMediaRealtimePoll(site.id);
     }, 80);
     return ''
+      // 🟢 Realtime banner (= 「今 N 人読んでます」)
+      + '<div id="mediaRtBanner" style="display:none;align-items:center;gap:10px;background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:9px 13px;margin-bottom:12px;font-size:12.5px">'
+      +   '<span class="rt-ic" style="font-size:14px">⚪</span>'
+      +   '<span style="font-size:18px;font-weight:900;color:#15803d" class="rt-val">—</span>'
+      +   '<span class="rt-sub" style="color:#15803d;font-weight:700">読者を計測中…</span>'
+      +   '<span style="margin-left:auto;font-size:9.5px;color:#15803d;opacity:.7;font-weight:700;letter-spacing:.04em">🔴 LIVE</span>'
+      + '</div>'
       + '<div style="background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:14px;position:relative">'
       +   '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">'
       +     '<div style="font-size:30px">'+(media.logo_url ? '<img src="'+esc(media.logo_url)+'" alt="" style="width:42px;height:42px;border-radius:9px;object-fit:cover">' : '📝')+'</div>'

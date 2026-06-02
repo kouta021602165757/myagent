@@ -13316,6 +13316,22 @@ async function ga4RunReport(user, propertyId, opts){
   return r.d;
 }
 
+// 🚀 GA4 Realtime API ラッパー (= 「今 N 人が読んでます」 用)
+async function ga4RunRealtime(user, propertyId, opts){
+  if(!propertyId) throw new Error('property_id required');
+  const token = await getValidGoogleAccessToken(user);
+  const body = {
+    metrics: (opts && opts.metrics) || [{ name: 'activeUsers' }],
+    dimensions: (opts && opts.dimensions) || [],
+    limit: Math.min(100, Math.max(1, Number((opts && opts.limit) || 10))),
+  };
+  const r = await httpsReq('POST', 'analyticsdata.googleapis.com',
+    '/v1beta/properties/' + String(propertyId).replace('properties/', '') + ':runRealtimeReport',
+    { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' }, body);
+  if(r.s !== 200) throw new Error('GA runRealtimeReport failed: '+JSON.stringify(r.d).slice(0,300));
+  return r.d;
+}
+
 // ── Google Search Console API helpers ─────────────────────────
 async function gscListSites(user){
   const token = await getValidGoogleAccessToken(user);
@@ -16240,6 +16256,14 @@ async function executePublishToMediaTool(user, agent, input){
   _mediaSlugCacheClear(agent.media.slug);
 
   const publicUrl = 'https://' + (agent.media.domain || 'myaiagents.agency') + '/media/' + agent.media.slug + '/' + postSlug;
+
+  // 🚀 Day 4: SNS 自動シェア (= 公開瞬間に Buffer / X に投稿)
+  //   失敗しても publish は成功扱い (= silent best-effort)
+  let snsResults = [];
+  try {
+    snsResults = await _mediaAutoShareSns(user, agent, postMeta, publicUrl);
+  } catch(e){ console.warn('[auto-share] failed:', e.message); }
+
   return {
     ok: true,
     published: true,
@@ -16251,7 +16275,42 @@ async function executePublishToMediaTool(user, agent, input){
     auto_created_media: !!agent.media.auto_created && agent.media_posts_idx.length === 1,
     media_name: agent.media.name,
     media_slug: agent.media.slug,
+    sns_shared: snsResults,
   };
+}
+
+// 🚀 SNS 自動シェア — 接続済 SNS に AI 投稿コピー付きで自動投稿
+async function _mediaAutoShareSns(user, agent, post, publicUrl){
+  const out = [];
+  const hasBuffer = !!(user.integrations && user.integrations.buffer && user.integrations.buffer.access_token);
+  // Buffer が一番手軽 (= 接続済 SNS 全てに 1 度に投稿)
+  if(!hasBuffer) return out;
+  // AI で 投稿コピー生成 (= プラットフォーム別、 簡易 1 つで OK)
+  let snsText = (post.title || '') + '\n\n' + (post.excerpt || '').slice(0, 100) + '\n\n' + publicUrl + '?utm_source=sns&utm_medium=auto&utm_campaign=' + (agent.media.slug || '');
+  try {
+    if(CLAUDE_KEY){
+      const prompt = '以下の記事を X / Twitter で告知する投稿文を 1 つ作成。 140 字以内、 行間あり、 ハッシュタグ 2-3 個、 URL なし (= 別途自動付与)。\n\n'
+        + 'タイトル: ' + post.title + '\n' + (post.excerpt ? '概要: ' + post.excerpt : '') + '\n\n出力は本文のみ、 引用符不要。';
+      const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 300, messages: [{ role: 'user', content: prompt }] }
+      );
+      if(r.s === 200 && r.d.content){
+        const aiText = (r.d.content[0] && r.d.content[0].text || '').trim();
+        if(aiText) snsText = aiText.slice(0, 200) + '\n\n' + publicUrl + '?utm_source=sns&utm_medium=auto&utm_campaign=' + (agent.media.slug || '');
+      }
+    }
+  } catch(_){}
+  // Buffer 経由で投稿
+  try {
+    const r = await executeBufferPostTool(user, { text: snsText, now: true });
+    if(r && r.ok){
+      out.push({ platform: 'buffer', ok: true, id: r.buffer_id, posted_to: r.posted_to });
+    } else {
+      out.push({ platform: 'buffer', ok: false, error: r && r.error });
+    }
+  } catch(e){ out.push({ platform: 'buffer', ok: false, error: e.message }); }
+  return out;
 }
 
 // research_keyword: AI が KW 候補生成 (= KW research 簡易版)
@@ -23339,6 +23398,58 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 200, { ok: true, post: postMeta, public_url: 'https://' + ag.media.domain + '/media/' + ag.media.slug + '/' + postSlug });
     } catch(e){
       return jres(res, 500, { error: 'rewrite_failed', detail: e.message });
+    }
+  }
+
+  //   GET /api/agents/:id/media/realtime — GA4 Realtime: 「今 N 人読んでます」
+  //   返却: { active_users, top_pages, has_realtime }
+  const mediaRtMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/realtime$/);
+  if(mediaRtMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaRtMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 200, { has_media: false });
+    if(!_hasGoogleRefreshToken(user) || !_hasGa4Scope(user)){
+      return jres(res, 200, { has_media: true, has_realtime: false, reason: 'ga4_not_connected' });
+    }
+    try {
+      let propertyId = null;
+      const tgt = _resolveServiceTarget(ag, user, 'ga4');
+      if(tgt) propertyId = String(tgt.id).replace('properties/', '');
+      if(!propertyId && ag.site_url){
+        try { const picked = await _autoPickGa4Property(user, ag);
+          if(picked) propertyId = String(picked.property_id).replace('properties/', '');
+        } catch(_){}
+      }
+      if(!propertyId) return jres(res, 200, { has_media: true, has_realtime: false, reason: 'no_property' });
+      // Realtime: 直近 30 分のアクティブユーザー + ページ別
+      const r = await ga4RunRealtime(user, propertyId, {
+        metrics: [{ name: 'activeUsers' }],
+        dimensions: [{ name: 'unifiedScreenName' }],
+        limit: 20,
+      });
+      const slugPrefix = '/media/' + ag.media.slug + '/';
+      let totalActive = 0;
+      const mediaPages = [];
+      (r.rows || []).forEach(row => {
+        const page = (row.dimensionValues || [])[0] && row.dimensionValues[0].value || '';
+        const active = parseInt((row.metricValues || [])[0] && row.metricValues[0].value || '0', 10) || 0;
+        totalActive += active;
+        if(page.indexOf(slugPrefix) >= 0 || page === '/media/' + ag.media.slug){
+          mediaPages.push({ page, active });
+        }
+      });
+      // メディア専用アクティブ ユーザ集計
+      const mediaActive = mediaPages.reduce((s, p) => s + p.active, 0);
+      return jres(res, 200, {
+        has_media: true,
+        has_realtime: true,
+        active_users: totalActive,
+        media_active_users: mediaActive,
+        top_pages: mediaPages.sort((a,b)=>b.active-a.active).slice(0, 5),
+        fetched_at: new Date().toISOString(),
+      });
+    } catch(e){
+      return jres(res, 200, { has_media: true, has_realtime: false, reason: 'fetch_failed', detail: e.message });
     }
   }
 

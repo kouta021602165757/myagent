@@ -16344,12 +16344,14 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   const inlineCTA = cta('inline_mid',
     '👉 ' + name + ' のサービスを見る',
     'display:block;background:'+brand+';color:#fff;padding:14px 20px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:14px;font-weight:700;text-align:center;margin:28px 0');
+  // endCard: <div class="body"> 内に置くため、 .body h3 / .body p の CSS と
+  //   競合しないよう explicit に color / border / padding / background を上書き
   const endCard = lpUrl ? `
-    <div style="background:linear-gradient(135deg,${brand},${isDark?'#0a1322':'#0a3d39'});color:#fff;border-radius:${s.cardRadius};padding:30px 28px;margin-top:36px;text-align:center">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.75;text-transform:uppercase;margin-bottom:6px">この記事を読んだあなたに</div>
-      <h3 style="font-family:${s.titleFont};font-size:22px;font-weight:900;margin:0 0 10px">${name} を試してみる</h3>
-      <p style="font-size:13px;opacity:.85;margin:0 0 18px;line-height:1.6">今すぐ公式サイトをチェックしてみてください</p>
-      ${cta('end_card', '🔗 公式サイトへ →', 'display:inline-block;background:#fff;color:'+brand+';padding:11px 22px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:13px;font-weight:800')}
+    <div class="end-card-cta" style="background:linear-gradient(135deg,${brand},${isDark?'#0a1322':'#0a3d39'});color:#fff;border-radius:${s.cardRadius};padding:34px 30px;margin-top:40px;text-align:center;box-shadow:0 6px 24px rgba(10,31,61,.12)">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.7);text-transform:uppercase;margin-bottom:10px">この記事を読んだあなたに</div>
+      <h3 style="font-family:${s.titleFont};font-size:23px;font-weight:900;margin:0 0 12px;color:#fff !important;padding:0;border:0;background:none;line-height:1.5">${name} を試してみる</h3>
+      <p style="font-size:14px;color:rgba(255,255,255,.85) !important;margin:0 0 22px;line-height:1.7;font-family:${s.bodyFont};border:0;padding:0;background:none">今すぐ公式サイトをチェックしてみてください</p>
+      ${cta('end_card', '🔗 公式サイトへ →', 'display:inline-block;background:#fff;color:'+brand+';padding:13px 28px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:14px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.18)')}
     </div>` : '';
   const footerBanner = lpUrl ? `
     <div style="background:${brand};color:#fff;padding:16px 0;text-align:center;font-size:13px;font-weight:700">

@@ -15905,14 +15905,24 @@ async function _mediaGenerateArticle(agent, params){
     + '- 競合プロダクト名 / 競合サービス名 を 具体的に列挙しない (= 自社メディアでの 競合促進を防ぐ)\n'
     + '- 「2025 年最新」 等の 古い年号 NG。 現在年 (2026 年) に統一\n'
     + '\n【📊 必須 視覚要素 — 全て入れる】\n'
-    + '1. **基礎情報テーブル** (必須): 記事冒頭付近に <table> で key facts を整理\n'
-    + '   例: 開催日 / 料金 / 対象者 / 申請期限 / 所要時間 等 5-8 行の key:value 形式\n'
-    + '   <table><tr><th>開催日</th><td>例年 8 月 9 日 20:00〜</td></tr>...</table>\n'
+    + '1. **基礎情報テーブル** (必須): 記事冒頭付近に 縦型 <table> で key facts を整理\n'
+    + '   例: 開催日 / 料金 / 対象者 / 申請期限 / 所要時間 等 5-8 行の key:value\n'
+    + '   <table><tr><th>開催日</th><td>例年 <mark>8 月 9 日 20:00〜</mark></td></tr>...</table>\n'
     + '2. **目次型 H2** — 「○○ とは｜基礎情報」 「見どころ｜△△」 等 縦棒 (｜) で 主+副ラベル\n'
-    + '3. **箇条書き** (<ul>) を 各セクション 1 個 (= 3-5 項目)\n'
-    + '4. **callout** <blockquote class="callout"> で 重要結論 1-3 個 (= 💡 で目立つ)\n'
-    + '5. **FAQ section** 末尾に <h2>よくある質問</h2> + <h3>Q. ...</h3><p>A. ...</p> × 5-8 問\n'
-    + '6. **段落は 2-3 行で改行** (= 1 段落 100 字以内)、 スマホで読みやすく\n'
+    + '3. **🎨 section-hero card** — 重要セクション 2-3 個 を 紺背景の章扉カードで強調:\n'
+    + '   <div class="section-hero">\n'
+    + '     <div class="section-eyebrow">CATEGORY · YEAR (= 英大文字)</div>\n'
+    + '     <h2>セクション タイトル</h2>\n'
+    + '     <p>このセクションの 導入文 (= 2-3 文)、 <mark>キーワード</mark> や <strong>数字</strong> をハイライト</p>\n'
+    + '   </div>\n'
+    + '   配置例: 記事冒頭 (= 概要紹介)、 中盤 (= 重要章)、 まとめ前\n'
+    + '4. **箇条書き** (<ul>) を 各セクション 1 個 (= 3-5 項目)\n'
+    + '5. **callout** <blockquote class="callout"> で 重要結論 1-3 個 (= 💡)\n'
+    + '6. **🖍 mark (蛍光ペン下線) を 積極使用** — 日付 / 金額 / 数値 / 固有名詞 / 重要キーワード に\n'
+    + '   <mark> で囲む (例: <mark>例年 8 月 9 日</mark>、 <mark>約 1,400 発</mark>、 <mark>無料</mark>)\n'
+    + '   1 段落あたり 1-3 箇所 目安、 むらなく散布\n'
+    + '7. **FAQ section** 末尾に <h2>よくある質問</h2> + <h3>Q. ...</h3><p>A. ...</p> × 5-8 問\n'
+    + '8. **段落は 2-3 行で改行** (= 1 段落 100 字以内)、 スマホで読みやすく\n'
     + '\n【文体ルール】\n'
     + '- 「AI が」「AI チームが」「私たちは」 等 AI 自己言及 禁止 (= E-E-A-T)\n'
     + '- 「実測」 「事例」 等の 検証不能語は 出典あり時のみ使用、 ない時は 「公式情報」 「一般論」 と書く\n'
@@ -16011,9 +16021,11 @@ async function _mediaGenerateArticle(agent, params){
     category_name = match || 'その他';
   }
 
-  // body に inline image を 2-3 枚 注入 (= H2 セクション 2/4/6 番目の後)
+  // 🚫 2026-06-02: inline AI 画像は廃止 (= 「意味わからん」 問題)
+  // 代わりに AI prompt で <div class="section-hero"> を 出力させて
+  // セクション 冒頭に デザインされた紺カードを表示する (= fukuyama-note 風)
   const sanitized = _sanitizeArticleHtml(String(parsed.body_html));
-  const withImages = _mediaInjectInlineImages(sanitized, parsed.title);
+  const withImages = sanitized;
 
   return {
     title: String(parsed.title).slice(0, 120),
@@ -16024,6 +16036,112 @@ async function _mediaGenerateArticle(agent, params){
     vertical: vert,
     template_used: tpl.template,
   };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 🎨 SVG Hero Template — テンプレ + カテゴリ で 「同じフォーマット、 微変更」
+//    AI 画像じゃなく、 fukuyama-note 風の デザインされた hero を SVG で生成。
+//    width:1280 / height:720 (= 16:9)、 inline data URI で hero として使用。
+// ──────────────────────────────────────────────────────────────────
+function _svgPaletteFor(tpl){
+  const palettes = {
+    minimal:    { bg: '#fdf6e3', accent: '#3b82f6', deco: '#bfdbfe', text: '#0f172a', sub: '#64748b' },
+    magazine:   { bg: '#fffbf5', accent: '#dc2626', deco: '#fecaca', text: '#0a0a0a', sub: '#525252' },
+    friendly:   { bg: '#fff7ed', accent: '#f59e0b', deco: '#fed7aa', text: '#1c1917', sub: '#78716c' },
+    tech:       { bg: '#0f172a', accent: '#22d3ee', deco: '#1e3a5c', text: '#f1f5f9', sub: '#94a3b8' },
+    newsletter: { bg: '#fdf4ff', accent: '#a855f7', deco: '#e9d5ff', text: '#1e1b4b', sub: '#64748b' },
+  };
+  return palettes[tpl] || palettes.minimal;
+}
+
+function _svgEscape(s){
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// 日本語タイトルは 文字幅で折り返し。 英語は word-wrap。
+function _wrapTitleForSvg(text, charsPerLine){
+  const s = String(text || '').trim();
+  if(!s) return [''];
+  // 日本語比率で 1 文字あたり幅を判定 (= 全角 ≈ 2x 半角)
+  const lines = [];
+  let cur = '';
+  let curWidth = 0;
+  for(const ch of s){
+    const w = (/[\x00-\x7F]/.test(ch)) ? 1 : 2;
+    if(curWidth + w > charsPerLine * 2 && cur.length > 0){
+      lines.push(cur);
+      cur = ch; curWidth = w;
+    } else {
+      cur += ch; curWidth += w;
+    }
+  }
+  if(cur) lines.push(cur);
+  return lines.slice(0, 3);  // 最大 3 行
+}
+
+// カテゴリ → 英語 caps subtitle (= TOURISM, FINANCE 等)
+function _categoryToEnSubtitle(cat){
+  const map = {
+    '観光': 'TOURISM', 'イベント': 'EVENT', 'AI': 'AI', 'マーケティング': 'MARKETING',
+    'SEO': 'SEO', 'メディア': 'MEDIA', '金融': 'FINANCE', '採用': 'RECRUITMENT',
+    '不動産': 'REAL ESTATE', '教育': 'EDUCATION', 'EC': 'E-COMMERCE',
+    '節約': 'SAVINGS', '投資': 'INVESTMENT', 'ライフスタイル': 'LIFESTYLE',
+    'ニュース': 'NEWS', 'グルメ': 'GOURMET', 'お役立ち': 'GUIDE',
+  };
+  const c = String(cat || '').trim();
+  for(const [jp, en] of Object.entries(map)){
+    if(c.includes(jp)) return en;
+  }
+  return 'CATEGORY';
+}
+
+function _svgHeroForArticle(post, media){
+  const tpl = (media && media.template) || 'minimal';
+  const pal = _svgPaletteFor(tpl);
+  const title = String(post && post.title || '').slice(0, 80);
+  const category = String(post && post.category_name || '').slice(0, 14) || '記事';
+  const categoryEn = _categoryToEnSubtitle(category);
+  const brandJp = String(media && media.name || 'Blog').slice(0, 24);
+  const brandEn = brandJp.replace(/[^\x00-\x7F]/g, '').toUpperCase().slice(0, 24) || 'MEDIA';
+  const titleLines = _wrapTitleForSvg(title, 18);
+  const titleStartY = titleLines.length === 1 ? 380 : titleLines.length === 2 ? 340 : 310;
+  const lineSpacing = 80;
+  // Decorative shapes (= 同じレイアウト 大枠、 色だけ palette で変わる)
+  const svg = ''
+    + `<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" width="1280" height="720">`
+    +   `<rect width="1280" height="720" fill="${pal.bg}"/>`
+    // 大円 (= 左上)
+    +   `<circle cx="160" cy="200" r="240" fill="${pal.deco}" opacity="0.45"/>`
+    // 中円 (= 右上)
+    +   `<circle cx="1140" cy="100" r="130" fill="${pal.deco}" opacity="0.55"/>`
+    // 小円 (= 右下)
+    +   `<circle cx="1010" cy="620" r="80" fill="${pal.deco}" opacity="0.45"/>`
+    // 三角 (= 右下寄り)
+    +   `<polygon points="800,550 870,620 730,620" fill="${pal.deco}" opacity="0.5"/>`
+    // 装飾ドット
+    +   `<circle cx="260" cy="540" r="9" fill="${pal.deco}"/>`
+    +   `<circle cx="950" cy="200" r="6" fill="${pal.deco}"/>`
+    +   `<circle cx="180" cy="600" r="5" fill="${pal.deco}" opacity="0.7"/>`
+    // カテゴリ pill (= 左上)
+    +   `<g>`
+    +     `<ellipse cx="200" cy="110" rx="130" ry="26" fill="#ffffff" stroke="${pal.deco}" stroke-width="2"/>`
+    +     `<text x="200" y="116" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic','Helvetica Neue',sans-serif" font-size="18" font-weight="700" fill="${pal.accent}">${_svgEscape(category)}</text>`
+    +     `<text x="200" y="148" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="11" letter-spacing="3" fill="${pal.sub}">${_svgEscape(categoryEn)}</text>`
+    +   `</g>`
+    // タイトル (= 中央、 最大 3 行)
+    +   titleLines.map((line, i) =>
+          `<text x="640" y="${titleStartY + i * lineSpacing}" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="${titleLines.length === 1 ? 62 : 58}" font-weight="900" fill="${pal.text}">${_svgEscape(line)}</text>`
+        ).join('')
+    // ブランドマーク (= 右下)
+    +   `<g>`
+    +     `<text x="1220" y="680" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="17" font-weight="800" fill="${pal.text}">${_svgEscape(brandJp)}</text>`
+    +     `<text x="1220" y="702" text-anchor="end" font-family="'Helvetica Neue',sans-serif" font-size="11" letter-spacing="3" fill="${pal.sub}">${_svgEscape(brandEn)}</text>`
+    +   `</g>`
+    + `</svg>`;
+  // data URI として返す (= <img src> で直接埋め込み可)
+  return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
 }
 
 // Pollinations.ai = 無料 / 即時 / API key 不要 の AI 画像生成 URL ビルダ。
@@ -16057,31 +16175,30 @@ function _extractHeroSubject(title){
   return t.slice(0, 60) || title;
 }
 
-async function _mediaGenerateHeroImage(title, template){
-  // 戦略: Replicate (SDXL) → 失敗 / 未設定 → Pollinations.ai
-  // 🎯 2026-06-02: タイトル直訳ではなく、 主要被写体を抽出してから image prompt 化
-  const subject = _extractHeroSubject(title);
-  // template ごとの画調 (= 「サムネ意味わからん」 対策、 photorealistic 重視)
-  const styleHint = template === 'tech'
-      ? ', photorealistic, clean office desk with laptop and modern UI screens, professional photography, soft natural lighting'
-    : template === 'newsletter'
-      ? ', clean editorial illustration, soft pastel palette, warm tones, modern flat design'
-    : template === 'magazine'
-      ? ', documentary photography, photorealistic, high quality, magazine cover style, natural lighting'
-    : template === 'friendly'
-      ? ', warm friendly illustration, hand-drawn style, approachable, cozy atmosphere'
-      : ', photorealistic, professional editorial photography, clean composition, natural lighting, magazine quality';
-  const basePrompt = subject + styleHint + ', no text, no logo, no watermark, no people faces blurred, 16:9 widescreen';
-  // 1) Replicate (token がある時のみ)
-  if(process.env.REPLICATE_API_TOKEN){
-    try {
-      const r = await generateImage(basePrompt, { width: 1280, height: 720 });
-      const u = (r && r.urls && r.urls[0]) || null;
-      if(u) return u;
-    } catch(e){ console.warn('[media-img] Replicate failed, fallback to Pollinations:', e.message); }
+// Hero 画像生成 — SVG テンプレ (デザイン固定) を 第一選択。
+// 「サムネ意味わからん」 問題への根本対応: AI 画像じゃなく テンプレ生成。
+// 同じフォーマット (= ブランド統一感)、 カテゴリ / タイトル で 自動変化。
+async function _mediaGenerateHeroImage(titleOrPost, mediaOrTemplate){
+  // 旧 signature 互換: (title, template) → SVG テンプレ呼び出し時に media obj 不要
+  // 新 signature: (post, media) で カテゴリも反映可能
+  let post, media;
+  if(typeof titleOrPost === 'string'){
+    // 旧呼び出し: title + template
+    post = { title: titleOrPost, category_name: '' };
+    media = { template: mediaOrTemplate || 'minimal', name: 'Blog' };
+  } else {
+    post = titleOrPost || {};
+    media = mediaOrTemplate || {};
   }
-  // 2) Pollinations.ai fallback (= 常に成功する URL)
-  return _pollinationsImageUrl(basePrompt, { width: 1280, height: 720 });
+  try {
+    return _svgHeroForArticle(post, media);
+  } catch(e){
+    console.warn('[media-img] SVG hero failed, fallback to Pollinations:', e.message);
+    // フォールバック: Pollinations.ai
+    const subject = _extractHeroSubject(post.title || '');
+    const prompt = subject + ', photorealistic editorial photography, magazine quality, no text, no logo, 16:9';
+    return _pollinationsImageUrl(prompt, { width: 1280, height: 720 });
+  }
 }
 
 // 本文中に挿入する 図 (H2 セクション毎、 関連プロンプトで Pollinations 生成)
@@ -16292,21 +16409,32 @@ ${schemaTags}
   article.post .body code{background:${isDark?'#0a1322':'#f5f5f5'};padding:1px 6px;border-radius:4px;font-size:14px;font-family:'SF Mono',Menlo,monospace;color:${accent}}
   article.post .body pre{background:#0f172a;color:#e2e8f0;padding:18px 20px;border-radius:9px;overflow-x:auto;font-size:13.5px;line-height:1.6}
   article.post .body strong{color:${s.textColor};font-weight:700}
-  article.post .body mark{background:${isDark?'#3a2f00':'#fff3cd'};color:${s.textColor};padding:1px 4px;border-radius:3px;font-weight:600}
+  /* 🖍 mark = 黄色蛍光ペン下線 (= fukuyama-note 風) — 文中の 日付 / 数字 / 固有名詞 を強調 */
+  article.post .body mark{background:linear-gradient(transparent 60%,#fde047 60%);color:${s.textColor};padding:0 2px;font-weight:700}
   article.post .body figure{margin:28px 0;text-align:center}
   article.post .body figure img{width:100%;max-width:780px;height:auto;border-radius:8px;border:1px solid ${s.cardBorder};display:block;margin:0 auto;background:${isDark?'#0a1322':'#fafaf7'}}
   article.post .body figure figcaption{font-size:11.5px;color:${s.mutedColor};margin-top:8px;font-style:italic}
   article.post .body blockquote.callout{font-style:normal;background:linear-gradient(135deg,${isDark?'#0a1f1c':'#f0fdf4'},${isDark?'#0f2925':'#ecfdf5'});border-left:4px solid ${accent};padding:16px 22px;color:${s.textColor};font-weight:600;font-size:15.5px;line-height:1.7;border-radius:0 8px 8px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
   article.post .body blockquote.callout::before{content:"💡 ";margin-right:4px}
-  article.post .body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;border:1px solid ${s.cardBorder};border-radius:6px;overflow:hidden}
+  /* 🎨 section-hero card — fukuyama-note 風の デザインされた章扉 */
+  article.post .body .section-hero{background:linear-gradient(135deg,#0a1f3d,#1e3a5c);color:#fff;padding:42px 32px;border-radius:12px;margin:32px 0;text-align:center;box-shadow:0 8px 24px rgba(10,31,61,.18)}
+  article.post .body .section-hero .section-eyebrow{font-size:11px;letter-spacing:.18em;color:#fbbf24;font-weight:700;margin-bottom:18px;text-transform:uppercase}
+  article.post .body .section-hero h2,article.post .body .section-hero h3{color:#fff;font-size:26px;font-weight:900;line-height:1.5;margin:0 0 18px;padding:0;background:none;border:none}
+  article.post .body .section-hero p{color:#cbd5e1;font-size:14.5px;line-height:1.95;max-width:640px;margin:14px auto 0;text-align:left}
+  article.post .body .section-hero mark{background:none;background-image:linear-gradient(transparent 60%,rgba(251,191,36,.55) 60%);color:#fbbf24;font-weight:800;padding:0 2px}
+  article.post .body .section-hero strong{color:#fbbf24;font-weight:800}
+  /* 表 — 横型 (thead あり) */
+  article.post .body table{width:100%;border-collapse:collapse;margin:28px 0;font-size:14.5px;border:1px solid ${s.cardBorder};border-radius:6px;overflow:hidden}
   article.post .body table thead{background:${isDark?'#0a1322':'#fafaf7'}}
-  article.post .body table th{padding:11px 14px;text-align:left;font-weight:800;color:${s.textColor};border-bottom:2px solid ${s.cardBorder};font-size:13px;background:${isDark?'#0a1322':'#fafaf7'}}
-  article.post .body table td{padding:11px 14px;border-top:1px solid ${s.cardBorder};color:${s.textColor};line-height:1.6}
-  article.post .body table tr:nth-child(even) td{background:${isDark?'#0d1626':'#fafaf7'}}
-  /* 縦型 info-table (= <tr><th>key</th><td>value</td></tr>) — fukuyama-note 風 */
-  article.post .body table tr td:first-child{}
-  article.post .body table tbody tr th{width:30%;background:${isDark?'#0a1322':'#fafaf7'};border-top:1px solid ${s.cardBorder};border-bottom:none;vertical-align:top;white-space:nowrap}
+  article.post .body table thead th{padding:13px 16px;text-align:left;font-weight:800;color:${s.textColor};border-bottom:2px solid ${s.cardBorder};font-size:13px;background:${isDark?'#0a1322':'#fafaf7'}}
+  article.post .body table td{padding:13px 18px;border-top:1px solid ${s.cardBorder};color:${s.textColor};line-height:1.7}
+  article.post .body table tbody tr:nth-child(even) td{background:${isDark?'#0d1626':'#fafaf7'}}
+  /* 🎨 縦型 info-table (= <tr><th>key</th><td>value</td></tr>) — fukuyama-note 風 紺左列 */
+  article.post .body table tbody tr th{width:30%;min-width:120px;background:#0a1f3d;color:#fff;border-top:2px solid #fff;border-bottom:none;vertical-align:top;padding:14px 18px;text-align:left;font-weight:800;font-size:14px}
   article.post .body table tbody tr:first-child th{border-top:none}
+  article.post .body table tbody tr:nth-child(even) th{background:#0a1f3d}
+  article.post .body table tbody tr th + td{padding:14px 20px;background:#fff;color:${s.textColor};font-weight:500}
+  article.post .body table tbody tr:nth-child(even) th + td{background:#f8fafc}
   /* モバイル時 上部に折りたたみ TOC 表示 */
   .mobile-toc{display:none}
   footer.site-foot{padding:20px 24px;background:${s.headerBg};font-size:11px;color:${s.mutedColor};border-top:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
@@ -16580,7 +16708,7 @@ async function executePublishToMediaTool(user, agent, input){
   }
 
   // Hero 画像 (失敗 OK)
-  const heroUrl = await _mediaGenerateHeroImage(article.title, agent.media.template).catch(() => null);
+  const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, agent.media).catch(() => null);
 
   // slug 採番 + 保存
   const existingSlugs = (agent.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
@@ -23852,7 +23980,7 @@ async function handleAPI(req,res,pathname,method,ip){
         // GSC ヒントは body 内に混ぜず、 user prompt に append される (= future)
       });
       // hero 画像 再生成 (= 新 prompt で 主要被写体抽出)
-      const heroUrl = await _mediaGenerateHeroImage(article.title, ag.media.template).catch(() => null);
+      const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
       const now = new Date().toISOString();
       postMeta.title = String(article.title || postMeta.title).slice(0, 120);
       postMeta.excerpt = String(article.excerpt || postMeta.excerpt || '').slice(0, 240);
@@ -23900,7 +24028,7 @@ async function handleAPI(req,res,pathname,method,ip){
       try {
         const keyword = postMeta.keyword || postMeta.title;
         const article = await _mediaGenerateArticle(ag, { keyword, title: postMeta.title });
-        const heroUrl = await _mediaGenerateHeroImage(article.title, ag.media.template).catch(() => null);
+        const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
         const now = new Date().toISOString();
         postMeta.title = String(article.title || postMeta.title).slice(0, 120);
         postMeta.excerpt = String(article.excerpt || postMeta.excerpt || '').slice(0, 240);
@@ -24139,7 +24267,7 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 500, { error: 'generation_failed', detail: e.message });
     }
 
-    const heroUrl = await _mediaGenerateHeroImage(article.title, ag.media.template).catch(() => null);
+    const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
     const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
     const postSlug = _mediaPostSlug(article.title, existingSlugs);
     const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');

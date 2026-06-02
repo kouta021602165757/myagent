@@ -5982,6 +5982,44 @@ twitter / threads / linkedin / facebook / reddit / mastodon / bluesky / line / t
   },
 ];
 
+// ══════════════════════════════════════════════════════════════════
+// 📝 BLOG_TOOLS — チャットから直接メディア機能を操作する
+// ══════════════════════════════════════════════════════════════════
+// AI が「○○ で書いて」 「今月もう何本書いた?」 みたいなお願いに対し、
+// 既存 /api/.../media/* endpoint を裏で呼び出して結果を返す。
+// site_url が登録された agent でのみ提供 (= site agent 専用).
+const BLOG_TOOLS = [
+  {
+    name: 'publish_to_media',
+    description: '🚀 メディア (= 集客ブログ) に SEO/AEO 記事を AI 生成し、 自動公開します。\n'
+      + 'タイトルまたはキーワードを 1 つ渡すだけで、 Claude Sonnet が 5,000 文字以上の記事を執筆 → Hero 画像を生成 → 即公開。\n'
+      + '【自動セットアップ】 まだメディアを立ち上げていない agent でも、 site 名から自動で立ち上げてから記事を公開します。 ユーザに "メディアまだ作ってないですよ" と聞き返す必要なし。\n'
+      + '【利用シーン】 「○○ で記事書いて」 「○○ に関する SEO 記事公開して」 「AEO 記事を書いて」 等の依頼すべて。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '記事のタイトル or ターゲットキーワード (= 例: 「中小企業 採用 助成金」)' },
+        mode:  { type: 'string', enum: ['seo','aeo'], description: 'SEO 通常記事 / AEO (= AI 検索向け、 FAQ schema 付き)。 既定 seo。' },
+        target_chars: { type: 'integer', description: '目安文字数 (= 既定 5000、 最大 15000)' },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'list_media_posts',
+    description: '📝 公開済メディア記事の一覧 (= タイトル + 公開日 + 公開 URL + ターゲット KW + ステータス) を取得。\n'
+      + '【利用シーン】 「今月もう何本書いた?」 「先週の記事教えて」 「公開済記事のタイトル全部見たい」 等。\n'
+      + '【返却】 最大 limit 件、 新しい順。 各記事の hero 画像 URL も含む。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', description: '取得件数 (= 既定 20、 最大 50)' },
+        days:  { type: 'integer', description: '直近 N 日に絞る場合 (例: 7 = 先週分のみ)' },
+      },
+    },
+  },
+];
+
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
 let _playwrightChromium = null;
 let _ffmpegStaticPath   = null;
@@ -15509,6 +15547,133 @@ ${footerBanner}
 </body></html>`;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// 📝 BLOG tool executors — チャットから呼ばれる
+// ══════════════════════════════════════════════════════════════════
+
+// publish_to_media: メディア未作成なら auto-create してから記事公開
+async function executePublishToMediaTool(user, agent, input){
+  if(!agent) return { error: 'agent not found' };
+  if(!agent.site_url) return { error: 'site_url not set on this agent — まず LP URL を登録してください' };
+  const title = String((input && input.title) || '').trim();
+  if(!title) return { error: 'title (= キーワード or タイトル) を渡してください' };
+  const mode = (input && input.mode === 'aeo') ? 'aeo' : 'seo';
+  const target_chars = Math.max(2000, Math.min(15000, parseInt(input && input.target_chars, 10) || 5000));
+
+  // メディア未作成 → 自動で立ち上げる (= 名前 + slug を agent.name から)
+  if(!agent.media || !agent.media.id){
+    let siteHostname = '';
+    try { siteHostname = new URL(agent.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+    const defaultSlug = (siteHostname.split('.')[0] || (agent.name || 'media')).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+    const finalSlug = await _mediaUniqueSlug(defaultSlug);
+    const media = {
+      id: 'mda_' + crypto.randomBytes(6).toString('hex'),
+      slug: finalSlug,
+      name: (agent.name || siteHostname || 'My Blog') + ' Blog',
+      template: 'minimal',
+      brand_color: '#0d4f4a',
+      lp_url: agent.site_url,
+      logo_url: null,
+      categories: [],
+      domain: 'myaiagents.agency',
+      public_path: '/media/' + finalSlug,
+      created_at: new Date().toISOString(),
+      status: 'live',
+      auto_created: true,
+    };
+    agent.media = media;
+    agent.media_posts_idx = [];
+    try { await DB.save(user); } catch(e){ return { error: 'auto-create save failed: ' + e.message }; }
+  }
+
+  // 記事生成
+  let article;
+  try {
+    article = await _mediaGenerateArticle(agent, { keyword: title, title, target_chars, mode });
+  } catch(e){
+    return { error: 'generation_failed: ' + e.message };
+  }
+
+  // Hero 画像 (失敗 OK)
+  const heroUrl = await _mediaGenerateHeroImage(article.title, agent.media.template).catch(() => null);
+
+  // slug 採番 + 保存
+  const existingSlugs = (agent.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
+  const postSlug = _mediaPostSlug(article.title, existingSlugs);
+  const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
+  const now = new Date().toISOString();
+  const postMeta = {
+    id: postId, slug: postSlug,
+    title: article.title, excerpt: article.excerpt,
+    category_name: article.category_name || '',
+    hero_image_url: heroUrl,
+    status: 'published', published_at: now,
+    keyword: title, mode,
+  };
+  if(!Array.isArray(agent.media_posts_idx)) agent.media_posts_idx = [];
+  agent.media_posts_idx.unshift(postMeta);
+  if(!user.media_posts_full) user.media_posts_full = {};
+  user.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
+
+  try { await DB.save(user); } catch(e){ return { error: 'save_failed: ' + e.message }; }
+  _mediaSlugCacheClear(agent.media.slug);
+
+  const publicUrl = 'https://' + (agent.media.domain || 'myaiagents.agency') + '/media/' + agent.media.slug + '/' + postSlug;
+  return {
+    ok: true,
+    published: true,
+    title: postMeta.title,
+    excerpt: postMeta.excerpt,
+    public_url: publicUrl,
+    hero_image_url: heroUrl,
+    mode,
+    auto_created_media: !!agent.media.auto_created && agent.media_posts_idx.length === 1,
+    media_name: agent.media.name,
+    media_slug: agent.media.slug,
+  };
+}
+
+// list_media_posts: 公開済記事の一覧
+async function executeListMediaPostsTool(user, agent, input){
+  if(!agent) return { error: 'agent not found' };
+  if(!agent.media || !agent.media.id){
+    return { ok: true, has_media: false, posts: [], message: 'メディアまだ立ち上げてません。 publish_to_media を呼べば自動で立ち上がります。' };
+  }
+  const limit = Math.max(1, Math.min(50, parseInt(input && input.limit, 10) || 20));
+  const days = (input && input.days) ? Math.max(1, parseInt(input.days, 10)) : 0;
+  const since = days ? (Date.now() - days * 86400000) : 0;
+  const idx = (agent.media_posts_idx || []).slice();
+  const filtered = idx.filter(p => {
+    if(!p || p.status === 'draft') return false;
+    if(!since) return true;
+    return Date.parse(p.published_at || 0) >= since;
+  }).slice(0, limit);
+  const host = agent.media.domain || 'myaiagents.agency';
+  return {
+    ok: true,
+    has_media: true,
+    media: {
+      name: agent.media.name,
+      slug: agent.media.slug,
+      public_url: 'https://' + host + '/media/' + agent.media.slug,
+    },
+    total_count: idx.filter(p => p && p.status !== 'draft').length,
+    returned: filtered.length,
+    days_filter: days || null,
+    posts: filtered.map(p => ({
+      title: p.title,
+      slug: p.slug,
+      published_at: p.published_at,
+      keyword: p.keyword,
+      mode: p.mode || 'seo',
+      category: p.category_name || '',
+      hero_image_url: p.hero_image_url || null,
+      excerpt: (p.excerpt || '').slice(0, 120),
+      public_url: 'https://' + host + '/media/' + agent.media.slug + '/' + p.slug,
+    })),
+  };
+}
+
 // HTML escape helper for SSR template
 function _mediaEsc(s){
   return String(s == null ? '' : s)
@@ -16083,6 +16248,8 @@ async function _runOneSchedule(user, agent, sched){
           else if(block.name === 'drive_set_default_folder') result = await executeDriveSetDefaultFolderTool(user, agent, block.input||{});
           else if(block.name === 'wordpress_publish')   result = await executeWordPressPublishTool(user, agent, block.input||{});
           else if(block.name === 'wordpress_test_connection') result = await executeWordPressTestConnectionTool(user, agent, block.input||{});
+          else if(block.name === 'publish_to_media')    result = await executePublishToMediaTool(user, agent, block.input||{});
+          else if(block.name === 'list_media_posts')    result = await executeListMediaPostsTool(user, agent, block.input||{});
           else if(block.name === 'share_to_sns')        result = await executeShareToSnsTool(block.input||{});
           else if(block.name === 'buffer_list_profiles') result = await executeBufferListProfilesTool(user);
           else if(block.name === 'buffer_post')          result = await executeBufferPostTool(user, block.input||{});
@@ -26697,9 +26864,11 @@ ${orgSummary || '(汎用チーム)'}
     // Without a PAT every tool call returns the same error, so it's pointless
     // to even list the tools in those cases.
     const githubActive = !!(agent.github_enabled && payerUser && (payerUser.github_pat || (payerUser.integrations && payerUser.integrations.github && payerUser.integrations.github.pat)));
+    // メディア (blog) tool は site agent (= site_url 登録済) なら常時 active
+    const blogToolsActive = !!(agent && agent.site_url);
     const useTools = !!agent.chrome_enabled || sheetsActive || extensionActive
                    || imageGenActive || videoGenActive || mediaUtilActive
-                   || webNativeActive || githubActive;
+                   || webNativeActive || githubActive || blogToolsActive;
     // send_email auto-routes to the user's own address, but the AI doesn't
     // know what that address IS — so it sometimes asks the user for one
     // or refuses with "no recipient". Inject the email into the tool's
@@ -26735,6 +26904,7 @@ ${orgSummary || '(汎用チーム)'}
       ...(mediaUtilActive ? _mediaTools : []),
       ...(webNativeActive ? WEB_NATIVE_TOOLS : []),
       ...(githubActive ? GITHUB_TOOLS : []),
+      ...(blogToolsActive ? BLOG_TOOLS : []),
       ..._mcpCompose.tools,
     ];
     const tools = _filterToolsByIntent(_allTools, _intentCatsSet);
@@ -27389,6 +27559,10 @@ ${orgSummary || '(汎用チーム)'}
               result = await executeWordPressPublishTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'wordpress_test_connection'){
               result = await executeWordPressTestConnectionTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'publish_to_media'){
+              result = await executePublishToMediaTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'list_media_posts'){
+              result = await executeListMediaPostsTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'share_to_sns'){
               result = await executeShareToSnsTool(block.input||{});
             } else if(block.name === 'buffer_list_profiles'){

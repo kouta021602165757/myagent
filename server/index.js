@@ -16367,13 +16367,17 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
     '👉 ' + name + ' のサービスを見る',
     'display:block;background:'+brand+';color:#fff;padding:14px 20px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:14px;font-weight:700;text-align:center;margin:28px 0');
   // endCard: <div class="body"> 内に置くため、 .body h3 / .body p の CSS と
-  //   競合しないよう explicit に color / border / padding / background を上書き
+  //   競合しないよう class 経由で 外部 CSS で全上書き (= inline ダブルクォートの破綻防止)
+  const endCardCtaUrl = lpUrl ? lpUrl + '?utm_source=media&utm_medium=end_card&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug) : '';
   const endCard = lpUrl ? `
-    <div class="end-card-cta" style="background:linear-gradient(135deg,${brand},${isDark?'#0a1322':'#0a3d39'});color:#fff;border-radius:${s.cardRadius};padding:34px 30px;margin-top:40px;text-align:center;box-shadow:0 6px 24px rgba(10,31,61,.12)">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.7);text-transform:uppercase;margin-bottom:10px">この記事を読んだあなたに</div>
-      <h3 style="font-family:${s.titleFont};font-size:23px;font-weight:900;margin:0 0 12px;color:#fff !important;padding:0;border:0;background:none;line-height:1.5">${name} を試してみる</h3>
-      <p style="font-size:14px;color:rgba(255,255,255,.85) !important;margin:0 0 22px;line-height:1.7;font-family:${s.bodyFont};border:0;padding:0;background:none">今すぐ公式サイトをチェックしてみてください</p>
-      ${cta('end_card', '🔗 公式サイトへ →', 'display:inline-block;background:#fff;color:'+brand+';padding:13px 28px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:14px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.18)')}
+    <div class="end-card-cta">
+      <div class="ec-bg-deco"></div>
+      <div class="ec-eyebrow">▌ EXCLUSIVE FOR YOU</div>
+      <div class="ec-eyebrow-jp">この記事を読んだあなたに</div>
+      <h3 class="ec-h3">${name} を試してみる</h3>
+      <p class="ec-desc">プロのチームが あなたのサイトの集客を <strong class="ec-strong">月 30 時間</strong> 削減します。</p>
+      <a href="${endCardCtaUrl}" target="_blank" rel="noopener" class="ec-btn">公式サイトを見る <span class="ec-arrow">→</span></a>
+      <div class="ec-foot">無料で試す ・ クレジット カード不要</div>
     </div>` : '';
   const footerBanner = lpUrl ? `
     <div style="background:${brand};color:#fff;padding:16px 0;text-align:center;font-size:13px;font-weight:700">
@@ -16420,17 +16424,19 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
       <span style="background:${isDark?'#1e293b':'#fafaf7'};border:1px solid ${s.cardBorder};color:${s.subColor};font-size:10px;padding:3px 8px;border-radius:3px;letter-spacing:.02em">#${_mediaEsc(post.category_name)}</span>
     </div>` : '';
 
-  // Author bio block (= 記事末尾)
+  // Author bio block (= 記事末尾、 max-width 1100px に揃えて 中央寄せ)
   const authorBioHTML = `
-    <section style="padding:24px;background:${isDark?'#0a1322':'#fafaf7'};border-top:1px solid ${s.cardBorder};border-bottom:1px solid ${s.cardBorder};display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;margin-top:30px">
-      <div style="width:72px;height:72px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;flex-shrink:0;font-family:${s.brandFont}">${name.charAt(0).toUpperCase()}</div>
-      <div>
-        <div style="font-size:10px;font-weight:800;color:${s.mutedColor};letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">この記事の著者</div>
-        <div style="font-family:${s.titleFont};font-size:16.5px;font-weight:900;color:${s.textColor};margin-bottom:7px">${authorName}</div>
-        <p style="font-size:12.5px;color:${s.subColor};line-height:1.7;margin:0 0 8px">${authorBio}</p>
-        <div style="font-size:11px"><a href="/media/${_mediaEsc(media.slug)}/about" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部 詳細 →</a></div>
-      </div>
-    </section>`;
+    <div style="max-width:1100px;margin:30px auto 0;padding:0 24px">
+      <section style="padding:28px 30px;background:${isDark?'#0a1322':'#fafaf7'};border:1px solid ${s.cardBorder};border-radius:10px;display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start">
+        <div style="width:72px;height:72px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;flex-shrink:0">${name.charAt(0).toUpperCase()}</div>
+        <div>
+          <div style="font-size:10px;font-weight:800;color:${s.mutedColor};letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">この記事の著者</div>
+          <div style="font-size:16.5px;font-weight:900;color:${s.textColor};margin-bottom:7px">${authorName}</div>
+          <p style="font-size:12.5px;color:${s.subColor};line-height:1.7;margin:0 0 8px">${authorBio}</p>
+          <div style="font-size:11px"><a href="/media/${_mediaEsc(media.slug)}/about" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部 詳細 →</a></div>
+        </div>
+      </section>
+    </div>`;
 
   // Related articles
   const related = (opts && Array.isArray(opts.relatedPosts)) ? opts.relatedPosts : [];
@@ -16538,6 +16544,20 @@ ${schemaTags}
   article.post .body .section-hero p{color:#cbd5e1;font-size:14.5px;line-height:1.95;max-width:640px;margin:14px auto 0;text-align:left}
   article.post .body .section-hero mark{background:none;background-image:linear-gradient(transparent 60%,rgba(251,191,36,.55) 60%);color:#fbbf24;font-weight:800;padding:0 2px}
   article.post .body .section-hero strong{color:#fbbf24;font-weight:800}
+  /* 🎨 end-card-cta — fukuyama-note 風 強い 末尾 CTA カード */
+  article.post .body .end-card-cta{position:relative;background:linear-gradient(135deg,#0a1f3d 0%,#0d4f4a 60%,#0a3d39 100%);color:#fff;border-radius:16px;padding:48px 36px 40px;margin:48px 0 16px;text-align:center;box-shadow:0 16px 48px rgba(10,31,61,.22),0 0 0 1px rgba(255,255,255,.06);overflow:hidden}
+  article.post .body .end-card-cta .ec-bg-deco{position:absolute;top:-80px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(251,191,36,.18),transparent 70%);pointer-events:none}
+  article.post .body .end-card-cta::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:60px;height:3px;background:#fbbf24;border-radius:0 0 4px 4px}
+  article.post .body .end-card-cta .ec-eyebrow{font-size:10.5px;letter-spacing:.22em;color:#fbbf24;font-weight:800;margin-bottom:6px;position:relative}
+  article.post .body .end-card-cta .ec-eyebrow-jp{font-size:12px;color:rgba(255,255,255,.7);font-weight:600;margin-bottom:18px;letter-spacing:.04em;position:relative}
+  article.post .body .end-card-cta .ec-h3{color:#fff;font-size:26px;font-weight:900;line-height:1.45;margin:0 0 14px;padding:0;background:none;border:none;letter-spacing:-.005em;position:relative}
+  article.post .body .end-card-cta .ec-desc{color:rgba(255,255,255,.88);font-size:14.5px;line-height:1.8;margin:0 auto 26px;max-width:520px;font-weight:500;border:0;padding:0;background:none;position:relative}
+  article.post .body .end-card-cta .ec-strong{color:#fbbf24;font-weight:800;background-image:linear-gradient(transparent 60%,rgba(251,191,36,.2) 60%);padding:0 3px}
+  article.post .body .end-card-cta .ec-btn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#0a1f3d;padding:15px 36px;border-radius:8px;text-decoration:none;font-size:14.5px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.25),0 0 0 1px rgba(251,191,36,.3);transition:all .2s;position:relative;letter-spacing:.01em}
+  article.post .body .end-card-cta .ec-btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.32),0 0 0 1px #fbbf24}
+  article.post .body .end-card-cta .ec-arrow{color:#fbbf24;font-weight:900;font-size:16px;transition:transform .2s}
+  article.post .body .end-card-cta .ec-btn:hover .ec-arrow{transform:translateX(4px)}
+  article.post .body .end-card-cta .ec-foot{font-size:11px;color:rgba(255,255,255,.55);font-weight:600;margin-top:18px;letter-spacing:.04em;position:relative}
   /* 表 — 横型 (thead あり) */
   article.post .body table{width:100%;border-collapse:collapse;margin:28px 0;font-size:14.5px;border:1px solid ${s.cardBorder};border-radius:6px;overflow:hidden}
   article.post .body table thead{background:${isDark?'#0a1322':'#fafaf7'}}

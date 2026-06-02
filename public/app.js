@@ -10424,6 +10424,130 @@ function _renderTabConnections(site){
     + '</div>';
 }
 
+// ✏️ カテゴリ編集 — 追加 / リネーム / 削除 modal
+window._openCategoryEditor = async function(siteId){
+  // 現在の categories を fetch (= GET /api/agents/:id/media)
+  var media = null;
+  try {
+    var r = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media');
+    media = r && r.media;
+  } catch(e){ showToast('読み込み失敗: '+(e.message||''),'ng'); return; }
+  if(!media){ showToast('メディアが未作成です','ng'); return; }
+  // 編集中の state (= editor 閉じるまで保持)
+  var editState = {
+    siteId: siteId,
+    media: media,
+    cats: (media.categories || []).map(function(c){
+      return { id: c.id, name: c.name || '', subs: (c.subs||[]).map(function(s){ return { id: s.id, name: s.name||'' }; }) };
+    }),
+  };
+  window._catEditState = editState;
+  if(document.getElementById('catEditorOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'catEditorOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.innerHTML = '<div id="catEditorCard" style="background:#fff;border-radius:14px;padding:22px 24px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+    +   '<div style="font-size:16px;font-weight:900">✏️ カテゴリ編集</div>'
+    +   '<button onclick="_closeCategoryEditor()" style="background:transparent;border:0;font-size:22px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">×</button>'
+    + '</div>'
+    + '<div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:14px;padding:10px 12px;background:var(--cream3);border-radius:8px">'
+    +   '・ カテゴリ名を変更しても <b>公開済記事は そのまま</b> です (= URL 不変)。<br>'
+    +   '・ カテゴリ削除後も 古い記事の category_name は残ります。 必要なら 保存後に「♻️ 既存記事を整理」 を実行してください。'
+    + '</div>'
+    + '<div id="catEditorList"></div>'
+    + '<button onclick="_catEditAdd()" style="margin-top:10px;background:#fff;border:1px dashed var(--wire2);color:var(--text2);padding:10px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">+ カテゴリ追加</button>'
+    + '<div style="display:flex;gap:10px;margin-top:18px">'
+    +   '<button onclick="_closeCategoryEditor()" style="flex:1;background:#fff;border:1px solid var(--wire2);color:var(--text2);padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button>'
+    +   '<button onclick="_catEditSave()" id="catEditSaveBtn" style="flex:1.5;background:var(--teal);border:0;color:#fff;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">保存</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target === ov) _closeCategoryEditor(); });
+  _catEditRender();
+};
+
+window._closeCategoryEditor = function(){
+  var ov = document.getElementById('catEditorOverlay');
+  if(ov && ov.parentNode) ov.parentNode.removeChild(ov);
+  window._catEditState = null;
+};
+
+window._catEditAdd = function(){
+  var s = window._catEditState; if(!s) return;
+  if(s.cats.length >= 8){ showToast('カテゴリは最大 8 個まで','ng'); return; }
+  s.cats.push({ id: null, name: '', subs: [] });
+  _catEditRender();
+  // focus the last input
+  setTimeout(function(){
+    var inputs = document.querySelectorAll('#catEditorList input[data-cat-idx]');
+    var last = inputs[inputs.length-1]; if(last) last.focus();
+  }, 30);
+};
+
+window._catEditRemove = function(idx){
+  var s = window._catEditState; if(!s) return;
+  s.cats.splice(idx, 1);
+  _catEditRender();
+};
+
+function _catEditRender(){
+  var s = window._catEditState; if(!s) return;
+  var el = document.getElementById('catEditorList'); if(!el) return;
+  if(!s.cats.length){
+    el.innerHTML = '<div style="padding:18px 8px;text-align:center;color:var(--text3);font-size:11.5px">カテゴリなし — 下の「+ カテゴリ追加」 から</div>';
+    return;
+  }
+  el.innerHTML = s.cats.map(function(c, i){
+    var subCount = (c.subs||[]).length;
+    var subBadge = subCount > 0 ? '<span style="font-size:10px;color:var(--text3);margin-left:6px">サブ '+subCount+' 件</span>' : '';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--cream3);border-radius:8px;margin-bottom:6px">'
+      + '<span style="color:var(--text3);font-size:12px;width:18px;text-align:right">'+(i+1)+'</span>'
+      + '<input type="text" data-cat-idx="'+i+'" value="'+esc(c.name)+'" oninput="_catEditUpdate('+i+', this.value)" placeholder="カテゴリ名" style="flex:1;background:#fff;border:1px solid var(--wire);padding:7px 10px;border-radius:6px;font-size:13px;font-family:inherit" maxlength="30">'
+      + subBadge
+      + '<button onclick="_catEditRemove('+i+')" title="削除" style="background:#fff;border:1px solid var(--wire2);color:#dc2626;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">🗑</button>'
+      + '</div>';
+  }).join('');
+}
+
+window._catEditUpdate = function(idx, val){
+  var s = window._catEditState; if(!s) return;
+  if(!s.cats[idx]) return;
+  s.cats[idx].name = String(val||'').slice(0, 30);
+};
+
+window._catEditSave = async function(){
+  var s = window._catEditState; if(!s) return;
+  // 名前空 / 重複 を validate
+  var seen = {};
+  var valid = [];
+  for(var i=0; i<s.cats.length; i++){
+    var nm = String(s.cats[i].name||'').trim();
+    if(!nm){ showToast('空欄のカテゴリがあります','ng'); return; }
+    var key = nm.toLowerCase();
+    if(seen[key]){ showToast('重複: '+nm,'ng'); return; }
+    seen[key] = true;
+    valid.push({ id: s.cats[i].id, name: nm, subs: s.cats[i].subs||[] });
+  }
+  var btn = document.getElementById('catEditSaveBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '保存中...'; }
+  try {
+    var r = await api('PUT', '/api/agents/'+encodeURIComponent(s.siteId)+'/media/categories', { categories: valid });
+    if(r && r.ok){
+      showToast('✅ カテゴリを更新しました','ok');
+      _closeCategoryEditor();
+      // 親パネルを再 render (= 既存の openMediaPanel があれば)
+      if(typeof window.openMediaPanel === 'function'){ window.openMediaPanel(s.siteId); }
+    } else {
+      showToast('保存失敗','ng');
+      if(btn){ btn.disabled = false; btn.textContent = '保存'; }
+    }
+  } catch(e){
+    showToast('エラー: '+(e.message||'unknown'),'ng');
+    if(btn){ btn.disabled = false; btn.textContent = '保存'; }
+  }
+};
+
 // ♻️ 既存記事 再分類 — Day 5 migration UI
 window._recategorizePosts = async function(siteId){
   // まず dry-run で 何件変わるか プレビュー
@@ -10867,6 +10991,7 @@ function _renderTabMedia(site){
       + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       +   '<b style="color:var(--text2)">📂 カテゴリ</b>: '
       +   '<span style="flex:1">'+((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')+'</span>'
+      +   '<button onclick="_openCategoryEditor(\''+esc(site.id)+'\')" style="background:var(--teal);border:0;color:#fff;font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="カテゴリ一覧を 追加 / リネーム / 削除">✏️ カテゴリ編集</button>'
       +   '<button onclick="_recategorizePosts(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="既存記事を カテゴリに 再マッピング (= AI が外れたカテゴリを正規化)">♻️ 既存記事を整理</button>'
       + '</div>'
       // 次のステップ — STEP 1 ✓ → STEP 2 (KW) → STEP 3 (戦略) → STEP 4 (タスク)

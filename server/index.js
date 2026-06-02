@@ -15740,12 +15740,16 @@ async function _mediaGenerateArticle(agent, params){
     + '\n上記の要件で記事を 1 本 JSON で出力してください。';
 
   if(!CLAUDE_KEY) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
+  // 🐛 Phase 4 bugfix: Haiku 4.5 は max output 8000、 Sonnet 4.6 は 16000。
+  //    model 切替時に上限を超えると Anthropic API が 400 で拒否する。
+  const modelMaxOut = useHaiku ? 8000 : 16000;
+  const max_tokens  = Math.min(modelMaxOut, Math.round(targetChars * 1.6));
   const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
     { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json',
       'anthropic-beta': 'prompt-caching-2024-07-31' },
     {
       model,
-      max_tokens: Math.min(16000, Math.round(targetChars * 1.6)),  // 業種別に動的調整
+      max_tokens,
       // 🚀 Prompt Caching: system block の最後に cache_control = ephemeral
       system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userText }],
@@ -18019,11 +18023,13 @@ async function _autoRewriteOneArticle(user, agent, postMeta){
     + '【既存タイトル】' + postMeta.title + '\n'
     + '【メインキーワード】' + (postMeta.keyword || postMeta.title) + '\n'
     + '【既存 HTML】\n' + oldBody.slice(0, 8000) + (oldBody.length > 8000 ? '\n...(以下省略)' : '');
+  // 🐛 Phase 4 bugfix: Haiku 4.5 は max output 8000、 Sonnet 4.6 は 16000。
+  const modelMaxOut = useHaiku ? 8000 : 16000;
   const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
     { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
     {
       model,
-      max_tokens: Math.min(14000, oldChars * 2),
+      max_tokens: Math.min(modelMaxOut, Math.max(2000, oldChars * 2)),
       system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userText }],
     }
@@ -23220,6 +23226,46 @@ async function handleAPI(req,res,pathname,method,ip){
     ag.media_cat_cache = out;
     try { await DB.save(user); } catch(e){ console.warn('[media-cat] save failed:', e.message); }
     return jres(res, 200, out);
+  }
+
+  //   PUT /api/agents/:id/media/categories — 既存メディアの カテゴリ一覧を上書き
+  //   body: { categories: [{ id?, name, subs?: [{name}] }, ...] }
+  //   既存記事の post.category_name は無加工 (= rename 時は別途 recategorize 推奨)
+  const mediaCatEditMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/categories$/);
+  if(mediaCatEditMatch && method === 'PUT'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaCatEditMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created yet' });
+    const body = await readBody(req).catch(() => ({}));
+    const inputCats = Array.isArray(body && body.categories) ? body.categories : [];
+    // 名前 normalize + dedupe + 上限 (= Wizard と同じ)
+    const seen = new Set();
+    const categories = inputCats.slice(0, 8).map(c => {
+      const name = String((c && c.name) || '').trim().slice(0, 30);
+      if(!name) return null;
+      const slug = _mediaSlugify(name);
+      if(!slug || seen.has(slug)) return null;
+      seen.add(slug);
+      // 既存 id を保持 (= public URL 不変)、 新規は採番
+      const id = (c && typeof c.id === 'string' && /^cat_/.test(c.id)) ? c.id : ('cat_' + crypto.randomBytes(4).toString('hex'));
+      const subs = (Array.isArray(c && c.subs) ? c.subs : []).slice(0, 4).map(s => {
+        const sn = String((s && s.name) || s || '').trim().slice(0, 30);
+        if(!sn) return null;
+        return {
+          id: (s && typeof s.id === 'string' && /^sub_/.test(s.id)) ? s.id : ('sub_' + crypto.randomBytes(4).toString('hex')),
+          name: sn,
+          slug: _mediaSlugify(sn),
+        };
+      }).filter(Boolean);
+      return { id, name, slug, subs };
+    }).filter(Boolean);
+    ag.media.categories = categories;
+    try { await DB.save(user); } catch(e){
+      return jres(res, 500, { error: 'save_failed', detail: e.message });
+    }
+    // 公開ページ SSR cache を invalidate (= 即反映)
+    try { _mediaSlugCacheClear(ag.media.slug); } catch(_){}
+    return jres(res, 200, { ok: true, categories });
   }
 
   //   POST /api/agents/:id/media/create — Wizard 完了時、 メディアを agent に保存

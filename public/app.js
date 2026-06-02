@@ -10397,11 +10397,16 @@ function _renderTabConnections(site){
 // 📊 Phase 2 週次トラッカー (= メディアダッシュ内、 今週公開ペース可視化)
 // ══════════════════════════════════════════════════════════════════
 function _renderWeeklyTracker(site, posts){
-  // 「今週」 = 月曜 0:00 から (= JST 想定で簡易判定)
+  // 「今週」 = ローカルタイムゾーンの月曜 0:00 から
+  // 🐛 fix: ブラウザのローカル TZ で計算 (= JST/EST どちらでも正しく動く)。
+  //   旧実装はタイムゾーンオフセット未考慮で UTC 寄りにズレてた。
   var now = new Date();
-  var day = now.getDay(); // 0=Sun, 1=Mon
-  var mondayMs = now.getTime() - ((day === 0 ? 6 : day - 1) * 86400000)
-    - (now.getHours() * 3600000) - (now.getMinutes() * 60000) - (now.getSeconds() * 1000);
+  var day = now.getDay(); // 0=Sun, 1=Mon ... (= local TZ)
+  // 月曜 0:00 local
+  var monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((day === 0 ? 6 : day - 1)));
+  var mondayMs = monday.getTime();
   var thisWeek = (posts || []).filter(function(p){
     return p && p.status !== 'draft' && Date.parse(p.published_at || 0) >= mondayMs;
   }).length;
@@ -10424,13 +10429,13 @@ function _renderWeeklyTracker(site, posts){
 // 🎯 Setup progress バー — 4 step 完了状況を chat 上部に表示
 // ══════════════════════════════════════════════════════════════════
 function _setupStepStatus(ag){
+  // 🐛 fix: kpi 値 0 で falsy 判定される bug。 PV=0 設定済の strategy が
+  // completed 判定されなかった。 null/undefined check に変更。
+  var kpiSet = !!(ag && ag.kpi && (ag.kpi.pv != null || ag.kpi.cvr != null || ag.kpi.leads != null));
   return {
     media:    !!(ag && ag.media && ag.media.id),
     keyword:  !!(ag && ag.kw_visited_at),
-    strategy: !!(ag && (
-      (ag.kpi && (ag.kpi.pv || ag.kpi.cvr || ag.kpi.leads)) ||
-      (ag.persona && Object.keys(ag.persona || {}).length > 0)
-    )),
+    strategy: !!(ag && (kpiSet || (ag.persona && Object.keys(ag.persona || {}).length > 0))),
     tasks:    !!(ag && ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0),
   };
 }
@@ -11014,13 +11019,17 @@ window._kwPublishToMedia = async function(siteId, title, mode){
 window._kwQuickClose = function(){
   var ov = document.getElementById('mediaQuickOverlay');
   if(ov) ov.remove();
+  window._mediaQuickBusy = false;
 };
 
 window._kwQuickSubmit = async function(siteId, title, mode){
+  // 🐛 fix: 連続クリックで二重実行防止 (= _mediaArtSubmit と同じ flag pattern)
+  if(window._mediaQuickBusy) return;
   var name = (document.getElementById('mqName')||{}).value || '';
   var slug = (document.getElementById('mqSlug')||{}).value || '';
   name = name.trim(); slug = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-');
   if(!name || !slug){ showToast('ブログ名と URL を入力してください','ng'); return; }
+  window._mediaQuickBusy = true;
   var card = document.getElementById('mediaQuickCard');
   if(card){
     card.innerHTML = '<div style="text-align:center;padding:30px 10px">'
@@ -11048,6 +11057,7 @@ window._kwQuickSubmit = async function(siteId, title, mode){
         + '<button onclick="_kwQuickClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 20px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button>'
         + '</div>';
     }
+    window._mediaQuickBusy = false;
   }
 };
 
@@ -11243,7 +11253,10 @@ window._kwQuickFirstArticle = async function(siteId){
   try {
     // 1. research_keyword で KW 1 個取得
     var kw = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/research-pick', { mode: 'seo' });
-    if(!kw || !kw.pick) throw new Error(kw && kw.error || 'KW 提案失敗');
+    // 🐛 fix: kw.pick が undefined だと TypeError。 strict check に変更
+    if(!kw || !kw.pick || (!kw.pick.title && !kw.pick.keyword)){
+      throw new Error((kw && kw.error) || 'KW 提案を取得できませんでした');
+    }
     // 2. UI 更新 (= 「○○ で執筆中」)
     var card = document.getElementById('mediaArtCard');
     if(card){

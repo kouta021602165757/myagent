@@ -7844,13 +7844,24 @@ async function _mediaUniqueSlug(base){
   }
 }
 
-// 永続 index に slug → user_id, agent_id を upsert
+// 永続 index に slug → user_id, agent_id を登録
+// 🐛 fix: sbReq は 5 引数目 (headers opts) を受け取らないため、 Prefer header が
+// 効かず、 2 回目の register で 409 duplicate で fail していた。
+// 我々の semantics では slug は 1 ユーザ固定 (= unique 採番済み) なので、
+// 409 は実害ゼロ。 silent ignore で十分。
 async function _registerMediaSlugIndex(slug, userId, agentId){
   if(!USE_SUPA || !slug || !userId || !agentId) return;
   try {
-    await sbReq('POST', 'media_slug_index', '', {
+    const r = await sbReq('POST', 'media_slug_index', '', {
       slug, user_id: userId, agent_id: agentId, updated_at: new Date().toISOString(),
-    }, { headers: { 'Prefer': 'resolution=merge-duplicates' } });
+    });
+    // 既に存在 (= 409 conflict、 もしくは body に duplicate key error 含む) は無視
+    if(r && r.s === 409) return;
+    if(r && r.s >= 400 && r.s !== 201 && r.s !== 200){
+      const errStr = JSON.stringify(r.d || '').toLowerCase();
+      if(/duplicate|already.*exists|unique.*constraint/i.test(errStr)) return; // idempotent
+      console.warn('[media-slug-index] register status:', r.s, errStr.slice(0, 200));
+    }
   } catch(e){ console.warn('[media-slug-index] register failed:', e.message); }
 }
 
@@ -15377,6 +15388,8 @@ async function _findUserByMediaSlug(slug, opts){
   const cached = _mediaSlugCache.get(slug);
   if(cached && cached.expires_at > Date.now()){
     if(cached.missing) return null;
+    // 🐛 fix: includePosts=true なら必ず full row 再 fetch (= body_html 取得のため)。
+    //   旧実装は cached.agent (= lean) を返す経路で body_html 欠落 → 個別記事 404 bug。
     try {
       if(includePosts){
         const u = await DB.findBy('id', cached.user_id);
@@ -15384,11 +15397,13 @@ async function _findUserByMediaSlug(slug, opts){
           const ag = (u.agents||[]).find(a => a && a.id === cached.agent_id);
           if(ag && ag.media && ag.media.slug === slug) return { user: u, agent: ag };
         }
+        _mediaSlugCache.delete(slug); // user 消失 / agent 移動 → cache 無効化
       } else if(cached.agent){
         return { user: { id: cached.user_id }, agent: cached.agent };
+      } else {
+        _mediaSlugCache.delete(slug); // 一覧でも lean agent 無いケース
       }
-    } catch(_){}
-    _mediaSlugCache.delete(slug);
+    } catch(_){ _mediaSlugCache.delete(slug); }
   }
   // 永続 index (= media_slug_index) を最優先 — 1 query で user_id 直接特定
   if(USE_SUPA){
@@ -15490,7 +15505,7 @@ async function _mediaGenerateArticle(agent, params){
     + '【キーワード】' + keyword + '\n'
     + '【ターゲット読者】' + persona + '\n'
     + '【メディア名】' + mediaName + '\n'
-    + (categories ? '【既存カテゴリ】' + categories + '\n' : '')
+    + (categories ? '【既存カテゴリ (= 必ずこの中から 1 つ選ぶ)】\n' + categories + '\n' : '')
     + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
     + '\n【記事の要件】\n'
     + '- 文字数: 約 ' + targetChars + ' 文字\n'
@@ -15502,7 +15517,7 @@ async function _mediaGenerateArticle(agent, params){
     + '{\n'
     + '  "title": "60 文字以内、 キーワード含む、 click したくなる",\n'
     + '  "excerpt": "120 文字以内、 記事の core value を要約",\n'
-    + '  "category_name": "上記カテゴリから 1 つ、 無ければ新規 1 単語",\n'
+    + '  "category_name": "' + (categories ? '上記既存カテゴリから 必ず 1 つ 文字列一致で選ぶ' : 'この記事のカテゴリ名を 1 単語で') + '",\n'
     + '  "body_html": "<h2>...</h2><p>...</p><h2>...</h2>... の連続。 HTML 整形済み"\n'
     + '}\n';
 
@@ -29382,8 +29397,17 @@ const server=http.createServer(async(req,res)=>{
         const cat = (agent.media.categories || []).find(c => c && (c.slug === catSlug));
         const catName = cat ? cat.name : catSlug;
         const allPosts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
-        // カテゴリ一致は category_name で (= AI 生成は category_name しか持たないため)
-        const posts = allPosts.filter(p => p.category_name === catName);
+        // 🐛 fix: AI 生成 category_name と Wizard 設定 category.name が
+        // 完全一致しない可能性に備え、 大文字小文字 + trim で正規化、
+        // category_name 未設定の記事は 「その他」 カテゴリでマッチ
+        const norm = s => String(s || '').trim().toLowerCase();
+        const targetNorm = norm(catName);
+        const isOther = (cat && cat.slug === 'other') || catSlug === 'other' || norm(catName) === '未分類' || norm(catName) === 'その他';
+        const posts = allPosts.filter(p => {
+          const pCat = norm(p.category_name);
+          if(isOther) return !pCat; // 未分類 page = category_name 空の記事
+          return pCat === targetNorm || pCat.indexOf(targetNorm) >= 0 || targetNorm.indexOf(pCat) >= 0;
+        });
         const html = _mediaRenderMinimalIndex(agent.media, posts, { categoryFilter: catName });
         res.writeHead(200, {
           'Content-Type': 'text/html;charset=utf-8',

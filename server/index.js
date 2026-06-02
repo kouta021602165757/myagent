@@ -23303,6 +23303,47 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { ok: true, count: ag.planned_articles.length });
   }
 
+  //   POST /api/agents/:id/media/recategorize — 既存記事を 既存カテゴリに 再マッピング (= Day 5 migration)
+  //   AI が文字列完全一致しないカテゴリを当てていた古い記事を、 まとめて 正規化。
+  //   body: { dry_run?: true }
+  const mediaRecatMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/recategorize$/);
+  if(mediaRecatMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaRecatMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created' });
+    const body = await readBody(req).catch(() => ({}));
+    const dryRun = !!(body && body.dry_run);
+    const validCats = (ag.media.categories || []).map(c => c.name);
+    if(!validCats.length) return jres(res, 200, { ok: true, no_categories: true, changed: 0 });
+    const norm = s => String(s || '').toLowerCase().trim();
+    const changes = [];
+    for(const p of (ag.media_posts_idx || [])){
+      if(!p) continue;
+      const cur = p.category_name || '';
+      if(validCats.includes(cur)) continue;  // 既に valid
+      // 部分一致 fallback
+      const match = validCats.find(v => {
+        const nv = norm(v), nc = norm(cur);
+        return nv === nc || nc.includes(nv) || nv.includes(nc);
+      });
+      const newCat = match || 'その他';
+      changes.push({ slug: p.slug, title: (p.title||'').slice(0,40), old: cur, new: newCat });
+      if(!dryRun) p.category_name = newCat;
+    }
+    if(!dryRun && changes.length){
+      try { await DB.save(user); } catch(e){ return jres(res, 500, { error: e.message }); }
+      _mediaSlugCacheClear(ag.media.slug);
+    }
+    return jres(res, 200, {
+      ok: true,
+      dry_run: dryRun,
+      changed: changes.length,
+      total_posts: (ag.media_posts_idx || []).length,
+      valid_categories: validCats,
+      changes: changes.slice(0, 50),  // 大量変更は上位 50 件のみ詳細
+    });
+  }
+
   //   POST /api/agents/:id/media/articles/:postSlug/rewrite — 既存記事を GSC データを context にリライト
   //   既存の URL を保持 (= SEO ペナルティ回避)、 body_html のみ差し替え
   const mediaRewriteMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/rewrite$/);

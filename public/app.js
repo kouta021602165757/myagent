@@ -10424,6 +10424,30 @@ function _renderTabConnections(site){
     + '</div>';
 }
 
+// ♻️ 既存記事 再分類 — Day 5 migration UI
+window._recategorizePosts = async function(siteId){
+  // まず dry-run で 何件変わるか プレビュー
+  try {
+    var dr = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/recategorize', { dry_run: true });
+    if(!dr || !dr.ok){ showToast('チェック失敗','ng'); return; }
+    if(dr.changed === 0){ showToast('再分類不要 (= 全記事が正規カテゴリ)','ok'); return; }
+    var sample = (dr.changes || []).slice(0, 5).map(function(c){
+      return '・「' + (c.title||'').slice(0,30) + '...」 「' + c.old + '」 → 「' + c.new + '」';
+    }).join('\n');
+    if(!confirm('既存 ' + dr.total_posts + ' 件中 ' + dr.changed + ' 件を 再分類します:\n\n' + sample + (dr.changed > 5 ? '\n... 他 ' + (dr.changed - 5) + ' 件' : '') + '\n\n実行しますか?')){
+      return;
+    }
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/recategorize', {});
+    if(r && r.ok){
+      showToast('✅ ' + r.changed + ' 件 再分類完了','ok');
+      // 再 render
+      window.openMediaPanel(siteId);
+    } else {
+      showToast('再分類失敗','ng');
+    }
+  } catch(e){ showToast('エラー: '+(e.message||'unknown'),'ng'); }
+};
+
 // ══════════════════════════════════════════════════════════════════
 // 📰 メディア型サイト 専用 hero (= 既存メディア向け 4 価値提案)
 // ══════════════════════════════════════════════════════════════════
@@ -10840,9 +10864,10 @@ function _renderTabMedia(site){
                   + '</div>';
               }).join('')
             + '</div></div>')
-      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px">'
+      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       +   '<b style="color:var(--text2)">📂 カテゴリ</b>: '
-      +   ((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')
+      +   '<span style="flex:1">'+((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')+'</span>'
+      +   '<button onclick="_recategorizePosts(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="既存記事を カテゴリに 再マッピング (= AI が外れたカテゴリを正規化)">♻️ 既存記事を整理</button>'
       + '</div>'
       // 次のステップ — STEP 1 ✓ → STEP 2 (KW) → STEP 3 (戦略) → STEP 4 (タスク)
       + '<div style="padding:14px 16px;background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:11px">'

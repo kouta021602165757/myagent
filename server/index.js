@@ -174,7 +174,11 @@ function _integrationsCatalog(){
     // WordPress now uses 'wp_multi' flow — array of sites with per-agent
     // override. Lets one user manage multiple WP blogs from one MY AI Agent
     // account ("ブログ A は AI X, ブログ B は AI Y" 構成 OK).
-    { id:'wordpress', name:'WordPress', logo:'📰', group:'blog', desc:'記事の作成・更新・公開 (複数サイト対応)', flow:'wp_multi', priority:true, has_backend:true },
+    // 🧟 WordPress: 2026-06-02 zombie 化 — 自前メディア に focus、 WP は隠す。
+    // 既存接続済ユーザの API endpoint は引き続き動くが、 新規追加 UI は出さない。
+    // hidden_in_catalog=true でクライアント catalog から除外。 catalog 経由
+    // 以外の直 API は防御的に維持 (= 復活したい時 flag 戻すだけ)。
+    { id:'wordpress', name:'WordPress', logo:'📰', group:'blog', desc:'記事の作成・更新・公開 (複数サイト対応)', flow:'wp_multi', priority:true, has_backend:true, hidden_in_catalog:true },
     { id:'ghost', name:'Ghost', logo:'👻', group:'blog', desc:'記事投稿・ニュースレター送信', flow:'form',
       fields:[{key:'adminUrl', label:'Admin URL', type:'url', required:true},
               {key:'apiKey', label:'Admin API Key', type:'password', required:true}] },
@@ -16481,7 +16485,10 @@ async function _runOneSchedule(user, agent, sched){
     // Build the same tool catalog as the chat handler, modulo browser.
     const sheetsActive = !!(agent.sheets_enabled && user.google_tokens);
     const githubActive = !!(agent.github_enabled && user && (user.github_pat || (user.integrations && user.integrations.github && user.integrations.github.pat)));
-    const _mediaTools = MEDIA_UTIL_TOOLS.map(t => {
+    // 🧟 WordPress 連携 zombie 化 (2026-06-02): AI には見せない (executor は残す)。
+    // 「マーケ担当雇う前 + 自前メディア」 ICP に focus、 サブ ICP (= WP 持ち)
+    // は当面外す。 実利用 0 ユーザだったので影響なし。
+    const _mediaTools = MEDIA_UTIL_TOOLS.filter(t => !/^wordpress_/.test(t.name)).map(t => {
       if(t.name !== 'send_email') return t;
       const ownerEmail = (user && user.email) || '';
       if(!ownerEmail) return t;
@@ -20199,7 +20206,11 @@ async function handleAPI(req,res,pathname,method,ip){
   // definition along with the caller's per-service connection status, so
   // the UI can render cards + Connect/Manage buttons in a single round-trip.
   if(pathname === '/api/me/integrations/catalog' && method === 'GET'){
-    const list = _integrationsCatalog().map(s => {
+    const list = _integrationsCatalog()
+      // 🧟 hidden_in_catalog=true な service は UI に出さない (= WordPress zombie 化)。
+      // 既に接続済のユーザだけは status を見せる (= disconnect できるよう)。
+      .filter(s => !s.hidden_in_catalog || (_getIntegrationStatus(user, s.id) || {}).connected)
+      .map(s => {
       const st = _getIntegrationStatus(user, s.id);
       return {
         id: s.id, name: s.name, logo: s.logo, group: s.group, desc: s.desc,
@@ -20209,6 +20220,7 @@ async function handleAPI(req,res,pathname,method,ip){
         // "setup pending" notice for OAuth services. Critical for github.
         has_backend: !!s.has_backend,
         status: st,
+        hidden: !!s.hidden_in_catalog,  // 接続済のみで残ったケース (= disconnect 用)
       };
     });
     const groups = {};
@@ -27531,7 +27543,8 @@ ${orgSummary || '(汎用チーム)'}
     // know what that address IS — so it sometimes asks the user for one
     // or refuses with "no recipient". Inject the email into the tool's
     // description per-request so the AI knows there's nothing to ask.
-    const _mediaTools = MEDIA_UTIL_TOOLS.map(t => {
+    // 🧟 WordPress 連携 zombie 化 (2026-06-02): tool 一覧からは除外、 executor は残す
+    const _mediaTools = MEDIA_UTIL_TOOLS.filter(t => !/^wordpress_/.test(t.name)).map(t => {
       if(t.name !== 'send_email') return t;
       const ownerEmail = (payerUser && payerUser.email) || (user && user.email) || '';
       if(!ownerEmail) return t; // fallback: leave generic

@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>モック: メディアデザイン 3 案 比較</title>
+<style>
+*{box-sizing:border-box;-webkit-text-size-adjust:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:#e7e7e3;color:#1a1a1a;line-height:1.6}
+.wrap{max-width:1240px;margin:0 auto;padding:30px 16px 80px}
+.intro{background:#fff;border-radius:14px;padding:22px 26px;margin-bottom:24px;border:1px solid rgba(0,0,0,.08)}
+.intro h1{margin:0 0 8px;font-size:22px;font-weight:900}
+.intro p{margin:0;color:#555;font-size:13px;line-height:1.7}
+.intro .note{background:#fafaf7;border-left:3px solid #a3e635;padding:10px 13px;margin-top:13px;font-size:11.5px;color:#555;border-radius:0 6px 6px 0}
+.section{margin-bottom:34px}
+.section-h{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:0 6px}
+.section-num{width:44px;height:44px;border-radius:11px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;flex-shrink:0}
+.s-cur .section-num{background:#71717a}
+.s-a .section-num{background:#111}
+.s-b .section-num{background:#0d4f4a}
+.s-c .section-num{background:linear-gradient(135deg,#1a1a1a,#7c2d12)}
+.section-h-text{flex:1}
+.section-h-eye{font-size:10.5px;font-weight:800;color:#71717a;letter-spacing:.06em;text-transform:uppercase}
+.section-h-ti{font-size:18px;font-weight:900;margin-top:2px}
+.section-h-sub{font-size:12px;color:#525252;margin-top:2px}
+.frame{background:#1a1a1a;border-radius:14px;padding:10px;overflow:hidden}
+.frame-bar{display:flex;gap:6px;padding:4px 8px 8px}
+.frame-bar span{width:11px;height:11px;border-radius:50%;background:#3a3a3a}
+.frame-bar .url{margin-left:auto;font-size:10.5px;color:#888;background:#0a0a0a;padding:4px 14px;border-radius:6px;font-family:'SF Mono',Menlo,monospace}
+.frame-body{background:#fff;border-radius:6px;overflow:hidden;min-height:560px}
+
+/* ═══════════ 現状 (= シンプル Georgia) ═══════════ */
+.cur{background:#fafaf7;font-family:Georgia,serif;color:#111;padding:0}
+.cur header{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0}
+.cur-brand{display:flex;align-items:center;gap:8px;font-weight:900;font-size:14px}
+.cur-logo{width:32px;height:32px;border-radius:6px;background:#0d4f4a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px}
+.cur header .cta{margin-left:auto;background:#0d4f4a;color:#fff;padding:8px 14px;border-radius:7px;font-size:12px;text-decoration:none;font-weight:700}
+.cur-hero{text-align:center;padding:48px 20px 30px}
+.cur-hero h1{font-size:32px;font-weight:700;margin:0 0 12px;border-bottom:3px double currentColor;display:inline-block;padding-bottom:4px}
+.cur-hero p{font-size:13px;color:#6b7280;margin:0}
+.cur-cats{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;padding:24px 20px 12px}
+.cur-cat{padding:5px 11px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;color:#374151;text-decoration:none;background:#fff}
+.cur-posts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:18px 20px 40px}
+.cur-art{background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden}
+.cur-art-hero{height:120px;background:linear-gradient(135deg,#0d4f4a,#0a3d39)}
+.cur-art-bd{padding:13px 14px}
+.cur-art-cat{font-size:10px;color:#0d4f4a;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.cur-art-h{font-size:14px;font-weight:800;line-height:1.45;margin:0 0 7px;color:#111}
+.cur-art-meta{font-size:10.5px;color:#9ca3af}
+
+/* ═══════════ A: Editorial Magazine (= NYT / Vox) ═══════════ */
+.ed{background:#fff;font-family:'Iowan Old Style','Charter','Cambria',Georgia,serif;color:#0a0a0a}
+.ed header{display:flex;align-items:center;padding:18px 30px;border-bottom:1px solid #000}
+.ed-brand{font-family:'Playfair Display',Georgia,serif;font-weight:900;font-size:22px;letter-spacing:-.02em}
+.ed-nav{margin-left:auto;display:flex;gap:18px;font-size:11.5px;font-weight:600;color:#444;letter-spacing:.04em;text-transform:uppercase}
+.ed-nav a{color:#444;text-decoration:none}
+.ed-nav .sub{background:#000;color:#fff;padding:7px 14px;border-radius:0;font-size:11px;text-decoration:none;font-weight:800;letter-spacing:.06em}
+.ed-eyebrow{padding:6px 30px;background:#fefce8;border-bottom:1px solid #fde68a;font-family:'SF Mono',Menlo,monospace;font-size:10.5px;color:#854d0e;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.ed-featured{padding:36px 30px 24px;border-bottom:1px solid #e5e5e5;display:grid;grid-template-columns:1.4fr 1fr;gap:30px;align-items:center}
+.ed-feat-img{background:linear-gradient(135deg,#1e293b 0%,#0f172a 50%,#3a3a3a 100%);height:300px;border-radius:0;position:relative;overflow:hidden}
+.ed-feat-img::before{content:'';position:absolute;inset:0;background:radial-gradient(at 30% 30%,rgba(192,255,92,.15),transparent 60%)}
+.ed-feat-bd .ed-feat-cat{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#dc2626;text-transform:uppercase;margin-bottom:10px;font-family:-apple-system,sans-serif}
+.ed-feat-h{font-size:36px;font-weight:900;line-height:1.15;margin:0 0 14px;letter-spacing:-.015em;color:#0a0a0a}
+.ed-feat-tx{font-size:14px;color:#525252;line-height:1.65;margin-bottom:14px}
+.ed-feat-meta{font-size:11.5px;color:#71717a;font-style:italic;font-family:Georgia,serif}
+.ed-grid{padding:30px;display:grid;grid-template-columns:repeat(3,1fr);gap:28px;border-bottom:1px solid #000}
+.ed-card{cursor:pointer}
+.ed-card-img{background:#0a0a0a;height:130px;margin-bottom:10px;position:relative;overflow:hidden}
+.ed-card-img::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#0d4f4a,#3a3a3a)}
+.ed-card-img.alt::before{background:linear-gradient(135deg,#7c2d12,#dc2626)}
+.ed-card-img.alt2::before{background:linear-gradient(135deg,#1e3a8a,#0f172a)}
+.ed-card-cat{font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#dc2626;text-transform:uppercase;margin-bottom:5px;font-family:-apple-system,sans-serif}
+.ed-card-h{font-size:16px;font-weight:800;line-height:1.3;margin:0 0 6px;letter-spacing:-.005em}
+.ed-card-meta{font-size:10.5px;color:#71717a;font-style:italic}
+
+/* ═══════════ B: Modern Newsletter (= Substack / Every) ═══════════ */
+.sb{background:#fafaf9;font-family:-apple-system,'Inter','Hiragino Sans',sans-serif;color:#0a0a0a}
+.sb header{padding:18px 30px;display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid #e7e5e4}
+.sb-logo-w{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900}
+.sb-brand-bd{flex:1}
+.sb-brand{font-size:17px;font-weight:900;color:#0a0a0a;letter-spacing:-.01em;line-height:1}
+.sb-tag{font-size:11px;color:#78716c;margin-top:2px}
+.sb-sub{background:#0a0a0a;color:#fff;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700}
+.sb-hero{padding:48px 30px 32px;text-align:center;background:#fff;border-bottom:1px solid #e7e5e4}
+.sb-hero-tag{display:inline-block;background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:800;padding:4px 11px;border-radius:11px;letter-spacing:.04em;margin-bottom:13px}
+.sb-hero-h{font-size:34px;font-weight:900;line-height:1.2;margin:0 0 14px;letter-spacing:-.025em;color:#0a0a0a;max-width:620px;margin-left:auto;margin-right:auto}
+.sb-hero-p{font-size:15px;color:#525252;max-width:520px;margin:0 auto 18px;line-height:1.6}
+.sb-hero-stats{display:flex;gap:18px;justify-content:center;font-size:11.5px;color:#78716c;font-weight:600}
+.sb-hero-stats b{color:#0a0a0a}
+.sb-feat{padding:36px 30px;background:#fff;border-bottom:1px solid #e7e5e4}
+.sb-feat-row{display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:center}
+.sb-feat-img{height:240px;background:linear-gradient(135deg,#fb923c,#dc2626);border-radius:14px;position:relative;overflow:hidden}
+.sb-feat-img::after{content:'';position:absolute;inset:0;background:radial-gradient(at 60% 40%,rgba(0,0,0,.0),rgba(0,0,0,.4))}
+.sb-feat-cat{font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#f97316;text-transform:uppercase;margin-bottom:9px}
+.sb-feat-h{font-size:28px;font-weight:900;line-height:1.2;margin:0 0 12px;letter-spacing:-.02em}
+.sb-feat-tx{font-size:14px;color:#525252;line-height:1.6;margin-bottom:14px}
+.sb-feat-meta{display:flex;align-items:center;gap:9px;font-size:11.5px;color:#78716c}
+.sb-feat-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#f97316)}
+.sb-grid{padding:30px;display:grid;grid-template-columns:repeat(2,1fr);gap:22px;background:#fafaf9}
+.sb-card{background:#fff;border:1px solid #e7e5e4;border-radius:13px;overflow:hidden;cursor:pointer;transition:.2s}
+.sb-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.07)}
+.sb-card-img{height:140px;background:linear-gradient(135deg,#84cc16,#4d7c0f)}
+.sb-card-img.alt{background:linear-gradient(135deg,#06b6d4,#0e7490)}
+.sb-card-bd{padding:16px 18px}
+.sb-card-cat{font-size:10px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;margin-bottom:6px}
+.sb-card-h{font-size:16.5px;font-weight:800;line-height:1.3;margin:0 0 8px;letter-spacing:-.01em}
+.sb-card-p{font-size:12px;color:#525252;line-height:1.55;margin:0 0 10px}
+.sb-card-meta{font-size:10.5px;color:#a8a29e}
+
+/* ═══════════ C: Premium Minimal (= Stratechery / Every) ═══════════ */
+.pm{background:#0f0f0f;color:#f5f5f4;font-family:'IBM Plex Mono','SF Mono',monospace}
+.pm header{padding:20px 30px;display:flex;align-items:center;gap:18px;border-bottom:1px solid #262626}
+.pm-brand{font-family:'IBM Plex Serif',Georgia,serif;font-size:20px;font-weight:700;letter-spacing:-.01em;color:#f5f5f4}
+.pm-nav{margin-left:auto;display:flex;gap:24px;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#a3a3a3}
+.pm-nav a{color:#a3a3a3;text-decoration:none}
+.pm-nav .sub{color:#c0ff5c;border-bottom:1px solid #c0ff5c;padding-bottom:2px}
+.pm-tag-row{padding:8px 30px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;font-size:9.5px;font-family:'SF Mono',monospace;color:#737373;display:flex;gap:18px;letter-spacing:.04em}
+.pm-tag-row b{color:#c0ff5c}
+.pm-hero{padding:60px 30px 50px;border-bottom:1px solid #262626;max-width:780px}
+.pm-hero-eye{font-family:'SF Mono',monospace;font-size:11px;color:#c0ff5c;letter-spacing:.1em;margin-bottom:14px;display:flex;align-items:center;gap:9px}
+.pm-hero-eye::before{content:'';width:24px;height:1px;background:#c0ff5c}
+.pm-hero-h{font-family:'IBM Plex Serif',Georgia,serif;font-size:42px;font-weight:600;line-height:1.15;margin:0 0 18px;letter-spacing:-.02em;color:#fafafa}
+.pm-hero-p{font-size:14.5px;color:#a3a3a3;line-height:1.7;font-family:-apple-system,sans-serif;margin:0 0 18px;max-width:620px}
+.pm-hero-meta{font-size:11px;color:#737373;font-family:'SF Mono',monospace;letter-spacing:.04em}
+.pm-list{padding:40px 30px}
+.pm-list-h{font-family:'SF Mono',monospace;font-size:11px;color:#a3a3a3;letter-spacing:.1em;text-transform:uppercase;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid #262626}
+.pm-item{padding:20px 0;border-bottom:1px solid #262626;cursor:pointer;transition:.2s}
+.pm-item:hover{padding-left:8px}
+.pm-item:last-child{border-bottom:0}
+.pm-item-meta{display:flex;gap:14px;font-size:10.5px;color:#737373;font-family:'SF Mono',monospace;letter-spacing:.04em;margin-bottom:7px}
+.pm-item-cat{color:#c0ff5c}
+.pm-item-h{font-family:'IBM Plex Serif',Georgia,serif;font-size:21px;font-weight:600;line-height:1.3;margin:0 0 6px;letter-spacing:-.01em;color:#fafafa}
+.pm-item-p{font-size:13px;color:#a3a3a3;line-height:1.6;font-family:-apple-system,sans-serif;margin:0}
+
+/* common */
+.eval-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
+.eval{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:11px 13px;font-size:11.5px}
+.eval b{display:block;font-size:10.5px;font-weight:800;color:#71717a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.tag-pro{background:#dcfce7;color:#15803d;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:3px}
+.tag-con{background:#fee2e2;color:#9f1239;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:3px}
+</style>
+</head><body>
+
+<div class="wrap">
+
+  <div class="intro">
+    <h1>🎨 メディアデザイン 3 案 比較</h1>
+    <p>
+      現状の「Georgia + 中央 double border」 デザインを刷新。 同じ「myaiagents.agency Blog」 を <b>3 つのモダンスタイル</b>で render。
+    </p>
+    <div class="note">
+      💡 <b>評価軸</b>: 1) かっこよさ / 2) ブランド感 / 3) 読みやすさ / 4) AI チームが作った感じが消える (= 本物のメディア感)
+    </div>
+  </div>
+
+  <!-- ─────── 現状 ─────── -->
+  <div class="section s-cur">
+    <div class="section-h">
+      <div class="section-num">現</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">現在 本番デプロイ中</div>
+        <div class="section-h-ti">現状 — シンプル Georgia</div>
+        <div class="section-h-sub">中央 H1 + double border + plain cards · ダサい原因</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">myaiagents.agency/media/...</div></div>
+      <div class="frame-body">
+        <div class="cur">
+          <header>
+            <div class="cur-brand">
+              <div class="cur-logo">M</div>
+              <span>myaiagents.agency Blog</span>
+            </div>
+            <a class="cta">サービスを見る →</a>
+          </header>
+          <div class="cur-hero">
+            <h1>myaiagents.agency Blog</h1>
+            <p>AI チームが運営する、 myaiagents.agency Blog のオウンドメディア</p>
+          </div>
+          <div class="cur-cats">
+            <a class="cur-cat">AI チーム運用</a>
+            <a class="cur-cat">SEO・コンテンツ</a>
+            <a class="cur-cat">SNS・マーケティング</a>
+            <a class="cur-cat">業種別ガイド</a>
+          </div>
+          <div class="cur-posts">
+            <article class="cur-art">
+              <div class="cur-art-hero"></div>
+              <div class="cur-art-bd">
+                <div class="cur-art-cat">SEO・コンテンツ</div>
+                <h2 class="cur-art-h">採用助成金 期限 2026 — 完全ガイド</h2>
+                <div class="cur-art-meta">2026/06/01</div>
+              </div>
+            </article>
+            <article class="cur-art">
+              <div class="cur-art-hero"></div>
+              <div class="cur-art-bd">
+                <div class="cur-art-cat">AI チーム運用</div>
+                <h2 class="cur-art-h">中小企業 採用助成金 完全マニュアル</h2>
+                <div class="cur-art-meta">2026/05/30</div>
+              </div>
+            </article>
+            <article class="cur-art">
+              <div class="cur-art-hero"></div>
+              <div class="cur-art-bd">
+                <div class="cur-art-cat">SNS マーケティング</div>
+                <h2 class="cur-art-h">DTC ブランドの始め方 — 0→1 を 90 日で</h2>
+                <div class="cur-art-meta">2026/05/28</div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="eval-row">
+      <div class="eval"><b>ブランド感</b>弱 <span class="tag-con">改善必要</span></div>
+      <div class="eval"><b>読みやすさ</b>普通</div>
+      <div class="eval"><b>本物メディア感</b><span class="tag-con">テンプレ感あり</span></div>
+    </div>
+  </div>
+
+  <!-- ─────── A: Editorial Magazine ─────── -->
+  <div class="section s-a">
+    <div class="section-h">
+      <div class="section-num">A</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">Editorial Magazine</div>
+        <div class="section-h-ti">A. 新聞社 / 雑誌風 (= NYT / Vox)</div>
+        <div class="section-h-sub">Featured article 主役 + 3 列グリッド · 強いタイポ + 赤アクセント</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">myaiagents.agency/media/...</div></div>
+      <div class="frame-body">
+        <div class="ed">
+          <header>
+            <div class="ed-brand">myaiagents.agency Blog</div>
+            <nav class="ed-nav">
+              <a>AI 運用</a><a>SEO</a><a>マーケ</a>
+              <a class="sub">サービスを見る →</a>
+            </nav>
+          </header>
+          <div class="ed-eyebrow">
+            <span>📅 Tuesday, June 2, 2026 · 全 47 記事</span>
+            <span>Powered by MY AI Agent</span>
+          </div>
+          <div class="ed-featured">
+            <div class="ed-feat-img"></div>
+            <div class="ed-feat-bd">
+              <div class="ed-feat-cat">▌ FEATURED · SEO</div>
+              <h1 class="ed-feat-h">採用助成金 期限 2026 — 採用担当が知るべき 8 制度 完全ガイド</h1>
+              <p class="ed-feat-tx">2026 年に申請可能な助成金 8 つを、 対象条件 / 金額 / 期限 / 申請の落とし穴まで網羅。 採用担当が最初に読むべき決定版。</p>
+              <p class="ed-feat-meta">— AI チーム / 2026 年 6 月 1 日 · 読了 17 分</p>
+            </div>
+          </div>
+          <div class="ed-grid">
+            <div class="ed-card">
+              <div class="ed-card-img"></div>
+              <div class="ed-card-cat">▌ AI 運用</div>
+              <h2 class="ed-card-h">中小企業 採用助成金 完全マニュアル</h2>
+              <p class="ed-card-meta">— 5 月 30 日 · 読了 12 分</p>
+            </div>
+            <div class="ed-card">
+              <div class="ed-card-img alt"></div>
+              <div class="ed-card-cat">▌ マーケ</div>
+              <h2 class="ed-card-h">DTC ブランドの始め方 — 0→1 を 90 日で</h2>
+              <p class="ed-card-meta">— 5 月 28 日 · 読了 15 分</p>
+            </div>
+            <div class="ed-card">
+              <div class="ed-card-img alt2"></div>
+              <div class="ed-card-cat">▌ 業種別ガイド</div>
+              <h2 class="ed-card-h">SaaS スタートアップが 1 年目に取るべき集客 7 戦略</h2>
+              <p class="ed-card-meta">— 5 月 25 日 · 読了 11 分</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="eval-row">
+      <div class="eval"><b>強み</b><span class="tag-pro">権威感</span> 雑誌風</div>
+      <div class="eval"><b>合う sites</b>BtoB / 専門メディア / 金融</div>
+      <div class="eval"><b>難点</b>BtoC は固いかも</div>
+    </div>
+  </div>
+
+  <!-- ─────── B: Modern Newsletter ─────── -->
+  <div class="section s-b">
+    <div class="section-h">
+      <div class="section-num">B</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">Modern Newsletter</div>
+        <div class="section-h-ti">B. モダン ニュースレター (= Substack / Lenny's)</div>
+        <div class="section-h-sub">温かみある色 + 大型 hero + 2 列グリッド · 友達感 + プロ感</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">myaiagents.agency/media/...</div></div>
+      <div class="frame-body">
+        <div class="sb">
+          <header>
+            <div class="sb-logo-w">M</div>
+            <div class="sb-brand-bd">
+              <div class="sb-brand">myaiagents.agency Blog</div>
+              <div class="sb-tag">AI チームが届ける、 集客のヒント</div>
+            </div>
+            <a class="sb-sub">サービスを見る →</a>
+          </header>
+          <div class="sb-hero">
+            <span class="sb-hero-tag">⚡ AI CHAIN-OF-THOUGHT</span>
+            <h1 class="sb-hero-h">マーケ担当を雇う前に、 まず読んでほしいこと</h1>
+            <p class="sb-hero-p">採用 / 助成金 / SEO / DTC — 中小企業が「これだけ知っておけば良い」 ノウハウを、 AI チームが毎週 1 記事お届け。</p>
+            <div class="sb-hero-stats">
+              <span><b>47</b> 記事</span>
+              <span><b>2.4K</b> 読者</span>
+              <span><b>毎週月曜</b> 更新</span>
+            </div>
+          </div>
+          <div class="sb-feat">
+            <div class="sb-feat-row">
+              <div class="sb-feat-img"></div>
+              <div>
+                <div class="sb-feat-cat">✨ Latest issue</div>
+                <h2 class="sb-feat-h">採用助成金 期限 2026 — 完全ガイド</h2>
+                <p class="sb-feat-tx">2026 年に申請可能な 8 つの助成金を、 対象条件 / 金額 / 期限まで網羅。 採用担当の必読決定版。</p>
+                <div class="sb-feat-meta">
+                  <div class="sb-feat-av"></div>
+                  <span><b>AI チーム</b> · 2 日前 · 17 分</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="sb-grid">
+            <div class="sb-card">
+              <div class="sb-card-img"></div>
+              <div class="sb-card-bd">
+                <div class="sb-card-cat">AI 運用</div>
+                <h3 class="sb-card-h">中小企業 採用助成金 完全マニュアル</h3>
+                <p class="sb-card-p">採用助成金を申請する時の「最初に押さえるべき」 8 つの観点と…</p>
+                <div class="sb-card-meta">5 月 30 日 · 12 分</div>
+              </div>
+            </div>
+            <div class="sb-card">
+              <div class="sb-card-img alt"></div>
+              <div class="sb-card-bd">
+                <div class="sb-card-cat">マーケ</div>
+                <h3 class="sb-card-h">DTC ブランド 0→1 を 90 日で立ち上げる</h3>
+                <p class="sb-card-p">DTC ブランドを 0 から立ち上げる時の、 90 日間の具体的なステップ…</p>
+                <div class="sb-card-meta">5 月 28 日 · 15 分</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="eval-row">
+      <div class="eval"><b>強み</b><span class="tag-pro">親しみ + プロ</span></div>
+      <div class="eval"><b>合う sites</b>SaaS / DTC / 個人ブランド / SMB</div>
+      <div class="eval"><b>難点</b>—</div>
+    </div>
+  </div>
+
+  <!-- ─────── C: Premium Minimal ─────── -->
+  <div class="section s-c">
+    <div class="section-h">
+      <div class="section-num">C</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">Premium Minimal · Dark</div>
+        <div class="section-h-ti">C. ダーク プレミアム (= Stratechery / Every)</div>
+        <div class="section-h-sub">ダーク + serif + mono アクセント · 知的 + 高単価感</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">myaiagents.agency/media/...</div></div>
+      <div class="frame-body">
+        <div class="pm">
+          <header>
+            <div class="pm-brand">myaiagents.agency Blog</div>
+            <nav class="pm-nav">
+              <a>Issues</a><a>Archive</a>
+              <a class="sub">Subscribe →</a>
+            </nav>
+          </header>
+          <div class="pm-tag-row">
+            <span>VOL. 1 · NO. 47</span>
+            <span>06.02.2026</span>
+            <b>· AI EDITORIAL</b>
+          </div>
+          <div class="pm-hero">
+            <div class="pm-hero-eye">FEATURED · 2026 SEASON</div>
+            <h1 class="pm-hero-h">採用助成金 期限 2026 — 採用担当が知るべき 8 制度 完全ガイド</h1>
+            <p class="pm-hero-p">2026 年度に申請可能な助成金 8 つを、 対象条件・金額・期限・申請の落とし穴まで網羅。 採用担当が最初に読むべき決定版。</p>
+            <div class="pm-hero-meta">— AI EDITORIAL · 06.01.2026 · 17 MIN READ</div>
+          </div>
+          <div class="pm-list">
+            <div class="pm-list-h">PAST ISSUES</div>
+            <div class="pm-item">
+              <div class="pm-item-meta">
+                <span class="pm-item-cat">AI OPERATIONS</span>
+                <span>05.30.2026</span>
+                <span>12 MIN</span>
+              </div>
+              <h2 class="pm-item-h">中小企業 採用助成金 完全マニュアル</h2>
+              <p class="pm-item-p">採用助成金を申請する時の「最初に押さえるべき」 8 つの観点と、 申請失敗するパターンを徹底解説。</p>
+            </div>
+            <div class="pm-item">
+              <div class="pm-item-meta">
+                <span class="pm-item-cat">MARKETING</span>
+                <span>05.28.2026</span>
+                <span>15 MIN</span>
+              </div>
+              <h2 class="pm-item-h">DTC ブランドの始め方 — 0→1 を 90 日で</h2>
+              <p class="pm-item-p">DTC ブランドを 0 から立ち上げる時の、 90 日間の具体的なステップを 3 段階のフェーズに分けて解説。</p>
+            </div>
+            <div class="pm-item">
+              <div class="pm-item-meta">
+                <span class="pm-item-cat">INDUSTRY</span>
+                <span>05.25.2026</span>
+                <span>11 MIN</span>
+              </div>
+              <h2 class="pm-item-h">SaaS スタートアップが 1 年目に取るべき集客 7 戦略</h2>
+              <p class="pm-item-p">SaaS スタートアップが PMF を取った直後の集客方法を、 実例 + 数字 + KPI 設計込みで提示。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="eval-row">
+      <div class="eval"><b>強み</b><span class="tag-pro">プレミアム</span> 知的</div>
+      <div class="eval"><b>合う sites</b>BtoB SaaS / コンサル / 経営 / 投資</div>
+      <div class="eval"><b>難点</b>BtoC / 一般向けには重い</div>
+    </div>
+  </div>
+
+  <!-- 推奨 -->
+  <div class="intro" style="background:linear-gradient(135deg,#fff,#fafaf7)">
+    <h1 style="font-size:18px">🎯 推奨</h1>
+    <p>
+      ICP (= マーケ担当ゼロ + LP+SMB) と master pitch を踏まえると、 <b>B (= Modern Newsletter)</b> が一番フィット:
+    </p>
+    <ul style="margin:9px 0 0;padding-left:20px;color:#525252;font-size:12.5px;line-height:1.8">
+      <li><b>親しみ + プロ感の両立</b> — SMB / 個人事業主 / SaaS どれにも刺さる</li>
+      <li><b>warm な印象</b> — Substack のようなニュースレター感で「読んでみたい」 を引き出す</li>
+      <li><b>5 テンプレ統一</b> — minimal は B、 magazine は A、 tech は C ベース、 friendly は B 色変え、 newsletter は B そのまま</li>
+      <li><b>実装の難易度</b> — 既存 _mediaRenderMinimalIndex を 1 commit で置換可</li>
+    </ul>
+    <p style="margin-top:14px;color:#525252;font-size:12.5px">
+      もしくは <b>B を default + テンプレ選択で A / C も提供</b> (= 業種別に推奨切替) も可。
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>
+</content>
+</invoke>

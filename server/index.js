@@ -15915,7 +15915,10 @@ async function _mediaGenerateArticle(agent, params){
 
   // 🚀 Phase 1+2: model 自動選択 (= 短文は Haiku、 長文は Sonnet)
   //    targetChars 8000 未満 → Haiku で十分品質、 コスト 1/15
-  const useHaiku = targetChars < 8000 && !tpl.codeExamplesRequired;
+  // Haiku 切替: targetChars が 5500 未満なら Haiku (= 短文で速い)、 それ以上は Sonnet
+  //   Haiku max output = 8000 token、 日本語 5000-6000 字 でカツカツ → 出力切れる
+  //   従って targetChars 7000+ は Sonnet (= max 16000 token、 余裕) で生成
+  const useHaiku = targetChars < 5500 && !tpl.codeExamplesRequired;
   const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
 
   // AEO 強制構造 (= 即効性 + AI 検索引用率 UP)

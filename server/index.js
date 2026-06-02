@@ -16305,6 +16305,17 @@ async function _runOneSchedule(user, agent, sched){
     ];
     if(agent.history.length > 500) agent.history = agent.history.slice(-500);
     user.balance_jpy = Math.round(((user.balance_jpy||0) - cost.jpy) * 1000) / 1000;
+    // 💰 billing_history に記録 (= 透明性、 schedule 経由消費も見える化)
+    try {
+      user.billing_history = Array.isArray(user.billing_history) ? user.billing_history : [];
+      user.billing_history.push({
+        date: new Date().toISOString(), type: 'usage', via: 'schedule',
+        agentId: agent.id, agentName: agent.name,
+        cost_jpy: cost.jpy,
+        detail: 'scheduled: ' + (sched.label || sched.prompt || '').slice(0, 80),
+      });
+      if(user.billing_history.length > 1000) user.billing_history = user.billing_history.slice(-1000);
+    } catch(e){ console.warn('[schedule] billing record failed:', e.message); }
 
     // Auto-deliver email — skip if the AI already called send_email itself
     // (otherwise the user gets two emails — one with the report + one with the
@@ -16510,7 +16521,9 @@ async function _generateNightlyDraft(user, ag, topic){
 
 完成度の高い、 そのまま WordPress に貼れる下書きを出力してください。`;
 
-  const reply = await callAI([{role:'user', content: prompt}], '', 'sonnet', ag);
+  const r = await callAI([{role:'user', content: prompt}], '', 'sonnet', ag);
+  // callAI returns Anthropic-shape: { content:[{text}], usage:{input_tokens, output_tokens} }
+  const reply = (r && r.content && r.content[0] && r.content[0].text) || '';
   if(!reply || reply.length < 400) throw new Error('AI returned empty/short');
 
   let articleTitle = topic;
@@ -16532,6 +16545,23 @@ async function _generateNightlyDraft(user, ag, topic){
     created_at: now,
     updated_at: now,
   });
+
+  // 💰 billing_history に記録 (= 透明性、 ユーザの「何に消費したか?」 を見える化)
+  try {
+    const cost = (r && r.usage)
+      ? calcCost(r.usage.input_tokens || 0, r.usage.output_tokens || 0)
+      : { jpy: 0, usd: 0 };
+    user.billing_history = Array.isArray(user.billing_history) ? user.billing_history : [];
+    user.billing_history.push({
+      date: now, type: 'usage', via: 'nightly_draft',
+      agentId: ag.id, agentName: ag.name,
+      cost_jpy: cost.jpy,
+      detail: 'nightly article draft: ' + (articleTitle||'').slice(0, 60),
+    });
+    if(user.billing_history.length > 1000) user.billing_history = user.billing_history.slice(-1000);
+    user.balance_jpy = Math.round(((user.balance_jpy || 0) - cost.jpy) * 1000) / 1000;
+  } catch(e){ console.warn('[nightly-draft] billing record failed:', e.message); }
+
   return { ok: true, note_id: noteId, title: articleTitle };
 }
 

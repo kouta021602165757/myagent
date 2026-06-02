@@ -20789,6 +20789,63 @@ async function handleAPI(req,res,pathname,method,ip){
   // main HTTP handler (createServer) 側で処理。 ここ (handleAPI) は
   // /api/ prefix 限定なので、 /media/... は到達しない。
 
+  // ── Service-key authenticated admin endpoints (= 認証は X-Service-Key header) ──
+  //   POST /api/admin/bulk-rewrite — 任意 user の 指定 agent の 記事を 一括リライト
+  //   body: { userId, agentId, limit? }
+  //   header: X-Service-Key: <SUPA_KEY>
+  //   用途: deploy 直後に saved style を 既存記事にも反映、 ユーザに代わって実行
+  if(pathname === '/api/admin/bulk-rewrite' && method === 'POST'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const body = await readBody(req).catch(() => ({}));
+    const userId = String(body && body.userId || '').trim();
+    const agentId = String(body && body.agentId || '').trim();
+    if(!userId || !agentId) return jres(res, 400, { error: 'userId + agentId required' });
+    const adminUser = await DB.findBy('id', userId).catch(() => null);
+    if(!adminUser) return jres(res, 404, { error: 'user not found' });
+    const ag = (adminUser.agents || []).find(a => a && a.id === agentId);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created' });
+    if(!ANTHROPIC) return jres(res, 503, { error: 'AI key not configured' });
+    const limit = Math.max(1, Math.min(50, parseInt(body && body.limit, 10) || 50));
+    const posts = (ag.media_posts_idx || []).slice(0, limit);
+    if(!posts.length) return jres(res, 200, { ok: true, total: 0, rewritten: 0 });
+    const results = { total: posts.length, rewritten: 0, failed: 0, errors: [] };
+    const startedAt = new Date().toISOString();
+    for(const postMeta of posts){
+      try {
+        const keyword = postMeta.keyword || postMeta.title;
+        const article = await _mediaGenerateArticle(ag, { keyword, title: postMeta.title });
+        const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
+        const now = new Date().toISOString();
+        postMeta.title = String(article.title || postMeta.title).slice(0, 120);
+        postMeta.excerpt = String(article.excerpt || postMeta.excerpt || '').slice(0, 240);
+        if(heroUrl) postMeta.hero_image_url = heroUrl;
+        postMeta.rewritten_at = now;
+        postMeta.rewrite_count = (postMeta.rewrite_count || 0) + 1;
+        if(!adminUser.media_posts_full) adminUser.media_posts_full = {};
+        const prev = adminUser.media_posts_full[postMeta.id];
+        adminUser.media_posts_full[postMeta.id] = {
+          body_html: article.body_html,
+          saved_at: now,
+          rewritten_from: (prev && prev.body_html && prev.body_html.length) || 0,
+        };
+        const estJpy = Math.round((article.body_html.length / 2000) * 10) / 10;
+        adminUser.billing_history = Array.isArray(adminUser.billing_history) ? adminUser.billing_history : [];
+        adminUser.billing_history.push({ date: now, type: 'usage', via: 'admin_bulk_rewrite', agentId: ag.id, agentName: ag.name, cost_jpy: estJpy, detail: 'admin-rewrite: ' + postMeta.title.slice(0, 60) });
+        adminUser.balance_jpy = Math.round(((adminUser.balance_jpy || 0) - estJpy) * 1000) / 1000;
+        results.rewritten++;
+        await DB.save(adminUser);
+        _mediaSlugCacheClear(ag.media.slug);
+      } catch(e){
+        results.failed++;
+        results.errors.push({ slug: postMeta.slug, error: e.message });
+        console.warn('[admin-bulk-rewrite]', postMeta.slug, 'failed:', e.message);
+      }
+    }
+    return jres(res, 200, { ok: true, started_at: startedAt, finished_at: new Date().toISOString(), ...results });
+  }
+
   // ── Auth required below ────────────────────────────────────
   const claims=getAuth(req);
   if(!claims)return jres(res,401,{error:'認証が必要です'});

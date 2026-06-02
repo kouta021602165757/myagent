@@ -20984,7 +20984,14 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created' });
     if(!ANTHROPIC) return jres(res, 503, { error: 'AI key not configured' });
     const limit = Math.max(1, Math.min(50, parseInt(body && body.limit, 10) || 50));
-    const posts = (ag.media_posts_idx || []).slice(0, limit);
+    // slug filter — body.slugs に配列で指定された slug のみ処理 (= ピンポイント rewrite)
+    const slugFilter = Array.isArray(body && body.slugs) ? body.slugs.map(String) : null;
+    let posts = (ag.media_posts_idx || []);
+    if(slugFilter && slugFilter.length){
+      posts = posts.filter(p => p && slugFilter.includes(p.slug));
+    } else {
+      posts = posts.slice(0, limit);
+    }
     if(!posts.length) return jres(res, 200, { ok: true, total: 0, rewritten: 0 });
     const results = { total: posts.length, rewritten: 0, failed: 0, errors: [] };
     const startedAt = new Date().toISOString();

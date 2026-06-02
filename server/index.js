@@ -15721,6 +15721,13 @@ async function _mediaGenerateArticle(agent, params){
     + '- 読者が次にすべき行動を 最後に提示\n'
     + '- 🚨 業界編集部目線で記述。 「AI が」「AI チームが」 等の AI 言及禁止 (= E-E-A-T 確保)\n'
     + '- 一次ソース (= 政府発表 / 業界統計 / 実体験) を引用するスタンス\n'
+    + '\n【視覚的メリハリ — 必ず使う】\n'
+    + '- 重要な発見・結論は <blockquote class="callout">...</blockquote> で 強調 (= 1-3 個)\n'
+    + '- 統計や比較は <table>...<th>項目</th>...</table> で 表 (= 1-2 個)\n'
+    + '- ポイント整理は <ul> / <ol> (= 各セクション 1 個目安)\n'
+    + '- 補足注釈 / 体験引用は <blockquote>...</blockquote> (= 通常引用)\n'
+    + '- 強調語は <strong>...</strong>、 文中ハイライトは <mark>...</mark>\n'
+    + '- 段落は短く 3-5 行で改行 (= スマホ読みやすさ)\n'
     + '\n【出力フォーマット】 必ず以下の JSON だけを返す。 説明・前置き禁止:\n'
     + '{\n'
     + '  "title": "60 文字以内、 キーワード含む、 click したくなる",\n'
@@ -15796,34 +15803,87 @@ async function _mediaGenerateArticle(agent, params){
     category_name = match || 'その他';
   }
 
+  // body に inline image を 2-3 枚 注入 (= H2 セクション 2/4/6 番目の後)
+  const sanitized = _sanitizeArticleHtml(String(parsed.body_html));
+  const withImages = _mediaInjectInlineImages(sanitized, parsed.title);
+
   return {
     title: String(parsed.title).slice(0, 120),
     excerpt: String(parsed.excerpt || '').slice(0, 240),
     category_name,
     tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5).map(t => String(t).slice(0, 30)) : [],
-    body_html: _sanitizeArticleHtml(String(parsed.body_html)),
+    body_html: withImages,
     vertical: vert,
     template_used: tpl.template,
   };
 }
 
+// Pollinations.ai = 無料 / 即時 / API key 不要 の AI 画像生成 URL ビルダ。
+// SSR で <img src> に直接埋め込むだけで動く (= サーバ側 fetch 不要、 Render egress も使わない)。
+function _pollinationsImageUrl(prompt, opts){
+  const w = (opts && opts.width)  || 1280;
+  const h = (opts && opts.height) || 720;
+  const seed = (opts && opts.seed) || Math.abs(_strHash(String(prompt || '')));
+  // nologo=true で透かし削除、 enhance=true で AI が prompt 強化、 model=flux で 品質 UP
+  const params = 'width='+w+'&height='+h+'&seed='+seed+'&nologo=true&enhance=true&model=flux';
+  const safe = encodeURIComponent(String(prompt || '').slice(0, 400));
+  return 'https://image.pollinations.ai/prompt/' + safe + '?' + params;
+}
+function _strHash(s){ let h=0; for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h|=0; } return h; }
+
 async function _mediaGenerateHeroImage(title, template){
-  // 既存の generateImage() を Replicate 経由で利用。 失敗時は null を返してフォールバック (= グラデ).
-  if(!process.env.REPLICATE_API_TOKEN) return null;
-  try {
-    const styleHint = template === 'tech' ? ', dark mode, technical diagram style'
-      : template === 'newsletter' ? ', soft pastel illustration'
-      : template === 'magazine' ? ', editorial photography'
-      : template === 'friendly' ? ', warm cozy illustration'
-      : ', clean modern minimalist';
-    const prompt = 'editorial hero image for blog article: ' + String(title).slice(0, 100) + styleHint + ', no text, no logo, no watermark';
-    const r = await generateImage(prompt, { width: 1280, height: 720 });
-    const u = (r && r.urls && r.urls[0]) || null;
-    return u;
-  } catch(e){
-    console.warn('[media-img] failed:', e.message);
-    return null;
+  // 戦略: Replicate (SDXL) → 失敗 / 未設定 → Pollinations.ai (= 確実に画像出す)
+  const styleHint = template === 'tech' ? ', dark mode, technical diagram style, futuristic'
+    : template === 'newsletter' ? ', soft pastel illustration, warm tones'
+    : template === 'magazine' ? ', editorial photography, professional, high contrast'
+    : template === 'friendly' ? ', warm cozy illustration, friendly approachable'
+    : ', clean modern minimalist, professional editorial';
+  const basePrompt = 'editorial hero image for blog article about: ' + String(title).slice(0, 100) + styleHint + ', no text, no logo, no watermark, 16:9 aspect';
+  // 1) Replicate (token がある時のみ)
+  if(process.env.REPLICATE_API_TOKEN){
+    try {
+      const r = await generateImage(basePrompt, { width: 1280, height: 720 });
+      const u = (r && r.urls && r.urls[0]) || null;
+      if(u) return u;
+    } catch(e){ console.warn('[media-img] Replicate failed, fallback to Pollinations:', e.message); }
   }
+  // 2) Pollinations.ai fallback (= 常に成功する URL)
+  return _pollinationsImageUrl(basePrompt, { width: 1280, height: 720 });
+}
+
+// 本文中に挿入する 図 (H2 セクション毎、 関連プロンプトで Pollinations 生成)
+function _mediaGenerateInlineImageUrl(sectionTitle, articleTitle){
+  const prompt = 'editorial illustration for blog section: ' + String(sectionTitle).slice(0, 60)
+    + ' (article: ' + String(articleTitle).slice(0, 60) + ')'
+    + ', clean modern editorial illustration, no text, no logo, no watermark, professional';
+  return _pollinationsImageUrl(prompt, { width: 1024, height: 576 });
+}
+
+// 本文 HTML に図を 2-3 枚 挿入。 H2 ごとに alternate (= 全部に入れると重い)。
+function _mediaInjectInlineImages(html, articleTitle){
+  if(!html) return html;
+  // H2 をすべて find、 2 番目 / 4 番目 (= 0-indexed の 1, 3) の直後に挿入
+  const h2Positions = [];
+  const re = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  let m;
+  while((m = re.exec(html)) !== null){
+    h2Positions.push({ idx: m.index, end: m.index + m[0].length, text: m[1].replace(/<[^>]+>/g, '').trim() });
+  }
+  if(h2Positions.length < 3) return html; // H2 少ない時はそのまま (= 図不要)
+  // 挿入位置 (= h2 + 直後の 1 段落の後がベスト、 ここでは簡易に h2 直後)
+  const targetIdxs = [1, 3, 5].filter(i => i < h2Positions.length).slice(0, 3);
+  // 後ろから挿入 (= index がずれない)
+  let out = html;
+  targetIdxs.slice().reverse().forEach(i => {
+    const section = h2Positions[i];
+    const imgUrl = _mediaGenerateInlineImageUrl(section.text, articleTitle);
+    const figure = '\n<figure style="margin:24px 0;text-align:center">'
+      + '<img src="' + imgUrl + '" alt="' + section.text.replace(/"/g,'&quot;').slice(0,100) + '" loading="lazy" style="width:100%;max-width:780px;height:auto;border-radius:8px;border:1px solid #e5e5e5">'
+      + '<figcaption style="font-size:11.5px;color:#737373;margin-top:8px;font-style:italic">図: ' + section.text.slice(0, 60).replace(/[<>"&]/g, '') + '</figcaption>'
+      + '</figure>\n';
+    out = out.slice(0, section.end) + figure + out.slice(section.end);
+  });
+  return out;
 }
 
 // 個別記事 SSR — opts.relatedPosts で「関連記事」 を末尾に表示 (= 回遊性向上)
@@ -15998,14 +16058,35 @@ ${schemaTags}
   article.post .body code{background:${isDark?'#0a1322':'#f5f5f5'};padding:1px 6px;border-radius:4px;font-size:14px;font-family:'SF Mono',Menlo,monospace;color:${accent}}
   article.post .body pre{background:#0f172a;color:#e2e8f0;padding:18px 20px;border-radius:9px;overflow-x:auto;font-size:13.5px;line-height:1.6}
   article.post .body strong{color:${s.textColor};font-weight:700}
+  article.post .body mark{background:${isDark?'#3a2f00':'#fff3cd'};color:${s.textColor};padding:1px 4px;border-radius:3px;font-weight:600}
+  article.post .body figure{margin:28px 0;text-align:center}
+  article.post .body figure img{width:100%;max-width:780px;height:auto;border-radius:8px;border:1px solid ${s.cardBorder};display:block;margin:0 auto;background:${isDark?'#0a1322':'#fafaf7'}}
+  article.post .body figure figcaption{font-size:11.5px;color:${s.mutedColor};margin-top:8px;font-style:italic}
+  article.post .body blockquote.callout{font-style:normal;background:linear-gradient(135deg,${isDark?'#0a1f1c':'#f0fdf4'},${isDark?'#0f2925':'#ecfdf5'});border-left:4px solid ${accent};padding:16px 22px;color:${s.textColor};font-weight:600;font-size:15.5px;line-height:1.7;border-radius:0 8px 8px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  article.post .body blockquote.callout::before{content:"💡 ";margin-right:4px}
+  article.post .body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;border:1px solid ${s.cardBorder};border-radius:6px;overflow:hidden}
+  article.post .body table thead{background:${isDark?'#0a1322':'#fafaf7'}}
+  article.post .body table th{padding:11px 14px;text-align:left;font-weight:800;color:${s.textColor};border-bottom:2px solid ${s.cardBorder};font-size:13px}
+  article.post .body table td{padding:11px 14px;border-top:1px solid ${s.cardBorder};color:${s.textColor};line-height:1.6}
+  article.post .body table tr:nth-child(even) td{background:${isDark?'#0d1626':'#fafaf7'}}
+  /* モバイル時 上部に折りたたみ TOC 表示 */
+  .mobile-toc{display:none}
   footer.site-foot{padding:20px 24px;background:${s.headerBg};font-size:11px;color:${s.mutedColor};border-top:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
   footer.site-foot a{color:${s.subColor};text-decoration:none;margin-right:14px}
   @media (max-width:880px){
     article.post{grid-template-columns:1fr}
-    aside{position:static !important}
+    article.post > aside{display:none}
     article.post h1{font-size:24px}
     article.post .meta-bar{flex-direction:column;align-items:flex-start;gap:7px}
     article.post .dates{margin-left:0}
+    .mobile-toc{display:block;background:${isDark?'#0a1322':'#fafaf7'};border:1px solid ${s.cardBorder};border-radius:8px;margin:18px 0;overflow:hidden}
+    .mobile-toc summary{padding:12px 16px;cursor:pointer;font-size:13px;font-weight:800;color:${s.textColor};list-style:none;display:flex;align-items:center;gap:8px}
+    .mobile-toc summary::-webkit-details-marker{display:none}
+    .mobile-toc summary::after{content:"▾";margin-left:auto;color:${s.mutedColor};transition:transform .2s}
+    .mobile-toc[open] summary::after{transform:rotate(180deg)}
+    .mobile-toc ol{margin:0;padding:0 16px 14px 38px;font-size:12.5px;color:${s.subColor};line-height:1.8}
+    .mobile-toc ol a{color:${s.subColor};text-decoration:none}
+    article.post .body figure img{max-width:100%}
   }
 </style>
 </head><body>
@@ -16051,6 +16132,11 @@ ${breadcrumbHTML}
     ${tagsHTML}
     <div class="hero-img">${hero}</div>
     ${post.hero_image_url ? '<div class="hero-cap">図: '+title.slice(0,60)+'</div>' : ''}
+
+    ${(toc.length >= 2) ? `<details class="mobile-toc" open>
+      <summary>📑 目次 (${toc.length} 章)</summary>
+      <ol>${toc.map(t => '<li><a href="#'+_mediaEsc(t.id)+'">'+_mediaEsc(t.text)+'</a></li>').join('')}</ol>
+    </details>` : ''}
 
     <div class="body">
       ${bodyWithIds}

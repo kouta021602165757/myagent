@@ -15578,37 +15578,138 @@ function _isHttpUrl(s){
 // ──────────────────────────────────────────────────────────────────
 // 📝 メディア機能 — 記事生成 (Claude Sonnet) + Hero 画像 (= 既存 image provider)
 // ──────────────────────────────────────────────────────────────────
+// 業種別 記事 prompt template (= "最短最速" 戦略 Day 2)
+// site_vertical / media.name から検出して 業種別の「型」 で書かせる
+function _mediaInferVertical(agent){
+  const vert = String(agent.site_vertical || '').toLowerCase();
+  const name = String((agent.media && agent.media.name) || agent.name || '').toLowerCase();
+  const url = String(agent.site_url || '').toLowerCase();
+  const blob = vert + ' ' + name + ' ' + url;
+  if(/finance|資金|金融|融資|ファクタリング|税理士|社労士|会計|fp|fintech/.test(blob)) return 'finance';
+  if(/採用|人事|労務|助成金|補助金|キャリア|hr/.test(blob)) return 'hr';
+  if(/saas|api|engineer|dev|tech|fintech|infra|cloud/.test(blob)) return 'saas';
+  if(/ec|d2c|通販|ショップ|store|shopify|cosme|coffee|食品|スキンケア|美容|健康|サプリ/.test(blob)) return 'ec';
+  if(/不動産|住宅|物件|賃貸|estate/.test(blob)) return 'realestate';
+  if(/教育|塾|学習|eラーニング|edtech/.test(blob)) return 'edu';
+  if(/note|blog|個人|オピニオン|consultant|コーチ|coach/.test(blob)) return 'personal';
+  return 'general';
+}
+
+function _mediaArticleTemplateFor(vert){
+  const templates = {
+    finance: {
+      targetChars: 12000, h2Count: 10,
+      template: '専門解説 + 比較型 (= 金融 / 士業)',
+      requiredSections: ['結論', '基礎知識', '比較表', '選び方', 'デメリット', '失敗事例', 'FAQ', '次のアクション'],
+      tone: '専門家監修目線、 引用元厳選、 法改正対応',
+      faqRequired: true,
+      tablesRequired: true,
+    },
+    hr: {
+      targetChars: 13000, h2Count: 10,
+      template: '完全ガイド + 申請テンプレ型 (= 採用 / 助成金)',
+      requiredSections: ['結論', '対象条件', '金額', '期限', '申請手順', '必要書類', '失敗事例', 'FAQ', '専門家相談 CTA'],
+      tone: '申請者目線、 厚労省一次ソース、 期限厳守',
+      faqRequired: true,
+    },
+    saas: {
+      targetChars: 8000, h2Count: 8,
+      template: '比較 + チュートリアル型 (= SaaS / 開発)',
+      requiredSections: ['結論', '機能比較', 'ユースケース', 'チュートリアル', '料金', 'API/コード例', 'まとめ'],
+      tone: '技術権威感、 コード例必須、 実運用視点',
+      codeExamplesRequired: true,
+    },
+    ec: {
+      targetChars: 5500, h2Count: 7,
+      template: 'レビュー + ランキング型 (= EC / DTC / 美容)',
+      requiredSections: ['結論', '比較表', '各商品レビュー', '選び方', '体験談', 'まとめ'],
+      tone: '体験者目線、 比較表必須、 写真意識、 薬機法注意',
+      tablesRequired: true,
+    },
+    realestate: {
+      targetChars: 7000, h2Count: 8,
+      template: '相場 + 注意点 + 比較型 (= 不動産)',
+      requiredSections: ['結論', '相場感', '比較', '注意点', '失敗事例', 'チェックリスト', 'FAQ'],
+      tone: '宅建士目線、 数値必須',
+      faqRequired: true,
+    },
+    edu: {
+      targetChars: 6000, h2Count: 7,
+      template: '体系解説 + 比較型 (= 教育)',
+      requiredSections: ['結論', '基礎', '比較表', '選び方', '料金', '体験談', 'FAQ'],
+      tone: '教育専門家目線、 学習効果データ',
+      tablesRequired: true,
+    },
+    personal: {
+      targetChars: 3500, h2Count: 5,
+      template: 'オピニオン + 体験型 (= 個人ブランド)',
+      requiredSections: ['結論', '体験', '気づき', '実践方法', 'まとめ'],
+      tone: '一人称、 個人体験ベース',
+    },
+    general: {
+      targetChars: 5500, h2Count: 7,
+      template: '汎用 SEO 型',
+      requiredSections: ['結論', '基礎知識', '実践方法', '事例', 'FAQ', '次のアクション'],
+      tone: '実用情報、 業界編集部目線',
+      faqRequired: true,
+    },
+  };
+  return templates[vert] || templates.general;
+}
+
 async function _mediaGenerateArticle(agent, params){
   const keyword = String(params.keyword || params.title || '').trim();
   if(!keyword) throw new Error('keyword required');
-  const targetChars = Math.max(2000, Math.min(15000, parseInt(params.target_chars,10) || 5000));
+  const mode = (params.mode === 'aeo') ? 'aeo' : 'seo';
+
+  // 業種検出 + 業種別 template (= Day 2 強化)
+  const vert = _mediaInferVertical(agent);
+  const tpl = _mediaArticleTemplateFor(vert);
+  const targetChars = Math.max(2000, Math.min(20000, parseInt(params.target_chars, 10) || tpl.targetChars));
+
   const mediaName = (agent.media && agent.media.name) || (agent.name || 'Blog');
   const persona = (agent.audience || agent.persona || '中小企業の経営者・担当者').slice(0, 200);
   const lpUrl = (agent.media && agent.media.lp_url) || agent.site_url || '';
   const categories = ((agent.media && agent.media.categories) || []).map(c => c.name).join(', ');
 
+  // AEO 強制構造 (= 即効性 + AI 検索引用率 UP)
+  const aeoRules = mode === 'aeo' || tpl.faqRequired ? [
+    '- 🚀 AEO 強制: 各 H2 の冒頭 1-2 文 で結論を明示 (= AI 検索引用されやすい)',
+    '- 🚀 AEO 強制: 末尾に FAQ section (Q&A 形式) を 8-12 問 必ず入れる',
+    '- 🚀 AEO 強制: 各 H2 は self-contained (= 単独で読んで意味が通る)',
+    '- 🚀 AEO 強制: 数値・固有名詞・日付 を 散布 (= AI が引用しやすい)',
+  ].join('\n') : '';
+
   const prompt = ''
-    + '以下のキーワードについて、 SEO とユーザ価値を両立する記事を 1 本書いてください。\n\n'
+    + '以下のキーワードについて、 業界編集部が書く 高品質な記事を 1 本作成してください。\n\n'
     + '【キーワード】' + keyword + '\n'
     + '【ターゲット読者】' + persona + '\n'
     + '【メディア名】' + mediaName + '\n'
-    + (categories ? '【既存カテゴリ (= 必ずこの中から 1 つ選ぶ)】\n' + categories + '\n' : '')
+    + '【検出業種】' + vert + ' (= ' + tpl.template + ')\n'
+    + (categories ? '【既存カテゴリ (= 必ずこの中から 1 つ 文字列完全一致 で選ぶ。 新カテゴリ発明禁止)】\n' + categories + '\n' : '')
     + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
-    + '\n【記事の要件】\n'
-    + '- 文字数: 約 ' + targetChars + ' 文字\n'
-    + '- 必ず読者の検索意図に答える内容にする\n'
-    + '- 体験談的・実用的・データ的どれかの切り口を入れる\n'
-    + '- 見出しは H2 → H3 で 6-8 個構造化\n'
-    + '- 読者が次にすべき行動を最後に提示する\n'
-    + '- 🚨 重要: **業界編集部が書く形** で記述。 「AI が」「AI チームが」 等の AI 言及は文章内禁止\n'
-    + '  (= 検索エンジン信頼性 (E-E-A-T) + 読者の専門性印象 確保のため)\n'
+    + '\n【業種別 記事要件】\n'
+    + '- 型: ' + tpl.template + '\n'
+    + '- 目標文字数: 約 ' + targetChars + ' 文字\n'
+    + '- 推奨 H2 章数: ' + tpl.h2Count + ' 個\n'
+    + '- 必須セクション: ' + tpl.requiredSections.join(' / ') + '\n'
+    + '- トーン: ' + tpl.tone + '\n'
+    + (tpl.faqRequired ? '- FAQ schema 12 問 (Q&A 形式) を末尾に必ず入れる\n' : '')
+    + (tpl.tablesRequired ? '- 比較表を 1-2 個 (<table>) 必ず入れる\n' : '')
+    + (tpl.codeExamplesRequired ? '- コード例 (<pre><code>) を 2-3 個入れる\n' : '')
+    + (aeoRules ? '\n【AEO 構造強制】\n' + aeoRules + '\n' : '')
+    + '\n【共通ルール】\n'
+    + '- 体験談的・実用的・データ的どれかの切り口\n'
+    + '- 読者が次にすべき行動を 最後に提示\n'
+    + '- 🚨 重要: **業界編集部目線** で記述。 「AI が」「AI チームが」 等の AI 言及は文章内禁止\n'
     + '- 一次ソース (= 政府発表 / 業界統計 / 実体験) を引用するスタンス\n'
     + '\n【出力フォーマット】 必ず以下の JSON だけを返す。 説明・前置き禁止:\n'
     + '{\n'
     + '  "title": "60 文字以内、 キーワード含む、 click したくなる",\n'
     + '  "excerpt": "120 文字以内、 記事の core value を要約",\n'
-    + '  "category_name": "' + (categories ? '上記既存カテゴリから 必ず 1 つ 文字列一致で選ぶ' : 'この記事のカテゴリ名を 1 単語で') + '",\n'
-    + '  "body_html": "<h2>...</h2><p>...</p><h2>...</h2>... の連続。 HTML 整形済み"\n'
+    + '  "category_name": "' + (categories ? '上記既存カテゴリから 必ず 1 つ 文字列完全一致 で選ぶ' : 'この記事のカテゴリ名を 1 単語で') + '",\n'
+    + '  "tags": ["タグ1","タグ2","タグ3"],  // 多重カテゴリ化、 2-5 個\n'
+    + '  "body_html": "<h2>...</h2><p>...</p>... の連続。 HTML 整形済み"\n'
     + '}\n';
 
   if(!CLAUDE_KEY) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
@@ -15616,7 +15717,7 @@ async function _mediaGenerateArticle(agent, params){
     { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     {
       model: 'claude-sonnet-4-6',
-      max_tokens: 12000,
+      max_tokens: 14000,
       messages: [{ role: 'user', content: prompt }],
     });
   if(r.s >= 400){
@@ -15624,17 +15725,30 @@ async function _mediaGenerateArticle(agent, params){
     throw new Error(err);
   }
   const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
-  // JSON extract
   const m = txt.match(/\{[\s\S]*\}/);
   if(!m) throw new Error('parse_failed: no JSON in response');
   let parsed;
   try { parsed = JSON.parse(m[0]); } catch(e){ throw new Error('parse_failed: ' + e.message); }
   if(!parsed.title || !parsed.body_html) throw new Error('parse_failed: missing fields');
+
+  // カテゴリ強制マッチ (= AI が違うカテゴリ出した時、 既存カテゴリと文字列マッチ)
+  let category_name = String(parsed.category_name || '').slice(0, 30);
+  const validCats = ((agent.media && agent.media.categories) || []).map(c => c.name);
+  if(validCats.length && !validCats.includes(category_name)){
+    // 部分一致 search
+    const norm = s => String(s||'').toLowerCase().trim();
+    const match = validCats.find(v => norm(v) === norm(category_name) || norm(category_name).includes(norm(v)) || norm(v).includes(norm(category_name)));
+    category_name = match || 'その他';
+  }
+
   return {
     title: String(parsed.title).slice(0, 120),
     excerpt: String(parsed.excerpt || '').slice(0, 240),
-    category_name: String(parsed.category_name || '').slice(0, 30),
+    category_name,
+    tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5).map(t => String(t).slice(0, 30)) : [],
     body_html: _sanitizeArticleHtml(String(parsed.body_html)),
+    vertical: vert,
+    template_used: tpl.template,
   };
 }
 
@@ -16098,9 +16212,12 @@ async function executePublishToMediaTool(user, agent, input){
     id: postId, slug: postSlug,
     title: article.title, excerpt: article.excerpt,
     category_name: article.category_name || '',
+    tags: Array.isArray(article.tags) ? article.tags : [],
     hero_image_url: heroUrl,
     status: 'published', published_at: now,
     keyword: title, mode,
+    vertical: article.vertical || '',
+    template_used: article.template_used || '',
   };
   if(!Array.isArray(agent.media_posts_idx)) agent.media_posts_idx = [];
   agent.media_posts_idx.unshift(postMeta);
@@ -23106,10 +23223,13 @@ async function handleAPI(req,res,pathname,method,ip){
       title: article.title,
       excerpt: article.excerpt,
       category_name: article.category_name || '',
+      tags: Array.isArray(article.tags) ? article.tags : [],
       hero_image_url: heroUrl,
       status: 'published',
       published_at: now,
       keyword,
+      vertical: article.vertical || '',
+      template_used: article.template_used || '',
     };
     if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
     ag.media_posts_idx.unshift(postMeta);

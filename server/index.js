@@ -16125,57 +16125,74 @@ async function _mediaGenerateArticle(agent, params){
     : systemText;
   const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
   if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
-  let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
-    { model, max_tokens, system: systemBlock, messages: [{ role: 'user', content: userText }] },
-    { timeout: 180000 }); // 180s — Sonnet 7000 字 + 重い SERP context で 90-150s かかる
-  // cache_control 関連 400 → caching なしで 1 回 retry
+  let r;
+  // 🎯 Tool Use で 構造化出力強制 (= AI が schema を 100% 守る、 products[] 抜けなし)
+  const productProps = {
+    rank: { type: 'integer', description: 'ランキング順位 (1 から始まる整数)' },
+    name: { type: 'string', description: 'プロダクト名 (例: Surfer SEO)' },
+    sub: { type: 'string', description: '英表記 / サブタイトル' },
+    score: { type: 'number', description: '総合評価 0-5 (= 推定 OK)' },
+    tagline: { type: 'string', description: 'なぜこの順位か 1 文 (= 60 字以内)' },
+    price: { type: 'string', description: '料金 (例: $49/月〜)' },
+    trial: { type: 'string', description: '無料試用期間' },
+    jp_support: { type: 'string', description: '日本語対応: ○ / △ / ×' },
+    origin: { type: 'string', description: '提供元国' },
+    features: { type: 'array', items: { type: 'string' }, description: '主な機能 4-6 個' },
+    pros: { type: 'array', items: { type: 'string' }, description: 'メリット 2-3 個' },
+    cons: { type: 'array', items: { type: 'string' }, description: 'デメリット 2-3 個' },
+    fit: { type: 'string', description: 'こんな人向け (= 50 字以内)' },
+    official_url: { type: 'string', description: '公式 URL (= http/https のみ、 不明なら空文字)' },
+  };
+  const articleSchemaProps = {
+    title: { type: 'string', description: '60 文字以内、 キーワード含む、 click したくなる' },
+    excerpt: { type: 'string', description: '120 文字以内、 記事の core value 要約' },
+    category_name: { type: 'string', description: '既存カテゴリから 1 つ 完全一致' },
+    tags: { type: 'array', items: { type: 'string' }, description: 'タグ 3-5 個' },
+    body_html: { type: 'string', description: intent.type === 'best'
+      ? '<h2>...</h2>... の連続。 個別プロダクト は ここに書かず products に書く。 ここには intro / 評価基準 / 比較表 / マトリクス / FAQ'
+      : '<h2>...</h2><p>...</p>... の連続、 HTML 整形済み' },
+  };
+  if(intent.type === 'best'){
+    articleSchemaProps.products = {
+      type: 'array',
+      minItems: intent.product_count || 5,
+      maxItems: intent.product_count || 5,
+      description: '必ず ' + (intent.product_count || 5) + ' 個ジャストの 個別プロダクト情報。 順位順',
+      items: { type: 'object', required: ['rank','name','score','tagline','features','pros','cons','fit'], properties: productProps },
+    };
+  }
+  const articleSchema = {
+    type: 'object',
+    required: ['title','excerpt','category_name','tags','body_html'].concat(intent.type === 'best' ? ['products'] : []),
+    properties: articleSchemaProps,
+  };
+  const tools = [{
+    name: 'return_article',
+    description: '記事の 構造化データ を返す' + (intent.type === 'best' ? ' (★ ランキング型: products[] 必須)' : ''),
+    input_schema: articleSchema,
+  }];
+  const reqBody = { model, max_tokens, system: systemBlock, messages: [{ role: 'user', content: userText }],
+    tools, tool_choice: { type: 'tool', name: 'return_article' } };
+  r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers, reqBody, { timeout: 180000 });
   if(r.s === 400 && useCache && /cache_control|too small|minimum/i.test(JSON.stringify(r.d||''))){
     console.warn('[media-art] cache_control rejected, retrying without cache');
     delete headers['anthropic-beta'];
     r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
-      { model, max_tokens, system: systemText, messages: [{ role: 'user', content: userText }] },
-      { timeout: 180000 });
+      Object.assign({}, reqBody, { system: systemText }), { timeout: 180000 });
   }
   if(r.s >= 400){
     const err = _claudeErrorMessage(r);
-    // 🐛 raw response を Render logs に出す (= 「[object Object]」 防止)
     console.error('[media-art] Anthropic '+r.s+':', JSON.stringify(r.d||'').slice(0, 500));
     throw new Error(err.user_message || err.error || ('Anthropic ' + r.s));
   }
-  const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
-  // stop_reason が max_tokens で打ち切り = JSON 不完全になる典型
-  if(r.d && r.d.stop_reason === 'max_tokens'){
-    console.warn('[media-art] hit max_tokens cap, model=', model, 'max=', max_tokens, 'chars=', txt.length);
+  // Tool Use 応答から tool_use ブロックを抽出
+  const blocks = (r.d && r.d.content) || [];
+  const toolUse = blocks.find(b => b && b.type === 'tool_use' && b.name === 'return_article');
+  if(!toolUse || !toolUse.input){
+    console.warn('[media-art] tool_use 不在、 stop_reason=', r.d && r.d.stop_reason, 'blocks=', blocks.length);
+    throw new Error('parse_failed: AI が return_article ツールを呼ばなかった');
   }
-  const m = txt.match(/\{[\s\S]*\}/);
-  if(!m){
-    console.warn('[media-art] no JSON match, txt head=', txt.slice(0,200));
-    throw new Error('parse_failed: AI が JSON を返しませんでした (= 出力が途中で切れた可能性)');
-  }
-  let parsed;
-  try { parsed = JSON.parse(m[0]); } catch(e){
-    // 🛡 AI が body_html の中で literal 改行 / タブ / 制御文字を吐く → JSON.parse 失敗
-    //    Defense: 制御文字を escape して 再 parse 試行 (= 多くの場合 これで通る)
-    try {
-      // string literal 内の 生の制御文字 ( -、 ただし " \\ は別) を escape
-      const sanitized = m[0].replace(/("(?:[^"\\]|\\.)*")/g, (mm, str) => {
-        return str.replace(/[ -]/g, (ch) => {
-          const code = ch.charCodeAt(0);
-          if(code === 10) return '\\n';
-          if(code === 13) return '\\r';
-          if(code === 9)  return '\\t';
-          if(code === 8)  return '\\b';
-          if(code === 12) return '\\f';
-          return '\\u' + ('0000' + code.toString(16)).slice(-4);
-        });
-      });
-      parsed = JSON.parse(sanitized);
-      console.log('[media-art] JSON sanitize fallback succeeded');
-    } catch(e2){
-      console.warn('[media-art] JSON parse fail:', e.message, 'tail=', m[0].slice(-200));
-      throw new Error('parse_failed: JSON 不正 (= 出力が途中で切れた可能性) — '+ e.message);
-    }
-  }
+  const parsed = toolUse.input;
   if(!parsed.title || !parsed.body_html) throw new Error('parse_failed: title/body_html が空');
 
   // カテゴリ強制マッチ (= AI が違うカテゴリ出した時、 既存カテゴリと文字列マッチ)

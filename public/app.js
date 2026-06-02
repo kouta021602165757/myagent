@@ -10771,9 +10771,9 @@ function _renderTabMedia(site){
       + '</div>'
       + '<div id="mediaStatsWeak" style="display:none"></div>'
       + _renderWeeklyTracker(site, posts)
-      + '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
-      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="flex:1;min-width:220px;background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査でネタを探す</button>'
-      +   '<button onclick="_mediaGenArticleFlow(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:11px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✨ キーワードを直接入力</button>'
+      + '<div style="margin-bottom:14px">'
+      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="width:100%;background:var(--teal);color:#fff;border:0;padding:13px 18px;border-radius:9px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査で新しい記事を書く →</button>'
+      +   '<div style="font-size:10.5px;color:var(--text3);text-align:center;margin-top:6px">候補から 1 クリックで公開 · チャットで「○○ で書いて」 も OK</div>'
       + '</div>'
       + (posts.length === 0
           ? '<div style="background:#fff;border:1.5px dashed var(--peach-dark);border-radius:11px;padding:24px;text-align:center;margin-bottom:14px">'
@@ -11246,95 +11246,21 @@ window._kwInvokeArticleGen = async function(siteId, title, mode){
   }
 };
 
-// メディアダッシュボードから「✨ 新しい記事」 を生成 — inline modal で kw 入力 → loader → 結果
+// 🚫 _mediaGenArticleFlow / _mediaArtClose / _mediaArtSubmit は 2026-06-02 で廃止
+//    記事生成の入口は: 🔍 KW 調査 / 💬 chat / 📋 タスク「書く予定」 の 3 つに集約。
+//    旧 onclick (= 既存 cached HTML 等) は KW 調査 panel に転送する stub に。
 window._mediaGenArticleFlow = function(siteId){
-  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
-  if(!ag || !ag.media) return;
-  // 既に走ってるなら何もしない (= 多重起動防止)
-  if(document.getElementById('mediaArtOverlay')) return;
-  var ov = document.createElement('div');
-  ov.id = 'mediaArtOverlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
-  ov.innerHTML = ''
-    + '<div id="mediaArtCard" style="background:#fff;border-radius:14px;padding:26px 28px;max-width:440px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
-    +   '<div style="font-size:11px;color:var(--teal-deep);font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">✨ AI に記事を書かせる</div>'
-    +   '<div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.4">どんなキーワードで記事を書きますか?</div>'
-    +   '<div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.6">例: 「中小企業 採用 助成金」 「DTC 始め方」 「Webflow 比較」 など。<br>5,000 文字 + Hero 画像が自動で生成 + 公開されます (= 1〜2 分)。</div>'
-    +   '<input id="mediaArtKw" type="text" placeholder="キーワードを入力" style="width:100%;padding:11px 13px;border:1.5px solid var(--wire2);border-radius:9px;font-size:13.5px;font-family:inherit;outline:0;margin-bottom:6px">'
-    +   '<div style="font-size:10.5px;color:var(--text3);margin-bottom:18px">⚙ 文字数: 約 5,000 字 / モデル: Claude Sonnet</div>'
-    +   '<div style="display:flex;justify-content:flex-end;gap:10px">'
-    +     '<button onclick="_mediaArtClose()" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button>'
-    +     '<button id="mediaArtGo" onclick="_mediaArtSubmit(\''+esc(siteId)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">記事を書かせる →</button>'
-    +   '</div>'
-    + '</div>';
-  document.body.appendChild(ov);
-  setTimeout(function(){
-    var inp = document.getElementById('mediaArtKw');
-    if(inp){
-      inp.focus();
-      inp.addEventListener('keydown', function(e){
-        if(e.key === 'Enter') _mediaArtSubmit(siteId);
-        if(e.key === 'Escape') _mediaArtClose();
-      });
-    }
-  }, 30);
+  if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
+  setTimeout(function(){ if(typeof openKeywordPanel === 'function') openKeywordPanel(siteId); }, 60);
 };
-
 window._mediaArtClose = function(){
+  // _kwInvokeArticleGen が使う共通 modal close (= 関数自体は残し、 中身を no-op に近く)
   var ov = document.getElementById('mediaArtOverlay');
   if(ov) ov.remove();
   window._mediaArtBusy = false;
 };
-
-window._mediaArtSubmit = async function(siteId){
-  if(window._mediaArtBusy) return;
-  var inp = document.getElementById('mediaArtKw');
-  var keyword = inp ? inp.value.trim() : '';
-  if(!keyword){
-    if(inp){ inp.style.borderColor = '#dc2626'; inp.focus(); }
-    return;
-  }
-  window._mediaArtBusy = true;
-  // overlay 内をローダーに置換
-  var card = document.getElementById('mediaArtCard');
-  if(card){
-    card.innerHTML = ''
-      + '<div style="text-align:center;padding:20px 10px">'
-      +   '<div style="font-size:42px;margin-bottom:10px">✨</div>'
-      +   '<div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:8px">AI チームが記事を執筆中</div>'
-      +   '<div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-bottom:14px">「' + esc(keyword) + '」 で 5,000 文字 + Hero 画像を生成中。<br>1〜2 分かかります。 このまま待つか、 別タブで作業してください。</div>'
-      +   '<div style="background:var(--cream3);border-radius:7px;height:6px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:30%;animation:mediaArtPulse 2s infinite ease-in-out"></div></div>'
-      +   '<style>@keyframes mediaArtPulse{0%{width:15%;margin-left:0}50%{width:75%;margin-left:25%}100%{width:15%;margin-left:85%}}</style>'
-      + '</div>';
-  }
-  try {
-    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', { keyword: keyword, target_chars: 5000 });
-    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
-    if(ag){
-      if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
-      ag.media_posts_idx.unshift(r.post);
-    }
-    _mediaArtClose();
-    showToast('✅ 記事「'+(r.post.title||'').slice(0,30)+'…」を公開しました','ok');
-    window.openMediaPanel(siteId);
-  } catch(e){
-    var msg = (e && e.message) || 'unknown';
-    // friendly error
-    if(/credit/i.test(msg))      msg = 'AI クレジットが不足しています。 設定 → 課金 で追加してください。';
-    else if(/timeout/i.test(msg)) msg = 'タイムアウトしました。 もう一度お試しください。';
-    else if(/rate/i.test(msg))   msg = 'リクエスト過多です。 少し時間を置いてください。';
-    if(card){
-      card.innerHTML = ''
-        + '<div style="text-align:center;padding:12px 4px">'
-        +   '<div style="font-size:34px;margin-bottom:8px">⚠️</div>'
-        +   '<div style="font-size:14px;font-weight:900;color:#9a3412;margin-bottom:8px">記事生成に失敗</div>'
-        +   '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:18px">' + esc(msg) + '</div>'
-        +   '<button onclick="_mediaArtClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button>'
-        + '</div>';
-    }
-    window._mediaArtBusy = false;
-  }
-};
+window._mediaArtSubmit = function(){};  // 旧 submit (= 入口削除済、 互換 stub)
+window._mediaArtBusy = false;
 
 window._mediaWizPickTemplate = function(key){
   if(!window._mediaWiz) return;
@@ -11354,12 +11280,9 @@ function _mediaWizStep4HTML(media){
     +   '<div style="display:inline-flex;align-items:center;background:#fff;border:1.5px solid var(--teal);border-radius:9px;padding:10px 14px;font-size:13px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);margin-bottom:18px;gap:8px">'
     +     '🌐 '+publicUrl
     +   '</div>'
-    +   '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">'
-    +     '<button onclick="_kwQuickFirstArticle(\''+esc(window._mediaWiz.siteId)+'\')" style="background:linear-gradient(135deg,var(--teal),var(--peach-dark));color:#fff;border:0;padding:13px 26px;border-radius:9px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(13,79,74,.3)">✨ 試しに 1 本書いてみる (= 一番おすすめ)</button>'
-    +   '</div>'
     +   '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
-    +     '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 自分で KW を選ぶ</button>'
-    +     '<a href="'+publicUrl+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#fff;color:var(--text);text-decoration:none;border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--wire2)">🔗 ブログを見る</a>'
+    +     '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:linear-gradient(135deg,var(--teal),var(--peach-dark));color:#fff;border:0;padding:13px 26px;border-radius:9px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(13,79,74,.3)">🔍 STEP 2: キーワード調査で記事を書く →</button>'
+    +     '<a href="'+publicUrl+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:11px 18px;background:#fff;color:var(--text);text-decoration:none;border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--wire2)">🔗 ブログを見る</a>'
     +   '</div>'
     + '</div>'
     + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:13px 16px;font-size:11.5px;color:var(--text2);line-height:1.7">'
@@ -11372,61 +11295,11 @@ function _mediaWizStep4HTML(media){
     + '</div>';
 }
 
-// 「試しに 1 本書く」 — AI が 1 個 KW 候補を提案 → 即公開
-// First win 早期化: Wizard 完了 〜 初記事公開を 5 分以内で完結させる
-window._kwQuickFirstArticle = async function(siteId){
-  if(document.getElementById('mediaArtOverlay')) return;
-  var ov = document.createElement('div');
-  ov.id = 'mediaArtOverlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
-  ov.innerHTML = '<div id="mediaArtCard" style="background:#fff;border-radius:14px;padding:26px 28px;max-width:460px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
-    + '<div style="text-align:center;padding:8px 4px">'
-    +   '<div style="font-size:42px;margin-bottom:10px">✨</div>'
-    +   '<div style="font-size:16px;font-weight:900;margin-bottom:6px">AI が最適な KW を 1 個選んで公開します</div>'
-    +   '<div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-bottom:14px">サイトを解析 → 一番効率いい KW を 1 つ AI が選定 → 5,000 字記事を生成 → 自動公開。<br>所要: 約 2 〜 3 分</div>'
-    +   '<div style="background:var(--cream3);border-radius:7px;height:6px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:30%;animation:mediaArtPulse 2s infinite ease-in-out"></div></div>'
-    + '</div></div>';
-  document.body.appendChild(ov);
-  try {
-    // 1. research_keyword で KW 1 個取得
-    var kw = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/research-pick', { mode: 'seo' });
-    // 🐛 fix: kw.pick が undefined だと TypeError。 strict check に変更
-    if(!kw || !kw.pick || (!kw.pick.title && !kw.pick.keyword)){
-      throw new Error((kw && kw.error) || 'KW 提案を取得できませんでした');
-    }
-    // 2. UI 更新 (= 「○○ で執筆中」)
-    var card = document.getElementById('mediaArtCard');
-    if(card){
-      card.innerHTML = '<div style="text-align:center;padding:8px 4px">'
-        + '<div style="font-size:42px;margin-bottom:10px">✍️</div>'
-        + '<div style="font-size:14px;font-weight:900;margin-bottom:6px">AI が選定した KW で執筆中</div>'
-        + '<div style="font-size:12.5px;color:var(--teal-deep);font-weight:800;background:var(--peach-soft);padding:8px 12px;border-radius:7px;margin-bottom:10px">🎯 '+esc(kw.pick.keyword || kw.pick.title)+'</div>'
-        + '<div style="font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:14px">'+esc((kw.pick.reason||'').slice(0,160))+'</div>'
-        + '<div style="background:var(--cream3);border-radius:7px;height:6px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:50%;animation:mediaArtPulse 2s infinite ease-in-out"></div></div>'
-        + '</div>';
-    }
-    // 3. publish
-    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', { keyword: kw.pick.title || kw.pick.keyword, target_chars: 5000, mode: 'seo' });
-    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
-    if(ag){
-      if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
-      ag.media_posts_idx.unshift(r.post);
-    }
-    _mediaArtClose();
-    showToast('🎉 初記事公開完了!','ok');
-    // メディアダッシュボードを開いて「公開ページを見る」 までトラック
-    window.openMediaPanel(siteId);
-  } catch(e){
-    var card2 = document.getElementById('mediaArtCard');
-    if(card2){
-      card2.innerHTML = '<div style="text-align:center;padding:12px 4px">'
-        + '<div style="font-size:34px;margin-bottom:8px">⚠️</div>'
-        + '<div style="font-size:14px;font-weight:900;color:#9a3412;margin-bottom:8px">公開失敗</div>'
-        + '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:18px">'+esc(e.message||'unknown')+'<br><br>「🔍 自分で KW を選ぶ」 から手動公開してみてください。</div>'
-        + '<button onclick="_mediaArtClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button>'
-        + '</div>';
-    }
-  }
+// 🚫 _kwQuickFirstArticle は 2026-06-02 で廃止 (= research-pick + 即公開 動線)
+//    Wizard Step 4 から「🔍 KW 調査へ」 だけにシンプル化。 stub 互換。
+window._kwQuickFirstArticle = function(siteId){
+  if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
+  setTimeout(function(){ if(typeof openKeywordPanel === 'function') openKeywordPanel(siteId); }, 60);
 };
 
 function _renderTabSettings(site){

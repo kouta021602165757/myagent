@@ -23040,50 +23040,9 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
-  //   POST /api/agents/:id/media/research-pick — First win 用、 AI が 1 個 KW を選定
-  //   body: { mode?: 'seo'|'aeo' }
-  //   返却: { pick: { keyword, title, volume_est, competition, reason } }
-  const mediaPickMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/research-pick$/);
-  if(mediaPickMatch && method === 'POST'){
-    const ag = (user.agents || []).find(a => a && a.id === mediaPickMatch[1]);
-    if(!ag) return jres(res, 404, { error: 'agent not found' });
-    if(!ag.site_url) return jres(res, 400, { error: 'site_url not set' });
-    const body = await readBody(req).catch(() => ({}));
-    const mode = (body && body.mode === 'aeo') ? 'aeo' : 'seo';
-    if(!CLAUDE_KEY) return jres(res, 503, { error: 'AI key not configured' });
-    const sitePreview = await _fetchSitePreview(ag).catch(() => null);
-    const siteCtx = sitePreview && sitePreview.content ? sitePreview.content.slice(0, 1500) : '';
-    const prompt = ''
-      + 'サイト: ' + ag.site_url + (ag.site_vertical ? ' (' + ag.site_vertical + ')' : '') + '\n'
-      + (siteCtx ? '【サイト内容】\n' + siteCtx + '\n\n' : '')
-      + '【ゴール】 このサイト向けに 「最初の 1 本」 として最適な検索キーワードを 1 個 選定してください。\n'
-      + '  - 低競合 × 中ボリューム を優先 (= ROI 最大)\n'
-      + '  - 即読者がアクション取りたくなる KW\n'
-      + '  - 初記事として「これで成果出れば嬉しい」 と思える内容\n'
-      + (mode === 'aeo' ? '  - AEO (= AI 検索引用) 向けに最適化\n' : '')
-      + '\n出力は以下の JSON のみ (前置き禁止):\n'
-      + '{\n'
-      + '  "keyword": "ターゲット KW",\n'
-      + '  "title": "推奨記事タイトル (= 60 字以内、 click したくなる)",\n'
-      + '  "volume_est": 1500,\n'
-      + '  "competition": "low|mid|high",\n'
-      + '  "reason": "なぜこの KW を選んだか (= 120 字以内)"\n'
-      + '}';
-    try {
-      const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        { model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] }
-      );
-      if(r.s >= 400) return jres(res, 500, { error: _claudeErrorMessage(r) });
-      const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
-      const m = txt.match(/\{[\s\S]*\}/);
-      if(!m) return jres(res, 500, { error: 'parse_failed' });
-      const parsed = JSON.parse(m[0]);
-      return jres(res, 200, { ok: true, pick: parsed });
-    } catch(e){
-      return jres(res, 500, { error: 'pick_failed', detail: e.message });
-    }
-  }
+  // (DEPRECATED 2026-06-02) /media/research-pick endpoint は削除済。
+  // 「First win」 動線は KW 調査 panel に集約済 (= research_keyword tool で
+  //  10 件 候補を出してユーザが選ぶ形)。 1 件 自動選定 は使われなくなった。
 
   //   POST /api/agents/:id/media/articles/generate — AI 記事生成 + 画像生成
   //   body: { keyword, title?, category_id?, sub_id?, target_chars? }

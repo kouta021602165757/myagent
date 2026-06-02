@@ -3016,7 +3016,18 @@ window._closeSiteTabModal = function(){
 };
 
 window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
-window.openKeywordPanel       = function(siteId){ _openSiteTabModal(siteId, 'keyword'); };
+window.openKeywordPanel       = function(siteId){
+  // setup progress 用に kw_visited_at を記録 (= 一度開けば step 2 完了扱い)
+  try {
+    var _ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(_ag && !_ag.kw_visited_at){
+      _ag.kw_visited_at = new Date().toISOString();
+      // server に同期 (= fire-and-forget、 失敗しても UX 影響なし)
+      api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/touch', { field: 'kw_visited_at' }).catch(function(){});
+    }
+  } catch(_){}
+  _openSiteTabModal(siteId, 'keyword');
+};
 // 📝 メディア (Phase A.4): in-app Wizard / Dashboard modal を開く
 window.openMediaPanel         = function(siteId){ _openSiteTabModal(siteId, 'media'); };
 window.openStrategyPanel      = function(siteId){ _openSiteTabModal(siteId, 'strategy'); };
@@ -10383,6 +10394,147 @@ function _renderTabConnections(site){
 }
 
 // ══════════════════════════════════════════════════════════════════
+// 📊 Phase 2 週次トラッカー (= メディアダッシュ内、 今週公開ペース可視化)
+// ══════════════════════════════════════════════════════════════════
+function _renderWeeklyTracker(site, posts){
+  // 「今週」 = 月曜 0:00 から (= JST 想定で簡易判定)
+  var now = new Date();
+  var day = now.getDay(); // 0=Sun, 1=Mon
+  var mondayMs = now.getTime() - ((day === 0 ? 6 : day - 1) * 86400000)
+    - (now.getHours() * 3600000) - (now.getMinutes() * 60000) - (now.getSeconds() * 1000);
+  var thisWeek = (posts || []).filter(function(p){
+    return p && p.status !== 'draft' && Date.parse(p.published_at || 0) >= mondayMs;
+  }).length;
+  // 目標: site.media.weekly_goal (= 設定可) or default 2 本/週
+  var goal = (site.media && site.media.weekly_goal) || 2;
+  var pct = Math.min(100, Math.round((thisWeek / goal) * 100));
+  var status = thisWeek >= goal ? '✓ 達成' : (thisWeek > 0 ? '進行中' : '未着手');
+  return ''
+    + '<div class="wt-card">'
+    +   '<div class="wt-card-h">'
+    +     '<span>📊 今週の公開ペース</span>'
+    +     '<span class="wt-num"><b>'+thisWeek+'</b> / '+goal+' 本</span>'
+    +   '</div>'
+    +   '<div class="wt-bar"><div class="wt-bar-fill" style="width:'+pct+'%"></div></div>'
+    +   '<div class="wt-card-sub">'+status+' · '+(thisWeek >= goal ? '今週の目標達成! 来週も継続を' : '残り '+(goal-thisWeek)+' 本で目標達成')+'</div>'
+    + '</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// 🎯 Setup progress バー — 4 step 完了状況を chat 上部に表示
+// ══════════════════════════════════════════════════════════════════
+function _setupStepStatus(ag){
+  return {
+    media:    !!(ag && ag.media && ag.media.id),
+    keyword:  !!(ag && ag.kw_visited_at),
+    strategy: !!(ag && (
+      (ag.kpi && (ag.kpi.pv || ag.kpi.cvr || ag.kpi.leads)) ||
+      (ag.persona && Object.keys(ag.persona || {}).length > 0)
+    )),
+    tasks:    !!(ag && ag.roadmap && Array.isArray(ag.roadmap.weeks) && ag.roadmap.weeks.length > 0),
+  };
+}
+function _renderSetupProgress(ag){
+  if(!ag) return '';
+  var st = _setupStepStatus(ag);
+  var done = (st.media?1:0) + (st.keyword?1:0) + (st.strategy?1:0) + (st.tasks?1:0);
+  // 全 step 完了したら隠す (= UI 圧迫しない)
+  if(done >= 4) return '';
+  var pct = Math.round((done / 4) * 100);
+  var siteId = esc(ag.id);
+  function step(num, ic, label, ok, openFn){
+    var cls = ok ? 'sp-step ok' : (num === done + 1 ? 'sp-step now' : 'sp-step');
+    var click = ok ? '' : ' onclick="'+openFn+'(\''+siteId+'\')"';
+    return '<div class="'+cls+'"'+click+'>'
+      + '<div class="sp-step-n">'+(ok?'✓':num)+'</div>'
+      + '<div class="sp-step-bd"><div class="sp-step-ic">'+ic+'</div><div class="sp-step-lb">'+label+'</div></div>'
+      + '</div>';
+  }
+  return ''
+    + '<div class="sp-card">'
+    +   '<div class="sp-card-h">'
+    +     '<div class="sp-card-eye">🎯 セットアップ進捗</div>'
+    +     '<div class="sp-card-ti"><b>'+done+' / 4</b> 完了 <span class="sp-card-pct">'+pct+'%</span></div>'
+    +     '<button class="sp-card-x" onclick="_dismissSetupProgress()" title="閉じる">×</button>'
+    +   '</div>'
+    +   '<div class="sp-bar"><div class="sp-bar-fill" style="width:'+pct+'%"></div></div>'
+    +   '<div class="sp-steps">'
+    +     step(1, '📝', 'メディア', st.media,    'openMediaPanel')
+    +     step(2, '🔍', 'KW 調査', st.keyword,  'openKeywordPanel')
+    +     step(3, '🎯', '戦略・KPI', st.strategy, 'openStrategyPanel')
+    +     step(4, '📋', 'タスク',   st.tasks,    'openTasksPanel')
+    +   '</div>'
+    + '</div>';
+}
+window._dismissSetupProgress = function(){
+  try { localStorage.setItem('setup_progress_dismissed', 'true'); } catch(_){}
+  var el = document.querySelector('.sp-card');
+  if(el) el.style.display = 'none';
+};
+
+// ══════════════════════════════════════════════════════════════════
+// 🎮 オンボーディング walkthrough — 4 step toolbar tooltip
+// ══════════════════════════════════════════════════════════════════
+// 初回サイト agent 開いた時、 toolbar の 4 ボタンを順に highlight。
+// localStorage に dismiss flag を保存して再表示しない。
+window._maybeShowOnboardingWalkthrough = function(ag){
+  try {
+    if(localStorage.getItem('onboarding_v2_seen')) return;
+    if(!ag || !ag.site_url) return;
+    if(ag.media && ag.media.id) return; // 既にメディア立ち上げ済 = 経験者
+    setTimeout(function(){ _showOnboardingStep(0); }, 700);
+  } catch(_){}
+};
+var _OB_STEPS = [
+  { selector: '.ct-media-tool',                  title: '1️⃣ ブログを立ち上げる', desc: 'まず 📝 を押してメディアを 60 秒で立ち上げます。 5 テンプレから選べます。' },
+  { selectorFn: function(){ var b = Array.from(document.querySelectorAll('.ct-tool')).find(function(x){return x.title && /KW|キーワード|Keyword/.test(x.title);}); return b; }, title: '2️⃣ キーワード調査', desc: 'AI が 10-20 個の SEO キーワード候補を生成。 ⊕ で「書く予定」 に溜めるか、 🚀 で即公開。' },
+  { selectorFn: function(){ var b = Array.from(document.querySelectorAll('.ct-tool')).find(function(x){return x.title && /戦略|Strategy/.test(x.title);}); return b; }, title: '3️⃣ 戦略・KPI', desc: 'ペルソナと 6 ヶ月目標を決める。 ここを埋めると AI が「逆算で何書くべきか」 を判断できる。' },
+  { selectorFn: function(){ var b = Array.from(document.querySelectorAll('.ct-tool')).find(function(x){return x.title && /タスク|Tasks/.test(x.title);}); return b; }, title: '4️⃣ タスク', desc: '8 週間のロードマップが自動生成 + 「書く予定の記事」 が並ぶ。 [✨ 公開] でいつでも 1 クリック実行。' },
+];
+function _showOnboardingStep(i){
+  _removeOnboardingOverlay();
+  if(i >= _OB_STEPS.length){
+    try { localStorage.setItem('onboarding_v2_seen', new Date().toISOString()); } catch(_){}
+    return;
+  }
+  var s = _OB_STEPS[i];
+  var target = s.selectorFn ? s.selectorFn() : document.querySelector(s.selector);
+  if(!target){
+    // ボタン見つからない → skip
+    return _showOnboardingStep(i + 1);
+  }
+  var rect = target.getBoundingClientRect();
+  var ov = document.createElement('div');
+  ov.className = 'ob-overlay';
+  ov.id = 'obOverlay';
+  ov.innerHTML = ''
+    + '<div class="ob-mask"></div>'
+    + '<div class="ob-spot" style="top:'+(rect.top-6)+'px;left:'+(rect.left-6)+'px;width:'+(rect.width+12)+'px;height:'+(rect.height+12)+'px"></div>'
+    + '<div class="ob-tip" style="top:'+(rect.bottom+14)+'px;left:'+Math.min(rect.left, window.innerWidth-320)+'px">'
+    +   '<div class="ob-tip-step">STEP '+(i+1)+' / '+_OB_STEPS.length+'</div>'
+    +   '<div class="ob-tip-ti">'+s.title+'</div>'
+    +   '<div class="ob-tip-tx">'+s.desc+'</div>'
+    +   '<div class="ob-tip-act">'
+    +     '<button class="ob-skip" onclick="_skipOnboarding()">スキップ</button>'
+    +     '<button class="ob-next" onclick="_showOnboardingStep('+(i+1)+')">'+(i === _OB_STEPS.length-1 ? '完了 ✓' : '次へ →')+'</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  // target を pulse animation
+  target.classList.add('ob-pulse');
+  setTimeout(function(){ target.classList.remove('ob-pulse'); }, 1800);
+}
+function _removeOnboardingOverlay(){
+  var el = document.getElementById('obOverlay');
+  if(el) el.remove();
+}
+window._showOnboardingStep = _showOnboardingStep;
+window._skipOnboarding = function(){
+  try { localStorage.setItem('onboarding_v2_seen', 'skip'); } catch(_){}
+  _removeOnboardingOverlay();
+};
+
+// ══════════════════════════════════════════════════════════════════
 // 📝 メディア機能 (Phase A.4) — Wizard / Dashboard モーダル
 // ══════════════════════════════════════════════════════════════════
 
@@ -10486,6 +10638,7 @@ function _renderTabMedia(site){
       +   '</div>'
       + '</div>'
       + '<div id="mediaStatsWeak" style="display:none"></div>'
+      + _renderWeeklyTracker(site, posts)
       + '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
       +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="flex:1;min-width:220px;background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査でネタを探す</button>'
       +   '<button onclick="_mediaGenArticleFlow(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:11px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✨ キーワードを直接入力</button>'
@@ -11054,8 +11207,11 @@ function _mediaWizStep4HTML(media){
     +   '<div style="display:inline-flex;align-items:center;background:#fff;border:1.5px solid var(--teal);border-radius:9px;padding:10px 14px;font-size:13px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);margin-bottom:18px;gap:8px">'
     +     '🌐 '+publicUrl
     +   '</div>'
+    +   '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">'
+    +     '<button onclick="_kwQuickFirstArticle(\''+esc(window._mediaWiz.siteId)+'\')" style="background:linear-gradient(135deg,var(--teal),var(--peach-dark));color:#fff;border:0;padding:13px 26px;border-radius:9px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(13,79,74,.3)">✨ 試しに 1 本書いてみる (= 一番おすすめ)</button>'
+    +   '</div>'
     +   '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
-    +     '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🔍 STEP 2: キーワード調査へ →</button>'
+    +     '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 自分で KW を選ぶ</button>'
     +     '<a href="'+publicUrl+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#fff;color:var(--text);text-decoration:none;border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--wire2)">🔗 ブログを見る</a>'
     +   '</div>'
     + '</div>'
@@ -11068,6 +11224,60 @@ function _mediaWizStep4HTML(media){
     +   '・<b>📊 数字</b>: GA4/GSC で結果を毎日追跡'
     + '</div>';
 }
+
+// 「試しに 1 本書く」 — AI が 1 個 KW 候補を提案 → 即公開
+// First win 早期化: Wizard 完了 〜 初記事公開を 5 分以内で完結させる
+window._kwQuickFirstArticle = async function(siteId){
+  if(document.getElementById('mediaArtOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'mediaArtOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.innerHTML = '<div id="mediaArtCard" style="background:#fff;border-radius:14px;padding:26px 28px;max-width:460px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
+    + '<div style="text-align:center;padding:8px 4px">'
+    +   '<div style="font-size:42px;margin-bottom:10px">✨</div>'
+    +   '<div style="font-size:16px;font-weight:900;margin-bottom:6px">AI が最適な KW を 1 個選んで公開します</div>'
+    +   '<div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-bottom:14px">サイトを解析 → 一番効率いい KW を 1 つ AI が選定 → 5,000 字記事を生成 → 自動公開。<br>所要: 約 2 〜 3 分</div>'
+    +   '<div style="background:var(--cream3);border-radius:7px;height:6px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:30%;animation:mediaArtPulse 2s infinite ease-in-out"></div></div>'
+    + '</div></div>';
+  document.body.appendChild(ov);
+  try {
+    // 1. research_keyword で KW 1 個取得
+    var kw = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/research-pick', { mode: 'seo' });
+    if(!kw || !kw.pick) throw new Error(kw && kw.error || 'KW 提案失敗');
+    // 2. UI 更新 (= 「○○ で執筆中」)
+    var card = document.getElementById('mediaArtCard');
+    if(card){
+      card.innerHTML = '<div style="text-align:center;padding:8px 4px">'
+        + '<div style="font-size:42px;margin-bottom:10px">✍️</div>'
+        + '<div style="font-size:14px;font-weight:900;margin-bottom:6px">AI が選定した KW で執筆中</div>'
+        + '<div style="font-size:12.5px;color:var(--teal-deep);font-weight:800;background:var(--peach-soft);padding:8px 12px;border-radius:7px;margin-bottom:10px">🎯 '+esc(kw.pick.keyword || kw.pick.title)+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:14px">'+esc((kw.pick.reason||'').slice(0,160))+'</div>'
+        + '<div style="background:var(--cream3);border-radius:7px;height:6px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:50%;animation:mediaArtPulse 2s infinite ease-in-out"></div></div>'
+        + '</div>';
+    }
+    // 3. publish
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', { keyword: kw.pick.title || kw.pick.keyword, target_chars: 5000, mode: 'seo' });
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(ag){
+      if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+      ag.media_posts_idx.unshift(r.post);
+    }
+    _mediaArtClose();
+    showToast('🎉 初記事公開完了!','ok');
+    // メディアダッシュボードを開いて「公開ページを見る」 までトラック
+    window.openMediaPanel(siteId);
+  } catch(e){
+    var card2 = document.getElementById('mediaArtCard');
+    if(card2){
+      card2.innerHTML = '<div style="text-align:center;padding:12px 4px">'
+        + '<div style="font-size:34px;margin-bottom:8px">⚠️</div>'
+        + '<div style="font-size:14px;font-weight:900;color:#9a3412;margin-bottom:8px">公開失敗</div>'
+        + '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:18px">'+esc(e.message||'unknown')+'<br><br>「🔍 自分で KW を選ぶ」 から手動公開してみてください。</div>'
+        + '<button onclick="_mediaArtClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button>'
+        + '</div>';
+    }
+  }
+};
 
 function _renderTabSettings(site){
   function _row(icon, color, title, desc, btnLbl, onClick){
@@ -12291,6 +12501,13 @@ function agDragEnd(ev){
 
 /* ── Open agent / chat ─────────────────────────────── */
 async function openAgent(id){
+  // 🎮 オンボーディング walkthrough trigger (= 初回 site agent open 時のみ)
+  try {
+    var _ob_ag = (agents||[]).find(function(a){return a && a.id === id;});
+    if(_ob_ag && _ob_ag.site_url && typeof _maybeShowOnboardingWalkthrough === 'function'){
+      setTimeout(function(){ _maybeShowOnboardingWalkthrough(_ob_ag); }, 1200);
+    }
+  } catch(_){}
   // Flag for renderMsgs — snap to bottom on the first render after switching
   // chats. Cleared once that render runs.
   window._chatJustOpened = true;
@@ -13639,8 +13856,13 @@ function renderMsgs(ag, forceScrollBottom){
   // 📝 メディア hero / link bar (Phase A.2) — site agent の chat top にのみ表示
   // - 未作成: hero (= 「集客ブログを立ち上げよう」 + マスター copy 5 動詞 + 60 秒 trust)
   // - 作成済: 小さい link bar (= 数字一目 + ダッシュボードへ)
-  var _mediaIntroBanner = '';
+  // 🎯 Setup progress バー (= 4 step 完了状況) — メディア型サイト以外で表示
+  var _setupProgressBanner = '';
   var _isMediaSiteVert = (ag.site_type === 'media' || ag.site_vertical === 'blog' || ag.site_vertical === 'news');
+  if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && !_isMediaSiteVert){
+    _setupProgressBanner = _renderSetupProgress(ag);
+  }
+  var _mediaIntroBanner = '';
   if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && !_isMediaSiteVert){
     var _mediaExists = !!(ag.media && ag.media.id);
     if(!_mediaExists){
@@ -13666,7 +13888,7 @@ function renderMsgs(ag, forceScrollBottom){
         + '</div>';
     }
   }
-  inner.innerHTML = _nudgeHTML + _mediaIntroBanner + _olderHistBanner + ag.history.map(function(m,i){
+  inner.innerHTML = _nudgeHTML + _setupProgressBanner + _mediaIntroBanner + _olderHistBanner + ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline ONLY on desktop;
     // on mobile they show inline so the user always sees the AI reply.
     if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';

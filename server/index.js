@@ -16056,14 +16056,14 @@ async function _mediaGenerateArticle(agent, params){
   if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
   let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
     { model, max_tokens, system: systemBlock, messages: [{ role: 'user', content: userText }] },
-    { timeout: 120000 }); // 120s — 長文 Sonnet で 60s+ かかることがある
+    { timeout: 180000 }); // 180s — Sonnet 7000 字 + 重い SERP context で 90-150s かかる
   // cache_control 関連 400 → caching なしで 1 回 retry
   if(r.s === 400 && useCache && /cache_control|too small|minimum/i.test(JSON.stringify(r.d||''))){
     console.warn('[media-art] cache_control rejected, retrying without cache');
     delete headers['anthropic-beta'];
     r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
       { model, max_tokens, system: systemText, messages: [{ role: 'user', content: userText }] },
-      { timeout: 120000 });
+      { timeout: 180000 });
   }
   if(r.s >= 400){
     const err = _claudeErrorMessage(r);

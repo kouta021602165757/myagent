@@ -837,9 +837,28 @@ function safe(u){
     // async DB.save が走ると、 trimmed history が永続化されてしまう)。
     // よって agents を shallow copy + history のみ別配列に置き換え。
     const SAFE_HISTORY_LIMIT = 30;
+    // 🔥 ペイロード slim 化 (2026-06-02): /api/me の egress を大幅削減
+    //   - history_archive: 別 endpoint /agents/:id/history_archive で lazy fetch 済
+    //   - 各種 cache: 次回パネル開く時に refresh OK
+    //   - persona_long / context_dump: AI 用、 client 表示不要
+    //   - memories: AI 用 long-term memory、 chat 時 hydrate
+    const AGENT_DROP_FIELDS = [
+      'history_archive',       // 別 endpoint で取得、 通常表示不要 (= 最大主犯)
+      'memories',              // agent 専用 long-term、 chat hydrate 時のみ必要
+      'kw_cache', 'gsc_cache', 'ga4_cache',   // データ取得 cache
+      'detected_site_type', 'media_cat_cache',// AI 提案 cache (7d TTL あり)
+      'serp_cache', 'serp_analysis',          // KW research 結果 cache
+      'trends_cache', 'keyword_detail_cache', // KW research cache
+      'kw_serp', 'kw_trends', 'kw_h2map',     // KW visualization cache
+      'context_dump', 'persona_long',         // AI prompt 用ロングテキスト
+      'playbook',                              // agent 固有 playbook (= 最初の表示で不要)
+      'tool_log_archive',                     // tool 履歴 archive
+    ];
     s.agents = s.agents.map(function(origAg){
       if(!origAg) return origAg;
       const ag = Object.assign({}, origAg); // shallow copy → mutation 隔離
+      // 重い field を drop (= /api/me の egress 大幅削減)
+      AGENT_DROP_FIELDS.forEach(f => { delete ag[f]; });
       ag.progress = _agentProgress(origAg);
       ag.trust = _agentTrust(origAg);
       ag.outcomes = _agentOutcomes(origAg);
@@ -881,6 +900,16 @@ function safe(u){
       if(Array.isArray(versions)) rest.versions = versions.map(v => ({ at: v && v.at, op: v && v.op }));
       return rest;
     });
+  }
+  // 🔥 billing_history slim (= 直近 50 件のみ送る、 client は直接参照してない)
+  //    1000 件 / user で 200 KB+ になる; UI の表示は別 endpoint で page 取りで十分。
+  if(Array.isArray(s.billing_history) && s.billing_history.length > 50){
+    s.billing_history_total = s.billing_history.length;
+    s.billing_history = s.billing_history.slice(-50);
+  }
+  // 同様に login_history も 直近 20 件 (= UI に出ないケース多い)
+  if(Array.isArray(s.login_history) && s.login_history.length > 20){
+    s.login_history = s.login_history.slice(-20);
   }
   return s;
 }

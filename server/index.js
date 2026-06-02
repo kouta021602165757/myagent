@@ -16080,8 +16080,27 @@ async function _mediaGenerateArticle(agent, params){
   }
   let parsed;
   try { parsed = JSON.parse(m[0]); } catch(e){
-    console.warn('[media-art] JSON parse fail:', e.message, 'tail=', m[0].slice(-200));
-    throw new Error('parse_failed: JSON 不正 (= 出力が途中で切れた可能性) — '+ e.message);
+    // 🛡 AI が body_html の中で literal 改行 / タブ / 制御文字を吐く → JSON.parse 失敗
+    //    Defense: 制御文字を escape して 再 parse 試行 (= 多くの場合 これで通る)
+    try {
+      // string literal 内の 生の制御文字 ( -、 ただし " \\ は別) を escape
+      const sanitized = m[0].replace(/("(?:[^"\\]|\\.)*")/g, (mm, str) => {
+        return str.replace(/[ -]/g, (ch) => {
+          const code = ch.charCodeAt(0);
+          if(code === 10) return '\\n';
+          if(code === 13) return '\\r';
+          if(code === 9)  return '\\t';
+          if(code === 8)  return '\\b';
+          if(code === 12) return '\\f';
+          return '\\u' + ('0000' + code.toString(16)).slice(-4);
+        });
+      });
+      parsed = JSON.parse(sanitized);
+      console.log('[media-art] JSON sanitize fallback succeeded');
+    } catch(e2){
+      console.warn('[media-art] JSON parse fail:', e.message, 'tail=', m[0].slice(-200));
+      throw new Error('parse_failed: JSON 不正 (= 出力が途中で切れた可能性) — '+ e.message);
+    }
   }
   if(!parsed.title || !parsed.body_html) throw new Error('parse_failed: title/body_html が空');
 

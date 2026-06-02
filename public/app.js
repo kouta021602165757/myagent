@@ -10500,10 +10500,12 @@ function _renderTabMedia(site){
             + '<b style="color:var(--text);font-size:12.5px">公開済記事 ' + posts.length + ' 本</b>'
             + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">'
             + posts.slice(0, 10).map(function(p){
-                return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--cream3);border-radius:7px;font-size:11.5px">'
+                var rewriteBadge = p.rewrite_count ? '<span style="background:var(--peach-soft);color:var(--teal-deep);font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:4px">♻️ '+p.rewrite_count+'回 改稿</span>' : '';
+                return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--cream3);border-radius:7px;font-size:11.5px">'
                   + '<span style="color:var(--text)">📝</span>'
-                  + '<a href="https://'+esc(mediaHost)+'/media/'+esc(media.slug)+'/'+esc(p.slug)+'" target="_blank" rel="noopener" style="color:var(--teal-deep);text-decoration:none;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.title||'(無題)')+'</a>'
+                  + '<a href="https://'+esc(mediaHost)+'/media/'+esc(media.slug)+'/'+esc(p.slug)+'" target="_blank" rel="noopener" style="color:var(--teal-deep);text-decoration:none;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.title||'(無題)')+rewriteBadge+'</a>'
                   + '<span style="color:var(--text3);font-size:10px">'+esc((p.published_at||'').slice(0,10))+'</span>'
+                  + '<button onclick="_rewriteMediaArticle(\''+esc(site.id)+'\',\''+esc(p.slug)+'\')" title="AI でリライト + 上書き公開" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);width:24px;height:24px;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center">♻️</button>'
                   + '</div>';
               }).join('')
             + '</div></div>')
@@ -10721,31 +10723,60 @@ window._mediaWizGoStep = async function(targetStep){
 };
 
 function _mediaWizStep2HTML(categories, isFallback){
+  // state を window._mediaWiz.categories と sync
+  window._mediaWiz.categories = categories || [];
   var html = ''
     + '<div style="font-size:10px;color:var(--teal-deep);letter-spacing:.06em;font-weight:800;text-transform:uppercase;margin-bottom:6px">Step 2 / 4 — カテゴリ階層</div>'
     + '<div style="font-size:18px;font-weight:900;margin-bottom:8px;line-height:1.35">'+(isFallback?'デフォルトカテゴリ':'AI 推奨')+'のカテゴリ階層</div>'
-    + '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">'+(isFallback?'カスタマイズ可能。 後からも変更 OK。':'ペルソナ + サイト解析から構造を生成。 編集・追加・削除も自由。')+'</div>'
-    + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:11px;padding:14px 16px;font-family:\'SF Mono\',Menlo,monospace;font-size:12px;line-height:1.85">'
-    + '<div style="font-weight:900;color:var(--teal-deep);padding-bottom:8px;border-bottom:1px dashed var(--wire2);margin-bottom:8px"><span style="font-family:system-ui">🌐</span> <b>'+esc(window._mediaWiz.name)+' (トップ)</b></div>';
-  categories.forEach(function(c, i){
-    var prefix = (i === categories.length - 1) ? '└' : '├';
-    html += '<div style="margin-bottom:6px"><div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-family:system-ui">'+prefix+'</span><span style="font-family:system-ui;font-size:14px">📁</span><b style="color:var(--text);font-family:system-ui">'+esc(c.name)+'</b><span style="font-family:system-ui;font-size:10px;color:var(--text3);margin-left:auto">'+(c.subs||[]).length+' サブ</span></div>'
-      + '<div style="padding-left:28px;font-size:11.5px;color:var(--text2)">'
-      + (c.subs||[]).map(function(s, j){
-          var lastSub = (j === (c.subs||[]).length - 1);
-          var subPrefix = (i === categories.length - 1) ? '   ' : '│  ';
-          return subPrefix + (lastSub ? '└' : '├') + ' ' + esc(s.name||s);
-        }).join('<br>')
-      + '</div></div>';
-  });
-  html += '</div>'
-    + '<div style="background:var(--blue-soft);border:1px solid #c7d2fe;border-radius:9px;padding:10px 13px;margin-top:12px;font-size:11px;color:#1e40af;line-height:1.55">💡 SEO 内部リンク効果 + ユーザ回遊改善 のため大カテゴリ 3-5 が目安。 編集機能は Phase A.7 で実装予定 — 今は AI 提案そのままで進めます。</div>'
+    + '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">編集・削除自由 (= 各カテゴリ右の × で削除)。 後からも変更 OK。</div>'
+    + '<div id="mwCatList" style="background:var(--cream3);border:1px solid var(--wire2);border-radius:11px;padding:14px 16px">'
+    + _mediaWizRenderCatList()
+    + '</div>'
+    + '<button onclick="_mediaWizAddCat()" style="margin-top:10px;background:#fff;border:1px dashed var(--wire2);color:var(--text2);padding:10px 14px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">+ カテゴリを追加</button>'
+    + '<div style="background:var(--blue-soft);border:1px solid #c7d2fe;border-radius:9px;padding:10px 13px;margin-top:12px;font-size:11px;color:#1e40af;line-height:1.55">💡 SEO 内部リンク効果 + 回遊性向上のため大カテゴリ 3-5 が目安。</div>'
     + '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--wire)">'
     +   '<button onclick="_mediaWizGoStep(1)" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">← 戻る</button>'
     +   '<button onclick="_mediaWizGoStep(3)" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">次へ →</button>'
     + '</div>';
   return html;
 }
+
+// カテゴリリスト renderer (= 編集可能)
+window._mediaWizRenderCatList = function(){
+  var cats = (window._mediaWiz && window._mediaWiz.categories) || [];
+  if(!cats.length) return '<div style="text-align:center;padding:18px 8px;color:var(--text3);font-size:11.5px">カテゴリなし — 下の「+ カテゴリを追加」 から</div>';
+  return cats.map(function(c, i){
+    return '<div style="padding:10px 12px;background:#fff;border:1px solid var(--wire2);border-radius:8px;margin-bottom:6px">'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      +   '<span style="font-size:14px">📁</span>'
+      +   '<input type="text" value="'+esc(c.name||'')+'" oninput="_mediaWizUpdateCat('+i+', this.value)" style="flex:1;border:0;background:transparent;font-size:13px;font-weight:800;color:var(--text);outline:0">'
+      +   '<button onclick="_mediaWizDelCat('+i+')" style="background:transparent;border:0;color:var(--text3);font-size:16px;cursor:pointer;padding:0 6px" title="削除">×</button>'
+      + '</div>'
+      + '<div style="margin-top:4px;font-size:10.5px;color:var(--text3);padding-left:22px">'
+      + ((c.subs||[]).map(function(s){return esc(s.name||s);}).join(' · ') || '<span style="color:var(--text3);font-style:italic">サブカテゴリなし</span>')
+      + '</div>'
+      + '</div>';
+  }).join('');
+};
+
+window._mediaWizAddCat = function(){
+  if(!window._mediaWiz.categories) window._mediaWiz.categories = [];
+  if(window._mediaWiz.categories.length >= 8){ showToast('カテゴリは 8 件まで','ng'); return; }
+  window._mediaWiz.categories.push({ id: 'cat_' + Math.random().toString(36).slice(2,7), name: '新カテゴリ', slug: 'new-cat-' + Math.random().toString(36).slice(2,5), subs: [] });
+  var el = document.getElementById('mwCatList');
+  if(el) el.innerHTML = _mediaWizRenderCatList();
+};
+window._mediaWizUpdateCat = function(i, val){
+  if(!window._mediaWiz.categories || !window._mediaWiz.categories[i]) return;
+  window._mediaWiz.categories[i].name = String(val||'').slice(0, 30);
+  window._mediaWiz.categories[i].slug = (val||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30);
+};
+window._mediaWizDelCat = function(i){
+  if(!window._mediaWiz.categories) return;
+  window._mediaWiz.categories.splice(i, 1);
+  var el = document.getElementById('mwCatList');
+  if(el) el.innerHTML = _mediaWizRenderCatList();
+};
 
 function _mediaWizStep3HTML(currentTemplate){
   var templates = [

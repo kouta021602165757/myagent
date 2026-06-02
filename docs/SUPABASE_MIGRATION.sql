@@ -139,6 +139,44 @@ NOTIFY pgrst, 'reload schema';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS media_posts_full jsonb DEFAULT '{}'::jsonb;
 
 -- ──────────────────────────────────────────────────────────────────
+-- メディア slug → user_id 永続インデックス (= 2026-06-02)
+-- /media/:slug 公開ページのスキャン egress を 0 に近づける。
+-- 構造: { slug: { user_id, agent_id, updated_at } }
+-- 採番時に GIN index で同一 slug 即検出 → グローバルユニーク保証 (= race condition 修正)
+-- 公開ページ access 時はこのテーブルから 1 query で user 特定可能。
+-- ──────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS media_slug_index (
+  slug      text PRIMARY KEY,
+  user_id   text NOT NULL,
+  agent_id  text NOT NULL,
+  updated_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS media_slug_index_user ON media_slug_index (user_id);
+
+-- ──────────────────────────────────────────────────────────────────
+-- メディア記事本文 別テーブル (= 2026-06-02、 user row 肥大対策)
+-- 旧構造: user.media_posts_full JSONB に { post_id: { body_html } } を蓄積
+--         → 100 記事/user で row size が数 MB になり、 ユーザ fetch 毎に
+--           不必要な egress 発生
+-- 新構造: 各記事 1 行で正規化、 SSR 時のみ SELECT body_html
+-- マイグレーション: アプリは新テーブル優先 → 無ければ user.media_posts_full
+--                  に fallback (= idempotent 移行)
+-- ──────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS media_post_bodies (
+  post_id    text PRIMARY KEY,
+  user_id    text NOT NULL,
+  agent_id   text NOT NULL,
+  media_slug text NOT NULL,
+  post_slug  text NOT NULL,
+  body_html  text NOT NULL,
+  saved_at   timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS media_post_bodies_user ON media_post_bodies (user_id);
+CREATE INDEX IF NOT EXISTS media_post_bodies_slug ON media_post_bodies (media_slug, post_slug);
+
+NOTIFY pgrst, 'reload schema';
+
+-- ──────────────────────────────────────────────────────────────────
 -- (OPTIONAL) 既存ユーザーを retroactively Founder 100 に登録するバックフィル
 -- ──────────────────────────────────────────────────────────────────
 -- Founder 100 機構を後付けした関係で、既存のサインアップ済みユーザーには

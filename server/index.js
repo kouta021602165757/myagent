@@ -7800,11 +7800,27 @@ function _mediaSlugify(s){
 async function _mediaUniqueSlug(base){
   let slug = _mediaSlugify(base);
   if(MEDIA_RESERVED_SLUGS.has(slug)) slug = slug + '-blog';
-  // Supabase で agents JSONB の slug を探すのは難しいので、 全 lean fetch して
-  // メモリで探す。 N≤数千 想定で OK。
+  // 永続 index (= media_slug_index テーブル) を最優先 — 1 query で完結。
+  // テーブルが無い場合 (migration 未実行) は fallback の全 lean scan に流れる。
+  if(USE_SUPA){
+    try {
+      const r = await sbReq('GET', 'media_slug_index', '?select=slug&limit=10000');
+      if(r.s === 200 && Array.isArray(r.d)){
+        const used = new Set(r.d.map(x => String(x.slug || '').toLowerCase()));
+        if(!used.has(slug)) return slug;
+        for(let i = 2; i <= 99; i++){
+          const cand = (slug.slice(0, 36)) + '-' + i;
+          if(!used.has(cand)) return cand;
+        }
+        return _mediaSlugify(slug.slice(0, 30)) + '-' + crypto.randomBytes(3).toString('hex');
+      }
+      // table 無し → 旧 fallback へ
+    } catch(_){}
+  }
+  // Fallback: agents JSONB を 全 lean fetch (= legacy / migration 未実行時)
   try {
     const r = await sbReq('GET', 'users', '?select=agents&limit=10000');
-    if(r.s !== 200) return slug;  // fail-open
+    if(r.s !== 200) return slug;
     const usedSlugs = new Set();
     (r.d || []).forEach(u => {
       (u.agents || []).forEach(a => {
@@ -7813,17 +7829,25 @@ async function _mediaUniqueSlug(base){
       });
     });
     if(!usedSlugs.has(slug)) return slug;
-    // 重複あり → -2, -3 ... を試す
     for(let i = 2; i <= 99; i++){
       const cand = (slug.slice(0, 36)) + '-' + i;
       if(!usedSlugs.has(cand)) return cand;
     }
-    // 99 まで重複なら hash
     return _mediaSlugify(slug.slice(0, 30)) + '-' + crypto.randomBytes(3).toString('hex');
   } catch(e){
     console.warn('[media-slug] lookup failed:', e.message);
     return slug;
   }
+}
+
+// 永続 index に slug → user_id, agent_id を upsert
+async function _registerMediaSlugIndex(slug, userId, agentId){
+  if(!USE_SUPA || !slug || !userId || !agentId) return;
+  try {
+    await sbReq('POST', 'media_slug_index', '', {
+      slug, user_id: userId, agent_id: agentId, updated_at: new Date().toISOString(),
+    }, { headers: { 'Prefer': 'resolution=merge-duplicates' } });
+  } catch(e){ console.warn('[media-slug-index] register failed:', e.message); }
 }
 
 // post slug 生成 (= per-media、 重複は同 media 内で確認)
@@ -15348,45 +15372,57 @@ async function _findUserByMediaSlug(slug, opts){
   const includePosts = !!(opts && opts.includePosts);
   const cached = _mediaSlugCache.get(slug);
   if(cached && cached.expires_at > Date.now()){
-    if(cached.missing) return null; // negative cache
+    if(cached.missing) return null;
     try {
-      // includePosts=true の時のみ full row fetch (= media_posts_full のため)
       if(includePosts){
         const u = await DB.findBy('id', cached.user_id);
         if(u){
           const ag = (u.agents||[]).find(a => a && a.id === cached.agent_id);
-          if(ag && ag.media && ag.media.slug === slug){
-            return { user: u, agent: ag };
-          }
+          if(ag && ag.media && ag.media.slug === slug) return { user: u, agent: ag };
         }
       } else if(cached.agent){
-        // 一覧ページ: cache の lean agent をそのまま返す
         return { user: { id: cached.user_id }, agent: cached.agent };
       }
     } catch(_){}
-    _mediaSlugCache.delete(slug); // stale
+    _mediaSlugCache.delete(slug);
   }
-  // 全 users スキャン
+  // 永続 index (= media_slug_index) を最優先 — 1 query で user_id 直接特定
+  if(USE_SUPA){
+    try {
+      const r = await sbReq('GET', 'media_slug_index', '?slug=eq.' + encodeURIComponent(slug) + '&limit=1');
+      if(r.s === 200 && Array.isArray(r.d) && r.d.length){
+        const row = r.d[0];
+        const fullU = await DB.findBy('id', row.user_id);
+        if(fullU){
+          const ag = (fullU.agents || []).find(a => a && a.id === row.agent_id);
+          if(ag && ag.media && ag.media.slug === slug){
+            _mediaSlugCache.set(slug, {
+              user_id: row.user_id, agent_id: row.agent_id,
+              agent: ag, expires_at: Date.now() + _MEDIA_SLUG_TTL,
+            });
+            return { user: fullU, agent: ag };
+          }
+        }
+      }
+    } catch(e){ console.warn('[media-slug-index] lookup failed, fallback:', e.message); }
+  }
+  // Fallback: 全 lean scan (= migration 未実行 / index 漏れ時)
   try {
     let users = [];
     if(USE_SUPA){
-      // agents 列は LEAN にあるはず — agent.media.slug で match
       const r = await sbReq('GET','users','?select=id,agents&limit=500');
       users = Array.isArray(r.d) ? r.d : [];
-    } else {
-      users = LDB.data || [];
-    }
+    } else { users = LDB.data || []; }
     for(const u of users){
       for(const ag of (u.agents||[])){
         if(ag && ag.media && ag.media.slug === slug){
           _mediaSlugCache.set(slug, {
-            user_id: u.id,
-            agent_id: ag.id,
-            agent: ag, // lean (一覧用)
+            user_id: u.id, agent_id: ag.id, agent: ag,
             expires_at: Date.now() + _MEDIA_SLUG_TTL,
           });
+          // 後追いで index 登録 (= 次回から fast path)
+          _registerMediaSlugIndex(slug, u.id, ag.id).catch(()=>{});
           if(!includePosts) return { user: { id: u.id }, agent: ag };
-          // 完全な user を取得 (LEAN だと media_posts_full が無い)
           const fullU = await DB.findBy('id', u.id);
           if(!fullU) return null;
           const fullAg = (fullU.agents||[]).find(a => a && a.id === ag.id);
@@ -15394,11 +15430,7 @@ async function _findUserByMediaSlug(slug, opts){
         }
       }
     }
-    // 見つからない → negative cache に 60s
-    _mediaSlugCache.set(slug, {
-      missing: true,
-      expires_at: Date.now() + _MEDIA_SLUG_NEG_TTL,
-    });
+    _mediaSlugCache.set(slug, { missing: true, expires_at: Date.now() + _MEDIA_SLUG_NEG_TTL });
   } catch(e){ console.warn('[media-slug-lookup] failed:', e.message); }
   return null;
 }
@@ -15640,12 +15672,34 @@ ${footerBanner}
 // 📝 BLOG tool executors — チャットから呼ばれる
 // ══════════════════════════════════════════════════════════════════
 
+// プラン別 月間記事公開 cap (= 過剰生成 + コスト保護)
+function _mediaPlanArticleCap(user){
+  const plan = (user && user.plan) || 'free';
+  if(plan === 'free')     return 5;     // 5 本/月 (= 試用)
+  if(plan === 'pro')      return 50;    // 50 本/月
+  if(plan === 'business') return 200;   // 200 本/月
+  return 5;
+}
+function _mediaThisMonthCount(agent){
+  if(!Array.isArray(agent.media_posts_idx)) return 0;
+  const since = Date.now() - 30 * 86400000;
+  return agent.media_posts_idx.filter(p =>
+    p && p.status !== 'draft' && Date.parse(p.published_at || 0) >= since
+  ).length;
+}
+
 // publish_to_media: メディア未作成なら auto-create してから記事公開
 async function executePublishToMediaTool(user, agent, input){
   if(!agent) return { error: 'agent not found' };
   if(!agent.site_url) return { error: 'site_url not set on this agent — まず LP URL を登録してください' };
   const title = String((input && input.title) || '').trim();
   if(!title) return { error: 'title (= キーワード or タイトル) を渡してください' };
+  // プラン別 cap chk
+  const cap = _mediaPlanArticleCap(user);
+  const used = _mediaThisMonthCount(agent);
+  if(used >= cap){
+    return { error: 'plan_cap_reached', detail: 'プラン (= ' + (user.plan||'free') + ') の月間生成 cap 到達 (' + used + '/' + cap + ')。 翌月リセット or プラン UP を検討してください。' };
+  }
   const mode = (input && input.mode === 'aeo') ? 'aeo' : 'seo';
   const target_chars = Math.max(2000, Math.min(15000, parseInt(input && input.target_chars, 10) || 5000));
 
@@ -15673,6 +15727,7 @@ async function executePublishToMediaTool(user, agent, input){
     agent.media = media;
     agent.media_posts_idx = [];
     try { await DB.save(user); } catch(e){ return { error: 'auto-create save failed: ' + e.message }; }
+    _registerMediaSlugIndex(finalSlug, user.id, agent.id).catch(()=>{});
   }
 
   // 記事生成
@@ -15928,11 +15983,28 @@ function _mediaEsc(s){
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// テンプレート別 スタイル変数 (= 5 テンプレートを同じ構造で色味だけ変える MVP)
+function _mediaTemplateVars(template){
+  switch((template || 'minimal').toLowerCase()){
+    case 'magazine':
+      return { font: 'Georgia,"Times New Roman",serif', bg: '#fafaf7', titleSize: '40px', titleWeight: '700', heroBg: 'linear-gradient(135deg,#1a1a1a,#3a3a3a)', accentRule: 'border-bottom:3px double currentColor' };
+    case 'friendly':
+      return { font: '-apple-system,"Hiragino Sans",sans-serif', bg: '#fef9f4', titleSize: '34px', titleWeight: '800', heroBg: 'linear-gradient(135deg,#fef3c7,#fde68a)', accentRule: '' };
+    case 'tech':
+      return { font: 'ui-monospace,SF Mono,Menlo,monospace', bg: '#0f172a', titleSize: '30px', titleWeight: '700', heroBg: 'linear-gradient(135deg,#1e293b,#0f172a)', accentRule: '', dark: true };
+    case 'newsletter':
+      return { font: '"Iowan Old Style","Charter",Georgia,serif', bg: '#f3e8ff', titleSize: '32px', titleWeight: '600', heroBg: 'linear-gradient(135deg,#f3e8ff,#e9d5ff)', accentRule: '' };
+    default: // minimal
+      return { font: '-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif', bg: '#fafafa', titleSize: '36px', titleWeight: '900', heroBg: '', accentRule: '' };
+  }
+}
+
 // Minimal テンプレート HTML (= SSR、 軽量、 SEO-safe)
 // opts.categoryFilter: 指定時はカテゴリページ (= /media/:slug/cat/:catSlug)
 function _mediaRenderMinimalIndex(media, posts, opts){
   const name = _mediaEsc(media.name || 'Blog');
   const brand = _mediaEsc(media.brand_color || '#0d4f4a');
+  const tpl = _mediaTemplateVars(media.template);
   const publicUrl = 'https://' + _mediaEsc(media.domain || 'myaiagents.agency') + '/media/' + _mediaEsc(media.slug);
   const lpUrl = _mediaEsc(media.lp_url || '');
   const categoryFilter = (opts && opts.categoryFilter) ? _mediaEsc(opts.categoryFilter) : '';
@@ -15961,6 +16033,11 @@ function _mediaRenderMinimalIndex(media, posts, opts){
       <div style="font-size:12px;color:#9ca3af;margin-top:6px">AI チームが最初の記事を執筆中です。 もう少しお待ちください。</div>
     </div>`;
 
+  const isDark = !!tpl.dark;
+  const bodyColor = isDark ? '#e2e8f0' : '#111';
+  const subColor = isDark ? '#94a3b8' : '#6b7280';
+  const cardBg = isDark ? '#1e293b' : '#fff';
+  const cardBorder = isDark ? '#334155' : '#e5e7eb';
   return `<!doctype html>
 <html lang="ja"><head>
 <meta charset="utf-8">
@@ -15972,23 +16049,24 @@ function _mediaRenderMinimalIndex(media, posts, opts){
 <meta property="og:type" content="website">
 <style>
   *{box-sizing:border-box;-webkit-text-size-adjust:100%}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;color:#111;background:#fafafa;line-height:1.6}
+  body{margin:0;font-family:${tpl.font};color:${bodyColor};background:${tpl.bg};line-height:1.6}
   a{color:inherit}
   .ct{max-width:1100px;margin:0 auto;padding:0 24px}
-  header.site{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 0;position:sticky;top:0;z-index:10}
+  header.site{background:${cardBg};border-bottom:1px solid ${cardBorder};padding:14px 0;position:sticky;top:0;z-index:10}
   header.site .row{display:flex;align-items:center;gap:14px}
-  header.site .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px;color:#111;text-decoration:none}
+  header.site .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px;color:${bodyColor};text-decoration:none}
   header.site .nav{margin-left:auto;display:flex;gap:6px;align-items:center}
   header.site .cta{background:${brand};color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700}
   .hero{padding:60px 0 50px;text-align:center}
-  .hero h1{font-size:36px;font-weight:900;margin:0 0 14px;color:#111;letter-spacing:-.01em}
-  .hero p{font-size:15px;color:#6b7280;margin:0;max-width:560px;margin:0 auto}
+  .hero h1{font-size:${tpl.titleSize};font-weight:${tpl.titleWeight};margin:0 0 14px;color:${bodyColor};letter-spacing:-.01em;${tpl.accentRule};display:inline-block}
+  .hero p{font-size:15px;color:${subColor};margin:0 auto;max-width:560px}
   .cats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:32px 0 14px;padding:0 24px}
   .posts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;padding:30px 0 60px}
-  footer.site{background:#fff;border-top:1px solid #e5e7eb;padding:24px 0;text-align:center;color:#9ca3af;font-size:12px;margin-top:40px}
-  footer.site a{color:#6b7280;text-decoration:none;font-weight:600}
+  .posts article{background:${cardBg};border-color:${cardBorder} !important}
+  footer.site{background:${cardBg};border-top:1px solid ${cardBorder};padding:24px 0;text-align:center;color:${subColor};font-size:12px;margin-top:40px}
+  footer.site a{color:${subColor};text-decoration:none;font-weight:600}
   @media (max-width:640px){
-    .hero{padding:40px 0 30px}.hero h1{font-size:26px}
+    .hero{padding:40px 0 30px}.hero h1{font-size:${parseInt(tpl.titleSize)*0.7}px}
   }
 </style>
 </head><body>
@@ -22041,6 +22119,8 @@ async function handleAPI(req,res,pathname,method,ip){
       console.warn('[media-create] save failed:', e.message);
       return jres(res, 500, { error: 'save_failed', detail: e.message });
     }
+    // 永続 slug index に登録 (= グローバル一意保証 + 公開ページ高速 lookup)
+    _registerMediaSlugIndex(finalSlug, user.id, ag.id).catch(()=>{});
     return jres(res, 200, { ok: true, media });
   }
 
@@ -22339,6 +22419,16 @@ async function handleAPI(req,res,pathname,method,ip){
     const body = await readBody(req).catch(() => ({}));
     const keyword = String((body && body.keyword) || (body && body.title) || '').trim();
     if(!keyword) return jres(res, 400, { error: 'keyword required' });
+    // プラン別 月間生成 cap
+    const _cap = _mediaPlanArticleCap(user);
+    const _used = _mediaThisMonthCount(ag);
+    if(_used >= _cap){
+      return jres(res, 402, {
+        error: 'plan_cap_reached',
+        used: _used, cap: _cap, plan: user.plan || 'free',
+        detail: 'プラン (= ' + (user.plan||'free') + ') の月間 cap (' + _cap + ' 本) 到達。 プラン UP で増加。'
+      });
+    }
 
     let article;
     try {

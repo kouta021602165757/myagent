@@ -15631,55 +15631,124 @@ async function _mediaGenerateHeroImage(title, template){
 }
 
 // 個別記事 SSR — opts.relatedPosts で「関連記事」 を末尾に表示 (= 回遊性向上)
+// ──────────────────────────────────────────────────────────────────
+// 📄 公開メディア ARTICLE ページ SSR
+//   - 5 テンプレート対応
+//   - TOC + 著者 bio + 公開日 / 更新日 / 読了時間 + Schema 3 種
+//   - 「Powered by MY AI Agent」 削除
+// ──────────────────────────────────────────────────────────────────
 function _mediaRenderMinimalPost(media, post, body_html, opts){
+  const s = _mediaTemplateStyle(media.template);
+  const isDark = s.dark;
   const name = _mediaEsc(media.name || 'Blog');
-  const brand = _mediaEsc(media.brand_color || '#0d4f4a');
+  const brand = _mediaEsc(media.brand_color || s.accent || '#0d4f4a');
+  const accent = _mediaEsc(s.accent || brand);
+  const host = _mediaEsc(media.domain || 'myaiagents.agency');
   const lpUrl = _mediaEsc(media.lp_url || '');
   const title = _mediaEsc(post.title || '');
   const excerpt = _mediaEsc(post.excerpt || '');
-  const hero = post.hero_image_url
-    ? '<img src="' + _mediaEsc(post.hero_image_url) + '" alt="" style="width:100%;height:auto;max-height:480px;object-fit:cover;border-radius:14px">'
-    : '<div style="width:100%;height:300px;background:linear-gradient(135deg,' + brand + ',#0a3d39);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;font-weight:900;padding:30px;text-align:center">' + title + '</div>';
-  const logoImg = media.logo_url
-    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover">'
-    : '<div style="width:32px;height:32px;border-radius:6px;background:' + brand + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
+  const authorName = _mediaEsc(post.author_name || _mediaInferAuthorName(media, opts && opts.agent || {}));
+  const authorBio = _mediaEsc(_mediaInferAuthorBio(media, opts && opts.agent || {}));
 
-  // 5 CTA configurations (= UTM tracking, Phase A.7 で稼働)
-  // 1: header, 2: hero-bottom, 3: inline-mid, 4: end-card, 5: footer-banner
+  // TOC + body with anchor ids
+  const bodyWithIds = _mediaAddTocIds(body_html);
+  const toc = _mediaExtractToc(body_html);
+  const rt = _mediaReadingTime(body_html);
+  const dateLocale = (media.template === 'tech') ? 'mono' : 'ja';
+
+  // 5 CTA configurations (= UTM tracking)
   const cta = (medium, label, style) => lpUrl
     ? '<a href="' + lpUrl + '?utm_source=media&utm_medium=' + medium + '&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug) + '" target="_blank" rel="noopener" style="' + style + '">' + label + '</a>'
     : '';
-
-  const headerCTA = cta('header', 'サービスを見る →', 'background:' + brand + ';color:#fff;padding:8px 14px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700');
-
-  const inlineCTA = cta('inline_mid', '👉 ' + name + ' のサービスを見る', 'display:block;background:' + brand + ';color:#fff;padding:14px 20px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;text-align:center;margin:28px 0');
-
-  const related = (opts && Array.isArray(opts.relatedPosts)) ? opts.relatedPosts : [];
-  const relatedHTML = related.length > 0 ? `
-    <div style="margin-top:48px;padding-top:30px;border-top:1px solid #e5e7eb">
-      <div style="font-size:13px;font-weight:800;color:#9ca3af;letter-spacing:.05em;text-transform:uppercase;margin-bottom:18px">関連記事</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
-        ${related.map(r => `
-          <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(r.slug)}" style="display:block;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;text-decoration:none;color:#111;transition:.15s" onmouseover="this.style.borderColor='${brand}'" onmouseout="this.style.borderColor='#e5e7eb'">
-            ${r.category_name ? '<div style="font-size:10.5px;color:' + brand + ';font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px">' + _mediaEsc(r.category_name) + '</div>' : ''}
-            <div style="font-size:14px;font-weight:800;line-height:1.45;margin-bottom:6px">${_mediaEsc(r.title)}</div>
-            <div style="font-size:11px;color:#9ca3af">${_mediaEsc((r.published_at||'').slice(0,10))}</div>
-          </a>`).join('')}
-      </div>
-    </div>` : '';
-
+  const inlineCTA = cta('inline_mid',
+    '👉 ' + name + ' のサービスを見る',
+    'display:block;background:'+brand+';color:#fff;padding:14px 20px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:14px;font-weight:700;text-align:center;margin:28px 0');
   const endCard = lpUrl ? `
-    <div style="background:linear-gradient(135deg,${brand},#0a3d39);color:#fff;border-radius:14px;padding:30px 28px;margin-top:36px;text-align:center">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.7;text-transform:uppercase;margin-bottom:6px">この記事を読んだあなたに</div>
-      <h3 style="font-size:22px;font-weight:900;margin:0 0 10px">${name} を試してみる</h3>
-      <p style="font-size:13px;opacity:.85;margin:0 0 18px;line-height:1.6">今すぐサイトをチェックしてみてください</p>
-      ${cta('end_card', '🔗 公式サイトへ →', 'display:inline-block;background:#fff;color:' + brand + ';padding:11px 22px;border-radius:9px;text-decoration:none;font-size:13px;font-weight:800')}
+    <div style="background:linear-gradient(135deg,${brand},${isDark?'#0a1322':'#0a3d39'});color:#fff;border-radius:${s.cardRadius};padding:30px 28px;margin-top:36px;text-align:center">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.75;text-transform:uppercase;margin-bottom:6px">この記事を読んだあなたに</div>
+      <h3 style="font-family:${s.titleFont};font-size:22px;font-weight:900;margin:0 0 10px">${name} を試してみる</h3>
+      <p style="font-size:13px;opacity:.85;margin:0 0 18px;line-height:1.6">今すぐ公式サイトをチェックしてみてください</p>
+      ${cta('end_card', '🔗 公式サイトへ →', 'display:inline-block;background:#fff;color:'+brand+';padding:11px 22px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:13px;font-weight:800')}
     </div>` : '';
-
   const footerBanner = lpUrl ? `
     <div style="background:${brand};color:#fff;padding:16px 0;text-align:center;font-size:13px;font-weight:700">
       ${cta('footer_banner', '✨ ' + name + ' で課題を解決する →', 'color:#fff;text-decoration:underline;font-weight:800')}
     </div>` : '';
+
+  const logoImg = media.logo_url
+    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';object-fit:cover">'
+    : '<div style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';background:'+brand+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
+
+  // Breadcrumb
+  const breadcrumbHTML = `
+    <nav style="padding:9px 24px;background:${isDark?'#0a1322':'#fafaf7'};border-bottom:1px solid ${s.cardBorder};font-size:11px;color:${s.mutedColor};max-width:1100px;margin:0 auto;width:100%;font-family:${s.brandFont}">
+      <a href="/media/${_mediaEsc(media.slug)}" style="color:${s.subColor};text-decoration:none">ホーム</a>
+      <span style="margin:0 7px">›</span>
+      ${post.category_name ? '<a href="/media/'+_mediaEsc(media.slug)+'/cat/'+_mediaEsc(_mediaSlugify(post.category_name))+'" style="color:'+s.subColor+';text-decoration:none">'+_mediaEsc(post.category_name)+'</a><span style="margin:0 7px">›</span>' : ''}
+      <span style="color:${s.textColor};font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:50vw;vertical-align:middle">${title}</span>
+    </nav>`;
+
+  // Hero image
+  const hero = post.hero_image_url
+    ? '<img src="' + _mediaEsc(post.hero_image_url) + '" alt="' + title + '" style="width:100%;height:auto;max-height:480px;object-fit:cover;border-radius:'+s.cardRadius+'">'
+    : '<div style="width:100%;height:300px;background:linear-gradient(135deg,'+brand+',#1e293b);border-radius:'+s.cardRadius+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;padding:30px;text-align:center">' + title + '</div>';
+
+  // TOC sidebar
+  const tocHTML = (toc.length >= 2) ? `
+    <aside style="font-family:${s.brandFont};position:sticky;top:14px;align-self:start">
+      <div style="background:${isDark?'#0a1322':'#fafaf7'};border:1px solid ${s.cardBorder};border-radius:6px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:10.5px;font-weight:800;color:${s.textColor};letter-spacing:.08em;text-transform:uppercase;margin:0 0 9px">📑 目次</div>
+        <ol style="list-style:decimal;margin:0;padding-left:18px;font-size:12px;color:${s.subColor};line-height:1.7">
+          ${toc.map(t => '<li><a href="#'+_mediaEsc(t.id)+'" style="color:'+s.subColor+';text-decoration:none">'+_mediaEsc(t.text)+'</a></li>').join('')}
+        </ol>
+      </div>
+      <div style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:11.5px;color:${s.subColor}">
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed ${s.cardBorder}"><span>文字数</span><b style="color:${s.textColor}">${rt.chars.toLocaleString()} 字</b></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed ${s.cardBorder}"><span>読了</span><b style="color:${s.textColor}">${rt.minutes} 分</b></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0"><span>章数</span><b style="color:${s.textColor}">H2 ${toc.length} 章</b></div>
+      </div>
+    </aside>` : '';
+
+  // Tags from category
+  const tagsHTML = post.category_name ? `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
+      <span style="background:${isDark?'#1e293b':'#fafaf7'};border:1px solid ${s.cardBorder};color:${s.subColor};font-size:10px;padding:3px 8px;border-radius:3px;letter-spacing:.02em">#${_mediaEsc(post.category_name)}</span>
+    </div>` : '';
+
+  // Author bio block (= 記事末尾)
+  const authorBioHTML = `
+    <section style="padding:24px;background:${isDark?'#0a1322':'#fafaf7'};border-top:1px solid ${s.cardBorder};border-bottom:1px solid ${s.cardBorder};display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;margin-top:30px">
+      <div style="width:72px;height:72px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;flex-shrink:0;font-family:${s.brandFont}">${name.charAt(0).toUpperCase()}</div>
+      <div>
+        <div style="font-size:10px;font-weight:800;color:${s.mutedColor};letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">この記事の著者</div>
+        <div style="font-family:${s.titleFont};font-size:16.5px;font-weight:900;color:${s.textColor};margin-bottom:7px">${authorName}</div>
+        <p style="font-size:12.5px;color:${s.subColor};line-height:1.7;margin:0 0 8px">${authorBio}</p>
+        <div style="font-size:11px"><a href="/media/${_mediaEsc(media.slug)}/about" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部 詳細 →</a></div>
+      </div>
+    </section>`;
+
+  // Related articles
+  const related = (opts && Array.isArray(opts.relatedPosts)) ? opts.relatedPosts : [];
+  const relatedHTML = related.length > 0 ? `
+    <section style="padding:28px 24px;max-width:1100px;margin:0 auto;border-top:1px solid ${s.cardBorder}">
+      <div style="font-family:${s.brandFont};font-size:11px;color:${s.subColor};letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:16px">▌ 関連記事</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+        ${related.map(r => `
+          <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(r.slug)}" style="display:block;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};padding:14px 16px;text-decoration:none;color:${s.textColor};transition:.15s" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
+            ${r.category_name ? '<div style="font-size:9.5px;color:'+accent+';font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">▌ '+_mediaEsc(r.category_name)+'</div>' : ''}
+            <div style="font-family:${s.titleFont};font-size:14.5px;font-weight:800;line-height:1.4;margin-bottom:6px;color:${s.textColor}">${_mediaEsc(r.title)}</div>
+            <div style="font-size:10.5px;color:${s.mutedColor}">${_mediaEsc(_mediaFmtDate(r.published_at, dateLocale))}</div>
+          </a>`).join('')}
+      </div>
+    </section>` : '';
+
+  // JSON-LD schema 3 種
+  const articleSchema = _mediaArticleSchema(media, post, body_html, host);
+  const breadcrumbSchema = _mediaBreadcrumbSchema(media, post, host);
+  const orgSchema = _mediaOrgSchema(media, host);
+  const schemaTags = _mediaSchemaInject(articleSchema, breadcrumbSchema, orgSchema);
+
+  const publicUrl = 'https://' + host + '/media/' + _mediaEsc(media.slug) + '/' + _mediaEsc(post.slug);
 
   return `<!doctype html>
 <html lang="ja"><head>
@@ -15687,66 +15756,236 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} | ${name}</title>
 <meta name="description" content="${excerpt}">
+<link rel="canonical" href="${publicUrl}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${excerpt}">
 ${post.hero_image_url ? '<meta property="og:image" content="' + _mediaEsc(post.hero_image_url) + '">' : ''}
 <meta property="og:type" content="article">
+<meta property="og:url" content="${publicUrl}">
+<meta property="og:site_name" content="${name}">
+<meta property="article:published_time" content="${_mediaEsc(post.published_at || '')}">
+<meta property="article:modified_time" content="${_mediaEsc(post.rewritten_at || post.published_at || '')}">
+<meta property="article:author" content="${authorName}">
+${post.category_name ? '<meta property="article:section" content="'+_mediaEsc(post.category_name)+'">' : ''}
+${schemaTags}
 <style>
   *{box-sizing:border-box;-webkit-text-size-adjust:100%}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;color:#1a1a1a;background:#fafafa;line-height:1.8;font-size:16px}
-  a{color:${brand}}
-  .ct{max-width:780px;margin:0 auto;padding:0 24px}
-  header.site{background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 0;position:sticky;top:0;z-index:10}
-  header.site .row{display:flex;align-items:center;gap:12px;max-width:1100px;margin:0 auto;padding:0 24px}
-  header.site .brand{display:flex;align-items:center;gap:9px;font-weight:900;font-size:15px;color:#111;text-decoration:none}
-  header.site .nav{margin-left:auto}
-  article.post{padding:30px 0 50px}
-  article.post .meta{font-size:11.5px;color:#9ca3af;letter-spacing:.04em;text-transform:uppercase;font-weight:700;margin-bottom:10px}
-  article.post h1{font-size:34px;font-weight:900;line-height:1.35;margin:0 0 16px;letter-spacing:-.01em;color:#111}
-  article.post .excerpt{font-size:16px;color:#4b5563;margin:0 0 28px;line-height:1.7}
-  article.post .hero{margin:0 0 32px}
-  article.post .body h2{font-size:24px;font-weight:900;margin:42px 0 14px;color:#111;line-height:1.4;letter-spacing:-.005em}
-  article.post .body h3{font-size:19px;font-weight:800;margin:30px 0 10px;color:#1a1a1a}
-  article.post .body p{margin:0 0 18px;color:#1a1a1a}
-  article.post .body ul, article.post .body ol{margin:0 0 18px;padding-left:24px}
+  body{margin:0;font-family:${s.bodyFont};color:${s.textColor};background:${s.bg};line-height:1.8;font-size:16px}
+  a{color:${accent}}
+  header.brand-bar{background:${s.headerBg};border-bottom:1px solid ${s.cardBorder};padding:14px 24px;display:flex;align-items:center;gap:12px;max-width:1100px;margin:0 auto}
+  .b-meta{flex:1;min-width:0}
+  .b-name{font-family:${s.brandFont};font-weight:900;font-size:16px;color:${s.textColor};line-height:1.1;letter-spacing:-.01em}
+  .b-tag{font-size:10.5px;color:${s.mutedColor};margin-top:2px}
+  .b-nav{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:11px;font-weight:700;color:${s.subColor}}
+  .b-nav a{color:${s.subColor};text-decoration:none}
+  .b-nav .sub{background:${brand};color:#fff;padding:7px 14px;border-radius:${s.chipStyle==='pill'?'18px':(s.chipStyle==='square'?'0':'6px')};font-size:11.5px;font-weight:800;text-decoration:none}
+  article.post{padding:28px 24px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 280px;gap:30px}
+  article.post .main{max-width:none;min-width:0}
+  article.post .eye{font-family:${s.brandFont};font-size:10.5px;font-weight:800;letter-spacing:.1em;color:${accent};text-transform:uppercase;margin-bottom:11px}
+  article.post h1{font-family:${s.titleFont};font-size:32px;font-weight:${s.titleWeight};line-height:1.18;margin:0 0 14px;letter-spacing:-.015em;color:${s.textColor}}
+  article.post .dek{font-family:${s.bodyFont};font-size:15.5px;color:${s.subColor};line-height:1.7;margin:0 0 18px;font-style:italic}
+  article.post .meta-bar{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid ${s.cardBorder};border-bottom:1px solid ${s.cardBorder};font-size:11.5px;color:${s.subColor};margin-bottom:22px;flex-wrap:wrap}
+  article.post .author{display:flex;align-items:center;gap:8px;font-family:${s.brandFont}}
+  article.post .author-av{width:32px;height:32px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+  article.post .author b{color:${s.textColor};font-weight:700}
+  article.post .author .role{color:${s.mutedColor};font-size:10.5px}
+  article.post .dates{display:flex;gap:12px;font-size:10.5px;color:${s.mutedColor};margin-left:auto;font-family:${s.brandFont}}
+  article.post .dates b{color:${s.textColor};font-weight:700}
+  article.post .hero-img{margin:0 0 8px}
+  article.post .hero-cap{font-size:10.5px;color:${s.mutedColor};font-style:italic;text-align:center;margin-bottom:22px}
+  article.post .body h2{font-family:${s.titleFont};font-size:23px;font-weight:900;margin:36px 0 12px;color:${s.textColor};line-height:1.4;letter-spacing:-.005em;scroll-margin-top:14px}
+  article.post .body h3{font-family:${s.titleFont};font-size:17.5px;font-weight:800;margin:26px 0 10px;color:${s.textColor}}
+  article.post .body p{margin:0 0 18px;color:${s.textColor};font-family:${s.bodyFont};line-height:1.85;font-size:16px}
+  article.post .body ul, article.post .body ol{margin:0 0 18px;padding-left:24px;font-family:${s.bodyFont}}
   article.post .body li{margin-bottom:6px}
-  article.post .body blockquote{margin:24px 0;padding:12px 20px;border-left:3px solid ${brand};background:#f8f8f6;color:#374151;font-style:italic}
-  article.post .body code{background:#f5f5f5;padding:1px 6px;border-radius:4px;font-size:14px;font-family:'SF Mono',Menlo,monospace}
-  article.post .body pre{background:#1e293b;color:#e2e8f0;padding:18px 20px;border-radius:9px;overflow-x:auto;font-size:13.5px;line-height:1.6}
-  article.post .body strong{color:#0a0a0a}
-  footer.site{background:#fff;border-top:1px solid #e5e7eb;padding:24px 0;text-align:center;color:#9ca3af;font-size:12px}
-  footer.site a{color:#6b7280;text-decoration:none;font-weight:600}
-  @media (max-width:640px){
-    article.post h1{font-size:24px}article.post{padding:20px 0 40px}
+  article.post .body blockquote{margin:24px 0;padding:14px 20px;border-left:3px solid ${accent};background:${isDark?'#1e293b':(s.bg==='#fffbf5'?'#fef9e8':'#fef2f2')};color:${s.subColor};font-style:italic;border-radius:0 4px 4px 0}
+  article.post .body code{background:${isDark?'#0a1322':'#f5f5f5'};padding:1px 6px;border-radius:4px;font-size:14px;font-family:'SF Mono',Menlo,monospace;color:${accent}}
+  article.post .body pre{background:#0f172a;color:#e2e8f0;padding:18px 20px;border-radius:9px;overflow-x:auto;font-size:13.5px;line-height:1.6}
+  article.post .body strong{color:${s.textColor};font-weight:700}
+  footer.site-foot{padding:20px 24px;background:${s.headerBg};font-size:11px;color:${s.mutedColor};border-top:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  footer.site-foot a{color:${s.subColor};text-decoration:none;margin-right:14px}
+  @media (max-width:880px){
+    article.post{grid-template-columns:1fr}
+    aside{position:static !important}
+    article.post h1{font-size:24px}
+    article.post .meta-bar{flex-direction:column;align-items:flex-start;gap:7px}
+    article.post .dates{margin-left:0}
   }
 </style>
 </head><body>
 
-<header class="site"><div class="row">
-  <a href="/media/${_mediaEsc(media.slug)}" class="brand">${logoImg}<span>${name}</span></a>
-  <div class="nav">${headerCTA}</div>
-</div></header>
+<header class="brand-bar">
+  <a href="/media/${_mediaEsc(media.slug)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+    ${logoImg}
+    <div class="b-meta">
+      <div class="b-name">${name}</div>
+      ${media.tagline ? '<div class="b-tag">'+_mediaEsc(media.tagline)+'</div>' : ''}
+    </div>
+  </a>
+  <nav class="b-nav">
+    <a href="/media/${_mediaEsc(media.slug)}">記事一覧</a>
+    <a href="/media/${_mediaEsc(media.slug)}/about">編集部</a>
+    ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=header&utm_campaign='+_mediaEsc(media.slug)+'_'+_mediaEsc(post.slug)+'" class="sub" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
+  </nav>
+</header>
+
+${breadcrumbHTML}
 
 <article class="post">
-  <div class="ct">
-    <div class="meta">${_mediaEsc(post.category_name || '')} · ${_mediaEsc((post.published_at||'').slice(0,10))}</div>
+  <div class="main">
+    <div class="eye">▌ ${post.category_name ? _mediaEsc(post.category_name) + ' · ' : ''}記事</div>
     <h1>${title}</h1>
-    ${excerpt ? '<p class="excerpt">' + excerpt + '</p>' : ''}
-    <div class="hero">${hero}</div>
+    ${excerpt ? '<p class="dek">'+excerpt+'</p>' : ''}
+
+    <div class="meta-bar">
+      <div class="author">
+        <div class="author-av">${name.charAt(0).toUpperCase()}</div>
+        <div>
+          <b>${authorName}</b>
+          <div class="role">専門分野の実務経験者で構成</div>
+        </div>
+      </div>
+      <div class="dates">
+        <span>公開: <b>${_mediaEsc(_mediaFmtDate(post.published_at, dateLocale))}</b></span>
+        ${(post.rewritten_at && post.rewritten_at !== post.published_at) ? '<span>更新: <b>'+_mediaEsc(_mediaFmtDate(post.rewritten_at, dateLocale))+'</b></span>' : ''}
+        <span>読了: <b>${rt.minutes} 分</b></span>
+      </div>
+    </div>
+
+    ${tagsHTML}
+    <div class="hero-img">${hero}</div>
+    ${post.hero_image_url ? '<div class="hero-cap">図: '+title.slice(0,60)+'</div>' : ''}
+
     <div class="body">
-      ${body_html}
+      ${bodyWithIds}
       ${inlineCTA}
       ${endCard}
-      ${relatedHTML}
     </div>
   </div>
+
+  ${tocHTML}
 </article>
 
+${authorBioHTML}
+${relatedHTML}
 ${footerBanner}
 
-<footer class="site"><div class="ct">
-  <a href="/media/${_mediaEsc(media.slug)}">← ${name} 記事一覧</a> · Powered by <a href="https://myaiagents.agency" target="_blank" rel="noopener">MY AI Agent</a>
-</div></footer>
+<footer class="site-foot">
+  <div>© ${new Date().getFullYear()} ${name}</div>
+  <div>
+    <a href="/media/${_mediaEsc(media.slug)}">← 記事一覧</a>
+    <a href="/media/${_mediaEsc(media.slug)}/about">編集部について</a>
+  </div>
+</footer>
+
+</body></html>`;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 📖 公開メディア ABOUT ページ SSR (= 編集部紹介、 E-E-A-T 最大の核)
+// ──────────────────────────────────────────────────────────────────
+function _mediaRenderAbout(media, opts){
+  const s = _mediaTemplateStyle(media.template);
+  const isDark = s.dark;
+  const name = _mediaEsc(media.name || 'Blog');
+  const brand = _mediaEsc(media.brand_color || s.accent || '#0d4f4a');
+  const accent = _mediaEsc(s.accent || brand);
+  const host = _mediaEsc(media.domain || 'myaiagents.agency');
+  const lpUrl = _mediaEsc(media.lp_url || '');
+  const authorName = _mediaEsc(_mediaInferAuthorName(media, opts && opts.agent || {}));
+  const authorBio = _mediaEsc(_mediaInferAuthorBio(media, opts && opts.agent || {}));
+  const postsCount = (opts && opts.postsCount) || 0;
+  const logoImg = media.logo_url
+    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';object-fit:cover">'
+    : '<div style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';background:'+brand+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
+
+  const publicUrl = 'https://' + host + '/media/' + _mediaEsc(media.slug) + '/about';
+  const orgSchema = _mediaOrgSchema(media, host);
+  const schemaTags = _mediaSchemaInject(orgSchema);
+
+  return `<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>編集部について | ${name}</title>
+<meta name="description" content="${authorName} の編集方針と運営者情報。 ${authorBio.slice(0, 100)}">
+<link rel="canonical" href="${publicUrl}">
+<meta property="og:title" content="編集部について | ${name}">
+<meta property="og:url" content="${publicUrl}">
+<meta property="og:type" content="profile">
+${schemaTags}
+<style>
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:${s.bodyFont};color:${s.textColor};background:${s.bg};line-height:1.7}
+  a{color:${accent}}
+  header.brand-bar{background:${s.headerBg};border-bottom:1px solid ${s.cardBorder};padding:14px 24px;display:flex;align-items:center;gap:12px;max-width:1100px;margin:0 auto}
+  .b-name{font-family:${s.brandFont};font-weight:900;font-size:16px;color:${s.textColor};line-height:1.1}
+  .b-nav{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:11px;font-weight:700;color:${s.subColor}}
+  .b-nav a{color:${s.subColor};text-decoration:none}
+  .b-nav .sub{background:${brand};color:#fff;padding:7px 14px;border-radius:${s.chipStyle==='pill'?'18px':(s.chipStyle==='square'?'0':'6px')};font-size:11.5px;font-weight:800;text-decoration:none}
+  main{max-width:760px;margin:0 auto;padding:40px 24px 60px}
+  .eye{font-family:${s.brandFont};font-size:10.5px;font-weight:800;letter-spacing:.1em;color:${accent};text-transform:uppercase;margin-bottom:11px}
+  h1{font-family:${s.titleFont};font-size:34px;font-weight:${s.titleWeight};margin:0 0 16px;letter-spacing:-.015em;color:${s.textColor}}
+  .lead{font-size:16px;color:${s.subColor};line-height:1.8;margin:0 0 32px}
+  h2{font-family:${s.titleFont};font-size:21px;font-weight:900;margin:32px 0 12px;color:${s.textColor}}
+  p{margin:0 0 16px;color:${s.textColor};font-size:14.5px;line-height:1.85}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin:24px 0 32px}
+  .stat{background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};padding:14px 16px}
+  .stat-v{font-family:${s.brandFont};font-size:24px;font-weight:900;color:${s.textColor};line-height:1.1}
+  .stat-l{font-size:10.5px;color:${s.mutedColor};font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:4px}
+  ul{margin:8px 0 18px;padding-left:24px}
+  li{margin-bottom:6px;font-size:14px;color:${s.textColor};line-height:1.7}
+  footer.site-foot{padding:20px 24px;background:${s.headerBg};font-size:11px;color:${s.mutedColor};border-top:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+</head><body>
+
+<header class="brand-bar">
+  <a href="/media/${_mediaEsc(media.slug)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+    ${logoImg}<div class="b-name">${name}</div>
+  </a>
+  <nav class="b-nav">
+    <a href="/media/${_mediaEsc(media.slug)}">記事一覧</a>
+    ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=about_header" class="sub" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
+  </nav>
+</header>
+
+<main>
+  <div class="eye">▌ ABOUT · 編集部について</div>
+  <h1>${authorName}</h1>
+  <p class="lead">${authorBio}</p>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-v">${postsCount}</div><div class="stat-l">公開記事</div></div>
+    <div class="stat"><div class="stat-v">${media.categories ? media.categories.length : 0}</div><div class="stat-l">カテゴリ</div></div>
+    <div class="stat"><div class="stat-v">${media.created_at ? _mediaEsc(_mediaFmtDate(media.created_at).slice(0, 7)) : '—'}</div><div class="stat-l">運営開始</div></div>
+  </div>
+
+  <h2>編集方針</h2>
+  <p>当メディアは、 <b>${name}</b> をご覧の読者の方々が「明日から使える」 実用情報を提供することを使命としています。 編集部は当該分野の実務経験者で構成され、 一次情報を必ず確認した上で記事を作成しています。</p>
+
+  <h2>運営者情報</h2>
+  <ul>
+    <li><b>運営者</b>: ${name}</li>
+    ${lpUrl ? '<li><b>公式サイト</b>: <a href="'+lpUrl+'?utm_source=media&utm_medium=about" target="_blank" rel="noopener">'+lpUrl+'</a></li>' : ''}
+    ${media.created_at ? '<li><b>運営開始</b>: '+_mediaEsc(_mediaFmtDate(media.created_at))+'</li>' : ''}
+    <li><b>お問い合わせ</b>: ${lpUrl ? '<a href="'+lpUrl+'" target="_blank" rel="noopener">公式サイトのお問い合わせ窓口より</a>' : '公式サイトのお問い合わせ窓口より'}</li>
+  </ul>
+
+  <h2>記事の更新ポリシー</h2>
+  <p>当メディアの記事は、 法改正・新情報・読者からのフィードバックに基づき定期的にアップデートしています。 各記事には <b>公開日</b>と<b>最終更新日</b>を明記しています。</p>
+
+  <h2>引用・参考について</h2>
+  <p>記事内で引用する情報は、 政府発表・公式ドキュメント・業界統計など信頼できる一次ソースを優先しています。 二次ソースを引用する場合は出典を明示します。</p>
+</main>
+
+<footer class="site-foot">
+  <div>© ${new Date().getFullYear()} ${name}</div>
+  <div>
+    <a href="/media/${_mediaEsc(media.slug)}" style="margin-right:14px">← 記事一覧</a>
+    ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=about_footer" target="_blank" rel="noopener">運営者公式サイト</a>' : ''}
+  </div>
+</footer>
+
 </body></html>`;
 }
 
@@ -16065,114 +16304,390 @@ function _mediaEsc(s){
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// テンプレート別 スタイル変数 (= 5 テンプレートを同じ構造で色味だけ変える MVP)
+// ──────────────────────────────────────────────────────────────────
+// 🎨 5 テンプレート スタイル定義
+// ──────────────────────────────────────────────────────────────────
+function _mediaTemplateStyle(template){
+  const styles = {
+    minimal: {
+      bg:'#fafafa', headerBg:'#fff', cardBg:'#fff', cardBorder:'#e5e7eb',
+      textColor:'#0a0a0a', subColor:'#525252', mutedColor:'#737373',
+      brandFont:'-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif',
+      bodyFont:'-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif',
+      titleFont:'-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif',
+      heroTitleSize:'30px', titleWeight:'900', cardRadius:'10px',
+      chipStyle:'square', dark:false,
+    },
+    magazine: {
+      bg:'#fff', headerBg:'#fff', cardBg:'#fff', cardBorder:'#e5e5e5',
+      textColor:'#0a0a0a', subColor:'#525252', mutedColor:'#737373',
+      accent:'#dc2626',
+      brandFont:'"Iowan Old Style","Charter",Georgia,serif',
+      bodyFont:'"Iowan Old Style","Charter",Georgia,serif',
+      titleFont:'"Iowan Old Style","Charter",Georgia,serif',
+      heroTitleSize:'34px', titleWeight:'900', cardRadius:'2px',
+      chipStyle:'square', dark:false,
+    },
+    friendly: {
+      bg:'#fffbf5', headerBg:'#fff', cardBg:'#fff', cardBorder:'#fef3c7',
+      textColor:'#3f3622', subColor:'#92621c', mutedColor:'#a17a3e',
+      accent:'#f97316',
+      brandFont:'-apple-system,"Inter","Hiragino Sans",sans-serif',
+      bodyFont:'-apple-system,"Inter","Hiragino Sans",sans-serif',
+      titleFont:'-apple-system,"Hiragino Sans",sans-serif',
+      heroTitleSize:'32px', titleWeight:'900', cardRadius:'18px',
+      chipStyle:'pill', dark:false,
+    },
+    tech: {
+      bg:'#0f172a', headerBg:'#0f172a', cardBg:'#1e293b', cardBorder:'#334155',
+      textColor:'#e2e8f0', subColor:'#94a3b8', mutedColor:'#64748b',
+      accent:'#06b6d4',
+      brandFont:'"JetBrains Mono","SF Mono",ui-monospace,monospace',
+      bodyFont:'"IBM Plex Sans","Inter",sans-serif',
+      titleFont:'"IBM Plex Sans","Inter",sans-serif',
+      heroTitleSize:'28px', titleWeight:'800', cardRadius:'7px',
+      chipStyle:'square', dark:true,
+    },
+    newsletter: {
+      bg:'#fafaf9', headerBg:'#fff', cardBg:'#fff', cardBorder:'#e7e5e4',
+      textColor:'#0a0a0a', subColor:'#525252', mutedColor:'#78716c',
+      accent:'#f97316',
+      brandFont:'-apple-system,sans-serif',
+      bodyFont:'-apple-system,"Inter",sans-serif',
+      titleFont:'"Iowan Old Style","Charter",Georgia,serif',
+      heroTitleSize:'32px', titleWeight:'900', cardRadius:'11px',
+      chipStyle:'pill', dark:false,
+    },
+  };
+  return styles[(template || 'minimal').toLowerCase()] || styles.minimal;
+}
+// 後方互換 (= 旧コードからの呼び出しがあれば fall through OK)
 function _mediaTemplateVars(template){
-  switch((template || 'minimal').toLowerCase()){
-    case 'magazine':
-      return { font: 'Georgia,"Times New Roman",serif', bg: '#fafaf7', titleSize: '40px', titleWeight: '700', heroBg: 'linear-gradient(135deg,#1a1a1a,#3a3a3a)', accentRule: 'border-bottom:3px double currentColor' };
-    case 'friendly':
-      return { font: '-apple-system,"Hiragino Sans",sans-serif', bg: '#fef9f4', titleSize: '34px', titleWeight: '800', heroBg: 'linear-gradient(135deg,#fef3c7,#fde68a)', accentRule: '' };
-    case 'tech':
-      return { font: 'ui-monospace,SF Mono,Menlo,monospace', bg: '#0f172a', titleSize: '30px', titleWeight: '700', heroBg: 'linear-gradient(135deg,#1e293b,#0f172a)', accentRule: '', dark: true };
-    case 'newsletter':
-      return { font: '"Iowan Old Style","Charter",Georgia,serif', bg: '#f3e8ff', titleSize: '32px', titleWeight: '600', heroBg: 'linear-gradient(135deg,#f3e8ff,#e9d5ff)', accentRule: '' };
-    default: // minimal
-      return { font: '-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif', bg: '#fafafa', titleSize: '36px', titleWeight: '900', heroBg: '', accentRule: '' };
-  }
+  const s = _mediaTemplateStyle(template);
+  return { font: s.bodyFont, bg: s.bg, titleSize: s.heroTitleSize, titleWeight: s.titleWeight, heroBg:'', accentRule:'', dark: s.dark };
 }
 
-// Minimal テンプレート HTML (= SSR、 軽量、 SEO-safe)
-// opts.categoryFilter: 指定時はカテゴリページ (= /media/:slug/cat/:catSlug)
+// ──────────────────────────────────────────────────────────────────
+// 📝 編集部 byline / bio 推測 (= AI 痕跡消去、 E-E-A-T シグナル)
+// ──────────────────────────────────────────────────────────────────
+function _mediaInferAuthorName(media, agent){
+  if(media && media.author_name) return String(media.author_name);
+  const base = (media && media.name) || (agent && agent.name) || 'メディア';
+  return base + ' 編集部';
+}
+function _mediaInferAuthorBio(media, agent){
+  if(media && media.author_bio) return String(media.author_bio);
+  const name = (media && media.name) || (agent && agent.name) || 'このメディア';
+  const vert = (agent && agent.site_vertical) || '';
+  const lower = name.toLowerCase();
+  if(vert === 'finance' || /金融|資金|FX|投資|融資|税理士|社労士|会計/.test(name)){
+    return name + 'の編集チーム。 金融業界経験者・税理士・FP を含む専門家集団。 一次データ (政府公表 / 金融機関データ等) を元に最新情報を更新しています。';
+  }
+  if(vert === 'saas' || /SaaS|エンジニア|テック|開発/.test(name)){
+    return name + 'の編集チーム。 SaaS 業界経験者・開発者を含むメンバー構成。 実プロダクト運用の体験ベースで最新ノウハウを共有しています。';
+  }
+  if(vert === 'ec' || /EC|D2C|通販|ショップ/.test(name)){
+    return name + 'の編集チーム。 EC / D2C ブランドの運営経験者で構成。 実店舗・通販オペレーションの実体験から書いています。';
+  }
+  if(/採用|人事|労務|助成金|補助金/.test(name)){
+    return name + 'の編集チーム。 人事 / 社労士 / 経営コンサル経験者で構成。 厚労省 / 経産省 / 自治体の公表情報を一次ソースに、 申請者目線で最新情報を更新しています。';
+  }
+  return name + 'の編集チーム。 当該分野の専門家・実務経験者で構成。 一次情報を元に最新ノウハウを更新しています。';
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 📊 読了時間 / TOC 抽出
+// ──────────────────────────────────────────────────────────────────
+function _mediaReadingTime(html){
+  const text = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim();
+  const chars = text.length;
+  // 日本語 600 字 / 分
+  return { minutes: Math.max(1, Math.ceil(chars / 600)), chars };
+}
+function _mediaExtractToc(html){
+  if(!html) return [];
+  const items = [];
+  const re = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  let m, idx = 0;
+  while((m = re.exec(html)) !== null){
+    const text = String(m[1]).replace(/<[^>]+>/g, '').trim();
+    if(text){
+      items.push({ id: 's' + idx, text });
+      idx++;
+    }
+  }
+  return items;
+}
+function _mediaAddTocIds(html){
+  if(!html) return '';
+  let idx = 0;
+  return String(html).replace(/<h2(\s*[^>]*)>/gi, function(match, attrs){
+    if(/\bid\s*=/i.test(attrs)) return match;
+    const id = 's' + idx;
+    idx++;
+    return '<h2' + attrs + ' id="' + id + '">';
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 📐 JSON-LD schema (Article / BreadcrumbList / Organization)
+// ──────────────────────────────────────────────────────────────────
+function _mediaArticleSchema(media, post, body_html, host){
+  const url = 'https://' + host + '/media/' + media.slug + '/' + post.slug;
+  const rt = _mediaReadingTime(body_html);
+  const out = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    'headline': post.title || '',
+    'description': post.excerpt || '',
+    'datePublished': post.published_at || '',
+    'dateModified': post.rewritten_at || post.published_at || '',
+    'author': { '@type': 'Organization', 'name': post.author_name || _mediaInferAuthorName(media, {}) },
+    'publisher': {
+      '@type': 'Organization',
+      'name': media.name || '',
+    },
+    'wordCount': rt.chars,
+    'timeRequired': 'PT' + rt.minutes + 'M',
+    'mainEntityOfPage': { '@type': 'WebPage', '@id': url },
+    'url': url,
+  };
+  if(post.hero_image_url) out.image = post.hero_image_url;
+  if(post.category_name) out.articleSection = post.category_name;
+  if(media.logo_url){
+    out.publisher.logo = { '@type': 'ImageObject', 'url': media.logo_url };
+  }
+  return out;
+}
+function _mediaBreadcrumbSchema(media, post, host){
+  const items = [{ name: 'ホーム', url: 'https://' + host + '/media/' + media.slug }];
+  if(post && post.category_name){
+    const catSlug = _mediaSlugify(post.category_name);
+    items.push({ name: post.category_name, url: 'https://' + host + '/media/' + media.slug + '/cat/' + catSlug });
+  }
+  if(post){
+    items.push({ name: post.title, url: 'https://' + host + '/media/' + media.slug + '/' + post.slug });
+  }
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': items.map((it, i) => ({
+      '@type': 'ListItem', 'position': i + 1, 'name': it.name, 'item': it.url,
+    })),
+  };
+}
+function _mediaOrgSchema(media, host){
+  const out = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    'name': media.name || '',
+    'url': 'https://' + host + '/media/' + media.slug,
+    'description': media.description || ((media.name || '') + ' のオウンドメディア'),
+  };
+  if(media.logo_url) out.logo = media.logo_url;
+  return out;
+}
+function _mediaSchemaInject(...objects){
+  return objects.filter(Boolean).map(o =>
+    '<script type="application/ld+json">' + JSON.stringify(o) + '</script>'
+  ).join('');
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 📅 日付フォーマット
+// ──────────────────────────────────────────────────────────────────
+function _mediaFmtDate(iso, locale){
+  if(!iso) return '';
+  try {
+    const d = new Date(iso);
+    if(locale === 'mono') return (d.getUTCMonth()+1).toString().padStart(2,'0')+'.'+d.getUTCDate().toString().padStart(2,'0')+'.'+d.getUTCFullYear();
+    return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+  } catch(_){ return iso.slice(0,10); }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 📰 公開メディア INDEX ページ SSR
+//   - 5 テンプレート対応 (= minimal / magazine / friendly / tech / newsletter)
+//   - SEO + E-E-A-T 装備: 編集部 byline + Breadcrumb + About + Org schema
+//   - 「AI チーム運営」 痕跡を消去 → 編集部運営に置換
+// ──────────────────────────────────────────────────────────────────
 function _mediaRenderMinimalIndex(media, posts, opts){
+  const s = _mediaTemplateStyle(media.template);
+  const isDark = s.dark;
   const name = _mediaEsc(media.name || 'Blog');
-  const brand = _mediaEsc(media.brand_color || '#0d4f4a');
-  const tpl = _mediaTemplateVars(media.template);
-  const publicUrl = 'https://' + _mediaEsc(media.domain || 'myaiagents.agency') + '/media/' + _mediaEsc(media.slug);
+  const brand = _mediaEsc(media.brand_color || s.accent || '#0d4f4a');
+  const accent = _mediaEsc(s.accent || brand);
+  const host = _mediaEsc(media.domain || 'myaiagents.agency');
+  const publicUrl = 'https://' + host + '/media/' + _mediaEsc(media.slug);
   const lpUrl = _mediaEsc(media.lp_url || '');
   const categoryFilter = (opts && opts.categoryFilter) ? _mediaEsc(opts.categoryFilter) : '';
+  const authorName = _mediaEsc(_mediaInferAuthorName(media, opts && opts.agent || {}));
+  const authorBio = _mediaEsc(_mediaInferAuthorBio(media, opts && opts.agent || {}));
+
   const logoImg = media.logo_url
-    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:36px;height:36px;border-radius:7px;object-fit:cover">'
-    : '<div style="width:36px;height:36px;border-radius:7px;background:' + brand + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
-  // カテゴリは実際のリンクに (= /media/:slug/cat/:catSlug)
+    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:34px;height:34px;border-radius:7px;object-fit:cover">'
+    : '<div style="width:34px;height:34px;border-radius:'+(s.chipStyle==='pill'?'50%':'7px')+';background:'+brand+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
+
+  const chipRadius = s.chipStyle === 'pill' ? '16px' : (s.chipStyle === 'square' ? '0' : '7px');
   const categoriesHTML = (media.categories || []).map(c => {
     const isActive = categoryFilter === c.name;
-    return '<a href="/media/' + _mediaEsc(media.slug) + '/cat/' + _mediaEsc(c.slug) + '" style="color:' + (isActive ? '#fff' : '#374151') + ';text-decoration:none;padding:6px 12px;border:1px solid ' + (isActive ? brand : '#e5e7eb') + ';border-radius:7px;font-size:13px;font-weight:600;background:' + (isActive ? brand : '#fff') + '">' + _mediaEsc(c.name) + '</a>';
-  }).join('\n      ');
+    return '<a href="/media/' + _mediaEsc(media.slug) + '/cat/' + _mediaEsc(c.slug) + '" style="color:' + (isActive ? '#fff' : s.subColor) + ';text-decoration:none;padding:6px 12px;border:1px solid ' + (isActive ? accent : s.cardBorder) + ';border-radius:' + chipRadius + ';font-size:12.5px;font-weight:700;background:' + (isActive ? accent : s.cardBg) + ';white-space:nowrap">' + _mediaEsc(c.name) + '</a>';
+  }).join('');
 
-  const postsHTML = (posts && posts.length) ? posts.map(p => `
-    <article style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
-      ${p.hero_image_url ? '<img src="' + _mediaEsc(p.hero_image_url) + '" alt="" style="width:100%;height:180px;object-fit:cover">' : '<div style="height:180px;background:linear-gradient(135deg,' + brand + ',#0a3d39)"></div>'}
-      <div style="padding:18px 20px;flex:1;display:flex;flex-direction:column">
-        ${p.category_name ? '<div style="font-size:11px;font-weight:700;color:' + brand + ';letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">' + _mediaEsc(p.category_name) + '</div>' : ''}
-        <h2 style="font-size:17px;font-weight:800;color:#111;margin:0 0 8px;line-height:1.4"><a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(p.slug)}" style="color:#111;text-decoration:none">${_mediaEsc(p.title)}</a></h2>
-        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 12px;flex:1">${_mediaEsc((p.excerpt||'').slice(0, 120))}</p>
-        <div style="font-size:11px;color:#9ca3af;margin-top:auto">${_mediaEsc((p.published_at||'').slice(0,10))}</div>
+  // Featured + grid
+  const featured = (posts && posts.length) ? posts[0] : null;
+  const restPosts = (posts && posts.length > 1) ? posts.slice(1) : [];
+  const heroGrad = [
+    'linear-gradient(135deg,#1e293b,#0d4f4a)',
+    'linear-gradient(135deg,#7c2d12,#dc2626)',
+    'linear-gradient(135deg,#1e3a8a,#0f172a)',
+    'linear-gradient(135deg,#14532d,#15803d)',
+    'linear-gradient(135deg,#581c87,#dc2626)',
+  ];
+
+  const featuredHTML = featured ? `
+    <section style="padding:32px 24px 24px;border-bottom:2px solid ${isDark?'#334155':'#0a0a0a'};display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:center;max-width:1100px;margin:0 auto">
+      ${featured.hero_image_url
+        ? '<img src="'+_mediaEsc(featured.hero_image_url)+'" alt="'+_mediaEsc(featured.title)+'" style="width:100%;height:280px;object-fit:cover;border-radius:'+s.cardRadius+'">'
+        : '<div style="width:100%;height:280px;background:'+heroGrad[0]+';border-radius:'+s.cardRadius+'"></div>'}
+      <div>
+        <div style="font-size:10.5px;font-weight:800;letter-spacing:.1em;color:${accent};text-transform:uppercase;margin-bottom:9px;font-family:${s.brandFont}">▌ 特集${featured.category_name?' · '+_mediaEsc(featured.category_name):''}</div>
+        <h2 style="font-family:${s.titleFont};font-size:${s.heroTitleSize};font-weight:${s.titleWeight};line-height:1.18;margin:0 0 12px;letter-spacing:-.015em;color:${s.textColor}">
+          <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(featured.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(featured.title)}</a>
+        </h2>
+        ${featured.excerpt ? '<p style="font-size:14px;color:'+s.subColor+';line-height:1.65;margin:0 0 12px">'+_mediaEsc((featured.excerpt||'').slice(0,160))+'</p>' : ''}
+        <div style="display:flex;align-items:center;gap:9px;font-size:11.5px;color:${s.subColor}">
+          <div style="width:28px;height:28px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">${name.charAt(0).toUpperCase()}</div>
+          <span><b style="color:${s.textColor};font-weight:700">${authorName}</b> · ${_mediaEsc(_mediaFmtDate(featured.published_at))} · ${_mediaReadingTime(featured.excerpt||'').minutes>1?_mediaReadingTime(featured.excerpt||'').minutes:5} 分</span>
+        </div>
       </div>
-    </article>`).join('') : `
-    <div style="grid-column:1/-1;background:#fff;border:1.5px dashed #e5e7eb;border-radius:12px;padding:60px 30px;text-align:center;color:#9ca3af">
-      <div style="font-size:48px;margin-bottom:12px">📝</div>
-      <div style="font-size:14px;font-weight:600;color:#6b7280">記事準備中</div>
-      <div style="font-size:12px;color:#9ca3af;margin-top:6px">AI チームが最初の記事を執筆中です。 もう少しお待ちください。</div>
-    </div>`;
+    </section>` : '';
 
-  const isDark = !!tpl.dark;
-  const bodyColor = isDark ? '#e2e8f0' : '#111';
-  const subColor = isDark ? '#94a3b8' : '#6b7280';
-  const cardBg = isDark ? '#1e293b' : '#fff';
-  const cardBorder = isDark ? '#334155' : '#e5e7eb';
+  const cardsHTML = (restPosts.length > 0) ? restPosts.map((p, i) => `
+      <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column">
+        ${p.hero_image_url
+          ? '<img src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:150px;object-fit:cover">'
+          : '<div style="height:150px;background:'+heroGrad[(i+1)%heroGrad.length]+'"></div>'}
+        <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column">
+          ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+          <h3 style="font-family:${s.titleFont};font-size:15px;font-weight:800;color:${s.textColor};margin:0 0 7px;line-height:1.35;letter-spacing:-.005em">
+            <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(p.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(p.title)}</a>
+          </h3>
+          ${p.excerpt ? '<p style="font-size:12px;color:'+s.subColor+';line-height:1.55;margin:0 0 10px;flex:1">'+_mediaEsc((p.excerpt||'').slice(0,100))+'</p>' : ''}
+          <div style="font-size:10.5px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(authorName)} · ${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
+        </div>
+      </article>`).join('') : '';
+
+  const postsSection = featured ? `
+    ${featuredHTML}
+    ${cardsHTML ? `
+    <section style="padding:24px;max-width:1100px;margin:0 auto">
+      <div style="font-family:${s.brandFont};font-size:11px;color:${s.subColor};letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid ${s.cardBorder}">▌ ${categoryFilter ? '同カテゴリの記事' : '最新記事'}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px">${cardsHTML}</div>
+    </section>` : ''}
+  ` : `
+    <section style="padding:60px 24px;text-align:center;max-width:660px;margin:0 auto">
+      <div style="font-size:42px;margin-bottom:14px;opacity:.6">📝</div>
+      <h2 style="font-family:${s.titleFont};font-size:22px;font-weight:800;color:${s.textColor};margin:0 0 10px">記事準備中</h2>
+      <p style="font-size:13.5px;color:${s.subColor};line-height:1.7;margin:0">編集部が記事を準備中です。 もう少しお待ちください。</p>
+    </section>
+  `;
+
+  // About snippet (= E-E-A-T 強化、 編集部紹介)
+  const aboutHTML = `
+    <section style="padding:30px 24px;background:${isDark?'#0a1322':'#fafaf7'};border-top:1px solid ${s.cardBorder};border-bottom:1px solid ${s.cardBorder};display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;max-width:1100px;margin:0 auto">
+      <div style="width:72px;height:72px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;flex-shrink:0;font-family:${s.brandFont}">${name.charAt(0).toUpperCase()}</div>
+      <div>
+        <div style="font-size:10.5px;font-weight:800;color:${s.subColor};letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">編集部について</div>
+        <div style="font-family:${s.titleFont};font-size:16px;font-weight:900;color:${s.textColor};margin:0 0 7px">${authorName}</div>
+        <p style="font-size:12.5px;color:${s.subColor};line-height:1.7;margin:0 0 8px">${authorBio}</p>
+        <div style="font-size:11px"><a href="/media/${_mediaEsc(media.slug)}/about" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部について 詳しく →</a></div>
+      </div>
+    </section>`;
+
+  const breadcrumbHTML = `
+    <nav style="padding:9px 24px;background:${isDark?'#0a1322':'#fafaf7'};border-bottom:1px solid ${s.cardBorder};font-size:11px;color:${s.mutedColor};max-width:1100px;margin:0 auto;width:100%;font-family:${s.brandFont}">
+      <a href="/media/${_mediaEsc(media.slug)}" style="color:${s.subColor};text-decoration:none">ホーム</a>
+      ${categoryFilter ? '<span style="margin:0 7px;color:'+s.mutedColor+'">›</span><span style="color:'+s.textColor+';font-weight:700">'+_mediaEsc(categoryFilter)+'</span>' : '<span style="margin:0 7px;color:'+s.mutedColor+'">›</span>最新記事'}
+    </nav>`;
+
+  // Schema (= Organization)
+  const schemaTags = _mediaSchemaInject(_mediaOrgSchema(media, host));
+
   return `<!doctype html>
 <html lang="ja"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${name}</title>
-<meta name="description" content="${name} - ${lpUrl}">
-<meta property="og:title" content="${name}">
+<title>${categoryFilter ? categoryFilter + ' | ' : ''}${name}</title>
+<meta name="description" content="${_mediaEsc(media.description || (name + ' — ' + (lpUrl ? lpUrl : '') + 'のオウンドメディア'))}">
+<link rel="canonical" href="${publicUrl}${categoryFilter ? '/cat/'+_mediaEsc(_mediaSlugify(categoryFilter)) : ''}">
+<meta property="og:title" content="${categoryFilter ? categoryFilter + ' | ' : ''}${name}">
 <meta property="og:url" content="${publicUrl}">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="${name}">
+${schemaTags}
 <style>
   *{box-sizing:border-box;-webkit-text-size-adjust:100%}
-  body{margin:0;font-family:${tpl.font};color:${bodyColor};background:${tpl.bg};line-height:1.6}
+  body{margin:0;font-family:${s.bodyFont};color:${s.textColor};background:${s.bg};line-height:1.6}
   a{color:inherit}
-  .ct{max-width:1100px;margin:0 auto;padding:0 24px}
-  header.site{background:${cardBg};border-bottom:1px solid ${cardBorder};padding:14px 0;position:sticky;top:0;z-index:10}
-  header.site .row{display:flex;align-items:center;gap:14px}
-  header.site .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px;color:${bodyColor};text-decoration:none}
-  header.site .nav{margin-left:auto;display:flex;gap:6px;align-items:center}
-  header.site .cta{background:${brand};color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700}
-  .hero{padding:60px 0 50px;text-align:center}
-  .hero h1{font-size:${tpl.titleSize};font-weight:${tpl.titleWeight};margin:0 0 14px;color:${bodyColor};letter-spacing:-.01em;${tpl.accentRule};display:inline-block}
-  .hero p{font-size:15px;color:${subColor};margin:0 auto;max-width:560px}
-  .cats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:32px 0 14px;padding:0 24px}
-  .posts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;padding:30px 0 60px}
-  .posts article{background:${cardBg};border-color:${cardBorder} !important}
-  footer.site{background:${cardBg};border-top:1px solid ${cardBorder};padding:24px 0;text-align:center;color:${subColor};font-size:12px;margin-top:40px}
-  footer.site a{color:${subColor};text-decoration:none;font-weight:600}
+  header.brand-bar{background:${s.headerBg};border-bottom:1px solid ${s.cardBorder};padding:14px 24px;display:flex;align-items:center;gap:12px;max-width:1100px;margin:0 auto;width:100%}
+  .b-meta{flex:1;min-width:0}
+  .b-name{font-family:${s.brandFont};font-weight:900;font-size:16px;color:${s.textColor};line-height:1.1;letter-spacing:-.01em}
+  .b-tag{font-size:10.5px;color:${s.mutedColor};margin-top:2px}
+  .b-nav{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:11px;font-weight:700;color:${s.subColor};letter-spacing:.04em}
+  .b-nav a{color:${s.subColor};text-decoration:none}
+  .b-nav .sub{background:${brand};color:#fff;padding:7px 14px;border-radius:${s.chipStyle==='pill'?'18px':(s.chipStyle==='square'?'0':'6px')};font-size:11.5px;font-weight:800;text-decoration:none}
+  footer.site-foot{padding:20px 24px;background:${s.headerBg};font-size:11px;color:${s.mutedColor};border-top:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  footer.site-foot a{color:${s.subColor};text-decoration:none;margin-right:14px}
   @media (max-width:640px){
-    .hero{padding:40px 0 30px}.hero h1{font-size:${parseInt(tpl.titleSize)*0.7}px}
+    section[style*="grid-template-columns:1.3fr 1fr"]{grid-template-columns:1fr !important}
+    section[style*="grid-template-columns:auto 1fr"]{grid-template-columns:1fr !important;text-align:center}
+    section[style*="grid-template-columns:auto 1fr"] > div:first-child{margin:0 auto}
   }
 </style>
 </head><body>
-<header class="site"><div class="ct row">
-  <a href="/media/${_mediaEsc(media.slug)}" class="brand">${logoImg}<span>${name}</span></a>
-  <div class="nav">
-    ${lpUrl ? '<a href="' + lpUrl + '?utm_source=media&utm_medium=header&utm_campaign=media_to_lp" class="cta" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
-  </div>
-</div></header>
+
+<header class="brand-bar">
+  <a href="/media/${_mediaEsc(media.slug)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+    ${logoImg}
+    <div class="b-meta">
+      <div class="b-name">${name}</div>
+      ${media.tagline ? '<div class="b-tag">'+_mediaEsc(media.tagline)+'</div>' : ''}
+    </div>
+  </a>
+  <nav class="b-nav">
+    <a href="/media/${_mediaEsc(media.slug)}">記事一覧</a>
+    <a href="/media/${_mediaEsc(media.slug)}/about">編集部</a>
+    ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=header&utm_campaign=media_to_lp" class="sub" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
+  </nav>
+</header>
+
+${breadcrumbHTML}
+
+${categoryFilter ? `
+  <section style="padding:36px 24px 24px;max-width:1100px;margin:0 auto;border-bottom:1px solid ${s.cardBorder}">
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:.1em;color:${accent};text-transform:uppercase;margin-bottom:9px;font-family:${s.brandFont}">▌ カテゴリ</div>
+    <h1 style="font-family:${s.titleFont};font-size:${s.heroTitleSize};font-weight:${s.titleWeight};margin:0 0 8px;letter-spacing:-.015em">${categoryFilter}</h1>
+    <p style="font-size:14px;color:${s.subColor};margin:0">${posts.length} 件の記事</p>
+  </section>
+` : ''}
+
+${categoriesHTML ? `<div style="padding:14px 24px;background:${s.headerBg};display:flex;gap:7px;overflow-x:auto;border-bottom:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;width:100%">${categoriesHTML}</div>` : ''}
 
 <main>
-  <section class="hero ct">
-    <h1>${categoryFilter ? _mediaEsc(categoryFilter) : name}</h1>
-    <p>${categoryFilter ? ('「' + _mediaEsc(categoryFilter) + '」 カテゴリの記事 · <a href="/media/' + _mediaEsc(media.slug) + '" style="color:' + brand + '">← ' + name + ' トップへ</a>') : 'AI チームが運営する、 ' + name + ' のオウンドメディア'}</p>
-  </section>
-  ${categoriesHTML ? '<div class="cats">' + categoriesHTML + '</div>' : ''}
-  <section class="ct">
-    <div class="posts">${postsHTML}</div>
-  </section>
+  ${postsSection}
 </main>
 
-<footer class="site"><div class="ct">
-  Powered by <a href="https://myaiagents.agency" target="_blank" rel="noopener">MY AI Agent</a>
-</div></footer>
+${aboutHTML}
+
+<footer class="site-foot">
+  <div>© ${new Date().getFullYear()} ${name}</div>
+  <div>
+    <a href="/media/${_mediaEsc(media.slug)}/about">編集部について</a>
+    ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=footer" target="_blank" rel="noopener">運営者情報</a>' : ''}
+  </div>
+</footer>
+
 </body></html>`;
 }
 
@@ -29444,6 +29959,34 @@ const server=http.createServer(async(req,res)=>{
     return serveAgentSharePage(res, aRoute[1]);
   }
 
+  // /media/:slug/about → 編集部 紹介 ページ (= E-E-A-T、 信頼性)
+  const mediaAboutRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/about\/?$/);
+  if(mediaAboutRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaAboutRoute[1];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+          return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>404 — メディアが見つかりません</h1></body></html>');
+        }
+        const { agent } = found;
+        const postsCount = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft').length;
+        const html = _mediaRenderAbout(agent.media, { agent, postsCount });
+        res.writeHead(200, {
+          'Content-Type': 'text/html;charset=utf-8',
+          'Cache-Control': 'public, max-age=600',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
+        });
+        return res.end(html);
+      } catch(e){
+        console.warn('[media-about] failed:', e.message);
+        res.writeHead(500); return res.end('500');
+      }
+    })();
+  }
+
   // /media/:slug/cat/:catSlug → カテゴリページ SSR (= 認証不要、 該当カテゴリの記事一覧)
   const mediaCatRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/cat\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
   if(mediaCatRoute && method === 'GET'){
@@ -29471,7 +30014,7 @@ const server=http.createServer(async(req,res)=>{
           if(isOther) return !pCat; // 未分類 page = category_name 空の記事
           return pCat === targetNorm || pCat.indexOf(targetNorm) >= 0 || targetNorm.indexOf(pCat) >= 0;
         });
-        const html = _mediaRenderMinimalIndex(agent.media, posts, { categoryFilter: catName });
+        const html = _mediaRenderMinimalIndex(agent.media, posts, { categoryFilter: catName, agent });
         res.writeHead(200, {
           'Content-Type': 'text/html;charset=utf-8',
           'Cache-Control': 'public, max-age=300',
@@ -29517,7 +30060,7 @@ const server=http.createServer(async(req,res)=>{
           const fillers = allOther.filter(p => !related.find(r => r.slug === p.slug)).slice(0, need);
           related = related.concat(fillers);
         }
-        const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html, { relatedPosts: related });
+        const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html, { relatedPosts: related, agent });
         res.writeHead(200, {
           'Content-Type': 'text/html;charset=utf-8',
           'Cache-Control': 'public, max-age=300',
@@ -29546,7 +30089,7 @@ const server=http.createServer(async(req,res)=>{
         }
         const { agent } = found;
         const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
-        const html = _mediaRenderMinimalIndex(agent.media, posts);
+        const html = _mediaRenderMinimalIndex(agent.media, posts, { agent });
         res.writeHead(200, {
           'Content-Type': 'text/html;charset=utf-8',
           'Cache-Control': 'public, max-age=300',

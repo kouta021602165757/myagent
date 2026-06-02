@@ -15645,13 +15645,19 @@ function _detectKwIntent(kw){
     ctaType: '無料診断 / 詳細問い合わせ',
   };
   // ランキング系 (おすすめ / 選び方 / ランキング / N 選 / ベスト)
-  if(/おすすめ|オススメ|お勧め|選び方|ランキング|\d+\s*選|best\s*\d+|ベスト/.test(k)) return {
-    type: 'best',
-    label: 'ランキング型',
-    structure: '評価基準 (= 3-5 軸) を最初に明示 → 各候補を 1 位から ランキング、 各候補に「強み / 弱み / 推奨対象」 を詳述。 最後に 用途別の選び方マトリクス',
-    must_sections: ['評価基準 (= 必須)', 'ランキング 1 位〜', '用途別マトリクス', '失敗しない選び方', 'FAQ'],
-    ctaType: '無料試用 / カートリンク',
-  };
+  // N 選を 検出して 数を抽出 (= "10 選" → 10 個 のプロダクトカード強制)
+  const numMatch = k.match(/(\d+)\s*選|best\s*(\d+)|top\s*(\d+)/);
+  if(/おすすめ|オススメ|お勧め|選び方|ランキング|\d+\s*選|best\s*\d+|ベスト|top\s*\d+/.test(k)){
+    const productCount = numMatch ? parseInt(numMatch[1] || numMatch[2] || numMatch[3], 10) : 5;
+    return {
+      type: 'best',
+      label: 'ランキング型 (= N 選 / おすすめ)',
+      product_count: Math.min(15, Math.max(3, productCount)),
+      structure: '冒頭に評価基準 (= 3-5 軸) + 全体比較表。 そして【最重要】 1 プロダクトずつ <div class="product-card"> で 詳細レビュー (= 製品名、 ⭐ 評価、 機能箇条書き、 料金、 メリ デメ、 向き不向き、 公式 URL)。 末尾に用途別マトリクス',
+      must_sections: ['評価基準テーブル (= 必須)', '全体比較表', '★ 各プロダクト 個別レビュー (= product-card で 1 個ずつ)', '用途別マトリクス', '失敗しない選び方', 'FAQ'],
+      ctaType: '無料試用 / カートリンク',
+    };
+  }
   // 手順系 (やり方 / 方法 / 手順 / ステップ / how)
   if(/やり方|方法|手順|ステップ|step|how\s*to|始め方|作り方|使い方/.test(k)) return {
     type: 'howto',
@@ -15939,6 +15945,7 @@ async function _mediaGenerateArticle(agent, params){
     + '【検索意図】' + intent.type + ' (= ' + intent.label + ')\n'
     + '【意図別構造】 ' + intent.structure + '\n'
     + '【意図必須セクション】 ' + intent.must_sections.join(' / ') + '\n'
+    + (intent.product_count ? '【製品数】 ' + intent.product_count + ' 個 (= タイトルに対応、 必ず ' + intent.product_count + ' 個の <div class="product-card"> を出力)\n' : '')
     + '【目標文字数】 ' + tpl.targetChars + ' 字 (=±500 字、 これ以上は書かない)\n'
     + '【H2 章数】 ' + tpl.h2Count + ' 個 — 1 H2 当たり 300-500 字で 短く区切る\n'
     + '【必須セクション】 ' + tpl.requiredSections.join(' / ') + '\n'
@@ -15956,14 +15963,54 @@ async function _mediaGenerateArticle(agent, params){
     + '- 出典のない 数値 / 統計 / 「ROI X%」 「成功率 Y%」 等は 一切書かない\n'
     + '- 「当チームの実測」 「弊社の事例」 等の 架空体験談 は 禁止\n'
     + '- 一次ソース (公式サイト / 政府発表 / 業界統計) を持たない事実は「公式案内をご確認ください」 と書く\n'
-    + '- 競合プロダクト名 / 競合サービス名 を 具体的に列挙しない (= 自社メディアでの 競合促進を防ぐ)\n'
+    + (intent.type === 'best'
+        ? '- ランキング型 (N 選 / おすすめ) なので 具体的なプロダクト名は **必ず列挙** (= product-card で 1 個ずつ詳細紹介)\n'
+        : '- 競合プロダクト名 / 競合サービス名 を 具体的に列挙しない (= 自社メディアでの 競合促進を防ぐ)\n')
     + '- 「2025 年最新」 等の 古い年号 NG。 現在年 (2026 年) に統一\n'
     + '\n【📊 必須 視覚要素 — 全て入れる】\n'
     + '1. **基礎情報テーブル** (必須): 記事冒頭付近に 縦型 <table> で key facts を整理\n'
     + '   例: 開催日 / 料金 / 対象者 / 申請期限 / 所要時間 等 5-8 行の key:value\n'
     + '   <table><tr><th>開催日</th><td>例年 <mark>8 月 9 日 20:00〜</mark></td></tr>...</table>\n'
     + '2. **目次型 H2** — 「○○ とは｜基礎情報」 「見どころ｜△△」 等 縦棒 (｜) で 主+副ラベル\n'
-    + '3. **🎨 section-hero card** — 重要セクション 2-3 個 を 紺背景の章扉カードで強調:\n'
+    + (intent.type === 'best' ? '3-A. **🏆 product-card** (ランキング型 必須) — '+ (intent.product_count || 5) +' 個の プロダクトを 1 個ずつ 個別カードで詳細紹介:\n'
+       + '   <div class="product-card">\n'
+       + '     <div class="pc-head">\n'
+       + '       <div class="pc-rank r1">1</div>  <!-- r1/r2/r3 で 金銀銅 色変化、 4 位以降は class なし -->\n'
+       + '       <div class="pc-name">\n'
+       + '         <h3>プロダクト名</h3>\n'
+       + '         <div class="pc-sub">英表記・サブタイトル</div>\n'
+       + '       </div>\n'
+       + '       <div class="pc-score">\n'
+       + '         <div class="pc-score-val">4.8</div><span class="pc-score-max">/5</span>\n'
+       + '         <div class="pc-score-stars">★★★★★</div>\n'
+       + '       </div>\n'
+       + '     </div>\n'
+       + '     <div class="pc-body">\n'
+       + '       <div class="pc-tagline">このプロダクトの 1 文要約 (= 何で 1 位なのか)</div>\n'
+       + '       <div class="pc-meta">\n'
+       + '         <div class="pc-meta-item"><div class="pc-meta-lbl">料金</div><div class="pc-meta-val">$X/月〜</div></div>\n'
+       + '         <div class="pc-meta-item"><div class="pc-meta-lbl">無料試用</div><div class="pc-meta-val">14日</div></div>\n'
+       + '         <div class="pc-meta-item"><div class="pc-meta-lbl">日本語対応</div><div class="pc-meta-val">○</div></div>\n'
+       + '         <div class="pc-meta-item"><div class="pc-meta-lbl">運営</div><div class="pc-meta-val">国名</div></div>\n'
+       + '       </div>\n'
+       + '       <div class="pc-features">\n'
+       + '         <div class="pc-features-h">主な機能</div>\n'
+       + '         <ul><li>機能 1</li><li>機能 2</li><li>機能 3</li><li>機能 4</li></ul>\n'
+       + '       </div>\n'
+       + '       <div class="pc-prokon">\n'
+       + '         <div class="pc-pro"><div class="pc-pk-h">メリット</div><ul><li>...</li><li>...</li></ul></div>\n'
+       + '         <div class="pc-kon"><div class="pc-pk-h">デメリット</div><ul><li>...</li><li>...</li></ul></div>\n'
+       + '       </div>\n'
+       + '       <div class="pc-fit"><strong>こんな人向け:</strong> 〇〇 を求める △△ なチーム</div>\n'
+       + '     </div>\n'
+       + '     <div class="pc-foot">\n'
+       + '       <a href="https://公式 URL" target="_blank" rel="nofollow noopener" class="pc-link">公式サイトを見る →</a>\n'
+       + '       <div class="pc-disclaimer">※ ' + (intent.product_count || 5) + ' 選の N 位</div>\n'
+       + '     </div>\n'
+       + '   </div>\n'
+       + '   ※ 必ず ' + (intent.product_count || 5) + ' 個の product-card を 順位順に並べる、 各カードに 必須フィールド (= ランキング番号、 名前、 スコア、 料金、 機能、 メリデメ、 公式 URL) を全て埋める\n'
+       + '\n3. **🎨 section-hero card** — 重要セクション 2-3 個 を 紺背景の章扉カードで強調:\n'
+       : '3. **🎨 section-hero card** — 重要セクション 2-3 個 を 紺背景の章扉カードで強調:\n')
     + '   <div class="section-hero">\n'
     + '     <div class="section-eyebrow">CATEGORY · YEAR (= 英大文字)</div>\n'
     + '     <h2>セクション タイトル</h2>\n'
@@ -16558,6 +16605,55 @@ ${schemaTags}
   article.post .body .end-card-cta .ec-arrow{color:#fbbf24;font-weight:900;font-size:16px;transition:transform .2s}
   article.post .body .end-card-cta .ec-btn:hover .ec-arrow{transform:translateX(4px)}
   article.post .body .end-card-cta .ec-foot{font-size:11px;color:rgba(255,255,255,.55);font-weight:600;margin-top:18px;letter-spacing:.04em;position:relative}
+  /* 🎨 product-card — ランキング型 記事の 1 プロダクトずつ詳細レビュー カード */
+  article.post .body .product-card{background:#fff;border:1px solid ${s.cardBorder};border-radius:14px;margin:28px 0;overflow:hidden;box-shadow:0 6px 24px rgba(10,31,61,.06);transition:transform .15s,box-shadow .15s}
+  article.post .body .product-card:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(10,31,61,.1)}
+  article.post .body .product-card .pc-head{display:flex;align-items:center;gap:18px;padding:22px 26px;background:linear-gradient(180deg,#fafaf7,#fff);border-bottom:1px solid ${s.cardBorder}}
+  article.post .body .product-card .pc-rank{flex-shrink:0;width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#0a1f3d,#0d4f4a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;letter-spacing:-.02em;box-shadow:0 4px 12px rgba(10,31,61,.18)}
+  article.post .body .product-card .pc-rank.r1{background:linear-gradient(135deg,#d97706,#ea580c);box-shadow:0 4px 14px rgba(217,119,6,.32)}
+  article.post .body .product-card .pc-rank.r2{background:linear-gradient(135deg,#94a3b8,#64748b)}
+  article.post .body .product-card .pc-rank.r3{background:linear-gradient(135deg,#b45309,#92400e)}
+  article.post .body .product-card .pc-name{flex:1;min-width:0}
+  article.post .body .product-card .pc-name h3{font-size:21px;font-weight:900;line-height:1.4;color:#0a1f3d;margin:0;padding:0;background:none;border:0}
+  article.post .body .product-card .pc-sub{font-size:11.5px;color:#64748b;margin-top:4px;font-weight:600;letter-spacing:.02em}
+  article.post .body .product-card .pc-score{flex-shrink:0;text-align:center;padding-left:18px;border-left:1px solid ${s.cardBorder}}
+  article.post .body .product-card .pc-score-val{font-size:30px;font-weight:900;color:#d97706;line-height:1;font-variant-numeric:tabular-nums}
+  article.post .body .product-card .pc-score-max{font-size:13px;color:#94a3b8;font-weight:700}
+  article.post .body .product-card .pc-score-stars{color:#d97706;font-size:11.5px;margin-top:3px;letter-spacing:.02em}
+  article.post .body .product-card .pc-body{padding:22px 26px}
+  article.post .body .product-card .pc-tagline{font-size:14px;color:#475569;line-height:1.7;margin-bottom:16px;padding:12px 16px;background:#fafaf7;border-left:3px solid #0a1f3d;border-radius:0 6px 6px 0}
+  article.post .body .product-card .pc-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+  article.post .body .product-card .pc-meta-item{padding:10px 14px;background:#fafaf7;border-radius:8px;border:1px solid ${s.cardBorder}}
+  article.post .body .product-card .pc-meta-lbl{font-size:10px;color:#94a3b8;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:3px}
+  article.post .body .product-card .pc-meta-val{font-size:14px;color:${s.textColor};font-weight:800}
+  article.post .body .product-card .pc-features{margin:14px 0}
+  article.post .body .product-card .pc-features-h{font-size:11.5px;color:#94a3b8;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+  article.post .body .product-card .pc-features ul{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 18px}
+  article.post .body .product-card .pc-features li{position:relative;padding-left:22px;font-size:13.5px;line-height:1.6;color:${s.textColor}}
+  article.post .body .product-card .pc-features li::before{content:"✓";position:absolute;left:0;color:#0a1f3d;font-weight:900}
+  article.post .body .product-card .pc-prokon{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+  article.post .body .product-card .pc-pro,article.post .body .product-card .pc-kon{padding:14px 16px;border-radius:8px;background:#fafaf7}
+  article.post .body .product-card .pc-pro{border-left:4px solid #16a34a}
+  article.post .body .product-card .pc-kon{border-left:4px solid #dc2626}
+  article.post .body .product-card .pc-pk-h{font-size:11.5px;font-weight:800;letter-spacing:.04em;margin-bottom:6px}
+  article.post .body .product-card .pc-pro .pc-pk-h{color:#16a34a}
+  article.post .body .product-card .pc-kon .pc-pk-h{color:#dc2626}
+  article.post .body .product-card .pc-pro ul,article.post .body .product-card .pc-kon ul{list-style:none;padding:0;margin:0}
+  article.post .body .product-card .pc-pro li,article.post .body .product-card .pc-kon li{font-size:12.5px;line-height:1.6;padding:3px 0 3px 18px;position:relative;color:${s.textColor}}
+  article.post .body .product-card .pc-pro li::before{content:"+";position:absolute;left:0;color:#16a34a;font-weight:900}
+  article.post .body .product-card .pc-kon li::before{content:"−";position:absolute;left:0;color:#dc2626;font-weight:900}
+  article.post .body .product-card .pc-fit{padding:12px 16px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border-radius:8px;font-size:13px;color:${s.textColor};line-height:1.7;font-weight:600;margin:14px 0;border:1px solid #fed7aa}
+  article.post .body .product-card .pc-fit strong{color:#92400e;font-weight:900}
+  article.post .body .product-card .pc-foot{padding:14px 26px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-top:1px solid ${s.cardBorder};background:#fafaf7}
+  article.post .body .product-card .pc-link{display:inline-flex;align-items:center;gap:7px;background:#0a1f3d;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:800;transition:all .15s}
+  article.post .body .product-card .pc-link:hover{background:#0d4f4a;transform:translateX(2px)}
+  article.post .body .product-card .pc-disclaimer{font-size:10.5px;color:#94a3b8;flex:1;min-width:200px;text-align:right}
+  @media (max-width:720px){
+    article.post .body .product-card .pc-head{flex-wrap:wrap}
+    article.post .body .product-card .pc-prokon{grid-template-columns:1fr}
+    article.post .body .product-card .pc-score{padding-left:0;border-left:0;padding-top:8px;border-top:1px dashed ${s.cardBorder};margin-top:4px;width:100%;display:flex;align-items:center;justify-content:flex-start;gap:14px}
+    article.post .body .product-card .pc-score-val,article.post .body .product-card .pc-score-max,article.post .body .product-card .pc-score-stars{display:inline-block}
+  }
   /* 表 — 横型 (thead あり) */
   article.post .body table{width:100%;border-collapse:collapse;margin:28px 0;font-size:14.5px;border:1px solid ${s.cardBorder};border-radius:6px;overflow:hidden}
   article.post .body table thead{background:${isDark?'#0a1322':'#fafaf7'}}

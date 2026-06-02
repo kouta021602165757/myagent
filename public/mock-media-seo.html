@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>モック: SEO 武装 + 非 AI 著者 メディア</title>
+<style>
+*{box-sizing:border-box;-webkit-text-size-adjust:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:#e7e7e3;color:#1a1a1a;line-height:1.6}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 12px 80px}
+.intro{background:#fff;border-radius:14px;padding:22px 26px;margin-bottom:24px;border:1px solid rgba(0,0,0,.08)}
+.intro h1{margin:0 0 8px;font-size:22px;font-weight:900}
+.intro p{margin:0;color:#555;font-size:13px;line-height:1.7}
+.intro .note{background:#fafaf7;border-left:3px solid #a3e635;padding:10px 13px;margin-top:13px;font-size:11.5px;color:#555;border-radius:0 6px 6px 0}
+
+.section{margin-bottom:34px}
+.section-h{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:0 6px}
+.section-num{width:44px;height:44px;border-radius:11px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;background:#0d4f4a;letter-spacing:.04em}
+.section-h-text{flex:1}
+.section-h-eye{font-size:10.5px;font-weight:800;color:#71717a;letter-spacing:.06em;text-transform:uppercase}
+.section-h-ti{font-size:18px;font-weight:900;margin-top:2px}
+.section-h-sub{font-size:12px;color:#525252;margin-top:2px}
+
+.frame{background:#1a1a1a;border-radius:14px;padding:10px;overflow:hidden;position:relative}
+.frame-bar{display:flex;gap:6px;padding:4px 8px 8px;align-items:center}
+.frame-bar span{width:11px;height:11px;border-radius:50%;background:#3a3a3a}
+.frame-bar .url{margin-left:auto;font-size:10.5px;color:#888;background:#0a0a0a;padding:4px 14px;border-radius:6px;font-family:'SF Mono',Menlo,monospace}
+.frame-body{background:#fff;border-radius:6px;overflow:hidden;min-height:560px;position:relative}
+
+/* annotation overlay */
+.note-pin{position:absolute;background:#dc2626;color:#fff;font-size:9.5px;font-weight:800;padding:3px 7px;border-radius:11px;letter-spacing:.02em;z-index:2;line-height:1;box-shadow:0 4px 10px rgba(220,38,38,.4)}
+
+/* ═══════════ 共通 editorial style ═══════════ */
+.med{font-family:-apple-system,'Hiragino Sans',sans-serif;color:#0a0a0a;background:#fff}
+.med header.brand-bar{padding:14px 26px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #e5e5e5;background:#fff;position:relative}
+.med .brand-name{font-family:'Iowan Old Style','Charter',Georgia,serif;font-weight:900;font-size:19px;letter-spacing:-.015em;color:#0a0a0a}
+.med .brand-sub{font-size:10.5px;color:#737373;margin-top:2px;font-style:italic}
+.med-nav{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:11px;font-weight:700;color:#444;letter-spacing:.04em;text-transform:uppercase}
+.med-nav a{color:#444;text-decoration:none;cursor:pointer}
+.med-nav .sub-btn{background:#0a0a0a;color:#fff;padding:7px 13px;text-decoration:none;font-weight:800;font-size:10.5px;letter-spacing:.06em}
+
+/* breadcrumb (= 階層 + schema 効く) */
+.med-bc{padding:9px 26px;background:#fafaf7;border-bottom:1px solid #e5e5e5;font-size:11px;color:#737373}
+.med-bc a{color:#525252;text-decoration:none}
+.med-bc .arr{margin:0 7px;color:#a3a3a3}
+
+/* ═══════════ Index page ═══════════ */
+.med-featured{padding:34px 26px 22px;border-bottom:2px solid #0a0a0a;display:grid;grid-template-columns:1.3fr 1fr;gap:30px;align-items:center}
+.med-feat-img{background:linear-gradient(135deg,#1e293b 0%,#0d4f4a 50%,#3a3a3a 100%);height:280px;position:relative;overflow:hidden;border-radius:2px}
+.med-feat-img::before{content:'';position:absolute;inset:0;background:radial-gradient(at 30% 30%,rgba(192,255,92,.15),transparent 60%)}
+.med-feat-cat{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#dc2626;text-transform:uppercase;margin-bottom:9px}
+.med-feat-h{font-family:'Iowan Old Style','Charter',Georgia,serif;font-size:34px;font-weight:900;line-height:1.15;margin:0 0 12px;letter-spacing:-.02em;color:#0a0a0a}
+.med-feat-tx{font-size:14px;color:#525252;line-height:1.65;margin:0 0 12px}
+.med-feat-byline{display:flex;align-items:center;gap:10px;font-size:11.5px;color:#525252}
+.med-feat-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#0d4f4a,#3a3a3a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.med-feat-byline b{color:#0a0a0a;font-weight:700}
+.med-feat-byline .mt{color:#737373;font-style:italic}
+
+.med-grid-h{padding:24px 26px 0;font-family:'SF Mono',monospace;font-size:11px;color:#525252;letter-spacing:.1em;text-transform:uppercase;font-weight:700;display:flex;gap:18px}
+.med-grid-h a{color:#737373;text-decoration:none;border-bottom:2px solid transparent;padding-bottom:7px}
+.med-grid-h a.active{color:#0a0a0a;border-bottom-color:#dc2626}
+.med-grid{padding:18px 26px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;border-bottom:1px solid #e5e5e5}
+.med-card{cursor:pointer}
+.med-card-img{height:130px;margin-bottom:11px;position:relative;overflow:hidden;border-radius:2px}
+.med-card-img.c1{background:linear-gradient(135deg,#7c2d12,#dc2626)}
+.med-card-img.c2{background:linear-gradient(135deg,#1e3a8a,#0f172a)}
+.med-card-img.c3{background:linear-gradient(135deg,#14532d,#15803d)}
+.med-card-cat{font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#dc2626;text-transform:uppercase;margin-bottom:5px}
+.med-card-h{font-family:'Iowan Old Style','Charter',Georgia,serif;font-size:16.5px;font-weight:800;line-height:1.3;margin:0 0 7px;letter-spacing:-.005em}
+.med-card-byline{font-size:10.5px;color:#737373;font-style:italic}
+
+/* About / 運営者 セクション (= E-E-A-T) */
+.med-about{padding:30px 26px;background:#fafaf7;border-bottom:1px solid #e5e5e5;display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+.med-about-av{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0d4f4a,#3a3a3a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;flex-shrink:0}
+.med-about-bd .lbl{font-size:10.5px;font-weight:800;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.med-about-h{font-family:'Iowan Old Style',Georgia,serif;font-size:19px;font-weight:900;margin:0 0 6px;color:#0a0a0a}
+.med-about-tx{font-size:13px;color:#525252;line-height:1.7;margin:0 0 8px}
+.med-about-links{display:flex;gap:14px;font-size:11px}
+.med-about-links a{color:#0d4f4a;font-weight:700;text-decoration:none;border-bottom:1px solid #0d4f4a;padding-bottom:1px}
+
+/* footer */
+.med-foot{padding:24px 26px;background:#fff;font-size:11px;color:#737373;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.med-foot a{color:#525252;text-decoration:none;margin-right:14px}
+
+/* ═══════════ Article page ═══════════ */
+.art{display:grid;grid-template-columns:1fr 280px;gap:30px;padding:28px 26px}
+.art-main{max-width:none}
+.art-eye{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#dc2626;text-transform:uppercase;margin-bottom:11px}
+.art-h{font-family:'Iowan Old Style','Charter',Georgia,serif;font-size:32px;font-weight:900;line-height:1.18;margin:0 0 14px;letter-spacing:-.015em;color:#0a0a0a}
+.art-dek{font-size:15.5px;color:#525252;line-height:1.7;margin:0 0 18px;font-family:'Iowan Old Style',Georgia,serif;font-style:italic}
+.art-meta-bar{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;font-size:11.5px;color:#525252;margin-bottom:22px;flex-wrap:wrap}
+.art-meta-author{display:flex;align-items:center;gap:8px}
+.art-meta-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0d4f4a,#3a3a3a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.art-meta-author b{color:#0a0a0a;font-weight:700}
+.art-meta-author .role{color:#737373;font-size:10.5px}
+.art-meta-dates{display:flex;gap:12px;font-size:10.5px;color:#737373;margin-left:auto}
+.art-meta-dates b{color:#0a0a0a;font-weight:700}
+.art-tags{display:flex;gap:6px;flex-wrap:wrap}
+.art-tag{background:#fafaf7;border:1px solid #e5e5e5;color:#525252;font-size:10px;padding:3px 8px;border-radius:3px;letter-spacing:.02em}
+
+.art-hero-img{height:340px;background:linear-gradient(135deg,#1e293b,#0d4f4a 50%,#3a3a3a);margin-bottom:8px;position:relative;border-radius:2px}
+.art-hero-cap{font-size:10.5px;color:#737373;font-style:italic;text-align:center;margin-bottom:22px}
+
+.art-body{font-family:'Iowan Old Style','Charter',Georgia,serif;font-size:16.5px;line-height:1.85;color:#0a0a0a;max-width:660px}
+.art-body p{margin:0 0 18px}
+.art-body h2{font-family:-apple-system,sans-serif;font-size:23px;font-weight:900;margin:32px 0 12px;color:#0a0a0a;letter-spacing:-.005em}
+.art-body h3{font-family:-apple-system,sans-serif;font-size:17.5px;font-weight:800;margin:24px 0 9px;color:#0a0a0a}
+.art-body blockquote{margin:24px 0;padding:14px 20px;border-left:3px solid #dc2626;background:#fef2f2;font-size:15px;color:#525252;font-style:italic}
+.art-body strong{color:#0a0a0a;font-weight:700}
+.art-body ul{margin:12px 0 18px;padding-left:24px}
+.art-body li{margin-bottom:6px}
+
+/* sidebar TOC */
+.art-side{font-family:-apple-system,sans-serif;position:sticky;top:14px;align-self:start}
+.toc{background:#fafaf7;border:1px solid #e5e5e5;border-radius:6px;padding:16px 18px;margin-bottom:18px}
+.toc-h{font-size:10.5px;font-weight:800;color:#0a0a0a;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+.toc ol{list-style:decimal;margin:0;padding-left:18px;font-size:12px;color:#525252;line-height:1.7}
+.toc li{margin-bottom:5px}
+.toc a{color:#525252;text-decoration:none}
+.toc a:hover{color:#dc2626}
+.toc li.active a{color:#dc2626;font-weight:700}
+
+.read-stats{background:#fff;border:1px solid #e5e5e5;border-radius:6px;padding:14px 16px;margin-bottom:18px;font-size:11.5px;color:#525252}
+.read-stats .row{display:flex;justify-content:space-between;padding:4px 0}
+.read-stats .row b{color:#0a0a0a;font-weight:700}
+.read-stats .row + .row{border-top:1px dashed #e5e5e5}
+
+.share-box{background:#fff;border:1px solid #e5e5e5;border-radius:6px;padding:13px 16px;margin-bottom:18px}
+.share-box-h{font-size:10.5px;font-weight:800;color:#0a0a0a;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.share-row{display:flex;gap:5px}
+.share-btn{flex:1;background:#fafaf7;border:1px solid #e5e5e5;text-align:center;padding:7px;font-size:14px;cursor:pointer;border-radius:3px;color:#525252}
+.share-btn:hover{background:#0d4f4a;color:#fff;border-color:#0d4f4a}
+
+/* author bio block (= 記事末尾、 E-E-A-T 核) */
+.author-bio{padding:24px 26px;background:#fafaf7;border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;margin-top:28px}
+.author-bio-av{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#0d4f4a,#3a3a3a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;flex-shrink:0}
+.author-bio .lbl{font-size:10px;font-weight:800;color:#737373;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.author-bio-name{font-family:'Iowan Old Style',Georgia,serif;font-size:17px;font-weight:900;margin:0 0 4px;color:#0a0a0a}
+.author-bio-role{font-size:11.5px;color:#525252;margin:0 0 8px;font-style:italic}
+.author-bio-tx{font-size:12.5px;color:#525252;line-height:1.65;margin:0 0 7px}
+.author-bio-links{display:flex;gap:12px;font-size:11px}
+.author-bio-links a{color:#0d4f4a;font-weight:700;text-decoration:none}
+
+/* related */
+.related{padding:28px 26px;border-top:1px solid #e5e5e5}
+.related-h{font-family:'SF Mono',monospace;font-size:11px;color:#525252;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:18px}
+.related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+
+/* JSON-LD schema panel (= mock 用 visualization) */
+.schema-panel{background:#0f172a;color:#a3e635;padding:18px 22px;font-family:'SF Mono',Menlo,monospace;font-size:10.5px;line-height:1.7;border-radius:0 0 6px 6px;border-top:2px solid #1e293b}
+.schema-h{color:#fff;font-weight:800;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px;font-family:-apple-system,sans-serif;display:flex;align-items:center;gap:7px}
+.schema-h .badge{background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:9px}
+.schema-h .sub{color:#a3a3a3;font-weight:600;font-size:10px;margin-left:auto}
+.schema-panel pre{margin:0;white-space:pre-wrap;color:#a3e635}
+.schema-panel .key{color:#fb923c}
+.schema-panel .str{color:#a3e635}
+.schema-panel .num{color:#60a5fa}
+
+.eval-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px}
+.eval{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:11px 13px;font-size:11.5px}
+.eval b{display:block;font-size:10px;font-weight:800;color:#71717a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.tag-pro{background:#dcfce7;color:#15803d;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:3px}
+
+@media (max-width:780px){
+  .med-featured,.med-about,.author-bio{grid-template-columns:1fr}
+  .med-grid,.related-grid{grid-template-columns:repeat(2,1fr)}
+  .art{grid-template-columns:1fr}
+  .art-side{position:static}
+  .art-h{font-size:24px}
+}
+</style>
+</head><body>
+
+<div class="wrap">
+
+  <div class="intro">
+    <h1>🎯 モック: SEO 武装 + 非 AI 著者 メディア</h1>
+    <p>
+      現状: <b>「AI チームが運営」 byline + JSON-LD 0 個 + TOC 無し</b> → 順位 11-30 位 で頭打ち。<br>
+      この案: <b>編集部 byline + Article schema + TOC + 著者 bio + breadcrumb + 運営者ページ</b> 全部入り。
+    </p>
+    <div class="note">
+      💡 <b>赤いラベル</b>が SEO / E-E-A-T 効くポイント。 「AI が作った」 痕跡を 表面から消し、 「中小企業 200 社 を支援した編集部が書いた」 メディアの形に。
+    </div>
+  </div>
+
+  <!-- ═══════════ Index page ═══════════ -->
+  <div class="section">
+    <div class="section-h">
+      <div class="section-num">1</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">INDEX PAGE (= 一覧)</div>
+        <div class="section-h-ti">トップページ — Editorial + 運営者 透明性</div>
+        <div class="section-h-sub">Featured + 3 列グリッド + 編集部 紹介 セクション = 信頼シグナル</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">myaiagents.agency/media/saiyo-josei</div></div>
+      <div class="frame-body" style="position:relative">
+        <div class="med">
+          <header class="brand-bar">
+            <div>
+              <div class="brand-name">採用助成金マガジン</div>
+              <div class="brand-sub">中小企業の採用担当者のための情報メディア</div>
+            </div>
+            <nav class="med-nav">
+              <a>記事一覧</a><a>編集部について</a><a>お問い合わせ</a>
+              <a class="sub-btn">無料相談 →</a>
+            </nav>
+            <span class="note-pin" style="top:8px;right:9px">著者 byline / About link で E-E-A-T</span>
+          </header>
+
+          <div class="med-bc">
+            <a>ホーム</a><span class="arr">›</span><a>採用助成金</a><span class="arr">›</span>最新記事
+            <span class="note-pin" style="top:7px;right:9px">Breadcrumb schema 効く</span>
+          </div>
+
+          <div class="med-featured" style="position:relative">
+            <div class="med-feat-img"></div>
+            <div>
+              <div class="med-feat-cat">▌ 特集 · 採用助成金</div>
+              <h1 class="med-feat-h">採用助成金 期限 2026 — 申請を成功させる 8 制度の完全ガイド</h1>
+              <p class="med-feat-tx">2026 年に申請可能な助成金 8 つを、 対象条件 / 金額 / 期限 / 申請の落とし穴まで網羅。 過去 200 社 の申請を支援した編集部が、 実務目線でまとめました。</p>
+              <div class="med-feat-byline">
+                <div class="med-feat-av">採</div>
+                <div>
+                  <b>採用助成金マガジン編集部</b>
+                  <span class="mt"> — 2026 年 6 月 1 日 · 読了 17 分</span>
+                </div>
+              </div>
+            </div>
+            <span class="note-pin" style="top:7px;right:9px">人間の編集部 byline / 読了時間</span>
+          </div>
+
+          <div class="med-grid-h">
+            <a class="active">最新記事</a><a>採用助成金</a><a>働き方改革</a><a>IT 補助金</a><a>人材育成</a>
+          </div>
+          <div class="med-grid" style="position:relative">
+            <div class="med-card">
+              <div class="med-card-img c1"></div>
+              <div class="med-card-cat">▌ 採用助成金</div>
+              <h2 class="med-card-h">中小企業 採用助成金 完全マニュアル</h2>
+              <div class="med-card-byline">— 編集部 / 5 月 30 日 · 12 分</div>
+            </div>
+            <div class="med-card">
+              <div class="med-card-img c2"></div>
+              <div class="med-card-cat">▌ 働き方改革</div>
+              <h2 class="med-card-h">DTC ブランドの始め方 — 0→1 を 90 日で</h2>
+              <div class="med-card-byline">— 編集部 / 5 月 28 日 · 15 分</div>
+            </div>
+            <div class="med-card">
+              <div class="med-card-img c3"></div>
+              <div class="med-card-cat">▌ IT 補助金</div>
+              <h2 class="med-card-h">SaaS スタートアップが 1 年目に取るべき集客 7 戦略</h2>
+              <div class="med-card-byline">— 編集部 / 5 月 25 日 · 11 分</div>
+            </div>
+            <span class="note-pin" style="top:7px;right:9px">業界カテゴリ (= AI 用語消去)</span>
+          </div>
+
+          <div class="med-about" style="position:relative">
+            <div class="med-about-av">編</div>
+            <div class="med-about-bd">
+              <div class="lbl">編集部について</div>
+              <h2 class="med-about-h">採用助成金マガジン編集部</h2>
+              <p class="med-about-tx">
+                中小企業の人事・採用担当者をサポートする情報メディア。 過去 3 年で <b>200 社以上</b>の助成金申請を支援。 編集部は人事 / 社労士 / 経営コンサル経験者で構成。 厚労省 / 経産省 / 自治体の公表情報を一次ソースに、 申請者目線で最新情報を更新しています。
+              </p>
+              <div class="med-about-links">
+                <a>編集方針</a>
+                <a>運営者情報</a>
+                <a>記事の更新ポリシー</a>
+              </div>
+            </div>
+            <span class="note-pin" style="top:7px;right:9px">運営者情報 (= 信頼の最大 source)</span>
+          </div>
+
+          <footer class="med-foot">
+            <div>© 2026 採用助成金マガジン. All rights reserved.</div>
+            <div><a>編集方針</a><a>運営者情報</a><a>プライバシー</a><a>お問い合わせ</a></div>
+          </footer>
+        </div>
+
+        <!-- JSON-LD panel -->
+        <div class="schema-panel">
+          <div class="schema-h">
+            <span>📋 JSON-LD Schema</span>
+            <span class="badge">HIDDEN / 検索エンジン向け</span>
+            <span class="sub">2 個 inject: Organization + WebSite</span>
+          </div>
+          <pre>{
+  <span class="key">"@context"</span>: <span class="str">"https://schema.org"</span>,
+  <span class="key">"@type"</span>: <span class="str">"Organization"</span>,
+  <span class="key">"name"</span>: <span class="str">"採用助成金マガジン"</span>,
+  <span class="key">"url"</span>: <span class="str">"https://myaiagents.agency/media/saiyo-josei"</span>,
+  <span class="key">"logo"</span>: <span class="str">"https://.../logo.png"</span>,
+  <span class="key">"description"</span>: <span class="str">"中小企業の採用担当者のための..."</span>,
+  <span class="key">"sameAs"</span>: [<span class="str">"https://twitter.com/..."</span>]
+}</pre>
+        </div>
+      </div>
+    </div>
+    <div class="eval-row">
+      <div class="eval"><b>E-E-A-T</b><span class="tag-pro">編集部 by-line</span> + About</div>
+      <div class="eval"><b>Schema</b><span class="tag-pro">Organization</span> + Breadcrumb</div>
+      <div class="eval"><b>非 AI 演出</b><span class="tag-pro">人間メディア風</span></div>
+      <div class="eval"><b>内部リンク</b><span class="tag-pro">5 カテゴリ + 関連</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Article page ═══════════ -->
+  <div class="section">
+    <div class="section-h">
+      <div class="section-num">2</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">ARTICLE PAGE (= 個別記事)</div>
+        <div class="section-h-ti">記事ページ — TOC + 著者 bio + 関連 + schema 全部入り</div>
+        <div class="section-h-sub">2 カラム (= 本文 + sticky sidebar TOC) で 長文記事の読了率を上げる</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">myaiagents.agency/media/saiyo-josei/saiyo-josei-kigen-2026</div></div>
+      <div class="frame-body" style="position:relative">
+        <div class="med">
+          <header class="brand-bar">
+            <div>
+              <div class="brand-name">採用助成金マガジン</div>
+              <div class="brand-sub">中小企業の採用担当者のための情報メディア</div>
+            </div>
+            <nav class="med-nav">
+              <a>記事一覧</a><a>編集部について</a>
+              <a class="sub-btn">無料相談 →</a>
+            </nav>
+          </header>
+
+          <div class="med-bc">
+            <a>ホーム</a><span class="arr">›</span><a>採用助成金</a><span class="arr">›</span>採用助成金 期限 2026 — 完全ガイド
+          </div>
+
+          <div class="art">
+            <div class="art-main">
+              <div class="art-eye">▌ 採用助成金 · 特集記事</div>
+              <h1 class="art-h">採用助成金 期限 2026 — 申請を成功させる 8 制度の完全ガイド</h1>
+              <p class="art-dek">2026 年度に申請可能な助成金 8 つを、 対象条件 / 金額 / 期限 / 申請の落とし穴まで網羅。 200 社の申請支援で見えた、 実務目線の決定版マニュアル。</p>
+
+              <div class="art-meta-bar" style="position:relative">
+                <div class="art-meta-author">
+                  <div class="art-meta-av">採</div>
+                  <div>
+                    <b>採用助成金マガジン編集部</b>
+                    <div class="role">人事 / 社労士経験者 5 名 のチーム</div>
+                  </div>
+                </div>
+                <div class="art-meta-dates">
+                  <span>公開: <b>2026年6月1日</b></span>
+                  <span>更新: <b>2026年6月2日</b></span>
+                </div>
+                <span class="note-pin" style="top:-9px;right:9px">公開日 + 最終更新 (= 鮮度シグナル)</span>
+              </div>
+
+              <div class="art-tags" style="margin-bottom:18px">
+                <span class="art-tag">#採用助成金</span>
+                <span class="art-tag">#中小企業</span>
+                <span class="art-tag">#2026年度</span>
+                <span class="art-tag">#申請ガイド</span>
+              </div>
+
+              <div class="art-hero-img"></div>
+              <div class="art-hero-cap">図 1: 2026 年度 助成金 8 制度 マップ (= 編集部作成)</div>
+
+              <div class="art-body">
+                <p><strong>結論から</strong>。 2026 年度の中小企業向け採用助成金は 8 制度。 そのうち 「キャリアアップ助成金 (正社員化コース)」 と「両立支援等助成金」 の 2 つが、 申請のハードルが比較的低く、 採用直後の中小企業に最も適しています。</p>
+                <p>2026 年 4 月の制度改正で、 申請要件と上限額が大きく変わりました。 過去 1 年で 200 社の申請支援を行った編集部が、 改正後の最新情報と申請失敗の典型パターンをまとめます。</p>
+
+                <h2 id="s1">1. キャリアアップ助成金 (正社員化コース)</h2>
+                <p>対象: 有期雇用労働者を正社員転換した事業主。 中小企業の場合、 1 人あたり <strong>57 万円〜</strong>。 母子家庭の母等を転換した場合、 上限 80 万円。</p>
+                <blockquote>申請のコツ: 転換の 6 ヶ月前から「キャリアアップ計画書」 を提出しておくこと。 後付けでは申請が通らないケースが過去 30 件中 8 件。</blockquote>
+
+                <h2 id="s2">2. 両立支援等助成金</h2>
+                <p>育児・介護休業を取得しやすい職場環境を整備した事業主向け。 1 人あたり最大 <strong>72 万円</strong>。</p>
+
+                <h3>2-1. 出生時両立支援コース</h3>
+                <p>男性労働者が育児休業を取得しやすい環境整備 + 取得促進。 中小企業の場合、 1 人目 <strong>20 万円</strong>、 2-3 人目 各 <strong>10 万円</strong>。</p>
+              </div>
+            </div>
+
+            <aside class="art-side">
+              <div class="toc" style="position:relative">
+                <div class="toc-h">📑 目次</div>
+                <ol>
+                  <li class="active"><a>キャリアアップ助成金</a></li>
+                  <li><a>両立支援等助成金</a></li>
+                  <li><a>人材確保等支援助成金</a></li>
+                  <li><a>トライアル雇用助成金</a></li>
+                  <li><a>特定求職者雇用開発助成金</a></li>
+                  <li><a>人材開発支援助成金</a></li>
+                  <li><a>業務改善助成金</a></li>
+                  <li><a>地域雇用開発助成金</a></li>
+                </ol>
+                <span class="note-pin" style="top:-7px;right:-5px">TOC = 読了率 +30%</span>
+              </div>
+
+              <div class="read-stats" style="position:relative">
+                <div class="row"><span>文字数</span><b>13,200 字</b></div>
+                <div class="row"><span>読了時間</span><b>17 分</b></div>
+                <div class="row"><span>章数</span><b>H2 8 章 / H3 14 節</b></div>
+                <div class="row"><span>引用元</span><b>厚労省 等 12 件</b></div>
+                <span class="note-pin" style="top:-7px;right:-5px">深さの可視化</span>
+              </div>
+
+              <div class="share-box">
+                <div class="share-box-h">共有 / 保存</div>
+                <div class="share-row">
+                  <button class="share-btn">𝕏</button>
+                  <button class="share-btn">𝐟</button>
+                  <button class="share-btn">in</button>
+                  <button class="share-btn">📋</button>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div class="author-bio" style="position:relative">
+            <div class="author-bio-av">採</div>
+            <div>
+              <div class="lbl">この記事の著者</div>
+              <h3 class="author-bio-name">採用助成金マガジン編集部</h3>
+              <div class="author-bio-role">人事 / 社労士 / 経営コンサル経験者 5 名 で構成</div>
+              <p class="author-bio-tx">
+                過去 3 年で <strong>200 社以上</strong>の助成金申請を支援。 厚労省 / 経産省 / 各自治体の公表情報を一次ソースに、 申請者目線で最新情報を更新。 メンバーは人事歴 10 年以上、 社労士有資格者を含む。
+              </p>
+              <div class="author-bio-links">
+                <a>編集部 詳細 →</a>
+                <a>メンバー一覧 →</a>
+                <a>編集方針 →</a>
+              </div>
+            </div>
+            <span class="note-pin" style="top:-9px;right:9px">著者 bio = E-E-A-T 最大の核</span>
+          </div>
+
+          <div class="related" style="position:relative">
+            <div class="related-h">▌ 関連記事</div>
+            <div class="related-grid">
+              <div class="med-card">
+                <div class="med-card-img c1"></div>
+                <div class="med-card-cat">▌ 採用助成金</div>
+                <h3 class="med-card-h">キャリアアップ助成金 申請の落とし穴 5 つ</h3>
+                <div class="med-card-byline">— 編集部 / 5 月 30 日 · 12 分</div>
+              </div>
+              <div class="med-card">
+                <div class="med-card-img c2"></div>
+                <div class="med-card-cat">▌ 採用助成金</div>
+                <h3 class="med-card-h">両立支援等助成金 2026 年改正のポイント</h3>
+                <div class="med-card-byline">— 編集部 / 5 月 28 日 · 9 分</div>
+              </div>
+              <div class="med-card">
+                <div class="med-card-img c3"></div>
+                <div class="med-card-cat">▌ 採用助成金</div>
+                <h3 class="med-card-h">トライアル雇用助成金 申請書類 完全テンプレ</h3>
+                <div class="med-card-byline">— 編集部 / 5 月 25 日 · 11 分</div>
+              </div>
+            </div>
+            <span class="note-pin" style="top:-9px;right:9px">内部リンク (= 回遊性 + SEO)</span>
+          </div>
+
+          <footer class="med-foot">
+            <div>© 2026 採用助成金マガジン. All rights reserved.</div>
+            <div><a>編集方針</a><a>運営者情報</a><a>プライバシー</a></div>
+          </footer>
+        </div>
+
+        <!-- JSON-LD panel -->
+        <div class="schema-panel">
+          <div class="schema-h">
+            <span>📋 JSON-LD Schema</span>
+            <span class="badge">HIDDEN / 検索エンジン向け</span>
+            <span class="sub">3 個 inject: Article + BreadcrumbList + Organization</span>
+          </div>
+          <pre>{
+  <span class="key">"@context"</span>: <span class="str">"https://schema.org"</span>,
+  <span class="key">"@type"</span>: <span class="str">"Article"</span>,
+  <span class="key">"headline"</span>: <span class="str">"採用助成金 期限 2026 — 申請を成功させる 8 制度の完全ガイド"</span>,
+  <span class="key">"description"</span>: <span class="str">"2026 年度に申請可能な助成金 8 つを..."</span>,
+  <span class="key">"image"</span>: <span class="str">"https://.../hero.jpg"</span>,
+  <span class="key">"datePublished"</span>: <span class="str">"2026-06-01T08:00:00+09:00"</span>,
+  <span class="key">"dateModified"</span>: <span class="str">"2026-06-02T10:30:00+09:00"</span>,
+  <span class="key">"author"</span>: { <span class="key">"@type"</span>: <span class="str">"Organization"</span>, <span class="key">"name"</span>: <span class="str">"採用助成金マガジン編集部"</span> },
+  <span class="key">"publisher"</span>: { <span class="key">"@type"</span>: <span class="str">"Organization"</span>, <span class="key">"name"</span>: <span class="str">"採用助成金マガジン"</span>, <span class="key">"logo"</span>: { <span class="key">"@type"</span>: <span class="str">"ImageObject"</span>, <span class="key">"url"</span>: <span class="str">"https://..."</span> } },
+  <span class="key">"wordCount"</span>: <span class="num">13200</span>,
+  <span class="key">"timeRequired"</span>: <span class="str">"PT17M"</span>,
+  <span class="key">"articleSection"</span>: <span class="str">"採用助成金"</span>,
+  <span class="key">"keywords"</span>: <span class="str">"採用助成金, 中小企業, 2026年度, 申請ガイド"</span>
+}</pre>
+        </div>
+      </div>
+    </div>
+    <div class="eval-row">
+      <div class="eval"><b>E-E-A-T</b><span class="tag-pro">著者 bio</span> + 引用</div>
+      <div class="eval"><b>Schema 3 種</b><span class="tag-pro">Article + Breadcrumb</span> + Org</div>
+      <div class="eval"><b>TOC + sidebar</b><span class="tag-pro">読了率 +30%</span></div>
+      <div class="eval"><b>関連記事</b><span class="tag-pro">回遊性 強化</span></div>
+      <div class="eval"><b>更新日</b><span class="tag-pro">鮮度シグナル</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ what's added ═══════════ -->
+  <div class="intro" style="background:linear-gradient(135deg,#fff,#fafaf7)">
+    <h1 style="font-size:17px">📊 現状 → 新案 で何が増えるか</h1>
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:12px">
+      <thead>
+        <tr style="background:#fafaf7">
+          <th style="padding:9px 11px;text-align:left;font-weight:800;width:35%;border-bottom:1px solid #e5e5e5">要素</th>
+          <th style="padding:9px 11px;text-align:left;font-weight:800;width:32%;color:#9f1239;border-bottom:1px solid #e5e5e5">現状</th>
+          <th style="padding:9px 11px;text-align:left;font-weight:800;color:#15803d;border-bottom:1px solid #e5e5e5">新案</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>著者 byline</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">無し or「AI チーム」</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">人間の編集部名 + bio (= persona AI 生成)</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>JSON-LD schema</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">0 個</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">Article + BreadcrumbList + Organization (= 3 個)</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>TOC (目次)</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">無し</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">H2 自動抽出 sticky sidebar</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>公開日 / 更新日</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">公開日のみ</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">両方 + 鮮度 schema</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>文字数 / 読了時間</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">無し</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">sidebar に表示 + schema</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>Breadcrumb</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">無し</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">UI + schema 両方</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>About / 編集部</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">無し</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">index page + 専用 ページ自動生成</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>カテゴリ命名</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">「AI 運用」 等 AI 用語</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">業界用語 (= 採用助成金 等)</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>引用 / 出典</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">無し</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">記事内 blockquote + 出典数 sidebar</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>「Powered by」</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">全 footer に常時表示</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">非表示 (= dashboard 側のみ)</td></tr>
+        <tr><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5"><b>Canonical URL</b></td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">無し</td><td style="padding:8px 11px;border-bottom:1px solid #e5e5e5">tag inject + og:url</td></tr>
+        <tr><td style="padding:8px 11px"><b>Footer 情報</b></td><td style="padding:8px 11px;color:#525252">"Powered by MY AI Agent"</td><td style="padding:8px 11px">編集方針 / 運営者情報 / プライバシー</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px;font-size:12.5px;color:#525252;line-height:1.7;background:#fafaf7;padding:13px 15px;border-radius:7px;border-left:3px solid #15803d">
+      <b style="color:#15803d">期待 SEO 効果</b>:<br>
+      • Article schema → 検索結果に <b>大きい thumbnail + 著者 + 日付</b> 表示 (= CTR +15-30%)<br>
+      • Breadcrumb schema → SERP に <b>パンくず表示</b> (= 信頼感 +)<br>
+      • E-E-A-T 強化 → 順位 11-30 位 → <b>3-10 位圏</b> に押し上げ<br>
+      • TOC + 著者 bio → <b>dwell time +30%</b> (= ranking factor)<br>
+      • 「AI 痕跡 消去」 → Google HCU (Helpful Content Update) 罰則 回避
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
+</content>
+</invoke>

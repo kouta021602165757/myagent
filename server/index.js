@@ -16214,11 +16214,21 @@ async function _mediaGenerateArticle(agent, params){
   //    サーバ側で product-card HTML を生成 → body_html に挿入
   let products = Array.isArray(parsed.products) ? parsed.products : null;
 
-  // 2 パス フォールバック: best 意図 + products[] 未取得 → Haiku で抽出
-  if(intent.type === 'best' && (!products || products.length === 0)){
+  // デバッグ ログ — Tool Use 結果が分かるように
+  if(intent.type === 'best'){
+    console.log('[media-art] Tool Use parsed.products length:', products ? products.length : 'null/undefined');
+  }
+
+  // 2 パス フォールバック: best 意図 + products[] が 期待数未満 → Haiku で抽出
+  const wantedCount = intent.product_count || 5;
+  if(intent.type === 'best' && (!products || products.length < wantedCount)){
+    console.log('[media-art] running 2nd-pass extract, AI returned', products ? products.length : 0, 'wanted=', wantedCount);
     try {
-      const wanted = intent.product_count || 5;
-      products = await _extractProductsFromHtml(sanitized, parsed.title, wanted);
+      const extracted = await _extractProductsFromHtml(sanitized, parsed.title, wantedCount);
+      console.log('[media-art] 2nd-pass extracted', extracted ? extracted.length : 'null');
+      if(Array.isArray(extracted) && extracted.length > (products ? products.length : 0)){
+        products = extracted;  // 多い方を採用
+      }
     } catch(e){ console.warn('[media-art] product extraction failed:', e.message); }
   }
 

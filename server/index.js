@@ -16043,7 +16043,27 @@ async function _mediaGenerateArticle(agent, params){
     + '  "excerpt": "120 文字以内、 記事の core value を要約",\n'
     + '  "category_name": "既存カテゴリから 必ず 1 つ 文字列完全一致 で選ぶ (= 新規発明禁止)",\n'
     + '  "tags": ["タグ1","タグ2","タグ3"],\n'
-    + '  "body_html": "<h2>...</h2><p>...</p>... の連続。 HTML 整形済み"\n'
+    + (intent.type === 'best' ? '  "products": [  // ★ 必須 ' + (intent.product_count || 5) + ' 個 (= タイトルに対応)、 順位順\n'
+       + '    {\n'
+       + '      "rank": 1,\n'
+       + '      "name": "プロダクト名 (例: Surfer SEO)",\n'
+       + '      "sub": "英表記 サブタイトル (= タグライン)",\n'
+       + '      "score": 4.8,                 // 0-5 の総合評価\n'
+       + '      "tagline": "なぜ N 位か 1 文",  // 60 字以内\n'
+       + '      "price": "$59/月〜",\n'
+       + '      "trial": "14日無料",\n'
+       + '      "jp_support": "○ / △ / ×",\n'
+       + '      "origin": "国名 (例: USA)",\n'
+       + '      "features": ["機能 1","機能 2","機能 3","機能 4"],  // 4-6 個\n'
+       + '      "pros": ["強み 1","強み 2"],   // 2-3 個\n'
+       + '      "cons": ["弱み 1","弱み 2"],   // 2-3 個\n'
+       + '      "fit": "こんな人向け: 〇〇 を求める △△ チーム",  // 50 字以内\n'
+       + '      "official_url": "https://公式 URL (= 存在する URL のみ、 知らないなら null)"\n'
+       + '    }\n'
+       + '    // ... 同じ構造で ' + (intent.product_count || 5) + ' 個 全て埋める ...\n'
+       + '  ],\n'
+       + '  "body_html": "<h2>...</h2>... <!-- products 部分は サーバ側で 自動 挿入されるので、 ここには intro / 評価基準 / 用途別マトリクス / FAQ など を書く。 個別プロダクト紹介は 書かない (= products 配列に書く) --> ..."\n'
+       : '  "body_html": "<h2>...</h2><p>...</p>... の連続。 HTML 整形済み"\n')
     + '}';
 
   // SERP 分析 (= 並列実行の結果を ここで await — 最大 12 秒、 失敗時は null)
@@ -16171,7 +16191,26 @@ async function _mediaGenerateArticle(agent, params){
   // 🚫 2026-06-02: inline AI 画像は廃止 (= 「意味わからん」 問題)
   // 代わりに AI prompt で <div class="section-hero"> を 出力させて
   // セクション 冒頭に デザインされた紺カードを表示する (= fukuyama-note 風)
-  const sanitized = _sanitizeArticleHtml(String(parsed.body_html));
+  let sanitized = _sanitizeArticleHtml(String(parsed.body_html));
+
+  // 🏆 ランキング型: AI が products[] を構造化 JSON で返した時、
+  //    サーバ側で product-card HTML を生成 → body_html に挿入
+  if(intent.type === 'best' && Array.isArray(parsed.products) && parsed.products.length > 0){
+    const cardsHtml = '<h2>📊 ' + (parsed.products.length) + ' プロダクト 個別レビュー｜順位別 詳細</h2>\n'
+      + parsed.products.map(p => _renderProductCard(p)).join('\n');
+    // body_html の 最初の H2 の手前に挿入 (= 概要の後、 詳細レビュー前)
+    // 最初の H2 を探して、 そこに挿入。 なければ body 末尾に append。
+    const h2Idx = sanitized.search(/<h2[^>]*>/i);
+    if(h2Idx >= 0){
+      // 2 番目の H2 の前に挿入 (= 1 つ目は概要、 2 つ目以降の詳細 H2 の前にカード)
+      const after1st = sanitized.indexOf('<h2', h2Idx + 1);
+      const insertAt = after1st >= 0 ? after1st : sanitized.length;
+      sanitized = sanitized.slice(0, insertAt) + cardsHtml + '\n\n' + sanitized.slice(insertAt);
+    } else {
+      sanitized = cardsHtml + sanitized;
+    }
+  }
+
   const withImages = sanitized;
 
   return {
@@ -16183,6 +16222,56 @@ async function _mediaGenerateArticle(agent, params){
     vertical: vert,
     template_used: tpl.template,
   };
+}
+
+// 🏆 product-card HTML 生成 — ランキング型記事で AI が返す products[] から
+//    1 個ずつ デザインされた商品レビューカードを HTML で出力。
+function _renderProductCard(p){
+  if(!p || typeof p !== 'object') return '';
+  const esc = s => String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const rank = parseInt(p.rank, 10) || 0;
+  const rankClass = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+  const score = (typeof p.score === 'number') ? Math.round(p.score * 10) / 10 : null;
+  // ⭐ 表示 (= score を 0-5 で 半端も対応)
+  const stars = score != null
+    ? '★★★★★'.slice(0, Math.round(score)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(score))
+    : '';
+  const features = Array.isArray(p.features) ? p.features.slice(0, 6) : [];
+  const pros = Array.isArray(p.pros) ? p.pros.slice(0, 4) : [];
+  const cons = Array.isArray(p.cons) ? p.cons.slice(0, 4) : [];
+  // 公式 URL 検証 (= http(s) のみ許可)
+  const officialOk = typeof p.official_url === 'string'
+    && /^https?:\/\//i.test(p.official_url)
+    && p.official_url.length < 300;
+  return ''
+    + '<div class="product-card">\n'
+    +   '<div class="pc-head">\n'
+    +     '<div class="pc-rank ' + rankClass + '">' + esc(rank || '?') + '</div>\n'
+    +     '<div class="pc-name">\n'
+    +       '<h3>' + esc(p.name || '') + '</h3>\n'
+    +       (p.sub ? '<div class="pc-sub">' + esc(p.sub) + '</div>\n' : '')
+    +     '</div>\n'
+    +     (score != null ? '<div class="pc-score"><div class="pc-score-val">' + score + '</div><span class="pc-score-max">/5</span><div class="pc-score-stars">' + stars + '</div></div>\n' : '')
+    +   '</div>\n'
+    +   '<div class="pc-body">\n'
+    +     (p.tagline ? '<div class="pc-tagline">' + esc(p.tagline) + '</div>\n' : '')
+    +     '<div class="pc-meta">\n'
+    +       (p.price ? '<div class="pc-meta-item"><div class="pc-meta-lbl">料金</div><div class="pc-meta-val">' + esc(p.price) + '</div></div>\n' : '')
+    +       (p.trial ? '<div class="pc-meta-item"><div class="pc-meta-lbl">無料試用</div><div class="pc-meta-val">' + esc(p.trial) + '</div></div>\n' : '')
+    +       (p.jp_support ? '<div class="pc-meta-item"><div class="pc-meta-lbl">日本語</div><div class="pc-meta-val">' + esc(p.jp_support) + '</div></div>\n' : '')
+    +       (p.origin ? '<div class="pc-meta-item"><div class="pc-meta-lbl">提供元</div><div class="pc-meta-val">' + esc(p.origin) + '</div></div>\n' : '')
+    +     '</div>\n'
+    +     (features.length > 0 ? '<div class="pc-features"><div class="pc-features-h">主な機能</div><ul>' + features.map(f => '<li>' + esc(f) + '</li>').join('') + '</ul></div>\n' : '')
+    +     ((pros.length > 0 || cons.length > 0) ? '<div class="pc-prokon">\n'
+        + (pros.length > 0 ? '<div class="pc-pro"><div class="pc-pk-h">メリット</div><ul>' + pros.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>\n' : '')
+        + (cons.length > 0 ? '<div class="pc-kon"><div class="pc-pk-h">デメリット</div><ul>' + cons.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>\n' : '')
+      + '</div>\n' : '')
+    +     (p.fit ? '<div class="pc-fit"><strong>こんな人向け:</strong> ' + esc(p.fit) + '</div>\n' : '')
+    +   '</div>\n'
+    +   (officialOk ? '<div class="pc-foot"><a href="' + esc(p.official_url) + '" target="_blank" rel="nofollow noopener" class="pc-link">公式サイトを見る →</a><div class="pc-disclaimer">※ 詳細は 公式サイトをご確認ください</div></div>\n' : '')
+    + '</div>';
 }
 
 // ──────────────────────────────────────────────────────────────────

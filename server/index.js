@@ -15816,7 +15816,7 @@ function _mediaArticleTemplateFor(vert){
   //    info-table を全 vertical で必須化 (= 開催日 / 料金 等の key facts は表で)
   const templates = {
     finance: {
-      targetChars: 5500, h2Count: 10,
+      targetChars: 7500, h2Count: 12,
       template: '専門解説 + 比較型 (= 金融 / 士業)',
       requiredSections: ['結論', '基礎情報テーブル', '基礎知識', '比較表', '選び方', 'デメリット', '失敗事例', 'FAQ', '次のアクション'],
       tone: '専門家監修目線、 引用元厳選、 法改正対応',
@@ -15824,7 +15824,7 @@ function _mediaArticleTemplateFor(vert){
       tablesRequired: true,
     },
     hr: {
-      targetChars: 5500, h2Count: 10,
+      targetChars: 7500, h2Count: 12,
       template: '完全ガイド + 申請テンプレ型 (= 採用 / 助成金)',
       requiredSections: ['結論', '基礎情報テーブル', '対象条件', '金額', '期限', '申請手順', '必要書類', 'FAQ', '専門家相談 CTA'],
       tone: '申請者目線、 厚労省一次ソース、 期限厳守',
@@ -15832,21 +15832,21 @@ function _mediaArticleTemplateFor(vert){
       tablesRequired: true,
     },
     saas: {
-      targetChars: 5000, h2Count: 9,
+      targetChars: 7000, h2Count: 11,
       template: '比較 + チュートリアル型 (= SaaS / 開発)',
       requiredSections: ['結論', '基礎情報テーブル', '機能比較', 'ユースケース', '料金', 'まとめ'],
       tone: '技術権威感、 実運用視点',
       tablesRequired: true,
     },
     ec: {
-      targetChars: 5000, h2Count: 9,
+      targetChars: 7000, h2Count: 11,
       template: 'レビュー + ランキング型 (= EC / DTC / 美容)',
       requiredSections: ['結論', '基礎情報テーブル', '比較表', '各商品レビュー', '選び方', '体験談', 'まとめ'],
       tone: '体験者目線、 比較表必須、 薬機法注意',
       tablesRequired: true,
     },
     realestate: {
-      targetChars: 5000, h2Count: 9,
+      targetChars: 7000, h2Count: 11,
       template: '相場 + 注意点 + 比較型 (= 不動産)',
       requiredSections: ['結論', '基礎情報テーブル', '相場感', '比較', '注意点', 'チェックリスト', 'FAQ'],
       tone: '宅建士目線、 数値必須',
@@ -15854,7 +15854,7 @@ function _mediaArticleTemplateFor(vert){
       tablesRequired: true,
     },
     edu: {
-      targetChars: 5000, h2Count: 9,
+      targetChars: 7000, h2Count: 11,
       template: '体系解説 + 比較型 (= 教育)',
       requiredSections: ['結論', '基礎情報テーブル', '基礎', '比較表', '選び方', '料金', 'FAQ'],
       tone: '教育専門家目線',
@@ -15862,14 +15862,14 @@ function _mediaArticleTemplateFor(vert){
       tablesRequired: true,
     },
     personal: {
-      targetChars: 4500, h2Count: 8,
+      targetChars: 6500, h2Count: 10,
       template: 'オピニオン + 体験型 (= 個人ブランド)',
       requiredSections: ['結論', '基礎情報テーブル', '体験', '気づき', '実践方法', 'まとめ'],
       tone: '一人称、 個人体験ベース',
       tablesRequired: true,
     },
     general: {
-      targetChars: 5000, h2Count: 9,
+      targetChars: 7000, h2Count: 11,
       template: '汎用 SEO 型',
       requiredSections: ['結論', '基礎情報テーブル', '基礎知識', '実践方法', '事例', 'FAQ', '次のアクション'],
       tone: '実用情報、 業界編集部目線',
@@ -15972,7 +15972,11 @@ async function _mediaGenerateArticle(agent, params){
     + '6. **🖍 mark (蛍光ペン下線) を 積極使用** — 日付 / 金額 / 数値 / 固有名詞 / 重要キーワード に\n'
     + '   <mark> で囲む (例: <mark>例年 8 月 9 日</mark>、 <mark>約 1,400 発</mark>、 <mark>無料</mark>)\n'
     + '   1 段落あたり 1-3 箇所 目安、 むらなく散布\n'
-    + '7. **FAQ section** 末尾に <h2>よくある質問</h2> + <h3>Q. ...</h3><p>A. ...</p> × 5-8 問\n'
+    + '7. **FAQ section** 末尾に <h2>よくある質問 (FAQ)</h2> + <details class="faq">\n'
+    + '     <summary>質問テキスト</summary>\n'
+    + '     <p>回答テキスト (= 2-4 文、 具体的)</p>\n'
+    + '   </details> × 7-10 問 (= 最初の <details class="faq" open>... で開いた状態)\n'
+    + '   ※ <h3>Q. ...</h3><p>A. ...</p> 形式は使わない、 必ず <details class="faq"> 形式\n'
     + '8. **段落は 2-3 行で改行** (= 1 段落 100 字以内)、 スマホで読みやすく\n'
     + '\n【文体ルール】\n'
     + '- 「AI が」「AI チームが」「私たちは」 等 AI 自己言及 禁止 (= E-E-A-T)\n'
@@ -16476,8 +16480,9 @@ ${schemaTags}
   article.post .dates b{color:${s.textColor};font-weight:700}
   article.post .hero-img{margin:0 0 8px}
   article.post .hero-cap{font-size:10.5px;color:${s.mutedColor};font-style:italic;text-align:center;margin-bottom:22px}
-  article.post .body h2{font-family:${s.titleFont};font-size:23px;font-weight:900;margin:36px 0 12px;color:${s.textColor};line-height:1.4;letter-spacing:-.005em;scroll-margin-top:14px}
-  article.post .body h3{font-family:${s.titleFont};font-size:17.5px;font-weight:800;margin:26px 0 10px;color:${s.textColor}}
+  /* 🎯 H2: 紺左バー + 淡グラデ背景 (fukuyama-note 風 シンプル設計) */
+  article.post .body h2{font-family:${s.titleFont};font-size:22px;font-weight:900;margin:42px 0 16px;color:${s.textColor};line-height:1.5;letter-spacing:-.005em;scroll-margin-top:14px;padding:14px 18px;background:linear-gradient(90deg,${isDark?'#0d1f3a':'#f1f5f9'},${isDark?'#0a1322':'transparent'} 80%);border-left:4px solid #0a1f3d;border-radius:0 4px 4px 0}
+  article.post .body h3{font-family:${s.titleFont};font-size:17.5px;font-weight:800;margin:30px 0 10px;color:${s.textColor};padding-left:12px;border-left:3px solid #cbd5e1}
   article.post .body p{margin:0 0 18px;color:${s.textColor};font-family:${s.bodyFont};line-height:1.85;font-size:16px}
   article.post .body ul, article.post .body ol{margin:0 0 18px;padding-left:24px;font-family:${s.bodyFont}}
   article.post .body li{margin-bottom:6px}
@@ -16492,6 +16497,16 @@ ${schemaTags}
   article.post .body figure figcaption{font-size:11.5px;color:${s.mutedColor};margin-top:8px;font-style:italic}
   article.post .body blockquote.callout{font-style:normal;background:linear-gradient(135deg,${isDark?'#0a1f1c':'#f0fdf4'},${isDark?'#0f2925':'#ecfdf5'});border-left:4px solid ${accent};padding:16px 22px;color:${s.textColor};font-weight:600;font-size:15.5px;line-height:1.7;border-radius:0 8px 8px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
   article.post .body blockquote.callout::before{content:"💡 ";margin-right:4px}
+  /* 🎯 FAQ アコーディオン (= <details><summary>) — fukuyama-note 風 カード */
+  article.post .body details.faq{background:${isDark?'#0d1322':'#fff'};border:1px solid ${s.cardBorder};border-radius:10px;margin-bottom:10px;overflow:hidden;transition:all .2s}
+  article.post .body details.faq[open]{border-color:#0a1f3d;box-shadow:0 2px 12px rgba(10,31,61,.08)}
+  article.post .body details.faq summary{padding:18px 22px;cursor:pointer;list-style:none;display:flex;align-items:flex-start;gap:12px;font-size:15px;font-weight:700;color:${s.textColor};line-height:1.6}
+  article.post .body details.faq summary::-webkit-details-marker{display:none}
+  article.post .body details.faq summary::before{content:"Q.";flex-shrink:0;color:#d97706;font-weight:900;font-family:${s.titleFont};font-size:16px}
+  article.post .body details.faq summary::after{content:"+";margin-left:auto;color:${s.mutedColor};font-size:20px;font-weight:300;transition:transform .25s}
+  article.post .body details.faq[open] summary::after{transform:rotate(45deg);color:#d97706}
+  article.post .body details.faq > p,article.post .body details.faq > div{padding:0 22px 18px 48px;color:${s.subColor};font-size:14.5px;line-height:1.8;margin:0;border-top:1px dashed ${s.cardBorder};padding-top:14px}
+  article.post .body details.faq > p::before,article.post .body details.faq > div::before{content:"A.";color:#0a1f3d;font-weight:900;margin-right:8px;font-family:${s.titleFont}}
   /* 🎨 section-hero card — fukuyama-note 風の デザインされた章扉 */
   article.post .body .section-hero{background:linear-gradient(135deg,#0a1f3d,#1e3a5c);color:#fff;padding:42px 32px;border-radius:12px;margin:32px 0;text-align:center;box-shadow:0 8px 24px rgba(10,31,61,.18)}
   article.post .body .section-hero .section-eyebrow{font-size:11px;letter-spacing:.18em;color:#fbbf24;font-weight:700;margin-bottom:18px;text-transform:uppercase}
@@ -16582,7 +16597,6 @@ ${breadcrumbHTML}
 
     <div class="body">
       ${bodyWithIds}
-      ${inlineCTA}
       ${endCard}
     </div>
   </div>
@@ -17293,11 +17307,11 @@ function _mediaOrgSchema(media, host){
 //    検索結果 CTR 最大 35% UP の リッチリザルト。
 function _mediaFaqSchema(body_html){
   if(!body_html) return null;
-  // FAQ section を 抽出 (= <h3>Q. ... <p>A. ... の連続)
-  const faqRe = /<h3[^>]*>\s*(?:Q[\.。\:：]?\s*)?([\s\S]*?)<\/h3>\s*<p[^>]*>\s*(?:A[\.。\:：]?\s*)?([\s\S]*?)<\/p>/gi;
   const items = [];
+  // 形式 1: <details class="faq"><summary>Q</summary><p>A</p></details>
+  const detailsRe = /<details[^>]*class=["']faq["'][^>]*>\s*<summary[^>]*>([\s\S]*?)<\/summary>\s*([\s\S]*?)<\/details>/gi;
   let m;
-  while((m = faqRe.exec(body_html)) !== null && items.length < 12){
+  while((m = detailsRe.exec(body_html)) !== null && items.length < 12){
     const q = String(m[1]).replace(/<[^>]+>/g, '').trim();
     const a = String(m[2]).replace(/<[^>]+>/g, '').trim();
     if(q && a && q.length >= 4 && a.length >= 8){
@@ -17306,6 +17320,21 @@ function _mediaFaqSchema(body_html){
         'name': q,
         'acceptedAnswer': { '@type': 'Answer', 'text': a },
       });
+    }
+  }
+  // 形式 2 (fallback): <h3>Q. ... <p>A. ...
+  if(items.length === 0){
+    const faqRe = /<h3[^>]*>\s*(?:Q[\.。\:：]?\s*)?([\s\S]*?)<\/h3>\s*<p[^>]*>\s*(?:A[\.。\:：]?\s*)?([\s\S]*?)<\/p>/gi;
+    while((m = faqRe.exec(body_html)) !== null && items.length < 12){
+      const q = String(m[1]).replace(/<[^>]+>/g, '').trim();
+      const a = String(m[2]).replace(/<[^>]+>/g, '').trim();
+      if(q && a && q.length >= 4 && a.length >= 8){
+        items.push({
+          '@type': 'Question',
+          'name': q,
+          'acceptedAnswer': { '@type': 'Answer', 'text': a },
+        });
+      }
     }
   }
   if(items.length < 2) return null;

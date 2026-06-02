@@ -10988,11 +10988,15 @@ function _renderTabMedia(site){
                   + '</div>';
               }).join('')
             + '</div></div>')
-      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-      +   '<b style="color:var(--text2)">📂 カテゴリ</b>: '
-      +   '<span style="flex:1">'+((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')+'</span>'
-      +   '<button onclick="_openCategoryEditor(\''+esc(site.id)+'\')" style="background:var(--teal);border:0;color:#fff;font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="カテゴリ一覧を 追加 / リネーム / 削除">✏️ カテゴリ編集</button>'
-      +   '<button onclick="_recategorizePosts(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="既存記事を カテゴリに 再マッピング (= AI が外れたカテゴリを正規化)">♻️ 既存記事を整理</button>'
+      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px">'
+      +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
+      +     '<b style="color:var(--text2);font-size:12px">📂 カテゴリ ('+ ((media.categories||[]).length) +')</b>'
+      +     '<div style="display:flex;gap:6px;flex-shrink:0">'
+      +       '<button onclick="_openCategoryEditor(\''+esc(site.id)+'\')" style="background:var(--teal);border:0;color:#fff;font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="カテゴリ一覧を 追加 / リネーム / 削除">✏️ 編集</button>'
+      +       '<button onclick="_recategorizePosts(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="既存記事を カテゴリに 再マッピング (= AI が外れたカテゴリを正規化)">♻️ 整理</button>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div>'+((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')+'</div>'
       + '</div>'
       // 次のステップ — STEP 1 ✓ → STEP 2 (KW) → STEP 3 (戦略) → STEP 4 (タスク)
       + '<div style="padding:14px 16px;background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:11px">'

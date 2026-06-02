@@ -6134,28 +6134,48 @@ input,textarea{font-family:var(--sans);}
 .meh-foot button:hover{background:rgba(255,255,255,.15)}
 @media (max-width:560px){.meh-h{font-size:15px}.meh-cell-ic{font-size:18px}}
 
-/* 🎯 Setup progress card (= chat 上部、 4 step 進捗) */
+/* 🎯 Setup progress card (= chat 上部、 4 step 進捗 + 次のアクション主役) */
 .sp-card{background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:13px;padding:14px 16px;margin-bottom:14px;max-width:880px;margin-left:auto;margin-right:auto}
-.sp-card-h{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-.sp-card-eye{font-size:10.5px;font-weight:800;color:var(--teal-deep);letter-spacing:.06em;text-transform:uppercase}
-.sp-card-ti{font-size:13px;font-weight:800;color:var(--text)}
-.sp-card-pct{color:var(--peach-dark);font-weight:900;margin-left:6px;font-size:14px}
+.sp-card-h{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.sp-card-eye{font-size:11.5px;font-weight:800;color:var(--teal-deep);letter-spacing:.04em}
+.sp-card-eye b{color:var(--text);margin-left:2px}
+.sp-card-pct{color:var(--text3);font-weight:700;font-size:11px}
 .sp-card-x{margin-left:auto;background:transparent;border:0;color:var(--text3);font-size:18px;cursor:pointer;padding:0 6px;line-height:1}
-.sp-bar{background:#fff;height:6px;border-radius:3px;overflow:hidden;border:1px solid var(--wire2);margin-bottom:12px}
+.sp-bar{background:#fff;height:5px;border-radius:3px;overflow:hidden;border:1px solid var(--wire2);margin-bottom:12px}
 .sp-bar-fill{background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;transition:width .5s ease}
-.sp-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.sp-step{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:8px 10px;transition:.15s;cursor:default}
-.sp-step.ok{background:#dcfce7;border-color:#86efac;color:#15803d}
-.sp-step.now{background:var(--peach-soft);border-color:var(--peach-dark);cursor:pointer;animation:spPulse 2s infinite}
-.sp-step.now:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(192,255,92,.4)}
-@keyframes spPulse{0%,100%{box-shadow:0 0 0 0 rgba(192,255,92,.4)}50%{box-shadow:0 0 0 6px rgba(192,255,92,0)}}
-.sp-step-n{width:22px;height:22px;border-radius:50%;background:var(--cream3);color:var(--text3);font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.sp-step.ok .sp-step-n{background:#15803d;color:#fff}
-.sp-step.now .sp-step-n{background:var(--teal);color:#fff}
-.sp-step-bd{flex:1;min-width:0}
-.sp-step-ic{font-size:14px;line-height:1}
-.sp-step-lb{font-size:11px;font-weight:700;color:var(--text);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media (max-width:640px){.sp-steps{grid-template-columns:repeat(2,1fr)}.sp-step-ic{display:none}}
+/* 次のアクション = card 内主役 (= 旧 hero card を統合) */
+.sp-next{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:10px;padding:13px 15px;cursor:pointer;transition:.15s;margin-bottom:10px;box-shadow:0 4px 14px rgba(13,79,74,.15)}
+.sp-next:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,79,74,.25)}
+.sp-next-eye{font-size:10px;font-weight:800;opacity:.85;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+.sp-next-ti{font-size:16px;font-weight:900;margin-bottom:2px;line-height:1.35}
+.sp-next-tx{font-size:11.5px;opacity:.9;line-height:1.55}
+.sp-next-cta{font-size:10.5px;opacity:.85;margin-top:6px;font-weight:700}
+/* 4 pill (= 進捗の見える化、 旧 sp-steps から簡素化) */
+.sp-pills{display:flex;gap:5px;flex-wrap:wrap}
+.sp-pill{display:flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--wire2);border-radius:7px;padding:5px 9px;font-size:10.5px;font-weight:700;color:var(--text2);transition:.15s}
+.sp-pill.ok{background:#dcfce7;border-color:#86efac;color:#15803d}
+.sp-pill.now{background:var(--peach-soft);border-color:var(--peach-dark);color:var(--teal-deep);cursor:pointer}
+.sp-pill.now:hover{transform:translateY(-1px)}
+.sp-pill-n{width:16px;height:16px;border-radius:50%;background:var(--cream3);color:var(--text3);font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sp-pill.ok .sp-pill-n{background:#15803d;color:#fff}
+.sp-pill.now .sp-pill-n{background:var(--teal);color:#fff}
+.sp-pill-ic{font-size:12px;line-height:1}
+.sp-pill-lb{white-space:nowrap}
+@media (max-width:560px){.sp-pill-lb{display:none}.sp-pill{padding:5px 7px}.sp-next-ti{font-size:14px}}
+
+/* ⋯ メニュー (= Lv1 整理 toolbar dropdown) */
+.ct-menu-wrap{position:relative;display:inline-block}
+.ct-menu-btn{font-size:14px !important;letter-spacing:1px}
+.ct-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--cream);border:1px solid var(--wire2);border-radius:10px;padding:5px;box-shadow:0 14px 40px rgba(0,0,0,.12);z-index:80;min-width:200px}
+.ct-menu.open{display:flex;flex-direction:column;animation:ctMenuIn .15s ease}
+@keyframes ctMenuIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.ct-menu-it{display:flex;align-items:center;gap:9px;background:transparent;border:0;padding:8px 10px;border-radius:7px;font-family:inherit;font-size:12px;text-align:left;cursor:pointer;color:var(--text);transition:background .12s}
+.ct-menu-it:hover{background:var(--cream3)}
+.ct-menu-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.ct-menu-lb{font-weight:800;flex:1}
+.ct-menu-sub{font-size:10.5px;color:var(--text3);font-weight:600}
+.ct-menu-sep{height:1px;background:var(--wire2);margin:4px 8px}
+@media (max-width:560px){.ct-menu{right:auto;left:0;min-width:180px}.ct-menu-sub{display:none}}
 
 /* 🎮 Onboarding walkthrough overlay */
 .ob-overlay{position:fixed;inset:0;z-index:99999;pointer-events:none;font-family:inherit}

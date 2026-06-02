@@ -3016,6 +3016,37 @@ window._closeSiteTabModal = function(){
 };
 
 window.openNumbersPanel       = function(siteId){ _openSiteTabModal(siteId, 'numbers'); };
+// 🎛️ Toolbar の ⋯ メニュー (= 運用 + 管理 ボタンを集約)
+window._toggleCtMenu = function(ev, siteId){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  // 他の開いてる menu を閉じる
+  document.querySelectorAll('.ct-menu.open').forEach(function(m){
+    if(m.id !== 'ctMenu_'+siteId) m.classList.remove('open');
+  });
+  var el = document.getElementById('ctMenu_'+siteId);
+  if(el){
+    el.classList.toggle('open');
+    // outside click で close
+    if(el.classList.contains('open')){
+      setTimeout(function(){
+        var handler = function(e){
+          if(!el.contains(e.target) && !e.target.closest('.ct-menu-btn')){
+            el.classList.remove('open');
+            document.removeEventListener('click', handler);
+          }
+        };
+        document.addEventListener('click', handler);
+      }, 30);
+    }
+  }
+};
+window._ctMenuClick = function(siteId, fn){
+  // メニュー閉じる + 関数実行
+  var el = document.getElementById('ctMenu_'+siteId);
+  if(el) el.classList.remove('open');
+  try { fn(siteId); } catch(e){ console.warn('[ct-menu]', e); }
+};
+
 window.openKeywordPanel       = function(siteId){
   // setup progress 用に kw_visited_at を記録 (= 一度開けば step 2 完了扱い)
   try {
@@ -10530,31 +10561,40 @@ function _renderSetupProgress(ag){
   if(!ag) return '';
   var st = _setupStepStatus(ag);
   var done = (st.media?1:0) + (st.keyword?1:0) + (st.strategy?1:0) + (st.tasks?1:0);
-  // 全 step 完了したら隠す (= UI 圧迫しない)
+  // 全 step 完了したら隠す
   if(done >= 4) return '';
   var pct = Math.round((done / 4) * 100);
   var siteId = esc(ag.id);
-  function step(num, ic, label, ok, openFn){
-    var cls = ok ? 'sp-step ok' : (num === done + 1 ? 'sp-step now' : 'sp-step');
-    var click = ok ? '' : ' onclick="'+openFn+'(\''+siteId+'\')"';
-    return '<div class="'+cls+'"'+click+'>'
-      + '<div class="sp-step-n">'+(ok?'✓':num)+'</div>'
-      + '<div class="sp-step-bd"><div class="sp-step-ic">'+ic+'</div><div class="sp-step-lb">'+label+'</div></div>'
-      + '</div>';
+  // 「次のアクション」 を主役表示 (= 旧 hero card を統合)
+  var STEP_META = [
+    { num: 1, ic: '📝', lb: 'ブログ立ち上げ',   sub: '60 秒でメディアを立ち上げ', fn: 'openMediaPanel',   ok: st.media },
+    { num: 2, ic: '🔍', lb: 'キーワード調査',  sub: 'AI が 10-20 候補生成 → 1 click 公開', fn: 'openKeywordPanel', ok: st.keyword },
+    { num: 3, ic: '🎯', lb: '戦略・KPI',       sub: 'ペルソナ + 6 ヶ月目標を設定', fn: 'openStrategyPanel', ok: st.strategy },
+    { num: 4, ic: '📋', lb: 'タスク',          sub: '8 週ロードマップ を自動生成',  fn: 'openTasksPanel',   ok: st.tasks },
+  ];
+  var nextStep = STEP_META.find(function(s){ return !s.ok; });
+  function pill(s){
+    var cls = s.ok ? 'sp-pill ok' : (s === nextStep ? 'sp-pill now' : 'sp-pill');
+    var click = s.ok ? '' : ' onclick="'+s.fn+'(\''+siteId+'\')"';
+    return '<div class="'+cls+'"'+click+'><span class="sp-pill-n">'+(s.ok?'✓':s.num)+'</span><span class="sp-pill-ic">'+s.ic+'</span><span class="sp-pill-lb">'+s.lb+'</span></div>';
   }
+  var nextHTML = nextStep ? ''
+    + '<div class="sp-next" onclick="'+nextStep.fn+'(\''+siteId+'\')">'
+    +   '<div class="sp-next-eye">🚀 STEP '+nextStep.num+' / 4 — 次にやること</div>'
+    +   '<div class="sp-next-ti">'+nextStep.ic+' '+nextStep.lb+'</div>'
+    +   '<div class="sp-next-tx">'+nextStep.sub+'</div>'
+    +   '<div class="sp-next-cta">クリックで開く →</div>'
+    + '</div>' : '';
   return ''
     + '<div class="sp-card">'
     +   '<div class="sp-card-h">'
-    +     '<div class="sp-card-eye">🎯 セットアップ進捗</div>'
-    +     '<div class="sp-card-ti"><b>'+done+' / 4</b> 完了 <span class="sp-card-pct">'+pct+'%</span></div>'
+    +     '<div class="sp-card-eye">セットアップ進捗 <b>'+done+' / 4</b> <span class="sp-card-pct">('+pct+'%)</span></div>'
     +     '<button class="sp-card-x" onclick="_dismissSetupProgress()" title="閉じる">×</button>'
     +   '</div>'
     +   '<div class="sp-bar"><div class="sp-bar-fill" style="width:'+pct+'%"></div></div>'
-    +   '<div class="sp-steps">'
-    +     step(1, '📝', 'メディア', st.media,    'openMediaPanel')
-    +     step(2, '🔍', 'KW 調査', st.keyword,  'openKeywordPanel')
-    +     step(3, '🎯', '戦略・KPI', st.strategy, 'openStrategyPanel')
-    +     step(4, '📋', 'タスク',   st.tasks,    'openTasksPanel')
+    +   nextHTML
+    +   '<div class="sp-pills">'
+    +     STEP_META.map(pill).join('')
     +   '</div>'
     + '</div>';
 }
@@ -12611,13 +12651,9 @@ function agDragEnd(ev){
 
 /* ── Open agent / chat ─────────────────────────────── */
 async function openAgent(id){
-  // 🎮 オンボーディング walkthrough trigger (= 初回 site agent open 時のみ)
-  try {
-    var _ob_ag = (agents||[]).find(function(a){return a && a.id === id;});
-    if(_ob_ag && _ob_ag.site_url && typeof _maybeShowOnboardingWalkthrough === 'function'){
-      setTimeout(function(){ _maybeShowOnboardingWalkthrough(_ob_ag); }, 1200);
-    }
-  } catch(_){}
+  // 🎮 オンボーディング walkthrough は Lv1 整理で無効化 (= setup progress card に統合)
+  //   進捗バー card 内の「now」 step が pulse animation で次アクション誘導するため
+  //   別 overlay の walkthrough は redundant。 コード自体は残す (= 復活簡単).
   // Flag for renderMsgs — snap to bottom on the first render after switching
   // chats. Cleared once that render runs.
   window._chatJustOpened = true;
@@ -12773,38 +12809,35 @@ async function openAgent(id){
     // 他のアクション (🔗 共有 / 💬 会話共有 / ↻ 新規 / 📝 メモ / ⚙ 設定) は
     // ダッシュボード内のアクションパネルに集約 — chat header をスッキリ。
     if(_isSiteAgent(ag)){
-      // ── サイト用 toolbar (icon-only + tooltip) ──
-      // 思考順序の左→右配置:
-      //   セットアップ動線 (= 一度だけ): 📝 ブログ立ち上げ → 🔍 キーワード調査 → 🎯 戦略・KPI → 📋 タスク
-      //   運用動線 (= 毎日): 📊 数字 → 📰 日次レポート
-      //   組織管理: 🏢 エージェント → 🔌 接続 → 📒 メモ → ⚙ 設定
+      // ── サイト用 toolbar (Lv1 整理: 10 → 5) ──
+      //   セットアップ動線: 📝 → 🔍 → 🎯 → 📋
+      //   ⚙ dropdown: 📊 数字 / 📰 日次レポ / 🏢 エージェント / 🔌 接続 / 📒 メモ / ⚙ 設定
       var _siteId = esc(ag.id);
       var _hasMedia = !!(ag.media && ag.media.id);
       var _isMediaSite = (ag.site_type === 'media' || ag.site_vertical === 'blog' || ag.site_vertical === 'news');
 
-      // 【セットアップ動線】 — 左から「立ち上げ → 何書く → 目標 → 何する」
+      // 4 step (= セットアップ動線、 常時表示)
       if(!_isMediaSite){
-        actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('1️⃣ ブログ立ち上げ・運用 (= 最初に作る)','1️⃣ Launch & operate blog (= start here)')+'">📝</button>';
+        actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('1️⃣ ブログ立ち上げ','1️⃣ Launch blog')+'">📝</button>';
       }
-      actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('2️⃣ キーワード調査 — 何を書くか決める','2️⃣ Keyword research — pick what to write')+'">🔍</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('3️⃣ 戦略・KPI — ペルソナ / 目標 / 競合','3️⃣ Strategy / KPI — persona / goals / competitors')+'">🎯</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('4️⃣ タスク — 8 週ロードマップ + 今週やること','4️⃣ Tasks — 8-week roadmap + this week')+'">📋</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('2️⃣ キーワード調査','2️⃣ Keyword research')+'">🔍</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('3️⃣ 戦略・KPI','3️⃣ Strategy / KPI')+'">🎯</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('4️⃣ タスク','4️⃣ Tasks')+'">📋</button>';
 
-      // 区切り (= 運用フェーズへ)
-      actsHTML += '<span class="ct-tool-sep" aria-hidden="true"></span>';
-
-      // 【運用動線】 — 結果を見る
-      actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 / GSC の生データ','Numbers — GA4 / GSC raw data')+'">📊</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openDailyGrowthReportPanel(\''+_siteId+'\')" title="'+L('日次グロースレポート — 数字 + 効いた施策 + 明日のアクション','Daily growth report')+'">📰</button>';
-
-      // 区切り (= 管理へ)
-      actsHTML += '<span class="ct-tool-sep" aria-hidden="true"></span>';
-
-      // 【管理】
-      actsHTML += '<button class="ct-act ct-tool" onclick="openAgentsPanel(\''+_siteId+'\')" title="'+L('エージェント一覧 — AI チームの組織図','Agents — AI team org chart')+'">🏢</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openConnectionsPanel(\''+_siteId+'\')" title="'+L('接続 — GA4 / SNS / OAuth','Connections')+'">🔌</button>';
-      actsHTML += '<button class="ct-act ct-tool notes-btn" onclick="openNotesPanel(\''+_siteId+'\')" title="'+L('メモ帳 — AI 成果物 + 手動メモ','Notebook')+'">📒</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openSiteSettingsPanel(\''+_siteId+'\')" title="'+L('設定 — サイト名 / 削除','Settings')+'">⚙️</button>';
+      // ⚙ メニュー (= 運用 + 管理 を集約、 click で dropdown 開閉)
+      actsHTML += '<div class="ct-menu-wrap">'
+        + '<button class="ct-act ct-tool ct-menu-btn" onclick="_toggleCtMenu(event,\''+_siteId+'\')" title="'+L('メニュー','Menu')+'" aria-haspopup="true" aria-expanded="false">⋯</button>'
+        + '<div class="ct-menu" id="ctMenu_'+_siteId+'" role="menu">'
+        + '<button class="ct-menu-it" onclick="_ctMenuClick(\''+_siteId+'\',openNumbersPanel)"><span class="ct-menu-ic">📊</span><span class="ct-menu-lb">数字分析</span><span class="ct-menu-sub">GA4 / GSC</span></button>'
+        + '<button class="ct-menu-it" onclick="_ctMenuClick(\''+_siteId+'\',openDailyGrowthReportPanel)"><span class="ct-menu-ic">📰</span><span class="ct-menu-lb">日次レポート</span><span class="ct-menu-sub">朝の数字 + 提案</span></button>'
+        + '<div class="ct-menu-sep"></div>'
+        + '<button class="ct-menu-it" onclick="_ctMenuClick(\''+_siteId+'\',openAgentsPanel)"><span class="ct-menu-ic">🏢</span><span class="ct-menu-lb">エージェント</span><span class="ct-menu-sub">AI チーム組織図</span></button>'
+        + '<button class="ct-menu-it" onclick="_ctMenuClick(\''+_siteId+'\',openConnectionsPanel)"><span class="ct-menu-ic">🔌</span><span class="ct-menu-lb">接続</span><span class="ct-menu-sub">GA4 / SNS / OAuth</span></button>'
+        + '<button class="ct-menu-it" onclick="_ctMenuClick(\''+_siteId+'\',openNotesPanel)"><span class="ct-menu-ic">📒</span><span class="ct-menu-lb">メモ帳</span><span class="ct-menu-sub">成果物 + 手動メモ</span></button>'
+        + '<div class="ct-menu-sep"></div>'
+        + '<button class="ct-menu-it" onclick="_ctMenuClick(\''+_siteId+'\',openSiteSettingsPanel)"><span class="ct-menu-ic">⚙️</span><span class="ct-menu-lb">設定</span><span class="ct-menu-sub">サイト名 / 削除</span></button>'
+        + '</div>'
+        + '</div>';
     } else {
       actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
       actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
@@ -13977,31 +14010,24 @@ function renderMsgs(ag, forceScrollBottom){
   if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && _isMediaSiteVert){
     _mediaExistingHero = _renderMediaExistingHero(ag);
   }
+  // 📝 メディア hero card は Lv1 整理で 廃止 (= setup progress card の「次のアクション」 に統合)
+  //    link bar (= 作成済時の小さい数字表示) のみ残す
   var _mediaIntroBanner = '';
   if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && !_isMediaSiteVert){
     var _mediaExists = !!(ag.media && ag.media.id);
-    if(!_mediaExists){
-      _mediaIntroBanner = '<div class="media-hero-card">'
-        +   '<div class="media-hero-card-eyebrow">🚀 STEP 1 / 4 · まずはブログを立ち上げよう</div>'
-        +   '<div class="media-hero-card-h">集客ブログを立ち上げよう。</div>'
-        +   '<div class="media-hero-card-tx">セットアップは <b>📝 メディア → 🔍 キーワード調査 → 🎯 戦略・KPI → 📋 タスク</b> の 4 ステップ。 30 名超の AI チームが自動で動きます。 まずは 60 秒のブログ立ち上げから。</div>'
-        +   '<div class="media-hero-card-cta-row">'
-        +     '<button class="media-hero-card-btn" onclick="openMediaPanel(\''+esc(ag.id)+'\')">🚀 STEP 1: ブログを立ち上げる <span style="font-size:18px">→</span></button>'
-        +     '<div class="media-hero-card-trust"><span>✓ 60 秒で完成</span><span>✓ 月 ¥0 〜</span><span>✓ 解約 1 click</span></div>'
-        +   '</div>'
-        + '</div>';
-    } else {
+    if(_mediaExists){
       var _mPostsCount = (ag.media_posts_idx || []).length;
-      var _mDomain = (ag.media && ag.media.domain) || ((ag.media && ag.media.slug) ? (ag.media.slug + '.myaiagents.agency') : '');
+      var _mDomain = (ag.media && ag.media.domain) || 'myaiagents.agency';
       _mediaIntroBanner = '<div class="media-link-bar">'
         +   '<div class="media-link-bar-ic">📝</div>'
         +   '<div class="media-link-bar-bd">'
         +     '<div class="media-link-bar-ti">'+esc((ag.media && ag.media.name) || (ag.name + ' Blog'))+' · 運用中</div>'
-        +     '<div class="media-link-bar-sub">'+_mPostsCount+' 本公開 · '+esc(_mDomain)+'</div>'
+        +     '<div class="media-link-bar-sub">'+_mPostsCount+' 本公開 · '+esc(_mDomain)+'/media/'+esc((ag.media && ag.media.slug)||'')+'</div>'
         +   '</div>'
         +   '<button class="media-link-bar-btn" onclick="openMediaPanel(\''+esc(ag.id)+'\')">ダッシュボードへ →</button>'
         + '</div>';
     }
+    // 未作成時は何も出さない (= setup progress card の「次のアクション」 が役割を担う)
   }
   inner.innerHTML = _nudgeHTML + _setupProgressBanner + _mediaExistingHero + _mediaIntroBanner + _olderHistBanner + ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline ONLY on desktop;

@@ -2254,26 +2254,65 @@
       var rel = _kwRelTime(dt);
       subEl.innerHTML = '最終更新: ' + _esc(rel) + ' · <a href="#" style="color:#0d4f4a;text-decoration:none;font-weight:800" onclick="return _doRefresh()">🔄 再生成</a>';
     }
-    // 候補カード再描画
-    var ranks = ['🥇 #1','🥈 #2','🥉 #3','#4','#5','#6'];
-    grid.innerHTML = arr.map(function(c, i){
+    // 勝率スコアで並べ替え (= 高勝率 を上に)
+    arr.sort(function(a, b){
+      var wa = (a && typeof a.win_probability === 'number') ? a.win_probability : 50;
+      var wb = (b && typeof b.win_probability === 'number') ? b.win_probability : 50;
+      return wb - wa;
+    });
+    // 勝率で 3 グループ分けする (= 高勝率 / 中 / 競合厳しい)
+    var highGroup = arr.filter(function(c){ return (c && (c.win_probability||50) >= 70); });
+    var midGroup  = arr.filter(function(c){ var w=(c && c.win_probability)||50; return w >= 35 && w < 70; });
+    var lowGroup  = arr.filter(function(c){ var w=(c && c.win_probability)||50; return w < 35; });
+    function _renderCardHtml(c, i){
       c = c || {};
-      var topCls = (i === 0) ? ' top' : '';
       var sig = c.signals || {};
-      return '<div class="cand' + topCls + '">'
-        +   '<div class="cand-rank">' + (ranks[i] || ('#' + (i+1))) + '</div>'
-        +   '<div class="cand-kw">' + _esc(c.keyword) + '</div>'
+      var winP = (typeof c.win_probability === 'number') ? c.win_probability : null;
+      var predRank = c.predicted_rank || '—';
+      var estPv = (typeof c.estimated_pv === 'number') ? c.estimated_pv : null;
+      var immed = (typeof c.immediacy_score === 'number') ? c.immediacy_score : null;
+      var vol = (typeof c.volume_est === 'number') ? c.volume_est : null;
+      // 勝率の色分け (≥70=緑、 35-70=黄、 <35=赤)
+      var winCls = '', winLbl = '';
+      if(winP != null){
+        if(winP >= 70){ winCls='style="background:#dcfce7;color:#15803d"'; winLbl='🏆 勝率 ' + winP + '%'; }
+        else if(winP >= 35){ winCls='style="background:#fef3c7;color:#92400e"'; winLbl='⚖ 勝率 ' + winP + '%'; }
+        else { winCls='style="background:#fee2e2;color:#9f1239"'; winLbl='⚠ 勝率 ' + winP + '%'; }
+      }
+      return '<div class="cand">'
+        +   (winP != null ? '<div ' + winCls + ' style="position:absolute;top:10px;right:12px;padding:3px 8px;border-radius:5px;font-size:10.5px;font-weight:800;letter-spacing:.02em">' + winLbl + '</div>' : '<div class="cand-rank">#' + (i+1) + '</div>')
+        +   '<div class="cand-kw" style="padding-right:90px">' + _esc(c.keyword) + '</div>'
         +   '<div class="cand-meta">'
         +     '<span class="cand-chip">' + _esc(c.type || '推測') + '</span>'
+        +     (estPv != null ? '<span class="cand-chip" style="background:#dbeafe;color:#1e40af">📊 想定 ' + (estPv >= 1000 ? Math.round(estPv/100)/10+'k' : estPv) + ' PV/月</span>' : '')
+        +     (predRank !== '—' ? '<span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">🎯 順位 ' + _esc(predRank) + ' 位</span>' : '')
+        +     (immed != null ? '<span class="cand-chip" style="background:#fff7ed;color:#c2410c">⚡ 即効 ' + immed + '</span>' : '')
         +   '</div>'
         +   '<div class="cand-signals">'
-        +     '<div class="sig"><span class="sig-ic">📈</span><div class="sig-val up">' + _esc(sig.trend || '—') + '</div><div class="sig-lbl">トレンド</div></div>'
-        +     '<div class="sig"><span class="sig-ic">🥊</span><div class="sig-val warn">' + _esc(sig.competition || '中') + '</div><div class="sig-lbl">競合強度</div></div>'
+        +     (vol != null ? '<div class="sig"><span class="sig-ic">📈</span><div class="sig-val">' + (vol >= 1000 ? Math.round(vol/100)/10+'k' : vol) + '</div><div class="sig-lbl">月間検索</div></div>'
+                          : '<div class="sig"><span class="sig-ic">📈</span><div class="sig-val up">' + _esc(sig.trend || '—') + '</div><div class="sig-lbl">トレンド</div></div>')
+        +     '<div class="sig"><span class="sig-ic">🥊</span><div class="sig-val warn">' + _esc(sig.competition || '中') + '</div><div class="sig-lbl">競合</div></div>'
         +     '<div class="sig"><span class="sig-ic">🎯</span><div class="sig-val">' + _esc(sig.intent || '情報') + '</div><div class="sig-lbl">意図</div></div>'
+        +     '<div class="sig"><span class="sig-ic">' + (c.difficulty != null && c.difficulty < 40 ? '✅' : '⚠') + '</span><div class="sig-val">' + (c.difficulty != null ? c.difficulty : '—') + '</div><div class="sig-lbl">難易度</div></div>'
         +   '</div>'
         +   '<div class="cand-reason">' + _esc(c.reason) + '</div>'
         + '</div>';
-    }).join('');
+    }
+    // 3 グループのセクション分け HTML
+    var sectionHtml = '';
+    if(highGroup.length){
+      sectionHtml += '<div style="grid-column:1/-1;font-size:11px;font-weight:800;color:#15803d;letter-spacing:.04em;text-transform:uppercase;padding:8px 4px 4px;border-bottom:2px solid #dcfce7;margin-bottom:6px">🏆 高勝率 (= 3 ヶ月以内に上位入る確率 70%↑、 まずこれから書く)</div>'
+                  + highGroup.map(_renderCardHtml).join('');
+    }
+    if(midGroup.length){
+      sectionHtml += '<div style="grid-column:1/-1;font-size:11px;font-weight:800;color:#92400e;letter-spacing:.04em;text-transform:uppercase;padding:14px 4px 4px;border-bottom:2px solid #fef3c7;margin-bottom:6px">⚖ 中勝率 (= 順位入るかは要監視)</div>'
+                  + midGroup.map(_renderCardHtml).join('');
+    }
+    if(lowGroup.length){
+      sectionHtml += '<div style="grid-column:1/-1;font-size:11px;font-weight:800;color:#9f1239;letter-spacing:.04em;text-transform:uppercase;padding:14px 4px 4px;border-bottom:2px solid #fee2e2;margin-bottom:6px">⚠ 競合厳しい (= 書いても上位入りにくい、 ロングテール化推奨)</div>'
+                  + lowGroup.map(_renderCardHtml).join('');
+    }
+    grid.innerHTML = sectionHtml || arr.map(_renderCardHtml).join('');
 
     // 推測モードの時は GSC 接続 CTA を hero の下に挿入
     if(d.mode === 'inferred'){
@@ -2305,18 +2344,31 @@
         + '</div>';
       return;
     }
-    var ranks = ['🥇 #1','🥈 #2','🥉 #3','#4','#5','#6'];
+    // 即効性 (immediacy_score) で並べ替え (= AEO は即効性が肝)
+    arr.sort(function(a, b){
+      var ia = (a && typeof a.immediacy_score === 'number') ? a.immediacy_score : 50;
+      var ib = (b && typeof b.immediacy_score === 'number') ? b.immediacy_score : 50;
+      return ib - ia;
+    });
     grid.innerHTML = arr.map(function(c, i){
       c = c || {};
-      var topCls = (i === 0) ? ' top' : '';
-      var topStyle = (i === 0) ? ' style="border-color:#a78bfa;background:linear-gradient(180deg,#fff,#f3e8ff)"' : '';
-      var rankColor = (i === 0) ? ' style="color:#7c3aed"' : '';
       var sig = c.signals || {};
-      return '<div class="cand' + topCls + '"' + topStyle + '>'
-        +   '<div class="cand-rank"' + rankColor + '>' + (ranks[i] || ('#' + (i+1))) + '</div>'
-        +   '<div class="cand-kw">' + _esc(c.keyword) + '</div>'
+      var immed = (typeof c.immediacy_score === 'number') ? c.immediacy_score : null;
+      var winP = (typeof c.win_probability === 'number') ? c.win_probability : null;
+      var estPv = (typeof c.estimated_pv === 'number') ? c.estimated_pv : null;
+      var immedCls = '', immedLbl = '';
+      if(immed != null){
+        if(immed >= 75){ immedCls='style="background:#fff7ed;color:#c2410c"'; immedLbl='⚡ 即効 ' + immed; }
+        else if(immed >= 40){ immedCls='style="background:#fef3c7;color:#92400e"'; immedLbl='⚡ 即効 ' + immed; }
+        else { immedCls='style="background:#f5f5f5;color:#525252"'; immedLbl='即効 ' + immed; }
+      }
+      return '<div class="cand">'
+        +   (immed != null ? '<div ' + immedCls + ' style="position:absolute;top:10px;right:12px;padding:3px 8px;border-radius:5px;font-size:10.5px;font-weight:800">' + immedLbl + '</div>' : '<div class="cand-rank">#' + (i+1) + '</div>')
+        +   '<div class="cand-kw" style="padding-right:90px">' + _esc(c.keyword) + '</div>'
         +   '<div class="cand-meta">'
         +     '<span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">' + _esc(c.type || '推測') + '</span>'
+        +     (estPv != null ? '<span class="cand-chip" style="background:#dbeafe;color:#1e40af">📊 想定 ' + (estPv >= 1000 ? Math.round(estPv/100)/10+'k' : estPv) + ' PV/月</span>' : '')
+        +     (winP != null ? '<span class="cand-chip" style="background:'+(winP>=70?'#dcfce7':'#fef3c7')+';color:'+(winP>=70?'#15803d':'#92400e')+'">🎯 勝率 ' + winP + '%</span>' : '')
         +   '</div>'
         +   '<div class="cand-signals">'
         +     '<div class="sig"><span class="sig-ic">🤖</span><div class="sig-val up">' + _esc(sig.ai_overview || '—') + '</div><div class="sig-lbl">AI Overview</div></div>'

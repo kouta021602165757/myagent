@@ -7807,6 +7807,15 @@ function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
     'AEO 候補は「〜とは?」「〜はいくら?」「〜の方法は?」など Q 形式で、ChatGPT/Perplexity/Google AI Overviews に',
     '引用されることを狙う。type は「PAA出現」「HowTo候補」「比較系」「定義系」「急上昇」のいずれか。',
     '',
+    '【重要】 各候補に「勝率スコア」 を必ず付ける:',
+    '  - win_probability: 3 ヶ月以内に上位 10 位 入る確率 (0-100 整数)',
+    '  - predicted_rank: 予想順位レンジ ("1-3"|"4-10"|"11-20"|"21-30"|"30+")',
+    '  - estimated_pv: 上位入った場合の月間想定 PV (= ボリューム × CTR)',
+    '  - immediacy_score: 即効性 (0-100、 AEO 引用率 + SNS シェア性込み)',
+    '  - volume_est: 月間検索ボリューム推定整数',
+    '  - difficulty: 競合難易度 1-100 (= 低い ほど狙いやすい)',
+    'これらは「狙えば勝てる」 を ユーザに判断させる核データ。',
+    '',
     '【出力】 必ず JSON だけを返す。コードフェンス・前置き・解説は禁止。',
     '{',
     '  "candidates": [   // SEO 用 6 件',
@@ -7815,6 +7824,12 @@ function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
     '      "keyword": "(具体キーワード)",',
     '      "type": "伸びしろ" | "機会損失" | "強み拡張" | "ゾンビ" | "CV直前" | "推測",',
     '      "reason": "なぜ推すか 1-2 文 (= GSC 表示 320/順位 18 等の数字込み)",',
+    '      "win_probability": 92,',
+    '      "predicted_rank": "1-3",',
+    '      "estimated_pv": 800,',
+    '      "immediacy_score": 72,',
+    '      "volume_est": 1800,',
+    '      "difficulty": 28,',
     '      "signals": { "trend": "+18%" | "—", "competition": "緩"|"中"|"激", "intent": "情報"|"比較"|"購入" }',
     '    }',
     '  ],',
@@ -7824,6 +7839,12 @@ function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
     '      "keyword": "(具体質問、Q 形式)",',
     '      "type": "PAA出現" | "HowTo候補" | "比較系" | "定義系" | "急上昇" | "推測",',
     '      "reason": "なぜ AI が引用しやすいか 1-2 文",',
+    '      "win_probability": 88,',
+    '      "predicted_rank": "1-3",',
+    '      "estimated_pv": 350,',
+    '      "immediacy_score": 88,   // AEO は即効性高い',
+    '      "volume_est": 600,',
+    '      "difficulty": 18,',
     '      "signals": { "ai_overview": "あり"|"なし", "sources_count": 5, "paa_count": 8, "score": "S"|"A"|"B"|"C" }',
     '    }',
     '  ]',
@@ -23279,7 +23300,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     const qs = url.parse(req.url, true).query || {};
     const TTL_MS = 6 * 3600 * 1000;
-    const KW_SCHEMA_VERSION = 3;  // 2→3: AEO 候補も同時生成 (2026-05-29)
+    const KW_SCHEMA_VERSION = 4;  // 3→4: 勝率スコア / 想定 PV / 即効性追加 (2026-06-02)
     const cached = ag.keyword_suggestions;
     if(!qs.refresh && cached && cached.fetched_at && cached.schema_version === KW_SCHEMA_VERSION &&
        (Date.now() - Date.parse(cached.fetched_at)) < TTL_MS){

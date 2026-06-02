@@ -16195,14 +16195,22 @@ async function _mediaGenerateArticle(agent, params){
 
   // 🏆 ランキング型: AI が products[] を構造化 JSON で返した時、
   //    サーバ側で product-card HTML を生成 → body_html に挿入
-  if(intent.type === 'best' && Array.isArray(parsed.products) && parsed.products.length > 0){
-    const cardsHtml = '<h2>📊 ' + (parsed.products.length) + ' プロダクト 個別レビュー｜順位別 詳細</h2>\n'
-      + parsed.products.map(p => _renderProductCard(p)).join('\n');
-    // body_html の 最初の H2 の手前に挿入 (= 概要の後、 詳細レビュー前)
-    // 最初の H2 を探して、 そこに挿入。 なければ body 末尾に append。
+  let products = Array.isArray(parsed.products) ? parsed.products : null;
+
+  // 2 パス フォールバック: best 意図 + products[] 未取得 → Haiku で抽出
+  if(intent.type === 'best' && (!products || products.length === 0)){
+    try {
+      const wanted = intent.product_count || 5;
+      products = await _extractProductsFromHtml(sanitized, parsed.title, wanted);
+    } catch(e){ console.warn('[media-art] product extraction failed:', e.message); }
+  }
+
+  if(intent.type === 'best' && Array.isArray(products) && products.length > 0){
+    const cardsHtml = '<h2>📊 ' + products.length + ' プロダクト 個別レビュー｜順位別 詳細</h2>\n'
+      + products.map(p => _renderProductCard(p)).join('\n');
+    // body_html の 2 番目の H2 の手前に挿入 (= 概要 / 比較表 の後、 詳細レビュー前)
     const h2Idx = sanitized.search(/<h2[^>]*>/i);
     if(h2Idx >= 0){
-      // 2 番目の H2 の前に挿入 (= 1 つ目は概要、 2 つ目以降の詳細 H2 の前にカード)
       const after1st = sanitized.indexOf('<h2', h2Idx + 1);
       const insertAt = after1st >= 0 ? after1st : sanitized.length;
       sanitized = sanitized.slice(0, insertAt) + cardsHtml + '\n\n' + sanitized.slice(insertAt);
@@ -16222,6 +16230,45 @@ async function _mediaGenerateArticle(agent, params){
     vertical: vert,
     template_used: tpl.template,
   };
+}
+
+// 🏆 2 パス フォールバック: 記事 body_html から products[] を Haiku で抽出
+//    AI が 1 パス目で products[] を返さない時に呼ぶ (= 「最高品質」 保証のため)
+//    Haiku 1500 tokens で 軽い call (= 数秒で完了)
+async function _extractProductsFromHtml(bodyHtml, articleTitle, wantedCount){
+  if(!ANTHROPIC) return null;
+  // body を テキストに変換 (= AI の入力を軽く)
+  const text = String(bodyHtml || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ').trim()
+    .slice(0, 6000);
+  if(text.length < 200) return null;
+  const sys = '【ROLE】 SEO 編集者 助手。 記事から プロダクト情報を JSON で抽出。\n\n'
+    + '【RULES】\n'
+    + '- 記事に出てくる プロダクト / サービス を 順位順 (= ランキングがあればその順、 なければ言及順) に '+wantedCount+' 個抽出\n'
+    + '- 各 product に: name, sub, score (0-5 推定), tagline (50 字), price (= 記事内記述優先、 なければ "公式参照"), trial, jp_support (○/△/×), origin, features (4 個), pros (2 個), cons (2 個), fit, official_url (= 記事内 URL あれば、 なければ null)\n'
+    + '- 出典のない数値は捏造禁止。 不明なら null / 「公式参照」\n'
+    + '【出力】 JSON のみ、 説明禁止:\n'
+    + '{ "products": [ { "rank":1, "name":"...", "sub":"...", "score":4.5, "tagline":"...", "price":"...", "trial":"...", "jp_support":"○", "origin":"...", "features":["..."], "pros":["..."], "cons":["..."], "fit":"...", "official_url":null } ] }';
+  const u = '【記事タイトル】 ' + String(articleTitle || '').slice(0, 100) + '\n\n【記事本文 (テキスト抜粋)】\n' + text;
+  try {
+    const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+    const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+      { model: 'claude-haiku-4-5-20251001', max_tokens: 3500, system: sys, messages: [{ role: 'user', content: u }] },
+      { timeout: 60000 });
+    if(r.s >= 400) return null;
+    const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+    const m = txt.match(/\{[\s\S]*\}/);
+    if(!m) return null;
+    let parsed; try { parsed = JSON.parse(m[0]); } catch(_){ return null; }
+    if(!Array.isArray(parsed.products)) return null;
+    return parsed.products.slice(0, wantedCount);
+  } catch(e){
+    console.warn('[extract-products]', e.message);
+    return null;
+  }
 }
 
 // 🏆 product-card HTML 生成 — ランキング型記事で AI が返す products[] から
@@ -16614,12 +16661,18 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
 <title>${title} | ${name}</title>
 <meta name="description" content="${excerpt}">
 <link rel="canonical" href="${publicUrl}">
+${media.favicon_url ? '<link rel="icon" href="' + _mediaEsc(media.favicon_url) + '">' : (media.logo_url ? '<link rel="icon" href="' + _mediaEsc(media.logo_url) + '">' : '<link rel="icon" href="/favicon.ico">')}
+${media.favicon_url ? '<link rel="apple-touch-icon" href="' + _mediaEsc(media.favicon_url) + '">' : ''}
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${excerpt}">
-${post.hero_image_url ? '<meta property="og:image" content="' + _mediaEsc(post.hero_image_url) + '">' : ''}
+${(media.og_image_url || post.hero_image_url) ? '<meta property="og:image" content="' + _mediaEsc(media.og_image_url || post.hero_image_url) + '">' : ''}
 <meta property="og:type" content="article">
 <meta property="og:url" content="${publicUrl}">
 <meta property="og:site_name" content="${name}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${excerpt}">
+${(media.og_image_url || post.hero_image_url) ? '<meta name="twitter:image" content="' + _mediaEsc(media.og_image_url || post.hero_image_url) + '">' : ''}
 <meta property="article:published_time" content="${_mediaEsc(post.published_at || '')}">
 <meta property="article:modified_time" content="${_mediaEsc(post.rewritten_at || post.published_at || '')}">
 <meta property="article:author" content="${authorName}">
@@ -16881,9 +16934,11 @@ function _mediaRenderAbout(media, opts){
 <title>編集部について | ${name}</title>
 <meta name="description" content="${authorName} の編集方針と運営者情報。 ${authorBio.slice(0, 100)}">
 <link rel="canonical" href="${publicUrl}">
+${media.favicon_url ? '<link rel="icon" href="' + _mediaEsc(media.favicon_url) + '">' : (media.logo_url ? '<link rel="icon" href="' + _mediaEsc(media.logo_url) + '">' : '<link rel="icon" href="/favicon.ico">')}
 <meta property="og:title" content="編集部について | ${name}">
 <meta property="og:url" content="${publicUrl}">
 <meta property="og:type" content="profile">
+${media.og_image_url ? '<meta property="og:image" content="' + _mediaEsc(media.og_image_url) + '">' : ''}
 ${schemaTags}
 <style>
   *{box-sizing:border-box;-webkit-text-size-adjust:100%}
@@ -17752,10 +17807,14 @@ function _mediaRenderMinimalIndex(media, posts, opts){
 <title>${categoryFilter ? categoryFilter + ' | ' : ''}${name}</title>
 <meta name="description" content="${_mediaEsc(media.description || (name + ' — ' + (lpUrl ? lpUrl : '') + 'のオウンドメディア'))}">
 <link rel="canonical" href="${publicUrl}${categoryFilter ? '/cat/'+_mediaEsc(_mediaSlugify(categoryFilter)) : ''}">
+${media.favicon_url ? '<link rel="icon" href="' + _mediaEsc(media.favicon_url) + '">' : (media.logo_url ? '<link rel="icon" href="' + _mediaEsc(media.logo_url) + '">' : '<link rel="icon" href="/favicon.ico">')}
 <meta property="og:title" content="${categoryFilter ? categoryFilter + ' | ' : ''}${name}">
+<meta property="og:description" content="${_mediaEsc(media.description || '')}">
 <meta property="og:url" content="${publicUrl}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="${name}">
+${media.og_image_url ? '<meta property="og:image" content="' + _mediaEsc(media.og_image_url) + '">' : ''}
+<meta name="twitter:card" content="summary_large_image">
 ${schemaTags}
 <style>
   *{box-sizing:border-box;-webkit-text-size-adjust:100%}
@@ -24226,6 +24285,70 @@ async function handleAPI(req,res,pathname,method,ip){
     // 公開ページ SSR cache を invalidate (= 即反映)
     try { _mediaSlugCacheClear(ag.media.slug); } catch(_){}
     return jres(res, 200, { ok: true, categories });
+  }
+
+  //   PUT /api/agents/:id/media/settings — メディアの SEO 設定 (タイトル/説明/favicon/OG)
+  //   body: { name?, description?, lp_url?, favicon_url?, og_image_url?, brand_color?, logo_url? }
+  const mediaSettingsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/settings$/);
+  if(mediaSettingsMatch && (method === 'PUT' || method === 'GET')){
+    const ag = (user.agents || []).find(a => a && a.id === mediaSettingsMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created yet' });
+    if(method === 'GET'){
+      return jres(res, 200, {
+        name: ag.media.name || '',
+        description: ag.media.description || '',
+        lp_url: ag.media.lp_url || '',
+        favicon_url: ag.media.favicon_url || '',
+        og_image_url: ag.media.og_image_url || '',
+        brand_color: ag.media.brand_color || '#0d4f4a',
+        logo_url: ag.media.logo_url || '',
+        template: ag.media.template || 'minimal',
+        slug: ag.media.slug,
+        public_url: 'https://' + (ag.media.domain || 'myaiagents.agency') + '/media/' + ag.media.slug,
+      });
+    }
+    // PUT — 部分更新
+    const body = await readBody(req).catch(() => ({}));
+    if(typeof body.name === 'string'){
+      const v = body.name.trim().slice(0, 60);
+      if(v) ag.media.name = v;
+    }
+    if(typeof body.description === 'string'){
+      ag.media.description = body.description.trim().slice(0, 300);
+    }
+    if(typeof body.lp_url === 'string'){
+      const u = body.lp_url.trim();
+      if(!u || _isHttpUrl(u)) ag.media.lp_url = u;
+      else return jres(res, 400, { error: 'lp_url must be http(s)' });
+    }
+    if(typeof body.favicon_url === 'string'){
+      const u = body.favicon_url.trim();
+      if(!u || _isHttpUrl(u) || u.startsWith('/')) ag.media.favicon_url = u;
+      else return jres(res, 400, { error: 'favicon_url must be http(s) or relative' });
+    }
+    if(typeof body.og_image_url === 'string'){
+      const u = body.og_image_url.trim();
+      if(!u || _isHttpUrl(u) || u.startsWith('/')) ag.media.og_image_url = u;
+      else return jres(res, 400, { error: 'og_image_url must be http(s) or relative' });
+    }
+    if(typeof body.brand_color === 'string'){
+      const c = body.brand_color.trim();
+      if(/^#[0-9a-fA-F]{6}$/.test(c)) ag.media.brand_color = c;
+    }
+    if(typeof body.logo_url === 'string'){
+      const u = body.logo_url.trim();
+      if(!u || _isHttpUrl(u)) ag.media.logo_url = u || null;
+    }
+    if(typeof body.template === 'string'){
+      const t = body.template.trim();
+      if(['minimal','magazine','friendly','tech','newsletter'].includes(t)) ag.media.template = t;
+    }
+    try { await DB.save(user); } catch(e){
+      return jres(res, 500, { error: 'save_failed', detail: e.message });
+    }
+    try { _mediaSlugCacheClear(ag.media.slug); } catch(_){}
+    return jres(res, 200, { ok: true, media: ag.media });
   }
 
   //   POST /api/agents/:id/media/create — Wizard 完了時、 メディアを agent に保存

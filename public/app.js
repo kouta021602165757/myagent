@@ -10424,6 +10424,119 @@ function _renderTabConnections(site){
     + '</div>';
 }
 
+// 📝 メディア SEO 設定 — タイトル / 説明 / favicon / OG / LP URL / brand 色
+window._openMediaSettings = async function(siteId){
+  var settings = null;
+  try {
+    settings = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media/settings');
+  } catch(e){ showToast('読み込み失敗: '+(e.message||''),'ng'); return; }
+  if(!settings){ showToast('メディア未作成','ng'); return; }
+  if(document.getElementById('mediaSettingsOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'mediaSettingsOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  var fav = settings.favicon_url || '';
+  var ogi = settings.og_image_url || '';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px 28px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 14px 50px rgba(0,0,0,.22)">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +   '<div style="font-size:17px;font-weight:900">📝 メディア SEO 設定</div>'
+    +   '<button onclick="_closeMediaSettings()" style="background:transparent;border:0;font-size:22px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">×</button>'
+    + '</div>'
+    + '<div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:18px;padding:11px 14px;background:var(--cream3);border-radius:8px">'
+    +   '・ サイトタイトル / 説明 / favicon / OG 画像 を編集できます<br>'
+    +   '・ favicon = ブラウザタブのアイコン、 OG 画像 = SNS シェア時のサムネ<br>'
+    +   '・ 保存後、 全 記事ページ + 一覧ページに 即反映されます'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">サイトタイトル <span style="color:#dc2626">*</span></label>'
+    +   '<input id="ms-name" type="text" maxlength="60" value="'+esc(settings.name||'')+'" style="width:100%;background:#fff;border:1px solid var(--wire);padding:9px 12px;border-radius:6px;font-size:14px;font-family:inherit;font-weight:600" placeholder="例: 福山NOTE">'
+    +   '<div style="font-size:10px;color:var(--text3);margin-top:3px">最大 60 文字、 ブラウザタブと SNS で表示</div>'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">サイト説明 (description)</label>'
+    +   '<textarea id="ms-desc" rows="3" maxlength="300" style="width:100%;background:#fff;border:1px solid var(--wire);padding:9px 12px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;line-height:1.6" placeholder="このサイトは ○○ を目的としたメディアです。 ...">'+esc(settings.description||'')+'</textarea>'
+    +   '<div style="font-size:10px;color:var(--text3);margin-top:3px">最大 300 文字、 検索結果と SNS で表示</div>'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">LP URL (= 自社サービス)</label>'
+    +   '<input id="ms-lp" type="url" value="'+esc(settings.lp_url||'')+'" style="width:100%;background:#fff;border:1px solid var(--wire);padding:9px 12px;border-radius:6px;font-size:13px;font-family:inherit" placeholder="https://example.com">'
+    +   '<div style="font-size:10px;color:var(--text3);margin-top:3px">記事中の CTA リンク 先</div>'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">Favicon URL</label>'
+    +   '<div style="display:flex;gap:10px;align-items:center">'
+    +     '<input id="ms-fav" type="url" value="'+esc(fav)+'" style="flex:1;background:#fff;border:1px solid var(--wire);padding:9px 12px;border-radius:6px;font-size:12.5px;font-family:inherit" placeholder="https://example.com/favicon.ico">'
+    +     (fav ? '<img src="'+esc(fav)+'" style="width:28px;height:28px;border:1px solid var(--wire);border-radius:4px;object-fit:contain;background:#fff" alt="">' : '<div style="width:28px;height:28px;border:1px dashed var(--wire);border-radius:4px;color:var(--text3);display:flex;align-items:center;justify-content:center;font-size:11px">—</div>')
+    +   '</div>'
+    +   '<button onclick="_msFetchLpFavicon()" style="margin-top:5px;background:transparent;border:0;color:var(--teal);font-size:10.5px;cursor:pointer;font-weight:700;font-family:inherit;padding:2px 0">🔍 LP から自動取得</button>'
+    +   '<div style="font-size:10px;color:var(--text3);margin-top:1px">ブラウザタブの アイコン、 64x64 以上推奨</div>'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">OG 画像 URL (= SNS シェア時の サムネ)</label>'
+    +   '<input id="ms-og" type="url" value="'+esc(ogi)+'" style="width:100%;background:#fff;border:1px solid var(--wire);padding:9px 12px;border-radius:6px;font-size:12.5px;font-family:inherit" placeholder="https://example.com/og-image.png (空欄 = 各記事の hero 画像 が使われる)">'
+    +   (ogi ? '<div style="margin-top:7px"><img src="'+esc(ogi)+'" style="max-width:100%;max-height:120px;border:1px solid var(--wire);border-radius:6px;background:var(--cream3)" alt=""></div>' : '')
+    +   '<div style="font-size:10px;color:var(--text3);margin-top:3px">1200×630 推奨、 空なら 各記事の SVG hero が 自動使用</div>'
+    + '</div>'
+
+    + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">公開 URL</label>'
+    +   '<div style="display:flex;gap:8px;align-items:center;background:var(--cream3);border:1px solid var(--wire);padding:8px 12px;border-radius:6px;font-size:12px;color:var(--text2);font-family:menlo,monospace">'
+    +     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(settings.public_url||'')+'</span>'
+    +     '<a href="'+esc(settings.public_url||'#')+'" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:none;font-weight:800;flex-shrink:0">↗</a>'
+    +   '</div>'
+    + '</div>'
+
+    + '<div style="display:flex;gap:10px;margin-top:22px">'
+    +   '<button onclick="_closeMediaSettings()" style="flex:1;background:#fff;border:1px solid var(--wire2);color:var(--text2);padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">キャンセル</button>'
+    +   '<button onclick="_saveMediaSettings(\''+esc(siteId)+'\')" id="msSaveBtn" style="flex:1.5;background:var(--teal);border:0;color:#fff;padding:11px 16px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">保存</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target === ov) _closeMediaSettings(); });
+};
+
+window._closeMediaSettings = function(){
+  var ov = document.getElementById('mediaSettingsOverlay');
+  if(ov && ov.parentNode) ov.parentNode.removeChild(ov);
+};
+
+window._msFetchLpFavicon = function(){
+  var lp = (document.getElementById('ms-lp') || {}).value || '';
+  if(!lp){ showToast('LP URL を 先に入力','ng'); return; }
+  try {
+    var url = new URL(lp);
+    var favUrl = url.origin + '/favicon.ico';
+    var input = document.getElementById('ms-fav');
+    if(input) input.value = favUrl;
+    showToast('LP の /favicon.ico を 取得 (= 確認後 保存)','ok');
+  } catch(e){ showToast('LP URL が 不正','ng'); }
+};
+
+window._saveMediaSettings = async function(siteId){
+  var btn = document.getElementById('msSaveBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '保存中...'; }
+  var body = {
+    name: (document.getElementById('ms-name')||{}).value || '',
+    description: (document.getElementById('ms-desc')||{}).value || '',
+    lp_url: (document.getElementById('ms-lp')||{}).value || '',
+    favicon_url: (document.getElementById('ms-fav')||{}).value || '',
+    og_image_url: (document.getElementById('ms-og')||{}).value || '',
+  };
+  try {
+    var r = await api('PUT', '/api/agents/'+encodeURIComponent(siteId)+'/media/settings', body);
+    if(r && r.ok){
+      showToast('✅ 保存完了','ok');
+      _closeMediaSettings();
+      if(typeof window.openMediaPanel === 'function') window.openMediaPanel(siteId);
+    } else {
+      showToast('保存失敗','ng');
+      if(btn){ btn.disabled = false; btn.textContent = '保存'; }
+    }
+  } catch(e){
+    showToast('エラー: '+(e.message||'unknown'),'ng');
+    if(btn){ btn.disabled = false; btn.textContent = '保存'; }
+  }
+};
+
 // ✏️ カテゴリ編集 — 追加 / リネーム / 削除 modal
 window._openCategoryEditor = async function(siteId){
   // 現在の categories を fetch (= GET /api/agents/:id/media)
@@ -11024,6 +11137,15 @@ function _renderTabMedia(site){
                   + '</div>';
               }).join('')
             + '</div></div>')
+      // 🎯 メディア SEO 設定 (= サイトタイトル / 説明 / favicon / OG / lp_url)
+      + '<div style="background:linear-gradient(135deg,var(--cream),#fff);border:1.5px solid var(--peach-dark);border-radius:10px;padding:12px 16px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:10px;display:flex;align-items:center;gap:12px">'
+      +   '<div style="font-size:18px">⚙️</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:12.5px;font-weight:800;color:var(--text);margin-bottom:2px">サイトタイトル / 説明 / favicon / OG 画像</div>'
+      +     '<div style="font-size:10.5px;color:var(--text3)">' + esc(media.name||'(未設定)') + ' — ' + esc((media.description||'未設定').slice(0,40)) + (media.description && media.description.length>40?'…':'') + '</div>'
+      +   '</div>'
+      +   '<button onclick="_openMediaSettings(\''+esc(site.id)+'\')" style="background:var(--peach-dark);border:0;color:#fff;font-size:10.5px;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:800;flex-shrink:0">📝 SEO 設定</button>'
+      + '</div>'
       + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px">'
       +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
       +     '<b style="color:var(--text2);font-size:12px">📂 カテゴリ ('+ ((media.categories||[]).length) +')</b>'

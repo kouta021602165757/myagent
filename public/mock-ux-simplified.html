@@ -60,13 +60,25 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino 
 .fake-hero-eye{font-size:9.5px;font-weight:800;opacity:.85;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
 .fake-hero-ti{font-size:14px;font-weight:900;margin-bottom:4px}
 .fake-hero-cta{display:inline-block;background:rgba(255,255,255,.2);padding:5px 11px;border-radius:6px;margin-top:6px;font-size:10.5px;font-weight:800}
-.fake-chat-area{flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0}
-.fake-msg{display:flex;gap:7px;font-size:11.5px;line-height:1.55}
-.fake-msg.user{flex-direction:row-reverse}
-.fake-av{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#fda85e,#a3e635);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
-.fake-av.user{background:#1f1f1f;color:#fff;font-size:9px;font-weight:700}
-.fake-bubble{background:#f4f5f3;border-radius:9px;padding:7px 11px;max-width:78%}
-.fake-msg.user .fake-bubble{background:var(--teal);color:#fff}
+/* 本番 chat = Slack-flat スタイル (= bubble なし、 avatar 38px + 名前 + body) を再現 */
+.fake-chat-area{flex:1;display:flex;flex-direction:column;gap:0;overflow-y:auto;min-height:0;background:#fafaf7;margin:0 -18px;padding:8px 0}
+.fake-msg{display:flex;flex-direction:row;align-items:flex-start;gap:11px;padding:8px 18px;position:relative;font-size:11.5px;line-height:1.6;transition:background .12s}
+.fake-msg:hover{background:rgba(29,28,29,.035)}
+.fake-msg.user{flex-direction:row;}  /* same direction! */
+.fake-av-wrap{flex-shrink:0}
+.fake-av{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,#fda85e,var(--peach-dark));color:#0a0a0e;font-weight:900}
+.fake-av.user{background:#1f1f1f;color:#fff;font-weight:800;font-size:11px}
+.fake-msg-content{flex:1;min-width:0}
+.fake-msg-meta{display:flex;align-items:baseline;gap:7px;line-height:1.3;margin-bottom:2px}
+.fake-msg-name{font-weight:900;font-size:12px;color:var(--text);letter-spacing:-.005em}
+.fake-msg-time{font-size:9.5px;color:var(--text3);font-weight:500}
+.fake-msg-body{font-size:11.5px;color:var(--text);line-height:1.65;background:transparent;border:0;padding:0;max-width:100%}
+.fake-msg-body p{margin:0 0 6px}
+.fake-msg-body p:last-child{margin:0}
+.fake-msg-body b{font-weight:800}
+/* 旧 .fake-bubble 互換 (= 内部 ボックス 用) */
+.fake-bubble{background:transparent;padding:0;max-width:100%;font-size:11.5px;line-height:1.65;color:var(--text)}
+.fake-msg.user .fake-bubble{background:transparent;color:var(--text)}
 .fake-tool-call{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:5px 8px;margin-top:5px;font-size:10px;color:var(--text2)}
 .fake-tool-call .ic{width:18px;height:18px;border-radius:4px;background:var(--peach-soft);color:var(--teal-deep);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
 .fake-tool-call .lbl{flex:1;font-weight:600}
@@ -270,37 +282,42 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino 
           <div style="flex:1;text-align:right;font-size:10.5px;color:var(--text3);padding:5px 8px;font-weight:700">myaiagents.agency Blog · 12 本公開</div>
         </div>
         <div class="fake-chat-area">
-          <!-- AI 提案 chip -->
           <div class="fake-msg">
-            <div class="fake-av">🤖</div>
-            <div class="fake-bubble">
-              おはようございます。 先週「助成金」 が PV 上昇です。 今週、 関連 KW で 1 本書きませんか?
-              <div class="fake-tool-call">
-                <div class="ic">📊</div>
-                <div class="lbl">先週 PV 分析 + KW 候補抽出</div>
-                <div class="st">✓ 完了</div>
+            <div class="fake-av-wrap"><div class="fake-av">🤖</div></div>
+            <div class="fake-msg-content">
+              <div class="fake-msg-meta">
+                <span class="fake-msg-name">myaiagents.agency Blog</span>
+                <span class="fake-msg-time">8:00</span>
               </div>
-              <div class="fake-cand-grid">
-                <div class="fake-cand-row reco">
-                  <div class="fake-cand-rk">②</div>
-                  <div class="fake-cand-ti"><b>採用助成金 期限 2026 — 完全ガイド</b></div>
-                  <button class="fake-cand-btn">🚀 公開</button>
+              <div class="fake-msg-body">
+                <p>おはようございます。 先週「助成金」 が PV 上昇です。 今週、 関連 KW で 1 本書きませんか?</p>
+                <div class="fake-tool-call">
+                  <div class="ic">📊</div>
+                  <div class="lbl">先週 PV 分析 + KW 候補抽出</div>
+                  <div class="st">✓ 完了</div>
                 </div>
-                <div class="fake-cand-row">
-                  <div class="fake-cand-rk">①</div>
-                  <div class="fake-cand-ti">中小企業 助成金 申請方法</div>
-                  <button class="fake-cand-btn">🚀 公開</button>
+                <div class="fake-cand-grid">
+                  <div class="fake-cand-row reco">
+                    <div class="fake-cand-rk">②</div>
+                    <div class="fake-cand-ti"><b>採用助成金 期限 2026 — 完全ガイド</b></div>
+                    <button class="fake-cand-btn">🚀 公開</button>
+                  </div>
+                  <div class="fake-cand-row">
+                    <div class="fake-cand-rk">①</div>
+                    <div class="fake-cand-ti">中小企業 助成金 申請方法</div>
+                    <button class="fake-cand-btn">🚀 公開</button>
+                  </div>
+                  <div class="fake-cand-row">
+                    <div class="fake-cand-rk">③</div>
+                    <div class="fake-cand-ti">助成金 必要書類 チェックリスト</div>
+                    <button class="fake-cand-btn">🚀 公開</button>
+                  </div>
                 </div>
-                <div class="fake-cand-row">
-                  <div class="fake-cand-rk">③</div>
-                  <div class="fake-cand-ti">助成金 必要書類 チェックリスト</div>
-                  <button class="fake-cand-btn">🚀 公開</button>
+                <div class="fake-chip-row">
+                  <span class="fake-chip primary">✨ 全部 公開</span>
+                  <span class="fake-chip">別の角度で</span>
+                  <span class="fake-chip">あとで</span>
                 </div>
-              </div>
-              <div class="fake-chip-row">
-                <span class="fake-chip primary">✨ 全部 公開</span>
-                <span class="fake-chip">別の角度で</span>
-                <span class="fake-chip">あとで</span>
               </div>
             </div>
           </div>
@@ -350,33 +367,51 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino 
         </div>
         <div class="fake-chat-area">
           <div class="fake-msg">
-            <div class="fake-av">🤖</div>
-            <div class="fake-bubble" style="background:linear-gradient(135deg,var(--peach-soft),#fff);border:1px solid var(--peach-dark)">
-              <b>🌅 おはようございます。</b><br>
-              先週はお疲れさまでした。 PV +18%、 「助成金」 記事が好調です。<br><br>
-              今朝、 私から提案が 1 つあります:
-              <div style="background:#fff;border-radius:7px;padding:8px 10px;margin-top:7px;font-size:11px;border:1px solid var(--peach-dark)">
-                <b>📝 採用助成金 期限 2026 — 完全ガイド</b><br>
-                <span style="color:var(--text3);font-size:10px">理由: 低競合 × ボリューム 1,800、 関連の助成金記事が伸びてる流れに乗れます</span>
+            <div class="fake-av-wrap"><div class="fake-av">🤖</div></div>
+            <div class="fake-msg-content">
+              <div class="fake-msg-meta">
+                <span class="fake-msg-name">myaiagents.agency Blog</span>
+                <span class="fake-msg-time">8:00</span>
               </div>
-              <div class="fake-chip-row" style="margin-top:8px">
-                <span class="fake-chip primary">✓ 進める</span>
-                <span class="fake-chip">違うやつ</span>
+              <div class="fake-msg-body">
+                <p><b>🌅 おはようございます。</b></p>
+                <p>先週はお疲れさまでした。 PV +18%、 「助成金」 記事が好調です。</p>
+                <p>今朝、 私から提案が 1 つあります:</p>
+                <div style="background:var(--peach-soft);border-radius:7px;padding:9px 11px;margin-top:5px;font-size:11px;border:1px solid var(--peach-dark);color:var(--text)">
+                  <b>📝 採用助成金 期限 2026 — 完全ガイド</b><br>
+                  <span style="color:var(--text2);font-size:10px">理由: 低競合 × ボリューム 1,800、 関連の助成金記事が伸びてる流れに乗れます</span>
+                </div>
+                <div class="fake-chip-row" style="margin-top:8px">
+                  <span class="fake-chip primary">✓ 進める</span>
+                  <span class="fake-chip">違うやつ</span>
+                </div>
               </div>
             </div>
           </div>
           <div class="fake-msg user">
-            <div class="fake-av user">あ</div>
-            <div class="fake-bubble">進めて</div>
+            <div class="fake-av-wrap"><div class="fake-av user">あ</div></div>
+            <div class="fake-msg-content">
+              <div class="fake-msg-meta">
+                <span class="fake-msg-name">あなた</span>
+                <span class="fake-msg-time">8:01</span>
+              </div>
+              <div class="fake-msg-body"><p>進めて</p></div>
+            </div>
           </div>
           <div class="fake-msg">
-            <div class="fake-av">🤖</div>
-            <div class="fake-bubble">
-              了解しました。 5,000 字 + 画像を 90 秒で仕上げます。
-              <div class="fake-tool-call">
-                <div class="ic">✍️</div>
-                <div class="lbl">執筆 + 画像生成 + 公開</div>
-                <div class="st">実行中…</div>
+            <div class="fake-av-wrap"><div class="fake-av">🤖</div></div>
+            <div class="fake-msg-content">
+              <div class="fake-msg-meta">
+                <span class="fake-msg-name">myaiagents.agency Blog</span>
+                <span class="fake-msg-time">8:01</span>
+              </div>
+              <div class="fake-msg-body">
+                <p>了解しました。 5,000 字 + 画像を 90 秒で仕上げます。</p>
+                <div class="fake-tool-call">
+                  <div class="ic">✍️</div>
+                  <div class="lbl">執筆 + 画像生成 + 公開</div>
+                  <div class="st">実行中…</div>
+                </div>
               </div>
             </div>
           </div>

@@ -15694,6 +15694,36 @@ function _detectKwIntent(kw){
   };
 }
 
+// 🎯 People Also Ask 風 質問抽出 — Google Suggest で 関連質問を取得
+//    本物の PAA は SERP に表示される Google の機能だが、 公式 API はない。
+//    Suggest API で 「KW + 疑問詞」 で 5-8 件 取得 → AI が FAQ 化する。
+async function _fetchPaaQuestions(kw){
+  if(!kw) return [];
+  try {
+    const suffixes = ['とは', 'とは何', 'いつ', 'どこ', '料金', 'いくら', '方法', 'やり方', '違い', 'メリット', 'デメリット'];
+    // 並列で Google Suggest を叩く (= 各 < 5 秒)
+    const results = await Promise.all(
+      suffixes.map(suf => _googleSuggest(kw + ' ' + suf, 'ja').catch(() => []))
+    );
+    const all = results.flat()
+      .filter(q => q && typeof q === 'string' && q.length > kw.length + 2);  // 短すぎる候補を除外
+    // 重複除去 + 上位 8 件
+    const seen = new Set();
+    const unique = [];
+    for(const q of all){
+      const k = q.toLowerCase();
+      if(seen.has(k)) continue;
+      seen.add(k);
+      unique.push(q);
+      if(unique.length >= 8) break;
+    }
+    return unique;
+  } catch(e){
+    console.warn('[paa]', e.message);
+    return [];
+  }
+}
+
 // SERP 上位 10 分析 + 共通 h2 + 頻出語 を取得 (= "ギャップ攻略" 用)
 // 既存 /serp-analysis endpoint と同じロジックを 関数として呼び出せるよう抽出。
 // 失敗時は null を返す (= 記事生成は SERP なしでも進む)。
@@ -15864,6 +15894,18 @@ async function _mediaGenerateArticle(agent, params){
   // 🎯 SERP 上位 10 分析 (= ギャップ攻略) — 並列実行、 失敗時は null
   //   AI に「上位サイトが扱ってる H2」 + 「平均文字数」 + 「網羅すべき項目」 を渡す
   const serpAnalysisP = _runSerpAnalysisForGen(keyword);
+  // 🎯 People Also Ask 質問 — Google Suggest 経由 (= FAQ に組み込む)
+  const paaP = _fetchPaaQuestions(keyword);
+  // 🎯 内部リンク候補 — 同メディア 既存記事 6 件
+  const internalLinks = (() => {
+    if(!agent || !agent.media || !Array.isArray(agent.media_posts_idx)) return [];
+    const slug = agent.media.slug;
+    const domain = agent.media.domain || 'myaiagents.agency';
+    return (agent.media_posts_idx || [])
+      .filter(p => p && p.title && p.slug && p.title !== params.title)
+      .slice(0, 6)
+      .map(p => ({ title: p.title, url: 'https://' + domain + '/media/' + slug + '/' + p.slug }));
+  })();
   const targetChars = Math.max(2000, Math.min(20000, parseInt(params.target_chars, 10) || tpl.targetChars));
 
   const mediaName = (agent.media && agent.media.name) || (agent.name || 'Blog');
@@ -15898,6 +15940,15 @@ async function _mediaGenerateArticle(agent, params){
     + '【H2 章数】 ' + tpl.h2Count + ' 個 — 1 H2 当たり 300-500 字で 短く区切る\n'
     + '【必須セクション】 ' + tpl.requiredSections.join(' / ') + '\n'
     + '【トーン】 ' + tpl.tone + '\n'
+    + '\n【🎯 Featured Snippet 構造化 — 0 位 (= 強調表示) を狙う】\n'
+    + '- 記事冒頭の <p> 1 文目: ' + intent.label + ' に対する 完璧な回答 (= 40 字以内、 結論先出し)\n'
+    + '- 例: 「ぬまくま夏祭り 阿伏兎花火大会は、 8 月 9 日に開催される広島県福山市の海上花火大会です。」\n'
+    + '- この 1 文目を Google が 検索結果の冒頭にハイライト表示 → CTR 35% UP\n'
+    + '\n【🤖 AI 検索最適化 (= ChatGPT / Perplexity / Google AI Overview)】\n'
+    + '- 各 H2 の冒頭 1-2 文 で その章の結論を明示 (= AI が引用しやすい)\n'
+    + '- 数値 / 日付 / 固有名詞 / 出典 を 散布 (= AI は具体性ある記事を引用)\n'
+    + '- 各セクションは self-contained (= 単独で読んで意味が通る)\n'
+    + '- 「公式情報によると」 「公的統計では」 等の 出典スタイル を強調\n'
     + '\n【🚨 絶対に守ること — fabrication 禁止】\n'
     + '- 出典のない 数値 / 統計 / 「ROI X%」 「成功率 Y%」 等は 一切書かない\n'
     + '- 「当チームの実測」 「弊社の事例」 等の 架空体験談 は 禁止\n'
@@ -15938,10 +15989,10 @@ async function _mediaGenerateArticle(agent, params){
     + '}';
 
   // SERP 分析 (= 並列実行の結果を ここで await — 最大 12 秒、 失敗時は null)
-  const serpAnalysis = await Promise.race([
-    serpAnalysisP,
-    new Promise(r => setTimeout(() => r(null), 12000)),
-  ]).catch(() => null);
+  const [serpAnalysis, paaQuestions] = await Promise.all([
+    Promise.race([serpAnalysisP, new Promise(r => setTimeout(() => r(null), 12000))]).catch(() => null),
+    Promise.race([paaP, new Promise(r => setTimeout(() => r([]), 8000))]).catch(() => []),
+  ]);
 
   let serpContextText = '';
   if(serpAnalysis && serpAnalysis.sites_analyzed > 0){
@@ -15953,6 +16004,21 @@ async function _mediaGenerateArticle(agent, params){
       + '\n【ギャップ攻略】 上記の上位 H2 を 全て網羅した上で、 さらに独自の切り口 (= 上位が扱ってない実用情報) を 1-2 個 追加する。\n';
   }
 
+  // People Also Ask — FAQ に組み込み (= リッチリザルト + 検索意図網羅)
+  let paaText = '';
+  if(paaQuestions && paaQuestions.length > 0){
+    paaText = '\n【💬 People Also Ask (= Google 関連質問)】 これらを FAQ に必ず含める:\n'
+      + paaQuestions.slice(0, 8).map((q, i) => `  ${i+1}. ${q}`).join('\n') + '\n';
+  }
+
+  // 内部リンク候補 — 関連文脈に <a href> として組み込ませる
+  let internalLinksText = '';
+  if(internalLinks.length > 0){
+    internalLinksText = '\n【🔗 内部リンク 候補 — 関連文脈で <a href="..."> として 2-4 本 自然に組み込む】\n'
+      + internalLinks.slice(0, 6).map(l => `  ・「${l.title}」: ${l.url}`).join('\n') + '\n'
+      + '配置例: 本文中で 関連話題に触れる時 「<a href="URL">関連記事 タイトル</a> で詳しく解説」 のように 自然に挿入。\n';
+  }
+
   const userText = ''
     + '【キーワード】' + keyword + '\n'
     + '【検出意図】 ' + intent.type + ' (= ' + intent.label + ')\n'
@@ -15962,6 +16028,8 @@ async function _mediaGenerateArticle(agent, params){
     + (categories ? '【既存カテゴリ】 ' + categories + '\n' : '')
     + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
     + serpContextText
+    + paaText
+    + internalLinksText
     + '\n上記の要件で記事を 1 本 JSON で出力してください。';
 
   if(!ANTHROPIC) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
@@ -16351,11 +16419,17 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
       </div>
     </section>` : '';
 
-  // JSON-LD schema 3 種
+  // JSON-LD schema 全網羅 (Article / BreadcrumbList / Organization / FAQPage / HowTo / Speakable)
   const articleSchema = _mediaArticleSchema(media, post, body_html, host);
   const breadcrumbSchema = _mediaBreadcrumbSchema(media, post, host);
   const orgSchema = _mediaOrgSchema(media, host);
-  const schemaTags = _mediaSchemaInject(articleSchema, breadcrumbSchema, orgSchema);
+  const faqSchema = _mediaFaqSchema(body_html);            // FAQ あれば
+  const howtoSchema = _mediaHowToSchema(post, body_html);  // 手順あれば
+  const speakableSchema = _mediaSpeakableSchema();         // 音声検索
+  // article schema に speakable を inline
+  articleSchema.speakable = speakableSchema;
+  const allSchemas = [articleSchema, breadcrumbSchema, orgSchema, faqSchema, howtoSchema].filter(Boolean);
+  const schemaTags = _mediaSchemaInject(...allSchemas);
 
   const publicUrl = 'https://' + host + '/media/' + _mediaEsc(media.slug) + '/' + _mediaEsc(post.slug);
 
@@ -17212,6 +17286,75 @@ function _mediaOrgSchema(media, host){
   };
   if(media.logo_url) out.logo = media.logo_url;
   return out;
+}
+
+// 🎯 FAQPage schema — 記事末尾の Q&A を Google 検索結果で 直接展開表示。
+//    body_html から <h3>Q. ...</h3><p>A. ...</p> パターンを抽出。
+//    検索結果 CTR 最大 35% UP の リッチリザルト。
+function _mediaFaqSchema(body_html){
+  if(!body_html) return null;
+  // FAQ section を 抽出 (= <h3>Q. ... <p>A. ... の連続)
+  const faqRe = /<h3[^>]*>\s*(?:Q[\.。\:：]?\s*)?([\s\S]*?)<\/h3>\s*<p[^>]*>\s*(?:A[\.。\:：]?\s*)?([\s\S]*?)<\/p>/gi;
+  const items = [];
+  let m;
+  while((m = faqRe.exec(body_html)) !== null && items.length < 12){
+    const q = String(m[1]).replace(/<[^>]+>/g, '').trim();
+    const a = String(m[2]).replace(/<[^>]+>/g, '').trim();
+    if(q && a && q.length >= 4 && a.length >= 8){
+      items.push({
+        '@type': 'Question',
+        'name': q,
+        'acceptedAnswer': { '@type': 'Answer', 'text': a },
+      });
+    }
+  }
+  if(items.length < 2) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    'mainEntity': items,
+  };
+}
+
+// 🎯 HowTo schema — 手順記事 (= step-by-step 内容) で 検索結果に各ステップを表示。
+//    body_html から <ol><li>...</li> パターンを抽出 (= 番号付き手順)。
+function _mediaHowToSchema(post, body_html){
+  if(!body_html) return null;
+  // 最初の <ol> ブロックを 手順とみなす (= step-by-step 記事の場合)
+  const olM = body_html.match(/<ol[^>]*>([\s\S]*?)<\/ol>/i);
+  if(!olM) return null;
+  const liRe = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+  const steps = [];
+  let m;
+  while((m = liRe.exec(olM[1])) !== null && steps.length < 10){
+    const text = String(m[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if(text.length >= 8){
+      steps.push({
+        '@type': 'HowToStep',
+        'position': steps.length + 1,
+        'name': 'Step ' + (steps.length + 1),
+        'text': text.slice(0, 300),
+      });
+    }
+  }
+  if(steps.length < 3) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    'name': post.title || '',
+    'description': post.excerpt || '',
+    'step': steps,
+  };
+}
+
+// 🎯 Speakable schema — 音声検索 (= Google Assistant / スマートスピーカー) で 記事を読み上げる
+//    冒頭の dek + 各 H2 冒頭文 を speakable に設定。
+function _mediaSpeakableSchema(){
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SpeakableSpecification',
+    'cssSelector': ['.dek', '.body h2 + p'],
+  };
 }
 function _mediaSchemaInject(...objects){
   return objects.filter(Boolean).map(o =>

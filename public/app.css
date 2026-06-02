@@ -6116,6 +6116,23 @@ input,textarea{font-family:var(--sans);}
 /* toolbar 区切り — セットアップ動線 / 運用動線 / 管理 のグルーピングを視覚化 */
 .ct-tool-sep{display:inline-block;width:1px;height:18px;background:var(--wire2);margin:0 4px;vertical-align:middle;flex-shrink:0;align-self:center;}
 @media (max-width:560px){.ct-tool-sep{display:none;}}
+/* 📝 書く予定の記事 セクション (= タスクパネル先頭) */
+.pa-sec{background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.pa-sec-h{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.pa-sec-ic{font-size:20px}
+.pa-sec-ti{font-size:14px;font-weight:900;color:var(--text)}
+.pa-sec-sub{font-size:10.5px;color:var(--text3);font-weight:600;margin-left:auto}
+.pa-list{display:flex;flex-direction:column;gap:7px}
+.pa-row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:9px 11px;transition:.15s}
+.pa-row:hover{border-color:var(--peach-dark);box-shadow:0 2px 8px rgba(192,255,92,.18)}
+.pa-row-bd{flex:1;min-width:0}
+.pa-row-ti{font-size:12.5px;font-weight:800;color:var(--text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pa-row-mt{font-size:10.5px;color:var(--text3);margin-top:2px}
+.pa-row-pub{background:var(--teal);color:#fff;border:0;padding:7px 13px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0}
+.pa-row-pub:hover{background:var(--teal-deep)}
+.pa-row-del{background:#fff;color:var(--text3);border:1px solid var(--wire2);width:28px;height:28px;border-radius:7px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit}
+.pa-row-del:hover{background:#fef2f2;color:#9a3412;border-color:#fed7aa}
+@media (max-width:560px){.pa-sec-sub{display:none}.pa-row-pub{padding:6px 9px;font-size:10.5px}}
 .ct-act.primary{background:rgba(192,255,92,.1);color:var(--peach-dark);border-color:rgba(192,255,92,.25);}
 .ct-act.primary:hover{background:rgba(192,255,92,.18);}
 /* 「📊 ダッシュボード」 ボタン — site agent のチャット上部、最も目立つ位置 */

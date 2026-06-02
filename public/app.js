@@ -2897,6 +2897,29 @@ function _openSiteTabModal(siteId, tabKey){
           }
         }, 80);
       }
+      else if(t === 'kw-queue-article'){
+        // ⊕ KW → タスクに追加 (= planned_articles に push、 後で書く)
+        var qTitle = String(e.data.title || '');
+        var qKw = String(e.data.keyword || qTitle);
+        var qMode = String(e.data.mode || 'seo');
+        if(!qTitle){ try { showToast('タイトルが空です','ng'); } catch(_){} return; }
+        api('POST', '/api/agents/'+encodeURIComponent(_kwSiteId)+'/media/planned', {
+          title: qTitle, keyword: qKw, mode: qMode, source: 'kw_research'
+        }).then(function(r){
+          // local state 反映
+          var ag = (agents||[]).find(function(a){return a && a.id === _kwSiteId;});
+          if(ag){
+            if(!Array.isArray(ag.planned_articles)) ag.planned_articles = [];
+            if(r.planned && !ag.planned_articles.find(p => p && p.id === r.planned.id)){
+              ag.planned_articles.unshift(r.planned);
+            }
+          }
+          if(r.deduped) showToast('既にタスクにあります','ok');
+          else showToast('📋 タスクに追加 (合計 ' + (r.count||1) + ' 件)','ok');
+        }).catch(function(err){
+          showToast('追加失敗: ' + (err.message||'unknown'),'ng');
+        });
+      }
       else if(t === 'kw-open-strategy'){
         // 🎯 KW → 戦略・KPI へ (= STEP 2 → STEP 3 のフロー)
         if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
@@ -9129,9 +9152,64 @@ function _renderWeeklyStatsBar(ag){
   el.style.display = 'block';
 }
 
+// 📝 「書く予定の記事」 セクション (= planned_articles キュー)
+//    KW 調査の ⊕ ボタンから追加された記事を表示、 1 クリックで公開できる
+function _renderPlannedArticlesSection(site){
+  var planned = Array.isArray(site.planned_articles) ? site.planned_articles : [];
+  if(planned.length === 0) return '';
+  var siteId = esc(site.id);
+  var rowsHTML = planned.map(function(p){
+    if(!p || !p.id) return '';
+    var sourceLabel = (p.source === 'kw_research') ? '🔍 KW 調査から' : '✍️ 手動';
+    var modeLabel = (p.mode === 'aeo') ? '<span style="background:#f3e8ff;color:#5b21b6;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px">AEO</span>' : '';
+    var queuedAt = '';
+    try { var d = new Date(p.queued_at); queuedAt = (d.getMonth()+1)+'/'+d.getDate(); } catch(_){}
+    return '<div class="pa-row">'
+      + '<div class="pa-row-bd">'
+      +   '<div class="pa-row-ti">' + esc((p.title||'').slice(0,80)) + modeLabel + '</div>'
+      +   '<div class="pa-row-mt">' + sourceLabel + ' · 追加 ' + queuedAt + '</div>'
+      + '</div>'
+      + '<button class="pa-row-pub" onclick="_publishPlannedArticle(\''+siteId+'\',\''+esc(p.id)+'\',\''+esc((p.title||'').replace(/\\/g,"\\\\").replace(/'/g,"\\'"))+'\',\''+esc(p.mode||'seo')+'\')" title="今すぐ AI に書かせて公開">✨ 公開</button>'
+      + '<button class="pa-row-del" onclick="_deletePlannedArticle(\''+siteId+'\',\''+esc(p.id)+'\')" title="削除">×</button>'
+      + '</div>';
+  }).join('');
+  return ''
+    + '<div class="pa-sec">'
+    +   '<div class="pa-sec-h">'
+    +     '<span class="pa-sec-ic">📝</span>'
+    +     '<span class="pa-sec-ti">書く予定の記事 (' + planned.length + ' 件)</span>'
+    +     '<span class="pa-sec-sub">🔍 キーワード調査 で ⊕ ボタンから追加</span>'
+    +   '</div>'
+    +   '<div class="pa-list">' + rowsHTML + '</div>'
+    + '</div>';
+}
+
+// ⊕ で追加した予定記事を 1 クリックで公開 (= /media/articles/generate)
+window._publishPlannedArticle = function(siteId, plannedId, title, mode){
+  // 既存の _kwInvokeArticleGen を再利用 (= 同じ loading UI + エラー処理)
+  if(!window._kwInvokeArticleGen){ showToast('公開機能ロード失敗','ng'); return; }
+  window._kwInvokeArticleGen(siteId, title, mode);
+  // 公開成功時、 サーバ側で planned から自動削除される (= executePublishToMediaTool / /generate 両方で対応済)
+};
+
+window._deletePlannedArticle = async function(siteId, plannedId){
+  if(!confirm('この記事タスクを削除しますか?')) return;
+  try {
+    await api('DELETE', '/api/agents/'+encodeURIComponent(siteId)+'/media/planned/'+encodeURIComponent(plannedId));
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(ag) ag.planned_articles = (ag.planned_articles || []).filter(p => p && p.id !== plannedId);
+    showToast('削除しました','ok');
+    // タスクパネル再描画
+    if(typeof openTasksPanel === 'function') openTasksPanel(siteId);
+  } catch(e){
+    showToast('削除失敗: '+(e.message||'unknown'),'ng');
+  }
+};
+
 function _renderTabTasks(site){
   var roadmap = site.roadmap || null;
   var hasRoadmap = !!(roadmap && Array.isArray(roadmap.weeks) && roadmap.weeks.length > 0);
+  var plannedHTML = _renderPlannedArticlesSection(site);
 
   // 部門 id → { name, icon, color } のマップ (= タスクに付ける dept tag 用)
   var deptMap = {};
@@ -9145,6 +9223,7 @@ function _renderTabTasks(site){
   if(!hasRoadmap){
     var hasKpi = !!(site.kpi && (site.kpi.pv || site.kpi.cvr || site.kpi.leads));
     return ''
+      + plannedHTML
       + '<div class="tk-empty">'
       +   '<div class="tk-empty-ic">✅</div>'
       +   '<div class="tk-empty-ti">8 週間の実行ロードマップを AI に作らせる</div>'
@@ -9285,6 +9364,7 @@ function _renderTabTasks(site){
   var artifactCountClass = artifactCount > 0 ? 'tt-count tt-count-hot' : 'tt-count';
 
   return ''
+    + plannedHTML
     + '<div class="tk-tabs">'
     +   '<button class="tk-tab active" onclick="_switchTaskTab(this, \'tk-tab-tasks\')">'
     +     '<span>📋 今日のタスク</span>'

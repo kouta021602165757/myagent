@@ -15615,6 +15615,18 @@ async function executePublishToMediaTool(user, agent, input){
   if(!user.media_posts_full) user.media_posts_full = {};
   user.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
 
+  // planned_articles から自動削除 (= chat 経由公開も同じ)
+  const _mt = (article.title || '').toLowerCase();
+  const _mk = (title || '').toLowerCase();
+  if(Array.isArray(agent.planned_articles) && agent.planned_articles.length){
+    agent.planned_articles = agent.planned_articles.filter(p => {
+      if(!p) return false;
+      const _pt = (p.title || '').toLowerCase();
+      const _pk = (p.keyword || '').toLowerCase();
+      return _pt !== _mt && _pt !== _mk && _pk !== _mk && _pk !== _mt;
+    });
+  }
+
   try { await DB.save(user); } catch(e){ return { error: 'save_failed: ' + e.message }; }
   _mediaSlugCacheClear(agent.media.slug);
 
@@ -21772,6 +21784,58 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  //   POST /api/agents/:id/media/planned — 「書く予定の記事」 を キューに追加
+  //   body: { title, keyword?, mode?: 'seo'|'aeo', source?: 'kw_research'|'manual' }
+  const mediaPlannedAddMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/planned$/);
+  if(mediaPlannedAddMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaPlannedAddMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req).catch(() => ({}));
+    const title = String((body && body.title) || '').trim().slice(0, 200);
+    if(!title) return jres(res, 400, { error: 'title required' });
+    const keyword = String((body && body.keyword) || title).trim().slice(0, 200);
+    const mode = (body && body.mode === 'aeo') ? 'aeo' : 'seo';
+    const source = String((body && body.source) || 'manual').slice(0, 30);
+    if(!Array.isArray(ag.planned_articles)) ag.planned_articles = [];
+    // 重複防止 (= 同タイトル既にある場合は 追加しない、 ok を返す)
+    const existing = ag.planned_articles.find(p => p && p.title === title);
+    if(existing){
+      return jres(res, 200, { ok: true, planned: existing, deduped: true });
+    }
+    // 上限 (= 30 件、 古いものは保持) — egress / UI 過剰を防ぐ
+    if(ag.planned_articles.length >= 30){
+      return jres(res, 409, { error: 'too_many_planned', detail: 'キューが満杯 (= 30 件)。 古いものを削除 or 公開してください' });
+    }
+    const planned = {
+      id: 'plan_' + crypto.randomBytes(4).toString('hex'),
+      title, keyword, mode, source,
+      queued_at: new Date().toISOString(),
+    };
+    ag.planned_articles.unshift(planned);
+    try { await DB.save(user); } catch(e){
+      console.warn('[media-planned-add] save failed:', e.message);
+      return jres(res, 500, { error: 'save_failed', detail: e.message });
+    }
+    return jres(res, 200, { ok: true, planned, count: ag.planned_articles.length });
+  }
+
+  //   DELETE /api/agents/:id/media/planned/:plannedId — キューから削除
+  const mediaPlannedDelMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/planned\/(plan_[a-z0-9]+)$/);
+  if(mediaPlannedDelMatch && method === 'DELETE'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaPlannedDelMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const plannedId = mediaPlannedDelMatch[2];
+    const before = Array.isArray(ag.planned_articles) ? ag.planned_articles.length : 0;
+    ag.planned_articles = (ag.planned_articles || []).filter(p => p && p.id !== plannedId);
+    if(ag.planned_articles.length === before){
+      return jres(res, 404, { error: 'planned not found' });
+    }
+    try { await DB.save(user); } catch(e){
+      return jres(res, 500, { error: 'save_failed', detail: e.message });
+    }
+    return jres(res, 200, { ok: true, count: ag.planned_articles.length });
+  }
+
   //   POST /api/agents/:id/media/articles/generate — AI 記事生成 + 画像生成
   //   body: { keyword, title?, category_id?, sub_id?, target_chars? }
   const mediaArtMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/generate$/);
@@ -21816,6 +21880,17 @@ async function handleAPI(req,res,pathname,method,ip){
       body_html: article.body_html,
       saved_at: now,
     };
+    // planned_articles から同タイトル / 同 keyword を 自動削除 (= 公開 = 完了)
+    const matchKw = keyword.toLowerCase();
+    const matchTitle = (article.title || '').toLowerCase();
+    if(Array.isArray(ag.planned_articles) && ag.planned_articles.length){
+      ag.planned_articles = ag.planned_articles.filter(p => {
+        if(!p) return false;
+        const t = (p.title || '').toLowerCase();
+        const k = (p.keyword || '').toLowerCase();
+        return t !== matchTitle && t !== matchKw && k !== matchKw && k !== matchTitle;
+      });
+    }
 
     try { await DB.save(user); } catch(e){
       console.warn('[media-art] save failed:', e.message);

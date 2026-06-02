@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>モック: UI/UX 簡素化 3 段階</title>
+<style>
+*{box-sizing:border-box;-webkit-text-size-adjust:100%}
+:root{
+  --teal:#0d4f4a;--teal-deep:#0a3d39;--teal-soft:#e8f1f0;
+  --peach:#c0ff5c;--peach-soft:#f7ffe9;--peach-dark:#a3e635;
+  --cream:#fff;--cream2:#fafafa;--cream3:#fafaf7;
+  --text:#1a1a1a;--text2:#525252;--text3:#71717a;
+  --wire:rgba(9,9,11,.06);--wire2:rgba(9,9,11,.10);
+  --rose-soft:#fff1f2;--rose-dark:#9f1239;
+  --green-soft:#dcfce7;--green-dark:#15803d;
+}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:#f3f4f3;color:var(--text);line-height:1.6}
+.page{max-width:1180px;margin:0 auto;padding:30px 20px 80px}
+.intro{background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:22px 26px;margin-bottom:28px}
+.intro h1{margin:0 0 8px;font-size:22px;font-weight:900}
+.intro p{margin:0;color:var(--text2);font-size:13px;line-height:1.7}
+.intro .note{background:var(--peach-soft);border-radius:8px;padding:10px 13px;margin-top:13px;font-size:11.5px;color:var(--text2);border-left:3px solid var(--peach-dark)}
+.intro .note b{color:var(--teal-deep)}
+.scenario-h{font-size:13px;font-weight:800;color:var(--text);background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:13px 18px;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.scenario-h .ic{font-size:22px}
+.lv-section{margin-bottom:38px}
+.lv-h{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:0 4px}
+.lv-badge{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;flex-shrink:0}
+.lv-cur .lv-badge{background:#71717a}
+.lv-1 .lv-badge{background:#86efac;color:#15803d}
+.lv-2 .lv-badge{background:var(--teal)}
+.lv-3 .lv-badge{background:linear-gradient(135deg,var(--teal),var(--peach-dark));color:#fff}
+.lv-h-text{flex:1;min-width:0}
+.lv-h-eye{font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.lv-h-ti{font-size:18px;font-weight:900;color:var(--text);line-height:1.3;margin-top:2px}
+.lv-h-tx{font-size:12px;color:var(--text2);margin-top:3px}
+.lv-h-cost{margin-left:auto;flex-shrink:0;background:#fff;border:1px solid var(--wire2);padding:6px 12px;border-radius:8px;font-size:11px;font-weight:800;color:var(--teal-deep)}
+
+/* デバイスフレーム */
+.demo{background:#1a1a1a;border-radius:18px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.demo-screen{background:var(--cream2);border-radius:8px;padding:18px;min-height:540px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.demo-label{position:absolute;top:8px;right:10px;font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+@media (max-width:780px){.demo{grid-template-columns:1fr}}
+
+/* アプリ風 UI element */
+.fake-toolbar{display:flex;gap:5px;background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:6px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.fake-tool{width:30px;height:30px;border-radius:6px;background:var(--cream3);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;border:1px solid transparent;flex-shrink:0}
+.fake-tool.active{background:var(--peach-soft);border-color:var(--peach-dark)}
+.fake-sep{width:1px;height:18px;background:var(--wire2);margin:0 2px}
+.fake-banner{background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:11.5px}
+.fake-banner-h{font-size:10px;font-weight:800;color:var(--teal-deep);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.fake-banner-ti{font-size:12.5px;font-weight:800;color:var(--text)}
+.fake-banner-bar{background:#fff;height:5px;border-radius:3px;overflow:hidden;border:1px solid var(--wire2);margin-top:7px}
+.fake-banner-bar-f{background:linear-gradient(90deg,var(--teal),var(--peach-dark));height:100%;width:30%}
+.fake-banner-step{display:flex;gap:5px;margin-top:7px}
+.fake-banner-step .st{flex:1;background:#fff;border:1px solid var(--wire2);border-radius:5px;padding:4px 6px;font-size:9.5px;font-weight:700;text-align:center}
+.fake-banner-step .st.ok{background:#dcfce7;border-color:#86efac;color:#15803d}
+.fake-banner-step .st.now{background:var(--peach-soft);border-color:var(--peach-dark)}
+.fake-hero{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:10px;padding:13px 14px;margin-bottom:10px;font-size:11.5px}
+.fake-hero-eye{font-size:9.5px;font-weight:800;opacity:.85;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+.fake-hero-ti{font-size:14px;font-weight:900;margin-bottom:4px}
+.fake-hero-cta{display:inline-block;background:rgba(255,255,255,.2);padding:5px 11px;border-radius:6px;margin-top:6px;font-size:10.5px;font-weight:800}
+.fake-chat-area{flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0}
+.fake-msg{display:flex;gap:7px;font-size:11.5px;line-height:1.55}
+.fake-msg.user{flex-direction:row-reverse}
+.fake-av{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#fda85e,#a3e635);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.fake-av.user{background:#1f1f1f;color:#fff;font-size:9px;font-weight:700}
+.fake-bubble{background:#f4f5f3;border-radius:9px;padding:7px 11px;max-width:78%}
+.fake-msg.user .fake-bubble{background:var(--teal);color:#fff}
+.fake-tool-call{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:5px 8px;margin-top:5px;font-size:10px;color:var(--text2)}
+.fake-tool-call .ic{width:18px;height:18px;border-radius:4px;background:var(--peach-soft);color:var(--teal-deep);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.fake-tool-call .lbl{flex:1;font-weight:600}
+.fake-tool-call .st{font-size:9px;color:var(--green-dark);font-weight:700}
+.fake-cand-grid{background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:10.5px}
+.fake-cand-row{display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--wire2)}
+.fake-cand-row:last-child{border-bottom:0}
+.fake-cand-row.reco{background:#dcfce7;margin:0 -10px;padding:5px 10px}
+.fake-cand-rk{font-weight:900;color:var(--teal-deep);width:13px;font-size:10px}
+.fake-cand-ti{flex:1;font-weight:700;color:var(--text);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fake-cand-btn{background:var(--teal);color:#fff;border:0;padding:3px 8px;border-radius:4px;font-size:9px;font-weight:800;cursor:pointer}
+.fake-chip-row{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.fake-chip{background:#fff;border:1px solid var(--wire2);padding:4px 10px;border-radius:11px;font-size:10px;font-weight:700;color:var(--text2);cursor:pointer}
+.fake-chip.primary{background:var(--peach-soft);border-color:var(--peach-dark);color:var(--teal-deep)}
+.fake-chat-input{background:#fff;border:1px solid var(--wire2);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.fake-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;border-radius:8px;z-index:5}
+.fake-overlay-tip{background:#fff;border-radius:10px;padding:14px;width:80%;max-width:240px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.fake-overlay-step{font-size:9px;font-weight:800;color:var(--teal-deep);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.fake-overlay-ti{font-size:13px;font-weight:900;margin-bottom:5px}
+.fake-overlay-tx{font-size:10.5px;color:var(--text2);line-height:1.55;margin-bottom:9px}
+.fake-overlay-btn{background:var(--teal);color:#fff;border:0;padding:5px 12px;border-radius:5px;font-size:10px;font-weight:800;float:right}
+
+.removed{position:relative;opacity:.4}
+.removed::after{content:'削除';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);background:var(--rose-dark);color:#fff;font-size:11px;font-weight:900;padding:4px 12px;border-radius:5px;letter-spacing:.04em}
+
+.callout{background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:13px 16px;margin-top:14px;font-size:12px;color:var(--text2);line-height:1.7}
+.callout b{color:var(--text)}
+.callout ul{margin:5px 0 0;padding-left:18px}
+.callout li{margin-bottom:2px}
+
+.tag-removed{display:inline-block;background:var(--rose-soft);color:var(--rose-dark);font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:3px;margin-right:4px}
+.tag-new{display:inline-block;background:var(--green-soft);color:var(--green-dark);font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:3px;margin-right:4px}
+.tag-stay{display:inline-block;background:var(--cream3);color:var(--text3);font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:3px;margin-right:4px}
+
+.matrix{background:var(--cream);border:1px solid var(--wire2);border-radius:13px;padding:18px 22px;margin-top:34px}
+.matrix h3{margin:0 0 14px;font-size:15px;font-weight:900}
+.matrix table{width:100%;border-collapse:collapse;font-size:11.5px}
+.matrix th,.matrix td{padding:9px 11px;border-bottom:1px solid var(--wire2);text-align:left;vertical-align:top}
+.matrix th{font-weight:800;color:var(--text);background:var(--cream3)}
+.matrix td b{color:var(--text)}
+.matrix .check{color:var(--green-dark);font-weight:900}
+.matrix .x{color:var(--rose-dark);font-weight:900}
+</style>
+</head><body>
+
+<div class="page">
+
+  <div class="intro">
+    <h1>🎯 モック: UI/UX を 3 段階で簡素化</h1>
+    <p>
+      同じシナリオ <b>「今週何書こう?」</b> を 4 種の UI で見比べます。
+      左に現状、 右に各 Lv の simplification。
+      右に行くほど 「マーケ担当雇った」 比喩に近づく。
+    </p>
+    <div class="note">
+      <b>💡 評価軸</b>: 1) 画面要素の数 / 2) 認知負荷 / 3) chat 中心度 / 4) 「マーケ担当雇った」 比喩との接近度
+    </div>
+  </div>
+
+  <div class="scenario-h">
+    <span class="ic">💭</span>
+    <span>シナリオ: ユーザが「今週何書こうかな?」 と思った瞬間</span>
+  </div>
+
+  <!-- ═════════ 現状 (= 今のアプリ) ═════════ -->
+  <div class="lv-section lv-cur">
+    <div class="lv-h">
+      <div class="lv-badge">現状</div>
+      <div class="lv-h-text">
+        <div class="lv-h-eye">いま production にあるもの</div>
+        <div class="lv-h-ti">「ボタンを覚えて自分で操作する」 段階</div>
+        <div class="lv-h-tx">要素 数: 進捗バー + 4 step ボタン + 6 補助ボタン + AI hint なし + chat エンプティ</div>
+      </div>
+      <div class="lv-h-cost">基準</div>
+    </div>
+    <div class="demo">
+      <div class="demo-screen">
+        <div class="demo-label">App view</div>
+        <div class="fake-toolbar">
+          <div class="fake-tool active">📝</div>
+          <div class="fake-tool">🔍</div>
+          <div class="fake-tool">🎯</div>
+          <div class="fake-tool">📋</div>
+          <div class="fake-sep"></div>
+          <div class="fake-tool">📊</div>
+          <div class="fake-tool">📰</div>
+          <div class="fake-sep"></div>
+          <div class="fake-tool">🏢</div>
+          <div class="fake-tool">🔌</div>
+          <div class="fake-tool">📒</div>
+          <div class="fake-tool">⚙️</div>
+        </div>
+        <div class="fake-banner">
+          <div class="fake-banner-h">🎯 セットアップ進捗</div>
+          <div class="fake-banner-ti">1 / 4 完了 <span style="color:var(--peach-dark)">25%</span></div>
+          <div class="fake-banner-bar"><div class="fake-banner-bar-f"></div></div>
+          <div class="fake-banner-step">
+            <div class="st ok">✓ 📝</div>
+            <div class="st now">2 🔍</div>
+            <div class="st">3 🎯</div>
+            <div class="st">4 📋</div>
+          </div>
+        </div>
+        <div class="fake-hero">
+          <div class="fake-hero-eye">🚀 STEP 2 / 4 · 次のアクション</div>
+          <div class="fake-hero-ti">キーワード調査でネタを探す</div>
+          <div style="font-size:10.5px;opacity:.85;line-height:1.5">候補から 1 ボタンで記事公開できます。</div>
+          <span class="fake-hero-cta">🔍 STEP 2 へ →</span>
+        </div>
+        <div class="fake-chat-area">
+          <div style="text-align:center;color:var(--text3);font-size:10px;padding:40px 10px">— まだメッセージなし —</div>
+        </div>
+        <div class="fake-chat-input">💬 メッセージを入力...</div>
+      </div>
+      <div class="demo-screen">
+        <div class="demo-label">User mental</div>
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:14px;font-size:11.5px;line-height:1.7;color:var(--text2)">
+          <div style="font-weight:900;color:var(--text);margin-bottom:8px">😕 ユーザの脳内</div>
+          <ul style="padding-left:18px;margin:0">
+            <li>「えーっと、 🔍 押せばいいんだっけ?」</li>
+            <li>「進捗バーと hero card は同じこと言ってる気がする」</li>
+            <li>「📊 と 📰 って何が違う?」</li>
+            <li>「⚙ にメニュー入れて欲しい」</li>
+            <li>「結局 toolbar 全部覚えないとダメ?」</li>
+            <li>「マーケ担当に頼む感じじゃなくて、 道具を使ってる感じ」</li>
+          </ul>
+        </div>
+        <div style="background:var(--rose-soft);border:1px solid #fecaca;border-radius:9px;padding:11px 13px;margin-top:10px;font-size:10.5px;color:var(--rose-dark);font-weight:700;line-height:1.55">
+          <b>⚠️ 認知負荷</b>: 14 個の click 可能要素、 進捗 3 重表示、 chat は empty
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Lv1: 即効 整理 ═════════ -->
+  <div class="lv-section lv-1">
+    <div class="lv-h">
+      <div class="lv-badge">Lv1</div>
+      <div class="lv-h-text">
+        <div class="lv-h-eye">即効 整理 (= 2 時間)</div>
+        <div class="lv-h-ti">「重複削除 + toolbar 圧縮」</div>
+        <div class="lv-h-tx">進捗表示を 1 つに、 toolbar 10 → 5 に、 hero と progress を統合</div>
+      </div>
+      <div class="lv-h-cost">⏱ 2 時間</div>
+    </div>
+    <div class="demo">
+      <div class="demo-screen">
+        <div class="demo-label">App view</div>
+        <div class="fake-toolbar">
+          <div class="fake-tool active">📝</div>
+          <div class="fake-tool">🔍</div>
+          <div class="fake-tool">🎯</div>
+          <div class="fake-tool">📋</div>
+          <div class="fake-tool">⚙️</div>
+        </div>
+        <div class="fake-banner">
+          <div class="fake-banner-h">🎯 STEP 2 / 4 — 次のアクション</div>
+          <div class="fake-banner-ti">🔍 キーワード調査でネタを探す</div>
+          <div style="font-size:10.5px;color:var(--text2);margin-top:3px">候補から 1 ボタンで公開可能</div>
+          <div class="fake-banner-bar" style="margin-top:9px"><div class="fake-banner-bar-f"></div></div>
+        </div>
+        <div class="fake-chat-area">
+          <div style="text-align:center;color:var(--text3);font-size:10px;padding:60px 10px">— メッセージなし —</div>
+        </div>
+        <div class="fake-chat-input">💬 メッセージを入力...</div>
+      </div>
+      <div class="demo-screen">
+        <div class="demo-label">What changed</div>
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:13px;font-size:11.5px;line-height:1.7;color:var(--text2)">
+          <div style="font-weight:900;color:var(--text);margin-bottom:8px">変更点</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> walkthrough overlay (= 初回 1 回ぽっきり、 不要)</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> hero card (= 進捗バーと統合)</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> toolbar の 📊 📰 🏢 🔌 📒 → ⚙ メニューへ</div>
+          <div style="margin-bottom:6px"><span class="tag-new">新</span> 進捗バーに「次のアクション」 が inline 表示 (= 統合)</div>
+          <div style="margin-bottom:6px"><span class="tag-stay">維</span> 4 step ボタン (= setup フロー核)</div>
+        </div>
+        <div style="background:var(--green-soft);border:1px solid #86efac;border-radius:9px;padding:11px 13px;margin-top:10px;font-size:10.5px;color:var(--green-dark);font-weight:700;line-height:1.55">
+          <b>✓ 効果</b>: click 可能要素 14 → 8、 進捗 3 重 → 1 重、 認知負荷 半減
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Lv2: chat-first ═════════ -->
+  <div class="lv-section lv-2">
+    <div class="lv-h">
+      <div class="lv-badge">Lv2</div>
+      <div class="lv-h-text">
+        <div class="lv-h-eye">中規模 (= 半日)</div>
+        <div class="lv-h-ti">「chat first + inline carousel」</div>
+        <div class="lv-h-tx">AI が次アクション提案 chip を chat 上に表示、 KW 結果も chat 内 inline carousel に</div>
+      </div>
+      <div class="lv-h-cost">⏱ 半日</div>
+    </div>
+    <div class="demo">
+      <div class="demo-screen">
+        <div class="demo-label">App view</div>
+        <div class="fake-toolbar">
+          <div class="fake-tool active">💬</div>
+          <div class="fake-tool">⚙️</div>
+          <div style="flex:1;text-align:right;font-size:10.5px;color:var(--text3);padding:5px 8px;font-weight:700">myaiagents.agency Blog · 12 本公開</div>
+        </div>
+        <div class="fake-chat-area">
+          <!-- AI 提案 chip -->
+          <div class="fake-msg">
+            <div class="fake-av">🤖</div>
+            <div class="fake-bubble">
+              おはようございます。 先週「助成金」 が PV 上昇です。 今週、 関連 KW で 1 本書きませんか?
+              <div class="fake-tool-call">
+                <div class="ic">📊</div>
+                <div class="lbl">先週 PV 分析 + KW 候補抽出</div>
+                <div class="st">✓ 完了</div>
+              </div>
+              <div class="fake-cand-grid">
+                <div class="fake-cand-row reco">
+                  <div class="fake-cand-rk">②</div>
+                  <div class="fake-cand-ti"><b>採用助成金 期限 2026 — 完全ガイド</b></div>
+                  <button class="fake-cand-btn">🚀 公開</button>
+                </div>
+                <div class="fake-cand-row">
+                  <div class="fake-cand-rk">①</div>
+                  <div class="fake-cand-ti">中小企業 助成金 申請方法</div>
+                  <button class="fake-cand-btn">🚀 公開</button>
+                </div>
+                <div class="fake-cand-row">
+                  <div class="fake-cand-rk">③</div>
+                  <div class="fake-cand-ti">助成金 必要書類 チェックリスト</div>
+                  <button class="fake-cand-btn">🚀 公開</button>
+                </div>
+              </div>
+              <div class="fake-chip-row">
+                <span class="fake-chip primary">✨ 全部 公開</span>
+                <span class="fake-chip">別の角度で</span>
+                <span class="fake-chip">あとで</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="fake-chat-input">💬 メッセージを入力...</div>
+      </div>
+      <div class="demo-screen">
+        <div class="demo-label">What changed</div>
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:13px;font-size:11.5px;line-height:1.7;color:var(--text2)">
+          <div style="font-weight:900;color:var(--text);margin-bottom:8px">変更点</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> toolbar 4 step ボタン (= 📝 🔍 🎯 📋 不要)</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> 進捗バー (= AI が自然と次提案するため)</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> 別 panel (= KW 調査結果は chat 内 inline)</div>
+          <div style="margin-bottom:6px"><span class="tag-new">新</span> AI が朝の chat top で <b>「先週の数字 + 今週の提案」</b></div>
+          <div style="margin-bottom:6px"><span class="tag-new">新</span> KW 候補を chat 内 carousel + 1 click 公開</div>
+          <div style="margin-bottom:6px"><span class="tag-new">新</span> chip で 「全部公開 / 別角度 / あとで」 即決可能</div>
+          <div style="margin-bottom:6px"><span class="tag-stay">維</span> ⚙ メニュー (= 設定 / 接続 / 組織)</div>
+        </div>
+        <div style="background:var(--green-soft);border:1px solid #86efac;border-radius:9px;padding:11px 13px;margin-top:10px;font-size:10.5px;color:var(--green-dark);font-weight:700;line-height:1.55">
+          <b>✓ 効果</b>: ユーザは「toolbar を覚える」 が不要、 朝 開く = 即提案、 「マーケ担当」 比喩に大幅接近
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Lv3: pure chat ═════════ -->
+  <div class="lv-section lv-3">
+    <div class="lv-h">
+      <div class="lv-badge">Lv3</div>
+      <div class="lv-h-text">
+        <div class="lv-h-eye">大胆 (= 1 週間)</div>
+        <div class="lv-h-ti">「pure chat — toolbar ゼロ」</div>
+        <div class="lv-h-tx">機能名すらユーザに見せない、 ただ AI チームとの会話のみ</div>
+      </div>
+      <div class="lv-h-cost">⏱ 1 週間</div>
+    </div>
+    <div class="demo">
+      <div class="demo-screen">
+        <div class="demo-label">App view</div>
+        <div style="background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700">
+          <span style="font-size:20px">🤖</span>
+          <div style="flex:1">
+            <div style="font-weight:900">myaiagents.agency · AI チーム</div>
+            <div style="font-size:9.5px;opacity:.8;font-weight:600">30 名待機中 · 接続済</div>
+          </div>
+          <span style="font-size:14px;opacity:.7;cursor:pointer">⋯</span>
+        </div>
+        <div class="fake-chat-area">
+          <div class="fake-msg">
+            <div class="fake-av">🤖</div>
+            <div class="fake-bubble" style="background:linear-gradient(135deg,var(--peach-soft),#fff);border:1px solid var(--peach-dark)">
+              <b>🌅 おはようございます。</b><br>
+              先週はお疲れさまでした。 PV +18%、 「助成金」 記事が好調です。<br><br>
+              今朝、 私から提案が 1 つあります:
+              <div style="background:#fff;border-radius:7px;padding:8px 10px;margin-top:7px;font-size:11px;border:1px solid var(--peach-dark)">
+                <b>📝 採用助成金 期限 2026 — 完全ガイド</b><br>
+                <span style="color:var(--text3);font-size:10px">理由: 低競合 × ボリューム 1,800、 関連の助成金記事が伸びてる流れに乗れます</span>
+              </div>
+              <div class="fake-chip-row" style="margin-top:8px">
+                <span class="fake-chip primary">✓ 進める</span>
+                <span class="fake-chip">違うやつ</span>
+              </div>
+            </div>
+          </div>
+          <div class="fake-msg user">
+            <div class="fake-av user">あ</div>
+            <div class="fake-bubble">進めて</div>
+          </div>
+          <div class="fake-msg">
+            <div class="fake-av">🤖</div>
+            <div class="fake-bubble">
+              了解しました。 5,000 字 + 画像を 90 秒で仕上げます。
+              <div class="fake-tool-call">
+                <div class="ic">✍️</div>
+                <div class="lbl">執筆 + 画像生成 + 公開</div>
+                <div class="st">実行中…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="fake-chat-input">💬 メッセージを入力...</div>
+      </div>
+      <div class="demo-screen">
+        <div class="demo-label">What changed</div>
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:9px;padding:13px;font-size:11.5px;line-height:1.7;color:var(--text2)">
+          <div style="font-weight:900;color:var(--text);margin-bottom:8px">変更点</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> toolbar 全部 (= ⋯ メニューだけ残す)</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> 「メディア / KW 調査 / 戦略 / タスク」 という用語</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> 進捗 / step / setup の概念</div>
+          <div style="margin-bottom:6px"><span class="tag-removed">削除</span> sidebar の multi-site 切替 (= 1 サイト 1 chat)</div>
+          <div style="margin-bottom:6px"><span class="tag-new">新</span> 朝の AI proactive nudge (= 数字 + 提案 inline)</div>
+          <div style="margin-bottom:6px"><span class="tag-new">新</span> 即 [✓ 進める] / [違うやつ] の 2 択 chip</div>
+          <div style="margin-bottom:6px"><span class="tag-new">新</span> tool 実行は chat 内 inline で透明 (= 「執筆中…」)</div>
+        </div>
+        <div style="background:var(--peach-soft);border:1px solid var(--peach-dark);border-radius:9px;padding:11px 13px;margin-top:10px;font-size:10.5px;color:var(--teal-deep);font-weight:700;line-height:1.55">
+          <b>🎯 master pitch 完全実装</b><br>
+          ユーザは「機能を使う」 ではなく「マーケ担当との会話」 をする。 「KW 調査」 「メディア立ち上げ」 などの言葉を一切聞かない。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Matrix ═════════ -->
+  <div class="matrix">
+    <h3>📊 比較 マトリクス</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:18%">軸</th>
+          <th style="width:20%">現状</th>
+          <th style="width:20%">Lv1 (= 整理)</th>
+          <th style="width:20%">Lv2 (= chat first)</th>
+          <th style="width:22%">Lv3 (= pure chat)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><b>click 可能要素</b></td><td>14 個</td><td>8 個</td><td>5 個 (= ⚙ + chip)</td><td>3 個 (= ⋯ + 2 chip)</td></tr>
+        <tr><td><b>進捗表示</b></td><td>3 重 (walkthrough + bar + hero)</td><td>1 重 (= bar)</td><td>0 (= AI 自然提案)</td><td>0</td></tr>
+        <tr><td><b>機能名 認知</b></td><td>全部見える</td><td>4 step は見える</td><td>chip にのみ</td><td>ゼロ</td></tr>
+        <tr><td><b>chat 中心度</b></td><td>低 (= empty)</td><td>中</td><td>高</td><td>最高</td></tr>
+        <tr><td><b>master pitch 一致度</b></td><td class="x">弱 (= 道具感)</td><td>中</td><td class="check">強</td><td class="check">完璧</td></tr>
+        <tr><td><b>工数</b></td><td>—</td><td>2 時間</td><td>半日</td><td>1 週間</td></tr>
+        <tr><td><b>既存ユーザ への影響</b></td><td>—</td><td>小 (= 既存 path 残る)</td><td>中 (= 慣れ要)</td><td>大 (= UI 全面変更)</td></tr>
+        <tr><td><b>recommended?</b></td><td>—</td><td>✓ 即やる</td><td>✓ 1 週後やる</td><td>△ data 見てから</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <b>💡 推奨</b>: <b>Lv1 を今やる → Lv2 を 1 週間以内に追加</b> が現実解。 Lv3 は Lv2 のユーザ反応データを見てから判断 (= dogfooding で「机を覚えなくていい」 体験が刺さるか測定)。<br><br>
+    Lv1 + Lv2 で プロダクトが <b>「マーケ担当雇った」 メタファーの 80% まで近づく</b>。 残り 20% (= Lv3) は段階的に。
+  </div>
+
+</div>
+
+</body>
+</html>
+</content>
+</invoke>

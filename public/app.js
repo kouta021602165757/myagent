@@ -3075,6 +3075,7 @@ window.openDailyGrowthReportPanel = async function(siteId){
     +    '<div id="dgrWins"></div>'
     +    '<div id="dgrSection1">' + initSection1 + '</div>'
     +    '<div id="dgrGscArticles"></div>'  // GSC「昨日の記事別流入」 (Phase 2 で埋める)
+    +    '<div id="dgrMediaSummary"></div>'  // 📝 メディア記事サマリー (= Phase 2 で埋める)
     +    '<div id="dgrThreeCh">' + initThreeCh + '</div>'
     +    '<div id="dgrSections">' + initSections + '</div>'
     +    '<div id="dgrPastList"></div>'
@@ -3180,6 +3181,17 @@ window.openDailyGrowthReportPanel = async function(siteId){
         }).catch(function(_){});
       }
     } catch(_){}
+    // 📝 メディア記事サマリー — 公開済記事 + 上位 PV + 弱記事
+    try {
+      var _msBox = document.getElementById('dgrMediaSummary');
+      if(_msBox && ag.media && ag.media.id){
+        api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media/stats?days=7').then(function(stats){
+          if(_msBox && stats && stats.has_media){
+            _msBox.innerHTML = _dgrRenderMediaSummary(siteId, stats, ag);
+          }
+        }).catch(function(_){});
+      }
+    } catch(_){}
     if(ssf) ssf.innerHTML = _dgrRenderMarkdownSections(latest && latest.content || '', siteId, snap);
     if(etf && latest){
       etf.innerHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openNotesPanel(\''+esc(siteId)+'\',\''+esc(latest.id)+'\')" '
@@ -3206,6 +3218,43 @@ window.openDailyGrowthReportPanel = async function(siteId){
     // しない。 ただし console に出して開発者に通知。
   }
 };
+
+// 📝 メディア記事サマリー section (= 日次レポ内)
+function _dgrRenderMediaSummary(siteId, stats, ag){
+  if(!stats || !stats.has_media) return '';
+  var publishedCount = stats.posts_count || 0;
+  var pv7 = stats.pv;
+  var hasGa4 = stats.ga4_connected;
+  var hasGsc = stats.gsc_connected;
+  var topHTML = (stats.top_posts && stats.top_posts.length) ? stats.top_posts.slice(0, 3).map(function(p, i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border-radius:7px;font-size:11.5px;margin-bottom:4px">'
+      + '<span style="font-weight:900;color:var(--teal-deep);width:18px">'+(i+1)+'.</span>'
+      + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:var(--text)">'+esc(p.title||p.slug)+'</span>'
+      + '<span style="font-size:10.5px;color:var(--text3)">'+(p.pv >= 1000 ? Math.round(p.pv/100)/10+'k' : p.pv)+' PV</span>'
+      + '</div>';
+  }).join('') : '<div style="padding:8px 10px;font-size:11px;color:var(--text3)">直近 7 日でアクセスのあった記事はまだありません</div>';
+
+  var weakBadge = (stats.weak_posts && stats.weak_posts.length > 0)
+    ? '<span style="background:#fff7ed;color:#9a3412;font-size:10px;font-weight:800;padding:3px 8px;border-radius:5px;margin-left:8px">📉 リライト推奨 '+stats.weak_posts.length+' 件</span>'
+    : '';
+
+  return ''
+    + '<div style="margin-bottom:18px;padding:14px 16px;background:linear-gradient(135deg,#fff,var(--peach-soft));border:1px solid var(--peach-dark);border-radius:11px">'
+    +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'
+    +     '<span style="font-size:16px">📝</span>'
+    +     '<span style="font-size:13px;font-weight:900;color:var(--text)">メディア (直近 7 日)</span>'
+    +     weakBadge
+    +     '<button onclick="document.getElementById(\'dailyGrowthOverlay\').remove();openMediaPanel(\''+esc(siteId)+'\')" style="margin-left:auto;background:var(--teal);color:#fff;border:0;padding:6px 12px;border-radius:6px;font-size:10.5px;font-weight:800;cursor:pointer;font-family:inherit">ダッシュボードへ →</button>'
+    +   '</div>'
+    +   '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
+    +     '<div style="background:#fff;border-radius:7px;padding:7px 9px"><div style="font-size:9.5px;color:var(--text3);font-weight:700">公開記事</div><div style="font-size:15px;font-weight:900;color:var(--text)">'+publishedCount+' 本</div></div>'
+    +     '<div style="background:#fff;border-radius:7px;padding:7px 9px'+(!hasGa4?';opacity:.5':'')+'"><div style="font-size:9.5px;color:var(--text3);font-weight:700">PV (7 日)</div><div style="font-size:15px;font-weight:900;color:var(--text)">'+(pv7==null?'—':(pv7>=1000?Math.round(pv7/100)/10+'k':pv7))+'</div></div>'
+    +     '<div style="background:#fff;border-radius:7px;padding:7px 9px'+(!hasGsc?';opacity:.5':'')+'"><div style="font-size:9.5px;color:var(--text3);font-weight:700">平均順位</div><div style="font-size:15px;font-weight:900;color:var(--text)">'+(stats.avg_position==null?'—':'#'+stats.avg_position)+'</div></div>'
+    +   '</div>'
+    +   '<div style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">🏆 PV TOP 3</div>'
+    +   topHTML
+    + '</div>';
+}
 
 // GSC「昨日の記事別流入」 セクション render (= ユーザー要望)
 // gscResp = /api/agents/:id/gsc-snapshot?period=yesterday の結果

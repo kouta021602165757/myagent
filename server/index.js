@@ -6018,6 +6018,45 @@ const BLOG_TOOLS = [
       },
     },
   },
+  {
+    name: 'research_keyword',
+    description: '🔍 サイト向けの SEO/AEO キーワード候補を AI が 10-20 件生成。 ボリューム推定 + 競合度 + 推奨タイトル付き。\n'
+      + '【利用シーン】 「今週なに書こう?」 「○○ 関連のキーワード調べて」 「狙うべきキーワードある?」 等の依頼。\n'
+      + '【返却】 候補リスト + 各候補の AI 推奨記事タイトル。 そのまま publish_to_media に渡せる。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        topic: { type: 'string', description: '調査したいテーマ (= 任意。 指定なければサイト全体の SEO 機会を AI が判断)' },
+        mode:  { type: 'string', enum: ['seo','aeo'], description: 'SEO 通常 / AEO (AI 検索向け)。 既定 seo' },
+      },
+    },
+  },
+  {
+    name: 'get_site_stats',
+    description: '📊 サイトの GA4 数字 (= PV / セッション / ユーザ / 直帰率) を取得。 メディアダッシュの「数字」 と同じ source。\n'
+      + '【利用シーン】 「先週の PV どう?」 「数字どう?」 等。 \n'
+      + '【注意】 既存 ga4_query tool より単純に「サマリー」 が欲しい時はこれ、 細かい query は ga4_query を使う。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: { type: 'integer', description: '直近 N 日 (= 既定 30、 最大 90)' },
+        scope: { type: 'string', enum: ['site','media'], description: 'site (= サイト全体) / media (= メディア記事のみ)。 既定 site' },
+      },
+    },
+  },
+  {
+    name: 'get_search_console_data',
+    description: '🏆 GSC (Search Console) から検索順位 / クリック / 表示回数 / トップクエリを取得。\n'
+      + '【利用シーン】 「順位上がった?」 「どんなキーワードで来てる?」 「順位下がってる記事ある?」 等。\n'
+      + '【返却】 上位 query + 順位下落記事 + 平均順位。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: { type: 'integer', description: '直近 N 日 (= 既定 30)' },
+        scope: { type: 'string', enum: ['site','media'], description: 'site / media。 既定 site' },
+      },
+    },
+  },
 ];
 
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
@@ -14183,6 +14222,41 @@ async function serveSitemapXml(res){
     }
   }catch(e){ console.warn('[sitemap] listings fetch failed:', e.message); }
 
+  // 📝 メディア記事 (= /media/:slug + /media/:slug/:postSlug) も sitemap に inject
+  try {
+    let users = [];
+    if(USE_SUPA){
+      const r = await sbReq('GET','users','?select=id,agents&limit=500');
+      users = Array.isArray(r.d) ? r.d : [];
+    } else {
+      users = LDB.data || [];
+    }
+    for(const u of users){
+      for(const ag of (u.agents || [])){
+        if(!ag || !ag.media || !ag.media.id || ag.media.status === 'draft') continue;
+        const mediaSlug = ag.media.slug;
+        if(!mediaSlug) continue;
+        // 一覧ページ
+        urls.push({
+          loc: APP_URL + '/media/' + mediaSlug,
+          changefreq: 'daily',
+          priority: '0.8',
+          lastmod: (ag.media.created_at || now).slice(0,10),
+        });
+        // 個別記事
+        for(const p of (ag.media_posts_idx || [])){
+          if(!p || p.status === 'draft' || !p.slug) continue;
+          urls.push({
+            loc: APP_URL + '/media/' + mediaSlug + '/' + p.slug,
+            changefreq: 'monthly',
+            priority: '0.7',
+            lastmod: (p.rewritten_at || p.published_at || now).slice(0,10),
+          });
+        }
+      }
+    }
+  } catch(e){ console.warn('[sitemap] media articles fetch failed:', e.message); }
+
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     urls.map(u => '  <url>\n' +
@@ -15442,8 +15516,8 @@ async function _mediaGenerateHeroImage(title, template){
   }
 }
 
-// 個別記事 SSR
-function _mediaRenderMinimalPost(media, post, body_html){
+// 個別記事 SSR — opts.relatedPosts で「関連記事」 を末尾に表示 (= 回遊性向上)
+function _mediaRenderMinimalPost(media, post, body_html, opts){
   const name = _mediaEsc(media.name || 'Blog');
   const brand = _mediaEsc(media.brand_color || '#0d4f4a');
   const lpUrl = _mediaEsc(media.lp_url || '');
@@ -15465,6 +15539,20 @@ function _mediaRenderMinimalPost(media, post, body_html){
   const headerCTA = cta('header', 'サービスを見る →', 'background:' + brand + ';color:#fff;padding:8px 14px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700');
 
   const inlineCTA = cta('inline_mid', '👉 ' + name + ' のサービスを見る', 'display:block;background:' + brand + ';color:#fff;padding:14px 20px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;text-align:center;margin:28px 0');
+
+  const related = (opts && Array.isArray(opts.relatedPosts)) ? opts.relatedPosts : [];
+  const relatedHTML = related.length > 0 ? `
+    <div style="margin-top:48px;padding-top:30px;border-top:1px solid #e5e7eb">
+      <div style="font-size:13px;font-weight:800;color:#9ca3af;letter-spacing:.05em;text-transform:uppercase;margin-bottom:18px">関連記事</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
+        ${related.map(r => `
+          <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(r.slug)}" style="display:block;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;text-decoration:none;color:#111;transition:.15s" onmouseover="this.style.borderColor='${brand}'" onmouseout="this.style.borderColor='#e5e7eb'">
+            ${r.category_name ? '<div style="font-size:10.5px;color:' + brand + ';font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px">' + _mediaEsc(r.category_name) + '</div>' : ''}
+            <div style="font-size:14px;font-weight:800;line-height:1.45;margin-bottom:6px">${_mediaEsc(r.title)}</div>
+            <div style="font-size:11px;color:#9ca3af">${_mediaEsc((r.published_at||'').slice(0,10))}</div>
+          </a>`).join('')}
+      </div>
+    </div>` : '';
 
   const endCard = lpUrl ? `
     <div style="background:linear-gradient(135deg,${brand},#0a3d39);color:#fff;border-radius:14px;padding:30px 28px;margin-top:36px;text-align:center">
@@ -15535,6 +15623,7 @@ ${post.hero_image_url ? '<meta property="og:image" content="' + _mediaEsc(post.h
       ${body_html}
       ${inlineCTA}
       ${endCard}
+      ${relatedHTML}
     </div>
   </div>
 </article>
@@ -15645,6 +15734,152 @@ async function executePublishToMediaTool(user, agent, input){
   };
 }
 
+// research_keyword: AI が KW 候補生成 (= KW research 簡易版)
+async function executeResearchKeywordTool(user, agent, input){
+  if(!agent) return { error: 'agent not found' };
+  if(!agent.site_url) return { error: 'site_url not set' };
+  const topic = String((input && input.topic) || '').trim();
+  const mode = (input && input.mode === 'aeo') ? 'aeo' : 'seo';
+  if(!CLAUDE_KEY) return { error: 'not_configured: ANTHROPIC_API_KEY not set' };
+  const sitePreview = await _fetchSitePreview(agent).catch(() => null);
+  const siteCtx = sitePreview && sitePreview.content ? sitePreview.content.slice(0, 1500) : '';
+  const prompt = ''
+    + 'サイト: ' + agent.site_url + (agent.site_vertical ? ' (' + agent.site_vertical + ')' : '') + '\n'
+    + (siteCtx ? '【サイト内容】\n' + siteCtx + '\n\n' : '')
+    + (topic ? '【調査テーマ】 ' + topic + '\n' : '【調査範囲】 サイト全体の SEO 機会\n')
+    + (mode === 'aeo' ? '【優先】 AEO (= AI 検索引用されやすい構造) 向け\n' : '【優先】 SEO (= Google 上位狙い) 向け\n')
+    + '\n'
+    + 'このサイトで狙うべき検索キーワード候補を 10 件、 以下の JSON 形式だけで返してください (前置き禁止):\n'
+    + '{\n'
+    + '  "keywords": [\n'
+    + '    {\n'
+    + '      "keyword": "ターゲット KW",\n'
+    + '      "volume_est": 1500,\n'
+    + '      "competition": "low|mid|high",\n'
+    + '      "title": "推奨記事タイトル (= 60 字以内、 click したくなる)"\n'
+    + '    }, ...\n'
+    + '  ]\n'
+    + '}\n'
+    + '- volume_est は月間検索数の推定整数\n'
+    + '- competition は low (= 低競合 推奨) / mid / high\n'
+    + '- 重複や同義 KW を避ける、 全部別の角度から';
+  try {
+    const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      { model: 'claude-sonnet-4-6', max_tokens: 3000, messages: [{ role: 'user', content: prompt }] }
+    );
+    if(r.s >= 400) return { error: _claudeErrorMessage(r) };
+    const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+    const m = txt.match(/\{[\s\S]*\}/);
+    if(!m) return { error: 'parse_failed' };
+    const parsed = JSON.parse(m[0]);
+    if(!Array.isArray(parsed.keywords)) return { error: 'no keywords' };
+    return { ok: true, mode, topic: topic || '(サイト全体)', keywords: parsed.keywords.slice(0, 10) };
+  } catch(e){
+    return { error: 'research_failed', detail: e.message };
+  }
+}
+
+// get_site_stats: GA4 ラッパー (= 既存 executeGa4QueryTool を chat tool として薄ラップ)
+async function executeGetSiteStatsTool(user, agent, input){
+  if(!agent) return { error: 'agent not found' };
+  if(!_hasGoogleRefreshToken(user) || !_hasGa4Scope(user)){
+    return { error: 'ga4_not_connected', detail: 'Google を接続してください (GA4 scope 必要)。 🔌 接続から。' };
+  }
+  const days = Math.max(1, Math.min(90, parseInt(input && input.days, 10) || 30));
+  const scope = (input && input.scope === 'media') ? 'media' : 'site';
+  const slugPrefix = (scope === 'media' && agent.media) ? '/media/' + agent.media.slug + '/' : null;
+  // ga4 query
+  let propertyId = null;
+  const tgt = _resolveServiceTarget(agent, user, 'ga4');
+  if(tgt) propertyId = String(tgt.id).replace('properties/', '');
+  if(!propertyId && agent.site_url){
+    try { const picked = await _autoPickGa4Property(user, agent);
+      if(picked) propertyId = String(picked.property_id).replace('properties/', '');
+    } catch(_){}
+  }
+  if(!propertyId) return { error: 'no_property_set', detail: 'ga4_list_properties → ga4_set_default で先に property を設定してください' };
+  try {
+    const r = await ga4RunReport(user, propertyId, {
+      metrics: [{ name: 'screenPageViews' }, { name: 'sessions' }, { name: 'activeUsers' }, { name: 'bounceRate' }],
+      dimensions: slugPrefix ? [{ name: 'pagePath' }] : undefined,
+      dateRanges: [{ startDate: days + 'daysAgo', endDate: 'yesterday' }],
+      limit: slugPrefix ? 1000 : 1,
+    });
+    let pv = 0, ss = 0, us = 0, br = 0;
+    if(slugPrefix){
+      (r.rows||[]).forEach(row => {
+        const path = (row.dimensionValues||[])[0] && row.dimensionValues[0].value;
+        if(!path || !path.startsWith(slugPrefix)) return;
+        pv += parseInt((row.metricValues||[])[0]?.value||'0',10)||0;
+        ss += parseInt((row.metricValues||[])[1]?.value||'0',10)||0;
+        us += parseInt((row.metricValues||[])[2]?.value||'0',10)||0;
+      });
+    } else {
+      const row = (r.rows||[])[0];
+      if(row){
+        pv = parseInt((row.metricValues||[])[0]?.value||'0',10)||0;
+        ss = parseInt((row.metricValues||[])[1]?.value||'0',10)||0;
+        us = parseInt((row.metricValues||[])[2]?.value||'0',10)||0;
+        br = parseFloat((row.metricValues||[])[3]?.value||'0')||0;
+      }
+    }
+    return { ok: true, days, scope, pv, sessions: ss, users: us, bounce_rate: Math.round(br*1000)/10 };
+  } catch(e){ return { error: 'ga4_failed', detail: e.message }; }
+}
+
+// get_search_console_data: GSC ラッパー
+async function executeGetSearchConsoleDataTool(user, agent, input){
+  if(!agent) return { error: 'agent not found' };
+  if(!_hasGoogleRefreshToken(user) || !_hasGscScope(user)){
+    return { error: 'gsc_not_connected', detail: 'Google を接続してください (Search Console scope 必要)。' };
+  }
+  const days = Math.max(1, Math.min(90, parseInt(input && input.days, 10) || 30));
+  const scope = (input && input.scope === 'media') ? 'media' : 'site';
+  const slugPrefix = (scope === 'media' && agent.media) ? '/media/' + agent.media.slug + '/' : null;
+  let siteUrl = agent.gsc_site_url
+    || (user.integrations && user.integrations.google && user.integrations.google.gsc_site_url)
+    || agent.site_url || '';
+  if(!siteUrl) return { error: 'no_site_set' };
+  try {
+    const r = await gscSearchAnalyticsQuery(user, siteUrl, {
+      startDate: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10),
+      endDate: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+      dimensions: ['query', 'page'],
+      rowLimit: 1000,
+    });
+    let totalC = 0, totalI = 0, posSum = 0, posCount = 0;
+    const queries = {};
+    const weakPages = [];
+    (r.rows || []).forEach(row => {
+      const q = (row.keys || [])[0] || '';
+      const page = (row.keys || [])[1] || '';
+      if(slugPrefix && page.indexOf(slugPrefix) < 0) return;
+      const c = row.clicks || 0, i = row.impressions || 0, p = row.position || 0;
+      totalC += c; totalI += i;
+      if(p > 0){ posSum += p; posCount++; }
+      if(!queries[q]) queries[q] = { clicks: 0, impressions: 0, position: 0, count: 0 };
+      queries[q].clicks += c; queries[q].impressions += i;
+      queries[q].position += p; queries[q].count++;
+      if(p > 10 && i > 5){
+        weakPages.push({ page, position: Math.round(p * 10) / 10, impressions: i, clicks: c });
+      }
+    });
+    const topQ = Object.entries(queries)
+      .map(([q, m]) => ({ query: q, clicks: m.clicks, impressions: m.impressions, position: Math.round((m.position / m.count) * 10) / 10 }))
+      .sort((a, b) => b.clicks - a.clicks)
+      .slice(0, 10);
+    return {
+      ok: true, days, scope,
+      total_clicks: totalC, total_impressions: totalI,
+      avg_position: posCount > 0 ? Math.round((posSum / posCount) * 10) / 10 : null,
+      ctr: totalI > 0 ? Math.round((totalC / totalI) * 1000) / 10 : 0,
+      top_queries: topQ,
+      weak_pages: weakPages.sort((a, b) => b.impressions - a.impressions).slice(0, 5),
+    };
+  } catch(e){ return { error: 'gsc_failed', detail: e.message }; }
+}
+
 // list_media_posts: 公開済記事の一覧
 async function executeListMediaPostsTool(user, agent, input){
   if(!agent) return { error: 'agent not found' };
@@ -15694,17 +15929,21 @@ function _mediaEsc(s){
 }
 
 // Minimal テンプレート HTML (= SSR、 軽量、 SEO-safe)
-function _mediaRenderMinimalIndex(media, posts){
+// opts.categoryFilter: 指定時はカテゴリページ (= /media/:slug/cat/:catSlug)
+function _mediaRenderMinimalIndex(media, posts, opts){
   const name = _mediaEsc(media.name || 'Blog');
   const brand = _mediaEsc(media.brand_color || '#0d4f4a');
-  const publicUrl = 'https://' + _mediaEsc(media.domain || (media.slug + '.myaiagents.agency'));
+  const publicUrl = 'https://' + _mediaEsc(media.domain || 'myaiagents.agency') + '/media/' + _mediaEsc(media.slug);
   const lpUrl = _mediaEsc(media.lp_url || '');
+  const categoryFilter = (opts && opts.categoryFilter) ? _mediaEsc(opts.categoryFilter) : '';
   const logoImg = media.logo_url
     ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:36px;height:36px;border-radius:7px;object-fit:cover">'
     : '<div style="width:36px;height:36px;border-radius:7px;background:' + brand + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
-  const categoriesHTML = (media.categories || []).map(c =>
-    '<a href="#cat-' + _mediaEsc(c.slug) + '" style="color:#374151;text-decoration:none;padding:6px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-weight:600;background:#fff">' + _mediaEsc(c.name) + '</a>'
-  ).join('\n      ');
+  // カテゴリは実際のリンクに (= /media/:slug/cat/:catSlug)
+  const categoriesHTML = (media.categories || []).map(c => {
+    const isActive = categoryFilter === c.name;
+    return '<a href="/media/' + _mediaEsc(media.slug) + '/cat/' + _mediaEsc(c.slug) + '" style="color:' + (isActive ? '#fff' : '#374151') + ';text-decoration:none;padding:6px 12px;border:1px solid ' + (isActive ? brand : '#e5e7eb') + ';border-radius:7px;font-size:13px;font-weight:600;background:' + (isActive ? brand : '#fff') + '">' + _mediaEsc(c.name) + '</a>';
+  }).join('\n      ');
 
   const postsHTML = (posts && posts.length) ? posts.map(p => `
     <article style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
@@ -15762,8 +16001,8 @@ function _mediaRenderMinimalIndex(media, posts){
 
 <main>
   <section class="hero ct">
-    <h1>${name}</h1>
-    <p>AI チームが運営する、 ${name} のオウンドメディア</p>
+    <h1>${categoryFilter ? _mediaEsc(categoryFilter) : name}</h1>
+    <p>${categoryFilter ? ('「' + _mediaEsc(categoryFilter) + '」 カテゴリの記事 · <a href="/media/' + _mediaEsc(media.slug) + '" style="color:' + brand + '">← ' + name + ' トップへ</a>') : 'AI チームが運営する、 ' + name + ' のオウンドメディア'}</p>
   </section>
   ${categoriesHTML ? '<div class="cats">' + categoriesHTML + '</div>' : ''}
   <section class="ct">
@@ -16262,6 +16501,9 @@ async function _runOneSchedule(user, agent, sched){
           else if(block.name === 'wordpress_test_connection') result = await executeWordPressTestConnectionTool(user, agent, block.input||{});
           else if(block.name === 'publish_to_media')    result = await executePublishToMediaTool(user, agent, block.input||{});
           else if(block.name === 'list_media_posts')    result = await executeListMediaPostsTool(user, agent, block.input||{});
+          else if(block.name === 'research_keyword')    result = await executeResearchKeywordTool(user, agent, block.input||{});
+          else if(block.name === 'get_site_stats')      result = await executeGetSiteStatsTool(user, agent, block.input||{});
+          else if(block.name === 'get_search_console_data') result = await executeGetSearchConsoleDataTool(user, agent, block.input||{});
           else if(block.name === 'share_to_sns')        result = await executeShareToSnsTool(block.input||{});
           else if(block.name === 'buffer_list_profiles') result = await executeBufferListProfilesTool(user);
           else if(block.name === 'buffer_post')          result = await executeBufferPostTool(user, block.input||{});
@@ -27889,6 +28131,12 @@ ${orgSummary || '(汎用チーム)'}
               result = await executePublishToMediaTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'list_media_posts'){
               result = await executeListMediaPostsTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'research_keyword'){
+              result = await executeResearchKeywordTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'get_site_stats'){
+              result = await executeGetSiteStatsTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'get_search_console_data'){
+              result = await executeGetSearchConsoleDataTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'share_to_sns'){
               result = await executeShareToSnsTool(block.input||{});
             } else if(block.name === 'buffer_list_profiles'){
@@ -28950,6 +29198,39 @@ const server=http.createServer(async(req,res)=>{
     return serveAgentSharePage(res, aRoute[1]);
   }
 
+  // /media/:slug/cat/:catSlug → カテゴリページ SSR (= 認証不要、 該当カテゴリの記事一覧)
+  const mediaCatRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/cat\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
+  if(mediaCatRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaCatRoute[1];
+      const catSlug = mediaCatRoute[2];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+          return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>404</h1></body></html>');
+        }
+        const { agent } = found;
+        const cat = (agent.media.categories || []).find(c => c && (c.slug === catSlug));
+        const catName = cat ? cat.name : catSlug;
+        const allPosts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+        // カテゴリ一致は category_name で (= AI 生成は category_name しか持たないため)
+        const posts = allPosts.filter(p => p.category_name === catName);
+        const html = _mediaRenderMinimalIndex(agent.media, posts, { categoryFilter: catName });
+        res.writeHead(200, {
+          'Content-Type': 'text/html;charset=utf-8',
+          'Cache-Control': 'public, max-age=300',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
+        });
+        return res.end(html);
+      } catch(e){
+        console.warn('[media-cat] failed:', e.message);
+        res.writeHead(500); return res.end('500');
+      }
+    })();
+  }
+
   // /media/:slug/:postSlug → 個別記事 SSR (= 認証不要)
   const mediaPostRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
   if(mediaPostRoute && method === 'GET'){
@@ -28970,7 +29251,18 @@ const server=http.createServer(async(req,res)=>{
         }
         const fullMap = user.media_posts_full || {};
         const body_html = _sanitizeArticleHtml((fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '<p>記事本文を読み込めませんでした。</p>');
-        const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html);
+        // 関連記事 (= 同カテゴリ優先、 ない場合は最新から、 自身を除外、 最大 3 件)
+        const allOther = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft' && p.slug !== postSlug);
+        let related = [];
+        if(postMeta.category_name){
+          related = allOther.filter(p => p.category_name === postMeta.category_name).slice(0, 3);
+        }
+        if(related.length < 3){
+          const need = 3 - related.length;
+          const fillers = allOther.filter(p => !related.find(r => r.slug === p.slug)).slice(0, need);
+          related = related.concat(fillers);
+        }
+        const html = _mediaRenderMinimalPost(agent.media, postMeta, body_html, { relatedPosts: related });
         res.writeHead(200, {
           'Content-Type': 'text/html;charset=utf-8',
           'Cache-Control': 'public, max-age=300',
@@ -29164,7 +29456,8 @@ const server=http.createServer(async(req,res)=>{
       'User-agent: Discordbot\nAllow: /\nDisallow: /api/\n\n' +
       // Default crawlers: keep the /app restriction (it's a SPA shell
       // with no SEO value) but allow /auth.html (signup landing has OG now).
-      'User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app\n\n' +
+      // /media/ は明示 Allow (= sitemap.xml と一致、 Google が確実に拾える)
+      'User-agent: *\nAllow: /\nAllow: /media/\nDisallow: /api/\nDisallow: /app\n\n' +
       'Sitemap: ' + APP_URL + '/sitemap.xml\n'
     );
   }

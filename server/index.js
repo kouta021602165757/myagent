@@ -23683,59 +23683,94 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     } catch(e){ console.warn('[rewrite-gsc]', e.message); }
 
-    // Claude Sonnet にリライト依頼
+    // 🎯 2026-06-02: _mediaGenerateArticle (= 新スタイル) 経由でリライト
+    //   - fukuyama-note 風 4500-5500 字 / info-table 必須 / FAQ 必須 / 出典厳守
+    //   - hero 画像 + 本文画像 自動再生成
     if(!ANTHROPIC) return jres(res, 503, { error: 'AI key not configured' });
-    const prompt = ''
-      + '以下の既存記事をリライトしてください。 URL は同じなので、 タイトルや excerpt も改善版に差し替えます。\n\n'
-      + '【既存タイトル】' + postMeta.title + '\n'
-      + '【メインキーワード】' + (postMeta.keyword || postMeta.title) + '\n'
-      + '【既存記事 HTML】\n' + oldBody.slice(0, 8000) + (oldBody.length > 8000 ? '\n...(以下省略)' : '')
-      + gscHint
-      + '\n\n【リライトの方針】\n'
-      + '- 古い情報を新しいデータに差し替え (= 2026 年最新)\n'
-      + '- 上位サイトがカバーしている内容を網羅\n'
-      + '- 結論を先出し / 具体例を増やす / 見出し階層を整理\n'
-      + '- 元記事より 30% は長く (= 情報量を上げる)\n'
-      + '- 必ず JSON で返す:\n'
-      + '{ "title": "改善版タイトル", "excerpt": "120 字以内", "body_html": "<h2>...</h2>..." }';
     try {
-      const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
-        { model: 'claude-sonnet-4-6', max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }
-      );
-      if(r.s >= 400) return jres(res, 500, { error: _claudeErrorMessage(r) });
-      const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
-      const m = txt.match(/\{[\s\S]*\}/);
-      if(!m) return jres(res, 500, { error: 'parse_failed' });
-      let parsed; try { parsed = JSON.parse(m[0]); } catch(e){ return jres(res, 500, { error: 'parse_failed: ' + e.message }); }
-      if(!parsed.body_html) return jres(res, 500, { error: 'no body_html' });
-      // 上書き保存 (= URL 不変、 SEO ペナルティなし)
+      const keyword = postMeta.keyword || postMeta.title;
+      const article = await _mediaGenerateArticle(ag, {
+        keyword, title: postMeta.title,
+        // GSC ヒントは body 内に混ぜず、 user prompt に append される (= future)
+      });
+      // hero 画像 再生成 (= 新 prompt で 主要被写体抽出)
+      const heroUrl = await _mediaGenerateHeroImage(article.title, ag.media.template).catch(() => null);
       const now = new Date().toISOString();
-      postMeta.title = String(parsed.title || postMeta.title).slice(0, 120);
-      postMeta.excerpt = String(parsed.excerpt || postMeta.excerpt || '').slice(0, 240);
+      postMeta.title = String(article.title || postMeta.title).slice(0, 120);
+      postMeta.excerpt = String(article.excerpt || postMeta.excerpt || '').slice(0, 240);
+      if(heroUrl) postMeta.hero_image_url = heroUrl;
       postMeta.rewritten_at = now;
       postMeta.rewrite_count = (postMeta.rewrite_count || 0) + 1;
       if(!user.media_posts_full) user.media_posts_full = {};
       user.media_posts_full[postMeta.id] = {
-        body_html: _sanitizeArticleHtml(String(parsed.body_html)),
+        body_html: article.body_html,  // 既に _sanitize + inline image 注入済
         saved_at: now,
         rewritten_from: oldBody.length,
       };
-      // billing 記録
+      // billing 記録 (= _mediaGenerateArticle 内で usage 取得できないため、 概算)
       try {
-        const cost = (r.d && r.d.usage)
-          ? calcCost(r.d.usage.input_tokens || 0, r.d.usage.output_tokens || 0)
-          : { jpy: 0, usd: 0 };
+        const estJpy = Math.round((article.body_html.length / 2000) * 10) / 10;  // 粗い概算
         user.billing_history = Array.isArray(user.billing_history) ? user.billing_history : [];
-        user.billing_history.push({ date: now, type: 'usage', via: 'media_rewrite', agentId: ag.id, agentName: ag.name, cost_jpy: cost.jpy, detail: 'rewrite: ' + postMeta.title.slice(0, 60) });
-        user.balance_jpy = Math.round(((user.balance_jpy || 0) - cost.jpy) * 1000) / 1000;
+        user.billing_history.push({ date: now, type: 'usage', via: 'media_rewrite', agentId: ag.id, agentName: ag.name, cost_jpy: estJpy, detail: 'rewrite: ' + postMeta.title.slice(0, 60) });
+        user.balance_jpy = Math.round(((user.balance_jpy || 0) - estJpy) * 1000) / 1000;
       } catch(_){}
       await DB.save(user);
       _mediaSlugCacheClear(ag.media.slug);
       return jres(res, 200, { ok: true, post: postMeta, public_url: 'https://' + ag.media.domain + '/media/' + ag.media.slug + '/' + postSlug });
     } catch(e){
+      console.warn('[rewrite] failed:', e.message);
       return jres(res, 500, { error: 'rewrite_failed', detail: e.message });
     }
+  }
+
+  //   POST /api/agents/:id/media/articles/bulk-rewrite — 全既存記事を 新スタイルで一括リライト
+  //   body: { limit?: N (= 上限、 既定 全件) }
+  //   並列実行はせず 1 件ずつ 順次 (= Anthropic rate limit 回避)
+  const mediaBulkRewriteMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/bulk-rewrite$/);
+  if(mediaBulkRewriteMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaBulkRewriteMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created' });
+    const body = await readBody(req).catch(() => ({}));
+    const limit = Math.max(1, Math.min(50, parseInt(body && body.limit, 10) || 50));
+    if(!ANTHROPIC) return jres(res, 503, { error: 'AI key not configured' });
+    const posts = (ag.media_posts_idx || []).slice(0, limit);
+    if(!posts.length) return jres(res, 200, { ok: true, total: 0, rewritten: 0 });
+    const results = { total: posts.length, rewritten: 0, failed: 0, errors: [] };
+    const startedAt = new Date().toISOString();
+    for(const postMeta of posts){
+      try {
+        const keyword = postMeta.keyword || postMeta.title;
+        const article = await _mediaGenerateArticle(ag, { keyword, title: postMeta.title });
+        const heroUrl = await _mediaGenerateHeroImage(article.title, ag.media.template).catch(() => null);
+        const now = new Date().toISOString();
+        postMeta.title = String(article.title || postMeta.title).slice(0, 120);
+        postMeta.excerpt = String(article.excerpt || postMeta.excerpt || '').slice(0, 240);
+        if(heroUrl) postMeta.hero_image_url = heroUrl;
+        postMeta.rewritten_at = now;
+        postMeta.rewrite_count = (postMeta.rewrite_count || 0) + 1;
+        if(!user.media_posts_full) user.media_posts_full = {};
+        const prev = user.media_posts_full[postMeta.id];
+        user.media_posts_full[postMeta.id] = {
+          body_html: article.body_html,
+          saved_at: now,
+          rewritten_from: (prev && prev.body_html && prev.body_html.length) || 0,
+        };
+        const estJpy = Math.round((article.body_html.length / 2000) * 10) / 10;
+        user.billing_history = Array.isArray(user.billing_history) ? user.billing_history : [];
+        user.billing_history.push({ date: now, type: 'usage', via: 'media_rewrite', agentId: ag.id, agentName: ag.name, cost_jpy: estJpy, detail: 'bulk-rewrite: ' + postMeta.title.slice(0, 60) });
+        user.balance_jpy = Math.round(((user.balance_jpy || 0) - estJpy) * 1000) / 1000;
+        results.rewritten++;
+        // 各記事ごとに DB save (= 途中失敗時も partial 保存される)
+        await DB.save(user);
+        _mediaSlugCacheClear(ag.media.slug);
+      } catch(e){
+        results.failed++;
+        results.errors.push({ slug: postMeta.slug, error: e.message });
+        console.warn('[bulk-rewrite]', postMeta.slug, 'failed:', e.message);
+      }
+    }
+    return jres(res, 200, { ok: true, started_at: startedAt, finished_at: new Date().toISOString(), ...results });
   }
 
   //   GET /api/agents/:id/media/realtime — GA4 Realtime: 「今 N 人読んでます」

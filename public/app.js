@@ -10548,6 +10548,42 @@ window._catEditSave = async function(){
   }
 };
 
+// ✨ 全記事 一括リライト — 新スタイル (fukuyama-note 風) で既存記事を再生成
+window._bulkRewritePosts = async function(siteId){
+  if(!confirm('既存記事を 全部 新スタイル (4500-5500字 / info-table / FAQ / 実写ぽい hero) で リライトします。\n\n注意:\n・ 各記事 1 分程度、 計 N 分かかります\n・ URL は変わりません (= SEO 影響なし)\n・ AI コスト発生 (= 1 記事 ¥3-10 目安)\n・ 元の本文は上書きされます\n\n実行しますか?')){ return; }
+  // ローダー (=黒画面 modal)
+  if(document.getElementById('bulkRwOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'bulkRwOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:26px 28px;max-width:460px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22);text-align:center">'
+    + '<div style="font-size:42px;margin-bottom:10px">✨</div>'
+    + '<div style="font-size:15px;font-weight:900;margin-bottom:8px">全記事を新スタイルで リライト中</div>'
+    + '<div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-bottom:14px">1 記事ごとに <b>新 hero 画像 + 新 body</b> を生成します。<br>進行中は このダイアログを 閉じないでください。</div>'
+    + '<div id="bulkRwStatus" style="font-size:12px;color:var(--text2);margin-top:14px">処理中...</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  try {
+    var r = await api('POST','/api/agents/'+encodeURIComponent(siteId)+'/media/articles/bulk-rewrite', { limit: 50 });
+    var stat = document.getElementById('bulkRwStatus');
+    if(r && r.ok){
+      if(stat) stat.innerHTML = '✅ <b>' + r.rewritten + ' 本</b> 完了 / ' + r.failed + ' 本 失敗';
+      setTimeout(function(){
+        var ov2 = document.getElementById('bulkRwOverlay');
+        if(ov2 && ov2.parentNode) ov2.parentNode.removeChild(ov2);
+        showToast('✨ ' + r.rewritten + ' 本 リライト完了 (' + r.failed + ' 失敗)','ok',6000);
+        if(typeof window.openMediaPanel === 'function') window.openMediaPanel(siteId);
+      }, 2500);
+    } else {
+      throw new Error((r && r.error) || 'unknown');
+    }
+  } catch(e){
+    var ov2 = document.getElementById('bulkRwOverlay');
+    if(ov2 && ov2.parentNode) ov2.parentNode.removeChild(ov2);
+    showToast('リライト失敗: ' + (e.message||'unknown'),'ng',7000);
+  }
+};
+
 // ♻️ 既存記事 再分類 — Day 5 migration UI
 window._recategorizePosts = async function(siteId){
   // まず dry-run で 何件変わるか プレビュー
@@ -10991,9 +11027,10 @@ function _renderTabMedia(site){
       + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px">'
       +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
       +     '<b style="color:var(--text2);font-size:12px">📂 カテゴリ ('+ ((media.categories||[]).length) +')</b>'
-      +     '<div style="display:flex;gap:6px;flex-shrink:0">'
+      +     '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">'
       +       '<button onclick="_openCategoryEditor(\''+esc(site.id)+'\')" style="background:var(--teal);border:0;color:#fff;font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="カテゴリ一覧を 追加 / リネーム / 削除">✏️ 編集</button>'
       +       '<button onclick="_recategorizePosts(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700" title="既存記事を カテゴリに 再マッピング (= AI が外れたカテゴリを正規化)">♻️ 整理</button>'
+      +       '<button onclick="_bulkRewritePosts(\''+esc(site.id)+'\')" style="background:var(--peach-soft);border:1px solid var(--peach-dark);color:var(--teal-deep);font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:800" title="全既存記事を 新スタイルで一括リライト (= 4500-5500字 / info-table / FAQ 強制)">✨ 全部リライト</button>'
       +     '</div>'
       +   '</div>'
       +   '<div>'+((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')+'</div>'

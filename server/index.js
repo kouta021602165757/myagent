@@ -15741,29 +15741,50 @@ async function _mediaGenerateArticle(agent, params){
 
   if(!CLAUDE_KEY) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
   // 🐛 Phase 4 bugfix: Haiku 4.5 は max output 8000、 Sonnet 4.6 は 16000。
-  //    model 切替時に上限を超えると Anthropic API が 400 で拒否する。
   const modelMaxOut = useHaiku ? 8000 : 16000;
   const max_tokens  = Math.min(modelMaxOut, Math.round(targetChars * 1.6));
-  const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json',
-      'anthropic-beta': 'prompt-caching-2024-07-31' },
-    {
-      model,
-      max_tokens,
-      // 🚀 Prompt Caching: system block の最後に cache_control = ephemeral
-      system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: userText }],
-    });
+  // 🐛 Phase 4 bugfix 2: Anthropic のキャッシュ最低サイズは Sonnet 1024 / Haiku 2048 tokens。
+  //    systemText が小さい時に cache_control を付けると 400 で拒否される。
+  //    1 char ≈ 0.5 token (日本語) で 概算、 ボーダー以下なら caching を諦める。
+  const sysEstTokens = Math.ceil(systemText.length * 0.5);
+  const cacheMin = useHaiku ? 2048 : 1024;
+  const useCache = sysEstTokens >= cacheMin;
+  const systemBlock = useCache
+    ? [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }]
+    : systemText;
+  const headers = { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+  if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
+  let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+    { model, max_tokens, system: systemBlock, messages: [{ role: 'user', content: userText }] });
+  // cache_control 関連 400 → caching なしで 1 回 retry
+  if(r.s === 400 && useCache && /cache_control|too small|minimum/i.test(JSON.stringify(r.d||''))){
+    console.warn('[media-art] cache_control rejected, retrying without cache');
+    delete headers['anthropic-beta'];
+    r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+      { model, max_tokens, system: systemText, messages: [{ role: 'user', content: userText }] });
+  }
   if(r.s >= 400){
     const err = _claudeErrorMessage(r);
-    throw new Error(err);
+    // 🐛 raw response を Render logs に出す (= 「[object Object]」 防止)
+    console.error('[media-art] Anthropic '+r.s+':', JSON.stringify(r.d||'').slice(0, 500));
+    throw new Error(err.user_message || err.error || ('Anthropic ' + r.s));
   }
   const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+  // stop_reason が max_tokens で打ち切り = JSON 不完全になる典型
+  if(r.d && r.d.stop_reason === 'max_tokens'){
+    console.warn('[media-art] hit max_tokens cap, model=', model, 'max=', max_tokens, 'chars=', txt.length);
+  }
   const m = txt.match(/\{[\s\S]*\}/);
-  if(!m) throw new Error('parse_failed: no JSON in response');
+  if(!m){
+    console.warn('[media-art] no JSON match, txt head=', txt.slice(0,200));
+    throw new Error('parse_failed: AI が JSON を返しませんでした (= 出力が途中で切れた可能性)');
+  }
   let parsed;
-  try { parsed = JSON.parse(m[0]); } catch(e){ throw new Error('parse_failed: ' + e.message); }
-  if(!parsed.title || !parsed.body_html) throw new Error('parse_failed: missing fields');
+  try { parsed = JSON.parse(m[0]); } catch(e){
+    console.warn('[media-art] JSON parse fail:', e.message, 'tail=', m[0].slice(-200));
+    throw new Error('parse_failed: JSON 不正 (= 出力が途中で切れた可能性) — '+ e.message);
+  }
+  if(!parsed.title || !parsed.body_html) throw new Error('parse_failed: title/body_html が空');
 
   // カテゴリ強制マッチ (= AI が違うカテゴリ出した時、 既存カテゴリと文字列マッチ)
   let category_name = String(parsed.category_name || '').slice(0, 30);
@@ -16377,17 +16398,25 @@ async function executeResearchKeywordTool(user, agent, input){
       + '- competition は low (= 低競合 推奨) / mid / high\n'
       + '- 重複や同義 KW を避ける、 全部別の角度から\n';
     const userText = prompt;
-    const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json',
-        'anthropic-beta': 'prompt-caching-2024-07-31' },
-      {
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 3000,
-        system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: userText }],
-      }
-    );
-    if(r.s >= 400) return { error: _claudeErrorMessage(r) };
+    // 🐛 systemText が Haiku の cache 最低 2048 tokens に達さない時は caching 無効化
+    const sysEstTokens = Math.ceil(systemText.length * 0.5);
+    const useCache = sysEstTokens >= 2048;
+    const systemBlock = useCache
+      ? [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }]
+      : systemText;
+    const headers = { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+    if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
+    let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+      { model: 'claude-haiku-4-5-20251001', max_tokens: 3000, system: systemBlock, messages: [{ role: 'user', content: userText }] });
+    if(r.s === 400 && useCache && /cache_control|too small|minimum/i.test(JSON.stringify(r.d||''))){
+      delete headers['anthropic-beta'];
+      r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 3000, system: systemText, messages: [{ role: 'user', content: userText }] });
+    }
+    if(r.s >= 400){
+      console.error('[kw-research] Anthropic '+r.s+':', JSON.stringify(r.d||'').slice(0,400));
+      return { error: _claudeErrorMessage(r) };
+    }
     const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
     const m = txt.match(/\{[\s\S]*\}/);
     if(!m) return { error: 'parse_failed' };
@@ -18025,15 +18054,23 @@ async function _autoRewriteOneArticle(user, agent, postMeta){
     + '【既存 HTML】\n' + oldBody.slice(0, 8000) + (oldBody.length > 8000 ? '\n...(以下省略)' : '');
   // 🐛 Phase 4 bugfix: Haiku 4.5 は max output 8000、 Sonnet 4.6 は 16000。
   const modelMaxOut = useHaiku ? 8000 : 16000;
-  const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
-    {
-      model,
-      max_tokens: Math.min(modelMaxOut, Math.max(2000, oldChars * 2)),
-      system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: userText }],
-    }
-  );
+  const max_tokens = Math.min(modelMaxOut, Math.max(2000, oldChars * 2));
+  // 🐛 cache_control は systemText が Sonnet 1024 / Haiku 2048 tokens 以上の時のみ。
+  const sysEstTokens = Math.ceil(systemText.length * 0.5);
+  const cacheMin = useHaiku ? 2048 : 1024;
+  const useCache = sysEstTokens >= cacheMin;
+  const systemBlock = useCache
+    ? [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }]
+    : systemText;
+  const headers = { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+  if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
+  let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+    { model, max_tokens, system: systemBlock, messages: [{ role: 'user', content: userText }] });
+  if(r.s === 400 && useCache && /cache_control|too small|minimum/i.test(JSON.stringify(r.d||''))){
+    delete headers['anthropic-beta'];
+    r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+      { model, max_tokens, system: systemText, messages: [{ role: 'user', content: userText }] });
+  }
   if(r.s >= 400) return;
   const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
   const m = txt.match(/\{[\s\S]*\}/);

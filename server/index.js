@@ -21866,6 +21866,227 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { ok: true, count: ag.planned_articles.length });
   }
 
+  //   POST /api/agents/:id/media/articles/:postSlug/rewrite — 既存記事を GSC データを context にリライト
+  //   既存の URL を保持 (= SEO ペナルティ回避)、 body_html のみ差し替え
+  const mediaRewriteMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/rewrite$/);
+  if(mediaRewriteMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaRewriteMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created' });
+    const postSlug = mediaRewriteMatch[2];
+    const postMeta = (ag.media_posts_idx || []).find(p => p && p.slug === postSlug);
+    if(!postMeta) return jres(res, 404, { error: 'post not found' });
+    const fullMap = user.media_posts_full || {};
+    const oldBody = (fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '';
+    if(!oldBody) return jres(res, 400, { error: 'no body to rewrite' });
+
+    // GSC から該当記事の query 一覧を取得 (= context として AI に渡す)
+    let gscHint = '';
+    try {
+      if(_hasGoogleRefreshToken(user) && _hasGscScope(user)){
+        const siteUrl = ag.gsc_site_url
+          || (user.integrations && user.integrations.google && user.integrations.google.gsc_site_url)
+          || ag.site_url || '';
+        if(siteUrl){
+          const r = await gscSearchAnalyticsQuery(user, siteUrl, {
+            startDate: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+            endDate: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+            dimensions: ['query'],
+            rowLimit: 30,
+            dimensionFilterGroups: [{
+              filters: [{ dimension: 'page', operator: 'contains', expression: '/media/' + ag.media.slug + '/' + postSlug }],
+            }],
+          }).catch(() => null);
+          if(r && r.rows && r.rows.length){
+            const top = r.rows.slice(0, 10).map(row => {
+              const q = (row.keys || [])[0] || '';
+              return '- 「' + q + '」: 表示 ' + (row.impressions||0) + ' / クリック ' + (row.clicks||0) + ' / 順位 ' + Math.round((row.position||0) * 10) / 10;
+            }).join('\n');
+            gscHint = '\n【GSC データ (= 30 日)】 — この記事が拾ってる検索クエリ:\n' + top
+              + '\n\nこれらの query で 順位が低い / クリック率が低い 部分を強化してください。';
+          }
+        }
+      }
+    } catch(e){ console.warn('[rewrite-gsc]', e.message); }
+
+    // Claude Sonnet にリライト依頼
+    if(!CLAUDE_KEY) return jres(res, 503, { error: 'AI key not configured' });
+    const prompt = ''
+      + '以下の既存記事をリライトしてください。 URL は同じなので、 タイトルや excerpt も改善版に差し替えます。\n\n'
+      + '【既存タイトル】' + postMeta.title + '\n'
+      + '【メインキーワード】' + (postMeta.keyword || postMeta.title) + '\n'
+      + '【既存記事 HTML】\n' + oldBody.slice(0, 8000) + (oldBody.length > 8000 ? '\n...(以下省略)' : '')
+      + gscHint
+      + '\n\n【リライトの方針】\n'
+      + '- 古い情報を新しいデータに差し替え (= 2026 年最新)\n'
+      + '- 上位サイトがカバーしている内容を網羅\n'
+      + '- 結論を先出し / 具体例を増やす / 見出し階層を整理\n'
+      + '- 元記事より 30% は長く (= 情報量を上げる)\n'
+      + '- 必ず JSON で返す:\n'
+      + '{ "title": "改善版タイトル", "excerpt": "120 字以内", "body_html": "<h2>...</h2>..." }';
+    try {
+      const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        { model: 'claude-sonnet-4-6', max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }
+      );
+      if(r.s >= 400) return jres(res, 500, { error: _claudeErrorMessage(r) });
+      const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+      const m = txt.match(/\{[\s\S]*\}/);
+      if(!m) return jres(res, 500, { error: 'parse_failed' });
+      let parsed; try { parsed = JSON.parse(m[0]); } catch(e){ return jres(res, 500, { error: 'parse_failed: ' + e.message }); }
+      if(!parsed.body_html) return jres(res, 500, { error: 'no body_html' });
+      // 上書き保存 (= URL 不変、 SEO ペナルティなし)
+      const now = new Date().toISOString();
+      postMeta.title = String(parsed.title || postMeta.title).slice(0, 120);
+      postMeta.excerpt = String(parsed.excerpt || postMeta.excerpt || '').slice(0, 240);
+      postMeta.rewritten_at = now;
+      postMeta.rewrite_count = (postMeta.rewrite_count || 0) + 1;
+      if(!user.media_posts_full) user.media_posts_full = {};
+      user.media_posts_full[postMeta.id] = {
+        body_html: _sanitizeArticleHtml(String(parsed.body_html)),
+        saved_at: now,
+        rewritten_from: oldBody.length,
+      };
+      // billing 記録
+      try {
+        const cost = (r.d && r.d.usage)
+          ? calcCost(r.d.usage.input_tokens || 0, r.d.usage.output_tokens || 0)
+          : { jpy: 0, usd: 0 };
+        user.billing_history = Array.isArray(user.billing_history) ? user.billing_history : [];
+        user.billing_history.push({ date: now, type: 'usage', via: 'media_rewrite', agentId: ag.id, agentName: ag.name, cost_jpy: cost.jpy, detail: 'rewrite: ' + postMeta.title.slice(0, 60) });
+        user.balance_jpy = Math.round(((user.balance_jpy || 0) - cost.jpy) * 1000) / 1000;
+      } catch(_){}
+      await DB.save(user);
+      _mediaSlugCacheClear(ag.media.slug);
+      return jres(res, 200, { ok: true, post: postMeta, public_url: 'https://' + ag.media.domain + '/media/' + ag.media.slug + '/' + postSlug });
+    } catch(e){
+      return jres(res, 500, { error: 'rewrite_failed', detail: e.message });
+    }
+  }
+
+  //   GET /api/agents/:id/media/stats — メディア記事の GA4 PV + GSC 順位/クリック
+  //   query: days (= 既定 30)
+  //   返却: { pv, sessions, clicks, impressions, avg_position, top_posts, weak_posts, ga4_connected, gsc_connected }
+  const mediaStatsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/stats$/);
+  if(mediaStatsMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaStatsMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 200, { has_media: false });
+
+    const qs = parsedUrl.query || {};
+    const days = Math.max(1, Math.min(90, parseInt(qs.days, 10) || 30));
+    const startDate = days + 'daysAgo';
+    const slugPrefix = '/media/' + ag.media.slug + '/';
+
+    const out = {
+      has_media: true,
+      days,
+      pv: null, sessions: null,
+      clicks: null, impressions: null, avg_position: null, ctr: null,
+      ga4_connected: _hasGoogleRefreshToken(user) && _hasGa4Scope(user),
+      gsc_connected: _hasGoogleRefreshToken(user) && _hasGscScope(user),
+      top_posts: [],   // 上位 PV 記事
+      weak_posts: [],  // 順位下落 or PV 少
+      posts_count: (ag.media_posts_idx || []).filter(p => p && p.status !== 'draft').length,
+    };
+
+    // GA4 — pagePath / screenPageViews を引いて prefix で filter
+    if(out.ga4_connected){
+      try {
+        let propertyId = null;
+        const tgt = _resolveServiceTarget(ag, user, 'ga4');
+        if(tgt) propertyId = String(tgt.id).replace('properties/', '');
+        if(!propertyId && ag.site_url){
+          try {
+            const picked = await _autoPickGa4Property(user, ag);
+            if(picked) propertyId = String(picked.property_id).replace('properties/', '');
+          } catch(_){}
+        }
+        if(propertyId){
+          const r = await ga4RunReport(user, propertyId, {
+            metrics: [{ name: 'screenPageViews' }, { name: 'sessions' }],
+            dimensions: [{ name: 'pagePath' }],
+            dateRanges: [{ startDate, endDate: 'yesterday' }],
+            limit: 1000,
+          });
+          let totalPv = 0, totalSess = 0;
+          const byPath = {};
+          (r.rows || []).forEach(row => {
+            const path = (row.dimensionValues || [])[0] && row.dimensionValues[0].value || '';
+            if(!path.startsWith(slugPrefix)) return;
+            const pv = parseInt((row.metricValues || [])[0] && row.metricValues[0].value || '0', 10) || 0;
+            const ss = parseInt((row.metricValues || [])[1] && row.metricValues[1].value || '0', 10) || 0;
+            totalPv += pv; totalSess += ss;
+            byPath[path] = { pv, ss };
+          });
+          out.pv = totalPv;
+          out.sessions = totalSess;
+          // top_posts: 公開済 idx の slug と join
+          const idx = (ag.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+          out.top_posts = idx.map(p => {
+            const path = slugPrefix + p.slug;
+            const m = byPath[path];
+            return { slug: p.slug, title: p.title, pv: m ? m.pv : 0 };
+          }).sort((a, b) => b.pv - a.pv).slice(0, 5);
+        }
+      } catch(e){ console.warn('[media-stats] ga4 failed:', e.message); }
+    }
+
+    // GSC — page filter で /media/:slug/* の clicks / impressions / position
+    if(out.gsc_connected){
+      try {
+        let siteUrl = ag.gsc_site_url
+          || (user.integrations && user.integrations.google && user.integrations.google.gsc_site_url)
+          || ag.site_url || '';
+        if(siteUrl){
+          const r = await gscSearchAnalyticsQuery(user, siteUrl, {
+            startDate: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10),
+            endDate: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+            dimensions: ['page'],
+            rowLimit: 1000,
+          });
+          let totalClicks = 0, totalImp = 0;
+          const positions = [];
+          const byPage = {};
+          (r.rows || []).forEach(row => {
+            const page = (row.keys || [])[0] || '';
+            if(page.indexOf(slugPrefix) < 0) return;
+            const c = row.clicks || 0;
+            const im = row.impressions || 0;
+            const pos = row.position || 0;
+            totalClicks += c; totalImp += im;
+            if(pos > 0) positions.push(pos);
+            byPage[page] = { clicks: c, impressions: im, position: pos };
+          });
+          out.clicks = totalClicks;
+          out.impressions = totalImp;
+          out.ctr = totalImp > 0 ? Math.round((totalClicks / totalImp) * 1000) / 10 : 0;
+          out.avg_position = positions.length > 0
+            ? Math.round((positions.reduce((s, p) => s + p, 0) / positions.length) * 10) / 10
+            : null;
+          // weak_posts: position > 10 で impressions > 5 (= 表示はあるが下位)
+          out.weak_posts = Object.entries(byPage)
+            .filter(([_, m]) => m.position > 10 && m.impressions > 5)
+            .map(([page, m]) => {
+              const slug = page.split('/').pop();
+              const post = (ag.media_posts_idx || []).find(p => p && p.slug === slug);
+              return {
+                slug,
+                title: post ? post.title : slug,
+                position: Math.round(m.position * 10) / 10,
+                impressions: m.impressions,
+                clicks: m.clicks,
+              };
+            })
+            .sort((a, b) => b.impressions - a.impressions)
+            .slice(0, 5);
+        }
+      } catch(e){ console.warn('[media-stats] gsc failed:', e.message); }
+    }
+
+    return jres(res, 200, out);
+  }
+
   //   POST /api/agents/:id/media/articles/generate — AI 記事生成 + 画像生成
   //   body: { keyword, title?, category_id?, sub_id?, target_chars? }
   const mediaArtMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/generate$/);

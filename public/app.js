@@ -10336,6 +10336,77 @@ function _renderTabConnections(site){
 // ══════════════════════════════════════════════════════════════════
 // 📝 メディア機能 (Phase A.4) — Wizard / Dashboard モーダル
 // ══════════════════════════════════════════════════════════════════
+
+// GA4/GSC 実数値 stats を Dashboard モーダル開いた後に非同期 fetch
+window._fetchMediaStats = async function(siteId){
+  if(!siteId) return;
+  try {
+    var r = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media/stats?days=30');
+    if(!r || !r.has_media) return;
+    // 数値を DOM に流し込む
+    var pvEl = document.querySelector('#mediaStat_pv [data-stat="pv"]');
+    var ckEl = document.querySelector('#mediaStat_clicks [data-stat="clicks"]');
+    var psEl = document.querySelector('#mediaStat_position [data-stat="position"]');
+    if(pvEl) pvEl.textContent = (r.pv == null) ? '—' : (r.pv >= 1000 ? (Math.round(r.pv/100)/10)+'k' : String(r.pv));
+    if(ckEl) ckEl.textContent = (r.clicks == null) ? '—' : (r.clicks >= 1000 ? (Math.round(r.clicks/100)/10)+'k' : String(r.clicks));
+    if(psEl) psEl.textContent = (r.avg_position == null) ? '—' : ('#' + r.avg_position);
+
+    // tooltip に接続状態を入れる (= ユーザに「GA4 未接続」 等を教える)
+    var pvParent = document.getElementById('mediaStat_pv');
+    if(pvParent && !r.ga4_connected){ pvParent.title = 'GA4 未接続 — 🔌 接続から GA4 をつなぐと PV が見えます'; pvParent.style.opacity = '.6'; }
+    var ckParent = document.getElementById('mediaStat_clicks');
+    if(ckParent && !r.gsc_connected){ ckParent.title = 'GSC 未接続 — 🔌 接続から Search Console をつなぐと表示されます'; ckParent.style.opacity = '.6'; }
+
+    // 弱記事 (= 順位下落 / 表示はあるがクリック少) があれば リライト CTA を表示
+    var weakHolder = document.getElementById('mediaStatsWeak');
+    if(weakHolder && r.weak_posts && r.weak_posts.length > 0){
+      var rowsHTML = r.weak_posts.map(function(w){
+        var hostNow = (r && r._host) || 'myaiagents.agency';
+        return '<div class="mw-row">'
+          + '<div class="mw-row-bd">'
+          +   '<div class="mw-row-ti">' + esc((w.title||'').slice(0,70)) + '</div>'
+          +   '<div class="mw-row-mt">📉 順位 #' + w.position + ' · 表示 ' + w.impressions + ' / クリック ' + w.clicks + '</div>'
+          + '</div>'
+          + '<button class="mw-row-rw" onclick="_rewriteMediaArticle(\''+esc(siteId)+'\',\''+esc(w.slug)+'\')" title="GSC データを元に AI がリライト">♻️ リライト</button>'
+          + '</div>';
+      }).join('');
+      weakHolder.innerHTML = ''
+        + '<div class="mw-sec">'
+        +   '<div class="mw-sec-h">📉 順位下位記事 (' + r.weak_posts.length + ' 件) — リライトすると改善可能</div>'
+        +   '<div class="mw-list">' + rowsHTML + '</div>'
+        + '</div>';
+      weakHolder.style.display = 'block';
+    }
+  } catch(e){
+    console.warn('[media-stats] fetch failed:', e && e.message);
+    var fail = document.querySelectorAll('[data-stat]');
+    fail.forEach(function(el){ if(el.textContent === '…') el.textContent = '—'; });
+  }
+};
+
+// 既存記事 リライト — /api/.../media/articles/:postSlug/rewrite を呼ぶ
+window._rewriteMediaArticle = async function(siteId, postSlug){
+  if(!confirm('「' + postSlug + '」 をリライトしますか?\n\nGSC データを元に AI が記事を更新します。 同じ URL に上書き (= 1〜2 分)。')) return;
+  // 既存 _kwInvokeArticleGen と同じ loader UI で表示
+  if(document.getElementById('mediaArtOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'mediaArtOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  ov.innerHTML = '<div id="mediaArtCard" style="background:#fff;border-radius:14px;padding:26px 28px;max-width:440px;width:100%;box-shadow:0 14px 50px rgba(0,0,0,.22)"><div style="text-align:center;padding:20px 10px"><div style="font-size:42px;margin-bottom:10px">♻️</div><div style="font-size:15px;font-weight:900;margin-bottom:8px">AI がリライト中</div><div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-bottom:14px">GSC データから改善ポイントを抽出 → 記事を更新中。<br>1〜2 分かかります。</div></div></div>';
+  document.body.appendChild(ov);
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/'+encodeURIComponent(postSlug)+'/rewrite', {});
+    _mediaArtClose();
+    showToast('✅ リライト完了。 30 日後に効果検証します','ok');
+    window.openMediaPanel(siteId);
+  } catch(e){
+    var card = document.getElementById('mediaArtCard');
+    if(card){
+      card.innerHTML = '<div style="text-align:center;padding:12px 4px"><div style="font-size:34px;margin-bottom:8px">⚠️</div><div style="font-size:14px;font-weight:900;color:#9a3412;margin-bottom:8px">リライト失敗</div><div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:18px">' + esc(e.message||'unknown') + '</div><button onclick="_mediaArtClose()" style="background:var(--teal);color:#fff;border:0;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">閉じる</button></div>';
+    }
+  }
+};
+
 function _renderTabMedia(site){
   var hasMedia = !!(site && site.media && site.media.id);
   if(hasMedia){
@@ -10344,6 +10415,10 @@ function _renderTabMedia(site){
     var posts = site.media_posts_idx || [];
     var mediaHost = media.domain || 'myaiagents.agency';
     var publicUrl = 'https://' + esc(mediaHost) + '/media/' + esc(media.slug);
+    // GA4/GSC stats を非同期 fetch + DOM 更新 (= 月間 PV / 検索クリック / 平均順位 / 弱記事)
+    setTimeout(function(){
+      _fetchMediaStats(site.id);
+    }, 80);
     return ''
       + '<div style="background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:14px;position:relative">'
       +   '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">'
@@ -10356,11 +10431,12 @@ function _renderTabMedia(site){
       +   '</div>'
       +   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
       +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">公開済記事</div><div style="font-size:17px;font-weight:900">'+posts.length+' <span style="font-size:11px;opacity:.7">本</span></div></div>'
-      +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">月間 PV</div><div style="font-size:17px;font-weight:900">—</div></div>'
-      +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">LP 送客</div><div style="font-size:17px;font-weight:900">—</div></div>'
-      +     '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">CV</div><div style="font-size:17px;font-weight:900">—</div></div>'
+      +     '<div id="mediaStat_pv" style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">月間 PV</div><div style="font-size:17px;font-weight:900" data-stat="pv">…</div></div>'
+      +     '<div id="mediaStat_clicks" style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">検索クリック</div><div style="font-size:17px;font-weight:900" data-stat="clicks">…</div></div>'
+      +     '<div id="mediaStat_position" style="background:rgba(255,255,255,.12);border-radius:8px;padding:9px 11px"><div style="font-size:9.5px;font-weight:700;opacity:.7;letter-spacing:.04em;margin-bottom:2px">平均順位</div><div style="font-size:17px;font-weight:900" data-stat="position">…</div></div>'
       +   '</div>'
       + '</div>'
+      + '<div id="mediaStatsWeak" style="display:none"></div>'
       + '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
       +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="flex:1;min-width:220px;background:var(--teal);color:#fff;border:0;padding:11px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査でネタを探す</button>'
       +   '<button onclick="_mediaGenArticleFlow(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:11px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✨ キーワードを直接入力</button>'

@@ -6116,6 +6116,16 @@ input,textarea{font-family:var(--sans);}
 /* toolbar 区切り — セットアップ動線 / 運用動線 / 管理 のグルーピングを視覚化 */
 .ct-tool-sep{display:inline-block;width:1px;height:18px;background:var(--wire2);margin:0 4px;vertical-align:middle;flex-shrink:0;align-self:center;}
 @media (max-width:560px){.ct-tool-sep{display:none;}}
+/* 📉 順位下位記事 リライト CTA (= メディアダッシュ内) */
+.mw-sec{background:linear-gradient(135deg,#fff7ed,#fff);border:1.5px solid #fed7aa;border-radius:11px;padding:14px 16px;margin-top:12px;margin-bottom:14px}
+.mw-sec-h{font-size:12.5px;font-weight:900;color:#9a3412;margin-bottom:10px}
+.mw-list{display:flex;flex-direction:column;gap:6px}
+.mw-row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px}
+.mw-row-bd{flex:1;min-width:0}
+.mw-row-ti{font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mw-row-mt{font-size:10.5px;color:var(--text3);margin-top:2px}
+.mw-row-rw{background:#9a3412;color:#fff;border:0;padding:6px 12px;border-radius:6px;font-size:10.5px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0}
+.mw-row-rw:hover{background:#7c2d12}
 /* 📝 書く予定の記事 セクション (= タスクパネル先頭) */
 .pa-sec{background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:12px;padding:16px 18px;margin-bottom:16px}
 .pa-sec-h{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}

@@ -16306,7 +16306,7 @@ async function _mediaAutoShareSns(user, agent, post, publicUrl){
       const prompt = '以下の記事を X / Twitter で告知する投稿文を 1 つ作成。 140 字以内、 行間あり、 ハッシュタグ 2-3 個、 URL なし (= 別途自動付与)。\n\n'
         + 'タイトル: ' + post.title + '\n' + (post.excerpt ? '概要: ' + post.excerpt : '') + '\n\n出力は本文のみ、 引用符不要。';
       const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
         { model: 'claude-haiku-4-5-20251001', max_tokens: 300, messages: [{ role: 'user', content: prompt }] }
       );
       if(r.s === 200 && r.d.content){
@@ -17862,7 +17862,7 @@ async function _proposeOneMorningAction(user, agent){
 
   try {
     const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
       { model: 'claude-haiku-4-5-20251001', max_tokens: 600, messages: [{ role: 'user', content: prompt }] }
     );
     if(r.s >= 400) return;
@@ -18001,21 +18001,32 @@ async function _autoRewriteOneArticle(user, agent, postMeta){
   const oldBody = (fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '';
   if(!oldBody) return;
   if(!CLAUDE_KEY) return;
-  const prompt = ''
-    + '以下の既存記事をリライトしてください。 同じ URL 上書きなので、 タイトルと excerpt も改善版に。\n\n'
-    + '【既存タイトル】' + postMeta.title + '\n'
-    + '【メインキーワード】' + (postMeta.keyword || postMeta.title) + '\n'
-    + '【既存 HTML】\n' + oldBody.slice(0, 8000) + (oldBody.length > 8000 ? '\n...(以下省略)' : '')
-    + '\n\n【リライト方針】\n'
+  // 🚀 Phase 1+2: model 自動選択 + Prompt Caching
+  //   元記事が短文 (= 8000 字未満) なら Haiku、 長文は Sonnet 維持
+  const oldChars = oldBody.replace(/<[^>]+>/g, '').length;
+  const useHaiku = oldChars < 8000;
+  const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
+  const systemText = ''
+    + '【ROLE】 あなたは業界編集部の編集長。 既存記事を 順位下落 / 競合更新 を元に リライトします。\n\n'
+    + '【リライト方針】\n'
     + '- 古い情報を新しいデータに差し替え (= 2026 年最新)\n'
     + '- 結論を先出し / 具体例を増やす / 見出し階層を整理\n'
     + '- 元記事より 30% 長く\n'
-    + '- 業界編集部目線、 AI 言及 文章内禁止\n'
-    + '\n必ず JSON:\n'
-    + '{ "title": "改善版", "excerpt": "120 字", "body_html": "<h2>...</h2>..." }';
+    + '- 業界編集部目線、 「AI が」 等の AI 言及 禁止\n\n'
+    + '【出力】 必ず JSON のみ。 説明禁止:\n'
+    + '{ "title": "改善版タイトル", "excerpt": "120 字以内", "body_html": "<h2>...</h2>..." }';
+  const userText = ''
+    + '【既存タイトル】' + postMeta.title + '\n'
+    + '【メインキーワード】' + (postMeta.keyword || postMeta.title) + '\n'
+    + '【既存 HTML】\n' + oldBody.slice(0, 8000) + (oldBody.length > 8000 ? '\n...(以下省略)' : '');
   const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    { model: 'claude-sonnet-4-6', max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }
+    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
+    {
+      model,
+      max_tokens: Math.min(14000, oldChars * 2),
+      system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: userText }],
+    }
   );
   if(r.s >= 400) return;
   const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
@@ -23440,7 +23451,7 @@ async function handleAPI(req,res,pathname,method,ip){
       + '{ "title": "改善版タイトル", "excerpt": "120 字以内", "body_html": "<h2>...</h2>..." }';
     try {
       const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
         { model: 'claude-sonnet-4-6', max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }
       );
       if(r.s >= 400) return jres(res, 500, { error: _claudeErrorMessage(r) });

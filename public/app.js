@@ -2897,6 +2897,14 @@ function _openSiteTabModal(siteId, tabKey){
           }
         }, 80);
       }
+      else if(t === 'kw-open-strategy'){
+        // 🎯 KW → 戦略・KPI へ (= STEP 2 → STEP 3 のフロー)
+        if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal();
+        setTimeout(function(){
+          try { if(typeof openStrategyPanel === 'function') openStrategyPanel(_kwSiteId); }
+          catch(_){ showToast('戦略パネルを開けませんでした','ng'); }
+        }, 80);
+      }
       else if(t === 'kw-publish-media'){
         // 🚀 KW → メディアに直接公開 — /media/articles/generate を呼んで自動公開
         // メディア未作成なら 60 秒 short-Wizard を提示してから生成へ
@@ -8212,7 +8220,19 @@ function _renderTabStrategy(site, allArts){
       + '</div>';
   }
 
-  return headerHTML + _render3ChannelSection(site) + kpiSheetHTML + personaHTML + competitorHTML + artHTML;
+  // 次のステップへ — STEP 3 (戦略・KPI) → STEP 4 (タスク・ロードマップ)
+  var nextStepHTML = ''
+    + '<div style="margin-top:24px;padding:22px 20px;background:linear-gradient(135deg,var(--cream3),var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:13px">'
+    +   '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+    +     '<div style="font-size:10.5px;font-weight:800;color:var(--teal-deep);letter-spacing:.06em">STEP 3 — 戦略・KPI</div>'
+    +     '<div style="font-size:13px;color:var(--text3);font-weight:700">→</div>'
+    +     '<div style="font-size:10.5px;font-weight:800;color:var(--teal-deep);letter-spacing:.06em">STEP 4 — タスク</div>'
+    +   '</div>'
+    +   '<div style="font-size:14.5px;font-weight:900;color:var(--text);margin-bottom:5px">戦略が決まったら、 8 週間ロードマップを自動生成</div>'
+    +   '<div style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:12px">KPI 目標から逆算 → 今週・来週やることが具体タスクで並びます。 進捗もここで管理。</div>'
+    +   '<button onclick="_closeSiteTabModal(); openTasksPanel(\''+esc(site.id)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">📋 STEP 4: タスクへ →</button>'
+    + '</div>';
+  return headerHTML + _render3ChannelSection(site) + kpiSheetHTML + personaHTML + competitorHTML + artHTML + nextStepHTML;
 }
 
 // ─── Strategy 生成 action ─────────────────────────────────────
@@ -10282,9 +10302,23 @@ function _renderTabMedia(site){
                   + '</div>';
               }).join('')
             + '</div></div>')
-      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55">'
+      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:11px 14px;font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:14px">'
       +   '<b style="color:var(--text2)">📂 カテゴリ</b>: '
       +   ((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')
+      + '</div>'
+      // 次のステップ — STEP 1 ✓ → STEP 2 (KW) → STEP 3 (戦略) → STEP 4 (タスク)
+      + '<div style="padding:14px 16px;background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:11px">'
+      +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:10.5px;font-weight:800;letter-spacing:.04em;margin-bottom:8px">'
+      +     '<span style="color:var(--teal-deep);background:var(--peach-soft);padding:3px 8px;border-radius:5px">STEP 1 ✓ メディア</span>'
+      +     '<span style="color:var(--text3)">→</span>'
+      +     '<span style="color:var(--teal-deep)">STEP 2: KW</span>'
+      +     '<span style="color:var(--text3)">→</span>'
+      +     '<span style="color:var(--text3)">STEP 3: 戦略</span>'
+      +     '<span style="color:var(--text3)">→</span>'
+      +     '<span style="color:var(--text3)">STEP 4: タスク</span>'
+      +   '</div>'
+      +   '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:10px">次は <b>キーワード調査でネタを決め</b>、 記事を公開していきましょう。</div>'
+      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔍 STEP 2: キーワード調査へ →</button>'
       + '</div>';
   }
 
@@ -10780,21 +10814,22 @@ function _mediaWizStep4HTML(media){
     + '<div style="background:linear-gradient(135deg,#fff,var(--peach-soft));border:2px solid var(--peach-dark);border-radius:13px;padding:30px 24px;text-align:center;margin-bottom:18px">'
     +   '<div style="font-size:50px;margin-bottom:6px">🎉</div>'
     +   '<div style="font-size:19px;font-weight:900;color:var(--teal-deep);margin-bottom:6px">'+esc(media.name)+' が立ち上がりました!</div>'
-    +   '<div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">DNS / SSL / 構成すべて自動セットアップ完了。<br>このあと <b>キーワード調査から最初の記事を作成</b>できます。</div>'
-    +   '<div style="display:inline-flex;align-items:center;background:#fff;border:1.5px solid var(--teal);border-radius:9px;padding:10px 14px;font-size:13px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);margin-bottom:14px;gap:8px">'
+    +   '<div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">DNS / SSL / 構成すべて自動セットアップ完了。<br><b>次は キーワード調査 で 最初の記事のネタを決めましょう</b>。</div>'
+    +   '<div style="display:inline-flex;align-items:center;background:#fff;border:1.5px solid var(--teal);border-radius:9px;padding:10px 14px;font-size:13px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);margin-bottom:18px;gap:8px">'
     +     '🌐 '+publicUrl
-    +   '</div><br>'
+    +   '</div>'
     +   '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
-    +     '<a href="'+publicUrl+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:var(--teal);color:#fff;text-decoration:none;border-radius:8px;font-size:12px;font-weight:800">🔗 ブログを見る</a>'
-    +     '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査へ</button>'
-    +     '<button onclick="window.openMediaPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">📊 管理画面へ</button>'
+    +     '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(window._mediaWiz.siteId)+'\')" style="background:var(--teal);color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🔍 STEP 2: キーワード調査へ →</button>'
+    +     '<a href="'+publicUrl+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#fff;color:var(--text);text-decoration:none;border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--wire2)">🔗 ブログを見る</a>'
     +   '</div>'
     + '</div>'
-    + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:13px 16px;font-size:11.5px;color:var(--text2);line-height:1.6">'
-    +   '<b style="color:var(--text)">📅 これから自動で起きること:</b><br>'
-    +   '・<b>キーワード調査</b>: 🔍 ボタンから候補生成 → 1-Click で記事生成<br>'
-    +   '・<b>記事公開</b>: 公開ページにすぐ反映 (= 上の URL で確認可)<br>'
-    +   '・<b>LP 集客</b>: 各記事に LP CTA を 5 配置で自動挿入 (= Phase A.7 で稼働)'
+    + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:13px 16px;font-size:11.5px;color:var(--text2);line-height:1.7">'
+    +   '<b style="color:var(--text)">📅 これからのフロー:</b><br>'
+    +   '・<b>1️⃣ メディア</b>: ✅ 立ち上げ済 (= いま)<br>'
+    +   '・<b>2️⃣ キーワード調査</b>: ネタを決めて → 1 クリックで記事公開<br>'
+    +   '・<b>3️⃣ 戦略・KPI</b>: 6 ヶ月後の目標を設定<br>'
+    +   '・<b>4️⃣ タスク</b>: 週次ロードマップを自動生成<br>'
+    +   '・<b>📊 数字</b>: GA4/GSC で結果を毎日追跡'
     + '</div>';
 }
 
@@ -12175,26 +12210,38 @@ async function openAgent(id){
     // 他のアクション (🔗 共有 / 💬 会話共有 / ↻ 新規 / 📝 メモ / ⚙ 設定) は
     // ダッシュボード内のアクションパネルに集約 — chat header をスッキリ。
     if(_isSiteAgent(ag)){
-      // ── サイト用 8 ボタンツールバー (icon-only + tooltip) ──
-      // ダッシュボード page を廃止して、機能ごとに on-demand modal を開く設計。
-      // 順序: 日次レポ / 数字 / 戦略 / タスク / 組織 / 接続 / メモ帳 / 設定
+      // ── サイト用 toolbar (icon-only + tooltip) ──
+      // 思考順序の左→右配置:
+      //   セットアップ動線 (= 一度だけ): 📝 ブログ立ち上げ → 🔍 キーワード調査 → 🎯 戦略・KPI → 📋 タスク
+      //   運用動線 (= 毎日): 📊 数字 → 📰 日次レポート
+      //   組織管理: 🏢 エージェント → 🔌 接続 → 📒 メモ → ⚙ 設定
       var _siteId = esc(ag.id);
-      actsHTML += '<button class="ct-act ct-tool" onclick="openDailyGrowthReportPanel(\''+_siteId+'\')" title="'+L('日次グロースレポート — 数字 + 効いた施策 + 明日のアクション','Daily growth report — numbers + wins + tomorrow\'s actions')+'">📰</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 の生データ・KPI','Numbers — GA4 metrics / KPI')+'">📊</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('キーワード調査 — SEO / AEO で狙うキーワードを設計','Keyword research — SEO / AEO targeting')+'">🔍</button>';
-      // 📝 メディア (Phase A) — 未作成サイトは NEW badge、 作成済は border 強調
-      // メディア型サイト (= 既にブログ/ニュース) には不表示 — 既にメディアあり
       var _hasMedia = !!(ag.media && ag.media.id);
       var _isMediaSite = (ag.site_type === 'media' || ag.site_vertical === 'blog' || ag.site_vertical === 'news');
+
+      // 【セットアップ動線】 — 左から「立ち上げ → 何書く → 目標 → 何する」
       if(!_isMediaSite){
-        actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('メディア — 集客ブログを立ち上げ・運用','Media — AI blog for traffic')+'">📝</button>';
+        actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('1️⃣ ブログ立ち上げ・運用 (= 最初に作る)','1️⃣ Launch & operate blog (= start here)')+'">📝</button>';
       }
-      actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('戦略・KPI — ペルソナ・競合・6ヶ月目標','Strategy / KPI')+'">🎯</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('タスク一覧 — 8 週ロードマップ + 進捗','Tasks — 8-week roadmap')+'">📋</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('2️⃣ キーワード調査 — 何を書くか決める','2️⃣ Keyword research — pick what to write')+'">🔍</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('3️⃣ 戦略・KPI — ペルソナ / 目標 / 競合','3️⃣ Strategy / KPI — persona / goals / competitors')+'">🎯</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('4️⃣ タスク — 8 週ロードマップ + 今週やること','4️⃣ Tasks — 8-week roadmap + this week')+'">📋</button>';
+
+      // 区切り (= 運用フェーズへ)
+      actsHTML += '<span class="ct-tool-sep" aria-hidden="true"></span>';
+
+      // 【運用動線】 — 結果を見る
+      actsHTML += '<button class="ct-act ct-tool" onclick="openNumbersPanel(\''+_siteId+'\')" title="'+L('数字分析 — GA4 / GSC の生データ','Numbers — GA4 / GSC raw data')+'">📊</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openDailyGrowthReportPanel(\''+_siteId+'\')" title="'+L('日次グロースレポート — 数字 + 効いた施策 + 明日のアクション','Daily growth report')+'">📰</button>';
+
+      // 区切り (= 管理へ)
+      actsHTML += '<span class="ct-tool-sep" aria-hidden="true"></span>';
+
+      // 【管理】
       actsHTML += '<button class="ct-act ct-tool" onclick="openAgentsPanel(\''+_siteId+'\')" title="'+L('エージェント一覧 — AI チームの組織図','Agents — AI team org chart')+'">🏢</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openConnectionsPanel(\''+_siteId+'\')" title="'+L('接続 — GA4 / SNS / OAuth','Connections')+'">🔌</button>';
-      actsHTML += '<button class="ct-act ct-tool notes-btn" onclick="openNotesPanel(\''+_siteId+'\')" title="'+L('メモ帳 — AI 成果物 + 手動メモ','Notebook — AI artifacts + manual memos')+'">📒</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openSiteSettingsPanel(\''+_siteId+'\')" title="'+L('設定 — サイト名 / 削除','Settings — site config')+'">⚙️</button>';
+      actsHTML += '<button class="ct-act ct-tool notes-btn" onclick="openNotesPanel(\''+_siteId+'\')" title="'+L('メモ帳 — AI 成果物 + 手動メモ','Notebook')+'">📒</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openSiteSettingsPanel(\''+_siteId+'\')" title="'+L('設定 — サイト名 / 削除','Settings')+'">⚙️</button>';
     } else {
       actsHTML += '<button class="ct-act primary" onclick="openShareCard()" title="'+(isJa?'共有URL':'Share URL')+'">🔗</button>';
       actsHTML += '<button class="ct-act" onclick="openChatShareModal()" title="'+(isJa?'この会話を公開リンクで共有':'Share this conversation')+'">💬</button>';
@@ -13362,11 +13409,11 @@ function renderMsgs(ag, forceScrollBottom){
     var _mediaExists = !!(ag.media && ag.media.id);
     if(!_mediaExists){
       _mediaIntroBanner = '<div class="media-hero-card">'
-        +   '<div class="media-hero-card-eyebrow">🚀 RECOMMENDED · LP に集客チームを 24h 配備</div>'
+        +   '<div class="media-hero-card-eyebrow">🚀 STEP 1 / 4 · まずはブログを立ち上げよう</div>'
         +   '<div class="media-hero-card-h">集客ブログを立ち上げよう。</div>'
-        +   '<div class="media-hero-card-tx"><b>ブログ立ち上げ・キーワード調査・記事執筆・公開・改善</b> すべて 30 名超の AI チームが自動で。 LP の URL は登録済、 設定は <b>60 秒</b>。</div>'
+        +   '<div class="media-hero-card-tx">セットアップは <b>📝 メディア → 🔍 キーワード調査 → 🎯 戦略・KPI → 📋 タスク</b> の 4 ステップ。 30 名超の AI チームが自動で動きます。 まずは 60 秒のブログ立ち上げから。</div>'
         +   '<div class="media-hero-card-cta-row">'
-        +     '<button class="media-hero-card-btn" onclick="openMediaPanel(\''+esc(ag.id)+'\')">🚀 ブログを立ち上げる <span style="font-size:18px">→</span></button>'
+        +     '<button class="media-hero-card-btn" onclick="openMediaPanel(\''+esc(ag.id)+'\')">🚀 STEP 1: ブログを立ち上げる <span style="font-size:18px">→</span></button>'
         +     '<div class="media-hero-card-trust"><span>✓ 60 秒で完成</span><span>✓ 月 ¥0 〜</span><span>✓ 解約 1 click</span></div>'
         +   '</div>'
         + '</div>';

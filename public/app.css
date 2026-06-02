@@ -6113,6 +6113,9 @@ input,textarea{font-family:var(--sans);}
 .ct-act.ct-tool:hover{transform:translateY(-1px);}
 .ct-act.ct-tool.notes-btn{background:var(--peach-soft);border-color:rgba(192,255,92,.32);color:var(--peach-dark);}
 .ct-act.ct-tool.notes-btn:hover{background:rgba(192,255,92,.18);}
+/* toolbar 区切り — セットアップ動線 / 運用動線 / 管理 のグルーピングを視覚化 */
+.ct-tool-sep{display:inline-block;width:1px;height:18px;background:var(--wire2);margin:0 4px;vertical-align:middle;flex-shrink:0;align-self:center;}
+@media (max-width:560px){.ct-tool-sep{display:none;}}
 .ct-act.primary{background:rgba(192,255,92,.1);color:var(--peach-dark);border-color:rgba(192,255,92,.25);}
 .ct-act.primary:hover{background:rgba(192,255,92,.18);}
 /* 「📊 ダッシュボード」 ボタン — site agent のチャット上部、最も目立つ位置 */

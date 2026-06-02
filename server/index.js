@@ -21300,40 +21300,48 @@ async function handleAPI(req,res,pathname,method,ip){
       posts = posts.slice(0, limit);
     }
     if(!posts.length) return jres(res, 200, { ok: true, total: 0, rewritten: 0 });
-    const results = { total: posts.length, rewritten: 0, failed: 0, errors: [] };
     const startedAt = new Date().toISOString();
-    for(const postMeta of posts){
-      try {
-        const keyword = postMeta.keyword || postMeta.title;
-        const article = await _mediaGenerateArticle(ag, { keyword, title: postMeta.title });
-        const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
-        const now = new Date().toISOString();
-        postMeta.title = String(article.title || postMeta.title).slice(0, 120);
-        postMeta.excerpt = String(article.excerpt || postMeta.excerpt || '').slice(0, 240);
-        if(heroUrl) postMeta.hero_image_url = heroUrl;
-        postMeta.rewritten_at = now;
-        postMeta.rewrite_count = (postMeta.rewrite_count || 0) + 1;
-        if(!adminUser.media_posts_full) adminUser.media_posts_full = {};
-        const prev = adminUser.media_posts_full[postMeta.id];
-        adminUser.media_posts_full[postMeta.id] = {
-          body_html: article.body_html,
-          saved_at: now,
-          rewritten_from: (prev && prev.body_html && prev.body_html.length) || 0,
-        };
-        const estJpy = Math.round((article.body_html.length / 2000) * 10) / 10;
-        adminUser.billing_history = Array.isArray(adminUser.billing_history) ? adminUser.billing_history : [];
-        adminUser.billing_history.push({ date: now, type: 'usage', via: 'admin_bulk_rewrite', agentId: ag.id, agentName: ag.name, cost_jpy: estJpy, detail: 'admin-rewrite: ' + postMeta.title.slice(0, 60) });
-        adminUser.balance_jpy = Math.round(((adminUser.balance_jpy || 0) - estJpy) * 1000) / 1000;
-        results.rewritten++;
-        await DB.save(adminUser);
-        _mediaSlugCacheClear(ag.media.slug);
-      } catch(e){
-        results.failed++;
-        results.errors.push({ slug: postMeta.slug, error: e.message });
-        console.warn('[admin-bulk-rewrite]', postMeta.slug, 'failed:', e.message);
+    // 🚀 非同期実行: Render edge 100s timeout 回避のため、 即時 200 を返して
+    //   バックグラウンドで 1 記事ずつ処理。 進捗は billing_history で確認可能。
+    const totalCount = posts.length;
+    jres(res, 200, { ok: true, async: true, total: totalCount, started_at: startedAt, message: 'バックグラウンドで処理中、 billing_history で 進捗確認可能' });
+    // 以下は response 後に 非同期で 実行
+    (async () => {
+      let rewritten = 0, failed = 0;
+      for(const postMeta of posts){
+        try {
+          const keyword = postMeta.keyword || postMeta.title;
+          const article = await _mediaGenerateArticle(ag, { keyword, title: postMeta.title });
+          const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
+          const now = new Date().toISOString();
+          postMeta.title = String(article.title || postMeta.title).slice(0, 120);
+          postMeta.excerpt = String(article.excerpt || postMeta.excerpt || '').slice(0, 240);
+          if(heroUrl) postMeta.hero_image_url = heroUrl;
+          postMeta.rewritten_at = now;
+          postMeta.rewrite_count = (postMeta.rewrite_count || 0) + 1;
+          if(!adminUser.media_posts_full) adminUser.media_posts_full = {};
+          const prev = adminUser.media_posts_full[postMeta.id];
+          adminUser.media_posts_full[postMeta.id] = {
+            body_html: article.body_html,
+            saved_at: now,
+            rewritten_from: (prev && prev.body_html && prev.body_html.length) || 0,
+          };
+          const estJpy = Math.round((article.body_html.length / 2000) * 10) / 10;
+          adminUser.billing_history = Array.isArray(adminUser.billing_history) ? adminUser.billing_history : [];
+          adminUser.billing_history.push({ date: now, type: 'usage', via: 'admin_bulk_rewrite', agentId: ag.id, agentName: ag.name, cost_jpy: estJpy, detail: 'admin-rewrite: ' + postMeta.title.slice(0, 60) });
+          adminUser.balance_jpy = Math.round(((adminUser.balance_jpy || 0) - estJpy) * 1000) / 1000;
+          rewritten++;
+          await DB.save(adminUser);
+          _mediaSlugCacheClear(ag.media.slug);
+          console.log('[admin-bulk-rewrite-async] ✅', postMeta.slug, rewritten + '/' + totalCount);
+        } catch(e){
+          failed++;
+          console.warn('[admin-bulk-rewrite-async] ❌', postMeta.slug, 'failed:', e.message);
+        }
       }
-    }
-    return jres(res, 200, { ok: true, started_at: startedAt, finished_at: new Date().toISOString(), ...results });
+      console.log('[admin-bulk-rewrite-async] ALL DONE rewritten=' + rewritten + ' failed=' + failed);
+    })().catch(e => console.error('[admin-bulk-rewrite-async] fatal:', e.message));
+    return;
   }
 
   // ── Auth required below ────────────────────────────────────

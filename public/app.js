@@ -25248,6 +25248,59 @@ async function loadBilling(){
     var hEl=document.getElementById('sb-history');
     if(hEl) hEl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">'+T.sTxFetchFail+'</div>';
   }
+  // 用途別 breakdown (= 過去 30 日)。 失敗しても history は表示済みなので静かに skip。
+  try{
+    var br = await api('GET','/api/billing/breakdown?days=30');
+    renderBillingBreakdown(br);
+  }catch(e){ /* noop */ }
+}
+
+// via → 日本語ラベル + アイコン (= billing_history.via フィールド)
+var _viaLabel = {
+  chat:               { ic:'💬', name:'チャット' },
+  schedule:           { ic:'⏰', name:'スケジュール 実行' },
+  nightly_draft:      { ic:'🌙', name:'夜間 草稿生成' },
+  morning_proposal:   { ic:'☀️', name:'朝の 1 個提案' },
+  auto_rewrite:       { ic:'♻️', name:'自動 リライト' },
+  media_rewrite:      { ic:'✍️', name:'メディア リライト' },
+  media_article:      { ic:'📝', name:'メディア 記事生成' },
+  kw_research:        { ic:'🔍', name:'KW 調査' },
+  media_share_sns:    { ic:'📢', name:'SNS シェア' },
+};
+function _viaPretty(via){ var v = _viaLabel[via]; return v || { ic:'⚙️', name: via||'その他' }; }
+
+function renderBillingBreakdown(br){
+  var el = document.getElementById('sb-breakdown'); if(!el) return;
+  var rows = (br && Array.isArray(br.breakdown)) ? br.breakdown : [];
+  if(!rows.length){
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">過去 30 日 の AI 利用なし</div>';
+    return;
+  }
+  var totalJpy = Math.max(0.0001, Number(br.total_jpy)||0);
+  var html = '';
+  html += '<div style="padding:14px 16px;border-bottom:1px solid var(--wire);font-size:12px;color:var(--text3)">'
+       +    '合計 <b style="color:var(--text);font-size:14px">¥'+ Math.round(totalJpy).toLocaleString() +'</b>'
+       +    ' / '+ (Number(br.total_calls)||0) +' 回 (過去 '+ (Number(br.days)||30) +' 日)'
+       +  '</div>';
+  rows.forEach(function(row){
+    var v = _viaPretty(row.via);
+    var pct = Math.max(0, Math.min(100, Number(row.share_pct)||0));
+    var costJpy = Math.round(Number(row.cost_jpy)||0);
+    html += '<div style="padding:11px 14px;border-bottom:1px solid var(--wire);font-size:13px">'
+         +    '<div style="display:flex;align-items:center;gap:10px">'
+         +      '<div style="font-size:16px;flex-shrink:0">'+ v.ic +'</div>'
+         +      '<div style="flex:1;min-width:0">'
+         +        '<div style="color:var(--text);font-weight:600">'+ esc(v.name) +'</div>'
+         +        '<div style="color:var(--text3);font-size:11px">'+ (Number(row.count)||0) +' 回 ・ '+ pct.toFixed(1) +'%</div>'
+         +      '</div>'
+         +      '<div style="font-weight:700;font-variant-numeric:tabular-nums">¥'+ costJpy.toLocaleString() +'</div>'
+         +    '</div>'
+         +    '<div style="margin-top:6px;height:4px;background:var(--wire);border-radius:999px;overflow:hidden">'
+         +      '<div style="height:100%;width:'+ pct +'%;background:linear-gradient(90deg,#0d4f4a,#14b8a6)"></div>'
+         +    '</div>'
+         +  '</div>';
+  });
+  el.innerHTML = html;
 }
 
 function renderBillingHistory(items){

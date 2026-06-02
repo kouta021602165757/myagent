@@ -30053,6 +30053,44 @@ ${orgSummary || '(汎用チーム)'}
   }
 
 
+  // ── GET /api/billing/breakdown ────────────────────────────
+  // 用途別 (via) コスト集計。 ユーザーが「どの機能がいくら使ってる?」
+  // を判断できるよう、 期間 + via フィールドで billing_history を aggregate。
+  // 結果は cron / chat / 記事生成 等を分けて表示できる。
+  if(pathname==='/api/billing/breakdown' && method==='GET'){
+    const all = Array.isArray(user.billing_history) ? user.billing_history : [];
+    const usages = all.filter(b => b && b.type === 'usage');
+    // 期間 filter (= ?days=30 等; 既定 30 日)
+    const _q = (() => { try { return new URL(req.url, 'https://x').searchParams; } catch(_){ return new URLSearchParams(); } })();
+    const daysParam = parseInt((_q.get('days')||'30'), 10);
+    const days = Math.min(365, Math.max(1, isNaN(daysParam) ? 30 : daysParam));
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+    const cutoffTs = cutoff.getTime();
+    const inRange = usages.filter(b => {
+      const t = b.date ? new Date(b.date).getTime() : 0;
+      return t >= cutoffTs;
+    });
+    // via 別 aggregate
+    const byVia = {};
+    let total = 0;
+    inRange.forEach(b => {
+      const via = b.via || 'chat';
+      if(!byVia[via]) byVia[via] = { via, count: 0, cost_jpy: 0 };
+      byVia[via].count++;
+      byVia[via].cost_jpy += Number(b.cost_jpy||0);
+      total += Number(b.cost_jpy||0);
+    });
+    const breakdown = Object.values(byVia)
+      .map(r => ({ ...r, cost_jpy: Math.round(r.cost_jpy*100)/100, share_pct: total ? Math.round(r.cost_jpy/total*1000)/10 : 0 }))
+      .sort((a,b) => b.cost_jpy - a.cost_jpy);
+    return jres(res, 200, {
+      days,
+      total_jpy: Math.round(total*100)/100,
+      total_calls: inRange.length,
+      breakdown,
+    });
+  }
+
   // ── POST /api/billing/setup-intent ────────────────────────
   // Modern flow: collect card via SetupIntent, then attach PM to subscription.
   // Replaces the older default_incomplete + latest_invoice.payment_intent flow.

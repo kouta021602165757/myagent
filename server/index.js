@@ -15945,7 +15945,11 @@ async function _mediaGenerateArticle(agent, params){
     + '【検索意図】' + intent.type + ' (= ' + intent.label + ')\n'
     + '【意図別構造】 ' + intent.structure + '\n'
     + '【意図必須セクション】 ' + intent.must_sections.join(' / ') + '\n'
-    + (intent.product_count ? '【製品数】 ' + intent.product_count + ' 個 (= タイトルに対応、 必ず ' + intent.product_count + ' 個の <div class="product-card"> を出力)\n' : '')
+    + (intent.product_count ? '【🚨 製品数 厳守 — 違反したら破棄】 ' + intent.product_count + ' 個ジャストの <div class="product-card"> を出力。\n'
+        + '   ⚠️ カテゴリでグループ化禁止 (= 「○○型 3 選」 で 3 個まとめるのは NG)\n'
+        + '   ⚠️ 必ず ' + intent.product_count + ' 個 別々の H3 + product-card を 順位順に並べる\n'
+        + '   ⚠️ 各カードは 上記の product-card テンプレートを 一字一句 忠実に\n'
+        + '   ⚠️ 「ランキング」 H2 1 個 の下に ' + intent.product_count + ' 個の product-card を 連続配置 (= 推奨)\n' : '')
     + '【目標文字数】 ' + tpl.targetChars + ' 字 (=±500 字、 これ以上は書かない)\n'
     + '【H2 章数】 ' + tpl.h2Count + ' 個 — 1 H2 当たり 300-500 字で 短く区切る\n'
     + '【必須セクション】 ' + tpl.requiredSections.join(' / ') + '\n'

@@ -752,9 +752,19 @@
             </button>
           </div>
 
-          <div class="bs-fld-lbl" data-i18n="bsCardLbl">カード情報</div>
-          <div id="bs-payg-card" class="bs-cardbox"></div>
-          <div id="bs-payg-err" class="bs-err"></div>
+          <!-- 保存済カード一覧 (= bsInitPaygCard で動的 populate) -->
+          <div id="bs-saved-pms" style="display:none;margin-bottom:14px"></div>
+
+          <!-- 新規カード form (= 保存済カードがない時 or 「新しいカード」 クリック時) -->
+          <div id="bs-newcard-section">
+            <div class="bs-fld-lbl" data-i18n="bsCardLbl">カード情報</div>
+            <div id="bs-payg-card" class="bs-cardbox"></div>
+            <div id="bs-payg-err" class="bs-err"></div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text2);margin-top:8px">
+              <input type="checkbox" id="bs-save-card" checked style="margin:0;cursor:pointer">
+              <label for="bs-save-card" style="cursor:pointer">次回からカード情報の入力を省略する</label>
+            </div>
+          </div>
 
           <button class="bs-go" id="bsPaygGo" onclick="bsPaygSubmit()">$6.99</button>
           <div class="bs-trust" data-i18n="bsTrustOne">🔒 Stripe による安全な決済 ・ 一度限りの請求</div>

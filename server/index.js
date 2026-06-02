@@ -13617,19 +13617,53 @@ async function stripeCreateTransfer(amountJpy, destAccountId, metadata){
   return r.d;
 }
 
-async function stripeCreatePaymentIntent(amtCentsUsd,userId,email){
-  // amtCentsUsd は USDセント (例: 699 = $6.99)。フロント側パラメータ名 amount_jpy は misnomer。
-  const r=await httpsReq('POST','api.stripe.com','/v1/payment_intents',
+async function stripeCreatePaymentIntent(amtCentsUsd, userId, email, opts){
+  // amtCentsUsd は USDセント (例: 699 = $6.99)。
+  // opts.customerId: Stripe Customer ID (= 後で card 保存に使う)
+  // opts.savePaymentMethod: true なら card を customer に保存 (= 次回 1 click)
+  // opts.paymentMethodId: 保存済 PM で off_session 即課金
+  const params = {
+    amount: String(amtCentsUsd),
+    currency: 'usd',
+    receipt_email: email,
+    'metadata[userId]': userId,
+    'metadata[amount_cents_usd]': String(amtCentsUsd),
+  };
+  if(opts && opts.customerId){
+    params.customer = opts.customerId;
+  }
+  if(opts && opts.savePaymentMethod){
+    params.setup_future_usage = 'off_session';
+  }
+  if(opts && opts.paymentMethodId){
+    // 保存済 PM で即課金 (= off_session 確認不要)
+    params.payment_method = opts.paymentMethodId;
+    params.confirm = 'true';
+    params.off_session = 'true';
+  } else {
+    params['automatic_payment_methods[enabled]'] = 'true';
+  }
+  const r = await httpsReq('POST','api.stripe.com','/v1/payment_intents',
     {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`},
-    new URLSearchParams({
-      amount:String(amtCentsUsd),
-      currency:'usd',
-      'automatic_payment_methods[enabled]':'true',
-      receipt_email:email,
-      'metadata[userId]':userId,
-      'metadata[amount_cents_usd]':String(amtCentsUsd)
-    }).toString());
-  if(r.s!==200)throw new Error(r.d?.error?.message||'Stripe error');
+    new URLSearchParams(params).toString());
+  if(r.s!==200) throw new Error(r.d?.error?.message || 'Stripe error');
+  return r.d;
+}
+
+// 顧客の保存済 PaymentMethods 一覧 (= card のみ)
+async function stripeListPaymentMethods(customerId){
+  if(!customerId) return [];
+  const r = await httpsReq('GET','api.stripe.com',
+    '/v1/customers/' + customerId + '/payment_methods?type=card&limit=10',
+    {'Authorization':`Bearer ${STRIPE_SK}`}, null);
+  if(r.s !== 200) throw new Error(r.d?.error?.message || 'Stripe error');
+  return (r.d && r.d.data) || [];
+}
+
+async function stripeDetachPaymentMethod(pmId){
+  const r = await httpsReq('POST','api.stripe.com','/v1/payment_methods/' + pmId + '/detach',
+    {'Content-Type':'application/x-www-form-urlencoded','Authorization':`Bearer ${STRIPE_SK}`}, '');
+  if(r.s !== 200) throw new Error(r.d?.error?.message || 'Stripe error');
   return r.d;
 }
 
@@ -30379,11 +30413,17 @@ ${orgSummary || '(汎用チーム)'}
   }
 
   // ── POST /api/billing/charge ───────────────────────────────
+  //   body: { amount_jpy: cents_usd, payment_method_id?: 'pm_...', save_card?: true }
+  //   - payment_method_id 指定: 保存済カードで 即課金 (= ワンクリック)
+  //   - save_card: true: 新規カード課金 + Customer に保存 (= 次回からワンクリック)
   if(pathname==='/api/billing/charge'&&method==='POST'){
     // 注意: パラメータ名 amount_jpy は misnomer。実体は USDセント (例: 699 = $6.99)
-    const{amount_jpy}=await readBody(req);
-    if(!amount_jpy||amount_jpy<100)return jres(res,400,{error:'最低チャージ額は $1.00 です'});
-    if(amount_jpy>100000)return jres(res,400,{error:'1回の上限は $1,000 です'});
+    const body = await readBody(req);
+    const amount_jpy = body && body.amount_jpy;
+    const pmId = body && body.payment_method_id;
+    const saveCard = !!(body && body.save_card);
+    if(!amount_jpy||amount_jpy<100) return jres(res,400,{error:'最低チャージ額は $1.00 です'});
+    if(amount_jpy>100000) return jres(res,400,{error:'1回の上限は $1,000 です'});
     if(!STRIPE_SK){
       // Demo mode — USDセントを JPY 換算して残高に加算
       const creditJpy=Math.round(amount_jpy/100*USD_TO_JPY*1000)/1000;
@@ -30392,11 +30432,61 @@ ${orgSummary || '(汎用チーム)'}
       return jres(res,200,{demo:true,balance_jpy:user.balance_jpy});
     }
     try{
-      const pi=await stripeCreatePaymentIntent(amount_jpy,user.id,user.email);
-      return jres(res,200,{client_secret:pi.client_secret,publishable_key:STRIPE_PK});
+      // Customer がまだない場合は 作成 (= card 保存に必須)
+      let customerId = user.stripe_customer_id;
+      if(!customerId && (saveCard || pmId)){
+        customerId = await stripeCreateCustomer(user.email, user.name || user.email);
+        user.stripe_customer_id = customerId;
+        await DB.save(user);
+      }
+      const pi = await stripeCreatePaymentIntent(amount_jpy, user.id, user.email, {
+        customerId,
+        savePaymentMethod: saveCard,
+        paymentMethodId: pmId,
+      });
+      // 保存済カードで即課金成功時は client_secret 不要
+      if(pmId && pi.status === 'succeeded'){
+        return jres(res,200,{ ok: true, charged: true, status: 'succeeded' });
+      }
+      // 3DS 等 追加認証が必要な時は client_secret を返す
+      return jres(res,200,{ client_secret: pi.client_secret, publishable_key: STRIPE_PK, status: pi.status });
     }catch(e){
       console.error('[billing/charge]', e.message);
       return jres(res,500,{error:'Stripe エラー: '+e.message});
+    }
+  }
+
+  // ── GET /api/billing/payment-methods ─────────────────────────
+  //   保存済カード一覧。 card の最後 4 桁 / brand / exp を返す。
+  if(pathname==='/api/billing/payment-methods' && method==='GET'){
+    if(!STRIPE_SK) return jres(res, 200, { payment_methods: [] });
+    if(!user.stripe_customer_id) return jres(res, 200, { payment_methods: [] });
+    try {
+      const pms = await stripeListPaymentMethods(user.stripe_customer_id);
+      const out = pms.map(pm => ({
+        id: pm.id,
+        brand: (pm.card && pm.card.brand) || 'card',
+        last4: (pm.card && pm.card.last4) || '????',
+        exp_month: pm.card && pm.card.exp_month,
+        exp_year: pm.card && pm.card.exp_year,
+      }));
+      return jres(res, 200, { payment_methods: out });
+    } catch(e){
+      console.error('[billing/pms]', e.message);
+      return jres(res, 500, { error: 'Stripe エラー: ' + e.message });
+    }
+  }
+
+  // ── DELETE /api/billing/payment-method/:id ───────────────────
+  //   保存済カードを 削除 (= detach)
+  const pmDelMatch = pathname.match(/^\/api\/billing\/payment-method\/(pm_[a-zA-Z0-9]+)$/);
+  if(pmDelMatch && method === 'DELETE'){
+    if(!STRIPE_SK) return jres(res, 503, { error: 'Stripe が設定されていません' });
+    try {
+      await stripeDetachPaymentMethod(pmDelMatch[1]);
+      return jres(res, 200, { ok: true });
+    } catch(e){
+      return jres(res, 500, { error: 'Stripe エラー: ' + e.message });
     }
   }
 

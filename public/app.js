@@ -24520,6 +24520,10 @@ async function bsInitMonthlyCard(){
     });
   }
 }
+// 保存済カード state (= _bsSelectedPmId が set されてる時は そのカードで charge)
+var _bsSavedPms = [];
+var _bsSelectedPmId = null;
+
 async function bsInitPaygCard(){
   if(!(await bsInitStripe())){
     showToast(isJa?'決済システムが利用できません（Stripe 未設定）':'Payment unavailable (Stripe not configured)','ng');
@@ -24532,7 +24536,81 @@ async function bsInitPaygCard(){
       document.getElementById('bs-payg-err').textContent=e.error?e.error.message:'';
     });
   }
+  // 保存済カード一覧 fetch (= 失敗しても 新規カードフォーム は表示)
+  try {
+    var r = await api('GET', '/api/billing/payment-methods');
+    _bsSavedPms = (r && r.payment_methods) || [];
+  } catch(e){ _bsSavedPms = []; }
+  _bsRenderSavedCards();
 }
+
+function _bsRenderSavedCards(){
+  var el = document.getElementById('bs-saved-pms');
+  var newcardEl = document.getElementById('bs-newcard-section');
+  if(!el) return;
+  if(!_bsSavedPms.length){
+    el.style.display = 'none';
+    if(newcardEl) newcardEl.style.display = '';
+    _bsSelectedPmId = null;
+    return;
+  }
+  // 既定では 最初の保存済カードを選択
+  if(!_bsSelectedPmId) _bsSelectedPmId = _bsSavedPms[0].id;
+  var brandIcons = { visa:'💳', mastercard:'💳', amex:'💳', jcb:'💳', diners:'💳', discover:'💳', card:'💳' };
+  var html = '<div style="font-size:11.5px;font-weight:700;color:var(--text2);margin-bottom:8px;letter-spacing:.04em">保存済カード</div>';
+  _bsSavedPms.forEach(function(pm){
+    var sel = pm.id === _bsSelectedPmId;
+    var brandLabel = (pm.brand||'card').toUpperCase();
+    var expStr = pm.exp_month && pm.exp_year ? String(pm.exp_month).padStart(2,'0') + '/' + String(pm.exp_year).slice(-2) : '';
+    html += '<div onclick="_bsPickPm(\''+pm.id+'\')" style="display:flex;align-items:center;gap:11px;padding:11px 14px;border:1.5px solid '+(sel?'var(--teal)':'var(--wire2)')+';border-radius:9px;background:'+(sel?'var(--peach-soft)':'#fff')+';cursor:pointer;margin-bottom:6px;transition:all .12s">'
+      + '<div style="font-size:18px">'+(brandIcons[pm.brand]||'💳')+'</div>'
+      + '<div style="flex:1">'
+      +   '<div style="font-size:13px;font-weight:800;color:var(--text)">'+esc(brandLabel)+' •••• '+esc(pm.last4)+'</div>'
+      +   '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">'+(expStr?'有効期限 '+expStr:'')+'</div>'
+      + '</div>'
+      + (sel ? '<div style="color:var(--teal);font-size:18px;font-weight:900">✓</div>' : '')
+      + '<button onclick="event.stopPropagation();_bsDeletePm(\''+pm.id+'\')" title="このカードを削除" style="background:transparent;border:0;color:var(--text3);font-size:14px;cursor:pointer;padding:2px 6px" type="button">🗑</button>'
+      + '</div>';
+  });
+  html += '<button type="button" onclick="_bsToggleNewCard()" style="background:transparent;border:0;color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;margin-top:4px;font-family:inherit">+ 別のカードを使う</button>';
+  el.innerHTML = html;
+  el.style.display = '';
+  // 既定: 新規カード form は 隠す (= 保存済カード ある時)
+  if(newcardEl) newcardEl.style.display = 'none';
+}
+
+window._bsPickPm = function(pmId){
+  _bsSelectedPmId = pmId;
+  _bsRenderSavedCards();
+};
+
+window._bsToggleNewCard = function(){
+  var newcardEl = document.getElementById('bs-newcard-section');
+  if(!newcardEl) return;
+  // toggle: 新規カードへ → 保存済 selection クリア
+  if(newcardEl.style.display === 'none'){
+    newcardEl.style.display = '';
+    _bsSelectedPmId = null;
+    _bsRenderSavedCards();
+  } else {
+    newcardEl.style.display = 'none';
+    if(_bsSavedPms.length) _bsSelectedPmId = _bsSavedPms[0].id;
+    _bsRenderSavedCards();
+  }
+};
+
+window._bsDeletePm = async function(pmId){
+  if(!confirm('このカードを削除しますか?')) return;
+  try {
+    await api('DELETE', '/api/billing/payment-method/' + encodeURIComponent(pmId));
+    _bsSavedPms = _bsSavedPms.filter(function(p){ return p.id !== pmId; });
+    if(_bsSelectedPmId === pmId) _bsSelectedPmId = _bsSavedPms[0] ? _bsSavedPms[0].id : null;
+    _bsRenderSavedCards();
+    showToast('カードを削除しました','ok');
+  } catch(e){
+    showToast('削除失敗: '+(e.message||''),'ng');
+  }
+};
 
 function bsAfterSubscribeSuccess(plan){
   if(me) me.plan=plan;
@@ -24605,25 +24683,59 @@ async function bsSubscribeSubmit(){
 async function bsPaygSubmit(){
   var cents=_bsPaygCents;
   if(!cents||cents<100){ showToast(L('金額を選択してください','Please pick an amount'),'ng'); return; }
-  if(!(await bsInitStripe()) || !_bsPaygCard){
+  if(!(await bsInitStripe())){
+    showToast(L('決済システムが利用できません','Payment unavailable'),'ng'); return;
+  }
+  var usingSavedPm = !!_bsSelectedPmId;
+  var newcardEl = document.getElementById('bs-newcard-section');
+  var newcardVisible = newcardEl && newcardEl.style.display !== 'none';
+  if(!usingSavedPm && !newcardVisible){
+    showToast(L('カード情報を入力してください','Please enter card details'),'ng'); return;
+  }
+  if(!usingSavedPm && !_bsPaygCard){
     showToast(L('カード情報を入力してください','Please enter your card details'),'ng'); return;
   }
   var label=_fmtT(T.bsBuyFmt,{p:'$'+(cents/100).toFixed(2)});
   setBtnLoad('bsPaygGo',true,isJa?'処理中...':'Processing...');
   try{
-    var r=await api('POST','/api/billing/charge',{amount_jpy:cents});
-    if(!r.client_secret){
-      console.warn('charge response without client_secret:', r);
-      showToast(r.demo ? 'デモモードのため Stripe 決済はスキップされました' : '決済の初期化に失敗しました（Stripe 未設定の可能性）','ng');
+    if(usingSavedPm){
+      // ── 保存済カードで ワンクリック課金 (= off_session, server side で confirm 済) ──
+      var r = await api('POST','/api/billing/charge', { amount_jpy: cents, payment_method_id: _bsSelectedPmId });
+      if(r && r.charged && r.status === 'succeeded'){
+        showToast(L('決済完了！クレジットに反映されます','Payment complete! Credits will be applied.'),'ok');
+        closeCharge();
+        if(typeof refreshMe==='function'){ refreshMe(); setTimeout(refreshMe,2500); }
+        setBtnLoad('bsPaygGo',false,label); return;
+      }
+      // 3DS 等 追加認証が必要な時は client_secret を使って 認証 (= rare)
+      if(r && r.client_secret){
+        var pay = await _bsStripe.confirmCardPayment(r.client_secret);
+        if(pay.error){ showToast(pay.error.message,'ng'); setBtnLoad('bsPaygGo',false,label); return; }
+        if(pay.paymentIntent && pay.paymentIntent.status === 'succeeded'){
+          showToast(L('決済完了！','Payment complete!'),'ok');
+          closeCharge();
+          if(typeof refreshMe==='function'){ refreshMe(); setTimeout(refreshMe,2500); }
+          setBtnLoad('bsPaygGo',false,label); return;
+        }
+      }
+      showToast(L('決済失敗 — カードを変更してください','Payment failed — try another card'),'ng');
       setBtnLoad('bsPaygGo',false,label); return;
     }
-    var result=await _bsStripe.confirmCardPayment(r.client_secret,{
-      payment_method:{card:_bsPaygCard}
+    // ── 新規カード課金 ──
+    var saveCard = !!(document.getElementById('bs-save-card') && document.getElementById('bs-save-card').checked);
+    var r2 = await api('POST','/api/billing/charge', { amount_jpy: cents, save_card: saveCard });
+    if(!r2.client_secret){
+      console.warn('charge response without client_secret:', r2);
+      showToast(r2.demo ? 'デモモードのため Stripe 決済はスキップされました' : '決済の初期化に失敗しました（Stripe 未設定の可能性）','ng');
+      setBtnLoad('bsPaygGo',false,label); return;
+    }
+    var result = await _bsStripe.confirmCardPayment(r2.client_secret, {
+      payment_method: { card: _bsPaygCard }
     });
     if(result.error){
-      document.getElementById('bs-payg-err').textContent=result.error.message;
+      document.getElementById('bs-payg-err').textContent = result.error.message;
       showToast(result.error.message,'ng');
-    } else if(result.paymentIntent && result.paymentIntent.status==='succeeded'){
+    } else if(result.paymentIntent && result.paymentIntent.status === 'succeeded'){
       showToast(L('決済完了！クレジットに反映されます','Payment complete! Credits will be applied.'),'ok');
       closeCharge();
       if(typeof refreshMe==='function'){ refreshMe(); setTimeout(refreshMe,2500); }

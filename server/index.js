@@ -3790,7 +3790,11 @@ function _genTaskId(){
 
 async function _understandTask(message, sse, agent){
   if(!_shouldRunPlanner(message)) return null;   // 単純な依頼は task 化しない
-  const BUDGET_MS = 6000;
+  // 🚀 BUDGET 半減 (6s → 3s) — Haiku は実測 1-2s で返る、 6s は overkill
+  //    かつ ユーザは 6s 沈黙を「フリーズ」 と認識するので 即時 indicator も emit
+  const BUDGET_MS = 3000;
+  // 即時 indicator: 「📋 任された仕事を理解中…」 を ユーザに 0ms で見せる
+  if(sse) try { sse('thinking', { iter: 0, phase: 'understanding' }); } catch(_){}
   const prevTask = (agent && agent.current_task) || null;
   // paused タスク一覧 (resume 判定用に 1 行ずつ要約を渡す)
   const pausedList = Array.isArray(agent && agent.tasks)

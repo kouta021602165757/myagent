@@ -18275,6 +18275,7 @@ async function _sendMsgStream(ag, text, imgs, texts){
   // "⚙️ 複雑な処理中…". Makes the agent feel responsive even on slow turns.
   let _thinkStartedAt = Date.now();
   let _thinkTimer = null;
+  let _thinkPhase = null;  // 'understanding' = planner 中、 それ以外は 通常 thinking
   const _agName = (ag && ag.name) || (isJa?'AI':'AI');
   const _thinkStages = isJa ? [
     { at:0,    text:'考えています…' },
@@ -18287,8 +18288,14 @@ async function _sendMsgStream(ag, text, imgs, texts){
     { at:12000,text:'🔎 Going deeper…' },
     { at:24000,text:'⚙️ Complex task — almost there' },
   ];
+  const _understandingLabel = isJa ? '📋 任された仕事を理解中…' : '📋 Understanding the task…';
   function _renderThinking(){
     if(!liveBody || acc || (ag.history[streamIdx] && ag.history[streamIdx].tool_log && ag.history[streamIdx].tool_log.length)) return;
+    // 「理解中」 フェーズは固定ラベル (= 短時間で終わるので escalator 不要)
+    if(_thinkPhase === 'understanding'){
+      liveBody.innerHTML = '<div class="gen-indicator"><div class="gen-logo"></div><div class="gen-text">' + _understandingLabel + '</div></div>';
+      return;
+    }
     const elapsed = Date.now() - _thinkStartedAt;
     let label = _thinkStages[0].text;
     for(const s of _thinkStages){ if(elapsed >= s.at) label = s.text; }
@@ -18338,6 +18345,8 @@ async function _sendMsgStream(ag, text, imgs, texts){
       } else if(evType === 'thinking'){
         // Server about to call AI for an iteration. Kick off the escalator so
         // the indicator text deepens as the wait stretches.
+        // phase='understanding' は planner (= 任された仕事 理解中) フェーズ
+        _thinkPhase = (obj && obj.phase) || null;
         if(liveBody && !acc){
           _thinkStartedAt = Date.now();
           _renderThinking();

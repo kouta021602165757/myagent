@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>モック: 5 テンプレート 全部 (SEO + 非 AI 著者 装備)</title>
+<style>
+*{box-sizing:border-box;-webkit-text-size-adjust:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:#e7e7e3;color:#1a1a1a;line-height:1.6}
+.wrap{max-width:1240px;margin:0 auto;padding:24px 12px 80px}
+.intro{background:#fff;border-radius:14px;padding:22px 26px;margin-bottom:24px;border:1px solid rgba(0,0,0,.08)}
+.intro h1{margin:0 0 8px;font-size:21px;font-weight:900}
+.intro p{margin:0;color:#555;font-size:13px;line-height:1.7}
+.intro .note{background:#fafaf7;border-left:3px solid #a3e635;padding:10px 13px;margin-top:13px;font-size:11.5px;color:#555}
+
+.section{margin-bottom:36px}
+.section-h{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:0 6px}
+.section-num{width:48px;height:48px;border-radius:11px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;letter-spacing:.04em}
+.s-minimal .section-num{background:#0a0a0a}
+.s-magazine .section-num{background:#7f1d1d}
+.s-friendly .section-num{background:#f59e0b}
+.s-tech .section-num{background:linear-gradient(135deg,#0f172a,#475569)}
+.s-newsletter .section-num{background:#f97316}
+.section-h-text{flex:1}
+.section-h-eye{font-size:10.5px;font-weight:800;color:#71717a;letter-spacing:.06em;text-transform:uppercase}
+.section-h-ti{font-size:18px;font-weight:900;margin-top:2px}
+.section-h-sub{font-size:12px;color:#525252;margin-top:2px}
+.section-h-cost{margin-left:auto;background:#fff;border:1px solid #e5e5e5;padding:6px 12px;border-radius:8px;font-size:10.5px;color:#525252;font-weight:700}
+
+.frame{background:#1a1a1a;border-radius:14px;padding:10px;overflow:hidden}
+.frame-bar{display:flex;gap:6px;padding:4px 8px 8px;align-items:center}
+.frame-bar span{width:11px;height:11px;border-radius:50%;background:#3a3a3a}
+.frame-bar .url{margin-left:auto;font-size:10.5px;color:#888;background:#0a0a0a;padding:4px 14px;border-radius:6px;font-family:'SF Mono',Menlo,monospace}
+.frame-body{border-radius:6px;overflow:hidden;min-height:520px;position:relative}
+
+/* common SEO annotations */
+.seo-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:11px}
+.seo-cell{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:10px 12px;font-size:11.5px}
+.seo-cell b{display:block;font-size:9.5px;color:#737373;letter-spacing:.06em;text-transform:uppercase;font-weight:800;margin-bottom:4px}
+.seo-cell .tag-pro{background:#dcfce7;color:#15803d;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px;margin-right:3px}
+
+/* shared editor elements */
+.b-bc{padding:8px 22px;background:#fafaf7;border-bottom:1px solid #e5e5e5;font-size:10.5px;color:#737373}
+.b-bc a{color:#525252;text-decoration:none}
+.b-bc .arr{margin:0 6px;color:#a3a3a3}
+.b-feat-eye{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.b-byline-row{display:flex;align-items:center;gap:8px;font-size:11px;color:#525252;margin-top:10px}
+.b-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#fff;flex-shrink:0}
+
+/* ═══════════ A: Minimal (default) ═══════════ */
+.mi{background:#fafafa;font-family:-apple-system,'Hiragino Sans',sans-serif;color:#0a0a0a}
+.mi header{padding:16px 24px;display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid #e5e5e5}
+.mi-brand{display:flex;align-items:center;gap:10px}
+.mi-logo{width:34px;height:34px;border-radius:7px;background:#0d4f4a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900}
+.mi-brand-bd .nm{font-weight:900;font-size:16px;color:#0a0a0a;line-height:1.1}
+.mi-brand-bd .tag{font-size:10.5px;color:#737373;margin-top:2px}
+.mi-nav{margin-left:auto;display:flex;gap:13px;align-items:center;font-size:11px;font-weight:700;color:#525252}
+.mi-nav a{color:#525252;text-decoration:none}
+.mi-nav .sub{background:#0d4f4a;color:#fff;padding:7px 13px;border-radius:6px;font-size:11px;font-weight:800;text-decoration:none}
+.mi-feat{padding:36px 24px;background:#fff;border-bottom:1px solid #e5e5e5;display:grid;grid-template-columns:1fr 1.2fr;gap:24px;align-items:center}
+.mi-feat-img{height:220px;background:linear-gradient(135deg,#0d4f4a,#1e293b);border-radius:9px}
+.mi-feat-h{font-size:28px;font-weight:900;letter-spacing:-.015em;line-height:1.25;margin:0 0 10px}
+.mi-feat-tx{font-size:13px;color:#525252;line-height:1.65;margin:0 0 10px}
+.mi-cat-bar{padding:14px 24px;border-bottom:1px solid #e5e5e5;background:#fafafa;display:flex;gap:8px;overflow-x:auto;font-size:11.5px}
+.mi-cat-bar a{color:#525252;text-decoration:none;padding:5px 11px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;font-weight:600;white-space:nowrap}
+.mi-cat-bar a.active{background:#0d4f4a;color:#fff;border-color:#0d4f4a}
+.mi-grid{padding:20px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;background:#fafafa}
+.mi-card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden}
+.mi-card-img{height:120px}
+.mi-card-img.c1{background:linear-gradient(135deg,#7c2d12,#dc2626)}
+.mi-card-img.c2{background:linear-gradient(135deg,#1e3a8a,#0f172a)}
+.mi-card-img.c3{background:linear-gradient(135deg,#14532d,#15803d)}
+.mi-card-bd{padding:11px 13px}
+.mi-card-cat{font-size:9.5px;color:#0d4f4a;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px}
+.mi-card-h{font-size:13.5px;font-weight:800;line-height:1.4;margin:0 0 6px}
+.mi-card-meta{font-size:10px;color:#737373}
+.mi-about{padding:24px;background:#fff;border-top:1px solid #e5e5e5;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.mi-about-av{width:60px;height:60px;border-radius:50%;background:#0d4f4a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0}
+.mi-about h3{font-size:14px;font-weight:900;margin:0 0 4px}
+.mi-about p{font-size:11.5px;color:#525252;line-height:1.6;margin:0}
+.mi-foot{padding:18px 24px;background:#fafafa;font-size:10.5px;color:#737373;display:flex;justify-content:space-between;border-top:1px solid #e5e5e5}
+.mi-foot a{color:#525252;text-decoration:none;margin-right:11px}
+
+/* ═══════════ B: Magazine (= NYT-y) ═══════════ */
+.mg{background:#fff;font-family:'Iowan Old Style','Charter',Georgia,serif;color:#0a0a0a}
+.mg header{padding:18px 26px;display:flex;align-items:center;border-bottom:2px solid #0a0a0a}
+.mg-brand{font-family:'Iowan Old Style',Georgia,serif;font-weight:900;font-size:22px;letter-spacing:-.02em}
+.mg-nav{margin-left:auto;display:flex;gap:18px;font-family:-apple-system,sans-serif;font-size:10.5px;font-weight:700;color:#444;letter-spacing:.1em;text-transform:uppercase}
+.mg-nav a{color:#444;text-decoration:none}
+.mg-nav .sub{background:#0a0a0a;color:#fff;padding:7px 14px;text-decoration:none;font-weight:800;letter-spacing:.06em}
+.mg-eyebrow{padding:6px 26px;background:#fffbeb;border-bottom:1px solid #fde68a;font-family:'SF Mono',monospace;font-size:10px;color:#854d0e;font-weight:600;display:flex;justify-content:space-between;letter-spacing:.04em}
+.mg-feat{padding:28px 26px 22px;display:grid;grid-template-columns:1.3fr 1fr;gap:26px;align-items:center;border-bottom:1px solid #e5e5e5}
+.mg-feat-img{height:240px;background:linear-gradient(135deg,#1e293b,#7c2d12,#3a3a3a);position:relative}
+.mg-feat-cat{font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;letter-spacing:.12em;color:#dc2626;text-transform:uppercase;margin-bottom:8px}
+.mg-feat-h{font-size:30px;font-weight:900;line-height:1.18;margin:0 0 11px;letter-spacing:-.015em}
+.mg-feat-tx{font-size:13.5px;color:#525252;line-height:1.65;margin:0 0 10px;font-family:Georgia,serif}
+.mg-feat-byline{font-family:-apple-system,sans-serif;font-size:11px;color:#525252;font-style:italic}
+.mg-feat-byline b{color:#0a0a0a;font-weight:700;font-style:normal}
+.mg-grid-h{font-family:-apple-system,sans-serif;padding:22px 26px 0;font-size:10.5px;color:#525252;letter-spacing:.1em;text-transform:uppercase;font-weight:700;display:flex;gap:18px}
+.mg-grid-h a{color:#737373;text-decoration:none;border-bottom:2px solid transparent;padding-bottom:6px}
+.mg-grid-h a.active{color:#0a0a0a;border-bottom-color:#dc2626}
+.mg-grid{padding:14px 26px 22px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;border-bottom:1px solid #e5e5e5}
+.mg-card-img{height:120px;margin-bottom:9px}
+.mg-card-img.c1{background:linear-gradient(135deg,#7c2d12,#dc2626)}
+.mg-card-img.c2{background:linear-gradient(135deg,#1e3a8a,#0f172a)}
+.mg-card-img.c3{background:linear-gradient(135deg,#14532d,#15803d)}
+.mg-card-cat{font-family:-apple-system,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#dc2626;text-transform:uppercase;margin-bottom:5px}
+.mg-card-h{font-size:16px;font-weight:800;line-height:1.3;margin:0 0 5px;letter-spacing:-.005em}
+.mg-card-meta{font-family:-apple-system,sans-serif;font-size:10px;color:#737373;font-style:italic}
+.mg-about{padding:22px 26px;background:#fffbeb;border-bottom:2px solid #0a0a0a;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.mg-about-av{width:60px;height:60px;border-radius:0;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;font-family:Georgia,serif}
+.mg-about h3{font-size:16px;font-weight:900;margin:0 0 5px;letter-spacing:-.005em}
+.mg-about p{font-size:12px;color:#525252;line-height:1.65;margin:0;font-family:Georgia,serif}
+.mg-foot{font-family:-apple-system,sans-serif;padding:18px 26px;background:#fff;font-size:10.5px;color:#737373;display:flex;justify-content:space-between;border-top:1px solid #e5e5e5}
+.mg-foot a{color:#525252;text-decoration:none;margin-right:11px}
+
+/* ═══════════ C: Friendly (= DTC / coaching) ═══════════ */
+.fr{background:#fffbf5;font-family:-apple-system,'Inter','Hiragino Sans',sans-serif;color:#3f3622}
+.fr header{padding:18px 26px;display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid #fef3c7}
+.fr-logo-w{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#f59e0b);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900}
+.fr-brand{font-weight:900;font-size:17px;color:#3f3622;letter-spacing:-.005em;line-height:1}
+.fr-tag{font-size:10.5px;color:#a17a3e;margin-top:2px;font-weight:600}
+.fr-sub{margin-left:auto;background:#92400e;color:#fff;padding:9px 18px;border-radius:24px;font-size:12px;font-weight:800;text-decoration:none}
+.fr-feat{padding:36px 26px;background:linear-gradient(135deg,#fef9e8,#fef3c7);text-align:center;border-bottom:1px solid #fef3c7}
+.fr-feat-tag{display:inline-block;background:#fff;color:#92400e;font-size:10.5px;font-weight:800;padding:4px 12px;border-radius:12px;margin-bottom:14px;border:1px solid #fef3c7}
+.fr-feat-h{font-size:30px;font-weight:900;line-height:1.25;margin:0 0 13px;letter-spacing:-.02em;color:#3f3622;max-width:540px;margin-left:auto;margin-right:auto}
+.fr-feat-p{font-size:14px;color:#92621c;max-width:480px;margin:0 auto 14px;line-height:1.65}
+.fr-feat-byline{font-size:11.5px;color:#92621c}
+.fr-feat-byline b{color:#3f3622;font-weight:800}
+.fr-cat-bar{padding:18px 26px;background:#fff;display:flex;gap:8px;justify-content:center;border-bottom:1px solid #fef3c7;overflow-x:auto;font-size:11.5px}
+.fr-cat-bar a{padding:6px 13px;border-radius:18px;background:#fef9e8;color:#92621c;text-decoration:none;font-weight:700;border:1px solid #fef3c7;white-space:nowrap}
+.fr-cat-bar a.active{background:#92400e;color:#fff;border-color:#92400e}
+.fr-grid{padding:24px 26px;display:grid;grid-template-columns:repeat(2,1fr);gap:18px;background:#fffbf5}
+.fr-card{background:#fff;border:1px solid #fef3c7;border-radius:18px;overflow:hidden}
+.fr-card-img{height:130px}
+.fr-card-img.c1{background:linear-gradient(135deg,#fb923c,#dc2626)}
+.fr-card-img.c2{background:linear-gradient(135deg,#84cc16,#15803d)}
+.fr-card-bd{padding:14px 17px}
+.fr-card-cat{font-size:10px;color:#f97316;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px}
+.fr-card-h{font-size:14.5px;font-weight:800;line-height:1.35;margin:0 0 7px;color:#3f3622}
+.fr-card-meta{font-size:10.5px;color:#a17a3e}
+.fr-about{padding:24px 26px;background:#fef9e8;border-top:1px solid #fef3c7;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.fr-about-av{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#f59e0b);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;flex-shrink:0}
+.fr-about h3{font-size:15px;font-weight:900;margin:0 0 4px;color:#3f3622}
+.fr-about p{font-size:12px;color:#92621c;line-height:1.6;margin:0}
+.fr-foot{padding:18px 26px;background:#fff;font-size:10.5px;color:#a17a3e;display:flex;justify-content:space-between;border-top:1px solid #fef3c7}
+.fr-foot a{color:#92621c;text-decoration:none;margin-right:11px}
+
+/* ═══════════ D: Tech Docs (= dark + mono) ═══════════ */
+.tc{background:#0f172a;color:#e2e8f0;font-family:'IBM Plex Sans','Inter',sans-serif}
+.tc header{padding:18px 26px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #1e293b;background:#0f172a}
+.tc-logo-w{width:34px;height:34px;border-radius:7px;background:linear-gradient(135deg,#0ea5e9,#06b6d4);color:#0f172a;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;font-family:'JetBrains Mono','SF Mono',monospace}
+.tc-brand{font-weight:900;font-size:16px;color:#f1f5f9;letter-spacing:-.01em;line-height:1;font-family:'JetBrains Mono',monospace}
+.tc-tag{font-size:10.5px;color:#64748b;margin-top:2px;font-family:'SF Mono',monospace}
+.tc-nav{margin-left:auto;display:flex;gap:18px;font-size:11px;font-weight:600;color:#94a3b8;font-family:'SF Mono',monospace}
+.tc-nav a{color:#94a3b8;text-decoration:none}
+.tc-nav .sub{background:#06b6d4;color:#0f172a;padding:7px 14px;border-radius:5px;font-weight:800;text-decoration:none;font-size:10.5px}
+.tc-tag-row{padding:8px 26px;background:#0a1322;border-bottom:1px solid #1e293b;font-family:'SF Mono',monospace;font-size:9.5px;color:#64748b;display:flex;gap:18px;letter-spacing:.04em}
+.tc-tag-row b{color:#06b6d4}
+.tc-feat{padding:32px 26px;border-bottom:1px solid #1e293b;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
+.tc-feat-img{height:220px;background:linear-gradient(135deg,#0c4a6e,#1e293b);border-radius:7px;position:relative}
+.tc-feat-img::after{content:'$ ./run.sh';position:absolute;bottom:14px;left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#06b6d4}
+.tc-feat-cat{font-family:'SF Mono',monospace;font-size:10px;color:#06b6d4;letter-spacing:.08em;margin-bottom:9px}
+.tc-feat-h{font-size:26px;font-weight:800;line-height:1.25;margin:0 0 11px;letter-spacing:-.01em;color:#f1f5f9}
+.tc-feat-tx{font-size:13px;color:#94a3b8;line-height:1.7;margin:0 0 10px}
+.tc-feat-byline{font-size:11px;color:#64748b;font-family:'SF Mono',monospace}
+.tc-feat-byline b{color:#e2e8f0;font-weight:600}
+.tc-cat-bar{padding:14px 26px;background:#0a1322;display:flex;gap:6px;border-bottom:1px solid #1e293b;overflow-x:auto;font-size:11px;font-family:'SF Mono',monospace}
+.tc-cat-bar a{color:#94a3b8;text-decoration:none;padding:5px 10px;border:1px solid #1e293b;border-radius:4px;font-weight:600;white-space:nowrap}
+.tc-cat-bar a.active{background:#06b6d4;color:#0f172a;border-color:#06b6d4}
+.tc-grid{padding:22px 26px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tc-card{background:#1e293b;border:1px solid #334155;border-radius:7px;overflow:hidden}
+.tc-card-img{height:105px}
+.tc-card-img.c1{background:linear-gradient(135deg,#0c4a6e,#0e7490)}
+.tc-card-img.c2{background:linear-gradient(135deg,#1e3a8a,#581c87)}
+.tc-card-img.c3{background:linear-gradient(135deg,#134e4a,#15803d)}
+.tc-card-bd{padding:12px 14px}
+.tc-card-cat{font-family:'SF Mono',monospace;font-size:9px;color:#06b6d4;letter-spacing:.06em;margin-bottom:5px;text-transform:uppercase}
+.tc-card-h{font-size:13.5px;font-weight:700;line-height:1.4;margin:0 0 6px;color:#f1f5f9}
+.tc-card-meta{font-family:'SF Mono',monospace;font-size:10px;color:#64748b}
+.tc-about{padding:22px 26px;background:#0a1322;border-top:1px solid #1e293b;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.tc-about-av{width:60px;height:60px;border-radius:7px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#0f172a;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.tc-about h3{font-size:14px;font-weight:800;margin:0 0 4px;color:#f1f5f9;font-family:'JetBrains Mono',monospace}
+.tc-about p{font-size:11.5px;color:#94a3b8;line-height:1.65;margin:0}
+.tc-foot{padding:18px 26px;background:#0f172a;font-size:10.5px;color:#64748b;display:flex;justify-content:space-between;border-top:1px solid #1e293b;font-family:'SF Mono',monospace}
+.tc-foot a{color:#94a3b8;text-decoration:none;margin-right:11px}
+
+/* ═══════════ E: Newsletter (= Substack-y) ═══════════ */
+.ns{background:#fafaf9;color:#0a0a0a;font-family:'Iowan Old Style','Charter',Georgia,serif}
+.ns header{padding:20px 26px;display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid #e7e5e4}
+.ns-logo-w{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;font-family:-apple-system,sans-serif}
+.ns-brand{font-size:18px;font-weight:900;color:#0a0a0a;line-height:1;letter-spacing:-.005em}
+.ns-tag{font-family:-apple-system,sans-serif;font-size:11px;color:#78716c;margin-top:2px}
+.ns-sub{margin-left:auto;background:#0a0a0a;color:#fff;padding:9px 18px;font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;border-radius:5px;text-decoration:none}
+.ns-feat{padding:44px 26px;background:#fff;border-bottom:1px solid #e7e5e4;text-align:center}
+.ns-feat-eye{display:inline-block;background:#fef3c7;color:#92400e;font-size:10px;font-weight:800;padding:4px 11px;border-radius:11px;font-family:-apple-system,sans-serif;letter-spacing:.04em;margin-bottom:14px}
+.ns-feat-h{font-size:32px;font-weight:900;line-height:1.18;margin:0 0 12px;letter-spacing:-.015em;color:#0a0a0a;max-width:540px;margin-left:auto;margin-right:auto}
+.ns-feat-p{font-family:-apple-system,sans-serif;font-size:14px;color:#525252;max-width:480px;margin:0 auto 14px;line-height:1.6}
+.ns-feat-byline{font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;gap:9px;font-size:11px;color:#78716c}
+.ns-feat-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#f97316)}
+.ns-feat-byline b{color:#0a0a0a;font-weight:700}
+.ns-cat-bar{padding:14px 26px;background:#fff;display:flex;gap:8px;justify-content:center;border-bottom:1px solid #e7e5e4;overflow-x:auto;font-family:-apple-system,sans-serif;font-size:11.5px}
+.ns-cat-bar a{padding:5px 12px;border-radius:16px;background:#fafaf9;color:#525252;text-decoration:none;font-weight:600;border:1px solid #e7e5e4;white-space:nowrap}
+.ns-cat-bar a.active{background:#f97316;color:#fff;border-color:#f97316}
+.ns-grid{padding:22px 26px;display:grid;grid-template-columns:repeat(2,1fr);gap:18px;background:#fafaf9}
+.ns-card{background:#fff;border:1px solid #e7e5e4;border-radius:11px;overflow:hidden}
+.ns-card-img{height:130px}
+.ns-card-img.c1{background:linear-gradient(135deg,#84cc16,#4d7c0f)}
+.ns-card-img.c2{background:linear-gradient(135deg,#06b6d4,#0e7490)}
+.ns-card-bd{padding:14px 17px}
+.ns-card-cat{font-family:-apple-system,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;margin-bottom:5px}
+.ns-card-h{font-size:16px;font-weight:800;line-height:1.3;margin:0 0 7px;letter-spacing:-.005em;color:#0a0a0a}
+.ns-card-p{font-family:-apple-system,sans-serif;font-size:11.5px;color:#525252;line-height:1.55;margin:0 0 9px}
+.ns-card-meta{font-family:-apple-system,sans-serif;font-size:10px;color:#a8a29e}
+.ns-about{padding:24px 26px;background:#fff;border-top:1px solid #e7e5e4;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.ns-about-av{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;flex-shrink:0;font-family:-apple-system,sans-serif}
+.ns-about h3{font-size:15px;font-weight:900;margin:0 0 4px;color:#0a0a0a;letter-spacing:-.005em}
+.ns-about p{font-family:-apple-system,sans-serif;font-size:12px;color:#525252;line-height:1.6;margin:0}
+.ns-foot{font-family:-apple-system,sans-serif;padding:18px 26px;background:#fafaf9;font-size:10.5px;color:#78716c;display:flex;justify-content:space-between;border-top:1px solid #e7e5e4}
+.ns-foot a{color:#525252;text-decoration:none;margin-right:11px}
+
+@media (max-width:780px){
+  .mi-feat,.mg-feat,.tc-feat{grid-template-columns:1fr}
+  .mi-grid,.mg-grid,.tc-grid{grid-template-columns:repeat(2,1fr)}
+  .fr-grid,.ns-grid{grid-template-columns:1fr}
+}
+</style>
+</head><body>
+
+<div class="wrap">
+
+  <div class="intro">
+    <h1>🎨 5 テンプレート 全部 — SEO + 非 AI 著者 装備</h1>
+    <p>
+      Minimal / Magazine / Friendly / Tech Docs / Newsletter の 5 テンプレを、 すべて<b>編集部 byline + Breadcrumb + About + 業界カテゴリ + Schema</b>装備で見せます。 各テンプレに「サンプル メディア」 を充てて使い分けが分かるように。
+    </p>
+    <div class="note">
+      💡 サイト diagnose 結果 (= 業種 / トーン) に応じて自動で最適なテンプレを推奨。 ユーザは <b>Wizard Step 3 で変更可</b>。
+    </div>
+  </div>
+
+  <!-- ═══════════ Minimal ═══════════ -->
+  <div class="section s-minimal">
+    <div class="section-h">
+      <div class="section-num">A</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">DEFAULT</div>
+        <div class="section-h-ti">A. Minimal — 採用助成金マガジン</div>
+        <div class="section-h-sub">クリーン + teal アクセント · あらゆる業種に汎用、 default 推奨</div>
+      </div>
+      <div class="section-h-cost">汎用 / SaaS / 個人事業</div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">.../media/saiyo-josei</div></div>
+      <div class="frame-body">
+        <div class="mi">
+          <header>
+            <div class="mi-brand"><div class="mi-logo">採</div><div class="mi-brand-bd"><div class="nm">採用助成金マガジン</div><div class="tag">中小企業の人事担当者向け</div></div></div>
+            <nav class="mi-nav"><a>記事一覧</a><a>編集部</a><a class="sub">無料相談 →</a></nav>
+          </header>
+          <div class="b-bc">ホーム<span class="arr">›</span>採用助成金<span class="arr">›</span>最新</div>
+          <div class="mi-feat">
+            <div class="mi-feat-img"></div>
+            <div>
+              <div class="b-feat-eye" style="color:#0d4f4a">▌ 特集 · 採用助成金</div>
+              <h1 class="mi-feat-h">採用助成金 期限 2026 — 申請を成功させる 8 制度 完全ガイド</h1>
+              <p class="mi-feat-tx">2026 年に申請可能な助成金 8 つを、 対象条件 / 金額 / 期限まで網羅。 200 社支援の編集部が実務目線で。</p>
+              <div class="b-byline-row"><div class="b-av" style="background:#0d4f4a">採</div><div><b>編集部</b> · 2026年6月1日 · 17 分</div></div>
+            </div>
+          </div>
+          <div class="mi-cat-bar"><a class="active">最新記事</a><a>採用助成金</a><a>働き方改革</a><a>IT 補助金</a><a>人材育成</a></div>
+          <div class="mi-grid">
+            <div class="mi-card"><div class="mi-card-img c1"></div><div class="mi-card-bd"><div class="mi-card-cat">▌ 採用助成金</div><h3 class="mi-card-h">中小企業 採用助成金 完全マニュアル</h3><div class="mi-card-meta">編集部 · 5/30 · 12 分</div></div></div>
+            <div class="mi-card"><div class="mi-card-img c2"></div><div class="mi-card-bd"><div class="mi-card-cat">▌ 働き方改革</div><h3 class="mi-card-h">DTC ブランドの始め方 0→1 を 90 日で</h3><div class="mi-card-meta">編集部 · 5/28 · 15 分</div></div></div>
+            <div class="mi-card"><div class="mi-card-img c3"></div><div class="mi-card-bd"><div class="mi-card-cat">▌ IT 補助金</div><h3 class="mi-card-h">SaaS 集客 7 戦略</h3><div class="mi-card-meta">編集部 · 5/25 · 11 分</div></div></div>
+          </div>
+          <div class="mi-about">
+            <div class="mi-about-av">編</div>
+            <div><h3>採用助成金マガジン編集部</h3><p>中小企業 200 社の助成金申請を支援。 人事 / 社労士経験者 5 名のチーム。 厚労省を一次ソースに最新情報を更新。</p></div>
+          </div>
+          <footer class="mi-foot"><div>© 2026 採用助成金マガジン</div><div><a>編集方針</a><a>運営者情報</a><a>プライバシー</a></div></footer>
+        </div>
+      </div>
+    </div>
+    <div class="seo-row">
+      <div class="seo-cell"><b>強み</b><span class="tag-pro">クリーン</span> 汎用性 ★★★</div>
+      <div class="seo-cell"><b>合うサイト</b>SaaS / 個人 / 専門 SMB / 美容 / 治療院</div>
+      <div class="seo-cell"><b>SEO 装備</b><span class="tag-pro">3 schema</span> + TOC + bio</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Magazine ═══════════ -->
+  <div class="section s-magazine">
+    <div class="section-h">
+      <div class="section-num">B</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">EDITORIAL / NYT-STYLE</div>
+        <div class="section-h-ti">B. Magazine — 資金繰り総研</div>
+        <div class="section-h-sub">serif + 赤アクセント · 権威感 + 信頼感、 BtoB 専門メディア向け</div>
+      </div>
+      <div class="section-h-cost">金融 / 士業 / 経営 / BtoB</div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">.../media/shikinguri-souken</div></div>
+      <div class="frame-body">
+        <div class="mg">
+          <header><div class="mg-brand">資金繰り総研</div><nav class="mg-nav"><a>資金調達</a><a>ファクタリング</a><a>編集部</a><a class="sub">無料相談 →</a></nav></header>
+          <div class="mg-eyebrow"><span>📅 2026年6月2日 · 全 142 記事</span><span>VOL. 4 · NO. 142</span></div>
+          <div class="mg-feat">
+            <div class="mg-feat-img"></div>
+            <div>
+              <div class="mg-feat-cat">▌ FEATURED · 資金調達</div>
+              <h1 class="mg-feat-h">ファクタリング徹底比較 2026 — 経営者が押さえる 12 業者の手数料率</h1>
+              <p class="mg-feat-tx">主要 12 社のファクタリング手数料、 入金スピード、 審査基準を一次データで比較。 中小企業の資金繰り改善の決定版。</p>
+              <p class="mg-feat-byline">— <b>資金繰り総研 編集部</b> · 2026年6月1日 · 読了 19 分</p>
+            </div>
+          </div>
+          <div class="mg-grid-h"><a class="active">最新</a><a>資金調達</a><a>ファクタリング</a><a>節税</a><a>経営戦略</a></div>
+          <div class="mg-grid">
+            <div><div class="mg-card-img c1"></div><div class="mg-card-cat">▌ FACTORING</div><h2 class="mg-card-h">ファクタリング契約書 必ず確認すべき 7 条項</h2><p class="mg-card-meta">— 編集部 / 5月30日 · 14 分</p></div>
+            <div><div class="mg-card-img c2"></div><div class="mg-card-cat">▌ 経営戦略</div><h2 class="mg-card-h">M&A 売却時の最適タイミング — 業績下降前か後か</h2><p class="mg-card-meta">— 編集部 / 5月28日 · 22 分</p></div>
+            <div><div class="mg-card-img c3"></div><div class="mg-card-cat">▌ 税務</div><h2 class="mg-card-h">2026 年度 改正税制 中小企業への影響 完全解説</h2><p class="mg-card-meta">— 編集部 / 5月25日 · 18 分</p></div>
+          </div>
+          <div class="mg-about">
+            <div class="mg-about-av">資</div>
+            <div><h3>資金繰り総研 編集部</h3><p>中小企業経営者向け資金調達情報メディア。 編集部は税理士 / 中小企業診断士 / 元金融機関出身者 8 名で構成。 累計 1,200 社の資金繰り改善を支援。</p></div>
+          </div>
+          <footer class="mg-foot"><div>© 2026 資金繰り総研</div><div><a>編集方針</a><a>運営者</a><a>取材依頼</a></div></footer>
+        </div>
+      </div>
+    </div>
+    <div class="seo-row">
+      <div class="seo-cell"><b>強み</b><span class="tag-pro">権威感</span> 専門性 ★★★</div>
+      <div class="seo-cell"><b>合うサイト</b>金融 / 士業 / コンサル / 投資 / BtoB</div>
+      <div class="seo-cell"><b>SEO 装備</b><span class="tag-pro">3 schema</span> + 一次データ訴求</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Friendly ═══════════ -->
+  <div class="section s-friendly">
+    <div class="section-h">
+      <div class="section-num">C</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">FRIENDLY · DTC / COACHING</div>
+        <div class="section-h-ti">C. Friendly Blog — グローボタニカル</div>
+        <div class="section-h-sub">温かい黄色 + 丸み · DTC / 美容 / コーチング / 個人ブランド向け</div>
+      </div>
+      <div class="section-h-cost">DTC / 美容 / 個人 / コーチング</div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">.../media/glow-botanicals</div></div>
+      <div class="frame-body">
+        <div class="fr">
+          <header><div class="fr-logo-w">🌿</div><div><div class="fr-brand">グローボタニカル ジャーナル</div><div class="fr-tag">大人の肌悩みに寄り添う、 植物コスメの読み物</div></div><a class="fr-sub">商品を見る →</a></header>
+          <div class="b-bc" style="background:#fef9e8;border-color:#fef3c7;color:#92621c"><a style="color:#92621c">ホーム</a><span class="arr">›</span><a style="color:#92621c">スキンケア</a><span class="arr">›</span>最新</div>
+          <div class="fr-feat">
+            <span class="fr-feat-tag">✨ 編集部の今月のおすすめ</span>
+            <h1 class="fr-feat-h">敏感肌の私が 30 日試した、 ボタニカル美容オイル ベスト 5</h1>
+            <p class="fr-feat-p">編集部スタッフ 3 名が 30 日間、 ボタニカル美容オイル 12 種類を実際に使用。 肌タイプ別の使用感を本音レビュー。</p>
+            <p class="fr-feat-byline"><b>ジャーナル編集部</b> · 2026年6月1日 · 12 分</p>
+          </div>
+          <div class="fr-cat-bar"><a class="active">最新</a><a>スキンケア</a><a>植物成分</a><a>ライフスタイル</a><a>レビュー</a></div>
+          <div class="fr-grid">
+            <div class="fr-card"><div class="fr-card-img c1"></div><div class="fr-card-bd"><div class="fr-card-cat">レビュー</div><h3 class="fr-card-h">ローズヒップオイル 5 種比較 — 30 代女性編集部が試した</h3><div class="fr-card-meta">編集部 · 5月30日 · 9 分</div></div></div>
+            <div class="fr-card"><div class="fr-card-img c2"></div><div class="fr-card-bd"><div class="fr-card-cat">植物成分</div><h3 class="fr-card-h">アロエベラの肌への効果 — 科学的根拠と歴史</h3><div class="fr-card-meta">編集部 · 5月28日 · 11 分</div></div></div>
+          </div>
+          <div class="fr-about">
+            <div class="fr-about-av">🌿</div>
+            <div><h3>グローボタニカル ジャーナル編集部</h3><p>植物由来コスメを愛する 7 人の編集チーム。 元美容部員 / コスメ商品開発者 / アロマセラピストが、 自分たちが本気で試したものだけを紹介します。</p></div>
+          </div>
+          <footer class="fr-foot"><div>© 2026 Glow Botanicals</div><div><a>編集方針</a><a>会社情報</a><a>お問い合わせ</a></div></footer>
+        </div>
+      </div>
+    </div>
+    <div class="seo-row">
+      <div class="seo-cell"><b>強み</b><span class="tag-pro">親しみ</span> + 体験訴求 ★★★</div>
+      <div class="seo-cell"><b>合うサイト</b>DTC / 美容 / コーチング / ライフスタイル</div>
+      <div class="seo-cell"><b>SEO 装備</b><span class="tag-pro">3 schema</span> + Review schema 追加可</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Tech Docs ═══════════ -->
+  <div class="section s-tech">
+    <div class="section-h">
+      <div class="section-num">D</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">TECH / SAAS / DEVELOPER</div>
+        <div class="section-h-ti">D. Tech Docs — Quants エンジニアブログ</div>
+        <div class="section-h-sub">ダーク + mono · SaaS / 技術メディア / 開発者向け</div>
+      </div>
+      <div class="section-h-cost">SaaS / 開発者ツール / fintech</div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">.../media/quants-blog</div></div>
+      <div class="frame-body">
+        <div class="tc">
+          <header><div class="tc-logo-w">{}</div><div><div class="tc-brand">Quants.engineering</div><div class="tc-tag">// data, infra, observability</div></div><nav class="tc-nav"><a>posts</a><a>changelog</a><a>about</a><a class="sub">$ subscribe</a></nav></header>
+          <div class="tc-tag-row"><span>VOL. 1 / 087</span><span>06.02.2026</span><b>// LATEST</b></div>
+          <div class="tc-feat">
+            <div class="tc-feat-img"></div>
+            <div>
+              <div class="tc-feat-cat">// observability</div>
+              <h1 class="tc-feat-h">Prometheus + Grafana 2026 完全構築 — 200 ms 以下を維持する設計</h1>
+              <p class="tc-feat-tx">本番環境で 1,000+ pods を監視する Quants の Observability スタックを、 Helm chart + Terraform 構成と共に詳解。</p>
+              <p class="tc-feat-byline">— <b>Quants Engineering Team</b> · 06.01.2026 · 24 min</p>
+            </div>
+          </div>
+          <div class="tc-cat-bar"><a class="active">// LATEST</a><a>// observability</a><a>// data</a><a>// infra</a><a>// tutorials</a></div>
+          <div class="tc-grid">
+            <div class="tc-card"><div class="tc-card-img c1"></div><div class="tc-card-bd"><div class="tc-card-cat">// DATA</div><h3 class="tc-card-h">PostgreSQL 15 → 16 アップグレード 実践記</h3><div class="tc-card-meta">— team / 05.30 / 18 min</div></div></div>
+            <div class="tc-card"><div class="tc-card-img c2"></div><div class="tc-card-bd"><div class="tc-card-cat">// INFRA</div><h3 class="tc-card-h">Karpenter で EKS Node コストを 40% 削減した話</h3><div class="tc-card-meta">— team / 05.28 / 14 min</div></div></div>
+            <div class="tc-card"><div class="tc-card-img c3"></div><div class="tc-card-bd"><div class="tc-card-cat">// TUTORIAL</div><h3 class="tc-card-h">Rust で書く 軽量 metrics exporter — 入門</h3><div class="tc-card-meta">— team / 05.25 / 22 min</div></div></div>
+          </div>
+          <div class="tc-about">
+            <div class="tc-about-av">{}</div>
+            <div><h3>Quants Engineering Team</h3><p>金融データ分析プラットフォーム Quants の開発チーム。 Site Reliability / Data Platform / ML Infra の 12 名で構成。 本番運用の実体験を共有します。</p></div>
+          </div>
+          <footer class="tc-foot"><div>// © 2026 Quants Inc</div><div><a>contact</a><a>github</a><a>privacy</a></div></footer>
+        </div>
+      </div>
+    </div>
+    <div class="seo-row">
+      <div class="seo-cell"><b>強み</b><span class="tag-pro">技術権威</span> 開発者愛 ★★★</div>
+      <div class="seo-cell"><b>合うサイト</b>SaaS / dev tools / fintech / 技術 BtoB</div>
+      <div class="seo-cell"><b>SEO 装備</b><span class="tag-pro">3 schema</span> + Code schema 追加可</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Newsletter ═══════════ -->
+  <div class="section s-newsletter">
+    <div class="section-h">
+      <div class="section-num">E</div>
+      <div class="section-h-text">
+        <div class="section-h-eye">NEWSLETTER / SUBSTACK-STYLE</div>
+        <div class="section-h-ti">E. Newsletter — 起業家ノート</div>
+        <div class="section-h-sub">大型 hero + serif · 個人ブランド / オピニオン / コーチング</div>
+      </div>
+      <div class="section-h-cost">個人ブランド / オピニオン / コンサル</div>
+    </div>
+    <div class="frame">
+      <div class="frame-bar"><span></span><span></span><span></span><div class="url">.../media/founder-notes</div></div>
+      <div class="frame-body">
+        <div class="ns">
+          <header><div class="ns-logo-w">F</div><div><div class="ns-brand">起業家ノート</div><div class="ns-tag">創業 5 年目までに必要な思考の癖</div></div><a class="ns-sub">購読する →</a></header>
+          <div class="ns-feat">
+            <span class="ns-feat-eye">⚡ THIS WEEK'S ISSUE</span>
+            <h1 class="ns-feat-h">PMF 前に「営業」 と「マーケ」 を 分けてはいけない</h1>
+            <p class="ns-feat-p">創業期に「営業」 と「マーケ」 を別の人間に分けると、 学習速度が半分になる。 私が 3 社で失敗した理由と、 4 社目で学んだ統合の作法。</p>
+            <div class="ns-feat-byline"><div class="ns-feat-av"></div><span><b>佐藤 拓海</b> · 2026年6月1日 · 11 分</span></div>
+          </div>
+          <div class="ns-cat-bar"><a class="active">All</a><a>PMF</a><a>営業 × マーケ</a><a>採用</a><a>資金調達</a></div>
+          <div class="ns-grid">
+            <div class="ns-card"><div class="ns-card-img c1"></div><div class="ns-card-bd"><div class="ns-card-cat">PMF</div><h3 class="ns-card-h">「ユーザインタビュー」 の質問 7 つを変えた話</h3><p class="ns-card-p">ユーザインタビューで「使いやすいですか?」 を聞いてはいけない理由と、 代わりに聞くべき 7 つの質問。</p><div class="ns-card-meta">佐藤 拓海 · 5月30日 · 13 分</div></div></div>
+            <div class="ns-card"><div class="ns-card-img c2"></div><div class="ns-card-bd"><div class="ns-card-cat">採用</div><h3 class="ns-card-h">初期 5 人の採用で 私が見た「未来の予言者」</h3><p class="ns-card-p">創業期の採用で、 「給与で釣る」 でも「ビジョンで燃やす」 でもない第三の方法を見つけた話。</p><div class="ns-card-meta">佐藤 拓海 · 5月28日 · 17 分</div></div></div>
+          </div>
+          <div class="ns-about">
+            <div class="ns-about-av">F</div>
+            <div><h3>佐藤 拓海 / 起業家ノート</h3><p>3 社 売却、 1 社 上場の連続起業家。 月曜朝に届く、 創業者向けノートを毎週執筆。 累計 5,400 名が購読中。</p></div>
+          </div>
+          <footer class="ns-foot"><div>© 2026 起業家ノート</div><div><a>About</a><a>過去アーカイブ</a><a>RSS</a></div></footer>
+        </div>
+      </div>
+    </div>
+    <div class="seo-row">
+      <div class="seo-cell"><b>強み</b><span class="tag-pro">個人ブランド</span> オピニオン ★★★</div>
+      <div class="seo-cell"><b>合うサイト</b>個人ブランド / オピニオン / コンサル</div>
+      <div class="seo-cell"><b>SEO 装備</b><span class="tag-pro">3 schema</span> + Person schema 追加可</div>
+    </div>
+  </div>
+
+  <!-- 推奨マトリクス -->
+  <div class="intro" style="background:linear-gradient(135deg,#fff,#fafaf7)">
+    <h1 style="font-size:17px">📊 業種別 推奨 テンプレート</h1>
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:12px">
+      <thead><tr style="background:#fafaf7"><th style="padding:9px 11px;text-align:left;font-weight:800;border-bottom:1px solid #e5e5e5">ユーザの業種</th><th style="padding:9px 11px;text-align:left;font-weight:800;border-bottom:1px solid #e5e5e5">推奨テンプレート</th><th style="padding:9px 11px;text-align:left;font-weight:800;border-bottom:1px solid #e5e5e5">理由</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5"><b>SaaS / 個人事業</b> (汎用)</td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">A. Minimal</td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">クリーン + 読みやすい (= default 推奨)</td></tr>
+        <tr><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5"><b>金融 / 士業 / 経営</b></td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">B. Magazine</td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">権威感 + 信頼性 (= NYT スタイル)</td></tr>
+        <tr><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5"><b>DTC / 美容 / コーチング</b></td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">C. Friendly</td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">温かみ + 体験訴求</td></tr>
+        <tr><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5"><b>SaaS / 開発者 / 技術</b></td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">D. Tech Docs</td><td style="padding:7px 11px;border-bottom:1px solid #e5e5e5">ダーク + mono (= 技術権威感)</td></tr>
+        <tr><td style="padding:7px 11px"><b>個人ブランド / コンサル</b></td><td style="padding:7px 11px">E. Newsletter</td><td style="padding:7px 11px">大型 hero + 個人著者 (= Substack)</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px;font-size:12.5px;color:#525252;line-height:1.7;background:#fafaf7;padding:13px 15px;border-radius:7px;border-left:3px solid #0d4f4a">
+      <b>📌 共通装備</b> (= 全 5 テンプレに自動 inject):<br>
+      • Article + BreadcrumbList + Organization schema (= 3 種)<br>
+      • 編集部 byline + bio + About section<br>
+      • Breadcrumb navigation + 業界カテゴリ命名<br>
+      • 公開日 + 最終更新日 + 読了時間<br>
+      • TOC (= 個別記事ページ)<br>
+      • Footer の「Powered by MY AI Agent」 削除<br>
+      • 共通 helper で各テンプレが同じ E-E-A-T シグナルを持つ
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
+</content>
+</invoke>

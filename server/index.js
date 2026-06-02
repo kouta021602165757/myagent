@@ -15739,7 +15739,7 @@ async function _mediaGenerateArticle(agent, params){
     + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
     + '\n上記の要件で記事を 1 本 JSON で出力してください。';
 
-  if(!CLAUDE_KEY) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
+  if(!ANTHROPIC) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
   // 🐛 Phase 4 bugfix: Haiku 4.5 は max output 8000、 Sonnet 4.6 は 16000。
   const modelMaxOut = useHaiku ? 8000 : 16000;
   const max_tokens  = Math.min(modelMaxOut, Math.round(targetChars * 1.6));
@@ -15752,7 +15752,7 @@ async function _mediaGenerateArticle(agent, params){
   const systemBlock = useCache
     ? [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }]
     : systemText;
-  const headers = { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+  const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
   if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
   let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
     { model, max_tokens, system: systemBlock, messages: [{ role: 'user', content: userText }] });
@@ -16327,11 +16327,11 @@ async function _mediaAutoShareSns(user, agent, post, publicUrl){
   // AI で 投稿コピー生成 (= プラットフォーム別、 簡易 1 つで OK)
   let snsText = (post.title || '') + '\n\n' + (post.excerpt || '').slice(0, 100) + '\n\n' + publicUrl + '?utm_source=sns&utm_medium=auto&utm_campaign=' + (agent.media.slug || '');
   try {
-    if(CLAUDE_KEY){
+    if(ANTHROPIC){
       const prompt = '以下の記事を X / Twitter で告知する投稿文を 1 つ作成。 140 字以内、 行間あり、 ハッシュタグ 2-3 個、 URL なし (= 別途自動付与)。\n\n'
         + 'タイトル: ' + post.title + '\n' + (post.excerpt ? '概要: ' + post.excerpt : '') + '\n\n出力は本文のみ、 引用符不要。';
       const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
+        { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
         { model: 'claude-haiku-4-5-20251001', max_tokens: 300, messages: [{ role: 'user', content: prompt }] }
       );
       if(r.s === 200 && r.d.content){
@@ -16358,7 +16358,7 @@ async function executeResearchKeywordTool(user, agent, input){
   if(!agent.site_url) return { error: 'site_url not set' };
   const topic = String((input && input.topic) || '').trim();
   const mode = (input && input.mode === 'aeo') ? 'aeo' : 'seo';
-  if(!CLAUDE_KEY) return { error: 'not_configured: ANTHROPIC_API_KEY not set' };
+  if(!ANTHROPIC) return { error: 'not_configured: ANTHROPIC_API_KEY not set' };
   const sitePreview = await _fetchSitePreview(agent).catch(() => null);
   const siteCtx = sitePreview && sitePreview.content ? sitePreview.content.slice(0, 1500) : '';
   const prompt = ''
@@ -16404,7 +16404,7 @@ async function executeResearchKeywordTool(user, agent, input){
     const systemBlock = useCache
       ? [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }]
       : systemText;
-    const headers = { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+    const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
     if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
     let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
       { model: 'claude-haiku-4-5-20251001', max_tokens: 3000, system: systemBlock, messages: [{ role: 'user', content: userText }] });
@@ -17846,7 +17846,7 @@ function _startMorningProposalCron(){
 
 // 1 user × 1 agent に対し、 next-action を AI が選定 → chat history に push
 async function _proposeOneMorningAction(user, agent){
-  if(!CLAUDE_KEY) return;
+  if(!ANTHROPIC) return;
   const recent = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft').slice(0, 10);
   const last7days = recent.filter(p => Date.parse(p.published_at||0) > Date.now() - 7*86400000).length;
   const totalPublished = recent.length;
@@ -17895,7 +17895,7 @@ async function _proposeOneMorningAction(user, agent){
 
   try {
     const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
+      { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
       { model: 'claude-haiku-4-5-20251001', max_tokens: 600, messages: [{ role: 'user', content: prompt }] }
     );
     if(r.s >= 400) return;
@@ -18033,7 +18033,7 @@ async function _autoRewriteOneArticle(user, agent, postMeta){
   const fullMap = user.media_posts_full || {};
   const oldBody = (fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '';
   if(!oldBody) return;
-  if(!CLAUDE_KEY) return;
+  if(!ANTHROPIC) return;
   // 🚀 Phase 1+2: model 自動選択 + Prompt Caching
   //   元記事が短文 (= 8000 字未満) なら Haiku、 長文は Sonnet 維持
   const oldChars = oldBody.replace(/<[^>]+>/g, '').length;
@@ -18062,7 +18062,7 @@ async function _autoRewriteOneArticle(user, agent, postMeta){
   const systemBlock = useCache
     ? [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }]
     : systemText;
-  const headers = { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+  const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
   if(useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
   let r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
     { model, max_tokens, system: systemBlock, messages: [{ role: 'user', content: userText }] });
@@ -23518,7 +23518,7 @@ async function handleAPI(req,res,pathname,method,ip){
     } catch(e){ console.warn('[rewrite-gsc]', e.message); }
 
     // Claude Sonnet にリライト依頼
-    if(!CLAUDE_KEY) return jres(res, 503, { error: 'AI key not configured' });
+    if(!ANTHROPIC) return jres(res, 503, { error: 'AI key not configured' });
     const prompt = ''
       + '以下の既存記事をリライトしてください。 URL は同じなので、 タイトルや excerpt も改善版に差し替えます。\n\n'
       + '【既存タイトル】' + postMeta.title + '\n'
@@ -23534,7 +23534,7 @@ async function handleAPI(req,res,pathname,method,ip){
       + '{ "title": "改善版タイトル", "excerpt": "120 字以内", "body_html": "<h2>...</h2>..." }';
     try {
       const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-        { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
+        { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-beta': 'prompt-caching-2024-07-31' },
         { model: 'claude-sonnet-4-6', max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }
       );
       if(r.s >= 400) return jres(res, 500, { error: _claudeErrorMessage(r) });

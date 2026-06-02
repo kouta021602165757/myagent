@@ -15688,6 +15688,11 @@ async function _mediaGenerateArticle(agent, params){
   const lpUrl = (agent.media && agent.media.lp_url) || agent.site_url || '';
   const categories = ((agent.media && agent.media.categories) || []).map(c => c.name).join(', ');
 
+  // 🚀 Phase 1+2: model 自動選択 (= 短文は Haiku、 長文は Sonnet)
+  //    targetChars 8000 未満 → Haiku で十分品質、 コスト 1/15
+  const useHaiku = targetChars < 8000 && !tpl.codeExamplesRequired;
+  const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
+
   // AEO 強制構造 (= 即効性 + AI 検索引用率 UP)
   const aeoRules = mode === 'aeo' || tpl.faqRequired ? [
     '- 🚀 AEO 強制: 各 H2 の冒頭 1-2 文 で結論を明示 (= AI 検索引用されやすい)',
@@ -15696,17 +15701,14 @@ async function _mediaGenerateArticle(agent, params){
     '- 🚀 AEO 強制: 数値・固有名詞・日付 を 散布 (= AI が引用しやすい)',
   ].join('\n') : '';
 
-  const prompt = ''
-    + '以下のキーワードについて、 業界編集部が書く 高品質な記事を 1 本作成してください。\n\n'
-    + '【キーワード】' + keyword + '\n'
-    + '【ターゲット読者】' + persona + '\n'
-    + '【メディア名】' + mediaName + '\n'
+  // 🚀 Phase 1: Prompt Caching 用に system / user 分離
+  //    system = 業種別 template ルール (= 同 vert で 5 分 cached → 90% off)
+  //    user = キーワード + persona など 動的部分
+  const systemText = ''
+    + '【ROLE】 あなたは業界編集部の編集長です。 SEO + ユーザ価値 + AEO 引用率 を 同時に最大化する記事を執筆します。\n\n'
     + '【検出業種】' + vert + ' (= ' + tpl.template + ')\n'
-    + (categories ? '【既存カテゴリ (= 必ずこの中から 1 つ 文字列完全一致 で選ぶ。 新カテゴリ発明禁止)】\n' + categories + '\n' : '')
-    + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
-    + '\n【業種別 記事要件】\n'
+    + '【業種別 記事要件】\n'
     + '- 型: ' + tpl.template + '\n'
-    + '- 目標文字数: 約 ' + targetChars + ' 文字\n'
     + '- 推奨 H2 章数: ' + tpl.h2Count + ' 個\n'
     + '- 必須セクション: ' + tpl.requiredSections.join(' / ') + '\n'
     + '- トーン: ' + tpl.tone + '\n'
@@ -15717,24 +15719,36 @@ async function _mediaGenerateArticle(agent, params){
     + '\n【共通ルール】\n'
     + '- 体験談的・実用的・データ的どれかの切り口\n'
     + '- 読者が次にすべき行動を 最後に提示\n'
-    + '- 🚨 重要: **業界編集部目線** で記述。 「AI が」「AI チームが」 等の AI 言及は文章内禁止\n'
+    + '- 🚨 業界編集部目線で記述。 「AI が」「AI チームが」 等の AI 言及禁止 (= E-E-A-T 確保)\n'
     + '- 一次ソース (= 政府発表 / 業界統計 / 実体験) を引用するスタンス\n'
     + '\n【出力フォーマット】 必ず以下の JSON だけを返す。 説明・前置き禁止:\n'
     + '{\n'
     + '  "title": "60 文字以内、 キーワード含む、 click したくなる",\n'
     + '  "excerpt": "120 文字以内、 記事の core value を要約",\n'
-    + '  "category_name": "' + (categories ? '上記既存カテゴリから 必ず 1 つ 文字列完全一致 で選ぶ' : 'この記事のカテゴリ名を 1 単語で') + '",\n'
-    + '  "tags": ["タグ1","タグ2","タグ3"],  // 多重カテゴリ化、 2-5 個\n'
+    + '  "category_name": "既存カテゴリから 必ず 1 つ 文字列完全一致 で選ぶ (= 新規発明禁止)",\n'
+    + '  "tags": ["タグ1","タグ2","タグ3"],\n'
     + '  "body_html": "<h2>...</h2><p>...</p>... の連続。 HTML 整形済み"\n'
-    + '}\n';
+    + '}';
+
+  const userText = ''
+    + '【キーワード】' + keyword + '\n'
+    + '【ターゲット読者】' + persona + '\n'
+    + '【メディア名】' + mediaName + '\n'
+    + '【目標文字数】 約 ' + targetChars + ' 文字\n'
+    + (categories ? '【既存カテゴリ】 ' + categories + '\n' : '')
+    + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
+    + '\n上記の要件で記事を 1 本 JSON で出力してください。';
 
   if(!CLAUDE_KEY) throw new Error('not_configured: ANTHROPIC_API_KEY not set');
   const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json',
+      'anthropic-beta': 'prompt-caching-2024-07-31' },
     {
-      model: 'claude-sonnet-4-6',
-      max_tokens: 14000,
-      messages: [{ role: 'user', content: prompt }],
+      model,
+      max_tokens: Math.min(16000, Math.round(targetChars * 1.6)),  // 業種別に動的調整
+      // 🚀 Prompt Caching: system block の最後に cache_control = ephemeral
+      system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: userText }],
     });
   if(r.s >= 400){
     const err = _claudeErrorMessage(r);
@@ -16343,9 +16357,31 @@ async function executeResearchKeywordTool(user, agent, input){
     + '- competition は low (= 低競合 推奨) / mid / high\n'
     + '- 重複や同義 KW を避ける、 全部別の角度から';
   try {
+    // 🚀 Phase 1+2: Sonnet → Haiku (= KW 候補生成は Haiku で十分品質、 コスト 1/15)
+    //   + Prompt Caching: system に共通部分、 user に動的部分
+    const systemText = ''
+      + '【ROLE】 あなたは SEO 戦略家です。 サイトに最適な検索キーワード候補を 10 件提案します。\n\n'
+      + '【出力フォーマット】 必ず以下の JSON だけを返す。 説明・前置き禁止:\n'
+      + '{\n'
+      + '  "keywords": [\n'
+      + '    { "keyword": "ターゲット KW", "volume_est": 1500, "competition": "low|mid|high",\n'
+      + '      "title": "推奨記事タイトル (= 60 字以内、 click したくなる)" }\n'
+      + '  ]\n'
+      + '}\n\n'
+      + '【ルール】\n'
+      + '- volume_est は月間検索数の推定整数\n'
+      + '- competition は low (= 低競合 推奨) / mid / high\n'
+      + '- 重複や同義 KW を避ける、 全部別の角度から\n';
+    const userText = prompt;
     const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
-      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      { model: 'claude-sonnet-4-6', max_tokens: 3000, messages: [{ role: 'user', content: prompt }] }
+      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json',
+        'anthropic-beta': 'prompt-caching-2024-07-31' },
+      {
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 3000,
+        system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: userText }],
+      }
     );
     if(r.s >= 400) return { error: _claudeErrorMessage(r) };
     const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
@@ -23912,7 +23948,8 @@ async function handleAPI(req,res,pathname,method,ip){
     } catch(e){ console.warn('[kw-sug] site preview failed:', e.message); }
 
     const prompt = _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData });
-    const info = _resolveModelInfo('sonnet');
+    // 🚀 Phase 1+2: Sonnet → Haiku (= KW score 算出は Haiku で十分、 コスト 1/15)
+    const info = _resolveModelInfo('haiku');
     let rawText = '';
     let parsed = null;
     try {
@@ -23921,7 +23958,8 @@ async function handleAPI(req,res,pathname,method,ip){
         rawText = (r && r.content && r.content[0] && r.content[0].text || '').trim();
       } else if(ANTHROPIC){
         const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
-          {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01'},
+          {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01',
+           'anthropic-beta':'prompt-caching-2024-07-31'},
           { model: info.modelId, max_tokens: 3000, messages:[{role:'user', content: prompt}] },
           { timeout: 45000 });
         if(r.s !== 200){

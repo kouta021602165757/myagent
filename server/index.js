@@ -7652,12 +7652,46 @@ async function _fetchSitePreview(agent){
         h2s.length && '【h2】 ' + h2s.join(' / '),
         body && '【body excerpt】 ' + body,
       ].filter(Boolean).join('\n');
+
+      // 📰 既存メディア / プラットフォーム検出 (= WP / Ghost / Webflow / 等)
+      //    UX 分岐用: メディア型 + 既存 CMS 検出時に 専用 onboarding を表示
+      const platform = _detectSitePlatform(html);
+      agent.site_platform = platform;
       agent.site_preview = { title, content, fetched_at: new Date().toISOString() };
     }
   } catch(e){
     console.warn('[site-preview] fetch failed:', agent.site_url, e.message);
   }
   return { title, content };
+}
+
+// HTML から CMS / プラットフォームを検出
+// 戻り値: { kind: 'wordpress'|'ghost'|'webflow'|'shopify'|'wix'|'squarespace'|'unknown',
+//          confidence: 'high'|'mid'|'low', signals: [...] }
+function _detectSitePlatform(html){
+  if(typeof html !== 'string' || !html) return { kind: 'unknown', confidence: 'low', signals: [] };
+  const signals = [];
+  let kind = 'unknown';
+  let confidence = 'low';
+  // meta generator (= 一番信頼できる)
+  const gen = html.match(/<meta[^>]+name=["']generator["'][^>]+content=["']([^"']+)["']/i);
+  const genVal = gen ? String(gen[1]).toLowerCase() : '';
+  if(/wordpress/i.test(genVal)){ kind = 'wordpress'; confidence = 'high'; signals.push('meta-generator'); }
+  else if(/ghost/i.test(genVal)){ kind = 'ghost'; confidence = 'high'; signals.push('meta-generator'); }
+  else if(/webflow/i.test(genVal)){ kind = 'webflow'; confidence = 'high'; signals.push('meta-generator'); }
+  else if(/wix/i.test(genVal)){ kind = 'wix'; confidence = 'high'; signals.push('meta-generator'); }
+  else if(/squarespace/i.test(genVal)){ kind = 'squarespace'; confidence = 'high'; signals.push('meta-generator'); }
+  else if(/shopify/i.test(genVal)){ kind = 'shopify'; confidence = 'high'; signals.push('meta-generator'); }
+  // path / asset signature (= meta 無しでも判定)
+  if(kind === 'unknown'){
+    if(/\/wp-(content|includes|json)\//.test(html)){ kind = 'wordpress'; confidence = 'mid'; signals.push('wp-path'); }
+    else if(/cdn\.shopify\.com|shopify-checkout/.test(html)){ kind = 'shopify'; confidence = 'mid'; signals.push('shopify-cdn'); }
+    else if(/static\.parastorage\.com|wix\.com\//i.test(html)){ kind = 'wix'; confidence = 'mid'; signals.push('wix-cdn'); }
+    else if(/squarespace\.com\/?asset|squarespace-cdn/i.test(html)){ kind = 'squarespace'; confidence = 'mid'; signals.push('sq-cdn'); }
+    else if(/webflow\.com\/?asset|webflow\.io/i.test(html)){ kind = 'webflow'; confidence = 'mid'; signals.push('webflow-cdn'); }
+    else if(/<link[^>]+href=["'][^"']*ghost\.io/i.test(html)){ kind = 'ghost'; confidence = 'mid'; signals.push('ghost-cdn'); }
+  }
+  return { kind, confidence, signals };
 }
 
 // 🔍 Anthropic API エラーを user-friendly な日本語メッセージに変換

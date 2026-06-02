@@ -6116,6 +6116,24 @@ input,textarea{font-family:var(--sans);}
 /* toolbar 区切り — セットアップ動線 / 運用動線 / 管理 のグルーピングを視覚化 */
 .ct-tool-sep{display:inline-block;width:1px;height:18px;background:var(--wire2);margin:0 4px;vertical-align:middle;flex-shrink:0;align-self:center;}
 @media (max-width:560px){.ct-tool-sep{display:none;}}
+/* 📰 メディア型サイト 専用 hero (= 既存メディア向け 4 価値カード) */
+.meh-card{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:14px;padding:18px 20px;margin-bottom:14px;max-width:880px;margin-left:auto;margin-right:auto;box-shadow:0 6px 24px rgba(13,79,74,.2)}
+.meh-eye{font-size:10px;font-weight:800;opacity:.85;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap}
+.meh-h{font-size:18px;font-weight:900;margin-bottom:8px;line-height:1.4}
+.meh-tx{font-size:12.5px;opacity:.9;line-height:1.65;margin-bottom:14px}
+.meh-tx b{background:rgba(255,255,255,.18);padding:1px 6px;border-radius:4px}
+.meh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px}
+.meh-cell{background:rgba(255,255,255,.12);border-radius:10px;padding:13px 14px;cursor:pointer;transition:.15s;backdrop-filter:blur(8px)}
+.meh-cell:hover{background:rgba(255,255,255,.22);transform:translateY(-2px)}
+.meh-cell-ic{font-size:22px;margin-bottom:5px}
+.meh-cell-h{font-size:13px;font-weight:900;margin-bottom:4px}
+.meh-cell-tx{font-size:11px;opacity:.85;line-height:1.55}
+.meh-foot{display:flex;align-items:center;gap:10px;font-size:11px;opacity:.85;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.15);padding-top:10px}
+.meh-foot span{flex:1;min-width:200px}
+.meh-foot button{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:6px;cursor:pointer;font-family:inherit}
+.meh-foot button:hover{background:rgba(255,255,255,.15)}
+@media (max-width:560px){.meh-h{font-size:15px}.meh-cell-ic{font-size:18px}}
+
 /* 🎯 Setup progress card (= chat 上部、 4 step 進捗) */
 .sp-card{background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:13px;padding:14px 16px;margin-bottom:14px;max-width:880px;margin-left:auto;margin-right:auto}
 .sp-card-h{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}

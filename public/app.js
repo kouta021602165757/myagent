@@ -10394,6 +10394,93 @@ function _renderTabConnections(site){
 }
 
 // ══════════════════════════════════════════════════════════════════
+// 📰 メディア型サイト 専用 hero (= 既存メディア向け 4 価値提案)
+// ══════════════════════════════════════════════════════════════════
+// マスター ICP は「LP + マーケ担当ゼロ」 だが、 メディア型サイト ユーザにも
+// 別の価値を提供。 自前メディア新規作成は出さず、 既存メディア改善ツール
+// として KW 機会発見 / リライト / 競合分析 を訴求。
+function _renderMediaExistingHero(ag){
+  if(!ag) return '';
+  var siteId = esc(ag.id);
+  var hostname = '';
+  try { hostname = new URL(ag.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+  var platform = (ag.site_platform && ag.site_platform.kind) || '';
+  var platformBadge = '';
+  if(platform && platform !== 'unknown'){
+    var platformIcons = {
+      wordpress: '📰', ghost: '👻', webflow: '🌐', wix: '🟦', squarespace: '◾', shopify: '🛒'
+    };
+    var ic = platformIcons[platform] || '🌐';
+    platformBadge = '<span style="background:#fff;color:var(--teal-deep);font-size:10px;font-weight:800;padding:3px 8px;border-radius:5px;margin-left:8px;letter-spacing:.04em;text-transform:uppercase">'+ic+' '+platform+'</span>';
+  }
+  // 直近 dismiss check
+  var dismissed = false;
+  try { dismissed = localStorage.getItem('media_existing_hero_dismissed') === 'true'; } catch(_){}
+  if(dismissed) return '';
+  return ''
+    + '<div class="meh-card">'
+    +   '<div class="meh-eye">📰 EXISTING MEDIA · 既存メディア向け価値' + platformBadge + '</div>'
+    +   '<div class="meh-h">'+esc(hostname || ag.name || 'Your media')+' は既にメディアをお持ちですね</div>'
+    +   '<div class="meh-tx">MY AI Agent はメインで <b>マーケ担当ゼロ + メディア未保有</b> 企業向けですが、'
+    +   ' 既存メディアの<b>運用強化</b>にも 4 つの価値を提供できます:</div>'
+    +   '<div class="meh-grid">'
+    +     '<div class="meh-cell" onclick="_mehTryKwOpp(\''+siteId+'\')">'
+    +       '<div class="meh-cell-ic">🔍</div>'
+    +       '<div class="meh-cell-h">KW 機会発見</div>'
+    +       '<div class="meh-cell-tx">既存サイトが取りこぼしてる 20 KW を AI が抽出</div>'
+    +     '</div>'
+    +     '<div class="meh-cell" onclick="_mehTryGscDiag(\''+siteId+'\')">'
+    +       '<div class="meh-cell-ic">📊</div>'
+    +       '<div class="meh-cell-h">SEO 順位 改善診断</div>'
+    +       '<div class="meh-cell-tx">GSC データから「あと一押し」 記事を抽出</div>'
+    +     '</div>'
+    +     '<div class="meh-cell" onclick="_mehTryRewrite(\''+siteId+'\')">'
+    +       '<div class="meh-cell-ic">♻️</div>'
+    +       '<div class="meh-cell-h">既存記事リライト 推奨</div>'
+    +       '<div class="meh-cell-tx">順位下がってる記事の改善案を AI が生成</div>'
+    +     '</div>'
+    +     '<div class="meh-cell" onclick="_mehTryCompetitor(\''+siteId+'\')">'
+    +       '<div class="meh-cell-ic">⚔️</div>'
+    +       '<div class="meh-cell-h">競合 3 社 SEO 分析</div>'
+    +       '<div class="meh-cell-tx">同領域競合の動き + 自社の差別化角度</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="meh-foot">'
+    +     '<span>💡 上をクリック / もしくは 上部 toolbar で 🔍 KW・📊 数字・🎯 戦略 をお試しください</span>'
+    +     '<button onclick="_mehDismiss()" title="閉じる">あとで</button>'
+    +   '</div>'
+    + '</div>';
+}
+
+// クイック action — chat にプロンプトを送って AI に直接依頼
+function _mehSendChatPrompt(siteId, prompt){
+  if(!prompt || !siteId) return;
+  try {
+    var b64 = btoa(unescape(encodeURIComponent(prompt)));
+    if(typeof _quickSendPrompt === 'function') _quickSendPrompt(b64);
+    else if(typeof window._sendQuickPrompt === 'function') window._sendQuickPrompt(prompt);
+    else { showToast('chat 送信機構を読み込めませんでした','ng'); }
+  } catch(e){ showToast('送信失敗: '+(e.message||'unknown'),'ng'); }
+}
+window._mehTryKwOpp = function(siteId){
+  _mehSendChatPrompt(siteId, 'この既存メディアが現在取りこぼしてる検索キーワードを research_keyword tool で 20 件抽出してください。 各候補に検索ボリューム推定・競合度・推奨記事タイトルを付けて。');
+};
+window._mehTryGscDiag = function(siteId){
+  _mehSendChatPrompt(siteId, 'get_search_console_data tool で 直近 30 日のデータを取得して、 「順位 11-20 位」 の「あと一押し」 記事を 5 件抽出してください。 各記事に伸ばし方の提案を付けて。');
+};
+window._mehTryRewrite = function(siteId){
+  _mehSendChatPrompt(siteId, 'get_search_console_data tool で 順位が直近で下がってる記事を抽出 + 各記事の改善方針 (= 何を追記・更新すべきか) を提案してください。');
+};
+window._mehTryCompetitor = function(siteId){
+  _mehSendChatPrompt(siteId, 'このメディアと同領域の競合 3 社を特定 + 各社の最近の SEO 動向 + 自社が取るべき差別化角度を分析してください。 web で検索しながら。');
+};
+window._mehDismiss = function(){
+  try { localStorage.setItem('media_existing_hero_dismissed', 'true'); } catch(_){}
+  var el = document.querySelector('.meh-card');
+  if(el) el.style.display = 'none';
+};
+
+// ══════════════════════════════════════════════════════════════════
 // 📊 Phase 2 週次トラッカー (= メディアダッシュ内、 今週公開ペース可視化)
 // ══════════════════════════════════════════════════════════════════
 function _renderWeeklyTracker(site, posts){
@@ -10687,19 +10774,29 @@ function _renderTabMedia(site){
       + '</div>';
   }
 
-  // === メディア型サイトには Wizard を出さない (= 既にメディアあり) ===
+  // === メディア型サイトには Wizard を出さず、 既存メディア向け 4 価値を再掲 ===
   if(site.site_type === 'media' || site.site_vertical === 'blog' || site.site_vertical === 'news'){
-    return '<div style="background:var(--cream3);border:1.5px dashed var(--peach-dark);border-radius:13px;padding:32px 28px;text-align:center">'
-      + '<div style="font-size:42px;margin-bottom:10px">📰</div>'
-      + '<div style="font-size:16px;font-weight:900;color:var(--text);margin-bottom:8px">このサイトはすでにメディアです</div>'
-      + '<div style="font-size:12.5px;color:var(--text2);line-height:1.7;max-width:480px;margin:0 auto 16px">'
-      +   '別途メディアを立ち上げる必要はありません。<br>'
-      +   '既存メディアの<b>キーワード調査・記事ネタ提案・改善施策</b>は、 上部の 🔍 や 🎯 ボタンからご利用いただけます。'
+    var _platform = (site.site_platform && site.site_platform.kind) || '';
+    var _platformText = (_platform && _platform !== 'unknown')
+      ? ' (' + _platform.charAt(0).toUpperCase() + _platform.slice(1) + ')' : '';
+    return ''
+      + '<div style="background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:13px;padding:24px 26px;margin-bottom:16px">'
+      +   '<div style="font-size:42px;margin-bottom:8px">📰</div>'
+      +   '<div style="font-size:17px;font-weight:900;margin-bottom:8px;line-height:1.4">このサイトはすでにメディアです'+esc(_platformText)+'</div>'
+      +   '<div style="font-size:12px;opacity:.9;line-height:1.7;margin-bottom:14px">'
+      +     'MY AI Agent は <b style="background:rgba(255,255,255,.18);padding:1px 6px;border-radius:4px">マーケ担当ゼロ + メディア未保有</b> 企業向けですが、'
+      +     ' 既存メディアの<b>運用強化</b>には以下 4 つを ご提供できます:'
+      +   '</div>'
+      +   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">'
+      +     '<button onclick="_mehTryKwOpp(\''+esc(site.id)+'\');_closeSiteTabModal()" style="background:rgba(255,255,255,.15);color:#fff;border:0;padding:11px 13px;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;backdrop-filter:blur(8px)"><div style="font-size:18px;margin-bottom:3px">🔍</div><div style="font-size:12px;font-weight:800;margin-bottom:2px">KW 機会発見</div><div style="font-size:10.5px;opacity:.85">未取得の 20 KW を AI 抽出</div></button>'
+      +     '<button onclick="_mehTryGscDiag(\''+esc(site.id)+'\');_closeSiteTabModal()" style="background:rgba(255,255,255,.15);color:#fff;border:0;padding:11px 13px;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;backdrop-filter:blur(8px)"><div style="font-size:18px;margin-bottom:3px">📊</div><div style="font-size:12px;font-weight:800;margin-bottom:2px">SEO 順位 診断</div><div style="font-size:10.5px;opacity:.85">「あと一押し」 記事抽出</div></button>'
+      +     '<button onclick="_mehTryRewrite(\''+esc(site.id)+'\');_closeSiteTabModal()" style="background:rgba(255,255,255,.15);color:#fff;border:0;padding:11px 13px;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;backdrop-filter:blur(8px)"><div style="font-size:18px;margin-bottom:3px">♻️</div><div style="font-size:12px;font-weight:800;margin-bottom:2px">記事リライト 推奨</div><div style="font-size:10.5px;opacity:.85">順位下落記事の改善案</div></button>'
+      +     '<button onclick="_mehTryCompetitor(\''+esc(site.id)+'\');_closeSiteTabModal()" style="background:rgba(255,255,255,.15);color:#fff;border:0;padding:11px 13px;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;backdrop-filter:blur(8px)"><div style="font-size:18px;margin-bottom:3px">⚔️</div><div style="font-size:12px;font-weight:800;margin-bottom:2px">競合 3 社 分析</div><div style="font-size:10.5px;opacity:.85">差別化角度を抽出</div></button>'
+      +   '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
-      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔍 キーワード調査へ</button>'
-      +   '<button onclick="_closeSiteTabModal(); openStrategyPanel(\''+esc(site.id)+'\')" style="background:#fff;border:1px solid var(--wire2);color:var(--text);padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🎯 戦略・KPI へ</button>'
-      + '</div>'
+      + '<div style="background:var(--cream3);border:1px solid var(--wire2);border-radius:10px;padding:12px 14px;font-size:11.5px;color:var(--text2);line-height:1.65">'
+      +   '上記カードをクリックすると AI が即座にチャットで分析を開始します。 もしくは toolbar の '
+      +   '<b>🔍 キーワード調査</b> / <b>📊 数字</b> / <b>🎯 戦略・KPI</b> から手動で操作できます。'
       + '</div>';
   }
 
@@ -13875,6 +13972,11 @@ function renderMsgs(ag, forceScrollBottom){
   if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && !_isMediaSiteVert){
     _setupProgressBanner = _renderSetupProgress(ag);
   }
+  // 📰 メディア型サイト 用 hero card (= 既存メディア向け 4 価値提案)
+  var _mediaExistingHero = '';
+  if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && _isMediaSiteVert){
+    _mediaExistingHero = _renderMediaExistingHero(ag);
+  }
   var _mediaIntroBanner = '';
   if(typeof _isSiteAgent === 'function' && _isSiteAgent(ag) && !_isMediaSiteVert){
     var _mediaExists = !!(ag.media && ag.media.id);
@@ -13901,7 +14003,7 @@ function renderMsgs(ag, forceScrollBottom){
         + '</div>';
     }
   }
-  inner.innerHTML = _nudgeHTML + _setupProgressBanner + _mediaIntroBanner + _olderHistBanner + ag.history.map(function(m,i){
+  inner.innerHTML = _nudgeHTML + _setupProgressBanner + _mediaExistingHero + _mediaIntroBanner + _olderHistBanner + ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline ONLY on desktop;
     // on mobile they show inline so the user always sees the AI reply.
     if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';

@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>モック: AI チーム司令室 (= chat 完全連携)</title>
+<style>
+*{box-sizing:border-box;-webkit-text-size-adjust:100%}
+:root{
+  --teal:#0d4f4a;--teal-deep:#0a3d39;--teal-soft:#e8f1f0;
+  --peach:#c0ff5c;--peach-soft:#f7ffe9;--peach-dark:#a3e635;
+  --cream:#fff;--cream2:#fafafa;--cream3:#fafaf7;
+  --text:#1a1a1a;--text2:#525252;--text3:#71717a;
+  --wire:rgba(9,9,11,.06);--wire2:rgba(9,9,11,.10);
+  --blue:#1e40af;--blue-soft:#dbeafe;
+  --amber:#92400e;--amber-soft:#fef3c7;
+  --rose:#9a3412;--rose-soft:#fff7ed;
+}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:#f3f4f3;color:var(--text);line-height:1.6}
+.page{max-width:920px;margin:0 auto;padding:30px 20px 60px}
+.intro{background:var(--cream);border:1px solid var(--wire2);border-radius:14px;padding:22px 26px;margin-bottom:28px}
+.intro h1{margin:0 0 8px;font-size:21px;font-weight:900}
+.intro p{margin:0;color:var(--text2);font-size:13px;line-height:1.7}
+.intro .note{background:var(--peach-soft);border-radius:8px;padding:9px 12px;margin-top:12px;font-size:11.5px;color:var(--text2)}
+.intro .note b{color:var(--teal-deep)}
+.scenarios{display:flex;flex-direction:column;gap:24px}
+.scn{background:var(--cream);border:1px solid var(--wire2);border-radius:14px;overflow:hidden}
+.scn-head{padding:14px 22px;background:var(--cream3);border-bottom:1px solid var(--wire2);display:flex;align-items:center;gap:12px}
+.scn-num{width:28px;height:28px;border-radius:7px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0}
+.scn-ti{font-weight:900;font-size:14px}
+.scn-sub{margin-left:auto;font-size:11px;color:var(--text3);font-weight:600}
+.chat{padding:22px 24px;background:var(--cream)}
+.msg{display:flex;gap:11px;margin-bottom:18px;animation:fadeIn .4s ease both}
+.msg.user{flex-direction:row-reverse}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:linear-gradient(135deg,#fda85e,#a3e635)}
+.avatar.user{background:#1f1f1f;color:#fff;font-size:14px;font-weight:700}
+.bubble{max-width:78%;background:#f4f5f3;border-radius:14px;padding:11px 15px;font-size:14px;line-height:1.65}
+.msg.user .bubble{background:var(--teal);color:#fff}
+.bubble b{color:var(--teal-deep)}
+.msg.user .bubble b{color:#fff}
+.bubble .meta{font-size:10.5px;color:var(--text3);margin-top:4px;font-weight:600}
+.msg.user .bubble .meta{color:rgba(255,255,255,.75)}
+.tool-call{display:flex;gap:10px;align-items:center;padding:9px 13px;background:#fff;border:1px solid var(--wire2);border-radius:9px;margin:8px 0;font-size:12px;color:var(--text2)}
+.tool-call .ic{width:24px;height:24px;border-radius:6px;background:var(--peach-soft);color:var(--teal-deep);display:flex;align-items:center;justify-content:center;font-size:13px}
+.tool-call .lbl{flex:1;font-weight:700;color:var(--text)}
+.tool-call .lbl b{color:var(--teal-deep)}
+.tool-call .st{font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.04em}
+.tool-call.done .st{color:#15803d}
+.tool-call.running .st{color:#1e40af}
+.tool-call.running .ic{background:var(--blue-soft);color:#1e40af}
+.callout{background:var(--peach-soft);border:1px solid var(--peach-dark);border-radius:11px;padding:13px 16px;margin:10px 0;font-size:13px;line-height:1.7}
+.callout .h{font-weight:900;color:var(--teal-deep);margin-bottom:6px;font-size:13.5px}
+.callout ul{margin:4px 0;padding-left:20px}
+.callout li{margin-bottom:2px}
+.callout li b{color:var(--text)}
+.candbox{background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:12px 14px;margin:10px 0}
+.candbox-h{font-weight:800;font-size:12.5px;color:var(--text);margin-bottom:8px}
+.cand-row{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;background:var(--cream3);margin-bottom:4px;font-size:12.5px}
+.cand-row.reco{background:#dcfce7;border:1px solid #86efac}
+.cand-row .rk{font-weight:900;color:var(--teal-deep);width:18px}
+.cand-row .ti{flex:1;color:var(--text)}
+.cand-row .ti b{color:var(--teal-deep)}
+.cand-row .mt{font-size:10.5px;color:var(--text3);margin-top:2px}
+.btnrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.bt{background:var(--teal);color:#fff;border:0;padding:8px 14px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit}
+.bt.sec{background:#fff;color:var(--text);border:1px solid var(--wire2)}
+.bt.warn{background:#fff;color:var(--amber);border:1px solid var(--amber-soft)}
+.linkpill{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;background:#fff;border:1.5px solid var(--teal);border-radius:7px;font-size:11.5px;font-family:'SF Mono',Menlo,monospace;font-weight:700;color:var(--teal-deep);text-decoration:none;margin-top:6px}
+.proactive{background:linear-gradient(135deg,var(--teal),var(--teal-deep));color:#fff;border-radius:13px;padding:16px 18px;margin:8px 0}
+.proactive .pa-meta{font-size:11px;font-weight:800;opacity:.8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.proactive .pa-ti{font-size:15.5px;font-weight:900;margin-bottom:6px}
+.proactive .pa-bd{font-size:12.5px;opacity:.9;line-height:1.65;margin-bottom:10px}
+.proactive .bt{background:rgba(255,255,255,.18);color:#fff;backdrop-filter:blur(8px)}
+.proactive .bt.sec{background:transparent;border:1px solid rgba(255,255,255,.4)}
+.divider-day{text-align:center;font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:8px 0 14px;position:relative}
+.divider-day:before, .divider-day:after{content:'';position:absolute;top:50%;width:30%;height:1px;background:var(--wire)}
+.divider-day:before{left:5%}.divider-day:after{right:5%}
+.legend{background:var(--cream3);border:1px solid var(--wire);border-radius:10px;padding:12px 14px;font-size:11.5px;color:var(--text2);line-height:1.7;margin-top:18px}
+.legend b{color:var(--text)}
+.legend .lg-row{display:flex;align-items:flex-start;gap:9px;margin-top:6px}
+.legend .lg-ic{flex-shrink:0;width:22px;height:22px;border-radius:5px;background:var(--peach-soft);color:var(--teal-deep);display:flex;align-items:center;justify-content:center;font-size:12px}
+@media (max-width:640px){
+  .page{padding:18px 12px 50px}
+  .scn-head{padding:12px 14px}
+  .chat{padding:16px 14px}
+  .bubble{max-width:85%;font-size:13.5px}
+}
+</style>
+</head><body>
+
+<div class="page">
+
+  <div class="intro">
+    <h1>🎯 モック: AI チーム司令室 (= chat 完全連携)</h1>
+    <p>
+      これは「実装したら こうなる」 の例です。 5 つの典型シナリオで、
+      ユーザがチャットだけで メディア + KW + 数字 を操作できる体験を示します。
+      <br>
+      <span style="color:var(--text3);font-size:11.5px">→ 灰色の四角は AI が裏で 自分で呼んでる「tool 実行」 の見える化。</span>
+    </p>
+    <div class="note">
+      <b>動線の前提</b>:
+      ユーザは toolbar の 🔍 や 📝 を 押さなくて よくなる。
+      欲しいものは チャットで頼む。 結果は同じチャットに 戻ってくる。
+    </div>
+  </div>
+
+  <div class="scenarios">
+
+    <!-- シナリオ 1: 朝の自動レポート -->
+    <div class="scn">
+      <div class="scn-head">
+        <div class="scn-num">1</div>
+        <div class="scn-ti">朝の自動レポート (= pro-active nudge)</div>
+        <div class="scn-sub">毎朝 8:00、 AI から開始</div>
+      </div>
+      <div class="chat">
+        <div class="divider-day">2026年6月2日 (火) — 朝 8:00</div>
+        <div class="msg">
+          <div class="avatar">🤖</div>
+          <div class="bubble">
+            <div class="proactive">
+              <div class="pa-meta"><span>🌅</span> 今朝のメディア戦況レポート</div>
+              <div class="pa-ti">先週は <b style="background:#fff;color:#0d4f4a;padding:1px 6px;border-radius:4px">PV +18%</b>。 ただし注意点 1 件あります。</div>
+              <div class="pa-bd">
+                公開済: 3 本 (= 目標 2 本 ✓)<br>
+                順位上昇: 「助成金 申請」 8 位 → <b style="color:#a3e635">3 位</b><br>
+                ⚠️ 「採用 補助金」 PV -22% — 上位サイトが情報更新済、 リライトで対応可能
+              </div>
+              <div class="btnrow">
+                <button class="bt">📉 リライトを開始</button>
+                <button class="bt sec">📊 詳細レポート</button>
+                <button class="bt sec">あとで</button>
+              </div>
+            </div>
+            <div class="meta">8:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- シナリオ 2: 「今週何書こう」 → KW 提案 → 即公開 -->
+    <div class="scn">
+      <div class="scn-head">
+        <div class="scn-num">2</div>
+        <div class="scn-ti">「今週何書こう」 → KW 提案 → 即公開 (= 一番頻度高い動線)</div>
+        <div class="scn-sub">3 ターンで公開完了</div>
+      </div>
+      <div class="chat">
+        <div class="msg user">
+          <div class="avatar user">あ</div>
+          <div class="bubble">今週なんか書こうかな<div class="meta">10:14</div></div>
+        </div>
+        <div class="msg">
+          <div class="avatar">🤖</div>
+          <div class="bubble">
+            少々お待ちください、 数字とキーワードを見てみます。
+            <div class="tool-call done">
+              <div class="ic">📊</div>
+              <div class="lbl">GA4 から先週の <b>記事別 PV</b> を取得</div>
+              <div class="st">✓ 完了</div>
+            </div>
+            <div class="tool-call done">
+              <div class="ic">🔍</div>
+              <div class="lbl">関連 KW を <b>30 件 候補生成</b></div>
+              <div class="st">✓ 完了</div>
+            </div>
+            <div class="tool-call done">
+              <div class="ic">🏆</div>
+              <div class="lbl">競合上位の <b>カバー漏れ KW を抽出</b></div>
+              <div class="st">✓ 完了</div>
+            </div>
+            <div class="callout">
+              <div class="h">💡 おすすめ 3 候補 (= 先週好調の「助成金」 関連、 まだ書いてない領域)</div>
+            </div>
+            <div class="candbox">
+              <div class="cand-row reco">
+                <div class="rk">②</div>
+                <div>
+                  <div class="ti"><b>採用助成金 期限 2026 — いつまでに何を出すか</b></div>
+                  <div class="mt">ボリューム 1,800 · 競合 <b style="color:#15803d">低</b> · ROI 最高 ★★★</div>
+                </div>
+              </div>
+              <div class="cand-row">
+                <div class="rk">①</div>
+                <div>
+                  <div class="ti">中小企業 助成金 申請方法 — 5 ステップで解説</div>
+                  <div class="mt">ボリューム 3,300 · 競合 中 · ROI ★★</div>
+                </div>
+              </div>
+              <div class="cand-row">
+                <div class="rk">③</div>
+                <div>
+                  <div class="ti">助成金 申請 必要書類 — チェックリスト付き</div>
+                  <div class="mt">ボリューム 2,200 · 競合 低 · ROI ★★</div>
+                </div>
+              </div>
+            </div>
+            <b>②</b> が一番効率いいです (= 低競合 × 中ボリューム)。 これで進めますか?
+            <div class="btnrow">
+              <button class="bt">② で書く →</button>
+              <button class="bt sec">3 本 全部書く</button>
+              <button class="bt sec">別の角度</button>
+            </div>
+            <div class="meta">10:14</div>
+          </div>
+        </div>
+        <div class="msg user">
+          <div class="avatar user">あ</div>
+          <div class="bubble">② で<div class="meta">10:15</div></div>
+        </div>
+        <div class="msg">
+          <div class="avatar">🤖</div>
+          <div class="bubble">
+            了解。 記事生成 + Hero 画像 + 公開まで自動で進めます。
+            <div class="tool-call done">
+              <div class="ic">✍️</div>
+              <div class="lbl">Claude Sonnet で <b>5,400 文字 記事生成</b></div>
+              <div class="st">✓ 1m 12s</div>
+            </div>
+            <div class="tool-call done">
+              <div class="ic">🎨</div>
+              <div class="lbl">Hero 画像を <b>AI 生成</b> (= editorial style)</div>
+              <div class="st">✓ 25s</div>
+            </div>
+            <div class="tool-call done">
+              <div class="ic">🚀</div>
+              <div class="lbl">メディアに <b>公開</b> + sitemap.xml 反映</div>
+              <div class="st">✓ 完了</div>
+            </div>
+            <div class="callout" style="background:#dcfce7;border-color:#86efac">
+              <div class="h">✅ 公開完了 (= 合計 1 分 50 秒)</div>
+              📌 採用助成金 期限 2026 — いつまでに何を出すか<br>
+              📊 想定 PV (= 3 ヶ月後): 800-1,200
+            </div>
+            <a class="linkpill" href="#">🔗 myaiagents.agency/media/.../saiyo-hojokin-kigen-2026</a>
+            <div class="btnrow">
+              <button class="bt sec">公開ページを見る</button>
+              <button class="bt sec">X / Threads にシェア</button>
+              <button class="bt sec">次の記事へ</button>
+            </div>
+            <div class="meta">10:17</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- シナリオ 3: ピンポイント指示 (= 直接コマンド) -->
+    <div class="scn">
+      <div class="scn-head">
+        <div class="scn-num">3</div>
+        <div class="scn-ti">具体的なお題で書かせる (= KW 確定済の時)</div>
+        <div class="scn-sub">1 ターンで公開</div>
+      </div>
+      <div class="chat">
+        <div class="msg user">
+          <div class="avatar user">あ</div>
+          <div class="bubble">「中小企業 採用 助成金」 で AEO 記事 書いて<div class="meta">14:32</div></div>
+        </div>
+        <div class="msg">
+          <div class="avatar">🤖</div>
+          <div class="bubble">
+            AEO 記事として作成します (= FAQ schema 12 問 + 結論先出し)。
+            <div class="tool-call done">
+              <div class="ic">✍️</div>
+              <div class="lbl"><b>AEO 記事生成</b> + FAQ 構造化</div>
+              <div class="st">✓ 1m 31s</div>
+            </div>
+            <div class="tool-call done">
+              <div class="ic">🚀</div>
+              <div class="lbl">公開 + AI 検索 (ChatGPT / Perplexity) 向け最適化</div>
+              <div class="st">✓ 完了</div>
+            </div>
+            <a class="linkpill" href="#">🔗 .../chusho-kigyo-saiyo-josei</a>
+            <div class="meta">14:34</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- シナリオ 4: 改善ループ -->
+    <div class="scn">
+      <div class="scn-head">
+        <div class="scn-num">4</div>
+        <div class="scn-ti">「改善」 サイクル — 弱記事 検出 → 自動リライト</div>
+        <div class="scn-sub">master pitch 5 動詞 最後の動詞</div>
+      </div>
+      <div class="chat">
+        <div class="msg user">
+          <div class="avatar user">あ</div>
+          <div class="bubble">最近 順位 下がってる記事ある?<div class="meta">9:18</div></div>
+        </div>
+        <div class="msg">
+          <div class="avatar">🤖</div>
+          <div class="bubble">
+            <div class="tool-call done">
+              <div class="ic">📊</div>
+              <div class="lbl">GSC から <b>順位変動</b> を取得 (= 30 日比較)</div>
+              <div class="st">✓ 完了</div>
+            </div>
+            <div class="tool-call done">
+              <div class="ic">🔍</div>
+              <div class="lbl">上位サイトの <b>更新差分</b> を解析</div>
+              <div class="st">✓ 完了</div>
+            </div>
+            <div class="callout" style="background:var(--rose-soft);border-color:#fed7aa">
+              <div class="h">📉 順位下落 2 件 検出</div>
+              <ul>
+                <li>「中小企業 採用」 12 位 → <b>18 位</b> · PV -34%</li>
+                <li>「助成金 一覧」 6 位 → <b>9 位</b> · PV -12%</li>
+              </ul>
+            </div>
+            原因: <b>上位 3 サイトが 6 月情報に更新済</b>。 こちらは古い情報のままです。
+            リライトで対応可能。 自動で進めますか?
+            <div class="btnrow">
+              <button class="bt">2 本 まとめてリライト</button>
+              <button class="bt sec">1 本ずつ確認</button>
+              <button class="bt sec">あとで</button>
+            </div>
+            <div class="meta">9:18</div>
+          </div>
+        </div>
+        <div class="msg user">
+          <div class="avatar user">あ</div>
+          <div class="bubble">まとめて<div class="meta">9:19</div></div>
+        </div>
+        <div class="msg">
+          <div class="avatar">🤖</div>
+          <div class="bubble">
+            <div class="tool-call done">
+              <div class="ic">♻️</div>
+              <div class="lbl">記事 2 本 <b>リライト + 同 URL 上書き</b></div>
+              <div class="st">✓ 3m 22s</div>
+            </div>
+            <div class="callout" style="background:#dcfce7;border-color:#86efac">
+              <div class="h">✅ リライト完了 — 30 日後に効果検証します</div>
+              更新箇所をリスト化済。 Google 再クロールに 通常 3-7 日。<br>
+              <b>📅 6 月 9 日に効果確認レポート</b> をお送りします。
+            </div>
+            <div class="meta">9:23</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- シナリオ 5: 質問だけ -->
+    <div class="scn">
+      <div class="scn-head">
+        <div class="scn-num">5</div>
+        <div class="scn-ti">気軽な質問 (= データを見ながら答える)</div>
+        <div class="scn-sub">tool は呼ぶが、 結果は会話で返す</div>
+      </div>
+      <div class="chat">
+        <div class="msg user">
+          <div class="avatar user">あ</div>
+          <div class="bubble">今月もう何本 書いた?<div class="meta">21:04</div></div>
+        </div>
+        <div class="msg">
+          <div class="avatar">🤖</div>
+          <div class="bubble">
+            <div class="tool-call done" style="margin-bottom:8px">
+              <div class="ic">📝</div>
+              <div class="lbl"><b>公開済記事</b> を集計</div>
+              <div class="st">✓</div>
+            </div>
+            今月は <b>7 本</b> 公開済です。 目標 8 本まで <b>あと 1 本</b>。<br>
+            今日含めて 残り 2 日あるので、 今日明日で 1 本書けば達成です。
+            <div class="btnrow">
+              <button class="bt">🚀 おすすめ KW で 1 本書く</button>
+              <button class="bt sec">過去 7 本を見る</button>
+            </div>
+            <div class="meta">21:04</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <b>裏で何が起きてる?</b>
+    <div class="lg-row"><div class="lg-ic">📊</div><div><b>tool: get_site_stats</b> — GA4 から PV / セッション / CVR を取得</div></div>
+    <div class="lg-row"><div class="lg-ic">🔍</div><div><b>tool: research_keyword</b> — 既存 KW 調査 endpoint を呼ぶ</div></div>
+    <div class="lg-row"><div class="lg-ic">🏆</div><div><b>tool: get_search_console_data</b> — GSC から順位 / 検索クエリを取得</div></div>
+    <div class="lg-row"><div class="lg-ic">✍️</div><div><b>tool: publish_to_media</b> — /api/.../media/articles/generate を呼ぶ</div></div>
+    <div class="lg-row"><div class="lg-ic">♻️</div><div><b>tool: rewrite_media_article</b> — 既存記事を GA4/GSC データを input にして書き直し (= 新規 endpoint)</div></div>
+    <div class="lg-row"><div class="lg-ic">📝</div><div><b>tool: list_media_posts</b> — 公開済記事のメタ一覧</div></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--wire);color:var(--text3);font-size:11px">
+      これらの tool を AI が呼べるように <b>system プロンプト + tools 定義</b> を追加するのが
+      実装の核。 既存 endpoint はほぼ流用なので、 期待コストは 2-3 日 / 1 機能。
+    </div>
+  </div>
+
+</div>
+
+</body></html>
+</content>
+</invoke>

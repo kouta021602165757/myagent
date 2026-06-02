@@ -15630,6 +15630,137 @@ function _isHttpUrl(s){
 }
 
 // ──────────────────────────────────────────────────────────────────
+// 🎯 検索意図 (search intent) 検出 — KW タイプ別に prompt template を変える
+// ──────────────────────────────────────────────────────────────────
+// 「○○ vs △△」 → 比較記事、 「○○ やり方」 → 手順記事、 等。
+// 同じ KW でも意図が違えば 上位獲得には 違う構造が必要。
+function _detectKwIntent(kw){
+  const k = String(kw || '').toLowerCase();
+  // 比較系 (vs / と / 違い / 比較)
+  if(/\bvs\b|\s+vs\s+| ?と ?|違い|比較|どっち|どちら|対決/.test(k)) return {
+    type: 'comparison',
+    label: '比較型',
+    structure: '比較表 (= 横軸 vs 縦軸) を冒頭に置き、 各社の特徴 / メリデメ / 適性 を詳細に。 結論で「○○ 向きはこっち / △△ 向きはあっち」 と決断指針',
+    must_sections: ['比較表 (= 必須)', '各選択肢の詳細', 'メリット・デメリット', '向き不向き別の結論', 'FAQ'],
+    ctaType: '無料診断 / 詳細問い合わせ',
+  };
+  // ランキング系 (おすすめ / 選び方 / ランキング / N 選 / ベスト)
+  if(/おすすめ|オススメ|お勧め|選び方|ランキング|\d+\s*選|best\s*\d+|ベスト/.test(k)) return {
+    type: 'best',
+    label: 'ランキング型',
+    structure: '評価基準 (= 3-5 軸) を最初に明示 → 各候補を 1 位から ランキング、 各候補に「強み / 弱み / 推奨対象」 を詳述。 最後に 用途別の選び方マトリクス',
+    must_sections: ['評価基準 (= 必須)', 'ランキング 1 位〜', '用途別マトリクス', '失敗しない選び方', 'FAQ'],
+    ctaType: '無料試用 / カートリンク',
+  };
+  // 手順系 (やり方 / 方法 / 手順 / ステップ / how)
+  if(/やり方|方法|手順|ステップ|step|how\s*to|始め方|作り方|使い方/.test(k)) return {
+    type: 'howto',
+    label: '手順型',
+    structure: 'step-by-step (= 番号付き 5-10 ステップ)、 各 step に「目的 / 操作 / 注意点」 を整理。 冒頭に「所要時間 / 必要なもの / 完成例」 を表で',
+    must_sections: ['前提・必要なもの (= 表)', 'ステップ 1-N', 'よくある失敗', '応用テクニック', 'FAQ'],
+    ctaType: 'チェックリスト DL / 専門家相談',
+  };
+  // 定義 / what is 系 (とは / 意味 / 違い / なに)
+  if(/とは$|^なに|^何|意味|定義|について$|どんな|where\s*is|what\s*is/.test(k)) return {
+    type: 'definition',
+    label: '定義・解説型',
+    structure: '冒頭に 1-2 文の シンプルな定義 → 詳細解説 → 歴史 / 由来 → 種類 / 用途 → 関連用語。 最後に「○○ と △△ の違い」 で関連 KW も拾う',
+    must_sections: ['基礎情報テーブル (= 必須)', '定義', '歴史・由来', '種類・分類', '関連用語', 'FAQ'],
+    ctaType: '無料資料 / 詳しい解説',
+  };
+  // 料金 / 価格系
+  if(/料金|価格|値段|いくら|費用|相場|コスト|price|fee/.test(k)) return {
+    type: 'price',
+    label: '料金型',
+    structure: '冒頭に 料金表 (= プラン別 / 用途別)、 各プランの内訳、 隠れたコスト、 同類サービスとの相場比較。 結論で「○○ なら A プラン、 △△ なら B プラン」',
+    must_sections: ['料金表 (= 必須)', 'プラン別 詳細', '隠れたコスト・追加費用', '相場比較', '値引き / 節約方法', 'FAQ'],
+    ctaType: '無料見積もり / プラン診断',
+  };
+  // レビュー / 評判系
+  if(/評判|レビュー|口コミ|評価|review|感想|本音|デメリット|メリット/.test(k)) return {
+    type: 'review',
+    label: 'レビュー型',
+    structure: '結論 (= 総合評価 5 段階) → 良い点 → 悪い点 → 体験談 (= ペルソナ別) → 向いてる人 / 向いてない人。 比較表で 同類サービスと並べる',
+    must_sections: ['総合評価 (= 必須)', '良かった点', '悪かった点', '実際の体験談', '向き不向き', 'FAQ'],
+    ctaType: '無料お試し / 申し込み',
+  };
+  // それ以外 (= 情報収集系)
+  return {
+    type: 'info',
+    label: '情報収集型',
+    structure: '基礎情報テーブルで概要を整理 → セクションごとに掘り下げ → 実用情報 → 体験談 / 事例 → 関連情報。 網羅性重視',
+    must_sections: ['基礎情報テーブル (= 必須)', '基礎知識', '実用情報', '事例・体験談', 'FAQ', '次のアクション'],
+    ctaType: '無料相談 / メルマガ登録',
+  };
+}
+
+// SERP 上位 10 分析 + 共通 h2 + 頻出語 を取得 (= "ギャップ攻略" 用)
+// 既存 /serp-analysis endpoint と同じロジックを 関数として呼び出せるよう抽出。
+// 失敗時は null を返す (= 記事生成は SERP なしでも進む)。
+async function _runSerpAnalysisForGen(kw){
+  if(!kw) return null;
+  try {
+    // 1) SERP 取得
+    let serp = [];
+    try {
+      if(typeof BRAVE_KEY !== 'undefined' && BRAVE_KEY){
+        serp = await braveSearch(kw).catch(() => []);
+      }
+      if(serp.length === 0) serp = await ddgSearch(kw);
+    } catch(_){}
+    if(serp.length === 0) return null;
+    // 2) 上位 5 並列 fetch + h2 抽出
+    const top5 = serp.slice(0, 5);
+    const valid = (await Promise.all(top5.map(async function(it){
+      try {
+        const ctrl = new AbortController();
+        const tm = setTimeout(() => ctrl.abort(), 6000);
+        const r = await fetch(it.url, {
+          signal: ctrl.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ja,en;q=0.9',
+          },
+          redirect: 'follow',
+        }).catch(() => null);
+        clearTimeout(tm);
+        if(!r || !r.ok) return null;
+        let html = await r.text();
+        if(html.length > 400000) html = html.slice(0, 400000);
+        const h2s = Array.from(html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi))
+          .map(m => String(m[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+          .filter(s => s.length > 0 && s.length < 150);
+        const body = String(html)
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        return {
+          url: it.url, title: it.title || '',
+          chars: body.length, h2_count: h2s.length,
+          h2s: h2s.slice(0, 12),
+        };
+      } catch(_){ return null; }
+    }))).filter(Boolean);
+    if(valid.length === 0) return null;
+    const avgChars = Math.round(valid.reduce((a,b) => a + b.chars, 0) / valid.length);
+    const avgH2 = Math.round(valid.reduce((a,b) => a + b.h2_count, 0) / valid.length * 10) / 10;
+    // 全 h2 を flatten (= AI に「上位は何を扱ってる」 を見せる)
+    const allH2 = valid.flatMap(v => v.h2s).slice(0, 60);
+    return {
+      avg_chars: avgChars,
+      avg_h2: avgH2,
+      sites_analyzed: valid.length,
+      all_h2: allH2,
+      titles: valid.map(v => v.title),
+    };
+  } catch(e){
+    console.warn('[serp-for-gen]', e.message);
+    return null;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────
 // 📝 メディア機能 — 記事生成 (Claude Sonnet) + Hero 画像 (= 既存 image provider)
 // ──────────────────────────────────────────────────────────────────
 // 業種別 記事 prompt template (= "最短最速" 戦略 Day 2)
@@ -15727,6 +15858,12 @@ async function _mediaGenerateArticle(agent, params){
   // 業種検出 + 業種別 template (= Day 2 強化)
   const vert = _mediaInferVertical(agent);
   const tpl = _mediaArticleTemplateFor(vert);
+  // 🎯 2026-06-02: 検索意図 検出 (= vs / how / best / what / price / review)
+  //   意図に応じて 別構造を強制 (= 上位獲得の確率 UP)
+  const intent = _detectKwIntent(keyword);
+  // 🎯 SERP 上位 10 分析 (= ギャップ攻略) — 並列実行、 失敗時は null
+  //   AI に「上位サイトが扱ってる H2」 + 「平均文字数」 + 「網羅すべき項目」 を渡す
+  const serpAnalysisP = _runSerpAnalysisForGen(keyword);
   const targetChars = Math.max(2000, Math.min(20000, parseInt(params.target_chars, 10) || tpl.targetChars));
 
   const mediaName = (agent.media && agent.media.name) || (agent.name || 'Blog');
@@ -15754,6 +15891,9 @@ async function _mediaGenerateArticle(agent, params){
   const systemText = ''
     + '【ROLE】 あなたは地域 / 専門メディアの編集長。 完全ガイド型の SEO 記事を執筆します。\n\n'
     + '【検出業種】' + vert + ' (= ' + tpl.template + ')\n'
+    + '【検索意図】' + intent.type + ' (= ' + intent.label + ')\n'
+    + '【意図別構造】 ' + intent.structure + '\n'
+    + '【意図必須セクション】 ' + intent.must_sections.join(' / ') + '\n'
     + '【目標文字数】 ' + tpl.targetChars + ' 字 (=±500 字、 これ以上は書かない)\n'
     + '【H2 章数】 ' + tpl.h2Count + ' 個 — 1 H2 当たり 300-500 字で 短く区切る\n'
     + '【必須セクション】 ' + tpl.requiredSections.join(' / ') + '\n'
@@ -15787,13 +15927,31 @@ async function _mediaGenerateArticle(agent, params){
     + '  "body_html": "<h2>...</h2><p>...</p>... の連続。 HTML 整形済み"\n'
     + '}';
 
+  // SERP 分析 (= 並列実行の結果を ここで await — 最大 12 秒、 失敗時は null)
+  const serpAnalysis = await Promise.race([
+    serpAnalysisP,
+    new Promise(r => setTimeout(() => r(null), 12000)),
+  ]).catch(() => null);
+
+  let serpContextText = '';
+  if(serpAnalysis && serpAnalysis.sites_analyzed > 0){
+    serpContextText = '\n【🔍 上位サイト分析 — これを超える内容を書く】\n'
+      + '・ 上位 ' + serpAnalysis.sites_analyzed + ' サイトの 平均文字数: ' + serpAnalysis.avg_chars + ' 字\n'
+      + '・ 平均 H2 章数: ' + serpAnalysis.avg_h2 + ' 個\n'
+      + '・ 上位サイト共通の H2 (= 必ず網羅): \n'
+      + '  ' + serpAnalysis.all_h2.slice(0, 20).map(h => '・' + h.slice(0, 50)).join('\n  ') + '\n'
+      + '\n【ギャップ攻略】 上記の上位 H2 を 全て網羅した上で、 さらに独自の切り口 (= 上位が扱ってない実用情報) を 1-2 個 追加する。\n';
+  }
+
   const userText = ''
     + '【キーワード】' + keyword + '\n'
+    + '【検出意図】 ' + intent.type + ' (= ' + intent.label + ')\n'
     + '【ターゲット読者】' + persona + '\n'
     + '【メディア名】' + mediaName + '\n'
     + '【目標文字数】 約 ' + targetChars + ' 文字\n'
     + (categories ? '【既存カテゴリ】 ' + categories + '\n' : '')
     + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
+    + serpContextText
     + '\n上記の要件で記事を 1 本 JSON で出力してください。';
 
   if(!ANTHROPIC) throw new Error('not_configured: ANTHROPIC_API_KEY not set');

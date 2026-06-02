@@ -17665,6 +17665,293 @@ function _startAgentScheduler(){
   console.log('[schedule] agent scheduler started (60s tick)');
 }
 
+// ──────────────────────────────────────────────────────────────────
+// 🌅 Day 3-A: 朝の "1 個" 提案 cron (= 毎朝 JST 7 時に AI が next-action を chat に push)
+// ──────────────────────────────────────────────────────────────────
+// 既存の schedule_routine は メール配信 + 複数 action 並列だったが、
+// これは「chat 内に 1 個だけ提案 + [✓ 進める] ボタン」 形式。
+// ユーザは tap だけで メディアが伸びる体験。
+let _morningProposalTimer = null;
+function _startMorningProposalCron(){
+  if(_morningProposalTimer) return;
+  const TICK_MS = 15 * 60 * 1000; // 15 分ごと → JST 7:00 ± 7.5 分 で発火
+  _morningProposalTimer = setInterval(async () => {
+    try {
+      const now = new Date();
+      const jstMs = now.getTime() + (now.getTimezoneOffset() + 9 * 60) * 60 * 1000;
+      const jst = new Date(jstMs);
+      // JST 7:00 帯 (= 6:45-7:15) のみ
+      if(jst.getUTCHours() !== 7 || jst.getUTCMinutes() > 15) return;
+      const todayKey = jst.toISOString().slice(0,10) + '-morning';
+
+      const users = USE_SUPA
+        ? (await sbReq('GET','users','?select=id,email,agents,balance_jpy&limit=2000')).d || []
+        : LDB.all();
+      let pushed = 0;
+      for(const u of users){
+        if(!u || !Array.isArray(u.agents)) continue;
+        if((u.balance_jpy||0) <= 0) continue;  // クレジット切れスキップ
+        let changed = false;
+        for(const ag of u.agents){
+          if(!ag || !ag.site_url || !ag.media || !ag.media.id) continue;
+          if(ag._morning_pushed_at === todayKey) continue;  // 今朝push済
+          try {
+            await _proposeOneMorningAction(u, ag);
+            ag._morning_pushed_at = todayKey;
+            changed = true;
+            pushed++;
+            // rate-limit
+            await new Promise(rs => setTimeout(rs, 800));
+          } catch(e){
+            console.warn('[morning-1] agent failed:', e.message);
+          }
+        }
+        if(changed){
+          try { await DB.save(u); } catch(e){ console.warn('[morning-1] save:', e.message); }
+        }
+      }
+      if(pushed > 0) console.log('[morning-1] pushed=' + pushed);
+    } catch(e){ console.warn('[morning-1] tick failed:', e.message); }
+  }, TICK_MS);
+  console.log('[morning-1] morning proposal cron started (= JST 7 時に chat へ push)');
+}
+
+// 1 user × 1 agent に対し、 next-action を AI が選定 → chat history に push
+async function _proposeOneMorningAction(user, agent){
+  if(!CLAUDE_KEY) return;
+  const recent = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft').slice(0, 10);
+  const last7days = recent.filter(p => Date.parse(p.published_at||0) > Date.now() - 7*86400000).length;
+  const totalPublished = recent.length;
+  const mediaName = (agent.media && agent.media.name) || 'メディア';
+
+  // 簡易 GSC stats (= ある場合)
+  let gscSummary = '';
+  if(_hasGoogleRefreshToken(user) && _hasGscScope(user)){
+    try {
+      const siteUrl = agent.gsc_site_url || (user.integrations?.google?.gsc_site_url) || agent.site_url;
+      if(siteUrl){
+        const r = await gscSearchAnalyticsQuery(user, siteUrl, {
+          startDate: new Date(Date.now() - 7*86400000).toISOString().slice(0,10),
+          endDate: new Date(Date.now() - 86400000).toISOString().slice(0,10),
+          dimensions: ['page'],
+          rowLimit: 100,
+        }).catch(() => null);
+        if(r && r.rows){
+          const sp = '/media/' + agent.media.slug + '/';
+          const myPages = r.rows.filter(x => ((x.keys||[])[0]||'').indexOf(sp) >= 0);
+          const weakPages = myPages.filter(x => x.position > 10 && x.impressions > 5);
+          gscSummary = '\n【GSC 直近 7 日】 自メディア表示記事 ' + myPages.length + ' 件 / 弱記事 (順位 11+) ' + weakPages.length + ' 件';
+        }
+      }
+    } catch(_){}
+  }
+
+  const prompt = ''
+    + 'あなたは ' + mediaName + ' の編集長 (AI) です。 今朝、 オーナーに 1 つだけ next-action を提案します。\n\n'
+    + '【状況】\n'
+    + '- 公開済記事 ' + totalPublished + ' 本 (= 過去 7 日 ' + last7days + ' 本)\n'
+    + '- サイト: ' + agent.site_url + '\n'
+    + gscSummary + '\n\n'
+    + '【提案ルール】\n'
+    + '- 「今日これだけやれば成長する」 1 つ だけ選ぶ\n'
+    + '- 候補: (a) 新記事生成 (b) 弱記事リライト (c) GSC/GA4 で見直す KW\n'
+    + '- 簡潔に。 「✓ 進める」 でユーザが ワンタップで実行できる形\n\n'
+    + '【出力】 JSON のみ:\n'
+    + '{\n'
+    + '  "title": "🚀 ${アクション名}",\n'
+    + '  "reason": "なぜ今日これか (= 60 字以内)",\n'
+    + '  "action_type": "publish" | "rewrite" | "research",\n'
+    + '  "keyword": "新記事 or リライト KW",\n'
+    + '  "summary": "実行すると何が起きるか (= 60 字)"\n'
+    + '}';
+
+  try {
+    const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+      { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      { model: 'claude-haiku-4-5-20251001', max_tokens: 600, messages: [{ role: 'user', content: prompt }] }
+    );
+    if(r.s >= 400) return;
+    const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+    const m = txt.match(/\{[\s\S]*\}/);
+    if(!m) return;
+    const parsed = JSON.parse(m[0]);
+    if(!parsed.title) return;
+
+    // agent.history に AI message として push
+    if(!Array.isArray(agent.history)) agent.history = [];
+    const ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    agent.history.push({
+      role: 'assistant',
+      content: '🌅 おはようございます。 今日の提案です:\n\n'
+        + '**' + parsed.title + '**\n\n'
+        + parsed.reason + '\n\n'
+        + '👉 ' + parsed.summary,
+      time: ts,
+      morning_proposal: true,
+      proposal_keyword: parsed.keyword || '',
+      proposal_action: parsed.action_type || 'publish',
+    });
+    if(agent.history.length > 500) agent.history = agent.history.slice(-500);
+
+    // billing 記録
+    if(r.d && r.d.usage){
+      const cost = calcCost(r.d.usage.input_tokens || 0, r.d.usage.output_tokens || 0);
+      user.balance_jpy = Math.round(((user.balance_jpy || 0) - cost.jpy) * 1000) / 1000;
+      user.billing_history = Array.isArray(user.billing_history) ? user.billing_history : [];
+      user.billing_history.push({
+        date: new Date().toISOString(), type: 'usage', via: 'morning_proposal',
+        agentId: agent.id, agentName: agent.name, cost_jpy: cost.jpy,
+        detail: 'morning-1: ' + (parsed.title || '').slice(0,60),
+      });
+      if(user.billing_history.length > 1000) user.billing_history = user.billing_history.slice(-1000);
+    }
+  } catch(e){ console.warn('[morning-1] propose failed:', e.message); }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 📉 Day 3-B: 自動リライト cron (= 公開 7d/30d/90d 後に GSC 検出 → 圏外 → 自動リライト)
+// ──────────────────────────────────────────────────────────────────
+let _rankCheckTimer = null;
+function _startRankCheckCron(){
+  if(_rankCheckTimer) return;
+  const TICK_MS = 6 * 60 * 60 * 1000;  // 6 時間ごと
+  _rankCheckTimer = setInterval(async () => {
+    try { await _articleRankCheckTick(); }
+    catch(e){ console.warn('[rank-check] tick failed:', e.message); }
+  }, TICK_MS);
+  console.log('[rank-check] auto-rewrite cron started (= 6h tick、 公開 7/30/90 日後 GSC check)');
+}
+
+async function _articleRankCheckTick(){
+  const users = USE_SUPA
+    ? (await sbReq('GET','users','?select=id,email,agents,balance_jpy,integrations&limit=2000')).d || []
+    : LDB.all();
+  const now = Date.now();
+  const CHECK_DAYS = [7, 30, 90];  // 公開後のチェックタイミング
+  for(const u of users){
+    if(!u || !Array.isArray(u.agents)) continue;
+    if((u.balance_jpy||0) <= 0) continue;
+    if(!_hasGoogleRefreshToken(u) || !_hasGscScope(u)) continue;
+    let changed = false;
+    for(const ag of u.agents){
+      if(!ag || !ag.site_url || !ag.media || !ag.media.id) continue;
+      const siteUrl = ag.gsc_site_url || (u.integrations?.google?.gsc_site_url) || ag.site_url;
+      if(!siteUrl) continue;
+      const posts = (ag.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+      if(!posts.length) continue;
+
+      for(const p of posts){
+        const pubMs = Date.parse(p.published_at || 0);
+        if(!pubMs) continue;
+        const ageDays = Math.floor((now - pubMs) / 86400000);
+        // 7d/30d/90d ± 1 日 のみチェック (= rerun しない)
+        const isCheckDay = CHECK_DAYS.some(d => Math.abs(ageDays - d) <= 1);
+        if(!isCheckDay) continue;
+        if(p._last_rank_check_day === ageDays) continue;  // 既にチェック済
+
+        try {
+          // GSC で該当記事の順位取得
+          const r = await gscSearchAnalyticsQuery(u, siteUrl, {
+            startDate: new Date(now - 7*86400000).toISOString().slice(0,10),
+            endDate: new Date(now - 86400000).toISOString().slice(0,10),
+            dimensions: ['page'],
+            rowLimit: 200,
+            dimensionFilterGroups: [{ filters: [{
+              dimension: 'page', operator: 'contains',
+              expression: '/media/' + ag.media.slug + '/' + p.slug,
+            }]}],
+          }).catch(() => null);
+
+          const row = r && r.rows && r.rows[0];
+          const position = row ? (row.position || 100) : 100;
+          p._last_rank_check_day = ageDays;
+          p._last_rank_position = Math.round(position * 10) / 10;
+          changed = true;
+
+          // 圏外 (= position > 30) → 自動リライト
+          if(position > 30){
+            console.log('[rank-check] 圏外検出 → 自動リライト: user=' + u.id + ' post=' + p.slug + ' pos=' + position);
+            try {
+              // 既存リライト endpoint と同じ logic を inline で
+              await _autoRewriteOneArticle(u, ag, p);
+              p._last_auto_rewrite_at = new Date().toISOString();
+              // chat に通知
+              if(!Array.isArray(ag.history)) ag.history = [];
+              ag.history.push({
+                role: 'assistant',
+                content: '♻️ 順位下落検出 → 自動リライトしました\n\n**' + (p.title||'').slice(0,60) + '**\n順位 #' + Math.round(position) + ' → 改善版を公開済 (= 同 URL 上書き)。 30 日後に効果検証します。',
+                time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                auto_rewrite: true,
+              });
+              if(ag.history.length > 500) ag.history = ag.history.slice(-500);
+            } catch(e){
+              console.warn('[rank-check] auto-rewrite failed:', e.message);
+            }
+            await new Promise(rs => setTimeout(rs, 2000));  // rate-limit
+          }
+        } catch(e){
+          console.warn('[rank-check] gsc query failed:', e.message);
+        }
+      }
+    }
+    if(changed){
+      try { await DB.save(u); } catch(e){ console.warn('[rank-check] save:', e.message); }
+    }
+  }
+}
+
+// 自動リライト本体 (= 既存 /rewrite endpoint の本質を inline 化)
+async function _autoRewriteOneArticle(user, agent, postMeta){
+  const fullMap = user.media_posts_full || {};
+  const oldBody = (fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '';
+  if(!oldBody) return;
+  if(!CLAUDE_KEY) return;
+  const prompt = ''
+    + '以下の既存記事をリライトしてください。 同じ URL 上書きなので、 タイトルと excerpt も改善版に。\n\n'
+    + '【既存タイトル】' + postMeta.title + '\n'
+    + '【メインキーワード】' + (postMeta.keyword || postMeta.title) + '\n'
+    + '【既存 HTML】\n' + oldBody.slice(0, 8000) + (oldBody.length > 8000 ? '\n...(以下省略)' : '')
+    + '\n\n【リライト方針】\n'
+    + '- 古い情報を新しいデータに差し替え (= 2026 年最新)\n'
+    + '- 結論を先出し / 具体例を増やす / 見出し階層を整理\n'
+    + '- 元記事より 30% 長く\n'
+    + '- 業界編集部目線、 AI 言及 文章内禁止\n'
+    + '\n必ず JSON:\n'
+    + '{ "title": "改善版", "excerpt": "120 字", "body_html": "<h2>...</h2>..." }';
+  const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+    { 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    { model: 'claude-sonnet-4-6', max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }
+  );
+  if(r.s >= 400) return;
+  const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+  const m = txt.match(/\{[\s\S]*\}/);
+  if(!m) return;
+  let parsed; try { parsed = JSON.parse(m[0]); } catch(e){ return; }
+  if(!parsed.body_html) return;
+  const now = new Date().toISOString();
+  postMeta.title = String(parsed.title || postMeta.title).slice(0, 120);
+  postMeta.excerpt = String(parsed.excerpt || postMeta.excerpt || '').slice(0, 240);
+  postMeta.rewritten_at = now;
+  postMeta.rewrite_count = (postMeta.rewrite_count || 0) + 1;
+  if(!user.media_posts_full) user.media_posts_full = {};
+  user.media_posts_full[postMeta.id] = {
+    body_html: _sanitizeArticleHtml(String(parsed.body_html)),
+    saved_at: now,
+  };
+  _mediaSlugCacheClear(agent.media.slug);
+  // billing
+  if(r.d && r.d.usage){
+    const cost = calcCost(r.d.usage.input_tokens || 0, r.d.usage.output_tokens || 0);
+    user.balance_jpy = Math.round(((user.balance_jpy || 0) - cost.jpy) * 1000) / 1000;
+    user.billing_history = Array.isArray(user.billing_history) ? user.billing_history : [];
+    user.billing_history.push({
+      date: now, type: 'usage', via: 'auto_rewrite',
+      agentId: agent.id, agentName: agent.name, cost_jpy: cost.jpy,
+      detail: 'auto-rewrite: ' + postMeta.title.slice(0,60),
+    });
+  }
+}
+
 // ── 24h 未利用ユーザーを検知して呼び戻しメール送信 ──
 // 条件: site agent 持ち + 作成から 24h 経過 + 一度もチャット履歴に user 発言なし
 //       + welcome mail と inactivity mail を未送信 (= 二重送信防止)
@@ -30553,6 +30840,13 @@ if(require.main === module){
   // Disabled in tests (LDB_PATH set => test mode).
   if(!process.env.LDB_PATH){
     _startAgentScheduler();
+    // 🌅 朝の 1 個提案 + 📉 自動リライト cron (= Day 3 「最短最速 訪問者増」)
+    if(process.env.MORNING_PROPOSAL_ENABLED !== 'false'){
+      _startMorningProposalCron();
+    }
+    if(process.env.AUTO_REWRITE_ENABLED !== 'false'){
+      _startRankCheckCron();
+    }
     // Nightly AI draft generator: 22:00-06:00 JST, AI writes article drafts while user sleeps.
     // 2026-06-02: opt-in 化。 ユーザに見えない場所で Claude を消費していたため、
     // env flag NIGHTLY_DRAFT_ENABLED=true で明示的に有効化した場合のみ起動。

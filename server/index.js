@@ -29031,7 +29031,15 @@ if(require.main === module){
   if(!process.env.LDB_PATH){
     _startAgentScheduler();
     // Nightly AI draft generator: 22:00-06:00 JST, AI writes article drafts while user sleeps.
-    _startNightlyDraftGenerator();
+    // 2026-06-02: opt-in 化。 ユーザに見えない場所で Claude を消費していたため、
+    // env flag NIGHTLY_DRAFT_ENABLED=true で明示的に有効化した場合のみ起動。
+    // default = 起動しない (= 消費ゼロ)。
+    if(process.env.NIGHTLY_DRAFT_ENABLED === 'true' || process.env.NIGHTLY_DRAFT_ENABLED === '1'){
+      _startNightlyDraftGenerator();
+      console.log('[nightly-draft] enabled via NIGHTLY_DRAFT_ENABLED');
+    } else {
+      console.log('[nightly-draft] disabled (default). Set NIGHTLY_DRAFT_ENABLED=true to opt in.');
+    }
     // ── 一回限りの migration: 既存ユーザーの「毎朝レポート」 schedule を
     //    deliver:chat → deliver:email に切替 + hour 9→7 に前倒し。
     //    新規ユーザーは onboarding 時点で email になっているので不要。

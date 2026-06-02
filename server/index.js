@@ -15650,62 +15650,70 @@ function _mediaInferVertical(agent){
 }
 
 function _mediaArticleTemplateFor(vert){
+  // 🚀 2026-06-02: 「読みやすさ」 優先で 全 vertical 4500-5500 字に統一。
+  //    H2 を 8-12 個に増やして 1 セクション 300-500 字 → スマホで離脱しにくい。
+  //    info-table を全 vertical で必須化 (= 開催日 / 料金 等の key facts は表で)
   const templates = {
     finance: {
-      targetChars: 12000, h2Count: 10,
+      targetChars: 5500, h2Count: 10,
       template: '専門解説 + 比較型 (= 金融 / 士業)',
-      requiredSections: ['結論', '基礎知識', '比較表', '選び方', 'デメリット', '失敗事例', 'FAQ', '次のアクション'],
+      requiredSections: ['結論', '基礎情報テーブル', '基礎知識', '比較表', '選び方', 'デメリット', '失敗事例', 'FAQ', '次のアクション'],
       tone: '専門家監修目線、 引用元厳選、 法改正対応',
       faqRequired: true,
       tablesRequired: true,
     },
     hr: {
-      targetChars: 13000, h2Count: 10,
+      targetChars: 5500, h2Count: 10,
       template: '完全ガイド + 申請テンプレ型 (= 採用 / 助成金)',
-      requiredSections: ['結論', '対象条件', '金額', '期限', '申請手順', '必要書類', '失敗事例', 'FAQ', '専門家相談 CTA'],
+      requiredSections: ['結論', '基礎情報テーブル', '対象条件', '金額', '期限', '申請手順', '必要書類', 'FAQ', '専門家相談 CTA'],
       tone: '申請者目線、 厚労省一次ソース、 期限厳守',
       faqRequired: true,
+      tablesRequired: true,
     },
     saas: {
-      targetChars: 8000, h2Count: 8,
+      targetChars: 5000, h2Count: 9,
       template: '比較 + チュートリアル型 (= SaaS / 開発)',
-      requiredSections: ['結論', '機能比較', 'ユースケース', 'チュートリアル', '料金', 'API/コード例', 'まとめ'],
-      tone: '技術権威感、 コード例必須、 実運用視点',
-      codeExamplesRequired: true,
+      requiredSections: ['結論', '基礎情報テーブル', '機能比較', 'ユースケース', '料金', 'まとめ'],
+      tone: '技術権威感、 実運用視点',
+      tablesRequired: true,
     },
     ec: {
-      targetChars: 5500, h2Count: 7,
+      targetChars: 5000, h2Count: 9,
       template: 'レビュー + ランキング型 (= EC / DTC / 美容)',
-      requiredSections: ['結論', '比較表', '各商品レビュー', '選び方', '体験談', 'まとめ'],
-      tone: '体験者目線、 比較表必須、 写真意識、 薬機法注意',
+      requiredSections: ['結論', '基礎情報テーブル', '比較表', '各商品レビュー', '選び方', '体験談', 'まとめ'],
+      tone: '体験者目線、 比較表必須、 薬機法注意',
       tablesRequired: true,
     },
     realestate: {
-      targetChars: 7000, h2Count: 8,
+      targetChars: 5000, h2Count: 9,
       template: '相場 + 注意点 + 比較型 (= 不動産)',
-      requiredSections: ['結論', '相場感', '比較', '注意点', '失敗事例', 'チェックリスト', 'FAQ'],
+      requiredSections: ['結論', '基礎情報テーブル', '相場感', '比較', '注意点', 'チェックリスト', 'FAQ'],
       tone: '宅建士目線、 数値必須',
       faqRequired: true,
+      tablesRequired: true,
     },
     edu: {
-      targetChars: 6000, h2Count: 7,
+      targetChars: 5000, h2Count: 9,
       template: '体系解説 + 比較型 (= 教育)',
-      requiredSections: ['結論', '基礎', '比較表', '選び方', '料金', '体験談', 'FAQ'],
-      tone: '教育専門家目線、 学習効果データ',
+      requiredSections: ['結論', '基礎情報テーブル', '基礎', '比較表', '選び方', '料金', 'FAQ'],
+      tone: '教育専門家目線',
+      faqRequired: true,
       tablesRequired: true,
     },
     personal: {
-      targetChars: 3500, h2Count: 5,
+      targetChars: 4500, h2Count: 8,
       template: 'オピニオン + 体験型 (= 個人ブランド)',
-      requiredSections: ['結論', '体験', '気づき', '実践方法', 'まとめ'],
+      requiredSections: ['結論', '基礎情報テーブル', '体験', '気づき', '実践方法', 'まとめ'],
       tone: '一人称、 個人体験ベース',
+      tablesRequired: true,
     },
     general: {
-      targetChars: 5500, h2Count: 7,
+      targetChars: 5000, h2Count: 9,
       template: '汎用 SEO 型',
-      requiredSections: ['結論', '基礎知識', '実践方法', '事例', 'FAQ', '次のアクション'],
+      requiredSections: ['結論', '基礎情報テーブル', '基礎知識', '実践方法', '事例', 'FAQ', '次のアクション'],
       tone: '実用情報、 業界編集部目線',
       faqRequired: true,
+      tablesRequired: true,
     },
   };
   return templates[vert] || templates.general;
@@ -15742,30 +15750,34 @@ async function _mediaGenerateArticle(agent, params){
   // 🚀 Phase 1: Prompt Caching 用に system / user 分離
   //    system = 業種別 template ルール (= 同 vert で 5 分 cached → 90% off)
   //    user = キーワード + persona など 動的部分
+  // 🎯 2026-06-02 全面改造: 「fukuyama-note 風」 の 読みやすさ + 短さ + 情報テーブル 重視
   const systemText = ''
-    + '【ROLE】 あなたは業界編集部の編集長です。 SEO + ユーザ価値 + AEO 引用率 を 同時に最大化する記事を執筆します。\n\n'
+    + '【ROLE】 あなたは地域 / 専門メディアの編集長。 完全ガイド型の SEO 記事を執筆します。\n\n'
     + '【検出業種】' + vert + ' (= ' + tpl.template + ')\n'
-    + '【業種別 記事要件】\n'
-    + '- 型: ' + tpl.template + '\n'
-    + '- 推奨 H2 章数: ' + tpl.h2Count + ' 個\n'
-    + '- 必須セクション: ' + tpl.requiredSections.join(' / ') + '\n'
-    + '- トーン: ' + tpl.tone + '\n'
-    + (tpl.faqRequired ? '- FAQ schema 12 問 (Q&A 形式) を末尾に必ず入れる\n' : '')
-    + (tpl.tablesRequired ? '- 比較表を 1-2 個 (<table>) 必ず入れる\n' : '')
-    + (tpl.codeExamplesRequired ? '- コード例 (<pre><code>) を 2-3 個入れる\n' : '')
-    + (aeoRules ? '\n【AEO 構造強制】\n' + aeoRules + '\n' : '')
-    + '\n【共通ルール】\n'
-    + '- 体験談的・実用的・データ的どれかの切り口\n'
-    + '- 読者が次にすべき行動を 最後に提示\n'
-    + '- 🚨 業界編集部目線で記述。 「AI が」「AI チームが」 等の AI 言及禁止 (= E-E-A-T 確保)\n'
-    + '- 一次ソース (= 政府発表 / 業界統計 / 実体験) を引用するスタンス\n'
-    + '\n【視覚的メリハリ — 必ず使う】\n'
-    + '- 重要な発見・結論は <blockquote class="callout">...</blockquote> で 強調 (= 1-3 個)\n'
-    + '- 統計や比較は <table>...<th>項目</th>...</table> で 表 (= 1-2 個)\n'
-    + '- ポイント整理は <ul> / <ol> (= 各セクション 1 個目安)\n'
-    + '- 補足注釈 / 体験引用は <blockquote>...</blockquote> (= 通常引用)\n'
-    + '- 強調語は <strong>...</strong>、 文中ハイライトは <mark>...</mark>\n'
-    + '- 段落は短く 3-5 行で改行 (= スマホ読みやすさ)\n'
+    + '【目標文字数】 ' + tpl.targetChars + ' 字 (=±500 字、 これ以上は書かない)\n'
+    + '【H2 章数】 ' + tpl.h2Count + ' 個 — 1 H2 当たり 300-500 字で 短く区切る\n'
+    + '【必須セクション】 ' + tpl.requiredSections.join(' / ') + '\n'
+    + '【トーン】 ' + tpl.tone + '\n'
+    + '\n【🚨 絶対に守ること — fabrication 禁止】\n'
+    + '- 出典のない 数値 / 統計 / 「ROI X%」 「成功率 Y%」 等は 一切書かない\n'
+    + '- 「当チームの実測」 「弊社の事例」 等の 架空体験談 は 禁止\n'
+    + '- 一次ソース (公式サイト / 政府発表 / 業界統計) を持たない事実は「公式案内をご確認ください」 と書く\n'
+    + '- 競合プロダクト名 / 競合サービス名 を 具体的に列挙しない (= 自社メディアでの 競合促進を防ぐ)\n'
+    + '- 「2025 年最新」 等の 古い年号 NG。 現在年 (2026 年) に統一\n'
+    + '\n【📊 必須 視覚要素 — 全て入れる】\n'
+    + '1. **基礎情報テーブル** (必須): 記事冒頭付近に <table> で key facts を整理\n'
+    + '   例: 開催日 / 料金 / 対象者 / 申請期限 / 所要時間 等 5-8 行の key:value 形式\n'
+    + '   <table><tr><th>開催日</th><td>例年 8 月 9 日 20:00〜</td></tr>...</table>\n'
+    + '2. **目次型 H2** — 「○○ とは｜基礎情報」 「見どころ｜△△」 等 縦棒 (｜) で 主+副ラベル\n'
+    + '3. **箇条書き** (<ul>) を 各セクション 1 個 (= 3-5 項目)\n'
+    + '4. **callout** <blockquote class="callout"> で 重要結論 1-3 個 (= 💡 で目立つ)\n'
+    + '5. **FAQ section** 末尾に <h2>よくある質問</h2> + <h3>Q. ...</h3><p>A. ...</p> × 5-8 問\n'
+    + '6. **段落は 2-3 行で改行** (= 1 段落 100 字以内)、 スマホで読みやすく\n'
+    + '\n【文体ルール】\n'
+    + '- 「AI が」「AI チームが」「私たちは」 等 AI 自己言及 禁止 (= E-E-A-T)\n'
+    + '- 「実測」 「事例」 等の 検証不能語は 出典あり時のみ使用、 ない時は 「公式情報」 「一般論」 と書く\n'
+    + '- 「次のアクション:」 等の AI 文末クセ 禁止\n'
+    + '- 「〜してください」 「〜と考えられます」 等の自然な丁寧体\n'
     + '\n【出力フォーマット】 必ず以下の JSON だけを返す。 説明・前置き禁止:\n'
     + '{\n'
     + '  "title": "60 文字以内、 キーワード含む、 click したくなる",\n'
@@ -15869,14 +15881,39 @@ function _pollinationsImageUrl(prompt, opts){
 }
 function _strHash(s){ let h=0; for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h|=0; } return h; }
 
+// タイトルから 画像生成に使える 主要被写体 (= 名詞) を抽出。
+// 「AIマーケティングツール導入で業務時間を60%削減した実例と選定基準」 → 「AIマーケティングツール」
+// 「ぬまくま夏祭り 阿伏兎花火大会 2026 完全ガイド」 → 「阿伏兎花火大会」
+function _extractHeroSubject(title){
+  let t = String(title || '');
+  // タイトル区切り (｜| ：: 〜) で 主節を取る (= 副題切り捨て)
+  t = t.split(/[｜|：:〜~]/)[0].trim();
+  // 「完全ガイド」 「徹底比較」 「実例」 等の修飾語を除去
+  t = t.replace(/(完全ガイド|徹底比較|徹底解説|完全解説|完全マニュアル|まとめ|入門|基本|実例|事例|選び方|の方法|の仕方|徹底|入念|プロ向け|初心者向け|総まとめ|総合)/g, '');
+  // 数字+「選」「個」「位」 を除去
+  t = t.replace(/\d+\s*(選|個|位|本|社|社版)/g, '');
+  // 年号 (= 1900-2099) を除去 (= 画像化に不要)
+  t = t.replace(/\b(19|20)\d{2}\s*年?/g, '');
+  // 末尾の助詞 / 句読点除去
+  t = t.replace(/[、，。…\s]+$/g, '').trim();
+  return t.slice(0, 60) || title;
+}
+
 async function _mediaGenerateHeroImage(title, template){
-  // 戦略: Replicate (SDXL) → 失敗 / 未設定 → Pollinations.ai (= 確実に画像出す)
-  const styleHint = template === 'tech' ? ', dark mode, technical diagram style, futuristic'
-    : template === 'newsletter' ? ', soft pastel illustration, warm tones'
-    : template === 'magazine' ? ', editorial photography, professional, high contrast'
-    : template === 'friendly' ? ', warm cozy illustration, friendly approachable'
-    : ', clean modern minimalist, professional editorial';
-  const basePrompt = 'editorial hero image for blog article about: ' + String(title).slice(0, 100) + styleHint + ', no text, no logo, no watermark, 16:9 aspect';
+  // 戦略: Replicate (SDXL) → 失敗 / 未設定 → Pollinations.ai
+  // 🎯 2026-06-02: タイトル直訳ではなく、 主要被写体を抽出してから image prompt 化
+  const subject = _extractHeroSubject(title);
+  // template ごとの画調 (= 「サムネ意味わからん」 対策、 photorealistic 重視)
+  const styleHint = template === 'tech'
+      ? ', photorealistic, clean office desk with laptop and modern UI screens, professional photography, soft natural lighting'
+    : template === 'newsletter'
+      ? ', clean editorial illustration, soft pastel palette, warm tones, modern flat design'
+    : template === 'magazine'
+      ? ', documentary photography, photorealistic, high quality, magazine cover style, natural lighting'
+    : template === 'friendly'
+      ? ', warm friendly illustration, hand-drawn style, approachable, cozy atmosphere'
+      : ', photorealistic, professional editorial photography, clean composition, natural lighting, magazine quality';
+  const basePrompt = subject + styleHint + ', no text, no logo, no watermark, no people faces blurred, 16:9 widescreen';
   // 1) Replicate (token がある時のみ)
   if(process.env.REPLICATE_API_TOKEN){
     try {
@@ -15890,10 +15927,11 @@ async function _mediaGenerateHeroImage(title, template){
 }
 
 // 本文中に挿入する 図 (H2 セクション毎、 関連プロンプトで Pollinations 生成)
+// 🎯 2026-06-02: section title から 主要被写体抽出 → photorealistic で 意味のある画像
 function _mediaGenerateInlineImageUrl(sectionTitle, articleTitle){
-  const prompt = 'editorial illustration for blog section: ' + String(sectionTitle).slice(0, 60)
-    + ' (article: ' + String(articleTitle).slice(0, 60) + ')'
-    + ', clean modern editorial illustration, no text, no logo, no watermark, professional';
+  const subject = _extractHeroSubject(sectionTitle) || _extractHeroSubject(articleTitle);
+  const prompt = subject
+    + ', photorealistic editorial photography, clean composition, natural lighting, magazine quality, no text, no logo, no watermark, 16:9';
   return _pollinationsImageUrl(prompt, { width: 1024, height: 576 });
 }
 
@@ -16104,9 +16142,13 @@ ${schemaTags}
   article.post .body blockquote.callout::before{content:"💡 ";margin-right:4px}
   article.post .body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;border:1px solid ${s.cardBorder};border-radius:6px;overflow:hidden}
   article.post .body table thead{background:${isDark?'#0a1322':'#fafaf7'}}
-  article.post .body table th{padding:11px 14px;text-align:left;font-weight:800;color:${s.textColor};border-bottom:2px solid ${s.cardBorder};font-size:13px}
+  article.post .body table th{padding:11px 14px;text-align:left;font-weight:800;color:${s.textColor};border-bottom:2px solid ${s.cardBorder};font-size:13px;background:${isDark?'#0a1322':'#fafaf7'}}
   article.post .body table td{padding:11px 14px;border-top:1px solid ${s.cardBorder};color:${s.textColor};line-height:1.6}
   article.post .body table tr:nth-child(even) td{background:${isDark?'#0d1626':'#fafaf7'}}
+  /* 縦型 info-table (= <tr><th>key</th><td>value</td></tr>) — fukuyama-note 風 */
+  article.post .body table tr td:first-child{}
+  article.post .body table tbody tr th{width:30%;background:${isDark?'#0a1322':'#fafaf7'};border-top:1px solid ${s.cardBorder};border-bottom:none;vertical-align:top;white-space:nowrap}
+  article.post .body table tbody tr:first-child th{border-top:none}
   /* モバイル時 上部に折りたたみ TOC 表示 */
   .mobile-toc{display:none}
   footer.site-foot{padding:20px 24px;background:${s.headerBg};font-size:11px;color:${s.mutedColor};border-top:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}

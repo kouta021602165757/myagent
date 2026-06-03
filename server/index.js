@@ -32397,6 +32397,26 @@ const server=http.createServer(async(req,res)=>{
   //     sub.myaiagents.agency/2026-8-3 → /media/sub/2026-8-3 (= 先頭に prefix)
   //     sub.myaiagents.agency/media/sub/2026-8-3 → /media/sub/2026-8-3 (= すでに qualified、 そのまま)
   const _subSlug = subdomainMatch ? subdomainMatch[1] : null;
+
+  // 🐛 fix: subdomain で /favicon.ico を browser がデフォルト fetch すると 404
+  // → media.favicon_url にリダイレクト (= 設定済なら)、 未設定なら /favicon.ico をメインから serve
+  if(_subSlug && (pathname === '/favicon.ico' || pathname === '/apple-touch-icon.png' || pathname === '/apple-touch-icon-precomposed.png') && method === 'GET'){
+    return (async () => {
+      try {
+        const found = await _findUserByMediaSlug(_subSlug, { includePosts: false });
+        if(found && found.agent && found.agent.media){
+          const m = found.agent.media;
+          const fav = m.favicon_url || m.logo_url;
+          if(fav){
+            res.writeHead(302, { 'Location': fav, 'Cache-Control': 'public, max-age=86400' });
+            return res.end();
+          }
+        }
+      } catch(_){}
+      res.writeHead(404); return res.end();
+    })();
+  }
+
   let effectivePath = pathname;
   if(_subSlug){
     const _qPrefix = '/media/' + _subSlug;

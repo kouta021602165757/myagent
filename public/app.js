@@ -11575,6 +11575,16 @@ window._kwInvokeArticleGen = async function(siteId, title, mode){
     var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', {
       keyword: title, target_chars: 5000, mode: mode,
     });
+    // 🚀 async 応答対応 (= サーバが async:true で即時返却、 バックグラウンド処理)
+    if(r && r.async){
+      _mediaArtClose();
+      showToast('✅ バックグラウンドで生成中 (= 1-3 分)。 完了したら メディアダッシュ で確認できます','ok',8000);
+      // 3 分後に dashboard 自動 refresh
+      setTimeout(function(){
+        if(typeof window.openMediaPanel === 'function') window.openMediaPanel(siteId);
+      }, 180000);
+      return;
+    }
     var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
     if(ag){
       if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
@@ -11582,7 +11592,6 @@ window._kwInvokeArticleGen = async function(siteId, title, mode){
     }
     _mediaArtClose();
     showToast('✅ 「'+(r.post.title||'').slice(0,30)+'…」を公開しました','ok');
-    // メディアダッシュボードを開いて確認できるようにする
     window.openMediaPanel(siteId);
   } catch(e){
     var msg = (e && e.message) || 'unknown';

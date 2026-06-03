@@ -24929,6 +24929,57 @@ async function handleAPI(req,res,pathname,method,ip){
       });
     }
 
+    // 🚀 非同期化 (= Render edge 100s timeout 回避)
+    //   Sonnet + Tool Use 記事生成は 90-150s かかる → sync だと 502。
+    //   即時 200 + async:true 返却、 バックグラウンドで生成 + DB 保存。
+    //   client は polling (= GET /api/agents/:id/media で media_posts_idx 確認)。
+    const acceptAsync = body && body.async !== false;  // 既定で async、 sync が必要なら body.async=false で 旧挙動
+    if(acceptAsync){
+      // 進行 ID 採番 + 即時応答
+      const jobId = 'gen_' + crypto.randomBytes(5).toString('hex');
+      const startedAt = new Date().toISOString();
+      jres(res, 200, { ok: true, async: true, job_id: jobId, started_at: startedAt, message: 'バックグラウンド生成中、 1-3 分で メディアダッシュ に表示されます' });
+      // 以下 バックグラウンド処理
+      (async () => {
+        try {
+          const article = await _mediaGenerateArticle(ag, body);
+          const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
+          const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
+          const postSlug = _mediaPostSlug(article.title, existingSlugs);
+          const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
+          const now = new Date().toISOString();
+          const postMeta = {
+            id: postId, slug: postSlug, title: article.title, excerpt: article.excerpt,
+            category_name: article.category_name || '',
+            tags: Array.isArray(article.tags) ? article.tags : [],
+            hero_image_url: heroUrl, status: 'published', published_at: now, keyword,
+            vertical: article.vertical || '', template_used: article.template_used || '',
+          };
+          if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+          ag.media_posts_idx.unshift(postMeta);
+          if(!user.media_posts_full) user.media_posts_full = {};
+          user.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
+          const matchKw = keyword.toLowerCase();
+          const matchTitle = (article.title || '').toLowerCase();
+          if(Array.isArray(ag.planned_articles) && ag.planned_articles.length){
+            ag.planned_articles = ag.planned_articles.filter(p => {
+              if(!p) return false;
+              const t = (p.title || '').toLowerCase();
+              const k = (p.keyword || '').toLowerCase();
+              return t !== matchTitle && t !== matchKw && k !== matchKw && k !== matchTitle;
+            });
+          }
+          await DB.save(user);
+          _mediaSlugCacheClear(ag.media.slug);
+          console.log('[media-art-async] ✅ ' + jobId + ' published: ' + postSlug);
+        } catch(e){
+          console.error('[media-art-async] ❌ ' + jobId + ' failed:', e.message);
+        }
+      })().catch(e => console.error('[media-art-async] fatal:', e.message));
+      return;
+    }
+
+    // 旧 sync パス (= body.async=false 指定時)
     let article;
     try {
       article = await _mediaGenerateArticle(ag, body);
@@ -24959,13 +25010,11 @@ async function handleAPI(req,res,pathname,method,ip){
     };
     if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
     ag.media_posts_idx.unshift(postMeta);
-    // body_html は別カラム
     if(!user.media_posts_full) user.media_posts_full = {};
     user.media_posts_full[postId] = {
       body_html: article.body_html,
       saved_at: now,
     };
-    // planned_articles から同タイトル / 同 keyword を 自動削除 (= 公開 = 完了)
     const matchKw = keyword.toLowerCase();
     const matchTitle = (article.title || '').toLowerCase();
     if(Array.isArray(ag.planned_articles) && ag.planned_articles.length){
@@ -24981,12 +25030,11 @@ async function handleAPI(req,res,pathname,method,ip){
       console.warn('[media-art] save failed:', e.message);
       return jres(res, 500, { error: 'save_failed', detail: e.message });
     }
-    // 公開ページキャッシュ flush
     _mediaSlugCacheClear(ag.media.slug);
     return jres(res, 200, {
       ok: true,
       post: postMeta,
-      public_url: 'https://' + (ag.media.domain || 'myaiagents.agency') + '/media/' + ag.media.slug + '/' + postSlug,
+      public_url: _mediaPublicUrl(ag.media, postSlug),
     });
   }
 

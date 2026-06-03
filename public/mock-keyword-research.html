@@ -2566,6 +2566,20 @@
     var wc = document.querySelector('.tab-pane[data-tab="seo"] .word-cloud');
     if(wc) wc.innerHTML = '<div style="color:#71717a;font-size:11.5px">分析中…</div>';
   }
+  // 🔄 リトライ ヘルパー (= 失敗時の上位サイト解析を 再 fetch)
+  window._kwRetrySerp = function(kw){
+    if(!kw) return;
+    // ローディング 表示
+    var h2map = document.querySelector('.tab-pane[data-tab="seo"] .h2map');
+    if(h2map) h2map.innerHTML = '<div style="text-align:center;padding:20px;color:#71717a;font-size:11.5px">🔄 リトライ中…</div>';
+    var wc = document.querySelector('.tab-pane[data-tab="seo"] .word-cloud');
+    if(wc) wc.innerHTML = '<div style="color:#71717a;font-size:11.5px">🔄 リトライ中…</div>';
+    var topsites = document.querySelector('.tab-pane[data-tab="seo"] .topsites');
+    if(topsites) topsites.innerHTML = '<div style="color:#71717a;font-size:11.5px;padding:14px;text-align:center">🔄 リトライ中…</div>';
+    // 親 window に 再 fetch リクエスト
+    window.parent.postMessage({ type: 'kw-serp-request', siteId: _siteId, kw: kw, refresh: true }, location.origin);
+  };
+
   function _renderSerp(d){
     var pane = document.querySelector('.tab-pane[data-tab="seo"]');
     if(!pane) return;
@@ -2601,13 +2615,26 @@
       if(h2html){
         h2map.innerHTML = h2html;
       } else {
-        // diagnostics を見せる
+        // diagnostics を見せる + 🔄 リトライ ボタン
         var dx = d.diagnostics || {};
         var diagMsg = '⚠️ 上位サイトの h2 が取得できませんでした。';
-        if(dx.serp_count === 0) diagMsg += ' 検索結果が 0 件 (= キーワードが英語/専門用語すぎる可能性)。';
-        else if(dx.top5_ok === 0) diagMsg += ' 上位 ' + dx.top5_attempted + ' サイト全て fetch 失敗 (= robots/CSP/gzip ブロック等)。';
-        else diagMsg += ' AI が共通 h2 を抽出できませんでした。';
-        h2map.innerHTML = '<div style="color:#92400e;background:#fffbeb;border-radius:7px;padding:12px;font-size:11.5px;line-height:1.55">' + _esc(diagMsg) + '</div>';
+        var detail = '';
+        if(dx.serp_count === 0){
+          diagMsg += ' 検索結果が 0 件。';
+          detail = 'KW が英語/専門用語すぎる可能性。 別 KW で 再試行を。';
+        } else if(dx.top5_ok === 0){
+          diagMsg += ' 上位 ' + dx.top5_attempted + ' サイト 全て fetch 失敗。';
+          detail = 'WAF / robots.txt / タイムアウトの可能性。 リトライで 改善することがあります。';
+        } else {
+          diagMsg += ' 共通 h2 抽出 失敗。';
+          detail = 'リトライで 別の上位サイトから 取得できる可能性あります。';
+        }
+        var kwForRetry = (d.keyword || '').replace(/'/g, '');
+        h2map.innerHTML = '<div style="color:#92400e;background:#fffbeb;border-radius:8px;padding:14px 16px;font-size:11.5px;line-height:1.7">'
+          + '<div style="font-weight:800;margin-bottom:4px">' + _esc(diagMsg) + '</div>'
+          + '<div style="color:#78350f;margin-bottom:10px">' + _esc(detail) + '</div>'
+          + '<button onclick="_kwRetrySerp(\'' + _esc(kwForRetry) + '\')" style="background:#d97706;color:#fff;border:0;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔄 リトライ</button>'
+          + '</div>';
       }
     }
     // 頻出語タグクラウド
@@ -2617,7 +2644,8 @@
         var sz = w.size || 3;
         return '<span class="word s' + sz + '">' + _esc(w.word) + '</span>';
       }).join('');
-      wc.innerHTML = wcHtml || '<div style="color:#92400e;font-size:11.5px">⚠️ 頻出語が取得できませんでした (上位サイト解析失敗)。</div>';
+      var kwForWc = (d.keyword || '').replace(/'/g, '');
+      wc.innerHTML = wcHtml || ('<div style="color:#92400e;font-size:11.5px;padding:10px 0">⚠️ 頻出語 取得失敗 <button onclick="_kwRetrySerp(\'' + _esc(kwForWc) + '\')" style="margin-left:10px;background:transparent;border:1px solid #d97706;color:#d97706;padding:3px 10px;border-radius:4px;font-size:10.5px;font-weight:800;cursor:pointer;font-family:inherit">🔄 リトライ</button></div>');
     }
     // 上位 10 サイト
     var topsites = pane.querySelector('.topsites');

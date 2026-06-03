@@ -11119,11 +11119,7 @@ function _renderTabMedia(site){
       +   '<div style="font-size:10.5px;color:var(--text3);text-align:center;margin-top:6px">候補から 1 クリックで公開 · チャットで「○○ で書いて」 も OK</div>'
       + '</div>'
       + (posts.length === 0
-          ? '<div style="background:#fff;border:1.5px dashed var(--peach-dark);border-radius:11px;padding:24px;text-align:center;margin-bottom:14px">'
-            + '<div style="font-size:36px;margin-bottom:8px">📝</div>'
-            + '<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:6px">最初の記事を AI チームに書かせよう</div>'
-            + '<div style="font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.55"><b>🔍 キーワード調査でネタを探す</b> がおすすめ。 AI が貴社サイト向けに 10〜20 個の SEO 候補を生成 → 1 クリックで記事化 + 公開できます。</div>'
-            + '</div>'
+          ? ''
           : '<div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:14px 18px;font-size:12px;margin-bottom:14px">'
             + '<b style="color:var(--text);font-size:12.5px">公開済記事 ' + posts.length + ' 本</b>'
             + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">'

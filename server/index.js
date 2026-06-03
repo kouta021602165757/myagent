@@ -9131,10 +9131,21 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
       // セクションマーカーで判定 (= AI が「日次〜」と冒頭に書き忘れても救う)
       type = 'daily';
       title = '日次グロースレポート ' + new Date().toISOString().slice(0, 10);
-    } else if(len >= 1500 && headerMatches.length >= 2){
+    } else if(len >= 800 && headerMatches.length >= 1){
+      // 緩和 (2026-06-03): 1500→800 字、 見出し 2→1 個。 通常の AI 返信も
+      //   構造化されてれば 保存される。
       type = 'analysis';
       const firstHeader = reply.match(/^#{1,3}\s+(.+)$/m);
       title = firstHeader ? firstHeader[1].slice(0, 80) : reply.slice(0, 40);
+    } else if(len >= 600){
+      // 🆕 catch-all 'reply' type — 600 字以上の AI 返信は 必ず保存。
+      //   ユーザが「output が メモに保存されない」 問題への対応。
+      type = 'reply';
+      // 最初の文 or 1 行目をタイトルに (= 80 字 cap)
+      const firstLine = reply.split('\n').find(s => s.trim());
+      title = firstLine
+        ? firstLine.replace(/^[#*\-\s]+/, '').slice(0, 80)
+        : ('AI 返信 ' + new Date().toISOString().slice(0, 10));
     } else if(/(?:^|\n)\s*(?:🐦|Twitter|X 投稿|SNS 投稿|X post|tweet|投稿案 ?\d|案 ?\d ?[:：])/im.test(reply) && len >= 300){
       type = 'sns_post';
       title = 'SNS 草稿 ' + new Date().toISOString().slice(0, 10);

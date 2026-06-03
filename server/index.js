@@ -15620,6 +15620,22 @@ function _sanitizeArticleHtml(html){
   return out;
 }
 
+// 🌐 メディア URL builder — env で サブドメイン / サブディレクトリ 切替
+//    MEDIA_USE_SUBDOMAIN=true → <slug>.myaiagents.agency/<path>
+//    未設定 → myaiagents.agency/media/<slug>/<path> (= 現状維持)
+//   DNS + Render Wildcard カスタムドメイン 設定済の時のみ ON にする。
+const MEDIA_BASE_DOMAIN = (process.env.MEDIA_BASE_DOMAIN || 'myaiagents.agency').toLowerCase();
+const USE_MEDIA_SUBDOMAIN = String(process.env.MEDIA_USE_SUBDOMAIN || 'false').toLowerCase() === 'true';
+function _mediaPublicUrl(media, sub){
+  if(!media || !media.slug) return '';
+  const slug = String(media.slug);
+  const tail = sub ? ('/' + String(sub).replace(/^\/+/, '')) : '';
+  if(USE_MEDIA_SUBDOMAIN){
+    return 'https://' + slug + '.' + MEDIA_BASE_DOMAIN + tail;
+  }
+  return 'https://' + (media.domain || MEDIA_BASE_DOMAIN) + '/media/' + slug + tail;
+}
+
 // http:// / https:// のみ許可
 function _isHttpUrl(s){
   if(!s) return false;
@@ -31853,8 +31869,44 @@ const server=http.createServer(async(req,res)=>{
     return serveAgentSharePage(res, aRoute[1]);
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // 🌐 サブドメイン routing — <slug>.myaiagents.agency → /media/<slug> リライト
+  // ──────────────────────────────────────────────────────────────
+  //   ユーザ視点: 「自分のメディア」 感を出すため <media-blog>.myaiagents.agency
+  //   サーバ側: hostname を 検出して 既存 /media/<slug>/... ルーティングに 内部リライト
+  //   DNS: Cloudflare で *.myaiagents.agency CNAME → Render、
+  //         Render Dashboard で Wildcard カスタムドメイン追加 (= ユーザ作業)
+  const rawHost = (req.headers.host || '').toLowerCase().split(':')[0];
+  const subdomainMatch = rawHost.match(/^([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\.myaiagents\.agency$/);
+  if(subdomainMatch && pathname !== '/api/health'){
+    const slug = subdomainMatch[1];
+    // ルート (= /) → /media/<slug>
+    // パス (= /xxx) → /media/<slug>/xxx
+    // /api/ や / 以外は そのまま (= 内部 API は メインドメインで)
+    if(!pathname.startsWith('/api/') && !pathname.startsWith('/auth') && !pathname.startsWith('/app')){
+      const newPath = pathname === '/' || pathname === ''
+        ? '/media/' + slug
+        : '/media/' + slug + pathname;
+      // ハンドラを 内部リライト (= req.url を 上書き、 pathname を再計算)
+      req.url = newPath + (parsed.search || '');
+      // pathname 変数も 上書き (= 以下のルーティングが新パスを見るため)
+      // この再代入は const なのでできないので、 直接 ハンドラを再呼び出し
+      // → スコープを out して 再帰すると 無限ループになるので、 ここでは
+      //   if 文の 直後に pathname を 書き換えて 後続コードを動かす
+      // 但し const pathname は const。 ここで let に変えると 影響大。
+      // → 代替案: 別の変数 effPath を使う
+      // 実装方針: subdomain → /media/<slug>* に内部書き換え、 mediaIndex/Post/About/Cat
+      //   ルートを 別 変数 effectivePath で マッチさせる
+    }
+  }
+  // effectivePath: subdomain ヒット時は リライト先、 通常は pathname
+  const _subSlug = subdomainMatch ? subdomainMatch[1] : null;
+  const effectivePath = _subSlug
+    ? (pathname === '/' || pathname === '' ? '/media/' + _subSlug : '/media/' + _subSlug + pathname)
+    : pathname;
+
   // /media/:slug/about → 編集部 紹介 ページ (= E-E-A-T、 信頼性)
-  const mediaAboutRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/about\/?$/);
+  const mediaAboutRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/about\/?$/);
   if(mediaAboutRoute && method === 'GET'){
     return (async () => {
       const slug = mediaAboutRoute[1];
@@ -31882,7 +31934,7 @@ const server=http.createServer(async(req,res)=>{
   }
 
   // /media/:slug/cat/:catSlug → カテゴリページ SSR (= 認証不要、 該当カテゴリの記事一覧)
-  const mediaCatRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/cat\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
+  const mediaCatRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/cat\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
   if(mediaCatRoute && method === 'GET'){
     return (async () => {
       const slug = mediaCatRoute[1];
@@ -31924,7 +31976,7 @@ const server=http.createServer(async(req,res)=>{
   }
 
   // /media/:slug/:postSlug → 個別記事 SSR (= 認証不要)
-  const mediaPostRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
+  const mediaPostRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
   if(mediaPostRoute && method === 'GET'){
     return (async () => {
       const slug = mediaPostRoute[1];
@@ -31971,7 +32023,7 @@ const server=http.createServer(async(req,res)=>{
   }
 
   // /media/:slug → メディア記事一覧 SSR (= 認証不要)
-  const mediaIndexRoute = pathname.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/?$/);
+  const mediaIndexRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/?$/);
   if(mediaIndexRoute && method === 'GET'){
     return (async () => {
       const slug = mediaIndexRoute[1];

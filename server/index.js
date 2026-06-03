@@ -7793,7 +7793,7 @@ function _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData }){
     '【ペルソナ / 強み】 ' + (persona || '(未設定)'),
     '【サイト内容 (title/h1/h2/抜粋)】',
     meta || '(取得失敗)',
-    '【既存記事タイトル】',
+    '【🚫 既に公開済の記事タイトル — これらと 同じ / 類似 KW は 絶対に提案しない】',
     arts || '(なし)',
     gscBlock,
     '',
@@ -21506,6 +21506,8 @@ async function handleAPI(req,res,pathname,method,ip){
         };
         if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
         ag.media_posts_idx.unshift(postMeta);
+        // 🎯 公開済 KW を AI 提案から除外するため、 KW suggestions cache を 失効
+        delete ag.keyword_suggestions;
         if(!adminUser.media_posts_full) adminUser.media_posts_full = {};
         adminUser.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
         const estJpy = Math.round((article.body_html.length / 2000) * 10) / 10;
@@ -25182,6 +25184,7 @@ async function handleAPI(req,res,pathname,method,ip){
           };
           if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
           ag.media_posts_idx.unshift(postMeta);
+          delete ag.keyword_suggestions;  // 🎯 公開済 KW を AI 提案から除外
           if(!user.media_posts_full) user.media_posts_full = {};
           user.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
           const matchKw = keyword.toLowerCase();
@@ -25235,6 +25238,7 @@ async function handleAPI(req,res,pathname,method,ip){
     };
     if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
     ag.media_posts_idx.unshift(postMeta);
+    delete ag.keyword_suggestions;  // 🎯 公開済 KW を AI 提案から除外
     if(!user.media_posts_full) user.media_posts_full = {};
     user.media_posts_full[postId] = {
       body_html: article.body_html,
@@ -25477,6 +25481,15 @@ async function handleAPI(req,res,pathname,method,ip){
       sitePreview = sp;
       articles = arts;
     } catch(e){ console.warn('[kw-sug] site preview failed:', e.message); }
+
+    // 🎯 自社メディアで すでに公開した記事 を articles リストに 追加
+    //   → AI が 同じタイトルを 提案するのを 防ぐ
+    if(ag.media && Array.isArray(ag.media_posts_idx)){
+      const publishedTitles = ag.media_posts_idx
+        .filter(p => p && p.title && p.status !== 'draft')
+        .map(p => ({ title: p.title, url: _mediaPublicUrl(ag.media, p.slug) }));
+      articles = (articles || []).concat(publishedTitles);
+    }
 
     const prompt = _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData });
     // 🚀 Phase 1+2: Sonnet → Haiku (= KW score 算出は Haiku で十分、 コスト 1/15)

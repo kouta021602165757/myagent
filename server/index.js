@@ -16285,6 +16285,24 @@ async function _mediaGenerateArticle(agent, params){
   // セクション 冒頭に デザインされた紺カードを表示する (= fukuyama-note 風)
   let sanitized = _sanitizeArticleHtml(String(parsed.body_html));
 
+  // 🎨 内部リンク (= 同メディアの他記事へのリンク) に class="related-inline" 付与
+  //   → CSS で カード風に見せる (= 赤下線 から 明るい背景 + 矢印 アイコン)
+  if(agent && agent.media && agent.media.slug){
+    const mediaHost = (agent.media.slug + '.myaiagents.agency').replace(/\./g, '\\.');
+    const internalLinkRe = new RegExp('<a\\s+href="(https?://' + mediaHost + '/[^"]*)"((?:[^>]*?))(?<!class="[^"]*")\\s*>', 'gi');
+    sanitized = sanitized.replace(/<a\s+href="(https?:\/\/[^"]+)"([^>]*)>/gi, (m, url, rest) => {
+      // 同メディアサブドメインへのリンクなら class 追加
+      const sameMedia = url.indexOf('://' + agent.media.slug + '.myaiagents.agency') >= 0
+                     || url.indexOf('://myaiagents.agency/media/' + agent.media.slug + '/') >= 0;
+      if(!sameMedia) return m;
+      // すでに class があれば 追記、 なければ class 追加
+      if(/class=["']/.test(rest)){
+        return m.replace(/class=(["'])([^"']*)\1/, 'class=$1$2 related-inline$1');
+      }
+      return '<a href="' + url + '"' + rest + ' class="related-inline">';
+    });
+  }
+
   // 🏆 ランキング型: AI が products[] を構造化 JSON で返した時、
   //    サーバ側で product-card HTML を生成 → body_html に挿入
   let products = Array.isArray(parsed.products) ? parsed.products : null;
@@ -16510,7 +16528,60 @@ function _renderProductCard(p){
 //    AI 画像じゃなく、 fukuyama-note 風の デザインされた hero を SVG で生成。
 //    width:1280 / height:720 (= 16:9)、 inline data URI で hero として使用。
 // ──────────────────────────────────────────────────────────────────
-function _svgPaletteFor(tpl){
+// hex を HSL に変換
+function _hexToHsl(hex){
+  const m = String(hex || '').match(/^#?([0-9a-f]{6})$/i);
+  if(!m) return null;
+  const r = parseInt(m[1].slice(0,2), 16) / 255;
+  const g = parseInt(m[1].slice(2,4), 16) / 255;
+  const b = parseInt(m[1].slice(4,6), 16) / 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  const l = (max + min) / 2;
+  let h, s;
+  if(max === min){ h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch(max){
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function _hslToHex(h, s, l){
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = v => Math.round(v * 255).toString(16).padStart(2, '0');
+  return '#' + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
+}
+
+// 🎨 brand_color から palette 自動生成 (= LP のブランド色に合わせた hero)
+function _paletteFromBrand(brandColor){
+  const hsl = _hexToHsl(brandColor);
+  if(!hsl) return null;
+  // 明度高い → 既に明るい色なので bg は さらに pale に
+  const isDark = hsl.l < 50;
+  return {
+    bg:     _hslToHex(hsl.h, Math.min(40, hsl.s), 96),     // 極淡 (背景)
+    accent: brandColor,                                      // そのまま (= pill / 装飾)
+    deco:   _hslToHex(hsl.h, Math.min(60, hsl.s), 85),     // 淡 (装飾円)
+    text:   isDark ? '#0f172a' : '#0a0a0a',                 // 文字色
+    sub:    _hslToHex(hsl.h, 20, 45),                       // サブ文字 (= 中間明度)
+  };
+}
+
+function _svgPaletteFor(tpl, brandColor){
+  // 🎨 brand_color を最優先 (= LP に色を合わせる)
+  if(brandColor){
+    const p = _paletteFromBrand(brandColor);
+    if(p) return p;
+  }
   const palettes = {
     minimal:    { bg: '#fdf6e3', accent: '#3b82f6', deco: '#bfdbfe', text: '#0f172a', sub: '#64748b' },
     magazine:   { bg: '#fffbf5', accent: '#dc2626', deco: '#fecaca', text: '#0a0a0a', sub: '#525252' },
@@ -16566,7 +16637,8 @@ function _categoryToEnSubtitle(cat){
 
 function _svgHeroForArticle(post, media){
   const tpl = (media && media.template) || 'minimal';
-  const pal = _svgPaletteFor(tpl);
+  // 🎨 media.brand_color を SVG palette に反映
+  const pal = _svgPaletteFor(tpl, media && media.brand_color);
   const title = String(post && post.title || '').slice(0, 80);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';
   const categoryEn = _categoryToEnSubtitle(category);
@@ -16928,6 +17000,23 @@ ${schemaTags}
   article.post .body strong{color:${s.textColor};font-weight:700}
   /* 🖍 mark = 黄色蛍光ペン下線 (= fukuyama-note 風) — 文中の 日付 / 数字 / 固有名詞 を強調 */
   article.post .body mark{background:linear-gradient(transparent 60%,#fde047 60%);color:${s.textColor};padding:0 2px;font-weight:700}
+  /* 🔗 関連記事 inline link (= 同メディア内 他記事へ) — カード風 */
+  /* 属性 selector で 既存記事も 自動 styled */
+  article.post .body a.related-inline,
+  article.post .body p a[href*=".myaiagents.agency"],
+  article.post .body li a[href*=".myaiagents.agency"]{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;margin:0 2px;background:${isDark?'#1e3a5c':'#eff6ff'};border:1px solid ${isDark?'#3b5783':'#bfdbfe'};border-radius:6px;color:${isDark?'#93c5fd':'#1e40af'} !important;font-weight:700;text-decoration:none;font-size:.92em;line-height:1.4;transition:all .15s;vertical-align:baseline}
+  article.post .body a.related-inline::before,
+  article.post .body p a[href*=".myaiagents.agency"]::before,
+  article.post .body li a[href*=".myaiagents.agency"]::before{content:"📄";font-size:.85em;flex-shrink:0}
+  article.post .body a.related-inline::after,
+  article.post .body p a[href*=".myaiagents.agency"]::after,
+  article.post .body li a[href*=".myaiagents.agency"]::after{content:"→";font-size:.85em;color:${isDark?'#93c5fd':'#3b82f6'};margin-left:2px;transition:transform .15s}
+  article.post .body a.related-inline:hover,
+  article.post .body p a[href*=".myaiagents.agency"]:hover,
+  article.post .body li a[href*=".myaiagents.agency"]:hover{background:${isDark?'#1e3a5c':'#dbeafe'};border-color:${isDark?'#5878a8':'#60a5fa'}}
+  article.post .body a.related-inline:hover::after,
+  article.post .body p a[href*=".myaiagents.agency"]:hover::after,
+  article.post .body li a[href*=".myaiagents.agency"]:hover::after{transform:translateX(3px)}
   article.post .body figure{margin:28px 0;text-align:center}
   article.post .body figure img{width:100%;max-width:780px;height:auto;border-radius:8px;border:1px solid ${s.cardBorder};display:block;margin:0 auto;background:${isDark?'#0a1322':'#fafaf7'}}
   article.post .body figure figcaption{font-size:11.5px;color:${s.mutedColor};margin-top:8px;font-style:italic}

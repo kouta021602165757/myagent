@@ -7806,7 +7806,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
         : '<div class="nu-sns-soon">⏳ 投稿 tool は近日対応 (接続情報は保存済)</div>';
       // 投稿 0 のユーザーへの onboarding CTA (= 「AI に最初の投稿を任せる」)
       var zeroCtaHTML = hasZeroPosts
-        ? '<button class="nu-sns-zero-cta" onclick="_promptAiToPost(\'' + esc(site.id) + '\',\'' + p.key + '\',' + JSON.stringify(p.name) + ')">✨ AI に最初の投稿を任せる →</button>'
+        ? '<button class="nu-sns-zero-cta" onclick="_promptAiToPost(\'' + esc(site.id) + '\',\'' + esc(p.key) + '\',\'' + esc(p.name) + '\')">✨ AI に最初の投稿を任せる →</button>'
         : '';
       return '<div class="nu-sns-card on' + (hasZeroPosts ? ' nu-sns-card-zero' : '') + (isFallback ? ' nu-sns-card-fallback' : '') + '" style="--nu-c:' + p.color + '">'
            +   '<div class="nu-sns-h">'
@@ -7885,7 +7885,7 @@ function _renderTabNumbers(site, kpi, ga4Connected, kpiHTML, ga4Banner, allArts,
         : '<div class="nu-sns-soon">⏳ ' + (p.kind === 'ec' ? '商品出品' : '記事公開') + ' tool は近日対応 (接続情報は保存済)</div>';
       var zeroCtaLbl = p.kind === 'ec' ? 'AI に最初の商品を作らせる' : 'AI に最初の記事を書かせる';
       var zeroCtaHTML = hasZeroPosts
-        ? '<button class="nu-sns-zero-cta" onclick="_promptAiToPost(\'' + esc(site.id) + '\',\'' + p.key + '\',' + JSON.stringify(p.name) + ')">✨ ' + zeroCtaLbl + ' →</button>'
+        ? '<button class="nu-sns-zero-cta" onclick="_promptAiToPost(\'' + esc(site.id) + '\',\'' + esc(p.key) + '\',\'' + esc(p.name) + '\')">✨ ' + zeroCtaLbl + ' →</button>'
         : '';
       return '<div class="nu-sns-card on' + (hasZeroPosts ? ' nu-sns-card-zero' : '') + '" style="--nu-c:' + p.color + '">'
            +   '<div class="nu-sns-h">'
@@ -8311,7 +8311,7 @@ function _renderTabStrategy(site, allArts){
            +   '<div class="st-comp-section"><div class="st-comp-lbl">💪 強み</div><ul class="st-comp-list st-comp-list-good">' + strBullets + '</ul></div>'
            +   '<div class="st-comp-section"><div class="st-comp-lbl">⚠️ 弱み</div><ul class="st-comp-list st-comp-list-bad">' + wkBullets + '</ul></div>'
            +   '<div class="st-comp-diff"><b>差別化:</b> ' + esc(c.differentiator || '') + '</div>'
-           +   '<button class="st-comp-deep" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(compAsk).replace(/'/g, '&#39;') + ')" title="チームに深掘り調査を依頼">💬 もっと調査</button>'
+           +   '<button class="st-comp-deep" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(compAsk))) + '\')" title="チームに深掘り調査を依頼">💬 もっと調査</button>'
            + '</div>';
     }).join('');
     competitorHTML = ''
@@ -8759,7 +8759,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
       +   '<div class="rp-act-grid">'
       +   top3Actions.map(function(a, i){
           var clsRank = ['c-1','c-2','c-3'][i] || '';
-          return '<div class="rp-act-card ' + clsRank + '" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(a.prompt).replace(/'/g, '&#39;') + ')">'
+          return '<div class="rp-act-card ' + clsRank + '" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(a.prompt))) + '\')">'
                +   '<div class="rp-act-num">' + (i + 1) + '</div>'
                +   '<div class="rp-act-ti">' + a.icon + ' ' + esc(a.label) + '</div>'
                +   '<div class="rp-act-tx">' + esc(String(a.prompt).slice(0, 110)) + (a.prompt.length > 110 ? '…' : '') + '</div>'
@@ -8928,7 +8928,7 @@ function _renderTabActions(site, events, next, quickActions, weekly, progressHTM
     +   '<div class="sd-card-h">⭐ 今日のおすすめアクション</div>'
     +   '<div class="sd-today-list">'
     +   quickActions.slice(0, 3).map(function(q, i){
-        return '<button class="sd-today-item" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(q.prompt).replace(/'/g, '&#39;') + ')">'
+        return '<button class="sd-today-item" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(q.prompt))) + '\')">'
              +   '<div class="sd-today-rank">' + (i + 1) + '</div>'
              +   '<div class="sd-today-ic">' + q.icon + '</div>'
              +   '<div class="sd-today-bd">'
@@ -8947,7 +8947,7 @@ function _renderTabActions(site, events, next, quickActions, weekly, progressHTM
     +   '<div class="sd-quick-h">⚡ その他の依頼テンプレ</div>'
     +   '<div class="sd-quick-grid">'
     +   quickActions.slice(3, 9).map(function(q){
-        return '<button class="sd-quick-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(q.prompt).replace(/'/g, '&#39;') + ')">'
+        return '<button class="sd-quick-btn" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(q.prompt))) + '\')">'
              +   '<span class="sd-quick-ic">' + q.icon + '</span>'
              +   '<span class="sd-quick-lbl">' + esc(q.label) + '</span>'
              + '</button>';
@@ -9271,7 +9271,7 @@ function _renderPlannedArticlesSection(site){
       +   '<div class="pa-row-ti">' + esc((p.title||'').slice(0,80)) + modeLabel + '</div>'
       +   '<div class="pa-row-mt">' + sourceLabel + ' · 追加 ' + queuedAt + '</div>'
       + '</div>'
-      + '<button class="pa-row-pub" onclick="_publishPlannedArticle(\''+siteId+'\',\''+esc(p.id)+'\',\''+esc((p.title||'').replace(/\\/g,"\\\\").replace(/'/g,"\\'"))+'\',\''+esc(p.mode||'seo')+'\')" title="今すぐ AI に書かせて公開">✨ 公開</button>'
+      + '<button class="pa-row-pub" onclick="_publishPlannedArticleB64(\''+esc(siteId)+'\',\''+esc(p.id)+'\',\''+btoa(unescape(encodeURIComponent(p.title||'')))+'\',\''+esc(p.mode||'seo')+'\')" title="今すぐ AI に書かせて公開">✨ 公開</button>'
       + '<button class="pa-row-del" onclick="_deletePlannedArticle(\''+siteId+'\',\''+esc(p.id)+'\')" title="削除">×</button>'
       + '</div>';
   }).join('');
@@ -9292,6 +9292,17 @@ window._publishPlannedArticle = function(siteId, plannedId, title, mode){
   if(!window._kwInvokeArticleGen){ showToast('公開機能ロード失敗','ng'); return; }
   window._kwInvokeArticleGen(siteId, title, mode);
   // 公開成功時、 サーバ側で planned から自動削除される (= executePublishToMediaTool / /generate 両方で対応済)
+};
+
+// 🔒 base64 経由 (= onclick attr quote 衝突回避)
+window._publishPlannedArticleB64 = function(siteId, plannedId, titleB64, mode){
+  try {
+    var title = decodeURIComponent(escape(atob(titleB64)));
+    window._publishPlannedArticle(siteId, plannedId, title, mode);
+  } catch(e){
+    console.warn('[_publishPlannedArticleB64] decode failed:', e && e.message);
+    showToast('タイトル decode 失敗', 'ng');
+  }
 };
 
 window._deletePlannedArticle = async function(siteId, plannedId){
@@ -9984,7 +9995,7 @@ function _renderTabAgents(site){
          +     '<div class="sd-mb-fc">' + esc(m.focus || '') + '</div>'
          +   '</div>'
          +   (artN > 0 ? '<div class="sd-mb-n" title="納品物 ' + artN + ' 件">' + artN + '</div>' : '')
-         +   '<button class="sd-mb-ask" onclick="event.stopPropagation();_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(promptText).replace(/'/g, '&#39;') + ')" title="このメンバーに依頼">💬</button>'
+         +   '<button class="sd-mb-ask" onclick="event.stopPropagation();_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(promptText))) + '\')" title="このメンバーに依頼">💬</button>'
          + '</div>';
   }
 
@@ -10012,7 +10023,7 @@ function _renderTabAgents(site){
          +       '<div class="sd-org-dept-nm">' + esc(d.name) + '</div>'
          +       '<div class="sd-org-dept-sub">' + deptMembers + ' 名 ・ ' + (d.teams || []).length + ' チーム</div>'
          +     '</div>'
-         +     '<button class="sd-org-dept-ask" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify(d.name + 'に依頼: ').replace(/'/g, '&#39;') + ')" title="この部門に依頼">部門に依頼 →</button>'
+         +     '<button class="sd-org-dept-ask" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(d.name + 'に依頼: '))) + '\')" title="この部門に依頼">部門に依頼 →</button>'
          +   '</div>'
          +   '<div class="sd-org-dept-teams">'
          +     (d.teams || []).map(function(t){ return _renderTeam(t, d.color); }).join('')

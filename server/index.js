@@ -25584,16 +25584,23 @@ async function handleAPI(req,res,pathname,method,ip){
     // 現在の site URL の hostname (= cache invalidate 判定用)
     let curHost = '';
     try { curHost = new URL(ag.site_url || '').hostname.replace(/^www\./, ''); } catch(_){}
-    const cacheValid = !qs.refresh
+    const cacheFresh = !qs.refresh
       && cached && cached.fetched_at
       && cached.schema_version === KW_SCHEMA_VERSION
-      && (!curHost || !cached.site_hostname || cached.site_hostname === curHost);
-    if(cacheValid){
+      && (!curHost || !cached.site_hostname || cached.site_hostname === curHost)
+      && Array.isArray(cached.candidates) && cached.candidates.length >= 3;
+    if(cacheFresh){
       return jres(res, 200, Object.assign({}, cached, { cached: true }));
     }
+    // ⚡ SWR: schema 違いでも candidates が 3 件以上あれば 即時 stale 返却 (= ページ即表示)
+    //   ただし qs.refresh=1 のときは古い cache を返さず 必ず再生成
+    const cacheHasContent = !qs.refresh && cached && Array.isArray(cached.candidates) && cached.candidates.length >= 3;
+    if(cacheHasContent){
+      // 古い cache をユーザに即時返す。 schema_version 違いでも 6 件の構造は同じなので UI 互換。
+      jres(res, 200, Object.assign({}, cached, { cached: true, stale: true }));
+      // fall-through: 裏で refresh 続行 (return しない)
+    }
     // GSC 接続判定: OAuth + scope + ドメイン照合の 3 段チェック
-    // ドメイン照合が必要な理由: agent.gsc_site_url が user-default にフォールバックしたり、
-    // 過去の誤マッピングで他サイトの GSC が紐づいてるケースがあるため、ホスト名一致を必須にする。
     const _agHost = (() => {
       try { return new URL(ag.site_url).hostname.replace(/^www\./, ''); }
       catch(_){ return ''; }
@@ -25611,34 +25618,26 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!_gscDomainMatches && _resolvedGscUrl){
       console.warn('[kw-sug] GSC domain mismatch: agent.site_url=' + _agHost + ' vs gsc=' + _gscHost + ' → 推測モード');
     }
-    let gscData = null;
-    let sitePreview = null;
-    let articles = [];
-    if(hasGsc){
-      try {
-        const _dayStr = (offsetDays) => {
-          const d = new Date(); d.setDate(d.getDate() - offsetDays);
-          return d.toISOString().slice(0, 10);
-        };
-        gscData = await executeGscQueryTool(user, ag, {
-          start_date: _dayStr(28),
-          end_date: _dayStr(1),
-          dimensions: ['query'],
-          row_limit: 200,
-        });
-      } catch(e){ console.warn('[kw-sug] gsc failed:', e.message); }
-    }
-    try {
-      const [sp, arts] = await Promise.all([
-        _fetchSitePreview(ag),
-        _fetchSiteExistingArticles(ag.site_url),
-      ]);
-      sitePreview = sp;
-      articles = arts;
-    } catch(e){ console.warn('[kw-sug] site preview failed:', e.message); }
+    // ⚡ GSC + site preview + articles を 完全並列 (= 直列 3-5s 節約)
+    const _dayStr = (offsetDays) => {
+      const d = new Date(); d.setDate(d.getDate() - offsetDays);
+      return d.toISOString().slice(0, 10);
+    };
+    const [gscResult, spResult, artsResult] = await Promise.all([
+      hasGsc
+        ? executeGscQueryTool(user, ag, {
+            start_date: _dayStr(28), end_date: _dayStr(1),
+            dimensions: ['query'], row_limit: 200,
+          }).catch(e => { console.warn('[kw-sug] gsc failed:', e.message); return null; })
+        : Promise.resolve(null),
+      _fetchSitePreview(ag).catch(e => { console.warn('[kw-sug] sp failed:', e.message); return null; }),
+      _fetchSiteExistingArticles(ag.site_url).catch(e => { console.warn('[kw-sug] arts failed:', e.message); return []; }),
+    ]);
+    const gscData = gscResult;
+    const sitePreview = spResult;
+    let articles = artsResult || [];
 
     // 🎯 自社メディアで すでに公開した記事 を articles リストに 追加
-    //   → AI が 同じタイトルを 提案するのを 防ぐ
     if(ag.media && Array.isArray(ag.media_posts_idx)){
       const publishedTitles = ag.media_posts_idx
         .filter(p => p && p.title && p.status !== 'draft')
@@ -25647,7 +25646,7 @@ async function handleAPI(req,res,pathname,method,ip){
     }
 
     const prompt = _buildKeywordSuggestionPrompt({ ag, sitePreview, articles, gscData });
-    // 🚀 Phase 1+2: Sonnet → Haiku (= KW score 算出は Haiku で十分、 コスト 1/15)
+    // 🚀 Haiku (= KW score 算出は Haiku で十分、 コスト 1/15)
     const info = _resolveModelInfo('haiku');
     let rawText = '';
     let parsed = null;
@@ -25659,36 +25658,48 @@ async function handleAPI(req,res,pathname,method,ip){
         const r = await httpsReq('POST','api.anthropic.com','/v1/messages',
           {'Content-Type':'application/json','x-api-key':ANTHROPIC,'anthropic-version':'2023-06-01',
            'anthropic-beta':'prompt-caching-2024-07-31'},
-          { model: info.modelId, max_tokens: 3000, messages:[{role:'user', content: prompt}] },
-          { timeout: 45000 });
+          { model: info.modelId, max_tokens: 4000, messages:[{role:'user', content: prompt}] },
+          { timeout: 60000 });
         if(r.s !== 200){
           console.warn('[kw-sug] claude non-200:', r.s);
+          if(cacheHasContent) return; // SWR: stale 既に返してる
           const ce = _claudeErrorMessage(r);
           return jres(res, 502, { error: ce.error, detail: ce.user_message, status: r.s });
         }
         rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       } else {
+        if(cacheHasContent) return;
         return jres(res, 500, { error: 'no_ai_provider', detail: 'AI provider が設定されていません。 ANTHROPIC_API_KEY をご確認ください。' });
       }
       const jsonM = rawText.match(/\{[\s\S]*"candidates"[\s\S]*\}/);
       parsed = JSON.parse(jsonM ? jsonM[0] : rawText);
     } catch(e){
       console.warn('[kw-sug] parse failed:', e.message, 'raw=', rawText.slice(0, 200));
+      if(cacheHasContent) return; // SWR: stale 既に返してるので silently abort
       return jres(res, 502, { error: 'parse_failed', message: e.message, raw: rawText.slice(0, 500) });
     }
 
     let hostname = '';
     try { hostname = new URL(ag.site_url).hostname.replace(/^www\./, ''); } catch(_){}
+    const candList = (parsed.candidates || []).slice(0, 6);
+    const aeoList  = (parsed.aeo_candidates || []).slice(0, 6);
+    // 空 candidates の場合 cache を上書きしない (= 既存 stale を残す方が UX 良い)
+    if(candList.length === 0 && aeoList.length === 0){
+      console.warn('[kw-sug] empty candidates from AI — preserving previous cache');
+      if(cacheHasContent) return;
+      return jres(res, 502, { error: 'empty_candidates', detail: 'AI が候補を生成できませんでした。 もう一度お試しください。' });
+    }
     const out = {
       schema_version: KW_SCHEMA_VERSION,
       mode: (hasGsc && gscData && gscData.ok && Array.isArray(gscData.rows) && gscData.rows.length > 0) ? 'gsc' : 'inferred',
       fetched_at: new Date().toISOString(),
       site_hostname: hostname,
-      candidates: (parsed.candidates || []).slice(0, 6),       // SEO (= 後方互換)
-      aeo_candidates: (parsed.aeo_candidates || []).slice(0, 6), // AEO 新規
+      candidates: candList,
+      aeo_candidates: aeoList,
     };
     ag.keyword_suggestions = out;
     try { await DB.save(user); } catch(e){ console.warn('[kw-sug] save failed:', e.message); }
+    if(cacheHasContent) return; // SWR: stale を返してたので、 fresh は次回に
     return jres(res, 200, out);
   }
 

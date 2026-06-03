@@ -16632,9 +16632,9 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   // Breadcrumb
   const breadcrumbHTML = `
     <nav style="padding:9px 24px;background:${isDark?'#0a1322':'#fafaf7'};border-bottom:1px solid ${s.cardBorder};font-size:11px;color:${s.mutedColor};max-width:1100px;margin:0 auto;width:100%;font-family:${s.brandFont}">
-      <a href="/media/${_mediaEsc(media.slug)}" style="color:${s.subColor};text-decoration:none">ホーム</a>
+      <a href="${_mediaPublicUrl(media)}" style="color:${s.subColor};text-decoration:none">ホーム</a>
       <span style="margin:0 7px">›</span>
-      ${post.category_name ? '<a href="/media/'+_mediaEsc(media.slug)+'/cat/'+_mediaEsc(_mediaSlugify(post.category_name))+'" style="color:'+s.subColor+';text-decoration:none">'+_mediaEsc(post.category_name)+'</a><span style="margin:0 7px">›</span>' : ''}
+      ${post.category_name ? '<a href="'+_mediaPublicUrl(media, 'cat/'+_mediaSlugify(post.category_name))+'" style="color:'+s.subColor+';text-decoration:none">'+_mediaEsc(post.category_name)+'</a><span style="margin:0 7px">›</span>' : ''}
       <span style="color:${s.textColor};font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:50vw;vertical-align:middle">${title}</span>
     </nav>`;
 
@@ -16674,7 +16674,7 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
           <div style="font-size:10px;font-weight:800;color:${s.mutedColor};letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">この記事の著者</div>
           <div style="font-size:16.5px;font-weight:900;color:${s.textColor};margin-bottom:7px">${authorName}</div>
           <p style="font-size:12.5px;color:${s.subColor};line-height:1.7;margin:0 0 8px">${authorBio}</p>
-          <div style="font-size:11px"><a href="/media/${_mediaEsc(media.slug)}/about" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部 詳細 →</a></div>
+          <div style="font-size:11px"><a href="${_mediaPublicUrl(media, 'about')}" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部 詳細 →</a></div>
         </div>
       </section>
     </div>`;
@@ -16686,7 +16686,7 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
       <div style="font-family:${s.brandFont};font-size:11px;color:${s.subColor};letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:16px">▌ 関連記事</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
         ${related.map(r => `
-          <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(r.slug)}" style="display:block;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};padding:14px 16px;text-decoration:none;color:${s.textColor};transition:.15s" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
+          <a href="${_mediaPublicUrl(media, r.slug)}" style="display:block;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};padding:14px 16px;text-decoration:none;color:${s.textColor};transition:.15s" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
             ${r.category_name ? '<div style="font-size:9.5px;color:'+accent+';font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">▌ '+_mediaEsc(r.category_name)+'</div>' : ''}
             <div style="font-family:${s.titleFont};font-size:14.5px;font-weight:800;line-height:1.4;margin-bottom:6px;color:${s.textColor}">${_mediaEsc(r.title)}</div>
             <div style="font-size:10.5px;color:${s.mutedColor}">${_mediaEsc(_mediaFmtDate(r.published_at, dateLocale))}</div>
@@ -16889,7 +16889,7 @@ ${schemaTags}
 </head><body>
 
 <header class="brand-bar">
-  <a href="/media/${_mediaEsc(media.slug)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+  <a href="${_mediaPublicUrl(media)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     ${logoImg}
     <div class="b-meta">
       <div class="b-name">${name}</div>
@@ -16897,8 +16897,8 @@ ${schemaTags}
     </div>
   </a>
   <nav class="b-nav">
-    <a href="/media/${_mediaEsc(media.slug)}">記事一覧</a>
-    <a href="/media/${_mediaEsc(media.slug)}/about">編集部</a>
+    <a href="${_mediaPublicUrl(media)}">記事一覧</a>
+    <a href="${_mediaPublicUrl(media, 'about')}">編集部</a>
     ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=header&utm_campaign='+_mediaEsc(media.slug)+'_'+_mediaEsc(post.slug)+'" class="sub" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
   </nav>
 </header>
@@ -16951,8 +16951,8 @@ ${footerBanner}
 <footer class="site-foot">
   <div>© ${new Date().getFullYear()} ${name}</div>
   <div>
-    <a href="/media/${_mediaEsc(media.slug)}">← 記事一覧</a>
-    <a href="/media/${_mediaEsc(media.slug)}/about">編集部について</a>
+    <a href="${_mediaPublicUrl(media)}">← 記事一覧</a>
+    <a href="${_mediaPublicUrl(media, 'about')}">編集部について</a>
   </div>
 </footer>
 
@@ -17020,11 +17020,11 @@ ${schemaTags}
 </head><body>
 
 <header class="brand-bar">
-  <a href="/media/${_mediaEsc(media.slug)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+  <a href="${_mediaPublicUrl(media)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     ${logoImg}<div class="b-name">${name}</div>
   </a>
   <nav class="b-nav">
-    <a href="/media/${_mediaEsc(media.slug)}">記事一覧</a>
+    <a href="${_mediaPublicUrl(media)}">記事一覧</a>
     ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=about_header" class="sub" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
   </nav>
 </header>
@@ -17061,7 +17061,7 @@ ${schemaTags}
 <footer class="site-foot">
   <div>© ${new Date().getFullYear()} ${name}</div>
   <div>
-    <a href="/media/${_mediaEsc(media.slug)}" style="margin-right:14px">← 記事一覧</a>
+    <a href="${_mediaPublicUrl(media)}" style="margin-right:14px">← 記事一覧</a>
     ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=about_footer" target="_blank" rel="noopener">運営者公式サイト</a>' : ''}
   </div>
 </footer>
@@ -17771,7 +17771,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   const chipRadius = s.chipStyle === 'pill' ? '16px' : (s.chipStyle === 'square' ? '0' : '7px');
   const categoriesHTML = (media.categories || []).map(c => {
     const isActive = categoryFilter === c.name;
-    return '<a href="/media/' + _mediaEsc(media.slug) + '/cat/' + _mediaEsc(c.slug) + '" style="color:' + (isActive ? '#fff' : s.subColor) + ';text-decoration:none;padding:6px 12px;border:1px solid ' + (isActive ? accent : s.cardBorder) + ';border-radius:' + chipRadius + ';font-size:12.5px;font-weight:700;background:' + (isActive ? accent : s.cardBg) + ';white-space:nowrap">' + _mediaEsc(c.name) + '</a>';
+    return '<a href="' + _mediaPublicUrl(media, 'cat/' + c.slug) + '" style="color:' + (isActive ? '#fff' : s.subColor) + ';text-decoration:none;padding:6px 12px;border:1px solid ' + (isActive ? accent : s.cardBorder) + ';border-radius:' + chipRadius + ';font-size:12.5px;font-weight:700;background:' + (isActive ? accent : s.cardBg) + ';white-space:nowrap">' + _mediaEsc(c.name) + '</a>';
   }).join('');
 
   // Featured + grid
@@ -17793,7 +17793,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
       <div>
         <div style="font-size:10.5px;font-weight:800;letter-spacing:.1em;color:${accent};text-transform:uppercase;margin-bottom:9px;font-family:${s.brandFont}">▌ 特集${featured.category_name?' · '+_mediaEsc(featured.category_name):''}</div>
         <h2 style="font-family:${s.titleFont};font-size:${s.heroTitleSize};font-weight:${s.titleWeight};line-height:1.18;margin:0 0 12px;letter-spacing:-.015em;color:${s.textColor}">
-          <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(featured.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(featured.title)}</a>
+          <a href="${_mediaPublicUrl(media, featured.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(featured.title)}</a>
         </h2>
         ${featured.excerpt ? '<p style="font-size:14px;color:'+s.subColor+';line-height:1.65;margin:0 0 12px">'+_mediaEsc((featured.excerpt||'').slice(0,160))+'</p>' : ''}
         <div style="display:flex;align-items:center;gap:9px;font-size:11.5px;color:${s.subColor}">
@@ -17811,7 +17811,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
         <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column">
           ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
           <h3 style="font-family:${s.titleFont};font-size:15px;font-weight:800;color:${s.textColor};margin:0 0 7px;line-height:1.35;letter-spacing:-.005em">
-            <a href="/media/${_mediaEsc(media.slug)}/${_mediaEsc(p.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(p.title)}</a>
+            <a href="${_mediaPublicUrl(media, p.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(p.title)}</a>
           </h3>
           ${p.excerpt ? '<p style="font-size:12px;color:'+s.subColor+';line-height:1.55;margin:0 0 10px;flex:1">'+_mediaEsc((p.excerpt||'').slice(0,100))+'</p>' : ''}
           <div style="font-size:10.5px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(authorName)} · ${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
@@ -17841,13 +17841,13 @@ function _mediaRenderMinimalIndex(media, posts, opts){
         <div style="font-size:10.5px;font-weight:800;color:${s.subColor};letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">編集部について</div>
         <div style="font-family:${s.titleFont};font-size:16px;font-weight:900;color:${s.textColor};margin:0 0 7px">${authorName}</div>
         <p style="font-size:12.5px;color:${s.subColor};line-height:1.7;margin:0 0 8px">${authorBio}</p>
-        <div style="font-size:11px"><a href="/media/${_mediaEsc(media.slug)}/about" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部について 詳しく →</a></div>
+        <div style="font-size:11px"><a href="${_mediaPublicUrl(media, 'about')}" style="color:${accent};font-weight:700;text-decoration:none;border-bottom:1px solid ${accent};padding-bottom:1px">編集部について 詳しく →</a></div>
       </div>
     </section>`;
 
   const breadcrumbHTML = `
     <nav style="padding:9px 24px;background:${isDark?'#0a1322':'#fafaf7'};border-bottom:1px solid ${s.cardBorder};font-size:11px;color:${s.mutedColor};max-width:1100px;margin:0 auto;width:100%;font-family:${s.brandFont}">
-      <a href="/media/${_mediaEsc(media.slug)}" style="color:${s.subColor};text-decoration:none">ホーム</a>
+      <a href="${_mediaPublicUrl(media)}" style="color:${s.subColor};text-decoration:none">ホーム</a>
       ${categoryFilter ? '<span style="margin:0 7px;color:'+s.mutedColor+'">›</span><span style="color:'+s.textColor+';font-weight:700">'+_mediaEsc(categoryFilter)+'</span>' : '<span style="margin:0 7px;color:'+s.mutedColor+'">›</span>最新記事'}
     </nav>`;
 
@@ -17892,7 +17892,7 @@ ${schemaTags}
 </head><body>
 
 <header class="brand-bar">
-  <a href="/media/${_mediaEsc(media.slug)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+  <a href="${_mediaPublicUrl(media)}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     ${logoImg}
     <div class="b-meta">
       <div class="b-name">${name}</div>
@@ -17900,8 +17900,8 @@ ${schemaTags}
     </div>
   </a>
   <nav class="b-nav">
-    <a href="/media/${_mediaEsc(media.slug)}">記事一覧</a>
-    <a href="/media/${_mediaEsc(media.slug)}/about">編集部</a>
+    <a href="${_mediaPublicUrl(media)}">記事一覧</a>
+    <a href="${_mediaPublicUrl(media, 'about')}">編集部</a>
     ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=header&utm_campaign=media_to_lp" class="sub" target="_blank" rel="noopener">サービスを見る →</a>' : ''}
   </nav>
 </header>
@@ -17927,7 +17927,7 @@ ${aboutHTML}
 <footer class="site-foot">
   <div>© ${new Date().getFullYear()} ${name}</div>
   <div>
-    <a href="/media/${_mediaEsc(media.slug)}/about">編集部について</a>
+    <a href="${_mediaPublicUrl(media, 'about')}">編集部について</a>
     ${lpUrl ? '<a href="'+lpUrl+'?utm_source=media&utm_medium=footer" target="_blank" rel="noopener">運営者情報</a>' : ''}
   </div>
 </footer>
@@ -31973,10 +31973,21 @@ const server=http.createServer(async(req,res)=>{
     }
   }
   // effectivePath: subdomain ヒット時は リライト先、 通常は pathname
+  //   重複 prefix 検出:
+  //     sub.myaiagents.agency/2026-8-3 → /media/sub/2026-8-3 (= 先頭に prefix)
+  //     sub.myaiagents.agency/media/sub/2026-8-3 → /media/sub/2026-8-3 (= すでに qualified、 そのまま)
   const _subSlug = subdomainMatch ? subdomainMatch[1] : null;
-  const effectivePath = _subSlug
-    ? (pathname === '/' || pathname === '' ? '/media/' + _subSlug : '/media/' + _subSlug + pathname)
-    : pathname;
+  let effectivePath = pathname;
+  if(_subSlug){
+    const _qPrefix = '/media/' + _subSlug;
+    if(pathname === _qPrefix || pathname.startsWith(_qPrefix + '/')){
+      effectivePath = pathname;  // already qualified — そのまま
+    } else if(pathname === '/' || pathname === ''){
+      effectivePath = _qPrefix;
+    } else {
+      effectivePath = _qPrefix + pathname;
+    }
+  }
 
   // /media/:slug/about → 編集部 紹介 ページ (= E-E-A-T、 信頼性)
   const mediaAboutRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/about\/?$/);

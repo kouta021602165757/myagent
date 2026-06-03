@@ -2727,21 +2727,32 @@ function _openSiteTabModal(siteId, tabKey){
     var kwCachedId = 'kwOverlayCache_' + siteId;
     var kwCached = document.getElementById(kwCachedId);
     if(kwCached){
-      // 現 visible overlay を片付ける (= numbers 等を開いてた場合)
-      var curOv0 = document.getElementById('siteTabOverlay');
-      if(curOv0){
-        if(curOv0.getAttribute('data-tab') === 'keyword' && curOv0.getAttribute('data-site-id') !== siteId){
-          // 別 site の keyword overlay → 同じく stash
-          curOv0.id = 'kwOverlayCache_' + curOv0.getAttribute('data-site-id');
-          curOv0.style.display = 'none';
-        } else {
-          curOv0.remove();
+      // iframe 内に 候補が 1 件以上あるか? 0 件なら stash を捨てて新規 open (= 前回失敗の救済)
+      var _hasCands = false;
+      try {
+        var _ifr = kwCached.querySelector('#kwIframe');
+        var _doc = _ifr && (_ifr.contentDocument || (_ifr.contentWindow && _ifr.contentWindow.document));
+        if(_doc) _hasCands = _doc.querySelectorAll('#kwCands .cand').length > 0;
+      } catch(_){}
+      if(!_hasCands){
+        // 失敗 cache を破棄 → 下の通常 open フローに fall-through (= 新規 iframe + fresh fetch)
+        kwCached.remove();
+      } else {
+        // 現 visible overlay を片付ける (= numbers 等を開いてた場合)
+        var curOv0 = document.getElementById('siteTabOverlay');
+        if(curOv0){
+          if(curOv0.getAttribute('data-tab') === 'keyword' && curOv0.getAttribute('data-site-id') !== siteId){
+            curOv0.id = 'kwOverlayCache_' + curOv0.getAttribute('data-site-id');
+            curOv0.style.display = 'none';
+          } else {
+            curOv0.remove();
+          }
         }
+        // 復元 → 即時表示
+        kwCached.id = 'siteTabOverlay';
+        kwCached.style.display = 'flex';
+        return;
       }
-      // 復元 → 即時表示
-      kwCached.id = 'siteTabOverlay';
-      kwCached.style.display = 'flex';
-      return;
     }
   }
 

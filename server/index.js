@@ -7875,6 +7875,18 @@ const MEDIA_RESERVED_SLUGS = new Set([
   'login','logout','signup','register','www','mail','smtp','ftp',
 ]);
 
+// 🐛 fix: 記事 baked-in cat link が 設定の cat.slug と ズレている時、
+// 「category_name から DB の cat.slug を 引き直す」 ことで 正しい URL を 生成する。
+// 全 日本語 cat 名は slug が random hex で 非決定的だったため、 article 生成時と
+// 現在で 違う slug になっていた (= 内部リンク 404 原因)。
+function _resolveCatSlug(media, categoryName){
+  if(!categoryName) return 'other';
+  const cats = (media && media.categories) || [];
+  const hit = cats.find(c => c && c.name === categoryName);
+  if(hit && hit.slug) return hit.slug;
+  return _mediaSlugify(categoryName);
+}
+
 // メディア slug 生成 — 半角英数 + ハイフン、 1-40 文字
 function _mediaSlugify(s){
   const base = String(s || '').toLowerCase()
@@ -7883,7 +7895,11 @@ function _mediaSlugify(s){
     .replace(/^-+|-+$/g, '')
     .replace(/--+/g, '-')
     .slice(0, 40);
-  return base || ('media-' + crypto.randomBytes(3).toString('hex'));
+  // 空 (= 全日本語) のときは 入力文字列の hash を使って deterministic に
+  // (= 同じ入力なら 常に同じ slug → 記事 baked link と 設定の cat.slug が一致)
+  if(base) return base;
+  const h = crypto.createHash('sha256').update(String(s || '')).digest('hex').slice(0, 6);
+  return 'media-' + h;
 }
 
 // グローバル slug 重複チェック (= 全 user の agent.media.slug を見て重複なら -N を付ける)
@@ -16909,7 +16925,7 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
     <nav style="padding:9px 24px;background:${isDark?'#0a1322':'#fafaf7'};border-bottom:1px solid ${s.cardBorder};font-size:11px;color:${s.mutedColor};max-width:1100px;margin:0 auto;width:100%;font-family:${s.brandFont}">
       <a href="${_mediaPublicUrl(media)}" style="color:${s.subColor};text-decoration:none">ホーム</a>
       <span style="margin:0 7px">›</span>
-      ${post.category_name ? '<a href="'+_mediaPublicUrl(media, 'cat/'+_mediaSlugify(post.category_name))+'" style="color:'+s.subColor+';text-decoration:none">'+_mediaEsc(post.category_name)+'</a><span style="margin:0 7px">›</span>' : ''}
+      ${post.category_name ? '<a href="'+_mediaPublicUrl(media, 'cat/'+_resolveCatSlug(media, post.category_name))+'" style="color:'+s.subColor+';text-decoration:none">'+_mediaEsc(post.category_name)+'</a><span style="margin:0 7px">›</span>' : ''}
       <span style="color:${s.textColor};font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:50vw;vertical-align:middle">${title}</span>
     </nav>`;
 
@@ -32422,7 +32438,7 @@ const server=http.createServer(async(req,res)=>{
   }
 
   // /media/:slug/cat/:catSlug → カテゴリページ SSR (= 認証不要、 該当カテゴリの記事一覧)
-  const mediaCatRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/cat\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/?$/);
+  const mediaCatRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/cat\/([a-z0-9](?:[a-z0-9-]{0,80}[a-z0-9])?)\/?$/);
   if(mediaCatRoute && method === 'GET'){
     return (async () => {
       const slug = mediaCatRoute[1];

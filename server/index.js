@@ -17053,20 +17053,20 @@ ${schemaTags}
   /* 🔗 関連記事 inline link (= 同メディア内 他記事へ) — カード風 */
   /* 属性 selector で 既存記事も 自動 styled */
   article.post .body a.related-inline,
-  article.post .body p a[href*=".myaiagents.agency"],
-  article.post .body li a[href*=".myaiagents.agency"]{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;margin:0 2px;background:${isDark?'#1e3a5c':'#eff6ff'};border:1px solid ${isDark?'#3b5783':'#bfdbfe'};border-radius:6px;color:${isDark?'#93c5fd':'#1e40af'} !important;font-weight:700;text-decoration:none;font-size:.92em;line-height:1.4;transition:all .15s;vertical-align:baseline}
+  article.post .body p a[href*="myaiagents.agency/"],
+  article.post .body li a[href*="myaiagents.agency/"]{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;margin:0 2px;background:${isDark?'#1e3a5c':'#eff6ff'};border:1px solid ${isDark?'#3b5783':'#bfdbfe'};border-radius:6px;color:${isDark?'#93c5fd':'#1e40af'} !important;font-weight:700;text-decoration:none;font-size:.92em;line-height:1.4;transition:all .15s;vertical-align:baseline}
   article.post .body a.related-inline::before,
-  article.post .body p a[href*=".myaiagents.agency"]::before,
-  article.post .body li a[href*=".myaiagents.agency"]::before{content:"📄";font-size:.85em;flex-shrink:0}
+  article.post .body p a[href*="myaiagents.agency/"]::before,
+  article.post .body li a[href*="myaiagents.agency/"]::before{content:"📄";font-size:.85em;flex-shrink:0}
   article.post .body a.related-inline::after,
-  article.post .body p a[href*=".myaiagents.agency"]::after,
-  article.post .body li a[href*=".myaiagents.agency"]::after{content:"→";font-size:.85em;color:${isDark?'#93c5fd':'#3b82f6'};margin-left:2px;transition:transform .15s}
+  article.post .body p a[href*="myaiagents.agency/"]::after,
+  article.post .body li a[href*="myaiagents.agency/"]::after{content:"→";font-size:.85em;color:${isDark?'#93c5fd':'#3b82f6'};margin-left:2px;transition:transform .15s}
   article.post .body a.related-inline:hover,
-  article.post .body p a[href*=".myaiagents.agency"]:hover,
-  article.post .body li a[href*=".myaiagents.agency"]:hover{background:${isDark?'#1e3a5c':'#dbeafe'};border-color:${isDark?'#5878a8':'#60a5fa'}}
+  article.post .body p a[href*="myaiagents.agency/"]:hover,
+  article.post .body li a[href*="myaiagents.agency/"]:hover{background:${isDark?'#1e3a5c':'#dbeafe'};border-color:${isDark?'#5878a8':'#60a5fa'}}
   article.post .body a.related-inline:hover::after,
-  article.post .body p a[href*=".myaiagents.agency"]:hover::after,
-  article.post .body li a[href*=".myaiagents.agency"]:hover::after{transform:translateX(3px)}
+  article.post .body p a[href*="myaiagents.agency/"]:hover::after,
+  article.post .body li a[href*="myaiagents.agency/"]:hover::after{transform:translateX(3px)}
   article.post .body figure{margin:28px 0;text-align:center}
   article.post .body figure img{width:100%;max-width:780px;height:auto;border-radius:8px;border:1px solid ${s.cardBorder};display:block;margin:0 auto;background:${isDark?'#0a1322':'#fafaf7'}}
   article.post .body figure figcaption{font-size:11.5px;color:${s.mutedColor};margin-top:8px;font-style:italic}

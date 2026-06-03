@@ -7966,6 +7966,23 @@ function _mediaPostSlug(title, existingSlugs){
   return s + '-' + crypto.randomBytes(3).toString('hex');
 }
 
+// 🆕 AI 英語 slug 経由 (= 日本語タイトル → URL-safe 英語) + 重複回避
+//    AI 失敗時は 旧 _mediaPostSlug fallback (= 日付 / random 数字)。
+async function _mediaPostSlugSmart(title, keyword, existingSlugs){
+  // 1) AI で 英語 slug 生成 試行
+  const aiSlug = await _aiGenerateSlug(title, keyword).catch(() => null);
+  const set = new Set((existingSlugs || []).map(x => String(x).toLowerCase()));
+  if(aiSlug && aiSlug.length >= 3){
+    if(!set.has(aiSlug)) return aiSlug;
+    for(let i = 2; i <= 99; i++){
+      const cand = aiSlug.slice(0, 36) + '-' + i;
+      if(!set.has(cand)) return cand;
+    }
+  }
+  // 2) Fallback: タイトル直接 slugify
+  return _mediaPostSlug(title, existingSlugs);
+}
+
 // 🎯 LP の説明 (= meta description / og:description) を取得
 //    記事末尾の CTA カードで 「この LP は何か」 を 訪問者に説明するため
 async function _fetchLpDescription(lpUrl){
@@ -16317,6 +16334,46 @@ async function _mediaGenerateArticle(agent, params){
   };
 }
 
+// 🆕 AI で 英語 slug を生成 (= 日本語タイトル → URL-safe な 短い英語 slug)
+//    fukuyama-note 風: 「写真売却アプリおすすめ8選」 → "photo-selling-apps-8-best"
+async function _aiGenerateSlug(title, keyword){
+  if(!ANTHROPIC) return null;
+  if(!title) return null;
+  const sys = '【ROLE】 SEO 専門家。 日本語タイトル + キーワード から URL slug を 生成。\n\n'
+    + '【ルール】\n'
+    + '- 英語 小文字 + ハイフン のみ\n'
+    + '- 3-6 単語、 25-40 字目安\n'
+    + '- タイトルの核心を 短く 言い表す\n'
+    + '- 日付 / 年号 は 不要 (= 古くなる)\n'
+    + '- 不自然な略語 NG (= 「app8」 等)\n'
+    + '\n例:\n'
+    + '"AIマーケティングツール導入で業務時間を60%削減した実例" → "ai-marketing-automation-guide"\n'
+    + '"生成AI×SEO急成長プロダクト10選" → "ai-seo-tools-comparison"\n'
+    + '"写真売却アプリおすすめ8選" → "photo-selling-apps-best"\n'
+    + '\n【出力】 slug 1 行のみ。 説明・引用符 禁止。';
+  const u = '【タイトル】' + String(title).slice(0, 200)
+    + (keyword ? '\n【キーワード】' + String(keyword).slice(0, 100) : '');
+  try {
+    const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+    const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+      { model: 'claude-haiku-4-5-20251001', max_tokens: 80, system: sys, messages: [{ role: 'user', content: u }] },
+      { timeout: 20000 });
+    if(r.s >= 400) return null;
+    const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
+    // 1 行目を抽出、 URL-safe な部分だけ keep
+    const slug = txt.split('\n')[0].trim().toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/--+/g, '-')
+      .slice(0, 50);
+    if(slug.length < 3) return null;
+    return slug;
+  } catch(e){
+    console.warn('[ai-slug]', e.message);
+    return null;
+  }
+}
+
 // 🏆 2 パス フォールバック: 記事 body_html から products[] を Haiku で抽出
 //    AI が 1 パス目で products[] を返さない時に呼ぶ (= 「最高品質」 保証のため)
 //    Haiku 1500 tokens で 軽い call (= 数秒で完了)
@@ -16328,28 +16385,70 @@ async function _extractProductsFromHtml(bodyHtml, articleTitle, wantedCount){
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ').trim()
-    .slice(0, 6000);
+    .slice(0, 8000);
   if(text.length < 200) return null;
-  const sys = '【ROLE】 SEO 編集者 助手。 記事から プロダクト情報を JSON で抽出。\n\n'
+  // Tool Use で 強制構造化 (= JSON parse 不要)
+  const productsTool = {
+    name: 'return_products',
+    description: '記事から ' + wantedCount + ' 個のプロダクト情報を 構造化して返す',
+    input_schema: {
+      type: 'object',
+      required: ['products'],
+      properties: {
+        products: {
+          type: 'array',
+          minItems: wantedCount,
+          maxItems: wantedCount,
+          description: '必ず ' + wantedCount + ' 個ジャスト。 順位順、 本文の table / 列挙から 漏れなく抽出',
+          items: {
+            type: 'object',
+            required: ['rank','name','tagline','features','pros','cons','fit'],
+            properties: {
+              rank: { type: 'integer' },
+              name: { type: 'string', description: 'プロダクト名' },
+              sub: { type: 'string', description: '英表記/サブタイトル' },
+              score: { type: 'number', description: '0-5 評価 (推定 OK)' },
+              tagline: { type: 'string', description: '1 文要約 60 字' },
+              price: { type: 'string' },
+              trial: { type: 'string' },
+              jp_support: { type: 'string' },
+              origin: { type: 'string' },
+              features: { type: 'array', items: { type: 'string' }, description: '機能 4 個' },
+              pros: { type: 'array', items: { type: 'string' }, description: 'メリ 2 個' },
+              cons: { type: 'array', items: { type: 'string' }, description: 'デメ 2 個' },
+              fit: { type: 'string', description: 'こんな人向け' },
+              official_url: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  };
+  const sys = '【ROLE】 SEO 編集者 助手。 記事から プロダクト情報を 構造化抽出。\n\n'
     + '【RULES】\n'
-    + '- 記事に出てくる プロダクト / サービス を 順位順 (= ランキングがあればその順、 なければ言及順) に '+wantedCount+' 個抽出\n'
-    + '- 各 product に: name, sub, score (0-5 推定), tagline (50 字), price (= 記事内記述優先、 なければ "公式参照"), trial, jp_support (○/△/×), origin, features (4 個), pros (2 個), cons (2 個), fit, official_url (= 記事内 URL あれば、 なければ null)\n'
-    + '- 出典のない数値は捏造禁止。 不明なら null / 「公式参照」\n'
-    + '【出力】 JSON のみ、 説明禁止:\n'
-    + '{ "products": [ { "rank":1, "name":"...", "sub":"...", "score":4.5, "tagline":"...", "price":"...", "trial":"...", "jp_support":"○", "origin":"...", "features":["..."], "pros":["..."], "cons":["..."], "fit":"...", "official_url":null } ] }';
+    + '- 必ず ' + wantedCount + ' 個ジャスト、 順位順 (= ランキング / 表 / 列挙から漏れなく抽出)\n'
+    + '- 不明な field は 「公式参照」 / null\n'
+    + '- 出典のない数値は捏造禁止';
   const u = '【記事タイトル】 ' + String(articleTitle || '').slice(0, 100) + '\n\n【記事本文 (テキスト抜粋)】\n' + text;
   try {
     const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
     const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
-      { model: 'claude-haiku-4-5-20251001', max_tokens: 3500, system: sys, messages: [{ role: 'user', content: u }] },
-      { timeout: 60000 });
-    if(r.s >= 400) return null;
-    const txt = (r.d && r.d.content && r.d.content[0] && r.d.content[0].text) || '';
-    const m = txt.match(/\{[\s\S]*\}/);
-    if(!m) return null;
-    let parsed; try { parsed = JSON.parse(m[0]); } catch(_){ return null; }
-    if(!Array.isArray(parsed.products)) return null;
-    return parsed.products.slice(0, wantedCount);
+      { model: 'claude-haiku-4-5-20251001', max_tokens: 6000, system: sys,
+        messages: [{ role: 'user', content: u }],
+        tools: [productsTool], tool_choice: { type: 'tool', name: 'return_products' } },
+      { timeout: 90000 });
+    if(r.s >= 400){
+      console.warn('[extract-products] Anthropic ' + r.s + ':', JSON.stringify(r.d||'').slice(0, 200));
+      return null;
+    }
+    const blocks = (r.d && r.d.content) || [];
+    const tu = blocks.find(b => b && b.type === 'tool_use' && b.name === 'return_products');
+    if(!tu || !tu.input || !Array.isArray(tu.input.products)){
+      console.warn('[extract-products] no tool_use input');
+      return null;
+    }
+    console.log('[extract-products] got ' + tu.input.products.length + ' products');
+    return tu.input.products.slice(0, wantedCount);
   } catch(e){
     console.warn('[extract-products]', e.message);
     return null;
@@ -17179,9 +17278,9 @@ async function executePublishToMediaTool(user, agent, input){
   // Hero 画像 (失敗 OK)
   const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, agent.media).catch(() => null);
 
-  // slug 採番 + 保存
+  // slug 採番 + 保存 (= AI で 英語 slug 生成、 失敗時は タイトル直 slugify)
   const existingSlugs = (agent.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
-  const postSlug = _mediaPostSlug(article.title, existingSlugs);
+  const postSlug = await _mediaPostSlugSmart(article.title, params.keyword || article.title, existingSlugs);
   const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
   const now = new Date().toISOString();
   const postMeta = {
@@ -24994,7 +25093,7 @@ async function handleAPI(req,res,pathname,method,ip){
           const article = await _mediaGenerateArticle(ag, body);
           const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
           const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
-          const postSlug = _mediaPostSlug(article.title, existingSlugs);
+          const postSlug = await _mediaPostSlugSmart(article.title, keyword, existingSlugs);
           const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
           const now = new Date().toISOString();
           const postMeta = {
@@ -25039,7 +25138,7 @@ async function handleAPI(req,res,pathname,method,ip){
 
     const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
     const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
-    const postSlug = _mediaPostSlug(article.title, existingSlugs);
+    const postSlug = await _mediaPostSlugSmart(article.title, keyword, existingSlugs);
     const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
     const now = new Date().toISOString();
 

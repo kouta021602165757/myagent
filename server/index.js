@@ -16695,7 +16695,7 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   const allSchemas = [articleSchema, breadcrumbSchema, orgSchema, faqSchema, howtoSchema].filter(Boolean);
   const schemaTags = _mediaSchemaInject(...allSchemas);
 
-  const publicUrl = 'https://' + host + '/media/' + _mediaEsc(media.slug) + '/' + _mediaEsc(post.slug);
+  const publicUrl = _mediaPublicUrl(media, post.slug);
 
   return `<!doctype html>
 <html lang="ja"><head>
@@ -16966,7 +16966,7 @@ function _mediaRenderAbout(media, opts){
     ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';object-fit:cover">'
     : '<div style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';background:'+brand+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
 
-  const publicUrl = 'https://' + host + '/media/' + _mediaEsc(media.slug) + '/about';
+  const publicUrl = _mediaPublicUrl(media, 'about');
   const orgSchema = _mediaOrgSchema(media, host);
   const schemaTags = _mediaSchemaInject(orgSchema);
 
@@ -17167,7 +17167,7 @@ async function executePublishToMediaTool(user, agent, input){
   try { await DB.save(user); } catch(e){ return { error: 'save_failed: ' + e.message }; }
   _mediaSlugCacheClear(agent.media.slug);
 
-  const publicUrl = 'https://' + (agent.media.domain || 'myaiagents.agency') + '/media/' + agent.media.slug + '/' + postSlug;
+  const publicUrl = _mediaPublicUrl(agent.media, postSlug);
 
   // 🚀 Day 4: SNS 自動シェア (= 公開瞬間に Buffer / X に投稿)
   //   失敗しても publish は成功扱い (= silent best-effort)
@@ -17423,7 +17423,7 @@ async function executeListMediaPostsTool(user, agent, input){
     media: {
       name: agent.media.name,
       slug: agent.media.slug,
-      public_url: 'https://' + host + '/media/' + agent.media.slug,
+      public_url: _mediaPublicUrl(agent.media),
     },
     total_count: idx.filter(p => p && p.status !== 'draft').length,
     returned: filtered.length,
@@ -17437,7 +17437,7 @@ async function executeListMediaPostsTool(user, agent, input){
       category: p.category_name || '',
       hero_image_url: p.hero_image_url || null,
       excerpt: (p.excerpt || '').slice(0, 120),
-      public_url: 'https://' + host + '/media/' + agent.media.slug + '/' + p.slug,
+      public_url: _mediaPublicUrl(agent.media, p.slug),
     })),
   };
 }
@@ -17578,7 +17578,7 @@ function _mediaAddTocIds(html){
 // 📐 JSON-LD schema (Article / BreadcrumbList / Organization)
 // ──────────────────────────────────────────────────────────────────
 function _mediaArticleSchema(media, post, body_html, host){
-  const url = 'https://' + host + '/media/' + media.slug + '/' + post.slug;
+  const url = _mediaPublicUrl(media, post.slug);
   const rt = _mediaReadingTime(body_html);
   const out = {
     '@context': 'https://schema.org',
@@ -17605,13 +17605,13 @@ function _mediaArticleSchema(media, post, body_html, host){
   return out;
 }
 function _mediaBreadcrumbSchema(media, post, host){
-  const items = [{ name: 'ホーム', url: 'https://' + host + '/media/' + media.slug }];
+  const items = [{ name: 'ホーム', url: _mediaPublicUrl(media) }];
   if(post && post.category_name){
     const catSlug = _mediaSlugify(post.category_name);
-    items.push({ name: post.category_name, url: 'https://' + host + '/media/' + media.slug + '/cat/' + catSlug });
+    items.push({ name: post.category_name, url: _mediaPublicUrl(media, 'cat/' + catSlug) });
   }
   if(post){
-    items.push({ name: post.title, url: 'https://' + host + '/media/' + media.slug + '/' + post.slug });
+    items.push({ name: post.title, url: _mediaPublicUrl(media, post.slug) });
   }
   return {
     '@context': 'https://schema.org',
@@ -17626,7 +17626,7 @@ function _mediaOrgSchema(media, host){
     '@context': 'https://schema.org',
     '@type': 'Organization',
     'name': media.name || '',
-    'url': 'https://' + host + '/media/' + media.slug,
+    'url': _mediaPublicUrl(media),
     'description': media.description || ((media.name || '') + ' のオウンドメディア'),
   };
   if(media.logo_url) out.logo = media.logo_url;
@@ -17747,7 +17747,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   const brand = _mediaEsc(media.brand_color || s.accent || '#0d4f4a');
   const accent = _mediaEsc(s.accent || brand);
   const host = _mediaEsc(media.domain || 'myaiagents.agency');
-  const publicUrl = 'https://' + host + '/media/' + _mediaEsc(media.slug);
+  const publicUrl = _mediaPublicUrl(media);
   const lpUrl = _mediaEsc(media.lp_url || '');
   const categoryFilter = (opts && opts.categoryFilter) ? _mediaEsc(opts.categoryFilter) : '';
   const authorName = _mediaEsc(_mediaInferAuthorName(media, opts && opts.agent || {}));

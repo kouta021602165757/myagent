@@ -9089,7 +9089,7 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
   // これで「生成失敗 → ノートに残らず行方不明」 を防ぐ。
   const userHint = String(userMsgText || '');
   const isExplicitDailyRequest = /【日次グロースレポート】|【日次レポート】|【グロースレポート】/.test(userHint);
-  if(reply.length < 200 && !isExplicitDailyRequest) return null;
+  if(reply.length < 400 && !isExplicitDailyRequest) return null;
   const tl = Array.isArray(toolLog) ? toolLog : [];
   // Strong signal — these tools produce a primary deliverable URL.
   const pageProducingTools = new Set([
@@ -9137,18 +9137,18 @@ function _maybeAutoCreateNote(user, agent, reply, toolLog, threadParentId, aiMsg
       type = 'analysis';
       const firstHeader = reply.match(/^#{1,3}\s+(.+)$/m);
       title = firstHeader ? firstHeader[1].slice(0, 80) : reply.slice(0, 40);
-    } else if(len >= 600){
-      // 🆕 catch-all 'reply' type — 600 字以上の AI 返信は 必ず保存。
-      //   ユーザが「output が メモに保存されない」 問題への対応。
+    } else if(/(?:^|\n)\s*(?:🐦|Twitter|X 投稿|SNS 投稿|X post|tweet|投稿案 ?\d|案 ?\d ?[:：])/im.test(reply) && len >= 300){
+      // SNS は reply より優先 (= マーカー検出時 SNS 種別を保つ)
+      type = 'sns_post';
+      title = 'SNS 草稿 ' + new Date().toISOString().slice(0, 10);
+    } else if(len >= 400){
+      // 🆕 catch-all 'reply' type — 400 字以上の AI 返信は 必ず保存。
+      //   ユーザが「output が メモに保存されない」 問題への対応 (= 緩和)。
       type = 'reply';
-      // 最初の文 or 1 行目をタイトルに (= 80 字 cap)
       const firstLine = reply.split('\n').find(s => s.trim());
       title = firstLine
         ? firstLine.replace(/^[#*\-\s]+/, '').slice(0, 80)
         : ('AI 返信 ' + new Date().toISOString().slice(0, 10));
-    } else if(/(?:^|\n)\s*(?:🐦|Twitter|X 投稿|SNS 投稿|X post|tweet|投稿案 ?\d|案 ?\d ?[:：])/im.test(reply) && len >= 300){
-      type = 'sns_post';
-      title = 'SNS 草稿 ' + new Date().toISOString().slice(0, 10);
     }
   }
   if(!type) return null;

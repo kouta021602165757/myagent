@@ -24432,7 +24432,24 @@ async function handleAPI(req,res,pathname,method,ip){
     const lp_url_raw = String((body && body.lp_url) || ag.site_url || '').trim();
     const lp_url = _isHttpUrl(lp_url_raw) ? lp_url_raw : '';
     const logo_url_raw = String((body && body.logo_url) || '').trim();
-    const logo_url = _isHttpUrl(logo_url_raw) ? logo_url_raw : null;
+    let logo_url = _isHttpUrl(logo_url_raw) ? logo_url_raw : null;
+    let favicon_url = null;
+    // 🎯 logo / favicon を LP から 自動抽出 (= 未指定時)
+    if(lp_url && !logo_url){
+      try {
+        const ext = await _mediaExtractLogo(lp_url);
+        if(ext && ext.logo_url){
+          logo_url = ext.logo_url;
+        }
+      } catch(e){ console.warn('[media-create] logo extract failed:', e.message); }
+    }
+    // favicon は 必ず LP origin の /favicon.ico を 試す (= 軽量 fallback)
+    if(lp_url){
+      try {
+        const u = new URL(lp_url);
+        favicon_url = u.origin + '/favicon.ico';
+      } catch(_){}
+    }
 
     // カテゴリ (= 入力 or default)
     const categoriesIn = Array.isArray(body && body.categories) ? body.categories : [];
@@ -24458,6 +24475,7 @@ async function handleAPI(req,res,pathname,method,ip){
       brand_color,
       lp_url,
       logo_url,
+      favicon_url,
       categories,
       // path-based public route (= myaiagents.agency/media/:slug)
       // 将来カスタムドメイン対応する時に subdomain or 完全独自ホストに切替

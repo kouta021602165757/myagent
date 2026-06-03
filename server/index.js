@@ -21469,6 +21469,60 @@ async function handleAPI(req,res,pathname,method,ip){
   // /api/ prefix 限定なので、 /media/... は到達しない。
 
   // ── Service-key authenticated admin endpoints (= 認証は X-Service-Key header) ──
+  //   POST /api/admin/generate-article — 任意 user の 指定 agent で 新規記事生成 (= async)
+  //   body: { userId, agentId, keyword, mode?: 'aeo'|'seo' }
+  //   header: X-Service-Key: <SUPA_KEY>
+  if(pathname === '/api/admin/generate-article' && method === 'POST'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const body = await readBody(req).catch(() => ({}));
+    const userId = String(body && body.userId || '').trim();
+    const agentId = String(body && body.agentId || '').trim();
+    const keyword = String(body && body.keyword || '').trim();
+    if(!userId || !agentId || !keyword) return jres(res, 400, { error: 'userId + agentId + keyword required' });
+    const adminUser = await DB.findBy('id', userId).catch(() => null);
+    if(!adminUser) return jres(res, 404, { error: 'user not found' });
+    const ag = (adminUser.agents || []).find(a => a && a.id === agentId);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created' });
+    if(!ANTHROPIC) return jres(res, 503, { error: 'AI key not configured' });
+    const jobId = 'gen_' + crypto.randomBytes(5).toString('hex');
+    const startedAt = new Date().toISOString();
+    jres(res, 200, { ok: true, async: true, job_id: jobId, started_at: startedAt });
+    (async () => {
+      try {
+        const article = await _mediaGenerateArticle(ag, { keyword, mode: body.mode || 'seo' });
+        const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
+        const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
+        const postSlug = await _mediaPostSlugSmart(article.title, keyword, existingSlugs);
+        const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
+        const now = new Date().toISOString();
+        const postMeta = {
+          id: postId, slug: postSlug, title: article.title, excerpt: article.excerpt,
+          category_name: article.category_name || '',
+          tags: Array.isArray(article.tags) ? article.tags : [],
+          hero_image_url: heroUrl, status: 'published', published_at: now, keyword,
+          vertical: article.vertical || '', template_used: article.template_used || '',
+        };
+        if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+        ag.media_posts_idx.unshift(postMeta);
+        if(!adminUser.media_posts_full) adminUser.media_posts_full = {};
+        adminUser.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
+        const estJpy = Math.round((article.body_html.length / 2000) * 10) / 10;
+        adminUser.billing_history = Array.isArray(adminUser.billing_history) ? adminUser.billing_history : [];
+        adminUser.billing_history.push({ date: now, type: 'usage', via: 'admin_generate', agentId: ag.id, agentName: ag.name, cost_jpy: estJpy, detail: 'admin-generate: ' + postMeta.title.slice(0, 60) });
+        adminUser.balance_jpy = Math.round(((adminUser.balance_jpy || 0) - estJpy) * 1000) / 1000;
+        await DB.save(adminUser);
+        _mediaSlugCacheClear(ag.media.slug);
+        console.log('[admin-generate] ✅ ' + jobId + ' published: ' + postSlug);
+      } catch(e){
+        console.error('[admin-generate] ❌ ' + jobId + ' failed:', e.message);
+      }
+    })().catch(e => console.error('[admin-generate] fatal:', e.message));
+    return;
+  }
+
+  // ── Service-key authenticated admin endpoints (= 認証は X-Service-Key header) ──
   //   POST /api/admin/bulk-rewrite — 任意 user の 指定 agent の 記事を 一括リライト
   //   body: { userId, agentId, limit? }
   //   header: X-Service-Key: <SUPA_KEY>

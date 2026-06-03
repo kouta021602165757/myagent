@@ -11576,13 +11576,71 @@ window._kwInvokeArticleGen = async function(siteId, title, mode){
       keyword: title, target_chars: 5000, mode: mode,
     });
     // 🚀 async 応答対応 (= サーバが async:true で即時返却、 バックグラウンド処理)
+    //   modal は 閉じない — 「生成中」 を 持続表示 + 30 秒ごとに DB ポーリング
+    //   完了したら modal を 「完成 → 開く」 に切り替え。
     if(r && r.async){
-      _mediaArtClose();
-      showToast('✅ バックグラウンドで生成中 (= 1-3 分)。 完了したら メディアダッシュ で確認できます','ok',8000);
-      // 3 分後に dashboard 自動 refresh
-      setTimeout(function(){
-        if(typeof window.openMediaPanel === 'function') window.openMediaPanel(siteId);
-      }, 180000);
+      var card = document.getElementById('mediaArtCard');
+      if(card){
+        card.innerHTML = ''
+          + '<div style="text-align:center;padding:16px 6px">'
+          +   '<div style="font-size:48px;margin-bottom:14px">📝</div>'
+          +   '<div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:8px">AI が記事を 生成中</div>'
+          +   '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:18px">「'+esc(title)+'」 の '+(mode==='aeo'?'AEO 記事':'SEO 記事')+' を執筆 + 画像生成中。<br>'
+          +     '<b>約 2-3 分 かかります</b>。<br>'
+          +     'バックグラウンドで処理中、 このタブを 閉じても OK。'
+          +   '</div>'
+          +   '<div style="background:var(--cream3);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text3);margin-bottom:18px;text-align:left;line-height:1.7">'
+          +     '✓ SERP 上位 10 サイト分析<br>'
+          +     '✓ AI 構造化出力 (= product-card 必須数)<br>'
+          +     '✓ 英語 slug 生成<br>'
+          +     '✓ Hero 画像 + 本文 図解'
+          +   '</div>'
+          +   '<div id="mediaGenStatus" style="font-size:11.5px;color:var(--peach-dark);font-weight:800;margin-bottom:14px">⏳ 経過: 0 秒</div>'
+          +   '<button onclick="_mediaArtClose()" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">バックグラウンドで続ける →</button>'
+          + '</div>';
+      }
+      // 経過時間表示 + 完了検出 (= DB ポーリング)
+      var startTs = Date.now();
+      var initialCount = ((agents||[]).find(function(a){return a && a.id === siteId;}) || {}).media_posts_idx || [];
+      var initialN = initialCount.length || 0;
+      var pollTimer = setInterval(async function(){
+        var elapsed = Math.floor((Date.now() - startTs) / 1000);
+        var statusEl = document.getElementById('mediaGenStatus');
+        if(statusEl) statusEl.textContent = '⏳ 経過: ' + elapsed + ' 秒  (' + (elapsed >= 180 ? 'もうすぐ完了です…' : '進行中') + ')';
+        try {
+          var mr = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media');
+          var posts = (mr && mr.posts_idx) || [];
+          if(posts.length > initialN){
+            clearInterval(pollTimer);
+            var newPost = posts[0];
+            var newCard = document.getElementById('mediaArtCard');
+            if(newCard){
+              var url = 'https://' + esc((newPost && newPost.slug) || '') + '.myaiagents.agency/'+esc((newPost && newPost.slug) || '');
+              // 実際の URL は media domain ベース、 ここではダッシュからジャンプ
+              newCard.innerHTML = '<div style="text-align:center;padding:12px 4px">'
+                + '<div style="font-size:48px;margin-bottom:10px">✅</div>'
+                + '<div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:8px">記事 公開完了!</div>'
+                + '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:18px">「'+esc((newPost && newPost.title || '').slice(0,55))+'」 を公開しました</div>'
+                + '<button onclick="_mediaArtClose();window.openMediaPanel(\''+esc(siteId)+'\')" style="background:var(--teal);color:#fff;border:0;padding:11px 28px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">ダッシュボードを 開く →</button>'
+                + '</div>';
+            }
+            showToast('✅ 記事 公開完了','ok',5000);
+          }
+        } catch(_){}
+        // 6 分超えたら タイムアウト
+        if(elapsed > 360){
+          clearInterval(pollTimer);
+          var tc = document.getElementById('mediaGenStatus');
+          if(tc) tc.innerHTML = '<span style="color:#9a3412">⚠️ 6 分超過、 ダッシュボードで 状況確認してください</span>';
+        }
+      }, 15000);
+      // 初回 即時 fire (= 15s 待たずに 即チェック)
+      setTimeout(async function(){
+        try {
+          var mr = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media');
+          // (= initialN は static、 ここでは何もしない、 次の 15s tick で確認される)
+        } catch(_){}
+      }, 1000);
       return;
     }
     var ag = (agents||[]).find(function(a){return a && a.id === siteId;});

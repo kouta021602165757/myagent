@@ -23714,7 +23714,7 @@ function _notesRenderEditor(){
 
   // ── 記事化アクション (= このメモから記事下書きを AI に作らせる) ──
   var articleActionHTML = '';
-  if(_siteMode && st._siteHint){
+  if(st._siteHint){  // 🐛 fix: _siteMode は openNotesPanel local だった → st._siteHint で判定 (site mode 時のみ set)
     articleActionHTML = '<div style="margin:14px 24px;background:linear-gradient(135deg, #f7ffe9, #fff);border:1px solid #c0ff5c;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
       +   '<div style="font-size:22px;flex-shrink:0">📝</div>'
       +   '<div style="flex:1">'

@@ -16744,8 +16744,31 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   //   LP の og:description / meta description を 自動取得済 (= media create / settings 時)
   const lpDescText = media.lp_description ? _mediaEsc(media.lp_description) : '公式サイトで 詳細を チェックしてください。';
   // CTA タイトルは LP ブランド名 を 抽出 (= 「○○ を試してみる」)
-  //   media.name から 「 Blog」 「ブログ」 を 除去
-  const lpBrand = String(media.name || '').replace(/\s*(Blog|ブログ|メディア)\s*$/i, '').trim() || 'このサービス';
+  //   1. media.lp_brand_name (= ユーザ設定) を最優先
+  //   2. lp_url ホスト名から推測 (= lp.pico-app.com → "Pico App")
+  //   3. media.name から 「Blog」 等を除去 (= fallback)
+  function _extractLpBrand(){
+    if(media.lp_brand_name) return String(media.lp_brand_name).slice(0, 40);
+    // lp_url から取得 (= 一番安定)
+    if(lpUrl){
+      try {
+        const u = new URL(lpUrl);
+        // www. / lp. / app. / blog. 等の prefix を除去
+        let host = u.hostname.replace(/^(www|lp|app|blog|m|en|ja|jp)\./i, '');
+        // .com / .jp 等の TLD を除去 (例: pico-app.com → pico-app)
+        host = host.replace(/\.(com|jp|net|org|io|co|app|dev|info|biz|me|tv|jp|co\.jp)$/i, '');
+        // さらに subdomain 残ってる場合 (= pico-app.com → pico-app)、 最初の dot まで
+        host = host.split('.')[0];
+        // hyphen 区切り → title case (例: pico-app → Pico App)
+        const parts = host.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).filter(Boolean);
+        const brand = parts.join(' ');
+        if(brand && brand.length >= 2) return brand.slice(0, 40);
+      } catch(_){}
+    }
+    // 最後の fallback: media.name から Blog 等を除去
+    return String(media.name || '').replace(/\s*(Blog|ブログ|メディア)\s*$/i, '').trim() || 'このサービス';
+  }
+  const lpBrand = _extractLpBrand();
   const endCard = lpUrl ? `
     <div class="end-card-cta">
       <div class="ec-bg-deco"></div>

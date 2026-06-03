@@ -10478,6 +10478,16 @@ window._openMediaSettings = async function(siteId){
     +   '<div style="font-size:10px;color:var(--text3);margin-top:3px">1200×630 推奨、 空なら 各記事の SVG hero が 自動使用</div>'
     + '</div>'
 
+    + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">🎨 ブランドカラー (= LP の色)</label>'
+    +   '<div style="display:flex;gap:10px;align-items:center">'
+    +     '<input id="ms-color" type="color" value="'+esc(settings.brand_color || '#0d4f4a')+'" style="width:48px;height:40px;border:1px solid var(--wire);border-radius:6px;padding:2px;cursor:pointer;background:#fff">'
+    +     '<input id="ms-color-hex" type="text" maxlength="7" value="'+esc(settings.brand_color || '#0d4f4a')+'" style="flex:1;background:#fff;border:1px solid var(--wire);padding:9px 12px;border-radius:6px;font-size:12.5px;font-family:menlo,monospace;font-weight:700" placeholder="#0d4f4a" oninput="(function(){var v=event.target.value;if(/^#[0-9a-fA-F]{6}$/.test(v)){var c=document.getElementById(\'ms-color\');if(c)c.value=v;}})()">'
+    +     '<button onclick="_msFetchLpThemeColor()" style="background:transparent;border:1px solid var(--wire2);color:var(--teal);font-size:10.5px;cursor:pointer;font-weight:800;font-family:inherit;padding:9px 12px;border-radius:6px;white-space:nowrap">🔍 LP 自動</button>'
+    +   '</div>'
+    +   '<div style="font-size:10px;color:var(--text3);margin-top:3px">記事 hero / 装飾色に 反映、 LP の theme-color と 合わせると 統一感 UP</div>'
+    +   '<script>(function(){var c=document.getElementById("ms-color"),h=document.getElementById("ms-color-hex");if(c&&h){c.addEventListener("input",function(){h.value=c.value});}})()</script>'
+    + '</div>'
+
     + '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:800;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.04em">公開 URL</label>'
     +   '<div style="display:flex;gap:8px;align-items:center;background:var(--cream3);border:1px solid var(--wire);padding:8px 12px;border-radius:6px;font-size:12px;color:var(--text2);font-family:menlo,monospace">'
     +     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(settings.public_url||'')+'</span>'
@@ -10511,6 +10521,28 @@ window._msFetchLpFavicon = function(){
   } catch(e){ showToast('LP URL が 不正','ng'); }
 };
 
+window._msFetchLpThemeColor = async function(){
+  var lp = (document.getElementById('ms-lp') || {}).value || '';
+  if(!lp){ showToast('LP URL を 先に入力','ng'); return; }
+  // siteId はオーバーレイの保存ボタンから取得
+  var btn = document.querySelector('#mediaSettingsOverlay button[onclick^="_saveMediaSettings("]');
+  var m = btn && btn.getAttribute('onclick').match(/_saveMediaSettings\('([^']+)'\)/);
+  var siteId = m && m[1];
+  if(!siteId){ showToast('内部エラー: siteId','ng'); return; }
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/theme-color', { url: lp });
+    if(r && r.color){
+      var c = document.getElementById('ms-color');
+      var h = document.getElementById('ms-color-hex');
+      if(c) c.value = r.color;
+      if(h) h.value = r.color;
+      showToast('🎨 ' + r.color + ' を 取得 (' + (r.source||'meta') + ')', 'ok');
+    } else {
+      showToast('theme-color が 見つかりません', 'ng');
+    }
+  } catch(e){ showToast('取得失敗: ' + (e.message||''), 'ng'); }
+};
+
 window._saveMediaSettings = async function(siteId){
   var btn = document.getElementById('msSaveBtn');
   if(btn){ btn.disabled = true; btn.textContent = '保存中...'; }
@@ -10520,6 +10552,7 @@ window._saveMediaSettings = async function(siteId){
     lp_url: (document.getElementById('ms-lp')||{}).value || '',
     favicon_url: (document.getElementById('ms-fav')||{}).value || '',
     og_image_url: (document.getElementById('ms-og')||{}).value || '',
+    brand_color: (document.getElementById('ms-color')||{}).value || '',
   };
   try {
     var r = await api('PUT', '/api/agents/'+encodeURIComponent(siteId)+'/media/settings', body);

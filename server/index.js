@@ -8016,6 +8016,50 @@ async function _fetchLpDescription(lpUrl){
 
 // ロゴ自動抽出 — 7 段階フォールバック
 // project_media_design_strategy.md 準拠
+// 🎨 LP HTML から theme-color (= meta tag) を抽出
+async function _mediaExtractThemeColor(siteUrl){
+  if(!siteUrl) return { color: null, source: null };
+  const base = (function(){
+    try { const u = new URL(siteUrl); return u.protocol + '//' + u.host; }
+    catch(_){ return siteUrl.replace(/\/$/, ''); }
+  })();
+  let html = '';
+  try {
+    const ctrl = new AbortController();
+    const tm = setTimeout(() => ctrl.abort(), 6000);
+    const fres = await fetch(base, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MY-AI-Agent-Media/1.0)' },
+      redirect: 'follow',
+    }).catch(() => null);
+    clearTimeout(tm);
+    if(fres && fres.ok) html = await fres.text();
+  } catch(e){ /* swallow */ }
+  if(!html) return { color: null, source: null };
+  // 1) <meta name="theme-color" content="#xxxxxx">
+  const themeM = html.match(/<meta[^>]+name=["']theme-color["'][^>]+content=["']([^"']+)["']/i)
+              || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']theme-color["']/i);
+  if(themeM){
+    const c = themeM[1].trim();
+    if(/^#[0-9a-fA-F]{6}$/.test(c)) return { color: c.toLowerCase(), source: 'meta theme-color' };
+    if(/^#[0-9a-fA-F]{3}$/.test(c)) return { color: ('#' + c.slice(1).split('').map(x=>x+x).join('')).toLowerCase(), source: 'meta theme-color' };
+  }
+  // 2) CSS 変数 --brand / --primary / --accent (= 良くある命名)
+  const cssVarRe = /--(?:brand|primary|accent|main|theme)[a-z-]*\s*:\s*(#[0-9a-fA-F]{3,6})/i;
+  const cssVarM = html.match(cssVarRe);
+  if(cssVarM){
+    const c = cssVarM[1];
+    if(/^#[0-9a-fA-F]{6}$/.test(c)) return { color: c.toLowerCase(), source: 'css var' };
+  }
+  // 3) msapplication-TileColor (= MS 標準)
+  const tileM = html.match(/<meta[^>]+name=["']msapplication-TileColor["'][^>]+content=["']([^"']+)["']/i);
+  if(tileM){
+    const c = tileM[1].trim();
+    if(/^#[0-9a-fA-F]{6}$/.test(c)) return { color: c.toLowerCase(), source: 'tile-color' };
+  }
+  return { color: null, source: null };
+}
+
 async function _mediaExtractLogo(siteUrl){
   if(!siteUrl) return { logo_url: null, source: 'none', candidates: [] };
   const base = (function(){
@@ -24578,6 +24622,22 @@ async function handleAPI(req,res,pathname,method,ip){
   // ════════════════════════════════════════════════════════════════
   // 📝 メディア機能 (Phase A) — Wizard backend endpoints
   // ════════════════════════════════════════════════════════════════
+
+  //   POST /api/agents/:id/media/theme-color — LP URL から theme-color (brand_color) 抽出
+  const mediaThemeMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/theme-color$/);
+  if(mediaThemeMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaThemeMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const body = await readBody(req).catch(() => ({}));
+    const url = String((body && body.url) || (ag.media && ag.media.lp_url) || '').trim();
+    if(!_isHttpUrl(url)) return jres(res, 400, { error: 'invalid_url' });
+    try {
+      const r = await _mediaExtractThemeColor(url);
+      return jres(res, 200, r);
+    } catch(e){
+      return jres(res, 500, { error: 'extract_failed', detail: e.message });
+    }
+  }
 
   //   POST /api/agents/:id/media/logo — LP URL からロゴ自動抽出
   const mediaLogoMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/logo$/);

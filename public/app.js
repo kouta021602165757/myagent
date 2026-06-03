@@ -11082,7 +11082,7 @@ function _renderTabMedia(site){
     var media = site.media;
     var posts = site.media_posts_idx || [];
     var mediaHost = media.domain || 'myaiagents.agency';
-    var publicUrl = 'https://' + esc(mediaHost) + '/media/' + esc(media.slug);
+    var publicUrl = mediaPublicUrl(media);
     // GA4/GSC stats + Realtime を非同期 fetch
     setTimeout(function(){
       _fetchMediaStats(site.id);
@@ -11131,7 +11131,7 @@ function _renderTabMedia(site){
                 var rewriteBadge = p.rewrite_count ? '<span style="background:var(--peach-soft);color:var(--teal-deep);font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:4px">♻️ '+p.rewrite_count+'回 改稿</span>' : '';
                 return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--cream3);border-radius:7px;font-size:11.5px">'
                   + '<span style="color:var(--text)">📝</span>'
-                  + '<a href="https://'+esc(mediaHost)+'/media/'+esc(media.slug)+'/'+esc(p.slug)+'" target="_blank" rel="noopener" style="color:var(--teal-deep);text-decoration:none;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.title||'(無題)')+rewriteBadge+'</a>'
+                  + '<a href="'+esc(mediaPublicUrl(media, p.slug))+'" target="_blank" rel="noopener" style="color:var(--teal-deep);text-decoration:none;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.title||'(無題)')+rewriteBadge+'</a>'
                   + '<span style="color:var(--text3);font-size:10px">'+esc((p.published_at||'').slice(0,10))+'</span>'
                   + '<button onclick="_rewriteMediaArticle(\''+esc(site.id)+'\',\''+esc(p.slug)+'\')" title="AI でリライト + 上書き公開" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);width:24px;height:24px;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center">♻️</button>'
                   + '</div>';
@@ -11489,8 +11489,9 @@ window._kwPublishToMedia = async function(siteId, title, mode){
       +   '<div style="margin-bottom:18px">'
       +     '<div style="font-size:11px;font-weight:800;margin-bottom:5px">ブログ URL</div>'
       +     '<div style="display:flex;align-items:center;background:var(--cream3);border:1.5px solid var(--wire2);border-radius:8px;overflow:hidden">'
-      +       '<span style="padding:11px 8px;font-size:12px;font-family:\'SF Mono\',Menlo,monospace;color:var(--text3)">myaiagents.agency/media/</span>'
+      +       '<span style="padding:11px 0 11px 12px;font-size:12px;font-family:\'SF Mono\',Menlo,monospace;color:var(--text3)">https://</span>'
       +       '<input id="mqSlug" type="text" value="'+esc(defSlug)+'" style="flex:1;border:0;background:transparent;padding:11px 6px;font-size:13px;font-family:\'SF Mono\',Menlo,monospace;font-weight:800;color:var(--teal-deep);outline:0">'
+      +       '<span style="padding:11px 12px 11px 0;font-size:12px;font-family:\'SF Mono\',Menlo,monospace;color:var(--text3)">.myaiagents.agency</span>'
       +     '</div>'
       +   '</div>'
       +   '<div style="background:var(--peach-soft);border-radius:8px;padding:10px 13px;margin-bottom:18px;font-size:11.5px;color:var(--text2);line-height:1.55">'
@@ -11630,7 +11631,7 @@ window._mediaWizPickTemplate = function(key){
 };
 
 function _mediaWizStep4HTML(media){
-  var publicUrl = 'https://' + esc(media.domain || 'myaiagents.agency') + '/media/' + esc(media.slug);
+  var publicUrl = mediaPublicUrl(media);
   return ''
     + '<div style="background:linear-gradient(135deg,#fff,var(--peach-soft));border:2px solid var(--peach-dark);border-radius:13px;padding:30px 24px;text-align:center;margin-bottom:18px">'
     +   '<div style="font-size:50px;margin-bottom:6px">🎉</div>'
@@ -14254,7 +14255,7 @@ function renderMsgs(ag, forceScrollBottom){
         +   '<div class="media-link-bar-ic">📝</div>'
         +   '<div class="media-link-bar-bd">'
         +     '<div class="media-link-bar-ti">'+esc((ag.media && ag.media.name) || (ag.name + ' Blog'))+' · 運用中</div>'
-        +     '<div class="media-link-bar-sub">'+_mPostsCount+' 本公開 · '+esc(_mDomain)+'/media/'+esc((ag.media && ag.media.slug)||'')+'</div>'
+        +     '<div class="media-link-bar-sub">'+_mPostsCount+' 本公開 · '+esc(((ag.media && ag.media.slug)||'')+'.myaiagents.agency')+'</div>'
         +   '</div>'
         +   '<button class="media-link-bar-btn" onclick="openMediaPanel(\''+esc(ag.id)+'\')">ダッシュボードへ →</button>'
         + '</div>';
@@ -24930,6 +24931,18 @@ function doLogout(){
 }
 
 /* ── Utils ─────────────────────────────────────────── */
+// 🌐 メディア公開 URL builder — サブドメイン優先
+//   サーバ側 _mediaPublicUrl と同じロジック。 media.domain で
+//   subdomain mode (= 'myaiagents.agency') か legacy か判定。
+function mediaPublicUrl(media, sub){
+  if(!media || !media.slug) return '';
+  var slug = String(media.slug);
+  var tail = sub ? ('/' + String(sub).replace(/^\/+/, '')) : '';
+  // 現状: サブドメイン強制 (= MEDIA_USE_SUBDOMAIN=true on Render)
+  // 旧 /media/<slug>/ も生きてるが、 UI 表示は サブドメインに統一
+  return 'https://' + slug + '.myaiagents.agency' + tail;
+}
+
 function esc(t){
   // Escapes &, <, >, ", ' so the value is safe for both text content AND
   // double/single-quoted HTML attributes (e.g. title="...", onclick="fn('...')")

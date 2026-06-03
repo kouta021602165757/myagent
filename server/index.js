@@ -7966,6 +7966,37 @@ function _mediaPostSlug(title, existingSlugs){
   return s + '-' + crypto.randomBytes(3).toString('hex');
 }
 
+// 🎯 LP の説明 (= meta description / og:description) を取得
+//    記事末尾の CTA カードで 「この LP は何か」 を 訪問者に説明するため
+async function _fetchLpDescription(lpUrl){
+  if(!lpUrl) return null;
+  try {
+    const ctrl = new AbortController();
+    const tm = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(lpUrl, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 MY-AI-Agent-Media/1.0' },
+      redirect: 'follow',
+    }).catch(() => null);
+    clearTimeout(tm);
+    if(!r || !r.ok) return null;
+    const html = (await r.text()).slice(0, 100000);
+    // og:description を最優先 (= 通常 LP に最適化された文言)
+    const ogM = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+    if(ogM && ogM[1].trim().length >= 10) return ogM[1].trim().slice(0, 240);
+    // 次に meta name="description"
+    const descM = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+    if(descM && descM[1].trim().length >= 10) return descM[1].trim().slice(0, 240);
+    // 最後に <title>
+    const titleM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if(titleM){
+      const t = titleM[1].replace(/<[^>]+>/g, '').trim();
+      if(t.length >= 10) return t.slice(0, 240);
+    }
+    return null;
+  } catch(e){ return null; }
+}
+
 // ロゴ自動抽出 — 7 段階フォールバック
 // project_media_design_strategy.md 準拠
 async function _mediaExtractLogo(siteUrl){
@@ -16610,15 +16641,21 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   // endCard: <div class="body"> 内に置くため、 .body h3 / .body p の CSS と
   //   競合しないよう class 経由で 外部 CSS で全上書き (= inline ダブルクォートの破綻防止)
   const endCardCtaUrl = lpUrl ? lpUrl + '?utm_source=media&utm_medium=end_card&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug) : '';
+  // 🎯 LP 紹介文 (= media.lp_description) を最優先、 なければ汎用 fallback
+  //   LP の og:description / meta description を 自動取得済 (= media create / settings 時)
+  const lpDescText = media.lp_description ? _mediaEsc(media.lp_description) : '公式サイトで 詳細を チェックしてください。';
+  // CTA タイトルは LP ブランド名 を 抽出 (= 「○○ を試してみる」)
+  //   media.name から 「 Blog」 「ブログ」 を 除去
+  const lpBrand = String(media.name || '').replace(/\s*(Blog|ブログ|メディア)\s*$/i, '').trim() || 'このサービス';
   const endCard = lpUrl ? `
     <div class="end-card-cta">
       <div class="ec-bg-deco"></div>
-      <div class="ec-eyebrow">▌ EXCLUSIVE FOR YOU</div>
-      <div class="ec-eyebrow-jp">この記事を読んだあなたに</div>
-      <h3 class="ec-h3">${name} を試してみる</h3>
-      <p class="ec-desc">プロのチームが あなたのサイトの集客を <strong class="ec-strong">月 30 時間</strong> 削減します。</p>
+      <div class="ec-eyebrow">▌ ABOUT ${_mediaEsc(lpBrand).toUpperCase()}</div>
+      <div class="ec-eyebrow-jp">この記事を書いた ${_mediaEsc(media.name||'')} が おすすめ するサービス</div>
+      <h3 class="ec-h3">${_mediaEsc(lpBrand)}</h3>
+      <p class="ec-desc">${lpDescText}</p>
       <a href="${endCardCtaUrl}" target="_blank" rel="noopener" class="ec-btn">公式サイトを見る <span class="ec-arrow">→</span></a>
-      <div class="ec-foot">無料で試す ・ クレジット カード不要</div>
+      <div class="ec-foot">${_mediaEsc(lpUrl).replace(/^https?:\/\//, '')}</div>
     </div>` : '';
   const footerBanner = lpUrl ? `
     <div style="background:${brand};color:#fff;padding:16px 0;text-align:center;font-size:13px;font-weight:700">
@@ -24361,13 +24398,14 @@ async function handleAPI(req,res,pathname,method,ip){
         name: ag.media.name || '',
         description: ag.media.description || '',
         lp_url: ag.media.lp_url || '',
+        lp_description: ag.media.lp_description || '',
         favicon_url: ag.media.favicon_url || '',
         og_image_url: ag.media.og_image_url || '',
         brand_color: ag.media.brand_color || '#0d4f4a',
         logo_url: ag.media.logo_url || '',
         template: ag.media.template || 'minimal',
         slug: ag.media.slug,
-        public_url: 'https://' + (ag.media.domain || 'myaiagents.agency') + '/media/' + ag.media.slug,
+        public_url: _mediaPublicUrl(ag.media),
       });
     }
     // PUT — 部分更新
@@ -24378,6 +24416,9 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     if(typeof body.description === 'string'){
       ag.media.description = body.description.trim().slice(0, 300);
+    }
+    if(typeof body.lp_description === 'string'){
+      ag.media.lp_description = body.lp_description.trim().slice(0, 240);
     }
     if(typeof body.lp_url === 'string'){
       const u = body.lp_url.trim();
@@ -24446,6 +24487,13 @@ async function handleAPI(req,res,pathname,method,ip){
         }
       } catch(e){ console.warn('[media-create] logo extract failed:', e.message); }
     }
+    // 🎯 LP の説明文を取得 (= 記事末尾 CTA カードに 使う)
+    let lp_description = null;
+    if(lp_url){
+      try {
+        lp_description = await _fetchLpDescription(lp_url);
+      } catch(e){ console.warn('[media-create] lp description fetch failed:', e.message); }
+    }
 
     // カテゴリ (= 入力 or default)
     const categoriesIn = Array.isArray(body && body.categories) ? body.categories : [];
@@ -24472,6 +24520,7 @@ async function handleAPI(req,res,pathname,method,ip){
       lp_url,
       logo_url,
       favicon_url,
+      lp_description,
       categories,
       // path-based public route (= myaiagents.agency/media/:slug)
       // 将来カスタムドメイン対応する時に subdomain or 完全独自ホストに切替

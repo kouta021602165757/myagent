@@ -16870,8 +16870,14 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
     </nav>`;
 
   // Hero image
-  const hero = post.hero_image_url
-    ? '<img src="' + _mediaEsc(post.hero_image_url) + '" alt="' + title + '" style="width:100%;height:auto;max-height:480px;object-fit:cover;border-radius:'+s.cardRadius+'">'
+  // ⚠️ data:URI の SVG hero は brand_color 変更後 古いまま baked in されているので、 SSR で 都度再生成 (= 設定変更が即反映)
+  // 外部 URL (Pollinations 等) は そのまま
+  let heroUrl = post.hero_image_url;
+  if(!heroUrl || (typeof heroUrl === 'string' && heroUrl.startsWith('data:image/svg'))){
+    try { heroUrl = _svgHeroForArticle(post, media); } catch(e){ /* fallback to default block */ }
+  }
+  const hero = heroUrl
+    ? '<img src="' + _mediaEsc(heroUrl) + '" alt="' + title + '" style="width:100%;height:auto;max-height:480px;object-fit:cover;border-radius:'+s.cardRadius+'">'
     : '<div style="width:100%;height:300px;background:linear-gradient(135deg,'+brand+',#1e293b);border-radius:'+s.cardRadius+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;padding:30px;text-align:center">' + title + '</div>';
 
   // TOC sidebar
@@ -16950,14 +16956,14 @@ ${media.favicon_url ? '<link rel="icon" href="' + _mediaEsc(media.favicon_url) +
 ${media.favicon_url ? '<link rel="apple-touch-icon" href="' + _mediaEsc(media.favicon_url) + '">' : ''}
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${excerpt}">
-${(media.og_image_url || post.hero_image_url) ? '<meta property="og:image" content="' + _mediaEsc(media.og_image_url || post.hero_image_url) + '">' : ''}
+${(media.og_image_url || heroUrl) ? '<meta property="og:image" content="' + _mediaEsc(media.og_image_url || heroUrl) + '">' : ''}
 <meta property="og:type" content="article">
 <meta property="og:url" content="${publicUrl}">
 <meta property="og:site_name" content="${name}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${excerpt}">
-${(media.og_image_url || post.hero_image_url) ? '<meta name="twitter:image" content="' + _mediaEsc(media.og_image_url || post.hero_image_url) + '">' : ''}
+${(media.og_image_url || heroUrl) ? '<meta name="twitter:image" content="' + _mediaEsc(media.og_image_url || heroUrl) + '">' : ''}
 <meta property="article:published_time" content="${_mediaEsc(post.published_at || '')}">
 <meta property="article:modified_time" content="${_mediaEsc(post.rewritten_at || post.published_at || '')}">
 <meta property="article:author" content="${authorName}">

@@ -8287,8 +8287,8 @@ function _renderTabStrategy(site, allArts){
       +     '<div class="st-persona-box st-p-trig"><div class="st-persona-lbl">⚡ 行動のキッカケ</div><ul class="st-persona-list">' + _bullets(p.buying_triggers) + '</ul></div>'
       +   '</div>'
       +   '<div class="st-card-actions">'
-      +     '<button class="st-act-btn" onclick="_quickAskAI(\'' + esc(site.id) + '\', ' + JSON.stringify('「' + personaName + '」 のペルソナをもっと詳しく分析してください。日常の悩み、情報収集の方法、購買決定のプロセス、競合と比較した時の私たちの強みを含めて。').replace(/'/g, '&#39;') + ')">💬 もっと深く分析</button>'
-      +     '<button class="st-act-btn st-act-secondary" onclick="_quickAskAI(\'' + esc(site.id) + '\', \'このペルソナに刺さるブログ記事のテーマを 5 個提案してください。\')">📝 このペルソナ向け記事案</button>'
+      +     '<button class="st-act-btn" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent('「' + personaName + '」 のペルソナをもっと詳しく分析してください。日常の悩み、情報収集の方法、購買決定のプロセス、競合と比較した時の私たちの強みを含めて。'))) + '\')">💬 もっと深く分析</button>'
+      +     '<button class="st-act-btn st-act-secondary" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent('このペルソナに刺さるブログ記事のテーマを 5 個提案してください。'))) + '\')">📝 このペルソナ向け記事案</button>'
       +   '</div>'
       + '</div>';
   }
@@ -12416,6 +12416,17 @@ function _quickAskAI(siteId, prompt){
     }
   }, 250);
 }
+
+// 🔒 base64 経由の prompt 渡し (= onclick attr 内の quote 問題回避)
+window._quickAskAIb64 = function(siteId, b64Prompt){
+  if(!siteId || !b64Prompt) return;
+  try {
+    var prompt = decodeURIComponent(escape(atob(b64Prompt)));
+    _quickAskAI(siteId, prompt);
+  } catch(e){
+    console.warn('[_quickAskAIb64] decode failed:', e && e.message);
+  }
+};
 
 // 「+ 新しいサイトを追加」モーダル
 function openAddSiteModal(){

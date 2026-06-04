@@ -9318,27 +9318,73 @@ function _renderWeeklyStatsBar(ag){
   el.style.display = 'block';
 }
 
-// 📄 記事一覧 panel — 「生成中/予約」 + 「公開済」 を 上下 2 セクションで 表示
+// 📄 記事一覧 panel — タブ切替 (📥 記事生成前 / ✅ 公開済) + AI 提案 KW 候補
 function _renderTabArticles(site){
   var siteId = esc(site.id);
-  var plannedSec = _renderPlannedArticlesSection(site) || '';
-  if(!plannedSec){
-    plannedSec = '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7;margin-bottom:18px">'
-      + '⏳ 生成中・予約の 記事は ありません。 <button onclick="_closeSiteTabModal();openKeywordPanel(\''+siteId+'\')" style="background:transparent;border:0;color:var(--teal);cursor:pointer;font-weight:800;padding:0;text-decoration:underline">🔍 キーワード調査</button> から 候補を 一括公開できます。'
+  var posts = (site.media_posts_idx || []).filter(function(p){ return p && p.status !== 'draft'; });
+  posts.sort(function(a, b){ return String(b.published_at||'').localeCompare(String(a.published_at||'')); });
+  var planned = (site.planned_articles || []).filter(Boolean);
+  var ks = site.keyword_suggestions || {};
+  var seoCands = (ks.candidates || []).slice();
+  var aeoCands = (ks.aeo_candidates || []).slice();
+  // 公開済 / 予約済 と 重複する候補は 除外 (= タイトル比較)
+  var pubTitleSet = {};
+  posts.forEach(function(p){ if(p && p.title) pubTitleSet[p.title.toLowerCase()] = true; });
+  planned.forEach(function(p){ if(p && p.title) pubTitleSet[p.title.toLowerCase()] = true; });
+  var dedupeFn = function(c){ if(!c || !c.keyword) return false; return !pubTitleSet[c.keyword.toLowerCase()]; };
+  seoCands = seoCands.filter(dedupeFn);
+  aeoCands = aeoCands.filter(dedupeFn);
+  var preCount = seoCands.length + aeoCands.length + planned.length;
+
+  // ── 「記事生成前」 タブ HTML ──
+  var preHTML = '';
+  // AI 候補 (= keyword_suggestions)
+  if(seoCands.length + aeoCands.length > 0){
+    var candRow = function(c, mode){
+      var winP = (typeof c.win_probability === 'number') ? c.win_probability : null;
+      var winChip = winP != null
+        ? '<span style="background:'+(winP>=70?'#dcfce7':(winP>=35?'#fef3c7':'#fee2e2'))+';color:'+(winP>=70?'#15803d':(winP>=35?'#92400e':'#9f1239'))+';padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.02em">'+(winP>=70?'🏆':(winP>=35?'⚖':'⚠'))+' '+winP+'%</span>'
+        : '';
+      var typeChip = '<span style="background:'+(mode==='aeo'?'#f3e8ff':'#fef3c7')+';color:'+(mode==='aeo'?'#5b21b6':'#92400e')+';padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800">'+esc(c.type||'推測')+'</span>';
+      var b64 = btoa(unescape(encodeURIComponent(c.keyword||'')));
+      return '<div class="art-cand" data-kw="'+esc(c.keyword)+'" data-mode="'+esc(mode)+'" style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px">'
+        + '<input type="checkbox" class="art-cand-cb" onclick="_artUpdateBatchBar()" style="width:17px;height:17px;cursor:pointer;accent-color:#0d4f4a;flex-shrink:0">'
+        + '<div style="flex:1;min-width:0">'
+        +   '<div style="font-size:13px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.keyword||'')+'</div>'
+        +   '<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'+typeChip+(winChip||'')+'</div>'
+        + '</div>'
+        + '<button onclick="_kwInvokeArticleGen(\''+siteId+'\',decodeURIComponent(escape(atob(\''+b64+'\'))),\''+esc(mode)+'\')" style="background:var(--teal);color:#fff;border:0;padding:7px 13px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">✨ 公開</button>'
+        + '</div>';
+    };
+    if(seoCands.length > 0){
+      preHTML += '<div style="margin-bottom:18px">'
+        + '<div style="font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">🔍 SEO 候補 ('+seoCands.length+' 件)</div>'
+        + '<div style="display:grid;gap:7px">'+seoCands.map(function(c){ return candRow(c, 'seo'); }).join('')+'</div>'
+        + '</div>';
+    }
+    if(aeoCands.length > 0){
+      preHTML += '<div style="margin-bottom:18px">'
+        + '<div style="font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">🤖 AEO 候補 ('+aeoCands.length+' 件)</div>'
+        + '<div style="display:grid;gap:7px">'+aeoCands.map(function(c){ return candRow(c, 'aeo'); }).join('')+'</div>'
+        + '</div>';
+    }
+  } else {
+    preHTML += '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7;margin-bottom:18px">'
+      + '⏳ AI 提案 候補 が ありません。 <button onclick="_closeSiteTabModal();openKeywordPanel(\''+siteId+'\')" style="background:transparent;border:0;color:var(--teal);cursor:pointer;font-weight:800;padding:0;text-decoration:underline">🔍 キーワード調査</button> で 候補を 生成してください。'
       + '</div>';
   }
-  var posts = (site.media_posts_idx || []).filter(function(p){ return p && p.status !== 'draft'; });
-  // 新→古 sort (= published_at)
-  posts.sort(function(a, b){ return String(b.published_at||'').localeCompare(String(a.published_at||'')); });
+  // 予約済 (= 既存 planned_articles)
+  var plannedSec = _renderPlannedArticlesSection(site) || '';
+  if(plannedSec) preHTML += '<div style="margin-top:18px">'+plannedSec+'</div>';
+
+  // ── 「公開済」 タブ HTML ──
   var mediaSlug = (site.media && site.media.slug) || '';
   var publicBase = mediaSlug ? ('https://' + mediaSlug + '.myaiagents.agency/') : '';
-  var publishedHTML = '';
+  var pubHTML = '';
   if(posts.length === 0){
-    publishedHTML = '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7">'
-      + 'まだ 公開された 記事は ありません。 「✨ 公開」 を 押すと ここに 表示されます。'
-      + '</div>';
+    pubHTML = '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7">まだ 公開された 記事は ありません。</div>';
   } else {
-    publishedHTML = '<div style="display:grid;gap:9px">'
+    pubHTML = '<div style="display:grid;gap:9px">'
       + posts.map(function(p){
           var url = publicBase ? (publicBase + p.slug) : ('/media/' + (mediaSlug || '?') + '/' + p.slug);
           var dt = '';
@@ -9354,16 +9400,94 @@ function _renderTabArticles(site){
         }).join('')
       + '</div>';
   }
+
+  // ── タブ UI ──
+  var tabBtn = function(key, lbl, count, isActive){
+    return '<button onclick="_artSwitchTab(\''+key+'\')" data-art-tab="'+key+'" style="background:'+(isActive?'var(--teal)':'transparent')+';color:'+(isActive?'#fff':'var(--text2)')+';border:'+(isActive?'0':'1px solid var(--wire2)')+';padding:9px 18px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">'+lbl+' <span style="opacity:.7;margin-left:3px">('+count+')</span></button>';
+  };
+
+  // panel open 時に keyword_suggestions が cache に無ければ fetch (= site list endpoint で除外されてる)
+  if(!ks.fetched_at){
+    setTimeout(function(){
+      api('GET', '/api/agents/' + encodeURIComponent(site.id) + '/keyword-suggestions').then(function(r){
+        if(!r) return;
+        site.keyword_suggestions = r;
+        // tab 開き直しで反映
+        try { openArticlesPanel(site.id); } catch(_){}
+      }).catch(function(){});
+    }, 50);
+  }
+
   return ''
-    + '<div style="margin-bottom:24px">'
-    +   '<div style="font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:10px">📥 生成中 / 予約</div>'
-    +   plannedSec
+    + '<div style="display:flex;gap:8px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--wire)">'
+    +   tabBtn('pre',  '📥 記事生成前', preCount,    true)
+    +   tabBtn('pub',  '✅ 公開済',     posts.length, false)
     + '</div>'
-    + '<div>'
-    +   '<div style="font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:10px">✅ 公開済 (' + posts.length + ' 件)</div>'
-    +   publishedHTML
-    + '</div>';
+    + '<div id="artTabPre">' + preHTML + '</div>'
+    + '<div id="artTabPub" style="display:none">' + pubHTML + '</div>';
 }
+
+window._artSwitchTab = function(key){
+  var pre = document.getElementById('artTabPre');
+  var pub = document.getElementById('artTabPub');
+  if(pre) pre.style.display = (key === 'pre' ? '' : 'none');
+  if(pub) pub.style.display = (key === 'pub' ? '' : 'none');
+  document.querySelectorAll('[data-art-tab]').forEach(function(b){
+    var isOn = b.getAttribute('data-art-tab') === key;
+    b.style.background = isOn ? 'var(--teal)' : 'transparent';
+    b.style.color = isOn ? '#fff' : 'var(--text2)';
+    b.style.border = isOn ? '0' : '1px solid var(--wire2)';
+  });
+  if(window._artBatchBar) document.getElementById('artBatchBar') && document.getElementById('artBatchBar').remove();
+};
+
+// 記事一覧 panel 内の checkbox を 集計 → 一括公開 bar
+window._artUpdateBatchBar = function(){
+  var checks = document.querySelectorAll('.art-cand-cb:checked');
+  var count = checks.length;
+  var bar = document.getElementById('artBatchBar');
+  if(count === 0){ if(bar) bar.remove(); return; }
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'artBatchBar';
+    bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#0d4f4a;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;align-items:center;gap:14px;z-index:9999;font-family:inherit';
+    bar.innerHTML = '<div style="font-size:13px;font-weight:800"><span id="artBatchCount">0</span> 件 選択中</div>'
+      + '<div style="font-size:11px;color:#cbd5e1">並列 3 件 / 1 件 ~90 秒 ・ 約 ¥10/件</div>'
+      + '<button onclick="_artBatchPublish()" style="background:#c0ff5c;color:#0a3d39;border:0;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:900;cursor:pointer;font-family:inherit">✨ 一括公開 →</button>'
+      + '<button onclick="_artBatchClear()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 12px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">クリア</button>';
+    document.body.appendChild(bar);
+  }
+  var cnt = document.getElementById('artBatchCount');
+  if(cnt) cnt.textContent = count;
+};
+window._artBatchClear = function(){
+  document.querySelectorAll('.art-cand-cb:checked').forEach(function(cb){ cb.checked = false; });
+  _artUpdateBatchBar();
+};
+window._artBatchPublish = function(){
+  var checks = Array.prototype.slice.call(document.querySelectorAll('.art-cand-cb:checked'));
+  if(checks.length === 0) return;
+  if(checks.length > 5){ alert('一度に 公開できるのは 5 件まで。'); return; }
+  var items = checks.map(function(cb){
+    var card = cb.closest('.art-cand');
+    return card ? { title: card.getAttribute('data-kw'), keyword: card.getAttribute('data-kw'), mode: card.getAttribute('data-mode') || 'seo' } : null;
+  }).filter(Boolean);
+  var sample = items.slice(0, 3).map(function(it){ return '・ ' + it.title; }).join('\n');
+  var more = items.length > 3 ? '\n... +' + (items.length - 3) + ' 件' : '';
+  if(!confirm(items.length + ' 件を 一括公開します。\n\n' + sample + more + '\n\n合計 ~¥' + (items.length * 10) + ' ・ 約 ' + Math.ceil(items.length / 3) + ' 分。\nchat に 進捗 thread が 立ちます。\n\nOK?')) return;
+  // 一括公開 API 呼ぶ
+  var sid = (document.getElementById('siteTabOverlay') || {}).getAttribute && document.getElementById('siteTabOverlay').getAttribute('data-site-id');
+  if(!sid){ showToast('siteId 不明', 'ng'); return; }
+  api('POST', '/api/agents/' + encodeURIComponent(sid) + '/keyword-batch-publish', { items: items })
+    .then(function(r){
+      if(!r || !r.ok){ showToast('公開失敗: ' + (r && r.detail || 'unknown'), 'ng'); return; }
+      showToast('✨ ' + items.length + ' 件 生成開始 (chat に thread 通知)', 'ok');
+      _artBatchClear();
+      // panel 再描画 (= 候補リストから 該当 KW を 一旦消す)
+      setTimeout(function(){ try { openArticlesPanel(sid); } catch(_){} }, 600);
+    })
+    .catch(function(err){ showToast('公開失敗: ' + (err.message || ''), 'ng'); });
+};
 
 // 📝 「書く予定の記事」 セクション (= planned_articles キュー)
 //    KW 調査の ⊕ ボタンから追加された記事を表示、 1 クリックで公開できる

@@ -2380,6 +2380,32 @@ document.addEventListener('DOMContentLoaded',async()=>{
     agents=ra.agents||[];
     // Fetch joined groups (where I'm an invitee, hosted by others)
     try { await fetchJoinedGroups(); } catch(e){ console.warn('[groups] fetch failed:', e.message); }
+    // 🚀 keyword_suggestions を 全 media-enabled site で 即時 先読み (= 記事一覧 開いた瞬間 表示用)
+    //   1) localStorage cache を 即時 復元 (= 0 ms)
+    //   2) cache miss なら API fetch を background (= ~100ms SWR)
+    setTimeout(function(){
+      (agents||[]).forEach(function(ag){
+        if(!(ag && ag.media && ag.media.id)) return;
+        if(ag.keyword_suggestions && Array.isArray(ag.keyword_suggestions.candidates) && ag.keyword_suggestions.candidates.length) return;
+        // 1) localStorage 復元
+        try {
+          var cached = localStorage.getItem('kwSug_' + ag.id);
+          if(cached){
+            var parsed = JSON.parse(cached);
+            if(Date.now() - (parsed._cached_at||0) < 7*86400000 && Array.isArray(parsed.candidates) && parsed.candidates.length){
+              ag.keyword_suggestions = parsed;
+              return;  // cache hit → fetch skip
+            }
+          }
+        } catch(_){}
+        // 2) localStorage miss → background fetch
+        api('GET', '/api/agents/' + encodeURIComponent(ag.id) + '/keyword-suggestions').then(function(r){
+          if(!r || !Array.isArray(r.candidates)) return;
+          ag.keyword_suggestions = r;
+          try { localStorage.setItem('kwSug_' + ag.id, JSON.stringify(Object.assign({}, r, { _cached_at: Date.now() }))); } catch(_){}
+        }).catch(function(){});
+      });
+    }, 100);
     // If URL has ?openAgent=ag_xxx (e.g., from invite redirect), focus that one.
     // ?joined=1 means the user just completed an invite → toast a welcome.
     // ?agent_id=ag_xxx&kickoff=1 means signup just finished and the site agent was
@@ -9353,9 +9379,23 @@ function _renderTabArticles(site){
         + '</div>';
     }
   } else {
-    preHTML += '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7;margin-bottom:18px">'
-      + '⏳ AI 提案 候補 が ありません。 <button onclick="_closeSiteTabModal();openKeywordPanel(\''+siteId+'\')" style="background:transparent;border:0;color:var(--teal);cursor:pointer;font-weight:800;padding:0;text-decoration:underline">🔍 キーワード調査</button> で 候補を 生成してください。'
-      + '</div>';
+    // 候補なし: fetch 中なら 「⏳ 取得中...」、 fetch 完了で 0 件なら 「候補なし」 メッセージ
+    var isFetchingKs = !ks.fetched_at;
+    if(isFetchingKs){
+      // skeleton loading (= 6 件 grey card)
+      var skelRow = '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;animation:artSkelPulse 1.4s infinite">'
+        + '<div style="width:18px;height:18px;background:var(--cream3);border-radius:50%"></div>'
+        + '<div style="flex:1"><div style="height:13px;background:var(--cream3);border-radius:4px;width:60%;margin-bottom:6px"></div><div style="display:flex;gap:5px"><div style="height:10px;width:50px;background:var(--cream3);border-radius:3px"></div><div style="height:10px;width:40px;background:var(--cream3);border-radius:3px"></div></div></div>'
+        + '</div>';
+      preHTML += '<style>@keyframes artSkelPulse{0%,100%{opacity:.5}50%{opacity:.85}}</style>'
+        + '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span class="art-spinner" style="display:inline-block;width:11px;height:11px;border:2px solid var(--cream3);border-top-color:var(--teal);border-radius:50%;animation:artSpinner .8s linear infinite"></span>AI チームが KW 候補を 取得中…</div>'
+        + '<style>@keyframes artSpinner{to{transform:rotate(360deg)}}</style>'
+        + '<div style="display:grid;gap:7px">' + skelRow + skelRow + skelRow + skelRow + '</div>';
+    } else {
+      preHTML += '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7;margin-bottom:18px">'
+        + '⏳ AI 提案 候補 が ありません。 「🔄 候補を更新」 を 押してください。'
+        + '</div>';
+    }
   }
   // 予約済 (= 既存 planned_articles)
   var plannedSec = _renderPlannedArticlesSection(site) || '';

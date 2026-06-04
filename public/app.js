@@ -15069,6 +15069,48 @@ function _linkInlineCitations(html, cites){
 // timeline or composer and would corrupt history if run on a thread msg).
 var _renderingInThread = false;
 function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
+  // 🎯 system_publish — 記事公開通知を カード化 (= タイトル + URL + 字数、 クリック可能)
+  if(raw && (raw.kind === 'system_publish' || raw.kind === 'system_publish_fail' || raw.kind === 'system_publish_start') && (raw.article_title || raw.article_url)){
+    const isStart = raw.kind === 'system_publish_start';
+    const isFail = raw.kind === 'system_publish_fail';
+    const url = raw.article_url || '';
+    const title = raw.article_title || (raw.content || '').slice(0, 60);
+    const icon = isStart ? '⏳' : (isFail ? '⚠️' : '✅');
+    const statusColor = isStart ? '#f59e0b' : (isFail ? '#dc2626' : '#15803d');
+    const statusBg = isStart ? '#fffbeb' : (isFail ? '#fee2e2' : '#dcfce7');
+    const statusLbl = isStart ? '生成中' : (isFail ? '失敗' : '公開済');
+    const domain = url ? url.replace(/^https?:\/\//, '').split('/')[0] : '';
+    const chars = (raw.content || '').match(/(\d{2,5})\s*字/);
+    const charsLbl = chars ? chars[1] + ' 字' : '';
+    const wrapStart = url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:block">' : '<div>';
+    const wrapEnd = url ? '</a>' : '</div>';
+    const card = '<div class="article-card" style="margin:8px 0;max-width:520px">'
+      + wrapStart
+      + '<div style="background:#fff;border:1px solid var(--wire);border-radius:11px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;' + (url ? 'cursor:pointer;transition:all .15s' : '') + '" '
+      +   (url ? 'onmouseover="this.style.borderColor=\'#0d4f4a\';this.style.boxShadow=\'0 4px 12px rgba(0,0,0,.06)\'" onmouseout="this.style.borderColor=\'var(--wire)\';this.style.boxShadow=\'\'"' : '') + '>'
+      +   '<div style="width:42px;height:42px;border-radius:9px;background:' + statusBg + ';color:' + statusColor + ';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0">' + icon + '</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:10px;font-weight:800;color:' + statusColor + ';letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase">📝 ' + statusLbl + (charsLbl ? ' · ' + esc(charsLbl) : '') + '</div>'
+      +     '<div style="font-size:14px;font-weight:800;color:var(--text);line-height:1.45;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + esc(title) + '</div>'
+      +     (domain ? '<div style="font-size:11px;color:var(--text3);font-family:ui-monospace,monospace;display:flex;align-items:center;gap:5px"><span style="opacity:.7">🔗</span>' + esc(domain) + '<span style="margin-left:auto;color:var(--teal);font-weight:800">開く →</span></div>' : '')
+      +   '</div>'
+      + '</div>'
+      + wrapEnd
+      + '</div>';
+    // 通常の bubble wrapper で 包む (= avatar + name + time が出るように)
+    const bubbleAv = '<div class="av">' + _avHTML(ag.avatar) + '</div>';
+    const bubbleName = '<div class="msg-name">' + esc(ag.name||'AI') + '</div>';
+    const tStr = time ? '<span class="msg-time">' + esc(time.slice ? time.slice(11,16) : time) + '</span>' : '';
+    return '<div class="msg msg-ai" data-msg-id="' + esc(raw.id||'') + '" data-msg-idx="' + idx + '">'
+      + '<div class="msg-row">'
+      +   bubbleAv
+      +   '<div class="msg-body">'
+      +     '<div class="msg-meta">' + bubbleName + tStr + '</div>'
+      +     card
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }
   const isU = role==='user';
   const isGroup = !!(ag && ag.is_group);
   // For group chats, show speaker's actual name (not just "あなた")

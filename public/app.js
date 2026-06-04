@@ -4703,6 +4703,13 @@ function _aggregatedSiteTasks(ag){
  * "他 N 件 →" opens the popout for the full list. Hidden when not a site
  * agent or 0 tasks. Called from openAgent + after task mutations. */
 window._renderTaskStrip = function(){
+  // 🚫 hide (2026-06-04 simplification): タスクストリップ (= chat 入力欄上の WEEK X + top3 タスク)
+  // ロードマップ/タスク機能 が UI から消えた以上、 浮いた UI なので 常に 非表示。
+  var el = document.getElementById('taskStrip');
+  if(el){ el.style.display = 'none'; el.innerHTML = ''; }
+  return;
+};
+window._renderTaskStrip_legacy = function(){
   var el = document.getElementById('taskStrip');
   if(!el) return;
   var ag = (agents||[]).find(function(a){return a && a.id === activeId;});
@@ -8815,23 +8822,8 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
 
   // ── 8) 今日の優先アクション (3 件) ──
   var top3Actions = (quickActions || []).slice(0, 3);
+  // 🚫 hide (2026-06-04): 「✅ 今日の優先アクション」 card は メイン flow から 浮いてる
   var actionsHTML = '';
-  if(top3Actions.length > 0){
-    actionsHTML = ''
-      + '<div class="rp-card">'
-      +   '<div class="rp-card-h"><span class="rp-card-ti">✅ 今日の優先アクション</span></div>'
-      +   '<div class="rp-act-grid">'
-      +   top3Actions.map(function(a, i){
-          var clsRank = ['c-1','c-2','c-3'][i] || '';
-          return '<div class="rp-act-card ' + clsRank + '" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(a.prompt))) + '\')">'
-               +   '<div class="rp-act-num">' + (i + 1) + '</div>'
-               +   '<div class="rp-act-ti">' + a.icon + ' ' + esc(a.label) + '</div>'
-               +   '<div class="rp-act-tx">' + esc(String(a.prompt).slice(0, 110)) + (a.prompt.length > 110 ? '…' : '') + '</div>'
-               + '</div>';
-        }).join('')
-      +   '</div>'
-      + '</div>';
-  }
 
   // ── 9) AI 組織活動 (控えめに) ──
   var deptCompactHTML = '';
@@ -8986,38 +8978,9 @@ function _buildStrategicInsights(site, ga4Data, allArts, weekly){
 
 // ─── Tab 3: ⚡ アクション (= 今後の動き) ───────────────────────────
 function _renderTabActions(site, events, next, quickActions, weekly, progressHTML, teamHTML){
-  // 今日のおすすめ (= AI が提案する今日の 3 件)
-  var todaysHTML = ''
-    + '<div class="sd-today-card">'
-    +   '<div class="sd-card-h">⭐ 今日のおすすめアクション</div>'
-    +   '<div class="sd-today-list">'
-    +   quickActions.slice(0, 3).map(function(q, i){
-        return '<button class="sd-today-item" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(q.prompt))) + '\')">'
-             +   '<div class="sd-today-rank">' + (i + 1) + '</div>'
-             +   '<div class="sd-today-ic">' + q.icon + '</div>'
-             +   '<div class="sd-today-bd">'
-             +     '<div class="sd-today-lbl">' + esc(q.label) + '</div>'
-             +     '<div class="sd-today-tx">' + esc(q.prompt.slice(0, 80)) + (q.prompt.length > 80 ? '…' : '') + '</div>'
-             +   '</div>'
-             +   '<div class="sd-today-arrow">→</div>'
-             + '</button>';
-      }).join('')
-    +   '</div>'
-    + '</div>';
-
-  // その他の Quick Actions
-  var moreHTML = ''
-    + '<div class="sd-quick">'
-    +   '<div class="sd-quick-h">⚡ その他の依頼テンプレ</div>'
-    +   '<div class="sd-quick-grid">'
-    +   quickActions.slice(3, 9).map(function(q){
-        return '<button class="sd-quick-btn" onclick="_quickAskAIb64(\'' + esc(site.id) + '\', \'' + btoa(unescape(encodeURIComponent(q.prompt))) + '\')">'
-             +   '<span class="sd-quick-ic">' + q.icon + '</span>'
-             +   '<span class="sd-quick-lbl">' + esc(q.label) + '</span>'
-             + '</button>';
-      }).join('')
-    +   '</div>'
-    + '</div>';
+  // 🚫 hide (2026-06-04): 「⭐ 今日のおすすめ」 + 「⚡ その他の依頼テンプレ」 cards は浮いた UI
+  var todaysHTML = '';
+  var moreHTML = '';
 
   // 次の予定 (大きく表示)
   var nextHTML = next
@@ -10777,19 +10740,16 @@ function _renderTabConnections(site){
         })
     + '</div>';
 
+  // 🚫 hide (2026-06-04): SNS / コンテンツ / EC / フォーム / 内蔵ツール sections を 非表示
+  //   ICP (= マーケ担当ゼロ企業) には Analytics + Search Console だけで十分。
+  //   他は コードに残してあり、 必要時 1 行追加で 復活可能。
   return '<div class="cn-page">'
     + '<div class="cn-hero">'
-    +   '<div class="cn-hero-tag"><span class="sd-rp-dot"></span>外部サービスとの接続 + 内蔵ツール</div>'
-    +   '<div class="cn-hero-ti">AI 組織が「読める / 投稿できる」サービスを増やす</div>'
-    +   '<div class="cn-hero-sub">接続したサービスから自動でデータが流れ込み、AI 組織のアウトプットの精度が上がります。<b>パスワード共有不要</b>。</div>'
+    +   '<div class="cn-hero-tag"><span class="sd-rp-dot"></span>分析データの接続</div>'
+    +   '<div class="cn-hero-ti">Google Analytics + Search Console を つなぐ</div>'
+    +   '<div class="cn-hero-sub">接続すると AI が 数字を 読み取って 「数字分析」 タブと 「日次レポート」 で 進捗 + 改善提案を 自動表示します。 <b>パスワード共有不要</b>。</div>'
     + '</div>'
-    + extWarn
     + analyticsHTML
-    + snsHTML
-    + contentHTML
-    + ecHTML
-    + formHTML
-    + internalToolsHTML
     + '</div>';
 }
 
@@ -13472,29 +13432,11 @@ async function openAgent(id){
   //   - DMs with Web tool ON: 🌐 Web
   //   - Otherwise: nothing (cleaner)
   var topPills = '';
-  // Site type pill (site agent のみ) — 3 パターン分類 (media / ec / lp-hp)
-  if(_isSiteAgent(ag)){
-    var stMap = {
-      media: { lbl: '📰 メディア型', bg: '#0d4f4a', fg: '#fff' },
-      ec:    { lbl: '🛒 EC 型',     bg: '#db2777', fg: '#fff' },
-      'lp-hp': { lbl: '💼 LP/HP 型', bg: '#4f46e5', fg: '#fff' },
-    };
-    var st = ag.site_type
-      || (ag.site_vertical === 'blog' ? 'media' : ag.site_vertical === 'ec' ? 'ec' : 'lp-hp');
-    var info = stMap[st];
-    if(info){
-      // .pill class has !important — use !important in inline style to override
-      var stylePill = 'background:' + info.bg + ' !important;'
-        + 'color:' + info.fg + ' !important;'
-        + 'border:1px solid ' + info.bg + ' !important;'
-        + 'font-weight:700 !important;';
-      topPills += '<span class="pill" style="' + stylePill + '">' + info.lbl + '</span>';
-    }
-    // 📝 メディア pill (Phase A) — 作成済時のみ「N 本」 を表示
-    if(ag.media && ag.media.id){
-      var _mCnt = (ag.media_posts_idx || []).length;
-      topPills += '<span class="pill ct-media-pill" onclick="openMediaPanel(\''+esc(ag.id)+'\')" title="'+L('メディア管理画面を開く','Open media dashboard')+'">📝 '+L('メディア','Media')+' '+_mCnt+' '+(isJa?'本':'posts')+'</span>';
-    }
+  // 🚫 hide (2026-06-04): site type pill (📰 メディア型 etc) は ICP に 必要なし
+  //   メディア pill は メディア構築済表示用に 残す (= 📝 N 本)
+  if(_isSiteAgent(ag) && ag.media && ag.media.id){
+    var _mCnt = (ag.media_posts_idx || []).length;
+    topPills += '<span class="pill ct-media-pill" onclick="openMediaPanel(\''+esc(ag.id)+'\')" title="'+L('メディア管理画面を開く','Open media dashboard')+'">📝 '+L('メディア','Media')+' '+_mCnt+' '+(isJa?'本':'posts')+'</span>';
   }
   const isTeam = !!(ag.is_team && Array.isArray(ag.team_member_agent_ids));
   const teamCount = isTeam ? ag.team_member_agent_ids.length : 0;

@@ -9287,6 +9287,20 @@ function _renderTabArticles(site){
   var posts = (site.media_posts_idx || []).filter(function(p){ return p && p.status !== 'draft'; });
   posts.sort(function(a, b){ return String(b.published_at||'').localeCompare(String(a.published_at||'')); });
   var planned = (site.planned_articles || []).filter(Boolean);
+  // 🚀 keyword_suggestions の localStorage cache 復元 (= ページ再 load で 毎回 fetch 防止)
+  //   site.keyword_suggestions が なければ localStorage から 復元 (= 7 日有効)
+  if(!site.keyword_suggestions || !site.keyword_suggestions.fetched_at){
+    try {
+      var cached = localStorage.getItem('kwSug_' + site.id);
+      if(cached){
+        var parsed = JSON.parse(cached);
+        var age = Date.now() - (parsed._cached_at || 0);
+        if(age < 7 * 86400000 && Array.isArray(parsed.candidates) && parsed.candidates.length){
+          site.keyword_suggestions = parsed;
+        }
+      }
+    } catch(_){}
+  }
   var ks = site.keyword_suggestions || {};
   var seoCands = (ks.candidates || []).slice();
   var aeoCands = (ks.aeo_candidates || []).slice();
@@ -9388,6 +9402,8 @@ function _renderTabArticles(site){
       api('GET', '/api/agents/' + encodeURIComponent(site.id) + '/keyword-suggestions').then(function(r){
         if(!r) return;
         site.keyword_suggestions = r;
+        // localStorage にも 保存 (= 次回 page reload で 即時 復元)
+        try { localStorage.setItem('kwSug_' + site.id, JSON.stringify(Object.assign({}, r, { _cached_at: Date.now() }))); } catch(_){}
         // tab 開き直しで反映
         try { openArticlesPanel(site.id); } catch(_){}
       }).catch(function(){});
@@ -9411,6 +9427,7 @@ window._artRefreshCandidates = async function(siteId){
     var r = await api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/keyword-suggestions?refresh=1');
     var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
     if(ag && r) ag.keyword_suggestions = r;
+    try { localStorage.setItem('kwSug_' + siteId, JSON.stringify(Object.assign({}, r, { _cached_at: Date.now() }))); } catch(_){}
     showToast('✓ 候補 更新完了 (' + ((r && r.candidates||[]).length + (r && r.aeo_candidates||[]).length) + ' 件)', 'ok');
     openArticlesPanel(siteId);  // 再描画
   } catch(e){

@@ -25551,6 +25551,7 @@ async function handleAPI(req,res,pathname,method,ip){
       const parentId = 'm_' + crypto.randomBytes(5).toString('hex');
       j.thread_parent_id = parentId;
       const predCat = _predictCategory(j.keyword || j.title);
+      j.article_category = predCat;  // client 楽観 push 用に response にも 含める
       ag.history.push({
         id: parentId,
         role: 'assistant',

@@ -11969,13 +11969,32 @@ window._kwInvokeArticleGen = async function(siteId, title, mode, keywordOpt){
       return;
     }
     var threadParentId = r.jobs[0].thread_parent_id;
+    var predCat = r.jobs[0].article_category || '';
+    // 🚀 楽観的に LOCAL ag.history へも push (= server fetch 待たずに 即時 表示)
+    var ag = (agents||[]).find(function(a){ return a && a.id === siteId; });
+    if(ag){
+      if(!Array.isArray(ag.history)) ag.history = [];
+      // 既に同 id が ある場合は skip (= 二重 push 防止)
+      if(!ag.history.find(function(m){ return m && m.id === threadParentId; })){
+        ag.history.push({
+          id: threadParentId,
+          role: 'assistant',
+          content: '📝 記事生成中: 「' + title + '」\n⏳ KW: ' + (keywordOpt || title) + (predCat ? ' ・ カテゴリ (推定): ' + predCat : '') + ' ・ mode: ' + (mode || 'seo'),
+          time: new Date().toISOString(),
+          kind: 'system_publish_start',
+          article_title: title,
+          article_category: predCat,
+        });
+        // history_truncated を 解除 (= openAgent 内の auto-hydrate を skip)
+        if(ag.history_truncated) ag.history_total_count = (ag.history_total_count || 0) + 1;
+      }
+    }
     showToast('✨ 生成 開始 (chat に thread が 立ちました)', 'ok');
-    // chat に 切替 + thread 自動 open
+    // chat に 切替 + thread 自動 open (= 楽観 push 済なので 即時に message が 見える)
     try { if(typeof openAgent === 'function') await openAgent(siteId); } catch(_){}
-    // openAgent で /history fetch が走るが、 push した parent message も 取れる
     setTimeout(function(){
       try { if(typeof _openThread === 'function' && threadParentId) _openThread(threadParentId); } catch(_){}
-    }, 400);
+    }, 300);
   } catch(e){
     showToast('生成 失敗: ' + (e.message||'unknown'), 'ng');
   }

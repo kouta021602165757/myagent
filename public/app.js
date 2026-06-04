@@ -2798,9 +2798,13 @@ function _openSiteTabModal(siteId, tabKey){
     try { content = _renderTabSettings(site); }
     catch(err){ console.error('[settings-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'media'){
-    title = '📝 ' + L('メディア','Media');
+    title = '📝 ' + L('メディア構築','Build media');
     try { content = _renderTabMedia(site); }
     catch(err){ console.error('[media-panel] render failed:', err); content = _dgrErrCard(err); }
+  } else if(tabKey === 'articles'){
+    title = '📄 ' + L('記事一覧','Articles');
+    try { content = _renderTabArticles(site); }
+    catch(err){ console.error('[articles-panel] render failed:', err); content = _dgrErrCard(err); }
   } else if(tabKey === 'keyword'){
     title = '🔍 ' + L('キーワード調査','Keyword research');
     // PHASE-1A: mock を iframe で表示。iframe は別 document で JWT token を持たないので、
@@ -3139,6 +3143,7 @@ window.openKeywordPanel       = function(siteId){
 };
 // 📝 メディア (Phase A.4): in-app Wizard / Dashboard modal を開く
 window.openMediaPanel         = function(siteId){ _openSiteTabModal(siteId, 'media'); };
+window.openArticlesPanel      = function(siteId){ _openSiteTabModal(siteId, 'articles'); };
 window.openStrategyPanel      = function(siteId){ _openSiteTabModal(siteId, 'strategy'); };
 window.openTasksPanel         = function(siteId){ _openSiteTabModal(siteId, 'tasks'); };
 window.openAgentsPanel        = function(siteId){ _openSiteTabModal(siteId, 'agents'); };
@@ -6803,16 +6808,8 @@ function _renderSiteDashboardHTML(site){
           +       '<span class="sd-tab-ic">📊</span><span class="sd-tab-lbl">数字一覧</span><span class="sd-tab-sub">' + (hasGa4Data0 ? '数字を常に確認' : 'GA4 接続待ち') + '</span>'
           +       lockBadge(hasGa4Data0, 'まず GA4 を接続して数字を取得')
           +     '</button>'
-          +     '<button class="sd-tab sd-tab-strategy' + lockCls(hasStrategy0) + (activeTab === 'strategy' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'strategy\')">'
-          +       '<span class="sd-tab-pdca">P</span>'
-          +       '<span class="sd-tab-ic">🎯</span><span class="sd-tab-lbl">戦略・KPI</span><span class="sd-tab-sub">' + (hasStrategy0 ? '計画を立てる' : '戦略未生成') + '</span>'
-          +       lockBadge(hasStrategy0, 'まず AI に戦略を作らせる')
-          +     '</button>'
-          +     '<button class="sd-tab sd-tab-tasks' + lockCls(hasRoadmap0) + (activeTab === 'tasks' ? ' on' : '') + '" onclick="_switchDashTab(\'' + esc(site.id) + '\',\'tasks\')">'
-          +       '<span class="sd-tab-pdca">D</span>'
-          +       '<span class="sd-tab-ic">✅</span><span class="sd-tab-lbl">タスク管理</span><span class="sd-tab-sub">' + (hasRoadmap0 ? '部門別に実行' : 'ロードマップ未生成') + '</span>'
-          +       lockBadge(hasRoadmap0, 'まずロードマップを生成')
-          +     '</button>'
+          // 🚫 hide (2026-06-04 simplification): 戦略・KPI / タスク管理 を 非表示
+          // コード自体は _renderTabStrategy / _renderTabTasks に残してある (= 復活時 1 行で OK)
           +   '</div>';
     })()
     +   '<div class="sd-tabs-grp sd-tabs-grp-other">'
@@ -9319,6 +9316,53 @@ function _renderWeeklyStatsBar(ag){
   }
   el.innerHTML = summaryLine + detailHTML;
   el.style.display = 'block';
+}
+
+// 📄 記事一覧 panel — 「生成中/予約」 + 「公開済」 を 上下 2 セクションで 表示
+function _renderTabArticles(site){
+  var siteId = esc(site.id);
+  var plannedSec = _renderPlannedArticlesSection(site) || '';
+  if(!plannedSec){
+    plannedSec = '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7;margin-bottom:18px">'
+      + '⏳ 生成中・予約の 記事は ありません。 <button onclick="_closeSiteTabModal();openKeywordPanel(\''+siteId+'\')" style="background:transparent;border:0;color:var(--teal);cursor:pointer;font-weight:800;padding:0;text-decoration:underline">🔍 キーワード調査</button> から 候補を 一括公開できます。'
+      + '</div>';
+  }
+  var posts = (site.media_posts_idx || []).filter(function(p){ return p && p.status !== 'draft'; });
+  // 新→古 sort (= published_at)
+  posts.sort(function(a, b){ return String(b.published_at||'').localeCompare(String(a.published_at||'')); });
+  var mediaSlug = (site.media && site.media.slug) || '';
+  var publicBase = mediaSlug ? ('https://' + mediaSlug + '.myaiagents.agency/') : '';
+  var publishedHTML = '';
+  if(posts.length === 0){
+    publishedHTML = '<div style="background:var(--cream2);border:1px dashed var(--wire2);border-radius:11px;padding:18px 22px;color:var(--text3);font-size:12.5px;line-height:1.7">'
+      + 'まだ 公開された 記事は ありません。 「✨ 公開」 を 押すと ここに 表示されます。'
+      + '</div>';
+  } else {
+    publishedHTML = '<div style="display:grid;gap:9px">'
+      + posts.map(function(p){
+          var url = publicBase ? (publicBase + p.slug) : ('/media/' + (mediaSlug || '?') + '/' + p.slug);
+          var dt = '';
+          try { var d = new Date(p.published_at); dt = (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); } catch(_){}
+          return '<div style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:12px">'
+            + '<div style="width:32px;height:32px;border-radius:8px;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0">✓</div>'
+            + '<div style="flex:1;min-width:0">'
+            +   '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.title || '(無題)') + '</div>'
+            +   '<div style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:600">' + esc(dt) + (p.category_name ? ' · ' + esc(p.category_name) : '') + '</div>'
+            + '</div>'
+            + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="background:transparent;border:1px solid var(--wire2);color:var(--teal);padding:7px 13px;border-radius:7px;font-size:11.5px;font-weight:800;text-decoration:none;font-family:inherit;flex-shrink:0">↗ 開く</a>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+  return ''
+    + '<div style="margin-bottom:24px">'
+    +   '<div style="font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:10px">📥 生成中 / 予約</div>'
+    +   plannedSec
+    + '</div>'
+    + '<div>'
+    +   '<div style="font-size:13.5px;font-weight:900;color:var(--text);margin-bottom:10px">✅ 公開済 (' + posts.length + ' 件)</div>'
+    +   publishedHTML
+    + '</div>';
 }
 
 // 📝 「書く予定の記事」 セクション (= planned_articles キュー)
@@ -13255,13 +13299,11 @@ async function openAgent(id){
       var _hasMedia = !!(ag.media && ag.media.id);
       var _isMediaSite = (ag.site_type === 'media' || ag.site_vertical === 'blog' || ag.site_vertical === 'news');
 
-      // 4 step (= セットアップ動線、 常時表示)
-      if(!_isMediaSite){
-        actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('1️⃣ ブログ立ち上げ','1️⃣ Launch blog')+'">📝</button>';
-      }
+      // 3 step (= メディア構築 → KW 調査 → 記事一覧、 シンプル化 2026-06-04)
+      //   戦略・KPI / タスク一覧 は ボタン非表示 (= コードは残す、 直接 panel 呼び出しは生きてる)
+      actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('1️⃣ メディア構築','1️⃣ Build media')+'">📝</button>';
       actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('2️⃣ キーワード調査','2️⃣ Keyword research')+'">🔍</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openStrategyPanel(\''+_siteId+'\')" title="'+L('3️⃣ 戦略・KPI','3️⃣ Strategy / KPI')+'">🎯</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openTasksPanel(\''+_siteId+'\')" title="'+L('4️⃣ タスク','4️⃣ Tasks')+'">📋</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openArticlesPanel(\''+_siteId+'\')" title="'+L('3️⃣ 記事一覧','3️⃣ Articles')+'">📄</button>';
 
       // ⚙ メニュー (= 運用 + 管理 を集約、 click で dropdown 開閉)
       actsHTML += '<div class="ct-menu-wrap">'

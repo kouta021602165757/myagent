@@ -25364,7 +25364,23 @@ async function handleAPI(req,res,pathname,method,ip){
       keyword: String((it && it.keyword) || (it && it.title) || '').trim(),
       mode: String((it && it.mode) || 'seo'),
     })).filter(j => j.title && j.keyword);
-    jres(res, 200, { ok: true, started_at: new Date().toISOString(), jobs });
+    // 各 job に対して thread parent message を先に push (= chat 内 thread 起点)
+    if(!Array.isArray(ag.history)) ag.history = [];
+    const now0 = new Date().toISOString();
+    jobs.forEach(j => {
+      const parentId = 'm_' + crypto.randomBytes(5).toString('hex');
+      j.thread_parent_id = parentId;
+      ag.history.push({
+        id: parentId,
+        role: 'assistant',
+        content: '📝 記事生成中: 「' + j.title + '」\n⏳ KW: ' + j.keyword + ' ・ mode: ' + j.mode,
+        time: now0,
+        kind: 'system_publish_start',
+        article_title: j.title,
+      });
+    });
+    try { await DB.save(user); } catch(_){}
+    jres(res, 200, { ok: true, started_at: now0, jobs });
     // 並列 3 件まで で 順次 処理
     const CONCURRENCY = 3;
     let cursor = 0;
@@ -25404,30 +25420,30 @@ async function handleAPI(req,res,pathname,method,ip){
               return t !== matchTitle && t !== matchKw && k !== matchKw && k !== matchTitle;
             });
           }
-          // ✨ chat に system message を append (= 公開 URL + メタ)
+          // ✨ chat に system message を append (= 公開 URL + メタ、 thread 子 として)
           const pubUrl = _mediaPublicUrl(ag.media, postSlug);
-          if(!Array.isArray(ag.history)) ag.history = [];
           ag.history.push({
             id: 'm_' + crypto.randomBytes(5).toString('hex'),
             role: 'assistant',
-            content: '📝 「' + article.title + '」 を 公開しました\n→ ' + pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字 ・ KW: ' + j.keyword,
+            content: '✅ 「' + article.title + '」 を 公開しました\n→ ' + pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字',
             time: now,
             kind: 'system_publish',
             article_url: pubUrl,
             article_title: article.title,
+            thread_parent_id: j.thread_parent_id || null,
           });
           await DB.save(user);
           _mediaSlugCacheClear(ag.media.slug);
           console.log('[kw-batch] ✅ ' + j.job_id + ' published: ' + postSlug);
         } catch(e){
           console.error('[kw-batch] ❌ ' + j.job_id + ' failed:', e.message);
-          if(!Array.isArray(ag.history)) ag.history = [];
           ag.history.push({
             id: 'm_' + crypto.randomBytes(5).toString('hex'),
             role: 'assistant',
             content: '⚠️ 「' + j.title + '」 の 公開に失敗: ' + (e.message || 'unknown').slice(0, 120),
             time: new Date().toISOString(),
             kind: 'system_publish_fail',
+            thread_parent_id: j.thread_parent_id || null,
           });
           try { await DB.save(user); } catch(_){}
         }

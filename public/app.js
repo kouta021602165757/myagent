@@ -13052,6 +13052,16 @@ async function openAgent(id){
       showToast((isJa?'グループ読み込み失敗: ':'Group load failed: ')+e.message, 'ng');
       return;
     }
+  } else if(!ag.is_group && ag.history_truncated && (ag.history||[]).length <= 1){
+    // 🚀 list endpoint は history を stub 1 件しか持たないので、 chat open 時に full fetch
+    try {
+      var _hr = await api('GET', '/api/agents/' + encodeURIComponent(id) + '/history?limit=50');
+      if(_hr && Array.isArray(_hr.items)){
+        ag.history = _hr.items;
+        ag.history_total_count = _hr.total;
+        ag.history_truncated = (_hr.start_idx || 0) > 0;
+      }
+    } catch(_){}
   } else if(ag.is_group && !ag._is_joined_group){
     // For hosted groups, refresh history + members from server so we pick up
     // any system messages added by joining users. Best-effort: fall back to

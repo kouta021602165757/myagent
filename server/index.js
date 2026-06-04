@@ -21791,12 +21791,36 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── GET /api/agents ────────────────────────────────────────
-  // 🚀 perf (2026-06-04): safe(user) 経由で 重い field (history_archive / memories /
-  // 各種 cache / playbook 等) を drop。 元 8MB → ~200KB (= 40 倍 軽量化)。 同じトリムロジックは
-  // /api/me で既に適用済だったが、 /api/agents だけ raw を 返していた漏れ。
+  // 🚀 perf (2026-06-04): /api/agents は agent list (= home dashboard / sidebar) 向けで、
+  //   個別 chat を 開く時は /api/agents/:id/history で full 取得。 list には:
+  //     - last message preview (= recent conversations card 用、 末尾 1 件 + content 300 字 max)
+  //     - history_total_count (= unread badge / 件数表示)
+  //   だけあれば十分。 8MB → ~500KB (= 17x 軽量化、 /api/me より さらに削る)。
   if(pathname==='/api/agents'&&method==='GET'){
     const slim = safe(user);
-    return jres(res,200,{agents: slim.agents || []});
+    const listAgents = (slim.agents || []).map(ag => {
+      if(!ag || typeof ag !== 'object') return ag;
+      const h = Array.isArray(ag.history) ? ag.history : [];
+      if(h.length === 0){
+        return Object.assign({}, ag, { history: [] });
+      }
+      // 末尾 1 件のみ、 content を 300 字 にトリム (= preview 用途で十分)
+      const last = h[h.length - 1] || {};
+      const slimLast = Object.assign({}, last);
+      if(typeof slimLast.content === 'string' && slimLast.content.length > 300){
+        slimLast.content = slimLast.content.slice(0, 300) + '…';
+      }
+      // tool_use / tool_result 等の重い field は drop (= preview に不要)
+      ['tool_use', 'tool_result', 'attachments', 'images', 'thinking', 'partials'].forEach(k => {
+        delete slimLast[k];
+      });
+      return Object.assign({}, ag, {
+        history: [slimLast],
+        history_total_count: ag.history_total_count || h.length,
+        history_truncated: (ag.history_total_count || h.length) > 1,
+      });
+    });
+    return jres(res,200,{agents: listAgents});
   }
 
   // ── POST /api/onboarding/quickstart ────────────────────────

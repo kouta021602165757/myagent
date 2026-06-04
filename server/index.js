@@ -26129,8 +26129,17 @@ async function handleAPI(req,res,pathname,method,ip){
     const mode = (String(qs.mode || 'seo').toLowerCase() === 'aeo') ? 'aeo' : 'seo';
     if(!kw) return jres(res, 400, { error: 'kw required' });
 
-    // 注: agent JSONB へのキャッシュ廃止 (= fat JSONB → Supabase 保存タイムアウト解消)
-    // Claude 呼び出しは Haiku で 5-10s、Anthropic 側 prompt cache (5min) でカバー
+    // 🚀 cache (2026-06-04): タイトル候補生成は ~5-10s かかるので、 同 KW を 2 回目以降は 即時返却。
+    //   size guard: 1 KW = ~3KB、 20 KW までキャッシュ (= 全体 60KB 程度、 Supabase JSONB 安全圏)。
+    //   TTL: 7 日 (= signals/PV 推定が 古びすぎる前に refresh)。 ?refresh=1 で強制再生成。
+    const cacheKey = mode + ':' + kw;
+    const CACHE_TTL = 7 * 24 * 3600 * 1000;
+    const CACHE_MAX_ENTRIES = 20;
+    if(!ag.keyword_detail_cache || typeof ag.keyword_detail_cache !== 'object') ag.keyword_detail_cache = {};
+    const _hit = ag.keyword_detail_cache[cacheKey];
+    if(!qs.refresh && _hit && _hit.fetched_at && (Date.now() - Date.parse(_hit.fetched_at)) < CACHE_TTL){
+      return jres(res, 200, Object.assign({}, _hit, { cached: true }));
+    }
 
     // 並列 fetch: サジェスト + サイトプレビュー (L1 のみで高速化、L2 再帰は廃止)
     let suggest = [], sitePreview = null;
@@ -26256,7 +26265,18 @@ async function handleAPI(req,res,pathname,method,ip){
       citation_checklist: (parsed.citation_checklist || []).slice(0, 7),
       schema_jsonld: parsed.schema_jsonld || null,
     };
-    // agent JSONB に保存しない (= fat JSONB → Supabase timeout 解消)
+    // 🚀 cache 保存 (= size guard: 古い entry を 落として 上限 20 件 維持)
+    try {
+      ag.keyword_detail_cache[cacheKey] = out;
+      const keys = Object.keys(ag.keyword_detail_cache);
+      if(keys.length > CACHE_MAX_ENTRIES){
+        // fetched_at で sort して 古い順に drop
+        keys.sort((a, b) => String(ag.keyword_detail_cache[a].fetched_at||'').localeCompare(String(ag.keyword_detail_cache[b].fetched_at||'')));
+        const drop = keys.length - CACHE_MAX_ENTRIES;
+        for(let i = 0; i < drop; i++) delete ag.keyword_detail_cache[keys[i]];
+      }
+      await DB.save(user);
+    } catch(e){ console.warn('[kw-detail] cache save failed:', e.message); }
     return jres(res, 200, out);
   }
 

@@ -9347,20 +9347,19 @@ function _renderTabArticles(site){
         : '';
       var typeChip = '<span style="background:'+(mode==='aeo'?'#f3e8ff':'#fef3c7')+';color:'+(mode==='aeo'?'#5b21b6':'#92400e')+';padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800">'+esc(c.type||'推測')+'</span>';
       var b64 = btoa(unescape(encodeURIComponent(c.keyword||'')));
-      // 展開可能 (= ▸ クリックで 5 つの タイトル候補を 表示)
+      // KW 行 = グループ見出し (= ▸ 展開で タイトル 5 つ 表示)、 checkbox/公開 は タイトル行のみ
       var kwId = 'kwexp_' + Math.abs(c.keyword.split('').reduce(function(h,ch){return ((h<<5)-h)+ch.charCodeAt(0)|0;},0));
       return '<div class="art-cand-group" data-kw="'+esc(c.keyword)+'" data-mode="'+esc(mode)+'" style="background:#fff;border:1px solid var(--wire);border-radius:10px;overflow:hidden">'
-        + '<div class="art-cand" style="padding:11px 14px;display:flex;align-items:center;gap:10px">'
-        +   '<input type="checkbox" class="art-cand-cb" onclick="event.stopPropagation();_artUpdateBatchBar()" style="width:17px;height:17px;cursor:pointer;accent-color:#0d4f4a;flex-shrink:0">'
-        +   '<button onclick="_artToggleTitles(\''+kwId+'\',\''+siteId+'\',\''+b64+'\',\''+esc(mode)+'\',this)" '
-        +     'style="background:transparent;border:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--text2);padding:0;flex-shrink:0;font-family:inherit" '
-        +     'title="タイトル候補 を 表示" data-expanded="0">▸</button>'
-        +   '<div style="flex:1;min-width:0;cursor:pointer" onclick="document.getElementById(\''+kwId+'\').previousElementSibling.querySelector(\'button[data-expanded]\').click()">'
+        + '<button onclick="_artToggleTitles(\''+kwId+'\',\''+siteId+'\',\''+b64+'\',\''+esc(mode)+'\',this)" '
+        +   'data-expanded="0" '
+        +   'style="width:100%;background:transparent;border:0;padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;font-family:inherit;text-align:left">'
+        +   '<span class="art-chevron" style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;transition:transform .15s">▸</span>'
+        +   '<div style="flex:1;min-width:0">'
         +     '<div style="font-size:13px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.keyword||'')+'</div>'
         +     '<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'+typeChip+(winChip||'')+'</div>'
         +   '</div>'
-        +   '<button onclick="_kwInvokeArticleGen(\''+siteId+'\',decodeURIComponent(escape(atob(\''+b64+'\'))),\''+esc(mode)+'\')" style="background:var(--teal);color:#fff;border:0;padding:7px 13px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">✨ 公開</button>'
-        + '</div>'
+        +   '<span style="font-size:10.5px;color:var(--text3);font-weight:700;flex-shrink:0">タイトル候補 →</span>'
+        + '</button>'
         + '<div id="'+kwId+'" class="art-titles" style="display:none;padding:4px 14px 12px;border-top:1px solid var(--cream2);background:#fafaf7"></div>'
         + '</div>';
     };
@@ -9486,13 +9485,16 @@ window._artToggleTitles = function(kwId, siteId, kwB64, mode, btn){
   var box = document.getElementById(kwId);
   if(!box) return;
   var expanded = btn && btn.getAttribute('data-expanded') === '1';
+  var chev = btn && btn.querySelector('.art-chevron');
   if(expanded){
     box.style.display = 'none';
-    if(btn){ btn.setAttribute('data-expanded', '0'); btn.textContent = '▸'; }
+    if(btn) btn.setAttribute('data-expanded', '0');
+    if(chev) chev.textContent = '▸';
     return;
   }
   box.style.display = 'block';
-  if(btn){ btn.setAttribute('data-expanded', '1'); btn.textContent = '▾'; }
+  if(btn) btn.setAttribute('data-expanded', '1');
+  if(chev) chev.textContent = '▾';
   // 既に render 済 (= キャッシュ) なら 再 fetch しない
   if(box.getAttribute('data-loaded') === '1') return;
   var kw = decodeURIComponent(escape(atob(kwB64)));
@@ -9552,8 +9554,7 @@ window._artSwitchTab = function(key){
 
 // 記事一覧 panel 内の checkbox を 集計 → 一括公開 bar
 window._artUpdateBatchBar = function(){
-  var count = document.querySelectorAll('.art-cand-cb:checked').length
-            + document.querySelectorAll('.art-title-cb:checked').length;
+  var count = document.querySelectorAll('.art-title-cb:checked').length;
   var bar = document.getElementById('artBatchBar');
   if(count === 0){ if(bar) bar.remove(); return; }
   if(!bar){
@@ -9570,24 +9571,19 @@ window._artUpdateBatchBar = function(){
   if(cnt) cnt.textContent = count;
 };
 window._artBatchClear = function(){
-  document.querySelectorAll('.art-cand-cb:checked, .art-title-cb:checked').forEach(function(cb){ cb.checked = false; });
+  document.querySelectorAll('.art-title-cb:checked').forEach(function(cb){ cb.checked = false; });
   _artUpdateBatchBar();
 };
 window._artBatchPublish = function(){
-  // KW 親 チェック + 個別タイトル チェック 両方を 受け付ける
-  var kwChecks = Array.prototype.slice.call(document.querySelectorAll('.art-cand-cb:checked'));
+  // タイトル行の checkbox のみ集計 (KW 行は グループ見出しで アクション無し)
   var titleChecks = Array.prototype.slice.call(document.querySelectorAll('.art-title-cb:checked'));
-  var total = kwChecks.length + titleChecks.length;
-  if(total === 0) return;
-  if(total > 5){ alert('一度に 公開できるのは 5 件まで。'); return; }
-  var items = kwChecks.map(function(cb){
-    var card = cb.closest('.art-cand-group') || cb.closest('.art-cand');
-    return card ? { title: card.getAttribute('data-kw'), keyword: card.getAttribute('data-kw'), mode: card.getAttribute('data-mode') || 'seo' } : null;
-  }).filter(Boolean);
-  titleChecks.forEach(function(cb){
+  if(titleChecks.length === 0) return;
+  if(titleChecks.length > 5){ alert('一度に 公開できるのは 5 件まで。'); return; }
+  var items = titleChecks.map(function(cb){
     var row = cb.closest('.art-title-row');
-    if(row){ items.push({ title: row.getAttribute('data-title'), keyword: row.getAttribute('data-kw'), mode: row.getAttribute('data-mode') || 'seo' }); }
-  });
+    if(!row) return null;
+    return { title: row.getAttribute('data-title'), keyword: row.getAttribute('data-kw'), mode: row.getAttribute('data-mode') || 'seo' };
+  }).filter(Boolean);
   var sample = items.slice(0, 3).map(function(it){ return '・ ' + it.title; }).join('\n');
   var more = items.length > 3 ? '\n... +' + (items.length - 3) + ' 件' : '';
   if(!confirm(items.length + ' 件を 一括公開します。\n\n' + sample + more + '\n\n合計 ~¥' + (items.length * 10) + ' ・ 約 ' + Math.ceil(items.length / 3) + ' 分。\nchat に 進捗 thread が 立ちます。\n\nOK?')) return;

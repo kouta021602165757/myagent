@@ -9347,13 +9347,21 @@ function _renderTabArticles(site){
         : '';
       var typeChip = '<span style="background:'+(mode==='aeo'?'#f3e8ff':'#fef3c7')+';color:'+(mode==='aeo'?'#5b21b6':'#92400e')+';padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800">'+esc(c.type||'推測')+'</span>';
       var b64 = btoa(unescape(encodeURIComponent(c.keyword||'')));
-      return '<div class="art-cand" data-kw="'+esc(c.keyword)+'" data-mode="'+esc(mode)+'" style="background:#fff;border:1px solid var(--wire);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px">'
-        + '<input type="checkbox" class="art-cand-cb" onclick="_artUpdateBatchBar()" style="width:17px;height:17px;cursor:pointer;accent-color:#0d4f4a;flex-shrink:0">'
-        + '<div style="flex:1;min-width:0">'
-        +   '<div style="font-size:13px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.keyword||'')+'</div>'
-        +   '<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'+typeChip+(winChip||'')+'</div>'
+      // 展開可能 (= ▸ クリックで 5 つの タイトル候補を 表示)
+      var kwId = 'kwexp_' + Math.abs(c.keyword.split('').reduce(function(h,ch){return ((h<<5)-h)+ch.charCodeAt(0)|0;},0));
+      return '<div class="art-cand-group" data-kw="'+esc(c.keyword)+'" data-mode="'+esc(mode)+'" style="background:#fff;border:1px solid var(--wire);border-radius:10px;overflow:hidden">'
+        + '<div class="art-cand" style="padding:11px 14px;display:flex;align-items:center;gap:10px">'
+        +   '<input type="checkbox" class="art-cand-cb" onclick="event.stopPropagation();_artUpdateBatchBar()" style="width:17px;height:17px;cursor:pointer;accent-color:#0d4f4a;flex-shrink:0">'
+        +   '<button onclick="_artToggleTitles(\''+kwId+'\',\''+siteId+'\',\''+b64+'\',\''+esc(mode)+'\',this)" '
+        +     'style="background:transparent;border:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--text2);padding:0;flex-shrink:0;font-family:inherit" '
+        +     'title="タイトル候補 を 表示" data-expanded="0">▸</button>'
+        +   '<div style="flex:1;min-width:0;cursor:pointer" onclick="document.getElementById(\''+kwId+'\').previousElementSibling.querySelector(\'button[data-expanded]\').click()">'
+        +     '<div style="font-size:13px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.keyword||'')+'</div>'
+        +     '<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'+typeChip+(winChip||'')+'</div>'
+        +   '</div>'
+        +   '<button onclick="_kwInvokeArticleGen(\''+siteId+'\',decodeURIComponent(escape(atob(\''+b64+'\'))),\''+esc(mode)+'\')" style="background:var(--teal);color:#fff;border:0;padding:7px 13px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">✨ 公開</button>'
         + '</div>'
-        + '<button onclick="_kwInvokeArticleGen(\''+siteId+'\',decodeURIComponent(escape(atob(\''+b64+'\'))),\''+esc(mode)+'\')" style="background:var(--teal);color:#fff;border:0;padding:7px 13px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">✨ 公開</button>'
+        + '<div id="'+kwId+'" class="art-titles" style="display:none;padding:4px 14px 12px;border-top:1px solid var(--cream2);background:#fafaf7"></div>'
         + '</div>';
     };
     if(seoCands.length > 0){
@@ -9427,6 +9435,61 @@ function _renderTabArticles(site){
     + '<div id="artTabPub" style="display:none">' + pubHTML + '</div>';
 }
 
+// 📄 KW 行を 展開 → タイトル候補 5 つを 表示 (= /keyword-detail から fetch)
+window._artToggleTitles = function(kwId, siteId, kwB64, mode, btn){
+  var box = document.getElementById(kwId);
+  if(!box) return;
+  var expanded = btn && btn.getAttribute('data-expanded') === '1';
+  if(expanded){
+    box.style.display = 'none';
+    if(btn){ btn.setAttribute('data-expanded', '0'); btn.textContent = '▸'; }
+    return;
+  }
+  box.style.display = 'block';
+  if(btn){ btn.setAttribute('data-expanded', '1'); btn.textContent = '▾'; }
+  // 既に render 済 (= キャッシュ) なら 再 fetch しない
+  if(box.getAttribute('data-loaded') === '1') return;
+  var kw = decodeURIComponent(escape(atob(kwB64)));
+  box.innerHTML = '<div style="padding:14px 4px;font-size:11.5px;color:var(--text3);text-align:center">⏳ タイトル候補 を AI が生成中… (5-10 秒)</div>';
+  api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/keyword-detail?kw=' + encodeURIComponent(kw) + '&mode=' + encodeURIComponent(mode))
+    .then(function(r){
+      var titles = (r && Array.isArray(r.titles)) ? r.titles : [];
+      if(titles.length === 0){
+        box.innerHTML = '<div style="padding:12px 4px;font-size:11.5px;color:var(--text3);text-align:center">⚠️ タイトル候補 が 取れませんでした</div>';
+        return;
+      }
+      box.innerHTML = titles.slice(0, 5).map(function(t, i){
+        var titleTxt = String(t.title || '').slice(0, 200);
+        var chars = (typeof t.chars_target === 'number') ? t.chars_target : null;
+        var h2c = (typeof t.h2_count === 'number') ? t.h2_count : null;
+        var meta = [chars ? '📚 約 '+chars.toLocaleString()+' 字' : null, h2c ? 'h2 '+h2c+' つ' : null].filter(Boolean).join(' · ');
+        var titleB64 = btoa(unescape(encodeURIComponent(titleTxt)));
+        return '<div class="art-title-row" data-title="'+esc(titleTxt)+'" data-kw="'+esc(kw)+'" data-mode="'+esc(mode)+'" style="display:flex;align-items:center;gap:9px;padding:8px 4px;border-bottom:1px solid var(--wire);font-size:11.5px">'
+          + '<input type="checkbox" class="art-title-cb" onclick="_artUpdateBatchBar()" style="width:15px;height:15px;cursor:pointer;accent-color:#0d4f4a;flex-shrink:0">'
+          + '<div style="width:18px;height:18px;border-radius:50%;background:#0d4f4a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">'+(i+1)+'</div>'
+          + '<div style="flex:1;min-width:0;line-height:1.4">'
+          +   '<div style="font-weight:700;color:var(--text);white-space:normal;word-break:break-word">'+esc(titleTxt)+'</div>'
+          +   (meta ? '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+esc(meta)+'</div>' : '')
+          +   (t.reason ? '<div style="font-size:10px;color:var(--text3);margin-top:1px">💡 '+esc(t.reason)+'</div>' : '')
+          + '</div>'
+          + '<button onclick="_kwInvokeArticleGenWithTitle(\''+esc(siteId)+'\',\''+titleB64+'\',\''+esc(kw)+'\',\''+esc(mode)+'\')" '
+          +   'style="background:var(--teal);color:#fff;border:0;padding:6px 11px;border-radius:6px;font-size:10.5px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">✨ 公開</button>'
+          + '</div>';
+      }).join('');
+      box.setAttribute('data-loaded', '1');
+    })
+    .catch(function(err){
+      box.innerHTML = '<div style="padding:12px 4px;font-size:11.5px;color:#9f1239;text-align:center">⚠️ タイトル候補 取得失敗: '+esc(err.message||'')+'</div>';
+    });
+};
+
+// 指定 タイトル + 元 KW で 記事生成 kick (= _kwInvokeArticleGen の title 指定版)
+window._kwInvokeArticleGenWithTitle = function(siteId, titleB64, keyword, mode){
+  var title = decodeURIComponent(escape(atob(titleB64)));
+  if(window._kwInvokeArticleGen){ window._kwInvokeArticleGen(siteId, title, mode, keyword); }
+  else { showToast('生成機能ロード失敗', 'ng'); }
+};
+
 window._artSwitchTab = function(key){
   var pre = document.getElementById('artTabPre');
   var pub = document.getElementById('artTabPub');
@@ -9443,8 +9506,8 @@ window._artSwitchTab = function(key){
 
 // 記事一覧 panel 内の checkbox を 集計 → 一括公開 bar
 window._artUpdateBatchBar = function(){
-  var checks = document.querySelectorAll('.art-cand-cb:checked');
-  var count = checks.length;
+  var count = document.querySelectorAll('.art-cand-cb:checked').length
+            + document.querySelectorAll('.art-title-cb:checked').length;
   var bar = document.getElementById('artBatchBar');
   if(count === 0){ if(bar) bar.remove(); return; }
   if(!bar){
@@ -9461,17 +9524,24 @@ window._artUpdateBatchBar = function(){
   if(cnt) cnt.textContent = count;
 };
 window._artBatchClear = function(){
-  document.querySelectorAll('.art-cand-cb:checked').forEach(function(cb){ cb.checked = false; });
+  document.querySelectorAll('.art-cand-cb:checked, .art-title-cb:checked').forEach(function(cb){ cb.checked = false; });
   _artUpdateBatchBar();
 };
 window._artBatchPublish = function(){
-  var checks = Array.prototype.slice.call(document.querySelectorAll('.art-cand-cb:checked'));
-  if(checks.length === 0) return;
-  if(checks.length > 5){ alert('一度に 公開できるのは 5 件まで。'); return; }
-  var items = checks.map(function(cb){
-    var card = cb.closest('.art-cand');
+  // KW 親 チェック + 個別タイトル チェック 両方を 受け付ける
+  var kwChecks = Array.prototype.slice.call(document.querySelectorAll('.art-cand-cb:checked'));
+  var titleChecks = Array.prototype.slice.call(document.querySelectorAll('.art-title-cb:checked'));
+  var total = kwChecks.length + titleChecks.length;
+  if(total === 0) return;
+  if(total > 5){ alert('一度に 公開できるのは 5 件まで。'); return; }
+  var items = kwChecks.map(function(cb){
+    var card = cb.closest('.art-cand-group') || cb.closest('.art-cand');
     return card ? { title: card.getAttribute('data-kw'), keyword: card.getAttribute('data-kw'), mode: card.getAttribute('data-mode') || 'seo' } : null;
   }).filter(Boolean);
+  titleChecks.forEach(function(cb){
+    var row = cb.closest('.art-title-row');
+    if(row){ items.push({ title: row.getAttribute('data-title'), keyword: row.getAttribute('data-kw'), mode: row.getAttribute('data-mode') || 'seo' }); }
+  });
   var sample = items.slice(0, 3).map(function(it){ return '・ ' + it.title; }).join('\n');
   var more = items.length > 3 ? '\n... +' + (items.length - 3) + ' 件' : '';
   if(!confirm(items.length + ' 件を 一括公開します。\n\n' + sample + more + '\n\n合計 ~¥' + (items.length * 10) + ' ・ 約 ' + Math.ceil(items.length / 3) + ' 分。\nchat に 進捗 thread が 立ちます。\n\nOK?')) return;
@@ -11845,7 +11915,7 @@ window._kwQuickSubmit = async function(siteId, title, mode){
 };
 
 // 共通: 記事生成 + 公開モーダル (= _mediaGenArticleFlow と loader UI 共有)
-window._kwInvokeArticleGen = async function(siteId, title, mode){
+window._kwInvokeArticleGen = async function(siteId, title, mode, keywordOpt){
   if(document.getElementById('mediaArtOverlay')) return; // 多重起動防止
   var ov = document.createElement('div');
   ov.id = 'mediaArtOverlay';
@@ -11863,7 +11933,9 @@ window._kwInvokeArticleGen = async function(siteId, title, mode){
   document.body.appendChild(ov);
   try {
     var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', {
-      keyword: title, target_chars: 5000, mode: mode,
+      keyword: keywordOpt || title,
+      title: title,  // AI に渡す タイトル ヒント (= keyword と別 指定 で 精度 UP)
+      target_chars: 5000, mode: mode,
     });
     // 🚀 async 応答対応 (= サーバが async:true で即時返却、 バックグラウンド処理)
     //   modal は 閉じない — 「生成中」 を 持続表示 + 30 秒ごとに DB ポーリング

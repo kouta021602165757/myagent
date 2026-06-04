@@ -2279,9 +2279,11 @@
         else if(winP >= 35){ winCls='style="background:#fef3c7;color:#92400e"'; winLbl='⚖ 勝率 ' + winP + '%'; }
         else { winCls='style="background:#fee2e2;color:#9f1239"'; winLbl='⚠ 勝率 ' + winP + '%'; }
       }
-      return '<div class="cand">'
+      return '<div class="cand" data-kw="' + _esc(c.keyword) + '" data-mode="seo">'
+        +   '<input type="checkbox" class="cand-cb" onclick="event.stopPropagation();_kwUpdateBatchBar()" '
+        +     'style="position:absolute;top:12px;left:12px;width:18px;height:18px;cursor:pointer;accent-color:#0d4f4a;z-index:2">'
         +   (winP != null ? '<div ' + winCls + ' style="position:absolute;top:10px;right:12px;padding:3px 8px;border-radius:5px;font-size:10.5px;font-weight:800;letter-spacing:.02em">' + winLbl + '</div>' : '<div class="cand-rank">#' + (i+1) + '</div>')
-        +   '<div class="cand-kw" style="padding-right:90px">' + _esc(c.keyword) + '</div>'
+        +   '<div class="cand-kw" style="padding-right:90px;padding-left:30px">' + _esc(c.keyword) + '</div>'
         +   '<div class="cand-meta">'
         +     '<span class="cand-chip">' + _esc(c.type || '推測') + '</span>'
         +     (estPv != null ? '<span class="cand-chip" style="background:#dbeafe;color:#1e40af">📊 想定 ' + (estPv >= 1000 ? Math.round(estPv/100)/10+'k' : estPv) + ' PV/月</span>' : '')
@@ -2362,9 +2364,11 @@
         else if(immed >= 40){ immedCls='style="background:#fef3c7;color:#92400e"'; immedLbl='⚡ 即効 ' + immed; }
         else { immedCls='style="background:#f5f5f5;color:#525252"'; immedLbl='即効 ' + immed; }
       }
-      return '<div class="cand">'
+      return '<div class="cand" data-kw="' + _esc(c.keyword) + '" data-mode="aeo">'
+        +   '<input type="checkbox" class="cand-cb" onclick="event.stopPropagation();_kwUpdateBatchBar()" '
+        +     'style="position:absolute;top:12px;left:12px;width:18px;height:18px;cursor:pointer;accent-color:#0d4f4a;z-index:2">'
         +   (immed != null ? '<div ' + immedCls + ' style="position:absolute;top:10px;right:12px;padding:3px 8px;border-radius:5px;font-size:10.5px;font-weight:800">' + immedLbl + '</div>' : '<div class="cand-rank">#' + (i+1) + '</div>')
-        +   '<div class="cand-kw" style="padding-right:90px">' + _esc(c.keyword) + '</div>'
+        +   '<div class="cand-kw" style="padding-right:90px;padding-left:30px">' + _esc(c.keyword) + '</div>'
         +   '<div class="cand-meta">'
         +     '<span class="cand-chip" style="background:#f3e8ff;color:#6d28d9">' + _esc(c.type || '推測') + '</span>'
         +     (estPv != null ? '<span class="cand-chip" style="background:#dbeafe;color:#1e40af">📊 想定 ' + (estPv >= 1000 ? Math.round(estPv/100)/10+'k' : estPv) + ' PV/月</span>' : '')
@@ -2783,6 +2787,96 @@
       bannerNote.style.color = '#166534';
     }
   }
+
+  // ─── ✨ 一括公開: 候補カードに付けた checkbox を集計 + 一括 kick ───
+  window._kwUpdateBatchBar = function(){
+    var checks = document.querySelectorAll('.cand-cb:checked');
+    var count = checks.length;
+    var bar = document.getElementById('kwBatchBar');
+    if(count === 0){
+      if(bar) bar.style.display = 'none';
+      return;
+    }
+    if(!bar){
+      bar = document.createElement('div');
+      bar.id = 'kwBatchBar';
+      bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#0d4f4a;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;align-items:center;gap:14px;z-index:9999;font-family:inherit';
+      bar.innerHTML = '<div style="font-size:13px;font-weight:800"><span id="kwBatchCount">0</span> 件 選択中</div>'
+        + '<div style="font-size:11px;color:#cbd5e1">並列 3 件 / 1 件 ~90 秒 ・ 約 ¥10/件</div>'
+        + '<button onclick="_kwBatchPublish()" style="background:#c0ff5c;color:#0a3d39;border:0;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:900;cursor:pointer;font-family:inherit">✨ 一括公開 →</button>'
+        + '<button onclick="_kwBatchClear()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 12px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">クリア</button>';
+      document.body.appendChild(bar);
+    }
+    bar.style.display = 'flex';
+    var cnt = document.getElementById('kwBatchCount');
+    if(cnt) cnt.textContent = count;
+  };
+  window._kwBatchClear = function(){
+    document.querySelectorAll('.cand-cb:checked').forEach(function(cb){ cb.checked = false; });
+    _kwUpdateBatchBar();
+  };
+  window._kwBatchPublish = function(){
+    var checks = Array.prototype.slice.call(document.querySelectorAll('.cand-cb:checked'));
+    if(checks.length === 0) return;
+    if(checks.length > 10){
+      alert('一度に 公開できるのは 10 件まで。 選択を 減らしてください。');
+      return;
+    }
+    var items = checks.map(function(cb){
+      var cand = cb.closest('.cand');
+      return cand ? { title: cand.getAttribute('data-kw'), keyword: cand.getAttribute('data-kw'), mode: cand.getAttribute('data-mode') || 'seo' } : null;
+    }).filter(Boolean);
+    var sample = items.slice(0, 3).map(function(it){ return '・ ' + it.title; }).join('\n');
+    var more = items.length > 3 ? '\n... +' + (items.length - 3) + ' 件' : '';
+    if(!confirm(items.length + ' 件を 一括公開します。\n\n' + sample + more + '\n\n合計 ~¥' + (items.length * 10) + ' ・ 約 ' + Math.ceil(items.length / 3) + ' 分 (並列 3 件)。\n各記事完了時に chat に URL が 通知されます。\n\nOK?')){
+      return;
+    }
+    // 親に request を送る
+    try {
+      window.parent.postMessage({ type: 'kw-batch-publish', siteId: _siteId, items: items }, location.origin);
+    } catch(e){}
+    // 進捗 modal を表示
+    _kwShowBatchProgress(items);
+    _kwBatchClear();
+  };
+  window._kwShowBatchProgress = function(items){
+    var mod = document.getElementById('kwBatchProgressModal');
+    if(mod) mod.remove();
+    mod = document.createElement('div');
+    mod.id = 'kwBatchProgressModal';
+    mod.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,12,.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+    var rows = items.map(function(it, i){
+      return '<div class="kw-batch-row" data-title="' + _esc(it.title) + '" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12.5px">'
+        + '<div style="width:24px;height:24px;border-radius:50%;background:#fef3c7;color:#92400e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0" class="kw-batch-icon">⏳</div>'
+        + '<div style="flex:1;font-weight:700;color:#0a0a0a">' + _esc(it.title) + '</div>'
+        + '<div class="kw-batch-status" style="font-size:11px;color:#737373;font-weight:700">待機中…</div>'
+        + '</div>';
+    }).join('');
+    mod.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 24px 48px rgba(0,0,0,.2)">'
+      + '<div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px"><div style="font-size:15px;font-weight:900">✨ 一括公開 進捗</div><div style="font-size:11px;color:#737373;margin-left:auto">' + items.length + ' 件 ・ 並列 3</div></div>'
+      + '<div id="kwBatchRows" style="padding:8px 12px">' + rows + '</div>'
+      + '<div style="padding:14px 22px;border-top:1px solid #e5e7eb;background:#fafaf7;font-size:11px;color:#525252;line-height:1.6">'
+      +   '💡 各記事完了時に chat に 公開 URL が 通知されます。 modal を 閉じても 生成は続行 (= back ground)。<br>'
+      +   '<button onclick="document.getElementById(\'kwBatchProgressModal\').remove()" style="margin-top:10px;background:transparent;border:1px solid #e5e7eb;padding:6px 14px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">閉じる</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(mod);
+  };
+  // 親からの batch 完了通知で 進捗 行を更新
+  window._kwBatchProgress = function(data){
+    if(!data || !data.title) return;
+    var row = document.querySelector('.kw-batch-row[data-title="' + (data.title||'').replace(/"/g, '\\"') + '"]');
+    if(!row) return;
+    var icon = row.querySelector('.kw-batch-icon');
+    var status = row.querySelector('.kw-batch-status');
+    if(data.ok){
+      if(icon){ icon.style.background = '#dcfce7'; icon.style.color = '#15803d'; icon.textContent = '✓'; }
+      if(status){ status.innerHTML = '<a href="' + _esc(data.url) + '" target="_blank" rel="noopener" style="color:#0d4f4a;text-decoration:none;font-weight:800">公開 →</a>'; }
+    } else {
+      if(icon){ icon.style.background = '#fee2e2'; icon.style.color = '#9f1239'; icon.textContent = '✗'; }
+      if(status){ status.textContent = '失敗'; status.style.color = '#9f1239'; }
+    }
+  };
 
   // null/undefined-safe HTML escape
   function _esc(s){

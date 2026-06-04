@@ -25336,6 +25336,108 @@ async function handleAPI(req,res,pathname,method,ip){
   // 「First win」 動線は KW 調査 panel に集約済 (= research_keyword tool で
   //  10 件 候補を出してユーザが選ぶ形)。 1 件 自動選定 は使われなくなった。
 
+  //   POST /api/agents/:id/keyword-batch-publish — KW 一括公開 (= 並列 3 件まで)
+  //   body: { items: [{title, keyword, mode}, ...] }  最大 10 件
+  //   各記事完了時に ag.history に system message を append (= 「✅ 公開しました: <URL>」)
+  const kwBatchMatch = pathname.match(/^\/api\/agents\/([^/]+)\/keyword-batch-publish$/);
+  if(kwBatchMatch && method === 'POST'){
+    const ag = (user.agents || []).find(a => a && a.id === kwBatchMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created yet' });
+    const body = await readBody(req).catch(() => ({}));
+    const items = Array.isArray(body && body.items) ? body.items.slice(0, 10) : [];
+    if(items.length === 0) return jres(res, 400, { error: 'no items' });
+    // プラン cap
+    const _cap = _mediaPlanArticleCap(user);
+    const _used = _mediaThisMonthCount(ag);
+    if(_used + items.length > _cap){
+      return jres(res, 402, {
+        error: 'plan_cap_reached',
+        used: _used, cap: _cap, requested: items.length, plan: user.plan || 'free',
+        detail: 'プラン (' + (user.plan||'free') + ') の月間 cap (' + _cap + ' 本) を 超過。 残り ' + (_cap - _used) + ' 件まで',
+      });
+    }
+    // 即時 jobs 一覧で応答
+    const jobs = items.map(it => ({
+      job_id: 'gen_' + crypto.randomBytes(5).toString('hex'),
+      title: String((it && it.title) || (it && it.keyword) || '').trim(),
+      keyword: String((it && it.keyword) || (it && it.title) || '').trim(),
+      mode: String((it && it.mode) || 'seo'),
+    })).filter(j => j.title && j.keyword);
+    jres(res, 200, { ok: true, started_at: new Date().toISOString(), jobs });
+    // 並列 3 件まで で 順次 処理
+    const CONCURRENCY = 3;
+    let cursor = 0;
+    const worker = async () => {
+      while(true){
+        const idx = cursor++;
+        if(idx >= jobs.length) return;
+        const j = jobs[idx];
+        try {
+          const article = await _mediaGenerateArticle(ag, { title: j.title, keyword: j.keyword, mode: j.mode });
+          const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
+          const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
+          const postSlug = await _mediaPostSlugSmart(article.title, j.keyword, existingSlugs);
+          const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
+          const now = new Date().toISOString();
+          const postMeta = {
+            id: postId, slug: postSlug, title: article.title, excerpt: article.excerpt,
+            category_name: article.category_name || '',
+            tags: Array.isArray(article.tags) ? article.tags : [],
+            hero_image_url: heroUrl, status: 'published', published_at: now,
+            keyword: j.keyword, vertical: article.vertical || '',
+            template_used: article.template_used || '',
+          };
+          if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+          ag.media_posts_idx.unshift(postMeta);
+          delete ag.keyword_suggestions;
+          if(!user.media_posts_full) user.media_posts_full = {};
+          user.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
+          // 公開した KW を planned_articles から削除
+          const matchKw = j.keyword.toLowerCase();
+          const matchTitle = (article.title || '').toLowerCase();
+          if(Array.isArray(ag.planned_articles) && ag.planned_articles.length){
+            ag.planned_articles = ag.planned_articles.filter(p => {
+              if(!p) return false;
+              const t = (p.title || '').toLowerCase();
+              const k = (p.keyword || '').toLowerCase();
+              return t !== matchTitle && t !== matchKw && k !== matchKw && k !== matchTitle;
+            });
+          }
+          // ✨ chat に system message を append (= 公開 URL + メタ)
+          const pubUrl = _mediaPublicUrl(ag.media, postSlug);
+          if(!Array.isArray(ag.history)) ag.history = [];
+          ag.history.push({
+            id: 'm_' + crypto.randomBytes(5).toString('hex'),
+            role: 'assistant',
+            content: '📝 「' + article.title + '」 を 公開しました\n→ ' + pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字 ・ KW: ' + j.keyword,
+            time: now,
+            kind: 'system_publish',
+            article_url: pubUrl,
+            article_title: article.title,
+          });
+          await DB.save(user);
+          _mediaSlugCacheClear(ag.media.slug);
+          console.log('[kw-batch] ✅ ' + j.job_id + ' published: ' + postSlug);
+        } catch(e){
+          console.error('[kw-batch] ❌ ' + j.job_id + ' failed:', e.message);
+          if(!Array.isArray(ag.history)) ag.history = [];
+          ag.history.push({
+            id: 'm_' + crypto.randomBytes(5).toString('hex'),
+            role: 'assistant',
+            content: '⚠️ 「' + j.title + '」 の 公開に失敗: ' + (e.message || 'unknown').slice(0, 120),
+            time: new Date().toISOString(),
+            kind: 'system_publish_fail',
+          });
+          try { await DB.save(user); } catch(_){}
+        }
+      }
+    };
+    Promise.all(Array.from({length: Math.min(CONCURRENCY, jobs.length)}, () => worker()))
+      .catch(e => console.error('[kw-batch] fatal:', e.message));
+    return;
+  }
+
   //   POST /api/agents/:id/media/articles/generate — AI 記事生成 + 画像生成
   //   body: { keyword, title?, category_id?, sub_id?, target_chars? }
   const mediaArtMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/generate$/);

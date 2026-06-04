@@ -2878,6 +2878,73 @@ function _openSiteTabModal(siteId, tabKey){
         return;
       }
       else if(t === 'kw-refresh')        _kwFetch(true);
+      else if(t === 'kw-batch-publish'){
+        // ✨ 一括公開 — items を サーバに 投げ、 polling で chat 反映
+        var items = Array.isArray(e.data.items) ? e.data.items.slice(0, 10) : [];
+        if(items.length === 0) return;
+        api('POST', '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-batch-publish', { items: items })
+          .then(function(r){
+            if(!r || !r.ok){
+              showToast('一括公開 開始に失敗: ' + (r && r.detail || r && r.error || 'unknown'), 'ng');
+              return;
+            }
+            showToast('✨ ' + (r.jobs || []).length + ' 件 並列生成 開始 (= 完了時 chat に URL 通知)', 'ok');
+            // 進捗 polling: ag.media_posts_idx を 30s 毎 4 回 chk
+            var seen = new Set(((agents.find(function(a){return a && a.id === _kwSiteId;}) || {}).media_posts_idx || []).map(function(p){ return p && p.slug; }));
+            var jobs = (r.jobs || []).slice();
+            var pollCount = 0;
+            var poll = function(){
+              pollCount++;
+              api('GET', '/api/agents/' + encodeURIComponent(_kwSiteId) + '/media')
+                .then(function(m){
+                  var idx = (m && m.media && m.media.posts) || (m && m.posts) || [];
+                  // /api/agents/:id/media が posts を返す形式は実装依存 — 簡易に local agents 更新
+                  var ag = agents.find(function(a){return a && a.id === _kwSiteId;});
+                  if(!ag) return;
+                  api('GET', '/api/agents/' + encodeURIComponent(_kwSiteId) + '/history?limit=20').then(function(h){
+                    // 直近 history に system_publish kind が来ているか チェック
+                    if(!h || !Array.isArray(h.items)) return;
+                    var ifr = document.getElementById('kwIframe');
+                    h.items.forEach(function(msg){
+                      if(!msg || msg.kind !== 'system_publish' || !msg.article_url) return;
+                      // jobs と マッチ
+                      jobs.forEach(function(j){
+                        if(j._done) return;
+                        if(msg.article_title && j.title && msg.article_title.indexOf(j.title.slice(0,20)) >= 0
+                           || msg.content && msg.content.indexOf(j.title) >= 0){
+                          j._done = true;
+                          if(ifr && ifr.contentWindow){
+                            ifr.contentWindow.postMessage({ type: 'kw-batch-progress', siteId: _kwSiteId, title: j.title, ok: true, url: msg.article_url }, location.origin);
+                          }
+                        }
+                      });
+                    });
+                    h.items.forEach(function(msg){
+                      if(!msg || msg.kind !== 'system_publish_fail') return;
+                      jobs.forEach(function(j){
+                        if(j._done) return;
+                        if(msg.content && msg.content.indexOf(j.title) >= 0){
+                          j._done = true;
+                          if(ifr && ifr.contentWindow){
+                            ifr.contentWindow.postMessage({ type: 'kw-batch-progress', siteId: _kwSiteId, title: j.title, ok: false }, location.origin);
+                          }
+                        }
+                      });
+                    });
+                  }).catch(function(){});
+                })
+                .catch(function(){});
+              // 全 done or 上限到達で 停止
+              if(jobs.every(function(j){return j._done;})) return;
+              if(pollCount < 30) setTimeout(poll, 15000);  // 15s × 30 = ~7.5 min 上限
+            };
+            setTimeout(poll, 8000);
+          })
+          .catch(function(err){
+            showToast('一括公開 失敗: ' + (err.message || 'unknown'), 'ng');
+          });
+        return;
+      }
       // sitetype + pdca は親が eager fetch 済 (= iframe 側 request は冪等)
       else if(t === 'kw-sitetype-request') { /* eager already fired */ }
       else if(t === 'kw-detail-request')   _kwFetchDetail(e.data.kw, e.data.mode);

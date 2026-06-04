@@ -21791,7 +21791,13 @@ async function handleAPI(req,res,pathname,method,ip){
   }
 
   // ── GET /api/agents ────────────────────────────────────────
-  if(pathname==='/api/agents'&&method==='GET')return jres(res,200,{agents:user.agents||[]});
+  // 🚀 perf (2026-06-04): safe(user) 経由で 重い field (history_archive / memories /
+  // 各種 cache / playbook 等) を drop。 元 8MB → ~200KB (= 40 倍 軽量化)。 同じトリムロジックは
+  // /api/me で既に適用済だったが、 /api/agents だけ raw を 返していた漏れ。
+  if(pathname==='/api/agents'&&method==='GET'){
+    const slim = safe(user);
+    return jres(res,200,{agents: slim.agents || []});
+  }
 
   // ── POST /api/onboarding/quickstart ────────────────────────
   // First-run onboarding: Claude designs a single solo agent that matches
